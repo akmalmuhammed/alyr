@@ -1,0 +1,44 @@
+{
+  "name": "asset-continuity-web",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "dev:api": "node server/start.mjs",
+    "dev:full": "node scripts/dev-full.mjs",
+    "build": "vite build && node scripts/prepare-sites-build.mjs",
+    "preview": "vite preview",
+    "test": "npm run test:domain && npm run test:server && npm run test:ui && npm run test:sites",
+    "test:domain": "node --test tests/domain.test.mjs tests/taxonomy.test.mjs tests/property-linkage.test.mjs tests/first-useful-vault.test.mjs tests/collector-domain.test.mjs tests/collector-workspace.test.mjs tests/memory-continuity.test.mjs tests/capture-pipeline.test.mjs tests/security-sync.test.mjs tests/recovery-kit.test.mjs tests/backup-preflight.test.mjs tests/file-store.test.mjs tests/storage-scope.test.mjs",
+    "test:server": "node --test tests/server-local-api.test.mjs",
+    "test:ui": "vitest run tests/app-flow.test.jsx tests/account-scope.test.jsx tests/secure-account-backup.test.jsx tests/globe.test.jsx tests/document-scan-panel.test.jsx tests/room-capture.test.jsx tests/asset-label-panel.test.jsx tests/location-picker.test.jsx",
+    "test:sites": "node --test tests/sites-worker.test.mjs"
+  },
+  "engines": {
+    "node": ">=22.22.0"
+  },
+  "dependencies": {
+    "@fontsource-variable/dm-sans": "^5.3.0",
+    "@fontsource-variable/manrope": "^5.3.0",
+    "@phosphor-icons/react": "^2.1.10",
+    "@vitejs/plugin-react": "5.0.4",
+    "cobe": "^2.0.1",
+    "leaflet": "^1.9.4",
+    "motion": "^12.42.2",
+    "postcss": "8.5.23",
+    "qrcode": "^1.5.4",
+    "react": "19.2.8",
+    "react-dom": "19.2.8",
+    "react-router": "8.3.0",
+    "tesseract.js": "^6.0.1",
+    "vite": "6.4.3"
+  },
+  "devDependencies": {
+    "@testing-library/react": "^16.3.2",
+    "@testing-library/user-event": "^14.6.1",
+    "axe-core": "^4.12.1",
+    "jsdom": "^29.1.1",
+    "vitest": "^4.1.10"
+  }
+}

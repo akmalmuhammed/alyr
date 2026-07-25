@@ -1,0 +1,69 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+      - master
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  validate:
+    name: Validate workspace
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Use Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22.22.0
+          cache: npm
+          cache-dependency-path: package-lock.json
+
+      - name: Install workspace dependencies
+        run: npm ci
+
+      - name: Validate shared contracts
+        run: npm run check:shared
+
+      - name: Verify generated API types
+        run: npm run check:api-contract
+
+      - name: Run static Supabase boundary checks
+        run: npm run check:supabase:static
+
+      - name: Install Supabase CLI
+        uses: supabase/setup-cli@v1
+        with:
+          version: 2.109.1
+
+      - name: Validate Supabase migrations and RLS
+        run: |
+          supabase start
+          supabase db lint --local --level warning
+          supabase test db --local
+
+      - name: Stop Supabase services
+        if: always()
+        run: supabase stop --no-backup
+
+      - name: Validate canonical web app
+        run: npm run check:web
+
+      - name: Validate Vite mobile prototype
+        run: npm run check:mobile-prototype
+
+      - name: Validate Expo native app
+        if: ${{ hashFiles('asset-continuity-native/package.json') != '' }}
+        run: npm run check:native

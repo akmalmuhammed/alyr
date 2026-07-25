@@ -1,0 +1,500 @@
+.capture-studio-backdrop {
+  z-index: 90;
+  align-items: stretch;
+  justify-content: flex-end;
+  padding: 0;
+}
+
+.capture-studio-drawer {
+  width: min(1180px, calc(100vw - var(--rail-width, 148px)));
+  min-height: 100dvh;
+  max-height: 100dvh;
+  overflow-y: auto;
+  color: var(--ink, #f7f9ff);
+  background:
+    radial-gradient(circle at 82% -8%, rgba(70, 148, 255, 0.15), transparent 30%),
+    radial-gradient(circle at 15% 12%, rgba(139, 92, 246, 0.11), transparent 32%),
+    linear-gradient(155deg, #07111f, #020812 68%);
+  border-left: 1px solid rgba(146, 176, 225, 0.2);
+  box-shadow: -36px 0 100px rgba(0, 3, 10, 0.46);
+  scrollbar-color: rgba(118, 152, 212, 0.45) transparent;
+}
+
+.capture-studio-drawer:focus {
+  outline: none;
+}
+
+.capture-studio-loading {
+  display: grid;
+  place-items: center;
+  align-content: center;
+  gap: 10px;
+  color: #8e9db2;
+  text-align: center;
+}
+
+.capture-studio-loading svg {
+  width: 42px;
+  height: 42px;
+  margin-bottom: 5px;
+  color: #73d4e9;
+}
+
+.capture-studio-loading strong {
+  color: #edf3fb;
+  font-size: 1.05rem;
+}
+
+.capture-studio-loading span {
+  font-size: 0.82rem;
+}
+
+.capture-studio-shell-header {
+  position: relative;
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 34px;
+  padding: clamp(30px, 4vw, 58px) clamp(24px, 5vw, 68px) 28px;
+}
+
+.capture-studio-shell-header::after {
+  position: absolute;
+  inset: auto clamp(24px, 5vw, 68px) 0;
+  height: 1px;
+  background: linear-gradient(
+    90deg,
+    rgba(139, 92, 246, 0.8),
+    rgba(74, 216, 245, 0.55),
+    transparent
+  );
+  content: "";
+}
+
+.capture-studio-shell-header > div {
+  max-width: 790px;
+}
+
+.capture-studio-shell-header h2 {
+  max-width: 760px;
+  margin: 8px 0 12px;
+  color: #f8faff;
+  font-family: "Manrope Variable", sans-serif;
+  font-size: clamp(2rem, 4vw, 4rem);
+  font-weight: 580;
+  letter-spacing: -0.058em;
+  line-height: 0.98;
+}
+
+.capture-studio-shell-header p {
+  max-width: 720px;
+  margin: 0;
+  color: #9aa8bd;
+  font-size: clamp(0.95rem, 1.3vw, 1.08rem);
+  line-height: 1.65;
+}
+
+.capture-studio-close {
+  display: grid;
+  flex: 0 0 auto;
+  width: 46px;
+  height: 46px;
+  place-items: center;
+  color: #c7d0df;
+  background: rgba(12, 25, 43, 0.78);
+  border: 1px solid rgba(150, 176, 220, 0.22);
+  border-radius: 15px;
+  cursor: pointer;
+}
+
+.capture-studio-close svg {
+  width: 20px;
+  height: 20px;
+}
+
+.capture-studio-tabs {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+  padding: 24px clamp(24px, 5vw, 68px) 6px;
+}
+
+.capture-studio-tabs button {
+  position: relative;
+  display: grid;
+  grid-template-columns: 44px minmax(0, 1fr);
+  gap: 13px;
+  min-height: 86px;
+  padding: 17px;
+  overflow: hidden;
+  color: #aab6c9;
+  text-align: left;
+  background: rgba(9, 20, 36, 0.64);
+  border: 1px solid rgba(137, 166, 215, 0.16);
+  border-radius: 18px;
+  cursor: pointer;
+  transition:
+    border-color 180ms ease,
+    background 180ms ease,
+    transform 180ms ease;
+}
+
+.capture-studio-tabs button:hover {
+  transform: translateY(-1px);
+  border-color: rgba(140, 178, 238, 0.35);
+}
+
+.capture-studio-tabs button.is-active {
+  color: #f8faff;
+  background:
+    linear-gradient(135deg, rgba(96, 57, 190, 0.32), rgba(18, 54, 92, 0.54)),
+    rgba(10, 21, 39, 0.9);
+  border-color: rgba(113, 188, 255, 0.5);
+  box-shadow:
+    inset 0 1px rgba(255, 255, 255, 0.06),
+    0 16px 44px rgba(0, 4, 14, 0.22);
+}
+
+.capture-studio-tabs button > span:first-child {
+  display: grid;
+  width: 44px;
+  height: 44px;
+  place-items: center;
+  color: #8adff1;
+  background: rgba(78, 150, 225, 0.1);
+  border: 1px solid rgba(114, 188, 237, 0.18);
+  border-radius: 14px;
+}
+
+.capture-studio-tabs button > span:first-child svg {
+  width: 23px;
+  height: 23px;
+}
+
+.capture-studio-tabs button > span:nth-child(2) {
+  display: grid;
+  align-content: center;
+  min-width: 0;
+}
+
+.capture-studio-tabs strong {
+  color: inherit;
+  font-size: 0.94rem;
+  font-weight: 680;
+}
+
+.capture-studio-tabs small {
+  margin-top: 4px;
+  overflow: hidden;
+  color: #78869b;
+  font-size: 0.76rem;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.capture-studio-tabs em {
+  display: none;
+}
+
+.capture-studio-workspace {
+  display: grid;
+  gap: 18px;
+  padding: 22px clamp(24px, 5vw, 68px) 42px;
+}
+
+.capture-studio-target {
+  display: grid;
+  grid-template-columns: 48px minmax(220px, 1fr) minmax(260px, 0.95fr);
+  align-items: center;
+  gap: 18px;
+  padding: 18px 20px;
+  background:
+    linear-gradient(100deg, rgba(93, 58, 170, 0.13), transparent 35%),
+    rgba(6, 15, 28, 0.76);
+  border: 1px solid rgba(133, 167, 218, 0.2);
+  border-radius: 20px;
+}
+
+.capture-studio-target-icon {
+  display: grid;
+  width: 48px;
+  height: 48px;
+  place-items: center;
+  color: #b49cff;
+  background: rgba(121, 84, 215, 0.12);
+  border: 1px solid rgba(156, 124, 255, 0.22);
+  border-radius: 15px;
+}
+
+.capture-studio-target-icon svg {
+  width: 25px;
+  height: 25px;
+}
+
+.capture-studio-target-copy {
+  min-width: 0;
+}
+
+.capture-studio-target-copy small {
+  color: #8adff1;
+  font-size: 0.67rem;
+  font-weight: 760;
+  letter-spacing: 0.13em;
+  text-transform: uppercase;
+}
+
+.capture-studio-target-copy h3 {
+  margin: 3px 0 3px;
+  color: #f4f7fc;
+  font-size: 1rem;
+  font-weight: 680;
+}
+
+.capture-studio-target-copy p {
+  margin: 0;
+  color: #7f8da2;
+  font-size: 0.78rem;
+  line-height: 1.45;
+}
+
+.capture-studio-target-fields {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.capture-studio-target-fields label {
+  display: grid;
+  gap: 6px;
+}
+
+.capture-studio-target-fields label > span {
+  color: #9daabd;
+  font-size: 0.71rem;
+  font-weight: 670;
+}
+
+.capture-studio-target-fields select,
+.capture-studio-target-fields input {
+  width: 100%;
+  min-height: 46px;
+  padding: 0 38px 0 13px;
+  color: #eef3fb;
+  background: #0b1829;
+  border: 1px solid rgba(139, 169, 218, 0.27);
+  border-radius: 12px;
+}
+
+.capture-studio-target-fields input {
+  padding-right: 13px;
+}
+
+.capture-studio-target-fields input::placeholder {
+  color: #68778e;
+}
+
+.capture-studio-empty {
+  display: grid;
+  min-height: 320px;
+  place-items: center;
+  align-content: center;
+  padding: 36px;
+  color: #8997ac;
+  text-align: center;
+  background: rgba(5, 13, 24, 0.72);
+  border: 1px dashed rgba(139, 170, 222, 0.24);
+  border-radius: 24px;
+}
+
+.capture-studio-empty svg {
+  width: 38px;
+  height: 38px;
+  margin-bottom: 14px;
+  color: #8fd8e9;
+}
+
+.capture-studio-empty h3 {
+  margin: 0 0 7px;
+  color: #edf3fb;
+}
+
+.capture-studio-empty p {
+  max-width: 480px;
+  margin: 0;
+  line-height: 1.6;
+}
+
+.capture-studio-shell-footer {
+  display: grid;
+  grid-template-columns: 44px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 14px;
+  margin: 0 clamp(24px, 5vw, 68px) 48px;
+  padding: 17px 19px;
+  color: #9aa8bb;
+  background: rgba(8, 17, 30, 0.76);
+  border: 1px solid rgba(139, 169, 214, 0.17);
+  border-radius: 17px;
+}
+
+.capture-studio-shell-footer > span {
+  display: grid;
+  width: 44px;
+  height: 44px;
+  place-items: center;
+  color: #9bd36b;
+  background: rgba(155, 211, 107, 0.09);
+  border-radius: 13px;
+}
+
+.capture-studio-shell-footer div {
+  display: grid;
+  gap: 3px;
+}
+
+.capture-studio-shell-footer strong {
+  color: #dfe6f0;
+  font-size: 0.86rem;
+}
+
+.capture-studio-shell-footer small {
+  line-height: 1.5;
+}
+
+.capture-studio-shell-footer > svg {
+  color: #708099;
+}
+
+.capture-studio-drawer button:focus-visible,
+.capture-studio-drawer select:focus-visible,
+.capture-studio-drawer input:focus-visible {
+  outline: 2px solid #55c7dd;
+  outline-offset: 3px;
+}
+
+@media (max-width: 900px) {
+  .capture-studio-drawer {
+    width: calc(100vw - var(--rail-width, 88px));
+  }
+
+  .capture-studio-tabs button {
+    grid-template-columns: 40px minmax(0, 1fr);
+    padding: 13px;
+  }
+
+  .capture-studio-tabs button > span:first-child {
+    width: 40px;
+    height: 40px;
+  }
+
+  .capture-studio-target {
+    grid-template-columns: 44px minmax(0, 1fr);
+  }
+
+  .capture-studio-target-fields {
+    grid-column: 1 / -1;
+  }
+}
+
+@media (max-width: 680px) {
+  .capture-studio-backdrop {
+    align-items: stretch;
+  }
+
+  .capture-studio-drawer {
+    width: 100vw;
+    min-height: 100dvh;
+    padding-bottom: calc(82px + env(safe-area-inset-bottom));
+    border-left: 0;
+  }
+
+  .capture-studio-shell-header {
+    gap: 16px;
+    padding: 24px 18px 20px;
+  }
+
+  .capture-studio-shell-header::after {
+    inset-inline: 18px;
+  }
+
+  .capture-studio-shell-header h2 {
+    max-width: 310px;
+    font-size: clamp(1.8rem, 9vw, 2.55rem);
+  }
+
+  .capture-studio-shell-header p {
+    font-size: 0.87rem;
+  }
+
+  .capture-studio-close {
+    width: 44px;
+    height: 44px;
+  }
+
+  .capture-studio-tabs {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 7px;
+    padding: 18px 18px 4px;
+  }
+
+  .capture-studio-tabs button {
+    display: grid;
+    grid-template-columns: 1fr;
+    justify-items: center;
+    min-height: 72px;
+    padding: 10px 7px;
+    text-align: center;
+  }
+
+  .capture-studio-tabs button > span:first-child {
+    width: 38px;
+    height: 38px;
+  }
+
+  .capture-studio-tabs button > span:nth-child(2) {
+    display: none;
+  }
+
+  .capture-studio-tabs em {
+    display: block;
+    color: inherit;
+    font-size: 0.69rem;
+    font-style: normal;
+    font-weight: 700;
+  }
+
+  .capture-studio-workspace {
+    padding: 17px 12px 30px;
+  }
+
+  .capture-studio-target {
+    grid-template-columns: 42px minmax(0, 1fr);
+    gap: 13px;
+    padding: 14px;
+  }
+
+  .capture-studio-target-icon {
+    width: 42px;
+    height: 42px;
+  }
+
+  .capture-studio-target-fields {
+    grid-template-columns: 1fr;
+  }
+
+  .capture-studio-shell-footer {
+    grid-template-columns: 40px minmax(0, 1fr);
+    margin: 0 12px 24px;
+    padding: 14px;
+  }
+
+  .capture-studio-shell-footer > svg {
+    display: none;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .capture-studio-tabs button {
+    transition: none;
+  }
+}

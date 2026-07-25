@@ -1,0 +1,465 @@
+.memory-people-editor {
+  display: grid;
+  gap: 1rem;
+  padding: clamp(1rem, 2.4vw, 1.45rem);
+  border: 1px solid var(--hairline);
+  border-radius: 1.25rem;
+  background:
+    linear-gradient(145deg, rgba(139, 92, 246, 0.12), transparent 72%),
+    rgba(7, 17, 31, 0.94);
+}
+
+.memory-people-editor > header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.memory-people-editor > header h3 {
+  margin: 0.25rem 0 0.4rem;
+  max-width: 34rem;
+  font-size: clamp(1.15rem, 2.2vw, 1.6rem);
+  letter-spacing: -0.035em;
+}
+
+.memory-people-editor > header p {
+  max-width: 44rem;
+  margin: 0;
+  color: var(--muted);
+  line-height: 1.6;
+}
+
+.memory-people-editor > header > svg {
+  width: 2rem;
+  height: 2rem;
+  flex: 0 0 auto;
+  color: var(--violet-soft);
+}
+
+.memory-person-editor-list {
+  display: grid;
+  gap: 0.8rem;
+}
+
+.memory-person-editor-card {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: 1rem;
+  padding: 1rem;
+  border: 1px solid var(--hairline);
+  border-radius: 1rem;
+  background: rgba(3, 10, 20, 0.74);
+}
+
+.memory-person-editor-number {
+  display: grid;
+  align-content: start;
+  justify-items: center;
+  gap: 0.35rem;
+  width: 2rem;
+  color: var(--muted);
+  font-size: 0.68rem;
+  letter-spacing: 0.08em;
+}
+
+.memory-person-editor-number svg {
+  width: 1.45rem;
+  height: 1.45rem;
+  color: var(--violet-soft);
+}
+
+.memory-person-editor-fields,
+.memory-person-editor-fields > label {
+  display: grid;
+  gap: 0.7rem;
+}
+
+.memory-person-editor-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.75rem;
+}
+
+.memory-person-editor-grid.is-three {
+  grid-template-columns: 1.2fr 0.8fr 0.9fr;
+}
+
+.memory-person-editor-fields label {
+  display: grid;
+  gap: 0.4rem;
+}
+
+.memory-person-editor-fields label > span:first-child {
+  color: var(--muted);
+  font-size: 0.72rem;
+  font-weight: 700;
+}
+
+.memory-person-editor-fields input,
+.memory-person-editor-fields select,
+.memory-person-editor-fields textarea {
+  width: 100%;
+  border: 1px solid var(--hairline-strong);
+  border-radius: 0.8rem;
+  padding: 0.74rem 0.82rem;
+  color: var(--ink);
+  outline: none;
+  background: rgba(11, 23, 40, 0.86);
+  font: inherit;
+}
+
+.memory-person-editor-fields textarea {
+  resize: vertical;
+}
+
+.memory-person-editor-fields input:focus,
+.memory-person-editor-fields select:focus,
+.memory-person-editor-fields textarea:focus {
+  border-color: var(--violet-soft);
+  box-shadow: 0 0 0 3px rgba(139, 92, 246, 0.17);
+}
+
+.memory-person-private-state {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  min-height: 2.85rem;
+  padding: 0.72rem 0.8rem;
+  border: 1px solid var(--hairline);
+  border-radius: 0.8rem;
+  color: var(--muted);
+  font-size: 0.78rem;
+}
+
+.memory-person-private-state svg {
+  color: var(--violet-soft);
+}
+
+.memory-person-sharing-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding-top: 0.2rem;
+}
+
+.memory-person-sharing-row > label {
+  display: flex;
+  grid-template-columns: none;
+  align-items: flex-start;
+  gap: 0.65rem;
+}
+
+.memory-person-sharing-row input {
+  width: 1.05rem;
+  height: 1.05rem;
+  margin-top: 0.15rem;
+  padding: 0;
+}
+
+.memory-person-sharing-row label > span {
+  display: grid;
+  gap: 0.15rem;
+}
+
+.memory-person-sharing-row label strong {
+  font-size: 0.78rem;
+}
+
+.memory-person-sharing-row label small {
+  color: var(--muted);
+  font-size: 0.7rem;
+}
+
+.memory-person-sharing-row > button,
+.memory-add-person-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.45rem;
+  border: 0;
+  color: var(--muted);
+  background: transparent;
+  font: inherit;
+  font-size: 0.76rem;
+  font-weight: 700;
+}
+
+.memory-person-sharing-row > button:hover {
+  color: var(--red);
+}
+
+.memory-person-sharing-row svg,
+.memory-add-person-button svg {
+  width: 1rem;
+  height: 1rem;
+}
+
+.memory-people-empty {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.8rem;
+  padding: 0.95rem;
+  border: 1px dashed var(--hairline-strong);
+  border-radius: 1rem;
+  color: var(--muted);
+}
+
+.memory-people-empty > svg {
+  width: 1.6rem;
+  height: 1.6rem;
+  flex: 0 0 auto;
+  color: var(--violet-soft);
+}
+
+.memory-people-empty strong {
+  color: var(--ink);
+}
+
+.memory-people-empty p {
+  margin: 0.2rem 0 0;
+  line-height: 1.55;
+}
+
+.memory-add-person-button {
+  justify-self: start;
+  min-height: 2.5rem;
+  padding: 0.55rem 0.7rem;
+  border: 1px solid var(--hairline);
+  border-radius: 0.75rem;
+  color: var(--ink);
+  background: rgba(11, 23, 40, 0.7);
+}
+
+.memory-add-person-button:hover {
+  border-color: rgba(183, 154, 255, 0.55);
+  color: var(--violet-soft);
+}
+
+.memory-subject-section {
+  display: grid;
+  gap: 1rem;
+  padding: clamp(1rem, 2vw, 1.3rem);
+  border: 1px solid var(--hairline);
+  border-radius: 1.3rem;
+  background:
+    radial-gradient(circle at 90% 4%, rgba(74, 216, 245, 0.13), transparent 34%),
+    linear-gradient(145deg, rgba(139, 92, 246, 0.12), transparent 62%),
+    rgba(3, 10, 20, 0.82);
+}
+
+.memory-subject-choice {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.7rem;
+}
+
+.memory-subject-choice > button {
+  position: relative;
+  min-height: 7.2rem;
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  grid-template-rows: auto auto;
+  align-content: center;
+  gap: 0.35rem 0.75rem;
+  padding: 1rem;
+  border: 1px solid var(--hairline);
+  border-radius: 1rem;
+  overflow: hidden;
+  color: var(--ink);
+  text-align: left;
+  background: rgba(7, 17, 31, 0.76);
+  transition:
+    border-color 160ms ease,
+    transform 160ms ease,
+    background 160ms ease;
+}
+
+.memory-subject-choice > button:hover {
+  transform: translateY(-1px);
+  border-color: rgba(74, 216, 245, 0.42);
+}
+
+.memory-subject-choice > button.is-active {
+  border-color: rgba(74, 216, 245, 0.68);
+  background:
+    linear-gradient(135deg, rgba(78, 140, 255, 0.18), rgba(139, 92, 246, 0.12)),
+    rgba(7, 17, 31, 0.92);
+  box-shadow: inset 0 0 0 1px rgba(74, 216, 245, 0.12);
+}
+
+.memory-subject-choice > button > span {
+  grid-row: 1 / 3;
+  width: 2.65rem;
+  height: 2.65rem;
+  display: grid;
+  place-items: center;
+  border: 1px solid var(--hairline);
+  border-radius: 0.85rem;
+  color: var(--cyan);
+  background: rgba(74, 216, 245, 0.07);
+}
+
+.memory-subject-choice > button > span svg {
+  width: 1.35rem;
+  height: 1.35rem;
+}
+
+.memory-subject-choice > button > strong {
+  align-self: end;
+  font-size: 0.86rem;
+}
+
+.memory-subject-choice > button > small {
+  max-width: 28rem;
+  color: var(--muted);
+  font-size: 0.7rem;
+  line-height: 1.45;
+}
+
+.memory-subject-choice > button > svg {
+  position: absolute;
+  top: 0.75rem;
+  right: 0.75rem;
+  width: 1.15rem;
+  height: 1.15rem;
+  color: var(--lime);
+}
+
+.memory-person-public-label {
+  padding: 0.8rem;
+  border: 1px solid rgba(155, 230, 94, 0.22);
+  border-radius: 0.9rem;
+  background: rgba(155, 230, 94, 0.05);
+}
+
+.memory-person-public-label small {
+  color: var(--muted);
+  font-size: 0.7rem;
+  line-height: 1.45;
+}
+
+.passport-memory-people {
+  display: grid;
+  gap: 0.5rem;
+  margin: 0.85rem 0 1rem;
+}
+
+.passport-memory-people > div {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 0.65rem;
+  min-width: 0;
+  padding: 0.7rem;
+  border: 1px solid var(--paper-line);
+  border-radius: 0.8rem;
+  background: rgba(255, 255, 255, 0.58);
+}
+
+.passport-memory-people > div > span:first-child {
+  width: 2rem;
+  height: 2rem;
+  display: grid;
+  place-items: center;
+  border-radius: 0.7rem;
+  color: #6746bd;
+  background: #eee9fb;
+}
+
+.passport-memory-people > div > span:nth-child(2) {
+  min-width: 0;
+  display: grid;
+  gap: 0.12rem;
+}
+
+.passport-memory-people strong {
+  overflow: hidden;
+  color: var(--paper-ink);
+  font-size: 0.78rem;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.passport-memory-people small {
+  color: var(--paper-muted);
+  font-size: 0.68rem;
+}
+
+.passport-memory-empty {
+  display: flex;
+  gap: 0.7rem;
+  margin: 0.85rem 0 1rem;
+  padding: 0.8rem;
+  border: 1px dashed var(--paper-line);
+  border-radius: 0.8rem;
+  color: var(--paper-muted);
+}
+
+.passport-memory-empty > svg {
+  width: 1.3rem;
+  height: 1.3rem;
+  color: #6746bd;
+}
+
+.passport-memory-empty > span {
+  display: grid;
+  gap: 0.15rem;
+}
+
+.passport-memory-empty strong {
+  color: var(--paper-ink);
+  font-size: 0.78rem;
+}
+
+.passport-memory-empty small {
+  font-size: 0.68rem;
+  line-height: 1.45;
+}
+
+@media (max-width: 720px) {
+  .memory-subject-choice {
+    grid-template-columns: 1fr;
+  }
+
+  .memory-person-editor-grid,
+  .memory-person-editor-grid.is-three {
+    grid-template-columns: 1fr;
+  }
+
+  .memory-person-sharing-row {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .memory-person-sharing-row > button {
+    justify-content: flex-start;
+    min-height: 2.5rem;
+  }
+}
+
+@media (max-width: 480px) {
+  .memory-people-editor {
+    padding: 0.9rem;
+  }
+
+  .memory-person-editor-card {
+    grid-template-columns: 1fr;
+  }
+
+  .memory-person-editor-number {
+    grid-auto-flow: column;
+    align-items: center;
+    justify-content: start;
+  }
+
+  .passport-memory-people > div {
+    grid-template-columns: auto minmax(0, 1fr);
+  }
+
+  .passport-memory-people .status-pill {
+    grid-column: 2;
+    justify-self: start;
+  }
+}

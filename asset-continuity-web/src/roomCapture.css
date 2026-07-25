@@ -1,0 +1,750 @@
+.room-capture-panel {
+  container-type: inline-size;
+  position: relative;
+  display: grid;
+  gap: clamp(18px, 2.6vw, 30px);
+  width: min(100%, 1120px);
+  padding: clamp(20px, 3vw, 38px);
+  overflow: hidden;
+  color: var(--ink, #f7f9ff);
+  background:
+    linear-gradient(
+      135deg,
+      color-mix(in srgb, var(--night-3, #0b1728) 82%, transparent),
+      color-mix(in srgb, var(--night-1, #030a14) 96%, transparent) 58%
+    ),
+    var(--night-1, #030a14);
+  border: 1px solid var(--hairline-strong, rgba(133, 164, 218, 0.3));
+  border-radius: clamp(22px, 3vw, 32px);
+  box-shadow: 0 34px 90px rgba(0, 4, 12, 0.44);
+  isolation: isolate;
+}
+
+.room-capture-panel::before {
+  position: absolute;
+  z-index: -1;
+  inset: 0 auto auto 0;
+  width: 42%;
+  height: 2px;
+  background: linear-gradient(
+    90deg,
+    var(--violet, #8b5cf6),
+    var(--cyan, #4ad8f5)
+  );
+  content: "";
+}
+
+.room-capture-header,
+.room-capture-actions,
+.room-capture-footer,
+.room-capture-boundary,
+.room-capture-meter > div,
+.room-capture-frame-meta,
+.room-capture-inline-actions,
+.room-capture-discard,
+.room-capture-discard > div {
+  display: flex;
+  align-items: center;
+}
+
+.room-capture-header,
+.room-capture-footer,
+.room-capture-discard {
+  justify-content: space-between;
+}
+
+.room-capture-header {
+  align-items: flex-start;
+  gap: 20px;
+}
+
+.room-capture-heading {
+  min-width: 0;
+}
+
+.room-capture-kicker {
+  display: block;
+  margin-bottom: 8px;
+  color: var(--violet-soft, #b79aff);
+  font-size: 0.72rem;
+  font-weight: 750;
+  letter-spacing: 0.15em;
+  line-height: 1;
+  text-transform: uppercase;
+}
+
+.room-capture-heading h2,
+.room-capture-panel.is-complete h2,
+.room-capture-panel.is-error h2 {
+  max-width: 720px;
+  margin: 0;
+  font-family:
+    "Manrope Variable",
+    "SF Pro Display",
+    "Segoe UI",
+    sans-serif;
+  font-size: clamp(1.65rem, 4cqi, 3rem);
+  font-weight: 590;
+  letter-spacing: -0.055em;
+  line-height: 1.04;
+  text-wrap: balance;
+}
+
+.room-capture-context {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 16px;
+  color: var(--muted, #a9b4c7);
+  font-size: 0.88rem;
+}
+
+.room-capture-context svg {
+  color: var(--cyan, #4ad8f5);
+  font-size: 1.1rem;
+}
+
+.room-capture-context strong {
+  color: var(--ink, #f7f9ff);
+  font-weight: 650;
+}
+
+.room-capture-close,
+.room-capture-order-actions button {
+  display: inline-grid;
+  place-items: center;
+  flex: 0 0 auto;
+  color: var(--muted, #a9b4c7);
+  background: transparent;
+  border: 1px solid var(--hairline, rgba(143, 168, 210, 0.18));
+  cursor: pointer;
+  transition:
+    border-color 160ms ease,
+    color 160ms ease,
+    background-color 160ms ease,
+    transform 160ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.room-capture-close {
+  width: 42px;
+  height: 42px;
+  border-radius: 50%;
+}
+
+.room-capture-close:hover:not(:disabled),
+.room-capture-order-actions button:hover:not(:disabled) {
+  color: var(--ink, #f7f9ff);
+  background: color-mix(in srgb, var(--night-4, #111f32) 82%, transparent);
+  border-color: var(--hairline-strong, rgba(133, 164, 218, 0.3));
+  transform: translateY(-1px);
+}
+
+.room-capture-boundary {
+  align-items: flex-start;
+  gap: 13px;
+  padding: 15px 16px;
+  background: color-mix(in srgb, var(--night-4, #111f32) 50%, transparent);
+  border-block: 1px solid var(--hairline, rgba(143, 168, 210, 0.18));
+}
+
+.room-capture-boundary-icon {
+  display: grid;
+  place-items: center;
+  flex: 0 0 auto;
+  width: 36px;
+  height: 36px;
+  color: var(--amber, #f8bd65);
+  background: color-mix(in srgb, var(--amber, #f8bd65) 10%, transparent);
+  border-radius: 50%;
+}
+
+.room-capture-boundary > div {
+  display: grid;
+  flex: 1 1 auto;
+  gap: 3px;
+}
+
+.room-capture-boundary strong {
+  font-size: 0.92rem;
+}
+
+.room-capture-boundary div span {
+  max-width: 780px;
+  color: var(--muted, #a9b4c7);
+  font-size: 0.8rem;
+  line-height: 1.5;
+}
+
+.room-capture-storage-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  flex: 0 0 auto;
+  padding: 7px 10px;
+  color: var(--amber, #f8bd65);
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  border: 1px solid color-mix(in srgb, var(--amber, #f8bd65) 32%, transparent);
+  border-radius: 999px;
+}
+
+.room-capture-recovered,
+.room-capture-error {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 12px 14px;
+  font-size: 0.84rem;
+  line-height: 1.5;
+  border-radius: var(--radius-sm, 10px);
+}
+
+.room-capture-recovered {
+  color: color-mix(in srgb, var(--lime, #9be65e) 82%, var(--ink, #f7f9ff));
+  background: color-mix(in srgb, var(--lime, #9be65e) 8%, transparent);
+  border: 1px solid
+    color-mix(in srgb, var(--lime, #9be65e) 24%, transparent);
+}
+
+.room-capture-meter {
+  display: grid;
+  gap: 9px;
+}
+
+.room-capture-meter > div {
+  justify-content: space-between;
+  gap: 16px;
+  color: var(--muted, #a9b4c7);
+  font-size: 0.78rem;
+}
+
+.room-capture-meter p {
+  max-width: 700px;
+  margin: 0;
+  color: var(--muted-2, #76839a);
+  font-size: 0.83rem;
+  line-height: 1.55;
+}
+
+.room-capture-status {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--cyan, #4ad8f5);
+  font-weight: 700;
+}
+
+.room-capture-status::before {
+  width: 7px;
+  height: 7px;
+  background: currentColor;
+  border-radius: 50%;
+  box-shadow: 0 0 0 4px color-mix(in srgb, currentColor 12%, transparent);
+  content: "";
+}
+
+.room-capture-status.is-paused {
+  color: var(--amber, #f8bd65);
+}
+
+.room-capture-status.is-ready,
+.room-capture-status.is-committed {
+  color: var(--lime, #9be65e);
+}
+
+.room-capture-empty {
+  display: grid;
+  grid-template-columns: minmax(190px, 0.72fr) minmax(230px, 1fr);
+  align-items: center;
+  gap: clamp(22px, 4vw, 52px);
+  min-height: 250px;
+  padding: clamp(18px, 3vw, 30px);
+  border: 1px dashed var(--hairline-strong, rgba(133, 164, 218, 0.3));
+  border-radius: var(--radius-lg, 24px);
+}
+
+.room-capture-empty > div:last-child {
+  max-width: 520px;
+}
+
+.room-capture-empty strong {
+  display: block;
+  margin-bottom: 8px;
+  font-family:
+    "Manrope Variable",
+    "SF Pro Display",
+    "Segoe UI",
+    sans-serif;
+  font-size: clamp(1.15rem, 2.7cqi, 1.65rem);
+  font-weight: 600;
+}
+
+.room-capture-empty p {
+  margin: 0;
+  color: var(--muted, #a9b4c7);
+  font-size: 0.88rem;
+  line-height: 1.6;
+}
+
+.room-capture-contact-sheet {
+  position: relative;
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 7px;
+  aspect-ratio: 4 / 3;
+  width: 100%;
+  padding: 10px;
+  overflow: hidden;
+  background: color-mix(in srgb, var(--night-4, #111f32) 58%, transparent);
+  border: 1px solid var(--hairline, rgba(143, 168, 210, 0.18));
+  border-radius: 18px;
+  transform: rotate(-1.2deg);
+}
+
+.room-capture-contact-sheet span {
+  background:
+    linear-gradient(
+      145deg,
+      color-mix(in srgb, var(--night-4, #111f32) 84%, transparent),
+      color-mix(in srgb, var(--blue, #4e8cff) 11%, var(--night-2, #07111f))
+    );
+  border-radius: 7px;
+}
+
+.room-capture-contact-sheet svg {
+  position: absolute;
+  inset: 50% auto auto 50%;
+  color: var(--cyan, #4ad8f5);
+  font-size: 2.1rem;
+  filter: drop-shadow(0 6px 16px rgba(0, 0, 0, 0.4));
+  transform: translate(-50%, -50%) rotate(1.2deg);
+}
+
+.room-capture-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 230px), 1fr));
+  gap: 15px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.room-capture-frame {
+  min-width: 0;
+  overflow: hidden;
+  background: color-mix(in srgb, var(--night-3, #0b1728) 78%, transparent);
+  border: 1px solid var(--hairline, rgba(143, 168, 210, 0.18));
+  border-radius: var(--radius, 16px);
+  transition:
+    border-color 180ms ease,
+    transform 220ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.room-capture-frame:hover {
+  border-color: var(--hairline-strong, rgba(133, 164, 218, 0.3));
+  transform: translateY(-2px);
+}
+
+.room-capture-thumbnail {
+  position: relative;
+  display: grid;
+  place-items: center;
+  aspect-ratio: 4 / 3;
+  overflow: hidden;
+  color: var(--muted-2, #76839a);
+  background: var(--night-2, #07111f);
+}
+
+.room-capture-thumbnail img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.room-capture-thumbnail > svg {
+  font-size: 2rem;
+}
+
+.room-capture-thumbnail > span {
+  position: absolute;
+  inset: 10px auto auto 10px;
+  display: grid;
+  place-items: center;
+  min-width: 30px;
+  height: 30px;
+  padding: 0 7px;
+  color: var(--ink, #f7f9ff);
+  background: rgba(2, 6, 13, 0.76);
+  font-size: 0.68rem;
+  font-variant-numeric: tabular-nums;
+  font-weight: 750;
+  border: 1px solid rgba(247, 249, 255, 0.18);
+  border-radius: 999px;
+  backdrop-filter: blur(10px);
+}
+
+.room-capture-frame-meta {
+  align-items: flex-start;
+  gap: 10px;
+  padding: 13px;
+}
+
+.room-capture-frame-meta > div:first-child {
+  display: grid;
+  flex: 1 1 auto;
+  gap: 4px;
+  min-width: 0;
+}
+
+.room-capture-frame-meta strong {
+  overflow: hidden;
+  font-size: 0.82rem;
+  font-weight: 620;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.room-capture-frame-meta span {
+  color: var(--muted-2, #76839a);
+  font-size: 0.68rem;
+}
+
+.room-capture-order-actions {
+  display: flex;
+  gap: 4px;
+  flex: 0 0 auto;
+}
+
+.room-capture-order-actions button {
+  width: 29px;
+  height: 29px;
+  padding: 0;
+  border-radius: 8px;
+}
+
+.room-capture-order-actions button.is-remove:hover:not(:disabled) {
+  color: var(--red, #ff7f86);
+  border-color: color-mix(in srgb, var(--red, #ff7f86) 38%, transparent);
+}
+
+.room-capture-actions {
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.room-capture-pickers {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.room-capture-input,
+.room-capture-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 46px;
+  gap: 9px;
+  padding: 0 17px;
+  color: var(--ink, #f7f9ff);
+  font-size: 0.84rem;
+  font-weight: 680;
+  border-radius: 999px;
+  cursor: pointer;
+  transition:
+    background-color 160ms ease,
+    border-color 160ms ease,
+    color 160ms ease,
+    opacity 160ms ease,
+    transform 180ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.room-capture-input {
+  background: color-mix(in srgb, var(--night-4, #111f32) 82%, transparent);
+  border: 1px solid var(--hairline-strong, rgba(133, 164, 218, 0.3));
+}
+
+.room-capture-input:first-child {
+  color: var(--night-0, #02060d);
+  background: var(--ink, #f7f9ff);
+  border-color: transparent;
+}
+
+.room-capture-input:hover:not(.is-disabled),
+.room-capture-button:hover:not(:disabled) {
+  transform: translateY(-1px);
+}
+
+.room-capture-input input {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  padding: 0;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+.room-capture-button {
+  border: 1px solid transparent;
+}
+
+.room-capture-button.is-primary {
+  min-width: 146px;
+  color: var(--night-0, #02060d);
+  background: var(--ink, #f7f9ff);
+  box-shadow: 0 12px 30px rgba(0, 0, 0, 0.24);
+}
+
+.room-capture-button.is-secondary {
+  color: var(--ink, #f7f9ff);
+  background: transparent;
+  border-color: var(--hairline-strong, rgba(133, 164, 218, 0.3));
+}
+
+.room-capture-checkpoint {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  margin: -12px 0 0;
+  color: var(--muted-2, #76839a);
+  font-size: 0.7rem;
+}
+
+.room-capture-checkpoint time {
+  color: var(--muted, #a9b4c7);
+}
+
+.room-capture-error {
+  color: color-mix(in srgb, var(--red, #ff7f86) 78%, var(--ink, #f7f9ff));
+  background: color-mix(in srgb, var(--red, #ff7f86) 9%, transparent);
+  border: 1px solid color-mix(in srgb, var(--red, #ff7f86) 25%, transparent);
+}
+
+.room-capture-footer {
+  align-items: flex-end;
+  gap: 24px;
+  padding-top: 24px;
+  border-top: 1px solid var(--hairline, rgba(143, 168, 210, 0.18));
+}
+
+.room-capture-footer > div {
+  display: grid;
+  gap: 4px;
+  max-width: 650px;
+}
+
+.room-capture-footer strong {
+  font-size: 0.84rem;
+}
+
+.room-capture-footer span,
+.room-capture-discard > span {
+  color: var(--muted-2, #76839a);
+  font-size: 0.74rem;
+  line-height: 1.5;
+}
+
+.room-capture-discard {
+  min-height: 30px;
+  gap: 16px;
+}
+
+.room-capture-discard > div,
+.room-capture-inline-actions {
+  gap: 10px;
+}
+
+.room-capture-text-button {
+  padding: 5px 0;
+  color: var(--muted, #a9b4c7);
+  background: transparent;
+  font-size: 0.76rem;
+  font-weight: 650;
+  cursor: pointer;
+}
+
+.room-capture-text-button.is-danger {
+  color: var(--red, #ff7f86);
+}
+
+.room-capture-panel.is-loading,
+.room-capture-panel.is-error,
+.room-capture-panel.is-complete {
+  grid-template-columns: auto 1fr;
+  align-items: center;
+  min-height: 250px;
+}
+
+.room-capture-panel.is-loading > svg,
+.room-capture-panel.is-error > svg,
+.room-capture-complete-mark {
+  width: 58px;
+  height: 58px;
+  padding: 14px;
+  color: var(--cyan, #4ad8f5);
+  background: color-mix(in srgb, var(--cyan, #4ad8f5) 9%, transparent);
+  border: 1px solid
+    color-mix(in srgb, var(--cyan, #4ad8f5) 24%, transparent);
+  border-radius: 50%;
+}
+
+.room-capture-panel.is-loading > div,
+.room-capture-panel.is-error > div,
+.room-capture-panel.is-complete > div {
+  display: grid;
+  gap: 10px;
+}
+
+.room-capture-panel.is-loading strong {
+  font-size: 1rem;
+}
+
+.room-capture-panel.is-loading span,
+.room-capture-panel.is-error p,
+.room-capture-panel.is-complete p {
+  max-width: 620px;
+  margin: 0;
+  color: var(--muted, #a9b4c7);
+  font-size: 0.85rem;
+  line-height: 1.6;
+}
+
+.room-capture-complete-mark {
+  display: grid;
+  place-items: center;
+  color: var(--lime, #9be65e);
+  background: color-mix(in srgb, var(--lime, #9be65e) 9%, transparent);
+  border-color: color-mix(in srgb, var(--lime, #9be65e) 25%, transparent);
+}
+
+.room-capture-complete-mark.is-muted {
+  color: var(--muted, #a9b4c7);
+  background: color-mix(in srgb, var(--muted, #a9b4c7) 8%, transparent);
+  border-color: var(--hairline-strong, rgba(133, 164, 218, 0.3));
+}
+
+.room-capture-spinner {
+  animation: room-capture-spin 900ms linear infinite;
+}
+
+.room-capture-input.is-disabled,
+.room-capture-button:disabled,
+.room-capture-close:disabled,
+.room-capture-order-actions button:disabled,
+.room-capture-text-button:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+  transform: none;
+}
+
+.room-capture-input:focus-within,
+.room-capture-button:focus-visible,
+.room-capture-close:focus-visible,
+.room-capture-order-actions button:focus-visible,
+.room-capture-text-button:focus-visible {
+  outline: 3px solid
+    color-mix(in srgb, var(--cyan, #4ad8f5) 76%, #f7f9ff);
+  outline-offset: 3px;
+}
+
+@keyframes room-capture-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@container (max-width: 680px) {
+  .room-capture-empty {
+    grid-template-columns: 1fr;
+  }
+
+  .room-capture-contact-sheet {
+    max-width: 330px;
+  }
+
+  .room-capture-actions,
+  .room-capture-footer {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .room-capture-pickers {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .room-capture-input,
+  .room-capture-button {
+    width: 100%;
+  }
+
+  .room-capture-actions > .room-capture-button {
+    width: auto;
+    align-self: flex-start;
+  }
+
+  .room-capture-footer .room-capture-button {
+    margin-top: 4px;
+  }
+}
+
+@container (max-width: 470px) {
+  .room-capture-panel {
+    padding: 18px;
+    border-radius: 22px;
+  }
+
+  .room-capture-boundary {
+    display: grid;
+    grid-template-columns: auto 1fr;
+  }
+
+  .room-capture-storage-chip {
+    grid-column: 2;
+    justify-self: start;
+  }
+
+  .room-capture-meter > div,
+  .room-capture-discard {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .room-capture-pickers {
+    grid-template-columns: 1fr;
+    width: 100%;
+  }
+
+  .room-capture-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .room-capture-discard > div {
+    flex-wrap: wrap;
+  }
+
+  .room-capture-panel.is-loading,
+  .room-capture-panel.is-error,
+  .room-capture-panel.is-complete {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .room-capture-frame,
+  .room-capture-input,
+  .room-capture-button,
+  .room-capture-close,
+  .room-capture-order-actions button {
+    transition: none;
+  }
+
+  .room-capture-spinner {
+    animation-duration: 1.8s;
+  }
+}

@@ -1,0 +1,716 @@
+.collector-care-workspace {
+  display: grid;
+  gap: clamp(1rem, 2vw, 1.5rem);
+}
+
+.collector-health-hero,
+.collector-care-section {
+  border: 1px solid color-mix(in srgb, var(--line) 82%, transparent);
+  background: color-mix(in srgb, var(--surface-1) 93%, transparent);
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.14);
+}
+
+.collector-health-hero {
+  position: relative;
+  display: grid;
+  grid-template-columns: minmax(0, 1.25fr) minmax(15rem, 0.65fr);
+  gap: clamp(1.5rem, 4vw, 4rem);
+  overflow: hidden;
+  padding: clamp(1.5rem, 3.4vw, 3.25rem);
+  border-radius: 1.75rem;
+}
+
+.collector-health-hero::after {
+  position: absolute;
+  width: 24rem;
+  height: 24rem;
+  right: -9rem;
+  top: -11rem;
+  border: 1px solid color-mix(in srgb, var(--accent) 28%, transparent);
+  border-radius: 50%;
+  content: "";
+  opacity: 0.7;
+  pointer-events: none;
+}
+
+.collector-health-hero.is-healthy {
+  background:
+    radial-gradient(circle at 88% 12%, rgba(112, 210, 164, 0.13), transparent 32%),
+    color-mix(in srgb, var(--surface-1) 93%, transparent);
+}
+
+.collector-health-hero.is-attention,
+.collector-health-hero.is-urgent {
+  background:
+    radial-gradient(circle at 88% 12%, rgba(145, 111, 255, 0.16), transparent 34%),
+    color-mix(in srgb, var(--surface-1) 93%, transparent);
+}
+
+.collector-health-copy {
+  position: relative;
+  z-index: 1;
+  max-width: 46rem;
+}
+
+.collector-health-copy h2 {
+  max-width: 16ch;
+  margin: 0.45rem 0 0.75rem;
+  font-size: clamp(2rem, 4.5vw, 4.3rem);
+  line-height: 0.98;
+  letter-spacing: -0.055em;
+}
+
+.collector-health-copy > p {
+  max-width: 55ch;
+  color: var(--text-soft);
+  font-size: 1rem;
+  line-height: 1.65;
+}
+
+.collector-health-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  margin-top: 1.5rem;
+}
+
+.collector-health-score {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  align-items: center;
+  align-self: center;
+  gap: 1.1rem;
+}
+
+.collector-health-score > div:last-child {
+  display: grid;
+  gap: 0.35rem;
+}
+
+.collector-health-score strong {
+  font-size: 0.94rem;
+}
+
+.collector-health-score small {
+  max-width: 20rem;
+  color: var(--text-soft);
+  line-height: 1.5;
+}
+
+.collector-progress-ring {
+  display: grid;
+  width: 7.2rem;
+  aspect-ratio: 1;
+  flex: 0 0 auto;
+  place-content: center;
+  border-radius: 50%;
+  background:
+    radial-gradient(circle, var(--surface-1) 59%, transparent 61%),
+    conic-gradient(
+      var(--accent) var(--collector-progress),
+      color-mix(in srgb, var(--line) 75%, transparent) 0
+    );
+  box-shadow:
+    inset 0 0 0 1px color-mix(in srgb, var(--line) 70%, transparent),
+    0 16px 45px rgba(0, 0, 0, 0.22);
+}
+
+.collector-progress-ring span {
+  font-size: 2.25rem;
+  font-weight: 700;
+  line-height: 1;
+  letter-spacing: -0.06em;
+}
+
+.collector-progress-ring small {
+  margin-top: 0.2rem;
+  color: var(--text-soft);
+  text-align: center;
+}
+
+.collector-health-facts {
+  position: relative;
+  z-index: 1;
+  display: grid;
+  grid-column: 1 / -1;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  margin: 0.5rem 0 0;
+  padding-top: 1.35rem;
+  border-top: 1px solid color-mix(in srgb, var(--line) 82%, transparent);
+}
+
+.collector-health-facts > div {
+  display: grid;
+  gap: 0.25rem;
+  padding: 0 1rem;
+  border-left: 1px solid color-mix(in srgb, var(--line) 78%, transparent);
+}
+
+.collector-health-facts > div:first-child {
+  padding-left: 0;
+  border-left: 0;
+}
+
+.collector-health-facts dt {
+  color: var(--text-soft);
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+}
+
+.collector-health-facts dd {
+  margin: 0;
+  font-size: 1.4rem;
+  font-weight: 700;
+}
+
+.collector-care-columns {
+  display: grid;
+  grid-template-columns: minmax(0, 1.2fr) minmax(19rem, 0.8fr);
+  gap: clamp(1rem, 2vw, 1.5rem);
+}
+
+.collector-care-section {
+  padding: clamp(1.25rem, 2.5vw, 2rem);
+  border-radius: 1.5rem;
+}
+
+.collector-section-heading {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.collector-section-heading h2 {
+  margin: 0.35rem 0 0;
+  font-size: clamp(1.45rem, 2vw, 2.1rem);
+  letter-spacing: -0.035em;
+}
+
+.collector-section-heading > svg {
+  width: 1.8rem;
+  height: 1.8rem;
+  color: var(--accent-soft);
+}
+
+.collector-section-intro {
+  max-width: 55ch;
+  color: var(--text-soft);
+  line-height: 1.6;
+}
+
+.collector-alert-list,
+.collector-gap-list,
+.collector-ledger {
+  display: grid;
+  gap: 0.65rem;
+  margin-top: 1.2rem;
+}
+
+.collector-alert,
+.collector-gap-list article {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 0.9rem;
+  padding: 1rem;
+  border: 1px solid color-mix(in srgb, var(--line) 82%, transparent);
+  border-radius: 1rem;
+  background: color-mix(in srgb, var(--surface-2) 74%, transparent);
+}
+
+.collector-alert.is-urgent {
+  border-color: color-mix(in srgb, #ff8a74 34%, var(--line));
+}
+
+.collector-alert-icon {
+  display: grid;
+  width: 2.55rem;
+  aspect-ratio: 1;
+  place-items: center;
+  border-radius: 0.8rem;
+  color: var(--accent-soft);
+  background: color-mix(in srgb, var(--accent) 11%, transparent);
+}
+
+.collector-alert > div,
+.collector-gap-list article > div {
+  display: grid;
+  gap: 0.25rem;
+  min-width: 0;
+}
+
+.collector-alert small,
+.collector-gap-list small {
+  color: var(--text-soft);
+  font-size: 0.72rem;
+  text-transform: capitalize;
+}
+
+.collector-alert button,
+.collector-gap-list button,
+.collector-plan-actions button,
+.collector-ledger-actions button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.4rem;
+  min-height: 2.5rem;
+  padding: 0.65rem 0.85rem;
+  border: 1px solid color-mix(in srgb, var(--line) 80%, transparent);
+  border-radius: 0.8rem;
+  color: var(--text);
+  background: color-mix(in srgb, var(--surface-1) 88%, transparent);
+  font: inherit;
+  font-size: 0.78rem;
+  font-weight: 650;
+  cursor: pointer;
+}
+
+.collector-alert button:hover,
+.collector-gap-list button:hover,
+.collector-plan-actions button:hover,
+.collector-ledger-actions button:hover {
+  border-color: color-mix(in srgb, var(--accent-soft) 55%, var(--line));
+  background: color-mix(in srgb, var(--accent) 10%, var(--surface-1));
+}
+
+.collector-alert button:disabled,
+.collector-gap-list button:disabled,
+.collector-plan-actions button:disabled,
+.collector-ledger-actions button:disabled {
+  cursor: not-allowed;
+  opacity: 0.45;
+}
+
+.collector-quiet-state {
+  display: flex;
+  align-items: flex-start;
+  gap: 1rem;
+  margin-top: 1.2rem;
+  padding: 1.25rem;
+  border: 1px dashed color-mix(in srgb, var(--line) 88%, transparent);
+  border-radius: 1rem;
+  color: var(--text-soft);
+}
+
+.collector-quiet-state > svg {
+  width: 1.7rem;
+  height: 1.7rem;
+  flex: 0 0 auto;
+  color: var(--accent-soft);
+}
+
+.collector-quiet-state strong {
+  display: block;
+  margin-bottom: 0.35rem;
+  color: var(--text);
+}
+
+.collector-quiet-state p {
+  margin: 0;
+  line-height: 1.55;
+}
+
+.collector-quiet-state.is-compact {
+  padding: 1rem;
+}
+
+.collector-plan-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.65rem;
+  margin-top: 1.2rem;
+}
+
+.collector-gap-type {
+  min-width: 4.2rem;
+  padding: 0.35rem 0.5rem;
+  border-radius: 99rem;
+  color: var(--accent-soft);
+  background: color-mix(in srgb, var(--accent) 12%, transparent);
+  font-size: 0.66rem;
+  font-weight: 750;
+  text-align: center;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+
+.collector-gap-type.is-wish {
+  color: #a9d9bf;
+  background: rgba(87, 181, 133, 0.12);
+}
+
+.collector-ledger-section,
+.collector-completion-section {
+  overflow: hidden;
+}
+
+.collector-ledger article {
+  display: grid;
+  grid-template-columns: minmax(13rem, 1fr) minmax(19rem, 1.4fr) auto;
+  align-items: center;
+  gap: 1rem;
+  padding: 1rem 0;
+  border-top: 1px solid color-mix(in srgb, var(--line) 76%, transparent);
+}
+
+.collector-ledger article:first-child {
+  border-top: 0;
+}
+
+.collector-ledger-identity {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  min-width: 0;
+}
+
+.collector-piece-index {
+  display: grid;
+  width: 2.7rem;
+  aspect-ratio: 1;
+  flex: 0 0 auto;
+  place-items: center;
+  border-radius: 0.75rem;
+  color: var(--accent-soft);
+  background: color-mix(in srgb, var(--accent) 10%, transparent);
+}
+
+.collector-ledger-identity > div,
+.collector-ledger dl > div {
+  display: grid;
+  gap: 0.2rem;
+}
+
+.collector-ledger-identity small,
+.collector-ledger dt,
+.collector-ledger dd small {
+  color: var(--text-soft);
+  font-size: 0.72rem;
+}
+
+.collector-ledger dl {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 1rem;
+  margin: 0;
+}
+
+.collector-ledger dt {
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+
+.collector-ledger dd {
+  display: grid;
+  gap: 0.15rem;
+  margin: 0;
+  font-size: 0.85rem;
+  font-weight: 650;
+  text-transform: capitalize;
+}
+
+.collector-ledger-actions {
+  display: flex;
+  gap: 0.45rem;
+}
+
+.collector-dimension-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 1.25rem 1rem;
+  margin-top: 1.5rem;
+}
+
+.collector-dimension-grid > div {
+  display: grid;
+  gap: 0.55rem;
+}
+
+.collector-dimension-grid > div > span {
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+  font-size: 0.8rem;
+}
+
+.collector-dimension-grid small {
+  color: var(--text-soft);
+}
+
+.collector-dimension-track {
+  height: 0.35rem;
+  overflow: hidden;
+  border-radius: 99rem;
+  background: color-mix(in srgb, var(--line) 70%, transparent);
+}
+
+.collector-dimension-track span {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: linear-gradient(90deg, var(--accent), var(--accent-soft));
+}
+
+.collector-care-empty {
+  display: grid;
+  min-height: 20rem;
+  place-content: center;
+  text-align: center;
+}
+
+.collector-care-empty > svg {
+  width: 2.5rem;
+  height: 2.5rem;
+  margin: 0 auto;
+  color: var(--accent-soft);
+}
+
+.collector-dialog-backdrop {
+  position: fixed;
+  z-index: 90;
+  inset: 0;
+  display: grid;
+  justify-items: end;
+  background: rgba(1, 7, 14, 0.72);
+  backdrop-filter: blur(14px);
+}
+
+.collector-record-dialog {
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr);
+  width: min(42rem, 100%);
+  height: 100%;
+  overflow: hidden;
+  border-left: 1px solid color-mix(in srgb, var(--line) 85%, transparent);
+  background:
+    radial-gradient(circle at 100% 0, rgba(85, 72, 186, 0.14), transparent 32%),
+    var(--surface-0);
+  box-shadow: -30px 0 80px rgba(0, 0, 0, 0.35);
+}
+
+.collector-record-dialog > header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 1.5rem clamp(1.25rem, 3vw, 2rem);
+  border-bottom: 1px solid color-mix(in srgb, var(--line) 75%, transparent);
+}
+
+.collector-record-dialog > header h2 {
+  margin: 0.3rem 0 0;
+  font-size: 1.55rem;
+  letter-spacing: -0.035em;
+}
+
+.collector-record-dialog > header > button {
+  display: grid;
+  width: 2.75rem;
+  aspect-ratio: 1;
+  flex: 0 0 auto;
+  place-items: center;
+  border: 1px solid var(--line);
+  border-radius: 0.85rem;
+  color: var(--text);
+  background: var(--surface-2);
+  cursor: pointer;
+}
+
+.collector-record-dialog form {
+  display: flex;
+  min-height: 0;
+  flex-direction: column;
+  gap: 1rem;
+  overflow: auto;
+  padding: clamp(1.25rem, 3vw, 2rem);
+}
+
+.collector-record-dialog label {
+  display: grid;
+  gap: 0.5rem;
+}
+
+.collector-record-dialog label > span {
+  font-size: 0.76rem;
+  font-weight: 700;
+}
+
+.collector-record-dialog input,
+.collector-record-dialog select,
+.collector-record-dialog textarea {
+  width: 100%;
+  border: 1px solid color-mix(in srgb, var(--line) 88%, transparent);
+  border-radius: 0.85rem;
+  padding: 0.8rem 0.9rem;
+  color: var(--text);
+  outline: none;
+  background: color-mix(in srgb, var(--surface-2) 88%, transparent);
+  font: inherit;
+}
+
+.collector-record-dialog textarea {
+  resize: vertical;
+}
+
+.collector-record-dialog input:focus,
+.collector-record-dialog select:focus,
+.collector-record-dialog textarea:focus {
+  border-color: var(--accent-soft);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 18%, transparent);
+}
+
+.collector-form-row {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.85rem;
+}
+
+.collector-checkbox {
+  align-content: center;
+  grid-template-columns: auto 1fr;
+  align-items: center;
+  padding: 0.8rem;
+  border: 1px solid color-mix(in srgb, var(--line) 88%, transparent);
+  border-radius: 0.85rem;
+}
+
+.collector-checkbox input {
+  width: 1.15rem;
+  height: 1.15rem;
+  padding: 0;
+}
+
+.collector-dialog-explainer {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.85rem;
+  padding: 1rem;
+  border: 1px solid color-mix(in srgb, var(--accent-soft) 30%, var(--line));
+  border-radius: 1rem;
+  background: color-mix(in srgb, var(--accent) 9%, transparent);
+}
+
+.collector-dialog-explainer > svg {
+  width: 1.7rem;
+  height: 1.7rem;
+  flex: 0 0 auto;
+  color: var(--accent-soft);
+}
+
+.collector-dialog-explainer p {
+  margin-bottom: 0;
+  color: var(--text-soft);
+  line-height: 1.55;
+}
+
+.collector-form-error {
+  margin: 0;
+  padding: 0.75rem 0.9rem;
+  border: 1px solid rgba(255, 111, 101, 0.28);
+  border-radius: 0.8rem;
+  color: #ffc2bb;
+  background: rgba(173, 52, 45, 0.12);
+}
+
+.collector-record-dialog form > footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-top: auto;
+  padding-top: 1rem;
+  border-top: 1px solid color-mix(in srgb, var(--line) 75%, transparent);
+}
+
+.collector-record-dialog footer > p {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  margin: 0;
+  color: var(--text-soft);
+  font-size: 0.73rem;
+}
+
+.collector-record-dialog footer > div {
+  display: flex;
+  gap: 0.65rem;
+}
+
+@media (max-width: 980px) {
+  .collector-health-hero,
+  .collector-care-columns {
+    grid-template-columns: 1fr;
+  }
+
+  .collector-health-score {
+    align-self: start;
+  }
+
+  .collector-ledger article {
+    grid-template-columns: 1fr;
+  }
+
+  .collector-ledger-actions {
+    justify-content: flex-start;
+  }
+
+  .collector-dimension-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 640px) {
+  .collector-health-hero,
+  .collector-care-section {
+    border-radius: 1.15rem;
+  }
+
+  .collector-health-facts {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 1rem 0;
+  }
+
+  .collector-health-facts > div:nth-child(3) {
+    padding-left: 0;
+    border-left: 0;
+  }
+
+  .collector-alert,
+  .collector-gap-list article {
+    grid-template-columns: auto minmax(0, 1fr);
+  }
+
+  .collector-alert button,
+  .collector-gap-list button {
+    grid-column: 2;
+    justify-self: start;
+  }
+
+  .collector-ledger dl,
+  .collector-dimension-grid,
+  .collector-form-row {
+    grid-template-columns: 1fr;
+  }
+
+  .collector-record-dialog form > footer {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .collector-record-dialog footer > div {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .collector-care-workspace *,
+  .collector-record-dialog * {
+    scroll-behavior: auto !important;
+    transition-duration: 0.01ms !important;
+  }
+}
