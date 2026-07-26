@@ -7,15 +7,14 @@ export type LocationOutcome =
   | { readonly ok: false; readonly reason: "permission" | "unavailable" };
 
 export async function readCurrentLocation(): Promise<LocationOutcome> {
-  const permission = await Location.requestForegroundPermissionsAsync();
-  if (!permission.granted) {
-    return {
-      ok: false,
-      reason: "permission"
-    };
-  }
-
   try {
+    const permission = await Location.requestForegroundPermissionsAsync();
+    if (!permission.granted) {
+      return {
+        ok: false,
+        reason: "permission"
+      };
+    }
     const position = await Location.getCurrentPositionAsync({
       accuracy: Location.Accuracy.Highest
     });

@@ -26,7 +26,6 @@ native development builds.
 ## Commands
 
 ```bash
-npm run start:go
 npm run android
 npm run typecheck
 npm test
@@ -35,9 +34,11 @@ npm run build:preview
 ```
 
 The SQLCipher and native AES modules require an Expo development build for the
-security acceptance gate. Expo Go can be used for visual work, but ALYR labels
-any memory fallback as session-only. The web preview intentionally does not
-claim encrypted persistence.
+security acceptance gate. During the Expo SDK 57 transition, physical iPhone
+testing through the App Store Expo Go client uses the sibling
+`asset-continuity-ios-preview` SDK 54 companion. That companion reuses these
+screens but selects explicit session-only adapters. The web preview likewise
+does not claim encrypted persistence.
 
 Cloud authentication and attachment upload orchestration are still release
 gates. The client will not send an evidence-version operation until its blob

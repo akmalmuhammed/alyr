@@ -35,6 +35,8 @@ asset-continuity-native/.eas/
 asset-continuity-native/dist-preview/
 asset-continuity-native/android/
 asset-continuity-native/ios/
+asset-continuity-ios-preview/.expo/
+asset-continuity-ios-preview/.expo-ios-bundle/
 
 # Local databases, vault state, and recovery artifacts
 **/*.db

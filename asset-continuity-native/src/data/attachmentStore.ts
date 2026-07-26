@@ -12,6 +12,7 @@ import type { CapturedFile } from "@/domain/model";
 import {
   ExpoSecureKeyStore
 } from "@/data/secureKeyStore";
+import { isExpoGoPreview } from "@/runtime/environment";
 
 const ATTACHMENT_KEY_NAME = "alyr.native.attachment-key.v1";
 
@@ -104,7 +105,11 @@ class EncryptedFileAttachmentStore implements AttachmentStore {
 }
 
 export function createDefaultAttachmentStore(): AttachmentStore {
-  if (Platform.OS === "web" || process.env.NODE_ENV === "test") {
+  if (
+    Platform.OS === "web" ||
+    process.env.NODE_ENV === "test" ||
+    isExpoGoPreview
+  ) {
     return new MemoryPreviewAttachmentStore();
   }
   return new EncryptedFileAttachmentStore();

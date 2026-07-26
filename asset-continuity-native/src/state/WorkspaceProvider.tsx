@@ -39,6 +39,7 @@ import {
   recordRetrieval,
   setWorkspaceLanguage
 } from "@/domain/workspace";
+import { isSessionPreview } from "@/runtime/environment";
 
 interface RepositoryInfo {
   readonly kind: NativeWorkspaceRepository["kind"];
@@ -50,6 +51,7 @@ interface WorkspaceContextValue {
   readonly workspace: NativeWorkspace | null;
   readonly loading: boolean;
   readonly saving: boolean;
+  readonly storageReady: boolean;
   readonly error: string | null;
   readonly repository: RepositoryInfo;
   readonly pendingOperationCount: number;
@@ -181,6 +183,7 @@ export function WorkspaceProvider({
   const [workspace, setWorkspace] = useState<NativeWorkspace | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [storageReady, setStorageReady] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [pendingOperationCount, setPendingOperationCount] = useState(0);
   const [repository, setRepository] = useState<NativeWorkspaceRepository>(
@@ -189,6 +192,7 @@ export function WorkspaceProvider({
 
   const workspaceRef = useRef<NativeWorkspace | null>(null);
   const revisionRef = useRef(0);
+  const storageReadyRef = useRef(false);
   const queueRef = useRef<Promise<unknown>>(Promise.resolve());
   const attachmentStoreRef = useRef<AttachmentStore>(
     createDefaultAttachmentStore()
@@ -214,6 +218,8 @@ export function WorkspaceProvider({
           return;
         }
         setRepository(nextRepository);
+        storageReadyRef.current = true;
+        setStorageReady(true);
         revisionRef.current = loaded.revision;
         if (loaded.snapshot !== null) {
           if (!isNativeWorkspace(loaded.snapshot)) {
@@ -229,7 +235,9 @@ export function WorkspaceProvider({
       } catch {
         if (active) {
           setError(
-            "Local storage could not be opened. This preview will remain session-only."
+            isSessionPreview
+              ? "The preview store could not be opened. Nothing was overwritten."
+              : "The encrypted vault could not be opened. Saving is blocked so ALYR never falls back to plaintext storage."
           );
         }
       } finally {
@@ -248,6 +256,11 @@ export function WorkspaceProvider({
       nextWorkspace: NativeWorkspace,
       operations: readonly SyncOperation[]
     ): Promise<void> => {
+      if (!storageReadyRef.current) {
+        throw new Error(
+          "The local vault is unavailable. Nothing was saved."
+        );
+      }
       const expectedRevision = revisionRef.current;
       const nextRevision = expectedRevision + 1;
       const result = await repository.commit({
@@ -464,6 +477,7 @@ export function WorkspaceProvider({
       workspace,
       loading,
       saving,
+      storageReady,
       error,
       repository: {
         kind: repository.kind,
@@ -492,6 +506,7 @@ export function WorkspaceProvider({
       replaceWithPersonalWorkspace,
       repository,
       saving,
+      storageReady,
       startWorkspace,
       workspace
     ]

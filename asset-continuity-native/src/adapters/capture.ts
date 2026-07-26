@@ -19,11 +19,11 @@ function fromImageAsset(asset: ImagePicker.ImagePickerAsset): CapturedFile {
 }
 
 export async function takeAssetPhoto(): Promise<CaptureOutcome> {
-  const permission = await ImagePicker.requestCameraPermissionsAsync();
-  if (!permission.granted) {
-    return { ok: false, reason: "permission" };
-  }
   try {
+    const permission = await ImagePicker.requestCameraPermissionsAsync();
+    if (!permission.granted) {
+      return { ok: false, reason: "permission" };
+    }
     const result = await ImagePicker.launchCameraAsync({
       mediaTypes: ["images"],
       allowsEditing: false,
@@ -40,11 +40,12 @@ export async function takeAssetPhoto(): Promise<CaptureOutcome> {
 }
 
 export async function chooseAssetPhoto(): Promise<CaptureOutcome> {
-  const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
-  if (!permission.granted) {
-    return { ok: false, reason: "permission" };
-  }
   try {
+    const permission =
+      await ImagePicker.requestMediaLibraryPermissionsAsync();
+    if (!permission.granted) {
+      return { ok: false, reason: "permission" };
+    }
     const result = await ImagePicker.launchImageLibraryAsync({
       mediaTypes: ["images"],
       allowsMultipleSelection: false,

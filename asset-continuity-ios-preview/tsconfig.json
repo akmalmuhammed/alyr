@@ -1,0 +1,34 @@
+{
+  "extends": "expo/tsconfig.base",
+  "compilerOptions": {
+    "strict": true,
+    "noUncheckedIndexedAccess": true,
+    "exactOptionalPropertyTypes": true,
+    "baseUrl": ".",
+    "paths": {
+      "@/data/attachmentStore": [
+        "./src/data/attachmentStore.ts"
+      ],
+      "@/data/createRepository": [
+        "./src/data/createRepository.ts"
+      ],
+      "@/*": [
+        "../asset-continuity-native/src/*"
+      ]
+    },
+    "types": [
+      "react",
+      "react-native"
+    ]
+  },
+  "include": [
+    "app/**/*.ts",
+    "app/**/*.tsx",
+    "src/**/*.ts",
+    "src/**/*.tsx",
+    "../asset-continuity-native/app/**/*.ts",
+    "../asset-continuity-native/app/**/*.tsx",
+    "../asset-continuity-native/src/**/*.ts",
+    "../asset-continuity-native/src/**/*.tsx"
+  ]
+}

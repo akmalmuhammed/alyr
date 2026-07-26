@@ -19,6 +19,7 @@ import { useMemo, useState } from "react";
 import {
   Alert,
   Image,
+  Linking,
   Pressable,
   StyleSheet,
   Text,
@@ -111,7 +112,43 @@ export default function CaptureScreen() {
 
   if (!workspace) return null;
 
-  const close = () => router.back();
+  const close = () => {
+    const hasDraft =
+      name.trim().length > 0 ||
+      photo !== null ||
+      evidence !== null ||
+      placeName.trim().length > 0 ||
+      address.trim().length > 0 ||
+      region.trim().length > 0 ||
+      roomName.trim().length > 0 ||
+      pin !== null;
+    if (!hasDraft) {
+      router.back();
+      return;
+    }
+    Alert.alert(
+      "Discard this draft?",
+      "The current capture has not been saved.",
+      [
+        { text: "Keep editing", style: "cancel" },
+        {
+          text: "Discard draft",
+          style: "destructive",
+          onPress: () => router.back()
+        }
+      ]
+    );
+  };
+
+  const showPermissionRecovery = (title: string, message: string) => {
+    Alert.alert(title, message, [
+      { text: "Not now", style: "cancel" },
+      {
+        text: "Open Settings",
+        onPress: () => void Linking.openSettings()
+      }
+    ]);
+  };
 
   const selectCategory = (nextId: string) => {
     const nextCategory = CATEGORY_CHOICES.find(
@@ -147,7 +184,7 @@ export default function CaptureScreen() {
     if (outcome.ok) {
       acceptCapturedFile(outcome.file, setPhoto);
     } else if (outcome.reason === "permission") {
-      Alert.alert(
+      showPermissionRecovery(
         "Camera permission is off",
         "You can continue without a photo or enable camera access in system settings."
       );
@@ -164,7 +201,7 @@ export default function CaptureScreen() {
     if (outcome.ok) {
       acceptCapturedFile(outcome.file, setPhoto);
     } else if (outcome.reason === "permission") {
-      Alert.alert(
+      showPermissionRecovery(
         "Photo access is off",
         "You can continue without a photo or enable selected-photo access in system settings."
       );
@@ -195,12 +232,17 @@ export default function CaptureScreen() {
     if (outcome.ok) {
       setPin(outcome.pin);
     } else {
-      Alert.alert(
-        outcome.reason === "permission"
-          ? "Location permission is off"
-          : "Current location unavailable",
-        "You can save the Place without a pin. A locality label will not be presented as an exact property location."
-      );
+      if (outcome.reason === "permission") {
+        showPermissionRecovery(
+          "Location permission is off",
+          "You can continue without a pin or enable location access in system settings."
+        );
+      } else {
+        Alert.alert(
+          "Current location unavailable",
+          "You can save the Place without a pin. A locality label will not be presented as an exact property location."
+        );
+      }
     }
   };
 
@@ -216,18 +258,22 @@ export default function CaptureScreen() {
           confirmedAt: new Date().toISOString()
         }
       : null;
-    const place = await createPlace({
-      name: placeName,
-      addressSummary: address.trim() || null,
-      regionLabel: region.trim() || "Unspecified region",
-      roomName: roomName.trim() || null,
-      pin: confirmedPin
-    });
-    setPlaceId(place.id);
-    setRoomId(place.rooms[0]?.id ?? null);
-    setLocationStatus(place.rooms.length > 0 ? "known" : "needs-detail");
-    setShowPlaceForm(false);
-    return place;
+    try {
+      const place = await createPlace({
+        name: placeName,
+        addressSummary: address.trim() || null,
+        regionLabel: region.trim() || "Unspecified region",
+        roomName: roomName.trim() || null,
+        pin: confirmedPin
+      });
+      setPlaceId(place.id);
+      setRoomId(place.rooms[0]?.id ?? null);
+      setLocationStatus(place.rooms.length > 0 ? "known" : "needs-detail");
+      setShowPlaceForm(false);
+      return place;
+    } catch {
+      return null;
+    }
   };
 
   const savePlaceOnly = async () => {
@@ -259,18 +305,22 @@ export default function CaptureScreen() {
   };
 
   const saveAsset = async () => {
-    const asset = await createAsset({
-      name,
-      categoryId: selectedCategory.id,
-      categoryLabel: selectedCategory.label,
-      photo,
-      locationStatus: physical ? locationStatus : "known",
-      placeId: physical ? placeId : null,
-      roomId: physical ? roomId : null,
-      locatorText: physical ? locatorText : null,
-      evidence
-    });
-    router.replace(`/asset/${asset.id}`);
+    try {
+      const asset = await createAsset({
+        name,
+        categoryId: selectedCategory.id,
+        categoryLabel: selectedCategory.label,
+        photo,
+        locationStatus: physical ? locationStatus : "known",
+        placeId: physical ? placeId : null,
+        roomId: physical ? roomId : null,
+        locatorText: physical ? locatorText : null,
+        evidence
+      });
+      router.replace(`/asset/${asset.id}`);
+    } catch {
+      // WorkspaceProvider keeps the draft visible and presents the error.
+    }
   };
 
   if (placeOnly) {

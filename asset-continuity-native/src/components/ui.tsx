@@ -17,6 +17,7 @@ import {
 import { SafeAreaView } from "react-native-safe-area-context";
 
 import { useCopy } from "@/i18n/copy";
+import { isExpoGoPreview } from "@/runtime/environment";
 import {
   colors,
   gradients,
@@ -54,6 +55,18 @@ export function AppScreen({
       style={styles.safeArea}
       testID={testID}
     >
+      {isExpoGoPreview ? (
+        <View
+          accessibilityLabel="iPhone preview. Data resets when this Expo Go session closes."
+          accessibilityRole="summary"
+          style={styles.previewBanner}
+        >
+          <View style={styles.previewDot} />
+          <Text style={styles.previewBannerText}>
+            IPHONE PREVIEW · SESSION ONLY
+          </Text>
+        </View>
+      ) : null}
       {scroll ? (
         <ScrollView
           contentContainerStyle={styles.scrollContent}
@@ -456,6 +469,30 @@ const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
     backgroundColor: colors.canvas
+  },
+  previewBanner: {
+    minHeight: 32,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 8,
+    paddingHorizontal: spacing.md,
+    borderBottomWidth: 1,
+    borderBottomColor: "rgba(183, 243, 74, 0.2)",
+    backgroundColor: colors.surface
+  },
+  previewDot: {
+    width: 6,
+    height: 6,
+    borderRadius: radius.round,
+    backgroundColor: colors.volt
+  },
+  previewBannerText: {
+    color: colors.textMuted,
+    fontFamily: typography.bodyMedium,
+    fontSize: 11,
+    lineHeight: 16,
+    letterSpacing: 1.1
   },
   scrollContent: {
     flexGrow: 1

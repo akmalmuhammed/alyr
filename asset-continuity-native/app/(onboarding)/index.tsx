@@ -21,6 +21,7 @@ import {
   Surface
 } from "@/components/ui";
 import type { WorkspaceMode } from "@/domain/model";
+import { isExpoGoPreview } from "@/runtime/environment";
 import { useWorkspace } from "@/state/WorkspaceProvider";
 import {
   colors,
@@ -32,19 +33,34 @@ import {
 
 export default function OnboardingScreen() {
   const router = useRouter();
-  const { error, clearError, saving, startWorkspace } = useWorkspace();
-  const [choice, setChoice] = useState<WorkspaceMode>("personal");
+  const {
+    error,
+    clearError,
+    saving,
+    startWorkspace,
+    storageReady
+  } = useWorkspace();
+  const [choice, setChoice] = useState<WorkspaceMode>(
+    isExpoGoPreview ? "sample" : "personal"
+  );
 
   const start = async () => {
-    await startWorkspace(choice);
-    router.replace("/(tabs)");
+    try {
+      await startWorkspace(choice);
+      router.replace("/(tabs)");
+    } catch {
+      // WorkspaceProvider presents the recoverable error without a dev redbox.
+    }
   };
 
   return (
     <AppScreen contentStyle={styles.screen} testID="onboarding-screen">
       <View style={styles.brandRow}>
         <BrandMark />
-        <StatusPill label="Private by design" tone="volt" />
+        <StatusPill
+          label={isExpoGoPreview ? "Test preview" : "Private by design"}
+          tone={isExpoGoPreview ? "warning" : "volt"}
+        />
       </View>
 
       <View style={styles.hero}>
@@ -63,9 +79,17 @@ export default function OnboardingScreen() {
       <View accessibilityRole="radiogroup" style={styles.choiceList}>
         <WorkspaceChoice
           active={choice === "personal"}
-          description="Begin with an empty household. Nothing from the sample will enter your personal workspace."
+          description={
+            isExpoGoPreview
+              ? "Use only non-sensitive test information. This temporary Expo Go workspace resets with the session."
+              : "Begin with an empty household. Nothing from the sample will enter your personal workspace."
+          }
           icon={FingerprintSimple}
-          label="Start my private workspace"
+          label={
+            isExpoGoPreview
+              ? "Start a temporary test"
+              : "Start my private workspace"
+          }
           onPress={() => setChoice("personal")}
         />
         <WorkspaceChoice
@@ -84,8 +108,9 @@ export default function OnboardingScreen() {
         <View style={styles.privacyCopy}>
           <Text style={styles.privacyTitle}>Your device is the first vault</Text>
           <BodyText muted>
-            The pilot starts local-first. Cloud sync is never implied until a
-            server acknowledges it.
+            {isExpoGoPreview
+              ? "This free iPhone preview tests the real flow, camera, documents, and location. Encrypted persistence is reserved for the signed ALYR build."
+              : "The pilot starts local-first. Cloud sync is never implied until a server acknowledges it."}
           </BodyText>
         </View>
       </Surface>
@@ -94,9 +119,14 @@ export default function OnboardingScreen() {
         accessibilityHint="Creates the selected workspace on this device"
         icon={ArrowRight}
         label={
-          choice === "personal" ? "Create private workspace" : "Open sample"
+          choice === "personal"
+            ? isExpoGoPreview
+              ? "Start temporary preview"
+              : "Create private workspace"
+            : "Open sample"
         }
         loading={saving}
+        disabled={!storageReady}
         onPress={() => void start()}
       />
       <View style={styles.footnote}>

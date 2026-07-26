@@ -24,6 +24,7 @@ import {
   Surface
 } from "@/components/ui";
 import { useCopy } from "@/i18n/copy";
+import { isExpoGoPreview } from "@/runtime/environment";
 import { useWorkspace } from "@/state/WorkspaceProvider";
 import { colors, radius, spacing, typography } from "@/theme/tokens";
 
@@ -158,11 +159,19 @@ export default function VaultScreen() {
             </Text>
           </View>
         </View>
-        <SecondaryButton
-          icon={FingerprintSimple}
-          label="Test biometric unlock"
-          onPress={() => void authenticate()}
-        />
+        {isExpoGoPreview ? (
+          <BodyText muted>
+            Face ID is intentionally excluded from Expo Go. It is verified in
+            the signed ALYR development build, where the app owns its native
+            permission message.
+          </BodyText>
+        ) : (
+          <SecondaryButton
+            icon={FingerprintSimple}
+            label="Test biometric unlock"
+            onPress={() => void authenticate()}
+          />
+        )}
       </Surface>
 
       <Surface>

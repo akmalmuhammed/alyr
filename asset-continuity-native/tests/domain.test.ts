@@ -1,6 +1,7 @@
 import { calculateNativeAssetReadiness, workspaceProgress } from "@/domain/readiness";
 import { createWorkspace } from "@/domain/sample";
 import { addAsset, addPlace, recordRetrieval } from "@/domain/workspace";
+import { classifyRuntime } from "@/runtime/environment";
 
 function context() {
   let sequence = 0;
@@ -11,6 +12,23 @@ function context() {
 }
 
 describe("native Quick Passport domain", () => {
+  it("keeps Expo Go in preview while signed native builds remain secure", () => {
+    expect(
+      classifyRuntime({
+        expoGo: true,
+        platform: "ios",
+        test: false
+      })
+    ).toBe("expo-go-preview");
+    expect(
+      classifyRuntime({
+        expoGo: false,
+        platform: "ios",
+        test: false
+      })
+    ).toBe("native-secure");
+  });
+
   it("creates a Place and Asset Passport without inventing location precision", () => {
     const initial = createWorkspace("personal", "2026-07-25T09:00:00.000Z");
     const placeResult = addPlace(
