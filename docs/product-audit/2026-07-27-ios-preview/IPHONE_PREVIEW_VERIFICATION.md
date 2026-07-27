@@ -17,10 +17,14 @@ Verified on **28 July 2026** for the zero-cost Expo Go walkthrough.
 - LAN manifest: HTTP 200
 - Manifest runtime: `exposdk:54.0.0`
 - LAN iOS development bundle: HTTP 200
-- Root-owned LAN iOS development bundle: `21,501,268` bytes on the latest
-  restart
+- Root-owned LAN iOS development bundle: `21,511,394` bytes on the latest
+  restart, SHA-256
+  `156D40C721AEB02C69A9675AED6E31F80EA1FB8B5DCF1A93DB3097BBDAA73C3D`
 - The development-bundle hash may change when Metro restarts; the clean
   static-export hash below is the reproducibility gate.
+- Metro watches only the canonical native app and shared package roots. An
+  exact temporary-tree create/delete volatility probe completed while Metro
+  stayed alive.
 
 The PC and iPhone must remain on the same Wi-Fi network. The local IP can
 change after reconnecting the PC or router; run `START_IPHONE_PREVIEW.ps1` and
@@ -29,17 +33,17 @@ use the new QR code if that happens.
 ## Current Expo Go gates
 
 - SDK 54 iPhone companion: TypeScript passed.
-- SDK 54 iPhone companion: **9/9 preview-contract tests passed**.
+- SDK 54 iPhone companion: **10/10 preview-contract tests passed**.
 - Companion route parity: **43/43 canonical route files**.
 - Expo public configuration reports SDK 54 and
   `dataPolicy: session-only`.
 - SDK 54 iOS Hermes export: **4,813 modules**.
-- SDK 54 Hermes bytecode: `12,400,575` bytes.
+- SDK 54 Hermes bytecode: `12,407,523` bytes.
 - SDK 54 Hermes SHA-256:
-  `4A78255F7684142AC846803AAFDCCF113F17697DF5443E9B130C28D8E932BB87`.
-- Complete SDK 54 export: **49 files / 23,814,363 bytes**.
+  `A56E10579AD7E80765D67CA59F6709FC285B5B70EB733E2F589654621A203AD7`.
+- Complete SDK 54 export: **49 files / 23,821,311 bytes**.
 - Static export metadata SHA-256:
-  `86287C1B1E11FA691FAFA087650A186706F20176FD6FCD6ECDCCFB2F2D276AF0`.
+  `338BE8E1F6F7070DB11648F7881ACBBB59337B5F0B3E59284E915D15F4FE29A8`.
 
 The signed application and backend have their own release evidence. This
 document records only the free, session-only Expo Go companion.

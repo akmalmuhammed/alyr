@@ -19,6 +19,10 @@ const windowsLauncherSource = await readFile(
   new URL("../START_IPHONE_PREVIEW.cmd", import.meta.url),
   "utf8"
 );
+const metroConfigSource = await readFile(
+  new URL("../metro.config.js", import.meta.url),
+  "utf8"
+);
 const previewAttachmentStoreSource = await readFile(
   new URL("../src/data/attachmentStore.ts", import.meta.url),
   "utf8"
@@ -69,6 +73,28 @@ test("the personal iPhone helper builds shared packages before Expo starts", () 
   assert.match(
     windowsLauncherSource,
     /-ExecutionPolicy Bypass -File "%~dp0START_IPHONE_PREVIEW\.ps1"/u
+  );
+});
+
+test("Metro watches product sources without volatile workspace collateral", () => {
+  assert.match(metroConfigSource, /asset-continuity-native/u);
+  for (const packageName of [
+    "analytics",
+    "contracts",
+    "design-tokens",
+    "domain",
+    "fixtures"
+  ]) {
+    assert.match(metroConfigSource, new RegExp(`"${packageName}"`, "u"));
+  }
+  assert.match(
+    metroConfigSource,
+    /\.filter\(\s*\(folder\) => path\.resolve\(folder\) !== workspaceRoot/u
+  );
+  assert.doesNotMatch(
+    metroConfigSource,
+    /watchFolders\s*=\s*\[[\s\S]{0,160}workspaceRoot\s*\]/u,
+    "the repository root would make transient browser/build directories fatal to Metro"
   );
 });
 

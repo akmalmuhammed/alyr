@@ -39,18 +39,22 @@ The QR was regenerated from the confirmed LAN URL at 768 x 768. SHA-256: `7FAA1C
 
 - The live LAN manifest returns HTTP 200 and reports Expo SDK 54.
 - The root-owned live iOS development bundle returns HTTP 200. The latest
-  restart served `21,501,268` bytes. Development-bundle hashes may change after
-  a Metro restart, so the clean static-export hash below is the reproducibility
-  gate.
+  restart served `21,511,394` bytes with SHA-256
+  `156D40C721AEB02C69A9675AED6E31F80EA1FB8B5DCF1A93DB3097BBDAA73C3D`.
+  Development-bundle hashes may change after a Metro restart, so the clean
+  static-export hash below is the reproducibility gate.
+- Metro watches only the canonical native app and shared package roots. An
+  exact temporary-tree create/delete volatility probe completed while Metro
+  stayed alive.
 - The companion TypeScript check passes.
-- The companion passes **9/9** preview-contract tests and mirrors **43/43**
+- The companion passes **10/10** preview-contract tests and mirrors **43/43**
   canonical route files.
 - The clean SDK 54 iOS Hermes export contains **4,813 modules**. Its
-  `12,400,575`-byte bundle has SHA-256
-  `4A78255F7684142AC846803AAFDCCF113F17697DF5443E9B130C28D8E932BB87`.
-- The complete static export is **49 files / 23,814,363 bytes**. Its metadata
+  `12,407,523`-byte bundle has SHA-256
+  `A56E10579AD7E80765D67CA59F6709FC285B5B70EB733E2F589654621A203AD7`.
+- The complete static export is **49 files / 23,821,311 bytes**. Its metadata
   has SHA-256
-  `86287C1B1E11FA691FAFA087650A186706F20176FD6FCD6ECDCCFB2F2D276AF0`.
+  `338BE8E1F6F7070DB11648F7881ACBBB59337B5F0B3E59284E915D15F4FE29A8`.
 
 These are local configuration, contract, manifest, and bundle results. This
 handoff does not claim that the current build has been opened or walked through
