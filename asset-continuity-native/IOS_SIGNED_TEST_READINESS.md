@@ -14,14 +14,16 @@ store submission is claimed.
 | Path | Status | Cost/account gate | Evidence produced |
 |---|---|---|---|
 | App Store Expo Go companion | **READY TO SCAN; DEVICE WALKTHROUGH OPEN** | No Apple Developer membership or ALYR App Store listing | Session-only product, design and permission-flow walkthrough |
+| EAS `development-simulator` build | **FINISHED / VERIFIED** | No Apple signing credentials; macOS is required to run iOS Simulator | Cloud-built `ALYR.app` archive plus inspected iOS metadata and privacy manifest |
 | Signed EAS development build | **CONFIG READY; EXTERNAL GATE OPEN** | Paid Apple membership plus test-iPhone UDID | Native modules, SQLCipher, SecureStore, Face ID and Metro development |
 | Signed EAS preview build | **CONFIG READY; EXTERNAL GATE OPEN** | Paid membership plus test-iPhone UDID | Standalone ad hoc ALYR build without Metro |
 | TestFlight production build | **CONFIG READY; EXTERNAL GATE OPEN** | Paid membership, App Store Connect record and distribution credentials | Store-signed installation; internal TestFlight does not require the device UDID |
 
-The free companion remains on SDK 54 because Expo's current physical-iPhone
-guidance says the App Store Expo Go client supports SDK 54. iOS does not offer
-side-loading of another Expo Go version. Recheck this dated compatibility gate
-immediately before scanning if the App Store client updates.
+The separate `asset-continuity-ios-preview` Expo Go companion remains on SDK 54
+because Expo's current physical-iPhone guidance says the App Store Expo Go
+client supports SDK 54. The signed native target in this directory uses SDK 57.
+iOS does not offer side-loading of another Expo Go version. Recheck this dated
+compatibility gate immediately before scanning if the App Store client updates.
 
 ## Live account and backend audit
 
@@ -31,7 +33,9 @@ The following checks were run on 2026-07-27 with the pinned EAS CLI:
 - The account owns both `akmalmuhammed93` and `alyr-app`.
 - `eas project:info` resolved the checked-in project ID to
   `@alyr-app/alyr-asset-continuity`.
-- `eas build:list --platform ios` returned no prior iOS builds.
+- The initial `eas build:list --platform ios` check returned no prior iOS
+  builds. The first `development-simulator` build has since finished and is
+  recorded in the release-artifact evidence below.
 - `eas device:list` reported no Apple teams for `alyr-app`; no registered
   physical iPhone or provisioning profile is therefore present yet.
 - Project-scoped EAS environments now contain the public
@@ -70,6 +74,10 @@ remain open gates.
 - The Expo owner, slug, and project ID are fixed in `app.config.ts` so a local
   environment variable cannot silently redirect a release archive.
 - EAS CLI is pinned to `21.2.0`.
+- Every EAS profile now selects its named server environment explicitly:
+  `development`, `preview`, or `production`. The simulator profile inherits
+  `development`. This prevents distribution heuristics from selecting a
+  different public Supabase configuration.
 - The iOS bundle ID is fixed at `com.alyr.continuity`.
 - The `alyr` custom URL scheme matches the implemented callback routes:
   `alyr://callback` and `alyr://reset-password`.
@@ -79,6 +87,10 @@ remain open gates.
 - Camera, selected-photo, in-use location, and Face ID purpose strings are
   specific to the related user action. Background location, motion, camera
   audio, and barcode capabilities are disabled.
+- Generated iOS transport configuration sets
+  `NSAllowsArbitraryLoads = false`. The local-network transport allowance
+  remains only to support Expo development-client discovery; public Supabase
+  traffic and EAS updates use HTTPS.
 - `.easignore` mirrors the repository security exclusions and removes local
   client work, output, credentials, databases, recovery files, build products,
   and developer state from the EAS archive while retaining every npm workspace
@@ -128,6 +140,33 @@ The canonical iOS JavaScript bundle SHA-256 is:
 This artifact is an unsigned static iOS export used for deterministic
 packaging verification. It is not evidence of a signed binary installation or
 physical-device execution.
+
+### EAS iOS Simulator development artifact
+
+EAS build
+[`b2f2abcf-0bb4-421d-b668-ba1e9f0642ad`](https://expo.dev/accounts/alyr-app/projects/alyr-asset-continuity/builds/b2f2abcf-0bb4-421d-b668-ba1e9f0642ad)
+finished at `2026-07-27T22:57:57.360Z` from clean commit
+`2bc447b7ab453a975161fbc83373abc668c0c18b`.
+
+- Profile: `development-simulator`
+- Result: **FINISHED / VERIFIED**
+- Target: iOS Simulator only; physical-iPhone signing remains a separate Apple
+  account gate.
+- Artifact:
+  [`VbFTYqXVAWOpkKKSJ_8G4WJ0c8XDNv6gApxW0o1N5YM.tar.gz`](https://expo.dev/artifacts/eas/VbFTYqXVAWOpkKKSJ_8G4WJ0c8XDNv6gApxW0o1N5YM.tar.gz)
+- Archive size: **57,514,636 bytes**
+- Archive SHA-256:
+  `6019840933DB40ACD8EAFE1AAFB7EBE47ACEB0E83085CB8FC8D4D8C740804303`
+- Archive inspection found **137 entries** and the expected `ALYR.app`.
+- `Info.plist` confirms bundle `com.alyr.continuity`, version `0.1.0`, build
+  `1`, the reviewed camera/photo/location/Face ID purpose strings, no
+  `UIBackgroundModes`, and `ITSAppUsesNonExemptEncryption = false`.
+- `Expo.plist` confirms runtime `0.1.0` and the `development` channel.
+- Both compressed EAS logs were decoded and scanned. Neither contains a fatal
+  or build-error line, and the Xcode transcript ends with `** BUILD SUCCEEDED **`.
+  The remaining compiler notices originate in Expo/React Native dependencies.
+- `PrivacyInfo.xcprivacy` is present and matches the reviewed app privacy
+  declaration.
 
 ## EAS profiles
 
@@ -259,11 +298,31 @@ been observed or claimed by this repository.
 
 1. Complete the paid membership and App Store Connect agreements.
 2. Create the ALYR app record for `com.alyr.continuity`.
-3. Complete App Privacy, export-compliance, age-rating and beta metadata.
+3. Complete App Privacy, export-compliance, age-rating and beta metadata,
+   including verified operator contact, support URL and privacy-policy URL.
 4. Run `eas build --platform ios --profile production`, submit the build, add
    the account as an internal tester and install from TestFlight.
 5. Run signed-build parity checks. External testers additionally require
    Apple's Beta App Review.
+
+### External-beta and public-link hardening
+
+The personal/internal pilot currently uses the installed-app-only custom scheme
+for confirmation, password reset and household invitations:
+`alyr://callback`, `alyr://reset-password`, and `alyr://join?...`.
+Before invitations or account links are sent to external testers or public
+users, provision an owned HTTPS domain and complete all three linked changes:
+
+1. Host a valid Apple App Site Association file for the ALYR application
+   identifier and link paths.
+2. Add the matching `applinks:` domain to `ios.associatedDomains`, then create a
+   fresh signed binary and verify both installed and not-installed behavior.
+3. Add the HTTPS callback/reset URLs to Supabase's redirect allow-list and make
+   invitation sharing prefer the HTTPS join URL, with the custom scheme kept as
+   an installed-app fallback.
+
+This gate does not block the owner's first ad hoc iPhone test. It is a release
+reliability and scheme-hijack boundary for external distribution.
 
 Recheck Expo identity immediately before signing:
 
@@ -282,3 +341,4 @@ Recheck Expo identity immediately before signing:
 - [Apple: required-reason APIs](https://developer.apple.com/documentation/bundleresources/app-privacy-configuration/nsprivacyaccessedapitypes)
 - [Apple: `ITSAppUsesNonExemptEncryption`](https://developer.apple.com/documentation/bundleresources/information-property-list/itsappusesnonexemptencryption)
 - [Apple: encryption export regulations](https://developer.apple.com/documentation/security/complying-with-encryption-export-regulations)
+- [Apple: supporting associated domains](https://developer.apple.com/documentation/xcode/supporting-associated-domains)

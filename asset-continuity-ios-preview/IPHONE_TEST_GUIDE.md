@@ -39,8 +39,8 @@ The QR was regenerated from the confirmed LAN URL at 768 x 768. SHA-256: `7FAA1C
 
 - The live LAN manifest returns HTTP 200 and reports Expo SDK 54.
 - The root-owned live iOS development bundle returns HTTP 200. The latest
-  restart served `21,511,394` bytes with SHA-256
-  `156D40C721AEB02C69A9675AED6E31F80EA1FB8B5DCF1A93DB3097BBDAA73C3D`.
+  stable two-pass result served `21,511,388` bytes with SHA-256
+  `312F37F50E69FFC158B9904DD4FD58FE2904631CFC17844D488E59567444479D`.
   Development-bundle hashes may change after a Metro restart, so the clean
   static-export hash below is the reproducibility gate.
 - Metro watches only the canonical native app and shared package roots. An

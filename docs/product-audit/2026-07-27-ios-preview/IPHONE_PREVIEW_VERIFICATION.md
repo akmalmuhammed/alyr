@@ -17,9 +17,9 @@ Verified on **28 July 2026** for the zero-cost Expo Go walkthrough.
 - LAN manifest: HTTP 200
 - Manifest runtime: `exposdk:54.0.0`
 - LAN iOS development bundle: HTTP 200
-- Root-owned LAN iOS development bundle: `21,511,394` bytes on the latest
-  restart, SHA-256
-  `156D40C721AEB02C69A9675AED6E31F80EA1FB8B5DCF1A93DB3097BBDAA73C3D`
+- Root-owned LAN iOS development bundle: stable two-pass result of
+  `21,511,388` bytes, SHA-256
+  `312F37F50E69FFC158B9904DD4FD58FE2904631CFC17844D488E59567444479D`
 - The development-bundle hash may change when Metro restarts; the clean
   static-export hash below is the reproducibility gate.
 - Metro watches only the canonical native app and shared package roots. An
