@@ -15,6 +15,7 @@ import type { ReactNode } from "react";
 
 import { useAuthFlow } from "@/auth/AuthFlowProvider";
 import { useCopy } from "@/i18n/copy";
+import { signedOutSampleWorkspaceReady } from "@/state/SessionBoundWorkspaceProvider";
 import { useWorkspace } from "@/state/WorkspaceProvider";
 import { colors, typography } from "@/theme/tokens";
 
@@ -54,9 +55,14 @@ export default function TabsLayout() {
     session?.assurance === "verified-email" &&
     session.identity.emailVerified &&
     Boolean(session.activeHouseholdId);
+  const localSampleReady = signedOutSampleWorkspaceReady(
+    mode,
+    session,
+    workspace?.mode ?? null
+  );
   if (
     !workspace ||
-    (mode !== "preview" && !signedSessionReady)
+    (mode !== "preview" && !localSampleReady && !signedSessionReady)
   ) {
     return <Redirect href="/" />;
   }

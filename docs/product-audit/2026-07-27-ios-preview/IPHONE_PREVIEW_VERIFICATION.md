@@ -18,8 +18,8 @@ Verified on **28 July 2026** for the zero-cost Expo Go walkthrough.
 - Manifest runtime: `exposdk:54.0.0`
 - LAN iOS development bundle: HTTP 200
 - Root-owned LAN iOS development bundle: stable two-pass result of
-  `21,511,388` bytes, SHA-256
-  `312F37F50E69FFC158B9904DD4FD58FE2904631CFC17844D488E59567444479D`
+  `21,512,695` bytes, SHA-256
+  `BC2D934C35E3F6CF5D822E71AB6BB10910DF49FBDAE735730F7F8F34D253B1C0`
 - The development-bundle hash may change when Metro restarts; the clean
   static-export hash below is the reproducibility gate.
 - Metro watches only the canonical native app and shared package roots. An
@@ -38,12 +38,12 @@ use the new QR code if that happens.
 - Expo public configuration reports SDK 54 and
   `dataPolicy: session-only`.
 - SDK 54 iOS Hermes export: **4,813 modules**.
-- SDK 54 Hermes bytecode: `12,407,523` bytes.
+- SDK 54 Hermes bytecode: `12,408,032` bytes.
 - SDK 54 Hermes SHA-256:
-  `A56E10579AD7E80765D67CA59F6709FC285B5B70EB733E2F589654621A203AD7`.
-- Complete SDK 54 export: **49 files / 23,821,311 bytes**.
+  `557626BF02E9647D672BD0F4525C1C03FF7185B6577EDE30E5EC35E5A2E85DD4`.
+- Complete SDK 54 export: **49 files / 23,821,820 bytes**.
 - Static export metadata SHA-256:
-  `338BE8E1F6F7070DB11648F7881ACBBB59337B5F0B3E59284E915D15F4FE29A8`.
+  `FB122772B56AED97F6AD1CF5013D28F682F294A563F213857573C333B5C65C35`.
 
 The signed application and backend have their own release evidence. This
 document records only the free, session-only Expo Go companion.

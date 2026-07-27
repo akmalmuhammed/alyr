@@ -7,6 +7,7 @@ import type {
   AuthGatewayMode,
   AuthSessionDescriptor
 } from "@/auth/types";
+import type { WorkspaceMode } from "@/domain/model";
 import type { EvidenceDownloadPort } from "@/data/evidenceDownload";
 import type { EvidenceUploadPort } from "@/data/evidenceUpload";
 import {
@@ -24,7 +25,10 @@ export function workspaceVaultAccessForSession(
   mode: AuthGatewayMode,
   session: AuthSessionDescriptor | null
 ): WorkspaceVaultAccess | null {
-  if (mode === "preview") {
+  if (
+    mode === "preview" ||
+    (mode === "supabase" && session === null)
+  ) {
     return { kind: "preview" };
   }
   if (
@@ -44,6 +48,18 @@ export function workspaceVaultAccessForSession(
     householdId: session.activeHouseholdId,
     role: session.activeHouseholdRole
   };
+}
+
+export function signedOutSampleWorkspaceReady(
+  mode: AuthGatewayMode,
+  session: AuthSessionDescriptor | null,
+  workspaceMode: WorkspaceMode | null
+): boolean {
+  return (
+    mode === "supabase" &&
+    session === null &&
+    workspaceMode === "sample"
+  );
 }
 
 export function releaseWorkspaceVaultAccess(

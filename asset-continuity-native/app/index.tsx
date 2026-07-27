@@ -14,6 +14,7 @@ import {
   localizedWorkspaceError,
   useCoreJourneyCopy
 } from "@/i18n/coreJourneyCopy";
+import { signedOutSampleWorkspaceReady } from "@/state/SessionBoundWorkspaceProvider";
 import { useWorkspace } from "@/state/WorkspaceProvider";
 import { colors, spacing } from "@/theme/tokens";
 
@@ -49,6 +50,15 @@ export default function IndexScreen() {
     ) : (
       <Redirect href={AUTH_ROUTES.welcome} />
     );
+  }
+  if (
+    signedOutSampleWorkspaceReady(
+      mode,
+      session,
+      workspace?.mode ?? null
+    )
+  ) {
+    return <Redirect href="/(tabs)" />;
   }
   if (mode !== "supabase" || !session) {
     return <Redirect href={AUTH_ROUTES.welcome} />;

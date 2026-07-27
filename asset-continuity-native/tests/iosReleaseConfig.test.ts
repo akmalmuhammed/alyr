@@ -2,6 +2,9 @@ import createConfig from "../app.config";
 
 declare const __dirname: string;
 declare function require(moduleName: string): unknown;
+declare const process: {
+  env: Record<string, string | undefined>;
+};
 
 const { existsSync, readFileSync } = require("fs") as {
   existsSync(filePath: string): boolean;
@@ -42,6 +45,7 @@ const eas = JSON.parse(
       extends?: string;
       developmentClient?: boolean;
       distribution?: string;
+      environment?: string;
       channel?: string;
       ios?: { simulator?: boolean };
     }
@@ -134,6 +138,52 @@ describe("signed iOS release configuration", () => {
     );
   });
 
+  it("keeps iOS transport security fail-closed outside the local dev network", () => {
+    const originalProfile = process.env.EAS_BUILD_PROFILE;
+    const originalNodeEnvironment = process.env.NODE_ENV;
+    const resolveTransportSecurity = () =>
+      createConfig({
+        config: {
+          name: "ALYR",
+          slug: "alyr-asset-continuity"
+        }
+      } as Parameters<typeof createConfig>[0]).ios?.infoPlist
+        ?.NSAppTransportSecurity;
+
+    try {
+      process.env.NODE_ENV = "production";
+      delete process.env.EAS_BUILD_PROFILE;
+      expect(resolveTransportSecurity()).toEqual({
+        NSAllowsArbitraryLoads: false,
+        NSAllowsLocalNetworking: false
+      });
+
+      process.env.EAS_BUILD_PROFILE = "development-simulator";
+      expect(resolveTransportSecurity()).toEqual({
+        NSAllowsArbitraryLoads: false,
+        NSAllowsLocalNetworking: true
+      });
+
+      process.env.EAS_BUILD_PROFILE = "preview";
+      expect(resolveTransportSecurity()).toEqual({
+        NSAllowsArbitraryLoads: false,
+        NSAllowsLocalNetworking: false
+      });
+    } finally {
+      if (originalProfile === undefined) {
+        delete process.env.EAS_BUILD_PROFILE;
+      } else {
+        process.env.EAS_BUILD_PROFILE = originalProfile;
+      }
+
+      if (originalNodeEnvironment === undefined) {
+        delete process.env.NODE_ENV;
+      } else {
+        process.env.NODE_ENV = originalNodeEnvironment;
+      }
+    }
+  });
+
   it("keeps callback routes aligned with the custom scheme", () => {
     expect(existsSync(path.join(appRoot, "app", "(auth)", "callback.tsx"))).toBe(
       true
@@ -159,6 +209,7 @@ describe("signed iOS release configuration", () => {
     expect(eas.build.development).toMatchObject({
       developmentClient: true,
       distribution: "internal",
+      environment: "development",
       channel: "development"
     });
     expect(eas.build["development-simulator"]).toEqual({
@@ -167,8 +218,10 @@ describe("signed iOS release configuration", () => {
     });
     expect(eas.build.preview).toMatchObject({
       distribution: "internal",
+      environment: "preview",
       channel: "preview"
     });
+    expect(eas.build.production?.environment).toBe("production");
     expect(eas.build.production?.distribution).toBeUndefined();
   });
 

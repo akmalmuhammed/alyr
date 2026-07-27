@@ -189,6 +189,7 @@ function TodayPortfolioCard({
           rtl && styles.rowReverse,
           pressed && styles.pressed
         ]}
+        testID="today-portfolio-entry"
       >
         <View style={styles.portfolioIcon}>
           <ChartDonut color={colors.volt} size={22} weight="regular" />
@@ -669,6 +670,7 @@ export default function HomeScreen() {
             styles.atlas,
             pressed && styles.pressed
           ]}
+          testID="today-atlas-entry"
         >
           <Svg
             {...hiddenMapDecorationProps}

@@ -1,0 +1,24 @@
+appId: com.alyr.continuity
+name: First run sample workspace to saved Passport
+tags:
+  - smoke
+  - onboarding
+  - passport
+env:
+  ASSET_NAME: "Maestro travel watch"
+---
+- runFlow:
+    file: "../subflows/start-sample-workspace.yaml"
+- runFlow:
+    file: "../subflows/add-minimal-passport.yaml"
+    env:
+      ASSET_NAME: "${ASSET_NAME}"
+- assertVisible: "Passport saved"
+- tapOn:
+    text: "Go to Today"
+    enabled: true
+- extendedWaitUntil:
+    visible:
+      id: "home-screen"
+    timeout: 15000
+- assertVisible: "Today"

@@ -75,4 +75,32 @@ describe("first-viewport onboarding decisions", () => {
       'return <Redirect href="/" />'
     );
   });
+
+  it("keeps a signed-out Supabase sample inside every protected-route gate", () => {
+    const indexRoute = read("app/index.tsx");
+    const rootLayout = read("app/_layout.tsx");
+    const tabsLayout = read("app/(tabs)/_layout.tsx");
+    const sessionBoundary = read(
+      "src/state/SessionBoundWorkspaceProvider.tsx"
+    );
+
+    expect(sessionBoundary).toContain(
+      '(mode === "supabase" && session === null)'
+    );
+    expect(sessionBoundary).toContain(
+      "export function signedOutSampleWorkspaceReady"
+    );
+    expect(indexRoute).toContain(
+      "signedOutSampleWorkspaceReady("
+    );
+    expect(rootLayout).toContain(
+      "signedOutSampleWorkspaceReady("
+    );
+    expect(rootLayout).toContain(
+      "mode === \"preview\" || localSampleReady || signedSessionReady"
+    );
+    expect(tabsLayout).toContain(
+      "mode !== \"preview\" && !localSampleReady && !signedSessionReady"
+    );
+  });
 });

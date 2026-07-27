@@ -1,0 +1,57 @@
+appId: com.alyr.continuity
+name: Local-first Passport survives an offline process restart
+tags:
+  - smoke
+  - offline
+  - passport
+env:
+  ASSET_NAME: "Offline continuity watch"
+onFlowComplete:
+  - setAirplaneMode: disabled
+---
+- launchApp:
+    clearState: true
+    permissions:
+      all: deny
+- extendedWaitUntil:
+    visible:
+      id: "auth-welcome-screen"
+    timeout: 20000
+- runFlow:
+    label: Normalize the persisted locale to English
+    when:
+      visible: "English"
+    commands:
+      - tapOn: "English"
+- setAirplaneMode: enabled
+- tapOn:
+    text: "Explore sample"
+    enabled: true
+- extendedWaitUntil:
+    visible:
+      id: "home-screen"
+    timeout: 20000
+- runFlow:
+    file: "../subflows/add-minimal-passport.yaml"
+    env:
+      ASSET_NAME: "${ASSET_NAME}"
+- stopApp
+- launchApp
+- extendedWaitUntil:
+    visible:
+      id: "home-screen"
+    timeout: 20000
+- tapOn:
+    text: "Assets"
+    enabled: true
+- extendedWaitUntil:
+    visible:
+      id: "assets-screen"
+    timeout: 15000
+- scrollUntilVisible:
+    element:
+      text: "${ASSET_NAME}"
+    direction: DOWN
+    timeout: 15000
+    visibilityPercentage: 60
+- assertVisible: "${ASSET_NAME}"

@@ -122,20 +122,29 @@ The final local readiness pass produced:
 
 | Verification | Result |
 |---|---:|
-| Native Jest | **116/116 suites, 569/569 tests** |
+| Native Jest | **116/116 suites, 573/573 tests** |
+| Maestro static contract | **5 flows, 2 subflows, 15 selectors** |
 | Expo Doctor | **20/20 checks** |
 | Supabase static | **29/29 checks** |
 | Supabase pgTAP | **105/105 checks** |
 | Export API E2E | **30 checks** |
 | Canonical static iOS export | **5,076 modules** |
-| iOS JavaScript bundle | **12,447,447 bytes** |
-| Exported artifact tree | **49 files, 23,861,043 bytes** |
+| iOS JavaScript bundle | **12,448,194 bytes** |
+| Exported artifact tree | **49 files, 23,861,790 bytes** |
+
+Maestro CLI `2.7.0` is installed locally on Java `17.0.19`. The executable
+suite reaches device selection, where the current Windows host reports zero
+connected emulators/devices; runtime results therefore remain part of the
+simulator or physical-device gate rather than this static pass.
 
 The canonical iOS JavaScript bundle SHA-256 is:
 
 ```text
-765D0894627B27A7A85425BDE633AF089851AFECB1666E7EFE5E48D8B2D67F6E
+39B11ADBC48BE56DC014C4AEC56B72CC66078FC6A6F92A3EDF1DF5AF2D3CE91A
 ```
+
+The matching `metadata.json` SHA-256 is
+`4CE62FC0642B827A6246EAA84D68DB0E3C56ED6882235ABB35749F561FAF96ED`.
 
 This artifact is an unsigned static iOS export used for deterministic
 packaging verification. It is not evidence of a signed binary installation or

@@ -1,0 +1,36 @@
+appId: com.alyr.continuity
+name: Arabic selection reaches the RTL Today experience
+tags:
+  - smoke
+  - localization
+  - rtl
+---
+- launchApp:
+    clearState: true
+    permissions:
+      all: deny
+- extendedWaitUntil:
+    visible:
+      id: "auth-welcome-screen"
+    timeout: 20000
+- runFlow:
+    label: Normalize the persisted locale to English
+    when:
+      visible: "English"
+    commands:
+      - tapOn: "English"
+- tapOn:
+    text: "العربية"
+    enabled: true
+- assertVisible: "English"
+- assertVisible: "أنشئ مساحتك الخاصة"
+- assertVisible: "استكشف نموذجًا"
+- tapOn:
+    text: "استكشف نموذجًا"
+    enabled: true
+- extendedWaitUntil:
+    visible:
+      id: "home-screen"
+    timeout: 20000
+- assertVisible: "اليوم"
+- assertVisible: "منزل تجريبي"

@@ -1220,6 +1220,7 @@ function IdentityStep({
         onChangeText={onNameChange}
         placeholder={copy.assetNamePlaceholder}
         ref={nameInputRef}
+        testID="capture-asset-name"
         value={name}
       />
       <View style={styles.optionSection}>

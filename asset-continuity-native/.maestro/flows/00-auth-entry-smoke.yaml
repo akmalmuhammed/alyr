@@ -1,0 +1,43 @@
+appId: com.alyr.continuity
+name: Auth entry surfaces remain connected
+tags:
+  - smoke
+  - auth
+---
+- launchApp:
+    clearState: true
+    permissions:
+      all: deny
+- extendedWaitUntil:
+    visible:
+      id: "auth-welcome-screen"
+    timeout: 20000
+- runFlow:
+    label: Normalize the persisted locale to English
+    when:
+      visible: "English"
+    commands:
+      - tapOn: "English"
+- assertVisible: "Create private workspace"
+- assertVisible: "Explore sample"
+- assertVisible: "Sign in"
+- tapOn:
+    text: "Create private workspace"
+    enabled: true
+- assertVisible:
+    id: "auth-create-account-screen"
+- assertVisible: "Email"
+- assertVisible: "Password"
+- assertVisible: "Confirm password"
+- tapOn:
+    text: "I already have an account"
+    enabled: true
+- assertVisible:
+    id: "auth-sign-in-screen"
+- assertVisible: "Forgot password?"
+- tapOn:
+    text: "Forgot password?"
+    enabled: true
+- assertVisible:
+    id: "auth-forgot-password-screen"
+- assertVisible: "Email"

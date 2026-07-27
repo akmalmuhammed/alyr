@@ -37,7 +37,10 @@ import {
   DeviceUnlockScreen,
   useDeviceAuth
 } from "@/deviceAuth";
-import { SessionBoundWorkspaceProvider } from "@/state/SessionBoundWorkspaceProvider";
+import {
+  SessionBoundWorkspaceProvider,
+  signedOutSampleWorkspaceReady
+} from "@/state/SessionBoundWorkspaceProvider";
 import { useWorkspace } from "@/state/WorkspaceProvider";
 import { useCoreJourneyCopy } from "@/i18n/coreJourneyCopy";
 import { useInviteCopy } from "@/i18n/inviteCopy";
@@ -168,8 +171,14 @@ function RootNavigator() {
         session.activeMembershipId &&
         session.activeHouseholdRole
     );
+  const localSampleReady = signedOutSampleWorkspaceReady(
+    mode,
+    session,
+    workspace?.mode ?? null
+  );
   const dataRoutesReady =
-    Boolean(workspace) && (mode === "preview" || signedSessionReady);
+    Boolean(workspace) &&
+    (mode === "preview" || localSampleReady || signedSessionReady);
 
   if (!localeReady) {
     return (

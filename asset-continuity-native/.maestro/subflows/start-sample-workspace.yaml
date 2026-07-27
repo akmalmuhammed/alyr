@@ -1,0 +1,27 @@
+appId: com.alyr.continuity
+---
+- launchApp:
+    clearState: true
+    permissions:
+      all: deny
+- extendedWaitUntil:
+    visible:
+      id: "auth-welcome-screen"
+    timeout: 20000
+- runFlow:
+    label: Normalize the persisted locale to English
+    when:
+      visible: "English"
+    commands:
+      - tapOn: "English"
+- assertVisible:
+    id: "auth-welcome-screen"
+- tapOn:
+    text: "Explore sample"
+    enabled: true
+- extendedWaitUntil:
+    visible:
+      id: "home-screen"
+    timeout: 20000
+- assertVisible: "Today"
+- assertVisible: "Demo household"

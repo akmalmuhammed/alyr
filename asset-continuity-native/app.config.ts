@@ -1,5 +1,14 @@
 import type { ConfigContext, ExpoConfig } from "expo/config";
 
+function allowsLocalDevelopmentNetworking(): boolean {
+  const profile = process.env.EAS_BUILD_PROFILE;
+  return (
+    process.env.NODE_ENV === "development" ||
+    profile === "development" ||
+    profile === "development-simulator"
+  );
+}
+
 export default ({ config }: ConfigContext): ExpoConfig => ({
   ...config,
   name: "ALYR",
@@ -43,6 +52,10 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
       ]
     },
     infoPlist: {
+      NSAppTransportSecurity: {
+        NSAllowsArbitraryLoads: false,
+        NSAllowsLocalNetworking: allowsLocalDevelopmentNetworking()
+      },
       NSCameraUsageDescription:
         "ALYR uses the camera only when you choose to photograph an asset or its supporting material.",
       NSFaceIDUsageDescription:

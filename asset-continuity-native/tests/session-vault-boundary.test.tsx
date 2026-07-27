@@ -34,6 +34,7 @@ import type { VaultScope } from "@/data/vaultScope";
 import { createWorkspace } from "@/domain/sample";
 import {
   releaseWorkspaceVaultAccess,
+  signedOutSampleWorkspaceReady,
   workspaceVaultAccessForSession
 } from "@/state/SessionBoundWorkspaceProvider";
 import {
@@ -94,8 +95,11 @@ describe("account and household vault boundary", () => {
     latestWorkspace = null;
   });
 
-  it("requires a verified signed session with an explicit household", () => {
+  it("opens only the sample scope while signed out and requires a verified session for household data", () => {
     expect(workspaceVaultAccessForSession("preview", null)).toEqual({
+      kind: "preview"
+    });
+    expect(workspaceVaultAccessForSession("supabase", null)).toEqual({
       kind: "preview"
     });
     expect(
@@ -117,6 +121,19 @@ describe("account and household vault boundary", () => {
     expect(
       workspaceVaultAccessForSession("unavailable", verifiedSession)
     ).toBeNull();
+    expect(
+      signedOutSampleWorkspaceReady("supabase", null, "sample")
+    ).toBe(true);
+    expect(
+      signedOutSampleWorkspaceReady(
+        "supabase",
+        verifiedSession,
+        "sample"
+      )
+    ).toBe(false);
+    expect(
+      signedOutSampleWorkspaceReady("supabase", null, "personal")
+    ).toBe(false);
   });
 
   it("does not release an authenticated workspace before device verification", () => {
@@ -205,6 +222,104 @@ describe("account and household vault boundary", () => {
     await waitFor(() => {
       expect(latestWorkspace?.error).toContain("Nothing was saved");
     });
+    await screen.unmount();
+  });
+
+  it("lets a signed-out Supabase runtime create the isolated sample workspace", async () => {
+    const access = workspaceVaultAccessForSession("supabase", null);
+    expect(access).toEqual({ kind: "preview" });
+    const scope = await vaultScopeForWorkspaceAccess(access!);
+    const repository = new TrackingRepository(scope);
+    const attachmentStore = new TrackingAttachmentStore(scope);
+    const screen = await render(
+      <WorkspaceProvider
+        attachmentStoreOverride={attachmentStore}
+        repositoryOverride={repository}
+        vaultAccess={access}
+      >
+        <Probe />
+      </WorkspaceProvider>
+    );
+
+    await waitFor(() => {
+      expect(latestWorkspace?.storageReady).toBe(true);
+      expect(latestWorkspace?.permissionRole).toBe("owner");
+      expect(latestWorkspace?.workspace).toBeNull();
+    });
+    await act(async () => {
+      await latestWorkspace!.startWorkspace("sample");
+    });
+    expect(latestWorkspace?.workspace?.mode).toBe("sample");
+    expect(latestWorkspace?.workspace?.household.id).toBe(
+      "household-sample"
+    );
+    expect(await repository.listPendingOperations(100)).toEqual([]);
+    await screen.unmount();
+  });
+
+  it("locks sample resources and opens an empty household scope on sign-in", async () => {
+    const repositories: TrackingRepository[] = [];
+    const attachmentStores: TrackingAttachmentStore[] = [];
+    const factory: WorkspaceVaultResourceFactory = {
+      async createRepository(scope) {
+        const repository = new TrackingRepository(scope);
+        repositories.push(repository);
+        return repository;
+      },
+      createAttachmentStore(scope) {
+        const store = new TrackingAttachmentStore(scope);
+        attachmentStores.push(store);
+        return store;
+      }
+    };
+    const sampleAccess = workspaceVaultAccessForSession(
+      "supabase",
+      null
+    )!;
+    const authenticatedAccess = workspaceVaultAccessForSession(
+      "supabase",
+      verifiedSession
+    )!;
+    const screen = await render(
+      <WorkspaceProvider
+        resourceFactory={factory}
+        vaultAccess={sampleAccess}
+      >
+        <Probe />
+      </WorkspaceProvider>
+    );
+
+    await waitFor(() => {
+      expect(latestWorkspace?.storageReady).toBe(true);
+      expect(repositories).toHaveLength(1);
+    });
+    await act(async () => {
+      await latestWorkspace!.startWorkspace("sample");
+    });
+    expect(latestWorkspace?.workspace?.mode).toBe("sample");
+
+    await screen.rerender(
+      <WorkspaceProvider
+        resourceFactory={factory}
+        vaultAccess={authenticatedAccess}
+      >
+        <Probe />
+      </WorkspaceProvider>
+    );
+    await waitFor(() => {
+      expect(repositories).toHaveLength(2);
+      expect(attachmentStores).toHaveLength(2);
+      expect(latestWorkspace?.storageReady).toBe(true);
+      expect(latestWorkspace?.workspace).toBeNull();
+    });
+
+    expect(repositories[0]?.lockCalls).toBeGreaterThanOrEqual(1);
+    expect(attachmentStores[0]?.lockCalls).toBeGreaterThanOrEqual(1);
+    expect(repositories[0]?.scopeId).not.toBe(repositories[1]?.scopeId);
+    expect(attachmentStores[0]?.scopeId).not.toBe(
+      attachmentStores[1]?.scopeId
+    );
+    expect((await repositories[1]!.load()).snapshot).toBeNull();
     await screen.unmount();
   });
 
