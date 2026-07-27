@@ -1,9 +1,19 @@
-import { LinearGradient } from "expo-linear-gradient";
 import type { Icon } from "phosphor-react-native";
-import type { PropsWithChildren, ReactNode } from "react";
 import {
+  forwardRef,
+  useEffect,
+  useId,
+  useRef,
+  type PropsWithChildren,
+  type ReactNode,
+  type RefObject
+} from "react";
+import {
+  AccessibilityInfo,
   ActivityIndicator,
   Image,
+  KeyboardAvoidingView,
+  Platform,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -14,15 +24,17 @@ import {
   View,
   type ViewStyle
 } from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
+import {
+  SafeAreaView,
+  type Edge,
+  useSafeAreaInsets
+} from "react-native-safe-area-context";
 
 import { useCopy } from "@/i18n/copy";
-import { isExpoGoPreview } from "@/runtime/environment";
+import { rtlRowStyle } from "@/i18n/rtlLayout";
 import {
   colors,
-  gradients,
   radius,
-  shadows,
   spacing,
   typography
 } from "@/theme/tokens";
@@ -31,46 +43,41 @@ export function AppScreen({
   children,
   scroll = true,
   contentStyle,
+  footer,
+  safeEdges = ["top"],
+  scrollRef,
   testID
 }: PropsWithChildren<{
   readonly scroll?: boolean;
   readonly contentStyle?: ViewStyle;
+  readonly footer?: ReactNode;
+  readonly safeEdges?: Edge[];
+  readonly scrollRef?: RefObject<ScrollView | null>;
   readonly testID?: string;
 }>) {
-  const { rtl } = useCopy();
+  const insets = useSafeAreaInsets();
   const content = (
     <View
       style={[
         styles.screenContent,
-        rtl && styles.rtlContent,
         contentStyle
       ]}
     >
       {children}
     </View>
   );
-  return (
-    <SafeAreaView
-      edges={["top"]}
-      style={styles.safeArea}
-      testID={testID}
-    >
-      {isExpoGoPreview ? (
-        <View
-          accessibilityLabel="iPhone preview. Data resets when this Expo Go session closes."
-          accessibilityRole="summary"
-          style={styles.previewBanner}
-        >
-          <View style={styles.previewDot} />
-          <Text style={styles.previewBannerText}>
-            IPHONE PREVIEW · SESSION ONLY
-          </Text>
-        </View>
-      ) : null}
+  const body = (
+    <>
       {scroll ? (
         <ScrollView
-          contentContainerStyle={styles.scrollContent}
+          automaticallyAdjustKeyboardInsets={Platform.OS === "ios"}
+          contentContainerStyle={[
+            styles.scrollContent,
+            { paddingBottom: Math.max(insets.bottom, spacing.md) + spacing.lg }
+          ]}
+          keyboardDismissMode={Platform.OS === "ios" ? "interactive" : "on-drag"}
           keyboardShouldPersistTaps="handled"
+          ref={scrollRef}
           showsVerticalScrollIndicator={false}
         >
           {content}
@@ -78,19 +85,57 @@ export function AppScreen({
       ) : (
         content
       )}
+      {footer ? (
+        <View
+          style={[
+            styles.footer,
+            { paddingBottom: Math.max(insets.bottom, spacing.sm) }
+          ]}
+        >
+          {footer}
+        </View>
+      ) : null}
+    </>
+  );
+  return (
+    <SafeAreaView
+      edges={safeEdges}
+      style={styles.safeArea}
+      testID={testID}
+    >
+      {footer ? (
+        <KeyboardAvoidingView
+          behavior={Platform.OS === "ios" ? "padding" : undefined}
+          style={styles.keyboardBody}
+        >
+          {body}
+        </KeyboardAvoidingView>
+      ) : (
+        body
+      )}
     </SafeAreaView>
   );
 }
 
-export function BrandMark({ compact = false }: { readonly compact?: boolean }) {
+export function BrandMark({
+  compact = false,
+  reversed = false
+}: {
+  readonly compact?: boolean;
+  readonly reversed?: boolean;
+}) {
   return (
     <Image
       accessibilityLabel="ALYR"
       resizeMode="contain"
       source={
         compact
-          ? require("../../assets/alyr/logos/png-exports/standalone-symbol-reversed-256w.png")
-          : require("../../assets/alyr/logos/png-exports/primary-horizontal-reversed-480w.png")
+          ? reversed
+            ? require("../../assets/alyr/logos/png-exports/standalone-symbol-reversed-256w.png")
+            : require("../../assets/alyr/logos/png-exports/standalone-symbol-carbon-volt-256w.png")
+          : reversed
+            ? require("../../assets/alyr/logos/png-exports/primary-horizontal-reversed-480w.png")
+            : require("../../assets/alyr/logos/png-exports/primary-horizontal-carbon-volt-480w.png")
       }
       style={compact ? styles.brandCompact : styles.brand}
     />
@@ -99,15 +144,18 @@ export function BrandMark({ compact = false }: { readonly compact?: boolean }) {
 
 export function Eyebrow({
   children,
-  tone = "violet"
-}: PropsWithChildren<{ readonly tone?: "violet" | "cyan" | "volt" }>) {
+  tone = "neutral"
+}: PropsWithChildren<{
+  readonly tone?: "neutral" | "information" | "volt";
+}>) {
   const { rtl } = useCopy();
   return (
     <Text
       style={[
         styles.eyebrow,
         rtl && styles.arabicMedium,
-        tone === "cyan" && styles.eyebrowCyan,
+        rtl && styles.textRight,
+        tone === "information" && styles.eyebrowInformation,
         tone === "volt" && styles.eyebrowVolt
       ]}
     >
@@ -132,6 +180,7 @@ export function ScreenTitle({
         styles.title,
         size === "medium" && styles.titleMedium,
         rtl && styles.arabicMedium,
+        rtl && styles.textRight,
         style
       ]}
     >
@@ -155,6 +204,7 @@ export function BodyText({
         styles.body,
         muted && styles.bodyMuted,
         rtl && styles.arabic,
+        rtl && styles.textRight,
         style
       ]}
     >
@@ -182,6 +232,27 @@ export function Surface({
       {children}
     </View>
   );
+}
+
+export function Section({
+  children,
+  style
+}: PropsWithChildren<{ readonly style?: ViewStyle }>) {
+  return <View style={[styles.section, style]}>{children}</View>;
+}
+
+export function Panel({
+  children,
+  style
+}: PropsWithChildren<{ readonly style?: ViewStyle }>) {
+  return <View style={[styles.panel, style]}>{children}</View>;
+}
+
+export function CommandSurface({
+  children,
+  style
+}: PropsWithChildren<{ readonly style?: ViewStyle }>) {
+  return <View style={[styles.commandSurface, style]}>{children}</View>;
 }
 
 export function PrimaryButton({
@@ -213,21 +284,16 @@ export function PrimaryButton({
         (disabled || loading) && styles.buttonDisabled
       ]}
     >
-      <LinearGradient
-        colors={gradients.primary}
-        end={{ x: 1, y: 0 }}
-        start={{ x: 0, y: 0 }}
-        style={[styles.primaryButton, rtl && styles.rowReverse]}
-      >
+      <View style={[styles.primaryButton, rtl && styles.rowReverse]}>
         {loading ? (
-          <ActivityIndicator color={colors.text} size="small" />
+          <ActivityIndicator color={colors.carbon} size="small" />
         ) : IconComponent ? (
-          <IconComponent color={colors.text} size={22} weight="regular" />
+          <IconComponent color={colors.carbon} size={22} weight="regular" />
         ) : null}
         <Text style={[styles.primaryButtonLabel, rtl && styles.arabicMedium]}>
           {label}
         </Text>
-      </LinearGradient>
+      </View>
     </Pressable>
   );
 }
@@ -303,7 +369,7 @@ export function IconButton({
       ]}
     >
       <IconComponent
-        color={active ? colors.cyan : colors.text}
+        color={active ? colors.carbon : colors.text}
         size={22}
         weight="regular"
       />
@@ -321,7 +387,14 @@ export function SectionHeader({
   const { rtl } = useCopy();
   return (
     <View style={[styles.sectionHeader, rtl && styles.rowReverse]}>
-      <Text style={[styles.sectionTitle, rtl && styles.arabicMedium]}>
+      <Text
+        accessibilityRole="header"
+        style={[
+          styles.sectionTitle,
+          rtl && styles.arabicMedium,
+          rtl && styles.textRight
+        ]}
+      >
         {title}
       </Text>
       {action}
@@ -336,6 +409,7 @@ export function ProgressBar({
   readonly percent: number;
   readonly label?: string;
 }) {
+  const { rtl } = useCopy();
   const normalized = Math.max(0, Math.min(percent, 100));
   return (
     <View
@@ -344,11 +418,12 @@ export function ProgressBar({
       accessibilityValue={{ min: 0, max: 100, now: normalized }}
       style={styles.progressTrack}
     >
-      <LinearGradient
-        colors={gradients.progress}
-        end={{ x: 1, y: 0 }}
-        start={{ x: 0, y: 0 }}
-        style={[styles.progressFill, { width: `${normalized}%` }]}
+      <View
+        style={[
+          styles.progressFill,
+          rtl && styles.progressFillRtl,
+          { width: `${normalized}%` }
+        ]}
       />
     </View>
   );
@@ -359,15 +434,15 @@ export function StatusPill({
   tone = "neutral"
 }: {
   readonly label: string;
-  readonly tone?: "neutral" | "cyan" | "violet" | "volt" | "warning";
+  readonly tone?: "neutral" | "information" | "volt" | "warning";
 }) {
   const { rtl } = useCopy();
   return (
     <View
       style={[
         styles.pill,
-        tone === "cyan" && styles.pillCyan,
-        tone === "violet" && styles.pillViolet,
+        rtl && styles.rowReverse,
+        tone === "information" && styles.pillInformation,
         tone === "volt" && styles.pillVolt,
         tone === "warning" && styles.pillWarning
       ]}
@@ -375,8 +450,7 @@ export function StatusPill({
       <View
         style={[
           styles.pillDot,
-          tone === "cyan" && styles.dotCyan,
-          tone === "violet" && styles.dotViolet,
+          tone === "information" && styles.dotInformation,
           tone === "volt" && styles.dotVolt,
           tone === "warning" && styles.dotWarning
         ]}
@@ -386,47 +460,87 @@ export function StatusPill({
   );
 }
 
-export function Field({
-  label,
-  description,
-  error,
-  ...props
-}: TextInputProps & {
+type FieldProps = TextInputProps & {
   readonly label: string;
   readonly description?: string;
   readonly error?: string | null;
-}) {
+};
+
+export const Field = forwardRef<TextInput, FieldProps>(function Field(
+  {
+    label,
+    description,
+    error,
+    accessibilityHint,
+    accessibilityLabel,
+    style: inputStyle,
+    ...props
+  },
+  ref
+) {
   const { rtl } = useCopy();
+  const fieldId = useId();
+  const descriptionId = `${fieldId}-description`;
+  const errorId = `${fieldId}-error`;
+  const effectiveHint = [accessibilityHint, description, error]
+    .filter(Boolean)
+    .join(" ");
   return (
     <View style={styles.fieldGroup}>
-      <Text style={[styles.fieldLabel, rtl && styles.arabicMedium]}>
+      <Text
+        style={[
+          styles.fieldLabel,
+          rtl && styles.arabicMedium,
+          rtl && styles.textRight
+        ]}
+      >
         {label}
       </Text>
       {description ? (
-        <Text style={[styles.fieldDescription, rtl && styles.arabic]}>
+        <Text
+          nativeID={descriptionId}
+          style={[
+            styles.fieldDescription,
+            rtl && styles.arabic,
+            rtl && styles.textRight
+          ]}
+        >
           {description}
         </Text>
       ) : null}
       <TextInput
-        accessibilityLabel={label}
+        {...props}
+        accessibilityHint={effectiveHint || undefined}
+        accessibilityLabel={accessibilityLabel ?? label}
+        aria-describedby={error ? errorId : description ? descriptionId : undefined}
+        aria-invalid={Boolean(error)}
         placeholderTextColor={colors.textFaint}
-        selectionColor={colors.cyan}
+        ref={ref}
+        selectionColor={colors.action}
         style={[
           styles.field,
           error && styles.fieldError,
           rtl && styles.arabic,
-          rtl && styles.textRight
+          rtl && styles.textRight,
+          inputStyle
         ]}
-        {...props}
       />
       {error ? (
-        <Text accessibilityLiveRegion="polite" style={styles.errorText}>
+        <Text
+          accessibilityLiveRegion="polite"
+          nativeID={errorId}
+          style={[
+            styles.errorText,
+            rtl && styles.arabic,
+            rtl && styles.textRight
+          ]}
+        >
           {error}
         </Text>
       ) : null}
     </View>
   );
-}
+});
 
 export function ErrorBanner({
   message,
@@ -435,15 +549,59 @@ export function ErrorBanner({
   readonly message: string;
   readonly onDismiss: () => void;
 }) {
+  const { language, rtl } = useCopy();
+  const lastAnnouncedMessage = useRef<string | null>(null);
+
+  useEffect(() => {
+    if (
+      Platform.OS !== "ios" ||
+      lastAnnouncedMessage.current === message
+    ) {
+      return;
+    }
+    lastAnnouncedMessage.current = message;
+    AccessibilityInfo.announceForAccessibility(
+      language === "ar" ? `خطأ. ${message}` : `Error. ${message}`
+    );
+  }, [language, message]);
+
   return (
-    <Pressable
-      accessibilityHint="Dismiss this message"
-      accessibilityRole="button"
-      onPress={onDismiss}
-      style={styles.errorBanner}
-    >
-      <Text style={styles.errorBannerText}>{message}</Text>
-    </Pressable>
+    <View style={[styles.errorBanner, rtl && styles.rowReverse]}>
+      <Text
+        accessibilityRole="alert"
+        {...(Platform.OS === "android"
+          ? { accessibilityLiveRegion: "assertive" as const }
+          : {})}
+        style={[
+          styles.errorBannerText,
+          rtl && styles.arabic,
+          rtl && styles.textRight
+        ]}
+      >
+        {message}
+      </Text>
+      <Pressable
+        accessibilityLabel={
+          language === "ar" ? "إخفاء الرسالة" : "Dismiss message"
+        }
+        accessibilityRole="button"
+        hitSlop={8}
+        onPress={onDismiss}
+        style={({ pressed }) => [
+          styles.errorDismiss,
+          pressed && styles.buttonPressed
+        ]}
+      >
+        <Text
+          style={[
+            styles.errorDismissText,
+            rtl && styles.arabicMedium
+          ]}
+        >
+          {language === "ar" ? "إخفاء" : "Dismiss"}
+        </Text>
+      </Pressable>
+    </View>
   );
 }
 
@@ -461,7 +619,10 @@ export const uiStyles = StyleSheet.create({
   gapSm: { gap: spacing.sm },
   gapMd: { gap: spacing.md },
   flex: { flex: 1 },
-  textRight: { textAlign: "right" },
+  textRight: {
+    textAlign: "right",
+    writingDirection: "rtl"
+  },
   center: { alignItems: "center", justifyContent: "center" }
 });
 
@@ -470,43 +631,25 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: colors.canvas
   },
-  previewBanner: {
-    minHeight: 32,
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    gap: 8,
-    paddingHorizontal: spacing.md,
-    borderBottomWidth: 1,
-    borderBottomColor: "rgba(183, 243, 74, 0.2)",
-    backgroundColor: colors.surface
-  },
-  previewDot: {
-    width: 6,
-    height: 6,
-    borderRadius: radius.round,
-    backgroundColor: colors.volt
-  },
-  previewBannerText: {
-    color: colors.textMuted,
-    fontFamily: typography.bodyMedium,
-    fontSize: 11,
-    lineHeight: 16,
-    letterSpacing: 1.1
+  keyboardBody: {
+    flex: 1
   },
   scrollContent: {
     flexGrow: 1
   },
   screenContent: {
     flex: 1,
-    paddingHorizontal: spacing.lg,
-    paddingTop: spacing.md,
-    paddingBottom: 128,
-    gap: spacing.xl,
+    paddingHorizontal: 20,
+    paddingTop: spacing.lg,
+    gap: 28,
     backgroundColor: colors.canvas
   },
-  rtlContent: {
-    direction: "rtl"
+  footer: {
+    paddingHorizontal: 20,
+    paddingTop: spacing.sm,
+    borderTopWidth: StyleSheet.hairlineWidth,
+    borderTopColor: colors.border,
+    backgroundColor: colors.canvas
   },
   brand: {
     width: 128,
@@ -517,15 +660,15 @@ const styles = StyleSheet.create({
     height: 34
   },
   eyebrow: {
-    color: colors.violetSoft,
+    color: colors.textMuted,
     fontFamily: typography.bodyBold,
     fontSize: 12,
     letterSpacing: 1.5,
     lineHeight: 18,
     textTransform: "uppercase"
   },
-  eyebrowCyan: {
-    color: colors.cyan
+  eyebrowInformation: {
+    color: colors.information
   },
   eyebrowVolt: {
     color: colors.volt
@@ -535,7 +678,7 @@ const styles = StyleSheet.create({
     fontFamily: typography.displayBold,
     fontSize: 34,
     lineHeight: 40,
-    letterSpacing: -1
+    letterSpacing: -0.8
   },
   titleMedium: {
     fontSize: 26,
@@ -553,21 +696,37 @@ const styles = StyleSheet.create({
   },
   surface: {
     gap: spacing.md,
+    padding: spacing.md,
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderRadius: radius.md,
+    backgroundColor: colors.surface
+  },
+  surfaceEmphasis: {
+    borderColor: colors.borderStrong,
+    backgroundColor: colors.surfaceRaised
+  },
+  section: {
+    gap: spacing.md
+  },
+  panel: {
+    gap: spacing.md,
     padding: spacing.lg,
     borderWidth: 1,
     borderColor: colors.border,
     borderRadius: radius.lg,
     backgroundColor: colors.surface
   },
-  surfaceEmphasis: {
-    borderColor: "rgba(139, 92, 246, 0.52)",
-    backgroundColor: colors.surfaceRaised
+  commandSurface: {
+    gap: spacing.md,
+    padding: spacing.lg,
+    borderRadius: radius.lg,
+    backgroundColor: colors.carbon
   },
   primaryButtonOuter: {
     minHeight: 54,
     borderRadius: radius.md,
-    overflow: "hidden",
-    ...shadows.floating
+    overflow: "hidden"
   },
   primaryButton: {
     minHeight: 54,
@@ -576,10 +735,11 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     gap: spacing.sm,
     paddingHorizontal: spacing.lg,
-    borderRadius: radius.md
+    borderRadius: radius.md,
+    backgroundColor: colors.volt
   },
   primaryButtonLabel: {
-    color: colors.text,
+    color: colors.carbon,
     fontFamily: typography.bodyBold,
     fontSize: 16
   },
@@ -593,7 +753,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: colors.borderStrong,
     borderRadius: radius.md,
-    backgroundColor: colors.surfaceQuiet
+    backgroundColor: colors.surface
   },
   secondaryButtonLabel: {
     color: colors.text,
@@ -608,18 +768,18 @@ const styles = StyleSheet.create({
     color: colors.danger
   },
   iconButton: {
-    width: 46,
-    height: 46,
+    width: 44,
+    height: 44,
     alignItems: "center",
     justifyContent: "center",
     borderWidth: 1,
     borderColor: colors.border,
-    borderRadius: radius.round,
-    backgroundColor: colors.surface
+    borderRadius: radius.md,
+    backgroundColor: "transparent"
   },
   iconButtonActive: {
-    borderColor: "rgba(74, 216, 245, 0.48)",
-    backgroundColor: colors.cyanQuiet
+    borderColor: colors.carbon,
+    backgroundColor: colors.surface
   },
   buttonPressed: {
     opacity: 0.82,
@@ -642,34 +802,34 @@ const styles = StyleSheet.create({
     lineHeight: 28
   },
   progressTrack: {
-    height: 7,
+    height: 5,
     overflow: "hidden",
     borderRadius: radius.round,
-    backgroundColor: "rgba(151, 165, 188, 0.18)"
+    backgroundColor: colors.mist
   },
   progressFill: {
     height: "100%",
-    borderRadius: radius.round
+    borderRadius: radius.round,
+    backgroundColor: colors.volt
+  },
+  progressFillRtl: {
+    alignSelf: "flex-end"
   },
   pill: {
     alignSelf: "flex-start",
     flexDirection: "row",
     alignItems: "center",
     gap: 7,
-    minHeight: 30,
-    paddingHorizontal: 10,
+    minHeight: 26,
+    paddingHorizontal: 8,
     borderWidth: 1,
     borderColor: colors.border,
-    borderRadius: radius.round,
-    backgroundColor: "rgba(154, 167, 188, 0.07)"
+    borderRadius: radius.xs,
+    backgroundColor: colors.surface
   },
-  pillCyan: {
-    borderColor: "rgba(74, 216, 245, 0.3)",
-    backgroundColor: colors.cyanQuiet
-  },
-  pillViolet: {
-    borderColor: "rgba(139, 92, 246, 0.32)",
-    backgroundColor: colors.violetQuiet
+  pillInformation: {
+    borderColor: colors.information,
+    backgroundColor: colors.informationQuiet
   },
   pillVolt: {
     borderColor: "rgba(183, 243, 74, 0.3)",
@@ -685,12 +845,11 @@ const styles = StyleSheet.create({
     borderRadius: radius.round,
     backgroundColor: colors.textMuted
   },
-  dotCyan: { backgroundColor: colors.cyan },
-  dotViolet: { backgroundColor: colors.violetSoft },
+  dotInformation: { backgroundColor: colors.information },
   dotVolt: { backgroundColor: colors.volt },
   dotWarning: { backgroundColor: colors.warning },
   pillLabel: {
-    color: colors.textMuted,
+    color: colors.text,
     fontFamily: typography.bodyMedium,
     fontSize: 12,
     lineHeight: 18
@@ -718,7 +877,7 @@ const styles = StyleSheet.create({
     borderColor: colors.borderStrong,
     borderRadius: radius.md,
     color: colors.text,
-    backgroundColor: colors.surfaceQuiet,
+    backgroundColor: colors.surface,
     fontFamily: typography.body,
     fontSize: 16
   },
@@ -732,6 +891,9 @@ const styles = StyleSheet.create({
     lineHeight: 18
   },
   errorBanner: {
+    flexDirection: "row",
+    alignItems: "flex-start",
+    gap: spacing.sm,
     padding: spacing.md,
     borderWidth: 1,
     borderColor: "rgba(255, 126, 132, 0.32)",
@@ -739,13 +901,25 @@ const styles = StyleSheet.create({
     backgroundColor: colors.dangerQuiet
   },
   errorBannerText: {
+    flex: 1,
     color: colors.text,
     fontFamily: typography.body,
     fontSize: 14,
     lineHeight: 20
   },
+  errorDismiss: {
+    minHeight: 32,
+    justifyContent: "center",
+    paddingHorizontal: spacing.xs
+  },
+  errorDismissText: {
+    color: colors.danger,
+    fontFamily: typography.bodyMedium,
+    fontSize: 13,
+    lineHeight: 18
+  },
   rowReverse: {
-    flexDirection: "row-reverse"
+    ...rtlRowStyle()
   },
   arabic: {
     fontFamily: typography.arabic
@@ -754,6 +928,7 @@ const styles = StyleSheet.create({
     fontFamily: typography.arabicMedium
   },
   textRight: {
-    textAlign: "right"
+    textAlign: "right",
+    writingDirection: "rtl"
   }
 });

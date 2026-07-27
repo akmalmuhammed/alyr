@@ -1,0 +1,131 @@
+import * as SecureStore from "expo-secure-store";
+import {
+  fireEvent,
+  render,
+  waitFor
+} from "@testing-library/react-native";
+import { Pressable, Text } from "react-native";
+
+import {
+  PortfolioPrivacyProvider,
+  portfolioVisibilityStorageKey,
+  usePortfolioPrivacy,
+  type ValueVisibilityScope
+} from "@/privacy/PortfolioPrivacyProvider";
+
+jest.mock("expo-crypto", () => ({
+  CryptoDigestAlgorithm: { SHA256: "SHA-256" },
+  CryptoEncoding: { HEX: "hex" },
+  digestStringAsync: jest.fn(async (_algorithm, input: string) =>
+    input.includes("household-b") ? "b".repeat(64) : "a".repeat(64)
+  )
+}));
+
+const getItem = jest.mocked(SecureStore.getItemAsync);
+const setItem = jest.mocked(SecureStore.setItemAsync);
+
+function VisibilityProbe() {
+  const {
+    amountsHidden,
+    toggleAmountsHidden,
+    visibility
+  } = usePortfolioPrivacy();
+  return (
+    <Pressable
+      accessibilityLabel={visibility}
+      accessibilityRole="button"
+      accessibilityState={{ checked: amountsHidden }}
+      onPress={toggleAmountsHidden}
+      testID="visibility-probe"
+    >
+      <Text>{visibility}</Text>
+    </Pressable>
+  );
+}
+
+function Boundary({
+  scope
+}: {
+  readonly scope: ValueVisibilityScope | null;
+}) {
+  return (
+    <PortfolioPrivacyProvider scope={scope}>
+      <VisibilityProbe />
+    </PortfolioPrivacyProvider>
+  );
+}
+
+describe("recorded-value account and household boundary", () => {
+  beforeEach(() => {
+    jest.clearAllMocks();
+    getItem.mockResolvedValue(null);
+    setItem.mockResolvedValue(undefined);
+  });
+
+  it("starts hidden and remains hidden while no account boundary is active", async () => {
+    const screen = await render(<Boundary scope={null} />);
+
+    expect(screen.getByTestId("visibility-probe").props.accessibilityLabel).toBe(
+      "hidden"
+    );
+    await fireEvent.press(screen.getByTestId("visibility-probe"));
+    expect(screen.getByTestId("visibility-probe").props.accessibilityLabel).toBe(
+      "hidden"
+    );
+    expect(getItem).not.toHaveBeenCalled();
+    expect(setItem).not.toHaveBeenCalled();
+  });
+
+  it("isolates saved visibility by account and household and closes on transition", async () => {
+    const scopeA: ValueVisibilityScope = {
+      kind: "account-household",
+      accountId: "account-a",
+      householdId: "household-a"
+    };
+    const scopeB: ValueVisibilityScope = {
+      kind: "account-household",
+      accountId: "account-a",
+      householdId: "household-b"
+    };
+    const keyA = await portfolioVisibilityStorageKey(scopeA);
+    const keyB = await portfolioVisibilityStorageKey(scopeB);
+    expect(keyA).not.toBe(keyB);
+    expect(keyA).not.toContain(scopeA.accountId);
+    expect(keyA).not.toContain(scopeA.householdId);
+
+    getItem.mockImplementation(async (key) =>
+      key === keyA ? "visible" : "hidden"
+    );
+
+    const screen = await render(<Boundary scope={scopeA} />);
+    await waitFor(() => {
+      expect(
+        screen.getByTestId("visibility-probe").props.accessibilityLabel
+      ).toBe("visible");
+    });
+
+    await screen.rerender(<Boundary scope={scopeB} />);
+
+    // The render for the next household is closed before its async preference
+    // read completes, so the previous household never flashes through.
+    expect(screen.getByTestId("visibility-probe").props.accessibilityLabel).toBe(
+      "hidden"
+    );
+    await waitFor(() => {
+      expect(getItem).toHaveBeenCalledWith(keyB);
+    });
+
+    await fireEvent.press(screen.getByTestId("visibility-probe"));
+    expect(screen.getByTestId("visibility-probe").props.accessibilityLabel).toBe(
+      "visible"
+    );
+    await waitFor(() => {
+      expect(setItem).toHaveBeenCalledWith(keyB, "visible");
+    });
+
+    await screen.rerender(<Boundary scope={null} />);
+    expect(screen.getByTestId("visibility-probe").props.accessibilityLabel).toBe(
+      "hidden"
+    );
+  });
+});

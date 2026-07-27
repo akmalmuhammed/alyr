@@ -1,10 +1,15 @@
 import type {
   JsonObject,
   Result,
+  SyncConflict,
+  SyncCursor,
   SyncOperation,
   WorkspaceCommit,
-  WorkspaceRepository
+  WorkspaceRepository,
+  WorkspaceSyncCommit,
+  WorkspaceSyncState
 } from "@alyr/contracts";
+import type { VaultScopeId } from "./vaultScope";
 
 export type RepositoryKind = "sqlite-sqlcipher" | "memory-preview";
 
@@ -13,6 +18,10 @@ export interface NativeWorkspaceRepository
   readonly kind: RepositoryKind;
   readonly durable: boolean;
   readonly encryptedAtRest: boolean;
+  readonly scopeId: VaultScopeId;
+  close(): Promise<void>;
+  lock(): Promise<void>;
+  purge(): Promise<void>;
 }
 
 export function storageFailure(
@@ -50,4 +59,8 @@ export function revisionConflict(
 }
 
 export type NativeWorkspaceCommit = WorkspaceCommit<JsonObject>;
+export type NativeWorkspaceSyncCommit = WorkspaceSyncCommit<JsonObject>;
+export type NativeWorkspaceSyncState = WorkspaceSyncState;
 export type PendingSyncOperation = SyncOperation;
+export type DurableSyncConflict = SyncConflict;
+export type DurableSyncCursor = SyncCursor;

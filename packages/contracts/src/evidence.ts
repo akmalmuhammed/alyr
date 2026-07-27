@@ -5,6 +5,8 @@ import type {
   HouseholdId,
   IsoDateTime,
   MemberId,
+  PlaceDocumentId,
+  PlaceDocumentVersionId,
   PlaceId,
   SpaceId,
 } from "./core.js";
@@ -89,4 +91,38 @@ export interface EvidenceDescriptor {
   readonly reviewedByMemberId: MemberId | null;
   readonly createdAt: IsoDateTime;
   readonly updatedAt: IsoDateTime;
+}
+
+/**
+ * A Place-scoped document is intentionally distinct from asset Evidence in
+ * the domain contract, even though both share the same encrypted blob and
+ * immutable-version infrastructure.
+ */
+export interface PlaceDocumentDescriptor {
+  readonly id: PlaceDocumentId;
+  readonly householdId: HouseholdId;
+  readonly placeId: PlaceId;
+  readonly kind: EvidenceKind;
+  readonly relation: EvidenceRelation;
+  readonly title: string;
+  readonly reviewStatus: EvidenceReviewStatus;
+  readonly storageState: EvidenceStorageState;
+  readonly version: number;
+  readonly createdAt: IsoDateTime;
+  readonly updatedAt: IsoDateTime;
+}
+
+export interface PlaceDocumentVersionDescriptor {
+  readonly id: PlaceDocumentVersionId;
+  readonly householdId: HouseholdId;
+  readonly placeDocumentId: PlaceDocumentId;
+  readonly blobObjectId: string;
+  readonly versionNumber: number;
+  readonly fileName: string;
+  readonly mimeType: string;
+  readonly byteSize: number;
+  readonly checksumSha256: string;
+  readonly storageState: EvidenceStorageState;
+  readonly createdByMemberId: MemberId;
+  readonly createdAt: IsoDateTime;
 }

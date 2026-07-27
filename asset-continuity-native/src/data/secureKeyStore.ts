@@ -3,7 +3,19 @@ import * as SecureStore from "expo-secure-store";
 
 import type { SecureKeyStore } from "@alyr/contracts";
 
-export const DATABASE_KEY_NAME = "alyr.native.database-key.v1";
+import {
+  assertValidVaultScope,
+  DEVICE_PREVIEW_VAULT_SCOPE,
+  type VaultScope
+} from "./vaultScope";
+
+/** Backward-compatible aliases for the explicit device-preview vault. */
+export const DATABASE_KEY_NAME =
+  DEVICE_PREVIEW_VAULT_SCOPE.databaseKeyName;
+export const ATTACHMENT_KEY_NAME =
+  DEVICE_PREVIEW_VAULT_SCOPE.attachmentKeyName;
+
+const AES_256_KEY_BYTES = 32;
 
 function encodeBase64(value: Uint8Array): string {
   let binary = "";
@@ -38,13 +50,56 @@ export class ExpoSecureKeyStore implements SecureKeyStore {
 }
 
 export async function getOrCreateDatabaseKey(
-  store: SecureKeyStore
+  store: SecureKeyStore,
+  scope: VaultScope = DEVICE_PREVIEW_VAULT_SCOPE
 ): Promise<Uint8Array> {
-  const existing = await store.get(DATABASE_KEY_NAME);
-  if (existing && existing.length === 32) {
+  const keyName = assertValidVaultScope(scope).databaseKeyName;
+  const existing = await store.get(keyName);
+  if (existing) {
+    if (existing.length !== AES_256_KEY_BYTES) {
+      throw new Error("The protected local database key is invalid.");
+    }
     return existing;
   }
-  const created = Crypto.getRandomBytes(32);
-  await store.set(DATABASE_KEY_NAME, created);
+  const created = Crypto.getRandomBytes(AES_256_KEY_BYTES);
+  await store.set(keyName, created);
   return created;
+}
+
+/**
+ * Returns the device-bound AES-256 attachment key, creating it only for a new
+ * attachment vault. An existing key with an unexpected length is treated as
+ * corrupt instead of being silently replaced, because replacing it would make
+ * every previously encrypted attachment unreadable.
+ */
+export async function getOrCreateAttachmentKey(
+  store: SecureKeyStore,
+  scope: VaultScope = DEVICE_PREVIEW_VAULT_SCOPE
+): Promise<Uint8Array> {
+  const keyName = assertValidVaultScope(scope).attachmentKeyName;
+  const existing = await store.get(keyName);
+  if (existing) {
+    if (existing.length !== AES_256_KEY_BYTES) {
+      throw new Error("The protected attachment key is invalid.");
+    }
+    return existing;
+  }
+
+  const created = Crypto.getRandomBytes(AES_256_KEY_BYTES);
+  await store.set(keyName, created);
+  return created;
+}
+
+export async function removeDatabaseKey(
+  store: SecureKeyStore,
+  scope: VaultScope = DEVICE_PREVIEW_VAULT_SCOPE
+): Promise<void> {
+  await store.remove(assertValidVaultScope(scope).databaseKeyName);
+}
+
+export async function removeAttachmentKey(
+  store: SecureKeyStore,
+  scope: VaultScope = DEVICE_PREVIEW_VAULT_SCOPE
+): Promise<void> {
+  await store.remove(assertValidVaultScope(scope).attachmentKeyName);
 }

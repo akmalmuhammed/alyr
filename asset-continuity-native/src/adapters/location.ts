@@ -25,10 +25,10 @@ export async function readCurrentLocation(): Promise<LocationOutcome> {
         latitude: position.coords.latitude,
         longitude: position.coords.longitude,
         source: "device_gps",
-        precision:
-          typeof accuracy === "number" && accuracy <= 15
-            ? "exact"
-            : "approximate",
+        // Accuracy describes the phone reading, not whether the marker is on
+        // the correct property. A separate map confirmation is required
+        // before ALYR can make a property-level precision claim.
+        precision: "approximate",
         horizontalAccuracyMeters: accuracy ?? null,
         observedAt: new Date(position.timestamp).toISOString(),
         confirmedAt: null

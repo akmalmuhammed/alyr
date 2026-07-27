@@ -4,6 +4,7 @@ import type {
   NativeEvidence,
   NativePlace
 } from "./model";
+import { getLocationPolicy } from "@alyr/domain";
 
 export function calculateNativeAssetReadiness(
   asset: NativeAsset,
@@ -13,13 +14,24 @@ export function calculateNativeAssetReadiness(
   const assetEvidence = evidence.filter((item) =>
     asset.evidenceIds.includes(item.id)
   );
+  const primaryPhotoEvidence = asset.photoEvidenceId
+    ? evidence.find(
+        (item) =>
+          item.id === asset.photoEvidenceId &&
+          item.assetId === asset.id &&
+          item.kind === "media"
+      )
+    : null;
   const place = places.find((item) => item.id === asset.placeId);
   const hasDetailedLocation =
     asset.locationStatus === "known" &&
     Boolean(place) &&
     Boolean(asset.roomId || asset.locatorText?.trim());
+  const requiresPhysicalLocation = getLocationPolicy(
+    asset.categoryId
+  ).requiresPhysicalLocator;
 
-  const items: AssetReadiness["items"] = [
+  const candidateItems: AssetReadiness["items"] = [
     {
       id: "identity",
       label: "Identity recorded",
@@ -30,7 +42,11 @@ export function calculateNativeAssetReadiness(
       id: "photo",
       label: "Primary photo attached",
       weight: 20,
-      complete: Boolean(asset.photoUri || asset.photoProtectedUri)
+      complete: Boolean(
+        asset.photoUri ||
+          asset.photoProtectedUri ||
+          primaryPhotoEvidence
+      )
     },
     {
       id: "location",
@@ -45,11 +61,22 @@ export function calculateNativeAssetReadiness(
       complete: assetEvidence.length > 0
     }
   ];
+  const items = candidateItems.filter(
+    (item) => item.id !== "location" || requiresPhysicalLocation
+  );
 
-  const percent = items.reduce(
+  const availableWeight = items.reduce(
+    (total, item) => total + item.weight,
+    0
+  );
+  const completedWeight = items.reduce(
     (total, item) => total + (item.complete ? item.weight : 0),
     0
   );
+  const percent =
+    availableWeight === 0
+      ? 0
+      : Math.round((completedWeight / availableWeight) * 100);
 
   return {
     percent,

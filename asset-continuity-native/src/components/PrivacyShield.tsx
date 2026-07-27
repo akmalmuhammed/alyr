@@ -8,9 +8,22 @@ import {
   View
 } from "react-native";
 
+import { useLocale } from "@/i18n/LocaleProvider";
+import { BrandMark } from "@/components/ui";
 import { colors, typography } from "@/theme/tokens";
 
-export function PrivacyShield() {
+export const PRIVACY_SHIELD_COPY = {
+  en: {
+    accessibilityLabel: "ALYR is locked while the app is not active",
+    message: "Private while you are away"
+  },
+  ar: {
+    accessibilityLabel: "تطبيق ALYR مقفل أثناء عدم استخدامه",
+    message: "خصوصيتك محفوظة أثناء ابتعادك"
+  }
+} as const;
+
+export function usePrivacyShielded() {
   const [appState, setAppState] = useState<AppStateStatus>(
     AppState.currentState
   );
@@ -20,22 +33,42 @@ export function PrivacyShield() {
     return () => subscription.remove();
   }, []);
 
-  if (appState === "active") {
+  return appState !== "active";
+}
+
+export function PrivacyShield({
+  visible
+}: {
+  readonly visible: boolean;
+}) {
+  const { language, rtl } = useLocale();
+  const copy = PRIVACY_SHIELD_COPY[language];
+
+  if (!visible) {
     return null;
   }
 
   return (
     <View
-      accessibilityLabel="ALYR is locked while the app is not active"
+      accessibilityLabel={copy.accessibilityLabel}
       accessibilityRole="summary"
+      accessibilityViewIsModal
       importantForAccessibility="yes"
       style={styles.overlay}
     >
       <View style={styles.mark}>
-        <ShieldCheck color={colors.volt} size={34} weight="duotone" />
+        <BrandMark compact reversed />
       </View>
-      <Text style={styles.brand}>ALYR</Text>
-      <Text style={styles.message}>Private while you are away</Text>
+      <ShieldCheck color={colors.text} size={22} weight="regular" />
+      <Text
+        style={[
+          styles.message,
+          rtl && styles.messageArabic,
+          rtl && styles.rtlText
+        ]}
+      >
+        {copy.message}
+      </Text>
     </View>
   );
 }
@@ -59,20 +92,19 @@ const styles = StyleSheet.create({
     height: 64,
     alignItems: "center",
     justifyContent: "center",
-    borderRadius: 20,
-    borderWidth: 1,
-    borderColor: colors.borderStrong,
-    backgroundColor: colors.surface
-  },
-  brand: {
-    color: colors.text,
-    fontFamily: typography.displayBold,
-    fontSize: 24,
-    letterSpacing: 6
+    borderRadius: 16,
+    backgroundColor: colors.carbon
   },
   message: {
     color: colors.textMuted,
     fontFamily: typography.body,
     fontSize: 14
+  },
+  messageArabic: {
+    fontFamily: typography.arabic
+  },
+  rtlText: {
+    textAlign: "right",
+    writingDirection: "rtl"
   }
 });

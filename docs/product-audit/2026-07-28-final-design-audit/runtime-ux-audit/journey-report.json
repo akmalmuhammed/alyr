@@ -1,0 +1,83 @@
+[
+  {
+    "file": "C:\\Users\\akmal\\OneDrive\\Documents\\alyr\\docs\\product-audit\\2026-07-28-final-design-audit\\runtime-ux-audit\\01-welcome-390x844.png",
+    "href": "http://127.0.0.1:4173/",
+    "pathname": "/",
+    "width": 390,
+    "height": 844,
+    "scrollWidth": 390,
+    "bodyText": "العربية\nSign in\nPRIVATE HOUSEHOLD RECORD\nKnow what you own. Know exactly where it is.\nKeep important items, places and proof connected in one household record you can actually use.\nONE PRIVATE RECORD\nRecord the things that matter\nReady to retrieve\nPlace each one precisely\nKeep the proof beside the item\nPersonal test mode: accounts and records stay only in this running preview. No email is sent. Use test information.\nCreate private workspace\nExplore sample"
+  },
+  {
+    "file": "C:\\Users\\akmal\\OneDrive\\Documents\\alyr\\docs\\product-audit\\2026-07-28-final-design-audit\\runtime-ux-audit\\02-create-account-390x844.png",
+    "href": "http://127.0.0.1:4173/create-account",
+    "pathname": "/create-account",
+    "width": 390,
+    "height": 844,
+    "scrollWidth": 390,
+    "bodyText": "CREATE YOUR ACCOUNT\nStart with one accountable owner.\nThis account will own the first private household record. Family access comes later, by invitation.\nTest mode keeps this identity only in memory. No email is sent and the email will not be marked verified.\nEmail\nPassword\nAt least 10 characters. Password managers are supported.\nConfirm password\nBy creating an account, you agree to the pilot terms and acknowledge the privacy notice.\nPrivacy notice\nPilot terms\nCreate account\nI already have an ac"
+  },
+  {
+    "file": "C:\\Users\\akmal\\OneDrive\\Documents\\alyr\\docs\\product-audit\\2026-07-28-final-design-audit\\runtime-ux-audit\\03-confirm-email-390x844.png",
+    "href": "http://127.0.0.1:4173/confirm-email",
+    "pathname": "/confirm-email",
+    "width": 390,
+    "height": 844,
+    "scrollWidth": 390,
+    "bodyText": "Step 1 of 3\nPERSONAL TEST MODE\nContinue with a session-only identity.\nNo email is sent in this preview. Your test identity stays on this device for this session.\nTEST EMAIL\nip••••@alyr.test\nThis preview resets when the session ends. Use test details only.\nContinue in test mode\nUse a different email"
+  },
+  {
+    "file": "C:\\Users\\akmal\\OneDrive\\Documents\\alyr\\docs\\product-audit\\2026-07-28-final-design-audit\\runtime-ux-audit\\04-household-390x844.png",
+    "href": "http://127.0.0.1:4173/household",
+    "pathname": "/household",
+    "width": 390,
+    "height": 844,
+    "scrollWidth": 390,
+    "bodyText": "Step 2 of 3\nHOUSEHOLD WORKSPACE\nName the household record.\nUse the name your family would recognise. Items, Places, proof and access stay organised here.\nCreate my household\nStart a private register that you own and can later share.\nJoin a household\nUse a one-time code shared directly by the household owner.\nHousehold name\nYou start as the only owner. You can review household access later.\nContinue"
+  },
+  {
+    "file": "C:\\Users\\akmal\\OneDrive\\Documents\\alyr\\docs\\product-audit\\2026-07-28-final-design-audit\\runtime-ux-audit\\05-first-use-choice-390x844.png",
+    "href": "http://127.0.0.1:4173/privacy",
+    "pathname": "/privacy",
+    "width": 390,
+    "height": 844,
+    "scrollWidth": 390,
+    "bodyText": "Step 3 of 3\nFIRST USEFUL ACTION\nChoose what you want to make findable first.\nALYR becomes useful with the first real record, not with a finished setup screen.\nStart with an important item\nA watch, document, artwork, vehicle or personal possession.\nStart with a home or property\nA home, apartment, plot, office or storage location.\nPrivate by default\nRecords begin private to this household.\nLocation by intent\nLocation is requested only when you choose to place something.\nAccess is deliberate\nFamily"
+  },
+  {
+    "file": "C:\\Users\\akmal\\OneDrive\\Documents\\alyr\\docs\\product-audit\\2026-07-28-final-design-audit\\runtime-ux-audit\\06-quick-passport-390x844.png",
+    "href": "http://127.0.0.1:4173/capture",
+    "pathname": "/capture",
+    "width": 390,
+    "height": 844,
+    "scrollWidth": 390,
+    "bodyText": "QUICK PASSPORT\n1 of 4 · Details\nWhat are you preserving?\nGive it a clear name and category. You can add more details later.\nAsset name\nAsset category\nCommon choices\nWatch\nJewelry\nCar\nPersonal item\nBrowse all categories\nHomes, apartments, land, and commercial property are organized separately as Places.\nPhoto\nAdd one so it is easy to recognize, or skip it for now.\nTake photo\nChoose photo\nContinue"
+  },
+  {
+    "file": "C:\\Users\\akmal\\OneDrive\\Documents\\alyr\\docs\\product-audit\\2026-07-28-final-design-audit\\runtime-ux-audit\\07-sample-today-390x844.png",
+    "href": "http://127.0.0.1:4173/",
+    "pathname": "/",
+    "width": 390,
+    "height": 844,
+    "scrollWidth": 390,
+    "bodyText": "Rahman household · sample\nDemo household\nToday\n6 important things across 2 Places.\nSaved on this device\nLocal preview only · not protected in cloud\nNEXT TO PROTECT\nRegister readiness · 97%\nAdd a photo of Childhood train set\nA clear image makes the Passport faster to recognise.\nAdd photo\nPORTFOLIO\nQAR ••••••\nUSD ••••••\n6 of 8 items and properties have a recorded value · currencies stay separate\nYour places\nView places\nLOCATION OVERVIEW\n2 Places in your register\n2 confirmed pins · 0 need confirmat"
+  },
+  {
+    "file": "C:\\Users\\akmal\\OneDrive\\Documents\\alyr\\docs\\product-audit\\2026-07-28-final-design-audit\\runtime-ux-audit\\08-portfolio-dashboard-390x844.png",
+    "href": "http://127.0.0.1:4173/dashboard",
+    "pathname": "/dashboard",
+    "width": 390,
+    "height": 844,
+    "scrollWidth": 390,
+    "bodyText": "Portfolio\nSAMPLE WORKSPACE\nWhat you own, where it is and what still needs attention.\nRECORDED VALUE\nQAR ••••••\n4 entries\nUSD ••••••\n2 entries\n6\nItems\n2\nProperties\n6\nValued\n6 of 8 items and properties have a recorded value\nIllustrative values are dated sample entries—not live prices or appraisals.\nCurrencies stay separate. No exchange rate has been applied.\nThis is not net worth. Liabilities, taxes and selling costs are not tracked.\nExplain this number\nNeeds attention\nItems without a recorded val"
+  },
+  {
+    "file": "C:\\Users\\akmal\\OneDrive\\Documents\\alyr\\docs\\product-audit\\2026-07-28-final-design-audit\\runtime-ux-audit\\09-atlas-390x844.png",
+    "href": "http://127.0.0.1:4173/atlas",
+    "pathname": "/atlas",
+    "width": 390,
+    "height": 844,
+    "scrollWidth": 390,
+    "bodyText": "Atlas\nPRIVATE LOCATION OVERVIEW\nSee where your Places are, then open the property record for exact retrieval details and documents.\nGlobe\nList\nSELECTED REGION\nDoha\n2\nmapped Places\nDrag to explore. Use previous and next Place for an exact selection.\n1 OF 2\nWest Bay Home\nSELECTED PLACE\nWest Bay Home\nDoha · 4 items · 4 spaces\nGPS pin confirmed · measured accuracy ±7 m\nOpen Place\nItems at West Bay Home\nGMT-Master II\nReady\nWatch\nWest Bay Home · Wardrobe · Upper watch drawer\nRoadster\nDue 16 Aug\nCar\nWe"
+  }
+]

@@ -4,26 +4,49 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
   ...config,
   name: "ALYR",
   slug: "alyr-asset-continuity",
-  owner: process.env.EXPO_PUBLIC_EAS_OWNER || undefined,
+  owner: "alyr-app",
   version: "0.1.0",
   orientation: "portrait",
   scheme: "alyr",
-  userInterfaceStyle: "dark",
-  newArchEnabled: true,
+  userInterfaceStyle: "light",
   icon: "./assets/alyr/app-and-favicon/01_App_Icon/PNG/app-icon-1024.png",
-  splash: {
-    image: "./assets/alyr/app-and-favicon/01_App_Icon/PNG/app-icon-512.png",
-    resizeMode: "contain",
-    backgroundColor: "#0E1012"
-  },
   ios: {
     bundleIdentifier: "com.alyr.continuity",
-    supportsTablet: true,
+    supportsTablet: false,
+    icon: "./assets/alyr/app-and-favicon/01_App_Icon/PNG/app-icon-ios-1024.png",
+    config: {
+      usesNonExemptEncryption: false
+    },
+    privacyManifests: {
+      NSPrivacyTracking: false,
+      NSPrivacyTrackingDomains: [],
+      NSPrivacyAccessedAPITypes: [
+        {
+          NSPrivacyAccessedAPIType:
+            "NSPrivacyAccessedAPICategoryFileTimestamp",
+          NSPrivacyAccessedAPITypeReasons: ["C617.1", "3B52.1"]
+        },
+        {
+          NSPrivacyAccessedAPIType: "NSPrivacyAccessedAPICategoryDiskSpace",
+          NSPrivacyAccessedAPITypeReasons: ["E174.1", "85F4.1"]
+        },
+        {
+          NSPrivacyAccessedAPIType:
+            "NSPrivacyAccessedAPICategorySystemBootTime",
+          NSPrivacyAccessedAPITypeReasons: ["35F9.1"]
+        },
+        {
+          NSPrivacyAccessedAPIType:
+            "NSPrivacyAccessedAPICategoryUserDefaults",
+          NSPrivacyAccessedAPITypeReasons: ["CA92.1"]
+        }
+      ]
+    },
     infoPlist: {
       NSCameraUsageDescription:
         "ALYR uses the camera only when you choose to photograph an asset or its supporting material.",
       NSFaceIDUsageDescription:
-        "Use Face ID to unlock the private ALYR vault on this device.",
+        "ALYR uses Face ID only to unlock your private household record on this device.",
       NSLocationWhenInUseUsageDescription:
         "ALYR uses your location only when you ask to place a property accurately."
     }
@@ -36,13 +59,11 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
         "./assets/alyr/app-and-favicon/01_App_Icon/PNG/app-icon-1024.png",
       backgroundColor: "#0E1012"
     },
-    edgeToEdgeEnabled: true,
     predictiveBackGestureEnabled: true,
     permissions: [
       "CAMERA",
       "ACCESS_COARSE_LOCATION",
-      "ACCESS_FINE_LOCATION",
-      "USE_BIOMETRIC"
+      "ACCESS_FINE_LOCATION"
     ]
   },
   web: {
@@ -54,6 +75,16 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
   plugins: [
     "expo-router",
     [
+      "expo-splash-screen",
+      {
+        image:
+          "./assets/alyr/app-and-favicon/01_App_Icon/PNG/app-icon-512.png",
+        imageWidth: 160,
+        resizeMode: "contain",
+        backgroundColor: "#F6F7F3"
+      }
+    ],
+    [
       "expo-sqlite",
       {
         enableFTS: true,
@@ -63,16 +94,17 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
     [
       "expo-secure-store",
       {
-        configureAndroidBackup: true,
-        faceIDPermission:
-          "Allow ALYR to use Face ID to unlock your private vault."
+        configureAndroidBackup: true
       }
     ],
     [
       "expo-camera",
       {
         cameraPermission:
-          "Allow ALYR to photograph an asset or supporting material."
+          "Allow ALYR to photograph an asset or supporting material.",
+        microphonePermission: false,
+        recordAudioAndroid: false,
+        barcodeScannerEnabled: false
       }
     ],
     [
@@ -88,35 +120,36 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
       "expo-location",
       {
         locationWhenInUsePermission:
-          "Allow ALYR to place a property when you request accurate location."
+          "Allow ALYR to place a property when you request accurate location.",
+        locationAlwaysAndWhenInUsePermission: false,
+        locationAlwaysPermission: false,
+        motionUsagePermission: false,
+        isIosBackgroundLocationEnabled: false,
+        isAndroidBackgroundLocationEnabled: false,
+        isAndroidForegroundServiceEnabled: false,
+        isAndroidMotionActivityEnabled: false
       }
     ],
     [
       "expo-local-authentication",
       {
         faceIDPermission:
-          "Allow ALYR to use Face ID to unlock your private vault."
+          "Allow ALYR to use Face ID to unlock your private household record on this device."
       }
     ],
-    [
-      "expo-notifications",
-      {
-        color: "#8B5CF6",
-        defaultChannel: "reviews"
-      }
-    ]
   ],
   experiments: {
     typedRoutes: true
+  },
+  updates: {
+    url: "https://u.expo.dev/85cab1f2-111f-4e20-abd5-8dff0df2fabb"
   },
   runtimeVersion: {
     policy: "appVersion"
   },
   extra: {
     eas: {
-      projectId: process.env.EXPO_PUBLIC_EAS_PROJECT_ID || undefined
-    },
-    supabaseUrl: process.env.EXPO_PUBLIC_SUPABASE_URL || "",
-    supabaseAnonKey: process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY || ""
+      projectId: "85cab1f2-111f-4e20-abd5-8dff0df2fabb"
+    }
   }
 });

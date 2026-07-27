@@ -1,0 +1,157 @@
+import {
+  fireEvent,
+  render
+} from "@testing-library/react-native";
+import type { PropsWithChildren } from "react";
+import { StyleSheet } from "react-native";
+
+import { VaultRecentProof } from "@/components/VaultRecentProof";
+import type {
+  NativeEvidence,
+  NativePlaceDocument,
+  NativeWorkspace
+} from "@/domain/model";
+import { createWorkspace } from "@/domain/sample";
+import { CORE_JOURNEY_COPY } from "@/i18n/coreJourneyCopy";
+import { LocaleProvider } from "@/i18n/LocaleProvider";
+import {
+  getRecentProofEntries,
+  recentProofCountLabel
+} from "@/vault/recentProof";
+
+const baseWorkspace = createWorkspace("sample");
+const place = baseWorkspace.places[0]!;
+const placeDocument: NativePlaceDocument = {
+  id: "place-document-newest",
+  versionId: "place-document-newest-v1",
+  blobObjectId: "place-document-newest-blob",
+  householdId: baseWorkspace.household.id,
+  placeId: place.id,
+  fileName: "West Bay title deed.pdf",
+  mimeType: "application/pdf",
+  byteSize: 384_000,
+  localUri: "file:///west-bay-title-deed.pdf",
+  checksumSha256: "a".repeat(64),
+  encryptedAtRest: true,
+  storageState: "on-device",
+  capturedAt: "2026-07-27T09:00:00.000Z"
+};
+
+const workspace: NativeWorkspace = {
+  ...baseWorkspace,
+  placeDocuments: [placeDocument]
+};
+
+function localeWrapper(language: "en" | "ar") {
+  return function TestLocaleWrapper({ children }: PropsWithChildren) {
+    return (
+      <LocaleProvider initialLanguage={language}>
+        {children}
+      </LocaleProvider>
+    );
+  };
+}
+
+describe("Vault recent proof", () => {
+  it("merges asset evidence and Place documents newest-first", () => {
+    const orphanEvidence: NativeEvidence = {
+      ...baseWorkspace.evidence[0]!,
+      id: "orphan-evidence",
+      assetId: "missing-asset",
+      capturedAt: "2026-07-28T09:00:00.000Z"
+    };
+    const orphanDocument: NativePlaceDocument = {
+      ...placeDocument,
+      id: "orphan-place-document",
+      placeId: "missing-place",
+      capturedAt: "2026-07-29T09:00:00.000Z"
+    };
+    const entries = getRecentProofEntries({
+      ...workspace,
+      evidence: [...workspace.evidence, orphanEvidence],
+      placeDocuments: [placeDocument, orphanDocument]
+    });
+
+    expect(entries[0]).toMatchObject({
+      kind: "place-document",
+      id: placeDocument.id
+    });
+    expect(entries.some((entry) => entry.id === orphanEvidence.id)).toBe(
+      false
+    );
+    expect(entries.some((entry) => entry.id === orphanDocument.id)).toBe(
+      false
+    );
+    expect(entries).toHaveLength(
+      baseWorkspace.evidence.length + 1
+    );
+  });
+
+  it("opens asset proof through its existing evidence route callback", async () => {
+    const onOpenEvidence = jest.fn();
+    const screen = await render(
+      <VaultRecentProof
+        attachmentStore={null}
+        onOpenEvidence={onOpenEvidence}
+        workspace={workspace}
+      />,
+      { wrapper: localeWrapper("en") }
+    );
+
+    expect(
+      screen.getByText(CORE_JOURNEY_COPY.en.vault.recentProof)
+    ).toBeTruthy();
+    expect(screen.getByText(placeDocument.fileName)).toBeTruthy();
+    await fireEvent.press(
+      screen.getByTestId("vault-recent-evidence-evidence-1")
+    );
+    expect(onOpenEvidence).toHaveBeenCalledWith("evidence-1");
+  });
+
+  it("keeps the first view compact and reveals the complete proof list", async () => {
+    const screen = await render(
+      <VaultRecentProof
+        attachmentStore={null}
+        onOpenEvidence={jest.fn()}
+        workspace={workspace}
+      />,
+      { wrapper: localeWrapper("en") }
+    );
+
+    expect(
+      screen.queryByTestId("vault-recent-evidence-photo-study-art")
+    ).toBeNull();
+    await fireEvent.press(
+      screen.getByTestId("vault-recent-proof-disclosure")
+    );
+    expect(
+      screen.getByTestId("vault-recent-evidence-photo-study-art")
+    ).toBeTruthy();
+  });
+
+  it("renders native Arabic copy, RTL text and localized counts", async () => {
+    const screen = await render(
+      <VaultRecentProof
+        attachmentStore={null}
+        onOpenEvidence={jest.fn()}
+        workspace={workspace}
+      />,
+      { wrapper: localeWrapper("ar") }
+    );
+    const title = screen.getByText(
+      CORE_JOURNEY_COPY.ar.vault.recentProof
+    );
+    const titleStyle = StyleSheet.flatten(title.props.style);
+
+    expect(
+      screen.queryByText(CORE_JOURNEY_COPY.en.vault.recentProof)
+    ).toBeNull();
+    expect(titleStyle.fontFamily).toBe(
+      "IBMPlexSansArabic_600SemiBold"
+    );
+    expect(titleStyle.writingDirection).toBe("rtl");
+    expect(recentProofCountLabel(1, "ar")).toBe("ملف واحد");
+    expect(recentProofCountLabel(2, "ar")).toBe("ملفان");
+    expect(recentProofCountLabel(5, "ar")).toContain("٥");
+  });
+});

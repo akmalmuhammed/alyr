@@ -4,10 +4,19 @@ import test from "node:test";
 import {
   ANALYTICS_EVENT_ALLOW_LIST,
   ANALYTICS_PROHIBITED_KEY_FRAGMENTS,
+  DOMAIN_COMMAND_TYPES,
   LOCALE_DIRECTIONS,
   ROLE_CAPABILITIES,
   SUPPORTED_LOCALES,
 } from "../dist/index.js";
+
+test("Place documents have explicit sync commands without weakening Evidence commands", () => {
+  assert.ok(DOMAIN_COMMAND_TYPES.includes("place-document.create"));
+  assert.ok(DOMAIN_COMMAND_TYPES.includes("place-document.version.add"));
+  assert.ok(DOMAIN_COMMAND_TYPES.includes("evidence.create"));
+  assert.ok(DOMAIN_COMMAND_TYPES.includes("evidence.version.add"));
+  assert.equal(new Set(DOMAIN_COMMAND_TYPES).size, DOMAIN_COMMAND_TYPES.length);
+});
 
 test("role capability sets remain deny-by-default and ordered by authority", () => {
   const owner = new Set(ROLE_CAPABILITIES.owner);

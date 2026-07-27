@@ -5,7 +5,10 @@ import type {
   IsoDateTime,
   JsonObject,
   MemberId,
+  PlaceDocumentId,
+  PlaceId,
 } from "./core.js";
+import type { EvidenceKind, EvidenceRelation } from "./evidence.js";
 
 export type SyncStatus =
   | "on-device"
@@ -15,16 +18,84 @@ export type SyncStatus =
   | "synced"
   | "needs-attention";
 
-export type DomainCommandType =
-  | "place.create"
-  | "space.create"
-  | "asset.create"
-  | "asset.update"
-  | "asset.move"
-  | "asset.archive"
-  | "evidence.create"
-  | "evidence.version.add"
-  | "evidence.review";
+export const DOMAIN_COMMAND_TYPES = [
+  "place.create",
+  "place.update",
+  "space.create",
+  "space.update",
+  "asset.create",
+  "asset.update",
+  "asset.move",
+  "asset.archive",
+  "asset.restore",
+  "evidence.create",
+  "evidence.version.add",
+  "evidence.review",
+  "place-document.create",
+  "place-document.version.add",
+  "value.create",
+  "value.update",
+  "value.delete",
+] as const;
+
+export type DomainCommandType = (typeof DOMAIN_COMMAND_TYPES)[number];
+
+/**
+ * One dated, user-entered Portfolio assertion targets exactly one subject.
+ * A Place subject is accepted only after the server confirms that the
+ * household explicitly classifies it as an owned Property.
+ */
+export type ValueAssertionPayload = {
+  readonly amountMinor: number;
+  readonly currency: string;
+  readonly asOf: string;
+  readonly source: "user-entered";
+} & (
+  | {
+      readonly assetId: EntityId;
+      readonly placeId?: never;
+    }
+  | {
+      readonly placeId: EntityId;
+      readonly assetId?: never;
+    }
+);
+
+/**
+ * Creates the durable metadata record before bytes are uploaded. Place
+ * documents use the same private BlobObject and immutable version lifecycle
+ * as asset Evidence while retaining an explicit Place parent.
+ */
+export interface PlaceDocumentCreatePayload extends JsonObject {
+  readonly placeId: PlaceId;
+  readonly kind: EvidenceKind;
+  readonly relation: EvidenceRelation;
+  readonly title: string;
+}
+
+/**
+ * Binds one byte-verified, already-stored BlobObject to the next immutable
+ * version of a Place document. `observedVersion` on the command is the current
+ * immutable document-version number, starting at zero.
+ */
+export interface PlaceDocumentVersionAddPayload extends JsonObject {
+  readonly placeDocumentId: PlaceDocumentId;
+  readonly blobObjectId: EntityId;
+  readonly fileName: string;
+  readonly mimeType: string;
+  readonly byteSize: number;
+  readonly checksumSha256: string;
+}
+
+export type PlaceDocumentCreateCommand = DomainCommand<
+  "place-document.create",
+  PlaceDocumentCreatePayload
+>;
+
+export type PlaceDocumentVersionAddCommand = DomainCommand<
+  "place-document.version.add",
+  PlaceDocumentVersionAddPayload
+>;
 
 export interface DomainCommand<
   TType extends DomainCommandType = DomainCommandType,

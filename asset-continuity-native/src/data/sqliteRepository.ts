@@ -3,15 +3,27 @@ import * as SQLite from "expo-sqlite";
 import type {
   JsonObject,
   SecureKeyStore,
+  SyncConflict,
+  SyncCursor,
   SyncOperation
 } from "@alyr/contracts";
 
 import {
   type NativeWorkspaceCommit,
   type NativeWorkspaceRepository,
+  type NativeWorkspaceSyncCommit,
   revisionConflict
 } from "./repository";
-import { getOrCreateDatabaseKey } from "./secureKeyStore";
+import {
+  getOrCreateDatabaseKey,
+  removeDatabaseKey
+} from "./secureKeyStore";
+import {
+  assertValidVaultScope,
+  DEVICE_PREVIEW_VAULT_SCOPE,
+  type VaultScope,
+  type VaultScopeId
+} from "./vaultScope";
 
 interface SnapshotRow {
   readonly revision: number;
@@ -20,6 +32,11 @@ interface SnapshotRow {
 
 interface OperationRow {
   readonly operation_json: string;
+}
+
+interface SyncStateRow {
+  readonly cursor_json: string;
+  readonly conflicts_json: string;
 }
 
 interface CipherVersionRow {
@@ -36,52 +53,138 @@ export class SQLiteWorkspaceRepository implements NativeWorkspaceRepository {
   readonly encryptedAtRest = true;
 
   private database: SQLite.SQLiteDatabase | null = null;
+  private locked = false;
+  private readonly vaultScope: VaultScope;
 
-  constructor(private readonly keyStore: SecureKeyStore) {}
+  constructor(
+    private readonly keyStore: SecureKeyStore,
+    scope: VaultScope = DEVICE_PREVIEW_VAULT_SCOPE
+  ) {
+    this.vaultScope = assertValidVaultScope(scope);
+  }
+
+  get scopeId(): VaultScopeId {
+    return this.vaultScope.scopeId;
+  }
+
+  get databaseName(): string {
+    return this.vaultScope.databaseName;
+  }
+
+  get isLocked(): boolean {
+    return this.locked;
+  }
 
   async initialize(): Promise<void> {
+    if (this.locked) {
+      throw new Error(
+        "This local vault is locked. Create a new authenticated vault session to reopen it."
+      );
+    }
     if (this.database) {
       return;
     }
-    const key = await getOrCreateDatabaseKey(this.keyStore);
+    const key = await getOrCreateDatabaseKey(
+      this.keyStore,
+      this.vaultScope
+    );
     const keyHex = bytesToHex(key);
     if (!/^[a-f0-9]{64}$/u.test(keyHex)) {
       throw new Error("The generated local database key was invalid.");
     }
 
-    const database = await SQLite.openDatabaseAsync("alyr-continuity.db");
-    await database.execAsync(`PRAGMA key = "x'${keyHex}'";`);
-    const cipher = await database.getFirstAsync<CipherVersionRow>(
-      "PRAGMA cipher_version;"
+    const database = await SQLite.openDatabaseAsync(
+      this.vaultScope.databaseName
     );
-    if (!cipher?.cipher_version) {
+    try {
+      await database.execAsync(`PRAGMA key = "x'${keyHex}'";`);
+      const cipher = await database.getFirstAsync<CipherVersionRow>(
+        "PRAGMA cipher_version;"
+      );
+      if (!cipher?.cipher_version) {
+        throw new Error(
+          "SQLCipher is unavailable; ALYR will not open a plaintext vault."
+        );
+      }
+      await database.execAsync("PRAGMA foreign_keys = ON;");
+      await database.execAsync("PRAGMA journal_mode = WAL;");
+      await database.execAsync(`
+        CREATE TABLE IF NOT EXISTS workspace_snapshot (
+          id INTEGER PRIMARY KEY CHECK (id = 1),
+          revision INTEGER NOT NULL,
+          snapshot_json TEXT,
+          updated_at TEXT NOT NULL
+        );
+        CREATE TABLE IF NOT EXISTS sync_outbox (
+          operation_id TEXT PRIMARY KEY,
+          operation_json TEXT NOT NULL,
+          status TEXT NOT NULL,
+          created_at TEXT NOT NULL,
+          updated_at TEXT NOT NULL
+        );
+        CREATE TABLE IF NOT EXISTS sync_state (
+          id INTEGER PRIMARY KEY CHECK (id = 1),
+          cursor_json TEXT NOT NULL,
+          conflicts_json TEXT NOT NULL,
+          updated_at TEXT NOT NULL
+        );
+        INSERT OR IGNORE INTO workspace_snapshot
+          (id, revision, snapshot_json, updated_at)
+        VALUES
+          (1, 0, NULL, '1970-01-01T00:00:00.000Z');
+        INSERT OR IGNORE INTO sync_state
+          (id, cursor_json, conflicts_json, updated_at)
+        VALUES
+          (
+            1,
+            '{"cursorVersion":1,"value":null,"issuedAt":null}',
+            '[]',
+            '1970-01-01T00:00:00.000Z'
+          );
+      `);
+      this.database = database;
+    } catch (error) {
       await database.closeAsync();
-      throw new Error(
-        "SQLCipher is unavailable; ALYR will not open a plaintext vault."
-      );
+      throw error;
     }
-    await database.execAsync("PRAGMA foreign_keys = ON;");
-    await database.execAsync("PRAGMA journal_mode = WAL;");
-    await database.execAsync(`
-      CREATE TABLE IF NOT EXISTS workspace_snapshot (
-        id INTEGER PRIMARY KEY CHECK (id = 1),
-        revision INTEGER NOT NULL,
-        snapshot_json TEXT,
-        updated_at TEXT NOT NULL
-      );
-      CREATE TABLE IF NOT EXISTS sync_outbox (
-        operation_id TEXT PRIMARY KEY,
-        operation_json TEXT NOT NULL,
-        status TEXT NOT NULL,
-        created_at TEXT NOT NULL,
-        updated_at TEXT NOT NULL
-      );
-      INSERT OR IGNORE INTO workspace_snapshot
-        (id, revision, snapshot_json, updated_at)
-      VALUES
-        (1, 0, NULL, '1970-01-01T00:00:00.000Z');
-    `);
-    this.database = database;
+  }
+
+  /**
+   * Closes the current SQLCipher handle but keeps the scope reopenable. This is
+   * useful for app lifecycle pressure; sign-out/account-switch code should use
+   * `lock()` instead.
+   */
+  async close(): Promise<void> {
+    const database = this.database;
+    this.database = null;
+    if (database) {
+      await database.closeAsync();
+    }
+  }
+
+  /**
+   * Irreversibly locks this repository instance. A freshly authenticated
+   * session must construct a new scoped repository, preventing stale callers
+   * from reopening the previous household after sign-out.
+   */
+  async lock(): Promise<void> {
+    this.locked = true;
+    await this.close();
+  }
+
+  /**
+   * Destructively removes this scope's database and device-bound database key.
+   * Attachment files/keys are purged by the matching scoped attachment store.
+   */
+  async purge(): Promise<void> {
+    await this.lock();
+    const results = await Promise.allSettled([
+      SQLite.deleteDatabaseAsync(this.vaultScope.databaseName),
+      removeDatabaseKey(this.keyStore, this.vaultScope)
+    ]);
+    if (results.some((result) => result.status === "rejected")) {
+      throw new Error("The local database vault could not be fully purged.");
+    }
   }
 
   async load(): Promise<{
@@ -162,7 +265,7 @@ export class SQLiteWorkspaceRepository implements NativeWorkspaceRepository {
     const rows = await database.getAllAsync<OperationRow>(
       `SELECT operation_json
        FROM sync_outbox
-       WHERE status IN ('on-device', 'queued', 'needs-attention')
+       WHERE status IN ('on-device', 'queued')
        ORDER BY created_at ASC
        LIMIT ?`,
       Math.max(0, limit)
@@ -180,7 +283,155 @@ export class SQLiteWorkspaceRepository implements NativeWorkspaceRepository {
     );
   }
 
+  async loadSyncState(): Promise<{
+    readonly cursor: SyncCursor;
+    readonly conflicts: readonly SyncConflict[];
+  }> {
+    const database = this.requireDatabase();
+    const row = await database.getFirstAsync<SyncStateRow>(
+      "SELECT cursor_json, conflicts_json FROM sync_state WHERE id = 1"
+    );
+    if (!row) {
+      return {
+        cursor: {
+          cursorVersion: 1,
+          value: null,
+          issuedAt: null
+        },
+        conflicts: []
+      };
+    }
+    return {
+      cursor: JSON.parse(row.cursor_json) as SyncCursor,
+      conflicts: JSON.parse(row.conflicts_json) as readonly SyncConflict[]
+    };
+  }
+
+  async commitSync(commit: NativeWorkspaceSyncCommit) {
+    const database = this.requireDatabase();
+    let actualRevision = commit.expectedRevision;
+    let committed = false;
+
+    await database.withExclusiveTransactionAsync(async (transaction) => {
+      const row = await transaction.getFirstAsync<SnapshotRow>(
+        "SELECT revision, snapshot_json FROM workspace_snapshot WHERE id = 1"
+      );
+      actualRevision = row?.revision ?? 0;
+      if (actualRevision !== commit.expectedRevision) {
+        return;
+      }
+
+      const updatedAt =
+        commit.cursor.issuedAt ?? new Date().toISOString();
+      await transaction.runAsync(
+        `UPDATE workspace_snapshot
+         SET revision = ?, snapshot_json = ?, updated_at = ?
+         WHERE id = 1 AND revision = ?`,
+        commit.nextRevision,
+        JSON.stringify(commit.snapshot),
+        updatedAt,
+        commit.expectedRevision
+      );
+      for (const operationId of commit.acknowledgedOperationIds) {
+        await transaction.runAsync(
+          "DELETE FROM sync_outbox WHERE operation_id = ?",
+          operationId
+        );
+      }
+      for (const operation of commit.operations ?? []) {
+        await transaction.runAsync(
+          `INSERT OR IGNORE INTO sync_outbox
+           (operation_id, operation_json, status, created_at, updated_at)
+           VALUES (?, ?, ?, ?, ?)`,
+          operation.operationId,
+          JSON.stringify(operation),
+          operation.status,
+          operation.createdAt,
+          operation.updatedAt
+        );
+      }
+      const previousSyncState =
+        await transaction.getFirstAsync<SyncStateRow>(
+          "SELECT cursor_json, conflicts_json FROM sync_state WHERE id = 1"
+        );
+      const retainedConflictOperationIds = new Set(
+        commit.conflicts.map((conflict) => conflict.operationId)
+      );
+      const previousConflicts = previousSyncState
+        ? (JSON.parse(
+            previousSyncState.conflicts_json
+          ) as readonly SyncConflict[])
+        : [];
+      for (const previousConflict of previousConflicts) {
+        if (
+          !retainedConflictOperationIds.has(previousConflict.operationId)
+        ) {
+          await transaction.runAsync(
+            "DELETE FROM sync_outbox WHERE operation_id = ?",
+            previousConflict.operationId
+          );
+        }
+      }
+      const conflictedOperationIds = new Set(
+        commit.conflicts.map((conflict) => conflict.operationId)
+      );
+      for (const operationId of conflictedOperationIds) {
+        const operationRow =
+          await transaction.getFirstAsync<OperationRow>(
+            `SELECT operation_json
+             FROM sync_outbox
+             WHERE operation_id = ?`,
+            operationId
+          );
+        if (!operationRow) continue;
+        const operation = JSON.parse(
+          operationRow.operation_json
+        ) as SyncOperation;
+        if (operation.status === "needs-attention") continue;
+        const needsAttention: SyncOperation = {
+          ...operation,
+          status: "needs-attention",
+          attemptCount: operation.attemptCount + 1,
+          nextAttemptAt: null,
+          lastErrorCode: "CONFLICT_REQUIRES_REVIEW",
+          updatedAt
+        };
+        await transaction.runAsync(
+          `UPDATE sync_outbox
+           SET operation_json = ?, status = ?, updated_at = ?
+           WHERE operation_id = ?`,
+          JSON.stringify(needsAttention),
+          needsAttention.status,
+          updatedAt,
+          operationId
+        );
+      }
+      await transaction.runAsync(
+        `UPDATE sync_state
+         SET cursor_json = ?, conflicts_json = ?, updated_at = ?
+         WHERE id = 1`,
+        JSON.stringify(commit.cursor),
+        JSON.stringify(commit.conflicts),
+        updatedAt
+      );
+      committed = true;
+    });
+
+    if (!committed) {
+      return revisionConflict(commit.expectedRevision, actualRevision);
+    }
+    return {
+      ok: true as const,
+      value: {
+        revision: commit.nextRevision
+      }
+    };
+  }
+
   private requireDatabase(): SQLite.SQLiteDatabase {
+    if (this.locked) {
+      throw new Error("The local vault is locked.");
+    }
     if (!this.database) {
       throw new Error("Repository must be initialized before use.");
     }

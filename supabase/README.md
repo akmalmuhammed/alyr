@@ -1,8 +1,9 @@
 # ALYR Supabase pilot boundary
 
 This directory implements the free-tier pilot boundary described by the
-mobile plan. It is not deployed automatically and it is not represented as
-production-grade backup, end-to-end encryption, or verified legal evidence.
+mobile plan. Deployment remains an explicit operator action. The current pilot
+deployment is verified below; it is not represented as production-grade
+backup, end-to-end encryption, or verified legal evidence.
 
 ## Included
 
@@ -11,22 +12,60 @@ production-grade backup, end-to-end encryption, or verified legal evidence.
 - Atomic, idempotent sync commands with visible version/location conflicts.
 - Immutable evidence-version and blob metadata.
 - Private Storage policies with a 10 MiB file limit.
+- An authenticated, RLS-scoped Evidence download route that rechecks cloud
+  byte size and SHA-256 before returning an immutable version.
 - A 40 MiB per-household application quota in the upload-intent API.
 - A serialized 20-household closed-pilot admission cap.
 - One-time manual household invitation codes.
-- Permission-scoped export snapshots.
+- Durable household, membership and role selection stored as one
+  provider-controlled account-metadata tuple after authorization.
+- Owner-only invitation creation with explicit editor/viewer roles and a
+  caller-selected expiry capped at 30 days.
+- Permission-scoped JSON/PDF exports with atomic renderer claims, immutable
+  artifact checksums, a 40 MiB retained household allowance, and daily
+  pointer-preserving retention cleanup.
 - A privacy-minimal product-event allow-list.
 - An OpenAPI 3.1 contract.
-- A single authenticated Edge Function router.
+- Pre-account pilot and recipient-invitation routes plus manually
+  authenticated Edge routes.
+
+## Verified live pilot state
+
+Verified on 2026-07-28:
+
+- Supabase project `ifiyragzeizaxdqzxvpk` reports `ACTIVE_HEALTHY`.
+- The live database and repository are in eleven-migration parity:
+  `202607250001`, `202607270001`, `202607270002`, `202607270003`,
+  `202607270004`, `202607270005`, `202607280001`, `202607280002`,
+  `202607280003`, `202607280004`, and `202607280005`.
+- The `api` Edge Function reports `ACTIVE`, version **3**. The reviewed local
+  source contains the recipient-preflight and subject-aware export changes and
+  still needs the authenticated function deployment described below.
+- The `alyr-export-retention-daily` cron is active on `17 2 * * *`.
+- Both Vault entries required by export maintenance are configured. Their
+  values are intentionally excluded from source, logs, and this document.
+- Live boundary probes returned:
+  - missing maintenance token: `403`;
+  - valid maintenance request: `200`, `status=complete`,
+    `batchLimit=100`;
+  - invalid pilot invitation: `403 AUTHORIZATION_DENIED`;
+  - sync request without a bearer: `401`.
+- The temporary deployment access token was revoked after verification, and
+  the local Supabase CLI has no stored access token.
 
 ## Honest pilot limitations
 
 - Supabase Free can pause and does not include managed backups.
 - Upload completion downloads the stored object in the Edge Function and
   confirms byte size and SHA-256 before the server marks it stored.
-- Export creation queues a snapshot; rendering is not included yet.
+- Clean devices request Evidence bytes through the provider-neutral API; the
+  native client verifies them again before encrypting them into its local vault.
+- Export retention is bounded to 100 object pointers per daily maintenance
+  invocation. Failed Storage deletions preserve their pointers for the next
+  run rather than reporting the bytes as removed.
 - Email delivery is intentionally outside this slice. Invitation codes are
-  shared manually during the closed pilot.
+  returned once and shared manually during the closed pilot. They must not be
+  written to analytics or long-lived application logs.
 - The clients must retain their durable local outbox and encrypted Recovery
   Kits.
 
@@ -35,8 +74,10 @@ production-grade backup, end-to-end encryption, or verified legal evidence.
 The static contract checks require only Node:
 
 ```sh
-node --test supabase/tests/schema.test.mjs
+npm run check:supabase:static
 ```
+
+Latest verified result: **29/29** static checks.
 
 The local database suite proves cross-household RLS, role-negative paths,
 idempotent nested commands, analytics rejection, upload reservation binding,
@@ -48,23 +89,100 @@ supabase db lint --local --level warning
 supabase test db --local
 ```
 
+Latest verified result: **105/105** pgTAP checks. The real local export API
+journey also passed **30** checks, including parallel same-key creation,
+authorization denial, JSON/PDF rendering, download integrity, and redaction:
+
+```sh
+npm run test:supabase:export-local
+```
+
 ## Closed-pilot admission
 
-Signup alone does not authorize household creation. Before an invited pilot
-owner creates a household, an operator must approve that authenticated user in
-SQL:
+The signed mobile client verifies an email-bound, one-use pilot access code
+before it calls Supabase Auth. Create an approval from an operator-only SQL
+session and copy the returned code once:
+
+```sql
+with invitation as (
+  select
+    lower(trim('owner@example.com')) as email,
+    upper(encode(extensions.gen_random_bytes(12), 'hex')) as access_code
+),
+inserted as (
+  insert into public.pilot_signup_approvals (
+    email_hash,
+    access_code_hash,
+    max_households,
+    expires_at,
+    note
+  )
+  select
+    encode(extensions.digest(email, 'sha256'), 'hex'),
+    encode(extensions.digest(access_code, 'sha256'), 'hex'),
+    1,
+    now() + interval '14 days',
+    'Closed pilot household 01'
+  from invitation
+  returning id
+)
+select invitation.email, invitation.access_code, inserted.id
+from invitation cross join inserted;
+```
+
+Share the code directly with that email owner. The database stores only hashes.
+`POST /pilot/preflight` returns a ten-minute, one-use enrollment grant; the
+auth-user insert consumes it atomically, creates `pilot_enrollments`, and
+removes the grant from account metadata. Invalid, expired, used and mismatched
+approvals return the same public denial. Preview mode does not call this route.
+
+Clients cannot read or write either admission table. The project-wide active
+household cap is 20, and each approval defaults to one household. Existing
+operator-created accounts may still be enrolled directly by user UUID when a
+mobile signup is not involved:
 
 ```sql
 insert into public.pilot_enrollments (user_id, max_households, note)
-values ('USER_UUID', 1, 'Closed pilot household 01');
+values ('USER_UUID', 1, 'Operator-created pilot account');
 ```
 
-Clients cannot read or write this table. The project-wide active household cap
-is 20, and each approval defaults to one household.
+`POST /households` creates the owner membership and records the selected
+household in provider-controlled app metadata in one database transaction.
+`POST /onboarding/complete` is owner-only and marks that same selection ready
+for restored sessions. The native client refreshes the provider session before
+opening record routes, so a process restart does not substitute a temporary
+client UUID for an authorized household.
+
+`POST /invites/accept` updates the same tuple and onboarding state in the
+membership transaction. If the successful response is lost, the same account
+may retry the same code; another account still receives a used/invalid result.
+The database rejects owner-role invitations even if a client bypasses the API
+validation.
 
 ## Edge secrets
 
-The API uses the caller token and anon key for ordinary RLS-scoped work. Only
-the final, byte-verified `mark_blob_stored` transition uses the Edge runtime's
-server-side service-role key. That key must never be placed in Expo, Vite,
-EAS public variables, logs, responses, or client bundles.
+Apply migrations, then deploy the API with JWT gateway verification disabled:
+
+```sh
+supabase db push
+supabase functions deploy api --no-verify-jwt
+```
+
+The gateway setting is required only because pilot preflight runs before an
+account exists. Every other route still verifies the bearer with
+`auth.getUser()` before doing any work. The API uses the caller token and anon
+key for ordinary RLS-scoped work. The preflight grant issuer, account deletion,
+and final byte-verified `mark_blob_stored` transition use the Edge runtime's
+server-side service-role key. That key must never be placed in Expo, Vite, EAS
+public variables, logs, responses, or client bundles.
+
+Export retention additionally requires:
+
+- Edge secret `ALYR_EXPORT_MAINTENANCE_TOKEN`;
+- Vault entry `alyr_export_maintenance_url`;
+- Vault entry `alyr_export_maintenance_token`.
+
+The two token locations contain the same operator-generated value. The cron
+reads only the Vault entries, while the Edge boundary compares the request
+token in constant time. Secret values stay outside source control and client
+environments.

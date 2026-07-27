@@ -8,6 +8,8 @@ export type SpaceId = EntityId;
 export type AssetId = EntityId;
 export type EvidenceId = EntityId;
 export type EvidenceVersionId = EntityId;
+export type PlaceDocumentId = EntityId;
+export type PlaceDocumentVersionId = EntityId;
 
 export type JsonPrimitive = string | number | boolean | null;
 export type JsonValue = JsonPrimitive | JsonObject | JsonValue[];

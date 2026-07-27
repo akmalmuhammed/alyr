@@ -4,6 +4,40 @@
  */
 
 export interface paths {
+    "/pilot/preflight": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Verify a one-use, email-bound closed-pilot invitation. */
+        post: operations["preflightPilotSignup"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/invites/preflight": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Exchange an active household invitation for an email-bound signup grant. */
+        post: operations["preflightHouseholdInviteSignup"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/households": {
         parameters: {
             query?: never;
@@ -14,6 +48,22 @@ export interface paths {
         get?: never;
         put?: never;
         post: operations["createHousehold"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/onboarding/complete": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["completeHouseholdOnboarding"];
         delete?: never;
         options?: never;
         head?: never;
@@ -84,6 +134,120 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/evidence/download": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Download one authorized immutable EvidenceVersion. */
+        post: operations["downloadEvidenceVersion"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/invites": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["createInvite"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/household-access": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Refresh the active household roster from the authoritative cloud. */
+        get: operations["getHouseholdAccessSnapshot"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/household-access/member-role": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["changeHouseholdMemberRole"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/household-access/member-revoke": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["revokeHouseholdMember"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/household-access/invite-cancel": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["cancelHouseholdInvite"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/household-access/ownership-transfer": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["transferHouseholdOwnership"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/invites/accept": {
         parameters: {
             query?: never;
@@ -132,6 +296,43 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/exports/{exportId}/download": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Download one authorized, server-verified continuity export. */
+        get: operations["downloadExport"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/account/deletion": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Re-authenticate and permanently remove the current account.
+         * @description The password and confirmation email are verified server-side. A sole active member who owns a household also deletes that household and its private evidence. Editor/viewer memberships are removed while the household remains. If an owned household has another active member, deletion stops until ownership is transferred.
+         */
+        post: operations["deleteCurrentAccount"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -139,8 +340,54 @@ export interface components {
         JsonObject: {
             [key: string]: unknown;
         };
+        PlaceDocumentCreatePayload: {
+            /** Format: uuid */
+            placeId: string;
+            /** @enum {string} */
+            kind: "paper" | "artifact" | "media" | "record" | "note" | "link";
+            /** @enum {string} */
+            relation: "ownership" | "identity" | "service" | "provenance" | "condition" | "insurance" | "valuation" | "legal" | "access" | "context" | "other";
+            title: string;
+        };
+        PlaceDocumentVersionAddPayload: {
+            /** Format: uuid */
+            placeDocumentId: string;
+            /** Format: uuid */
+            blobObjectId: string;
+            fileName: string;
+            mimeType: string;
+            byteSize: number;
+            checksumSha256: string;
+        };
+        PilotPreflightRequest: {
+            /** @constant */
+            apiVersion: 1;
+            /** Format: email */
+            email: string;
+            accessCode: string;
+        };
+        PilotPreflightResponse: {
+            /** @constant */
+            apiVersion: 1;
+            enrollmentGrant: string;
+            /** Format: date-time */
+            expiresAt: string;
+        };
+        HouseholdInvitePreflightRequest: {
+            /** @constant */
+            apiVersion: 1;
+            /** Format: email */
+            email: string;
+            oneTimeCode: string;
+        };
         CreateHouseholdRequest: {
             name: string;
+        };
+        CompleteOnboardingRequest: {
+            /** @constant */
+            apiVersion: 1;
+            /** Format: uuid */
+            householdId: string;
         };
         Household: {
             /** Format: uuid */
@@ -175,7 +422,7 @@ export interface components {
             actorMemberId: string;
             deviceId: string;
             /** @enum {string} */
-            type: "place.create" | "space.create" | "asset.create" | "asset.update" | "asset.move" | "asset.archive" | "evidence.create" | "evidence.version.add" | "evidence.review";
+            type: "place.create" | "place.update" | "space.create" | "space.update" | "asset.create" | "asset.update" | "asset.move" | "asset.archive" | "asset.restore" | "evidence.create" | "evidence.version.add" | "evidence.review" | "place-document.create" | "place-document.version.add" | "value.create" | "value.update" | "value.delete";
             aggregateId: string | null;
             observedVersion: number | null;
             /** Format: date-time */
@@ -245,17 +492,39 @@ export interface components {
             cursor: components["schemas"]["SyncCursor"];
         };
         SyncPullResponse: {
+            workspace: components["schemas"]["WorkspaceBootstrapDescriptor"];
             changes: components["schemas"]["SyncChange"][];
             cursor: components["schemas"]["SyncCursor"];
+        };
+        WorkspaceBootstrapDescriptor: {
+            /** Format: uuid */
+            householdId: string;
+            householdName: string;
+            householdVersion: number;
+            /** Format: date-time */
+            householdCreatedAt: string;
+            /** Format: uuid */
+            membershipId: string;
+            /** Format: uuid */
+            accountId: string;
+            /** @enum {string} */
+            role: "owner" | "editor" | "viewer";
+            membershipVersion: number;
         };
         UploadIntentRequest: {
             /** @constant */
             apiVersion: 1;
             /** Format: uuid */
             householdId: string;
-            /** Format: uuid */
+            /**
+             * Format: uuid
+             * @description The asset Evidence ID, or the Place Document ID when this upload will be committed by place-document.version.add.
+             */
             evidenceId: string;
-            /** Format: uuid */
+            /**
+             * Format: uuid
+             * @description The immutable Evidence Version ID, or Place Document Version ID, selected before upload.
+             */
             evidenceVersionId: string;
             /** Format: uuid */
             blobId: string;
@@ -289,10 +558,145 @@ export interface components {
             };
             note: string;
         };
+        EvidenceDownloadRequest: {
+            /** @constant */
+            apiVersion: 1;
+            /** Format: uuid */
+            householdId: string;
+            /**
+             * Format: uuid
+             * @description The asset Evidence ID or Place Document ID that owns this immutable version.
+             */
+            evidenceId: string;
+            /**
+             * Format: uuid
+             * @description The immutable asset Evidence Version ID or Place Document Version ID whose bytes are requested.
+             */
+            evidenceVersionId: string;
+            /** Format: uuid */
+            blobId: string;
+            fileName: string;
+            mimeType: string;
+            byteSize: number;
+            checksumSha256: string;
+        };
         InviteAcceptRequest: {
             /** @constant */
             apiVersion: 1;
             oneTimeCode: string;
+        };
+        InviteCreateRequest: {
+            /** @constant */
+            apiVersion: 1;
+            /** Format: uuid */
+            householdId: string;
+            /** @enum {string} */
+            role: "editor" | "viewer";
+            expiresInHours: number;
+        };
+        InviteCreateResponse: {
+            /** Format: uuid */
+            inviteId: string;
+            oneTimeCode: string;
+            /** @enum {string} */
+            role: "editor" | "viewer";
+            /** Format: date-time */
+            expiresAt: string;
+        };
+        HouseholdMemberDescriptor: {
+            /** Format: uuid */
+            membershipId: string;
+            /** Format: uuid */
+            householdId: string;
+            /** Format: uuid */
+            accountId: string;
+            displayName: string;
+            /** Format: email */
+            email: string | null;
+            /** @enum {string} */
+            role: "owner" | "editor" | "viewer";
+            /** @constant */
+            status: "active";
+            version: number;
+            /** Format: date-time */
+            joinedAt: string;
+            isCurrentUser: boolean;
+        };
+        PendingHouseholdInviteDescriptor: {
+            /** Format: uuid */
+            inviteId: string;
+            /** Format: uuid */
+            householdId: string;
+            /** @enum {string} */
+            role: "editor" | "viewer";
+            /** @constant */
+            status: "pending";
+            version: number;
+            /** Format: date-time */
+            createdAt: string;
+            /** Format: date-time */
+            expiresAt: string;
+        };
+        HouseholdAccessSnapshot: {
+            /** Format: uuid */
+            householdId: string;
+            householdName: string;
+            householdVersion: number;
+            /** Format: uuid */
+            currentMembershipId: string;
+            /** Format: uuid */
+            currentAccountId: string;
+            /** @enum {string} */
+            currentRole: "owner" | "editor" | "viewer";
+            members: components["schemas"]["HouseholdMemberDescriptor"][];
+            pendingInvites: components["schemas"]["PendingHouseholdInviteDescriptor"][];
+            /** Format: date-time */
+            refreshedAt: string;
+        };
+        HouseholdAccessMutationBase: {
+            /** @constant */
+            apiVersion: 1;
+            /** Format: uuid */
+            householdId: string;
+            /** Format: uuid */
+            operationId: string;
+        };
+        HouseholdMemberRoleChangeRequest: components["schemas"]["HouseholdAccessMutationBase"] & {
+            /** Format: uuid */
+            membershipId: string;
+            expectedVersion: number;
+            /** @enum {string} */
+            role: "editor" | "viewer";
+        };
+        HouseholdMemberRevokeRequest: components["schemas"]["HouseholdAccessMutationBase"] & {
+            /** Format: uuid */
+            membershipId: string;
+            expectedVersion: number;
+        };
+        HouseholdInviteCancelRequest: components["schemas"]["HouseholdAccessMutationBase"] & {
+            /** Format: uuid */
+            inviteId: string;
+            expectedVersion: number;
+        };
+        HouseholdOwnershipTransferRequest: components["schemas"]["HouseholdAccessMutationBase"] & {
+            /** Format: uuid */
+            targetMembershipId: string;
+            expectedOwnerVersion: number;
+            expectedTargetVersion: number;
+            /** @constant */
+            acknowledgeOwnerTransfer: true;
+        };
+        HouseholdAccessMutationReceipt: {
+            /** Format: uuid */
+            operationId: string;
+            /** @enum {string} */
+            kind: "membership.role_changed" | "membership.revoked" | "invite.cancelled" | "ownership.transferred";
+        } & {
+            [key: string]: unknown;
+        };
+        HouseholdAccessMutationResponse: {
+            receipt: components["schemas"]["HouseholdAccessMutationReceipt"];
+            snapshot: components["schemas"]["HouseholdAccessSnapshot"];
         };
         ExportCreateRequest: {
             /** @constant */
@@ -303,6 +707,7 @@ export interface components {
             format: "pdf" | "json-manifest";
             assetIds: string[];
             redacted: boolean;
+            idempotencyKey: string;
         };
         ExportStatusResponse: {
             /** Format: uuid */
@@ -310,9 +715,39 @@ export interface components {
             /** @enum {string} */
             status: "queued" | "processing" | "ready" | "failed" | "expired";
             blobObjectId: string | null;
+            fileName: string | null;
+            /** @enum {string|null} */
+            mimeType: "application/json" | "application/pdf" | null;
+            byteSize: number | null;
+            checksumSha256: string | null;
             /** Format: date-time */
             expiresAt: string | null;
+            /** Format: date-time */
+            completedAt: string | null;
             error: components["schemas"]["ApiError"] | null;
+        };
+        AccountDeletionRequest: {
+            /** @constant */
+            apiVersion: 1;
+            /** Format: uuid */
+            expectedAccountId: string;
+            /** Format: uuid */
+            expectedActiveHouseholdId: string;
+            /** @enum {string} */
+            expectedActiveHouseholdRole: "owner" | "editor" | "viewer";
+            /** Format: email */
+            confirmationEmail: string;
+            password: string;
+            /** @constant */
+            acknowledgeIrreversibleDeletion: true;
+        };
+        AccountDeletionReceipt: {
+            /** Format: uuid */
+            accountId: string;
+            deletedHouseholdIds: string[];
+            departedHouseholdIds: string[];
+            /** Format: date-time */
+            deletedAt: string;
         };
         ApiError: {
             /** @constant */
@@ -379,6 +814,42 @@ export interface components {
                 "application/json": components["schemas"]["ApiErrorEnvelope"];
             };
         };
+        /** @description The household export creation rate was exceeded. */
+        TooManyRequests: {
+            headers: {
+                [name: string]: unknown;
+            };
+            content: {
+                "application/json": components["schemas"]["ApiErrorEnvelope"];
+            };
+        };
+        /** @description The requested export has expired and its retained bytes were removed. */
+        Gone: {
+            headers: {
+                [name: string]: unknown;
+            };
+            content: {
+                "application/json": components["schemas"]["ApiErrorEnvelope"];
+            };
+        };
+        /** @description A retryable provider or storage boundary is temporarily unavailable. */
+        ServiceUnavailable: {
+            headers: {
+                [name: string]: unknown;
+            };
+            content: {
+                "application/json": components["schemas"]["ApiErrorEnvelope"];
+            };
+        };
+        /** @description The versioned owner action succeeded and the roster was refreshed. */
+        HouseholdAccessMutation: {
+            headers: {
+                [name: string]: unknown;
+            };
+            content: {
+                "application/json": components["schemas"]["HouseholdAccessMutationResponse"];
+            };
+        };
     };
     parameters: never;
     requestBodies: never;
@@ -387,6 +858,59 @@ export interface components {
 }
 export type $defs = Record<string, never>;
 export interface operations {
+    preflightPilotSignup: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PilotPreflightRequest"];
+            };
+        };
+        responses: {
+            /** @description A short-lived grant that may be consumed by one signup. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PilotPreflightResponse"];
+                };
+            };
+            403: components["responses"]["Forbidden"];
+            409: components["responses"]["Conflict"];
+            503: components["responses"]["ApiError"];
+        };
+    };
+    preflightHouseholdInviteSignup: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["HouseholdInvitePreflightRequest"];
+            };
+        };
+        responses: {
+            /** @description A short-lived zero-household-creation grant for one signup. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PilotPreflightResponse"];
+                };
+            };
+            403: components["responses"]["Forbidden"];
+            503: components["responses"]["ApiError"];
+        };
+    };
     createHousehold: {
         parameters: {
             query?: never;
@@ -413,6 +937,38 @@ export interface operations {
             };
             400: components["responses"]["ApiError"];
             401: components["responses"]["Unauthorized"];
+        };
+    };
+    completeHouseholdOnboarding: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CompleteOnboardingRequest"];
+            };
+        };
+        responses: {
+            /** @description Household setup was recorded in provider-controlled account metadata. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /** Format: uuid */
+                        householdId: string;
+                        /** @constant */
+                        onboarding: "complete";
+                    };
+                };
+            };
+            400: components["responses"]["ApiError"];
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
         };
     };
     pushSyncOperations: {
@@ -532,6 +1088,165 @@ export interface operations {
             409: components["responses"]["Conflict"];
         };
     };
+    downloadEvidenceVersion: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["EvidenceDownloadRequest"];
+            };
+        };
+        responses: {
+            /** @description Authoritative evidence bytes. The client must verify byte size and SHA-256 against the requested immutable version before persistence. */
+            200: {
+                headers: {
+                    "Cache-Control"?: "no-store";
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/octet-stream": string;
+                };
+            };
+            400: components["responses"]["ApiError"];
+            401: components["responses"]["Unauthorized"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
+            503: components["responses"]["ApiError"];
+        };
+    };
+    createInvite: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["InviteCreateRequest"];
+            };
+        };
+        responses: {
+            /** @description One-time manual household invitation created. */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["InviteCreateResponse"];
+                };
+            };
+            400: components["responses"]["ApiError"];
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+        };
+    };
+    getHouseholdAccessSnapshot: {
+        parameters: {
+            query: {
+                householdId: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Active members and owner-visible pending invitations. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        snapshot: components["schemas"]["HouseholdAccessSnapshot"];
+                    };
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+        };
+    };
+    changeHouseholdMemberRole: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["HouseholdMemberRoleChangeRequest"];
+            };
+        };
+        responses: {
+            200: components["responses"]["HouseholdAccessMutation"];
+            400: components["responses"]["ApiError"];
+            403: components["responses"]["Forbidden"];
+            409: components["responses"]["Conflict"];
+        };
+    };
+    revokeHouseholdMember: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["HouseholdMemberRevokeRequest"];
+            };
+        };
+        responses: {
+            200: components["responses"]["HouseholdAccessMutation"];
+            400: components["responses"]["ApiError"];
+            403: components["responses"]["Forbidden"];
+            409: components["responses"]["Conflict"];
+        };
+    };
+    cancelHouseholdInvite: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["HouseholdInviteCancelRequest"];
+            };
+        };
+        responses: {
+            200: components["responses"]["HouseholdAccessMutation"];
+            400: components["responses"]["ApiError"];
+            403: components["responses"]["Forbidden"];
+            409: components["responses"]["Conflict"];
+        };
+    };
+    transferHouseholdOwnership: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["HouseholdOwnershipTransferRequest"];
+            };
+        };
+        responses: {
+            200: components["responses"]["HouseholdAccessMutation"];
+            400: components["responses"]["ApiError"];
+            403: components["responses"]["Forbidden"];
+            409: components["responses"]["Conflict"];
+        };
+    };
     acceptInvite: {
         parameters: {
             query?: never;
@@ -573,8 +1288,8 @@ export interface operations {
             };
         };
         responses: {
-            /** @description Immutable export snapshot queued. */
-            202: {
+            /** @description Existing idempotent export snapshot returned. */
+            200: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -582,8 +1297,22 @@ export interface operations {
                     "application/json": components["schemas"]["ExportStatusResponse"];
                 };
             };
+            /** @description Immutable export snapshot generated, stored, and verified. */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ExportStatusResponse"];
+                };
+            };
+            400: components["responses"]["ApiError"];
             401: components["responses"]["Unauthorized"];
             403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
+            429: components["responses"]["TooManyRequests"];
+            503: components["responses"]["ServiceUnavailable"];
         };
     };
     getExport: {
@@ -608,6 +1337,77 @@ export interface operations {
             };
             401: components["responses"]["Unauthorized"];
             404: components["responses"]["NotFound"];
+            503: components["responses"]["ServiceUnavailable"];
+        };
+    };
+    downloadExport: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                exportId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Export bytes. Content-Length and X-ALYR-Checksum-SHA256 match the immutable status descriptor and must be revalidated by the client. */
+            200: {
+                headers: {
+                    /** @description Attachment filename matching the immutable status descriptor. */
+                    "Content-Disposition"?: string;
+                    /** @description Exact byte length matching the immutable status descriptor. */
+                    "Content-Length": number;
+                    /** @description SHA-256 digest matching the immutable status descriptor. */
+                    "X-ALYR-Checksum-SHA256": string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": string;
+                    "application/pdf": string;
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
+            410: components["responses"]["Gone"];
+            503: components["responses"]["ServiceUnavailable"];
+        };
+    };
+    deleteCurrentAccount: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AccountDeletionRequest"];
+            };
+        };
+        responses: {
+            /** @description Account, eligible sole-member households, and memberships removed. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AccountDeletionReceipt"];
+                };
+            };
+            400: components["responses"]["ApiError"];
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            /** @description Household ownership must be transferred before deletion. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorEnvelope"];
+                };
+            };
         };
     };
 }

@@ -12,6 +12,12 @@
       "@/data/createRepository": [
         "./src/data/createRepository.ts"
       ],
+      "@/recovery": [
+        "./src/recovery/index.ts"
+      ],
+      "@/runtime/signedSupabaseRuntime": [
+        "./src/runtime/signedSupabaseRuntime.ts"
+      ],
       "@/*": [
         "../asset-continuity-native/src/*"
       ]

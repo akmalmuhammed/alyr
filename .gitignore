@@ -32,7 +32,10 @@ google-services.json
 # Expo-generated local and native state
 asset-continuity-native/.expo/
 asset-continuity-native/.eas/
+asset-continuity-native/.expo-ios-export/
+asset-continuity-native/.expo-ios-bundle/
 asset-continuity-native/dist-preview/
+asset-continuity-native/dist-quiet-preview*/
 asset-continuity-native/android/
 asset-continuity-native/ios/
 asset-continuity-ios-preview/.expo/

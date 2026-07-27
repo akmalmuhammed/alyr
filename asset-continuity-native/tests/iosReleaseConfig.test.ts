@@ -1,0 +1,251 @@
+import createConfig from "../app.config";
+
+declare const __dirname: string;
+declare function require(moduleName: string): unknown;
+
+const { existsSync, readFileSync } = require("fs") as {
+  existsSync(filePath: string): boolean;
+  readFileSync(filePath: string, encoding?: string): any;
+};
+const path = require("path") as {
+  join(...parts: string[]): string;
+  resolve(...parts: string[]): string;
+};
+
+const appRoot = path.resolve(__dirname, "..");
+const repositoryRoot = path.resolve(appRoot, "..");
+const nativePackage = JSON.parse(
+  readFileSync(path.join(appRoot, "package.json"), "utf8")
+) as {
+  scripts: Record<string, string>;
+  dependencies: Record<string, string>;
+};
+
+const config = createConfig({
+  config: {
+    name: "ALYR",
+    slug: "alyr-asset-continuity"
+  }
+} as Parameters<typeof createConfig>[0]);
+
+const eas = JSON.parse(
+  readFileSync(path.join(appRoot, "eas.json"), "utf8")
+) as {
+  cli: {
+    version: string;
+    appVersionSource: string;
+    requireCommit: boolean;
+  };
+  build: Record<
+    string,
+    {
+      extends?: string;
+      developmentClient?: boolean;
+      distribution?: string;
+      channel?: string;
+      ios?: { simulator?: boolean };
+    }
+  >;
+};
+
+function pluginOptions(name: string): Record<string, unknown> | undefined {
+  const plugin = (config.plugins ?? []).find(
+    (entry) => Array.isArray(entry) && entry[0] === name
+  );
+  return Array.isArray(plugin)
+    ? (plugin[1] as Record<string, unknown>)
+    : undefined;
+}
+
+function privacyReasons(category: string): readonly string[] {
+  const entry = config.ios?.privacyManifests?.NSPrivacyAccessedAPITypes?.find(
+    (candidate) => candidate.NSPrivacyAccessedAPIType === category
+  );
+  return entry?.NSPrivacyAccessedAPITypeReasons ?? [];
+}
+
+describe("signed iOS release configuration", () => {
+  it("pins the linked Expo identity, app identity, and deep-link scheme", () => {
+    expect(config.owner).toBe("alyr-app");
+    expect(config.extra?.eas).toEqual({
+      projectId: "85cab1f2-111f-4e20-abd5-8dff0df2fabb"
+    });
+    expect(config.slug).toBe("alyr-asset-continuity");
+    expect(config.ios?.bundleIdentifier).toBe("com.alyr.continuity");
+    expect(config.scheme).toBe("alyr");
+    expect(config.ios?.supportsTablet).toBe(false);
+  });
+
+  it("enables app-version-scoped EAS updates for the linked project", () => {
+    expect(config.runtimeVersion).toEqual({ policy: "appVersion" });
+    expect(config.updates?.url).toBe(
+      "https://u.expo.dev/85cab1f2-111f-4e20-abd5-8dff0df2fabb"
+    );
+    expect(nativePackage.dependencies["expo-updates"]).toMatch(/^~57\./u);
+  });
+
+  it("uses an opaque full-bleed 1024px PNG for the iOS app icon", () => {
+    const iconPath = config.ios?.icon;
+    expect(iconPath).toBe(
+      "./assets/alyr/app-and-favicon/01_App_Icon/PNG/app-icon-ios-1024.png"
+    );
+
+    const png = readFileSync(path.resolve(appRoot, iconPath as string));
+    expect(png.subarray(1, 4).toString("ascii")).toBe("PNG");
+    expect(png.readUInt32BE(16)).toBe(1024);
+    expect(png.readUInt32BE(20)).toBe(1024);
+    expect(png[25]).toBe(2);
+    expect(png.indexOf("tRNS", 0, "ascii")).toBe(-1);
+  });
+
+  it("declares only the reviewed required-reason API categories", () => {
+    expect(config.ios?.privacyManifests?.NSPrivacyTracking).toBe(false);
+    expect(config.ios?.privacyManifests?.NSPrivacyTrackingDomains).toEqual([]);
+    expect(
+      privacyReasons("NSPrivacyAccessedAPICategoryFileTimestamp")
+    ).toEqual(["C617.1", "3B52.1"]);
+    expect(
+      privacyReasons("NSPrivacyAccessedAPICategoryDiskSpace")
+    ).toEqual(["E174.1", "85F4.1"]);
+    expect(
+      privacyReasons("NSPrivacyAccessedAPICategorySystemBootTime")
+    ).toEqual(["35F9.1"]);
+    expect(
+      privacyReasons("NSPrivacyAccessedAPICategoryUserDefaults")
+    ).toEqual(["CA92.1"]);
+  });
+
+  it("uses the exempt Apple-platform encryption declaration", () => {
+    expect(config.ios?.config?.usesNonExemptEncryption).toBe(false);
+  });
+
+  it("keeps specific camera, location, photo, and biometric disclosures", () => {
+    expect(config.ios?.infoPlist?.NSCameraUsageDescription).toContain(
+      "photograph an asset"
+    );
+    expect(
+      config.ios?.infoPlist?.NSLocationWhenInUseUsageDescription
+    ).toContain("place a property");
+    expect(config.ios?.infoPlist?.NSFaceIDUsageDescription).toContain(
+      "unlock your private household record"
+    );
+    expect(pluginOptions("expo-image-picker")?.photosPermission).toContain(
+      "only the photos you choose"
+    );
+  });
+
+  it("keeps callback routes aligned with the custom scheme", () => {
+    expect(existsSync(path.join(appRoot, "app", "(auth)", "callback.tsx"))).toBe(
+      true
+    );
+    expect(
+      existsSync(path.join(appRoot, "app", "(auth)", "reset-password.tsx"))
+    ).toBe(true);
+
+    const runtimeConfig = readFileSync(
+      path.join(appRoot, "src", "runtime", "supabaseConfig.ts"),
+      "utf8"
+    );
+    expect(runtimeConfig).toContain('"alyr://callback"');
+    expect(runtimeConfig).toContain('"alyr://reset-password"');
+  });
+
+  it("separates physical-device, simulator, preview, and store profiles", () => {
+    expect(eas.cli).toEqual({
+      version: "21.2.0",
+      appVersionSource: "remote",
+      requireCommit: true
+    });
+    expect(eas.build.development).toMatchObject({
+      developmentClient: true,
+      distribution: "internal",
+      channel: "development"
+    });
+    expect(eas.build["development-simulator"]).toEqual({
+      extends: "development",
+      ios: { simulator: true }
+    });
+    expect(eas.build.preview).toMatchObject({
+      distribution: "internal",
+      channel: "preview"
+    });
+    expect(eas.build.production?.distribution).toBeUndefined();
+  });
+
+  it("does not ship unimplemented push or background-task capabilities", () => {
+    expect(nativePackage.dependencies["expo-notifications"]).toBeUndefined();
+    expect(nativePackage.dependencies["expo-background-task"]).toBeUndefined();
+    expect(pluginOptions("expo-notifications")).toBeUndefined();
+  });
+
+  it("keeps the splash asset separate from the iOS icon", () => {
+    expect(pluginOptions("expo-splash-screen")).toEqual({
+      image:
+        "./assets/alyr/app-and-favicon/01_App_Icon/PNG/app-icon-512.png",
+      imageWidth: 160,
+      resizeMode: "contain",
+      backgroundColor: "#F6F7F3"
+    });
+  });
+
+  it("keeps credentials out of the EAS archive while retaining build inputs", () => {
+    const easIgnore = readFileSync(
+      path.join(repositoryRoot, ".easignore"),
+      "utf8"
+    );
+    expect(easIgnore).toContain("**/.env.*");
+    expect(easIgnore).toContain("*.p8");
+    expect(easIgnore).toContain("*.mobileprovision");
+    expect(easIgnore).toContain("client-work/");
+    expect(easIgnore).toContain("\n.git\n");
+    expect(easIgnore).not.toContain("\n.git/\n");
+    expect(easIgnore).not.toContain("\npackages/\n");
+    expect(easIgnore).not.toContain("\nasset-continuity-native/\n");
+    expect(existsSync(path.join(repositoryRoot, "package-lock.json"))).toBe(
+      true
+    );
+  });
+
+  it("rebuilds ignored shared-package outputs after a clean EAS install", () => {
+    expect(nativePackage.scripts["postinstall"]).toBe(
+      "npm run build:shared"
+    );
+    expect(nativePackage.scripts["build:shared"]).toBe(
+      "npm --prefix .. run build:shared"
+    );
+    expect(nativePackage.scripts["verify:eas-packaging"]).toBe(
+      "node scripts/verify-eas-shared-packages.mjs"
+    );
+
+    for (const packageDirectory of [
+      "analytics",
+      "contracts",
+      "design-tokens",
+      "domain",
+      "fixtures"
+    ]) {
+      const manifest = JSON.parse(
+        readFileSync(
+          path.join(
+            repositoryRoot,
+            "packages",
+            packageDirectory,
+            "package.json"
+          ),
+          "utf8"
+        )
+      ) as {
+        main: string;
+        exports: {
+          ".": {
+            import: string;
+            types: string;
+          };
+        };
+      };
+      expect(manifest.main).toBe("./dist/index.js");
+      expect(manifest.exports["."].import).toBe("./dist/index.js");
+      expect(manifest.exports["."].types).toBe("./dist/index.d.ts");
+    }
+  });
+});

@@ -1,0 +1,103 @@
+# This file intentionally mirrors .gitignore because EAS uses .easignore
+# instead of .gitignore whenever this file is present.
+
+# Dependencies and package-manager state
+**/node_modules/
+.npm/
+
+# Environment files and local credentials
+**/.env
+**/.env.*
+!**/.env.example
+!**/.env.*.example
+!**/.env.template
+!**/.env.*.template
+*.pem
+*.p8
+*.p12
+*.jks
+*.keystore
+*.mobileprovision
+credentials.json
+GoogleService-Info.plist
+google-services.json
+
+# Build output and test reports
+**/dist/
+**/build/
+**/coverage/
+**/.cache/
+**/.vite/
+**/*.tsbuildinfo
+**/test-results/
+**/playwright-report/
+
+# Expo-generated local and native state
+asset-continuity-native/.expo/
+asset-continuity-native/.eas/
+asset-continuity-native/.expo-ios-export/
+asset-continuity-native/.expo-ios-bundle/
+asset-continuity-native/dist-preview/
+asset-continuity-native/dist-quiet-preview*/
+asset-continuity-native/android/
+asset-continuity-native/ios/
+asset-continuity-ios-preview/.expo/
+asset-continuity-ios-preview/.expo-ios-bundle/
+
+# Local databases, vault state, and recovery artifacts
+**/*.db
+**/*.db-shm
+**/*.db-wal
+**/*.sqlite
+**/*.sqlite-shm
+**/*.sqlite-wal
+**/*.sqlite3
+**/*.sqlite3-shm
+**/*.sqlite3-wal
+asset-continuity-web/server/data/
+**/*.recovery-kit
+**/*.recovery-kit.*
+**/*.alyr-backup
+**/*.alyr-backup.*
+
+# Local logs and runtime state
+**/*.log
+**/*.pid
+.agents/
+.codex/
+.playwright-cli/
+.playwright-mcp/
+supabase/.branches/
+supabase/.temp/
+
+# Python and operating-system noise
+**/__pycache__/
+**/.pytest_cache/
+**/*.py[cod]
+.DS_Store
+Thumbs.db
+Desktop.ini
+
+# Local product collateral and client work are unrelated to the native build.
+ALYR_Design_System/
+ALYR_Design_System_v1.0_2026-07-15.zip
+ALYR_Lead_Intelligence/
+LUCID_Logo_System/
+client-work/
+docs/
+output/
+tmp/
+ASSET_CONTINUITY_STARTUP_BLUEPRINT.md
+build_pdfs.py
+content_data.py
+
+# Large web/prototype visual-review artifacts are not native build inputs.
+asset-continuity-web/artifacts/
+asset-continuity-web/audit/
+asset-continuity-web/public/
+asset-continuity-mobile/public/
+asset-continuity-mobile/qa/
+
+# EAS creates the VCS archive; local repository internals are never inputs.
+# Keep this slashless: EAS checks the literal ".git" path before copying.
+.git

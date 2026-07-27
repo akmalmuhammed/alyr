@@ -6,7 +6,7 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
   slug: "alyr-iphone-preview",
   version: "0.1.0",
   orientation: "portrait",
-  userInterfaceStyle: "dark",
+  userInterfaceStyle: "light",
   newArchEnabled: true,
   icon:
     "../asset-continuity-native/assets/alyr/app-and-favicon/01_App_Icon/PNG/app-icon-1024.png",
@@ -14,7 +14,7 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
     image:
       "../asset-continuity-native/assets/alyr/app-and-favicon/01_App_Icon/PNG/app-icon-512.png",
     resizeMode: "contain",
-    backgroundColor: "#0E1012"
+    backgroundColor: "#F6F7F3"
   },
   ios: {
     supportsTablet: true

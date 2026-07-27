@@ -28,8 +28,8 @@
     "motion": "^12.42.2",
     "postcss": "8.5.23",
     "qrcode": "^1.5.4",
-    "react": "19.2.8",
-    "react-dom": "19.2.8",
+    "react": "19.2.3",
+    "react-dom": "19.2.3",
     "react-router": "8.3.0",
     "tesseract.js": "^6.0.1",
     "vite": "6.4.3"

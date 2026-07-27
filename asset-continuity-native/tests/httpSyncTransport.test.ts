@@ -92,6 +92,16 @@ describe("HttpSyncTransport", () => {
 
   it("pulls from an encoded household and opaque cursor", async () => {
     const response: SyncPullResponse = {
+      workspace: {
+        householdId: "00000000-0000-4000-8000-000000000101",
+        householdName: "Rahman household",
+        householdVersion: 1,
+        householdCreatedAt: "2026-07-25T09:00:00.000Z",
+        membershipId: "00000000-0000-4000-8000-000000000102",
+        accountId: "00000000-0000-4000-8000-000000000103",
+        role: "owner",
+        membershipVersion: 1
+      },
       changes: [
         {
           sequence: 13,
@@ -212,6 +222,34 @@ describe("HttpSyncTransport", () => {
         retryable: false
       })
     }
+  })
+
+  it("rejects a pull that omits signed workspace identity", async () => {
+    const fetchImpl = fetchMock()
+    fetchImpl.mockResolvedValue(
+      jsonResponse({
+        changes: [],
+        cursor: { cursorVersion: 1, value: "0", issuedAt: null }
+      })
+    )
+    const transport = new HttpSyncTransport({
+      baseUrl: "https://edge.example.test/api",
+      getAccessToken: async () => "access-token",
+      fetchImpl
+    })
+
+    const result = await transport.pull(
+      "00000000-0000-4000-8000-000000000101",
+      { cursorVersion: 1, value: null, issuedAt: null }
+    )
+
+    expect(result).toMatchObject({
+      ok: false,
+      error: {
+        code: "VALIDATION_FAILED",
+        retryable: false
+      }
+    })
   })
 
   it("does not trust an unversioned or unknown error payload", async () => {

@@ -1,71 +1,110 @@
 /**
- * Platform-neutral ALYR product tokens. Values follow the approved premium
- * midnight continuity UI. Platform adapters decide how to express shadows,
- * gradients, fonts, and reduced motion.
+ * Platform-neutral ALYR product tokens.
+ *
+ * Paper is the default working canvas, Carbon carries structure and premium
+ * moments, and Volt is reserved for action, current state, and confirmed
+ * progress. Platform adapters choose the active light or dark scheme.
  */
+export const palette = {
+  paper: "#F6F7F3",
+  white: "#FFFFFF",
+  mist: "#E9ECEF",
+  concrete: "#A7ADB5",
+  muted: "#5F666D",
+  carbon: "#15171A",
+  canvasDark: "#0E1012",
+  surfaceDark: "#191C1F",
+  graphite: "#2A2E33",
+  black: "#050505",
+  volt: "#B7F34A",
+} as const;
+
 export const colors = {
-  dark: {
-    canvas: "#02060D",
-    canvasRaised: "#030A14",
-    surface: "#07111F",
-    surfaceRaised: "#0B1728",
-    surfaceStrong: "#111F32",
-    text: "#F7F9FF",
-    textMuted: "#A9B4C7",
-    textSubtle: "#76839A",
-    border: "rgba(143, 168, 210, 0.18)",
-    borderStrong: "rgba(133, 164, 218, 0.30)",
+  brand: {
+    paper: palette.paper,
+    carbon: palette.carbon,
+    volt: palette.volt,
+    mist: palette.mist,
+    concrete: palette.concrete,
+    white: palette.white,
   },
   light: {
-    canvas: "#F5F7FB",
-    canvasRaised: "#ECF0F6",
-    surface: "#FFFFFF",
-    text: "#11192A",
-    textMuted: "#657086",
-    border: "#DFE5EE",
+    canvas: palette.paper,
+    canvasRaised: palette.mist,
+    surface: palette.white,
+    surfaceRaised: palette.white,
+    surfaceStrong: palette.mist,
+    text: palette.carbon,
+    textMuted: palette.muted,
+    textSubtle: "#697077",
+    border: "#D9DDE0",
+    borderStrong: "#858C93",
+    action: palette.volt,
+    actionText: palette.carbon,
   },
+  dark: {
+    canvas: palette.canvasDark,
+    canvasRaised: palette.carbon,
+    surface: palette.surfaceDark,
+    surfaceRaised: "#202327",
+    surfaceStrong: palette.graphite,
+    text: palette.white,
+    textMuted: "#C3C7CB",
+    textSubtle: palette.concrete,
+    border: "rgba(255, 255, 255, 0.12)",
+    borderStrong: "rgba(255, 255, 255, 0.22)",
+    action: palette.volt,
+    actionText: palette.carbon,
+  },
+  /**
+   * Compatibility aliases for existing consumers. They intentionally resolve
+   * to restrained brand/semantic colors rather than the retired neon palette.
+   */
   accent: {
-    cyan: "#4AD8F5",
-    blue: "#4E8CFF",
-    violet: "#8B5CF6",
-    violetSoft: "#B79AFF",
+    cyan: "#1769AA",
+    blue: "#1769AA",
+    violet: palette.carbon,
+    violetSoft: palette.muted,
   },
   semantic: {
-    success: "#9BE65E",
-    warning: "#F8BD65",
-    danger: "#FF7F86",
-    information: "#4AD8F5",
+    success: "#2D7D46",
+    warning: "#A35F00",
+    danger: "#B42318",
+    information: "#1769AA",
   },
   focus: {
-    dark: "#7BE5FA",
-    light: "#2446A8",
+    dark: palette.volt,
+    light: palette.carbon,
   },
 } as const;
 
+/**
+ * Kept temporarily for call-site compatibility. Action and progress gradients
+ * resolve to a single Volt field; atmosphere resolves to a neutral wash.
+ */
 export const gradients = {
   primaryAction: {
-    angleDegrees: 100,
+    angleDegrees: 0,
     stops: [
-      { offset: 0, color: "#7928FF" },
-      { offset: 0.52, color: "#4E8CFF" },
-      { offset: 1, color: "#35D8ED" },
+      { offset: 0, color: palette.volt },
+      { offset: 1, color: palette.volt },
     ],
   },
   globeAtmosphere: {
-    angleDegrees: 135,
+    angleDegrees: 0,
     stops: [
-      { offset: 0, color: "rgba(139, 92, 246, 0.58)" },
-      { offset: 0.55, color: "rgba(78, 140, 255, 0.34)" },
-      { offset: 1, color: "rgba(74, 216, 245, 0.14)" },
+      { offset: 0, color: "rgba(21, 23, 26, 0.04)" },
+      { offset: 1, color: "rgba(21, 23, 26, 0.04)" },
     ],
   },
 } as const;
 
 export const typography = {
   families: {
-    interface: "DM Sans",
-    display: "Manrope",
+    interface: "Instrument Sans",
+    display: "Instrument Sans",
     arabic: "IBM Plex Sans Arabic",
+    metadata: "IBM Plex Mono",
     systemFallback: "System",
   },
   sizes: {
@@ -81,7 +120,7 @@ export const typography = {
     metadata: 12,
   },
   lineHeights: {
-    display: 46,
+    display: 44,
     heading1: 37,
     heading2: 32,
     heading3: 28,
@@ -119,10 +158,10 @@ export const spacing = {
 
 export const radii = {
   compact: 4,
-  small: 10,
-  control: 12,
-  panel: 16,
-  large: 24,
+  small: 8,
+  control: 8,
+  panel: 12,
+  large: 16,
   round: 999,
 } as const;
 
@@ -130,8 +169,8 @@ export const control = {
   minimumTouchTarget: 44,
   comfortableHeight: 48,
   compactHeight: 40,
-  focusRingWidth: 3,
-  focusRingOffset: 3,
+  focusRingWidth: 2,
+  focusRingOffset: 2,
   iconSizes: {
     compact: 16,
     navigation: 20,
@@ -157,8 +196,8 @@ export const motion = {
 } as const;
 
 export const navigation = {
-  primaryDestinations: ["home", "assets", "family", "vault"],
-  contextualActions: ["search", "capture"],
+  primaryDestinations: ["today", "assets", "family", "vault"],
+  contextualActions: ["capture", "household"],
 } as const;
 
 export const layout = {
@@ -174,6 +213,7 @@ export const layout = {
 } as const;
 
 export const alyrTokens = {
+  palette,
   colors,
   gradients,
   typography,
@@ -190,6 +230,7 @@ export const alyrTokens = {
  * font-family names are exposed here.
  */
 export const nativeTokens = {
+  palette,
   colors,
   typography,
   spacing,

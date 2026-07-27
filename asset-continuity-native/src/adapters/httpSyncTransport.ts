@@ -14,7 +14,8 @@ import {
   type SyncPullResponse,
   type SyncPushRequest,
   type SyncPushResponse,
-  type SyncTransport
+  type SyncTransport,
+  type WorkspaceBootstrapDescriptor
 } from "@alyr/contracts"
 
 export type AccessTokenProvider = () => Promise<string>
@@ -52,6 +53,8 @@ const conflictKinds: readonly SyncConflict["conflictKind"][] = [
   "identifier",
   "lifecycle"
 ]
+const uuidPattern =
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/iu
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value)
@@ -178,6 +181,30 @@ function isSyncChange(value: unknown): value is SyncChange {
   )
 }
 
+function isWorkspaceBootstrapDescriptor(
+  value: unknown
+): value is WorkspaceBootstrapDescriptor {
+  return (
+    isRecord(value) &&
+    typeof value.householdId === "string" &&
+    uuidPattern.test(value.householdId) &&
+    typeof value.householdName === "string" &&
+    value.householdName.trim().length > 0 &&
+    value.householdName.length <= 120 &&
+    isSafeIntegerAtLeast(value.householdVersion, 1) &&
+    typeof value.householdCreatedAt === "string" &&
+    Number.isFinite(Date.parse(value.householdCreatedAt)) &&
+    typeof value.membershipId === "string" &&
+    uuidPattern.test(value.membershipId) &&
+    typeof value.accountId === "string" &&
+    uuidPattern.test(value.accountId) &&
+    (value.role === "owner" ||
+      value.role === "editor" ||
+      value.role === "viewer") &&
+    isSafeIntegerAtLeast(value.membershipVersion, 1)
+  )
+}
+
 function isSyncPushResponse(value: unknown): value is SyncPushResponse {
   return (
     isRecord(value) &&
@@ -194,6 +221,7 @@ function isSyncPushResponse(value: unknown): value is SyncPushResponse {
 function isSyncPullResponse(value: unknown): value is SyncPullResponse {
   return (
     isRecord(value) &&
+    isWorkspaceBootstrapDescriptor(value.workspace) &&
     Array.isArray(value.changes) &&
     value.changes.every((change) => isSyncChange(change)) &&
     isSyncCursor(value.cursor)

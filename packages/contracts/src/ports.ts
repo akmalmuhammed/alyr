@@ -15,6 +15,13 @@ import type {
   SyncCursor,
   SyncOperation,
 } from "./sync.js";
+import type {
+  AccountDeletionReceipt,
+  AccountDeletionRequest,
+  HouseholdAccessMutationReceipt,
+  HouseholdAccessSnapshot,
+  WorkspaceBootstrapDescriptor,
+} from "./api.js";
 
 export interface AuthSession {
   readonly accountId: string;
@@ -34,11 +41,140 @@ export interface AuthPort {
   refreshSession(): Promise<Result<AuthSession>>;
 }
 
+export interface HouseholdInvite {
+  readonly inviteId: string;
+  /**
+   * Returned once at creation time for deliberate out-of-band sharing.
+   * Clients must not place this code in analytics or long-lived logs.
+   */
+  readonly oneTimeCode: string;
+  readonly role: Exclude<HouseholdRole, "owner">;
+  readonly expiresAt: IsoDateTime;
+}
+
+export interface HouseholdMembership {
+  readonly membershipId: string;
+  readonly householdId: HouseholdId;
+  readonly accountId: string;
+  readonly role: HouseholdRole;
+  readonly status: "active" | "revoked";
+  readonly version: number;
+}
+
+export interface HouseholdWorkspace {
+  readonly householdId: HouseholdId;
+  readonly name: string;
+  readonly version: number;
+  readonly createdAt: IsoDateTime;
+}
+
+export interface HouseholdAccessPort {
+  createHousehold(name: string): Promise<Result<HouseholdWorkspace>>;
+  completeOnboarding(
+    householdId: HouseholdId,
+  ): Promise<
+    Result<{
+      readonly householdId: HouseholdId;
+      readonly onboarding: "complete";
+    }>
+  >;
+  createInvite(input: {
+    readonly householdId: HouseholdId;
+    readonly role: Exclude<HouseholdRole, "owner">;
+    readonly expiresInHours: number;
+  }): Promise<Result<HouseholdInvite>>;
+  acceptInvite(oneTimeCode: string): Promise<Result<HouseholdMembership>>;
+  getAccessSnapshot(
+    householdId: HouseholdId,
+  ): Promise<Result<HouseholdAccessSnapshot>>;
+  changeMemberRole(input: {
+    readonly householdId: HouseholdId;
+    readonly membershipId: string;
+    readonly expectedVersion: number;
+    readonly role: Exclude<HouseholdRole, "owner">;
+    readonly operationId: string;
+  }): Promise<
+    Result<{
+      readonly receipt: HouseholdAccessMutationReceipt;
+      readonly snapshot: HouseholdAccessSnapshot;
+    }>
+  >;
+  revokeMember(input: {
+    readonly householdId: HouseholdId;
+    readonly membershipId: string;
+    readonly expectedVersion: number;
+    readonly operationId: string;
+  }): Promise<
+    Result<{
+      readonly receipt: HouseholdAccessMutationReceipt;
+      readonly snapshot: HouseholdAccessSnapshot;
+    }>
+  >;
+  cancelInvite(input: {
+    readonly householdId: HouseholdId;
+    readonly inviteId: string;
+    readonly expectedVersion: number;
+    readonly operationId: string;
+  }): Promise<
+    Result<{
+      readonly receipt: HouseholdAccessMutationReceipt;
+      readonly snapshot: HouseholdAccessSnapshot;
+    }>
+  >;
+  transferOwnership(input: {
+    readonly householdId: HouseholdId;
+    readonly targetMembershipId: string;
+    readonly expectedOwnerVersion: number;
+    readonly expectedTargetVersion: number;
+    readonly operationId: string;
+    readonly acknowledgeOwnerTransfer: true;
+  }): Promise<
+    Result<{
+      readonly receipt: HouseholdAccessMutationReceipt;
+      readonly snapshot: HouseholdAccessSnapshot;
+    }>
+  >;
+}
+
+export interface AccountDeletionPort {
+  deleteAccount(
+    input: AccountDeletionRequest,
+  ): Promise<Result<AccountDeletionReceipt>>;
+}
+
 export interface WorkspaceCommit<TSnapshot = JsonObject> {
   readonly expectedRevision: number;
   readonly nextRevision: number;
   readonly snapshot: TSnapshot;
   readonly operations: readonly SyncOperation[];
+}
+
+export interface WorkspaceSyncState {
+  readonly cursor: SyncCursor;
+  /**
+   * Conflicts stay durable until a reviewed resolution flow replaces or
+   * dismisses them.
+   */
+  readonly conflicts: readonly SyncConflict[];
+}
+
+/**
+ * Advances the local snapshot, pull cursor, server-confirmed
+ * acknowledgements and conflict ledger in one transaction.
+ */
+export interface WorkspaceSyncCommit<TSnapshot = JsonObject> {
+  readonly expectedRevision: number;
+  readonly nextRevision: number;
+  readonly snapshot: TSnapshot;
+  readonly cursor: SyncCursor;
+  /**
+   * New local operations created while reviewing a durable conflict. Keeping
+   * these in the same transaction as the conflict ledger prevents a restart
+   * from losing the reviewed resolution intent.
+   */
+  readonly operations?: readonly SyncOperation[];
+  readonly acknowledgedOperationIds: readonly string[];
+  readonly conflicts: readonly SyncConflict[];
 }
 
 export interface WorkspaceRepository<TSnapshot = JsonObject> {
@@ -52,6 +188,10 @@ export interface WorkspaceRepository<TSnapshot = JsonObject> {
   ): Promise<Result<{ readonly revision: number }>>;
   listPendingOperations(limit: number): Promise<readonly SyncOperation[]>;
   acknowledgeOperation(operationId: string): Promise<void>;
+  loadSyncState(): Promise<WorkspaceSyncState>;
+  commitSync(
+    commit: WorkspaceSyncCommit<TSnapshot>,
+  ): Promise<Result<{ readonly revision: number }>>;
 }
 
 export interface BinarySource {
@@ -89,6 +229,7 @@ export interface SyncTransport {
     cursor: SyncCursor,
   ): Promise<
     Result<{
+      readonly workspace: WorkspaceBootstrapDescriptor;
       readonly changes: readonly SyncChange[];
       readonly cursor: SyncCursor;
     }>

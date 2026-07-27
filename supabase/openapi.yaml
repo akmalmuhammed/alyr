@@ -13,6 +13,52 @@ servers:
 security:
   - bearerAuth: []
 paths:
+  /pilot/preflight:
+    post:
+      operationId: preflightPilotSignup
+      summary: Verify a one-use, email-bound closed-pilot invitation.
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PilotPreflightRequest"
+      responses:
+        "200":
+          description: A short-lived grant that may be consumed by one signup.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PilotPreflightResponse"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "409":
+          $ref: "#/components/responses/Conflict"
+        "503":
+          $ref: "#/components/responses/ApiError"
+  /invites/preflight:
+    post:
+      operationId: preflightHouseholdInviteSignup
+      summary: Exchange an active household invitation for an email-bound signup grant.
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/HouseholdInvitePreflightRequest"
+      responses:
+        "200":
+          description: A short-lived zero-household-creation grant for one signup.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PilotPreflightResponse"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "503":
+          $ref: "#/components/responses/ApiError"
   /households:
     post:
       operationId: createHousehold
@@ -37,6 +83,37 @@ paths:
           $ref: "#/components/responses/ApiError"
         "401":
           $ref: "#/components/responses/Unauthorized"
+  /onboarding/complete:
+    post:
+      operationId: completeHouseholdOnboarding
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CompleteOnboardingRequest"
+      responses:
+        "200":
+          description: Household setup was recorded in provider-controlled account metadata.
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: false
+                required: [householdId, onboarding]
+                properties:
+                  householdId:
+                    type: string
+                    format: uuid
+                  onboarding:
+                    type: string
+                    const: complete
+        "400":
+          $ref: "#/components/responses/ApiError"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
   /sync/push:
     post:
       operationId: pushSyncOperations
@@ -150,6 +227,162 @@ paths:
           $ref: "#/components/responses/NotFound"
         "409":
           $ref: "#/components/responses/Conflict"
+  /evidence/download:
+    post:
+      operationId: downloadEvidenceVersion
+      summary: Download one authorized immutable EvidenceVersion.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/EvidenceDownloadRequest"
+      responses:
+        "200":
+          description: >
+            Authoritative evidence bytes. The client must verify byte size and
+            SHA-256 against the requested immutable version before persistence.
+          headers:
+            Cache-Control:
+              schema:
+                type: string
+                const: no-store
+          content:
+            application/octet-stream:
+              schema:
+                type: string
+                format: binary
+        "400":
+          $ref: "#/components/responses/ApiError"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          $ref: "#/components/responses/Conflict"
+        "503":
+          $ref: "#/components/responses/ApiError"
+  /invites:
+    post:
+      operationId: createInvite
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/InviteCreateRequest"
+      responses:
+        "201":
+          description: One-time manual household invitation created.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/InviteCreateResponse"
+        "400":
+          $ref: "#/components/responses/ApiError"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+  /household-access:
+    get:
+      operationId: getHouseholdAccessSnapshot
+      summary: Refresh the active household roster from the authoritative cloud.
+      parameters:
+        - in: query
+          name: householdId
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "200":
+          description: Active members and owner-visible pending invitations.
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: false
+                required: [snapshot]
+                properties:
+                  snapshot:
+                    $ref: "#/components/schemas/HouseholdAccessSnapshot"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+  /household-access/member-role:
+    post:
+      operationId: changeHouseholdMemberRole
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/HouseholdMemberRoleChangeRequest"
+      responses:
+        "200":
+          $ref: "#/components/responses/HouseholdAccessMutation"
+        "400":
+          $ref: "#/components/responses/ApiError"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "409":
+          $ref: "#/components/responses/Conflict"
+  /household-access/member-revoke:
+    post:
+      operationId: revokeHouseholdMember
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/HouseholdMemberRevokeRequest"
+      responses:
+        "200":
+          $ref: "#/components/responses/HouseholdAccessMutation"
+        "400":
+          $ref: "#/components/responses/ApiError"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "409":
+          $ref: "#/components/responses/Conflict"
+  /household-access/invite-cancel:
+    post:
+      operationId: cancelHouseholdInvite
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/HouseholdInviteCancelRequest"
+      responses:
+        "200":
+          $ref: "#/components/responses/HouseholdAccessMutation"
+        "400":
+          $ref: "#/components/responses/ApiError"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "409":
+          $ref: "#/components/responses/Conflict"
+  /household-access/ownership-transfer:
+    post:
+      operationId: transferHouseholdOwnership
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/HouseholdOwnershipTransferRequest"
+      responses:
+        "200":
+          $ref: "#/components/responses/HouseholdAccessMutation"
+        "400":
+          $ref: "#/components/responses/ApiError"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "409":
+          $ref: "#/components/responses/Conflict"
   /invites/accept:
     post:
       operationId: acceptInvite
@@ -184,16 +417,32 @@ paths:
             schema:
               $ref: "#/components/schemas/ExportCreateRequest"
       responses:
-        "202":
-          description: Immutable export snapshot queued.
+        "201":
+          description: Immutable export snapshot generated, stored, and verified.
           content:
             application/json:
               schema:
                 $ref: "#/components/schemas/ExportStatusResponse"
+        "200":
+          description: Existing idempotent export snapshot returned.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ExportStatusResponse"
+        "400":
+          $ref: "#/components/responses/ApiError"
         "401":
           $ref: "#/components/responses/Unauthorized"
         "403":
           $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          $ref: "#/components/responses/Conflict"
+        "429":
+          $ref: "#/components/responses/TooManyRequests"
+        "503":
+          $ref: "#/components/responses/ServiceUnavailable"
   /exports/{exportId}:
     get:
       operationId: getExport
@@ -215,6 +464,97 @@ paths:
           $ref: "#/components/responses/Unauthorized"
         "404":
           $ref: "#/components/responses/NotFound"
+        "503":
+          $ref: "#/components/responses/ServiceUnavailable"
+  /exports/{exportId}/download:
+    get:
+      operationId: downloadExport
+      summary: Download one authorized, server-verified continuity export.
+      parameters:
+        - in: path
+          name: exportId
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "200":
+          description: >
+            Export bytes. Content-Length and X-ALYR-Checksum-SHA256 match the
+            immutable status descriptor and must be revalidated by the client.
+          headers:
+            Content-Disposition:
+              description: Attachment filename matching the immutable status descriptor.
+              schema:
+                type: string
+                pattern: '^attachment; filename="[A-Za-z0-9._-]{1,160}"$'
+            Content-Length:
+              description: Exact byte length matching the immutable status descriptor.
+              required: true
+              schema:
+                type: integer
+                minimum: 1
+                maximum: 5242880
+            X-ALYR-Checksum-SHA256:
+              description: SHA-256 digest matching the immutable status descriptor.
+              required: true
+              schema:
+                type: string
+                pattern: "^[a-f0-9]{64}$"
+          content:
+            application/json:
+              schema:
+                type: string
+                format: binary
+            application/pdf:
+              schema:
+                type: string
+                format: binary
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          $ref: "#/components/responses/Conflict"
+        "410":
+          $ref: "#/components/responses/Gone"
+        "503":
+          $ref: "#/components/responses/ServiceUnavailable"
+  /account/deletion:
+    post:
+      operationId: deleteCurrentAccount
+      summary: Re-authenticate and permanently remove the current account.
+      description: >
+        The password and confirmation email are verified server-side. A sole
+        active member who owns a household also deletes that household and its
+        private evidence. Editor/viewer memberships are removed while the
+        household remains. If an owned household has another active member,
+        deletion stops until ownership is transferred.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AccountDeletionRequest"
+      responses:
+        "200":
+          description: Account, eligible sole-member households, and memberships removed.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AccountDeletionReceipt"
+        "400":
+          $ref: "#/components/responses/ApiError"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "409":
+          description: Household ownership must be transferred before deletion.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiErrorEnvelope"
 components:
   securitySchemes:
     bearerAuth:
@@ -252,10 +592,142 @@ components:
         application/json:
           schema:
             $ref: "#/components/schemas/ApiErrorEnvelope"
+    TooManyRequests:
+      description: The household export creation rate was exceeded.
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ApiErrorEnvelope"
+    Gone:
+      description: The requested export has expired and its retained bytes were removed.
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ApiErrorEnvelope"
+    ServiceUnavailable:
+      description: A retryable provider or storage boundary is temporarily unavailable.
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ApiErrorEnvelope"
+    HouseholdAccessMutation:
+      description: The versioned owner action succeeded and the roster was refreshed.
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/HouseholdAccessMutationResponse"
   schemas:
     JsonObject:
       type: object
       additionalProperties: true
+    PlaceDocumentCreatePayload:
+      type: object
+      additionalProperties: false
+      required: [placeId, kind, relation, title]
+      properties:
+        placeId:
+          type: string
+          format: uuid
+        kind:
+          type: string
+          enum: [paper, artifact, media, record, note, link]
+        relation:
+          type: string
+          enum:
+            - ownership
+            - identity
+            - service
+            - provenance
+            - condition
+            - insurance
+            - valuation
+            - legal
+            - access
+            - context
+            - other
+        title:
+          type: string
+          minLength: 1
+          maxLength: 180
+    PlaceDocumentVersionAddPayload:
+      type: object
+      additionalProperties: false
+      required:
+        - placeDocumentId
+        - blobObjectId
+        - fileName
+        - mimeType
+        - byteSize
+        - checksumSha256
+      properties:
+        placeDocumentId:
+          type: string
+          format: uuid
+        blobObjectId:
+          type: string
+          format: uuid
+        fileName:
+          type: string
+          minLength: 1
+          maxLength: 255
+        mimeType:
+          type: string
+          minLength: 1
+          maxLength: 160
+        byteSize:
+          type: integer
+          minimum: 1
+          maximum: 10485760
+        checksumSha256:
+          type: string
+          pattern: "^[a-f0-9]{64}$"
+    PilotPreflightRequest:
+      type: object
+      additionalProperties: false
+      required: [apiVersion, email, accessCode]
+      properties:
+        apiVersion:
+          type: integer
+          const: 1
+        email:
+          type: string
+          format: email
+          maxLength: 254
+        accessCode:
+          type: string
+          minLength: 16
+          maxLength: 64
+          pattern: "^[A-Z0-9]+$"
+    PilotPreflightResponse:
+      type: object
+      additionalProperties: false
+      required: [apiVersion, enrollmentGrant, expiresAt]
+      properties:
+        apiVersion:
+          type: integer
+          const: 1
+        enrollmentGrant:
+          type: string
+          pattern: "^[a-f0-9]{64}$"
+        expiresAt:
+          type: string
+          format: date-time
+    HouseholdInvitePreflightRequest:
+      type: object
+      additionalProperties: false
+      required: [apiVersion, email, oneTimeCode]
+      properties:
+        apiVersion:
+          type: integer
+          const: 1
+        email:
+          type: string
+          format: email
+          maxLength: 254
+        oneTimeCode:
+          type: string
+          minLength: 1
+          maxLength: 128
     CreateHouseholdRequest:
       type: object
       additionalProperties: false
@@ -265,6 +737,17 @@ components:
           type: string
           minLength: 1
           maxLength: 120
+    CompleteOnboardingRequest:
+      type: object
+      additionalProperties: false
+      required: [apiVersion, householdId]
+      properties:
+        apiVersion:
+          type: integer
+          const: 1
+        householdId:
+          type: string
+          format: uuid
     Household:
       type: object
       required: [id, name, version, created_at, updated_at]
@@ -342,14 +825,22 @@ components:
           type: string
           enum:
             - place.create
+            - place.update
             - space.create
+            - space.update
             - asset.create
             - asset.update
             - asset.move
             - asset.archive
+            - asset.restore
             - evidence.create
             - evidence.version.add
             - evidence.review
+            - place-document.create
+            - place-document.version.add
+            - value.create
+            - value.update
+            - value.delete
         aggregateId:
           type:
             - string
@@ -537,14 +1028,54 @@ components:
     SyncPullResponse:
       type: object
       additionalProperties: false
-      required: [changes, cursor]
+      required: [workspace, changes, cursor]
       properties:
+        workspace:
+          $ref: "#/components/schemas/WorkspaceBootstrapDescriptor"
         changes:
           type: array
           items:
             $ref: "#/components/schemas/SyncChange"
         cursor:
           $ref: "#/components/schemas/SyncCursor"
+    WorkspaceBootstrapDescriptor:
+      type: object
+      additionalProperties: false
+      required:
+        - householdId
+        - householdName
+        - householdVersion
+        - householdCreatedAt
+        - membershipId
+        - accountId
+        - role
+        - membershipVersion
+      properties:
+        householdId:
+          type: string
+          format: uuid
+        householdName:
+          type: string
+          minLength: 1
+          maxLength: 120
+        householdVersion:
+          type: integer
+          minimum: 1
+        householdCreatedAt:
+          type: string
+          format: date-time
+        membershipId:
+          type: string
+          format: uuid
+        accountId:
+          type: string
+          format: uuid
+        role:
+          type: string
+          enum: [owner, editor, viewer]
+        membershipVersion:
+          type: integer
+          minimum: 1
     UploadIntentRequest:
       type: object
       additionalProperties: false
@@ -568,9 +1099,15 @@ components:
         evidenceId:
           type: string
           format: uuid
+          description: >
+            The asset Evidence ID, or the Place Document ID when this upload
+            will be committed by place-document.version.add.
         evidenceVersionId:
           type: string
           format: uuid
+          description: >
+            The immutable Evidence Version ID, or Place Document Version ID,
+            selected before upload.
         blobId:
           type: string
           format: uuid
@@ -638,6 +1175,56 @@ components:
               const: stored
         note:
           type: string
+    EvidenceDownloadRequest:
+      type: object
+      additionalProperties: false
+      required:
+        - apiVersion
+        - householdId
+        - evidenceId
+        - evidenceVersionId
+        - blobId
+        - fileName
+        - mimeType
+        - byteSize
+        - checksumSha256
+      properties:
+        apiVersion:
+          type: integer
+          const: 1
+        householdId:
+          type: string
+          format: uuid
+        evidenceId:
+          type: string
+          format: uuid
+          description: >
+            The asset Evidence ID or Place Document ID that owns this immutable
+            version.
+        evidenceVersionId:
+          type: string
+          format: uuid
+          description: >
+            The immutable asset Evidence Version ID or Place Document Version
+            ID whose bytes are requested.
+        blobId:
+          type: string
+          format: uuid
+        fileName:
+          type: string
+          minLength: 1
+          maxLength: 255
+        mimeType:
+          type: string
+          minLength: 1
+          maxLength: 160
+        byteSize:
+          type: integer
+          minimum: 1
+          maximum: 10485760
+        checksumSha256:
+          type: string
+          pattern: "^[a-f0-9]{64}$"
     InviteAcceptRequest:
       type: object
       additionalProperties: false
@@ -650,10 +1237,276 @@ components:
           type: string
           minLength: 1
           maxLength: 128
+    InviteCreateRequest:
+      type: object
+      additionalProperties: false
+      required: [apiVersion, householdId, role, expiresInHours]
+      properties:
+        apiVersion:
+          type: integer
+          const: 1
+        householdId:
+          type: string
+          format: uuid
+        role:
+          type: string
+          enum: [editor, viewer]
+        expiresInHours:
+          type: integer
+          minimum: 1
+          maximum: 720
+    InviteCreateResponse:
+      type: object
+      additionalProperties: false
+      required: [inviteId, oneTimeCode, role, expiresAt]
+      properties:
+        inviteId:
+          type: string
+          format: uuid
+        oneTimeCode:
+          type: string
+          minLength: 1
+        role:
+          type: string
+          enum: [editor, viewer]
+        expiresAt:
+          type: string
+          format: date-time
+    HouseholdMemberDescriptor:
+      type: object
+      additionalProperties: false
+      required:
+        - membershipId
+        - householdId
+        - accountId
+        - displayName
+        - email
+        - role
+        - status
+        - version
+        - joinedAt
+        - isCurrentUser
+      properties:
+        membershipId:
+          type: string
+          format: uuid
+        householdId:
+          type: string
+          format: uuid
+        accountId:
+          type: string
+          format: uuid
+        displayName:
+          type: string
+          minLength: 1
+          maxLength: 320
+        email:
+          type:
+            - string
+            - "null"
+          format: email
+        role:
+          type: string
+          enum: [owner, editor, viewer]
+        status:
+          type: string
+          const: active
+        version:
+          type: integer
+          minimum: 1
+        joinedAt:
+          type: string
+          format: date-time
+        isCurrentUser:
+          type: boolean
+    PendingHouseholdInviteDescriptor:
+      type: object
+      additionalProperties: false
+      required:
+        - inviteId
+        - householdId
+        - role
+        - status
+        - version
+        - createdAt
+        - expiresAt
+      properties:
+        inviteId:
+          type: string
+          format: uuid
+        householdId:
+          type: string
+          format: uuid
+        role:
+          type: string
+          enum: [editor, viewer]
+        status:
+          type: string
+          const: pending
+        version:
+          type: integer
+          minimum: 1
+        createdAt:
+          type: string
+          format: date-time
+        expiresAt:
+          type: string
+          format: date-time
+    HouseholdAccessSnapshot:
+      type: object
+      additionalProperties: false
+      required:
+        - householdId
+        - householdName
+        - householdVersion
+        - currentMembershipId
+        - currentAccountId
+        - currentRole
+        - members
+        - pendingInvites
+        - refreshedAt
+      properties:
+        householdId:
+          type: string
+          format: uuid
+        householdName:
+          type: string
+          minLength: 1
+          maxLength: 120
+        householdVersion:
+          type: integer
+          minimum: 1
+        currentMembershipId:
+          type: string
+          format: uuid
+        currentAccountId:
+          type: string
+          format: uuid
+        currentRole:
+          type: string
+          enum: [owner, editor, viewer]
+        members:
+          type: array
+          items:
+            $ref: "#/components/schemas/HouseholdMemberDescriptor"
+        pendingInvites:
+          type: array
+          items:
+            $ref: "#/components/schemas/PendingHouseholdInviteDescriptor"
+        refreshedAt:
+          type: string
+          format: date-time
+    HouseholdAccessMutationBase:
+      type: object
+      additionalProperties: false
+      required:
+        - apiVersion
+        - householdId
+        - operationId
+      properties:
+        apiVersion:
+          type: integer
+          const: 1
+        householdId:
+          type: string
+          format: uuid
+        operationId:
+          type: string
+          format: uuid
+    HouseholdMemberRoleChangeRequest:
+      allOf:
+        - $ref: "#/components/schemas/HouseholdAccessMutationBase"
+        - type: object
+          additionalProperties: false
+          required: [membershipId, expectedVersion, role]
+          properties:
+            membershipId:
+              type: string
+              format: uuid
+            expectedVersion:
+              type: integer
+              minimum: 1
+            role:
+              type: string
+              enum: [editor, viewer]
+    HouseholdMemberRevokeRequest:
+      allOf:
+        - $ref: "#/components/schemas/HouseholdAccessMutationBase"
+        - type: object
+          additionalProperties: false
+          required: [membershipId, expectedVersion]
+          properties:
+            membershipId:
+              type: string
+              format: uuid
+            expectedVersion:
+              type: integer
+              minimum: 1
+    HouseholdInviteCancelRequest:
+      allOf:
+        - $ref: "#/components/schemas/HouseholdAccessMutationBase"
+        - type: object
+          additionalProperties: false
+          required: [inviteId, expectedVersion]
+          properties:
+            inviteId:
+              type: string
+              format: uuid
+            expectedVersion:
+              type: integer
+              minimum: 1
+    HouseholdOwnershipTransferRequest:
+      allOf:
+        - $ref: "#/components/schemas/HouseholdAccessMutationBase"
+        - type: object
+          additionalProperties: false
+          required:
+            - targetMembershipId
+            - expectedOwnerVersion
+            - expectedTargetVersion
+            - acknowledgeOwnerTransfer
+          properties:
+            targetMembershipId:
+              type: string
+              format: uuid
+            expectedOwnerVersion:
+              type: integer
+              minimum: 1
+            expectedTargetVersion:
+              type: integer
+              minimum: 1
+            acknowledgeOwnerTransfer:
+              type: boolean
+              const: true
+    HouseholdAccessMutationReceipt:
+      type: object
+      additionalProperties: true
+      required: [operationId, kind]
+      properties:
+        operationId:
+          type: string
+          format: uuid
+        kind:
+          type: string
+          enum:
+            - membership.role_changed
+            - membership.revoked
+            - invite.cancelled
+            - ownership.transferred
+    HouseholdAccessMutationResponse:
+      type: object
+      additionalProperties: false
+      required: [receipt, snapshot]
+      properties:
+        receipt:
+          $ref: "#/components/schemas/HouseholdAccessMutationReceipt"
+        snapshot:
+          $ref: "#/components/schemas/HouseholdAccessSnapshot"
     ExportCreateRequest:
       type: object
       additionalProperties: false
-      required: [apiVersion, householdId, format, assetIds, redacted]
+      required:
+        [apiVersion, householdId, format, assetIds, redacted, idempotencyKey]
       properties:
         apiVersion:
           type: integer
@@ -667,14 +1520,31 @@ components:
         assetIds:
           type: array
           maxItems: 500
+          uniqueItems: true
           items:
             type: string
+            format: uuid
         redacted:
           type: boolean
+        idempotencyKey:
+          type: string
+          minLength: 16
+          maxLength: 128
+          pattern: "^[A-Za-z0-9._:-]+$"
     ExportStatusResponse:
       type: object
       additionalProperties: false
-      required: [exportId, status, blobObjectId, expiresAt, error]
+      required:
+        - exportId
+        - status
+        - blobObjectId
+        - fileName
+        - mimeType
+        - byteSize
+        - checksumSha256
+        - expiresAt
+        - completedAt
+        - error
       properties:
         exportId:
           type: string
@@ -686,7 +1556,33 @@ components:
           type:
             - string
             - "null"
+        fileName:
+          type:
+            - string
+            - "null"
+          pattern: "^[A-Za-z0-9._-]{1,160}$"
+        mimeType:
+          type:
+            - string
+            - "null"
+          enum: [application/json, application/pdf, null]
+        byteSize:
+          type:
+            - integer
+            - "null"
+          minimum: 1
+          maximum: 5242880
+        checksumSha256:
+          type:
+            - string
+            - "null"
+          pattern: "^[a-f0-9]{64}$"
         expiresAt:
+          type:
+            - string
+            - "null"
+          format: date-time
+        completedAt:
           type:
             - string
             - "null"
@@ -695,6 +1591,68 @@ components:
           oneOf:
             - $ref: "#/components/schemas/ApiError"
             - type: "null"
+    AccountDeletionRequest:
+      type: object
+      additionalProperties: false
+      required:
+        - apiVersion
+        - expectedAccountId
+        - expectedActiveHouseholdId
+        - expectedActiveHouseholdRole
+        - confirmationEmail
+        - password
+        - acknowledgeIrreversibleDeletion
+      properties:
+        apiVersion:
+          type: integer
+          const: 1
+        expectedAccountId:
+          type: string
+          format: uuid
+        expectedActiveHouseholdId:
+          type: string
+          format: uuid
+        expectedActiveHouseholdRole:
+          type: string
+          enum: [owner, editor, viewer]
+        confirmationEmail:
+          type: string
+          format: email
+          maxLength: 320
+        password:
+          type: string
+          minLength: 1
+          maxLength: 128
+        acknowledgeIrreversibleDeletion:
+          type: boolean
+          const: true
+    AccountDeletionReceipt:
+      type: object
+      additionalProperties: false
+      required:
+        - accountId
+        - deletedHouseholdIds
+        - departedHouseholdIds
+        - deletedAt
+      properties:
+        accountId:
+          type: string
+          format: uuid
+        deletedHouseholdIds:
+          type: array
+          uniqueItems: true
+          items:
+            type: string
+            format: uuid
+        departedHouseholdIds:
+          type: array
+          uniqueItems: true
+          items:
+            type: string
+            format: uuid
+        deletedAt:
+          type: string
+          format: date-time
     ApiError:
       type: object
       additionalProperties: false

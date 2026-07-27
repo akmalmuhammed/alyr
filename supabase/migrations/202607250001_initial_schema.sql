@@ -69,6 +69,9 @@ create table public.places (
   kind text not null default 'home',
   tenure text not null default 'unknown',
   address_text text,
+  region_label text check (
+    region_label is null or char_length(region_label) between 1 and 120
+  ),
   latitude double precision check (latitude is null or latitude between -90 and 90),
   longitude double precision check (longitude is null or longitude between -180 and 180),
   location_source text not null default 'unknown'
@@ -131,7 +134,8 @@ create table public.spaces (
   place_id uuid not null,
   parent_space_id uuid,
   name text not null check (char_length(name) between 1 and 120),
-  kind text not null default 'room',
+  kind text not null default 'room'
+    check (kind in ('room', 'zone', 'container')),
   ordinal integer not null default 0,
   version integer not null default 1 check (version > 0),
   created_by uuid not null references auth.users(id),
@@ -164,6 +168,30 @@ create table public.assets (
   deleted_at timestamptz,
   unique (household_id, id)
 );
+
+create table public.asset_value_assertions (
+  id uuid primary key,
+  household_id uuid not null references public.households(id) on delete cascade,
+  asset_id uuid not null,
+  amount_minor bigint not null
+    check (amount_minor between 0 and 9007199254740991),
+  currency text not null check (currency ~ '^[A-Z]{3}$'),
+  as_of date not null,
+  source text not null default 'user-entered'
+    check (source = 'user-entered'),
+  version integer not null default 1 check (version > 0),
+  created_by uuid not null references auth.users(id),
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now(),
+  deleted_at timestamptz,
+  unique (household_id, id),
+  foreign key (household_id, asset_id)
+    references public.assets(household_id, id) on delete cascade
+);
+
+create index asset_value_assertions_household_asset_as_of
+  on public.asset_value_assertions(household_id, asset_id, as_of desc)
+  where deleted_at is null;
 
 create table public.asset_location_revisions (
   id uuid primary key,
@@ -471,7 +499,64 @@ begin
   insert into public.audit_events(household_id, actor_id, event_name, entity_type, entity_id)
   values (v_household.id, v_user_id, 'household.created', 'household', v_household.id);
 
+  -- Durable account routing belongs in provider-controlled app metadata, never
+  -- in client-editable user metadata. A refreshed JWT can now restore the same
+  -- household-scoped local vault after process death or reinstall.
+  update auth.users
+  set raw_app_meta_data =
+    coalesce(raw_app_meta_data, '{}'::jsonb)
+    || jsonb_build_object(
+      'active_household_id', v_household.id::text,
+      'onboarding_complete', false
+    )
+  where id = v_user_id;
+
   return v_household;
+end
+$$;
+
+create or replace function public.complete_household_onboarding(
+  p_household_id uuid
+)
+returns void
+language plpgsql
+security definer
+set search_path = public, pg_temp
+as $$
+declare
+  v_user_id uuid := auth.uid();
+begin
+  if v_user_id is null then
+    raise exception 'AUTH_REQUIRED' using errcode = 'P0001';
+  end if;
+
+  if not public.can_admin_household(p_household_id) then
+    raise exception 'HOUSEHOLD_ADMIN_REQUIRED' using errcode = 'P0001';
+  end if;
+
+  update auth.users
+  set raw_app_meta_data =
+    coalesce(raw_app_meta_data, '{}'::jsonb)
+    || jsonb_build_object(
+      'active_household_id', p_household_id::text,
+      'onboarding_complete', true
+    )
+  where id = v_user_id;
+
+  insert into public.audit_events(
+    household_id,
+    actor_id,
+    event_name,
+    entity_type,
+    entity_id
+  )
+  values (
+    p_household_id,
+    v_user_id,
+    'household.onboarding_completed',
+    'household',
+    p_household_id
+  );
 end
 $$;
 
@@ -1002,6 +1087,8 @@ declare
   v_version integer;
   v_cursor bigint;
   v_active_location public.asset_location_revisions;
+  v_asset_record_version integer;
+  v_evidence_record_version integer;
   v_current_evidence_version integer;
   v_blob public.blob_objects;
 begin
@@ -1077,13 +1164,73 @@ begin
     return v_result || jsonb_build_object('idempotent', true);
   end if;
 
+  if v_command in ('value.create', 'value.update') then
+    if
+      (v_payload->>'amountMinor') is null
+      or (v_payload->>'amountMinor') !~ '^[0-9]+$'
+      or (v_payload->>'amountMinor')::numeric > 9007199254740991
+      or (v_payload->>'currency') is null
+      or (v_payload->>'currency') !~ '^[A-Z]{3}$'
+      or (v_payload->>'asOf') is null
+      or (v_payload->>'asOf') !~ '^[0-9]{4}-[0-9]{2}-[0-9]{2}$'
+      or (v_payload->>'asOf')::date > current_date
+      or coalesce(v_payload->>'source', 'user-entered') <> 'user-entered'
+    then
+      raise exception 'VALIDATION_FAILED' using errcode = 'P0001';
+    end if;
+
+    perform 1
+    from public.assets
+    where id = (v_payload->>'assetId')::uuid
+      and household_id = v_household
+      and lifecycle = 'active'
+      and deleted_at is null;
+
+    if not found then
+      raise exception 'ASSET_UNAVAILABLE' using errcode = 'P0001';
+    end if;
+  end if;
+
+  if v_command = 'place.update' then
+    if
+      (v_payload ? 'name' and char_length(trim(coalesce(v_payload->>'name', ''))) not between 1 and 160)
+      or (
+        v_payload ? 'regionLabel'
+        and char_length(trim(coalesce(v_payload->>'regionLabel', ''))) not between 1 and 120
+      )
+      or (
+        v_payload ?| array[
+          'latitude', 'longitude', 'locationSource', 'locationPrecision',
+          'horizontalAccuracyM', 'observedAt', 'confirmedAt'
+        ]
+        and not (v_payload ?& array[
+          'latitude', 'longitude', 'locationSource', 'locationPrecision',
+          'horizontalAccuracyM', 'observedAt', 'confirmedAt'
+        ])
+      )
+    then
+      raise exception 'VALIDATION_FAILED' using errcode = 'P0001';
+    end if;
+  end if;
+
+  if v_command in ('space.create', 'space.update') then
+    if
+      char_length(trim(coalesce(v_payload->>'name', ''))) not between 1 and 120
+      or coalesce(v_payload->>'kind', '') not in ('room', 'zone', 'container')
+      or nullif(v_payload->>'placeId', '') is null
+    then
+      raise exception 'VALIDATION_FAILED' using errcode = 'P0001';
+    end if;
+  end if;
+
   if v_command = 'place.create' then
     if v_base_version <> 0 then
       raise exception 'VERSION_CONFLICT' using errcode = 'P0001';
     end if;
 
     insert into public.places(
-      id, household_id, name, kind, tenure, address_text, latitude, longitude,
+      id, household_id, name, kind, tenure, address_text, region_label,
+      latitude, longitude,
       location_source, location_precision, horizontal_accuracy_m,
       location_observed_at, location_confirmed_at, created_by
     )
@@ -1097,6 +1244,7 @@ begin
         nullif(v_payload->>'addressText', ''),
         nullif(v_payload->>'addressSummary', '')
       ),
+      nullif(trim(v_payload->>'regionLabel'), ''),
       nullif(v_payload->>'latitude', '')::double precision,
       nullif(v_payload->>'longitude', '')::double precision,
       coalesce(v_payload->>'locationSource', 'unknown'),
@@ -1107,6 +1255,72 @@ begin
       v_actor
     );
     v_version := 1;
+
+  elsif v_command = 'place.update' then
+    update public.places
+    set
+      name = case
+        when v_payload ? 'name' then trim(v_payload->>'name')
+        else name
+      end,
+      address_text = case
+        when v_payload ? 'addressSummary'
+          then nullif(trim(v_payload->>'addressSummary'), '')
+        when v_payload ? 'addressText'
+          then nullif(trim(v_payload->>'addressText'), '')
+        else address_text
+      end,
+      region_label = case
+        when v_payload ? 'regionLabel'
+          then nullif(trim(v_payload->>'regionLabel'), '')
+        else region_label
+      end,
+      latitude = case
+        when v_payload ? 'latitude'
+          then nullif(v_payload->>'latitude', '')::double precision
+        else latitude
+      end,
+      longitude = case
+        when v_payload ? 'longitude'
+          then nullif(v_payload->>'longitude', '')::double precision
+        else longitude
+      end,
+      location_source = case
+        when v_payload ? 'locationSource'
+          then coalesce(nullif(v_payload->>'locationSource', ''), 'not_set')
+        else location_source
+      end,
+      location_precision = case
+        when v_payload ? 'locationPrecision'
+          then coalesce(nullif(v_payload->>'locationPrecision', ''), 'locality_only')
+        else location_precision
+      end,
+      horizontal_accuracy_m = case
+        when v_payload ? 'horizontalAccuracyM'
+          then nullif(v_payload->>'horizontalAccuracyM', '')::double precision
+        else horizontal_accuracy_m
+      end,
+      location_observed_at = case
+        when v_payload ? 'observedAt'
+          then nullif(v_payload->>'observedAt', '')::timestamptz
+        else location_observed_at
+      end,
+      location_confirmed_at = case
+        when v_payload ? 'confirmedAt'
+          then nullif(v_payload->>'confirmedAt', '')::timestamptz
+        else location_confirmed_at
+      end,
+      version = version + 1,
+      updated_at = now()
+    where id = v_entity_id
+      and household_id = v_household
+      and version = v_base_version
+      and deleted_at is null
+    returning version into v_version;
+
+    if not found then
+      raise exception 'VERSION_CONFLICT' using errcode = 'P0001';
+    end if;
 
   elsif v_command = 'space.create' then
     if v_base_version <> 0 then
@@ -1127,6 +1341,50 @@ begin
       v_actor
     );
     v_version := 1;
+
+  elsif v_command = 'space.update' then
+    if
+      nullif(v_payload->>'parentSpaceId', '')::uuid = v_entity_id
+      or exists (
+        with recursive ancestors as (
+          select id, parent_space_id
+          from public.spaces
+          where id = nullif(v_payload->>'parentSpaceId', '')::uuid
+            and household_id = v_household
+            and place_id = (v_payload->>'placeId')::uuid
+            and deleted_at is null
+          union all
+          select parent.id, parent.parent_space_id
+          from public.spaces parent
+          join ancestors child on parent.id = child.parent_space_id
+          where parent.household_id = v_household
+            and parent.place_id = (v_payload->>'placeId')::uuid
+            and parent.deleted_at is null
+        )
+        select 1 from ancestors where id = v_entity_id
+      )
+    then
+      raise exception 'INVALID_SPACE_HIERARCHY' using errcode = 'P0001';
+    end if;
+
+    update public.spaces
+    set
+      parent_space_id = nullif(v_payload->>'parentSpaceId', '')::uuid,
+      name = trim(v_payload->>'name'),
+      kind = v_payload->>'kind',
+      ordinal = coalesce((v_payload->>'ordinal')::integer, ordinal),
+      version = version + 1,
+      updated_at = now()
+    where id = v_entity_id
+      and household_id = v_household
+      and place_id = (v_payload->>'placeId')::uuid
+      and version = v_base_version
+      and deleted_at is null
+    returning version into v_version;
+
+    if not found then
+      raise exception 'VERSION_CONFLICT' using errcode = 'P0001';
+    end if;
 
   elsif v_command = 'asset.create' then
     if v_base_version <> 0 then
@@ -1187,6 +1445,75 @@ begin
       raise exception 'VERSION_CONFLICT' using errcode = 'P0001';
     end if;
 
+  elsif v_command = 'asset.restore' then
+    update public.assets
+    set lifecycle = 'active', version = version + 1, updated_at = now()
+    where id = v_entity_id
+      and household_id = v_household
+      and version = v_base_version
+      and deleted_at is null
+    returning version into v_version;
+
+    if not found then
+      raise exception 'VERSION_CONFLICT' using errcode = 'P0001';
+    end if;
+
+  elsif v_command = 'value.create' then
+    if v_base_version <> 0 then
+      raise exception 'VERSION_CONFLICT' using errcode = 'P0001';
+    end if;
+
+    insert into public.asset_value_assertions(
+      id, household_id, asset_id, amount_minor, currency, as_of, source,
+      created_by
+    )
+    values (
+      v_entity_id,
+      v_household,
+      (v_payload->>'assetId')::uuid,
+      (v_payload->>'amountMinor')::bigint,
+      upper(v_payload->>'currency'),
+      (v_payload->>'asOf')::date,
+      coalesce(v_payload->>'source', 'user-entered'),
+      v_actor
+    );
+    v_version := 1;
+
+  elsif v_command = 'value.update' then
+    update public.asset_value_assertions
+    set
+      amount_minor = (v_payload->>'amountMinor')::bigint,
+      currency = upper(v_payload->>'currency'),
+      as_of = (v_payload->>'asOf')::date,
+      version = version + 1,
+      updated_at = now()
+    where id = v_entity_id
+      and household_id = v_household
+      and asset_id = (v_payload->>'assetId')::uuid
+      and version = v_base_version
+      and deleted_at is null
+    returning version into v_version;
+
+    if not found then
+      raise exception 'VERSION_CONFLICT' using errcode = 'P0001';
+    end if;
+
+  elsif v_command = 'value.delete' then
+    update public.asset_value_assertions
+    set
+      version = version + 1,
+      updated_at = now(),
+      deleted_at = now()
+    where id = v_entity_id
+      and household_id = v_household
+      and version = v_base_version
+      and deleted_at is null
+    returning version into v_version;
+
+    if not found then
+      raise exception 'VERSION_CONFLICT' using errcode = 'P0001';
+    end if;
+
   elsif v_command = 'asset.move' then
     select *
     into v_active_location
@@ -1229,7 +1556,8 @@ begin
 
     update public.assets
     set version = version + 1, updated_at = now()
-    where id = v_entity_id and household_id = v_household and deleted_at is null;
+    where id = v_entity_id and household_id = v_household and deleted_at is null
+    returning version into v_asset_record_version;
 
   elsif v_command = 'evidence.create' then
     if v_base_version <> 0 then
@@ -1343,7 +1671,8 @@ begin
       version = version + 1,
       updated_at = now()
     where id = (v_payload->>'evidenceId')::uuid
-      and household_id = v_household;
+      and household_id = v_household
+    returning version into v_evidence_record_version;
 
   else
     raise exception 'UNSUPPORTED_COMMAND' using errcode = 'P0001';
@@ -1356,6 +1685,18 @@ begin
     'status', 'applied',
     'idempotent', false
   );
+
+  if v_command = 'asset.move' then
+    v_result := v_result || jsonb_build_object(
+      'entityVersion', v_asset_record_version,
+      'locationVersion', v_version
+    );
+  elsif v_command in ('evidence.version.create', 'evidence.version.add') then
+    v_result := v_result || jsonb_build_object(
+      'entityVersion', v_evidence_record_version,
+      'evidenceVersionNumber', v_version
+    );
+  end if;
 
   insert into public.sync_operations(
     id, household_id, idempotency_key, request_hash, actor_id, device_id,
@@ -1487,7 +1828,8 @@ declare
 begin
   foreach v_table in array array[
     'households', 'memberships', 'devices', 'places', 'spaces', 'assets',
-    'asset_location_revisions', 'evidence', 'blob_objects', 'evidence_versions',
+    'asset_value_assertions', 'asset_location_revisions', 'evidence',
+    'blob_objects', 'evidence_versions',
     'invites', 'sync_operations', 'audit_events', 'export_snapshots',
     'product_events', 'pilot_enrollments'
   ]
@@ -1519,9 +1861,9 @@ declare
   v_table text;
 begin
   foreach v_table in array array[
-    'devices', 'places', 'spaces', 'assets', 'asset_location_revisions',
-    'evidence', 'blob_objects', 'evidence_versions', 'sync_operations',
-    'product_events'
+    'devices', 'places', 'spaces', 'assets', 'asset_value_assertions',
+    'asset_location_revisions', 'evidence', 'blob_objects',
+    'evidence_versions', 'sync_operations', 'product_events'
   ]
   loop
     execute format(
@@ -1543,8 +1885,9 @@ revoke all on all tables in schema public from anon;
 revoke insert, update, delete on all tables in schema public from authenticated;
 revoke execute on all functions in schema public from public, anon, authenticated;
 grant select on public.households, public.memberships, public.devices, public.places,
-  public.spaces, public.assets, public.asset_location_revisions, public.evidence,
-  public.blob_objects, public.evidence_versions, public.invites,
+  public.spaces, public.assets, public.asset_value_assertions,
+  public.asset_location_revisions, public.evidence, public.blob_objects,
+  public.evidence_versions, public.invites,
   public.sync_operations, public.audit_events, public.export_snapshots
 to authenticated;
 
@@ -1553,6 +1896,7 @@ grant execute on function public.is_household_member(uuid) to authenticated;
 grant execute on function public.can_edit_household(uuid) to authenticated;
 grant execute on function public.can_admin_household(uuid) to authenticated;
 grant execute on function public.create_household(text) to authenticated;
+grant execute on function public.complete_household_onboarding(uuid) to authenticated;
 grant execute on function public.create_household_invite(uuid, public.household_role, interval) to authenticated;
 grant execute on function public.accept_household_invite(text) to authenticated;
 grant execute on function public.apply_sync_operation(jsonb) to authenticated;
