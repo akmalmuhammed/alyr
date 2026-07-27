@@ -34,8 +34,8 @@ The following checks were run on 2026-07-27 with the pinned EAS CLI:
 - `eas project:info` resolved the checked-in project ID to
   `@alyr-app/alyr-asset-continuity`.
 - The initial `eas build:list --platform ios` check returned no prior iOS
-  builds. The first `development-simulator` build has since finished and is
-  recorded in the release-artifact evidence below.
+  builds. The final-source `development-simulator` build has since finished and
+  is recorded in the release-artifact evidence below.
 - `eas device:list` reported no Apple teams for `alyr-app`; no registered
   physical iPhone or provisioning profile is therefore present yet.
 - Project-scoped EAS environments now contain the public
@@ -153,23 +153,28 @@ physical-device execution.
 ### EAS iOS Simulator development artifact
 
 EAS build
-[`b2f2abcf-0bb4-421d-b668-ba1e9f0642ad`](https://expo.dev/accounts/alyr-app/projects/alyr-asset-continuity/builds/b2f2abcf-0bb4-421d-b668-ba1e9f0642ad)
-finished at `2026-07-27T22:57:57.360Z` from clean commit
-`2bc447b7ab453a975161fbc83373abc668c0c18b`.
+[`b9bb7206-b3e4-4df8-ae36-c140b6e5ddbc`](https://expo.dev/accounts/alyr-app/projects/alyr-asset-continuity/builds/b9bb7206-b3e4-4df8-ae36-c140b6e5ddbc)
+finished at `2026-07-27T23:44:48.906Z` from clean commit
+`bcb2e04a6785f5a06d709e5416df150aa7f7777a`.
 
 - Profile: `development-simulator`
 - Result: **FINISHED / VERIFIED**
 - Target: iOS Simulator only; physical-iPhone signing remains a separate Apple
   account gate.
+- Source includes the signed-out cloud sample-workspace repair, isolated
+  account/household vault remounting, explicit EAS environment mapping, and the
+  stable Maestro selector contract.
 - Artifact:
-  [`VbFTYqXVAWOpkKKSJ_8G4WJ0c8XDNv6gApxW0o1N5YM.tar.gz`](https://expo.dev/artifacts/eas/VbFTYqXVAWOpkKKSJ_8G4WJ0c8XDNv6gApxW0o1N5YM.tar.gz)
-- Archive size: **57,514,636 bytes**
+  [`90JzLQgzz07--XbqZoEw7VBDyNz3LR0MndS1oOwHGeE.tar.gz`](https://expo.dev/artifacts/eas/90JzLQgzz07--XbqZoEw7VBDyNz3LR0MndS1oOwHGeE.tar.gz)
+- Archive size: **57,514,626 bytes**
 - Archive SHA-256:
-  `6019840933DB40ACD8EAFE1AAFB7EBE47ACEB0E83085CB8FC8D4D8C740804303`
+  `F669D6C4CE39BF2C82A407FF696D5368E83080E9BA959F3ECBAD568F54C36BE1`
 - Archive inspection found **137 entries** and the expected `ALYR.app`.
 - `Info.plist` confirms bundle `com.alyr.continuity`, version `0.1.0`, build
-  `1`, the reviewed camera/photo/location/Face ID purpose strings, no
-  `UIBackgroundModes`, and `ITSAppUsesNonExemptEncryption = false`.
+  `1`, iPhone-only `UIDeviceFamily = [1]`, the reviewed
+  camera/photo/location/Face ID purpose strings, no `UIBackgroundModes`,
+  `NSAllowsArbitraryLoads = false`, development-only local networking, and
+  `ITSAppUsesNonExemptEncryption = false`.
 - `Expo.plist` confirms runtime `0.1.0` and the `development` channel.
 - Both compressed EAS logs were decoded and scanned. Neither contains a fatal
   or build-error line, and the Xcode transcript ends with `** BUILD SUCCEEDED **`.
