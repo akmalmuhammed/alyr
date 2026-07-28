@@ -31,7 +31,7 @@ and scan the QR code it prints.
 Current LAN URL: `exp://192.168.1.32:8081`
 
 Current QR code:
-`C:\Users\akmal\OneDrive\Documents\alyr\docs\product-audit\2026-07-28-iphone-preview-fd95bf9\ALYR-EXPO-GO-QR-fd95bf9.png`
+`C:\Users\akmal\OneDrive\Documents\alyr\docs\product-audit\2026-07-28-iphone-preview-deece47\ALYR-EXPO-GO-QR-deece47.png`
 
 The QR was regenerated from the confirmed LAN URL at 768 x 768 and
 independently decoded back to `exp://192.168.1.32:8081`. SHA-256:
@@ -40,11 +40,11 @@ independently decoded back to `exp://192.168.1.32:8081`. SHA-256:
 ## Verified handoff
 
 - The preview reflects canonical app commit
-  `fd95bf9707c1d7b92b611891a28ec080578b573b`.
+  `deece47f971ce73d13ae5386918f249c5393bb23`.
 - The live LAN manifest returns HTTP 200 and reports Expo SDK 54.
 - The root-owned live iOS development bundle returns HTTP 200. The latest
-  result served `21,822,006` bytes with SHA-256
-  `FBC50341510402049E8AD0414F8ED636D05C3AE1ABAA3C0D180078BC9BBC5661`.
+  result served `22,319,604` bytes with SHA-256
+  `4F11FF5C84D068F22475B68BB51DF5DD8E4CB6DE9E2AAEDFD1AED3CC8A4BF5D8`.
   Development-bundle hashes may change after a Metro restart, so the clean
   static-export hash below is the reproducibility gate.
 - Metro watches only the canonical native app and shared package roots. An
@@ -53,12 +53,12 @@ independently decoded back to `exp://192.168.1.32:8081`. SHA-256:
 - The companion TypeScript check passes.
 - The companion passes **10/10** preview-contract tests and mirrors every
   canonical route file.
-- The clean SDK 54 iOS Hermes export contains **4,825 modules**. Its
-  `12,581,869`-byte bundle has SHA-256
-  `E4D099EF9117133DDCCD5B5ECD139D6E1ED1E70CECD0AFD3FB6016D516A2F78A`.
-- The complete static export is **49 files / 23,995,657 bytes**. Its
+- The clean SDK 54 iOS Hermes export contains **4,913 modules**. Its
+  `12,859,707`-byte bundle has SHA-256
+  `C4915C523FC4221F3893BEA447A411AE31843F8E1EA2F574D9C4DEF50F04D229`.
+- The complete static export is **49 files / 24,273,495 bytes**. Its
   deterministic tree SHA-256 is
-  `E09788670298E73A1FB66B0B5F59D91503E1ED8DD3624E982632000FCFE54640`.
+  `85D3F7872715EB849E518ED63AFF36D16C2D426687D1375F4F45266F64B8A7C3`.
 
 These are local configuration, contract, manifest, and bundle results. This
 handoff does not claim that the current build has been opened or walked through
