@@ -29,17 +29,20 @@ shown by Expo CLI. Use the sample workspace first.
 
 - Current LAN URL: `exp://192.168.1.32:8081`
 - Current QR:
-  `C:\Users\akmal\OneDrive\Documents\alyr\docs\product-audit\2026-07-27-ios-preview\ALYR-EXPO-GO-QR.png`
+  `C:\Users\akmal\OneDrive\Documents\alyr\docs\product-audit\2026-07-28-iphone-preview-fd95bf9\ALYR-EXPO-GO-QR-fd95bf9.png`
 
-The current companion passes TypeScript, **9/9** preview contracts, and
-**41/41** route-parity checks. The post-restart LAN manifest returns HTTP 200,
-reports `exposdk:54.0.0`, and launches from `192.168.1.32`. Its live iOS
-development bundle returns HTTP 200, is `21,460,885` bytes, and has SHA-256
-`5FCA65F9697C288D0CCDFA78AD7CCBB6443D1C3362BFFC635898005509FF67BB`.
-The separate verified static SDK 54 Hermes export contains **4,802 modules**;
-its `12,367,535`-byte bundle has SHA-256
-`ECF92F6FC10B285AB22FD30868BCE395EB7A29A2C2DB72FFDF052C5E0A3E86E6`.
-It remains a session-only preview for test information.
+The current companion reflects canonical app commit
+`fd95bf9707c1d7b92b611891a28ec080578b573b`. It passes TypeScript and
+**10/10** preview contracts while mirroring every canonical route. The LAN
+manifest returns HTTP 200, reports `exposdk:54.0.0`, and launches from
+`192.168.1.32`. Its live iOS development bundle returns HTTP 200, is
+`21,822,006` bytes, and has SHA-256
+`FBC50341510402049E8AD0414F8ED636D05C3AE1ABAA3C0D180078BC9BBC5661`.
+The separate verified static SDK 54 Hermes export contains **4,825 modules**;
+its `12,581,869`-byte bundle has SHA-256
+`E4D099EF9117133DDCCD5B5ECD139D6E1ED1E70CECD0AFD3FB6016D516A2F78A`.
+The QR was independently decoded back to the exact Expo URL. It remains a
+session-only preview for test information.
 
 On this Windows PC, the easiest launcher is:
 

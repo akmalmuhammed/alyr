@@ -31,30 +31,34 @@ and scan the QR code it prints.
 Current LAN URL: `exp://192.168.1.32:8081`
 
 Current QR code:
-`C:\Users\akmal\OneDrive\Documents\alyr\docs\product-audit\2026-07-27-ios-preview\ALYR-EXPO-GO-QR.png`
+`C:\Users\akmal\OneDrive\Documents\alyr\docs\product-audit\2026-07-28-iphone-preview-fd95bf9\ALYR-EXPO-GO-QR-fd95bf9.png`
 
-The QR was regenerated from the confirmed LAN URL at 768 x 768. SHA-256: `7FAA1CAA06CEE2C46B3DB3F47DB0D7C1C690B8BDFB18C34080562CAEEA7F0A49`.
+The QR was regenerated from the confirmed LAN URL at 768 x 768 and
+independently decoded back to `exp://192.168.1.32:8081`. SHA-256:
+`9B71E6F2E8E3770F64497D4F350AF006D9A8391F35B9B1B292891790C461351E`.
 
 ## Verified handoff
 
+- The preview reflects canonical app commit
+  `fd95bf9707c1d7b92b611891a28ec080578b573b`.
 - The live LAN manifest returns HTTP 200 and reports Expo SDK 54.
 - The root-owned live iOS development bundle returns HTTP 200. The latest
-  stable two-pass result served `21,512,695` bytes with SHA-256
-  `BC2D934C35E3F6CF5D822E71AB6BB10910DF49FBDAE735730F7F8F34D253B1C0`.
+  result served `21,822,006` bytes with SHA-256
+  `FBC50341510402049E8AD0414F8ED636D05C3AE1ABAA3C0D180078BC9BBC5661`.
   Development-bundle hashes may change after a Metro restart, so the clean
   static-export hash below is the reproducibility gate.
 - Metro watches only the canonical native app and shared package roots. An
   exact temporary-tree create/delete volatility probe completed while Metro
   stayed alive.
 - The companion TypeScript check passes.
-- The companion passes **10/10** preview-contract tests and mirrors **43/43**
-  canonical route files.
-- The clean SDK 54 iOS Hermes export contains **4,813 modules**. Its
-  `12,408,032`-byte bundle has SHA-256
-  `557626BF02E9647D672BD0F4525C1C03FF7185B6577EDE30E5EC35E5A2E85DD4`.
-- The complete static export is **49 files / 23,821,820 bytes**. Its metadata
-  has SHA-256
-  `FB122772B56AED97F6AD1CF5013D28F682F294A563F213857573C333B5C65C35`.
+- The companion passes **10/10** preview-contract tests and mirrors every
+  canonical route file.
+- The clean SDK 54 iOS Hermes export contains **4,825 modules**. Its
+  `12,581,869`-byte bundle has SHA-256
+  `E4D099EF9117133DDCCD5B5ECD139D6E1ED1E70CECD0AFD3FB6016D516A2F78A`.
+- The complete static export is **49 files / 23,995,657 bytes**. Its
+  deterministic tree SHA-256 is
+  `E09788670298E73A1FB66B0B5F59D91503E1ED8DD3624E982632000FCFE54640`.
 
 These are local configuration, contract, manifest, and bundle results. This
 handoff does not claim that the current build has been opened or walked through
