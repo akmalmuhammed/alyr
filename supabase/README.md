@@ -168,6 +168,34 @@ supabase db push
 supabase functions deploy api --no-verify-jwt
 ```
 
+For the current linked pilot, authenticate the pinned Supabase CLI once, then
+run the deterministic deployment gate from the repository root:
+
+```powershell
+npx --yes supabase@2.109.1 login
+npm run deploy:supabase:api
+```
+
+The npm command runs all static Supabase checks, deploys only `api` to
+`ifiyragzeizaxdqzxvpk` with `--no-verify-jwt --use-api`, then waits for
+propagation and verifies these public boundaries without printing any key,
+token, response message, invitation or household data:
+
+- invalid recipient invitation: `403 AUTHORIZATION_DENIED`;
+- invalid pilot invitation: `403 AUTHORIZATION_DENIED`;
+- sync without a bearer: `401 AUTHENTICATION_REQUIRED`;
+- export create, status and download without a bearer:
+  `401 AUTHENTICATION_REQUIRED`.
+
+The probe accepts the existing ignored
+`asset-continuity-native/.env.local`, or the corresponding
+`EXPO_PUBLIC_SUPABASE_URL` and public publishable-key environment variables.
+It rejects secret and service-role keys. Run the probe by itself with:
+
+```powershell
+npm run probe:supabase:live
+```
+
 The gateway setting is required only because pilot preflight runs before an
 account exists. Every other route still verifies the bearer with
 `auth.getUser()` before doing any work. The API uses the caller token and anon

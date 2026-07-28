@@ -19,6 +19,8 @@
     "check:supabase:static": "node --test supabase/tests/schema.test.mjs supabase/tests/export_completion.test.mjs supabase/tests/property_value_sync.test.mjs",
     "check:supabase:local": "npx --yes supabase@2.109.1 db lint --local --level warning && npx --yes supabase@2.109.1 test db",
     "test:supabase:export-local": "node supabase/tests/export_api.local.mjs",
+    "probe:supabase:live": "node supabase/scripts/probe-live-api.mjs",
+    "deploy:supabase:api": "npm run check:supabase:static && npx --yes supabase@2.109.1 functions deploy api --project-ref ifiyragzeizaxdqzxvpk --no-verify-jwt --use-api --yes && npm run probe:supabase:live",
     "check:web": "npm run test:domain --workspace=asset-continuity-web && npm run test:server --workspace=asset-continuity-web && npm run test:ui --workspace=asset-continuity-web -- --maxWorkers=2 --testTimeout=15000 && npm run test:sites --workspace=asset-continuity-web && npm run build --workspace=asset-continuity-web",
     "check:mobile-prototype": "npm run build --workspace=asset-continuity-mobile && npm run test:sites --workspace=asset-continuity-mobile",
     "check:native": "npm run build:shared && npm run typecheck --workspace=@alyr/native && npm run test --workspace=@alyr/native && npm run config:check --workspace=@alyr/native",
