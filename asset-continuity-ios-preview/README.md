@@ -28,11 +28,12 @@ npm run dev:ios-preview
 Install Expo Go on the iPhone, allow Local Network access, and scan the QR code
 shown by Expo CLI. Use the sample workspace first.
 
-The source checkpoint and handoff QR are intentionally **pending** until the
-root release task creates a clean commit and regenerates the QR from that exact
-source. Do not treat a QR stored under an older commit-named audit directory as
-the current handoff. The live Expo CLI QR is valid only while that preview
-server is running.
+The verified source checkpoint is
+`691e4e6d97842927985e0cd4f01ee085cf3805a0`. Its decoded handoff QR is stored
+at
+`docs/product-audit/2026-07-28-iphone-preview-691e4e6/ALYR-EXPO-GO-QR-691e4e6.png`
+and resolves to `exp://192.168.1.32:8081`. The preview server must still be
+running, and the iPhone must be able to reach that Windows PC on the same LAN.
 
 ## Current verified local gates
 

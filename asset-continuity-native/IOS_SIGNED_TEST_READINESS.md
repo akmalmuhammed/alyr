@@ -15,9 +15,9 @@ store submission is claimed.
 |---|---|---|---|
 | App Store Expo Go companion | **READY TO SCAN; DEVICE WALKTHROUGH OPEN** | No Apple Developer membership or ALYR App Store listing | Session-only product, design and permission-flow walkthrough |
 | EAS `development-simulator` build | **HISTORICAL BUILD VERIFIED; CURRENT SOURCE EXPORT VERIFIED** | No Apple signing credentials; macOS is required to run iOS Simulator | Prior cloud-built `ALYR.app` archive plus current local SDK 57 export evidence |
-| Signed EAS development build | **CONFIG READY; SOURCE + EXTERNAL GATES OPEN** | Clean source commit, current Edge deployment, paid Apple membership and test-iPhone UDID | Native modules, SQLCipher, SecureStore, Face ID and Metro development |
-| Signed EAS preview build | **CONFIG READY; SOURCE + EXTERNAL GATES OPEN** | Clean source commit, current Edge deployment, paid membership and test-iPhone UDID | Standalone ad hoc ALYR build without Metro |
-| TestFlight production build | **CONFIG READY; SOURCE + EXTERNAL GATES OPEN** | Clean source commit, current Edge deployment, paid membership, App Store Connect record and distribution credentials | Store-signed installation; internal TestFlight does not require the device UDID |
+| Signed EAS development build | **CONFIG READY; EXTERNAL GATES OPEN** | Current Edge deployment, paid Apple membership and test-iPhone UDID | Native modules, SQLCipher, SecureStore, Face ID and Metro development |
+| Signed EAS preview build | **CONFIG READY; EXTERNAL GATES OPEN** | Current Edge deployment, paid membership and test-iPhone UDID | Standalone ad hoc ALYR build without Metro |
+| TestFlight production build | **CONFIG READY; EXTERNAL GATES OPEN** | Current Edge deployment, paid membership, App Store Connect record and distribution credentials | Store-signed installation; internal TestFlight does not require the device UDID |
 
 The separate `asset-continuity-ios-preview` Expo Go companion remains on SDK 54
 because Expo's current physical-iPhone guidance says the App Store Expo Go
@@ -70,10 +70,12 @@ The following checks were run on 2026-07-27 with the pinned EAS CLI:
   local Supabase CLI has no stored access token.
 
 These results replace assumptions with confirmed account state. They also show
-that Expo Go remains the current zero-cost physical-iPhone path. The local
-database gate is current; the latest migrations, Edge source deployment,
-clean source checkpoint, signed distribution and resulting artifact inspection
-remain open gates.
+that Expo Go remains the current zero-cost physical-iPhone path. The clean
+source checkpoint and its decoded Expo Go QR are verified at
+`691e4e6d97842927985e0cd4f01ee085cf3805a0`. The local database gate is
+current; the latest migrations, Edge source deployment, paid Apple access,
+signed distribution, artifact inspection, and physical walkthrough remain
+open gates.
 
 ## Locally verified configuration
 
@@ -162,8 +164,9 @@ The matching `metadata.json` SHA-256 is
 
 This artifact is an unsigned static iOS export used for deterministic
 packaging verification. It is not evidence of a signed binary installation or
-physical-device execution. A clean source checkpoint and a newly inspected EAS
-artifact remain required before signed-device promotion.
+physical-device execution. The clean source checkpoint is
+`691e4e6d97842927985e0cd4f01ee085cf3805a0`; a newly inspected EAS artifact
+and physical-device run remain required before signed-device promotion.
 
 ### EAS iOS Simulator development artifact
 
@@ -350,11 +353,11 @@ refreshed ad hoc provisioning profile.
 
 No paid Apple membership is involved. Install the current App Store Expo Go,
 keep the Windows preview server running, and complete the checklist in
-`asset-continuity-ios-preview/IPHONE_TEST_GUIDE.md`. The source checkpoint and
-handoff QR must be refreshed after the root release task creates a clean commit;
-no old commit-named QR is claimed as current. The remaining product evidence is
-the user's real iPhone walkthrough; it has not yet been observed or claimed by
-this repository.
+`asset-continuity-ios-preview/IPHONE_TEST_GUIDE.md`. The verified source
+checkpoint is `691e4e6d97842927985e0cd4f01ee085cf3805a0`; its decoded handoff QR
+is stored under `docs/product-audit/2026-07-28-iphone-preview-691e4e6/`. The
+remaining product evidence is the user's real iPhone walkthrough; it has not
+yet been observed or claimed by this repository.
 
 ### Signed development or ad hoc preview
 

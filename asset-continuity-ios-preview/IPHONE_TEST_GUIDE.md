@@ -28,12 +28,12 @@ If the preview is no longer running, open PowerShell and run:
 You can also double-click `START_IPHONE_PREVIEW.cmd`. Keep that window open
 and scan the QR code it prints.
 
-The source checkpoint and handoff QR are **pending** until the root release
-task creates a clean commit, starts the matching preview server, regenerates
-the QR, and verifies its decoded Expo URL. Do not use a QR stored under an
-older commit-named audit directory as evidence for the current source. Until
-that checkpoint exists, scan only the QR printed by the currently running Expo
-CLI and treat it as a temporary session URL.
+The verified source checkpoint is
+`691e4e6d97842927985e0cd4f01ee085cf3805a0`. Its handoff QR is
+`docs/product-audit/2026-07-28-iphone-preview-691e4e6/ALYR-EXPO-GO-QR-691e4e6.png`;
+it was decoded back to `exp://192.168.1.32:8081`. The matching preview server
+must remain running, and the iPhone must be able to reach this Windows PC on
+the same LAN.
 
 ## Verified handoff
 
