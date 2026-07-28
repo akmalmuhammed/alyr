@@ -6,14 +6,17 @@ import {
   useAuthFlow
 } from "@/auth/AuthFlowProvider";
 import { createUnavailableAuthGateway } from "@/auth/adapters/unavailable";
+import { createPendingHouseholdProvisionStore } from "@/auth/pendingHouseholdProvision";
 import type {
   AccountAuthGateway,
   AuthSessionDescriptor
 } from "@/auth/types";
 import type {
   AccountDeletionPort,
+  HouseholdCreationReceipt,
   HouseholdAccessSnapshot,
-  HouseholdAccessPort
+  HouseholdAccessPort,
+  Result
 } from "@alyr/contracts";
 
 function householdAdministrationStubs() {
@@ -274,6 +277,100 @@ describe("global auth session state", () => {
     await screen.unmount();
   });
 
+  it("keeps an unreadable household provision blocked until explicit signed-account cleanup", async () => {
+    const storageKey = "alyr.pending-household-provision.v1";
+    const secureValues = new Map<string, string>([
+      [storageKey, '{"version":2,"accountId":"account-owner"']
+    ]);
+    const createStore = () =>
+      createPendingHouseholdProvisionStore({
+        async getItem(key) {
+          return secureValues.get(key) ?? null;
+        },
+        async setItem(key, value) {
+          secureValues.set(key, value);
+        },
+        async removeItem(key) {
+          secureValues.delete(key);
+        }
+      });
+    const gateway = gatewayWithSession(restoredSession);
+    let emitSession: (
+      session: AuthSessionDescriptor | null
+    ) => void = () => undefined;
+    gateway.onSessionChanged = jest.fn((listener) => {
+      emitSession = listener;
+      return () => undefined;
+    });
+    const operationIdFactory = jest.fn(
+      () => "00000000-0000-4000-8000-0000000000a1"
+    );
+    const householdIdFactory = jest.fn(
+      () => "00000000-0000-4000-8000-0000000000a2"
+    );
+    const firstProcess = await render(
+      <AuthFlowProvider
+        gateway={gateway}
+        householdIdFactory={householdIdFactory}
+        operationIdFactory={operationIdFactory}
+        pendingHouseholdProvisionStore={createStore()}
+      >
+        <Probe />
+      </AuthFlowProvider>
+    );
+
+    await waitFor(() =>
+      expect(latestAuth?.bootstrapState).toBe("error")
+    );
+    expect(latestAuth?.session).toBeNull();
+    expect(gateway.currentSession).not.toHaveBeenCalled();
+    expect(secureValues.get(storageKey)).toBe(
+      '{"version":2,"accountId":"account-owner"'
+    );
+
+    await act(async () => {
+      emitSession(restoredSession);
+    });
+    expect(latestAuth?.bootstrapState).toBe("error");
+    expect(latestAuth?.session).toBeNull();
+
+    await act(async () => {
+      await expect(latestAuth!.retryBootstrap()).resolves.toBe(false);
+      await expect(
+        latestAuth!.provisionHousehold("Replacement household")
+      ).resolves.toBeNull();
+    });
+    expect(gateway.currentSession).not.toHaveBeenCalled();
+    expect(operationIdFactory).not.toHaveBeenCalled();
+    expect(householdIdFactory).not.toHaveBeenCalled();
+    expect(secureValues.has(storageKey)).toBe(true);
+
+    await act(async () => {
+      await expect(latestAuth!.signOut()).resolves.toBe(true);
+    });
+    expect(gateway.signOut).toHaveBeenCalledTimes(1);
+    expect(secureValues.has(storageKey)).toBe(false);
+    expect(latestAuth?.bootstrapState).toBe("ready");
+    expect(latestAuth?.session).toBeNull();
+    await firstProcess.unmount();
+
+    const restartedGateway = gatewayWithSession(null);
+    const restartedProcess = await render(
+      <AuthFlowProvider
+        gateway={restartedGateway}
+        pendingHouseholdProvisionStore={createStore()}
+      >
+        <Probe />
+      </AuthFlowProvider>
+    );
+    await waitFor(() =>
+      expect(latestAuth?.bootstrapState).toBe("ready")
+    );
+    expect(restartedGateway.currentSession).toHaveBeenCalledTimes(1);
+    expect(latestAuth?.session).toBeNull();
+    await restartedProcess.unmount();
+  });
+
   it("holds and consumes a signed recovery grant before one password update", async () => {
     const gateway = gatewayWithSession(null);
     gateway.exchangePasswordRecoveryCode = jest.fn(async () => ({
@@ -372,6 +469,8 @@ describe("global auth session state", () => {
 
   it("provisions and durably completes a signed household before opening data routes", async () => {
     const householdId = "00000000-0000-4000-8000-000000000010";
+    const operationId =
+      "00000000-0000-4000-8000-000000000014";
     const membershipId =
       "00000000-0000-4000-8000-000000000011";
     const requiredSession: AuthSessionDescriptor = {
@@ -407,10 +506,13 @@ describe("global auth session state", () => {
       createHousehold: jest.fn(async () => ({
         ok: true as const,
         value: {
-          householdId,
-          name: "Rahman household",
-          version: 1,
-          createdAt: "2026-07-27T12:00:00.000Z"
+          operationId,
+          household: {
+            householdId,
+            name: "Rahman household",
+            version: 1,
+            createdAt: "2026-07-27T12:00:00.000Z"
+          }
         }
       })),
       completeOnboarding: jest.fn(async () => ({
@@ -424,6 +526,8 @@ describe("global auth session state", () => {
       <AuthFlowProvider
         gateway={gateway}
         householdAccess={householdAccess}
+        operationIdFactory={() => operationId}
+        householdIdFactory={() => householdId}
       >
         <Probe />
       </AuthFlowProvider>
@@ -442,9 +546,12 @@ describe("global auth session state", () => {
       await expect(latestAuth!.completeOnboarding()).resolves.toBe(true);
     });
     expect(latestAuth?.session).toEqual(completedSession);
-    expect(householdAccess.createHousehold).toHaveBeenCalledWith(
-      "Rahman household"
-    );
+    expect(householdAccess.createHousehold).toHaveBeenCalledWith({
+      apiVersion: 1,
+      operationId,
+      householdId,
+      name: "Rahman household"
+    });
     expect(
       householdAccess.completeOnboarding
     ).toHaveBeenCalledWith(householdId);
@@ -454,6 +561,8 @@ describe("global auth session state", () => {
 
   it("keeps household setup recoverable until the provider returns the full owner tuple", async () => {
     const householdId = "00000000-0000-4000-8000-000000000012";
+    const operationId =
+      "00000000-0000-4000-8000-000000000015";
     const membershipId =
       "00000000-0000-4000-8000-000000000013";
     const requiredSession: AuthSessionDescriptor = {
@@ -488,10 +597,13 @@ describe("global auth session state", () => {
       createHousehold: jest.fn(async () => ({
         ok: true as const,
         value: {
-          householdId,
-          name: "Rahman household",
-          version: 1,
-          createdAt: "2026-07-27T12:00:00.000Z"
+          operationId,
+          household: {
+            householdId,
+            name: "Rahman household",
+            version: 1,
+            createdAt: "2026-07-27T12:00:00.000Z"
+          }
         }
       })),
       completeOnboarding: jest.fn(),
@@ -502,6 +614,8 @@ describe("global auth session state", () => {
       <AuthFlowProvider
         gateway={gateway}
         householdAccess={householdAccess}
+        operationIdFactory={() => operationId}
+        householdIdFactory={() => householdId}
       >
         <Probe />
       </AuthFlowProvider>
@@ -527,6 +641,597 @@ describe("global auth session state", () => {
     expect(latestAuth?.session).toEqual(readySession);
     expect(householdAccess.createHousehold).toHaveBeenCalledTimes(1);
     expect(gateway.refreshSession).toHaveBeenCalledTimes(2);
+    await screen.unmount();
+  });
+
+  it("reconciles a committed household after its HTTP response is dropped before reposting", async () => {
+    const householdId = "00000000-0000-4000-8000-000000000072";
+    const membershipId =
+      "00000000-0000-4000-8000-000000000073";
+    const operationId =
+      "00000000-0000-4000-8000-000000000074";
+    const requiredSession: AuthSessionDescriptor = {
+      ...restoredSession,
+      onboarding: "required",
+      activeHouseholdId: null,
+      activeMembershipId: null,
+      activeHouseholdRole: null
+    };
+    const committedSession: AuthSessionDescriptor = {
+      ...requiredSession,
+      activeHouseholdId: householdId,
+      activeMembershipId: membershipId,
+      activeHouseholdRole: "owner"
+    };
+    const gateway = gatewayWithSession(requiredSession);
+    gateway.refreshSession = jest.fn(async () => ({
+      ok: true as const,
+      value: committedSession
+    }));
+    const createHousehold = jest.fn(async () => ({
+      ok: false as const,
+      error: {
+        errorVersion: 1 as const,
+        code: "OFFLINE" as const,
+        message: "The committed acknowledgement was interrupted.",
+        retryable: true
+      }
+    }));
+    const householdAccess: HouseholdAccessPort = {
+      ...householdAdministrationStubs(),
+      createHousehold,
+      completeOnboarding: jest.fn(),
+      createInvite: jest.fn(),
+      acceptInvite: jest.fn()
+    };
+    const secureValues = new Map<string, string>();
+    const pendingStore = createPendingHouseholdProvisionStore({
+      async getItem(key) {
+        return secureValues.get(key) ?? null;
+      },
+      async setItem(key, value) {
+        secureValues.set(key, value);
+      },
+      async removeItem(key) {
+        secureValues.delete(key);
+      }
+    });
+    const screen = await render(
+      <AuthFlowProvider
+        gateway={gateway}
+        householdAccess={householdAccess}
+        operationIdFactory={() => operationId}
+        householdIdFactory={() => householdId}
+        pendingHouseholdProvisionStore={pendingStore}
+      >
+        <Probe />
+      </AuthFlowProvider>
+    );
+    await waitFor(() => expect(latestAuth?.bootstrapState).toBe("ready"));
+
+    await act(async () => {
+      await expect(
+        latestAuth!.provisionHousehold("Rahman household")
+      ).resolves.toBeNull();
+    });
+    expect(createHousehold).toHaveBeenCalledWith({
+      apiVersion: 1,
+      operationId,
+      householdId,
+      name: "Rahman household"
+    });
+    await expect(pendingStore.read()).resolves.toMatchObject({
+      operationId,
+      householdId,
+      accountId: "account-owner"
+    });
+
+    await act(async () => {
+      await expect(
+        latestAuth!.provisionHousehold("Changed draft name")
+      ).resolves.toBe(householdId);
+    });
+    expect(gateway.refreshSession).toHaveBeenCalledTimes(1);
+    expect(createHousehold).toHaveBeenCalledTimes(1);
+    expect(latestAuth?.session).toEqual(committedSession);
+    await expect(pendingStore.read()).resolves.toBeNull();
+    await screen.unmount();
+  });
+
+  it("restores the same household operation after process restart and reuses it only after reconciliation", async () => {
+    const householdId = "00000000-0000-4000-8000-000000000075";
+    const membershipId =
+      "00000000-0000-4000-8000-000000000076";
+    const operationId =
+      "00000000-0000-4000-8000-000000000077";
+    const requiredSession: AuthSessionDescriptor = {
+      ...restoredSession,
+      onboarding: "required",
+      activeHouseholdId: null,
+      activeMembershipId: null,
+      activeHouseholdRole: null
+    };
+    const committedSession: AuthSessionDescriptor = {
+      ...requiredSession,
+      activeHouseholdId: householdId,
+      activeMembershipId: membershipId,
+      activeHouseholdRole: "owner"
+    };
+    const secureValues = new Map<string, string>();
+    const createStore = () =>
+      createPendingHouseholdProvisionStore({
+        async getItem(key) {
+          return secureValues.get(key) ?? null;
+        },
+        async setItem(key, value) {
+          secureValues.set(key, value);
+        },
+        async removeItem(key) {
+          secureValues.delete(key);
+        }
+      });
+    const createHousehold = jest
+      .fn()
+      .mockResolvedValueOnce({
+        ok: false as const,
+        error: {
+          errorVersion: 1 as const,
+          code: "OFFLINE" as const,
+          message: "The request was interrupted before commit.",
+          retryable: true
+        }
+      })
+      .mockResolvedValueOnce({
+        ok: true as const,
+        value: {
+          operationId,
+          household: {
+            householdId,
+            name: "Rahman household",
+            version: 1,
+            createdAt: "2026-07-28T10:00:00.000Z"
+          }
+        }
+      });
+    const householdAccess: HouseholdAccessPort = {
+      ...householdAdministrationStubs(),
+      createHousehold,
+      completeOnboarding: jest.fn(),
+      createInvite: jest.fn(),
+      acceptInvite: jest.fn()
+    };
+    const firstGateway = gatewayWithSession(requiredSession);
+    const firstProcess = await render(
+      <AuthFlowProvider
+        gateway={firstGateway}
+        householdAccess={householdAccess}
+        operationIdFactory={() => operationId}
+        householdIdFactory={() => householdId}
+        pendingHouseholdProvisionStore={createStore()}
+      >
+        <Probe />
+      </AuthFlowProvider>
+    );
+    await waitFor(() => expect(latestAuth?.bootstrapState).toBe("ready"));
+    await act(async () => {
+      await expect(
+        latestAuth!.provisionHousehold("Rahman household")
+      ).resolves.toBeNull();
+    });
+    await firstProcess.unmount();
+    expect(secureValues.size).toBe(1);
+
+    const restartedGateway = gatewayWithSession(requiredSession);
+    restartedGateway.refreshSession = jest
+      .fn()
+      .mockResolvedValueOnce({
+        ok: true as const,
+        value: requiredSession
+      })
+      .mockResolvedValueOnce({
+        ok: true as const,
+        value: committedSession
+      });
+    const restartedProcess = await render(
+      <AuthFlowProvider
+        gateway={restartedGateway}
+        householdAccess={householdAccess}
+        operationIdFactory={() =>
+          "00000000-0000-4000-8000-000000000078"
+        }
+        householdIdFactory={() =>
+          "00000000-0000-4000-8000-000000000079"
+        }
+        pendingHouseholdProvisionStore={createStore()}
+      >
+        <Probe />
+      </AuthFlowProvider>
+    );
+    await waitFor(() => expect(latestAuth?.bootstrapState).toBe("ready"));
+    await act(async () => {
+      await expect(
+        latestAuth!.provisionHousehold("Another name")
+      ).resolves.toBe(householdId);
+    });
+
+    expect(restartedGateway.refreshSession).toHaveBeenCalledTimes(2);
+    expect(createHousehold).toHaveBeenCalledTimes(2);
+    expect(createHousehold).toHaveBeenNthCalledWith(2, {
+      apiVersion: 1,
+      operationId,
+      householdId,
+      name: "Rahman household"
+    });
+    expect(latestAuth?.session).toEqual(committedSession);
+    expect(secureValues.size).toBe(0);
+    await restartedProcess.unmount();
+  });
+
+  it("preserves pending household A through bootstrap, retry and owner-B session events", async () => {
+    const pendingHouseholdId =
+      "00000000-0000-4000-8000-000000000091";
+    const otherHouseholdId =
+      "00000000-0000-4000-8000-000000000092";
+    const operationId =
+      "00000000-0000-4000-8000-000000000093";
+    const otherOwnerSession: AuthSessionDescriptor = {
+      ...restoredSession,
+      onboarding: "required",
+      activeHouseholdId: otherHouseholdId,
+      activeMembershipId:
+        "00000000-0000-4000-8000-000000000094",
+      activeHouseholdRole: "owner"
+    };
+    const secureValues = new Map<string, string>();
+    const pendingStore = createPendingHouseholdProvisionStore({
+      async getItem(key) {
+        return secureValues.get(key) ?? null;
+      },
+      async setItem(key, value) {
+        secureValues.set(key, value);
+      },
+      async removeItem(key) {
+        secureValues.delete(key);
+      }
+    });
+    await pendingStore.write({
+      accountId: restoredSession.identity.id,
+      operationId,
+      householdId: pendingHouseholdId,
+      name: "Pending household A",
+      createdAt: "2026-07-28T10:00:00.000Z"
+    });
+
+    const gateway = gatewayWithSession(otherOwnerSession);
+    let emitSession: (
+      session: AuthSessionDescriptor | null
+    ) => void = () => undefined;
+    gateway.onSessionChanged = jest.fn((listener) => {
+      emitSession = listener;
+      return () => undefined;
+    });
+    const createHousehold = jest.fn(async () => {
+      throw new Error("An unrelated owner session must block creation.");
+    });
+    const householdAccess: HouseholdAccessPort = {
+      ...householdAdministrationStubs(),
+      createHousehold,
+      completeOnboarding: jest.fn(),
+      createInvite: jest.fn(),
+      acceptInvite: jest.fn()
+    };
+    const screen = await render(
+      <AuthFlowProvider
+        gateway={gateway}
+        householdAccess={householdAccess}
+        pendingHouseholdProvisionStore={pendingStore}
+      >
+        <Probe />
+      </AuthFlowProvider>
+    );
+    await waitFor(() => expect(latestAuth?.bootstrapState).toBe("ready"));
+
+    expect(latestAuth?.activeHouseholdId).toBe(otherHouseholdId);
+    await expect(pendingStore.read()).resolves.toMatchObject({
+      operationId,
+      householdId: pendingHouseholdId
+    });
+
+    await act(async () => {
+      await expect(latestAuth!.retryBootstrap()).resolves.toBe(true);
+    });
+    await expect(pendingStore.read()).resolves.toMatchObject({
+      operationId,
+      householdId: pendingHouseholdId
+    });
+
+    await act(async () => {
+      emitSession(otherOwnerSession);
+    });
+    await expect(pendingStore.read()).resolves.toMatchObject({
+      operationId,
+      householdId: pendingHouseholdId
+    });
+
+    await act(async () => {
+      await expect(
+        latestAuth!.provisionHousehold("Pending household A")
+      ).resolves.toBeNull();
+    });
+    expect(latestAuth?.activeHouseholdId).toBe(otherHouseholdId);
+    expect(latestAuth?.error).toMatchObject({
+      code: "invalid_request",
+      retryable: false
+    });
+    expect(createHousehold).not.toHaveBeenCalled();
+    expect(gateway.refreshSession).not.toHaveBeenCalled();
+    await expect(pendingStore.read()).resolves.toMatchObject({
+      operationId,
+      householdId: pendingHouseholdId
+    });
+    await screen.unmount();
+  });
+
+  it("blocks owner household B returned by pending-A provision reconciliation", async () => {
+    const pendingHouseholdId =
+      "00000000-0000-4000-8000-000000000095";
+    const otherHouseholdId =
+      "00000000-0000-4000-8000-000000000096";
+    const operationId =
+      "00000000-0000-4000-8000-000000000097";
+    const requiredSession: AuthSessionDescriptor = {
+      ...restoredSession,
+      onboarding: "required",
+      activeHouseholdId: null,
+      activeMembershipId: null,
+      activeHouseholdRole: null
+    };
+    const otherOwnerSession: AuthSessionDescriptor = {
+      ...requiredSession,
+      activeHouseholdId: otherHouseholdId,
+      activeMembershipId:
+        "00000000-0000-4000-8000-000000000098",
+      activeHouseholdRole: "owner"
+    };
+    const secureValues = new Map<string, string>();
+    const pendingStore = createPendingHouseholdProvisionStore({
+      async getItem(key) {
+        return secureValues.get(key) ?? null;
+      },
+      async setItem(key, value) {
+        secureValues.set(key, value);
+      },
+      async removeItem(key) {
+        secureValues.delete(key);
+      }
+    });
+    await pendingStore.write({
+      accountId: requiredSession.identity.id,
+      operationId,
+      householdId: pendingHouseholdId,
+      name: "Pending household A",
+      createdAt: "2026-07-28T10:00:00.000Z"
+    });
+
+    const gateway = gatewayWithSession(requiredSession);
+    gateway.refreshSession = jest.fn(async () => ({
+      ok: true as const,
+      value: otherOwnerSession
+    }));
+    const createHousehold = jest.fn(async () => {
+      throw new Error("Reconciliation must not repost against household B.");
+    });
+    const householdAccess: HouseholdAccessPort = {
+      ...householdAdministrationStubs(),
+      createHousehold,
+      completeOnboarding: jest.fn(),
+      createInvite: jest.fn(),
+      acceptInvite: jest.fn()
+    };
+    const screen = await render(
+      <AuthFlowProvider
+        gateway={gateway}
+        householdAccess={householdAccess}
+        pendingHouseholdProvisionStore={pendingStore}
+      >
+        <Probe />
+      </AuthFlowProvider>
+    );
+    await waitFor(() => expect(latestAuth?.bootstrapState).toBe("ready"));
+
+    await act(async () => {
+      await expect(
+        latestAuth!.provisionHousehold("Changed draft")
+      ).resolves.toBeNull();
+    });
+    expect(latestAuth?.activeHouseholdId).toBe(otherHouseholdId);
+    expect(gateway.refreshSession).toHaveBeenCalledTimes(1);
+    expect(createHousehold).not.toHaveBeenCalled();
+    await expect(pendingStore.read()).resolves.toMatchObject({
+      operationId,
+      householdId: pendingHouseholdId
+    });
+
+    await act(async () => {
+      await expect(
+        latestAuth!.provisionHousehold("Changed draft again")
+      ).resolves.toBeNull();
+    });
+    expect(latestAuth?.activeHouseholdId).toBe(otherHouseholdId);
+    expect(gateway.refreshSession).toHaveBeenCalledTimes(1);
+    expect(createHousehold).not.toHaveBeenCalled();
+    await expect(pendingStore.read()).resolves.toMatchObject({
+      operationId,
+      householdId: pendingHouseholdId
+    });
+    await screen.unmount();
+  });
+
+  it("does not resurrect a signed-out account when household creation resolves in flight", async () => {
+    const householdId = "00000000-0000-4000-8000-000000000081";
+    const operationId =
+      "00000000-0000-4000-8000-000000000082";
+    const requiredSession: AuthSessionDescriptor = {
+      ...restoredSession,
+      onboarding: "required",
+      activeHouseholdId: null,
+      activeMembershipId: null,
+      activeHouseholdRole: null
+    };
+    let resolveCreate!: (
+      value: Result<HouseholdCreationReceipt>
+    ) => void;
+    const createResult = new Promise<
+      Result<HouseholdCreationReceipt>
+    >((resolve) => {
+      resolveCreate = resolve;
+    });
+    const createHousehold = jest.fn(() => createResult);
+    const householdAccess: HouseholdAccessPort = {
+      ...householdAdministrationStubs(),
+      createHousehold,
+      completeOnboarding: jest.fn(),
+      createInvite: jest.fn(),
+      acceptInvite: jest.fn()
+    };
+    const gateway = gatewayWithSession(requiredSession);
+    const screen = await render(
+      <AuthFlowProvider
+        gateway={gateway}
+        householdAccess={householdAccess}
+        operationIdFactory={() => operationId}
+        householdIdFactory={() => householdId}
+      >
+        <Probe />
+      </AuthFlowProvider>
+    );
+    await waitFor(() => expect(latestAuth?.bootstrapState).toBe("ready"));
+
+    let provisionResult: string | null | undefined;
+    let provisionPromise!: Promise<string | null>;
+    await act(async () => {
+      provisionPromise =
+        latestAuth!.provisionHousehold("Rahman household");
+    });
+    await waitFor(() =>
+      expect(createHousehold).toHaveBeenCalledTimes(1)
+    );
+    await act(async () => {
+      await expect(latestAuth!.signOut()).resolves.toBe(true);
+    });
+    await act(async () => {
+      resolveCreate({
+        ok: true,
+        value: {
+          operationId,
+          household: {
+            householdId,
+            name: "Rahman household",
+            version: 1,
+            createdAt: "2026-07-28T10:00:00.000Z"
+          }
+        }
+      });
+      provisionResult = await provisionPromise;
+    });
+
+    expect(provisionResult).toBeNull();
+    expect(latestAuth?.session).toBeNull();
+    expect(latestAuth?.householdName).toBe("");
+    expect(gateway.refreshSession).not.toHaveBeenCalled();
+    await screen.unmount();
+  });
+
+  it("does not overwrite a different account when household creation resolves in flight", async () => {
+    const householdId = "00000000-0000-4000-8000-000000000083";
+    const operationId =
+      "00000000-0000-4000-8000-000000000084";
+    const requiredSession: AuthSessionDescriptor = {
+      ...restoredSession,
+      onboarding: "required",
+      activeHouseholdId: null,
+      activeMembershipId: null,
+      activeHouseholdRole: null
+    };
+    const otherSession: AuthSessionDescriptor = {
+      ...restoredSession,
+      identity: {
+        id: "account-other",
+        email: "other@example.com",
+        emailVerified: true
+      },
+      activeHouseholdId: "household-other",
+      activeMembershipId: "membership-other",
+      activeHouseholdRole: "owner"
+    };
+    let resolveCreate!: (
+      value: Result<HouseholdCreationReceipt>
+    ) => void;
+    const createResult = new Promise<
+      Result<HouseholdCreationReceipt>
+    >((resolve) => {
+      resolveCreate = resolve;
+    });
+    const createHousehold = jest.fn(() => createResult);
+    const householdAccess: HouseholdAccessPort = {
+      ...householdAdministrationStubs(),
+      createHousehold,
+      completeOnboarding: jest.fn(),
+      createInvite: jest.fn(),
+      acceptInvite: jest.fn()
+    };
+    const gateway = gatewayWithSession(requiredSession);
+    let emitSession: (
+      session: AuthSessionDescriptor | null
+    ) => void = () => undefined;
+    gateway.onSessionChanged = jest.fn((listener) => {
+      emitSession = listener;
+      return () => undefined;
+    });
+    const screen = await render(
+      <AuthFlowProvider
+        gateway={gateway}
+        householdAccess={householdAccess}
+        operationIdFactory={() => operationId}
+        householdIdFactory={() => householdId}
+      >
+        <Probe />
+      </AuthFlowProvider>
+    );
+    await waitFor(() => expect(latestAuth?.bootstrapState).toBe("ready"));
+
+    let provisionResult: string | null | undefined;
+    let provisionPromise!: Promise<string | null>;
+    await act(async () => {
+      provisionPromise =
+        latestAuth!.provisionHousehold("Rahman household");
+    });
+    await waitFor(() =>
+      expect(createHousehold).toHaveBeenCalledTimes(1)
+    );
+    await act(async () => {
+      emitSession(otherSession);
+    });
+    await act(async () => {
+      resolveCreate({
+        ok: true,
+        value: {
+          operationId,
+          household: {
+            householdId,
+            name: "Rahman household",
+            version: 1,
+            createdAt: "2026-07-28T10:00:00.000Z"
+          }
+        }
+      });
+      provisionResult = await provisionPromise;
+    });
+
+    expect(provisionResult).toBeNull();
+    expect(latestAuth?.session).toEqual(otherSession);
+    expect(latestAuth?.householdName).toBe("");
+    expect(gateway.refreshSession).not.toHaveBeenCalled();
     await screen.unmount();
   });
 

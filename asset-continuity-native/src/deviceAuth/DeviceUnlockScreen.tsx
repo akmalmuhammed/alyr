@@ -256,7 +256,7 @@ const styles = StyleSheet.create({
     gap: spacing.xs,
     paddingHorizontal: spacing.sm,
     borderWidth: 1,
-    borderColor: "rgba(246,247,243,0.18)",
+    borderColor: colors.onCarbonBorder,
     borderRadius: radius.round
   },
   statusDot: {
@@ -267,8 +267,9 @@ const styles = StyleSheet.create({
   },
   statusText: {
     color: colors.concrete,
-    fontFamily: typography.bodyBold,
-    fontSize: 11,
+    fontFamily: typography.metadata,
+    fontSize: 12,
+    lineHeight: 17,
     letterSpacing: 1.2
   },
   hero: {
@@ -284,9 +285,9 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     marginBottom: spacing.sm,
     borderWidth: 1,
-    borderColor: "rgba(183,243,74,0.34)",
+    borderColor: colors.voltBorder,
     borderRadius: radius.xl,
-    backgroundColor: "rgba(246,247,243,0.05)"
+    backgroundColor: colors.onCarbonSurface
   },
   eyebrow: {
     color: colors.volt,

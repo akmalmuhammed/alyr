@@ -79,9 +79,9 @@ describe("PortfolioDashboard", () => {
     const order = renderedTestIds(screen.toJSON()).filter((testID) =>
       [
         "portfolio-net-position",
+        "portfolio-review-next-section",
         "portfolio-recorded-values-section",
         "portfolio-liabilities-section",
-        "portfolio-attention-section",
         "portfolio-location-distribution-section",
         "portfolio-register-health-section"
       ].includes(testID)
@@ -89,12 +89,124 @@ describe("PortfolioDashboard", () => {
 
     expect(order).toEqual([
       "portfolio-net-position",
+      "portfolio-review-next-section",
       "portfolio-recorded-values-section",
       "portfolio-liabilities-section",
-      "portfolio-attention-section",
       "portfolio-location-distribution-section",
       "portfolio-register-health-section"
     ]);
+  });
+
+  it("places only non-zero review work directly after the hero", async () => {
+    const sample = await render(
+      <PortfolioDashboard workspace={createWorkspace("sample")} />
+    );
+
+    expect(sample.getByTestId("portfolio-review-next-section")).toBeTruthy();
+    expect(sample.getByText("Review next")).toBeTruthy();
+    expect(
+      sample.queryByLabelText(/: 0$/u)
+    ).toBeNull();
+
+    const personal = await render(
+      <PortfolioDashboard workspace={createWorkspace("personal")} />
+    );
+    expect(
+      personal.queryByTestId("portfolio-review-next-section")
+    ).toBeNull();
+  });
+
+  it("previews three recorded rows per currency and expands the full group", async () => {
+    const screen = await render(
+      <PortfolioDashboard
+        onOpenSubject={jest.fn()}
+        workspace={createWorkspace("sample")}
+      />
+    );
+    const toggle = screen.getByTestId(
+      "portfolio-recorded-values-view-all-QAR"
+    );
+
+    expect(toggle.props.accessibilityState).toMatchObject({
+      expanded: false
+    });
+    expect(
+      screen.queryByTestId(
+        "portfolio-recorded-value-asset:asset-gmt"
+      )
+    ).toBeNull();
+    expect(screen.getByText("View all 4 QAR entries")).toBeTruthy();
+
+    await fireEvent.press(toggle);
+
+    expect(
+      screen.getByTestId(
+        "portfolio-recorded-value-asset:asset-gmt"
+      )
+    ).toBeTruthy();
+    expect(
+      screen.getByTestId("portfolio-recorded-values-view-all-QAR")
+        .props.accessibilityState
+    ).toMatchObject({ expanded: true });
+    expect(screen.getByText("Show fewer QAR entries")).toBeTruthy();
+
+    await fireEvent.press(
+      screen.getByTestId("portfolio-recorded-values-view-all-QAR")
+    );
+    expect(
+      screen.queryByTestId(
+        "portfolio-recorded-value-asset:asset-gmt"
+      )
+    ).toBeNull();
+  });
+
+  it("previews three liabilities and expands every active record", async () => {
+    const sample = createWorkspace("sample");
+    const basis = sample.liabilities?.[0]!;
+    const workspace = {
+      ...sample,
+      liabilities: [
+        ...(sample.liabilities ?? []),
+        {
+          ...basis,
+          id: "liability-business",
+          name: "Business loan",
+          kind: "business" as const
+        },
+        {
+          ...basis,
+          id: "liability-education",
+          name: "Education loan",
+          kind: "education-loan" as const
+        }
+      ]
+    };
+    const screen = await render(
+      <PortfolioDashboard
+        onOpenSubject={jest.fn()}
+        workspace={workspace}
+      />
+    );
+    const toggle = screen.getByTestId("portfolio-liabilities-view-all");
+
+    expect(toggle.props.accessibilityState).toMatchObject({
+      expanded: false
+    });
+    expect(
+      screen.queryByTestId("liability-row-liability-mortgage")
+    ).toBeNull();
+    expect(screen.getByText("View all 4 liabilities")).toBeTruthy();
+
+    await fireEvent.press(toggle);
+
+    expect(
+      screen.getByTestId("liability-row-liability-mortgage")
+    ).toBeTruthy();
+    expect(
+      screen.getByTestId("portfolio-liabilities-view-all").props
+        .accessibilityState
+    ).toMatchObject({ expanded: true });
+    expect(screen.getByText("Show fewer liabilities")).toBeTruthy();
   });
 
   it("shows one currency at a time and updates the hero through an accessible selector", async () => {
@@ -244,6 +356,14 @@ describe("PortfolioDashboard", () => {
     expect(screen.queryByText(/QAR\s*2,150,000\.00/u)).toBeNull();
     expect(screen.queryAllByText(/QAR\s*7,197,500\.00/u)).toHaveLength(0);
     expect(screen.queryAllByText(/USD\s*13,700\.00/u)).toHaveLength(0);
+    expect(
+      screen.queryByLabelText(
+        "GMT-Master II, QAR, recorded amount hidden"
+      )
+    ).toBeNull();
+    await fireEvent.press(
+      screen.getByTestId("portfolio-recorded-values-view-all-QAR")
+    );
     expect(
       screen.getByLabelText(
         "GMT-Master II, QAR, recorded amount hidden"
@@ -459,12 +579,59 @@ describe("PortfolioDashboard", () => {
     expect(visibilityButton.props.accessibilityLabel).toMatch(
       /[\u0600-\u06ff]/u
     );
-    expect(screen.getAllByText("QAR \u2022\u2022\u2022\u2022\u2022\u2022").length).toBeGreaterThan(1);
+    const isolatedHiddenQar =
+      "\u2066QAR \u2022\u2022\u2022\u2022\u2022\u2022\u2069";
+    expect(
+      screen.getAllByText(isolatedHiddenQar).length
+    ).toBeGreaterThan(1);
+    await fireEvent.press(
+      screen.getByTestId("portfolio-recorded-values-view-all-QAR")
+    );
     const itemLabel = screen.getByLabelText(/GMT-Master II/u).props
       .accessibilityLabel as string;
     expect(itemLabel).toContain("QAR");
     expect(itemLabel).toMatch(/[\u0600-\u06ff]/u);
     expect(itemLabel).not.toMatch(/[0-9]/u);
+  });
+
+  it("renders Arabic QAR and USD financial tokens inside explicit LTR isolates", async () => {
+    const sample = createWorkspace("sample");
+    const screen = await render(
+      <PortfolioDashboard language="ar" workspace={sample} />
+    );
+    const hero = within(screen.getByTestId("portfolio-net-position"));
+
+    expect(
+      hero.getAllByText("\u2066QAR \u2022\u2022\u2022\u2022\u2022\u2022\u2069")
+        .length
+    ).toBeGreaterThan(0);
+    await fireEvent.press(
+      screen.getByLabelText("إظهار المبالغ المالية المسجّلة")
+    );
+    expect(hero.getByText("\u2066QAR ٥٬٠٤٧٬٥٠٠٫٠٠\u2069")).toBeTruthy();
+
+    await fireEvent.press(screen.getByTestId("portfolio-currency-USD"));
+    expect(hero.getByText("\u2066USD ١٠٬٢٠٠٫٠٠\u2069")).toBeTruthy();
+
+    const negativeRecords = getPortfolioValueRecords(sample).map(
+      (record) =>
+        record.liabilityId === "liability-mortgage"
+          ? { ...record, amountMinor: 800_000_000 }
+          : record
+    );
+    const negative = await render(
+      <PortfolioDashboard
+        amountsHidden={false}
+        language="ar"
+        valueRecords={negativeRecords}
+        workspace={sample}
+      />
+    );
+    expect(
+      within(negative.getByTestId("portfolio-net-position")).getByText(
+        "\u2066QAR −٨٠٢٬٥٠٠٫٠٠\u2069"
+      )
+    ).toBeTruthy();
   });
 
   it("opens a recorded property as a Place rather than an Asset", async () => {
@@ -577,6 +744,9 @@ describe("PortfolioDashboard", () => {
     expect(screen.getByText("المحفظة")).toBeTruthy();
     expect(screen.getByText("صافي المركز المسجّل")).toBeTruthy();
     expect(screen.getByText("الالتزامات")).toBeTruthy();
+    await fireEvent.press(
+      screen.getByTestId("portfolio-recorded-values-view-all-QAR")
+    );
     expect(screen.getByText(/ساعة/u)).toBeTruthy();
     expect(screen.queryByText("Watch")).toBeNull();
     expect(screen.getByText(/عقار.*بتاريخ/us)).toBeTruthy();

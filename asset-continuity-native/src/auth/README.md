@@ -85,8 +85,15 @@ The production client follows the Supabase React Native lifecycle:
   the reset form;
 - the recovery grant exists only in process, is claimed before the provider
   update, and is revoked before every reset-route exit;
-- a separate in-process recovery-session marker keeps the truthful completion
-  screen available after the one-use grant is consumed, until sign-out succeeds;
+- a device-bound SecureStore marker is committed before recovery-code exchange
+  and then bound to the provider-confirmed account before that session is
+  exposed to the reset route;
+- a fresh process audits the marker before routing, token release, or vault
+  bootstrap and signs out a matching persisted recovery session;
+- password-update success is reported only after the provider recovery session
+  is signed out and the durable marker is removed;
+- failed cleanup retains the marker and keeps bootstrap closed; a marker for a
+  different account is removed without signing out that unrelated session;
 - pending exchanges settle before provider sign-out, and a failed sign-out
   leaves the user on the recovery surface with a visible error;
 - one `AppState` listener runs refresh only while the app is active;

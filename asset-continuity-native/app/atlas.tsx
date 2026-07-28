@@ -34,12 +34,12 @@ import {
   SectionHeader
 } from "@/components/ui";
 import {
-  ATLAS_COASTLINES,
-  ATLAS_GRATICULE,
+  ATLAS_COASTLINE_RENDER_LINES,
+  ATLAS_GRATICULE_RENDER_LINES,
   assetsNeedingPhysicalPlace,
   atlasCenter,
   moveAtlasCenter,
-  projectAtlasPolyline,
+  projectPreparedAtlasPolyline,
   projectOnAtlas,
   type AtlasCoordinates,
   type AtlasProjection
@@ -59,6 +59,14 @@ import {
   localizedAtlasPinDisclosure,
   useSecondarySurfaceCopy
 } from "@/i18n/secondarySurfaceCopy";
+import {
+  atlasLocationWorkRoute,
+  type AtlasLocationWorkKind
+} from "@/navigation/atlasLocationWork";
+import {
+  placeHasPin,
+  placeNeedsPinReview
+} from "@/register/browse";
 import { useWorkspace } from "@/state/WorkspaceProvider";
 import {
   colors,
@@ -85,19 +93,19 @@ interface PinnedPlace {
 
 type AtlasView = "globe" | "list";
 
+const ATLAS_DRAG_THRESHOLD = 7;
+
+export function shouldActivateAtlasDrag(
+  deltaX: number,
+  deltaY: number
+): boolean {
+  return Math.hypot(deltaX, deltaY) > ATLAS_DRAG_THRESHOLD;
+}
+
 function hasValidPin(
   place: NativePlace
 ): place is NativePlace & { readonly latitude: number; readonly longitude: number } {
-  return (
-    place.latitude !== null &&
-    place.longitude !== null &&
-    Number.isFinite(place.latitude) &&
-    Number.isFinite(place.longitude) &&
-    place.latitude >= -90 &&
-    place.latitude <= 90 &&
-    place.longitude >= -180 &&
-    place.longitude <= 180
-  );
+  return placeHasPin(place);
 }
 
 function placePinLabel(
@@ -169,7 +177,28 @@ export default function AtlasScreen() {
   );
   const [cameraCenter, setCameraCenter] =
     useState<AtlasCoordinates>(initialCenter);
+  const cameraCenterRef = useRef<AtlasCoordinates>(initialCenter);
   const dragStart = useRef<AtlasCoordinates>(initialCenter);
+  const pendingDrag = useRef<{
+    readonly deltaX: number;
+    readonly deltaY: number;
+  } | null>(null);
+  const cameraFrame = useRef<number | null>(null);
+
+  useEffect(() => {
+    cameraCenterRef.current = cameraCenter;
+  }, [cameraCenter]);
+
+  useEffect(
+    () => () => {
+      if (cameraFrame.current !== null) {
+        cancelAnimationFrame(cameraFrame.current);
+        cameraFrame.current = null;
+      }
+      pendingDrag.current = null;
+    },
+    []
+  );
 
   useEffect(() => {
     if (
@@ -215,8 +244,8 @@ export default function AtlasScreen() {
   );
   const graticulePaths = useMemo(
     () =>
-      ATLAS_GRATICULE.flatMap((line) =>
-        projectAtlasPolyline(line, cameraCenter)
+      ATLAS_GRATICULE_RENDER_LINES.flatMap((line) =>
+        projectPreparedAtlasPolyline(line, cameraCenter)
       ).map((segment) =>
         projectedPath(segment, sphereRadius, projectionRadius)
       ),
@@ -224,8 +253,8 @@ export default function AtlasScreen() {
   );
   const coastlinePaths = useMemo(
     () =>
-      ATLAS_COASTLINES.flatMap((line) =>
-        projectAtlasPolyline(line, cameraCenter)
+      ATLAS_COASTLINE_RENDER_LINES.flatMap((line) =>
+        projectPreparedAtlasPolyline(line, cameraCenter)
       ).map((segment) =>
         projectedPath(segment, sphereRadius, projectionRadius)
       ),
@@ -234,53 +263,85 @@ export default function AtlasScreen() {
   const visibleCount = projections.filter(
     (entry) => entry.projection.visible
   ).length;
-  const unpinnedCount = places.length - pinnedPlaces.length;
-  const unconfirmedPinCount = pinnedPlaces.filter(
-    (entry) => entry.place.confirmedAt === null
+  const unpinnedCount = places.filter(
+    (place) => !placeHasPin(place)
+  ).length;
+  const unconfirmedPinCount = places.filter(
+    placeNeedsPinReview
   ).length;
   const unplacedAssetCount =
     assetsNeedingPhysicalPlace(activeAssets).length;
-  const locationWork = [
-    unpinnedCount > 0
-      ? atlasLocationWork("unpinned", unpinnedCount, language)
-      : null,
-    unconfirmedPinCount > 0
-      ? atlasLocationWork(
-          "unconfirmed",
-          unconfirmedPinCount,
-          language
-        )
-      : null,
-    unplacedAssetCount > 0
-      ? atlasLocationWork("unplaced", unplacedAssetCount, language)
-      : null
-  ].filter((item): item is string => item !== null);
+  const locationWork: {
+    readonly kind: AtlasLocationWorkKind;
+    readonly label: string;
+  }[] = [];
+  if (unpinnedCount > 0) {
+    locationWork.push({
+      kind: "no-pin",
+      label: atlasLocationWork("unpinned", unpinnedCount, language)
+    });
+  }
+  if (unconfirmedPinCount > 0) {
+    locationWork.push({
+      kind: "pin-review",
+      label: atlasLocationWork(
+        "review",
+        unconfirmedPinCount,
+        language
+      )
+    });
+  }
+  if (unplacedAssetCount > 0) {
+    locationWork.push({
+      kind: "unplaced-items",
+      label: atlasLocationWork(
+        "unplaced",
+        unplacedAssetCount,
+        language
+      )
+    });
+  }
 
   const panResponder = useMemo(
     () =>
       PanResponder.create({
-        onMoveShouldSetPanResponder: (_, gesture) => {
-          const horizontalTravel = Math.abs(gesture.dx);
-          const verticalTravel = Math.abs(gesture.dy);
-          return horizontalTravel > 7 && horizontalTravel > verticalTravel;
-        },
+        onMoveShouldSetPanResponder: (_, gesture) =>
+          shouldActivateAtlasDrag(gesture.dx, gesture.dy),
         onPanResponderGrant: () => {
-          dragStart.current = cameraCenter;
+          if (cameraFrame.current !== null) {
+            cancelAnimationFrame(cameraFrame.current);
+            cameraFrame.current = null;
+          }
+          pendingDrag.current = null;
+          dragStart.current = cameraCenterRef.current;
         },
         onPanResponderMove: (_, gesture) => {
-          setCameraCenter(
-            moveAtlasCenter(
-              dragStart.current,
-              gesture.dx,
-              gesture.dy,
-              diameter
-            )
-          );
+          pendingDrag.current = {
+            deltaX: gesture.dx,
+            deltaY: gesture.dy
+          };
+          if (cameraFrame.current !== null) return;
+
+          cameraFrame.current = requestAnimationFrame(() => {
+            cameraFrame.current = null;
+            const pending = pendingDrag.current;
+            pendingDrag.current = null;
+            if (!pending) return;
+
+            setCameraCenter(
+              moveAtlasCenter(
+                dragStart.current,
+                pending.deltaX,
+                pending.deltaY,
+                diameter
+              )
+            );
+          });
         },
         onPanResponderTerminationRequest: () => true,
         onShouldBlockNativeResponder: () => false
       }),
-    [cameraCenter, diameter]
+    [diameter]
   );
 
   function focusPlace(entry: PinnedPlace) {
@@ -411,6 +472,7 @@ export default function AtlasScreen() {
                   numberOfLines={1}
                   style={[
                     styles.canvasRegion,
+                    rtl && styles.arabicMedium,
                     styles.mixedScript,
                     rtl && styles.textRight
                   ]}
@@ -639,6 +701,7 @@ export default function AtlasScreen() {
                   numberOfLines={1}
                   style={[
                     styles.positionName,
+                    rtl && styles.arabicMedium,
                     styles.mixedScript,
                     rtl && styles.textRight
                   ]}
@@ -685,6 +748,7 @@ export default function AtlasScreen() {
                 <Text
                   style={[
                     styles.selectedTitle,
+                    rtl && styles.arabicMedium,
                     styles.mixedScript,
                     rtl && styles.textRight
                   ]}
@@ -695,7 +759,8 @@ export default function AtlasScreen() {
                   style={[
                     styles.selectedMeta,
                     rtl && styles.arabic,
-                    rtl && styles.rtlText
+                    styles.mixedScript,
+                    rtl && styles.textRight
                   ]}
                 >
                   {selected.place.regionLabel} ·{" "}
@@ -811,32 +876,58 @@ export default function AtlasScreen() {
           </View>
 
           {locationWork.length > 0 ? (
-            <View
-              style={[
-                styles.attention,
-                rtl && styles.rowReverse
-              ]}
-            >
-              <WarningCircle color={colors.warning} size={22} />
+            <View style={styles.attention}>
               <View style={styles.attentionCopy}>
-                <Text
+                <View
                   style={[
-                    styles.attentionTitle,
-                    rtl && styles.arabicMedium,
-                    rtl && styles.rtlText
+                    styles.attentionHeading,
+                    rtl && styles.rowReverse
                   ]}
                 >
-                  {atlasCopy.locationWorkTitle}
-                </Text>
-                <Text
-                  style={[
-                    styles.attentionMeta,
-                    rtl && styles.arabic,
-                    rtl && styles.rtlText
-                  ]}
-                >
-                  {locationWork.join(" · ")}
-                </Text>
+                  <WarningCircle color={colors.warning} size={22} />
+                  <Text
+                    style={[
+                      styles.attentionTitle,
+                      rtl && styles.arabicMedium,
+                      rtl && styles.rtlText
+                    ]}
+                  >
+                    {atlasCopy.locationWorkTitle}
+                  </Text>
+                </View>
+                <View style={styles.attentionActions}>
+                  {locationWork.map((work) => (
+                    <Pressable
+                      accessibilityHint={atlasCopy.locationWorkHint}
+                      accessibilityLabel={work.label}
+                      accessibilityRole="button"
+                      key={work.kind}
+                      onPress={() =>
+                        router.push(atlasLocationWorkRoute(work.kind))
+                      }
+                      style={({ pressed }) => [
+                        styles.attentionAction,
+                        rtl && styles.rowReverse,
+                        pressed && styles.pressed
+                      ]}
+                    >
+                      <Text
+                        style={[
+                          styles.attentionMeta,
+                          rtl && styles.arabic,
+                          rtl && styles.rtlText
+                        ]}
+                      >
+                        {work.label}
+                      </Text>
+                      <ArrowRight
+                        color={colors.textMuted}
+                        mirrored={rtl}
+                        size={17}
+                      />
+                    </Pressable>
+                  ))}
+                </View>
               </View>
             </View>
           ) : null}
@@ -942,6 +1033,7 @@ export default function AtlasScreen() {
                         numberOfLines={1}
                         style={[
                           styles.placeName,
+                          rtl && styles.arabicMedium,
                           styles.mixedScript,
                           rtl && styles.textRight
                         ]}
@@ -964,7 +1056,8 @@ export default function AtlasScreen() {
                       style={[
                         styles.placeMeta,
                         rtl && styles.arabic,
-                        rtl && styles.rtlText
+                        styles.mixedScript,
+                        rtl && styles.textRight
                       ]}
                     >
                       {place.regionLabel} ·{" "}
@@ -1099,8 +1192,8 @@ const styles = StyleSheet.create({
   canvasKicker: {
     color: colors.concrete,
     fontFamily: typography.bodyBold,
-    fontSize: 11,
-    lineHeight: 15,
+    fontSize: 13,
+    lineHeight: 18,
     letterSpacing: 1
   },
   canvasRegion: {
@@ -1114,16 +1207,16 @@ const styles = StyleSheet.create({
   },
   canvasCountValue: {
     color: colors.volt,
-    fontFamily: typography.displayBold,
+    fontFamily: typography.metadata,
     fontSize: 24,
     lineHeight: 27,
     fontVariant: ["tabular-nums"]
   },
   canvasCountLabel: {
     color: colors.concrete,
-    fontFamily: typography.bodyBold,
-    fontSize: 11,
-    lineHeight: 15,
+    fontFamily: typography.metadata,
+    fontSize: 12,
+    lineHeight: 17,
     letterSpacing: 0.8
   },
   globe: {
@@ -1169,9 +1262,9 @@ const styles = StyleSheet.create({
   },
   positionLabel: {
     color: colors.concrete,
-    fontFamily: typography.bodyBold,
-    fontSize: 11,
-    lineHeight: 15,
+    fontFamily: typography.metadata,
+    fontSize: 12,
+    lineHeight: 17,
     letterSpacing: 1.1
   },
   positionName: {
@@ -1192,8 +1285,8 @@ const styles = StyleSheet.create({
   selectedKicker: {
     color: colors.concrete,
     fontFamily: typography.bodyBold,
-    fontSize: 11,
-    lineHeight: 15,
+    fontSize: 13,
+    lineHeight: 18,
     letterSpacing: 1.1
   },
   selectedTitle: {
@@ -1210,7 +1303,7 @@ const styles = StyleSheet.create({
   },
   selectedPrecision: {
     color: colors.white,
-    fontFamily: typography.bodyMedium,
+    fontFamily: typography.metadata,
     fontSize: 13,
     lineHeight: 19
   },
@@ -1234,9 +1327,6 @@ const styles = StyleSheet.create({
     opacity: 0.38
   },
   attention: {
-    flexDirection: "row",
-    alignItems: "flex-start",
-    gap: spacing.sm,
     padding: spacing.md,
     borderWidth: 1,
     borderColor: colors.border,
@@ -1245,26 +1335,45 @@ const styles = StyleSheet.create({
   },
   attentionCopy: {
     flex: 1,
-    gap: 3
+    gap: spacing.xs
+  },
+  attentionHeading: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: spacing.sm
   },
   attentionTitle: {
+    flex: 1,
     color: colors.text,
     fontFamily: typography.bodyBold,
     fontSize: 14,
     lineHeight: 19
   },
   attentionMeta: {
+    flex: 1,
     color: colors.textMuted,
     fontFamily: typography.body,
     fontSize: 13,
     lineHeight: 19
+  },
+  attentionActions: {
+    marginTop: spacing.xs
+  },
+  attentionAction: {
+    minHeight: 44,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    gap: spacing.sm,
+    borderTopWidth: StyleSheet.hairlineWidth,
+    borderTopColor: colors.border
   },
   placeList: {
     gap: spacing.sm
   },
   listSummary: {
     color: colors.text,
-    fontFamily: typography.bodyBold,
+    fontFamily: typography.metadata,
     fontSize: 14,
     lineHeight: 19,
     fontVariant: ["tabular-nums"]
@@ -1322,9 +1431,9 @@ const styles = StyleSheet.create({
   },
   currentLabel: {
     color: colors.textMuted,
-    fontFamily: typography.bodyBold,
-    fontSize: 10,
-    lineHeight: 14,
+    fontFamily: typography.metadata,
+    fontSize: 12,
+    lineHeight: 17,
     letterSpacing: 0.8
   },
   placeMeta: {
@@ -1335,7 +1444,7 @@ const styles = StyleSheet.create({
   },
   placePinMeta: {
     color: colors.textMuted,
-    fontFamily: typography.bodyMedium,
+    fontFamily: typography.metadata,
     fontSize: 12,
     lineHeight: 17
   },

@@ -21,6 +21,7 @@ import type {
   ItemGroup,
   ItemSort,
   PlaceGroup,
+  PlaceFilter,
   PlaceSort
 } from "@/register/browse";
 import { colors, radius, spacing, typography } from "@/theme/tokens";
@@ -32,32 +33,36 @@ interface Choice<T extends string> {
 
 export function RegisterOrganizerModal({
   copy,
-  filter,
+  assetFilter,
   itemGroup,
   itemSort,
   onClose,
-  onFilterChange,
+  onAssetFilterChange,
   onItemGroupChange,
   onItemSortChange,
+  onPlaceFilterChange,
   onPlaceGroupChange,
   onPlaceSortChange,
   open,
+  placeFilter,
   placeGroup,
   placeSort,
   rtl,
   view
 }: {
   readonly copy: RegisterCopy;
-  readonly filter: AssetFilter;
+  readonly assetFilter: AssetFilter;
   readonly itemGroup: ItemGroup;
   readonly itemSort: ItemSort;
   readonly onClose: () => void;
-  readonly onFilterChange: (value: AssetFilter) => void;
+  readonly onAssetFilterChange: (value: AssetFilter) => void;
   readonly onItemGroupChange: (value: ItemGroup) => void;
   readonly onItemSortChange: (value: ItemSort) => void;
+  readonly onPlaceFilterChange: (value: PlaceFilter) => void;
   readonly onPlaceGroupChange: (value: PlaceGroup) => void;
   readonly onPlaceSortChange: (value: PlaceSort) => void;
   readonly open: boolean;
+  readonly placeFilter: PlaceFilter;
   readonly placeGroup: PlaceGroup;
   readonly placeSort: PlaceSort;
   readonly rtl: boolean;
@@ -75,9 +80,12 @@ export function RegisterOrganizerModal({
     return () => clearTimeout(timer);
   }, [open, reduceMotion]);
 
-  const filterChoices = (
+  const assetFilterChoices = (
     Object.keys(copy.filters) as AssetFilter[]
   ).map((value) => ({ label: copy.filters[value], value }));
+  const placeFilterChoices = (
+    Object.keys(copy.placeFilters) as PlaceFilter[]
+  ).map((value) => ({ label: copy.placeFilters[value], value }));
   const itemSortChoices = (
     Object.keys(copy.itemSorts) as ItemSort[]
   ).map((value) => ({ label: copy.itemSorts[value], value }));
@@ -147,13 +155,21 @@ export function RegisterOrganizerModal({
           >
             {view === "items" ? (
               <ChoiceGroup
-                choices={filterChoices}
+                choices={assetFilterChoices}
                 label={copy.filterBy}
-                onChange={onFilterChange}
+                onChange={onAssetFilterChange}
                 rtl={rtl}
-                value={filter}
+                value={assetFilter}
               />
-            ) : null}
+            ) : (
+              <ChoiceGroup
+                choices={placeFilterChoices}
+                label={copy.filterBy}
+                onChange={onPlaceFilterChange}
+                rtl={rtl}
+                value={placeFilter}
+              />
+            )}
             <ChoiceGroup
               choices={
                 view === "items" ? itemSortChoices : placeSortChoices
@@ -221,6 +237,7 @@ function ChoiceGroup<T extends string>({
           const selected = value === choice.value;
           return (
             <Pressable
+              accessibilityLabel={choice.label}
               accessibilityRole="radio"
               accessibilityState={{ checked: selected }}
               key={choice.value}

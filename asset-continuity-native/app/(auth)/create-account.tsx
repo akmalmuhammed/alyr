@@ -237,6 +237,10 @@ export default function CreateAccountScreen() {
               clearFieldError("password");
             }}
             onSubmitEditing={() => confirmRef.current?.focus()}
+            passwordVisibility={{
+              showLabel: copy.common.showPassword,
+              hideLabel: copy.common.hidePassword
+            }}
             passwordRules="minlength: 10; maxlength: 128;"
             placeholder={copy.createAccount.passwordPlaceholder}
             ref={passwordRef}
@@ -256,6 +260,10 @@ export default function CreateAccountScreen() {
               clearFieldError("confirmPassword");
             }}
             onSubmitEditing={() => void submit()}
+            passwordVisibility={{
+              showLabel: copy.common.showPassword,
+              hideLabel: copy.common.hidePassword
+            }}
             placeholder={copy.createAccount.confirmPasswordPlaceholder}
             ref={confirmRef}
             returnKeyType="go"

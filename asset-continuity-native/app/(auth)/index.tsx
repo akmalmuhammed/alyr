@@ -358,8 +358,8 @@ const styles = StyleSheet.create({
   eyebrow: {
     color: colors.volt,
     fontFamily: typography.bodyBold,
-    fontSize: 11,
-    lineHeight: 16,
+    fontSize: 13,
+    lineHeight: 18,
     letterSpacing: 1.2
   },
   title: {
@@ -415,9 +415,9 @@ const styles = StyleSheet.create({
   previewEyebrow: {
     color: colors.concrete,
     fontFamily: typography.bodyBold,
-    fontSize: 10,
-    lineHeight: 14,
-    letterSpacing: 0.85
+    fontSize: 12,
+    lineHeight: 17,
+    letterSpacing: 0.75
   },
   previewTitle: {
     color: colors.white,

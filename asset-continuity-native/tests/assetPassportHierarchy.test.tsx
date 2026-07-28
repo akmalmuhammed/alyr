@@ -5,7 +5,11 @@ import { StyleSheet } from "react-native";
 import AssetPassportScreen, {
   ASSET_PASSPORT_COPY
 } from "../app/asset/[id]";
-import type { NativeAsset, NativeWorkspace } from "@/domain/model";
+import type {
+  NativeAsset,
+  NativePlace,
+  NativeWorkspace
+} from "@/domain/model";
 import type { PortfolioValueRecord } from "@/domain/portfolio";
 import { createWorkspace } from "@/domain/sample";
 import { LocaleProvider } from "@/i18n/LocaleProvider";
@@ -13,6 +17,10 @@ import { PortfolioPrivacyProvider } from "@/privacy/PortfolioPrivacyProvider";
 
 let mockLanguage: "en" | "ar" = "en";
 let mockWorkspaceContext: Record<string, unknown>;
+let mockParams: { id: string; justCreated?: string } = {
+  id: "asset-passport-hierarchy",
+  justCreated: "1"
+};
 
 const mockRouter = {
   back: jest.fn(),
@@ -25,10 +33,7 @@ jest.mock("expo-router", () => ({
     const { useEffect } = require("react") as typeof import("react");
     useEffect(callback, []);
   },
-  useLocalSearchParams: () => ({
-    id: "asset-passport-hierarchy",
-    justCreated: "1"
-  }),
+  useLocalSearchParams: () => mockParams,
   useRouter: () => mockRouter
 }));
 
@@ -107,7 +112,8 @@ function renderedTestIds(node: unknown): string[] {
 }
 
 function createContext(
-  recordedAssetValues: readonly PortfolioValueRecord[] = []
+  recordedAssetValues: readonly PortfolioValueRecord[] = [],
+  workspaceOverride: Partial<NativeWorkspace> = {}
 ) {
   const personal = createWorkspace(
     "personal",
@@ -116,7 +122,8 @@ function createContext(
   const workspace: NativeWorkspace = {
     ...personal,
     language: mockLanguage,
-    assets: [asset]
+    assets: [asset],
+    ...workspaceOverride
   };
 
   return {
@@ -140,48 +147,67 @@ function createContext(
   };
 }
 
+function locatedContext(
+  placeOverride: Partial<NativePlace>
+): Record<string, unknown> {
+  const sample = createWorkspace("sample");
+  const sourcePlace = sample.places.find(
+    (item) => item.id === "place-west-bay"
+  )!;
+  const place: NativePlace = {
+    ...sourcePlace,
+    id: "asset-passport-place",
+    ...placeOverride
+  };
+  const locatedAsset: NativeAsset = {
+    ...asset,
+    locationStatus: "known",
+    placeId: place.id,
+    roomId: place.rooms[0]!.id,
+    locatorText: "Upper drawer"
+  };
+
+  return createContext([], {
+    assets: [locatedAsset],
+    places: [place]
+  });
+}
+
 describe("Asset Passport post-save hierarchy", () => {
   beforeEach(() => {
     mockLanguage = "en";
+    mockParams = {
+      id: "asset-passport-hierarchy",
+      justCreated: "1"
+    };
     mockWorkspaceContext = createContext();
     mockRouter.back.mockClear();
     mockRouter.push.mockClear();
     mockRouter.replace.mockClear();
   });
 
-  it("celebrates the saved Passport and offers value, another item, and Today before readiness debt", async () => {
+  it("keeps post-save focused on portfolio value, another item, or the full Passport", async () => {
     const screen = await render(<AssetPassportScreen />, { wrapper });
     const relevantOrder = renderedTestIds(screen.toJSON()).filter(
       (testId) =>
         [
-          "asset-passport-saved-confirmation",
-          "asset-passport-primary-action",
-          "asset-passport-first-value-action",
-          "asset-passport-add-another-action",
-          "asset-passport-today-action",
-          "sync-truth",
+           "asset-passport-saved-confirmation",
+           "asset-passport-primary-action",
+           "asset-passport-add-another-action",
+           "asset-passport-view-action",
+           "sync-truth",
           "asset-passport-retrieval-heading",
           "asset-passport-value-heading"
         ].includes(testId)
     );
 
     expect(relevantOrder).toEqual([
-      "asset-passport-saved-confirmation",
-      "asset-passport-primary-action",
-      "asset-passport-first-value-action",
-      "asset-passport-add-another-action",
-      "asset-passport-today-action",
-      "sync-truth",
-      "asset-passport-retrieval-heading",
-      "asset-passport-value-heading"
-    ]);
-
-    await fireEvent.press(
-      screen.getByText(ASSET_PASSPORT_COPY.en.missingAction.photo)
-    );
-    expect(mockRouter.push).toHaveBeenCalledWith(
-      "/asset-edit?assetId=asset-passport-hierarchy&focus=photo&returnTo=passport"
-    );
+       "asset-passport-saved-confirmation",
+       "asset-passport-primary-action",
+       "asset-passport-add-another-action",
+       "asset-passport-view-action",
+       "sync-truth"
+     ]);
 
     await fireEvent.press(
       screen.getByText(ASSET_PASSPORT_COPY.en.addRecordedValue)
@@ -196,17 +222,25 @@ describe("Asset Passport post-save hierarchy", () => {
     expect(mockRouter.replace).toHaveBeenCalledWith("/capture");
 
     await fireEvent.press(
-      screen.getByText(ASSET_PASSPORT_COPY.en.goToToday)
+      screen.getByText(ASSET_PASSPORT_COPY.en.viewPassport)
     );
-    expect(mockRouter.replace).toHaveBeenCalledWith("/(tabs)");
+    expect(mockRouter.replace).toHaveBeenCalledWith(
+      "/asset/asset-passport-hierarchy"
+    );
+    expect(
+      screen.queryByTestId("asset-passport-retrieval-heading")
+    ).toBeNull();
+    expect(
+      screen.queryByTestId("asset-passport-value-heading")
+    ).toBeNull();
   });
 
-  it("keeps the promoted next action mirrored and accessible in Arabic", async () => {
+  it("keeps the focused portfolio action mirrored and accessible in Arabic", async () => {
     mockLanguage = "ar";
     mockWorkspaceContext = createContext();
     const screen = await render(<AssetPassportScreen />, { wrapper });
     const nextActionLabel = screen.getByText(
-      ASSET_PASSPORT_COPY.ar.missingAction.photo
+      ASSET_PASSPORT_COPY.ar.addRecordedValue
     );
     const nextActionContent = nextActionLabel.parent;
 
@@ -215,11 +249,141 @@ describe("Asset Passport post-save hierarchy", () => {
     ).toBe("row-reverse");
     await fireEvent.press(nextActionLabel);
     expect(mockRouter.push).toHaveBeenCalledWith(
-      "/asset-edit?assetId=asset-passport-hierarchy&focus=photo&returnTo=passport"
+      "/asset-value?assetId=asset-passport-hierarchy&returnTo=dashboard"
+    );
+  });
+
+  it("uses Today as the single primary action when the item already has a value", async () => {
+    mockWorkspaceContext = createContext([
+      {
+        id: "asset-passport-value",
+        assetId: asset.id,
+        amountMinor: 123_450,
+        currency: "QAR",
+        asOf: "2026-07-27T00:00:00.000Z",
+        updatedAt: "2026-07-27T10:00:00.000Z",
+        source: "user-entered"
+      }
+    ]);
+    const screen = await render(<AssetPassportScreen />, { wrapper });
+
+    expect(
+      screen.queryByText(ASSET_PASSPORT_COPY.en.addRecordedValue)
+    ).toBeNull();
+    await fireEvent.press(
+      screen.getByText(ASSET_PASSPORT_COPY.en.goToToday)
+    );
+    expect(mockRouter.replace).toHaveBeenCalledWith("/(tabs)");
+  });
+
+  it("keeps the first missing action primary while exposing corrections for completed details", async () => {
+    mockParams = { id: "asset-passport-hierarchy" };
+    const screen = await render(<AssetPassportScreen />, { wrapper });
+    const initialOrder = renderedTestIds(screen.toJSON()).filter(
+      (testId) =>
+        testId === "asset-passport-next-action" ||
+        testId === "asset-passport-edit-details"
+    );
+
+    expect(initialOrder).toEqual([
+      "asset-passport-next-action",
+      "asset-passport-edit-details"
+    ]);
+    expect(
+      screen.getByTestId("asset-passport-edit-details").props
+        .accessibilityState
+    ).toEqual({ expanded: false });
+    expect(
+      screen.queryByText(ASSET_PASSPORT_COPY.en.updateIdentity)
+    ).toBeNull();
+
+    await fireEvent.press(
+      screen.getByTestId("asset-passport-edit-details")
+    );
+
+    expect(
+      screen.getByTestId("asset-passport-edit-details").props
+        .accessibilityState
+    ).toEqual({ expanded: true });
+    expect(
+      screen.getByText(ASSET_PASSPORT_COPY.en.missingAction.photo)
+    ).toBeTruthy();
+
+    await fireEvent.press(
+      screen.getByText(ASSET_PASSPORT_COPY.en.updateIdentity)
+    );
+    expect(mockRouter.push).toHaveBeenCalledWith(
+      "/asset-edit?assetId=asset-passport-hierarchy&focus=identity&returnTo=passport"
+    );
+  });
+
+  it("discloses that an unconfirmed GPS pin still needs confirmation", async () => {
+    mockParams = { id: "asset-passport-hierarchy" };
+    mockWorkspaceContext = locatedContext({
+      locationSource: "device_gps",
+      precision: "exact",
+      horizontalAccuracyMeters: 6.8,
+      confirmedAt: null
+    });
+
+    const screen = await render(<AssetPassportScreen />, { wrapper });
+
+    expect(
+      screen.getByText("GPS pin · confirmation needed")
+    ).toBeTruthy();
+    const action = screen.getByRole("button", {
+      name: new RegExp(
+        `^${ASSET_PASSPORT_COPY.en.confirmPlacePin}`
+      )
+    });
+    expect(action.props.accessibilityLabel).toContain(
+      ASSET_PASSPORT_COPY.en.confirmPlacePinMeta
+    );
+    expect(action.props.accessibilityHint).toBe(
+      ASSET_PASSPORT_COPY.en.confirmPlacePinHint
+    );
+
+    await fireEvent.press(action);
+    expect(mockRouter.push).toHaveBeenCalledWith(
+      "/place-pin?placeId=asset-passport-place"
+    );
+  });
+
+  it("localizes confirmation-needed truth for an adjusted pin", async () => {
+    mockLanguage = "ar";
+    mockParams = { id: "asset-passport-hierarchy" };
+    mockWorkspaceContext = locatedContext({
+      locationSource: "user_pin",
+      precision: "user_placed",
+      horizontalAccuracyMeters: null,
+      confirmedAt: null
+    });
+
+    const screen = await render(<AssetPassportScreen />, { wrapper });
+
+    expect(
+      screen.getByText("دبوس موضوع يدويًا · يحتاج إلى تأكيد")
+    ).toBeTruthy();
+    const action = screen.getByRole("button", {
+      name: new RegExp(
+        `^${ASSET_PASSPORT_COPY.ar.confirmPlacePin}`
+      )
+    });
+    expect(action.props.accessibilityLabel).toContain(
+      ASSET_PASSPORT_COPY.ar.confirmPlacePinMeta
+    );
+    expect(action.props.accessibilityHint).toBe(
+      ASSET_PASSPORT_COPY.ar.confirmPlacePinHint
+    );
+
+    await fireEvent.press(action);
+    expect(mockRouter.push).toHaveBeenCalledWith(
+      "/place-pin?placeId=asset-passport-place"
     );
   });
 
   it("masks a Passport value in both visible and assistive output by default", async () => {
+    mockParams = { id: "asset-passport-hierarchy" };
     mockWorkspaceContext = createContext([
       {
         id: "asset-passport-value",

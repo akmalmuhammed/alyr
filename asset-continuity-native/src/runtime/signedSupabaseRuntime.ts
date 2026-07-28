@@ -4,12 +4,16 @@ import { createClient, processLock } from "@supabase/supabase-js";
 import { AppState } from "react-native";
 
 import { createExpoSecureSessionStorage } from "@/auth/expoSecureSessionStorage";
+import { createExpoPasswordRecoverySessionMarkerStore } from "@/auth/expoPasswordRecoverySessionMarker";
 import {
   createSupabaseAuthGateway,
   type SupabaseAuthClientLike
 } from "@/auth/adapters/supabase";
 import { createExpoPendingHouseholdInviteStore } from "@/auth/expoPendingHouseholdInvite";
+import { createExpoPendingHouseholdProvisionStore } from "@/auth/expoPendingHouseholdProvision";
 import { configurePendingHouseholdInviteStoreFactory } from "@/auth/pendingHouseholdInvite";
+import { configurePendingHouseholdProvisionStoreFactory } from "@/auth/pendingHouseholdProvision";
+import { createRecoveryProtectedAuthGateway } from "@/auth/recoveryProtectedAuthGateway";
 import { configureAuthGatewayFactory } from "@/auth/runtime";
 import type { AccountAuthGateway } from "@/auth/types";
 
@@ -72,7 +76,7 @@ function createServices(
   // The local port intentionally models only the stable auth methods used by
   // ALYR. Supabase's generated response unions are structurally compatible at
   // runtime but stricter than that narrow testable interface.
-  const authGateway = createSupabaseAuthGateway(
+  const providerAuthGateway = createSupabaseAuthGateway(
     client as unknown as SupabaseAuthClientLike,
     {
       emailRedirectTo: configuration.emailRedirectTo,
@@ -82,6 +86,12 @@ function createServices(
       publicApiKey: configuration.publishableKey,
       passwordRecoveryRedirectTo:
         configuration.passwordRecoveryRedirectTo
+    }
+  );
+  const authGateway = createRecoveryProtectedAuthGateway(
+    providerAuthGateway,
+    {
+      markerStore: createExpoPasswordRecoverySessionMarkerStore()
     }
   );
   const cloud = createAuthenticatedCloudTransports(
@@ -96,6 +106,10 @@ function createServices(
   const removePendingInviteStore =
     configurePendingHouseholdInviteStoreFactory(
       createExpoPendingHouseholdInviteStore
+    );
+  const removePendingProvisionStore =
+    configurePendingHouseholdProvisionStoreFactory(
+      createExpoPendingHouseholdProvisionStore
     );
   const removeSyncTransport = configureRuntimeSyncTransport(cloud.sync);
   const removeEvidenceUploads = configureRuntimeEvidenceUploadPort(
@@ -113,6 +127,7 @@ function createServices(
     dispose() {
       removeFactory();
       removePendingInviteStore();
+      removePendingProvisionStore();
       removeSyncTransport();
       removeEvidenceUploads();
       removeEvidenceDownloads();

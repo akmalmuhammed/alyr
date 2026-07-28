@@ -26,7 +26,7 @@ describe("Portfolio review routing", () => {
     expect(source).toContain("snapshot.locationGapAssetIds");
     expect(source).toContain("snapshot.unvaluedAssetIds");
     expect(source).toContain("snapshot.pendingProofReviewAssetIds");
-    expect(source).toContain("registerCopy.filters[filter]");
+    expect(source).toContain("registerCopy.filters[assetFilter]");
     expect(CORE_JOURNEY_COPY.en.items.needsValue).toBe("Needs value");
     expect(CORE_JOURNEY_COPY.en.items.reviewProof).toBe("Review proof");
     expect(REGISTER_COPY.en.filters.value).toBe("Needs value");

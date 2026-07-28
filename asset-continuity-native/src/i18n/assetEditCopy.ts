@@ -66,6 +66,10 @@ export interface AssetEditCopy {
   readonly retrievalClue: string;
   readonly retrievalCluePlaceholder: string;
   readonly retrievalTruth: (placeName: string) => string;
+  readonly placePinDebtTitle: string;
+  readonly placePinDebtBody: string;
+  readonly reviewPlacePin: string;
+  readonly reviewPlacePinHint: string;
   readonly photoSelected: (fileName: string, size: string) => string;
   readonly proofSelected: (fileName: string, size: string) => string;
   readonly photoPreview: AssetPhotoPreviewCopy;
@@ -168,6 +172,12 @@ export const ASSET_EDIT_COPY: Readonly<
     retrievalCluePlaceholder: "e.g. upper drawer, blue case",
     retrievalTruth: (placeName) =>
       `This saves the indoor retrieval clue. Property-pin accuracy is managed on ${isolateDynamicText(placeName)}.`,
+    placePinDebtTitle: "Confirm the Place pin",
+    placePinDebtBody:
+      "The retrieval detail can be saved now, but location readiness stays open until this Place has a confirmed precise pin.",
+    reviewPlacePin: "Review Place pin",
+    reviewPlacePinHint:
+      "Opens the Place pin editor. Your unsaved item changes stay on this screen.",
     photoSelected: (fileName, size) =>
       `${isolateDynamicText(fileName)}, ${size}, ready to save as the primary photo.`,
     proofSelected: (fileName, size) =>
@@ -276,6 +286,12 @@ export const ASSET_EDIT_COPY: Readonly<
     retrievalCluePlaceholder: "مثال: الدرج العلوي، الحافظة الزرقاء",
     retrievalTruth: (placeName) =>
       `يحفظ هذا دليل الوصول داخل المكان. تُدار دقة دبوس العقار في ${isolateDynamicText(placeName)}.`,
+    placePinDebtTitle: "أكّد دبوس المكان",
+    placePinDebtBody:
+      "يمكن حفظ دليل الوصول الآن، لكن اكتمال الموقع يبقى معلقًا حتى يتوفر لهذا المكان دبوس دقيق ومؤكد.",
+    reviewPlacePin: "مراجعة دبوس المكان",
+    reviewPlacePinHint:
+      "يفتح محرر دبوس المكان. تبقى تغييرات الغرض غير المحفوظة في هذه الشاشة.",
     photoSelected: (fileName, size) =>
       `${isolateDynamicText(fileName)}، ${size}، جاهزة للحفظ كصورة رئيسية.`,
     proofSelected: (fileName, size) =>

@@ -30,6 +30,11 @@ import {
   type PendingHouseholdInvite,
   type PendingHouseholdInviteStore
 } from "./pendingHouseholdInvite";
+import {
+  createRuntimePendingHouseholdProvisionStore,
+  type PendingHouseholdProvision,
+  type PendingHouseholdProvisionStore
+} from "./pendingHouseholdProvision";
 import type {
   AccountAuthGateway,
   AuthAttempt,
@@ -194,19 +199,35 @@ function authFailureFromContract(error: ContractError): AuthFailure {
   }
 }
 
+function sessionConfirmsPendingHouseholdProvision(
+  provision: PendingHouseholdProvision,
+  session: AuthSessionDescriptor
+): boolean {
+  return (
+    session.identity.id === provision.accountId &&
+    session.activeHouseholdId === provision.householdId &&
+    Boolean(session.activeMembershipId) &&
+    session.activeHouseholdRole === "owner"
+  );
+}
+
 export function AuthFlowProvider({
   children,
   gateway,
   householdAccess,
   accountDeletion,
   operationIdFactory,
-  pendingInviteStore
+  householdIdFactory,
+  pendingInviteStore,
+  pendingHouseholdProvisionStore
 }: PropsWithChildren<{
   readonly gateway?: AccountAuthGateway;
   readonly householdAccess?: HouseholdAccessPort;
   readonly accountDeletion?: AccountDeletionPort;
   readonly operationIdFactory?: () => string;
+  readonly householdIdFactory?: () => string;
   readonly pendingInviteStore?: PendingHouseholdInviteStore;
+  readonly pendingHouseholdProvisionStore?: PendingHouseholdProvisionStore;
 }>) {
   const gatewayRef = useRef<AccountAuthGateway>(
     gateway ?? createRuntimeAuthGateway()
@@ -216,8 +237,15 @@ export function AuthFlowProvider({
   const pendingInviteStoreRef = useRef(
     pendingInviteStore ?? createRuntimePendingHouseholdInviteStore()
   );
+  const pendingHouseholdProvisionStoreRef = useRef(
+    pendingHouseholdProvisionStore ??
+      createRuntimePendingHouseholdProvisionStore()
+  );
   const operationIdFactoryRef = useRef(
     operationIdFactory ?? randomUUID
+  );
+  const householdIdFactoryRef = useRef(
+    householdIdFactory ?? randomUUID
   );
   const [bootstrapState, setBootstrapState] = useState<
     "bootstrapping" | "ready" | "error"
@@ -256,6 +284,11 @@ export function AuthFlowProvider({
   const activeSessionRef = useRef<AuthSessionDescriptor | null>(null);
   const pendingHouseholdInviteRef =
     useRef<PendingHouseholdInvite | null>(null);
+  const pendingHouseholdProvisionRef =
+    useRef<PendingHouseholdProvision | null>(null);
+  const pendingHouseholdProvisionStoreStateRef = useRef<
+    "pending" | "ready" | "blocked"
+  >("pending");
   const previewInvitesRef = useRef(
     new Map<string, PreviewHouseholdInviteRecord>()
   );
@@ -272,6 +305,10 @@ export function AuthFlowProvider({
     operationIdFactoryRef.current = operationIdFactory ?? randomUUID;
   }, [operationIdFactory]);
 
+  useEffect(() => {
+    householdIdFactoryRef.current = householdIdFactory ?? randomUUID;
+  }, [householdIdFactory]);
+
   const nextOperationId = useCallback((): string => {
     const operationId = operationIdFactoryRef.current();
     if (
@@ -285,6 +322,39 @@ export function AuthFlowProvider({
     }
     return operationId;
   }, []);
+
+  const nextHouseholdId = useCallback((): string => {
+    const householdId = householdIdFactoryRef.current();
+    if (
+      !/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/iu.test(
+        householdId
+      )
+    ) {
+      throw new Error(
+        "Household provisioning requires a valid household identity."
+      );
+    }
+    return householdId;
+  }, []);
+
+  const discardPendingHouseholdProvision =
+    useCallback(async (): Promise<boolean> => {
+      try {
+        await pendingHouseholdProvisionStoreRef.current.clear();
+        pendingHouseholdProvisionRef.current = null;
+        pendingHouseholdProvisionStoreStateRef.current = "ready";
+        return true;
+      } catch {
+        pendingHouseholdProvisionStoreStateRef.current = "blocked";
+        setError({
+          code: "unexpected",
+          message:
+            "Household setup is confirmed, but its completed retry marker still needs cleanup.",
+          retryable: true
+        });
+        return false;
+      }
+    }, []);
 
   const acceptSession = useCallback(
     (nextSession: AuthSessionDescriptor | null) => {
@@ -336,6 +406,28 @@ export function AuthFlowProvider({
         if (!active) return;
         pendingHouseholdInviteRef.current = storedInvite;
         setPendingHouseholdInviteState(storedInvite);
+        let storedProvision: PendingHouseholdProvision | null = null;
+        try {
+          storedProvision =
+            await pendingHouseholdProvisionStoreRef.current.read();
+        } catch {
+          if (!active) return;
+          pendingHouseholdProvisionRef.current = null;
+          pendingHouseholdProvisionStoreStateRef.current = "blocked";
+          acceptSession(null);
+          setPasswordRecoverySessionActive(false);
+          setError({
+            code: "unexpected",
+            message:
+              "The saved household setup operation could not be restored.",
+            retryable: true
+          });
+          setBootstrapState("error");
+          return;
+        }
+        if (!active) return;
+        pendingHouseholdProvisionRef.current = storedProvision;
+        pendingHouseholdProvisionStoreStateRef.current = "ready";
         const result = await gatewayRef.current.currentSession();
         if (!active) return;
         if (!result.ok) {
@@ -344,6 +436,23 @@ export function AuthFlowProvider({
           setError(result.error);
           setBootstrapState("error");
           return;
+        }
+        if (
+          storedProvision &&
+          result.value &&
+          sessionConfirmsPendingHouseholdProvision(
+            storedProvision,
+            result.value
+          )
+        ) {
+          const cleared = await discardPendingHouseholdProvision();
+          if (!active) return;
+          if (!cleared) {
+            acceptSession(null);
+            setPasswordRecoverySessionActive(false);
+            setBootstrapState("error");
+            return;
+          }
         }
         acceptSession(result.value);
         setPasswordRecoverySessionActive(false);
@@ -363,13 +472,34 @@ export function AuthFlowProvider({
     return () => {
       active = false;
     };
-  }, [acceptSession]);
+  }, [acceptSession, discardPendingHouseholdProvision]);
 
   const retryBootstrap = useCallback(async (): Promise<boolean> => {
     setBootstrapState("bootstrapping");
     setError(null);
     setStatusMessage(null);
     try {
+      pendingHouseholdProvisionStoreStateRef.current = "pending";
+      let pendingProvision: PendingHouseholdProvision | null;
+      try {
+        pendingProvision =
+          await pendingHouseholdProvisionStoreRef.current.read();
+      } catch {
+        pendingHouseholdProvisionRef.current = null;
+        pendingHouseholdProvisionStoreStateRef.current = "blocked";
+        acceptSession(null);
+        setPasswordRecoverySessionActive(false);
+        setError({
+          code: "unexpected",
+          message:
+            "The saved household setup operation could not be restored.",
+          retryable: true
+        });
+        setBootstrapState("error");
+        return false;
+      }
+      pendingHouseholdProvisionRef.current = pendingProvision;
+      pendingHouseholdProvisionStoreStateRef.current = "ready";
       const result = await gatewayRef.current.currentSession();
       if (!result.ok) {
         acceptSession(null);
@@ -377,6 +507,22 @@ export function AuthFlowProvider({
         setError(result.error);
         setBootstrapState("error");
         return false;
+      }
+      if (
+        pendingProvision &&
+        result.value &&
+        sessionConfirmsPendingHouseholdProvision(
+          pendingProvision,
+          result.value
+        )
+      ) {
+        const cleared = await discardPendingHouseholdProvision();
+        if (!cleared) {
+          acceptSession(null);
+          setPasswordRecoverySessionActive(false);
+          setBootstrapState("error");
+          return false;
+        }
       }
       acceptSession(result.value);
       setPasswordRecoverySessionActive(false);
@@ -393,17 +539,46 @@ export function AuthFlowProvider({
       setBootstrapState("error");
       return false;
     }
-  }, [acceptSession]);
+  }, [acceptSession, discardPendingHouseholdProvision]);
 
   useEffect(
     () =>
       gatewayRef.current.onSessionChanged((nextSession) => {
+        if (
+          pendingHouseholdProvisionStoreStateRef.current !== "ready"
+        ) {
+          return;
+        }
+        const pendingProvision =
+          pendingHouseholdProvisionRef.current;
+        if (
+          pendingProvision &&
+          nextSession &&
+          sessionConfirmsPendingHouseholdProvision(
+            pendingProvision,
+            nextSession
+          )
+        ) {
+          void discardPendingHouseholdProvision().then((cleared) => {
+            if (!cleared) {
+              acceptSession(null);
+              setPasswordRecoverySessionActive(false);
+              setBootstrapState("error");
+              return;
+            }
+            acceptSession(nextSession);
+            setPasswordRecoverySessionActive(false);
+            setBootstrapState("ready");
+            setError(null);
+          });
+          return;
+        }
         acceptSession(nextSession);
         setPasswordRecoverySessionActive(false);
         setBootstrapState("ready");
         setError(null);
       }),
-    [acceptSession]
+    [acceptSession, discardPendingHouseholdProvision]
   );
 
   const prepareRequest = useCallback(() => {
@@ -756,7 +931,8 @@ export function AuthFlowProvider({
       const name = nameValue.trim();
       prepareRequest();
       try {
-        if (!session) {
+        const currentSession = activeSessionRef.current;
+        if (!currentSession) {
           setError({
             code: "session_missing",
             message: "Sign in before creating a household.",
@@ -773,13 +949,48 @@ export function AuthFlowProvider({
           return null;
         }
 
-        if (session.activeHouseholdId) {
-          updateHouseholdName(name);
+        const restoredProvision =
+          pendingHouseholdProvisionRef.current;
+
+        if (
+          restoredProvision &&
+          restoredProvision.accountId !== currentSession.identity.id
+        ) {
+          setError({
+            code: "session_missing",
+            message:
+              "Household setup belongs to a different signed account. Sign out to clear it from this device.",
+            retryable: false
+          });
+          return null;
+        }
+
+        if (currentSession.activeHouseholdId) {
           if (
-            session.activeMembershipId &&
-            session.activeHouseholdRole === "owner"
+            restoredProvision &&
+            restoredProvision.householdId !==
+              currentSession.activeHouseholdId
           ) {
-            return session.activeHouseholdId;
+            setError({
+              code: "invalid_request",
+              message:
+                "Another household is active. Return to that household before retrying this setup.",
+              retryable: false
+            });
+            return null;
+          }
+          updateHouseholdName(restoredProvision?.name ?? name);
+          if (
+            currentSession.activeMembershipId &&
+            currentSession.activeHouseholdRole === "owner"
+          ) {
+            if (
+              restoredProvision &&
+              !(await discardPendingHouseholdProvision())
+            ) {
+              return null;
+            }
+            return currentSession.activeHouseholdId;
           }
 
           const refresh = gatewayRef.current.refreshSession;
@@ -797,7 +1008,7 @@ export function AuthFlowProvider({
             !refreshed.ok ||
             !refreshed.value ||
             refreshed.value.activeHouseholdId !==
-              session.activeHouseholdId ||
+              currentSession.activeHouseholdId ||
             !refreshed.value.activeMembershipId ||
             refreshed.value.activeHouseholdRole !== "owner"
           ) {
@@ -814,6 +1025,12 @@ export function AuthFlowProvider({
             return null;
           }
           acceptSession(refreshed.value);
+          if (
+            restoredProvision &&
+            !(await discardPendingHouseholdProvision())
+          ) {
+            return null;
+          }
           return refreshed.value.activeHouseholdId;
         }
 
@@ -822,7 +1039,7 @@ export function AuthFlowProvider({
           const membershipId = randomUUID();
           updateHouseholdName(name);
           acceptSession({
-            ...session,
+            ...currentSession,
             activeHouseholdId: householdId,
             activeMembershipId: membershipId,
             activeHouseholdRole: "owner",
@@ -841,21 +1058,134 @@ export function AuthFlowProvider({
           });
           return null;
         }
-        const result = await access.createHousehold(name);
+
+        let pendingProvision =
+          pendingHouseholdProvisionRef.current;
+
+        // A retry or process restart first asks the provider for the
+        // authoritative owner tuple. This closes the server-commit/lost-HTTP-
+        // response window without posting a second creation request.
+        if (pendingProvision) {
+          const refresh = gatewayRef.current.refreshSession;
+          if (!refresh) {
+            setError({
+              code: "unsupported",
+              message:
+                "Account access needs to be reconciled before household setup can retry.",
+              retryable: true
+            });
+            return null;
+          }
+          const reconciled = await refresh.call(gatewayRef.current);
+          if (!reconciled.ok) {
+            setError(reconciled.error);
+            return null;
+          }
+          if (!reconciled.value) {
+            setError({
+              code: "session_missing",
+              message:
+                "Account access needs to be restored before household setup can retry.",
+              retryable: true
+            });
+            return null;
+          }
+          if (
+            reconciled.value.identity.id !==
+            pendingProvision.accountId
+          ) {
+            setError({
+              code: "session_missing",
+              message:
+                "Household setup belongs to a different signed account.",
+              retryable: false
+            });
+            return null;
+          }
+          acceptSession(reconciled.value);
+          if (reconciled.value.activeHouseholdId) {
+            if (
+              reconciled.value.activeHouseholdId !==
+                pendingProvision.householdId ||
+              !reconciled.value.activeMembershipId ||
+              reconciled.value.activeHouseholdRole !== "owner"
+            ) {
+              setError({
+                code: "session_missing",
+                message:
+                  "The household exists, but account access is still refreshing. Retry account access.",
+                retryable: true
+              });
+              return null;
+            }
+            updateHouseholdName(pendingProvision.name);
+            if (!(await discardPendingHouseholdProvision())) {
+              return null;
+            }
+            return reconciled.value.activeHouseholdId;
+          }
+        }
+
+        if (!pendingProvision) {
+          pendingProvision = {
+            accountId: currentSession.identity.id,
+            operationId: nextOperationId(),
+            householdId: nextHouseholdId(),
+            name,
+            createdAt: new Date().toISOString()
+          };
+          try {
+            await pendingHouseholdProvisionStoreRef.current.write(
+              pendingProvision
+            );
+            pendingHouseholdProvisionRef.current =
+              pendingProvision;
+          } catch {
+            setError({
+              code: "unexpected",
+              message:
+                "Household setup could not protect its retry identity on this device.",
+              retryable: true
+            });
+            return null;
+          }
+        }
+
+        const result = await access.createHousehold({
+          apiVersion: CONTRACT_API_VERSION,
+          operationId: pendingProvision.operationId,
+          householdId: pendingProvision.householdId,
+          name: pendingProvision.name
+        });
+        const sessionAfterResponse = activeSessionRef.current;
+        if (
+          !sessionAfterResponse ||
+          sessionAfterResponse.identity.id !==
+            pendingProvision.accountId ||
+          (sessionAfterResponse.activeHouseholdId !== null &&
+            sessionAfterResponse.activeHouseholdId !==
+              pendingProvision.householdId)
+        ) {
+          return null;
+        }
         if (!result.ok) {
           setError(authFailureFromContract(result.error));
           return null;
         }
-
-        updateHouseholdName(result.value.name);
-        const selectedSession: AuthSessionDescriptor = {
-          ...session,
-          activeHouseholdId: result.value.householdId,
-          activeMembershipId: null,
-          activeHouseholdRole: null,
-          onboarding: "required"
-        };
-        acceptSession(selectedSession);
+        if (
+          result.value.operationId !==
+            pendingProvision.operationId ||
+          result.value.household.householdId !==
+            pendingProvision.householdId
+        ) {
+          setError({
+            code: "unexpected",
+            message:
+              "Household setup returned a receipt for another operation.",
+            retryable: false
+          });
+          return null;
+        }
 
         const refresh = gatewayRef.current.refreshSession;
         if (!refresh) {
@@ -868,11 +1198,35 @@ export function AuthFlowProvider({
           return null;
         }
         const refreshed = await refresh.call(gatewayRef.current);
+        const sessionAfterRefresh = activeSessionRef.current;
+        if (
+          !sessionAfterRefresh ||
+          sessionAfterRefresh.identity.id !==
+            pendingProvision.accountId ||
+          (sessionAfterRefresh.activeHouseholdId !== null &&
+            sessionAfterRefresh.activeHouseholdId !==
+              pendingProvision.householdId)
+        ) {
+          return null;
+        }
+        if (
+          refreshed.ok &&
+          refreshed.value &&
+          refreshed.value.identity.id ===
+            pendingProvision.accountId &&
+          refreshed.value.activeHouseholdId ===
+            pendingProvision.householdId
+        ) {
+          updateHouseholdName(result.value.household.name);
+          acceptSession(refreshed.value);
+        }
         if (
           !refreshed.ok ||
           !refreshed.value ||
+          refreshed.value.identity.id !==
+            pendingProvision.accountId ||
           refreshed.value.activeHouseholdId !==
-            result.value.householdId ||
+            pendingProvision.householdId ||
           !refreshed.value.activeMembershipId ||
           refreshed.value.activeHouseholdRole !== "owner"
         ) {
@@ -888,13 +1242,21 @@ export function AuthFlowProvider({
           );
           return null;
         }
-        acceptSession(refreshed.value);
-        return result.value.householdId;
+        if (!(await discardPendingHouseholdProvision())) {
+          return null;
+        }
+        return pendingProvision.householdId;
       } finally {
         setBusy(false);
       }
     },
-    [acceptSession, prepareRequest, session]
+    [
+      acceptSession,
+      discardPendingHouseholdProvision,
+      nextHouseholdId,
+      nextOperationId,
+      prepareRequest
+    ]
   );
 
   const completeOnboarding = useCallback(async (): Promise<boolean> => {
@@ -1675,6 +2037,7 @@ export function AuthFlowProvider({
       // unconditionally so a stale provider response never reopens the vault.
     } finally {
       await discardPendingHouseholdInvite();
+      await discardPendingHouseholdProvision();
       setEmail("");
       acceptSession(null);
       setConfirmation(null);
@@ -1686,7 +2049,11 @@ export function AuthFlowProvider({
       setStatusMessage(null);
       setBusy(false);
     }
-  }, [acceptSession, discardPendingHouseholdInvite]);
+  }, [
+    acceptSession,
+    discardPendingHouseholdInvite,
+    discardPendingHouseholdProvision
+  ]);
 
   const signOut = useCallback(async () => {
     prepareRequest();
@@ -1697,6 +2064,8 @@ export function AuthFlowProvider({
         return false;
       }
       await discardPendingHouseholdInvite();
+      const provisionCleared =
+        await discardPendingHouseholdProvision();
       setEmail("");
       acceptSession(null);
       setConfirmation(null);
@@ -1706,6 +2075,10 @@ export function AuthFlowProvider({
       updateHouseholdName("");
       updateFirstCaptureIntent(null);
       setStatusMessage(null);
+      if (!provisionCleared) {
+        setBootstrapState("error");
+        return false;
+      }
       setBootstrapState("ready");
       return true;
     } finally {
@@ -1714,6 +2087,7 @@ export function AuthFlowProvider({
   }, [
     acceptSession,
     discardPendingHouseholdInvite,
+    discardPendingHouseholdProvision,
     prepareRequest
   ]);
 
@@ -1730,7 +2104,12 @@ export function AuthFlowProvider({
     updateHouseholdName("");
     updateFirstCaptureIntent(null);
     void discardPendingHouseholdInvite();
-  }, [acceptSession, discardPendingHouseholdInvite]);
+    void discardPendingHouseholdProvision();
+  }, [
+    acceptSession,
+    discardPendingHouseholdInvite,
+    discardPendingHouseholdProvision
+  ]);
 
   const value = useMemo<AuthFlowContextValue>(
     () => ({

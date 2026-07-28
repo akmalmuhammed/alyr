@@ -18,6 +18,11 @@ export interface CaptureCopy {
   readonly skip: string;
   readonly savePassport: string;
   readonly saving: string;
+  readonly edit: string;
+  readonly editIdentity: string;
+  readonly editPhoto: string;
+  readonly editLocation: string;
+  readonly editProof: string;
   readonly assetName: string;
   readonly assetNamePlaceholder: string;
   readonly identityTitle: string;
@@ -67,6 +72,7 @@ export interface CaptureCopy {
   readonly addLocationLaterBody: string;
   readonly newPlace: string;
   readonly addNewPlace: string;
+  readonly quickPlaceBody: string;
   readonly placeDetails: string;
   readonly placeName: string;
   readonly placeNamePlaceholder: string;
@@ -141,6 +147,10 @@ export interface CaptureCopy {
   readonly reviewLocation: string;
   readonly reviewProof: string;
   readonly notAdded: string;
+  readonly placePinDebtTitle: string;
+  readonly placePinDebtBody: string;
+  readonly reviewPlacePin: string;
+  readonly reviewPlacePinHint: string;
   readonly reviewSaving: string;
   readonly savedDeviceFirst: string;
   readonly privateTitle: string;
@@ -161,16 +171,21 @@ export const CAPTURE_COPY: Readonly<Record<LanguageCode, CaptureCopy>> = {
     skip: "Skip for now",
     savePassport: "Save Passport",
     saving: "Saving",
-    assetName: "Asset name",
+    edit: "Edit",
+    editIdentity: "Edit item details",
+    editPhoto: "Edit photo",
+    editLocation: "Edit location",
+    editProof: "Edit proof",
+    assetName: "Item name",
     assetNamePlaceholder: "e.g. GMT-Master II",
     identityTitle: "What are you preserving?",
     identityBody: "Give it a clear name and category. You can add more details later.",
-    category: "Asset category",
-    categoryChoices: "Asset category choices",
+    category: "Item category",
+    categoryChoices: "Item category choices",
     categoryFeatured: "Common choices",
     browseAllCategories: "Browse all categories",
     changeCategory: "Change category",
-    searchCategories: "Search asset categories",
+    searchCategories: "Search item categories",
     searchCategoriesPlaceholder: "Search categories",
     clearCategorySearch: "Clear category search",
     noCategoryResults: "No categories match this search.",
@@ -219,6 +234,8 @@ export const CAPTURE_COPY: Readonly<Record<LanguageCode, CaptureCopy>> = {
     addLocationLaterBody: "This Passport will keep a reminder so the item is not forgotten.",
     newPlace: "New place",
     addNewPlace: "Add a new place",
+    quickPlaceBody:
+      "Name this place and optionally confirm its pin. Add rooms and documents later.",
     placeDetails: "Place details",
     placeName: "Place name",
     placeNamePlaceholder: "e.g. West Bay Home",
@@ -312,6 +329,12 @@ export const CAPTURE_COPY: Readonly<Record<LanguageCode, CaptureCopy>> = {
     reviewLocation: "Location",
     reviewProof: "Proof",
     notAdded: "Not added",
+    placePinDebtTitle: "Confirm the Place pin",
+    placePinDebtBody:
+      "The retrieval detail is in this draft, but this Place still needs a confirmed precise pin before location readiness is complete.",
+    reviewPlacePin: "Review Place pin",
+    reviewPlacePinHint:
+      "Opens the Place pin editor. Your Quick Passport draft stays protected on this device.",
     reviewSaving: "Saving",
     savedDeviceFirst: "Saved on this device first",
     privateTitle: "Private by default",
@@ -350,6 +373,11 @@ export const CAPTURE_COPY: Readonly<Record<LanguageCode, CaptureCopy>> = {
     skip: "تخطي الآن",
     savePassport: "حفظ الجواز",
     saving: "جارٍ الحفظ",
+    edit: "تعديل",
+    editIdentity: "تعديل تفاصيل الغرض",
+    editPhoto: "تعديل الصورة",
+    editLocation: "تعديل الموقع",
+    editProof: "تعديل الإثبات",
     assetName: "اسم الغرض",
     assetNamePlaceholder: "مثال: ساعة GMT‑Master II",
     identityTitle: "ما الغرض الذي تريد حفظه؟",
@@ -408,6 +436,8 @@ export const CAPTURE_COPY: Readonly<Record<LanguageCode, CaptureCopy>> = {
     addLocationLaterBody: "سيحتفظ الجواز بتذكير حتى لا يُنسى الغرض.",
     newPlace: "مكان جديد",
     addNewPlace: "إضافة مكان جديد",
+    quickPlaceBody:
+      "سمِّ هذا المكان، وأكّد دبوسه اختياريًا. يمكنك إضافة الغرف والمستندات لاحقًا.",
     placeDetails: "تفاصيل المكان",
     placeName: "اسم المكان",
     placeNamePlaceholder: "مثال: منزل الخليج الغربي",
@@ -501,6 +531,12 @@ export const CAPTURE_COPY: Readonly<Record<LanguageCode, CaptureCopy>> = {
     reviewLocation: "الموقع",
     reviewProof: "الإثبات",
     notAdded: "غير مضاف",
+    placePinDebtTitle: "أكّد دبوس المكان",
+    placePinDebtBody:
+      "تم تسجيل دليل الوصول، لكن اكتمال الموقع يتطلب دبوسًا دقيقًا ومؤكدًا لهذا المكان.",
+    reviewPlacePin: "مراجعة دبوس المكان",
+    reviewPlacePinHint:
+      "يفتح محرر دبوس المكان. تبقى مسودة الجواز السريع محمية على هذا الجهاز.",
     reviewSaving: "الحفظ",
     savedDeviceFirst: "يُحفظ على هذا الجهاز أولًا",
     privateTitle: "خاص افتراضيًا",

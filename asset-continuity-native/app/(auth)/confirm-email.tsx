@@ -19,6 +19,10 @@ import {
 } from "@/i18n/coreJourneyCopy";
 import { colors, radius, spacing, typography } from "@/theme/tokens";
 
+export function isolateLtrEmail(value: string): string {
+  return `\u2066${value}\u2069`;
+}
+
 export default function ConfirmEmailScreen() {
   const router = useRouter();
   const {
@@ -45,6 +49,7 @@ export default function ConfirmEmailScreen() {
     }
     return <Redirect href={AUTH_ROUTES.createAccount} />;
   }
+  const maskedEmail = maskEmail(email);
 
   const continueAfterConfirmation = async () => {
     const session =
@@ -129,8 +134,14 @@ export default function ConfirmEmailScreen() {
                 ? copy.confirmEmail.testEmail
                 : copy.confirmEmail.deliveryAccepted}
             </Text>
-            <Text style={styles.destinationValue}>
-              {maskEmail(email)}
+            <Text
+              accessibilityLabel={maskedEmail}
+              style={[
+                styles.destinationValue,
+                rtl && styles.destinationValueRtl
+              ]}
+            >
+              {isolateLtrEmail(maskedEmail)}
             </Text>
           </View>
         </View>
@@ -190,14 +201,18 @@ const styles = StyleSheet.create({
   destinationLabel: {
     color: colors.textMuted,
     fontFamily: typography.bodyBold,
-    fontSize: 10,
-    letterSpacing: 1
+    fontSize: 12,
+    lineHeight: 17,
+    letterSpacing: 0.8
   },
   destinationValue: {
     color: colors.text,
     fontFamily: typography.bodyBold,
     fontSize: 16,
     writingDirection: "ltr"
+  },
+  destinationValueRtl: {
+    textAlign: "right"
   },
   arabicMedium: {
     fontFamily: typography.arabicMedium

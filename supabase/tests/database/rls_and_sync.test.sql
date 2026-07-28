@@ -141,7 +141,11 @@ select results_eq(
 
 select throws_ok(
   $$
-    select public.create_household('Unapproved second household')
+    select public.create_household(
+      'Unapproved second household',
+      '90000000-0000-4000-8000-000000000001',
+      '90000000-0000-4000-8000-000000000002'
+    )
   $$,
   'P0001',
   'PILOT_ENROLLMENT_REQUIRED',

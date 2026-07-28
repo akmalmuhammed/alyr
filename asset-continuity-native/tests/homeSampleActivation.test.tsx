@@ -104,6 +104,10 @@ describe("Today sample activation", () => {
     const screen = await render(<HomeScreen />);
 
     expect(screen.getByTestId("today-sample-activation")).toBeTruthy();
+    expect(screen.getAllByTestId("today-primary-action")).toHaveLength(1);
+    expect(
+      screen.getByTestId("today-secondary-command-action")
+    ).toBeTruthy();
     expect(
       screen.getByText(CORE_JOURNEY_COPY.en.today.sampleNextTitle)
     ).toBeTruthy();

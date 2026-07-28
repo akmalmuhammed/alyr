@@ -335,9 +335,9 @@ const styles = StyleSheet.create({
   },
   state: {
     color: colors.textMuted,
-    fontFamily: typography.bodyMedium,
-    fontSize: 11,
-    lineHeight: 16
+    fontFamily: typography.metadata,
+    fontSize: 12,
+    lineHeight: 17
   },
   disclosure: {
     minHeight: 44,

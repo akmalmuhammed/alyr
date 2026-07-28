@@ -5,7 +5,11 @@ import {
   waitFor
 } from "@testing-library/react-native";
 import type { PropsWithChildren } from "react";
+import { StyleSheet } from "react-native";
 
+import ConfirmEmailScreen, {
+  isolateLtrEmail
+} from "../app/(auth)/confirm-email";
 import ForgotPasswordScreen from "../app/(auth)/forgot-password";
 import ResetPasswordScreen from "../app/(auth)/reset-password";
 import SignInScreen from "../app/(auth)/sign-in";
@@ -200,6 +204,38 @@ describe("premium auth recovery lifecycle", () => {
     );
   });
 
+  it("right-aligns and directionally isolates the confirmation email in Arabic", async () => {
+    mockAuthState = {
+      ...baseAuthState(),
+      acceptPendingHouseholdInvite: jest.fn(),
+      confirmation: {
+        delivery: "none"
+      },
+      continuePreview: jest.fn(),
+      mode: "preview",
+      pendingHouseholdInvite: null
+    };
+    const maskedEmail = "ow•••@example.com";
+    const screen = await render(<ConfirmEmailScreen />, {
+      wrapper: arabicWrapper
+    });
+
+    const destination = screen.getByLabelText(maskedEmail);
+    const destinationStyle = StyleSheet.flatten(destination.props.style);
+    const labelStyle = StyleSheet.flatten(
+      screen.getByText(
+        CORE_JOURNEY_COPY.ar.confirmEmail.testEmail
+      ).props.style
+    );
+
+    expect(destination.props.children).toBe(
+      isolateLtrEmail(maskedEmail)
+    );
+    expect(destinationStyle.writingDirection).toBe("ltr");
+    expect(destinationStyle.textAlign).toBe("right");
+    expect(labelStyle.fontSize).toBe(12);
+  });
+
   it("completes a truthful preview reset without cloud-delivery language", async () => {
     mockAuthState = {
       ...baseAuthState(),
@@ -275,6 +311,64 @@ describe("premium auth recovery lifecycle", () => {
     ).toBeNull();
     expect(mockAuthState.updatePassword).not.toHaveBeenCalled();
   });
+
+  it.each([
+    ["en", undefined],
+    ["ar", arabicWrapper]
+  ] as const)(
+    "keeps an invalid or consumed recovery code fail-closed in %s",
+    async (language, wrapper) => {
+      mockParams = { code: "already-consumed-recovery-code" };
+      mockAuthState = {
+        ...baseAuthState(),
+        error: {
+          code: "invalid_request",
+          message: "provider detail",
+          retryable: false
+        },
+        exchangePasswordRecoveryCode: jest.fn(async () => null),
+        session: {
+          identity: {
+            id: "account-owner",
+            email: "owner@example.com",
+            emailVerified: true
+          },
+          assurance: "verified-email",
+          expiresAt: null,
+          onboarding: "complete",
+          activeHouseholdId: "household-a"
+        }
+      };
+
+      const screen = await render(
+        <ResetPasswordScreen />,
+        wrapper ? { wrapper } : undefined
+      );
+
+      await waitFor(() => {
+        expect(
+          mockAuthState.exchangePasswordRecoveryCode
+        ).toHaveBeenCalledWith("already-consumed-recovery-code");
+        expect(
+          screen.getByTestId("auth-reset-password-incomplete")
+        ).toBeTruthy();
+      });
+      expect(
+        screen.queryByLabelText(
+          CORE_JOURNEY_COPY[language].resetPassword.password
+        )
+      ).toBeNull();
+      expect(mockAuthState.updatePassword).not.toHaveBeenCalled();
+      expect(
+        screen.getByText(
+          CORE_JOURNEY_COPY[language].resetPassword.incomplete
+        )
+      ).toBeTruthy();
+      expect(
+        screen.getByRole("alert").props.children
+      ).toBe(CORE_JOURNEY_COPY[language].authErrors.invalid_request);
+    }
+  );
 
   it("enables the signed form only when a provider recovery grant exists", async () => {
     mockAuthState = {

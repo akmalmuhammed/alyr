@@ -8,6 +8,7 @@ import AuthLayout from "../app/(auth)/_layout";
 import AuthWelcomeScreen from "../app/(auth)/index";
 import {
   authenticatedAuthEntryDestination,
+  hasPasswordRecoveryCodeParameter,
   publicAuthEntryRouteFromSegments
 } from "@/auth/routes";
 import type { AuthSessionDescriptor } from "@/auth/types";
@@ -20,6 +21,7 @@ const mockRouter = {
   replace: jest.fn()
 };
 let mockSegments: string[] = ["(auth)"];
+let mockParams: Record<string, string | string[] | undefined> = {};
 let mockAuthState: Record<string, unknown>;
 let mockWorkspaceState: Record<string, unknown>;
 let mockAuthStackOptions: Record<string, unknown> | null = null;
@@ -51,6 +53,7 @@ jest.mock("expo-router", () => {
         href
       ),
     Stack,
+    useLocalSearchParams: () => mockParams,
     useRouter: () => mockRouter,
     useSegments: () => mockSegments
   };
@@ -126,6 +129,7 @@ describe("authenticated auth-route hardening", () => {
   beforeEach(() => {
     jest.clearAllMocks();
     mockSegments = ["(auth)"];
+    mockParams = {};
     mockAuthStackOptions = null;
     mockReduceMotion = false;
     mockRtl = false;
@@ -206,6 +210,17 @@ describe("authenticated auth-route hardening", () => {
     await preview.unmount();
   });
 
+  it("mounts a verified account's reset deep link before its recovery code is exchanged", async () => {
+    mockSegments = ["(auth)", "reset-password"];
+    mockParams = { code: "recovery-pkce-code" };
+
+    const screen = await render(<AuthLayout />);
+
+    expect(screen.getByTestId("auth-stack")).toBeTruthy();
+    expect(screen.queryByTestId("auth-redirect")).toBeNull();
+    await screen.unmount();
+  });
+
   it("removes auth motion when the device requests it", async () => {
     mockAuthState = authState({ session: null });
     mockRtl = true;
@@ -248,6 +263,7 @@ describe("authenticated auth-route hardening", () => {
       authenticatedAuthEntryDestination({
         bootstrapState: "ready",
         mode: "supabase",
+        passwordRecoveryCodePresent: false,
         passwordRecoverySessionActive: false,
         route: "forgotPassword",
         session: {
@@ -256,6 +272,33 @@ describe("authenticated auth-route hardening", () => {
         }
       })
     ).toBe("/(auth)/household");
+  });
+
+  it("admits only a non-empty first reset-code value and keeps normal auth guards active", async () => {
+    expect(hasPasswordRecoveryCodeParameter(undefined)).toBe(false);
+    expect(hasPasswordRecoveryCodeParameter("   ")).toBe(false);
+    expect(
+      hasPasswordRecoveryCodeParameter(["", "recovery-pkce-code"])
+    ).toBe(false);
+    expect(
+      hasPasswordRecoveryCodeParameter(["recovery-pkce-code", "ignored"])
+    ).toBe(true);
+
+    mockSegments = ["(auth)", "reset-password"];
+    mockParams = { code: "   " };
+    const blankReset = await render(<AuthLayout />);
+    expect(
+      blankReset.getByTestId("auth-redirect").props.children
+    ).toBe("/");
+    await blankReset.unmount();
+
+    mockSegments = ["(auth)", "sign-in"];
+    mockParams = { code: "recovery-pkce-code" };
+    const unrelatedRoute = await render(<AuthLayout />);
+    expect(
+      unrelatedRoute.getByTestId("auth-redirect").props.children
+    ).toBe("/");
+    await unrelatedRoute.unmount();
   });
 
   it("never clears a live cloud session from Welcome navigation", async () => {

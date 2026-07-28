@@ -74,7 +74,9 @@ describe("localized startup status", () => {
         arabicError: null,
         arabicLoaded: false,
         instrumentError: null,
-        instrumentLoaded: false
+        instrumentLoaded: false,
+        monoError: null,
+        monoLoaded: false
       })
     ).toBe("loading");
     expect(
@@ -82,7 +84,9 @@ describe("localized startup status", () => {
         arabicError: null,
         arabicLoaded: true,
         instrumentError: null,
-        instrumentLoaded: true
+        instrumentLoaded: true,
+        monoError: null,
+        monoLoaded: true
       })
     ).toBe("ready");
     expect(
@@ -90,7 +94,19 @@ describe("localized startup status", () => {
         arabicError: new Error("font failed"),
         arabicLoaded: false,
         instrumentError: null,
-        instrumentLoaded: true
+        instrumentLoaded: true,
+        monoError: null,
+        monoLoaded: true
+      })
+    ).toBe("fallback");
+    expect(
+      resolveFontStartupState({
+        arabicError: null,
+        arabicLoaded: true,
+        instrumentError: null,
+        instrumentLoaded: true,
+        monoError: new Error("metadata font failed"),
+        monoLoaded: false
       })
     ).toBe("fallback");
   });

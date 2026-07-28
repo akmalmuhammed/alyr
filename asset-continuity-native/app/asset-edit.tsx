@@ -6,6 +6,8 @@ import {
   useRouter
 } from "expo-router";
 import {
+  ArrowLeft,
+  ArrowRight,
   Camera,
   Check,
   File,
@@ -57,6 +59,7 @@ import {
   type NativeAsset,
   type NativePlace
 } from "@/domain/model";
+import { hasConfirmedPreciseNativePlacePin } from "@/domain/readiness";
 import {
   getAssetEditCopy,
   type AssetEditCopy
@@ -486,6 +489,13 @@ function AssetEditForm({
               setPlaceId(nextPlaceId);
               setRoomId(null);
             }}
+            onReviewPlacePin={(selectedPlaceId) =>
+              router.push(
+                `/place-pin?placeId=${encodeURIComponent(
+                  selectedPlaceId
+                )}`
+              )
+            }
             onRoomChange={setRoomId}
             onStatusChange={(status) => {
               setLocationStatus(status);
@@ -796,6 +806,7 @@ function LocationEditor({
   onAddPlace,
   onStatusChange,
   onPlaceChange,
+  onReviewPlacePin,
   onRoomChange,
   onLocatorChange
 }: {
@@ -807,6 +818,7 @@ function LocationEditor({
   readonly onAddPlace: () => void;
   readonly onStatusChange: (status: LocationStatus) => void;
   readonly onPlaceChange: (placeId: string) => void;
+  readonly onReviewPlacePin: (placeId: string) => void;
   readonly onRoomChange: (roomId: string | null) => void;
   readonly onLocatorChange: (value: string) => void;
 }) {
@@ -815,6 +827,10 @@ function LocationEditor({
   const captureCopy = getCaptureCopy(language);
   const { workspace } = useWorkspace();
   if (!workspace) return null;
+  const placePinDebt =
+    Boolean(selectedPlace) &&
+    !hasConfirmedPreciseNativePlacePin(selectedPlace);
+  const ForwardIcon = rtl ? ArrowLeft : ArrowRight;
   const validationError =
     locationStatus === "known" &&
     (!placeId || !(roomId || locatorText.trim()))
@@ -954,6 +970,73 @@ function LocationEditor({
                 placeholder={copy.retrievalCluePlaceholder}
                 value={locatorText}
               />
+              {placePinDebt ? (
+                <View
+                  style={styles.placePinDebt}
+                  testID="asset-edit-place-pin-debt"
+                >
+                  <View
+                    accessibilityLiveRegion="polite"
+                    accessibilityRole="alert"
+                    style={styles.placePinDebtMessage}
+                    testID="asset-edit-place-pin-alert"
+                  >
+                    <View
+                      style={[
+                        styles.placePinDebtHeading,
+                        rtl && styles.rowReverse
+                      ]}
+                    >
+                      <Warning
+                        color={colors.warning}
+                        size={21}
+                        weight="regular"
+                      />
+                      <Text
+                        style={[
+                          styles.placePinDebtTitle,
+                          rtl && styles.arabicMedium,
+                          rtl && styles.textRight
+                        ]}
+                      >
+                        {copy.placePinDebtTitle}
+                      </Text>
+                    </View>
+                    <Text
+                      style={[
+                        styles.placePinDebtBody,
+                        rtl && styles.arabic,
+                        rtl && styles.textRight
+                      ]}
+                    >
+                      {copy.placePinDebtBody}
+                    </Text>
+                  </View>
+                  <Pressable
+                    accessibilityHint={copy.reviewPlacePinHint}
+                    accessibilityLabel={copy.reviewPlacePin}
+                    accessibilityRole="button"
+                    onPress={() => onReviewPlacePin(selectedPlace.id)}
+                    style={({ pressed }) => [
+                      styles.placePinDebtAction,
+                      rtl && styles.rowReverse,
+                      pressed && styles.pressed
+                    ]}
+                    testID="asset-edit-place-pin-action"
+                  >
+                    <Text
+                      style={[
+                        styles.placePinDebtActionText,
+                        rtl && styles.arabicMedium,
+                        rtl && styles.textRight
+                      ]}
+                    >
+                      {copy.reviewPlacePin}
+                    </Text>
+                    <ForwardIcon color={colors.text} size={18} />
+                  </Pressable>
+                </View>
+              ) : null}
               <View style={[styles.truthNote, rtl && styles.rowReverse]}>
                 <MapPin color={colors.textMuted} size={18} />
                 <Text
@@ -1247,6 +1330,52 @@ const styles = StyleSheet.create({
     fontFamily: typography.body,
     fontSize: 12,
     lineHeight: 18
+  },
+  placePinDebt: {
+    alignItems: "stretch",
+    gap: spacing.xs,
+    padding: spacing.sm,
+    borderWidth: 1,
+    borderColor: colors.warning,
+    borderRadius: radius.md,
+    backgroundColor: colors.warningQuiet
+  },
+  placePinDebtMessage: {
+    gap: spacing.xs
+  },
+  placePinDebtHeading: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: spacing.xs
+  },
+  placePinDebtTitle: {
+    flex: 1,
+    color: colors.text,
+    fontFamily: typography.bodyBold,
+    fontSize: 15,
+    lineHeight: 21
+  },
+  placePinDebtBody: {
+    color: colors.textMuted,
+    fontFamily: typography.body,
+    fontSize: 13,
+    lineHeight: 19
+  },
+  placePinDebtAction: {
+    minHeight: 44,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    gap: spacing.sm,
+    paddingVertical: spacing.xs
+  },
+  placePinDebtActionText: {
+    flex: 1,
+    color: colors.text,
+    fontFamily: typography.bodyMedium,
+    fontSize: 14,
+    lineHeight: 20,
+    textDecorationLine: "underline"
   },
   validationText: {
     color: colors.danger,

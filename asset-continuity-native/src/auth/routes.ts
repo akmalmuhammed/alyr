@@ -60,16 +60,36 @@ export function publicAuthEntryRouteFromSegments(
 }
 
 /**
+ * A reset-link code is only an admission ticket to the recovery exchange
+ * screen. It is not a recovery capability: the signed reset form remains
+ * locked until the provider emits a matching one-use recovery grant.
+ *
+ * Expo Router may represent a repeated query key as an array. The reset
+ * screen consumes the first value, so the route guard must make the same
+ * decision and must not admit an empty first value.
+ */
+export function hasPasswordRecoveryCodeParameter(
+  value: string | readonly string[] | undefined
+): boolean {
+  const code = typeof value === "string" ? value : value?.[0];
+  return Boolean(code?.trim());
+}
+
+/**
  * A restored verified account never re-enters public authentication forms.
  * Incomplete accounts resume household setup; complete accounts pass through
  * `/` so the encrypted workspace and device-unlock boundaries run normally.
  *
- * The reset screen is available only while the provider-backed, in-process
- * recovery capability exists. Preview sessions retain their existing flow.
+ * A reset deep link may mount long enough to exchange its one-use code even
+ * when an ordinary verified session was restored. This exception grants no
+ * password-update authority by itself; the reset screen requires the separate
+ * provider-backed, in-process recovery capability before exposing its form.
+ * Preview sessions retain their existing flow.
  */
 export function authenticatedAuthEntryDestination(input: {
   readonly bootstrapState: AuthBootstrapState;
   readonly mode: AuthGatewayMode;
+  readonly passwordRecoveryCodePresent: boolean;
   readonly passwordRecoverySessionActive: boolean;
   readonly route: PublicAuthEntryRoute | null;
   readonly session: AuthSessionDescriptor | null;
@@ -87,7 +107,8 @@ export function authenticatedAuthEntryDestination(input: {
   }
   if (
     input.route === "resetPassword" &&
-    input.passwordRecoverySessionActive
+    (input.passwordRecoveryCodePresent ||
+      input.passwordRecoverySessionActive)
   ) {
     return null;
   }

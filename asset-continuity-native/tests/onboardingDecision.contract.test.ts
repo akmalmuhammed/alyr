@@ -136,7 +136,7 @@ describe("first-viewport onboarding decisions", () => {
       authProvider.indexOf("if (session.activeHouseholdId)")
     ).toBeLessThan(
       authProvider.indexOf(
-        "const result = await access.createHousehold(name)"
+        "const result = await access.createHousehold({"
       )
     );
     expect(householdScreen).toContain(

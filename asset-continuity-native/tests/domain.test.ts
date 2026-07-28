@@ -1,4 +1,8 @@
-import { calculateNativeAssetReadiness, workspaceProgress } from "@/domain/readiness";
+import {
+  calculateNativeAssetReadiness,
+  nativeAssetLocationNeedsConfirmedPin,
+  workspaceProgress
+} from "@/domain/readiness";
 import { createWorkspace } from "@/domain/sample";
 import {
   addAsset,
@@ -91,10 +95,90 @@ describe("native Quick Passport domain", () => {
       assetResult.workspace.places,
       assetResult.workspace.evidence
     );
-    expect(readiness.percent).toBe(100);
+    expect(readiness.percent).toBe(70);
+    expect(readiness.nextItem?.id).toBe("location");
     expect(assetResult.workspace.evidence[0]?.reviewStatus).toBe("pending");
     expect(assetResult.asset.syncStatus).toBe("on-device");
   });
+
+  it.each([
+    {
+      name: "confirmed exact GPS pin",
+      precision: "exact" as const,
+      locationSource: "device_gps" as const,
+      confirmedAt: "2026-07-25T10:00:00.000Z",
+      expectedComplete: true
+    },
+    {
+      name: "unconfirmed exact GPS pin",
+      precision: "exact" as const,
+      locationSource: "device_gps" as const,
+      confirmedAt: null,
+      expectedComplete: false
+    },
+    {
+      name: "confirmed manually placed pin",
+      precision: "user_placed" as const,
+      locationSource: "manual_coordinates" as const,
+      confirmedAt: "2026-07-25T10:00:00.000Z",
+      expectedComplete: true
+    },
+    {
+      name: "unconfirmed manually placed pin",
+      precision: "user_placed" as const,
+      locationSource: "manual_coordinates" as const,
+      confirmedAt: null,
+      expectedComplete: false
+    },
+    {
+      name: "confirmed approximate GPS pin",
+      precision: "approximate" as const,
+      locationSource: "device_gps" as const,
+      confirmedAt: "2026-07-25T10:00:00.000Z",
+      expectedComplete: false
+    }
+  ])(
+    "matches shared precise-pin readiness for a $name",
+    ({
+      precision,
+      locationSource,
+      confirmedAt,
+      expectedComplete
+    }) => {
+      const sample = createWorkspace("sample");
+      const target = sample.assets.find(
+        (item) => item.id === "asset-gmt"
+      )!;
+      const place = sample.places.find(
+        (item) => item.id === target.placeId
+      )!;
+      const updatedPlace = {
+        ...place,
+        precision,
+        locationSource,
+        horizontalAccuracyMeters:
+          locationSource === "device_gps" ? 6.8 : null,
+        confirmedAt
+      };
+      const readiness = calculateNativeAssetReadiness(
+        target,
+        [updatedPlace],
+        sample.evidence
+      );
+      const location = readiness.items.find(
+        (item) => item.id === "location"
+      );
+
+      expect(location?.complete).toBe(expectedComplete);
+      expect(readiness.percent).toBe(expectedComplete ? 100 : 70);
+      expect(readiness.nextItem?.id ?? null).toBe(
+        expectedComplete ? null : "location"
+      );
+      expect(
+        nativeAssetLocationNeedsConfirmedPin(target, updatedPlace)
+      ).toBe(!expectedComplete);
+    }
+  );
 
   it("updates a property pin with provenance and a monotonic record version", () => {
     const initial = createWorkspace("sample");

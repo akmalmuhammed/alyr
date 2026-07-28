@@ -1,7 +1,8 @@
 import type {
   LanguageCode,
   NativeAsset,
-  NativePlace
+  NativePlace,
+  NativePlaceDocument
 } from "@/domain/model";
 import { localizedCategoryLabel } from "@/i18n/captureCopy";
 
@@ -13,6 +14,12 @@ export type AssetFilter =
   | "value"
   | "review"
   | "archived";
+export type PlaceFilter =
+  | "all"
+  | "pin-review"
+  | "no-pin"
+  | "missing-address"
+  | "missing-documents";
 export type ItemSort = "recent" | "name" | "oldest";
 export type ItemGroup = "none" | "place" | "category";
 export type PlaceSort = "recent" | "name" | "item-count";
@@ -38,6 +45,17 @@ export function initialAssetFilter(
     value === "value" ||
     value === "review" ||
     value === "archived"
+    ? value
+    : "all";
+}
+
+export function initialPlaceFilter(
+  value: string | undefined
+): PlaceFilter {
+  return value === "pin-review" ||
+    value === "no-pin" ||
+    value === "missing-address" ||
+    value === "missing-documents"
     ? value
     : "all";
 }
@@ -71,6 +89,51 @@ export function initialPlaceGroup(
 function timestamp(value: string): number {
   const parsed = Date.parse(value);
   return Number.isFinite(parsed) ? parsed : 0;
+}
+
+export function placeHasPin(place: NativePlace): boolean {
+  return (
+    place.latitude !== null &&
+    place.longitude !== null &&
+    Number.isFinite(place.latitude) &&
+    Number.isFinite(place.longitude) &&
+    place.latitude >= -90 &&
+    place.latitude <= 90 &&
+    place.longitude >= -180 &&
+    place.longitude <= 180
+  );
+}
+
+export function placeNeedsPinReview(place: NativePlace): boolean {
+  return (
+    placeHasPin(place) &&
+    (!place.observedAt ||
+      !place.confirmedAt ||
+      (place.precision !== "exact" &&
+        place.precision !== "user_placed"))
+  );
+}
+
+export function filterRegisterPlaces(
+  places: readonly NativePlace[],
+  filter: PlaceFilter,
+  placeDocuments: readonly NativePlaceDocument[]
+): readonly NativePlace[] {
+  if (filter === "all") return places;
+
+  const documentedPlaceIds =
+    filter === "missing-documents"
+      ? new Set(placeDocuments.map((document) => document.placeId))
+      : null;
+
+  return places.filter((place) => {
+    if (filter === "pin-review") return placeNeedsPinReview(place);
+    if (filter === "no-pin") return !placeHasPin(place);
+    if (filter === "missing-address") {
+      return !place.addressSummary?.trim();
+    }
+    return !documentedPlaceIds?.has(place.id);
+  });
 }
 
 function collator(language: LanguageCode): Intl.Collator {

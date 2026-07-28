@@ -8,6 +8,8 @@ import {
   ArrowCounterClockwise,
   ArrowLeft,
   ArrowRight,
+  CaretDown,
+  CaretUp,
   Check,
   CheckCircle,
   CurrencyCircleDollar,
@@ -49,7 +51,11 @@ import {
   type LanguageCode,
   type NativeAsset
 } from "@/domain/model";
-import { calculateNativeAssetReadiness } from "@/domain/readiness";
+import {
+  calculateNativeAssetReadiness,
+  nativeAssetLocationNeedsConfirmedPin,
+  placePinFromNativePlace
+} from "@/domain/readiness";
 import {
   selectCurrentPortfolioValues
 } from "@/domain/portfolio";
@@ -60,6 +66,7 @@ import {
   localizedWorkspaceError,
   useCoreJourneyCopy
 } from "@/i18n/coreJourneyCopy";
+import { localizedAtlasPinDisclosure } from "@/i18n/secondarySurfaceCopy";
 import { usePortfolioPrivacy } from "@/privacy/PortfolioPrivacyProvider";
 import { formatRecordedValue } from "@/privacy/ValueVisibility";
 import { useWorkspace } from "@/state/WorkspaceProvider";
@@ -82,12 +89,15 @@ export const ASSET_PASSPORT_COPY = {
     savedTitle: "Passport saved",
     savedMeta:
       "Your first record is protected and ready. Choose what feels useful next.",
-    addRecordedValue: "Add a recorded value",
-    addRecordedValueHint: "Opens the value form for this Passport",
+    addRecordedValue: "Add value to portfolio",
+    addRecordedValueHint:
+      "Records a dated value, then opens your Today portfolio",
     addAnotherItem: "Add another item",
     addAnotherItemHint: "Starts a new Quick Passport",
     todayHint: "Returns to the Today overview",
-    goToToday: "Go to Today",
+    goToToday: "View Today",
+    viewPassport: "View full Passport",
+    viewPassportHint: "Opens all Passport details and completion actions",
     primaryPhoto: (name: string) => `Primary photo of ${name}`,
     openingPhoto: "Opening protected photo…",
     photoOpenError: "The protected photo could not be opened.",
@@ -128,6 +138,11 @@ export const ASSET_PASSPORT_COPY = {
     },
     missingHint: (action: string) =>
       `Opens a focused editor for ${action.toLowerCase()}`,
+    confirmPlacePin: "Confirm the Place pin",
+    confirmPlacePinMeta:
+      "Review the visible coordinate and confirm it, or replace it with a precise pin.",
+    confirmPlacePinHint:
+      "Opens the precise Place-pin editor. Returning here will show the updated location readiness.",
     valueTitle: "Recorded asset value",
     valueEditHint:
       "Opens the value editor and keeps earlier entries in history.",
@@ -142,6 +157,10 @@ export const ASSET_PASSPORT_COPY = {
       "A dated amount you add yourself. ALYR does not estimate or convert it.",
     restoreBeforeValue: " Restore the Passport before changing it.",
     manageTitle: "Manage Passport",
+    editDetails: "Edit details",
+    hideEditDetails: "Hide edit options",
+    editDetailsHint:
+      "Shows controls for identity, photo, location and proof",
     updateIdentity: "Update identity",
     replacePhoto: "Replace primary photo",
     updateLocation: "Update retrieval location",
@@ -186,12 +205,15 @@ export const ASSET_PASSPORT_COPY = {
     savedTitle: "تم حفظ الجواز",
     savedMeta:
       "أصبح سجلك الأول محميًا وجاهزًا. اختر الخطوة التالية المناسبة لك.",
-    addRecordedValue: "إضافة قيمة مسجّلة",
-    addRecordedValueHint: "يفتح نموذج القيمة لهذا الجواز",
+    addRecordedValue: "إضافة قيمة إلى المحفظة",
+    addRecordedValueHint:
+      "يسجّل قيمة مؤرخة ثم يفتح محفظة «اليوم»",
     addAnotherItem: "إضافة غرض آخر",
     addAnotherItemHint: "يبدأ جوازًا سريعًا جديدًا",
     todayHint: "يعود إلى نظرة «اليوم» العامة",
-    goToToday: "الانتقال إلى اليوم",
+    goToToday: "عرض اليوم",
+    viewPassport: "عرض الجواز الكامل",
+    viewPassportHint: "يفتح كل تفاصيل الجواز وخطوات استكماله",
     primaryPhoto: (name: string) => `الصورة الرئيسية للغرض ${name}`,
     openingPhoto: "جارٍ فتح الصورة المحمية…",
     photoOpenError: "تعذّر فتح الصورة المحمية.",
@@ -229,6 +251,11 @@ export const ASSET_PASSPORT_COPY = {
       identity: "أضف بيانات الهوية الناقصة."
     },
     missingHint: (action: string) => `يفتح محررًا مخصصًا لإجراء «${action}»`,
+    confirmPlacePin: "تأكيد دبوس المكان",
+    confirmPlacePinMeta:
+      "راجع الإحداثي الظاهر وأكّده، أو استبدله بدبوس دقيق.",
+    confirmPlacePinHint:
+      "يفتح محرر دبوس المكان الدقيق. سيظهر اكتمال الموقع المحدّث عند العودة إلى هنا.",
     valueTitle: "القيمة المسجّلة للغرض",
     valueEditHint: "يفتح محرر القيمة مع الاحتفاظ بالمدخلات السابقة في السجل.",
     valueAddHint: "يفتح نموذج تسجيل قيمة الغرض.",
@@ -242,6 +269,10 @@ export const ASSET_PASSPORT_COPY = {
       "مبلغ مؤرّخ تضيفه بنفسك. لا تقدّر ALYR القيمة ولا تحوّل العملات.",
     restoreBeforeValue: " استعد جواز الغرض قبل تعديلها.",
     manageTitle: "إدارة جواز الغرض",
+    editDetails: "تعديل التفاصيل",
+    hideEditDetails: "إخفاء خيارات التعديل",
+    editDetailsHint:
+      "يعرض أدوات تعديل الهوية والصورة والموقع والإثبات",
     updateIdentity: "تحديث الهوية",
     replacePhoto: "استبدال الصورة الرئيسية",
     updateLocation: "تحديث موقع الاسترجاع",
@@ -360,6 +391,7 @@ export default function AssetPassportScreen() {
     workspace
   } = useWorkspace();
   const [screenActive, setScreenActive] = useState(false);
+  const [manageOpen, setManageOpen] = useState(false);
   const asset = workspace?.assets.find((item) => item.id === id);
   const photoEvidence =
     workspace?.evidence.find((item) => item.id === asset?.photoEvidenceId) ??
@@ -422,6 +454,9 @@ export default function AssetPassportScreen() {
     asset.evidenceIds.includes(item.id)
   );
   const place = workspace.places.find((item) => item.id === asset.placeId);
+  const placePin = placePinFromNativePlace(place);
+  const locationNeedsConfirmedPin =
+    nativeAssetLocationNeedsConfirmedPin(asset, place);
   const room = place?.rooms.find((item) => item.id === asset.roomId);
   const path = asset.categoryId.startsWith("digital")
     ? copy.noPhysicalLocation
@@ -434,22 +469,9 @@ export default function AssetPassportScreen() {
           .join(language === "ar" ? " ‹ " : " › ")
       : copy.locationNotRecorded;
   const provenance =
-    place?.locationSource === "device_gps" &&
-    place.horizontalAccuracyMeters !== null
-      ? copy.deviceGps(
-          isolateAssetPassportIdentifier(
-            formatLocalizedNumber(
-              Math.round(place.horizontalAccuracyMeters),
-              language
-            ),
-            language
-          )
-        )
-      : place?.locationSource === "user_pin"
-        ? copy.pinAdjusted
-        : place?.latitude !== null && place?.latitude !== undefined
-          ? copy.noMeasuredAccuracy
-          : copy.noPropertyPin;
+    place && placePin
+      ? localizedAtlasPinDisclosure(place, language)
+      : copy.noPropertyPin;
   const recordedValue =
     selectCurrentPortfolioValues(
       [asset],
@@ -467,7 +489,7 @@ export default function AssetPassportScreen() {
   const archived = assetLifecycleStatus(asset) === "archived";
   const canWriteAsset = can("asset.write");
   const isJustCreated = justCreated === "1";
-  const firstMissing = archived ? null : (missing[0] ?? null);
+  const showManageRows = missing.length === 0 || manageOpen;
 
   const confirmLifecycleChange = () => {
     if (archived) {
@@ -563,53 +585,70 @@ export default function AssetPassportScreen() {
           </Text>
         </View>
       ) : (
-        missing.map((item, index) => (
-          <Pressable
-            accessibilityHint={copy.missingHint(
-              missingAction(item.id, language)
-            )}
-            accessibilityRole="button"
-            accessibilityState={{ disabled: !canWriteAsset }}
-            disabled={!canWriteAsset}
-            key={item.id}
-            onPress={() => router.push(editHref(asset.id, item.id))}
-            style={({ pressed }) => [
-              styles.gapRow,
-              rtl && styles.rowReverse,
-              pressed && styles.pressed
-            ]}
-            testID={
-              index === 0
-                ? "asset-passport-next-action"
-                : `asset-passport-readiness-action-${item.id}`
-            }
-          >
-            <View style={styles.gapMarker} />
-            <View style={styles.gapCopy}>
-              <Text
-                style={[
-                  styles.gapTitle,
-                  rtl && styles.arabicMedium,
-                  rtl && styles.rtlText
-                ]}
-              >
-                {missingAction(item.id, language)}
-              </Text>
-              <Text
-                style={[
-                  styles.gapMeta,
-                  rtl && styles.arabic,
-                  rtl && styles.rtlText
-                ]}
-              >
-                {missingMeta(item.id, language)}
-              </Text>
-            </View>
-            {canWriteAsset ? (
-              <ForwardIcon color={colors.textMuted} size={20} />
-            ) : null}
-          </Pressable>
-        ))
+        missing.map((item, index) => {
+          const pinDebt =
+            item.id === "location" && locationNeedsConfirmedPin && place;
+          const action = pinDebt
+            ? copy.confirmPlacePin
+            : missingAction(item.id, language);
+          const meta = pinDebt
+            ? copy.confirmPlacePinMeta
+            : missingMeta(item.id, language);
+          const href = pinDebt
+            ? `/place-pin?placeId=${encodeURIComponent(place.id)}`
+            : editHref(asset.id, item.id);
+
+          return (
+            <Pressable
+              accessibilityHint={
+                pinDebt
+                  ? copy.confirmPlacePinHint
+                  : copy.missingHint(action)
+              }
+              accessibilityLabel={`${action}. ${meta}`}
+              accessibilityRole="button"
+              accessibilityState={{ disabled: !canWriteAsset }}
+              disabled={!canWriteAsset}
+              key={item.id}
+              onPress={() => router.push(href)}
+              style={({ pressed }) => [
+                styles.gapRow,
+                rtl && styles.rowReverse,
+                pressed && styles.pressed
+              ]}
+              testID={
+                index === 0
+                  ? "asset-passport-next-action"
+                  : `asset-passport-readiness-action-${item.id}`
+              }
+            >
+              <View style={styles.gapMarker} />
+              <View style={styles.gapCopy}>
+                <Text
+                  style={[
+                    styles.gapTitle,
+                    rtl && styles.arabicMedium,
+                    rtl && styles.rtlText
+                  ]}
+                >
+                  {action}
+                </Text>
+                <Text
+                  style={[
+                    styles.gapMeta,
+                    rtl && styles.arabic,
+                    rtl && styles.rtlText
+                  ]}
+                >
+                  {meta}
+                </Text>
+              </View>
+              {canWriteAsset ? (
+                <ForwardIcon color={colors.textMuted} size={20} />
+              ) : null}
+            </Pressable>
+          );
+        })
       )}
     </Section>
   );
@@ -755,51 +794,30 @@ export default function AssetPassportScreen() {
             </View>
           </View>
           <View style={styles.savedPassportActions}>
-            {canWriteAsset ? (
-              <View testID="asset-passport-primary-action">
-                <PrimaryButton
-                  accessibilityHint={
-                    firstMissing
-                      ? copy.missingHint(
-                          missingAction(firstMissing.id, language)
-                        )
-                      : copy.addRecordedValueHint
-                  }
-                  icon={
-                    firstMissing ? ForwardIcon : CurrencyCircleDollar
-                  }
-                  label={
-                    firstMissing
-                      ? missingAction(firstMissing.id, language)
-                      : copy.addRecordedValue
-                  }
-                  onPress={() =>
-                    firstMissing
-                      ? router.push(editHref(asset.id, firstMissing.id))
-                      : router.push(
-                          `/asset-value?assetId=${encodeURIComponent(
-                            asset.id
-                          )}&returnTo=dashboard`
-                        )
-                  }
-                />
-              </View>
-            ) : null}
-            {canWriteAsset && firstMissing ? (
-              <View testID="asset-passport-first-value-action">
-                <SecondaryButton
-                  icon={CurrencyCircleDollar}
-                  label={copy.addRecordedValue}
-                  onPress={() =>
-                    router.push(
-                      `/asset-value?assetId=${encodeURIComponent(
-                        asset.id
-                      )}&returnTo=dashboard`
-                    )
-                  }
-                />
-              </View>
-            ) : null}
+            <View testID="asset-passport-primary-action">
+              <PrimaryButton
+                accessibilityHint={
+                  recordedValue
+                    ? copy.todayHint
+                    : copy.addRecordedValueHint
+                }
+                icon={
+                  recordedValue ? ForwardIcon : CurrencyCircleDollar
+                }
+                label={
+                  recordedValue ? copy.goToToday : copy.addRecordedValue
+                }
+                onPress={() =>
+                  recordedValue
+                    ? router.replace("/(tabs)")
+                    : router.push(
+                        `/asset-value?assetId=${encodeURIComponent(
+                          asset.id
+                        )}&returnTo=dashboard`
+                      )
+                }
+              />
+            </View>
             {canWriteAsset ? (
               <View testID="asset-passport-add-another-action">
                 <SecondaryButton
@@ -810,14 +828,14 @@ export default function AssetPassportScreen() {
               </View>
             ) : null}
             <Pressable
-              accessibilityHint={copy.todayHint}
+              accessibilityHint={copy.viewPassportHint}
               accessibilityRole="button"
-              onPress={() => router.replace("/(tabs)")}
+              onPress={() => router.replace(`/asset/${asset.id}`)}
               style={({ pressed }) => [
                 styles.savedPassportAction,
                 pressed && styles.pressed
               ]}
-              testID="asset-passport-today-action"
+              testID="asset-passport-view-action"
             >
               <Text
                 style={[
@@ -826,7 +844,7 @@ export default function AssetPassportScreen() {
                   rtl && styles.rtlText
                 ]}
               >
-                {copy.goToToday}
+                {copy.viewPassport}
               </Text>
             </Pressable>
           </View>
@@ -841,15 +859,17 @@ export default function AssetPassportScreen() {
         />
       ) : null}
 
-      {!canWriteAsset ? (
-        <PermissionNotice
-          capability="asset.write"
-          testID="asset-view-only-notice"
-        />
-      ) : null}
-      {!isJustCreated ? readinessSection : null}
+      {!isJustCreated ? (
+        <>
+          {!canWriteAsset ? (
+            <PermissionNotice
+              capability="asset.write"
+              testID="asset-view-only-notice"
+            />
+          ) : null}
+          {readinessSection}
 
-      <CommandSurface>
+          <CommandSurface>
         <View style={[styles.commandHeading, rtl && styles.rowReverse]}>
           <MapPin color={colors.volt} size={24} weight="regular" />
           <Text
@@ -992,7 +1012,7 @@ export default function AssetPassportScreen() {
         </Text>
       </Section>
 
-      {!archived && missing.length === 0 && canWriteAsset ? (
+      {!archived && canWriteAsset ? (
         <Section>
           <Text
             style={[
@@ -1003,32 +1023,73 @@ export default function AssetPassportScreen() {
           >
             {copy.manageTitle}
           </Text>
-          <ManageRow
-            label={copy.updateIdentity}
-            language={language}
-            onPress={() => router.push(editHref(asset.id, "identity"))}
-            rtl={rtl}
-          />
-          <ManageRow
-            label={copy.replacePhoto}
-            language={language}
-            onPress={() => router.push(editHref(asset.id, "photo"))}
-            rtl={rtl}
-          />
-          {!asset.categoryId.startsWith("digital") ? (
-            <ManageRow
-              label={copy.updateLocation}
-              language={language}
-              onPress={() => router.push(editHref(asset.id, "location"))}
-              rtl={rtl}
-            />
+          {missing.length > 0 ? (
+            <Pressable
+              accessibilityHint={copy.editDetailsHint}
+              accessibilityRole="button"
+              accessibilityState={{ expanded: manageOpen }}
+              onPress={() => setManageOpen((open) => !open)}
+              style={({ pressed }) => [
+                styles.manageDisclosure,
+                rtl && styles.rowReverse,
+                pressed && styles.pressed
+              ]}
+              testID="asset-passport-edit-details"
+            >
+              <Text
+                style={[
+                  styles.manageDisclosureLabel,
+                  rtl && styles.arabicMedium,
+                  rtl && styles.rtlText
+                ]}
+              >
+                {manageOpen ? copy.hideEditDetails : copy.editDetails}
+              </Text>
+              {manageOpen ? (
+                <CaretUp color={colors.textMuted} size={19} />
+              ) : (
+                <CaretDown color={colors.textMuted} size={19} />
+              )}
+            </Pressable>
           ) : null}
-          <ManageRow
-            label={copy.addProof}
-            language={language}
-            onPress={() => router.push(editHref(asset.id, "evidence"))}
-            rtl={rtl}
-          />
+          {showManageRows ? (
+            <>
+              <ManageRow
+                label={copy.updateIdentity}
+                language={language}
+                onPress={() =>
+                  router.push(editHref(asset.id, "identity"))
+                }
+                rtl={rtl}
+              />
+              <ManageRow
+                label={copy.replacePhoto}
+                language={language}
+                onPress={() =>
+                  router.push(editHref(asset.id, "photo"))
+                }
+                rtl={rtl}
+              />
+              {!asset.categoryId.startsWith("digital") ? (
+                <ManageRow
+                  label={copy.updateLocation}
+                  language={language}
+                  onPress={() =>
+                    router.push(editHref(asset.id, "location"))
+                  }
+                  rtl={rtl}
+                />
+              ) : null}
+              <ManageRow
+                label={copy.addProof}
+                language={language}
+                onPress={() =>
+                  router.push(editHref(asset.id, "evidence"))
+                }
+                rtl={rtl}
+              />
+            </>
+          ) : null}
         </Section>
       ) : null}
 
@@ -1089,8 +1150,8 @@ export default function AssetPassportScreen() {
         )}
       </Section>
 
-      {canWriteAsset ? (
-        <Section style={styles.lifecycleSection}>
+          {canWriteAsset ? (
+            <Section style={styles.lifecycleSection}>
           <Text
             style={[
               styles.sectionTitle,
@@ -1119,7 +1180,9 @@ export default function AssetPassportScreen() {
               onPress={confirmLifecycleChange}
             />
           )}
-        </Section>
+            </Section>
+          ) : null}
+        </>
       ) : null}
     </AppScreen>
   );
@@ -1509,6 +1572,24 @@ const styles = StyleSheet.create({
     paddingVertical: spacing.sm,
     borderBottomWidth: StyleSheet.hairlineWidth,
     borderBottomColor: colors.border
+  },
+  manageDisclosure: {
+    minHeight: 48,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    gap: spacing.sm,
+    paddingVertical: spacing.sm,
+    borderTopWidth: StyleSheet.hairlineWidth,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderColor: colors.border
+  },
+  manageDisclosureLabel: {
+    flex: 1,
+    color: colors.text,
+    fontFamily: typography.bodyMedium,
+    fontSize: 15,
+    lineHeight: 21
   },
   manageLabel: {
     flex: 1,

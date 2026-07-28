@@ -142,6 +142,7 @@ interface DashboardCopy {
   readonly needsLocationConfirmation: string;
   readonly noPhysicalPlaceRequired: string;
   readonly needsAttention: string;
+  readonly reviewNext: string;
   readonly allCoreRecordsReady: string;
   readonly allCoreRecordsReadyDetail: string;
   readonly missingValues: string;
@@ -156,6 +157,8 @@ interface DashboardCopy {
   readonly reviewUnvalued: string;
   readonly addFirstItem: string;
   readonly reviewAllItems: string;
+  readonly viewAllRecorded: (currency: string, count: number) => string;
+  readonly showFewerRecorded: (currency: string) => string;
   readonly asOf: string;
   readonly items: (count: number) => string;
   readonly entries: (count: number) => string;
@@ -244,6 +247,7 @@ const ENGLISH: DashboardCopy = {
   needsLocationConfirmation: "Location needs confirmation",
   noPhysicalPlaceRequired: "No physical place required",
   needsAttention: "Needs attention",
+  reviewNext: "Review next",
   allCoreRecordsReady: "Core records are ready",
   allCoreRecordsReadyDetail:
     "Every item and property has a recorded value; item proof and retrieval locations are ready.",
@@ -261,6 +265,9 @@ const ENGLISH: DashboardCopy = {
   reviewUnvalued: "Review unvalued items",
   addFirstItem: "Add your first item",
   reviewAllItems: "Review all items",
+  viewAllRecorded: (currency, count) =>
+    `View all ${count} ${currency} ${count === 1 ? "entry" : "entries"}`,
+  showFewerRecorded: (currency) => `Show fewer ${currency} entries`,
   asOf: "As of",
   items: (count) => itemCount(count, "en"),
   entries: (count) => portfolioEntryCount(count, "en"),
@@ -334,6 +341,7 @@ const ARABIC: DashboardCopy = {
   needsLocationConfirmation: "الموقع بحاجة إلى تأكيد",
   noPhysicalPlaceRequired: "لا يحتاج إلى مكان فعلي",
   needsAttention: "بحاجة إلى اهتمام",
+  reviewNext: "المراجعة التالية",
   allCoreRecordsReady: "السجلات الأساسية مكتملة",
   allCoreRecordsReadyDetail:
     "لكل غرض وعقار قيمة مسجّلة، وإثباتات الأغراض ومواقع استرجاعها جاهزة.",
@@ -351,6 +359,9 @@ const ARABIC: DashboardCopy = {
   reviewUnvalued: "مراجعة الأصول غير المقيّمة",
   addFirstItem: "أضف أول أصل",
   reviewAllItems: "مراجعة جميع الأصول",
+  viewAllRecorded: (currency, count) =>
+    `عرض كل قيود ${currency} (${formatLocalizedNumber(count, "ar")})`,
+  showFewerRecorded: (currency) => `عرض قيود ${currency} أقل`,
   asOf: "بتاريخ",
   items: (count) => itemCount(count, "ar"),
   entries: (count) => portfolioEntryCount(count, "ar"),
@@ -521,48 +532,59 @@ export function PortfolioDashboard({
         </Text>
       </View>
 
-      {canReadLiabilities && netPosition ? (
-        <PortfolioHero
-          amountsHidden={amountsHidden}
-          copy={copy}
-          explanationOpen={explanationOpen}
-          financialCopy={financialCopy}
-          language={language}
-          netPosition={netPosition}
-          onToggleExplanation={() =>
-            setExplanationOpen((current) => !current)
-          }
-          onToggleRecordedAmounts={() => {
-            const next = !amountsHidden;
-            if (controlledAmountsHidden === undefined) {
-              setInternalAmountsHidden(next);
+      <View style={styles.heroDecisionGroup}>
+        {canReadLiabilities && netPosition ? (
+          <PortfolioHero
+            amountsHidden={amountsHidden}
+            copy={copy}
+            explanationOpen={explanationOpen}
+            financialCopy={financialCopy}
+            language={language}
+            netPosition={netPosition}
+            onToggleExplanation={() =>
+              setExplanationOpen((current) => !current)
             }
-            onAmountsHiddenChange?.(next);
-          }}
-          rtl={rtl}
-          sample={workspace.mode === "sample"}
-        />
-      ) : (
-        <AssetPortfolioHero
-          amountsHidden={amountsHidden}
-          copy={copy}
-          explanationOpen={explanationOpen}
-          language={language}
-          onToggleExplanation={() =>
-            setExplanationOpen((current) => !current)
-          }
-          onToggleRecordedAmounts={() => {
-            const next = !amountsHidden;
-            if (controlledAmountsHidden === undefined) {
-              setInternalAmountsHidden(next);
+            onToggleRecordedAmounts={() => {
+              const next = !amountsHidden;
+              if (controlledAmountsHidden === undefined) {
+                setInternalAmountsHidden(next);
+              }
+              onAmountsHiddenChange?.(next);
+            }}
+            rtl={rtl}
+            sample={workspace.mode === "sample"}
+          />
+        ) : (
+          <AssetPortfolioHero
+            amountsHidden={amountsHidden}
+            copy={copy}
+            explanationOpen={explanationOpen}
+            language={language}
+            onToggleExplanation={() =>
+              setExplanationOpen((current) => !current)
             }
-            onAmountsHiddenChange?.(next);
-          }}
+            onToggleRecordedAmounts={() => {
+              const next = !amountsHidden;
+              if (controlledAmountsHidden === undefined) {
+                setInternalAmountsHidden(next);
+              }
+              onAmountsHiddenChange?.(next);
+            }}
+            rtl={rtl}
+            sample={workspace.mode === "sample"}
+            snapshot={snapshot}
+          />
+        )}
+
+        <ReviewNext
+          copy={copy}
+          language={language}
+          onReviewAssets={onReviewAssets}
+          onReviewPlaces={onReviewPlaces}
           rtl={rtl}
-          sample={workspace.mode === "sample"}
           snapshot={snapshot}
         />
-      )}
+      </View>
 
       {snapshot.valuableCount === 0 ? (
         <View
@@ -628,14 +650,6 @@ export function PortfolioDashboard({
 
       {snapshot.valuableCount > 0 ? (
         <>
-          <AttentionList
-            copy={copy}
-            language={language}
-            onReviewAssets={onReviewAssets}
-            onReviewPlaces={onReviewPlaces}
-            rtl={rtl}
-            snapshot={snapshot}
-          />
           <LocationDistribution
             copy={copy}
             language={language}
@@ -757,6 +771,7 @@ function AssetPortfolioHero({
         : formatRecordedValue({
             amountMinor: total.amountMinor,
             currency: total.currency,
+            isolateBidi: true,
             language,
             visibility
           })
@@ -1106,6 +1121,7 @@ function PortfolioHero({
         : formatSignedRecordedValue({
             amountMinor: line.recordedNetPositionMinor,
             currency: line.currency,
+            isolateBidi: true,
             language,
             visibility
           }),
@@ -1115,6 +1131,7 @@ function PortfolioHero({
         : formatRecordedValue({
             amountMinor: line.recordedAssetsMinor,
             currency: line.currency,
+            isolateBidi: true,
             language,
             visibility
           }),
@@ -1124,6 +1141,7 @@ function PortfolioHero({
         : formatRecordedValue({
             amountMinor: line.recordedLiabilitiesMinor,
             currency: line.currency,
+            isolateBidi: true,
             language,
             visibility
           })
@@ -1516,6 +1534,8 @@ function LiabilitiesSection({
   const active = liabilities.filter(isActiveLiability);
   const archived = liabilities.filter((liability) => !isActiveLiability(liability));
   const [archivedOpen, setArchivedOpen] = useState(false);
+  const [activeExpanded, setActiveExpanded] = useState(false);
+  const visibleActive = activeExpanded ? active : active.slice(0, 3);
   const review = netPosition.liabilityReview;
   const validNoneReview = Boolean(
     active.length === 0 &&
@@ -1562,29 +1582,47 @@ function LiabilitiesSection({
     >
       <View testID="liabilities-list">
         {active.length > 0 ? (
-          <View style={styles.liabilityList}>
-            {active.map((liability) => (
-              <LiabilityRow
-                amountsHidden={amountsHidden}
-                copy={copy}
-                key={liability.id}
-                language={language}
-                liability={liability}
-                onPress={
-                  onOpenSubject
-                    ? () =>
-                        onOpenSubject({
-                          kind: "liability",
-                          liabilityId: liability.id
-                        })
-                    : undefined
+          <>
+            <View style={styles.liabilityList}>
+              {visibleActive.map((liability) => (
+                <LiabilityRow
+                  amountsHidden={amountsHidden}
+                  copy={copy}
+                  key={liability.id}
+                  language={language}
+                  liability={liability}
+                  onPress={
+                    onOpenSubject
+                      ? () =>
+                          onOpenSubject({
+                            kind: "liability",
+                            liabilityId: liability.id
+                          })
+                      : undefined
+                  }
+                  rtl={rtl}
+                  stale={netPosition.staleLiabilityIds.includes(liability.id)}
+                  workspace={workspace}
+                />
+              ))}
+            </View>
+            {active.length > 3 ? (
+              <TextAction
+                expanded={activeExpanded}
+                kind="expand"
+                label={
+                  activeExpanded
+                    ? copy.liabilities.showFewer
+                    : copy.liabilities.viewAll(active.length)
+                }
+                onPress={() =>
+                  setActiveExpanded((current) => !current)
                 }
                 rtl={rtl}
-                stale={netPosition.staleLiabilityIds.includes(liability.id)}
-                workspace={workspace}
+                testID="portfolio-liabilities-view-all"
               />
-            ))}
-          </View>
+            ) : null}
+          </>
         ) : (
           <View style={[styles.liabilityEmpty, rtl && styles.alignEnd]}>
             <View style={[styles.liabilityEmptyHeading, rtl && styles.rowReverse]}>
@@ -1742,6 +1780,7 @@ function LiabilityRow({
     ? formatRecordedValue({
         amountMinor: current.amountMinor,
         currency: current.currency,
+        isolateBidi: true,
         language,
         visibility: valueVisibilityFromHidden(amountsHidden)
       })
@@ -2085,8 +2124,10 @@ function MetricRow({
           <View
             style={[
               styles.progressFill,
+              rtl && styles.progressFillRtl,
               { width: `${progress.percent}%` }
             ]}
+            testID="portfolio-progress-fill"
           />
         </View>
       ) : null}
@@ -2174,10 +2215,12 @@ function LocationDistribution({
               <View
                 style={[
                   styles.distributionFill,
+                  rtl && styles.distributionFillRtl,
                   bucket.kind === "needs-confirmation" &&
                     styles.distributionWarning,
                   { width: `${bucket.percent}%` }
                 ]}
+                testID={`portfolio-distribution-fill-${bucket.id}`}
               />
             </View>
             </View>
@@ -2188,7 +2231,7 @@ function LocationDistribution({
   );
 }
 
-function AttentionList({
+function ReviewNext({
   copy,
   language,
   onReviewAssets,
@@ -2242,70 +2285,51 @@ function AttentionList({
     }
   ].filter((item) => item.count > 0);
 
+  if (actions.length === 0 && snapshot.pendingProofReviewCount === 0) {
+    return null;
+  }
+
   return (
     <DashboardSection
       rtl={rtl}
-      testID="portfolio-attention-section"
-      title={copy.needsAttention}
+      testID="portfolio-review-next-section"
+      title={copy.reviewNext}
     >
-      {actions.length === 0 && snapshot.pendingProofReviewCount === 0 ? (
-        <View style={[styles.readyRow, rtl && styles.rowReverse]}>
-          <CheckCircle color={colors.success} size={24} weight="regular" />
-          <View style={styles.readyCopy}>
-            <Text
-              style={[
-                styles.readyTitle,
-                rtl && styles.arabicMedium,
-                rtl && styles.textRight
-              ]}
-            >
-              {copy.allCoreRecordsReady}
-            </Text>
-            <Text
-              style={[
-                styles.readyDetail,
-                rtl && styles.arabic,
-                rtl && styles.textRight
-              ]}
-            >
-              {copy.allCoreRecordsReadyDetail}
-            </Text>
-          </View>
-        </View>
-      ) : (
-        <View style={styles.actionList}>
-          {actions.map((action) => (
-            <GapAction
-              count={action.count}
-              icon={action.icon}
-              key={action.id}
-              label={action.label}
-              language={language}
-              onPress={action.onPress}
-              rtl={rtl}
-            />
-          ))}
-          {snapshot.pendingProofReviewCount > 0 ? (
-            <GapAction
-              count={snapshot.pendingProofReviewCount}
-              icon={WarningCircle}
-              label={copy.pendingReview}
-              language={language}
-              onPress={
-                onReviewAssets
-                  ? () => onReviewAssets("proof-review")
-                  : undefined
-              }
-              rtl={rtl}
-            />
-          ) : null}
-        </View>
-      )}
+      <View style={styles.reviewNextList}>
+        {actions.map((action) => (
+          <GapAction
+            compact
+            count={action.count}
+            icon={action.icon}
+            key={action.id}
+            label={action.label}
+            language={language}
+            onPress={action.onPress}
+            rtl={rtl}
+          />
+        ))}
+        {snapshot.pendingProofReviewCount > 0 ? (
+          <GapAction
+            compact
+            count={snapshot.pendingProofReviewCount}
+            icon={WarningCircle}
+            label={copy.pendingReview}
+            language={language}
+            onPress={
+              onReviewAssets
+                ? () => onReviewAssets("proof-review")
+                : undefined
+            }
+            rtl={rtl}
+          />
+        ) : null}
+      </View>
     </DashboardSection>
   );
 }
 
 function GapAction({
+  compact = false,
   count,
   icon: IconComponent,
   label,
@@ -2313,6 +2337,7 @@ function GapAction({
   onPress,
   rtl
 }: {
+  readonly compact?: boolean;
   readonly count: number;
   readonly icon: Icon;
   readonly label: string;
@@ -2360,6 +2385,7 @@ function GapAction({
       onPress={onPress}
       style={({ pressed }) => [
         styles.actionRow,
+        compact && styles.reviewNextRow,
         rtl && styles.rowReverse,
         pressed && styles.pressed
       ]}
@@ -2372,7 +2398,11 @@ function GapAction({
         count,
         language
       )}`}
-      style={[styles.actionRow, rtl && styles.rowReverse]}
+      style={[
+        styles.actionRow,
+        compact && styles.reviewNextRow,
+        rtl && styles.rowReverse
+      ]}
     >
       {row}
     </View>
@@ -2404,9 +2434,23 @@ function RecordedValues({
   readonly sample: boolean;
   readonly snapshot: PortfolioSnapshot;
 }) {
+  const [expandedCurrencies, setExpandedCurrencies] = useState<
+    ReadonlySet<string>
+  >(() => new Set());
   const currencies = [
     ...new Set(snapshot.recordedValues.map((item) => item.currency))
   ];
+  const toggleCurrency = (currency: string) => {
+    setExpandedCurrencies((current) => {
+      const next = new Set(current);
+      if (next.has(currency)) {
+        next.delete(currency);
+      } else {
+        next.add(currency);
+      }
+      return next;
+    });
+  };
   return (
     <DashboardSection
       action={
@@ -2459,8 +2503,14 @@ function RecordedValues({
             const items = snapshot.recordedValues.filter(
               (item) => item.currency === currency
             );
+            const expanded = expandedCurrencies.has(currency);
+            const visibleItems = expanded ? items : items.slice(0, 3);
             return (
-              <View key={currency} style={styles.valueGroup}>
+              <View
+                key={currency}
+                style={styles.valueGroup}
+                testID={`portfolio-recorded-values-${currency}`}
+              >
                 <View
                   style={[styles.valueGroupHeader, rtl && styles.rowReverse]}
                 >
@@ -2483,7 +2533,7 @@ function RecordedValues({
                     {copy.entries(items.length)}
                   </Text>
                 </View>
-                {items.map((item) => (
+                {visibleItems.map((item) => (
                   <RecordedValueRow
                     amountsHidden={amountsHidden}
                     copy={copy}
@@ -2502,6 +2552,20 @@ function RecordedValues({
                     rtl={rtl}
                   />
                 ))}
+                {items.length > 3 ? (
+                  <TextAction
+                    expanded={expanded}
+                    kind="expand"
+                    label={
+                      expanded
+                        ? copy.showFewerRecorded(currency)
+                        : copy.viewAllRecorded(currency, items.length)
+                    }
+                    onPress={() => toggleCurrency(currency)}
+                    rtl={rtl}
+                    testID={`portfolio-recorded-values-view-all-${currency}`}
+                  />
+                ) : null}
               </View>
             );
           })}
@@ -2529,6 +2593,7 @@ function RecordedValueRow({
   const formattedValue = formatRecordedValue({
     amountMinor: item.amountMinor,
     currency: item.currency,
+    isolateBidi: true,
     language,
     visibility: valueVisibilityFromHidden(amountsHidden)
   });
@@ -2592,11 +2657,15 @@ function RecordedValueRow({
         rtl && styles.rowReverse,
         pressed && styles.pressed
       ]}
+      testID={`portfolio-recorded-value-${item.subjectKey}`}
     >
       {content}
     </Pressable>
   ) : (
-    <View style={[styles.recordedItem, rtl && styles.rowReverse]}>
+    <View
+      style={[styles.recordedItem, rtl && styles.rowReverse]}
+      testID={`portfolio-recorded-value-${item.subjectKey}`}
+    >
       {content}
     </View>
   );
@@ -2651,17 +2720,26 @@ function DashboardSection({
 }
 
 function TextAction({
+  expanded,
+  kind = "navigate",
   label,
   onPress,
-  rtl
+  rtl,
+  testID
 }: {
+  readonly expanded?: boolean;
+  readonly kind?: "navigate" | "expand";
   readonly label: string;
   readonly onPress: () => void;
   readonly rtl: boolean;
+  readonly testID?: string;
 }) {
   return (
     <Pressable
       accessibilityRole="button"
+      accessibilityState={
+        kind === "expand" ? { expanded: Boolean(expanded) } : undefined
+      }
       onPress={onPress}
       style={({ pressed }) => [
         styles.textAction,
@@ -2669,6 +2747,7 @@ function TextAction({
         rtl && styles.alignSelfEnd,
         pressed && styles.pressed
       ]}
+      testID={testID}
     >
       <Text
         style={[
@@ -2679,7 +2758,13 @@ function TextAction({
       >
         {label}
       </Text>
-      {rtl ? (
+      {kind === "expand" ? (
+        expanded ? (
+          <CaretUp color={colors.text} size={17} />
+        ) : (
+          <CaretDown color={colors.text} size={17} />
+        )
+      ) : rtl ? (
         <ArrowLeft color={colors.text} size={17} />
       ) : (
         <ArrowRight color={colors.text} size={17} />
@@ -2691,6 +2776,9 @@ function TextAction({
 const styles = StyleSheet.create({
   dashboard: {
     gap: spacing.xxxl
+  },
+  heroDecisionGroup: {
+    gap: spacing.xl
   },
   rowReverse: {
     flexDirection: "row-reverse"
@@ -2751,8 +2839,8 @@ const styles = StyleSheet.create({
   sampleBadgeText: {
     color: colors.textMuted,
     fontFamily: typography.bodyBold,
-    fontSize: 10,
-    lineHeight: 14,
+    fontSize: 13,
+    lineHeight: 18,
     letterSpacing: 0.8
   },
   introduction: {
@@ -2785,8 +2873,8 @@ const styles = StyleSheet.create({
     flex: 1,
     color: colors.concrete,
     fontFamily: typography.bodyBold,
-    fontSize: 11,
-    lineHeight: 16,
+    fontSize: 13,
+    lineHeight: 18,
     letterSpacing: 1.15
   },
   heroHeading: {
@@ -2809,7 +2897,7 @@ const styles = StyleSheet.create({
   },
   heroPrivacyStatus: {
     color: colors.concrete,
-    fontFamily: typography.bodyMedium,
+    fontFamily: typography.metadata,
     fontSize: 12,
     lineHeight: 17
   },
@@ -2829,7 +2917,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.md,
     borderWidth: 1,
     borderColor: themes.dark.borderStrong,
-    borderRadius: radius.round,
+    borderRadius: radius.sm,
     backgroundColor: themes.dark.surface
   },
   currencySelectorChoiceSelected: {
@@ -2838,9 +2926,9 @@ const styles = StyleSheet.create({
   },
   currencySelectorLabel: {
     color: colors.white,
-    fontFamily: typography.bodyBold,
-    fontSize: 12,
-    lineHeight: 17,
+    fontFamily: typography.metadata,
+    fontSize: 13,
+    lineHeight: 18,
     letterSpacing: 0.4,
     fontVariant: ["tabular-nums"]
   },
@@ -2892,7 +2980,7 @@ const styles = StyleSheet.create({
   },
   totalMeta: {
     color: colors.concrete,
-    fontFamily: typography.body,
+    fontFamily: typography.metadata,
     fontSize: 12,
     lineHeight: 17
   },
@@ -2922,8 +3010,8 @@ const styles = StyleSheet.create({
   netCompositionLabel: {
     color: colors.concrete,
     fontFamily: typography.body,
-    fontSize: 11,
-    lineHeight: 16
+    fontSize: 13,
+    lineHeight: 18
   },
   netCompositionValue: {
     color: colors.white,
@@ -2972,7 +3060,7 @@ const styles = StyleSheet.create({
   },
   heroFactValue: {
     color: colors.white,
-    fontFamily: typography.display,
+    fontFamily: typography.metadata,
     fontSize: 20,
     lineHeight: 25,
     fontVariant: ["tabular-nums"]
@@ -2980,8 +3068,8 @@ const styles = StyleSheet.create({
   heroFactLabel: {
     color: colors.concrete,
     fontFamily: typography.body,
-    fontSize: 12,
-    lineHeight: 17
+    fontSize: 13,
+    lineHeight: 18
   },
   heroSupporting: {
     color: colors.concrete,
@@ -3146,9 +3234,9 @@ const styles = StyleSheet.create({
   },
   liabilityMeta: {
     color: colors.textMuted,
-    fontFamily: typography.body,
-    fontSize: 11,
-    lineHeight: 16
+    fontFamily: typography.metadata,
+    fontSize: 12,
+    lineHeight: 17
   },
   liabilityValueCopy: {
     maxWidth: "38%",
@@ -3168,7 +3256,7 @@ const styles = StyleSheet.create({
   },
   liabilityValue: {
     color: colors.text,
-    fontFamily: typography.bodyMedium,
+    fontFamily: typography.metadata,
     fontSize: 14,
     lineHeight: 20,
     textAlign: "right",
@@ -3179,9 +3267,9 @@ const styles = StyleSheet.create({
   },
   liabilityLifecycle: {
     color: colors.textMuted,
-    fontFamily: typography.body,
-    fontSize: 10,
-    lineHeight: 15,
+    fontFamily: typography.metadata,
+    fontSize: 12,
+    lineHeight: 17,
     textAlign: "right"
   },
   liabilityLifecycleStacked: {
@@ -3254,8 +3342,8 @@ const styles = StyleSheet.create({
     flex: 1,
     color: colors.textMuted,
     fontFamily: typography.bodyBold,
-    fontSize: 11,
-    lineHeight: 16,
+    fontSize: 13,
+    lineHeight: 18,
     letterSpacing: 0.8
   },
   metricsBand: {
@@ -3294,7 +3382,7 @@ const styles = StyleSheet.create({
   },
   metricValue: {
     color: colors.text,
-    fontFamily: typography.display,
+    fontFamily: typography.metadata,
     fontSize: 22,
     lineHeight: 28,
     fontVariant: ["tabular-nums"]
@@ -3309,6 +3397,9 @@ const styles = StyleSheet.create({
     height: "100%",
     borderRadius: radius.round,
     backgroundColor: colors.volt
+  },
+  progressFillRtl: {
+    alignSelf: "flex-end"
   },
   distribution: {
     gap: spacing.md
@@ -3331,7 +3422,7 @@ const styles = StyleSheet.create({
   },
   distributionCount: {
     color: colors.textMuted,
-    fontFamily: typography.body,
+    fontFamily: typography.metadata,
     fontSize: 12,
     lineHeight: 17,
     fontVariant: ["tabular-nums"]
@@ -3347,6 +3438,9 @@ const styles = StyleSheet.create({
     borderRadius: radius.xs,
     backgroundColor: colors.carbon
   },
+  distributionFillRtl: {
+    alignSelf: "flex-end"
+  },
   distributionWarning: {
     backgroundColor: colors.warning
   },
@@ -3354,6 +3448,15 @@ const styles = StyleSheet.create({
     borderTopWidth: 1,
     borderBottomWidth: 1,
     borderColor: colors.borderStrong
+  },
+  reviewNextList: {
+    paddingStart: spacing.sm,
+    borderStartWidth: 3,
+    borderStartColor: colors.volt,
+    borderTopWidth: 1,
+    borderBottomWidth: 1,
+    borderTopColor: colors.borderStrong,
+    borderBottomColor: colors.borderStrong
   },
   actionRow: {
     minHeight: 58,
@@ -3363,6 +3466,9 @@ const styles = StyleSheet.create({
     paddingVertical: spacing.xs,
     borderBottomWidth: StyleSheet.hairlineWidth,
     borderBottomColor: colors.border
+  },
+  reviewNextRow: {
+    minHeight: 52
   },
   actionLabel: {
     flex: 1,
@@ -3374,7 +3480,7 @@ const styles = StyleSheet.create({
   actionCount: {
     minWidth: 24,
     color: colors.text,
-    fontFamily: typography.bodyMedium,
+    fontFamily: typography.metadata,
     fontSize: 14,
     lineHeight: 20,
     textAlign: "right",
@@ -3422,14 +3528,14 @@ const styles = StyleSheet.create({
   },
   valueGroupCurrency: {
     color: colors.text,
-    fontFamily: typography.bodyBold,
-    fontSize: 12,
-    lineHeight: 17,
+    fontFamily: typography.metadata,
+    fontSize: 13,
+    lineHeight: 18,
     letterSpacing: 1
   },
   valueGroupCount: {
     color: colors.textMuted,
-    fontFamily: typography.body,
+    fontFamily: typography.metadata,
     fontSize: 12,
     lineHeight: 17
   },
@@ -3454,14 +3560,14 @@ const styles = StyleSheet.create({
   },
   recordedItemMeta: {
     color: colors.textMuted,
-    fontFamily: typography.body,
-    fontSize: 11,
-    lineHeight: 16
+    fontFamily: typography.metadata,
+    fontSize: 12,
+    lineHeight: 17
   },
   recordedItemValue: {
     maxWidth: "42%",
     color: colors.text,
-    fontFamily: typography.bodyMedium,
+    fontFamily: typography.metadata,
     fontSize: 14,
     lineHeight: 20,
     textAlign: "right",

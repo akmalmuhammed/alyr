@@ -1,5 +1,8 @@
 import { portfolioAmountsHiddenFromStorage } from "@/privacy/PortfolioPrivacyProvider";
 import {
+  LEFT_TO_RIGHT_ISOLATE,
+  POP_DIRECTIONAL_ISOLATE,
+  bidiIsolateFinancialToken,
   formatRecordedValue,
   formatSignedRecordedValue
 } from "@/privacy/ValueVisibility";
@@ -28,6 +31,7 @@ describe("Portfolio amount privacy", () => {
     const arabic = formatRecordedValue({
       amountMinor: 123_450,
       currency: "QAR",
+      isolateBidi: true,
       language: "ar",
       visibility: "hidden"
     });
@@ -36,9 +40,11 @@ describe("Portfolio amount privacy", () => {
       text: "QAR \u2022\u2022\u2022\u2022\u2022\u2022",
       accessibilityLabel: "QAR, recorded amount hidden"
     });
-    expect(arabic.text).toBe("QAR \u2022\u2022\u2022\u2022\u2022\u2022");
+    expect(arabic.text).toBe(
+      `${LEFT_TO_RIGHT_ISOLATE}QAR \u2022\u2022\u2022\u2022\u2022\u2022${POP_DIRECTIONAL_ISOLATE}`
+    );
     expect(arabic.accessibilityLabel).toBe(
-      "QAR، القيمة المسجّلة مخفية"
+      `${LEFT_TO_RIGHT_ISOLATE}QAR${POP_DIRECTIONAL_ISOLATE}، القيمة المسجّلة مخفية`
     );
     expect(JSON.stringify([english, arabic])).not.toContain("1,234.50");
   });
@@ -67,6 +73,7 @@ describe("Portfolio amount privacy", () => {
     const hiddenArabic = formatSignedRecordedValue({
       amountMinor: -2_500,
       currency: "QAR",
+      isolateBidi: true,
       language: "ar",
       visibility: "hidden"
     });
@@ -76,7 +83,7 @@ describe("Portfolio amount privacy", () => {
       accessibilityLabel: "QAR, recorded amount hidden"
     });
     expect(hiddenArabic.text).toBe(
-      "QAR \u2022\u2022\u2022\u2022\u2022\u2022"
+      `${LEFT_TO_RIGHT_ISOLATE}QAR \u2022\u2022\u2022\u2022\u2022\u2022${POP_DIRECTIONAL_ISOLATE}`
     );
     expect(hiddenArabic.accessibilityLabel).toMatch(
       /[\u0600-\u06ff]/u
@@ -98,5 +105,53 @@ describe("Portfolio amount privacy", () => {
       text: "QAR −25.00",
       accessibilityLabel: "QAR −25.00"
     });
+  });
+
+  it.each(["QAR", "USD"])(
+    "bidi-isolates visible, negative and hidden Arabic %s financial tokens",
+    (currency) => {
+      const positive = formatRecordedValue({
+        amountMinor: 123_450,
+        currency,
+        isolateBidi: true,
+        language: "ar",
+        visibility: "visible"
+      });
+      const negative = formatSignedRecordedValue({
+        amountMinor: -123_450,
+        currency,
+        isolateBidi: true,
+        language: "ar",
+        visibility: "visible"
+      });
+      const hidden = formatSignedRecordedValue({
+        amountMinor: -123_450,
+        currency,
+        isolateBidi: true,
+        language: "ar",
+        visibility: "hidden"
+      });
+
+      expect(positive.text).toBe(
+        `${LEFT_TO_RIGHT_ISOLATE}${currency} ١٬٢٣٤٫٥٠${POP_DIRECTIONAL_ISOLATE}`
+      );
+      expect(negative.text).toBe(
+        `${LEFT_TO_RIGHT_ISOLATE}${currency} −١٬٢٣٤٫٥٠${POP_DIRECTIONAL_ISOLATE}`
+      );
+      expect(hidden.text).toBe(
+        `${LEFT_TO_RIGHT_ISOLATE}${currency} \u2022\u2022\u2022\u2022\u2022\u2022${POP_DIRECTIONAL_ISOLATE}`
+      );
+      expect(positive.accessibilityLabel).toBe(positive.text);
+      expect(negative.accessibilityLabel).toBe(negative.text);
+      expect(hidden.accessibilityLabel).toBe(
+        `${LEFT_TO_RIGHT_ISOLATE}${currency}${POP_DIRECTIONAL_ISOLATE}، القيمة المسجّلة مخفية`
+      );
+    }
+  );
+
+  it("leaves English financial tokens unchanged", () => {
+    expect(bidiIsolateFinancialToken("QAR −25.00", "en")).toBe(
+      "QAR −25.00"
+    );
   });
 });

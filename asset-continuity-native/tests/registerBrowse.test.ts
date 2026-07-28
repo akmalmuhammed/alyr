@@ -1,14 +1,18 @@
 import { createWorkspace } from "@/domain/sample";
 import { REGISTER_COPY } from "@/i18n/registerCopy";
 import {
+  filterRegisterPlaces,
   groupRegisterAssets,
   groupRegisterPlaces,
   initialAssetFilter,
   initialCollectionView,
   initialItemGroup,
   initialItemSort,
+  initialPlaceFilter,
   initialPlaceGroup,
   initialPlaceSort,
+  placeHasPin,
+  placeNeedsPinReview,
   sortRegisterAssets,
   sortRegisterPlaces
 } from "@/register/browse";
@@ -19,6 +23,15 @@ describe("scalable register browsing", () => {
     expect(initialCollectionView("unknown")).toBe("items");
     expect(initialAssetFilter("evidence")).toBe("evidence");
     expect(initialAssetFilter("unknown")).toBe("all");
+    expect(initialPlaceFilter("pin-review")).toBe("pin-review");
+    expect(initialPlaceFilter("no-pin")).toBe("no-pin");
+    expect(initialPlaceFilter("missing-address")).toBe(
+      "missing-address"
+    );
+    expect(initialPlaceFilter("missing-documents")).toBe(
+      "missing-documents"
+    );
+    expect(initialPlaceFilter("evidence")).toBe("all");
     expect(initialItemSort("oldest")).toBe("oldest");
     expect(initialItemSort("item-count")).toBe("recent");
     expect(initialItemGroup("category")).toBe("category");
@@ -113,12 +126,96 @@ describe("scalable register browsing", () => {
     expect(sections[0]?.records).toHaveLength(2);
   });
 
+  it("filters every Place-completion debt without guessing pin truth", () => {
+    const workspace = createWorkspace("sample");
+    const complete = {
+      ...workspace.places[0]!,
+      id: "place-complete"
+    };
+    const pinReview = {
+      ...complete,
+      id: "place-pin-review",
+      confirmedAt: null
+    };
+    const approximatePin = {
+      ...complete,
+      id: "place-approximate",
+      precision: "approximate" as const
+    };
+    const noPin = {
+      ...complete,
+      id: "place-no-pin",
+      latitude: null,
+      longitude: null,
+      locationSource: "not_set" as const,
+      precision: "locality_only" as const,
+      observedAt: null,
+      confirmedAt: null
+    };
+    const missingAddress = {
+      ...complete,
+      id: "place-missing-address",
+      addressSummary: " "
+    };
+    const missingDocuments = {
+      ...complete,
+      id: "place-missing-documents"
+    };
+    const places = [
+      complete,
+      pinReview,
+      approximatePin,
+      noPin,
+      missingAddress,
+      missingDocuments
+    ];
+    const sourceDocument = workspace.placeDocuments![0]!;
+    const documents = places
+      .filter((place) => place.id !== missingDocuments.id)
+      .map((place, index) => ({
+        ...sourceDocument,
+        id: `document-${index}`,
+        placeId: place.id
+      }));
+
+    expect(placeHasPin(complete)).toBe(true);
+    expect(placeHasPin(noPin)).toBe(false);
+    expect(placeNeedsPinReview(complete)).toBe(false);
+    expect(placeNeedsPinReview(pinReview)).toBe(true);
+    expect(placeNeedsPinReview(approximatePin)).toBe(true);
+    expect(
+      filterRegisterPlaces(places, "pin-review", documents).map(
+        (place) => place.id
+      )
+    ).toEqual(["place-pin-review", "place-approximate"]);
+    expect(
+      filterRegisterPlaces(places, "no-pin", documents).map(
+        (place) => place.id
+      )
+    ).toEqual(["place-no-pin"]);
+    expect(
+      filterRegisterPlaces(
+        places,
+        "missing-address",
+        documents
+      ).map((place) => place.id)
+    ).toEqual(["place-missing-address"]);
+    expect(
+      filterRegisterPlaces(
+        places,
+        "missing-documents",
+        documents
+      ).map((place) => place.id)
+    ).toEqual(["place-missing-documents"]);
+  });
+
   it("keeps the register organizer complete in English and Arabic", () => {
     expect(Object.keys(REGISTER_COPY.ar).sort()).toEqual(
       Object.keys(REGISTER_COPY.en).sort()
     );
     for (const key of [
       "filters",
+      "placeFilters",
       "itemSorts",
       "itemGroups",
       "placeSorts",
@@ -131,5 +228,11 @@ describe("scalable register browsing", () => {
     expect(REGISTER_COPY.ar.organize).toBe("تنظيم");
     expect(REGISTER_COPY.ar.itemGroups.place).toBe("المكان");
     expect(REGISTER_COPY.ar.placeGroups.region).toBe("المنطقة");
+    expect(REGISTER_COPY.en.placeFilters["pin-review"]).toBe(
+      "Pin needs review"
+    );
+    expect(REGISTER_COPY.ar.placeFilters["no-pin"]).toBe(
+      "من دون دبوس"
+    );
   });
 });

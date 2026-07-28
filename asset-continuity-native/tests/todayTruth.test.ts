@@ -5,11 +5,13 @@ import {
   CORE_JOURNEY_COPY,
   formatLocalizedPercent,
   todayHouseholdSummary,
+  todayPlaceLocationSummary,
   todayPinSummary
 } from "@/i18n/coreJourneyCopy";
 import {
   rankTodayAttention,
   selectTodayCommandState,
+  selectTodayPlaceOverview,
   selectTodayPlacePinStatus
 } from "@/domain/today";
 
@@ -137,19 +139,23 @@ describe("Today truth selectors", () => {
   });
 
   it("counts a coordinate as confirmed only when confirmedAt is present", () => {
-    const status = selectTodayPlacePinStatus([
+    const places = [
       place("confirmed", {
-        confirmedAt: "2026-07-27T12:00:00.000Z"
+        confirmedAt: "2026-07-27T12:00:00.000Z",
+        regionLabel: "Doha"
       }),
       place("needs-confirmation", {
-        confirmedAt: null
+        confirmedAt: null,
+        regionLabel: "Lusail"
       }),
       place("not-pinned", {
         latitude: null,
         longitude: null,
-        confirmedAt: null
+        confirmedAt: null,
+        regionLabel: "Doha"
       })
-    ]);
+    ];
+    const status = selectTodayPlacePinStatus(places);
 
     expect(status.confirmedCount).toBe(1);
     expect(status.confirmationNeededCount).toBe(1);
@@ -163,6 +169,21 @@ describe("Today truth selectors", () => {
         place: expect.objectContaining({ id: "needs-confirmation" })
       })
     ]);
+
+    expect(selectTodayPlaceOverview(places)).toEqual({
+      placeCount: 3,
+      regions: ["Doha", "Lusail"],
+      confirmedCount: 1,
+      confirmationNeededCount: 1,
+      missingPinCount: 1,
+      reviewCount: 2
+    });
+    expect(todayPlaceLocationSummary(1, 1, 1, "en")).toBe(
+      "1 confirmed location · 1 pin needs confirmation · 1 Place without a pin"
+    );
+    expect(todayPlaceLocationSummary(2, 0, 0, "ar")).toBe(
+      "موقعان مؤكدان · لا شيء يحتاج إلى مراجعة"
+    );
   });
 
   it("gives the all-ready state a truthful next action", () => {

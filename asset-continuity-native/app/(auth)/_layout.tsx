@@ -1,10 +1,16 @@
-import { Redirect, Stack, useSegments } from "expo-router";
+import {
+  Redirect,
+  Stack,
+  useLocalSearchParams,
+  useSegments
+} from "expo-router";
 import { Platform } from "react-native";
 
 import { useReduceMotionPreference } from "@/accessibility/useReduceMotionPreference";
 import { useAuthFlow } from "@/auth/AuthFlowProvider";
 import {
   authenticatedAuthEntryDestination,
+  hasPasswordRecoveryCodeParameter,
   publicAuthEntryRouteFromSegments
 } from "@/auth/routes";
 import { useLocale } from "@/i18n/LocaleProvider";
@@ -12,6 +18,9 @@ import { colors } from "@/theme/tokens";
 
 export default function AuthLayout() {
   const segments = useSegments();
+  const params = useLocalSearchParams<{
+    code?: string | string[];
+  }>();
   const reduceMotion = useReduceMotionPreference();
   const { rtl } = useLocale();
   const {
@@ -20,11 +29,15 @@ export default function AuthLayout() {
     passwordRecoverySessionActive,
     session
   } = useAuthFlow();
+  const route = publicAuthEntryRouteFromSegments(segments);
   const redirect = authenticatedAuthEntryDestination({
     bootstrapState,
     mode,
+    passwordRecoveryCodePresent:
+      route === "resetPassword" &&
+      hasPasswordRecoveryCodeParameter(params.code),
     passwordRecoverySessionActive,
-    route: publicAuthEntryRouteFromSegments(segments),
+    route,
     session
   });
 

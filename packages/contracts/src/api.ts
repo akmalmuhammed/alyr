@@ -11,6 +11,24 @@ import type { SyncChange, SyncConflict, SyncCursor, SyncOperation } from "./sync
 
 export const CONTRACT_API_VERSION = 1 as const;
 
+/**
+ * Caller-stable household provisioning intent.
+ *
+ * The operation identity is persisted before the request leaves the device
+ * and reused until the provider-authoritative owner tuple is reconciled.
+ * Reusing an identity with a different name is an idempotency conflict.
+ */
+export interface CreateHouseholdRequest {
+  readonly apiVersion: typeof CONTRACT_API_VERSION;
+  readonly operationId: string;
+  /**
+   * Client-generated once with the durable operation. It makes recovery
+   * specific to the intended household even when an account may own several.
+   */
+  readonly householdId: HouseholdId;
+  readonly name: string;
+}
+
 export interface SyncPushRequest {
   readonly apiVersion: typeof CONTRACT_API_VERSION;
   readonly operations: readonly SyncOperation[];

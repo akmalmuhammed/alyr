@@ -11,13 +11,26 @@ import { createWorkspace } from "@/domain/sample";
 
 const mockRouter = {
   back: jest.fn(),
+  push: jest.fn(),
   replace: jest.fn()
 };
 const mockNavigation = {
   addListener: jest.fn(() => jest.fn()),
   dispatch: jest.fn()
 };
-const mockWorkspace = createWorkspace("personal");
+const personalWorkspace = createWorkspace("personal");
+const sampleWorkspace = createWorkspace("sample");
+const samplePlace = sampleWorkspace.places[0]!;
+const mockWorkspace = {
+  ...personalWorkspace,
+  places: [
+    {
+      ...samplePlace,
+      householdId: personalWorkspace.household.id,
+      confirmedAt: null
+    }
+  ]
+};
 const mockCreateAsset = jest.fn();
 
 jest.mock("expo-router", () => ({
@@ -91,18 +104,18 @@ describe("Quick Passport validation and step accessibility", () => {
     expect(
       screen.getByText("Choose the category that fits this item.")
     ).toBeTruthy();
-    expect(screen.getByLabelText("Asset name").props["aria-invalid"]).toBe(
+    expect(screen.getByLabelText("Item name").props["aria-invalid"]).toBe(
       true
     );
 
     await fireEvent.changeText(
-      screen.getByLabelText("Asset name"),
+      screen.getByLabelText("Item name"),
       "GMT-Master II"
     );
     await fireEvent.press(continueButton);
 
     expect(
-      screen.getByLabelText("Asset category").props.accessibilityHint
+      screen.getByLabelText("Item category").props.accessibilityHint
     ).toBe("Choose the category that fits this item.");
   });
 
@@ -113,7 +126,7 @@ describe("Quick Passport validation and step accessibility", () => {
       .find((node) => node.props.accessibilityRole === "header");
     expect(initialStepHeader?.props.accessibilityLiveRegion).toBeUndefined();
     await fireEvent.changeText(
-      screen.getByLabelText("Asset name"),
+      screen.getByLabelText("Item name"),
       "GMT-Master II"
     );
     await fireEvent.press(screen.getByRole("radio", { name: "Watch" }));
@@ -159,7 +172,7 @@ describe("Quick Passport validation and step accessibility", () => {
     const screen = await render(<CaptureScreen />);
 
     await fireEvent.changeText(
-      screen.getByLabelText("Asset name"),
+      screen.getByLabelText("Item name"),
       "Travel watch"
     );
     await fireEvent.press(screen.getByRole("radio", { name: "Watch" }));
@@ -184,5 +197,104 @@ describe("Quick Passport validation and step accessibility", () => {
       )
     ).toBeTruthy();
     expect(mockCreateAsset).toHaveBeenCalledTimes(1);
+  });
+
+  it("lets a user jump directly from Review to each editable step", async () => {
+    const copy = getCaptureCopy("en");
+    const screen = await render(<CaptureScreen />);
+
+    await fireEvent.changeText(
+      screen.getByLabelText(copy.assetName),
+      "Travel watch"
+    );
+    await fireEvent.press(screen.getByRole("radio", { name: "Watch" }));
+    await fireEvent.press(
+      screen.getByRole("button", { name: copy.continue })
+    );
+    await fireEvent.press(screen.getByText(copy.unknown));
+    await fireEvent.press(
+      screen.getByRole("button", { name: copy.continue })
+    );
+    await fireEvent.press(
+      screen.getByRole("button", { name: copy.skip })
+    );
+
+    expect(screen.getByTestId("capture-step-3")).toBeTruthy();
+    expect(
+      screen.getByRole("button", {
+        name: new RegExp(`^${copy.editIdentity}`)
+      })
+    ).toBeTruthy();
+    expect(
+      screen.getByRole("button", {
+        name: new RegExp(`^${copy.editPhoto}`)
+      })
+    ).toBeTruthy();
+    expect(
+      screen.getByRole("button", {
+        name: new RegExp(`^${copy.editLocation}`)
+      })
+    ).toBeTruthy();
+    expect(
+      screen.getByRole("button", {
+        name: new RegExp(`^${copy.editProof}`)
+      })
+    ).toBeTruthy();
+
+    await fireEvent.press(
+      screen.getByRole("button", {
+        name: new RegExp(`^${copy.editLocation}`)
+      })
+    );
+    expect(screen.getByTestId("capture-step-1")).toBeTruthy();
+  });
+
+  it("keeps Place-pin debt explicit and actionable from Review", async () => {
+    const copy = getCaptureCopy("en");
+    const place = mockWorkspace.places[0]!;
+    const room = place.rooms[0]!;
+    const screen = await render(<CaptureScreen />);
+
+    await fireEvent.changeText(
+      screen.getByLabelText(copy.assetName),
+      "Travel watch"
+    );
+    await fireEvent.press(screen.getByRole("radio", { name: "Watch" }));
+    await fireEvent.press(
+      screen.getByRole("button", { name: copy.continue })
+    );
+    await fireEvent.press(
+      screen.getByText(copy.exactSpot)
+    );
+    await fireEvent.press(
+      screen.getByText(place.name)
+    );
+    await fireEvent.press(
+      screen.getByText(room.name)
+    );
+    await fireEvent.press(
+      screen.getByRole("button", { name: copy.continue })
+    );
+    await fireEvent.press(
+      screen.getByRole("button", { name: copy.skip })
+    );
+
+    const debt = screen.getByTestId("capture-review-place-pin-debt");
+    const alert = screen.getByTestId("capture-review-place-pin-alert");
+    const action = screen.getByTestId(
+      "capture-review-place-pin-action"
+    );
+    expect(debt).toBeTruthy();
+    expect(alert.props.accessibilityRole).toBe("alert");
+    expect(screen.getByText(copy.placePinDebtTitle)).toBeTruthy();
+    expect(action.props.accessibilityLabel).toBe(copy.reviewPlacePin);
+    expect(action.props.accessibilityHint).toBe(
+      copy.reviewPlacePinHint
+    );
+
+    await fireEvent.press(action);
+    expect(mockRouter.push).toHaveBeenCalledWith(
+      `/place-pin?placeId=${encodeURIComponent(place.id)}`
+    );
   });
 });

@@ -18,6 +18,7 @@ import type {
 import type {
   AccountDeletionReceipt,
   AccountDeletionRequest,
+  CreateHouseholdRequest,
   HouseholdAccessMutationReceipt,
   HouseholdAccessSnapshot,
   WorkspaceBootstrapDescriptor,
@@ -68,8 +69,15 @@ export interface HouseholdWorkspace {
   readonly createdAt: IsoDateTime;
 }
 
+export interface HouseholdCreationReceipt {
+  readonly operationId: string;
+  readonly household: HouseholdWorkspace;
+}
+
 export interface HouseholdAccessPort {
-  createHousehold(name: string): Promise<Result<HouseholdWorkspace>>;
+  createHousehold(
+    request: CreateHouseholdRequest,
+  ): Promise<Result<HouseholdCreationReceipt>>;
   completeOnboarding(
     householdId: HouseholdId,
   ): Promise<

@@ -4,18 +4,19 @@ import {
   ArrowRight,
   Camera,
   ChartDonut,
+  CheckCircle,
+  GlobeHemisphereWest,
   LockKey,
   MapPin,
-  Plus
+  Plus,
+  WarningCircle
 } from "phosphor-react-native";
 import {
-  Platform,
   Pressable,
   StyleSheet,
   Text,
   View
 } from "react-native";
-import Svg, { Circle, Path } from "react-native-svg";
 
 import { useAuthFlow } from "@/auth/AuthFlowProvider";
 import { AssetListItem } from "@/components/AssetListItem";
@@ -30,6 +31,7 @@ import {
   IconButton,
   PrimaryButton,
   ScreenTitle,
+  SecondaryButton,
   Section,
   SectionHeader
 } from "@/components/ui";
@@ -41,12 +43,10 @@ import { calculateNativeAssetReadiness } from "@/domain/readiness";
 import {
   rankTodayAttention,
   selectTodayCommandState,
-  selectTodayPlacePinStatus,
-  type TodayPlacePin
+  selectTodayPlaceOverview
 } from "@/domain/today";
 
 import {
-  atlasAccessibilityLabel,
   formatLocalizedNumber,
   formatLocalizedPercent,
   itemCount,
@@ -54,7 +54,8 @@ import {
   portfolioAccessibilityLabel,
   spaceCount,
   todayHouseholdSummary,
-  todayPinSummary,
+  todayPlaceLocationSummary,
+  todayRegionSummary,
   type CoreJourneyCopy,
   useCoreJourneyCopy
 } from "@/i18n/coreJourneyCopy";
@@ -74,49 +75,7 @@ import {
   typography
 } from "@/theme/tokens";
 
-const hiddenMapDecorationProps =
-  Platform.OS === "web"
-    ? { "aria-hidden": true as const }
-    : { accessibilityElementsHidden: true };
-
 type GapKind = "identity" | "photo" | "location" | "evidence";
-
-interface AtlasPoint {
-  readonly id: string;
-  readonly cx: number;
-  readonly cy: number;
-  readonly confirmation: TodayPlacePin["confirmation"];
-}
-
-function projectAtlasPins(
-  pinned: readonly TodayPlacePin[]
-): AtlasPoint[] {
-  if (pinned.length === 0) return [];
-
-  const latitudes = pinned.map((pin) => pin.latitude);
-  const longitudes = pinned.map((pin) => pin.longitude);
-  const minLatitude = Math.min(...latitudes);
-  const maxLatitude = Math.max(...latitudes);
-  const minLongitude = Math.min(...longitudes);
-  const maxLongitude = Math.max(...longitudes);
-  const latitudeSpan = maxLatitude - minLatitude;
-  const longitudeSpan = maxLongitude - minLongitude;
-
-  return pinned.slice(0, 8).map((pin) => ({
-    id: pin.place.id,
-    confirmation: pin.confirmation,
-    // A proportional overview, not a street map. Every marker is still
-    // derived from the saved coordinates and absent Places never get a pin.
-    cx:
-      longitudeSpan === 0
-        ? 272
-        : 196 + ((pin.longitude - minLongitude) / longitudeSpan) * 122,
-    cy:
-      latitudeSpan === 0
-        ? 76
-        : 30 + ((maxLatitude - pin.latitude) / latitudeSpan) * 94
-  }));
-}
 
 function gapCopy(
   asset: NativeAsset,
@@ -338,16 +297,15 @@ export default function HomeScreen() {
     workspace.places.length,
     language
   );
-  const placePinStatus = selectTodayPlacePinStatus(workspace.places);
-  const atlasPins = projectAtlasPins(placePinStatus.pins);
-  const regionSummary = [
-    ...new Set(workspace.places.map((place) => place.regionLabel))
-  ]
-    .filter(Boolean)
-    .join(" \u00B7 ");
-  const pinSummary = todayPinSummary(
-    placePinStatus.confirmedCount,
-    placePinStatus.confirmationNeededCount,
+  const placeOverview = selectTodayPlaceOverview(workspace.places);
+  const regionSummary = todayRegionSummary(
+    placeOverview.regions,
+    language
+  );
+  const locationSummary = todayPlaceLocationSummary(
+    placeOverview.confirmedCount,
+    placeOverview.confirmationNeededCount,
+    placeOverview.missingPinCount,
     language
   );
   // Today is glanceable and may appear while someone is looking over the
@@ -500,6 +458,15 @@ export default function HomeScreen() {
     registerReadiness,
     language
   );
+  const openCommand = () =>
+    commandState === "incomplete" && firstGap
+      ? router.push(
+          gapHref(
+            firstGap.asset,
+            firstGap.readiness.nextItem!.id
+          )
+        )
+      : router.push("/capture");
 
   return (
     <AppScreen testID="home-screen">
@@ -578,11 +545,13 @@ export default function HomeScreen() {
           >
             {copy.today.sampleNextBody}
           </Text>
-          <PrimaryButton
-            icon={LockKey}
-            label={copy.vault.createMyPrivateHousehold}
-            onPress={() => router.push(sampleActivationRoute)}
-          />
+          <View testID="today-primary-action">
+            <PrimaryButton
+              icon={LockKey}
+              label={copy.vault.createMyPrivateHousehold}
+              onPress={() => router.push(sampleActivationRoute)}
+            />
+          </View>
         </View>
       ) : null}
 
@@ -692,20 +661,23 @@ export default function HomeScreen() {
           </View>
         </View>
         {canWriteAssets ? (
-          <PrimaryButton
-            icon={command.icon}
-            label={command.action}
-            onPress={() =>
-              commandState === "incomplete" && firstGap
-                ? router.push(
-                    gapHref(
-                      firstGap.asset,
-                      firstGap.readiness.nextItem!.id
-                    )
-                  )
-                : router.push("/capture")
-            }
-          />
+          sampleActivationRoute ? (
+            <View testID="today-secondary-command-action">
+              <SecondaryButton
+                icon={command.icon}
+                label={command.action}
+                onPress={openCommand}
+              />
+            </View>
+          ) : (
+            <View testID="today-primary-action">
+              <PrimaryButton
+                icon={command.icon}
+                label={command.action}
+                onPress={openCommand}
+              />
+            </View>
+          )
         ) : null}
       </CommandSurface>
 
@@ -796,12 +768,16 @@ export default function HomeScreen() {
           title={copy.items.yourPlaces}
         />
         <Pressable
-          accessibilityLabel={atlasAccessibilityLabel(
-            placePinStatus.confirmedCount,
-            placePinStatus.confirmationNeededCount,
-            workspace.places.length,
-            language
-          )}
+          accessibilityLabel={[
+            copy.stack.atlas,
+            placeCount(placeOverview.placeCount, language),
+            placeOverview.placeCount > 0 ? regionSummary : null,
+            placeOverview.placeCount > 0
+              ? locationSummary
+              : copy.today.addPlaceDetail
+          ]
+            .filter(Boolean)
+            .join(". ")}
           accessibilityHint={copy.today.atlasHint}
           accessibilityRole="button"
           onPress={() => router.push("/atlas")}
@@ -811,96 +787,102 @@ export default function HomeScreen() {
           ]}
           testID="today-atlas-entry"
         >
-          <Svg
-            {...hiddenMapDecorationProps}
-            height="154"
-            style={StyleSheet.absoluteFill}
-            viewBox="0 0 350 154"
-            width="100%"
+          <View
+            style={[
+              styles.atlasHeader,
+              rtl && styles.rowReverse
+            ]}
           >
-            <Path
-              d="M-14 40 C58 2 122 74 196 38 S314 12 380 48"
-              fill="none"
-              opacity={0.42}
-              stroke={colors.concrete}
-              strokeWidth="1"
-            />
-            <Path
-              d="M-6 94 C66 50 136 116 202 78 S308 58 368 98"
-              fill="none"
-              opacity={0.52}
-              stroke={colors.concrete}
-              strokeWidth="1"
-            />
-            <Path
-              d="M38 -8 C68 54 38 92 78 166"
-              fill="none"
-              opacity={0.35}
-              stroke={colors.concrete}
-              strokeWidth="1"
-            />
-            <Path
-              d="M274 -10 C240 38 290 96 250 166"
-              fill="none"
-              opacity={0.35}
-              stroke={colors.concrete}
-              strokeWidth="1"
-            />
-            {atlasPins.map((pin) => (
-              <Circle
-                cx={pin.cx}
-                cy={pin.cy}
-                fill={
-                  pin.confirmation === "confirmed"
-                    ? colors.volt
-                    : colors.surface
-                }
-                key={pin.id}
-                r="6"
-                stroke={
-                  pin.confirmation === "confirmed"
-                    ? colors.carbon
-                    : colors.warning
-                }
-                strokeWidth="3"
+            <View style={styles.atlasIcon}>
+              <GlobeHemisphereWest
+                color={colors.white}
+                size={24}
+                weight="regular"
               />
-            ))}
-          </Svg>
-          <View style={styles.atlasCopy}>
+            </View>
+            <View style={styles.atlasCopy}>
+              <Text
+                style={[
+                  styles.atlasKicker,
+                  rtl && styles.arabicMedium,
+                  rtl && styles.rtlText
+                ]}
+              >
+                {copy.today.locationOverview}
+              </Text>
+              <Text
+                style={[
+                  styles.atlasTitle,
+                  rtl && styles.arabicMedium,
+                  rtl && styles.rtlText
+                ]}
+              >
+                {placeCount(placeOverview.placeCount, language)}
+              </Text>
+              <Text
+                style={[
+                  styles.atlasMeta,
+                  rtl && styles.arabic,
+                  rtl && styles.rtlText
+                ]}
+              >
+                {placeOverview.placeCount > 0
+                  ? regionSummary
+                  : copy.today.addPlaceDetail}
+              </Text>
+            </View>
+          </View>
+
+          {placeOverview.placeCount > 0 ? (
+            <View
+              style={[
+                styles.atlasStatus,
+                placeOverview.reviewCount > 0 &&
+                  styles.atlasStatusAttention,
+                rtl && styles.rowReverse
+              ]}
+            >
+              {placeOverview.reviewCount > 0 ? (
+                <WarningCircle
+                  color={colors.warning}
+                  size={20}
+                  weight="regular"
+                />
+              ) : (
+                <CheckCircle
+                  color={colors.success}
+                  size={20}
+                  weight="regular"
+                />
+              )}
+              <Text
+                style={[
+                  styles.atlasStatusText,
+                  rtl && styles.arabic,
+                  rtl && styles.rtlText
+                ]}
+              >
+                {locationSummary}
+              </Text>
+            </View>
+          ) : null}
+
+          <View
+            style={[
+              styles.atlasAction,
+              rtl && styles.rowReverse
+            ]}
+          >
             <Text
               style={[
-                styles.atlasKicker,
+                styles.atlasActionLabel,
                 rtl && styles.arabicMedium,
                 rtl && styles.rtlText
               ]}
             >
-              {copy.today.locationOverview}
+              {copy.today.openAtlas}
             </Text>
-            <Text
-              style={[
-                styles.atlasTitle,
-                rtl && styles.arabicMedium,
-                rtl && styles.rtlText
-              ]}
-            >
-              {workspace.places.length > 0
-                ? `${placeCount(
-                    workspace.places.length,
-                    language
-                  )} ${copy.today.registerMapSuffix}`
-                : copy.today.registerMapEmpty}
-            </Text>
-            <Text
-              style={[
-                styles.atlasMeta,
-                rtl && styles.arabic,
-                rtl && styles.rtlText
-              ]}
-            >
-              {workspace.places.length > 0
-                ? `${pinSummary}${regionSummary ? ` \u00B7 ${regionSummary}` : ""}`
-                : copy.today.addPlaceDetail}
-            </Text>
+            <ForwardIcon color={colors.text} size={18} />
           </View>
         </Pressable>
 
@@ -1053,8 +1035,8 @@ const styles = StyleSheet.create({
   sampleActivationEyebrow: {
     color: colors.textMuted,
     fontFamily: typography.bodyBold,
-    fontSize: 11,
-    lineHeight: 16,
+    fontSize: 13,
+    lineHeight: 18,
     letterSpacing: 1.1
   },
   sampleActivationTitle: {
@@ -1074,8 +1056,8 @@ const styles = StyleSheet.create({
   commandLabel: {
     color: colors.concrete,
     fontFamily: typography.bodyBold,
-    fontSize: 11,
-    lineHeight: 16,
+    fontSize: 13,
+    lineHeight: 18,
     letterSpacing: 1.2
   },
   commandHeader: {
@@ -1174,8 +1156,8 @@ const styles = StyleSheet.create({
   portfolioLabel: {
     color: colors.textMuted,
     fontFamily: typography.bodyBold,
-    fontSize: 11,
-    lineHeight: 16,
+    fontSize: 13,
+    lineHeight: 18,
     letterSpacing: 1
   },
   portfolioValues: {
@@ -1230,37 +1212,86 @@ const styles = StyleSheet.create({
     textDecorationLine: "underline"
   },
   atlas: {
-    minHeight: 154,
-    overflow: "hidden",
-    justifyContent: "flex-end",
-    padding: spacing.md,
+    gap: spacing.md,
+    padding: spacing.lg,
     borderWidth: 1,
-    borderColor: colors.border,
+    borderColor: colors.borderStrong,
     borderRadius: radius.lg,
-    backgroundColor: colors.mist
+    backgroundColor: colors.surface
+  },
+  atlasHeader: {
+    flexDirection: "row",
+    alignItems: "flex-start",
+    gap: spacing.md
+  },
+  atlasIcon: {
+    width: 48,
+    height: 48,
+    flexShrink: 0,
+    alignItems: "center",
+    justifyContent: "center",
+    borderRadius: radius.md,
+    backgroundColor: colors.carbon
   },
   atlasCopy: {
-    maxWidth: "70%",
+    flex: 1,
     gap: 2
   },
   atlasKicker: {
     color: colors.textMuted,
     fontFamily: typography.bodyBold,
-    fontSize: 11,
-    lineHeight: 15,
-    letterSpacing: 1.1
+    fontSize: 12,
+    lineHeight: 17,
+    letterSpacing: 0.9
   },
   atlasTitle: {
     color: colors.text,
-    fontFamily: typography.display,
-    fontSize: 20,
-    lineHeight: 26
+    fontFamily: typography.displayBold,
+    fontSize: 24,
+    lineHeight: 30,
+    letterSpacing: -0.35
   },
   atlasMeta: {
     color: colors.textMuted,
     fontFamily: typography.body,
-    fontSize: 13,
-    lineHeight: 18
+    fontSize: 15,
+    lineHeight: 22
+  },
+  atlasStatus: {
+    minHeight: 48,
+    flexDirection: "row",
+    alignItems: "flex-start",
+    gap: spacing.sm,
+    padding: spacing.sm,
+    borderRadius: radius.md,
+    backgroundColor: colors.surfaceQuiet
+  },
+  atlasStatusAttention: {
+    backgroundColor: colors.warningQuiet
+  },
+  atlasStatusText: {
+    flex: 1,
+    color: colors.text,
+    fontFamily: typography.body,
+    fontSize: 14,
+    lineHeight: 21
+  },
+  atlasAction: {
+    minHeight: 44,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    gap: spacing.sm,
+    paddingTop: spacing.sm,
+    borderTopWidth: StyleSheet.hairlineWidth,
+    borderTopColor: colors.border
+  },
+  atlasActionLabel: {
+    flex: 1,
+    color: colors.text,
+    fontFamily: typography.bodyMedium,
+    fontSize: 15,
+    lineHeight: 21
   },
   placeRow: {
     minHeight: 68,

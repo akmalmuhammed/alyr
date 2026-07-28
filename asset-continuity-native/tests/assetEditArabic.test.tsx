@@ -97,6 +97,9 @@ describe("Asset Passport editor Arabic contract", () => {
       error: null,
       clearError: jest.fn()
     };
+    mockRouter.back.mockClear();
+    mockRouter.push.mockClear();
+    mockRouter.replace.mockClear();
   });
 
   it("keeps every editor mode, consequence, and recovery state bilingual", () => {
@@ -122,6 +125,12 @@ describe("Asset Passport editor Arabic contract", () => {
     expect(
       ASSET_EDIT_COPY.ar.photoPreview.protectedPhotoError
     ).toContain("الصورة");
+    expect(ASSET_EDIT_COPY.ar.placePinDebtTitle).not.toBe(
+      ASSET_EDIT_COPY.en.placePinDebtTitle
+    );
+    expect(ASSET_EDIT_COPY.ar.reviewPlacePinHint).not.toBe(
+      ASSET_EDIT_COPY.en.reviewPlacePinHint
+    );
     expect(isolateDynamicText("GMT-Master II")).toBe(
       "\u2068GMT-Master II\u2069"
     );
@@ -202,6 +211,52 @@ describe("Asset Passport editor Arabic contract", () => {
       ])
     );
     alertSpy.mockRestore();
+  });
+
+  it("exposes the unresolved Place pin as an Arabic direct action", async () => {
+    const selectedPlace = sampleWorkspace.places.find(
+      (place) => place.id === sampleAsset.placeId
+    )!;
+    mockParams = {
+      assetId: sampleAsset.id,
+      focus: "location",
+      returnTo: "passport"
+    };
+    mockWorkspaceContext = {
+      ...mockWorkspaceContext,
+      workspace: {
+        ...sampleWorkspace,
+        places: sampleWorkspace.places.map((place) =>
+          place.id === selectedPlace.id
+            ? { ...place, confirmedAt: null }
+            : place
+        )
+      }
+    };
+
+    const screen = await render(<AssetEditRoute />, {
+      wrapper: arabicWrapper
+    });
+    const debt = screen.getByTestId("asset-edit-place-pin-debt");
+    const alert = screen.getByTestId("asset-edit-place-pin-alert");
+    const action = screen.getByTestId("asset-edit-place-pin-action");
+
+    expect(debt).toBeTruthy();
+    expect(alert.props.accessibilityRole).toBe("alert");
+    expect(
+      screen.getByText(ASSET_EDIT_COPY.ar.placePinDebtTitle)
+    ).toBeTruthy();
+    expect(action.props.accessibilityLabel).toBe(
+      ASSET_EDIT_COPY.ar.reviewPlacePin
+    );
+    expect(action.props.accessibilityHint).toBe(
+      ASSET_EDIT_COPY.ar.reviewPlacePinHint
+    );
+
+    await fireEvent.press(action);
+    expect(mockRouter.push).toHaveBeenCalledWith(
+      `/place-pin?placeId=${encodeURIComponent(selectedPlace.id)}`
+    );
   });
 
   it("routes all user-facing editor copy through locale contracts", () => {

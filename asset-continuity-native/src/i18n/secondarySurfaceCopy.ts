@@ -50,6 +50,7 @@ interface SecondarySurfaceCopy {
     readonly firstPinBody: string;
     readonly addPlace: string;
     readonly locationWorkTitle: string;
+    readonly locationWorkHint: string;
     readonly noItemsTitle: string;
     readonly noItemsBody: string;
     readonly everyPlace: string;
@@ -183,6 +184,7 @@ export const SECONDARY_SURFACE_COPY: Readonly<
         "Homes, plots, offices and storage locations appear here after you place their pins.",
       addPlace: "Add a Place",
       locationWorkTitle: "Location records to finish",
+      locationWorkHint: "Opens the matching filtered register",
       noItemsTitle: "No items assigned here",
       noItemsBody:
         "This Place has a property pin, but no active Passport points to it yet.",
@@ -369,6 +371,7 @@ export const SECONDARY_SURFACE_COPY: Readonly<
         "تظهر المنازل والأراضي والمكاتب ومواقع التخزين هنا بعد تثبيت دبابيسها.",
       addPlace: "إضافة مكان",
       locationWorkTitle: "سجلات المواقع التي تحتاج إلى إكمال",
+      locationWorkHint: "يفتح السجل المصفّى المطابق",
       noItemsTitle: "لا توجد أغراض مسندة هنا",
       noItemsBody:
         "لهذا المكان دبوس عقار، لكن لا يشير إليه أي جواز نشط بعد.",
@@ -652,7 +655,7 @@ export function atlasItemsAt(
 }
 
 export function atlasLocationWork(
-  kind: "unpinned" | "unconfirmed" | "unplaced",
+  kind: "unpinned" | "review" | "unplaced",
   count: number,
   language: LanguageCode
 ): string {
@@ -660,8 +663,8 @@ export function atlasLocationWork(
     if (kind === "unpinned") {
       return `${count} ${count === 1 ? "Place needs" : "Places need"} a pin`;
     }
-    if (kind === "unconfirmed") {
-      return `${count} ${count === 1 ? "pin needs" : "pins need"} confirmation`;
+    if (kind === "review") {
+      return `${count} ${count === 1 ? "pin needs" : "pins need"} review`;
     }
     return `${count} ${count === 1 ? "item has" : "items have"} no Place`;
   }
@@ -670,10 +673,10 @@ export function atlasLocationWork(
     if (count === 2) return "مكانان يحتاجان إلى دبوس";
     return `${formatLocalizedNumber(count, "ar")} أماكن تحتاج إلى دبابيس`;
   }
-  if (kind === "unconfirmed") {
-    if (count === 1) return "دبوس واحد يحتاج إلى تأكيد";
-    if (count === 2) return "دبوسان يحتاجان إلى تأكيد";
-    return `${formatLocalizedNumber(count, "ar")} دبابيس تحتاج إلى تأكيد`;
+  if (kind === "review") {
+    if (count === 1) return "دبوس واحد يحتاج إلى مراجعة";
+    if (count === 2) return "دبوسان يحتاجان إلى مراجعة";
+    return `${formatLocalizedNumber(count, "ar")} دبابيس تحتاج إلى مراجعة`;
   }
   if (count === 1) return "غرض واحد بلا مكان";
   if (count === 2) return "غرضان بلا مكان";

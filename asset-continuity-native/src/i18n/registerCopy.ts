@@ -3,6 +3,7 @@ import type {
   AssetFilter,
   ItemGroup,
   ItemSort,
+  PlaceFilter,
   PlaceGroup,
   PlaceSort
 } from "@/register/browse";
@@ -20,7 +21,10 @@ export interface RegisterCopy {
   readonly resultLabel: string;
   readonly noPlace: string;
   readonly noRegion: string;
+  readonly noPlaces: string;
+  readonly noPlacesBody: string;
   readonly filters: Readonly<Record<AssetFilter, string>>;
+  readonly placeFilters: Readonly<Record<PlaceFilter, string>>;
   readonly itemSorts: Readonly<Record<ItemSort, string>>;
   readonly itemGroups: Readonly<Record<ItemGroup, string>>;
   readonly placeSorts: Readonly<Record<PlaceSort, string>>;
@@ -42,6 +46,8 @@ export const REGISTER_COPY: Readonly<Record<LanguageCode, RegisterCopy>> = {
     resultLabel: "Current view",
     noPlace: "No Place assigned",
     noRegion: "Region not recorded",
+    noPlaces: "No Places in this view",
+    noPlacesBody: "Choose another filter to return to all Places.",
     filters: {
       all: "All active items",
       location: "Needs location",
@@ -49,6 +55,13 @@ export const REGISTER_COPY: Readonly<Record<LanguageCode, RegisterCopy>> = {
       value: "Needs value",
       review: "Proof to review",
       archived: "Archived"
+    },
+    placeFilters: {
+      all: "All Places",
+      "pin-review": "Pin needs review",
+      "no-pin": "No pin",
+      "missing-address": "Missing address",
+      "missing-documents": "Missing documents"
     },
     itemSorts: {
       recent: "Recently updated",
@@ -84,6 +97,8 @@ export const REGISTER_COPY: Readonly<Record<LanguageCode, RegisterCopy>> = {
     resultLabel: "العرض الحالي",
     noPlace: "من دون مكان محدد",
     noRegion: "المنطقة غير مسجلة",
+    noPlaces: "لا توجد أماكن في هذا العرض",
+    noPlacesBody: "اختر عامل تصفية آخر للعودة إلى كل الأماكن.",
     filters: {
       all: "كل الأغراض النشطة",
       location: "ينقصه الموقع",
@@ -91,6 +106,13 @@ export const REGISTER_COPY: Readonly<Record<LanguageCode, RegisterCopy>> = {
       value: "تنقصه القيمة",
       review: "إثباتات للمراجعة",
       archived: "المؤرشف"
+    },
+    placeFilters: {
+      all: "كل الأماكن",
+      "pin-review": "دبوس يحتاج إلى مراجعة",
+      "no-pin": "من دون دبوس",
+      "missing-address": "العنوان غير مسجل",
+      "missing-documents": "من دون مستندات"
     },
     itemSorts: {
       recent: "الأحدث تحديثًا",

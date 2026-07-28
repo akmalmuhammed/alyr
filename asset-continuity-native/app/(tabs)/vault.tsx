@@ -345,11 +345,6 @@ export function VaultScreen({
         />
       ) : null}
 
-      <ReviewReminderSettingsSection
-        language={language}
-        rtl={rtl}
-      />
-
       <Section>
         <Text
           style={[
@@ -480,6 +475,10 @@ export function VaultScreen({
         </>
       ) : (
         <>
+      <ReviewReminderSettingsSection
+        language={language}
+        rtl={rtl}
+      />
 
       <Section>
         <Text
@@ -1216,8 +1215,8 @@ const styles = StyleSheet.create({
   commandLabel: {
     color: colors.concrete,
     fontFamily: typography.bodyBold,
-    fontSize: 11,
-    lineHeight: 15,
+    fontSize: 13,
+    lineHeight: 18,
     letterSpacing: 1
   },
   commandTitle: {
@@ -1273,8 +1272,8 @@ const styles = StyleSheet.create({
   reminderEyebrow: {
     color: colors.textMuted,
     fontFamily: typography.bodyBold,
-    fontSize: 11,
-    lineHeight: 15,
+    fontSize: 13,
+    lineHeight: 18,
     letterSpacing: 1
   },
   reminderIcon: {
@@ -1454,9 +1453,9 @@ const styles = StyleSheet.create({
   },
   accountLabel: {
     color: colors.textMuted,
-    fontFamily: typography.bodyBold,
-    fontSize: 10,
-    lineHeight: 14,
+    fontFamily: typography.metadata,
+    fontSize: 12,
+    lineHeight: 17,
     letterSpacing: 1
   },
   accountEmail: {

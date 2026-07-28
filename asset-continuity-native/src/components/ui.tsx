@@ -761,7 +761,7 @@ const styles = StyleSheet.create({
     fontSize: 15
   },
   destructiveButton: {
-    borderColor: "rgba(255, 126, 132, 0.32)",
+    borderColor: colors.dangerBorder,
     backgroundColor: colors.dangerQuiet
   },
   destructiveText: {
@@ -832,11 +832,11 @@ const styles = StyleSheet.create({
     backgroundColor: colors.informationQuiet
   },
   pillVolt: {
-    borderColor: "rgba(183, 243, 74, 0.3)",
+    borderColor: colors.voltBorder,
     backgroundColor: colors.voltQuiet
   },
   pillWarning: {
-    borderColor: "rgba(242, 179, 93, 0.3)",
+    borderColor: colors.warningBorder,
     backgroundColor: colors.warningQuiet
   },
   pillDot: {
@@ -896,7 +896,7 @@ const styles = StyleSheet.create({
     gap: spacing.sm,
     padding: spacing.md,
     borderWidth: 1,
-    borderColor: "rgba(255, 126, 132, 0.32)",
+    borderColor: colors.dangerBorder,
     borderRadius: radius.md,
     backgroundColor: colors.dangerQuiet
   },

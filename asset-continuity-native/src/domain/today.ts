@@ -21,6 +21,15 @@ export interface TodayPlacePinStatus {
   readonly confirmationNeededCount: number;
 }
 
+export interface TodayPlaceOverview {
+  readonly placeCount: number;
+  readonly regions: readonly string[];
+  readonly confirmedCount: number;
+  readonly confirmationNeededCount: number;
+  readonly missingPinCount: number;
+  readonly reviewCount: number;
+}
+
 export interface TodayAttentionEntry {
   readonly asset: NativeAsset;
   readonly readiness: AssetReadiness;
@@ -111,5 +120,36 @@ export function selectTodayPlacePinStatus(
     confirmationNeededCount: pins.filter(
       (pin) => pin.confirmation === "confirmation-needed"
     ).length
+  };
+}
+
+/**
+ * Summarises only persisted Place facts for Today. A missing coordinate and an
+ * unconfirmed coordinate are separate, visible review debts; neither is
+ * promoted to a mapped or confirmed location.
+ */
+export function selectTodayPlaceOverview(
+  places: readonly NativePlace[]
+): TodayPlaceOverview {
+  const pinStatus = selectTodayPlacePinStatus(places);
+  const regions = [
+    ...new Set(
+      places
+        .map((place) => place.regionLabel.trim())
+        .filter((region) => region.length > 0)
+    )
+  ].sort((left, right) => left.localeCompare(right));
+  const missingPinCount = places.length - pinStatus.pins.length;
+  const reviewCount =
+    pinStatus.confirmationNeededCount + missingPinCount;
+
+  return {
+    placeCount: places.length,
+    regions,
+    confirmedCount: pinStatus.confirmedCount,
+    confirmationNeededCount:
+      pinStatus.confirmationNeededCount,
+    missingPinCount,
+    reviewCount
   };
 }

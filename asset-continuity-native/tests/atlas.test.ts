@@ -1,11 +1,15 @@
 import {
+  ATLAS_COASTLINE_SOURCE,
+  ATLAS_COASTLINE_RENDER_LINES,
   ATLAS_COASTLINES,
   ATLAS_GRATICULE,
+  ATLAS_GRATICULE_RENDER_LINES,
   assetsNeedingPhysicalPlace,
   atlasCenter,
   atlasPinDisclosure,
   moveAtlasCenter,
   projectAtlasPolyline,
+  projectPreparedAtlasPolyline,
   projectOnAtlas
 } from "@/domain/atlas";
 import { createWorkspace } from "@/domain/sample";
@@ -89,7 +93,15 @@ describe("Atlas projection", () => {
       projectAtlasPolyline(line, center)
     );
 
-    expect(ATLAS_COASTLINES.length).toBeGreaterThanOrEqual(7);
+    expect(ATLAS_COASTLINE_SOURCE).toMatchObject({
+      name: "Natural Earth 1:110m Coastline",
+      version: "4.1.0",
+      publicDomain: true
+    });
+    expect(ATLAS_COASTLINES).toHaveLength(134);
+    expect(
+      ATLAS_COASTLINES.reduce((total, line) => total + line.length, 0)
+    ).toBe(1_095);
     expect(projected.length).toBeGreaterThan(0);
     expect(
       projected.every(
@@ -103,6 +115,35 @@ describe("Atlas projection", () => {
           )
       )
     ).toBe(true);
+  });
+
+  it("keeps the pinned public-domain Natural Earth artifact byte-exact", () => {
+    const { readFileSync } = jest.requireActual("fs") as {
+      readFileSync(path: string): Uint8Array;
+    };
+    const { createHash } = jest.requireActual("crypto") as {
+      createHash(algorithm: string): {
+        update(value: Uint8Array): { digest(encoding: "hex"): string };
+      };
+    };
+    const coastline = readFileSync(
+      `${process.cwd()}/src/assets/atlas/ne_110m_coastline.json`
+    );
+    const mobileCoastline = readFileSync(
+      `${process.cwd()}/src/assets/atlas/ne_110m_coastline_mobile.json`
+    );
+
+    expect(createHash("sha256").update(coastline).digest("hex")).toBe(
+      "851f581ff5ffb844deed8ae1a9ce22e3c4bb3d74fa342cadb5d8e39b41ae7c3c"
+    );
+    expect(
+      createHash("sha256").update(mobileCoastline).digest("hex")
+    ).toBe(
+      "522f419ab2d171c0c0d9fcb8d81630f5940a4b6533dd10e5309d758b824ba0d3"
+    );
+    expect(ATLAS_COASTLINE_SOURCE.repositoryCommit).toBe(
+      "ca96624a56bd078437bca8184e78163e5039ad19"
+    );
   });
 
   it("provides geographic graticules that rotate with the camera", () => {
@@ -123,6 +164,23 @@ describe("Atlas projection", () => {
     expect(qatarPaths.length).toBeGreaterThan(10);
     expect(sydneyPaths.length).toBeGreaterThan(10);
     expect(qatarPaths[0]).not.toEqual(sydneyPaths[0]);
+  });
+
+  it("prevalidates fixed geography once for interactive Atlas frames", () => {
+    const center = { latitude: 25.2854, longitude: 51.531 };
+
+    expect(ATLAS_COASTLINE_RENDER_LINES).toHaveLength(
+      ATLAS_COASTLINES.length
+    );
+    expect(ATLAS_GRATICULE_RENDER_LINES).toHaveLength(
+      ATLAS_GRATICULE.length
+    );
+    expect(
+      projectPreparedAtlasPolyline(
+        ATLAS_COASTLINE_RENDER_LINES[0]!,
+        center
+      )
+    ).toEqual(projectAtlasPolyline(ATLAS_COASTLINES[0]!, center));
   });
 
   it("moves the presentation camera without claiming to move a Place pin", () => {

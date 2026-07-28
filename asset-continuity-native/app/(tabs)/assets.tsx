@@ -33,12 +33,14 @@ import {
 import { getRegisterCopy } from "@/i18n/registerCopy";
 import { PRIMARY_ROUTES } from "@/navigation/primaryRoutes";
 import {
+  filterRegisterPlaces,
   groupRegisterAssets,
   groupRegisterPlaces,
   initialAssetFilter,
   initialCollectionView,
   initialItemGroup,
   initialItemSort,
+  initialPlaceFilter,
   initialPlaceGroup,
   initialPlaceSort,
   sortRegisterAssets,
@@ -47,6 +49,7 @@ import {
   type CollectionView,
   type ItemGroup,
   type ItemSort,
+  type PlaceFilter,
   type PlaceGroup,
   type PlaceSort
 } from "@/register/browse";
@@ -59,6 +62,7 @@ export {
   initialCollectionView,
   initialItemGroup,
   initialItemSort,
+  initialPlaceFilter,
   initialPlaceGroup,
   initialPlaceSort
 };
@@ -67,6 +71,7 @@ export type {
   CollectionView,
   ItemGroup,
   ItemSort,
+  PlaceFilter,
   PlaceGroup,
   PlaceSort
 };
@@ -92,8 +97,11 @@ export default function ItemsScreen() {
   const [view, setView] = useState<CollectionView>(() =>
     initialCollectionView(params.view)
   );
-  const [filter, setFilter] = useState<AssetFilter>(() =>
+  const [assetFilter, setAssetFilter] = useState<AssetFilter>(() =>
     initialAssetFilter(params.filter)
+  );
+  const [placeFilter, setPlaceFilter] = useState<PlaceFilter>(() =>
+    initialPlaceFilter(params.filter)
   );
   const [itemSort, setItemSort] = useState<ItemSort>(() =>
     initialItemSort(params.itemSort)
@@ -109,8 +117,22 @@ export default function ItemsScreen() {
   );
 
   useEffect(() => {
-    setView(initialCollectionView(params.view));
-    setFilter(initialAssetFilter(params.filter));
+    const nextView = initialCollectionView(params.view);
+    const nextAssetFilter = initialAssetFilter(params.filter);
+    const nextPlaceFilter = initialPlaceFilter(params.filter);
+
+    setView(nextView);
+    if (nextView === "places") {
+      setPlaceFilter(nextPlaceFilter);
+      if (nextAssetFilter !== "all") {
+        setAssetFilter(nextAssetFilter);
+      }
+    } else {
+      setAssetFilter(nextAssetFilter);
+      if (nextPlaceFilter !== "all") {
+        setPlaceFilter(nextPlaceFilter);
+      }
+    }
     setItemSort(initialItemSort(params.itemSort));
     setItemGroup(initialItemGroup(params.itemGroup));
     setPlaceSort(initialPlaceSort(params.placeSort));
@@ -153,12 +175,13 @@ export default function ItemsScreen() {
   const filteredAssets = useMemo(() => {
     if (!workspace) return [];
     return workspace.assets.filter((asset) =>
-      filter === "archived"
+      assetFilter === "archived"
         ? assetLifecycleStatus(asset) === "archived"
         : isAssetActive(asset) &&
-          (filter === "all" || reviewIds[filter].has(asset.id))
+          (assetFilter === "all" ||
+            reviewIds[assetFilter].has(asset.id))
     );
-  }, [filter, reviewIds, workspace]);
+  }, [assetFilter, reviewIds, workspace]);
 
   const sortedAssets = useMemo(
     () => sortRegisterAssets(filteredAssets, itemSort, language),
@@ -191,15 +214,25 @@ export default function ItemsScreen() {
     return counts;
   }, [activeAssets]);
 
+  const filteredPlaces = useMemo(
+    () =>
+      filterRegisterPlaces(
+        workspace?.places ?? [],
+        placeFilter,
+        workspace?.placeDocuments ?? []
+      ),
+    [placeFilter, workspace?.placeDocuments, workspace?.places]
+  );
+
   const sortedPlaces = useMemo(
     () =>
       sortRegisterPlaces(
-        workspace?.places ?? [],
+        filteredPlaces,
         placeSort,
         language,
         activeItemCountByPlace
       ),
-    [activeItemCountByPlace, language, placeSort, workspace?.places]
+    [activeItemCountByPlace, filteredPlaces, language, placeSort]
   );
   const placeSections = useMemo(
     () =>
@@ -221,12 +254,26 @@ export default function ItemsScreen() {
 
   const updateView = (next: CollectionView) => {
     setView(next);
+    const routeView = next === "items" ? undefined : next;
+    const destinationFilter =
+      next === "items" ? assetFilter : placeFilter;
+    const routeFilter =
+      destinationFilter === "all" ? undefined : destinationFilter;
+
+    router.setParams(
+      params.filter === routeFilter
+        ? { view: routeView }
+        : { view: routeView, filter: routeFilter }
+    );
+  };
+  const updateAssetFilter = (next: AssetFilter) => {
+    setAssetFilter(next);
     router.setParams({
-      view: next === "items" ? undefined : next
+      filter: next === "all" ? undefined : next
     });
   };
-  const updateFilter = (next: AssetFilter) => {
-    setFilter(next);
+  const updatePlaceFilter = (next: PlaceFilter) => {
+    setPlaceFilter(next);
     router.setParams({
       filter: next === "all" ? undefined : next
     });
@@ -265,11 +312,13 @@ export default function ItemsScreen() {
   const currentCount =
     view === "items"
       ? itemCount(filteredAssets.length, language)
-      : placeCount(workspace.places.length, language);
+      : placeCount(filteredPlaces.length, language);
   const arrangement =
     view === "items"
       ? [
-          filter === "all" ? null : registerCopy.filters[filter],
+          assetFilter === "all"
+            ? null
+            : registerCopy.filters[assetFilter],
           registerCopy.itemSorts[itemSort],
           itemGroup === "none"
             ? null
@@ -278,6 +327,9 @@ export default function ItemsScreen() {
           .filter(Boolean)
           .join(" · ")
       : [
+          placeFilter === "all"
+            ? null
+            : registerCopy.placeFilters[placeFilter],
           registerCopy.placeSorts[placeSort],
           placeGroup === "none"
             ? null
@@ -424,7 +476,7 @@ export default function ItemsScreen() {
               ) : null}
             </View>
 
-            {workspace.places.length > 0 ? (
+            {filteredPlaces.length > 0 ? (
               placeSections.map((section) => (
                 <Fragment key={section.id}>
                   {section.label ? (
@@ -508,7 +560,7 @@ export default function ItemsScreen() {
                   })}
                 </Fragment>
               ))
-            ) : (
+            ) : workspace.places.length === 0 ? (
               <View style={[styles.empty, rtl && styles.alignEnd]}>
                 <MapPin color={colors.text} size={34} weight="regular" />
                 <Text
@@ -530,6 +582,38 @@ export default function ItemsScreen() {
                     }
                   />
                 ) : null}
+              </View>
+            ) : (
+              <View style={[styles.empty, rtl && styles.alignEnd]}>
+                <SlidersHorizontal
+                  color={colors.text}
+                  size={32}
+                  weight="regular"
+                />
+                <Text
+                  style={[
+                    styles.emptyTitle,
+                    rtl && styles.sectionTitleArabic,
+                    rtl && styles.rtlText
+                  ]}
+                >
+                  {registerCopy.noPlaces}
+                </Text>
+                <BodyText muted>{registerCopy.noPlacesBody}</BodyText>
+                <Pressable
+                  accessibilityRole="button"
+                  onPress={() => updatePlaceFilter("all")}
+                  style={styles.clearFilter}
+                >
+                  <Text
+                    style={[
+                      styles.clearFilterLabel,
+                      rtl && styles.arabicMedium
+                    ]}
+                  >
+                    {copy.items.clearFilter}
+                  </Text>
+                </Pressable>
               </View>
             )}
           </Section>
@@ -559,7 +643,7 @@ export default function ItemsScreen() {
                 </Fragment>
               ))
             ) : activeAssets.length === 0 &&
-              filter !== "archived" ? (
+              assetFilter !== "archived" ? (
               <View style={[styles.empty, rtl && styles.alignEnd]}>
                 <Text
                   style={[
@@ -593,18 +677,18 @@ export default function ItemsScreen() {
                     rtl && styles.rtlText
                   ]}
                 >
-                  {filter === "archived"
+                  {assetFilter === "archived"
                     ? copy.items.noArchived
                     : copy.items.noItems}
                 </Text>
                 <BodyText muted>
-                  {filter === "archived"
+                  {assetFilter === "archived"
                     ? copy.items.noArchivedBody
                     : copy.items.noItemsBody}
                 </BodyText>
                 <Pressable
                   accessibilityRole="button"
-                  onPress={() => updateFilter("all")}
+                  onPress={() => updateAssetFilter("all")}
                   style={styles.clearFilter}
                 >
                   <Text
@@ -623,17 +707,19 @@ export default function ItemsScreen() {
       </AppScreen>
 
       <RegisterOrganizerModal
+        assetFilter={assetFilter}
         copy={registerCopy}
-        filter={filter}
         itemGroup={itemGroup}
         itemSort={itemSort}
         onClose={() => setOrganizerOpen(false)}
-        onFilterChange={updateFilter}
+        onAssetFilterChange={updateAssetFilter}
         onItemGroupChange={updateItemGroup}
         onItemSortChange={updateItemSort}
+        onPlaceFilterChange={updatePlaceFilter}
         onPlaceGroupChange={updatePlaceGroup}
         onPlaceSortChange={updatePlaceSort}
         open={organizerOpen}
+        placeFilter={placeFilter}
         placeGroup={placeGroup}
         placeSort={placeSort}
         rtl={rtl}

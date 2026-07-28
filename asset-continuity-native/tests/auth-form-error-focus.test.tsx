@@ -92,12 +92,16 @@ describe("auth form first-invalid-field wiring", () => {
   beforeEach(() => {
     jest.clearAllMocks();
     mockAuthState.mode = "preview";
+    mockAuthState.householdName = "";
     mockAuthState.pendingHouseholdInvite = null;
   });
 
   it("orders create-account fields from email through confirmation", async () => {
     const screen = await render(<CreateAccountScreen />);
 
+    expect(
+      screen.getAllByRole("button", { name: "Show password" })
+    ).toHaveLength(2);
     await fireEvent.press(screen.getByText("Create account"));
 
     expect(mockFocusFirstInvalidAuthField).toHaveBeenCalledTimes(1);
@@ -226,6 +230,9 @@ describe("auth form first-invalid-field wiring", () => {
   it("orders sign-in fields with email first", async () => {
     const screen = await render(<SignInScreen />);
 
+    expect(
+      screen.getByRole("button", { name: "Show password" })
+    ).toBeTruthy();
     await fireEvent.press(screen.getByText("Sign in"));
 
     expect(mockFocusFirstInvalidAuthField).toHaveBeenCalledTimes(1);
@@ -243,7 +250,10 @@ describe("auth form first-invalid-field wiring", () => {
 
   it("focuses the household name when setup validation fails", async () => {
     const screen = await render(<HouseholdSetupScreen />);
-    await fireEvent.changeText(screen.getByLabelText("Household name"), " ");
+    const householdName = screen.getByLabelText("Household name");
+
+    expect(householdName.props.value).toBe("");
+    expect(householdName.props.placeholder).toBe("e.g. Family home");
 
     await fireEvent.press(screen.getByText("Continue"));
 

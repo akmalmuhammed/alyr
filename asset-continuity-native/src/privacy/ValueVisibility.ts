@@ -19,6 +19,7 @@ export interface RecordedValueFormatInput {
   readonly visibility: ValueVisibility;
   readonly compact?: boolean;
   readonly locale?: string;
+  readonly isolateBidi?: boolean;
 }
 
 export interface FormattedRecordedValue {
@@ -29,6 +30,31 @@ export interface FormattedRecordedValue {
 }
 
 const RECORDED_VALUE_MASK = "\u2022".repeat(6);
+export const LEFT_TO_RIGHT_ISOLATE = "\u2066";
+export const POP_DIRECTIONAL_ISOLATE = "\u2069";
+
+/**
+ * Keeps an ISO currency code, sign and amount together inside RTL copy.
+ *
+ * Currency codes are Latin while Arabic-formatted digits and punctuation are
+ * bidi-sensitive. A directional isolate gives the complete financial token a
+ * stable left-to-right boundary without changing the surrounding paragraph.
+ */
+export function bidiIsolateFinancialToken(
+  token: string,
+  language: LanguageCode
+): string {
+  return language === "ar"
+    ? `${LEFT_TO_RIGHT_ISOLATE}${token}${POP_DIRECTIONAL_ISOLATE}`
+    : token;
+}
+
+function bidiIsolateCurrencyCode(
+  currency: string,
+  language: LanguageCode
+): string {
+  return bidiIsolateFinancialToken(currency, language);
+}
 
 export function valueVisibilityFromHidden(
   amountsHidden: boolean
@@ -38,10 +64,15 @@ export function valueVisibilityFromHidden(
 
 export function recordedValueHiddenAccessibilityLabel(
   currency: string,
-  language: LanguageCode
+  language: LanguageCode,
+  isolateBidi = false
 ): string {
   return language === "ar"
-    ? `${currency}، القيمة المسجّلة مخفية`
+    ? `${
+        isolateBidi
+          ? bidiIsolateCurrencyCode(currency, language)
+          : currency
+      }، القيمة المسجّلة مخفية`
     : `${currency}, recorded amount hidden`;
 }
 
@@ -55,16 +86,21 @@ export function formatRecordedValue({
   amountMinor,
   compact = false,
   currency,
+  isolateBidi = false,
   language,
   locale = language === "ar" ? "ar-QA" : "en-QA",
   visibility
 }: RecordedValueFormatInput): FormattedRecordedValue {
   if (visibility === "hidden") {
+    const hiddenToken = `${currency} ${RECORDED_VALUE_MASK}`;
     return {
-      text: `${currency} ${RECORDED_VALUE_MASK}`,
+      text: isolateBidi
+        ? bidiIsolateFinancialToken(hiddenToken, language)
+        : hiddenToken,
       accessibilityLabel: recordedValueHiddenAccessibilityLabel(
         currency,
-        language
+        language,
+        isolateBidi
       )
     };
   }
@@ -72,25 +108,33 @@ export function formatRecordedValue({
   const text = compact
     ? formatPortfolioMoneyCompact(amountMinor, currency, locale)
     : formatPortfolioMoney(amountMinor, currency, locale);
+  const isolatedText = isolateBidi
+    ? bidiIsolateFinancialToken(text, language)
+    : text;
   return {
-    text,
-    accessibilityLabel: text
+    text: isolatedText,
+    accessibilityLabel: isolatedText
   };
 }
 
 export function formatSignedRecordedValue({
   amountMinor,
   currency,
+  isolateBidi = false,
   language,
   locale = language === "ar" ? "ar-QA" : "en-QA",
   visibility
 }: Omit<RecordedValueFormatInput, "compact">): FormattedRecordedValue {
   if (visibility === "hidden") {
+    const hiddenToken = `${currency} ${RECORDED_VALUE_MASK}`;
     return {
-      text: `${currency} ${RECORDED_VALUE_MASK}`,
+      text: isolateBidi
+        ? bidiIsolateFinancialToken(hiddenToken, language)
+        : hiddenToken,
       accessibilityLabel: recordedValueHiddenAccessibilityLabel(
         currency,
-        language
+        language,
+        isolateBidi
       )
     };
   }
@@ -99,5 +143,11 @@ export function formatSignedRecordedValue({
     currency,
     locale
   );
-  return { text, accessibilityLabel: text };
+  const isolatedText = isolateBidi
+    ? bidiIsolateFinancialToken(text, language)
+    : text;
+  return {
+    text: isolatedText,
+    accessibilityLabel: isolatedText
+  };
 }

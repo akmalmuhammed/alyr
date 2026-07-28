@@ -23,6 +23,7 @@ import {
   focusFirstInvalidAuthField
 } from "@/auth/components";
 import { AUTH_ROUTES, authStepNumber } from "@/auth/routes";
+import { completeSignedAccountExit } from "@/auth/signedAccountExit";
 import { validateHouseholdName } from "@/auth/validation";
 import {
   localizeAuthFailure,
@@ -52,7 +53,8 @@ export default function HouseholdSetupScreen() {
     mode,
     pendingHouseholdInvite,
     session,
-    setHouseholdName
+    setHouseholdName,
+    signOut
   } = useAuthFlow();
   const { copy, language, rtl } = useCoreJourneyCopy();
   const inviteCopy = useInviteCopy();
@@ -60,13 +62,12 @@ export default function HouseholdSetupScreen() {
   const [setupMode, setSetupMode] = useState<"create" | "join">(
     pendingHouseholdInvite ? "join" : "create"
   );
-  const [name, setName] = useState(
-    householdName || copy.household.defaultName
-  );
+  const [name, setName] = useState(householdName.trim());
   const [nameError, setNameError] = useState<string | null>(null);
   const [inviteCode, setInviteCode] = useState("");
   const [inviteCodeError, setInviteCodeError] =
     useState<string | null>(null);
+  const [leavingAccount, setLeavingAccount] = useState(false);
   const householdAlreadyCreated = Boolean(activeHouseholdId);
   const automaticJoinStarted = useRef(false);
   const accountAccessPending =
@@ -155,6 +156,19 @@ export default function HouseholdSetupScreen() {
     router.replace("/");
   };
 
+  const useAnotherAccount = async () => {
+    if (busy || leavingAccount) return;
+    setLeavingAccount(true);
+    clearError();
+    const result = await completeSignedAccountExit(
+      signOut,
+      () => router.replace(AUTH_ROUTES.welcome)
+    );
+    if (result === "still-signed-in") {
+      setLeavingAccount(false);
+    }
+  };
+
   return (
     <AuthScaffold
       footer={
@@ -167,16 +181,24 @@ export default function HouseholdSetupScreen() {
               ? { label: inviteCopy.household.joinAction }
               : {}),
             icon: ArrowRight,
-            loading: busy,
-            disabled: busy,
+            loading: busy && !leavingAccount,
+            disabled: busy || leavingAccount,
             onPress: () => void advance()
+          }}
+          secondary={{
+            label: copy.common.useAnotherAccount,
+            disabled: busy || leavingAccount,
+            onPress: () => void useAnotherAccount()
           }}
         />
       }
+      backDisabled={leavingAccount}
       onBack={() =>
-        router.canGoBack()
-          ? router.back()
-          : router.replace(AUTH_ROUTES.signIn)
+        leavingAccount
+          ? undefined
+          : router.canGoBack()
+            ? router.back()
+            : router.replace(AUTH_ROUTES.signIn)
       }
       progress={authStepNumber("household")}
       testID="auth-household-screen"

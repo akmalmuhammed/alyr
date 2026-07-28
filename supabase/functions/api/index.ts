@@ -619,39 +619,91 @@ async function handleHouseholdCreate(
   context: AuthenticatedContext,
 ): Promise<Response> {
   const body = await readJson(request);
+  requireApiVersion(body);
   const name = typeof body.name === "string" ? body.name.trim() : "";
+  const operationId = typeof body.operationId === "string"
+    ? body.operationId
+    : "";
+  const householdId = typeof body.householdId === "string"
+    ? body.householdId
+    : "";
   if (
-    !hasOnlyKeys(body, ["name"]) ||
+    !hasOnlyKeys(
+      body,
+      ["apiVersion", "operationId", "householdId", "name"],
+    ) ||
+    !uuidPattern.test(operationId) ||
+    !uuidPattern.test(householdId) ||
     name.length < 1 ||
     name.length > 120
   ) {
-    return apiError("VALIDATION_FAILED", "The household name is invalid.");
+    return apiError(
+      "VALIDATION_FAILED",
+      "The household creation request is invalid.",
+    );
   }
   const { data, error } = await context.client.rpc(
     "create_household",
-    { p_name: name },
+    {
+      p_name: name,
+      p_operation_id: operationId,
+      p_household_id: householdId,
+    },
   );
 
   if (error) {
     const quotaReached = error.message.includes("PILOT_HOUSEHOLD_LIMIT");
+    const capacityReached = error.message.includes(
+      "PILOT_CAPACITY_REACHED",
+    );
     const enrollmentRequired = error.message.includes(
       "PILOT_ENROLLMENT_REQUIRED",
     );
+    const idempotencyConflict = error.message.includes(
+      "IDEMPOTENCY_CONFLICT",
+    );
+    const operationLimited = error.message.includes(
+      "HOUSEHOLD_OPERATION_LIMIT",
+    );
+    const recoveryDenied =
+      error.message.includes("HOUSEHOLD_RECOVERY_DENIED") ||
+      error.message.includes("IDEMPOTENCY_RECEIPT_INVALID");
     return apiError(
-      quotaReached
+      operationLimited
+        ? "RATE_LIMITED"
+        : recoveryDenied
+        ? "AUTHORIZATION_DENIED"
+        : idempotencyConflict
+        ? "IDEMPOTENCY_CONFLICT"
+        : quotaReached || capacityReached
         ? "QUOTA_EXCEEDED"
         : enrollmentRequired
         ? "AUTHORIZATION_DENIED"
         : "VALIDATION_FAILED",
-      quotaReached
+      operationLimited
+        ? "Household setup has reached its retry limit. Try again after the retention window."
+        : recoveryDenied
+        ? "This household setup operation is not available to this account."
+        : idempotencyConflict
+        ? "This household creation identity was already used for a different request."
+        : quotaReached || capacityReached
         ? "The closed pilot has reached its household limit."
         : enrollmentRequired
         ? "This account is not enrolled in the closed pilot."
-        : "Unable to create the household.",
-      quotaReached ? 409 : enrollmentRequired ? 403 : 400,
+        : "The household could not be created.",
+      operationLimited
+        ? 429
+        : recoveryDenied
+        ? 403
+        : idempotencyConflict || quotaReached || capacityReached
+        ? 409
+        : enrollmentRequired
+        ? 403
+        : 400,
+      operationLimited,
     );
   }
-  return json({ household: data }, 201);
+  return json({ operationId, household: data }, 201);
 }
 
 async function handleOnboardingComplete(

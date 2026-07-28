@@ -10,6 +10,9 @@ const english = {
     back: "Back",
     dismiss: "Dismiss",
     continue: "Continue",
+    showPassword: "Show password",
+    hidePassword: "Hide password",
+    useAnotherAccount: "Use another account",
     item: "item",
     items: "items",
     place: "Place",
@@ -160,24 +163,43 @@ const english = {
   },
   callback: {
     returnToConfirmation: "Return to confirmation",
+    retry: "Retry confirmation",
+    retryInvite: "Retry household invitation",
+    requestNewLink: "Request a new confirmation email",
+    signInToResend: "Sign in to resend confirmation",
+    signIn: "Sign in instead",
+    resend: "Resend confirmation email",
+    recover: "Recover account access",
+    continue: "Continue to ALYR",
+    otherOptions: "Other account access options",
     body: "ALYR is asking the account provider for a verified session. Nothing is marked complete until that session is returned.",
+    failedBody: "The account provider did not return a verified session. Your household record is unchanged.",
     eyebrow: "ACCOUNT VERIFICATION",
     confirmedTitle: "Email confirmed.",
     checkingTitle: "Checking the confirmation link.",
+    failedTitle: "Confirmation needs another try.",
+    inviteFailedTitle: "Email confirmed. Invitation needs another try.",
     checkingLabel: "Checking confirmation",
     waiting: "Waiting for a verified account session.",
     incompleteLink:
       "This confirmation link is incomplete. Return to ALYR and request a new one.",
+    exchangeFailed:
+      "This confirmation link did not return a verified account session.",
+    failedNotice:
+      "Retry this link, request a new confirmation email, or choose another account access path below.",
+    inviteFailedBody:
+      "Your verified account session is ready, but ALYR did not finish joining the household.",
+    inviteFailedNotice:
+      "Retry the household invitation, sign in instead, or use the account recovery options below.",
     complete:
-      "A verified session was returned. Continuing to household setup."
+      "A verified session was returned. Continue to your household record."
   },
   household: {
     eyebrow: "HOUSEHOLD WORKSPACE",
     title: "Name the household record.",
     body: "Use the name your family would recognise. Items, Places, proof and access stay organised here.",
     label: "Household name",
-    placeholder: "My household",
-    defaultName: "My household",
+    placeholder: "e.g. Family home",
     retryAccess: "Retry account access",
     ownerFact: "You start as the only owner. You can review household access later."
   },
@@ -250,6 +272,7 @@ const english = {
     confirmedPins: "confirmed pins",
     needsConfirmation: "need confirmation",
     atlasHint: "Opens the globe overview and complete Place list",
+    openAtlas: "Open Atlas",
     valueCoverage: "have a recorded value",
     locationGap: "Finish the location for",
     locationGapDetail: "Make it retrievable without relying on memory.",
@@ -264,7 +287,7 @@ const english = {
     identityGapDetail: "Add the missing identity details."
   },
   items: {
-    title: "Items",
+    title: "Assets",
     intro: "Browse your possessions, or switch to Places to see where they belong.",
     addItem: "Add an item",
     itemsTab: "Items",
@@ -309,7 +332,7 @@ const english = {
     noMatchBody: "Try an item, category, place, room or retrieval clue."
   },
   stack: {
-    assetPassport: "Asset Passport",
+    assetPassport: "Passport",
     evidence: "Evidence",
     updatePassport: "Update Passport",
     recordedValue: "Recorded value",
@@ -334,8 +357,8 @@ const english = {
     record: "Record value",
     updateHint: "Adds a new dated record and keeps the previous entries in history.",
     recordHint: "Adds this dated value to the private workspace.",
-    passport: "ASSET PASSPORT",
-    recordTitle: "Record an asset value",
+    passport: "ITEM PASSPORT",
+    recordTitle: "Record an item value",
     intro: "Enter a value you know. ALYR keeps currencies separate and never fills in a price for you.",
     valueLabel: "RECORDED VALUE",
     currentEntry: "Current entry",
@@ -357,7 +380,7 @@ const english = {
     datePreview: "Readable date",
     validDate: "enter a valid date",
     meaningTitle: "What this number means",
-    meaningBody: "This is your dated asset-value record. It is not a live market quote, formal appraisal or net worth. Liabilities, taxes, selling costs and currency conversion are excluded.",
+    meaningBody: "This is your dated item-value record. It is not a live market quote, formal appraisal or net worth. Liabilities, taxes, selling costs and currency conversion are excluded.",
     history: "Value history",
     historyBody: "Updating creates a new entry. Earlier records remain visible.",
     invalidDate: "Use a valid date in YYYY-MM-DD format.",
@@ -507,6 +530,9 @@ const arabic = {
     back: "رجوع",
     dismiss: "إخفاء",
     continue: "متابعة",
+    showPassword: "إظهار كلمة المرور",
+    hidePassword: "إخفاء كلمة المرور",
+    useAnotherAccount: "استخدام حساب آخر",
     item: "غرض",
     items: "أغراض",
     place: "مكان",
@@ -657,23 +683,43 @@ const arabic = {
   },
   callback: {
     returnToConfirmation: "العودة إلى تأكيد البريد",
+    retry: "إعادة محاولة التأكيد",
+    retryInvite: "إعادة محاولة دعوة المنزل",
+    requestNewLink: "طلب رسالة تأكيد جديدة",
+    signInToResend: "سجّل الدخول لإعادة إرسال التأكيد",
+    signIn: "تسجيل الدخول بدلاً من ذلك",
+    resend: "إعادة إرسال رسالة التأكيد",
+    recover: "استعادة الوصول إلى الحساب",
+    continue: "المتابعة إلى ALYR",
+    otherOptions: "خيارات أخرى للوصول إلى الحساب",
     body: "يطلب ALYR جلسة مؤكدة من مزوّد الحساب. ولا يكتمل أي إجراء قبل استلامها.",
+    failedBody: "لم يُرجع مزوّد الحساب جلسة مؤكدة. لم يتغير سجل منزلك.",
     eyebrow: "التحقق من الحساب",
     confirmedTitle: "تم تأكيد البريد الإلكتروني.",
     checkingTitle: "جارٍ التحقق من رابط التأكيد.",
+    failedTitle: "يحتاج التأكيد إلى محاولة أخرى.",
+    inviteFailedTitle:
+      "تم تأكيد البريد. تحتاج دعوة المنزل إلى محاولة أخرى.",
     checkingLabel: "جارٍ التحقق من التأكيد",
     waiting: "في انتظار جلسة حساب مؤكدة.",
     incompleteLink:
       "رابط التأكيد غير مكتمل. عُد إلى ALYR واطلب رابطًا جديدًا.",
-    complete: "تم استلام جلسة مؤكدة. جارٍ الانتقال إلى إعداد المنزل."
+    exchangeFailed:
+      "لم يُرجع رابط التأكيد هذا جلسة حساب مؤكدة.",
+    failedNotice:
+      "أعد محاولة هذا الرابط، أو اطلب رسالة تأكيد جديدة، أو اختر مسارًا آخر للوصول إلى الحساب أدناه.",
+    inviteFailedBody:
+      "جلسة حسابك المؤكدة جاهزة، لكن ALYR لم يُكمل الانضمام إلى المنزل.",
+    inviteFailedNotice:
+      "أعد محاولة دعوة المنزل، أو سجّل الدخول بدلاً من ذلك، أو استخدم خيارات استعادة الحساب أدناه.",
+    complete: "تم استلام جلسة مؤكدة. تابع إلى سجلك المنزلي."
   },
   household: {
     eyebrow: "مساحة المنزل",
     title: "سمِّ السجل المنزلي.",
     body: "اختر اسمًا مألوفًا لأسرتك. تبقى الأغراض والأماكن والإثباتات والصلاحيات منظّمة داخله.",
     label: "اسم المنزل",
-    placeholder: "منزلي",
-    defaultName: "منزلي",
+    placeholder: "مثال: منزل العائلة",
     retryAccess: "إعادة محاولة الوصول إلى الحساب",
     ownerFact: "تبدأ بصفتك المالك الوحيد، ويمكنك مراجعة صلاحيات الأسرة لاحقًا."
   },
@@ -745,6 +791,7 @@ const arabic = {
     confirmedPins: "دبابيس مؤكدة",
     needsConfirmation: "تحتاج إلى تأكيد",
     atlasHint: "يفتح عرض الكرة الأرضية وقائمة الأماكن الكاملة",
+    openAtlas: "فتح الأطلس",
     valueCoverage: "لها قيمة مسجلة",
     locationGap: "أكمل موقع",
     locationGapDetail: "اجعل الوصول إليه ممكنًا من دون الاعتماد على الذاكرة.",
@@ -759,7 +806,7 @@ const arabic = {
     identityGapDetail: "أضف بيانات الهوية الناقصة."
   },
   items: {
-    title: "الأغراض",
+    title: "الأصول",
     intro: "تصفّح مقتنياتك أو انتقل إلى الأماكن لمعرفة موضع كل غرض.",
     addItem: "إضافة غرض",
     itemsTab: "الأغراض",
@@ -1194,6 +1241,148 @@ export function spaceCount(
 
 function bidiIsolate(value: string): string {
   return `\u2068${value}\u2069`;
+}
+
+export function todayRegionSummary(
+  regions: readonly string[],
+  language: LanguageCode,
+  visibleLimit = 3
+): string {
+  const normalized = [
+    ...new Set(
+      regions
+        .map((region) => region.trim())
+        .filter((region) => region.length > 0)
+    )
+  ];
+  if (normalized.length === 0) {
+    return language === "ar"
+      ? "لا مناطق مسجّلة"
+      : "No regions recorded";
+  }
+
+  const visible = normalized
+    .slice(0, visibleLimit)
+    .map(bidiIsolate)
+    .join(language === "ar" ? "، " : ", ");
+  const hiddenCount = Math.max(
+    normalized.length - visibleLimit,
+    0
+  );
+  const formattedCount = formatLocalizedNumber(
+    normalized.length,
+    language
+  );
+  const formattedHidden = formatLocalizedNumber(
+    hiddenCount,
+    language
+  );
+
+  if (language === "ar") {
+    const countCopy =
+      normalized.length === 1
+        ? "منطقة واحدة"
+        : normalized.length === 2
+          ? "منطقتان"
+          : normalized.length >= 3 && normalized.length <= 10
+            ? `${formattedCount} مناطق`
+            : `${formattedCount} منطقة`;
+    const more =
+      hiddenCount > 0 ? `، و${formattedHidden} أخرى` : "";
+    return `${countCopy} · ${visible}${more}`;
+  }
+
+  const countCopy = `${formattedCount} ${
+    normalized.length === 1 ? "region" : "regions"
+  }`;
+  const more = hiddenCount > 0 ? `, +${formattedHidden} more` : "";
+  return `${countCopy} · ${visible}${more}`;
+}
+
+export function todayPlaceLocationSummary(
+  confirmedLocations: number,
+  pinsNeedingConfirmation: number,
+  placesWithoutPins: number,
+  language: LanguageCode
+): string {
+  if (
+    confirmedLocations === 0 &&
+    pinsNeedingConfirmation === 0 &&
+    placesWithoutPins === 0
+  ) {
+    return language === "ar"
+      ? "لا توجد مواقع للمراجعة"
+      : "No Place locations to review";
+  }
+
+  const confirmed = formatLocalizedNumber(
+    confirmedLocations,
+    language
+  );
+  const pending = formatLocalizedNumber(
+    pinsNeedingConfirmation,
+    language
+  );
+  const missing = formatLocalizedNumber(
+    placesWithoutPins,
+    language
+  );
+
+  if (language === "ar") {
+    const confirmedCopy =
+      confirmedLocations === 0
+        ? "لا مواقع مؤكدة"
+        : confirmedLocations === 1
+          ? "موقع واحد مؤكد"
+          : confirmedLocations === 2
+            ? "موقعان مؤكدان"
+            : confirmedLocations >= 3 &&
+                confirmedLocations <= 10
+              ? `${confirmed} مواقع مؤكدة`
+              : `${confirmed} موقعًا مؤكدًا`;
+    const reviewParts: string[] = [];
+    if (pinsNeedingConfirmation === 1) {
+      reviewParts.push("دبوس واحد يحتاج إلى تأكيد");
+    } else if (pinsNeedingConfirmation === 2) {
+      reviewParts.push("دبوسان يحتاجان إلى تأكيد");
+    } else if (pinsNeedingConfirmation > 2) {
+      reviewParts.push(`${pending} دبابيس تحتاج إلى تأكيد`);
+    }
+    if (placesWithoutPins === 1) {
+      reviewParts.push("مكان واحد بلا دبوس");
+    } else if (placesWithoutPins === 2) {
+      reviewParts.push("مكانان بلا دبوس");
+    } else if (placesWithoutPins > 2) {
+      reviewParts.push(`${missing} أماكن بلا دبابيس`);
+    }
+    if (reviewParts.length === 0) {
+      reviewParts.push("لا شيء يحتاج إلى مراجعة");
+    }
+    return [confirmedCopy, ...reviewParts].join(" · ");
+  }
+
+  const confirmedCopy = `${confirmed} confirmed ${
+    confirmedLocations === 1 ? "location" : "locations"
+  }`;
+  const reviewParts: string[] = [];
+  if (pinsNeedingConfirmation > 0) {
+    reviewParts.push(
+      `${pending} ${
+        pinsNeedingConfirmation === 1 ? "pin needs" : "pins need"
+      } confirmation`
+    );
+  }
+  if (placesWithoutPins > 0) {
+    reviewParts.push(
+      `${missing} ${
+        placesWithoutPins === 1 ? "Place" : "Places"
+      } without a pin`
+    );
+  }
+  if (reviewParts.length === 0) {
+    reviewParts.push("nothing to review");
+  }
+  return [confirmedCopy, ...reviewParts].join(" · ");
 }
 
 export function familyMemberCount(

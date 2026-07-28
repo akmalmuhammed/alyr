@@ -44,7 +44,16 @@ describe("Quick Passport accessibility focus contract", () => {
     expect(source).toContain(
       "accessibilityLabel={copy.locationQuestion}"
     );
-    expect(CAPTURE_COPY.en.category).toBe("Asset category");
+    expect(CAPTURE_COPY.en.assetName).toBe("Item name");
+    expect(CAPTURE_COPY.en.category).toBe("Item category");
+    expect(CAPTURE_COPY.en.categoryChoices).toBe(
+      "Item category choices"
+    );
+    expect(CAPTURE_COPY.en.searchCategories).toBe(
+      "Search item categories"
+    );
+    expect(CAPTURE_COPY.ar.assetName).toBe("اسم الغرض");
+    expect(CAPTURE_COPY.ar.category).toBe("فئة الغرض");
     expect(CAPTURE_COPY.en.locationQuestion).toBe(
       "What you know about the item's location"
     );

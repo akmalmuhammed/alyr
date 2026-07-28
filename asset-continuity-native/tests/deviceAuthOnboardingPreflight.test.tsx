@@ -146,6 +146,44 @@ describe("device-security onboarding preflight", () => {
     mockDeviceAuthState = makeDeviceAuthState();
   });
 
+  it("keeps protection detail compact until the user asks for it", async () => {
+    const screen = await render(
+      <LocaleProvider initialLanguage="en">
+        <PrivacyAndCaptureScreen />
+      </LocaleProvider>
+    );
+    const disclosure = screen.getByRole("button", {
+      name: "Private by default"
+    });
+
+    expect(disclosure.props.accessibilityState).toEqual({
+      expanded: false
+    });
+    expect(screen.queryByText("Location by intent")).toBeNull();
+    expect(screen.queryByText("Access is deliberate")).toBeNull();
+    expect(
+      screen.queryByText(
+        "The device record is created first. Cloud protection is shown as active only after a confirmed sync."
+      )
+    ).toBeNull();
+
+    await fireEvent.press(disclosure);
+
+    expect(
+      screen.getByRole("button", {
+        name: "Private by default"
+      }).props.accessibilityState
+    ).toEqual({ expanded: true });
+    expect(screen.getByText("Location by intent")).toBeTruthy();
+    expect(screen.getByText("Access is deliberate")).toBeTruthy();
+    expect(
+      screen.getByText(
+        "The device record is created first. Cloud protection is shown as active only after a confirmed sync."
+      )
+    ).toBeTruthy();
+    await screen.unmount();
+  });
+
   it("verifies the exact Place intent before any local or cloud onboarding mutation", async () => {
     const calls: string[] = [];
     mockDeviceAuthState.authorizeOnboarding = jest.fn(

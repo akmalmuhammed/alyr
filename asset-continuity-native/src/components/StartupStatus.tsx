@@ -19,9 +19,15 @@ export function resolveFontStartupState(input: {
   readonly arabicLoaded: boolean;
   readonly instrumentError: Error | null;
   readonly instrumentLoaded: boolean;
+  readonly monoError: Error | null;
+  readonly monoLoaded: boolean;
 }): FontStartupState {
-  if (input.arabicError || input.instrumentError) return "fallback";
-  return input.arabicLoaded && input.instrumentLoaded
+  if (input.arabicError || input.instrumentError || input.monoError) {
+    return "fallback";
+  }
+  return input.arabicLoaded &&
+    input.instrumentLoaded &&
+    input.monoLoaded
     ? "ready"
     : "loading";
 }

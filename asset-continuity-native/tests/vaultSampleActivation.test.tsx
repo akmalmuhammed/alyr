@@ -125,6 +125,31 @@ describe("Settings sample activation", () => {
     mockWorkspace = createWorkspace("sample");
   });
 
+  it("keeps notification preferences in Settings and proof recovery in Vault", async () => {
+    const vault = await render(<VaultScreen surface="vault" />, {
+      wrapper: localeWrapper("en")
+    });
+
+    expect(vault.queryByTestId("review-reminder-toggle")).toBeNull();
+    expect(
+      vault.getByRole("button", {
+        name: /^Settings/u
+      })
+    ).toBeTruthy();
+    await vault.unmount();
+
+    const settings = await render(<VaultScreen surface="settings" />, {
+      wrapper: localeWrapper("en")
+    });
+
+    expect(settings.getByTestId("review-reminder-toggle")).toBeTruthy();
+    expect(
+      settings.getAllByRole("header", {
+        name: CORE_JOURNEY_COPY.en.vault.settingsTitle
+      })
+    ).toHaveLength(1);
+  });
+
   it("sends a signed-out cloud sample to account creation without mutating its local vault", async () => {
     const screen = await render(<VaultScreen surface="settings" />, {
       wrapper: localeWrapper("en")

@@ -1,10 +1,18 @@
 import type { Icon } from "phosphor-react-native";
-import { ArrowLeft, ArrowRight, Check } from "phosphor-react-native";
+import {
+  ArrowLeft,
+  ArrowRight,
+  Check,
+  Eye,
+  EyeSlash
+} from "phosphor-react-native";
 import {
   forwardRef,
   useEffect,
   useId,
+  useImperativeHandle,
   useRef,
+  useState,
   type PropsWithChildren,
   type RefObject,
   type ReactNode
@@ -281,6 +289,10 @@ type AuthFieldProps = TextInputProps & {
   readonly label: string;
   readonly description?: string | undefined;
   readonly error?: string | null | undefined;
+  readonly passwordVisibility?: {
+    readonly showLabel: string;
+    readonly hideLabel: string;
+  };
   readonly style?: TextInputProps["style"] | undefined;
 };
 
@@ -290,6 +302,7 @@ export const AuthField = forwardRef<TextInput, AuthFieldProps>(
       label,
       description,
       error,
+      passwordVisibility,
       style,
       ...props
     },
@@ -297,70 +310,117 @@ export const AuthField = forwardRef<TextInput, AuthFieldProps>(
   ) {
     const { rtl } = useCoreJourneyCopy();
     const id = useId();
-  const descriptionId = `${id}-description`;
-  const errorId = `${id}-error`;
-  const hint = [props.accessibilityHint, description, error]
-    .filter(Boolean)
-    .join(" ");
-  return (
-    <View style={styles.fieldGroup}>
-      <Text
-        style={[
-          styles.fieldLabel,
-          rtl && styles.arabicMedium,
-          rtl && styles.rtlText
-        ]}
-      >
-        {label}
-      </Text>
-      {description ? (
+    const inputRef = useRef<TextInput>(null);
+    const [passwordVisible, setPasswordVisible] = useState(false);
+    const descriptionId = `${id}-description`;
+    const errorId = `${id}-error`;
+    const hint = [props.accessibilityHint, description, error]
+      .filter(Boolean)
+      .join(" ");
+    const hasPasswordToggle = Boolean(
+      props.secureTextEntry && passwordVisibility
+    );
+
+    useImperativeHandle(ref, () => inputRef.current as TextInput);
+
+    return (
+      <View style={styles.fieldGroup}>
         <Text
-          nativeID={descriptionId}
           style={[
-            styles.fieldDescription,
-            rtl && styles.arabic,
+            styles.fieldLabel,
+            rtl && styles.arabicMedium,
             rtl && styles.rtlText
           ]}
         >
-          {description}
+          {label}
         </Text>
-      ) : null}
-      <TextInput
-        {...props}
-        accessibilityHint={hint || undefined}
-        accessibilityLabel={props.accessibilityLabel ?? label}
-        aria-describedby={
-          error ? errorId : description ? descriptionId : undefined
-        }
-        aria-invalid={Boolean(error)}
-        placeholderTextColor={colors.textFaint}
-        selectionColor={colors.action}
-        ref={ref}
-        style={[
-          styles.field,
-          error && styles.fieldError,
-          rtl && styles.arabic,
-          rtl &&
-            props.keyboardType !== "email-address" &&
-            !props.secureTextEntry &&
-            styles.rtlInput,
-          style
-        ]}
-      />
-      {error ? (
-        <Text
-          nativeID={errorId}
-          style={[
-            styles.errorText,
-            rtl && styles.arabic,
-            rtl && styles.rtlText
-          ]}
-        >
-          {error}
-        </Text>
-      ) : null}
-    </View>
-  );
+        {description ? (
+          <Text
+            nativeID={descriptionId}
+            style={[
+              styles.fieldDescription,
+              rtl && styles.arabic,
+              rtl && styles.rtlText
+            ]}
+          >
+            {description}
+          </Text>
+        ) : null}
+        <View style={styles.fieldFrame}>
+          <TextInput
+            {...props}
+            accessibilityHint={hint || undefined}
+            accessibilityLabel={props.accessibilityLabel ?? label}
+            aria-describedby={
+              error ? errorId : description ? descriptionId : undefined
+            }
+            aria-invalid={Boolean(error)}
+            placeholderTextColor={colors.textFaint}
+            ref={inputRef}
+            secureTextEntry={
+              props.secureTextEntry ? !passwordVisible : undefined
+            }
+            selectionColor={colors.action}
+            style={[
+              styles.field,
+              error && styles.fieldError,
+              rtl && styles.arabic,
+              rtl &&
+                props.keyboardType !== "email-address" &&
+                !props.secureTextEntry &&
+                styles.rtlInput,
+              hasPasswordToggle &&
+                (rtl
+                  ? styles.fieldWithPasswordActionRtl
+                  : styles.fieldWithPasswordAction),
+              style
+            ]}
+          />
+          {hasPasswordToggle && passwordVisibility ? (
+            <Pressable
+              accessibilityLabel={
+                passwordVisible
+                  ? passwordVisibility.hideLabel
+                  : passwordVisibility.showLabel
+              }
+              accessibilityRole="button"
+              accessibilityState={{ expanded: passwordVisible }}
+              hitSlop={2}
+              onPress={() => {
+                const restoreFocus = inputRef.current?.isFocused() ?? false;
+                setPasswordVisible((current) => !current);
+                if (restoreFocus) inputRef.current?.focus();
+              }}
+              style={({ pressed }) => [
+                styles.passwordVisibilityAction,
+                rtl
+                  ? styles.passwordVisibilityActionRtl
+                  : styles.passwordVisibilityActionLtr,
+                pressed && styles.passwordVisibilityActionPressed
+              ]}
+            >
+              {passwordVisible ? (
+                <EyeSlash color={colors.textMuted} size={20} weight="bold" />
+              ) : (
+                <Eye color={colors.textMuted} size={20} weight="bold" />
+              )}
+            </Pressable>
+          ) : null}
+        </View>
+        {error ? (
+          <Text
+            nativeID={errorId}
+            style={[
+              styles.errorText,
+              rtl && styles.arabic,
+              rtl && styles.rtlText
+            ]}
+          >
+            {error}
+          </Text>
+        ) : null}
+      </View>
+    );
   }
 );
 
@@ -687,8 +747,8 @@ const styles = StyleSheet.create({
   eyebrow: {
     color: colors.textMuted,
     fontFamily: typography.bodyBold,
-    fontSize: 11,
-    lineHeight: 16,
+    fontSize: 13,
+    lineHeight: 18,
     letterSpacing: 1.15
   },
   title: {
@@ -744,9 +804,9 @@ const styles = StyleSheet.create({
   },
   statusEyebrow: {
     color: colors.textMuted,
-    fontFamily: typography.bodyBold,
-    fontSize: 10,
-    lineHeight: 15,
+    fontFamily: typography.metadata,
+    fontSize: 12,
+    lineHeight: 17,
     letterSpacing: 0.8
   },
   statusValue: {
@@ -771,6 +831,9 @@ const styles = StyleSheet.create({
   },
   fieldGroup: {
     gap: 7
+  },
+  fieldFrame: {
+    position: "relative"
   },
   fieldLabel: {
     color: colors.text,
@@ -799,6 +862,31 @@ const styles = StyleSheet.create({
   },
   fieldError: {
     borderColor: colors.danger
+  },
+  fieldWithPasswordAction: {
+    paddingRight: 56
+  },
+  fieldWithPasswordActionRtl: {
+    paddingLeft: 56
+  },
+  passwordVisibilityAction: {
+    position: "absolute",
+    top: 5,
+    zIndex: 1,
+    width: 44,
+    height: 44,
+    alignItems: "center",
+    justifyContent: "center",
+    borderRadius: radius.sm
+  },
+  passwordVisibilityActionLtr: {
+    right: 5
+  },
+  passwordVisibilityActionRtl: {
+    left: 5
+  },
+  passwordVisibilityActionPressed: {
+    backgroundColor: colors.mist
   },
   errorText: {
     color: colors.danger,
@@ -849,7 +937,8 @@ const styles = StyleSheet.create({
     marginBottom: spacing.sm,
     color: colors.concrete,
     fontFamily: typography.bodyBold,
-    fontSize: 11,
+    fontSize: 13,
+    lineHeight: 18,
     letterSpacing: 1
   },
   commandRow: {

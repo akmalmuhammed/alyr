@@ -73,7 +73,7 @@ describe("ALYR navigation vocabulary", () => {
     const itemsTab = screen.getByRole("tab", { name: "Items · 0" });
     const placesTab = screen.getByRole("tab", { name: "Places · 0" });
 
-    expect(screen.getByText("Items")).toBeTruthy();
+    expect(screen.getByText("Assets")).toBeTruthy();
     expect(itemsTab.props.accessibilityState).toEqual({ selected: true });
     expect(placesTab.props.accessibilityState).toEqual({ selected: false });
     expect(screen.getByText("Start with one important item")).toBeTruthy();
@@ -236,6 +236,18 @@ describe("ALYR navigation vocabulary", () => {
     expect(PRIMARY_ROUTES.family).toBe("/family");
     expect(COPY.en.navItems).toBe("Assets");
     expect(COPY.ar.navItems).toBe("الأصول");
+    expect(COPY.en.navItemsA11y).toBe(
+      "Assets. Browse items and places."
+    );
+    expect(COPY.ar.navItemsA11y).toBe(
+      "الأصول. تصفّح أغراضك والأماكن التي تحفظها."
+    );
+    expect(CORE_JOURNEY_COPY.en.items.title).toBe("Assets");
+    expect(CORE_JOURNEY_COPY.ar.items.title).toBe("الأصول");
+    expect(CORE_JOURNEY_COPY.en.items.itemsTab).toBe("Items");
+    expect(CORE_JOURNEY_COPY.en.items.placesTab).toBe("Places");
+    expect(CORE_JOURNEY_COPY.ar.items.itemsTab).toBe("الأغراض");
+    expect(CORE_JOURNEY_COPY.ar.items.placesTab).toBe("الأماكن");
     expect(COPY.en.navFamily).toBe("Family");
     expect(COPY.ar.navFamily).toBe("الأسرة");
     expect(family).toContain("<ScreenTitle>{copy.family.title}</ScreenTitle>");

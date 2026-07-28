@@ -49,8 +49,14 @@ export const colors = {
   informationQuiet: "rgba(23, 105, 170, 0.08)",
   volt: light.action,
   voltQuiet: "rgba(183, 243, 74, 0.18)",
+  voltBorder: "rgba(183, 243, 74, 0.34)",
   warningQuiet: "rgba(169, 100, 0, 0.09)",
+  warningBorder: "rgba(169, 100, 0, 0.28)",
   dangerQuiet: "rgba(180, 35, 24, 0.08)",
+  dangerBorder: "rgba(180, 35, 24, 0.28)",
+  onCarbonBorder: "rgba(246, 247, 243, 0.18)",
+  onCarbonSurface: "rgba(246, 247, 243, 0.05)",
+  modalScrim: "rgba(21, 23, 26, 0.42)",
   transparent: "transparent",
   shadow: nativeTokens.palette.black
 } as const;
@@ -81,6 +87,7 @@ export const typography = {
   bodyBold: "InstrumentSans_600SemiBold",
   display: "InstrumentSans_600SemiBold",
   displayBold: "InstrumentSans_700Bold",
+  metadata: "IBMPlexMono_500Medium",
   arabic: "IBMPlexSansArabic_400Regular",
   arabicMedium: "IBMPlexSansArabic_600SemiBold"
 } as const;

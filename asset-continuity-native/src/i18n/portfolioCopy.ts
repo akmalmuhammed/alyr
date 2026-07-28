@@ -76,6 +76,8 @@ export interface PortfolioExperienceCopy {
     readonly noneReviewChangedTitle: string;
     readonly noneReviewChangedBody: string;
     readonly archivedCount: (count: number) => string;
+    readonly viewAll: (count: number) => string;
+    readonly showFewer: string;
   };
   readonly create: {
     readonly eyebrow: string;
@@ -262,7 +264,10 @@ const ENGLISH: PortfolioExperienceCopy = {
     noneReviewChangedBody:
       "Your previous no-liabilities review is no longer current. Review again to confirm the household still has none.",
     archivedCount: (count) =>
-      `${count} archived ${count === 1 ? "liability" : "liabilities"}`
+      `${count} archived ${count === 1 ? "liability" : "liabilities"}`,
+    viewAll: (count) =>
+      `View all ${count} ${count === 1 ? "liability" : "liabilities"}`,
+    showFewer: "Show fewer liabilities"
   },
   create: {
     eyebrow: "FINANCIAL CONTINUITY",
@@ -463,7 +468,10 @@ const ARABIC: PortfolioExperienceCopy = {
     noneReviewChangedTitle: "تغيّر نشاط التزامات",
     noneReviewChangedBody:
       "لم تعد مراجعتك السابقة لعدم وجود التزامات سارية بعد نشاط لاحق. راجِع مجددًا لتأكيد أن الأسرة ما زالت بلا التزامات.",
-    archivedCount: (count) => `التزامات مؤرشفة: ${count}`
+    archivedCount: (count) => `التزامات مؤرشفة: ${count}`,
+    viewAll: (count) =>
+      `عرض كل الالتزامات (${arabicInteger.format(count)})`,
+    showFewer: "عرض التزامات أقل"
   },
   create: {
     eyebrow: "الاستمرارية المالية",

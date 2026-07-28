@@ -88,6 +88,7 @@ describe("HttpHouseholdAccess", () => {
     fetchImpl.mockResolvedValue(
       response(
         {
+          operationId,
           household: {
             id: householdId,
             name: "Rahman household",
@@ -101,23 +102,70 @@ describe("HttpHouseholdAccess", () => {
     );
 
     await expect(
-      transport(fetchImpl).createHousehold("  Rahman household  ")
+      transport(fetchImpl).createHousehold({
+        apiVersion: 1,
+        operationId,
+        householdId,
+        name: "  Rahman household  "
+      })
     ).resolves.toEqual({
       ok: true,
       value: {
-        householdId,
-        name: "Rahman household",
-        version: 1,
-        createdAt: "2026-07-27T12:00:00.000Z"
+        operationId,
+        household: {
+          householdId,
+          name: "Rahman household",
+          version: 1,
+          createdAt: "2026-07-27T12:00:00.000Z"
+        }
       }
     });
     expect(fetchImpl).toHaveBeenCalledWith(
       "https://project.example/functions/v1/api/households",
       expect.objectContaining({
         method: "POST",
-        body: JSON.stringify({ name: "Rahman household" })
+        body: JSON.stringify({
+          apiVersion: 1,
+          operationId,
+          householdId,
+          name: "Rahman household"
+        })
       })
     );
+  });
+
+  it("rejects a creation receipt for a different household UUID", async () => {
+    const fetchImpl = jest.fn<ReturnType<SyncFetch>, Parameters<SyncFetch>>();
+    fetchImpl.mockResolvedValue(
+      response(
+        {
+          operationId,
+          household: {
+            id: "00000000-0000-4000-8000-000000000099",
+            name: "Another household",
+            version: 1,
+            created_at: "2026-07-27T12:00:00.000Z",
+            updated_at: "2026-07-27T12:00:00.000Z"
+          }
+        },
+        201
+      )
+    );
+
+    await expect(
+      transport(fetchImpl).createHousehold({
+        apiVersion: 1,
+        operationId,
+        householdId,
+        name: "Rahman household"
+      })
+    ).resolves.toMatchObject({
+      ok: false,
+      error: {
+        code: "VALIDATION_FAILED",
+        retryable: false
+      }
+    });
   });
 
   it("records onboarding completion through the authenticated owner boundary", async () => {

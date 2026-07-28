@@ -70,19 +70,31 @@ paths:
               $ref: "#/components/schemas/CreateHouseholdRequest"
       responses:
         "201":
-          description: Household created with the caller as owner.
+          description: >
+            Durable household-creation receipt. Repeating the same operation
+            returns the same household without creating a duplicate.
           content:
             application/json:
               schema:
                 type: object
-                required: [household]
+                additionalProperties: false
+                required: [operationId, household]
                 properties:
+                  operationId:
+                    type: string
+                    format: uuid
                   household:
                     $ref: "#/components/schemas/Household"
         "400":
           $ref: "#/components/responses/ApiError"
         "401":
           $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "409":
+          $ref: "#/components/responses/Conflict"
+        "429":
+          $ref: "#/components/responses/TooManyRequests"
   /onboarding/complete:
     post:
       operationId: completeHouseholdOnboarding
@@ -593,7 +605,7 @@ components:
           schema:
             $ref: "#/components/schemas/ApiErrorEnvelope"
     TooManyRequests:
-      description: The household export creation rate was exceeded.
+      description: A bounded household operation rate was exceeded.
       content:
         application/json:
           schema:
@@ -731,8 +743,17 @@ components:
     CreateHouseholdRequest:
       type: object
       additionalProperties: false
-      required: [name]
+      required: [apiVersion, operationId, householdId, name]
       properties:
+        apiVersion:
+          type: integer
+          const: 1
+        operationId:
+          type: string
+          format: uuid
+        householdId:
+          type: string
+          format: uuid
         name:
           type: string
           minLength: 1

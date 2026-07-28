@@ -203,6 +203,10 @@ export default function SignInScreen() {
               if (error) clearError();
             }}
             onSubmitEditing={() => void submit()}
+            passwordVisibility={{
+              showLabel: copy.common.showPassword,
+              hideLabel: copy.common.hidePassword
+            }}
             placeholder={copy.signIn.passwordPlaceholder}
             ref={passwordRef}
             returnKeyType="go"

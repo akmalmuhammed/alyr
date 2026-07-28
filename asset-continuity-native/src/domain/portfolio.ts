@@ -1218,6 +1218,23 @@ function decimalSeparator(locale: string): string {
   }
 }
 
+function localizedFraction(
+  fraction: string,
+  digits: number,
+  locale: string
+): string {
+  if (digits === 0) return "";
+  try {
+    return new Intl.NumberFormat(locale, {
+      maximumFractionDigits: 0,
+      minimumIntegerDigits: digits,
+      useGrouping: false
+    }).format(BigInt(fraction));
+  } catch {
+    return fraction;
+  }
+}
+
 /**
  * Formats an exact minor-unit integer and always includes the currency code.
  * Financial totals never rely on a locale's ambiguous currency symbol alone.
@@ -1252,7 +1269,11 @@ export function formatPortfolioMoney(
   }
   return digits === 0
     ? `${normalized} ${formattedWhole}`
-    : `${normalized} ${formattedWhole}${decimalSeparator(locale)}${fraction}`;
+    : `${normalized} ${formattedWhole}${decimalSeparator(locale)}${localizedFraction(
+        fraction,
+        digits,
+        locale
+      )}`;
 }
 
 /**

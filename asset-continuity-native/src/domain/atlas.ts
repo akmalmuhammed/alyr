@@ -1,5 +1,6 @@
 import { getLocationPolicy } from "@alyr/domain";
 
+import naturalEarthCoastline from "../assets/atlas/ne_110m_coastline_mobile.json";
 import type { NativeAsset } from "./model";
 import { isAssetActive } from "./model";
 
@@ -19,6 +20,10 @@ export interface AtlasProjection {
   readonly depth: number;
 }
 
+export interface PreparedAtlasPolyline {
+  readonly points: readonly AtlasCoordinates[];
+}
+
 export type AtlasLocationSource =
   | "device_gps"
   | "user_pin"
@@ -30,6 +35,17 @@ export interface AtlasPinDisclosure {
   readonly precision: "exact" | "user_placed" | "approximate" | "locality_only";
   readonly horizontalAccuracyMeters: number | null;
   readonly confirmedAt: string | null;
+}
+
+interface NaturalEarthCoastlineFeatureCollection {
+  readonly type: "FeatureCollection";
+  readonly features: readonly {
+    readonly type: "Feature";
+    readonly geometry: {
+      readonly type: "LineString";
+      readonly coordinates: readonly (readonly [number, number])[];
+    };
+  }[];
 }
 
 const degreesToRadians = Math.PI / 180;
@@ -190,61 +206,78 @@ function projectionAtHorizon(
   };
 }
 
-/**
- * Projects a coastline or graticule and splits it at the visible horizon.
- * Every returned point is safe to draw inside the unit globe.
- */
-export function projectAtlasPolyline(
+export function prepareAtlasPolyline(
   points: readonly AtlasCoordinates[],
-  center: AtlasCoordinates
-): readonly (readonly AtlasProjection[])[] {
-  assertCoordinate(center, "The Atlas center");
+): PreparedAtlasPolyline {
   for (const point of points) {
     assertCoordinate(point, "An Atlas line point");
   }
-  if (points.length < 2) return [];
+  return { points: densifyPolyline(points) };
+}
 
-  const dense = densifyPolyline(points);
+function projectPreparedPoints(
+  dense: readonly AtlasCoordinates[],
+  center: AtlasCoordinates
+): readonly (readonly AtlasProjection[])[] {
+  if (dense.length < 2) return [];
   const segments: AtlasProjection[][] = [];
   let current: AtlasProjection[] = [];
+  let previousPoint = dense[0]!;
+  const previousProjection = projectOnAtlas(previousPoint, center);
+  let previousVisible =
+    previousProjection.depth >= -horizonTolerance;
+  if (previousVisible) current.push(previousProjection);
 
-  for (let index = 0; index < dense.length; index += 1) {
+  for (let index = 1; index < dense.length; index += 1) {
     const point = dense[index]!;
     const projection = projectOnAtlas(point, center);
     const visible = projection.depth >= -horizonTolerance;
 
-    if (index === 0) {
-      if (visible) current.push(projection);
-      continue;
-    }
-
-    const previousPoint = dense[index - 1]!;
-    const previousProjection = projectOnAtlas(previousPoint, center);
-    const previousVisible =
-      previousProjection.depth >= -horizonTolerance;
-
     if (previousVisible && visible) {
       current.push(projection);
-      continue;
-    }
-
-    if (previousVisible && !visible) {
+    } else if (previousVisible && !visible) {
       current.push(projectionAtHorizon(previousPoint, point, center));
       if (current.length >= 2) segments.push(current);
       current = [];
-      continue;
-    }
-
-    if (!previousVisible && visible) {
+    } else if (!previousVisible && visible) {
       current = [
         projectionAtHorizon(previousPoint, point, center),
         projection
       ];
     }
+
+    previousPoint = point;
+    previousVisible = visible;
   }
 
   if (current.length >= 2) segments.push(current);
   return segments;
+}
+
+/**
+ * Projects prevalidated, predensified geography without repeating fixed work
+ * during every interactive Atlas frame.
+ */
+export function projectPreparedAtlasPolyline(
+  prepared: PreparedAtlasPolyline,
+  center: AtlasCoordinates
+): readonly (readonly AtlasProjection[])[] {
+  assertCoordinate(center, "The Atlas center");
+  return projectPreparedPoints(prepared.points, center);
+}
+
+/**
+ * Projects an arbitrary coastline or graticule and splits it at the visible
+ * horizon. Every returned point is safe to draw inside the unit globe.
+ */
+export function projectAtlasPolyline(
+  points: readonly AtlasCoordinates[],
+  center: AtlasCoordinates
+): readonly (readonly AtlasProjection[])[] {
+  return projectPreparedAtlasPolyline(
+    prepareAtlasPolyline(points),
+    center
+  );
 }
 
 export function atlasCenter(
@@ -367,137 +400,48 @@ export function atlasPinDisclosure(
 }
 
 /**
- * Purpose-built, low-resolution coastlines for orientation at mobile scale.
- * These are stored locally, contain no political borders, and are not a
- * cadastral or navigation dataset.
+ * Natural Earth 1:110m coastline, bundled for deterministic offline rendering.
+ * Source data is public domain and remains presentation-only: ALYR never uses
+ * coastline geometry to infer, adjust, or validate a household Place pin.
  */
-export const ATLAS_COASTLINES: readonly (readonly AtlasCoordinates[])[] = [
-  [
-    { latitude: 72, longitude: -168 },
-    { latitude: 70, longitude: -145 },
-    { latitude: 60, longitude: -135 },
-    { latitude: 54, longitude: -130 },
-    { latitude: 49, longitude: -124 },
-    { latitude: 38, longitude: -123 },
-    { latitude: 29, longitude: -115 },
-    { latitude: 22, longitude: -106 },
-    { latitude: 18, longitude: -96 },
-    { latitude: 25, longitude: -89 },
-    { latitude: 30, longitude: -82 },
-    { latitude: 44, longitude: -66 },
-    { latitude: 52, longitude: -56 },
-    { latitude: 60, longitude: -64 },
-    { latitude: 66, longitude: -82 },
-    { latitude: 72, longitude: -110 },
-    { latitude: 72, longitude: -168 }
-  ],
-  [
-    { latitude: 60, longitude: -46 },
-    { latitude: 68, longitude: -52 },
-    { latitude: 78, longitude: -58 },
-    { latitude: 83, longitude: -35 },
-    { latitude: 76, longitude: -18 },
-    { latitude: 66, longitude: -30 },
-    { latitude: 60, longitude: -46 }
-  ],
-  [
-    { latitude: 12, longitude: -81 },
-    { latitude: 5, longitude: -77 },
-    { latitude: -6, longitude: -79 },
-    { latitude: -18, longitude: -70 },
-    { latitude: -33, longitude: -72 },
-    { latitude: -55, longitude: -68 },
-    { latitude: -52, longitude: -58 },
-    { latitude: -35, longitude: -53 },
-    { latitude: -20, longitude: -40 },
-    { latitude: -5, longitude: -35 },
-    { latitude: 6, longitude: -52 },
-    { latitude: 12, longitude: -65 },
-    { latitude: 12, longitude: -81 }
-  ],
-  [
-    { latitude: 36, longitude: -10 },
-    { latitude: 44, longitude: -9 },
-    { latitude: 52, longitude: -5 },
-    { latitude: 61, longitude: 6 },
-    { latitude: 71, longitude: 25 },
-    { latitude: 70, longitude: 58 },
-    { latitude: 76, longitude: 105 },
-    { latitude: 67, longitude: 140 },
-    { latitude: 56, longitude: 162 },
-    { latitude: 47, longitude: 145 },
-    { latitude: 39, longitude: 129 },
-    { latitude: 23, longitude: 121 },
-    { latitude: 10, longitude: 106 },
-    { latitude: 5, longitude: 99 },
-    { latitude: 8, longitude: 78 },
-    { latitude: 23, longitude: 68 },
-    { latitude: 26, longitude: 56 },
-    { latitude: 30, longitude: 48 },
-    { latitude: 36, longitude: 38 },
-    { latitude: 41, longitude: 27 },
-    { latitude: 36, longitude: -10 }
-  ],
-  [
-    { latitude: 37, longitude: -10 },
-    { latitude: 35, longitude: 10 },
-    { latitude: 31, longitude: 34 },
-    { latitude: 22, longitude: 37 },
-    { latitude: 12, longitude: 44 },
-    { latitude: 0, longitude: 42 },
-    { latitude: -12, longitude: 40 },
-    { latitude: -25, longitude: 35 },
-    { latitude: -35, longitude: 20 },
-    { latitude: -34, longitude: 17 },
-    { latitude: -24, longitude: 14 },
-    { latitude: -8, longitude: 12 },
-    { latitude: 5, longitude: 10 },
-    { latitude: 15, longitude: -17 },
-    { latitude: 28, longitude: -17 },
-    { latitude: 37, longitude: -10 }
-  ],
-  [
-    { latitude: 31, longitude: 34 },
-    { latitude: 30, longitude: 48 },
-    { latitude: 26, longitude: 56 },
-    { latitude: 16, longitude: 52 },
-    { latitude: 12, longitude: 44 },
-    { latitude: 20, longitude: 39 },
-    { latitude: 31, longitude: 34 }
-  ],
-  [
-    { latitude: -11, longitude: 113 },
-    { latitude: -20, longitude: 114 },
-    { latitude: -35, longitude: 116 },
-    { latitude: -39, longitude: 146 },
-    { latitude: -28, longitude: 154 },
-    { latitude: -16, longitude: 146 },
-    { latitude: -11, longitude: 130 },
-    { latitude: -11, longitude: 113 }
-  ],
-  [
-    { latitude: 34, longitude: 130 },
-    { latitude: 38, longitude: 136 },
-    { latitude: 44, longitude: 145 }
-  ],
-  [
-    { latitude: -13, longitude: 49 },
-    { latitude: -24, longitude: 48 },
-    { latitude: -26, longitude: 44 },
-    { latitude: -13, longitude: 49 }
-  ],
-  [
-    { latitude: -35, longitude: 172 },
-    { latitude: -42, longitude: 174 },
-    { latitude: -47, longitude: 168 }
-  ]
-] as const;
+export const ATLAS_COASTLINE_SOURCE = {
+  name: "Natural Earth 1:110m Coastline",
+  version: "4.1.0",
+  repositoryCommit: "ca96624a56bd078437bca8184e78163e5039ad19",
+  sourceUrl:
+    "https://github.com/nvkelso/natural-earth-vector/blob/ca96624a56bd078437bca8184e78163e5039ad19/geojson/ne_110m_coastline.geojson",
+  mobileSimplification: "Ramer-Douglas-Peucker · 0.75° tolerance",
+  publicDomain: true
+} as const;
+
+const naturalEarthCoastlineData =
+  naturalEarthCoastline as unknown as NaturalEarthCoastlineFeatureCollection;
+
+function loadNaturalEarthCoastlines(): readonly (readonly AtlasCoordinates[])[] {
+  if (naturalEarthCoastlineData.type !== "FeatureCollection") {
+    throw new Error("The bundled Natural Earth coastline is invalid.");
+  }
+
+  return naturalEarthCoastlineData.features.map((feature) => {
+    if (feature.geometry.type !== "LineString") {
+      throw new Error("The bundled Natural Earth coastline is not a line dataset.");
+    }
+
+    return feature.geometry.coordinates.map(([longitude, latitude]) => {
+      const coordinate = { latitude, longitude };
+      assertCoordinate(coordinate, "A Natural Earth coastline point");
+      return coordinate;
+    });
+  });
+}
+
+export const ATLAS_COASTLINES = loadNaturalEarthCoastlines();
 
 function createGraticule(): readonly (readonly AtlasCoordinates[])[] {
   const lines: AtlasCoordinates[][] = [];
   for (let latitude = -60; latitude <= 60; latitude += 30) {
     const line: AtlasCoordinates[] = [];
-    for (let longitude = -180; longitude <= 180; longitude += 5) {
+    for (let longitude = -180; longitude <= 180; longitude += 10) {
       line.push({
         latitude,
         longitude: longitude === 180 ? 179.999999 : longitude
@@ -507,7 +451,7 @@ function createGraticule(): readonly (readonly AtlasCoordinates[])[] {
   }
   for (let longitude = -150; longitude <= 180; longitude += 30) {
     const line: AtlasCoordinates[] = [];
-    for (let latitude = -85; latitude <= 85; latitude += 5) {
+    for (let latitude = -80; latitude <= 80; latitude += 10) {
       line.push({
         latitude,
         longitude: longitude === 180 ? 179.999999 : longitude
@@ -519,3 +463,7 @@ function createGraticule(): readonly (readonly AtlasCoordinates[])[] {
 }
 
 export const ATLAS_GRATICULE = createGraticule();
+export const ATLAS_COASTLINE_RENDER_LINES =
+  ATLAS_COASTLINES.map(prepareAtlasPolyline);
+export const ATLAS_GRATICULE_RENDER_LINES =
+  ATLAS_GRATICULE.map(prepareAtlasPolyline);

@@ -20,6 +20,7 @@
     "@alyr/design-tokens": "*",
     "@alyr/domain": "*",
     "@alyr/fixtures": "*",
+    "@expo-google-fonts/ibm-plex-mono": "^0.4.1",
     "@expo-google-fonts/ibm-plex-sans-arabic": "^0.4.2",
     "@expo-google-fonts/instrument-sans": "^0.4.2",
     "@expo/metro-runtime": "~6.1.2",

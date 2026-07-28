@@ -18,6 +18,7 @@
     "test": "jest --runInBand",
     "test:watch": "jest --watch",
     "config:check": "expo config --type public",
+    "generate:atlas-coastline": "node scripts/generate-atlas-coastline.mjs",
     "build:preview": "expo export --platform web --output-dir dist-preview"
   },
   "dependencies": {
@@ -26,6 +27,7 @@
     "@alyr/design-tokens": "*",
     "@alyr/domain": "*",
     "@alyr/fixtures": "*",
+    "@expo-google-fonts/ibm-plex-mono": "^0.4.1",
     "@expo-google-fonts/ibm-plex-sans-arabic": "^0.4.2",
     "@expo-google-fonts/instrument-sans": "^0.4.2",
     "@expo/vector-icons": "^15.1.1",

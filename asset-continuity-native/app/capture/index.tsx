@@ -35,6 +35,7 @@ import {
   Image,
   KeyboardAvoidingView,
   Linking,
+  Modal,
   Platform,
   Pressable,
   ScrollView,
@@ -75,8 +76,7 @@ import {
   ProgressBar,
   ScreenTitle,
   SecondaryButton,
-  StatusPill,
-  Surface
+  StatusPill
 } from "@/components/ui";
 import {
   CATEGORY_CHOICES,
@@ -90,6 +90,7 @@ import {
   filterItemCategories,
   groupItemCategories
 } from "@/domain/assetCategoryCatalog";
+import { hasConfirmedPreciseNativePlacePin } from "@/domain/readiness";
 import {
   getCaptureCopy,
   localizedCategoryLabel
@@ -576,6 +577,14 @@ export default function CaptureScreen() {
       setLocationStatus(place.rooms.length > 0 ? "known" : "needs-detail");
       setLocationError(null);
       setShowPlaceForm(false);
+      if (!placeOnly) {
+        setPlaceName("");
+        setPlaceClassification("unknown");
+        setAddress("");
+        setRegion("");
+        setRoomName("");
+        setPin(null);
+      }
       return place;
     } catch {
       return null;
@@ -721,10 +730,6 @@ export default function CaptureScreen() {
 
   const openPlaceForm = () => {
     setShowPlaceForm(true);
-    requestAnimationFrame(() => {
-      scrollRef.current?.scrollToEnd({ animated: !reduceMotion });
-      inlinePlaceNameRef.current?.focus();
-    });
   };
 
   const closePlaceForm = () => {
@@ -982,60 +987,6 @@ export default function CaptureScreen() {
             />
           ) : null}
 
-          {step === 1 && showPlaceForm ? (
-            <Surface emphasis>
-              <View
-                style={[
-                  styles.inlineFormHeader,
-                  rtl && styles.rowReverse
-                ]}
-              >
-                <View style={styles.inlineFormCopy}>
-                  <Eyebrow>{captureCopy.newPlace}</Eyebrow>
-                  <Text
-                    style={[
-                      styles.inlineFormTitle,
-                      rtl && styles.arabicMedium,
-                      rtl && styles.rtlText
-                    ]}
-                  >
-                    {captureCopy.addNewPlace}
-                  </Text>
-                </View>
-                <IconButton
-                  icon={X}
-                  label={captureCopy.closePlaceForm}
-                  onPress={closePlaceForm}
-                />
-              </View>
-              <PlaceForm
-                address={address}
-                classification={placeClassification}
-                language={language}
-                nameInputRef={inlinePlaceNameRef}
-                onAddressChange={setAddress}
-                onClassificationChange={setPlaceClassification}
-                onNameChange={setPlaceName}
-                onPinChange={setPin}
-                onPinConfirm={setPin}
-                onRegionChange={setRegion}
-                onRequestCurrentLocation={requestPlaceLocation}
-                onRoomChange={setRoomName}
-                pin={pin}
-                placeError={placeError}
-                placeName={placeName}
-                region={region}
-                roomName={roomName}
-              />
-              <SecondaryButton
-                disabled={Boolean(pin && !pin.confirmedAt)}
-                icon={Plus}
-                label={captureCopy.saveAndUsePlace}
-                onPress={() => void savePlace()}
-              />
-            </Surface>
-          ) : null}
-
           {step === 2 ? (
             <EvidenceStep
               evidence={evidence}
@@ -1058,6 +1009,14 @@ export default function CaptureScreen() {
               locatorText={locatorText}
               locationStatus={locationStatus}
               name={name}
+              onEditStep={setStep}
+              onReviewPlacePin={(selectedPlaceId) =>
+                router.push(
+                  `/place-pin?placeId=${encodeURIComponent(
+                    selectedPlaceId
+                  )}`
+                )
+              }
               photo={photo}
               physical={physical}
               place={selectedPlace}
@@ -1118,6 +1077,25 @@ export default function CaptureScreen() {
           </View>
         </View>
       </KeyboardAvoidingView>
+      <QuickPlaceSheet
+        language={language}
+        nameInputRef={inlinePlaceNameRef}
+        onClose={closePlaceForm}
+        onNameChange={(value) => {
+          setPlaceName(value);
+          if (value.trim()) setPlaceError(null);
+        }}
+        onPinChange={setPin}
+        onPinConfirm={setPin}
+        onRequestCurrentLocation={requestPlaceLocation}
+        onSave={() => void savePlace()}
+        pin={pin}
+        placeError={placeError}
+        placeName={placeName}
+        reduceMotion={reduceMotion}
+        saving={saving}
+        visible={step === 1 && showPlaceForm}
+      />
     </AppScreen>
   );
 }
@@ -1257,6 +1235,51 @@ function IdentityStep({
         <BodyText muted>
           {copy.identityBody}
         </BodyText>
+      </View>
+      <View style={styles.mediaSection}>
+        <View style={[styles.photoHeader, rtl && styles.rowReverse]}>
+          <View style={styles.photoIcon}>
+            <Camera color={colors.text} size={24} weight="regular" />
+          </View>
+          <View style={styles.inlineFormCopy}>
+            <Text
+              style={[
+                styles.inlineFormTitle,
+                rtl && styles.arabicMedium,
+                rtl && styles.rtlText
+              ]}
+            >
+              {copy.photo}
+            </Text>
+            <BodyText muted>
+              {copy.photoBody}
+            </BodyText>
+          </View>
+        </View>
+        {photo ? (
+          <>
+            <Image source={{ uri: photo.localUri }} style={styles.photoPreview} />
+            <Text style={styles.fileMeta}>
+              {photo.fileName} · {fileSize(photo.byteSize, language)}
+            </Text>
+          </>
+        ) : null}
+        <View style={[styles.twoButtons, rtl && styles.rowReverse]}>
+          <View style={styles.buttonFlex}>
+            <SecondaryButton
+              icon={Camera}
+              label={copy.takePhoto}
+              onPress={onTakePhoto}
+            />
+          </View>
+          <View style={styles.buttonFlex}>
+            <SecondaryButton
+              icon={ImageSquare}
+              label={copy.choosePhoto}
+              onPress={onChoosePhoto}
+            />
+          </View>
+        </View>
       </View>
       <Field
         autoCapitalize="words"
@@ -1479,51 +1502,6 @@ function IdentityStep({
             {categoryError}
           </Text>
         ) : null}
-      </View>
-      <View style={styles.mediaSection}>
-        <View style={[styles.photoHeader, rtl && styles.rowReverse]}>
-          <View style={styles.photoIcon}>
-            <Camera color={colors.text} size={24} weight="regular" />
-          </View>
-          <View style={styles.inlineFormCopy}>
-            <Text
-              style={[
-                styles.inlineFormTitle,
-                rtl && styles.arabicMedium,
-                rtl && styles.rtlText
-              ]}
-            >
-              {copy.photo}
-            </Text>
-            <BodyText muted>
-              {copy.photoBody}
-            </BodyText>
-          </View>
-        </View>
-        {photo ? (
-          <>
-            <Image source={{ uri: photo.localUri }} style={styles.photoPreview} />
-            <Text style={styles.fileMeta}>
-              {photo.fileName} · {fileSize(photo.byteSize, language)}
-            </Text>
-          </>
-        ) : null}
-        <View style={[styles.twoButtons, rtl && styles.rowReverse]}>
-          <View style={styles.buttonFlex}>
-            <SecondaryButton
-              icon={Camera}
-              label={copy.takePhoto}
-              onPress={onTakePhoto}
-            />
-          </View>
-          <View style={styles.buttonFlex}>
-            <SecondaryButton
-              icon={ImageSquare}
-              label={copy.choosePhoto}
-              onPress={onChoosePhoto}
-            />
-          </View>
-        </View>
       </View>
     </>
   );
@@ -1857,6 +1835,134 @@ function PlaceForm({
   );
 }
 
+function QuickPlaceSheet({
+  language,
+  nameInputRef,
+  onClose,
+  onNameChange,
+  onPinChange,
+  onPinConfirm,
+  onRequestCurrentLocation,
+  onSave,
+  pin,
+  placeError,
+  placeName,
+  reduceMotion,
+  saving,
+  visible
+}: {
+  readonly language: "en" | "ar";
+  readonly nameInputRef: RefObject<TextInput | null>;
+  readonly onClose: () => void;
+  readonly onNameChange: (value: string) => void;
+  readonly onPinChange: (value: PlacePinEditorValue | null) => void;
+  readonly onPinConfirm: (value: PlacePinEditorValue) => void;
+  readonly onRequestCurrentLocation: () => Promise<PlacePinEditorValue | null>;
+  readonly onSave: () => void;
+  readonly pin: NewPlaceInput["pin"];
+  readonly placeError: string | null;
+  readonly placeName: string;
+  readonly reduceMotion: boolean;
+  readonly saving: boolean;
+  readonly visible: boolean;
+}) {
+  const insets = useSafeAreaInsets();
+  const copy = getCaptureCopy(language);
+  const rtl = language === "ar";
+
+  return (
+    <Modal
+      animationType={reduceMotion ? "none" : "slide"}
+      onRequestClose={onClose}
+      onShow={() => nameInputRef.current?.focus()}
+      presentationStyle="overFullScreen"
+      statusBarTranslucent
+      transparent
+      visible={visible}
+    >
+      <View style={styles.placeSheetBackdrop}>
+        <KeyboardAvoidingView
+          behavior={Platform.OS === "ios" ? "padding" : undefined}
+          keyboardVerticalOffset={0}
+          style={styles.placeSheetKeyboard}
+        >
+          <View
+            accessibilityViewIsModal
+            style={[
+              styles.placeSheet,
+              { paddingBottom: Math.max(insets.bottom, spacing.md) }
+            ]}
+          >
+            <View
+              style={[
+                styles.placeSheetHeader,
+                rtl && styles.rowReverse
+              ]}
+            >
+              <View style={styles.inlineFormCopy}>
+                <Eyebrow>{copy.newPlace}</Eyebrow>
+                <Text
+                  accessibilityRole="header"
+                  style={[
+                    styles.placeSheetTitle,
+                    rtl && styles.arabicMedium,
+                    rtl && styles.rtlText
+                  ]}
+                >
+                  {copy.addNewPlace}
+                </Text>
+                <BodyText muted>
+                  {copy.quickPlaceBody}
+                </BodyText>
+              </View>
+              <IconButton
+                icon={X}
+                label={copy.closePlaceForm}
+                onPress={onClose}
+              />
+            </View>
+            <ScrollView
+              contentContainerStyle={styles.placeSheetContent}
+              keyboardShouldPersistTaps="handled"
+              showsVerticalScrollIndicator={false}
+            >
+              <Field
+                autoCapitalize="words"
+                error={placeError}
+                label={copy.placeName}
+                onChangeText={onNameChange}
+                placeholder={copy.placeNamePlaceholder}
+                ref={nameInputRef}
+                returnKeyType="done"
+                value={placeName}
+              />
+              <PlacePinEditor
+                language={language}
+                onChange={onPinChange}
+                onConfirm={onPinConfirm}
+                onRequestCurrentLocation={onRequestCurrentLocation}
+                value={pin}
+              />
+              {!pin ? (
+                <BodyText muted style={styles.honestyNote}>
+                  {copy.noPinNote}
+                </BodyText>
+              ) : null}
+            </ScrollView>
+            <PrimaryButton
+              disabled={Boolean(pin && !pin.confirmedAt)}
+              icon={Check}
+              label={copy.saveAndUsePlace}
+              loading={saving}
+              onPress={onSave}
+            />
+          </View>
+        </KeyboardAvoidingView>
+      </View>
+    </Modal>
+  );
+}
+
 function EvidenceStep({
   evidence,
   onChoose,
@@ -1960,6 +2066,8 @@ function ReviewStep({
   locatorText,
   locationStatus,
   name,
+  onEditStep,
+  onReviewPlacePin,
   photo,
   physical,
   place,
@@ -1970,6 +2078,8 @@ function ReviewStep({
   readonly locatorText: string;
   readonly locationStatus: LocationChoice | null;
   readonly name: string;
+  readonly onEditStep: (step: 0 | 1 | 2) => void;
+  readonly onReviewPlacePin: (placeId: string) => void;
   readonly photo: CapturedFile | null;
   readonly physical: boolean;
   readonly place: NativePlace | undefined;
@@ -1981,11 +2091,17 @@ function ReviewStep({
     ? copy.noPhysicalLocation
     : locationStatus === "unknown"
       ? copy.unknownReminder
-      : place
+        : place
         ? [place.name, roomName, locatorText]
             .filter(Boolean)
             .join(rtl ? " ‹ " : " › ")
         : copy.placeNeedsDetail;
+  const placePinDebt =
+    physical &&
+    locationStatus !== "unknown" &&
+    Boolean(place) &&
+    !hasConfirmedPreciseNativePlacePin(place);
+  const ForwardIcon = rtl ? ArrowLeft : ArrowRight;
   return (
     <>
       <View style={styles.stepHeading}>
@@ -1995,7 +2111,16 @@ function ReviewStep({
         </BodyText>
       </View>
       <View style={styles.reviewPanel}>
-        <View style={[styles.reviewHero, rtl && styles.rowReverse]}>
+        <Pressable
+          accessibilityLabel={`${copy.editIdentity}. ${name}, ${categoryLabel}`}
+          accessibilityRole="button"
+          onPress={() => onEditStep(0)}
+          style={({ pressed }) => [
+            styles.reviewHero,
+            rtl && styles.rowReverse,
+            pressed && styles.pressed
+          ]}
+        >
           {photo ? (
             <Image source={{ uri: photo.localUri }} style={styles.reviewPhoto} />
           ) : (
@@ -2032,10 +2157,101 @@ function ReviewStep({
               {copy.readyToAdd}
             </Text>
           </View>
-        </View>
-        <ReviewRow label={copy.reviewLocation} value={location} />
+          <View style={[styles.reviewEditAction, rtl && styles.rowReverse]}>
+            <Text
+              style={[
+                styles.reviewEditText,
+                rtl && styles.arabicMedium
+              ]}
+            >
+              {copy.edit}
+            </Text>
+            <ForwardIcon color={colors.textMuted} size={17} />
+          </View>
+        </Pressable>
         <ReviewRow
+          editLabel={copy.editPhoto}
+          label={copy.photo}
+          onPress={() => onEditStep(0)}
+          value={photo ? photo.fileName : copy.notAdded}
+        />
+        <ReviewRow
+          editLabel={copy.editLocation}
+          label={copy.reviewLocation}
+          onPress={() => onEditStep(1)}
+          value={location}
+        />
+        {placePinDebt && place ? (
+          <View
+            style={styles.placePinDebt}
+            testID="capture-review-place-pin-debt"
+          >
+            <View
+              accessibilityLiveRegion="polite"
+              accessibilityRole="alert"
+              style={styles.placePinDebtMessage}
+              testID="capture-review-place-pin-alert"
+            >
+              <View
+                style={[
+                  styles.placePinDebtHeading,
+                  rtl && styles.rowReverse
+                ]}
+              >
+                <Warning
+                  color={colors.warning}
+                  size={21}
+                  weight="regular"
+                />
+                <Text
+                  style={[
+                    styles.placePinDebtTitle,
+                    rtl && styles.arabicMedium,
+                    rtl && styles.rtlText
+                  ]}
+                >
+                  {copy.placePinDebtTitle}
+                </Text>
+              </View>
+              <Text
+                style={[
+                  styles.placePinDebtBody,
+                  rtl && styles.arabic,
+                  rtl && styles.rtlText
+                ]}
+              >
+                {copy.placePinDebtBody}
+              </Text>
+            </View>
+            <Pressable
+              accessibilityHint={copy.reviewPlacePinHint}
+              accessibilityLabel={copy.reviewPlacePin}
+              accessibilityRole="button"
+              onPress={() => onReviewPlacePin(place.id)}
+              style={({ pressed }) => [
+                styles.placePinDebtAction,
+                rtl && styles.rowReverse,
+                pressed && styles.pressed
+              ]}
+              testID="capture-review-place-pin-action"
+            >
+              <Text
+                style={[
+                  styles.placePinDebtActionText,
+                  rtl && styles.arabicMedium,
+                  rtl && styles.rtlText
+                ]}
+              >
+                {copy.reviewPlacePin}
+              </Text>
+              <ForwardIcon color={colors.text} size={18} />
+            </Pressable>
+          </View>
+        ) : null}
+        <ReviewRow
+          editLabel={copy.editProof}
           label={copy.reviewProof}
+          onPress={() => onEditStep(2)}
           value={evidence ? evidence.fileName : copy.notAdded}
         />
         <ReviewRow
@@ -2172,33 +2388,78 @@ function LocationStatusChoice({
 }
 
 function ReviewRow({
+  editLabel,
   label,
+  onPress,
   value
 }: {
+  readonly editLabel?: string;
   readonly label: string;
+  readonly onPress?: () => void;
   readonly value: string;
 }) {
-  const { rtl } = useCoreJourneyCopy();
+  const { language, rtl } = useCoreJourneyCopy();
+  const copy = getCaptureCopy(language);
+  const ForwardIcon = rtl ? ArrowLeft : ArrowRight;
+  const rowContent = (
+    <>
+      <View style={styles.reviewRowCopy}>
+        <Text
+          style={[
+            styles.reviewRowLabel,
+            rtl && styles.arabic,
+            rtl && styles.rtlText
+          ]}
+        >
+          {label}
+        </Text>
+        <Text
+          numberOfLines={2}
+          style={[
+            styles.reviewRowValue,
+            rtl && styles.arabicMedium,
+            rtl && styles.rtlText
+          ]}
+        >
+          {value}
+        </Text>
+      </View>
+      {onPress ? (
+        <View style={[styles.reviewEditAction, rtl && styles.rowReverse]}>
+          <Text
+            style={[
+              styles.reviewEditText,
+              rtl && styles.arabicMedium
+            ]}
+          >
+            {copy.edit}
+          </Text>
+          <ForwardIcon color={colors.textMuted} size={17} />
+        </View>
+      ) : null}
+    </>
+  );
+
+  if (onPress) {
+    return (
+      <Pressable
+        accessibilityLabel={`${editLabel ?? copy.edit}. ${label}: ${value}`}
+        accessibilityRole="button"
+        onPress={onPress}
+        style={({ pressed }) => [
+          styles.reviewRow,
+          rtl && styles.rowReverse,
+          pressed && styles.pressed
+        ]}
+      >
+        {rowContent}
+      </Pressable>
+    );
+  }
+
   return (
-    <View style={styles.reviewRow}>
-      <Text
-        style={[
-          styles.reviewRowLabel,
-          rtl && styles.arabic,
-          rtl && styles.rtlText
-        ]}
-      >
-        {label}
-      </Text>
-      <Text
-        style={[
-          styles.reviewRowValue,
-          rtl && styles.arabicMedium,
-          rtl && styles.rtlText
-        ]}
-      >
-        {value}
-      </Text>
+    <View style={[styles.reviewRow, rtl && styles.rowReverse]}>
+      {rowContent}
     </View>
   );
 }
@@ -2453,7 +2714,8 @@ const styles = StyleSheet.create({
   choiceMeta: {
     color: colors.textFaint,
     fontFamily: typography.body,
-    fontSize: 11
+    fontSize: 12,
+    lineHeight: 17
   },
   choiceMetaActive: {
     color: colors.concrete
@@ -2567,6 +2829,45 @@ const styles = StyleSheet.create({
     fontSize: 17,
     lineHeight: 23
   },
+  placeSheetBackdrop: {
+    flex: 1,
+    alignItems: "center",
+    justifyContent: "flex-end",
+    backgroundColor: colors.modalScrim
+  },
+  placeSheetKeyboard: {
+    width: "100%",
+    maxWidth: 560,
+    justifyContent: "flex-end"
+  },
+  placeSheet: {
+    maxHeight: "90%",
+    gap: spacing.md,
+    paddingTop: spacing.lg,
+    paddingHorizontal: spacing.lg,
+    borderTopLeftRadius: radius.xl,
+    borderTopRightRadius: radius.xl,
+    borderWidth: StyleSheet.hairlineWidth,
+    borderBottomWidth: 0,
+    borderColor: colors.borderStrong,
+    backgroundColor: colors.canvas
+  },
+  placeSheetHeader: {
+    flexDirection: "row",
+    alignItems: "flex-start",
+    justifyContent: "space-between",
+    gap: spacing.md
+  },
+  placeSheetTitle: {
+    color: colors.text,
+    fontFamily: typography.displayBold,
+    fontSize: 24,
+    lineHeight: 30
+  },
+  placeSheetContent: {
+    gap: spacing.md,
+    paddingBottom: spacing.sm
+  },
   formStack: {
     gap: spacing.md
   },
@@ -2631,9 +2932,10 @@ const styles = StyleSheet.create({
     fontSize: 12
   },
   reviewHero: {
+    minHeight: 88,
     flexDirection: "row",
     alignItems: "center",
-    gap: spacing.md
+    gap: spacing.sm
   },
   reviewPhoto: {
     width: 76,
@@ -2652,6 +2954,7 @@ const styles = StyleSheet.create({
     backgroundColor: colors.surfaceQuiet
   },
   reviewCopy: {
+    minWidth: 0,
     flex: 1,
     gap: spacing.xs
   },
@@ -2673,16 +2976,24 @@ const styles = StyleSheet.create({
     fontSize: 12
   },
   reviewRow: {
-    minHeight: 54,
-    gap: 4,
-    paddingTop: spacing.sm,
+    minHeight: 64,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    gap: spacing.sm,
+    paddingVertical: spacing.sm,
     borderTopWidth: 1,
     borderTopColor: colors.border
+  },
+  reviewRowCopy: {
+    minWidth: 0,
+    flex: 1,
+    gap: 4
   },
   reviewRowLabel: {
     color: colors.textFaint,
     fontFamily: typography.bodyMedium,
-    fontSize: 11,
+    fontSize: 12,
     letterSpacing: 0.5,
     textTransform: "uppercase"
   },
@@ -2691,6 +3002,66 @@ const styles = StyleSheet.create({
     fontFamily: typography.body,
     fontSize: 14,
     lineHeight: 20
+  },
+  reviewEditAction: {
+    minHeight: 44,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 3,
+    flexShrink: 0
+  },
+  reviewEditText: {
+    color: colors.textMuted,
+    fontFamily: typography.bodyMedium,
+    fontSize: 13,
+    lineHeight: 18
+  },
+  placePinDebt: {
+    alignItems: "stretch",
+    gap: spacing.xs,
+    padding: spacing.sm,
+    borderWidth: 1,
+    borderColor: colors.warning,
+    borderRadius: radius.md,
+    backgroundColor: colors.warningQuiet
+  },
+  placePinDebtMessage: {
+    gap: spacing.xs
+  },
+  placePinDebtHeading: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: spacing.xs
+  },
+  placePinDebtTitle: {
+    flex: 1,
+    color: colors.text,
+    fontFamily: typography.bodyBold,
+    fontSize: 15,
+    lineHeight: 21
+  },
+  placePinDebtBody: {
+    color: colors.textMuted,
+    fontFamily: typography.body,
+    fontSize: 13,
+    lineHeight: 19
+  },
+  placePinDebtAction: {
+    minHeight: 44,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    gap: spacing.sm,
+    paddingVertical: spacing.xs
+  },
+  placePinDebtActionText: {
+    flex: 1,
+    color: colors.text,
+    fontFamily: typography.bodyMedium,
+    fontSize: 14,
+    lineHeight: 20,
+    textDecorationLine: "underline"
   },
   noticePanel: {
     alignItems: "flex-start",

@@ -10,6 +10,10 @@ import {
   useFonts as useArabic
 } from "@expo-google-fonts/ibm-plex-sans-arabic";
 import {
+  IBMPlexMono_500Medium,
+  useFonts as useMono
+} from "@expo-google-fonts/ibm-plex-mono";
+import {
   InstrumentSans_400Regular,
   InstrumentSans_500Medium,
   InstrumentSans_600SemiBold,
@@ -99,13 +103,18 @@ function LocalizedRootLayout() {
     IBMPlexSansArabic_400Regular,
     IBMPlexSansArabic_600SemiBold
   });
+  const [monoLoaded, monoError] = useMono({
+    IBMPlexMono_500Medium
+  });
   const [continueWithSystemText, setContinueWithSystemText] =
     useState(false);
   const fontStartupState = resolveFontStartupState({
     arabicError,
     arabicLoaded,
     instrumentError,
-    instrumentLoaded
+    instrumentLoaded,
+    monoError,
+    monoLoaded
   });
 
   useEffect(() => {
@@ -669,9 +678,9 @@ const styles = StyleSheet.create({
   },
   fontFallbackEyebrow: {
     color: colors.textMuted,
-    fontSize: 11,
+    fontSize: 13,
     fontWeight: "700",
-    lineHeight: 16,
+    lineHeight: 18,
     letterSpacing: 1.1
   },
   fontFallbackTitle: {

@@ -3,9 +3,11 @@ import {
   CONTRACT_API_VERSION,
   type ApiErrorCode,
   type ContractError,
+  type CreateHouseholdRequest,
   type HouseholdAccessPort,
   type HouseholdAccessMutationReceipt,
   type HouseholdAccessSnapshot,
+  type HouseholdCreationReceipt,
   type HouseholdInvite,
   type HouseholdMemberDescriptor,
   type HouseholdMembership,
@@ -151,10 +153,7 @@ function parseMembership(value: unknown): HouseholdMembership | null {
 }
 
 function parseHousehold(value: unknown): HouseholdWorkspace | null {
-  const candidate =
-    isRecord(value) && isRecord(value.household)
-      ? value.household
-      : null;
+  const candidate = isRecord(value) ? value : null;
   if (
     candidate === null ||
     typeof candidate.id !== "string" ||
@@ -174,6 +173,27 @@ function parseHousehold(value: unknown): HouseholdWorkspace | null {
     version: candidate.version,
     createdAt: candidate.created_at
   };
+}
+
+function parseHouseholdCreationReceipt(
+  value: unknown,
+  expectedOperationId: string,
+  expectedHouseholdId: string
+): HouseholdCreationReceipt | null {
+  if (
+    !isRecord(value) ||
+    value.operationId !== expectedOperationId ||
+    !uuidPattern.test(expectedOperationId)
+  ) {
+    return null;
+  }
+  const household = parseHousehold(value.household);
+  return household?.householdId === expectedHouseholdId
+    ? {
+        operationId: expectedOperationId,
+        household
+      }
+    : null;
 }
 
 function parseOnboardingCompletion(
@@ -375,26 +395,39 @@ export class HttpHouseholdAccess implements HouseholdAccessPort {
   }
 
   async createHousehold(
-    name: string
-  ): Promise<Result<HouseholdWorkspace>> {
-    const normalizedName = name.trim();
-    if (normalizedName.length < 1 || normalizedName.length > 120) {
+    request: CreateHouseholdRequest
+  ): ReturnType<HouseholdAccessPort["createHousehold"]> {
+    const normalizedName = request.name.trim();
+    if (
+      request.apiVersion !== CONTRACT_API_VERSION ||
+      !uuidPattern.test(request.operationId) ||
+      !uuidPattern.test(request.householdId) ||
+      normalizedName.length < 1 ||
+      normalizedName.length > 120
+    ) {
       return failure(
         "VALIDATION_FAILED",
-        "Enter a valid household name.",
+        "Enter a valid household creation request.",
         false
       );
     }
     const result = await this.post("/households", {
+      apiVersion: CONTRACT_API_VERSION,
+      operationId: request.operationId,
+      householdId: request.householdId,
       name: normalizedName
     });
     if (!result.ok) return result;
-    const household = parseHousehold(result.value);
-    return household
-      ? { ok: true, value: household }
+    const receipt = parseHouseholdCreationReceipt(
+      result.value,
+      request.operationId,
+      request.householdId
+    );
+    return receipt
+      ? { ok: true, value: receipt }
       : failure(
           "VALIDATION_FAILED",
-          "The household service returned a malformed response.",
+          "The household service returned a malformed creation receipt.",
           false
         );
   }

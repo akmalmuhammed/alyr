@@ -1,5 +1,5 @@
 describe("post-capture navigation contract", () => {
-  it("marks a newly created Passport and exposes the three activation choices", () => {
+  it("marks a newly created Passport and exposes one focused activation path", () => {
     const { readFileSync } = jest.requireActual("fs") as {
       readFileSync(path: string, encoding: "utf8"): string;
     };
@@ -21,12 +21,16 @@ describe("post-capture navigation contract", () => {
     );
     expect(passportRoute).toContain('justCreated === "1"');
     expect(passportRoute).toContain("Passport saved");
-    expect(passportRoute).toContain("Add a recorded value");
+    expect(passportRoute).toContain("Add value to portfolio");
     expect(passportRoute).toContain("Add another item");
-    expect(passportRoute).toContain("Go to Today");
+    expect(passportRoute).toContain("View full Passport");
+    expect(passportRoute).toContain("View Today");
     expect(passportRoute).toContain("returnTo=dashboard");
     expect(passportRoute).toContain('router.replace("/capture")');
     expect(passportRoute).toContain('router.replace("/(tabs)")');
+    expect(passportRoute).toContain(
+      "router.replace(`/asset/${asset.id}`)"
+    );
     expect(valueRoute.indexOf('if (returnTo === "dashboard")')).toBeLessThan(
       valueRoute.indexOf("router.canGoBack()")
     );

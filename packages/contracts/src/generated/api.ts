@@ -381,6 +381,12 @@ export interface components {
             oneTimeCode: string;
         };
         CreateHouseholdRequest: {
+            /** @constant */
+            apiVersion: 1;
+            /** Format: uuid */
+            operationId: string;
+            /** Format: uuid */
+            householdId: string;
             name: string;
         };
         CompleteOnboardingRequest: {
@@ -819,7 +825,7 @@ export interface components {
                 "application/json": components["schemas"]["ApiErrorEnvelope"];
             };
         };
-        /** @description The household export creation rate was exceeded. */
+        /** @description A bounded household operation rate was exceeded. */
         TooManyRequests: {
             headers: {
                 [name: string]: unknown;
@@ -929,19 +935,24 @@ export interface operations {
             };
         };
         responses: {
-            /** @description Household created with the caller as owner. */
+            /** @description Durable household-creation receipt. Repeating the same operation returns the same household without creating a duplicate. */
             201: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
                     "application/json": {
+                        /** Format: uuid */
+                        operationId: string;
                         household: components["schemas"]["Household"];
                     };
                 };
             };
             400: components["responses"]["ApiError"];
             401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            409: components["responses"]["Conflict"];
+            429: components["responses"]["TooManyRequests"];
         };
     };
     completeHouseholdOnboarding: {
