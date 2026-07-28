@@ -3,6 +3,7 @@ import type {
   EvidenceRelation,
   HouseholdRole,
   JsonObject,
+  LiabilityKind as ContractLiabilityKind,
   LocationStatus,
   SyncStatus
 } from "@alyr/contracts";
@@ -196,6 +197,57 @@ export interface NativeAsset extends JsonObject {
   readonly updatedAt: string;
 }
 
+export type LiabilityKind = ContractLiabilityKind;
+
+export interface NativeLiability extends JsonObject {
+  readonly id: string;
+  readonly householdId: string;
+  readonly version: number;
+  readonly name: string;
+  readonly kind: LiabilityKind;
+  readonly lifecycleStatus: "active" | "archived";
+  readonly archivedAt: string | null;
+  readonly syncStatus: SyncStatus;
+  readonly createdAt: string;
+  readonly updatedAt: string;
+}
+
+/**
+ * A durable local deletion marker prevents an older sync page or Recovery Kit
+ * replay from resurrecting a Liability after the user removed it.
+ *
+ * The user-facing Liability record is removed immediately, while this compact
+ * marker remains inside the encrypted workspace until a future compaction
+ * policy can prove every device has observed the authoritative tombstone.
+ */
+export interface NativeLiabilityTombstone extends JsonObject {
+  readonly id: string;
+  readonly householdId: string;
+  readonly version: number;
+  readonly deletedAt: string;
+  readonly syncStatus: SyncStatus;
+}
+
+export interface NativeLiabilityReview extends JsonObject {
+  readonly id: string;
+  readonly householdId: string;
+  readonly version: number;
+  readonly status: "none-confirmed";
+  /** Calendar date in YYYY-MM-DD format. */
+  readonly reviewedAt: string;
+  /** A quiet re-review becomes due after this YYYY-MM-DD date. */
+  readonly expiresAt: string;
+  /**
+   * Deterministic snapshot of the Liability masters, tombstones and balance
+   * history observed when the household confirmed none. It is device-local
+   * derived state: the cloud review identity/version stays reusable while any
+   * later Liability activity makes this acknowledgement stale.
+   */
+  readonly activityWatermark?: string;
+  readonly syncStatus: SyncStatus;
+  readonly updatedAt: string;
+}
+
 export interface NativeMember extends JsonObject {
   readonly id: string;
   readonly householdId: string;
@@ -237,6 +289,21 @@ export interface NativeWorkspace extends JsonObject {
   readonly placeDocuments?: NativePlaceDocument[];
   readonly assets: NativeAsset[];
   readonly evidence: NativeEvidence[];
+  /**
+   * Optional for schema-v2 snapshots created before Liability records
+   * shipped. Readers normalize absence to an empty collection.
+   */
+  readonly liabilities?: NativeLiability[];
+  /**
+   * Optional for legacy schema-v2 snapshots. New workspaces retain versioned
+   * Liability deletions so an older sync page never resurrects a removed debt.
+   */
+  readonly liabilityTombstones?: NativeLiabilityTombstone[];
+  /**
+   * Optional dated acknowledgement used only when the household explicitly
+   * confirms it currently tracks no Liabilities. Absence remains unknown.
+   */
+  readonly liabilityReview?: NativeLiabilityReview;
   readonly members: NativeMember[];
   readonly activity: WorkspaceActivity[];
   readonly syncStatus: "local-only" | "ready" | "syncing" | "needs-attention";
@@ -511,6 +578,14 @@ export function isNativeWorkspace(value: unknown): value is NativeWorkspace {
       Array.isArray(record.placeDocuments)) &&
     Array.isArray(record.assets) &&
     Array.isArray(record.evidence) &&
+    (record.liabilities === undefined ||
+      Array.isArray(record.liabilities)) &&
+    (record.liabilityTombstones === undefined ||
+      Array.isArray(record.liabilityTombstones)) &&
+    (record.liabilityReview === undefined ||
+      (typeof record.liabilityReview === "object" &&
+        record.liabilityReview !== null &&
+        !Array.isArray(record.liabilityReview))) &&
     Array.isArray(record.members)
   );
 }

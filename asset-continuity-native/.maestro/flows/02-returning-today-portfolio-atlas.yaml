@@ -23,6 +23,14 @@ tags:
     timeout: 15000
 - assertVisible:
     id: "portfolio-dashboard"
+- assertVisible:
+    id: "portfolio-net-position"
+- assertVisible:
+    id: "portfolio-net-position-visibility"
+- assertVisible:
+    id: "liabilities-list"
+- assertVisible: "West Bay Home mortgage"
+- assertVisible: "Travel card balance"
 - tapOn:
     text: "Back"
     enabled: true

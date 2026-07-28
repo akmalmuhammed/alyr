@@ -4,6 +4,7 @@ import { getLocationPolicy } from "@alyr/domain";
 import type {
   NativeAsset,
   NativeEvidence,
+  NativeLiability,
   NativePlace,
   NativeWorkspace
 } from "./model";
@@ -25,6 +26,10 @@ export type PortfolioValuableSubject =
   | {
       readonly kind: "place";
       readonly placeId: string;
+    }
+  | {
+      readonly kind: "liability";
+      readonly liabilityId: string;
     };
 
 /**
@@ -44,6 +49,7 @@ export interface PortfolioValueRecord extends JsonObject {
   readonly subject?: PortfolioValuableSubject;
   readonly assetId?: string;
   readonly placeId?: string;
+  readonly liabilityId?: string;
   readonly version?: number;
   readonly amountMinor: number;
   readonly currency: string;
@@ -57,7 +63,7 @@ export interface PortfolioValueRecord extends JsonObject {
     | "needs-attention";
 }
 
-interface PortfolioValueInputBase {
+export interface PortfolioValueInputBase {
   readonly amountMinor: number;
   readonly currency: string;
   /** Calendar date in YYYY-MM-DD format. */
@@ -68,10 +74,17 @@ export type PortfolioValueInput =
   | (PortfolioValueInputBase & {
       readonly assetId: string;
       readonly placeId?: never;
+      readonly liabilityId?: never;
     })
   | (PortfolioValueInputBase & {
       readonly placeId: string;
       readonly assetId?: never;
+      readonly liabilityId?: never;
+    })
+  | (PortfolioValueInputBase & {
+      readonly liabilityId: string;
+      readonly assetId?: never;
+      readonly placeId?: never;
     });
 
 export interface PortfolioValueMutationContext {
@@ -267,9 +280,9 @@ function nonEmptyId(value: unknown): value is string {
 export function portfolioSubjectKey(
   subject: PortfolioValuableSubject
 ): string {
-  return subject.kind === "asset"
-    ? `asset:${subject.assetId}`
-    : `place:${subject.placeId}`;
+  if (subject.kind === "asset") return `asset:${subject.assetId}`;
+  if (subject.kind === "place") return `place:${subject.placeId}`;
+  return `liability:${subject.liabilityId}`;
 }
 
 /**
@@ -282,7 +295,7 @@ export function portfolioSubjectKey(
 export function portfolioValueSubject(
   value: Pick<
     PortfolioValueRecord,
-    "subject" | "assetId" | "placeId"
+    "subject" | "assetId" | "placeId" | "liabilityId"
   >
 ): PortfolioValuableSubject | null {
   const assetId = nonEmptyId(value.assetId)
@@ -291,7 +304,10 @@ export function portfolioValueSubject(
   const placeId = nonEmptyId(value.placeId)
     ? value.placeId.trim()
     : null;
-  if (assetId && placeId) {
+  const liabilityId = nonEmptyId(value.liabilityId)
+    ? value.liabilityId.trim()
+    : null;
+  if ([assetId, placeId, liabilityId].filter(Boolean).length > 1) {
     return null;
   }
   if (value.subject?.kind === "asset") {
@@ -300,6 +316,7 @@ export function portfolioValueSubject(
       : null;
     return subjectAssetId &&
       !placeId &&
+      !liabilityId &&
       (!assetId || assetId === subjectAssetId)
       ? { kind: "asset", assetId: subjectAssetId }
       : null;
@@ -310,8 +327,20 @@ export function portfolioValueSubject(
       : null;
     return subjectPlaceId &&
       !assetId &&
+      !liabilityId &&
       (!placeId || placeId === subjectPlaceId)
       ? { kind: "place", placeId: subjectPlaceId }
+      : null;
+  }
+  if (value.subject?.kind === "liability") {
+    const subjectLiabilityId = nonEmptyId(value.subject.liabilityId)
+      ? value.subject.liabilityId.trim()
+      : null;
+    return subjectLiabilityId &&
+      !assetId &&
+      !placeId &&
+      (!liabilityId || liabilityId === subjectLiabilityId)
+      ? { kind: "liability", liabilityId: subjectLiabilityId }
       : null;
   }
   if (value.subject !== undefined) {
@@ -424,12 +453,17 @@ export function recordPortfolioValue(
   context: PortfolioValueMutationContext
 ): PortfolioValueMutationResult {
   const subject: PortfolioValuableSubject =
-    "placeId" in input && nonEmptyId(input.placeId)
+    "liabilityId" in input && nonEmptyId(input.liabilityId)
+      ? {
+          kind: "liability",
+          liabilityId: input.liabilityId.trim()
+        }
+      : "placeId" in input && nonEmptyId(input.placeId)
       ? { kind: "place", placeId: input.placeId.trim() }
       : "assetId" in input && nonEmptyId(input.assetId)
         ? { kind: "asset", assetId: input.assetId.trim() }
         : (() => {
-            throw new Error("Choose one item or property.");
+            throw new Error("Choose one item, property or liability.");
           })();
   const targetAvailable =
     subject.kind === "asset"
@@ -440,17 +474,26 @@ export function recordPortfolioValue(
             isAssetActive(candidate) &&
             !getLocationPolicy(candidate.categoryId).isRealEstate
         )
-      : workspace.places.some(
+      : subject.kind === "place"
+        ? workspace.places.some(
           (candidate) =>
             candidate.id === subject.placeId &&
             candidate.householdId === workspace.household.id &&
             isOwnedPropertyPlace(candidate)
-        );
+          )
+        : (workspace.liabilities ?? []).some(
+            (candidate) =>
+              candidate.id === subject.liabilityId &&
+              candidate.householdId === workspace.household.id &&
+              candidate.lifecycleStatus === "active"
+          );
   if (!targetAvailable) {
     throw new Error(
       subject.kind === "asset"
         ? "This item is not available in the current household."
-        : "This property is not available in the current household."
+        : subject.kind === "place"
+          ? "This property is not available in the current household."
+          : "This liability is not available in the current household."
     );
   }
   if (
@@ -487,7 +530,9 @@ export function recordPortfolioValue(
     subject,
     ...(subject.kind === "asset"
       ? { assetId: subject.assetId }
-      : { placeId: subject.placeId }),
+      : subject.kind === "place"
+        ? { placeId: subject.placeId }
+        : { liabilityId: subject.liabilityId }),
     version: 1,
     amountMinor: input.amountMinor,
     currency,
@@ -522,7 +567,8 @@ export function recordPortfolioValue(
 export function selectCurrentPortfolioValues(
   assets: readonly NativeAsset[],
   values: readonly PortfolioValueRecord[],
-  places: readonly NativePlace[] = []
+  places: readonly NativePlace[] = [],
+  liabilities: readonly NativeLiability[] = []
 ): CurrentValueSelection {
   const assetIds = new Set(
     assets
@@ -538,6 +584,13 @@ export function selectCurrentPortfolioValues(
       .filter(isOwnedPropertyPlace)
       .map((place) => place.id)
   );
+  const liabilityIds = new Set(
+    liabilities
+      .filter(
+        (liability) => liability.lifecycleStatus === "active"
+      )
+      .map((liability) => liability.id)
+  );
   const current = new Map<string, PortfolioValueRecord>();
   let ignoredCount = 0;
 
@@ -550,7 +603,9 @@ export function selectCurrentPortfolioValues(
     const available =
       subject.kind === "asset"
         ? assetIds.has(subject.assetId)
-        : placeIds.has(subject.placeId);
+        : subject.kind === "place"
+          ? placeIds.has(subject.placeId)
+          : liabilityIds.has(subject.liabilityId);
     if (!available) {
       ignoredCount += 1;
       continue;
@@ -560,7 +615,9 @@ export function selectCurrentPortfolioValues(
       subject,
       ...(subject.kind === "asset"
         ? { assetId: subject.assetId }
-        : { placeId: subject.placeId }),
+        : subject.kind === "place"
+          ? { placeId: subject.placeId }
+          : { liabilityId: subject.liabilityId }),
       currency: normalizePortfolioCurrency(candidate.currency)!
     };
     const key = portfolioSubjectKey(subject);
@@ -851,9 +908,13 @@ export function buildPortfolioSnapshot(
     .filter((place) => !confirmedPropertyPinSet.has(place.id))
     .map((place) => place.id);
 
+  const assetAndPropertyValueRecords = valueRecords.filter((record) => {
+    const subject = portfolioValueSubject(record);
+    return subject === null || subject.kind !== "liability";
+  });
   const selected = selectCurrentPortfolioValues(
     activeAssets,
-    valueRecords,
+    assetAndPropertyValueRecords,
     properties
   );
   const currentBySubject = new Map(
@@ -919,6 +980,11 @@ export function buildPortfolioSnapshot(
           asOf: record.asOf,
           syncStatus: record.syncStatus ?? "on-device"
         };
+      }
+      if (subject.kind !== "place") {
+        throw new Error(
+          "Liability balances are excluded from recorded Asset values."
+        );
       }
       const property = propertyById.get(subject.placeId)!;
       return {
@@ -1187,6 +1253,32 @@ export function formatPortfolioMoney(
   return digits === 0
     ? `${normalized} ${formattedWhole}`
     : `${normalized} ${formattedWhole}${decimalSeparator(locale)}${fraction}`;
+}
+
+/**
+ * Formats an exact signed minor-unit amount for net-position arithmetic.
+ * Recorded Asset and Liability inputs remain non-negative; only their
+ * calculated difference may carry a minus sign.
+ */
+export function formatSignedPortfolioMoney(
+  amountMinor: number,
+  currency: string,
+  locale = "en"
+): string {
+  if (!Number.isSafeInteger(amountMinor)) {
+    const normalized =
+      normalizePortfolioCurrency(currency) ?? currency.trim().toUpperCase();
+    return `${normalized} —`;
+  }
+  const absolute = Math.abs(amountMinor);
+  const formatted = formatPortfolioMoney(absolute, currency, locale);
+  if (amountMinor >= 0) return formatted;
+  const normalized =
+    normalizePortfolioCurrency(currency) ?? currency.trim().toUpperCase();
+  const prefix = `${normalized} `;
+  return formatted.startsWith(prefix)
+    ? `${prefix}−${formatted.slice(prefix.length)}`
+    : `−${formatted}`;
 }
 
 /**

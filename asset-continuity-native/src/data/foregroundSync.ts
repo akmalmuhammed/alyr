@@ -32,13 +32,23 @@ import {
   normalizedPlaceTenure,
   type NativeAsset,
   type NativeEvidence,
+  type NativeLiability,
+  type NativeLiabilityReview,
   type NativePlace,
   type NativePlaceDocument,
   type NativeRoom,
   type NativeWorkspace
 } from "@/domain/model";
 import {
+  getLiabilities,
+  getLiabilityReview,
+  getLiabilityTombstones,
+  isLiabilityKind,
+  liabilityActivityWatermark
+} from "@/domain/liabilities";
+import {
   getPortfolioValueRecords,
+  portfolioValueSubject,
   type PortfolioValueRecord
 } from "@/domain/portfolio";
 import { createWorkspace } from "@/domain/sample";
@@ -446,6 +456,47 @@ function removeTombstone(
       ...workspace,
       portfolioValueRecords: getPortfolioValueRecords(workspace).filter(
         (record) => record.id !== change.entityId
+      )
+    };
+  }
+  if (change.entityType === "liability") {
+    const currentTombstones = getLiabilityTombstones(workspace);
+    const previousTombstone = currentTombstones.find(
+      (record) => record.id === change.entityId
+    );
+    const tombstoneVersion = Math.max(
+      change.version,
+      previousTombstone?.version ?? 0
+    );
+    return {
+      ...workspace,
+      liabilities: getLiabilities(workspace).filter(
+        (record) => record.id !== change.entityId
+      ),
+      liabilityTombstones: [
+        ...currentTombstones.filter(
+          (record) => record.id !== change.entityId
+        ),
+        {
+          id: change.entityId,
+          householdId: change.householdId,
+          version: tombstoneVersion,
+          deletedAt:
+            previousTombstone &&
+            previousTombstone.version > change.version
+              ? previousTombstone.deletedAt
+              : change.changedAt,
+          syncStatus: "synced" as const
+        }
+      ],
+      portfolioValueRecords: getPortfolioValueRecords(workspace).filter(
+        (record) => {
+          const subject = portfolioValueSubject(record);
+          return !(
+            subject?.kind === "liability" &&
+            subject.liabilityId === change.entityId
+          );
+        }
       )
     };
   }
@@ -1249,6 +1300,195 @@ function applyPlaceDocumentChange(
   return { ...workspace, placeDocuments: documents };
 }
 
+function liabilityDetails(
+  payload: Readonly<Record<string, JsonValue>>
+): Pick<NativeLiability, "name" | "kind"> {
+  const name = requiredString(payload, "name", 120);
+  const kind = payload.kind;
+  if (!isLiabilityKind(kind)) {
+    throw new SyncApplyError(
+      "The server Liability category is invalid."
+    );
+  }
+  return { name, kind };
+}
+
+function applyLiabilityChange(
+  workspace: NativeWorkspace,
+  change: SyncChange,
+  body: ParsedChangeBody,
+  localOperationIds: ReadonlySet<string>
+): NativeWorkspace {
+  const tombstone = getLiabilityTombstones(workspace).find(
+    (candidate) => candidate.id === change.entityId
+  );
+  if (tombstone) {
+    if (change.version <= tombstone.version) {
+      return workspace;
+    }
+    throw new SyncApplyError(
+      "A newer Liability change follows a local deletion marker."
+    );
+  }
+  const liabilities = [...getLiabilities(workspace)];
+  const index = liabilities.findIndex(
+    (candidate) => candidate.id === change.entityId
+  );
+  if (body.command === "liability.create") {
+    const details = liabilityDetails(body.payload);
+    if (index < 0) {
+      if (change.version !== 1) {
+        throw new SyncApplyError(
+          "A new Liability must begin at version one."
+        );
+      }
+      liabilities.push({
+        id: change.entityId,
+        householdId: change.householdId,
+        version: 1,
+        ...details,
+        lifecycleStatus: "active",
+        archivedAt: null,
+        syncStatus: "synced",
+        createdAt: change.changedAt,
+        updatedAt: change.changedAt
+      });
+    } else {
+      if (!localOperationIds.has(body.operationId)) {
+        throw new SyncApplyError(
+          "A remote Liability collided with a local record."
+        );
+      }
+      liabilities[index] = {
+        ...liabilities[index]!,
+        ...details,
+        version: Math.max(
+          liabilities[index]!.version,
+          change.version
+        ),
+        syncStatus: "synced",
+        updatedAt: change.changedAt
+      };
+    }
+    return { ...workspace, liabilities };
+  }
+  if (
+    body.command !== "liability.update" &&
+    body.command !== "liability.archive" &&
+    body.command !== "liability.restore"
+  ) {
+    throw new SyncApplyError(
+      "The server Liability command is unsupported."
+    );
+  }
+  if (index < 0) {
+    throw new SyncApplyError(
+      "The server Liability change references an unavailable record."
+    );
+  }
+  const current = liabilities[index]!;
+  assertEntityVersion(
+    current.version,
+    change.version,
+    body.operationId,
+    localOperationIds
+  );
+  if (body.command === "liability.update") {
+    const details = liabilityDetails(body.payload);
+    liabilities[index] = {
+      ...current,
+      ...details,
+      version: Math.max(current.version, change.version),
+      syncStatus: "synced",
+      updatedAt: change.changedAt
+    };
+  } else {
+    const lifecycleStatus =
+      body.command === "liability.archive" ? "archived" : "active";
+    const archivedAt =
+      lifecycleStatus === "archived"
+        ? nullableString(body.payload, "archivedAt", 40) ??
+          change.changedAt
+        : null;
+    if (archivedAt !== null && !isIsoDateTime(archivedAt)) {
+      throw new SyncApplyError(
+        "The server Liability archive date is invalid."
+      );
+    }
+    liabilities[index] = {
+      ...current,
+      version: Math.max(current.version, change.version),
+      lifecycleStatus,
+      archivedAt,
+      syncStatus: "synced",
+      updatedAt: change.changedAt
+    };
+  }
+  return { ...workspace, liabilities };
+}
+
+function applyLiabilityReviewChange(
+  workspace: NativeWorkspace,
+  change: SyncChange,
+  body: ParsedChangeBody,
+  localOperationIds: ReadonlySet<string>
+): NativeWorkspace {
+  if (
+    body.command !== "liability-review.set" ||
+    body.payload.status !== "none-confirmed"
+  ) {
+    throw new SyncApplyError(
+      "The server Liability review command is unsupported."
+    );
+  }
+  const reviewedAt = requiredString(
+    body.payload,
+    "reviewedAt",
+    10
+  );
+  const expiresAt = requiredString(
+    body.payload,
+    "expiresAt",
+    10
+  );
+  if (
+    !/^\d{4}-\d{2}-\d{2}$/u.test(reviewedAt) ||
+    !/^\d{4}-\d{2}-\d{2}$/u.test(expiresAt) ||
+    !Number.isFinite(Date.parse(`${reviewedAt}T00:00:00.000Z`)) ||
+    !Number.isFinite(Date.parse(`${expiresAt}T00:00:00.000Z`)) ||
+    expiresAt < reviewedAt
+  ) {
+    throw new SyncApplyError(
+      "The server Liability review dates are invalid."
+    );
+  }
+  const current = getLiabilityReview(workspace);
+  if (current) {
+    assertEntityVersion(
+      current.version,
+      change.version,
+      body.operationId,
+      localOperationIds
+    );
+  } else if (change.version !== 1) {
+    throw new SyncApplyError(
+      "A new Liability review must begin at version one."
+    );
+  }
+  const review: NativeLiabilityReview = {
+    id: change.entityId,
+    householdId: change.householdId,
+    version: change.version,
+    status: "none-confirmed",
+    reviewedAt,
+    expiresAt,
+    activityWatermark: liabilityActivityWatermark(workspace),
+    syncStatus: "synced",
+    updatedAt: change.changedAt
+  };
+  return { ...workspace, liabilityReview: review };
+}
+
 function valuePayload(
   payload: Readonly<Record<string, JsonValue>>
 ): ({
@@ -1258,6 +1498,7 @@ function valuePayload(
   };
   readonly assetId: string;
   readonly placeId?: never;
+  readonly liabilityId?: never;
 } | {
   readonly subject: {
     readonly kind: "place";
@@ -1265,6 +1506,15 @@ function valuePayload(
   };
   readonly placeId: string;
   readonly assetId?: never;
+  readonly liabilityId?: never;
+} | {
+  readonly subject: {
+    readonly kind: "liability";
+    readonly liabilityId: string;
+  };
+  readonly liabilityId: string;
+  readonly assetId?: never;
+  readonly placeId?: never;
 }) & {
   readonly amountMinor: number;
   readonly currency: string;
@@ -1279,12 +1529,19 @@ function valuePayload(
     typeof payload.placeId === "string" && payload.placeId.trim()
       ? payload.placeId.trim()
       : null;
+  const liabilityId =
+    typeof payload.liabilityId === "string" &&
+    payload.liabilityId.trim()
+      ? payload.liabilityId.trim()
+      : null;
   const amountMinor = payload.amountMinor;
   const currency = payload.currency;
   const asOf = payload.asOf;
   const source = payload.source ?? "user-entered";
   if (
-    (assetId === null) === (placeId === null) ||
+    [assetId, placeId, liabilityId].filter(
+      (value) => value !== null
+    ).length !== 1 ||
     typeof amountMinor !== "number" ||
     !Number.isSafeInteger(amountMinor) ||
     amountMinor < 0 ||
@@ -1300,17 +1557,28 @@ function valuePayload(
     );
   }
   const common = { amountMinor, currency, asOf, source } as const;
-  return assetId
-    ? {
+  if (assetId) {
+    return {
         ...common,
         subject: { kind: "asset", assetId } as const,
         assetId
-      }
-    : {
-        ...common,
-        subject: { kind: "place", placeId: placeId! } as const,
-        placeId: placeId!
       };
+  }
+  if (placeId) {
+    return {
+        ...common,
+        subject: { kind: "place", placeId } as const,
+        placeId
+      };
+  }
+  return {
+    ...common,
+    subject: {
+      kind: "liability",
+      liabilityId: liabilityId!
+    } as const,
+    liabilityId: liabilityId!
+  };
 }
 
 function applyValueChange(
@@ -1335,17 +1603,26 @@ function applyValueChange(
             candidate.id === payload.assetId &&
             candidate.householdId === change.householdId
         )
-      : workspace.places.some(
+      : payload.subject.kind === "place"
+        ? workspace.places.some(
           (candidate) =>
             candidate.id === payload.placeId &&
             candidate.householdId === change.householdId &&
             isOwnedPropertyPlace(candidate)
-        );
+          )
+        : getLiabilities(workspace).some(
+            (candidate) =>
+              candidate.id === payload.liabilityId &&
+              candidate.householdId === change.householdId &&
+              candidate.lifecycleStatus === "active"
+          );
   if (!subjectAvailable) {
     throw new SyncApplyError(
       payload.subject.kind === "asset"
         ? "The server value assertion references an unavailable Asset."
-        : "The server value assertion references an unavailable owned Property."
+        : payload.subject.kind === "place"
+          ? "The server value assertion references an unavailable owned Property."
+          : "The server value assertion references an unavailable Liability."
     );
   }
   const records = [...getPortfolioValueRecords(workspace)];
@@ -1358,10 +1635,15 @@ function applyValueChange(
           subject: payload.subject,
           assetId: payload.subject.assetId
         }
-      : {
+      : payload.subject.kind === "place"
+        ? {
           subject: payload.subject,
           placeId: payload.subject.placeId
-        };
+          }
+        : {
+            subject: payload.subject,
+            liabilityId: payload.subject.liabilityId
+          };
   const valueFields = {
     amountMinor: payload.amountMinor,
     currency: payload.currency,
@@ -1506,6 +1788,20 @@ export function applyServerChanges(
       );
     } else if (change.entityType === "value") {
       next = applyValueChange(
+        next,
+        change,
+        body,
+        options.localOperationIds
+      );
+    } else if (change.entityType === "liability") {
+      next = applyLiabilityChange(
+        next,
+        change,
+        body,
+        options.localOperationIds
+      );
+    } else if (change.entityType === "liability-review") {
+      next = applyLiabilityReviewChange(
         next,
         change,
         body,
@@ -1903,6 +2199,24 @@ async function bootstrapCleanWorkspace(
         syncStatus: "synced"
       })
     ),
+    liabilities: getLiabilities(workspace).map((liability) => ({
+      ...liability,
+      syncStatus: "synced"
+    })),
+    liabilityTombstones: getLiabilityTombstones(workspace).map(
+      (tombstone) => ({
+        ...tombstone,
+        syncStatus: "synced"
+      })
+    ),
+    ...(getLiabilityReview(workspace)
+      ? {
+          liabilityReview: {
+            ...getLiabilityReview(workspace)!,
+            syncStatus: "synced" as const
+          }
+        }
+      : {}),
     syncStatus: "ready",
     lastSyncedAt: timestamp,
     updatedAt: changes.at(-1)?.changedAt ?? timestamp
@@ -2281,6 +2595,77 @@ export async function reconcileForeground(
       .filter((change) => change.entityType === "value")
       .map((change) => change.entityId)
   );
+  const pendingLiabilityIds = new Set(
+    remaining
+      .filter((operation) =>
+        operation.command.type.startsWith("liability.")
+      )
+      .map((operation) => operation.command.aggregateId)
+      .filter((value): value is string => value !== null)
+  );
+  const acknowledgedLiabilityIds = new Set(
+    allPending
+      .filter(
+        (operation) =>
+          acknowledged.has(operation.operationId) &&
+          operation.command.type.startsWith("liability.")
+      )
+      .map((operation) => operation.command.aggregateId)
+      .filter((value): value is string => value !== null)
+  );
+  const conflictedLiabilityIds = new Set(
+    conflicts.flatMap((conflict) => {
+      const operation = allPending.find(
+        (candidate) =>
+          candidate.operationId === conflict.operationId
+      );
+      return operation?.command.type.startsWith("liability.")
+        ? [conflict.entityId]
+        : [];
+    })
+  );
+  const changedLiabilityIds = new Set(
+    pulled.value.changes
+      .filter((change) => change.entityType === "liability")
+      .map((change) => change.entityId)
+  );
+  const pendingReviewIds = new Set(
+    remaining
+      .filter(
+        (operation) =>
+          operation.command.type === "liability-review.set"
+      )
+      .map((operation) => operation.command.aggregateId)
+      .filter((value): value is string => value !== null)
+  );
+  const acknowledgedReviewIds = new Set(
+    allPending
+      .filter(
+        (operation) =>
+          acknowledged.has(operation.operationId) &&
+          operation.command.type === "liability-review.set"
+      )
+      .map((operation) => operation.command.aggregateId)
+      .filter((value): value is string => value !== null)
+  );
+  const conflictedReviewIds = new Set(
+    conflicts.flatMap((conflict) => {
+      const operation = allPending.find(
+        (candidate) =>
+          candidate.operationId === conflict.operationId
+      );
+      return operation?.command.type === "liability-review.set"
+        ? [conflict.entityId]
+        : [];
+    })
+  );
+  const changedReviewIds = new Set(
+    pulled.value.changes
+      .filter(
+        (change) => change.entityType === "liability-review"
+      )
+      .map((change) => change.entityId)
+  );
   const nextWorkspaceMetadata: NativeWorkspace = {
     ...applied,
     assets: applied.assets.map((asset) => ({
@@ -2309,6 +2694,53 @@ export async function reconcileForeground(
               : record.syncStatus ?? "on-device"
       })
     ),
+    liabilities: getLiabilities(applied).map((liability) => ({
+      ...liability,
+      syncStatus: conflictedLiabilityIds.has(liability.id)
+        ? "needs-attention"
+        : pendingLiabilityIds.has(liability.id)
+          ? "queued"
+          : acknowledgedLiabilityIds.has(liability.id) ||
+              changedLiabilityIds.has(liability.id)
+            ? "synced"
+            : liability.syncStatus
+    })),
+    liabilityTombstones: getLiabilityTombstones(applied).map(
+      (tombstone) => ({
+        ...tombstone,
+        syncStatus: conflictedLiabilityIds.has(tombstone.id)
+          ? "needs-attention"
+          : pendingLiabilityIds.has(tombstone.id)
+            ? "queued"
+            : acknowledgedLiabilityIds.has(tombstone.id) ||
+                changedLiabilityIds.has(tombstone.id)
+              ? "synced"
+              : tombstone.syncStatus
+      })
+    ),
+    ...(getLiabilityReview(applied)
+      ? {
+          liabilityReview: {
+            ...getLiabilityReview(applied)!,
+            syncStatus: conflictedReviewIds.has(
+              getLiabilityReview(applied)!.id
+            )
+              ? "needs-attention" as const
+              : pendingReviewIds.has(
+                  getLiabilityReview(applied)!.id
+                )
+                ? "queued" as const
+                : acknowledgedReviewIds.has(
+                      getLiabilityReview(applied)!.id
+                    ) ||
+                    changedReviewIds.has(
+                      getLiabilityReview(applied)!.id
+                    )
+                  ? "synced" as const
+                  : getLiabilityReview(applied)!.syncStatus
+          }
+        }
+      : {}),
     syncStatus:
       conflicts.length > 0 ? "needs-attention" : "ready",
     lastSyncedAt: timestamp,

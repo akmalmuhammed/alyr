@@ -9,7 +9,7 @@ import {
   useRef,
   useState
 } from "react";
-import { Platform } from "react-native";
+import { AppState, Platform } from "react-native";
 
 import type {
   AuthGatewayMode,
@@ -191,6 +191,15 @@ export function PortfolioPrivacyProvider({
   const toggleAmountsHidden = useCallback(() => {
     setAmountsHidden(!amountsHidden);
   }, [amountsHidden, setAmountsHidden]);
+
+  useEffect(() => {
+    const subscription = AppState.addEventListener("change", (nextState) => {
+      if (nextState === "inactive" || nextState === "background") {
+        setAmountsHidden(true);
+      }
+    });
+    return () => subscription.remove();
+  }, [setAmountsHidden]);
 
   const value = useMemo(
     () => ({

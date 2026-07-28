@@ -34,3 +34,31 @@ tags:
     timeout: 20000
 - assertVisible: "اليوم"
 - assertVisible: "منزل تجريبي"
+- tapOn:
+    id: "today-portfolio-entry"
+    enabled: true
+- extendedWaitUntil:
+    visible:
+      id: "portfolio-screen"
+    timeout: 15000
+- assertVisible:
+    id: "portfolio-net-position"
+- assertVisible:
+    id: "portfolio-net-position-visibility"
+- assertVisible:
+    id: "liabilities-list"
+- tapOn:
+    id: "liability-add"
+    enabled: true
+- extendedWaitUntil:
+    visible:
+      id: "liability-create-screen"
+    timeout: 15000
+- assertVisible:
+    id: "liability-name"
+- assertVisible:
+    id: "liability-category"
+- assertVisible:
+    id: "liability-amount"
+- assertVisible:
+    id: "liability-as-of"

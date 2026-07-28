@@ -14,13 +14,18 @@ tooling environment.
 | --- | --- |
 | `00-auth-entry-smoke.yaml` | Welcome to Create account to Sign in to Forgot password |
 | `01-sample-first-passport.yaml` | Fresh install to sample workspace to all four Quick Passport steps to saved Passport to Today |
-| `02-returning-today-portfolio-atlas.yaml` | Process restart to Today to Portfolio to Today to Atlas Globe/List |
+| `02-returning-today-portfolio-atlas.yaml` | Process restart to Today to recorded net position and liabilities to Atlas Globe/List |
 | `03-local-first-passport-restart.yaml` | Network-independent sample capture to save to process restart to durable Asset list |
-| `04-arabic-rtl-smoke.yaml` | English to Arabic selection to Arabic Welcome to Arabic Today |
+| `04-arabic-rtl-smoke.yaml` | English to Arabic selection to Arabic Welcome, Today, net position and liability form |
+| `05-liability-lifecycle.yaml` | Add a dated liability, update its balance history and delete with explicit confirmation |
+| `06-net-position-offline-restart.yaml` | Add and update a liability offline, restart the process and verify the durable record |
 
 The Quick Passport flow intentionally chooses **I don't know yet** and skips media.
 That makes the local transaction deterministic while camera, document picker,
 GPS, permission recovery, and VoiceOver remain real-device acceptance cases.
+Liability journeys use stable accessibility identifiers for every financial
+control and keep currencies separate. They do not assert a combined total or
+rely on tap coordinates.
 
 ## Run locally
 

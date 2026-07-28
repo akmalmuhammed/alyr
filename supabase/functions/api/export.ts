@@ -90,6 +90,8 @@ interface ExportManifest {
     readonly places: number;
     readonly spaces: number;
     readonly assets: number;
+    readonly liabilities: number;
+    readonly liabilityReviews: number;
     readonly valueAssertions: number;
     readonly locationRevisions: number;
     readonly evidence: number;
@@ -99,6 +101,8 @@ interface ExportManifest {
     readonly places: readonly Record<string, unknown>[];
     readonly spaces: readonly Record<string, unknown>[];
     readonly assets: readonly Record<string, unknown>[];
+    readonly liabilities: readonly Record<string, unknown>[];
+    readonly liabilityReviews: readonly Record<string, unknown>[];
     readonly valueAssertions: readonly Record<string, unknown>[];
     readonly locationRevisions: readonly Record<string, unknown>[];
     readonly evidence: readonly Record<string, unknown>[];
@@ -336,6 +340,7 @@ function hasSelectedSubject(
   record: Record<string, unknown>,
   selectedAssetIds: ReadonlySet<string>,
   selectedPlaceIds: ReadonlySet<string>,
+  selectedLiabilityIds: ReadonlySet<string>,
 ): boolean {
   const assetId = typeof record.asset_id === "string"
     ? record.asset_id
@@ -343,13 +348,23 @@ function hasSelectedSubject(
   const placeId = typeof record.place_id === "string"
     ? record.place_id
     : null;
-  if ((assetId === null) === (placeId === null)) return false;
+  const liabilityId = typeof record.liability_id === "string"
+    ? record.liability_id
+    : null;
+  if (
+    [assetId, placeId, liabilityId].filter((subjectId) => subjectId !== null)
+      .length !== 1
+  ) return false;
   if (assetId !== null) {
     return record.subject_kind === "asset" && selectedAssetIds.has(assetId);
   }
-  return record.subject_kind === "place" &&
-    placeId !== null &&
-    selectedPlaceIds.has(placeId);
+  if (placeId !== null) {
+    return record.subject_kind === "place" &&
+      selectedPlaceIds.has(placeId);
+  }
+  return record.subject_kind === "liability" &&
+    liabilityId !== null &&
+    selectedLiabilityIds.has(liabilityId);
 }
 
 async function buildManifest(
@@ -394,6 +409,8 @@ async function buildManifest(
   const allValues = recordArray(data.values);
   const locations = recordArray(data.locations);
   const allEvidence = recordArray(data.evidence);
+  const allLiabilities = recordArray(data.liabilities);
+  const allLiabilityReviews = recordArray(data.liabilityReviews);
   const allPlaces = recordArray(data.places);
   const allSpaces = recordArray(data.spaces);
   const allEvidenceVersions = recordArray(data.evidenceVersions);
@@ -423,13 +440,26 @@ async function buildManifest(
     : allPlaces.filter((place) =>
       typeof place.id === "string" && selectedPlaceIds.has(place.id)
     );
+  const liabilities = fullHousehold ? allLiabilities : [];
+  const liabilityReviews = fullHousehold ? allLiabilityReviews : [];
   const exportedAssetIds = orderedIds(assets);
   const exportedPlaceIds = orderedIds(places);
+  const exportedLiabilityIds = orderedIds(liabilities);
   const values = allValues.filter((value) =>
-    hasSelectedSubject(value, exportedAssetIds, exportedPlaceIds)
+    hasSelectedSubject(
+      value,
+      exportedAssetIds,
+      exportedPlaceIds,
+      exportedLiabilityIds,
+    )
   );
   const evidence = allEvidence.filter((item) =>
-    hasSelectedSubject(item, exportedAssetIds, exportedPlaceIds)
+    hasSelectedSubject(
+      item,
+      exportedAssetIds,
+      exportedPlaceIds,
+      exportedLiabilityIds,
+    )
   );
   const exportedEvidenceIds = orderedIds(evidence);
   const evidenceVersions = allEvidenceVersions.filter((version) =>
@@ -482,6 +512,7 @@ async function buildManifest(
         subject_kind: value.subject_kind,
         asset_id: value.asset_id,
         place_id: value.place_id,
+        liability_id: value.liability_id,
         currency: value.currency,
         as_of: value.as_of,
         source: value.source,
@@ -489,6 +520,31 @@ async function buildManifest(
         redacted: true,
       })
       : stripNullish(value);
+  const redactLiability = (liability: Record<string, unknown>) =>
+    body.redacted
+      ? stripNullish({
+        id: liability.id,
+        name: "Liability",
+        kind: liability.kind,
+        lifecycle: liability.lifecycle,
+        version: liability.version,
+        created_at: liability.created_at,
+        updated_at: liability.updated_at,
+        redacted: true,
+      })
+      : stripNullish(liability);
+  const redactLiabilityReview = (review: Record<string, unknown>) =>
+    body.redacted
+      ? stripNullish({
+        id: review.id,
+        status: review.status,
+        reviewed_at: review.reviewed_at,
+        expires_at: review.expires_at,
+        invalidated_at: review.invalidated_at,
+        version: review.version,
+        redacted: true,
+      })
+      : stripNullish(review);
   const redactLocation = (location: Record<string, unknown>) =>
     body.redacted
       ? stripNullish({
@@ -549,6 +605,8 @@ async function buildManifest(
       places: places.length,
       spaces: spaces.length,
       assets: assets.length,
+      liabilities: liabilities.length,
+      liabilityReviews: liabilityReviews.length,
       valueAssertions: values.length,
       locationRevisions: locations.length,
       evidence: evidence.length,
@@ -558,6 +616,8 @@ async function buildManifest(
       places: places.map(redactPlace),
       spaces: spaces.map(stripNullish),
       assets: assets.map(redactAsset),
+      liabilities: liabilities.map(redactLiability),
+      liabilityReviews: liabilityReviews.map(redactLiabilityReview),
       valueAssertions: values.map(redactValue),
       locationRevisions: locations.map(redactLocation),
       evidence: evidence.map(redactEvidence),
@@ -606,7 +666,9 @@ function buildPdfWithAttachedManifest(
     "0 -20 Td",
     `(Created: ${escapePdfText(manifest.export.generatedAt)}) Tj`,
     "0 -20 Td",
-    `(Assets: ${manifest.summary.assets}   Places: ${manifest.summary.places}   Evidence records: ${manifest.summary.evidence}) Tj`,
+    `(Assets: ${manifest.summary.assets}   Liabilities: ${manifest.summary.liabilities}   Places: ${manifest.summary.places}) Tj`,
+    "0 -20 Td",
+    `(Evidence records: ${manifest.summary.evidence}) Tj`,
     "0 -32 Td",
     `(The complete UTF-8 JSON manifest is attached as alyr-manifest.json.) Tj`,
     "0 -20 Td",

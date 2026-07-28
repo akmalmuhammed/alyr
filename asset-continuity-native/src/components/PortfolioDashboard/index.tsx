@@ -6,11 +6,14 @@ import {
   CaretUp,
   ChartDonut,
   CheckCircle,
+  ClockCounterClockwise,
+  CreditCard,
   FileText,
   Eye,
   EyeSlash,
   Info,
   MapPin,
+  Plus,
   Tag,
   WarningCircle
 } from "phosphor-react-native";
@@ -24,10 +27,20 @@ import {
 
 import type {
   LanguageCode,
+  NativeLiability,
   NativeWorkspace
 } from "@/domain/model";
 import {
+  getLiabilities,
+  isActiveLiability
+} from "@/domain/liabilities";
+import {
+  buildNetPositionSnapshot,
+  type NetPositionSnapshot
+} from "@/domain/netPosition";
+import {
   buildPortfolioSnapshot,
+  getPortfolioValueHistory,
   getPortfolioValueRecords,
   type PortfolioLocationBucket,
   type PortfolioRatio,
@@ -41,7 +54,14 @@ import {
 } from "@/i18n/coreJourneyCopy";
 import { localizedCategoryLabel } from "@/i18n/captureCopy";
 import {
+  getPortfolioExperienceCopy,
+  liabilityKindLabel,
+  liabilityLifecycleLabel,
+  type PortfolioExperienceCopy
+} from "@/i18n/portfolioCopy";
+import {
   formatRecordedValue,
+  formatSignedRecordedValue,
   valueVisibilityFromHidden
 } from "@/privacy/ValueVisibility";
 import {
@@ -63,7 +83,10 @@ export interface PortfolioDashboardProps {
   readonly workspace: NativeWorkspace;
   readonly valueRecords?: readonly PortfolioValueRecord[];
   readonly language?: LanguageCode;
+  readonly canReadLiabilities?: boolean;
   readonly onAddAsset?: () => void;
+  readonly onAddLiability?: () => void;
+  readonly onConfirmNoLiabilities?: () => void;
   readonly amountsHidden?: boolean;
   readonly onAmountsHiddenChange?: (hidden: boolean) => void;
   readonly onOpenAsset?: (assetId: string) => void;
@@ -183,7 +206,7 @@ const ENGLISH: DashboardCopy = {
   separateCurrencies:
     "Currencies stay separate. No exchange rate has been applied.",
   netWorthNote:
-    "This is not net worth. Liabilities, taxes and selling costs are not tracked.",
+    "Recorded liabilities are included. Taxes, selling costs and unrecorded accounts remain outside this view.",
   explain: "Explain this number",
   hideExplanation: "Hide explanation",
   explanationTitle: "What is included",
@@ -191,7 +214,7 @@ const ENGLISH: DashboardCopy = {
     "The latest dated value you recorded for each item or property.",
     "Separate totals for each currency, with no currency conversion.",
     "Unvalued items are excluded—not treated as zero.",
-    "No live prices, appraisal, liabilities, taxes or selling costs."
+    "No live prices or appraisals; taxes and selling costs remain outside this view."
   ],
   overview: "Register health",
   documented: "Documented items",
@@ -273,7 +296,7 @@ const ARABIC: DashboardCopy = {
   separateCurrencies:
     "تُعرض العملات بشكل منفصل من دون تطبيق سعر صرف.",
   netWorthNote:
-    "هذا ليس صافي الثروة؛ فالالتزامات والضرائب وتكاليف البيع غير مسجّلة.",
+    "تُحتسب الالتزامات المسجّلة، بينما تبقى الضرائب وتكاليف البيع والحسابات غير المسجّلة خارج هذا العرض.",
   explain: "كيف حُسب هذا الرقم؟",
   hideExplanation: "إخفاء التوضيح",
   explanationTitle: "ما الذي يشمله الحساب؟",
@@ -281,7 +304,7 @@ const ARABIC: DashboardCopy = {
     "أحدث قيمة مؤرخة أدخلها المستخدم لكل غرض أو عقار.",
     "إجمالي مستقل لكل عملة من دون تحويل العملات.",
     "تُستبعد الأصول غير المقيّمة ولا تُعامل كأن قيمتها صفر.",
-    "لا يشمل أسعاراً مباشرة أو تقييماً رسمياً أو التزامات أو ضرائب أو تكاليف بيع."
+    "لا يشمل أسعاراً مباشرة أو تقييماً رسمياً؛ وتبقى الضرائب وتكاليف البيع خارج هذا العرض."
   ],
   overview: "سلامة السجل",
   documented: "الأصول الموثّقة",
@@ -379,11 +402,14 @@ function dateLabel(value: string, language: LanguageCode): string {
 
 export function PortfolioDashboard({
   amountsHidden: controlledAmountsHidden,
+  canReadLiabilities = true,
   workspace,
   valueRecords,
   language = workspace.language,
   onAddAsset,
+  onAddLiability,
   onAmountsHiddenChange,
+  onConfirmNoLiabilities,
   onOpenAsset,
   onOpenSubject,
   onReviewAssets,
@@ -396,12 +422,23 @@ export function PortfolioDashboard({
   const amountsHidden =
     controlledAmountsHidden ?? internalAmountsHidden;
   const copy = copyFor(language);
+  const financialCopy = getPortfolioExperienceCopy(language);
   const rtl = language === "ar";
   const resolvedValueRecords =
     valueRecords ?? getPortfolioValueRecords(workspace);
   const snapshot = useMemo(
     () => buildPortfolioSnapshot(workspace, resolvedValueRecords),
     [resolvedValueRecords, workspace]
+  );
+  const netPosition = useMemo(
+    () =>
+      canReadLiabilities
+        ? buildNetPositionSnapshot({
+            ...workspace,
+            portfolioValueRecords: [...resolvedValueRecords]
+          })
+        : null,
+    [canReadLiabilities, resolvedValueRecords, workspace]
   );
 
   return (
@@ -467,27 +504,62 @@ export function PortfolioDashboard({
         </Text>
       </View>
 
-      <PortfolioHero
-        amountsHidden={amountsHidden}
-        copy={copy}
-        explanationOpen={explanationOpen}
-        language={language}
-        onToggleExplanation={() =>
-          setExplanationOpen((current) => !current)
-        }
-        onToggleRecordedAmounts={() =>
-          {
+      {canReadLiabilities && netPosition ? (
+        <>
+          <PortfolioHero
+            amountsHidden={amountsHidden}
+            copy={copy}
+            explanationOpen={explanationOpen}
+            financialCopy={financialCopy}
+            language={language}
+            netPosition={netPosition}
+            onToggleExplanation={() =>
+              setExplanationOpen((current) => !current)
+            }
+            onToggleRecordedAmounts={() => {
+              const next = !amountsHidden;
+              if (controlledAmountsHidden === undefined) {
+                setInternalAmountsHidden(next);
+              }
+              onAmountsHiddenChange?.(next);
+            }}
+            rtl={rtl}
+            sample={workspace.mode === "sample"}
+            snapshot={snapshot}
+          />
+          <LiabilitiesSection
+            amountsHidden={amountsHidden}
+            copy={financialCopy}
+            language={language}
+            netPosition={netPosition}
+            onAddLiability={onAddLiability}
+            onConfirmNoLiabilities={onConfirmNoLiabilities}
+            onOpenSubject={onOpenSubject}
+            rtl={rtl}
+            workspace={workspace}
+          />
+        </>
+      ) : (
+        <AssetPortfolioHero
+          amountsHidden={amountsHidden}
+          copy={copy}
+          explanationOpen={explanationOpen}
+          language={language}
+          onToggleExplanation={() =>
+            setExplanationOpen((current) => !current)
+          }
+          onToggleRecordedAmounts={() => {
             const next = !amountsHidden;
             if (controlledAmountsHidden === undefined) {
               setInternalAmountsHidden(next);
             }
             onAmountsHiddenChange?.(next);
-          }
-        }
-        rtl={rtl}
-        sample={workspace.mode === "sample"}
-        snapshot={snapshot}
-      />
+          }}
+          rtl={rtl}
+          sample={workspace.mode === "sample"}
+          snapshot={snapshot}
+        />
+      )}
 
       {snapshot.valuableCount === 0 ? (
         <View
@@ -589,7 +661,7 @@ export function PortfolioDashboard({
   );
 }
 
-function PortfolioHero({
+function AssetPortfolioHero({
   amountsHidden,
   copy,
   explanationOpen,
@@ -610,9 +682,8 @@ function PortfolioHero({
   readonly sample: boolean;
   readonly snapshot: PortfolioSnapshot;
 }) {
-  const hasMultipleCurrencies = snapshot.currencyTotals.length > 1;
   const visibility = valueVisibilityFromHidden(amountsHidden);
-  const formattedTotals = snapshot.currencyTotals.map((total) => ({
+  const totals = snapshot.currencyTotals.map((total) => ({
     ...total,
     formatted:
       total.amountMinor === null
@@ -626,19 +697,47 @@ function PortfolioHero({
   }));
   const formatCount = (value: number) =>
     new Intl.NumberFormat(language === "ar" ? "ar-QA" : "en").format(value);
+  const boundary =
+    language === "ar"
+      ? "يشمل هذا العرض الأغراض والعقارات المملوكة للأسرة التي سُجّلت قيمتها فقط. ولا يمثّل تقييماً مباشراً."
+      : "This view includes only recorded items and household-owned properties. It is not a live valuation.";
+  const a11ySummary =
+    totals.length === 0
+      ? copy.noTotal
+      : totals
+          .map(
+            (total) =>
+              `${total.currency}: ${
+                total.formatted?.accessibilityLabel ??
+                copy.totalUnavailable
+              }`
+          )
+          .join("; ");
+
   return (
-    <View style={styles.hero}>
+    <View style={styles.hero} testID="portfolio-recorded-asset-value">
       <View style={[styles.voltRule, rtl && styles.voltRuleRtl]} />
       <View style={[styles.heroHeading, rtl && styles.rowReverse]}>
-        <Text
-          style={[
-            styles.heroEyebrow,
-            rtl && styles.arabicMedium,
-            rtl && styles.textRight
-          ]}
-        >
-          {copy.recordedValue}
-        </Text>
+        <View style={styles.heroHeadingCopy}>
+          <Text
+            style={[
+              styles.heroEyebrow,
+              rtl && styles.arabicMedium,
+              rtl && styles.textRight
+            ]}
+          >
+            {copy.recordedValue}
+          </Text>
+          <Text
+            style={[
+              styles.heroIntro,
+              rtl && styles.arabic,
+              rtl && styles.textRight
+            ]}
+          >
+            {copy.personalValueNote}
+          </Text>
+        </View>
         <Pressable
           accessibilityLabel={
             amountsHidden
@@ -662,7 +761,7 @@ function PortfolioHero({
         </Pressable>
       </View>
 
-      {snapshot.currencyTotals.length === 0 ? (
+      {totals.length === 0 ? (
         <Text
           accessibilityLabel={copy.noTotal}
           style={[
@@ -674,17 +773,8 @@ function PortfolioHero({
           {copy.noTotal}
         </Text>
       ) : (
-        <View
-          accessibilityLabel={formattedTotals
-            .map((total) =>
-              total.amountMinor === null
-                ? `${total.currency}: ${copy.totalUnavailable}`
-                : total.formatted!.accessibilityLabel
-            )
-            .join(", ")}
-          style={styles.totalList}
-        >
-          {formattedTotals.map((total, index) => (
+        <View accessibilityLabel={a11ySummary} style={styles.totalList}>
+          {totals.map((total, index) => (
             <View
               key={total.currency}
               style={[
@@ -700,9 +790,7 @@ function PortfolioHero({
                   rtl && styles.textRight
                 ]}
               >
-                {total.amountMinor === null
-                  ? copy.totalUnavailable
-                  : total.formatted!.text}
+                {total.formatted?.text ?? copy.totalUnavailable}
               </Text>
               <Text
                 style={[
@@ -711,7 +799,7 @@ function PortfolioHero({
                   rtl && styles.textRight
                 ]}
               >
-                {copy.entries(total.entryCount ?? total.assetCount)}
+                {copy.asOf} {dateLabel(total.latestAsOf, language)}
               </Text>
             </View>
           ))}
@@ -793,10 +881,19 @@ function PortfolioHero({
         </View>
       </View>
 
-      {snapshot.valuableCount > 0 ? (
+      <View
+        accessibilityLiveRegion="polite"
+        style={[styles.heroStatus, rtl && styles.rowReverse]}
+      >
+        {snapshot.valuedEntryCount === snapshot.valuableCount &&
+        snapshot.valuableCount > 0 ? (
+          <CheckCircle color={colors.volt} size={19} weight="regular" />
+        ) : (
+          <WarningCircle color={colors.volt} size={19} weight="regular" />
+        )}
         <Text
           style={[
-            styles.heroSupporting,
+            styles.heroStatusText,
             rtl && styles.arabic,
             rtl && styles.textRight
           ]}
@@ -806,8 +903,9 @@ function PortfolioHero({
             snapshot.valuableCount
           )}
         </Text>
-      ) : null}
-      {snapshot.currencyTotals.length === 0 || sample ? (
+      </View>
+
+      {sample ? (
         <Text
           style={[
             styles.heroSupporting,
@@ -815,10 +913,10 @@ function PortfolioHero({
             rtl && styles.textRight
           ]}
         >
-          {sample ? copy.sampleValueNote : copy.personalValueNote}
+          {copy.sampleValueNote}
         </Text>
       ) : null}
-      {hasMultipleCurrencies ? (
+      {totals.length > 1 ? (
         <Text
           style={[
             styles.heroSupporting,
@@ -836,7 +934,7 @@ function PortfolioHero({
           rtl && styles.textRight
         ]}
       >
-        {copy.netWorthNote}
+        {boundary}
       </Text>
 
       <Pressable
@@ -898,6 +996,755 @@ function PortfolioHero({
           ))}
         </View>
       ) : null}
+    </View>
+  );
+}
+
+function PortfolioHero({
+  amountsHidden,
+  copy,
+  explanationOpen,
+  financialCopy,
+  language,
+  netPosition,
+  onToggleExplanation,
+  onToggleRecordedAmounts,
+  rtl,
+  sample,
+  snapshot
+}: {
+  readonly amountsHidden: boolean;
+  readonly copy: DashboardCopy;
+  readonly explanationOpen: boolean;
+  readonly financialCopy: PortfolioExperienceCopy;
+  readonly language: LanguageCode;
+  readonly netPosition: NetPositionSnapshot;
+  readonly onToggleExplanation: () => void;
+  readonly onToggleRecordedAmounts: () => void;
+  readonly rtl: boolean;
+  readonly sample: boolean;
+  readonly snapshot: PortfolioSnapshot;
+}) {
+  const visibility = valueVisibilityFromHidden(amountsHidden);
+  const formattedLines = netPosition.byCurrency.map((line) => ({
+    ...line,
+    net:
+      line.recordedNetPositionMinor === null
+        ? null
+        : formatSignedRecordedValue({
+            amountMinor: line.recordedNetPositionMinor,
+            currency: line.currency,
+            language,
+            visibility
+          }),
+    assets:
+      line.recordedAssetsMinor === null
+        ? null
+        : formatRecordedValue({
+            amountMinor: line.recordedAssetsMinor,
+            currency: line.currency,
+            language,
+            visibility
+          }),
+    liabilities:
+      line.recordedLiabilitiesMinor === null
+        ? null
+        : formatRecordedValue({
+            amountMinor: line.recordedLiabilitiesMinor,
+            currency: line.currency,
+            language,
+            visibility
+          })
+  }));
+  const formatCount = (value: number) =>
+    new Intl.NumberFormat(language === "ar" ? "ar-QA" : "en").format(value);
+  const statusReady = netPosition.status === "recorded";
+  const a11ySummary =
+    formattedLines.length === 0
+      ? financialCopy.netPosition.noTotal
+      : formattedLines
+          .map((line) =>
+            [
+              line.currency,
+              `${financialCopy.netPosition.assets}: ${
+                line.assets?.accessibilityLabel ??
+                financialCopy.netPosition.exactUnavailable
+              }`,
+              `${financialCopy.netPosition.liabilities}: ${
+                line.liabilities?.accessibilityLabel ??
+                financialCopy.netPosition.reviewRequired
+              }`,
+              `${financialCopy.netPosition.net}: ${
+                line.net?.accessibilityLabel ??
+                financialCopy.netPosition.reviewRequired
+              }`
+            ].join(", ")
+          )
+          .join("; ");
+
+  return (
+    <View style={styles.hero} testID="portfolio-net-position">
+      <View style={[styles.voltRule, rtl && styles.voltRuleRtl]} />
+      <View style={[styles.heroHeading, rtl && styles.rowReverse]}>
+        <View style={styles.heroHeadingCopy}>
+          <Text
+            style={[
+              styles.heroEyebrow,
+              rtl && styles.arabicMedium,
+              rtl && styles.textRight
+            ]}
+          >
+            {financialCopy.netPosition.eyebrow}
+          </Text>
+          <Text
+            style={[
+              styles.heroIntro,
+              rtl && styles.arabic,
+              rtl && styles.textRight
+            ]}
+          >
+            {financialCopy.netPosition.introduction}
+          </Text>
+        </View>
+        <View testID="portfolio-net-position-visibility">
+          <Pressable
+            accessibilityLabel={
+              amountsHidden
+                ? financialCopy.netPosition.showAmounts
+                : financialCopy.netPosition.hideAmounts
+            }
+            accessibilityRole="button"
+            hitSlop={8}
+            onPress={onToggleRecordedAmounts}
+            style={({ pressed }) => [
+              styles.amountVisibilityButton,
+              pressed && styles.amountVisibilityPressed
+            ]}
+            testID="portfolio-amount-visibility"
+          >
+            {amountsHidden ? (
+              <Eye color={colors.white} size={20} weight="regular" />
+            ) : (
+              <EyeSlash color={colors.white} size={20} weight="regular" />
+            )}
+          </Pressable>
+        </View>
+      </View>
+
+      {formattedLines.length === 0 ? (
+        <Text
+          accessibilityLabel={financialCopy.netPosition.noTotal}
+          style={[
+            styles.noTotal,
+            rtl && styles.arabicHeading,
+            rtl && styles.textRight
+          ]}
+        >
+          {financialCopy.netPosition.noTotal}
+        </Text>
+      ) : (
+        <View accessibilityLabel={a11ySummary} style={styles.totalList}>
+          {formattedLines.map((line, index) => (
+            <View
+              key={line.currency}
+              style={[
+                styles.totalRow,
+                index > 0 && styles.totalRowSeparated,
+                rtl && styles.totalRowRtl
+              ]}
+            >
+              <Text
+                style={[
+                  styles.totalValue,
+                  rtl && styles.arabicHeading,
+                  rtl && styles.textRight
+                ]}
+              >
+                {line.net?.text ?? financialCopy.netPosition.reviewRequired}
+              </Text>
+              <Text
+                style={[
+                  styles.totalMeta,
+                  rtl && styles.arabic,
+                  rtl && styles.textRight
+                ]}
+              >
+                {line.oldestAsOf && line.newestAsOf
+                  ? financialCopy.netPosition.asOfRange(
+                      dateLabel(line.oldestAsOf, language),
+                      dateLabel(line.newestAsOf, language)
+                    )
+                  : line.currency}
+              </Text>
+              <View
+                style={[
+                  styles.netComposition,
+                  rtl && styles.rowReverse
+                ]}
+              >
+                <View style={styles.netCompositionPart}>
+                  <Text
+                    style={[
+                      styles.netCompositionLabel,
+                      rtl && styles.arabic,
+                      rtl && styles.textRight
+                    ]}
+                  >
+                    {financialCopy.netPosition.assets}
+                  </Text>
+                  <Text
+                    style={[
+                      styles.netCompositionValue,
+                      rtl && styles.arabicMedium,
+                      rtl && styles.textRight
+                    ]}
+                  >
+                    {line.assets?.text ?? financialCopy.netPosition.exactUnavailable}
+                  </Text>
+                </View>
+                <View style={styles.netOperator}>
+                  <Text style={styles.netOperatorText}>{"\u2212"}</Text>
+                </View>
+                <View style={styles.netCompositionPart}>
+                  <Text
+                    style={[
+                      styles.netCompositionLabel,
+                      rtl && styles.arabic,
+                      rtl && styles.textRight
+                    ]}
+                  >
+                    {financialCopy.netPosition.liabilities}
+                  </Text>
+                  <Text
+                    style={[
+                      styles.netCompositionValue,
+                      rtl && styles.arabicMedium,
+                      rtl && styles.textRight
+                    ]}
+                  >
+                    {line.liabilities?.text ?? financialCopy.netPosition.reviewRequired}
+                  </Text>
+                </View>
+              </View>
+            </View>
+          ))}
+        </View>
+      )}
+
+      <View style={[styles.heroFacts, rtl && styles.rowReverse]}>
+        <View
+          style={[
+            styles.heroFact,
+            styles.heroFactSeparated,
+            rtl && styles.heroFactSeparatedRtl
+          ]}
+        >
+          <Text
+            style={[
+              styles.heroFactValue,
+              rtl && styles.arabicHeading,
+              rtl && styles.textRight
+            ]}
+          >
+            {formatCount(snapshot.valuableCount)}
+          </Text>
+          <Text
+            style={[
+              styles.heroFactLabel,
+              rtl && styles.arabic,
+              rtl && styles.textRight
+            ]}
+          >
+            {financialCopy.netPosition.assets}
+          </Text>
+        </View>
+        <View
+          style={[
+            styles.heroFact,
+            styles.heroFactSeparated,
+            rtl && styles.heroFactSeparatedRtl
+          ]}
+        >
+          <Text
+            style={[
+              styles.heroFactValue,
+              rtl && styles.arabicHeading,
+              rtl && styles.textRight
+            ]}
+          >
+            {formatCount(netPosition.activeLiabilityCount)}
+          </Text>
+          <Text
+            style={[
+              styles.heroFactLabel,
+              rtl && styles.arabic,
+              rtl && styles.textRight
+            ]}
+          >
+            {financialCopy.netPosition.liabilities}
+          </Text>
+        </View>
+        <View style={styles.heroFact}>
+          <Text
+            style={[
+              styles.heroFactValue,
+              rtl && styles.arabicHeading,
+              rtl && styles.textRight
+            ]}
+          >
+            {formatCount(
+              snapshot.valuedEntryCount + netPosition.valuedLiabilityCount
+            )}
+          </Text>
+          <Text
+            style={[
+              styles.heroFactLabel,
+              rtl && styles.arabic,
+              rtl && styles.textRight
+            ]}
+          >
+            {copy.valuedLabel}
+          </Text>
+        </View>
+      </View>
+
+      <View
+        accessibilityLiveRegion="polite"
+        style={[styles.heroStatus, rtl && styles.rowReverse]}
+      >
+        {statusReady ? (
+          <CheckCircle color={colors.volt} size={19} weight="regular" />
+        ) : (
+          <WarningCircle color={colors.volt} size={19} weight="regular" />
+        )}
+        <Text
+          style={[
+            styles.heroStatusText,
+            rtl && styles.arabic,
+            rtl && styles.textRight
+          ]}
+        >
+          {financialCopy.netPosition.status[netPosition.status]}
+        </Text>
+      </View>
+
+      {sample ? (
+        <Text
+          style={[
+            styles.heroSupporting,
+            rtl && styles.arabic,
+            rtl && styles.textRight
+          ]}
+        >
+          {copy.sampleValueNote}
+        </Text>
+      ) : null}
+      {netPosition.hasMultipleCurrencies ? (
+        <Text
+          style={[
+            styles.heroSupporting,
+            rtl && styles.arabic,
+            rtl && styles.textRight
+          ]}
+        >
+          {financialCopy.netPosition.currenciesSeparate}
+        </Text>
+      ) : null}
+      <Text
+        style={[
+          styles.netWorthNote,
+          rtl && styles.arabic,
+          rtl && styles.textRight
+        ]}
+      >
+        {financialCopy.netPosition.boundary}
+      </Text>
+
+      <Pressable
+        accessibilityHint={financialCopy.netPosition.explanationTitle}
+        accessibilityRole="button"
+        accessibilityState={{ expanded: explanationOpen }}
+        onPress={onToggleExplanation}
+        style={({ pressed }) => [
+          styles.explainButton,
+          rtl && styles.rowReverse,
+          pressed && styles.pressed
+        ]}
+      >
+        <Info color={colors.volt} size={19} weight="regular" />
+        <Text
+          style={[
+            styles.explainLabel,
+            rtl && styles.arabicMedium,
+            rtl && styles.textRight
+          ]}
+        >
+          {explanationOpen
+            ? financialCopy.netPosition.hideExplanation
+            : financialCopy.netPosition.explain}
+        </Text>
+        {explanationOpen ? (
+          <CaretUp color={colors.concrete} size={18} />
+        ) : (
+          <CaretDown color={colors.concrete} size={18} />
+        )}
+      </Pressable>
+
+      {explanationOpen ? (
+        <View style={styles.explanation}>
+          <Text
+            accessibilityRole="header"
+            style={[
+              styles.explanationTitle,
+              rtl && styles.arabicMedium,
+              rtl && styles.textRight
+            ]}
+          >
+            {financialCopy.netPosition.explanationTitle}
+          </Text>
+          {financialCopy.netPosition.explanationLines.map((line) => (
+            <View
+              key={line}
+              style={[styles.explanationLine, rtl && styles.rowReverse]}
+            >
+              <View style={styles.explanationMarker} />
+              <Text
+                style={[
+                  styles.explanationText,
+                  rtl && styles.arabic,
+                  rtl && styles.textRight
+                ]}
+              >
+                {line}
+              </Text>
+            </View>
+          ))}
+        </View>
+      ) : null}
+    </View>
+  );
+}
+
+function LiabilitiesSection({
+  amountsHidden,
+  copy,
+  language,
+  netPosition,
+  onAddLiability,
+  onConfirmNoLiabilities,
+  onOpenSubject,
+  rtl,
+  workspace
+}: {
+  readonly amountsHidden: boolean;
+  readonly copy: PortfolioExperienceCopy;
+  readonly language: LanguageCode;
+  readonly netPosition: NetPositionSnapshot;
+  readonly onAddLiability?: (() => void) | undefined;
+  readonly onConfirmNoLiabilities?: (() => void) | undefined;
+  readonly onOpenSubject?:
+    | ((subject: PortfolioValuableSubject) => void)
+    | undefined;
+  readonly rtl: boolean;
+  readonly workspace: NativeWorkspace;
+}) {
+  const liabilities = getLiabilities(workspace);
+  const active = liabilities.filter(isActiveLiability);
+  const archived = liabilities.filter((liability) => !isActiveLiability(liability));
+  const review = netPosition.liabilityReview;
+  const validNoneReview = Boolean(
+    active.length === 0 &&
+      review &&
+      !netPosition.liabilityReviewExpired &&
+      !netPosition.liabilityReviewInvalidated
+  );
+  const invalidatedNoneReview = Boolean(
+    active.length === 0 &&
+      review &&
+      netPosition.liabilityReviewInvalidated
+  );
+
+  return (
+    <DashboardSection
+      action={
+        onAddLiability ? (
+          <Pressable
+            accessibilityRole="button"
+            onPress={onAddLiability}
+            style={({ pressed }) => [
+              styles.addLiability,
+              rtl && styles.rowReverse,
+              pressed && styles.pressed
+            ]}
+            testID="liability-add"
+          >
+            <Plus color={colors.carbon} size={17} weight="bold" />
+            <Text
+              style={[
+                styles.addLiabilityLabel,
+                rtl && styles.arabicMedium
+              ]}
+            >
+              {copy.liabilities.add}
+            </Text>
+          </Pressable>
+        ) : undefined
+      }
+      rtl={rtl}
+      subtitle={copy.liabilities.subtitle}
+      title={copy.liabilities.title}
+    >
+      <View testID="liabilities-list">
+        {active.length > 0 ? (
+          <View style={styles.liabilityList}>
+            {active.map((liability) => (
+              <LiabilityRow
+                amountsHidden={amountsHidden}
+                copy={copy}
+                key={liability.id}
+                language={language}
+                liability={liability}
+                onPress={
+                  onOpenSubject
+                    ? () =>
+                        onOpenSubject({
+                          kind: "liability",
+                          liabilityId: liability.id
+                        })
+                    : undefined
+                }
+                rtl={rtl}
+                stale={netPosition.staleLiabilityIds.includes(liability.id)}
+                workspace={workspace}
+              />
+            ))}
+          </View>
+        ) : (
+          <View style={[styles.liabilityEmpty, rtl && styles.alignEnd]}>
+            <View style={[styles.liabilityEmptyHeading, rtl && styles.rowReverse]}>
+              {validNoneReview ? (
+                <CheckCircle color={colors.success} size={24} weight="regular" />
+              ) : (
+                <CreditCard color={colors.text} size={24} weight="regular" />
+              )}
+              <View style={styles.liabilityEmptyCopy}>
+                <Text
+                  style={[
+                    styles.liabilityEmptyTitle,
+                    rtl && styles.arabicMedium,
+                    rtl && styles.textRight
+                  ]}
+                >
+                  {validNoneReview
+                    ? copy.liabilities.noneConfirmed
+                    : invalidatedNoneReview
+                      ? copy.liabilities.noneReviewChangedTitle
+                      : copy.liabilities.noActiveTitle}
+                </Text>
+                <Text
+                  style={[
+                    styles.liabilityEmptyBody,
+                    rtl && styles.arabic,
+                    rtl && styles.textRight
+                  ]}
+                >
+                  {validNoneReview && review
+                    ? copy.liabilities.noneConfirmedUntil(
+                        dateLabel(review.expiresAt, language)
+                      )
+                    : invalidatedNoneReview
+                      ? copy.liabilities.noneReviewChangedBody
+                      : netPosition.liabilityReviewExpired
+                      ? copy.liabilities.noneReviewExpired
+                      : copy.liabilities.noActiveBody}
+                </Text>
+              </View>
+            </View>
+            {!validNoneReview && onConfirmNoLiabilities ? (
+              <Pressable
+                accessibilityHint={copy.liabilities.confirmNoneBody}
+                accessibilityRole="button"
+                onPress={onConfirmNoLiabilities}
+                style={({ pressed }) => [
+                  styles.confirmNone,
+                  rtl && styles.rowReverse,
+                  pressed && styles.pressed
+                ]}
+                testID="liability-confirm-none"
+              >
+                <CheckCircle color={colors.text} size={19} weight="regular" />
+                <Text
+                  style={[
+                    styles.confirmNoneLabel,
+                    rtl && styles.arabicMedium
+                  ]}
+                >
+                  {copy.liabilities.confirmNone}
+                </Text>
+              </Pressable>
+            ) : null}
+          </View>
+        )}
+
+        {archived.length > 0 ? (
+          <View style={styles.archivedGroup}>
+            <Text
+              style={[
+                styles.archivedGroupTitle,
+                rtl && styles.arabicMedium,
+                rtl && styles.textRight
+              ]}
+            >
+              {copy.liabilities.archivedCount(archived.length)}
+            </Text>
+            {archived.map((liability) => (
+              <LiabilityRow
+                amountsHidden={amountsHidden}
+                copy={copy}
+                key={liability.id}
+                language={language}
+                liability={liability}
+                onPress={
+                  onOpenSubject
+                    ? () =>
+                        onOpenSubject({
+                          kind: "liability",
+                          liabilityId: liability.id
+                        })
+                    : undefined
+                }
+                rtl={rtl}
+                stale={false}
+                workspace={workspace}
+              />
+            ))}
+          </View>
+        ) : null}
+      </View>
+    </DashboardSection>
+  );
+}
+
+function LiabilityRow({
+  amountsHidden,
+  copy,
+  language,
+  liability,
+  onPress,
+  rtl,
+  stale,
+  workspace
+}: {
+  readonly amountsHidden: boolean;
+  readonly copy: PortfolioExperienceCopy;
+  readonly language: LanguageCode;
+  readonly liability: NativeLiability;
+  readonly onPress?: (() => void) | undefined;
+  readonly rtl: boolean;
+  readonly stale: boolean;
+  readonly workspace: NativeWorkspace;
+}) {
+  const current = getPortfolioValueHistory(workspace, {
+    kind: "liability",
+    liabilityId: liability.id
+  })[0] ?? null;
+  const formatted = current
+    ? formatRecordedValue({
+        amountMinor: current.amountMinor,
+        currency: current.currency,
+        language,
+        visibility: valueVisibilityFromHidden(amountsHidden)
+      })
+    : null;
+  const ForwardIcon = rtl ? ArrowLeft : ArrowRight;
+  const balanceStatus = current
+    ? stale
+      ? copy.liabilities.balanceNeedsReview
+      : `${copy.liabilities.currentBalance} \u00B7 ${dateLabel(
+          current.asOf,
+          language
+        )}`
+    : copy.liabilities.noBalance;
+  const content = (
+    <>
+      <View style={styles.liabilityIcon}>
+        <CreditCard color={colors.text} size={20} weight="regular" />
+      </View>
+      <View style={styles.liabilityCopy}>
+        <Text
+          numberOfLines={2}
+          style={[
+            styles.liabilityName,
+            rtl && styles.arabicMedium,
+            rtl && styles.textRight
+          ]}
+        >
+          {liability.name}
+        </Text>
+        <Text
+          style={[
+            styles.liabilityMeta,
+            rtl && styles.arabic,
+            rtl && styles.textRight
+          ]}
+        >
+          {liabilityKindLabel(liability.kind, language)}
+          {" \u00B7 "}
+          {balanceStatus}
+        </Text>
+      </View>
+      <View style={styles.liabilityValueCopy}>
+        <Text
+          style={[
+            styles.liabilityValue,
+            rtl && styles.arabicMedium,
+            rtl && styles.textRight
+          ]}
+        >
+          {formatted?.text ?? "?"}
+        </Text>
+        <Text
+          style={[
+            styles.liabilityLifecycle,
+            stale && styles.liabilityStale,
+            rtl && styles.arabic,
+            rtl && styles.textRight
+          ]}
+        >
+          {stale
+            ? copy.liabilities.balanceNeedsReview
+            : liabilityLifecycleLabel(liability, language)}
+        </Text>
+      </View>
+      {onPress ? <ForwardIcon color={colors.textMuted} size={18} /> : null}
+    </>
+  );
+  const accessibilityLabel = `${liability.name}, ${liabilityKindLabel(
+    liability.kind,
+    language
+  )}, ${formatted?.accessibilityLabel ?? copy.liabilities.noBalance}, ${balanceStatus}`;
+  return onPress ? (
+    <Pressable
+      accessibilityLabel={accessibilityLabel}
+      accessibilityRole="button"
+      key={liability.id}
+      onPress={onPress}
+      style={({ pressed }) => [
+        styles.liabilityRow,
+        rtl && styles.rowReverse,
+        pressed && styles.pressed
+      ]}
+      testID={`liability-row-${liability.id}`}
+    >
+      {content}
+    </Pressable>
+  ) : (
+    <View
+      accessibilityLabel={accessibilityLabel}
+      key={liability.id}
+      style={[styles.liabilityRow, rtl && styles.rowReverse]}
+    >
+      {content}
     </View>
   );
 }
@@ -1790,9 +2637,20 @@ const styles = StyleSheet.create({
   heroHeading: {
     minHeight: 44,
     flexDirection: "row",
-    alignItems: "center",
+    alignItems: "flex-start",
     justifyContent: "space-between",
     gap: spacing.sm
+  },
+  heroHeadingCopy: {
+    minWidth: 0,
+    flex: 1,
+    gap: 2
+  },
+  heroIntro: {
+    color: colors.concrete,
+    fontFamily: typography.body,
+    fontSize: 13,
+    lineHeight: 19
   },
   amountVisibilityButton: {
     width: 44,
@@ -1843,6 +2701,46 @@ const styles = StyleSheet.create({
     fontSize: 12,
     lineHeight: 17
   },
+  netComposition: {
+    width: "100%",
+    flexDirection: "row",
+    alignItems: "stretch",
+    gap: spacing.sm,
+    marginTop: spacing.sm,
+    paddingTop: spacing.sm,
+    borderTopWidth: StyleSheet.hairlineWidth,
+    borderTopColor: themes.dark.border
+  },
+  netCompositionPart: {
+    minWidth: 0,
+    flex: 1,
+    gap: 2
+  },
+  netCompositionLabel: {
+    color: colors.concrete,
+    fontFamily: typography.body,
+    fontSize: 11,
+    lineHeight: 16
+  },
+  netCompositionValue: {
+    color: colors.white,
+    fontFamily: typography.bodyMedium,
+    fontSize: 13,
+    lineHeight: 19,
+    fontVariant: ["tabular-nums"]
+  },
+  netOperator: {
+    width: 18,
+    alignItems: "center",
+    justifyContent: "flex-end",
+    paddingBottom: 1
+  },
+  netOperatorText: {
+    color: colors.concrete,
+    fontFamily: typography.body,
+    fontSize: 15,
+    lineHeight: 19
+  },
   heroFacts: {
     minHeight: 62,
     flexDirection: "row",
@@ -1885,6 +2783,19 @@ const styles = StyleSheet.create({
   heroSupporting: {
     color: colors.concrete,
     fontFamily: typography.body,
+    fontSize: 13,
+    lineHeight: 19
+  },
+  heroStatus: {
+    flexDirection: "row",
+    alignItems: "flex-start",
+    gap: spacing.xs,
+    paddingTop: spacing.xs
+  },
+  heroStatusText: {
+    flex: 1,
+    color: colors.white,
+    fontFamily: typography.bodyMedium,
     fontSize: 13,
     lineHeight: 19
   },
@@ -1969,6 +2880,146 @@ const styles = StyleSheet.create({
     fontFamily: typography.body,
     fontSize: 13,
     lineHeight: 19
+  },
+  addLiability: {
+    minHeight: 44,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    marginTop: -spacing.xs,
+    marginEnd: -spacing.xs,
+    paddingHorizontal: spacing.xs
+  },
+  addLiabilityLabel: {
+    color: colors.text,
+    fontFamily: typography.bodyMedium,
+    fontSize: 14,
+    lineHeight: 20,
+    textDecorationLine: "underline"
+  },
+  liabilityList: {
+    borderTopWidth: 1,
+    borderBottomWidth: 1,
+    borderColor: colors.borderStrong
+  },
+  liabilityRow: {
+    minHeight: 76,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: spacing.sm,
+    paddingVertical: spacing.sm,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderBottomColor: colors.border
+  },
+  liabilityIcon: {
+    width: 40,
+    height: 40,
+    flexShrink: 0,
+    alignItems: "center",
+    justifyContent: "center",
+    borderRadius: radius.sm,
+    backgroundColor: colors.mist
+  },
+  liabilityCopy: {
+    minWidth: 0,
+    flex: 1,
+    gap: 2
+  },
+  liabilityName: {
+    color: colors.text,
+    fontFamily: typography.bodyMedium,
+    fontSize: 15,
+    lineHeight: 20
+  },
+  liabilityMeta: {
+    color: colors.textMuted,
+    fontFamily: typography.body,
+    fontSize: 11,
+    lineHeight: 16
+  },
+  liabilityValueCopy: {
+    maxWidth: "38%",
+    alignItems: "flex-end",
+    gap: 2
+  },
+  liabilityValue: {
+    color: colors.text,
+    fontFamily: typography.bodyMedium,
+    fontSize: 14,
+    lineHeight: 20,
+    textAlign: "right",
+    fontVariant: ["tabular-nums"]
+  },
+  liabilityLifecycle: {
+    color: colors.textMuted,
+    fontFamily: typography.body,
+    fontSize: 10,
+    lineHeight: 15,
+    textAlign: "right"
+  },
+  liabilityStale: {
+    color: colors.warning
+  },
+  liabilityEmpty: {
+    gap: spacing.md,
+    paddingVertical: spacing.lg,
+    borderTopWidth: 1,
+    borderBottomWidth: 1,
+    borderColor: colors.borderStrong
+  },
+  liabilityEmptyHeading: {
+    flexDirection: "row",
+    alignItems: "flex-start",
+    gap: spacing.sm
+  },
+  liabilityEmptyCopy: {
+    minWidth: 0,
+    flex: 1,
+    gap: 2
+  },
+  liabilityEmptyTitle: {
+    color: colors.text,
+    fontFamily: typography.display,
+    fontSize: 18,
+    lineHeight: 24
+  },
+  liabilityEmptyBody: {
+    color: colors.textMuted,
+    fontFamily: typography.body,
+    fontSize: 13,
+    lineHeight: 19
+  },
+  confirmNone: {
+    minHeight: 48,
+    alignSelf: "flex-start",
+    flexDirection: "row",
+    alignItems: "center",
+    gap: spacing.xs,
+    paddingHorizontal: spacing.sm,
+    borderWidth: 1,
+    borderColor: colors.borderStrong,
+    borderRadius: radius.sm,
+    backgroundColor: colors.surface
+  },
+  confirmNoneLabel: {
+    color: colors.text,
+    fontFamily: typography.bodyMedium,
+    fontSize: 14,
+    lineHeight: 20
+  },
+  archivedGroup: {
+    marginTop: spacing.lg,
+    borderTopWidth: 1,
+    borderBottomWidth: 1,
+    borderColor: colors.borderStrong
+  },
+  archivedGroupTitle: {
+    color: colors.textMuted,
+    fontFamily: typography.bodyBold,
+    fontSize: 11,
+    lineHeight: 16,
+    letterSpacing: 0.8,
+    paddingVertical: spacing.sm
   },
   metricsBand: {
     borderTopWidth: 1,

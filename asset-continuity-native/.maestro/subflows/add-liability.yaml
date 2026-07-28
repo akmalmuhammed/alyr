@@ -1,0 +1,53 @@
+appId: com.alyr.continuity
+env:
+  LIABILITY_NAME: "Pilot home mortgage"
+  LIABILITY_CATEGORY: "Mortgage"
+  LIABILITY_AMOUNT: "250000"
+  LIABILITY_CURRENCY: "QAR"
+---
+- tapOn:
+    id: "liability-add"
+    enabled: true
+- extendedWaitUntil:
+    visible:
+      id: "liability-create-screen"
+    timeout: 15000
+- tapOn:
+    id: "liability-name"
+    enabled: true
+- inputText: "${LIABILITY_NAME}"
+- assertVisible:
+    id: "liability-category"
+- tapOn:
+    text: "${LIABILITY_CATEGORY}"
+    enabled: true
+- tapOn:
+    id: "liability-amount"
+    enabled: true
+- inputText: "${LIABILITY_AMOUNT}"
+- hideKeyboard
+- assertVisible:
+    id: "liability-currency"
+- tapOn:
+    text: "${LIABILITY_CURRENCY}"
+    enabled: true
+- assertVisible:
+    id: "liability-as-of"
+- tapOn:
+    id: "liability-save"
+    enabled: true
+- extendedWaitUntil:
+    visible:
+      id: "liability-detail-screen"
+    timeout: 15000
+- assertVisible:
+    id: "liability-status"
+- assertVisible: "${LIABILITY_NAME}"
+- tapOn:
+    text: "Back"
+    enabled: true
+- extendedWaitUntil:
+    visible:
+      id: "liabilities-list"
+    timeout: 15000
+- assertVisible: "${LIABILITY_NAME}"

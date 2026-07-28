@@ -1,6 +1,12 @@
 import { useRouter } from "expo-router";
 import { ChartDonut } from "phosphor-react-native";
-import { ActivityIndicator, StyleSheet, Text, View } from "react-native";
+import {
+  ActivityIndicator,
+  Alert,
+  StyleSheet,
+  Text,
+  View
+} from "react-native";
 
 import {
   PortfolioDashboard,
@@ -10,10 +16,15 @@ import { PermissionNotice } from "@/components/PermissionDenied";
 import {
   AppScreen,
   BodyText,
+  ErrorBanner,
   PrimaryButton,
   ScreenTitle
 } from "@/components/ui";
+import { localizedWorkspaceError } from "@/i18n/coreJourneyCopy";
 import { useSecondarySurfaceCopy } from "@/i18n/secondarySurfaceCopy";
+import {
+  getPortfolioExperienceCopy
+} from "@/i18n/portfolioCopy";
 import { portfolioReviewRoute } from "@/navigation/portfolioReview";
 import { usePortfolioPrivacy } from "@/privacy/PortfolioPrivacyProvider";
 import { useWorkspace } from "@/state/WorkspaceProvider";
@@ -21,10 +32,13 @@ import { colors, spacing, typography } from "@/theme/tokens";
 
 export default function DashboardScreen() {
   const router = useRouter();
-  const { copy, rtl } = useSecondarySurfaceCopy();
+  const { copy, language, rtl } = useSecondarySurfaceCopy();
+  const financialCopy = getPortfolioExperienceCopy(language);
   const { amountsHidden, setAmountsHidden } = usePortfolioPrivacy();
   const {
     can,
+    clearError,
+    confirmNoLiabilities,
     error,
     loading,
     recordedPortfolioValues,
@@ -95,6 +109,12 @@ export default function DashboardScreen() {
 
   return (
     <AppScreen safeEdges={["top"]} testID="portfolio-screen">
+      {error ? (
+        <ErrorBanner
+          message={localizedWorkspaceError(error, language)}
+          onDismiss={clearError}
+        />
+      ) : null}
       {!can("asset.write") ? (
         <PermissionNotice
           capability="asset.write"
@@ -103,16 +123,50 @@ export default function DashboardScreen() {
       ) : null}
       <PortfolioDashboard
         amountsHidden={amountsHidden}
+        canReadLiabilities={can("liability.read")}
         language={workspace.language}
         {...(can("asset.write")
           ? { onAddAsset: () => router.push("/capture") }
+          : {})}
+        {...(can("liability.read") && can("liability.write")
+          ? {
+              onAddLiability: () => router.push("/liability-create"),
+              onConfirmNoLiabilities: () =>
+                Alert.alert(
+                  financialCopy.liabilities.confirmNoneTitle,
+                  financialCopy.liabilities.confirmNoneBody,
+                  [
+                    {
+                      text: financialCopy.detail.deleteCancel,
+                      style: "cancel"
+                    },
+                    {
+                      text: financialCopy.liabilities.confirmNoneAction,
+                      onPress: () => {
+                        const now = new Date();
+                        const reviewedAt = `${now.getFullYear()}-${String(
+                          now.getMonth() + 1
+                        ).padStart(2, "0")}-${String(now.getDate()).padStart(
+                          2,
+                          "0"
+                        )}`;
+                        void confirmNoLiabilities(reviewedAt).catch(
+                          () => undefined
+                        );
+                      }
+                    }
+                  ]
+                )
+            }
           : {})}
         onOpenAsset={(assetId) => router.push(`/asset/${assetId}`)}
         onOpenSubject={(subject) =>
           router.push(
             subject.kind === "asset"
               ? `/asset/${subject.assetId}`
-              : `/place/${subject.placeId}`
+              : subject.kind === "place"
+                ? `/place/${subject.placeId}`
+                : `/liability/${subject.liabilityId}`
           )
         }
         onAmountsHiddenChange={setAmountsHidden}

@@ -1,4 +1,4 @@
-import { readFileSync, readdirSync } from "node:fs";
+import { existsSync, readFileSync, readdirSync } from "node:fs";
 import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -20,8 +20,8 @@ const subflowFiles = readdirSync(subflowDirectory)
   .filter((file) => file.endsWith(".yaml"))
   .sort();
 
-if (flowFiles.length < 5) {
-  failures.push(`Expected at least 5 executable flows; found ${flowFiles.length}.`);
+if (flowFiles.length < 7) {
+  failures.push(`Expected at least 7 executable flows; found ${flowFiles.length}.`);
 }
 
 const parsedFiles = new Map();
@@ -67,26 +67,32 @@ for (const file of flowFiles) {
   }
 }
 
+function readNativeSource(relativePath) {
+  const path = resolve(nativeRoot, relativePath);
+  if (!existsSync(path)) {
+    failures.push(`Required native source is missing: ${relativePath}.`);
+    return "";
+  }
+  return readFileSync(path, "utf8");
+}
+
 const allSources = [
-  readFileSync(resolve(nativeRoot, "app/(auth)/index.tsx"), "utf8"),
-  readFileSync(resolve(nativeRoot, "app/(auth)/create-account.tsx"), "utf8"),
-  readFileSync(resolve(nativeRoot, "app/(auth)/sign-in.tsx"), "utf8"),
-  readFileSync(resolve(nativeRoot, "app/(auth)/forgot-password.tsx"), "utf8"),
-  readFileSync(resolve(nativeRoot, "app/(tabs)/index.tsx"), "utf8"),
-  readFileSync(resolve(nativeRoot, "app/(tabs)/assets.tsx"), "utf8"),
-  readFileSync(resolve(nativeRoot, "app/capture/index.tsx"), "utf8"),
-  readFileSync(resolve(nativeRoot, "app/asset/[id].tsx"), "utf8"),
-  readFileSync(resolve(nativeRoot, "app/dashboard.tsx"), "utf8"),
-  readFileSync(
-    resolve(nativeRoot, "src/state/SessionBoundWorkspaceProvider.tsx"),
-    "utf8"
-  ),
-  readFileSync(
-    resolve(nativeRoot, "src/components/PortfolioDashboard/index.tsx"),
-    "utf8"
-  ),
-  readFileSync(resolve(nativeRoot, "app/atlas.tsx"), "utf8")
-].join("\n");
+  "app/(auth)/index.tsx",
+  "app/(auth)/create-account.tsx",
+  "app/(auth)/sign-in.tsx",
+  "app/(auth)/forgot-password.tsx",
+  "app/(tabs)/index.tsx",
+  "app/(tabs)/assets.tsx",
+  "app/capture/index.tsx",
+  "app/asset/[id].tsx",
+  "app/dashboard.tsx",
+  "app/liability-create.tsx",
+  "app/liability/[id].tsx",
+  "app/liability-balance.tsx",
+  "src/state/SessionBoundWorkspaceProvider.tsx",
+  "src/components/PortfolioDashboard/index.tsx",
+  "app/atlas.tsx"
+].map(readNativeSource).join("\n");
 
 const requiredIds = [
   "auth-welcome-screen",
@@ -100,6 +106,24 @@ const requiredIds = [
   "today-portfolio-entry",
   "portfolio-screen",
   "portfolio-dashboard",
+  "portfolio-net-position",
+  "portfolio-net-position-visibility",
+  "liabilities-list",
+  "liability-add",
+  "liability-create-screen",
+  "liability-detail-screen",
+  "liability-balance-screen",
+  "liability-name",
+  "liability-category",
+  "liability-amount",
+  "liability-currency",
+  "liability-as-of",
+  "liability-save",
+  "liability-edit",
+  "liability-delete",
+  "liability-delete-confirm",
+  "liability-status",
+  "liability-balance-save",
   "today-atlas-entry",
   "atlas-screen",
   "assets-screen"
@@ -147,6 +171,55 @@ if (
   !offline?.source.includes("setAirplaneMode: disabled")
 ) {
   failures.push("Offline flow must enable airplane mode and always restore it.");
+}
+
+const liabilityLifecycle = parsedFiles.get(
+  resolve(flowDirectory, "05-liability-lifecycle.yaml")
+);
+for (const selector of [
+  "portfolio-net-position",
+  "liabilities-list",
+  "liability-edit",
+  "liability-delete",
+  "liability-delete-confirm"
+]) {
+  if (!liabilityLifecycle?.source.includes(`"${selector}"`)) {
+    failures.push(
+      `Liability lifecycle flow must exercise selector ${selector}.`
+    );
+  }
+}
+
+const addLiability = parsedFiles.get(
+  resolve(subflowDirectory, "add-liability.yaml")
+);
+for (const selector of [
+  "liability-add",
+  "liability-name",
+  "liability-category",
+  "liability-amount",
+  "liability-currency",
+  "liability-as-of",
+  "liability-save"
+]) {
+  if (!addLiability?.source.includes(`"${selector}"`)) {
+    failures.push(`Add-liability subflow must exercise selector ${selector}.`);
+  }
+}
+
+const netPositionOffline = parsedFiles.get(
+  resolve(flowDirectory, "06-net-position-offline-restart.yaml")
+);
+if (
+  !netPositionOffline?.source.includes("setAirplaneMode: enabled") ||
+  !netPositionOffline?.source.includes("onFlowComplete:") ||
+  !netPositionOffline?.source.includes("setAirplaneMode: disabled") ||
+  !netPositionOffline?.source.includes("- stopApp") ||
+  !netPositionOffline?.source.includes("- launchApp")
+) {
+  failures.push(
+    "Net-position offline flow must edit offline, restart, and always restore connectivity."
+  );
 }
 
 const config = readFileSync(

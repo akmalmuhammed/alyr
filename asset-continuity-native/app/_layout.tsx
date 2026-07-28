@@ -331,6 +331,28 @@ function RootNavigator() {
               }}
             />
             <Stack.Screen
+              name="liability-create"
+              options={{
+                title: rtl ? "إضافة التزام" : "Add liability",
+                presentation: "modal",
+                gestureEnabled: false
+              }}
+            />
+            <Stack.Screen
+              name="liability/[id]"
+              options={{
+                title: rtl ? "سجل الالتزام" : "Liability record"
+              }}
+            />
+            <Stack.Screen
+              name="liability-balance"
+              options={{
+                title: rtl ? "رصيد الالتزام" : "Liability balance",
+                presentation: "modal",
+                gestureEnabled: false
+              }}
+            />
+            <Stack.Screen
               name="place/[id]"
               options={{
                 title: copy.stack.place

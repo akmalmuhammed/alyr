@@ -28,6 +28,11 @@ test("role capability sets remain deny-by-default and ordered by authority", () 
   assert.equal(viewer.has("asset.write"), false);
   assert.equal(editor.has("member.manage"), false);
   assert.equal(owner.has("member.manage"), true);
+  assert.equal(owner.has("liability.read"), true);
+  assert.equal(owner.has("liability.write"), true);
+  assert.equal(editor.has("liability.read"), false);
+  assert.equal(editor.has("liability.write"), false);
+  assert.equal(viewer.has("liability.read"), false);
 });
 
 test("English and Arabic retain explicit reading directions", () => {

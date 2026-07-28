@@ -182,6 +182,7 @@ try {
   const placeId = randomUUID();
   const spaceId = randomUUID();
   const assetId = randomUUID();
+  const liabilityId = randomUUID();
   const now = new Date().toISOString();
   operatorSql(
     `begin;
@@ -244,6 +245,40 @@ try {
        'QAR',
        '2026-07-27'::date,
        'user-entered',
+       ${sqlLiteral(ownerId)}::uuid
+     );
+     insert into public.liabilities (
+       id, household_id, name, kind, lifecycle, archived_at, created_by
+     ) values (
+       ${sqlLiteral(liabilityId)}::uuid,
+       ${sqlLiteral(householdId)}::uuid,
+       'Private home mortgage',
+       'mortgage',
+       'archived',
+       ${sqlLiteral(now)}::timestamptz,
+       ${sqlLiteral(ownerId)}::uuid
+     );
+     insert into public.asset_value_assertions (
+       id, household_id, liability_id, amount_minor, currency, as_of,
+       source, created_by
+     ) values (
+       ${sqlLiteral(randomUUID())}::uuid,
+       ${sqlLiteral(householdId)}::uuid,
+       ${sqlLiteral(liabilityId)}::uuid,
+       925000,
+       'QAR',
+       current_date,
+       'user-entered',
+       ${sqlLiteral(ownerId)}::uuid
+     );
+     insert into public.liability_reviews (
+       id, household_id, status, reviewed_at, expires_at, reviewed_by
+     ) values (
+       ${sqlLiteral(randomUUID())}::uuid,
+       ${sqlLiteral(householdId)}::uuid,
+       'none-confirmed',
+       current_date,
+       current_date + 90,
        ${sqlLiteral(ownerId)}::uuid
      );
      insert into public.asset_location_revisions (
@@ -365,11 +400,34 @@ try {
   );
   assert.equal(manifest.schema, "alyr.continuity-manifest");
   assert.equal(manifest.summary.assets, 1);
+  assert.equal(manifest.summary.liabilities, 1);
+  assert.equal(manifest.summary.liabilityReviews, 1);
+  assert.equal(manifest.summary.valueAssertions, 2);
   assert.equal(manifest.records.assets[0].description, "Private free-text description");
+  assert.equal(
+    manifest.records.liabilities[0].name,
+    "Private home mortgage"
+  );
+  assert.equal(
+    manifest.records.liabilityReviews[0].status,
+    "none-confirmed"
+  );
   assert.equal(manifest.records.places[0].latitude, 25.3);
   assert.equal(
-    Number(manifest.records.valueAssertions[0].amount_minor),
+    Number(
+      manifest.records.valueAssertions.find(
+        (record) => record.subject_kind === "asset"
+      ).amount_minor
+    ),
     1250000
+  );
+  assert.equal(
+    Number(
+      manifest.records.valueAssertions.find(
+        (record) => record.subject_kind === "liability"
+      ).amount_minor
+    ),
+    925000
   );
   assert.equal(
     Object.hasOwn(manifest.records.blobs[0] ?? {}, "object_key"),
@@ -399,8 +457,51 @@ try {
   );
   assert.equal(
     Object.hasOwn(
-      redactedManifest.records.valueAssertions[0],
+      redactedManifest.records.valueAssertions.find(
+        (record) => record.subject_kind === "asset"
+      ),
       "amount_minor"
+    ),
+    false
+  );
+  assert.equal(
+    redactedManifest.records.liabilities[0].name,
+    "Liability"
+  );
+  assert.equal(
+    Object.hasOwn(
+      redactedManifest.records.valueAssertions.find(
+        (record) => record.subject_kind === "liability"
+      ),
+      "amount_minor"
+    ),
+    false
+  );
+
+  const selective = await createExport(ownerToken, {
+    format: "json-manifest",
+    assetIds: [assetId],
+    redacted: false,
+    idempotencyKey: randomUUID()
+  });
+  assert.equal(selective.response.status, 201);
+  const selectiveDownload = await api(
+    `/exports/${selective.payload.exportId}/download`,
+    ownerToken
+  );
+  const selectiveManifest = JSON.parse(
+    new TextDecoder().decode(selectiveDownload.payload)
+  );
+  assert.equal(selectiveManifest.summary.assets, 1);
+  assert.equal(selectiveManifest.summary.liabilities, 0);
+  assert.equal(selectiveManifest.summary.liabilityReviews, 0);
+  assert.deepEqual(selectiveManifest.records.liabilities, []);
+  assert.deepEqual(selectiveManifest.records.liabilityReviews, []);
+  assert.equal(
+    selectiveManifest.records.valueAssertions.some(
+      (record) =>
+        record.subject_kind === "liability" ||
+        Object.hasOwn(record, "liability_id")
     ),
     false
   );
@@ -444,7 +545,7 @@ try {
   console.log(
     JSON.stringify({
       status: "pass",
-      checks: 30,
+      checks: 47,
       ownerMembershipId,
       formats: ["json-manifest", "pdf"],
       authorization: ["owner-ready", "viewer-denied"],

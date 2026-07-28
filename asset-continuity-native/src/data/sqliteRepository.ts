@@ -266,7 +266,7 @@ export class SQLiteWorkspaceRepository implements NativeWorkspaceRepository {
       `SELECT operation_json
        FROM sync_outbox
        WHERE status IN ('on-device', 'queued')
-       ORDER BY created_at ASC
+       ORDER BY created_at ASC, rowid ASC
        LIMIT ?`,
       Math.max(0, limit)
     );

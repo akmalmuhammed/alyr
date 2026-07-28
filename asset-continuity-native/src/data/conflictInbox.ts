@@ -7,6 +7,11 @@ import type {
 
 import type { LanguageCode, NativeWorkspace } from "@/domain/model";
 import {
+  getLiabilities,
+  getLiabilityReview,
+  getLiabilityTombstones
+} from "@/domain/liabilities";
+import {
   getPortfolioValueRecords,
   portfolioValueSubject
 } from "@/domain/portfolio";
@@ -41,6 +46,51 @@ export interface DurableSyncConflict extends SyncConflict {
 
 function isObject(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
+function payloadReferencesLiability(value: unknown): boolean {
+  if (!isObject(value)) return false;
+  if (
+    typeof value.liabilityId === "string" &&
+    value.liabilityId.trim().length > 0
+  ) {
+    return true;
+  }
+  return (
+    isObject(value.subject) &&
+    value.subject.kind === "liability" &&
+    typeof value.subject.liabilityId === "string" &&
+    value.subject.liabilityId.trim().length > 0
+  );
+}
+
+/**
+ * Liability metadata, dated balances, reviews and lifecycle operations are
+ * owner-only. Keep this classifier payload-based so a former owner cannot
+ * recover activity from an operation whose aggregate record has since been
+ * redacted or tombstoned.
+ */
+export function isLiabilitySyncOperation(
+  operation: SyncOperation,
+  workspace?: NativeWorkspace | null
+): boolean {
+  const type = operation.command.type;
+  if (
+    type.startsWith("liability.") ||
+    type === "liability-review.set" ||
+    (type.startsWith("value.") &&
+      payloadReferencesLiability(operation.command.payload))
+  ) {
+    return true;
+  }
+  if (!workspace || !type.startsWith("value.")) return false;
+  const aggregateId = operation.command.aggregateId;
+  const value = getPortfolioValueRecords(workspace).find(
+    (candidate) => candidate.id === aggregateId
+  );
+  return Boolean(
+    value && portfolioValueSubject(value)?.kind === "liability"
+  );
 }
 
 function serverChangeMatchesVersion(
@@ -113,6 +163,79 @@ export function isDurableSyncConflict(
       resolution.replacementOperationId.length > 0 &&
       typeof resolution.requestedAt === "string")
   );
+}
+
+function serverChangeReferencesLiability(
+  change: SyncChange | null
+): boolean {
+  if (!change) return false;
+  if (
+    change.entityType === "liability" ||
+    change.entityType === "liability-review"
+  ) {
+    return true;
+  }
+  if (change.entityType !== "value" || !isObject(change.body)) {
+    return false;
+  }
+  return payloadReferencesLiability(change.body.payload);
+}
+
+/**
+ * Identifies an owner-only conflict without relying on a currently visible
+ * record. Durable local/server provenance is checked first; the authoritative
+ * workspace is then used for legacy conflicts that predate durable context.
+ */
+export function isLiabilitySyncConflict(
+  conflict: SyncConflict,
+  workspace?: NativeWorkspace | null
+): boolean {
+  if (
+    isDurableSyncConflict(conflict) &&
+    (isLiabilitySyncOperation(
+      conflict.clientContext.localOperation,
+      workspace
+    ) ||
+      serverChangeReferencesLiability(
+        conflict.clientContext.serverChange
+      ))
+  ) {
+    return true;
+  }
+  if (!workspace) return false;
+  if (
+    getLiabilities(workspace).some(
+      (candidate) => candidate.id === conflict.entityId
+    ) ||
+    getLiabilityTombstones(workspace).some(
+      (candidate) => candidate.id === conflict.entityId
+    ) ||
+    getLiabilityReview(workspace)?.id === conflict.entityId
+  ) {
+    return true;
+  }
+  const value = getPortfolioValueRecords(workspace).find(
+    (candidate) => candidate.id === conflict.entityId
+  );
+  return Boolean(
+    value && portfolioValueSubject(value)?.kind === "liability"
+  );
+}
+
+/**
+ * UI projection only. The repository continues to retain the full conflict
+ * inbox so owner access can be restored without discarding local work.
+ */
+export function syncConflictsVisibleToRole(
+  conflicts: readonly SyncConflict[],
+  workspace: NativeWorkspace | null | undefined,
+  canReadLiabilities: boolean
+): readonly SyncConflict[] {
+  return canReadLiabilities
+    ? conflicts
+    : conflicts.filter(
+        (conflict) => !isLiabilitySyncConflict(conflict, workspace)
+      );
 }
 
 function matchingServerChange(
@@ -212,7 +335,12 @@ const REAPPLY_COMMANDS = new Set([
   "asset.restore",
   "evidence.review",
   "value.update",
-  "value.delete"
+  "value.delete",
+  "liability.update",
+  "liability.archive",
+  "liability.restore",
+  "liability.delete",
+  "liability-review.set"
 ]);
 
 export function conflictResolutionOptions(
@@ -267,10 +395,34 @@ export function createConflictReapplyOperation(
   };
 }
 
+interface ConflictPrivacyOptions {
+  readonly canReadLiabilities?: boolean;
+  readonly workspace?: NativeWorkspace | null;
+}
+
+function isConflictRestricted(
+  conflict: SyncConflict,
+  options?: ConflictPrivacyOptions
+): boolean {
+  return (
+    options?.canReadLiabilities === false &&
+    isLiabilitySyncConflict(conflict, options.workspace)
+  );
+}
+
 export function conflictRecordLabel(
   conflict: SyncConflict,
-  workspace: NativeWorkspace
+  workspace: NativeWorkspace,
+  options?: Pick<ConflictPrivacyOptions, "canReadLiabilities">
 ): string {
+  if (
+    isConflictRestricted(conflict, {
+      ...options,
+      workspace
+    })
+  ) {
+    return "Private owner record";
+  }
   const asset = workspace.assets.find(
     (candidate) => candidate.id === conflict.entityId
   );
@@ -297,11 +449,48 @@ export function conflictRecordLabel(
         )?.name ?? "Recorded value"
       );
     }
+    if (subject?.kind === "place") {
+      return (
+        workspace.places.find(
+          (candidate) => candidate.id === subject.placeId
+        )?.name ?? "Property value"
+      );
+    }
+    if (subject?.kind === "liability") {
+      return (
+        getLiabilities(workspace).find(
+          (candidate) => candidate.id === subject.liabilityId
+        )?.name ?? "Liability balance"
+      );
+    }
+  }
+  const liability = getLiabilities(workspace).find(
+    (candidate) => candidate.id === conflict.entityId
+  );
+  if (liability) return liability.name;
+  if (workspace.liabilityReview?.id === conflict.entityId) {
+    return "Liability review";
+  }
+  if (isDurableSyncConflict(conflict)) {
+    const operation = conflict.clientContext.localOperation;
+    if (
+      operation.command.type.startsWith("liability.") &&
+      typeof operation.command.payload.name === "string" &&
+      operation.command.payload.name.trim()
+    ) {
+      return operation.command.payload.name.trim();
+    }
   }
   return `Record ${conflict.entityId.slice(0, 8)}`;
 }
 
-export function conflictFieldLabel(conflict: SyncConflict): string {
+export function conflictFieldLabel(
+  conflict: SyncConflict,
+  options?: ConflictPrivacyOptions
+): string {
+  if (isConflictRestricted(conflict, options)) {
+    return "Private record";
+  }
   if (conflict.conflictKind === "permission") return "Household access";
   if (conflict.conflictKind === "ownership") return "Ownership";
   if (conflict.conflictKind === "identifier") return "Identifier";
@@ -327,6 +516,8 @@ export function conflictFieldLabel(conflict: SyncConflict): string {
     return "Lifecycle";
   }
   if (type === "evidence.review") return "Evidence review";
+  if (type.startsWith("liability.")) return "Liability";
+  if (type === "liability-review.set") return "Liability review";
   return "Record details";
 }
 
@@ -482,12 +673,21 @@ export function conflictProvenanceValues(
     readonly accessibility?: boolean;
     readonly language: LanguageCode;
     readonly visibility: ValueVisibility;
+    readonly canReadLiabilities?: boolean;
+    readonly workspace?: NativeWorkspace | null;
   }
 ): {
   readonly local: string;
   readonly cloud: string;
   readonly cloudVerified: boolean;
 } {
+  if (isConflictRestricted(conflict, valueOptions)) {
+    return {
+      local: "Private owner record",
+      cloud: "Private owner record",
+      cloudVerified: false
+    };
+  }
   if (!isDurableSyncConflict(conflict)) {
     return {
       local: "Local change preserved on this device",
@@ -538,8 +738,17 @@ export function conflictProvenanceValues(
 
 export function conflictManualReviewRoute(
   conflict: SyncConflict,
-  workspace: NativeWorkspace
+  workspace: NativeWorkspace,
+  options?: Pick<ConflictPrivacyOptions, "canReadLiabilities">
 ): string {
+  if (
+    isConflictRestricted(conflict, {
+      ...options,
+      workspace
+    })
+  ) {
+    return "/vault";
+  }
   if (conflict.conflictKind === "permission") return "/family";
   const asset = workspace.assets.find(
     (candidate) => candidate.id === conflict.entityId

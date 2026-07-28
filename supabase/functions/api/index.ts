@@ -334,6 +334,8 @@ async function currentServerVersion(
     place: "places",
     space: "spaces",
     asset: "assets",
+    liability: "liabilities",
+    "liability-review": "liability_reviews",
     evidence: "evidence",
   };
   const table = versionTables[entityType];
@@ -393,8 +395,12 @@ async function handleSyncPush(
       const idempotencyConflict = error.message.includes(
         "IDEMPOTENCY_CONFLICT",
       );
+      const liabilityReviewConflict = error.message.includes(
+        "LIABILITY_REVIEW_CONFLICT",
+      );
       const versionConflict = error.message.includes("VERSION_CONFLICT") ||
-        error.message.includes("LOCATION_CONFLICT");
+        error.message.includes("LOCATION_CONFLICT") ||
+        liabilityReviewConflict;
       const permissionConflict = error.message.includes("PERMISSION");
       const serverVersion =
         versionConflict && uuidPattern.test(entityId)
@@ -427,6 +433,8 @@ async function handleSyncPush(
           ? "This idempotency key was already used for a different change."
           : permissionConflict
           ? "Your household role does not allow this change."
+          : liabilityReviewConflict
+          ? "Review the household Liability register before confirming that none are recorded."
           : versionConflict
           ? "This record changed on another device and needs review before it can sync."
           : "The server rejected this queued change; earlier acknowledgements remain valid.",
@@ -521,7 +529,7 @@ async function handleSyncPull(
   }
 
   const { data, error } = await context.client.rpc(
-    "pull_sync_operations",
+    "pull_sync_batch",
     {
       p_household_id: householdId,
       p_after_cursor: cursor,
@@ -542,10 +550,23 @@ async function handleSyncPull(
     );
   }
 
-  const operations = data ?? [];
-  const nextCursor = operations.length > 0
-    ? operations[operations.length - 1].cursor
-    : cursor;
+  const batch =
+    data && typeof data === "object" && !Array.isArray(data)
+      ? data as Record<string, unknown>
+      : {};
+  const operations = Array.isArray(batch.operations)
+    ? batch.operations.filter(
+      (operation): operation is Record<string, unknown> =>
+        operation !== null &&
+        typeof operation === "object" &&
+        !Array.isArray(operation),
+    )
+    : [];
+  const scannedCursor = Number(batch.nextCursor ?? cursor);
+  const nextCursor =
+    Number.isSafeInteger(scannedCursor) && scannedCursor >= cursor
+      ? scannedCursor
+      : cursor;
 
   return json({
     workspace: {
@@ -569,8 +590,12 @@ async function handleSyncPull(
         householdId,
         version: Number(result.entityVersion ?? 1),
         // Archive/restore are reversible lifecycle states, not deletion.
-        tombstoned: operation.command === "value.delete",
-        body: operation.command === "value.delete"
+        tombstoned:
+          operation.command === "value.delete" ||
+          operation.command === "liability.delete",
+        body:
+          operation.command === "value.delete" ||
+            operation.command === "liability.delete"
           ? null
           : {
             operationId: operation.operation_id,

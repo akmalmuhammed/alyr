@@ -34,8 +34,10 @@ import {
   conflictRecordLabel,
   conflictResolutionOptions,
   conflictReplacementOperationId,
+  syncConflictsVisibleToRole,
   type ConflictResolutionChoice
 } from "@/data/conflictInbox";
+import type { NativeWorkspace } from "@/domain/model";
 import { useLocale } from "@/i18n/LocaleProvider";
 import { syncConflictCopy } from "@/i18n/syncConflictCopy";
 import { usePortfolioPrivacy } from "@/privacy/PortfolioPrivacyProvider";
@@ -44,9 +46,14 @@ import { colors, radius, spacing, typography } from "@/theme/tokens";
 
 function localizedField(
   conflict: SyncConflict,
-  language: "en" | "ar"
+  language: "en" | "ar",
+  canReadLiabilities: boolean,
+  workspace: NativeWorkspace
 ): string {
-  const english = conflictFieldLabel(conflict);
+  const english = conflictFieldLabel(conflict, {
+    canReadLiabilities,
+    workspace
+  });
   if (language === "en") return english;
   const translations: Record<string, string> = {
     "Household access": "صلاحيات الأسرة",
@@ -74,12 +81,19 @@ export default function SyncConflictsScreen() {
   const {
     workspace,
     sync,
+    can,
     resolveSyncConflict
   } = useWorkspace();
   const [busyOperationId, setBusyOperationId] = useState<string | null>(
     null
   );
   if (!workspace) return null;
+  const canReadLiabilities = can("liability.read");
+  const visibleConflicts = syncConflictsVisibleToRole(
+    sync.conflicts,
+    workspace,
+    canReadLiabilities
+  );
 
   const runResolution = async (
     conflict: SyncConflict,
@@ -137,8 +151,8 @@ export default function SyncConflictsScreen() {
           testID="sync-conflicts-back"
         />
         <StatusPill
-          label={`${sync.conflicts.length} ${copy.difference}`}
-          tone={sync.conflicts.length > 0 ? "warning" : "volt"}
+          label={`${visibleConflicts.length} ${copy.difference}`}
+          tone={visibleConflicts.length > 0 ? "warning" : "volt"}
         />
       </View>
 
@@ -147,7 +161,7 @@ export default function SyncConflictsScreen() {
         <BodyText muted>{copy.intro}</BodyText>
       </View>
 
-      {sync.conflicts.length === 0 ? (
+      {visibleConflicts.length === 0 ? (
         <View
           accessible
           accessibilityLabel={`${copy.allClearTitle}. ${copy.allClearBody}`}
@@ -178,22 +192,33 @@ export default function SyncConflictsScreen() {
           />
         </View>
       ) : (
-        sync.conflicts.map((conflict) => {
+        visibleConflicts.map((conflict) => {
           const options = conflictResolutionOptions(conflict);
           const provenance = conflictProvenanceValues(conflict, {
+            canReadLiabilities,
             language,
-            visibility: valueVisibility
+            visibility: valueVisibility,
+            workspace
           });
           const accessibleProvenance = conflictProvenanceValues(conflict, {
             accessibility: true,
+            canReadLiabilities,
             language,
-            visibility: valueVisibility
+            visibility: valueVisibility,
+            workspace
           });
           const replacementOperationId =
             conflictReplacementOperationId(conflict);
           const busy = busyOperationId === conflict.operationId;
-          const recordLabel = conflictRecordLabel(conflict, workspace);
-          const field = localizedField(conflict, language);
+          const recordLabel = conflictRecordLabel(conflict, workspace, {
+            canReadLiabilities
+          });
+          const field = localizedField(
+            conflict,
+            language,
+            canReadLiabilities,
+            workspace
+          );
           return (
             <View
               accessibilityLabel={`${recordLabel}. ${field}. ${copy.localSource}: ${accessibleProvenance.local}. ${copy.cloudSource}: ${accessibleProvenance.cloud}.`}
@@ -390,7 +415,9 @@ export default function SyncConflictsScreen() {
                 accessibilityRole="button"
                 onPress={() =>
                   router.push(
-                    conflictManualReviewRoute(conflict, workspace)
+                    conflictManualReviewRoute(conflict, workspace, {
+                      canReadLiabilities
+                    })
                   )
                 }
                 style={({ pressed }) => [
@@ -412,7 +439,7 @@ export default function SyncConflictsScreen() {
         })
       )}
 
-      {sync.conflicts.length > 0 ? (
+      {visibleConflicts.length > 0 ? (
         <Text
           style={[
             styles.provenanceHint,

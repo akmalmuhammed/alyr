@@ -33,6 +33,7 @@ import {
 } from "@/components/ui";
 import type { NativeAsset } from "@/domain/model";
 import { isAssetActive } from "@/domain/model";
+import { buildNetPositionSnapshot } from "@/domain/netPosition";
 import { buildPortfolioSnapshot } from "@/domain/portfolio";
 import { calculateNativeAssetReadiness } from "@/domain/readiness";
 import {
@@ -59,8 +60,10 @@ import { useWorkspace } from "@/state/WorkspaceProvider";
 import { usePortfolioPrivacy } from "@/privacy/PortfolioPrivacyProvider";
 import {
   formatRecordedValue,
+  formatSignedRecordedValue,
   valueVisibilityFromHidden
 } from "@/privacy/ValueVisibility";
+import { getPortfolioExperienceCopy } from "@/i18n/portfolioCopy";
 import {
   colors,
   radius,
@@ -156,25 +159,25 @@ function gapHref(asset: NativeAsset, gap: GapKind): string {
 
 function TodayPortfolioCard({
   accessibilityLabel,
-  recordCount,
   copy,
-  language,
+  emptyLabel,
+  label,
+  meta,
   onPress,
   rtl,
-  totals,
-  valuedCount
+  totals
 }: {
   readonly accessibilityLabel: string;
-  readonly recordCount: number;
   readonly copy: CoreJourneyCopy;
-  readonly language: "en" | "ar";
+  readonly emptyLabel: string;
+  readonly label: string;
+  readonly meta: string;
   readonly onPress: () => void;
   readonly rtl: boolean;
   readonly totals: readonly {
     readonly currency: string;
     readonly compact: string;
   }[];
-  readonly valuedCount: number;
 }) {
   const ForwardIcon = rtl ? ArrowLeft : ArrowRight;
   return (
@@ -202,7 +205,7 @@ function TodayPortfolioCard({
               rtl && styles.rtlText
             ]}
           >
-            {copy.today.portfolio}
+            {label}
           </Text>
           {totals.length === 0 ? (
             <Text
@@ -212,7 +215,7 @@ function TodayPortfolioCard({
                 rtl && styles.rtlText
               ]}
             >
-              {copy.today.noValues}
+              {emptyLabel}
             </Text>
           ) : (
             <View style={styles.portfolioValues}>
@@ -237,22 +240,7 @@ function TodayPortfolioCard({
               rtl && styles.rtlText
             ]}
           >
-            {language === "ar"
-              ? `${formatLocalizedNumber(
-                  valuedCount,
-                  language
-                )} من ${formatLocalizedNumber(
-                  recordCount,
-                  language
-                )} ${copy.today.valueCoverage}`
-              : `${formatLocalizedNumber(
-                  valuedCount,
-                  language
-                )} of ${formatLocalizedNumber(
-                  recordCount,
-                  language
-                )} items and properties ${copy.today.valueCoverage}`}{" "}
-            · {copy.today.currenciesSeparate}
+            {meta}
           </Text>
         </View>
         <ForwardIcon color={colors.textMuted} size={20} />
@@ -266,11 +254,12 @@ export default function HomeScreen() {
   const {
     can,
     pendingOperationCount,
-    recordedAssetValues,
+    recordedPortfolioValues,
     sync,
     workspace
   } = useWorkspace();
   const { copy, language, rtl } = useCoreJourneyCopy();
+  const financialCopy = getPortfolioExperienceCopy(language);
   const { amountsHidden } = usePortfolioPrivacy();
   if (!workspace) return null;
   const canWriteAssets = can("asset.write");
@@ -353,13 +342,50 @@ export default function HomeScreen() {
     placePinStatus.confirmationNeededCount,
     language
   );
-  const portfolio = buildPortfolioSnapshot(
-    workspace,
-    recordedAssetValues
-  );
   const valueVisibility = valueVisibilityFromHidden(amountsHidden);
-  const portfolioTotals = portfolio.currencyTotals.slice(0, 2).map(
-    (total) => {
+  const portfolioCard = (() => {
+    if (can("liability.read")) {
+      const netPosition = buildNetPositionSnapshot(workspace);
+      const totals = netPosition.byCurrency.slice(0, 2).map((line) => {
+        if (line.recordedNetPositionMinor === null) {
+          const unavailable = `${line.currency} ${financialCopy.netPosition.reviewRequired}`;
+          return {
+            currency: line.currency,
+            compact: unavailable,
+            exact: unavailable
+          };
+        }
+        const formatted = formatSignedRecordedValue({
+          amountMinor: line.recordedNetPositionMinor,
+          currency: line.currency,
+          language,
+          visibility: valueVisibility
+        });
+        return {
+          currency: line.currency,
+          compact: formatted.text,
+          exact: formatted.accessibilityLabel
+        };
+      });
+      const summary =
+        totals.length === 0
+          ? financialCopy.netPosition.noTotal
+          : totals.map((total) => total.exact).join("; ");
+      const status = financialCopy.netPosition.status[netPosition.status];
+      return {
+        accessibilityLabel: `${financialCopy.netPosition.net}: ${summary}. ${status}`,
+        emptyLabel: financialCopy.netPosition.noTotal,
+        label: financialCopy.netPosition.eyebrow,
+        meta: `${status} \u00B7 ${financialCopy.netPosition.currenciesSeparate}`,
+        totals
+      };
+    }
+
+    const portfolio = buildPortfolioSnapshot(
+      workspace,
+      recordedPortfolioValues
+    );
+    const totals = portfolio.currencyTotals.slice(0, 2).map((total) => {
       if (total.amountMinor === null) {
         const unavailable = `${total.currency} ${copy.today.totalUnavailable}`;
         return {
@@ -386,20 +412,42 @@ export default function HomeScreen() {
         compact: compact.text,
         exact: exact.accessibilityLabel
       };
-    }
-  );
+    });
+    const summary =
+      totals.length === 0
+        ? copy.today.noValues
+        : totals.map((total) => total.exact).join("; ");
+    const coverage =
+      language === "ar"
+        ? `${formatLocalizedNumber(
+            portfolio.valuedEntryCount,
+            language
+          )} من ${formatLocalizedNumber(
+            portfolio.valuableCount,
+            language
+          )} ${copy.today.valueCoverage}`
+        : `${formatLocalizedNumber(
+            portfolio.valuedEntryCount,
+            language
+          )} of ${formatLocalizedNumber(
+            portfolio.valuableCount,
+            language
+          )} items and properties ${copy.today.valueCoverage}`;
+    return {
+      accessibilityLabel: portfolioAccessibilityLabel(
+        summary,
+        portfolio.valuedEntryCount,
+        portfolio.valuableCount,
+        language
+      ),
+      emptyLabel: copy.today.noValues,
+      label: copy.today.portfolio,
+      meta: `${coverage} \u00B7 ${copy.today.currenciesSeparate}`,
+      totals
+    };
+  })();
   const readinessPercent = formatLocalizedPercent(
     registerReadiness,
-    language
-  );
-  const portfolioSummary =
-    portfolioTotals.length === 0
-      ? copy.today.noValues
-      : portfolioTotals.map((total) => total.exact).join("; ");
-  const portfolioA11y = portfolioAccessibilityLabel(
-    portfolioSummary,
-    portfolio.valuedEntryCount,
-    portfolio.valuableCount,
     language
   );
 
@@ -571,14 +619,14 @@ export default function HomeScreen() {
       </CommandSurface>
 
       <TodayPortfolioCard
-        accessibilityLabel={portfolioA11y}
-        recordCount={portfolio.valuableCount}
+        accessibilityLabel={portfolioCard.accessibilityLabel}
         copy={copy}
-        language={language}
+        emptyLabel={portfolioCard.emptyLabel}
+        label={portfolioCard.label}
+        meta={portfolioCard.meta}
         onPress={() => router.push("/dashboard")}
         rtl={rtl}
-        totals={portfolioTotals}
-        valuedCount={portfolio.valuedEntryCount}
+        totals={portfolioCard.totals}
       />
 
       {incomplete.length > 1 ? (

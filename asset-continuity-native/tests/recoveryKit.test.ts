@@ -117,7 +117,42 @@ const workspace = {
   schemaVersion: 2,
   mode: "personal",
   household: { id: "household-1", name: "West Bay home" },
-  assets: [{ id: "asset-1", name: "GMT watch" }]
+  assets: [{ id: "asset-1", name: "GMT watch" }],
+  liabilities: [
+    {
+      id: "liability-1",
+      householdId: "household-1",
+      version: 1,
+      name: "Home finance",
+      kind: "mortgage",
+      lifecycleStatus: "active"
+    }
+  ],
+  liabilityTombstones: [
+    {
+      id: "liability-deleted",
+      householdId: "household-1",
+      version: 3,
+      deletedAt: "2026-07-26T10:00:00.000Z"
+    }
+  ],
+  liabilityReview: {
+    id: "liability-review-1",
+    householdId: "household-1",
+    version: 1,
+    status: "none-confirmed",
+    reviewedAt: "2026-07-27",
+    expiresAt: "2026-10-25"
+  },
+  portfolioValueRecords: [
+    {
+      id: "liability-value-1",
+      liabilityId: "liability-1",
+      amountMinor: 215_000_000,
+      currency: "QAR",
+      asOf: "2026-07-27"
+    }
+  ]
 };
 
 const protectedA = Uint8Array.from({ length: 44 }, (_, index) => index + 1);

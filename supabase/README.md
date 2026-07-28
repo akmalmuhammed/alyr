@@ -24,6 +24,9 @@ backup, end-to-end encryption, or verified legal evidence.
 - Permission-scoped JSON/PDF exports with atomic renderer claims, immutable
   artifact checksums, a 40 MiB retained household allowance, and daily
   pointer-preserving retention cleanup.
+- Owner-only Liability masters, dated balance history and expiring
+  no-Liability reviews, with versioned soft tombstones and selective-export
+  isolation.
 - A privacy-minimal product-event allow-list.
 - An OpenAPI 3.1 contract.
 - Pre-account pilot and recipient-invitation routes plus manually
@@ -34,10 +37,14 @@ backup, end-to-end encryption, or verified legal evidence.
 Verified on 2026-07-28:
 
 - Supabase project `ifiyragzeizaxdqzxvpk` reports `ACTIVE_HEALTHY`.
-- The live database and repository are in eleven-migration parity:
+- The live database currently has the first eleven reviewed migrations:
   `202607250001`, `202607270001`, `202607270002`, `202607270003`,
   `202607270004`, `202607270005`, `202607280001`, `202607280002`,
   `202607280003`, `202607280004`, and `202607280005`.
+- Repository migration `202607280006` adds the owner-only Liability and
+  recorded-net-position cloud boundary. It passed local reset, lint and
+  pgTAP verification and remains pending the authenticated live deployment
+  gate below.
 - The `api` Edge Function reports `ACTIVE`, version **3**. The reviewed local
   source contains the recipient-preflight and subject-aware export changes and
   still needs the authenticated function deployment described below.
@@ -77,7 +84,7 @@ The static contract checks require only Node:
 npm run check:supabase:static
 ```
 
-Latest verified result: **29/29** static checks.
+Latest verified result: **38/38** static checks.
 
 The local database suite proves cross-household RLS, role-negative paths,
 idempotent nested commands, analytics rejection, upload reservation binding,
@@ -89,9 +96,10 @@ supabase db lint --local --level warning
 supabase test db --local
 ```
 
-Latest verified result: **105/105** pgTAP checks. The real local export API
-journey also passed **30** checks, including parallel same-key creation,
-authorization denial, JSON/PDF rendering, download integrity, and redaction:
+Latest verified result: **131/131** pgTAP checks. The real local export API
+journey also passed **47** checks, including parallel same-key creation,
+authorization denial, full Liability history, selective-export isolation,
+JSON/PDF rendering, download integrity, and redaction:
 
 ```sh
 npm run test:supabase:export-local
@@ -176,9 +184,10 @@ npx --yes supabase@2.109.1 login
 npm run deploy:supabase:api
 ```
 
-The npm command runs all static Supabase checks, deploys only `api` to
-`ifiyragzeizaxdqzxvpk` with `--no-verify-jwt --use-api`, then waits for
-propagation and verifies these public boundaries without printing any key,
+The npm command runs all static Supabase checks, applies pending reviewed
+migrations to the linked database before the dependent Edge code, deploys only
+`api` to `ifiyragzeizaxdqzxvpk` with `--no-verify-jwt --use-api`, then waits
+for propagation and verifies these public boundaries without printing any key,
 token, response message, invitation or household data:
 
 - invalid recipient invitation: `403 AUTHORIZATION_DENIED`;

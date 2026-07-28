@@ -1,0 +1,75 @@
+appId: com.alyr.continuity
+name: Offline liability survives balance edit and process restart
+tags:
+  - offline
+  - portfolio
+  - liability
+env:
+  LIABILITY_NAME: "Offline vehicle loan"
+  UPDATED_AMOUNT: "87500"
+onFlowComplete:
+  - setAirplaneMode: disabled
+---
+- runFlow:
+    file: "../subflows/start-sample-workspace.yaml"
+- setAirplaneMode: enabled
+- tapOn:
+    id: "today-portfolio-entry"
+    enabled: true
+- extendedWaitUntil:
+    visible:
+      id: "portfolio-screen"
+    timeout: 15000
+- runFlow:
+    file: "../subflows/add-liability.yaml"
+    env:
+      LIABILITY_NAME: "${LIABILITY_NAME}"
+      LIABILITY_CATEGORY: "Vehicle loan"
+      LIABILITY_AMOUNT: "90000"
+      LIABILITY_CURRENCY: "QAR"
+- tapOn:
+    text: "${LIABILITY_NAME}"
+    enabled: true
+- extendedWaitUntil:
+    visible:
+      id: "liability-detail-screen"
+    timeout: 15000
+- tapOn:
+    id: "liability-edit"
+    enabled: true
+- extendedWaitUntil:
+    visible:
+      id: "liability-balance-screen"
+    timeout: 15000
+- tapOn:
+    id: "liability-amount"
+    enabled: true
+- eraseText: 20
+- inputText: "${UPDATED_AMOUNT}"
+- hideKeyboard
+- tapOn:
+    id: "liability-balance-save"
+    enabled: true
+- extendedWaitUntil:
+    visible:
+      id: "liability-detail-screen"
+    timeout: 15000
+- stopApp
+- launchApp
+- extendedWaitUntil:
+    visible:
+      id: "home-screen"
+    timeout: 20000
+- tapOn:
+    id: "today-portfolio-entry"
+    enabled: true
+- extendedWaitUntil:
+    visible:
+      id: "liabilities-list"
+    timeout: 15000
+- assertVisible: "${LIABILITY_NAME}"
+- tapOn:
+    text: "${LIABILITY_NAME}"
+    enabled: true
+- assertVisible:
+    id: "liability-status"

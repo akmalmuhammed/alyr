@@ -1,7 +1,8 @@
 import type { LanguageCode } from "@/domain/model";
 import {
   formatPortfolioMoney,
-  formatPortfolioMoneyCompact
+  formatPortfolioMoneyCompact,
+  formatSignedPortfolioMoney
 } from "@/domain/portfolio";
 
 /**
@@ -75,4 +76,28 @@ export function formatRecordedValue({
     text,
     accessibilityLabel: text
   };
+}
+
+export function formatSignedRecordedValue({
+  amountMinor,
+  currency,
+  language,
+  locale = language === "ar" ? "ar-QA" : "en-QA",
+  visibility
+}: Omit<RecordedValueFormatInput, "compact">): FormattedRecordedValue {
+  if (visibility === "hidden") {
+    return {
+      text: `${currency} ${RECORDED_VALUE_MASK}`,
+      accessibilityLabel: recordedValueHiddenAccessibilityLabel(
+        currency,
+        language
+      )
+    };
+  }
+  const text = formatSignedPortfolioMoney(
+    amountMinor,
+    currency,
+    locale
+  );
+  return { text, accessibilityLabel: text };
 }

@@ -4,6 +4,8 @@ import type {
   HouseholdId,
   IsoDateTime,
   JsonObject,
+  LiabilityId,
+  LiabilityKind,
   MemberId,
   PlaceDocumentId,
   PlaceId,
@@ -36,6 +38,12 @@ export const DOMAIN_COMMAND_TYPES = [
   "value.create",
   "value.update",
   "value.delete",
+  "liability.create",
+  "liability.update",
+  "liability.archive",
+  "liability.restore",
+  "liability.delete",
+  "liability-review.set",
 ] as const;
 
 export type DomainCommandType = (typeof DOMAIN_COMMAND_TYPES)[number];
@@ -54,12 +62,44 @@ export type ValueAssertionPayload = {
   | {
       readonly assetId: EntityId;
       readonly placeId?: never;
+      readonly liabilityId?: never;
     }
   | {
       readonly placeId: EntityId;
       readonly assetId?: never;
+      readonly liabilityId?: never;
+    }
+  | {
+      readonly liabilityId: LiabilityId;
+      readonly assetId?: never;
+      readonly placeId?: never;
     }
 );
+
+/**
+ * A Liability is a household-owned label for a debt or obligation. Dated
+ * balances remain separate value assertions so history is preserved.
+ */
+export interface LiabilityCreatePayload extends JsonObject {
+  readonly name: string;
+  readonly kind: LiabilityKind;
+}
+
+export interface LiabilityUpdatePayload extends JsonObject {
+  readonly name?: string;
+  readonly kind?: LiabilityKind;
+}
+
+export interface LiabilityLifecyclePayload extends JsonObject {
+  readonly lifecycle: "active" | "archived";
+  readonly archivedAt: IsoDateTime | null;
+}
+
+export interface LiabilityReviewPayload extends JsonObject {
+  readonly status: "none-confirmed";
+  readonly reviewedAt: string;
+  readonly expiresAt: string;
+}
 
 /**
  * Creates the durable metadata record before bytes are uploaded. Place

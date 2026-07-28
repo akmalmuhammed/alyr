@@ -1,10 +1,16 @@
 import * as SecureStore from "expo-secure-store";
 import {
+  act,
   fireEvent,
   render,
   waitFor
 } from "@testing-library/react-native";
-import { Pressable, Text } from "react-native";
+import {
+  AppState,
+  type AppStateStatus,
+  Pressable,
+  Text
+} from "react-native";
 
 import {
   PortfolioPrivacyProvider,
@@ -60,6 +66,10 @@ describe("recorded-value account and household boundary", () => {
     jest.clearAllMocks();
     getItem.mockResolvedValue(null);
     setItem.mockResolvedValue(undefined);
+  });
+
+  afterEach(() => {
+    jest.restoreAllMocks();
   });
 
   it("starts hidden and remains hidden while no account boundary is active", async () => {
@@ -128,4 +138,48 @@ describe("recorded-value account and household boundary", () => {
       "hidden"
     );
   });
+
+  it.each<AppStateStatus>(["inactive", "background"])(
+    "re-hides every recorded amount as soon as the app becomes %s",
+    async (nextState) => {
+      let appStateListener:
+        | ((state: AppStateStatus) => void)
+        | null = null;
+      jest
+        .spyOn(AppState, "addEventListener")
+        .mockImplementation((_event, listener) => {
+          appStateListener = listener;
+          return { remove: jest.fn() };
+        });
+      const scope: ValueVisibilityScope = {
+        kind: "account-household",
+        accountId: "account-a",
+        householdId: "household-a"
+      };
+      const screen = await render(<Boundary scope={scope} />);
+      await waitFor(() => {
+        expect(getItem).toHaveBeenCalledTimes(1);
+      });
+
+      await fireEvent.press(screen.getByTestId("visibility-probe"));
+      expect(
+        screen.getByTestId("visibility-probe").props.accessibilityLabel
+      ).toBe("visible");
+
+      await act(async () => {
+        appStateListener?.(nextState);
+      });
+
+      expect(
+        screen.getByTestId("visibility-probe").props.accessibilityLabel
+      ).toBe("hidden");
+      await waitFor(() => {
+        expect(setItem).toHaveBeenLastCalledWith(
+          expect.stringContaining("alyr.portfolio.value-visibility.v2."),
+          "hidden"
+        );
+      });
+      await screen.unmount();
+    }
+  );
 });

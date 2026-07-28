@@ -412,6 +412,11 @@ export interface components {
             status: "active" | "revoked";
             version: number;
         };
+        /**
+         * @description Closed vocabulary used by liability.create and liability.update. Dated balances are sent separately through value.create/value.update.
+         * @enum {string}
+         */
+        LiabilityKind: "mortgage" | "vehicle-loan" | "personal-loan" | "credit-card" | "education-loan" | "installment" | "tax" | "business" | "family-debt" | "other";
         DomainCommand: {
             /** @constant */
             commandVersion: 1;
@@ -422,7 +427,7 @@ export interface components {
             actorMemberId: string;
             deviceId: string;
             /** @enum {string} */
-            type: "place.create" | "place.update" | "space.create" | "space.update" | "asset.create" | "asset.update" | "asset.move" | "asset.archive" | "asset.restore" | "evidence.create" | "evidence.version.add" | "evidence.review" | "place-document.create" | "place-document.version.add" | "value.create" | "value.update" | "value.delete";
+            type: "place.create" | "place.update" | "space.create" | "space.update" | "asset.create" | "asset.update" | "asset.move" | "asset.archive" | "asset.restore" | "evidence.create" | "evidence.version.add" | "evidence.review" | "place-document.create" | "place-document.version.add" | "value.create" | "value.update" | "value.delete" | "liability.create" | "liability.update" | "liability.archive" | "liability.restore" | "liability.delete" | "liability-review.set";
             aggregateId: string | null;
             observedVersion: number | null;
             /** Format: date-time */

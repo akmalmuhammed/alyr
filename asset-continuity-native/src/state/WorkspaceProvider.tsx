@@ -15,6 +15,10 @@ import type {
   ContractError,
   HouseholdRole,
   JsonObject,
+  LiabilityCreatePayload,
+  LiabilityLifecyclePayload,
+  LiabilityReviewPayload,
+  LiabilityUpdatePayload,
   PermissionCapability,
   SyncConflict,
   SyncOperation,
@@ -32,7 +36,12 @@ import {
   type ScopedAttachmentStore
 } from "@/data/attachmentStore";
 import { createDefaultRepository } from "@/data/createRepository";
-import type { ConflictResolutionChoice } from "@/data/conflictInbox";
+import {
+  isLiabilitySyncConflict,
+  isLiabilitySyncOperation,
+  syncConflictsVisibleToRole,
+  type ConflictResolutionChoice
+} from "@/data/conflictInbox";
 import { resolveDurableSyncConflict } from "@/data/conflictResolution";
 import {
   reconcileForeground,
@@ -60,6 +69,8 @@ import type {
   LanguageCode,
   NativeAsset,
   NativeEvidence,
+  NativeLiability,
+  NativeLiabilityReview,
   NativePlace,
   NativePlaceDocument,
   NativeRoom,
@@ -76,10 +87,25 @@ import type {
 } from "@/domain/model";
 import { isNativeWorkspace } from "@/domain/model";
 import {
+  confirmNoLiabilities as confirmNoLiabilitiesInWorkspace,
+  createLiability as createLiabilityInWorkspace,
+  deleteLiability as deleteLiabilityInWorkspace,
+  getLiabilities,
+  getLiabilityReview,
+  setLiabilityLifecycle as setLiabilityLifecycleInWorkspace,
+  updateLiability as updateLiabilityInWorkspace,
+  type LiabilityLifecycleInput,
+  type LiabilityMutationResult,
+  type LiabilityReviewMutationResult,
+  type NewLiabilityInput,
+  type UpdateLiabilityInput
+} from "@/domain/liabilities";
+import {
   getPortfolioValueRecords,
   portfolioValueSubject,
   recordPortfolioValue as recordPortfolioValueInWorkspace,
   type PortfolioValueInput,
+  type PortfolioValueInputBase,
   type PortfolioValueRecord
 } from "@/domain/portfolio";
 import { createWorkspace } from "@/domain/sample";
@@ -134,6 +160,57 @@ export interface WorkspaceSyncRuntimeState {
   readonly lastSyncedAt: string | null;
 }
 
+interface PendingOperationCounts {
+  readonly total: number;
+  readonly liability: number;
+}
+
+export function pendingOperationCountVisibleToRole(
+  counts: PendingOperationCounts,
+  role: HouseholdRole | null
+): number {
+  return hasHouseholdCapability(role, "liability.read")
+    ? counts.total
+    : Math.max(0, counts.total - counts.liability);
+}
+
+/**
+ * Projects owner-only conflict signals out of render state without mutating
+ * the durable conflict inbox. When the sole attention reason is a hidden
+ * Liability conflict, the visible status/error return to the role-appropriate
+ * baseline rather than revealing that private activity exists.
+ */
+export function syncRuntimeVisibleToRole(
+  sync: WorkspaceSyncRuntimeState,
+  workspace: NativeWorkspace | null,
+  role: HouseholdRole | null,
+  fallbackStatus: "idle" | "local-only"
+): WorkspaceSyncRuntimeState {
+  if (hasHouseholdCapability(role, "liability.read")) {
+    return sync;
+  }
+  const conflicts = syncConflictsVisibleToRole(
+    sync.conflicts,
+    workspace,
+    false
+  );
+  const hidesLiabilityConflict =
+    conflicts.length !== sync.conflicts.length;
+  const liabilityOnlyAttention =
+    hidesLiabilityConflict &&
+    conflicts.length === 0 &&
+    sync.status === "needs-attention";
+  return {
+    ...sync,
+    status: liabilityOnlyAttention ? fallbackStatus : sync.status,
+    conflicts,
+    // A runtime error is not typed to one conflict. Once any owner-only
+    // conflict is projected out, retaining the raw message could disclose its
+    // record name or value alongside an otherwise visible Asset conflict.
+    lastError: hidesLiabilityConflict ? null : sync.lastError
+  };
+}
+
 export interface WorkspaceBootstrapRuntimeState {
   readonly status:
     | "locked"
@@ -148,6 +225,8 @@ export interface WorkspaceBootstrapRuntimeState {
 
 export interface WorkspaceContextValue {
   readonly workspace: NativeWorkspace | null;
+  readonly liabilities: readonly NativeLiability[];
+  readonly liabilityReview: NativeLiabilityReview | null;
   readonly recordedPortfolioValues: readonly PortfolioValueRecord[];
   /** @deprecated Use recordedPortfolioValues. Kept for route compatibility. */
   readonly recordedAssetValues: readonly PortfolioValueRecord[];
@@ -204,6 +283,19 @@ export interface WorkspaceContextValue {
   readonly recordPortfolioValue: (
     input: PortfolioValueInput
   ) => Promise<PortfolioValueRecord>;
+  readonly createLiability: (
+    input: NewLiabilityInput & PortfolioValueInputBase
+  ) => Promise<NativeLiability>;
+  readonly updateLiability: (
+    input: UpdateLiabilityInput
+  ) => Promise<NativeLiability>;
+  readonly setLiabilityLifecycle: (
+    input: LiabilityLifecycleInput
+  ) => Promise<NativeLiability>;
+  readonly deleteLiability: (liabilityId: string) => Promise<void>;
+  readonly confirmNoLiabilities: (
+    reviewedAt: string
+  ) => Promise<NativeLiabilityReview>;
   readonly setAssetLifecycle: (
     input: AssetLifecycleInput
   ) => Promise<NativeAsset>;
@@ -238,6 +330,35 @@ export type WorkspaceVaultAccess =
 export interface WorkspaceVaultResourceFactory {
   createRepository(scope: VaultScope): Promise<NativeWorkspaceRepository>;
   createAttachmentStore(scope: VaultScope): ScopedAttachmentStore;
+}
+
+/**
+ * Liability records are owner-only in the pilot. Keep the authoritative
+ * encrypted snapshot intact for sync, but project a redacted workspace into
+ * UI/export surfaces for every other role. This also covers a rare ownership
+ * transfer on a device that still holds the former owner's cached snapshot.
+ */
+export function workspaceVisibleToRole(
+  workspace: NativeWorkspace,
+  role: HouseholdRole | null
+): NativeWorkspace {
+  if (hasHouseholdCapability(role, "liability.read")) {
+    return workspace;
+  }
+  const {
+    liabilityReview: _liabilityReview,
+    liabilityTombstones: _liabilityTombstones,
+    liabilities: _liabilities,
+    ...continuityWorkspace
+  } = workspace;
+  return {
+    ...continuityWorkspace,
+    liabilities: [],
+    liabilityTombstones: [],
+    portfolioValueRecords: getPortfolioValueRecords(workspace).filter(
+      (record) => portfolioValueSubject(record)?.kind !== "liability"
+    )
+  };
 }
 
 interface WorkspaceProviderProps extends PropsWithChildren {
@@ -598,12 +719,14 @@ export function createPortfolioValueOperation(
 ): SyncOperation {
   const subject = portfolioValueSubject(record);
   if (!subject) {
-    throw new Error("Choose one item or property.");
+    throw new Error("Choose one item, property or liability.");
   }
   const payload: ValueAssertionPayload = {
     ...(subject.kind === "asset"
       ? { assetId: subject.assetId }
-      : { placeId: subject.placeId }),
+      : subject.kind === "place"
+        ? { placeId: subject.placeId }
+        : { liabilityId: subject.liabilityId }),
     amountMinor: record.amountMinor,
     currency: record.currency,
     asOf: record.asOf,
@@ -617,6 +740,126 @@ export function createPortfolioValueOperation(
     idempotencyKey: identity.idempotencyKey(),
     observedVersion: 0,
     occurredAt: record.updatedAt
+  });
+}
+
+export function createLiabilityOperation(
+  workspace: NativeWorkspace,
+  result: LiabilityMutationResult,
+  identity: {
+    readonly operationId: () => string;
+    readonly idempotencyKey: () => string;
+  } = {
+    operationId: () => id("operation"),
+    idempotencyKey: () => id("idempotency")
+  }
+): SyncOperation {
+  const creating = result.previousLiability === null;
+  const payload: LiabilityCreatePayload | LiabilityUpdatePayload =
+    creating
+      ? {
+          name: result.liability.name,
+          kind: result.liability.kind
+        }
+      : {
+          name: result.liability.name,
+          kind: result.liability.kind
+        };
+  return createLocalOperation(workspace, {
+    type: creating ? "liability.create" : "liability.update",
+    aggregateId: result.liability.id,
+    payload,
+    operationId: identity.operationId(),
+    idempotencyKey: identity.idempotencyKey(),
+    observedVersion: creating
+      ? 0
+      : result.previousLiability!.version,
+    occurredAt: result.liability.updatedAt
+  });
+}
+
+export function createLiabilityLifecycleOperation(
+  workspace: NativeWorkspace,
+  result: LiabilityMutationResult,
+  identity: {
+    readonly operationId: () => string;
+    readonly idempotencyKey: () => string;
+  } = {
+    operationId: () => id("operation"),
+    idempotencyKey: () => id("idempotency")
+  }
+): SyncOperation {
+  if (!result.previousLiability) {
+    throw new Error("A Liability lifecycle change needs a prior version.");
+  }
+  const payload: LiabilityLifecyclePayload = {
+    lifecycle: result.liability.lifecycleStatus,
+    archivedAt: result.liability.archivedAt
+  };
+  return createLocalOperation(workspace, {
+    type:
+      result.liability.lifecycleStatus === "archived"
+        ? "liability.archive"
+        : "liability.restore",
+    aggregateId: result.liability.id,
+    payload,
+    operationId: identity.operationId(),
+    idempotencyKey: identity.idempotencyKey(),
+    observedVersion: result.previousLiability.version,
+    occurredAt: result.liability.updatedAt
+  });
+}
+
+export function createLiabilityDeleteOperation(
+  workspace: NativeWorkspace,
+  liability: NativeLiability,
+  occurredAt: string,
+  identity: {
+    readonly operationId: () => string;
+    readonly idempotencyKey: () => string;
+  } = {
+    operationId: () => id("operation"),
+    idempotencyKey: () => id("idempotency")
+  }
+): SyncOperation {
+  return createLocalOperation(workspace, {
+    type: "liability.delete",
+    aggregateId: liability.id,
+    payload: {
+      name: liability.name,
+      kind: liability.kind
+    },
+    operationId: identity.operationId(),
+    idempotencyKey: identity.idempotencyKey(),
+    observedVersion: liability.version,
+    occurredAt
+  });
+}
+
+export function createLiabilityReviewOperation(
+  workspace: NativeWorkspace,
+  result: LiabilityReviewMutationResult,
+  identity: {
+    readonly operationId: () => string;
+    readonly idempotencyKey: () => string;
+  } = {
+    operationId: () => id("operation"),
+    idempotencyKey: () => id("idempotency")
+  }
+): SyncOperation {
+  const payload: LiabilityReviewPayload = {
+    status: result.review.status,
+    reviewedAt: result.review.reviewedAt,
+    expiresAt: result.review.expiresAt
+  };
+  return createLocalOperation(workspace, {
+    type: "liability-review.set",
+    aggregateId: result.review.id,
+    payload,
+    operationId: identity.operationId(),
+    idempotencyKey: identity.idempotencyKey(),
+    observedVersion: result.previousReview?.version ?? 0,
+    occurredAt: result.review.updatedAt
   });
 }
 
@@ -978,7 +1221,11 @@ export function WorkspaceProvider({
   const [saving, setSaving] = useState(false);
   const [storageReady, setStorageReady] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [pendingOperationCount, setPendingOperationCount] = useState(0);
+  const [pendingOperationCounts, setPendingOperationCounts] =
+    useState<PendingOperationCounts>({
+      total: 0,
+      liability: 0
+    });
   const [bootstrap, setBootstrap] =
     useState<WorkspaceBootstrapRuntimeState>({
       status: resolvedVaultAccess === null ? "locked" : "opening",
@@ -1043,7 +1290,15 @@ export function WorkspaceProvider({
   const refreshPendingCount = useCallback(
     async (activeRepository: NativeWorkspaceRepository) => {
       const operations = await activeRepository.listPendingOperations(1000);
-      setPendingOperationCount(operations.length);
+      setPendingOperationCounts({
+        total: operations.length,
+        liability: operations.filter((operation) =>
+          isLiabilitySyncOperation(
+            operation,
+            workspaceRef.current
+          )
+        ).length
+      });
     },
     []
   );
@@ -1320,7 +1575,7 @@ export function WorkspaceProvider({
     setStorageReady(false);
     setOpenedAttachmentStore(null);
     setWorkspace(null);
-    setPendingOperationCount(0);
+    setPendingOperationCounts({ total: 0, liability: 0 });
     setError(null);
     setBootstrap({
       status: accessKind === "locked" ? "locked" : "opening",
@@ -1661,6 +1916,22 @@ export function WorkspaceProvider({
             "The active household record is unavailable for conflict review."
           );
         }
+        const storedSyncState = await activeRepository.loadSyncState();
+        const selectedConflict = storedSyncState.conflicts.find(
+          (candidate) => candidate.operationId === operationId
+        );
+        if (
+          selectedConflict &&
+          isLiabilitySyncConflict(
+            selectedConflict,
+            workspaceRef.current
+          ) &&
+          !hasHouseholdCapability(permissionRole, "liability.read")
+        ) {
+          throw new Error(
+            "This conflict is not available for the current household role."
+          );
+        }
         const result = await resolveDurableSyncConflict({
           repository: activeRepository,
           householdId,
@@ -1688,7 +1959,13 @@ export function WorkspaceProvider({
         void syncNow();
         return result.outcome;
       }),
-    [boundHouseholdId, enqueue, refreshPendingCount, syncNow]
+    [
+      boundHouseholdId,
+      enqueue,
+      permissionRole,
+      refreshPendingCount,
+      syncNow
+    ]
   );
 
   const purgeActiveVault = useCallback(
@@ -1711,7 +1988,7 @@ export function WorkspaceProvider({
       setStorageReady(false);
       setOpenedAttachmentStore(null);
       setWorkspace(null);
-      setPendingOperationCount(0);
+      setPendingOperationCounts({ total: 0, liability: 0 });
       setSaving(false);
       setError(null);
       setLoading(reopenEmptyPreview);
@@ -2157,7 +2434,9 @@ export function WorkspaceProvider({
     async (input: PortfolioValueInput): Promise<PortfolioValueRecord> =>
       enqueue(async () => {
         requireCapabilities(
-          "placeId" in input && input.placeId
+          "liabilityId" in input && input.liabilityId
+            ? "liability.write"
+            : "placeId" in input && input.placeId
             ? "place.write"
             : "asset.write"
         );
@@ -2178,6 +2457,158 @@ export function WorkspaceProvider({
             : [createPortfolioValueOperation(current, result.record)];
         await commitWorkspace(result.workspace, operations);
         return result.record;
+      }),
+    [commitWorkspace, enqueue, requireCapabilities]
+  );
+
+  const createLiability = useCallback(
+    async (
+      input: NewLiabilityInput & PortfolioValueInputBase
+    ): Promise<NativeLiability> =>
+      enqueue(async () => {
+        requireCapabilities("liability.write");
+        const current = workspaceRef.current;
+        if (!current) {
+          throw new Error(
+            "Choose a workspace before recording a liability."
+          );
+        }
+        const created = createLiabilityInWorkspace(
+          current,
+          { name: input.name, kind: input.kind },
+          { ...mutationContext, today }
+        );
+        const valued = recordPortfolioValueInWorkspace(
+          created.workspace,
+          {
+            liabilityId: created.liability.id,
+            amountMinor: input.amountMinor,
+            currency: input.currency,
+            asOf: input.asOf
+          },
+          { ...mutationContext, today }
+        );
+        const operations =
+          current.mode === "sample"
+            ? []
+            : [
+                createLiabilityOperation(current, created),
+                createPortfolioValueOperation(
+                  created.workspace,
+                  valued.record
+                )
+              ];
+        await commitWorkspace(valued.workspace, operations);
+        return created.liability;
+      }),
+    [commitWorkspace, enqueue, requireCapabilities]
+  );
+
+  const updateLiability = useCallback(
+    async (input: UpdateLiabilityInput): Promise<NativeLiability> =>
+      enqueue(async () => {
+        requireCapabilities("liability.write");
+        const current = workspaceRef.current;
+        if (!current) {
+          throw new Error(
+            "Choose a workspace before updating a liability."
+          );
+        }
+        const result = updateLiabilityInWorkspace(
+          current,
+          input,
+          { ...mutationContext, today }
+        );
+        const operations =
+          current.mode === "sample"
+            ? []
+            : [createLiabilityOperation(current, result)];
+        await commitWorkspace(result.workspace, operations);
+        return result.liability;
+      }),
+    [commitWorkspace, enqueue, requireCapabilities]
+  );
+
+  const setLiabilityLifecycle = useCallback(
+    async (
+      input: LiabilityLifecycleInput
+    ): Promise<NativeLiability> =>
+      enqueue(async () => {
+        requireCapabilities("liability.write");
+        const current = workspaceRef.current;
+        if (!current) {
+          throw new Error(
+            "Choose a workspace before changing a liability."
+          );
+        }
+        const result = setLiabilityLifecycleInWorkspace(
+          current,
+          input,
+          { ...mutationContext, today }
+        );
+        if (result.workspace === current) return result.liability;
+        const operations =
+          current.mode === "sample"
+            ? []
+            : [createLiabilityLifecycleOperation(current, result)];
+        await commitWorkspace(result.workspace, operations);
+        return result.liability;
+      }),
+    [commitWorkspace, enqueue, requireCapabilities]
+  );
+
+  const deleteLiability = useCallback(
+    async (liabilityId: string): Promise<void> =>
+      enqueue(async () => {
+        requireCapabilities("liability.write");
+        const current = workspaceRef.current;
+        if (!current) {
+          throw new Error(
+            "Choose a workspace before deleting a liability."
+          );
+        }
+        const occurredAt = now();
+        const result = deleteLiabilityInWorkspace(
+          current,
+          liabilityId,
+          occurredAt
+        );
+        const operations =
+          current.mode === "sample"
+            ? []
+            : [
+                createLiabilityDeleteOperation(
+                  current,
+                  result.liability,
+                  occurredAt
+                )
+              ];
+        await commitWorkspace(result.workspace, operations);
+      }),
+    [commitWorkspace, enqueue, requireCapabilities]
+  );
+
+  const confirmNoLiabilities = useCallback(
+    async (reviewedAt: string): Promise<NativeLiabilityReview> =>
+      enqueue(async () => {
+        requireCapabilities("liability.write");
+        const current = workspaceRef.current;
+        if (!current) {
+          throw new Error(
+            "Choose a workspace before reviewing liabilities."
+          );
+        }
+        const result = confirmNoLiabilitiesInWorkspace(
+          current,
+          reviewedAt,
+          { ...mutationContext, today }
+        );
+        const operations =
+          current.mode === "sample"
+            ? []
+            : [createLiabilityReviewOperation(current, result)];
+        await commitWorkspace(result.workspace, operations);
+        return result.review;
       }),
     [commitWorkspace, enqueue, requireCapabilities]
   );
@@ -2242,18 +2673,65 @@ export function WorkspaceProvider({
         exportedAt: now(),
         warning:
           "Readable JSON is not an encrypted Recovery Kit or automatic backup.",
-        workspace: current
+        workspace: workspaceVisibleToRole(current, permissionRole)
       },
       null,
       2
     );
-  }, [can]);
+  }, [can, permissionRole]);
 
+  const visibleWorkspace = useMemo(
+    () =>
+      workspace
+        ? workspaceVisibleToRole(workspace, permissionRole)
+        : null,
+    [permissionRole, workspace]
+  );
+  const pendingOperationCount = useMemo(
+    () =>
+      pendingOperationCountVisibleToRole(
+        pendingOperationCounts,
+        permissionRole
+      ),
+    [pendingOperationCounts, permissionRole]
+  );
+  const visibleSync = useMemo(
+    () =>
+      syncRuntimeVisibleToRole(
+        sync,
+        workspace,
+        permissionRole,
+        syncTransport && accessKind === "authenticated"
+          ? "idle"
+          : "local-only"
+      ),
+    [
+      accessKind,
+      permissionRole,
+      sync,
+      syncTransport,
+      workspace
+    ]
+  );
   const recordedPortfolioValues = useMemo(
-    () => (workspace ? getPortfolioValueRecords(workspace) : []),
-    [workspace]
+    () =>
+      visibleWorkspace
+        ? getPortfolioValueRecords(visibleWorkspace)
+        : [],
+    [visibleWorkspace]
   );
   const recordedAssetValues = recordedPortfolioValues;
+  const liabilities = useMemo(
+    () => (visibleWorkspace ? getLiabilities(visibleWorkspace) : []),
+    [visibleWorkspace]
+  );
+  const liabilityReview = useMemo(
+    () =>
+      visibleWorkspace
+        ? getLiabilityReview(visibleWorkspace)
+        : null,
+    [visibleWorkspace]
+  );
   const attachmentStore =
     storageReady &&
     openedAttachmentStore?.bindingKey === vaultBindingKey
@@ -2279,7 +2757,7 @@ export function WorkspaceProvider({
       revisionRef.current = revision;
       workspaceRef.current = restored;
       setWorkspace(restored);
-      setPendingOperationCount(0);
+      setPendingOperationCounts({ total: 0, liability: 0 });
       setError(null);
       setBootstrap({ status: "ready", lastError: null });
       setSync({
@@ -2303,7 +2781,12 @@ export function WorkspaceProvider({
         attachmentStore: recoveryVaultReady
           ? attachmentStore
           : null,
-        currentWorkspace: () => workspaceRef.current,
+        currentWorkspace: () => {
+          const current = workspaceRef.current;
+          return current
+            ? workspaceVisibleToRole(current, permissionRole)
+            : null;
+        },
         currentHouseholdId: () => boundHouseholdId,
         currentDeviceId: () => installationDeviceIdRef.current,
         runExclusive: runRecoveryExclusive,
@@ -2313,6 +2796,7 @@ export function WorkspaceProvider({
       attachmentStore,
       boundHouseholdId,
       publishRecoveredWorkspace,
+      permissionRole,
       recoveryVaultReady,
       repository,
       runRecoveryExclusive
@@ -2328,7 +2812,9 @@ export function WorkspaceProvider({
 
   const value = useMemo<WorkspaceContextValue>(
     () => ({
-      workspace,
+      workspace: visibleWorkspace,
+      liabilities,
+      liabilityReview,
       recordedPortfolioValues,
       recordedAssetValues,
       loading,
@@ -2343,7 +2829,7 @@ export function WorkspaceProvider({
       },
       pendingOperationCount,
       bootstrap,
-      sync,
+      sync: visibleSync,
       permissionRole,
       can,
       retryBootstrap,
@@ -2362,6 +2848,11 @@ export function WorkspaceProvider({
       setEvidenceReviewStatus,
       recordAssetValue,
       recordPortfolioValue: recordAssetValue,
+      createLiability,
+      updateLiability,
+      setLiabilityLifecycle,
+      deleteLiability,
+      confirmNoLiabilities,
       markRetrieved,
       changeLanguage,
       renameHousehold: renameCurrentHousehold,
@@ -2376,12 +2867,17 @@ export function WorkspaceProvider({
       attachmentStore,
       bootstrap,
       can,
+      confirmNoLiabilities,
       createAsset,
+      createLiability,
       createPlace,
       createPlaceSpace,
       error,
+      deleteLiability,
       exportReadableSnapshot,
       loading,
+      liabilities,
+      liabilityReview,
       markRetrieved,
       pendingOperationCount,
       permissionRole,
@@ -2396,16 +2892,18 @@ export function WorkspaceProvider({
       renameCurrentHousehold,
       saving,
       setAssetLifecycle,
+      setLiabilityLifecycle,
       setEvidenceReviewStatus,
-      sync,
+      visibleSync,
       syncNow,
       storageReady,
       startWorkspace,
       updateAsset,
+      updateLiability,
       updatePlaceBasics,
       updatePlacePin,
       updatePlaceSpace,
-      workspace
+      visibleWorkspace
     ]
   );
 

@@ -1,6 +1,7 @@
 import type {
   NativeAsset,
   NativeEvidence,
+  NativeLiability,
   NativeMember,
   NativePlace,
   NativePlaceDocument,
@@ -558,6 +559,65 @@ export const SAMPLE_PORTFOLIO_VALUES: PortfolioValueRecord[] = [
     asOf: "2026-07-22T00:00:00.000Z",
     updatedAt: FIXTURE_TIME,
     source: "user-entered"
+  },
+  {
+    id: "sample-value-mortgage",
+    householdId: SAMPLE_HOUSEHOLD_ID,
+    subject: {
+      kind: "liability",
+      liabilityId: "liability-mortgage"
+    },
+    liabilityId: "liability-mortgage",
+    version: 1,
+    amountMinor: 215_000_000,
+    currency: "QAR",
+    asOf: "2026-07-23",
+    updatedAt: FIXTURE_TIME,
+    source: "user-entered",
+    syncStatus: "on-device"
+  },
+  {
+    id: "sample-value-card",
+    householdId: SAMPLE_HOUSEHOLD_ID,
+    subject: {
+      kind: "liability",
+      liabilityId: "liability-card"
+    },
+    liabilityId: "liability-card",
+    version: 1,
+    amountMinor: 350_000,
+    currency: "USD",
+    asOf: "2026-07-24",
+    updatedAt: FIXTURE_TIME,
+    source: "user-entered",
+    syncStatus: "on-device"
+  }
+];
+
+export const SAMPLE_LIABILITIES: NativeLiability[] = [
+  {
+    id: "liability-mortgage",
+    householdId: SAMPLE_HOUSEHOLD_ID,
+    version: 1,
+    name: "West Bay Home mortgage",
+    kind: "mortgage",
+    lifecycleStatus: "active",
+    archivedAt: null,
+    syncStatus: "on-device",
+    createdAt: "2026-07-10T09:00:00.000Z",
+    updatedAt: FIXTURE_TIME
+  },
+  {
+    id: "liability-card",
+    householdId: SAMPLE_HOUSEHOLD_ID,
+    version: 1,
+    name: "Travel card balance",
+    kind: "credit-card",
+    lifecycleStatus: "active",
+    archivedAt: null,
+    syncStatus: "on-device",
+    createdAt: "2026-07-12T09:00:00.000Z",
+    updatedAt: FIXTURE_TIME
   }
 ];
 
@@ -610,6 +670,8 @@ export function createWorkspace(
       placeDocuments: samplePlaceDocuments,
       assets: sampleAssets,
       evidence: sampleEvidence,
+      liabilities: SAMPLE_LIABILITIES,
+      liabilityTombstones: [],
       members: sampleMembers,
       activity: [],
       portfolioValueRecords: SAMPLE_PORTFOLIO_VALUES,
@@ -633,6 +695,8 @@ export function createWorkspace(
     placeDocuments: [],
     assets: [],
     evidence: [],
+    liabilities: [],
+    liabilityTombstones: [],
     members: [
       {
         id: identity.ownerMemberId,

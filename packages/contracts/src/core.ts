@@ -6,6 +6,18 @@ export type DeviceId = EntityId;
 export type PlaceId = EntityId;
 export type SpaceId = EntityId;
 export type AssetId = EntityId;
+export type LiabilityId = EntityId;
+export type LiabilityKind =
+  | "mortgage"
+  | "vehicle-loan"
+  | "personal-loan"
+  | "credit-card"
+  | "education-loan"
+  | "installment"
+  | "tax"
+  | "business"
+  | "family-debt"
+  | "other";
 export type EvidenceId = EntityId;
 export type EvidenceVersionId = EntityId;
 export type PlaceDocumentId = EntityId;
@@ -31,6 +43,8 @@ export type PermissionCapability =
   | "place.write"
   | "asset.read"
   | "asset.write"
+  | "liability.read"
+  | "liability.write"
   | "evidence.read"
   | "evidence.write"
   | "member.manage"
@@ -45,6 +59,8 @@ export const ROLE_CAPABILITIES = {
     "place.write",
     "asset.read",
     "asset.write",
+    "liability.read",
+    "liability.write",
     "evidence.read",
     "evidence.write",
     "member.manage",

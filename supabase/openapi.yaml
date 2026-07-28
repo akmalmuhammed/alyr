@@ -788,6 +788,22 @@ components:
         version:
           type: integer
           minimum: 1
+    LiabilityKind:
+      type: string
+      description: >
+        Closed vocabulary used by liability.create and liability.update.
+        Dated balances are sent separately through value.create/value.update.
+      enum:
+        - mortgage
+        - vehicle-loan
+        - personal-loan
+        - credit-card
+        - education-loan
+        - installment
+        - tax
+        - business
+        - family-debt
+        - other
     DomainCommand:
       type: object
       additionalProperties: false
@@ -841,6 +857,12 @@ components:
             - value.create
             - value.update
             - value.delete
+            - liability.create
+            - liability.update
+            - liability.archive
+            - liability.restore
+            - liability.delete
+            - liability-review.set
         aggregateId:
           type:
             - string

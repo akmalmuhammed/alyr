@@ -8,26 +8,9 @@ import {
   portfolioValuedCoverage,
   type PortfolioReviewIntent
 } from "@/components/PortfolioDashboard";
-import type { PortfolioValueRecord } from "@/domain/portfolio";
+import { getPortfolioValueRecords } from "@/domain/portfolio";
 import { createWorkspace } from "@/domain/sample";
 import { itemCount } from "@/i18n/coreJourneyCopy";
-
-function value(
-  id: string,
-  assetId: string,
-  amountMinor: number,
-  currency: string
-): PortfolioValueRecord {
-  return {
-    id,
-    assetId,
-    amountMinor,
-    currency,
-    asOf: "2026-07-27T00:00:00.000Z",
-    updatedAt: "2026-07-27T10:00:00.000Z",
-    source: "user-entered"
-  };
-}
 
 describe("PortfolioDashboard", () => {
   it("shows separated illustrative sample values without implying live prices", async () => {
@@ -40,6 +23,9 @@ describe("PortfolioDashboard", () => {
 
     expect(screen.getByText("Portfolio")).toBeTruthy();
     expect(screen.getByLabelText("SAMPLE WORKSPACE")).toBeTruthy();
+    expect(screen.getByText("TRACKED NET POSITION")).toBeTruthy();
+    expect(screen.getByText(/QAR\s*5,047,500\.00/u)).toBeTruthy();
+    expect(screen.getByText(/USD\s*10,200\.00/u)).toBeTruthy();
     expect(screen.getAllByText(/QAR\s*7,197,500\.00/u).length).toBeGreaterThan(0);
     expect(screen.getAllByText(/USD\s*13,700\.00/u).length).toBeGreaterThan(0);
     expect(
@@ -49,9 +35,11 @@ describe("PortfolioDashboard", () => {
     ).toBeTruthy();
     expect(
       screen.getByText(
-        "Currencies stay separate. No exchange rate has been applied."
+        "Currencies stay separate. No exchange rate is applied."
       )
     ).toBeTruthy();
+    expect(screen.getByText("West Bay Home mortgage")).toBeTruthy();
+    expect(screen.getByText("Travel card balance")).toBeTruthy();
     expect(screen.getAllByText("100%").length).toBeGreaterThan(0);
     expect(screen.getAllByText("West Bay Home").length).toBeGreaterThan(1);
   });
@@ -60,50 +48,94 @@ describe("PortfolioDashboard", () => {
     const screen = await render(
       <PortfolioDashboard workspace={createWorkspace("sample")} />
     );
-    const explain = screen.getByText("Explain this number");
+    const explain = screen.getByText("How this is calculated");
 
     await fireEvent.press(explain);
 
-    expect(screen.getByText("What is included")).toBeTruthy();
+    expect(screen.getByText("Calculation boundary")).toBeTruthy();
     expect(
       screen.getByText(
-        "Unvalued items are excluded—not treated as zero."
+        "Missing values stay missing and are never treated as zero."
       )
     ).toBeTruthy();
     expect(
       screen.getByText(
-        "No live prices, appraisal, liabilities, taxes or selling costs."
+        "Each currency is calculated independently; currencies are never combined."
       )
     ).toBeTruthy();
-    expect(screen.getByText("Hide explanation")).toBeTruthy();
+    expect(screen.getByText("Hide calculation details")).toBeTruthy();
   });
 
-  it("shows currency-grouped totals and never labels them net worth", async () => {
-    const values = [
-      value("gmt", "asset-gmt", 123_450, "QAR"),
-      value("heritage", "asset-heritage", 500_000, "QAR"),
-      value("car", "asset-roadster", 2_000_000, "USD")
-    ];
+  it("shows currency-grouped subtraction without claiming complete net worth", async () => {
     const screen = await render(
       <PortfolioDashboard
         amountsHidden={false}
-        valueRecords={values}
         workspace={createWorkspace("sample")}
       />
     );
 
-    expect(screen.getAllByText(/QAR\s*6,234\.50/u).length).toBeGreaterThan(0);
-    expect(screen.getAllByText(/USD\s*20,000\.00/u).length).toBeGreaterThan(0);
+    expect(screen.getByText(/QAR\s*5,047,500\.00/u)).toBeTruthy();
+    expect(screen.getByText(/USD\s*10,200\.00/u)).toBeTruthy();
     expect(
       screen.getByText(
-        "Currencies stay separate. No exchange rate has been applied."
+        "Currencies stay separate. No exchange rate is applied."
       )
     ).toBeTruthy();
     expect(
       screen.getByText(
-        "This is not net worth. Liabilities, taxes and selling costs are not tracked."
+        "Recorded assets minus recorded liabilities—not a bank balance, live valuation or complete statement of net worth."
       )
     ).toBeTruthy();
+    expect(screen.queryByText(/^Net worth$/iu)).toBeNull();
+  });
+
+  it("retains a negative net position sign in visual and assistive output", async () => {
+    const sample = createWorkspace("sample");
+    const valueRecords = getPortfolioValueRecords(sample).map(
+      (record) =>
+        record.liabilityId === "liability-mortgage"
+          ? { ...record, amountMinor: 800_000_000 }
+          : record
+    );
+    const screen = await render(
+      <PortfolioDashboard
+        amountsHidden={false}
+        valueRecords={valueRecords}
+        workspace={sample}
+      />
+    );
+
+    expect(screen.getByText("QAR −802,500.00")).toBeTruthy();
+    expect(
+      screen.getByLabelText(/Tracked net position: QAR −802,500\.00/u)
+    ).toBeTruthy();
+  });
+
+  it("shows an honest not-started state with both first actions available", async () => {
+    const addAsset = jest.fn();
+    const addLiability = jest.fn();
+    const screen = await render(
+      <PortfolioDashboard
+        onAddAsset={addAsset}
+        onAddLiability={addLiability}
+        workspace={createWorkspace("personal")}
+      />
+    );
+
+    expect(screen.getByText("Review to calculate")).toBeTruthy();
+    expect(
+      screen.getByText(
+        "Start with one asset or liability to build this view."
+      )
+    ).toBeTruthy();
+    expect(
+      screen.getByText("No active liabilities recorded")
+    ).toBeTruthy();
+
+    await fireEvent.press(screen.getByTestId("liability-add"));
+    await fireEvent.press(screen.getByText("Add your first item"));
+    expect(addLiability).toHaveBeenCalledTimes(1);
+    expect(addAsset).toHaveBeenCalledTimes(1);
   });
 
   it("starts hidden and never leaks amounts through accessibility labels", async () => {
@@ -117,7 +149,11 @@ describe("PortfolioDashboard", () => {
       />
     );
 
-    expect(screen.getByLabelText("Show recorded amounts")).toBeTruthy();
+    expect(
+      screen.getByLabelText("Show tracked financial amounts")
+    ).toBeTruthy();
+    expect(screen.queryByText(/QAR\s*5,047,500\.00/u)).toBeNull();
+    expect(screen.queryByText(/QAR\s*2,150,000\.00/u)).toBeNull();
     expect(screen.queryAllByText(/QAR\s*7,197,500\.00/u)).toHaveLength(0);
     expect(screen.queryAllByText(/USD\s*13,700\.00/u)).toHaveLength(0);
     expect(
@@ -130,23 +166,50 @@ describe("PortfolioDashboard", () => {
         "West Bay Home, QAR, recorded amount hidden"
       )
     ).toBeTruthy();
-    expect(screen.getAllByText("QAR \u2022\u2022\u2022\u2022\u2022\u2022").length).toBeGreaterThan(1);
-    expect(screen.getAllByText("USD \u2022\u2022\u2022\u2022\u2022\u2022").length).toBeGreaterThan(1);
+    expect(
+      screen.getByLabelText(
+        /West Bay Home mortgage, Mortgage, QAR, recorded amount hidden/u
+      )
+    ).toBeTruthy();
+    expect(
+      screen.getAllByText("QAR \u2022\u2022\u2022\u2022\u2022\u2022")
+        .length
+    ).toBeGreaterThan(1);
+    expect(
+      screen.getAllByText("USD \u2022\u2022\u2022\u2022\u2022\u2022")
+        .length
+    ).toBeGreaterThan(1);
     expect(screen.getByText("QAR")).toBeTruthy();
     expect(screen.getByText("USD")).toBeTruthy();
     expect(screen.getAllByText(/items?$/u).length).toBeGreaterThan(0);
 
-    await fireEvent.press(screen.getByLabelText("Show recorded amounts"));
+    await fireEvent.press(
+      screen.getByLabelText("Show tracked financial amounts")
+    );
 
-    expect(screen.getByLabelText("Hide recorded amounts")).toBeTruthy();
+    expect(
+      screen.getByLabelText("Hide tracked financial amounts")
+    ).toBeTruthy();
+    expect(screen.getByText(/QAR\s*5,047,500\.00/u)).toBeTruthy();
     expect(screen.getAllByText(/QAR\s*7,197,500\.00/u).length).toBeGreaterThan(0);
     expect(
       screen.getByLabelText(/GMT-Master II, QAR\s*52,500\.00/u)
     ).toBeTruthy();
 
-    await fireEvent.press(screen.getByLabelText("Hide recorded amounts"));
-    expect(screen.getByLabelText("Show recorded amounts")).toBeTruthy();
-    expect(screen.queryByLabelText(/GMT-Master II, QAR\s*52,500\.00/u)).toBeNull();
+    await fireEvent.press(
+      screen.getByLabelText("Hide tracked financial amounts")
+    );
+    expect(
+      screen.getByLabelText("Show tracked financial amounts")
+    ).toBeTruthy();
+    expect(
+      screen.queryByLabelText(/GMT-Master II, QAR\s*52,500\.00/u)
+    ).toBeNull();
+    expect(
+      screen.queryByLabelText(
+        /West Bay Home mortgage.+QAR\s*2,150,000\.00/u
+      )
+    ).toBeNull();
   });
 
   it("localizes the hidden-by-default control in Arabic", async () => {
@@ -189,6 +252,27 @@ describe("PortfolioDashboard", () => {
     expect(openSubject).toHaveBeenCalledWith({
       kind: "place",
       placeId: "place-west-bay"
+    });
+  });
+
+  it("opens a liability as its own financial record", async () => {
+    const openSubject = jest.fn();
+    const screen = await render(
+      <PortfolioDashboard
+        amountsHidden={false}
+        onOpenSubject={openSubject}
+        workspace={createWorkspace("sample")}
+      />
+    );
+
+    await fireEvent.press(
+      screen.getByLabelText(
+        /West Bay Home mortgage, Mortgage, QAR\s*2,150,000\.00/u
+      )
+    );
+    expect(openSubject).toHaveBeenCalledWith({
+      kind: "liability",
+      liabilityId: "liability-mortgage"
     });
   });
 
@@ -259,7 +343,8 @@ describe("PortfolioDashboard", () => {
     );
 
     expect(screen.getByText("المحفظة")).toBeTruthy();
-    expect(screen.getByText("العقارات")).toBeTruthy();
+    expect(screen.getByText("صافي المركز المسجّل")).toBeTruthy();
+    expect(screen.getByText("الالتزامات")).toBeTruthy();
     expect(screen.getByText(/ساعة/u)).toBeTruthy();
     expect(screen.queryByText("Watch")).toBeNull();
     expect(screen.getByText(/عقار.*بتاريخ/us)).toBeTruthy();
@@ -267,7 +352,7 @@ describe("PortfolioDashboard", () => {
     expect(screen.getByLabelText(/QAR.+USD/us)).toBeTruthy();
     expect(
       screen.getByText(
-        "هذا ليس صافي الثروة؛ فالالتزامات والضرائب وتكاليف البيع غير مسجّلة."
+        "الأصول المسجّلة ناقص الالتزامات المسجّلة؛ وليس رصيدًا مصرفيًا أو تقييمًا مباشرًا أو بيانًا كاملًا لصافي الثروة."
       )
     ).toBeTruthy();
   });
@@ -298,9 +383,6 @@ describe("PortfolioDashboard", () => {
         "ar"
       )
     ).toBe("لا يحتاج إلى مكان فعلي");
-    expect(
-      screen.getByText(portfolioValuedCoverage(6, 8, "ar"))
-    ).toBeTruthy();
     expect(screen.getAllByText("٤ سجلات").length).toBeGreaterThan(0);
     expect(screen.getAllByText("سجلان").length).toBeGreaterThan(0);
     expect(screen.getByText("لا يحتاج إلى مكان فعلي")).toBeTruthy();

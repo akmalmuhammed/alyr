@@ -1,0 +1,75 @@
+appId: com.alyr.continuity
+name: Liability capture, balance history and deliberate deletion
+tags:
+  - smoke
+  - portfolio
+  - liability
+env:
+  LIABILITY_NAME: "Pilot home mortgage"
+  UPDATED_AMOUNT: "245000"
+---
+- runFlow:
+    file: "../subflows/start-sample-workspace.yaml"
+- tapOn:
+    id: "today-portfolio-entry"
+    enabled: true
+- extendedWaitUntil:
+    visible:
+      id: "portfolio-screen"
+    timeout: 15000
+- assertVisible:
+    id: "portfolio-net-position"
+- assertVisible:
+    id: "portfolio-net-position-visibility"
+- assertVisible:
+    id: "liabilities-list"
+- runFlow:
+    file: "../subflows/add-liability.yaml"
+    env:
+      LIABILITY_NAME: "${LIABILITY_NAME}"
+      LIABILITY_CATEGORY: "Mortgage"
+      LIABILITY_AMOUNT: "250000"
+      LIABILITY_CURRENCY: "QAR"
+- tapOn:
+    text: "${LIABILITY_NAME}"
+    enabled: true
+- extendedWaitUntil:
+    visible:
+      id: "liability-detail-screen"
+    timeout: 15000
+- assertVisible:
+    id: "liability-status"
+- tapOn:
+    id: "liability-edit"
+    enabled: true
+- extendedWaitUntil:
+    visible:
+      id: "liability-balance-screen"
+    timeout: 15000
+- tapOn:
+    id: "liability-amount"
+    enabled: true
+- eraseText: 20
+- inputText: "${UPDATED_AMOUNT}"
+- hideKeyboard
+- tapOn:
+    id: "liability-balance-save"
+    enabled: true
+- extendedWaitUntil:
+    visible:
+      id: "liability-detail-screen"
+    timeout: 15000
+- assertVisible: "${LIABILITY_NAME}"
+- tapOn:
+    id: "liability-delete"
+    enabled: true
+- assertVisible:
+    id: "liability-delete-confirm"
+- tapOn:
+    id: "liability-delete-confirm"
+    enabled: true
+- extendedWaitUntil:
+    visible:
+      id: "liabilities-list"
+    timeout: 15000
+- assertNotVisible: "${LIABILITY_NAME}"
