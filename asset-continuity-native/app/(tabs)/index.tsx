@@ -4,6 +4,7 @@ import {
   ArrowRight,
   Camera,
   ChartDonut,
+  LockKey,
   MapPin,
   Plus
 } from "phosphor-react-native";
@@ -16,6 +17,7 @@ import {
 } from "react-native";
 import Svg, { Circle, Path } from "react-native-svg";
 
+import { useAuthFlow } from "@/auth/AuthFlowProvider";
 import { AssetListItem } from "@/components/AssetListItem";
 import { AssetPhotoPreview } from "@/components/AssetPhotoPreview";
 import { PermissionNotice } from "@/components/PermissionDenied";
@@ -57,13 +59,13 @@ import {
   useCoreJourneyCopy
 } from "@/i18n/coreJourneyCopy";
 import { useWorkspace } from "@/state/WorkspaceProvider";
-import { usePortfolioPrivacy } from "@/privacy/PortfolioPrivacyProvider";
 import {
   formatRecordedValue,
   formatSignedRecordedValue,
   valueVisibilityFromHidden
 } from "@/privacy/ValueVisibility";
 import { getPortfolioExperienceCopy } from "@/i18n/portfolioCopy";
+import { sampleActivationDestination } from "@/navigation/sampleActivation";
 import {
   colors,
   radius,
@@ -251,6 +253,7 @@ function TodayPortfolioCard({
 
 export default function HomeScreen() {
   const router = useRouter();
+  const { mode, session } = useAuthFlow();
   const {
     can,
     pendingOperationCount,
@@ -260,10 +263,15 @@ export default function HomeScreen() {
   } = useWorkspace();
   const { copy, language, rtl } = useCoreJourneyCopy();
   const financialCopy = getPortfolioExperienceCopy(language);
-  const { amountsHidden } = usePortfolioPrivacy();
   if (!workspace) return null;
   const canWriteAssets = can("asset.write");
   const canWritePlaces = can("place.write");
+  const sampleActivationRoute = sampleActivationDestination({
+    canManageHousehold: can("household.manage"),
+    mode,
+    session,
+    workspaceMode: workspace.mode
+  });
   const ForwardIcon = rtl ? ArrowLeft : ArrowRight;
   const activeAssets = workspace.assets.filter(isAssetActive);
 
@@ -342,7 +350,10 @@ export default function HomeScreen() {
     placePinStatus.confirmationNeededCount,
     language
   );
-  const valueVisibility = valueVisibilityFromHidden(amountsHidden);
+  // Today is glanceable and may appear while someone is looking over the
+  // owner's shoulder. Exact financial amounts are revealed only inside the
+  // dedicated Portfolio surface.
+  const valueVisibility = valueVisibilityFromHidden(true);
   const portfolioCard = (() => {
     if (can("liability.read")) {
       const netPosition = buildNetPositionSnapshot(workspace);
@@ -372,11 +383,31 @@ export default function HomeScreen() {
           ? financialCopy.netPosition.noTotal
           : totals.map((total) => total.exact).join("; ");
       const status = financialCopy.netPosition.status[netPosition.status];
+      const remainingCurrencyCount =
+        netPosition.byCurrency.length - totals.length;
+      const moreCurrencyLabel =
+        remainingCurrencyCount > 0
+          ? financialCopy.netPosition.moreCurrencies(
+              remainingCurrencyCount
+            )
+          : null;
       return {
-        accessibilityLabel: `${financialCopy.netPosition.net}: ${summary}. ${status}`,
+        accessibilityLabel: [
+          `${financialCopy.netPosition.net}: ${summary}.`,
+          status,
+          moreCurrencyLabel
+        ]
+          .filter(Boolean)
+          .join(" "),
         emptyLabel: financialCopy.netPosition.noTotal,
         label: financialCopy.netPosition.eyebrow,
-        meta: `${status} \u00B7 ${financialCopy.netPosition.currenciesSeparate}`,
+        meta: [
+          status,
+          financialCopy.netPosition.currenciesSeparate,
+          moreCurrencyLabel
+        ]
+          .filter(Boolean)
+          .join(" \u00B7 "),
         totals
       };
     }
@@ -433,16 +464,35 @@ export default function HomeScreen() {
             portfolio.valuableCount,
             language
           )} items and properties ${copy.today.valueCoverage}`;
+    const remainingCurrencyCount =
+      portfolio.currencyTotals.length - totals.length;
+    const moreCurrencyLabel =
+      remainingCurrencyCount > 0
+        ? financialCopy.netPosition.moreCurrencies(
+            remainingCurrencyCount
+          )
+        : null;
     return {
-      accessibilityLabel: portfolioAccessibilityLabel(
-        summary,
-        portfolio.valuedEntryCount,
-        portfolio.valuableCount,
-        language
-      ),
+      accessibilityLabel: [
+        portfolioAccessibilityLabel(
+          summary,
+          portfolio.valuedEntryCount,
+          portfolio.valuableCount,
+          language
+        ),
+        moreCurrencyLabel
+      ]
+        .filter(Boolean)
+        .join(". "),
       emptyLabel: copy.today.noValues,
       label: copy.today.portfolio,
-      meta: `${coverage} \u00B7 ${copy.today.currenciesSeparate}`,
+      meta: [
+        coverage,
+        copy.today.currenciesSeparate,
+        moreCurrencyLabel
+      ]
+        .filter(Boolean)
+        .join(" \u00B7 "),
       totals
     };
   })();
@@ -494,6 +544,47 @@ export default function HomeScreen() {
         <ScreenTitle>{copy.today.title}</ScreenTitle>
         <BodyText muted>{summary}</BodyText>
       </View>
+
+      {sampleActivationRoute ? (
+        <View
+          style={styles.sampleActivation}
+          testID="today-sample-activation"
+        >
+          <Text
+            style={[
+              styles.sampleActivationEyebrow,
+              rtl && styles.arabicMedium,
+              rtl && styles.rtlText
+            ]}
+          >
+            {copy.today.sampleNextEyebrow}
+          </Text>
+          <Text
+            accessibilityRole="header"
+            style={[
+              styles.sampleActivationTitle,
+              rtl && styles.arabicMedium,
+              rtl && styles.rtlText
+            ]}
+          >
+            {copy.today.sampleNextTitle}
+          </Text>
+          <Text
+            style={[
+              styles.sampleActivationBody,
+              rtl && styles.arabic,
+              rtl && styles.rtlText
+            ]}
+          >
+            {copy.today.sampleNextBody}
+          </Text>
+          <PrimaryButton
+            icon={LockKey}
+            label={copy.vault.createMyPrivateHousehold}
+            onPress={() => router.push(sampleActivationRoute)}
+          />
+        </View>
+      ) : null}
 
       <SyncTruth
         language={language}
@@ -952,6 +1043,34 @@ const styles = StyleSheet.create({
   heading: {
     gap: spacing.xs
   },
+  sampleActivation: {
+    gap: spacing.xs,
+    paddingVertical: spacing.lg,
+    borderTopWidth: 1,
+    borderBottomWidth: 1,
+    borderColor: colors.borderStrong
+  },
+  sampleActivationEyebrow: {
+    color: colors.textMuted,
+    fontFamily: typography.bodyBold,
+    fontSize: 11,
+    lineHeight: 16,
+    letterSpacing: 1.1
+  },
+  sampleActivationTitle: {
+    color: colors.text,
+    fontFamily: typography.displayBold,
+    fontSize: 24,
+    lineHeight: 30,
+    letterSpacing: -0.35
+  },
+  sampleActivationBody: {
+    marginBottom: spacing.sm,
+    color: colors.textMuted,
+    fontFamily: typography.body,
+    fontSize: 14,
+    lineHeight: 21
+  },
   commandLabel: {
     color: colors.concrete,
     fontFamily: typography.bodyBold,
@@ -1188,10 +1307,12 @@ const styles = StyleSheet.create({
     opacity: 0.65
   },
   arabic: {
-    fontFamily: typography.arabic
+    fontFamily: typography.arabic,
+    letterSpacing: 0
   },
   arabicMedium: {
-    fontFamily: typography.arabicMedium
+    fontFamily: typography.arabicMedium,
+    letterSpacing: 0
   },
   rtlText: {
     textAlign: "right",

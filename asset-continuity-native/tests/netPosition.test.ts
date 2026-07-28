@@ -64,6 +64,39 @@ describe("recorded net position", () => {
     )).toBe(true);
   });
 
+  it("does not require a duplicate liability in every asset currency once the liability register has started", () => {
+    const sample = createWorkspace("sample");
+    const onlyQarMortgage = {
+      ...sample,
+      liabilities: (sample.liabilities ?? []).filter(
+        (liability) => liability.id === "liability-mortgage"
+      ),
+      portfolioValueRecords: getPortfolioValueRecords(sample).filter(
+        (record) =>
+          record.subject?.kind !== "liability" ||
+          record.subject.liabilityId === "liability-mortgage"
+      )
+    };
+
+    const snapshot = buildNetPositionSnapshot(
+      onlyQarMortgage,
+      "2026-07-28"
+    );
+    const usd = snapshot.byCurrency.find(
+      (line) => line.currency === "USD"
+    );
+
+    expect(snapshot.liabilityCoverageComplete).toBe(true);
+    expect(snapshot.status).toBe("partial");
+    expect(usd).toMatchObject({
+      recordedAssetsMinor: 1_370_000,
+      recordedLiabilitiesMinor: 0,
+      recordedNetPositionMinor: 1_370_000,
+      liabilityEntryCount: 0,
+      liabilityCoverage: "no-recorded-liabilities"
+    });
+  });
+
   it("uses a current explicit none-confirmed review without inventing debt", () => {
     const sample = createWorkspace("sample");
     let workspace = sample;
@@ -279,6 +312,27 @@ describe("recorded net position", () => {
       "2026-09-01"
     );
     expect(snapshot.status).toBe("stale");
+    expect(snapshot.staleLiabilityIds).toContain("liability-card");
+  });
+
+  it("keeps an old zero balance inside the normal review window rules", () => {
+    const sample = createWorkspace("sample");
+    const workspace = {
+      ...sample,
+      portfolioValueRecords: getPortfolioValueRecords(sample).map(
+        (record) =>
+          record.subject?.kind === "liability" &&
+          record.subject.liabilityId === "liability-card"
+            ? { ...record, amountMinor: 0 }
+            : record
+      )
+    };
+
+    const snapshot = buildNetPositionSnapshot(
+      workspace,
+      "2026-09-01"
+    );
+
     expect(snapshot.staleLiabilityIds).toContain("liability-card");
   });
 

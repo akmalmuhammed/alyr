@@ -223,6 +223,10 @@ const english = {
     itemsSection: "Recent items",
     demoHousehold: "Demo household",
     privateRegister: "Private register",
+    sampleNextEyebrow: "MAKE IT YOURS",
+    sampleNextTitle: "Start your private record",
+    sampleNextBody:
+      "Sample entries stay out of it. Begin with your own first Place and item.",
     startHere: "START HERE",
     emptyTitle: "Add one thing you would hate to lose track of",
     emptyDetail: "A photo and an honest location are enough for the first save.",
@@ -696,6 +700,10 @@ const arabic = {
     itemsSection: "أحدث الأغراض",
     demoHousehold: "منزل تجريبي",
     privateRegister: "سجل خاص",
+    sampleNextEyebrow: "اجعله سجلك",
+    sampleNextTitle: "ابدأ سجلك الخاص",
+    sampleNextBody:
+      "لن تنتقل السجلات التجريبية إليه. ابدأ بأول مكان وغرض يخصانك.",
     startHere: "ابدأ هنا",
     emptyTitle: "أضف غرضًا واحدًا لا تريد أن تفقد أثره",
     emptyDetail: "تكفي صورة ومعلومة صادقة عن الموقع للحفظ الأول.",

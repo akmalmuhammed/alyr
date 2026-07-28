@@ -5,7 +5,11 @@ import {
   CheckCircle,
   ShieldCheck
 } from "phosphor-react-native";
-import { useEffect, useRef } from "react";
+import {
+  useCallback,
+  useEffect,
+  useRef
+} from "react";
 import { ActivityIndicator, StyleSheet, View } from "react-native";
 
 import { useAuthFlow } from "@/auth/AuthFlowProvider";
@@ -40,19 +44,48 @@ export default function JoinHouseholdScreen() {
     ? params.code[0]
     : params.code;
   const stagedCode = useRef<string | null>(null);
+  const stagingInFlight = useRef(false);
   const acceptanceStarted = useRef(false);
+  const acceptanceInFlight = useRef(false);
+
+  const protectInvitation = useCallback(
+    async (oneTimeCode: string) => {
+      if (stagingInFlight.current) return;
+      stagingInFlight.current = true;
+      clearError();
+      try {
+        const stored = await stageHouseholdInvite(oneTimeCode);
+        if (stored) {
+          // Remove the bearer from visible route state as soon as its
+          // encrypted device-bound copy is durable.
+          router.replace(AUTH_ROUTES.join);
+        }
+      } finally {
+        stagingInFlight.current = false;
+      }
+    },
+    [clearError, router, stageHouseholdInvite]
+  );
+
+  const acceptInvitation = useCallback(async () => {
+    if (acceptanceInFlight.current) return;
+    acceptanceInFlight.current = true;
+    clearError();
+    try {
+      const membership = await acceptPendingHouseholdInvite();
+      if (membership) router.replace("/");
+    } catch {
+      // The auth flow owns the localized, privacy-preserving error state.
+    } finally {
+      acceptanceInFlight.current = false;
+    }
+  }, [acceptPendingHouseholdInvite, clearError, router]);
 
   useEffect(() => {
     if (!rawCode || stagedCode.current === rawCode) return;
     stagedCode.current = rawCode;
-    void stageHouseholdInvite(rawCode).then((stored) => {
-      if (stored) {
-        // Remove the bearer from visible route state as soon as its encrypted
-        // device-bound copy is durable.
-        router.replace(AUTH_ROUTES.join);
-      }
-    });
-  }, [rawCode, router, stageHouseholdInvite]);
+    void protectInvitation(rawCode);
+  }, [protectInvitation, rawCode]);
 
   useEffect(() => {
     if (
@@ -64,14 +97,11 @@ export default function JoinHouseholdScreen() {
       return;
     }
     acceptanceStarted.current = true;
-    void acceptPendingHouseholdInvite().then((membership) => {
-      if (membership) router.replace("/");
-    });
+    void acceptInvitation();
   }, [
-    acceptPendingHouseholdInvite,
+    acceptInvitation,
     bootstrapState,
     pendingHouseholdInvite,
-    router,
     session
   ]);
 
@@ -89,11 +119,43 @@ export default function JoinHouseholdScreen() {
     bootstrapState === "ready" &&
     !loading &&
     (!pendingHouseholdInvite || Boolean(error));
+  const retryableStagingFailure =
+    invalid &&
+    Boolean(rawCode && error?.retryable && !pendingHouseholdInvite);
+  const retryableAcceptanceFailure =
+    invalid &&
+    Boolean(
+      session &&
+        pendingHouseholdInvite &&
+        error?.retryable
+    );
+  const retryableFailure =
+    retryableStagingFailure || retryableAcceptanceFailure;
 
   return (
     <AuthScaffold
       footer={
-        loading ? undefined : invalid ? (
+        loading ? undefined : retryableFailure ? (
+          <AuthActions
+            primary={{
+              label: copy.joinLink.retryAction,
+              icon: ArrowRight,
+              disabled: busy,
+              onPress: () => {
+                if (retryableAcceptanceFailure) {
+                  void acceptInvitation();
+                } else if (rawCode) {
+                  void protectInvitation(rawCode);
+                }
+              }
+            }}
+            secondary={{
+              label: copy.joinLink.cancelAction,
+              disabled: busy,
+              onPress: () => void closeInvitation()
+            }}
+          />
+        ) : invalid ? (
           <AuthActions
             primary={{
               label: copy.joinLink.cancelAction,
@@ -123,18 +185,30 @@ export default function JoinHouseholdScreen() {
       <View style={styles.content}>
         <AuthHeading
           body={
-            invalid
+            retryableAcceptanceFailure
+              ? copy.joinLink.acceptRetryBody
+              : retryableStagingFailure
+                ? copy.joinLink.retryBody
+              : invalid
               ? copy.joinLink.invalidBody
-              : loading && session
-                ? copy.joinLink.acceptingBody
+              : loading
+                ? session
+                  ? copy.joinLink.acceptingBody
+                  : copy.joinLink.protectingBody
                 : copy.joinLink.body
           }
           eyebrow={copy.joinLink.eyebrow}
           title={
-            invalid
+            retryableAcceptanceFailure
+              ? copy.joinLink.acceptRetryTitle
+              : retryableStagingFailure
+                ? copy.joinLink.retryTitle
+              : invalid
               ? copy.joinLink.invalidTitle
-              : loading && session
-                ? copy.joinLink.acceptingTitle
+              : loading
+                ? session
+                  ? copy.joinLink.acceptingTitle
+                  : copy.joinLink.protectingTitle
                 : copy.joinLink.title
           }
         />
@@ -145,9 +219,19 @@ export default function JoinHouseholdScreen() {
           >
             <ActivityIndicator color={colors.text} size="small" />
             <AuthNotice live>
-              {copy.joinLink.acceptingBody}
+              {session
+                ? copy.joinLink.acceptingBody
+                : copy.joinLink.protectingBody}
             </AuthNotice>
           </View>
+        ) : retryableAcceptanceFailure ? (
+          <AuthNotice live tone="attention">
+            {copy.joinLink.acceptRetryBody}
+          </AuthNotice>
+        ) : retryableStagingFailure ? (
+          <AuthNotice live tone="attention">
+            {copy.joinLink.retryBody}
+          </AuthNotice>
         ) : invalid ? (
           <AuthNotice live tone="attention">
             {copy.joinLink.invalidBody}

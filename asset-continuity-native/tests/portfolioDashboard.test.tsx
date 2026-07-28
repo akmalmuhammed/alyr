@@ -1,11 +1,15 @@
-import { fireEvent, render } from "@testing-library/react-native";
+import {
+  fireEvent,
+  render,
+  within
+} from "@testing-library/react-native";
 
 import {
   PortfolioDashboard,
   portfolioEntryCount,
   portfolioLocationBucketLabel,
   portfolioPercentLabel,
-  portfolioValuedCoverage,
+  shouldStackPortfolioFinancialLayout,
   type PortfolioReviewIntent
 } from "@/components/PortfolioDashboard";
 import { getPortfolioValueRecords } from "@/domain/portfolio";
@@ -13,6 +17,12 @@ import { createWorkspace } from "@/domain/sample";
 import { itemCount } from "@/i18n/coreJourneyCopy";
 
 describe("PortfolioDashboard", () => {
+  it("stacks financial rows on narrow screens and large text", () => {
+    expect(shouldStackPortfolioFinancialLayout(320, 1)).toBe(true);
+    expect(shouldStackPortfolioFinancialLayout(390, 1.3)).toBe(true);
+    expect(shouldStackPortfolioFinancialLayout(390, 1)).toBe(false);
+  });
+
   it("shows separated illustrative sample values without implying live prices", async () => {
     const screen = await render(
       <PortfolioDashboard
@@ -25,9 +35,11 @@ describe("PortfolioDashboard", () => {
     expect(screen.getByLabelText("SAMPLE WORKSPACE")).toBeTruthy();
     expect(screen.getByText("TRACKED NET POSITION")).toBeTruthy();
     expect(screen.getByText(/QAR\s*5,047,500\.00/u)).toBeTruthy();
-    expect(screen.getByText(/USD\s*10,200\.00/u)).toBeTruthy();
     expect(screen.getAllByText(/QAR\s*7,197,500\.00/u).length).toBeGreaterThan(0);
+    await fireEvent.press(screen.getByTestId("portfolio-currency-USD"));
+    expect(screen.getByText(/USD\s*10,200\.00/u)).toBeTruthy();
     expect(screen.getAllByText(/USD\s*13,700\.00/u).length).toBeGreaterThan(0);
+    await fireEvent.press(screen.getByText("How this is calculated"));
     expect(
       screen.getByText(
         "Illustrative values are dated sample entries—not live prices or appraisals."
@@ -42,6 +54,37 @@ describe("PortfolioDashboard", () => {
     expect(screen.getByText("Travel card balance")).toBeTruthy();
     expect(screen.getAllByText("100%").length).toBeGreaterThan(0);
     expect(screen.getAllByText("West Bay Home").length).toBeGreaterThan(1);
+  });
+
+  it("shows one currency at a time and updates the hero through an accessible selector", async () => {
+    const screen = await render(
+      <PortfolioDashboard
+        amountsHidden={false}
+        workspace={createWorkspace("sample")}
+      />
+    );
+    const hero = within(screen.getByTestId("portfolio-net-position"));
+    const qar = screen.getByTestId("portfolio-currency-QAR");
+    const usd = screen.getByTestId("portfolio-currency-USD");
+
+    expect(qar.props.accessibilityRole).toBe("radio");
+    expect(qar.props.accessibilityState).toMatchObject({ checked: true });
+    expect(usd.props.accessibilityState).toMatchObject({ checked: false });
+    expect(hero.getByText("QAR 5,047,500.00")).toBeTruthy();
+    expect(hero.queryByText("USD 10,200.00")).toBeNull();
+
+    await fireEvent.press(usd);
+
+    expect(
+      screen.getByTestId("portfolio-currency-QAR").props
+        .accessibilityState
+    ).toMatchObject({ checked: false });
+    expect(
+      screen.getByTestId("portfolio-currency-USD").props
+        .accessibilityState
+    ).toMatchObject({ checked: true });
+    expect(hero.queryByText("QAR 5,047,500.00")).toBeNull();
+    expect(hero.getByText("USD 10,200.00")).toBeTruthy();
   });
 
   it("discloses exactly how recorded value is calculated", async () => {
@@ -75,7 +118,11 @@ describe("PortfolioDashboard", () => {
     );
 
     expect(screen.getByText(/QAR\s*5,047,500\.00/u)).toBeTruthy();
+    expect(screen.queryByText(/USD\s*10,200\.00/u)).toBeNull();
+    await fireEvent.press(screen.getByTestId("portfolio-currency-USD"));
     expect(screen.getByText(/USD\s*10,200\.00/u)).toBeTruthy();
+    expect(screen.queryByText(/QAR\s*5,047,500\.00/u)).toBeNull();
+    await fireEvent.press(screen.getByText("How this is calculated"));
     expect(
       screen.getByText(
         "Currencies stay separate. No exchange rate is applied."
@@ -179,8 +226,8 @@ describe("PortfolioDashboard", () => {
       screen.getAllByText("USD \u2022\u2022\u2022\u2022\u2022\u2022")
         .length
     ).toBeGreaterThan(1);
-    expect(screen.getByText("QAR")).toBeTruthy();
-    expect(screen.getByText("USD")).toBeTruthy();
+    expect(screen.getAllByText("QAR").length).toBeGreaterThan(0);
+    expect(screen.getAllByText("USD").length).toBeGreaterThan(0);
     expect(screen.getAllByText(/items?$/u).length).toBeGreaterThan(0);
 
     await fireEvent.press(
@@ -210,6 +257,150 @@ describe("PortfolioDashboard", () => {
         /West Bay Home mortgage.+QAR\s*2,150,000\.00/u
       )
     ).toBeNull();
+  });
+
+  it("does not demand a duplicate liability for an asset-only currency", async () => {
+    const sample = createWorkspace("sample");
+    const workspace = {
+      ...sample,
+      liabilities: (sample.liabilities ?? []).filter(
+        (liability) => liability.id === "liability-mortgage"
+      ),
+      portfolioValueRecords: getPortfolioValueRecords(sample).filter(
+        (record) =>
+          record.subject?.kind !== "liability" ||
+          record.subject.liabilityId === "liability-mortgage"
+      )
+    };
+    const screen = await render(
+      <PortfolioDashboard
+        amountsHidden={false}
+        workspace={workspace}
+      />
+    );
+    const hero = within(screen.getByTestId("portfolio-net-position"));
+
+    await fireEvent.press(screen.getByTestId("portfolio-currency-USD"));
+
+    expect(hero.getAllByText("USD 13,700.00")).toHaveLength(2);
+    expect(
+      hero.getByText("None recorded in this currency")
+    ).toBeTruthy();
+    expect(
+      hero.queryByText("Liability review required")
+    ).toBeNull();
+  });
+
+  it("shows category icons, zero-balance review truth and combined sync labels", async () => {
+    const sample = createWorkspace("sample");
+    const workspace = {
+      ...sample,
+      liabilities: (sample.liabilities ?? []).map((liability) => ({
+        ...liability,
+        syncStatus:
+          liability.id === "liability-mortgage"
+            ? ("queued" as const)
+            : ("synced" as const)
+      })),
+      portfolioValueRecords: getPortfolioValueRecords(sample).map(
+        (record) => {
+          if (record.subject?.kind !== "liability") {
+            return record;
+          }
+          if (record.subject.liabilityId === "liability-card") {
+            return {
+              ...record,
+              amountMinor: 0,
+              asOf: "2020-01-01",
+              syncStatus: "queued" as const
+            };
+          }
+          return {
+            ...record,
+            syncStatus: "synced" as const
+          };
+        }
+      )
+    };
+    const screen = await render(
+      <PortfolioDashboard
+        amountsHidden={false}
+        onOpenSubject={jest.fn()}
+        workspace={workspace}
+      />
+    );
+    const mortgage = within(
+      screen.getByTestId("liability-row-liability-mortgage")
+    );
+    const card = within(
+      screen.getByTestId("liability-row-liability-card")
+    );
+
+    expect(
+      mortgage.getByTestId("phosphor-react-native-house-regular")
+    ).toBeTruthy();
+    expect(
+      card.getByTestId("phosphor-react-native-credit-card-regular")
+    ).toBeTruthy();
+    expect(mortgage.getByText("Active · Queued")).toBeTruthy();
+    expect(
+      card.getByText("Credit card · Zero balance recorded · 1 Jan 2020")
+    ).toBeTruthy();
+    expect(
+      card.getByText("Active · Balance needs review · Queued")
+    ).toBeTruthy();
+  });
+
+  it("keeps archived liabilities collapsed until the user asks for history", async () => {
+    const sample = createWorkspace("sample");
+    const workspace = {
+      ...sample,
+      liabilities: (sample.liabilities ?? []).map((liability) =>
+        liability.id === "liability-card"
+          ? {
+              ...liability,
+              lifecycleStatus: "archived" as const,
+              archivedAt: "2026-07-25T12:00:00.000Z"
+            }
+          : liability
+      )
+    };
+    const screen = await render(
+      <PortfolioDashboard
+        amountsHidden={false}
+        onOpenSubject={jest.fn()}
+        workspace={workspace}
+      />
+    );
+    const toggle = screen.getByTestId("liability-archived-toggle");
+
+    expect(toggle.props.accessibilityState).toMatchObject({
+      expanded: false
+    });
+    expect(screen.getByText("1 archived liability")).toBeTruthy();
+    expect(
+      screen.queryByTestId("liability-row-liability-card")
+    ).toBeNull();
+    expect(
+      within(toggle).getByTestId(
+        "phosphor-react-native-caret-down-undefined"
+      )
+    ).toBeTruthy();
+
+    await fireEvent.press(toggle);
+
+    expect(
+      screen.getByTestId("liability-archived-toggle").props
+        .accessibilityState
+    ).toMatchObject({ expanded: true });
+    expect(
+      screen.getByTestId("liability-row-liability-card")
+    ).toBeTruthy();
+    expect(
+      within(screen.getByTestId("liability-archived-toggle")).getByTestId(
+        "phosphor-react-native-caret-up-undefined"
+      )
+    ).toBeTruthy();
   });
 
   it("localizes the hidden-by-default control in Arabic", async () => {
@@ -348,8 +539,18 @@ describe("PortfolioDashboard", () => {
     expect(screen.getByText(/ساعة/u)).toBeTruthy();
     expect(screen.queryByText("Watch")).toBeNull();
     expect(screen.getByText(/عقار.*بتاريخ/us)).toBeTruthy();
-    expect(screen.getByText(/على هذا الجهاز/u)).toBeTruthy();
-    expect(screen.getByLabelText(/QAR.+USD/us)).toBeTruthy();
+    expect(
+      screen.getAllByText(/على هذا الجهاز/u).length
+    ).toBeGreaterThan(0);
+    expect(
+      screen.getByTestId("portfolio-currency-QAR").props
+        .accessibilityState
+    ).toMatchObject({ checked: true });
+    expect(
+      screen.getByTestId("portfolio-currency-USD").props
+        .accessibilityState
+    ).toMatchObject({ checked: false });
+    await fireEvent.press(screen.getByText("كيف يُحتسب هذا الرقم؟"));
     expect(
       screen.getByText(
         "الأصول المسجّلة ناقص الالتزامات المسجّلة؛ وليس رصيدًا مصرفيًا أو تقييمًا مباشرًا أو بيانًا كاملًا لصافي الثروة."

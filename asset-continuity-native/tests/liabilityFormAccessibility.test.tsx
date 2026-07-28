@@ -1,9 +1,10 @@
 import {
   fireEvent,
   render,
+  within,
   waitFor
 } from "@testing-library/react-native";
-import { StyleSheet } from "react-native";
+import { AccessibilityInfo, StyleSheet } from "react-native";
 
 import { getPortfolioExperienceCopy } from "@/i18n/portfolioCopy";
 
@@ -90,7 +91,9 @@ describe("liability form accessibility", () => {
     expect(name.props.accessibilityLabel).toBe(copy.create.name);
     expect(category.props.accessibilityRole).toBe("radiogroup");
     expect(mortgage.props.accessibilityRole).toBe("radio");
-    expect(mortgage.props.accessibilityState).toEqual({ checked: true });
+    expect(mortgage.props.accessibilityState).toMatchObject({
+      checked: false
+    });
     expect(amount.props.accessibilityLabel).toBe(copy.create.amount);
     expect(amount.props.accessibilityHint).toBe(
       `${copy.create.amountDescription} QAR`
@@ -111,7 +114,121 @@ describe("liability form accessibility", () => {
     await fireEvent.press(screen.getByTestId("liability-save"));
 
     expect(screen.getByText(copy.create.nameError)).toBeTruthy();
+    expect(screen.getByText(copy.create.categoryError)).toBeTruthy();
     expect(mockCreateLiability).not.toHaveBeenCalled();
+    await screen.unmount();
+  });
+
+  it("announces and focuses the category choice when other required fields are valid", async () => {
+    const copy = getPortfolioExperienceCopy("en");
+    const announce = jest
+      .spyOn(AccessibilityInfo, "announceForAccessibility")
+      .mockImplementation(() => undefined);
+    const screen = await render(<LiabilityCreateRoute />);
+
+    await fireEvent.changeText(
+      screen.getByTestId("liability-name"),
+      "Home mortgage"
+    );
+    await fireEvent.changeText(
+      screen.getByTestId("liability-amount"),
+      "250000"
+    );
+    await fireEvent.press(screen.getByTestId("liability-save"));
+
+    await waitFor(() => {
+      expect(announce).toHaveBeenCalledWith(copy.create.categoryError);
+    });
+    expect(screen.getByText(copy.create.categoryError)).toBeTruthy();
+    expect(mockCreateLiability).not.toHaveBeenCalled();
+    await screen.unmount();
+  });
+
+  it("requires an explicit category and keeps uncommon categories behind a clear expansion", async () => {
+    const copy = getPortfolioExperienceCopy("en");
+    const screen = await render(<LiabilityCreateRoute />);
+
+    for (const testID of [
+      "liability-category",
+      "liability-category-vehicle-loan",
+      "liability-category-credit-card",
+      "liability-category-personal-loan"
+    ]) {
+      expect(screen.getByTestId(testID)).toBeTruthy();
+    }
+    expect(
+      screen.queryByTestId("liability-category-education-loan")
+    ).toBeNull();
+    expect(screen.queryByTestId("liability-category-tax")).toBeNull();
+    expect(screen.getByText(copy.create.moreCategories)).toBeTruthy();
+
+    const mortgage = screen.getByTestId("liability-category");
+    const vehicle = screen.getByTestId(
+      "liability-category-vehicle-loan"
+    );
+    const creditCard = screen.getByTestId(
+      "liability-category-credit-card"
+    );
+    const personal = screen.getByTestId(
+      "liability-category-personal-loan"
+    );
+    expect(
+      within(mortgage).getByTestId(
+        "phosphor-react-native-house-regular"
+      )
+    ).toBeTruthy();
+    expect(
+      within(vehicle).getByTestId("phosphor-react-native-car-regular")
+    ).toBeTruthy();
+    expect(
+      within(creditCard).getByTestId(
+        "phosphor-react-native-credit-card-regular"
+      )
+    ).toBeTruthy();
+    expect(
+      within(personal).getByTestId("phosphor-react-native-bank-regular")
+    ).toBeTruthy();
+
+    const toggle = screen.getByTestId("liability-category-toggle");
+    expect(toggle.props.accessibilityState).toMatchObject({
+      expanded: false
+    });
+    await fireEvent.press(toggle);
+
+    expect(
+      screen.getByTestId("liability-category-education-loan")
+    ).toBeTruthy();
+    expect(screen.getByTestId("liability-category-tax")).toBeTruthy();
+    expect(screen.getByText(copy.create.fewerCategories)).toBeTruthy();
+    expect(
+      screen.getByTestId("liability-category-toggle").props
+        .accessibilityState
+    ).toMatchObject({ expanded: true });
+    await fireEvent.press(
+      screen.getByTestId("liability-category-education-loan")
+    );
+    await fireEvent.press(
+      screen.getByTestId("liability-category-toggle")
+    );
+
+    expect(
+      screen.getByTestId("liability-category-education-loan")
+    ).toBeTruthy();
+    expect(
+      screen.getByTestId("liability-category-toggle").props
+        .accessibilityState
+    ).toMatchObject({ expanded: false });
+    expect(screen.getByText(copy.create.moreCategories)).toBeTruthy();
+    await screen.unmount();
+  });
+
+  it("offers three common currencies before the manual currency path", async () => {
+    const screen = await render(<LiabilityCreateRoute />);
+
+    expect(screen.getByTestId("liability-currency")).toBeTruthy();
+    expect(screen.getByTestId("liability-currency-USD")).toBeTruthy();
+    expect(screen.getByTestId("liability-currency-EUR")).toBeTruthy();
+    expect(screen.queryByTestId("liability-currency-GBP")).toBeNull();
     await screen.unmount();
   });
 
@@ -127,6 +244,7 @@ describe("liability form accessibility", () => {
       screen.getByTestId("liability-amount"),
       "250000"
     );
+    await fireEvent.press(screen.getByTestId("liability-category"));
     await fireEvent.press(screen.getByTestId("liability-save"));
 
     await waitFor(() => {

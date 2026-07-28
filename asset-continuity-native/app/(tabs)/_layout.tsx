@@ -6,7 +6,6 @@ import {
   UsersThree
 } from "phosphor-react-native";
 import {
-  ActivityIndicator,
   Platform,
   StyleSheet,
   View
@@ -14,6 +13,7 @@ import {
 import type { ReactNode } from "react";
 
 import { useAuthFlow } from "@/auth/AuthFlowProvider";
+import { StartupStatus } from "@/components/StartupStatus";
 import { useCopy } from "@/i18n/copy";
 import { signedOutSampleWorkspaceReady } from "@/state/SessionBoundWorkspaceProvider";
 import { useWorkspace } from "@/state/WorkspaceProvider";
@@ -45,9 +45,10 @@ export default function TabsLayout() {
   const { rtl, text } = useCopy();
   if (bootstrapState === "bootstrapping" || loading) {
     return (
-      <View style={styles.loading}>
-        <ActivityIndicator color={colors.action} size="small" />
-      </View>
+      <StartupStatus
+        kind="workspace"
+        testID="tabs-startup-status"
+      />
     );
   }
   const signedSessionReady =
@@ -162,12 +163,6 @@ export default function TabsLayout() {
 }
 
 const styles = StyleSheet.create({
-  loading: {
-    flex: 1,
-    alignItems: "center",
-    justifyContent: "center",
-    backgroundColor: colors.canvas
-  },
   scene: {
     backgroundColor: colors.canvas
   },

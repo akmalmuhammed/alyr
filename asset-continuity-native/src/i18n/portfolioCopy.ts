@@ -5,6 +5,28 @@ import type {
 } from "@/domain/model";
 import type { NetPositionStatus } from "@/domain/netPosition";
 
+const arabicPluralRules = new Intl.PluralRules("ar");
+const arabicInteger = new Intl.NumberFormat("ar-QA", {
+  maximumFractionDigits: 0,
+  useGrouping: false
+});
+
+function additionalArabicCurrencies(count: number): string {
+  const value = arabicInteger.format(count);
+  switch (arabicPluralRules.select(count)) {
+    case "one":
+      return "+عملة إضافية";
+    case "two":
+      return "+عملتان إضافيتان";
+    case "few":
+      return `+${value} عملات إضافية`;
+    case "many":
+      return `+${value} عملة إضافية`;
+    default:
+      return `+${value} عملة إضافية`;
+  }
+}
+
 export interface PortfolioExperienceCopy {
   readonly netPosition: {
     readonly eyebrow: string;
@@ -15,6 +37,11 @@ export interface PortfolioExperienceCopy {
     readonly assets: string;
     readonly liabilities: string;
     readonly net: string;
+    readonly currencySelectorLabel: string;
+    readonly moreCurrencies: (count: number) => string;
+    readonly amountsHiddenStatus: string;
+    readonly amountsVisibleStatus: string;
+    readonly noRecordedLiabilities: string;
     readonly currenciesSeparate: string;
     readonly boundary: string;
     readonly explain: string;
@@ -36,6 +63,7 @@ export interface PortfolioExperienceCopy {
     readonly noBalance: string;
     readonly balanceNeedsReview: string;
     readonly reviewBalance: string;
+    readonly zeroBalanceOn: (date: string) => string;
     readonly noActiveTitle: string;
     readonly noActiveBody: string;
     readonly confirmNone: string;
@@ -60,6 +88,8 @@ export interface PortfolioExperienceCopy {
     readonly category: string;
     readonly categoryDescription: string;
     readonly categoryError: string;
+    readonly moreCategories: string;
+    readonly fewerCategories: string;
     readonly amount: string;
     readonly amountPlaceholder: string;
     readonly amountDescription: string;
@@ -94,6 +124,7 @@ export interface PortfolioExperienceCopy {
     readonly noBalance: string;
     readonly addBalance: string;
     readonly updateBalance: string;
+    readonly details: string;
     readonly edit: string;
     readonly saveDetails: string;
     readonly cancel: string;
@@ -112,7 +143,7 @@ export interface PortfolioExperienceCopy {
     readonly paidOffTitle: string;
     readonly paidOffBody: string;
     readonly paidOffConfirm: string;
-    readonly paidOffRecorded: string;
+    readonly zeroBalanceRecorded: string;
     readonly delete: string;
     readonly deleteTitle: string;
     readonly deleteBody: string;
@@ -161,6 +192,12 @@ const ENGLISH: PortfolioExperienceCopy = {
     assets: "Recorded assets",
     liabilities: "Recorded liabilities",
     net: "Tracked net position",
+    currencySelectorLabel: "Choose a currency view",
+    moreCurrencies: (count) =>
+      `+${count} more ${count === 1 ? "currency" : "currencies"}`,
+    amountsHiddenStatus: "Private · amounts hidden",
+    amountsVisibleStatus: "Private · amounts visible on this screen",
+    noRecordedLiabilities: "None recorded in this currency",
     currenciesSeparate: "Currencies stay separate. No exchange rate is applied.",
     boundary:
       "Recorded assets minus recorded liabilities—not a bank balance, live valuation or complete statement of net worth.",
@@ -181,8 +218,9 @@ const ENGLISH: PortfolioExperienceCopy = {
         "Review liabilities before treating this as a net position.",
       partial:
         "Some assets have no recorded value and remain outside the calculation.",
-      recorded: "Recorded asset and liability coverage is current.",
-      stale: "One or more liability balances need a fresh review.",
+      recorded:
+        "Recorded asset and liability entries are within their review windows.",
+      stale: "One or more recorded values need a fresh review.",
       "exact-total-unavailable":
         "An exact total is outside the supported calculation range."
     },
@@ -204,6 +242,7 @@ const ENGLISH: PortfolioExperienceCopy = {
     noBalance: "Balance not recorded",
     balanceNeedsReview: "Balance needs review",
     reviewBalance: "Review balance",
+    zeroBalanceOn: (date) => `Zero balance recorded · ${date}`,
     noActiveTitle: "No active liabilities recorded",
     noActiveBody:
       "Add an obligation, or confirm that you currently track none. The confirmation expires after 90 days.",
@@ -233,6 +272,8 @@ const ENGLISH: PortfolioExperienceCopy = {
     category: "Category",
     categoryDescription: "Choose the closest practical category.",
     categoryError: "Choose a category.",
+    moreCategories: "More categories",
+    fewerCategories: "Show fewer",
     amount: "Recorded balance",
     amountPlaceholder: "125000.00",
     amountDescription:
@@ -270,6 +311,7 @@ const ENGLISH: PortfolioExperienceCopy = {
     noBalance: "No balance has been recorded.",
     addBalance: "Record balance",
     updateBalance: "Record updated balance",
+    details: "Details",
     edit: "Edit details",
     saveDetails: "Save details",
     cancel: "Cancel",
@@ -287,12 +329,12 @@ const ENGLISH: PortfolioExperienceCopy = {
     previous: "Previous",
     archive: "Archive liability",
     restore: "Restore liability",
-    markPaidOff: "Mark paid off",
-    paidOffTitle: "Record this liability as paid off?",
+    markPaidOff: "Record zero balance",
+    paidOffTitle: "Record a zero balance for this liability?",
     paidOffBody:
-      "ALYR will append a zero balance dated today. Earlier balances remain in history; this does not verify lender closure.",
+      "ALYR will append a zero balance dated today. Earlier balances remain in history; this does not verify lender closure or change the Active status.",
     paidOffConfirm: "Record zero balance",
-    paidOffRecorded: "Paid off balance recorded",
+    zeroBalanceRecorded: "Zero balance recorded",
     delete: "Delete liability",
     deleteTitle: "Delete this liability and its balance history?",
     deleteBody:
@@ -348,6 +390,11 @@ const ARABIC: PortfolioExperienceCopy = {
     assets: "الأصول المسجّلة",
     liabilities: "الالتزامات المسجّلة",
     net: "صافي المركز المسجّل",
+    currencySelectorLabel: "اختر عرض العملة",
+    moreCurrencies: additionalArabicCurrencies,
+    amountsHiddenStatus: "خاص · المبالغ مخفية",
+    amountsVisibleStatus: "خاص · المبالغ ظاهرة على هذه الشاشة",
+    noRecordedLiabilities: "لا توجد التزامات مسجّلة بهذه العملة",
     currenciesSeparate:
       "تبقى كل عملة مستقلة ولا يُطبّق أي سعر صرف.",
     boundary:
@@ -369,8 +416,9 @@ const ARABIC: PortfolioExperienceCopy = {
         "راجِع الالتزامات قبل اعتماد هذا الرقم كمركز صافٍ.",
       partial:
         "بعض الأصول بلا قيمة مسجّلة، لذلك تبقى خارج الاحتساب.",
-      recorded: "تغطية الأصول والالتزامات المسجّلة محدثة.",
-      stale: "تحتاج أرصدة بعض الالتزامات إلى مراجعة جديدة.",
+      recorded:
+        "قيود الأصول والالتزامات المسجّلة ضمن فترات المراجعة الحالية.",
+      stale: "تحتاج قيمة مسجّلة واحدة أو أكثر إلى مراجعة جديدة.",
       "exact-total-unavailable":
         "يتجاوز الإجمالي الدقيق نطاق الاحتساب المدعوم."
     },
@@ -392,6 +440,7 @@ const ARABIC: PortfolioExperienceCopy = {
     noBalance: "لم يُسجّل الرصيد",
     balanceNeedsReview: "الرصيد بحاجة إلى مراجعة",
     reviewBalance: "مراجعة الرصيد",
+    zeroBalanceOn: (date) => `سُجّل رصيد صفري · ${date}`,
     noActiveTitle: "لا توجد التزامات نشطة مسجّلة",
     noActiveBody:
       "أضف التزامًا، أو أكّد أنك لا تسجّل أي التزام حاليًا. تنتهي صلاحية التأكيد بعد ٩٠ يومًا.",
@@ -420,6 +469,8 @@ const ARABIC: PortfolioExperienceCopy = {
     category: "الفئة",
     categoryDescription: "اختر الفئة العملية الأقرب.",
     categoryError: "اختر فئة.",
+    moreCategories: "فئات إضافية",
+    fewerCategories: "عرض أقل",
     amount: "الرصيد المسجّل",
     amountPlaceholder: "125000.00",
     amountDescription:
@@ -457,6 +508,7 @@ const ARABIC: PortfolioExperienceCopy = {
     noBalance: "لم يُسجّل رصيد بعد.",
     addBalance: "تسجيل الرصيد",
     updateBalance: "تسجيل رصيد محدّث",
+    details: "التفاصيل",
     edit: "تعديل التفاصيل",
     saveDetails: "حفظ التفاصيل",
     cancel: "إلغاء",
@@ -474,12 +526,12 @@ const ARABIC: PortfolioExperienceCopy = {
     previous: "السابق",
     archive: "أرشفة الالتزام",
     restore: "استعادة الالتزام",
-    markPaidOff: "تسجيل السداد الكامل",
-    paidOffTitle: "هل تريد تسجيل سداد هذا الالتزام؟",
+    markPaidOff: "تسجيل رصيد صفري",
+    paidOffTitle: "هل تريد تسجيل رصيد صفري لهذا الالتزام؟",
     paidOffBody:
-      "سيضيف ALYR رصيدًا صفريًا بتاريخ اليوم. تبقى الأرصدة السابقة في السجل، ولا يُعد ذلك تحققًا من إغلاق الحساب لدى الجهة الممولة.",
+      "سيضيف ALYR رصيدًا صفريًا بتاريخ اليوم. تبقى الأرصدة السابقة في السجل، ولا يُعد ذلك تحققًا من إغلاق الحساب لدى الجهة الممولة أو تغييرًا لحالة «نشط».",
     paidOffConfirm: "تسجيل رصيد صفري",
-    paidOffRecorded: "تم تسجيل رصيد السداد",
+    zeroBalanceRecorded: "تم تسجيل رصيد صفري",
     delete: "حذف الالتزام",
     deleteTitle: "حذف الالتزام وسجل أرصدته؟",
     deleteBody:

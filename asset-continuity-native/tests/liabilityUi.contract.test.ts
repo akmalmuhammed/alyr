@@ -74,6 +74,16 @@ describe("liability and recorded-net-position UI contract", () => {
     expect(portfolio).toContain("amountsHidden");
   });
 
+  it("formats date-only financial records in UTC so device timezone cannot shift the calendar day", () => {
+    const portfolio = read(
+      "src/components/PortfolioDashboard/index.tsx"
+    );
+
+    expect(portfolio).toMatch(
+      /new Intl\.DateTimeFormat\([\s\S]*?timeZone:\s*"UTC"[\s\S]*?\)\.format\(new Date\(value\)\)/u
+    );
+  });
+
   it("gives every financial control a semantic label and focuses invalid input", () => {
     const create = read("app/liability-create.tsx");
     const balance = read("app/liability-balance.tsx");

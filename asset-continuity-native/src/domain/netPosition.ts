@@ -38,6 +38,7 @@ export interface NetPositionCurrencyLine {
   readonly newestAsOf: string | null;
   readonly liabilityCoverage:
     | "recorded"
+    | "no-recorded-liabilities"
     | "none-confirmed"
     | "unreviewed";
 }
@@ -206,6 +207,8 @@ export function buildNetPositionSnapshot(
       const liabilities = liabilityGroups.get(currency) ?? [];
       const liabilityCoverage = liabilities.length > 0
         ? "recorded"
+        : activeLiabilities.length > 0
+          ? "no-recorded-liabilities"
         : noneConfirmed
           ? "none-confirmed"
           : "unreviewed";
@@ -245,10 +248,7 @@ export function buildNetPositionSnapshot(
   const liabilityCoverageComplete =
     noneConfirmed ||
     (activeLiabilities.length > 0 &&
-      unvaluedLiabilityIds.length === 0 &&
-      portfolio.currencyTotals.every((total) =>
-        liabilityGroups.has(total.currency)
-      ));
+      unvaluedLiabilityIds.length === 0);
   const exactUnavailable = byCurrency.some(
     (line) =>
       line.recordedAssetsMinor === null ||

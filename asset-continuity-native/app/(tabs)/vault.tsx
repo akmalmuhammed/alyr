@@ -56,6 +56,7 @@ import {
 import { useAccountDeletionCopy } from "@/i18n/accountDeletionCopy";
 import { useExportCopy } from "@/i18n/exportCopy";
 import { PRIMARY_ROUTES } from "@/navigation/primaryRoutes";
+import { sampleActivationDestination } from "@/navigation/sampleActivation";
 import { useRecoveryJourney } from "@/recovery";
 import { useWorkspace } from "@/state/WorkspaceProvider";
 import { colors, radius, spacing, typography } from "@/theme/tokens";
@@ -91,6 +92,12 @@ export default function VaultScreen() {
   const [showDiagnostics, setShowDiagnostics] = useState(false);
   if (!workspace) return null;
 
+  const sampleActivationRoute = sampleActivationDestination({
+    canManageHousehold,
+    mode,
+    session,
+    workspaceMode: workspace.mode
+  });
   const signedAccount = signedAccountIdentity(mode, session);
   const placeDocuments = workspace.placeDocuments ?? [];
   const proofFileCount =
@@ -777,13 +784,11 @@ export default function VaultScreen() {
         ) : null}
       </Section>
 
-      {mode === "preview" &&
-      workspace.mode === "sample" &&
-      canManageHousehold ? (
+      {sampleActivationRoute ? (
         <SecondaryButton
           icon={LockKey}
           label={copy.vault.createMyPrivateHousehold}
-          onPress={() => router.push("/personal-start")}
+          onPress={() => router.push(sampleActivationRoute)}
         />
       ) : null}
     </AppScreen>

@@ -44,12 +44,22 @@ const english = {
       "Continue with the account that should join. ALYR keeps the one-time code protected on this device while you sign in or confirm a new email.",
     existingAction: "Sign in to accept",
     newAction: "Create an account",
+    protectingTitle: "Protecting the invitation",
+    protectingBody:
+      "ALYR is moving the one-time code into encrypted storage on this device.",
     acceptingTitle: "Joining the household",
     acceptingBody:
       "ALYR is confirming this account and its assigned household role.",
     invalidTitle: "This invitation needs a new link",
     invalidBody:
       "Ask the household owner for a current invitation. No household details were opened.",
+    retryTitle: "Secure setup needs another try",
+    retryBody:
+      "The invitation was not opened and no household details were revealed. Try protecting the link on this device again.",
+    acceptRetryTitle: "Finishing the invitation needs another try",
+    acceptRetryBody:
+      "Your protected invitation is still on this device. Try completing membership again; no household details were opened.",
+    retryAction: "Try again",
     cancelAction: "Close invitation",
     protectedNotice:
       "The code stays encrypted on this device and is removed after acceptance, rejection, or cancellation."
@@ -158,12 +168,22 @@ const arabic = {
       "تابع باستخدام الحساب الذي سينضم. يحتفظ ALYR بالرمز المخصص لمرة واحدة محميًا على هذا الجهاز أثناء تسجيل الدخول أو تأكيد بريد جديد.",
     existingAction: "تسجيل الدخول للقبول",
     newAction: "إنشاء حساب",
+    protectingTitle: "جارٍ حماية الدعوة",
+    protectingBody:
+      "ينقل ALYR الرمز المخصص لمرة واحدة إلى مساحة مشفرة على هذا الجهاز.",
     acceptingTitle: "جارٍ الانضمام إلى الأسرة",
     acceptingBody:
       "يتحقق ALYR من هذا الحساب ومن دور الأسرة المخصص له.",
     invalidTitle: "تحتاج هذه الدعوة إلى رابط جديد",
     invalidBody:
       "اطلب من مالك الأسرة دعوة سارية. لم يتم فتح أي تفاصيل للأسرة.",
+    retryTitle: "يحتاج الإعداد الآمن إلى محاولة أخرى",
+    retryBody:
+      "لم تُفتح الدعوة ولم تظهر أي تفاصيل عن الأسرة. حاول حماية الرابط على هذا الجهاز مرة أخرى.",
+    acceptRetryTitle: "يحتاج إكمال الدعوة إلى محاولة أخرى",
+    acceptRetryBody:
+      "لا تزال الدعوة المحمية محفوظة على هذا الجهاز. حاول إكمال العضوية مرة أخرى؛ لم يتم فتح أي تفاصيل للأسرة.",
+    retryAction: "حاول مرة أخرى",
     cancelAction: "إغلاق الدعوة",
     protectedNotice:
       "يبقى الرمز مشفرًا على هذا الجهاز ويُحذف بعد القبول أو الرفض أو الإلغاء."

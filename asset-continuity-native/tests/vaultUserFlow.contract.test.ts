@@ -81,6 +81,10 @@ describe("Vault user-flow contract", () => {
       `${process.cwd()}/app/(tabs)/vault.tsx`,
       "utf8"
     );
+    const activationSource = readFileSync(
+      `${process.cwd()}/src/navigation/sampleActivation.ts`,
+      "utf8"
+    );
     const conversionSource = readFileSync(
       `${process.cwd()}/app/personal-start.tsx`,
       "utf8"
@@ -94,8 +98,15 @@ describe("Vault user-flow contract", () => {
       "utf8"
     );
 
+    expect(vaultSource).toContain("sampleActivationDestination({");
     expect(vaultSource).toContain(
-      'router.push("/personal-start")'
+      "router.push(sampleActivationRoute)"
+    );
+    expect(activationSource).toContain(
+      'if (input.mode === "preview") return "/personal-start";'
+    );
+    expect(activationSource).toContain(
+      "return AUTH_ROUTES.createAccount;"
     );
     expect(vaultSource).not.toContain(
       "void replaceWithPersonalWorkspace()"

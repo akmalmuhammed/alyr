@@ -17,17 +17,25 @@ import {
 import { Stack, useRouter } from "expo-router";
 import * as SplashScreen from "expo-splash-screen";
 import { StatusBar } from "expo-status-bar";
-import { ArrowLeft, ArrowRight } from "phosphor-react-native";
-import { useEffect, useMemo } from "react";
 import {
-  ActivityIndicator,
+  ArrowLeft,
+  ArrowRight,
+  WarningCircle
+} from "phosphor-react-native";
+import { useEffect, useMemo, useState } from "react";
+import {
+  AccessibilityInfo,
   Platform,
   Pressable,
   StyleSheet,
+  Text,
   View
 } from "react-native";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
-import { SafeAreaProvider } from "react-native-safe-area-context";
+import {
+  SafeAreaProvider,
+  SafeAreaView
+} from "react-native-safe-area-context";
 
 import { AuthFlowProvider, useAuthFlow } from "@/auth/AuthFlowProvider";
 import { AuthBootstrapBoundary } from "@/auth/AuthBootstrapBoundary";
@@ -49,6 +57,11 @@ import {
   PrivacyShield,
   usePrivacyShielded
 } from "@/components/PrivacyShield";
+import {
+  resolveFontStartupState,
+  StartupStatus
+} from "@/components/StartupStatus";
+import { useStartupCopy } from "@/i18n/startupCopy";
 import { installSignedSupabaseRuntimeFromEnvironment } from "@/runtime/signedSupabaseRuntime";
 import {
   PortfolioPrivacyProvider,
@@ -61,53 +74,154 @@ const signedRuntimeInstallation =
 void SplashScreen.preventAutoHideAsync();
 
 export default function RootLayout() {
-  const [instrumentLoaded] = useInstrumentSans({
+  return (
+    <LocaleProvider>
+      <LocalizedRootLayout />
+    </LocaleProvider>
+  );
+}
+
+function LocalizedRootLayout() {
+  const [instrumentLoaded, instrumentError] = useInstrumentSans({
     InstrumentSans_400Regular,
     InstrumentSans_500Medium,
     InstrumentSans_600SemiBold,
     InstrumentSans_700Bold
   });
-  const [arabicLoaded] = useArabic({
+  const [arabicLoaded, arabicError] = useArabic({
     IBMPlexSansArabic_400Regular,
     IBMPlexSansArabic_600SemiBold
   });
-  const fontsLoaded = instrumentLoaded && arabicLoaded;
+  const [continueWithSystemText, setContinueWithSystemText] =
+    useState(false);
+  const fontStartupState = resolveFontStartupState({
+    arabicError,
+    arabicLoaded,
+    instrumentError,
+    instrumentLoaded
+  });
 
   useEffect(() => {
-    if (fontsLoaded) {
+    if (fontStartupState !== "loading") {
       void SplashScreen.hideAsync();
     }
-  }, [fontsLoaded]);
+  }, [fontStartupState]);
 
-  if (!fontsLoaded) {
+  if (fontStartupState === "loading") {
     return (
-      <View style={styles.loading}>
-        <ActivityIndicator color={colors.action} size="small" />
-      </View>
+      <StartupStatus
+        kind="application"
+        testID="root-font-startup-status"
+      />
+    );
+  }
+
+  if (
+    fontStartupState === "fallback" &&
+    !continueWithSystemText
+  ) {
+    return (
+      <FontFallbackRecovery
+        onContinue={() => setContinueWithSystemText(true)}
+      />
     );
   }
 
   return (
     <GestureHandlerRootView style={styles.root}>
       <SafeAreaProvider>
-        <LocaleProvider>
-          <AuthFlowProvider
-            {...(signedRuntimeInstallation.kind === "configured"
-              ? {
-                  householdAccess:
-                    signedRuntimeInstallation.services.cloud.householdAccess,
-                  accountDeletion:
-                    signedRuntimeInstallation.services.cloud.accountDeletion
-                }
-              : {})}
-          >
-            <AuthBootstrapBoundary>
-              <SignedWorkspaceBoundary />
-            </AuthBootstrapBoundary>
-          </AuthFlowProvider>
-        </LocaleProvider>
+        <AuthFlowProvider
+          {...(signedRuntimeInstallation.kind === "configured"
+            ? {
+                householdAccess:
+                  signedRuntimeInstallation.services.cloud.householdAccess,
+                accountDeletion:
+                  signedRuntimeInstallation.services.cloud.accountDeletion
+              }
+            : {})}
+        >
+          <AuthBootstrapBoundary>
+            <SignedWorkspaceBoundary />
+          </AuthBootstrapBoundary>
+        </AuthFlowProvider>
       </SafeAreaProvider>
     </GestureHandlerRootView>
+  );
+}
+
+function FontFallbackRecovery({
+  onContinue
+}: {
+  readonly onContinue: () => void;
+}) {
+  const { copy, rtl } = useStartupCopy();
+
+  useEffect(() => {
+    AccessibilityInfo.announceForAccessibility(
+      `${copy.fontErrorTitle}. ${copy.fontErrorBody}`
+    );
+  }, [copy.fontErrorBody, copy.fontErrorTitle]);
+
+  return (
+    <SafeAreaProvider>
+      <SafeAreaView
+        accessibilityRole="alert"
+        style={styles.fontFallbackSafeArea}
+        testID="font-fallback-recovery"
+      >
+        <View style={styles.fontFallbackContent}>
+          <View style={styles.fontFallbackIcon}>
+            <WarningCircle
+              color={colors.action}
+              size={28}
+              weight="regular"
+            />
+          </View>
+          <Text
+            style={[
+              styles.fontFallbackEyebrow,
+              rtl && styles.fontFallbackRtl
+            ]}
+          >
+            {copy.fontErrorEyebrow}
+          </Text>
+          <Text
+            style={[
+              styles.fontFallbackTitle,
+              rtl && styles.fontFallbackRtl
+            ]}
+          >
+            {copy.fontErrorTitle}
+          </Text>
+          <Text
+            style={[
+              styles.fontFallbackBody,
+              rtl && styles.fontFallbackRtl
+            ]}
+          >
+            {copy.fontErrorBody}
+          </Text>
+          <Pressable
+            accessibilityRole="button"
+            onPress={onContinue}
+            style={({ pressed }) => [
+              styles.fontFallbackAction,
+              pressed && styles.localizedBackPressed
+            ]}
+            testID="font-fallback-continue"
+          >
+            <Text
+              style={[
+                styles.fontFallbackActionLabel,
+                rtl && styles.fontFallbackRtl
+              ]}
+            >
+              {copy.fontErrorAction}
+            </Text>
+          </Pressable>
+        </View>
+      </SafeAreaView>
+    </SafeAreaProvider>
   );
 }
 
@@ -182,9 +296,10 @@ function RootNavigator() {
 
   if (!localeReady) {
     return (
-      <View style={styles.loading}>
-        <ActivityIndicator color={colors.action} size="small" />
-      </View>
+      <StartupStatus
+        kind="application"
+        testID="root-locale-startup-status"
+      />
     );
   }
 
@@ -466,12 +581,6 @@ const styles = StyleSheet.create({
   navigatorLayer: {
     flex: 1
   },
-  loading: {
-    flex: 1,
-    alignItems: "center",
-    justifyContent: "center",
-    backgroundColor: colors.canvas
-  },
   localizedBack: {
     width: 44,
     height: 44,
@@ -481,5 +590,66 @@ const styles = StyleSheet.create({
   },
   localizedBackPressed: {
     opacity: 0.62
+  },
+  fontFallbackSafeArea: {
+    flex: 1,
+    backgroundColor: colors.canvas
+  },
+  fontFallbackContent: {
+    flex: 1,
+    justifyContent: "center",
+    gap: 12,
+    paddingHorizontal: 24,
+    paddingVertical: 32
+  },
+  fontFallbackIcon: {
+    width: 52,
+    height: 52,
+    alignItems: "center",
+    justifyContent: "center",
+    borderWidth: 1,
+    borderColor: colors.borderStrong,
+    borderRadius: 12,
+    backgroundColor: colors.surface
+  },
+  fontFallbackEyebrow: {
+    color: colors.textMuted,
+    fontSize: 11,
+    fontWeight: "700",
+    lineHeight: 16,
+    letterSpacing: 1.1
+  },
+  fontFallbackTitle: {
+    color: colors.text,
+    fontSize: 32,
+    fontWeight: "700",
+    lineHeight: 38,
+    letterSpacing: -0.6
+  },
+  fontFallbackBody: {
+    maxWidth: 520,
+    color: colors.textMuted,
+    fontSize: 16,
+    lineHeight: 24
+  },
+  fontFallbackRtl: {
+    textAlign: "right",
+    writingDirection: "rtl",
+    letterSpacing: 0
+  },
+  fontFallbackAction: {
+    minHeight: 54,
+    alignItems: "center",
+    justifyContent: "center",
+    marginTop: 12,
+    paddingHorizontal: 20,
+    borderRadius: 12,
+    backgroundColor: colors.action
+  },
+  fontFallbackActionLabel: {
+    color: colors.carbon,
+    fontSize: 16,
+    fontWeight: "700",
+    lineHeight: 22
   }
 });

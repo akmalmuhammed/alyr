@@ -1,16 +1,31 @@
 import { useNavigation, useRouter } from "expo-router";
+import type { Icon } from "phosphor-react-native";
 import {
+  Bank,
+  Buildings,
   CalendarBlank,
+  Car,
+  CaretDown,
+  CaretUp,
   Check,
   CreditCard,
   Eye,
   EyeSlash,
+  FileText,
+  GraduationCap,
+  Handshake,
+  House,
   Info,
+  Receipt,
+  Wallet,
   Warning
 } from "phosphor-react-native";
 import { useEffect, useMemo, useRef, useState } from "react";
 import {
+  AccessibilityInfo,
   Alert,
+  findNodeHandle,
+  Platform,
   Pressable,
   StyleSheet,
   Text,
@@ -28,8 +43,7 @@ import {
   ScreenTitle
 } from "@/components/ui";
 import {
-  LIABILITY_KINDS,
-  type NewLiabilityInput
+  LIABILITY_KINDS
 } from "@/domain/liabilities";
 import type { LiabilityKind } from "@/domain/model";
 import {
@@ -55,7 +69,25 @@ import {
   typography
 } from "@/theme/tokens";
 
-const COMMON_CURRENCIES = PORTFOLIO_CURRENCY_CHOICES.slice(0, 6);
+const COMMON_CURRENCIES = PORTFOLIO_CURRENCY_CHOICES.slice(0, 3);
+const COMMON_LIABILITY_KINDS: readonly LiabilityKind[] = [
+  "mortgage",
+  "vehicle-loan",
+  "credit-card",
+  "personal-loan"
+];
+const LIABILITY_KIND_ICONS: Readonly<Record<LiabilityKind, Icon>> = {
+  mortgage: House,
+  "vehicle-loan": Car,
+  "personal-loan": Bank,
+  "credit-card": CreditCard,
+  "education-loan": GraduationCap,
+  installment: Wallet,
+  tax: Receipt,
+  business: Buildings,
+  "family-debt": Handshake,
+  other: FileText
+};
 
 function localCalendarDate(date = new Date()): string {
   const year = date.getFullYear();
@@ -104,11 +136,13 @@ export default function LiabilityCreateRoute() {
   const submittingRef = useRef(false);
   const allowRemovalRef = useRef(false);
   const nameRef = useRef<TextInput>(null);
+  const categoryRef = useRef<View>(null);
   const amountRef = useRef<TextInput>(null);
   const currencyRef = useRef<TextInput>(null);
   const dateRef = useRef<TextInput>(null);
   const [name, setName] = useState("");
-  const [kind, setKind] = useState<LiabilityKind>("mortgage");
+  const [kind, setKind] = useState<LiabilityKind | null>(null);
+  const [showAllKinds, setShowAllKinds] = useState(false);
   const [amount, setAmount] = useState("");
   const [amountInputHidden, setAmountInputHidden] = useState(true);
   const [currency, setCurrency] = useState(DEFAULT_PORTFOLIO_CURRENCY);
@@ -131,12 +165,13 @@ export default function LiabilityCreateRoute() {
   const hasDraft =
     Boolean(name.trim()) ||
     Boolean(amount.trim()) ||
-    kind !== "mortgage" ||
+    kind !== null ||
     currency !== DEFAULT_PORTFOLIO_CURRENCY ||
     asOf !== today;
   const canSave =
     Boolean(workspace) &&
     Boolean(name.trim()) &&
+    kind !== null &&
     parsedMoney.ok &&
     normalizedCurrency !== null &&
     normalizedAsOf !== null &&
@@ -184,6 +219,24 @@ export default function LiabilityCreateRoute() {
       nameRef.current?.focus();
       return;
     }
+    if (!kind) {
+      requestAnimationFrame(() => {
+        if (Platform.OS === "web") {
+          (
+            categoryRef.current as unknown as {
+              focus?: () => void;
+            } | null
+          )?.focus?.();
+          return;
+        }
+        AccessibilityInfo.announceForAccessibility(
+          copy.create.categoryError
+        );
+        const handle = findNodeHandle(categoryRef.current);
+        if (handle) AccessibilityInfo.setAccessibilityFocus(handle);
+      });
+      return;
+    }
     if (!parsedMoney.ok) {
       if (
         customCurrency &&
@@ -223,6 +276,16 @@ export default function LiabilityCreateRoute() {
     attempted && normalizedCurrency === null
       ? copy.create.currencyError
       : null;
+  const selectedRareKind =
+    kind !== null && !COMMON_LIABILITY_KINDS.includes(kind);
+  const visibleLiabilityKinds = showAllKinds
+    ? LIABILITY_KINDS
+    : selectedRareKind && kind
+      ? [...COMMON_LIABILITY_KINDS, kind]
+      : COMMON_LIABILITY_KINDS;
+  const categoryToggleLabel = showAllKinds
+    ? copy.create.fewerCategories
+    : copy.create.moreCategories;
 
   return (
     <AppScreen
@@ -335,14 +398,16 @@ export default function LiabilityCreateRoute() {
             style={styles.choiceList}
             testID="liability-category-list"
           >
-            {LIABILITY_KINDS.map((choice) => {
+            {visibleLiabilityKinds.map((choice) => {
               const selected = choice === kind;
+              const ChoiceIcon = LIABILITY_KIND_ICONS[choice];
               return (
                 <Pressable
                   accessibilityRole="radio"
                   accessibilityState={{ checked: selected }}
                   key={choice}
                   onPress={() => setKind(choice)}
+                  ref={choice === "mortgage" ? categoryRef : undefined}
                   style={({ pressed }) => [
                     styles.choiceRow,
                     rtl && styles.rowReverse,
@@ -355,6 +420,18 @@ export default function LiabilityCreateRoute() {
                       : `liability-category-${choice}`
                   }
                 >
+                  <View
+                    style={[
+                      styles.choiceIcon,
+                      selected && styles.choiceIconSelected
+                    ]}
+                  >
+                    <ChoiceIcon
+                      color={selected ? colors.volt : colors.text}
+                      size={20}
+                      weight="regular"
+                    />
+                  </View>
                   <View
                     style={[
                       styles.radio,
@@ -377,6 +454,44 @@ export default function LiabilityCreateRoute() {
               );
             })}
           </View>
+          {attempted && !kind ? (
+            <Text
+              accessibilityLiveRegion="polite"
+              style={[
+                styles.fieldError,
+                rtl && styles.arabic,
+                rtl && styles.rtlText
+              ]}
+            >
+              {copy.create.categoryError}
+            </Text>
+          ) : null}
+          <Pressable
+            accessibilityRole="button"
+            accessibilityState={{ expanded: showAllKinds }}
+            onPress={() => setShowAllKinds((current) => !current)}
+            style={({ pressed }) => [
+              styles.categoryToggle,
+              rtl && styles.rowReverse,
+              pressed && styles.pressed
+            ]}
+            testID="liability-category-toggle"
+          >
+            <Text
+              style={[
+                styles.categoryToggleLabel,
+                rtl && styles.arabicMedium,
+                rtl && styles.rtlText
+              ]}
+            >
+              {categoryToggleLabel}
+            </Text>
+            {showAllKinds ? (
+              <CaretUp color={colors.text} size={18} />
+            ) : (
+              <CaretDown color={colors.text} size={18} />
+            )}
+          </Pressable>
         </View>
       </View>
 
@@ -592,10 +707,12 @@ const styles = StyleSheet.create({
     writingDirection: "rtl"
   },
   arabic: {
-    fontFamily: typography.arabic
+    fontFamily: typography.arabic,
+    letterSpacing: 0
   },
   arabicMedium: {
-    fontFamily: typography.arabicMedium
+    fontFamily: typography.arabicMedium,
+    letterSpacing: 0
   },
   eyebrow: {
     color: colors.textMuted,
@@ -639,6 +756,12 @@ const styles = StyleSheet.create({
     fontSize: 13,
     lineHeight: 19
   },
+  fieldError: {
+    color: colors.danger,
+    fontFamily: typography.bodyMedium,
+    fontSize: 13,
+    lineHeight: 19
+  },
   choiceList: {
     borderTopWidth: 1,
     borderBottomWidth: 1,
@@ -656,6 +779,20 @@ const styles = StyleSheet.create({
   choiceRowSelected: {
     backgroundColor: colors.mist
   },
+  choiceIcon: {
+    width: 36,
+    height: 36,
+    alignItems: "center",
+    justifyContent: "center",
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderRadius: radius.sm,
+    backgroundColor: colors.surface
+  },
+  choiceIconSelected: {
+    borderColor: colors.carbon,
+    backgroundColor: colors.carbon
+  },
   choiceLabel: {
     flex: 1,
     color: colors.text,
@@ -665,6 +802,25 @@ const styles = StyleSheet.create({
   },
   choiceLabelSelected: {
     fontFamily: typography.bodyMedium
+  },
+  categoryToggle: {
+    minHeight: 44,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    gap: spacing.sm,
+    paddingHorizontal: spacing.sm,
+    borderWidth: 1,
+    borderColor: colors.borderStrong,
+    borderRadius: radius.sm,
+    backgroundColor: colors.surface
+  },
+  categoryToggleLabel: {
+    flex: 1,
+    color: colors.text,
+    fontFamily: typography.bodyMedium,
+    fontSize: 14,
+    lineHeight: 20
   },
   radio: {
     width: 20,

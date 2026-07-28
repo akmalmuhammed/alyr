@@ -282,7 +282,7 @@ export function LiabilityDetail({
   const detailsChanged =
     name.trim() !== liability.name || kind !== liability.kind;
   const active = liability.lifecycleStatus === "active";
-  const paidOff = current?.amountMinor === 0;
+  const zeroBalance = current?.amountMinor === 0;
 
   const beginEditing = () => {
     draftBaseline.current = {
@@ -414,7 +414,7 @@ export function LiabilityDetail({
           {current
                 ? `${copy.detail.balanceAsOf(
                     formatLocalizedDate(current.asOf, language)
-                  )}${paidOff ? ` \u00B7 ${copy.detail.paidOffRecorded}` : ""}`
+                  )}${zeroBalance ? ` \u00B7 ${copy.detail.zeroBalanceRecorded}` : ""}`
                 : copy.detail.noBalance}
             </Text>
           </View>
@@ -504,7 +504,7 @@ export function LiabilityDetail({
               rtl && styles.rtlText
             ]}
           >
-            {copy.detail.edit}
+            {copy.detail.details}
           </Text>
           {canWrite && !editing ? (
             <Pressable
@@ -880,7 +880,7 @@ export function LiabilityDetail({
 
       {canWrite ? (
         <View style={styles.lifecycle}>
-          {active && current && !paidOff ? (
+          {active && current && !zeroBalance ? (
             !paidOffConfirming ? (
               <Pressable
                 accessibilityHint={copy.detail.paidOffBody}
