@@ -64,6 +64,11 @@ export interface ReconcileEvidenceUploadsRequest {
   readonly operations: readonly SyncOperation[];
   readonly attachmentStore: AttachmentStore;
   readonly uploadPort: EvidenceUploadPort;
+  /**
+   * Last-moment background-task gate. It is checked synchronously immediately
+   * before protected bytes are decrypted into a temporary file.
+   */
+  readonly canMaterializeProtectedAttachment?: () => boolean;
   readonly now?: () => string;
 }
 
@@ -320,6 +325,26 @@ export async function reconcileEvidenceUploads(
           "INVALID_FILE",
           "Cloud Evidence upload requires the signed encrypted attachment vault.",
           false
+        ),
+        storedBlobObjectIds,
+        attemptedBlobObjectIds
+      };
+    }
+
+    let materializationAllowed = true;
+    try {
+      materializationAllowed =
+        request.canMaterializeProtectedAttachment?.() ?? true;
+    } catch {
+      materializationAllowed = false;
+    }
+    if (!materializationAllowed) {
+      return {
+        ok: false,
+        error: failure(
+          "OFFLINE",
+          "The background execution window ended before protected Evidence could be prepared.",
+          true
         ),
         storedBlobObjectIds,
         attemptedBlobObjectIds

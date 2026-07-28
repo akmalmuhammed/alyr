@@ -96,6 +96,11 @@ export interface ForegroundSyncRequest {
   readonly attachmentStore?: AttachmentStore;
   readonly evidenceUploadPort?: EvidenceUploadPort;
   readonly evidenceDownloadPort?: EvidenceDownloadPort;
+  /**
+   * Optional bounded-task guard checked at the exact upload plaintext
+   * materialization boundary. Foreground callers omit it.
+   */
+  readonly canMaterializeProtectedAttachment?: () => boolean;
   readonly householdId: string;
   /**
    * Required only when a clean vault must be materialized. The provider
@@ -2329,6 +2334,12 @@ export async function reconcileForeground(
         operations: allPending,
         attachmentStore: request.attachmentStore,
         uploadPort: request.evidenceUploadPort,
+        ...(request.canMaterializeProtectedAttachment
+          ? {
+              canMaterializeProtectedAttachment:
+                request.canMaterializeProtectedAttachment
+            }
+          : {}),
         ...(request.now ? { now: request.now } : {})
       });
       storedBlobObjectIds = uploadResult.storedBlobObjectIds;
