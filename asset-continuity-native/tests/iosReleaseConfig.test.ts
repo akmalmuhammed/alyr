@@ -119,6 +119,35 @@ describe("signed iOS release configuration", () => {
     ).toEqual(["CA92.1"]);
   });
 
+  it("declares the signed cloud record collected by first-party code", () => {
+    const collected =
+      config.ios?.privacyManifests?.NSPrivacyCollectedDataTypes ?? [];
+    expect(
+      collected.map((entry) => entry.NSPrivacyCollectedDataType)
+    ).toEqual([
+      "NSPrivacyCollectedDataTypeEmailAddress",
+      "NSPrivacyCollectedDataTypeUserID",
+      "NSPrivacyCollectedDataTypeDeviceID",
+      "NSPrivacyCollectedDataTypePhysicalAddress",
+      "NSPrivacyCollectedDataTypePreciseLocation",
+      "NSPrivacyCollectedDataTypeCoarseLocation",
+      "NSPrivacyCollectedDataTypeOtherFinancialInfo",
+      "NSPrivacyCollectedDataTypePhotosorVideos",
+      "NSPrivacyCollectedDataTypeOtherUserContent",
+      "NSPrivacyCollectedDataTypeOtherDiagnosticData"
+    ]);
+    expect(collected).toEqual(
+      collected.map((entry) => ({
+        ...entry,
+        NSPrivacyCollectedDataTypeLinked: true,
+        NSPrivacyCollectedDataTypeTracking: false,
+        NSPrivacyCollectedDataTypePurposes: [
+          "NSPrivacyCollectedDataTypePurposeAppFunctionality"
+        ]
+      }))
+    );
+  });
+
   it("uses the exempt Apple-platform encryption declaration", () => {
     expect(config.ios?.config?.usesNonExemptEncryption).toBe(false);
   });

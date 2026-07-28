@@ -58,6 +58,10 @@ describe("Vault user-flow contract", () => {
     expect(routeSource).toContain("await purgeActiveVault()");
     expect(routeSource).toContain("reopenEmptyPreview: true");
     expect(routeSource).toContain("await finalizeAccountDeletion()");
+    expect(routeSource.match(/setCloudDeleted\(true\)/gu)).toHaveLength(1);
+    expect(routeSource).toMatch(
+      /if \(!result\.ok\)[\s\S]*?return;[\s\S]*?setCloudDeleted\(true\)/u
+    );
     expect(routeSource).toContain(
       '<Redirect href={AUTH_ROUTES.welcome} />'
     );

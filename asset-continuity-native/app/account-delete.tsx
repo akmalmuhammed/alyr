@@ -129,7 +129,6 @@ export default function AccountDeleteScreen() {
       await finalizeAccountDeletion();
       router.replace(AUTH_ROUTES.welcome);
     } catch {
-      setCloudDeleted(true);
       setError(copy.signed.localCleanupFailure);
     } finally {
       setLocalBusy(false);

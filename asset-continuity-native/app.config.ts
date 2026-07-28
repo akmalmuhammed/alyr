@@ -29,6 +29,96 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
     privacyManifests: {
       NSPrivacyTracking: false,
       NSPrivacyTrackingDomains: [],
+      NSPrivacyCollectedDataTypes: [
+        {
+          NSPrivacyCollectedDataType:
+            "NSPrivacyCollectedDataTypeEmailAddress",
+          NSPrivacyCollectedDataTypeLinked: true,
+          NSPrivacyCollectedDataTypeTracking: false,
+          NSPrivacyCollectedDataTypePurposes: [
+            "NSPrivacyCollectedDataTypePurposeAppFunctionality"
+          ]
+        },
+        {
+          NSPrivacyCollectedDataType: "NSPrivacyCollectedDataTypeUserID",
+          NSPrivacyCollectedDataTypeLinked: true,
+          NSPrivacyCollectedDataTypeTracking: false,
+          NSPrivacyCollectedDataTypePurposes: [
+            "NSPrivacyCollectedDataTypePurposeAppFunctionality"
+          ]
+        },
+        {
+          NSPrivacyCollectedDataType: "NSPrivacyCollectedDataTypeDeviceID",
+          NSPrivacyCollectedDataTypeLinked: true,
+          NSPrivacyCollectedDataTypeTracking: false,
+          NSPrivacyCollectedDataTypePurposes: [
+            "NSPrivacyCollectedDataTypePurposeAppFunctionality"
+          ]
+        },
+        {
+          NSPrivacyCollectedDataType:
+            "NSPrivacyCollectedDataTypePhysicalAddress",
+          NSPrivacyCollectedDataTypeLinked: true,
+          NSPrivacyCollectedDataTypeTracking: false,
+          NSPrivacyCollectedDataTypePurposes: [
+            "NSPrivacyCollectedDataTypePurposeAppFunctionality"
+          ]
+        },
+        {
+          NSPrivacyCollectedDataType:
+            "NSPrivacyCollectedDataTypePreciseLocation",
+          NSPrivacyCollectedDataTypeLinked: true,
+          NSPrivacyCollectedDataTypeTracking: false,
+          NSPrivacyCollectedDataTypePurposes: [
+            "NSPrivacyCollectedDataTypePurposeAppFunctionality"
+          ]
+        },
+        {
+          NSPrivacyCollectedDataType:
+            "NSPrivacyCollectedDataTypeCoarseLocation",
+          NSPrivacyCollectedDataTypeLinked: true,
+          NSPrivacyCollectedDataTypeTracking: false,
+          NSPrivacyCollectedDataTypePurposes: [
+            "NSPrivacyCollectedDataTypePurposeAppFunctionality"
+          ]
+        },
+        {
+          NSPrivacyCollectedDataType:
+            "NSPrivacyCollectedDataTypeOtherFinancialInfo",
+          NSPrivacyCollectedDataTypeLinked: true,
+          NSPrivacyCollectedDataTypeTracking: false,
+          NSPrivacyCollectedDataTypePurposes: [
+            "NSPrivacyCollectedDataTypePurposeAppFunctionality"
+          ]
+        },
+        {
+          NSPrivacyCollectedDataType:
+            "NSPrivacyCollectedDataTypePhotosorVideos",
+          NSPrivacyCollectedDataTypeLinked: true,
+          NSPrivacyCollectedDataTypeTracking: false,
+          NSPrivacyCollectedDataTypePurposes: [
+            "NSPrivacyCollectedDataTypePurposeAppFunctionality"
+          ]
+        },
+        {
+          NSPrivacyCollectedDataType:
+            "NSPrivacyCollectedDataTypeOtherUserContent",
+          NSPrivacyCollectedDataTypeLinked: true,
+          NSPrivacyCollectedDataTypeTracking: false,
+          NSPrivacyCollectedDataTypePurposes: [
+            "NSPrivacyCollectedDataTypePurposeAppFunctionality"
+          ]
+        },
+        {
+          NSPrivacyCollectedDataType:
+            "NSPrivacyCollectedDataTypeOtherDiagnosticData",
+          NSPrivacyCollectedDataTypeLinked: true,
+          NSPrivacyCollectedDataTypeTracking: false,
+          NSPrivacyCollectedDataTypePurposes: [
+            "NSPrivacyCollectedDataTypePurposeAppFunctionality"
+          ]
+        }
+      ],
       NSPrivacyAccessedAPITypes: [
         {
           NSPrivacyAccessedAPIType:

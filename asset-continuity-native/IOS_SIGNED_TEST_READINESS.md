@@ -179,8 +179,11 @@ finished at `2026-07-27T23:44:48.906Z` from clean commit
 - Both compressed EAS logs were decoded and scanned. Neither contains a fatal
   or build-error line, and the Xcode transcript ends with `** BUILD SUCCEEDED **`.
   The remaining compiler notices originate in Expo/React Native dependencies.
-- `PrivacyInfo.xcprivacy` is present and matches the reviewed app privacy
-  declaration.
+- `PrivacyInfo.xcprivacy` is present and matches the required-reason declaration
+  at the artifact commit. A post-build source audit found that its first-party
+  collected-data array was empty even though the signed cloud pilot stores an
+  account-bound household record. Current source now declares those collected
+  data categories; the next build must be inspected before promoting it.
 
 ## EAS profiles
 
@@ -211,13 +214,40 @@ The app-level manifest copies relevant reasons from static native packages
 because Expo notes that package manifests are not always included in Apple's
 analysis of a submitted binary.
 
+Current source also declares the first-party categories stored by the signed
+cloud record: email address, account and installation identifiers, physical
+address, coarse and precise location, recorded asset/property values, selected
+photos, user-provided item/document content, and sync diagnostics. Each is
+linked to the signed account, used only for app functionality, and not used for
+tracking. ALYR does not currently include an advertising, product-analytics, or
+cross-app tracking SDK, so `NSPrivacyTracking` is set to `false`.
+
 This manifest does **not** complete App Store Connect's App Privacy
 questionnaire. Before TestFlight or App Store distribution, the account owner
-must review the actual pilot configuration and declare the data it collects,
-including account identity, precise location when requested, user-provided
-photos/documents and asset records, diagnostics, and product events. ALYR does
-not currently include an advertising or cross-app tracking SDK, so
-`NSPrivacyTracking` is set to `false`.
+must reconcile the generated privacy report and final pilot behavior against
+the questionnaire.
+
+## Focused post-build P0/P1 audit
+
+The 2026-07-28 source audit found no local P0 in the final simulator evidence,
+icon/splash inputs, custom-scheme routes, onboarding resume path, cloud export,
+or Today-to-Portfolio entry. Focused contract suites cover those paths.
+
+Two local P1s were corrected after build `b9bb7206`:
+
+1. The app privacy manifest now declares the first-party data collected by the
+   signed cloud record rather than emitting an empty collected-data array.
+2. Account deletion marks the cloud identity deleted only after a validated
+   server receipt. An unexpected pre-receipt exception now remains retryable
+   and cannot switch the UI to device-cleanup-only mode.
+
+One store-submission P1 remains intentionally explicit: no verified public
+operator contact, support URL, or privacy-policy URL exists in repository
+configuration. The in-app pilot documents remain reachable before
+authentication, but their invitation-only contact wording is not public-store
+metadata. Supply and verify `SUPPORT_URL`, `PRIVACY_POLICY_URL`, and
+`OPERATOR_CONTACT` before creating a production submission. Do not substitute
+placeholder or unrelated domains.
 
 ## Encryption and export-compliance setting
 
