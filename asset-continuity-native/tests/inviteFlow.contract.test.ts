@@ -113,6 +113,12 @@ describe("household invitation journey", () => {
       /name="invite-member"[\s\S]*?headerShown: false[\s\S]*?presentation: "modal"/
     );
     expect(householdScreen).toContain(
+      "stageHouseholdInvite(normalizedCode)"
+    );
+    expect(householdScreen).toContain(
+      "router.push(AUTH_ROUTES.join)"
+    );
+    expect(householdScreen).not.toContain(
       "acceptHouseholdInvite(normalizedCode)"
     );
     expect(householdScreen).toContain(

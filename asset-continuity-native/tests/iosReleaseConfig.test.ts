@@ -237,6 +237,18 @@ describe("signed iOS release configuration", () => {
         NSAllowsArbitraryLoads: false,
         NSAllowsLocalNetworking: false
       });
+
+      process.env.NODE_ENV = "development";
+      expect(resolveTransportSecurity()).toEqual({
+        NSAllowsArbitraryLoads: false,
+        NSAllowsLocalNetworking: false
+      });
+
+      process.env.EAS_BUILD_PROFILE = "production";
+      expect(resolveTransportSecurity()).toEqual({
+        NSAllowsArbitraryLoads: false,
+        NSAllowsLocalNetworking: false
+      });
     } finally {
       if (originalProfile === undefined) {
         delete process.env.EAS_BUILD_PROFILE;

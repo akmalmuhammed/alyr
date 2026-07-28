@@ -79,7 +79,12 @@ const mockWorkspaceFlow = {
 };
 
 jest.mock("expo-router", () => ({
-  useRouter: () => mockRouter
+  useRouter: () => mockRouter,
+  useFocusEffect: (callback: () => void) =>
+    jest.requireActual<typeof import("react")>("react").useEffect(
+      callback,
+      [callback]
+    )
 }));
 
 jest.mock("@/auth/AuthFlowProvider", () => ({

@@ -81,9 +81,18 @@ function availableRuntime(
       attachmentCount: 5,
       createdAt: "2026-07-27T10:00:00.000Z",
       verifiedAt: "2026-07-27T10:01:00.000Z",
-      protection: "Argon2id + AES-256-GCM" as const
+      protection: "Argon2id + AES-256-GCM" as const,
+      externalBackupConfirmedAt: null
     })),
     share: jest.fn(async () => undefined),
+    listRecent: jest.fn(async () => []),
+    confirmExternalBackup: jest.fn(async (reference: string) => ({
+      reference,
+      fileName: "ALYR-Recovery-2026-07-27.alyrkit",
+      byteSize: 2048,
+      createdAt: "2026-07-27T10:00:00.000Z",
+      externalBackupConfirmedAt: "2026-07-27T10:02:00.000Z"
+    })),
     chooseAndPreview: jest.fn(async () => preview),
     restore: jest.fn(async () => undefined),
     clearPreview: jest.fn(),
@@ -111,7 +120,7 @@ describe("Recovery Kit routes", () => {
       .toBeTruthy();
   });
 
-  it("requires matching passphrases, then shows verified share metadata", async () => {
+  it("keeps a verified local kit unprotected until another copy is explicitly confirmed", async () => {
     const runtime = availableRuntime();
     const screen = await render(
       <RecoveryJourneyProvider runtime={runtime}>
@@ -142,14 +151,35 @@ describe("Recovery Kit routes", () => {
         "a careful recovery phrase"
       )
     );
-    expect(screen.getByText("Recovery Kit created")).toBeTruthy();
+    expect(
+      screen.getByText("Encrypted kit created on this device")
+    ).toBeTruthy();
+    expect(screen.getByText("Save another copy before leaving")).toBeTruthy();
     expect(screen.getByText("Argon2id + AES-256-GCM")).toBeTruthy();
+    expect(
+      screen.queryByRole("button", { name: "I saved another copy" })
+    ).toBeNull();
     await fireEvent.press(
       screen.getByRole("button", { name: "Share encrypted kit" })
     );
     await waitFor(() =>
       expect(runtime.share).toHaveBeenCalledWith("file:///kit.alyrkit")
     );
+    expect(
+      screen.getByText("Did you save it somewhere else?")
+    ).toBeTruthy();
+    await fireEvent.press(
+      screen.getByRole("button", { name: "I saved another copy" })
+    );
+    await waitFor(() =>
+      expect(runtime.confirmExternalBackup).toHaveBeenCalledWith(
+        "file:///kit.alyrkit"
+      )
+    );
+    expect(screen.getByText("Recovery backup protected")).toBeTruthy();
+    expect(
+      screen.queryByRole("button", { name: "Share encrypted kit" })
+    ).toBeNull();
   });
 
   it("previews before restore and requires typed plus system confirmation", async () => {

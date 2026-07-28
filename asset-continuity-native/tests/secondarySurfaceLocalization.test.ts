@@ -24,6 +24,8 @@ describe("secondary surface localization", () => {
     const english = getSecondarySurfaceCopy("en");
     const arabic = getSecondarySurfaceCopy("ar");
 
+    expect(english.atlas.title).toBe("Atlas");
+    expect(arabic.atlas.title).toBe("الأطلس");
     expect(english.atlas.globe).toBe("Globe");
     expect(arabic.atlas.globe).toBe("الكرة الأرضية");
     expect(arabic.atlas.intro).not.toContain("Place");

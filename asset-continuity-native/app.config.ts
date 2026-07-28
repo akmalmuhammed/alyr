@@ -2,11 +2,13 @@ import type { ConfigContext, ExpoConfig } from "expo/config";
 
 function allowsLocalDevelopmentNetworking(): boolean {
   const profile = process.env.EAS_BUILD_PROFILE;
-  return (
-    process.env.NODE_ENV === "development" ||
-    profile === "development" ||
-    profile === "development-simulator"
-  );
+  if (profile !== undefined && profile.length > 0) {
+    return (
+      profile === "development" ||
+      profile === "development-simulator"
+    );
+  }
+  return process.env.NODE_ENV === "development";
 }
 
 export default ({ config }: ConfigContext): ExpoConfig => ({
@@ -251,6 +253,12 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
           "Allow ALYR to use Face ID to unlock your private household record on this device."
       }
     ],
+    [
+      "./plugins/with-production-network-privacy",
+      {
+        allowLocalNetworking: allowsLocalDevelopmentNetworking()
+      }
+    ]
   ],
   experiments: {
     typedRoutes: true

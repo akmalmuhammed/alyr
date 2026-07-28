@@ -213,9 +213,11 @@ export const CAPTURE_COPY: Readonly<Record<LanguageCode, CaptureCopy>> = {
     locationQuestion: "What you know about the item's location",
     locationChoices: "Location detail choices",
     exactSpot: "Exact spot",
-    exactSpotDescription: "You know the place and the room, container, or exact spot.",
+    exactSpotDescription:
+      "The Place pin is confirmed, and you know the room, container, or retrieval clue.",
     placeOnly: "Place only",
-    placeOnlyDescription: "You know the property or building, but not the exact spot.",
+    placeOnlyDescription:
+      "You know the Place, but its pin or indoor spot still needs detail.",
     unknown: "I don't know yet",
     unknownDescription: "Save the item now and add its location when you remember.",
     locatorClue: "Locator clue",
@@ -331,7 +333,7 @@ export const CAPTURE_COPY: Readonly<Record<LanguageCode, CaptureCopy>> = {
     notAdded: "Not added",
     placePinDebtTitle: "Confirm the Place pin",
     placePinDebtBody:
-      "The retrieval detail is in this draft, but this Place still needs a confirmed precise pin before location readiness is complete.",
+      "The indoor retrieval detail is recorded. Until this Place has a confirmed precise pin, the Passport saves the location as needing detail—not exact.",
     reviewPlacePin: "Review Place pin",
     reviewPlacePinHint:
       "Opens the Place pin editor. Your Quick Passport draft stays protected on this device.",
@@ -415,9 +417,11 @@ export const CAPTURE_COPY: Readonly<Record<LanguageCode, CaptureCopy>> = {
     locationQuestion: "ما الذي تعرفه عن موقع الغرض؟",
     locationChoices: "خيارات تفاصيل الموقع",
     exactSpot: "الموضع الدقيق",
-    exactSpotDescription: "تعرف المكان والغرفة أو الحاوية أو الموضع المحدد.",
+    exactSpotDescription:
+      "دبوس المكان دقيق ومؤكد، وتعرف الغرفة أو الحاوية أو دليل الوصول.",
     placeOnly: "المكان فقط",
-    placeOnlyDescription: "تعرف العقار أو المبنى، لكن لا تعرف الموضع الدقيق.",
+    placeOnlyDescription:
+      "تعرف المكان، لكن الدبوس أو الموضع الداخلي ما زال يحتاج إلى تفاصيل.",
     unknown: "لا أعرف بعد",
     unknownDescription: "احفظ الغرض الآن وأضف موقعه عندما تتذكر.",
     locatorClue: "دليل الوصول",
@@ -533,7 +537,7 @@ export const CAPTURE_COPY: Readonly<Record<LanguageCode, CaptureCopy>> = {
     notAdded: "غير مضاف",
     placePinDebtTitle: "أكّد دبوس المكان",
     placePinDebtBody:
-      "تم تسجيل دليل الوصول، لكن اكتمال الموقع يتطلب دبوسًا دقيقًا ومؤكدًا لهذا المكان.",
+      "تم تسجيل دليل الوصول داخل المكان. وحتى يتوفر دبوس دقيق ومؤكد، يُحفظ الموقع على أنه يحتاج إلى تفاصيل، وليس موقعًا دقيقًا.",
     reviewPlacePin: "مراجعة دبوس المكان",
     reviewPlacePinHint:
       "يفتح محرر دبوس المكان. تبقى مسودة الجواز السريع محمية على هذا الجهاز.",

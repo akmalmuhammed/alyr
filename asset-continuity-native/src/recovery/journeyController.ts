@@ -17,6 +17,7 @@ import type {
 import { RecoveryKitError } from "./types";
 import {
   RECOVERY_REPLACE_CONFIRMATION,
+  type LocalRecoveryKitRecord,
   type RecoveryImportPreview,
   type RecoveryJourneyRuntime,
   type RecoveryKitVerification,
@@ -36,6 +37,13 @@ export interface RecoveryJourneyDependencies {
   readonly createRequest: () => Promise<CreateRecoveryKitRequest>;
   readonly chooseEncryptedKit: () => Promise<PickedRecoveryKit | null>;
   readonly shareEncryptedKit: (reference: string) => Promise<void>;
+  readonly listRecentEncryptedKits?: () => Promise<
+    readonly LocalRecoveryKitRecord[]
+  >;
+  readonly confirmEncryptedKitExternalBackup?: (
+    reference: string,
+    confirmedAt: string
+  ) => Promise<LocalRecoveryKitRecord>;
   readonly currentHouseholdId: () => string | null;
   readonly now?: () => string;
 }
@@ -165,7 +173,8 @@ export class RecoveryJourneyController implements RecoveryJourneyRuntime {
         ...stored,
         createdAt: request.createdAt,
         verifiedAt: now(),
-        protection: "Argon2id + AES-256-GCM"
+        protection: "Argon2id + AES-256-GCM",
+        externalBackupConfirmedAt: null
       };
     } finally {
       request.attachmentVaultKey?.fill(0);
@@ -174,6 +183,27 @@ export class RecoveryJourneyController implements RecoveryJourneyRuntime {
 
   async share(reference: string): Promise<void> {
     await this.dependencies.shareEncryptedKit(reference);
+  }
+
+  async listRecent(): Promise<readonly LocalRecoveryKitRecord[]> {
+    return this.dependencies.listRecentEncryptedKits?.() ?? [];
+  }
+
+  async confirmExternalBackup(
+    reference: string
+  ): Promise<LocalRecoveryKitRecord> {
+    const now =
+      this.dependencies.now ?? (() => new Date().toISOString());
+    if (!this.dependencies.confirmEncryptedKitExternalBackup) {
+      throw new RecoveryKitError(
+        "STORAGE_FAILED",
+        "External-copy confirmation is unavailable in this build."
+      );
+    }
+    return this.dependencies.confirmEncryptedKitExternalBackup(
+      reference,
+      now()
+    );
   }
 
   async chooseAndPreview(

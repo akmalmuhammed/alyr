@@ -15,6 +15,10 @@ import {
   isAssetActive,
   isOwnedPropertyPlace
 } from "./model";
+import {
+  deriveNativeAssetLocationTruth,
+  hasConfirmedPreciseNativePlacePin
+} from "./readiness";
 
 /**
  * The subject is explicit so a real-estate Place can carry a dated value
@@ -704,21 +708,17 @@ function isLocationReady(
   if (!policy.requiresPhysicalLocator) {
     return true;
   }
-  if (asset.locationStatus !== "known" || !asset.placeId) {
-    return false;
-  }
-  const place = placeById.get(asset.placeId);
-  if (!place) {
-    return false;
-  }
-  if (policy.isRealEstate) {
-    return Boolean(
-      place.latitude !== null &&
-        place.longitude !== null &&
-        place.confirmedAt
-    );
-  }
-  return Boolean(asset.roomId || asset.locatorText?.trim());
+  return (
+    deriveNativeAssetLocationTruth({
+      categoryId: asset.categoryId,
+      requestedStatus: asset.locationStatus,
+      place: asset.placeId
+        ? placeById.get(asset.placeId)
+        : undefined,
+      roomId: asset.roomId,
+      locatorText: asset.locatorText
+    }).status === "known"
+  );
 }
 
 function locationDistribution(
@@ -920,14 +920,7 @@ export function buildPortfolioSnapshot(
     }
   }
   const confirmedPropertyPinIds = properties
-    .filter(
-      (place) =>
-        place.confirmedAt !== null &&
-        place.latitude !== null &&
-        Number.isFinite(place.latitude) &&
-        place.longitude !== null &&
-        Number.isFinite(place.longitude)
-    )
+    .filter(hasConfirmedPreciseNativePlacePin)
     .map((place) => place.id);
   const confirmedPropertyPinSet = new Set(confirmedPropertyPinIds);
   const propertyPinGapPlaceIds = properties
@@ -1024,7 +1017,7 @@ export function buildPortfolioSnapshot(
         amountMinor: record.amountMinor,
         currency: record.currency,
         asOf: record.asOf,
-        syncStatus: "on-device"
+        syncStatus: record.syncStatus ?? "on-device"
       };
     })
     .sort(

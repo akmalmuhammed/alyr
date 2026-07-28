@@ -22,6 +22,7 @@ const mockAuthState = {
     capturedAt: string;
   } | null,
   acceptPendingHouseholdInvite: jest.fn(),
+  provisionHousehold: jest.fn(),
   selectHousehold: jest.fn(),
   session: {
     identity: {
@@ -31,7 +32,9 @@ const mockAuthState = {
     }
   },
   setHouseholdName: jest.fn(),
-  signIn: jest.fn()
+  signIn: jest.fn(),
+  signOut: jest.fn(async () => true),
+  stageHouseholdInvite: jest.fn(async () => true)
 };
 
 jest.mock("@/auth/components", () => {
@@ -83,6 +86,7 @@ import CreateAccountScreen from "../app/(auth)/create-account";
 import HouseholdSetupScreen from "../app/(auth)/household";
 import SignInScreen from "../app/(auth)/sign-in";
 import { focusFirstInvalidAuthField } from "@/auth/components";
+import { LocaleProvider } from "@/i18n/LocaleProvider";
 import { typography } from "@/theme/tokens";
 
 const mockFocusFirstInvalidAuthField =
@@ -117,7 +121,7 @@ describe("auth form first-invalid-field wiring", () => {
       expect.stringMatching(/password/i)
     ]);
     expect(mockAuthState.createAccount).not.toHaveBeenCalled();
-    expect(screen.queryByLabelText("Pilot access code")).toBeNull();
+    expect(screen.queryByLabelText("Early access code")).toBeNull();
     await screen.unmount();
   });
 
@@ -125,7 +129,7 @@ describe("auth form first-invalid-field wiring", () => {
     mockAuthState.mode = "supabase";
     const screen = await render(<CreateAccountScreen />);
     const pilotCodeStyle = StyleSheet.flatten(
-      screen.getByLabelText("Pilot access code").props.style
+      screen.getByLabelText("Early access code").props.style
     );
     expect(pilotCodeStyle.fontFamily).toBe(typography.bodyBold);
     expect(pilotCodeStyle.textAlign).toBe("left");
@@ -147,7 +151,9 @@ describe("auth form first-invalid-field wiring", () => {
       screen.getByText("Verify access and create account")
     );
 
-    expect(screen.getByText("Enter your pilot access code.")).toBeTruthy();
+    expect(
+      screen.getByText("Enter your early access code.")
+    ).toBeTruthy();
     expect(mockAuthState.createAccount).not.toHaveBeenCalled();
     expect(
       mockFocusFirstInvalidAuthField.mock.calls[0]?.[0].map(
@@ -155,7 +161,7 @@ describe("auth form first-invalid-field wiring", () => {
       )
     ).toEqual([
       undefined,
-      "Enter your pilot access code.",
+      "Enter your early access code.",
       undefined,
       undefined
     ]);
@@ -170,7 +176,7 @@ describe("auth form first-invalid-field wiring", () => {
       " OWNER@EXAMPLE.COM "
     );
     await fireEvent.changeText(
-      screen.getByLabelText("Pilot access code"),
+      screen.getByLabelText("Early access code"),
       "alyr-aaaa-bbbb-cccc"
     );
     await fireEvent.changeText(
@@ -204,10 +210,10 @@ describe("auth form first-invalid-field wiring", () => {
       kind: "confirmation-required"
     });
     const screen = await render(<CreateAccountScreen />);
-    expect(screen.queryByLabelText("Pilot access code")).toBeNull();
+    expect(screen.queryByLabelText("Early access code")).toBeNull();
     expect(
       screen.getByText(
-        /one-time household invitation replaces the operator pilot code/i
+        /one-time household invitation already grants access/i
       )
     ).toBeTruthy();
 
@@ -238,6 +244,8 @@ describe("auth form first-invalid-field wiring", () => {
   it("orders sign-in fields with email first", async () => {
     const screen = await render(<SignInScreen />);
 
+    expect(screen.getByTestId("auth-sign-in-email")).toBeTruthy();
+    expect(screen.getByTestId("auth-sign-in-password")).toBeTruthy();
     expect(
       screen.getByRole("button", { name: "Show password" })
     ).toBeTruthy();
@@ -256,14 +264,86 @@ describe("auth form first-invalid-field wiring", () => {
     await screen.unmount();
   });
 
+  it("routes a signed-in recipient to invitation review without auto-accepting", async () => {
+    mockAuthState.mode = "supabase";
+    mockAuthState.pendingHouseholdInvite = {
+      oneTimeCode: "INVITE-RECIPIENT-01",
+      capturedAt: "2026-07-28T08:00:00.000Z"
+    };
+    mockAuthState.signIn.mockResolvedValue({
+      kind: "authenticated",
+      session: {
+        ...mockAuthState.session,
+        onboarding: "required"
+      }
+    });
+    const screen = await render(<SignInScreen />);
+
+    await fireEvent.changeText(
+      screen.getByLabelText("Email"),
+      "recipient@example.com"
+    );
+    await fireEvent.changeText(
+      screen.getByLabelText("Password"),
+      "correct horse battery staple"
+    );
+    await fireEvent.press(screen.getByText("Sign in"));
+
+    expect(mockRouter.replace).toHaveBeenCalledWith("/join");
+    expect(
+      mockAuthState.acceptPendingHouseholdInvite
+    ).not.toHaveBeenCalled();
+    await screen.unmount();
+  });
+
+  it("routes an immediately authenticated new recipient to invitation review", async () => {
+    mockAuthState.mode = "supabase";
+    mockAuthState.pendingHouseholdInvite = {
+      oneTimeCode: "INVITE-RECIPIENT-02",
+      capturedAt: "2026-07-28T08:10:00.000Z"
+    };
+    mockAuthState.createAccount.mockResolvedValue({
+      kind: "authenticated",
+      session: {
+        ...mockAuthState.session,
+        onboarding: "required"
+      }
+    });
+    const screen = await render(<CreateAccountScreen />);
+
+    await fireEvent.changeText(
+      screen.getByLabelText("Email"),
+      "recipient@example.com"
+    );
+    await fireEvent.changeText(
+      screen.getByLabelText("Password"),
+      "correct horse battery staple"
+    );
+    await fireEvent.changeText(
+      screen.getByLabelText("Confirm password"),
+      "correct horse battery staple"
+    );
+    await fireEvent.press(
+      screen.getByText("Create account and continue")
+    );
+
+    expect(mockRouter.replace).toHaveBeenCalledWith("/join");
+    expect(
+      mockAuthState.acceptPendingHouseholdInvite
+    ).not.toHaveBeenCalled();
+    await screen.unmount();
+  });
+
   it("focuses the household name when setup validation fails", async () => {
     const screen = await render(<HouseholdSetupScreen />);
-    const householdName = screen.getByLabelText("Household name");
+    const householdName = screen.getByLabelText("Record name");
 
-    expect(householdName.props.value).toBe("");
+    expect(screen.queryByLabelText("Back")).toBeNull();
+    expect(householdName.props.value).toBe("My record");
     expect(householdName.props.placeholder).toBe("e.g. Family home");
+    await fireEvent.changeText(householdName, "");
 
-    await fireEvent.press(screen.getByText("Continue"));
+    await fireEvent.press(screen.getByText("Create private record"));
 
     expect(mockFocusFirstInvalidAuthField).toHaveBeenCalledTimes(1);
     expect(
@@ -275,6 +355,144 @@ describe("auth form first-invalid-field wiring", () => {
     ]);
     expect(mockAuthState.setHouseholdName).not.toHaveBeenCalled();
     expect(mockRouter.push).not.toHaveBeenCalled();
+    await screen.unmount();
+  });
+
+  it("does not offer a Back action that redirects a verified account into the same private-record screen", async () => {
+    mockAuthState.mode = "supabase";
+    const screen = await render(<HouseholdSetupScreen />);
+
+    expect(screen.queryByLabelText("Back")).toBeNull();
+    expect(screen.getByTestId("auth-activation-progress")).toBeTruthy();
+    expect(
+      screen.getByRole("button", { name: "Use another account" })
+    ).toBeTruthy();
+    await screen.unmount();
+  });
+
+  it("creates the suggested private record in one action", async () => {
+    mockAuthState.householdName = "";
+    mockAuthState.provisionHousehold.mockResolvedValue(
+      "household-personal"
+    );
+    const screen = await render(<HouseholdSetupScreen />);
+
+    await fireEvent.press(
+      screen.getByText("Create private record")
+    );
+
+    expect(mockAuthState.provisionHousehold).toHaveBeenCalledWith(
+      "My record"
+    );
+    expect(mockAuthState.setHouseholdName).toHaveBeenCalledWith(
+      "My record"
+    );
+    expect(mockRouter.push).toHaveBeenCalledWith("/(auth)/privacy");
+    await screen.unmount();
+  });
+
+  it("keeps private-record creation primary and reveals invitation entry only on request", async () => {
+    const screen = await render(<HouseholdSetupScreen />);
+
+    expect(screen.queryAllByRole("radio")).toHaveLength(0);
+    expect(screen.queryByLabelText("Invitation code")).toBeNull();
+    expect(screen.getByText("Create private record")).toBeTruthy();
+    const disclosure = screen.getByTestId(
+      "household-invitation-disclosure"
+    );
+    expect(disclosure.props.accessibilityState).toEqual({
+      disabled: false,
+      expanded: false
+    });
+
+    await fireEvent.press(disclosure);
+
+    expect(screen.getByLabelText("Invitation code")).toBeTruthy();
+    expect(screen.getByText("Review invitation")).toBeTruthy();
+    expect(
+      screen.getByTestId("household-invitation-disclosure").props
+        .accessibilityState
+    ).toEqual({
+      disabled: false,
+      expanded: true
+    });
+    await screen.unmount();
+  });
+
+  it("stages a manually entered invitation for explicit review without accepting it", async () => {
+    const screen = await render(<HouseholdSetupScreen />);
+    await fireEvent.press(
+      screen.getByTestId("household-invitation-disclosure")
+    );
+    await fireEvent.changeText(
+      screen.getByLabelText("Invitation code"),
+      "  invite-recipient-05  "
+    );
+    await fireEvent.press(screen.getByText("Review invitation"));
+
+    expect(mockAuthState.stageHouseholdInvite).toHaveBeenCalledWith(
+      "INVITE-RECIPIENT-05"
+    );
+    expect(mockRouter.push).toHaveBeenCalledWith("/join");
+    expect(
+      mockAuthState.acceptPendingHouseholdInvite
+    ).not.toHaveBeenCalled();
+    await screen.unmount();
+  });
+
+  it("focuses the optional invitation field before any invitation is staged", async () => {
+    const screen = await render(<HouseholdSetupScreen />);
+    await fireEvent.press(
+      screen.getByTestId("household-invitation-disclosure")
+    );
+    await fireEvent.press(screen.getByText("Review invitation"));
+
+    expect(mockFocusFirstInvalidAuthField).toHaveBeenCalledWith([
+      expect.objectContaining({
+        error: "Invitation code required"
+      })
+    ]);
+    expect(mockAuthState.stageHouseholdInvite).not.toHaveBeenCalled();
+    expect(mockRouter.push).not.toHaveBeenCalledWith("/join");
+    await screen.unmount();
+  });
+
+  it("localizes the quiet invitation disclosure and its expanded field in Arabic", async () => {
+    const screen = await render(
+      <LocaleProvider initialLanguage="ar">
+        <HouseholdSetupScreen />
+      </LocaleProvider>
+    );
+    const disclosure = screen.getByText("لديّ رمز دعوة");
+    expect(screen.queryByLabelText("رمز الدعوة")).toBeNull();
+
+    await fireEvent.press(disclosure);
+
+    expect(screen.getByLabelText("رمز الدعوة")).toBeTruthy();
+    expect(screen.getByText("مراجعة الدعوة")).toBeTruthy();
+    expect(
+      screen.getByTestId("household-invitation-disclosure").props
+        .accessibilityState.expanded
+    ).toBe(true);
+    await screen.unmount();
+  });
+
+  it("opens the explicit review screen for a protected invitation during household setup", async () => {
+    mockAuthState.pendingHouseholdInvite = {
+      oneTimeCode: "INVITE-RECIPIENT-04",
+      capturedAt: "2026-07-28T08:30:00.000Z"
+    };
+    const screen = await render(<HouseholdSetupScreen />);
+
+    expect(
+      mockAuthState.acceptPendingHouseholdInvite
+    ).not.toHaveBeenCalled();
+    expect(screen.queryByLabelText("Record name")).toBeNull();
+    await fireEvent.press(screen.getByText("Review invitation"));
+    expect(mockRouter.replace).toHaveBeenCalledWith("/join");
+    expect(
+      mockAuthState.acceptPendingHouseholdInvite
+    ).not.toHaveBeenCalled();
     await screen.unmount();
   });
 });

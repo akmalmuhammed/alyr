@@ -3,8 +3,11 @@ import {
   ArrowLeft,
   ArrowRight,
   Check,
+  CheckCircle,
   Eye,
-  EyeSlash
+  EyeSlash,
+  WarningCircle,
+  XCircle
 } from "phosphor-react-native";
 import {
   forwardRef,
@@ -19,6 +22,7 @@ import {
 } from "react";
 import {
   AccessibilityInfo,
+  ActivityIndicator,
   findNodeHandle,
   Platform,
   Pressable,
@@ -39,11 +43,15 @@ import {
   SecondaryButton
 } from "@/components/ui";
 import {
-  formatStep,
+  formatActivationProgressValue,
   useCoreJourneyCopy
 } from "@/i18n/coreJourneyCopy";
 import { rtlRowStyle } from "@/i18n/rtlLayout";
 import { colors, radius, spacing, typography } from "@/theme/tokens";
+import {
+  AUTH_ACTIVATION_STAGE_ORDER,
+  type AuthActivationProgress
+} from "./routes";
 
 export interface AuthViewport {
   readonly width: number;
@@ -72,12 +80,15 @@ export function AuthScaffold({
   readonly footer?: ReactNode;
   readonly headerAction?: ReactNode;
   readonly onBack?: () => void;
-  readonly progress?: { readonly current: number; readonly total: number };
+  readonly progress?: AuthActivationProgress;
   readonly testID?: string;
 }>) {
   const { copy, language, rtl } = useCoreJourneyCopy();
   const compact = isCompactAuthViewport(useWindowDimensions());
   const BackIcon = rtl ? ArrowRight : ArrowLeft;
+  const currentStageLabel = progress
+    ? copy.activationProgress.stages[progress.stage]
+    : null;
   return (
     <AppScreen
       contentStyle={StyleSheet.flatten([
@@ -109,40 +120,61 @@ export function AuthScaffold({
         )}
         {progress ? (
           <View
-            accessibilityLabel={formatStep(
-              progress.current,
-              progress.total,
-              language
-            )}
+            accessible
+            accessibilityLabel={copy.activationProgress.label}
             accessibilityRole="progressbar"
             accessibilityValue={{
               min: 1,
               max: progress.total,
-              now: progress.current
+              now: progress.position,
+              text: formatActivationProgressValue(
+                currentStageLabel ?? "",
+                progress.position,
+                progress.total,
+                language
+              )
             }}
             style={[
               styles.progressBlock,
               rtl && styles.progressBlockRtl
             ]}
+            testID="auth-activation-progress"
           >
             <Text
+              accessible={false}
               style={[
                 styles.progressLabel,
-                rtl && styles.arabicMedium
+                rtl && styles.progressLabelRtl
               ]}
+              testID="auth-activation-current-stage"
             >
-              {formatStep(progress.current, progress.total, language)}
+              {currentStageLabel}
             </Text>
-            <View style={styles.progressTrack}>
-              <View
-                style={[
-                  styles.progressValue,
-                  rtl && styles.progressValueRtl,
-                  {
-                    width: `${(progress.current / progress.total) * 100}%`
-                  }
-                ]}
-              />
+            <View
+              accessibilityElementsHidden
+              importantForAccessibility="no-hide-descendants"
+              style={[
+                styles.progressRail,
+                rtl && styles.progressRailRtl
+              ]}
+              testID="auth-activation-rail"
+            >
+              {AUTH_ACTIVATION_STAGE_ORDER.map((stage, index) => {
+                const position = index + 1;
+                return (
+                  <View
+                    key={stage}
+                    style={[
+                      styles.progressSegment,
+                      position < progress.position &&
+                        styles.progressSegmentComplete,
+                      position === progress.position &&
+                        styles.progressSegmentCurrent
+                    ]}
+                    testID={`auth-activation-segment-${stage}`}
+                  />
+                );
+              })}
             </View>
           </View>
         ) : (
@@ -229,6 +261,7 @@ export function AuthStatusRow({
   eyebrow,
   icon: IconComponent,
   live = false,
+  state = "ready",
   value,
   valueDirection = "natural"
 }: {
@@ -236,19 +269,80 @@ export function AuthStatusRow({
   readonly eyebrow: string;
   readonly icon: Icon;
   readonly live?: boolean;
+  readonly state?: "checking" | "ready" | "success" | "warning" | "error";
   readonly value: string;
   readonly valueDirection?: "natural" | "ltr";
 }) {
   const { rtl } = useCoreJourneyCopy();
+  const liveRegion =
+    state === "error" ? "assertive" : live ? "polite" : undefined;
+  const statusIcon =
+    state === "checking" ? (
+      <ActivityIndicator
+        color={colors.information}
+        size="small"
+        testID="auth-status-glyph-checking"
+      />
+    ) : state === "success" ? (
+      <CheckCircle
+        color={colors.success}
+        size={24}
+        testID="auth-status-glyph-success"
+        weight="fill"
+      />
+    ) : state === "warning" ? (
+      <WarningCircle
+        color={colors.warning}
+        size={24}
+        testID="auth-status-glyph-warning"
+        weight="fill"
+      />
+    ) : state === "error" ? (
+      <XCircle
+        color={colors.danger}
+        size={24}
+        testID="auth-status-glyph-error"
+        weight="fill"
+      />
+    ) : (
+      <IconComponent
+        color={colors.volt}
+        size={22}
+        testID="auth-status-glyph-ready"
+        weight="bold"
+      />
+    );
   return (
     <View
       accessible
       accessibilityLabel={`${eyebrow}. ${value}. ${detail}`}
-      {...(live ? { accessibilityLiveRegion: "polite" as const } : {})}
-      style={[styles.statusRow, rtl && styles.rowReverse]}
+      accessibilityState={{ busy: state === "checking" }}
+      {...(liveRegion
+        ? { accessibilityLiveRegion: liveRegion }
+        : {})}
+      {...(state === "error"
+        ? { accessibilityRole: "alert" as const }
+        : {})}
+      style={[
+        styles.statusRow,
+        state === "warning" && styles.statusRowWarning,
+        state === "error" && styles.statusRowError,
+        rtl && styles.rowReverse
+      ]}
+      testID={`auth-status-row-${state}`}
     >
-      <View style={styles.statusIcon}>
-        <IconComponent color={colors.volt} size={22} weight="bold" />
+      <View
+        importantForAccessibility="no"
+        style={[
+          styles.statusIcon,
+          state === "checking" && styles.statusIconChecking,
+          state === "success" && styles.statusIconSuccess,
+          state === "warning" && styles.statusIconWarning,
+          state === "error" && styles.statusIconError
+        ]}
+        testID={`auth-status-icon-${state}`}
+      >
+        {statusIcon}
       </View>
       <View style={styles.statusCopy}>
         <Text
@@ -266,7 +360,10 @@ export function AuthStatusRow({
             rtl && valueDirection === "natural" && styles.arabicMedium,
             rtl && valueDirection === "natural" && styles.rtlText,
             valueDirection === "ltr" && styles.ltrValue,
-            rtl && valueDirection === "ltr" && styles.ltrValueRtl
+            rtl && valueDirection === "ltr" && styles.ltrValueRtl,
+            state === "success" && styles.statusValueSuccess,
+            state === "warning" && styles.statusValueWarning,
+            state === "error" && styles.statusValueError
           ]}
         >
           {value}
@@ -584,7 +681,8 @@ export function SelectionRow({
   disabled = false,
   icon: IconComponent,
   label,
-  onPress
+  onPress,
+  testID
 }: {
   readonly active: boolean;
   readonly description: string;
@@ -592,6 +690,7 @@ export function SelectionRow({
   readonly icon: Icon;
   readonly label: string;
   readonly onPress: () => void;
+  readonly testID?: string;
 }) {
   const { rtl } = useCoreJourneyCopy();
   return (
@@ -600,6 +699,7 @@ export function SelectionRow({
       accessibilityState={{ checked: active, disabled }}
       disabled={disabled}
       onPress={onPress}
+      testID={testID}
       style={({ pressed }) => [
         styles.selection,
         rtl && styles.rowReverse,
@@ -722,30 +822,49 @@ const styles = StyleSheet.create({
     opacity: 0.42
   },
   progressBlock: {
-    width: 92,
-    gap: 5,
-    alignItems: "flex-end"
+    flex: 1,
+    flexShrink: 1,
+    minWidth: 0,
+    maxWidth: 200,
+    gap: 6,
+    alignItems: "stretch"
   },
   progressBlockRtl: {
-    alignItems: "flex-start"
+    direction: "rtl"
   },
   progressLabel: {
-    color: colors.textMuted,
-    fontFamily: typography.bodyMedium,
-    fontSize: 12,
-    fontVariant: ["tabular-nums"]
+    flexShrink: 1,
+    color: colors.text,
+    fontFamily: typography.bodyBold,
+    fontSize: 13,
+    lineHeight: 18,
+    textAlign: "right"
   },
-  progressTrack: {
+  progressLabelRtl: {
+    fontFamily: typography.arabicMedium,
+    writingDirection: "rtl",
+    textAlign: "right"
+  },
+  progressRail: {
     width: "100%",
-    height: 2,
+    height: 4,
+    flexDirection: "row",
+    gap: 4
+  },
+  progressRailRtl: {
+    flexDirection: "row-reverse"
+  },
+  progressSegment: {
+    flex: 1,
+    height: 3,
+    borderRadius: radius.xs,
     backgroundColor: colors.border
   },
-  progressValue: {
-    height: 2,
-    backgroundColor: colors.carbon
+  progressSegmentComplete: {
+    backgroundColor: colors.textMuted
   },
-  progressValueRtl: {
-    alignSelf: "flex-end"
+  progressSegmentCurrent: {
+    backgroundColor: colors.action
   },
   heading: {
     gap: spacing.sm
@@ -794,6 +913,14 @@ const styles = StyleSheet.create({
     borderBottomWidth: StyleSheet.hairlineWidth,
     borderColor: colors.border
   },
+  statusRowWarning: {
+    backgroundColor: colors.warningQuiet,
+    borderColor: colors.warningBorder
+  },
+  statusRowError: {
+    backgroundColor: colors.dangerQuiet,
+    borderColor: colors.dangerBorder
+  },
   statusIcon: {
     width: 44,
     height: 44,
@@ -802,6 +929,22 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     borderRadius: radius.md,
     backgroundColor: colors.carbon
+  },
+  statusIconChecking: {
+    backgroundColor: colors.informationQuiet
+  },
+  statusIconSuccess: {
+    backgroundColor: colors.voltQuiet
+  },
+  statusIconWarning: {
+    backgroundColor: colors.surface,
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: colors.warningBorder
+  },
+  statusIconError: {
+    backgroundColor: colors.surface,
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: colors.dangerBorder
   },
   statusCopy: {
     minWidth: 0,
@@ -820,6 +963,15 @@ const styles = StyleSheet.create({
     fontFamily: typography.bodyBold,
     fontSize: 16,
     lineHeight: 22
+  },
+  statusValueSuccess: {
+    color: colors.success
+  },
+  statusValueWarning: {
+    color: colors.warning
+  },
+  statusValueError: {
+    color: colors.danger
   },
   statusDetail: {
     color: colors.textMuted,

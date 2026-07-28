@@ -4,8 +4,9 @@ import type {
   NativeEvidence,
   NativePlace
 } from "./model";
-import type { PlacePin } from "@alyr/contracts";
+import type { LocationStatus, PlacePin } from "@alyr/contracts";
 import {
+  deriveLocationTruth,
   getLocationPolicy,
   isConfirmedPrecisePlacePin
 } from "@alyr/domain";
@@ -55,6 +56,60 @@ export function hasConfirmedPreciseNativePlacePin(
   return isConfirmedPrecisePlacePin(placePinFromNativePlace(place));
 }
 
+export interface NativeAssetLocationTruth {
+  readonly status: LocationStatus;
+  readonly hasPlace: boolean;
+  readonly hasConfirmedPlacePin: boolean;
+  readonly hasIndoorLocator: boolean;
+}
+
+/**
+ * Keeps the Place coordinate claim separate from the item's indoor retrieval
+ * clue. A room/container never upgrades an unresolved Place pin into a known
+ * physical location.
+ */
+export function deriveNativeAssetLocationTruth(input: {
+  readonly categoryId: string;
+  readonly requestedStatus: LocationStatus;
+  readonly place: NativePlace | null | undefined;
+  readonly roomId: string | null;
+  readonly locatorText: string | null;
+}): NativeAssetLocationTruth {
+  const policy = getLocationPolicy(input.categoryId);
+  const hasPlace = Boolean(input.place);
+  const hasConfirmedPlacePin =
+    hasConfirmedPreciseNativePlacePin(input.place);
+  const hasIndoorLocator = Boolean(
+    input.roomId || input.locatorText?.trim()
+  );
+
+  if (!policy.requiresPhysicalLocator) {
+    return {
+      status: input.requestedStatus,
+      hasPlace,
+      hasConfirmedPlacePin,
+      hasIndoorLocator
+    };
+  }
+
+  const truth = deriveLocationTruth({
+    requiresPhysicalLocator: policy.requiresPhysicalLocator,
+    allowsVirtual: policy.allowsVirtual,
+    isRealEstate: policy.isRealEstate,
+    requestedMode: "physical",
+    requestedStatus: input.requestedStatus,
+    hasPlace,
+    hasIndoorLocator,
+    placePin: placePinFromNativePlace(input.place)
+  });
+  return {
+    status: truth.status,
+    hasPlace,
+    hasConfirmedPlacePin,
+    hasIndoorLocator
+  };
+}
+
 /**
  * Identifies the narrow location-completion case where the item already has
  * every non-pin detail it needs and the owning Place pin is the only debt.
@@ -65,17 +120,19 @@ export function nativeAssetLocationNeedsConfirmedPin(
   asset: NativeAsset,
   place: NativePlace | null | undefined
 ): boolean {
-  const locationPolicy = getLocationPolicy(asset.categoryId);
-  const indoorLocator = Boolean(
-    asset.roomId || asset.locatorText?.trim()
-  );
+  const truth = deriveNativeAssetLocationTruth({
+    categoryId: asset.categoryId,
+    requestedStatus: asset.locationStatus,
+    place,
+    roomId: asset.roomId,
+    locatorText: asset.locatorText
+  });
 
   return (
-    locationPolicy.requiresPhysicalLocator &&
-    asset.locationStatus === "known" &&
-    Boolean(place) &&
-    (locationPolicy.isRealEstate || indoorLocator) &&
-    !hasConfirmedPreciseNativePlacePin(place)
+    getLocationPolicy(asset.categoryId).requiresPhysicalLocator &&
+    truth.hasPlace &&
+    truth.hasIndoorLocator &&
+    !truth.hasConfirmedPlacePin
   );
 }
 
@@ -97,15 +154,15 @@ export function calculateNativeAssetReadiness(
     : null;
   const place = places.find((item) => item.id === asset.placeId);
   const locationPolicy = getLocationPolicy(asset.categoryId);
-  const precisePin = hasConfirmedPreciseNativePlacePin(place);
-  const indoorLocator = Boolean(
-    asset.roomId || asset.locatorText?.trim()
-  );
+  const locationTruth = deriveNativeAssetLocationTruth({
+    categoryId: asset.categoryId,
+    requestedStatus: asset.locationStatus,
+    place,
+    roomId: asset.roomId,
+    locatorText: asset.locatorText
+  });
   const hasDetailedLocation =
-    asset.locationStatus === "known" &&
-    Boolean(place) &&
-    precisePin &&
-    (locationPolicy.isRealEstate || indoorLocator);
+    locationTruth.status === "known";
   const requiresPhysicalLocation =
     locationPolicy.requiresPhysicalLocator;
 

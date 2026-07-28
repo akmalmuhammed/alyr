@@ -9,6 +9,7 @@ import {
   type HouseholdAccessSnapshot,
   type HouseholdCreationReceipt,
   type HouseholdInvite,
+  type HouseholdInviteReview,
   type HouseholdMemberDescriptor,
   type HouseholdMembership,
   type PendingHouseholdInviteDescriptor,
@@ -119,6 +120,26 @@ function parseInvite(value: unknown): HouseholdInvite | null {
     oneTimeCode: value.oneTimeCode,
     role: value.role,
     expiresAt: value.expiresAt
+  };
+}
+
+function parseInviteReview(value: unknown): HouseholdInviteReview | null {
+  const candidate =
+    isRecord(value) && isRecord(value.review) ? value.review : null;
+  if (
+    candidate === null ||
+    typeof candidate.householdName !== "string" ||
+    candidate.householdName.trim().length < 1 ||
+    candidate.householdName.length > 120 ||
+    (candidate.role !== "editor" && candidate.role !== "viewer") ||
+    !isIsoDateTime(candidate.expiresAt)
+  ) {
+    return null;
+  }
+  return {
+    householdName: candidate.householdName.trim(),
+    role: candidate.role,
+    expiresAt: candidate.expiresAt
   };
 }
 
@@ -514,6 +535,33 @@ export class HttpHouseholdAccess implements HouseholdAccessPort {
       : failure(
           "VALIDATION_FAILED",
           "The invitation service returned a malformed response.",
+          false
+        );
+  }
+
+  async previewInvite(
+    oneTimeCode: string
+  ): Promise<Result<HouseholdInviteReview>> {
+    const normalizedCode = oneTimeCode.trim().toUpperCase();
+    if (normalizedCode.length < 1 || normalizedCode.length > 128) {
+      return failure(
+        "VALIDATION_FAILED",
+        "Enter a valid invitation code.",
+        false
+      );
+    }
+
+    const result = await this.post("/invites/preview", {
+      apiVersion: CONTRACT_API_VERSION,
+      oneTimeCode: normalizedCode
+    });
+    if (!result.ok) return result;
+    const review = parseInviteReview(result.value);
+    return review
+      ? { ok: true, value: review }
+      : failure(
+          "VALIDATION_FAILED",
+          "The invitation service returned a malformed review.",
           false
         );
   }

@@ -13,9 +13,9 @@ env:
     file: "../subflows/add-minimal-passport.yaml"
     env:
       ASSET_NAME: "${ASSET_NAME}"
-- assertVisible: "Passport saved"
+- assertVisible: "Passport started"
 - tapOn:
-    text: "Go to Today"
+    text: "View Today"
     enabled: true
 - extendedWaitUntil:
     visible:

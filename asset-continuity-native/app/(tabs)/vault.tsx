@@ -1,12 +1,15 @@
 import { File, Paths } from "expo-file-system";
-import { useRouter } from "expo-router";
+import { useFocusEffect, useRouter } from "expo-router";
 import * as Sharing from "expo-sharing";
 import {
   ArrowRight,
+  ArrowsClockwise,
   BellRinging,
+  CloudCheck,
   CloudArrowDown,
   CloudSlash,
   Clock,
+  DeviceMobile,
   DownloadSimple,
   FileText,
   GearSix,
@@ -17,9 +20,10 @@ import {
   Trash,
   UploadSimple,
   UserCircle,
-  Warning
+  Warning,
+  WarningCircle
 } from "phosphor-react-native";
-import { useState } from "react";
+import { useCallback, useState } from "react";
 import {
   Alert,
   Platform,
@@ -54,11 +58,13 @@ import {
   Section
 } from "@/components/ui";
 import { PermissionNotice } from "@/components/PermissionDenied";
-import { SyncTruth } from "@/components/SyncTruth";
+import { queuedSyncChangeSummary } from "@/components/SyncTruth";
 import { VaultRecentProof } from "@/components/VaultRecentProof";
 import { useDeviceAuth } from "@/deviceAuth";
 import {
   formatByteSize,
+  formatLocalizedDate,
+  formatLocalizedNumber,
   householdAccessSummary,
   pendingUpdateSummary,
   proofFileSummary,
@@ -73,6 +79,10 @@ import type {
   NativePlaceDocument
 } from "@/domain/model";
 import {
+  cloudStorageUsageTruth,
+  type AuthoritativeCloudStorageUsage
+} from "@/domain/vaultStorage";
+import {
   reviewReminderSettingsCopy,
   type ReviewReminderSettingsCopy
 } from "@/i18n/reviewReminderCopy";
@@ -82,9 +92,21 @@ import {
   type ReviewReminderStatus
 } from "@/notifications/ReviewReminderProvider";
 import { sampleActivationDestination } from "@/navigation/sampleActivation";
-import { useRecoveryJourney } from "@/recovery";
-import { useWorkspace } from "@/state/WorkspaceProvider";
-import { colors, radius, spacing, typography } from "@/theme/tokens";
+import {
+  type LocalRecoveryKitRecord,
+  useRecoveryJourney
+} from "@/recovery";
+import {
+  useWorkspace,
+  type WorkspaceSyncRuntimeState
+} from "@/state/WorkspaceProvider";
+import {
+  colors,
+  radius,
+  spacing,
+  themes,
+  typography
+} from "@/theme/tokens";
 
 export function isCompactVaultActionWidth(width: number): boolean {
   return width <= 360;
@@ -109,9 +131,458 @@ export function localProofStorageSummary(
   };
 }
 
+export function archiveSyncPresentation(
+  sync: WorkspaceSyncRuntimeState,
+  pendingOperationCount: number,
+  language: "en" | "ar"
+) {
+  const ar = language === "ar";
+  if (sync.conflicts.length > 0) {
+    const count = formatLocalizedNumber(sync.conflicts.length, language);
+    return {
+      icon: WarningCircle,
+      color: themes.dark.danger,
+      title: ar ? "تحتاج المزامنة إلى مراجعة" : "Sync needs review",
+      detail: ar
+        ? `${count} اختلافات محفوظة بأمان. افتحها لمقارنة السجل المحلي بالسحابة.`
+        : `${count} ${
+            sync.conflicts.length === 1 ? "difference" : "differences"
+          } safely preserved. Open to compare device and cloud records.`
+    };
+  }
+  if (sync.status === "local-only") {
+    return {
+      icon: DeviceMobile,
+      color: themes.dark.warning,
+      title: ar ? "محفوظ على هذا الجهاز" : "Saved on this device",
+      detail: ar
+        ? "تبقى هذه المساحة على هذا الجهاز · لا توجد نسخة سحابية"
+        : "This workspace stays on this device · no cloud copy"
+    };
+  }
+  if (sync.status === "needs-attention") {
+    return {
+      icon: WarningCircle,
+      color: themes.dark.danger,
+      title: ar ? "تحتاج المزامنة إلى مراجعة" : "Sync needs review",
+      detail: ar
+        ? "سجلك المحلي محفوظ. افتح الحالة لمراجعة الاتصال."
+        : "Your local record is preserved. Open status to review the connection."
+    };
+  }
+  if (sync.status === "syncing" || pendingOperationCount > 0) {
+    return {
+      icon: ArrowsClockwise,
+      color: themes.dark.information,
+      title: ar ? "بانتظار تأكيد السحابة" : "Awaiting cloud",
+      detail: queuedSyncChangeSummary(
+        pendingOperationCount,
+        language
+      )
+    };
+  }
+  if (sync.status === "offline") {
+    return {
+      icon: CloudSlash,
+      color: themes.dark.warning,
+      title: ar ? "محفوظ على الجهاز" : "Saved on device",
+      detail: ar
+        ? "تُستأنف المزامنة عند عودة الاتصال"
+        : "Sync resumes when the connection returns"
+    };
+  }
+  if (sync.lastSyncedAt) {
+    return {
+      icon: CloudCheck,
+      color: themes.dark.success,
+      title: ar ? "محمي في السحابة" : "Protected in cloud",
+      detail: ar
+        ? "أكدت السحابة أحدث التغييرات المحلية"
+        : "Cloud acknowledged the latest local changes"
+    };
+  }
+  return {
+    icon: CloudCheck,
+    color: themes.dark.information,
+    title: ar ? "السجل السحابي متصل" : "Cloud register connected",
+    detail: ar
+      ? "لا توجد تغييرات محلية بانتظار المزامنة"
+      : "No local changes are waiting to sync"
+  };
+}
+
+function ArchiveStatusMasthead({
+  canReadEvidence,
+  cloudAllowanceLabel,
+  cloudUsageDescription,
+  cloudUsageStatus,
+  encryptedAtRest,
+  localSizeLabel,
+  lockNow,
+  onSyncPress,
+  pendingOperationCount,
+  previewBypass,
+  proofFileCount,
+  requiresUnlock,
+  sync
+}: {
+  readonly canReadEvidence: boolean;
+  readonly cloudAllowanceLabel: string;
+  readonly cloudUsageDescription: string;
+  readonly cloudUsageStatus: string;
+  readonly encryptedAtRest: boolean;
+  readonly localSizeLabel: string;
+  readonly lockNow: () => void;
+  readonly onSyncPress?: (() => void) | undefined;
+  readonly pendingOperationCount: number;
+  readonly previewBypass: boolean;
+  readonly proofFileCount: number;
+  readonly requiresUnlock: boolean;
+  readonly sync: WorkspaceSyncRuntimeState;
+}) {
+  const { copy, language, rtl } = useCoreJourneyCopy();
+  const syncState = archiveSyncPresentation(
+    sync,
+    pendingOperationCount,
+    language
+  );
+  const SyncIcon = syncState.icon;
+  const protectionTitle = previewBypass
+    ? copy.vault.sessionPreviewUnlockOff
+    : requiresUnlock
+      ? copy.vault.deviceUnlockActive
+      : encryptedAtRest
+        ? copy.vault.protectedOnDevice
+        : copy.vault.previewSessionOnly;
+  const protectionBody = previewBypass
+    ? copy.vault.previewBypassBody
+    : requiresUnlock
+      ? copy.vault.deviceUnlockBody
+      : encryptedAtRest
+        ? copy.vault.protectedBody
+        : copy.vault.previewBody;
+  const pendingSummary = pendingUpdateSummary(
+    pendingOperationCount,
+    language
+  );
+  const localProofSummary = proofFileSummary(
+    proofFileCount,
+    encryptedAtRest,
+    language
+  );
+  const syncContent = (
+    <>
+      <View style={[styles.archiveFactLabelColumn, rtl && styles.archiveFactLabelColumnRtl]}>
+        <Text
+          style={[
+            styles.archiveFactLabel,
+            rtl && styles.arabicMedium,
+            rtl && styles.rtlText
+          ]}
+        >
+          {copy.vault.archiveSync}
+        </Text>
+      </View>
+      <View style={styles.archiveSyncCopy}>
+        <View style={[styles.archiveSyncTitleRow, rtl && styles.rowReverse]}>
+          <SyncIcon
+            color={syncState.color}
+            size={18}
+            weight="regular"
+          />
+          <Text
+            accessibilityRole="header"
+            style={[
+              styles.archiveFactValue,
+              rtl && styles.arabicMedium,
+              rtl && styles.rtlText
+            ]}
+          >
+            {syncState.title}
+          </Text>
+        </View>
+        <Text
+          style={[
+            styles.archiveFactDescription,
+            rtl && styles.arabic,
+            rtl && styles.rtlText
+          ]}
+        >
+          {syncState.detail}
+        </Text>
+      </View>
+      {onSyncPress ? (
+        <ArrowRight
+          color={colors.concrete}
+          size={18}
+          style={rtl ? styles.mirrorArrow : undefined}
+        />
+      ) : null}
+    </>
+  );
+
+  return (
+    <View testID="vault-archive-status">
+      <CommandSurface
+        style={styles.archiveMasthead}
+      >
+      <View
+        style={[styles.protectionHeader, rtl && styles.rowReverse]}
+      >
+        {encryptedAtRest ? (
+          <ShieldCheck color={colors.volt} size={30} weight="regular" />
+        ) : (
+          <Warning color={themes.dark.warning} size={30} weight="regular" />
+        )}
+        <View style={styles.protectionCopy}>
+          <Text
+            style={[
+              styles.commandLabel,
+              rtl && styles.arabicMedium,
+              rtl && styles.rtlText
+            ]}
+          >
+            {copy.vault.archiveStatus}
+          </Text>
+          <Text
+            style={[
+              styles.commandTitle,
+              rtl && styles.arabicMedium,
+              rtl && styles.rtlText
+            ]}
+          >
+            {protectionTitle}
+          </Text>
+        </View>
+      </View>
+      <Text
+        style={[
+          styles.commandBody,
+          rtl && styles.arabic,
+          rtl && styles.rtlText
+        ]}
+      >
+        {protectionBody}
+      </Text>
+
+      <View style={styles.archiveLedger}>
+        {onSyncPress ? (
+          <Pressable
+            accessibilityHint={
+              language === "ar"
+                ? "يفتح حالة المزامنة وخيارات مراجعة الاختلافات"
+                : "Opens sync status and recovery options"
+            }
+            accessibilityLabel={`${copy.vault.archiveSync}. ${syncState.title}. ${syncState.detail}`}
+            accessibilityRole="button"
+            onPress={onSyncPress}
+            style={({ pressed }) => [
+              styles.archiveFactRow,
+              rtl && styles.rowReverse,
+              pressed && styles.archivePressed
+            ]}
+            testID="sync-truth"
+          >
+            {syncContent}
+          </Pressable>
+        ) : (
+          <View
+            accessible
+            accessibilityLabel={`${copy.vault.archiveSync}. ${syncState.title}. ${syncState.detail}`}
+            style={[styles.archiveFactRow, rtl && styles.rowReverse]}
+            testID="sync-truth"
+          >
+            {syncContent}
+          </View>
+        )}
+
+        <ArchiveFact
+          accessibilityLabel={`${copy.vault.deviceQueue}. ${pendingSummary}. ${
+            pendingOperationCount > 0
+              ? copy.vault.waiting
+              : copy.vault.upToDate
+          }`}
+          detail={
+            pendingOperationCount > 0
+              ? copy.vault.waiting
+              : copy.vault.upToDate
+          }
+          label={copy.vault.deviceQueue}
+          rtl={rtl}
+          value={pendingSummary}
+        />
+
+        {canReadEvidence ? (
+          <>
+            <ArchiveFact
+              accessibilityLabel={`${copy.vault.proofOnDevice}. ${localSizeLabel}. ${localProofSummary} ${copy.vault.localProofStorageDescription}`}
+              detail={localProofSummary}
+              description={copy.vault.localProofStorageDescription}
+              label={copy.vault.proofOnDevice}
+              rtl={rtl}
+              testID="vault-local-proof-storage"
+              value={localSizeLabel}
+            />
+            <ArchiveFact
+              accessibilityLabel={[
+                copy.vault.cloudPilotStorage,
+                cloudUsageStatus,
+                `${copy.vault.cloudPilotAllowance}: ${cloudAllowanceLabel}`,
+                cloudUsageDescription
+              ].join(". ")}
+              detail={`${copy.vault.cloudPilotAllowance}: ${cloudAllowanceLabel}`}
+              description={cloudUsageDescription}
+              label={copy.vault.cloudPilotStorage}
+              rtl={rtl}
+              testID="vault-cloud-storage-usage"
+              value={cloudUsageStatus}
+            />
+          </>
+        ) : null}
+      </View>
+
+        {requiresUnlock ? (
+          <Pressable
+            accessibilityRole="button"
+            onPress={lockNow}
+            style={({ pressed }) => [
+              styles.archiveLockAction,
+              rtl && styles.rowReverse,
+              pressed && styles.archivePressed
+            ]}
+            testID="vault-lock-now"
+          >
+            <LockKey color={colors.white} size={19} weight="regular" />
+            <Text
+              style={[
+                styles.archiveLockLabel,
+                rtl && styles.arabicMedium
+              ]}
+            >
+              {copy.vault.lockNow}
+            </Text>
+          </Pressable>
+        ) : null}
+      </CommandSurface>
+    </View>
+  );
+}
+
+function ArchiveFact({
+  accessibilityLabel,
+  description,
+  detail,
+  label,
+  rtl,
+  testID,
+  value
+}: {
+  readonly accessibilityLabel: string;
+  readonly description?: string;
+  readonly detail: string;
+  readonly label: string;
+  readonly rtl: boolean;
+  readonly testID?: string;
+  readonly value: string;
+}) {
+  return (
+    <View
+      accessibilityLabel={accessibilityLabel}
+      accessible
+      style={[styles.archiveFactRow, rtl && styles.rowReverse]}
+      testID={testID}
+    >
+      <View style={[styles.archiveFactLabelColumn, rtl && styles.archiveFactLabelColumnRtl]}>
+        <Text
+          style={[
+            styles.archiveFactLabel,
+            rtl && styles.arabicMedium,
+            rtl && styles.rtlText
+          ]}
+        >
+          {label}
+        </Text>
+      </View>
+      <View style={styles.archiveFactCopy}>
+        <Text
+          style={[
+            styles.archiveFactValue,
+            rtl && styles.arabicMedium,
+            rtl && styles.rtlText
+          ]}
+        >
+          {value}
+        </Text>
+        <Text
+          style={[
+            styles.archiveFactDetail,
+            rtl && styles.arabic,
+            rtl && styles.rtlText
+          ]}
+        >
+          {detail}
+        </Text>
+        {description ? (
+          <Text
+            style={[
+              styles.archiveFactDescription,
+              rtl && styles.arabic,
+              rtl && styles.rtlText
+            ]}
+          >
+            {description}
+          </Text>
+        ) : null}
+      </View>
+    </View>
+  );
+}
+
+function VaultChapterHeader({
+  index,
+  testID,
+  title
+}: {
+  readonly index: number;
+  readonly testID: string;
+  readonly title: string;
+}) {
+  const { language, rtl } = useCoreJourneyCopy();
+  const reference = formatLocalizedNumber(index, language, {
+    minimumIntegerDigits: 2,
+    useGrouping: false
+  });
+  return (
+    <View
+      style={[styles.chapterHeader, rtl && styles.rowReverse]}
+      testID={testID}
+    >
+      <Text
+        style={styles.chapterReference}
+      >
+        {reference}
+      </Text>
+      <Text
+        accessibilityRole="header"
+        style={[
+          styles.chapterTitle,
+          rtl && styles.arabicMedium,
+          rtl && styles.rtlText
+        ]}
+      >
+        {title}
+      </Text>
+    </View>
+  );
+}
+
 export function VaultScreen({
+  authoritativeCloudStorageUsage = null,
   surface = "vault"
 }: {
+  readonly authoritativeCloudStorageUsage?:
+    | AuthoritativeCloudStorageUsage
+    | null;
   readonly surface?: "vault" | "settings";
 } = {}) {
   const router = useRouter();
@@ -146,6 +617,48 @@ export function VaultScreen({
   const recovery = useRecoveryJourney();
   const [showDiagnostics, setShowDiagnostics] = useState(false);
   const [sampleExitBusy, setSampleExitBusy] = useState(false);
+  const [recentRecoveryKits, setRecentRecoveryKits] = useState<
+    readonly LocalRecoveryKitRecord[]
+  >([]);
+  const [recoveryHistoryState, setRecoveryHistoryState] = useState<
+    "idle" | "loading" | "ready" | "error"
+  >("idle");
+  const [recoveryHistoryRefreshKey, setRecoveryHistoryRefreshKey] =
+    useState(0);
+  useFocusEffect(
+    useCallback(() => {
+      let active = true;
+      if (recovery.capability.kind !== "available") {
+        setRecoveryHistoryState("idle");
+        setRecentRecoveryKits((current) =>
+          current.length === 0 ? current : []
+        );
+        return () => {
+          active = false;
+        };
+      }
+      setRecoveryHistoryState("loading");
+      void recovery
+        .listRecent()
+        .then((records) => {
+          if (active) {
+            setRecentRecoveryKits(records);
+            setRecoveryHistoryState("ready");
+          }
+        })
+        .catch(() => {
+          if (active) {
+            setRecentRecoveryKits((current) =>
+              current.length === 0 ? current : []
+            );
+            setRecoveryHistoryState("error");
+          }
+        });
+      return () => {
+        active = false;
+      };
+    }, [recovery, recoveryHistoryRefreshKey])
+  );
   if (!workspace) return null;
 
   const sampleActivationRoute = sampleActivationDestination({
@@ -159,6 +672,10 @@ export function VaultScreen({
     session,
     workspace.household.id
   );
+  const cloudStorage = cloudStorageUsageTruth({
+    verifiedCloudAccess: Boolean(verifiedCloudAccess),
+    authoritativeUsage: authoritativeCloudStorageUsage
+  });
   const authoritativeAccess = authoritativeHouseholdAccessSnapshot(
     mode,
     session,
@@ -198,6 +715,28 @@ export function VaultScreen({
     workspace.evidence,
     placeDocuments
   );
+  const localSizeLabel = formatByteSize(localBytes, language);
+  const cloudAllowanceLabel = formatByteSize(
+    cloudStorage.allowanceBytes,
+    language
+  );
+  const cloudUsageStatus =
+    cloudStorage.kind === "authoritative"
+      ? `${formatByteSize(cloudStorage.usedBytes, language)} ${
+          copy.vault.cloudUsed
+        }`
+      : cloudStorage.reason === "not-connected"
+        ? copy.vault.cloudNotConnected
+        : copy.vault.cloudUsageUnknown;
+  const cloudUsageDescription =
+    cloudStorage.kind === "authoritative"
+      ? `${copy.vault.cloudUsageConfirmedDescription} ${formatLocalizedDate(
+          cloudStorage.measuredAt,
+          language
+        )}. ${copy.vault.cloudAllowanceDescription}`
+      : cloudStorage.reason === "not-connected"
+        ? copy.vault.cloudNotConnectedDescription
+        : `${copy.vault.cloudUsageUnknownDescription} ${copy.vault.cloudAllowanceDescription}`;
 
   const shareSnapshot = async (): Promise<void> => {
     let file: File | null = null;
@@ -345,9 +884,15 @@ export function VaultScreen({
 
       {surface === "vault" ? (
         <>
-      <SyncTruth
-        language={language}
-        onPress={
+      <ArchiveStatusMasthead
+        canReadEvidence={canReadEvidence}
+        cloudAllowanceLabel={cloudAllowanceLabel}
+        cloudUsageDescription={cloudUsageDescription}
+        cloudUsageStatus={cloudUsageStatus}
+        encryptedAtRest={repository.encryptedAtRest}
+        localSizeLabel={localSizeLabel}
+        lockNow={deviceAuth.lockNow}
+        onSyncPress={
           sync.status === "local-only"
             ? undefined
             : sync.conflicts.length > 0
@@ -355,113 +900,18 @@ export function VaultScreen({
               : () => void syncNow()
         }
         pendingOperationCount={pendingOperationCount}
+        previewBypass={deviceAuth.previewBypass}
+        proofFileCount={proofFileCount}
+        requiresUnlock={deviceAuth.requiresUnlock}
         sync={sync}
       />
 
-      <CommandSurface>
-        <View
-          style={[styles.protectionHeader, rtl && styles.rowReverse]}
-        >
-          {repository.encryptedAtRest ? (
-            <ShieldCheck color={colors.volt} size={30} weight="regular" />
-          ) : (
-            <Warning color={colors.warning} size={30} weight="regular" />
-          )}
-          <View style={styles.protectionCopy}>
-            <Text
-              style={[
-                styles.commandLabel,
-                rtl && styles.arabicMedium,
-                rtl && styles.rtlText
-              ]}
-            >
-              {copy.vault.deviceProtection}
-            </Text>
-            <Text
-              style={[
-                styles.commandTitle,
-                rtl && styles.arabicMedium,
-                rtl && styles.rtlText
-              ]}
-            >
-              {deviceAuth.previewBypass
-                ? copy.vault.sessionPreviewUnlockOff
-                : deviceAuth.requiresUnlock
-                  ? copy.vault.deviceUnlockActive
-                  : repository.encryptedAtRest
-                    ? copy.vault.protectedOnDevice
-                    : copy.vault.previewSessionOnly}
-            </Text>
-          </View>
-        </View>
-        <Text
-          style={[
-            styles.commandBody,
-            rtl && styles.arabic,
-            rtl && styles.rtlText
-          ]}
-        >
-          {deviceAuth.previewBypass
-            ? copy.vault.previewBypassBody
-            : deviceAuth.requiresUnlock
-              ? copy.vault.deviceUnlockBody
-              : repository.encryptedAtRest
-                ? copy.vault.protectedBody
-                : copy.vault.previewBody}
-        </Text>
-        {deviceAuth.requiresUnlock ? (
-          <SecondaryButton
-            icon={LockKey}
-            label={copy.vault.lockNow}
-            onPress={deviceAuth.lockNow}
-          />
-        ) : null}
-      </CommandSurface>
-
-      <Section>
-        {canReadEvidence ? (
-          <>
-            <View style={[styles.sectionHeading, rtl && styles.rowReverse]}>
-              <Text
-                style={[
-                  styles.sectionTitle,
-                  rtl && styles.arabicMedium,
-                  rtl && styles.rtlText
-                ]}
-              >
-                {copy.vault.proofOnDevice}
-              </Text>
-              <Text
-                style={[
-                  styles.sectionValue,
-                  rtl && styles.arabic,
-                  rtl && styles.rtlText
-                ]}
-              >
-                {formatByteSize(localBytes, language)}
-              </Text>
-            </View>
-            <Text
-              style={[
-                styles.sectionMeta,
-                rtl && styles.arabic,
-                rtl && styles.rtlText
-              ]}
-            >
-              {proofFileSummary(
-                proofFileCount,
-                repository.encryptedAtRest,
-                language
-              )}
-            </Text>
-          </>
-        ) : (
-          <PermissionNotice
-            capability="evidence.read"
-            testID="vault-proof-view-denied"
-          />
-        )}
-      </Section>
+      {!canReadEvidence ? (
+        <PermissionNotice
+          capability="evidence.read"
+          testID="vault-proof-view-denied"
+        />
+      ) : null}
 
       {canReadEvidence ? (
         <VaultRecentProof
@@ -474,15 +924,11 @@ export function VaultScreen({
       ) : null}
 
       <Section>
-        <Text
-          style={[
-            styles.sectionTitle,
-            rtl && styles.arabicMedium,
-            rtl && styles.rtlText
-          ]}
-        >
-          {copy.vault.backupRecovery}
-        </Text>
+        <VaultChapterHeader
+          index={2}
+          testID="vault-chapter-recovery"
+          title={copy.vault.backupRecovery}
+        />
         <StatusRow
           compact={compactActions}
           description={copy.vault.cloudBackupDescription}
@@ -504,6 +950,65 @@ export function VaultScreen({
               : copy.vault.signedBuildNeeded
           }
         />
+        {recoveryHistoryState === "error" ? (
+          <StatusRow
+            compact={compactActions}
+            description={copy.vault.recoveryHistoryUnavailable}
+            icon={Warning}
+            label={copy.vault.recentRecoveryKits}
+            onPress={() =>
+              setRecoveryHistoryRefreshKey((current) => current + 1)
+            }
+            status={copy.vault.retryRecoveryHistory}
+          />
+        ) : null}
+        {recentRecoveryKits.length > 0 ? (
+          <View
+            style={styles.recoveryHistory}
+            testID="vault-recent-recovery-kits"
+          >
+            <Text
+              style={[
+                styles.storageSubheading,
+                rtl && styles.arabicMedium,
+                rtl && styles.rtlText
+              ]}
+            >
+              {copy.vault.recentRecoveryKits}
+            </Text>
+            <Text
+              style={[
+                styles.sectionMeta,
+                rtl && styles.arabic,
+                rtl && styles.rtlText
+              ]}
+            >
+              {copy.vault.recentRecoveryKitsDescription}
+            </Text>
+            {recentRecoveryKits.map((kit) => (
+              <StatusRow
+                compact={compactActions}
+                description={`${formatLocalizedDate(
+                  kit.createdAt,
+                  language
+                )} · ${formatByteSize(kit.byteSize, language)}`}
+                icon={
+                  kit.externalBackupConfirmedAt
+                    ? ShieldCheck
+                    : Warning
+                }
+                key={kit.reference}
+                label={kit.fileName}
+                onPress={() => router.push("/recovery-create")}
+                status={
+                  kit.externalBackupConfirmedAt
+                    ? copy.vault.externalCopyConfirmed
+                    : copy.vault.localKitNeedsCopy
+                }
+              />
+            ))}
+          </View>
+        ) : null}
         <StatusRow
           compact={compactActions}
           description={copy.vault.restoreRecoveryKitDescription}
@@ -521,15 +1026,11 @@ export function VaultScreen({
       </Section>
 
       <Section>
-        <Text
-          style={[
-            styles.sectionTitle,
-            rtl && styles.arabicMedium,
-            rtl && styles.rtlText
-          ]}
-        >
-          {copy.vault.dataPortability}
-        </Text>
+        <VaultChapterHeader
+          index={3}
+          testID="vault-chapter-portability"
+          title={copy.vault.dataPortability}
+        />
         {canExport ? (
           <>
             <StatusRow
@@ -599,11 +1100,17 @@ export function VaultScreen({
       </Section>
 
       <Section>
+        <VaultChapterHeader
+          index={4}
+          testID="vault-chapter-settings"
+          title={copy.vault.settingsTitle}
+        />
         <StatusRow
+          accessibilityLabel={`${copy.vault.settingsTitle}. ${copy.vault.settingsMeta}`}
           compact={compactActions}
           description={copy.vault.settingsMeta}
           icon={GearSix}
-          label={copy.vault.settingsTitle}
+          label={copy.vault.settingsControls}
           onPress={() => router.push("/settings")}
           status={copy.vault.settingsOpen}
         />
@@ -739,6 +1246,7 @@ export function VaultScreen({
       {signedAccount ? (
         <Section>
           <Text
+            accessibilityRole="header"
             style={[
               styles.sectionTitle,
               rtl && styles.arabicMedium,
@@ -1240,6 +1748,7 @@ export function ReviewReminderSettingsSection({
 }
 
 function StatusRow({
+  accessibilityLabel,
   compact = false,
   description,
   icon: Icon,
@@ -1247,6 +1756,7 @@ function StatusRow({
   onPress,
   status
 }: {
+  readonly accessibilityLabel?: string;
   readonly compact?: boolean;
   readonly description: string;
   readonly icon: typeof CloudSlash;
@@ -1316,6 +1826,7 @@ function StatusRow({
     return (
       <Pressable
         accessibilityHint={description}
+        accessibilityLabel={accessibilityLabel}
         accessibilityRole="button"
         onPress={onPress}
         style={({ pressed }) => [
@@ -1372,9 +1883,14 @@ const styles = StyleSheet.create({
   heading: {
     gap: spacing.xs
   },
+  archiveMasthead: {
+    paddingTop: spacing.xl,
+    paddingBottom: spacing.lg,
+    borderRadius: radius.lg
+  },
   protectionHeader: {
     flexDirection: "row",
-    alignItems: "center",
+    alignItems: "flex-start",
     gap: spacing.sm
   },
   protectionCopy: {
@@ -1401,12 +1917,117 @@ const styles = StyleSheet.create({
     fontSize: 14,
     lineHeight: 21
   },
-  sectionHeading: {
-    minHeight: 32,
+  archiveLedger: {
+    borderTopWidth: 1,
+    borderTopColor: colors.onCarbonBorder
+  },
+  archiveFactRow: {
+    minHeight: 68,
+    flexDirection: "row",
+    alignItems: "flex-start",
+    gap: spacing.sm,
+    paddingVertical: spacing.sm,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.onCarbonBorder
+  },
+  archiveFactLabelColumn: {
+    width: 78,
+    flexShrink: 0,
+    paddingTop: 2,
+    alignItems: "flex-start"
+  },
+  archiveFactLabelColumnRtl: {
+    alignItems: "flex-end"
+  },
+  archiveFactLabel: {
+    color: colors.concrete,
+    fontFamily: typography.metadata,
+    fontSize: 12,
+    lineHeight: 17,
+    letterSpacing: 0.6,
+    textTransform: "uppercase"
+  },
+  archiveFactCopy: {
+    flex: 1,
+    minWidth: 0,
+    gap: 2
+  },
+  archiveSyncCopy: {
+    flex: 1,
+    minWidth: 0,
+    gap: 3
+  },
+  archiveSyncTitleRow: {
     flexDirection: "row",
     alignItems: "center",
-    justifyContent: "space-between",
-    gap: spacing.md
+    gap: spacing.xs
+  },
+  archiveFactValue: {
+    flexShrink: 1,
+    color: colors.white,
+    fontFamily: typography.bodyMedium,
+    fontSize: 14,
+    lineHeight: 20,
+    fontVariant: ["tabular-nums"]
+  },
+  archiveFactDetail: {
+    color: colors.concrete,
+    fontFamily: typography.body,
+    fontSize: 12,
+    lineHeight: 17
+  },
+  archiveFactDescription: {
+    color: colors.concrete,
+    fontFamily: typography.body,
+    fontSize: 12,
+    lineHeight: 17
+  },
+  archiveLockAction: {
+    minHeight: 44,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: spacing.xs,
+    paddingHorizontal: spacing.md,
+    borderWidth: 1,
+    borderColor: colors.onCarbonBorder,
+    borderRadius: radius.md
+  },
+  archiveLockLabel: {
+    color: colors.white,
+    fontFamily: typography.bodyMedium,
+    fontSize: 14,
+    lineHeight: 20
+  },
+  archivePressed: {
+    opacity: 0.7
+  },
+  chapterHeader: {
+    minHeight: 44,
+    flexDirection: "row",
+    alignItems: "flex-start",
+    gap: spacing.sm,
+    paddingTop: spacing.sm,
+    borderTopWidth: 1,
+    borderTopColor: colors.borderStrong
+  },
+  chapterReference: {
+    width: 30,
+    flexShrink: 0,
+    color: colors.textMuted,
+    fontFamily: typography.metadata,
+    fontSize: 12,
+    lineHeight: 18,
+    textAlign: "left",
+    writingDirection: "ltr"
+  },
+  chapterTitle: {
+    flex: 1,
+    minWidth: 0,
+    color: colors.text,
+    fontFamily: typography.display,
+    fontSize: 20,
+    lineHeight: 26
   },
   sectionTitle: {
     flexShrink: 1,
@@ -1415,17 +2036,24 @@ const styles = StyleSheet.create({
     fontSize: 22,
     lineHeight: 28
   },
-  sectionValue: {
-    color: colors.textMuted,
-    fontFamily: typography.bodyMedium,
-    fontSize: 13,
-    lineHeight: 18
-  },
   sectionMeta: {
     color: colors.textMuted,
     fontFamily: typography.body,
     fontSize: 13,
     lineHeight: 19
+  },
+  recoveryHistory: {
+    gap: spacing.xs,
+    paddingTop: spacing.md,
+    borderTopWidth: 1,
+    borderTopColor: colors.border
+  },
+  storageSubheading: {
+    flexShrink: 1,
+    color: colors.text,
+    fontFamily: typography.bodyMedium,
+    fontSize: 15,
+    lineHeight: 21
   },
   reminderHeading: {
     minHeight: 44,

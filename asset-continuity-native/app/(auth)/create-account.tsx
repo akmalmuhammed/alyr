@@ -48,8 +48,7 @@ export default function CreateAccountScreen() {
     createAccount,
     error,
     mode,
-    pendingHouseholdInvite,
-    acceptPendingHouseholdInvite
+    pendingHouseholdInvite
   } = useAuthFlow();
   const { copy, language, rtl } = useCoreJourneyCopy();
   const inviteCopy = useInviteCopy();
@@ -104,11 +103,8 @@ export default function CreateAccountScreen() {
       attempt.kind === "authenticated" &&
       pendingHouseholdInvite
     ) {
-      const membership = await acceptPendingHouseholdInvite();
-      if (membership) {
-        router.replace("/");
-        return;
-      }
+      router.replace(AUTH_ROUTES.join);
+      return;
     }
     router.replace(
       attempt.kind === "authenticated"
@@ -202,6 +198,7 @@ export default function CreateAccountScreen() {
             placeholder={copy.createAccount.emailPlaceholder}
             returnKeyType="next"
             ref={emailRef}
+            testID="auth-create-email"
             textContentType="emailAddress"
             value={email}
           />
@@ -223,6 +220,7 @@ export default function CreateAccountScreen() {
               ref={pilotAccessRef}
               returnKeyType="next"
               style={styles.codeInput}
+              testID="auth-create-pilot-access"
               value={pilotAccessCode}
             />
           ) : null}
@@ -247,6 +245,7 @@ export default function CreateAccountScreen() {
             ref={passwordRef}
             returnKeyType="next"
             secureTextEntry
+            testID="auth-create-password"
             textContentType="newPassword"
             value={password}
           />
@@ -269,6 +268,7 @@ export default function CreateAccountScreen() {
             ref={confirmRef}
             returnKeyType="go"
             secureTextEntry
+            testID="auth-create-confirm-password"
             textContentType="newPassword"
             value={confirmPassword}
           />

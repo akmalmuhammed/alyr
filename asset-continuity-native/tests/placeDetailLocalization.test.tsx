@@ -230,6 +230,13 @@ describe("localized Place detail", () => {
     expect(screen.queryByText(PLACE_DETAIL_COPY.en.savedTitle)).toBeNull();
 
     await fireEvent.press(
+      screen.getAllByRole("button", { name: copy.addFirstItem })[0]!
+    );
+    expect(mockRouter.replace).toHaveBeenCalledWith(
+      `/capture?placeId=${mockWorkspace.places[0]!.id}`
+    );
+
+    await fireEvent.press(
       screen.getByRole("button", { name: copy.goToToday })
     );
     expect(mockRouter.replace).toHaveBeenCalledWith("/(tabs)");
@@ -246,6 +253,25 @@ describe("localized Place detail", () => {
     );
     expect(coordinateStyle.writingDirection).toBe("ltr");
     expect(coordinateStyle.textAlign).toBe("right");
+  });
+
+  it("keeps the saved Place receipt useful for a view-only member", async () => {
+    mockCan = (capability?: string) => capability !== "asset.write";
+    const screen = await render(<PlaceScreen />, {
+      wrapper: localeWrapper("en")
+    });
+
+    expect(
+      screen.queryByRole("button", {
+        name: PLACE_DETAIL_COPY.en.addFirstItem
+      })
+    ).toBeNull();
+    await fireEvent.press(
+      screen.getByRole("button", {
+        name: PLACE_DETAIL_COPY.en.goToToday
+      })
+    );
+    expect(mockRouter.replace).toHaveBeenCalledWith("/(tabs)");
   });
 
   it("renders a document row in Arabic with one RTL layout strategy", async () => {

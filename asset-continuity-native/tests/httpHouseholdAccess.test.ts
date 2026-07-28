@@ -275,6 +275,70 @@ describe("HttpHouseholdAccess", () => {
     });
   });
 
+  it("previews only the household name, assigned role and expiry before redemption", async () => {
+    const fetchImpl = jest.fn<ReturnType<SyncFetch>, Parameters<SyncFetch>>();
+    fetchImpl.mockResolvedValue(
+      response({
+        review: {
+          householdName: "Rahman household",
+          role: "viewer",
+          expiresAt: "2026-07-30T12:00:00.000Z"
+        }
+      })
+    );
+
+    await expect(
+      transport(fetchImpl).previewInvite("  abcd1234  ")
+    ).resolves.toEqual({
+      ok: true,
+      value: {
+        householdName: "Rahman household",
+        role: "viewer",
+        expiresAt: "2026-07-30T12:00:00.000Z"
+      }
+    });
+    expect(fetchImpl).toHaveBeenCalledWith(
+      "https://project.example/functions/v1/api/invites/preview",
+      expect.objectContaining({
+        method: "POST",
+        headers: {
+          Accept: "application/json",
+          Authorization: "Bearer access-token",
+          "Content-Type": "application/json"
+        }
+      })
+    );
+    expect(
+      JSON.parse(String(fetchImpl.mock.calls[0]![1].body))
+    ).toEqual({
+      apiVersion: 1,
+      oneTimeCode: "ABCD1234"
+    });
+  });
+
+  it("rejects malformed invitation review metadata without redeeming the code", async () => {
+    const fetchImpl = jest.fn<ReturnType<SyncFetch>, Parameters<SyncFetch>>();
+    fetchImpl.mockResolvedValue(
+      response({
+        review: {
+          householdName: "",
+          role: "owner",
+          expiresAt: "not-a-date"
+        }
+      })
+    );
+
+    await expect(
+      transport(fetchImpl).previewInvite("ABCD1234")
+    ).resolves.toMatchObject({
+      ok: false,
+      error: {
+        code: "VALIDATION_FAILED",
+        retryable: false
+      }
+    });
+  });
+
   it("rejects owner invitations and invalid expiry before network access", async () => {
     const fetchImpl = jest.fn<ReturnType<SyncFetch>, Parameters<SyncFetch>>();
     const access = transport(fetchImpl);

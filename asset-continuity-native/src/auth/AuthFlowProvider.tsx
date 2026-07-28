@@ -18,6 +18,7 @@ import {
   type HouseholdAccessPort,
   type HouseholdAccessSnapshot,
   type HouseholdInvite,
+  type HouseholdInviteReview,
   type HouseholdMembership,
   type HouseholdRole,
   type Result
@@ -69,6 +70,8 @@ interface AuthFlowContextValue {
    */
   readonly passwordRecoverySessionActive: boolean;
   readonly pendingHouseholdInvite: PendingHouseholdInvite | null;
+  readonly pendingHouseholdInviteReview: HouseholdInviteReview | null;
+  readonly pendingHouseholdInviteDeferred: boolean;
   readonly householdName: string;
   readonly firstCaptureIntent: FirstCaptureIntent | null;
   readonly householdAccessSnapshot: HouseholdAccessSnapshot | null;
@@ -112,7 +115,9 @@ interface AuthFlowContextValue {
   readonly stageHouseholdInvite: (
     oneTimeCode: string
   ) => Promise<boolean>;
+  readonly reviewPendingHouseholdInvite: () => Promise<HouseholdInviteReview | null>;
   readonly acceptPendingHouseholdInvite: () => Promise<HouseholdMembership | null>;
+  readonly deferPendingHouseholdInvite: () => void;
   readonly discardPendingHouseholdInvite: () => Promise<void>;
   readonly refreshHouseholdAccess: () => Promise<boolean>;
   readonly changeHouseholdMemberRole: (
@@ -267,6 +272,14 @@ export function AuthFlowProvider({
     setPendingHouseholdInviteState
   ] = useState<PendingHouseholdInvite | null>(null);
   const [
+    pendingHouseholdInviteReview,
+    setPendingHouseholdInviteReview
+  ] = useState<HouseholdInviteReview | null>(null);
+  const [
+    pendingHouseholdInviteDeferred,
+    setPendingHouseholdInviteDeferred
+  ] = useState(false);
+  const [
     passwordRecoverySessionActive,
     setPasswordRecoverySessionActive
   ] = useState(false);
@@ -284,6 +297,8 @@ export function AuthFlowProvider({
   const activeSessionRef = useRef<AuthSessionDescriptor | null>(null);
   const pendingHouseholdInviteRef =
     useRef<PendingHouseholdInvite | null>(null);
+  const pendingHouseholdInviteReviewRef =
+    useRef<HouseholdInviteReview | null>(null);
   const pendingHouseholdProvisionRef =
     useRef<PendingHouseholdProvision | null>(null);
   const pendingHouseholdProvisionStoreStateRef = useRef<
@@ -590,7 +605,10 @@ export function AuthFlowProvider({
   const discardPendingHouseholdInvite =
     useCallback(async (): Promise<void> => {
       pendingHouseholdInviteRef.current = null;
+      pendingHouseholdInviteReviewRef.current = null;
       setPendingHouseholdInviteState(null);
+      setPendingHouseholdInviteReview(null);
+      setPendingHouseholdInviteDeferred(false);
       try {
         await pendingInviteStoreRef.current.clear();
       } catch {
@@ -622,13 +640,19 @@ export function AuthFlowProvider({
       try {
         await pendingInviteStoreRef.current.write(invite);
         pendingHouseholdInviteRef.current = invite;
+        pendingHouseholdInviteReviewRef.current = null;
         setPendingHouseholdInviteState(invite);
+        setPendingHouseholdInviteReview(null);
+        setPendingHouseholdInviteDeferred(false);
         setError(null);
         setStatusMessage(null);
         return true;
       } catch {
         pendingHouseholdInviteRef.current = null;
+        pendingHouseholdInviteReviewRef.current = null;
         setPendingHouseholdInviteState(null);
+        setPendingHouseholdInviteReview(null);
+        setPendingHouseholdInviteDeferred(false);
         setError({
           code: "unexpected",
           message:
@@ -742,7 +766,9 @@ export function AuthFlowProvider({
   const checkConfirmedSession = useCallback(async () => {
     prepareRequest();
     try {
-      const result = await gatewayRef.current.currentSession();
+      const result = gatewayRef.current.refreshSession
+        ? await gatewayRef.current.refreshSession()
+        : await gatewayRef.current.currentSession();
       if (!result.ok) {
         setError(result.error);
         return null;
@@ -1696,6 +1722,102 @@ export function AuthFlowProvider({
     [householdName, prepareRequest, session]
   );
 
+  const reviewPendingHouseholdInvite = useCallback(
+    async (): Promise<HouseholdInviteReview | null> => {
+      const pending = pendingHouseholdInviteRef.current;
+      const normalizedCode = pending
+        ? normalizeHouseholdInviteCode(pending.oneTimeCode)
+        : null;
+      prepareRequest();
+      setPendingHouseholdInviteDeferred(false);
+      try {
+        const currentSession = activeSessionRef.current;
+        if (!currentSession) {
+          setError({
+            code: "session_missing",
+            message: "Sign in before reviewing a household invitation.",
+            retryable: false
+          });
+          return null;
+        }
+        if (!normalizedCode) {
+          await discardPendingHouseholdInvite();
+          setError({
+            code: "invalid_request",
+            message: "Open a current household invitation to continue.",
+            retryable: false
+          });
+          return null;
+        }
+
+        if (gatewayRef.current.mode === "preview") {
+          if (normalizedCode === PREVIEW_HOUSEHOLD_INVITE_CODE) {
+            const review: HouseholdInviteReview = {
+              householdName: "Hassan household · sample",
+              role: "viewer",
+              expiresAt: new Date(
+                Date.now() + 24 * 60 * 60 * 1000
+              ).toISOString()
+            };
+            pendingHouseholdInviteReviewRef.current = review;
+            setPendingHouseholdInviteReview(review);
+            return review;
+          }
+          const record =
+            previewInvitesRef.current.get(normalizedCode);
+          if (
+            !record ||
+            record.acceptedMembership ||
+            record.createdByAccountId === currentSession.identity.id ||
+            Date.parse(record.invite.expiresAt) <= Date.now()
+          ) {
+            await discardPendingHouseholdInvite();
+            setError({
+              code: "invalid_request",
+              message:
+                "This session-only invitation is invalid or has expired.",
+              retryable: false
+            });
+            return null;
+          }
+          const review: HouseholdInviteReview = {
+            householdName: record.householdName,
+            role: record.invite.role,
+            expiresAt: record.invite.expiresAt
+          };
+          pendingHouseholdInviteReviewRef.current = review;
+          setPendingHouseholdInviteReview(review);
+          return review;
+        }
+
+        const access = householdAccessRef.current;
+        if (!access) {
+          setError({
+            code: "unsupported",
+            message:
+              "Household invitation review is not connected in this signed build.",
+            retryable: false
+          });
+          return null;
+        }
+        const result = await access.previewInvite(normalizedCode);
+        if (!result.ok) {
+          if (!result.error.retryable) {
+            await discardPendingHouseholdInvite();
+          }
+          setError(authFailureFromContract(result.error));
+          return null;
+        }
+        pendingHouseholdInviteReviewRef.current = result.value;
+        setPendingHouseholdInviteReview(result.value);
+        return result.value;
+      } finally {
+        setBusy(false);
+      }
+    },
+    [discardPendingHouseholdInvite, prepareRequest]
+  );
+
   const acceptHouseholdInvite = useCallback(
     async (
       oneTimeCode: string
@@ -1919,10 +2041,25 @@ export function AuthFlowProvider({
         });
         return null;
       }
+      if (!pendingHouseholdInviteReviewRef.current) {
+        setError({
+          code: "invalid_request",
+          message: "Review the household invitation before joining.",
+          retryable: false
+        });
+        return null;
+      }
       return acceptHouseholdInvite(pending.oneTimeCode);
     },
     [acceptHouseholdInvite]
   );
+
+  const deferPendingHouseholdInvite = useCallback(() => {
+    if (!pendingHouseholdInviteRef.current) return;
+    setPendingHouseholdInviteDeferred(true);
+    setError(null);
+    setStatusMessage(null);
+  }, []);
 
   const createCompletion = useCallback(() => {
     const name = householdName.trim();
@@ -2127,6 +2264,8 @@ export function AuthFlowProvider({
       passwordRecoveryGrant,
       passwordRecoverySessionActive,
       pendingHouseholdInvite,
+      pendingHouseholdInviteReview,
+      pendingHouseholdInviteDeferred,
       householdName,
       firstCaptureIntent,
       householdAccessSnapshot,
@@ -2148,7 +2287,9 @@ export function AuthFlowProvider({
       createHouseholdInvite,
       acceptHouseholdInvite,
       stageHouseholdInvite,
+      reviewPendingHouseholdInvite,
       acceptPendingHouseholdInvite,
+      deferPendingHouseholdInvite,
       discardPendingHouseholdInvite,
       refreshHouseholdAccess,
       changeHouseholdMemberRole,
@@ -2173,6 +2314,7 @@ export function AuthFlowProvider({
       completeOnboarding,
       createHouseholdInvite,
       acceptHouseholdInvite,
+      reviewPendingHouseholdInvite,
       acceptPendingHouseholdInvite,
       refreshHouseholdAccess,
       changeHouseholdMemberRole,
@@ -2199,6 +2341,8 @@ export function AuthFlowProvider({
       passwordRecoveryGrant,
       passwordRecoverySessionActive,
       pendingHouseholdInvite,
+      pendingHouseholdInviteReview,
+      pendingHouseholdInviteDeferred,
       requestPasswordRecovery,
       resendConfirmation,
       retryBootstrap,
@@ -2210,6 +2354,7 @@ export function AuthFlowProvider({
       signOut,
       signIn,
       stageHouseholdInvite,
+      deferPendingHouseholdInvite,
       discardPendingHouseholdInvite,
       statusMessage,
       updatePassword

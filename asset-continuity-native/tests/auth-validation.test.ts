@@ -49,7 +49,9 @@ describe("auth validation", () => {
       "ALYRAAAABBBBCCCC"
     );
     expect(validatePilotAccessCode("ALYR-AAAA-BBBB-CCCC")).toBeNull();
-    expect(validatePilotAccessCode("short")).toMatch(/full pilot access/i);
+    expect(validatePilotAccessCode("short")).toMatch(
+      /full early access/i
+    );
     expect(
       validateCreateAccount({
         email: "owner@example.com",
@@ -59,7 +61,7 @@ describe("auth validation", () => {
         requirePilotAccess: true
       })
     ).toEqual({
-      pilotAccessCode: "Enter your pilot access code."
+      pilotAccessCode: "Enter your early access code."
     });
     expect(
       validateCreateAccount({

@@ -30,6 +30,7 @@ function householdAdministrationStubs() {
         retryable: true
       }
     })),
+    previewInvite: jest.fn(),
     changeMemberRole: jest.fn(),
     revokeMember: jest.fn(),
     cancelInvite: jest.fn(),
@@ -161,6 +162,32 @@ describe("global auth session state", () => {
       "ready:none:none"
     );
     expect(gateway.signOut).toHaveBeenCalledTimes(1);
+    await screen.unmount();
+  });
+
+  it("refreshes provider state when confirmation is checked", async () => {
+    const gateway = gatewayWithSession(null);
+    gateway.refreshSession = jest.fn(async () => ({
+      ok: true as const,
+      value: restoredSession
+    }));
+    const screen = await render(
+      <AuthFlowProvider gateway={gateway}>
+        <Probe />
+      </AuthFlowProvider>
+    );
+    await waitFor(() => expect(latestAuth?.bootstrapState).toBe("ready"));
+    expect(latestAuth?.session).toBeNull();
+
+    await act(async () => {
+      await expect(
+        latestAuth!.checkConfirmedSession()
+      ).resolves.toEqual(restoredSession);
+    });
+
+    expect(gateway.currentSession).toHaveBeenCalledTimes(1);
+    expect(gateway.refreshSession).toHaveBeenCalledTimes(1);
+    expect(latestAuth?.session).toEqual(restoredSession);
     await screen.unmount();
   });
 

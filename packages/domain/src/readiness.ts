@@ -72,7 +72,8 @@ export function calculateAssetReadiness(
     asset.locationMode === "physical" &&
     asset.locationStatus === "known" &&
     Boolean(place) &&
-    (policy.isRealEstate ? precisePin : indoorLocator);
+    precisePin &&
+    (policy.isRealEstate || indoorLocator);
   const truthfulVirtualLocation =
     asset.locationMode === "virtual" && policy.allowsVirtual;
   const truthfulNotApplicable =

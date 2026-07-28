@@ -16,6 +16,7 @@ export {
   validateRecoveryConfirmation
 } from "../../../asset-continuity-native/src/recovery/journey";
 export type {
+  LocalRecoveryKitRecord,
   RecoveryCapability,
   RecoveryImportPreview,
   RecoveryKitVerification,

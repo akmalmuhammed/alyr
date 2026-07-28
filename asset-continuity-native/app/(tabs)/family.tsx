@@ -30,7 +30,6 @@ import {
 import {
   AppScreen,
   BodyText,
-  CommandSurface,
   PrimaryButton,
   ScreenTitle,
   SecondaryButton,
@@ -147,9 +146,12 @@ export default function FamilyScreen() {
         <BodyText muted>{copy.family.intro}</BodyText>
       </View>
 
-      <CommandSurface>
+      <View
+        style={styles.accessOverview}
+        testID="family-access-overview"
+      >
         <View style={[styles.summary, rtl && styles.rowReverse]}>
-          <UsersThree color={colors.volt} size={29} weight="regular" />
+          <UsersThree color={colors.text} size={27} weight="regular" />
           <View style={styles.summaryCopy}>
             <Text
               style={[
@@ -197,7 +199,46 @@ export default function FamilyScreen() {
                   language
                 )}
         </Text>
-      </CommandSurface>
+
+        <View style={styles.inviteDivider} />
+        {ownerCanInvite ? (
+          <View style={[styles.inviteRow, rtl && styles.rowReverse]}>
+            <BodyText muted style={styles.inviteHint}>
+              {inviteCopy.family.inviteHint}
+            </BodyText>
+            <Pressable
+              accessibilityRole="button"
+              onPress={() => router.push(HOUSEHOLD_ROUTES.inviteMember)}
+              style={({ pressed }) => [
+                styles.inviteAction,
+                rtl && styles.rowReverse,
+                pressed && styles.rowPressed
+              ]}
+            >
+              <Plus color={colors.text} size={18} weight="bold" />
+              <Text
+                style={[
+                  styles.inviteActionLabel,
+                  rtl && styles.arabicMedium
+                ]}
+              >
+                {inviteCopy.family.inviteAction}
+              </Text>
+            </Pressable>
+          </View>
+        ) : (
+          <View style={[styles.inviteRow, rtl && styles.rowReverse]}>
+            <ShieldCheck
+              color={colors.textMuted}
+              size={21}
+              weight="regular"
+            />
+            <BodyText muted style={styles.inviteHint}>
+              {inviteCopy.family.ownerOnly}
+            </BodyText>
+          </View>
+        )}
+      </View>
 
       {usesCloudRoster ? (
         <HouseholdRosterStatus
@@ -207,36 +248,9 @@ export default function FamilyScreen() {
         />
       ) : null}
 
-      <Section style={styles.inviteSection}>
-        {ownerCanInvite ? (
-          <>
-            <BodyText muted>{inviteCopy.family.inviteHint}</BodyText>
-            <PrimaryButton
-              icon={Plus}
-              label={inviteCopy.family.inviteAction}
-              onPress={() =>
-                router.push(HOUSEHOLD_ROUTES.inviteMember)
-              }
-            />
-          </>
-        ) : (
-          <View style={[styles.notice, rtl && styles.rowReverse]}>
-            <ShieldCheck
-              color={colors.text}
-              size={23}
-              weight="regular"
-            />
-            <View style={styles.noticeCopy}>
-              <BodyText muted>
-                {inviteCopy.family.ownerOnly}
-              </BodyText>
-            </View>
-          </View>
-        )}
-      </Section>
-
       <Section>
         <Text
+          accessibilityRole="header"
           style={[
             styles.sectionTitle,
             rtl && styles.arabicMedium,
@@ -354,6 +368,7 @@ export default function FamilyScreen() {
       {ownerCanManage && pendingInvites.length > 0 ? (
         <Section>
           <Text
+            accessibilityRole="header"
             style={[
               styles.sectionTitle,
               rtl && styles.arabicMedium,
@@ -559,6 +574,13 @@ const styles = StyleSheet.create({
   heading: {
     gap: spacing.xs
   },
+  accessOverview: {
+    gap: spacing.md,
+    paddingVertical: spacing.lg,
+    borderTopWidth: 1,
+    borderBottomWidth: 1,
+    borderColor: colors.borderStrong
+  },
   summary: {
     flexDirection: "row",
     alignItems: "center",
@@ -570,20 +592,20 @@ const styles = StyleSheet.create({
     gap: 2
   },
   commandLabel: {
-    color: colors.concrete,
+    color: colors.textMuted,
     fontFamily: typography.bodyBold,
     fontSize: 12,
     lineHeight: 15,
     letterSpacing: 1
   },
   commandTitle: {
-    color: colors.white,
+    color: colors.text,
     fontFamily: typography.display,
     fontSize: 22,
     lineHeight: 28
   },
   commandMeta: {
-    color: colors.concrete,
+    color: colors.textMuted,
     fontFamily: typography.body,
     fontSize: 14,
     lineHeight: 20
@@ -594,8 +616,41 @@ const styles = StyleSheet.create({
     fontSize: 22,
     lineHeight: 28
   },
-  inviteSection: {
-    gap: spacing.sm
+  inviteDivider: {
+    height: StyleSheet.hairlineWidth,
+    backgroundColor: colors.border
+  },
+  inviteRow: {
+    minHeight: 44,
+    flexDirection: "row",
+    flexWrap: "wrap",
+    alignItems: "center",
+    justifyContent: "space-between",
+    gap: spacing.md
+  },
+  inviteHint: {
+    minWidth: 0,
+    flexBasis: 140,
+    flex: 1
+  },
+  inviteAction: {
+    minHeight: 44,
+    flexShrink: 0,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: spacing.xs,
+    paddingHorizontal: spacing.sm,
+    borderWidth: 1,
+    borderColor: colors.borderStrong,
+    borderRadius: radius.sm,
+    backgroundColor: colors.surface
+  },
+  inviteActionLabel: {
+    color: colors.text,
+    fontFamily: typography.bodyMedium,
+    fontSize: 14,
+    lineHeight: 20
   },
   refreshSection: {
     gap: spacing.sm
@@ -640,14 +695,12 @@ const styles = StyleSheet.create({
     borderBottomColor: colors.border
   },
   avatar: {
-    width: 48,
-    height: 48,
+    width: 40,
+    height: 40,
     alignItems: "center",
     justifyContent: "center",
-    borderWidth: 1,
-    borderColor: colors.borderStrong,
-    borderRadius: radius.round,
-    backgroundColor: colors.surface
+    borderRadius: radius.sm,
+    backgroundColor: colors.mist
   },
   avatarInvited: {
     borderStyle: "dashed",
@@ -691,19 +744,15 @@ const styles = StyleSheet.create({
   roleBadge: {
     maxWidth: "48%",
     flexShrink: 1,
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderWidth: 1,
-    borderColor: colors.border,
-    borderRadius: radius.xs,
-    backgroundColor: colors.surface
+    paddingVertical: 4
   },
   roleBadgeText: {
     flexShrink: 1,
-    color: colors.text,
-    fontFamily: typography.bodyMedium,
+    color: colors.textMuted,
+    fontFamily: typography.metadata,
     fontSize: 12,
-    lineHeight: 16
+    lineHeight: 16,
+    letterSpacing: 0.6
   },
   notice: {
     flexDirection: "row",

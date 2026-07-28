@@ -9,11 +9,39 @@ describe("Atlas premium interaction contract", () => {
   })();
 
   it("keeps one Atlas title and exposes clear Globe and List tabs", () => {
-    expect(source).not.toContain("<ScreenTitle>Atlas</ScreenTitle>");
+    expect(source).toContain("<ScreenTitle>{atlasCopy.title}</ScreenTitle>");
+    expect(
+      source.match(/<ScreenTitle>\{atlasCopy\.title\}<\/ScreenTitle>/g)
+    ).toHaveLength(1);
     expect(source).toContain('accessibilityRole="tab"');
+    expect(source).toContain(
+      'accessibilityState={{ selected: view === "globe" }}'
+    );
+    expect(source).toContain(
+      'accessibilityState={{ selected: view === "list" }}'
+    );
     expect(source).toContain("{atlasCopy.globe}");
     expect(source).toContain("{atlasCopy.list}");
     expect(source).toContain("useSecondarySurfaceCopy");
+  });
+
+  it("uses rule-led Paper instrument tabs instead of a capsule", () => {
+    expect(source).toMatch(
+      /viewSwitch:\s*\{[\s\S]*?minHeight:\s*45,[\s\S]*?borderBottomWidth:\s*1,[\s\S]*?borderBottomColor:\s*colors\.borderStrong,[\s\S]*?backgroundColor:\s*colors\.canvas/
+    );
+    expect(source).toMatch(
+      /viewTab:\s*\{[\s\S]*?minHeight:\s*44,[\s\S]*?borderBottomWidth:\s*3,[\s\S]*?borderBottomColor:\s*colors\.transparent/
+    );
+    expect(source).toMatch(
+      /viewTabSelected:\s*\{[\s\S]*?borderBottomColor:\s*colors\.volt/
+    );
+    expect(source).not.toMatch(
+      /viewSwitch:\s*\{[^}]*borderRadius:/
+    );
+    expect(source).not.toMatch(
+      /viewTabSelected:\s*\{[^}]*backgroundColor:/
+    );
+    expect(source).toContain("rtl && styles.rowReverse");
   });
 
   it("keeps direct drag plus accessible previous and next controls", () => {
@@ -187,7 +215,8 @@ describe("Atlas premium interaction contract", () => {
         "listSummary",
         "placePinMeta",
         "positionLabel",
-        "selectedPrecision"
+        "selectedPrecision",
+        "viewTabLabel"
       ].sort()
     );
   });

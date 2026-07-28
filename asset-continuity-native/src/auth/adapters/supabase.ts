@@ -351,7 +351,7 @@ export function createSupabaseAuthGateway(
     if (!normalizedAccessCode) {
       return pilotFailure(
         "pilot_access_required",
-        "Enter the pilot access code from your invitation.",
+        "Enter the early access code from your invitation.",
         false
       );
     }

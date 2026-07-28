@@ -1,4 +1,4 @@
-import {
+﻿import {
   fireEvent,
   render,
   waitFor
@@ -9,8 +9,9 @@ const mockRouter = {
   replace: jest.fn()
 };
 let mockParams: { code?: string } = {};
-let mockAuthState: Record<string, unknown>;
+let mockAuthState: Record<string, any>;
 let mockLanguage: "en" | "ar" = "en";
+const mockStartWorkspace = jest.fn(async () => undefined);
 
 jest.mock("expo-router", () => ({
   useLocalSearchParams: () => mockParams,
@@ -19,6 +20,13 @@ jest.mock("expo-router", () => ({
 
 jest.mock("@/auth/AuthFlowProvider", () => ({
   useAuthFlow: () => mockAuthState
+}));
+
+jest.mock("@/state/WorkspaceProvider", () => ({
+  useWorkspace: () => ({
+    startWorkspace: mockStartWorkspace,
+    workspace: null
+  })
 }));
 
 jest.mock("@/i18n/inviteCopy", () => {
@@ -44,19 +52,30 @@ jest.mock("react-native-safe-area-context", () => {
 
 import JoinHouseholdScreen from "../app/join";
 
+const review = {
+  householdName: "Rahman household",
+  role: "viewer" as const,
+  expiresAt: "2026-07-30T12:00:00.000Z"
+};
+
 function state(overrides: Record<string, unknown> = {}) {
   return {
     acceptPendingHouseholdInvite: jest.fn(),
     bootstrapState: "ready",
     busy: false,
     clearError: jest.fn(),
+    deferPendingHouseholdInvite: jest.fn(),
     discardPendingHouseholdInvite: jest.fn(async () => undefined),
     error: null,
+    mode: "supabase",
     pendingHouseholdInvite: {
       oneTimeCode: "PRIVATE-INVITE-CODE",
       capturedAt: "2026-07-28T08:00:00.000Z"
     },
+    pendingHouseholdInviteReview: null,
+    reviewPendingHouseholdInvite: jest.fn(async () => review),
     session: null,
+    signOut: jest.fn(async () => true),
     stageHouseholdInvite: jest.fn(async () => true),
     ...overrides
   };
@@ -70,10 +89,16 @@ describe("recipient invitation route", () => {
     mockAuthState = state();
   });
 
-  it("offers sign-in or account creation without rendering the bearer", async () => {
+  it("offers sign-in or account creation without rendering or redeeming the bearer", async () => {
     const screen = await render(<JoinHouseholdScreen />);
 
     expect(screen.queryByText("PRIVATE-INVITE-CODE")).toBeNull();
+    expect(
+      mockAuthState.acceptPendingHouseholdInvite
+    ).not.toHaveBeenCalled();
+    expect(
+      mockAuthState.reviewPendingHouseholdInvite
+    ).not.toHaveBeenCalled();
     await fireEvent.press(screen.getByText("Sign in to accept"));
     expect(mockRouter.push).toHaveBeenCalledWith("/(auth)/sign-in");
     await fireEvent.press(screen.getByText("Create an account"));
@@ -119,20 +144,92 @@ describe("recipient invitation route", () => {
     await screen.unmount();
   });
 
-  it("accepts immediately for an existing verified account", async () => {
+  it("reviews a signed-in invitation without joining, then redeems only after the explicit Join action", async () => {
+    const reviewPendingHouseholdInvite = jest.fn(async () => review);
     const acceptPendingHouseholdInvite = jest.fn(async () => ({
       membershipId: "membership-recipient"
     }));
     mockAuthState = state({
-      session: { identity: { id: "account-recipient" } },
+      session: {
+        identity: { id: "account-recipient" },
+        onboarding: "required"
+      },
+      reviewPendingHouseholdInvite,
       acceptPendingHouseholdInvite
     });
     const screen = await render(<JoinHouseholdScreen />);
 
     await waitFor(() => {
-      expect(acceptPendingHouseholdInvite).toHaveBeenCalledTimes(1);
-      expect(mockRouter.replace).toHaveBeenCalledWith("/");
+      expect(reviewPendingHouseholdInvite).toHaveBeenCalledTimes(1);
     });
+    expect(acceptPendingHouseholdInvite).not.toHaveBeenCalled();
+
+    mockAuthState = {
+      ...mockAuthState,
+      pendingHouseholdInviteReview: review
+    };
+    await screen.rerender(<JoinHouseholdScreen />);
+    expect(screen.getByText("Review before you join")).toBeTruthy();
+    expect(screen.getByText("Rahman household")).toBeTruthy();
+    expect(screen.getByText("Viewer")).toBeTruthy();
+    expect(screen.queryByText("PRIVATE-INVITE-CODE")).toBeNull();
+
+    await fireEvent.press(screen.getByText("Join this household"));
+    await waitFor(() => {
+      expect(acceptPendingHouseholdInvite).toHaveBeenCalledTimes(1);
+      expect(screen.getByText("You joined the household")).toBeTruthy();
+    });
+    expect(mockRouter.replace).not.toHaveBeenCalledWith("/");
+
+    await fireEvent.press(screen.getByText("Open household"));
+    expect(mockRouter.replace).toHaveBeenCalledWith("/");
+    await screen.unmount();
+  });
+
+  it("keeps a reviewed invitation protected when the recipient chooses Not now", async () => {
+    mockAuthState = state({
+      session: {
+        identity: { id: "account-recipient" },
+        onboarding: "required"
+      },
+      pendingHouseholdInviteReview: review
+    });
+    const screen = await render(<JoinHouseholdScreen />);
+
+    await fireEvent.press(screen.getByText("Not now"));
+    expect(
+      mockAuthState.deferPendingHouseholdInvite
+    ).toHaveBeenCalledTimes(1);
+    expect(
+      mockAuthState.discardPendingHouseholdInvite
+    ).not.toHaveBeenCalled();
+    expect(mockRouter.replace).toHaveBeenCalledWith(
+      "/(auth)/household"
+    );
+    await screen.unmount();
+  });
+
+  it("moves a protected invitation across an explicit account switch without putting it back in the URL", async () => {
+    mockAuthState = state({
+      session: {
+        identity: { id: "account-recipient" },
+        onboarding: "required"
+      },
+      pendingHouseholdInviteReview: review
+    });
+    const screen = await render(<JoinHouseholdScreen />);
+
+    await fireEvent.press(screen.getByText("Use another account"));
+    await waitFor(() => {
+      expect(mockAuthState.signOut).toHaveBeenCalledTimes(1);
+      expect(mockAuthState.stageHouseholdInvite).toHaveBeenCalledWith(
+        "PRIVATE-INVITE-CODE"
+      );
+      expect(mockRouter.replace).toHaveBeenCalledWith(
+        "/(auth)/sign-in"
+      );
+    });
+    expect(screen.queryByText("PRIVATE-INVITE-CODE")).toBeNull();
     await screen.unmount();
   });
 
@@ -150,7 +247,7 @@ describe("recipient invitation route", () => {
     expect(
       screen.getByText("This invitation needs a new link")
     ).toBeTruthy();
-    expect(screen.queryByText(/household-invited/i)).toBeNull();
+    expect(screen.queryByText(/Rahman household/i)).toBeNull();
     await screen.unmount();
   });
 
@@ -187,7 +284,7 @@ describe("recipient invitation route", () => {
     expect(
       screen.queryByText(/PRIVATE_PROVIDER_STORAGE_DETAIL/u)
     ).toBeNull();
-    fireEvent.press(screen.getByText("Try again"));
+    await fireEvent.press(screen.getByText("Try again"));
 
     await waitFor(() => {
       expect(stageHouseholdInvite).toHaveBeenCalledTimes(2);
@@ -199,7 +296,7 @@ describe("recipient invitation route", () => {
     await screen.unmount();
   });
 
-  it("retries a protected invitation after a retryable acceptance failure", async () => {
+  it("retries explicit acceptance while keeping reviewed metadata visible and shows a local receipt on success", async () => {
     const acceptPendingHouseholdInvite = jest
       .fn()
       .mockResolvedValueOnce(null)
@@ -207,11 +304,16 @@ describe("recipient invitation route", () => {
         membershipId: "membership-recipient"
       });
     mockAuthState = state({
-      session: { identity: { id: "account-recipient" } },
+      session: {
+        identity: { id: "account-recipient" },
+        onboarding: "required"
+      },
+      pendingHouseholdInviteReview: review,
       acceptPendingHouseholdInvite
     });
     const screen = await render(<JoinHouseholdScreen />);
 
+    await fireEvent.press(screen.getByText("Join this household"));
     await waitFor(() => {
       expect(acceptPendingHouseholdInvite).toHaveBeenCalledTimes(1);
     });
@@ -233,11 +335,11 @@ describe("recipient invitation route", () => {
     expect(
       screen.queryByText(/PRIVATE_PROVIDER_REFRESH_DETAIL/u)
     ).toBeNull();
-    fireEvent.press(screen.getByText("Try again"));
+    await fireEvent.press(screen.getByText("Try again"));
 
     await waitFor(() => {
       expect(acceptPendingHouseholdInvite).toHaveBeenCalledTimes(2);
-      expect(mockRouter.replace).toHaveBeenCalledWith("/");
+      expect(screen.getByText("You joined the household")).toBeTruthy();
     });
     expect(
       mockAuthState.discardPendingHouseholdInvite

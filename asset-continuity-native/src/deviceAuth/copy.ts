@@ -49,6 +49,9 @@ export interface OnboardingDevicePreflightCopy {
   readonly verifyPlaceAction: string;
   readonly checkingAction: string;
   readonly retryAction: string;
+  readonly openSettingsAction: string;
+  readonly openSettingsHint: string;
+  readonly openSettingsError: string;
   readonly preparingAction: string;
   readonly retryStorageAction: string;
   readonly promptTitle: string;
@@ -247,6 +250,10 @@ const englishPreflight: Omit<
   verifyPlaceAction: "Verify and add my first Place",
   checkingAction: "Checking device\u2026",
   retryAction: "Check device again",
+  openSettingsAction: "Open device Settings",
+  openSettingsHint: "Opens device security settings so you can set a passcode",
+  openSettingsError:
+    "Device Settings did not open. Open Settings manually, set a passcode, then return.",
   preparingAction: "Preparing private record\u2026",
   retryStorageAction: "Try device storage again",
   promptTitle: "Verify to finish ALYR setup",
@@ -288,6 +295,10 @@ const arabicPreflight: Omit<
   verifyPlaceAction: "تحقق وأضف أول مكان",
   checkingAction: "جارٍ التحقق من الجهاز…",
   retryAction: "التحقق من الجهاز مرة أخرى",
+  openSettingsAction: "فتح إعدادات الجهاز",
+  openSettingsHint: "يفتح إعدادات أمان الجهاز لتعيين رمز دخول",
+  openSettingsError:
+    "تعذّر فتح إعدادات الجهاز. افتح الإعدادات يدويًا وعيّن رمز دخول ثم ارجع.",
   preparingAction: "جارٍ تجهيز السجل الخاص…",
   retryStorageAction: "إعادة محاولة فتح مساحة الجهاز",
   promptTitle: "تحقق لإكمال إعداد ALYR",

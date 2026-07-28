@@ -17,6 +17,7 @@ import {
   householdAccessErrorMessage
 } from "@/i18n/householdAdminCopy";
 import { LocaleProvider } from "@/i18n/LocaleProvider";
+import { colors } from "@/theme/tokens";
 
 const householdId = "00000000-0000-4000-8000-000000000010";
 const ownerMembershipId =
@@ -181,6 +182,16 @@ describe("household administration UI", () => {
       wrapper: wrapper("en")
     });
     expect(screen.getByText("Pearl household")).toBeTruthy();
+    const accessOverviewStyle = StyleSheet.flatten(
+      screen.getByTestId("family-access-overview").props.style
+    );
+    expect(accessOverviewStyle).toMatchObject({
+      borderTopWidth: 1,
+      borderBottomWidth: 1,
+      borderColor: colors.borderStrong
+    });
+    expect(accessOverviewStyle).not.toHaveProperty("backgroundColor");
+    expect(accessOverviewStyle).not.toHaveProperty("borderRadius");
     expect(screen.queryByText("Stale private household name")).toBeNull();
     expect(screen.getByText("Omar Editor")).toBeTruthy();
     expect(

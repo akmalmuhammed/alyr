@@ -28,6 +28,7 @@ interface RecoveryUnavailableCopy {
 interface SecondarySurfaceCopy {
   readonly atlas: {
     readonly eyebrow: string;
+    readonly title: string;
     readonly intro: string;
     readonly viewLabel: string;
     readonly globe: string;
@@ -69,6 +70,16 @@ interface SecondarySurfaceCopy {
       readonly successEyebrow: string;
       readonly successTitle: string;
       readonly successBody: string;
+      readonly protectedEyebrow: string;
+      readonly protectedTitle: string;
+      readonly protectedBody: string;
+      readonly backupNeededTitle: string;
+      readonly backupNeededBody: string;
+      readonly shareSheetReturnedTitle: string;
+      readonly shareSheetReturnedBody: string;
+      readonly confirmExternalCopy: string;
+      readonly confirmExternalCopyHint: string;
+      readonly confirmedAt: string;
       readonly verification: string;
       readonly file: string;
       readonly size: string;
@@ -159,6 +170,7 @@ export const SECONDARY_SURFACE_COPY: Readonly<
   en: {
     atlas: {
       eyebrow: "PRIVATE LOCATION OVERVIEW",
+      title: "Atlas",
       intro:
         "See where your Places are, then open the property record for exact retrieval details and documents.",
       viewLabel: "Atlas view",
@@ -205,9 +217,23 @@ export const SECONDARY_SURFACE_COPY: Readonly<
         intro:
           "Protect a local copy of this household register and its on-device proof with a passphrase only you know.",
         successEyebrow: "VERIFIED ENCRYPTED FILE",
-        successTitle: "Recovery Kit created",
+        successTitle: "Encrypted kit created on this device",
         successBody:
-          "ALYR read the stored encrypted bytes again and matched their SHA-256 checksum before showing this result.",
+          "ALYR read the stored encrypted bytes again and matched their SHA-256 checksum. This local file is not yet an independent backup.",
+        protectedEyebrow: "INDEPENDENT COPY CONFIRMED",
+        protectedTitle: "Recovery backup protected",
+        protectedBody:
+          "You confirmed that another encrypted copy is stored outside ALYR on this device. Keep its passphrase separately.",
+        backupNeededTitle: "Save another copy before leaving",
+        backupNeededBody:
+          "A kit inside ALYR can be lost with this device. Share it to Files, a trusted drive or another device, then confirm below.",
+        shareSheetReturnedTitle: "Did you save it somewhere else?",
+        shareSheetReturnedBody:
+          "Returning from the share sheet does not prove that a copy was saved. Confirm only after you can find the .alyrkit file outside ALYR.",
+        confirmExternalCopy: "I saved another copy",
+        confirmExternalCopyHint:
+          "Confirms that an encrypted copy now exists outside ALYR on this device",
+        confirmedAt: "External copy confirmed",
         verification: "Verification",
         file: "File",
         size: "Size",
@@ -346,6 +372,7 @@ export const SECONDARY_SURFACE_COPY: Readonly<
   ar: {
     atlas: {
       eyebrow: "نظرة خاصة على المواقع",
+      title: "الأطلس",
       intro:
         "اعرف أين توجد أماكنك، ثم افتح سجل العقار للوصول إلى تفاصيل العثور والمستندات.",
       viewLabel: "طريقة عرض الأطلس",
@@ -391,10 +418,24 @@ export const SECONDARY_SURFACE_COPY: Readonly<
         title: "إنشاء حزمة استرداد",
         intro:
           "احمِ نسخة محلية من سجل الأسرة وإثباتاته المحفوظة على الجهاز بعبارة مرور لا يعرفها سواك.",
-        successEyebrow: "ملف مشفر تم التحقق منه",
-        successTitle: "تم إنشاء حزمة الاسترداد",
+        successEyebrow: "ملف مشفّر تم التحقق منه",
+        successTitle: "أُنشئت حزمة مشفّرة على هذا الجهاز",
         successBody:
-          "أعادت ALYR قراءة البايتات المشفرة المحفوظة وطابقت بصمتها SHA-256 قبل عرض هذه النتيجة.",
+          "أعادت ALYR قراءة البيانات المشفّرة وطابقت بصمة SHA-256. هذا الملف المحلي ليس نسخة احتياطية مستقلة بعد.",
+        protectedEyebrow: "تم تأكيد النسخة المستقلة",
+        protectedTitle: "نسخة الاستعادة الاحتياطية محمية",
+        protectedBody:
+          "أكدتَ حفظ نسخة مشفّرة أخرى خارج ALYR على هذا الجهاز. احتفظ بعبارة المرور في مكان منفصل.",
+        backupNeededTitle: "احفظ نسخة أخرى قبل المغادرة",
+        backupNeededBody:
+          "قد تُفقد الحزمة الموجودة داخل ALYR مع هذا الجهاز. شاركها إلى تطبيق الملفات أو مساحة موثوقة أو جهاز آخر، ثم أكد ذلك أدناه.",
+        shareSheetReturnedTitle: "هل حفظت النسخة في مكان آخر؟",
+        shareSheetReturnedBody:
+          "العودة من نافذة المشاركة لا تثبت حفظ نسخة. أكد فقط بعد العثور على ملف .alyrkit خارج ALYR.",
+        confirmExternalCopy: "حفظت نسخة أخرى",
+        confirmExternalCopyHint:
+          "يؤكد وجود نسخة مشفّرة خارج ALYR على هذا الجهاز",
+        confirmedAt: "تم تأكيد النسخة الخارجية",
         verification: "التحقق",
         file: "الملف",
         size: "الحجم",

@@ -1052,6 +1052,72 @@ async function handleInviteAccept(
   return json({ membership: data });
 }
 
+async function handleInvitePreview(
+  request: Request,
+  context: AuthenticatedContext,
+): Promise<Response> {
+  const body = await readJson(request);
+  requireApiVersion(body);
+  const code = typeof body.oneTimeCode === "string"
+    ? body.oneTimeCode.trim().toUpperCase()
+    : "";
+  if (
+    !hasOnlyKeys(body, ["apiVersion", "oneTimeCode"]) ||
+    code.length < 1 ||
+    code.length > 128 ||
+    /[\u0000-\u001f\u007f-\u009f]/u.test(code)
+  ) {
+    return apiError("VALIDATION_FAILED", "The invitation code is invalid.");
+  }
+
+  const { data, error } = await context.client.rpc(
+    "preview_household_invite",
+    { p_code: code },
+  );
+  if (error) {
+    return apiError(
+      "NOT_FOUND",
+      "This invitation is invalid or has expired.",
+      404,
+    );
+  }
+
+  const candidate = Array.isArray(data) ? data[0] : data;
+  const householdName = typeof candidate?.household_name === "string"
+    ? candidate.household_name.trim()
+    : "";
+  const role = candidate?.role;
+  const expiresAt = typeof candidate?.expires_at === "string"
+    ? candidate.expires_at
+    : "";
+  if (
+    householdName.length < 1 ||
+    householdName.length > 120 ||
+    (role !== "editor" && role !== "viewer") ||
+    !expiresAt ||
+    Number.isNaN(Date.parse(expiresAt))
+  ) {
+    return apiError(
+      "STORAGE_UNAVAILABLE",
+      "Invitation review returned an invalid acknowledgement.",
+      503,
+      true,
+    );
+  }
+
+  return json(
+    {
+      review: {
+        householdName,
+        role,
+        expiresAt,
+      },
+    },
+    200,
+    { "Cache-Control": "no-store" },
+  );
+}
+
 async function handleInviteCreate(
   request: Request,
   context: AuthenticatedContext,
@@ -2267,6 +2333,9 @@ Deno.serve(async (request) => {
     }
     if (request.method === "POST" && path === "/invites") {
       return await handleInviteCreate(request, context);
+    }
+    if (request.method === "POST" && path === "/invites/preview") {
+      return await handleInvitePreview(request, context);
     }
     if (request.method === "POST" && path === "/invites/accept") {
       return await handleInviteAccept(request, context);

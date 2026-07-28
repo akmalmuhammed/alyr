@@ -1,5 +1,6 @@
 import { fireEvent, render } from "@testing-library/react-native";
 import type { PropsWithChildren } from "react";
+import { StyleSheet } from "react-native";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 
 import ItemsScreen, {
@@ -9,6 +10,7 @@ import { createWorkspace } from "@/domain/sample";
 import { COPY } from "@/i18n/copy";
 import { CORE_JOURNEY_COPY } from "@/i18n/coreJourneyCopy";
 import { PRIMARY_ROUTES } from "@/navigation/primaryRoutes";
+import { colors } from "@/theme/tokens";
 
 const mockRouter = {
   push: jest.fn(),
@@ -76,6 +78,16 @@ describe("ALYR navigation vocabulary", () => {
     expect(screen.getByText("Assets")).toBeTruthy();
     expect(itemsTab.props.accessibilityState).toEqual({ selected: true });
     expect(placesTab.props.accessibilityState).toEqual({ selected: false });
+    expect(StyleSheet.flatten(itemsTab.props.style)).toMatchObject({
+      minHeight: 48,
+      borderBottomWidth: 2,
+      borderBottomColor: colors.carbon
+    });
+    expect(StyleSheet.flatten(placesTab.props.style)).toMatchObject({
+      minHeight: 48,
+      borderBottomWidth: 2,
+      borderBottomColor: colors.transparent
+    });
     expect(screen.getByText("Start with one important item")).toBeTruthy();
   });
 

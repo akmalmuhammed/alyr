@@ -79,7 +79,7 @@ const english = {
       stale:
         "The selected records changed while the snapshot was created. Sync and try again.",
       size:
-        "This export is over the pilot file allowance. Create a redacted copy or reduce the item scope.",
+        "This export is over the current file allowance. Create a redacted copy or reduce the item scope.",
       offline:
         "The export service is not reachable. Your household records remain unchanged.",
       invalid:

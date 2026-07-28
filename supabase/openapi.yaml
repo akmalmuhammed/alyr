@@ -426,6 +426,36 @@ paths:
           $ref: "#/components/responses/Forbidden"
         "409":
           $ref: "#/components/responses/Conflict"
+  /invites/preview:
+    post:
+      operationId: previewInvite
+      summary: Review the minimum household invitation details before joining.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/InviteAcceptRequest"
+      responses:
+        "200":
+          description: Privacy-scoped invitation review returned without changing membership.
+          headers:
+            Cache-Control:
+              schema:
+                type: string
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: false
+                required: [review]
+                properties:
+                  review:
+                    $ref: "#/components/schemas/HouseholdInviteReview"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/NotFound"
   /invites/accept:
     post:
       operationId: acceptInvite
@@ -895,6 +925,21 @@ components:
         version:
           type: integer
           minimum: 1
+    HouseholdInviteReview:
+      type: object
+      additionalProperties: false
+      required: [householdName, role, expiresAt]
+      properties:
+        householdName:
+          type: string
+          minLength: 1
+          maxLength: 120
+        role:
+          type: string
+          enum: [editor, viewer]
+        expiresAt:
+          type: string
+          format: date-time
     LiabilityKind:
       type: string
       description: >

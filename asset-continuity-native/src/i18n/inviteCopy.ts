@@ -27,6 +27,13 @@ const english = {
       "Codes expire and can be used by one account. Paste it exactly as shared.",
     codePlaceholder: "Enter the one-time code",
     codeRequired: "Enter the complete invitation code.",
+    codeEntryAction: "I have an invitation code",
+    codeEntryHint:
+      "Opens the optional invitation-code field without joining a household.",
+    codeEntryCloseAction: "Use my private record instead",
+    codeEntryCloseHint:
+      "Closes the invitation-code field and keeps private-record creation selected.",
+    reviewAction: "Review invitation",
     joinAction: "Join household",
     sampleAction: "Review a sample invitation",
     previewNotice:
@@ -34,7 +41,7 @@ const english = {
   },
   account: {
     signupNotice:
-      "This one-time household invitation replaces the operator pilot code. Create the account with the email that will join.",
+      "This one-time household invitation already grants access. Create the account with the email that will join.",
     createAction: "Create account and continue"
   },
   joinLink: {
@@ -47,6 +54,18 @@ const english = {
     protectingTitle: "Protecting the invitation",
     protectingBody:
       "ALYR is moving the one-time code into encrypted storage on this device.",
+    reviewingTitle: "Checking the invitation",
+    reviewingBody:
+      "ALYR is confirming the household, access level and expiry without joining you yet.",
+    reviewTitle: "Review before you join",
+    reviewBody:
+      "Joining gives this household access to the records you create there. Confirm the household and your assigned role first.",
+    householdLabel: "Household",
+    accessLabel: "Your access",
+    expiresLabel: "Invitation expires",
+    joinAction: "Join this household",
+    notNowAction: "Not now",
+    useAnotherAccount: "Use another account",
     acceptingTitle: "Joining the household",
     acceptingBody:
       "ALYR is confirming this account and its assigned household role.",
@@ -62,7 +81,12 @@ const english = {
     retryAction: "Try again",
     cancelAction: "Close invitation",
     protectedNotice:
-      "The code stays encrypted on this device and is removed after acceptance, rejection, or cancellation."
+      "The code stays encrypted on this device and is removed after acceptance, rejection, or cancellation.",
+    receiptEyebrow: "MEMBERSHIP CONFIRMED",
+    receiptTitle: "You joined the household",
+    receiptBody:
+      "Your assigned access is active. ALYR will open the household register with the same role shown above.",
+    receiptAction: "Open household"
   },
   screen: {
     navigationTitle: "Invite a person",
@@ -115,11 +139,11 @@ const english = {
     network_unavailable:
       "The invitation service could not be reached. Your code entry was preserved.",
     pilot_access_denied:
-      "Pilot access must be verified before this account can be created.",
+      "Early access must be verified before this account can be created.",
     pilot_access_required:
-      "Enter the pilot access code before creating an account.",
+      "Enter the early access code before creating an account.",
     pilot_capacity_reached:
-      "The current pilot group is full.",
+      "The current early access group is full.",
     rate_limited: "Too many attempts. Wait a moment, then try again.",
     session_missing: "Refresh your account session, then try again.",
     unsupported: "Household invitations are not connected in this build.",
@@ -151,6 +175,13 @@ const arabic = {
       "تنتهي صلاحية الرمز ويستخدمه حساب واحد. الصقه كما تمت مشاركته.",
     codePlaceholder: "أدخل الرمز المخصص لمرة واحدة",
     codeRequired: "أدخل رمز الدعوة كاملًا.",
+    codeEntryAction: "لديّ رمز دعوة",
+    codeEntryHint:
+      "يفتح حقل رمز الدعوة الاختياري من دون الانضمام إلى أسرة.",
+    codeEntryCloseAction: "استخدام سجلي الخاص بدلًا من ذلك",
+    codeEntryCloseHint:
+      "يغلق حقل رمز الدعوة ويبقي إنشاء السجل الخاص محددًا.",
+    reviewAction: "مراجعة الدعوة",
     joinAction: "الانضمام إلى الأسرة",
     sampleAction: "مراجعة دعوة تجريبية",
     previewNotice:
@@ -158,7 +189,7 @@ const arabic = {
   },
   account: {
     signupNotice:
-      "تحل دعوة الأسرة هذه والمخصصة لمرة واحدة محل رمز البرنامج التجريبي. أنشئ الحساب بالبريد الإلكتروني الذي سينضم.",
+      "تمنح دعوة الأسرة المخصصة لمرة واحدة صلاحية الوصول بالفعل. أنشئ الحساب بالبريد الإلكتروني الذي سينضم.",
     createAction: "إنشاء الحساب والمتابعة"
   },
   joinLink: {
@@ -171,6 +202,18 @@ const arabic = {
     protectingTitle: "جارٍ حماية الدعوة",
     protectingBody:
       "ينقل ALYR الرمز المخصص لمرة واحدة إلى مساحة مشفرة على هذا الجهاز.",
+    reviewingTitle: "جارٍ التحقق من الدعوة",
+    reviewingBody:
+      "يتحقق ALYR من الأسرة ومستوى الصلاحية وموعد الانتهاء من دون ضمك بعد.",
+    reviewTitle: "راجع الدعوة قبل الانضمام",
+    reviewBody:
+      "يتيح لك الانضمام إنشاء السجلات داخل هذه الأسرة وفق الصلاحية المحددة. تأكد من الأسرة ودورك أولاً.",
+    householdLabel: "الأسرة",
+    accessLabel: "صلاحيتك",
+    expiresLabel: "تنتهي الدعوة",
+    joinAction: "الانضمام إلى هذه الأسرة",
+    notNowAction: "ليس الآن",
+    useAnotherAccount: "استخدام حساب آخر",
     acceptingTitle: "جارٍ الانضمام إلى الأسرة",
     acceptingBody:
       "يتحقق ALYR من هذا الحساب ومن دور الأسرة المخصص له.",
@@ -186,7 +229,12 @@ const arabic = {
     retryAction: "حاول مرة أخرى",
     cancelAction: "إغلاق الدعوة",
     protectedNotice:
-      "يبقى الرمز مشفرًا على هذا الجهاز ويُحذف بعد القبول أو الرفض أو الإلغاء."
+      "يبقى الرمز مشفرًا على هذا الجهاز ويُحذف بعد القبول أو الرفض أو الإلغاء.",
+    receiptEyebrow: "تم تأكيد العضوية",
+    receiptTitle: "انضممت إلى الأسرة",
+    receiptBody:
+      "أصبحت صلاحيتك المحددة فعالة. سيفتح ALYR سجل الأسرة بالدور الموضح أعلاه.",
+    receiptAction: "فتح الأسرة"
   },
   screen: {
     navigationTitle: "دعوة شخص",
@@ -239,11 +287,11 @@ const arabic = {
     network_unavailable:
       "تعذر الوصول إلى خدمة الدعوات. تم الاحتفاظ بالرمز الذي أدخلته.",
     pilot_access_denied:
-      "يجب التحقق من الوصول إلى البرنامج التجريبي قبل إنشاء هذا الحساب.",
+      "يجب التحقق من الوصول المبكر قبل إنشاء هذا الحساب.",
     pilot_access_required:
-      "أدخل رمز الوصول إلى البرنامج التجريبي قبل إنشاء الحساب.",
+      "أدخل رمز الوصول المبكر قبل إنشاء الحساب.",
     pilot_capacity_reached:
-      "اكتملت المجموعة التجريبية الحالية.",
+      "اكتملت مجموعة الوصول المبكر الحالية.",
     rate_limited: "محاولات كثيرة. انتظر قليلًا ثم حاول مجددًا.",
     session_missing: "حدّث جلسة حسابك ثم حاول مجددًا.",
     unsupported: "الدعوات الأسرية غير متصلة في هذه النسخة.",

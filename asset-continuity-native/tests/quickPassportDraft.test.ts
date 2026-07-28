@@ -10,6 +10,10 @@ import {
   writePlaceCaptureDraft,
   writeQuickPassportDraft
 } from "@/capture/quickPassportDraft";
+import type {
+  DraftAttachmentStore,
+  MaterializedAttachment
+} from "@/data/attachmentStore";
 import { vaultScopeFromOpaqueId } from "@/data/vaultScope";
 
 const getItem = jest.mocked(SecureStore.getItemAsync);
@@ -69,9 +73,15 @@ function placeDraft(
 
 describe("Quick Passport process-death draft", () => {
   let values: Map<string, string>;
+  let availableDrafts: Set<string>;
+  let discardDraftFile: jest.MockedFunction<
+    DraftAttachmentStore["discardDraftFile"]
+  >;
+  let protectedDraftStore: DraftAttachmentStore;
 
   beforeEach(() => {
     values = new Map<string, string>();
+    availableDrafts = new Set<string>();
     getItem.mockImplementation(async (key) => values.get(key) ?? null);
     setItem.mockImplementation(async (key, value) => {
       values.set(key, value);
@@ -79,6 +89,64 @@ describe("Quick Passport process-death draft", () => {
     deleteItem.mockImplementation(async (key) => {
       values.delete(key);
     });
+    discardDraftFile = jest.fn(async (file) => {
+      if (file.protectedUri) {
+        availableDrafts.delete(file.protectedUri);
+      }
+    });
+    protectedDraftStore = {
+      kind: "encrypted-files",
+      encryptedAtRest: true,
+      async ingest(file) {
+        return file;
+      },
+      async stageForDraft(file) {
+        if (file.encryptedAtRest && file.protectedUri) {
+          if (!availableDrafts.has(file.protectedUri)) {
+            throw new Error("staged bytes missing");
+          }
+          return file;
+        }
+        const token = file.fileName.replaceAll(/[^a-z0-9]/giu, "-");
+        const protectedUri = `file:///drafts/${token}.alyrdraft`;
+        availableDrafts.add(protectedUri);
+        return {
+          ...file,
+          localUri: protectedUri,
+          protectedUri,
+          checksumSha256: "a".repeat(64),
+          encryptedAtRest: true
+        };
+      },
+      async verifyDraftFile(file) {
+        return Boolean(
+          file.protectedUri &&
+            availableDrafts.has(file.protectedUri)
+        );
+      },
+      async materializeDraftForViewing(file) {
+        if (
+          !file.protectedUri ||
+          !availableDrafts.has(file.protectedUri)
+        ) {
+          throw new Error("staged bytes missing");
+        }
+        return {
+          uri: `file:///cache/${file.fileName}`,
+          fileName: file.fileName,
+          mimeType: file.mimeType,
+          byteSize: file.byteSize,
+          checksumSha256: file.checksumSha256 ?? null,
+          integrity: "aes-gcm-and-sha256",
+          temporary: true
+        } satisfies MaterializedAttachment;
+      },
+      discardDraftFile,
+      async materializeForViewing() {
+        throw new Error("not used");
+      },
+      async cleanupMaterialized() {}
+    };
   });
 
   it("restores the latest protected draft for the exact vault scope and household", async () => {
@@ -124,6 +192,100 @@ describe("Quick Passport process-death draft", () => {
     ).resolves.toMatchObject({
       captureSource: "camera"
     });
+  });
+
+  it("restores protected bytes after process death without persisting the picker URI", async () => {
+    await writeQuickPassportDraft(
+      quickDraft({
+        step: 2,
+        captureSource: "camera",
+        photo: {
+          localUri: "file:///private-cache/watch.jpg",
+          fileName: "watch.jpg",
+          mimeType: "image/jpeg",
+          byteSize: 1_024
+        }
+      }),
+      protectedDraftStore
+    );
+
+    expect(values.get(ITEM_KEY_A)).not.toContain(
+      "file:///private-cache/watch.jpg"
+    );
+    await expect(
+      readQuickPassportDraft(
+        scopeA,
+        "household-a",
+        protectedDraftStore
+      )
+    ).resolves.toMatchObject({
+      photo: {
+        localUri: "file:///cache/watch.jpg",
+        protectedUri: "file:///drafts/watch-jpg.alyrdraft",
+        encryptedAtRest: true,
+        checksumSha256: "a".repeat(64)
+      }
+    });
+  });
+
+  it("drops and cleans a draft reference when protected bytes are missing or corrupt", async () => {
+    await writeQuickPassportDraft(
+      quickDraft({
+        photo: {
+          localUri: "file:///private-cache/watch.jpg",
+          fileName: "watch.jpg",
+          mimeType: "image/jpeg",
+          byteSize: 1_024
+        }
+      }),
+      protectedDraftStore
+    );
+    availableDrafts.clear();
+
+    await expect(
+      readQuickPassportDraft(
+        scopeA,
+        "household-a",
+        protectedDraftStore
+      )
+    ).resolves.toMatchObject({ photo: null });
+    expect(discardDraftFile).toHaveBeenCalledWith(
+      expect.objectContaining({
+        protectedUri: "file:///drafts/watch-jpg.alyrdraft"
+      })
+    );
+  });
+
+  it("cleans replaced and abandoned staged bytes without touching the current draft", async () => {
+    await writeQuickPassportDraft(
+      quickDraft({
+        photo: {
+          localUri: "file:///private-cache/watch.jpg",
+          fileName: "watch.jpg",
+          mimeType: "image/jpeg",
+          byteSize: 1_024
+        }
+      }),
+      protectedDraftStore
+    );
+    await writeQuickPassportDraft(
+      quickDraft({
+        photo: {
+          localUri: "file:///private-cache/camera.jpg",
+          fileName: "camera.jpg",
+          mimeType: "image/jpeg",
+          byteSize: 2_048
+        }
+      }),
+      protectedDraftStore
+    );
+
+    expect(availableDrafts).toEqual(
+      new Set(["file:///drafts/camera-jpg.alyrdraft"])
+    );
+    await clearQuickPassportDraft(scopeA, protectedDraftStore);
+    expect(availableDrafts.size).toBe(0);
+    expect(discardDraftFile).toHaveBeenCalledTimes(2);
   });
 
   it("does not expose a draft to another household", async () => {

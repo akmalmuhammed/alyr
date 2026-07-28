@@ -24,6 +24,7 @@ export default function IndexScreen() {
     busy: authBusy,
     mode,
     pendingHouseholdInvite,
+    pendingHouseholdInviteDeferred,
     session,
     signOut
   } = useAuthFlow();
@@ -41,7 +42,10 @@ export default function IndexScreen() {
       </View>
     );
   }
-  if (pendingHouseholdInvite) {
+  if (
+    pendingHouseholdInvite &&
+    !pendingHouseholdInviteDeferred
+  ) {
     return <Redirect href={AUTH_ROUTES.join} />;
   }
   if (mode === "preview") {

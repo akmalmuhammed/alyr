@@ -27,7 +27,9 @@ import {
 } from "./expoCrypto";
 import {
   chooseEncryptedRecoveryKit,
+  confirmRecoveryKitExternalBackup,
   ExpoRecoveryKitStorage,
+  listRecentLocalRecoveryKits,
   shareEncryptedRecoveryKit
 } from "./nativeFiles";
 import { RecoveryKitError } from "./types";
@@ -74,6 +76,8 @@ function unavailableLockedRuntime(): RecoveryJourneyRuntime {
     },
     create: reject,
     share: reject,
+    listRecent: async () => [],
+    confirmExternalBackup: reject,
     chooseAndPreview: reject,
     restore: reject,
     clearPreview() {}
@@ -396,6 +400,9 @@ export function createSignedRecoveryJourneyRuntime(
     },
     chooseEncryptedKit: chooseEncryptedRecoveryKit,
     shareEncryptedKit: shareEncryptedRecoveryKit,
+    listRecentEncryptedKits: listRecentLocalRecoveryKits,
+    confirmEncryptedKitExternalBackup:
+      confirmRecoveryKitExternalBackup,
     currentHouseholdId: dependencies.currentHouseholdId,
     ...(dependencies.now ? { now: dependencies.now } : {})
   });
@@ -405,6 +412,9 @@ export function createSignedRecoveryJourneyRuntime(
     create: (passphrase) =>
       dependencies.runExclusive(() => controller.create(passphrase)),
     share: (reference) => controller.share(reference),
+    listRecent: () => controller.listRecent(),
+    confirmExternalBackup: (reference) =>
+      controller.confirmExternalBackup(reference),
     chooseAndPreview: (passphrase) =>
       controller.chooseAndPreview(passphrase),
     restore: (previewId, confirmation) =>

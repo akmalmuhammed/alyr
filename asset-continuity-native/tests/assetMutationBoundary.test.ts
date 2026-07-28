@@ -7,6 +7,7 @@ import type { AttachmentStore } from "@/data/attachmentStore";
 import { MemoryWorkspaceRepository } from "@/data/memoryRepository";
 import type {
   CapturedFile,
+  NativePlace,
   NativeWorkspace,
   NewAssetInput
 } from "@/domain/model";
@@ -37,6 +38,26 @@ function workspaceWithPlace(): NativeWorkspace {
         householdId: workspace.household.id
       }
     ]
+  };
+}
+
+function workspaceWithPlacePatch(
+  patch: Pick<
+    NativePlace,
+    | "latitude"
+    | "longitude"
+    | "locationSource"
+    | "precision"
+    | "horizontalAccuracyMeters"
+    | "observedAt"
+    | "confirmedAt"
+  >
+): NativeWorkspace {
+  const workspace = workspaceWithPlace();
+  const place = workspace.places[0]!;
+  return {
+    ...workspace,
+    places: [{ ...place, ...patch }]
   };
 }
 
@@ -122,14 +143,6 @@ describe("native final Asset mutation boundary", () => {
       "ASSET_LOCATION_STATE_INVALID"
     ],
     [
-      "Place-only state retaining an exact room",
-      (workspace: NativeWorkspace) => ({
-        ...validInput(workspace),
-        locationStatus: "needs-detail" as const
-      }),
-      "ASSET_LOCATION_STATE_INVALID"
-    ],
-    [
       "missing Place",
       (workspace: NativeWorkspace) => ({
         ...validInput(workspace),
@@ -144,15 +157,6 @@ describe("native final Asset mutation boundary", () => {
         roomId: "room-missing"
       }),
       "ASSET_SPACE_INVALID"
-    ],
-    [
-      "incomplete exact location",
-      (workspace: NativeWorkspace) => ({
-        ...validInput(workspace),
-        roomId: null,
-        locatorText: " "
-      }),
-      "ASSET_EXACT_LOCATION_REQUIRED"
     ]
   ] as const)(
     "rejects %s before allocating mutation IDs",
@@ -205,6 +209,154 @@ describe("native final Asset mutation boundary", () => {
       "ASSET_PLACE_INVALID"
     );
     expect(mutation.id).not.toHaveBeenCalled();
+  });
+
+  it.each([
+    {
+      name: "no Place pin",
+      patch: {
+        latitude: null,
+        longitude: null,
+        locationSource: "not_set" as const,
+        precision: "locality_only" as const,
+        horizontalAccuracyMeters: null,
+        observedAt: null,
+        confirmedAt: null
+      }
+    },
+    {
+      name: "unconfirmed exact device pin",
+      patch: {
+        latitude: 25.2854,
+        longitude: 51.531,
+        locationSource: "device_gps" as const,
+        precision: "exact" as const,
+        horizontalAccuracyMeters: 7,
+        observedAt: "2026-07-28T09:59:00.000Z",
+        confirmedAt: null
+      }
+    }
+  ])(
+    "downgrades a requested exact location to needs-detail for $name",
+    ({ patch }) => {
+      const workspace = workspaceWithPlacePatch(patch);
+      const result = addAsset(
+        workspace,
+        {
+          ...validInput(workspace),
+          locatorText: "Blue case"
+        },
+        context()
+      );
+
+      expect(result.asset).toMatchObject({
+        locationStatus: "needs-detail",
+        placeId: workspace.places[0]!.id,
+        roomId: workspace.places[0]!.rooms[0]!.id,
+        locatorText: "Blue case"
+      });
+    }
+  );
+
+  it.each([
+    {
+      source: "manual_coordinates" as const,
+      precision: "user_placed" as const
+    },
+    {
+      source: "user_pin" as const,
+      precision: "user_placed" as const
+    }
+  ])(
+    "keeps a confirmed $source Place pin exact with room/container detail",
+    ({ source, precision }) => {
+      const workspace = workspaceWithPlacePatch({
+        latitude: 25.2854,
+        longitude: 51.531,
+        locationSource: source,
+        precision,
+        horizontalAccuracyMeters: null,
+        observedAt: "2026-07-28T09:59:00.000Z",
+        confirmedAt: "2026-07-28T10:00:00.000Z"
+      });
+      const place = workspace.places[0]!;
+      const container = {
+        id: "container-watch-roll",
+        version: 1,
+        name: "Watch roll",
+        kind: "container" as const,
+        parentRoomId: place.rooms[0]!.id
+      };
+      const withContainer: NativeWorkspace = {
+        ...workspace,
+        places: [
+          {
+            ...place,
+            rooms: [...place.rooms, container]
+          }
+        ]
+      };
+      const result = addAsset(
+        withContainer,
+        {
+          ...validInput(withContainer),
+          roomId: container.id
+        },
+        context()
+      );
+
+      expect(result.asset).toMatchObject({
+        locationStatus: "known",
+        roomId: container.id
+      });
+    }
+  );
+
+  it("retains indoor detail when the caller explicitly saves needs-detail", () => {
+    const workspace = workspaceWithPlacePatch({
+      latitude: null,
+      longitude: null,
+      locationSource: "not_set",
+      precision: "locality_only",
+      horizontalAccuracyMeters: null,
+      observedAt: null,
+      confirmedAt: null
+    });
+    const result = addAsset(
+      workspace,
+      {
+        ...validInput(workspace),
+        locationStatus: "needs-detail",
+        locatorText: "Upper shelf"
+      },
+      context()
+    );
+
+    expect(result.asset).toMatchObject({
+      locationStatus: "needs-detail",
+      roomId: workspace.places[0]!.rooms[0]!.id,
+      locatorText: "Upper shelf"
+    });
+  });
+
+  it("downgrades a confirmed Place without an indoor clue to needs-detail", () => {
+    const workspace = workspaceWithPlace();
+    const result = addAsset(
+      workspace,
+      {
+        ...validInput(workspace),
+        roomId: null,
+        locatorText: " "
+      },
+      context()
+    );
+
+    expect(result.asset).toMatchObject({
+      locationStatus: "needs-detail",
+      placeId: workspace.places[0]!.id,
+      roomId: null,
+      locatorText: null
+    });
   });
 
   it("rejects invalid capture metadata and the 10 MB boundary", () => {
@@ -276,8 +428,7 @@ describe("WorkspaceProvider Asset create preparation", () => {
         workspace,
         {
           ...validInput(workspace),
-          roomId: null,
-          locatorText: "",
+          roomId: "room-missing",
           photo: {
             localUri: "file:///watch.jpg",
             fileName: "watch.jpg",
@@ -289,7 +440,7 @@ describe("WorkspaceProvider Asset create preparation", () => {
         context()
       )
     ).rejects.toMatchObject({
-      issue: { code: "ASSET_EXACT_LOCATION_REQUIRED" },
+      issue: { code: "ASSET_SPACE_INVALID" },
       recoverable: true
     });
 
@@ -359,5 +510,57 @@ describe("WorkspaceProvider Asset create preparation", () => {
     await expect(
       repository.listPendingOperations(100)
     ).resolves.toEqual(prepared.operations);
+  });
+
+  it("queues an unresolved Place pin as needs-detail without dropping indoor detail", async () => {
+    const workspace = workspaceWithPlacePatch({
+      latitude: 25.2854,
+      longitude: 51.531,
+      locationSource: "device_gps",
+      precision: "exact",
+      horizontalAccuracyMeters: 5,
+      observedAt: "2026-07-28T09:59:00.000Z",
+      confirmedAt: null
+    });
+    const store: AttachmentStore = {
+      kind: "encrypted-files",
+      encryptedAtRest: true,
+      ingest: jest.fn(async (file: CapturedFile) => file),
+      materializeForViewing: jest.fn(),
+      cleanupMaterialized: jest.fn()
+    };
+    const prepared = await prepareNewAssetCreation(
+      workspace,
+      {
+        ...validInput(workspace),
+        locatorText: "Upper drawer"
+      },
+      store,
+      context(),
+      {
+        operationId: identityFactory("operation"),
+        idempotencyKey: identityFactory("idempotency"),
+        locationRevisionId: identityFactory("location-revision")
+      }
+    );
+
+    expect(prepared.result.asset).toMatchObject({
+      locationStatus: "needs-detail",
+      roomId: workspace.places[0]!.rooms[0]!.id,
+      locatorText: "Upper drawer"
+    });
+    expect(
+      prepared.operations.find(
+        (operation) => operation.command.type === "asset.move"
+      )
+    ).toMatchObject({
+      command: {
+        payload: {
+          status: "needs-detail",
+          spaceId: workspace.places[0]!.rooms[0]!.id,
+          locationDetail: "Upper drawer"
+        }
+      }
+    });
   });
 });

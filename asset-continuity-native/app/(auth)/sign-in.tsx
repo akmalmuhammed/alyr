@@ -45,8 +45,7 @@ export default function SignInScreen() {
     mode,
     pendingHouseholdInvite,
     resendConfirmation,
-    signIn,
-    acceptPendingHouseholdInvite
+    signIn
   } = useAuthFlow();
   const { copy, language, rtl } = useCoreJourneyCopy();
   const compact = isCompactAuthViewport(useWindowDimensions());
@@ -77,11 +76,8 @@ export default function SignInScreen() {
       return;
     }
     if (pendingHouseholdInvite) {
-      const membership = await acceptPendingHouseholdInvite();
-      if (membership) {
-        router.replace("/");
-        return;
-      }
+      router.replace(AUTH_ROUTES.join);
+      return;
     }
     router.replace(
       attempt.session.onboarding === "complete"
@@ -183,6 +179,7 @@ export default function SignInScreen() {
             placeholder={copy.signIn.emailPlaceholder}
             ref={emailRef}
             returnKeyType="next"
+            testID="auth-sign-in-email"
             textContentType="username"
             value={email}
           />
@@ -211,6 +208,7 @@ export default function SignInScreen() {
             ref={passwordRef}
             returnKeyType="go"
             secureTextEntry
+            testID="auth-sign-in-password"
             textContentType="password"
             value={password}
           />

@@ -15,7 +15,6 @@ import {
   CurrencyCircleDollar,
   FileText,
   ImageSquare,
-  MapPin,
   Plus,
   Warning
 } from "phosphor-react-native";
@@ -26,10 +25,12 @@ import {
   Pressable,
   StyleSheet,
   Text,
+  useWindowDimensions,
   View
 } from "react-native";
 import { useCallback, useState } from "react";
 
+import { useReduceMotionPreference } from "@/accessibility/useReduceMotionPreference";
 import {
   useAttachmentPreview
 } from "@/components/AttachmentViewer";
@@ -40,10 +41,8 @@ import { SyncTruth } from "@/components/SyncTruth";
 import {
   AppScreen,
   BodyText,
-  CommandSurface,
   ErrorBanner,
   PrimaryButton,
-  ScreenTitle,
   Section,
   SecondaryButton
 } from "@/components/ui";
@@ -61,6 +60,7 @@ import {
   isPortfolioValuableAsset,
   selectCurrentPortfolioValues
 } from "@/domain/portfolio";
+import { playTactileFeedback } from "@/feedback/tactileFeedback";
 import {
   formatLocalizedDate,
   formatLocalizedNumber,
@@ -91,6 +91,9 @@ export const ASSET_PASSPORT_COPY = {
     savedTitle: "Passport saved",
     savedMeta:
       "Your first record is protected and ready. Choose what feels useful next.",
+    startedTitle: "Passport started",
+    startedMeta:
+      "Your record is saved safely. Today will guide you through the details still worth adding.",
     addRecordedValue: "Add value to portfolio",
     addRecordedValueHint:
       "Records a dated value, then opens your Today portfolio",
@@ -107,6 +110,13 @@ export const ASSET_PASSPORT_COPY = {
       "Sample photo metadata recorded · local category artwork shown",
     protectedPhoto: "Photo protected on this device",
     noPhoto: "No primary photo yet",
+    passportDocument: "ASSET PASSPORT",
+    categoryField: "CATEGORY",
+    statusField: "STATUS",
+    createdField: "CREATED",
+    recordField: "RECORD",
+    privateHousehold: "Private household",
+    active: "Active",
     archived: "Archived",
     onDevice: "On this device",
     created: (date: string) =>
@@ -118,6 +128,11 @@ export const ASSET_PASSPORT_COPY = {
     noMeasuredAccuracy: "Location recorded without measured GPS accuracy",
     noPropertyPin: "No property pin is attached",
     retrievalPath: "RETRIEVAL PATH",
+    retrievalPlace: "PLACE",
+    retrievalSpace: "SPACE",
+    retrievalLocator: "LOCATOR",
+    digitalRecord: "Digital record",
+    openDisclosure: "OPEN",
     retrievalConfirmAction: "I found this item",
     retrievalConfirmHint:
       "Records that this Asset Passport helped you locate the item.",
@@ -218,6 +233,9 @@ export const ASSET_PASSPORT_COPY = {
     savedTitle: "تم حفظ الجواز",
     savedMeta:
       "أصبح سجلك الأول محميًا وجاهزًا. اختر الخطوة التالية المناسبة لك.",
+    startedTitle: "بدأ جواز الغرض",
+    startedMeta:
+      "حُفظ سجلك بأمان. سيرشدك قسم «اليوم» إلى التفاصيل التي ما زالت تستحق الإضافة.",
     addRecordedValue: "إضافة قيمة إلى المحفظة",
     addRecordedValueHint:
       "يسجّل قيمة مؤرخة ثم يفتح محفظة «اليوم»",
@@ -234,6 +252,13 @@ export const ASSET_PASSPORT_COPY = {
       "تم تسجيل بيانات الصورة التجريبية · يظهر رسم الفئة المحلي",
     protectedPhoto: "الصورة محمية على هذا الجهاز",
     noPhoto: "لم تُضف صورة رئيسية بعد",
+    passportDocument: "جواز الغرض",
+    categoryField: "الفئة",
+    statusField: "الحالة",
+    createdField: "تاريخ الإنشاء",
+    recordField: "مرجع السجل",
+    privateHousehold: "خاص بهذه الأسرة",
+    active: "نشط",
     archived: "مؤرشف",
     onDevice: "محفوظ على هذا الجهاز",
     created: (date: string) => `أُنشئ في ${date} · خاص بهذه الأسرة`,
@@ -244,6 +269,11 @@ export const ASSET_PASSPORT_COPY = {
     noMeasuredAccuracy: "تم تسجيل الموقع من دون دقة GPS مقاسة",
     noPropertyPin: "لا يوجد دبوس مرتبط بالعقار",
     retrievalPath: "مسار الاسترجاع",
+    retrievalPlace: "المكان",
+    retrievalSpace: "المساحة",
+    retrievalLocator: "محدِّد الموقع",
+    digitalRecord: "سجل رقمي",
+    openDisclosure: "فتح",
     retrievalConfirmAction: "وجدت هذا الغرض",
     retrievalConfirmHint:
       "يسجّل أن جواز الغرض ساعدك في العثور عليه.",
@@ -351,6 +381,13 @@ export function assetRetrievalSourceFromRoute(
   return "deep-link";
 }
 
+export function shouldStackAssetPassportMasthead(
+  width: number,
+  fontScale: number
+): boolean {
+  return width < 360 || fontScale >= 1.5;
+}
+
 function localizedCategoryLabel(
   asset: Pick<NativeAsset, "categoryId" | "categoryLabel">,
   language: LanguageCode
@@ -405,6 +442,95 @@ function recordedDateLabel(
   return formatLocalizedDate(value, language);
 }
 
+function DossierFact({
+  label,
+  language,
+  rtl,
+  technical = false,
+  testID,
+  value
+}: {
+  readonly label: string;
+  readonly language: LanguageCode;
+  readonly rtl: boolean;
+  readonly technical?: boolean;
+  readonly testID: string;
+  readonly value: string;
+}) {
+  return (
+    <View
+      accessibilityLabel={`${label}: ${value}`}
+      accessible
+      style={[styles.dossierFact, rtl && styles.rowReverse]}
+      testID={testID}
+    >
+      <Text
+        style={[
+          styles.factLabel,
+          language === "ar" && styles.arabicMedium,
+          rtl && styles.factLabelRtl
+        ]}
+      >
+        {label}
+      </Text>
+      <Text
+        style={[
+          styles.factValue,
+          language === "ar" && styles.arabic,
+          rtl && styles.rtlText,
+          technical && styles.factValueTechnical,
+          technical && rtl && styles.factValueTechnicalRtl
+        ]}
+      >
+        {value}
+      </Text>
+    </View>
+  );
+}
+
+function LocatorField({
+  label,
+  language,
+  rtl,
+  testID,
+  value
+}: {
+  readonly label: string;
+  readonly language: LanguageCode;
+  readonly rtl: boolean;
+  readonly testID: string;
+  readonly value: string;
+}) {
+  return (
+    <View
+      accessibilityLabel={`${label}: ${value}`}
+      accessible
+      style={[styles.locatorField, rtl && styles.rowReverse]}
+      testID={testID}
+    >
+      <Text
+        style={[
+          styles.locatorFieldLabel,
+          language === "ar" && styles.arabicMedium,
+          rtl && styles.locatorLabelArabic,
+          rtl && styles.rtlText
+        ]}
+      >
+        {label}
+      </Text>
+      <Text
+        style={[
+          styles.locatorFieldValue,
+          language === "ar" && styles.arabicMedium,
+          rtl && styles.rtlText
+        ]}
+      >
+        {value}
+      </Text>
+    </View>
+  );
+}
+
 export default function AssetPassportScreen() {
   const {
     id,
@@ -416,7 +542,9 @@ export default function AssetPassportScreen() {
     retrievalSource?: string | string[];
   }>();
   const router = useRouter();
+  const { fontScale, width } = useWindowDimensions();
   const { language, rtl } = useCoreJourneyCopy();
+  const reduceMotion = useReduceMotionPreference();
   const { visibility: valueVisibility } = usePortfolioPrivacy();
   const copy = getAssetPassportCopy(language);
   const ForwardIcon = rtl ? ArrowLeft : ArrowRight;
@@ -503,16 +631,22 @@ export default function AssetPassportScreen() {
   const locationNeedsConfirmedPin =
     nativeAssetLocationNeedsConfirmedPin(asset, place);
   const room = place?.rooms.find((item) => item.id === asset.roomId);
-  const path = asset.categoryId.startsWith("digital")
-    ? copy.noPhysicalLocation
+  const isDigitalRecord = asset.categoryId.startsWith("digital");
+  const retrievalPlaceValue = isDigitalRecord
+    ? copy.digitalRecord
     : place
-      ? [place.name, room?.name, asset.locatorText]
-          .filter(Boolean)
-          .map((part) =>
-            isolateAssetPassportIdentifier(String(part), language)
-          )
-          .join(language === "ar" ? " ‹ " : " › ")
-      : copy.locationNotRecorded;
+      ? isolateAssetPassportIdentifier(place.name, language)
+      : copy.notRecorded;
+  const retrievalSpaceValue = isDigitalRecord
+    ? copy.noPhysicalLocation
+    : room
+      ? isolateAssetPassportIdentifier(room.name, language)
+      : copy.notRecorded;
+  const retrievalLocatorValue = isDigitalRecord
+    ? copy.noPhysicalLocation
+    : asset.locatorText
+      ? isolateAssetPassportIdentifier(asset.locatorText, language)
+      : copy.notRecorded;
   const provenance =
     place && placePin
       ? localizedAtlasPinDisclosure(place, language)
@@ -534,16 +668,37 @@ export default function AssetPassportScreen() {
       })
     : null;
   const archived = assetLifecycleStatus(asset) === "archived";
+  const stackMasthead = shouldStackAssetPassportMasthead(
+    width,
+    fontScale
+  );
+  const statusValue = [
+    archived ? copy.archived : copy.active,
+    asset.syncStatus === "on-device" ? copy.onDevice : null
+  ]
+    .filter(Boolean)
+    .join(" · ");
+  const createdDate = formatLocalizedDate(asset.createdAt, language);
+  const createdValue = `${createdDate} · ${copy.privateHousehold}`;
+  const recordReference = isolateAssetPassportIdentifier(
+    asset.id,
+    language
+  );
   const canWriteAsset = can("asset.write");
   const isJustCreated = justCreated === "1";
-  const needsPortfolioValue =
-    portfolioValueEligible && recordedValue === null;
+  const receiptComplete = missing.length === 0;
+  const receiptTitle = receiptComplete
+    ? copy.savedTitle
+    : copy.startedTitle;
+  const receiptMeta = receiptComplete
+    ? copy.savedMeta
+    : copy.startedMeta;
   const showManageRows = missing.length === 0 || manageOpen;
   const retrievalSource = assetRetrievalSourceFromRoute(
     retrievalSourceParam
   );
   const hasUsableRetrievalPath =
-    Boolean(place) || asset.categoryId.startsWith("digital");
+    Boolean(place) || isDigitalRecord;
 
   const confirmLifecycleChange = () => {
     if (archived) {
@@ -579,6 +734,9 @@ export default function AssetPassportScreen() {
                 await setAssetLifecycle({
                   assetId: asset.id,
                   lifecycleStatus: "archived"
+                });
+                void playTactileFeedback("destructive", {
+                  reduceMotion
                 });
                 router.replace("/assets?view=items&filter=archived");
               } catch {
@@ -747,105 +905,142 @@ export default function AssetPassportScreen() {
           onDismiss={clearError}
         />
       ) : null}
-      {photo.status === "ready" ? (
-        <Image
-          accessibilityLabel={copy.primaryPhoto(
-            isolateAssetPassportIdentifier(asset.name, language)
-          )}
-          source={{ uri: photo.uri }}
-          style={styles.heroImage}
-        />
-      ) : (
+      <View
+        style={styles.dossierMasthead}
+        testID="asset-passport-masthead"
+      >
         <View
           style={[
-            styles.identityPlaceholder,
-            rtl && styles.rowReverse
+            styles.mastheadBody,
+            stackMasthead && styles.mastheadBodyStacked,
+            rtl && !stackMasthead && styles.rowReverse
           ]}
         >
-          {photo.status === "loading" ? (
-            <ActivityIndicator color={colors.text} size="small" />
-          ) : photo.status === "error" ? (
-            <Warning color={colors.danger} size={30} weight="regular" />
-          ) : (
-            <AssetArtworkIcon asset={asset} size={34} />
-          )}
-          <View style={styles.placeholderCopy}>
-            <Text
-              style={[
-                styles.placeholderTitle,
-                rtl && styles.arabicMedium,
-                rtl && styles.rtlText
-              ]}
-            >
-              {localizedCategoryLabel(asset, language)}
-            </Text>
-            <Text
-              {...(photo.status === "error"
-                ? {
-                    accessibilityLiveRegion: "polite" as const,
-                    accessibilityRole: "alert" as const
-                  }
-                : {})}
-              style={[
-                styles.placeholderMeta,
-                rtl && styles.arabic,
-                rtl && styles.rtlText
-              ]}
-            >
-              {photo.status === "loading"
-                ? copy.openingPhoto
-                : photo.status === "error"
-                  ? language === "ar"
-                    ? copy.photoOpenError
-                    : photo.error
-                  : samplePhotoMetadataOnly
-                    ? copy.samplePhoto
-                    : asset.photoProtectedUri
-                      ? copy.protectedPhoto
-                      : copy.noPhoto}
-            </Text>
-          </View>
-        </View>
-      )}
-
-      <View style={styles.heading}>
-        <View style={[styles.metadataRow, rtl && styles.rowReverse]}>
-          <Text
-            style={[
-              styles.category,
-              rtl && styles.arabicMedium,
-              rtl && styles.rtlText
-            ]}
-          >
-            {localizedCategoryLabel(asset, language)}
-          </Text>
           <View
             style={[
-              styles.statusBadge,
-              archived && styles.statusBadgeArchived
+              styles.mastheadMedia,
+              stackMasthead && styles.mastheadMediaStacked
             ]}
+            testID="asset-passport-masthead-media"
+          >
+            {photo.status === "ready" ? (
+              <Image
+                accessibilityLabel={copy.primaryPhoto(
+                  isolateAssetPassportIdentifier(asset.name, language)
+                )}
+                source={{ uri: photo.uri }}
+                style={styles.heroImage}
+              />
+            ) : (
+              <View style={styles.identityPlaceholder}>
+                {photo.status === "loading" ? (
+                  <ActivityIndicator color={colors.text} size="small" />
+                ) : photo.status === "error" ? (
+                  <Warning
+                    color={colors.danger}
+                    size={30}
+                    weight="regular"
+                  />
+                ) : (
+                  <AssetArtworkIcon asset={asset} size={38} />
+                )}
+                <View style={styles.placeholderCopy}>
+                  <Text
+                    style={[
+                      styles.placeholderTitle,
+                      rtl && styles.arabicMedium,
+                      rtl && styles.rtlText
+                    ]}
+                  >
+                    {localizedCategoryLabel(asset, language)}
+                  </Text>
+                  <Text
+                    {...(photo.status === "error"
+                      ? {
+                          accessibilityLiveRegion: "polite" as const,
+                          accessibilityRole: "alert" as const
+                        }
+                      : {})}
+                    style={[
+                      styles.placeholderMeta,
+                      rtl && styles.arabic,
+                      rtl && styles.rtlText
+                    ]}
+                  >
+                    {photo.status === "loading"
+                      ? copy.openingPhoto
+                      : photo.status === "error"
+                        ? language === "ar"
+                          ? copy.photoOpenError
+                          : photo.error
+                        : samplePhotoMetadataOnly
+                          ? copy.samplePhoto
+                          : asset.photoProtectedUri
+                            ? copy.protectedPhoto
+                            : copy.noPhoto}
+                  </Text>
+                </View>
+              </View>
+            )}
+          </View>
+
+          <View
+            style={styles.mastheadIdentity}
+            testID="asset-passport-masthead-identity"
           >
             <Text
               style={[
-                styles.statusBadgeLabel,
+                styles.documentKicker,
+                rtl && styles.arabicMedium,
+                rtl && styles.documentKickerArabic,
+                rtl && styles.rtlText
+              ]}
+            >
+              {copy.passportDocument}
+            </Text>
+            <Text
+              accessibilityRole="header"
+              style={[
+                styles.mastheadTitle,
                 rtl && styles.arabicMedium,
                 rtl && styles.rtlText
               ]}
             >
-              {archived ? copy.archived : copy.onDevice}
+              {asset.name}
             </Text>
+            <View style={styles.dossierFacts}>
+              <DossierFact
+                label={copy.categoryField}
+                language={language}
+                rtl={rtl}
+                testID="asset-passport-category-field"
+                value={localizedCategoryLabel(asset, language)}
+              />
+              <DossierFact
+                label={copy.statusField}
+                language={language}
+                rtl={rtl}
+                testID="asset-passport-status-field"
+                value={statusValue}
+              />
+              <DossierFact
+                label={copy.createdField}
+                language={language}
+                rtl={rtl}
+                testID="asset-passport-created-field"
+                value={createdValue}
+              />
+              <DossierFact
+                label={copy.recordField}
+                language={language}
+                rtl={rtl}
+                technical
+                testID="asset-passport-record-field"
+                value={recordReference}
+              />
+            </View>
           </View>
         </View>
-        <ScreenTitle style={rtl ? styles.rtlText : styles.ltrText}>
-          {asset.name}
-        </ScreenTitle>
-        <BodyText muted style={rtl ? styles.rtlText : styles.ltrText}>
-          {copy.created(
-            language === "ar"
-              ? formatLocalizedDate(asset.createdAt, language)
-              : new Date(asset.createdAt).toLocaleDateString()
-          )}
-        </BodyText>
       </View>
 
       {isJustCreated ? (
@@ -855,9 +1050,11 @@ export default function AssetPassportScreen() {
           testID="asset-passport-saved-confirmation"
         >
           <View style={[styles.savedPassportHeading, rtl && styles.rowReverse]}>
-            <View style={styles.savedPassportIcon}>
-              <CheckCircle color={colors.carbon} size={22} weight="regular" />
-            </View>
+            <CheckCircle
+              color={colors.success}
+              size={24}
+              weight="regular"
+            />
             <View style={styles.savedPassportCopy}>
               <Text
                 style={[
@@ -866,7 +1063,7 @@ export default function AssetPassportScreen() {
                   rtl && styles.rtlText
                 ]}
               >
-                {copy.savedTitle}
+                {receiptTitle}
               </Text>
               <Text
                 style={[
@@ -875,42 +1072,23 @@ export default function AssetPassportScreen() {
                   rtl && styles.rtlText
                 ]}
               >
-                {copy.savedMeta}
+                {receiptMeta}
               </Text>
             </View>
           </View>
           <View style={styles.savedPassportActions}>
             <View testID="asset-passport-primary-action">
               <PrimaryButton
-                accessibilityHint={
-                  needsPortfolioValue
-                    ? copy.addRecordedValueHint
-                    : copy.todayHint
-                }
-                icon={
-                  needsPortfolioValue
-                    ? CurrencyCircleDollar
-                    : ForwardIcon
-                }
-                label={
-                  needsPortfolioValue
-                    ? copy.addRecordedValue
-                    : copy.goToToday
-                }
-                onPress={() =>
-                  needsPortfolioValue
-                    ? router.push(
-                        `/asset-value?assetId=${encodeURIComponent(
-                          asset.id
-                        )}&returnTo=dashboard`
-                      )
-                    : router.replace("/(tabs)")
-                }
+                accessibilityHint={copy.todayHint}
+                icon={ForwardIcon}
+                label={copy.goToToday}
+                onPress={() => router.replace("/(tabs)")}
               />
             </View>
             {canWriteAsset ? (
               <View testID="asset-passport-add-another-action">
                 <SecondaryButton
+                  accessibilityHint={copy.addAnotherItemHint}
                   icon={Plus}
                   label={copy.addAnotherItem}
                   onPress={() => router.replace("/capture")}
@@ -959,66 +1137,110 @@ export default function AssetPassportScreen() {
           ) : null}
           {readinessSection}
 
-          <CommandSurface>
-        <View style={[styles.commandHeading, rtl && styles.rowReverse]}>
-          <MapPin color={colors.volt} size={24} weight="regular" />
-          <Text
-            style={[
-              styles.commandLabel,
-              rtl && styles.arabicMedium,
-              rtl && styles.rtlText,
-              rtl && styles.commandLabelArabic
-            ]}
-            testID="asset-passport-retrieval-heading"
+          <View
+            style={styles.locatorStrip}
+            testID="asset-passport-retrieval-strip"
           >
-            {copy.retrievalPath}
-          </Text>
-        </View>
-        <Text
-          style={[
-            styles.commandTitle,
-            rtl && styles.arabicMedium,
-            rtl && styles.rtlText
-          ]}
-        >
-          {path}
-        </Text>
-        <Text
-          style={[
-            styles.commandMeta,
-            rtl && styles.arabic,
-            rtl && styles.rtlText
-          ]}
-        >
-          {provenance}
-        </Text>
-        {place ? (
-          <PrimaryButton
-            icon={ForwardIcon}
-            label={copy.openPlace(
-              isolateAssetPassportIdentifier(place.name, language)
-            )}
-            onPress={() => router.push(`/place/${place.id}`)}
-          />
-        ) : null}
-        {!archived && canWriteAsset && hasUsableRetrievalPath ? (
-          <View testID="asset-passport-retrieval-confirm">
-            <SecondaryButton
-              accessibilityHint={copy.retrievalConfirmHint}
-              disabled={saving}
-              icon={CheckCircle}
-              label={copy.retrievalConfirmAction}
-              loading={retrievalPending}
-              onPress={confirmRetrieval}
-            />
+            <Text
+              style={[
+                styles.locatorHeading,
+                rtl && styles.arabicMedium,
+                rtl && styles.locatorLabelArabic,
+                rtl && styles.rtlText
+              ]}
+              testID="asset-passport-retrieval-heading"
+            >
+              {copy.retrievalPath}
+            </Text>
+            <View style={styles.locatorSequence}>
+              <LocatorField
+                label={copy.retrievalPlace}
+                language={language}
+                rtl={rtl}
+                testID="asset-passport-locator-place"
+                value={retrievalPlaceValue}
+              />
+              <LocatorField
+                label={copy.retrievalSpace}
+                language={language}
+                rtl={rtl}
+                testID="asset-passport-locator-space"
+                value={retrievalSpaceValue}
+              />
+              <LocatorField
+                label={copy.retrievalLocator}
+                language={language}
+                rtl={rtl}
+                testID="asset-passport-locator-detail"
+                value={retrievalLocatorValue}
+              />
+            </View>
+            <Text
+              style={[
+                styles.locatorProvenance,
+                rtl && styles.arabic,
+                rtl && styles.rtlText
+              ]}
+            >
+              {provenance}
+            </Text>
+            {place ? (
+              <Pressable
+                accessibilityLabel={copy.openPlace(
+                  isolateAssetPassportIdentifier(place.name, language)
+                )}
+                accessibilityRole="button"
+                onPress={() => router.push(`/place/${place.id}`)}
+                style={({ pressed }) => [
+                  styles.locatorOpen,
+                  rtl && styles.rowReverse,
+                  pressed && styles.locatorPressed
+                ]}
+                testID="asset-passport-open-place"
+              >
+                <View style={styles.locatorOpenCopy}>
+                  <Text
+                    style={[
+                      styles.locatorOpenLabel,
+                      rtl && styles.arabicMedium,
+                      rtl && styles.locatorLabelArabic,
+                      rtl && styles.rtlText
+                    ]}
+                  >
+                    {copy.openDisclosure}
+                  </Text>
+                  <Text
+                    style={[
+                      styles.locatorOpenTarget,
+                      rtl && styles.arabicMedium,
+                      rtl && styles.rtlText
+                    ]}
+                  >
+                    {isolateAssetPassportIdentifier(place.name, language)}
+                  </Text>
+                </View>
+                <ForwardIcon color={colors.volt} size={21} />
+              </Pressable>
+            ) : null}
+            {!archived && canWriteAsset && hasUsableRetrievalPath ? (
+              <View testID="asset-passport-retrieval-confirm">
+                <SecondaryButton
+                  accessibilityHint={copy.retrievalConfirmHint}
+                  disabled={saving}
+                  icon={CheckCircle}
+                  label={copy.retrievalConfirmAction}
+                  loading={retrievalPending}
+                  onPress={confirmRetrieval}
+                />
+              </View>
+            ) : null}
           </View>
-        ) : null}
-      </CommandSurface>
 
       {portfolioValueEligible ? (
         <Section>
           <View style={styles.sectionHeading}>
             <Text
+              accessibilityRole="header"
               style={[
                 styles.sectionTitle,
                 rtl && styles.arabicMedium,
@@ -1119,6 +1341,7 @@ export default function AssetPassportScreen() {
       {!archived && canWriteAsset ? (
         <Section>
           <Text
+            accessibilityRole="header"
             style={[
               styles.sectionTitle,
               rtl && styles.arabicMedium,
@@ -1202,6 +1425,7 @@ export default function AssetPassportScreen() {
           style={[styles.sectionHeading, rtl && styles.rowReverse]}
         >
           <Text
+            accessibilityRole="header"
             style={[
               styles.sectionTitle,
               rtl && styles.arabicMedium,
@@ -1257,6 +1481,7 @@ export default function AssetPassportScreen() {
           {canWriteAsset ? (
             <Section style={styles.lifecycleSection}>
           <Text
+            accessibilityRole="header"
             style={[
               styles.sectionTitle,
               rtl && styles.arabicMedium,
@@ -1406,25 +1631,16 @@ function ManageRow({
 
 const styles = StyleSheet.create({
   savedPassport: {
-    gap: spacing.md,
-    padding: spacing.md,
-    borderWidth: 1,
-    borderColor: colors.borderStrong,
-    borderRadius: radius.lg,
-    backgroundColor: colors.surfaceRaised
+    gap: spacing.lg,
+    paddingVertical: spacing.lg,
+    borderTopWidth: 2,
+    borderBottomWidth: 1,
+    borderColor: colors.carbon
   },
   savedPassportHeading: {
     flexDirection: "row",
     alignItems: "flex-start",
     gap: spacing.sm
-  },
-  savedPassportIcon: {
-    width: 38,
-    height: 38,
-    alignItems: "center",
-    justifyContent: "center",
-    borderRadius: radius.round,
-    backgroundColor: colors.volt
   },
   savedPassportCopy: {
     flex: 1,
@@ -1458,26 +1674,44 @@ const styles = StyleSheet.create({
     fontSize: 14,
     lineHeight: 20
   },
+  dossierMasthead: {
+    paddingTop: spacing.sm,
+    borderTopWidth: 2,
+    borderTopColor: colors.carbon
+  },
+  mastheadBody: {
+    flexDirection: "row",
+    alignItems: "flex-start",
+    gap: spacing.lg
+  },
+  mastheadBodyStacked: {
+    flexDirection: "column"
+  },
+  mastheadMedia: {
+    width: "42%",
+    aspectRatio: 0.78,
+    overflow: "hidden",
+    backgroundColor: colors.surfaceQuiet
+  },
+  mastheadMediaStacked: {
+    width: "100%",
+    aspectRatio: 1.5
+  },
   heroImage: {
     width: "100%",
-    aspectRatio: 1.45,
-    borderRadius: radius.lg,
+    height: "100%",
     backgroundColor: colors.surface
   },
   identityPlaceholder: {
-    minHeight: 96,
-    flexDirection: "row",
+    flex: 1,
     alignItems: "center",
+    justifyContent: "center",
     gap: spacing.md,
     padding: spacing.md,
-    borderWidth: 1,
-    borderColor: colors.border,
-    borderRadius: radius.lg,
-    backgroundColor: colors.surface
+    backgroundColor: colors.surfaceQuiet
   },
   placeholderCopy: {
-    flex: 1,
-    gap: 3
+    gap: spacing.xxs
   },
   placeholderTitle: {
     color: colors.text,
@@ -1491,62 +1725,153 @@ const styles = StyleSheet.create({
     fontSize: 13,
     lineHeight: 18
   },
-  heading: {
-    gap: spacing.xs
+  mastheadIdentity: {
+    flex: 1,
+    minWidth: 0,
+    gap: spacing.md
   },
-  metadataRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    flexWrap: "wrap",
-    gap: spacing.sm
-  },
-  category: {
+  documentKicker: {
     color: colors.textMuted,
+    fontFamily: typography.metadata,
+    fontSize: 12,
+    lineHeight: 17,
+    letterSpacing: 1.4
+  },
+  documentKickerArabic: {
+    letterSpacing: 0
+  },
+  mastheadTitle: {
+    color: colors.text,
+    fontFamily: typography.displayBold,
+    fontSize: 32,
+    lineHeight: 35,
+    letterSpacing: -0.7
+  },
+  dossierFacts: {
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderBottomColor: colors.borderStrong
+  },
+  dossierFact: {
+    minHeight: 42,
+    flexDirection: "row",
+    alignItems: "flex-start",
+    gap: spacing.sm,
+    paddingVertical: spacing.xs,
+    borderTopWidth: StyleSheet.hairlineWidth,
+    borderTopColor: colors.borderStrong
+  },
+  factLabel: {
+    width: "34%",
+    color: colors.textMuted,
+    fontFamily: typography.metadata,
+    fontSize: 12,
+    lineHeight: 17,
+    letterSpacing: 1
+  },
+  factLabelRtl: {
+    textAlign: "right",
+    letterSpacing: 0
+  },
+  factValue: {
+    flex: 1,
+    minWidth: 0,
+    color: colors.text,
     fontFamily: typography.bodyMedium,
     fontSize: 13,
     lineHeight: 18
   },
-  statusBadge: {
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderWidth: 1,
-    borderColor: colors.border,
-    borderRadius: radius.xs,
-    backgroundColor: colors.surface
-  },
-  statusBadgeArchived: {
-    borderColor: colors.borderStrong,
-    backgroundColor: colors.mist
-  },
-  statusBadgeLabel: {
-    color: colors.text,
-    fontFamily: typography.bodyMedium,
+  factValueTechnical: {
+    fontFamily: typography.metadata,
     fontSize: 12,
-    lineHeight: 16
+    lineHeight: 18,
+    writingDirection: "ltr"
   },
-  commandHeading: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: spacing.xs
+  factValueTechnicalRtl: {
+    textAlign: "right"
   },
-  commandLabel: {
+  locatorStrip: {
+    gap: spacing.lg,
+    marginHorizontal: -20,
+    paddingHorizontal: 20,
+    paddingVertical: spacing.xl,
+    backgroundColor: colors.carbon
+  },
+  locatorHeading: {
     color: colors.concrete,
-    fontFamily: typography.bodyBold,
+    fontFamily: typography.metadata,
     fontSize: 12,
-    lineHeight: 16,
-    letterSpacing: 1.1
+    lineHeight: 17,
+    letterSpacing: 1.4
   },
-  commandTitle: {
+  locatorSequence: {
+    borderTopWidth: 1,
+    borderTopColor: colors.onCarbonBorder
+  },
+  locatorField: {
+    minHeight: 56,
+    flexDirection: "row",
+    alignItems: "flex-start",
+    gap: spacing.md,
+    paddingVertical: spacing.sm,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.onCarbonBorder
+  },
+  locatorFieldLabel: {
+    width: "28%",
+    color: colors.concrete,
+    fontFamily: typography.metadata,
+    fontSize: 12,
+    lineHeight: 17,
+    letterSpacing: 1.2
+  },
+  locatorLabelArabic: {
+    letterSpacing: 0
+  },
+  locatorFieldValue: {
+    flex: 1,
+    minWidth: 0,
     color: colors.white,
-    fontFamily: typography.display,
-    fontSize: 22,
-    lineHeight: 29
+    fontFamily: typography.bodyMedium,
+    fontSize: 18,
+    lineHeight: 24
   },
-  commandMeta: {
+  locatorProvenance: {
     color: colors.concrete,
     fontFamily: typography.body,
-    fontSize: 14,
-    lineHeight: 20
+    fontSize: 13,
+    lineHeight: 19
+  },
+  locatorOpen: {
+    minHeight: 58,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    gap: spacing.md,
+    paddingVertical: spacing.sm,
+    borderTopWidth: 1,
+    borderBottomWidth: 1,
+    borderColor: colors.onCarbonBorder
+  },
+  locatorOpenCopy: {
+    flex: 1,
+    minWidth: 0,
+    gap: 2
+  },
+  locatorOpenLabel: {
+    color: colors.volt,
+    fontFamily: typography.metadata,
+    fontSize: 12,
+    lineHeight: 17,
+    letterSpacing: 1.3
+  },
+  locatorOpenTarget: {
+    color: colors.white,
+    fontFamily: typography.bodyMedium,
+    fontSize: 15,
+    lineHeight: 21
+  },
+  locatorPressed: {
+    opacity: 0.72
   },
   sectionHeading: {
     minHeight: 36,
@@ -1578,14 +1903,10 @@ const styles = StyleSheet.create({
     borderColor: colors.border
   },
   valueIcon: {
-    width: 42,
+    width: 28,
     height: 42,
     alignItems: "center",
-    justifyContent: "center",
-    borderWidth: 1,
-    borderColor: colors.border,
-    borderRadius: radius.md,
-    backgroundColor: colors.surface
+    justifyContent: "center"
   },
   valueCopy: {
     flex: 1,
@@ -1728,14 +2049,10 @@ const styles = StyleSheet.create({
     borderBottomColor: colors.border
   },
   evidenceIcon: {
-    width: 42,
+    width: 28,
     height: 42,
     alignItems: "center",
-    justifyContent: "center",
-    borderWidth: 1,
-    borderColor: colors.border,
-    borderRadius: radius.md,
-    backgroundColor: colors.surface
+    justifyContent: "center"
   },
   evidenceCopy: {
     flex: 1,
@@ -1781,8 +2098,5 @@ const styles = StyleSheet.create({
   },
   ltrText: {
     writingDirection: "ltr"
-  },
-  commandLabelArabic: {
-    letterSpacing: 0
   }
 });

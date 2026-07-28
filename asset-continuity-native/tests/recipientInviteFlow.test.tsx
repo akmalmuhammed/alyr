@@ -162,6 +162,14 @@ function householdAccess(
     createHousehold: unsupported,
     completeOnboarding: unsupported,
     createInvite: unsupported,
+    previewInvite: jest.fn(async () => ({
+      ok: true as const,
+      value: {
+        householdName: "Invited household",
+        role: "viewer" as const,
+        expiresAt: "2026-07-30T12:00:00.000Z"
+      }
+    })),
     acceptInvite,
     getAccessSnapshot: offlineSnapshot,
     changeMemberRole: unsupported,
@@ -236,6 +244,12 @@ describe("recipient household invitation continuity", () => {
         flow!.exchangeConfirmationCode("provider-code")
       ).resolves.toEqual(recipientSession);
       await expect(
+        flow!.reviewPendingHouseholdInvite()
+      ).resolves.toMatchObject({
+        householdName: "Invited household",
+        role: "viewer"
+      });
+      await expect(
         flow!.acceptPendingHouseholdInvite()
       ).resolves.toEqual(membership);
     });
@@ -274,6 +288,12 @@ describe("recipient household invitation continuity", () => {
         "correct horse battery staple"
       );
       await expect(
+        flow!.reviewPendingHouseholdInvite()
+      ).resolves.toMatchObject({
+        householdName: "Invited household",
+        role: "viewer"
+      });
+      await expect(
         flow!.acceptPendingHouseholdInvite()
       ).resolves.toEqual(membership);
     });
@@ -311,6 +331,7 @@ describe("recipient household invitation continuity", () => {
 
     await act(async () => {
       await flow!.stageHouseholdInvite("EXPIRED-CODE");
+      await flow!.reviewPendingHouseholdInvite();
       await expect(
         flow!.acceptPendingHouseholdInvite()
       ).resolves.toBeNull();
@@ -322,6 +343,73 @@ describe("recipient household invitation continuity", () => {
     });
     expect(flow?.pendingHouseholdInvite).toBeNull();
     expect(storage.values.size).toBe(0);
+    await screen.unmount();
+  });
+
+  it("never redeems a protected invitation before the recipient reviews its household and role", async () => {
+    const storage = inviteStore();
+    const gateway = signedGateway(recipientSession);
+    const acceptInvite = jest.fn(async () => ({
+      ok: true as const,
+      value: membership
+    }));
+    const screen = await render(
+      <AuthFlowProvider
+        gateway={gateway}
+        householdAccess={householdAccess(acceptInvite)}
+        pendingInviteStore={storage.store}
+      >
+        <Probe />
+      </AuthFlowProvider>
+    );
+    await waitFor(() => expect(flow?.bootstrapState).toBe("ready"));
+
+    await act(async () => {
+      await flow!.stageHouseholdInvite("REVIEW-FIRST-CODE");
+      await expect(
+        flow!.acceptPendingHouseholdInvite()
+      ).resolves.toBeNull();
+    });
+
+    expect(acceptInvite).not.toHaveBeenCalled();
+    expect(flow?.pendingHouseholdInvite).not.toBeNull();
+    expect(flow?.error).toMatchObject({
+      code: "invalid_request",
+      retryable: false
+    });
+    await screen.unmount();
+  });
+
+  it("defers a protected invitation for the current session without deleting its bearer", async () => {
+    const storage = inviteStore();
+    const gateway = signedGateway(recipientSession);
+    const screen = await render(
+      <AuthFlowProvider
+        gateway={gateway}
+        householdAccess={householdAccess(jest.fn())}
+        pendingInviteStore={storage.store}
+      >
+        <Probe />
+      </AuthFlowProvider>
+    );
+    await waitFor(() => expect(flow?.bootstrapState).toBe("ready"));
+
+    await act(async () => {
+      await flow!.stageHouseholdInvite("DEFER-FOR-NOW");
+      flow!.deferPendingHouseholdInvite();
+    });
+
+    expect(flow?.pendingHouseholdInviteDeferred).toBe(true);
+    expect(flow?.pendingHouseholdInvite?.oneTimeCode).toBe(
+      "DEFER-FOR-NOW"
+    );
+    expect(storage.values.size).toBe(1);
+
+    await act(async () => {
+      await flow!.reviewPendingHouseholdInvite();
+    });
+    expect(flow?.pendingHouseholdInviteDeferred).toBe(false);
+    expect(flow?.pendingHouseholdInvite).not.toBeNull();
     await screen.unmount();
   });
 

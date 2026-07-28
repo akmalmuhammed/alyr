@@ -11,6 +11,7 @@ import {
 import type { RecoveryKitStoragePort } from "./types";
 import { RecoveryKitError } from "./types";
 import type { PickedRecoveryKit } from "./journeyController";
+import type { LocalRecoveryKitRecord } from "./journey";
 
 const FILE_NAME_PATTERN =
   /^ALYR-Recovery-\d{4}-\d{2}-\d{2}\.alyrkit$/u;
@@ -26,6 +27,118 @@ function assertEncryptedKitName(fileName: string): void {
       "Recovery Kit file name is invalid."
     );
   }
+}
+
+function externalBackupReceipt(fileName: string): File {
+  return new File(
+    recoveryDirectory(),
+    `.${fileName}.external-copy-confirmed`
+  );
+}
+
+function validIsoTimestamp(value: string): boolean {
+  return (
+    /^\d{4}-\d{2}-\d{2}T/u.test(value) &&
+    Number.isFinite(Date.parse(value))
+  );
+}
+
+async function confirmedAtFor(
+  fileName: string
+): Promise<string | null> {
+  const receipt = externalBackupReceipt(fileName);
+  if (!receipt.exists || receipt.size <= 0 || receipt.size > 64) {
+    return null;
+  }
+  try {
+    const value = (await receipt.text()).trim();
+    return validIsoTimestamp(value) ? value : null;
+  } catch {
+    return null;
+  }
+}
+
+async function recordFor(
+  file: File
+): Promise<LocalRecoveryKitRecord> {
+  const timestamp =
+    file.lastModified ?? file.creationTime ?? Date.now();
+  return {
+    reference: file.uri,
+    fileName: file.name,
+    byteSize: file.size,
+    createdAt: new Date(timestamp).toISOString(),
+    externalBackupConfirmedAt: await confirmedAtFor(file.name)
+  };
+}
+
+function localEncryptedKits(): File[] {
+  const directory = recoveryDirectory();
+  if (!directory.exists) return [];
+  return directory
+    .list()
+    .filter(
+      (entry): entry is File =>
+        entry instanceof File &&
+        entry.exists &&
+        entry.size > 0 &&
+        FILE_NAME_PATTERN.test(entry.name)
+    );
+}
+
+export async function listRecentLocalRecoveryKits(
+  limit = 3
+): Promise<readonly LocalRecoveryKitRecord[]> {
+  if (!Number.isSafeInteger(limit) || limit < 1 || limit > 20) {
+    throw new RecoveryKitError(
+      "INVALID_INPUT",
+      "Recovery Kit history limit is invalid."
+    );
+  }
+  const records = await Promise.all(
+    localEncryptedKits().map(recordFor)
+  );
+  return records
+    .sort((left, right) => right.createdAt.localeCompare(left.createdAt))
+    .slice(0, limit);
+}
+
+export async function confirmRecoveryKitExternalBackup(
+  reference: string,
+  confirmedAt: string
+): Promise<LocalRecoveryKitRecord> {
+  if (!validIsoTimestamp(confirmedAt)) {
+    throw new RecoveryKitError(
+      "INVALID_INPUT",
+      "Recovery Kit backup confirmation time is invalid."
+    );
+  }
+  const file = localEncryptedKits().find(
+    (candidate) => candidate.uri === reference
+  );
+  if (!file) {
+    throw new RecoveryKitError(
+      "STORAGE_FAILED",
+      "The encrypted Recovery Kit is no longer available on this device."
+    );
+  }
+  const receipt = externalBackupReceipt(file.name);
+  receipt.create({ overwrite: true, intermediates: true });
+  receipt.write(confirmedAt);
+  if (
+    !receipt.exists ||
+    receipt.size <= 0 ||
+    (await receipt.text()).trim() !== confirmedAt
+  ) {
+    throw new RecoveryKitError(
+      "STORAGE_FAILED",
+      "The external-copy confirmation could not be stored."
+    );
+  }
+  return {
+    ...(await recordFor(file)),
+    externalBackupConfirmedAt: confirmedAt
+  };
 }
 
 /**
@@ -75,6 +188,8 @@ export class ExpoRecoveryKitStorage implements RecoveryKitStoragePort {
       ) {
         throw new Error("Encrypted Recovery Kit size did not match.");
       }
+      const previousReceipt = externalBackupReceipt(input.fileName);
+      if (previousReceipt.exists) previousReceipt.delete();
       return {
         reference: destination.uri,
         fileName: input.fileName,

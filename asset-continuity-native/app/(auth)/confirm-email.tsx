@@ -4,13 +4,20 @@ import {
   useRouter
 } from "expo-router";
 import { ArrowRight, EnvelopeSimpleOpen } from "phosphor-react-native";
-import { useEffect } from "react";
 import {
+  useCallback,
+  useEffect,
+  useRef,
+  useState
+} from "react";
+import {
+  AppState,
   BackHandler,
   Platform,
   StyleSheet,
   Text,
-  View
+  View,
+  type AppStateStatus
 } from "react-native";
 
 import { useAuthFlow } from "@/auth/AuthFlowProvider";
@@ -23,7 +30,7 @@ import {
 } from "@/auth/components";
 import {
   AUTH_ROUTES,
-  authStepNumber,
+  authActivationProgress,
   confirmEmailReturnRoute
 } from "@/auth/routes";
 import { maskEmail } from "@/auth/validation";
@@ -44,7 +51,6 @@ export default function ConfirmEmailScreen() {
     from?: string | string[];
   }>();
   const {
-    acceptPendingHouseholdInvite,
     busy,
     checkConfirmedSession,
     clearError,
@@ -61,6 +67,108 @@ export default function ConfirmEmailScreen() {
   } = useAuthFlow();
   const { copy, language, rtl } = useCoreJourneyCopy();
   const returnRoute = confirmEmailReturnRoute(params.from);
+  const [foregroundCycle, setForegroundCycle] = useState(0);
+  const [processedForegroundCycle, setProcessedForegroundCycle] =
+    useState(0);
+  const [foregroundChecking, setForegroundChecking] = useState(false);
+  const appStateRef = useRef<AppStateStatus>(AppState.currentState);
+  const foregroundExitObservedRef = useRef(
+    AppState.currentState === "background" ||
+      AppState.currentState === "inactive"
+  );
+  const confirmationCheckInFlightRef = useRef(false);
+  const mountedRef = useRef(true);
+
+  const continueAfterConfirmation = useCallback(
+    async (source: "manual" | "foreground" = "manual") => {
+      if (busy || confirmationCheckInFlightRef.current) return;
+      confirmationCheckInFlightRef.current = true;
+      if (source === "foreground") {
+        setForegroundChecking(true);
+      }
+      try {
+        const verifiedSession =
+          mode === "preview"
+            ? await continuePreview()
+            : await checkConfirmedSession();
+        if (!verifiedSession || !mountedRef.current) return;
+        if (pendingHouseholdInvite) {
+          router.replace(AUTH_ROUTES.join);
+          return;
+        }
+        router.replace(AUTH_ROUTES.household);
+      } finally {
+        confirmationCheckInFlightRef.current = false;
+        if (mountedRef.current) {
+          setForegroundChecking(false);
+        }
+      }
+    },
+    [
+      busy,
+      checkConfirmedSession,
+      continuePreview,
+      mode,
+      pendingHouseholdInvite,
+      router
+    ]
+  );
+
+  useEffect(() => {
+    mountedRef.current = true;
+    return () => {
+      mountedRef.current = false;
+    };
+  }, []);
+
+  useEffect(() => {
+    const subscription = AppState.addEventListener(
+      "change",
+      (nextState) => {
+        const previousState = appStateRef.current;
+        appStateRef.current = nextState;
+
+        if (nextState === "background" || nextState === "inactive") {
+          foregroundExitObservedRef.current = true;
+          return;
+        }
+        if (
+          mode === "supabase" &&
+          nextState === "active" &&
+          previousState !== "active" &&
+          foregroundExitObservedRef.current
+        ) {
+          foregroundExitObservedRef.current = false;
+          setForegroundCycle((cycle) => cycle + 1);
+        }
+      }
+    );
+    return () => subscription.remove();
+  }, [mode]);
+
+  useEffect(() => {
+    if (
+      foregroundCycle <= processedForegroundCycle ||
+      mode !== "supabase" ||
+      !email ||
+      !confirmation ||
+      busy ||
+      confirmationCheckInFlightRef.current
+    ) {
+      return;
+    }
+    setProcessedForegroundCycle((cycle) => cycle + 1);
+    void continueAfterConfirmation("foreground");
+  }, [
+    busy,
+    confirmation,
+    continueAfterConfirmation,
+    email,
+    foregroundCycle,
+    foregroundChecking,
+    mode,
+    processedForegroundCycle
+  ]);
 
   useEffect(() => {
     if (Platform.OS !== "android") return;
@@ -76,27 +184,20 @@ export default function ConfirmEmailScreen() {
 
   if (!email || !confirmation) {
     if (session) {
-      return <Redirect href={AUTH_ROUTES.household} />;
+      return (
+        <Redirect
+          href={
+            pendingHouseholdInvite
+              ? AUTH_ROUTES.join
+              : AUTH_ROUTES.household
+          }
+        />
+      );
     }
     return <Redirect href={AUTH_ROUTES.createAccount} />;
   }
   const maskedEmail = maskEmail(email);
-
-  const continueAfterConfirmation = async () => {
-    const session =
-      mode === "preview"
-        ? await continuePreview()
-        : await checkConfirmedSession();
-    if (!session) return;
-    if (pendingHouseholdInvite) {
-      const membership = await acceptPendingHouseholdInvite();
-      if (membership) {
-        router.replace("/");
-        return;
-      }
-    }
-    router.replace(AUTH_ROUTES.household);
-  };
+  const checking = busy || foregroundChecking;
 
   return (
     <AuthScaffold
@@ -108,15 +209,15 @@ export default function ConfirmEmailScreen() {
                 ? copy.confirmEmail.continuePreview
                 : copy.confirmEmail.confirmed,
             icon: ArrowRight,
-            loading: busy,
-            onPress: () => void continueAfterConfirmation()
+            loading: checking,
+            onPress: () => void continueAfterConfirmation("manual")
           }}
           secondary={{
             label:
               mode === "preview"
                 ? copy.confirmEmail.differentEmail
                 : copy.confirmEmail.requestAgain,
-            disabled: busy,
+            disabled: checking,
             onPress: () => {
               if (mode === "preview") {
                 router.replace(returnRoute);
@@ -129,7 +230,12 @@ export default function ConfirmEmailScreen() {
       }
       backDisabled={busy}
       onBack={() => router.replace(returnRoute)}
-      progress={authStepNumber("confirmEmail")}
+      {...(mode === "supabase"
+        ? {
+            progress:
+              authActivationProgress("confirmEmail")
+          }
+        : {})}
       testID="auth-confirm-email-screen"
     >
       <View style={styles.content}>
@@ -177,14 +283,26 @@ export default function ConfirmEmailScreen() {
             </Text>
           </View>
         </View>
-        <AuthNotice tone={mode === "preview" ? "attention" : "neutral"}>
-          {mode === "preview"
-            ? copy.confirmEmail.previewNotice
-            : copy.confirmEmail.liveNotice}
-        </AuthNotice>
+        {foregroundChecking ? (
+          <AuthNotice live tone="dark">
+            {copy.confirmEmail.foregroundChecking}
+          </AuthNotice>
+        ) : (
+          <AuthNotice
+            tone={mode === "preview" ? "attention" : "neutral"}
+          >
+            {mode === "preview"
+              ? copy.confirmEmail.previewNotice
+              : copy.confirmEmail.liveNotice}
+          </AuthNotice>
+        )}
         {error ? (
           <ErrorBanner
-            message={localizeAuthFailure(error, language)}
+            message={
+              error.code === "session_missing"
+                ? copy.confirmEmail.notConfirmedYet
+                : localizeAuthFailure(error, language)
+            }
             onDismiss={clearError}
           />
         ) : null}

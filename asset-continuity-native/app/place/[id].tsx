@@ -150,7 +150,7 @@ export const PLACE_DETAIL_COPY = {
     propertyValueTruth:
       "A dated value you enter—not a live price, appraisal or proof of ownership.",
     propertyValueOnDevice:
-      "Property values stay on this device in the pilot.",
+      "Property values stay on this device until cloud sync is confirmed.",
     placeLocation: "PLACE LOCATION",
     propertyLocation: "PROPERTY LOCATION",
     deviceGps: (accuracy: string) => `Device GPS ±${accuracy} m`,
@@ -233,7 +233,7 @@ export const PLACE_DETAIL_COPY = {
     propertyValueTruth:
       "قيمة مؤرخة تدخلها بنفسك، وليست سعرًا مباشرًا أو تقييمًا رسميًا أو إثبات ملكية.",
     propertyValueOnDevice:
-      "تبقى قيم العقارات على هذا الجهاز في النسخة التجريبية.",
+      "تبقى قيم العقارات على هذا الجهاز حتى تتأكد المزامنة السحابية.",
     placeLocation: "موقع المكان",
     propertyLocation: "موقع العقار",
     deviceGps: (accuracy: string) => `GPS الجهاز بدقة ±${accuracy} م`,
@@ -459,11 +459,28 @@ export default function PlaceScreen() {
               </Text>
             </View>
           </View>
-          <PrimaryButton
-            accessibilityHint={copy.todayHint}
-            label={copy.goToToday}
-            onPress={() => router.replace("/(tabs)")}
-          />
+          {canWriteAssets ? (
+            <>
+              <PrimaryButton
+                accessibilityHint={copy.placeAlreadySelected}
+                label={copy.addFirstItem}
+                onPress={() =>
+                  router.replace(`/capture?placeId=${place.id}`)
+                }
+              />
+              <SecondaryButton
+                accessibilityHint={copy.todayHint}
+                label={copy.goToToday}
+                onPress={() => router.replace("/(tabs)")}
+              />
+            </>
+          ) : (
+            <PrimaryButton
+              accessibilityHint={copy.todayHint}
+              label={copy.goToToday}
+              onPress={() => router.replace("/(tabs)")}
+            />
+          )}
         </View>
       ) : null}
       {justCreated === "1" ? (

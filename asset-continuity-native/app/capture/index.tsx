@@ -77,8 +77,7 @@ import {
   PrimaryButton,
   ProgressBar,
   ScreenTitle,
-  SecondaryButton,
-  StatusPill
+  SecondaryButton
 } from "@/components/ui";
 import {
   CATEGORY_CHOICES,
@@ -93,7 +92,11 @@ import {
   filterItemCategories,
   groupItemCategories
 } from "@/domain/assetCategoryCatalog";
-import { hasConfirmedPreciseNativePlacePin } from "@/domain/readiness";
+import {
+  deriveNativeAssetLocationTruth,
+  hasConfirmedPreciseNativePlacePin
+} from "@/domain/readiness";
+import { playTactileFeedback } from "@/feedback/tactileFeedback";
 import {
   getCaptureCopy,
   localizedCategoryLabel
@@ -188,6 +191,7 @@ export default function CaptureScreen() {
   const {
     workspace,
     repository,
+    attachmentStore,
     saving,
     error,
     clearError,
@@ -265,6 +269,16 @@ export default function CaptureScreen() {
   const selectedPlace = workspace?.places.find((place) => place.id === placeId);
   const selectedRoom = selectedPlace?.rooms.find((room) => room.id === roomId);
   const physical = selectedCategory?.supportsPhysicalLocation === true;
+  const truthfulLocationStatus =
+    physical && locationStatus
+      ? deriveNativeAssetLocationTruth({
+          categoryId: selectedCategory?.id ?? "",
+          requestedStatus: locationStatus,
+          place: selectedPlace,
+          roomId,
+          locatorText
+        }).status
+      : locationStatus;
   const hasDraft =
     name.trim().length > 0 ||
     categoryId !== null ||
@@ -321,7 +335,11 @@ export default function CaptureScreen() {
           setDraftReady(false);
         });
     } else {
-      void readQuickPassportDraft(draftScopeId, householdId)
+      void readQuickPassportDraft(
+        draftScopeId,
+        householdId,
+        attachmentStore
+      )
         .then((draft) => {
           if (!active) return;
           if (draft) {
@@ -368,6 +386,7 @@ export default function CaptureScreen() {
       active = false;
     };
   }, [
+    attachmentStore,
     draftRestoreAttempt,
     draftScopeId,
     householdId,
@@ -429,39 +448,46 @@ export default function CaptureScreen() {
       }
       if (!hasDraft) {
         settle(
-          clearQuickPassportDraft(draftScopeId),
+          clearQuickPassportDraft(
+            draftScopeId,
+            attachmentStore
+          ),
           "clear"
         );
         return;
       }
       settle(
-        writeQuickPassportDraft({
-          scopeId: draftScopeId,
-          householdId,
-          step,
-          name,
-          categoryId,
-          captureSource,
-          photo,
-          evidence,
-          locationStatus,
-          placeId,
-          roomId,
-          locatorText,
-          showPlaceForm,
-          placeName,
-          placeClassification,
-          address,
-          region,
-          roomName,
-          pin
-        }),
+        writeQuickPassportDraft(
+          {
+            scopeId: draftScopeId,
+            householdId,
+            step,
+            name,
+            categoryId,
+            captureSource,
+            photo,
+            evidence,
+            locationStatus,
+            placeId,
+            roomId,
+            locatorText,
+            showPlaceForm,
+            placeName,
+            placeClassification,
+            address,
+            region,
+            roomName,
+            pin
+          },
+          attachmentStore
+        ),
         "write"
       );
     }, 180);
     return () => clearTimeout(timer);
   }, [
     address,
+    attachmentStore,
     categoryId,
     captureSource,
     draftReady,
@@ -536,7 +562,10 @@ export default function CaptureScreen() {
             if (record.kind === "place") {
               await clearPlaceCaptureDraft(draftScopeId);
             } else {
-              await clearQuickPassportDraft(draftScopeId);
+              await clearQuickPassportDraft(
+                draftScopeId,
+                attachmentStore
+              );
             }
             setDraftPersistenceFailure((current) =>
               current === "clear" ? null : current
@@ -573,6 +602,7 @@ export default function CaptureScreen() {
     },
     [
       activeFirstRecordHandoff,
+      attachmentStore,
       deviceAuth,
       draftScopeId,
       language,
@@ -670,7 +700,11 @@ export default function CaptureScreen() {
               onPress: () => {
                 const clearActiveDraft = placeOnly
                   ? () => clearPlaceCaptureDraft(draftScopeId)
-                  : () => clearQuickPassportDraft(draftScopeId);
+                  : () =>
+                      clearQuickPassportDraft(
+                        draftScopeId,
+                        attachmentStore
+                      );
                 void clearActiveDraft()
                   .then(() => {
                     setDraftPersistenceFailure((current) =>
@@ -689,6 +723,7 @@ export default function CaptureScreen() {
         );
       }),
     [
+      attachmentStore,
       captureCopy,
       deferActiveFirstRecordHandoff,
       draftScopeId,
@@ -1034,12 +1069,13 @@ export default function CaptureScreen() {
         categoryLabel: selectedCategory.label,
         captureSource,
         photo,
-        locationStatus: physical ? locationStatus! : "known",
+        locationStatus: physical ? truthfulLocationStatus! : "known",
         placeId: physical ? placeId : null,
         roomId: physical ? roomId : null,
         locatorText: physical ? locatorText : null,
         evidence
       });
+      void playTactileFeedback("success", { reduceMotion });
       const committed: CommittedCaptureRecord = {
         kind: "item",
         id: asset.id,
@@ -1450,7 +1486,7 @@ export default function CaptureScreen() {
               )}
               evidence={evidence}
               locatorText={locatorText}
-              locationStatus={locationStatus}
+              locationStatus={truthfulLocationStatus}
               name={name}
               onEditStep={setStep}
               onReviewPlacePin={(selectedPlaceId) =>
@@ -1697,11 +1733,9 @@ function IdentityStep({
           {copy.identityBody}
         </BodyText>
       </View>
-      <View style={styles.mediaSection}>
+      <View style={[styles.documentaryFrame, styles.mediaSection]}>
         <View style={[styles.photoHeader, rtl && styles.rowReverse]}>
-          <View style={styles.photoIcon}>
-            <Camera color={colors.text} size={24} weight="regular" />
-          </View>
+          <Camera color={colors.text} size={24} weight="regular" />
           <View style={styles.inlineFormCopy}>
             <Text
               style={[
@@ -1776,7 +1810,7 @@ function IdentityStep({
             accessibilityRole="radiogroup"
             style={styles.categorySelection}
           >
-            <ChoiceCard
+            <RuleChoice
               active
               compact
               label={localizedCategoryLabel(
@@ -1808,7 +1842,7 @@ function IdentityStep({
               style={styles.categoryGridCompact}
             >
               {featuredCategories.map((category) => (
-                <ChoiceCard
+                <RuleChoice
                   active={false}
                   compact
                   key={category.id}
@@ -1914,7 +1948,7 @@ function IdentityStep({
                     style={styles.categoryGridCompact}
                   >
                     {group.categories.map((category) => (
-                      <ChoiceCard
+                      <RuleChoice
                         active={category.id === categoryId}
                         compact
                         key={category.id}
@@ -2127,7 +2161,7 @@ function LocationStep({
             {places.length > 0 ? (
               <View accessibilityRole="radiogroup" style={styles.placeChoices}>
                 {places.map((place) => (
-                  <ChoiceCard
+                  <RuleChoice
                     active={place.id === selectedPlace?.id}
                     key={place.id}
                     label={place.name}
@@ -2161,7 +2195,7 @@ function LocationStep({
               {selectedPlace.rooms.length > 0 ? (
                 <View accessibilityRole="radiogroup" style={styles.placeChoices}>
                   {selectedPlace.rooms.map((room) => (
-                    <ChoiceCard
+                    <RuleChoice
                       active={room.id === roomId}
                       key={room.id}
                       label={room.name}
@@ -2443,65 +2477,91 @@ function EvidenceStep({
           {copy.evidenceBody}
         </BodyText>
       </View>
-      {evidence ? (
-        <View style={styles.filePanel}>
-          <View style={[styles.fileRow, rtl && styles.rowReverse]}>
-            <View style={styles.fileIcon}>
+      <View
+        style={styles.documentaryFrame}
+        testID="capture-evidence-frame"
+      >
+        {evidence ? (
+          <>
+            <View style={[styles.fileRow, rtl && styles.rowReverse]}>
               <File color={colors.text} size={25} weight="regular" />
+              <View style={styles.fileCopy}>
+                <Text
+                  numberOfLines={2}
+                  style={[
+                    styles.fileName,
+                    rtl && styles.arabicMedium,
+                    rtl && styles.rtlText
+                  ]}
+                >
+                  {evidence.fileName}
+                </Text>
+                <Text
+                  style={[
+                    styles.fileMeta,
+                    rtl && styles.arabic,
+                    rtl && styles.rtlText
+                  ]}
+                >
+                  {fileSize(evidence.byteSize, language)} ·{" "}
+                  {copy.readyToAdd}
+                </Text>
+                <View style={[styles.evidenceState, rtl && styles.rowReverse]}>
+                  <View style={styles.evidenceStateSignal} />
+                  <Text
+                    style={[
+                      styles.evidenceStateLabel,
+                      rtl && styles.arabicMedium,
+                      rtl && styles.rtlText
+                    ]}
+                  >
+                    {language === "ar" ? "على الجهاز" : "On device"}
+                  </Text>
+                </View>
+              </View>
             </View>
-            <View style={styles.fileCopy}>
-              <Text numberOfLines={1} style={styles.fileName}>
-                {evidence.fileName}
-              </Text>
-              <Text style={styles.fileMeta}>
-                {fileSize(evidence.byteSize, language)} ·{" "}
-                {copy.readyToAdd}
-              </Text>
-            </View>
-            <StatusPill
-              label={
-                language === "ar" ? "على الجهاز" : "On device"
-              }
-              tone="neutral"
+            <SecondaryButton
+              label={copy.removeDocument}
+              onPress={onRemove}
             />
-          </View>
-          <SecondaryButton
-            label={copy.removeDocument}
-            onPress={onRemove}
-          />
-        </View>
-      ) : (
-        <Pressable
-          accessibilityRole="button"
-          onPress={onChoose}
-          style={({ pressed }) => [
-            styles.dropArea,
-            pressed && styles.pressed
-          ]}
-        >
-          <View style={styles.dropIcon}>
-            <FolderOpen color={colors.text} size={31} weight="regular" />
-          </View>
-          <Text
-            style={[
-              styles.dropTitle,
-              rtl && styles.arabicMedium,
-              rtl && styles.rtlText
+          </>
+        ) : (
+          <Pressable
+            accessibilityHint={copy.fileLimit}
+            accessibilityLabel={copy.choosePdf}
+            accessibilityRole="button"
+            onPress={onChoose}
+            style={({ pressed }) => [
+              styles.evidenceChoose,
+              rtl && styles.rowReverse,
+              pressed && styles.pressed
             ]}
+            testID="capture-evidence-choose"
           >
-            {copy.choosePdf}
-          </Text>
-          <Text
-            style={[
-              styles.dropCopy,
-              rtl && styles.arabic,
-              rtl && styles.rtlText
-            ]}
-          >
-            {copy.fileLimit}
-          </Text>
-        </Pressable>
-      )}
+            <FolderOpen color={colors.text} size={29} weight="regular" />
+            <View style={styles.evidenceChooseCopy}>
+              <Text
+                style={[
+                  styles.evidenceChooseTitle,
+                  rtl && styles.arabicMedium,
+                  rtl && styles.rtlText
+                ]}
+              >
+                {copy.choosePdf}
+              </Text>
+              <Text
+                style={[
+                  styles.evidenceChooseDetail,
+                  rtl && styles.arabic,
+                  rtl && styles.rtlText
+                ]}
+              >
+                {copy.fileLimit}
+              </Text>
+            </View>
+          </Pressable>
+        )}
+      </View>
       <View style={[styles.noticePanel, rtl && styles.noticePanelRtl]}>
         <ShieldCheck color={colors.text} size={25} weight="regular" />
         <Text
@@ -2548,15 +2608,18 @@ function ReviewStep({
 }) {
   const { language, rtl } = useCoreJourneyCopy();
   const copy = getCaptureCopy(language);
+  const locationPath = place
+    ? [place.name, roomName, locatorText]
+        .filter(Boolean)
+        .join(rtl ? " ‹ " : " › ")
+    : null;
   const location = !physical
     ? copy.noPhysicalLocation
     : locationStatus === "unknown"
       ? copy.unknownReminder
-        : place
-        ? [place.name, roomName, locatorText]
-            .filter(Boolean)
-            .join(rtl ? " ‹ " : " › ")
-        : copy.placeNeedsDetail;
+      : locationStatus === "needs-detail" && locationPath
+        ? `${locationPath} · ${copy.placeNeedsDetail}`
+        : locationPath ?? copy.placeNeedsDetail;
   const placePinDebt =
     physical &&
     locationStatus !== "unknown" &&
@@ -2571,7 +2634,10 @@ function ReviewStep({
           {copy.reviewBody}
         </BodyText>
       </View>
-      <View style={styles.reviewPanel}>
+      <View
+        style={styles.documentaryFrame}
+        testID="capture-review-frame"
+      >
         <Pressable
           accessibilityLabel={`${copy.editIdentity}. ${name}, ${categoryLabel}`}
           accessibilityRole="button"
@@ -2739,7 +2805,7 @@ function ReviewStep({
   );
 }
 
-function ChoiceCard({
+function RuleChoice({
   active,
   compact = false,
   label,
@@ -2759,39 +2825,49 @@ function ChoiceCard({
       accessibilityState={{ checked: active }}
       onPress={onPress}
       style={({ pressed }) => [
-        styles.choiceCard,
-        compact && styles.choiceCardCompact,
+        styles.choiceRow,
+        compact && styles.choiceRowCompact,
         rtl && styles.rowReverse,
-        active && styles.choiceCardActive,
+        active && styles.choiceRowActive,
         pressed && styles.pressed
       ]}
     >
-      <View style={[styles.choiceCheck, active && styles.choiceCheckActive]}>
-        {active ? <Check color={colors.carbon} size={13} weight="bold" /> : null}
-      </View>
-      <View style={styles.choiceCopy}>
-        <Text
-          style={[
-            styles.choiceLabel,
-            active && styles.choiceLabelActive,
-            rtl && styles.arabicMedium,
-            rtl && styles.rtlText
-          ]}
-        >
-          {label}
-        </Text>
-        {meta ? (
+      <View
+        style={[
+          styles.choiceSignal,
+          active && styles.choiceSignalActive
+        ]}
+      />
+      <View style={[styles.choiceContent, rtl && styles.rowReverse]}>
+        <View style={styles.choiceCheck}>
+          {active ? (
+            <Check color={colors.volt} size={16} weight="bold" />
+          ) : null}
+        </View>
+        <View style={styles.choiceCopy}>
           <Text
             style={[
-              styles.choiceMeta,
-              active && styles.choiceMetaActive,
-              rtl && styles.arabic,
+              styles.choiceLabel,
+              active && styles.choiceLabelActive,
+              rtl && styles.arabicMedium,
               rtl && styles.rtlText
             ]}
           >
-            {meta}
+            {label}
           </Text>
-        ) : null}
+          {meta ? (
+            <Text
+              style={[
+                styles.choiceMeta,
+                active && styles.choiceMetaActive,
+                rtl && styles.arabic,
+                rtl && styles.rtlText
+              ]}
+            >
+              {meta}
+            </Text>
+          ) : null}
+        </View>
       </View>
     </Pressable>
   );
@@ -3123,42 +3199,49 @@ const styles = StyleSheet.create({
   placeChoices: {
     gap: spacing.xs
   },
-  choiceCard: {
+  choiceRow: {
     minWidth: "47%",
-    minHeight: 58,
+    minHeight: 56,
     flexGrow: 1,
     flexBasis: 150,
     flexDirection: "row",
-    alignItems: "center",
-    gap: spacing.sm,
-    padding: spacing.sm,
-    borderWidth: 1,
-    borderColor: colors.border,
-    borderRadius: radius.md,
-    backgroundColor: colors.surface
+    alignItems: "stretch",
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderBottomColor: colors.borderStrong,
+    backgroundColor: colors.transparent
   },
-  choiceCardCompact: {
+  choiceRowCompact: {
     minWidth: 124,
     minHeight: 52,
-    flexBasis: 124,
-    paddingVertical: spacing.xs
+    flexBasis: 124
   },
-  choiceCardActive: {
-    borderColor: colors.carbon,
+  choiceRowActive: {
+    borderBottomColor: colors.carbon,
     backgroundColor: colors.carbon
   },
-  choiceCheck: {
-    width: 22,
-    height: 22,
-    alignItems: "center",
-    justifyContent: "center",
-    borderWidth: 1,
-    borderColor: colors.borderStrong,
-    borderRadius: radius.round
+  choiceSignal: {
+    width: 3,
+    alignSelf: "stretch",
+    backgroundColor: colors.transparent
   },
-  choiceCheckActive: {
-    borderColor: colors.volt,
+  choiceSignalActive: {
     backgroundColor: colors.volt
+  },
+  choiceContent: {
+    minWidth: 0,
+    flex: 1,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: spacing.sm,
+    paddingHorizontal: spacing.sm,
+    paddingVertical: spacing.xs
+  },
+  choiceCheck: {
+    width: 18,
+    height: 22,
+    flexShrink: 0,
+    alignItems: "center",
+    justifyContent: "center"
   },
   choiceCopy: {
     flex: 1,
@@ -3186,19 +3269,8 @@ const styles = StyleSheet.create({
     alignItems: "center",
     gap: spacing.sm
   },
-  photoIcon: {
-    width: 34,
-    height: 34,
-    alignItems: "center",
-    justifyContent: "center",
-    borderRadius: radius.md
-  },
   mediaSection: {
-    gap: spacing.md,
-    paddingVertical: spacing.md,
-    borderTopWidth: StyleSheet.hairlineWidth,
-    borderBottomWidth: StyleSheet.hairlineWidth,
-    borderColor: colors.border
+    gap: spacing.md
   },
   photoPreview: {
     width: "100%",
@@ -3336,47 +3408,43 @@ const styles = StyleSheet.create({
     fontSize: 12,
     lineHeight: 18
   },
-  dropArea: {
-    minHeight: 160,
-    alignItems: "center",
-    justifyContent: "center",
-    gap: spacing.sm,
-    padding: spacing.xl,
-    borderWidth: 1,
-    borderColor: colors.borderStrong,
-    borderRadius: radius.lg,
-    backgroundColor: colors.surface
+  documentaryFrame: {
+    gap: spacing.md,
+    paddingVertical: spacing.md,
+    borderTopWidth: 1,
+    borderBottomWidth: 1,
+    borderColor: colors.borderStrong
   },
-  dropIcon: {
-    width: 44,
-    height: 44,
-    alignItems: "center",
-    justifyContent: "center",
-    borderRadius: radius.md
-  },
-  dropTitle: {
-    color: colors.text,
-    fontFamily: typography.display,
-    fontSize: 18
-  },
-  dropCopy: {
-    color: colors.textMuted,
-    fontFamily: typography.body,
-    fontSize: 12,
-    lineHeight: 18,
-    textAlign: "center"
-  },
-  fileRow: {
+  evidenceChoose: {
+    minHeight: 88,
     flexDirection: "row",
     alignItems: "center",
-    gap: spacing.sm
+    gap: spacing.md,
+    paddingVertical: spacing.sm
   },
-  fileIcon: {
-    width: 44,
-    height: 44,
+  evidenceChooseCopy: {
+    minWidth: 0,
+    flex: 1,
+    gap: 3
+  },
+  evidenceChooseTitle: {
+    color: colors.text,
+    fontFamily: typography.display,
+    fontSize: 18,
+    lineHeight: 24
+  },
+  evidenceChooseDetail: {
+    color: colors.textMuted,
+    fontFamily: typography.body,
+    fontSize: 14,
+    lineHeight: 20
+  },
+  fileRow: {
+    minHeight: 56,
+    flexDirection: "row",
     alignItems: "center",
-    justifyContent: "center",
-    borderRadius: radius.md
+    gap: spacing.sm,
+    paddingVertical: spacing.xs
   },
   fileCopy: {
     flex: 1,
@@ -3390,7 +3458,25 @@ const styles = StyleSheet.create({
   fileMeta: {
     color: colors.textMuted,
     fontFamily: typography.body,
-    fontSize: 12
+    fontSize: 13,
+    lineHeight: 18
+  },
+  evidenceState: {
+    flexShrink: 0,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6
+  },
+  evidenceStateSignal: {
+    width: 3,
+    height: 18,
+    backgroundColor: colors.volt
+  },
+  evidenceStateLabel: {
+    color: colors.textMuted,
+    fontFamily: typography.bodyMedium,
+    fontSize: 12,
+    lineHeight: 18
   },
   reviewHero: {
     minHeight: 88,
@@ -3534,22 +3620,6 @@ const styles = StyleSheet.create({
   },
   noticePanelRtl: {
     alignItems: "flex-end"
-  },
-  filePanel: {
-    gap: spacing.md,
-    padding: spacing.md,
-    borderWidth: 1,
-    borderColor: colors.border,
-    borderRadius: radius.lg,
-    backgroundColor: colors.surface
-  },
-  reviewPanel: {
-    gap: spacing.md,
-    padding: spacing.md,
-    borderWidth: 1,
-    borderColor: colors.border,
-    borderRadius: radius.lg,
-    backgroundColor: colors.surface
   },
   footer: {
     flexDirection: "row",

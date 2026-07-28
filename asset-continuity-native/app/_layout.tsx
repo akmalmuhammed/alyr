@@ -594,6 +594,7 @@ function RootNavigator() {
             <Stack.Screen
               name="dashboard"
               options={{
+                headerTitle: () => null,
                 title: copy.stack.portfolio
               }}
             />
@@ -606,6 +607,7 @@ function RootNavigator() {
             <Stack.Screen
               name="atlas"
               options={{
+                headerTitle: () => null,
                 title: copy.stack.atlas
               }}
             />

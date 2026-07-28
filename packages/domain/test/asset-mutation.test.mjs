@@ -7,6 +7,26 @@ import {
   assertValidFinalAssetMutation,
 } from "../dist/index.js";
 
+const NOW = "2026-07-28T10:00:00.000Z";
+const confirmedUserPin = {
+  latitude: 25.2854,
+  longitude: 51.531,
+  source: "user_pin",
+  precision: "user_placed",
+  horizontalAccuracyMeters: null,
+  observedAt: NOW,
+  confirmedAt: NOW,
+};
+const unconfirmedDevicePin = {
+  latitude: 25.2854,
+  longitude: 51.531,
+  source: "device_gps",
+  precision: "exact",
+  horizontalAccuracyMeters: 8,
+  observedAt: NOW,
+  confirmedAt: null,
+};
+
 const context = {
   householdId: "household-a",
   supportedCategoryIds: [
@@ -20,11 +40,25 @@ const context = {
       id: "place-a",
       householdId: "household-a",
       spaceIds: ["room-a", "container-a"],
+      pin: confirmedUserPin,
+    },
+    {
+      id: "place-no-pin",
+      householdId: "household-a",
+      spaceIds: ["room-no-pin"],
+      pin: null,
+    },
+    {
+      id: "place-device-unconfirmed",
+      householdId: "household-a",
+      spaceIds: ["container-unconfirmed"],
+      pin: unconfirmedDevicePin,
     },
     {
       id: "place-foreign",
       householdId: "household-b",
       spaceIds: ["room-foreign"],
+      pin: confirmedUserPin,
     },
   ],
 };
@@ -117,13 +151,15 @@ test("location state, household Place, and nested space invariants fail closed",
     }),
     "ASSET_LOCATION_STATE_INVALID",
   );
-  assert.equal(
-    reasonFor({
-      ...valid,
-      locationStatus: "needs-detail",
-      spaceId: "room-a",
-    }),
-    "ASSET_LOCATION_STATE_INVALID",
+  assert.doesNotThrow(() =>
+    assertValidFinalAssetMutation(
+      {
+        ...valid,
+        locationStatus: "needs-detail",
+        spaceId: "room-a",
+      },
+      context,
+    ),
   );
   assert.equal(
     reasonFor({
@@ -172,6 +208,61 @@ test("known physical locations require a Place plus room, container, or clue", (
         ...valid,
         spaceId: null,
         locationDetail: "Blue case, upper shelf",
+      },
+      context,
+    ),
+  );
+});
+
+test("only a confirmed precise Place pin can make an indoor location known", () => {
+  assert.equal(
+    reasonFor({
+      ...valid,
+      placeId: "place-no-pin",
+      spaceId: "room-no-pin",
+    }),
+    "ASSET_EXACT_LOCATION_REQUIRED",
+  );
+  assert.equal(
+    reasonFor({
+      ...valid,
+      placeId: "place-device-unconfirmed",
+      spaceId: "container-unconfirmed",
+    }),
+    "ASSET_EXACT_LOCATION_REQUIRED",
+  );
+  assert.doesNotThrow(() =>
+    assertValidFinalAssetMutation(
+      {
+        ...valid,
+        placeId: "place-a",
+        spaceId: "container-a",
+      },
+      context,
+    ),
+  );
+});
+
+test("needs-detail retains a truthful room, container, or locator clue", () => {
+  assert.doesNotThrow(() =>
+    assertValidFinalAssetMutation(
+      {
+        ...valid,
+        locationStatus: "needs-detail",
+        placeId: "place-no-pin",
+        spaceId: "room-no-pin",
+        locationDetail: "Blue case",
+      },
+      context,
+    ),
+  );
+  assert.doesNotThrow(() =>
+    assertValidFinalAssetMutation(
+      {
+        ...valid,
+        locationStatus: "needs-detail",
+        placeId: "place-device-unconfirmed",
+        spaceId: "container-unconfirmed",
       },
       context,
     ),

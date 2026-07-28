@@ -186,6 +186,29 @@ describe("Today truth selectors", () => {
     );
   });
 
+  it("does not promote approximate or invalid coordinates to confirmed locations", () => {
+    const approximate = place("approximate", {
+      locationSource: "device_gps",
+      precision: "approximate",
+      horizontalAccuracyMeters: 250,
+      confirmedAt: "2026-07-27T12:00:00.000Z"
+    });
+    const invalid = place("invalid", {
+      latitude: 125,
+      longitude: 51,
+      confirmedAt: "2026-07-27T12:00:00.000Z"
+    });
+
+    expect(
+      selectTodayPlaceOverview([approximate, invalid])
+    ).toMatchObject({
+      confirmedCount: 0,
+      confirmationNeededCount: 1,
+      missingPinCount: 1,
+      reviewCount: 2
+    });
+  });
+
   it("gives the all-ready state a truthful next action", () => {
     const { readFileSync } = jest.requireActual("fs") as {
       readFileSync(path: string, encoding: "utf8"): string;
@@ -205,10 +228,23 @@ describe("Today truth selectors", () => {
       "Your core records are ready"
     );
     expect(CORE_JOURNEY_COPY.en.today.addAnotherItem).toBe(
-      "Add another item"
+      "Add another record"
     );
     expect(source).toContain(
-      'commandState === "incomplete" && firstGap'
+      'commandState === "incomplete" && firstTask'
     );
+  });
+
+  it("does not reverse inherited RTL rows a second time on web", () => {
+    const { readFileSync } = jest.requireActual("fs") as {
+      readFileSync(path: string, encoding: "utf8"): string;
+    };
+    const source = readFileSync(
+      `${process.cwd()}/app/(tabs)/index.tsx`,
+      "utf8"
+    );
+
+    expect(source).toContain('Platform.OS !== "web"');
+    expect(source).not.toContain("rtl && styles.rowReverse");
   });
 });

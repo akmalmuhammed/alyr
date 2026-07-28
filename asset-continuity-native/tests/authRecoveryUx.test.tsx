@@ -5,7 +5,11 @@ import {
   waitFor
 } from "@testing-library/react-native";
 import type { PropsWithChildren } from "react";
-import { StyleSheet } from "react-native";
+import {
+  AppState,
+  StyleSheet,
+  type AppStateStatus
+} from "react-native";
 
 import ConfirmEmailScreen, {
   isolateLtrEmail
@@ -80,6 +84,7 @@ function baseAuthState() {
     mode: "supabase",
     passwordRecovery: null,
     passwordRecoveryGrant: null,
+    pendingHouseholdInvite: null,
     requestPasswordRecovery: jest.fn(async () => true),
     resendConfirmation: jest.fn(async () => true),
     session: null,
@@ -186,6 +191,7 @@ describe("premium auth recovery lifecycle", () => {
       pendingHouseholdInvite: null
     };
     const screen = await render(<ConfirmEmailScreen />);
+    expect(screen.queryByRole("progressbar")).toBeNull();
 
     await fireEvent.press(
       screen.getByLabelText(CORE_JOURNEY_COPY.en.common.back)
@@ -202,6 +208,351 @@ describe("premium auth recovery lifecycle", () => {
     expect(mockRouter.replace).toHaveBeenLastCalledWith(
       AUTH_ROUTES.signIn
     );
+  });
+
+  it("routes a newly confirmed recipient to invitation review without redeeming it", async () => {
+    const acceptPendingHouseholdInvite = jest.fn();
+    const checkConfirmedSession = jest.fn(async () => ({
+      identity: {
+        id: "account-recipient",
+        email: "recipient@example.com",
+        emailVerified: true
+      },
+      assurance: "verified-email",
+      expiresAt: "2026-08-01T00:00:00.000Z",
+      onboarding: "required",
+      activeHouseholdId: null,
+      activeMembershipId: null,
+      activeHouseholdRole: null
+    }));
+    mockAuthState = {
+      ...baseAuthState(),
+      acceptPendingHouseholdInvite,
+      checkConfirmedSession,
+      confirmation: {
+        delivery: "requested"
+      },
+      pendingHouseholdInvite: {
+        oneTimeCode: "INVITE-RECIPIENT-03",
+        capturedAt: "2026-07-28T08:20:00.000Z"
+      }
+    };
+    const screen = await render(<ConfirmEmailScreen />);
+    expect(
+      screen.getByRole("progressbar", {
+        name: CORE_JOURNEY_COPY.en.activationProgress.label
+      }).props.accessibilityValue.text
+    ).toBe("Verify account. Activation stage 1 of 3.");
+
+    await fireEvent.press(
+      screen.getByText(CORE_JOURNEY_COPY.en.confirmEmail.confirmed)
+    );
+    await waitFor(() => {
+      expect(checkConfirmedSession).toHaveBeenCalledTimes(1);
+      expect(mockRouter.replace).toHaveBeenCalledWith("/join");
+    });
+    expect(acceptPendingHouseholdInvite).not.toHaveBeenCalled();
+    await screen.unmount();
+  });
+
+  it("checks once when the live app returns and opens private-record setup", async () => {
+    let appStateListener:
+      | ((state: AppStateStatus) => void)
+      | null = null;
+    jest
+      .spyOn(AppState, "addEventListener")
+      .mockImplementation((_event, listener) => {
+        appStateListener = listener;
+        return { remove: jest.fn() };
+      });
+    const checkConfirmedSession = jest.fn(async () => ({
+      identity: {
+        id: "account-owner",
+        email: "owner@example.com",
+        emailVerified: true
+      },
+      assurance: "verified-email" as const,
+      expiresAt: "2026-08-01T00:00:00.000Z",
+      onboarding: "required" as const,
+      activeHouseholdId: null,
+      activeMembershipId: null,
+      activeHouseholdRole: null
+    }));
+    mockAuthState = {
+      ...baseAuthState(),
+      checkConfirmedSession,
+      confirmation: {
+        delivery: "requested"
+      }
+    };
+    const screen = await render(<ConfirmEmailScreen />);
+
+    await act(async () => {
+      appStateListener?.("background");
+      appStateListener?.("active");
+      appStateListener?.("active");
+    });
+
+    await waitFor(() => {
+      expect(checkConfirmedSession).toHaveBeenCalledTimes(1);
+      expect(mockRouter.replace).toHaveBeenCalledWith(
+        AUTH_ROUTES.household
+      );
+    });
+    await screen.unmount();
+  });
+
+  it("checks a returning recipient once and opens invitation review without joining", async () => {
+    let appStateListener:
+      | ((state: AppStateStatus) => void)
+      | null = null;
+    jest
+      .spyOn(AppState, "addEventListener")
+      .mockImplementation((_event, listener) => {
+        appStateListener = listener;
+        return { remove: jest.fn() };
+      });
+    const acceptPendingHouseholdInvite = jest.fn();
+    const checkConfirmedSession = jest.fn(async () => ({
+      identity: {
+        id: "account-recipient",
+        email: "recipient@example.com",
+        emailVerified: true
+      },
+      assurance: "verified-email" as const,
+      expiresAt: "2026-08-01T00:00:00.000Z",
+      onboarding: "required" as const,
+      activeHouseholdId: null,
+      activeMembershipId: null,
+      activeHouseholdRole: null
+    }));
+    mockAuthState = {
+      ...baseAuthState(),
+      acceptPendingHouseholdInvite,
+      checkConfirmedSession,
+      confirmation: {
+        delivery: "requested"
+      },
+      pendingHouseholdInvite: {
+        oneTimeCode: "INVITE-RECIPIENT-04",
+        capturedAt: "2026-07-28T08:30:00.000Z"
+      }
+    };
+    const screen = await render(<ConfirmEmailScreen />);
+
+    await act(async () => {
+      appStateListener?.("inactive");
+      appStateListener?.("active");
+    });
+
+    await waitFor(() => {
+      expect(checkConfirmedSession).toHaveBeenCalledTimes(1);
+      expect(mockRouter.replace).toHaveBeenCalledWith(
+        AUTH_ROUTES.join
+      );
+    });
+    expect(acceptPendingHouseholdInvite).not.toHaveBeenCalled();
+    await screen.unmount();
+  });
+
+  it("queues one foreground check while another account action is busy", async () => {
+    let appStateListener:
+      | ((state: AppStateStatus) => void)
+      | null = null;
+    jest
+      .spyOn(AppState, "addEventListener")
+      .mockImplementation((_event, listener) => {
+        appStateListener = listener;
+        return { remove: jest.fn() };
+      });
+    const checkConfirmedSession = jest.fn(async () => null);
+    mockAuthState = {
+      ...baseAuthState(),
+      busy: true,
+      checkConfirmedSession,
+      confirmation: {
+        delivery: "requested"
+      }
+    };
+    const screen = await render(<ConfirmEmailScreen />);
+
+    await act(async () => {
+      appStateListener?.("background");
+      appStateListener?.("active");
+    });
+    expect(checkConfirmedSession).not.toHaveBeenCalled();
+
+    mockAuthState = {
+      ...mockAuthState,
+      busy: false
+    };
+    await screen.rerender(<ConfirmEmailScreen />);
+
+    await waitFor(() => {
+      expect(checkConfirmedSession).toHaveBeenCalledTimes(1);
+    });
+    expect(mockRouter.replace).not.toHaveBeenCalled();
+    await screen.unmount();
+  });
+
+  it("serializes one check for each foreground transition", async () => {
+    let appStateListener:
+      | ((state: AppStateStatus) => void)
+      | null = null;
+    jest
+      .spyOn(AppState, "addEventListener")
+      .mockImplementation((_event, listener) => {
+        appStateListener = listener;
+        return { remove: jest.fn() };
+      });
+    let finishFirstCheck: (
+      session: Record<string, unknown> | null
+    ) => void = () => undefined;
+    const checkConfirmedSession = jest
+      .fn()
+      .mockImplementationOnce(
+        () =>
+          new Promise<Record<string, unknown> | null>((resolve) => {
+            finishFirstCheck = resolve;
+          })
+      )
+      .mockResolvedValueOnce(null);
+    mockAuthState = {
+      ...baseAuthState(),
+      checkConfirmedSession,
+      confirmation: {
+        delivery: "requested"
+      }
+    };
+    const screen = await render(<ConfirmEmailScreen />);
+
+    await act(async () => {
+      appStateListener?.("background");
+      appStateListener?.("active");
+    });
+    await waitFor(() => {
+      expect(checkConfirmedSession).toHaveBeenCalledTimes(1);
+    });
+
+    await act(async () => {
+      appStateListener?.("background");
+      appStateListener?.("active");
+    });
+    expect(checkConfirmedSession).toHaveBeenCalledTimes(1);
+
+    await act(async () => {
+      finishFirstCheck(null);
+    });
+    await waitFor(() => {
+      expect(checkConfirmedSession).toHaveBeenCalledTimes(2);
+    });
+    await screen.unmount();
+  });
+
+  it("keeps preview confirmation manual and announces a live foreground check", async () => {
+    let appStateListener:
+      | ((state: AppStateStatus) => void)
+      | null = null;
+    jest
+      .spyOn(AppState, "addEventListener")
+      .mockImplementation((_event, listener) => {
+        appStateListener = listener;
+        return { remove: jest.fn() };
+      });
+    let finishCheck: (
+      session: Record<string, unknown> | null
+    ) => void = () => undefined;
+    const checkConfirmedSession = jest.fn(
+      () =>
+        new Promise<Record<string, unknown> | null>((resolve) => {
+          finishCheck = resolve;
+        })
+    );
+    mockAuthState = {
+      ...baseAuthState(),
+      checkConfirmedSession,
+      confirmation: {
+        delivery: "requested"
+      }
+    };
+    const screen = await render(<ConfirmEmailScreen />);
+
+    await act(async () => {
+      appStateListener?.("background");
+      appStateListener?.("active");
+      appStateListener?.("active");
+    });
+    const checkingCopy =
+      CORE_JOURNEY_COPY.en.confirmEmail.foregroundChecking;
+    await waitFor(() => {
+      expect(checkConfirmedSession).toHaveBeenCalledTimes(1);
+      expect(screen.getByText(checkingCopy)).toBeTruthy();
+    });
+    expect(
+      screen.getByText(checkingCopy).parent?.props
+        .accessibilityLiveRegion
+    ).toBe("polite");
+
+    await act(async () => {
+      finishCheck(null);
+    });
+    await waitFor(() => {
+      expect(screen.queryByText(checkingCopy)).toBeNull();
+    });
+
+    const continuePreview = jest.fn();
+    mockAuthState = {
+      ...baseAuthState(),
+      confirmation: {
+        delivery: "none"
+      },
+      continuePreview,
+      mode: "preview"
+    };
+    await screen.rerender(<ConfirmEmailScreen />);
+    await act(async () => {
+      appStateListener?.("background");
+      appStateListener?.("active");
+    });
+    expect(continuePreview).not.toHaveBeenCalled();
+    await screen.unmount();
+  });
+
+  it("keeps the manual confirmation check available after an automatic miss", async () => {
+    let appStateListener:
+      | ((state: AppStateStatus) => void)
+      | null = null;
+    jest
+      .spyOn(AppState, "addEventListener")
+      .mockImplementation((_event, listener) => {
+        appStateListener = listener;
+        return { remove: jest.fn() };
+      });
+    const checkConfirmedSession = jest.fn(async () => null);
+    mockAuthState = {
+      ...baseAuthState(),
+      checkConfirmedSession,
+      confirmation: {
+        delivery: "requested"
+      }
+    };
+    const screen = await render(<ConfirmEmailScreen />);
+
+    await act(async () => {
+      appStateListener?.("background");
+      appStateListener?.("active");
+    });
+    await waitFor(() => {
+      expect(checkConfirmedSession).toHaveBeenCalledTimes(1);
+    });
+
+    await fireEvent.press(
+      screen.getByText(CORE_JOURNEY_COPY.en.confirmEmail.confirmed)
+    );
+    await waitFor(() => {
+      expect(checkConfirmedSession).toHaveBeenCalledTimes(2);
+    });
+    await screen.unmount();
   });
 
   it("fails closed to Create Account for an unknown confirmation origin", () => {
@@ -283,6 +634,34 @@ describe("premium auth recovery lifecycle", () => {
     expect(destinationStyle.writingDirection).toBe("ltr");
     expect(destinationStyle.textAlign).toBe("right");
     expect(labelStyle.fontSize).toBe(12);
+  });
+
+  it("keeps an unconfirmed return recoverable in Arabic", async () => {
+    mockAuthState = {
+      ...baseAuthState(),
+      confirmation: {
+        delivery: "requested"
+      },
+      error: {
+        code: "session_missing",
+        message: "provider detail",
+        retryable: true
+      }
+    };
+    const screen = await render(<ConfirmEmailScreen />, {
+      wrapper: arabicWrapper
+    });
+
+    expect(
+      screen.getByText(
+        CORE_JOURNEY_COPY.ar.confirmEmail.notConfirmedYet
+      )
+    ).toBeTruthy();
+    expect(
+      screen.queryByText(
+        CORE_JOURNEY_COPY.ar.authErrors.session_missing
+      )
+    ).toBeNull();
   });
 
   it("completes a truthful preview reset without cloud-delivery language", async () => {
@@ -535,6 +914,11 @@ describe("premium auth recovery lifecycle", () => {
     );
     expect(authLayout).toContain('name="reset-password"');
     expect(authLayout).toContain('name="confirm-email"');
-    expect(authLayout).toContain("gestureEnabled: false");
+    expect(authLayout).toContain('name="household"');
+    const householdRoute = authLayout.slice(
+      authLayout.indexOf('name="household"'),
+      authLayout.indexOf('name="reset-password"')
+    );
+    expect(householdRoute).toContain("gestureEnabled: false");
   });
 });

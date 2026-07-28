@@ -268,6 +268,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/invites/preview": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Review the minimum household invitation details before joining. */
+        post: operations["previewInvite"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/invites/accept": {
         parameters: {
             query?: never;
@@ -459,6 +476,13 @@ export interface components {
             /** @enum {string} */
             status: "active" | "revoked";
             version: number;
+        };
+        HouseholdInviteReview: {
+            householdName: string;
+            /** @enum {string} */
+            role: "editor" | "viewer";
+            /** Format: date-time */
+            expiresAt: string;
         };
         /**
          * @description Closed vocabulary used by liability.create and liability.update. Dated balances are sent separately through value.create/value.update.
@@ -1332,6 +1356,35 @@ export interface operations {
             400: components["responses"]["ApiError"];
             403: components["responses"]["Forbidden"];
             409: components["responses"]["Conflict"];
+        };
+    };
+    previewInvite: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["InviteAcceptRequest"];
+            };
+        };
+        responses: {
+            /** @description Privacy-scoped invitation review returned without changing membership. */
+            200: {
+                headers: {
+                    "Cache-Control"?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        review: components["schemas"]["HouseholdInviteReview"];
+                    };
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            404: components["responses"]["NotFound"];
         };
     };
     acceptInvite: {

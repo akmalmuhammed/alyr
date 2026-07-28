@@ -22,8 +22,16 @@ const english = {
     current: "Current",
     previous: "Previous",
     onDevice: "On this device",
-    previewSession: "Expo Go preview: kept for this session only.",
+    previewSession: "Private preview · this session only.",
     encryptedDevice: "Saved inside the encrypted on-device workspace."
+  },
+  activationProgress: {
+    label: "Account activation",
+    stages: {
+      verifyAccount: "Verify account",
+      privateRecord: "Private record",
+      firstPassport: "First Passport"
+    }
   },
   welcome: {
     createWorkspace: "Create private workspace",
@@ -39,7 +47,8 @@ const english = {
     commandThree: "Keep the proof beside the item",
     sampleImageLabel: "Illustrative item in a private record",
     readyToRetrieve: "Ready to retrieve",
-    previewNotice: "Personal test mode: accounts and records stay only in this running preview. No email is sent. Use test information.",
+    previewNotice:
+      "Private preview · records stay on this device for this session. No email is sent. Use non-sensitive information.",
     unavailableNotice: "This signed build has no account service configuration. The household vault opens after that connection is installed.",
     accountNotice: "Your account protects access. Family access is added deliberately after your private record exists.",
     languageAction: "العربية",
@@ -51,7 +60,7 @@ const english = {
     eyebrow: "WELCOME BACK",
     title: "Return to your record.",
     body: "Use the account that owns or can access your household record.",
-    previewNotice: "Only accounts created earlier in this running preview can sign in. No credentials leave this device session.",
+    previewNotice: "Preview accounts exist only for this session. Account details stay on this device.",
     email: "Email",
     emailPlaceholder: "name@example.com",
     password: "Password",
@@ -66,11 +75,11 @@ const english = {
     network_unavailable:
       "ALYR could not reach the account service. Check your connection.",
     pilot_access_denied:
-      "This pilot invitation does not match the email, has expired, or was already used.",
+      "This early access invitation does not match the email, has expired, or was already used.",
     pilot_access_required:
-      "Enter the pilot access code from your invitation.",
+      "Enter the early access code from your invitation.",
     pilot_capacity_reached:
-      "The current pilot group is full. Ask the ALYR team about the next opening.",
+      "The current early access group is full. Ask the ALYR team about the next opening.",
     rate_limited: "Too many attempts. Wait a moment, then try again.",
     session_missing: "This account session is no longer available. Start again.",
     unsupported: "This account action is not available in this build.",
@@ -86,13 +95,13 @@ const english = {
     sentEyebrow: "REQUEST RECORDED",
     sentTitle: "If an account matches, use the latest reset message.",
     sentBody: "The provider accepted the request. ALYR does not reveal whether the address matched an account or whether a message arrived.",
-    previewSentEyebrow: "LOCAL TEST RECOVERY",
+    previewSentEyebrow: "PREVIEW RECOVERY",
     previewSentTitle: "Continue on this device.",
-    previewBody: "Test mode does not send email. Continue to the local reset form on this device.",
+    previewBody: "Private preview does not send email. Continue on this device.",
     requestAccepted: "RESET REQUEST",
-    previewRequestReady: "LOCAL TEST REQUEST",
+    previewRequestReady: "PREVIEW REQUEST",
     destinationNote: "This is the address you entered—not proof that an account exists.",
-    openPreviewReset: "Set a new test password",
+    openPreviewReset: "Set a new preview password",
     backToSignIn: "Back to sign in",
     differentEmail: "Use a different email",
     sendAgain: "Request again"
@@ -110,14 +119,14 @@ const english = {
     checking: "Checking the recovery session",
     ending: "Closing this recovery session securely",
     incomplete: "Open the latest password reset link, or request a new one from sign in.",
-    previewIncomplete: "Start password recovery in this preview before setting a new test password.",
-    previewNotice: "Personal test mode changes only the in-memory account for this running preview.",
+    previewIncomplete: "Start password recovery in this preview before choosing a new password.",
+    previewNotice: "This preview changes only the account held for this session.",
     completeTitle: "Password updated.",
     completeBody: "Use your new password the next time you sign in.",
-    previewCompleteTitle: "Test password updated.",
-    previewCompleteBody: "The new password works only for this running preview and resets when the preview ends.",
+    previewCompleteTitle: "Preview password updated.",
+    previewCompleteBody: "This password works only for the current preview session.",
     completeStatus: "ACCOUNT ACCESS",
-    previewCompleteStatus: "TEST ACCOUNT",
+    previewCompleteStatus: "PREVIEW ACCOUNT",
     completeValue: "New password active",
     completeDetail: "The account provider accepted the update.",
     previewCompleteDetail: "Stored in this running preview only.",
@@ -128,16 +137,16 @@ const english = {
     signedSubmit: "Verify access and create account",
     existingAccount: "I already have an account",
     eyebrow: "CREATE YOUR ACCOUNT",
-    title: "Start with one accountable owner.",
-    body: "This account will own the first private household record. Family access comes later, by invitation.",
-    previewNotice: "Test mode keeps this identity only in memory. No email is sent and the email will not be marked verified.",
+    title: "Create your private account.",
+    body: "Your private record starts with you. Share access later, one person at a time.",
+    previewNotice: "This private preview keeps the account on this device for the session. No email is sent.",
     pilotNotice:
-      "ALYR is currently a closed pilot. Your email and access code are checked before any account is created.",
+      "ALYR is in limited early access. We verify your email and access code before creating an account.",
     email: "Email",
     emailPlaceholder: "name@example.com",
-    pilotAccessCode: "Pilot access code",
+    pilotAccessCode: "Early access code",
     pilotAccessDescription:
-      "Use the code shared with your pilot invitation.",
+      "Use the code included with your invitation.",
     pilotAccessPlaceholder: "ALYR-XXXX-XXXX-XXXX",
     password: "Password",
     passwordDescription: "At least 10 characters. Password managers are supported.",
@@ -145,27 +154,36 @@ const english = {
     confirmPassword: "Confirm password",
     confirmPasswordPlaceholder: "Enter it again",
     legalAcknowledgement:
-      "By creating an account, you agree to the pilot terms and acknowledge the privacy notice.",
+      "By creating an account, you agree to the early access terms and acknowledge the privacy notice.",
     privacyNotice: "Privacy notice",
-    pilotTerms: "Pilot terms"
+    pilotTerms: "Early access terms"
   },
   confirmEmail: {
-    continuePreview: "Continue in test mode",
-    confirmed: "I confirmed my email",
+    continuePreview: "Open private preview",
+    confirmed: "Check confirmation",
     differentEmail: "Use a different email",
-    requestAgain: "Resend confirmation email",
-    previewBody: "No email is sent in this preview. Your test identity stays on this device for this session.",
-    liveBody: "Use the verification link, return to ALYR, then ask the app to check the confirmed session.",
-    previewEyebrow: "PERSONAL TEST MODE",
-    liveEyebrow: "CONFIRM YOUR EMAIL",
-    previewTitle: "Continue with a session-only identity.",
-    liveTitle: "Check your inbox, then return here.",
-    testEmail: "TEST EMAIL",
-    deliveryAccepted: "DELIVERY REQUEST ACCEPTED",
-    previewNotice: "This preview resets when the session ends. Use test details only.",
-    liveNotice: "ALYR knows only that the account provider accepted the request. It does not claim that the message reached your inbox.",
-    resendAccepted: "The provider accepted another request. Inbox delivery is not confirmed.",
-    dismissStatus: "Dismiss status"
+    requestAgain: "Send a new confirmation link",
+    previewBody:
+      "Explore the private-record experience without creating or verifying an account. Preview details stay on this device for this session.",
+    liveBody:
+      "Open the secure link sent to your email. When you return to ALYR, we’ll check automatically.",
+    previewEyebrow: "PRIVATE PREVIEW",
+    liveEyebrow: "ACCOUNT SECURITY",
+    previewTitle: "See how your private record works.",
+    liveTitle: "Confirm it’s you.",
+    testEmail: "PREVIEW EMAIL",
+    deliveryAccepted: "CONFIRMATION EMAIL",
+    previewNotice:
+      "Preview details are temporary and clear when this session ends.",
+    liveNotice:
+      "For your security, use the newest confirmation link. Keep this screen open; ALYR will continue automatically when you return.",
+    foregroundChecking:
+      "Welcome back. Checking your email confirmation…",
+    notConfirmedYet:
+      "Your email is not confirmed yet. Use the newest link, then return here or check again.",
+    resendAccepted:
+      "A new confirmation link was requested. Use the newest email, then return to ALYR.",
+    dismissStatus: "Got it"
   },
   callback: {
     returnToConfirmation: "Return to confirmation",
@@ -201,25 +219,27 @@ const english = {
       "A verified session was returned. Continue to your household record."
   },
   household: {
-    eyebrow: "HOUSEHOLD WORKSPACE",
-    title: "Name the household record.",
-    body: "Use the name your family would recognise. Items, Places, proof and access stay organised here.",
-    label: "Household name",
+    eyebrow: "PRIVATE RECORD",
+    title: "Create your private record.",
+    body: "We suggested a name so you can start now. You can rename it at any time.",
+    label: "Record name",
+    defaultName: "My record",
     placeholder: "e.g. Family home",
+    createAction: "Create private record",
     retryAccess: "Retry account access",
-    ownerFact: "You start as the only owner. You can review household access later.",
+    ownerFact: "You are the only person with access until you deliberately invite someone.",
     setupMethodLabel: "Choose how to start the household record"
   },
   privacy: {
     addFirstPlace: "Add my first place",
     addFirstItem: "Add my first item",
-    eyebrow: "FIRST USEFUL ACTION",
-    title: "Choose what you want to make findable first.",
-    body: "ALYR becomes useful with the first real record, not with a finished setup screen.",
-    chooseFirst: "Choose first record",
-    itemLabel: "Start with an important item",
-    itemDescription: "A watch, document, artwork, vehicle or personal possession.",
-    placeLabel: "Start with a home or property",
+    eyebrow: "QUICK PASSPORT",
+    title: "Make one thing findable.",
+    body: "An important item is selected. Choose a Place instead if that is where you want to begin.",
+    chooseFirst: "Choose your first Passport",
+    itemLabel: "Important item",
+    itemDescription: "A watch, document, artwork, vehicle or another possession.",
+    placeLabel: "Place or property",
     placeDescription: "A home, apartment, plot, office or storage location.",
     privateTitle: "Private by default",
     privateText: "Records begin private to this household.",
@@ -257,13 +277,13 @@ const english = {
     sampleNextBody:
       "Sample entries stay out of it. Begin with your own first Place and item.",
     startHere: "START HERE",
-    emptyTitle: "Add one thing you would hate to lose track of",
-    emptyDetail: "A photo and an honest location are enough for the first save.",
-    addFirstItem: "Add first item",
+    emptyTitle: "Add one record you would hate to lose track of",
+    emptyDetail: "Start with an item, owned property or liability. Save what you know and complete the visible gaps later.",
+    addFirstItem: "Add first record",
     registerReady: "REGISTER READY",
     readyTitle: "Your core records are ready",
-    readyDetail: "Each active item has identity, photo and proof, plus a retrieval location where needed.",
-    addAnotherItem: "Add another item",
+    readyDetail: "Your items, owned properties and liabilities have the current details needed to find and review them.",
+    addAnotherItem: "Add another record",
     nextToProtect: "NEXT TO PROTECT",
     reviewNext: "Review the next item",
     reviewNextDetail: "Complete the next visible gap in this Passport.",
@@ -291,7 +311,28 @@ const english = {
     photoGapDetail: "A clear image makes the Passport faster to recognise.",
     addPhoto: "Add photo",
     identityGap: "Complete",
-    identityGapDetail: "Add the missing identity details."
+    identityGapDetail: "Add the missing identity details.",
+    propertyPinGap: "Confirm the property pin for",
+    propertyPinGapDetail:
+      "Place this owned property precisely so its location is not inferred.",
+    confirmPropertyPin: "Confirm property pin",
+    liabilityBalanceGap: "Add the current balance for",
+    liabilityBalanceGapDetail:
+      "A liability stays incomplete until it has a dated balance you entered.",
+    liabilityBalanceStale: "Review the balance for",
+    liabilityBalanceStaleDetail:
+      "The last recorded balance reached its review date.",
+    reviewBalance: "Review balance",
+    liabilityReviewGap: "Review your liability statement",
+    liabilityReviewExpiredDetail:
+      "Your earlier confirmation of no liabilities reached its review date.",
+    liabilityReviewChangedDetail:
+      "Liability activity changed after your earlier confirmation.",
+    reviewLiabilities: "Review liabilities",
+    recordedValueStale: "Review the recorded value for",
+    recordedValueStaleDetail:
+      "This optional value is still shown, but its recorded date is now old.",
+    reviewRecordedValue: "Review value"
   },
   items: {
     title: "Assets",
@@ -423,15 +464,16 @@ const english = {
       "Account, household, language, support and sync diagnostics.",
     settingsMeta:
       "Account, household, language, support and sync diagnostics.",
+    settingsControls: "Account and app controls",
     settingsOpen: "Open",
     documentCurrent: "Current",
     privacySupport: "Privacy and support",
     privacyNotice: "Privacy notice",
     privacyNoticeDescription:
       "What ALYR stores and how household records are handled.",
-    pilotTerms: "Pilot terms",
+    pilotTerms: "Early access terms",
     pilotTermsDescription:
-      "Purpose, responsibilities and pilot boundaries.",
+      "Terms, responsibilities and service limits.",
     support: "Support",
     supportDescription:
       "Report an issue without exposing household data.",
@@ -456,6 +498,8 @@ const english = {
       "Your account session is still open. Check the connection, then try again.",
     signOutConfirmTitle: "Sign out or switch account?",
     signOut: "Sign out",
+    archiveStatus: "ARCHIVE STATUS",
+    archiveSync: "Sync",
     deviceProtection: "DEVICE PROTECTION",
     sessionPreviewUnlockOff: "Session preview · device unlock off",
     deviceUnlockActive: "Device unlock active",
@@ -475,6 +519,21 @@ const english = {
     arabic: "العربية",
     languageReady: "English and Arabic are available. The selected language applies to account setup and the core record journey.",
     proofOnDevice: "Proof on this device",
+    localProofStorageDescription:
+      "Original files currently present on this device. This total is separate from cloud usage.",
+    cloudPilotStorage: "Cloud storage",
+    cloudPilotAllowance: "Household allowance",
+    cloudUsed: "used",
+    cloudUsageUnknown: "Usage unknown",
+    cloudNotConnected: "Not connected",
+    cloudUsageConfirmedDescription:
+      "Server-confirmed usage measured on",
+    cloudUsageUnknownDescription:
+      "No server-confirmed usage total is available. Local proof size is not used as a substitute.",
+    cloudNotConnectedDescription:
+      "This workspace has no verified cloud storage. The household allowance appears after cloud access is confirmed.",
+    cloudAllowanceDescription:
+      "The allowance may include retained cloud files and exports, not only originals on this device.",
     recentProof: "Recent proof",
     recentProofIntro: "Newest files across Items and Places.",
     recentProofEmpty:
@@ -490,14 +549,25 @@ const english = {
       "Opens metadata, the stored original and review controls.",
     recentProofShowAll: "Show all",
     recentProofShowLess: "Show recent only",
+    recentProofReference: "REF",
+    recentProofRecord: "RECORD",
+    recentProofState: "STATE",
     backupRecovery: "Independent recovery",
     cloudBackup: "Independent disaster backup",
     cloudBackupDescription:
-      "Separate from day-to-day sync · use a Recovery Kit during the pilot",
+      "Separate from day-to-day sync · keep an independent Recovery Kit",
     notSetUp: "Not set up",
     createRecoveryKit: "Create Recovery Kit",
     createRecoveryKitDescription:
       "Create a portable encrypted copy you control",
+    recentRecoveryKits: "Recent local kits",
+    recentRecoveryKitsDescription:
+      "Encrypted files still inside ALYR on this device. File names, dates and backup state are shown; passphrases and contents stay hidden.",
+    recoveryHistoryUnavailable:
+      "Recent Recovery Kits could not be read from this device.",
+    retryRecoveryHistory: "Try device storage again",
+    localKitNeedsCopy: "Save another copy",
+    externalCopyConfirmed: "Independent copy confirmed",
     ready: "Ready",
     signedBuildNeeded: "Signed build needed",
     restoreRecoveryKit: "Restore Recovery Kit",
@@ -568,8 +638,16 @@ const arabic = {
     current: "الحالي",
     previous: "السابق",
     onDevice: "على هذا الجهاز",
-    previewSession: "معاينة Expo Go: محفوظ خلال هذه الجلسة فقط.",
+    previewSession: "معاينة خاصة · لهذه الجلسة فقط.",
     encryptedDevice: "محفوظ في المساحة المشفّرة على الجهاز."
+  },
+  activationProgress: {
+    label: "تفعيل الحساب",
+    stages: {
+      verifyAccount: "تأكيد الحساب",
+      privateRecord: "السجل الخاص",
+      firstPassport: "الجواز الأول"
+    }
   },
   welcome: {
     createWorkspace: "أنشئ مساحتك الخاصة",
@@ -585,7 +663,8 @@ const arabic = {
     commandThree: "احفظ الإثبات مع الغرض",
     sampleImageLabel: "صورة توضيحية لغرض في السجل",
     readyToRetrieve: "جاهز للاسترجاع",
-    previewNotice: "وضع التجربة الشخصية: تبقى الحسابات والسجلات داخل هذه المعاينة، ولا تُرسل أي رسالة بريد. استخدم بيانات تجريبية.",
+    previewNotice:
+      "معاينة خاصة · تبقى السجلات على هذا الجهاز خلال الجلسة. لا يُرسل بريد إلكتروني. استخدم معلومات غير حساسة.",
     unavailableNotice: "هذه النسخة غير مرتبطة بخدمة الحسابات بعد. تفتح خزنة المنزل عند تثبيت الاتصال.",
     accountNotice: "يحمي الحساب الوصول إلى سجلك. ويمكنك منح أفراد الأسرة صلاحيات محددة لاحقًا.",
     languageAction: "English",
@@ -597,7 +676,8 @@ const arabic = {
     eyebrow: "مرحبًا بعودتك",
     title: "عُد إلى سجلك.",
     body: "استخدم الحساب المالك للسجل المنزلي أو المخوّل بالوصول إليه.",
-    previewNotice: "يعمل هنا فقط حساب أُنشئ سابقًا في جلسة المعاينة الحالية. ولا تغادر بيانات الدخول هذه الجلسة.",
+    previewNotice:
+      "حسابات المعاينة متاحة لهذه الجلسة فقط. تبقى بيانات الحساب على هذا الجهاز.",
     email: "البريد الإلكتروني",
     emailPlaceholder: "name@example.com",
     password: "كلمة المرور",
@@ -612,11 +692,11 @@ const arabic = {
     network_unavailable:
       "تعذر على ALYR الوصول إلى خدمة الحسابات. تحقق من اتصالك.",
     pilot_access_denied:
-      "لا تتطابق دعوة البرنامج التجريبي مع البريد الإلكتروني، أو انتهت صلاحيتها، أو استُخدمت من قبل.",
+      "لا تتطابق دعوة الوصول المبكر مع البريد الإلكتروني، أو انتهت صلاحيتها، أو استُخدمت من قبل.",
     pilot_access_required:
-      "أدخل رمز الوصول إلى البرنامج التجريبي من دعوتك.",
+      "أدخل رمز الوصول المبكر من دعوتك.",
     pilot_capacity_reached:
-      "اكتملت المجموعة التجريبية الحالية. تواصل مع فريق ALYR لمعرفة موعد الإتاحة التالي.",
+      "اكتملت مجموعة الوصول المبكر الحالية. تواصل مع فريق ALYR لمعرفة موعد الإتاحة التالي.",
     rate_limited: "محاولات كثيرة. انتظر قليلًا ثم حاول مرة أخرى.",
     session_missing: "لم تعد جلسة الحساب متاحة. ابدأ من جديد.",
     unsupported: "إجراء الحساب هذا غير متاح في هذه النسخة.",
@@ -632,13 +712,14 @@ const arabic = {
     sentEyebrow: "تم تسجيل الطلب",
     sentTitle: "إذا وُجد حساب مطابق، فاستخدم أحدث رسالة لإعادة التعيين.",
     sentBody: "قبل مزوّد الحساب الطلب. لا يكشف ALYR ما إذا كان العنوان يطابق حسابًا أو ما إذا وصلت رسالة.",
-    previewSentEyebrow: "استعادة تجريبية محلية",
+    previewSentEyebrow: "استعادة المعاينة",
     previewSentTitle: "تابع على هذا الجهاز.",
-    previewBody: "لا يرسل وضع التجربة بريدًا. تابع إلى نموذج التعيين المحلي على هذا الجهاز.",
+    previewBody:
+      "لا ترسل المعاينة الخاصة بريدًا إلكترونيًا. تابع على هذا الجهاز.",
     requestAccepted: "طلب إعادة التعيين",
-    previewRequestReady: "طلب تجريبي محلي",
+    previewRequestReady: "طلب معاينة",
     destinationNote: "هذا هو العنوان الذي أدخلته، وليس دليلًا على وجود حساب.",
-    openPreviewReset: "تعيين كلمة مرور تجريبية جديدة",
+    openPreviewReset: "تعيين كلمة مرور للمعاينة",
     backToSignIn: "العودة إلى تسجيل الدخول",
     differentEmail: "استخدام بريد إلكتروني آخر",
     sendAgain: "طلب مرة أخرى"
@@ -656,14 +737,17 @@ const arabic = {
     checking: "جارٍ التحقق من جلسة الاستعادة",
     ending: "جارٍ إغلاق جلسة الاستعادة بأمان",
     incomplete: "افتح أحدث رابط لإعادة تعيين كلمة المرور، أو اطلب رابطًا جديدًا من شاشة تسجيل الدخول.",
-    previewIncomplete: "ابدأ استعادة كلمة المرور في هذه المعاينة قبل تعيين كلمة مرور تجريبية جديدة.",
-    previewNotice: "يغيّر وضع التجربة الشخصية الحساب المحفوظ في ذاكرة هذه المعاينة فقط.",
+    previewIncomplete:
+      "ابدأ استعادة كلمة المرور في هذه المعاينة قبل اختيار كلمة مرور جديدة.",
+    previewNotice:
+      "تغيّر هذه المعاينة الحساب المحفوظ لهذه الجلسة فقط.",
     completeTitle: "تم تحديث كلمة المرور.",
     completeBody: "استخدم كلمة المرور الجديدة عند تسجيل الدخول في المرة القادمة.",
-    previewCompleteTitle: "تم تحديث كلمة المرور التجريبية.",
-    previewCompleteBody: "تعمل كلمة المرور الجديدة في هذه المعاينة فقط وتُصفّر عند انتهائها.",
+    previewCompleteTitle: "تم تحديث كلمة مرور المعاينة.",
+    previewCompleteBody:
+      "تعمل كلمة المرور خلال جلسة المعاينة الحالية فقط.",
     completeStatus: "الوصول إلى الحساب",
-    previewCompleteStatus: "الحساب التجريبي",
+    previewCompleteStatus: "حساب المعاينة",
     completeValue: "كلمة المرور الجديدة مفعّلة",
     completeDetail: "قبل مزوّد الحساب التحديث.",
     previewCompleteDetail: "محفوظة في هذه المعاينة الحالية فقط.",
@@ -674,16 +758,18 @@ const arabic = {
     signedSubmit: "التحقق من الوصول وإنشاء الحساب",
     existingAccount: "لدي حساب بالفعل",
     eyebrow: "إنشاء حسابك",
-    title: "ابدأ بمالك واحد واضح المسؤولية.",
-    body: "يمتلك هذا الحساب أول سجل منزلي خاص. ويمكن دعوة أفراد الأسرة لاحقًا.",
-    previewNotice: "يحتفظ وضع التجربة بهذه الهوية في الذاكرة فقط. لا تُرسل رسالة بريد ولا يُعتمد البريد كمؤكد.",
+    title: "أنشئ حسابك الخاص.",
+    body:
+      "يبدأ سجلك الخاص بك. شارك الوصول لاحقًا مع كل شخص على حدة.",
+    previewNotice:
+      "تحتفظ هذه المعاينة الخاصة بالحساب على هذا الجهاز خلال الجلسة. لا يُرسل بريد إلكتروني.",
     pilotNotice:
-      "يتوفر ALYR حاليًا ضمن برنامج تجريبي مغلق. نتحقق من بريدك ورمز الوصول قبل إنشاء أي حساب.",
+      "ALYR متاح حاليًا ضمن وصول مبكر محدود. نتحقق من البريد ورمز الوصول قبل إنشاء الحساب.",
     email: "البريد الإلكتروني",
     emailPlaceholder: "name@example.com",
-    pilotAccessCode: "رمز الوصول إلى البرنامج التجريبي",
+    pilotAccessCode: "رمز الوصول المبكر",
     pilotAccessDescription:
-      "استخدم الرمز الذي تمت مشاركته مع دعوتك إلى البرنامج التجريبي.",
+      "استخدم الرمز المرفق بدعوتك.",
     pilotAccessPlaceholder: "ALYR-XXXX-XXXX-XXXX",
     password: "كلمة المرور",
     passwordDescription: "10 أحرف على الأقل. يدعم التطبيق برامج إدارة كلمات المرور.",
@@ -691,27 +777,36 @@ const arabic = {
     confirmPassword: "تأكيد كلمة المرور",
     confirmPasswordPlaceholder: "أدخلها مرة أخرى",
     legalAcknowledgement:
-      "بإنشاء الحساب، فإنك توافق على شروط النسخة التجريبية وتقر بإشعار الخصوصية.",
+      "بإنشاء الحساب، فإنك توافق على شروط الوصول المبكر وتقر بإشعار الخصوصية.",
     privacyNotice: "إشعار الخصوصية",
-    pilotTerms: "شروط النسخة التجريبية"
+    pilotTerms: "شروط الوصول المبكر"
   },
   confirmEmail: {
-    continuePreview: "المتابعة في وضع التجربة",
-    confirmed: "أكدت بريدي الإلكتروني",
-    differentEmail: "استخدام بريد آخر",
-    requestAgain: "إعادة إرسال رسالة التأكيد",
-    previewBody: "لا تُرسل رسالة بريد في هذه المعاينة. تبقى هويتك التجريبية على هذا الجهاز خلال الجلسة.",
-    liveBody: "افتح رابط التحقق، ثم عُد إلى ALYR واطلب من التطبيق التحقق من الجلسة.",
-    previewEyebrow: "وضع التجربة الشخصية",
-    liveEyebrow: "تأكيد البريد الإلكتروني",
-    previewTitle: "تابع بهوية مؤقتة لهذه الجلسة.",
-    liveTitle: "تحقق من بريدك ثم عُد إلى هنا.",
-    testEmail: "البريد التجريبي",
-    deliveryAccepted: "قُبل طلب الإرسال",
-    previewNotice: "تُصفّر هذه المعاينة عند انتهاء الجلسة. استخدم بيانات تجريبية فقط.",
-    liveNotice: "يعرف ALYR فقط أن مزوّد الحساب قبل الطلب، ولا يفترض أن الرسالة وصلت إلى صندوق بريدك.",
-    resendAccepted: "قبل المزوّد طلبًا آخر، ولم يتم تأكيد وصول الرسالة إلى صندوق البريد.",
-    dismissStatus: "إخفاء الحالة"
+    continuePreview: "فتح المعاينة الخاصة",
+    confirmed: "التحقق من التأكيد",
+    differentEmail: "استخدام بريد إلكتروني آخر",
+    requestAgain: "إرسال رابط تأكيد جديد",
+    previewBody:
+      "استكشف تجربة السجل الخاص من دون إنشاء حساب أو تأكيده. تبقى بيانات المعاينة على هذا الجهاز خلال هذه الجلسة.",
+    liveBody:
+      "افتح الرابط الآمن الذي أُرسل إلى بريدك. عند عودتك إلى ALYR، سنتحقق تلقائيًا.",
+    previewEyebrow: "معاينة خاصة",
+    liveEyebrow: "أمان الحساب",
+    previewTitle: "تعرّف على طريقة عمل سجلك الخاص.",
+    liveTitle: "أكّد هويتك.",
+    testEmail: "بريد المعاينة",
+    deliveryAccepted: "رسالة التأكيد",
+    previewNotice:
+      "بيانات المعاينة مؤقتة وتُحذف عند انتهاء هذه الجلسة.",
+    liveNotice:
+      "لأمانك، استخدم أحدث رابط تأكيد. اترك هذه الشاشة مفتوحة؛ سيتابع ALYR تلقائيًا عند عودتك.",
+    foregroundChecking:
+      "مرحبًا بعودتك. جارٍ التحقق من تأكيد بريدك…",
+    notConfirmedYet:
+      "لم يتم تأكيد بريدك بعد. استخدم أحدث رابط، ثم عُد إلى هنا أو تحقق مرة أخرى.",
+    resendAccepted:
+      "طُلب رابط تأكيد جديد. استخدم أحدث رسالة، ثم عُد إلى ALYR.",
+    dismissStatus: "حسنًا"
   },
   callback: {
     returnToConfirmation: "العودة إلى تأكيد البريد",
@@ -747,25 +842,27 @@ const arabic = {
     complete: "تم استلام جلسة مؤكدة. تابع إلى سجلك المنزلي."
   },
   household: {
-    eyebrow: "مساحة المنزل",
-    title: "سمِّ السجل المنزلي.",
-    body: "اختر اسمًا مألوفًا لأسرتك. تبقى الأغراض والأماكن والإثباتات والصلاحيات منظّمة داخله.",
-    label: "اسم المنزل",
+    eyebrow: "السجل الخاص",
+    title: "أنشئ سجلك الخاص.",
+    body: "اقترحنا اسمًا لتبدأ الآن، ويمكنك تغييره في أي وقت.",
+    label: "اسم السجل",
+    defaultName: "سجلي",
     placeholder: "مثال: منزل العائلة",
+    createAction: "إنشاء السجل الخاص",
     retryAccess: "إعادة محاولة الوصول إلى الحساب",
-    ownerFact: "تبدأ بصفتك المالك الوحيد، ويمكنك مراجعة صلاحيات الأسرة لاحقًا.",
+    ownerFact: "أنت الشخص الوحيد الذي يملك صلاحية الوصول حتى تدعو شخصًا عن قصد.",
     setupMethodLabel: "اختر طريقة بدء سجل المنزل"
   },
   privacy: {
     addFirstPlace: "إضافة أول مكان",
     addFirstItem: "إضافة أول غرض",
-    eyebrow: "أول خطوة مفيدة",
-    title: "اختر ما تريد تسهيل العثور عليه أولًا.",
-    body: "تبدأ فائدة ALYR بأول سجل حقيقي، لا بمجرد إنهاء الإعداد.",
-    chooseFirst: "اختر أول سجل",
-    itemLabel: "ابدأ بغرض مهم",
-    itemDescription: "ساعة أو مستند أو عمل فني أو مركبة أو مقتنى شخصي.",
-    placeLabel: "ابدأ بمنزل أو عقار",
+    eyebrow: "الجواز السريع",
+    title: "اجعل شيئًا واحدًا سهل العثور عليه.",
+    body: "تم اختيار غرض مهم. اختر مكانًا بدلًا منه إذا أردت أن تبدأ به.",
+    chooseFirst: "اختر جوازك الأول",
+    itemLabel: "غرض مهم",
+    itemDescription: "ساعة أو مستند أو عمل فني أو مركبة أو مقتنى آخر.",
+    placeLabel: "مكان أو عقار",
     placeDescription: "منزل أو شقة أو أرض أو مكتب أو مخزن.",
     privateTitle: "خاص افتراضيًا",
     privateText: "يبدأ السجل خاصًا بهذا المنزل.",
@@ -802,13 +899,13 @@ const arabic = {
     sampleNextBody:
       "لن تنتقل السجلات التجريبية إليه. ابدأ بأول مكان وغرض يخصانك.",
     startHere: "ابدأ هنا",
-    emptyTitle: "أضف غرضًا واحدًا لا تريد أن تفقد أثره",
-    emptyDetail: "تكفي صورة ومعلومة صادقة عن الموقع للحفظ الأول.",
-    addFirstItem: "إضافة أول غرض",
+    emptyTitle: "أضف سجلًا واحدًا لا تريد أن تفقد أثره",
+    emptyDetail: "ابدأ بغرض أو عقار مملوك أو التزام. احفظ ما تعرفه الآن وأكمل النواقص الظاهرة لاحقًا.",
+    addFirstItem: "إضافة أول سجل",
     registerReady: "السجل جاهز",
     readyTitle: "اكتملت السجلات الأساسية",
-    readyDetail: "لكل غرض نشط هوية وصورة وإثبات، ومسار وصول عندما يحتاج إليه.",
-    addAnotherItem: "إضافة غرض آخر",
+    readyDetail: "تتضمن أغراضك وعقاراتك المملوكة والتزاماتك التفاصيل الحالية اللازمة للعثور عليها ومراجعتها.",
+    addAnotherItem: "إضافة سجل آخر",
     nextToProtect: "التالي للتوثيق",
     reviewNext: "راجع الغرض التالي",
     reviewNextDetail: "أكمل النقص الظاهر التالي في هذا الجواز.",
@@ -836,7 +933,22 @@ const arabic = {
     photoGapDetail: "تساعد الصورة الواضحة على تمييز الجواز بسرعة.",
     addPhoto: "إضافة صورة",
     identityGap: "أكمل",
-    identityGapDetail: "أضف بيانات الهوية الناقصة."
+    identityGapDetail: "أضف بيانات الهوية الناقصة.",
+    propertyPinGap: "أكّد دبوس العقار لـ",
+    propertyPinGapDetail: "حدّد هذا العقار المملوك بدقة حتى لا يُستنتج موقعه.",
+    confirmPropertyPin: "تأكيد دبوس العقار",
+    liabilityBalanceGap: "أضف الرصيد الحالي لـ",
+    liabilityBalanceGapDetail: "يبقى الالتزام غير مكتمل حتى تسجّل له رصيدًا مؤرخًا.",
+    liabilityBalanceStale: "راجع رصيد",
+    liabilityBalanceStaleDetail: "بلغ آخر رصيد مسجّل موعد مراجعته.",
+    reviewBalance: "مراجعة الرصيد",
+    liabilityReviewGap: "راجع إقرار الالتزامات",
+    liabilityReviewExpiredDetail: "بلغ تأكيدك السابق بعدم وجود التزامات موعد مراجعته.",
+    liabilityReviewChangedDetail: "تغيّر نشاط الالتزامات بعد تأكيدك السابق.",
+    reviewLiabilities: "مراجعة الالتزامات",
+    recordedValueStale: "راجع القيمة المسجّلة لـ",
+    recordedValueStaleDetail: "ما زالت هذه القيمة الاختيارية ظاهرة، لكن تاريخ تسجيلها أصبح قديمًا.",
+    reviewRecordedValue: "مراجعة القيمة"
   },
   items: {
     title: "الأصول",
@@ -968,14 +1080,15 @@ const arabic = {
       "الحساب والأسرة واللغة والدعم وتشخيصات المزامنة.",
     settingsMeta:
       "الحساب والأسرة واللغة والدعم وتشخيصات المزامنة.",
+    settingsControls: "ضوابط الحساب والتطبيق",
     settingsOpen: "فتح",
     privacySupport: "الخصوصية والدعم",
     privacyNotice: "إشعار الخصوصية",
     privacyNoticeDescription:
       "ما الذي يحفظه ALYR وكيف تُدار السجلات.",
-    pilotTerms: "شروط النسخة التجريبية",
+    pilotTerms: "شروط الوصول المبكر",
     pilotTermsDescription:
-      "الغرض والمسؤوليات وحدود النسخة التجريبية.",
+      "الشروط والمسؤوليات وحدود الخدمة.",
     support: "الدعم",
     supportDescription:
       "الإبلاغ عن مشكلة من دون كشف بيانات المنزل.",
@@ -1000,6 +1113,8 @@ const arabic = {
       "لا تزال جلسة حسابك مفتوحة. تحقق من الاتصال ثم حاول مرة أخرى.",
     signOutConfirmTitle: "تسجيل الخروج أو تبديل الحساب؟",
     signOut: "تسجيل الخروج",
+    archiveStatus: "حالة الأرشيف",
+    archiveSync: "المزامنة",
     deviceProtection: "حماية الجهاز",
     sessionPreviewUnlockOff: "معاينة الجلسة · قفل الجهاز غير مفعّل",
     deviceUnlockActive: "قفل الجهاز مفعّل",
@@ -1019,6 +1134,21 @@ const arabic = {
     arabic: "العربية",
     languageReady: "الإنجليزية والعربية متاحتان. تُطبّق اللغة المختارة على إعداد الحساب ومسار السجل الأساسي.",
     proofOnDevice: "الإثباتات على هذا الجهاز",
+    localProofStorageDescription:
+      "هذه هي الملفات الأصلية الموجودة حاليًا على هذا الجهاز. هذا الإجمالي منفصل عن الاستخدام السحابي.",
+    cloudPilotStorage: "التخزين السحابي",
+    cloudPilotAllowance: "حصة الأسرة",
+    cloudUsed: "مستخدمة",
+    cloudUsageUnknown: "الاستخدام غير معروف",
+    cloudNotConnected: "غير متصل",
+    cloudUsageConfirmedDescription:
+      "استخدام مؤكد من الخادم بتاريخ",
+    cloudUsageUnknownDescription:
+      "لا يتوفر إجمالي استخدام مؤكد من الخادم. لا يُستخدم حجم الإثباتات المحلية بديلًا عنه.",
+    cloudNotConnectedDescription:
+      "لا تتوفر لهذا السجل مساحة تخزين سحابية موثقة. تظهر حصة الأسرة بعد تأكيد الوصول السحابي.",
+    cloudAllowanceDescription:
+      "قد تشمل الحصة الملفات السحابية وملفات التصدير المحتفظ بها، وليس فقط النسخ الأصلية الموجودة على هذا الجهاز.",
     recentProof: "أحدث الإثباتات",
     recentProofIntro:
       "أحدث الملفات المرتبطة بالأغراض والأماكن، من الأحدث إلى الأقدم.",
@@ -1035,14 +1165,25 @@ const arabic = {
       "يفتح البيانات الوصفية والنسخة الأصلية المحفوظة وأدوات المراجعة.",
     recentProofShowAll: "عرض الكل",
     recentProofShowLess: "عرض الأحدث فقط",
+    recentProofReference: "المرجع",
+    recentProofRecord: "السجل",
+    recentProofState: "الحالة",
     backupRecovery: "التعافي المستقل",
     cloudBackup: "نسخة مستقلة للتعافي من الكوارث",
     cloudBackupDescription:
-      "منفصلة عن المزامنة اليومية · استخدم حزمة الاستعادة خلال النسخة التجريبية",
+      "منفصلة عن المزامنة اليومية · احتفظ بحزمة استعادة مستقلة",
     notSetUp: "غير مُعدّ",
     createRecoveryKit: "إنشاء حزمة استعادة",
     createRecoveryKitDescription:
       "أنشئ نسخة مشفّرة محمولة تتحكم بها",
+    recentRecoveryKits: "حزم محلية حديثة",
+    recentRecoveryKitsDescription:
+      "ملفات مشفّرة ما زالت داخل ALYR على هذا الجهاز. تظهر أسماء الملفات والتواريخ وحالة النسخ فقط؛ وتبقى عبارات المرور والمحتويات مخفية.",
+    recoveryHistoryUnavailable:
+      "تعذّرت قراءة حزم الاستعادة الحديثة من هذا الجهاز.",
+    retryRecoveryHistory: "إعادة محاولة تخزين الجهاز",
+    localKitNeedsCopy: "احفظ نسخة أخرى",
+    externalCopyConfirmed: "تم تأكيد نسخة مستقلة",
     ready: "جاهزة",
     signedBuildNeeded: "تتطلب نسخة موقّعة",
     restoreRecoveryKit: "الاستعادة من حزمة",
@@ -1164,6 +1305,19 @@ export function formatStep(
   return language === "ar"
     ? `الخطوة ${number(current)} من ${number(total)}`
     : `Step ${number(current)} of ${number(total)}`;
+}
+
+export function formatActivationProgressValue(
+  stageLabel: string,
+  position: number,
+  total: number,
+  language: LanguageCode
+): string {
+  const current = formatLocalizedNumber(position, language);
+  const count = formatLocalizedNumber(total, language);
+  return language === "ar"
+    ? `${stageLabel}. المرحلة ${current} من ${count} لتفعيل الحساب.`
+    : `${stageLabel}. Activation stage ${current} of ${count}.`;
 }
 
 export function itemCount(
@@ -1688,10 +1842,10 @@ const arabicValidation: Readonly<Record<string, string>> = {
   "Enter your email address.": "أدخل بريدك الإلكتروني.",
   "Enter a complete email address, such as name@example.com.":
     "أدخل بريدًا إلكترونيًا كاملًا، مثل name@example.com.",
-  "Enter your pilot access code.":
-    "أدخل رمز الوصول إلى البرنامج التجريبي.",
-  "Use the full pilot access code from your invitation.":
-    "استخدم رمز الوصول الكامل الوارد في دعوتك إلى البرنامج التجريبي.",
+  "Enter your early access code.":
+    "أدخل رمز الوصول المبكر.",
+  "Use the full early access code from your invitation.":
+    "استخدم رمز الوصول المبكر الكامل الوارد في دعوتك.",
   "Enter your password.": "أدخل كلمة المرور.",
   "Use at least 10 characters.": "استخدم 10 أحرف على الأقل.",
   "Use 128 characters or fewer.": "استخدم 128 حرفًا أو أقل.",

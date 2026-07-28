@@ -38,10 +38,8 @@ type ConfirmationCallbackPhase =
   | "failed"
   | "complete";
 
-type ConfirmationCallbackFailureStage = "exchange" | "invite";
-
 interface ConfirmationCallbackFailure {
-  readonly stage: ConfirmationCallbackFailureStage;
+  readonly stage: "exchange";
   readonly failure: AuthFailure;
 }
 
@@ -116,7 +114,6 @@ export default function AuthCallbackScreen() {
   const router = useRouter();
   const params = useLocalSearchParams<{ code?: string | string[] }>();
   const {
-    acceptPendingHouseholdInvite,
     busy,
     clearError,
     email,
@@ -129,14 +126,18 @@ export default function AuthCallbackScreen() {
   const { copy, language, rtl } = useCoreJourneyCopy();
   const started = useRef(false);
   const attemptVersion = useRef(0);
-  const verifiedSession = useRef<AuthSessionDescriptor | null>(null);
   const code = Array.isArray(params.code) ? params.code[0] : params.code;
   const [phase, setPhase] = useState<ConfirmationCallbackPhase>(
     code ? "checking" : "failed"
   );
   const [bannerVisible, setBannerVisible] = useState(!code);
   const [completionDestination, setCompletionDestination] =
-    useState<"/" | typeof AUTH_ROUTES.household | null>(null);
+    useState<
+      | "/"
+      | typeof AUTH_ROUTES.household
+      | typeof AUTH_ROUTES.join
+      | null
+    >(null);
   const [callbackFailure, setCallbackFailure] =
     useState<ConfirmationCallbackFailure | null>(null);
 
@@ -145,53 +146,22 @@ export default function AuthCallbackScreen() {
       nextSession: AuthSessionDescriptor,
       attempt: number
     ): Promise<boolean> => {
-      verifiedSession.current = nextSession;
-      let destination: "/" | typeof AUTH_ROUTES.household =
-        nextSession.onboarding === "complete"
-          ? "/"
-          : AUTH_ROUTES.household;
-      if (pendingHouseholdInvite) {
-        try {
-          const membership =
-            await acceptPendingHouseholdInvite();
-          if (attempt !== attemptVersion.current) return false;
-          if (!membership) {
-            setCallbackFailure({
-              stage: "invite",
-              failure: {
-                code: "unexpected",
-                message:
-                  "The verified session was returned, but the household invitation was not accepted.",
-                retryable: true
-              }
-            });
-            setBannerVisible(true);
-            setPhase("failed");
-            return false;
-          }
-          destination = "/";
-        } catch (exception) {
-          if (attempt !== attemptVersion.current) return false;
-          setCallbackFailure({
-            stage: "invite",
-            failure:
-              confirmationCallbackFailureFromException(exception)
-          });
-          setBannerVisible(true);
-          setPhase("failed");
-          return false;
-        }
-      }
+      const destination:
+        | "/"
+        | typeof AUTH_ROUTES.household
+        | typeof AUTH_ROUTES.join =
+        pendingHouseholdInvite
+          ? AUTH_ROUTES.join
+          : nextSession.onboarding === "complete"
+            ? "/"
+            : AUTH_ROUTES.household;
       if (attempt !== attemptVersion.current) return false;
       setCallbackFailure(null);
       setCompletionDestination(destination);
       setPhase("complete");
       return true;
     },
-    [
-      acceptPendingHouseholdInvite,
-      pendingHouseholdInvite
-    ]
+    [pendingHouseholdInvite]
   );
 
   const checkConfirmation = useCallback(async () => {
@@ -263,7 +233,6 @@ export default function AuthCallbackScreen() {
         | typeof AUTH_ROUTES.forgotPassword
     ) => {
       attemptVersion.current += 1;
-      verifiedSession.current = null;
       clearError();
       router.replace(destination);
     },
@@ -272,7 +241,6 @@ export default function AuthCallbackScreen() {
 
   const requestAnotherConfirmation = useCallback(async () => {
     attemptVersion.current += 1;
-    verifiedSession.current = null;
     clearError();
     setCallbackFailure(null);
     setBannerVisible(false);
@@ -307,30 +275,8 @@ export default function AuthCallbackScreen() {
   ]);
 
   const retryFailure = useCallback(async () => {
-    if (
-      callbackFailure?.stage !== "invite" ||
-      !verifiedSession.current
-    ) {
-      await checkConfirmation();
-      return;
-    }
-    const attempt = attemptVersion.current + 1;
-    attemptVersion.current = attempt;
-    clearError();
-    setCallbackFailure(null);
-    setBannerVisible(false);
-    setCompletionDestination(null);
-    setPhase("checking");
-    await continueWithVerifiedSession(
-      verifiedSession.current,
-      attempt
-    );
-  }, [
-    callbackFailure?.stage,
-    checkConfirmation,
-    clearError,
-    continueWithVerifiedSession
-  ]);
+    await checkConfirmation();
+  }, [checkConfirmation]);
 
   const headingTitle =
     phase === "complete"
@@ -349,8 +295,6 @@ export default function AuthCallbackScreen() {
       : error
         ? localizeAuthFailure(error, language)
         : copy.callback.exchangeFailed;
-  const inviteFailure = callbackFailure?.stage === "invite";
-
   return (
     <AuthScaffold
       footer={
@@ -358,9 +302,7 @@ export default function AuthCallbackScreen() {
           <AuthActions
             primary={{
               label: code?.trim()
-                ? inviteFailure
-                  ? copy.callback.retryInvite
-                  : copy.callback.retry
+                ? copy.callback.retry
                 : email.trim()
                   ? copy.callback.requestNewLink
                   : copy.callback.signInToResend,
@@ -392,18 +334,10 @@ export default function AuthCallbackScreen() {
     >
       <View style={styles.content}>
         <AuthHeading
-          body={
-            inviteFailure
-              ? copy.callback.inviteFailedBody
-              : headingBody
-          }
+          body={headingBody}
           eyebrow={copy.callback.eyebrow}
           focusOnChange={phase !== "checking"}
-          title={
-            inviteFailure
-              ? copy.callback.inviteFailedTitle
-              : headingTitle
-          }
+          title={headingTitle}
         />
         {phase === "checking" ? (
           <View
@@ -428,9 +362,7 @@ export default function AuthCallbackScreen() {
               />
             ) : null}
             <AuthNotice live tone="attention">
-              {inviteFailure
-                ? copy.callback.inviteFailedNotice
-                : copy.callback.failedNotice}
+              {copy.callback.failedNotice}
             </AuthNotice>
             <View
               accessibilityLabel={copy.callback.otherOptions}

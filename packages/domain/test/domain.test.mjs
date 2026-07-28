@@ -6,8 +6,10 @@ import {
   applyEvidenceVersion,
   calculateAssetReadiness,
   createHonestPlacePin,
+  deriveLocationTruth,
   evidenceVersionIdForChecksum,
   getPortfolioValuePolicy,
+  isConfirmedPrecisePlacePin,
   isEvidenceReviewable,
   reviewEvidence,
 } from "../dist/index.js";
@@ -65,9 +67,86 @@ test("GPS precision is exact only at 15 metres or better", () => {
   assert.equal(approximate.precision, "approximate");
   assert.equal(placed.precision, "user_placed");
   assert.equal(placed.horizontalAccuracyMeters, null);
+  assert.equal(isConfirmedPrecisePlacePin(exact), true);
+  assert.equal(isConfirmedPrecisePlacePin(approximate), false);
+  assert.equal(isConfirmedPrecisePlacePin(placed), true);
+  assert.equal(
+    isConfirmedPrecisePlacePin({
+      ...exact,
+      horizontalAccuracyMeters: 18,
+    }),
+    false,
+  );
+  assert.equal(
+    isConfirmedPrecisePlacePin({
+      ...placed,
+      source: "not_set",
+    }),
+    false,
+  );
+});
+
+test("physical location truth requires both a confirmed Place pin and indoor detail", () => {
+  const confirmedManualPin = createHonestPlacePin({
+    latitude: 25.2854,
+    longitude: 51.531,
+    source: "manual_coordinates",
+    observedAt: NOW,
+    confirmedAt: NOW,
+  });
+  const unconfirmedDevicePin = createHonestPlacePin({
+    latitude: 25.2854,
+    longitude: 51.531,
+    source: "device_gps",
+    horizontalAccuracyMeters: 8,
+    observedAt: NOW,
+  });
+  const base = {
+    requiresPhysicalLocator: true,
+    allowsVirtual: false,
+    isRealEstate: false,
+    requestedMode: "physical",
+    requestedStatus: "known",
+    hasPlace: true,
+    hasIndoorLocator: true,
+  };
+
+  assert.equal(
+    deriveLocationTruth({ ...base, placePin: null }).status,
+    "needs-detail",
+  );
+  assert.equal(
+    deriveLocationTruth({
+      ...base,
+      placePin: unconfirmedDevicePin,
+    }).status,
+    "needs-detail",
+  );
+  assert.equal(
+    deriveLocationTruth({
+      ...base,
+      placePin: confirmedManualPin,
+    }).status,
+    "known",
+  );
+  assert.equal(
+    deriveLocationTruth({
+      ...base,
+      hasIndoorLocator: false,
+      placePin: confirmedManualPin,
+    }).status,
+    "needs-detail",
+  );
 });
 
 test("moving an asset closes the prior revision without mutating it", () => {
+  const pin = createHonestPlacePin({
+    latitude: 25.2854,
+    longitude: 51.531,
+    source: "user_pin",
+    observedAt: NOW,
+    confirmedAt: NOW,
+  });
   const first = appendLocationRevision([], {
     revisionId: "location-1",
     householdId: "household-1",
@@ -78,7 +157,7 @@ test("moving an asset closes the prior revision without mutating it", () => {
       id: "place-1",
       name: "West Bay Home",
       addressSummary: "Doha",
-      pin: null,
+      pin,
     },
     spacePathSnapshot: [],
     locatorText: "Study safe",
@@ -99,7 +178,7 @@ test("moving an asset closes the prior revision without mutating it", () => {
       id: "place-2",
       name: "Pearl Apartment",
       addressSummary: "Doha",
-      pin: null,
+      pin,
     },
     spacePathSnapshot: [],
     locatorText: "Bedroom cabinet",
@@ -117,6 +196,13 @@ test("moving an asset closes the prior revision without mutating it", () => {
 });
 
 test("location revision retries are idempotent but ID reuse is rejected", () => {
+  const pin = createHonestPlacePin({
+    latitude: 25.2854,
+    longitude: 51.531,
+    source: "manual_coordinates",
+    observedAt: NOW,
+    confirmedAt: NOW,
+  });
   const input = {
     revisionId: "location-retry",
     householdId: "household-1",
@@ -127,7 +213,7 @@ test("location revision retries are idempotent but ID reuse is rejected", () => 
       id: "place-1",
       name: "West Bay Home",
       addressSummary: "Doha",
-      pin: null,
+      pin,
     },
     spacePathSnapshot: [],
     locatorText: "Study",
@@ -147,6 +233,52 @@ test("location revision retries are idempotent but ID reuse is rejected", () => 
         locatorText: "Different location",
       }),
     /cannot be reused/u,
+  );
+});
+
+test("a known location revision rejects missing or unconfirmed Place coordinates", () => {
+  const base = {
+    revisionId: "location-unresolved",
+    householdId: "household-1",
+    assetId: "asset-1",
+    mode: "physical",
+    status: "known",
+    placeSnapshot: {
+      id: "place-1",
+      name: "West Bay Home",
+      addressSummary: "Doha",
+      pin: null,
+    },
+    spacePathSnapshot: [
+      { id: "room-1", name: "Study", kind: "room" },
+    ],
+    locatorText: "Upper drawer",
+    confirmationState: "user-confirmed",
+    source: "user_pin",
+    observedAt: NOW,
+    validFrom: NOW,
+    createdByMemberId: "member-1",
+    reason: "Asset created",
+  };
+
+  assert.throws(
+    () => appendLocationRevision([], base),
+    /confirmed precise Place pin/u,
+  );
+  const unconfirmed = createHonestPlacePin({
+    latitude: 25.2854,
+    longitude: 51.531,
+    source: "device_gps",
+    horizontalAccuracyMeters: 6,
+    observedAt: NOW,
+  });
+  assert.throws(
+    () =>
+      appendLocationRevision([], {
+        ...base,
+        placeSnapshot: { ...base.placeSnapshot, pin: unconfirmed },
+      }),
+    /confirmed precise Place pin/u,
   );
 });
 

@@ -192,6 +192,10 @@ export function buildNetPositionSnapshot(
   const unvaluedLiabilityIds = activeLiabilities
     .filter((liability) => !valueByLiability.has(liability.id))
     .map((liability) => liability.id);
+  // A Liability without a current balance has no trustworthy currency yet.
+  // Withhold every currency net until that balance is recorded; otherwise the
+  // missing Liability would be silently omitted from one or more totals.
+  const hasUnvaluedLiabilities = unvaluedLiabilityIds.length > 0;
   const staleLiabilityIds = activeLiabilities
     .filter((liability) => {
       const value = valueByLiability.get(liability.id);
@@ -227,13 +231,15 @@ export function buildNetPositionSnapshot(
     (currency): NetPositionCurrencyLine => {
       const asset = assetGroups.get(currency);
       const liabilities = liabilityGroups.get(currency) ?? [];
-      const liabilityCoverage = liabilities.length > 0
-        ? "recorded"
-        : activeLiabilities.length > 0
-          ? "no-recorded-liabilities"
-        : noneConfirmed
-          ? "none-confirmed"
-          : "unreviewed";
+      const liabilityCoverage = hasUnvaluedLiabilities
+        ? "unreviewed"
+        : liabilities.length > 0
+          ? "recorded"
+          : activeLiabilities.length > 0
+            ? "no-recorded-liabilities"
+            : noneConfirmed
+              ? "none-confirmed"
+              : "unreviewed";
       const recordedAssetsMinor = asset?.amountMinor ?? 0;
       const recordedLiabilitiesMinor =
         liabilityCoverage === "unreviewed"

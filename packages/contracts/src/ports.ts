@@ -53,6 +53,20 @@ export interface HouseholdInvite {
   readonly expiresAt: IsoDateTime;
 }
 
+/**
+ * Privacy-scoped invitation details shown to the authenticated recipient
+ * before the one-time code is redeemed.
+ *
+ * This deliberately excludes household identifiers, member counts, account
+ * identifiers, and any other record data. A valid review never creates or
+ * changes membership.
+ */
+export interface HouseholdInviteReview {
+  readonly householdName: string;
+  readonly role: Exclude<HouseholdRole, "owner">;
+  readonly expiresAt: IsoDateTime;
+}
+
 export interface HouseholdMembership {
   readonly membershipId: string;
   readonly householdId: HouseholdId;
@@ -91,6 +105,7 @@ export interface HouseholdAccessPort {
     readonly role: Exclude<HouseholdRole, "owner">;
     readonly expiresInHours: number;
   }): Promise<Result<HouseholdInvite>>;
+  previewInvite(oneTimeCode: string): Promise<Result<HouseholdInviteReview>>;
   acceptInvite(oneTimeCode: string): Promise<Result<HouseholdMembership>>;
   getAccessSnapshot(
     householdId: HouseholdId,

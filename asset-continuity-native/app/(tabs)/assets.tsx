@@ -461,6 +461,7 @@ export default function ItemsScreen() {
               ]}
             >
               <Text
+                accessibilityRole="header"
                 style={[
                   styles.sectionTitle,
                   rtl && styles.sectionTitleArabic
@@ -905,23 +906,21 @@ const styles = StyleSheet.create({
   },
   segment: {
     flexDirection: "row",
-    gap: 2,
-    padding: 3,
-    borderWidth: 1,
-    borderColor: colors.border,
-    borderRadius: radius.md,
-    backgroundColor: colors.mist
+    borderBottomWidth: 1,
+    borderBottomColor: colors.borderStrong
   },
   segmentButton: {
-    minHeight: 44,
+    minHeight: 48,
     flex: 1,
     alignItems: "center",
     justifyContent: "center",
+    marginBottom: -1,
     paddingHorizontal: spacing.sm,
-    borderRadius: radius.sm
+    borderBottomWidth: 2,
+    borderBottomColor: colors.transparent
   },
   segmentButtonActive: {
-    backgroundColor: colors.surface
+    borderBottomColor: colors.carbon
   },
   segmentButtonLabel: {
     color: colors.textMuted,

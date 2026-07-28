@@ -20,8 +20,8 @@ const subflowFiles = readdirSync(subflowDirectory)
   .filter((file) => file.endsWith(".yaml"))
   .sort();
 
-if (flowFiles.length < 7) {
-  failures.push(`Expected at least 7 executable flows; found ${flowFiles.length}.`);
+if (flowFiles.length < 9) {
+  failures.push(`Expected at least 9 executable flows; found ${flowFiles.length}.`);
 }
 
 const parsedFiles = new Map();
@@ -79,6 +79,9 @@ function readNativeSource(relativePath) {
 const allSources = [
   "app/(auth)/index.tsx",
   "app/(auth)/create-account.tsx",
+  "app/(auth)/confirm-email.tsx",
+  "app/(auth)/household.tsx",
+  "app/(auth)/privacy.tsx",
   "app/(auth)/sign-in.tsx",
   "app/(auth)/forgot-password.tsx",
   "app/(tabs)/index.tsx",
@@ -89,6 +92,7 @@ const allSources = [
   "app/liability-create.tsx",
   "app/liability/[id].tsx",
   "app/liability-balance.tsx",
+  "src/auth/components.tsx",
   "src/state/SessionBoundWorkspaceProvider.tsx",
   "src/state/WorkspaceProvider.tsx",
   "src/components/PortfolioDashboard/index.tsx",
@@ -98,8 +102,22 @@ const allSources = [
 const requiredIds = [
   "auth-welcome-screen",
   "auth-create-account-screen",
+  "auth-create-email",
+  "auth-create-pilot-access",
+  "auth-create-password",
+  "auth-create-confirm-password",
+  "auth-confirm-email-screen",
   "auth-sign-in-screen",
+  "auth-sign-in-email",
+  "auth-sign-in-password",
   "auth-forgot-password-screen",
+  "auth-household-screen",
+  "auth-private-record-name",
+  "auth-privacy-screen",
+  "auth-first-passport-item",
+  "auth-activation-progress",
+  "auth-activation-current-stage",
+  "onboarding-device-preflight",
   "home-screen",
   "capture-asset-name",
   "asset-passport-saved-confirmation",
@@ -148,6 +166,85 @@ for (const contract of [
   if (!allSources.includes(contract)) {
     failures.push(`Signed-out sample runtime contract is missing: ${contract}`);
   }
+}
+
+function copyValuesForKeys(source, keys) {
+  const values = new Set();
+  for (const key of keys) {
+    const pattern = new RegExp(`${key}:\\s*"([^"]+)"`, "gu");
+    for (const match of source.matchAll(pattern)) {
+      if (match[1]) values.add(match[1]);
+    }
+  }
+  return [...values];
+}
+
+const previewOnlyCopy = [
+  ...new Set([
+    ...copyValuesForKeys(
+      readNativeSource("src/i18n/coreJourneyCopy.ts"),
+      [
+        "previewSession",
+        "previewNotice",
+        "previewSentEyebrow",
+        "previewSentTitle",
+        "previewBody",
+        "previewRequestReady",
+        "openPreviewReset",
+        "previewIncomplete",
+        "previewCompleteTitle",
+        "previewCompleteBody",
+        "previewCompleteStatus",
+        "previewCompleteDetail",
+        "continuePreview",
+        "previewEyebrow",
+        "previewTitle",
+        "sessionPreviewUnlockOff",
+        "previewSessionOnly",
+        "previewBypassBody"
+      ]
+    ),
+    ...copyValuesForKeys(
+      readNativeSource("src/i18n/accountDeletionCopy.ts"),
+      ["resetPreview", "resetPreviewMeta"]
+    ),
+    ...copyValuesForKeys(
+      readNativeSource("src/i18n/householdAdminCopy.ts"),
+      ["previewTitle", "previewBody"]
+    ),
+    ...copyValuesForKeys(
+      readNativeSource("src/i18n/inviteCopy.ts"),
+      ["previewNotice"]
+    )
+  ])
+];
+
+for (const [path, parsed] of parsedFiles.entries()) {
+  if (/\bpreview(?:-only)?\b/iu.test(parsed.source)) {
+    failures.push(
+      `${path}: installed-app flows must not contain preview-only strings.`
+    );
+  }
+  for (const previewCopy of previewOnlyCopy) {
+    if (parsed.source.includes(previewCopy)) {
+      failures.push(
+        `${path}: installed-app flows must not reference preview-only copy "${previewCopy}".`
+      );
+    }
+  }
+}
+
+const nativeSecureFlows = flowFiles.filter((file) => {
+  const parsed = parsedFiles.get(resolve(flowDirectory, file));
+  return (
+    Array.isArray(parsed?.config?.tags) &&
+    parsed.config.tags.includes("native-secure")
+  );
+});
+if (nativeSecureFlows.length < 2) {
+  failures.push(
+    "Expected separate native-secure signup and preconfirmed-account activation flows."
+  );
 }
 
 for (const parsed of parsedFiles.values()) {
@@ -223,6 +320,159 @@ if (
 ) {
   failures.push(
     "Net-position offline flow must edit offline, restart, and always restore connectivity."
+  );
+}
+
+function findSingleTaggedFlow(tag, label) {
+  const matches = flowFiles
+    .map((file) => ({
+      file,
+      parsed: parsedFiles.get(resolve(flowDirectory, file))
+    }))
+    .filter(
+      ({ parsed }) =>
+        Array.isArray(parsed?.config?.tags) &&
+        parsed.config.tags.includes(tag)
+    );
+  if (matches.length !== 1) {
+    failures.push(
+      `${label} must have exactly one executable flow tagged ${tag}; found ${matches.length}.`
+    );
+    return undefined;
+  }
+  if (!matches[0]?.parsed?.config.tags.includes("native-secure")) {
+    failures.push(`${label} must also remain tagged native-secure.`);
+  }
+  return matches[0];
+}
+
+const nativeSignupEntry = findSingleTaggedFlow(
+  "native-signup",
+  "Native signup flow"
+);
+const nativeActivationEntry = findSingleTaggedFlow(
+  "native-activation",
+  "Native preconfirmed-account activation flow"
+);
+const nativeSignup = nativeSignupEntry?.parsed;
+const nativeActivation = nativeActivationEntry?.parsed;
+const completePassportFromCapture = parsedFiles.get(
+  resolve(subflowDirectory, "complete-minimal-passport-from-capture.yaml")
+);
+if (
+  !completePassportFromCapture?.source.includes(
+    'assertVisible: "Passport started"'
+  )
+) {
+  failures.push(
+    "Minimal Passport subflow must assert the truthful Passport started receipt."
+  );
+}
+const nativeActivationSource = [
+  nativeActivation?.source,
+  completePassportFromCapture?.source
+]
+  .filter(Boolean)
+  .join("\n");
+
+function requireSelectors(label, source, selectors) {
+  for (const selector of selectors) {
+    if (!source.includes(`"${selector}"`)) {
+      failures.push(`${label} must exercise selector ${selector}.`);
+    }
+  }
+}
+
+function collectInputTextValues(value, output = []) {
+  if (Array.isArray(value)) {
+    for (const item of value) collectInputTextValues(item, output);
+    return output;
+  }
+  if (!value || typeof value !== "object") return output;
+  for (const [key, child] of Object.entries(value)) {
+    if (key === "inputText" && typeof child === "string") {
+      output.push(child);
+    } else {
+      collectInputTextValues(child, output);
+    }
+  }
+  return output;
+}
+
+function requireExternalParameters(label, parsed, parameters) {
+  const inputTextValues = collectInputTextValues(parsed?.commands);
+  for (const parameter of parameters) {
+    if (!inputTextValues.includes(`\${${parameter}}`)) {
+      failures.push(
+        `${label} must input external parameter ${parameter} from Maestro -e.`
+      );
+    }
+    if (
+      parsed?.config?.env &&
+      Object.prototype.hasOwnProperty.call(parsed.config.env, parameter)
+    ) {
+      failures.push(
+        `${label} must not commit a default value for ${parameter}; pass it with Maestro -e.`
+      );
+    }
+  }
+}
+
+requireSelectors("Native signup flow", nativeSignup?.source ?? "", [
+  "auth-welcome-screen",
+  "auth-create-account-screen",
+  "auth-create-email",
+  "auth-create-pilot-access",
+  "auth-create-password",
+  "auth-create-confirm-password",
+  "auth-confirm-email-screen",
+  "auth-activation-progress",
+  "auth-activation-current-stage"
+]);
+requireExternalParameters("Native signup flow", nativeSignup, [
+  "ALYR_E2E_SIGNUP_EMAIL",
+  "ALYR_E2E_PASSWORD",
+  "ALYR_E2E_EARLY_ACCESS_CODE"
+]);
+
+requireSelectors(
+  "Native preconfirmed-account activation flow",
+  nativeActivationSource,
+  [
+    "auth-welcome-screen",
+    "auth-sign-in-screen",
+    "auth-sign-in-email",
+    "auth-sign-in-password",
+    "auth-household-screen",
+    "auth-private-record-name",
+    "auth-activation-progress",
+    "auth-activation-current-stage",
+    "auth-privacy-screen",
+    "auth-first-passport-item",
+    "onboarding-device-preflight",
+    "capture-step-0",
+    "capture-asset-name",
+    "asset-passport-saved-confirmation",
+    "home-screen"
+  ]
+);
+requireExternalParameters(
+  "Native preconfirmed-account activation flow",
+  nativeActivation,
+  ["ALYR_E2E_PRECONFIRMED_EMAIL", "ALYR_E2E_PASSWORD"]
+);
+if (
+  !nativeActivation?.source.includes(
+    'text: "Verify and add my first item"'
+  )
+) {
+  failures.push(
+    "Native preconfirmed-account activation flow must cross the device-verification action before capture."
+  );
+}
+if (!nativeActivation?.source.includes('text: "Private record"')) {
+  failures.push(
+    "Native preconfirmed-account activation flow must assert the named Private record activation stage."
   );
 }
 

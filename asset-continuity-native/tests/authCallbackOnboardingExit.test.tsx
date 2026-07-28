@@ -380,19 +380,9 @@ describe("confirmation recovery and incomplete-onboarding account exit", () => {
     await screen.unmount();
   });
 
-  it("retries only pending-invite acceptance when it rejects after a successful exchange", async () => {
+  it("routes a confirmed pending invitation to explicit review without redeeming it", async () => {
     const exchange = jest.fn(async () => verifiedIncompleteSession);
-    const acceptPendingHouseholdInvite = jest
-      .fn()
-      .mockRejectedValueOnce({
-        code: "network_unavailable",
-        message: "Provider detail",
-        retryable: true
-      })
-      .mockResolvedValueOnce({
-        membershipId: "membership-recipient",
-        householdId: "household-invited"
-      });
+    const acceptPendingHouseholdInvite = jest.fn();
     mockParams = { code: "confirmed-before-invite-code" };
     mockAuthState = authState({
       acceptPendingHouseholdInvite,
@@ -409,34 +399,15 @@ describe("confirmation recovery and incomplete-onboarding account exit", () => {
       wrapper: wrapper("en")
     });
     await waitFor(() =>
-      expect(screen.getByTestId("auth-callback-failed")).toBeTruthy()
-    );
-
-    expect(
-      screen.getByText(
-        CORE_JOURNEY_COPY.en.callback.inviteFailedTitle
-      )
-    ).toBeTruthy();
-    expect(
-      screen.getByText(
-        CORE_JOURNEY_COPY.en.authErrors.network_unavailable
-      )
-    ).toBeTruthy();
-    await fireEvent.press(
-      screen.getByText(
-        CORE_JOURNEY_COPY.en.callback.retryInvite
-      )
-    );
-
-    await waitFor(() =>
       expect(screen.getByTestId("auth-callback-complete")).toBeTruthy()
     );
+
     expect(exchange).toHaveBeenCalledTimes(1);
-    expect(acceptPendingHouseholdInvite).toHaveBeenCalledTimes(2);
+    expect(acceptPendingHouseholdInvite).not.toHaveBeenCalled();
     await fireEvent.press(
       screen.getByText(CORE_JOURNEY_COPY.en.callback.continue)
     );
-    expect(mockRouter.replace).toHaveBeenCalledWith("/");
+    expect(mockRouter.replace).toHaveBeenCalledWith("/join");
     await screen.unmount();
   });
 
@@ -548,6 +519,139 @@ describe("confirmation recovery and incomplete-onboarding account exit", () => {
     expect(mockRouter.replace).toHaveBeenCalledWith(
       AUTH_ROUTES.welcome
     );
+    await screen.unmount();
+  });
+
+  it("redirects a completed account away from the onboarding privacy deep link", async () => {
+    mockAuthState = authState({
+      activeHouseholdId: "household-a",
+      householdName: "Rahman household",
+      session: {
+        ...verifiedIncompleteSession,
+        onboarding: "complete",
+        activeHouseholdId: "household-a",
+        activeMembershipId: "membership-owner",
+        activeHouseholdRole: "owner"
+      }
+    });
+
+    const screen = await render(<PrivacyAndCaptureScreen />, {
+      wrapper: wrapper("en")
+    });
+
+    expect(screen.getByTestId("auth-redirect").props.children).toBe("/");
+    expect(screen.queryByTestId("auth-privacy-screen")).toBeNull();
+    await screen.unmount();
+  });
+
+  it("fails a partial owner tuple closed before the first-record screen", async () => {
+    const checkOnboardingProtection = jest.fn(async () => null);
+    const setFirstCaptureIntent = jest.fn();
+    mockAuthState = authState({
+      activeHouseholdId: "household-a",
+      householdName: "Rahman household",
+      setFirstCaptureIntent,
+      session: {
+        ...verifiedIncompleteSession,
+        activeHouseholdId: "household-a",
+        activeMembershipId: null,
+        activeHouseholdRole: null
+      }
+    });
+    mockDeviceAuthState = deviceAuthState({
+      checkOnboardingProtection,
+      onboardingPreflight: {
+        phase: "idle",
+        capability: null,
+        intent: null,
+        notice: null
+      }
+    });
+
+    const screen = await render(<PrivacyAndCaptureScreen />, {
+      wrapper: wrapper("en")
+    });
+
+    expect(screen.getByTestId("auth-redirect").props.children).toBe(
+      AUTH_ROUTES.household
+    );
+    expect(screen.queryByTestId("auth-privacy-screen")).toBeNull();
+    expect(checkOnboardingProtection).not.toHaveBeenCalled();
+    expect(setFirstCaptureIntent).not.toHaveBeenCalled();
+    await screen.unmount();
+  });
+
+  it("does not resume a durable first-record handoff for a partial owner tuple", async () => {
+    const completeOnboarding = jest.fn(async () => true);
+    const startWorkspace = jest.fn(async () => undefined);
+    mockAuthState = authState({
+      activeHouseholdId: "household-a",
+      completeOnboarding,
+      householdName: "Rahman household",
+      session: {
+        ...verifiedIncompleteSession,
+        activeHouseholdId: "household-a",
+        activeMembershipId: null,
+        activeHouseholdRole: null
+      }
+    });
+    mockWorkspaceState = workspaceState({ startWorkspace });
+    mockDeviceAuthState = deviceAuthState({
+      onboardingPreflight: {
+        phase: "authorized",
+        capability: {
+          kind: "available",
+          method: "face",
+          biometricEnrolled: true
+        },
+        intent: "item",
+        notice: null
+      },
+      pendingFirstRecordIntent: "item"
+    });
+
+    const screen = await render(<PrivacyAndCaptureScreen />, {
+      wrapper: wrapper("en")
+    });
+    await act(async () => undefined);
+
+    expect(screen.getByTestId("auth-redirect").props.children).toBe(
+      AUTH_ROUTES.household
+    );
+    expect(startWorkspace).not.toHaveBeenCalled();
+    expect(completeOnboarding).not.toHaveBeenCalled();
+    await screen.unmount();
+  });
+
+  it("keeps a partial completed household tuple on its account-access recovery screen", async () => {
+    const provisionHousehold = jest.fn(async () => "household-a");
+    mockAuthState = authState({
+      activeHouseholdId: "household-a",
+      householdName: "Rahman household",
+      provisionHousehold,
+      session: {
+        ...verifiedIncompleteSession,
+        onboarding: "complete",
+        activeHouseholdId: "household-a",
+        activeMembershipId: null,
+        activeHouseholdRole: null
+      }
+    });
+
+    const screen = await render(<HouseholdSetupScreen />, {
+      wrapper: wrapper("en")
+    });
+
+    expect(screen.queryByTestId("auth-redirect")).toBeNull();
+    await fireEvent.press(
+      screen.getByText(CORE_JOURNEY_COPY.en.household.retryAccess)
+    );
+    await waitFor(() =>
+      expect(provisionHousehold).toHaveBeenCalledWith(
+        "Rahman household"
+      )
+    );
+    expect(mockRouter.push).toHaveBeenCalledWith(AUTH_ROUTES.privacy);
     await screen.unmount();
   });
 

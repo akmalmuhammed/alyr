@@ -1,4 +1,5 @@
 import { fireEvent, render } from "@testing-library/react-native";
+import { StyleSheet } from "react-native";
 
 import type { LanguageCode, NativeWorkspace } from "@/domain/model";
 import { createWorkspace } from "@/domain/sample";
@@ -8,6 +9,7 @@ import {
   todayPlaceLocationSummary,
   todayRegionSummary
 } from "@/i18n/coreJourneyCopy";
+import { colors } from "@/theme/tokens";
 
 const mockRouter = {
   push: jest.fn()
@@ -157,6 +159,17 @@ describe("Today Place summary", () => {
     ).toBeTruthy();
     expect(entry.props.accessibilityLabel).toContain("2 Places");
     expect(entry.props.accessibilityLabel).toContain("Doha");
+    expect(StyleSheet.flatten(entry.props.style)).toMatchObject({
+      borderTopWidth: 1,
+      borderBottomWidth: 1,
+      borderColor: colors.borderStrong
+    });
+    expect(StyleSheet.flatten(entry.props.style)).not.toHaveProperty(
+      "borderRadius"
+    );
+    expect(StyleSheet.flatten(entry.props.style)).not.toHaveProperty(
+      "backgroundColor"
+    );
 
     fireEvent.press(entry);
 

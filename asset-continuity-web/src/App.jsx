@@ -85,6 +85,7 @@ import {
   Navigate,
   NavLink,
   Route,
+  RouterProvider,
   Routes,
   useBeforeUnload,
   useBlocker,
@@ -93,7 +94,6 @@ import {
   useParams,
   useSearchParams,
 } from "react-router";
-import { RouterProvider } from "react-router/dom";
 import {
   LEGACY_STORAGE_KEYS,
   SNAPSHOT_VERSION,

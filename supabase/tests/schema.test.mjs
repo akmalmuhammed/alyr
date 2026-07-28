@@ -34,6 +34,10 @@ const placeDocumentMigrationUrl = new URL(
   "../migrations/202607280003_place_document_sync.sql",
   import.meta.url,
 );
+const explicitInviteReviewMigrationUrl = new URL(
+  "../migrations/202607280010_explicit_household_invite_review.sql",
+  import.meta.url,
+);
 const functionUrl = new URL("../functions/api/index.ts", import.meta.url);
 const configUrl = new URL("../config.toml", import.meta.url);
 
@@ -61,6 +65,10 @@ const placeClassificationMigration = await readFile(
 );
 const placeDocumentMigration = await readFile(
   placeDocumentMigrationUrl,
+  "utf8",
+);
+const explicitInviteReviewMigration = await readFile(
+  explicitInviteReviewMigrationUrl,
   "utf8",
 );
 const apiFunction = await readFile(functionUrl, "utf8");
@@ -169,6 +177,49 @@ test("household recipients cross signup without receiving household-creation aut
   assert.match(
     apiFunction,
     /serviceClient\.rpc\(\s*"issue_household_invite_signup_grant"/,
+  );
+});
+
+test("household invitation review is explicit, authenticated, privacy-scoped, and non-mutating", () => {
+  assert.match(
+    explicitInviteReviewMigration,
+    /create or replace function public\.preview_household_invite\(p_code text\)/,
+  );
+  assert.match(
+    explicitInviteReviewMigration,
+    /returns table\(\s*household_name text,\s*role public\.household_role,\s*expires_at timestamptz\s*\)/,
+  );
+  assert.match(
+    explicitInviteReviewMigration,
+    /security definer[\s\S]*stable/,
+  );
+  assert.match(
+    explicitInviteReviewMigration,
+    /accepted_at is null[\s\S]*revoked_at is null[\s\S]*expires_at > now\(\)/,
+  );
+  assert.match(
+    explicitInviteReviewMigration,
+    /v_reservation\.email_hash <>[\s\S]{0,120}digest\(v_user_email, 'sha256'\)/,
+  );
+  assert.match(
+    explicitInviteReviewMigration,
+    /revoke all on function public\.preview_household_invite\(text\)[\s\S]*from public, anon/,
+  );
+  assert.match(
+    explicitInviteReviewMigration,
+    /grant execute on function public\.preview_household_invite\(text\)[\s\S]*to authenticated/,
+  );
+  assert.doesNotMatch(
+    explicitInviteReviewMigration,
+    /update public\.invites|insert into public\.memberships/,
+  );
+  assert.match(
+    apiFunction,
+    /path === "\/invites\/preview"[\s\S]*handleInvitePreview\(request, context\)/,
+  );
+  assert.match(
+    apiFunction,
+    /handleInvitePreview[\s\S]*"Cache-Control": "no-store"/,
   );
 });
 

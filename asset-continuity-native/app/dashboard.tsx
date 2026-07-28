@@ -50,7 +50,7 @@ export default function DashboardScreen() {
 
   if (loading) {
     return (
-      <AppScreen scroll={false} testID="portfolio-loading">
+      <AppScreen safeEdges={[]} scroll={false} testID="portfolio-loading">
         <View
           accessibilityLabel={copy.portfolio.preparing}
           accessibilityLiveRegion="polite"
@@ -82,7 +82,7 @@ export default function DashboardScreen() {
 
   if (!workspace) {
     return (
-      <AppScreen testID="portfolio-unavailable">
+      <AppScreen safeEdges={[]} testID="portfolio-unavailable">
         <View
           style={[
             styles.emptyHeading,
@@ -111,7 +111,7 @@ export default function DashboardScreen() {
   };
 
   return (
-    <AppScreen safeEdges={["top"]} testID="portfolio-screen">
+    <AppScreen safeEdges={[]} testID="portfolio-screen">
       {error ? (
         <ErrorBanner
           message={localizedWorkspaceError(error, language)}
@@ -127,7 +127,7 @@ export default function DashboardScreen() {
       <PortfolioDashboard
         amountsHidden={amountsHidden}
         canReadLiabilities={can("liability.read")}
-        language={workspace.language}
+        language={language}
         {...(can("asset.write")
           ? { onAddAsset: () => router.push("/capture") }
           : {})}
@@ -182,7 +182,6 @@ export default function DashboardScreen() {
           router.push(portfolioPropertyValueReviewRoute())
         }
         onReviewPlaces={() => router.push("/atlas")}
-        showTitle={false}
         valueRecords={recordedPortfolioValues}
         workspace={workspace}
       />

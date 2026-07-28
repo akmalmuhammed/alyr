@@ -1,6 +1,7 @@
 import {
   fireEvent,
-  render
+  render,
+  waitFor
 } from "@testing-library/react-native";
 import type { PropsWithChildren } from "react";
 import {
@@ -222,8 +223,10 @@ describe("Asset Passport editor Arabic contract", () => {
       focus: "location",
       returnTo: "passport"
     };
+    const updateAsset = jest.fn(async () => sampleAsset);
     mockWorkspaceContext = {
       ...mockWorkspaceContext,
+      updateAsset,
       workspace: {
         ...sampleWorkspace,
         places: sampleWorkspace.places.map((place) =>
@@ -251,6 +254,24 @@ describe("Asset Passport editor Arabic contract", () => {
     );
     expect(action.props.accessibilityHint).toBe(
       ASSET_EDIT_COPY.ar.reviewPlacePinHint
+    );
+
+    await fireEvent.press(
+      screen.getByRole("button", {
+        name: ASSET_EDIT_COPY.ar.saveLabel.location
+      })
+    );
+    await waitFor(() =>
+      expect(updateAsset).toHaveBeenCalledWith(
+        expect.objectContaining({
+          assetId: sampleAsset.id,
+          location: expect.objectContaining({
+            locationStatus: "needs-detail",
+            placeId: selectedPlace.id,
+            roomId: sampleAsset.roomId
+          })
+        })
+      )
     );
 
     await fireEvent.press(action);

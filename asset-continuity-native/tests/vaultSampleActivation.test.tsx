@@ -35,7 +35,12 @@ let mockSession: AuthSessionDescriptor | null = null;
 let mockWorkspace: NativeWorkspace = createWorkspace("sample");
 
 jest.mock("expo-router", () => ({
-  useRouter: () => mockRouter
+  useRouter: () => mockRouter,
+  useFocusEffect: (callback: () => void) =>
+    jest.requireActual<typeof import("react")>("react").useEffect(
+      callback,
+      [callback]
+    )
 }));
 
 jest.mock("@/auth/AuthFlowProvider", () => ({
@@ -157,6 +162,19 @@ describe("Settings sample activation", () => {
         name: CORE_JOURNEY_COPY.en.vault.settingsTitle
       })
     ).toHaveLength(1);
+  });
+
+  it("does not assign cloud usage or an active allowance to a signed-out sample", async () => {
+    const screen = await render(<VaultScreen surface="vault" />, {
+      wrapper: localeWrapper("en")
+    });
+    const copy = CORE_JOURNEY_COPY.en.vault;
+
+    expect(screen.getByText(copy.cloudNotConnected)).toBeTruthy();
+    expect(
+      screen.getByText(copy.cloudNotConnectedDescription)
+    ).toBeTruthy();
+    expect(screen.queryByText(copy.cloudUsageUnknown)).toBeNull();
   });
 
   it("sends a signed-out cloud sample to account creation without mutating its local vault", async () => {

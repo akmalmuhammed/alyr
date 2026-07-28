@@ -13,6 +13,7 @@ import {
   shouldStackPortfolioFinancialLayout,
   type PortfolioReviewIntent
 } from "@/components/PortfolioDashboard";
+import { createLiability } from "@/domain/liabilities";
 import { getPortfolioValueRecords } from "@/domain/portfolio";
 import type {
   NativeAsset,
@@ -191,7 +192,7 @@ describe("PortfolioDashboard", () => {
     });
     expect(
       screen.queryByTestId(
-        "portfolio-recorded-value-asset:asset-gmt"
+        "portfolio-recorded-value-place:place-west-bay"
       )
     ).toBeNull();
     expect(screen.getByText("View all 4 QAR entries")).toBeTruthy();
@@ -200,7 +201,7 @@ describe("PortfolioDashboard", () => {
 
     expect(
       screen.getByTestId(
-        "portfolio-recorded-value-asset:asset-gmt"
+        "portfolio-recorded-value-place:place-west-bay"
       )
     ).toBeTruthy();
     expect(
@@ -214,9 +215,43 @@ describe("PortfolioDashboard", () => {
     );
     expect(
       screen.queryByTestId(
-        "portfolio-recorded-value-asset:asset-gmt"
+        "portfolio-recorded-value-place:place-west-bay"
       )
     ).toBeNull();
+  });
+
+  it("uses a neutral stable order while amounts are hidden", async () => {
+    const screen = await render(
+      <PortfolioDashboard
+        onOpenSubject={jest.fn()}
+        workspace={createWorkspace("sample")}
+      />
+    );
+    const visibleQarRows = () =>
+      renderedTestIds(screen.toJSON()).filter((testID) =>
+        [
+          "portfolio-recorded-value-asset:asset-heritage",
+          "portfolio-recorded-value-asset:asset-gmt",
+          "portfolio-recorded-value-asset:asset-roadster",
+          "portfolio-recorded-value-place:place-west-bay"
+        ].includes(testID)
+      );
+
+    expect(visibleQarRows()).toEqual([
+      "portfolio-recorded-value-asset:asset-heritage",
+      "portfolio-recorded-value-asset:asset-gmt",
+      "portfolio-recorded-value-asset:asset-roadster"
+    ]);
+
+    await fireEvent.press(
+      screen.getByLabelText("Show tracked financial amounts")
+    );
+
+    expect(visibleQarRows()).toEqual([
+      "portfolio-recorded-value-place:place-west-bay",
+      "portfolio-recorded-value-asset:asset-roadster",
+      "portfolio-recorded-value-asset:asset-heritage"
+    ]);
   });
 
   it("previews three liabilities and expands every active record", async () => {
@@ -433,22 +468,22 @@ describe("PortfolioDashboard", () => {
     expect(screen.queryAllByText(/QAR\s*7,197,500\.00/u)).toHaveLength(0);
     expect(screen.queryAllByText(/USD\s*13,700\.00/u)).toHaveLength(0);
     expect(
-      screen.queryByLabelText(
-        "GMT-Master II, QAR, recorded amount hidden"
+      screen.getByLabelText(
+        "GMT-Master II, QAR, recorded amount hidden, On this device"
       )
-    ).toBeNull();
+    ).toBeTruthy();
     await fireEvent.press(screen.getByTestId("portfolio-insights-toggle"));
     await fireEvent.press(
       screen.getByTestId("portfolio-recorded-values-view-all-QAR")
     );
     expect(
       screen.getByLabelText(
-        "GMT-Master II, QAR, recorded amount hidden"
+        "GMT-Master II, QAR, recorded amount hidden, On this device"
       )
     ).toBeTruthy();
     expect(
       screen.getByLabelText(
-        "West Bay Home, QAR, recorded amount hidden"
+        "West Bay Home, QAR, recorded amount hidden, On this device"
       )
     ).toBeTruthy();
     expect(
@@ -497,6 +532,75 @@ describe("PortfolioDashboard", () => {
     ).toBeNull();
   });
 
+  it("preserves and labels recorded-value sync truth for assets and properties", async () => {
+    const sample = createWorkspace("sample");
+    const workspace = {
+      ...sample,
+      portfolioValueRecords: getPortfolioValueRecords(sample).map(
+        (record) => {
+          if (record.id === "sample-value-west-bay") {
+            return { ...record, syncStatus: "synced" as const };
+          }
+          if (record.id === "sample-value-gmt") {
+            return { ...record, syncStatus: "queued" as const };
+          }
+          if (record.id === "sample-value-roadster") {
+            return {
+              ...record,
+              syncStatus: "needs-attention" as const
+            };
+          }
+          return record;
+        }
+      )
+    };
+    const screen = await render(
+      <PortfolioDashboard
+        onOpenSubject={jest.fn()}
+        workspace={workspace}
+      />
+    );
+
+    expect(
+      within(
+        screen.getByTestId(
+          "portfolio-recorded-value-asset:asset-gmt"
+        )
+      ).getByText(/Queued$/u)
+    ).toBeTruthy();
+    expect(
+      within(
+        screen.getByTestId(
+          "portfolio-recorded-value-asset:asset-roadster"
+        )
+      ).getByText(/Needs attention$/u)
+    ).toBeTruthy();
+    expect(
+      within(
+        screen.getByTestId(
+          "portfolio-recorded-value-asset:asset-heritage"
+        )
+      ).getByText(/On this device$/u)
+    ).toBeTruthy();
+
+    await fireEvent.press(
+      screen.getByTestId("portfolio-recorded-values-view-all-QAR")
+    );
+
+    const property = within(
+      screen.getByTestId(
+        "portfolio-recorded-value-place:place-west-bay"
+      )
+    );
+    expect(property.getByText(/Synced$/u)).toBeTruthy();
+    expect(property.queryByText(/On this device$/u)).toBeNull();
+    expect(
+      screen.getByLabelText(
+        "West Bay Home, QAR, recorded amount hidden, Synced"
+      )
+    ).toBeTruthy();
+  });
+
   it("does not demand a duplicate liability for an asset-only currency", async () => {
     const sample = createWorkspace("sample");
     const workspace = {
@@ -527,6 +631,34 @@ describe("PortfolioDashboard", () => {
     expect(
       hero.queryByText("Liability review required")
     ).toBeNull();
+  });
+
+  it("withholds the displayed net while any active Liability has no balance", async () => {
+    const created = createLiability(
+      createWorkspace("sample"),
+      {
+        name: "Unreviewed family debt",
+        kind: "family-debt"
+      },
+      {
+        id: () => "liability-unreviewed",
+        now: () => "2026-07-28T10:00:00.000Z",
+        today: () => "2026-07-28"
+      }
+    );
+    const screen = await render(
+      <PortfolioDashboard
+        amountsHidden={false}
+        workspace={created.workspace}
+      />
+    );
+    const hero = within(screen.getByTestId("portfolio-net-position"));
+
+    expect(hero.queryByText(/QAR\s*5,047,500\.00/u)).toBeNull();
+    expect(hero.getByText(/QAR\s*7,197,500\.00/u)).toBeTruthy();
+    expect(
+      hero.getAllByText("Liability review required").length
+    ).toBeGreaterThan(1);
   });
 
   it("shows category icons, zero-balance review truth and combined sync labels", async () => {

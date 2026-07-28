@@ -21,9 +21,9 @@ export function normalizePilotAccessCode(value: string): string {
 
 export function validatePilotAccessCode(value: string): string | null {
   const code = normalizePilotAccessCode(value);
-  if (!code) return "Enter your pilot access code.";
+  if (!code) return "Enter your early access code.";
   if (code.length < 16 || code.length > 64 || !/^[A-Z0-9]+$/u.test(code)) {
-    return "Use the full pilot access code from your invitation.";
+    return "Use the full early access code from your invitation.";
   }
   return null;
 }

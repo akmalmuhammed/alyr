@@ -8,7 +8,8 @@ import { Alert, StyleSheet } from "react-native";
 
 import AssetPassportScreen, {
   ASSET_PASSPORT_COPY,
-  assetRetrievalSourceFromRoute
+  assetRetrievalSourceFromRoute,
+  shouldStackAssetPassportMasthead
 } from "../app/asset/[id]";
 import type {
   NativeAsset,
@@ -19,6 +20,7 @@ import type { PortfolioValueRecord } from "@/domain/portfolio";
 import { createWorkspace } from "@/domain/sample";
 import { LocaleProvider } from "@/i18n/LocaleProvider";
 import { PortfolioPrivacyProvider } from "@/privacy/PortfolioPrivacyProvider";
+import { colors } from "@/theme/tokens";
 
 let mockLanguage: "en" | "ar" = "en";
 let mockWorkspaceContext: Record<string, unknown>;
@@ -31,6 +33,10 @@ let mockParams: {
   justCreated: "1"
 };
 const mockMarkRetrieved = jest.fn(async () => undefined);
+const mockPlayTactileFeedback = jest.fn<
+  Promise<void>,
+  [string, { readonly reduceMotion: boolean }]
+>(async () => undefined);
 
 const mockRouter = {
   back: jest.fn(),
@@ -49,6 +55,18 @@ jest.mock("expo-router", () => ({
 
 jest.mock("@/components/AttachmentViewer", () => ({
   useAttachmentPreview: () => ({ status: "idle" })
+}));
+
+jest.mock("@/accessibility/useReduceMotionPreference", () => ({
+  useReduceMotionPreference: () => false
+}));
+
+jest.mock("@/feedback/tactileFeedback", () => ({
+  __esModule: true,
+  playTactileFeedback: (
+    kind: string,
+    options: { readonly reduceMotion: boolean }
+  ) => mockPlayTactileFeedback(kind, options)
 }));
 
 jest.mock("@/state/WorkspaceProvider", () => ({
@@ -184,6 +202,34 @@ function locatedContext(
   });
 }
 
+function completeContext(): Record<string, unknown> {
+  const sample = createWorkspace("sample");
+  const place = sample.places.find(
+    (item) => item.id === "place-west-bay"
+  )!;
+  const sourceEvidence = sample.evidence[0]!;
+  const evidence = {
+    ...sourceEvidence,
+    id: "asset-passport-complete-proof",
+    assetId: asset.id
+  };
+  const completedAsset: NativeAsset = {
+    ...asset,
+    photoUri: "file:///protected/asset-passport-complete.jpg",
+    locationStatus: "known",
+    placeId: place.id,
+    roomId: place.rooms[0]!.id,
+    locatorText: "Upper drawer",
+    evidenceIds: [evidence.id]
+  };
+
+  return createContext([], {
+    assets: [completedAsset],
+    evidence: [evidence],
+    places: [place]
+  });
+}
+
 function documentContext(): Record<string, unknown> {
   return createContext([], {
     assets: [
@@ -214,9 +260,10 @@ describe("Asset Passport post-save hierarchy", () => {
     mockRouter.push.mockClear();
     mockRouter.replace.mockClear();
     mockMarkRetrieved.mockClear();
+    mockPlayTactileFeedback.mockClear();
   });
 
-  it("keeps post-save focused on portfolio value, another item, or the full Passport", async () => {
+  it("keeps first-Passport success focused on Today, another item, then the full Passport", async () => {
     const screen = await render(<AssetPassportScreen />, { wrapper });
     const relevantOrder = renderedTestIds(screen.toJSON()).filter(
       (testId) =>
@@ -236,16 +283,34 @@ describe("Asset Passport post-save hierarchy", () => {
        "asset-passport-primary-action",
        "asset-passport-add-another-action",
        "asset-passport-view-action",
-       "sync-truth"
-     ]);
+      "sync-truth"
+    ]);
+    expect(
+      screen.getByText(ASSET_PASSPORT_COPY.en.startedTitle)
+    ).toBeTruthy();
+    expect(
+      screen.getByText(ASSET_PASSPORT_COPY.en.startedMeta)
+    ).toBeTruthy();
+    expect(
+      screen.queryByText(ASSET_PASSPORT_COPY.en.savedMeta)
+    ).toBeNull();
 
+    expect(
+      screen.queryByText(ASSET_PASSPORT_COPY.en.addRecordedValue)
+    ).toBeNull();
     await fireEvent.press(
-      screen.getByText(ASSET_PASSPORT_COPY.en.addRecordedValue)
+      screen.getByText(ASSET_PASSPORT_COPY.en.goToToday)
     );
-    expect(mockRouter.push).toHaveBeenCalledWith(
-      "/asset-value?assetId=asset-passport-hierarchy&returnTo=dashboard"
+    expect(mockRouter.replace).toHaveBeenCalledWith("/(tabs)");
+    expect(mockRouter.push).not.toHaveBeenCalledWith(
+      expect.stringContaining("/asset-value")
     );
 
+    expect(
+      screen.getByRole("button", {
+        name: ASSET_PASSPORT_COPY.en.addAnotherItem
+      }).props.accessibilityHint
+    ).toBe(ASSET_PASSPORT_COPY.en.addAnotherItemHint);
     await fireEvent.press(
       screen.getByText(ASSET_PASSPORT_COPY.en.addAnotherItem)
     );
@@ -265,25 +330,104 @@ describe("Asset Passport post-save hierarchy", () => {
     ).toBeNull();
   });
 
-  it("keeps the focused portfolio action mirrored and accessible in Arabic", async () => {
+  it("uses one ruled documentary masthead and a non-card confirmation band", async () => {
+    const screen = await render(<AssetPassportScreen />, { wrapper });
+    const mastheadStyle = StyleSheet.flatten(
+      screen.getByTestId("asset-passport-masthead").props.style
+    );
+    const confirmationStyle = StyleSheet.flatten(
+      screen.getByTestId("asset-passport-saved-confirmation").props
+        .style
+    );
+
+    expect(mastheadStyle).toMatchObject({
+      borderTopWidth: 2,
+      borderTopColor: colors.carbon
+    });
+    expect(mastheadStyle.borderRadius).toBeUndefined();
+    expect(
+      screen.getByTestId("asset-passport-masthead-media")
+    ).toBeTruthy();
+    expect(
+      screen.getByTestId("asset-passport-masthead-identity")
+    ).toBeTruthy();
+    expect(
+      screen.getByTestId("asset-passport-category-field")
+    ).toBeTruthy();
+    expect(
+      screen.getByTestId("asset-passport-status-field")
+    ).toBeTruthy();
+    expect(
+      screen.getByTestId("asset-passport-created-field")
+    ).toBeTruthy();
+    expect(
+      screen.getByTestId("asset-passport-record-field")
+    ).toBeTruthy();
+
+    expect(confirmationStyle).toMatchObject({
+      borderTopWidth: 2,
+      borderBottomWidth: 1,
+      borderColor: colors.carbon
+    });
+    expect(confirmationStyle.borderRadius).toBeUndefined();
+    expect(confirmationStyle.backgroundColor).toBeUndefined();
+  });
+
+  it("stacks the masthead at 320 points and for larger Dynamic Type", () => {
+    expect(shouldStackAssetPassportMasthead(320, 1)).toBe(true);
+    expect(shouldStackAssetPassportMasthead(390, 1)).toBe(false);
+    expect(shouldStackAssetPassportMasthead(390, 1.5)).toBe(true);
+    expect(shouldStackAssetPassportMasthead(768, 1.8)).toBe(true);
+  });
+
+  it("keeps the Today-first hierarchy mirrored and accessible in Arabic", async () => {
     mockLanguage = "ar";
     mockWorkspaceContext = createContext();
     const screen = await render(<AssetPassportScreen />, { wrapper });
     const nextActionLabel = screen.getByText(
-      ASSET_PASSPORT_COPY.ar.addRecordedValue
+      ASSET_PASSPORT_COPY.ar.goToToday
     );
     const nextActionContent = nextActionLabel.parent;
 
     expect(
+      screen.getByText(ASSET_PASSPORT_COPY.ar.startedTitle)
+    ).toBeTruthy();
+    expect(
+      screen.getByText(ASSET_PASSPORT_COPY.ar.startedMeta)
+    ).toBeTruthy();
+    expect(
+      screen.queryByText(ASSET_PASSPORT_COPY.ar.savedMeta)
+    ).toBeNull();
+    expect(
       StyleSheet.flatten(nextActionContent?.props.style).flexDirection
     ).toBe("row-reverse");
     await fireEvent.press(nextActionLabel);
-    expect(mockRouter.push).toHaveBeenCalledWith(
-      "/asset-value?assetId=asset-passport-hierarchy&returnTo=dashboard"
+    expect(mockRouter.replace).toHaveBeenCalledWith("/(tabs)");
+    expect(
+      screen.queryByText(ASSET_PASSPORT_COPY.ar.addRecordedValue)
+    ).toBeNull();
+    expect(mockRouter.push).not.toHaveBeenCalledWith(
+      expect.stringContaining("/asset-value")
     );
   });
 
-  it("uses Today as the single primary action when the item already has a value", async () => {
+  it("preserves the complete-record receipt only when every readiness item is complete", async () => {
+    mockWorkspaceContext = completeContext();
+    const screen = await render(<AssetPassportScreen />, { wrapper });
+
+    expect(
+      screen.getByText(ASSET_PASSPORT_COPY.en.savedTitle)
+    ).toBeTruthy();
+    expect(
+      screen.getByText(ASSET_PASSPORT_COPY.en.savedMeta)
+    ).toBeTruthy();
+    expect(
+      screen.queryByText(ASSET_PASSPORT_COPY.en.startedMeta)
+    ).toBeNull();
+    await screen.unmount();
+  });
+
+  it("keeps Today primary when the item already has a recorded value", async () => {
     mockWorkspaceContext = createContext([
       {
         id: "asset-passport-value",
@@ -300,6 +444,34 @@ describe("Asset Passport post-save hierarchy", () => {
     expect(
       screen.queryByText(ASSET_PASSPORT_COPY.en.addRecordedValue)
     ).toBeNull();
+    await fireEvent.press(
+      screen.getByText(ASSET_PASSPORT_COPY.en.goToToday)
+    );
+    expect(mockRouter.replace).toHaveBeenCalledWith("/(tabs)");
+  });
+
+  it("preserves read-only permissions without withholding Today or the saved Passport", async () => {
+    mockWorkspaceContext = {
+      ...createContext(),
+      can: () => false
+    };
+    const screen = await render(<AssetPassportScreen />, { wrapper });
+
+    expect(
+      screen.getByRole("button", {
+        name: ASSET_PASSPORT_COPY.en.goToToday
+      }).props.accessibilityHint
+    ).toBe(ASSET_PASSPORT_COPY.en.todayHint);
+    expect(
+      screen.queryByText(ASSET_PASSPORT_COPY.en.addAnotherItem)
+    ).toBeNull();
+    expect(
+      screen.getByRole("button", {
+        name: ASSET_PASSPORT_COPY.en.viewPassport
+      })
+    ).toBeTruthy();
+    expect(screen.getByTestId("sync-truth")).toBeTruthy();
+
     await fireEvent.press(
       screen.getByText(ASSET_PASSPORT_COPY.en.goToToday)
     );
@@ -391,6 +563,66 @@ describe("Asset Passport post-save hierarchy", () => {
     expect(mockRouter.push).toHaveBeenCalledWith(
       "/asset-edit?assetId=asset-passport-hierarchy&focus=identity&returnTo=passport"
     );
+  });
+
+  it("adds optional destructive feedback only after archive is durably confirmed", async () => {
+    mockParams = { id: "asset-passport-hierarchy" };
+    let resolveLifecycle!: () => void;
+    const setAssetLifecycle = jest.fn(
+      () =>
+        new Promise<void>((resolve) => {
+          resolveLifecycle = resolve;
+        })
+    );
+    mockWorkspaceContext = {
+      ...createContext(),
+      setAssetLifecycle
+    };
+    const alertSpy = jest
+      .spyOn(Alert, "alert")
+      .mockImplementation((title, _message, buttons) => {
+        if (title !== ASSET_PASSPORT_COPY.en.archiveAlertTitle) return;
+        buttons
+          ?.find(
+            (button) =>
+              button.text === ASSET_PASSPORT_COPY.en.archivePassport
+          )
+          ?.onPress?.();
+      });
+
+    try {
+      const screen = await render(<AssetPassportScreen />, { wrapper });
+      await fireEvent.press(
+        screen.getByTestId("asset-passport-edit-details")
+      );
+      await fireEvent.press(
+        screen.getByRole("button", {
+          name: ASSET_PASSPORT_COPY.en.archiveAction
+        })
+      );
+
+      await waitFor(() =>
+        expect(setAssetLifecycle).toHaveBeenCalledWith({
+          assetId: asset.id,
+          lifecycleStatus: "archived"
+        })
+      );
+      expect(mockPlayTactileFeedback).not.toHaveBeenCalled();
+
+      resolveLifecycle();
+
+      await waitFor(() =>
+        expect(mockPlayTactileFeedback).toHaveBeenCalledWith(
+          "destructive",
+          { reduceMotion: false }
+        )
+      );
+      expect(mockRouter.replace).toHaveBeenCalledWith(
+        "/assets?view=items&filter=archived"
+      );
+    } finally {
+      alertSpy.mockRestore();
+    }
   });
 
   it("discloses that an unconfirmed GPS pin still needs confirmation", async () => {
@@ -507,6 +739,98 @@ describe("Asset Passport post-save hierarchy", () => {
     } finally {
       alertSpy.mockRestore();
     }
+  });
+
+  it("presents retrieval as an edge-to-edge Place, Space, Locator sequence with an explicit open disclosure", async () => {
+    mockParams = { id: "asset-passport-hierarchy" };
+    mockWorkspaceContext = locatedContext({
+      locationSource: "user_pin",
+      precision: "user_placed",
+      horizontalAccuracyMeters: null,
+      confirmedAt: "2026-07-27T09:00:00.000Z"
+    });
+    const screen = await render(<AssetPassportScreen />, { wrapper });
+    const locatorOrder = renderedTestIds(screen.toJSON()).filter(
+      (testId) =>
+        [
+          "asset-passport-retrieval-strip",
+          "asset-passport-locator-place",
+          "asset-passport-locator-space",
+          "asset-passport-locator-detail",
+          "asset-passport-open-place"
+        ].includes(testId)
+    );
+    const stripStyle = StyleSheet.flatten(
+      screen.getByTestId("asset-passport-retrieval-strip").props.style
+    );
+    const openPlace = screen.getByTestId(
+      "asset-passport-open-place"
+    );
+
+    expect(locatorOrder).toEqual([
+      "asset-passport-retrieval-strip",
+      "asset-passport-locator-place",
+      "asset-passport-locator-space",
+      "asset-passport-locator-detail",
+      "asset-passport-open-place"
+    ]);
+    expect(stripStyle).toMatchObject({
+      marginHorizontal: -20,
+      paddingHorizontal: 20,
+      backgroundColor: colors.carbon
+    });
+    expect(stripStyle.borderRadius).toBeUndefined();
+    expect(
+      screen.getByText(ASSET_PASSPORT_COPY.en.openDisclosure)
+    ).toBeTruthy();
+    expect(openPlace.props.accessibilityRole).toBe("button");
+    expect(openPlace.props.accessibilityLabel).toContain(
+      "West Bay Home"
+    );
+
+    await fireEvent.press(openPlace);
+    expect(mockRouter.push).toHaveBeenCalledWith(
+      "/place/asset-passport-place"
+    );
+  });
+
+  it("mirrors locator rows and the open disclosure in Arabic without reordering the retrieval sequence", async () => {
+    mockLanguage = "ar";
+    mockParams = { id: "asset-passport-hierarchy" };
+    mockWorkspaceContext = locatedContext({
+      locationSource: "user_pin",
+      precision: "user_placed",
+      horizontalAccuracyMeters: null,
+      confirmedAt: "2026-07-27T09:00:00.000Z"
+    });
+    const screen = await render(<AssetPassportScreen />, { wrapper });
+    const placeRow = screen.getByTestId("asset-passport-locator-place");
+    const openPlace = screen.getByTestId(
+      "asset-passport-open-place"
+    );
+    const locatorOrder = renderedTestIds(screen.toJSON()).filter(
+      (testId) =>
+        [
+          "asset-passport-locator-place",
+          "asset-passport-locator-space",
+          "asset-passport-locator-detail"
+        ].includes(testId)
+    );
+
+    expect(locatorOrder).toEqual([
+      "asset-passport-locator-place",
+      "asset-passport-locator-space",
+      "asset-passport-locator-detail"
+    ]);
+    expect(StyleSheet.flatten(placeRow.props.style).flexDirection).toBe(
+      "row-reverse"
+    );
+    expect(
+      StyleSheet.flatten(openPlace.props.style).flexDirection
+    ).toBe("row-reverse");
+    expect(
+      screen.getByText(ASSET_PASSPORT_COPY.ar.openDisclosure)
+    ).toBeTruthy();
   });
 
   it("uses a localized retrieval action and a bounded deep-link fallback", async () => {

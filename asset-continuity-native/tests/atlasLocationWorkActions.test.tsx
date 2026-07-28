@@ -8,6 +8,10 @@ import { createWorkspace } from "@/domain/sample";
 const mockRouter = {
   push: jest.fn()
 };
+const mockPlayTactileFeedback = jest.fn<
+  Promise<void>,
+  [string, { readonly reduceMotion: boolean }]
+>(async () => undefined);
 const sample = createWorkspace("sample");
 const mockWorkspace = {
   ...sample,
@@ -69,6 +73,18 @@ jest.mock("@/state/WorkspaceProvider", () => ({
   })
 }));
 
+jest.mock("@/accessibility/useReduceMotionPreference", () => ({
+  useReduceMotionPreference: () => false
+}));
+
+jest.mock("@/feedback/tactileFeedback", () => ({
+  __esModule: true,
+  playTactileFeedback: (
+    kind: string,
+    options: { readonly reduceMotion: boolean }
+  ) => mockPlayTactileFeedback(kind, options)
+}));
+
 jest.mock("phosphor-react-native", () => {
   const React = jest.requireActual("react") as typeof import("react");
   const { View } = jest.requireActual("react-native") as typeof import("react-native");
@@ -105,6 +121,32 @@ jest.mock("react-native-svg", () => {
 describe("Atlas location-work actions", () => {
   beforeEach(() => {
     mockRouter.push.mockClear();
+    mockPlayTactileFeedback.mockClear();
+  });
+
+  it("renders a visible title and exposes stateful Globe and List tabs", async () => {
+    const screen = await render(<AtlasScreen />, {
+      wrapper: SafeAreaTestProvider
+    });
+    const globe = screen.getByTestId("atlas-view-tab-globe");
+    const list = screen.getByTestId("atlas-view-tab-list");
+
+    expect(screen.getByRole("header", { name: "Atlas" })).toBeTruthy();
+    expect(globe.props.accessibilityRole).toBe("tab");
+    expect(globe.props.accessibilityState).toEqual({ selected: true });
+    expect(list.props.accessibilityRole).toBe("tab");
+    expect(list.props.accessibilityState).toEqual({ selected: false });
+
+    await fireEvent.press(list);
+
+    expect(
+      screen.getByTestId("atlas-view-tab-globe").props
+        .accessibilityState
+    ).toEqual({ selected: false });
+    expect(
+      screen.getByTestId("atlas-view-tab-list").props
+        .accessibilityState
+    ).toEqual({ selected: true });
   });
 
   it("opens each truthful debt in its matching filtered register", async () => {
@@ -139,6 +181,30 @@ describe("Atlas location-work actions", () => {
     await fireEvent.press(unplaced);
     expect(mockRouter.push).toHaveBeenLastCalledWith(
       "/assets?view=items&filter=location"
+    );
+  });
+
+  it("adds optional selection feedback when a mapped Place snaps into focus", async () => {
+    const screen = await render(<AtlasScreen />, {
+      wrapper: SafeAreaTestProvider
+    });
+    const place = mockWorkspace.places[1]!;
+    const assetCount = mockWorkspace.assets.filter(
+      (asset) =>
+        asset.lifecycleStatus === "active" &&
+        asset.placeId === place.id
+    ).length;
+    const pin = screen.getByRole("button", {
+      name: `${place.name}, ${place.regionLabel}, ${assetCount} ${
+        assetCount === 1 ? "item" : "items"
+      }`
+    });
+
+    await fireEvent.press(pin);
+
+    expect(mockPlayTactileFeedback).toHaveBeenCalledWith(
+      "selection",
+      { reduceMotion: false }
     );
   });
 });

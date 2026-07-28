@@ -45,6 +45,7 @@ const MAX_PROTECTED_ATTACHMENT_BYTES = MAX_ATTACHMENT_BYTES + 128;
 const MATERIALIZED_FILE_PATTERN =
   /^alyr-view-[a-f0-9]{32}\.[a-z0-9]{1,10}$/u;
 const PROTECTED_FILE_PATTERN = /^[a-f0-9]{64}\.alyrblob$/u;
+const DRAFT_PROTECTED_FILE_PATTERN = /^[a-f0-9]{64}\.alyrdraft$/u;
 const RECOVERY_STAGING_DIRECTORY_PATTERN =
   /^alyr-recovery-stage-[a-f0-9]{32}$/u;
 
@@ -129,6 +130,36 @@ export interface AttachmentStore {
    * passthroughs are intentionally left untouched.
    */
   cleanupMaterialized(attachment: MaterializedAttachment): Promise<void>;
+}
+
+export interface DraftAttachmentStore extends AttachmentStore {
+  /**
+   * Copies picker/cache bytes into the vault's durable draft area before a
+   * process-restorable draft points at them. Signed builds encrypt these bytes.
+   */
+  stageForDraft(file: CapturedFile): Promise<CapturedFile>;
+  /** Authenticates staged bytes without exposing plaintext to the caller. */
+  verifyDraftFile(file: CapturedFile): Promise<boolean>;
+  /** Returns an authenticated cache copy for an in-progress draft preview. */
+  materializeDraftForViewing(
+    file: CapturedFile
+  ): Promise<MaterializedAttachment>;
+  /** Deletes only a file owned by this scope's draft staging directory. */
+  discardDraftFile(file: CapturedFile): Promise<void>;
+}
+
+export function isDraftAttachmentStore(
+  store: AttachmentStore | null | undefined
+): store is DraftAttachmentStore {
+  const candidate = store as Partial<DraftAttachmentStore> | null | undefined;
+  return Boolean(
+    candidate &&
+      candidate.encryptedAtRest &&
+      typeof candidate.stageForDraft === "function" &&
+      typeof candidate.verifyDraftFile === "function" &&
+      typeof candidate.materializeDraftForViewing === "function" &&
+      typeof candidate.discardDraftFile === "function"
+  );
 }
 
 export interface VerifiedAttachmentBytesRequest {
@@ -282,6 +313,13 @@ function protectedDirectory(scope: VaultScope): Directory {
   );
 }
 
+function draftProtectedDirectory(scope: VaultScope): Directory {
+  return new Directory(
+    Paths.document,
+    `${scope.protectedAttachmentDirectoryName}-drafts`
+  );
+}
+
 function directoryUriWithTrailingSlash(directory: Directory): string {
   return directory.uri.endsWith("/") ? directory.uri : `${directory.uri}/`;
 }
@@ -301,6 +339,14 @@ function isScopedProtectedBlobUri(uri: string, scope: VaultScope): boolean {
   const path = uri.split(/[?#]/u, 1)[0] ?? "";
   const fileName = directChildName(protectedDirectory(scope), path);
   return Boolean(fileName && PROTECTED_FILE_PATTERN.test(fileName));
+}
+
+function isScopedDraftBlobUri(uri: string, scope: VaultScope): boolean {
+  const path = uri.split(/[?#]/u, 1)[0] ?? "";
+  const fileName = directChildName(draftProtectedDirectory(scope), path);
+  return Boolean(
+    fileName && DRAFT_PROTECTED_FILE_PATTERN.test(fileName)
+  );
 }
 
 function deleteDirectoryIfPresent(directory: Directory): void {
@@ -350,6 +396,33 @@ export class MemoryPreviewAttachmentStore implements ScopedAttachmentStore {
       checksumSha256: null,
       encryptedAtRest: false
     };
+  }
+
+  async stageForDraft(file: CapturedFile): Promise<CapturedFile> {
+    this.assertUnlocked();
+    return {
+      ...file,
+      protectedUri: null,
+      checksumSha256: null,
+      encryptedAtRest: false
+    };
+  }
+
+  async verifyDraftFile(): Promise<boolean> {
+    this.assertUnlocked();
+    return false;
+  }
+
+  async materializeDraftForViewing(): Promise<MaterializedAttachment> {
+    this.assertUnlocked();
+    throw new AttachmentReadError(
+      "PROTECTED_ATTACHMENT_UNAVAILABLE",
+      "Protected draft previews require an ALYR signed build."
+    );
+  }
+
+  async discardDraftFile(): Promise<void> {
+    this.assertUnlocked();
   }
 
   async materializeForViewing(
@@ -443,6 +516,18 @@ export class EncryptedFileAttachmentStore implements ScopedAttachmentStore {
     );
     if (hasProtectedMetadata) {
       if (
+        file.encryptedAtRest &&
+        file.protectedUri &&
+        file.checksumSha256 &&
+        isScopedDraftBlobUri(file.protectedUri, this.vaultScope)
+      ) {
+        const plaintext = await this.readVerifiedDraftPlaintext(file);
+        return this.persistPlaintext(file, plaintext, {
+          byteSize: file.byteSize,
+          checksumSha256: file.checksumSha256
+        });
+      }
+      if (
         !file.encryptedAtRest ||
         !file.protectedUri ||
         !file.checksumSha256 ||
@@ -480,6 +565,123 @@ export class EncryptedFileAttachmentStore implements ScopedAttachmentStore {
     }
 
     return protectedFile;
+  }
+
+  async stageForDraft(file: CapturedFile): Promise<CapturedFile> {
+    this.assertUnlocked();
+    if (
+      file.encryptedAtRest === true &&
+      file.protectedUri &&
+      file.checksumSha256 &&
+      isScopedDraftBlobUri(file.protectedUri, this.vaultScope)
+    ) {
+      if (!(await this.verifyDraftFile(file))) {
+        throw new AttachmentReadError(
+          "PROTECTED_FILE_MISSING",
+          "The protected draft attachment is missing or unreadable."
+        );
+      }
+      return {
+        ...file,
+        localUri: file.protectedUri,
+        checksumSha256: file.checksumSha256.toLowerCase()
+      };
+    }
+
+    if (
+      file.encryptedAtRest ||
+      file.protectedUri ||
+      file.checksumSha256
+    ) {
+      throw new AttachmentReadError(
+        "INVALID_REFERENCE",
+        "Only picker bytes or this vault's staged draft bytes can enter a draft."
+      );
+    }
+
+    const source = new File(file.localUri);
+    if (!source.exists) {
+      throw new AttachmentReadError(
+        "PROTECTED_FILE_MISSING",
+        "The attachment source file is missing."
+      );
+    }
+    const plaintext = new Uint8Array(await source.arrayBuffer());
+    return this.persistPlaintext(file, plaintext, undefined, true);
+  }
+
+  async verifyDraftFile(file: CapturedFile): Promise<boolean> {
+    this.assertUnlocked();
+    try {
+      const plaintext = await this.readVerifiedDraftPlaintext(file);
+      plaintext.fill(0);
+      return true;
+    } catch {
+      return false;
+    }
+  }
+
+  async materializeDraftForViewing(
+    file: CapturedFile
+  ): Promise<MaterializedAttachment> {
+    this.assertUnlocked();
+    const plaintext = await this.readVerifiedDraftPlaintext(file);
+    const checksum = file.checksumSha256!.toLowerCase();
+    const directory = materializedDirectory(this.vaultScope);
+    directory.create({ idempotent: true, intermediates: true });
+    const extension = safeExtension(file.fileName, file.mimeType);
+    const destination = new File(
+      directory,
+      `alyr-view-${checksum.slice(0, 32)}.${extension}`
+    );
+    try {
+      destination.create({ overwrite: true, intermediates: true });
+      destination.write(plaintext);
+      if (!destination.exists || destination.size !== plaintext.byteLength) {
+        throw new Error("Draft preview size verification failed.");
+      }
+      return {
+        uri: destination.uri,
+        fileName: file.fileName,
+        mimeType: file.mimeType,
+        byteSize: plaintext.byteLength,
+        checksumSha256: checksum,
+        integrity: "aes-gcm-and-sha256",
+        temporary: true
+      };
+    } catch {
+      if (destination.exists) destination.delete();
+      throw new AttachmentReadError(
+        "TEMPORARY_FILE_FAILED",
+        "A protected draft preview could not be created."
+      );
+    } finally {
+      plaintext.fill(0);
+    }
+  }
+
+  async discardDraftFile(file: CapturedFile): Promise<void> {
+    this.assertUnlocked();
+    const reference = file.protectedUri;
+    if (!reference || !isScopedDraftBlobUri(reference, this.vaultScope)) {
+      return;
+    }
+    const staged = new File(reference);
+    if (staged.exists) {
+      staged.delete();
+    }
+    if (
+      file.checksumSha256 &&
+      /^[a-f0-9]{64}$/iu.test(file.checksumSha256)
+    ) {
+      const preview = new File(
+        materializedDirectory(this.vaultScope),
+        `alyr-view-${file.checksumSha256
+          .toLowerCase()
+          .slice(0, 32)}.${safeExtension(file.fileName, file.mimeType)}`
+      );
+      if (preview.exists) preview.delete();
+    }
   }
 
   async ingestVerifiedBytes(
@@ -529,7 +731,8 @@ export class EncryptedFileAttachmentStore implements ScopedAttachmentStore {
     expected?: {
       readonly byteSize: number;
       readonly checksumSha256: string;
-    }
+    },
+    draft = false
   ): Promise<CapturedFile> {
     try {
       const byteSize = plaintext.byteLength;
@@ -570,11 +773,13 @@ export class EncryptedFileAttachmentStore implements ScopedAttachmentStore {
         );
       }
 
-      const directory = protectedDirectory(this.vaultScope);
+      const directory = draft
+        ? draftProtectedDirectory(this.vaultScope)
+        : protectedDirectory(this.vaultScope);
       directory.create({ idempotent: true, intermediates: true });
       const destination = new File(
         directory,
-        `${checksumSha256}.alyrblob`
+        `${checksumSha256}.${draft ? "alyrdraft" : "alyrblob"}`
       );
       destination.create({ overwrite: true, intermediates: true });
       destination.write(encrypted);
@@ -600,6 +805,88 @@ export class EncryptedFileAttachmentStore implements ScopedAttachmentStore {
       // The caller transfers ownership of plaintext to the vault. Wipe it on
       // every success and failure path after verification/encryption finishes.
       plaintext.fill(0);
+    }
+  }
+
+  private async readVerifiedDraftPlaintext(
+    file: CapturedFile
+  ): Promise<Uint8Array> {
+    if (
+      !file.encryptedAtRest ||
+      !file.protectedUri ||
+      !file.checksumSha256 ||
+      !isScopedDraftBlobUri(file.protectedUri, this.vaultScope) ||
+      !/^[a-f0-9]{64}$/iu.test(file.checksumSha256) ||
+      !Number.isSafeInteger(file.byteSize) ||
+      file.byteSize < 1 ||
+      file.byteSize > MAX_ATTACHMENT_BYTES
+    ) {
+      throw new AttachmentReadError(
+        "INVALID_REFERENCE",
+        "The protected draft attachment metadata is invalid."
+      );
+    }
+
+    const source = new File(file.protectedUri);
+    if (
+      !source.exists ||
+      source.size <= 0 ||
+      source.size > MAX_PROTECTED_ATTACHMENT_BYTES
+    ) {
+      throw new AttachmentReadError(
+        "PROTECTED_FILE_MISSING",
+        "The protected draft attachment is missing or unreadable."
+      );
+    }
+
+    const keyBytes = await this.secureStore.get(
+      this.vaultScope.attachmentKeyName
+    );
+    if (!keyBytes || keyBytes.byteLength !== 32) {
+      keyBytes?.fill(0);
+      throw new AttachmentReadError(
+        "KEY_UNAVAILABLE",
+        "The device attachment key is unavailable."
+      );
+    }
+
+    try {
+      let plaintext: Uint8Array;
+      try {
+        const encrypted = new Uint8Array(await source.arrayBuffer());
+        const key = await AESEncryptionKey.import(keyBytes);
+        const sealed = AESSealedData.fromCombined(encrypted);
+        plaintext = await aesDecryptAsync(sealed, key);
+      } catch {
+        throw new AttachmentReadError(
+          "DECRYPTION_FAILED",
+          "The protected draft attachment did not pass authentication."
+        );
+      }
+
+      if (plaintext.byteLength !== file.byteSize) {
+        plaintext.fill(0);
+        throw new AttachmentReadError(
+          "SIZE_MISMATCH",
+          "The protected draft attachment does not match its saved size."
+        );
+      }
+      const checksum = await sha256Hex(plaintext);
+      if (
+        !timingSafeHexEqual(
+          checksum,
+          file.checksumSha256.toLowerCase()
+        )
+      ) {
+        plaintext.fill(0);
+        throw new AttachmentReadError(
+          "CHECKSUM_MISMATCH",
+          "The protected draft attachment does not match its checksum."
+        );
+      }
+      return plaintext;
+    } finally {
+      keyBytes.fill(0);
     }
   }
 
@@ -1589,6 +1876,9 @@ export class EncryptedFileAttachmentStore implements ScopedAttachmentStore {
     const results = await Promise.allSettled([
       Promise.resolve().then(() =>
         deleteDirectoryIfPresent(protectedDirectory(this.vaultScope))
+      ),
+      Promise.resolve().then(() =>
+        deleteDirectoryIfPresent(draftProtectedDirectory(this.vaultScope))
       ),
       removeAttachmentKey(this.secureStore, this.vaultScope)
     ]);

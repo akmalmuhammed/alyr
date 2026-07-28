@@ -70,6 +70,29 @@ export default function AuthLayout() {
         }}
       />
       <Stack.Screen
+        name="household"
+        options={{
+          /*
+           * A verified incomplete account is guarded back to Household from
+           * public auth routes. Disable the iOS edge-swipe so it cannot create
+           * a visible redirect loop behind the deliberate account-exit action.
+           */
+          gestureEnabled: false
+        }}
+      />
+      <Stack.Screen
+        name="privacy"
+        options={{
+          /*
+           * This screen owns a state-aware Back action. Once device
+           * authorization begins it locks that action until the durable
+           * first-record handoff is committed, so an iOS edge swipe must not
+           * bypass the same boundary.
+           */
+          gestureEnabled: false
+        }}
+      />
+      <Stack.Screen
         name="reset-password"
         options={{
           /*

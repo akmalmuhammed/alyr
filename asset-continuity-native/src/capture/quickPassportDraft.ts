@@ -15,6 +15,11 @@ import {
   vaultScopeFromOpaqueId,
   type VaultScopeId
 } from "@/data/vaultScope";
+import {
+  isDraftAttachmentStore,
+  type AttachmentStore,
+  type DraftAttachmentStore
+} from "@/data/attachmentStore";
 
 const ITEM_DRAFT_KEY_PREFIX = "alyr.quick-passport-draft";
 const PLACE_DRAFT_KEY_PREFIX = "alyr.place-capture-draft";
@@ -185,6 +190,79 @@ function sanitizeDraft(draft: QuickPassportDraft): QuickPassportDraft {
   };
 }
 
+function draftFileReference(file: CapturedFile | null): string | null {
+  return file?.encryptedAtRest === true &&
+    typeof file.protectedUri === "string"
+    ? file.protectedUri
+    : null;
+}
+
+function draftFileReferences(
+  draft: Pick<QuickPassportDraft, "photo" | "evidence">
+): Set<string> {
+  return new Set(
+    [draftFileReference(draft.photo), draftFileReference(draft.evidence)].filter(
+      (value): value is string => Boolean(value)
+    )
+  );
+}
+
+async function discardUnreferencedDraftFiles(
+  store: DraftAttachmentStore,
+  files: readonly (CapturedFile | null)[],
+  retained: ReadonlySet<string>
+): Promise<void> {
+  const discarded = new Set<string>();
+  for (const file of files) {
+    const reference = draftFileReference(file);
+    if (
+      !reference ||
+      retained.has(reference) ||
+      discarded.has(reference)
+    ) {
+      continue;
+    }
+    await store.discardDraftFile(file!);
+    discarded.add(reference);
+  }
+}
+
+async function restorableDraftFile(
+  file: CapturedFile | null,
+  role: "photo" | "evidence",
+  store: AttachmentStore | null | undefined
+): Promise<CapturedFile | null> {
+  const sanitized = sanitizedDraftFile(file, role);
+  if (!sanitized || !isDraftAttachmentStore(store)) return null;
+  try {
+    const materialized = await store.materializeDraftForViewing(
+      sanitized
+    );
+    return {
+      ...sanitized,
+      localUri: materialized.uri
+    };
+  } catch {
+    await store.discardDraftFile(sanitized);
+    return null;
+  }
+}
+
+async function storedDraft(
+  scopeId: VaultScopeId
+): Promise<QuickPassportDraft | null> {
+  const stored = await SecureStore.getItemAsync(
+    scopedDraftKey(ITEM_DRAFT_KEY_PREFIX, scopeId)
+  );
+  if (!stored) return null;
+  try {
+    const parsed: unknown = JSON.parse(stored);
+    return isDraft(parsed) ? parsed : null;
+  } catch {
+    return null;
+  }
+}
+
 function isPlaceDraft(value: unknown): value is PlaceCaptureDraft {
   if (!value || typeof value !== "object") return false;
   const candidate = value as Partial<PlaceCaptureDraft>;
@@ -210,49 +288,114 @@ function isPlaceDraft(value: unknown): value is PlaceCaptureDraft {
 
 export async function readQuickPassportDraft(
   scopeId: VaultScopeId,
-  householdId: string
+  householdId: string,
+  attachmentStore?: AttachmentStore | null
 ): Promise<QuickPassportDraft | null> {
-  const stored = await SecureStore.getItemAsync(
-    scopedDraftKey(ITEM_DRAFT_KEY_PREFIX, scopeId)
-  );
-  if (!stored) return null;
-  try {
-    const parsed: unknown = JSON.parse(stored);
-    if (
-      !isDraft(parsed) ||
-      parsed.scopeId !== scopeId ||
-      parsed.householdId !== householdId
-    ) {
-      return null;
-    }
-    return sanitizeDraft(parsed);
-  } catch {
+  const parsed = await storedDraft(scopeId);
+  if (
+    !parsed ||
+    parsed.scopeId !== scopeId ||
+    parsed.householdId !== householdId
+  ) {
     return null;
   }
+  const sanitized = sanitizeDraft(parsed);
+  const [photo, evidence] = await Promise.all([
+    restorableDraftFile(sanitized.photo, "photo", attachmentStore),
+    restorableDraftFile(
+      sanitized.evidence,
+      "evidence",
+      attachmentStore
+    )
+  ]);
+  return { ...sanitized, photo, evidence };
 }
 
 export function writeQuickPassportDraft(
-  draft: Omit<QuickPassportDraft, "version" | "updatedAt">
+  draft: Omit<QuickPassportDraft, "version" | "updatedAt">,
+  attachmentStore?: AttachmentStore | null
 ): Promise<void> {
   return enqueueWrite(async () => {
-    await SecureStore.setItemAsync(
-      scopedDraftKey(ITEM_DRAFT_KEY_PREFIX, draft.scopeId),
-      JSON.stringify({
-        ...draft,
-        version: DRAFT_VERSION,
-        updatedAt: new Date().toISOString()
-      } satisfies QuickPassportDraft)
-    );
+    const previous = await storedDraft(draft.scopeId);
+    const store = isDraftAttachmentStore(attachmentStore)
+      ? attachmentStore
+      : null;
+    let photo: CapturedFile | null = null;
+    let evidence: CapturedFile | null = null;
+    if (store) {
+      try {
+        photo = draft.photo
+          ? await store.stageForDraft(draft.photo)
+          : null;
+        evidence = draft.evidence
+          ? await store.stageForDraft(draft.evidence)
+          : null;
+      } catch (error) {
+        await discardUnreferencedDraftFiles(
+          store,
+          [photo, evidence],
+          previous ? draftFileReferences(previous) : new Set()
+        );
+        throw error;
+      }
+    }
+    const next = {
+      ...draft,
+      photo,
+      evidence,
+      version: DRAFT_VERSION,
+      updatedAt: new Date().toISOString()
+    } satisfies QuickPassportDraft;
+    const previousReferences = previous
+      ? draftFileReferences(previous)
+      : new Set<string>();
+    try {
+      await SecureStore.setItemAsync(
+        scopedDraftKey(ITEM_DRAFT_KEY_PREFIX, draft.scopeId),
+        JSON.stringify(next)
+      );
+    } catch (error) {
+      if (store) {
+        await discardUnreferencedDraftFiles(
+          store,
+          [photo, evidence],
+          previousReferences
+        );
+      }
+      throw error;
+    }
+    if (store && previous) {
+      await discardUnreferencedDraftFiles(
+        store,
+        [previous.photo, previous.evidence],
+        draftFileReferences(next)
+      );
+    }
   });
 }
 
 export function clearQuickPassportDraft(
-  scopeId: VaultScopeId
+  scopeId: VaultScopeId,
+  attachmentStore?: AttachmentStore | null,
+  discardStagedFiles = true
 ): Promise<void> {
   return enqueueWrite(async () => {
+    const previous = discardStagedFiles
+      ? await storedDraft(scopeId)
+      : null;
     await SecureStore.deleteItemAsync(
       scopedDraftKey(ITEM_DRAFT_KEY_PREFIX, scopeId)
     );
+    if (
+      previous &&
+      isDraftAttachmentStore(attachmentStore)
+    ) {
+      await discardUnreferencedDraftFiles(
+        attachmentStore,
+        [previous.photo, previous.evidence],
+        new Set()
+      );
+    }
   });
 }
 

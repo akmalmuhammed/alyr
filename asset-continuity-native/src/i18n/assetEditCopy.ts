@@ -174,7 +174,7 @@ export const ASSET_EDIT_COPY: Readonly<
       `This saves the indoor retrieval clue. Property-pin accuracy is managed on ${isolateDynamicText(placeName)}.`,
     placePinDebtTitle: "Confirm the Place pin",
     placePinDebtBody:
-      "The retrieval detail can be saved now, but location readiness stays open until this Place has a confirmed precise pin.",
+      "The indoor retrieval detail can be saved now. Until this Place has a confirmed precise pin, the Passport saves the location as needing detail—not exact.",
     reviewPlacePin: "Review Place pin",
     reviewPlacePinHint:
       "Opens the Place pin editor. Your unsaved item changes stay on this screen.",
@@ -288,7 +288,7 @@ export const ASSET_EDIT_COPY: Readonly<
       `يحفظ هذا دليل الوصول داخل المكان. تُدار دقة دبوس العقار في ${isolateDynamicText(placeName)}.`,
     placePinDebtTitle: "أكّد دبوس المكان",
     placePinDebtBody:
-      "يمكن حفظ دليل الوصول الآن، لكن اكتمال الموقع يبقى معلقًا حتى يتوفر لهذا المكان دبوس دقيق ومؤكد.",
+      "يمكن حفظ دليل الوصول داخل المكان الآن. وحتى يتوفر دبوس دقيق ومؤكد، يُحفظ الموقع على أنه يحتاج إلى تفاصيل، وليس موقعًا دقيقًا.",
     reviewPlacePin: "مراجعة دبوس المكان",
     reviewPlacePinHint:
       "يفتح محرر دبوس المكان. تبقى تغييرات الغرض غير المحفوظة في هذه الشاشة.",

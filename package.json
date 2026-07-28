@@ -23,7 +23,7 @@
     "deploy:supabase:api": "npm run check:supabase:static && npx --yes supabase@2.109.1 db push --linked --include-all --yes && npx --yes supabase@2.109.1 functions deploy api --project-ref ifiyragzeizaxdqzxvpk --no-verify-jwt --use-api --yes && npm run probe:supabase:live",
     "check:web": "npm run test:domain --workspace=asset-continuity-web && npm run test:server --workspace=asset-continuity-web && npm run test:ui --workspace=asset-continuity-web -- --maxWorkers=2 --testTimeout=15000 && npm run test:sites --workspace=asset-continuity-web && npm run build --workspace=asset-continuity-web",
     "check:mobile-prototype": "npm run build --workspace=asset-continuity-mobile && npm run test:sites --workspace=asset-continuity-mobile",
-    "check:native": "npm run build:shared && npm run typecheck --workspace=@alyr/native && npm run test --workspace=@alyr/native && npm run config:check --workspace=@alyr/native",
+    "check:native": "npm run build:shared && npm run typecheck --workspace=@alyr/native && npm run test --workspace=@alyr/native && npm run test:e2e:static --workspace=@alyr/native && npm run config:check --workspace=@alyr/native && npm run config:check:production --workspace=@alyr/native && npm run verify:eas-packaging --workspace=@alyr/native && npm run verify:recovery-crypto --workspace=@alyr/native",
     "check:ios-preview": "npm run build:shared && npm run typecheck --workspace=@alyr/ios-preview && npm run test:contract --workspace=@alyr/ios-preview && npm run config:check --workspace=@alyr/ios-preview && npm run bundle:ios --workspace=@alyr/ios-preview",
     "test": "npm run check",
     "dev:web": "npm run dev --workspace=asset-continuity-web",
@@ -36,7 +36,6 @@
     "npm": ">=10.9.0"
   },
   "devDependencies": {
-    "eas-cli": "21.2.0",
     "expo-file-system": "57.0.1",
     "expo-font": "57.0.1",
     "openapi-typescript": "7.13.0",

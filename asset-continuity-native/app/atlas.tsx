@@ -24,12 +24,14 @@ import {
 } from "react-native";
 import Svg, { Circle, Path } from "react-native-svg";
 
+import { useReduceMotionPreference } from "@/accessibility/useReduceMotionPreference";
 import { AssetListItem } from "@/components/AssetListItem";
 import { PermissionNotice } from "@/components/PermissionDenied";
 import {
   AppScreen,
   BodyText,
   Eyebrow,
+  ScreenTitle,
   Section,
   SectionHeader
 } from "@/components/ui";
@@ -46,6 +48,7 @@ import {
 } from "@/domain/atlas";
 
 import type { LanguageCode, NativePlace } from "@/domain/model";
+import { playTactileFeedback } from "@/feedback/tactileFeedback";
 import {
   atlasGlobeAccessibilityLabel,
   atlasItemCount,
@@ -135,6 +138,7 @@ function projectedPath(
 
 export default function AtlasScreen() {
   const router = useRouter();
+  const reduceMotion = useReduceMotionPreference();
   const { width } = useWindowDimensions();
   const { copy, language, rtl } = useSecondarySurfaceCopy();
   const atlasCopy = copy.atlas;
@@ -347,6 +351,7 @@ export default function AtlasScreen() {
   function focusPlace(entry: PinnedPlace) {
     setSelectedPlaceId(entry.place.id);
     setCameraCenter(entry);
+    void playTactileFeedback("selection", { reduceMotion });
   }
 
   function rotate(step: -1 | 1) {
@@ -361,10 +366,12 @@ export default function AtlasScreen() {
   return (
     <AppScreen
       contentStyle={styles.screenContent}
+      safeEdges={[]}
       testID="atlas-screen"
     >
       <View style={styles.heading}>
         <Eyebrow>{atlasCopy.eyebrow}</Eyebrow>
+        <ScreenTitle>{atlasCopy.title}</ScreenTitle>
         <BodyText muted>{atlasCopy.intro}</BodyText>
       </View>
 
@@ -388,12 +395,14 @@ export default function AtlasScreen() {
           onPress={() => setView("globe")}
           style={({ pressed }) => [
             styles.viewTab,
+            rtl && styles.rowReverse,
             view === "globe" && styles.viewTabSelected,
             pressed && styles.pressed
           ]}
+          testID="atlas-view-tab-globe"
         >
           <GlobeHemisphereWest
-            color={view === "globe" ? colors.white : colors.textMuted}
+            color={view === "globe" ? colors.carbon : colors.textMuted}
             size={19}
             weight="regular"
           />
@@ -414,12 +423,14 @@ export default function AtlasScreen() {
           onPress={() => setView("list")}
           style={({ pressed }) => [
             styles.viewTab,
+            rtl && styles.rowReverse,
             view === "list" && styles.viewTabSelected,
             pressed && styles.pressed
           ]}
+          testID="atlas-view-tab-list"
         >
           <ListBullets
-            color={view === "list" ? colors.white : colors.textMuted}
+            color={view === "list" ? colors.carbon : colors.textMuted}
             size={19}
             weight="regular"
           />
@@ -1143,14 +1154,12 @@ const styles = StyleSheet.create({
     gap: spacing.xs
   },
   viewSwitch: {
-    minHeight: 52,
+    minHeight: 45,
     flexDirection: "row",
-    gap: 4,
-    padding: 4,
-    borderWidth: 1,
-    borderColor: colors.border,
-    borderRadius: radius.md,
-    backgroundColor: colors.surface
+    gap: spacing.md,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.borderStrong,
+    backgroundColor: colors.canvas
   },
   viewTab: {
     minHeight: 44,
@@ -1159,19 +1168,23 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     gap: spacing.xs,
-    borderRadius: radius.sm
+    marginBottom: -1,
+    borderBottomWidth: 3,
+    borderBottomColor: colors.transparent
   },
   viewTabSelected: {
-    backgroundColor: colors.carbon
+    borderBottomColor: colors.volt
   },
   viewTabLabel: {
     color: colors.textMuted,
-    fontFamily: typography.bodyBold,
-    fontSize: 14,
-    lineHeight: 19
+    fontFamily: typography.metadata,
+    fontSize: 13,
+    lineHeight: 18,
+    letterSpacing: 0.8,
+    textTransform: "uppercase"
   },
   viewTabLabelSelected: {
-    color: colors.white
+    color: colors.carbon
   },
   geographyCanvas: {
     alignItems: "center",

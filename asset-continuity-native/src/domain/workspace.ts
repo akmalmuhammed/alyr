@@ -3,6 +3,7 @@ import {
   unresolvedLocationForCategoryTransition
 } from "./assetCategoryLocation";
 import { validateNewAssetInput } from "./assetMutationBoundary";
+import { deriveNativeAssetLocationTruth } from "./readiness";
 import type {
   AssetLifecycleInput,
   EvidenceReviewInput,
@@ -769,8 +770,21 @@ export function updateAsset(
     ) {
       throw new Error("Choose a space inside the selected Place.");
     }
-  } else if (nextLocation?.roomId) {
-    throw new Error("A space cannot be saved without its Place.");
+    nextLocation = {
+      ...nextLocation,
+      locationStatus: deriveNativeAssetLocationTruth({
+        categoryId: identity?.categoryId ?? previousAsset.categoryId,
+        requestedStatus: nextLocation.locationStatus,
+        place,
+        roomId: nextLocation.roomId,
+        locatorText: nextLocation.locatorText
+      }).status
+    };
+  } else if (
+    nextLocation &&
+    nextLocation.locationStatus !== "unknown"
+  ) {
+    throw new Error("Choose a Place for this physical location.");
   }
 
   const identityChanged = Boolean(

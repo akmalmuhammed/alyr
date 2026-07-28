@@ -1,6 +1,7 @@
 import {
   fireEvent,
   render,
+  within,
   waitFor
 } from "@testing-library/react-native";
 import type { PropsWithChildren } from "react";
@@ -24,6 +25,7 @@ import {
   CORE_JOURNEY_COPY,
   familyMemberSummary,
   formatByteSize,
+  formatLocalizedDate,
   householdAccessSummary,
   memberAvatarAccessibilityLabel,
   pendingUpdateSummary,
@@ -31,6 +33,8 @@ import {
   signedAccountExitPrompt
 } from "@/i18n/coreJourneyCopy";
 import { LocaleProvider } from "@/i18n/LocaleProvider";
+import { PILOT_CLOUD_STORAGE_ALLOWANCE_BYTES } from "@/domain/vaultStorage";
+import type { LocalRecoveryKitRecord } from "@/recovery";
 
 const mockRouter = {
   push: jest.fn(),
@@ -44,6 +48,20 @@ const mockRefreshHouseholdAccess = jest.fn(async () => true);
 const mockCan = jest.fn((_capability: string) => true);
 const mockIsSharingAvailable = jest.fn(async () => true);
 const mockShare = jest.fn(async () => undefined);
+const mockRecoveryListRecent = jest.fn(
+  async (): Promise<readonly LocalRecoveryKitRecord[]> => []
+);
+const mockRecoveryJourney = {
+  capability: {
+    kind: "unavailable"
+  } as
+    | { kind: "unavailable" }
+    | {
+        kind: "available";
+        protection: "argon2id-aes-256-gcm";
+      },
+  listRecent: mockRecoveryListRecent
+};
 
 const baseWorkspace = createWorkspace("personal");
 const mockWorkspace: NativeWorkspace = {
@@ -84,7 +102,12 @@ const mockSession: AuthSessionDescriptor = {
 };
 
 jest.mock("expo-router", () => ({
-  useRouter: () => mockRouter
+  useRouter: () => mockRouter,
+  useFocusEffect: (callback: () => void) =>
+    jest.requireActual<typeof import("react")>("react").useEffect(
+      callback,
+      [callback]
+    )
 }));
 
 jest.mock("@/auth/AuthFlowProvider", () => ({
@@ -145,11 +168,7 @@ jest.mock("@/deviceAuth", () => ({
 }));
 
 jest.mock("@/recovery", () => ({
-  useRecoveryJourney: () => ({
-    capability: {
-      kind: "unavailable"
-    }
-  })
+  useRecoveryJourney: () => mockRecoveryJourney
 }));
 
 jest.mock("@/notifications/ReviewReminderProvider", () => ({
@@ -215,6 +234,8 @@ describe("Family and Vault localization", () => {
     jest.clearAllMocks();
     mockCan.mockReturnValue(true);
     mockIsSharingAvailable.mockResolvedValue(true);
+    mockRecoveryJourney.capability = { kind: "unavailable" };
+    mockRecoveryListRecent.mockResolvedValue([]);
   });
 
   it("keeps every canonical Stack title behind the bilingual copy contract", () => {
@@ -300,6 +321,241 @@ describe("Family and Vault localization", () => {
       })
     );
     expect(mockRouter.push).toHaveBeenCalledWith("/settings");
+  });
+
+  it("uses one archive-status masthead before proof and numbered rule-led chapters", async () => {
+    const screen = await render(<VaultScreen />, {
+      wrapper: localeWrapper("en")
+    });
+    const copy = CORE_JOURNEY_COPY.en.vault;
+    const archive = within(screen.getByTestId("vault-archive-status"));
+    const { readFileSync } = jest.requireActual("fs") as {
+      readFileSync(path: string, encoding: "utf8"): string;
+    };
+    const source = readFileSync(
+      `${process.cwd()}/app/(tabs)/vault.tsx`,
+      "utf8"
+    );
+
+    expect(archive.getByText(copy.archiveStatus)).toBeTruthy();
+    expect(archive.getByTestId("sync-truth")).toBeTruthy();
+    expect(archive.getByTestId("vault-local-proof-storage")).toBeTruthy();
+    expect(archive.getByTestId("vault-cloud-storage-usage")).toBeTruthy();
+    expect(
+      within(screen.getByTestId("vault-chapter-recovery")).getByText(
+        "02",
+        { includeHiddenElements: true }
+      )
+    ).toBeTruthy();
+    expect(
+      within(screen.getByTestId("vault-chapter-portability")).getByText(
+        "03",
+        { includeHiddenElements: true }
+      )
+    ).toBeTruthy();
+    expect(
+      within(screen.getByTestId("vault-chapter-settings")).getByText(
+        "04",
+        { includeHiddenElements: true }
+      )
+    ).toBeTruthy();
+
+    const masthead = source.indexOf("<ArchiveStatusMasthead");
+    const proof = source.indexOf("<VaultRecentProof");
+    const recovery = source.indexOf('testID="vault-chapter-recovery"');
+    const portability = source.indexOf('testID="vault-chapter-portability"');
+    const settings = source.indexOf('testID="vault-chapter-settings"');
+
+    expect(masthead).toBeGreaterThan(-1);
+    expect(masthead).toBeLessThan(proof);
+    expect(proof).toBeLessThan(recovery);
+    expect(recovery).toBeLessThan(portability);
+    expect(portability).toBeLessThan(settings);
+    expect(source).not.toContain("<SyncTruth");
+    expect(source).not.toContain("storageTruthGroup");
+  });
+
+  it("separates device proof size from unknown cloud usage in English and Arabic", async () => {
+    const english = await render(<VaultScreen />, {
+      wrapper: localeWrapper("en")
+    });
+    const englishCopy = CORE_JOURNEY_COPY.en.vault;
+    const englishAllowance = formatByteSize(
+      PILOT_CLOUD_STORAGE_ALLOWANCE_BYTES,
+      "en"
+    );
+    const englishLocal = english.getByTestId(
+      "vault-local-proof-storage"
+    );
+    const englishCloud = english.getByTestId(
+      "vault-cloud-storage-usage"
+    );
+
+    expect(englishLocal.props.accessible).toBe(true);
+    expect(englishLocal.props.accessibilityLabel).toContain(
+      englishCopy.localProofStorageDescription
+    );
+    expect(
+      within(englishCloud).getByText(englishCopy.cloudUsageUnknown)
+    ).toBeTruthy();
+    expect(
+      within(englishCloud).getByText(
+        `${englishCopy.cloudPilotAllowance}: ${englishAllowance}`
+      )
+    ).toBeTruthy();
+    expect(englishCloud.props.accessibilityLabel).toBe(
+      [
+        englishCopy.cloudPilotStorage,
+        englishCopy.cloudUsageUnknown,
+        `${englishCopy.cloudPilotAllowance}: ${englishAllowance}`,
+        `${englishCopy.cloudUsageUnknownDescription} ${englishCopy.cloudAllowanceDescription}`
+      ].join(". ")
+    );
+    expect(
+      within(englishCloud).queryByText(formatByteSize(0, "en"))
+    ).toBeNull();
+    await english.unmount();
+
+    const arabic = await render(<VaultScreen />, {
+      wrapper: localeWrapper("ar")
+    });
+    const arabicCopy = CORE_JOURNEY_COPY.ar.vault;
+    const arabicAllowance = formatByteSize(
+      PILOT_CLOUD_STORAGE_ALLOWANCE_BYTES,
+      "ar"
+    );
+    const arabicCloud = arabic.getByTestId(
+      "vault-cloud-storage-usage"
+    );
+
+    expect(
+      within(arabicCloud).getByText(arabicCopy.cloudUsageUnknown)
+    ).toBeTruthy();
+    expect(
+      within(arabicCloud).getByText(
+        `${arabicCopy.cloudPilotAllowance}: ${arabicAllowance}`
+      )
+    ).toBeTruthy();
+    expect(arabicCloud.props.accessibilityLabel).toContain(
+      arabicCopy.cloudUsageUnknownDescription
+    );
+    expect(
+      within(arabicCloud).queryByText(englishCopy.cloudUsageUnknown)
+    ).toBeNull();
+    const arabicHeadingStyle = StyleSheet.flatten(
+      within(arabicCloud).getByText(arabicCopy.cloudPilotStorage)
+        .props.style
+    );
+    expect(arabicHeadingStyle.writingDirection).toBe("rtl");
+  });
+
+  it("shows recent local kits and the truthful next backup action", async () => {
+    mockRecoveryJourney.capability = {
+      kind: "available",
+      protection: "argon2id-aes-256-gcm"
+    };
+    mockRecoveryListRecent.mockResolvedValue([
+      {
+        reference: "file:///ALYR-Recovery-2026-07-28.alyrkit",
+        fileName: "ALYR-Recovery-2026-07-28.alyrkit",
+        byteSize: 2048,
+        createdAt: "2026-07-28T08:00:00.000Z",
+        externalBackupConfirmedAt: null
+      },
+      {
+        reference: "file:///ALYR-Recovery-2026-07-27.alyrkit",
+        fileName: "ALYR-Recovery-2026-07-27.alyrkit",
+        byteSize: 1024,
+        createdAt: "2026-07-27T08:00:00.000Z",
+        externalBackupConfirmedAt: "2026-07-27T08:05:00.000Z"
+      }
+    ]);
+    const screen = await render(<VaultScreen />, {
+      wrapper: localeWrapper("en")
+    });
+    const copy = CORE_JOURNEY_COPY.en.vault;
+
+    await waitFor(() =>
+      expect(screen.getByTestId("vault-recent-recovery-kits")).toBeTruthy()
+    );
+    expect(screen.getByText(copy.recentRecoveryKitsDescription)).toBeTruthy();
+    expect(screen.getByText(copy.localKitNeedsCopy)).toBeTruthy();
+    expect(screen.getByText(copy.externalCopyConfirmed)).toBeTruthy();
+    expect(screen.queryByText(/SHA-256/iu)).toBeNull();
+
+    await fireEvent.press(
+      screen.getByRole("button", {
+        name: new RegExp("ALYR-Recovery-2026-07-28", "u")
+      })
+    );
+    expect(mockRouter.push).toHaveBeenCalledWith("/recovery-create");
+  });
+
+  it("surfaces a local Recovery Kit listing failure and retries device storage", async () => {
+    mockRecoveryJourney.capability = {
+      kind: "available",
+      protection: "argon2id-aes-256-gcm"
+    };
+    mockRecoveryListRecent
+      .mockRejectedValueOnce(new Error("device storage unavailable"))
+      .mockResolvedValueOnce([]);
+    const screen = await render(<VaultScreen />, {
+      wrapper: localeWrapper("en")
+    });
+    const copy = CORE_JOURNEY_COPY.en.vault;
+
+    expect(
+      await screen.findByText(copy.recoveryHistoryUnavailable)
+    ).toBeTruthy();
+
+    await fireEvent.press(
+      screen.getByRole("button", {
+        name: new RegExp(copy.recentRecoveryKits, "u")
+      })
+    );
+
+    await waitFor(() =>
+      expect(mockRecoveryListRecent).toHaveBeenCalledTimes(2)
+    );
+    await waitFor(() =>
+      expect(
+        screen.queryByText(copy.recoveryHistoryUnavailable)
+      ).toBeNull()
+    );
+  });
+
+  it("labels a server-confirmed cloud measurement as authoritative", async () => {
+    const measuredAt = "2026-07-28T08:00:00.000Z";
+    const screen = await render(
+      <VaultScreen
+        authoritativeCloudStorageUsage={{
+          source: "server-confirmed",
+          usedBytes: 2 * 1024 * 1024,
+          measuredAt
+        }}
+      />,
+      { wrapper: localeWrapper("en") }
+    );
+    const copy = CORE_JOURNEY_COPY.en.vault;
+    const cloud = screen.getByTestId("vault-cloud-storage-usage");
+    const confirmedDescription = `${
+      copy.cloudUsageConfirmedDescription
+    } ${formatLocalizedDate(measuredAt, "en")}. ${
+      copy.cloudAllowanceDescription
+    }`;
+
+    expect(
+      within(cloud).getByText(
+        `${formatByteSize(2 * 1024 * 1024, "en")} ${copy.cloudUsed}`
+      )
+    ).toBeTruthy();
+    expect(within(cloud).getByText(confirmedDescription)).toBeTruthy();
+    expect(cloud.props.accessibilityLabel).toContain(
+      confirmedDescription
+    );
+    expect(
+      within(cloud).queryByText(copy.cloudUsageUnknown)
+    ).toBeNull();
   });
 
   it("keeps account, household, language and diagnostics on Settings in Arabic", async () => {

@@ -71,6 +71,36 @@ export interface AttachmentStore {
   cleanupMaterialized(attachment: MaterializedAttachment): Promise<void>;
 }
 
+/**
+ * Mirrors the signed-build draft capability without exposing it from Expo Go.
+ * Durable draft persistence is deliberately available only when attachment
+ * bytes can be encrypted before SecureStore metadata references them.
+ */
+export interface DraftAttachmentStore extends AttachmentStore {
+  stageForDraft(file: CapturedFile): Promise<CapturedFile>;
+  verifyDraftFile(file: CapturedFile): Promise<boolean>;
+  materializeDraftForViewing(
+    file: CapturedFile
+  ): Promise<MaterializedAttachment>;
+  discardDraftFile(file: CapturedFile): Promise<void>;
+}
+
+export function isDraftAttachmentStore(
+  store: AttachmentStore | null | undefined
+): store is DraftAttachmentStore {
+  return Boolean(
+    store?.encryptedAtRest &&
+      typeof (store as Partial<DraftAttachmentStore>).stageForDraft ===
+        "function" &&
+      typeof (store as Partial<DraftAttachmentStore>).verifyDraftFile ===
+        "function" &&
+      typeof (store as Partial<DraftAttachmentStore>)
+        .materializeDraftForViewing === "function" &&
+      typeof (store as Partial<DraftAttachmentStore>).discardDraftFile ===
+        "function"
+  );
+}
+
 export interface VerifiedAttachmentBytesRequest {
   readonly bytes: Uint8Array;
   readonly fileName: string;

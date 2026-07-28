@@ -6,6 +6,9 @@ import {
 } from "@testing-library/react-native";
 
 import PrivacyAndCaptureScreen from "../app/(auth)/privacy";
+import { Linking, StyleSheet } from "react-native";
+
+import { onboardingDevicePreflightCopy } from "@/deviceAuth/copy";
 import { LocaleProvider } from "@/i18n/LocaleProvider";
 
 const mockRouter = {
@@ -85,7 +88,7 @@ function availablePreflight(
 }
 
 function makeAuthState(
-  firstCaptureIntent: "item" | "place" = "place"
+  firstCaptureIntent: "item" | "place" | null = "place"
 ): Record<string, unknown> {
   return {
     activeHouseholdId: "household-a",
@@ -102,7 +105,10 @@ function makeAuthState(
     householdName: "My household",
     mode: "supabase",
     session: {
-      onboarding: "required"
+      onboarding: "required",
+      activeHouseholdId: "household-a",
+      activeMembershipId: "membership-owner",
+      activeHouseholdRole: "owner"
     },
     setFirstCaptureIntent: jest.fn()
   };
@@ -146,6 +152,10 @@ describe("device-security onboarding preflight", () => {
     mockDeviceAuthState = makeDeviceAuthState();
   });
 
+  afterEach(() => {
+    jest.restoreAllMocks();
+  });
+
   it("keeps protection detail compact until the user asks for it", async () => {
     const screen = await render(
       <LocaleProvider initialLanguage="en">
@@ -181,6 +191,66 @@ describe("device-security onboarding preflight", () => {
         "The device record is created first. Cloud protection is shown as active only after a confirmed sync."
       )
     ).toBeTruthy();
+    await screen.unmount();
+  });
+
+  it("defaults a new verified household to an Item only after handoff restoration is ready", async () => {
+    mockAuthState = makeAuthState(null);
+    const setFirstCaptureIntent = jest.fn(
+      (intent: "item" | "place") => {
+        mockAuthState.firstCaptureIntent = intent;
+        mockAuthState.createCompletion = jest.fn(() => ({
+          householdName: "My household",
+          firstCaptureIntent: intent,
+          session: {}
+        }));
+      }
+    );
+    mockAuthState.setFirstCaptureIntent = setFirstCaptureIntent;
+    const screen = await render(
+      <LocaleProvider initialLanguage="en">
+        <PrivacyAndCaptureScreen />
+      </LocaleProvider>
+    );
+
+    await waitFor(() =>
+      expect(setFirstCaptureIntent).toHaveBeenCalledWith("item")
+    );
+    await screen.rerender(
+      <LocaleProvider initialLanguage="en">
+        <PrivacyAndCaptureScreen />
+      </LocaleProvider>
+    );
+    expect(
+      screen.getAllByRole("radio")[0]!.props.accessibilityState
+        .checked
+    ).toBe(true);
+    expect(
+      screen.getByRole("button", {
+        name: "Verify and add my first item"
+      })
+    ).toBeTruthy();
+    expect(
+      mockDeviceAuthState.clearOnboardingAuthorization
+    ).not.toHaveBeenCalled();
+    await screen.unmount();
+  });
+
+  it("does not overwrite a first-record intent while durable handoff restoration is unresolved", async () => {
+    mockAuthState = makeAuthState(null);
+    const setFirstCaptureIntent = jest.fn();
+    mockAuthState.setFirstCaptureIntent = setFirstCaptureIntent;
+    mockDeviceAuthState = {
+      ...makeDeviceAuthState(),
+      onboardingHandoffRestoreState: "loading"
+    };
+    const screen = await render(
+      <LocaleProvider initialLanguage="en">
+        <PrivacyAndCaptureScreen />
+      </LocaleProvider>
+    );
+
+    expect(setFirstCaptureIntent).not.toHaveBeenCalled();
     await screen.unmount();
   });
 
@@ -227,6 +297,9 @@ describe("device-security onboarding preflight", () => {
   });
 
   it("keeps setup uncommitted when device protection is unavailable", async () => {
+    const openSettings = jest
+      .spyOn(Linking, "openSettings")
+      .mockResolvedValue();
     mockDeviceAuthState = makeDeviceAuthState("unavailable");
     mockDeviceAuthState.authorizeOnboarding = jest.fn(
       async () => null
@@ -240,6 +313,23 @@ describe("device-security onboarding preflight", () => {
     expect(
       screen.getByText("Device passcode required")
     ).toBeTruthy();
+    const warning = screen.getByTestId("auth-status-row-warning");
+    expect(warning.props.accessibilityRole).toBeUndefined();
+    expect(warning.props.accessibilityLiveRegion).toBe("polite");
+    expect(warning.props.accessibilityState).toEqual({ busy: false });
+    expect(screen.getByTestId("auth-status-glyph-warning")).toBeTruthy();
+    const settingsAction = screen.getByTestId(
+      "onboarding-open-device-settings"
+    );
+    expect(settingsAction.props.accessibilityRole).toBe("button");
+    expect(settingsAction.props.accessibilityLabel).toBe(
+      "Open device Settings"
+    );
+    expect(settingsAction.props.accessibilityHint).toBe(
+      "Opens device security settings so you can set a passcode"
+    );
+    await fireEvent.press(settingsAction);
+    expect(openSettings).toHaveBeenCalledTimes(1);
     await fireEvent.press(
       screen.getByRole("button", {
         name: "Check device again"
@@ -254,6 +344,140 @@ describe("device-security onboarding preflight", () => {
     expect(mockWorkspaceState.startWorkspace).not.toHaveBeenCalled();
     expect(mockWorkspaceState.renameHousehold).not.toHaveBeenCalled();
     expect(mockAuthState.completeOnboarding).not.toHaveBeenCalled();
+    await screen.unmount();
+  });
+
+  it("keeps the passcode recovery visible when device Settings do not open", async () => {
+    jest
+      .spyOn(Linking, "openSettings")
+      .mockRejectedValue(new Error("settings unavailable"));
+    mockDeviceAuthState = makeDeviceAuthState("unavailable");
+    const screen = await render(
+      <LocaleProvider initialLanguage="en">
+        <PrivacyAndCaptureScreen />
+      </LocaleProvider>
+    );
+
+    await fireEvent.press(
+      screen.getByTestId("onboarding-open-device-settings")
+    );
+
+    expect(
+      await screen.findByText(
+        onboardingDevicePreflightCopy(
+          "en",
+          availablePreflight("unavailable").capability
+        ).openSettingsError
+      )
+    ).toBeTruthy();
+    await screen.unmount();
+  });
+
+  it("distinguishes checking, ready, success and restore-error protection states", async () => {
+    mockDeviceAuthState = {
+      ...makeDeviceAuthState("idle"),
+      onboardingPreflight: {
+        ...availablePreflight("idle"),
+        phase: "checking"
+      }
+    };
+    const screen = await render(
+      <LocaleProvider initialLanguage="en">
+        <PrivacyAndCaptureScreen />
+      </LocaleProvider>
+    );
+
+    const checking = screen.getByTestId("auth-status-row-checking");
+    expect(checking.props.accessibilityLiveRegion).toBe("polite");
+    expect(checking.props.accessibilityState).toEqual({ busy: true });
+    expect(screen.getByTestId("auth-status-glyph-checking")).toBeTruthy();
+
+    mockDeviceAuthState = makeDeviceAuthState("ready");
+    await screen.rerender(
+      <LocaleProvider initialLanguage="en">
+        <PrivacyAndCaptureScreen />
+      </LocaleProvider>
+    );
+    const ready = screen.getByTestId("auth-status-row-ready");
+    expect(ready.props.accessibilityRole).toBeUndefined();
+    expect(ready.props.accessibilityState).toEqual({ busy: false });
+    expect(screen.getByTestId("auth-status-glyph-ready")).toBeTruthy();
+    expect(screen.getByText("Face ID is ready")).toBeTruthy();
+
+    mockDeviceAuthState = {
+      ...makeDeviceAuthState("ready"),
+      onboardingPreflight: {
+        ...availablePreflight("ready"),
+        phase: "authorized",
+        intent: "place"
+      }
+    };
+    await screen.rerender(
+      <LocaleProvider initialLanguage="en">
+        <PrivacyAndCaptureScreen />
+      </LocaleProvider>
+    );
+    const success = screen.getByTestId("auth-status-row-success");
+    expect(success.props.accessibilityRole).toBeUndefined();
+    expect(success.props.accessibilityLiveRegion).toBe("polite");
+    expect(screen.getByTestId("auth-status-glyph-success")).toBeTruthy();
+    expect(screen.getByText("Device verified")).toBeTruthy();
+
+    mockDeviceAuthState = {
+      ...makeDeviceAuthState("ready"),
+      onboardingHandoffRestoreState: "error"
+    };
+    await screen.rerender(
+      <LocaleProvider initialLanguage="en">
+        <PrivacyAndCaptureScreen />
+      </LocaleProvider>
+    );
+    const error = screen.getByTestId("auth-status-row-error");
+    expect(error.props.accessibilityRole).toBe("alert");
+    expect(error.props.accessibilityLiveRegion).toBe("assertive");
+    expect(error.props.accessibilityState).toEqual({ busy: false });
+    expect(screen.getByTestId("auth-status-glyph-error")).toBeTruthy();
+    expect(
+      screen.getByText("Resume details need another check.")
+    ).toBeTruthy();
+
+    await screen.unmount();
+  });
+
+  it("keeps warning semantics and localized status text in Arabic RTL", async () => {
+    mockDeviceAuthState = makeDeviceAuthState("unavailable");
+    const screen = await render(
+      <LocaleProvider initialLanguage="ar">
+        <PrivacyAndCaptureScreen />
+      </LocaleProvider>
+    );
+
+    const warning = screen.getByTestId("auth-status-row-warning");
+    expect(warning.props.accessibilityLiveRegion).toBe("polite");
+    expect(warning.props.accessibilityState).toEqual({ busy: false });
+    expect(
+      screen.getByText("يلزم تعيين رمز دخول للجهاز")
+    ).toBeTruthy();
+    expect(
+      screen.getByTestId("auth-status-glyph-warning")
+    ).toBeTruthy();
+    const settingsAction = screen.getByTestId(
+      "onboarding-open-device-settings"
+    );
+    const arabicCopy = onboardingDevicePreflightCopy(
+      "ar",
+      availablePreflight("unavailable").capability
+    );
+    expect(settingsAction.props.accessibilityLabel).toBe(
+      arabicCopy.openSettingsAction
+    );
+    expect(settingsAction.props.accessibilityHint).toBe(
+      arabicCopy.openSettingsHint
+    );
+    expect(
+      StyleSheet.flatten(settingsAction.props.style).flexDirection
+    ).toBe("row-reverse");
+
     await screen.unmount();
   });
 

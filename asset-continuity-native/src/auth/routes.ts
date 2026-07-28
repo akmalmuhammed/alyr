@@ -148,17 +148,64 @@ export const AUTH_ROUTE_SEQUENCE = [
   "privacy"
 ] as const satisfies readonly AuthRouteName[];
 
+export const AUTH_ACTIVATION_STAGE_ORDER = [
+  "verifyAccount",
+  "privateRecord",
+  "firstPassport"
+] as const;
+
+export type AuthActivationStage =
+  (typeof AUTH_ACTIVATION_STAGE_ORDER)[number];
+
+export interface AuthActivationProgress {
+  readonly stage: AuthActivationStage;
+  readonly position: 1 | 2 | 3;
+  readonly total: 3;
+}
+
+/**
+ * Account creation is the entry into activation, not one of its stages.
+ * Keeping this mapping route-specific avoids suggesting that Welcome or the
+ * account form was "step one" when the user reaches email verification.
+ */
+export function authActivationProgress(
+  route: "confirmEmail" | "household" | "privacy"
+): AuthActivationProgress {
+  switch (route) {
+    case "confirmEmail":
+      return {
+        stage: "verifyAccount",
+        position: 1,
+        total: AUTH_ACTIVATION_STAGE_ORDER.length
+      };
+    case "household":
+      return {
+        stage: "privateRecord",
+        position: 2,
+        total: AUTH_ACTIVATION_STAGE_ORDER.length
+      };
+    case "privacy":
+      return {
+        stage: "firstPassport",
+        position: 3,
+        total: AUTH_ACTIVATION_STAGE_ORDER.length
+      };
+  }
+}
+
+/**
+ * @deprecated Prefer `authActivationProgress`, which keeps the stage name
+ * attached to its ordinal. Retained only for callers that have not yet
+ * adopted the named activation contract.
+ */
 export function authStepNumber(
   route: "confirmEmail" | "household" | "privacy"
 ): { readonly current: number; readonly total: number } {
-  switch (route) {
-    case "confirmEmail":
-      return { current: 1, total: 3 };
-    case "household":
-      return { current: 2, total: 3 };
-    case "privacy":
-      return { current: 3, total: 3 };
-  }
+  const progress = authActivationProgress(route);
+  return {
+    current: progress.position,
+    total: progress.total
+  };
 }
 
 export function firstRecordCaptureDestination(

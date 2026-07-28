@@ -59,7 +59,10 @@ import {
   type NativeAsset,
   type NativePlace
 } from "@/domain/model";
-import { hasConfirmedPreciseNativePlacePin } from "@/domain/readiness";
+import {
+  deriveNativeAssetLocationTruth,
+  hasConfirmedPreciseNativePlacePin
+} from "@/domain/readiness";
 import {
   getAssetEditCopy,
   type AssetEditCopy
@@ -189,6 +192,13 @@ function AssetEditForm({
   );
   const selectedPlace = workspace?.places.find((place) => place.id === placeId);
   const physical = selectedCategory?.supportsPhysicalLocation !== false;
+  const truthfulLocationStatus = deriveNativeAssetLocationTruth({
+    categoryId,
+    requestedStatus: locationStatus,
+    place: selectedPlace,
+    roomId,
+    locatorText
+  }).status;
   const locationTransition = selectedCategory
     ? categoryLocationTransition(asset.categoryId, selectedCategory.id)
     : null;
@@ -196,14 +206,14 @@ function AssetEditForm({
     name.trim() !== asset.name ||
     categoryId !== asset.categoryId;
   const locationChanged =
-    locationStatus !== asset.locationStatus ||
+    truthfulLocationStatus !== asset.locationStatus ||
     placeId !== asset.placeId ||
     roomId !== asset.roomId ||
     (locatorText.trim() || null) !== asset.locatorText;
   const locationValid =
-    locationStatus === "unknown" ||
-    (locationStatus === "needs-detail" && Boolean(placeId)) ||
-    (locationStatus === "known" &&
+    truthfulLocationStatus === "unknown" ||
+    (truthfulLocationStatus === "needs-detail" && Boolean(placeId)) ||
+    (truthfulLocationStatus === "known" &&
       Boolean(placeId) &&
       Boolean(roomId || locatorText.trim()));
   const hasDraft =
@@ -367,11 +377,13 @@ function AssetEditForm({
         ...(focus === "location"
           ? {
               location: {
-                locationStatus,
-                placeId: locationStatus === "unknown" ? null : placeId,
-                roomId: locationStatus === "unknown" ? null : roomId,
+                locationStatus: truthfulLocationStatus,
+                placeId:
+                  truthfulLocationStatus === "unknown" ? null : placeId,
+                roomId:
+                  truthfulLocationStatus === "unknown" ? null : roomId,
                 locatorText:
-                  locationStatus === "unknown"
+                  truthfulLocationStatus === "unknown"
                     ? null
                     : locatorText.trim() || null
               }

@@ -7,39 +7,7 @@ appId: com.alyr.continuity
     visible:
       id: "capture-step-0"
     timeout: 15000
-- tapOn:
-    id: "capture-asset-name"
-- inputText: "${ASSET_NAME}"
-- hideKeyboard
-- tapOn:
-    text: "Watch"
-    enabled: true
-- tapOn:
-    text: "Continue"
-    enabled: true
-- assertVisible:
-    id: "capture-step-1"
-- tapOn:
-    text: "I don't know yet"
-    enabled: true
-- tapOn:
-    text: "Continue"
-    enabled: true
-- assertVisible:
-    id: "capture-step-2"
-- tapOn:
-    text: "Skip for now"
-    enabled: true
-- assertVisible:
-    id: "capture-step-3"
-- assertVisible: "${ASSET_NAME}"
-- tapOn:
-    text: "Save Passport"
-    enabled: true
-- extendedWaitUntil:
-    visible:
-      id: "asset-passport-saved-confirmation"
-    timeout: 20000
-- assertVisible:
-    id: "asset-passport-screen"
-- assertVisible: "${ASSET_NAME}"
+- runFlow:
+    file: "./complete-minimal-passport-from-capture.yaml"
+    env:
+      ASSET_NAME: "${ASSET_NAME}"

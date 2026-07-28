@@ -164,7 +164,7 @@ describe("Supabase auth adapter contract", () => {
       ok: false,
       error: {
         code: "pilot_access_required",
-        message: "Enter the pilot access code from your invitation.",
+        message: "Enter the early access code from your invitation.",
         retryable: false
       }
     });

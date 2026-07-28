@@ -40,7 +40,7 @@ describe("first-viewport onboarding decisions", () => {
       source.indexOf("<View style={styles.principles}>")
     );
     expect(CORE_JOURNEY_COPY.en.privacy.chooseFirst).toBe(
-      "Choose first record"
+      "Choose your first Passport"
     );
   });
 

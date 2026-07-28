@@ -1,0 +1,58 @@
+appId: com.alyr.continuity
+name: Native-secure signup reaches email confirmation
+tags:
+  - smoke
+  - auth
+  - native-secure
+  - native-signup
+  - external-fixture
+  - single-use
+---
+- launchApp:
+    clearState: true
+    permissions:
+      all: deny
+- extendedWaitUntil:
+    visible:
+      id: "auth-welcome-screen"
+    timeout: 20000
+- runFlow:
+    label: Normalize the persisted locale to English
+    when:
+      visible: "English"
+    commands:
+      - tapOn: "English"
+- tapOn:
+    text: "Create private workspace"
+    enabled: true
+- extendedWaitUntil:
+    visible:
+      id: "auth-create-account-screen"
+    timeout: 15000
+- tapOn:
+    id: "auth-create-email"
+- inputText: "${ALYR_E2E_SIGNUP_EMAIL}"
+- tapOn:
+    id: "auth-create-pilot-access"
+- inputText: "${ALYR_E2E_EARLY_ACCESS_CODE}"
+- tapOn:
+    id: "auth-create-password"
+- inputText: "${ALYR_E2E_PASSWORD}"
+- tapOn:
+    id: "auth-create-confirm-password"
+- inputText: "${ALYR_E2E_PASSWORD}"
+- hideKeyboard
+- tapOn:
+    text: "Verify access and create account"
+    enabled: true
+- extendedWaitUntil:
+    visible:
+      id: "auth-confirm-email-screen"
+    timeout: 30000
+- assertVisible:
+    id: "auth-activation-progress"
+- assertVisible:
+    id: "auth-activation-current-stage"
+    text: "Verify account"
+- assertVisible: "ACCOUNT SECURITY"
+- assertVisible: "Check confirmation"

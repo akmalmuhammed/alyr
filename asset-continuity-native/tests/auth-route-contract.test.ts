@@ -1,8 +1,9 @@
 import {
   AUTH_ROUTES,
   AUTH_ROUTE_SEQUENCE,
+  AUTH_ACTIVATION_STAGE_ORDER,
   HOUSEHOLD_ROUTES,
-  authStepNumber,
+  authActivationProgress,
   firstRecordCaptureDestination
 } from "@/auth/routes";
 import { resolveFirstRecordHandoff } from "@/auth/firstRecordHandoff";
@@ -33,19 +34,38 @@ describe("auth route contract", () => {
     });
   });
 
-  it("reports accessible progress only after account submission", () => {
-    expect(authStepNumber("confirmEmail")).toEqual({
-      current: 1,
+  it("names the three activation stages without counting the public account forms", () => {
+    expect(AUTH_ACTIVATION_STAGE_ORDER).toEqual([
+      "verifyAccount",
+      "privateRecord",
+      "firstPassport"
+    ]);
+    expect(authActivationProgress("confirmEmail")).toEqual({
+      stage: "verifyAccount",
+      position: 1,
       total: 3
     });
-    expect(authStepNumber("household")).toEqual({
-      current: 2,
+    expect(authActivationProgress("household")).toEqual({
+      stage: "privateRecord",
+      position: 2,
       total: 3
     });
-    expect(authStepNumber("privacy")).toEqual({
-      current: 3,
+    expect(authActivationProgress("privacy")).toEqual({
+      stage: "firstPassport",
+      position: 3,
       total: 3
     });
+
+    const { readFileSync } = jest.requireActual("fs") as {
+      readFileSync(path: string, encoding: "utf8"): string;
+    };
+    for (const route of ["index", "create-account"]) {
+      const source = readFileSync(
+        `${process.cwd()}/app/(auth)/${route}.tsx`,
+        "utf8"
+      );
+      expect(source).not.toContain("authActivationProgress(");
+    }
   });
 
   it("routes each first-record intent without collapsing Place into item capture", () => {
@@ -96,7 +116,7 @@ describe("auth route contract", () => {
     }
   });
 
-  it("gives direct auth deep links a deterministic route back to welcome", () => {
+  it("keeps auth exits deterministic without verified-account redirect loops", () => {
     const { readFileSync } = jest.requireActual("fs") as {
       readFileSync(path: string, encoding: "utf8"): string;
     };
@@ -113,11 +133,25 @@ describe("auth route contract", () => {
       `${process.cwd()}/app/(auth)/household.tsx`,
       "utf8"
     );
+    const authLayout = readFileSync(
+      `${process.cwd()}/app/(auth)/_layout.tsx`,
+      "utf8"
+    );
     const privacy = readFileSync(
       `${process.cwd()}/app/(auth)/privacy.tsx`,
       "utf8"
     );
-    expect(household).toContain("router.replace(AUTH_ROUTES.signIn)");
+    expect(household).toContain(
+      "return <Redirect href={AUTH_ROUTES.signIn} />"
+    );
+    expect(household).not.toContain("router.canGoBack()");
+    expect(household).not.toContain("onBack=");
+    expect(authLayout).toMatch(
+      /name="household"[\s\S]*?gestureEnabled:\s*false/u
+    );
+    expect(authLayout).toMatch(
+      /name="privacy"[\s\S]*?gestureEnabled:\s*false/u
+    );
     expect(privacy).toContain(
       "router.replace(AUTH_ROUTES.household)"
     );
@@ -171,7 +205,7 @@ describe("auth route contract", () => {
       "authenticatedAuthEntryDestination"
     );
     expect(confirmationRoute).toContain(
-      "if (session) {\n      return <Redirect href={AUTH_ROUTES.household} />;"
+      "pendingHouseholdInvite\n              ? AUTH_ROUTES.join\n              : AUTH_ROUTES.household"
     );
     expect(callbackRoute).toContain(
       "localizeAuthFailure(error, language)"

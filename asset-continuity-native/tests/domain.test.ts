@@ -97,6 +97,12 @@ describe("native Quick Passport domain", () => {
     );
     expect(readiness.percent).toBe(70);
     expect(readiness.nextItem?.id).toBe("location");
+    expect(assetResult.asset).toMatchObject({
+      locationStatus: "needs-detail",
+      placeId: placeResult.place.id,
+      roomId: room.id,
+      locatorText: "Upper drawer"
+    });
     expect(assetResult.workspace.evidence[0]?.reviewStatus).toBe("pending");
     expect(assetResult.asset.syncStatus).toBe("on-device");
   });
@@ -446,6 +452,74 @@ describe("native Quick Passport domain", () => {
     expect(result.changes.identity).toBe(true);
     expect(result.changes.location).toBe(true);
     expect(result.newEvidence).toEqual([]);
+  });
+
+  it("keeps an indoor locator but downgrades an unconfirmed Place pin on edit", () => {
+    const initial = createWorkspace("sample");
+    const original = initial.assets.find(
+      (asset) => asset.id === "asset-heritage"
+    )!;
+    const place = initial.places.find(
+      (item) => item.id === "place-west-bay"
+    )!;
+    const room = place.rooms.find((item) => item.id === "room-study")!;
+    const unresolved: typeof initial = {
+      ...initial,
+      places: initial.places.map((candidate) =>
+        candidate.id === place.id
+          ? {
+              ...candidate,
+              locationSource: "device_gps" as const,
+              precision: "exact" as const,
+              horizontalAccuracyMeters: 6,
+              confirmedAt: null
+            }
+          : candidate
+      )
+    };
+    const result = updateAsset(
+      unresolved,
+      {
+        assetId: original.id,
+        location: {
+          locationStatus: "known",
+          placeId: place.id,
+          roomId: room.id,
+          locatorText: "Archive cabinet"
+        }
+      },
+      context()
+    );
+
+    expect(result.asset).toMatchObject({
+      locationStatus: "needs-detail",
+      placeId: place.id,
+      roomId: room.id,
+      locatorText: "Archive cabinet"
+    });
+    expect(result.changes.location).toBe(true);
+  });
+
+  it("does not treat a confirmed Place pin without indoor detail as retrievable", () => {
+    const sample = createWorkspace("sample");
+    const target = sample.assets.find(
+      (item) => item.id === "asset-gmt"
+    )!;
+    const withoutIndoorDetail = {
+      ...target,
+      roomId: null,
+      locatorText: null
+    };
+    const readiness = calculateNativeAssetReadiness(
+      withoutIndoorDetail,
+      sample.places,
+      sample.evidence
+    );
+
+    expect(
+      readiness.items.find((item) => item.id === "location")?.complete
+    ).toBe(false);
+    expect(readiness.nextItem?.id).toBe("location");
   });
 
   it("clears an item's physical location link when its category becomes digital", () => {

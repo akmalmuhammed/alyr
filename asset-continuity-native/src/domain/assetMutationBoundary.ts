@@ -10,6 +10,10 @@ import {
   type NativeWorkspace,
   type NewAssetInput
 } from "@/domain/model";
+import {
+  deriveNativeAssetLocationTruth,
+  placePinFromNativePlace
+} from "@/domain/readiness";
 
 function normalizeCapturedFile(file: CapturedFile): CapturedFile {
   return {
@@ -42,14 +46,30 @@ export function validateNewAssetInput(
   workspace: NativeWorkspace,
   input: NewAssetInput
 ): NewAssetInput {
+  const placeId = normalizeAssetMutationReference(input.placeId);
+  const roomId = normalizeAssetMutationReference(input.roomId);
+  const locatorText = normalizeAssetMutationReference(
+    input.locatorText
+  );
+  const place = workspace.places.find(
+    (candidate) => candidate.id === placeId
+  );
+  const locationStatus = deriveNativeAssetLocationTruth({
+    categoryId: input.categoryId,
+    requestedStatus: input.locationStatus,
+    place,
+    roomId,
+    locatorText
+  }).status;
+
   assertValidFinalAssetMutation(
     {
       name: input.name,
       categoryId: input.categoryId,
-      locationStatus: input.locationStatus,
-      placeId: input.placeId,
-      spaceId: input.roomId,
-      locationDetail: input.locatorText,
+      locationStatus,
+      placeId,
+      spaceId: roomId,
+      locationDetail: locatorText,
       photo: input.photo,
       evidence: input.evidence
     },
@@ -61,7 +81,8 @@ export function validateNewAssetInput(
       places: workspace.places.map((place) => ({
         id: place.id,
         householdId: place.householdId,
-        spaceIds: place.rooms.map((room) => room.id)
+        spaceIds: place.rooms.map((room) => room.id),
+        pin: placePinFromNativePlace(place)
       }))
     }
   );
@@ -73,12 +94,6 @@ export function validateNewAssetInput(
     (candidate) => candidate.id === categoryId
   );
   const name = normalizeAssetMutationName(input.name);
-  const placeId = normalizeAssetMutationReference(input.placeId);
-  const roomId = normalizeAssetMutationReference(input.roomId);
-  const locatorText = normalizeAssetMutationReference(
-    input.locatorText
-  );
-
   // The assertion above proves this lookup. Keep the fallback unreachable and
   // side-effect free in case the native catalog ever drifts from the shared
   // allow-list during development.
@@ -91,6 +106,7 @@ export function validateNewAssetInput(
     name,
     categoryId: category.id,
     categoryLabel: category.label,
+    locationStatus,
     placeId,
     roomId,
     locatorText,

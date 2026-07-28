@@ -37,6 +37,19 @@ export interface RecoveryKitVerification {
   readonly createdAt: string;
   readonly verifiedAt: string;
   readonly protection: "Argon2id + AES-256-GCM";
+  /**
+   * User-confirmed evidence that another copy was saved outside ALYR's
+   * application sandbox. A locally created file alone is never called backup.
+   */
+  readonly externalBackupConfirmedAt: string | null;
+}
+
+export interface LocalRecoveryKitRecord {
+  readonly reference: string;
+  readonly fileName: string;
+  readonly byteSize: number;
+  readonly createdAt: string;
+  readonly externalBackupConfirmedAt: string | null;
 }
 
 export interface RecoveryImportPreview {
@@ -62,6 +75,10 @@ export interface RecoveryJourneyRuntime {
   readonly capability: RecoveryCapability;
   create(passphrase: string): Promise<RecoveryKitVerification>;
   share(reference: string): Promise<void>;
+  listRecent(): Promise<readonly LocalRecoveryKitRecord[]>;
+  confirmExternalBackup(
+    reference: string
+  ): Promise<LocalRecoveryKitRecord>;
   chooseAndPreview(passphrase: string): Promise<RecoveryImportPreview | null>;
   restore(previewId: string, confirmation: string): Promise<void>;
   clearPreview(): void;
@@ -106,6 +123,8 @@ export function createUnavailableRecoveryRuntime(
     capability,
     create: unavailable,
     share: unavailable,
+    listRecent: async () => [],
+    confirmExternalBackup: unavailable,
     chooseAndPreview: unavailable,
     restore: unavailable,
     clearPreview() {}

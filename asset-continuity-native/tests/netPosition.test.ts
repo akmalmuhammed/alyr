@@ -64,6 +64,45 @@ describe("recorded net position", () => {
     )).toBe(true);
   });
 
+  it("withholds every currency net while an active Liability has no current balance or known currency", () => {
+    const created = createLiability(
+      createWorkspace("sample"),
+      {
+        name: "Unreviewed family debt",
+        kind: "family-debt"
+      },
+      {
+        id: () => "liability-unreviewed",
+        now: () => "2026-07-28T10:00:00.000Z",
+        today: () => "2026-07-28"
+      }
+    );
+
+    const snapshot = buildNetPositionSnapshot(
+      created.workspace,
+      "2026-07-28"
+    );
+
+    expect(snapshot.status).toBe("liabilities-unreviewed");
+    expect(snapshot.unvaluedLiabilityIds).toEqual([
+      "liability-unreviewed"
+    ]);
+    expect(snapshot.byCurrency).toHaveLength(2);
+    expect(
+      snapshot.byCurrency.every(
+        (line) =>
+          line.liabilityCoverage === "unreviewed" &&
+          line.recordedLiabilitiesMinor === null &&
+          line.recordedNetPositionMinor === null
+      )
+    ).toBe(true);
+    expect(
+      snapshot.byCurrency.every(
+        (line) => line.recordedAssetsMinor !== null
+      )
+    ).toBe(true);
+  });
+
   it("does not require a duplicate liability in every asset currency once the liability register has started", () => {
     const sample = createWorkspace("sample");
     const onlyQarMortgage = {

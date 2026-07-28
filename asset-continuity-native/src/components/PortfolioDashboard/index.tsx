@@ -477,6 +477,71 @@ export function shouldStackPortfolioFinancialLayout(
   return width <= 360 || fontScale >= 1.3;
 }
 
+export interface PortfolioCompositionRailModel {
+  readonly concealed: boolean;
+  readonly assetsPercent: number | null;
+  readonly liabilitiesPercent: number | null;
+}
+
+/**
+ * Builds the visual split only while amounts are intentionally visible.
+ * The concealed state deliberately returns no ratio so privacy mode cannot
+ * reveal the relationship between recorded assets and liabilities through
+ * segment widths.
+ */
+export function buildPortfolioCompositionRail(
+  recordedAssetsMinor: number | null,
+  recordedLiabilitiesMinor: number | null,
+  amountsHidden: boolean
+): PortfolioCompositionRailModel | null {
+  if (
+    recordedAssetsMinor === null ||
+    recordedLiabilitiesMinor === null ||
+    !Number.isSafeInteger(recordedAssetsMinor) ||
+    !Number.isSafeInteger(recordedLiabilitiesMinor) ||
+    recordedAssetsMinor < 0 ||
+    recordedLiabilitiesMinor < 0
+  ) {
+    return null;
+  }
+
+  if (amountsHidden) {
+    return {
+      concealed: true,
+      assetsPercent: null,
+      liabilitiesPercent: null
+    };
+  }
+
+  const largest = Math.max(
+    recordedAssetsMinor,
+    recordedLiabilitiesMinor
+  );
+  if (largest === 0) {
+    return {
+      concealed: false,
+      assetsPercent: 50,
+      liabilitiesPercent: 50
+    };
+  }
+
+  // Normalize before adding so two individually safe values cannot overflow
+  // the exact-integer range while their proportional relationship stays true.
+  const assetsUnit = recordedAssetsMinor / largest;
+  const liabilitiesUnit = recordedLiabilitiesMinor / largest;
+  const assetsPercent =
+    Math.round(
+      (assetsUnit / (assetsUnit + liabilitiesUnit)) * 1000
+    ) / 10;
+
+  return {
+    concealed: false,
+    assetsPercent,
+    liabilitiesPercent:
+      Math.round((100 - assetsPercent) * 10) / 10
+  };
+}
+
 export function PortfolioDashboard({
   amountsHidden: controlledAmountsHidden,
   canReadLiabilities = true,
@@ -697,6 +762,7 @@ export function PortfolioDashboard({
           rtl={rtl}
           sample={workspace.mode === "sample"}
           snapshot={snapshot}
+          syncCopy={financialCopy}
         />
       ) : null}
 
@@ -945,7 +1011,7 @@ const LIABILITY_KIND_ICONS: Readonly<Record<NativeLiability["kind"], Icon>> = {
   other: FileText
 };
 
-function liabilitySyncLabel(
+function portfolioSyncLabel(
   status:
     | NativeLiability["syncStatus"]
     | PortfolioValueRecord["syncStatus"],
@@ -1411,9 +1477,52 @@ function PortfolioHero({
   const statusColor = statusReady
     ? themes.dark.success
     : themes.dark.warning;
+  const selectedLiabilitiesText = selectedLine
+    ? selectedLine.liabilityCoverage ===
+      "no-recorded-liabilities"
+      ? financialCopy.netPosition.noRecordedLiabilities
+      : selectedLine.liabilities?.text ??
+        financialCopy.netPosition.reviewRequired
+    : financialCopy.netPosition.reviewRequired;
+  const selectedLiabilitiesAccessibilityLabel = selectedLine
+    ? selectedLine.liabilityCoverage ===
+      "no-recorded-liabilities"
+      ? financialCopy.netPosition.noRecordedLiabilities
+      : selectedLine.liabilities?.accessibilityLabel ??
+        financialCopy.netPosition.reviewRequired
+    : financialCopy.netPosition.reviewRequired;
+  const selectedRecordBasis =
+    selectedLine?.oldestAsOf && selectedLine.newestAsOf
+      ? financialCopy.netPosition.asOfRange(
+          dateLabel(selectedLine.oldestAsOf, language),
+          dateLabel(selectedLine.newestAsOf, language)
+        )
+      : selectedLine?.currency ?? null;
+  const compositionRail = selectedLine
+    ? buildPortfolioCompositionRail(
+        selectedLine.recordedAssetsMinor,
+        selectedLine.recordedLiabilitiesMinor,
+        amountsHidden
+      )
+    : null;
+  const equationAccessibilityLabel = selectedLine
+    ? `${financialCopy.netPosition.assets} \u2212 ${financialCopy.netPosition.liabilities} = ${financialCopy.netPosition.net}`
+    : financialCopy.netPosition.noTotal;
+  const compositionAccessibilityLabel = compositionRail?.concealed
+    ? financialCopy.netPosition.amountsHiddenStatus
+    : [
+        `${financialCopy.netPosition.assets}: ${
+          selectedLine?.assets?.accessibilityLabel ??
+          financialCopy.netPosition.exactUnavailable
+        }`,
+        `${financialCopy.netPosition.liabilities}: ${selectedLiabilitiesAccessibilityLabel}`
+      ].join("; ");
 
   return (
-    <View style={styles.hero} testID="portfolio-net-position">
+    <View
+      style={[styles.hero, styles.financialHero]}
+      testID="portfolio-net-position"
+    >
       <View style={[styles.voltRule, rtl && styles.voltRuleRtl]} />
       <View style={[styles.heroHeading, rtl && styles.rowReverse]}>
         <View style={styles.heroHeadingCopy}>
@@ -1461,19 +1570,6 @@ function PortfolioHero({
         </View>
       </View>
 
-      <Text
-        accessibilityLiveRegion="polite"
-        style={[
-          styles.heroPrivacyStatus,
-          rtl && styles.arabic,
-          rtl && styles.textRight
-        ]}
-      >
-        {amountsHidden
-          ? financialCopy.netPosition.amountsHiddenStatus
-          : financialCopy.netPosition.amountsVisibleStatus}
-      </Text>
-
       {formattedLines.length > 1 ? (
         <View
           accessibilityLabel={financialCopy.netPosition.currencySelectorLabel}
@@ -1518,48 +1614,147 @@ function PortfolioHero({
       ) : null}
 
       {!selectedLine ? (
-        <Text
-          accessibilityLabel={financialCopy.netPosition.noTotal}
-          style={[
-            styles.noTotal,
-            rtl && styles.arabicHeading,
-            rtl && styles.textRight
-          ]}
-        >
-          {financialCopy.netPosition.noTotal}
-        </Text>
-      ) : (
-        <View
-          accessibilityLabel={a11ySummary}
-          style={[
-            styles.totalRow,
-            rtl && styles.totalRowRtl
-          ]}
-        >
+        <View style={[styles.positionEmpty, rtl && styles.alignEnd]}>
           <Text
+            accessibilityLabel={financialCopy.netPosition.noTotal}
             style={[
-              styles.totalValue,
+              styles.noTotal,
               rtl && styles.arabicHeading,
               rtl && styles.textRight
             ]}
           >
-            {selectedLine.net?.text ??
-              financialCopy.netPosition.reviewRequired}
+            {financialCopy.netPosition.noTotal}
           </Text>
           <Text
+            accessibilityLiveRegion="polite"
             style={[
-              styles.totalMeta,
+              styles.heroPrivacyStatus,
               rtl && styles.arabic,
               rtl && styles.textRight
             ]}
           >
-            {selectedLine.oldestAsOf && selectedLine.newestAsOf
-              ? financialCopy.netPosition.asOfRange(
-                  dateLabel(selectedLine.oldestAsOf, language),
-                  dateLabel(selectedLine.newestAsOf, language)
-                )
-              : selectedLine.currency}
+            {amountsHidden
+              ? financialCopy.netPosition.amountsHiddenStatus
+              : financialCopy.netPosition.amountsVisibleStatus}
           </Text>
+        </View>
+      ) : (
+        <View
+          accessible
+          accessibilityLabel={a11ySummary}
+          style={[
+            styles.positionFrame,
+            stackFinancialLayout && styles.positionFrameStacked,
+            rtl &&
+              !stackFinancialLayout &&
+              styles.positionFrameRtl
+          ]}
+          testID="portfolio-position-block"
+        >
+          <View
+            style={[
+              styles.positionPrimary,
+              rtl && styles.positionPrimaryRtl
+            ]}
+          >
+            <Text
+              adjustsFontSizeToFit
+              minimumFontScale={0.72}
+              numberOfLines={1}
+              style={[
+                styles.positionValue,
+                rtl && styles.arabicHeading,
+                rtl && styles.textRight
+              ]}
+              testID="portfolio-position-value"
+            >
+              {selectedLine.net?.text ??
+                financialCopy.netPosition.reviewRequired}
+            </Text>
+          </View>
+          <View
+            style={[
+              styles.positionFreshness,
+              stackFinancialLayout &&
+                styles.positionFreshnessStacked,
+              rtl &&
+                !stackFinancialLayout &&
+                styles.positionFreshnessRtl,
+              rtl && styles.alignEnd
+            ]}
+            testID="portfolio-position-freshness"
+          >
+            <Text
+              style={[
+                styles.positionCurrency,
+                rtl && styles.textRight
+              ]}
+            >
+              {selectedLine.currency}
+            </Text>
+            {selectedRecordBasis ? (
+              <Text
+                style={[
+                  styles.positionDate,
+                  rtl && styles.arabic,
+                  rtl && styles.textRight
+                ]}
+              >
+                {selectedRecordBasis}
+              </Text>
+            ) : null}
+            <Text
+              accessibilityLiveRegion="polite"
+              style={[
+                styles.heroPrivacyStatus,
+                rtl && styles.arabic,
+                rtl && styles.textRight
+              ]}
+            >
+              {amountsHidden
+                ? financialCopy.netPosition.amountsHiddenStatus
+                : financialCopy.netPosition.amountsVisibleStatus}
+            </Text>
+          </View>
+        </View>
+      )}
+
+      {selectedLine ? (
+        <View
+          style={styles.equationBand}
+          testID="portfolio-net-equation"
+        >
+          <View
+            accessible
+            accessibilityLabel={equationAccessibilityLabel}
+            style={[
+              styles.equationFormula,
+              rtl && styles.rowReverse
+            ]}
+          >
+            <Text
+              style={[
+                styles.equationFormulaLabel,
+                rtl && styles.arabicMedium,
+                rtl && styles.textRight
+              ]}
+            >
+              {financialCopy.netPosition.assets}
+            </Text>
+            <Text style={styles.equationFormulaOperator}>
+              {"\u2212"}
+            </Text>
+            <Text
+              style={[
+                styles.equationFormulaLabel,
+                rtl && styles.arabicMedium,
+                rtl && styles.textRight
+              ]}
+            >
+              {financialCopy.netPosition.liabilities}
+            </Text>
+          </View>
+
           <View
             style={[
               styles.netComposition,
@@ -1584,6 +1779,7 @@ function PortfolioHero({
                   rtl && styles.arabicMedium,
                   rtl && styles.textRight
                 ]}
+                testID="portfolio-equation-assets"
               >
                 {selectedLine.assets?.text ??
                   financialCopy.netPosition.exactUnavailable}
@@ -1616,17 +1812,54 @@ function PortfolioHero({
                   rtl && styles.arabicMedium,
                   rtl && styles.textRight
                 ]}
+                testID="portfolio-equation-liabilities"
               >
-                {selectedLine.liabilityCoverage ===
-                "no-recorded-liabilities"
-                  ? financialCopy.netPosition.noRecordedLiabilities
-                  : selectedLine.liabilities?.text ??
-                    financialCopy.netPosition.reviewRequired}
+                {selectedLiabilitiesText}
               </Text>
             </View>
           </View>
+
+          {compositionRail ? (
+            <View
+              accessible
+              accessibilityLabel={compositionAccessibilityLabel}
+              accessibilityRole="image"
+              style={styles.compositionRail}
+              testID="portfolio-composition-rail"
+            >
+              {compositionRail.concealed ? (
+                <View
+                  style={styles.compositionRailConcealed}
+                  testID="portfolio-composition-concealed"
+                />
+              ) : (
+                <>
+                  <View
+                    style={[
+                      styles.compositionRailAssets,
+                      {
+                        width: `${compositionRail.assetsPercent ?? 0}%`
+                      }
+                    ]}
+                    testID="portfolio-composition-assets"
+                  />
+                  <View
+                    style={[
+                      styles.compositionRailLiabilities,
+                      {
+                        width: `${
+                          compositionRail.liabilitiesPercent ?? 0
+                        }%`
+                      }
+                    ]}
+                    testID="portfolio-composition-liabilities"
+                  />
+                </>
+              )}
+            </View>
+          ) : null}
         </View>
-      )}
+      ) : null}
 
       <View
         accessibilityLiveRegion="polite"
@@ -2035,7 +2268,7 @@ function LiabilityRow({
           language
          )}`
     : copy.liabilities.noBalance;
-  const syncLabel = liabilitySyncLabel(
+  const syncLabel = portfolioSyncLabel(
     combinedLiabilitySyncStatus(
       liability.syncStatus,
       current?.syncStatus
@@ -2657,7 +2890,8 @@ function RecordedValues({
   onReviewAssets,
   rtl,
   sample,
-  snapshot
+  snapshot,
+  syncCopy
 }: {
   readonly amountsHidden: boolean;
   readonly copy: DashboardCopy;
@@ -2672,12 +2906,25 @@ function RecordedValues({
   readonly rtl: boolean;
   readonly sample: boolean;
   readonly snapshot: PortfolioSnapshot;
+  readonly syncCopy: PortfolioExperienceCopy;
 }) {
   const [expandedCurrencies, setExpandedCurrencies] = useState<
     ReadonlySet<string>
   >(() => new Set());
+  const orderedValues = useMemo(
+    () =>
+      amountsHidden
+        ? [...snapshot.recordedValues].sort(
+            (left, right) =>
+              left.currency.localeCompare(right.currency) ||
+              left.name.localeCompare(right.name) ||
+              left.subjectKey.localeCompare(right.subjectKey)
+          )
+        : snapshot.recordedValues,
+    [amountsHidden, snapshot.recordedValues]
+  );
   const currencies = [
-    ...new Set(snapshot.recordedValues.map((item) => item.currency))
+    ...new Set(orderedValues.map((item) => item.currency))
   ];
   const toggleCurrency = (currency: string) => {
     setExpandedCurrencies((current) => {
@@ -2739,7 +2986,7 @@ function RecordedValues({
       ) : (
         <View style={styles.valueGroups}>
           {currencies.map((currency) => {
-            const items = snapshot.recordedValues.filter(
+            const items = orderedValues.filter(
               (item) => item.currency === currency
             );
             const expanded = expandedCurrencies.has(currency);
@@ -2789,6 +3036,7 @@ function RecordedValues({
                           : undefined
                     }
                     rtl={rtl}
+                    syncCopy={syncCopy}
                   />
                 ))}
                 {items.length > 3 ? (
@@ -2820,7 +3068,8 @@ function RecordedValueRow({
   item,
   language,
   onPress,
-  rtl
+  rtl,
+  syncCopy
 }: {
   readonly amountsHidden: boolean;
   readonly copy: DashboardCopy;
@@ -2828,6 +3077,7 @@ function RecordedValueRow({
   readonly language: LanguageCode;
   readonly onPress?: (() => void) | undefined;
   readonly rtl: boolean;
+  readonly syncCopy: PortfolioExperienceCopy;
 }) {
   const formattedValue = formatRecordedValue({
     amountMinor: item.amountMinor,
@@ -2836,6 +3086,7 @@ function RecordedValueRow({
     language,
     visibility: valueVisibilityFromHidden(amountsHidden)
   });
+  const syncLabel = portfolioSyncLabel(item.syncStatus, syncCopy);
   const content = (
     <>
       <View style={styles.recordedItemCopy}>
@@ -2865,7 +3116,8 @@ function RecordedValueRow({
               )}{" "}
           · {copy.asOf}{" "}
           {dateLabel(item.asOf, language)}
-          {item.subjectKind === "place" ? ` · ${copy.onDevice}` : ""}
+          {" · "}
+          {syncLabel}
         </Text>
       </View>
       <Text
@@ -2888,7 +3140,7 @@ function RecordedValueRow({
   );
   return onPress ? (
     <Pressable
-      accessibilityLabel={`${item.name}, ${formattedValue.accessibilityLabel}`}
+      accessibilityLabel={`${item.name}, ${formattedValue.accessibilityLabel}, ${syncLabel}`}
       accessibilityRole="button"
       onPress={onPress}
       style={({ pressed }) => [
@@ -3224,6 +3476,13 @@ const styles = StyleSheet.create({
     borderRadius: radius.lg,
     backgroundColor: colors.carbon
   },
+  financialHero: {
+    gap: spacing.md,
+    paddingTop: spacing.xl,
+    borderWidth: 1,
+    borderColor: themes.dark.borderStrong,
+    borderRadius: radius.sm
+  },
   voltRule: {
     position: "absolute",
     top: 0,
@@ -3265,6 +3524,91 @@ const styles = StyleSheet.create({
   heroPrivacyStatus: {
     color: colors.concrete,
     fontFamily: typography.metadata,
+    fontSize: 12,
+    lineHeight: 17
+  },
+  positionEmpty: {
+    gap: spacing.xs,
+    paddingVertical: spacing.md,
+    borderTopWidth: StyleSheet.hairlineWidth,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderColor: themes.dark.border
+  },
+  positionFrame: {
+    minHeight: 132,
+    flexDirection: "row",
+    alignItems: "stretch",
+    paddingVertical: spacing.lg,
+    borderTopWidth: StyleSheet.hairlineWidth,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderColor: themes.dark.border
+  },
+  positionFrameRtl: {
+    flexDirection: "row-reverse"
+  },
+  positionFrameStacked: {
+    minHeight: 0,
+    flexDirection: "column"
+  },
+  positionPrimary: {
+    minWidth: 0,
+    flex: 1,
+    justifyContent: "center",
+    gap: spacing.xs,
+    paddingRight: spacing.md
+  },
+  positionPrimaryRtl: {
+    alignItems: "flex-end",
+    paddingRight: 0,
+    paddingLeft: spacing.md
+  },
+  positionValue: {
+    width: "100%",
+    color: colors.white,
+    fontFamily: typography.displayBold,
+    fontSize: 38,
+    lineHeight: 45,
+    letterSpacing: -1.15,
+    fontVariant: ["tabular-nums"]
+  },
+  positionFreshness: {
+    width: 124,
+    flexShrink: 0,
+    justifyContent: "center",
+    alignItems: "flex-start",
+    gap: spacing.xs,
+    paddingLeft: spacing.md,
+    borderLeftWidth: StyleSheet.hairlineWidth,
+    borderLeftColor: themes.dark.border
+  },
+  positionFreshnessRtl: {
+    paddingRight: spacing.md,
+    paddingLeft: 0,
+    borderRightWidth: StyleSheet.hairlineWidth,
+    borderRightColor: themes.dark.border,
+    borderLeftWidth: 0
+  },
+  positionFreshnessStacked: {
+    width: "100%",
+    alignItems: "flex-start",
+    marginTop: spacing.md,
+    paddingTop: spacing.md,
+    paddingLeft: 0,
+    borderTopWidth: StyleSheet.hairlineWidth,
+    borderTopColor: themes.dark.border,
+    borderLeftWidth: 0
+  },
+  positionCurrency: {
+    color: colors.volt,
+    fontFamily: typography.metadata,
+    fontSize: 14,
+    lineHeight: 19,
+    letterSpacing: 0.8,
+    fontVariant: ["tabular-nums"]
+  },
+  positionDate: {
+    color: colors.white,
+    fontFamily: typography.bodyMedium,
     fontSize: 12,
     lineHeight: 17
   },
@@ -3351,15 +3695,37 @@ const styles = StyleSheet.create({
     fontSize: 12,
     lineHeight: 17
   },
+  equationBand: {
+    gap: spacing.sm
+  },
+  equationFormula: {
+    minHeight: 32,
+    flexDirection: "row",
+    flexWrap: "wrap",
+    alignItems: "center",
+    gap: spacing.xs,
+    paddingTop: spacing.sm,
+    borderTopWidth: StyleSheet.hairlineWidth,
+    borderTopColor: themes.dark.border
+  },
+  equationFormulaLabel: {
+    color: colors.concrete,
+    fontFamily: typography.bodyMedium,
+    fontSize: 12,
+    lineHeight: 18
+  },
+  equationFormulaOperator: {
+    color: colors.concrete,
+    fontFamily: typography.metadata,
+    fontSize: 13,
+    lineHeight: 18
+  },
   netComposition: {
     width: "100%",
     flexDirection: "row",
     alignItems: "stretch",
     gap: spacing.sm,
-    marginTop: spacing.sm,
-    paddingTop: spacing.sm,
-    borderTopWidth: StyleSheet.hairlineWidth,
-    borderTopColor: themes.dark.border
+    paddingTop: spacing.xs
   },
   netCompositionStacked: {
     flexDirection: "column"
@@ -3382,9 +3748,9 @@ const styles = StyleSheet.create({
   },
   netCompositionValue: {
     color: colors.white,
-    fontFamily: typography.bodyMedium,
-    fontSize: 13,
-    lineHeight: 19,
+    fontFamily: typography.metadata,
+    fontSize: 14,
+    lineHeight: 20,
     fontVariant: ["tabular-nums"]
   },
   netOperator: {
@@ -3398,6 +3764,27 @@ const styles = StyleSheet.create({
     fontFamily: typography.body,
     fontSize: 15,
     lineHeight: 19
+  },
+  compositionRail: {
+    width: "100%",
+    height: 7,
+    overflow: "hidden",
+    flexDirection: "row",
+    borderRadius: radius.xs,
+    backgroundColor: themes.dark.border
+  },
+  compositionRailConcealed: {
+    width: "100%",
+    height: "100%",
+    backgroundColor: themes.dark.borderStrong
+  },
+  compositionRailAssets: {
+    height: "100%",
+    backgroundColor: colors.volt
+  },
+  compositionRailLiabilities: {
+    height: "100%",
+    backgroundColor: colors.concrete
   },
   heroFacts: {
     minHeight: 62,

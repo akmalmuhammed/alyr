@@ -2,7 +2,8 @@ import {
   CheckCircle,
   FileLock,
   ShareNetwork,
-  ShieldCheck
+  ShieldCheck,
+  Warning
 } from "phosphor-react-native";
 import { useMemo, useState } from "react";
 import {
@@ -33,6 +34,7 @@ import {
 import {
   formatLocalizedNumber,
   formatRecoveryByteSize,
+  formatRecoveryDate,
   localizedRecoveryErrorMessage,
   shouldStackSecondaryMetadata,
   useSecondarySurfaceCopy
@@ -57,6 +59,7 @@ export default function CreateRecoveryKitScreen() {
   const [error, setError] = useState<string | null>(null);
   const [verification, setVerification] =
     useState<RecoveryKitVerification | null>(null);
+  const [shareSheetReturned, setShareSheetReturned] = useState(false);
 
   const fieldError = useMemo(() => {
     if (!passphrase && !confirmation) return null;
@@ -85,6 +88,7 @@ export default function CreateRecoveryKitScreen() {
     try {
       const created = await runtime.create(passphrase);
       setVerification(created);
+      setShareSheetReturned(false);
       setPassphrase("");
       setConfirmation("");
     } catch (caught) {
@@ -100,6 +104,27 @@ export default function CreateRecoveryKitScreen() {
     setError(null);
     try {
       await runtime.share(verification.reference);
+      setShareSheetReturned(true);
+    } catch (caught) {
+      setError(localizedRecoveryErrorMessage(caught, language));
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const confirmExternalBackup = async () => {
+    if (!verification || !shareSheetReturned) return;
+    setBusy(true);
+    setError(null);
+    try {
+      const confirmed = await runtime.confirmExternalBackup(
+        verification.reference
+      );
+      setVerification({
+        ...verification,
+        externalBackupConfirmedAt:
+          confirmed.externalBackupConfirmedAt
+      });
     } catch (caught) {
       setError(localizedRecoveryErrorMessage(caught, language));
     } finally {
@@ -130,7 +155,19 @@ export default function CreateRecoveryKitScreen() {
                 rtl && styles.rowReverse
               ]}
             >
-              <CheckCircle color={colors.volt} size={32} weight="regular" />
+              {verification.externalBackupConfirmedAt ? (
+                <ShieldCheck
+                  color={colors.volt}
+                  size={32}
+                  weight="regular"
+                />
+              ) : (
+                <FileLock
+                  color={colors.volt}
+                  size={32}
+                  weight="regular"
+                />
+              )}
               <View style={styles.successCopy}>
                 <Text
                   style={[
@@ -139,7 +176,9 @@ export default function CreateRecoveryKitScreen() {
                     rtl && styles.rtlText
                   ]}
                 >
-                  {recoveryCopy.successEyebrow}
+                  {verification.externalBackupConfirmedAt
+                    ? recoveryCopy.protectedEyebrow
+                    : recoveryCopy.successEyebrow}
                 </Text>
                 <Text
                   accessibilityRole="header"
@@ -149,7 +188,9 @@ export default function CreateRecoveryKitScreen() {
                     rtl && styles.rtlText
                   ]}
                 >
-                  {recoveryCopy.successTitle}
+                  {verification.externalBackupConfirmedAt
+                    ? recoveryCopy.protectedTitle
+                    : recoveryCopy.successTitle}
                 </Text>
               </View>
             </View>
@@ -160,7 +201,9 @@ export default function CreateRecoveryKitScreen() {
                 rtl && styles.rtlText
               ]}
             >
-              {recoveryCopy.successBody}
+              {verification.externalBackupConfirmedAt
+                ? recoveryCopy.protectedBody
+                : recoveryCopy.successBody}
             </Text>
           </CommandSurface>
 
@@ -214,22 +257,90 @@ export default function CreateRecoveryKitScreen() {
               value={verification.sha256}
               valueDirection="ltr"
             />
+            {verification.externalBackupConfirmedAt ? (
+              <MetadataRow
+                compact={compactMetadata}
+                label={recoveryCopy.confirmedAt}
+                rtl={rtl}
+                value={formatRecoveryDate(
+                  verification.externalBackupConfirmedAt,
+                  language
+                )}
+              />
+            ) : null}
           </Section>
 
           {error ? (
             <ErrorBanner message={error} onDismiss={() => setError(null)} />
           ) : null}
-          <PrimaryButton
-            disabled={busy}
-            icon={ShareNetwork}
-            label={recoveryCopy.share}
-            loading={busy}
-            onPress={() => void share()}
-          />
+          {!verification.externalBackupConfirmedAt ? (
+            <Section>
+              <View
+                accessibilityLiveRegion="polite"
+                style={[
+                  styles.backupGate,
+                  rtl && styles.rowReverse
+                ]}
+              >
+                <Warning
+                  color={colors.warning}
+                  size={24}
+                  weight="regular"
+                />
+                <View style={styles.backupGateCopy}>
+                  <Text
+                    style={[
+                      styles.backupGateTitle,
+                      rtl && styles.arabicMedium,
+                      rtl && styles.rtlText
+                    ]}
+                  >
+                    {shareSheetReturned
+                      ? recoveryCopy.shareSheetReturnedTitle
+                      : recoveryCopy.backupNeededTitle}
+                  </Text>
+                  <Text
+                    style={[
+                      styles.backupGateBody,
+                      rtl && styles.arabic,
+                      rtl && styles.rtlText
+                    ]}
+                  >
+                    {shareSheetReturned
+                      ? recoveryCopy.shareSheetReturnedBody
+                      : recoveryCopy.backupNeededBody}
+                  </Text>
+                </View>
+              </View>
+            </Section>
+          ) : null}
+          {!verification.externalBackupConfirmedAt ? (
+            <PrimaryButton
+              disabled={busy}
+              icon={ShareNetwork}
+              label={recoveryCopy.share}
+              loading={busy}
+              onPress={() => void share()}
+            />
+          ) : null}
+          {shareSheetReturned &&
+          !verification.externalBackupConfirmedAt ? (
+            <SecondaryButton
+              accessibilityHint={recoveryCopy.confirmExternalCopyHint}
+              disabled={busy}
+              icon={CheckCircle}
+              label={recoveryCopy.confirmExternalCopy}
+              loading={busy}
+              onPress={() => void confirmExternalBackup()}
+            />
+          ) : null}
           <SecondaryButton
             icon={FileLock}
             label={recoveryCopy.createAnother}
-            onPress={() => setVerification(null)}
+            onPress={() => {
+              setVerification(null);
+              setShareSheetReturned(false);
+            }}
           />
         </>
       ) : (
@@ -463,6 +574,29 @@ const styles = StyleSheet.create({
     fontSize: 13,
     lineHeight: 19,
     textAlign: "center"
+  },
+  backupGate: {
+    minHeight: 72,
+    flexDirection: "row",
+    alignItems: "flex-start",
+    gap: spacing.sm
+  },
+  backupGateCopy: {
+    flex: 1,
+    minWidth: 0,
+    gap: spacing.xs
+  },
+  backupGateTitle: {
+    color: colors.text,
+    fontFamily: typography.bodyMedium,
+    fontSize: 15,
+    lineHeight: 21
+  },
+  backupGateBody: {
+    color: colors.textMuted,
+    fontFamily: typography.body,
+    fontSize: 13,
+    lineHeight: 19
   },
   rowReverse: {
     flexDirection: "row-reverse"

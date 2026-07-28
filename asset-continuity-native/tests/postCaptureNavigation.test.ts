@@ -1,5 +1,5 @@
 describe("post-capture navigation contract", () => {
-  it("marks a newly created Passport and exposes one focused activation path", () => {
+  it("marks a newly created Passport and hands off to Today before optional completion", () => {
     const { readFileSync } = jest.requireActual("fs") as {
       readFileSync(path: string, encoding: "utf8"): string;
     };
@@ -11,11 +11,6 @@ describe("post-capture navigation contract", () => {
       `${process.cwd()}/app/asset/[id].tsx`,
       "utf8"
     );
-    const valueRoute = readFileSync(
-      `${process.cwd()}/app/asset-value.tsx`,
-      "utf8"
-    );
-
     expect(captureRoute).toContain(
       "navigateAfterCommittedRecord(record.kind, record.id)"
     );
@@ -24,18 +19,18 @@ describe("post-capture navigation contract", () => {
     );
     expect(passportRoute).toContain('justCreated === "1"');
     expect(passportRoute).toContain("Passport saved");
-    expect(passportRoute).toContain("Add value to portfolio");
+    expect(passportRoute).toContain("Passport started");
+    expect(passportRoute).toContain(
+      "const receiptComplete = missing.length === 0"
+    );
     expect(passportRoute).toContain("Add another item");
     expect(passportRoute).toContain("View full Passport");
     expect(passportRoute).toContain("View Today");
-    expect(passportRoute).toContain("returnTo=dashboard");
+    expect(passportRoute).not.toContain("returnTo=dashboard");
     expect(passportRoute).toContain('router.replace("/capture")');
     expect(passportRoute).toContain('router.replace("/(tabs)")');
     expect(passportRoute).toContain(
       "router.replace(`/asset/${asset.id}`)"
-    );
-    expect(valueRoute.indexOf('if (returnTo === "dashboard")')).toBeLessThan(
-      valueRoute.indexOf("router.canGoBack()")
     );
   });
 

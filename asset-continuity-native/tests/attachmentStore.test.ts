@@ -505,6 +505,84 @@ describe("encrypted attachment ingestion contract", () => {
   });
 });
 
+describe("protected capture-draft staging", () => {
+  it("encrypts cache bytes durably, reopens them after restart, and promotes them on save", async () => {
+    const keyStore = secureStoreWith(new Uint8Array(32).fill(17));
+    const scope = vaultScopeFromOpaqueId(
+      `auth-v1-${"d".repeat(64)}`
+    );
+    const store = new EncryptedFileAttachmentStore(keyStore, scope);
+    const sourceUri = "file:///cache/process-death-photo.jpg";
+    const sourceBytes = new Uint8Array([65, 76, 89, 82]);
+    mockFileSystem.__files.set(sourceUri, sourceBytes);
+    mockCrypto.__setPlaintext(sourceBytes);
+
+    const staged = await store.stageForDraft({
+      localUri: sourceUri,
+      fileName: "process-death-photo.jpg",
+      mimeType: "image/jpeg",
+      byteSize: sourceBytes.byteLength
+    });
+
+    expect(staged).toMatchObject({
+      encryptedAtRest: true,
+      checksumSha256: expect.stringMatching(/^[a-f0-9]{64}$/u)
+    });
+    expect(staged.protectedUri).toContain("-attachments-drafts/");
+    expect(staged.protectedUri).toMatch(/\.alyrdraft$/u);
+    expect(mockFileSystem.__files.has(sourceUri)).toBe(true);
+
+    const reopened = new EncryptedFileAttachmentStore(keyStore, scope);
+    await expect(reopened.verifyDraftFile(staged)).resolves.toBe(true);
+    await expect(
+      reopened.materializeDraftForViewing(staged)
+    ).resolves.toMatchObject({
+      byteSize: sourceBytes.byteLength,
+      checksumSha256: staged.checksumSha256,
+      integrity: "aes-gcm-and-sha256",
+      temporary: true
+    });
+
+    const promoted = await reopened.ingest(staged);
+    expect(promoted.protectedUri).toContain("-attachments/");
+    expect(promoted.protectedUri).toMatch(/\.alyrblob$/u);
+    expect(promoted.protectedUri).not.toBe(staged.protectedUri);
+    expect(mockFileSystem.__files.has(staged.protectedUri!)).toBe(true);
+  });
+
+  it("fails closed for missing or corrupt staged bytes and deletes only draft-owned files", async () => {
+    const keyStore = secureStoreWith(new Uint8Array(32).fill(19));
+    const scope = vaultScopeFromOpaqueId(
+      `auth-v1-${"e".repeat(64)}`
+    );
+    const store = new EncryptedFileAttachmentStore(keyStore, scope);
+    const sourceUri = "file:///cache/receipt.pdf";
+    const sourceBytes = new Uint8Array([65, 76, 89, 82]);
+    mockFileSystem.__files.set(sourceUri, sourceBytes);
+    mockCrypto.__setPlaintext(sourceBytes);
+    const staged = await store.stageForDraft({
+      localUri: sourceUri,
+      fileName: "receipt.pdf",
+      mimeType: "application/pdf",
+      byteSize: sourceBytes.byteLength
+    });
+
+    mockCrypto.__setDecryptFailure(true);
+    await expect(store.verifyDraftFile(staged)).resolves.toBe(false);
+    mockCrypto.__setDecryptFailure(false);
+    mockFileSystem.__files.delete(staged.protectedUri!);
+    await expect(store.verifyDraftFile(staged)).resolves.toBe(false);
+
+    const canonicalUri = `file:///document/${scope.protectedAttachmentDirectoryName}/${"f".repeat(64)}.alyrblob`;
+    mockFileSystem.__files.set(canonicalUri, new Uint8Array([1, 2, 3]));
+    await store.discardDraftFile({
+      ...staged,
+      protectedUri: canonicalUri
+    });
+    expect(mockFileSystem.__files.has(canonicalUri)).toBe(true);
+  });
+});
+
 describe("encrypted attachment viewing contract", () => {
   it("decrypts, verifies, materializes, and cleans up a protected file", async () => {
     const plaintext = new Uint8Array([9, 8, 7, 6, 5]);

@@ -2,10 +2,12 @@ import {
   API_ERROR_VERSION,
   type ContractError,
   type LocationStatus,
+  type PlacePin,
 } from "@alyr/contracts";
 
 import { getFocusedCategory } from "./categories.js";
 import { DomainInvariantError } from "./errors.js";
+import { isConfirmedPrecisePlacePin } from "./location.js";
 
 export const MAX_ASSET_CAPTURE_FILE_BYTES = 10 * 1024 * 1024;
 
@@ -48,7 +50,7 @@ const ASSET_MUTATION_MESSAGES: Readonly<
   ASSET_SPACE_INVALID:
     "Choose a room, zone, or container inside the selected Place.",
   ASSET_EXACT_LOCATION_REQUIRED:
-    "An exact item location needs a Place and an indoor locator.",
+    "An exact item location needs a confirmed precise Place pin and an indoor locator.",
   ASSET_FILE_METADATA_INVALID:
     "The attached file metadata is incomplete or invalid.",
   ASSET_FILE_SIZE_INVALID:
@@ -134,6 +136,7 @@ export interface AssetMutationPlaceReference {
   readonly id: string;
   readonly householdId: string;
   readonly spaceIds: readonly string[];
+  readonly pin: PlacePin | null;
 }
 
 export interface FinalAssetMutationContext {
@@ -371,15 +374,9 @@ export function assertValidFinalAssetMutation(
       fail("ASSET_SPACE_INVALID", "space");
     }
     if (
-      candidate.locationStatus === "needs-detail" &&
-      (spaceId || detail)
-    ) {
-      fail("ASSET_LOCATION_STATE_INVALID", "location");
-    }
-    if (
       candidate.locationStatus === "known" &&
-      !spaceId &&
-      !detail
+      ((!spaceId && !detail) ||
+        !isConfirmedPrecisePlacePin(place.pin))
     ) {
       fail("ASSET_EXACT_LOCATION_REQUIRED", "location");
     }

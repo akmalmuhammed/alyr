@@ -87,11 +87,33 @@ export function createHonestPlacePin(input: HonestPlacePinInput): PlacePin {
 export function isConfirmedPrecisePlacePin(
   pin: PlacePin | null | undefined,
 ): boolean {
-  return Boolean(
-    pin &&
-      (pin.precision === "exact" || pin.precision === "user_placed") &&
-      pin.confirmedAt,
-  );
+  if (
+    !pin ||
+    !validCoordinate(pin.latitude, -90, 90) ||
+    !validCoordinate(pin.longitude, -180, 180) ||
+    !Number.isFinite(Date.parse(pin.observedAt)) ||
+    !pin.confirmedAt ||
+    !Number.isFinite(Date.parse(pin.confirmedAt))
+  ) {
+    return false;
+  }
+  if (pin.precision === "exact") {
+    return Boolean(
+      pin.source === "device_gps" &&
+        typeof pin.horizontalAccuracyMeters === "number" &&
+        Number.isFinite(pin.horizontalAccuracyMeters) &&
+        pin.horizontalAccuracyMeters >= 0 &&
+        pin.horizontalAccuracyMeters <= MAX_EXACT_GPS_ACCURACY_METERS,
+    );
+  }
+  if (pin.precision === "user_placed") {
+    return Boolean(
+      (pin.source === "user_pin" ||
+        pin.source === "manual_coordinates") &&
+        pin.horizontalAccuracyMeters === null,
+    );
+  }
+  return false;
 }
 
 export interface DeriveLocationTruthInput {
@@ -109,9 +131,12 @@ export function deriveLocationTruth(
   input: DeriveLocationTruthInput,
 ): { readonly mode: LocationMode; readonly status: LocationStatus } {
   if (input.hasPlace) {
-    const canBeKnown = input.isRealEstate
-      ? isConfirmedPrecisePlacePin(input.placePin)
-      : input.hasIndoorLocator;
+    const hasConfirmedPlacePin = isConfirmedPrecisePlacePin(
+      input.placePin,
+    );
+    const canBeKnown =
+      hasConfirmedPlacePin &&
+      (input.isRealEstate || input.hasIndoorLocator);
     return {
       mode: "physical",
       status:
@@ -132,7 +157,7 @@ export function deriveLocationTruth(
   if (
     input.requiresPhysicalLocator &&
     input.requestedMode === "physical" &&
-    input.requestedStatus === "needs-detail"
+    input.requestedStatus !== "unknown"
   ) {
     return { mode: "physical", status: "needs-detail" };
   }
@@ -204,6 +229,16 @@ export function appendLocationRevision(
     throw new DomainInvariantError(
       "KNOWN_LOCATION_REQUIRES_PLACE",
       "A known physical location requires a Place snapshot.",
+    );
+  }
+  if (
+    input.mode === "physical" &&
+    input.status === "known" &&
+    !isConfirmedPrecisePlacePin(input.placeSnapshot?.pin)
+  ) {
+    throw new DomainInvariantError(
+      "KNOWN_LOCATION_REQUIRES_CONFIRMED_PIN",
+      "A known physical location requires a confirmed precise Place pin.",
     );
   }
   if (!input.placeSnapshot && input.spacePathSnapshot.length > 0) {

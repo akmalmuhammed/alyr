@@ -1,0 +1,99 @@
+appId: com.alyr.continuity
+name: Native-secure preconfirmed account completes first Passport
+tags:
+  - smoke
+  - auth
+  - onboarding
+  - passport
+  - native-secure
+  - native-activation
+  - external-fixture
+  - single-use
+env:
+  RECORD_NAME: "Maestro private record"
+  ASSET_NAME: "Native-secure first watch"
+---
+- launchApp:
+    clearState: true
+    permissions:
+      all: allow
+- extendedWaitUntil:
+    visible:
+      id: "auth-welcome-screen"
+    timeout: 20000
+- runFlow:
+    label: Normalize the persisted locale to English
+    when:
+      visible: "English"
+    commands:
+      - tapOn: "English"
+- tapOn:
+    text: "Sign in"
+    enabled: true
+- extendedWaitUntil:
+    visible:
+      id: "auth-sign-in-screen"
+    timeout: 15000
+- tapOn:
+    id: "auth-sign-in-email"
+- inputText: "${ALYR_E2E_PRECONFIRMED_EMAIL}"
+- tapOn:
+    id: "auth-sign-in-password"
+- inputText: "${ALYR_E2E_PASSWORD}"
+- hideKeyboard
+- tapOn:
+    text: "Sign in"
+    enabled: true
+- extendedWaitUntil:
+    visible:
+      id: "auth-household-screen"
+    timeout: 30000
+- assertVisible:
+    id: "auth-activation-progress"
+- assertVisible:
+    id: "auth-activation-current-stage"
+    text: "Private record"
+- tapOn:
+    id: "auth-private-record-name"
+- eraseText: 60
+- inputText: "${RECORD_NAME}"
+- hideKeyboard
+- tapOn:
+    text: "Create private record"
+    enabled: true
+- extendedWaitUntil:
+    visible:
+      id: "auth-privacy-screen"
+    timeout: 30000
+- assertVisible:
+    id: "auth-activation-current-stage"
+    text: "First Passport"
+- tapOn:
+    id: "auth-first-passport-item"
+    enabled: true
+- assertVisible:
+    id: "onboarding-device-preflight"
+- extendedWaitUntil:
+    visible:
+      text: "Verify and add my first item"
+    timeout: 30000
+- tapOn:
+    text: "Verify and add my first item"
+    enabled: true
+- extendedWaitUntil:
+    visible:
+      id: "capture-step-0"
+    timeout: 60000
+- runFlow:
+    file: "../subflows/complete-minimal-passport-from-capture.yaml"
+    env:
+      ASSET_NAME: "${ASSET_NAME}"
+- assertVisible: "Passport started"
+- tapOn:
+    text: "View Today"
+    enabled: true
+- extendedWaitUntil:
+    visible:
+      id: "home-screen"
+    timeout: 30000
+- assertVisible: "${ASSET_NAME}"

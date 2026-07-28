@@ -60,6 +60,7 @@ describe("Recovery Kit journey controller", () => {
   it("verifies stored encrypted bytes and returns metadata without plaintext", async () => {
     const storage = memoryStorage();
     let selectedReference = "";
+    let externalBackupConfirmedAt: string | null = null;
     const controller = new RecoveryJourneyController({
       crypto: new RecoveryTestCrypto(),
       attachments: {
@@ -78,6 +79,20 @@ describe("Recovery Kit journey controller", () => {
       shareEncryptedKit: async (reference) => {
         selectedReference = reference;
       },
+      listRecentEncryptedKits: async () => [],
+      confirmEncryptedKitExternalBackup: async (
+        reference,
+        confirmedAt
+      ) => {
+        externalBackupConfirmedAt = confirmedAt;
+        return {
+          reference,
+          fileName: "ALYR-Recovery-2026-07-27.alyrkit",
+          byteSize: storage.files.get(reference)?.byteLength ?? 0,
+          createdAt: CREATED_AT,
+          externalBackupConfirmedAt: confirmedAt
+        };
+      },
       currentHouseholdId: () => "household-current",
       now: () => "2026-07-27T10:01:00.000Z"
     });
@@ -86,6 +101,7 @@ describe("Recovery Kit journey controller", () => {
     expect(verification.protection).toBe("Argon2id + AES-256-GCM");
     expect(verification.sha256).toMatch(/^[a-f0-9]{64}$/u);
     expect(verification.verifiedAt).toBe("2026-07-27T10:01:00.000Z");
+    expect(verification.externalBackupConfirmedAt).toBeNull();
     const stored = storage.files.get(verification.reference)!;
     const visible = String.fromCharCode(...stored);
     expect(visible).not.toContain("Private household");
@@ -93,6 +109,16 @@ describe("Recovery Kit journey controller", () => {
 
     await controller.share(verification.reference);
     expect(selectedReference).toBe(verification.reference);
+    expect(externalBackupConfirmedAt).toBeNull();
+    const confirmed = await controller.confirmExternalBackup(
+      verification.reference
+    );
+    expect(confirmed.externalBackupConfirmedAt).toBe(
+      "2026-07-27T10:01:00.000Z"
+    );
+    expect(externalBackupConfirmedAt).toBe(
+      "2026-07-27T10:01:00.000Z"
+    );
   });
 
   it("previews only an authenticated same-household kit and requires REPLACE", async () => {

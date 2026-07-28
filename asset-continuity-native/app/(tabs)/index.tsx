@@ -2,7 +2,6 @@ import { useRouter } from "expo-router";
 import {
   ArrowLeft,
   ArrowRight,
-  Camera,
   ChartDonut,
   CheckCircle,
   GlobeHemisphereWest,
@@ -12,6 +11,7 @@ import {
   WarningCircle
 } from "phosphor-react-native";
 import {
+  Platform,
   Pressable,
   StyleSheet,
   Text,
@@ -39,11 +39,11 @@ import type { NativeAsset } from "@/domain/model";
 import { isAssetActive } from "@/domain/model";
 import { buildNetPositionSnapshot } from "@/domain/netPosition";
 import { buildPortfolioSnapshot } from "@/domain/portfolio";
-import { calculateNativeAssetReadiness } from "@/domain/readiness";
 import {
-  rankTodayAttention,
+  buildTodayRegisterHealth,
   selectTodayCommandState,
-  selectTodayPlaceOverview
+  selectTodayPlaceOverview,
+  type TodayAttentionTask
 } from "@/domain/today";
 
 import {
@@ -138,6 +138,103 @@ function gapHref(asset: NativeAsset, gap: GapKind): string {
   return `/asset-edit?assetId=${encodeURIComponent(asset.id)}&focus=${gap}`;
 }
 
+function attentionCopy(
+  task: TodayAttentionTask,
+  copy: CoreJourneyCopy
+): {
+  readonly title: string;
+  readonly detail: string;
+  readonly action: string;
+} {
+  if (task.kind === "asset-gap") {
+    return gapCopy(
+      task.asset,
+      task.readiness.nextItem.id,
+      copy
+    );
+  }
+  if (task.kind === "property-pin") {
+    return {
+      title: `${copy.today.propertyPinGap} ${task.place.name}`,
+      detail: copy.today.propertyPinGapDetail,
+      action: copy.today.confirmPropertyPin
+    };
+  }
+  if (task.kind === "liability-balance") {
+    return task.state === "missing"
+      ? {
+          title: `${copy.today.liabilityBalanceGap} ${task.liability.name}`,
+          detail: copy.today.liabilityBalanceGapDetail,
+          action: copy.today.reviewBalance
+        }
+      : {
+          title: `${copy.today.liabilityBalanceStale} ${task.liability.name}`,
+          detail: copy.today.liabilityBalanceStaleDetail,
+          action: copy.today.reviewBalance
+        };
+  }
+  if (task.kind === "liability-review") {
+    return {
+      title: copy.today.liabilityReviewGap,
+      detail:
+        task.state === "expired"
+          ? copy.today.liabilityReviewExpiredDetail
+          : copy.today.liabilityReviewChangedDetail,
+      action: copy.today.reviewLiabilities
+    };
+  }
+  return {
+    title: `${copy.today.recordedValueStale} ${task.name}`,
+    detail: copy.today.recordedValueStaleDetail,
+    action: copy.today.reviewRecordedValue
+  };
+}
+
+function attentionHref(
+  task: TodayAttentionTask,
+  editable: boolean
+): string {
+  if (task.kind === "asset-gap") {
+    return editable
+      ? gapHref(task.asset, task.readiness.nextItem.id)
+      : `/asset/${task.asset.id}`;
+  }
+  if (task.kind === "property-pin") {
+    return editable
+      ? `/place-pin?placeId=${encodeURIComponent(task.place.id)}`
+      : `/place/${task.place.id}`;
+  }
+  if (task.kind === "liability-balance") {
+    return editable
+      ? `/liability-balance?liabilityId=${encodeURIComponent(
+          task.liability.id
+        )}`
+      : `/liability/${task.liability.id}`;
+  }
+  if (task.kind === "liability-review") {
+    return "/dashboard";
+  }
+  if (task.subject.kind === "asset") {
+    return editable
+      ? `/asset-value?assetId=${encodeURIComponent(
+          task.subject.assetId
+        )}`
+      : `/asset/${task.subject.assetId}`;
+  }
+  if (task.subject.kind === "liability") {
+    return editable
+      ? `/liability-balance?liabilityId=${encodeURIComponent(
+          task.subject.liabilityId
+        )}`
+      : `/liability/${task.subject.liabilityId}`;
+  }
+  return editable
+    ? `/asset-value?placeId=${encodeURIComponent(
+        task.subject.placeId
+      )}`
+    : `/place/${task.subject.placeId}`;
+}
+
 function TodayPortfolioCard({
   accessibilityLabel,
   copy,
@@ -161,6 +258,8 @@ function TodayPortfolioCard({
   }[];
 }) {
   const ForwardIcon = rtl ? ArrowLeft : ArrowRight;
+  const rtlRow =
+    rtl && Platform.OS !== "web" ? styles.rowReverse : undefined;
   return (
     <Section>
       <Pressable
@@ -170,14 +269,11 @@ function TodayPortfolioCard({
         onPress={onPress}
         style={({ pressed }) => [
           styles.portfolioRow,
-          rtl && styles.rowReverse,
+          rtlRow,
           pressed && styles.pressed
         ]}
         testID="today-portfolio-entry"
       >
-        <View style={styles.portfolioIcon}>
-          <ChartDonut color={colors.volt} size={22} weight="regular" />
-        </View>
         <View style={styles.portfolioCopy}>
           <Text
             style={[
@@ -252,38 +348,25 @@ export default function HomeScreen() {
     workspaceMode: workspace.mode
   });
   const ForwardIcon = rtl ? ArrowLeft : ArrowRight;
+  // React Native Web already applies the inherited RTL direction to row
+  // layout. Reversing those rows again restores LTR visual order; native
+  // platforms still need the explicit row reversal.
+  const rtlRow =
+    rtl && Platform.OS !== "web" ? styles.rowReverse : undefined;
   const activeAssets = workspace.assets.filter(isAssetActive);
-
-  const readinessEntries = activeAssets.map((asset) => ({
-    asset,
-    readiness: calculateNativeAssetReadiness(
-      asset,
-      workspace.places,
-      workspace.evidence
-    )
-  }));
-  const incomplete = rankTodayAttention(readinessEntries);
-  const registerReadiness =
-    readinessEntries.length === 0
-      ? 0
-      : Math.round(
-          readinessEntries.reduce(
-            (total, entry) => total + entry.readiness.percent,
-            0
-          ) / readinessEntries.length
-        );
-
-  const firstGap = incomplete[0];
-  const primary = firstGap?.readiness.nextItem
-    ? gapCopy(
-        firstGap.asset,
-        firstGap.readiness.nextItem.id,
-        copy
-      )
+  const registerHealth = buildTodayRegisterHealth(
+    workspace,
+    recordedPortfolioValues
+  );
+  const attention = registerHealth.tasks;
+  const registerReadiness = registerHealth.readinessPercent;
+  const firstTask = attention[0];
+  const primary = firstTask
+    ? attentionCopy(firstTask, copy)
     : null;
   const commandState = selectTodayCommandState(
-    activeAssets.length,
-    incomplete.length
+    registerHealth.recordCount,
+    attention.length
   );
   const command =
     commandState === "empty"
@@ -292,7 +375,7 @@ export default function HomeScreen() {
           title: copy.today.emptyTitle,
           detail: copy.today.emptyDetail,
           action: copy.today.addFirstItem,
-          icon: Camera
+          icon: Plus
         }
       : commandState === "ready"
         ? {
@@ -309,7 +392,14 @@ export default function HomeScreen() {
               primary?.detail ??
               copy.today.reviewNextDetail,
             action: primary?.action ?? copy.today.reviewPassport,
-            icon: ForwardIcon
+            icon:
+              firstTask?.kind === "property-pin"
+                ? MapPin
+                : firstTask?.kind === "liability-balance" ||
+                    firstTask?.kind === "liability-review" ||
+                    firstTask?.kind === "recorded-value-review"
+                  ? ChartDonut
+                  : ForwardIcon
           };
   const CommandIcon = command.icon;
   const summary = todayHouseholdSummary(
@@ -479,6 +569,27 @@ export default function HomeScreen() {
     language
   );
   const promoteSyncTruth = shouldPromoteSyncTruth(sync);
+  const canEditTask = (task: TodayAttentionTask): boolean => {
+    if (task.kind === "property-pin") return canWritePlaces;
+    if (
+      task.kind === "liability-balance" ||
+      task.kind === "liability-review"
+    ) {
+      return can("liability.write");
+    }
+    if (task.kind === "recorded-value-review") {
+      return task.subject.kind === "place"
+        ? canWritePlaces
+        : task.subject.kind === "liability"
+          ? can("liability.write")
+          : canWriteAssets;
+    }
+    return canWriteAssets;
+  };
+  const canOpenCommand =
+    commandState === "incomplete" && firstTask
+      ? canEditTask(firstTask)
+      : canWriteAssets || canWritePlaces;
   const syncTruth = (
     <SyncTruth
       language={language}
@@ -492,19 +603,16 @@ export default function HomeScreen() {
     />
   );
   const openCommand = () =>
-    commandState === "incomplete" && firstGap
-      ? router.push(
-          gapHref(
-            firstGap.asset,
-            firstGap.readiness.nextItem!.id
-          )
-        )
-      : router.push("/capture");
+    commandState === "incomplete" && firstTask
+      ? router.push(attentionHref(firstTask, true))
+      : router.push(
+          canWriteAssets ? "/capture" : "/capture?intent=place"
+        );
 
   return (
     <AppScreen testID="home-screen">
-      <View style={[styles.topBar, rtl && styles.rowReverse]}>
-        <View style={[styles.identity, rtl && styles.rowReverse]}>
+      <View style={[styles.topBar, rtlRow]}>
+        <View style={[styles.identity, rtlRow]}>
           <BrandMark compact />
           <View style={styles.identityCopy}>
             <Text
@@ -530,7 +638,7 @@ export default function HomeScreen() {
           </View>
         </View>
         {canWriteAssets ? (
-          <View style={[styles.topActions, rtl && styles.rowReverse]}>
+          <View style={[styles.topActions, rtlRow]}>
             <IconButton
               icon={Plus}
               label={copy.items.addItem}
@@ -601,7 +709,7 @@ export default function HomeScreen() {
         <View
           style={[
             styles.commandHeader,
-            rtl && styles.rowReverse
+            rtlRow
           ]}
         >
           <Text
@@ -644,13 +752,13 @@ export default function HomeScreen() {
         <View
           style={[
             styles.commandMain,
-            rtl && styles.rowReverse
+            rtlRow
           ]}
         >
-          {firstGap ? (
+          {firstTask?.kind === "asset-gap" ? (
             <AssetPhotoPreview
               active
-              asset={firstGap.asset}
+              asset={firstTask.asset}
               evidence={workspace.evidence}
               variant="command"
             />
@@ -684,7 +792,7 @@ export default function HomeScreen() {
             </Text>
           </View>
         </View>
-        {canWriteAssets ? (
+        {canOpenCommand ? (
           sampleActivationRoute ? (
             <View testID="today-secondary-command-action">
               <SecondaryButton
@@ -718,29 +826,26 @@ export default function HomeScreen() {
         totals={portfolioCard.totals}
       />
 
-      {incomplete.length > 1 ? (
+      {attention.length > 1 ? (
         <Section>
           <SectionHeader title={copy.today.needsAttention} />
-          {incomplete.slice(1, 3).map(({ asset, readiness }) => {
-            const task = gapCopy(
-              asset,
-              readiness.nextItem!.id,
-              copy
-            );
+          {attention.slice(1, 3).map((attentionTask) => {
+            const task = attentionCopy(attentionTask, copy);
             return (
               <Pressable
                 accessibilityRole="button"
-                key={asset.id}
+                key={attentionTask.id}
                 onPress={() =>
                   router.push(
-                    canWriteAssets
-                      ? gapHref(asset, readiness.nextItem!.id)
-                      : `/asset/${asset.id}`
+                    attentionHref(
+                      attentionTask,
+                      canEditTask(attentionTask)
+                    )
                   )
                 }
                 style={({ pressed }) => [
                   styles.taskRow,
-                  rtl && styles.rowReverse,
+                  rtlRow,
                   pressed && styles.pressed
                 ]}
               >
@@ -816,12 +921,12 @@ export default function HomeScreen() {
           <View
             style={[
               styles.atlasHeader,
-              rtl && styles.rowReverse
+              rtlRow
             ]}
           >
             <View style={styles.atlasIcon}>
               <GlobeHemisphereWest
-                color={colors.white}
+                color={colors.text}
                 size={24}
                 weight="regular"
               />
@@ -865,7 +970,7 @@ export default function HomeScreen() {
                 styles.atlasStatus,
                 placeOverview.reviewCount > 0 &&
                   styles.atlasStatusAttention,
-                rtl && styles.rowReverse
+                rtlRow
               ]}
             >
               {placeOverview.reviewCount > 0 ? (
@@ -896,7 +1001,7 @@ export default function HomeScreen() {
           <View
             style={[
               styles.atlasAction,
-              rtl && styles.rowReverse
+              rtlRow
             ]}
           >
             <Text
@@ -923,7 +1028,7 @@ export default function HomeScreen() {
               onPress={() => router.push(`/place/${place.id}`)}
               style={({ pressed }) => [
                 styles.placeRow,
-                rtl && styles.rowReverse,
+                rtlRow,
                 pressed && styles.pressed
               ]}
             >
@@ -1161,22 +1266,13 @@ const styles = StyleSheet.create({
     borderBottomColor: colors.border
   },
   portfolioRow: {
-    minHeight: 104,
+    minHeight: 96,
     flexDirection: "row",
     alignItems: "center",
-    gap: spacing.md,
     paddingVertical: spacing.md,
     borderTopWidth: 1,
     borderBottomWidth: 1,
     borderColor: colors.borderStrong
-  },
-  portfolioIcon: {
-    width: 44,
-    height: 44,
-    alignItems: "center",
-    justifyContent: "center",
-    borderRadius: radius.sm,
-    backgroundColor: colors.carbon
   },
   portfolioCopy: {
     flex: 1,
@@ -1243,11 +1339,10 @@ const styles = StyleSheet.create({
   },
   atlas: {
     gap: spacing.md,
-    padding: spacing.lg,
-    borderWidth: 1,
-    borderColor: colors.borderStrong,
-    borderRadius: radius.lg,
-    backgroundColor: colors.surface
+    paddingVertical: spacing.md,
+    borderTopWidth: 1,
+    borderBottomWidth: 1,
+    borderColor: colors.borderStrong
   },
   atlasHeader: {
     flexDirection: "row",
@@ -1255,13 +1350,11 @@ const styles = StyleSheet.create({
     gap: spacing.md
   },
   atlasIcon: {
-    width: 48,
-    height: 48,
+    width: 32,
+    height: 32,
     flexShrink: 0,
     alignItems: "center",
-    justifyContent: "center",
-    borderRadius: radius.md,
-    backgroundColor: colors.carbon
+    justifyContent: "center"
   },
   atlasCopy: {
     flex: 1,
@@ -1292,12 +1385,12 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "flex-start",
     gap: spacing.sm,
-    padding: spacing.sm,
-    borderRadius: radius.md,
-    backgroundColor: colors.surfaceQuiet
+    paddingVertical: spacing.sm,
+    borderTopWidth: StyleSheet.hairlineWidth,
+    borderTopColor: colors.border
   },
   atlasStatusAttention: {
-    backgroundColor: colors.warningQuiet
+    borderTopColor: colors.warning
   },
   atlasStatusText: {
     flex: 1,

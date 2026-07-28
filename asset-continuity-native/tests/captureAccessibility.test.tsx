@@ -1,6 +1,7 @@
 import {
   fireEvent,
-  render
+  render,
+  waitFor
 } from "@testing-library/react-native";
 
 import { AssetMutationValidationError } from "@alyr/domain";
@@ -32,6 +33,10 @@ const mockWorkspace = {
   ]
 };
 const mockCreateAsset = jest.fn();
+const mockPlayTactileFeedback = jest.fn<
+  Promise<void>,
+  [string, { readonly reduceMotion: boolean }]
+>(async () => undefined);
 
 jest.mock("expo-router", () => ({
   useLocalSearchParams: () => ({}),
@@ -54,6 +59,14 @@ jest.mock("@/state/WorkspaceProvider", () => ({
 
 jest.mock("@/accessibility/useReduceMotionPreference", () => ({
   useReduceMotionPreference: () => false
+}));
+
+jest.mock("@/feedback/tactileFeedback", () => ({
+  __esModule: true,
+  playTactileFeedback: (
+    kind: string,
+    options: { readonly reduceMotion: boolean }
+  ) => mockPlayTactileFeedback(kind, options)
 }));
 
 jest.mock("@/components/PlacePinEditor", () => ({
@@ -288,6 +301,9 @@ describe("Quick Passport validation and step accessibility", () => {
     expect(debt).toBeTruthy();
     expect(alert.props.accessibilityRole).toBe("alert");
     expect(screen.getByText(copy.placePinDebtTitle)).toBeTruthy();
+    expect(
+      screen.getByText(new RegExp(copy.placeNeedsDetail))
+    ).toBeTruthy();
     expect(action.props.accessibilityLabel).toBe(copy.reviewPlacePin);
     expect(action.props.accessibilityHint).toBe(
       copy.reviewPlacePinHint
@@ -296,6 +312,60 @@ describe("Quick Passport validation and step accessibility", () => {
     await fireEvent.press(action);
     expect(mockRouter.push).toHaveBeenCalledWith(
       `/place-pin?placeId=${encodeURIComponent(place.id)}`
+    );
+  });
+
+  it("saves indoor detail as needs-detail while the Place pin is unconfirmed", async () => {
+    const copy = getCaptureCopy("en");
+    const place = mockWorkspace.places[0]!;
+    const room = place.rooms[0]!;
+    let resolveCreateAsset!: (asset: { id: string }) => void;
+    mockCreateAsset.mockReturnValueOnce(
+      new Promise<{ id: string }>((resolve) => {
+        resolveCreateAsset = resolve;
+      })
+    );
+    const screen = await render(<CaptureScreen />);
+
+    await fireEvent.changeText(
+      screen.getByLabelText(copy.assetName),
+      "Travel watch"
+    );
+    await fireEvent.press(screen.getByRole("radio", { name: "Watch" }));
+    await fireEvent.press(
+      screen.getByRole("button", { name: copy.continue })
+    );
+    await fireEvent.press(screen.getByText(copy.exactSpot));
+    await fireEvent.press(screen.getByText(place.name));
+    await fireEvent.press(screen.getByText(room.name));
+    await fireEvent.press(
+      screen.getByRole("button", { name: copy.continue })
+    );
+    await fireEvent.press(
+      screen.getByRole("button", { name: copy.skip })
+    );
+    await fireEvent.press(
+      screen.getByRole("button", { name: copy.savePassport })
+    );
+
+    await waitFor(() =>
+      expect(mockCreateAsset).toHaveBeenCalledWith(
+        expect.objectContaining({
+          locationStatus: "needs-detail",
+          placeId: place.id,
+          roomId: room.id
+        })
+      )
+    );
+    expect(mockPlayTactileFeedback).not.toHaveBeenCalled();
+
+    resolveCreateAsset({ id: "asset-location-truth" });
+
+    await waitFor(() =>
+      expect(mockPlayTactileFeedback).toHaveBeenCalledWith(
+        "success",
+        { reduceMotion: false }
+      )
     );
   });
 });

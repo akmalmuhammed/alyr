@@ -4,6 +4,7 @@ import {
   CaretDown,
   CaretUp,
   Cube,
+  GearSix,
   LockKey,
   MapPin,
   ShieldCheck,
@@ -16,6 +17,8 @@ import {
   useState
 } from "react";
 import {
+  Linking,
+  Platform,
   Pressable,
   StyleSheet,
   Text,
@@ -31,7 +34,10 @@ import {
   AuthStatusRow,
   SelectionRow
 } from "@/auth/components";
-import { AUTH_ROUTES, authStepNumber } from "@/auth/routes";
+import {
+  AUTH_ROUTES,
+  authActivationProgress
+} from "@/auth/routes";
 import { completeSignedAccountExit } from "@/auth/signedAccountExit";
 import { ErrorBanner } from "@/components/ui";
 import {
@@ -91,6 +97,7 @@ export default function PrivacyAndCaptureScreen() {
   const [submitting, setSubmitting] = useState(false);
   const [protectionDetailsOpen, setProtectionDetailsOpen] =
     useState(false);
+  const [settingsOpenFailed, setSettingsOpenFailed] = useState(false);
   const [leavingAccount, setLeavingAccount] = useState(false);
   const commitInFlightRef = useRef(false);
   const protectionCopy = onboardingDevicePreflightCopy(
@@ -108,23 +115,45 @@ export default function PrivacyAndCaptureScreen() {
   const protectionBusy =
     onboardingPreflight.phase === "checking" ||
     onboardingPreflight.phase === "authorizing";
+  const protectionStatusState =
+    handoffRestoreFailed
+      ? "error"
+      : handoffRestoreLoading ||
+          onboardingPreflight.phase === "idle" ||
+          onboardingPreflight.phase === "checking" ||
+          onboardingPreflight.phase === "authorizing"
+        ? "checking"
+        : onboardingPreflight.phase === "unavailable" ||
+            onboardingPreflight.phase === "bypassed"
+          ? "warning"
+          : onboardingPreflight.phase === "authorized"
+            ? "success"
+            : "ready";
+  const onboardingAccessReady = Boolean(
+    session &&
+      session.onboarding !== "complete" &&
+      householdName.trim() &&
+      activeHouseholdId &&
+      session.activeMembershipId &&
+      session.activeHouseholdRole === "owner"
+  );
 
   useEffect(() => {
     if (
-      session?.onboarding !== "complete" &&
+      onboardingAccessReady &&
       onboardingPreflight.phase === "idle"
     ) {
       void checkOnboardingProtection();
     }
   }, [
     checkOnboardingProtection,
-    onboardingPreflight.phase,
-    session?.onboarding
+    onboardingAccessReady,
+    onboardingPreflight.phase
   ]);
 
   useEffect(() => {
     if (
-      session?.onboarding !== "complete" &&
+      onboardingAccessReady &&
       pendingFirstRecordIntent &&
       firstCaptureIntent !== pendingFirstRecordIntent
     ) {
@@ -132,16 +161,39 @@ export default function PrivacyAndCaptureScreen() {
     }
   }, [
     firstCaptureIntent,
+    onboardingAccessReady,
     pendingFirstRecordIntent,
-    session?.onboarding,
     setFirstCaptureIntent
   ]);
+
+  useEffect(() => {
+    if (
+      onboardingAccessReady &&
+      onboardingHandoffRestoreState === "ready" &&
+      !pendingFirstRecordIntent &&
+      !firstCaptureIntent
+    ) {
+      setFirstCaptureIntent("item");
+    }
+  }, [
+    firstCaptureIntent,
+    onboardingAccessReady,
+    onboardingHandoffRestoreState,
+    pendingFirstRecordIntent,
+    setFirstCaptureIntent
+  ]);
+
+  useEffect(() => {
+    if (onboardingPreflight.phase !== "unavailable") {
+      setSettingsOpenFailed(false);
+    }
+  }, [onboardingPreflight.phase]);
 
   const commitAuthorizedOnboarding = useCallback(
     async (intent: "item" | "place") => {
       if (
         commitInFlightRef.current ||
-        session?.onboarding === "complete" ||
+        !onboardingAccessReady ||
         !storageReady
       ) {
         return;
@@ -171,8 +223,8 @@ export default function PrivacyAndCaptureScreen() {
     [
       completeOnboarding,
       createCompletion,
+      onboardingAccessReady,
       renameHousehold,
-      session?.onboarding,
       startWorkspace,
       storageReady,
       workspace
@@ -181,6 +233,7 @@ export default function PrivacyAndCaptureScreen() {
 
   useEffect(() => {
     if (
+      onboardingAccessReady &&
       pendingFirstRecordIntent &&
       storageReady &&
       (onboardingPreflight.phase === "authorized" ||
@@ -192,13 +245,20 @@ export default function PrivacyAndCaptureScreen() {
     }
   }, [
     commitAuthorizedOnboarding,
+    onboardingAccessReady,
     onboardingPreflight.phase,
     pendingFirstRecordIntent,
     storageReady
   ]);
 
   const finish = async () => {
-    if (handoffRestoreLoading || submitting) return;
+    if (
+      !onboardingAccessReady ||
+      handoffRestoreLoading ||
+      submitting
+    ) {
+      return;
+    }
     if (handoffRestoreFailed) {
       retryOnboardingHandoffRestore();
       return;
@@ -265,8 +325,31 @@ export default function PrivacyAndCaptureScreen() {
     }
   };
 
+  const openDeviceSettings = useCallback(async () => {
+    if (Platform.OS === "web") return;
+    setSettingsOpenFailed(false);
+    try {
+      await Linking.openSettings();
+    } catch {
+      setSettingsOpenFailed(true);
+    }
+  }, []);
+
   if (!session) return <Redirect href={AUTH_ROUTES.signIn} />;
-  if (!householdName.trim() || !activeHouseholdId) {
+  if (
+    session.onboarding === "complete" &&
+    activeHouseholdId &&
+    session.activeMembershipId &&
+    session.activeHouseholdRole
+  ) {
+    return <Redirect href="/" />;
+  }
+  if (
+    !householdName.trim() ||
+    !activeHouseholdId ||
+    !session.activeMembershipId ||
+    session.activeHouseholdRole !== "owner"
+  ) {
     return <Redirect href={AUTH_ROUTES.household} />;
   }
 
@@ -330,7 +413,11 @@ export default function PrivacyAndCaptureScreen() {
           ? router.back()
           : router.replace(AUTH_ROUTES.household);
       }}
-      progress={authStepNumber("privacy")}
+      {...(mode === "supabase"
+        ? {
+            progress: authActivationProgress("privacy")
+          }
+        : {})}
       testID="auth-privacy-screen"
     >
       <View style={styles.content}>
@@ -356,6 +443,7 @@ export default function PrivacyAndCaptureScreen() {
               }
               setFirstCaptureIntent("item");
             }}
+            testID="auth-first-passport-item"
           />
           <SelectionRow
             active={firstCaptureIntent === "place"}
@@ -370,6 +458,7 @@ export default function PrivacyAndCaptureScreen() {
               }
               setFirstCaptureIntent("place");
             }}
+            testID="auth-first-passport-place"
           />
         </View>
         <View testID="onboarding-device-preflight">
@@ -393,6 +482,7 @@ export default function PrivacyAndCaptureScreen() {
             eyebrow={protectionCopy.eyebrow}
             icon={LockKey}
             live
+            state={protectionStatusState}
             value={
               handoffRestoreLoading
                 ? handoffCopy.restoreCheckingTitle
@@ -410,7 +500,37 @@ export default function PrivacyAndCaptureScreen() {
                       : protectionCopy.checkingTitle
             }
           />
+          {onboardingPreflight.phase === "unavailable" &&
+          Platform.OS !== "web" ? (
+            <Pressable
+              accessibilityHint={protectionCopy.openSettingsHint}
+              accessibilityLabel={protectionCopy.openSettingsAction}
+              accessibilityRole="button"
+              onPress={() => void openDeviceSettings()}
+              style={({ pressed }) => [
+                styles.settingsAction,
+                language === "ar" && styles.rowReverse,
+                pressed && styles.pressed
+              ]}
+              testID="onboarding-open-device-settings"
+            >
+              <GearSix color={colors.text} size={20} weight="regular" />
+              <Text
+                style={[
+                  styles.settingsActionLabel,
+                  language === "ar" && styles.settingsActionLabelArabic
+                ]}
+              >
+                {protectionCopy.openSettingsAction}
+              </Text>
+            </Pressable>
+          ) : null}
         </View>
+        {settingsOpenFailed ? (
+          <AuthNotice live tone="attention">
+            {protectionCopy.openSettingsError}
+          </AuthNotice>
+        ) : null}
         {onboardingPreflight.notice ? (
           <AuthNotice live tone="attention">
             {protectionCopy.notices[onboardingPreflight.notice]}
@@ -547,6 +667,30 @@ const styles = StyleSheet.create({
     borderTopWidth: StyleSheet.hairlineWidth,
     borderBottomWidth: StyleSheet.hairlineWidth,
     borderColor: colors.border
+  },
+  settingsAction: {
+    minHeight: 48,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: spacing.sm,
+    marginTop: spacing.sm,
+    paddingHorizontal: spacing.md,
+    borderWidth: 1,
+    borderColor: colors.borderStrong,
+    borderRadius: radius.sm,
+    backgroundColor: colors.surface
+  },
+  settingsActionLabel: {
+    color: colors.text,
+    fontFamily: typography.bodyBold,
+    fontSize: 14,
+    lineHeight: 20
+  },
+  settingsActionLabelArabic: {
+    fontFamily: typography.arabicMedium,
+    textAlign: "right",
+    writingDirection: "rtl"
   },
   protectionDisclosureTrigger: {
     minHeight: 68,

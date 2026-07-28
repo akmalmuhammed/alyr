@@ -11,21 +11,39 @@ jest.mock("expo-router", () => ({
 
 jest.mock("@/components/PortfolioDashboard", () => {
   const React = jest.requireActual("react");
-  const { Pressable, Text } = jest.requireActual("react-native");
+  const { Pressable, Text, View } = jest.requireActual("react-native");
   return {
     PortfolioDashboard: ({
-      onReviewPropertyValues
+      language,
+      onReviewPropertyValues,
+      showTitle = true
     }: {
+      readonly language?: string;
       readonly onReviewPropertyValues?: () => void;
+      readonly showTitle?: boolean;
     }) =>
       React.createElement(
-        Pressable,
-        {
-          accessibilityRole: "button",
-          onPress: onReviewPropertyValues,
-          testID: "mock-review-property-values"
-        },
-        React.createElement(Text, null, "Review property values")
+        View,
+        null,
+        React.createElement(
+          Text,
+          { testID: "mock-portfolio-language" },
+          language
+        ),
+        React.createElement(
+          Text,
+          { testID: "mock-portfolio-title-visibility" },
+          showTitle ? "Portfolio" : "Hidden"
+        ),
+        React.createElement(
+          Pressable,
+          {
+            accessibilityRole: "button",
+            onPress: onReviewPropertyValues,
+            testID: "mock-review-property-values"
+          },
+          React.createElement(Text, null, "Review property values")
+        )
       )
   };
 });
@@ -42,8 +60,8 @@ jest.mock("@/i18n/secondarySurfaceCopy", () => ({
         continueSetup: "Continue setup"
       }
     },
-    language: "en",
-    rtl: false
+    language: "ar",
+    rtl: true
   })
 }));
 
@@ -100,5 +118,22 @@ describe("Dashboard property-value review routing", () => {
       "/assets?view=places&filter=value"
     );
     expect(mockRouter.push).not.toHaveBeenCalledWith("/atlas");
+  });
+
+  it("renders Portfolio in the active user locale rather than the workspace default", async () => {
+    const screen = await render(<DashboardScreen />);
+
+    expect(
+      screen.getByTestId("mock-portfolio-language").props.children
+    ).toBe("ar");
+  });
+
+  it("keeps the Portfolio route title visible", async () => {
+    const screen = await render(<DashboardScreen />);
+
+    expect(
+      screen.getByTestId("mock-portfolio-title-visibility").props
+        .children
+    ).toBe("Portfolio");
   });
 });
