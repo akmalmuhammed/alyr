@@ -6,6 +6,7 @@ import {
 } from "@testing-library/react-native";
 import { AccessibilityInfo, StyleSheet } from "react-native";
 
+import { isoFromLocalizedDateParts } from "@/i18n/dateInput";
 import { getPortfolioExperienceCopy } from "@/i18n/portfolioCopy";
 
 let mockLanguage: "en" | "ar" = "en";
@@ -234,7 +235,12 @@ describe("liability form accessibility", () => {
 
   it("persists an exact dated balance through the local-first command", async () => {
     const screen = await render(<LiabilityCreateRoute />);
-    const asOf = screen.getByTestId("liability-as-of").props.value as string;
+    const asOf = isoFromLocalizedDateParts({
+      day: screen.getByTestId("liability-as-of-day").props.value,
+      month: screen.getByTestId("liability-as-of-month").props.value,
+      year: screen.getByTestId("liability-as-of-year").props.value
+    });
+    expect(asOf).not.toBeNull();
 
     await fireEvent.changeText(
       screen.getByTestId("liability-name"),
@@ -259,6 +265,41 @@ describe("liability form accessibility", () => {
     expect(mockRouter.replace).toHaveBeenCalledWith(
       "/liability/liability-created"
     );
+    await screen.unmount();
+  });
+
+  it("accepts Arabic-Indic date digits while persisting canonical ISO", async () => {
+    mockLanguage = "ar";
+    const screen = await render(<LiabilityCreateRoute />);
+
+    await fireEvent.changeText(
+      screen.getByTestId("liability-name"),
+      "رهن المنزل"
+    );
+    await fireEvent.changeText(
+      screen.getByTestId("liability-amount"),
+      "250000"
+    );
+    await fireEvent.press(screen.getByTestId("liability-category"));
+    await fireEvent.changeText(
+      screen.getByTestId("liability-as-of-day"),
+      "\u0662\u0667"
+    );
+    await fireEvent.changeText(
+      screen.getByTestId("liability-as-of-month"),
+      "\u0660\u0667"
+    );
+    await fireEvent.changeText(
+      screen.getByTestId("liability-as-of-year"),
+      "\u0662\u0660\u0662\u0666"
+    );
+    await fireEvent.press(screen.getByTestId("liability-save"));
+
+    await waitFor(() => {
+      expect(mockCreateLiability).toHaveBeenCalledWith(
+        expect.objectContaining({ asOf: "2026-07-27" })
+      );
+    });
     await screen.unmount();
   });
 

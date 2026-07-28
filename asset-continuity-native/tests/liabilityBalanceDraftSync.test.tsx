@@ -13,6 +13,7 @@ import {
   type PortfolioValueRecord
 } from "@/domain/portfolio";
 import { createWorkspace } from "@/domain/sample";
+import { isoFromLocalizedDateParts } from "@/i18n/dateInput";
 import { getPortfolioExperienceCopy } from "@/i18n/portfolioCopy";
 
 const LIABILITY_ID = "liability-home";
@@ -159,9 +160,13 @@ describe("Liability balance draft synchronization", () => {
         )
       );
     });
-    expect(screen.getByTestId("liability-as-of").props.value).toBe(
-      "2026-07-22"
-    );
+    expect(
+      isoFromLocalizedDateParts({
+        day: screen.getByTestId("liability-as-of-day").props.value,
+        month: screen.getByTestId("liability-as-of-month").props.value,
+        year: screen.getByTestId("liability-as-of-year").props.value
+      })
+    ).toBe("2026-07-22");
     expect(
       screen.queryByTestId("liability-balance-concurrent-update")
     ).toBeNull();

@@ -84,6 +84,25 @@ describe("liability and recorded-net-position UI contract", () => {
     );
   });
 
+  it("uses localized day, month and year controls instead of raw ISO text entry", () => {
+    const create = read("app/liability-create.tsx");
+    const balance = read("app/liability-balance.tsx");
+    const localizedDate = read(
+      "src/components/LocalizedDateFieldGroup.tsx"
+    );
+
+    expect(create).toContain("LocalizedDateFieldGroup");
+    expect(balance).toContain("LocalizedDateFieldGroup");
+    expect(create).not.toContain("onChangeText={setAsOf}");
+    expect(balance).not.toContain("onChangeText={setAsOf}");
+    expect(localizedDate).toContain("normalizeLocaleDigits");
+    expect(localizedDate).toContain("shouldStackLocalizedDateFields");
+    expect(localizedDate).toContain('keyboardType="number-pad"');
+    expect(localizedDate).toContain('testID={`${testID}-day`}');
+    expect(localizedDate).toContain('testID={`${testID}-month`}');
+    expect(localizedDate).toContain('testID={`${testID}-year`}');
+  });
+
   it("gives every financial control a semantic label and focuses invalid input", () => {
     const create = read("app/liability-create.tsx");
     const balance = read("app/liability-balance.tsx");

@@ -17,10 +17,11 @@ import {
   Pressable,
   StyleSheet,
   Text,
-  type TextInput,
+  TextInput,
   View
 } from "react-native";
 
+import { LocalizedDateFieldGroup } from "@/components/LocalizedDateFieldGroup";
 import { PermissionDeniedScreen } from "@/components/PermissionDenied";
 import {
   AppScreen,
@@ -33,13 +34,18 @@ import {
 import {
   DEFAULT_PORTFOLIO_CURRENCY,
   getPortfolioValueHistory,
-  normalizePortfolioAsOfDate,
   normalizePortfolioCurrency,
   parsePortfolioMoney,
   type PortfolioValueRecord,
   portfolioMinorUnitsToInput,
   PORTFOLIO_CURRENCY_CHOICES
 } from "@/domain/portfolio";
+import {
+  datePartsFromIso,
+  isoFromLocalizedDateParts,
+  validateLocalizedDateParts,
+  type LocalizedDateParts
+} from "@/i18n/dateInput";
 import {
   formatLocalizedDate,
   localizedWorkspaceError,
@@ -179,7 +185,9 @@ export default function LiabilityBalanceRoute() {
   const [customCurrency, setCustomCurrency] = useState(
     incomingSource.customCurrency
   );
-  const [asOf, setAsOf] = useState(incomingSource.asOf);
+  const [dateParts, setDateParts] = useState<LocalizedDateParts>(() =>
+    datePartsFromIso(incomingSource.asOf, language)
+  );
   const [concurrentSource, setConcurrentSource] =
     useState<BalanceEditorSource | null>(null);
   const [replacementConfirmedRevision, setReplacementConfirmedRevision] =
@@ -195,11 +203,12 @@ export default function LiabilityBalanceRoute() {
     [amount, currency]
   );
   const normalizedCurrency = normalizePortfolioCurrency(currency);
-  const normalizedAsOf = normalizePortfolioAsOfDate(asOf);
+  const normalizedAsOf = isoFromLocalizedDateParts(dateParts);
+  const dateValidation = validateLocalizedDateParts(dateParts, today);
   const dateError =
-    !normalizedAsOf
+    dateValidation === "invalid"
       ? copy.create.dateError
-      : normalizedAsOf > today
+      : dateValidation === "future"
         ? copy.create.futureDateError
         : null;
   const hasDraft =
@@ -217,7 +226,7 @@ export default function LiabilityBalanceRoute() {
     parsedMoney.ok &&
     normalizedCurrency !== null &&
     normalizedAsOf !== null &&
-    normalizedAsOf <= today;
+    dateValidation === null;
   const formattedCurrent = current
     ? formatRecordedValue({
         amountMinor: current.amountMinor,
@@ -241,7 +250,7 @@ export default function LiabilityBalanceRoute() {
       setAmount(incomingSource.amount);
       setCurrency(incomingSource.currency);
       setCustomCurrency(incomingSource.customCurrency);
-      setAsOf(incomingSource.asOf);
+      setDateParts(datePartsFromIso(incomingSource.asOf, language));
       setConcurrentSource(null);
       setReplacementConfirmedRevision(null);
       setAttempted(false);
@@ -311,7 +320,7 @@ export default function LiabilityBalanceRoute() {
       }
       return;
     }
-    if (!normalizedAsOf || normalizedAsOf > today) {
+    if (!normalizedAsOf || dateValidation !== null) {
       dateRef.current?.focus();
       return;
     }
@@ -343,7 +352,7 @@ export default function LiabilityBalanceRoute() {
     setAmount(concurrentSource.amount);
     setCurrency(concurrentSource.currency);
     setCustomCurrency(concurrentSource.customCurrency);
-    setAsOf(concurrentSource.asOf);
+    setDateParts(datePartsFromIso(concurrentSource.asOf, language));
     setConcurrentSource(null);
     setReplacementConfirmedRevision(null);
     setAttempted(false);
@@ -685,20 +694,21 @@ export default function LiabilityBalanceRoute() {
           ) : null}
         </View>
 
-        <Field
-          autoCorrect={false}
+        <LocalizedDateFieldGroup
+          datePreviewLabel={copy.create.datePreview}
+          dayLabel={copy.create.day}
           description={copy.create.dateDescription}
           error={attempted ? dateError : null}
-          inputMode="numeric"
-          keyboardType="numbers-and-punctuation"
+          inputRef={dateRef}
+          invalidPreview={copy.create.validDate}
           label={copy.create.asOf}
-          maxLength={10}
-          onChangeText={setAsOf}
-          placeholder={copy.create.datePlaceholder}
-          ref={dateRef}
-          style={styles.ltrInput}
+          language={language}
+          monthLabel={copy.create.month}
+          onChange={setDateParts}
+          rtl={rtl}
           testID="liability-as-of"
-          value={asOf}
+          value={dateParts}
+          yearLabel={copy.create.year}
         />
       </View>
 

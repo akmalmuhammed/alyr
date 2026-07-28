@@ -29,10 +29,11 @@ import {
   Pressable,
   StyleSheet,
   Text,
-  type TextInput,
+  TextInput,
   View
 } from "react-native";
 
+import { LocalizedDateFieldGroup } from "@/components/LocalizedDateFieldGroup";
 import { PermissionDeniedScreen } from "@/components/PermissionDenied";
 import {
   AppScreen,
@@ -48,11 +49,16 @@ import {
 import type { LiabilityKind } from "@/domain/model";
 import {
   DEFAULT_PORTFOLIO_CURRENCY,
-  normalizePortfolioAsOfDate,
   normalizePortfolioCurrency,
   parsePortfolioMoney,
   PORTFOLIO_CURRENCY_CHOICES
 } from "@/domain/portfolio";
+import {
+  datePartsFromIso,
+  isoFromLocalizedDateParts,
+  validateLocalizedDateParts,
+  type LocalizedDateParts
+} from "@/i18n/dateInput";
 import {
   localizedWorkspaceError,
   useCoreJourneyCopy
@@ -140,6 +146,7 @@ export default function LiabilityCreateRoute() {
   const amountRef = useRef<TextInput>(null);
   const currencyRef = useRef<TextInput>(null);
   const dateRef = useRef<TextInput>(null);
+  const today = localCalendarDate();
   const [name, setName] = useState("");
   const [kind, setKind] = useState<LiabilityKind | null>(null);
   const [showAllKinds, setShowAllKinds] = useState(false);
@@ -147,19 +154,21 @@ export default function LiabilityCreateRoute() {
   const [amountInputHidden, setAmountInputHidden] = useState(true);
   const [currency, setCurrency] = useState(DEFAULT_PORTFOLIO_CURRENCY);
   const [customCurrency, setCustomCurrency] = useState(false);
-  const [asOf, setAsOf] = useState(localCalendarDate());
+  const [dateParts, setDateParts] = useState<LocalizedDateParts>(() =>
+    datePartsFromIso(today, language)
+  );
   const [attempted, setAttempted] = useState(false);
   const parsedMoney = useMemo(
     () => parsePortfolioMoney(amount, currency),
     [amount, currency]
   );
   const normalizedCurrency = normalizePortfolioCurrency(currency);
-  const normalizedAsOf = normalizePortfolioAsOfDate(asOf);
-  const today = localCalendarDate();
+  const normalizedAsOf = isoFromLocalizedDateParts(dateParts);
+  const dateValidation = validateLocalizedDateParts(dateParts, today);
   const dateError =
-    !normalizedAsOf
+    dateValidation === "invalid"
       ? copy.create.dateError
-      : normalizedAsOf > today
+      : dateValidation === "future"
         ? copy.create.futureDateError
         : null;
   const hasDraft =
@@ -167,7 +176,7 @@ export default function LiabilityCreateRoute() {
     Boolean(amount.trim()) ||
     kind !== null ||
     currency !== DEFAULT_PORTFOLIO_CURRENCY ||
-    asOf !== today;
+    normalizedAsOf !== today;
   const canSave =
     Boolean(workspace) &&
     Boolean(name.trim()) &&
@@ -175,7 +184,7 @@ export default function LiabilityCreateRoute() {
     parsedMoney.ok &&
     normalizedCurrency !== null &&
     normalizedAsOf !== null &&
-    normalizedAsOf <= today;
+    dateValidation === null;
 
   useEffect(
     () =>
@@ -249,7 +258,7 @@ export default function LiabilityCreateRoute() {
       }
       return;
     }
-    if (!normalizedAsOf || normalizedAsOf > today) {
+    if (!normalizedAsOf || dateValidation !== null) {
       dateRef.current?.focus();
       return;
     }
@@ -647,20 +656,21 @@ export default function LiabilityCreateRoute() {
           )}
         </View>
 
-        <Field
-          autoCorrect={false}
+        <LocalizedDateFieldGroup
+          datePreviewLabel={copy.create.datePreview}
+          dayLabel={copy.create.day}
           description={copy.create.dateDescription}
           error={attempted ? dateError : null}
-          inputMode="numeric"
-          keyboardType="numbers-and-punctuation"
+          inputRef={dateRef}
+          invalidPreview={copy.create.validDate}
           label={copy.create.asOf}
-          maxLength={10}
-          onChangeText={setAsOf}
-          placeholder={copy.create.datePlaceholder}
-          ref={dateRef}
-          style={styles.ltrInput}
+          language={language}
+          monthLabel={copy.create.month}
+          onChange={setDateParts}
+          rtl={rtl}
           testID="liability-as-of"
-          value={asOf}
+          value={dateParts}
+          yearLabel={copy.create.year}
         />
       </View>
 

@@ -101,8 +101,12 @@ export interface PortfolioExperienceCopy {
     readonly other: string;
     readonly currencyError: string;
     readonly asOf: string;
+    readonly day: string;
+    readonly month: string;
+    readonly year: string;
+    readonly datePreview: string;
+    readonly validDate: string;
     readonly dateDescription: string;
-    readonly datePlaceholder: string;
     readonly dateError: string;
     readonly futureDateError: string;
     readonly save: string;
@@ -286,9 +290,13 @@ const ENGLISH: PortfolioExperienceCopy = {
     other: "Other",
     currencyError: "Enter a supported three-letter currency code.",
     asOf: "Balance date",
-    dateDescription: "Use YYYY-MM-DD.",
-    datePlaceholder: "2026-07-28",
-    dateError: "Enter a valid calendar date as YYYY-MM-DD.",
+    day: "Day",
+    month: "Month",
+    year: "Year",
+    datePreview: "Readable date",
+    validDate: "Enter a valid date",
+    dateDescription: "Enter day, month, and year.",
+    dateError: "Enter a valid calendar day, month, and year.",
     futureDateError: "The balance date cannot be in the future.",
     save: "Add liability",
     savingHint: "Saves the liability and first dated balance to this device.",
@@ -484,9 +492,13 @@ const ARABIC: PortfolioExperienceCopy = {
     other: "أخرى",
     currencyError: "أدخل رمز عملة مدعومًا من ثلاثة أحرف.",
     asOf: "تاريخ الرصيد",
-    dateDescription: "استخدم الصيغة YYYY-MM-DD.",
-    datePlaceholder: "2026-07-28",
-    dateError: "أدخل تاريخًا صحيحًا بالصيغة YYYY-MM-DD.",
+    day: "اليوم",
+    month: "الشهر",
+    year: "السنة",
+    datePreview: "التاريخ المقروء",
+    validDate: "أدخل تاريخًا صحيحًا",
+    dateDescription: "أدخل اليوم والشهر والسنة.",
+    dateError: "أدخل يومًا وشهرًا وسنة صحيحة.",
     futureDateError: "لا يمكن أن يكون تاريخ الرصيد في المستقبل.",
     save: "إضافة الالتزام",
     savingHint: "يحفظ الالتزام وأول رصيد مؤرخ على هذا الجهاز.",
