@@ -29,26 +29,43 @@ import { useDeviceAuth } from "./DeviceAuthProvider";
 
 export function DeviceUnlockScreen() {
   const {
+    onboardingHandoffRestoreState,
     retryCapability,
+    retryOnboardingHandoffRestore,
     state,
     unlock
   } = useDeviceAuth();
   const { busy: authBusy, signOut } = useAuthFlow();
   const { language, rtl } = useLocale();
   const copy = deviceAuthCopy(language, state.capability);
-  const checking = state.phase === "checking";
-  const unavailable = state.phase === "unavailable";
+  const restoringHandoff =
+    onboardingHandoffRestoreState === "loading";
+  const handoffRestoreFailed =
+    onboardingHandoffRestoreState === "error";
+  const checking =
+    restoringHandoff ||
+    (!handoffRestoreFailed && state.phase === "checking");
+  const unavailable =
+    !handoffRestoreFailed && state.phase === "unavailable";
   const unlocking = state.phase === "unlocking";
-  const title = checking
-    ? copy.checkingTitle
-    : unavailable
-      ? copy.unavailableTitle
-      : copy.unlockTitle;
-  const body = checking
-    ? copy.checkingBody
-    : unavailable
-      ? copy.unavailableBody
-      : copy.unlockBody;
+  const title = restoringHandoff
+    ? copy.restoreCheckingTitle
+    : handoffRestoreFailed
+      ? copy.restoreFailedTitle
+      : checking
+        ? copy.checkingTitle
+        : unavailable
+          ? copy.unavailableTitle
+          : copy.unlockTitle;
+  const body = restoringHandoff
+    ? copy.restoreCheckingBody
+    : handoffRestoreFailed
+      ? copy.restoreFailedBody
+      : checking
+        ? copy.checkingBody
+        : unavailable
+          ? copy.unavailableBody
+          : copy.unlockBody;
 
   return (
     <SafeAreaView
@@ -81,7 +98,7 @@ export function DeviceUnlockScreen() {
           <View style={styles.iconFrame}>
             {checking ? (
               <ActivityIndicator color={colors.volt} size="small" />
-            ) : unavailable ? (
+            ) : unavailable || handoffRestoreFailed ? (
               <WarningCircle
                 color={colors.warning}
                 size={34}
@@ -141,17 +158,31 @@ export function DeviceUnlockScreen() {
           {!checking ? (
             <PrimaryButton
               accessibilityHint={
-                unavailable ? copy.retryHint : copy.unlockHint
+                handoffRestoreFailed
+                  ? copy.retryRestoreHint
+                  : unavailable
+                    ? copy.retryHint
+                    : copy.unlockHint
               }
-              icon={unavailable ? ShieldCheck : LockKey}
+              icon={
+                unavailable || handoffRestoreFailed
+                  ? ShieldCheck
+                  : LockKey
+              }
               label={
-                unavailable ? copy.retryAction : copy.unlockAction
+                handoffRestoreFailed
+                  ? copy.retryRestoreAction
+                  : unavailable
+                    ? copy.retryAction
+                    : copy.unlockAction
               }
               loading={unlocking}
               onPress={() =>
-                unavailable
-                  ? retryCapability()
-                  : void unlock()
+                handoffRestoreFailed
+                  ? retryOnboardingHandoffRestore()
+                  : unavailable
+                    ? retryCapability()
+                    : void unlock()
               }
             />
           ) : null}

@@ -2,6 +2,7 @@ import {
   categoryLocationTransition,
   unresolvedLocationForCategoryTransition
 } from "./assetCategoryLocation";
+import { validateNewAssetInput } from "./assetMutationBoundary";
 import type {
   AssetLifecycleInput,
   EvidenceReviewInput,
@@ -533,12 +534,17 @@ export function addAsset(
   input: NewAssetInput,
   context: MutationContext
 ): AssetMutationResult {
+  const validatedInput = validateNewAssetInput(workspace, input);
   const now = context.now();
   const assetId = context.id("asset");
-  const photoEvidenceId = input.photo ? context.id("evidence") : null;
-  const evidenceId = input.evidence ? context.id("evidence") : null;
+  const photoEvidenceId = validatedInput.photo
+    ? context.id("evidence")
+    : null;
+  const evidenceId = validatedInput.evidence
+    ? context.id("evidence")
+    : null;
   const photoEvidence: NativeEvidence | null =
-    input.photo && photoEvidenceId
+    validatedInput.photo && photoEvidenceId
       ? {
           id: photoEvidenceId,
           version: 1,
@@ -548,11 +554,14 @@ export function addAsset(
           assetId,
           kind: "media",
           relation: "condition",
-          fileName: input.photo.fileName,
-          mimeType: input.photo.mimeType,
-          byteSize: input.photo.byteSize,
-          localUri: input.photo.protectedUri ?? input.photo.localUri,
-          checksumSha256: input.photo.checksumSha256 ?? null,
+          fileName: validatedInput.photo.fileName,
+          mimeType: validatedInput.photo.mimeType,
+          byteSize: validatedInput.photo.byteSize,
+          localUri:
+            validatedInput.photo.protectedUri ??
+            validatedInput.photo.localUri,
+          checksumSha256:
+            validatedInput.photo.checksumSha256 ?? null,
           reviewStatus: "pending",
           reviewedAt: null,
           storageState: "on-device",
@@ -561,7 +570,7 @@ export function addAsset(
         }
       : null;
   const supportingEvidence: NativeEvidence | null =
-    input.evidence && evidenceId
+    validatedInput.evidence && evidenceId
       ? {
           id: evidenceId,
           version: 1,
@@ -571,12 +580,14 @@ export function addAsset(
           assetId,
           kind: "paper",
           relation: "identity",
-          fileName: input.evidence.fileName,
-          mimeType: input.evidence.mimeType,
-          byteSize: input.evidence.byteSize,
+          fileName: validatedInput.evidence.fileName,
+          mimeType: validatedInput.evidence.mimeType,
+          byteSize: validatedInput.evidence.byteSize,
           localUri:
-            input.evidence.protectedUri ?? input.evidence.localUri,
-          checksumSha256: input.evidence.checksumSha256 ?? null,
+            validatedInput.evidence.protectedUri ??
+            validatedInput.evidence.localUri,
+          checksumSha256:
+            validatedInput.evidence.checksumSha256 ?? null,
           reviewStatus: "pending",
           reviewedAt: null,
           storageState: "on-device",
@@ -593,20 +604,22 @@ export function addAsset(
     version: 2,
     locationRevisionVersion: 1,
     householdId: workspace.household.id,
-    name: input.name.trim(),
-    categoryId: input.categoryId,
-    categoryLabel: input.categoryLabel,
+    name: validatedInput.name,
+    categoryId: validatedInput.categoryId,
+    categoryLabel: validatedInput.categoryLabel,
     photoUri:
-      input.photo?.encryptedAtRest ? null : input.photo?.localUri ?? null,
+      validatedInput.photo?.encryptedAtRest
+        ? null
+        : validatedInput.photo?.localUri ?? null,
     photoProtectedUri:
-      input.photo?.protectedUri ?? null,
+      validatedInput.photo?.protectedUri ?? null,
     photoChecksumSha256:
-      input.photo?.checksumSha256 ?? null,
+      validatedInput.photo?.checksumSha256 ?? null,
     photoEvidenceId,
-    locationStatus: input.locationStatus,
-    placeId: input.placeId,
-    roomId: input.roomId,
-    locatorText: input.locatorText?.trim() || null,
+    locationStatus: validatedInput.locationStatus,
+    placeId: validatedInput.placeId,
+    roomId: validatedInput.roomId,
+    locatorText: validatedInput.locatorText,
     evidenceIds: evidenceId ? [evidenceId] : [],
     lifecycleStatus: "active",
     archivedAt: null,
@@ -618,7 +631,7 @@ export function addAsset(
     id: context.id("activity"),
     type: "asset_created",
     assetId,
-    placeId: input.placeId,
+    placeId: validatedInput.placeId,
     occurredAt: now
   };
 

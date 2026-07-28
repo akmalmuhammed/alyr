@@ -47,6 +47,11 @@ import {
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import {
+  isAssetMutationValidationError,
+  type AssetMutationValidationError
+} from "@alyr/domain";
+
+import {
   chooseAssetPhoto,
   chooseEvidenceDocument,
   takeAssetPhoto
@@ -89,6 +94,7 @@ import {
   getCaptureCopy,
   localizedCategoryLabel
 } from "@/i18n/captureCopy";
+import { localizedAssetMutationRecovery } from "@/i18n/assetMutationCopy";
 import {
   clearPlaceCaptureDraft,
   clearQuickPassportDraft,
@@ -180,6 +186,8 @@ export default function CaptureScreen() {
   const [nameError, setNameError] = useState<string | null>(null);
   const [categoryError, setCategoryError] = useState<string | null>(null);
   const [locationError, setLocationError] = useState<string | null>(null);
+  const [assetMutationFailure, setAssetMutationFailure] =
+    useState<AssetMutationValidationError | null>(null);
   const [draftReady, setDraftReady] = useState(false);
   const [draftRestored, setDraftRestored] = useState(false);
   const householdId = workspace?.household.id ?? null;
@@ -451,6 +459,7 @@ export default function CaptureScreen() {
       (category) => category.id === nextId
     );
     const wasPhysical = selectedCategory?.supportsPhysicalLocation;
+    setAssetMutationFailure(null);
     setCategoryId(nextId);
     setCategoryError(null);
     if (!nextCategory?.supportsPhysicalLocation) {
@@ -475,6 +484,7 @@ export default function CaptureScreen() {
       );
       return;
     }
+    setAssetMutationFailure(null);
     setter(file);
   };
 
@@ -658,6 +668,7 @@ export default function CaptureScreen() {
   };
 
   const saveAsset = async () => {
+    setAssetMutationFailure(null);
     if (!selectedCategory) {
       setStep(0);
       setCategoryError(captureCopy.categoryError);
@@ -687,8 +698,24 @@ export default function CaptureScreen() {
       } else {
         router.replace(`/asset/${asset.id}?justCreated=1`);
       }
-    } catch {
-      // WorkspaceProvider keeps the draft visible and presents the error.
+    } catch (caught) {
+      if (!isAssetMutationValidationError(caught)) {
+        // WorkspaceProvider keeps the draft visible and presents the error.
+        return;
+      }
+      const recovery = localizedAssetMutationRecovery(caught, language);
+      setAssetMutationFailure(caught);
+      setStep(recovery.step);
+      if (recovery.field === "name") {
+        setNameError(recovery.message);
+        focusValidationTarget(nameInputRef);
+      } else if (recovery.field === "category") {
+        setCategoryError(recovery.message);
+        focusValidationTarget(categoryGroupRef);
+      } else if (recovery.field === "location") {
+        setLocationError(recovery.message);
+        focusValidationTarget(locationGroupRef);
+      }
     }
   };
 
@@ -876,7 +903,17 @@ export default function CaptureScreen() {
               </View>
             </View>
           ) : null}
-          {error ? (
+          {assetMutationFailure ? (
+            <ErrorBanner
+              message={
+                localizedAssetMutationRecovery(
+                  assetMutationFailure,
+                  language
+                ).message
+              }
+              onDismiss={() => setAssetMutationFailure(null)}
+            />
+          ) : error ? (
             <ErrorBanner
               message={localizedWorkspaceError(error, language)}
               onDismiss={clearError}
@@ -894,6 +931,7 @@ export default function CaptureScreen() {
               onCategoryChange={selectCategory}
               onChoosePhoto={() => void choosePhoto()}
               onNameChange={(value) => {
+                setAssetMutationFailure(null);
                 setName(value);
                 if (value.trim()) setNameError(null);
               }}
@@ -911,19 +949,23 @@ export default function CaptureScreen() {
               locationStatus={locationStatus}
               onAddPlace={openPlaceForm}
               onLocatorChange={(value) => {
+                setAssetMutationFailure(null);
                 setLocatorText(value);
                 if (value.trim() && placeId) setLocationError(null);
               }}
               onPlaceChange={(nextPlace) => {
+                setAssetMutationFailure(null);
                 setPlaceId(nextPlace.id);
                 setRoomId(null);
                 setLocationError(null);
               }}
               onRoomChange={(nextRoomId) => {
+                setAssetMutationFailure(null);
                 setRoomId(nextRoomId);
                 setLocationError(null);
               }}
               onStatusChange={(status) => {
+                setAssetMutationFailure(null);
                 setLocationStatus(status);
                 setLocationError(null);
                 if (status === "unknown") {
@@ -998,7 +1040,10 @@ export default function CaptureScreen() {
             <EvidenceStep
               evidence={evidence}
               onChoose={() => void chooseEvidence()}
-              onRemove={() => setEvidence(null)}
+              onRemove={() => {
+                setAssetMutationFailure(null);
+                setEvidence(null);
+              }}
             />
           ) : null}
 

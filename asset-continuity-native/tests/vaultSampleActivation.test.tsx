@@ -5,7 +5,7 @@ import {
 import type { PropsWithChildren } from "react";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 
-import VaultScreen from "../app/(tabs)/vault";
+import { VaultScreen } from "../app/(tabs)/vault";
 import { AUTH_ROUTES } from "@/auth/routes";
 import type {
   AuthGatewayMode,
@@ -116,7 +116,7 @@ function localeWrapper(language: "en" | "ar") {
   };
 }
 
-describe("Vault sample activation", () => {
+describe("Settings sample activation", () => {
   beforeEach(() => {
     jest.clearAllMocks();
     mockCan.mockReturnValue(true);
@@ -126,7 +126,7 @@ describe("Vault sample activation", () => {
   });
 
   it("sends a signed-out cloud sample to account creation without mutating its local vault", async () => {
-    const screen = await render(<VaultScreen />, {
+    const screen = await render(<VaultScreen surface="settings" />, {
       wrapper: localeWrapper("en")
     });
 
@@ -146,7 +146,7 @@ describe("Vault sample activation", () => {
 
   it("keeps the localized Arabic preview action on confirmed local conversion", async () => {
     mockMode = "preview";
-    const screen = await render(<VaultScreen />, {
+    const screen = await render(<VaultScreen surface="settings" />, {
       wrapper: localeWrapper("ar")
     });
     const label =
@@ -183,7 +183,7 @@ describe("Vault sample activation", () => {
       activeMembershipId: "membership-owner",
       activeHouseholdRole: "owner"
     };
-    const screen = await render(<VaultScreen />, {
+    const screen = await render(<VaultScreen surface="settings" />, {
       wrapper: localeWrapper("en")
     });
 
@@ -196,7 +196,7 @@ describe("Vault sample activation", () => {
 
   it("does not offer activation for a personal workspace or without household management", async () => {
     mockWorkspace = createWorkspace("personal");
-    const personal = await render(<VaultScreen />, {
+    const personal = await render(<VaultScreen surface="settings" />, {
       wrapper: localeWrapper("en")
     });
     const label =
@@ -211,7 +211,7 @@ describe("Vault sample activation", () => {
     mockCan.mockImplementation(
       (capability) => capability !== "household.manage"
     );
-    const denied = await render(<VaultScreen />, {
+    const denied = await render(<VaultScreen surface="settings" />, {
       wrapper: localeWrapper("en")
     });
 

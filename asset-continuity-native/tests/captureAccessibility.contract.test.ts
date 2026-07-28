@@ -36,7 +36,10 @@ describe("Quick Passport accessibility focus contract", () => {
     );
     expect(
       source.match(/focusValidationTarget\(locationGroupRef\)/g)
-    ).toHaveLength(3);
+    ).toHaveLength(4);
+    expect(source).toMatch(
+      /else if \(recovery\.field === "location"\) \{\s*setLocationError\(recovery\.message\);\s*focusValidationTarget\(locationGroupRef\);/
+    );
     expect(source).toContain("accessibilityLabel={copy.category}");
     expect(source).toContain(
       "accessibilityLabel={copy.locationQuestion}"

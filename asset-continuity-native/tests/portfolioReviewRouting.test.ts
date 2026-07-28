@@ -1,5 +1,6 @@
 import { portfolioReviewRoute } from "@/navigation/portfolioReview";
 import { CORE_JOURNEY_COPY } from "@/i18n/coreJourneyCopy";
+import { REGISTER_COPY } from "@/i18n/registerCopy";
 
 describe("Portfolio review routing", () => {
   it.each([
@@ -25,9 +26,10 @@ describe("Portfolio review routing", () => {
     expect(source).toContain("snapshot.locationGapAssetIds");
     expect(source).toContain("snapshot.unvaluedAssetIds");
     expect(source).toContain("snapshot.pendingProofReviewAssetIds");
-    expect(source).toContain("label={copy.items.needsValue}");
-    expect(source).toContain("label={copy.items.reviewProof}");
+    expect(source).toContain("registerCopy.filters[filter]");
     expect(CORE_JOURNEY_COPY.en.items.needsValue).toBe("Needs value");
     expect(CORE_JOURNEY_COPY.en.items.reviewProof).toBe("Review proof");
+    expect(REGISTER_COPY.en.filters.value).toBe("Needs value");
+    expect(REGISTER_COPY.en.filters.review).toBe("Proof to review");
   });
 });

@@ -59,3 +59,29 @@ export interface DeviceAuthPort {
   ) => Promise<DeviceAuthAttempt>;
   readonly cancel: () => Promise<void>;
 }
+
+export type OnboardingFirstRecordIntent = "item" | "place";
+
+export type OnboardingDevicePreflightNotice =
+  | "cancelled"
+  | "failed"
+  | "locked-out";
+
+export interface OnboardingDevicePreflightState {
+  readonly phase:
+    | "idle"
+    | "checking"
+    | "ready"
+    | "authorizing"
+    | "authorized"
+    | "unavailable"
+    | "bypassed";
+  readonly capability: DeviceAuthCapability | null;
+  readonly intent: OnboardingFirstRecordIntent | null;
+  readonly notice: OnboardingDevicePreflightNotice | null;
+}
+
+export interface OnboardingDeviceAuthorization {
+  readonly kind: "authorized" | "bypassed";
+  readonly intent: OnboardingFirstRecordIntent;
+}

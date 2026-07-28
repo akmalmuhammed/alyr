@@ -14,6 +14,7 @@ import {
   FileText,
   ImageSquare,
   MapPin,
+  Plus,
   Warning
 } from "phosphor-react-native";
 import {
@@ -80,7 +81,11 @@ export const ASSET_PASSPORT_COPY = {
     archivePassport: "Archive Passport",
     savedTitle: "Passport saved",
     savedMeta:
-      "It is available on this device. Continue from Today whenever you are ready.",
+      "Your first record is protected and ready. Choose what feels useful next.",
+    addRecordedValue: "Add a recorded value",
+    addRecordedValueHint: "Opens the value form for this Passport",
+    addAnotherItem: "Add another item",
+    addAnotherItemHint: "Starts a new Quick Passport",
     todayHint: "Returns to the Today overview",
     goToToday: "Go to Today",
     primaryPhoto: (name: string) => `Primary photo of ${name}`,
@@ -180,7 +185,11 @@ export const ASSET_PASSPORT_COPY = {
     archivePassport: "أرشفة الجواز",
     savedTitle: "تم حفظ الجواز",
     savedMeta:
-      "أصبح متاحًا على هذا الجهاز. يمكنك المتابعة من «اليوم» عندما تكون جاهزًا.",
+      "أصبح سجلك الأول محميًا وجاهزًا. اختر الخطوة التالية المناسبة لك.",
+    addRecordedValue: "إضافة قيمة مسجّلة",
+    addRecordedValueHint: "يفتح نموذج القيمة لهذا الجواز",
+    addAnotherItem: "إضافة غرض آخر",
+    addAnotherItemHint: "يبدأ جوازًا سريعًا جديدًا",
     todayHint: "يعود إلى نظرة «اليوم» العامة",
     goToToday: "الانتقال إلى اليوم",
     primaryPhoto: (name: string) => `الصورة الرئيسية للغرض ${name}`,
@@ -458,6 +467,7 @@ export default function AssetPassportScreen() {
   const archived = assetLifecycleStatus(asset) === "archived";
   const canWriteAsset = can("asset.write");
   const isJustCreated = justCreated === "1";
+  const firstMissing = archived ? null : (missing[0] ?? null);
 
   const confirmLifecycleChange = () => {
     if (archived) {
@@ -606,63 +616,6 @@ export default function AssetPassportScreen() {
 
   return (
     <AppScreen safeEdges={[]} testID="asset-passport-screen">
-      {isJustCreated ? (
-        <View
-          accessibilityRole="summary"
-          style={[styles.savedPassport, rtl && styles.rowReverse]}
-          testID="asset-passport-saved-confirmation"
-        >
-          <CheckCircle color={colors.success} size={24} weight="regular" />
-          <View style={styles.savedPassportCopy}>
-            <Text
-              style={[
-                styles.savedPassportTitle,
-                rtl && styles.arabicMedium,
-                rtl && styles.rtlText
-              ]}
-            >
-              {copy.savedTitle}
-            </Text>
-            <Text
-              style={[
-                styles.savedPassportMeta,
-                rtl && styles.arabic,
-                rtl && styles.rtlText
-              ]}
-            >
-              {copy.savedMeta}
-            </Text>
-          </View>
-          <Pressable
-            accessibilityHint={copy.todayHint}
-            accessibilityRole="button"
-            onPress={() => router.replace("/(tabs)")}
-            style={({ pressed }) => [
-              styles.savedPassportAction,
-              pressed && styles.pressed
-            ]}
-          >
-            <Text
-              style={[
-                styles.savedPassportActionLabel,
-                rtl && styles.arabicMedium,
-                rtl && styles.rtlText
-              ]}
-            >
-              {copy.goToToday}
-            </Text>
-          </Pressable>
-        </View>
-      ) : null}
-      {isJustCreated ? (
-        <SyncTruth
-          language={language}
-          onPress={() => router.push("/vault")}
-          pendingOperationCount={pendingOperationCount}
-          sync={sync}
-        />
-      ) : null}
-      {isJustCreated ? readinessSection : null}
       {error ? (
         <ErrorBanner
           message={localizedWorkspaceError(error, language)}
@@ -769,6 +722,124 @@ export default function AssetPassportScreen() {
           )}
         </BodyText>
       </View>
+
+      {isJustCreated ? (
+        <View
+          accessibilityRole="summary"
+          style={styles.savedPassport}
+          testID="asset-passport-saved-confirmation"
+        >
+          <View style={[styles.savedPassportHeading, rtl && styles.rowReverse]}>
+            <View style={styles.savedPassportIcon}>
+              <CheckCircle color={colors.carbon} size={22} weight="regular" />
+            </View>
+            <View style={styles.savedPassportCopy}>
+              <Text
+                style={[
+                  styles.savedPassportTitle,
+                  rtl && styles.arabicMedium,
+                  rtl && styles.rtlText
+                ]}
+              >
+                {copy.savedTitle}
+              </Text>
+              <Text
+                style={[
+                  styles.savedPassportMeta,
+                  rtl && styles.arabic,
+                  rtl && styles.rtlText
+                ]}
+              >
+                {copy.savedMeta}
+              </Text>
+            </View>
+          </View>
+          <View style={styles.savedPassportActions}>
+            {canWriteAsset ? (
+              <View testID="asset-passport-primary-action">
+                <PrimaryButton
+                  accessibilityHint={
+                    firstMissing
+                      ? copy.missingHint(
+                          missingAction(firstMissing.id, language)
+                        )
+                      : copy.addRecordedValueHint
+                  }
+                  icon={
+                    firstMissing ? ForwardIcon : CurrencyCircleDollar
+                  }
+                  label={
+                    firstMissing
+                      ? missingAction(firstMissing.id, language)
+                      : copy.addRecordedValue
+                  }
+                  onPress={() =>
+                    firstMissing
+                      ? router.push(editHref(asset.id, firstMissing.id))
+                      : router.push(
+                          `/asset-value?assetId=${encodeURIComponent(
+                            asset.id
+                          )}&returnTo=dashboard`
+                        )
+                  }
+                />
+              </View>
+            ) : null}
+            {canWriteAsset && firstMissing ? (
+              <View testID="asset-passport-first-value-action">
+                <SecondaryButton
+                  icon={CurrencyCircleDollar}
+                  label={copy.addRecordedValue}
+                  onPress={() =>
+                    router.push(
+                      `/asset-value?assetId=${encodeURIComponent(
+                        asset.id
+                      )}&returnTo=dashboard`
+                    )
+                  }
+                />
+              </View>
+            ) : null}
+            {canWriteAsset ? (
+              <View testID="asset-passport-add-another-action">
+                <SecondaryButton
+                  icon={Plus}
+                  label={copy.addAnotherItem}
+                  onPress={() => router.replace("/capture")}
+                />
+              </View>
+            ) : null}
+            <Pressable
+              accessibilityHint={copy.todayHint}
+              accessibilityRole="button"
+              onPress={() => router.replace("/(tabs)")}
+              style={({ pressed }) => [
+                styles.savedPassportAction,
+                pressed && styles.pressed
+              ]}
+              testID="asset-passport-today-action"
+            >
+              <Text
+                style={[
+                  styles.savedPassportActionLabel,
+                  rtl && styles.arabicMedium,
+                  rtl && styles.rtlText
+                ]}
+              >
+                {copy.goToToday}
+              </Text>
+            </Pressable>
+          </View>
+        </View>
+      ) : null}
+      {isJustCreated ? (
+        <SyncTruth
+          language={language}
+          onPress={() => router.push("/vault")}
+          pendingOperationCount={pendingOperationCount}
+          sync={sync}
+        />
+      ) : null}
 
       {!canWriteAsset ? (
         <PermissionNotice
@@ -1168,45 +1239,57 @@ function ManageRow({
 
 const styles = StyleSheet.create({
   savedPassport: {
-    minHeight: 72,
+    gap: spacing.md,
+    padding: spacing.md,
+    borderWidth: 1,
+    borderColor: colors.borderStrong,
+    borderRadius: radius.lg,
+    backgroundColor: colors.surfaceRaised
+  },
+  savedPassportHeading: {
     flexDirection: "row",
+    alignItems: "flex-start",
+    gap: spacing.sm
+  },
+  savedPassportIcon: {
+    width: 38,
+    height: 38,
     alignItems: "center",
-    gap: spacing.sm,
-    paddingVertical: spacing.sm,
-    borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: colors.border
+    justifyContent: "center",
+    borderRadius: radius.round,
+    backgroundColor: colors.volt
   },
   savedPassportCopy: {
     flex: 1,
     minWidth: 0,
-    gap: 2
+    gap: spacing.xxs
   },
   savedPassportTitle: {
     color: colors.text,
     fontFamily: typography.bodyBold,
-    fontSize: 15,
-    lineHeight: 20
+    fontSize: 18,
+    lineHeight: 24
   },
   savedPassportMeta: {
     color: colors.textMuted,
     fontFamily: typography.body,
-    fontSize: 12,
-    lineHeight: 17
+    fontSize: 14,
+    lineHeight: 20
+  },
+  savedPassportActions: {
+    gap: spacing.sm
   },
   savedPassportAction: {
     minHeight: 44,
+    alignItems: "center",
     justifyContent: "center",
-    paddingHorizontal: spacing.sm,
-    borderWidth: 1,
-    borderColor: colors.borderStrong,
-    borderRadius: radius.sm,
-    backgroundColor: colors.surface
+    paddingHorizontal: spacing.md
   },
   savedPassportActionLabel: {
-    color: colors.text,
+    color: colors.textMuted,
     fontFamily: typography.bodyBold,
-    fontSize: 12,
-    lineHeight: 16
+    fontSize: 14,
+    lineHeight: 20
   },
   heroImage: {
     width: "100%",

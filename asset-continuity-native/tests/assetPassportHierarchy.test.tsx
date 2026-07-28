@@ -1,4 +1,4 @@
-import { render } from "@testing-library/react-native";
+import { fireEvent, render } from "@testing-library/react-native";
 import type { PropsWithChildren } from "react";
 import { StyleSheet } from "react-native";
 
@@ -149,14 +149,17 @@ describe("Asset Passport post-save hierarchy", () => {
     mockRouter.replace.mockClear();
   });
 
-  it("renders the first next action immediately after save truth and before retrieval and value", async () => {
+  it("celebrates the saved Passport and offers value, another item, and Today before readiness debt", async () => {
     const screen = await render(<AssetPassportScreen />, { wrapper });
     const relevantOrder = renderedTestIds(screen.toJSON()).filter(
       (testId) =>
         [
           "asset-passport-saved-confirmation",
+          "asset-passport-primary-action",
+          "asset-passport-first-value-action",
+          "asset-passport-add-another-action",
+          "asset-passport-today-action",
           "sync-truth",
-          "asset-passport-next-action",
           "asset-passport-retrieval-heading",
           "asset-passport-value-heading"
         ].includes(testId)
@@ -164,46 +167,56 @@ describe("Asset Passport post-save hierarchy", () => {
 
     expect(relevantOrder).toEqual([
       "asset-passport-saved-confirmation",
+      "asset-passport-primary-action",
+      "asset-passport-first-value-action",
+      "asset-passport-add-another-action",
+      "asset-passport-today-action",
       "sync-truth",
-      "asset-passport-next-action",
       "asset-passport-retrieval-heading",
       "asset-passport-value-heading"
     ]);
 
-    const nextAction = screen.getByTestId(
-      "asset-passport-next-action"
-    );
-    expect(nextAction.props.accessibilityRole).toBe("button");
-    expect(nextAction.props.accessibilityHint).toBe(
-      ASSET_PASSPORT_COPY.en.missingHint(
-        ASSET_PASSPORT_COPY.en.missingAction.photo
-      )
-    );
-    expect(
+    await fireEvent.press(
       screen.getByText(ASSET_PASSPORT_COPY.en.missingAction.photo)
-    ).toBeTruthy();
+    );
+    expect(mockRouter.push).toHaveBeenCalledWith(
+      "/asset-edit?assetId=asset-passport-hierarchy&focus=photo&returnTo=passport"
+    );
+
+    await fireEvent.press(
+      screen.getByText(ASSET_PASSPORT_COPY.en.addRecordedValue)
+    );
+    expect(mockRouter.push).toHaveBeenCalledWith(
+      "/asset-value?assetId=asset-passport-hierarchy&returnTo=dashboard"
+    );
+
+    await fireEvent.press(
+      screen.getByText(ASSET_PASSPORT_COPY.en.addAnotherItem)
+    );
+    expect(mockRouter.replace).toHaveBeenCalledWith("/capture");
+
+    await fireEvent.press(
+      screen.getByText(ASSET_PASSPORT_COPY.en.goToToday)
+    );
+    expect(mockRouter.replace).toHaveBeenCalledWith("/(tabs)");
   });
 
   it("keeps the promoted next action mirrored and accessible in Arabic", async () => {
     mockLanguage = "ar";
     mockWorkspaceContext = createContext();
     const screen = await render(<AssetPassportScreen />, { wrapper });
-    const nextAction = screen.getByTestId(
-      "asset-passport-next-action"
+    const nextActionLabel = screen.getByText(
+      ASSET_PASSPORT_COPY.ar.missingAction.photo
     );
+    const nextActionContent = nextActionLabel.parent;
 
-    expect(StyleSheet.flatten(nextAction.props.style).flexDirection).toBe(
-      "row-reverse"
-    );
-    expect(nextAction.props.accessibilityRole).toBe("button");
-    expect(nextAction.props.accessibilityHint).toBe(
-      ASSET_PASSPORT_COPY.ar.missingHint(
-        ASSET_PASSPORT_COPY.ar.missingAction.photo
-      )
-    );
     expect(
-      screen.getByText(ASSET_PASSPORT_COPY.ar.missingAction.photo)
-    ).toBeTruthy();
+      StyleSheet.flatten(nextActionContent?.props.style).flexDirection
+    ).toBe("row-reverse");
+    await fireEvent.press(nextActionLabel);
+    expect(mockRouter.push).toHaveBeenCalledWith(
+      "/asset-edit?assetId=asset-passport-hierarchy&focus=photo&returnTo=passport"
+    );
   });
 
   it("masks a Passport value in both visible and assistive output by default", async () => {

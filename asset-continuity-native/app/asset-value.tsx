@@ -463,10 +463,10 @@ export default function AssetValueRoute() {
         asOf: normalizedAsOf!
       });
       allowRemovalRef.current = true;
-      if (router.canGoBack()) {
-        router.back();
-      } else if (returnTo === "dashboard") {
+      if (returnTo === "dashboard") {
         router.replace("/dashboard");
+      } else if (router.canGoBack()) {
+        router.back();
       } else if (subject.kind === "place") {
         router.replace(`/place/${subject.placeId}`);
       } else {

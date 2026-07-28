@@ -237,6 +237,16 @@ test("the SDK 54 recovery boundary excludes signed-build crypto and file adapter
   );
   assert.match(
     recoverySource,
+    /export async function resolveInterruptedRecoveryRestore/u,
+    "the preview must mirror the canonical startup recovery hook"
+  );
+  assert.match(
+    recoverySource,
+    /return "none";/u,
+    "the memory-only preview has no durable restore journal to reconcile"
+  );
+  assert.match(
+    recoverySource,
     /return createUnavailableRecoveryRuntime\(dependencies\.profile\)/u,
     "the mirrored factory must stay visibly fail-closed"
   );

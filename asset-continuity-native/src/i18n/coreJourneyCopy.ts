@@ -318,6 +318,7 @@ const english = {
     editPlace: "Edit Place",
     placeSpace: "Place space",
     portfolio: "Portfolio",
+    settings: "Settings",
     atlas: "Atlas",
     createRecoveryKit: "Create Recovery Kit",
     restoreRecoveryKit: "Restore Recovery Kit"
@@ -385,7 +386,24 @@ const english = {
   },
   vault: {
     title: "Vault",
-    intro: "Proof, backup, recovery and household access.",
+    intro:
+      "Proof, device protection, independent recovery and data portability.",
+    settingsTitle: "Settings",
+    settingsIntro:
+      "Account, household, language, support and sync diagnostics.",
+    settingsMeta:
+      "Account, household, language, support and sync diagnostics.",
+    settingsOpen: "Open",
+    privacySupport: "Privacy and support",
+    privacyNotice: "Privacy notice",
+    privacyNoticeDescription:
+      "What ALYR stores and how household records are handled.",
+    pilotTerms: "Pilot terms",
+    pilotTermsDescription:
+      "Purpose, responsibilities and pilot boundaries.",
+    support: "Support",
+    supportDescription:
+      "Report an issue without exposing household data.",
     installedAppRequiredTitle: "Installed app required",
     installedAppRequiredBody:
       "A readable export can be shared from an installed native build. It is not an encrypted Recovery Kit.",
@@ -438,10 +456,10 @@ const english = {
       "Opens metadata, the stored original and review controls.",
     recentProofShowAll: "Show all",
     recentProofShowLess: "Show recent only",
-    backupRecovery: "Backup and recovery",
-    cloudBackup: "Cloud backup",
+    backupRecovery: "Independent recovery",
+    cloudBackup: "Independent disaster backup",
     cloudBackupDescription:
-      "Not connected · this device is the only copy",
+      "Separate from day-to-day sync · use a Recovery Kit during the pilot",
     notSetUp: "Not set up",
     createRecoveryKit: "Create Recovery Kit",
     createRecoveryKitDescription:
@@ -795,6 +813,7 @@ const arabic = {
     editPlace: "تعديل المكان",
     placeSpace: "مساحة داخل المكان",
     portfolio: "المحفظة",
+    settings: "الإعدادات",
     atlas: "الأطلس",
     createRecoveryKit: "إنشاء حزمة الاستعادة",
     restoreRecoveryKit: "الاستعادة من حزمة"
@@ -861,7 +880,24 @@ const arabic = {
   },
   vault: {
     title: "الخزنة",
-    intro: "الإثباتات والنسخ الاحتياطية والاستعادة وصلاحيات الأسرة.",
+    intro:
+      "الإثباتات وحماية الجهاز والتعافي المستقل ونقل البيانات.",
+    settingsTitle: "الإعدادات",
+    settingsIntro:
+      "الحساب والأسرة واللغة والدعم وتشخيصات المزامنة.",
+    settingsMeta:
+      "الحساب والأسرة واللغة والدعم وتشخيصات المزامنة.",
+    settingsOpen: "فتح",
+    privacySupport: "الخصوصية والدعم",
+    privacyNotice: "إشعار الخصوصية",
+    privacyNoticeDescription:
+      "ما الذي يحفظه ALYR وكيف تُدار السجلات.",
+    pilotTerms: "شروط النسخة التجريبية",
+    pilotTermsDescription:
+      "الغرض والمسؤوليات وحدود النسخة التجريبية.",
+    support: "الدعم",
+    supportDescription:
+      "الإبلاغ عن مشكلة من دون كشف بيانات المنزل.",
     installedAppRequiredTitle: "يلزم تثبيت التطبيق",
     installedAppRequiredBody:
       "يمكن مشاركة نسخة مقروءة من التطبيق المثبّت. هذه النسخة ليست حزمة استعادة مشفّرة.",
@@ -915,10 +951,10 @@ const arabic = {
       "يفتح البيانات الوصفية والنسخة الأصلية المحفوظة وأدوات المراجعة.",
     recentProofShowAll: "عرض الكل",
     recentProofShowLess: "عرض الأحدث فقط",
-    backupRecovery: "النسخ الاحتياطي والاستعادة",
-    cloudBackup: "النسخ الاحتياطي السحابي",
+    backupRecovery: "التعافي المستقل",
+    cloudBackup: "نسخة مستقلة للتعافي من الكوارث",
     cloudBackupDescription:
-      "غير متصل · هذا الجهاز هو النسخة الوحيدة",
+      "منفصلة عن المزامنة اليومية · استخدم حزمة الاستعادة خلال النسخة التجريبية",
     notSetUp: "غير مُعدّ",
     createRecoveryKit: "إنشاء حزمة استعادة",
     createRecoveryKitDescription:

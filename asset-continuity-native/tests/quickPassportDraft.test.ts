@@ -1,5 +1,7 @@
 import * as SecureStore from "expo-secure-store";
 
+import { MAX_ASSET_CAPTURE_FILE_BYTES } from "@alyr/domain";
+
 import {
   clearPlaceCaptureDraft,
   clearQuickPassportDraft,
@@ -165,5 +167,79 @@ describe("Quick Passport process-death draft", () => {
     await expect(
       readQuickPassportDraft("household-a")
     ).resolves.toMatchObject({ name: "Travel watch" });
+  });
+
+  it("restores identity while removing forged category and invalid files", async () => {
+    stored = JSON.stringify({
+      version: 1,
+      householdId: "household-a",
+      updatedAt: "2026-07-28T10:00:00.000Z",
+      step: 3,
+      name: "Recovered watch",
+      categoryId: "property.house",
+      photo: {
+        localUri: "file:///watch.jpg",
+        fileName: "watch.jpg",
+        mimeType: "application/pdf",
+        byteSize: 1_024
+      },
+      evidence: {
+        localUri: "file:///receipt.pdf",
+        fileName: "receipt.pdf",
+        mimeType: "application/pdf",
+        byteSize: MAX_ASSET_CAPTURE_FILE_BYTES + 1
+      },
+      locationStatus: "unknown",
+      placeId: "place-stale",
+      roomId: "room-stale",
+      locatorText: "Stale clue",
+      showPlaceForm: false,
+      placeName: "",
+      placeClassification: "unknown",
+      address: "",
+      region: "",
+      roomName: "",
+      pin: null
+    });
+
+    await expect(
+      readQuickPassportDraft("household-a")
+    ).resolves.toMatchObject({
+      name: "Recovered watch",
+      categoryId: null,
+      photo: null,
+      evidence: null,
+      locationStatus: "unknown",
+      placeId: null,
+      roomId: null,
+      locatorText: ""
+    });
+  });
+
+  it("drops a structurally malformed restored draft before render", async () => {
+    stored = JSON.stringify({
+      version: 1,
+      householdId: "household-a",
+      updatedAt: "2026-07-28T10:00:00.000Z",
+      step: 3,
+      name: "Recovered watch",
+      categoryId: "lifestyle.watch",
+      photo: "file:///not-an-object.jpg",
+      evidence: null,
+      locationStatus: "unknown",
+      placeId: null,
+      roomId: null,
+      locatorText: "",
+      showPlaceForm: false,
+      placeName: "",
+      address: "",
+      region: "",
+      roomName: "",
+      pin: null
+    });
+
+    await expect(
+      readQuickPassportDraft("household-a")
+    ).resolves.toBeNull();
   });
 });

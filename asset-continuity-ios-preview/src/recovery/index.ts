@@ -25,6 +25,22 @@ export { recoveryErrorMessage } from "../../../asset-continuity-native/src/recov
 export { createUnavailableRecoveryRuntime };
 export type { RecoveryJourneyRuntime };
 
+export type InterruptedRecoveryResolution =
+  | "none"
+  | "rolled-back"
+  | "completed";
+
+/**
+ * The Expo Go shell uses a memory repository with no crash journal or durable
+ * attachment transaction. Mirror the canonical startup hook without pulling
+ * SQLCipher/file-recovery modules into the SDK 54 graph.
+ */
+export async function resolveInterruptedRecoveryRestore(
+  _input: unknown
+): Promise<InterruptedRecoveryResolution> {
+  return "none";
+}
+
 /**
  * Mirrors the canonical factory name without importing its signed crypto and
  * filesystem graph. The generic accepts the complete dependency object passed

@@ -52,6 +52,7 @@ export function isCompactAuthViewport({
 }
 
 export function AuthScaffold({
+  backDisabled = false,
   children,
   footer,
   headerAction,
@@ -59,6 +60,7 @@ export function AuthScaffold({
   progress,
   testID
 }: PropsWithChildren<{
+  readonly backDisabled?: boolean;
   readonly footer?: ReactNode;
   readonly headerAction?: ReactNode;
   readonly onBack?: () => void;
@@ -82,11 +84,14 @@ export function AuthScaffold({
           <Pressable
             accessibilityLabel={copy.common.back}
             accessibilityRole="button"
+            accessibilityState={{ disabled: backDisabled }}
+            disabled={backDisabled}
             hitSlop={8}
             onPress={onBack}
             style={({ pressed }) => [
               styles.back,
-              pressed && styles.pressed
+              pressed && styles.pressed,
+              backDisabled && styles.disabled
             ]}
           >
             <BackIcon color={colors.text} size={22} />
@@ -516,12 +521,14 @@ export function CommandList({
 export function SelectionRow({
   active,
   description,
+  disabled = false,
   icon: IconComponent,
   label,
   onPress
 }: {
   readonly active: boolean;
   readonly description: string;
+  readonly disabled?: boolean;
   readonly icon: Icon;
   readonly label: string;
   readonly onPress: () => void;
@@ -530,13 +537,15 @@ export function SelectionRow({
   return (
     <Pressable
       accessibilityRole="radio"
-      accessibilityState={{ checked: active }}
+      accessibilityState={{ checked: active, disabled }}
+      disabled={disabled}
       onPress={onPress}
       style={({ pressed }) => [
         styles.selection,
         rtl && styles.rowReverse,
         active && styles.selectionActive,
-        pressed && styles.pressed
+        pressed && styles.pressed,
+        disabled && styles.disabled
       ]}
     >
       <IconComponent color={colors.text} size={23} />
@@ -926,7 +935,8 @@ const styles = StyleSheet.create({
     fontFamily: typography.arabic
   },
   arabicMedium: {
-    fontFamily: typography.arabicMedium
+    fontFamily: typography.arabicMedium,
+    letterSpacing: 0
   },
   rtlInput: {
     textAlign: "right",

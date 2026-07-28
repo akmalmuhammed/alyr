@@ -1,4 +1,5 @@
 import {
+  fireEvent,
   render,
   waitFor
 } from "@testing-library/react-native";
@@ -15,6 +16,8 @@ import { formatRecordedValue } from "@/privacy/ValueVisibility";
 
 let mockLanguage: "en" | "ar" = "en";
 let mockCanWrite = true;
+let mockReturnTo = "passport";
+const mockRecordPortfolioValue = jest.fn(async () => undefined);
 const mockRouter = {
   back: jest.fn(),
   canGoBack: jest.fn(() => true),
@@ -62,7 +65,7 @@ const mockWorkspace: NativeWorkspace = {
 jest.mock("expo-router", () => ({
   useLocalSearchParams: () => ({
     assetId: mockAsset.id,
-    returnTo: "passport"
+    returnTo: mockReturnTo
   }),
   useNavigation: () => mockNavigation,
   useRouter: () => mockRouter
@@ -73,7 +76,7 @@ jest.mock("@/state/WorkspaceProvider", () => ({
     can: () => mockCanWrite,
     clearError: jest.fn(),
     error: null,
-    recordPortfolioValue: jest.fn(async () => undefined),
+    recordPortfolioValue: mockRecordPortfolioValue,
     recordedPortfolioValues: mockValues,
     repository: {
       durable: true,
@@ -109,6 +112,7 @@ describe("recorded value editor privacy", () => {
     jest.clearAllMocks();
     mockLanguage = "en";
     mockCanWrite = true;
+    mockReturnTo = "passport";
   });
 
   it("masks the current entry, editable field and complete history by default", async () => {
@@ -181,5 +185,23 @@ describe("recorded value editor privacy", () => {
         .getAllByLabelText(/[\u0600-\u06ff]/u)
         .filter((node) => node.props.secureTextEntry === true)
     ).toHaveLength(1);
+  });
+
+  it("honors the post-capture dashboard destination after recording the first value", async () => {
+    mockReturnTo = "dashboard";
+    const screen = await render(<AssetValueRoute />, { wrapper });
+
+    await fireEvent.changeText(
+      screen.getByLabelText("Amount"),
+      "7000000"
+    );
+    const submitLabels = screen.getAllByText("Update recorded value");
+    await fireEvent.press(submitLabels[submitLabels.length - 1]!);
+
+    await waitFor(() => {
+      expect(mockRecordPortfolioValue).toHaveBeenCalledTimes(1);
+      expect(mockRouter.replace).toHaveBeenCalledWith("/dashboard");
+    });
+    expect(mockRouter.back).not.toHaveBeenCalled();
   });
 });

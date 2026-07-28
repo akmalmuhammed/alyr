@@ -16,6 +16,22 @@ import { getPortfolioValueRecords } from "@/domain/portfolio";
 import { createWorkspace } from "@/domain/sample";
 import { itemCount } from "@/i18n/coreJourneyCopy";
 
+function renderedTestIds(node: unknown): string[] {
+  if (!node) return [];
+  if (Array.isArray(node)) return node.flatMap(renderedTestIds);
+  if (typeof node !== "object") return [];
+  const element = node as {
+    readonly props?: { readonly testID?: unknown };
+    readonly children?: readonly unknown[];
+  };
+  return [
+    ...(typeof element.props?.testID === "string"
+      ? [element.props.testID]
+      : []),
+    ...(element.children?.flatMap(renderedTestIds) ?? [])
+  ];
+}
+
 describe("PortfolioDashboard", () => {
   it("stacks financial rows on narrow screens and large text", () => {
     expect(shouldStackPortfolioFinancialLayout(320, 1)).toBe(true);
@@ -54,6 +70,31 @@ describe("PortfolioDashboard", () => {
     expect(screen.getByText("Travel card balance")).toBeTruthy();
     expect(screen.getAllByText("100%").length).toBeGreaterThan(0);
     expect(screen.getAllByText("West Bay Home").length).toBeGreaterThan(1);
+  });
+
+  it("keeps financial composition ahead of continuity diagnostics", async () => {
+    const screen = await render(
+      <PortfolioDashboard workspace={createWorkspace("sample")} />
+    );
+    const order = renderedTestIds(screen.toJSON()).filter((testID) =>
+      [
+        "portfolio-net-position",
+        "portfolio-recorded-values-section",
+        "portfolio-liabilities-section",
+        "portfolio-attention-section",
+        "portfolio-location-distribution-section",
+        "portfolio-register-health-section"
+      ].includes(testID)
+    );
+
+    expect(order).toEqual([
+      "portfolio-net-position",
+      "portfolio-recorded-values-section",
+      "portfolio-liabilities-section",
+      "portfolio-attention-section",
+      "portfolio-location-distribution-section",
+      "portfolio-register-health-section"
+    ]);
   });
 
   it("shows one currency at a time and updates the hero through an accessible selector", async () => {

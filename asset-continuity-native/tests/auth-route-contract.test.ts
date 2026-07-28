@@ -2,8 +2,10 @@ import {
   AUTH_ROUTES,
   AUTH_ROUTE_SEQUENCE,
   HOUSEHOLD_ROUTES,
-  authStepNumber
+  authStepNumber,
+  firstRecordCaptureDestination
 } from "@/auth/routes";
+import { resolveFirstRecordHandoff } from "@/auth/firstRecordHandoff";
 
 describe("auth route contract", () => {
   it("keeps the complete first-user sequence explicit", () => {
@@ -44,6 +46,54 @@ describe("auth route contract", () => {
       current: 3,
       total: 3
     });
+  });
+
+  it("routes each first-record intent without collapsing Place into item capture", () => {
+    expect(firstRecordCaptureDestination("item")).toBe("/capture");
+    expect(firstRecordCaptureDestination("place")).toBe(
+      "/capture?intent=place"
+    );
+  });
+
+  it("resumes the chosen record only after onboarding, vault release, and data readiness", () => {
+    expect(
+      resolveFirstRecordHandoff({
+        dataRoutesReady: true,
+        onboardingFinished: true,
+        vaultReleased: true,
+        intent: "place"
+      })
+    ).toBe("/capture?intent=place");
+    expect(
+      resolveFirstRecordHandoff({
+        dataRoutesReady: true,
+        onboardingFinished: true,
+        vaultReleased: true,
+        intent: "item"
+      })
+    ).toBe("/capture");
+    for (const input of [
+      {
+        dataRoutesReady: false,
+        onboardingFinished: true,
+        vaultReleased: true,
+        intent: "place" as const
+      },
+      {
+        dataRoutesReady: true,
+        onboardingFinished: false,
+        vaultReleased: true,
+        intent: "place" as const
+      },
+      {
+        dataRoutesReady: true,
+        onboardingFinished: true,
+        vaultReleased: false,
+        intent: "place" as const
+      }
+    ]) {
+      expect(resolveFirstRecordHandoff(input)).toBeNull();
+    }
   });
 
   it("gives direct auth deep links a deterministic route back to welcome", () => {

@@ -29,6 +29,13 @@ export type VaultLockEvent =
   | { readonly type: "BYPASS" }
   | { readonly type: "PROTECT" }
   | {
+      readonly type: "PROTECT_AUTHORIZED";
+      readonly capability: Extract<
+        DeviceAuthCapability,
+        { readonly kind: "available" }
+      >;
+    }
+  | {
       readonly type: "CAPABILITY_RESOLVED";
       readonly capability: DeviceAuthCapability;
     }
@@ -119,6 +126,13 @@ export function reduceVaultLockState(
       return {
         phase: "checking",
         capability: null,
+        backgroundedAt: null,
+        notice: null
+      };
+    case "PROTECT_AUTHORIZED":
+      return {
+        phase: "unlocked",
+        capability: event.capability,
         backgroundedAt: null,
         notice: null
       };

@@ -26,6 +26,20 @@ function unlockedState(): VaultLockState {
 }
 
 describe("signed workspace device-auth state machine", () => {
+  it("accepts one verified onboarding grant without entering a lock state", () => {
+    expect(
+      reduceVaultLockState(initialVaultLockState, {
+        type: "PROTECT_AUTHORIZED",
+        capability: available
+      })
+    ).toEqual({
+      phase: "unlocked",
+      capability: available,
+      backgroundedAt: null,
+      notice: null
+    });
+  });
+
   it("keeps a short background visit unlocked and re-locks at the timeout", () => {
     const startedAt = 10_000;
     const backgrounded = reduceVaultLockState(unlockedState(), {

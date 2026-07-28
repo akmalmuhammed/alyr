@@ -522,39 +522,26 @@ export function PortfolioDashboard({
       </View>
 
       {canReadLiabilities && netPosition ? (
-        <>
-          <PortfolioHero
-            amountsHidden={amountsHidden}
-            copy={copy}
-            explanationOpen={explanationOpen}
-            financialCopy={financialCopy}
-            language={language}
-            netPosition={netPosition}
-            onToggleExplanation={() =>
-              setExplanationOpen((current) => !current)
+        <PortfolioHero
+          amountsHidden={amountsHidden}
+          copy={copy}
+          explanationOpen={explanationOpen}
+          financialCopy={financialCopy}
+          language={language}
+          netPosition={netPosition}
+          onToggleExplanation={() =>
+            setExplanationOpen((current) => !current)
+          }
+          onToggleRecordedAmounts={() => {
+            const next = !amountsHidden;
+            if (controlledAmountsHidden === undefined) {
+              setInternalAmountsHidden(next);
             }
-            onToggleRecordedAmounts={() => {
-              const next = !amountsHidden;
-              if (controlledAmountsHidden === undefined) {
-                setInternalAmountsHidden(next);
-              }
-              onAmountsHiddenChange?.(next);
-            }}
-            rtl={rtl}
-            sample={workspace.mode === "sample"}
-          />
-          <LiabilitiesSection
-            amountsHidden={amountsHidden}
-            copy={financialCopy}
-            language={language}
-            netPosition={netPosition}
-            onAddLiability={onAddLiability}
-            onConfirmNoLiabilities={onConfirmNoLiabilities}
-            onOpenSubject={onOpenSubject}
-            rtl={rtl}
-            workspace={workspace}
-          />
-        </>
+            onAmountsHiddenChange?.(next);
+          }}
+          rtl={rtl}
+          sample={workspace.mode === "sample"}
+        />
       ) : (
         <AssetPortfolioHero
           amountsHidden={amountsHidden}
@@ -612,6 +599,34 @@ export function PortfolioDashboard({
           ) : null}
         </View>
       ) : (
+        <RecordedValues
+          amountsHidden={amountsHidden}
+          copy={copy}
+          language={language}
+          onOpenAsset={onOpenAsset}
+          onOpenSubject={onOpenSubject}
+          onReviewAssets={onReviewAssets}
+          rtl={rtl}
+          sample={workspace.mode === "sample"}
+          snapshot={snapshot}
+        />
+      )}
+
+      {canReadLiabilities && netPosition ? (
+        <LiabilitiesSection
+          amountsHidden={amountsHidden}
+          copy={financialCopy}
+          language={language}
+          netPosition={netPosition}
+          onAddLiability={onAddLiability}
+          onConfirmNoLiabilities={onConfirmNoLiabilities}
+          onOpenSubject={onOpenSubject}
+          rtl={rtl}
+          workspace={workspace}
+        />
+      ) : null}
+
+      {snapshot.valuableCount > 0 ? (
         <>
           <AttentionList
             copy={copy}
@@ -635,19 +650,8 @@ export function PortfolioDashboard({
             rtl={rtl}
             snapshot={snapshot}
           />
-          <RecordedValues
-            amountsHidden={amountsHidden}
-            copy={copy}
-            language={language}
-            onOpenAsset={onOpenAsset}
-            onOpenSubject={onOpenSubject}
-            onReviewAssets={onReviewAssets}
-            rtl={rtl}
-            sample={workspace.mode === "sample"}
-            snapshot={snapshot}
-          />
         </>
-      )}
+      ) : null}
 
       {snapshot.ignoredValueRecordCount > 0 ||
       snapshot.uncalculableCurrencyCount > 0 ? (
@@ -1553,6 +1557,7 @@ function LiabilitiesSection({
       }
       rtl={rtl}
       subtitle={copy.liabilities.subtitle}
+      testID="portfolio-liabilities-section"
       title={copy.liabilities.title}
     >
       <View testID="liabilities-list">
@@ -1908,6 +1913,7 @@ function RegisterHealth({
     <DashboardSection
       rtl={rtl}
       subtitle={undefined}
+      testID="portfolio-register-health-section"
       title={copy.overview}
     >
       <View style={styles.metricsBand}>
@@ -2123,6 +2129,7 @@ function LocationDistribution({
     <DashboardSection
       rtl={rtl}
       subtitle={copy.locationDistributionDetail}
+      testID="portfolio-location-distribution-section"
       title={copy.locationDistribution}
     >
       <View style={styles.distribution}>
@@ -2236,7 +2243,11 @@ function AttentionList({
   ].filter((item) => item.count > 0);
 
   return (
-    <DashboardSection rtl={rtl} title={copy.needsAttention}>
+    <DashboardSection
+      rtl={rtl}
+      testID="portfolio-attention-section"
+      title={copy.needsAttention}
+    >
       {actions.length === 0 && snapshot.pendingProofReviewCount === 0 ? (
         <View style={[styles.readyRow, rtl && styles.rowReverse]}>
           <CheckCircle color={colors.success} size={24} weight="regular" />
@@ -2408,6 +2419,7 @@ function RecordedValues({
         ) : undefined
       }
       rtl={rtl}
+      testID="portfolio-recorded-values-section"
       title={copy.recordedItems}
     >
       {snapshot.recordedValues.length === 0 ? (
@@ -2595,16 +2607,18 @@ function DashboardSection({
   children,
   rtl,
   subtitle,
+  testID,
   title
 }: {
   readonly action?: React.ReactNode;
   readonly children: React.ReactNode;
   readonly rtl: boolean;
   readonly subtitle?: string | undefined;
+  readonly testID?: string | undefined;
   readonly title: string;
 }) {
   return (
-    <View style={styles.section}>
+    <View style={styles.section} testID={testID}>
       <View style={[styles.sectionHeader, rtl && styles.rowReverse]}>
         <View style={styles.sectionHeadingCopy}>
           <Text

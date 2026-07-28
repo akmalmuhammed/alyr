@@ -41,6 +41,7 @@ import {
 
 import { AuthFlowProvider, useAuthFlow } from "@/auth/AuthFlowProvider";
 import { AuthBootstrapBoundary } from "@/auth/AuthBootstrapBoundary";
+import { resolveFirstRecordHandoff } from "@/auth/firstRecordHandoff";
 import { useReduceMotionPreference } from "@/accessibility/useReduceMotionPreference";
 import {
   DeviceAuthProvider,
@@ -237,19 +238,20 @@ function SignedWorkspaceBoundary() {
     () => valueVisibilityScopeForSession(mode, session),
     [mode, session]
   );
-  const protectionRequired =
+  const deviceSubjectReady =
     mode === "supabase" &&
     bootstrapState === "ready" &&
     session?.assurance === "verified-email" &&
     session.identity.emailVerified &&
-    session.onboarding === "complete" &&
     Boolean(
       session.activeHouseholdId &&
         session.activeMembershipId &&
         session.activeHouseholdRole
     );
+  const protectionRequired =
+    deviceSubjectReady && session?.onboarding === "complete";
   const subjectId =
-    protectionRequired && session?.activeHouseholdId
+    deviceSubjectReady && session?.activeHouseholdId
       ? `${session.identity.id}:${session.activeHouseholdId}`
       : null;
 
@@ -303,6 +305,36 @@ function RootNavigator() {
   const dataRoutesReady =
     Boolean(workspace) &&
     (mode === "preview" || localSampleReady || signedSessionReady);
+  const onboardingFinished =
+    session?.onboarding === "complete" &&
+    (mode === "preview" || signedSessionReady);
+  const pendingFirstRecordIntent =
+    deviceAuth.pendingFirstRecordIntent;
+  const firstRecordHandoffDestination =
+    resolveFirstRecordHandoff({
+      dataRoutesReady,
+      onboardingFinished: Boolean(onboardingFinished),
+      vaultReleased: deviceAuth.vaultReleased,
+      intent: pendingFirstRecordIntent
+    });
+
+  useEffect(() => {
+    if (
+      !firstRecordHandoffDestination ||
+      !pendingFirstRecordIntent
+    ) {
+      return;
+    }
+    router.replace(firstRecordHandoffDestination);
+    void deviceAuth
+      .completeOnboardingHandoff(pendingFirstRecordIntent)
+      .catch(() => undefined);
+  }, [
+    deviceAuth.completeOnboardingHandoff,
+    firstRecordHandoffDestination,
+    pendingFirstRecordIntent,
+    router
+  ]);
 
   if (!localeReady) {
     return (
@@ -335,8 +367,15 @@ function RootNavigator() {
         <StatusBar style="dark" />
         <Stack
           screenOptions={{
-            animation: reduceMotion ? "none" : "default",
+            animation: reduceMotion
+              ? "none"
+              : rtl
+                ? Platform.OS === "ios"
+                  ? "ios_from_left"
+                  : "slide_from_left"
+                : "default",
             contentStyle: { backgroundColor: colors.canvas },
+            gestureDirection: "horizontal",
             headerStyle: { backgroundColor: colors.canvas },
             headerTintColor: colors.text,
             headerShadowVisible: false,
@@ -533,6 +572,12 @@ function RootNavigator() {
               name="dashboard"
               options={{
                 title: copy.stack.portfolio
+              }}
+            />
+            <Stack.Screen
+              name="settings"
+              options={{
+                title: copy.stack.settings
               }}
             />
             <Stack.Screen

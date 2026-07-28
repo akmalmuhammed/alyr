@@ -12,11 +12,19 @@ import { PRIMARY_ROUTES } from "@/navigation/primaryRoutes";
 
 const mockRouter = {
   push: jest.fn(),
-  replace: jest.fn()
+  replace: jest.fn(),
+  setParams: jest.fn()
 };
-let mockParams: { view?: string; filter?: string } = {};
+let mockParams: {
+  view?: string;
+  filter?: string;
+  itemSort?: string;
+  itemGroup?: string;
+  placeSort?: string;
+  placeGroup?: string;
+} = {};
 let mockCanWrite = true;
-const mockWorkspace = createWorkspace("personal");
+let mockWorkspace = createWorkspace("personal");
 const safeAreaMetrics = {
   frame: { x: 0, y: 0, width: 390, height: 844 },
   insets: { top: 47, right: 0, bottom: 34, left: 0 }
@@ -31,8 +39,13 @@ function SafeAreaTestProvider({ children }: PropsWithChildren) {
 }
 
 jest.mock("expo-router", () => ({
+  useFocusEffect: () => undefined,
   useLocalSearchParams: () => mockParams,
   useRouter: () => mockRouter
+}));
+
+jest.mock("@/components/AssetPhotoPreview", () => ({
+  AssetPhotoPreview: () => null
 }));
 
 jest.mock("@/state/WorkspaceProvider", () => ({
@@ -47,8 +60,10 @@ describe("ALYR navigation vocabulary", () => {
   beforeEach(() => {
     mockParams = {};
     mockCanWrite = true;
+    mockWorkspace = createWorkspace("personal");
     mockRouter.push.mockClear();
     mockRouter.replace.mockClear();
+    mockRouter.setParams.mockClear();
   });
 
   it("opens the Items destination on the Items view by default", async () => {
@@ -78,6 +93,66 @@ describe("ALYR navigation vocabulary", () => {
     ).toEqual({ selected: true });
     expect(screen.getByText("Your places")).toBeTruthy();
     expect(screen.getByText("Add a place you recognise")).toBeTruthy();
+    expect(mockRouter.setParams).toHaveBeenCalledWith({
+      view: "places"
+    });
+  });
+
+  it("restores each peer view's independent URL-backed organization state", async () => {
+    mockWorkspace = createWorkspace("sample");
+    mockParams = {
+      view: "places",
+      filter: "evidence",
+      itemSort: "name",
+      itemGroup: "place",
+      placeSort: "item-count",
+      placeGroup: "region"
+    };
+    const screen = await render(<ItemsScreen />, {
+      wrapper: SafeAreaTestProvider
+    });
+
+    expect(screen.getByText("Most items · Region")).toBeTruthy();
+
+    await fireEvent.press(
+      screen.getByRole("tab", { name: "Items · 6" })
+    );
+
+    expect(screen.getByText("Needs proof · Name A–Z · Place")).toBeTruthy();
+    expect(mockRouter.setParams).toHaveBeenLastCalledWith({
+      view: undefined
+    });
+  });
+
+  it("keeps organize controls explicit, accessible and reflected in URL params", async () => {
+    mockWorkspace = createWorkspace("sample");
+    const screen = await render(<ItemsScreen />, {
+      wrapper: SafeAreaTestProvider
+    });
+
+    await fireEvent.press(
+      screen.getByRole("button", { name: "Organize" })
+    );
+
+    expect(screen.getByTestId("register-organizer")).toBeTruthy();
+    expect(
+      screen.getByRole("radio", { name: "All active items" }).props
+        .accessibilityState
+    ).toEqual({ checked: true });
+
+    await fireEvent.press(
+      screen.getByRole("radio", { name: "Needs proof" })
+    );
+    expect(mockRouter.setParams).toHaveBeenLastCalledWith({
+      filter: "evidence"
+    });
+
+    await fireEvent.press(
+      screen.getByRole("radio", { name: "Place" })
+    );
+    expect(mockRouter.setParams).toHaveBeenLastCalledWith({
+      itemGroup: "place"
+    });
   });
 
   it("honours direct Places links and rejects unknown view names", () => {

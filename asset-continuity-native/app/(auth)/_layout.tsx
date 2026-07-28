@@ -1,14 +1,19 @@
 import { Redirect, Stack, useSegments } from "expo-router";
+import { Platform } from "react-native";
 
+import { useReduceMotionPreference } from "@/accessibility/useReduceMotionPreference";
 import { useAuthFlow } from "@/auth/AuthFlowProvider";
 import {
   authenticatedAuthEntryDestination,
   publicAuthEntryRouteFromSegments
 } from "@/auth/routes";
+import { useLocale } from "@/i18n/LocaleProvider";
 import { colors } from "@/theme/tokens";
 
 export default function AuthLayout() {
   const segments = useSegments();
+  const reduceMotion = useReduceMotionPreference();
+  const { rtl } = useLocale();
   const {
     bootstrapState,
     mode,
@@ -29,8 +34,15 @@ export default function AuthLayout() {
     <Stack
       screenOptions={{
         headerShown: false,
-        animation: "default",
+        animation: reduceMotion
+          ? "none"
+          : rtl
+            ? Platform.OS === "ios"
+              ? "ios_from_left"
+              : "slide_from_left"
+            : "default",
         contentStyle: { backgroundColor: colors.canvas },
+        gestureDirection: "horizontal",
         gestureEnabled: true
       }}
     >

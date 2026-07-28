@@ -34,8 +34,79 @@ describe("first-viewport onboarding decisions", () => {
     expect(source.indexOf("accessibilityLabel={copy.privacy.chooseFirst}")).toBeLessThan(
       source.indexOf("<View style={styles.principles}>")
     );
+    expect(
+      source.indexOf('testID="onboarding-device-preflight"')
+    ).toBeLessThan(
+      source.indexOf("<View style={styles.principles}>")
+    );
     expect(CORE_JOURNEY_COPY.en.privacy.chooseFirst).toBe(
       "Choose first record"
+    );
+  });
+
+  it("checks and authorizes the device before committing setup, then hands off the exact intent", () => {
+    const privacy = read("app/(auth)/privacy.tsx");
+    const rootLayout = read("app/_layout.tsx");
+    const routes = read("src/auth/routes.ts");
+    const provider = read(
+      "src/deviceAuth/DeviceAuthProvider.tsx"
+    );
+    const sessionBoundary = read(
+      "src/state/SessionBoundWorkspaceProvider.tsx"
+    );
+
+    expect(privacy).toContain(
+      "const authorization = await authorizeOnboarding("
+    );
+    expect(privacy).toContain(
+      "pendingFirstRecordIntent &&\n      storageReady"
+    );
+    expect(privacy).toContain(
+      'onboardingHandoffRestoreState === "error"'
+    );
+    expect(privacy).toContain(
+      "retryOnboardingHandoffRestore();"
+    );
+    expect(privacy).toContain(
+      'onboardingHandoffRestoreState !== "ready"'
+    );
+    expect(privacy).toContain(
+      "void commitAuthorizedOnboarding("
+    );
+    const disabledBlock = privacy.slice(
+      privacy.indexOf("disabled:"),
+      privacy.indexOf("onPress: () => void finish()")
+    );
+    expect(disabledBlock).not.toContain("!storageReady");
+    expect(privacy).toContain(
+      "onboardingPreflight.phase === \"unavailable\""
+    );
+    expect(provider).toContain(
+      "await onboardingHandoffStore.save("
+    );
+    expect(provider).toContain(
+      'onboardingHandoffRestoreState !== "ready"'
+    );
+    expect(
+      provider.indexOf("await onboardingHandoffStore.save(")
+    ).toBeLessThan(
+      provider.indexOf("onboardingGrantRef.current = {")
+    );
+    expect(provider).toContain(
+      "vaultReleased:\n        !nativeSubjectProtection"
+    );
+    expect(sessionBoundary).toContain(
+      "access?.kind === \"authenticated\" && !deviceAuthReleased"
+    );
+    expect(rootLayout).toContain(
+      "resolveFirstRecordHandoff({"
+    );
+    expect(rootLayout).toContain("firstRecordHandoffDestination");
+    expect(rootLayout).toContain(
+      ".completeOnboardingHandoff(pendingFirstRecordIntent)"
+    );
+    expect(routes).toContain(
+      'return intent === "place" ? "/capture?intent=place" : "/capture";'
     );
   });
 

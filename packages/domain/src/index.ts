@@ -1,4 +1,5 @@
 export * from "./categories.js";
+export * from "./asset-mutation.js";
 export * from "./errors.js";
 export * from "./evidence.js";
 export * from "./location.js";

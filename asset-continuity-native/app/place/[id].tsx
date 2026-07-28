@@ -196,10 +196,10 @@ export const PLACE_DETAIL_COPY = {
     documents: "Place documents",
     attach: "Attach",
     attachAccessibilityLabel: "Attach a Place document",
-    protectedDocuments: "Protected in the device vault",
+    protectedDocuments: "Protected locally · status shown per document",
     previewDocuments: "Session-only preview files",
     documentTruth:
-      "These belong to the Place, not to an item. Cloud sync for Place documents is not active, so ALYR keeps the state explicitly on-device.",
+      "These belong to the Place, not to an item. Each row reports whether its original is on device, waiting to upload, synced, or unavailable. Sync is not an independent disaster backup.",
     noDocumentsTitle: "No Place documents",
     noDocumentsBody:
       "Attach a deed, lease, plan, policy or other Place-level record.",
@@ -278,10 +278,10 @@ export const PLACE_DETAIL_COPY = {
     documents: "مستندات المكان",
     attach: "إرفاق",
     attachAccessibilityLabel: "إرفاق مستند بالمكان",
-    protectedDocuments: "محمية في خزنة الجهاز",
+    protectedDocuments: "محمية محليًا · تظهر حالة كل مستند",
     previewDocuments: "ملفات معاينة لهذه الجلسة فقط",
     documentTruth:
-      "تخص هذه المستندات المكان لا غرضًا بعينه. مزامنة مستندات المكان سحابيًا غير نشطة، لذلك يعرض ALYR حالتها على الجهاز بوضوح.",
+      "ترتبط هذه الملفات بالمكان لا بالغرض. يوضح كل صف ما إذا كانت النسخة الأصلية على الجهاز أو تنتظر الرفع أو متزامنة أو غير متاحة. المزامنة ليست نسخة مستقلة للتعافي من الكوارث.",
     noDocumentsTitle: "لا توجد مستندات للمكان",
     noDocumentsBody:
       "أرفق سندًا أو عقد إيجار أو مخططًا أو وثيقة تأمين أو سجلًا آخر يخص المكان.",

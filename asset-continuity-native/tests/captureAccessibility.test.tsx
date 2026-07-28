@@ -3,7 +3,10 @@ import {
   render
 } from "@testing-library/react-native";
 
+import { AssetMutationValidationError } from "@alyr/domain";
+
 import CaptureScreen from "../app/capture";
+import { getCaptureCopy } from "@/i18n/captureCopy";
 import { createWorkspace } from "@/domain/sample";
 
 const mockRouter = {
@@ -15,6 +18,7 @@ const mockNavigation = {
   dispatch: jest.fn()
 };
 const mockWorkspace = createWorkspace("personal");
+const mockCreateAsset = jest.fn();
 
 jest.mock("expo-router", () => ({
   useLocalSearchParams: () => ({}),
@@ -30,7 +34,7 @@ jest.mock("@/state/WorkspaceProvider", () => ({
     error: null,
     clearError: jest.fn(),
     createPlace: jest.fn(),
-    createAsset: jest.fn()
+    createAsset: mockCreateAsset
   })
 }));
 
@@ -141,5 +145,44 @@ describe("Quick Passport validation and step accessibility", () => {
       screen.getByLabelText("What you know about the item's location").props
         .accessibilityHint
     ).toBe("Choose what you know about the item's location.");
+  });
+
+  it("returns a provider-boundary failure to its localized recovery step", async () => {
+    const copy = getCaptureCopy("en");
+    mockCreateAsset.mockRejectedValueOnce(
+      new AssetMutationValidationError({
+        code: "ASSET_FILE_SIZE_INVALID",
+        field: "evidence",
+        fileRole: "evidence"
+      })
+    );
+    const screen = await render(<CaptureScreen />);
+
+    await fireEvent.changeText(
+      screen.getByLabelText("Asset name"),
+      "Travel watch"
+    );
+    await fireEvent.press(screen.getByRole("radio", { name: "Watch" }));
+    await fireEvent.press(
+      screen.getByRole("button", { name: "Continue" })
+    );
+    await fireEvent.press(screen.getByText("I don't know yet"));
+    await fireEvent.press(
+      screen.getByRole("button", { name: "Continue" })
+    );
+    await fireEvent.press(
+      screen.getByRole("button", { name: "Skip for now" })
+    );
+    await fireEvent.press(
+      screen.getByRole("button", { name: "Save Passport" })
+    );
+
+    expect(screen.getByTestId("capture-step-2")).toBeTruthy();
+    expect(
+      screen.getByText(
+        `${copy.documentFailed}. ${copy.documentFailedRecovery}`
+      )
+    ).toBeTruthy();
+    expect(mockCreateAsset).toHaveBeenCalledTimes(1);
   });
 });

@@ -2,7 +2,8 @@ import type { Href } from "expo-router";
 
 import type {
   AuthGatewayMode,
-  AuthSessionDescriptor
+  AuthSessionDescriptor,
+  FirstCaptureIntent
 } from "./types";
 
 export const AUTH_ROUTES = {
@@ -120,4 +121,10 @@ export function authStepNumber(
     case "privacy":
       return { current: 3, total: 3 };
   }
+}
+
+export function firstRecordCaptureDestination(
+  intent: FirstCaptureIntent
+): "/capture" | "/capture?intent=place" {
+  return intent === "place" ? "/capture?intent=place" : "/capture";
 }

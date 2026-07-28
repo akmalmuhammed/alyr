@@ -36,6 +36,10 @@ interface PlaceDocumentCopy {
   readonly dateNotReported: string;
   readonly encrypted: string;
   readonly preview: string;
+  readonly onDevice: string;
+  readonly waitingToUpload: string;
+  readonly synced: string;
+  readonly originalUnavailable: string;
   readonly viewerUnavailable: string;
   readonly genericError: string;
   readonly integrityError: string;
@@ -55,6 +59,10 @@ export const PLACE_DOCUMENT_COPY = {
     dateNotReported: "Date not reported",
     encrypted: "Encrypted on this device",
     preview: "Session-only preview copy",
+    onDevice: "On device",
+    waitingToUpload: "Waiting to upload",
+    synced: "Synced",
+    originalUnavailable: "Original unavailable on this device",
     viewerUnavailable: "The system document viewer is not supported here.",
     genericError:
       "The Place document did not open. The saved record was preserved.",
@@ -74,6 +82,10 @@ export const PLACE_DOCUMENT_COPY = {
     dateNotReported: "التاريخ غير مسجّل",
     encrypted: "مشفّر على هذا الجهاز",
     preview: "نسخة معاينة لهذه الجلسة فقط",
+    onDevice: "على الجهاز",
+    waitingToUpload: "في انتظار الرفع",
+    synced: "متزامن",
+    originalUnavailable: "النسخة الأصلية غير متاحة على هذا الجهاز",
     viewerUnavailable: "عارض مستندات النظام غير متاح هنا.",
     genericError:
       "لم يُفتح مستند المكان. بقي السجل المحفوظ كما هو.",
@@ -206,6 +218,24 @@ export function placeDocumentCapturedDate(
     : formatLocalizedDate(value, language);
 }
 
+export function placeDocumentStorageState(
+  document: NativePlaceDocument,
+  language: LanguageCode
+): string {
+  const copy = PLACE_DOCUMENT_COPY[language];
+  if (!document.localUri) return copy.originalUnavailable;
+  if (!document.encryptedAtRest) return copy.preview;
+  switch (document.storageState) {
+    case "queued":
+      return `${copy.waitingToUpload} · ${copy.encrypted}`;
+    case "synced":
+      return `${copy.synced} · ${copy.encrypted}`;
+    case "on-device":
+    default:
+      return `${copy.onDevice} · ${copy.encrypted}`;
+  }
+}
+
 export function PlaceDocumentRow({
   contextLabel,
   document,
@@ -303,7 +333,7 @@ export function PlaceDocumentRow({
               rtl && styles.rtlText
             ]}
           >
-            {document.encryptedAtRest ? copy.encrypted : copy.preview}
+            {placeDocumentStorageState(document, language)}
           </Text>
         </View>
         {opening ? (

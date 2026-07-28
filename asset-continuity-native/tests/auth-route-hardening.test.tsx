@@ -2,6 +2,7 @@ import {
   fireEvent,
   render
 } from "@testing-library/react-native";
+import { Platform } from "react-native";
 
 import AuthLayout from "../app/(auth)/_layout";
 import AuthWelcomeScreen from "../app/(auth)/index";
@@ -21,6 +22,9 @@ const mockRouter = {
 let mockSegments: string[] = ["(auth)"];
 let mockAuthState: Record<string, unknown>;
 let mockWorkspaceState: Record<string, unknown>;
+let mockAuthStackOptions: Record<string, unknown> | null = null;
+let mockReduceMotion = false;
+let mockRtl = false;
 
 jest.mock("expo-router", () => {
   const React = jest.requireActual("react") as typeof import("react");
@@ -29,10 +33,15 @@ jest.mock("expo-router", () => {
     View
   } = jest.requireActual("react-native") as typeof import("react-native");
   const Stack = ({
-    children
+    children,
+    screenOptions
   }: {
     readonly children?: import("react").ReactNode;
-  }) => React.createElement(View, { testID: "auth-stack" }, children);
+    readonly screenOptions?: Record<string, unknown>;
+  }) => {
+    mockAuthStackOptions = screenOptions ?? null;
+    return React.createElement(View, { testID: "auth-stack" }, children);
+  };
   Stack.Screen = () => null;
   return {
     Redirect: ({ href }: { readonly href: string }) =>
@@ -49,6 +58,20 @@ jest.mock("expo-router", () => {
 
 jest.mock("@/auth/AuthFlowProvider", () => ({
   useAuthFlow: () => mockAuthState
+}));
+
+jest.mock("@/accessibility/useReduceMotionPreference", () => ({
+  useReduceMotionPreference: () => mockReduceMotion
+}));
+
+jest.mock("@/i18n/LocaleProvider", () => ({
+  useLocale: () => ({
+    language: mockRtl ? "ar" : "en",
+    locale: mockRtl ? "ar-QA" : "en-QA",
+    ready: true,
+    rtl: mockRtl,
+    setLanguage: jest.fn(async () => undefined)
+  })
 }));
 
 jest.mock("@/state/WorkspaceProvider", () => ({
@@ -103,6 +126,9 @@ describe("authenticated auth-route hardening", () => {
   beforeEach(() => {
     jest.clearAllMocks();
     mockSegments = ["(auth)"];
+    mockAuthStackOptions = null;
+    mockReduceMotion = false;
+    mockRtl = false;
     mockAuthState = authState();
     mockWorkspaceState = {
       clearError: jest.fn(),
@@ -178,6 +204,37 @@ describe("authenticated auth-route hardening", () => {
     expect(preview.getByTestId("auth-stack")).toBeTruthy();
     expect(preview.queryByTestId("auth-redirect")).toBeNull();
     await preview.unmount();
+  });
+
+  it("removes auth motion when the device requests it", async () => {
+    mockAuthState = authState({ session: null });
+    mockRtl = true;
+    mockReduceMotion = true;
+
+    const screen = await render(<AuthLayout />);
+
+    expect(mockAuthStackOptions).toMatchObject({
+      animation: "none",
+      gestureDirection: "horizontal",
+      gestureEnabled: true
+    });
+    await screen.unmount();
+  });
+
+  it("uses the native leading-edge transition for Arabic", async () => {
+    mockAuthState = authState({ session: null });
+    mockRtl = true;
+
+    const screen = await render(<AuthLayout />);
+
+    expect(mockAuthStackOptions).toMatchObject({
+      animation:
+        Platform.OS === "ios"
+          ? "ios_from_left"
+          : "slide_from_left",
+      gestureDirection: "horizontal"
+    });
+    await screen.unmount();
   });
 
   it("maps only public entry segments and fails closed on partial tuples", () => {

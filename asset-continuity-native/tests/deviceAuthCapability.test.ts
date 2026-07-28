@@ -20,7 +20,10 @@ jest.mock("expo-local-authentication", () => ({
 
 import * as LocalAuthentication from "expo-local-authentication";
 
-import { deviceAuthCopy } from "@/deviceAuth/copy";
+import {
+  deviceAuthCopy,
+  onboardingDevicePreflightCopy
+} from "@/deviceAuth/copy";
 import {
   assessExpoDeviceAuth,
   expoDeviceAuthPort
@@ -87,6 +90,12 @@ describe("Expo device-auth capability adapter", () => {
     expect(deviceAuthCopy("ar", capability).unlockBody).not.toContain(
       "Face ID"
     );
+    expect(
+      onboardingDevicePreflightCopy("en", capability).readyTitle
+    ).toBe("Device passcode is ready");
+    expect(
+      onboardingDevicePreflightCopy("ar", capability).readyTitle
+    ).toBe("رمز دخول الجهاز جاهز");
   });
 
   it("fails closed when no device credential exists or capability checks fail", async () => {
@@ -124,5 +133,20 @@ describe("Expo device-auth capability adapter", () => {
         biometricsSecurityLevel: "strong"
       })
     );
+  });
+
+  it("discloses preview limits and preserves native Arabic copy", () => {
+    const english = onboardingDevicePreflightCopy("en", null);
+    const arabic = onboardingDevicePreflightCopy("ar", null);
+
+    expect(english.bypassedBody).toContain("Expo Go");
+    expect(english.readyBody).toContain(
+      "exact item or Place you selected"
+    );
+    expect(arabic.bypassedBody).toContain("Expo Go");
+    expect(arabic.verifyPlaceAction).toBe(
+      "تحقق وأضف أول مكان"
+    );
+    expect(arabic.unavailableBody).toContain("الإعدادات");
   });
 });

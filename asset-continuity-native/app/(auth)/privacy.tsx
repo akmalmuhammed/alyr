@@ -1,13 +1,18 @@
 import { Redirect, useRouter } from "expo-router";
 import {
-  ArrowRight,
   Buildings,
   Cube,
+  LockKey,
   MapPin,
   ShieldCheck,
   UsersThree
 } from "phosphor-react-native";
-import { useState } from "react";
+import {
+  useCallback,
+  useEffect,
+  useRef,
+  useState
+} from "react";
 import { StyleSheet, Text, View } from "react-native";
 
 import { useAuthFlow } from "@/auth/AuthFlowProvider";
@@ -16,10 +21,16 @@ import {
   AuthHeading,
   AuthNotice,
   AuthScaffold,
+  AuthStatusRow,
   SelectionRow
 } from "@/auth/components";
 import { AUTH_ROUTES, authStepNumber } from "@/auth/routes";
 import { ErrorBanner } from "@/components/ui";
+import {
+  deviceAuthCopy,
+  onboardingDevicePreflightCopy,
+  useDeviceAuth
+} from "@/deviceAuth";
 import {
   localizeAuthFailure,
   localizedWorkspaceError,
@@ -47,67 +58,225 @@ export default function PrivacyAndCaptureScreen() {
     clearError: clearWorkspaceError,
     error: workspaceError,
     renameHousehold,
+    retryBootstrap,
     saving,
     startWorkspace,
     storageReady,
     workspace
   } = useWorkspace();
+  const {
+    authorizeOnboarding,
+    checkOnboardingProtection,
+    clearOnboardingAuthorization,
+    onboardingHandoffRestoreState,
+    onboardingPreflight,
+    pendingFirstRecordIntent,
+    retryOnboardingHandoffRestore
+  } = useDeviceAuth();
   const { copy, language } = useCoreJourneyCopy();
   const [submitting, setSubmitting] = useState(false);
+  const commitInFlightRef = useRef(false);
+  const protectionCopy = onboardingDevicePreflightCopy(
+    language,
+    onboardingPreflight.capability
+  );
+  const handoffCopy = deviceAuthCopy(
+    language,
+    onboardingPreflight.capability
+  );
+  const handoffRestoreLoading =
+    onboardingHandoffRestoreState === "loading";
+  const handoffRestoreFailed =
+    onboardingHandoffRestoreState === "error";
+  const protectionBusy =
+    onboardingPreflight.phase === "checking" ||
+    onboardingPreflight.phase === "authorizing";
+
+  useEffect(() => {
+    if (
+      session?.onboarding !== "complete" &&
+      onboardingPreflight.phase === "idle"
+    ) {
+      void checkOnboardingProtection();
+    }
+  }, [
+    checkOnboardingProtection,
+    onboardingPreflight.phase,
+    session?.onboarding
+  ]);
+
+  useEffect(() => {
+    if (
+      session?.onboarding !== "complete" &&
+      pendingFirstRecordIntent &&
+      firstCaptureIntent !== pendingFirstRecordIntent
+    ) {
+      setFirstCaptureIntent(pendingFirstRecordIntent);
+    }
+  }, [
+    firstCaptureIntent,
+    pendingFirstRecordIntent,
+    session?.onboarding,
+    setFirstCaptureIntent
+  ]);
+
+  const commitAuthorizedOnboarding = useCallback(
+    async (intent: "item" | "place") => {
+      if (
+        commitInFlightRef.current ||
+        session?.onboarding === "complete" ||
+        !storageReady
+      ) {
+        return;
+      }
+      const next = createCompletion();
+      if (!next || next.firstCaptureIntent !== intent) return;
+      commitInFlightRef.current = true;
+      setSubmitting(true);
+      try {
+        if (!workspace || workspace.mode === "sample") {
+          await startWorkspace("personal");
+        }
+        await renameHousehold(next.householdName);
+        await completeOnboarding();
+        /*
+         * RootNavigator owns the final handoff. It waits for the durable
+         * onboarding session, local vault, and device release, then resumes
+         * the exact intent persisted before these mutations.
+         */
+      } catch {
+        // WorkspaceProvider supplies a recovery-oriented message below.
+      } finally {
+        commitInFlightRef.current = false;
+        setSubmitting(false);
+      }
+    },
+    [
+      completeOnboarding,
+      createCompletion,
+      renameHousehold,
+      session?.onboarding,
+      startWorkspace,
+      storageReady,
+      workspace
+    ]
+  );
+
+  useEffect(() => {
+    if (
+      pendingFirstRecordIntent &&
+      storageReady &&
+      (onboardingPreflight.phase === "authorized" ||
+        onboardingPreflight.phase === "bypassed")
+    ) {
+      void commitAuthorizedOnboarding(
+        pendingFirstRecordIntent
+      );
+    }
+  }, [
+    commitAuthorizedOnboarding,
+    onboardingPreflight.phase,
+    pendingFirstRecordIntent,
+    storageReady
+  ]);
+
+  const finish = async () => {
+    if (handoffRestoreLoading || submitting) return;
+    if (handoffRestoreFailed) {
+      retryOnboardingHandoffRestore();
+      return;
+    }
+    const next = createCompletion();
+    if (!next) return;
+    setSubmitting(true);
+    try {
+      const authorization = await authorizeOnboarding(
+        next.firstCaptureIntent
+      );
+      if (!authorization) return;
+      if (workspaceError && !storageReady) {
+        await retryBootstrap();
+      } else if (storageReady) {
+        await commitAuthorizedOnboarding(
+          authorization.intent
+        );
+      }
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  const waitingForAuthorizedVault =
+    Boolean(pendingFirstRecordIntent) &&
+    (onboardingPreflight.phase === "authorized" ||
+      onboardingPreflight.phase === "bypassed") &&
+    !storageReady;
+  const onboardingCommitLocked =
+    submitting ||
+    commitInFlightRef.current ||
+    (Boolean(pendingFirstRecordIntent) &&
+      (onboardingPreflight.phase === "authorized" ||
+        onboardingPreflight.phase === "bypassed"));
+  const onboardingChoiceLocked =
+    onboardingCommitLocked ||
+    onboardingHandoffRestoreState !== "ready";
 
   if (!session) return <Redirect href={AUTH_ROUTES.signIn} />;
   if (!householdName.trim() || !activeHouseholdId) {
     return <Redirect href={AUTH_ROUTES.household} />;
   }
 
-  const finish = async () => {
-    const next = createCompletion();
-    if (!next || submitting) return;
-    setSubmitting(true);
-    try {
-      if (!workspace || workspace.mode === "sample") {
-        await startWorkspace("personal");
-      }
-      await renameHousehold(next.householdName);
-      const durable = await completeOnboarding();
-      if (!durable) return;
-      router.replace(
-        next.firstCaptureIntent === "place"
-          ? "/capture?intent=place"
-          : "/capture"
-      );
-    } catch {
-      // WorkspaceProvider supplies a recovery-oriented message below.
-    } finally {
-      setSubmitting(false);
-    }
-  };
-
   return (
     <AuthScaffold
+      backDisabled={onboardingCommitLocked}
       footer={
         <AuthActions
           primary={{
             label:
-              firstCaptureIntent === "place"
-                ? copy.privacy.addFirstPlace
-                : copy.privacy.addFirstItem,
-            icon: ArrowRight,
-            loading: saving || submitting || authBusy,
-            disabled:
-              !firstCaptureIntent ||
-              !storageReady ||
+              handoffRestoreLoading
+                ? protectionCopy.preparingAction
+                : handoffRestoreFailed
+                  ? handoffCopy.retryRestoreAction
+              : protectionBusy
+                ? protectionCopy.checkingAction
+                : waitingForAuthorizedVault
+                  ? workspaceError
+                    ? protectionCopy.retryStorageAction
+                    : protectionCopy.preparingAction
+                : onboardingPreflight.phase === "unavailable"
+                  ? protectionCopy.retryAction
+                  : onboardingPreflight.phase === "bypassed"
+                    ? firstCaptureIntent === "place"
+                      ? copy.privacy.addFirstPlace
+                      : copy.privacy.addFirstItem
+                    : firstCaptureIntent === "place"
+                      ? protectionCopy.verifyPlaceAction
+                      : protectionCopy.verifyItemAction,
+            icon: LockKey,
+            loading:
+              saving ||
+              submitting ||
               authBusy ||
-              submitting,
+              protectionBusy ||
+              handoffRestoreLoading,
+            disabled:
+              (onboardingHandoffRestoreState === "ready" &&
+                !firstCaptureIntent) ||
+              handoffRestoreLoading ||
+              authBusy ||
+              submitting ||
+              protectionBusy ||
+              (waitingForAuthorizedVault && !workspaceError),
             onPress: () => void finish()
           }}
         />
       }
-      onBack={() =>
+      onBack={() => {
+        if (onboardingCommitLocked) return;
         router.canGoBack()
           ? router.back()
-          : router.replace(AUTH_ROUTES.household)
-      }
+          : router.replace(AUTH_ROUTES.household);
+      }}
       progress={authStepNumber("privacy")}
       testID="auth-privacy-screen"
     >
@@ -124,18 +293,76 @@ export default function PrivacyAndCaptureScreen() {
           <SelectionRow
             active={firstCaptureIntent === "item"}
             description={copy.privacy.itemDescription}
+            disabled={onboardingChoiceLocked}
             icon={Cube}
             label={copy.privacy.itemLabel}
-            onPress={() => setFirstCaptureIntent("item")}
+            onPress={() => {
+              if (onboardingChoiceLocked) return;
+              if (firstCaptureIntent !== "item") {
+                clearOnboardingAuthorization();
+              }
+              setFirstCaptureIntent("item");
+            }}
           />
           <SelectionRow
             active={firstCaptureIntent === "place"}
             description={copy.privacy.placeDescription}
+            disabled={onboardingChoiceLocked}
             icon={Buildings}
             label={copy.privacy.placeLabel}
-            onPress={() => setFirstCaptureIntent("place")}
+            onPress={() => {
+              if (onboardingChoiceLocked) return;
+              if (firstCaptureIntent !== "place") {
+                clearOnboardingAuthorization();
+              }
+              setFirstCaptureIntent("place");
+            }}
           />
         </View>
+        <View testID="onboarding-device-preflight">
+          <AuthStatusRow
+            detail={
+              handoffRestoreLoading
+                ? handoffCopy.restoreCheckingBody
+                : handoffRestoreFailed
+                  ? handoffCopy.restoreFailedBody
+              : onboardingPreflight.phase === "unavailable"
+                ? protectionCopy.unavailableBody
+                : onboardingPreflight.phase === "bypassed"
+                  ? protectionCopy.bypassedBody
+                  : onboardingPreflight.phase === "authorized"
+                    ? protectionCopy.authorizedBody
+                    : onboardingPreflight.phase === "ready" ||
+                        onboardingPreflight.phase === "authorizing"
+                      ? protectionCopy.readyBody
+                      : protectionCopy.checkingBody
+            }
+            eyebrow={protectionCopy.eyebrow}
+            icon={LockKey}
+            live
+            value={
+              handoffRestoreLoading
+                ? handoffCopy.restoreCheckingTitle
+                : handoffRestoreFailed
+                  ? handoffCopy.restoreFailedTitle
+              : onboardingPreflight.phase === "unavailable"
+                ? protectionCopy.unavailableTitle
+                : onboardingPreflight.phase === "bypassed"
+                  ? protectionCopy.bypassedTitle
+                  : onboardingPreflight.phase === "authorized"
+                    ? protectionCopy.authorizedTitle
+                    : onboardingPreflight.phase === "ready" ||
+                        onboardingPreflight.phase === "authorizing"
+                      ? protectionCopy.readyTitle
+                      : protectionCopy.checkingTitle
+            }
+          />
+        </View>
+        {onboardingPreflight.notice ? (
+          <AuthNotice live tone="attention">
+            {protectionCopy.notices[onboardingPreflight.notice]}
+          </AuthNotice>
+        ) : null}
         <View style={styles.principles}>
           <Principle
             icon={ShieldCheck}

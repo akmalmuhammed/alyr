@@ -9,6 +9,7 @@ import {
   Clock,
   DownloadSimple,
   FileText,
+  GearSix,
   Lifebuoy,
   LockKey,
   SignOut,
@@ -76,7 +77,11 @@ export function isCompactVaultActionWidth(width: number): boolean {
   return width <= 360;
 }
 
-export default function VaultScreen() {
+export function VaultScreen({
+  surface = "vault"
+}: {
+  readonly surface?: "vault" | "settings";
+} = {}) {
   const router = useRouter();
   const { width } = useWindowDimensions();
   const { busy: authBusy, mode, session, signOut } = useAuthFlow();
@@ -194,12 +199,24 @@ export default function VaultScreen() {
   };
 
   return (
-    <AppScreen testID="vault-screen">
+    <AppScreen
+      testID={surface === "vault" ? "vault-screen" : "settings-screen"}
+    >
       <View style={styles.heading}>
-        <ScreenTitle>{copy.vault.title}</ScreenTitle>
-        <BodyText muted>{copy.vault.intro}</BodyText>
+        <ScreenTitle>
+          {surface === "vault"
+            ? copy.vault.title
+            : copy.vault.settingsTitle}
+        </ScreenTitle>
+        <BodyText muted>
+          {surface === "vault"
+            ? copy.vault.intro
+            : copy.vault.settingsIntro}
+        </BodyText>
       </View>
 
+      {surface === "vault" ? (
+        <>
       <SyncTruth
         language={language}
         onPress={
@@ -451,6 +468,20 @@ export default function VaultScreen() {
       </Section>
 
       <Section>
+        <StatusRow
+          compact={compactActions}
+          description={copy.vault.settingsMeta}
+          icon={GearSix}
+          label={copy.vault.settingsTitle}
+          onPress={() => router.push("/settings")}
+          status={copy.vault.settingsOpen}
+        />
+      </Section>
+        </>
+      ) : (
+        <>
+
+      <Section>
         <Text
           style={[
             styles.sectionTitle,
@@ -458,47 +489,31 @@ export default function VaultScreen() {
             rtl && styles.rtlText
           ]}
         >
-          {language === "ar" ? "الخصوصية والدعم" : "Privacy and support"}
+          {copy.vault.privacySupport}
         </Text>
         <StatusRow
           compact={compactActions}
-          description={
-            language === "ar"
-              ? "ما الذي يحفظه ALYR وكيف تُدار السجلات."
-              : "What ALYR stores and how household records are handled."
-          }
+          description={copy.vault.privacyNoticeDescription}
           icon={ShieldCheck}
-          label={
-            language === "ar" ? "إشعار الخصوصية" : "Privacy notice"
-          }
+          label={copy.vault.privacyNotice}
           onPress={() => router.push("/privacy-policy")}
           status="v0.1"
         />
         <StatusRow
           compact={compactActions}
-          description={
-            language === "ar"
-              ? "الغرض والمسؤوليات وحدود النسخة التجريبية."
-              : "Purpose, responsibilities and pilot boundaries."
-          }
+          description={copy.vault.pilotTermsDescription}
           icon={FileText}
-          label={
-            language === "ar" ? "شروط النسخة التجريبية" : "Pilot terms"
-          }
+          label={copy.vault.pilotTerms}
           onPress={() => router.push("/terms")}
           status="v0.1"
         />
         <StatusRow
           compact={compactActions}
-          description={
-            language === "ar"
-              ? "الإبلاغ عن مشكلة من دون كشف بيانات المنزل."
-              : "Report an issue without exposing household data."
-          }
+          description={copy.vault.supportDescription}
           icon={Lifebuoy}
-          label={language === "ar" ? "الدعم" : "Support"}
+          label={copy.vault.support}
           onPress={() => router.push("/support")}
-          status={language === "ar" ? "فتح" : "Open"}
+          status={copy.vault.settingsOpen}
         />
       </Section>
 
@@ -807,8 +822,14 @@ export default function VaultScreen() {
           onPress={() => router.push(sampleActivationRoute)}
         />
       ) : null}
+        </>
+      )}
     </AppScreen>
   );
+}
+
+export default function VaultRoute() {
+  return <VaultScreen />;
 }
 
 function reviewReminderStatusLabel(

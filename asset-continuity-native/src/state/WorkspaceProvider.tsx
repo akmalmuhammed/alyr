@@ -25,6 +25,7 @@ import type {
   SyncTransport,
   ValueAssertionPayload
 } from "@alyr/contracts";
+import { isAssetMutationValidationError } from "@alyr/domain";
 
 import {
   hasHouseholdCapability,
@@ -100,6 +101,7 @@ import type {
   WorkspaceMode
 } from "@/domain/model";
 import { isNativeWorkspace } from "@/domain/model";
+import { validateNewAssetInput } from "@/domain/assetMutationBoundary";
 import {
   confirmNoLiabilities as confirmNoLiabilitiesInWorkspace,
   createLiability as createLiabilityInWorkspace,
@@ -460,7 +462,16 @@ function createAssetOperations(
   workspace: NativeWorkspace,
   asset: NativeAsset,
   evidence: readonly NativeEvidence[],
-  occurredAt: string
+  occurredAt: string,
+  identity: {
+    readonly operationId: () => string;
+    readonly idempotencyKey: () => string;
+    readonly locationRevisionId: () => string;
+  } = {
+    operationId: () => id("operation"),
+    idempotencyKey: () => id("idempotency"),
+    locationRevisionId: () => id("location-revision")
+  }
 ): SyncOperation[] {
   const operations: SyncOperation[] = [
     createLocalOperation(workspace, {
@@ -473,8 +484,8 @@ function createAssetOperations(
         importance: "ordinary",
         profile: {}
       },
-      operationId: id("operation"),
-      idempotencyKey: id("idempotency"),
+      operationId: identity.operationId(),
+      idempotencyKey: identity.idempotencyKey(),
       observedVersion: 0,
       occurredAt
     }),
@@ -482,15 +493,15 @@ function createAssetOperations(
       type: "asset.move",
       aggregateId: asset.id,
       payload: {
-        assignmentId: id("location-revision"),
+        assignmentId: identity.locationRevisionId(),
         placeId: asset.placeId,
         spaceId: asset.roomId,
         status: asset.locationStatus,
         locationDetail: asset.locatorText,
         source: "user"
       },
-      operationId: id("operation"),
-      idempotencyKey: id("idempotency"),
+      operationId: identity.operationId(),
+      idempotencyKey: identity.idempotencyKey(),
       observedVersion: 0,
       occurredAt
     })
@@ -508,8 +519,8 @@ function createAssetOperations(
           title: item.fileName,
           storageState: "on-device"
         },
-        operationId: id("operation"),
-        idempotencyKey: id("idempotency"),
+        operationId: identity.operationId(),
+        idempotencyKey: identity.idempotencyKey(),
         observedVersion: 0,
         occurredAt
       })
@@ -532,8 +543,8 @@ function createAssetOperations(
             byteSize: item.byteSize,
             checksumSha256: item.checksumSha256
           },
-          operationId: id("operation"),
-          idempotencyKey: id("idempotency"),
+          operationId: identity.operationId(),
+          idempotencyKey: identity.idempotencyKey(),
           observedVersion: 0,
           occurredAt,
           prerequisites: [
@@ -548,6 +559,60 @@ function createAssetOperations(
   }
 
   return operations;
+}
+
+export async function prepareNewAssetCreation(
+  workspace: NativeWorkspace,
+  input: NewAssetInput,
+  attachmentStore: AttachmentStore,
+  context: MutationContext,
+  operationIdentity?: {
+    readonly operationId: () => string;
+    readonly idempotencyKey: () => string;
+    readonly locationRevisionId: () => string;
+  }
+): Promise<{
+  readonly result: ReturnType<typeof addAsset>;
+  readonly operations: readonly SyncOperation[];
+}> {
+  // The preflight runs before attachment ingestion. Invalid restored or
+  // programmatic drafts therefore produce no protected file, workspace
+  // revision, activity entry, or outbox operation.
+  const validatedInput = validateNewAssetInput(workspace, input);
+  const [protectedPhoto, protectedEvidence] = await Promise.all([
+    validatedInput.photo
+      ? attachmentStore.ingest(validatedInput.photo)
+      : Promise.resolve(null),
+    validatedInput.evidence
+      ? attachmentStore.ingest(validatedInput.evidence)
+      : Promise.resolve(null)
+  ]);
+  const result = addAsset(
+    workspace,
+    {
+      ...validatedInput,
+      photo: protectedPhoto,
+      evidence: protectedEvidence
+    },
+    context
+  );
+  const newEvidence = result.workspace.evidence.filter(
+    (item) => item.assetId === result.asset.id
+  );
+
+  return {
+    result,
+    operations:
+      workspace.mode === "sample"
+        ? []
+        : createAssetOperations(
+            workspace,
+            result.asset,
+            newEvidence,
+            result.asset.createdAt,
+            operationIdentity
+          )
+  };
 }
 
 export function createPlaceDocumentOperations(
@@ -2161,6 +2226,9 @@ export function WorkspaceProvider({
       try {
         return await run;
       } catch (caught) {
+        if (isAssetMutationValidationError(caught)) {
+          throw caught;
+        }
         setError(
           caught instanceof Error
             ? caught.message
@@ -2541,38 +2609,17 @@ export function WorkspaceProvider({
         if (!current) {
           throw new Error("Choose a workspace before adding an asset.");
         }
-        const [protectedPhoto, protectedEvidence] = await Promise.all([
-          input.photo
-            ? requireOpenAttachmentStore().ingest(input.photo)
-            : Promise.resolve(null),
-          input.evidence
-            ? requireOpenAttachmentStore().ingest(input.evidence)
-            : Promise.resolve(null)
-        ]);
-        const result = addAsset(
+        const prepared = await prepareNewAssetCreation(
           current,
-          {
-            ...input,
-            photo: protectedPhoto,
-            evidence: protectedEvidence
-          },
+          input,
+          requireOpenAttachmentStore(),
           mutationContext
         );
-        const occurredAt = now();
-        const newEvidence = result.workspace.evidence.filter(
-          (item) => item.assetId === result.asset.id
+        await commitWorkspace(
+          prepared.result.workspace,
+          prepared.operations
         );
-        const operations =
-          current.mode === "sample"
-            ? []
-            : createAssetOperations(
-                current,
-                result.asset,
-                newEvidence,
-                occurredAt
-              );
-        await commitWorkspace(result.workspace, operations);
-        return result.asset;
+        return prepared.result.asset;
       }),
     [
       commitWorkspace,

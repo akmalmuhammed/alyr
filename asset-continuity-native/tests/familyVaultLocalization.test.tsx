@@ -7,7 +7,8 @@ import type { PropsWithChildren } from "react";
 import { Alert, StyleSheet } from "react-native";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 
-import VaultScreen, {
+import {
+  VaultScreen,
   isCompactVaultActionWidth
 } from "../app/(tabs)/vault";
 import FamilyScreen from "../app/(tabs)/family";
@@ -268,7 +269,7 @@ describe("Family and Vault localization", () => {
     expect(mixedNameStyle.textAlign).toBe("right");
   });
 
-  it("renders the complete Vault surface in Arabic, including status and account actions", async () => {
+  it("keeps Vault focused on protection, proof and recovery in Arabic", async () => {
     const screen = await render(<VaultScreen />, {
       wrapper: localeWrapper("ar")
     });
@@ -278,13 +279,40 @@ describe("Family and Vault localization", () => {
     expect(screen.getByText(copy.backupRecovery)).toBeTruthy();
     expect(screen.getByText(copy.recentProof)).toBeTruthy();
     expect(screen.getByText(copy.dataPortability)).toBeTruthy();
-    expect(screen.getByText(copy.householdAccess)).toBeTruthy();
-    expect(screen.getByText(copy.account)).toBeTruthy();
-    expect(screen.getByText(copy.signOutSwitch)).toBeTruthy();
+    expect(screen.getByText(copy.settingsTitle)).toBeTruthy();
     expect(screen.getAllByText(copy.signedBuildNeeded)).toHaveLength(2);
+    expect(screen.queryByText(copy.householdAccess)).toBeNull();
+    expect(screen.queryByText(copy.account)).toBeNull();
+    expect(screen.queryByText(copy.signOutSwitch)).toBeNull();
+    expect(screen.queryByText(copy.language)).toBeNull();
     expect(
       screen.queryByText(CORE_JOURNEY_COPY.en.vault.backupRecovery)
     ).toBeNull();
+
+    await fireEvent.press(
+      screen.getByRole("button", {
+        name: new RegExp(copy.settingsTitle, "u")
+      })
+    );
+    expect(mockRouter.push).toHaveBeenCalledWith("/settings");
+  });
+
+  it("keeps account, household, language and diagnostics on Settings in Arabic", async () => {
+    const screen = await render(<VaultScreen surface="settings" />, {
+      wrapper: localeWrapper("ar")
+    });
+    const copy = CORE_JOURNEY_COPY.ar.vault;
+
+    expect(screen.getByText(copy.settingsTitle)).toBeTruthy();
+    expect(screen.getByText(copy.settingsIntro)).toBeTruthy();
+    expect(screen.getByText(copy.privacySupport)).toBeTruthy();
+    expect(screen.getByText(copy.householdAccess)).toBeTruthy();
+    expect(screen.getByText(copy.account)).toBeTruthy();
+    expect(screen.getByText(copy.signOutSwitch)).toBeTruthy();
+    expect(screen.getByText(copy.language)).toBeTruthy();
+    expect(screen.queryByText(copy.backupRecovery)).toBeNull();
+    expect(screen.queryByText(copy.recentProof)).toBeNull();
+    expect(screen.queryByText(copy.dataPortability)).toBeNull();
 
     const emailStyle = StyleSheet.flatten(
       screen.getByText("leila+home@example.com").props.style

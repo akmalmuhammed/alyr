@@ -17,7 +17,8 @@ import {
   openPlaceDocument,
   placeDocumentCapturedDate,
   placeDocumentErrorMessage,
-  placeDocumentFileSize
+  placeDocumentFileSize,
+  placeDocumentStorageState
 } from "@/components/PlaceDocumentRow";
 import type {
   NativePlaceDocument,
@@ -156,6 +157,12 @@ describe("localized Place detail", () => {
     expect(JSON.stringify(PLACE_DOCUMENT_COPY.ar)).toMatch(
       /[\u0600-\u06ff]/u
     );
+    expect(PLACE_DETAIL_COPY.en.documentTruth).not.toContain(
+      "Cloud sync for Place documents is not active"
+    );
+    expect(PLACE_DETAIL_COPY.en.documentTruth).toContain(
+      "waiting to upload"
+    );
   });
 
   it("formats counts and dates for the selected locale and isolates coordinates", () => {
@@ -167,6 +174,41 @@ describe("localized Place detail", () => {
     expect(placeDocumentCapturedDate("bad-date", "ar")).toBe(
       PLACE_DOCUMENT_COPY.ar.dateNotReported
     );
+    const protectedDocument = {
+      ...mockDocument,
+      encryptedAtRest: true,
+      checksumSha256: "a".repeat(64)
+    } satisfies NativePlaceDocument;
+    expect(
+      placeDocumentStorageState(
+        { ...protectedDocument, storageState: "on-device" },
+        "en"
+      )
+    ).toBe(
+      `${PLACE_DOCUMENT_COPY.en.onDevice} · ${PLACE_DOCUMENT_COPY.en.encrypted}`
+    );
+    expect(
+      placeDocumentStorageState(
+        { ...protectedDocument, storageState: "queued" },
+        "en"
+      )
+    ).toBe(
+      `${PLACE_DOCUMENT_COPY.en.waitingToUpload} · ${PLACE_DOCUMENT_COPY.en.encrypted}`
+    );
+    expect(
+      placeDocumentStorageState(
+        { ...protectedDocument, storageState: "synced" },
+        "en"
+      )
+    ).toBe(
+      `${PLACE_DOCUMENT_COPY.en.synced} · ${PLACE_DOCUMENT_COPY.en.encrypted}`
+    );
+    expect(
+      placeDocumentStorageState(
+        { ...protectedDocument, localUri: null, storageState: "synced" },
+        "en"
+      )
+    ).toBe(PLACE_DOCUMENT_COPY.en.originalUnavailable);
     expect(placeCoordinateLabel(25.321234, 51.531234)).toBe(
       "\u206625.321234, 51.531234\u2069"
     );
