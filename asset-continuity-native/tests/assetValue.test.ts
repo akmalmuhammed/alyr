@@ -208,4 +208,40 @@ describe("recorded asset value domain", () => {
       )
     ).toThrow("current household");
   });
+
+  it("does not create a financial assertion for an important document", () => {
+    const personal = createWorkspace("personal");
+    const basis = createWorkspace("sample").assets[0]!;
+    const workspace: NativeWorkspace = {
+      ...personal,
+      assets: [
+        {
+          ...basis,
+          id: "asset-important-document",
+          householdId: personal.household.id,
+          name: "Family certificate",
+          categoryId: "document.important",
+          categoryLabel: "Important document",
+          locationStatus: "known",
+          placeId: null,
+          roomId: null,
+          locatorText: null
+        }
+      ]
+    };
+
+    expect(() =>
+      recordPortfolioValue(
+        workspace,
+        {
+          assetId: "asset-important-document",
+          amountMinor: 100,
+          currency: "QAR",
+          asOf: "2026-07-27"
+        },
+        context()
+      )
+    ).toThrow("does not use a portfolio value");
+    expect(getPortfolioValueRecords(workspace)).toEqual([]);
+  });
 });

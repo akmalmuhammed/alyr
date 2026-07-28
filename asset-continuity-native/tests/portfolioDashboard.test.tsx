@@ -3,6 +3,7 @@ import {
   render,
   within
 } from "@testing-library/react-native";
+import { StyleSheet } from "react-native";
 
 import {
   PortfolioDashboard,
@@ -13,6 +14,10 @@ import {
   type PortfolioReviewIntent
 } from "@/components/PortfolioDashboard";
 import { getPortfolioValueRecords } from "@/domain/portfolio";
+import type {
+  NativeAsset,
+  NativeWorkspace
+} from "@/domain/model";
 import { createWorkspace } from "@/domain/sample";
 import { itemCount } from "@/i18n/coreJourneyCopy";
 
@@ -30,6 +35,33 @@ function renderedTestIds(node: unknown): string[] {
       : []),
     ...(element.children?.flatMap(renderedTestIds) ?? [])
   ];
+}
+
+function documentOnlyWorkspace(
+  language: NativeWorkspace["language"] = "en"
+): NativeWorkspace {
+  const personal = createWorkspace("personal");
+  const basis = createWorkspace("sample").assets[0]!;
+  const documentAsset: NativeAsset = {
+    ...basis,
+    id: "asset-important-document",
+    householdId: personal.household.id,
+    name: "Family certificate",
+    categoryId: "document.important",
+    categoryLabel: "Important document",
+    visualKind: "digital",
+    locationStatus: "known",
+    placeId: null,
+    roomId: null,
+    locatorText: null
+  };
+
+  return {
+    ...personal,
+    language,
+    assets: [documentAsset],
+    portfolioValueRecords: []
+  };
 }
 
 describe("PortfolioDashboard", () => {
@@ -68,30 +100,57 @@ describe("PortfolioDashboard", () => {
     ).toBeTruthy();
     expect(screen.getByText("West Bay Home mortgage")).toBeTruthy();
     expect(screen.getByText("Travel card balance")).toBeTruthy();
+    await fireEvent.press(screen.getByTestId("portfolio-insights-toggle"));
     expect(screen.getAllByText("100%").length).toBeGreaterThan(0);
     expect(screen.getAllByText("West Bay Home").length).toBeGreaterThan(1);
   });
 
-  it("keeps financial composition ahead of continuity diagnostics", async () => {
+  it("keeps secondary continuity diagnostics behind one progressive disclosure", async () => {
     const screen = await render(
       <PortfolioDashboard workspace={createWorkspace("sample")} />
     );
-    const order = renderedTestIds(screen.toJSON()).filter((testID) =>
+    const initialOrder = renderedTestIds(screen.toJSON()).filter((testID) =>
       [
         "portfolio-net-position",
         "portfolio-review-next-section",
         "portfolio-recorded-values-section",
         "portfolio-liabilities-section",
+        "portfolio-insights-toggle",
         "portfolio-location-distribution-section",
         "portfolio-register-health-section"
       ].includes(testID)
     );
 
-    expect(order).toEqual([
+    expect(initialOrder).toEqual([
       "portfolio-net-position",
       "portfolio-review-next-section",
       "portfolio-recorded-values-section",
       "portfolio-liabilities-section",
+      "portfolio-insights-toggle"
+    ]);
+    expect(
+      screen.getByTestId("portfolio-insights-toggle").props
+        .accessibilityState
+    ).toMatchObject({ expanded: false });
+
+    await fireEvent.press(screen.getByTestId("portfolio-insights-toggle"));
+    const expandedOrder = renderedTestIds(screen.toJSON()).filter((testID) =>
+      [
+        "portfolio-net-position",
+        "portfolio-review-next-section",
+        "portfolio-recorded-values-section",
+        "portfolio-liabilities-section",
+        "portfolio-insights-toggle",
+        "portfolio-location-distribution-section",
+        "portfolio-register-health-section"
+      ].includes(testID)
+    );
+    expect(expandedOrder).toEqual([
+      "portfolio-net-position",
+      "portfolio-review-next-section",
+      "portfolio-recorded-values-section",
+      "portfolio-liabilities-section",
+      "portfolio-insights-toggle",
       "portfolio-location-distribution-section",
       "portfolio-register-health-section"
     ]);
@@ -311,7 +370,7 @@ describe("PortfolioDashboard", () => {
     ).toBeTruthy();
   });
 
-  it("shows an honest not-started state with both first actions available", async () => {
+  it("replaces zero-subject analysis with one first-record decision", async () => {
     const addAsset = jest.fn();
     const addLiability = jest.fn();
     const screen = await render(
@@ -322,18 +381,35 @@ describe("PortfolioDashboard", () => {
       />
     );
 
-    expect(screen.getByText("Review to calculate")).toBeTruthy();
+    expect(screen.getByTestId("portfolio-start-decision")).toBeTruthy();
+    expect(
+      screen.getByRole("header", {
+        name: "Choose your first financial record"
+      })
+    ).toBeTruthy();
     expect(
       screen.getByText(
-        "Start with one asset or liability to build this view."
+        "Choose your first financial record"
       )
     ).toBeTruthy();
     expect(
-      screen.getByText("No active liabilities recorded")
+      screen.getByText(
+        "Add an item or property you want to value, or record a liability. ALYR never estimates an amount for you."
+      )
     ).toBeTruthy();
+    expect(screen.queryByTestId("portfolio-net-position")).toBeNull();
+    expect(
+      screen.queryByTestId("portfolio-review-next-section")
+    ).toBeNull();
+    expect(
+      screen.queryByTestId("portfolio-recorded-values-section")
+    ).toBeNull();
+    expect(
+      screen.queryByTestId("portfolio-liabilities-section")
+    ).toBeNull();
 
-    await fireEvent.press(screen.getByTestId("liability-add"));
-    await fireEvent.press(screen.getByText("Add your first item"));
+    await fireEvent.press(screen.getByTestId("portfolio-start-liability"));
+    await fireEvent.press(screen.getByTestId("portfolio-start-asset"));
     expect(addLiability).toHaveBeenCalledTimes(1);
     expect(addAsset).toHaveBeenCalledTimes(1);
   });
@@ -361,6 +437,7 @@ describe("PortfolioDashboard", () => {
         "GMT-Master II, QAR, recorded amount hidden"
       )
     ).toBeNull();
+    await fireEvent.press(screen.getByTestId("portfolio-insights-toggle"));
     await fireEvent.press(
       screen.getByTestId("portfolio-recorded-values-view-all-QAR")
     );
@@ -676,10 +753,12 @@ describe("PortfolioDashboard", () => {
   });
 
   it("routes an unvalued property gap to the Place review surface", async () => {
+    const reviewPropertyValues = jest.fn();
     const reviewPlaces = jest.fn();
     const screen = await render(
       <PortfolioDashboard
         onReviewPlaces={reviewPlaces}
+        onReviewPropertyValues={reviewPropertyValues}
         workspace={createWorkspace("sample")}
       />
     );
@@ -687,7 +766,8 @@ describe("PortfolioDashboard", () => {
     await fireEvent.press(
       screen.getByLabelText("Properties without a recorded value: 1")
     );
-    expect(reviewPlaces).toHaveBeenCalledTimes(1);
+    expect(reviewPropertyValues).toHaveBeenCalledTimes(1);
+    expect(reviewPlaces).not.toHaveBeenCalled();
   });
 
   it("keeps pending proof review separate from proof and value gaps", async () => {
@@ -728,9 +808,78 @@ describe("PortfolioDashboard", () => {
       />
     );
 
-    expect(screen.getByText("No values recorded")).toBeTruthy();
-    await fireEvent.press(screen.getByText("Add your first item"));
+    expect(screen.getByTestId("portfolio-start-decision")).toBeTruthy();
+    await fireEvent.press(screen.getByTestId("portfolio-start-asset"));
     expect(addAsset).toHaveBeenCalledTimes(1);
+  });
+
+  it("keeps document-only continuity records outside the financial dashboard", async () => {
+    const addAsset = jest.fn();
+    const addLiability = jest.fn();
+    const screen = await render(
+      <PortfolioDashboard
+        amountsHidden={false}
+        onAddAsset={addAsset}
+        onAddLiability={addLiability}
+        workspace={documentOnlyWorkspace()}
+      />
+    );
+    const assetAction = screen.getByTestId("portfolio-start-asset");
+    const liabilityAction = screen.getByTestId(
+      "portfolio-start-liability"
+    );
+
+    expect(
+      screen.getByText(
+        "Your documents remain protected in the continuity register without becoming financial assets. Add an item, property or liability when it is useful."
+      )
+    ).toBeTruthy();
+    expect(screen.queryByTestId("portfolio-net-position")).toBeNull();
+    expect(
+      screen.queryByTestId("portfolio-recorded-asset-value")
+    ).toBeNull();
+    expect(
+      screen.queryByText("Items without a recorded value")
+    ).toBeNull();
+    expect(
+      StyleSheet.flatten(assetAction.props.style).minHeight
+    ).toBeGreaterThanOrEqual(44);
+    expect(
+      StyleSheet.flatten(liabilityAction.props.style).minHeight
+    ).toBeGreaterThanOrEqual(44);
+
+    await fireEvent.press(assetAction);
+    await fireEvent.press(liabilityAction);
+    expect(addAsset).toHaveBeenCalledTimes(1);
+    expect(addLiability).toHaveBeenCalledTimes(1);
+  });
+
+  it("mirrors the document-only first decision in Arabic", async () => {
+    const screen = await render(
+      <PortfolioDashboard
+        language="ar"
+        onAddAsset={jest.fn()}
+        onAddLiability={jest.fn()}
+        workspace={documentOnlyWorkspace("ar")}
+      />
+    );
+    const title = screen.getByText(
+      "\u0627\u062e\u062a\u0631 \u0623\u0648\u0644 \u0633\u062c\u0644 \u0645\u0627\u0644\u064a"
+    );
+    const body = screen.getByText(
+      "\u062a\u0628\u0642\u0649 \u0645\u0633\u062a\u0646\u062f\u0627\u062a\u0643 \u0645\u062d\u0645\u064a\u0629 \u0641\u064a \u0633\u062c\u0644 \u0627\u0644\u0627\u0633\u062a\u0645\u0631\u0627\u0631\u064a\u0629 \u0645\u0646 \u062f\u0648\u0646 \u0627\u062d\u062a\u0633\u0627\u0628\u0647\u0627 \u0643\u0623\u0635\u0648\u0644 \u0645\u0627\u0644\u064a\u0629. \u0623\u0636\u0641 \u063a\u0631\u0636\u064b\u0627 \u0623\u0648 \u0639\u0642\u0627\u0631\u064b\u0627 \u0623\u0648 \u0627\u0644\u062a\u0632\u0627\u0645\u064b\u0627 \u0639\u0646\u062f\u0645\u0627 \u064a\u0643\u0648\u0646 \u0630\u0644\u0643 \u0645\u0641\u064a\u062f\u064b\u0627."
+    );
+    const action = screen.getByTestId("portfolio-start-asset");
+
+    expect(StyleSheet.flatten(title.props.style).writingDirection).toBe(
+      "rtl"
+    );
+    expect(StyleSheet.flatten(body.props.style).textAlign).toBe("right");
+    expect(StyleSheet.flatten(action.props.style).flexDirection).toBe(
+      "row-reverse"
+    );
+    expect(action.props.accessibilityRole).toBe("button");
+    expect(screen.queryByTestId("portfolio-net-position")).toBeNull();
   });
 
   it("renders an RTL Arabic dashboard with the same truth boundary", async () => {
@@ -795,6 +944,7 @@ describe("PortfolioDashboard", () => {
         "ar"
       )
     ).toBe("لا يحتاج إلى مكان فعلي");
+    await fireEvent.press(screen.getByTestId("portfolio-insights-toggle"));
     expect(screen.getAllByText("٤ سجلات").length).toBeGreaterThan(0);
     expect(screen.getAllByText("سجلان").length).toBeGreaterThan(0);
     expect(screen.getByText("لا يحتاج إلى مكان فعلي")).toBeTruthy();

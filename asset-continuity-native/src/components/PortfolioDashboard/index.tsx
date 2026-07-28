@@ -100,6 +100,7 @@ export interface PortfolioDashboardProps {
   readonly onAmountsHiddenChange?: (hidden: boolean) => void;
   readonly onOpenAsset?: (assetId: string) => void;
   readonly onOpenSubject?: (subject: PortfolioValuableSubject) => void;
+  readonly onReviewPropertyValues?: () => void;
   readonly onReviewPlaces?: () => void;
   readonly onReviewAssets?: (intent: PortfolioReviewIntent) => void;
   readonly showTitle?: boolean;
@@ -139,6 +140,14 @@ interface DashboardCopy {
   readonly noApplicableLocations: string;
   readonly locationDistribution: string;
   readonly locationDistributionDetail: string;
+  readonly portfolioInsights: string;
+  readonly showPortfolioInsights: string;
+  readonly hidePortfolioInsights: string;
+  readonly portfolioInsightsSummary: (
+    placeCount: number,
+    documented: number,
+    total: number
+  ) => string;
   readonly needsLocationConfirmation: string;
   readonly noPhysicalPlaceRequired: string;
   readonly needsAttention: string;
@@ -154,6 +163,12 @@ interface DashboardCopy {
   readonly noRecordedValues: string;
   readonly emptyPersonal: string;
   readonly emptySample: string;
+  readonly startEyebrow: string;
+  readonly startTitle: string;
+  readonly startBody: string;
+  readonly startWithDocumentsBody: string;
+  readonly startAsset: string;
+  readonly startLiability: string;
   readonly reviewUnvalued: string;
   readonly addFirstItem: string;
   readonly reviewAllItems: string;
@@ -244,6 +259,16 @@ const ENGLISH: DashboardCopy = {
   locationDistribution: "Where things are",
   locationDistributionDetail:
     "Distribution by assigned Place, not by estimated value.",
+  portfolioInsights: "Portfolio insights",
+  showPortfolioInsights: "Show details",
+  hidePortfolioInsights: "Hide details",
+  portfolioInsightsSummary: (placeTotal, documented, total) =>
+    `${formatLocalizedNumber(placeTotal, "en")} ${
+      placeTotal === 1 ? "Place" : "Places"
+    } · ${formatLocalizedNumber(documented, "en")} of ${formatLocalizedNumber(
+      total,
+      "en"
+    )} items documented`,
   needsLocationConfirmation: "Location needs confirmation",
   noPhysicalPlaceRequired: "No physical place required",
   needsAttention: "Needs attention",
@@ -262,6 +287,14 @@ const ENGLISH: DashboardCopy = {
     "Your continuity register still works without financial data. Add values only when they are useful to you.",
   emptySample:
     "This sample demonstrates organization and proof coverage without making up prices.",
+  startEyebrow: "START PORTFOLIO",
+  startTitle: "Choose your first financial record",
+  startBody:
+    "Add an item or property you want to value, or record a liability. ALYR never estimates an amount for you.",
+  startWithDocumentsBody:
+    "Your documents remain protected in the continuity register without becoming financial assets. Add an item, property or liability when it is useful.",
+  startAsset: "Add an item or property",
+  startLiability: "Record a liability",
   reviewUnvalued: "Review unvalued items",
   addFirstItem: "Add your first item",
   reviewAllItems: "Review all items",
@@ -293,6 +326,14 @@ const ENGLISH: DashboardCopy = {
 };
 
 const ARABIC: DashboardCopy = {
+  portfolioInsights: "تفاصيل المحفظة",
+  showPortfolioInsights: "عرض التفاصيل",
+  hidePortfolioInsights: "إخفاء التفاصيل",
+  portfolioInsightsSummary: (placeTotal, documented, total) =>
+    `${formatLocalizedNumber(placeTotal, "ar")} أماكن · ${formatLocalizedNumber(
+      documented,
+      "ar"
+    )} من ${formatLocalizedNumber(total, "ar")} أغراض موثقة`,
   itemsLabel: "الأغراض",
   propertiesLabel: "العقارات",
   valuedLabel: "لها قيمة",
@@ -356,6 +397,14 @@ const ARABIC: DashboardCopy = {
     "يبقى سجل الاستمرارية مفيداً من دون بيانات مالية. أضف القيم عندما تكون مفيدة لك فقط.",
   emptySample:
     "توضح هذه العينة التنظيم وتغطية الإثبات من دون افتراض أسعار.",
+  startEyebrow: "ابدأ المحفظة",
+  startTitle: "اختر أول سجل مالي",
+  startBody:
+    "أضف غرضًا أو عقارًا تريد تسجيل قيمته، أو سجّل التزامًا. لا يقدّر ALYR أي مبلغ نيابةً عنك.",
+  startWithDocumentsBody:
+    "تبقى مستنداتك محمية في سجل الاستمرارية من دون احتسابها كأصول مالية. أضف غرضًا أو عقارًا أو التزامًا عندما يكون ذلك مفيدًا.",
+  startAsset: "إضافة غرض أو عقار",
+  startLiability: "تسجيل التزام",
   reviewUnvalued: "مراجعة الأصول غير المقيّمة",
   addFirstItem: "أضف أول أصل",
   reviewAllItems: "مراجعة جميع الأصول",
@@ -441,11 +490,13 @@ export function PortfolioDashboard({
   onOpenAsset,
   onOpenSubject,
   onReviewAssets,
+  onReviewPropertyValues,
   onReviewPlaces,
   showTitle = true,
   testID = "portfolio-dashboard"
 }: PortfolioDashboardProps) {
   const [explanationOpen, setExplanationOpen] = useState(false);
+  const [insightsOpen, setInsightsOpen] = useState(false);
   const [internalAmountsHidden, setInternalAmountsHidden] = useState(true);
   const amountsHidden =
     controlledAmountsHidden ?? internalAmountsHidden;
@@ -468,6 +519,10 @@ export function PortfolioDashboard({
         : null,
     [canReadLiabilities, resolvedValueRecords, workspace]
   );
+  const hasFinancialSubjects =
+    snapshot.valuableCount > 0 ||
+    (netPosition?.activeLiabilityCount ?? 0) > 0 ||
+    Boolean(netPosition?.liabilityReview);
 
   return (
     <View
@@ -532,61 +587,72 @@ export function PortfolioDashboard({
         </Text>
       </View>
 
-      <View style={styles.heroDecisionGroup}>
-        {canReadLiabilities && netPosition ? (
-          <PortfolioHero
-            amountsHidden={amountsHidden}
-            copy={copy}
-            explanationOpen={explanationOpen}
-            financialCopy={financialCopy}
-            language={language}
-            netPosition={netPosition}
-            onToggleExplanation={() =>
-              setExplanationOpen((current) => !current)
-            }
-            onToggleRecordedAmounts={() => {
-              const next = !amountsHidden;
-              if (controlledAmountsHidden === undefined) {
-                setInternalAmountsHidden(next);
+      {hasFinancialSubjects ? (
+        <View style={styles.heroDecisionGroup}>
+          {canReadLiabilities && netPosition ? (
+            <PortfolioHero
+              amountsHidden={amountsHidden}
+              copy={copy}
+              explanationOpen={explanationOpen}
+              financialCopy={financialCopy}
+              language={language}
+              netPosition={netPosition}
+              onToggleExplanation={() =>
+                setExplanationOpen((current) => !current)
               }
-              onAmountsHiddenChange?.(next);
-            }}
-            rtl={rtl}
-            sample={workspace.mode === "sample"}
-          />
-        ) : (
-          <AssetPortfolioHero
-            amountsHidden={amountsHidden}
-            copy={copy}
-            explanationOpen={explanationOpen}
-            language={language}
-            onToggleExplanation={() =>
-              setExplanationOpen((current) => !current)
-            }
-            onToggleRecordedAmounts={() => {
-              const next = !amountsHidden;
-              if (controlledAmountsHidden === undefined) {
-                setInternalAmountsHidden(next);
+              onToggleRecordedAmounts={() => {
+                const next = !amountsHidden;
+                if (controlledAmountsHidden === undefined) {
+                  setInternalAmountsHidden(next);
+                }
+                onAmountsHiddenChange?.(next);
+              }}
+              rtl={rtl}
+              sample={workspace.mode === "sample"}
+            />
+          ) : (
+            <AssetPortfolioHero
+              amountsHidden={amountsHidden}
+              copy={copy}
+              explanationOpen={explanationOpen}
+              language={language}
+              onToggleExplanation={() =>
+                setExplanationOpen((current) => !current)
               }
-              onAmountsHiddenChange?.(next);
-            }}
+              onToggleRecordedAmounts={() => {
+                const next = !amountsHidden;
+                if (controlledAmountsHidden === undefined) {
+                  setInternalAmountsHidden(next);
+                }
+                onAmountsHiddenChange?.(next);
+              }}
+              rtl={rtl}
+              sample={workspace.mode === "sample"}
+              snapshot={snapshot}
+            />
+          )}
+
+          <ReviewNext
+            copy={copy}
+            language={language}
+            onReviewAssets={onReviewAssets}
+            onReviewPropertyValues={onReviewPropertyValues}
+            onReviewPlaces={onReviewPlaces}
             rtl={rtl}
-            sample={workspace.mode === "sample"}
             snapshot={snapshot}
           />
-        )}
-
-        <ReviewNext
+        </View>
+      ) : (
+        <PortfolioStartDecision
           copy={copy}
-          language={language}
-          onReviewAssets={onReviewAssets}
-          onReviewPlaces={onReviewPlaces}
+          hasContinuityRecords={snapshot.assetCount > 0}
+          onAddAsset={onAddAsset}
+          onAddLiability={onAddLiability}
           rtl={rtl}
-          snapshot={snapshot}
         />
-      </View>
+      )}
 
-      {snapshot.valuableCount === 0 ? (
+      {hasFinancialSubjects && snapshot.valuableCount === 0 ? (
         <View
           accessibilityLabel={copy.noRecordedValues}
           style={[styles.firstItemState, rtl && styles.alignEnd]}
@@ -620,7 +686,7 @@ export function PortfolioDashboard({
             />
           ) : null}
         </View>
-      ) : (
+      ) : hasFinancialSubjects ? (
         <RecordedValues
           amountsHidden={amountsHidden}
           copy={copy}
@@ -632,9 +698,9 @@ export function PortfolioDashboard({
           sample={workspace.mode === "sample"}
           snapshot={snapshot}
         />
-      )}
+      ) : null}
 
-      {canReadLiabilities && netPosition ? (
+      {hasFinancialSubjects && canReadLiabilities && netPosition ? (
         <LiabilitiesSection
           amountsHidden={amountsHidden}
           copy={financialCopy}
@@ -649,22 +715,84 @@ export function PortfolioDashboard({
       ) : null}
 
       {snapshot.valuableCount > 0 ? (
-        <>
-          <LocationDistribution
-            copy={copy}
-            language={language}
-            rtl={rtl}
-            snapshot={snapshot}
-          />
-          <RegisterHealth
-            copy={copy}
-            language={language}
-            onReviewAssets={onReviewAssets}
-            onReviewPlaces={onReviewPlaces}
-            rtl={rtl}
-            snapshot={snapshot}
-          />
-        </>
+        <View style={styles.insightsGroup}>
+          <Pressable
+            accessibilityHint={
+              insightsOpen
+                ? copy.hidePortfolioInsights
+                : copy.showPortfolioInsights
+            }
+            accessibilityRole="button"
+            accessibilityState={{ expanded: insightsOpen }}
+            onPress={() => setInsightsOpen((current) => !current)}
+            style={({ pressed }) => [
+              styles.insightsDisclosure,
+              rtl && styles.rowReverse,
+              pressed && styles.pressed
+            ]}
+            testID="portfolio-insights-toggle"
+          >
+            <View style={[styles.insightsCopy, rtl && styles.alignEnd]}>
+              <Text
+                style={[
+                  styles.insightsTitle,
+                  rtl && styles.arabicMedium,
+                  rtl && styles.textRight
+                ]}
+              >
+                {copy.portfolioInsights}
+              </Text>
+              <Text
+                style={[
+                  styles.insightsSummary,
+                  rtl && styles.arabic,
+                  rtl && styles.textRight
+                ]}
+              >
+                {copy.portfolioInsightsSummary(
+                  snapshot.locationDistribution.length,
+                  snapshot.documentedItems.complete,
+                  snapshot.documentedItems.total
+                )}
+              </Text>
+            </View>
+            <View style={[styles.insightsAction, rtl && styles.rowReverse]}>
+              <Text
+                style={[
+                  styles.insightsActionLabel,
+                  rtl && styles.arabicMedium
+                ]}
+              >
+                {insightsOpen
+                  ? copy.hidePortfolioInsights
+                  : copy.showPortfolioInsights}
+              </Text>
+              {insightsOpen ? (
+                <CaretUp color={colors.text} size={18} weight="bold" />
+              ) : (
+                <CaretDown color={colors.text} size={18} weight="bold" />
+              )}
+            </View>
+          </Pressable>
+          {insightsOpen ? (
+            <>
+              <LocationDistribution
+                copy={copy}
+                language={language}
+                rtl={rtl}
+                snapshot={snapshot}
+              />
+              <RegisterHealth
+                copy={copy}
+                language={language}
+                onReviewAssets={onReviewAssets}
+                onReviewPlaces={onReviewPlaces}
+                rtl={rtl}
+                snapshot={snapshot}
+              />
+            </>
+          ) : null}
+        </View>
       ) : null}
 
       {snapshot.ignoredValueRecordCount > 0 ||
@@ -689,6 +817,115 @@ export function PortfolioDashboard({
               .filter(Boolean)
               .join(" ")}
           </Text>
+        </View>
+      ) : null}
+    </View>
+  );
+}
+
+function PortfolioStartDecision({
+  copy,
+  hasContinuityRecords,
+  onAddAsset,
+  onAddLiability,
+  rtl
+}: {
+  readonly copy: DashboardCopy;
+  readonly hasContinuityRecords: boolean;
+  readonly onAddAsset?: (() => void) | undefined;
+  readonly onAddLiability?: (() => void) | undefined;
+  readonly rtl: boolean;
+}) {
+  const body = hasContinuityRecords
+    ? copy.startWithDocumentsBody
+    : copy.startBody;
+
+  return (
+    <View
+      style={[styles.startDecision, rtl && styles.alignEnd]}
+      testID="portfolio-start-decision"
+    >
+      <View
+        accessibilityElementsHidden
+        importantForAccessibility="no-hide-descendants"
+        style={styles.startDecisionIcon}
+      >
+        <ChartDonut color={colors.volt} size={26} weight="regular" />
+      </View>
+      <Text
+        style={[
+          styles.startEyebrow,
+          rtl && styles.arabicMedium,
+          rtl && styles.textRight
+        ]}
+      >
+        {copy.startEyebrow}
+      </Text>
+      <Text
+        accessibilityRole="header"
+        style={[
+          styles.startTitle,
+          rtl && styles.arabicHeading,
+          rtl && styles.textRight
+        ]}
+      >
+        {copy.startTitle}
+      </Text>
+      <Text
+        style={[
+          styles.startBody,
+          rtl && styles.arabic,
+          rtl && styles.textRight
+        ]}
+      >
+        {body}
+      </Text>
+      {onAddAsset || onAddLiability ? (
+        <View style={styles.startActions}>
+          {onAddAsset ? (
+            <Pressable
+              accessibilityRole="button"
+              onPress={onAddAsset}
+              style={({ pressed }) => [
+                styles.startPrimary,
+                rtl && styles.rowReverse,
+                pressed && styles.startPressed
+              ]}
+              testID="portfolio-start-asset"
+            >
+              <Plus color={colors.carbon} size={19} weight="bold" />
+              <Text
+                style={[
+                  styles.startPrimaryLabel,
+                  rtl && styles.arabicMedium
+                ]}
+              >
+                {copy.startAsset}
+              </Text>
+            </Pressable>
+          ) : null}
+          {onAddLiability ? (
+            <Pressable
+              accessibilityRole="button"
+              onPress={onAddLiability}
+              style={({ pressed }) => [
+                styles.startSecondary,
+                rtl && styles.rowReverse,
+                pressed && styles.startPressed
+              ]}
+              testID="portfolio-start-liability"
+            >
+              <CreditCard color={colors.white} size={19} weight="regular" />
+              <Text
+                style={[
+                  styles.startSecondaryLabel,
+                  rtl && styles.arabicMedium
+                ]}
+              >
+                {copy.startLiability}
+              </Text>
+            </Pressable>
+          ) : null}
         </View>
       ) : null}
     </View>
@@ -2235,6 +2472,7 @@ function ReviewNext({
   copy,
   language,
   onReviewAssets,
+  onReviewPropertyValues,
   onReviewPlaces,
   rtl,
   snapshot
@@ -2244,6 +2482,7 @@ function ReviewNext({
   readonly onReviewAssets?:
     | ((intent: PortfolioReviewIntent) => void)
     | undefined;
+  readonly onReviewPropertyValues?: (() => void) | undefined;
   readonly onReviewPlaces?: (() => void) | undefined;
   readonly rtl: boolean;
   readonly snapshot: PortfolioSnapshot;
@@ -2263,7 +2502,7 @@ function ReviewNext({
       icon: MapPin,
       label: copy.missingPropertyValues,
       count: snapshot.unvaluedPlaceIds.length,
-      onPress: onReviewPlaces
+      onPress: onReviewPropertyValues ?? onReviewPlaces
     },
     {
       id: "proof" as const,
@@ -2779,6 +3018,134 @@ const styles = StyleSheet.create({
   },
   heroDecisionGroup: {
     gap: spacing.xl
+  },
+  startDecision: {
+    overflow: "hidden",
+    alignItems: "flex-start",
+    gap: spacing.sm,
+    padding: spacing.lg,
+    borderRadius: radius.lg,
+    backgroundColor: colors.carbon
+  },
+  startDecisionIcon: {
+    width: 48,
+    height: 48,
+    alignItems: "center",
+    justifyContent: "center",
+    marginBottom: spacing.xs,
+    borderWidth: 1,
+    borderColor: colors.onCarbonBorder,
+    borderRadius: radius.md,
+    backgroundColor: colors.onCarbonSurface
+  },
+  startEyebrow: {
+    color: colors.concrete,
+    fontFamily: typography.bodyBold,
+    fontSize: 12,
+    lineHeight: 17,
+    letterSpacing: 1.1
+  },
+  startTitle: {
+    maxWidth: 500,
+    color: colors.white,
+    fontFamily: typography.displayBold,
+    fontSize: 26,
+    lineHeight: 32
+  },
+  startBody: {
+    maxWidth: 520,
+    color: colors.concrete,
+    fontFamily: typography.body,
+    fontSize: 15,
+    lineHeight: 23
+  },
+  startActions: {
+    alignSelf: "stretch",
+    gap: spacing.sm,
+    marginTop: spacing.sm
+  },
+  startPrimary: {
+    minHeight: 52,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: spacing.sm,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm,
+    borderRadius: radius.md,
+    backgroundColor: colors.volt
+  },
+  startPrimaryLabel: {
+    color: colors.carbon,
+    fontFamily: typography.bodyBold,
+    fontSize: 15,
+    lineHeight: 21,
+    textAlign: "center"
+  },
+  startSecondary: {
+    minHeight: 48,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: spacing.sm,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm,
+    borderWidth: 1,
+    borderColor: colors.onCarbonBorder,
+    borderRadius: radius.md
+  },
+  startSecondaryLabel: {
+    color: colors.white,
+    fontFamily: typography.bodyMedium,
+    fontSize: 15,
+    lineHeight: 21,
+    textAlign: "center"
+  },
+  startPressed: {
+    opacity: 0.78
+  },
+  insightsGroup: {
+    gap: spacing.xl
+  },
+  insightsDisclosure: {
+    minHeight: 72,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    gap: spacing.md,
+    paddingVertical: spacing.md,
+    borderTopWidth: StyleSheet.hairlineWidth,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderColor: colors.border
+  },
+  insightsCopy: {
+    minWidth: 0,
+    flex: 1,
+    gap: 2
+  },
+  insightsTitle: {
+    color: colors.text,
+    fontFamily: typography.bodyBold,
+    fontSize: 16,
+    lineHeight: 22
+  },
+  insightsSummary: {
+    color: colors.textMuted,
+    fontFamily: typography.body,
+    fontSize: 13,
+    lineHeight: 19
+  },
+  insightsAction: {
+    minHeight: 44,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: spacing.xs
+  },
+  insightsActionLabel: {
+    color: colors.text,
+    fontFamily: typography.bodyMedium,
+    fontSize: 13,
+    lineHeight: 18
   },
   rowReverse: {
     flexDirection: "row-reverse"

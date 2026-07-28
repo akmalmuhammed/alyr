@@ -33,6 +33,7 @@ import { useCallback, useState } from "react";
 import {
   useAttachmentPreview
 } from "@/components/AttachmentViewer";
+import type { AssetRetrievalSource } from "@/analytics";
 import { AssetArtworkIcon } from "@/components/AssetArtwork";
 import { PermissionNotice } from "@/components/PermissionDenied";
 import { SyncTruth } from "@/components/SyncTruth";
@@ -57,6 +58,7 @@ import {
   placePinFromNativePlace
 } from "@/domain/readiness";
 import {
+  isPortfolioValuableAsset,
   selectCurrentPortfolioValues
 } from "@/domain/portfolio";
 import {
@@ -116,6 +118,17 @@ export const ASSET_PASSPORT_COPY = {
     noMeasuredAccuracy: "Location recorded without measured GPS accuracy",
     noPropertyPin: "No property pin is attached",
     retrievalPath: "RETRIEVAL PATH",
+    retrievalConfirmAction: "I found this item",
+    retrievalConfirmHint:
+      "Records that this Asset Passport helped you locate the item.",
+    retrievalConfirmTitle: "Confirm item found?",
+    retrievalConfirmBody:
+      "This records a successful retrieval in this household. It does not change the item's saved location.",
+    retrievalConfirmCancel: "Not yet",
+    retrievalConfirmSubmit: "Record retrieval",
+    retrievalConfirmedTitle: "Item found",
+    retrievalConfirmedBody:
+      "Retrieval recorded. The saved location remains unchanged.",
     openPlace: (name: string) => `Open ${name}`,
     archivedTitle: "Passport archived",
     archivedBody:
@@ -231,6 +244,17 @@ export const ASSET_PASSPORT_COPY = {
     noMeasuredAccuracy: "تم تسجيل الموقع من دون دقة GPS مقاسة",
     noPropertyPin: "لا يوجد دبوس مرتبط بالعقار",
     retrievalPath: "مسار الاسترجاع",
+    retrievalConfirmAction: "وجدت هذا الغرض",
+    retrievalConfirmHint:
+      "يسجّل أن جواز الغرض ساعدك في العثور عليه.",
+    retrievalConfirmTitle: "تأكيد العثور على الغرض؟",
+    retrievalConfirmBody:
+      "سيُسجّل استرجاع ناجح داخل هذه الأسرة من دون تغيير الموقع المحفوظ للغرض.",
+    retrievalConfirmCancel: "ليس بعد",
+    retrievalConfirmSubmit: "تسجيل الاسترجاع",
+    retrievalConfirmedTitle: "تم العثور على الغرض",
+    retrievalConfirmedBody:
+      "تم تسجيل الاسترجاع، وبقي الموقع المحفوظ كما هو.",
     openPlace: (name: string) => `فتح ${name}`,
     archivedTitle: "جواز الغرض مؤرشف",
     archivedBody:
@@ -313,6 +337,20 @@ export function isolateAssetPassportIdentifier(
   return language === "ar" ? `\u2068${value}\u2069` : value;
 }
 
+export function assetRetrievalSourceFromRoute(
+  value: string | readonly string[] | undefined
+): AssetRetrievalSource {
+  const candidate = Array.isArray(value) ? value[0] : value;
+  if (
+    candidate === "search" ||
+    candidate === "asset-list" ||
+    candidate === "place-view"
+  ) {
+    return candidate;
+  }
+  return "deep-link";
+}
+
 function localizedCategoryLabel(
   asset: Pick<NativeAsset, "categoryId" | "categoryLabel">,
   language: LanguageCode
@@ -368,9 +406,14 @@ function recordedDateLabel(
 }
 
 export default function AssetPassportScreen() {
-  const { id, justCreated } = useLocalSearchParams<{
+  const {
+    id,
+    justCreated,
+    retrievalSource: retrievalSourceParam
+  } = useLocalSearchParams<{
     id: string;
     justCreated?: string;
+    retrievalSource?: string | string[];
   }>();
   const router = useRouter();
   const { language, rtl } = useCoreJourneyCopy();
@@ -386,12 +429,14 @@ export default function AssetPassportScreen() {
     recordedAssetValues,
     repository,
     saving,
+    markRetrieved,
     setAssetLifecycle,
     sync,
     workspace
   } = useWorkspace();
   const [screenActive, setScreenActive] = useState(false);
   const [manageOpen, setManageOpen] = useState(false);
+  const [retrievalPending, setRetrievalPending] = useState(false);
   const asset = workspace?.assets.find((item) => item.id === id);
   const photoEvidence =
     workspace?.evidence.find((item) => item.id === asset?.photoEvidenceId) ??
@@ -472,11 +517,13 @@ export default function AssetPassportScreen() {
     place && placePin
       ? localizedAtlasPinDisclosure(place, language)
       : copy.noPropertyPin;
-  const recordedValue =
-    selectCurrentPortfolioValues(
-      [asset],
-      recordedAssetValues
-    ).records[0] ?? null;
+  const portfolioValueEligible = isPortfolioValuableAsset(asset);
+  const recordedValue = portfolioValueEligible
+    ? selectCurrentPortfolioValues(
+        [asset],
+        recordedAssetValues
+      ).records[0] ?? null
+    : null;
   const formattedRecordedValue = recordedValue
     ? formatRecordedValue({
         amountMinor: recordedValue.amountMinor,
@@ -489,7 +536,14 @@ export default function AssetPassportScreen() {
   const archived = assetLifecycleStatus(asset) === "archived";
   const canWriteAsset = can("asset.write");
   const isJustCreated = justCreated === "1";
+  const needsPortfolioValue =
+    portfolioValueEligible && recordedValue === null;
   const showManageRows = missing.length === 0 || manageOpen;
+  const retrievalSource = assetRetrievalSourceFromRoute(
+    retrievalSourceParam
+  );
+  const hasUsableRetrievalPath =
+    Boolean(place) || asset.categoryId.startsWith("digital");
 
   const confirmLifecycleChange = () => {
     if (archived) {
@@ -529,6 +583,38 @@ export default function AssetPassportScreen() {
                 router.replace("/assets?view=items&filter=archived");
               } catch {
                 // WorkspaceProvider keeps the Passport visible with the error.
+              }
+            })();
+          }
+        }
+      ]
+    );
+  };
+
+  const confirmRetrieval = () => {
+    Alert.alert(
+      copy.retrievalConfirmTitle,
+      copy.retrievalConfirmBody,
+      [
+        {
+          text: copy.retrievalConfirmCancel,
+          style: "cancel"
+        },
+        {
+          text: copy.retrievalConfirmSubmit,
+          onPress: () => {
+            void (async () => {
+              setRetrievalPending(true);
+              try {
+                await markRetrieved(asset.id, retrievalSource);
+                Alert.alert(
+                  copy.retrievalConfirmedTitle,
+                  copy.retrievalConfirmedBody
+                );
+              } catch {
+                // WorkspaceProvider keeps the Passport visible with the error.
+              } finally {
+                setRetrievalPending(false);
               }
             })();
           }
@@ -797,24 +883,28 @@ export default function AssetPassportScreen() {
             <View testID="asset-passport-primary-action">
               <PrimaryButton
                 accessibilityHint={
-                  recordedValue
-                    ? copy.todayHint
-                    : copy.addRecordedValueHint
+                  needsPortfolioValue
+                    ? copy.addRecordedValueHint
+                    : copy.todayHint
                 }
                 icon={
-                  recordedValue ? ForwardIcon : CurrencyCircleDollar
+                  needsPortfolioValue
+                    ? CurrencyCircleDollar
+                    : ForwardIcon
                 }
                 label={
-                  recordedValue ? copy.goToToday : copy.addRecordedValue
+                  needsPortfolioValue
+                    ? copy.addRecordedValue
+                    : copy.goToToday
                 }
                 onPress={() =>
-                  recordedValue
-                    ? router.replace("/(tabs)")
-                    : router.push(
+                  needsPortfolioValue
+                    ? router.push(
                         `/asset-value?assetId=${encodeURIComponent(
                           asset.id
                         )}&returnTo=dashboard`
                       )
+                    : router.replace("/(tabs)")
                 }
               />
             </View>
@@ -911,106 +1001,120 @@ export default function AssetPassportScreen() {
             onPress={() => router.push(`/place/${place.id}`)}
           />
         ) : null}
-      </CommandSurface>
-
-      <Section>
-        <View style={styles.sectionHeading}>
-          <Text
-            style={[
-              styles.sectionTitle,
-              rtl && styles.arabicMedium,
-              rtl && styles.rtlText
-            ]}
-            testID="asset-passport-value-heading"
-          >
-            {copy.valueTitle}
-          </Text>
-        </View>
-        <Pressable
-          accessibilityHint={
-            recordedValue
-              ? copy.valueEditHint
-              : copy.valueAddHint
-          }
-          accessibilityLabel={
-            recordedValue && formattedRecordedValue
-              ? copy.valueLabel(
-                  isolateAssetPassportIdentifier(
-                    formattedRecordedValue.accessibilityLabel,
-                    language
-                  ),
-                  recordedDateLabel(recordedValue.asOf, language)
-                )
-              : copy.noValueLabel
-          }
-          accessibilityRole="button"
-          accessibilityState={{ disabled: archived || !canWriteAsset }}
-          disabled={archived || !canWriteAsset}
-          onPress={() =>
-            router.push(
-              `/asset-value?assetId=${encodeURIComponent(
-                asset.id
-              )}&returnTo=passport`
-            )
-          }
-          style={({ pressed }) => [
-            styles.valueRow,
-            rtl && styles.rowReverse,
-            (archived || !canWriteAsset) && styles.disabledRow,
-            pressed && styles.pressed
-          ]}
-        >
-          <View style={styles.valueIcon}>
-            <CurrencyCircleDollar
-              color={colors.text}
-              size={24}
-              weight="regular"
+        {!archived && canWriteAsset && hasUsableRetrievalPath ? (
+          <View testID="asset-passport-retrieval-confirm">
+            <SecondaryButton
+              accessibilityHint={copy.retrievalConfirmHint}
+              disabled={saving}
+              icon={CheckCircle}
+              label={copy.retrievalConfirmAction}
+              loading={retrievalPending}
+              onPress={confirmRetrieval}
             />
           </View>
-          <View style={styles.valueCopy}>
+        ) : null}
+      </CommandSurface>
+
+      {portfolioValueEligible ? (
+        <Section>
+          <View style={styles.sectionHeading}>
             <Text
               style={[
-                styles.valueAmount,
+                styles.sectionTitle,
                 rtl && styles.arabicMedium,
                 rtl && styles.rtlText
               ]}
+              testID="asset-passport-value-heading"
             >
-              {recordedValue && formattedRecordedValue
-                ? isolateAssetPassportIdentifier(
-                    formattedRecordedValue.text,
-                    language
-                  )
-                : copy.notRecorded}
-            </Text>
-            <Text
-              style={[
-                styles.valueMeta,
-                rtl && styles.arabic,
-                rtl && styles.rtlText
-              ]}
-            >
-              {recordedValue
-                ? copy.valueAsOf(
-                    recordedDateLabel(recordedValue.asOf, language)
-                  )
-                : copy.valueOptional}
+              {copy.valueTitle}
             </Text>
           </View>
-          {!archived && canWriteAsset ? (
-            <ForwardIcon color={colors.textMuted} size={20} />
-          ) : null}
-        </Pressable>
-        <Text
-          style={[
-            styles.valueTruth,
-            rtl && styles.arabic,
-            rtl && styles.rtlText
-          ]}
-        >
-          {copy.valueTruth}
-          {archived ? copy.restoreBeforeValue : ""}
-        </Text>
-      </Section>
+          <Pressable
+            accessibilityHint={
+              recordedValue
+                ? copy.valueEditHint
+                : copy.valueAddHint
+            }
+            accessibilityLabel={
+              recordedValue && formattedRecordedValue
+                ? copy.valueLabel(
+                    isolateAssetPassportIdentifier(
+                      formattedRecordedValue.accessibilityLabel,
+                      language
+                    ),
+                    recordedDateLabel(recordedValue.asOf, language)
+                  )
+                : copy.noValueLabel
+            }
+            accessibilityRole="button"
+            accessibilityState={{ disabled: archived || !canWriteAsset }}
+            disabled={archived || !canWriteAsset}
+            onPress={() =>
+              router.push(
+                `/asset-value?assetId=${encodeURIComponent(
+                  asset.id
+                )}&returnTo=passport`
+              )
+            }
+            style={({ pressed }) => [
+              styles.valueRow,
+              rtl && styles.rowReverse,
+              (archived || !canWriteAsset) && styles.disabledRow,
+              pressed && styles.pressed
+            ]}
+          >
+            <View style={styles.valueIcon}>
+              <CurrencyCircleDollar
+                color={colors.text}
+                size={24}
+                weight="regular"
+              />
+            </View>
+            <View style={styles.valueCopy}>
+              <Text
+                style={[
+                  styles.valueAmount,
+                  rtl && styles.arabicMedium,
+                  rtl && styles.rtlText
+                ]}
+              >
+                {recordedValue && formattedRecordedValue
+                  ? isolateAssetPassportIdentifier(
+                      formattedRecordedValue.text,
+                      language
+                    )
+                  : copy.notRecorded}
+              </Text>
+              <Text
+                style={[
+                  styles.valueMeta,
+                  rtl && styles.arabic,
+                  rtl && styles.rtlText
+                ]}
+              >
+                {recordedValue
+                  ? copy.valueAsOf(
+                      recordedDateLabel(recordedValue.asOf, language)
+                    )
+                  : copy.valueOptional}
+              </Text>
+            </View>
+            {!archived && canWriteAsset ? (
+              <ForwardIcon color={colors.textMuted} size={20} />
+            ) : null}
+          </Pressable>
+          <Text
+            style={[
+              styles.valueTruth,
+              rtl && styles.arabic,
+              rtl && styles.rtlText
+            ]}
+          >
+            {copy.valueTruth}
+            {archived ? copy.restoreBeforeValue : ""}
+          </Text>
+        </Section>
+      ) : null}
 
       {!archived && canWriteAsset ? (
         <Section>

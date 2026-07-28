@@ -158,7 +158,7 @@ const styles = StyleSheet.create({
   readoutLabel: {
     color: colors.white,
     fontFamily: typography.bodyMedium,
-    fontSize: 11,
+    fontSize: 12,
     lineHeight: 15
   },
   readoutValue: {

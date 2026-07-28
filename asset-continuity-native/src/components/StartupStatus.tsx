@@ -8,8 +8,14 @@ import {
   View
 } from "react-native";
 
+import { BrandMark } from "@/components/ui";
 import { useStartupCopy } from "@/i18n/startupCopy";
-import { colors, spacing } from "@/theme/tokens";
+import {
+  colors,
+  radius,
+  spacing,
+  typography
+} from "@/theme/tokens";
 
 export type StartupStatusKind = "application" | "workspace";
 export type FontStartupState = "loading" | "fallback" | "ready";
@@ -58,22 +64,35 @@ export function StartupStatus({
       style={styles.root}
       testID={testID}
     >
-      <ActivityIndicator
+      <View
         accessible={false}
-        color={colors.action}
-        importantForAccessibility="no"
-        size="small"
-      />
-      <Text
-        accessible={false}
-        importantForAccessibility="no"
-        style={[
-          styles.label,
-          rtl && styles.labelRtl
-        ]}
+        importantForAccessibility="no-hide-descendants"
+        style={styles.brandFrame}
+        testID="startup-brand"
       >
-        {label}
-      </Text>
+        <BrandMark compact />
+      </View>
+      <View
+        accessible={false}
+        style={styles.statusLine}
+      >
+        <ActivityIndicator
+          accessible={false}
+          color={colors.action}
+          importantForAccessibility="no"
+          size="small"
+        />
+        <Text
+          accessible={false}
+          importantForAccessibility="no"
+          style={[
+            styles.label,
+            rtl && styles.labelRtl
+          ]}
+        >
+          {label}
+        </Text>
+      </View>
     </View>
   );
 }
@@ -83,11 +102,29 @@ const styles = StyleSheet.create({
     flex: 1,
     alignItems: "center",
     justifyContent: "center",
-    gap: spacing.sm,
+    gap: spacing.lg,
     backgroundColor: colors.canvas
+  },
+  brandFrame: {
+    width: 72,
+    height: 72,
+    alignItems: "center",
+    justifyContent: "center",
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: colors.borderStrong,
+    borderRadius: radius.lg,
+    backgroundColor: colors.surface
+  },
+  statusLine: {
+    minHeight: 44,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: spacing.sm
   },
   label: {
     color: colors.textMuted,
+    fontFamily: typography.bodyMedium,
     fontSize: 14,
     lineHeight: 20,
     textAlign: "center"

@@ -16,7 +16,7 @@
     "build:shared": "npm run build --workspace=@alyr/contracts --workspace=@alyr/domain --workspace=@alyr/design-tokens --workspace=@alyr/analytics --workspace=@alyr/fixtures --if-present",
     "generate:api": "openapi-typescript supabase/openapi.yaml --output packages/contracts/src/generated/api.ts",
     "check:api-contract": "npm run generate:api && git diff --exit-code -- packages/contracts/src/generated/api.ts",
-    "check:supabase:static": "node --test supabase/tests/schema.test.mjs supabase/tests/household_creation_idempotency.test.mjs supabase/tests/export_completion.test.mjs supabase/tests/property_value_sync.test.mjs supabase/tests/liability_net_position.test.mjs",
+    "check:supabase:static": "node --test supabase/tests/schema.test.mjs supabase/tests/household_creation_idempotency.test.mjs supabase/tests/export_completion.test.mjs supabase/tests/property_value_sync.test.mjs supabase/tests/liability_net_position.test.mjs supabase/tests/product_event_idempotency.test.mjs",
     "check:supabase:local": "npx --yes supabase@2.109.1 db lint --local --level warning && npx --yes supabase@2.109.1 test db",
     "test:supabase:export-local": "node supabase/tests/export_api.local.mjs",
     "probe:supabase:live": "node supabase/scripts/probe-live-api.mjs",

@@ -7,6 +7,7 @@ import {
   calculateAssetReadiness,
   createHonestPlacePin,
   evidenceVersionIdForChecksum,
+  getPortfolioValuePolicy,
   isEvidenceReviewable,
   reviewEvidence,
 } from "../dist/index.js";
@@ -14,6 +15,25 @@ import {
 const NOW = "2026-07-25T10:00:00.000Z";
 const LATER = "2026-07-25T11:00:00.000Z";
 const CHECKSUM = "a".repeat(64);
+
+test("portfolio value eligibility is explicit by category role", () => {
+  assert.deepEqual(getPortfolioValuePolicy("lifestyle.watch"), {
+    subject: "asset",
+    contributesToFinancialPosition: true,
+  });
+  assert.deepEqual(getPortfolioValuePolicy("property.house"), {
+    subject: "place",
+    contributesToFinancialPosition: true,
+  });
+  assert.deepEqual(getPortfolioValuePolicy("document.important"), {
+    subject: "none",
+    contributesToFinancialPosition: false,
+  });
+  assert.deepEqual(getPortfolioValuePolicy("legacy.custom-item"), {
+    subject: "asset",
+    contributesToFinancialPosition: true,
+  });
+});
 
 test("GPS precision is exact only at 15 metres or better", () => {
   const exact = createHonestPlacePin({

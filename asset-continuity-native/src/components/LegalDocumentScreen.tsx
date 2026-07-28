@@ -40,14 +40,14 @@ const ENGLISH: Record<LegalDocumentKind, LegalDocument> = {
     title: "Pilot privacy notice",
     summary:
       "ALYR keeps a private household record of the items, places and proof you choose to add.",
-    version: "Version 0.1",
-    updated: "Updated 27 July 2026",
+    version: "Effective 28 July 2026",
+    updated: "Closed pilot · Last revised 28 July 2026",
     sections: [
       {
-        title: "What this test build stores",
+        title: "What ALYR stores",
         points: [
-          "Expo Go and web preview records stay in the running test session. No confirmation email is sent.",
-          "A signed pilot can store your email, household membership, item and Place details, location records, photos, documents and sync diagnostics.",
+          "The sample workspace stays isolated on this device and is not synchronized with a personal household.",
+          "A personal household can store your email, membership, item and Place details, location records, photos, documents and sync diagnostics.",
           "Precise location is requested only when you choose to place a property or item."
         ]
       },
@@ -60,6 +60,17 @@ const ENGLISH: Record<LegalDocumentKind, LegalDocument> = {
         ]
       },
       {
+        title: "Closed-pilot product measurement",
+        paragraphs: [
+          "For signed personal households, ALYR records a small set of product-interaction events to measure pilot activation, retention and reliability. Events can show that setup, a Passport, retrieval confirmation, invitation or export was completed."
+        ],
+        points: [
+          "Event properties are limited to reviewed categories such as platform, app version, language, offline state, action source and coarse time or count bands.",
+          "Asset names, recorded amounts, addresses, coordinates, retrieval clues, filenames and document contents are excluded from these events.",
+          "Events are linked to the authenticated account and household for first-party analysis only. They are not used for advertising or cross-app tracking."
+        ]
+      },
+      {
         title: "Sharing and access",
         paragraphs: [
           "Records begin private to the household. Household roles control who can view, edit or manage access. ALYR does not use the register for advertising or sell household records."
@@ -68,8 +79,8 @@ const ENGLISH: Record<LegalDocumentKind, LegalDocument> = {
       {
         title: "Protection, retention and deletion",
         paragraphs: [
-          "A development build encrypts local metadata and attachments. Expo Go is a visual test surface and does not provide the same device-protection boundary.",
-          "Preview data can be reset from Vault. Signed-pilot account deletion and retention follow the controls shown in Account. Final store disclosures and operator contact details are completed before public release."
+          "Installed iPhone and Android builds encrypt local metadata and attachments. A sample is not a cloud backup.",
+          "Sample data can be reset from Vault. Personal-account deletion and retention follow the controls shown in Account. Closed-pilot contact and retention details are supplied with each invitation."
         ]
       }
     ]
@@ -78,9 +89,9 @@ const ENGLISH: Record<LegalDocumentKind, LegalDocument> = {
     eyebrow: "TERMS",
     title: "Pilot terms",
     summary:
-      "These terms describe the personal test build and closed ALYR pilot.",
-    version: "Version 0.1",
-    updated: "Updated 27 July 2026",
+      "These terms describe personal use and the closed ALYR pilot.",
+    version: "Effective 28 July 2026",
+    updated: "Closed pilot · Last revised 28 July 2026",
     sections: [
       {
         title: "Purpose",
@@ -115,8 +126,8 @@ const ENGLISH: Record<LegalDocumentKind, LegalDocument> = {
     title: "Pilot support",
     summary:
       "Use these steps to get help without exposing private household material.",
-    version: "Support guide 0.1",
-    updated: "Updated 27 July 2026",
+    version: "Support guide",
+    updated: "Closed pilot · Last revised 28 July 2026",
     sections: [
       {
         title: "Before reporting an issue",
@@ -131,7 +142,7 @@ const ENGLISH: Record<LegalDocumentKind, LegalDocument> = {
         points: [
           "Keep the app installed while a local record is waiting to sync.",
           "Use a verified Recovery Kit before replacing a signed-build workspace.",
-          "Preview sessions are for test information and reset when the session ends."
+          "Sample workspaces are for exploration and should not contain personal records."
         ]
       },
       {
@@ -150,14 +161,14 @@ const ARABIC: Record<LegalDocumentKind, LegalDocument> = {
     title: "إشعار خصوصية النسخة التجريبية",
     summary:
       "يحفظ ALYR سجلًا منزليًا خاصًا للأغراض والأماكن والإثباتات التي تختار إضافتها.",
-    version: "الإصدار 0.1",
-    updated: "آخر تحديث: 27 يوليو 2026",
+    version: "ساري من 28 يوليو 2026",
+    updated: "تجربة مغلقة · آخر مراجعة 28 يوليو 2026",
     sections: [
       {
         title: "ما الذي تحفظه هذه النسخة",
         points: [
-          "تبقى سجلات Expo Go ومعاينة الويب داخل جلسة الاختبار، ولا تُرسل رسالة تأكيد.",
-          "قد تحفظ النسخة التجريبية الموقعة بريدك وعضوية المنزل وتفاصيل الأغراض والأماكن والمواقع والصور والمستندات وتشخيصات المزامنة.",
+          "تبقى مساحة العمل النموذجية معزولة على هذا الجهاز ولا تتم مزامنتها مع منزل شخصي.",
+          "قد يحفظ المنزل الشخصي بريدك وعضوية المنزل وتفاصيل الأغراض والأماكن والمواقع والصور والمستندات وتشخيصات المزامنة.",
           "لا يُطلب الموقع الدقيق إلا عندما تختار تحديد مكان عقار أو غرض."
         ]
       },
@@ -170,6 +181,17 @@ const ARABIC: Record<LegalDocumentKind, LegalDocument> = {
         ]
       },
       {
+        title: "قياس استخدام التجربة المغلقة",
+        paragraphs: [
+          "في المنازل الشخصية المسجّلة، يسجل ALYR مجموعة محدودة من أحداث التفاعل لقياس بدء الاستخدام والعودة إلى المنتج وموثوقيته. قد يبين الحدث اكتمال إعداد المنزل أو جواز غرض أو تأكيد استرجاع أو دعوة أو تصدير."
+        ],
+        points: [
+          "تقتصر خصائص الحدث على فئات مراجَعة مثل المنصة وإصدار التطبيق واللغة وحالة الاتصال ومصدر الإجراء ونطاقات زمنية أو عددية عامة.",
+          "لا تتضمن هذه الأحداث أسماء الأغراض أو المبالغ المسجلة أو العناوين أو الإحداثيات أو أدلة الاسترجاع أو أسماء الملفات أو محتوى المستندات.",
+          "ترتبط الأحداث بالحساب والمنزل المصادق عليهما للتحليل الداخلي فقط، ولا تُستخدم للإعلانات أو للتتبع عبر التطبيقات."
+        ]
+      },
+      {
         title: "المشاركة والصلاحيات",
         paragraphs: [
           "تبدأ السجلات خاصة بالمنزل، وتحدد الأدوار من يمكنه العرض أو التعديل أو إدارة الوصول. لا تُباع سجلات المنزل ولا تُستخدم للإعلانات."
@@ -178,8 +200,8 @@ const ARABIC: Record<LegalDocumentKind, LegalDocument> = {
       {
         title: "الحماية والاحتفاظ والحذف",
         paragraphs: [
-          "تشفّر نسخة التطوير البيانات المحلية والمرفقات. أما Expo Go فهو سطح اختبار بصري ولا يقدم مستوى حماية الجهاز نفسه.",
-          "يمكن تصفير بيانات المعاينة من الخزنة. تتبع عملية حذف حساب النسخة الموقعة عناصر التحكم الظاهرة في الحساب. تُستكمل بيانات المتجر وجهة التواصل قبل الإطلاق العام."
+          "تشفّر نسخ iPhone وAndroid المثبتة البيانات الوصفية المحلية والمرفقات. ولا تُعد مساحة العمل النموذجية نسخة احتياطية سحابية.",
+          "يمكن تصفير بيانات العينة من الخزنة. ويتبع حذف الحساب الشخصي والاحتفاظ به عناصر التحكم الظاهرة في الحساب، وتُرسل تفاصيل التواصل والاحتفاظ الخاصة بالتجربة المغلقة مع كل دعوة."
         ]
       }
     ]
@@ -189,8 +211,8 @@ const ARABIC: Record<LegalDocumentKind, LegalDocument> = {
     title: "شروط النسخة التجريبية",
     summary:
       "تصف هذه الشروط نسخة الاختبار الشخصي وتجربة ALYR المغلقة.",
-    version: "الإصدار 0.1",
-    updated: "آخر تحديث: 27 يوليو 2026",
+    version: "ساري من 28 يوليو 2026",
+    updated: "تجربة مغلقة · آخر مراجعة 28 يوليو 2026",
     sections: [
       {
         title: "الغرض",
@@ -225,8 +247,8 @@ const ARABIC: Record<LegalDocumentKind, LegalDocument> = {
     title: "دعم النسخة التجريبية",
     summary:
       "اتبع هذه الخطوات لطلب المساعدة من دون كشف مواد المنزل الخاصة.",
-    version: "دليل الدعم 0.1",
-    updated: "آخر تحديث: 27 يوليو 2026",
+    version: "دليل الدعم",
+    updated: "تجربة مغلقة · آخر مراجعة 28 يوليو 2026",
     sections: [
       {
         title: "قبل الإبلاغ عن مشكلة",
@@ -326,8 +348,8 @@ export function LegalDocumentScreen({
           ]}
         >
           {language === "ar"
-            ? "واضح ومحدد بالنسخة"
-            : "Clear about the build you are using"}
+            ? "الحماية تتبع مساحة عملك"
+            : "Protection follows your workspace"}
         </Text>
         <Text
           style={[
@@ -337,8 +359,8 @@ export function LegalDocumentScreen({
           ]}
         >
           {language === "ar"
-            ? "توضح شاشات ALYR دائمًا الفرق بين المعاينة المحلية والنسخة الموقعة والمزامنة السحابية."
-            : "ALYR surfaces the difference between a local preview, a signed build and cloud synchronization."}
+            ? "تبقى العينة على هذا الجهاز. ويمكن للمنازل الشخصية استخدام التخزين المحلي المشفّر والمزامنة السحابية بعد تسجيل الدخول."
+            : "A sample stays on this device. Personal households can use encrypted local storage and cloud synchronization after sign-in."}
         </Text>
       </CommandSurface>
 
@@ -425,7 +447,7 @@ const styles = StyleSheet.create({
   eyebrow: {
     color: colors.textMuted,
     fontFamily: typography.bodyBold,
-    fontSize: 11,
+    fontSize: 12,
     lineHeight: 16,
     letterSpacing: 1.1
   },

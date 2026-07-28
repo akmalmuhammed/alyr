@@ -3,6 +3,16 @@ import {
   render,
   waitFor
 } from "@testing-library/react-native";
+
+jest.mock("expo-crypto", () => {
+  let sequence = 0;
+  return {
+    randomUUID: jest.fn(
+      () =>
+        `00000000-0000-4000-8000-${String(++sequence).padStart(12, "0")}`
+    )
+  };
+});
 import { Text, AppState, type AppStateStatus } from "react-native";
 
 import {
@@ -240,8 +250,13 @@ describe("signed device-auth provider", () => {
     expect(assess).toHaveBeenCalledTimes(1);
     expect(authenticate).toHaveBeenCalledTimes(1);
 
+    const handoff = latestGate!.pendingFirstRecordHandoff!;
     await act(async () => {
-      latestGate!.completeOnboardingHandoff("place");
+      await latestGate!.acknowledgeOnboardingHandoff({
+        handoffId: handoff.handoffId,
+        intent: handoff.intent,
+        recordId: handoff.recordId
+      });
     });
     expect(screen.getByTestId("preflight-state").props.children.join(""))
       .toBe("idle:none:none");
@@ -725,15 +740,21 @@ describe("signed device-auth provider", () => {
   it("keeps the workspace sealed after a restore read failure and retries the same subject in place", async () => {
     let loadAttempts = 0;
     const store: OnboardingHandoffStore = {
-      load: jest.fn(async () => {
+      load: jest.fn(async () => "item"),
+      loadRecord: jest.fn(async () => {
         loadAttempts += 1;
         if (loadAttempts === 1) {
           throw new Error("transient keychain read");
         }
-        return "item";
+        return {
+          handoffId: "handoff-retry",
+          recordId: "asset-retry",
+          intent: "item" as const,
+          createdAt: 1
+        };
       }),
       save: jest.fn(async () => undefined),
-      clear: jest.fn(async () => undefined)
+      clear: jest.fn(async () => true)
     };
     const port: DeviceAuthPort = {
       assess: jest.fn(async () => ({
@@ -796,13 +817,14 @@ describe("signed device-auth provider", () => {
         intent: latestGate!.pendingFirstRecordIntent
       })
     ).toBe("/capture");
-    expect(store.load).toHaveBeenCalledTimes(2);
+    expect(store.loadRecord).toHaveBeenCalledTimes(2);
     await screen.unmount();
   });
 
   it("fails closed before onboarding mutation when the durable handoff cannot be saved", async () => {
     const store: OnboardingHandoffStore = {
       load: jest.fn(async () => null),
+      loadRecord: jest.fn(async () => null),
       save: jest.fn(
         async (
           _subjectId: string,
@@ -812,7 +834,7 @@ describe("signed device-auth provider", () => {
           throw new Error("storage unavailable");
         }
       ),
-      clear: jest.fn(async () => undefined)
+      clear: jest.fn(async () => true)
     };
     const port: DeviceAuthPort = {
       assess: jest.fn(async () => ({
@@ -851,6 +873,134 @@ describe("signed device-auth provider", () => {
     expect(
       screen.getByTestId("preflight-state").props.children.join("")
     ).toBe("ready:item:none");
+    await screen.unmount();
+  });
+
+  it("defers an empty-close handoff only in memory and restores the exact intent and record identity after restart", async () => {
+    const persisted = memoryHandoffStore();
+    const port: DeviceAuthPort = {
+      assess: jest.fn(async () => ({
+        kind: "available" as const,
+        method: "device-passcode" as const,
+        biometricEnrolled: false
+      })),
+      authenticate: jest.fn(async () => ({
+        success: true as const
+      })),
+      cancel: jest.fn(async () => undefined)
+    };
+    const firstProcess = await render(
+      <LocaleProvider initialLanguage="en">
+        <DeviceAuthProvider
+          onboardingHandoffStore={persisted.store}
+          port={port}
+          profile="native-secure"
+          protectionRequired={false}
+          subjectId="account-a:household-a"
+        >
+          <Probe />
+        </DeviceAuthProvider>
+      </LocaleProvider>
+    );
+    await act(async () => {
+      await latestGate!.authorizeOnboarding("place");
+    });
+    const handoff = latestGate!.pendingFirstRecordHandoff!;
+    const durableValue = persisted.value();
+
+    await act(async () => {
+      latestGate!.deferOnboardingHandoff(handoff.handoffId);
+    });
+    expect(latestGate!.pendingFirstRecordIntent).toBeNull();
+    expect(latestGate!.pendingFirstRecordHandoff).toEqual(handoff);
+    expect(persisted.value()).toBe(durableValue);
+
+    await firstProcess.unmount();
+    latestGate = null;
+    const restarted = await render(
+      <LocaleProvider initialLanguage="en">
+        <DeviceAuthProvider
+          onboardingHandoffStore={persisted.store}
+          port={port}
+          profile="native-secure"
+          protectionRequired={false}
+          subjectId="account-a:household-a"
+        >
+          <Probe />
+        </DeviceAuthProvider>
+      </LocaleProvider>
+    );
+    await waitFor(() => {
+      expect(latestGate!.pendingFirstRecordIntent).toBe("place");
+      expect(latestGate!.pendingFirstRecordHandoff).toEqual(handoff);
+    });
+    await restarted.unmount();
+  });
+
+  it("keeps an acknowledgement failure visible and retries the same durable receipt", async () => {
+    let value: string | null = null;
+    let failRemove = true;
+    const store = createOnboardingHandoffStore({
+      get: jest.fn(async () => value),
+      set: jest.fn(async (_key, nextValue) => {
+        value = nextValue;
+      }),
+      remove: jest.fn(async () => {
+        if (failRemove) {
+          failRemove = false;
+          throw new Error("keychain busy");
+        }
+        value = null;
+      })
+    });
+    const port: DeviceAuthPort = {
+      assess: jest.fn(async () => ({
+        kind: "available" as const,
+        method: "device-passcode" as const,
+        biometricEnrolled: false
+      })),
+      authenticate: jest.fn(async () => ({
+        success: true as const
+      })),
+      cancel: jest.fn(async () => undefined)
+    };
+    const screen = await render(
+      <LocaleProvider initialLanguage="en">
+        <DeviceAuthProvider
+          onboardingHandoffStore={store}
+          port={port}
+          profile="native-secure"
+          protectionRequired={false}
+          subjectId="account-a:household-a"
+        >
+          <Probe />
+        </DeviceAuthProvider>
+      </LocaleProvider>
+    );
+    await act(async () => {
+      await latestGate!.authorizeOnboarding("item");
+    });
+    const receipt = latestGate!.pendingFirstRecordHandoff!;
+
+    await act(async () => {
+      await expect(
+        latestGate!.acknowledgeOnboardingHandoff(receipt)
+      ).rejects.toThrow("keychain busy");
+    });
+    expect(latestGate!.onboardingHandoffAcknowledgeState).toBe(
+      "error"
+    );
+    expect(latestGate!.pendingFirstRecordHandoff).toEqual(receipt);
+    expect(value).toContain(receipt.handoffId);
+
+    await act(async () => {
+      await latestGate!.acknowledgeOnboardingHandoff(receipt);
+    });
+    expect(latestGate!.onboardingHandoffAcknowledgeState).toBe(
+      "idle"
+    );
+    expect(latestGate!.pendingFirstRecordHandoff).toBeNull();
+    expect(value).toBeNull();
     await screen.unmount();
   });
 });

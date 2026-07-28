@@ -29,7 +29,10 @@ import {
 } from "@/components/ui";
 import { LocalizedRouteBack } from "@/components/LocalizedRouteBack";
 import { useCoreJourneyCopy } from "@/i18n/coreJourneyCopy";
-import { useHouseholdAdminCopy } from "@/i18n/householdAdminCopy";
+import {
+  householdAccessErrorMessage,
+  useHouseholdAdminCopy
+} from "@/i18n/householdAdminCopy";
 import { colors, radius, spacing, typography } from "@/theme/tokens";
 
 type ManagedRole = "editor" | "viewer";
@@ -52,7 +55,7 @@ export default function MemberAccessScreen() {
     cancelPendingHouseholdInvite,
     transferHouseholdOwnership
   } = useAuthFlow();
-  const { copy: coreCopy, rtl } = useCoreJourneyCopy();
+  const { copy: coreCopy, language, rtl } = useCoreJourneyCopy();
   const copy = useHouseholdAdminCopy();
   const member = useMemo(
     () =>
@@ -121,9 +124,10 @@ export default function MemberAccessScreen() {
           </Text>
         </View>
         <ErrorBanner
-          message={
-            householdAccessError?.message ?? copy.refreshFailedBody
-          }
+          message={householdAccessErrorMessage(
+            householdAccessError,
+            language
+          )}
           onDismiss={() => router.replace("/(tabs)/family")}
         />
         <PrimaryButton
@@ -170,7 +174,10 @@ export default function MemberAccessScreen() {
         </CommandSurface>
         {localError ? (
           <ErrorBanner
-            message={copy.failureBody}
+            message={householdAccessErrorMessage(
+              householdAccessError,
+              language
+            )}
             onDismiss={() => setLocalError(false)}
           />
         ) : null}
@@ -255,7 +262,10 @@ export default function MemberAccessScreen() {
 
       {localError ? (
         <ErrorBanner
-          message={copy.failureBody}
+          message={householdAccessErrorMessage(
+            householdAccessError,
+            language
+          )}
           onDismiss={() => setLocalError(false)}
         />
       ) : null}
@@ -464,7 +474,7 @@ const styles = StyleSheet.create({
   eyebrow: {
     color: colors.concrete,
     fontFamily: typography.bodyBold,
-    fontSize: 11,
+    fontSize: 12,
     lineHeight: 15,
     letterSpacing: 1
   },

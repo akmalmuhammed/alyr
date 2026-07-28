@@ -11,10 +11,14 @@ import type {
   PlacePinInput
 } from "@/domain/model";
 import { CATEGORY_CHOICES } from "@/domain/model";
+import {
+  vaultScopeFromOpaqueId,
+  type VaultScopeId
+} from "@/data/vaultScope";
 
-const ITEM_DRAFT_KEY = "alyr.quick-passport-draft.v1";
-const PLACE_DRAFT_KEY = "alyr.place-capture-draft.v1";
-const DRAFT_VERSION = 1 as const;
+const ITEM_DRAFT_KEY_PREFIX = "alyr.quick-passport-draft";
+const PLACE_DRAFT_KEY_PREFIX = "alyr.place-capture-draft";
+const DRAFT_VERSION = 2 as const;
 
 export type DraftLocationChoice =
   | "known"
@@ -23,11 +27,17 @@ export type DraftLocationChoice =
 
 export interface QuickPassportDraft {
   readonly version: typeof DRAFT_VERSION;
+  readonly scopeId: VaultScopeId;
   readonly householdId: string;
   readonly updatedAt: string;
   readonly step: number;
   readonly name: string;
   readonly categoryId: string | null;
+  readonly captureSource?:
+    | "camera"
+    | "image-library"
+    | "document-import"
+    | "manual";
   readonly photo: CapturedFile | null;
   readonly evidence: CapturedFile | null;
   readonly locationStatus: DraftLocationChoice | null;
@@ -45,6 +55,7 @@ export interface QuickPassportDraft {
 
 export interface PlaceCaptureDraft {
   readonly version: typeof DRAFT_VERSION;
+  readonly scopeId: VaultScopeId;
   readonly householdId: string;
   readonly updatedAt: string;
   readonly placeName: string;
@@ -57,11 +68,26 @@ export interface PlaceCaptureDraft {
 
 let writeQueue: Promise<void> = Promise.resolve();
 
+function scopedDraftKey(
+  prefix: typeof ITEM_DRAFT_KEY_PREFIX | typeof PLACE_DRAFT_KEY_PREFIX,
+  scopeId: VaultScopeId
+): string {
+  const scope = vaultScopeFromOpaqueId(scopeId);
+  return `${prefix}.${scope.scopeId}.v${DRAFT_VERSION}`;
+}
+
+function enqueueWrite(operation: () => Promise<void>): Promise<void> {
+  const result = writeQueue.then(operation, operation);
+  writeQueue = result.catch(() => undefined);
+  return result;
+}
+
 function isDraft(value: unknown): value is QuickPassportDraft {
   if (!value || typeof value !== "object") return false;
   const candidate = value as Partial<QuickPassportDraft>;
   return (
     candidate.version === DRAFT_VERSION &&
+    typeof candidate.scopeId === "string" &&
     typeof candidate.householdId === "string" &&
     typeof candidate.updatedAt === "string" &&
     typeof candidate.step === "number" &&
@@ -71,6 +97,11 @@ function isDraft(value: unknown): value is QuickPassportDraft {
     typeof candidate.name === "string" &&
     (candidate.categoryId === null ||
       typeof candidate.categoryId === "string") &&
+    (candidate.captureSource === undefined ||
+      candidate.captureSource === "camera" ||
+      candidate.captureSource === "image-library" ||
+      candidate.captureSource === "document-import" ||
+      candidate.captureSource === "manual") &&
     (candidate.photo === null ||
       (typeof candidate.photo === "object" &&
         candidate.photo !== null &&
@@ -133,12 +164,21 @@ function sanitizeDraft(draft: QuickPassportDraft): QuickPassportDraft {
     ? normalizeAssetMutationReference(draft.roomId)
     : null;
   const unknownLocation = draft.locationStatus === "unknown";
+  const photo = sanitizedDraftFile(draft.photo, "photo");
+  const evidence = sanitizedDraftFile(draft.evidence, "evidence");
 
   return {
     ...draft,
     categoryId,
-    photo: sanitizedDraftFile(draft.photo, "photo"),
-    evidence: sanitizedDraftFile(draft.evidence, "evidence"),
+    captureSource:
+      draft.captureSource ??
+      (photo
+        ? "image-library"
+        : evidence
+          ? "document-import"
+          : "manual"),
+    photo,
+    evidence,
     placeId: unknownLocation ? null : placeId,
     roomId: unknownLocation ? null : roomId,
     locatorText: unknownLocation ? "" : draft.locatorText
@@ -150,6 +190,7 @@ function isPlaceDraft(value: unknown): value is PlaceCaptureDraft {
   const candidate = value as Partial<PlaceCaptureDraft>;
   return (
     candidate.version === DRAFT_VERSION &&
+    typeof candidate.scopeId === "string" &&
     typeof candidate.householdId === "string" &&
     typeof candidate.updatedAt === "string" &&
     typeof candidate.placeName === "string" &&
@@ -168,13 +209,20 @@ function isPlaceDraft(value: unknown): value is PlaceCaptureDraft {
 }
 
 export async function readQuickPassportDraft(
+  scopeId: VaultScopeId,
   householdId: string
 ): Promise<QuickPassportDraft | null> {
+  const stored = await SecureStore.getItemAsync(
+    scopedDraftKey(ITEM_DRAFT_KEY_PREFIX, scopeId)
+  );
+  if (!stored) return null;
   try {
-    const stored = await SecureStore.getItemAsync(ITEM_DRAFT_KEY);
-    if (!stored) return null;
     const parsed: unknown = JSON.parse(stored);
-    if (!isDraft(parsed) || parsed.householdId !== householdId) {
+    if (
+      !isDraft(parsed) ||
+      parsed.scopeId !== scopeId ||
+      parsed.householdId !== householdId
+    ) {
       return null;
     }
     return sanitizeDraft(parsed);
@@ -186,38 +234,43 @@ export async function readQuickPassportDraft(
 export function writeQuickPassportDraft(
   draft: Omit<QuickPassportDraft, "version" | "updatedAt">
 ): Promise<void> {
-  writeQueue = writeQueue
-    .catch(() => undefined)
-    .then(() =>
-      SecureStore.setItemAsync(
-        ITEM_DRAFT_KEY,
-        JSON.stringify({
-          ...draft,
-          version: DRAFT_VERSION,
-          updatedAt: new Date().toISOString()
-        } satisfies QuickPassportDraft)
-      )
-    )
-    .catch(() => undefined);
-  return writeQueue;
+  return enqueueWrite(async () => {
+    await SecureStore.setItemAsync(
+      scopedDraftKey(ITEM_DRAFT_KEY_PREFIX, draft.scopeId),
+      JSON.stringify({
+        ...draft,
+        version: DRAFT_VERSION,
+        updatedAt: new Date().toISOString()
+      } satisfies QuickPassportDraft)
+    );
+  });
 }
 
-export function clearQuickPassportDraft(): Promise<void> {
-  writeQueue = writeQueue
-    .catch(() => undefined)
-    .then(() => SecureStore.deleteItemAsync(ITEM_DRAFT_KEY))
-    .catch(() => undefined);
-  return writeQueue;
+export function clearQuickPassportDraft(
+  scopeId: VaultScopeId
+): Promise<void> {
+  return enqueueWrite(async () => {
+    await SecureStore.deleteItemAsync(
+      scopedDraftKey(ITEM_DRAFT_KEY_PREFIX, scopeId)
+    );
+  });
 }
 
 export async function readPlaceCaptureDraft(
+  scopeId: VaultScopeId,
   householdId: string
 ): Promise<PlaceCaptureDraft | null> {
+  const stored = await SecureStore.getItemAsync(
+    scopedDraftKey(PLACE_DRAFT_KEY_PREFIX, scopeId)
+  );
+  if (!stored) return null;
   try {
-    const stored = await SecureStore.getItemAsync(PLACE_DRAFT_KEY);
-    if (!stored) return null;
     const parsed: unknown = JSON.parse(stored);
-    if (!isPlaceDraft(parsed) || parsed.householdId !== householdId) {
+    if (
+      !isPlaceDraft(parsed) ||
+      parsed.scopeId !== scopeId ||
+      parsed.householdId !== householdId
+    ) {
       return null;
     }
     return parsed;
@@ -229,26 +282,24 @@ export async function readPlaceCaptureDraft(
 export function writePlaceCaptureDraft(
   draft: Omit<PlaceCaptureDraft, "version" | "updatedAt">
 ): Promise<void> {
-  writeQueue = writeQueue
-    .catch(() => undefined)
-    .then(() =>
-      SecureStore.setItemAsync(
-        PLACE_DRAFT_KEY,
-        JSON.stringify({
-          ...draft,
-          version: DRAFT_VERSION,
-          updatedAt: new Date().toISOString()
-        } satisfies PlaceCaptureDraft)
-      )
-    )
-    .catch(() => undefined);
-  return writeQueue;
+  return enqueueWrite(async () => {
+    await SecureStore.setItemAsync(
+      scopedDraftKey(PLACE_DRAFT_KEY_PREFIX, draft.scopeId),
+      JSON.stringify({
+        ...draft,
+        version: DRAFT_VERSION,
+        updatedAt: new Date().toISOString()
+      } satisfies PlaceCaptureDraft)
+    );
+  });
 }
 
-export function clearPlaceCaptureDraft(): Promise<void> {
-  writeQueue = writeQueue
-    .catch(() => undefined)
-    .then(() => SecureStore.deleteItemAsync(PLACE_DRAFT_KEY))
-    .catch(() => undefined);
-  return writeQueue;
+export function clearPlaceCaptureDraft(
+  scopeId: VaultScopeId
+): Promise<void> {
+  return enqueueWrite(async () => {
+    await SecureStore.deleteItemAsync(
+      scopedDraftKey(PLACE_DRAFT_KEY_PREFIX, scopeId)
+    );
+  });
 }

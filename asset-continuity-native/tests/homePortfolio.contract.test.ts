@@ -22,6 +22,18 @@ describe("Today portfolio entry point", () => {
     expect(source.indexOf("<CommandSurface>")).toBeLessThan(
       source.indexOf("<TodayPortfolioCard")
     );
+    expect(source).toContain(
+      "{promoteSyncTruth ? syncTruth : null}"
+    );
+    expect(source).toContain(
+      "{!promoteSyncTruth ? syncTruth : null}"
+    );
+    expect(
+      source.indexOf("{promoteSyncTruth ? syncTruth : null}")
+    ).toBeLessThan(source.indexOf("<CommandSurface>"));
+    expect(
+      source.indexOf("{!promoteSyncTruth ? syncTruth : null}")
+    ).toBeGreaterThan(source.indexOf("</CommandSurface>"));
     expect(source).not.toContain("compactPriority");
     expect(source).toContain('variant="command"');
     expect(source).toContain("borderTopWidth: 1");

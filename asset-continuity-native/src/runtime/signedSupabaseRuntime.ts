@@ -21,6 +21,7 @@ import {
   configureRuntimeCloudExportPort,
   configureRuntimeEvidenceDownloadPort,
   configureRuntimeEvidenceUploadPort,
+  configureRuntimeProductEventTransportFactory,
   configureRuntimeSyncTransport,
   createAuthenticatedCloudTransports
 } from "./cloudServices";
@@ -121,6 +122,10 @@ function createServices(
   const removeCloudExports = configureRuntimeCloudExportPort(
     cloud.cloudExports
   );
+  const removeProductEvents =
+    configureRuntimeProductEventTransportFactory(
+      cloud.productEventsForHousehold
+    );
 
   return {
     services: { authGateway, cloud },
@@ -132,6 +137,7 @@ function createServices(
       removeEvidenceUploads();
       removeEvidenceDownloads();
       removeCloudExports();
+      removeProductEvents();
       detachAutoRefresh();
     }
   };

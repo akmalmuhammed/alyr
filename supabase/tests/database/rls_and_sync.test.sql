@@ -2,7 +2,7 @@ begin;
 
 create extension if not exists pgtap with schema extensions;
 
-select plan(50);
+select plan(54);
 
 insert into auth.users (
   id, instance_id, aud, role, email, encrypted_password,
@@ -164,7 +164,8 @@ select lives_ok(
         "locale": "en",
         "occurredOffline": true,
         "creationMode": "personal"
-      }'::jsonb
+      }'::jsonb,
+      '92000000-0000-4000-8000-000000000001'
     )
   $$,
   'allow-listed analytics vocabulary is accepted'
@@ -182,12 +183,86 @@ select throws_ok(
         "locale": "en",
         "occurredOffline": true,
         "creationMode": "Pearl watch at 10 Private Street"
-      }'::jsonb
+      }'::jsonb,
+      '92000000-0000-4000-8000-000000000002'
     )
   $$,
   'P0001',
   'INVALID_ANALYTICS_PROPERTY_VALUE',
   'analytics rejects private free text in an allowed key'
+);
+
+select is(
+  public.record_product_event(
+    'household_created',
+    '20000000-0000-4000-8000-000000000001',
+    '{
+      "schemaVersion": 1,
+      "platform": "android",
+      "appVersion": "0.1.0",
+      "locale": "en",
+      "occurredOffline": true,
+      "creationMode": "personal"
+    }'::jsonb,
+    '92000000-0000-4000-8000-000000000001'
+  ),
+  public.record_product_event(
+    'household_created',
+    '20000000-0000-4000-8000-000000000001',
+    '{
+      "schemaVersion": 1,
+      "platform": "android",
+      "appVersion": "0.1.0",
+      "locale": "en",
+      "occurredOffline": true,
+      "creationMode": "personal"
+    }'::jsonb,
+    '92000000-0000-4000-8000-000000000001'
+  ),
+  'an exact analytics retry returns the original product event'
+);
+
+reset role;
+select is(
+  (
+    select count(*)
+    from public.product_events
+    where actor_id =
+        '10000000-0000-4000-8000-000000000001'
+      and client_event_id =
+        '92000000-0000-4000-8000-000000000001'
+  ),
+  1::bigint,
+  'an exact analytics retry does not duplicate the row'
+);
+set local role authenticated;
+
+select throws_ok(
+  $$
+    select public.record_product_event(
+      'household_created',
+      '20000000-0000-4000-8000-000000000001',
+      '{
+        "schemaVersion": 1,
+        "platform": "android",
+        "appVersion": "0.1.0",
+        "locale": "en",
+        "occurredOffline": true,
+        "creationMode": "sample"
+      }'::jsonb,
+      '92000000-0000-4000-8000-000000000001'
+    )
+  $$,
+  'P0001',
+  'ANALYTICS_IDEMPOTENCY_CONFLICT',
+  'analytics rejects reuse of a client event key for changed properties'
+);
+
+select ok(
+  to_regprocedure(
+    'public.record_product_event(text,uuid,jsonb)'
+  ) is null,
+  'the legacy non-idempotent analytics signature is unavailable'
 );
 
 select ok(

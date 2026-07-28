@@ -43,6 +43,7 @@ jest.mock("@/state/WorkspaceProvider", () => ({
   useWorkspace: () => ({
     can: () => true,
     workspace: mockWorkspace,
+    repository: { scopeId: "device-preview-v1" },
     saving: false,
     error: null,
     clearError: jest.fn(),

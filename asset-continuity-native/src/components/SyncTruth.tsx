@@ -60,8 +60,8 @@ function presentation(
       color: colors.warning,
       title: ar ? "محفوظ على هذا الجهاز" : "Saved on this device",
       detail: ar
-        ? "معاينة محلية فقط · غير محمي سحابيًا"
-        : "Local preview only · not protected in cloud"
+        ? "تبقى العينة على هذا الجهاز · لا توجد نسخة احتياطية سحابية"
+        : "This sample stays on this device · no cloud backup"
     };
   }
   if (sync.status === "needs-attention") {

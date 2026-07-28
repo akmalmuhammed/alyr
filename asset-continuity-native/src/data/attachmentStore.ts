@@ -1623,6 +1623,9 @@ export function createDefaultAttachmentStore(
     void locked.lock();
     return locked;
   }
+  // The remaining validated native layouts are the isolated signed sample and
+  // authenticated household scopes. Both use their own AES key and protected
+  // directory; neither can materialize or ingest files from the other.
   return new EncryptedFileAttachmentStore(
     new ExpoSecureKeyStore(),
     scope

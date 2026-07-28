@@ -146,17 +146,44 @@ describe("signed iOS release configuration", () => {
       "NSPrivacyCollectedDataTypeOtherFinancialInfo",
       "NSPrivacyCollectedDataTypePhotosorVideos",
       "NSPrivacyCollectedDataTypeOtherUserContent",
-      "NSPrivacyCollectedDataTypeOtherDiagnosticData"
+      "NSPrivacyCollectedDataTypeOtherDiagnosticData",
+      "NSPrivacyCollectedDataTypeProductInteraction"
     ]);
-    expect(collected).toEqual(
-      collected.map((entry) => ({
+    const productInteraction = collected.find(
+      (entry) =>
+        entry.NSPrivacyCollectedDataType ===
+        "NSPrivacyCollectedDataTypeProductInteraction"
+    );
+    expect(productInteraction).toEqual({
+      NSPrivacyCollectedDataType:
+        "NSPrivacyCollectedDataTypeProductInteraction",
+      NSPrivacyCollectedDataTypeLinked: true,
+      NSPrivacyCollectedDataTypeTracking: false,
+      NSPrivacyCollectedDataTypePurposes: [
+        "NSPrivacyCollectedDataTypePurposeAnalytics"
+      ]
+    });
+    expect(
+      collected.filter(
+        (entry) =>
+          entry.NSPrivacyCollectedDataType !==
+          "NSPrivacyCollectedDataTypeProductInteraction"
+      )
+    ).toEqual(
+      collected
+        .filter(
+          (entry) =>
+            entry.NSPrivacyCollectedDataType !==
+            "NSPrivacyCollectedDataTypeProductInteraction"
+        )
+        .map((entry) => ({
         ...entry,
         NSPrivacyCollectedDataTypeLinked: true,
         NSPrivacyCollectedDataTypeTracking: false,
         NSPrivacyCollectedDataTypePurposes: [
           "NSPrivacyCollectedDataTypePurposeAppFunctionality"
         ]
-      }))
+        }))
     );
   });
 

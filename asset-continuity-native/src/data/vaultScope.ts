@@ -16,7 +16,7 @@ export type VaultScopeId = string & {
 };
 
 export interface VaultScope {
-  readonly kind: "device-preview" | "authenticated";
+  readonly kind: "device-preview" | "signed-sample" | "authenticated";
   readonly scopeId: VaultScopeId;
   readonly databaseName: string;
   readonly databaseKeyName: string;
@@ -26,6 +26,7 @@ export interface VaultScope {
 }
 
 const DEVICE_PREVIEW_SCOPE_ID = "device-preview-v1";
+const SIGNED_OUT_SAMPLE_SCOPE_ID = "signed-sample-v1";
 const AUTHENTICATED_SCOPE_ID_PATTERN = /^auth-v1-[a-f0-9]{64}$/u;
 const CONTROL_CHARACTER_PATTERN = /[\u0000-\u001f\u007f-\u009f]/u;
 const MAX_IDENTITY_COMPONENT_LENGTH = 512;
@@ -56,6 +57,23 @@ export const DEVICE_PREVIEW_VAULT_SCOPE: VaultScope = Object.freeze({
   attachmentKeyName: "alyr.native.attachment-key.v1",
   protectedAttachmentDirectoryName: "alyr-attachments",
   materializedAttachmentDirectoryName: "alyr-materialized"
+});
+
+/**
+ * A durable, encrypted local scope for the signed-out sample journey.
+ *
+ * It deliberately has no account or household identity and never shares a
+ * database, key, attachment directory, or materialized-file directory with
+ * either the legacy preview scope or an authenticated household vault.
+ */
+export const SIGNED_OUT_SAMPLE_VAULT_SCOPE: VaultScope = Object.freeze({
+  kind: "signed-sample",
+  scopeId: SIGNED_OUT_SAMPLE_SCOPE_ID as VaultScopeId,
+  databaseName: "alyr-signed-sample-v1.db",
+  databaseKeyName: "alyr.native.signed-sample.database-key.v1",
+  attachmentKeyName: "alyr.native.signed-sample.attachment-key.v1",
+  protectedAttachmentDirectoryName: "alyr-signed-sample-v1-attachments",
+  materializedAttachmentDirectoryName: "alyr-signed-sample-v1-materialized"
 });
 
 function validateIdentityComponent(
@@ -115,6 +133,9 @@ export function vaultScopeFromOpaqueId(scopeId: string): VaultScope {
   if (scopeId === DEVICE_PREVIEW_SCOPE_ID) {
     return DEVICE_PREVIEW_VAULT_SCOPE;
   }
+  if (scopeId === SIGNED_OUT_SAMPLE_SCOPE_ID) {
+    return SIGNED_OUT_SAMPLE_VAULT_SCOPE;
+  }
   if (!AUTHENTICATED_SCOPE_ID_PATTERN.test(scopeId)) {
     throw new Error("The local vault scope identifier is invalid.");
   }
@@ -148,4 +169,8 @@ export function assertValidVaultScope(scope: VaultScope): VaultScope {
 
 export function isDevicePreviewVaultScope(scope: VaultScope): boolean {
   return assertValidVaultScope(scope).kind === "device-preview";
+}
+
+export function isSignedOutSampleVaultScope(scope: VaultScope): boolean {
+  return assertValidVaultScope(scope).kind === "signed-sample";
 }

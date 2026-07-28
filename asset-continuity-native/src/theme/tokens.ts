@@ -92,6 +92,11 @@ export const typography = {
   arabicMedium: "IBMPlexSansArabic_600SemiBold"
 } as const;
 
+export const typeScale = nativeTokens.typography.sizes;
+export const lineHeight = nativeTokens.typography.lineHeights;
+export const iconSize = nativeTokens.control.iconSizes;
+export const control = nativeTokens.control;
+
 export const shadows = {
   floating: {
     shadowColor: colors.shadow,

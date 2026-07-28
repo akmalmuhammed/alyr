@@ -9,6 +9,7 @@ import {
   useRef,
   useState
 } from "react";
+import * as Crypto from "expo-crypto";
 import {
   AppState,
   type AppStateStatus
@@ -27,6 +28,7 @@ import {
 import { expoDeviceAuthPort } from "./expoDeviceAuth";
 import {
   expoOnboardingHandoffStore,
+  type OnboardingHandoffRecord,
   type OnboardingHandoffStore
 } from "./onboardingHandoffStore";
 import {
@@ -72,6 +74,11 @@ export interface DeviceAuthContextValue {
   readonly previewBypass: boolean;
   readonly onboardingPreflight: OnboardingDevicePreflightState;
   readonly pendingFirstRecordIntent: OnboardingFirstRecordIntent | null;
+  readonly pendingFirstRecordHandoff: OnboardingHandoffRecord | null;
+  readonly onboardingHandoffAcknowledgeState:
+    | "idle"
+    | "acknowledging"
+    | "error";
   readonly onboardingHandoffRestoreState:
     | "loading"
     | "ready"
@@ -82,8 +89,12 @@ export interface DeviceAuthContextValue {
   ) => Promise<OnboardingDeviceAuthorization | null>;
   readonly clearOnboardingAuthorization: () => void;
   readonly retryOnboardingHandoffRestore: () => void;
-  readonly completeOnboardingHandoff: (
-    intent: OnboardingFirstRecordIntent
+  readonly deferOnboardingHandoff: (handoffId: string) => void;
+  readonly acknowledgeOnboardingHandoff: (
+    receipt: Pick<
+      OnboardingHandoffRecord,
+      "handoffId" | "intent" | "recordId"
+    >
   ) => Promise<void>;
   readonly unlock: () => Promise<void>;
   readonly retryCapability: () => void;
@@ -97,12 +108,15 @@ const missingProviderValue: DeviceAuthContextValue = {
   previewBypass: false,
   onboardingPreflight: initialOnboardingDevicePreflightState,
   pendingFirstRecordIntent: null,
+  pendingFirstRecordHandoff: null,
+  onboardingHandoffAcknowledgeState: "idle",
   onboardingHandoffRestoreState: "ready",
   checkOnboardingProtection: async () => null,
   authorizeOnboarding: async () => null,
   clearOnboardingAuthorization: () => undefined,
   retryOnboardingHandoffRestore: () => undefined,
-  completeOnboardingHandoff: async () => undefined,
+  deferOnboardingHandoff: () => undefined,
+  acknowledgeOnboardingHandoff: async () => undefined,
   unlock: async () => undefined,
   retryCapability: () => undefined,
   lockNow: () => undefined
@@ -145,8 +159,16 @@ export function DeviceAuthProvider({
             notice: null
           }
     );
-  const [durableFirstRecordIntent, setDurableFirstRecordIntent] =
-    useState<OnboardingFirstRecordIntent | null>(null);
+  const [
+    durableFirstRecordHandoff,
+    setDurableFirstRecordHandoff
+  ] = useState<OnboardingHandoffRecord | null>(null);
+  const [deferredHandoffId, setDeferredHandoffId] =
+    useState<string | null>(null);
+  const [
+    onboardingHandoffAcknowledgeState,
+    setOnboardingHandoffAcknowledgeState
+  ] = useState<"idle" | "acknowledging" | "error">("idle");
   const [
     onboardingHandoffRestoreState,
     setOnboardingHandoffRestoreState
@@ -176,6 +198,11 @@ export function DeviceAuthProvider({
     Boolean(subjectId) && profile === "native-secure";
   const previewBypass =
     profile === "expo-go-preview" || profile === "web-preview";
+  const pendingFirstRecordIntent =
+    durableFirstRecordHandoff &&
+    deferredHandoffId !== durableFirstRecordHandoff.handoffId
+      ? durableFirstRecordHandoff.intent
+      : null;
   const matchingOnboardingGrant =
     nativeSubjectProtection &&
     AppState.currentState !== "background" &&
@@ -195,7 +222,9 @@ export function DeviceAuthProvider({
       onboardingHandoffLoadVersionRef.current += 1;
       onboardingGrantRef.current = null;
       releasedSubjectRef.current = null;
-      setDurableFirstRecordIntent(null);
+      setDurableFirstRecordHandoff(null);
+      setDeferredHandoffId(null);
+      setOnboardingHandoffAcknowledgeState("idle");
       setOnboardingHandoffRestoreState(
         profile === "native-secure" && subjectId
           ? "loading"
@@ -254,14 +283,16 @@ export function DeviceAuthProvider({
     onboardingHandoffLoadVersionRef.current = loadVersion;
     let active = true;
     void onboardingHandoffStore
-      .load(requestedSubject)
-      .then((intent) => {
+      .loadRecord(requestedSubject)
+      .then((handoff) => {
         if (
           active &&
           activeSubjectRef.current === requestedSubject &&
           onboardingHandoffLoadVersionRef.current === loadVersion
         ) {
-          setDurableFirstRecordIntent(intent);
+          setDurableFirstRecordHandoff(handoff);
+          setDeferredHandoffId(null);
+          setOnboardingHandoffAcknowledgeState("idle");
           setOnboardingHandoffRestoreState("ready");
         }
       })
@@ -553,8 +584,16 @@ export function DeviceAuthProvider({
       const requestedSubject = subjectId;
 
       if (profile !== "native-secure") {
+        const handoff: OnboardingHandoffRecord = {
+          handoffId: Crypto.randomUUID(),
+          recordId: Crypto.randomUUID(),
+          intent,
+          createdAt: now()
+        };
         setOnboardingHandoffRestoreState("ready");
-        setDurableFirstRecordIntent(intent);
+        setDurableFirstRecordHandoff(handoff);
+        setDeferredHandoffId(null);
+        setOnboardingHandoffAcknowledgeState("idle");
         setOnboardingPreflight({
           phase: "bypassed",
           capability: null,
@@ -586,8 +625,37 @@ export function DeviceAuthProvider({
         now() - existingGrant.authorizedAt <=
           ONBOARDING_AUTHORIZATION_TTL_MS
       ) {
+        const existingHandoff =
+          durableFirstRecordHandoff?.intent === intent
+            ? durableFirstRecordHandoff
+            : {
+                handoffId: Crypto.randomUUID(),
+                recordId: Crypto.randomUUID(),
+                intent,
+                createdAt: now()
+              };
+        if (existingHandoff !== durableFirstRecordHandoff) {
+          try {
+            await onboardingHandoffStore.save(
+              requestedSubject,
+              intent,
+              existingHandoff.createdAt,
+              existingHandoff
+            );
+          } catch {
+            setOnboardingPreflight({
+              phase: "ready",
+              capability: existingGrant.capability,
+              intent,
+              notice: "failed"
+            });
+            return null;
+          }
+        }
         setOnboardingHandoffRestoreState("ready");
-        setDurableFirstRecordIntent(intent);
+        setDurableFirstRecordHandoff(existingHandoff);
+        setDeferredHandoffId(null);
+        setOnboardingHandoffAcknowledgeState("idle");
         setOnboardingPreflight({
           phase: "authorized",
           capability: existingGrant.capability,
@@ -649,11 +717,18 @@ export function DeviceAuthProvider({
         return null;
       }
       if (result.success) {
+        const handoff: OnboardingHandoffRecord = {
+          handoffId: Crypto.randomUUID(),
+          recordId: Crypto.randomUUID(),
+          intent,
+          createdAt: now()
+        };
         try {
           await onboardingHandoffStore.save(
             requestedSubject,
             intent,
-            now()
+            handoff.createdAt,
+            handoff
           );
         } catch {
           onboardingAuthorizeInFlightRef.current = false;
@@ -672,7 +747,7 @@ export function DeviceAuthProvider({
         ) {
           onboardingAuthorizeInFlightRef.current = false;
           await onboardingHandoffStore
-            .clear(requestedSubject)
+            .clear(requestedSubject, handoff.handoffId)
             .catch(() => undefined);
           return null;
         }
@@ -684,7 +759,9 @@ export function DeviceAuthProvider({
         };
         onboardingAuthorizeInFlightRef.current = false;
         setOnboardingHandoffRestoreState("ready");
-        setDurableFirstRecordIntent(intent);
+        setDurableFirstRecordHandoff(handoff);
+        setDeferredHandoffId(null);
+        setOnboardingHandoffAcknowledgeState("idle");
         setOnboardingPreflight({
           phase: "authorized",
           capability,
@@ -737,6 +814,7 @@ export function DeviceAuthProvider({
     },
     [
       checkOnboardingProtection,
+      durableFirstRecordHandoff,
       language,
       now,
       onboardingPreflight.capability,
@@ -751,7 +829,9 @@ export function DeviceAuthProvider({
   const clearOnboardingAuthorization = useCallback(() => {
     onboardingRequestVersionRef.current += 1;
     onboardingGrantRef.current = null;
-    setDurableFirstRecordIntent(null);
+    setDurableFirstRecordHandoff(null);
+    setDeferredHandoffId(null);
+    setOnboardingHandoffAcknowledgeState("idle");
     if (profile === "native-secure" && subjectId) {
       void onboardingHandoffStore
         .clear(subjectId)
@@ -779,25 +859,78 @@ export function DeviceAuthProvider({
     }
   }, [profile, subjectId]);
 
-  const completeOnboardingHandoff = useCallback(
-    async (intent: OnboardingFirstRecordIntent) => {
+  const deferOnboardingHandoff = useCallback((handoffId: string) => {
+    setDeferredHandoffId((current) =>
+      durableFirstRecordHandoff?.handoffId === handoffId
+        ? handoffId
+        : current
+    );
+  }, [durableFirstRecordHandoff]);
+
+  const acknowledgeOnboardingHandoff = useCallback(
+    async (
+      receipt: Pick<
+        OnboardingHandoffRecord,
+        "handoffId" | "intent" | "recordId"
+      >
+    ) => {
       const activeSubject = subjectId;
-      setDurableFirstRecordIntent((current) =>
-        current === intent ? null : current
-      );
-      setOnboardingPreflight((current) =>
-        current.intent === intent
-          ? initialOnboardingDevicePreflightState
-          : current
-      );
+      const current = durableFirstRecordHandoff;
+      if (
+        !current ||
+        current.handoffId !== receipt.handoffId ||
+        current.intent !== receipt.intent ||
+        current.recordId !== receipt.recordId
+      ) {
+        setOnboardingHandoffAcknowledgeState("error");
+        throw new Error(
+          "The first-record completion receipt does not match the active handoff."
+        );
+      }
+
+      setOnboardingHandoffAcknowledgeState("acknowledging");
       if (
         profile === "native-secure" &&
         activeSubject
       ) {
-        await onboardingHandoffStore.clear(activeSubject);
+        try {
+          const cleared = await onboardingHandoffStore.clear(
+            activeSubject,
+            receipt.handoffId
+          );
+          if (!cleared) {
+            throw new Error(
+              "The durable first-record handoff changed before acknowledgement."
+            );
+          }
+        } catch (error) {
+          setOnboardingHandoffAcknowledgeState("error");
+          throw error;
+        }
       }
+
+      // Clear memory only after the subject-scoped SecureStore record has been
+      // durably removed. A failed acknowledgement therefore remains visible
+      // and can be retried without creating the record again.
+      setDurableFirstRecordHandoff((latest) =>
+        latest?.handoffId === receipt.handoffId ? null : latest
+      );
+      setDeferredHandoffId((deferred) =>
+        deferred === receipt.handoffId ? null : deferred
+      );
+      setOnboardingHandoffAcknowledgeState("idle");
+      setOnboardingPreflight((latest) =>
+        latest.intent === receipt.intent
+          ? initialOnboardingDevicePreflightState
+          : latest
+      );
     },
-    [onboardingHandoffStore, profile, subjectId]
+    [
+      durableFirstRecordHandoff,
+      onboardingHandoffStore,
+      profile,
+      subjectId
+    ]
   );
 
   const retryCapability = useCallback(() => {
@@ -820,28 +953,34 @@ export function DeviceAuthProvider({
             Boolean(matchingOnboardingGrant))),
       previewBypass,
       onboardingPreflight,
-      pendingFirstRecordIntent: durableFirstRecordIntent,
+      pendingFirstRecordIntent,
+      pendingFirstRecordHandoff: durableFirstRecordHandoff,
+      onboardingHandoffAcknowledgeState,
       onboardingHandoffRestoreState,
       checkOnboardingProtection,
       authorizeOnboarding,
       clearOnboardingAuthorization,
       retryOnboardingHandoffRestore,
-      completeOnboardingHandoff,
+      deferOnboardingHandoff,
+      acknowledgeOnboardingHandoff,
       unlock,
       retryCapability,
       lockNow
     }),
     [
       lockNow,
+      acknowledgeOnboardingHandoff,
       authorizeOnboarding,
       checkOnboardingProtection,
       clearOnboardingAuthorization,
-      completeOnboardingHandoff,
-      durableFirstRecordIntent,
+      deferOnboardingHandoff,
+      durableFirstRecordHandoff,
       matchingOnboardingGrant,
       nativeSubjectProtection,
+      onboardingHandoffAcknowledgeState,
       onboardingHandoffRestoreState,
       onboardingPreflight,
+      pendingFirstRecordIntent,
       previewBypass,
       requiresUnlock,
       retryCapability,

@@ -35,17 +35,29 @@ describe("versioned pilot policy and support surfaces", () => {
     expect(vault).toContain('router.push("/support")');
   });
 
-  it("states a version, update date and preview-versus-signed boundary", () => {
+  it("states an effective date and an honest sample-versus-personal boundary", () => {
     const document = read(
       "src/components/LegalDocumentScreen.tsx"
     );
 
-    expect(document).toContain('version: "Version 0.1"');
-    expect(document).toContain("Updated 27 July 2026");
+    expect(document).toContain('version: "Effective 28 July 2026"');
     expect(document).toContain(
-      "Expo Go is a visual test surface"
+      "Closed pilot · Last revised 28 July 2026"
     );
-    expect(document).toContain("الإصدار 0.1");
-    expect(document).toContain("27 يوليو 2026");
+    expect(document).toContain(
+      "The sample workspace stays isolated on this device"
+    );
+    expect(document).toContain(
+      "Closed-pilot product measurement"
+    );
+    expect(document).toContain(
+      "Asset names, recorded amounts, addresses, coordinates"
+    );
+    expect(document).not.toContain(
+      "Expo Go"
+    );
+    expect(document).toContain("ساري من 28 يوليو 2026");
+    expect(document).toContain("تجربة مغلقة");
+    expect(document).toContain("قياس استخدام التجربة المغلقة");
   });
 });

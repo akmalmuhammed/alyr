@@ -2,6 +2,7 @@ import {
   fireEvent,
   render
 } from "@testing-library/react-native";
+import { StyleSheet } from "react-native";
 
 const mockRouter = {
   back: jest.fn(),
@@ -82,6 +83,7 @@ import CreateAccountScreen from "../app/(auth)/create-account";
 import HouseholdSetupScreen from "../app/(auth)/household";
 import SignInScreen from "../app/(auth)/sign-in";
 import { focusFirstInvalidAuthField } from "@/auth/components";
+import { typography } from "@/theme/tokens";
 
 const mockFocusFirstInvalidAuthField =
   focusFirstInvalidAuthField as jest.MockedFunction<
@@ -122,6 +124,12 @@ describe("auth form first-invalid-field wiring", () => {
   it("requires pilot access in signed mode before creating an account", async () => {
     mockAuthState.mode = "supabase";
     const screen = await render(<CreateAccountScreen />);
+    const pilotCodeStyle = StyleSheet.flatten(
+      screen.getByLabelText("Pilot access code").props.style
+    );
+    expect(pilotCodeStyle.fontFamily).toBe(typography.bodyBold);
+    expect(pilotCodeStyle.textAlign).toBe("left");
+    expect(pilotCodeStyle.writingDirection).toBe("ltr");
     await fireEvent.changeText(
       screen.getByLabelText("Email"),
       "owner@example.com"

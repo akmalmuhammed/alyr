@@ -192,7 +192,10 @@ import {
   ATTACHMENT_KEY_NAME,
   getOrCreateAttachmentKey
 } from "@/data/secureKeyStore";
-import { vaultScopeFromOpaqueId } from "@/data/vaultScope";
+import {
+  SIGNED_OUT_SAMPLE_VAULT_SCOPE,
+  vaultScopeFromOpaqueId
+} from "@/data/vaultScope";
 import { createWorkspace } from "@/domain/sample";
 
 interface MockFileSystemModule {
@@ -334,6 +337,50 @@ async function stageSingleRecoveryAttachment(input: {
 }
 
 describe("encrypted attachment ingestion contract", () => {
+  it("encrypts signed-out sample attachments in a scope rejected by authenticated stores", async () => {
+    const authenticatedScope = vaultScopeFromOpaqueId(
+      `auth-v1-${"9".repeat(64)}`
+    );
+    const keyStore = secureStoreWith(new Uint8Array(32).fill(21));
+    const sampleStore = new EncryptedFileAttachmentStore(
+      keyStore,
+      SIGNED_OUT_SAMPLE_VAULT_SCOPE
+    );
+    const authenticatedStore = new EncryptedFileAttachmentStore(
+      keyStore,
+      authenticatedScope
+    );
+    const sourceUri = "file:///cache/signed-sample-photo.jpg";
+    const sourceBytes = new Uint8Array([83, 65, 77, 80, 76, 69]);
+    mockFileSystem.__files.set(sourceUri, sourceBytes);
+
+    const ingested = await sampleStore.ingest({
+      localUri: sourceUri,
+      fileName: "signed-sample-photo.jpg",
+      mimeType: "image/jpeg",
+      byteSize: sourceBytes.byteLength,
+      protectedUri: null,
+      checksumSha256: null,
+      encryptedAtRest: false
+    });
+
+    expect(sampleStore.kind).toBe("encrypted-files");
+    expect(sampleStore.encryptedAtRest).toBe(true);
+    expect(sampleStore.scopeId).toBe(
+      SIGNED_OUT_SAMPLE_VAULT_SCOPE.scopeId
+    );
+    expect(ingested.encryptedAtRest).toBe(true);
+    expect(ingested.protectedUri).toContain(
+      `/${SIGNED_OUT_SAMPLE_VAULT_SCOPE.protectedAttachmentDirectoryName}/`
+    );
+    expect(keyStore.get).toHaveBeenCalledWith(
+      SIGNED_OUT_SAMPLE_VAULT_SCOPE.attachmentKeyName
+    );
+    await expect(authenticatedStore.ingest(ingested)).rejects.toThrow(
+      "does not belong to this local vault"
+    );
+  });
+
   it("persists the measured byte size when picker metadata reports zero", async () => {
     const sourceUri = "file:///cache/picker-photo.jpg";
     const sourceBytes = new Uint8Array([7, 6, 5, 4, 3, 2]);

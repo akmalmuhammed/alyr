@@ -1134,7 +1134,7 @@ const styles = StyleSheet.create({
   kicker: {
     color: colors.textMuted,
     fontFamily: typography.bodyBold,
-    fontSize: 11,
+    fontSize: 12,
     lineHeight: 15,
     letterSpacing: 1.1
   },

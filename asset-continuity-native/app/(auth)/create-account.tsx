@@ -222,6 +222,7 @@ export default function CreateAccountScreen() {
               placeholder={copy.createAccount.pilotAccessPlaceholder}
               ref={pilotAccessRef}
               returnKeyType="next"
+              style={styles.codeInput}
               value={pilotAccessCode}
             />
           ) : null}
@@ -280,26 +281,16 @@ export default function CreateAccountScreen() {
               rtl && styles.rtlText
             ]}
           >
-            {language === "ar"
-              ? "بإنشاء الحساب، فإنك توافق على شروط النسخة التجريبية وتقر بإشعار الخصوصية."
-              : "By creating an account, you agree to the pilot terms and acknowledge the privacy notice."}
+            {copy.createAccount.legalAcknowledgement}
           </Text>
           <View style={[styles.legalLinks, rtl && styles.rowReverse]}>
             <LegalLink
-              label={
-                language === "ar"
-                  ? "إشعار الخصوصية"
-                  : "Privacy notice"
-              }
+              label={copy.createAccount.privacyNotice}
               onPress={() => router.push("/privacy-policy")}
               rtl={rtl}
             />
             <LegalLink
-              label={
-                language === "ar"
-                  ? "شروط النسخة التجريبية"
-                  : "Pilot terms"
-              }
+              label={copy.createAccount.pilotTerms}
               onPress={() => router.push("/terms")}
               rtl={rtl}
             />
@@ -352,6 +343,12 @@ const styles = StyleSheet.create({
     paddingTop: spacing.sm,
     borderTopWidth: StyleSheet.hairlineWidth,
     borderTopColor: colors.border
+  },
+  codeInput: {
+    fontFamily: typography.bodyBold,
+    letterSpacing: 1.2,
+    textAlign: "left",
+    writingDirection: "ltr"
   },
   legalBody: {
     color: colors.textMuted,

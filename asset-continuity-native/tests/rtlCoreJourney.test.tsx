@@ -3,7 +3,7 @@ import type { PropsWithChildren } from "react";
 import { StyleSheet } from "react-native";
 
 import { AuthHeading } from "@/auth/components";
-import { BodyText, ScreenTitle } from "@/components/ui";
+import { BodyText, Eyebrow, ScreenTitle } from "@/components/ui";
 import {
   CORE_JOURNEY_COPY,
   formatLocalizedDate,
@@ -92,6 +92,18 @@ describe("Arabic RTL core journey", () => {
       "IBMPlexSansArabic_600SemiBold"
     );
     expect(bodyStyle.fontFamily).toBe("IBMPlexSansArabic_400Regular");
+  });
+
+  it("does not apply Latin uppercase tracking to Arabic eyebrows", async () => {
+    const screen = await render(<Eyebrow>Ø³Ø¬Ù„ Ø®Ø§Øµ</Eyebrow>, {
+      wrapper: arabicWrapper
+    });
+    const style = StyleSheet.flatten(
+      screen.getByText("Ø³Ø¬Ù„ Ø®Ø§Øµ").props.style
+    );
+
+    expect(style.letterSpacing).toBe(0);
+    expect(style.textTransform).toBe("none");
   });
 
   it("mirrors RTL rows exactly once on web and native", () => {

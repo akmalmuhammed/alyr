@@ -132,6 +132,11 @@ describe("localized startup status", () => {
     expect(
       screen.getByText(STARTUP_COPY.en.application)
     ).toBeTruthy();
+    expect(
+      screen.getByTestId("startup-brand", {
+        includeHiddenElements: true
+      })
+    ).toBeTruthy();
     await waitFor(() => {
       expect(announce).toHaveBeenCalledWith(
         STARTUP_COPY.en.application

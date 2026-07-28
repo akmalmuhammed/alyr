@@ -17,7 +17,10 @@ describe("post-capture navigation contract", () => {
     );
 
     expect(captureRoute).toContain(
-      "router.replace(`/asset/${asset.id}?justCreated=1`);"
+      "navigateAfterCommittedRecord(record.kind, record.id)"
+    );
+    expect(captureRoute).toContain(
+      "`/asset/${recordId}?justCreated=1`"
     );
     expect(passportRoute).toContain('justCreated === "1"');
     expect(passportRoute).toContain("Passport saved");

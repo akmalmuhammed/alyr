@@ -28,41 +28,36 @@ If the preview is no longer running, open PowerShell and run:
 You can also double-click `START_IPHONE_PREVIEW.cmd`. Keep that window open
 and scan the QR code it prints.
 
-Current LAN URL: `exp://192.168.1.32:8081`
-
-Current QR code:
-`C:\Users\akmal\OneDrive\Documents\alyr\docs\product-audit\2026-07-28-iphone-preview-deece47\ALYR-EXPO-GO-QR-deece47.png`
-
-The QR was regenerated from the confirmed LAN URL at 768 x 768 and
-independently decoded back to `exp://192.168.1.32:8081`. SHA-256:
-`9B71E6F2E8E3770F64497D4F350AF006D9A8391F35B9B1B292891790C461351E`.
+The source checkpoint and handoff QR are **pending** until the root release
+task creates a clean commit, starts the matching preview server, regenerates
+the QR, and verifies its decoded Expo URL. Do not use a QR stored under an
+older commit-named audit directory as evidence for the current source. Until
+that checkpoint exists, scan only the QR printed by the currently running Expo
+CLI and treat it as a temporary session URL.
 
 ## Verified handoff
 
-- The preview reflects canonical app commit
-  `deece47f971ce73d13ae5386918f249c5393bb23`.
-- The live LAN manifest returns HTTP 200 and reports Expo SDK 54.
-- The root-owned live iOS development bundle returns HTTP 200. The latest
-  result served `22,319,604` bytes with SHA-256
-  `4F11FF5C84D068F22475B68BB51DF5DD8E4CB6DE9E2AAEDFD1AED3CC8A4BF5D8`.
-  Development-bundle hashes may change after a Metro restart, so the clean
-  static-export hash below is the reproducibility gate.
-- Metro watches only the canonical native app and shared package roots. An
-  exact temporary-tree create/delete volatility probe completed while Metro
-  stayed alive.
+- The canonical native regression passes **178 suites / 1,071 tests** and
+  TypeScript.
+- The Maestro route contract passes **7 flows / 3 subflows / 33 selectors**,
+  and Expo Doctor passes **20/20** checks.
+- EAS packaging resolves all **5 shared packages** and the Argon2
+  implementation.
 - The companion TypeScript check passes.
-- The companion passes **10/10** preview-contract tests and mirrors every
+- The companion passes **11/11** preview-contract tests and mirrors every
   canonical route file.
-- The clean SDK 54 iOS Hermes export contains **4,913 modules**. Its
-  `12,859,707`-byte bundle has SHA-256
-  `C4915C523FC4221F3893BEA447A411AE31843F8E1EA2F574D9C4DEF50F04D229`.
-- The complete static export is **49 files / 24,273,495 bytes**. Its
-  deterministic tree SHA-256 is
-  `85D3F7872715EB849E518ED63AFF36D16C2D426687D1375F4F45266F64B8A7C3`.
+- The clean SDK 54 iOS Hermes export contains **5,015 modules**; its entry HBC
+  bundle is **13.2 MB**.
+- The canonical SDK 57 iOS export contains **5,206 modules**. Its
+  `13,169,149`-byte JavaScript bundle has SHA-256
+  `3B3E98A5EA7AFF08B96777E970A9D93A5D0913D3DFB3F2C444764F13CFF58B4F`.
+- The canonical export is **63 files / 26,532,025 bytes**. Its `4,045`-byte
+  `metadata.json` has SHA-256
+  `95B25B2CD6A2515869FF965FC18D96EB08E6DAF2EF71F421456F1B44825F5C3D`.
 
-These are local configuration, contract, manifest, and bundle results. This
-handoff does not claim that the current build has been opened or walked through
-on a physical iPhone.
+These are source, contract, and local export-packaging results. This handoff
+does not claim that the current source has been opened or walked through on a
+physical iPhone.
 
 ## Two useful starting paths
 
@@ -184,8 +179,9 @@ cross-device invitation, production membership, or durable access record.
 - Recovery Kit creation and restore stay off in Expo Go. Their routes remain
   visible and explain that the signed build is required instead of applying
   weaker protection.
-- Email delivery, cloud synchronization, background work, biometric unlock,
-  and durable encrypted storage are outside this preview.
+- Email delivery, cloud synchronization, opportunistic background sync, local
+  review reminders, biometric unlock, and durable encrypted storage are
+  outside this preview.
 
 ## What waits for a signed development build
 
@@ -193,8 +189,9 @@ cross-device invitation, production membership, or durable access record.
 - SecureStore key lifecycle and account/household vault isolation
 - Real email confirmation and Supabase household synchronization
 - Signed-account sign-out, membership revocation, and cross-device convergence
-- Background upload, remote notifications, biometric unlock, and encrypted
-  Recovery Kit creation and restore
+- Opportunistic background upload, device-local review reminders, remote
+  notifications, biometric unlock, and encrypted Recovery Kit creation and
+  restore
 - Final signed permission prompts, entitlements, and App Store distribution
 
 No physical-iPhone run is claimed in this handoff. The free Expo Go walkthrough

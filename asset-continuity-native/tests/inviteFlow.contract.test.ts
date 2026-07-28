@@ -104,6 +104,9 @@ describe("household invitation journey", () => {
     expect(inviteScreen).toContain("formatInvitationExpiry(");
     expect(inviteScreen).toContain("groupInvitationCode(");
     expect(inviteScreen).toContain("setInvite(null)");
+    expect(inviteScreen).toMatch(
+      /copyAction:\s*\{[\s\S]*?minHeight:\s*44,/
+    );
     expect(inviteScreen).not.toContain("SecureStore");
     expect(inviteScreen).not.toContain("AsyncStorage");
     expect(rootLayout).toMatch(

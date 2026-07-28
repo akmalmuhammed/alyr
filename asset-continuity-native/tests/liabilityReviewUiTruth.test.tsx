@@ -59,8 +59,11 @@ describe("Liability review UI truth", () => {
       />
     );
     expect(
-      firstTime.getByText(copy.liabilities.noActiveTitle)
+      firstTime.getByTestId("portfolio-start-decision")
     ).toBeTruthy();
+    expect(
+      firstTime.queryByText(copy.liabilities.noActiveTitle)
+    ).toBeNull();
     expect(
       firstTime.queryByText(copy.liabilities.noneReviewChangedTitle)
     ).toBeNull();

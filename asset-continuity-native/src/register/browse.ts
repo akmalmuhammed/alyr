@@ -1,8 +1,9 @@
-import type {
-  LanguageCode,
-  NativeAsset,
-  NativePlace,
-  NativePlaceDocument
+import {
+  isOwnedPropertyPlace,
+  type LanguageCode,
+  type NativeAsset,
+  type NativePlace,
+  type NativePlaceDocument
 } from "@/domain/model";
 import { localizedCategoryLabel } from "@/i18n/captureCopy";
 
@@ -16,6 +17,7 @@ export type AssetFilter =
   | "archived";
 export type PlaceFilter =
   | "all"
+  | "value"
   | "pin-review"
   | "no-pin"
   | "missing-address"
@@ -52,7 +54,8 @@ export function initialAssetFilter(
 export function initialPlaceFilter(
   value: string | undefined
 ): PlaceFilter {
-  return value === "pin-review" ||
+  return value === "value" ||
+    value === "pin-review" ||
     value === "no-pin" ||
     value === "missing-address" ||
     value === "missing-documents"
@@ -117,7 +120,8 @@ export function placeNeedsPinReview(place: NativePlace): boolean {
 export function filterRegisterPlaces(
   places: readonly NativePlace[],
   filter: PlaceFilter,
-  placeDocuments: readonly NativePlaceDocument[]
+  placeDocuments: readonly NativePlaceDocument[],
+  unvaluedPropertyPlaceIds: ReadonlySet<string> = new Set()
 ): readonly NativePlace[] {
   if (filter === "all") return places;
 
@@ -127,6 +131,12 @@ export function filterRegisterPlaces(
       : null;
 
   return places.filter((place) => {
+    if (filter === "value") {
+      return (
+        isOwnedPropertyPlace(place) &&
+        unvaluedPropertyPlaceIds.has(place.id)
+      );
+    }
     if (filter === "pin-review") return placeNeedsPinReview(place);
     if (filter === "no-pin") return !placeHasPin(place);
     if (filter === "missing-address") {

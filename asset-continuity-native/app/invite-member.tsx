@@ -40,6 +40,7 @@ import {
 } from "@/i18n/inviteCopy";
 import { useLocale } from "@/i18n/LocaleProvider";
 import { PRIMARY_ROUTES } from "@/navigation/primaryRoutes";
+import { useWorkspace } from "@/state/WorkspaceProvider";
 import {
   colors,
   radius,
@@ -108,6 +109,7 @@ export default function InviteMemberScreen() {
     mode,
     session
   } = useAuthFlow();
+  const { trackAccessGrantCreated } = useWorkspace();
   const { language, rtl } = useLocale();
   const copy = useInviteCopy();
   const [role, setRole] = useState<InviteRole>("viewer");
@@ -133,7 +135,10 @@ export default function InviteMemberScreen() {
       role,
       expiresInHours
     );
-    if (created) setInvite(created);
+    if (created) {
+      await trackAccessGrantCreated?.(role, expiresInHours);
+      setInvite(created);
+    }
   };
 
   const share = async () => {
@@ -550,13 +555,13 @@ const styles = StyleSheet.create({
     flex: 1,
     color: colors.concrete,
     fontFamily: typography.bodyBold,
-    fontSize: 11,
+    fontSize: 12,
     lineHeight: 18,
     letterSpacing: 1,
     textTransform: "uppercase"
   },
   copyAction: {
-    minHeight: 40,
+    minHeight: 44,
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",

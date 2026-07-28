@@ -1,9 +1,14 @@
-import { fireEvent, render } from "@testing-library/react-native";
+import {
+  fireEvent,
+  render,
+  waitFor
+} from "@testing-library/react-native";
 import type { PropsWithChildren } from "react";
-import { StyleSheet } from "react-native";
+import { Alert, StyleSheet } from "react-native";
 
 import AssetPassportScreen, {
-  ASSET_PASSPORT_COPY
+  ASSET_PASSPORT_COPY,
+  assetRetrievalSourceFromRoute
 } from "../app/asset/[id]";
 import type {
   NativeAsset,
@@ -17,10 +22,15 @@ import { PortfolioPrivacyProvider } from "@/privacy/PortfolioPrivacyProvider";
 
 let mockLanguage: "en" | "ar" = "en";
 let mockWorkspaceContext: Record<string, unknown>;
-let mockParams: { id: string; justCreated?: string } = {
+let mockParams: {
+  id: string;
+  justCreated?: string;
+  retrievalSource?: string | string[];
+} = {
   id: "asset-passport-hierarchy",
   justCreated: "1"
 };
+const mockMarkRetrieved = jest.fn(async () => undefined);
 
 const mockRouter = {
   back: jest.fn(),
@@ -135,6 +145,7 @@ function createContext(
     recordedAssetValues,
     repository: { encryptedAtRest: false },
     saving: false,
+    markRetrieved: mockMarkRetrieved,
     setAssetLifecycle: jest.fn(async () => undefined),
     sync: {
       status: "local-only",
@@ -173,6 +184,24 @@ function locatedContext(
   });
 }
 
+function documentContext(): Record<string, unknown> {
+  return createContext([], {
+    assets: [
+      {
+        ...asset,
+        name: "Family certificate",
+        categoryId: "document.important",
+        categoryLabel: "Important document",
+        visualKind: "digital",
+        locationStatus: "known",
+        placeId: null,
+        roomId: null,
+        locatorText: null
+      }
+    ]
+  });
+}
+
 describe("Asset Passport post-save hierarchy", () => {
   beforeEach(() => {
     mockLanguage = "en";
@@ -184,6 +213,7 @@ describe("Asset Passport post-save hierarchy", () => {
     mockRouter.back.mockClear();
     mockRouter.push.mockClear();
     mockRouter.replace.mockClear();
+    mockMarkRetrieved.mockClear();
   });
 
   it("keeps post-save focused on portfolio value, another item, or the full Passport", async () => {
@@ -273,6 +303,52 @@ describe("Asset Passport post-save hierarchy", () => {
     await fireEvent.press(
       screen.getByText(ASSET_PASSPORT_COPY.en.goToToday)
     );
+    expect(mockRouter.replace).toHaveBeenCalledWith("/(tabs)");
+  });
+
+  it("keeps an important document out of value CTAs and editor access", async () => {
+    mockWorkspaceContext = documentContext();
+    const screen = await render(<AssetPassportScreen />, { wrapper });
+    const action = screen.getByRole("button", {
+      name: ASSET_PASSPORT_COPY.en.goToToday
+    });
+
+    expect(
+      screen.queryByText(ASSET_PASSPORT_COPY.en.addRecordedValue)
+    ).toBeNull();
+    expect(
+      screen.queryByTestId("asset-passport-value-heading")
+    ).toBeNull();
+    expect(action.props.accessibilityHint).toBe(
+      ASSET_PASSPORT_COPY.en.todayHint
+    );
+
+    await fireEvent.press(action);
+    expect(mockRouter.replace).toHaveBeenCalledWith("/(tabs)");
+    expect(mockRouter.push).not.toHaveBeenCalledWith(
+      expect.stringContaining("/asset-value")
+    );
+  });
+
+  it("mirrors the document-safe post-save action in Arabic", async () => {
+    mockLanguage = "ar";
+    mockWorkspaceContext = documentContext();
+    const screen = await render(<AssetPassportScreen />, { wrapper });
+    const action = screen.getByRole("button", {
+      name: ASSET_PASSPORT_COPY.ar.goToToday
+    });
+
+    expect(action.props.accessibilityHint).toBe(
+      ASSET_PASSPORT_COPY.ar.todayHint
+    );
+    expect(
+      StyleSheet.flatten(action.props.style).minHeight
+    ).toBeGreaterThanOrEqual(44);
+    expect(
+      screen.queryByText(ASSET_PASSPORT_COPY.ar.valueTitle)
+    ).toBeNull();
+
+    await fireEvent.press(action);
     expect(mockRouter.replace).toHaveBeenCalledWith("/(tabs)");
   });
 
@@ -380,6 +456,83 @@ describe("Asset Passport post-save hierarchy", () => {
     expect(mockRouter.push).toHaveBeenCalledWith(
       "/place-pin?placeId=asset-passport-place"
     );
+  });
+
+  it("records a confirmed retrieval with the actual search entry source", async () => {
+    mockParams = {
+      id: "asset-passport-hierarchy",
+      retrievalSource: "search"
+    };
+    mockWorkspaceContext = locatedContext({
+      locationSource: "user_pin",
+      precision: "user_placed",
+      horizontalAccuracyMeters: null,
+      confirmedAt: "2026-07-27T09:00:00.000Z"
+    });
+    const alertSpy = jest
+      .spyOn(Alert, "alert")
+      .mockImplementation((title, _message, buttons) => {
+        if (title !== ASSET_PASSPORT_COPY.en.retrievalConfirmTitle) {
+          return;
+        }
+        buttons
+          ?.find(
+            (button) =>
+              button.text ===
+              ASSET_PASSPORT_COPY.en.retrievalConfirmSubmit
+          )
+          ?.onPress?.();
+      });
+
+    try {
+      const screen = await render(<AssetPassportScreen />, { wrapper });
+      const action = screen.getByText(
+        ASSET_PASSPORT_COPY.en.retrievalConfirmAction
+      );
+
+      expect(
+        screen.getByTestId("asset-passport-retrieval-confirm")
+      ).toBeTruthy();
+      expect(action.parent?.props.accessibilityHint).toBe(
+        ASSET_PASSPORT_COPY.en.retrievalConfirmHint
+      );
+
+      await fireEvent.press(action);
+      await waitFor(() =>
+        expect(mockMarkRetrieved).toHaveBeenCalledWith(
+          "asset-passport-hierarchy",
+          "search"
+        )
+      );
+    } finally {
+      alertSpy.mockRestore();
+    }
+  });
+
+  it("uses a localized retrieval action and a bounded deep-link fallback", async () => {
+    expect(assetRetrievalSourceFromRoute(undefined)).toBe("deep-link");
+    expect(assetRetrievalSourceFromRoute("unexpected")).toBe(
+      "deep-link"
+    );
+    expect(assetRetrievalSourceFromRoute(["place-view"])).toBe(
+      "place-view"
+    );
+
+    mockLanguage = "ar";
+    mockParams = { id: "asset-passport-hierarchy" };
+    mockWorkspaceContext = locatedContext({
+      locationSource: "user_pin",
+      precision: "user_placed",
+      horizontalAccuracyMeters: null,
+      confirmedAt: "2026-07-27T09:00:00.000Z"
+    });
+    const screen = await render(<AssetPassportScreen />, { wrapper });
+
+    expect(
+      screen.getByText(
+        ASSET_PASSPORT_COPY.ar.retrievalConfirmAction
+      )
+    ).toBeTruthy();
   });
 
   it("masks a Passport value in both visible and assistive output by default", async () => {

@@ -37,6 +37,16 @@ jest.mock("expo-sqlite", () => {
       conflictsJson: string;
       recoveryJournalTransactionId: string | null;
       recoveryJournalJson: string | null;
+      readonly analytics: Map<
+        string,
+        {
+          dedupeKey: string | null;
+          eventJson: string;
+          createdAt: string;
+          attemptCount: number;
+          acknowledgedAt: string | null;
+        }
+      >;
     }
   >();
   const opened: string[] = [];
@@ -55,7 +65,8 @@ jest.mock("expo-sqlite", () => {
         '{"cursorVersion":1,"value":null,"issuedAt":null}',
       conflictsJson: "[]",
       recoveryJournalTransactionId: null,
-      recoveryJournalJson: null
+      recoveryJournalJson: null,
+      analytics: new Map()
     };
     states.set(name, created);
     return created;
@@ -86,6 +97,34 @@ jest.mock("expo-sqlite", () => {
           ? {
               transaction_id: state.recoveryJournalTransactionId,
               journal_json: state.recoveryJournalJson
+            }
+          : null;
+      }
+      if (sql.includes("analytics_outbox")) {
+        if (sql.includes("COUNT(*)")) {
+          return {
+            count: [...state.analytics.values()].filter(
+              (entry) => entry.acknowledgedAt === null
+            ).length
+          };
+        }
+        const idempotencyKey = String(parameters[0]);
+        const dedupeKey =
+          parameters[1] === null || parameters[1] === undefined
+            ? null
+            : String(parameters[1]);
+        const matched = [...state.analytics.entries()].find(
+          ([key, entry]) =>
+            key === idempotencyKey ||
+            (dedupeKey !== null && entry.dedupeKey === dedupeKey)
+        );
+        return matched
+          ? {
+              idempotency_key: matched[0],
+              dedupe_key: matched[1].dedupeKey,
+              event_json: matched[1].eventJson,
+              created_at: matched[1].createdAt,
+              attempt_count: matched[1].attemptCount
             }
           : null;
       }
@@ -133,6 +172,26 @@ jest.mock("expo-sqlite", () => {
         ) {
           state.recoveryJournalTransactionId = null;
           state.recoveryJournalJson = null;
+        } else if (sql.includes("INSERT INTO analytics_outbox")) {
+          state.analytics.set(String(parameters[0]), {
+            dedupeKey:
+              parameters[1] === null ? null : String(parameters[1]),
+            eventJson: String(parameters[2]),
+            createdAt: String(parameters[3]),
+            attemptCount: 0,
+            acknowledgedAt: null
+          });
+        } else if (
+          sql.includes("UPDATE analytics_outbox") &&
+          sql.includes("attempt_count")
+        ) {
+          const entry = state.analytics.get(String(parameters[1]));
+          if (entry) entry.attemptCount += 1;
+        } else if (sql.includes("UPDATE analytics_outbox")) {
+          const entry = state.analytics.get(String(parameters[1]));
+          if (entry) entry.acknowledgedAt = String(parameters[0]);
+        } else if (sql.includes("DELETE FROM analytics_outbox")) {
+          state.analytics.delete(String(parameters[0]));
         }
       }
     );
@@ -141,10 +200,20 @@ jest.mock("expo-sqlite", () => {
       closeAsync: jest.fn(async () => undefined),
       execAsync: jest.fn(async () => undefined),
       getFirstAsync,
-      getAllAsync: jest.fn(async () =>
-        [...state.operations.values()].map((operation_json) => ({
-          operation_json
-        }))
+      getAllAsync: jest.fn(async (sql: string) =>
+        sql.includes("analytics_outbox")
+          ? [...state.analytics.entries()]
+              .filter(([, entry]) => entry.acknowledgedAt === null)
+              .map(([idempotencyKey, entry]) => ({
+                idempotency_key: idempotencyKey,
+                dedupe_key: entry.dedupeKey,
+                event_json: entry.eventJson,
+                created_at: entry.createdAt,
+                attempt_count: entry.attemptCount
+              }))
+          : [...state.operations.values()].map((operation_json) => ({
+              operation_json
+            }))
       ),
       runAsync,
       withExclusiveTransactionAsync: jest.fn(
@@ -173,12 +242,16 @@ jest.mock("expo-sqlite", () => {
   };
 });
 
+import { createPrivacySafeEvent } from "@alyr/analytics";
 import type { SecureKeyStore } from "@alyr/contracts";
 
 import { captureConflictContexts } from "@/data/conflictInbox";
 import { SQLiteWorkspaceRepository } from "@/data/sqliteRepository";
 import { createLocalOperation } from "@/data/sync";
-import { deriveAuthenticatedVaultScope } from "@/data/vaultScope";
+import {
+  deriveAuthenticatedVaultScope,
+  SIGNED_OUT_SAMPLE_VAULT_SCOPE
+} from "@/data/vaultScope";
 import { createWorkspace } from "@/domain/sample";
 
 interface MockSQLiteModule {
@@ -207,6 +280,141 @@ function inMemoryKeyStore(): SecureKeyStore & {
 }
 
 describe("scoped SQLCipher workspace repository", () => {
+  it("keeps privacy-safe analytics pending across restart and isolated by authenticated vault", async () => {
+    const keyStore = inMemoryKeyStore();
+    const scopeA = await deriveAuthenticatedVaultScope(
+      "account-analytics",
+      "household-analytics-a"
+    );
+    const scopeB = await deriveAuthenticatedVaultScope(
+      "account-analytics",
+      "household-analytics-b"
+    );
+    const repository = new SQLiteWorkspaceRepository(keyStore, scopeA);
+    const otherHousehold = new SQLiteWorkspaceRepository(
+      keyStore,
+      scopeB
+    );
+    await repository.initialize();
+    await otherHousehold.initialize();
+    const event = createPrivacySafeEvent(
+      "first_asset_passport_created",
+      {
+        schemaVersion: 1,
+        platform: "ios",
+        appVersion: "0.1.0",
+        locale: "ar",
+        occurredOffline: true,
+        captureSource: "camera",
+        elapsedTimeBand: "under-5-minutes"
+      }
+    );
+    const idempotencyKey =
+      "93000000-0000-4000-8000-000000000001";
+    await expect(
+      repository.enqueueAnalyticsEvent({
+        idempotencyKey,
+        dedupeKey: "milestone:first-asset-passport",
+        event,
+        createdAt: "2026-07-28T13:00:00.000Z"
+      })
+    ).resolves.toBe("queued");
+    await repository.close();
+
+    const reopened = new SQLiteWorkspaceRepository(keyStore, scopeA);
+    await reopened.initialize();
+    await expect(reopened.listPendingAnalyticsEvents(25)).resolves.toEqual(
+      [
+        {
+          idempotencyKey,
+          dedupeKey: "milestone:first-asset-passport",
+          event,
+          createdAt: "2026-07-28T13:00:00.000Z",
+          attemptCount: 0
+        }
+      ]
+    );
+    await expect(
+      otherHousehold.listPendingAnalyticsEvents(25)
+    ).resolves.toEqual([]);
+
+    await reopened.acknowledgeAnalyticsEvent(idempotencyKey);
+    await expect(reopened.listPendingAnalyticsEvents(25)).resolves.toEqual(
+      []
+    );
+    await expect(
+      reopened.enqueueAnalyticsEvent({
+        idempotencyKey:
+          "93000000-0000-4000-8000-000000000002",
+        dedupeKey: "milestone:first-asset-passport",
+        event,
+        createdAt: "2026-07-28T13:05:00.000Z"
+      })
+    ).resolves.toBe("duplicate");
+  });
+
+  it("reopens a durable encrypted signed-out sample without entering an authenticated scope", async () => {
+    const keyStore = inMemoryKeyStore();
+    const authenticatedScope = await deriveAuthenticatedVaultScope(
+      "account-sample-check",
+      "household-private"
+    );
+    const sampleRepository = new SQLiteWorkspaceRepository(
+      keyStore,
+      SIGNED_OUT_SAMPLE_VAULT_SCOPE
+    );
+    const authenticatedRepository = new SQLiteWorkspaceRepository(
+      keyStore,
+      authenticatedScope
+    );
+    await sampleRepository.initialize();
+    await authenticatedRepository.initialize();
+
+    expect(sampleRepository.kind).toBe("sqlite-sqlcipher");
+    expect(sampleRepository.durable).toBe(true);
+    expect(sampleRepository.encryptedAtRest).toBe(true);
+    expect(sampleRepository.scopeId).toBe(
+      SIGNED_OUT_SAMPLE_VAULT_SCOPE.scopeId
+    );
+    expect(sampleRepository.scopeId).not.toBe(
+      authenticatedRepository.scopeId
+    );
+
+    const sample = createWorkspace(
+      "sample",
+      "2026-07-28T12:00:00.000Z"
+    );
+    await sampleRepository.commit({
+      expectedRevision: 0,
+      nextRevision: 1,
+      snapshot: sample,
+      operations: []
+    });
+    await sampleRepository.close();
+
+    const reopenedSample = new SQLiteWorkspaceRepository(
+      keyStore,
+      SIGNED_OUT_SAMPLE_VAULT_SCOPE
+    );
+    await reopenedSample.initialize();
+    await expect(reopenedSample.load()).resolves.toEqual({
+      revision: 1,
+      snapshot: sample
+    });
+    await expect(authenticatedRepository.load()).resolves.toEqual({
+      revision: 0,
+      snapshot: null
+    });
+    expect(
+      keyStore.values.has(
+        SIGNED_OUT_SAMPLE_VAULT_SCOPE.databaseKeyName
+      )
+    ).toBe(true);
+    expect(keyStore.values.has(authenticatedScope.databaseKeyName)).toBe(
+      true
+    );
+  });
+
   it("persists one compare-and-transition Recovery Kit crash journal across reopen", async () => {
     const keyStore = inMemoryKeyStore();
     const scope = await deriveAuthenticatedVaultScope(

@@ -469,7 +469,7 @@ export default function AtlasScreen() {
                   {atlasCopy.selectedRegion}
                 </Text>
                 <Text
-                  numberOfLines={1}
+                  numberOfLines={2}
                   style={[
                     styles.canvasRegion,
                     rtl && styles.arabicMedium,
@@ -698,7 +698,7 @@ export default function AtlasScreen() {
                       )}
                 </Text>
                 <Text
-                  numberOfLines={1}
+                  numberOfLines={2}
                   style={[
                     styles.positionName,
                     rtl && styles.arabicMedium,
@@ -942,7 +942,11 @@ export default function AtlasScreen() {
                   asset={asset}
                   evidence={workspace.evidence}
                   key={asset.id}
-                  onPress={() => router.push(`/asset/${asset.id}`)}
+                  onPress={() =>
+                    router.push(
+                      `/asset/${asset.id}?retrievalSource=place-view`
+                    )
+                  }
                   places={workspace.places}
                 />
               ))}
@@ -1030,7 +1034,7 @@ export default function AtlasScreen() {
                       ]}
                     >
                       <Text
-                        numberOfLines={1}
+                        numberOfLines={2}
                         style={[
                           styles.placeName,
                           rtl && styles.arabicMedium,

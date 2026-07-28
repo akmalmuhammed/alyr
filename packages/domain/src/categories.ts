@@ -6,6 +6,17 @@ export type FocusedAssetKind =
   | "digital"
   | "document";
 
+/**
+ * Portfolio values are deliberately opt-in by category.
+ *
+ * - `asset` categories may carry a dated user-entered item value.
+ * - `place` categories are represented by an explicitly owned Place instead
+ *   of a duplicate Asset record.
+ * - `none` categories remain continuity records and never enter value
+ *   coverage or a financial position.
+ */
+export type PortfolioValueSubjectPolicy = "asset" | "place" | "none";
+
 export interface FocusedCategory {
   readonly id: string;
   readonly label: string;
@@ -17,6 +28,7 @@ export interface FocusedCategory {
     | "home-storage"
     | "digital-records";
   readonly kind: FocusedAssetKind;
+  readonly portfolioValueSubject: PortfolioValueSubjectPolicy;
   readonly recommendedEvidenceTypes: readonly string[];
 }
 
@@ -26,6 +38,7 @@ export const FOCUSED_V1_CATEGORIES = [
     label: "Car",
     groupId: "vehicles",
     kind: "physical",
+    portfolioValueSubject: "asset",
     recommendedEvidenceTypes: [
       "Current photo",
       "Registration",
@@ -37,6 +50,7 @@ export const FOCUSED_V1_CATEGORIES = [
     label: "Motorbike",
     groupId: "vehicles",
     kind: "physical",
+    portfolioValueSubject: "asset",
     recommendedEvidenceTypes: [
       "Current photo",
       "Registration",
@@ -48,6 +62,7 @@ export const FOCUSED_V1_CATEGORIES = [
     label: "House",
     groupId: "real-estate-land",
     kind: "real-estate",
+    portfolioValueSubject: "place",
     recommendedEvidenceTypes: [
       "Title deed",
       "Insurance policy",
@@ -59,6 +74,7 @@ export const FOCUSED_V1_CATEGORIES = [
     label: "Apartment or unit",
     groupId: "real-estate-land",
     kind: "real-estate",
+    portfolioValueSubject: "place",
     recommendedEvidenceTypes: [
       "Title deed",
       "Insurance policy",
@@ -70,6 +86,7 @@ export const FOCUSED_V1_CATEGORIES = [
     label: "Plot or land",
     groupId: "real-estate-land",
     kind: "real-estate",
+    portfolioValueSubject: "place",
     recommendedEvidenceTypes: [
       "Title deed",
       "Survey or site plan",
@@ -81,6 +98,7 @@ export const FOCUSED_V1_CATEGORIES = [
     label: "Commercial property",
     groupId: "real-estate-land",
     kind: "real-estate",
+    portfolioValueSubject: "place",
     recommendedEvidenceTypes: [
       "Title deed",
       "Insurance policy",
@@ -92,6 +110,7 @@ export const FOCUSED_V1_CATEGORIES = [
     label: "Watch",
     groupId: "lifestyle-personal",
     kind: "physical",
+    portfolioValueSubject: "asset",
     recommendedEvidenceTypes: [
       "Current photo",
       "Purchase receipt",
@@ -103,6 +122,7 @@ export const FOCUSED_V1_CATEGORIES = [
     label: "Jewelry",
     groupId: "lifestyle-personal",
     kind: "physical",
+    portfolioValueSubject: "asset",
     recommendedEvidenceTypes: [
       "Current photo",
       "Purchase receipt",
@@ -114,6 +134,7 @@ export const FOCUSED_V1_CATEGORIES = [
     label: "Painting",
     groupId: "art-collectibles",
     kind: "physical",
+    portfolioValueSubject: "asset",
     recommendedEvidenceTypes: [
       "Current photo",
       "Provenance record",
@@ -125,6 +146,7 @@ export const FOCUSED_V1_CATEGORIES = [
     label: "Collectible",
     groupId: "art-collectibles",
     kind: "physical",
+    portfolioValueSubject: "asset",
     recommendedEvidenceTypes: ["Current photo", "Provenance record"],
   },
   {
@@ -132,6 +154,7 @@ export const FOCUSED_V1_CATEGORIES = [
     label: "Electronics",
     groupId: "home-storage",
     kind: "physical",
+    portfolioValueSubject: "asset",
     recommendedEvidenceTypes: ["Current photo", "Purchase receipt"],
   },
   {
@@ -139,6 +162,7 @@ export const FOCUSED_V1_CATEGORIES = [
     label: "Furniture",
     groupId: "home-storage",
     kind: "physical",
+    portfolioValueSubject: "asset",
     recommendedEvidenceTypes: ["Current photo", "Purchase receipt"],
   },
   {
@@ -146,6 +170,7 @@ export const FOCUSED_V1_CATEGORIES = [
     label: "Physical item",
     groupId: "home-storage",
     kind: "physical",
+    portfolioValueSubject: "asset",
     recommendedEvidenceTypes: ["Current photo"],
   },
   {
@@ -153,6 +178,7 @@ export const FOCUSED_V1_CATEGORIES = [
     label: "Digital asset",
     groupId: "digital-records",
     kind: "digital",
+    portfolioValueSubject: "asset",
     recommendedEvidenceTypes: ["Ownership record"],
   },
   {
@@ -160,6 +186,7 @@ export const FOCUSED_V1_CATEGORIES = [
     label: "Important document",
     groupId: "digital-records",
     kind: "document",
+    portfolioValueSubject: "none",
     recommendedEvidenceTypes: ["Current document copy"],
   },
 ] as const satisfies readonly FocusedCategory[];
@@ -172,6 +199,39 @@ export function getFocusedCategory(
   categoryId: string,
 ): FocusedCategory | null {
   return CATEGORIES_BY_ID.get(categoryId) ?? null;
+}
+
+export interface PortfolioValuePolicy {
+  readonly subject: PortfolioValueSubjectPolicy;
+  readonly contributesToFinancialPosition: boolean;
+}
+
+/**
+ * Returns the reviewed value policy for a category.
+ *
+ * Unknown legacy categories retain the previous item-value behavior rather
+ * than silently losing a user's historical value. Known document categories
+ * are explicitly non-financial.
+ */
+export function getPortfolioValuePolicy(
+  categoryOrKind: string | FocusedCategory,
+): PortfolioValuePolicy {
+  const category =
+    typeof categoryOrKind === "string"
+      ? getFocusedCategory(categoryOrKind)
+      : categoryOrKind;
+  const subject: PortfolioValueSubjectPolicy =
+    category?.portfolioValueSubject ??
+    (categoryOrKind === "real-estate"
+      ? "place"
+      : categoryOrKind === "document"
+        ? "none"
+        : "asset");
+
+  return {
+    subject,
+    contributesToFinancialPosition: subject !== "none",
+  };
 }
 
 export interface LocationPolicy {

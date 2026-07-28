@@ -10,6 +10,7 @@ import {
   FilePdf,
   FileText,
   ShieldCheck,
+  UserPlus,
   WarningCircle
 } from "phosphor-react-native";
 import type { Icon } from "phosphor-react-native";
@@ -28,6 +29,7 @@ import type {
 } from "@alyr/contracts";
 
 import { useAuthFlow } from "@/auth/AuthFlowProvider";
+import { verifiedHouseholdAccessForWorkspace } from "@/auth/verifiedHouseholdAccess";
 import { PermissionDeniedScreen } from "@/components/PermissionDenied";
 import {
   AppScreen,
@@ -42,24 +44,36 @@ import {
   exportErrorMessage,
   useExportCopy
 } from "@/i18n/exportCopy";
+import { sampleActivationDestination } from "@/navigation/sampleActivation";
 import { getRuntimeCloudExportPort } from "@/runtime/cloudServices";
 import { useWorkspace } from "@/state/WorkspaceProvider";
 import { colors, radius, spacing, typography } from "@/theme/tokens";
 
 type ExportFormat = "json-manifest" | "pdf";
+export type CloudExportBlocker = "pending" | "conflict" | null;
+
+export function cloudExportBlocker(
+  pendingOperationCount: number,
+  conflictCount: number
+): CloudExportBlocker {
+  if (conflictCount > 0) return "conflict";
+  if (pendingOperationCount > 0) return "pending";
+  return null;
+}
 
 const sleep = (milliseconds: number) =>
   new Promise<void>((resolve) => setTimeout(resolve, milliseconds));
 
 export default function ExportCreateScreen() {
   const router = useRouter();
-  const { mode } = useAuthFlow();
+  const { mode, session } = useAuthFlow();
   const {
     can,
     workspace,
     pendingOperationCount,
     sync,
-    syncNow
+    syncNow,
+    trackContinuitySnapshotExported
   } = useWorkspace();
   const { copy, language, locale, rtl } = useExportCopy();
   const [format, setFormat] =
@@ -71,8 +85,28 @@ export default function ExportCreateScreen() {
     useState<ExportStatusResponse | null>(null);
   const [error, setError] = useState<string | null>(null);
   const idempotencyKeyRef = useRef<string | null>(null);
-  const cloudExport =
-    mode === "supabase" ? getRuntimeCloudExportPort() : null;
+  const verifiedCloudAccess = workspace
+    ? verifiedHouseholdAccessForWorkspace(
+        mode,
+        session,
+        workspace.household.id
+      )
+    : null;
+  const activationRoute = workspace && mode === "supabase" && session === null
+    ? sampleActivationDestination({
+        canManageHousehold: can("household.manage"),
+        mode,
+        session,
+        workspaceMode: workspace.mode
+      })
+    : null;
+  const cloudExport = verifiedCloudAccess
+    ? getRuntimeCloudExportPort()
+    : null;
+  const exportBlocker = cloudExportBlocker(
+    pendingOperationCount,
+    sync.conflicts.length
+  );
 
   if (!workspace) return null;
   if (!can("export.create")) {
@@ -93,7 +127,14 @@ export default function ExportCreateScreen() {
   };
 
   const createExport = async () => {
-    if (!cloudExport || creating || pendingOperationCount > 0) return;
+    if (
+      !cloudExport ||
+      !verifiedCloudAccess ||
+      creating ||
+      exportBlocker
+    ) {
+      return;
+    }
     setCreating(true);
     setError(null);
     setReady(null);
@@ -103,7 +144,7 @@ export default function ExportCreateScreen() {
     try {
       let result = await cloudExport.create({
         apiVersion: 1,
-        householdId: workspace.household.id,
+        householdId: verifiedCloudAccess.householdId,
         format,
         assetIds: [],
         redacted,
@@ -138,6 +179,11 @@ export default function ExportCreateScreen() {
         return;
       }
       idempotencyKeyRef.current = null;
+      await trackContinuitySnapshotExported?.(
+        format,
+        workspace.assets.length,
+        redacted
+      );
       setReady(status);
     } catch {
       setError(copy.screen.error.offline);
@@ -240,6 +286,14 @@ export default function ExportCreateScreen() {
           >
             {copy.screen.previewBody}
           </Text>
+          {activationRoute ? (
+            <PrimaryButton
+              accessibilityHint={copy.screen.activateAccountHint}
+              icon={UserPlus}
+              label={copy.screen.activateAccount}
+              onPress={() => router.replace(activationRoute)}
+            />
+          ) : null}
           <SecondaryButton
             icon={rtl ? ArrowRight : ArrowLeft}
             label={copy.screen.backToVault}
@@ -354,7 +408,7 @@ export default function ExportCreateScreen() {
             />
           </Section>
 
-          {pendingOperationCount > 0 ? (
+          {exportBlocker === "pending" ? (
             <View
               accessibilityLiveRegion="polite"
               style={styles.warning}
@@ -386,6 +440,42 @@ export default function ExportCreateScreen() {
                 disabled={sync.status === "syncing"}
                 label={copy.screen.syncNow}
                 onPress={() => void syncNow()}
+              />
+            </View>
+          ) : null}
+
+          {sync.conflicts.length > 0 ? (
+            <View
+              accessibilityLiveRegion="polite"
+              style={styles.warning}
+              testID="export-conflict-blocker"
+            >
+              <View
+                style={[styles.noticeHeading, rtl && styles.rowReverse]}
+              >
+                <WarningCircle color={colors.warning} size={24} />
+                <Text
+                  style={[
+                    styles.warningTitle,
+                    rtl && styles.arabicMedium,
+                    rtl && styles.textRight
+                  ]}
+                >
+                  {copy.screen.conflictTitle}
+                </Text>
+              </View>
+              <Text
+                style={[
+                  styles.warningBody,
+                  rtl && styles.arabic,
+                  rtl && styles.textRight
+                ]}
+              >
+                {copy.screen.conflictBody}
+              </Text>
+              <SecondaryButton
+                label={copy.screen.reviewConflicts}
+                onPress={() => router.push("/sync-conflicts")}
               />
             </View>
           ) : null}
@@ -466,7 +556,7 @@ export default function ExportCreateScreen() {
           ) : (
             <PrimaryButton
               accessibilityHint={copy.screen.intro}
-              disabled={pendingOperationCount > 0}
+              disabled={exportBlocker !== null}
               icon={CloudArrowDown}
               label={
                 creating

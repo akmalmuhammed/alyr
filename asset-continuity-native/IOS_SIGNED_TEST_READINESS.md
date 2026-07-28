@@ -14,10 +14,10 @@ store submission is claimed.
 | Path | Status | Cost/account gate | Evidence produced |
 |---|---|---|---|
 | App Store Expo Go companion | **READY TO SCAN; DEVICE WALKTHROUGH OPEN** | No Apple Developer membership or ALYR App Store listing | Session-only product, design and permission-flow walkthrough |
-| EAS `development-simulator` build | **FINISHED / VERIFIED** | No Apple signing credentials; macOS is required to run iOS Simulator | Cloud-built `ALYR.app` archive plus inspected iOS metadata and privacy manifest |
-| Signed EAS development build | **CONFIG READY; EXTERNAL GATE OPEN** | Paid Apple membership plus test-iPhone UDID | Native modules, SQLCipher, SecureStore, Face ID and Metro development |
-| Signed EAS preview build | **CONFIG READY; EXTERNAL GATE OPEN** | Paid membership plus test-iPhone UDID | Standalone ad hoc ALYR build without Metro |
-| TestFlight production build | **CONFIG READY; EXTERNAL GATE OPEN** | Paid membership, App Store Connect record and distribution credentials | Store-signed installation; internal TestFlight does not require the device UDID |
+| EAS `development-simulator` build | **HISTORICAL BUILD VERIFIED; CURRENT SOURCE EXPORT VERIFIED** | No Apple signing credentials; macOS is required to run iOS Simulator | Prior cloud-built `ALYR.app` archive plus current local SDK 57 export evidence |
+| Signed EAS development build | **CONFIG READY; SOURCE + EXTERNAL GATES OPEN** | Clean source commit, current Edge deployment, paid Apple membership and test-iPhone UDID | Native modules, SQLCipher, SecureStore, Face ID and Metro development |
+| Signed EAS preview build | **CONFIG READY; SOURCE + EXTERNAL GATES OPEN** | Clean source commit, current Edge deployment, paid membership and test-iPhone UDID | Standalone ad hoc ALYR build without Metro |
+| TestFlight production build | **CONFIG READY; SOURCE + EXTERNAL GATES OPEN** | Clean source commit, current Edge deployment, paid membership, App Store Connect record and distribution credentials | Store-signed installation; internal TestFlight does not require the device UDID |
 
 The separate `asset-continuity-ios-preview` Expo Go companion remains on SDK 54
 because Expo's current physical-iPhone guidance says the App Store Expo Go
@@ -42,15 +42,20 @@ The following checks were run on 2026-07-27 with the pinned EAS CLI:
   `EXPO_PUBLIC_SUPABASE_URL` and `EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY` in
   `development`, `preview`, and `production`. No service-role or secret key is
   present in a client environment.
-- The complete local Supabase migration chain applied successfully in Docker.
-  Supabase static checks passed **29/29**, pgTAP passed **105/105**, the export
-  API journey passed **30** checks, and `db lint --local --level warning`
-  reported no schema errors.
+- The complete current local Supabase migration chain applied successfully in
+  Docker. Supabase static checks passed **44/44**, pgTAP passed **160/160**,
+  and `db lint --local --level warning` reported no schema errors.
 - Supabase project `ifiyragzeizaxdqzxvpk` reports `ACTIVE_HEALTHY`. The live
-  database is in parity with all eleven repository migrations:
+  database was previously confirmed in parity through these eleven repository
+  migrations:
   `202607250001`, `202607270001`, `202607270002`, `202607270003`,
   `202607270004`, `202607270005`, `202607280001`, `202607280002`,
   `202607280003`, `202607280004`, and `202607280005`.
+- The repository now also contains `202607280006` through `202607280009`,
+  including liability/net-position, household idempotency/scope, and product
+  event idempotency changes. A current authenticated deployment and live
+  verification are required; live migration parity is not claimed for this
+  source checkpoint.
 - The live `api` Edge Function reports `ACTIVE`, version **3**. The reviewed
   source now adds recipient preflight plus Place-document/property export
   handling; that source revision still requires an authenticated function
@@ -64,9 +69,10 @@ The following checks were run on 2026-07-27 with the pinned EAS CLI:
 - The temporary deployment access token was revoked after deployment, and the
   local Supabase CLI has no stored access token.
 
-These results replace assumptions with confirmed account state. They also
-show that Expo Go remains the current zero-cost physical-iPhone path. The live
-database gate is current; the Edge source deployment and signed distribution
+These results replace assumptions with confirmed account state. They also show
+that Expo Go remains the current zero-cost physical-iPhone path. The local
+database gate is current; the latest migrations, Edge source deployment,
+clean source checkpoint, signed distribution and resulting artifact inspection
 remain open gates.
 
 ## Locally verified configuration
@@ -105,9 +111,11 @@ remain open gates.
   `EXUpdatesEnabled = true`, runtime `0.1.0`, and
   `https://u.expo.dev/85cab1f2-111f-4e20-abd5-8dff0df2fabb`.
 - The focused release is iPhone-only; iPad support is not advertised.
-- Push notifications and background-task execution are not implemented in this
-  build. Their packages/plugins were removed; generated entitlements are empty
-  and no `UIBackgroundModes` value is emitted.
+- The current signed source includes `expo-background-task`,
+  `expo-task-manager`, and local-only `expo-notifications` configuration.
+  Background synchronization is opportunistic and foreground reconciliation
+  remains mandatory because iOS controls whether and when a background task
+  runs. Review reminders are device-local; no remote-push delivery is claimed.
 - The installed runtime now composes the Recovery Kit journey with SQLCipher,
   the scoped encrypted attachment vault, iOS document/share sheets, native
   AES-256-GCM, and the audited RFC 9106 Argon2id implementation from
@@ -122,15 +130,21 @@ The final local readiness pass produced:
 
 | Verification | Result |
 |---|---:|
-| Native Jest | **116/116 suites, 573/573 tests** |
-| Maestro static contract | **5 flows, 2 subflows, 15 selectors** |
+| Native Jest | **178/178 suites, 1,071/1,071 tests** |
+| Native TypeScript | **Pass** |
+| Maestro static contract | **7 flows, 3 subflows, 33 selectors** |
 | Expo Doctor | **20/20 checks** |
-| Supabase static | **29/29 checks** |
-| Supabase pgTAP | **105/105 checks** |
-| Export API E2E | **30 checks** |
-| Canonical static iOS export | **5,076 modules** |
-| iOS JavaScript bundle | **12,448,194 bytes** |
-| Exported artifact tree | **49 files, 23,861,790 bytes** |
+| EAS packaging | **5 shared packages + Argon2 pass** |
+| Supabase static | **44/44 checks** |
+| Supabase pgTAP | **160/160 checks** |
+| Supabase lint | **Clean** |
+| Web regression/build | **228 domain + 7 server + 126 UI + 4 Sites; build pass** |
+| Mobile visual prototype | **Build + 4 Sites pass** |
+| SDK 54 Expo Go companion | **11/11 contracts; 5,015-module iOS export; 13.2 MB entry HBC** |
+| Canonical SDK 57 static iOS export | **5,206 modules** |
+| Canonical iOS JavaScript bundle | **13,169,149 bytes** |
+| Canonical `metadata.json` | **4,045 bytes** |
+| Canonical exported artifact tree | **63 files, 26,532,025 bytes** |
 
 Maestro CLI `2.7.0` is installed locally on Java `17.0.19`. The executable
 suite reaches device selection, where the current Windows host reports zero
@@ -140,17 +154,23 @@ simulator or physical-device gate rather than this static pass.
 The canonical iOS JavaScript bundle SHA-256 is:
 
 ```text
-39B11ADBC48BE56DC014C4AEC56B72CC66078FC6A6F92A3EDF1DF5AF2D3CE91A
+3B3E98A5EA7AFF08B96777E970A9D93A5D0913D3DFB3F2C444764F13CFF58B4F
 ```
 
 The matching `metadata.json` SHA-256 is
-`4CE62FC0642B827A6246EAA84D68DB0E3C56ED6882235ABB35749F561FAF96ED`.
+`95B25B2CD6A2515869FF965FC18D96EB08E6DAF2EF71F421456F1B44825F5C3D`.
 
 This artifact is an unsigned static iOS export used for deterministic
 packaging verification. It is not evidence of a signed binary installation or
-physical-device execution.
+physical-device execution. A clean source checkpoint and a newly inspected EAS
+artifact remain required before signed-device promotion.
 
 ### EAS iOS Simulator development artifact
+
+This is preserved as historical proof that the earlier native configuration
+could produce an iOS Simulator application. It is not the current-source
+artifact and does not replace a new build/inspection after the clean source
+checkpoint.
 
 EAS build
 [`b9bb7206-b3e4-4df8-ae36-c140b6e5ddbc`](https://expo.dev/accounts/alyr-app/projects/alyr-asset-continuity/builds/b9bb7206-b3e4-4df8-ae36-c140b6e5ddbc)
@@ -161,7 +181,7 @@ finished at `2026-07-27T23:44:48.906Z` from clean commit
 - Result: **FINISHED / VERIFIED**
 - Target: iOS Simulator only; physical-iPhone signing remains a separate Apple
   account gate.
-- Source includes the signed-out cloud sample-workspace repair, isolated
+- Its source includes the signed-out cloud sample-workspace repair, isolated
   account/household vault remounting, explicit EAS environment mapping, and the
   stable Maestro selector contract.
 - Artifact:
@@ -183,7 +203,8 @@ finished at `2026-07-27T23:44:48.906Z` from clean commit
   at the artifact commit. A post-build source audit found that its first-party
   collected-data array was empty even though the signed cloud pilot stores an
   account-bound household record. Current source now declares those collected
-  data categories; the next build must be inspected before promoting it.
+  data categories plus Product Interaction analytics; the next build must be
+  inspected before promoting it.
 
 ## EAS profiles
 
@@ -219,8 +240,12 @@ cloud record: email address, account and installation identifiers, physical
 address, coarse and precise location, recorded asset/property values, selected
 photos, user-provided item/document content, and sync diagnostics. Each is
 linked to the signed account, used only for app functionality, and not used for
-tracking. ALYR does not currently include an advertising, product-analytics, or
-cross-app tracking SDK, so `NSPrivacyTracking` is set to `false`.
+tracking. Product Interaction is also declared as linked to the signed account,
+used for analytics, and not used for tracking. The in-app legal copy explains
+the closed-pilot measurement boundary and excludes names, values, addresses,
+coordinates, and other asset content from analytics payloads. ALYR includes no
+advertising or cross-app tracking behavior, and `NSPrivacyTracking` is set to
+`false`.
 
 This manifest does **not** complete App Store Connect's App Privacy
 questionnaire. Before TestFlight or App Store distribution, the account owner
@@ -324,10 +349,12 @@ refreshed ad hoc provisioning profile.
 ### Free personal walkthrough
 
 No paid Apple membership is involved. Install the current App Store Expo Go,
-keep the Windows preview server running, scan the QR referenced by
-`asset-continuity-ios-preview/IPHONE_TEST_GUIDE.md`, and complete its checklist.
-The remaining evidence is the user's real iPhone walkthrough; it has not yet
-been observed or claimed by this repository.
+keep the Windows preview server running, and complete the checklist in
+`asset-continuity-ios-preview/IPHONE_TEST_GUIDE.md`. The source checkpoint and
+handoff QR must be refreshed after the root release task creates a clean commit;
+no old commit-named QR is claimed as current. The remaining product evidence is
+the user's real iPhone walkthrough; it has not yet been observed or claimed by
+this repository.
 
 ### Signed development or ad hoc preview
 
@@ -335,8 +362,10 @@ been observed or claimed by this repository.
 2. Register `com.alyr.continuity` in that Apple team.
 3. Create development/distribution credentials and an ad hoc profile.
 4. Register the test iPhone UDID in that profile.
-5. Commit the final source, run the full gate, create and install the EAS build,
-   then complete the signed-device acceptance sequence.
+5. Deploy and verify the current Supabase migrations and Edge Function.
+6. Commit the final source, run the full gate, create the EAS build, inspect its
+   metadata/privacy configuration, install it, then complete the signed-device
+   acceptance sequence.
 
 ### TestFlight
 

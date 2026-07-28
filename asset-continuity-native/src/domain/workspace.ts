@@ -77,6 +77,22 @@ export interface EvidenceReviewMutationResult {
   readonly previousEvidence: NativeEvidence;
 }
 
+function requestedRecordId(
+  value: string | undefined,
+  fallback: () => string
+): string {
+  if (value === undefined) return fallback();
+  const recordId = value.trim();
+  if (
+    recordId.length === 0 ||
+    recordId.length > 1_024 ||
+    /[\u0000-\u001f\u007f-\u009f]/u.test(recordId)
+  ) {
+    throw new Error("The reserved record identity is invalid.");
+  }
+  return recordId;
+}
+
 export function addPlace(
   workspace: NativeWorkspace,
   input: NewPlaceInput,
@@ -85,7 +101,7 @@ export function addPlace(
   const now = context.now();
   const roomId = input.roomName?.trim() ? context.id("room") : null;
   const place: NativePlace = {
-    id: context.id("place"),
+    id: requestedRecordId(input.recordId, () => context.id("place")),
     householdId: workspace.household.id,
     version: 1,
     name: input.name.trim(),
@@ -536,7 +552,10 @@ export function addAsset(
 ): AssetMutationResult {
   const validatedInput = validateNewAssetInput(workspace, input);
   const now = context.now();
-  const assetId = context.id("asset");
+  const assetId = requestedRecordId(
+    input.recordId,
+    () => context.id("asset")
+  );
   const photoEvidenceId = validatedInput.photo
     ? context.id("evidence")
     : null;

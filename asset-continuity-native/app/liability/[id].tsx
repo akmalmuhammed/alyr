@@ -1126,7 +1126,7 @@ const styles = StyleSheet.create({
     flex: 1,
     color: colors.textMuted,
     fontFamily: typography.bodyBold,
-    fontSize: 11,
+    fontSize: 12,
     lineHeight: 16,
     letterSpacing: 1.2
   },
@@ -1156,7 +1156,7 @@ const styles = StyleSheet.create({
   statusLabel: {
     color: colors.text,
     fontFamily: typography.bodyMedium,
-    fontSize: 11,
+    fontSize: 12,
     lineHeight: 16
   },
   balanceHeading: {
@@ -1172,7 +1172,7 @@ const styles = StyleSheet.create({
   commandLabel: {
     color: colors.concrete,
     fontFamily: typography.bodyBold,
-    fontSize: 11,
+    fontSize: 12,
     lineHeight: 16,
     letterSpacing: 1.1
   },
@@ -1442,7 +1442,7 @@ const styles = StyleSheet.create({
   historyState: {
     color: colors.textMuted,
     fontFamily: typography.bodyMedium,
-    fontSize: 11,
+    fontSize: 12,
     lineHeight: 16,
     textTransform: "uppercase",
     letterSpacing: 0.7

@@ -18,3 +18,11 @@ export function portfolioReviewRoute(
 ): string {
   return PORTFOLIO_REVIEW_ROUTES[intent];
 }
+
+/**
+ * Keeps the property-value review cohort in the URL so the user returns to
+ * the same truthful queue after opening and updating an exact Place.
+ */
+export function portfolioPropertyValueReviewRoute(): string {
+  return "/assets?view=places&filter=value";
+}

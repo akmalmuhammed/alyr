@@ -445,7 +445,7 @@ const styles = StyleSheet.create({
   commandLabel: {
     color: colors.concrete,
     fontFamily: typography.bodyBold,
-    fontSize: 10,
+    fontSize: 12,
     lineHeight: 14,
     letterSpacing: 1
   },
@@ -499,7 +499,7 @@ const styles = StyleSheet.create({
   },
   metadataMono: {
     fontFamily: "monospace",
-    fontSize: 11
+    fontSize: 12
   },
   dangerNotice: {
     flexDirection: "row",

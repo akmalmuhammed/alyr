@@ -1,5 +1,8 @@
 import type { JsonObject, JsonValue } from "@alyr/contracts";
-import { getLocationPolicy } from "@alyr/domain";
+import {
+  getLocationPolicy,
+  getPortfolioValuePolicy
+} from "@alyr/domain";
 
 import type {
   NativeAsset,
@@ -249,6 +252,17 @@ interface CurrentValueSelection {
   readonly ignoredCount: number;
 }
 
+/**
+ * Financial eligibility is category policy, not a side effect of being an
+ * Asset record. Important documents remain fully usable continuity records
+ * while staying outside value coverage and tracked financial position.
+ */
+export function isPortfolioValuableAsset(
+  asset: Pick<NativeAsset, "categoryId">
+): boolean {
+  return getPortfolioValuePolicy(asset.categoryId).subject === "asset";
+}
+
 function ratio(
   assetIds: readonly string[],
   total: number
@@ -465,14 +479,25 @@ export function recordPortfolioValue(
         : (() => {
             throw new Error("Choose one item, property or liability.");
           })();
-  const targetAvailable =
+  const subjectAsset =
     subject.kind === "asset"
-      ? workspace.assets.some(
+      ? workspace.assets.find(
           (candidate) =>
             candidate.id === subject.assetId &&
             candidate.householdId === workspace.household.id &&
-            isAssetActive(candidate) &&
-            !getLocationPolicy(candidate.categoryId).isRealEstate
+            isAssetActive(candidate)
+        )
+      : undefined;
+  if (
+    subjectAsset &&
+    getPortfolioValuePolicy(subjectAsset.categoryId).subject === "none"
+  ) {
+    throw new Error("This item category does not use a portfolio value.");
+  }
+  const targetAvailable =
+    subject.kind === "asset"
+      ? Boolean(
+          subjectAsset && isPortfolioValuableAsset(subjectAsset)
         )
       : subject.kind === "place"
         ? workspace.places.some(
@@ -575,7 +600,7 @@ export function selectCurrentPortfolioValues(
       .filter(
         (asset) =>
           isAssetActive(asset) &&
-          !getLocationPolicy(asset.categoryId).isRealEstate
+          isPortfolioValuableAsset(asset)
       )
       .map((asset) => asset.id)
   );
@@ -847,6 +872,7 @@ export function buildPortfolioSnapshot(
       isAssetActive(asset) &&
       !getLocationPolicy(asset.categoryId).isRealEstate
   );
+  const valuableAssets = activeAssets.filter(isPortfolioValuableAsset);
   const properties = workspace.places.filter(
     (place) =>
       place.householdId === workspace.household.id &&
@@ -913,7 +939,7 @@ export function buildPortfolioSnapshot(
     return subject === null || subject.kind !== "liability";
   });
   const selected = selectCurrentPortfolioValues(
-    activeAssets,
+    valuableAssets,
     assetAndPropertyValueRecords,
     properties
   );
@@ -923,14 +949,14 @@ export function buildPortfolioSnapshot(
       record
     ])
   );
-  const valuedAssetIds = activeAssets
+  const valuedAssetIds = valuableAssets
     .filter((asset) =>
       currentBySubject.has(
         portfolioSubjectKey({ kind: "asset", assetId: asset.id })
       )
     )
     .map((asset) => asset.id);
-  const unvaluedAssetIds = activeAssets
+  const unvaluedAssetIds = valuableAssets
     .filter(
       (asset) =>
         !currentBySubject.has(
@@ -954,7 +980,7 @@ export function buildPortfolioSnapshot(
     )
     .map((place) => place.id);
   const assetById = new Map(
-    activeAssets.map((asset) => [asset.id, asset])
+    valuableAssets.map((asset) => [asset.id, asset])
   );
   const propertyById = new Map(
     properties.map((place) => [place.id, place])
@@ -1011,7 +1037,7 @@ export function buildPortfolioSnapshot(
   return {
     assetCount: activeAssets.length,
     propertyCount: properties.length,
-    valuableCount: activeAssets.length + properties.length,
+    valuableCount: valuableAssets.length + properties.length,
     documentedItems: ratio(
       documentedAssetIds,
       activeAssets.length
@@ -1032,7 +1058,7 @@ export function buildPortfolioSnapshot(
       placeIds: confirmedPropertyPinIds
     },
     propertyPinGapPlaceIds,
-    valuedItems: ratio(valuedAssetIds, activeAssets.length),
+    valuedItems: ratio(valuedAssetIds, valuableAssets.length),
     valuedPlaces: {
       complete: valuedPlaceIds.length,
       total: properties.length,

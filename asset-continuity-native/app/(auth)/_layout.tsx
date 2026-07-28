@@ -60,6 +60,16 @@ export default function AuthLayout() {
       }}
     >
       <Stack.Screen
+        name="confirm-email"
+        options={{
+          /*
+           * Confirmation replaces its entry form and owns a URL-backed return
+           * route. Disable the iOS swipe so it cannot bypass that origin.
+           */
+          gestureEnabled: false
+        }}
+      />
+      <Stack.Screen
         name="reset-password"
         options={{
           /*

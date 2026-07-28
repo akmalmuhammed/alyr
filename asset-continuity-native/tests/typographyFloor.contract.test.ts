@@ -1,13 +1,28 @@
-const auditedFiles = [
-  "app/_layout.tsx",
-  "app/(auth)/index.tsx",
-  "src/auth/components.tsx",
-  "src/deviceAuth/DeviceUnlockScreen.tsx",
-  "app/(tabs)/_layout.tsx",
-  "app/(tabs)/index.tsx",
-  "app/(tabs)/vault.tsx",
-  "src/components/VaultRecentProof.tsx"
-] as const;
+import { nativeTokens } from "@alyr/design-tokens";
+
+const fs = jest.requireActual("fs") as {
+  readdirSync(path: string, options: { withFileTypes: true }): Array<{
+    isDirectory(): boolean;
+    isFile(): boolean;
+    name: string;
+  }>;
+};
+
+function visibleTsxFiles(directory: string): string[] {
+  return fs
+    .readdirSync(`${process.cwd()}/${directory}`, { withFileTypes: true })
+    .flatMap((entry) => {
+      const relativePath = `${directory}/${entry.name}`;
+      if (entry.isDirectory()) {
+        return visibleTsxFiles(relativePath);
+      }
+      return entry.isFile() && entry.name.endsWith(".tsx")
+        ? [relativePath]
+        : [];
+    });
+}
+
+const auditedFiles = [...visibleTsxFiles("app"), ...visibleTsxFiles("src")];
 
 const labelStyles = [
   ["app/_layout.tsx", "fontFallbackEyebrow"],
@@ -19,7 +34,8 @@ const labelStyles = [
   ["app/(tabs)/index.tsx", "commandLabel"],
   ["app/(tabs)/index.tsx", "portfolioLabel"],
   ["app/(tabs)/vault.tsx", "commandLabel"],
-  ["app/(tabs)/vault.tsx", "reminderEyebrow"]
+  ["app/(tabs)/vault.tsx", "reminderEyebrow"],
+  ["src/components/ui.tsx", "eyebrow"]
 ] as const;
 
 const metadataStyles = [
@@ -49,18 +65,41 @@ function styleBlock(file: string, styleName: string): string {
 }
 
 function fontSize(block: string): number {
-  const match = block.match(/fontSize:\s*(\d+(?:\.\d+)?)/);
+  const match = block.match(
+    /fontSize:\s*(?:(\d+(?:\.\d+)?)|typeScale\.([A-Za-z0-9_]+))/
+  );
   if (!match) {
     throw new Error("Style block is missing an explicit fontSize");
   }
-  return Number(match[1]);
+  if (match[1]) return Number(match[1]);
+  const token = match[2] as keyof typeof nativeTokens.typography.sizes;
+  const value = nativeTokens.typography.sizes[token];
+  if (typeof value !== "number") {
+    throw new Error(`Unknown typeScale token: ${match[2]}`);
+  }
+  return value;
+}
+
+function declaredFontSizes(file: string): number[] {
+  return [
+    ...source(file).matchAll(
+      /fontSize:\s*(?:(\d+(?:\.\d+)?)|typeScale\.([A-Za-z0-9_]+))/g
+    )
+  ].map((match) => {
+    if (match[1]) return Number(match[1]);
+    const token = match[2] as keyof typeof nativeTokens.typography.sizes;
+    const value = nativeTokens.typography.sizes[token];
+    if (typeof value !== "number") {
+      throw new Error(`Unknown typeScale token: ${match[2]} in ${file}`);
+    }
+    return value;
+  });
 }
 
 describe("ALYR native typography floor", () => {
-  it("keeps every audited visible text style at 12px or larger", () => {
+  it("keeps every visible native text style at 12px or larger", () => {
     const undersized = auditedFiles.flatMap((file) =>
-      [...source(file).matchAll(/fontSize:\s*(\d+(?:\.\d+)?)/g)]
-        .map((match) => Number(match[1]))
+      declaredFontSizes(file)
         .filter((size) => size < 12)
         .map((size) => ({ file, size }))
     );
@@ -86,4 +125,11 @@ describe("ALYR native typography floor", () => {
       expect(fontSize(block)).toBeGreaterThanOrEqual(12);
     }
   );
+
+  it("removes Latin tracking and casing from shared Arabic eyebrows", () => {
+    const block = styleBlock("src/components/ui.tsx", "arabicEyebrow");
+
+    expect(block).toContain("letterSpacing: 0");
+    expect(block).toContain('textTransform: "none"');
+  });
 });

@@ -3,6 +3,8 @@ import {
   ArrowLeft,
   ArrowRight,
   Camera,
+  CheckCircle,
+  CurrencyCircleDollar,
   MagnifyingGlass,
   MapPin,
   Plus,
@@ -19,6 +21,7 @@ import {
   IconButton,
   PrimaryButton,
   ScreenTitle,
+  SecondaryButton,
   Section
 } from "@/components/ui";
 import { assetLifecycleStatus, isAssetActive } from "@/domain/model";
@@ -152,7 +155,8 @@ export default function ItemsScreen() {
         location: new Set<string>(),
         evidence: new Set<string>(),
         value: new Set<string>(),
-        review: new Set<string>()
+        review: new Set<string>(),
+        propertyValue: new Set<string>()
       };
     }
     const snapshot = buildPortfolioSnapshot(
@@ -163,7 +167,8 @@ export default function ItemsScreen() {
       location: new Set(snapshot.locationGapAssetIds),
       evidence: new Set(snapshot.proofGapAssetIds),
       value: new Set(snapshot.unvaluedAssetIds),
-      review: new Set(snapshot.pendingProofReviewAssetIds)
+      review: new Set(snapshot.pendingProofReviewAssetIds),
+      propertyValue: new Set(snapshot.unvaluedPlaceIds)
     };
   }, [recordedAssetValues, workspace]);
 
@@ -219,9 +224,15 @@ export default function ItemsScreen() {
       filterRegisterPlaces(
         workspace?.places ?? [],
         placeFilter,
-        workspace?.placeDocuments ?? []
+        workspace?.placeDocuments ?? [],
+        reviewIds.propertyValue
       ),
-    [placeFilter, workspace?.placeDocuments, workspace?.places]
+    [
+      placeFilter,
+      reviewIds.propertyValue,
+      workspace?.placeDocuments,
+      workspace?.places
+    ]
   );
 
   const sortedPlaces = useMemo(
@@ -502,10 +513,24 @@ export default function ItemsScreen() {
                           : copy.items.pinNeedsReview;
                     return (
                       <Pressable
+                        accessibilityHint={
+                          placeFilter === "value"
+                            ? registerCopy.openPropertyValueHint
+                            : undefined
+                        }
+                        accessibilityLabel={
+                          placeFilter === "value"
+                            ? `${place.name}. ${registerCopy.placeFilters.value}. ${
+                                place.addressSummary ?? place.regionLabel
+                              }`
+                            : undefined
+                        }
                         accessibilityRole="button"
                         key={place.id}
                         onPress={() =>
-                          router.push(`/place/${place.id}`)
+                          router.push(
+                            `/place/${encodeURIComponent(place.id)}`
+                          )
                         }
                         style={({ pressed }) => [
                           styles.placeRow,
@@ -550,6 +575,29 @@ export default function ItemsScreen() {
                             {spaceCount(place.rooms.length, language)} ·{" "}
                             {precision}
                           </Text>
+                          {placeFilter === "value" ? (
+                            <View
+                              style={[
+                                styles.placeValueGap,
+                                rtl && styles.rowReverse
+                              ]}
+                            >
+                              <CurrencyCircleDollar
+                                color={colors.warning}
+                                size={16}
+                                weight="regular"
+                              />
+                              <Text
+                                style={[
+                                  styles.placeValueGapLabel,
+                                  rtl && styles.arabicMedium,
+                                  rtl && styles.rtlText
+                                ]}
+                              >
+                                {registerCopy.propertyValueMissing}
+                              </Text>
+                            </View>
+                          ) : null}
                         </View>
                         <ForwardIcon
                           color={colors.textMuted}
@@ -560,6 +608,40 @@ export default function ItemsScreen() {
                   })}
                 </Fragment>
               ))
+            ) : placeFilter === "value" ? (
+              <View
+                style={[styles.empty, rtl && styles.alignEnd]}
+                testID="property-value-review-empty"
+              >
+                <CheckCircle
+                  color={colors.success}
+                  size={34}
+                  weight="regular"
+                />
+                <Text
+                  style={[
+                    styles.emptyTitle,
+                    rtl && styles.sectionTitleArabic,
+                    rtl && styles.rtlText
+                  ]}
+                >
+                  {registerCopy.noPropertyValuesTitle}
+                </Text>
+                <BodyText
+                  muted
+                  {...(rtl ? { style: styles.rtlText } : {})}
+                >
+                  {registerCopy.noPropertyValuesBody}
+                </BodyText>
+                <PrimaryButton
+                  label={registerCopy.returnToPortfolio}
+                  onPress={() => router.replace("/dashboard")}
+                />
+                <SecondaryButton
+                  label={registerCopy.reviewAllPlaces}
+                  onPress={() => updatePlaceFilter("all")}
+                />
+              </View>
             ) : workspace.places.length === 0 ? (
               <View style={[styles.empty, rtl && styles.alignEnd]}>
                 <MapPin color={colors.text} size={34} weight="regular" />
@@ -635,7 +717,9 @@ export default function ItemsScreen() {
                       evidence={workspace.evidence}
                       key={asset.id}
                       onPress={() =>
-                        router.push(`/asset/${asset.id}`)
+                        router.push(
+                          `/asset/${asset.id}?retrievalSource=asset-list`
+                        )
                       }
                       places={workspace.places}
                     />
@@ -983,6 +1067,18 @@ const styles = StyleSheet.create({
     fontFamily: typography.body,
     fontSize: 12,
     lineHeight: 17
+  },
+  placeValueGap: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: spacing.xs,
+    paddingTop: 2
+  },
+  placeValueGapLabel: {
+    color: colors.text,
+    fontFamily: typography.bodyMedium,
+    fontSize: 12,
+    lineHeight: 18
   },
   empty: {
     alignItems: "flex-start",

@@ -54,6 +54,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/product-events": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Acknowledge one privacy-safe, idempotent pilot product event.
+         * @description Event properties must exactly match the reject-by-default @alyr/contracts analytics allow-list. Household and client-event UUIDs are routing/idempotency fields and are never copied into properties.
+         */
+        post: operations["recordProductEvent"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/onboarding/complete": {
         parameters: {
             query?: never;
@@ -379,6 +399,28 @@ export interface components {
             /** Format: email */
             email: string;
             oneTimeCode: string;
+        };
+        ProductEventRequest: {
+            /** @constant */
+            apiVersion: 1;
+            /** Format: uuid */
+            householdId: string;
+            /** Format: uuid */
+            idempotencyKey: string;
+            /** @enum {string} */
+            eventName: "pilot_invitation_accepted" | "household_created" | "first_asset_passport_created" | "asset_location_confirmed" | "first_evidence_reviewed" | "critical_register_25_completed" | "asset_retrieval_completed" | "access_grant_created" | "continuity_snapshot_exported" | "household_returned_day_30_45" | "reservation_paid" | "pilot_contract_signed";
+            /** @description Exact event-specific properties from @alyr/contracts. Nested values and non-allow-listed keys are rejected. */
+            properties: {
+                [key: string]: string | number | boolean | null;
+            };
+        };
+        ProductEventAcknowledgement: {
+            /** @constant */
+            apiVersion: 1;
+            /** @constant */
+            accepted: true;
+            /** Format: uuid */
+            idempotencyKey: string;
         };
         CreateHouseholdRequest: {
             /** @constant */
@@ -953,6 +995,35 @@ export interface operations {
             403: components["responses"]["Forbidden"];
             409: components["responses"]["Conflict"];
             429: components["responses"]["TooManyRequests"];
+        };
+    };
+    recordProductEvent: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ProductEventRequest"];
+            };
+        };
+        responses: {
+            /** @description The event was inserted or replayed exactly. */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProductEventAcknowledgement"];
+                };
+            };
+            400: components["responses"]["ApiError"];
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            409: components["responses"]["Conflict"];
+            503: components["responses"]["ServiceUnavailable"];
         };
     };
     completeHouseholdOnboarding: {

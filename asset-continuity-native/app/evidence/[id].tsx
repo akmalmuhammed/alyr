@@ -81,6 +81,9 @@ export const EVIDENCE_DETAIL_COPY = {
     sampleMetadataOnly: "This sample contains metadata only.",
     reattachSource:
       "The metadata is preserved. Reattach the source before relying on this record.",
+    addReplacementProof: "Add replacement proof",
+    addReplacementProofHint:
+      "Opens this item so you can attach a new stored original.",
     metadata: "Evidence metadata",
     fileName: "File name",
     format: "Format",
@@ -130,6 +133,9 @@ export const EVIDENCE_DETAIL_COPY = {
     }
   },
   ar: {
+    addReplacementProof: "إضافة إثبات بديل",
+    addReplacementProofHint:
+      "يفتح هذا العنصر لإرفاق نسخة أصلية جديدة محفوظة.",
     screenTitle: "الإثبات",
     back: "العودة",
     notFoundTitle: "الإثبات غير موجود",
@@ -285,6 +291,16 @@ export function evidenceStorageLabel(
 export function evidenceBackHref(assetId: string | null | undefined): Href {
   return assetId
     ? (`/asset/${encodeURIComponent(assetId)}` as Href)
+    : "/vault";
+}
+
+export function evidenceRepairHref(
+  assetId: string | null | undefined
+): Href {
+  return assetId
+    ? (`/asset-edit?assetId=${encodeURIComponent(
+        assetId
+      )}&focus=evidence` as Href)
     : "/vault";
 }
 
@@ -513,35 +529,46 @@ export default function EvidenceDetailScreen() {
             store={attachmentStore}
           />
         ) : (
-          <View
-            style={[
-              styles.sourceUnavailable,
-              rtl && styles.rowReverse
-            ]}
-          >
-            <FileText color={colors.text} size={24} weight="regular" />
-            <View style={[styles.sourceCopy, rtl && styles.alignEnd]}>
-              <Text
-                style={[
-                  styles.sourceTitle,
-                  rtl && styles.arabicMedium,
-                  rtl && styles.rtlText
-                ]}
-              >
-                {copy.originalUnavailable}
-              </Text>
-              <Text
-                style={[
-                  styles.sourceMeta,
-                  rtl && styles.arabic,
-                  rtl && styles.rtlText
-                ]}
-              >
-                {workspace.mode === "sample"
-                  ? copy.sampleMetadataOnly
-                  : copy.reattachSource}
-              </Text>
+          <View style={styles.sourceUnavailableStack}>
+            <View
+              style={[
+                styles.sourceUnavailable,
+                rtl && styles.rowReverse
+              ]}
+            >
+              <FileText color={colors.text} size={24} weight="regular" />
+              <View style={[styles.sourceCopy, rtl && styles.alignEnd]}>
+                <Text
+                  style={[
+                    styles.sourceTitle,
+                    rtl && styles.arabicMedium,
+                    rtl && styles.rtlText
+                  ]}
+                >
+                  {copy.originalUnavailable}
+                </Text>
+                <Text
+                  style={[
+                    styles.sourceMeta,
+                    rtl && styles.arabic,
+                    rtl && styles.rtlText
+                  ]}
+                >
+                  {workspace.mode === "sample"
+                    ? copy.sampleMetadataOnly
+                    : copy.reattachSource}
+                </Text>
+              </View>
             </View>
+            {workspace.mode !== "sample" && canReviewEvidence ? (
+              <SecondaryButton
+                accessibilityHint={copy.addReplacementProofHint}
+                label={copy.addReplacementProof}
+                onPress={() =>
+                  router.push(evidenceRepairHref(asset.id))
+                }
+              />
+            ) : null}
           </View>
         )}
       </Section>
@@ -736,7 +763,7 @@ const styles = StyleSheet.create({
   kicker: {
     color: colors.textMuted,
     fontFamily: typography.bodyBold,
-    fontSize: 11,
+    fontSize: 12,
     lineHeight: 16,
     letterSpacing: 1.2
   },
@@ -754,7 +781,7 @@ const styles = StyleSheet.create({
   commandLabel: {
     color: colors.concrete,
     fontFamily: typography.bodyBold,
-    fontSize: 11,
+    fontSize: 12,
     lineHeight: 16,
     letterSpacing: 1.1
   },
@@ -786,6 +813,9 @@ const styles = StyleSheet.create({
     borderColor: colors.border,
     borderRadius: radius.md,
     backgroundColor: colors.surface
+  },
+  sourceUnavailableStack: {
+    gap: spacing.sm
   },
   sourceCopy: {
     flex: 1,
@@ -855,7 +885,7 @@ const styles = StyleSheet.create({
   checksum: {
     color: colors.text,
     fontFamily: "monospace",
-    fontSize: 11,
+    fontSize: 12,
     lineHeight: 17,
     writingDirection: "ltr"
   },

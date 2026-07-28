@@ -48,6 +48,7 @@ describe("first-viewport onboarding decisions", () => {
     const privacy = read("app/(auth)/privacy.tsx");
     const rootLayout = read("app/_layout.tsx");
     const routes = read("src/auth/routes.ts");
+    const capture = read("app/capture/index.tsx");
     const provider = read(
       "src/deviceAuth/DeviceAuthProvider.tsx"
     );
@@ -103,7 +104,13 @@ describe("first-viewport onboarding decisions", () => {
     );
     expect(rootLayout).toContain("firstRecordHandoffDestination");
     expect(rootLayout).toContain(
-      ".completeOnboardingHandoff(pendingFirstRecordIntent)"
+      "pendingFirstRecordHandoff.handoffId"
+    );
+    expect(rootLayout).not.toContain(
+      "acknowledgeOnboardingHandoff("
+    );
+    expect(capture).toContain(
+      "await deviceAuth.acknowledgeOnboardingHandoff({"
     );
     expect(routes).toContain(
       'return intent === "place" ? "/capture?intent=place" : "/capture";'

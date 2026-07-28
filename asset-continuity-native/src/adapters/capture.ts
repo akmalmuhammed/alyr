@@ -1,4 +1,5 @@
 import * as DocumentPicker from "expo-document-picker";
+import { File } from "expo-file-system";
 import * as ImagePicker from "expo-image-picker";
 
 import type { CapturedFile } from "@/domain/model";
@@ -7,6 +8,27 @@ export type CaptureOutcome =
   | { readonly ok: true; readonly file: CapturedFile }
   | { readonly ok: false; readonly reason: "cancelled" | "permission" | "failed" };
 
+function positiveByteSize(
+  uri: string,
+  reportedSize: number | null | undefined
+): number {
+  if (
+    typeof reportedSize === "number" &&
+    Number.isSafeInteger(reportedSize) &&
+    reportedSize > 0
+  ) {
+    return reportedSize;
+  }
+  const measuredSize = new File(uri).size;
+  if (
+    Number.isSafeInteger(measuredSize) &&
+    measuredSize > 0
+  ) {
+    return measuredSize;
+  }
+  throw new Error("The selected file size could not be verified.");
+}
+
 function fromImageAsset(asset: ImagePicker.ImagePickerAsset): CapturedFile {
   return {
     localUri: asset.uri,
@@ -14,7 +36,7 @@ function fromImageAsset(asset: ImagePicker.ImagePickerAsset): CapturedFile {
       asset.fileName ??
       `asset-${new Date().toISOString().replaceAll(":", "-")}.jpg`,
     mimeType: asset.mimeType ?? "image/jpeg",
-    byteSize: asset.fileSize ?? 0
+    byteSize: positiveByteSize(asset.uri, asset.fileSize)
   };
 }
 
@@ -79,7 +101,7 @@ export async function chooseEvidenceDocument(): Promise<CaptureOutcome> {
         localUri: asset.uri,
         fileName: asset.name,
         mimeType: asset.mimeType ?? "application/octet-stream",
-        byteSize: asset.size ?? 0
+        byteSize: positiveByteSize(asset.uri, asset.size)
       }
     };
   } catch {

@@ -21,6 +21,7 @@ import {
   X
 } from "phosphor-react-native";
 import {
+  useCallback,
   useEffect,
   useMemo,
   useRef,
@@ -59,6 +60,7 @@ import {
 } from "@/adapters/capture";
 import { readCurrentLocation } from "@/adapters/location";
 import { useReduceMotionPreference } from "@/accessibility/useReduceMotionPreference";
+import { finalizeCommittedRecord } from "@/auth/firstRecordCompletion";
 import {
   PlacePinEditor,
   type PlacePinEditorValue
@@ -82,6 +84,7 @@ import {
   CATEGORY_CHOICES,
   type CapturedFile,
   type NativePlace,
+  type NewAssetInput,
   type NewPlaceInput,
   type PlaceClassification
 } from "@/domain/model";
@@ -106,6 +109,10 @@ import {
   type DraftLocationChoice
 } from "@/capture/quickPassportDraft";
 import {
+  useDeviceAuth,
+  type OnboardingHandoffRecord
+} from "@/deviceAuth";
+import {
   formatLocalizedNumber,
   localizedWorkspaceError,
   useCoreJourneyCopy
@@ -120,6 +127,31 @@ import {
 
 const MAX_FILE_BYTES = 10 * 1024 * 1024;
 type LocationChoice = DraftLocationChoice;
+type DraftPersistenceOperation = "read" | "write" | "clear";
+
+interface CommittedCaptureRecord {
+  readonly kind: "item" | "place";
+  readonly id: string;
+  readonly handoff: OnboardingHandoffRecord | null;
+}
+
+function draftPersistenceMessage(
+  language: "en" | "ar",
+  operation: DraftPersistenceOperation
+): string {
+  if (language === "ar") {
+    return operation === "read"
+      ? "تعذّرت استعادة المسودة المحمية. حاول مرة أخرى قبل المتابعة."
+      : operation === "write"
+        ? "لم تُحفظ تغييرات المسودة في التخزين المحمي بعد. حاول الحفظ مرة أخرى."
+        : "تعذّر مسح المسودة المحمية. السجل المحفوظ لم يتغير؛ حاول الإنهاء مرة أخرى.";
+  }
+  return operation === "read"
+    ? "The protected draft could not be restored. Try again before continuing."
+    : operation === "write"
+      ? "Your latest draft changes are not protected yet. Try saving the draft again."
+      : "The protected draft could not be cleared. Your saved record is unchanged; try finishing again.";
+}
 
 export default function CaptureScreen() {
   const router = useRouter();
@@ -144,15 +176,18 @@ export default function CaptureScreen() {
   const allowRemovalRef = useRef(false);
   const {
     intent,
+    handoffId: requestedHandoffId,
     placeId: requestedPlaceId,
     returnTo
   } = useLocalSearchParams<{
     intent?: string;
+    handoffId?: string;
     placeId?: string;
     returnTo?: string;
   }>();
   const {
     workspace,
+    repository,
     saving,
     error,
     clearError,
@@ -160,12 +195,15 @@ export default function CaptureScreen() {
     createPlace,
     createAsset
   } = useWorkspace();
+  const deviceAuth = useDeviceAuth();
   const [placeOnly] = useState(intent === "place");
   const [step, setStep] = useState(0);
   const [name, setName] = useState("");
   const [categoryId, setCategoryId] = useState<string | null>(null);
   const [photo, setPhoto] = useState<CapturedFile | null>(null);
   const [evidence, setEvidence] = useState<CapturedFile | null>(null);
+  const [captureSource, setCaptureSource] =
+    useState<NonNullable<NewAssetInput["captureSource"]>>("manual");
   const [locationStatus, setLocationStatus] =
     useState<LocationChoice | null>(
       typeof requestedPlaceId === "string" ? "needs-detail" : null
@@ -191,7 +229,33 @@ export default function CaptureScreen() {
     useState<AssetMutationValidationError | null>(null);
   const [draftReady, setDraftReady] = useState(false);
   const [draftRestored, setDraftRestored] = useState(false);
+  const [
+    committedCaptureRecord,
+    setCommittedCaptureRecord
+  ] = useState<CommittedCaptureRecord | null>(null);
+  const [
+    handoffCompletionError,
+    setHandoffCompletionError
+  ] = useState<string | null>(null);
+  const [
+    draftPersistenceFailure,
+    setDraftPersistenceFailure
+  ] = useState<DraftPersistenceOperation | null>(null);
+  const [draftRestoreAttempt, setDraftRestoreAttempt] = useState(0);
+  const [draftPersistAttempt, setDraftPersistAttempt] = useState(0);
+  const draftPersistenceVersionRef = useRef(0);
+  const handoffCommitInFlightRef = useRef(false);
+  const handoffAcknowledgeInFlightRef = useRef(false);
   const householdId = workspace?.household.id ?? null;
+  const draftScopeId = repository.scopeId;
+  const activeFirstRecordHandoff =
+    typeof requestedHandoffId === "string" &&
+    deviceAuth.pendingFirstRecordHandoff?.handoffId ===
+      requestedHandoffId &&
+    deviceAuth.pendingFirstRecordHandoff.intent ===
+      (placeOnly ? "place" : "item")
+      ? deviceAuth.pendingFirstRecordHandoff
+      : null;
 
   const selectedCategory = useMemo(
     () =>
@@ -224,106 +288,185 @@ export default function CaptureScreen() {
   useEffect(() => {
     if (!householdId) {
       setDraftReady(true);
+      setDraftPersistenceFailure((current) =>
+        current === "read" ? null : current
+      );
       return;
     }
     let active = true;
     setDraftReady(false);
     if (placeOnly) {
-      void readPlaceCaptureDraft(householdId).then((draft) => {
-        if (!active) return;
-        if (draft) {
-          setPlaceName(draft.placeName);
-          setPlaceClassification(
-            draft.placeClassification ?? "unknown"
+      void readPlaceCaptureDraft(draftScopeId, householdId)
+        .then((draft) => {
+          if (!active) return;
+          if (draft) {
+            setPlaceName(draft.placeName);
+            setPlaceClassification(
+              draft.placeClassification ?? "unknown"
+            );
+            setAddress(draft.address);
+            setRegion(draft.region);
+            setRoomName(draft.roomName);
+            setPin(draft.pin);
+            setDraftRestored(true);
+          }
+          setDraftPersistenceFailure((current) =>
+            current === "read" ? null : current
           );
-          setAddress(draft.address);
-          setRegion(draft.region);
-          setRoomName(draft.roomName);
-          setPin(draft.pin);
-          setDraftRestored(true);
-        }
-        setDraftReady(true);
-      });
+          setDraftReady(true);
+        })
+        .catch(() => {
+          if (!active) return;
+          setDraftPersistenceFailure("read");
+          setDraftReady(false);
+        });
     } else {
-      void readQuickPassportDraft(householdId).then((draft) => {
-        if (!active) return;
-        if (draft) {
-          setStep(draft.step);
-          setName(draft.name);
-          setCategoryId(draft.categoryId);
-          setPhoto(draft.photo);
-          setEvidence(draft.evidence);
-          setLocationStatus(draft.locationStatus);
-          setPlaceId(draft.placeId);
-          setRoomId(draft.roomId);
-          setLocatorText(draft.locatorText);
-          setShowPlaceForm(draft.showPlaceForm);
-          setPlaceName(draft.placeName);
-          setPlaceClassification(
-            draft.placeClassification ?? "unknown"
+      void readQuickPassportDraft(draftScopeId, householdId)
+        .then((draft) => {
+          if (!active) return;
+          if (draft) {
+            setStep(draft.step);
+            setName(draft.name);
+            setCategoryId(draft.categoryId);
+            setPhoto(draft.photo);
+            setEvidence(draft.evidence);
+            setCaptureSource(
+              draft.captureSource ??
+                (draft.photo
+                  ? "image-library"
+                  : draft.evidence
+                    ? "document-import"
+                    : "manual")
+            );
+            setLocationStatus(draft.locationStatus);
+            setPlaceId(draft.placeId);
+            setRoomId(draft.roomId);
+            setLocatorText(draft.locatorText);
+            setShowPlaceForm(draft.showPlaceForm);
+            setPlaceName(draft.placeName);
+            setPlaceClassification(
+              draft.placeClassification ?? "unknown"
+            );
+            setAddress(draft.address);
+            setRegion(draft.region);
+            setRoomName(draft.roomName);
+            setPin(draft.pin);
+            setDraftRestored(true);
+          }
+          setDraftPersistenceFailure((current) =>
+            current === "read" ? null : current
           );
-          setAddress(draft.address);
-          setRegion(draft.region);
-          setRoomName(draft.roomName);
-          setPin(draft.pin);
-          setDraftRestored(true);
-        }
-        setDraftReady(true);
-      });
+          setDraftReady(true);
+        })
+        .catch(() => {
+          if (!active) return;
+          setDraftPersistenceFailure("read");
+          setDraftReady(false);
+        });
     }
     return () => {
       active = false;
     };
-  }, [householdId, placeOnly]);
+  }, [
+    draftRestoreAttempt,
+    draftScopeId,
+    householdId,
+    placeOnly
+  ]);
 
   useEffect(() => {
     if (!draftReady || !householdId) return;
     const timer = setTimeout(() => {
+      const persistenceVersion =
+        draftPersistenceVersionRef.current + 1;
+      draftPersistenceVersionRef.current = persistenceVersion;
+      const settle = (
+        operation: Promise<void>,
+        failure: Exclude<DraftPersistenceOperation, "read">
+      ) => {
+        void operation
+          .then(() => {
+            if (
+              draftPersistenceVersionRef.current ===
+              persistenceVersion
+            ) {
+              setDraftPersistenceFailure((current) =>
+                current === failure ? null : current
+              );
+            }
+          })
+          .catch(() => {
+            if (
+              draftPersistenceVersionRef.current ===
+              persistenceVersion
+            ) {
+              setDraftPersistenceFailure(failure);
+            }
+          });
+      };
       if (placeOnly) {
         if (!hasPlaceDraft) {
-          void clearPlaceCaptureDraft();
+          settle(
+            clearPlaceCaptureDraft(draftScopeId),
+            "clear"
+          );
           return;
         }
-        void writePlaceCaptureDraft({
+        settle(
+          writePlaceCaptureDraft({
+            scopeId: draftScopeId,
+            householdId,
+            placeName,
+            placeClassification,
+            address,
+            region,
+            roomName,
+            pin
+          }),
+          "write"
+        );
+        return;
+      }
+      if (!hasDraft) {
+        settle(
+          clearQuickPassportDraft(draftScopeId),
+          "clear"
+        );
+        return;
+      }
+      settle(
+        writeQuickPassportDraft({
+          scopeId: draftScopeId,
           householdId,
+          step,
+          name,
+          categoryId,
+          captureSource,
+          photo,
+          evidence,
+          locationStatus,
+          placeId,
+          roomId,
+          locatorText,
+          showPlaceForm,
           placeName,
           placeClassification,
           address,
           region,
           roomName,
           pin
-        });
-        return;
-      }
-      if (!hasDraft) {
-        void clearQuickPassportDraft();
-        return;
-      }
-      void writeQuickPassportDraft({
-        householdId,
-        step,
-        name,
-        categoryId,
-        photo,
-        evidence,
-        locationStatus,
-        placeId,
-        roomId,
-        locatorText,
-        showPlaceForm,
-        placeName,
-        placeClassification,
-        address,
-        region,
-        roomName,
-        pin
-      });
+        }),
+        "write"
+      );
     }, 180);
     return () => clearTimeout(timer);
   }, [
     address,
     categoryId,
+    captureSource,
     draftReady,
+    draftPersistAttempt,
+    draftScopeId,
     evidence,
     hasDraft,
     hasPlaceDraft,
@@ -347,6 +490,142 @@ export default function CaptureScreen() {
   useEffect(() => {
     scrollRef.current?.scrollTo({ y: 0, animated: false });
   }, [step]);
+
+  const navigateAfterCommittedRecord = useCallback(
+    (kind: "item" | "place", recordId: string) => {
+      allowRemovalRef.current = true;
+      if (returnTo === "today") {
+        router.replace("/");
+      } else if (kind === "place" && returnTo === "asset-edit") {
+        router.back();
+      } else {
+        router.replace(
+          kind === "place"
+            ? `/place/${recordId}?justCreated=1`
+            : `/asset/${recordId}?justCreated=1`
+        );
+      }
+    },
+    [returnTo, router]
+  );
+
+  const finishCommittedCapture = useCallback(
+    async (record: CommittedCaptureRecord): Promise<boolean> => {
+      const handoff = record.handoff;
+      if (
+        handoff &&
+        (activeFirstRecordHandoff?.handoffId !==
+          handoff.handoffId ||
+          handoff.recordId !== record.id)
+      ) {
+        setHandoffCompletionError(
+          language === "ar"
+            ? "تعذّر تأكيد اكتمال السجل الأول. أعد فتح عملية الإعداد."
+            : "The first record could not be confirmed. Reopen setup and try again."
+        );
+        return false;
+      }
+      if (handoffAcknowledgeInFlightRef.current) return false;
+
+      handoffAcknowledgeInFlightRef.current = true;
+      setHandoffCompletionError(null);
+      let failureStage: "clear" | "acknowledge" = "clear";
+      try {
+        await finalizeCommittedRecord({
+          clearDraft: async () => {
+            if (record.kind === "place") {
+              await clearPlaceCaptureDraft(draftScopeId);
+            } else {
+              await clearQuickPassportDraft(draftScopeId);
+            }
+            setDraftPersistenceFailure((current) =>
+              current === "clear" ? null : current
+            );
+          },
+          acknowledge: async () => {
+            failureStage = "acknowledge";
+            if (handoff) {
+              await deviceAuth.acknowledgeOnboardingHandoff({
+                handoffId: handoff.handoffId,
+                intent: handoff.intent,
+                recordId: record.id
+              });
+            }
+          },
+          navigate: () =>
+            navigateAfterCommittedRecord(record.kind, record.id)
+        });
+        return true;
+      } catch {
+        if (failureStage === "clear") {
+          setDraftPersistenceFailure("clear");
+        } else {
+          setHandoffCompletionError(
+            language === "ar"
+              ? "تم حفظ السجل على هذا الجهاز، لكن تأكيد الإعداد لم يكتمل. حاول التأكيد مرة أخرى."
+              : "Your record is saved on this device, but setup confirmation did not finish. Try confirming again."
+          );
+        }
+        return false;
+      } finally {
+        handoffAcknowledgeInFlightRef.current = false;
+      }
+    },
+    [
+      activeFirstRecordHandoff,
+      deviceAuth,
+      draftScopeId,
+      language,
+      navigateAfterCommittedRecord
+    ]
+  );
+
+  const deferActiveFirstRecordHandoff = useCallback(() => {
+    if (activeFirstRecordHandoff) {
+      deviceAuth.deferOnboardingHandoff(
+        activeFirstRecordHandoff.handoffId
+      );
+    }
+  }, [activeFirstRecordHandoff, deviceAuth]);
+
+  useEffect(() => {
+    if (
+      !draftReady ||
+      !workspace ||
+      !activeFirstRecordHandoff ||
+      committedCaptureRecord ||
+      handoffCommitInFlightRef.current ||
+      handoffAcknowledgeInFlightRef.current
+    ) {
+      return;
+    }
+
+    const record =
+      activeFirstRecordHandoff.intent === "place"
+        ? workspace.places.find(
+            (place) =>
+              place.id === activeFirstRecordHandoff.recordId
+          )
+        : workspace.assets.find(
+            (asset) =>
+              asset.id === activeFirstRecordHandoff.recordId
+          );
+    if (!record) return;
+
+    const committed = {
+      kind: activeFirstRecordHandoff.intent,
+      id: record.id,
+      handoff: activeFirstRecordHandoff
+    } as const;
+    setCommittedCaptureRecord(committed);
+    void finishCommittedCapture(committed);
+  }, [
+    activeFirstRecordHandoff,
+    committedCaptureRecord,
+    draftReady,
+    finishCommittedCapture,
+    workspace
+  ]);
 
   useEffect(() => {
     if (placeOnly) return;
@@ -374,7 +653,11 @@ export default function CaptureScreen() {
   useEffect(
     () =>
       navigation.addListener("beforeRemove", (event) => {
-        if (!hasDraft || allowRemovalRef.current) return;
+        if (allowRemovalRef.current) return;
+        if (!hasDraft) {
+          deferActiveFirstRecordHandoff();
+          return;
+        }
         event.preventDefault();
         Alert.alert(
           captureCopy.discardTitle,
@@ -386,18 +669,33 @@ export default function CaptureScreen() {
               style: "destructive",
               onPress: () => {
                 const clearActiveDraft = placeOnly
-                  ? clearPlaceCaptureDraft
-                  : clearQuickPassportDraft;
-                void clearActiveDraft().then(() => {
-                  allowRemovalRef.current = true;
-                  navigation.dispatch(event.data.action);
-                });
+                  ? () => clearPlaceCaptureDraft(draftScopeId)
+                  : () => clearQuickPassportDraft(draftScopeId);
+                void clearActiveDraft()
+                  .then(() => {
+                    setDraftPersistenceFailure((current) =>
+                      current === "clear" ? null : current
+                    );
+                    allowRemovalRef.current = true;
+                    deferActiveFirstRecordHandoff();
+                    navigation.dispatch(event.data.action);
+                  })
+                  .catch(() => {
+                    setDraftPersistenceFailure("clear");
+                  });
               }
             }
           ]
         );
       }),
-    [captureCopy, hasDraft, navigation, placeOnly]
+    [
+      captureCopy,
+      deferActiveFirstRecordHandoff,
+      draftScopeId,
+      hasDraft,
+      navigation,
+      placeOnly
+    ]
   );
 
   useEffect(() => {
@@ -418,6 +716,30 @@ export default function CaptureScreen() {
       <PermissionDeniedScreen
         capability={placeOnly ? "place.write" : "asset.write"}
       />
+    );
+  }
+
+  if (!draftReady && draftPersistenceFailure === "read") {
+    const retryRestore = () => {
+      setDraftPersistenceFailure(null);
+      setDraftRestoreAttempt((current) => current + 1);
+    };
+    return (
+      <AppScreen testID="capture-draft-read-error">
+        <ErrorBanner
+          message={draftPersistenceMessage(language, "read")}
+          onDismiss={retryRestore}
+        />
+        <PrimaryButton
+          icon={ShieldCheck}
+          label={
+            language === "ar"
+              ? "محاولة استعادة المسودة مرة أخرى"
+              : "Try restoring draft again"
+          }
+          onPress={retryRestore}
+        />
+      </AppScreen>
     );
   }
 
@@ -477,22 +799,25 @@ export default function CaptureScreen() {
   const acceptCapturedFile = (
     file: CapturedFile,
     setter: (value: CapturedFile) => void
-  ) => {
+  ): boolean => {
     if (file.byteSize > MAX_FILE_BYTES) {
       Alert.alert(
         captureCopy.fileTooLarge,
         captureCopy.fileTooLargeRecovery
       );
-      return;
+      return false;
     }
     setAssetMutationFailure(null);
     setter(file);
+    return true;
   };
 
   const takePhoto = async () => {
     const outcome = await takeAssetPhoto();
     if (outcome.ok) {
-      acceptCapturedFile(outcome.file, setPhoto);
+      if (acceptCapturedFile(outcome.file, setPhoto)) {
+        setCaptureSource("camera");
+      }
     } else if (outcome.reason === "permission") {
       showPermissionRecovery(
         captureCopy.cameraPermission,
@@ -509,7 +834,9 @@ export default function CaptureScreen() {
   const choosePhoto = async () => {
     const outcome = await chooseAssetPhoto();
     if (outcome.ok) {
-      acceptCapturedFile(outcome.file, setPhoto);
+      if (acceptCapturedFile(outcome.file, setPhoto)) {
+        setCaptureSource("image-library");
+      }
     } else if (outcome.reason === "permission") {
       showPermissionRecovery(
         captureCopy.photoPermission,
@@ -526,7 +853,9 @@ export default function CaptureScreen() {
   const chooseEvidence = async () => {
     const outcome = await chooseEvidenceDocument();
     if (outcome.ok) {
-      acceptCapturedFile(outcome.file, setEvidence);
+      if (acceptCapturedFile(outcome.file, setEvidence) && !photo) {
+        setCaptureSource("document-import");
+      }
     } else if (outcome.reason === "failed") {
       Alert.alert(
         captureCopy.documentFailed,
@@ -565,6 +894,9 @@ export default function CaptureScreen() {
     setPlaceError(null);
     try {
       const place = await createPlace({
+        ...(placeOnly && activeFirstRecordHandoff
+          ? { recordId: activeFirstRecordHandoff.recordId }
+          : {}),
         name: placeName,
         classification: placeClassification,
         addressSummary: address.trim() || null,
@@ -592,17 +924,20 @@ export default function CaptureScreen() {
   };
 
   const savePlaceOnly = async () => {
-    const place = await savePlace();
-    if (place) {
-      await clearPlaceCaptureDraft();
-      allowRemovalRef.current = true;
-      if (returnTo === "asset-edit") {
-        router.back();
-      } else if (returnTo === "today") {
-        router.replace("/");
-      } else {
-        router.replace(`/place/${place.id}?justCreated=1`);
+    handoffCommitInFlightRef.current = true;
+    try {
+      const place = await savePlace();
+      if (place) {
+        const committed: CommittedCaptureRecord = {
+          kind: "place",
+          id: place.id,
+          handoff: activeFirstRecordHandoff
+        };
+        setCommittedCaptureRecord(committed);
+        await finishCommittedCapture(committed);
       }
+    } finally {
+      handoffCommitInFlightRef.current = false;
     }
   };
 
@@ -688,11 +1023,16 @@ export default function CaptureScreen() {
       setLocationError(captureCopy.locationError);
       return;
     }
+    handoffCommitInFlightRef.current = true;
     try {
       const asset = await createAsset({
+        ...(activeFirstRecordHandoff
+          ? { recordId: activeFirstRecordHandoff.recordId }
+          : {}),
         name: name.trim(),
         categoryId: selectedCategory.id,
         categoryLabel: selectedCategory.label,
+        captureSource,
         photo,
         locationStatus: physical ? locationStatus! : "known",
         placeId: physical ? placeId : null,
@@ -700,13 +1040,13 @@ export default function CaptureScreen() {
         locatorText: physical ? locatorText : null,
         evidence
       });
-      await clearQuickPassportDraft();
-      allowRemovalRef.current = true;
-      if (returnTo === "today") {
-        router.replace("/");
-      } else {
-        router.replace(`/asset/${asset.id}?justCreated=1`);
-      }
+      const committed: CommittedCaptureRecord = {
+        kind: "item",
+        id: asset.id,
+        handoff: activeFirstRecordHandoff
+      };
+      setCommittedCaptureRecord(committed);
+      await finishCommittedCapture(committed);
     } catch (caught) {
       if (!isAssetMutationValidationError(caught)) {
         // WorkspaceProvider keeps the draft visible and presents the error.
@@ -725,6 +1065,8 @@ export default function CaptureScreen() {
         setLocationError(recovery.message);
         focusValidationTarget(locationGroupRef);
       }
+    } finally {
+      handoffCommitInFlightRef.current = false;
     }
   };
 
@@ -799,11 +1141,52 @@ export default function CaptureScreen() {
                 </View>
               </View>
             ) : null}
+            {draftPersistenceFailure &&
+            draftPersistenceFailure !== "read" ? (
+              <View
+                style={styles.formStack}
+                testID="capture-draft-persistence-error"
+              >
+                <ErrorBanner
+                  message={draftPersistenceMessage(
+                    language,
+                    draftPersistenceFailure
+                  )}
+                  onDismiss={() => setDraftPersistenceFailure(null)}
+                />
+                <SecondaryButton
+                  label={
+                    language === "ar"
+                      ? "المحاولة مرة أخرى"
+                      : "Try again"
+                  }
+                  onPress={() => {
+                    if (committedCaptureRecord) {
+                      void finishCommittedCapture(
+                        committedCaptureRecord
+                      );
+                    } else {
+                      setDraftPersistAttempt(
+                        (current) => current + 1
+                      );
+                    }
+                  }}
+                />
+              </View>
+            ) : null}
             {error ? (
               <ErrorBanner
                 message={localizedWorkspaceError(error, language)}
                 onDismiss={clearError}
               />
+            ) : null}
+            {handoffCompletionError ? (
+              <View testID="first-record-handoff-error">
+                <ErrorBanner
+                  message={handoffCompletionError}
+                  onDismiss={() => setHandoffCompletionError(null)}
+                />
+              </View>
             ) : null}
             <PlaceForm
               address={address}
@@ -832,10 +1215,28 @@ export default function CaptureScreen() {
           >
             <PrimaryButton
               disabled={Boolean(pin && !pin.confirmedAt)}
-              icon={Check}
-              label={captureCopy.savePlace}
-              loading={saving}
-              onPress={() => void savePlaceOnly()}
+              icon={committedCaptureRecord ? ShieldCheck : Check}
+              label={
+                committedCaptureRecord
+                  ? committedCaptureRecord.handoff
+                    ? language === "ar"
+                      ? "تأكيد الإعداد مرة أخرى"
+                      : "Confirm setup again"
+                    : language === "ar"
+                      ? "إكمال الحفظ"
+                      : "Finish saving"
+                  : captureCopy.savePlace
+              }
+              loading={
+                saving ||
+                deviceAuth.onboardingHandoffAcknowledgeState ===
+                  "acknowledging"
+              }
+              onPress={() =>
+                void (committedCaptureRecord
+                  ? finishCommittedCapture(committedCaptureRecord)
+                  : savePlaceOnly())
+              }
             />
           </View>
         </KeyboardAvoidingView>
@@ -908,6 +1309,39 @@ export default function CaptureScreen() {
               </View>
             </View>
           ) : null}
+          {draftPersistenceFailure &&
+          draftPersistenceFailure !== "read" ? (
+            <View
+              style={styles.formStack}
+              testID="capture-draft-persistence-error"
+            >
+              <ErrorBanner
+                message={draftPersistenceMessage(
+                  language,
+                  draftPersistenceFailure
+                )}
+                onDismiss={() => setDraftPersistenceFailure(null)}
+              />
+              <SecondaryButton
+                label={
+                  language === "ar"
+                    ? "المحاولة مرة أخرى"
+                    : "Try again"
+                }
+                onPress={() => {
+                  if (committedCaptureRecord) {
+                    void finishCommittedCapture(
+                      committedCaptureRecord
+                    );
+                  } else {
+                    setDraftPersistAttempt(
+                      (current) => current + 1
+                    );
+                  }
+                }}
+              />
+            </View>
+          ) : null}
           {assetMutationFailure ? (
             <ErrorBanner
               message={
@@ -923,6 +1357,14 @@ export default function CaptureScreen() {
               message={localizedWorkspaceError(error, language)}
               onDismiss={clearError}
             />
+          ) : null}
+          {handoffCompletionError ? (
+            <View testID="first-record-handoff-error">
+              <ErrorBanner
+                message={handoffCompletionError}
+                onDismiss={() => setHandoffCompletionError(null)}
+              />
+            </View>
           ) : null}
 
           {step === 0 ? (
@@ -994,6 +1436,7 @@ export default function CaptureScreen() {
               onRemove={() => {
                 setAssetMutationFailure(null);
                 setEvidence(null);
+                if (!photo) setCaptureSource("manual");
               }}
             />
           ) : null}
@@ -1069,9 +1512,27 @@ export default function CaptureScreen() {
             ) : (
               <PrimaryButton
                 icon={ShieldCheck}
-                label={captureCopy.savePassport}
-                loading={saving}
-                onPress={() => void saveAsset()}
+                label={
+                  committedCaptureRecord
+                    ? committedCaptureRecord.handoff
+                      ? language === "ar"
+                        ? "تأكيد الإعداد مرة أخرى"
+                        : "Confirm setup again"
+                      : language === "ar"
+                        ? "إكمال الحفظ"
+                        : "Finish saving"
+                    : captureCopy.savePassport
+                }
+                loading={
+                  saving ||
+                  deviceAuth.onboardingHandoffAcknowledgeState ===
+                    "acknowledging"
+                }
+                onPress={() =>
+                  void (committedCaptureRecord
+                    ? finishCommittedCapture(committedCaptureRecord)
+                    : saveAsset())
+                }
               />
             )}
           </View>

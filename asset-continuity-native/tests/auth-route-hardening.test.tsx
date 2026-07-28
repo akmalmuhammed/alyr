@@ -2,7 +2,7 @@ import {
   fireEvent,
   render
 } from "@testing-library/react-native";
-import { Platform } from "react-native";
+import { Platform, StyleSheet } from "react-native";
 
 import AuthLayout from "../app/(auth)/_layout";
 import AuthWelcomeScreen from "../app/(auth)/index";
@@ -13,6 +13,7 @@ import {
 } from "@/auth/routes";
 import type { AuthSessionDescriptor } from "@/auth/types";
 import { CORE_JOURNEY_COPY } from "@/i18n/coreJourneyCopy";
+import { typography } from "@/theme/tokens";
 
 const mockRouter = {
   back: jest.fn(),
@@ -316,6 +317,32 @@ describe("authenticated auth-route hardening", () => {
       "/(auth)/create-account"
     );
     await screen.unmount();
+  });
+
+  it("uses the label language for the mixed-script locale control", async () => {
+    mockAuthState = authState({ session: null });
+    const englishScreen = await render(<AuthWelcomeScreen />);
+    const arabicLabelStyle = StyleSheet.flatten(
+      englishScreen.getByText(
+        CORE_JOURNEY_COPY.en.welcome.languageAction
+      ).props.style
+    );
+    expect(arabicLabelStyle.fontFamily).toBe(
+      typography.arabicMedium
+    );
+    expect(arabicLabelStyle.writingDirection).toBe("rtl");
+    await englishScreen.unmount();
+
+    mockRtl = true;
+    const arabicScreen = await render(<AuthWelcomeScreen />);
+    const englishLabelStyle = StyleSheet.flatten(
+      arabicScreen.getByText(
+        CORE_JOURNEY_COPY.ar.welcome.languageAction
+      ).props.style
+    );
+    expect(englishLabelStyle.fontFamily).toBe(typography.bodyBold);
+    expect(englishLabelStyle.writingDirection).toBe("ltr");
+    await arabicScreen.unmount();
   });
 
   it("retains the existing session-only reset behavior in preview", async () => {

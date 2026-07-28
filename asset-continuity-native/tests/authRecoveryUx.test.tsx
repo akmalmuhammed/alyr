@@ -14,7 +14,11 @@ import ForgotPasswordScreen from "../app/(auth)/forgot-password";
 import ResetPasswordScreen from "../app/(auth)/reset-password";
 import SignInScreen from "../app/(auth)/sign-in";
 import { isCompactAuthViewport } from "@/auth/components";
-import { AUTH_ROUTES } from "@/auth/routes";
+import {
+  AUTH_ROUTES,
+  CONFIRM_EMAIL_ROUTES,
+  confirmEmailReturnRoute
+} from "@/auth/routes";
 import {
   CORE_JOURNEY_COPY,
   localizeAuthFailure
@@ -165,9 +169,54 @@ describe("premium auth recovery lifecycle", () => {
     await waitFor(() => {
       expect(mockAuthState.resendConfirmation).toHaveBeenCalledTimes(1);
       expect(mockRouter.replace).toHaveBeenCalledWith(
-        AUTH_ROUTES.confirmEmail
+        CONFIRM_EMAIL_ROUTES.signIn
       );
     });
+  });
+
+  it("preserves Sign In as the confirmation return path", async () => {
+    mockParams = { from: "sign-in" };
+    mockAuthState = {
+      ...baseAuthState(),
+      acceptPendingHouseholdInvite: jest.fn(),
+      confirmation: {
+        delivery: "none"
+      },
+      mode: "preview",
+      pendingHouseholdInvite: null
+    };
+    const screen = await render(<ConfirmEmailScreen />);
+
+    await fireEvent.press(
+      screen.getByLabelText(CORE_JOURNEY_COPY.en.common.back)
+    );
+    expect(mockRouter.replace).toHaveBeenLastCalledWith(
+      AUTH_ROUTES.signIn
+    );
+
+    await fireEvent.press(
+      screen.getByText(
+        CORE_JOURNEY_COPY.en.confirmEmail.differentEmail
+      )
+    );
+    expect(mockRouter.replace).toHaveBeenLastCalledWith(
+      AUTH_ROUTES.signIn
+    );
+  });
+
+  it("fails closed to Create Account for an unknown confirmation origin", () => {
+    expect(confirmEmailReturnRoute(undefined)).toBe(
+      AUTH_ROUTES.createAccount
+    );
+    expect(confirmEmailReturnRoute("unexpected")).toBe(
+      AUTH_ROUTES.createAccount
+    );
+    expect(confirmEmailReturnRoute(["sign-in", "ignored"])).toBe(
+      AUTH_ROUTES.signIn
+    );
+    expect(confirmEmailReturnRoute(["", "sign-in"])).toBe(
+      AUTH_ROUTES.createAccount
+    );
   });
 
   it("shows a masked, non-enumerating sent state in Arabic RTL", async () => {
@@ -476,7 +525,7 @@ describe("premium auth recovery lifecycle", () => {
     });
   });
 
-  it("disables the iOS reset gesture so cleanup owns every exit", () => {
+  it("disables iOS gestures where a screen owns a stateful exit", () => {
     const { readFileSync } = jest.requireActual("fs") as {
       readFileSync(path: string, encoding: "utf8"): string;
     };
@@ -485,6 +534,7 @@ describe("premium auth recovery lifecycle", () => {
       "utf8"
     );
     expect(authLayout).toContain('name="reset-password"');
+    expect(authLayout).toContain('name="confirm-email"');
     expect(authLayout).toContain("gestureEnabled: false");
   });
 });

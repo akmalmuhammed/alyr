@@ -59,7 +59,10 @@ import {
   type CoreJourneyCopy,
   useCoreJourneyCopy
 } from "@/i18n/coreJourneyCopy";
-import { useWorkspace } from "@/state/WorkspaceProvider";
+import {
+  useWorkspace,
+  type WorkspaceSyncRuntimeState
+} from "@/state/WorkspaceProvider";
 import {
   formatRecordedValue,
   formatSignedRecordedValue,
@@ -76,6 +79,23 @@ import {
 } from "@/theme/tokens";
 
 type GapKind = "identity" | "photo" | "location" | "evidence";
+
+/**
+ * Today leads with the user's next decision. Sync becomes an interrupt only
+ * when ALYR has a concrete error or conflict that needs review.
+ */
+export function shouldPromoteSyncTruth(
+  sync: Pick<
+    WorkspaceSyncRuntimeState,
+    "conflicts" | "lastError" | "status"
+  >
+): boolean {
+  return (
+    sync.conflicts.length > 0 ||
+    sync.status === "needs-attention" ||
+    Boolean(sync.lastError)
+  );
+}
 
 function gapCopy(
   asset: NativeAsset,
@@ -458,6 +478,19 @@ export default function HomeScreen() {
     registerReadiness,
     language
   );
+  const promoteSyncTruth = shouldPromoteSyncTruth(sync);
+  const syncTruth = (
+    <SyncTruth
+      language={language}
+      onPress={() =>
+        router.push(
+          sync.conflicts.length > 0 ? "/sync-conflicts" : "/vault"
+        )
+      }
+      pendingOperationCount={pendingOperationCount}
+      sync={sync}
+    />
+  );
   const openCommand = () =>
     commandState === "incomplete" && firstGap
       ? router.push(
@@ -555,16 +588,7 @@ export default function HomeScreen() {
         </View>
       ) : null}
 
-      <SyncTruth
-        language={language}
-        onPress={() =>
-          router.push(
-            sync.conflicts.length > 0 ? "/sync-conflicts" : "/vault"
-          )
-        }
-        pendingOperationCount={pendingOperationCount}
-        sync={sync}
-      />
+      {promoteSyncTruth ? syncTruth : null}
 
       {!canWriteAssets ? (
         <PermissionNotice
@@ -680,6 +704,8 @@ export default function HomeScreen() {
           )
         ) : null}
       </CommandSurface>
+
+      {!promoteSyncTruth ? syncTruth : null}
 
       <TodayPortfolioCard
         accessibilityLabel={portfolioCard.accessibilityLabel}
@@ -974,7 +1000,11 @@ export default function HomeScreen() {
               asset={asset}
               evidence={workspace.evidence}
               key={asset.id}
-              onPress={() => router.push(`/asset/${asset.id}`)}
+              onPress={() =>
+                router.push(
+                  `/asset/${asset.id}?retrievalSource=asset-list`
+                )
+              }
               places={workspace.places}
             />
           ))}

@@ -3,6 +3,7 @@ import {
   render
 } from "@testing-library/react-native";
 import type { PropsWithChildren } from "react";
+import { Alert } from "react-native";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 
 import { VaultScreen } from "../app/(tabs)/vault";
@@ -23,6 +24,10 @@ const mockRouter = {
 const mockSignOut = jest.fn(async () => true);
 const mockCan = jest.fn((_capability: string) => true);
 const mockReplaceWorkspace = jest.fn(async () => undefined);
+const mockResetSignedOutSampleVault = jest.fn(
+  async () => undefined
+);
+const mockClearOnboardingAuthorization = jest.fn();
 const mockChangeLanguage = jest.fn(async () => undefined);
 const mockSyncNow = jest.fn(async () => undefined);
 let mockMode: AuthGatewayMode = "supabase";
@@ -44,6 +49,8 @@ jest.mock("@/auth/AuthFlowProvider", () => ({
 
 jest.mock("@/deviceAuth", () => ({
   useDeviceAuth: () => ({
+    clearOnboardingAuthorization:
+      mockClearOnboardingAuthorization,
     lockNow: jest.fn(),
     previewBypass: true,
     requiresUnlock: false
@@ -95,6 +102,7 @@ jest.mock("@/state/WorkspaceProvider", () => ({
     syncNow: mockSyncNow,
     changeLanguage: mockChangeLanguage,
     exportReadableSnapshot: () => "{}",
+    resetSignedOutSampleVault: mockResetSignedOutSampleVault,
     replaceWithPersonalWorkspace: mockReplaceWorkspace
   })
 }));
@@ -123,6 +131,7 @@ describe("Settings sample activation", () => {
     mockMode = "supabase";
     mockSession = null;
     mockWorkspace = createWorkspace("sample");
+    mockResetSignedOutSampleVault.mockResolvedValue(undefined);
   });
 
   it("keeps notification preferences in Settings and proof recovery in Vault", async () => {
@@ -167,6 +176,94 @@ describe("Settings sample activation", () => {
     );
     expect(mockRouter.push).not.toHaveBeenCalledWith("/personal-start");
     expect(mockReplaceWorkspace).not.toHaveBeenCalled();
+    expect(mockResetSignedOutSampleVault).not.toHaveBeenCalled();
+  });
+
+  it("presents a clear signed-out sample exit confirmation without invoking account actions", async () => {
+    const alert = jest.spyOn(Alert, "alert").mockImplementation();
+    const copy = CORE_JOURNEY_COPY.en.vault;
+    const screen = await render(<VaultScreen surface="settings" />, {
+      wrapper: localeWrapper("en")
+    });
+    const exit = screen.getByRole("button", {
+      name: copy.exitSample
+    });
+
+    expect(exit.props.accessibilityHint).toBe(copy.exitSampleHint);
+    expect(exit.props.accessibilityState).toMatchObject({
+      busy: false,
+      disabled: false
+    });
+    fireEvent.press(exit);
+
+    expect(alert).toHaveBeenCalledWith(
+      copy.exitSampleConfirmTitle,
+      copy.exitSampleConfirmBody,
+      expect.arrayContaining([
+        expect.objectContaining({
+          text: copy.cancel,
+          style: "cancel"
+        }),
+        expect.objectContaining({
+          text: copy.exitSample,
+          style: "destructive"
+        })
+      ])
+    );
+    expect(mockResetSignedOutSampleVault).not.toHaveBeenCalled();
+    expect(mockClearOnboardingAuthorization).not.toHaveBeenCalled();
+    expect(mockRouter.replace).not.toHaveBeenCalled();
+    expect(mockSignOut).not.toHaveBeenCalled();
+    expect(mockReplaceWorkspace).not.toHaveBeenCalled();
+    alert.mockRestore();
+  });
+
+  it("localizes the sample exit for Arabic and keeps the destructive action accessible", async () => {
+    const copy = CORE_JOURNEY_COPY.ar.vault;
+    const screen = await render(<VaultScreen surface="settings" />, {
+      wrapper: localeWrapper("ar")
+    });
+    const exit = screen.getByRole("button", {
+      name: copy.exitSample
+    });
+
+    expect(screen.getByRole("header", {
+      name: copy.sampleWorkspace
+    })).toBeTruthy();
+    expect(exit.props.accessibilityHint).toBe(copy.exitSampleHint);
+    expect(
+      screen.queryByText(CORE_JOURNEY_COPY.en.vault.exitSample)
+    ).toBeNull();
+  });
+
+  it("keeps failed-reset recovery localized in the wired Vault flow", () => {
+    const { readFileSync } = jest.requireActual("fs") as {
+      readFileSync(path: string, encoding: "utf8"): string;
+    };
+    const source = readFileSync(
+      `${process.cwd()}/app/(tabs)/vault.tsx`,
+      "utf8"
+    );
+
+    expect(source).toContain(
+      "copy.vault.exitSampleFailedTitle"
+    );
+    expect(source).toContain(
+      "copy.vault.exitSampleFailedBody"
+    );
+    expect(
+      CORE_JOURNEY_COPY.ar.vault.exitSampleFailedTitle
+    ).not.toBe(
+      CORE_JOURNEY_COPY.en.vault.exitSampleFailedTitle
+    );
+    expect(
+      CORE_JOURNEY_COPY.ar.vault.exitSampleFailedBody
+    ).not.toBe(
+      CORE_JOURNEY_COPY.en.vault.exitSampleFailedBody
+    );
+    expect(mockClearOnboardingAuthorization).not.toHaveBeenCalled();
+    expect(mockRouter.replace).not.toHaveBeenCalled();
+    expect(mockSignOut).not.toHaveBeenCalled();
   });
 
   it("keeps the localized Arabic preview action on confirmed local conversion", async () => {
@@ -217,6 +314,12 @@ describe("Settings sample activation", () => {
         name: CORE_JOURNEY_COPY.en.vault.createMyPrivateHousehold
       })
     ).toBeNull();
+    expect(
+      screen.queryByRole("button", {
+        name: CORE_JOURNEY_COPY.en.vault.exitSample
+      })
+    ).toBeNull();
+    expect(mockResetSignedOutSampleVault).not.toHaveBeenCalled();
   });
 
   it("does not offer activation for a personal workspace or without household management", async () => {

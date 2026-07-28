@@ -1,4 +1,5 @@
 import * as Crypto from "expo-crypto";
+import Constants from "expo-constants";
 import {
   createContext,
   type PropsWithChildren,
@@ -9,7 +10,7 @@ import {
   useRef,
   useState
 } from "react";
-import { AppState } from "react-native";
+import { AppState, Platform } from "react-native";
 
 import type {
   ContractError,
@@ -27,6 +28,19 @@ import type {
 } from "@alyr/contracts";
 import { isAssetMutationValidationError } from "@alyr/domain";
 
+import {
+  accessGrantCreatedEvent,
+  assetRetrievalCompletedEvent,
+  continuitySnapshotExportedEvent,
+  criticalRegisterCompletedEvent,
+  DurableAnalyticsAdapter,
+  firstAssetPassportCreatedEvent,
+  householdCreatedEvent,
+  isAnalyticsQueueStore,
+  type AssetRetrievalSource,
+  type PilotAnalyticsCommon,
+  type ProductEventTransport
+} from "@/analytics";
 import {
   hasHouseholdCapability,
   requireHouseholdCapabilities
@@ -71,7 +85,9 @@ import { createLocalOperation } from "@/data/sync";
 import {
   deriveAuthenticatedVaultScope,
   DEVICE_PREVIEW_VAULT_SCOPE,
-  type VaultScope
+  SIGNED_OUT_SAMPLE_VAULT_SCOPE,
+  type VaultScope,
+  type VaultScopeId
 } from "@/data/vaultScope";
 import {
   createVaultGenerationScope,
@@ -162,6 +178,11 @@ interface RepositoryInfo {
   readonly kind: NativeWorkspaceRepository["kind"];
   readonly durable: boolean;
   readonly encryptedAtRest: boolean;
+  /**
+   * Opaque account + household boundary used by adjacent protected stores.
+   * Raw account and household identifiers are never exposed through this key.
+   */
+  readonly scopeId: VaultScopeId;
 }
 
 export interface WorkspaceSyncRuntimeState {
@@ -262,8 +283,9 @@ export interface WorkspaceContextValue {
   readonly bootstrap: WorkspaceBootstrapRuntimeState;
   readonly sync: WorkspaceSyncRuntimeState;
   /**
-   * Provider-authoritative role for the active household. Preview sessions
-   * deliberately act as owners; a missing signed role is fail-closed.
+   * Provider-authoritative role for the active household. Preview and isolated
+   * sample scopes deliberately act as owners; a missing signed role is
+   * fail-closed.
    */
   readonly permissionRole: HouseholdRole | null;
   readonly can: (capability: PermissionCapability) => boolean;
@@ -319,7 +341,19 @@ export interface WorkspaceContextValue {
   readonly setEvidenceReviewStatus: (
     input: EvidenceReviewInput
   ) => Promise<NativeEvidence>;
-  readonly markRetrieved: (assetId: string) => Promise<void>;
+  readonly markRetrieved: (
+    assetId: string,
+    source: AssetRetrievalSource
+  ) => Promise<void>;
+  readonly trackAccessGrantCreated?: (
+    role: "editor" | "viewer",
+    expiresInHours: 24 | 72 | 168
+  ) => Promise<void>;
+  readonly trackContinuitySnapshotExported?: (
+    format: "pdf" | "json-manifest",
+    assetCount: number,
+    redacted: boolean
+  ) => Promise<void>;
   readonly changeLanguage: (language: LanguageCode) => Promise<void>;
   readonly renameHousehold: (name: string) => Promise<void>;
   readonly replaceWithPersonalWorkspace: () => Promise<void>;
@@ -330,13 +364,20 @@ export interface WorkspaceContextValue {
    */
   readonly purgeActiveVault: (options?: {
     readonly reopenEmptyPreview?: boolean;
+    readonly reopenEmptyLocal?: boolean;
   }) => Promise<void>;
+  /**
+   * Removes only the isolated, signed-out sample scope and reopens it empty.
+   * Authenticated and preview scopes reject this operation before deletion.
+   */
+  readonly resetSignedOutSampleVault: () => Promise<void>;
   readonly exportReadableSnapshot: () => string | null;
   readonly clearError: () => void;
 }
 
 export type WorkspaceVaultAccess =
   | { readonly kind: "preview" }
+  | { readonly kind: "signed-sample" }
   | {
       readonly kind: "authenticated";
       readonly accountId: string;
@@ -391,6 +432,7 @@ interface WorkspaceProviderProps extends PropsWithChildren {
   readonly syncTransport?: SyncTransport | null;
   readonly evidenceUploadPort?: EvidenceUploadPort | null;
   readonly evidenceDownloadPort?: EvidenceDownloadPort | null;
+  readonly productEventTransport?: ProductEventTransport | null;
   /**
    * Native scheduler seam. Production uses Expo BackgroundTask; tests can
    * capture the installed task without invoking a native module.
@@ -418,9 +460,16 @@ const WorkspaceContext = createContext<WorkspaceContextValue | null>(null);
 export async function vaultScopeForWorkspaceAccess(
   access: WorkspaceVaultAccess
 ): Promise<VaultScope> {
-  return access.kind === "preview"
-    ? DEVICE_PREVIEW_VAULT_SCOPE
-    : deriveAuthenticatedVaultScope(access.accountId, access.householdId);
+  if (access.kind === "preview") {
+    return DEVICE_PREVIEW_VAULT_SCOPE;
+  }
+  if (access.kind === "signed-sample") {
+    return SIGNED_OUT_SAMPLE_VAULT_SCOPE;
+  }
+  return deriveAuthenticatedVaultScope(
+    access.accountId,
+    access.householdId
+  );
 }
 
 function id(_prefix: string): string {
@@ -446,6 +495,30 @@ function id(_prefix: string): string {
 
 function now(): string {
   return new Date().toISOString();
+}
+
+function analyticsCommon(
+  workspace: NativeWorkspace,
+  occurredOffline: boolean
+): PilotAnalyticsCommon {
+  const configuredVersion = Constants.expoConfig?.version ?? "0.1.0";
+  const appVersion = /^[0-9A-Za-z][0-9A-Za-z.+_-]{0,39}$/u.test(
+    configuredVersion
+  )
+    ? configuredVersion
+    : "0.1.0";
+  return {
+    schemaVersion: 1,
+    platform:
+      Platform.OS === "ios"
+        ? "ios"
+        : Platform.OS === "android"
+          ? "android"
+          : "web",
+    appVersion,
+    locale: workspace.language,
+    occurredOffline
+  };
 }
 
 function today(): string {
@@ -1278,6 +1351,7 @@ export function WorkspaceProvider({
   syncTransport = null,
   evidenceUploadPort = null,
   evidenceDownloadPort = null,
+  productEventTransport = null,
   backgroundSyncInstaller = installExpoBackgroundSync,
   installationDeviceIdentity = defaultInstallationDeviceIdentity
 }: WorkspaceProviderProps) {
@@ -1293,7 +1367,8 @@ export function WorkspaceProvider({
       ? resolvedVaultAccess.householdId
       : null;
   const permissionRole: HouseholdRole | null =
-    resolvedVaultAccess?.kind === "preview"
+    resolvedVaultAccess?.kind === "preview" ||
+    resolvedVaultAccess?.kind === "signed-sample"
       ? "owner"
       : resolvedVaultAccess?.kind === "authenticated"
         ? resolvedVaultAccess.role
@@ -1359,6 +1434,28 @@ export function WorkspaceProvider({
   const backgroundInstallationRef =
     useRef<ExpoBackgroundSyncInstallation | null>(null);
   const installationDeviceIdRef = useRef<string | null>(null);
+  const analyticsRef = useRef<DurableAnalyticsAdapter | null>(null);
+
+  const trackProductEvent = useCallback(
+    async (
+      event:
+        | ReturnType<typeof householdCreatedEvent>
+        | ReturnType<typeof firstAssetPassportCreatedEvent>
+        | ReturnType<typeof criticalRegisterCompletedEvent>
+        | ReturnType<typeof assetRetrievalCompletedEvent>
+        | ReturnType<typeof accessGrantCreatedEvent>
+        | ReturnType<typeof continuitySnapshotExportedEvent>
+    ): Promise<void> => {
+      try {
+        await analyticsRef.current?.track(event);
+      } catch {
+        // Product analytics never changes a successful household action. The
+        // bounded encrypted queue remains available for the next foreground
+        // flush when storage accepts the event.
+      }
+    },
+    []
+  );
 
   const requireOpenAttachmentStore = useCallback((): ScopedAttachmentStore => {
     const activeStore = attachmentStoreRef.current;
@@ -1721,8 +1818,10 @@ export function WorkspaceProvider({
     vaultGenerationRef.current = generation;
     let openedRepository: NativeWorkspaceRepository | null = null;
     let openedStoreForEffect: ScopedAttachmentStore | null = null;
+    let openedAnalytics: DurableAnalyticsAdapter | null = null;
 
     storageReadyRef.current = false;
+    analyticsRef.current = null;
     attachmentStoreRef.current = null;
     installationDeviceIdRef.current = null;
     workspaceRef.current = null;
@@ -1790,14 +1889,16 @@ export function WorkspaceProvider({
           resolvedInstallationDeviceId.toLowerCase();
         installationDeviceIdRef.current = installationDeviceId;
         const access: WorkspaceVaultAccess =
-          accessKind === "preview"
-            ? { kind: "preview" }
-            : {
+          accessKind === "authenticated"
+            ? {
                 kind: "authenticated",
                 accountId: accountId!,
                 householdId: boundHouseholdId!,
                 role: permissionRole!
-              };
+              }
+            : accessKind === "signed-sample"
+              ? { kind: "signed-sample" }
+              : { kind: "preview" };
         const scope = await vaultScopeForWorkspaceAccess(access);
         const nextRepository =
           repositoryOverride ??
@@ -1860,6 +1961,14 @@ export function WorkspaceProvider({
             );
           }
           if (
+            accessKind === "signed-sample" &&
+            loadedSnapshot.mode !== "sample"
+          ) {
+            throw new Error(
+              "The isolated sample vault contains a non-sample workspace. Nothing was opened or overwritten."
+            );
+          }
+          if (
             installationDeviceIdentity.scope === "installation" &&
             loadedSnapshot.deviceId !== installationDeviceId
           ) {
@@ -1902,6 +2011,19 @@ export function WorkspaceProvider({
         }
         repositoryRef.current = nextRepository;
         attachmentStoreRef.current = nextAttachmentStore;
+        if (
+          accessKind === "authenticated" &&
+          productEventTransport &&
+          isAnalyticsQueueStore(nextRepository)
+        ) {
+          openedAnalytics = new DurableAnalyticsAdapter(
+            nextRepository,
+            productEventTransport,
+            () => id("analytics-event")
+          );
+          analyticsRef.current = openedAnalytics;
+          void openedAnalytics.flush().catch(() => undefined);
+        }
         setRepository(nextRepository);
         setOpenedAttachmentStore({
           bindingKey: vaultBindingKey,
@@ -1914,7 +2036,10 @@ export function WorkspaceProvider({
           workspaceRef.current = validatedSnapshot;
           setWorkspace(validatedSnapshot);
           setBootstrap({ status: "ready", lastError: null });
-        } else if (accessKind === "preview") {
+        } else if (
+          accessKind === "preview" ||
+          accessKind === "signed-sample"
+        ) {
           setBootstrap({ status: "ready", lastError: null });
         }
         setSync({
@@ -1973,6 +2098,9 @@ export function WorkspaceProvider({
           vaultGenerationScopeRef.current === generationScope
         ) {
           attachmentStoreRef.current = null;
+          if (analyticsRef.current === openedAnalytics) {
+            analyticsRef.current = null;
+          }
           setOpenedAttachmentStore(null);
           const installationIdentityFailure =
             caught instanceof InstallationDeviceIdentityError
@@ -2027,6 +2155,9 @@ export function WorkspaceProvider({
       if (attachmentStoreRef.current === openedStoreForEffect) {
         attachmentStoreRef.current = null;
       }
+      if (analyticsRef.current === openedAnalytics) {
+        analyticsRef.current = null;
+      }
       const precedingClose = vaultTransitionRef.current;
       const transition = (async (): Promise<void> => {
         await precedingClose.catch(() => undefined);
@@ -2047,6 +2178,7 @@ export function WorkspaceProvider({
     boundHouseholdId,
     installationDeviceIdentity,
     permissionRole,
+    productEventTransport,
     refreshPendingCount,
     repositoryOverride,
     resourceFactory,
@@ -2178,6 +2310,46 @@ export function WorkspaceProvider({
     );
     return () => subscription.remove();
   }, [accessKind, syncNow, syncTransport]);
+
+  useEffect(() => {
+    if (
+      accessKind !== "authenticated" ||
+      !storageReady ||
+      workspace?.mode !== "personal" ||
+      !analyticsRef.current
+    ) {
+      return;
+    }
+    void trackProductEvent(
+      householdCreatedEvent(
+        analyticsCommon(workspace, syncTransport === null)
+      )
+    );
+  }, [
+    accessKind,
+    storageReady,
+    syncTransport,
+    trackProductEvent,
+    workspace
+  ]);
+
+  useEffect(() => {
+    if (
+      accessKind !== "authenticated" ||
+      !productEventTransport
+    ) {
+      return;
+    }
+    const subscription = AppState.addEventListener(
+      "change",
+      (nextState) => {
+        if (nextState === "active") {
+          void analyticsRef.current?.flush();
+        }
+      }
+    );
+    return () => subscription.remove();
+  }, [accessKind, productEventTransport]);
 
   const commitWorkspace = useCallback(
     async (
@@ -2317,9 +2489,14 @@ export function WorkspaceProvider({
   const purgeActiveVault = useCallback(
     async (options?: {
       readonly reopenEmptyPreview?: boolean;
+      readonly reopenEmptyLocal?: boolean;
     }): Promise<void> => {
-      const reopenEmptyPreview =
-        options?.reopenEmptyPreview === true && accessKind === "preview";
+      const reopenEmptyLocal =
+        (options?.reopenEmptyLocal === true &&
+          (accessKind === "preview" ||
+            accessKind === "signed-sample")) ||
+        (options?.reopenEmptyPreview === true &&
+          accessKind === "preview");
       const activeRepository = repositoryRef.current;
       const activeAttachmentStore = attachmentStoreRef.current;
       const activeGenerationScope = vaultGenerationScopeRef.current;
@@ -2348,9 +2525,9 @@ export function WorkspaceProvider({
       setPendingOperationCounts({ total: 0, liability: 0 });
       setSaving(false);
       setError(null);
-      setLoading(reopenEmptyPreview);
+      setLoading(reopenEmptyLocal);
       setBootstrap({
-        status: reopenEmptyPreview ? "opening" : "locked",
+        status: reopenEmptyLocal ? "opening" : "locked",
         lastError: null
       });
       setSync({
@@ -2378,17 +2555,34 @@ export function WorkspaceProvider({
         );
       }
 
-      if (reopenEmptyPreview) {
+      if (reopenEmptyLocal) {
         setResourceEpoch((current) => current + 1);
       }
     },
     [accessKind]
   );
 
+  const resetSignedOutSampleVault = useCallback(
+    async (): Promise<void> => {
+      if (accessKind !== "signed-sample") {
+        throw new Error(
+          "Only the isolated signed-out sample vault can be reset here."
+        );
+      }
+      await purgeActiveVault({ reopenEmptyLocal: true });
+    },
+    [accessKind, purgeActiveVault]
+  );
+
   const startWorkspace = useCallback(
     async (mode: WorkspaceMode): Promise<void> =>
       enqueue(async () => {
         requireCapabilities("household.manage");
+        if (accessKind === "signed-sample" && mode !== "sample") {
+          throw new Error(
+            "Create or sign in to an account before starting a personal workspace."
+          );
+        }
         if (boundHouseholdId !== null && mode === "sample") {
           throw new Error(
             "A sample workspace cannot replace an authenticated household vault."
@@ -2418,7 +2612,13 @@ export function WorkspaceProvider({
             : createWorkspace(mode, createdAt, identity);
         await commitWorkspace(nextWorkspace, []);
       }),
-    [boundHouseholdId, commitWorkspace, enqueue, requireCapabilities]
+    [
+      accessKind,
+      boundHouseholdId,
+      commitWorkspace,
+      enqueue,
+      requireCapabilities
+    ]
   );
 
   const createPlace = useCallback(
@@ -2428,6 +2628,14 @@ export function WorkspaceProvider({
         const current = workspaceRef.current;
         if (!current) {
           throw new Error("Choose a workspace before adding a Place.");
+        }
+        if (input.recordId) {
+          const committed = current.places.find(
+            (place) => place.id === input.recordId
+          );
+          if (committed) {
+            return committed;
+          }
         }
         const result = addPlace(current, input, mutationContext);
         const occurredAt = now();
@@ -2609,6 +2817,14 @@ export function WorkspaceProvider({
         if (!current) {
           throw new Error("Choose a workspace before adding an asset.");
         }
+        if (input.recordId) {
+          const committed = current.assets.find(
+            (asset) => asset.id === input.recordId
+          );
+          if (committed) {
+            return committed;
+          }
+        }
         const prepared = await prepareNewAssetCreation(
           current,
           input,
@@ -2619,13 +2835,47 @@ export function WorkspaceProvider({
           prepared.result.workspace,
           prepared.operations
         );
+        if (current.mode === "personal") {
+          const nextWorkspace = prepared.result.workspace;
+          const common = analyticsCommon(
+            nextWorkspace,
+            syncTransport === null
+          );
+          if (current.assets.length === 0) {
+            await trackProductEvent(
+              firstAssetPassportCreatedEvent(
+                common,
+                input,
+                current.createdAt,
+                prepared.result.asset.createdAt
+              )
+            );
+          }
+          const previousActiveCount = current.assets.filter(
+            (asset) => asset.lifecycleStatus === "active"
+          ).length;
+          const nextActiveCount = nextWorkspace.assets.filter(
+            (asset) => asset.lifecycleStatus === "active"
+          ).length;
+          if (previousActiveCount < 25 && nextActiveCount >= 25) {
+            await trackProductEvent(
+              criticalRegisterCompletedEvent(
+                common,
+                current.createdAt,
+                prepared.result.asset.createdAt
+              )
+            );
+          }
+        }
         return prepared.result.asset;
       }),
     [
       commitWorkspace,
       enqueue,
       requireCapabilities,
-      requireOpenAttachmentStore
+      requireOpenAttachmentStore,
+      syncTransport,
+      trackProductEvent
     ]
   );
 
@@ -2949,17 +3199,75 @@ export function WorkspaceProvider({
   );
 
   const markRetrieved = useCallback(
-    async (assetId: string): Promise<void> =>
+    async (
+      assetId: string,
+      source: AssetRetrievalSource
+    ): Promise<void> =>
       enqueue(async () => {
         requireCapabilities("asset.write");
         const current = workspaceRef.current;
         if (!current) {
           return;
         }
+        const retrievedAsset = current.assets.find(
+          (asset) => asset.id === assetId
+        );
         const next = recordRetrieval(current, assetId, mutationContext);
         await commitWorkspace(next, []);
+        if (current.mode === "personal" && retrievedAsset) {
+          await trackProductEvent(
+            assetRetrievalCompletedEvent(
+              analyticsCommon(next, syncTransport === null),
+              source
+            )
+          );
+        }
       }),
-    [commitWorkspace, enqueue, requireCapabilities]
+    [
+      commitWorkspace,
+      enqueue,
+      requireCapabilities,
+      syncTransport,
+      trackProductEvent
+    ]
+  );
+
+  const trackAccessGrantCreated = useCallback(
+    async (
+      role: "editor" | "viewer",
+      expiresInHours: 24 | 72 | 168
+    ): Promise<void> => {
+      const current = workspaceRef.current;
+      if (!current || current.mode !== "personal") return;
+      await trackProductEvent(
+        accessGrantCreatedEvent(
+          analyticsCommon(current, syncTransport === null),
+          role,
+          expiresInHours
+        )
+      );
+    },
+    [syncTransport, trackProductEvent]
+  );
+
+  const trackContinuitySnapshotExported = useCallback(
+    async (
+      format: "pdf" | "json-manifest",
+      assetCount: number,
+      redacted: boolean
+    ): Promise<void> => {
+      const current = workspaceRef.current;
+      if (!current || current.mode !== "personal") return;
+      await trackProductEvent(
+        continuitySnapshotExportedEvent(
+          analyticsCommon(current, syncTransport === null),
+          format,
+          assetCount,
+          redacted
+        )
+      );
+    },
+    [syncTransport, trackProductEvent]
   );
 
   const changeLanguage = useCallback(
@@ -3154,7 +3462,8 @@ export function WorkspaceProvider({
       repository: {
         kind: repository.kind,
         durable: repository.durable,
-        encryptedAtRest: repository.encryptedAtRest
+        encryptedAtRest: repository.encryptedAtRest,
+        scopeId: repository.scopeId
       },
       pendingOperationCount,
       bootstrap,
@@ -3183,10 +3492,13 @@ export function WorkspaceProvider({
       deleteLiability,
       confirmNoLiabilities,
       markRetrieved,
+      trackAccessGrantCreated,
+      trackContinuitySnapshotExported,
       changeLanguage,
       renameHousehold: renameCurrentHousehold,
       replaceWithPersonalWorkspace,
       purgeActiveVault,
+      resetSignedOutSampleVault,
       exportReadableSnapshot,
       clearError: () => setError(null)
     }),
@@ -3208,6 +3520,8 @@ export function WorkspaceProvider({
       liabilities,
       liabilityReview,
       markRetrieved,
+      trackAccessGrantCreated,
+      trackContinuitySnapshotExported,
       pendingOperationCount,
       permissionRole,
       recordAssetValue,
@@ -3217,6 +3531,7 @@ export function WorkspaceProvider({
       resolveSyncConflict,
       replaceWithPersonalWorkspace,
       purgeActiveVault,
+      resetSignedOutSampleVault,
       repository,
       renameCurrentHousehold,
       saving,

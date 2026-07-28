@@ -492,9 +492,12 @@ describe("confirmation recovery and incomplete-onboarding account exit", () => {
     const exit = exitLabel.parent;
 
     expect(exit?.props.accessibilityRole).toBe("button");
-    expect(exit?.props.accessibilityState).toEqual({
-      disabled: false
-    });
+    expect(exit?.props.accessibilityState).toEqual(
+      expect.objectContaining({
+        busy: false,
+        disabled: false
+      })
+    );
     await fireEvent.press(exitLabel);
 
     await waitFor(() => expect(signOut).toHaveBeenCalledTimes(1));
@@ -557,9 +560,12 @@ describe("confirmation recovery and incomplete-onboarding account exit", () => {
       CORE_JOURNEY_COPY.ar.common.useAnotherAccount
     );
     expect(exitLabel.parent?.props.accessibilityRole).toBe("button");
-    expect(exitLabel.parent?.props.accessibilityState).toEqual({
-      disabled: false
-    });
+    expect(exitLabel.parent?.props.accessibilityState).toEqual(
+      expect.objectContaining({
+        busy: false,
+        disabled: false
+      })
+    );
     await screen.unmount();
   });
 });

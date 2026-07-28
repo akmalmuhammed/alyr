@@ -37,6 +37,7 @@ import {
   assertValidVaultScope,
   deriveAuthenticatedVaultScope,
   DEVICE_PREVIEW_VAULT_SCOPE,
+  SIGNED_OUT_SAMPLE_VAULT_SCOPE,
   vaultScopeFromOpaqueId,
   type VaultScope
 } from "@/data/vaultScope";
@@ -122,6 +123,44 @@ describe("authenticated local vault scope", () => {
     });
   });
 
+  it("keeps the signed-out sample in a dedicated durable-vault namespace", async () => {
+    const authenticated = await deriveAuthenticatedVaultScope(
+      "account-a",
+      "household-a"
+    );
+    const namespaceFields: readonly (keyof VaultScope)[] = [
+      "scopeId",
+      "databaseName",
+      "databaseKeyName",
+      "attachmentKeyName",
+      "protectedAttachmentDirectoryName",
+      "materializedAttachmentDirectoryName"
+    ];
+
+    expect(SIGNED_OUT_SAMPLE_VAULT_SCOPE).toEqual({
+      kind: "signed-sample",
+      scopeId: "signed-sample-v1",
+      databaseName: "alyr-signed-sample-v1.db",
+      databaseKeyName: "alyr.native.signed-sample.database-key.v1",
+      attachmentKeyName: "alyr.native.signed-sample.attachment-key.v1",
+      protectedAttachmentDirectoryName:
+        "alyr-signed-sample-v1-attachments",
+      materializedAttachmentDirectoryName:
+        "alyr-signed-sample-v1-materialized"
+    });
+    expect(
+      vaultScopeFromOpaqueId(SIGNED_OUT_SAMPLE_VAULT_SCOPE.scopeId)
+    ).toBe(SIGNED_OUT_SAMPLE_VAULT_SCOPE);
+    namespaceFields.forEach((field) => {
+      expect(SIGNED_OUT_SAMPLE_VAULT_SCOPE[field]).not.toBe(
+        DEVICE_PREVIEW_VAULT_SCOPE[field]
+      );
+      expect(SIGNED_OUT_SAMPLE_VAULT_SCOPE[field]).not.toBe(
+        authenticated[field]
+      );
+    });
+  });
+
   it("fails closed for invalid source identities and forged layouts", async () => {
     await expect(
       deriveAuthenticatedVaultScope("", "household-a")
@@ -159,12 +198,21 @@ describe("authenticated local vault scope", () => {
       "household-b"
     );
 
-    const [databaseA, attachmentA, databaseB, attachmentB] =
+    const [
+      databaseA,
+      attachmentA,
+      databaseB,
+      attachmentB,
+      sampleDatabase,
+      sampleAttachment
+    ] =
       await Promise.all([
         getOrCreateDatabaseKey(store, scopeA),
         getOrCreateAttachmentKey(store, scopeA),
         getOrCreateDatabaseKey(store, scopeB),
-        getOrCreateAttachmentKey(store, scopeB)
+        getOrCreateAttachmentKey(store, scopeB),
+        getOrCreateDatabaseKey(store, SIGNED_OUT_SAMPLE_VAULT_SCOPE),
+        getOrCreateAttachmentKey(store, SIGNED_OUT_SAMPLE_VAULT_SCOPE)
       ]);
 
     expect(store.values.has(scopeA.databaseKeyName)).toBe(true);
@@ -174,6 +222,20 @@ describe("authenticated local vault scope", () => {
     expect(databaseA).not.toEqual(databaseB);
     expect(attachmentA).not.toEqual(attachmentB);
     expect(databaseA).not.toEqual(attachmentA);
+    expect(sampleDatabase).not.toEqual(databaseA);
+    expect(sampleDatabase).not.toEqual(databaseB);
+    expect(sampleAttachment).not.toEqual(attachmentA);
+    expect(sampleAttachment).not.toEqual(attachmentB);
+    expect(
+      store.values.has(
+        SIGNED_OUT_SAMPLE_VAULT_SCOPE.databaseKeyName
+      )
+    ).toBe(true);
+    expect(
+      store.values.has(
+        SIGNED_OUT_SAMPLE_VAULT_SCOPE.attachmentKeyName
+      )
+    ).toBe(true);
     expect(
       store.values.has(DEVICE_PREVIEW_VAULT_SCOPE.databaseKeyName)
     ).toBe(false);

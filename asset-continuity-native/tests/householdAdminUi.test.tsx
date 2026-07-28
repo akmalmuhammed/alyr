@@ -13,7 +13,8 @@ import MemberAccessScreen from "../app/member-access";
 import type { HouseholdAccessSnapshot } from "@alyr/contracts";
 import { createWorkspace } from "@/domain/sample";
 import {
-  HOUSEHOLD_ADMIN_COPY
+  HOUSEHOLD_ADMIN_COPY,
+  householdAccessErrorMessage
 } from "@/i18n/householdAdminCopy";
 import { LocaleProvider } from "@/i18n/LocaleProvider";
 
@@ -207,7 +208,18 @@ describe("household administration UI", () => {
     expect(screen.queryByText("Pearl household")).toBeNull();
     expect(screen.queryByText("Stale private household name")).toBeNull();
     expect(screen.queryByText("Omar Editor")).toBeNull();
-    expect(screen.getByText("Access was revoked.")).toBeTruthy();
+    expect(
+      screen.getByText(
+        householdAccessErrorMessage(
+          {
+            code: "AUTHORIZATION_DENIED",
+            retryable: false
+          },
+          "en"
+        )
+      )
+    ).toBeTruthy();
+    expect(screen.queryByText("Access was revoked.")).toBeNull();
   });
 
   it("requires explicit confirmation before ownership transfer", async () => {

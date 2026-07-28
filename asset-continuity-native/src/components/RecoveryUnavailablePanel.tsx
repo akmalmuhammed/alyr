@@ -94,7 +94,7 @@ const styles = StyleSheet.create({
   eyebrow: {
     color: colors.concrete,
     fontFamily: typography.bodyBold,
-    fontSize: 10,
+    fontSize: 12,
     lineHeight: 14,
     letterSpacing: 1
   },

@@ -25,7 +25,10 @@ import { useSecondarySurfaceCopy } from "@/i18n/secondarySurfaceCopy";
 import {
   getPortfolioExperienceCopy
 } from "@/i18n/portfolioCopy";
-import { portfolioReviewRoute } from "@/navigation/portfolioReview";
+import {
+  portfolioPropertyValueReviewRoute,
+  portfolioReviewRoute
+} from "@/navigation/portfolioReview";
 import { usePortfolioPrivacy } from "@/privacy/PortfolioPrivacyProvider";
 import { useWorkspace } from "@/state/WorkspaceProvider";
 import { colors, spacing, typography } from "@/theme/tokens";
@@ -159,11 +162,15 @@ export default function DashboardScreen() {
                 )
             }
           : {})}
-        onOpenAsset={(assetId) => router.push(`/asset/${assetId}`)}
+        onOpenAsset={(assetId) =>
+          router.push(
+            `/asset/${assetId}?retrievalSource=asset-list`
+          )
+        }
         onOpenSubject={(subject) =>
           router.push(
             subject.kind === "asset"
-              ? `/asset/${subject.assetId}`
+              ? `/asset/${subject.assetId}?retrievalSource=asset-list`
               : subject.kind === "place"
                 ? `/place/${subject.placeId}`
                 : `/liability/${subject.liabilityId}`
@@ -171,6 +178,9 @@ export default function DashboardScreen() {
         }
         onAmountsHiddenChange={setAmountsHidden}
         onReviewAssets={reviewAssets}
+        onReviewPropertyValues={() =>
+          router.push(portfolioPropertyValueReviewRoute())
+        }
         onReviewPlaces={() => router.push("/atlas")}
         showTitle={false}
         valueRecords={recordedPortfolioValues}

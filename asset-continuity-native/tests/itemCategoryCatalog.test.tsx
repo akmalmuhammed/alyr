@@ -1,4 +1,7 @@
-import { FOCUSED_V1_CATEGORIES } from "@alyr/domain";
+import {
+  FOCUSED_V1_CATEGORIES,
+  getPortfolioValuePolicy
+} from "@alyr/domain";
 import {
   fireEvent,
   render
@@ -44,6 +47,7 @@ jest.mock("@/state/WorkspaceProvider", () => ({
   useWorkspace: () => ({
     can: () => true,
     workspace: mockWorkspace,
+    repository: { scopeId: "device-preview-v1" },
     saving: false,
     error: null,
     clearError: jest.fn(),
@@ -108,6 +112,18 @@ describe("Quick Passport item taxonomy", () => {
       id: "property.house",
       label: "Real estate",
       supportsPhysicalLocation: true
+    });
+    expect(getPortfolioValuePolicy("document.important")).toEqual({
+      subject: "none",
+      contributesToFinancialPosition: false
+    });
+    expect(getPortfolioValuePolicy("digital.asset")).toEqual({
+      subject: "asset",
+      contributesToFinancialPosition: true
+    });
+    expect(getPortfolioValuePolicy("property.house")).toEqual({
+      subject: "place",
+      contributesToFinancialPosition: true
     });
   });
 

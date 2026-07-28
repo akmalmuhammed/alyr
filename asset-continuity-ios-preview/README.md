@@ -8,15 +8,16 @@ ALYR native screens on a physical iPhone from Windows.
   SDK 57, because the current App Store Expo Go client supports SDK 54.
 - It overrides persistence and attachments with memory-only adapters.
 - It must not be used for sensitive or durable information.
-- SQLCipher, Face ID, background work, signed permission configuration, and
-  production recovery are tested only in the signed development build.
+- Durable SQLCipher storage, Face ID, opportunistic background sync, local
+  review reminders, signed permission configuration, and production Recovery
+  Kits require the signed development build.
 
 `expo-doctor` reports the second SDK and the strict Metro resolver as
 duplicates/customization. Those are intentional in this companion: Metro is
 locked to its local SDK 54 modules, while the canonical app remains on SDK 57.
-The automated acceptance gate is a successful SDK 54 iOS Hermes export. The
-physical Expo Go walkthrough is a separate personal-device check and is not
-claimed by the repository evidence.
+The automated preview gate is a successful SDK 54 iOS Hermes export. The
+physical Expo Go walkthrough is a separate personal-device check and remains
+open.
 
 ## Start on the same Wi-Fi
 
@@ -27,22 +28,34 @@ npm run dev:ios-preview
 Install Expo Go on the iPhone, allow Local Network access, and scan the QR code
 shown by Expo CLI. Use the sample workspace first.
 
-- Current LAN URL: `exp://192.168.1.32:8081`
-- Current QR:
-  `C:\Users\akmal\OneDrive\Documents\alyr\docs\product-audit\2026-07-28-iphone-preview-deece47\ALYR-EXPO-GO-QR-deece47.png`
+The source checkpoint and handoff QR are intentionally **pending** until the
+root release task creates a clean commit and regenerates the QR from that exact
+source. Do not treat a QR stored under an older commit-named audit directory as
+the current handoff. The live Expo CLI QR is valid only while that preview
+server is running.
 
-The current companion reflects canonical app commit
-`deece47f971ce73d13ae5386918f249c5393bb23`. It passes TypeScript and
-**10/10** preview contracts while mirroring every canonical route. The LAN
-manifest returns HTTP 200, reports `exposdk:54.0.0`, and launches from
-`192.168.1.32`. Its live iOS development bundle returns HTTP 200, is
-`22,319,604` bytes, and has SHA-256
-`4F11FF5C84D068F22475B68BB51DF5DD8E4CB6DE9E2AAEDFD1AED3CC8A4BF5D8`.
-The separate verified static SDK 54 Hermes export contains **4,913 modules**;
-its `12,859,707`-byte bundle has SHA-256
-`C4915C523FC4221F3893BEA447A411AE31843F8E1EA2F574D9C4DEF50F04D229`.
-The QR was independently decoded back to the exact Expo URL. It remains a
-session-only preview for test information.
+## Current verified local gates
+
+- Preview TypeScript passes.
+- The SDK 54 companion passes **11/11 preview contracts** and mirrors every
+  canonical route.
+- The clean SDK 54 iOS Hermes export contains **5,015 modules**; its entry HBC
+  bundle is **13.2 MB**.
+- The canonical SDK 57 native app passes **178 suites / 1,071 tests**,
+  TypeScript, **7 Maestro flows / 3 subflows / 33 selectors**, and Expo Doctor
+  **20/20**.
+- EAS packaging resolves all **5 shared packages** and the Argon2
+  implementation.
+- The canonical SDK 57 iOS export contains **5,206 modules**. Its
+  `13,169,149`-byte JavaScript bundle has SHA-256
+  `3B3E98A5EA7AFF08B96777E970A9D93A5D0913D3DFB3F2C444764F13CFF58B4F`.
+- That canonical export contains **63 files / 26,532,025 bytes**. Its
+  `4,045`-byte `metadata.json` has SHA-256
+  `95B25B2CD6A2515869FF965FC18D96EB08E6DAF2EF71F421456F1B44825F5C3D`.
+
+These results verify source, contracts, and local export packaging. They do not
+claim that the current source has been opened or walked through on a physical
+iPhone.
 
 On this Windows PC, the easiest launcher is:
 

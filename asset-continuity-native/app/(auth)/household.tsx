@@ -220,11 +220,7 @@ export default function HouseholdSetupScreen() {
 
         {!householdAlreadyCreated ? (
           <View
-            accessibilityLabel={
-              language === "ar"
-                ? "اختر طريقة بدء سجل المنزل"
-                : "Choose how to start the household record"
-            }
+            accessibilityLabel={copy.household.setupMethodLabel}
             accessibilityRole="radiogroup"
           >
             <SelectionRow
@@ -266,7 +262,7 @@ export default function HouseholdSetupScreen() {
               onSubmitEditing={() => void advance()}
               placeholder={copy.household.placeholder}
               ref={nameRef}
-              returnKeyType="next"
+              returnKeyType="go"
               textContentType="organizationName"
               value={name}
             />

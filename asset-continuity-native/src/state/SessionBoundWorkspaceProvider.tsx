@@ -10,11 +10,17 @@ import type {
 import type { WorkspaceMode } from "@/domain/model";
 import type { EvidenceDownloadPort } from "@/data/evidenceDownload";
 import type { EvidenceUploadPort } from "@/data/evidenceUpload";
+import type { ProductEventTransport } from "@/analytics";
 import {
   getRuntimeEvidenceDownloadPort,
   getRuntimeEvidenceUploadPort,
+  getRuntimeProductEventTransport,
   getRuntimeSyncTransport
 } from "@/runtime/cloudServices";
+import {
+  runtimeProfile,
+  type RuntimeProfile
+} from "@/runtime/environment";
 
 import {
   WorkspaceProvider,
@@ -23,12 +29,20 @@ import {
 
 export function workspaceVaultAccessForSession(
   mode: AuthGatewayMode,
-  session: AuthSessionDescriptor | null
+  session: AuthSessionDescriptor | null,
+  profile: RuntimeProfile = runtimeProfile
 ): WorkspaceVaultAccess | null {
+  if (mode === "preview") {
+    return { kind: "preview" };
+  }
   if (
-    mode === "preview" ||
-    (mode === "supabase" && session === null)
+    profile === "native-secure" &&
+    session === null &&
+    (mode === "supabase" || mode === "unavailable")
   ) {
+    return { kind: "signed-sample" };
+  }
+  if (mode === "supabase" && session === null) {
     return { kind: "preview" };
   }
   if (
@@ -56,7 +70,7 @@ export function signedOutSampleWorkspaceReady(
   workspaceMode: WorkspaceMode | null
 ): boolean {
   return (
-    mode === "supabase" &&
+    (mode === "supabase" || mode === "unavailable") &&
     session === null &&
     workspaceMode === "sample"
   );
@@ -82,16 +96,18 @@ export function SessionBoundWorkspaceProvider({
   children,
   syncTransport,
   evidenceUploadPort,
-  evidenceDownloadPort
+  evidenceDownloadPort,
+  productEventTransport
 }: PropsWithChildren<{
   readonly syncTransport?: SyncTransport | null;
   readonly evidenceUploadPort?: EvidenceUploadPort | null;
   readonly evidenceDownloadPort?: EvidenceDownloadPort | null;
+  readonly productEventTransport?: ProductEventTransport | null;
 }>) {
   const { mode, session } = useAuthFlow();
   const { vaultReleased } = useDeviceAuth();
   const sessionVaultAccess = useMemo(
-    () => workspaceVaultAccessForSession(mode, session),
+    () => workspaceVaultAccessForSession(mode, session, runtimeProfile),
     [mode, session]
   );
   const vaultAccess = releaseWorkspaceVaultAccess(
@@ -101,6 +117,8 @@ export function SessionBoundWorkspaceProvider({
   const boundaryKey =
     vaultAccess?.kind === "authenticated"
       ? `authenticated:${vaultAccess.accountId}:${vaultAccess.householdId}:${vaultAccess.role}`
+      : vaultAccess?.kind === "signed-sample"
+        ? "signed-sample"
       : vaultAccess?.kind === "preview"
         ? "preview"
         : sessionVaultAccess?.kind === "authenticated"
@@ -118,6 +136,11 @@ export function SessionBoundWorkspaceProvider({
     evidenceDownloadPort === undefined
       ? getRuntimeEvidenceDownloadPort()
       : evidenceDownloadPort;
+  const resolvedProductEventTransport =
+    productEventTransport === undefined &&
+    vaultAccess?.kind === "authenticated"
+      ? getRuntimeProductEventTransport(vaultAccess.householdId)
+      : productEventTransport ?? null;
 
   return (
     <WorkspaceProvider
@@ -136,6 +159,11 @@ export function SessionBoundWorkspaceProvider({
       evidenceDownloadPort={
         vaultAccess?.kind === "authenticated"
           ? resolvedEvidenceDownloadPort
+          : null
+      }
+      productEventTransport={
+        vaultAccess?.kind === "authenticated"
+          ? resolvedProductEventTransport
           : null
       }
     >

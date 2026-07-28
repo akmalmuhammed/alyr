@@ -26,11 +26,16 @@ jest.mock("expo-crypto", () => {
 
 import { act, render, waitFor } from "@testing-library/react-native";
 import { Text } from "react-native";
+import type { JsonObject } from "@alyr/contracts";
 
 import type { AuthSessionDescriptor } from "@/auth/types";
 import { MemoryPreviewAttachmentStore } from "@/data/attachmentStore";
 import { MemoryWorkspaceRepository } from "@/data/memoryRepository";
-import type { VaultScope } from "@/data/vaultScope";
+import type { NativeWorkspaceCommit } from "@/data/repository";
+import {
+  SIGNED_OUT_SAMPLE_VAULT_SCOPE,
+  type VaultScope
+} from "@/data/vaultScope";
 import { createWorkspace } from "@/domain/sample";
 import {
   releaseWorkspaceVaultAccess,
@@ -61,10 +66,57 @@ const verifiedSession: AuthSessionDescriptor = {
 
 class TrackingRepository extends MemoryWorkspaceRepository {
   lockCalls = 0;
+  purgeCalls = 0;
 
   override async lock(): Promise<void> {
     this.lockCalls += 1;
     await super.lock();
+  }
+
+  override async purge(): Promise<void> {
+    this.purgeCalls += 1;
+    await super.purge();
+  }
+}
+
+class RelaunchSampleRepository extends MemoryWorkspaceRepository {
+  constructor(
+    scope: VaultScope,
+    private readonly backing: {
+      revision: number;
+      snapshot: JsonObject | null;
+      purgeCalls: number;
+    }
+  ) {
+    super(scope);
+  }
+
+  override async initialize(): Promise<void> {
+    await super.initialize();
+    if (this.backing.snapshot && this.backing.revision > 0) {
+      await super.commit({
+        expectedRevision: 0,
+        nextRevision: this.backing.revision,
+        snapshot: structuredClone(this.backing.snapshot),
+        operations: []
+      });
+    }
+  }
+
+  override async commit(commit: NativeWorkspaceCommit) {
+    const result = await super.commit(commit);
+    if (result.ok) {
+      this.backing.revision = result.value.revision;
+      this.backing.snapshot = structuredClone(commit.snapshot);
+    }
+    return result;
+  }
+
+  override async purge(): Promise<void> {
+    this.backing.purgeCalls += 1;
+    this.backing.revision = 0;
+    this.backing.snapshot = null;
+    await super.purge();
   }
 }
 
@@ -103,6 +155,24 @@ describe("account and household vault boundary", () => {
       kind: "preview"
     });
     expect(
+      workspaceVaultAccessForSession(
+        "supabase",
+        null,
+        "native-secure"
+      )
+    ).toEqual({
+      kind: "signed-sample"
+    });
+    expect(
+      workspaceVaultAccessForSession(
+        "unavailable",
+        null,
+        "native-secure"
+      )
+    ).toEqual({
+      kind: "signed-sample"
+    });
+    expect(
       workspaceVaultAccessForSession("supabase", {
         ...verifiedSession,
         activeHouseholdId: null,
@@ -123,6 +193,9 @@ describe("account and household vault boundary", () => {
     ).toBeNull();
     expect(
       signedOutSampleWorkspaceReady("supabase", null, "sample")
+    ).toBe(true);
+    expect(
+      signedOutSampleWorkspaceReady("unavailable", null, "sample")
     ).toBe(true);
     expect(
       signedOutSampleWorkspaceReady(
@@ -148,6 +221,9 @@ describe("account and household vault boundary", () => {
     expect(
       releaseWorkspaceVaultAccess({ kind: "preview" }, false)
     ).toEqual({ kind: "preview" });
+    expect(
+      releaseWorkspaceVaultAccess({ kind: "signed-sample" }, false)
+    ).toEqual({ kind: "signed-sample" });
   });
 
   it("keeps a viewer read-only at the local durability boundary", async () => {
@@ -225,10 +301,15 @@ describe("account and household vault boundary", () => {
     await screen.unmount();
   });
 
-  it("lets a signed-out Supabase runtime create the isolated sample workspace", async () => {
-    const access = workspaceVaultAccessForSession("supabase", null);
-    expect(access).toEqual({ kind: "preview" });
+  it("lets a signed-out native-secure runtime open only the isolated sample workspace", async () => {
+    const access = workspaceVaultAccessForSession(
+      "supabase",
+      null,
+      "native-secure"
+    );
+    expect(access).toEqual({ kind: "signed-sample" });
     const scope = await vaultScopeForWorkspaceAccess(access!);
+    expect(scope).toBe(SIGNED_OUT_SAMPLE_VAULT_SCOPE);
     const repository = new TrackingRepository(scope);
     const attachmentStore = new TrackingAttachmentStore(scope);
     const screen = await render(
@@ -249,11 +330,166 @@ describe("account and household vault boundary", () => {
     await act(async () => {
       await latestWorkspace!.startWorkspace("sample");
     });
-    expect(latestWorkspace?.workspace?.mode).toBe("sample");
+    expect(
+      (
+        latestWorkspace as ReturnType<
+          typeof useWorkspace
+        > | null
+      )?.workspace?.mode
+    ).toBe("sample");
     expect(latestWorkspace?.workspace?.household.id).toBe(
       "household-sample"
     );
     expect(await repository.listPendingOperations(100)).toEqual([]);
+    let personalRejection: unknown;
+    await act(async () => {
+      try {
+        await latestWorkspace!.startWorkspace("personal");
+      } catch (caught) {
+        personalRejection = caught;
+      }
+    });
+    expect(personalRejection).toBeInstanceOf(Error);
+    expect((personalRejection as Error).message).toContain(
+      "Create or sign in"
+    );
+    expect(latestWorkspace?.workspace?.mode).toBe("sample");
+    await screen.unmount();
+  });
+
+  it("removes the signed-out sample durably, reopens Welcome-ready storage, and stays empty after process relaunch", async () => {
+    const backing: {
+      revision: number;
+      snapshot: JsonObject | null;
+      purgeCalls: number;
+    } = {
+      revision: 0,
+      snapshot: null,
+      purgeCalls: 0
+    };
+    const repositories: RelaunchSampleRepository[] = [];
+    const attachmentStores: TrackingAttachmentStore[] = [];
+    const factory: WorkspaceVaultResourceFactory = {
+      async createRepository(scope) {
+        const repository = new RelaunchSampleRepository(
+          scope,
+          backing
+        );
+        repositories.push(repository);
+        return repository;
+      },
+      createAttachmentStore(scope) {
+        const store = new TrackingAttachmentStore(scope);
+        attachmentStores.push(store);
+        return store;
+      }
+    };
+    const access = workspaceVaultAccessForSession(
+      "supabase",
+      null,
+      "native-secure"
+    )!;
+    const firstProcess = await render(
+      <WorkspaceProvider
+        resourceFactory={factory}
+        vaultAccess={access}
+      >
+        <Probe />
+      </WorkspaceProvider>
+    );
+
+    await waitFor(() => {
+      expect(latestWorkspace?.storageReady).toBe(true);
+    });
+    await act(async () => {
+      await latestWorkspace!.startWorkspace("sample");
+    });
+    expect(backing.snapshot).not.toBeNull();
+    expect(latestWorkspace?.workspace?.mode).toBe("sample");
+
+    await act(async () => {
+      await latestWorkspace!.resetSignedOutSampleVault();
+    });
+    await waitFor(() => {
+      expect(latestWorkspace?.storageReady).toBe(true);
+      expect(latestWorkspace?.workspace).toBeNull();
+      expect(repositories.length).toBeGreaterThanOrEqual(2);
+      expect(attachmentStores.length).toBeGreaterThanOrEqual(2);
+    });
+    expect(backing).toEqual({
+      revision: 0,
+      snapshot: null,
+      purgeCalls: 1
+    });
+    await firstProcess.unmount();
+    latestWorkspace = null;
+
+    const relaunched = await render(
+      <WorkspaceProvider
+        resourceFactory={factory}
+        vaultAccess={access}
+      >
+        <Probe />
+      </WorkspaceProvider>
+    );
+    await waitFor(() => {
+      expect(latestWorkspace?.storageReady).toBe(true);
+      expect(latestWorkspace?.workspace).toBeNull();
+    });
+    expect(backing.snapshot).toBeNull();
+
+    await act(async () => {
+      await latestWorkspace!.startWorkspace("sample");
+    });
+    expect(
+      (
+        latestWorkspace as ReturnType<
+          typeof useWorkspace
+        > | null
+      )?.workspace?.mode
+    ).toBe("sample");
+    expect(backing.snapshot).not.toBeNull();
+    await relaunched.unmount();
+  });
+
+  it("rejects the sample-only reset inside an authenticated account before purging its vault", async () => {
+    const access = workspaceVaultAccessForSession(
+      "supabase",
+      verifiedSession
+    )!;
+    const scope = await vaultScopeForWorkspaceAccess(access);
+    const repository = new TrackingRepository(scope);
+    const attachmentStore = new TrackingAttachmentStore(scope);
+    const screen = await render(
+      <WorkspaceProvider
+        attachmentStoreOverride={attachmentStore}
+        repositoryOverride={repository}
+        vaultAccess={access}
+      >
+        <Probe />
+      </WorkspaceProvider>
+    );
+
+    await waitFor(() => {
+      expect(latestWorkspace?.storageReady).toBe(true);
+    });
+    await act(async () => {
+      await latestWorkspace!.startWorkspace("personal");
+    });
+    const householdId =
+      latestWorkspace?.workspace?.household.id;
+
+    await act(async () => {
+      await expect(
+        latestWorkspace!.resetSignedOutSampleVault()
+      ).rejects.toThrow("Only the isolated signed-out sample");
+    });
+    expect(repository.purgeCalls).toBe(0);
+    expect(attachmentStore.lockCalls).toBe(0);
+    expect(latestWorkspace?.workspace?.household.id).toBe(
+      householdId
+    );
+    expect((await repository.load()).snapshot).not.toBeNull();
     await screen.unmount();
   });
 
@@ -274,7 +510,8 @@ describe("account and household vault boundary", () => {
     };
     const sampleAccess = workspaceVaultAccessForSession(
       "supabase",
-      null
+      null,
+      "native-secure"
     )!;
     const authenticatedAccess = workspaceVaultAccessForSession(
       "supabase",
@@ -316,6 +553,9 @@ describe("account and household vault boundary", () => {
     expect(repositories[0]?.lockCalls).toBeGreaterThanOrEqual(1);
     expect(attachmentStores[0]?.lockCalls).toBeGreaterThanOrEqual(1);
     expect(repositories[0]?.scopeId).not.toBe(repositories[1]?.scopeId);
+    expect(repositories[0]?.scopeId).toBe(
+      SIGNED_OUT_SAMPLE_VAULT_SCOPE.scopeId
+    );
     expect(attachmentStores[0]?.scopeId).not.toBe(
       attachmentStores[1]?.scopeId
     );

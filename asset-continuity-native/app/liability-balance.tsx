@@ -762,7 +762,7 @@ const styles = StyleSheet.create({
   eyebrow: {
     color: colors.textMuted,
     fontFamily: typography.bodyBold,
-    fontSize: 11,
+    fontSize: 12,
     lineHeight: 16,
     letterSpacing: 1.2
   },
@@ -774,7 +774,7 @@ const styles = StyleSheet.create({
   commandLabel: {
     color: colors.concrete,
     fontFamily: typography.bodyBold,
-    fontSize: 11,
+    fontSize: 12,
     lineHeight: 16,
     letterSpacing: 1.1
   },

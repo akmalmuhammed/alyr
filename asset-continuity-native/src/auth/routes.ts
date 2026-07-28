@@ -19,6 +19,14 @@ export const AUTH_ROUTES = {
   privacy: "/(auth)/privacy"
 } as const satisfies Record<string, Href>;
 
+export const CONFIRM_EMAIL_ROUTES = {
+  createAccount: AUTH_ROUTES.confirmEmail,
+  signIn: {
+    pathname: AUTH_ROUTES.confirmEmail,
+    params: { from: "sign-in" }
+  }
+} as const satisfies Record<"createAccount" | "signIn", Href>;
+
 export const HOUSEHOLD_ROUTES = {
   inviteMember: "/invite-member",
   memberAccess: "/member-access"
@@ -34,6 +42,15 @@ export type PublicAuthEntryRoute =
   | "resetPassword";
 
 export type AuthBootstrapState = "bootstrapping" | "ready" | "error";
+
+export function confirmEmailReturnRoute(
+  value: string | readonly string[] | undefined
+): typeof AUTH_ROUTES.createAccount | typeof AUTH_ROUTES.signIn {
+  const origin = typeof value === "string" ? value : value?.[0];
+  return origin === "sign-in"
+    ? AUTH_ROUTES.signIn
+    : AUTH_ROUTES.createAccount;
+}
 
 const PUBLIC_AUTH_ENTRY_BY_SEGMENT = {
   "create-account": "createAccount",

@@ -138,6 +138,7 @@ test("every native module reached by the shared screens is pinned in the shell",
     "@expo/metro-runtime",
     "expo-constants",
     "expo-crypto",
+    "expo-background-task",
     "expo-document-picker",
     "expo-file-system",
     "expo-font",
@@ -145,11 +146,13 @@ test("every native module reached by the shared screens is pinned in the shell",
     "expo-linking",
     "expo-local-authentication",
     "expo-location",
+    "expo-notifications",
     "expo-router",
     "expo-secure-store",
     "expo-sharing",
     "expo-splash-screen",
     "expo-status-bar",
+    "expo-task-manager",
     "phosphor-react-native",
     "react-native-gesture-handler",
     "react-native-reanimated",
@@ -163,6 +166,48 @@ test("every native module reached by the shared screens is pinned in the shell",
     assert.ok(
       packageJson.dependencies[dependency],
       `${dependency} must be a direct preview dependency`
+    );
+  }
+});
+
+test("every evaluated Expo native module resolves to the SDK 54 preview copy", async () => {
+  const previewRoot = fileURLToPath(new URL("../", import.meta.url));
+  const bundledVersions = JSON.parse(
+    await readFile(
+      new URL(
+        "../node_modules/expo/bundledNativeModules.json",
+        import.meta.url
+      ),
+      "utf8"
+    )
+  );
+  const evaluatedModules = [
+    "expo-background-task",
+    "expo-task-manager",
+    "expo-notifications"
+  ];
+
+  for (const moduleName of evaluatedModules) {
+    const modulePackageUrl = new URL(
+      `../node_modules/${moduleName}/package.json`,
+      import.meta.url
+    );
+    const modulePackagePath = fileURLToPath(modulePackageUrl);
+    assert.ok(
+      modulePackagePath.startsWith(
+        path.join(previewRoot, "node_modules", moduleName)
+      ),
+      `${moduleName} must resolve inside the SDK 54 companion`
+    );
+    const modulePackage = JSON.parse(
+      await readFile(modulePackageUrl, "utf8")
+    );
+    const expected = bundledVersions[moduleName];
+    assert.ok(expected, `${moduleName} must be part of Expo SDK 54`);
+    assert.equal(
+      `~${modulePackage.version}`,
+      expected,
+      `${moduleName} must match Expo SDK 54's bundled native version`
     );
   }
 });
@@ -262,6 +307,7 @@ test("the preview follows the Quiet Precision visual contract", () => {
   assert.equal(packageJson.dependencies["expo-linear-gradient"], undefined);
   assert.match(configSource, /userInterfaceStyle: "light"/u);
   assert.match(configSource, /backgroundColor: "#F6F7F3"/u);
+  assert.match(configSource, /supportsTablet: false/u);
 });
 
 test("the preview mirrors the four-tab IA and keeps Search off the tab bar", async () => {

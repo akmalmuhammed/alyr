@@ -45,7 +45,12 @@ import {
   useCoreJourneyCopy
 } from "@/i18n/coreJourneyCopy";
 import { useWorkspace } from "@/state/WorkspaceProvider";
-import { colors, spacing, typography } from "@/theme/tokens";
+import {
+  colors,
+  radius,
+  spacing,
+  typography
+} from "@/theme/tokens";
 
 export default function PrivacyAndCaptureScreen() {
   const router = useRouter();
@@ -555,7 +560,7 @@ const styles = StyleSheet.create({
     height: 38,
     alignItems: "center",
     justifyContent: "center",
-    borderRadius: 8,
+    borderRadius: radius.sm,
     backgroundColor: colors.surfaceQuiet
   },
   principles: {

@@ -132,6 +132,7 @@ export default function AuthWelcomeScreen() {
         >
           <TextAction
             label={copy.welcome.languageAction}
+            labelLanguage={language === "ar" ? "en" : "ar"}
             onPress={() =>
               void setLanguage(language === "ar" ? "en" : "ar")
             }
@@ -190,11 +191,7 @@ export default function AuthWelcomeScreen() {
           >
             <Image
               accessibilityIgnoresInvertColors
-              accessibilityLabel={
-                language === "ar"
-                  ? "صورة توضيحية لغرض في السجل"
-                  : "Illustrative item in a private record"
-              }
+              accessibilityLabel={copy.welcome.sampleImageLabel}
               resizeMode="cover"
               source={require("../../assets/sample-assets/gmt-watch.png")}
               style={styles.previewImage}
@@ -236,9 +233,7 @@ export default function AuthWelcomeScreen() {
                     rtl && styles.rtlText
                   ]}
                 >
-                  {language === "ar"
-                    ? "جاهز للاسترجاع"
-                    : "Ready to retrieve"}
+                  {copy.welcome.readyToRetrieve}
                 </Text>
               </View>
             </View>

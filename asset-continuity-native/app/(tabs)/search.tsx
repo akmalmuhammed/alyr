@@ -232,7 +232,11 @@ export default function SearchScreen() {
               asset={asset}
               evidence={workspace.evidence}
               key={asset.id}
-              onPress={() => router.push(`/asset/${asset.id}`)}
+              onPress={() =>
+                router.push(
+                  `/asset/${asset.id}?retrievalSource=search`
+                )
+              }
               places={workspace.places}
             />
           ))}
@@ -322,7 +326,11 @@ export default function SearchScreen() {
                   asset={asset}
                   evidence={workspace.evidence}
                   key={asset.id}
-                  onPress={() => router.push(`/asset/${asset.id}`)}
+                  onPress={() =>
+                    router.push(
+                      `/asset/${asset.id}?retrievalSource=search`
+                    )
+                  }
                   places={workspace.places}
                 />
               ))}
@@ -420,7 +428,7 @@ const styles = StyleSheet.create({
     marginTop: spacing.xs,
     color: colors.textMuted,
     fontFamily: typography.bodyBold,
-    fontSize: 11,
+    fontSize: 12,
     lineHeight: 16,
     letterSpacing: 1
   },

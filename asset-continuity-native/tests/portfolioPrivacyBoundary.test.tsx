@@ -16,6 +16,7 @@ import {
   PortfolioPrivacyProvider,
   portfolioVisibilityStorageKey,
   usePortfolioPrivacy,
+  valueVisibilityScopeForSession,
   type ValueVisibilityScope
 } from "@/privacy/PortfolioPrivacyProvider";
 
@@ -84,6 +85,25 @@ describe("recorded-value account and household boundary", () => {
     );
     expect(getItem).not.toHaveBeenCalled();
     expect(setItem).not.toHaveBeenCalled();
+  });
+
+  it("persists signed-native sample visibility under a key separate from every account", async () => {
+    const sampleScope = valueVisibilityScopeForSession(
+      "supabase",
+      null,
+      "native-secure"
+    );
+    const accountScope: ValueVisibilityScope = {
+      kind: "account-household",
+      accountId: "account-a",
+      householdId: "household-a"
+    };
+
+    expect(sampleScope).toEqual({ kind: "signed-sample" });
+    const sampleKey = await portfolioVisibilityStorageKey(sampleScope!);
+    const accountKey = await portfolioVisibilityStorageKey(accountScope);
+    expect(sampleKey).toContain("signed-sample-v1");
+    expect(sampleKey).not.toBe(accountKey);
   });
 
   it("isolates saved visibility by account and household and closes on transition", async () => {

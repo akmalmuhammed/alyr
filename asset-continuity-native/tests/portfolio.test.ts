@@ -6,6 +6,7 @@ import {
   selectCurrentPortfolioValues,
   type PortfolioValueRecord
 } from "@/domain/portfolio";
+import { buildNetPositionSnapshot } from "@/domain/netPosition";
 import { createWorkspace } from "@/domain/sample";
 
 const VALUE_TIME = "2026-07-27T10:00:00.000Z";
@@ -44,6 +45,55 @@ describe("portfolio truth model", () => {
     expect(snapshot.locationReadyItems.percent).toBeNull();
     expect(snapshot.currencyTotals).toEqual([]);
     expect(snapshot.locationDistribution).toEqual([]);
+  });
+
+  it("keeps important documents outside value coverage and net position", () => {
+    const personal = createWorkspace("personal");
+    const basis = createWorkspace("sample").assets[0]!;
+    const documentAsset = {
+      ...basis,
+      id: "asset-important-document",
+      householdId: personal.household.id,
+      name: "Family certificate",
+      categoryId: "document.important",
+      categoryLabel: "Important document",
+      locationStatus: "known" as const,
+      placeId: null,
+      roomId: null,
+      locatorText: null
+    };
+    const legacyValue = value(
+      "legacy-document-value",
+      documentAsset.id,
+      900_000,
+      "QAR"
+    );
+    const workspace = {
+      ...personal,
+      assets: [documentAsset],
+      portfolioValueRecords: [legacyValue]
+    };
+
+    const snapshot = buildPortfolioSnapshot(workspace);
+    const netPosition = buildNetPositionSnapshot(
+      workspace,
+      "2026-07-27"
+    );
+
+    expect(snapshot.assetCount).toBe(1);
+    expect(snapshot.valuableCount).toBe(0);
+    expect(snapshot.valuedItems).toEqual({
+      complete: 0,
+      total: 0,
+      percent: null,
+      assetIds: []
+    });
+    expect(snapshot.unvaluedAssetIds).toEqual([]);
+    expect(snapshot.currencyTotals).toEqual([]);
+    expect(snapshot.recordedValues).toEqual([]);
+    expect(snapshot.ignoredValueRecordCount).toBe(1);
+    expect(netPosition.status).toBe("empty");
+    expect(netPosition.byCurrency).toEqual([]);
   });
 
   it("derives documentation, proof and location coverage from real records", () => {

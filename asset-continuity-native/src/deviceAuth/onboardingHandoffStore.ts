@@ -1,27 +1,65 @@
+import * as Crypto from "expo-crypto";
 import * as SecureStore from "expo-secure-store";
 
 import type { OnboardingFirstRecordIntent } from "./types";
 
 const STORE_KEY = "alyr.device-auth.onboarding-handoff.v1";
-const STORE_VERSION = 1;
+const STORE_VERSION = 2;
+const LEGACY_STORE_VERSION = 1;
 
-interface StoredOnboardingHandoff {
+export interface OnboardingHandoffRecord {
+  readonly handoffId: string;
+  readonly intent: OnboardingFirstRecordIntent;
+  /**
+   * Stable local aggregate identity reserved before capture starts. Reusing
+   * this ID makes a commit-before-ack retry idempotent after process death.
+   */
+  readonly recordId: string;
+  readonly createdAt: number;
+}
+
+interface StoredOnboardingHandoff extends OnboardingHandoffRecord {
   readonly version: typeof STORE_VERSION;
+  readonly subjectId: string;
+}
+
+interface LegacyStoredOnboardingHandoff {
+  readonly version: typeof LEGACY_STORE_VERSION;
   readonly subjectId: string;
   readonly intent: OnboardingFirstRecordIntent;
   readonly createdAt: number;
 }
 
+export interface OnboardingHandoffIdentity {
+  readonly handoffId: string;
+  readonly recordId: string;
+}
+
 export interface OnboardingHandoffStore {
+  /**
+   * Kept for compatibility with the lock gate. New continuation work should
+   * use `loadRecord`, which carries the stable aggregate identity.
+   */
   readonly load: (
     subjectId: string
   ) => Promise<OnboardingFirstRecordIntent | null>;
+  readonly loadRecord: (
+    subjectId: string
+  ) => Promise<OnboardingHandoffRecord | null>;
   readonly save: (
     subjectId: string,
     intent: OnboardingFirstRecordIntent,
-    createdAt: number
+    createdAt: number,
+    identity?: OnboardingHandoffIdentity
   ) => Promise<void>;
-  readonly clear: (subjectId: string) => Promise<void>;
+  /**
+   * When a handoff ID is supplied, a stale acknowledgement cannot erase a
+   * newer first-record continuation for the same subject.
+   */
+  readonly clear: (
+    subjectId: string,
+    handoffId?: string
+  ) => Promise<boolean>;
 }
 
 export interface OnboardingHandoffStoreDriver {
@@ -30,7 +68,7 @@ export interface OnboardingHandoffStoreDriver {
   readonly remove: (key: string) => Promise<void>;
 }
 
-function validSubjectId(value: unknown): value is string {
+function validOpaqueId(value: unknown): value is string {
   return (
     typeof value === "string" &&
     value.length > 0 &&
@@ -39,25 +77,53 @@ function validSubjectId(value: unknown): value is string {
   );
 }
 
+function validSubjectId(value: unknown): value is string {
+  return validOpaqueId(value);
+}
+
+function validIntent(
+  value: unknown
+): value is OnboardingFirstRecordIntent {
+  return value === "item" || value === "place";
+}
+
+function validCreatedAt(value: unknown): value is number {
+  return (
+    typeof value === "number" &&
+    Number.isSafeInteger(value) &&
+    value >= 0
+  );
+}
+
 function parseStoredHandoff(
   value: string | null
-): StoredOnboardingHandoff | null {
-  if (!value || value.length > 4_096) return null;
+): StoredOnboardingHandoff | LegacyStoredOnboardingHandoff | null {
+  if (!value || value.length > 8_192) return null;
   try {
     const parsed = JSON.parse(value) as unknown;
     if (
       typeof parsed !== "object" ||
       parsed === null ||
       !("version" in parsed) ||
-      parsed.version !== STORE_VERSION ||
       !("subjectId" in parsed) ||
       !validSubjectId(parsed.subjectId) ||
       !("intent" in parsed) ||
-      (parsed.intent !== "item" && parsed.intent !== "place") ||
+      !validIntent(parsed.intent) ||
       !("createdAt" in parsed) ||
-      typeof parsed.createdAt !== "number" ||
-      !Number.isSafeInteger(parsed.createdAt) ||
-      parsed.createdAt < 0
+      !validCreatedAt(parsed.createdAt)
+    ) {
+      return null;
+    }
+
+    if (parsed.version === LEGACY_STORE_VERSION) {
+      return parsed as LegacyStoredOnboardingHandoff;
+    }
+    if (
+      parsed.version !== STORE_VERSION ||
+      !("handoffId" in parsed) ||
+      !validOpaqueId(parsed.handoffId) ||
+      !("recordId" in parsed) ||
+      !validOpaqueId(parsed.recordId)
     ) {
       return null;
     }
@@ -67,8 +133,20 @@ function parseStoredHandoff(
   }
 }
 
+function publicRecord(
+  stored: StoredOnboardingHandoff
+): OnboardingHandoffRecord {
+  return {
+    handoffId: stored.handoffId,
+    intent: stored.intent,
+    recordId: stored.recordId,
+    createdAt: stored.createdAt
+  };
+}
+
 export function createOnboardingHandoffStore(
-  driver: OnboardingHandoffStoreDriver
+  driver: OnboardingHandoffStoreDriver,
+  createId: () => string = () => Crypto.randomUUID()
 ): OnboardingHandoffStore {
   let queue: Promise<unknown> = Promise.resolve();
   const exclusive = <T>(operation: () => Promise<T>): Promise<T> => {
@@ -80,25 +158,60 @@ export function createOnboardingHandoffStore(
     return result;
   };
 
+  const loadStoredRecord = async (
+    subjectId: string
+  ): Promise<StoredOnboardingHandoff | null> => {
+    if (!validSubjectId(subjectId)) return null;
+    const stored = parseStoredHandoff(await driver.get(STORE_KEY));
+    if (!stored || stored.subjectId !== subjectId) return null;
+
+    if (stored.version === STORE_VERSION) {
+      return stored;
+    }
+
+    // Upgrade V1 in place before exposing it. Both identities are then durable
+    // before routing, so a later process restart reuses the same aggregate.
+    const upgraded: StoredOnboardingHandoff = {
+      version: STORE_VERSION,
+      subjectId: stored.subjectId,
+      intent: stored.intent,
+      createdAt: stored.createdAt,
+      handoffId: createId(),
+      recordId: createId()
+    };
+    if (
+      !validOpaqueId(upgraded.handoffId) ||
+      !validOpaqueId(upgraded.recordId)
+    ) {
+      throw new Error("The onboarding handoff identity is invalid.");
+    }
+    await driver.set(STORE_KEY, JSON.stringify(upgraded));
+    return upgraded;
+  };
+
   return {
     load(subjectId) {
       return exclusive(async () => {
-        if (!validSubjectId(subjectId)) return null;
-        const stored = parseStoredHandoff(
-          await driver.get(STORE_KEY)
-        );
-        return stored?.subjectId === subjectId
-          ? stored.intent
-          : null;
+        const stored = await loadStoredRecord(subjectId);
+        return stored?.intent ?? null;
       });
     },
-    save(subjectId, intent, createdAt) {
+    loadRecord(subjectId) {
       return exclusive(async () => {
+        const stored = await loadStoredRecord(subjectId);
+        return stored ? publicRecord(stored) : null;
+      });
+    },
+    save(subjectId, intent, createdAt, identity) {
+      return exclusive(async () => {
+        const handoffId = identity?.handoffId ?? createId();
+        const recordId = identity?.recordId ?? createId();
         if (
           !validSubjectId(subjectId) ||
-          (intent !== "item" && intent !== "place") ||
-          !Number.isSafeInteger(createdAt) ||
-          createdAt < 0
+          !validIntent(intent) ||
+          !validCreatedAt(createdAt) ||
+          !validOpaqueId(handoffId) ||
+          !validOpaqueId(recordId)
         ) {
           throw new Error(
             "The onboarding handoff record is invalid."
@@ -108,20 +221,35 @@ export function createOnboardingHandoffStore(
           version: STORE_VERSION,
           subjectId,
           intent,
-          createdAt
+          createdAt,
+          handoffId,
+          recordId
         };
         await driver.set(STORE_KEY, JSON.stringify(record));
       });
     },
-    clear(subjectId) {
+    clear(subjectId, handoffId) {
       return exclusive(async () => {
-        if (!validSubjectId(subjectId)) return;
-        const stored = parseStoredHandoff(
-          await driver.get(STORE_KEY)
-        );
-        if (stored?.subjectId === subjectId) {
-          await driver.remove(STORE_KEY);
+        if (
+          !validSubjectId(subjectId) ||
+          (handoffId !== undefined && !validOpaqueId(handoffId))
+        ) {
+          return false;
         }
+        const stored = parseStoredHandoff(await driver.get(STORE_KEY));
+        // Deletion is idempotent: an absent record already satisfies the
+        // acknowledgement. A different/newer record still returns false.
+        if (!stored) return true;
+        if (
+          stored?.subjectId === subjectId &&
+          (handoffId === undefined ||
+            (stored.version === STORE_VERSION &&
+              stored.handoffId === handoffId))
+        ) {
+          await driver.remove(STORE_KEY);
+          return true;
+        }
+        return false;
       });
     }
   };

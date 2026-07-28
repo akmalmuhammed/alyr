@@ -1,4 +1,8 @@
-import { render, within } from "@testing-library/react-native";
+import {
+  fireEvent,
+  render,
+  within
+} from "@testing-library/react-native";
 import { StyleSheet } from "react-native";
 import type {
   StyleProp,
@@ -103,6 +107,7 @@ describe("Portfolio ALYR design-system contract", () => {
         workspace={createWorkspace("sample")}
       />
     );
+    await fireEvent.press(screen.getByTestId("portfolio-insights-toggle"));
     const progressFills = screen.getAllByTestId(
       "portfolio-progress-fill"
     );

@@ -23,6 +23,12 @@ export interface RegisterCopy {
   readonly noRegion: string;
   readonly noPlaces: string;
   readonly noPlacesBody: string;
+  readonly noPropertyValuesTitle: string;
+  readonly noPropertyValuesBody: string;
+  readonly returnToPortfolio: string;
+  readonly reviewAllPlaces: string;
+  readonly propertyValueMissing: string;
+  readonly openPropertyValueHint: string;
   readonly filters: Readonly<Record<AssetFilter, string>>;
   readonly placeFilters: Readonly<Record<PlaceFilter, string>>;
   readonly itemSorts: Readonly<Record<ItemSort, string>>;
@@ -48,6 +54,14 @@ export const REGISTER_COPY: Readonly<Record<LanguageCode, RegisterCopy>> = {
     noRegion: "Region not recorded",
     noPlaces: "No Places in this view",
     noPlacesBody: "Choose another filter to return to all Places.",
+    noPropertyValuesTitle: "No property values to review",
+    noPropertyValuesBody:
+      "There are no household-owned properties without a recorded value. Return to Portfolio or review every Place.",
+    returnToPortfolio: "Return to Portfolio",
+    reviewAllPlaces: "Review all Places",
+    propertyValueMissing: "No property value recorded",
+    openPropertyValueHint:
+      "Opens this property record to review its value and, when permitted, add a dated entry.",
     filters: {
       all: "All active items",
       location: "Needs location",
@@ -58,6 +72,7 @@ export const REGISTER_COPY: Readonly<Record<LanguageCode, RegisterCopy>> = {
     },
     placeFilters: {
       all: "All Places",
+      value: "Needs property value",
       "pin-review": "Pin needs review",
       "no-pin": "No pin",
       "missing-address": "Missing address",
@@ -99,6 +114,14 @@ export const REGISTER_COPY: Readonly<Record<LanguageCode, RegisterCopy>> = {
     noRegion: "المنطقة غير مسجلة",
     noPlaces: "لا توجد أماكن في هذا العرض",
     noPlacesBody: "اختر عامل تصفية آخر للعودة إلى كل الأماكن.",
+    noPropertyValuesTitle: "لا توجد قيم عقارية للمراجعة",
+    noPropertyValuesBody:
+      "لا توجد عقارات مملوكة للأسرة بلا قيمة مسجّلة. عُد إلى المحفظة أو راجع كل الأماكن.",
+    returnToPortfolio: "العودة إلى المحفظة",
+    reviewAllPlaces: "مراجعة كل الأماكن",
+    propertyValueMissing: "لم تُسجّل قيمة للعقار",
+    openPropertyValueHint:
+      "يفتح سجل هذا العقار لمراجعة قيمته وإضافة قيد مؤرخ عند توفر الصلاحية.",
     filters: {
       all: "كل الأغراض النشطة",
       location: "ينقصه الموقع",
@@ -109,6 +132,7 @@ export const REGISTER_COPY: Readonly<Record<LanguageCode, RegisterCopy>> = {
     },
     placeFilters: {
       all: "كل الأماكن",
+      value: "تنقصه قيمة العقار",
       "pin-review": "دبوس يحتاج إلى مراجعة",
       "no-pin": "من دون دبوس",
       "missing-address": "العنوان غير مسجل",

@@ -4,9 +4,12 @@ import {
   waitFor
 } from "@testing-library/react-native";
 import type { PropsWithChildren } from "react";
+import { StyleSheet } from "react-native";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 
-import AssetValueRoute from "../app/asset-value";
+import AssetValueRoute, {
+  VALUE_SUBJECT_COPY
+} from "../app/asset-value";
 import type { NativeWorkspace } from "@/domain/model";
 import type { PortfolioValueRecord } from "@/domain/portfolio";
 import { createWorkspace } from "@/domain/sample";
@@ -17,6 +20,7 @@ import { formatRecordedValue } from "@/privacy/ValueVisibility";
 let mockLanguage: "en" | "ar" = "en";
 let mockCanWrite = true;
 let mockReturnTo = "passport";
+let mockAssetCategoryId = "lifestyle.watch";
 const mockRecordPortfolioValue = jest.fn(async () => undefined);
 const mockRouter = {
   back: jest.fn(),
@@ -85,7 +89,17 @@ jest.mock("@/state/WorkspaceProvider", () => ({
     saving: false,
     workspace: {
       ...mockWorkspace,
-      language: mockLanguage
+      language: mockLanguage,
+      assets: [
+        {
+          ...mockAsset,
+          categoryId: mockAssetCategoryId,
+          categoryLabel:
+            mockAssetCategoryId === "document.important"
+              ? "Important document"
+              : mockAsset.categoryLabel
+        }
+      ]
     }
   })
 }));
@@ -113,6 +127,7 @@ describe("recorded value editor privacy", () => {
     mockLanguage = "en";
     mockCanWrite = true;
     mockReturnTo = "passport";
+    mockAssetCategoryId = "lifestyle.watch";
   });
 
   it("masks the current entry, editable field and complete history by default", async () => {
@@ -203,5 +218,49 @@ describe("recorded value editor privacy", () => {
       expect(mockRouter.replace).toHaveBeenCalledWith("/dashboard");
     });
     expect(mockRouter.back).not.toHaveBeenCalled();
+  });
+
+  it("blocks a direct value-editor link for an important document", async () => {
+    mockAssetCategoryId = "document.important";
+    const screen = await render(<AssetValueRoute />, { wrapper });
+    const action = screen.getByRole("button", {
+      name: VALUE_SUBJECT_COPY.en.reviewAsset
+    });
+
+    expect(screen.getByTestId("asset-value-not-eligible")).toBeTruthy();
+    expect(screen.queryByTestId("asset-value-screen")).toBeNull();
+    expect(
+      screen.getByText(VALUE_SUBJECT_COPY.en.assetNotEligible)
+    ).toBeTruthy();
+    expect(
+      StyleSheet.flatten(action.props.style).minHeight
+    ).toBeGreaterThanOrEqual(44);
+
+    await fireEvent.press(action);
+    expect(mockRouter.replace).toHaveBeenCalledWith(
+      `/asset/${mockAsset.id}`
+    );
+    expect(mockRecordPortfolioValue).not.toHaveBeenCalled();
+  });
+
+  it("localizes and mirrors the document value boundary in Arabic", async () => {
+    mockLanguage = "ar";
+    mockAssetCategoryId = "document.important";
+    const screen = await render(<AssetValueRoute />, { wrapper });
+    const body = screen.getByText(
+      VALUE_SUBJECT_COPY.ar.assetNotEligibleBody
+    );
+    const action = screen.getByRole("button", {
+      name: VALUE_SUBJECT_COPY.ar.reviewAsset
+    });
+
+    expect(
+      screen.getByText(VALUE_SUBJECT_COPY.ar.assetNotEligible)
+    ).toBeTruthy();
+    expect(StyleSheet.flatten(body.props.style).writingDirection).toBe(
+      "rtl"
+    );
+    expect(action.props.accessibilityRole).toBe("button");
+    expect(screen.queryByLabelText("Amount")).toBeNull();
   });
 });

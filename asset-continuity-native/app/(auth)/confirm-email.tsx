@@ -1,6 +1,17 @@
-import { Redirect, useRouter } from "expo-router";
+import {
+  Redirect,
+  useLocalSearchParams,
+  useRouter
+} from "expo-router";
 import { ArrowRight, EnvelopeSimpleOpen } from "phosphor-react-native";
-import { StyleSheet, Text, View } from "react-native";
+import { useEffect } from "react";
+import {
+  BackHandler,
+  Platform,
+  StyleSheet,
+  Text,
+  View
+} from "react-native";
 
 import { useAuthFlow } from "@/auth/AuthFlowProvider";
 import {
@@ -10,7 +21,11 @@ import {
   AuthScaffold,
   TextAction
 } from "@/auth/components";
-import { AUTH_ROUTES, authStepNumber } from "@/auth/routes";
+import {
+  AUTH_ROUTES,
+  authStepNumber,
+  confirmEmailReturnRoute
+} from "@/auth/routes";
 import { maskEmail } from "@/auth/validation";
 import { ErrorBanner } from "@/components/ui";
 import {
@@ -25,6 +40,9 @@ export function isolateLtrEmail(value: string): string {
 
 export default function ConfirmEmailScreen() {
   const router = useRouter();
+  const params = useLocalSearchParams<{
+    from?: string | string[];
+  }>();
   const {
     acceptPendingHouseholdInvite,
     busy,
@@ -42,6 +60,19 @@ export default function ConfirmEmailScreen() {
     statusMessage
   } = useAuthFlow();
   const { copy, language, rtl } = useCoreJourneyCopy();
+  const returnRoute = confirmEmailReturnRoute(params.from);
+
+  useEffect(() => {
+    if (Platform.OS !== "android") return;
+    const subscription = BackHandler.addEventListener(
+      "hardwareBackPress",
+      () => {
+        if (!busy) router.replace(returnRoute);
+        return true;
+      }
+    );
+    return () => subscription.remove();
+  }, [busy, returnRoute, router]);
 
   if (!email || !confirmation) {
     if (session) {
@@ -88,7 +119,7 @@ export default function ConfirmEmailScreen() {
             disabled: busy,
             onPress: () => {
               if (mode === "preview") {
-                router.replace(AUTH_ROUTES.createAccount);
+                router.replace(returnRoute);
               } else {
                 void resendConfirmation();
               }
@@ -96,7 +127,8 @@ export default function ConfirmEmailScreen() {
           }}
         />
       }
-      onBack={() => router.replace(AUTH_ROUTES.createAccount)}
+      backDisabled={busy}
+      onBack={() => router.replace(returnRoute)}
       progress={authStepNumber("confirmEmail")}
       testID="auth-confirm-email-screen"
     >
@@ -157,7 +189,7 @@ export default function ConfirmEmailScreen() {
           />
         ) : null}
         {statusMessage ? (
-          <View>
+          <View style={styles.statusBlock}>
             <AuthNotice live>{copy.confirmEmail.resendAccepted}</AuthNotice>
             <TextAction
               label={copy.confirmEmail.dismissStatus}
@@ -173,6 +205,9 @@ export default function ConfirmEmailScreen() {
 const styles = StyleSheet.create({
   content: {
     gap: spacing.xl
+  },
+  statusBlock: {
+    gap: spacing.xs
   },
   destination: {
     flexDirection: "row",

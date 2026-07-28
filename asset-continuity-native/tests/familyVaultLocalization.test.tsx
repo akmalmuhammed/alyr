@@ -9,12 +9,17 @@ import { SafeAreaProvider } from "react-native-safe-area-context";
 
 import {
   VaultScreen,
-  isCompactVaultActionWidth
+  isCompactVaultActionWidth,
+  localProofStorageSummary
 } from "../app/(tabs)/vault";
 import FamilyScreen from "../app/(tabs)/family";
 import type { AuthSessionDescriptor } from "@/auth/types";
 import { createWorkspace } from "@/domain/sample";
 import type { NativeWorkspace } from "@/domain/model";
+import type {
+  NativeEvidence,
+  NativePlaceDocument
+} from "@/domain/model";
 import {
   CORE_JOURNEY_COPY,
   familyMemberSummary,
@@ -352,6 +357,36 @@ describe("Family and Vault localization", () => {
     ).toBeNull();
   });
 
+  it("counts only proof originals that are actually present on this device", () => {
+    const summary = localProofStorageSummary(
+      [
+        {
+          localUri: "file:///local-proof.pdf",
+          byteSize: 1_024
+        } as NativeEvidence,
+        {
+          localUri: null,
+          byteSize: 8_192
+        } as NativeEvidence
+      ],
+      [
+        {
+          localUri: "file:///local-place-proof.pdf",
+          byteSize: 2_048
+        } as NativePlaceDocument,
+        {
+          localUri: null,
+          byteSize: 16_384
+        } as NativePlaceDocument
+      ]
+    );
+
+    expect(summary).toEqual({
+      fileCount: 2,
+      byteSize: 3_072
+    });
+  });
+
   it("shows localized recovery when the readable Vault export fails", async () => {
     mockIsSharingAvailable.mockRejectedValueOnce(
       new Error("Share service failed")
@@ -388,8 +423,11 @@ describe("Family and Vault localization", () => {
     expect(familyMemberSummary(2, 1, "ar")).toBe(
       "فردان · فرد نشط"
     );
-    expect(householdAccessSummary(2, "ar")).toContain(
-      "الأدوار والدعوات"
+    expect(householdAccessSummary(2, 1, "ar")).toContain(
+      "دعوة معلّقة واحدة"
+    );
+    expect(householdAccessSummary(2, 0, "en")).toBe(
+      "2 people · no pending invitations"
     );
     expect(proofFileSummary(2, true, "ar")).toBe(
       "ملفا إثبات على هذا الجهاز. كل ملف مشفّر عند التخزين."

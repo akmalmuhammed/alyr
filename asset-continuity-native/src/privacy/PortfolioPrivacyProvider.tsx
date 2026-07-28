@@ -17,8 +17,13 @@ import type {
 } from "@/auth/types";
 import {
   deriveAuthenticatedVaultScope,
-  DEVICE_PREVIEW_VAULT_SCOPE
+  DEVICE_PREVIEW_VAULT_SCOPE,
+  SIGNED_OUT_SAMPLE_VAULT_SCOPE
 } from "@/data/vaultScope";
+import {
+  runtimeProfile,
+  type RuntimeProfile
+} from "@/runtime/environment";
 
 import type { ValueVisibility } from "./ValueVisibility";
 
@@ -26,6 +31,7 @@ const STORAGE_KEY_PREFIX = "alyr.portfolio.value-visibility.v2";
 
 export type ValueVisibilityScope =
   | { readonly kind: "device-preview" }
+  | { readonly kind: "signed-sample" }
   | {
       readonly kind: "account-household";
       readonly accountId: string;
@@ -58,7 +64,8 @@ export function portfolioAmountsHiddenFromStorage(
 
 export function valueVisibilityScopeForSession(
   mode: AuthGatewayMode,
-  session: AuthSessionDescriptor | null
+  session: AuthSessionDescriptor | null,
+  profile: RuntimeProfile = runtimeProfile
 ): ValueVisibilityScope | null {
   if (session?.identity.id && session.activeHouseholdId) {
     return {
@@ -67,16 +74,27 @@ export function valueVisibilityScopeForSession(
       householdId: session.activeHouseholdId
     };
   }
-  return mode === "preview" ? { kind: "device-preview" } : null;
+  if (mode === "preview") {
+    return { kind: "device-preview" };
+  }
+  return profile === "native-secure" &&
+    session === null &&
+    (mode === "supabase" || mode === "unavailable")
+    ? { kind: "signed-sample" }
+    : null;
 }
 
 export function valueVisibilityScopeIdentity(
   scope: ValueVisibilityScope | null
 ): string | null {
   if (!scope) return null;
-  return scope.kind === "device-preview"
-    ? DEVICE_PREVIEW_VAULT_SCOPE.scopeId
-    : JSON.stringify([scope.accountId, scope.householdId]);
+  if (scope.kind === "device-preview") {
+    return DEVICE_PREVIEW_VAULT_SCOPE.scopeId;
+  }
+  if (scope.kind === "signed-sample") {
+    return SIGNED_OUT_SAMPLE_VAULT_SCOPE.scopeId;
+  }
+  return JSON.stringify([scope.accountId, scope.householdId]);
 }
 
 export async function portfolioVisibilityStorageKey(
@@ -85,12 +103,14 @@ export async function portfolioVisibilityStorageKey(
   const scopeId =
     scope.kind === "device-preview"
       ? DEVICE_PREVIEW_VAULT_SCOPE.scopeId
-      : (
-          await deriveAuthenticatedVaultScope(
-            scope.accountId,
-            scope.householdId
-          )
-        ).scopeId;
+      : scope.kind === "signed-sample"
+        ? SIGNED_OUT_SAMPLE_VAULT_SCOPE.scopeId
+        : (
+            await deriveAuthenticatedVaultScope(
+              scope.accountId,
+              scope.householdId
+            )
+          ).scopeId;
   return `${STORAGE_KEY_PREFIX}.${scopeId}`;
 }
 

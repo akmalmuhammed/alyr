@@ -23,6 +23,7 @@ describe("scalable register browsing", () => {
     expect(initialCollectionView("unknown")).toBe("items");
     expect(initialAssetFilter("evidence")).toBe("evidence");
     expect(initialAssetFilter("unknown")).toBe("all");
+    expect(initialPlaceFilter("value")).toBe("value");
     expect(initialPlaceFilter("pin-review")).toBe("pin-review");
     expect(initialPlaceFilter("no-pin")).toBe("no-pin");
     expect(initialPlaceFilter("missing-address")).toBe(
@@ -161,13 +162,19 @@ describe("scalable register browsing", () => {
       ...complete,
       id: "place-missing-documents"
     };
+    const rented = {
+      ...complete,
+      id: "place-rented",
+      tenure: "rented" as const
+    };
     const places = [
       complete,
       pinReview,
       approximatePin,
       noPin,
       missingAddress,
-      missingDocuments
+      missingDocuments,
+      rented
     ];
     const sourceDocument = workspace.placeDocuments![0]!;
     const documents = places
@@ -207,6 +214,14 @@ describe("scalable register browsing", () => {
         documents
       ).map((place) => place.id)
     ).toEqual(["place-missing-documents"]);
+    expect(
+      filterRegisterPlaces(
+        places,
+        "value",
+        documents,
+        new Set(["place-complete", "place-no-pin", "place-rented"])
+      ).map((place) => place.id)
+    ).toEqual(["place-complete", "place-no-pin"]);
   });
 
   it("keeps the register organizer complete in English and Arabic", () => {
@@ -231,8 +246,17 @@ describe("scalable register browsing", () => {
     expect(REGISTER_COPY.en.placeFilters["pin-review"]).toBe(
       "Pin needs review"
     );
+    expect(REGISTER_COPY.en.placeFilters.value).toBe(
+      "Needs property value"
+    );
     expect(REGISTER_COPY.ar.placeFilters["no-pin"]).toBe(
       "من دون دبوس"
+    );
+    expect(REGISTER_COPY.ar.placeFilters.value).toBe(
+      "تنقصه قيمة العقار"
+    );
+    expect(REGISTER_COPY.ar.returnToPortfolio).not.toBe(
+      REGISTER_COPY.en.returnToPortfolio
     );
   });
 });

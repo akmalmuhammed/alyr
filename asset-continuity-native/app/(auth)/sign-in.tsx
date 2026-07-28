@@ -19,7 +19,7 @@ import {
   focusFirstInvalidAuthField,
   isCompactAuthViewport
 } from "@/auth/components";
-import { AUTH_ROUTES } from "@/auth/routes";
+import { AUTH_ROUTES, CONFIRM_EMAIL_ROUTES } from "@/auth/routes";
 import {
   hasFieldErrors,
   normalizeEmail,
@@ -73,7 +73,7 @@ export default function SignInScreen() {
     setPassword("");
 
     if (attempt.kind !== "authenticated") {
-      router.replace(AUTH_ROUTES.confirmEmail);
+      router.replace(CONFIRM_EMAIL_ROUTES.signIn);
       return;
     }
     if (pendingHouseholdInvite) {
@@ -148,7 +148,7 @@ export default function SignInScreen() {
                 onPress={() => {
                   void resendConfirmation().then((accepted) => {
                     if (accepted) {
-                      router.replace(AUTH_ROUTES.confirmEmail);
+                      router.replace(CONFIRM_EMAIL_ROUTES.signIn);
                     }
                   });
                 }}

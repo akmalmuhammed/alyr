@@ -95,6 +95,37 @@ paths:
           $ref: "#/components/responses/Conflict"
         "429":
           $ref: "#/components/responses/TooManyRequests"
+  /product-events:
+    post:
+      operationId: recordProductEvent
+      summary: Acknowledge one privacy-safe, idempotent pilot product event.
+      description: >
+        Event properties must exactly match the reject-by-default
+        @alyr/contracts analytics allow-list. Household and client-event UUIDs
+        are routing/idempotency fields and are never copied into properties.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ProductEventRequest"
+      responses:
+        "202":
+          description: The event was inserted or replayed exactly.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ProductEventAcknowledgement"
+        "400":
+          $ref: "#/components/responses/ApiError"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "409":
+          $ref: "#/components/responses/Conflict"
+        "503":
+          $ref: "#/components/responses/ServiceUnavailable"
   /onboarding/complete:
     post:
       operationId: completeHouseholdOnboarding
@@ -740,6 +771,61 @@ components:
           type: string
           minLength: 1
           maxLength: 128
+    ProductEventRequest:
+      type: object
+      additionalProperties: false
+      required:
+        [apiVersion, householdId, idempotencyKey, eventName, properties]
+      properties:
+        apiVersion:
+          type: integer
+          const: 1
+        householdId:
+          type: string
+          format: uuid
+        idempotencyKey:
+          type: string
+          format: uuid
+        eventName:
+          type: string
+          enum:
+            - pilot_invitation_accepted
+            - household_created
+            - first_asset_passport_created
+            - asset_location_confirmed
+            - first_evidence_reviewed
+            - critical_register_25_completed
+            - asset_retrieval_completed
+            - access_grant_created
+            - continuity_snapshot_exported
+            - household_returned_day_30_45
+            - reservation_paid
+            - pilot_contract_signed
+        properties:
+          type: object
+          description: >
+            Exact event-specific properties from @alyr/contracts. Nested
+            values and non-allow-listed keys are rejected.
+          additionalProperties:
+            oneOf:
+              - type: string
+              - type: number
+              - type: boolean
+              - type: "null"
+    ProductEventAcknowledgement:
+      type: object
+      additionalProperties: false
+      required: [apiVersion, accepted, idempotencyKey]
+      properties:
+        apiVersion:
+          type: integer
+          const: 1
+        accepted:
+          type: boolean
+          const: true
+        idempotencyKey:
+          type: string
+          format: uuid
     CreateHouseholdRequest:
       type: object
       additionalProperties: false

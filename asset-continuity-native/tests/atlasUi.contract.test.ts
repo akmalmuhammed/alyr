@@ -111,6 +111,11 @@ describe("Atlas premium interaction contract", () => {
     expect(source).toContain("localizedAtlasPinDisclosure");
   });
 
+  it("gives long Place and region names a readable second line", () => {
+    expect(source.match(/numberOfLines=\{2\}/g)).toHaveLength(3);
+    expect(source).not.toContain("numberOfLines={1}");
+  });
+
   it("keeps the Globe and List targets at least 44 points tall", () => {
     expect(source).toMatch(
       /viewTab:\s*\{[\s\S]*?minHeight:\s*44,/

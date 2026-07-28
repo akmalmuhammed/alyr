@@ -34,8 +34,10 @@ import { useCopy } from "@/i18n/copy";
 import { rtlRowStyle } from "@/i18n/rtlLayout";
 import {
   colors,
+  lineHeight,
   radius,
   spacing,
+  typeScale,
   typography
 } from "@/theme/tokens";
 
@@ -154,6 +156,7 @@ export function Eyebrow({
       style={[
         styles.eyebrow,
         rtl && styles.arabicMedium,
+        rtl && styles.arabicEyebrow,
         rtl && styles.textRight,
         tone === "information" && styles.eyebrowInformation,
         tone === "volt" && styles.eyebrowVolt
@@ -303,30 +306,40 @@ export function SecondaryButton({
   onPress,
   icon: IconComponent,
   disabled = false,
-  destructive = false
+  destructive = false,
+  loading = false,
+  accessibilityHint
 }: {
   readonly label: string;
   readonly onPress: () => void;
   readonly icon?: Icon;
   readonly disabled?: boolean;
   readonly destructive?: boolean;
+  readonly loading?: boolean;
+  readonly accessibilityHint?: string;
 }) {
   const { rtl } = useCopy();
   return (
     <Pressable
+      accessibilityHint={accessibilityHint}
       accessibilityRole="button"
-      accessibilityState={{ disabled }}
-      disabled={disabled}
+      accessibilityState={{ disabled: disabled || loading, busy: loading }}
+      disabled={disabled || loading}
       onPress={onPress}
       style={({ pressed }) => [
         styles.secondaryButton,
         rtl && styles.rowReverse,
         destructive && styles.destructiveButton,
         pressed && styles.buttonPressed,
-        disabled && styles.buttonDisabled
+        (disabled || loading) && styles.buttonDisabled
       ]}
     >
-      {IconComponent ? (
+      {loading ? (
+        <ActivityIndicator
+          color={destructive ? colors.danger : colors.text}
+          size="small"
+        />
+      ) : IconComponent ? (
         <IconComponent
           color={destructive ? colors.danger : colors.text}
           size={20}
@@ -662,9 +675,9 @@ const styles = StyleSheet.create({
   eyebrow: {
     color: colors.textMuted,
     fontFamily: typography.bodyBold,
-    fontSize: 12,
+    fontSize: typeScale.label,
     letterSpacing: 1.5,
-    lineHeight: 18,
+    lineHeight: lineHeight.label,
     textTransform: "uppercase"
   },
   eyebrowInformation: {
@@ -676,20 +689,20 @@ const styles = StyleSheet.create({
   title: {
     color: colors.text,
     fontFamily: typography.displayBold,
-    fontSize: 34,
-    lineHeight: 40,
+    fontSize: typeScale.heading1,
+    lineHeight: lineHeight.heading1,
     letterSpacing: -0.8
   },
   titleMedium: {
-    fontSize: 26,
-    lineHeight: 32,
+    fontSize: typeScale.heading2,
+    lineHeight: lineHeight.heading2,
     letterSpacing: -0.5
   },
   body: {
     color: colors.text,
     fontFamily: typography.body,
-    fontSize: 16,
-    lineHeight: 24
+    fontSize: typeScale.body,
+    lineHeight: lineHeight.body
   },
   bodyMuted: {
     color: colors.textMuted
@@ -741,7 +754,7 @@ const styles = StyleSheet.create({
   primaryButtonLabel: {
     color: colors.carbon,
     fontFamily: typography.bodyBold,
-    fontSize: 16
+    fontSize: typeScale.body
   },
   secondaryButton: {
     minHeight: 48,
@@ -758,7 +771,7 @@ const styles = StyleSheet.create({
   secondaryButtonLabel: {
     color: colors.text,
     fontFamily: typography.bodyMedium,
-    fontSize: 15
+    fontSize: typeScale.body
   },
   destructiveButton: {
     borderColor: colors.dangerBorder,
@@ -775,7 +788,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: colors.border,
     borderRadius: radius.md,
-    backgroundColor: "transparent"
+    backgroundColor: colors.transparent
   },
   iconButtonActive: {
     borderColor: colors.carbon,
@@ -798,8 +811,8 @@ const styles = StyleSheet.create({
   sectionTitle: {
     color: colors.text,
     fontFamily: typography.display,
-    fontSize: 20,
-    lineHeight: 28
+    fontSize: typeScale.heading4,
+    lineHeight: lineHeight.heading4
   },
   progressTrack: {
     height: 5,
@@ -851,8 +864,8 @@ const styles = StyleSheet.create({
   pillLabel: {
     color: colors.text,
     fontFamily: typography.bodyMedium,
-    fontSize: 12,
-    lineHeight: 18
+    fontSize: typeScale.metadata,
+    lineHeight: lineHeight.metadata
   },
   fieldGroup: {
     gap: spacing.xs
@@ -860,14 +873,14 @@ const styles = StyleSheet.create({
   fieldLabel: {
     color: colors.text,
     fontFamily: typography.bodyMedium,
-    fontSize: 14,
-    lineHeight: 20
+    fontSize: typeScale.bodySmall,
+    lineHeight: lineHeight.bodySmall
   },
   fieldDescription: {
     color: colors.textMuted,
     fontFamily: typography.body,
-    fontSize: 13,
-    lineHeight: 18
+    fontSize: typeScale.label,
+    lineHeight: lineHeight.label
   },
   field: {
     minHeight: 52,
@@ -879,7 +892,7 @@ const styles = StyleSheet.create({
     color: colors.text,
     backgroundColor: colors.surface,
     fontFamily: typography.body,
-    fontSize: 16
+    fontSize: typeScale.body
   },
   fieldError: {
     borderColor: colors.danger
@@ -887,8 +900,8 @@ const styles = StyleSheet.create({
   errorText: {
     color: colors.danger,
     fontFamily: typography.body,
-    fontSize: 13,
-    lineHeight: 18
+    fontSize: typeScale.label,
+    lineHeight: lineHeight.label
   },
   errorBanner: {
     flexDirection: "row",
@@ -904,8 +917,8 @@ const styles = StyleSheet.create({
     flex: 1,
     color: colors.text,
     fontFamily: typography.body,
-    fontSize: 14,
-    lineHeight: 20
+    fontSize: typeScale.bodySmall,
+    lineHeight: lineHeight.bodySmall
   },
   errorDismiss: {
     minHeight: 32,
@@ -915,8 +928,8 @@ const styles = StyleSheet.create({
   errorDismissText: {
     color: colors.danger,
     fontFamily: typography.bodyMedium,
-    fontSize: 13,
-    lineHeight: 18
+    fontSize: typeScale.label,
+    lineHeight: lineHeight.label
   },
   rowReverse: {
     ...rtlRowStyle()
@@ -926,6 +939,10 @@ const styles = StyleSheet.create({
   },
   arabicMedium: {
     fontFamily: typography.arabicMedium
+  },
+  arabicEyebrow: {
+    letterSpacing: 0,
+    textTransform: "none"
   },
   textRight: {
     textAlign: "right",

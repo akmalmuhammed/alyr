@@ -34,6 +34,7 @@ import { PermissionDeniedScreen } from "@/components/PermissionDenied";
 import {
   DEFAULT_PORTFOLIO_CURRENCY,
   getPortfolioValueHistory,
+  isPortfolioValuableAsset,
   normalizePortfolioCurrency,
   parsePortfolioMoney,
   portfolioMinorUnitsToInput,
@@ -82,6 +83,9 @@ interface ValueSubjectCopy {
   readonly placeNoValue: string;
   readonly assetNotFound: string;
   readonly assetNotFoundBody: string;
+  readonly assetNotEligible: string;
+  readonly assetNotEligibleBody: string;
+  readonly reviewAsset: string;
   readonly placeNotFound: string;
   readonly placeNotFoundBody: string;
   readonly placeNotOwned: string;
@@ -107,6 +111,10 @@ export const VALUE_SUBJECT_COPY = {
     assetNotFound: "Item not found",
     assetNotFoundBody:
       "This item is not available in the current household.",
+    assetNotEligible: "No financial value needed",
+    assetNotEligibleBody:
+      "This record stays in your continuity register without becoming a financial asset or changing Portfolio coverage.",
+    reviewAsset: "Return to Asset Passport",
     placeNotFound: "Property not found",
     placeNotFoundBody:
       "This Place is not available in the current household.",
@@ -134,6 +142,10 @@ export const VALUE_SUBJECT_COPY = {
     placeNoValue: "لم تُسجّل قيمة لهذا العقار.",
     assetNotFound: "الغرض غير موجود",
     assetNotFoundBody: "هذا الغرض غير متاح ضمن الأسرة الحالية.",
+    assetNotEligible: "لا تلزم قيمة مالية",
+    assetNotEligibleBody:
+      "يبقى هذا السجل ضمن سجل الاستمرارية من دون احتسابه كأصل مالي أو تغيير تغطية المحفظة.",
+    reviewAsset: "العودة إلى جواز الغرض",
     placeNotFound: "العقار غير موجود",
     placeNotFoundBody: "هذا المكان غير متاح ضمن الأسرة الحالية.",
     placeNotOwned: "أكّد ملكية العقار أولاً",
@@ -412,6 +424,30 @@ export default function AssetValueRoute() {
               ? subjectCopy.placeNotFoundBody
               : subjectCopy.assetNotFoundBody}
           </BodyText>
+        </View>
+      </AppScreen>
+    );
+  }
+
+  if (asset && !isPortfolioValuableAsset(asset)) {
+    return (
+      <AppScreen safeEdges={[]} testID="asset-value-not-eligible">
+        <View style={[styles.notFound, rtl && styles.alignEnd]}>
+          <Warning color={colors.warning} size={32} />
+          <ScreenTitle size="medium">
+            {subjectCopy.assetNotEligible}
+          </ScreenTitle>
+          <BodyText muted {...(rtl ? { style: styles.rtlText } : {})}>
+            {subjectCopy.assetNotEligibleBody}
+          </BodyText>
+          <PrimaryButton
+            label={subjectCopy.reviewAsset}
+            onPress={() =>
+              router.replace(
+                `/asset/${encodeURIComponent(asset.id)}`
+              )
+            }
+          />
         </View>
       </AppScreen>
     );
@@ -986,7 +1022,7 @@ const styles = StyleSheet.create({
   kicker: {
     color: colors.textMuted,
     fontFamily: typography.bodyBold,
-    fontSize: 11,
+    fontSize: 12,
     lineHeight: 16,
     letterSpacing: 1.2
   },
@@ -998,7 +1034,7 @@ const styles = StyleSheet.create({
   commandLabel: {
     color: colors.concrete,
     fontFamily: typography.bodyBold,
-    fontSize: 11,
+    fontSize: 12,
     lineHeight: 16,
     letterSpacing: 1.1
   },
@@ -1180,7 +1216,7 @@ const styles = StyleSheet.create({
   historyStatus: {
     color: colors.textMuted,
     fontFamily: typography.bodyMedium,
-    fontSize: 11,
+    fontSize: 12,
     lineHeight: 16,
     textTransform: "uppercase",
     letterSpacing: 0.8

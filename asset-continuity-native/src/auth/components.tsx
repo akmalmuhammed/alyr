@@ -642,16 +642,20 @@ export function SelectionRow({
 
 export function TextAction({
   label,
+  labelLanguage,
   onPress,
   disabled = false,
   tone = "default"
 }: {
   readonly label: string;
+  readonly labelLanguage?: "ar" | "en";
   readonly onPress: () => void;
   readonly disabled?: boolean;
   readonly tone?: "default" | "inverse";
 }) {
   const { rtl } = useCoreJourneyCopy();
+  const arabicLabel =
+    labelLanguage === "ar" || (labelLanguage === undefined && rtl);
   return (
     <Pressable
       accessibilityRole="button"
@@ -668,7 +672,9 @@ export function TextAction({
         style={[
           styles.textActionLabel,
           tone === "inverse" && styles.textActionLabelInverse,
-          rtl && styles.arabicMedium
+          arabicLabel && styles.arabicMedium,
+          labelLanguage === "ar" && styles.rtlInlineText,
+          labelLanguage === "en" && styles.ltrInlineText
         ]}
       >
         {label}
@@ -1034,5 +1040,11 @@ const styles = StyleSheet.create({
   rtlText: {
     textAlign: "right",
     writingDirection: "rtl"
+  },
+  rtlInlineText: {
+    writingDirection: "rtl"
+  },
+  ltrInlineText: {
+    writingDirection: "ltr"
   }
 });

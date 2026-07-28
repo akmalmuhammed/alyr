@@ -37,6 +37,8 @@ const english = {
     commandOne: "Record the things that matter",
     commandTwo: "Place each one precisely",
     commandThree: "Keep the proof beside the item",
+    sampleImageLabel: "Illustrative item in a private record",
+    readyToRetrieve: "Ready to retrieve",
     previewNotice: "Personal test mode: accounts and records stay only in this running preview. No email is sent. Use test information.",
     unavailableNotice: "This signed build has no account service configuration. The household vault opens after that connection is installed.",
     accountNotice: "Your account protects access. Family access is added deliberately after your private record exists.",
@@ -141,7 +143,11 @@ const english = {
     passwordDescription: "At least 10 characters. Password managers are supported.",
     passwordPlaceholder: "Create a strong password",
     confirmPassword: "Confirm password",
-    confirmPasswordPlaceholder: "Enter it again"
+    confirmPasswordPlaceholder: "Enter it again",
+    legalAcknowledgement:
+      "By creating an account, you agree to the pilot terms and acknowledge the privacy notice.",
+    privacyNotice: "Privacy notice",
+    pilotTerms: "Pilot terms"
   },
   confirmEmail: {
     continuePreview: "Continue in test mode",
@@ -201,7 +207,8 @@ const english = {
     label: "Household name",
     placeholder: "e.g. Family home",
     retryAccess: "Retry account access",
-    ownerFact: "You start as the only owner. You can review household access later."
+    ownerFact: "You start as the only owner. You can review household access later.",
+    setupMethodLabel: "Choose how to start the household record"
   },
   privacy: {
     addFirstPlace: "Add my first place",
@@ -417,6 +424,7 @@ const english = {
     settingsMeta:
       "Account, household, language, support and sync diagnostics.",
     settingsOpen: "Open",
+    documentCurrent: "Current",
     privacySupport: "Privacy and support",
     privacyNotice: "Privacy notice",
     privacyNoticeDescription:
@@ -435,6 +443,9 @@ const english = {
     exportFailedBody:
       "The export file was not created or shared. Your household records are unchanged. Keep ALYR open, then try the export again.",
     exportTryAgain: "Try export again",
+    temporaryCopyCleanupTitle: "Temporary copy still on this device",
+    temporaryCopyCleanupBody:
+      "The readable copy was shared, but ALYR did not confirm removal of its temporary cache file. Keep this device private and clear ALYR’s app cache before handing it to someone else.",
     replaceDemoTitle: "Replace this demo?",
     replaceDemoBody:
       "This creates a new private household on this device. Export anything you need first.",
@@ -500,6 +511,8 @@ const english = {
     exportReadableMeta: "Private metadata · not encrypted",
     household: "Household",
     householdAccess: "Household access",
+    householdAccessPending:
+      "Waiting for verified household access before showing names or counts.",
     rolesInvitations: "roles and invitations",
     account: "Account",
     signedIn: "SIGNED IN",
@@ -508,6 +521,19 @@ const english = {
     signOutSwitch: "Sign out or switch account",
     signOutExplanation:
       "Switching accounts starts by signing out. This locks the current account vault on this device; it does not erase the household.",
+    sampleWorkspace: "Sample workspace",
+    exitSample: "Exit sample",
+    exitingSample: "Exiting sample…",
+    exitSampleHint:
+      "Removes this device-local sample and returns to Welcome.",
+    exitSampleMeta:
+      "Return to Welcome and remove this sample’s items, Places and files from this device. Signed accounts are not changed.",
+    exitSampleConfirmTitle: "Exit this sample?",
+    exitSampleConfirmBody:
+      "ALYR will remove this sample workspace, its local files and unfinished sample changes from this device, then return to Welcome. This does not sign out, delete or change any account.",
+    exitSampleFailedTitle: "Sample reset not finished",
+    exitSampleFailedBody:
+      "ALYR did not confirm removal of every local sample record. Account data was not touched. Restart ALYR, then try again.",
     advancedDiagnostics: "Advanced diagnostics",
     diagnosticsMeta: "Local queue and sync details",
     deviceQueue: "Device queue",
@@ -557,6 +583,8 @@ const arabic = {
     commandOne: "وثّق ما يهمك",
     commandTwo: "حدّد مكان كل غرض بدقة",
     commandThree: "احفظ الإثبات مع الغرض",
+    sampleImageLabel: "صورة توضيحية لغرض في السجل",
+    readyToRetrieve: "جاهز للاسترجاع",
     previewNotice: "وضع التجربة الشخصية: تبقى الحسابات والسجلات داخل هذه المعاينة، ولا تُرسل أي رسالة بريد. استخدم بيانات تجريبية.",
     unavailableNotice: "هذه النسخة غير مرتبطة بخدمة الحسابات بعد. تفتح خزنة المنزل عند تثبيت الاتصال.",
     accountNotice: "يحمي الحساب الوصول إلى سجلك. ويمكنك منح أفراد الأسرة صلاحيات محددة لاحقًا.",
@@ -661,7 +689,11 @@ const arabic = {
     passwordDescription: "10 أحرف على الأقل. يدعم التطبيق برامج إدارة كلمات المرور.",
     passwordPlaceholder: "أنشئ كلمة مرور قوية",
     confirmPassword: "تأكيد كلمة المرور",
-    confirmPasswordPlaceholder: "أدخلها مرة أخرى"
+    confirmPasswordPlaceholder: "أدخلها مرة أخرى",
+    legalAcknowledgement:
+      "بإنشاء الحساب، فإنك توافق على شروط النسخة التجريبية وتقر بإشعار الخصوصية.",
+    privacyNotice: "إشعار الخصوصية",
+    pilotTerms: "شروط النسخة التجريبية"
   },
   confirmEmail: {
     continuePreview: "المتابعة في وضع التجربة",
@@ -721,7 +753,8 @@ const arabic = {
     label: "اسم المنزل",
     placeholder: "مثال: منزل العائلة",
     retryAccess: "إعادة محاولة الوصول إلى الحساب",
-    ownerFact: "تبدأ بصفتك المالك الوحيد، ويمكنك مراجعة صلاحيات الأسرة لاحقًا."
+    ownerFact: "تبدأ بصفتك المالك الوحيد، ويمكنك مراجعة صلاحيات الأسرة لاحقًا.",
+    setupMethodLabel: "اختر طريقة بدء سجل المنزل"
   },
   privacy: {
     addFirstPlace: "إضافة أول مكان",
@@ -926,6 +959,7 @@ const arabic = {
       "تعمل رموز الدعوة خلال جلسة الاختبار الحالية فقط ولا تُنشئ عضوية سحابية."
   },
   vault: {
+    documentCurrent: "ساري",
     title: "الخزنة",
     intro:
       "الإثباتات وحماية الجهاز والتعافي المستقل ونقل البيانات.",
@@ -953,6 +987,9 @@ const arabic = {
     exportFailedBody:
       "لم يُنشأ ملف التصدير أو لم تتم مشاركته. لم تتغير سجلات المنزل. أبقِ ALYR مفتوحًا ثم حاول التصدير مرة أخرى.",
     exportTryAgain: "محاولة التصدير مرة أخرى",
+    temporaryCopyCleanupTitle: "لا تزال النسخة المؤقتة على هذا الجهاز",
+    temporaryCopyCleanupBody:
+      "تمت مشاركة النسخة المقروءة، لكن ALYR لم يؤكد إزالة ملفها المؤقت. حافظ على خصوصية هذا الجهاز وامسح ذاكرة التخزين المؤقتة لـ ALYR قبل تسليمه لشخص آخر.",
     replaceDemoTitle: "استبدال هذا النموذج؟",
     replaceDemoBody:
       "سيؤدي ذلك إلى إنشاء منزل خاص جديد على هذا الجهاز. صدّر ما تحتاج إليه أولًا.",
@@ -1019,6 +1056,8 @@ const arabic = {
     exportReadableMeta: "بيانات وصفية خاصة · غير مشفّرة",
     household: "المنزل",
     householdAccess: "صلاحيات الأسرة",
+    householdAccessPending:
+      "بانتظار توثيق صلاحيات الأسرة قبل عرض الأسماء أو الأعداد.",
     rolesInvitations: "الأدوار والدعوات",
     account: "الحساب",
     signedIn: "تم تسجيل الدخول",
@@ -1027,6 +1066,19 @@ const arabic = {
     signOutSwitch: "تسجيل الخروج أو تبديل الحساب",
     signOutExplanation:
       "يبدأ تبديل الحساب بتسجيل الخروج. يؤدي ذلك إلى قفل خزنة الحساب الحالي على هذا الجهاز من دون حذف بيانات المنزل.",
+    sampleWorkspace: "المساحة التجريبية",
+    exitSample: "إنهاء التجربة",
+    exitingSample: "جارٍ إنهاء التجربة…",
+    exitSampleHint:
+      "يزيل بيانات التجربة المحلية من هذا الجهاز ويعيدك إلى شاشة الترحيب.",
+    exitSampleMeta:
+      "العودة إلى شاشة الترحيب وإزالة أغراض التجربة وأماكنها وملفاتها من هذا الجهاز. لن تتغير أي حسابات مسجّلة.",
+    exitSampleConfirmTitle: "إنهاء هذه التجربة؟",
+    exitSampleConfirmBody:
+      "سيزيل ALYR مساحة التجربة وملفاتها المحلية والتغييرات غير المكتملة من هذا الجهاز، ثم يعيدك إلى شاشة الترحيب. لن يسجّل الخروج من أي حساب ولن يحذف أي حساب أو يغيّره.",
+    exitSampleFailedTitle: "لم تكتمل إعادة ضبط التجربة",
+    exitSampleFailedBody:
+      "لم يؤكد ALYR إزالة جميع سجلات التجربة المحلية. لم تتأثر بيانات الحساب. أعد تشغيل ALYR ثم حاول مرة أخرى.",
     advancedDiagnostics: "التشخيصات المتقدمة",
     diagnosticsMeta: "تفاصيل قائمة الانتظار والمزامنة المحلية",
     deviceQueue: "قائمة الجهاز",
@@ -1463,16 +1515,45 @@ export function proofFileSummary(
 }
 
 export function householdAccessSummary(
-  count: number,
+  memberCount: number,
+  pendingInviteCount: number,
   language: LanguageCode
 ): string {
+  const members = familyMemberCount(memberCount, language);
+  const formattedPending = formatLocalizedNumber(
+    pendingInviteCount,
+    language
+  );
+  if (language === "ar") {
+    const pending =
+      pendingInviteCount === 0
+        ? "لا دعوات معلّقة"
+        : pendingInviteCount === 1
+          ? "دعوة معلّقة واحدة"
+          : pendingInviteCount === 2
+            ? "دعوتان معلّقتان"
+            : pendingInviteCount >= 3 && pendingInviteCount <= 10
+              ? `${formattedPending} دعوات معلّقة`
+              : `${formattedPending} دعوة معلّقة`;
+    return `${members} · ${pending}`;
+  }
+  return `${members} · ${
+    pendingInviteCount === 0
+      ? "no pending invitations"
+      : `${formattedPending} pending ${
+          pendingInviteCount === 1 ? "invitation" : "invitations"
+        }`
+  }`;
+}
+
+export function sampleHouseholdAccessSummary(
+  memberCount: number,
+  language: LanguageCode
+): string {
+  const members = familyMemberCount(memberCount, language);
   return language === "ar"
-    ? `${familyMemberCount(count, language)} · ${
-        CORE_JOURNEY_COPY.ar.vault.rolesInvitations
-      }`
-    : `${familyMemberCount(count, language)} · ${
-        CORE_JOURNEY_COPY.en.vault.rolesInvitations
-      }`;
+    ? `${members} · نموذج محلي غير مشترك`
+    : `${members} · local sample · not shared`;
 }
 
 export function pendingUpdateSummary(

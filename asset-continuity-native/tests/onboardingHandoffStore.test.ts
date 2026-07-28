@@ -3,6 +3,16 @@ import {
   type OnboardingHandoffStoreDriver
 } from "@/deviceAuth/onboardingHandoffStore";
 
+jest.mock("expo-crypto", () => {
+  let sequence = 0;
+  return {
+    randomUUID: jest.fn(
+      () =>
+        `00000000-0000-4000-8000-${String(++sequence).padStart(12, "0")}`
+    )
+  };
+});
+
 function memoryDriver(initial: string | null = null) {
   let value = initial;
   const driver: OnboardingHandoffStoreDriver = {
@@ -25,10 +35,26 @@ describe("subject-scoped onboarding handoff store", () => {
     const memory = memoryDriver();
     const store = createOnboardingHandoffStore(memory.driver);
 
-    await store.save("account-a:household-a", "place", 10_000);
+    await store.save(
+      "account-a:household-a",
+      "place",
+      10_000,
+      {
+        handoffId: "handoff-place",
+        recordId: "place-record"
+      }
+    );
     await expect(
       store.load("account-a:household-a")
     ).resolves.toBe("place");
+    await expect(
+      store.loadRecord("account-a:household-a")
+    ).resolves.toEqual({
+      handoffId: "handoff-place",
+      recordId: "place-record",
+      intent: "place",
+      createdAt: 10_000
+    });
     await store.clear("account-a:household-a");
     await expect(
       store.load("account-a:household-a")
@@ -52,6 +78,59 @@ describe("subject-scoped onboarding handoff store", () => {
     await expect(
       store.load("account-a:household-a")
     ).resolves.toBe("item");
+  });
+
+  it("restores the same reserved record identity after process restart", async () => {
+    const memory = memoryDriver();
+    const firstProcess = createOnboardingHandoffStore(memory.driver);
+    await firstProcess.save(
+      "account-a:household-a",
+      "item",
+      25_000,
+      {
+        handoffId: "handoff-restart",
+        recordId: "asset-restart"
+      }
+    );
+
+    const restartedProcess = createOnboardingHandoffStore(
+      memory.driver
+    );
+    await expect(
+      restartedProcess.loadRecord("account-a:household-a")
+    ).resolves.toEqual({
+      handoffId: "handoff-restart",
+      recordId: "asset-restart",
+      intent: "item",
+      createdAt: 25_000
+    });
+  });
+
+  it("does not let a stale acknowledgement erase a newer handoff", async () => {
+    const memory = memoryDriver();
+    const store = createOnboardingHandoffStore(memory.driver);
+    await store.save(
+      "account-a:household-a",
+      "item",
+      26_000,
+      {
+        handoffId: "handoff-new",
+        recordId: "asset-new"
+      }
+    );
+
+    await store.clear(
+      "account-a:household-a",
+      "handoff-old"
+    );
+
+    await expect(
+      store.loadRecord("account-a:household-a")
+    ).resolves.toMatchObject({
+      handoffId: "handoff-new",
+      recordId: "asset-new"
+    });
+    expect(memory.driver.remove).not.toHaveBeenCalled();
   });
 
   it("ignores malformed or unversioned records", async () => {

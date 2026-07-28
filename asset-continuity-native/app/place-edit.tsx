@@ -330,7 +330,7 @@ const styles = StyleSheet.create({
   kicker: {
     color: colors.textMuted,
     fontFamily: typography.bodyBold,
-    fontSize: 11,
+    fontSize: 12,
     lineHeight: 16,
     letterSpacing: 1.1
   },
@@ -352,7 +352,7 @@ const styles = StyleSheet.create({
   pinLabel: {
     color: colors.concrete,
     fontFamily: typography.bodyBold,
-    fontSize: 10,
+    fontSize: 12,
     lineHeight: 15,
     letterSpacing: 1
   },

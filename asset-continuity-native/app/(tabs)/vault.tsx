@@ -38,6 +38,14 @@ import {
   signedAccountIdentity
 } from "@/auth/signedAccountExit";
 import {
+  canExitSignedOutSample,
+  completeSignedOutSampleExit
+} from "@/auth/signedOutSampleExit";
+import {
+  authoritativeHouseholdAccessSnapshot,
+  verifiedHouseholdAccessForWorkspace
+} from "@/auth/verifiedHouseholdAccess";
+import {
   AppScreen,
   BodyText,
   CommandSurface,
@@ -54,11 +62,16 @@ import {
   householdAccessSummary,
   pendingUpdateSummary,
   proofFileSummary,
+  sampleHouseholdAccessSummary,
   signedAccountExitPrompt,
   useCoreJourneyCopy
 } from "@/i18n/coreJourneyCopy";
 import { useAccountDeletionCopy } from "@/i18n/accountDeletionCopy";
 import { useExportCopy } from "@/i18n/exportCopy";
+import type {
+  NativeEvidence,
+  NativePlaceDocument
+} from "@/domain/model";
 import {
   reviewReminderSettingsCopy,
   type ReviewReminderSettingsCopy
@@ -77,6 +90,25 @@ export function isCompactVaultActionWidth(width: number): boolean {
   return width <= 360;
 }
 
+export function localProofStorageSummary(
+  evidence: readonly NativeEvidence[],
+  placeDocuments: readonly NativePlaceDocument[]
+): {
+  readonly fileCount: number;
+  readonly byteSize: number;
+} {
+  const localRecords = [...evidence, ...placeDocuments].filter(
+    (record) => Boolean(record.localUri)
+  );
+  return {
+    fileCount: localRecords.length,
+    byteSize: localRecords.reduce(
+      (total, record) => total + record.byteSize,
+      0
+    )
+  };
+}
+
 export function VaultScreen({
   surface = "vault"
 }: {
@@ -84,7 +116,13 @@ export function VaultScreen({
 } = {}) {
   const router = useRouter();
   const { width } = useWindowDimensions();
-  const { busy: authBusy, mode, session, signOut } = useAuthFlow();
+  const {
+    busy: authBusy,
+    householdAccessSnapshot,
+    mode,
+    session,
+    signOut
+  } = useAuthFlow();
   const deviceAuth = useDeviceAuth();
   const {
     workspace,
@@ -95,7 +133,8 @@ export function VaultScreen({
     sync,
     syncNow,
     changeLanguage,
-    exportReadableSnapshot
+    exportReadableSnapshot,
+    resetSignedOutSampleVault
   } = useWorkspace();
   const { copy, language, rtl, setLanguage } = useCoreJourneyCopy();
   const { copy: accountCopy } = useAccountDeletionCopy();
@@ -106,6 +145,7 @@ export function VaultScreen({
   const canManageHousehold = can("household.manage");
   const recovery = useRecoveryJourney();
   const [showDiagnostics, setShowDiagnostics] = useState(false);
+  const [sampleExitBusy, setSampleExitBusy] = useState(false);
   if (!workspace) return null;
 
   const sampleActivationRoute = sampleActivationDestination({
@@ -114,21 +154,53 @@ export function VaultScreen({
     session,
     workspaceMode: workspace.mode
   });
+  const verifiedCloudAccess = verifiedHouseholdAccessForWorkspace(
+    mode,
+    session,
+    workspace.household.id
+  );
+  const authoritativeAccess = authoritativeHouseholdAccessSnapshot(
+    mode,
+    session,
+    householdAccessSnapshot,
+    workspace.household.id
+  );
+  const cloudExportActivationRoute =
+    mode === "supabase" && session === null
+      ? sampleActivationRoute
+      : null;
+  const cloudExportRoute = verifiedCloudAccess
+    ? "/export-create"
+    : cloudExportActivationRoute;
+  const householdAccessDescription = authoritativeAccess
+    ? householdAccessSummary(
+        authoritativeAccess.members.length,
+        authoritativeAccess.pendingInvites.length,
+        language
+      )
+    : workspace.mode === "sample" && session === null
+      ? sampleHouseholdAccessSummary(
+          workspace.members.length,
+          language
+        )
+      : copy.vault.householdAccessPending;
   const signedAccount = signedAccountIdentity(mode, session);
+  const signedOutSampleExitAvailable = canExitSignedOutSample({
+    mode,
+    session,
+    workspaceMode: workspace.mode
+  });
   const placeDocuments = workspace.placeDocuments ?? [];
-  const proofFileCount =
-    workspace.evidence.length + placeDocuments.length;
-  const localBytes =
-    workspace.evidence.reduce(
-      (total, item) => total + item.byteSize,
-      0
-    ) +
-    placeDocuments.reduce(
-      (total, document) => total + document.byteSize,
-      0
-    );
+  const {
+    fileCount: proofFileCount,
+    byteSize: localBytes
+  } = localProofStorageSummary(
+    workspace.evidence,
+    placeDocuments
+  );
 
   const shareSnapshot = async (): Promise<void> => {
+    let file: File | null = null;
     try {
       const snapshot = exportReadableSnapshot();
       if (!snapshot) {
@@ -141,7 +213,7 @@ export function VaultScreen({
         );
         return;
       }
-      const file = new File(
+      file = new File(
         Paths.cache,
         `alyr-readable-snapshot-${Date.now()}.json`
       );
@@ -163,6 +235,17 @@ export function VaultScreen({
           }
         ]
       );
+    } finally {
+      if (file?.exists) {
+        try {
+          file.delete();
+        } catch {
+          Alert.alert(
+            copy.vault.temporaryCopyCleanupTitle,
+            copy.vault.temporaryCopyCleanupBody
+          );
+        }
+      }
     }
   };
 
@@ -193,6 +276,51 @@ export function VaultScreen({
           text: copy.vault.signOut,
           style: "destructive",
           onPress: () => void completeAccountExit()
+        }
+      ]
+    );
+  };
+
+  const completeSampleExit = async () => {
+    setSampleExitBusy(true);
+    const result = await completeSignedOutSampleExit({
+      mode,
+      session,
+      workspaceMode: workspace.mode,
+      resetSampleVault: resetSignedOutSampleVault,
+      clearDeviceAuthorization:
+        deviceAuth.clearOnboardingAuthorization,
+      routeToWelcome: () => {
+        router.replace(AUTH_ROUTES.welcome);
+      }
+    });
+    if (result === "reset-failed") {
+      setSampleExitBusy(false);
+      Alert.alert(
+        copy.vault.exitSampleFailedTitle,
+        copy.vault.exitSampleFailedBody
+      );
+      return;
+    }
+    if (result === "not-signed-out-sample") {
+      setSampleExitBusy(false);
+    }
+  };
+
+  const confirmSampleExit = () => {
+    if (!signedOutSampleExitAvailable || sampleExitBusy) return;
+    const beginSampleExit = () => {
+      void completeSampleExit();
+    };
+    Alert.alert(
+      copy.vault.exitSampleConfirmTitle,
+      copy.vault.exitSampleConfirmBody,
+      [
+        { text: copy.vault.cancel, style: "cancel" },
+        {
+          text: copy.vault.exitSample,
+          style: "destructive",
+          onPress: beginSampleExit
         }
       ]
     );
@@ -406,14 +534,22 @@ export function VaultScreen({
           <>
             <StatusRow
               compact={compactActions}
-              description={exportCopy.vault.cloudExportMeta}
+              description={
+                verifiedCloudAccess
+                  ? exportCopy.vault.cloudExportMeta
+                  : exportCopy.vault.activateAccountMeta
+              }
               icon={CloudArrowDown}
               label={exportCopy.vault.cloudExport}
-              onPress={() => router.push("/export-create")}
+              {...(cloudExportRoute
+                ? { onPress: () => router.push(cloudExportRoute) }
+                : {})}
               status={
-                mode === "supabase"
+                verifiedCloudAccess
                   ? exportCopy.vault.open
-                  : exportCopy.vault.signedAccount
+                  : cloudExportActivationRoute
+                    ? exportCopy.vault.activateAccount
+                    : exportCopy.vault.signedAccount
               }
             />
             <Pressable
@@ -496,7 +632,7 @@ export function VaultScreen({
           icon={ShieldCheck}
           label={copy.vault.privacyNotice}
           onPress={() => router.push("/privacy-policy")}
-          status="v0.1"
+          status={copy.vault.documentCurrent}
         />
         <StatusRow
           compact={compactActions}
@@ -504,7 +640,7 @@ export function VaultScreen({
           icon={FileText}
           label={copy.vault.pilotTerms}
           onPress={() => router.push("/terms")}
-          status="v0.1"
+          status={copy.vault.documentCurrent}
         />
         <StatusRow
           compact={compactActions}
@@ -552,10 +688,7 @@ export function VaultScreen({
                 rtl && styles.rtlText
               ]}
             >
-              {householdAccessSummary(
-                workspace.members.length,
-                language
-              )}
+              {householdAccessDescription}
             </Text>
           </View>
           <ArrowRight
@@ -565,6 +698,43 @@ export function VaultScreen({
           />
         </Pressable>
       </Section>
+
+      {signedOutSampleExitAvailable ? (
+        <Section>
+          <Text
+            accessibilityRole="header"
+            style={[
+              styles.sectionTitle,
+              rtl && styles.arabicMedium,
+              rtl && styles.rtlText
+            ]}
+          >
+            {copy.vault.sampleWorkspace}
+          </Text>
+          <SecondaryButton
+            accessibilityHint={copy.vault.exitSampleHint}
+            destructive
+            disabled={sampleExitBusy}
+            icon={SignOut}
+            label={
+              sampleExitBusy
+                ? copy.vault.exitingSample
+                : copy.vault.exitSample
+            }
+            loading={sampleExitBusy}
+            onPress={confirmSampleExit}
+          />
+          <Text
+            style={[
+              styles.sectionMeta,
+              rtl && styles.arabic,
+              rtl && styles.rtlText
+            ]}
+          >
+            {copy.vault.exitSampleMeta}
+          </Text>
+        </Section>
+      ) : null}
 
       {signedAccount ? (
         <Section>

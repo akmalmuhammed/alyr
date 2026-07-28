@@ -1,6 +1,8 @@
 import * as SQLite from "expo-sqlite";
+import { validateAnalyticsEvent } from "@alyr/analytics";
 
 import type {
+  AnalyticsEvent,
   JsonObject,
   SecureKeyStore,
   SyncConflict,
@@ -24,6 +26,11 @@ import {
   type VaultScope,
   type VaultScopeId
 } from "./vaultScope";
+import {
+  ANALYTICS_QUEUE_CAPACITY,
+  type AnalyticsQueueStore,
+  type QueuedAnalyticsEvent
+} from "@/analytics/types";
 import { assertRecoveryRestoreCrashJournal } from "@/recovery/crashJournal";
 import type {
   RecoveryRestoreCrashJournal,
@@ -53,6 +60,18 @@ interface RecoveryRestoreJournalRow {
   readonly journal_json: string;
 }
 
+interface AnalyticsEventRow {
+  readonly idempotency_key: string;
+  readonly dedupe_key: string | null;
+  readonly event_json: string;
+  readonly created_at: string;
+  readonly attempt_count: number;
+}
+
+interface CountRow {
+  readonly count: number;
+}
+
 const RECOVERY_JOURNAL_PHASE_ORDER: Readonly<
   Record<RecoveryRestoreJournalPhase, number>
 > = {
@@ -66,7 +85,8 @@ function bytesToHex(bytes: Uint8Array): string {
   return [...bytes].map((byte) => byte.toString(16).padStart(2, "0")).join("");
 }
 
-export class SQLiteWorkspaceRepository implements NativeWorkspaceRepository {
+export class SQLiteWorkspaceRepository
+  implements NativeWorkspaceRepository, AnalyticsQueueStore {
   readonly kind = "sqlite-sqlcipher" as const;
   readonly durable = true;
   readonly encryptedAtRest = true;
@@ -152,6 +172,15 @@ export class SQLiteWorkspaceRepository implements NativeWorkspaceRepository {
           transaction_id TEXT NOT NULL UNIQUE,
           journal_json TEXT NOT NULL,
           updated_at TEXT NOT NULL
+        );
+        CREATE TABLE IF NOT EXISTS analytics_outbox (
+          idempotency_key TEXT PRIMARY KEY,
+          dedupe_key TEXT UNIQUE,
+          event_json TEXT NOT NULL,
+          created_at TEXT NOT NULL,
+          attempt_count INTEGER NOT NULL DEFAULT 0,
+          last_attempt_at TEXT,
+          acknowledged_at TEXT
         );
         INSERT OR IGNORE INTO workspace_snapshot
           (id, revision, snapshot_json, updated_at)
@@ -437,6 +466,146 @@ export class SQLiteWorkspaceRepository implements NativeWorkspaceRepository {
       "DELETE FROM sync_outbox WHERE operation_id = ?",
       operationId
     );
+  }
+
+  async enqueueAnalyticsEvent(
+    entry: Omit<QueuedAnalyticsEvent, "attemptCount">
+  ): Promise<"queued" | "duplicate"> {
+    const database = this.requireDatabase();
+    const errors = validateAnalyticsEvent(entry.event);
+    if (errors.length > 0) throw errors[0];
+    if (
+      !/^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/iu.test(
+        entry.idempotencyKey
+      ) ||
+      !Number.isFinite(Date.parse(entry.createdAt)) ||
+      (entry.dedupeKey !== null &&
+        !/^[a-z0-9][a-z0-9:_-]{0,79}$/u.test(entry.dedupeKey))
+    ) {
+      throw new Error("The analytics queue entry is invalid.");
+    }
+
+    let outcome: "queued" | "duplicate" = "duplicate";
+    await database.withExclusiveTransactionAsync(async (transaction) => {
+      const existing = await transaction.getFirstAsync<AnalyticsEventRow>(
+        `SELECT idempotency_key, dedupe_key, event_json, created_at,
+                attempt_count
+         FROM analytics_outbox
+         WHERE idempotency_key = ?
+            OR (? IS NOT NULL AND dedupe_key = ?)
+         LIMIT 1`,
+        entry.idempotencyKey,
+        entry.dedupeKey,
+        entry.dedupeKey
+      );
+      if (existing) {
+        if (
+          existing.idempotency_key === entry.idempotencyKey &&
+          (existing.dedupe_key !== entry.dedupeKey ||
+            existing.event_json !== JSON.stringify(entry.event))
+        ) {
+          throw new Error(
+            "The analytics idempotency key was reused for another event."
+          );
+        }
+        outcome = "duplicate";
+        return;
+      }
+      const count = await transaction.getFirstAsync<CountRow>(
+        `SELECT COUNT(*) AS count
+         FROM analytics_outbox
+         WHERE acknowledged_at IS NULL`
+      );
+      if ((count?.count ?? 0) >= ANALYTICS_QUEUE_CAPACITY) {
+        throw new Error(
+          "The encrypted analytics queue reached its bounded capacity."
+        );
+      }
+      await transaction.runAsync(
+        `INSERT INTO analytics_outbox
+         (idempotency_key, dedupe_key, event_json, created_at,
+          attempt_count, last_attempt_at, acknowledged_at)
+         VALUES (?, ?, ?, ?, 0, NULL, NULL)`,
+        entry.idempotencyKey,
+        entry.dedupeKey,
+        JSON.stringify(entry.event),
+        entry.createdAt
+      );
+      outcome = "queued";
+    });
+    return outcome;
+  }
+
+  async listPendingAnalyticsEvents(
+    limit: number
+  ): Promise<readonly QueuedAnalyticsEvent[]> {
+    const database = this.requireDatabase();
+    const rows = await database.getAllAsync<AnalyticsEventRow>(
+      `SELECT idempotency_key, dedupe_key, event_json, created_at,
+              attempt_count
+       FROM analytics_outbox
+       WHERE acknowledged_at IS NULL
+       ORDER BY created_at ASC, rowid ASC
+       LIMIT ?`,
+      Math.max(0, Math.min(ANALYTICS_QUEUE_CAPACITY, limit))
+    );
+    return rows.map((row) => {
+      const event = JSON.parse(row.event_json) as AnalyticsEvent;
+      const errors = validateAnalyticsEvent(event);
+      if (errors.length > 0) throw errors[0];
+      return {
+        idempotencyKey: row.idempotency_key,
+        dedupeKey: row.dedupe_key,
+        event,
+        createdAt: row.created_at,
+        attemptCount: row.attempt_count
+      };
+    });
+  }
+
+  async recordAnalyticsAttempt(
+    idempotencyKey: string,
+    attemptedAt: string
+  ): Promise<void> {
+    const database = this.requireDatabase();
+    await database.runAsync(
+      `UPDATE analytics_outbox
+       SET attempt_count = attempt_count + 1, last_attempt_at = ?
+       WHERE idempotency_key = ?`,
+      attemptedAt,
+      idempotencyKey
+    );
+  }
+
+  async acknowledgeAnalyticsEvent(
+    idempotencyKey: string
+  ): Promise<void> {
+    const database = this.requireDatabase();
+    await database.withExclusiveTransactionAsync(async (transaction) => {
+      const row = await transaction.getFirstAsync<{
+        readonly dedupe_key: string | null;
+      }>(
+        `SELECT dedupe_key
+         FROM analytics_outbox
+         WHERE idempotency_key = ?`,
+        idempotencyKey
+      );
+      if (!row) return;
+      if (row.dedupe_key === null) {
+        await transaction.runAsync(
+          "DELETE FROM analytics_outbox WHERE idempotency_key = ?",
+          idempotencyKey
+        );
+        return;
+      }
+      await transaction.runAsync(
+        `UPDATE analytics_outbox
+         SET acknowledged_at = ?
+         WHERE idempotency_key = ?`,
+        new Date().toISOString(),
+        idempotencyKey
+      );
+    });
   }
 
   async loadSyncState(): Promise<{

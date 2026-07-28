@@ -125,6 +125,284 @@ function hasOnlyKeys(
   return Object.keys(body).every((key) => allowed.has(key));
 }
 
+const analyticsCommonKeys = [
+  "schemaVersion",
+  "platform",
+  "appVersion",
+  "locale",
+  "occurredOffline",
+] as const;
+const analyticsSpecificKeys = {
+  pilot_invitation_accepted: ["invitationChannel"],
+  household_created: ["creationMode"],
+  first_asset_passport_created: ["captureSource", "elapsedTimeBand"],
+  asset_location_confirmed: ["locationPrecision", "hierarchyDepth"],
+  first_evidence_reviewed: ["evidenceKind", "hasOriginal"],
+  critical_register_25_completed: ["completionTimeBand"],
+  asset_retrieval_completed: ["resultEntityType", "retrievalSource"],
+  access_grant_created: ["role", "expiryBand"],
+  continuity_snapshot_exported: ["format", "assetCountBand", "redacted"],
+  household_returned_day_30_45: ["returnDayBand"],
+  reservation_paid: ["planCode", "currency", "amountBand"],
+  pilot_contract_signed: ["partnerType", "annualizedValueBand"],
+} as const;
+
+type ProductEventName = keyof typeof analyticsSpecificKeys;
+
+function isProductEventName(value: unknown): value is ProductEventName {
+  return (
+    typeof value === "string" &&
+    Object.hasOwn(analyticsSpecificKeys, value)
+  );
+}
+
+function oneOf(value: unknown, options: readonly unknown[]): boolean {
+  return options.includes(value);
+}
+
+function validProductEventProperties(
+  eventName: ProductEventName,
+  value: unknown,
+): value is Record<string, string | number | boolean | null> {
+  if (!value || typeof value !== "object" || Array.isArray(value)) {
+    return false;
+  }
+  const properties = value as Record<string, unknown>;
+  const allowedKeys = [
+    ...analyticsCommonKeys,
+    ...analyticsSpecificKeys[eventName],
+  ];
+  if (
+    !hasOnlyKeys(properties, allowedKeys) ||
+    allowedKeys.some((key) => !Object.hasOwn(properties, key)) ||
+    Object.values(properties).some((field) =>
+      field !== null &&
+      typeof field !== "string" &&
+      typeof field !== "number" &&
+      typeof field !== "boolean"
+    ) ||
+    properties.schemaVersion !== 1 ||
+    !oneOf(properties.platform, ["ios", "android", "web"]) ||
+    typeof properties.appVersion !== "string" ||
+    !/^[0-9A-Za-z][0-9A-Za-z.+_-]{0,39}$/u.test(properties.appVersion) ||
+    !oneOf(properties.locale, ["en", "ar"]) ||
+    typeof properties.occurredOffline !== "boolean"
+  ) {
+    return false;
+  }
+
+  switch (eventName) {
+    case "pilot_invitation_accepted":
+      return oneOf(properties.invitationChannel, [
+        "manual-code",
+        "deep-link",
+      ]);
+    case "household_created":
+      return oneOf(properties.creationMode, ["sample", "personal"]);
+    case "first_asset_passport_created":
+      return (
+        oneOf(properties.captureSource, [
+          "camera",
+          "image-library",
+          "document-import",
+          "manual",
+        ]) &&
+        oneOf(properties.elapsedTimeBand, [
+          "under-2-minutes",
+          "under-5-minutes",
+          "5-10-minutes",
+          "over-10-minutes",
+        ])
+      );
+    case "asset_location_confirmed":
+      return (
+        oneOf(properties.locationPrecision, [
+          "exact",
+          "user_placed",
+          "approximate",
+          "locality_only",
+          "unknown",
+        ]) &&
+        typeof properties.hierarchyDepth === "number" &&
+        Number.isInteger(properties.hierarchyDepth) &&
+        properties.hierarchyDepth >= 0 &&
+        properties.hierarchyDepth <= 4
+      );
+    case "first_evidence_reviewed":
+      return (
+        oneOf(properties.evidenceKind, [
+          "paper",
+          "artifact",
+          "media",
+          "record",
+          "note",
+          "link",
+        ]) &&
+        typeof properties.hasOriginal === "boolean"
+      );
+    case "critical_register_25_completed":
+      return oneOf(properties.completionTimeBand, [
+        "same-day",
+        "2-7-days",
+        "8-30-days",
+        "over-30-days",
+      ]);
+    case "asset_retrieval_completed":
+      return (
+        oneOf(properties.resultEntityType, [
+          "asset",
+          "place",
+          "space",
+          "evidence",
+          "member",
+        ]) &&
+        oneOf(properties.retrievalSource, [
+          "search",
+          "asset-list",
+          "place-view",
+          "deep-link",
+        ])
+      );
+    case "access_grant_created":
+      return (
+        oneOf(properties.role, ["owner", "editor", "viewer"]) &&
+        oneOf(properties.expiryBand, [
+          "24-hours",
+          "7-days",
+          "30-days",
+          "no-expiry",
+        ])
+      );
+    case "continuity_snapshot_exported":
+      return (
+        oneOf(properties.format, ["pdf", "json-manifest"]) &&
+        oneOf(properties.assetCountBand, [
+          "1-5",
+          "6-24",
+          "25-49",
+          "50-plus",
+        ]) &&
+        typeof properties.redacted === "boolean"
+      );
+    case "household_returned_day_30_45":
+      return oneOf(properties.returnDayBand, [
+        "30-34",
+        "35-39",
+        "40-45",
+      ]);
+    case "reservation_paid":
+      return (
+        oneOf(properties.planCode, [
+          "pilot-household",
+          "pilot-partner",
+        ]) &&
+        typeof properties.currency === "string" &&
+        /^[A-Z]{3}$/u.test(properties.currency) &&
+        oneOf(properties.amountBand, [
+          "under-100",
+          "100-499",
+          "500-4999",
+          "5000-plus",
+        ])
+      );
+    case "pilot_contract_signed":
+      return (
+        oneOf(properties.partnerType, [
+          "broker",
+          "insurer",
+          "adviser",
+          "family-office",
+          "estate-professional",
+          "residence-manager",
+          "other",
+        ]) &&
+        oneOf(properties.annualizedValueBand, [
+          "under-5000",
+          "5000-9999",
+          "10000-24999",
+          "25000-plus",
+        ])
+      );
+  }
+}
+
+async function handleProductEvent(
+  request: Request,
+  context: AuthenticatedContext,
+): Promise<Response> {
+  const body = await readJson(request);
+  requireApiVersion(body);
+  const householdId = body.householdId;
+  const idempotencyKey = body.idempotencyKey;
+  const eventName = body.eventName;
+  if (
+    !hasOnlyKeys(body, [
+      "apiVersion",
+      "householdId",
+      "idempotencyKey",
+      "eventName",
+      "properties",
+    ]) ||
+    typeof householdId !== "string" ||
+    !uuidPattern.test(householdId) ||
+    typeof idempotencyKey !== "string" ||
+    !uuidPattern.test(idempotencyKey) ||
+    !isProductEventName(eventName) ||
+    !validProductEventProperties(eventName, body.properties)
+  ) {
+    return apiError(
+      "VALIDATION_FAILED",
+      "The product event did not match the privacy-safe contract.",
+      400,
+    );
+  }
+
+  const { error } = await context.client.rpc("record_product_event", {
+    p_event_name: eventName,
+    p_household_id: householdId,
+    p_properties: body.properties,
+    p_client_event_id: idempotencyKey,
+  });
+  if (error) {
+    const permissionDenied = error.message.includes("PERMISSION_DENIED");
+    const idempotencyConflict = error.message.includes(
+      "ANALYTICS_IDEMPOTENCY_CONFLICT",
+    );
+    const retryable = error.message.includes(
+      "ANALYTICS_ACKNOWLEDGEMENT_UNAVAILABLE",
+    );
+    return apiError(
+      permissionDenied
+        ? "AUTHORIZATION_DENIED"
+        : idempotencyConflict
+        ? "IDEMPOTENCY_CONFLICT"
+        : retryable
+        ? "STORAGE_UNAVAILABLE"
+        : "VALIDATION_FAILED",
+      permissionDenied
+        ? "The active account cannot record events for this household."
+        : idempotencyConflict
+        ? "This product event key was already used for another event."
+        : retryable
+        ? "The product event acknowledgement is temporarily unavailable."
+        : "The product event did not match the privacy-safe contract.",
+      permissionDenied
+        ? 403
+        : idempotencyConflict
+        ? 409
+        : retryable
+        ? 503
+        : 400,
+      retryable,
+    );
+  }
+  return json({
+    apiVersion: 1,
+    accepted: true,
+    idempotencyKey,
+  }, 202);
+}
+
 async function handlePilotPreflight(request: Request): Promise<Response> {
   if (!supabaseUrl || !supabaseServiceRoleKey) {
     return apiError(
@@ -1956,6 +2234,9 @@ Deno.serve(async (request) => {
     const context = await authenticate(request);
     if (context instanceof Response) return context;
 
+    if (request.method === "POST" && path === "/product-events") {
+      return await handleProductEvent(request, context);
+    }
     if (request.method === "POST" && path === "/households") {
       return await handleHouseholdCreate(request, context);
     }

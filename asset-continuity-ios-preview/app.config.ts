@@ -17,7 +17,7 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
     backgroundColor: "#F6F7F3"
   },
   ios: {
-    supportsTablet: true
+    supportsTablet: false
   },
   android: {
     edgeToEdgeEnabled: true,

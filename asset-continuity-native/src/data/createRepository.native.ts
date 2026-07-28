@@ -19,9 +19,12 @@ export async function createDefaultRepository(
   }
   if (isDevicePreviewVaultScope(scope)) {
     throw new Error(
-      "A verified account and household scope are required before opening a signed local vault."
+      "A signed local vault requires either the isolated sample scope or a verified account and household scope."
     );
   }
+  // Both the signed-out sample and authenticated household layouts are
+  // explicit, encrypted scopes. The legacy device-preview layout remains
+  // blocked here so a signed build never opens it as a plaintext fallback.
   const repository = new SQLiteWorkspaceRepository(
     new ExpoSecureKeyStore(),
     scope

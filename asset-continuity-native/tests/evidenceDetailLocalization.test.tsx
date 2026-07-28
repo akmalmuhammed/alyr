@@ -12,6 +12,7 @@ import EvidenceDetailScreen, {
   evidenceDateLabel,
   evidenceFileSize,
   evidenceKindLabel,
+  evidenceRepairHref,
   evidenceRelationLabel,
   evidenceStorageLabel,
   isolateEvidenceIdentifier
@@ -42,6 +43,7 @@ let mockStackOptions: {
 const mockRouter = {
   back: jest.fn(),
   canGoBack: jest.fn(() => false),
+  push: jest.fn(),
   replace: jest.fn()
 };
 
@@ -170,6 +172,10 @@ describe("Evidence detail localization", () => {
     );
     expect(evidenceBackHref("asset / one")).toBe("/asset/asset%20%2F%20one");
     expect(evidenceBackHref(null)).toBe("/vault");
+    expect(evidenceRepairHref("asset / one")).toBe(
+      "/asset-edit?assetId=asset%20%2F%20one&focus=evidence"
+    );
+    expect(evidenceRepairHref(null)).toBe("/vault");
   });
 
   it("isolates user and technical identifiers in Arabic", () => {
@@ -255,6 +261,40 @@ describe("Evidence detail localization", () => {
     expect(
       viewer.queryByRole("button", {
         name: EVIDENCE_DETAIL_COPY.ar.markReviewed
+      })
+    ).toBeNull();
+  });
+
+  it("offers an exact replacement-proof action when a personal original is missing", async () => {
+    mockWorkspace = {
+      ...sample,
+      mode: "personal",
+      evidence: sample.evidence.map((item) =>
+        item.id === evidence.id
+          ? { ...evidence, localUri: null, storageState: "synced" }
+          : item
+      )
+    };
+    const screen = await render(<EvidenceDetailScreen />, {
+      wrapper: localeWrapper("en")
+    });
+
+    const action = screen.getByRole("button", {
+      name: EVIDENCE_DETAIL_COPY.en.addReplacementProof
+    });
+    await fireEvent.press(action);
+
+    expect(mockRouter.push).toHaveBeenCalledWith(
+      evidenceRepairHref(evidence.assetId)
+    );
+
+    mockCanReview = false;
+    const viewer = await render(<EvidenceDetailScreen />, {
+      wrapper: localeWrapper("en")
+    });
+    expect(
+      viewer.queryByRole("button", {
+        name: EVIDENCE_DETAIL_COPY.en.addReplacementProof
       })
     ).toBeNull();
   });

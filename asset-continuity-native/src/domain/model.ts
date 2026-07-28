@@ -335,6 +335,17 @@ export interface CapturedFile {
 }
 
 export interface NewAssetInput {
+  /** Stable identity reserved by a durable onboarding handoff. */
+  readonly recordId?: string;
+  /**
+   * Privacy-safe acquisition channel used only for aggregate activation
+   * analytics. It never contains a URI, filename, identifier, or free text.
+   */
+  readonly captureSource?:
+    | "camera"
+    | "image-library"
+    | "document-import"
+    | "manual";
   readonly name: string;
   readonly categoryId: string;
   readonly categoryLabel: string;
@@ -393,6 +404,8 @@ export interface PlacePinInput {
 }
 
 export interface NewPlaceInput {
+  /** Stable identity reserved by a durable onboarding handoff. */
+  readonly recordId?: string;
   readonly name: string;
   /**
    * Optional only for backward-compatible callers. New UI always supplies an

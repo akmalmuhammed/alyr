@@ -1,3 +1,4 @@
+import type { ContractError } from "@alyr/contracts";
 import { useRouter } from "expo-router";
 import {
   ArrowClockwise,
@@ -6,10 +7,14 @@ import {
   Clock,
   Plus,
   ShieldCheck,
-  UsersThree
+  UsersThree,
+  WarningCircle
 } from "phosphor-react-native";
+import { useEffect } from "react";
 import {
+  AccessibilityInfo,
   ActivityIndicator,
+  Platform,
   Pressable,
   StyleSheet,
   Text,
@@ -19,20 +24,27 @@ import {
 import { useAuthFlow } from "@/auth/AuthFlowProvider";
 import { HOUSEHOLD_ROUTES } from "@/auth/routes";
 import {
+  authoritativeHouseholdAccessSnapshot,
+  verifiedHouseholdAccessForWorkspace
+} from "@/auth/verifiedHouseholdAccess";
+import {
   AppScreen,
   BodyText,
   CommandSurface,
   PrimaryButton,
   ScreenTitle,
+  SecondaryButton,
   Section
 } from "@/components/ui";
 import {
   familyMemberSummary,
+  householdAccessSummary,
   memberAvatarAccessibilityLabel,
   useCoreJourneyCopy
 } from "@/i18n/coreJourneyCopy";
 import { useInviteCopy } from "@/i18n/inviteCopy";
 import {
+  householdAccessErrorMessage,
   useHouseholdAdminCopy
 } from "@/i18n/householdAdminCopy";
 import { useWorkspace } from "@/state/WorkspaceProvider";
@@ -54,11 +66,23 @@ export default function FamilyScreen() {
   const adminCopy = useHouseholdAdminCopy();
   if (!workspace) return null;
 
+  const verifiedCloudAccess = verifiedHouseholdAccessForWorkspace(
+    mode,
+    session,
+    workspace.household.id
+  );
+  const cloudRoster = authoritativeHouseholdAccessSnapshot(
+    mode,
+    session,
+    householdAccessSnapshot,
+    workspace.household.id
+  );
+  const usesCloudRoster = verifiedCloudAccess !== null;
   const signedRosterUnavailable =
-    mode === "supabase" && !householdAccessSnapshot;
+    usesCloudRoster && !cloudRoster;
   const visibleMembers =
-    mode === "supabase"
-      ? householdAccessSnapshot?.members.map((member) => ({
+    usesCloudRoster
+      ? cloudRoster?.members.map((member) => ({
           id: member.membershipId,
           name: member.displayName,
           initials: member.displayName
@@ -90,17 +114,17 @@ export default function FamilyScreen() {
     (member) => member.status === "active"
   ).length;
   const pendingInvites =
-    mode === "supabase"
-      ? householdAccessSnapshot?.pendingInvites ?? []
+    usesCloudRoster
+      ? cloudRoster?.pendingInvites ?? []
       : [];
   const ownerCanInvite =
     mode === "preview"
       ? session?.activeHouseholdRole === "owner" &&
         Boolean(session.activeMembershipId)
-      : householdAccessSnapshot?.currentRole === "owner";
+      : cloudRoster?.currentRole === "owner";
   const ownerCanManage =
-    mode === "supabase" &&
-    householdAccessSnapshot?.currentRole === "owner";
+    usesCloudRoster &&
+    cloudRoster?.currentRole === "owner";
   const roleCopy = {
     owner: {
       label: copy.family.owner,
@@ -145,7 +169,7 @@ export default function FamilyScreen() {
             >
               {signedRosterUnavailable
                 ? copy.family.householdEyebrow
-                : householdAccessSnapshot?.householdName ??
+                : cloudRoster?.householdName ??
                   workspace.household.name}
             </Text>
           </View>
@@ -161,42 +185,26 @@ export default function FamilyScreen() {
             ? householdAccessStatus === "refreshing"
               ? adminCopy.refreshing
               : adminCopy.refreshFailedTitle
-            : familyMemberSummary(
-                visibleMembers.length + pendingInvites.length,
-                activeCount,
-                language
-              )}
+            : usesCloudRoster
+              ? householdAccessSummary(
+                  visibleMembers.length,
+                  pendingInvites.length,
+                  language
+                )
+              : familyMemberSummary(
+                  visibleMembers.length,
+                  activeCount,
+                  language
+                )}
         </Text>
       </CommandSurface>
 
-      {mode === "supabase" ? (
-        <Section style={styles.refreshSection}>
-          <View style={[styles.refreshRow, rtl && styles.rowReverse]}>
-            {householdAccessStatus === "refreshing" ? (
-              <ActivityIndicator color={colors.action} size="small" />
-            ) : (
-              <ShieldCheck color={colors.success} size={22} />
-            )}
-            <BodyText muted>
-              {householdAccessStatus === "ready"
-                ? adminCopy.refreshed
-                : householdAccessError?.message ??
-                  adminCopy.refreshFailedBody}
-            </BodyText>
-          </View>
-          <PrimaryButton
-            accessibilityHint={adminCopy.refreshFailedBody}
-            disabled={householdAccessStatus === "refreshing"}
-            icon={ArrowClockwise}
-            label={
-              householdAccessStatus === "refreshing"
-                ? adminCopy.refreshing
-                : adminCopy.refresh
-            }
-            loading={householdAccessStatus === "refreshing"}
-            onPress={() => void refreshHouseholdAccess()}
-          />
-        </Section>
+      {usesCloudRoster ? (
+        <HouseholdRosterStatus
+          error={householdAccessError}
+          onRefresh={() => void refreshHouseholdAccess()}
+          status={householdAccessStatus}
+        />
       ) : null}
 
       <Section style={styles.inviteSection}>
@@ -410,7 +418,7 @@ export default function FamilyScreen() {
         </Section>
       ) : null}
 
-      {mode === "preview" ? (
+      {!usesCloudRoster && workspace.mode === "sample" ? (
         <View style={[styles.notice, rtl && styles.rowReverse]}>
           <ShieldCheck color={colors.text} size={23} weight="regular" />
           <View style={styles.noticeCopy}>
@@ -428,6 +436,119 @@ export default function FamilyScreen() {
         </View>
       ) : null}
     </AppScreen>
+  );
+}
+
+export type HouseholdRosterStatusKind =
+  | "idle"
+  | "refreshing"
+  | "ready"
+  | "error";
+
+export function HouseholdRosterStatus({
+  error,
+  onRefresh,
+  status
+}: {
+  readonly error: ContractError | null;
+  readonly onRefresh: () => void;
+  readonly status: HouseholdRosterStatusKind;
+}) {
+  const { language, rtl } = useCoreJourneyCopy();
+  const copy = useHouseholdAdminCopy();
+  const message =
+    status === "ready"
+      ? copy.refreshed
+      : status === "refreshing"
+        ? copy.refreshing
+        : status === "error"
+          ? householdAccessErrorMessage(error, language)
+          : copy.refreshIdle;
+  const refreshing = status === "refreshing";
+  const failed = status === "error";
+
+  useEffect(() => {
+    if (Platform.OS === "ios" && status !== "idle") {
+      AccessibilityInfo.announceForAccessibility(message);
+    }
+  }, [message, status]);
+
+  return (
+    <Section style={styles.refreshSection}>
+      <View
+        accessible
+        accessibilityLabel={message}
+        accessibilityLiveRegion="polite"
+        accessibilityRole={
+          refreshing ? "progressbar" : failed ? "alert" : "summary"
+        }
+        accessibilityState={{ busy: refreshing }}
+        style={[
+          styles.refreshRow,
+          failed && styles.refreshRowWarning,
+          rtl && styles.rowReverse
+        ]}
+        testID="family-access-status"
+      >
+        <View
+          accessible={false}
+          importantForAccessibility="no-hide-descendants"
+          style={styles.statusIcon}
+          testID={
+            status === "ready"
+              ? "family-access-ready-icon"
+              : refreshing
+                ? "family-access-progress-icon"
+                : failed
+                  ? "family-access-warning-icon"
+                  : "family-access-idle-icon"
+          }
+        >
+          {status === "ready" ? (
+            <ShieldCheck color={colors.success} size={22} />
+          ) : refreshing ? (
+            <ActivityIndicator color={colors.action} size="small" />
+          ) : failed ? (
+            <WarningCircle
+              color={colors.warning}
+              size={22}
+              weight="fill"
+            />
+          ) : (
+            <ArrowClockwise color={colors.textMuted} size={22} />
+          )}
+        </View>
+        <Text
+          accessible={false}
+          importantForAccessibility="no"
+          style={[
+            styles.refreshText,
+            failed && styles.refreshTextWarning,
+            rtl && styles.arabic,
+            rtl && styles.rtlText
+          ]}
+        >
+          {message}
+        </Text>
+      </View>
+      {failed ? (
+        <PrimaryButton
+          accessibilityHint={message}
+          icon={ArrowClockwise}
+          label={copy.refresh}
+          onPress={onRefresh}
+        />
+      ) : (
+        <SecondaryButton
+          accessibilityHint={copy.refreshHint}
+          disabled={refreshing}
+          icon={ArrowClockwise}
+          label={refreshing ? copy.refreshing : copy.refresh}
+          loading={refreshing}
+          onPress={onRefresh}
+        />
+      )}
+    </Section>
   );
 }
 
@@ -451,7 +572,7 @@ const styles = StyleSheet.create({
   commandLabel: {
     color: colors.concrete,
     fontFamily: typography.bodyBold,
-    fontSize: 11,
+    fontSize: 12,
     lineHeight: 15,
     letterSpacing: 1
   },
@@ -484,6 +605,30 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     gap: spacing.sm
+  },
+  refreshRowWarning: {
+    paddingHorizontal: spacing.sm,
+    paddingVertical: spacing.xs,
+    borderWidth: 1,
+    borderColor: colors.warningBorder,
+    borderRadius: radius.sm,
+    backgroundColor: colors.warningQuiet
+  },
+  refreshText: {
+    flex: 1,
+    color: colors.textMuted,
+    fontFamily: typography.body,
+    fontSize: 14,
+    lineHeight: 20
+  },
+  refreshTextWarning: {
+    color: colors.warning
+  },
+  statusIcon: {
+    width: 24,
+    minHeight: 24,
+    alignItems: "center",
+    justifyContent: "center"
   },
   memberRow: {
     minHeight: 84,

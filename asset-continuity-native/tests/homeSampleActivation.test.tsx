@@ -91,7 +91,9 @@ jest.mock("react-native-safe-area-context", () => {
   };
 });
 
-import HomeScreen from "../app/(tabs)/index";
+import HomeScreen, {
+  shouldPromoteSyncTruth
+} from "../app/(tabs)/index";
 
 describe("Today sample activation", () => {
   beforeEach(() => {
@@ -133,5 +135,56 @@ describe("Today sample activation", () => {
     );
 
     expect(mockRouter.push).toHaveBeenCalledWith("/personal-start");
+  });
+
+  it("promotes only conflicts and concrete sync errors above the next action", () => {
+    const quiet = {
+      conflicts: [],
+      lastError: null,
+      status: "idle" as const
+    };
+
+    expect(shouldPromoteSyncTruth(quiet)).toBe(false);
+    expect(
+      shouldPromoteSyncTruth({
+        ...quiet,
+        status: "local-only"
+      })
+    ).toBe(false);
+    expect(
+      shouldPromoteSyncTruth({
+        ...quiet,
+        status: "syncing"
+      })
+    ).toBe(false);
+    expect(
+      shouldPromoteSyncTruth({
+        ...quiet,
+        status: "offline"
+      })
+    ).toBe(false);
+    expect(
+      shouldPromoteSyncTruth({
+        ...quiet,
+        status: "needs-attention"
+      })
+    ).toBe(true);
+    expect(
+      shouldPromoteSyncTruth({
+        ...quiet,
+        conflicts: [{} as never]
+      })
+    ).toBe(true);
+    expect(
+      shouldPromoteSyncTruth({
+        ...quiet,
+        lastError: {
+          errorVersion: 1,
+          code: "OFFLINE",
+          message: "The cloud could not be reached.",
+          retryable: true
+        }
+      })
+    ).toBe(true);
   });
 });

@@ -35,6 +35,25 @@ describe("Vault user-flow contract", () => {
     );
   });
 
+  it("removes the plaintext readable export from cache after sharing", () => {
+    const { readFileSync } = jest.requireActual("fs") as {
+      readFileSync(path: string, encoding: "utf8"): string;
+    };
+    const source = readFileSync(
+      `${process.cwd()}/app/(tabs)/vault.tsx`,
+      "utf8"
+    );
+    const share = source.indexOf("await Sharing.shareAsync(file.uri");
+    const cleanup = source.indexOf("file.delete()", share);
+
+    expect(share).toBeGreaterThan(-1);
+    expect(source).toContain("} finally {");
+    expect(cleanup).toBeGreaterThan(share);
+    expect(source).toContain(
+      "copy.vault.temporaryCopyCleanupTitle"
+    );
+  });
+
   it("separates signed account deletion from truthful preview reset", () => {
     const { readFileSync } = jest.requireActual("fs") as {
       readFileSync(path: string, encoding: "utf8"): string;

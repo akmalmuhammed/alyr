@@ -28,7 +28,7 @@ import {
   ArrowRight,
   WarningCircle
 } from "phosphor-react-native";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import {
   AccessibilityInfo,
   Platform,
@@ -284,6 +284,9 @@ function SignedWorkspaceBoundary() {
 
 function RootNavigator() {
   const router = useRouter();
+  const deliveredFirstRecordHandoffRef = useRef<string | null>(
+    null
+  );
   const { bootstrapState, mode, session } = useAuthFlow();
   const deviceAuth = useDeviceAuth();
   const { workspace } = useWorkspace();
@@ -319,6 +322,8 @@ function RootNavigator() {
     (mode === "preview" || signedSessionReady);
   const pendingFirstRecordIntent =
     deviceAuth.pendingFirstRecordIntent;
+  const pendingFirstRecordHandoff =
+    deviceAuth.pendingFirstRecordHandoff;
   const firstRecordHandoffDestination =
     resolveFirstRecordHandoff({
       dataRoutesReady,
@@ -330,17 +335,26 @@ function RootNavigator() {
   useEffect(() => {
     if (
       !firstRecordHandoffDestination ||
-      !pendingFirstRecordIntent
+      !pendingFirstRecordIntent ||
+      !pendingFirstRecordHandoff ||
+      deliveredFirstRecordHandoffRef.current ===
+        pendingFirstRecordHandoff.handoffId
     ) {
       return;
     }
-    router.replace(firstRecordHandoffDestination);
-    void deviceAuth
-      .completeOnboardingHandoff(pendingFirstRecordIntent)
-      .catch(() => undefined);
+    deliveredFirstRecordHandoffRef.current =
+      pendingFirstRecordHandoff.handoffId;
+    const separator = firstRecordHandoffDestination.includes("?")
+      ? "&"
+      : "?";
+    router.replace(
+      `${firstRecordHandoffDestination}${separator}handoffId=${encodeURIComponent(
+        pendingFirstRecordHandoff.handoffId
+      )}`
+    );
   }, [
-    deviceAuth.completeOnboardingHandoff,
     firstRecordHandoffDestination,
+    pendingFirstRecordHandoff,
     pendingFirstRecordIntent,
     router
   ]);

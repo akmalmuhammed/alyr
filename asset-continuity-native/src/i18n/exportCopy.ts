@@ -13,7 +13,10 @@ const english = {
     localExport: "Export this device’s readable copy",
     localExportMeta: "Current device metadata · not encrypted",
     open: "Open",
-    signedAccount: "Signed account"
+    signedAccount: "Signed account",
+    activateAccount: "Create account",
+    activateAccountMeta:
+      "Create a verified account and private household to enable cloud exports"
   },
   screen: {
     eyebrow: "DATA PORTABILITY",
@@ -43,6 +46,10 @@ const english = {
     pendingBody:
       "This device has changes waiting for cloud confirmation. Sync them first so the cloud snapshot is current.",
     syncNow: "Sync now",
+    conflictTitle: "Resolve conflicts before exporting",
+    conflictBody:
+      "This device and the cloud disagree about one or more records. Review each conflict before creating a point-in-time export.",
+    reviewConflicts: "Review conflicts",
     create: "Create export",
     creating: "Creating verified export…",
     readyTitle: "Export ready",
@@ -51,9 +58,12 @@ const english = {
     share: "Share export",
     createAnother: "Create another",
     expires: (date: string) => `Available until ${date}`,
-    previewTitle: "Cloud export needs a signed account",
+    previewTitle: "Activate cloud continuity",
     previewBody:
-      "Use the readable device copy in Vault during this Expo Go test. Cloud verification activates in the signed app.",
+      "Cloud exports start after a verified account and active private household are ready. This sample stays isolated on this device.",
+    activateAccount: "Create my account",
+    activateAccountHint:
+      "Starts account setup without moving records from this sample",
     backToVault: "Back to Vault",
     shareUnavailableTitle: "Sharing is not available",
     shareUnavailableBody:
@@ -88,7 +98,10 @@ const arabic = {
     localExport: "تصدير نسخة مقروءة من هذا الجهاز",
     localExportMeta: "بيانات الجهاز الحالي · غير مشفّرة",
     open: "فتح",
-    signedAccount: "حساب مسجّل"
+    signedAccount: "حساب مسجّل",
+    activateAccount: "إنشاء حساب",
+    activateAccountMeta:
+      "أنشئ حسابًا موثّقًا ومنزلًا خاصًا لتفعيل التصدير السحابي"
   },
   screen: {
     eyebrow: "نقل البيانات",
@@ -118,6 +131,10 @@ const arabic = {
     pendingBody:
       "على هذا الجهاز تغييرات تنتظر تأكيد السحابة. زامنها أولًا ليعكس التصدير أحدث سجل.",
     syncNow: "المزامنة الآن",
+    conflictTitle: "حلّ التعارضات قبل التصدير",
+    conflictBody:
+      "يختلف سجل هذا الجهاز عن السحابة في سجل واحد أو أكثر. راجع كل تعارض قبل إنشاء التصدير المؤرخ.",
+    reviewConflicts: "مراجعة التعارضات",
     create: "إنشاء التصدير",
     creating: "جارٍ إنشاء تصدير موثّق…",
     readyTitle: "التصدير جاهز",
@@ -126,9 +143,12 @@ const arabic = {
     share: "مشاركة التصدير",
     createAnother: "إنشاء تصدير آخر",
     expires: (date: string) => `متاح حتى ${date}`,
-    previewTitle: "يتطلب التصدير السحابي حسابًا مسجّلًا",
+    previewTitle: "فعّل الاستمرارية السحابية",
     previewBody:
-      "استخدم النسخة المقروءة من الجهاز في الخزنة خلال اختبار Expo Go. يتفعّل التحقق السحابي في التطبيق الموقّع.",
+      "يبدأ التصدير السحابي بعد توثيق الحساب وتجهيز منزل خاص ونشط. يبقى هذا النموذج معزولًا على هذا الجهاز.",
+    activateAccount: "إنشاء حسابي",
+    activateAccountHint:
+      "يبدأ إعداد الحساب من دون نقل سجلات هذا النموذج",
     backToVault: "العودة إلى الخزنة",
     shareUnavailableTitle: "المشاركة غير متاحة",
     shareUnavailableBody:

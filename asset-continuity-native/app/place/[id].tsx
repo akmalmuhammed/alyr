@@ -1036,7 +1036,11 @@ export default function PlaceScreen() {
               asset={asset}
               evidence={workspace.evidence}
               key={asset.id}
-              onPress={() => router.push(`/asset/${asset.id}`)}
+              onPress={() =>
+                router.push(
+                  `/asset/${asset.id}?retrievalSource=place-view`
+                )
+              }
               places={workspace.places}
             />
           ))
@@ -1204,7 +1208,7 @@ const styles = StyleSheet.create({
   valueEyebrow: {
     color: colors.text,
     fontFamily: typography.bodyBold,
-    fontSize: 11,
+    fontSize: 12,
     lineHeight: 16,
     letterSpacing: 1.1
   },
@@ -1248,7 +1252,7 @@ const styles = StyleSheet.create({
   mapCaptionLabel: {
     color: colors.concrete,
     fontFamily: typography.bodyBold,
-    fontSize: 11,
+    fontSize: 12,
     lineHeight: 15,
     letterSpacing: 1
   },

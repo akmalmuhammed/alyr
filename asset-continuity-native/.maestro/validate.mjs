@@ -90,6 +90,7 @@ const allSources = [
   "app/liability/[id].tsx",
   "app/liability-balance.tsx",
   "src/state/SessionBoundWorkspaceProvider.tsx",
+  "src/state/WorkspaceProvider.tsx",
   "src/components/PortfolioDashboard/index.tsx",
   "app/atlas.tsx"
 ].map(readNativeSource).join("\n");
@@ -137,9 +138,12 @@ if (!allSources.includes("testID={`capture-step-${step}`}")) {
   failures.push("Native selector contract is missing dynamic capture step IDs.");
 }
 for (const contract of [
-  '(mode === "supabase" && session === null)',
+  'profile === "native-secure"',
+  'kind: "signed-sample"',
+  'mode === "unavailable"',
   "signedOutSampleWorkspaceReady(",
-  'workspaceMode === "sample"'
+  'workspaceMode === "sample"',
+  "SIGNED_OUT_SAMPLE_VAULT_SCOPE"
 ]) {
   if (!allSources.includes(contract)) {
     failures.push(`Signed-out sample runtime contract is missing: ${contract}`);

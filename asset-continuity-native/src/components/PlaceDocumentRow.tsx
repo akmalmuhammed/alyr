@@ -423,7 +423,7 @@ const styles = StyleSheet.create({
   state: {
     color: colors.textMuted,
     fontFamily: typography.bodyMedium,
-    fontSize: 11,
+    fontSize: 12,
     lineHeight: 16
   },
   openAction: {
