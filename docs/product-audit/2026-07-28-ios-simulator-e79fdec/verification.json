@@ -1,0 +1,273 @@
+{
+  "build": {
+    "id": "71351749-9f72-42ba-86d2-e2b4156827f0",
+    "status": "FINISHED",
+    "platform": "IOS",
+    "distribution": "INTERNAL",
+    "buildProfile": "development-simulator",
+    "channel": "development",
+    "sdkVersion": "57.0.0",
+    "appVersion": "0.1.0",
+    "appBuildVersion": "1",
+    "runtimeVersion": "0.1.0",
+    "gitCommitHash": "e79fdec052d85354c83910d61b64d30e14802230",
+    "gitCommitMessage": "docs: refresh iPhone preview handoff",
+    "createdAt": "2026-07-28T12:24:28.519Z",
+    "completedAt": "2026-07-28T12:32:42.005Z",
+    "expirationDate": "2026-08-11T12:24:28.578Z",
+    "isForIosSimulator": true
+  },
+  "canonicalSourceCommit": "691e4e6d97842927985e0cd4f01ee085cf3805a0",
+  "commitRelation": "e79fdec is the direct child of 691e4e6; its diff contains release documentation/audit artifacts only and no executable app source changes.",
+  "fingerprint": {
+    "id": "019fa8ae-feab-78a2-ad94-6dd402476d43",
+    "hash": "f45936120c262589173d1b39551c2e8ed61f866f"
+  },
+  "archive": {
+    "url": "https://expo.dev/artifacts/eas/4Bf9U4x95x1eRksKC9LOfFf11yJ959abF-6dimJATYQ.tar.gz",
+    "bytes": 58277627,
+    "sha256": "93C85B130CFE6195502ABDAE546BF895F18502E07622D89AA26C34C5C768480F",
+    "memberCount": 146,
+    "regularFiles": 98,
+    "directories": 48,
+    "symlinks": 0,
+    "unsafePaths": 0,
+    "root": "ALYR.app",
+    "embeddedMobileProvision": false,
+    "hardlinks": 0
+  },
+  "embeddedFiles": {
+    "ALYR.app/Info.plist": {
+      "bytes": 2518,
+      "sha256": "516F6071AA7A2D31DEFFF386A5EBDE24D471B99AC725129BD8F605354687B346"
+    },
+    "ALYR.app/Expo.plist": {
+      "bytes": 368,
+      "sha256": "92A26BC756146F4A5578582F8EEE76CA5264351AEDAEDECF2459FBA283153A9F"
+    },
+    "ALYR.app/PrivacyInfo.xcprivacy": {
+      "bytes": 5518,
+      "sha256": "38EB64B2FA739A83F72CDAC50374F1448112B43A2FDFB065183DE07F56A4165B"
+    }
+  },
+  "infoPlist": {
+    "bundleIdentifier": "com.alyr.continuity",
+    "displayName": "ALYR",
+    "shortVersion": "0.1.0",
+    "buildVersion": "1",
+    "supportedPlatforms": [
+      "iPhoneSimulator"
+    ],
+    "deviceFamily": [
+      1
+    ],
+    "minimumOSVersion": "16.4",
+    "usesNonExemptEncryption": false,
+    "urlTypes": [
+      {
+        "CFBundleURLSchemes": [
+          "alyr",
+          "com.alyr.continuity"
+        ]
+      },
+      {
+        "CFBundleURLSchemes": [
+          "exp+alyr-asset-continuity"
+        ]
+      }
+    ],
+    "appTransportSecurity": {
+      "NSAllowsArbitraryLoads": false,
+      "NSAllowsLocalNetworking": true
+    },
+    "bonjourServices": [
+      "_expo._tcp"
+    ],
+    "backgroundModes": [
+      "fetch",
+      "processing"
+    ],
+    "backgroundTaskIdentifiers": [
+      "com.expo.modules.backgroundtask.processing"
+    ],
+    "usageDescriptions": {
+      "NSCameraUsageDescription": "Allow ALYR to photograph an asset or supporting material.",
+      "NSFaceIDUsageDescription": "Allow ALYR to use Face ID to unlock your private household record on this device.",
+      "NSLocalNetworkUsageDescription": "Expo Dev Launcher uses the local network to discover and connect to development servers running on your computer.",
+      "NSLocationWhenInUseUsageDescription": "Allow ALYR to place a property when you request accurate location.",
+      "NSPhotoLibraryUsageDescription": "Allow ALYR to attach only the photos you choose."
+    }
+  },
+  "expoPlist": {
+    "EXUpdatesCheckOnLaunch": "ALWAYS",
+    "EXUpdatesEnableBsdiffPatchSupport": true,
+    "EXUpdatesEnabled": true,
+    "EXUpdatesLaunchWaitMs": 0,
+    "EXUpdatesRequestHeaders": {
+      "expo-channel-name": "development"
+    },
+    "EXUpdatesRuntimeVersion": "0.1.0",
+    "EXUpdatesURL": "https://u.expo.dev/85cab1f2-111f-4e20-abd5-8dff0df2fabb"
+  },
+  "privacyManifest": {
+    "tracking": false,
+    "trackingDomains": [],
+    "collectedDataTypes": [
+      {
+        "NSPrivacyCollectedDataType": "NSPrivacyCollectedDataTypeEmailAddress",
+        "NSPrivacyCollectedDataTypeLinked": true,
+        "NSPrivacyCollectedDataTypePurposes": [
+          "NSPrivacyCollectedDataTypePurposeAppFunctionality"
+        ],
+        "NSPrivacyCollectedDataTypeTracking": false
+      },
+      {
+        "NSPrivacyCollectedDataType": "NSPrivacyCollectedDataTypeUserID",
+        "NSPrivacyCollectedDataTypeLinked": true,
+        "NSPrivacyCollectedDataTypePurposes": [
+          "NSPrivacyCollectedDataTypePurposeAppFunctionality"
+        ],
+        "NSPrivacyCollectedDataTypeTracking": false
+      },
+      {
+        "NSPrivacyCollectedDataType": "NSPrivacyCollectedDataTypeDeviceID",
+        "NSPrivacyCollectedDataTypeLinked": true,
+        "NSPrivacyCollectedDataTypePurposes": [
+          "NSPrivacyCollectedDataTypePurposeAppFunctionality"
+        ],
+        "NSPrivacyCollectedDataTypeTracking": false
+      },
+      {
+        "NSPrivacyCollectedDataType": "NSPrivacyCollectedDataTypePhysicalAddress",
+        "NSPrivacyCollectedDataTypeLinked": true,
+        "NSPrivacyCollectedDataTypePurposes": [
+          "NSPrivacyCollectedDataTypePurposeAppFunctionality"
+        ],
+        "NSPrivacyCollectedDataTypeTracking": false
+      },
+      {
+        "NSPrivacyCollectedDataType": "NSPrivacyCollectedDataTypePreciseLocation",
+        "NSPrivacyCollectedDataTypeLinked": true,
+        "NSPrivacyCollectedDataTypePurposes": [
+          "NSPrivacyCollectedDataTypePurposeAppFunctionality"
+        ],
+        "NSPrivacyCollectedDataTypeTracking": false
+      },
+      {
+        "NSPrivacyCollectedDataType": "NSPrivacyCollectedDataTypeCoarseLocation",
+        "NSPrivacyCollectedDataTypeLinked": true,
+        "NSPrivacyCollectedDataTypePurposes": [
+          "NSPrivacyCollectedDataTypePurposeAppFunctionality"
+        ],
+        "NSPrivacyCollectedDataTypeTracking": false
+      },
+      {
+        "NSPrivacyCollectedDataType": "NSPrivacyCollectedDataTypeOtherFinancialInfo",
+        "NSPrivacyCollectedDataTypeLinked": true,
+        "NSPrivacyCollectedDataTypePurposes": [
+          "NSPrivacyCollectedDataTypePurposeAppFunctionality"
+        ],
+        "NSPrivacyCollectedDataTypeTracking": false
+      },
+      {
+        "NSPrivacyCollectedDataType": "NSPrivacyCollectedDataTypePhotosorVideos",
+        "NSPrivacyCollectedDataTypeLinked": true,
+        "NSPrivacyCollectedDataTypePurposes": [
+          "NSPrivacyCollectedDataTypePurposeAppFunctionality"
+        ],
+        "NSPrivacyCollectedDataTypeTracking": false
+      },
+      {
+        "NSPrivacyCollectedDataType": "NSPrivacyCollectedDataTypeOtherUserContent",
+        "NSPrivacyCollectedDataTypeLinked": true,
+        "NSPrivacyCollectedDataTypePurposes": [
+          "NSPrivacyCollectedDataTypePurposeAppFunctionality"
+        ],
+        "NSPrivacyCollectedDataTypeTracking": false
+      },
+      {
+        "NSPrivacyCollectedDataType": "NSPrivacyCollectedDataTypeOtherDiagnosticData",
+        "NSPrivacyCollectedDataTypeLinked": true,
+        "NSPrivacyCollectedDataTypePurposes": [
+          "NSPrivacyCollectedDataTypePurposeAppFunctionality"
+        ],
+        "NSPrivacyCollectedDataTypeTracking": false
+      },
+      {
+        "NSPrivacyCollectedDataType": "NSPrivacyCollectedDataTypeProductInteraction",
+        "NSPrivacyCollectedDataTypeLinked": true,
+        "NSPrivacyCollectedDataTypePurposes": [
+          "NSPrivacyCollectedDataTypePurposeAnalytics"
+        ],
+        "NSPrivacyCollectedDataTypeTracking": false
+      }
+    ],
+    "accessedAPITypes": [
+      {
+        "NSPrivacyAccessedAPIType": "NSPrivacyAccessedAPICategoryFileTimestamp",
+        "NSPrivacyAccessedAPITypeReasons": [
+          "C617.1",
+          "3B52.1"
+        ]
+      },
+      {
+        "NSPrivacyAccessedAPIType": "NSPrivacyAccessedAPICategoryUserDefaults",
+        "NSPrivacyAccessedAPITypeReasons": [
+          "CA92.1"
+        ]
+      },
+      {
+        "NSPrivacyAccessedAPIType": "NSPrivacyAccessedAPICategorySystemBootTime",
+        "NSPrivacyAccessedAPITypeReasons": [
+          "35F9.1"
+        ]
+      },
+      {
+        "NSPrivacyAccessedAPIType": "NSPrivacyAccessedAPICategoryDiskSpace",
+        "NSPrivacyAccessedAPITypeReasons": [
+          "E174.1",
+          "85F4.1"
+        ]
+      }
+    ]
+  },
+  "logs": {
+    "easCompressed": {
+      "bytes": 65132,
+      "sha256": "944099FC5D87ABCE16F97B7FAD2B71504FA4454C5E1467E8B3022C59AC46E09E"
+    },
+    "easDecoded": {
+      "bytes": 528972,
+      "sha256": "9B2372D195C57830AE55195B3E5C010FBF10821F3B8CE08AB4971C0640C0AC75",
+      "jsonLines": 1730,
+      "levelAtLeast40": 0
+    },
+    "xcodeCompressed": {
+      "bytes": 215080,
+      "sha256": "5B7158958BEE74E02274F760551D64D8AA67D3925B9B2FCABC7F9CE057341B27"
+    },
+    "xcodeDecoded": {
+      "bytes": 17285029,
+      "sha256": "05A070F4FF04796D916E3019B13EE9FA3EDCCC253319DCA41A764094F97478E9",
+      "lines": 89626,
+      "errors": 0,
+      "warnings": 3929,
+      "warningClasses": {
+        "Pods/build-phase": 258,
+        "node_modules source": 1080,
+        "toolchain/other": 48,
+        "prebuilt dependency headers": 2542,
+        "ALYR target build-phase": 1
+      },
+      "buildSucceededMarkers": 1,
+      "buildFailedMarkers": 0
+    }
+  },
+  "issues": [
+    "Simulator-only development artifact: no embedded mobile provision or physical-iPhone execution evidence.",
+    "Development client intentionally retains NSAllowsLocalNetworking=true, _expo._tcp Bonjour discovery, and dev-launcher URL scheme; re-inspect preview/production builds for release stripping.",
+    "Xcode emitted 3,929 warning lines (no errors): 2,542 prebuilt dependency headers, 1,080 node_modules, 258 Pods/build-phase, 48 toolchain/other, and 1 ALYR target build-phase output-dependency warning. EAS summary also reports two missing Metal-toolchain search-path warnings and a future Ruby 3.2 support warning.",
+    "This build does not verify the current Supabase migration or live Edge Function deployment; that release gate remains open."
+  ],
+  "buildPage": "https://expo.dev/accounts/alyr-app/projects/alyr-asset-continuity/builds/71351749-9f72-42ba-86d2-e2b4156827f0"
+}
