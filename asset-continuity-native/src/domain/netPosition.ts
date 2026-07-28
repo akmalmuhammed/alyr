@@ -60,7 +60,9 @@ export interface NetPositionSnapshot {
   readonly hasMultipleCurrencies: boolean;
 }
 
-const LIABILITY_REFRESH_DAYS: Readonly<
+export const ASSET_VALUE_REVIEW_WINDOW_DAYS = 365 as const;
+
+export const LIABILITY_BALANCE_REVIEW_WINDOW_DAYS: Readonly<
   Record<NativeLiability["kind"], number>
 > = {
   mortgage: 90,
@@ -107,13 +109,35 @@ function dateRange(
   };
 }
 
-function addDays(
+/**
+ * Adds whole calendar days in UTC so a stored YYYY-MM-DD assertion never
+ * shifts when the device changes timezone or crosses a daylight-saving
+ * boundary.
+ */
+export function addPortfolioCalendarDays(
   isoDate: string,
   days: number
 ): string {
   const value = new Date(`${isoDate.slice(0, 10)}T00:00:00.000Z`);
   value.setUTCDate(value.getUTCDate() + days);
   return value.toISOString().slice(0, 10);
+}
+
+export function assetValueReviewDate(asOf: string): string {
+  return addPortfolioCalendarDays(
+    asOf,
+    ASSET_VALUE_REVIEW_WINDOW_DAYS
+  );
+}
+
+export function liabilityBalanceReviewDate(
+  asOf: string,
+  kind: NativeLiability["kind"]
+): string {
+  return addPortfolioCalendarDays(
+    asOf,
+    LIABILITY_BALANCE_REVIEW_WINDOW_DAYS[kind]
+  );
 }
 
 function liabilityValues(
@@ -173,15 +197,13 @@ export function buildNetPositionSnapshot(
       const value = valueByLiability.get(liability.id);
       return Boolean(
         value &&
-          addDays(
-            value.asOf,
-            LIABILITY_REFRESH_DAYS[liability.kind]
-          ) < today
+          liabilityBalanceReviewDate(value.asOf, liability.kind) <
+            today
       );
     })
     .map((liability) => liability.id);
   const staleAssetSubjectKeys = portfolio.recordedValues
-    .filter((value) => addDays(value.asOf, 365) < today)
+    .filter((value) => assetValueReviewDate(value.asOf) < today)
     .map((value) => value.subjectKey);
   const liabilityGroups = new Map<
     string,
