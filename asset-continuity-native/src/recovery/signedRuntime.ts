@@ -12,8 +12,10 @@ import {
 } from "./workspaceExport";
 import {
   createCoordinatedRecoveryRestorePort,
+  type RecoveryJournaledWorkspaceRestoreAdapter,
   type RecoveryWorkspaceRestoreAdapter
 } from "./atomicRestore";
+import { isRecoveryRestoreJournalPort } from "./crashJournal";
 import {
   createUnavailableRecoveryRuntime,
   type RecoveryJourneyRuntime
@@ -106,6 +108,7 @@ export function createSignedRecoveryWorkspaceRestoreAdapter(
     | "currentHouseholdId"
     | "currentDeviceId"
     | "onRestored"
+    | "now"
   >
 ): RecoveryWorkspaceRestoreAdapter {
   let preflight:
@@ -115,7 +118,40 @@ export function createSignedRecoveryWorkspaceRestoreAdapter(
       }
     | null = null;
 
-  return {
+  const normalizeTarget = (
+    value: unknown,
+    workspaceSchemaVersion: number,
+    checked: {
+      readonly revision: number;
+      readonly householdId: string;
+    }
+  ): NativeWorkspace => {
+    const current = assertCurrentWorkspace(
+      dependencies.currentWorkspace,
+      dependencies.currentHouseholdId
+    );
+    const deviceId = dependencies.currentDeviceId();
+    if (
+      !deviceId ||
+      !isNativeWorkspace(value) ||
+      value.schemaVersion !== workspaceSchemaVersion ||
+      value.household.id !== checked.householdId ||
+      current.household.id !== checked.householdId
+    ) {
+      throw new RecoveryKitError(
+        "RESTORE_REJECTED",
+        "Recovery Kit no longer matches the active household vault."
+      );
+    }
+    return {
+      ...value,
+      deviceId,
+      syncStatus: "local-only",
+      lastSyncedAt: null
+    };
+  };
+
+  const adapter: RecoveryWorkspaceRestoreAdapter = {
     async preflight(metadata) {
       const workspace = assertCurrentWorkspace(
         dependencies.currentWorkspace,
@@ -156,24 +192,17 @@ export function createSignedRecoveryWorkspaceRestoreAdapter(
     async replaceWorkspaceAtomically(value, workspaceSchemaVersion) {
       const checked = preflight;
       preflight = null;
-      const current = assertCurrentWorkspace(
-        dependencies.currentWorkspace,
-        dependencies.currentHouseholdId
-      );
-      const deviceId = dependencies.currentDeviceId();
-      if (
-        !checked ||
-        !deviceId ||
-        !isNativeWorkspace(value) ||
-        value.schemaVersion !== workspaceSchemaVersion ||
-        value.household.id !== checked.householdId ||
-        current.household.id !== checked.householdId
-      ) {
+      if (!checked) {
         throw new RecoveryKitError(
           "RESTORE_REJECTED",
           "Recovery Kit no longer matches the active household vault."
         );
       }
+      const restored = normalizeTarget(
+        value,
+        workspaceSchemaVersion,
+        checked
+      );
 
       const loaded = await dependencies.repository.load();
       if (loaded.revision !== checked.revision) {
@@ -182,12 +211,23 @@ export function createSignedRecoveryWorkspaceRestoreAdapter(
           "The household changed after verification. Verify the Recovery Kit again."
         );
       }
-      const restored: NativeWorkspace = {
-        ...value,
-        deviceId,
-        syncStatus: "local-only",
-        lastSyncedAt: null
-      };
+      if (isRecoveryRestoreJournalPort(dependencies.repository)) {
+        const journal =
+          await dependencies.repository.loadRecoveryRestoreJournal();
+        if (
+          !journal ||
+          journal.transactionId !== journal.kitId ||
+          journal.expectedRevision !== checked.revision ||
+          journal.targetRevision !== checked.revision + 1 ||
+          JSON.stringify(journal.targetWorkspace) !==
+            JSON.stringify(restored)
+        ) {
+          throw new RecoveryKitError(
+            "RESTORE_REJECTED",
+            "Recovery Kit journal no longer matches the prepared workspace."
+          );
+        }
+      }
       const committed = await dependencies.repository.commitSync({
         expectedRevision: checked.revision,
         nextRevision: checked.revision + 1,
@@ -205,9 +245,101 @@ export function createSignedRecoveryWorkspaceRestoreAdapter(
           "The encrypted workspace changed before replacement."
         );
       }
-      dependencies.onRestored(restored, committed.value.revision);
+      try {
+        dependencies.onRestored(restored, committed.value.revision);
+      } catch {
+        // UI publication is not part of the SQLCipher commit. The provider
+        // reloads the authoritative snapshot after a process restart.
+      }
     }
   };
+
+  const journalRepository = isRecoveryRestoreJournalPort(
+    dependencies.repository
+  )
+    ? dependencies.repository
+    : null;
+  if (!journalRepository) {
+    return adapter;
+  }
+
+  const journaled = adapter as RecoveryJournaledWorkspaceRestoreAdapter;
+  journaled.prepareRecoveryRestoreJournal = async (input) => {
+    const checked = preflight;
+    if (
+      !checked ||
+      input.metadata.kitId.length !== 32 ||
+      input.metadata.workspaceSchemaVersion !==
+        input.workspaceSchemaVersion ||
+      input.attachments.vaultScopeId !== dependencies.repository.scopeId
+    ) {
+      throw new RecoveryKitError(
+        "RESTORE_REJECTED",
+        "Recovery Kit journal preparation was rejected."
+      );
+    }
+    const loaded = await dependencies.repository.load();
+    if (
+      loaded.revision !== checked.revision ||
+      !loaded.snapshot ||
+      !isNativeWorkspace(loaded.snapshot) ||
+      loaded.snapshot.household.id !== checked.householdId
+    ) {
+      throw new RecoveryKitError(
+        "RESTORE_REJECTED",
+        "The household changed before Recovery Kit journal preparation."
+      );
+    }
+    const normalizedTarget = normalizeTarget(
+      input.workspace,
+      input.workspaceSchemaVersion,
+      checked
+    );
+    const timestamp = (
+      dependencies.now ?? (() => new Date().toISOString())
+    )();
+    const target: NativeWorkspace = {
+      ...normalizedTarget,
+      recoveryRestoreLineage: {
+        lineageVersion: 1,
+        transactionId: input.metadata.kitId,
+        targetRevision: checked.revision + 1,
+        committedAt: timestamp
+      }
+    };
+    await journalRepository.createRecoveryRestoreJournal({
+      journalVersion: 1,
+      transactionId: input.metadata.kitId,
+      kitId: input.metadata.kitId,
+      householdId: checked.householdId,
+      workspaceSchemaVersion: input.workspaceSchemaVersion,
+      expectedRevision: checked.revision,
+      targetRevision: checked.revision + 1,
+      targetWorkspace: target,
+      attachments: input.attachments,
+      phase: "prepared",
+      createdAt: timestamp,
+      updatedAt: timestamp
+    });
+    return {
+      transactionId: input.metadata.kitId,
+      workspace: target
+    };
+  };
+  journaled.transitionRecoveryRestoreJournal = (
+    transactionId,
+    expectedPhase,
+    nextPhase
+  ) =>
+    journalRepository.transitionRecoveryRestoreJournal(
+      transactionId,
+      expectedPhase,
+      nextPhase,
+      (dependencies.now ?? (() => new Date().toISOString()))()
+    );
+  journaled.clearRecoveryRestoreJournal = (transactionId) =>
+    journalRepository.clearRecoveryRestoreJournal(transactionId);
+  return journaled;
 }
 
 /**
@@ -232,7 +364,8 @@ export function createSignedRecoveryJourneyRuntime(
     !dependencies.repository.encryptedAtRest ||
     !store ||
     !isRecoveryCapableAttachmentStore(store) ||
-    !attachmentRestore
+    !attachmentRestore ||
+    !isRecoveryRestoreJournalPort(dependencies.repository)
   ) {
     return unavailableLockedRuntime();
   }

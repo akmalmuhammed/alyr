@@ -283,6 +283,10 @@ describe("clean-device Evidence hydration", () => {
         evidenceVersionId: PLACE_DOCUMENT_VERSION_ID,
         blobId: PLACE_DOCUMENT_BLOB_ID,
         checksumSha256: CHECKSUM
+      }),
+      expect.objectContaining({
+        signal: expect.any(Object),
+        deadlineAtMs: expect.any(Number)
       })
     );
     const persisted = (await repository.load())

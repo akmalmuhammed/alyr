@@ -4,6 +4,7 @@ declare const __dirname: string;
 declare function require(moduleName: string): unknown;
 declare const process: {
   env: Record<string, string | undefined>;
+  execPath: string;
 };
 
 const { existsSync, readFileSync } = require("fs") as {
@@ -13,6 +14,17 @@ const { existsSync, readFileSync } = require("fs") as {
 const path = require("path") as {
   join(...parts: string[]): string;
   resolve(...parts: string[]): string;
+};
+const { execFileSync } = require("child_process") as {
+  execFileSync(
+    file: string,
+    args: readonly string[],
+    options: {
+      cwd: string;
+      encoding: "utf8";
+      env: Record<string, string | undefined>;
+    }
+  ): string;
 };
 
 const appRoot = path.resolve(__dirname, "..");
@@ -254,11 +266,73 @@ describe("signed iOS release configuration", () => {
     expect(eas.build.production?.distribution).toBeUndefined();
   });
 
-  it("does not ship unimplemented push or background-task capabilities", () => {
-    expect(nativePackage.dependencies["expo-notifications"]).toBeUndefined();
-    expect(nativePackage.dependencies["expo-background-task"]).toBeUndefined();
+  it("ships local notification APIs without push entitlements or remote background mode", () => {
+    expect(nativePackage.dependencies["expo-notifications"]).toMatch(
+      /^~57\./u
+    );
     expect(pluginOptions("expo-notifications")).toBeUndefined();
-  });
+    expect(config.plugins).not.toContain("expo-notifications");
+    expect(config.plugins).toContain(
+      "./plugins/with-local-notifications-only"
+    );
+    const expoCli = path.join(
+      repositoryRoot,
+      "node_modules",
+      "expo",
+      "bin",
+      "cli"
+    );
+    const introspected = JSON.parse(
+      execFileSync(
+        process.execPath,
+        [
+          expoCli,
+          "config",
+          "--type",
+          "introspect",
+          "--json"
+        ],
+        {
+          cwd: appRoot,
+          encoding: "utf8",
+          env: {
+            ...process.env,
+            FORCE_COLOR: "0"
+          }
+        }
+      )
+    ) as {
+      _internal: {
+        autolinkedModules: readonly string[];
+        modResults: {
+          ios: {
+            entitlements?: Record<string, unknown>;
+            infoPlist?: {
+              UIBackgroundModes?: readonly string[];
+            };
+          };
+        };
+      };
+    };
+    const introspectedIos =
+      introspected._internal.modResults.ios;
+    expect(
+      introspectedIos.entitlements?.["aps-environment"]
+    ).toBeUndefined();
+    expect(
+      introspectedIos.infoPlist?.UIBackgroundModes ?? []
+    ).not.toContain("remote-notification");
+    expect(
+      introspected._internal.autolinkedModules
+    ).toContain("expo-notifications");
+    expect(nativePackage.dependencies["expo-background-task"]).toMatch(
+      /^~57\./u
+    );
+    expect(nativePackage.dependencies["expo-task-manager"]).toMatch(
+      /^~57\./u
+    );
+    expect(config.plugins).toContain("expo-background-task");
+  }, 30_000);
 
   it("keeps the splash asset separate from the iOS icon", () => {
     expect(pluginOptions("expo-splash-screen")).toEqual({

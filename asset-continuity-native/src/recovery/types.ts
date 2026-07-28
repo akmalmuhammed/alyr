@@ -137,6 +137,78 @@ export interface RecoveryRestoreMetadata {
   readonly attachmentCount: number;
 }
 
+/**
+ * Opaque filesystem information needed to finish or undo an interrupted
+ * attachment-vault install. This value is persisted only inside the encrypted
+ * SQLCipher vault; it never contains decrypted attachment bytes.
+ */
+export interface RecoveryRestoreJournalAttachmentFile {
+  readonly stagedReference: string;
+  readonly destinationReference: string;
+  readonly protectedByteSize: number;
+  readonly protectedSha256: string;
+}
+
+export interface RecoveryRestoreJournalAttachmentState {
+  readonly journalVersion: 1;
+  readonly vaultScopeId: string;
+  readonly stagingDirectoryReference: string;
+  readonly vaultKeyDisposition: "preserve" | "install";
+  /**
+   * Present only when this restore introduces a vault key. The journal itself
+   * lives inside SQLCipher so a restart can finish installing the same key.
+   */
+  readonly pendingVaultKeyHex: string | null;
+  /**
+   * Exact key observed during staging. For an install it equals
+   * `pendingVaultKeyHex`; for a preserve it proves that a later arbitrary
+   * SecureStore value is not silently accepted.
+   */
+  readonly expectedVaultKeyHex: string | null;
+  readonly files: readonly RecoveryRestoreJournalAttachmentFile[];
+}
+
+export type RecoveryRestoreJournalPhase =
+  | "prepared"
+  | "attachments-installing"
+  | "attachments-installed"
+  | "workspace-committed";
+
+/**
+ * One active restore journal is allowed per encrypted vault. `targetWorkspace`
+ * is the exact normalized snapshot intended for `targetRevision`, allowing
+ * restart reconciliation to distinguish committed-new from preserved-old
+ * without relying on an in-memory completion flag.
+ */
+export interface RecoveryRestoreCrashJournal {
+  readonly journalVersion: 1;
+  readonly transactionId: string;
+  readonly kitId: string;
+  readonly householdId: string;
+  readonly workspaceSchemaVersion: number;
+  readonly expectedRevision: number;
+  readonly targetRevision: number;
+  readonly targetWorkspace: unknown;
+  readonly attachments: RecoveryRestoreJournalAttachmentState;
+  readonly phase: RecoveryRestoreJournalPhase;
+  readonly createdAt: string;
+  readonly updatedAt: string;
+}
+
+export interface RecoveryRestoreJournalPort {
+  loadRecoveryRestoreJournal(): Promise<RecoveryRestoreCrashJournal | null>;
+  createRecoveryRestoreJournal(
+    journal: RecoveryRestoreCrashJournal
+  ): Promise<void>;
+  transitionRecoveryRestoreJournal(
+    transactionId: string,
+    expectedPhase: RecoveryRestoreJournalPhase,
+    nextPhase: RecoveryRestoreJournalPhase,
+    updatedAt: string
+  ): Promise<void>;
+  clearRecoveryRestoreJournal(transactionId: string): Promise<void>;
+}
+
 export interface RecoveryRestoreTransaction {
   /**
    * Ports must copy staged bytes. They must reject a different existing vault

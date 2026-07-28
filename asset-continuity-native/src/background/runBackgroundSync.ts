@@ -22,10 +22,18 @@ import {
   type ForegroundSyncResult
 } from "@/data/foregroundSync";
 import type { NativeWorkspaceRepository } from "@/data/repository";
+import {
+  isSyncExecutionCancelled,
+  runSyncLocalBoundary,
+  syncExecutionIsActive,
+  type SyncExecutionControl,
+  type SyncLocalExclusiveRunner
+} from "@/data/syncExecution";
 
 export const DEFAULT_BACKGROUND_METADATA_OPERATION_LIMIT = 20;
 export const DEFAULT_BACKGROUND_EVIDENCE_TRANSFER_LIMIT = 2;
 export const DEFAULT_BACKGROUND_EXECUTION_WINDOW_MS = 25_000;
+export const DEFAULT_BACKGROUND_PROVIDER_TIMEOUT_MS = 8_000;
 
 const MAX_BACKGROUND_METADATA_OPERATION_LIMIT = 20;
 const MAX_BACKGROUND_EVIDENCE_TRANSFER_LIMIT = 2;
@@ -43,6 +51,10 @@ export type BackgroundSyncRuntimeState =
       readonly attachmentStore: AttachmentStore;
       readonly evidenceUploadPort: EvidenceUploadPort;
       readonly evidenceDownloadPort: EvidenceDownloadPort;
+      readonly execution?: Pick<
+        SyncExecutionControl,
+        "signal" | "isCurrent" | "trackProviderSettlement"
+      >;
     };
 
 export type BackgroundSyncSkipReason =
@@ -95,6 +107,8 @@ export interface RunBackgroundSyncRequest {
    */
   readonly metadataOperationLimit?: number;
   readonly evidenceTransferLimit?: number;
+  readonly providerTimeoutMs?: number;
+  readonly runLocalExclusive?: SyncLocalExclusiveRunner;
 }
 
 function stoppedError(message: string): ContractError {
@@ -128,6 +142,23 @@ function normalizeLimit(
   return Math.min(requested, maximum);
 }
 
+function normalizeProviderTimeout(requested: number | undefined): number {
+  if (
+    requested === undefined ||
+    !Number.isFinite(requested) ||
+    requested <= 0
+  ) {
+    return DEFAULT_BACKGROUND_PROVIDER_TIMEOUT_MS;
+  }
+  return Math.max(
+    1,
+    Math.min(
+      Math.floor(requested),
+      DEFAULT_BACKGROUND_PROVIDER_TIMEOUT_MS
+    )
+  );
+}
+
 function validNow(clock: BackgroundSyncClock): number {
   const value = clock.nowMs();
   return Number.isFinite(value) ? value : Date.now();
@@ -157,6 +188,13 @@ class ExecutionBudget {
     return (
       !Number.isFinite(expiresAtMs) ||
       validNow(this.clock) >= expiresAtMs
+    );
+  }
+
+  remainingTimeMs(): number {
+    return Math.max(
+      0,
+      this.deadline.expiresAtMs() - validNow(this.clock)
     );
   }
 
@@ -227,22 +265,22 @@ function backgroundTransport(
   budget: ExecutionBudget
 ): SyncTransport {
   return {
-    async push(operations) {
+    async push(operations, context) {
       const selected = budget.selectMetadataOperations(operations);
       if (selected.length === 0 && operations.length > 0) {
         return stoppedResult(
           "The background metadata window ended before another operation could start."
         );
       }
-      return transport.push(selected);
+      return transport.push(selected, context);
     },
-    async pull(householdId, cursor) {
+    async pull(householdId, cursor, context) {
       if (budget.expired()) {
         return stoppedResult(
           "The background execution window ended before cloud metadata could be pulled."
         );
       }
-      return transport.pull(householdId, cursor);
+      return transport.pull(householdId, cursor, context);
     }
   };
 }
@@ -262,14 +300,18 @@ function backgroundEvidenceUploadPort(
   }
 
   return {
-    async complete(descriptor, uploadId) {
+    async complete(descriptor, uploadId, context) {
       const finalizing = awaitingCompletion.has(descriptor.blobId);
       if (!finalizing) {
         const stopped = canContinue<UploadCompletionResponse>();
         if (stopped) return stopped;
       }
       try {
-        const completed = await port.complete(descriptor, uploadId);
+        const completed = await port.complete(
+          descriptor,
+          uploadId,
+          context
+        );
         if (
           !finalizing &&
           !completed.ok &&
@@ -292,14 +334,15 @@ function backgroundEvidenceUploadPort(
         }
       }
     },
-    async createIntent(descriptor) {
+    async createIntent(descriptor, context) {
       const stopped = canContinue<UploadIntentResponse>();
-      return stopped ?? port.createIntent(descriptor);
+      return stopped ?? port.createIntent(descriptor, context);
     },
     async upload(
       descriptor: EvidenceUploadDescriptor,
       intent,
-      attachment: MaterializedAttachment
+      attachment: MaterializedAttachment,
+      context
     ): Promise<Result<EvidenceUploadTransfer>> {
       if (!budget.beginEvidenceTransfer()) {
         return stoppedResult(
@@ -309,7 +352,8 @@ function backgroundEvidenceUploadPort(
       const uploaded = await port.upload(
         descriptor,
         intent,
-        attachment
+        attachment,
+        context
       );
       if (uploaded.ok) {
         // Completion is part of the transfer already in progress. Let it run
@@ -326,7 +370,7 @@ function backgroundEvidenceDownloadPort(
   budget: ExecutionBudget
 ): EvidenceDownloadPort {
   return {
-    download(descriptor) {
+    download(descriptor, context) {
       if (!budget.beginEvidenceTransfer()) {
         return Promise.resolve(
           stoppedResult(
@@ -334,7 +378,7 @@ function backgroundEvidenceDownloadPort(
           )
         );
       }
-      return port.download(descriptor);
+      return port.download(descriptor, context);
     }
   };
 }
@@ -388,6 +432,10 @@ export async function runBackgroundSync(
   if (request.runtime.kind !== "ready") {
     return skipped(request.runtime.kind);
   }
+  const runtime = request.runtime;
+  if (!syncExecutionIsActive(runtime.execution)) {
+    return skipped("vault-locked");
+  }
 
   const clock = request.clock ?? { nowMs: Date.now };
   const startedAt = validNow(clock);
@@ -433,9 +481,20 @@ export async function runBackgroundSync(
     metadataOperationLimit,
     evidenceTransferLimit
   );
+  const execution: SyncExecutionControl = {
+    ...(runtime.execution ?? {}),
+    providerTimeoutMs: normalizeProviderTimeout(
+      request.providerTimeoutMs
+    ),
+    ...(request.runLocalExclusive
+      ? { runLocalExclusive: request.runLocalExclusive }
+      : {})
+  };
 
   try {
-    const loaded = await request.runtime.repository.load();
+    const loaded = await runSyncLocalBoundary(execution, () =>
+      runtime.repository.load()
+    );
     // Clean-device restore is foreground-only so a partial OS window never
     // leaves a user with a half-materialized household.
     if (loaded.snapshot === null) {
@@ -445,30 +504,37 @@ export async function runBackgroundSync(
 
     const result = await reconcileForeground({
       repository: backgroundRepository(
-        request.runtime.repository,
+        runtime.repository,
         loaded
       ),
       transport: backgroundTransport(
-        request.runtime.transport,
+        runtime.transport,
         budget
       ),
-      attachmentStore: request.runtime.attachmentStore,
+      attachmentStore: runtime.attachmentStore,
       evidenceUploadPort: backgroundEvidenceUploadPort(
-        request.runtime.evidenceUploadPort,
+        runtime.evidenceUploadPort,
         budget
       ),
       evidenceDownloadPort: backgroundEvidenceDownloadPort(
-        request.runtime.evidenceDownloadPort,
+        runtime.evidenceDownloadPort,
         budget
       ),
       canMaterializeProtectedAttachment: () =>
         budget.canContinueEvidenceWork(),
-      householdId: request.runtime.householdId,
-      accountId: request.runtime.accountId,
-      now: () => new Date(validNow(clock)).toISOString()
+      householdId: runtime.householdId,
+      accountId: runtime.accountId,
+      now: () => new Date(validNow(clock)).toISOString(),
+      execution
     });
     return finished(outcomeFor(result), budget);
-  } catch {
+  } catch (caught) {
+    if (
+      isSyncExecutionCancelled(caught) &&
+      !syncExecutionIsActive(execution)
+    ) {
+      return skipped("vault-locked");
+    }
     // Repository locking, provider exceptions, and process-transition races
     // remain retryable without copying their potentially sensitive messages
     // into logs or task-manager diagnostics.

@@ -35,6 +35,8 @@ jest.mock("expo-sqlite", () => {
       readonly operations: Map<string, string>;
       cursorJson: string;
       conflictsJson: string;
+      recoveryJournalTransactionId: string | null;
+      recoveryJournalJson: string | null;
     }
   >();
   const opened: string[] = [];
@@ -51,7 +53,9 @@ jest.mock("expo-sqlite", () => {
       operations: new Map<string, string>(),
       cursorJson:
         '{"cursorVersion":1,"value":null,"issuedAt":null}',
-      conflictsJson: "[]"
+      conflictsJson: "[]",
+      recoveryJournalTransactionId: null,
+      recoveryJournalJson: null
     };
     states.set(name, created);
     return created;
@@ -75,6 +79,15 @@ jest.mock("expo-sqlite", () => {
           cursor_json: state.cursorJson,
           conflicts_json: state.conflictsJson
         };
+      }
+      if (sql.includes("recovery_restore_journal")) {
+        return state.recoveryJournalJson &&
+          state.recoveryJournalTransactionId
+          ? {
+              transaction_id: state.recoveryJournalTransactionId,
+              journal_json: state.recoveryJournalJson
+            }
+          : null;
       }
       if (sql.includes("sync_outbox")) {
         const operation = state.operations.get(String(parameters[0]));
@@ -106,6 +119,20 @@ jest.mock("expo-sqlite", () => {
         } else if (sql.includes("UPDATE sync_state")) {
           state.cursorJson = String(parameters[0]);
           state.conflictsJson = String(parameters[1]);
+        } else if (
+          sql.includes("INSERT INTO recovery_restore_journal")
+        ) {
+          state.recoveryJournalTransactionId = String(parameters[0]);
+          state.recoveryJournalJson = String(parameters[1]);
+        } else if (
+          sql.includes("UPDATE recovery_restore_journal")
+        ) {
+          state.recoveryJournalJson = String(parameters[0]);
+        } else if (
+          sql.includes("DELETE FROM recovery_restore_journal")
+        ) {
+          state.recoveryJournalTransactionId = null;
+          state.recoveryJournalJson = null;
         }
       }
     );
@@ -180,6 +207,83 @@ function inMemoryKeyStore(): SecureKeyStore & {
 }
 
 describe("scoped SQLCipher workspace repository", () => {
+  it("persists one compare-and-transition Recovery Kit crash journal across reopen", async () => {
+    const keyStore = inMemoryKeyStore();
+    const scope = await deriveAuthenticatedVaultScope(
+      "account-recovery",
+      "household-recovery"
+    );
+    const repository = new SQLiteWorkspaceRepository(keyStore, scope);
+    await repository.initialize();
+    const targetWorkspace = {
+      ...createWorkspace("personal", "2026-07-28T10:00:00.000Z", {
+        householdId: "household-recovery",
+        ownerMemberId: "member-owner",
+        deviceId: "device-recovery"
+      }),
+      syncStatus: "local-only" as const,
+      lastSyncedAt: null
+    };
+    const transactionId = "c".repeat(32);
+    const journal = {
+      journalVersion: 1 as const,
+      transactionId,
+      kitId: transactionId,
+      householdId: targetWorkspace.household.id,
+      workspaceSchemaVersion: targetWorkspace.schemaVersion,
+      expectedRevision: 4,
+      targetRevision: 5,
+      targetWorkspace,
+      attachments: {
+        journalVersion: 1 as const,
+        vaultScopeId: scope.scopeId,
+        stagingDirectoryReference:
+          "file:///cache/alyr-recovery-stage-0123456789abcdef0123456789abcdef",
+        vaultKeyDisposition: "preserve" as const,
+        pendingVaultKeyHex: null,
+        expectedVaultKeyHex: null,
+        files: []
+      },
+      phase: "prepared" as const,
+      createdAt: "2026-07-28T10:00:00.000Z",
+      updatedAt: "2026-07-28T10:00:00.000Z"
+    };
+
+    await repository.createRecoveryRestoreJournal(journal);
+    await expect(
+      repository.createRecoveryRestoreJournal(journal)
+    ).rejects.toThrow("must be resolved");
+    await repository.transitionRecoveryRestoreJournal(
+      transactionId,
+      "prepared",
+      "attachments-installing",
+      "2026-07-28T10:00:01.000Z"
+    );
+    await repository.close();
+
+    const reopened = new SQLiteWorkspaceRepository(keyStore, scope);
+    await reopened.initialize();
+    await expect(reopened.loadRecoveryRestoreJournal()).resolves.toEqual(
+      expect.objectContaining({
+        transactionId,
+        phase: "attachments-installing",
+        targetWorkspace
+      })
+    );
+    await expect(
+      reopened.transitionRecoveryRestoreJournal(
+        transactionId,
+        "prepared",
+        "attachments-installed",
+        "2026-07-28T10:00:02.000Z"
+      )
+    ).rejects.toThrow("changed before");
+    await reopened.clearRecoveryRestoreJournal(transactionId);
+    await expect(
+      reopened.loadRecoveryRestoreJournal()
+    ).resolves.toBeNull();
+  });
+
   it("isolates snapshots and outboxes and locks stale account sessions", async () => {
     const sqlite = jest.requireMock<MockSQLiteModule>("expo-sqlite");
     const keyStore = inMemoryKeyStore();

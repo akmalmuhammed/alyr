@@ -44,8 +44,12 @@ describe("authenticated Evidence download adapter", () => {
       fetchImpl,
       digestBytes: async () => CHECKSUM
     });
+    const controller = new AbortController();
 
-    const result = await port.download(descriptor);
+    const result = await port.download(descriptor, {
+      signal: controller.signal,
+      deadlineAtMs: Date.now() + 1_000
+    });
 
     expect(result).toEqual({ ok: true, value: BYTES });
     expect(getAccessToken).toHaveBeenCalledTimes(1);
@@ -57,6 +61,7 @@ describe("authenticated Evidence download adapter", () => {
     expect(new Headers(init.headers).get("Authorization")).toBe(
       "Bearer fresh-user-token"
     );
+    expect(init.signal).toBe(controller.signal);
     expect(JSON.parse(String(init.body))).toEqual(descriptor);
   });
 

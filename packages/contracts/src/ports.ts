@@ -214,9 +214,25 @@ export interface BlobStore {
   remove(blobObjectId: string): Promise<Result<void>>;
 }
 
+/**
+ * Cancellation/deadline context for one provider boundary.
+ *
+ * Implementations must stop reading caller-owned buffers or file references
+ * after `signal` aborts. `deadlineAtMs` is an absolute Unix timestamp and is a
+ * second guard for runtimes whose fetch implementation does not propagate an
+ * abort promptly. Implementations must settle their returned promise after
+ * abort/finally cleanup; a never-settling provider blocks secure vault
+ * transition by contract.
+ */
+export interface ProviderRequestContext {
+  readonly signal: AbortSignal;
+  readonly deadlineAtMs: number;
+}
+
 export interface SyncTransport {
   push(
     operations: readonly SyncOperation[],
+    context?: ProviderRequestContext,
   ): Promise<
     Result<{
       readonly acknowledgedOperationIds: readonly string[];
@@ -227,6 +243,7 @@ export interface SyncTransport {
   pull(
     householdId: HouseholdId,
     cursor: SyncCursor,
+    context?: ProviderRequestContext,
   ): Promise<
     Result<{
       readonly workspace: WorkspaceBootstrapDescriptor;

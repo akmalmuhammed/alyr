@@ -355,4 +355,55 @@ describe("durable Evidence upload reconciliation", () => {
     expect(result.ok).toBe(false);
     expect(localStore.cleanupMaterialized).toHaveBeenCalledTimes(1);
   });
+
+  it("cancels an in-flight upload when the vault locks and never confirms afterward", async () => {
+    const { workspace, operation } = fixture();
+    const localStore = store();
+    const controller = new AbortController();
+    let markUploadStarted!: () => void;
+    const uploadStarted = new Promise<void>((resolve) => {
+      markUploadStarted = resolve;
+    });
+    const cloud = port({
+      complete: async () => errorResult("NOT_FOUND", false),
+      upload: async (_descriptor, _intent, _attachment, context) => {
+        markUploadStarted();
+        return new Promise<never>((_resolve, reject) => {
+          const rejectCancelled = () =>
+            reject(new Error("provider upload aborted"));
+          if (context?.signal.aborted) {
+            rejectCancelled();
+            return;
+          }
+          context?.signal.addEventListener(
+            "abort",
+            rejectCancelled,
+            { once: true }
+          );
+        });
+      }
+    });
+
+    const uploadRun = reconcileEvidenceUploads({
+      workspace,
+      operations: [operation],
+      attachmentStore: localStore.value,
+      uploadPort: cloud.value,
+      now: () => NOW,
+      execution: {
+        signal: controller.signal,
+        providerTimeoutMs: 1_000
+      }
+    });
+    await uploadStarted;
+
+    controller.abort();
+
+    await expect(uploadRun).rejects.toMatchObject({
+      name: "SyncExecutionCancelledError",
+      reason: "cancelled"
+    });
+    expect(localStore.cleanupMaterialized).toHaveBeenCalledTimes(1);
+    expect(cloud.complete).toHaveBeenCalledTimes(1);
+  });
 });

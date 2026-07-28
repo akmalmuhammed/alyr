@@ -31,6 +31,14 @@ import {
   requireHouseholdCapabilities
 } from "@/auth/capabilityPolicy";
 import {
+  createBackgroundSyncTask,
+  type BackgroundSyncTask
+} from "@/background/backgroundSyncTask";
+import {
+  installExpoBackgroundSync,
+  type ExpoBackgroundSyncInstallation
+} from "@/background/expoBackgroundSync";
+import {
   createDefaultAttachmentStore,
   type AttachmentStore,
   type ScopedAttachmentStore
@@ -47,6 +55,7 @@ import {
   reconcileForeground,
   type ForegroundSyncResult
 } from "@/data/foregroundSync";
+import { isSyncExecutionCancelled } from "@/data/syncExecution";
 import type { EvidenceDownloadPort } from "@/data/evidenceDownload";
 import type { EvidenceUploadPort } from "@/data/evidenceUpload";
 import {
@@ -63,6 +72,11 @@ import {
   DEVICE_PREVIEW_VAULT_SCOPE,
   type VaultScope
 } from "@/data/vaultScope";
+import {
+  createVaultGenerationScope,
+  runVaultOperationExclusive,
+  type VaultGenerationScope
+} from "@/data/vaultOperationGate";
 import type {
   AssetLifecycleInput,
   EvidenceReviewInput,
@@ -133,7 +147,8 @@ import {
 } from "@/domain/workspace";
 import {
   createSignedRecoveryJourneyRuntime,
-  RecoveryJourneyProvider
+  RecoveryJourneyProvider,
+  resolveInterruptedRecoveryRestore
 } from "@/recovery";
 import {
   isSessionPreview,
@@ -374,6 +389,13 @@ interface WorkspaceProviderProps extends PropsWithChildren {
   readonly syncTransport?: SyncTransport | null;
   readonly evidenceUploadPort?: EvidenceUploadPort | null;
   readonly evidenceDownloadPort?: EvidenceDownloadPort | null;
+  /**
+   * Native scheduler seam. Production uses Expo BackgroundTask; tests can
+   * capture the installed task without invoking a native module.
+   */
+  readonly backgroundSyncInstaller?: (
+    task: BackgroundSyncTask
+  ) => ExpoBackgroundSyncInstallation;
   /**
    * Test/runtime seam for the installation-scoped device identifier. Signed
    * builds use the SecureStore-backed default; preview runtimes use one
@@ -1191,6 +1213,7 @@ export function WorkspaceProvider({
   syncTransport = null,
   evidenceUploadPort = null,
   evidenceDownloadPort = null,
+  backgroundSyncInstaller = installExpoBackgroundSync,
   installationDeviceIdentity = defaultInstallationDeviceIdentity
 }: WorkspaceProviderProps) {
   const resolvedVaultAccess: WorkspaceVaultAccess | null =
@@ -1258,10 +1281,18 @@ export function WorkspaceProvider({
   const storageReadyRef = useRef(false);
   const queueRef = useRef<Promise<unknown>>(Promise.resolve());
   const attachmentStoreRef = useRef<ScopedAttachmentStore | null>(null);
-  const syncInFlightRef = useRef<Promise<void> | null>(null);
+  const syncInFlightRef = useRef<{
+    readonly scope: VaultGenerationScope;
+    readonly promise: Promise<void>;
+  } | null>(null);
   const syncRequestedRef = useRef(false);
   const mountedRef = useRef(true);
   const vaultGenerationRef = useRef(0);
+  const vaultGenerationScopeRef =
+    useRef<VaultGenerationScope | null>(null);
+  const vaultTransitionRef = useRef<Promise<void>>(Promise.resolve());
+  const backgroundInstallationRef =
+    useRef<ExpoBackgroundSyncInstallation | null>(null);
   const installationDeviceIdRef = useRef<string | null>(null);
 
   const requireOpenAttachmentStore = useCallback((): ScopedAttachmentStore => {
@@ -1288,8 +1319,12 @@ export function WorkspaceProvider({
   );
 
   const refreshPendingCount = useCallback(
-    async (activeRepository: NativeWorkspaceRepository) => {
+    async (
+      activeRepository: NativeWorkspaceRepository,
+      isCurrent: () => boolean = () => true
+    ) => {
       const operations = await activeRepository.listPendingOperations(1000);
+      if (!isCurrent()) return;
       setPendingOperationCounts({
         total: operations.length,
         liability: operations.filter((operation) =>
@@ -1307,6 +1342,9 @@ export function WorkspaceProvider({
     () => () => {
       mountedRef.current = false;
       vaultGenerationRef.current += 1;
+      vaultGenerationScopeRef.current?.cancel();
+      backgroundInstallationRef.current?.dispose();
+      backgroundInstallationRef.current = null;
     },
     []
   );
@@ -1356,7 +1394,12 @@ export function WorkspaceProvider({
           lastError: result.error
         });
       }
-      await refreshPendingCount(activeRepository);
+      await refreshPendingCount(
+        activeRepository,
+        () =>
+          mountedRef.current &&
+          generation === vaultGenerationRef.current
+      );
       if (
         !mountedRef.current ||
         generation !== vaultGenerationRef.current
@@ -1395,7 +1438,15 @@ export function WorkspaceProvider({
     [refreshPendingCount]
   );
 
-  const runForegroundSync = useCallback(async (): Promise<void> => {
+  const runForegroundSync = useCallback(async (
+    generationScope: VaultGenerationScope
+  ): Promise<void> => {
+    if (
+      !generationScope.isActive() ||
+      vaultGenerationScopeRef.current !== generationScope
+    ) {
+      return;
+    }
     if (
       !syncTransport ||
       accessKind !== "authenticated" ||
@@ -1452,6 +1503,23 @@ export function WorkspaceProvider({
     }
     const generation = vaultGenerationRef.current;
     const activeRepository = repositoryRef.current;
+    const activeAttachmentStore = attachmentStoreRef.current;
+    const syncExecution = {
+      signal: generationScope.signal,
+      isCurrent: () =>
+        mountedRef.current &&
+        generationScope.isActive() &&
+        vaultGenerationScopeRef.current === generationScope &&
+        generation === vaultGenerationRef.current &&
+        storageReadyRef.current &&
+        repositoryRef.current === activeRepository &&
+        attachmentStoreRef.current === activeAttachmentStore,
+      runLocalExclusive: runVaultOperationExclusive,
+      trackProviderSettlement: <T,>(
+        providerPromise: Promise<T>
+      ): Promise<T> =>
+        generationScope.track(() => providerPromise)
+    } as const;
     if (mountedRef.current) {
       if (workspaceRef.current === null) {
         setBootstrap({ status: "pulling", lastError: null });
@@ -1467,27 +1535,35 @@ export function WorkspaceProvider({
       const result = await reconcileForeground({
         repository: activeRepository,
         transport: syncTransport,
-        ...(attachmentStoreRef.current && evidenceUploadPort
+        ...(activeAttachmentStore && evidenceUploadPort
           ? {
-              attachmentStore: attachmentStoreRef.current,
+              attachmentStore: activeAttachmentStore,
               evidenceUploadPort,
               ...(evidenceDownloadPort
                 ? { evidenceDownloadPort }
                 : {})
             }
-          : attachmentStoreRef.current && evidenceDownloadPort
+          : activeAttachmentStore && evidenceDownloadPort
             ? {
-                attachmentStore: attachmentStoreRef.current,
+                attachmentStore: activeAttachmentStore,
                 evidenceDownloadPort
               }
             : {}),
         householdId: boundHouseholdId,
         ...(accountId ? { accountId } : {}),
         deviceId: installationDeviceId,
-        now
+        now,
+        execution: syncExecution
       });
       await publishSyncResult(result, generation, activeRepository);
-    } catch {
+    } catch (caught) {
+      if (
+        isSyncExecutionCancelled(caught) ||
+        !generationScope.isActive() ||
+        vaultGenerationScopeRef.current !== generationScope
+      ) {
+        return;
+      }
       if (
         mountedRef.current &&
         generation === vaultGenerationRef.current
@@ -1530,22 +1606,35 @@ export function WorkspaceProvider({
   ]);
 
   const syncNow = useCallback(async (): Promise<void> => {
+    const generationScope = vaultGenerationScopeRef.current;
+    if (!generationScope?.isActive()) return;
     syncRequestedRef.current = true;
-    if (syncInFlightRef.current) {
-      return syncInFlightRef.current;
+    const currentRun = syncInFlightRef.current;
+    if (currentRun?.scope === generationScope) {
+      return currentRun.promise;
     }
     let task: Promise<void>;
-    task = (async () => {
-      do {
-        syncRequestedRef.current = false;
-        await runForegroundSync();
-      } while (syncRequestedRef.current && mountedRef.current);
-    })().finally(() => {
-      if (syncInFlightRef.current === task) {
-        syncInFlightRef.current = null;
-      }
-    });
-    syncInFlightRef.current = task;
+    task = generationScope
+      .track(async () => {
+        do {
+          syncRequestedRef.current = false;
+          await runForegroundSync(generationScope);
+        } while (
+          syncRequestedRef.current &&
+          mountedRef.current &&
+          generationScope.isActive() &&
+          vaultGenerationScopeRef.current === generationScope
+        );
+      })
+      .finally(() => {
+        if (syncInFlightRef.current?.promise === task) {
+          syncInFlightRef.current = null;
+        }
+      });
+    syncInFlightRef.current = {
+      scope: generationScope,
+      promise: task
+    };
     return task;
   }, [runForegroundSync]);
 
@@ -1562,6 +1651,7 @@ export function WorkspaceProvider({
 
   useEffect(() => {
     let active = true;
+    const precedingTransition = vaultTransitionRef.current;
     const generation = vaultGenerationRef.current + 1;
     vaultGenerationRef.current = generation;
     let openedRepository: NativeWorkspaceRepository | null = null;
@@ -1593,15 +1683,27 @@ export function WorkspaceProvider({
     });
 
     if (accessKind === "locked") {
+      vaultGenerationScopeRef.current = null;
       setLoading(false);
       return () => {
         active = false;
       };
     }
 
+    const generationScope = createVaultGenerationScope();
+    vaultGenerationScopeRef.current = generationScope;
     setLoading(true);
-    void (async () => {
+    void generationScope.track(async () => {
       try {
+        await precedingTransition.catch(() => undefined);
+        if (
+          !active ||
+          !generationScope.isActive() ||
+          vaultGenerationScopeRef.current !== generationScope ||
+          generation !== vaultGenerationRef.current
+        ) {
+          return;
+        }
         const resolvedInstallationDeviceId =
           await installationDeviceIdentity.getOrCreate();
         if (
@@ -1613,6 +1715,8 @@ export function WorkspaceProvider({
         }
         if (
           !active ||
+          !generationScope.isActive() ||
+          vaultGenerationScopeRef.current !== generationScope ||
           generation !== vaultGenerationRef.current
         ) {
           return;
@@ -1646,21 +1750,34 @@ export function WorkspaceProvider({
             "The local database and attachment vault scopes do not match the active account."
           );
         }
-        await nextRepository.initialize();
-        const [loaded, loadedSyncState] = await Promise.all([
-          nextRepository.load(),
-          nextRepository.loadSyncState()
-        ]);
+        const [loaded, loadedSyncState] =
+          await runVaultOperationExclusive(async () => {
+            await nextRepository.initialize();
+            await resolveInterruptedRecoveryRestore({
+              repository: nextRepository,
+              attachments: nextAttachmentStore,
+              householdId: boundHouseholdId,
+              deviceId: installationDeviceId
+            });
+            return Promise.all([
+              nextRepository.load(),
+              nextRepository.loadSyncState()
+            ]);
+          });
         let loadedRevision = loaded.revision;
         let loadedSnapshot = loaded.snapshot;
         if (
           !active ||
+          !generationScope.isActive() ||
+          vaultGenerationScopeRef.current !== generationScope ||
           generation !== vaultGenerationRef.current
         ) {
-          await Promise.allSettled([
-            nextRepository.lock(),
-            nextAttachmentStore.lock()
-          ]);
+          await runVaultOperationExclusive(() =>
+            Promise.allSettled([
+              nextRepository.lock(),
+              nextAttachmentStore.lock()
+            ]).then(() => undefined)
+          );
           return;
         }
         if (loadedSnapshot !== null) {
@@ -1685,12 +1802,14 @@ export function WorkspaceProvider({
               ...loadedSnapshot,
               deviceId: installationDeviceId
             };
-            const rebound = await nextRepository.commit({
-              expectedRevision: loadedRevision,
-              nextRevision: loadedRevision + 1,
-              snapshot: reboundSnapshot,
-              operations: []
-            });
+            const rebound = await runVaultOperationExclusive(() =>
+              nextRepository.commit({
+                expectedRevision: loadedRevision,
+                nextRevision: loadedRevision + 1,
+                snapshot: reboundSnapshot,
+                operations: []
+              })
+            );
             if (!rebound.ok) {
               throw new Error(
                 "The local workspace could not be bound to this installation identity."
@@ -1702,6 +1821,20 @@ export function WorkspaceProvider({
         }
         const validatedSnapshot =
           loadedSnapshot as NativeWorkspace | null;
+        if (
+          !active ||
+          !generationScope.isActive() ||
+          vaultGenerationScopeRef.current !== generationScope ||
+          generation !== vaultGenerationRef.current
+        ) {
+          await runVaultOperationExclusive(() =>
+            Promise.allSettled([
+              nextRepository.lock(),
+              nextAttachmentStore.lock()
+            ]).then(() => undefined)
+          );
+          return;
+        }
         repositoryRef.current = nextRepository;
         attachmentStoreRef.current = nextAttachmentStore;
         setRepository(nextRepository);
@@ -1732,7 +1865,14 @@ export function WorkspaceProvider({
           lastSyncedAt:
             validatedSnapshot?.lastSyncedAt ?? null
         });
-        await refreshPendingCount(nextRepository);
+        await refreshPendingCount(
+          nextRepository,
+          () =>
+            active &&
+            generationScope.isActive() &&
+            vaultGenerationScopeRef.current === generationScope &&
+            generation === vaultGenerationRef.current
+        );
         if (syncTransport && accessKind === "authenticated") {
           if (validatedSnapshot === null) {
             await syncNow();
@@ -1756,11 +1896,17 @@ export function WorkspaceProvider({
           });
         }
       } catch (caught) {
-        await Promise.allSettled([
-          openedRepository?.lock(),
-          openedStoreForEffect?.lock()
-        ]);
-        if (active) {
+        await runVaultOperationExclusive(() =>
+          Promise.allSettled([
+            openedRepository?.lock(),
+            openedStoreForEffect?.lock()
+          ])
+        );
+        if (
+          active &&
+          generationScope.isActive() &&
+          vaultGenerationScopeRef.current === generationScope
+        ) {
           attachmentStoreRef.current = null;
           setOpenedAttachmentStore(null);
           const installationIdentityFailure =
@@ -1796,19 +1942,38 @@ export function WorkspaceProvider({
           setLoading(false);
         }
       }
-    })();
+    });
     return () => {
       active = false;
       vaultGenerationRef.current += 1;
+      generationScope.cancel();
+      if (vaultGenerationScopeRef.current === generationScope) {
+        vaultGenerationScopeRef.current = null;
+      }
+      const installation = backgroundInstallationRef.current;
+      backgroundInstallationRef.current = null;
+      installation?.dispose();
       storageReadyRef.current = false;
       installationDeviceIdRef.current = null;
+      syncRequestedRef.current = false;
+      if (syncInFlightRef.current?.scope === generationScope) {
+        syncInFlightRef.current = null;
+      }
       if (attachmentStoreRef.current === openedStoreForEffect) {
         attachmentStoreRef.current = null;
       }
-      void Promise.allSettled([
-        openedRepository?.lock(),
-        openedStoreForEffect?.lock()
-      ]);
+      const precedingClose = vaultTransitionRef.current;
+      const transition = (async (): Promise<void> => {
+        await precedingClose.catch(() => undefined);
+        await generationScope.whenIdle();
+        await runVaultOperationExclusive(() =>
+          Promise.allSettled([
+            openedRepository?.lock(),
+            openedStoreForEffect?.lock()
+          ]).then(() => undefined)
+        );
+      })();
+      vaultTransitionRef.current = transition.catch(() => undefined);
     };
   }, [
     accessKind,
@@ -1824,6 +1989,114 @@ export function WorkspaceProvider({
     syncTransport,
     vaultBindingKey,
     resourceEpoch
+  ]);
+
+  useEffect(() => {
+    if (
+      accessKind !== "authenticated" ||
+      !accountId ||
+      !boundHouseholdId ||
+      !storageReady ||
+      !storageReadyRef.current
+    ) {
+      return;
+    }
+
+    const generation = vaultGenerationRef.current;
+    const generationScope = vaultGenerationScopeRef.current;
+    const activeRepository = repositoryRef.current;
+    const activeAttachmentStore = attachmentStoreRef.current;
+    if (
+      !generationScope?.isActive() ||
+      !activeAttachmentStore ||
+      openedAttachmentStore?.bindingKey !== vaultBindingKey ||
+      openedAttachmentStore.store !== activeAttachmentStore ||
+      !activeRepository.durable ||
+      !activeRepository.encryptedAtRest ||
+      !activeAttachmentStore.encryptedAtRest
+    ) {
+      return;
+    }
+
+    const processTask = createBackgroundSyncTask({
+      runtime: {
+        resolve: async () => {
+          if (
+            !mountedRef.current ||
+            !generationScope.isActive() ||
+            vaultGenerationScopeRef.current !== generationScope ||
+            generation !== vaultGenerationRef.current ||
+            !storageReadyRef.current ||
+            repositoryRef.current !== activeRepository ||
+            attachmentStoreRef.current !== activeAttachmentStore
+          ) {
+            return { kind: "vault-locked" } as const;
+          }
+          if (
+            !syncTransport ||
+            !evidenceUploadPort ||
+            !evidenceDownloadPort
+          ) {
+            return { kind: "provider-missing" } as const;
+          }
+          return {
+            kind: "ready",
+            accountId,
+            householdId: boundHouseholdId,
+            repository: activeRepository,
+            transport: syncTransport,
+            attachmentStore: activeAttachmentStore,
+            evidenceUploadPort,
+            evidenceDownloadPort,
+            execution: {
+              signal: generationScope.signal,
+              isCurrent: () =>
+                mountedRef.current &&
+                generationScope.isActive() &&
+                vaultGenerationScopeRef.current === generationScope &&
+                generation === vaultGenerationRef.current &&
+                storageReadyRef.current &&
+                repositoryRef.current === activeRepository &&
+                attachmentStoreRef.current === activeAttachmentStore,
+              trackProviderSettlement: <T,>(
+                providerPromise: Promise<T>
+              ): Promise<T> =>
+                generationScope.track(() => providerPromise)
+            }
+          } as const;
+        }
+      },
+      runExclusive: runVaultOperationExclusive
+    });
+    const task: BackgroundSyncTask = (invocation) =>
+      generationScope.track(() => processTask(invocation));
+
+    let installation: ExpoBackgroundSyncInstallation;
+    try {
+      installation = backgroundSyncInstaller(task);
+    } catch {
+      return;
+    }
+    backgroundInstallationRef.current?.dispose();
+    backgroundInstallationRef.current = installation;
+    void installation.registration.catch(() => undefined);
+    return () => {
+      if (backgroundInstallationRef.current === installation) {
+        backgroundInstallationRef.current = null;
+        installation.dispose();
+      }
+    };
+  }, [
+    accessKind,
+    accountId,
+    backgroundSyncInstaller,
+    boundHouseholdId,
+    evidenceDownloadPort,
+    evidenceUploadPort,
+    openedAttachmentStore,
+    storageReady,
+    syncTransport,
+    vaultBindingKey
   ]);
 
   useEffect(() => {
@@ -1883,7 +2156,7 @@ export function WorkspaceProvider({
   const enqueue = useCallback(
     async <T,>(work: () => Promise<T>): Promise<T> => {
       setSaving(true);
-      const run = queueRef.current.then(work, work);
+      const run = runVaultOperationExclusive(work);
       queueRef.current = run.catch(() => undefined);
       try {
         return await run;
@@ -1905,9 +2178,13 @@ export function WorkspaceProvider({
     async (
       operationId: string,
       choice: Exclude<ConflictResolutionChoice, "review-manually">
-    ): Promise<"cloud-kept" | "local-reapply-queued"> =>
-      enqueue(async () => {
-        await (syncInFlightRef.current ?? Promise.resolve());
+    ): Promise<"cloud-kept" | "local-reapply-queued"> => {
+      // Capture only work that was already submitted. Reading this ref after
+      // entering the gate could observe a later sync queued behind this
+      // mutation and create a circular wait.
+      const precedingSync = syncInFlightRef.current?.promise;
+      await (precedingSync ?? Promise.resolve());
+      return enqueue(async () => {
         const activeRepository = repositoryRef.current;
         const householdId =
           boundHouseholdId ?? workspaceRef.current?.household.id;
@@ -1958,7 +2235,8 @@ export function WorkspaceProvider({
         await refreshPendingCount(activeRepository);
         void syncNow();
         return result.outcome;
-      }),
+      });
+    },
     [
       boundHouseholdId,
       enqueue,
@@ -1976,13 +2254,24 @@ export function WorkspaceProvider({
         options?.reopenEmptyPreview === true && accessKind === "preview";
       const activeRepository = repositoryRef.current;
       const activeAttachmentStore = attachmentStoreRef.current;
+      const activeGenerationScope = vaultGenerationScopeRef.current;
 
       // Stop new writes and hide every record before waiting for an in-flight
       // mutation/sync task to settle. The generation bump prevents late sync
       // results from republishing a deleted workspace.
       vaultGenerationRef.current += 1;
+      activeGenerationScope?.cancel();
+      if (vaultGenerationScopeRef.current === activeGenerationScope) {
+        vaultGenerationScopeRef.current = null;
+      }
+      const installation = backgroundInstallationRef.current;
+      backgroundInstallationRef.current = null;
+      installation?.dispose();
       storageReadyRef.current = false;
       syncRequestedRef.current = false;
+      if (syncInFlightRef.current?.scope === activeGenerationScope) {
+        syncInFlightRef.current = null;
+      }
       workspaceRef.current = null;
       revisionRef.current = 0;
       setStorageReady(false);
@@ -2004,14 +2293,13 @@ export function WorkspaceProvider({
         lastSyncedAt: null
       });
 
-      await Promise.allSettled([
-        queueRef.current,
-        syncInFlightRef.current ?? Promise.resolve()
-      ]);
-      const purgeResults = await Promise.allSettled([
-        activeRepository.purge(),
-        activeAttachmentStore?.purge() ?? Promise.resolve()
-      ]);
+      await activeGenerationScope?.whenIdle();
+      const purgeResults = await runVaultOperationExclusive(() =>
+        Promise.allSettled([
+          activeRepository.purge(),
+          activeAttachmentStore?.purge() ?? Promise.resolve()
+        ])
+      );
       if (attachmentStoreRef.current === activeAttachmentStore) {
         attachmentStoreRef.current = null;
       }
@@ -2743,14 +3031,8 @@ export function WorkspaceProvider({
     storageReady;
   const runRecoveryExclusive = useCallback(
     async <T,>(work: () => Promise<T>): Promise<T> =>
-      enqueue(async () => {
-        // Let an already-running foreground reconciliation settle before
-        // Recovery Kit preflight snapshots the repository revision. A later
-        // sync still loses its revision race rather than overwriting restore.
-        await (syncInFlightRef.current ?? Promise.resolve());
-        return work();
-      }),
-    [enqueue]
+      runVaultOperationExclusive(work),
+    []
   );
   const publishRecoveredWorkspace = useCallback(
     (restored: NativeWorkspace, revision: number): void => {

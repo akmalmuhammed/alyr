@@ -33,6 +33,7 @@ import type {
 import { MemoryPreviewAttachmentStore } from "@/data/attachmentStore";
 import { MemoryWorkspaceRepository } from "@/data/memoryRepository";
 import { deriveAuthenticatedVaultScope } from "@/data/vaultScope";
+import { runVaultOperationExclusive } from "@/data/vaultOperationGate";
 import { createWorkspace } from "@/domain/sample";
 import {
   WorkspaceProvider,
@@ -244,6 +245,175 @@ describe("WorkspaceProvider foreground sync lifecycle", () => {
       expect(latest?.pendingOperationCount).toBe(0);
       expect(latest?.sync.status).toBe("idle");
       expect(latest?.workspace?.lastSyncedAt).toBeTruthy();
+    });
+    await screen.unmount();
+    appStateSpy.mockRestore();
+  });
+
+  it("queues manual/AppState sync and attachment persistence behind an active vault operation", async () => {
+    let foregroundListener:
+      | ((state: AppStateStatus) => void)
+      | null = null;
+    const appStateSpy = jest
+      .spyOn(AppState, "addEventListener")
+      .mockImplementation((_type, listener) => {
+        foregroundListener = listener;
+        return { remove: jest.fn() };
+      });
+    const scope = await deriveAuthenticatedVaultScope(
+      "account-provider-test",
+      HOUSEHOLD_ID
+    );
+    const repository = new MemoryWorkspaceRepository(scope);
+    await repository.initialize();
+    const workspace = createWorkspace("personal", NOW, {
+      householdId: HOUSEHOLD_ID,
+      ownerMemberId:
+        "00000000-0000-4000-8000-000000000812",
+      deviceId: "00000000-0000-4000-8000-000000000813"
+    });
+    await repository.commit({
+      expectedRevision: 0,
+      nextRevision: 1,
+      snapshot: workspace,
+      operations: []
+    });
+    const attachmentStore = new MemoryPreviewAttachmentStore(scope);
+    const ingest = jest.spyOn(attachmentStore, "ingest");
+    const transport = new ProviderTestTransport();
+    const screen = await render(
+      <WorkspaceProvider
+        repositoryOverride={repository}
+        attachmentStoreOverride={attachmentStore}
+        vaultAccess={{
+          kind: "authenticated",
+          accountId: "account-provider-test",
+          householdId: HOUSEHOLD_ID,
+          role: "owner"
+        }}
+        syncTransport={transport}
+      >
+        <Probe />
+      </WorkspaceProvider>
+    );
+    await waitFor(() => {
+      expect(latest?.storageReady).toBe(true);
+      expect(latest?.sync.status).toBe("idle");
+    });
+    const pullsBeforeGate = transport.pullCalls;
+    let releaseGate!: () => void;
+    let signalGateStarted!: () => void;
+    const gateStarted = new Promise<void>((resolve) => {
+      signalGateStarted = resolve;
+    });
+    const gateRelease = new Promise<void>((resolve) => {
+      releaseGate = resolve;
+    });
+    const activeVaultOperation = runVaultOperationExclusive(async () => {
+      signalGateStarted();
+      await gateRelease;
+    });
+    await gateStarted;
+
+    let asset!: ReturnType<NonNullable<typeof latest>["createAsset"]>;
+    let manualSync!: ReturnType<NonNullable<typeof latest>["syncNow"]>;
+    await act(async () => {
+      asset = latest!.createAsset({
+        name: "Gate camera",
+        categoryId: "home.other",
+        categoryLabel: "Personal item",
+        photo: {
+          localUri: "file:///gate-camera.jpg",
+          fileName: "gate-camera.jpg",
+          mimeType: "image/jpeg",
+          byteSize: 1024
+        },
+        locationStatus: "unknown",
+        placeId: null,
+        roomId: null,
+        locatorText: null,
+        evidence: null
+      });
+      manualSync = latest!.syncNow();
+      foregroundListener?.("active");
+      await Promise.resolve();
+      await Promise.resolve();
+    });
+    expect(ingest).not.toHaveBeenCalled();
+    expect(transport.pullCalls).toBe(pullsBeforeGate);
+
+    await act(async () => {
+      releaseGate();
+      await activeVaultOperation;
+      await asset;
+      await manualSync;
+    });
+    await waitFor(() => {
+      expect(ingest).toHaveBeenCalledTimes(1);
+      expect(transport.pullCalls).toBeGreaterThan(pullsBeforeGate);
+    });
+    await screen.unmount();
+    appStateSpy.mockRestore();
+  });
+
+  it("serializes startup interrupted-restore resolution through the shared vault gate", async () => {
+    const appStateSpy = jest
+      .spyOn(AppState, "addEventListener")
+      .mockReturnValue({ remove: jest.fn() });
+    const scope = await deriveAuthenticatedVaultScope(
+      "account-provider-test",
+      HOUSEHOLD_ID
+    );
+    const repository = new MemoryWorkspaceRepository(scope);
+    const initialize = jest.spyOn(repository, "initialize");
+    let releaseGate!: () => void;
+    let signalGateStarted!: () => void;
+    const gateStarted = new Promise<void>((resolve) => {
+      signalGateStarted = resolve;
+    });
+    const gateRelease = new Promise<void>((resolve) => {
+      releaseGate = resolve;
+    });
+    const activeVaultOperation = runVaultOperationExclusive(async () => {
+      signalGateStarted();
+      await gateRelease;
+    });
+    await gateStarted;
+
+    const screen = await render(
+      <WorkspaceProvider
+        repositoryOverride={repository}
+        attachmentStoreOverride={
+          new MemoryPreviewAttachmentStore(scope)
+        }
+        vaultAccess={{
+          kind: "authenticated",
+          accountId: "account-provider-test",
+          householdId: HOUSEHOLD_ID,
+          role: "owner"
+        }}
+        installationDeviceIdentity={{
+          scope: "installation",
+          getOrCreate: async () =>
+            "00000000-0000-4000-8000-000000000813"
+        }}
+      >
+        <Probe />
+      </WorkspaceProvider>
+    );
+    await act(async () => {
+      await new Promise((resolve) => setTimeout(resolve, 20));
+    });
+    expect(initialize).not.toHaveBeenCalled();
+    expect(latest?.storageReady).toBe(false);
+
+    await act(async () => {
+      releaseGate();
+      await activeVaultOperation;
+    });
+    await waitFor(() => {
+      expect(initialize).toHaveBeenCalledTimes(1);
+      expect(latest?.storageReady).toBe(true);
     });
     await screen.unmount();
     appStateSpy.mockRestore();

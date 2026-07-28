@@ -1,5 +1,6 @@
 export * from "./atomicRestore";
 export * from "./container";
+export * from "./crashJournal";
 export * from "./expoCrypto";
 export * from "./journey";
 export * from "./journeyController";

@@ -24,6 +24,11 @@ import {
   type VaultScope,
   type VaultScopeId
 } from "./vaultScope";
+import { assertRecoveryRestoreCrashJournal } from "@/recovery/crashJournal";
+import type {
+  RecoveryRestoreCrashJournal,
+  RecoveryRestoreJournalPhase
+} from "@/recovery/types";
 
 interface SnapshotRow {
   readonly revision: number;
@@ -42,6 +47,20 @@ interface SyncStateRow {
 interface CipherVersionRow {
   readonly cipher_version: string;
 }
+
+interface RecoveryRestoreJournalRow {
+  readonly transaction_id: string;
+  readonly journal_json: string;
+}
+
+const RECOVERY_JOURNAL_PHASE_ORDER: Readonly<
+  Record<RecoveryRestoreJournalPhase, number>
+> = {
+  prepared: 0,
+  "attachments-installing": 1,
+  "attachments-installed": 2,
+  "workspace-committed": 3
+};
 
 function bytesToHex(bytes: Uint8Array): string {
   return [...bytes].map((byte) => byte.toString(16).padStart(2, "0")).join("");
@@ -128,6 +147,12 @@ export class SQLiteWorkspaceRepository implements NativeWorkspaceRepository {
           conflicts_json TEXT NOT NULL,
           updated_at TEXT NOT NULL
         );
+        CREATE TABLE IF NOT EXISTS recovery_restore_journal (
+          id INTEGER PRIMARY KEY CHECK (id = 1),
+          transaction_id TEXT NOT NULL UNIQUE,
+          journal_json TEXT NOT NULL,
+          updated_at TEXT NOT NULL
+        );
         INSERT OR IGNORE INTO workspace_snapshot
           (id, revision, snapshot_json, updated_at)
         VALUES
@@ -207,6 +232,137 @@ export class SQLiteWorkspaceRepository implements NativeWorkspaceRepository {
         ? (JSON.parse(row.snapshot_json) as JsonObject)
         : null
     };
+  }
+
+  async loadRecoveryRestoreJournal(): Promise<RecoveryRestoreCrashJournal | null> {
+    const database = this.requireDatabase();
+    const row =
+      await database.getFirstAsync<RecoveryRestoreJournalRow>(
+        `SELECT transaction_id, journal_json
+         FROM recovery_restore_journal
+         WHERE id = 1`
+      );
+    if (!row) return null;
+    let journal: unknown;
+    try {
+      journal = JSON.parse(row.journal_json);
+    } catch {
+      throw new Error("The encrypted Recovery Kit journal is corrupt.");
+    }
+    assertRecoveryRestoreCrashJournal(journal);
+    if (journal.transactionId !== row.transaction_id) {
+      throw new Error("The encrypted Recovery Kit journal identity is corrupt.");
+    }
+    return journal;
+  }
+
+  async createRecoveryRestoreJournal(
+    journal: RecoveryRestoreCrashJournal
+  ): Promise<void> {
+    assertRecoveryRestoreCrashJournal(journal);
+    const database = this.requireDatabase();
+    await database.withExclusiveTransactionAsync(async (transaction) => {
+      const existing =
+        await transaction.getFirstAsync<RecoveryRestoreJournalRow>(
+          `SELECT transaction_id, journal_json
+           FROM recovery_restore_journal
+           WHERE id = 1`
+        );
+      if (existing) {
+        throw new Error(
+          "An interrupted Recovery Kit must be resolved before another restore."
+        );
+      }
+      await transaction.runAsync(
+        `INSERT INTO recovery_restore_journal
+          (id, transaction_id, journal_json, updated_at)
+         VALUES (1, ?, ?, ?)`,
+        journal.transactionId,
+        JSON.stringify(journal),
+        journal.updatedAt
+      );
+    });
+  }
+
+  async transitionRecoveryRestoreJournal(
+    transactionId: string,
+    expectedPhase: RecoveryRestoreJournalPhase,
+    nextPhase: RecoveryRestoreJournalPhase,
+    updatedAt: string
+  ): Promise<void> {
+    const expectedOrder = RECOVERY_JOURNAL_PHASE_ORDER[expectedPhase];
+    const nextOrder = RECOVERY_JOURNAL_PHASE_ORDER[nextPhase];
+    if (
+      !/^[a-f0-9]{32}$/u.test(transactionId) ||
+      !Number.isFinite(Date.parse(updatedAt)) ||
+      typeof expectedOrder !== "number" ||
+      typeof nextOrder !== "number" ||
+      nextOrder <= expectedOrder
+    ) {
+      throw new Error("The Recovery Kit journal transition is invalid.");
+    }
+    const database = this.requireDatabase();
+    await database.withExclusiveTransactionAsync(async (transaction) => {
+      const row =
+        await transaction.getFirstAsync<RecoveryRestoreJournalRow>(
+          `SELECT transaction_id, journal_json
+           FROM recovery_restore_journal
+           WHERE id = 1`
+        );
+      if (!row) {
+        throw new Error("The Recovery Kit journal is missing.");
+      }
+      const journal = JSON.parse(row.journal_json) as unknown;
+      assertRecoveryRestoreCrashJournal(journal);
+      if (
+        row.transaction_id !== transactionId ||
+        journal.transactionId !== transactionId ||
+        journal.phase !== expectedPhase
+      ) {
+        throw new Error(
+          "The Recovery Kit journal changed before its phase transition."
+        );
+      }
+      const next: RecoveryRestoreCrashJournal = {
+        ...journal,
+        phase: nextPhase,
+        updatedAt
+      };
+      await transaction.runAsync(
+        `UPDATE recovery_restore_journal
+         SET journal_json = ?, updated_at = ?
+         WHERE id = 1 AND transaction_id = ?`,
+        JSON.stringify(next),
+        updatedAt,
+        transactionId
+      );
+    });
+  }
+
+  async clearRecoveryRestoreJournal(transactionId: string): Promise<void> {
+    if (!/^[a-f0-9]{32}$/u.test(transactionId)) {
+      throw new Error("The Recovery Kit journal identity is invalid.");
+    }
+    const database = this.requireDatabase();
+    await database.withExclusiveTransactionAsync(async (transaction) => {
+      const row =
+        await transaction.getFirstAsync<RecoveryRestoreJournalRow>(
+          `SELECT transaction_id, journal_json
+           FROM recovery_restore_journal
+           WHERE id = 1`
+        );
+      if (!row) return;
+      if (row.transaction_id !== transactionId) {
+        throw new Error(
+          "A different Recovery Kit journal is active."
+        );
+      }
+      await transaction.runAsync(
+        `DELETE FROM recovery_restore_journal
+         WHERE id = 1 AND transaction_id = ?`,
+        transactionId
+      );
+    });
   }
 
   async commit(commit: NativeWorkspaceCommit) {

@@ -200,10 +200,7 @@ interface MockFileSystemModule {
 }
 
 interface MockCryptoModule {
-  readonly digest: (
-    algorithm: string,
-    value: Uint8Array
-  ) => Promise<ArrayBuffer>;
+  readonly digest: jest.Mock<Promise<ArrayBuffer>, [string, Uint8Array]>;
   readonly CryptoDigestAlgorithm: { readonly SHA256: string };
   readonly aesDecryptAsync: jest.Mock;
   readonly __reset: () => void;
@@ -225,6 +222,31 @@ function secureStoreWith(
     get: jest.fn(async () => key),
     set: jest.fn(async () => undefined),
     remove: jest.fn(async () => undefined)
+  };
+}
+
+function statefulSecureStore(
+  initial: Uint8Array | null
+): SecureKeyStore & {
+  readonly values: Map<string, Uint8Array>;
+  readonly get: jest.Mock;
+  readonly set: jest.Mock;
+  readonly remove: jest.Mock;
+} {
+  const values = new Map<string, Uint8Array>();
+  if (initial) values.set(ATTACHMENT_KEY_NAME, new Uint8Array(initial));
+  return {
+    values,
+    get: jest.fn(async (name: string) => {
+      const value = values.get(name);
+      return value ? new Uint8Array(value) : null;
+    }),
+    set: jest.fn(async (name: string, value: Uint8Array) => {
+      values.set(name, new Uint8Array(value));
+    }),
+    remove: jest.fn(async (name: string) => {
+      values.delete(name);
+    })
   };
 }
 
@@ -258,6 +280,58 @@ beforeEach(() => {
   mockFileSystem.__files.clear();
   mockCrypto.__reset();
 });
+
+async function stageSingleRecoveryAttachment(input: {
+  readonly keyStore: SecureKeyStore;
+  readonly importedKey: Uint8Array;
+  readonly kitId: string;
+  readonly protectedBytes?: Uint8Array;
+}) {
+  const store = new EncryptedFileAttachmentStore(input.keyStore);
+  const protectedBytes =
+    input.protectedBytes ?? new Uint8Array([13, 21, 34, 55]);
+  const sample = createWorkspace("sample");
+  const originalEvidence = sample.evidence[0]!;
+  const originalAsset = sample.assets.find(
+    (asset) => asset.id === originalEvidence.assetId
+  )!;
+  const workspace = {
+    ...sample,
+    evidence: [originalEvidence],
+    assets: [originalAsset],
+    placeDocuments: []
+  };
+  const transaction = await store.beginRecoveryAttachmentRestore({
+    kitId: input.kitId,
+    createdAt: "2026-07-28T10:00:00.000Z",
+    workspaceSchemaVersion: workspace.schemaVersion,
+    attachmentCount: 1
+  });
+  await transaction.stageAttachmentVaultKey(input.importedKey);
+  await transaction.stageProtectedAttachment({
+    id: originalEvidence.blobObjectId,
+    evidenceId: originalEvidence.id,
+    fileName: originalEvidence.fileName,
+    mimeType: originalEvidence.mimeType,
+    plaintextByteSize: originalEvidence.byteSize,
+    plaintextChecksumSha256: originalEvidence.checksumSha256,
+    protectedFormat: "expo-aes-gcm-combined-v1",
+    protectedBytes,
+    protectedSha256: await checksumFor(protectedBytes)
+  });
+  const stagedWorkspace = (await transaction.stageWorkspace(
+    workspace,
+    workspace.schemaVersion
+  )) as typeof workspace;
+  const journal = await transaction.createRecoveryRestoreJournalState();
+  return {
+    journal,
+    protectedBytes,
+    restoredUri: stagedWorkspace.evidence[0]!.localUri!,
+    store,
+    transaction
+  };
+}
 
 describe("encrypted attachment ingestion contract", () => {
   it("persists the measured byte size when picker metadata reports zero", async () => {
@@ -586,7 +660,7 @@ describe("attachment key lifecycle", () => {
 
 describe("Recovery Kit attachment boundary", () => {
   it("stages opaque protected bytes and removes installed files and a new key on rollback", async () => {
-    const keyStore = secureStoreWith(null);
+    const keyStore = statefulSecureStore(null);
     const store = new EncryptedFileAttachmentStore(keyStore);
     const protectedBytes = new Uint8Array([31, 41, 59, 26, 53]);
     const protectedSha256 = await checksumFor(protectedBytes);
@@ -642,11 +716,169 @@ describe("Recovery Kit attachment boundary", () => {
     await transaction.rollback();
     expect(mockFileSystem.__files.has(restoredUri)).toBe(false);
     expect(keyStore.remove).toHaveBeenCalledWith(ATTACHMENT_KEY_NAME);
+    expect(keyStore.values.has(ATTACHMENT_KEY_NAME)).toBe(false);
     expect(
       [...mockFileSystem.__files.keys()].some((uri) =>
         uri.includes("alyr-recovery-stage-")
       )
     ).toBe(false);
+  });
+
+  it("rejects an ungated key introduced after staging without deleting it", async () => {
+    const importedKey = new Uint8Array(32).fill(7);
+    const replacementKey = new Uint8Array(32).fill(8);
+    const keyStore = statefulSecureStore(null);
+    const staged = await stageSingleRecoveryAttachment({
+      keyStore,
+      importedKey,
+      kitId: "6".repeat(32)
+    });
+    keyStore.values.set(
+      ATTACHMENT_KEY_NAME,
+      new Uint8Array(replacementKey)
+    );
+
+    await expect(staged.transaction.commit()).rejects.toMatchObject({
+      code: "RESTORE_REJECTED"
+    });
+    expect(keyStore.values.get(ATTACHMENT_KEY_NAME)).toEqual(
+      replacementKey
+    );
+    expect(keyStore.remove).not.toHaveBeenCalled();
+    expect(mockFileSystem.__files.has(staged.restoredUri)).toBe(false);
+    expect(
+      [...mockFileSystem.__files.keys()].some((uri) =>
+        uri.includes("alyr-recovery-stage-")
+      )
+    ).toBe(false);
+  });
+
+  it("rejects an ungated replacement of the preserved key before finalization", async () => {
+    const importedKey = new Uint8Array(32).fill(3);
+    const replacementKey = new Uint8Array(32).fill(4);
+    const keyStore = statefulSecureStore(importedKey);
+    const staged = await stageSingleRecoveryAttachment({
+      keyStore,
+      importedKey,
+      kitId: "7".repeat(32)
+    });
+    keyStore.values.set(
+      ATTACHMENT_KEY_NAME,
+      new Uint8Array(replacementKey)
+    );
+
+    await expect(staged.transaction.commit()).rejects.toMatchObject({
+      code: "RESTORE_REJECTED"
+    });
+    expect(keyStore.values.get(ATTACHMENT_KEY_NAME)).toEqual(
+      replacementKey
+    );
+    expect(keyStore.remove).not.toHaveBeenCalled();
+    expect(mockFileSystem.__files.has(staged.restoredUri)).toBe(false);
+  });
+
+  it("verifies a newly installed key and preserves an ungated replacement", async () => {
+    const importedKey = new Uint8Array(32).fill(5);
+    const replacementKey = new Uint8Array(32).fill(6);
+    const keyStore = statefulSecureStore(null);
+    keyStore.set.mockImplementation(
+      async (name: string, _value: Uint8Array) => {
+        keyStore.values.set(name, new Uint8Array(replacementKey));
+      }
+    );
+    const staged = await stageSingleRecoveryAttachment({
+      keyStore,
+      importedKey,
+      kitId: "8".repeat(32)
+    });
+
+    await expect(staged.transaction.commit()).rejects.toMatchObject({
+      code: "RESTORE_REJECTED"
+    });
+    expect(keyStore.values.get(ATTACHMENT_KEY_NAME)).toEqual(
+      replacementKey
+    );
+    expect(keyStore.remove).not.toHaveBeenCalled();
+    expect(mockFileSystem.__files.has(staged.restoredUri)).toBe(false);
+  });
+
+  it("cleans a moved destination after post-move verification fails while preserving the existing key", async () => {
+    const importedKey = new Uint8Array(32).fill(11);
+    const keyStore = statefulSecureStore(importedKey);
+    const staged = await stageSingleRecoveryAttachment({
+      keyStore,
+      importedKey,
+      kitId: "9".repeat(32)
+    });
+    const [journalFile] = staged.journal.files;
+    expect(journalFile).toBeDefined();
+    mockCrypto.digest.mockImplementationOnce(async () =>
+      new Uint8Array(32).fill(255).buffer
+    );
+
+    await expect(staged.transaction.commit()).rejects.toMatchObject({
+      code: "STORAGE_FAILED"
+    });
+    expect(
+      mockFileSystem.__files.has(journalFile!.destinationReference)
+    ).toBe(false);
+    expect(
+      mockFileSystem.__files.has(journalFile!.stagedReference)
+    ).toBe(false);
+    expect(
+      [...mockFileSystem.__files.keys()].some((uri) =>
+        uri.includes("alyr-recovery-stage-")
+      )
+    ).toBe(false);
+    expect(keyStore.values.get(ATTACHMENT_KEY_NAME)).toEqual(
+      importedKey
+    );
+    expect(keyStore.remove).not.toHaveBeenCalled();
+  });
+
+  it("removes only its exact introduced key during live rollback", async () => {
+    const importedKey = new Uint8Array(32).fill(12);
+    const replacementKey = new Uint8Array(32).fill(13);
+    const keyStore = statefulSecureStore(null);
+    const staged = await stageSingleRecoveryAttachment({
+      keyStore,
+      importedKey,
+      kitId: "a".repeat(32)
+    });
+    await staged.transaction.commit();
+    keyStore.get.mockImplementationOnce(async (name: string) => {
+      const value = keyStore.values.get(name);
+      keyStore.values.set(name, new Uint8Array(replacementKey));
+      return value ? new Uint8Array(value) : null;
+    });
+
+    await staged.transaction.rollback();
+    expect(keyStore.values.get(ATTACHMENT_KEY_NAME)).toEqual(
+      replacementKey
+    );
+    expect(keyStore.remove).not.toHaveBeenCalled();
+    expect(mockFileSystem.__files.has(staged.restoredUri)).toBe(false);
+  });
+
+  it("finalizes transaction secrets idempotently after durable commit", async () => {
+    const importedKey = new Uint8Array(32).fill(14);
+    const keyStore = statefulSecureStore(null);
+    const staged = await stageSingleRecoveryAttachment({
+      keyStore,
+      importedKey,
+      kitId: "b".repeat(32)
+    });
+    await staged.transaction.commit();
+
+    await expect(staged.transaction.finalize()).resolves.toBeUndefined();
+    await expect(staged.transaction.finalize()).resolves.toBeUndefined();
+    await expect(staged.transaction.rollback()).resolves.toBeUndefined();
+    expect(keyStore.values.get(ATTACHMENT_KEY_NAME)).toEqual(
+      importedKey
+    );
+    expect(mockFileSystem.__files.get(staged.restoredUri)).toEqual(
+      staged.protectedBytes
+    );
   });
 
   it("rejects a conflicting current attachment key before staging files", async () => {
@@ -665,4 +897,227 @@ describe("Recovery Kit attachment boundary", () => {
     ).rejects.toMatchObject({ code: "RESTORE_REJECTED" });
     await transaction.rollback();
   });
+
+  it("finishes a staged key and protected file idempotently after restart", async () => {
+    const keyStore = statefulSecureStore(null);
+    const store = new EncryptedFileAttachmentStore(keyStore);
+    const protectedBytes = new Uint8Array([2, 7, 1, 8, 2, 8]);
+    const protectedSha256 = await checksumFor(protectedBytes);
+    const sample = createWorkspace("sample");
+    const originalEvidence = sample.evidence[0]!;
+    const originalAsset = sample.assets.find(
+      (asset) => asset.id === originalEvidence.assetId
+    )!;
+    const workspace = {
+      ...sample,
+      evidence: [originalEvidence],
+      assets: [originalAsset],
+      placeDocuments: []
+    };
+    const transaction = await store.beginRecoveryAttachmentRestore({
+      kitId: "d".repeat(32),
+      createdAt: "2026-07-28T10:00:00.000Z",
+      workspaceSchemaVersion: workspace.schemaVersion,
+      attachmentCount: 1
+    });
+    await transaction.stageAttachmentVaultKey(
+      new Uint8Array(32).fill(9)
+    );
+    await transaction.stageProtectedAttachment({
+      id: originalEvidence.blobObjectId,
+      evidenceId: originalEvidence.id,
+      fileName: originalEvidence.fileName,
+      mimeType: originalEvidence.mimeType,
+      plaintextByteSize: originalEvidence.byteSize,
+      plaintextChecksumSha256: originalEvidence.checksumSha256,
+      protectedFormat: "expo-aes-gcm-combined-v1",
+      protectedBytes,
+      protectedSha256
+    });
+    await transaction.stageWorkspace(
+      workspace,
+      workspace.schemaVersion
+    );
+    const journal =
+      await transaction.createRecoveryRestoreJournalState();
+    const [file] = journal.files;
+    expect(file).toBeDefined();
+
+    const reopened = new EncryptedFileAttachmentStore(keyStore);
+    await reopened.resolveInterruptedRecoveryAttachmentRestore(
+      journal,
+      "complete"
+    );
+    expect(mockFileSystem.__files.get(file!.destinationReference)).toEqual(
+      protectedBytes
+    );
+    expect(mockFileSystem.__files.has(file!.stagedReference)).toBe(false);
+    expect(keyStore.values.get(ATTACHMENT_KEY_NAME)).toEqual(
+      new Uint8Array(32).fill(9)
+    );
+
+    await reopened.resolveInterruptedRecoveryAttachmentRestore(
+      journal,
+      "complete"
+    );
+    expect(mockFileSystem.__files.get(file!.destinationReference)).toEqual(
+      protectedBytes
+    );
+  });
+
+  it("rejects a replacement of the exact preserved key during restart completion", async () => {
+    const importedKey = new Uint8Array(32).fill(15);
+    const replacementKey = new Uint8Array(32).fill(16);
+    const keyStore = statefulSecureStore(importedKey);
+    const staged = await stageSingleRecoveryAttachment({
+      keyStore,
+      importedKey,
+      kitId: "c".repeat(32)
+    });
+    const [journalFile] = staged.journal.files;
+    keyStore.values.set(
+      ATTACHMENT_KEY_NAME,
+      new Uint8Array(replacementKey)
+    );
+
+    const reopened = new EncryptedFileAttachmentStore(keyStore);
+    await expect(
+      reopened.resolveInterruptedRecoveryAttachmentRestore(
+        staged.journal,
+        "complete"
+      )
+    ).rejects.toMatchObject({ code: "RESTORE_REJECTED" });
+    expect(keyStore.values.get(ATTACHMENT_KEY_NAME)).toEqual(
+      replacementKey
+    );
+    expect(
+      mockFileSystem.__files.has(journalFile!.stagedReference)
+    ).toBe(true);
+    expect(
+      mockFileSystem.__files.has(journalFile!.destinationReference)
+    ).toBe(false);
+  });
+
+  it("removes a partially installed file and only the matching introduced key after restart", async () => {
+    const pendingKey = new Uint8Array(32).fill(5);
+    const keyStore = statefulSecureStore(pendingKey);
+    const store = new EncryptedFileAttachmentStore(keyStore);
+    const stagedReference =
+      `file:///cache/alyr-recovery-stage-${"e".repeat(32)}/${"f".repeat(
+        64
+      )}.alyrblob`;
+    const destinationReference =
+      `file:///document/alyr-attachments/${"f".repeat(64)}.alyrblob`;
+    const bytes = new Uint8Array([1, 6, 1, 8]);
+    mockFileSystem.__files.set(destinationReference, bytes);
+
+    await store.resolveInterruptedRecoveryAttachmentRestore(
+      {
+        journalVersion: 1,
+        vaultScopeId: store.scopeId,
+        stagingDirectoryReference:
+          `file:///cache/alyr-recovery-stage-${"e".repeat(32)}`,
+        vaultKeyDisposition: "install",
+        pendingVaultKeyHex: "05".repeat(32),
+        expectedVaultKeyHex: "05".repeat(32),
+        files: [
+          {
+            stagedReference,
+            destinationReference,
+            protectedByteSize: bytes.byteLength,
+            protectedSha256: await checksumFor(bytes)
+          }
+        ]
+      },
+      "rollback"
+    );
+
+    expect(mockFileSystem.__files.has(destinationReference)).toBe(false);
+    expect(keyStore.values.has(ATTACHMENT_KEY_NAME)).toBe(false);
+    expect(keyStore.remove).toHaveBeenCalledWith(ATTACHMENT_KEY_NAME);
+  });
+
+  it("rejects same-size staged corruption before restart completion moves or clears it", async () => {
+    const keyStore = statefulSecureStore(new Uint8Array(32).fill(4));
+    const store = new EncryptedFileAttachmentStore(keyStore);
+    const expectedBytes = new Uint8Array([1, 2, 3, 4]);
+    const corruptBytes = new Uint8Array([4, 3, 2, 1]);
+    const stagingDirectoryReference =
+      `file:///cache/alyr-recovery-stage-${"1".repeat(32)}`;
+    const stagedReference =
+      `${stagingDirectoryReference}/${"2".repeat(64)}.alyrblob`;
+    const destinationReference =
+      `file:///document/alyr-attachments/${"2".repeat(64)}.alyrblob`;
+    mockFileSystem.__files.set(stagedReference, corruptBytes);
+
+    await expect(
+      store.resolveInterruptedRecoveryAttachmentRestore(
+        {
+          journalVersion: 1,
+          vaultScopeId: store.scopeId,
+          stagingDirectoryReference,
+          vaultKeyDisposition: "preserve",
+          pendingVaultKeyHex: null,
+          expectedVaultKeyHex: "04".repeat(32),
+          files: [
+            {
+              stagedReference,
+              destinationReference,
+              protectedByteSize: expectedBytes.byteLength,
+              protectedSha256: await checksumFor(expectedBytes)
+            }
+          ]
+        },
+        "complete"
+      )
+    ).rejects.toMatchObject({ code: "STORAGE_FAILED" });
+    expect(mockFileSystem.__files.get(stagedReference)).toEqual(
+      corruptBytes
+    );
+    expect(mockFileSystem.__files.has(destinationReference)).toBe(false);
+  });
+
+  it.each(["complete", "rollback"] as const)(
+    "retains a same-size corrupt destination during interrupted %s resolution",
+    async (outcome) => {
+      const keyStore = statefulSecureStore(
+        new Uint8Array(32).fill(4)
+      );
+      const store = new EncryptedFileAttachmentStore(keyStore);
+      const expectedBytes = new Uint8Array([9, 8, 7, 6]);
+      const corruptBytes = new Uint8Array([6, 7, 8, 9]);
+      const stagingDirectoryReference =
+        `file:///cache/alyr-recovery-stage-${"3".repeat(32)}`;
+      const stagedReference =
+        `${stagingDirectoryReference}/${"4".repeat(64)}.alyrblob`;
+      const destinationReference =
+        `file:///document/alyr-attachments/${"4".repeat(64)}.alyrblob`;
+      mockFileSystem.__files.set(destinationReference, corruptBytes);
+
+      await expect(
+        store.resolveInterruptedRecoveryAttachmentRestore(
+          {
+            journalVersion: 1,
+            vaultScopeId: store.scopeId,
+            stagingDirectoryReference,
+            vaultKeyDisposition: "preserve",
+            pendingVaultKeyHex: null,
+            expectedVaultKeyHex: "04".repeat(32),
+            files: [
+              {
+                stagedReference,
+                destinationReference,
+                protectedByteSize: expectedBytes.byteLength,
+                protectedSha256: await checksumFor(expectedBytes)
+              }
+            ]
+          },
+          outcome
+        )
+      ).rejects.toMatchObject({ code: "STORAGE_FAILED" });
+      expect(mockFileSystem.__files.get(destinationReference)).toEqual(
+        corruptBytes
+      );
+    }
+  );
 });

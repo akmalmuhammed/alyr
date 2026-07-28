@@ -306,6 +306,18 @@ export interface NativeWorkspace extends JsonObject {
   readonly liabilityReview?: NativeLiabilityReview;
   readonly members: NativeMember[];
   readonly activity: WorkspaceActivity[];
+  /**
+   * Local commit marker written into a Recovery Kit replacement snapshot.
+   * Normal local mutations and foreground reconciliation preserve it through
+   * object spreads until the matching crash journal is cleared. It is never a
+   * cloud identifier or proof of ownership.
+   */
+  readonly recoveryRestoreLineage?: {
+    readonly lineageVersion: 1;
+    readonly transactionId: string;
+    readonly targetRevision: number;
+    readonly committedAt: string;
+  };
   readonly syncStatus: "local-only" | "ready" | "syncing" | "needs-attention";
   readonly lastSyncedAt: string | null;
   readonly createdAt: string;
@@ -569,6 +581,19 @@ export function isNativeWorkspace(value: unknown): value is NativeWorkspace {
     return false;
   }
   const record = value as Partial<NativeWorkspace>;
+  const lineage = record.recoveryRestoreLineage;
+  const validLineage =
+    lineage === undefined ||
+    (lineage !== null &&
+      typeof lineage === "object" &&
+      lineage.lineageVersion === 1 &&
+      typeof lineage.transactionId === "string" &&
+      /^[a-f0-9]{32}$/u.test(lineage.transactionId) &&
+      typeof lineage.targetRevision === "number" &&
+      Number.isSafeInteger(lineage.targetRevision) &&
+      lineage.targetRevision > 0 &&
+      typeof lineage.committedAt === "string" &&
+      Number.isFinite(Date.parse(lineage.committedAt)));
   return (
     record.schemaVersion === WORKSPACE_SCHEMA_VERSION &&
     typeof record.deviceId === "string" &&
@@ -586,6 +611,7 @@ export function isNativeWorkspace(value: unknown): value is NativeWorkspace {
       (typeof record.liabilityReview === "object" &&
         record.liabilityReview !== null &&
         !Array.isArray(record.liabilityReview))) &&
-    Array.isArray(record.members)
+    Array.isArray(record.members) &&
+    validLineage
   );
 }

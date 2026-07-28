@@ -19,6 +19,10 @@ function dependencies(
     acknowledgeOperation: jest.fn(),
     loadSyncState: jest.fn(),
     commitSync: jest.fn(),
+    loadRecoveryRestoreJournal: jest.fn(async () => null),
+    createRecoveryRestoreJournal: jest.fn(),
+    transitionRecoveryRestoreJournal: jest.fn(),
+    clearRecoveryRestoreJournal: jest.fn(),
     close: jest.fn(),
     lock: jest.fn(),
     purge: jest.fn()
@@ -36,7 +40,8 @@ function dependencies(
     readProtectedAttachment: jest.fn(),
     protectedAttachmentByteSize: jest.fn(),
     readAttachmentVaultKeyForRecovery: jest.fn(),
-    beginRecoveryAttachmentRestore: jest.fn()
+    beginRecoveryAttachmentRestore: jest.fn(),
+    resolveInterruptedRecoveryAttachmentRestore: jest.fn()
   } as unknown as ScopedAttachmentStore;
 
   return {
@@ -70,6 +75,28 @@ describe("signed Recovery Journey runtime gate", () => {
     const runtime = createSignedRecoveryJourneyRuntime(
       dependencies({ attachmentStore: null })
     );
+
+    expect(runtime.capability).toEqual(
+      expect.objectContaining({
+        kind: "unavailable",
+        reason: "vault-locked"
+      })
+    );
+  });
+
+  it("keeps a durable vault unavailable when crash-journal recovery is incomplete", () => {
+    const base = dependencies();
+    const incompleteRepository = {
+      ...base.repository,
+      loadRecoveryRestoreJournal: undefined,
+      createRecoveryRestoreJournal: undefined,
+      transitionRecoveryRestoreJournal: undefined,
+      clearRecoveryRestoreJournal: undefined
+    } as unknown as NativeWorkspaceRepository;
+    const runtime = createSignedRecoveryJourneyRuntime({
+      ...base,
+      repository: incompleteRepository
+    });
 
     expect(runtime.capability).toEqual(
       expect.objectContaining({

@@ -1,5 +1,6 @@
 import type {
   ContractError,
+  ProviderRequestContext,
   Result,
   SyncOperation,
   UploadCompletionResponse,
@@ -16,6 +17,14 @@ import type {
   NativePlaceDocument,
   NativeWorkspace
 } from "@/domain/model";
+import {
+  assertSyncExecutionActive,
+  isSyncExecutionCancelled,
+  runSyncLocalBoundary,
+  runSyncLocalCleanupBoundary,
+  runSyncProviderBoundary,
+  type SyncExecutionControl
+} from "@/data/syncExecution";
 
 const CHECKSUM_PATTERN = /^[a-f0-9]{64}$/u;
 const EXPIRY_SAFETY_WINDOW_MS = 5_000;
@@ -33,16 +42,19 @@ export interface EvidenceUploadTransfer {
  */
 export interface EvidenceUploadPort {
   createIntent(
-    descriptor: EvidenceUploadDescriptor
+    descriptor: EvidenceUploadDescriptor,
+    context?: ProviderRequestContext
   ): Promise<Result<UploadIntentResponse>>;
   upload(
     descriptor: EvidenceUploadDescriptor,
     intent: UploadIntentResponse,
-    attachment: MaterializedAttachment
+    attachment: MaterializedAttachment,
+    context?: ProviderRequestContext
   ): Promise<Result<EvidenceUploadTransfer>>;
   complete(
     descriptor: EvidenceUploadDescriptor,
-    uploadId: string
+    uploadId: string,
+    context?: ProviderRequestContext
   ): Promise<Result<UploadCompletionResponse>>;
 }
 
@@ -70,6 +82,7 @@ export interface ReconcileEvidenceUploadsRequest {
    */
   readonly canMaterializeProtectedAttachment?: () => boolean;
   readonly now?: () => string;
+  readonly execution?: SyncExecutionControl;
 }
 
 function failure(
@@ -280,6 +293,7 @@ export async function reconcileEvidenceUploads(
   }
 
   for (const [blobObjectId, operation] of versionOperations) {
+    assertSyncExecutionActive(request.execution);
     attemptedBlobObjectIds.push(blobObjectId);
     const resolved = descriptorFor(
       request.workspace,
@@ -298,9 +312,14 @@ export async function reconcileEvidenceUploads(
 
     // Completion is idempotent and authoritative. This probe reconciles a
     // previous transfer whose response was lost or whose process was killed.
-    const existing = await request.uploadPort.complete(
-      descriptor,
-      descriptor.blobId
+    const existing = await runSyncProviderBoundary(
+      request.execution,
+      (context) =>
+        request.uploadPort.complete(
+          descriptor,
+          descriptor.blobId,
+          context
+        )
     );
     if (existing.ok) {
       storedBlobObjectIds.add(blobObjectId);
@@ -353,16 +372,20 @@ export async function reconcileEvidenceUploads(
 
     let attachment: MaterializedAttachment;
     try {
-      attachment =
-        await request.attachmentStore.materializeForViewing({
-          storage: "encrypted",
-          protectedUri: protectedRecord.localUri!,
-          fileName: descriptor.fileName,
-          mimeType: descriptor.mimeType,
-          byteSize: descriptor.byteSize,
-          checksumSha256: descriptor.checksumSha256
-        });
-    } catch {
+      attachment = await runSyncLocalBoundary(
+        request.execution,
+        () =>
+          request.attachmentStore.materializeForViewing({
+            storage: "encrypted",
+            protectedUri: protectedRecord.localUri!,
+            fileName: descriptor.fileName,
+            mimeType: descriptor.mimeType,
+            byteSize: descriptor.byteSize,
+            checksumSha256: descriptor.checksumSha256
+          })
+      );
+    } catch (caught) {
+      if (isSyncExecutionCancelled(caught)) throw caught;
       return {
         ok: false,
         error: failure(
@@ -389,8 +412,11 @@ export async function reconcileEvidenceUploads(
           false
         );
       } else {
-        const intent =
-          await request.uploadPort.createIntent(descriptor);
+        const intent = await runSyncProviderBoundary(
+          request.execution,
+          (context) =>
+            request.uploadPort.createIntent(descriptor, context)
+        );
         if (!intent.ok) {
           transferError = intent.error;
         } else {
@@ -402,17 +428,27 @@ export async function reconcileEvidenceUploads(
           if (intentError) {
             transferError = intentError;
           } else {
-            const uploaded = await request.uploadPort.upload(
-              descriptor,
-              intent.value,
-              attachment
+            const uploaded = await runSyncProviderBoundary(
+              request.execution,
+              (context) =>
+                request.uploadPort.upload(
+                  descriptor,
+                  intent.value,
+                  attachment,
+                  context
+                )
             );
             if (!uploaded.ok) {
               transferError = uploaded.error;
             } else {
-              const completed = await request.uploadPort.complete(
-                descriptor,
-                intent.value.uploadId
+              const completed = await runSyncProviderBoundary(
+                request.execution,
+                (context) =>
+                  request.uploadPort.complete(
+                    descriptor,
+                    intent.value.uploadId,
+                    context
+                  )
               );
               if (!completed.ok) {
                 transferError = completed.error;
@@ -422,9 +458,13 @@ export async function reconcileEvidenceUploads(
         }
       }
     } finally {
-      const cleanupError = await cleanupTemporary(
-        request.attachmentStore,
-        attachment
+      const cleanupError = await runSyncLocalCleanupBoundary(
+        request.execution,
+        () =>
+          cleanupTemporary(
+            request.attachmentStore,
+            attachment
+          )
       );
       if (cleanupError) transferError = cleanupError;
     }

@@ -1,7 +1,7 @@
 import type { ScopedAttachmentStore } from "@/data/attachmentStore";
 import type {
-  RecoveryAttachmentRestoreAdapter,
-  RecoveryAttachmentRestoreSession
+  RecoveryJournaledAttachmentRestoreAdapter,
+  RecoveryJournaledAttachmentRestoreSession
 } from "./atomicRestore";
 import type {
   NativeEvidence,
@@ -12,6 +12,7 @@ import { RECOVERY_KIT_LIMITS } from "./container";
 import {
   type CreateRecoveryKitRequest,
   type RecoveryAttachmentSource,
+  type RecoveryRestoreJournalAttachmentState,
   type RecoveryProtectedAttachmentReadPort,
   RecoveryKitError
 } from "./types";
@@ -28,7 +29,11 @@ export interface RecoveryRestorableAttachmentStore
   extends RecoveryCapableAttachmentStore {
   beginRecoveryAttachmentRestore(
     metadata: RecoveryRestoreMetadata
-  ): Promise<RecoveryAttachmentRestoreSession>;
+  ): Promise<RecoveryJournaledAttachmentRestoreSession>;
+  resolveInterruptedRecoveryAttachmentRestore(
+    state: RecoveryRestoreJournalAttachmentState,
+    outcome: "rollback" | "complete"
+  ): Promise<void>;
 }
 
 export function isRecoveryCapableAttachmentStore(
@@ -45,14 +50,23 @@ export function isRecoveryCapableAttachmentStore(
 
 export function asRecoveryAttachmentRestoreAdapter(
   store: RecoveryCapableAttachmentStore
-): RecoveryAttachmentRestoreAdapter | null {
+): RecoveryJournaledAttachmentRestoreAdapter | null {
   const candidate = store as Partial<RecoveryRestorableAttachmentStore>;
-  if (typeof candidate.beginRecoveryAttachmentRestore !== "function") {
+  if (
+    typeof candidate.beginRecoveryAttachmentRestore !== "function" ||
+    typeof candidate.resolveInterruptedRecoveryAttachmentRestore !==
+      "function"
+  ) {
     return null;
   }
   return {
     begin: (metadata) =>
-      candidate.beginRecoveryAttachmentRestore!(metadata)
+      candidate.beginRecoveryAttachmentRestore!(metadata),
+    resolveInterruptedRecoveryAttachmentRestore: (state, outcome) =>
+      candidate.resolveInterruptedRecoveryAttachmentRestore!(
+        state,
+        outcome
+      )
   };
 }
 

@@ -11,6 +11,7 @@ import {
   type ContractError,
   type JsonObject,
   type JsonPrimitive,
+  type ProviderRequestContext,
   type Result,
   type UploadCompletionRequest,
   type UploadCompletionResponse,
@@ -27,6 +28,10 @@ import type {
   AccessTokenProvider,
   SyncFetch
 } from "@/adapters/httpSyncTransport";
+import {
+  assertProviderRequestActive,
+  rethrowProviderCancellation
+} from "@/adapters/providerRequest";
 
 const apiErrorCodes: readonly ApiErrorCode[] = [
   "AUTHENTICATION_REQUIRED",
@@ -256,18 +261,21 @@ export class HttpEvidenceUploadPort implements EvidenceUploadPort {
   }
 
   async createIntent(
-    descriptor: EvidenceUploadDescriptor
+    descriptor: EvidenceUploadDescriptor,
+    context?: ProviderRequestContext
   ): Promise<Result<UploadIntentResponse>> {
     return this.apiRequest(
       `${this.apiBaseUrl}/uploads/intents`,
       JSON.stringify(descriptor),
-      isUploadIntentResponse
+      isUploadIntentResponse,
+      context
     );
   }
 
   async complete(
     descriptor: EvidenceUploadDescriptor,
-    uploadId: string
+    uploadId: string,
+    context?: ProviderRequestContext
   ): Promise<Result<UploadCompletionResponse>> {
     const request: UploadCompletionRequest = {
       apiVersion: CONTRACT_API_VERSION,
@@ -277,7 +285,8 @@ export class HttpEvidenceUploadPort implements EvidenceUploadPort {
     const result = await this.apiRequest(
       `${this.apiBaseUrl}/uploads/${encodeURIComponent(uploadId)}/complete`,
       JSON.stringify(request),
-      isUploadCompletionResponse
+      isUploadCompletionResponse,
+      context
     );
     if (!result.ok) return result;
 
@@ -296,8 +305,10 @@ export class HttpEvidenceUploadPort implements EvidenceUploadPort {
   async upload(
     descriptor: EvidenceUploadDescriptor,
     intent: UploadIntentResponse,
-    attachment: MaterializedAttachment
+    attachment: MaterializedAttachment,
+    context?: ProviderRequestContext
   ): Promise<Result<EvidenceUploadTransfer>> {
+    assertProviderRequestActive(context);
     const target = intent.uploadTarget;
     const expectedPath =
       `${descriptor.householdId}/${descriptor.blobId}/` +
@@ -317,22 +328,23 @@ export class HttpEvidenceUploadPort implements EvidenceUploadPort {
       return malformed();
     }
 
-    let bytes: Uint8Array;
-    try {
-      bytes = await this.readBytes(attachment.uri);
-    } catch {
-      return {
-        ok: false,
-        error: failure(
-          "INVALID_FILE",
-          "The verified temporary Evidence file could not be read.",
-          false
-        )
-      };
-    }
-
+    let bytes: Uint8Array | null = null;
     let body: ArrayBuffer | null = null;
     try {
+      try {
+        bytes = await this.readBytes(attachment.uri);
+        assertProviderRequestActive(context);
+      } catch (error) {
+        rethrowProviderCancellation(error, context);
+        return {
+          ok: false,
+          error: failure(
+            "INVALID_FILE",
+            "The verified temporary Evidence file could not be read.",
+            false
+          )
+        };
+      }
       if (
         bytes.byteLength !== descriptor.byteSize ||
         bytes.byteLength !== attachment.byteSize
@@ -347,6 +359,7 @@ export class HttpEvidenceUploadPort implements EvidenceUploadPort {
         };
       }
       const checksum = (await this.digestBytes(bytes)).toLowerCase();
+      assertProviderRequestActive(context);
       if (
         !CHECKSUM_PATTERN.test(checksum) ||
         checksum !== descriptor.checksumSha256 ||
@@ -378,9 +391,12 @@ export class HttpEvidenceUploadPort implements EvidenceUploadPort {
             "Content-Type": descriptor.mimeType,
             "x-upsert": "false"
           },
-          body
+          body,
+          ...(context ? { signal: context.signal } : {})
         });
-      } catch {
+        assertProviderRequestActive(context);
+      } catch (error) {
+        rethrowProviderCancellation(error, context);
         return offline();
       }
 
@@ -430,7 +446,7 @@ export class HttpEvidenceUploadPort implements EvidenceUploadPort {
         value: { outcome: "uploaded" }
       };
     } finally {
-      bytes.fill(0);
+      bytes?.fill(0);
       if (body) new Uint8Array(body).fill(0);
     }
   }
@@ -438,12 +454,16 @@ export class HttpEvidenceUploadPort implements EvidenceUploadPort {
   private async apiRequest<T>(
     url: string,
     body: string,
-    guard: (value: unknown) => value is T
+    guard: (value: unknown) => value is T,
+    context?: ProviderRequestContext
   ): Promise<Result<T>> {
+    assertProviderRequestActive(context);
     let accessToken: string;
     try {
       accessToken = (await this.getAccessToken()).trim();
-    } catch {
+      assertProviderRequestActive(context);
+    } catch (error) {
+      rethrowProviderCancellation(error, context);
       return offline();
     }
     if (!accessToken) {
@@ -459,23 +479,28 @@ export class HttpEvidenceUploadPort implements EvidenceUploadPort {
 
     let response: Response;
     try {
-      response = await this.fetchImpl(url, {
-        method: "POST",
-        headers: {
-          Accept: "application/json",
-          Authorization: `Bearer ${accessToken}`,
-          "Content-Type": "application/json"
-        },
-        body
-      });
-    } catch {
+        response = await this.fetchImpl(url, {
+          method: "POST",
+          headers: {
+            Accept: "application/json",
+            Authorization: `Bearer ${accessToken}`,
+            "Content-Type": "application/json"
+          },
+          body,
+          ...(context ? { signal: context.signal } : {})
+        });
+      assertProviderRequestActive(context);
+    } catch (error) {
+      rethrowProviderCancellation(error, context);
       return offline();
     }
 
     let payload: unknown;
     try {
       payload = JSON.parse(await response.text()) as unknown;
-    } catch {
+      assertProviderRequestActive(context);
+    } catch (error) {
+      rethrowProviderCancellation(error, context);
       return malformed();
     }
     if (!response.ok) {

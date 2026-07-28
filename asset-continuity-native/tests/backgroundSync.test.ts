@@ -1017,7 +1017,9 @@ describe("background task hook and registration", () => {
     expect(events).toContainEqual({
       event: "background-sync.coalesced"
     });
-    expect(exclusiveCallCount).toBe(1);
+    // Runtime resolution and each protected local section are serialized
+    // independently; the provider wait itself no longer monopolizes the gate.
+    expect(exclusiveCallCount).toBeGreaterThan(1);
     expect(pull).toHaveBeenCalledTimes(1);
   });
 

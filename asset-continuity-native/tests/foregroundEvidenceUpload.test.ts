@@ -375,7 +375,11 @@ describe("foreground Evidence prerequisite integration", () => {
         evidenceVersionId: VERSION_ID,
         blobId: BLOB_ID
       }),
-      BLOB_ID
+      BLOB_ID,
+      expect.objectContaining({
+        signal: expect.any(Object),
+        deadlineAtMs: expect.any(Number)
+      })
     );
     expect(pushed.map((operation) => operation.command.type)).toEqual([
       "place-document.create",

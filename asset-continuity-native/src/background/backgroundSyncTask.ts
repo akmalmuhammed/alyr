@@ -1,5 +1,6 @@
 import {
   DEFAULT_BACKGROUND_EXECUTION_WINDOW_MS,
+  DEFAULT_BACKGROUND_PROVIDER_TIMEOUT_MS,
   runBackgroundSync,
   type BackgroundSyncClock,
   type BackgroundSyncRunResult,
@@ -69,6 +70,7 @@ export interface CreateBackgroundSyncTaskRequest {
   readonly executionWindowMs?: number;
   readonly metadataOperationLimit?: number;
   readonly evidenceTransferLimit?: number;
+  readonly providerTimeoutMs?: number;
 }
 
 function safeRecord(
@@ -146,29 +148,32 @@ export function createBackgroundSyncTask(
     const task = (async (): Promise<BackgroundSyncRunResult> => {
       let result: BackgroundSyncRunResult;
       try {
-        const run = async () => {
-          const runtime = await request.runtime.resolve();
-          return runBackgroundSync({
-            runtime,
-            clock,
-            deadline,
-            ...(request.metadataOperationLimit === undefined
-              ? {}
-              : {
-                  metadataOperationLimit:
-                    request.metadataOperationLimit
-                }),
-            ...(request.evidenceTransferLimit === undefined
-              ? {}
-              : {
-                  evidenceTransferLimit:
-                    request.evidenceTransferLimit
-                })
-          });
-        };
-        result = request.runExclusive
-          ? await request.runExclusive(run)
-          : await run();
+        const runtime = request.runExclusive
+          ? await request.runExclusive(() => request.runtime.resolve())
+          : await request.runtime.resolve();
+        result = await runBackgroundSync({
+          runtime,
+          clock,
+          deadline,
+          ...(request.metadataOperationLimit === undefined
+            ? {}
+            : {
+                metadataOperationLimit:
+                  request.metadataOperationLimit
+              }),
+          ...(request.evidenceTransferLimit === undefined
+            ? {}
+            : {
+                evidenceTransferLimit:
+                  request.evidenceTransferLimit
+              }),
+          providerTimeoutMs:
+            request.providerTimeoutMs ??
+            DEFAULT_BACKGROUND_PROVIDER_TIMEOUT_MS,
+          ...(request.runExclusive
+            ? { runLocalExclusive: request.runExclusive }
+            : {})
+        });
       } catch {
         result = retryResult();
       }

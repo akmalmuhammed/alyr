@@ -2,6 +2,7 @@ import {
   CONTRACT_API_VERSION,
   type ContractError,
   type EvidenceDownloadRequest,
+  type ProviderRequestContext,
   type Result
 } from "@alyr/contracts";
 
@@ -15,6 +16,13 @@ import type {
   NativePlaceDocument,
   NativeWorkspace
 } from "@/domain/model";
+import {
+  assertSyncExecutionActive,
+  isSyncExecutionCancelled,
+  runSyncLocalBoundary,
+  runSyncProviderBoundary,
+  type SyncExecutionControl
+} from "@/data/syncExecution";
 
 const UUID_PATTERN =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/iu;
@@ -30,7 +38,8 @@ export type EvidenceDownloadDescriptor = EvidenceDownloadRequest;
  */
 export interface EvidenceDownloadPort {
   download(
-    descriptor: EvidenceDownloadDescriptor
+    descriptor: EvidenceDownloadDescriptor,
+    context?: ProviderRequestContext
   ): Promise<Result<Uint8Array>>;
 }
 
@@ -51,6 +60,7 @@ export interface ReconcileEvidenceDownloadsRequest {
   readonly workspace: NativeWorkspace;
   readonly attachmentStore: AttachmentStore;
   readonly downloadPort: EvidenceDownloadPort;
+  readonly execution?: SyncExecutionControl;
 }
 
 function failure(
@@ -178,10 +188,12 @@ export async function reconcileEvidenceDownloads(
       )
     };
   }
+  const attachmentSink = request.attachmentStore;
 
   let workspace = request.workspace;
   const hydratedEvidenceIds: string[] = [];
   for (const pendingAttachment of pending) {
+    assertSyncExecutionActive(request.execution);
     const current:
       | NativeEvidence
       | NativePlaceDocument
@@ -205,7 +217,10 @@ export async function reconcileEvidenceDownloads(
       };
     }
 
-    const downloaded = await request.downloadPort.download(descriptor);
+    const downloaded = await runSyncProviderBoundary(
+      request.execution,
+      (context) => request.downloadPort.download(descriptor, context)
+    );
     if (!downloaded.ok) {
       return {
         ok: false,
@@ -217,14 +232,18 @@ export async function reconcileEvidenceDownloads(
 
     const plaintext = downloaded.value;
     try {
-      const protectedFile =
-        await request.attachmentStore.ingestVerifiedBytes({
-          bytes: plaintext,
-          fileName: descriptor.fileName,
-          mimeType: descriptor.mimeType,
-          byteSize: descriptor.byteSize,
-          checksumSha256: descriptor.checksumSha256
-        });
+      assertSyncExecutionActive(request.execution);
+      const protectedFile = await runSyncLocalBoundary(
+        request.execution,
+        () =>
+          attachmentSink.ingestVerifiedBytes({
+            bytes: plaintext,
+            fileName: descriptor.fileName,
+            mimeType: descriptor.mimeType,
+            byteSize: descriptor.byteSize,
+            checksumSha256: descriptor.checksumSha256
+          })
+      );
       const protectedUri = protectedFile.protectedUri;
       if (
         !protectedFile.encryptedAtRest ||
@@ -282,6 +301,7 @@ export async function reconcileEvidenceDownloads(
       };
       hydratedEvidenceIds.push(current.id);
     } catch (caught) {
+      if (isSyncExecutionCancelled(caught)) throw caught;
       return {
         ok: false,
         workspace,

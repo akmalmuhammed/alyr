@@ -23,6 +23,12 @@ import {
   reconcileEvidenceUploads,
   type EvidenceUploadPort
 } from "@/data/evidenceUpload";
+import {
+  assertSyncExecutionActive,
+  runSyncLocalBoundary,
+  runSyncProviderBoundary,
+  type SyncExecutionControl
+} from "@/data/syncExecution";
 import type { NativeWorkspaceRepository } from "@/data/repository";
 import {
   findCategoryChoice,
@@ -110,6 +116,7 @@ export interface ForegroundSyncRequest {
   /** Used to reject a mismatched signed bootstrap descriptor. */
   readonly accountId?: string;
   readonly now?: () => string;
+  readonly execution?: SyncExecutionControl;
 }
 
 interface ParsedChangeBody {
@@ -1904,7 +1911,8 @@ async function hydrateCloudEvidence(
   const hydrated = await reconcileEvidenceDownloads({
     workspace,
     attachmentStore: request.attachmentStore,
-    downloadPort: request.evidenceDownloadPort
+    downloadPort: request.evidenceDownloadPort,
+    ...(request.execution ? { execution: request.execution } : {})
   });
   return hydrated.ok
     ? { workspace: hydrated.workspace, error: null }
@@ -2058,9 +2066,14 @@ async function bootstrapCleanWorkspace(
   // durable cursor until an empty page proves the clean-device snapshot is
   // complete; never expose a partially restored household.
   for (let page = 0; page < 40; page += 1) {
-    const pulled = await request.transport.pull(
-      request.householdId,
-      cursor
+    const pulled = await runSyncProviderBoundary(
+      request.execution,
+      (context) =>
+        request.transport.pull(
+          request.householdId,
+          cursor,
+          context
+        )
     );
     if (!pulled.ok) {
       return {
@@ -2231,14 +2244,18 @@ async function bootstrapCleanWorkspace(
     restoredMetadata
   );
   const restored = hydration.workspace;
-  const committed = await request.repository.commitSync({
-    expectedRevision: loadedRevision,
-    nextRevision: loadedRevision + 1,
-    snapshot: restored,
-    cursor,
-    acknowledgedOperationIds: [],
-    conflicts: existingConflicts
-  });
+  const committed = await runSyncLocalBoundary(
+    request.execution,
+    () =>
+      request.repository.commitSync({
+        expectedRevision: loadedRevision,
+        nextRevision: loadedRevision + 1,
+        snapshot: restored,
+        cursor,
+        acknowledgedOperationIds: [],
+        conflicts: existingConflicts
+      })
+  );
   if (!committed.ok) {
     return {
       kind: "needs-attention",
@@ -2272,11 +2289,21 @@ async function bootstrapCleanWorkspace(
 export async function reconcileForeground(
   request: ForegroundSyncRequest
 ): Promise<ForegroundSyncResult> {
-  const loaded = await request.repository.load();
-  const syncState = await request.repository.loadSyncState();
+  assertSyncExecutionActive(request.execution);
+  const [loaded, syncState] = await runSyncLocalBoundary(
+    request.execution,
+    () =>
+      Promise.all([
+        request.repository.load(),
+        request.repository.loadSyncState()
+      ])
+  );
   const cursor = syncState.cursor ?? INITIAL_CURSOR;
   if (loaded.snapshot === null) {
-    const pending = await request.repository.listPendingOperations(1);
+    const pending = await runSyncLocalBoundary(
+      request.execution,
+      () => request.repository.listPendingOperations(1)
+    );
     if (pending.length > 0) {
       return {
         kind: "needs-attention",
@@ -2316,7 +2343,10 @@ export async function reconcileForeground(
   }
   let initialWorkspace: NativeWorkspace = loaded.snapshot;
 
-  const allPending = await request.repository.listPendingOperations(1000);
+  const allPending = await runSyncLocalBoundary(
+    request.execution,
+    () => request.repository.listPendingOperations(1000)
+  );
   const hasEvidenceUploadPrerequisites = allPending.some(
     (operation) =>
       (operation.command.type === "evidence.version.add" ||
@@ -2340,7 +2370,8 @@ export async function reconcileForeground(
                 request.canMaterializeProtectedAttachment
             }
           : {}),
-        ...(request.now ? { now: request.now } : {})
+        ...(request.now ? { now: request.now } : {}),
+        ...(request.execution ? { execution: request.execution } : {})
       });
       storedBlobObjectIds = uploadResult.storedBlobObjectIds;
       if (!uploadResult.ok) uploadError = uploadResult.error;
@@ -2360,7 +2391,10 @@ export async function reconcileForeground(
   let acknowledgedOperationIds: readonly string[] = [];
   let incomingConflicts: readonly SyncConflict[] = [];
   if (pushable.length > 0) {
-    const pushed = await request.transport.push(pushable);
+    const pushed = await runSyncProviderBoundary(
+      request.execution,
+      (context) => request.transport.push(pushable, context)
+    );
     if (!pushed.ok) {
       return {
         kind: runtimeFailureKind(pushed.error),
@@ -2399,7 +2433,11 @@ export async function reconcileForeground(
     // another device. Only a pull from the durable cursor can advance safely.
   }
 
-  const pulled = await request.transport.pull(request.householdId, cursor);
+  const pulled = await runSyncProviderBoundary(
+    request.execution,
+    (context) =>
+      request.transport.pull(request.householdId, cursor, context)
+  );
   if (!pulled.ok) {
     // A push may already have reached the server. Keep every operation in the
     // outbox and retry the same idempotency keys from the durable cursor.
@@ -2764,14 +2802,18 @@ export async function reconcileForeground(
   );
   const nextWorkspace = hydration.workspace;
 
-  const committed = await request.repository.commitSync({
-    expectedRevision: loaded.revision,
-    nextRevision: loaded.revision + 1,
-    snapshot: nextWorkspace,
-    cursor: pulled.value.cursor,
-    acknowledgedOperationIds: durablyAcknowledgedOperationIds,
-    conflicts
-  });
+  const committed = await runSyncLocalBoundary(
+    request.execution,
+    () =>
+      request.repository.commitSync({
+        expectedRevision: loaded.revision,
+        nextRevision: loaded.revision + 1,
+        snapshot: nextWorkspace,
+        cursor: pulled.value.cursor,
+        acknowledgedOperationIds: durablyAcknowledgedOperationIds,
+        conflicts
+      })
+  );
   if (!committed.ok) {
     return {
       kind: "needs-attention",

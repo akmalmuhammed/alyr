@@ -262,6 +262,9 @@ describe("coordinated Recovery Kit restore", () => {
             },
             async rollback() {
               calls.push("attachments.rollback");
+            },
+            async finalize() {
+              calls.push("attachments.finalize");
             }
           };
         }

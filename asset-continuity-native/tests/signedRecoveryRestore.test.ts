@@ -3,6 +3,13 @@ import { createWorkspace } from "@/domain/sample";
 import {
   createSignedRecoveryWorkspaceRestoreAdapter
 } from "@/recovery/signedRuntime";
+import type {
+  RecoveryJournaledWorkspaceRestoreAdapter
+} from "@/recovery/atomicRestore";
+import type {
+  RecoveryRestoreCrashJournal,
+  RecoveryRestoreJournalPhase
+} from "@/recovery/types";
 import { RecoveryKitError } from "@/recovery/types";
 
 const createdAt = "2026-07-27T12:00:00.000Z";
@@ -159,6 +166,125 @@ describe("signed Recovery Kit atomic workspace replacement", () => {
         syncStatus: "local-only"
       }),
       8
+    );
+  });
+
+  it("journals the exact device-bound target before SQLCipher replacement", async () => {
+    const active = workspace();
+    let journal: RecoveryRestoreCrashJournal | null = null;
+    const commitSync = jest.fn(async (commit) => ({
+      ok: true as const,
+      value: { revision: commit.nextRevision }
+    }));
+    const repository = {
+      kind: "sqlite-sqlcipher",
+      durable: true,
+      encryptedAtRest: true,
+      scopeId: "scope-recovery",
+      load: jest.fn(async () => ({
+        revision: 7,
+        snapshot: active
+      })),
+      commit: jest.fn(),
+      listPendingOperations: jest.fn(async () => []),
+      acknowledgeOperation: jest.fn(),
+      loadSyncState: jest.fn(async () => ({
+        cursor: {
+          cursorVersion: 1 as const,
+          value: null,
+          issuedAt: null
+        },
+        conflicts: []
+      })),
+      commitSync,
+      loadRecoveryRestoreJournal: jest.fn(async () => journal),
+      createRecoveryRestoreJournal: jest.fn(
+        async (next: RecoveryRestoreCrashJournal) => {
+          journal = next;
+        }
+      ),
+      transitionRecoveryRestoreJournal: jest.fn(
+        async (
+          _transactionId: string,
+          expected: RecoveryRestoreJournalPhase,
+          next: RecoveryRestoreJournalPhase,
+          updatedAt: string
+        ) => {
+          if (!journal || journal.phase !== expected) {
+            throw new Error("journal phase mismatch");
+          }
+          journal = { ...journal, phase: next, updatedAt };
+        }
+      ),
+      clearRecoveryRestoreJournal: jest.fn(async () => {
+        journal = null;
+      }),
+      close: jest.fn(),
+      lock: jest.fn(),
+      purge: jest.fn()
+    } as unknown as NativeWorkspaceRepository;
+    const adapter = createSignedRecoveryWorkspaceRestoreAdapter({
+      repository,
+      currentWorkspace: () => active,
+      currentHouseholdId: () => active.household.id,
+      currentDeviceId: () => "device-current",
+      onRestored: jest.fn(),
+      now: () => createdAt
+    }) as RecoveryJournaledWorkspaceRestoreAdapter;
+
+    await adapter.preflight(metadata);
+    const prepared = await adapter.prepareRecoveryRestoreJournal({
+      metadata,
+      workspace: workspace(),
+      workspaceSchemaVersion: metadata.workspaceSchemaVersion,
+      attachments: {
+        journalVersion: 1,
+        vaultScopeId: "scope-recovery",
+        stagingDirectoryReference:
+          "file:///cache/alyr-recovery-stage-0123456789abcdef0123456789abcdef",
+        vaultKeyDisposition: "preserve",
+        pendingVaultKeyHex: null,
+        expectedVaultKeyHex: null,
+        files: []
+      }
+    });
+    expect(journal).toMatchObject({
+      expectedRevision: 7,
+      targetRevision: 8,
+      targetWorkspace: {
+        deviceId: "device-current",
+        recoveryRestoreLineage: {
+          lineageVersion: 1,
+          transactionId: metadata.kitId,
+          targetRevision: 8,
+          committedAt: createdAt
+        },
+        syncStatus: "local-only",
+        lastSyncedAt: null
+      },
+      phase: "prepared"
+    });
+    await adapter.transitionRecoveryRestoreJournal(
+      metadata.kitId,
+      "prepared",
+      "attachments-installing"
+    );
+    await adapter.transitionRecoveryRestoreJournal(
+      metadata.kitId,
+      "attachments-installing",
+      "attachments-installed"
+    );
+    await adapter.replaceWorkspaceAtomically(
+      prepared.workspace,
+      metadata.workspaceSchemaVersion
+    );
+
+    expect(commitSync).toHaveBeenCalledWith(
+      expect.objectContaining({
+        expectedRevision: 7,
+        nextRevision: 8,
+        snapshot: prepared.workspace
+      })
     );
   });
 });

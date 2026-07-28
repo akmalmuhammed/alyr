@@ -177,6 +177,8 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
   },
   plugins: [
     "expo-router",
+    "expo-background-task",
+    "./plugins/with-local-notifications-only",
     [
       "expo-splash-screen",
       {

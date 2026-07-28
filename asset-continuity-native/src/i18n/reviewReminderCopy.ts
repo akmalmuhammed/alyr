@@ -8,10 +8,18 @@ export interface ReviewReminderSettingsCopy {
   readonly toggleHint: string;
   readonly enabledStatus: string;
   readonly disabledStatus: string;
+  readonly noReviewStatus: string;
+  readonly permissionBlockedStatus: string;
+  readonly cleanupPendingStatus: string;
+  readonly loadingStatus: string;
+  readonly errorStatus: string;
   readonly timeLabel: string;
   readonly localTime: string;
   readonly privacyNote: string;
   readonly accountRequired: string;
+  readonly permissionDeniedTitle: string;
+  readonly permissionDeniedBody: string;
+  readonly permissionDeniedAction: string;
 }
 
 export const REVIEW_REMINDER_SETTINGS_COPY: Readonly<
@@ -27,29 +35,47 @@ export const REVIEW_REMINDER_SETTINGS_COPY: Readonly<
       "Schedules one private on-device reminder. Names, values and locations stay out of notifications.",
     enabledStatus: "On",
     disabledStatus: "Off",
+    noReviewStatus: "No review due",
+    permissionBlockedStatus: "Notifications off",
+    cleanupPendingStatus: "Finishing notification cleanup",
+    loadingStatus: "Checking",
+    errorStatus: "Try again",
     timeLabel: "Reminder time",
     localTime: "9:00 AM local time",
     privacyNote:
       "The notification says only that a private review is ready.",
     accountRequired:
-      "Review reminders become available in your signed-in personal workspace."
+      "Review reminders become available in your signed-in personal workspace.",
+    permissionDeniedTitle: "Notifications are off",
+    permissionDeniedBody:
+      "Allow ALYR notifications in device Settings, then turn the reminder on again.",
+    permissionDeniedAction: "OK"
   },
   ar: {
-    eyebrow: "مراجعات خاصة",
+    eyebrow: "مراجعة خاصة",
     title: "تذكيرات المراجعة",
     body:
-      "تلقَّ إشعارًا هادئًا واحدًا عندما يحين موعد مراجعة إثبات أو قيمة مسجّلة.",
+      "استلم إشعارًا هادئًا واحدًا عندما يحين موعد مراجعة إثبات أو قيمة مسجّلة.",
     toggleLabel: "ذكّرني بالمراجعة",
     toggleHint:
-      "يحدّد تذكيرًا خاصًا واحدًا على هذا الجهاز. لا تظهر الأسماء أو القيم أو المواقع في الإشعارات.",
-    enabledStatus: "مفعّلة",
-    disabledStatus: "متوقفة",
+      "يجدول تذكيرًا خاصًا واحدًا على هذا الجهاز. لا تظهر الأسماء أو القيم أو المواقع في الإشعار.",
+    enabledStatus: "مفعّل",
+    disabledStatus: "متوقف",
+    noReviewStatus: "لا توجد مراجعة مستحقة",
+    permissionBlockedStatus: "الإشعارات متوقفة",
+    cleanupPendingStatus: "جارٍ إنهاء إيقاف الإشعار",
+    loadingStatus: "جارٍ التحقق",
+    errorStatus: "أعد المحاولة",
     timeLabel: "وقت التذكير",
     localTime: "٩:٠٠ صباحًا بالتوقيت المحلي",
     privacyNote:
       "لا يذكر الإشعار سوى أن مراجعة خاصة جاهزة.",
     accountRequired:
-      "تتوفر تذكيرات المراجعة في مساحتك الشخصية بعد تسجيل الدخول."
+      "تتوفر التذكيرات في مساحة شخصية مسجّل الدخول إليها.",
+    permissionDeniedTitle: "الإشعارات متوقفة",
+    permissionDeniedBody:
+      "اسمح بإشعارات ALYR من إعدادات الجهاز، ثم فعّل التذكير مرة أخرى.",
+    permissionDeniedAction: "حسنًا"
   }
 };
 

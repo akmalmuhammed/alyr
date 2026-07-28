@@ -66,8 +66,14 @@ describe("HttpSyncTransport", () => {
       getAccessToken,
       fetchImpl
     })
+    const controller = new AbortController()
 
-    await expect(transport.push([operation])).resolves.toEqual({
+    await expect(
+      transport.push([operation], {
+        signal: controller.signal,
+        deadlineAtMs: Date.now() + 1_000
+      })
+    ).resolves.toEqual({
       ok: true,
       value: response
     })
@@ -78,6 +84,7 @@ describe("HttpSyncTransport", () => {
     expect(url).toBe("https://edge.example.test/api/sync/push")
     expect(init).toMatchObject({
       method: "POST",
+      signal: controller.signal,
       headers: {
         Accept: "application/json",
         Authorization: "Bearer access-token",

@@ -3,8 +3,10 @@ import { useRouter } from "expo-router";
 import * as Sharing from "expo-sharing";
 import {
   ArrowRight,
+  BellRinging,
   CloudArrowDown,
   CloudSlash,
+  Clock,
   DownloadSimple,
   FileText,
   Lifebuoy,
@@ -22,6 +24,7 @@ import {
   Platform,
   Pressable,
   StyleSheet,
+  Switch,
   Text,
   useWindowDimensions,
   View
@@ -55,7 +58,15 @@ import {
 } from "@/i18n/coreJourneyCopy";
 import { useAccountDeletionCopy } from "@/i18n/accountDeletionCopy";
 import { useExportCopy } from "@/i18n/exportCopy";
+import {
+  reviewReminderSettingsCopy,
+  type ReviewReminderSettingsCopy
+} from "@/i18n/reviewReminderCopy";
 import { PRIMARY_ROUTES } from "@/navigation/primaryRoutes";
+import {
+  useReviewReminder,
+  type ReviewReminderStatus
+} from "@/notifications/ReviewReminderProvider";
 import { sampleActivationDestination } from "@/navigation/sampleActivation";
 import { useRecoveryJourney } from "@/recovery";
 import { useWorkspace } from "@/state/WorkspaceProvider";
@@ -316,6 +327,11 @@ export default function VaultScreen() {
           workspace={workspace}
         />
       ) : null}
+
+      <ReviewReminderSettingsSection
+        language={language}
+        rtl={rtl}
+      />
 
       <Section>
         <Text
@@ -795,6 +811,244 @@ export default function VaultScreen() {
   );
 }
 
+function reviewReminderStatusLabel(
+  status: ReviewReminderStatus,
+  available: boolean,
+  copy: ReviewReminderSettingsCopy
+): string {
+  if (!available || status === "unavailable") {
+    return copy.accountRequired;
+  }
+  switch (status) {
+    case "enabled":
+      return copy.enabledStatus;
+    case "no-review":
+      return copy.noReviewStatus;
+    case "permission-blocked":
+      return copy.permissionBlockedStatus;
+    case "cleanup-pending":
+      return copy.cleanupPendingStatus;
+    case "loading":
+      return copy.loadingStatus;
+    case "error":
+      return copy.errorStatus;
+    case "disabled":
+    default:
+      return copy.disabledStatus;
+  }
+}
+
+export function ReviewReminderSettingsSection({
+  language,
+  rtl
+}: {
+  readonly language: "en" | "ar";
+  readonly rtl: boolean;
+}) {
+  const reminder = useReviewReminder();
+  const reminderCopy = reviewReminderSettingsCopy(language);
+  const controlDisabled =
+    !reminder.available ||
+    reminder.busy ||
+    reminder.status === "loading" ||
+    reminder.status === "cleanup-pending";
+  const blocked = reminder.status === "permission-blocked";
+  const switchEnabled = reminder.enabled && !blocked;
+  const statusLabel = reviewReminderStatusLabel(
+    reminder.status,
+    reminder.available,
+    reminderCopy
+  );
+  const cleanupPending =
+    reminder.status === "cleanup-pending";
+  const statusColor = blocked || cleanupPending
+    ? colors.warning
+    : reminder.status === "error"
+      ? colors.danger
+      : reminder.enabled
+        ? colors.success
+        : colors.textMuted;
+  const iconColor = blocked
+    ? colors.warning
+    : reminder.enabled
+      ? colors.action
+      : colors.textMuted;
+
+  const toggleReminder = async (): Promise<void> => {
+    if (controlDisabled) return;
+    const nextStatus = switchEnabled
+      ? await reminder.disable()
+      : await reminder.enable();
+    if (nextStatus === "permission-blocked") {
+      Alert.alert(
+        reminderCopy.permissionDeniedTitle,
+        reminderCopy.permissionDeniedBody,
+        [{ text: reminderCopy.permissionDeniedAction }]
+      );
+    }
+  };
+
+  return (
+    <Section>
+      <View
+        style={[
+          styles.reminderHeading,
+          rtl && styles.rowReverse
+        ]}
+      >
+        <View style={styles.reminderHeadingCopy}>
+          <Text
+            style={[
+              styles.reminderEyebrow,
+              rtl && styles.arabicMedium,
+              rtl && styles.rtlText
+            ]}
+          >
+            {reminderCopy.eyebrow}
+          </Text>
+          <Text
+            style={[
+              styles.sectionTitle,
+              rtl && styles.arabicMedium,
+              rtl && styles.rtlText
+            ]}
+          >
+            {reminderCopy.title}
+          </Text>
+        </View>
+        <View
+          accessible={false}
+          style={styles.reminderIcon}
+        >
+          <BellRinging
+            color={iconColor}
+            size={24}
+            weight="regular"
+          />
+        </View>
+      </View>
+
+      <Text
+        style={[
+          styles.reminderBody,
+          rtl && styles.arabic,
+          rtl && styles.rtlText
+        ]}
+      >
+        {reminderCopy.body}
+      </Text>
+
+      <Pressable
+        accessibilityHint={reminderCopy.toggleHint}
+        accessibilityLabel={reminderCopy.toggleLabel}
+        accessibilityRole="switch"
+        accessibilityState={{
+          checked: switchEnabled,
+          disabled: controlDisabled,
+          busy: reminder.busy
+        }}
+        disabled={controlDisabled}
+        onPress={() => void toggleReminder()}
+        style={({ pressed }) => [
+          styles.reminderToggle,
+          rtl && styles.rowReverse,
+          controlDisabled && styles.reminderControlDisabled,
+          pressed && styles.pressed
+        ]}
+        testID="review-reminder-toggle"
+      >
+        <View style={styles.reminderToggleCopy}>
+          <Text
+            style={[
+              styles.settingsTitle,
+              rtl && styles.arabicMedium,
+              rtl && styles.rtlText
+            ]}
+          >
+            {reminderCopy.toggleLabel}
+          </Text>
+          <Text
+            accessibilityLiveRegion="polite"
+            style={[
+              styles.reminderStatus,
+              { color: statusColor },
+              rtl && styles.arabic,
+              rtl && styles.rtlText
+            ]}
+            testID="review-reminder-status"
+          >
+            {statusLabel}
+          </Text>
+        </View>
+        <View
+          accessible={false}
+          pointerEvents="none"
+          style={styles.reminderSwitchTarget}
+        >
+          <Switch
+            accessibilityElementsHidden
+            importantForAccessibility="no"
+            ios_backgroundColor={colors.borderStrong}
+            onValueChange={() => undefined}
+            thumbColor={
+              switchEnabled ? colors.carbon : colors.white
+            }
+            trackColor={{
+              false: colors.borderStrong,
+              true: colors.action
+            }}
+            value={switchEnabled}
+            testID="review-reminder-switch"
+          />
+        </View>
+      </Pressable>
+
+      <View
+        style={[
+          styles.reminderTime,
+          rtl && styles.rowReverse
+        ]}
+      >
+        <Clock
+          color={colors.textMuted}
+          size={20}
+          weight="regular"
+        />
+        <View style={styles.reminderTimeCopy}>
+          <Text
+            style={[
+              styles.reminderTimeLabel,
+              rtl && styles.arabicMedium,
+              rtl && styles.rtlText
+            ]}
+          >
+            {reminderCopy.timeLabel}
+          </Text>
+          <Text
+            style={[
+              styles.reminderTimeValue,
+              rtl && styles.arabic,
+              rtl && styles.rtlText
+            ]}
+          >
+            {reminderCopy.localTime}
+          </Text>
+        </View>
+      </View>
+
+      <Text
+        style={[
+          styles.reminderPrivacy,
+          rtl && styles.arabic,
+          rtl && styles.rtlText
+        ]}
+      >
+        {reminderCopy.privacyNote}
+      </Text>
+    </Section>
+  );
+}
+
 function StatusRow({
   compact = false,
   description,
@@ -982,6 +1236,103 @@ const styles = StyleSheet.create({
     fontFamily: typography.body,
     fontSize: 13,
     lineHeight: 19
+  },
+  reminderHeading: {
+    minHeight: 44,
+    flexDirection: "row",
+    alignItems: "flex-start",
+    justifyContent: "space-between",
+    gap: spacing.md
+  },
+  reminderHeadingCopy: {
+    flex: 1,
+    minWidth: 0,
+    gap: spacing.xxs
+  },
+  reminderEyebrow: {
+    color: colors.textMuted,
+    fontFamily: typography.bodyBold,
+    fontSize: 11,
+    lineHeight: 15,
+    letterSpacing: 1
+  },
+  reminderIcon: {
+    width: 44,
+    height: 44,
+    alignItems: "center",
+    justifyContent: "center",
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderRadius: radius.md,
+    backgroundColor: colors.surface
+  },
+  reminderBody: {
+    maxWidth: 560,
+    color: colors.textMuted,
+    fontFamily: typography.body,
+    fontSize: 15,
+    lineHeight: 22
+  },
+  reminderToggle: {
+    minHeight: 68,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    gap: spacing.md,
+    paddingVertical: spacing.sm,
+    borderTopWidth: 1,
+    borderBottomWidth: 1,
+    borderColor: colors.border
+  },
+  reminderToggleCopy: {
+    flex: 1,
+    minWidth: 0,
+    gap: spacing.xxs
+  },
+  reminderStatus: {
+    fontFamily: typography.bodyMedium,
+    fontSize: 12,
+    lineHeight: 18
+  },
+  reminderSwitchTarget: {
+    minWidth: 52,
+    minHeight: 44,
+    flexShrink: 0,
+    alignItems: "center",
+    justifyContent: "center"
+  },
+  reminderControlDisabled: {
+    opacity: 0.56
+  },
+  reminderTime: {
+    minHeight: 44,
+    flexDirection: "row",
+    alignItems: "flex-start",
+    gap: spacing.sm
+  },
+  reminderTimeCopy: {
+    flex: 1,
+    minWidth: 0,
+    gap: 2
+  },
+  reminderTimeLabel: {
+    color: colors.text,
+    fontFamily: typography.bodyMedium,
+    fontSize: 13,
+    lineHeight: 19
+  },
+  reminderTimeValue: {
+    color: colors.textMuted,
+    fontFamily: typography.body,
+    fontSize: 13,
+    lineHeight: 19
+  },
+  reminderPrivacy: {
+    maxWidth: 560,
+    color: colors.textMuted,
+    fontFamily: typography.body,
+    fontSize: 12,
+    lineHeight: 18
   },
   statusRow: {
     minHeight: 72,

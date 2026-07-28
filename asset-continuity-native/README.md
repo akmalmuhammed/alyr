@@ -31,10 +31,30 @@ application, not a WebView wrapper and not the existing phone-frame prototype.
 - Authenticated provider-neutral HTTP sync transport with strict response checks
 - Cross-device Evidence retrieval with SHA-256 verification and encrypted
   local-vault persistence before the restored record becomes openable
+- Bounded opportunistic sync core with an Expo SDK 57 module-scope native task,
+  iOS expiration handling, and a shared foreground/recovery exclusion seam
 
 The web build is a developer preview only. Camera, encrypted SQLite, secure
 storage, biometric unlock, and background behavior must be verified in signed
 native development builds.
+
+## Background sync contract
+
+- The native task is defined at module scope in
+  `src/background/expoBackgroundSync.ts`.
+- WorkspaceProvider registers `process-resident` opportunistic work only while
+  the exact authenticated vault is open, encrypted storage is ready, and its
+  interactive DeviceAuth grant remains active. iOS may wake that suspended
+  live process and use the already-configured bounded task.
+- Lock, sign-out, household replacement, and provider cleanup synchronously
+  cancel the vault generation and clear its resolver, then best-effort
+  unregister the native task before protected storage is locked.
+- A terminated cold launch opens no vault key, database, or attachment
+  storage. It resolves a typed signed-out, provider-missing, or vault-locked
+  state, removes stale native registration, and reports
+  `foreground-only when cold`.
+- iOS expiration tightens the active durable-work deadline.
+- This path does not enable remote notifications.
 
 ## Commands
 

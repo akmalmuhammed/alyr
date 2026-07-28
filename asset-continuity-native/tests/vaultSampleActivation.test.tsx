@@ -58,6 +58,19 @@ jest.mock("@/recovery", () => ({
   })
 }));
 
+jest.mock("@/notifications/ReviewReminderProvider", () => ({
+  useReviewReminder: () => ({
+    status: "unavailable",
+    enabled: false,
+    available: false,
+    busy: false,
+    scheduledAt: null,
+    permission: null,
+    enable: jest.fn(async () => "unavailable"),
+    disable: jest.fn(async () => "unavailable")
+  })
+}));
+
 jest.mock("expo-sharing", () => ({
   isAvailableAsync: jest.fn(async () => true),
   shareAsync: jest.fn(async () => undefined)

@@ -31,10 +31,11 @@ import {
 } from "@/data/vaultScope";
 import { isExpoGoPreview } from "@/runtime/environment";
 import type {
-  RecoveryAttachmentRestoreSession
+  RecoveryJournaledAttachmentRestoreSession
 } from "@/recovery/atomicRestore";
 import type {
   RecoveredAttachment,
+  RecoveryRestoreJournalAttachmentState,
   RecoveryRestoreMetadata
 } from "@/recovery/types";
 import { RecoveryKitError } from "@/recovery/types";
@@ -44,6 +45,8 @@ const MAX_PROTECTED_ATTACHMENT_BYTES = MAX_ATTACHMENT_BYTES + 128;
 const MATERIALIZED_FILE_PATTERN =
   /^alyr-view-[a-f0-9]{32}\.[a-z0-9]{1,10}$/u;
 const PROTECTED_FILE_PATTERN = /^[a-f0-9]{64}\.alyrblob$/u;
+const RECOVERY_STAGING_DIRECTORY_PATTERN =
+  /^alyr-recovery-stage-[a-f0-9]{32}$/u;
 
 export type AttachmentReadErrorCode =
   | "INVALID_REFERENCE"
@@ -172,12 +175,43 @@ function bytesToHex(bytes: Uint8Array): string {
   return [...bytes].map((byte) => byte.toString(16).padStart(2, "0")).join("");
 }
 
+function hexToBytes(value: string): Uint8Array {
+  if (!/^[a-f0-9]+$/u.test(value) || value.length % 2 !== 0) {
+    throw new RecoveryKitError(
+      "RESTORE_REJECTED",
+      "Recovery attachment key journal data is invalid."
+    );
+  }
+  return Uint8Array.from(
+    { length: value.length / 2 },
+    (_unused, index) =>
+      Number.parseInt(value.slice(index * 2, index * 2 + 2), 16)
+  );
+}
+
 async function sha256Hex(bytes: Uint8Array): Promise<string> {
   const checksumBuffer = await digest(
     CryptoDigestAlgorithm.SHA256,
     new Uint8Array(bytes)
   );
   return bytesToHex(new Uint8Array(checksumBuffer));
+}
+
+async function protectedFileMatches(
+  file: File,
+  expectedByteSize: number,
+  expectedSha256: string
+): Promise<boolean> {
+  if (!file.exists || file.size !== expectedByteSize) return false;
+  const bytes = await file.bytes();
+  try {
+    return timingSafeHexEqual(
+      await sha256Hex(bytes),
+      expectedSha256
+    );
+  } finally {
+    bytes.fill(0);
+  }
 }
 
 function timingSafeHexEqual(left: string, right: string): boolean {
@@ -282,6 +316,20 @@ function equalSecretBytes(left: Uint8Array, right: Uint8Array): boolean {
     difference |= left[index]! ^ right[index]!;
   }
   return difference === 0;
+}
+
+function matchesSecretAndWipe(
+  actual: Uint8Array | null,
+  expected: Uint8Array
+): boolean {
+  if (!actual) return false;
+  const matches =
+    actual.byteLength === expected.byteLength &&
+    equalSecretBytes(actual, expected);
+  if (actual !== expected) {
+    actual.fill(0);
+  }
+  return matches;
 }
 
 export class MemoryPreviewAttachmentStore implements ScopedAttachmentStore {
@@ -804,7 +852,7 @@ export class EncryptedFileAttachmentStore implements ScopedAttachmentStore {
 
   async beginRecoveryAttachmentRestore(
     metadata: RecoveryRestoreMetadata
-  ): Promise<RecoveryAttachmentRestoreSession> {
+  ): Promise<RecoveryJournaledAttachmentRestoreSession> {
     this.assertUnlocked();
     if (
       !metadata.kitId.match(/^[a-f0-9]{32}$/u) ||
@@ -833,33 +881,83 @@ export class EncryptedFileAttachmentStore implements ScopedAttachmentStore {
         readonly source: File;
         readonly destination: File;
         readonly protectedByteSize: number;
+        readonly protectedSha256: string;
+        movedToDestination: boolean;
       }
     >();
-    const installed: File[] = [];
-    let pendingKey: Uint8Array | null = null;
+    let expectedVaultKey: Uint8Array | null = null;
+    let vaultKeyDisposition: "preserve" | "install" | null = null;
     let keyStaged = false;
-    let keyInstalled = false;
+    let keyWriteAttempted = false;
     let attachmentCount = 0;
     let workspaceStaged = false;
     let committed = false;
     let rolledBack = false;
+    let finalized = false;
 
     const rollback = async (): Promise<void> => {
-      if (rolledBack) return;
-      rolledBack = true;
-      for (const file of installed) {
-        if (file.exists) file.delete();
+      if (rolledBack || finalized) return;
+      let unexpectedDestination = false;
+      for (const item of staged.values()) {
+        if (item.destination.exists) {
+          if (item.movedToDestination) {
+            // This live session allocated the path, observed it absent, and
+            // completed the move. Re-read its digest before removing it, but
+            // still remove transaction-owned output when the commit's own
+            // post-move verification detected corruption.
+            await protectedFileMatches(
+              item.destination,
+              item.protectedByteSize,
+              item.protectedSha256
+            ).catch(() => false);
+            item.destination.delete();
+          } else {
+            // A destination that appeared without a successful move is not
+            // owned by this transaction and may belong to an ungated writer.
+            unexpectedDestination = true;
+          }
+        }
+        if (item.source.exists) {
+          await protectedFileMatches(
+            item.source,
+            item.protectedByteSize,
+            item.protectedSha256
+          ).catch(() => false);
+          item.source.delete();
+        }
       }
-      installed.splice(0, installed.length);
-      if (keyInstalled) {
-        await this.secureStore.remove(
+      deleteDirectoryIfPresent(stagingDirectory);
+      if (
+        vaultKeyDisposition === "install" &&
+        keyWriteAttempted &&
+        expectedVaultKey
+      ) {
+        const current = await this.secureStore.get(
           this.vaultScope.attachmentKeyName
         );
-        keyInstalled = false;
+        if (matchesSecretAndWipe(current, expectedVaultKey)) {
+          const confirmation = await this.secureStore.get(
+            this.vaultScope.attachmentKeyName
+          );
+          if (
+            matchesSecretAndWipe(confirmation, expectedVaultKey)
+          ) {
+            await this.secureStore.remove(
+              this.vaultScope.attachmentKeyName
+            );
+          }
+        }
       }
-      pendingKey?.fill(0);
-      pendingKey = null;
-      deleteDirectoryIfPresent(stagingDirectory);
+      if (unexpectedDestination) {
+        throw new RecoveryKitError(
+          "STORAGE_FAILED",
+          "A recovery destination changed before this transaction installed it."
+        );
+      }
+      expectedVaultKey?.fill(0);
+      expectedVaultKey = null;
+      keyWriteAttempted = false;
+      rolledBack = true;
     };
 
     return {
@@ -867,6 +965,7 @@ export class EncryptedFileAttachmentStore implements ScopedAttachmentStore {
         if (
           committed ||
           rolledBack ||
+          finalized ||
           keyStaged ||
           value.byteLength !== 32
         ) {
@@ -880,19 +979,19 @@ export class EncryptedFileAttachmentStore implements ScopedAttachmentStore {
           this.vaultScope.attachmentKeyName
         );
         if (existing) {
-          const matches =
-            existing.byteLength === 32 &&
-            equalSecretBytes(existing, value);
-          existing.fill(0);
+          const matches = matchesSecretAndWipe(existing, value);
           if (!matches) {
             throw new RecoveryKitError(
               "RESTORE_REJECTED",
               "The imported attachment key conflicts with this household vault."
             );
           }
+          expectedVaultKey = value.slice();
+          vaultKeyDisposition = "preserve";
           return;
         }
-        pendingKey = value.slice();
+        expectedVaultKey = value.slice();
+        vaultKeyDisposition = "install";
       },
       stageProtectedAttachment: async (
         value: RecoveredAttachment
@@ -900,6 +999,7 @@ export class EncryptedFileAttachmentStore implements ScopedAttachmentStore {
         if (
           committed ||
           rolledBack ||
+          finalized ||
           workspaceStaged ||
           staged.has(value.id) ||
           value.protectedFormat !== "expo-aes-gcm-combined-v1" ||
@@ -934,8 +1034,11 @@ export class EncryptedFileAttachmentStore implements ScopedAttachmentStore {
         source.create({ overwrite: false, intermediates: true });
         source.write(value.protectedBytes);
         if (
-          !source.exists ||
-          source.size !== value.protectedBytes.byteLength
+          !(await protectedFileMatches(
+            source,
+            value.protectedBytes.byteLength,
+            value.protectedSha256
+          ))
         ) {
           if (source.exists) source.delete();
           throw new RecoveryKitError(
@@ -946,7 +1049,9 @@ export class EncryptedFileAttachmentStore implements ScopedAttachmentStore {
         staged.set(value.id, {
           source,
           destination,
-          protectedByteSize: value.protectedBytes.byteLength
+          protectedByteSize: value.protectedBytes.byteLength,
+          protectedSha256: value.protectedSha256,
+          movedToDestination: false
         });
         attachmentCount += 1;
       },
@@ -957,6 +1062,7 @@ export class EncryptedFileAttachmentStore implements ScopedAttachmentStore {
         if (
           committed ||
           rolledBack ||
+          finalized ||
           workspaceStaged ||
           !isNativeWorkspace(value) ||
           value.schemaVersion !== workspaceSchemaVersion ||
@@ -1044,12 +1150,54 @@ export class EncryptedFileAttachmentStore implements ScopedAttachmentStore {
           lastSyncedAt: null
         };
       },
+      createRecoveryRestoreJournalState: async () => {
+        if (
+          committed ||
+          rolledBack ||
+          finalized ||
+          !workspaceStaged ||
+          attachmentCount !== metadata.attachmentCount ||
+          (metadata.attachmentCount > 0 &&
+            (!keyStaged ||
+              !expectedVaultKey ||
+              vaultKeyDisposition === null))
+        ) {
+          throw new RecoveryKitError(
+            "RESTORE_REJECTED",
+            "Recovery attachment journal staging order is invalid."
+          );
+        }
+        return {
+          journalVersion: 1,
+          vaultScopeId: this.vaultScope.scopeId,
+          stagingDirectoryReference: stagingDirectory.uri,
+          vaultKeyDisposition: vaultKeyDisposition ?? "preserve",
+          pendingVaultKeyHex:
+            vaultKeyDisposition === "install" && expectedVaultKey
+              ? bytesToHex(expectedVaultKey)
+              : null,
+          expectedVaultKeyHex: expectedVaultKey
+            ? bytesToHex(expectedVaultKey)
+            : null,
+          files: [...staged.values()].map((item) => ({
+            stagedReference: item.source.uri,
+            destinationReference: item.destination.uri,
+            protectedByteSize: item.protectedByteSize,
+            protectedSha256: item.protectedSha256
+          }))
+        };
+      },
       commit: async () => {
         if (
           committed ||
           rolledBack ||
+          finalized ||
           !workspaceStaged ||
-          attachmentCount !== metadata.attachmentCount
+          attachmentCount !== metadata.attachmentCount ||
+          (metadata.attachmentCount > 0 &&
+            (!keyStaged ||
+              !expectedVaultKey ||
+              vaultKeyDisposition === null))
         ) {
           throw new RecoveryKitError(
             "RESTORE_REJECTED",
@@ -1057,22 +1205,45 @@ export class EncryptedFileAttachmentStore implements ScopedAttachmentStore {
           );
         }
         try {
-          if (pendingKey) {
-            await this.secureStore.set(
-              this.vaultScope.attachmentKeyName,
-              pendingKey
-            );
-            keyInstalled = true;
-          } else if (metadata.attachmentCount > 0) {
-            const existing = await this.secureStore.get(
+          if (expectedVaultKey && vaultKeyDisposition) {
+            const beforeFinalization = await this.secureStore.get(
               this.vaultScope.attachmentKeyName
             );
-            const valid = existing?.byteLength === 32;
-            existing?.fill(0);
-            if (!valid) {
+            const keyWasPresent = beforeFinalization !== null;
+            const keyMatched = matchesSecretAndWipe(
+              beforeFinalization,
+              expectedVaultKey
+            );
+            if (vaultKeyDisposition === "install") {
+              if (keyWasPresent) {
+                throw new RecoveryKitError(
+                  "RESTORE_REJECTED",
+                  "The attachment vault key changed before recovery installation."
+                );
+              }
+              keyWriteAttempted = true;
+              await this.secureStore.set(
+                this.vaultScope.attachmentKeyName,
+                expectedVaultKey
+              );
+              const installedKey = await this.secureStore.get(
+                this.vaultScope.attachmentKeyName
+              );
+              if (
+                !matchesSecretAndWipe(
+                  installedKey,
+                  expectedVaultKey
+                )
+              ) {
+                throw new RecoveryKitError(
+                  "RESTORE_REJECTED",
+                  "The attachment vault key did not verify after recovery installation."
+                );
+              }
+            } else if (!keyMatched) {
               throw new RecoveryKitError(
                 "RESTORE_REJECTED",
-                "The attachment vault key is unavailable."
+                "The preserved attachment vault key changed before recovery installation."
               );
             }
           }
@@ -1084,19 +1255,33 @@ export class EncryptedFileAttachmentStore implements ScopedAttachmentStore {
             await item.source.move(item.destination, {
               overwrite: false
             });
+            item.movedToDestination = true;
             if (
-              !item.destination.exists ||
-              item.destination.size !== item.protectedByteSize
+              !(await protectedFileMatches(
+                item.destination,
+                item.protectedByteSize,
+                item.protectedSha256
+              ))
             ) {
               throw new RecoveryKitError(
                 "STORAGE_FAILED",
                 "A restored protected attachment did not verify on disk."
               );
             }
-            installed.push(item.destination);
           }
-          pendingKey?.fill(0);
-          pendingKey = null;
+          if (expectedVaultKey) {
+            const finalizedKey = await this.secureStore.get(
+              this.vaultScope.attachmentKeyName
+            );
+            if (
+              !matchesSecretAndWipe(finalizedKey, expectedVaultKey)
+            ) {
+              throw new RecoveryKitError(
+                "RESTORE_REJECTED",
+                "The attachment vault key changed during recovery finalization."
+              );
+            }
+          }
           deleteDirectoryIfPresent(stagingDirectory);
           committed = true;
         } catch (error) {
@@ -1104,8 +1289,290 @@ export class EncryptedFileAttachmentStore implements ScopedAttachmentStore {
           throw error;
         }
       },
-      rollback
+      rollback,
+      finalize: async () => {
+        if (finalized) return;
+        if (!committed && !rolledBack) {
+          throw new RecoveryKitError(
+            "RESTORE_REJECTED",
+            "Recovery attachment finalization was requested before commit."
+          );
+        }
+        expectedVaultKey?.fill(0);
+        expectedVaultKey = null;
+        keyWriteAttempted = false;
+        finalized = true;
+      }
     };
+  }
+
+  async resolveInterruptedRecoveryAttachmentRestore(
+    state: RecoveryRestoreJournalAttachmentState,
+    outcome: "rollback" | "complete"
+  ): Promise<void> {
+    this.assertUnlocked();
+    const cacheRoot = new Directory(Paths.cache);
+    const stagingName = directChildName(
+      cacheRoot,
+      state.stagingDirectoryReference
+    );
+    if (
+      state.journalVersion !== 1 ||
+      state.vaultScopeId !== this.vaultScope.scopeId ||
+      !stagingName ||
+      !RECOVERY_STAGING_DIRECTORY_PATTERN.test(stagingName) ||
+      !Array.isArray(state.files) ||
+      state.files.length > 256 ||
+      (state.files.length > 0
+        ? !state.expectedVaultKeyHex ||
+          !/^[a-f0-9]{64}$/u.test(state.expectedVaultKeyHex)
+        : state.expectedVaultKeyHex !== null) ||
+      (state.vaultKeyDisposition === "install"
+        ? state.files.length === 0 ||
+          !state.pendingVaultKeyHex ||
+          !/^[a-f0-9]{64}$/u.test(state.pendingVaultKeyHex) ||
+          state.pendingVaultKeyHex !== state.expectedVaultKeyHex
+        : state.vaultKeyDisposition !== "preserve" ||
+          state.pendingVaultKeyHex !== null)
+    ) {
+      throw new RecoveryKitError(
+        "RESTORE_REJECTED",
+        "Recovery attachment journal does not match this vault."
+      );
+    }
+
+    const stagingDirectory = new Directory(Paths.cache, stagingName);
+    const seenStaged = new Set<string>();
+    const seenDestinations = new Set<string>();
+    const files = state.files.map((item) => {
+      const stagedName = directChildName(
+        stagingDirectory,
+        item.stagedReference
+      );
+      if (
+        !stagedName ||
+        !PROTECTED_FILE_PATTERN.test(stagedName) ||
+        !isScopedProtectedBlobUri(
+          item.destinationReference,
+          this.vaultScope
+        ) ||
+        !Number.isSafeInteger(item.protectedByteSize) ||
+        item.protectedByteSize <= 0 ||
+        item.protectedByteSize > MAX_PROTECTED_ATTACHMENT_BYTES ||
+        typeof item.protectedSha256 !== "string" ||
+        !/^[a-f0-9]{64}$/u.test(item.protectedSha256) ||
+        seenStaged.has(item.stagedReference) ||
+        seenDestinations.has(item.destinationReference)
+      ) {
+        throw new RecoveryKitError(
+          "RESTORE_REJECTED",
+          "Recovery attachment journal contains an invalid file boundary."
+        );
+      }
+      seenStaged.add(item.stagedReference);
+      seenDestinations.add(item.destinationReference);
+      return {
+        source: new File(item.stagedReference),
+        destination: new File(item.destinationReference),
+        protectedByteSize: item.protectedByteSize,
+        protectedSha256: item.protectedSha256
+      };
+    });
+
+    let expectedVaultKey: Uint8Array | null = state.expectedVaultKeyHex
+      ? hexToBytes(state.expectedVaultKeyHex)
+      : null;
+    try {
+      if (outcome === "rollback") {
+        if (expectedVaultKey) {
+          const installed = await this.secureStore.get(
+            this.vaultScope.attachmentKeyName
+          );
+          const keyIsPresent = installed !== null;
+          const keyMatches = matchesSecretAndWipe(
+            installed,
+            expectedVaultKey
+          );
+          if (state.vaultKeyDisposition === "preserve") {
+            if (!keyMatches) {
+              throw new RecoveryKitError(
+                "RESTORE_REJECTED",
+                "The preserved attachment key changed during interrupted restore recovery."
+              );
+            }
+          } else if (keyIsPresent) {
+            if (!keyMatches) {
+              throw new RecoveryKitError(
+                "RESTORE_REJECTED",
+                "The attachment key changed during interrupted restore recovery."
+              );
+            }
+            await this.secureStore.remove(
+              this.vaultScope.attachmentKeyName
+            );
+          }
+        }
+        for (const item of files) {
+          if (item.destination.exists) {
+            if (
+              !(await protectedFileMatches(
+                item.destination,
+                item.protectedByteSize,
+                item.protectedSha256
+              ))
+            ) {
+              throw new RecoveryKitError(
+                "STORAGE_FAILED",
+                "An interrupted restored attachment failed digest verification before rollback."
+              );
+            }
+            item.destination.delete();
+          }
+          if (item.source.exists) {
+            if (
+              !(await protectedFileMatches(
+                item.source,
+                item.protectedByteSize,
+                item.protectedSha256
+              ))
+            ) {
+              throw new RecoveryKitError(
+                "STORAGE_FAILED",
+                "A staged attachment failed digest verification before rollback."
+              );
+            }
+            item.source.delete();
+          }
+        }
+        deleteDirectoryIfPresent(stagingDirectory);
+        return;
+      }
+
+      if (expectedVaultKey) {
+        const installed = await this.secureStore.get(
+          this.vaultScope.attachmentKeyName
+        );
+        const keyIsPresent = installed !== null;
+        const keyMatches = matchesSecretAndWipe(
+          installed,
+          expectedVaultKey
+        );
+        if (state.vaultKeyDisposition === "install") {
+          if (keyIsPresent && !keyMatches) {
+            throw new RecoveryKitError(
+              "RESTORE_REJECTED",
+              "The attachment key changed during interrupted restore recovery."
+            );
+          }
+          if (!keyIsPresent) {
+            await this.secureStore.set(
+              this.vaultScope.attachmentKeyName,
+              expectedVaultKey
+            );
+            const installedAfterWrite = await this.secureStore.get(
+              this.vaultScope.attachmentKeyName
+            );
+            if (
+              !matchesSecretAndWipe(
+                installedAfterWrite,
+                expectedVaultKey
+              )
+            ) {
+              throw new RecoveryKitError(
+                "RESTORE_REJECTED",
+                "The attachment key did not verify after interrupted restore installation."
+              );
+            }
+          }
+        } else if (!keyMatches) {
+          throw new RecoveryKitError(
+            "RESTORE_REJECTED",
+            "The preserved attachment key changed after restart."
+          );
+        }
+      }
+      const targetDirectory = protectedDirectory(this.vaultScope);
+      targetDirectory.create({
+        idempotent: true,
+        intermediates: true
+      });
+      for (const item of files) {
+        if (item.destination.exists) {
+          if (
+            !(await protectedFileMatches(
+              item.destination,
+              item.protectedByteSize,
+              item.protectedSha256
+            ))
+          ) {
+            throw new RecoveryKitError(
+              "STORAGE_FAILED",
+              "A restored protected attachment failed digest verification."
+            );
+          }
+          if (item.source.exists) {
+            if (
+              !(await protectedFileMatches(
+                item.source,
+                item.protectedByteSize,
+                item.protectedSha256
+              ))
+            ) {
+              throw new RecoveryKitError(
+                "STORAGE_FAILED",
+                "A staged protected attachment failed digest verification."
+              );
+            }
+            item.source.delete();
+          }
+          continue;
+        }
+        if (
+          !(await protectedFileMatches(
+            item.source,
+            item.protectedByteSize,
+            item.protectedSha256
+          ))
+        ) {
+          throw new RecoveryKitError(
+            "STORAGE_FAILED",
+            "A staged protected attachment is missing or corrupt after restart."
+          );
+        }
+        await item.source.move(item.destination, {
+          overwrite: false
+        });
+        if (
+          !(await protectedFileMatches(
+            item.destination,
+            item.protectedByteSize,
+            item.protectedSha256
+          ))
+        ) {
+          throw new RecoveryKitError(
+            "STORAGE_FAILED",
+            "A restored protected attachment did not verify after restart."
+          );
+        }
+      }
+      if (expectedVaultKey) {
+        const finalizedKey = await this.secureStore.get(
+          this.vaultScope.attachmentKeyName
+        );
+        if (
+          !matchesSecretAndWipe(finalizedKey, expectedVaultKey)
+        ) {
+          throw new RecoveryKitError(
+            "RESTORE_REJECTED",
+            "The attachment key changed while interrupted recovery was completing."
+          );
+        }
+      }
+      deleteDirectoryIfPresent(stagingDirectory);
+    } finally {
+      expectedVaultKey?.fill(0);
+      expectedVaultKey = null;
+    }
   }
 
   async close(): Promise<void> {

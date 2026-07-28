@@ -6,6 +6,7 @@ import {
   type HouseholdId,
   type JsonObject,
   type JsonPrimitive,
+  type ProviderRequestContext,
   type Result,
   type SyncChange,
   type SyncConflict,
@@ -17,6 +18,11 @@ import {
   type SyncTransport,
   type WorkspaceBootstrapDescriptor
 } from "@alyr/contracts"
+
+import {
+  assertProviderRequestActive,
+  rethrowProviderCancellation
+} from "@/adapters/providerRequest"
 
 export type AccessTokenProvider = () => Promise<string>
 export type SyncFetch = (url: string, init: RequestInit) => Promise<Response>
@@ -270,7 +276,8 @@ export class HttpSyncTransport implements SyncTransport {
   }
 
   async push(
-    operations: readonly SyncOperation[]
+    operations: readonly SyncOperation[],
+    context?: ProviderRequestContext
   ): Promise<Result<SyncPushResponse>> {
     const request: SyncPushRequest = {
       apiVersion: CONTRACT_API_VERSION,
@@ -281,13 +288,15 @@ export class HttpSyncTransport implements SyncTransport {
       `${this.baseUrl}/sync/push`,
       "POST",
       JSON.stringify(request),
-      isSyncPushResponse
+      isSyncPushResponse,
+      context
     )
   }
 
   async pull(
     householdId: HouseholdId,
-    cursor: SyncCursor
+    cursor: SyncCursor,
+    context?: ProviderRequestContext
   ): Promise<Result<SyncPullResponse>> {
     const query =
       `householdId=${encodeURIComponent(householdId)}` +
@@ -297,7 +306,8 @@ export class HttpSyncTransport implements SyncTransport {
       `${this.baseUrl}/sync/pull?${query}`,
       "GET",
       undefined,
-      isSyncPullResponse
+      isSyncPullResponse,
+      context
     )
   }
 
@@ -305,12 +315,16 @@ export class HttpSyncTransport implements SyncTransport {
     url: string,
     method: "GET" | "POST",
     body: string | undefined,
-    isSuccess: ResponseGuard<T>
+    isSuccess: ResponseGuard<T>,
+    context?: ProviderRequestContext
   ): Promise<Result<T>> {
+    assertProviderRequestActive(context)
     let accessToken: string
     try {
       accessToken = (await this.getAccessToken()).trim()
-    } catch {
+      assertProviderRequestActive(context)
+    } catch (error) {
+      rethrowProviderCancellation(error, context)
       return offlineFailure()
     }
 
@@ -339,17 +353,30 @@ export class HttpSyncTransport implements SyncTransport {
       response = await this.fetchImpl(
         url,
         body === undefined
-          ? { method, headers }
-          : { method, headers, body }
+          ? {
+              method,
+              headers,
+              ...(context ? { signal: context.signal } : {})
+            }
+          : {
+              method,
+              headers,
+              body,
+              ...(context ? { signal: context.signal } : {})
+            }
       )
-    } catch {
+      assertProviderRequestActive(context)
+    } catch (error) {
+      rethrowProviderCancellation(error, context)
       return offlineFailure()
     }
 
     let responseText: string
     try {
       responseText = await response.text()
-    } catch {
+      assertProviderRequestActive(context)
+    } catch (error) {
+      rethrowProviderCancellation(error, context)
       return offlineFailure()
     }
 

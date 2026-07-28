@@ -2,6 +2,8 @@ import "react-native-gesture-handler";
 import "react-native-reanimated";
 import "react-native-url-polyfill/auto";
 
+import "@/background/expoBackgroundSync";
+
 import {
   IBMPlexSansArabic_400Regular,
   IBMPlexSansArabic_600SemiBold,
@@ -67,6 +69,10 @@ import {
   PortfolioPrivacyProvider,
   valueVisibilityScopeForSession
 } from "@/privacy/PortfolioPrivacyProvider";
+import {
+  ReviewReminderProvider,
+  ReviewReminderWorkspaceObserver
+} from "@/notifications/ReviewReminderProvider";
 import { colors } from "@/theme/tokens";
 
 const signedRuntimeInstallation =
@@ -253,9 +259,13 @@ function SignedWorkspaceBoundary() {
         protectionRequired={protectionRequired}
         subjectId={subjectId}
       >
-        <SessionBoundWorkspaceProvider>
-          <RootNavigator />
-        </SessionBoundWorkspaceProvider>
+        <ReviewReminderProvider>
+          <SessionBoundWorkspaceProvider>
+            <ReviewReminderWorkspaceObserver>
+              <RootNavigator />
+            </ReviewReminderWorkspaceObserver>
+          </SessionBoundWorkspaceProvider>
+        </ReviewReminderProvider>
       </DeviceAuthProvider>
     </PortfolioPrivacyProvider>
   );

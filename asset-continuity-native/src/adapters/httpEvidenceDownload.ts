@@ -8,6 +8,7 @@ import {
   type ApiErrorCode,
   type ContractError,
   type JsonPrimitive,
+  type ProviderRequestContext,
   type Result
 } from "@alyr/contracts";
 
@@ -19,6 +20,10 @@ import type {
   AccessTokenProvider,
   SyncFetch
 } from "@/adapters/httpSyncTransport";
+import {
+  assertProviderRequestActive,
+  rethrowProviderCancellation
+} from "@/adapters/providerRequest";
 
 const MAX_ATTACHMENT_BYTES = 10 * 1024 * 1024;
 const CHECKSUM_PATTERN = /^[a-f0-9]{64}$/u;
@@ -204,8 +209,10 @@ export class HttpEvidenceDownloadPort implements EvidenceDownloadPort {
   }
 
   async download(
-    descriptor: EvidenceDownloadDescriptor
+    descriptor: EvidenceDownloadDescriptor,
+    context?: ProviderRequestContext
   ): Promise<Result<Uint8Array>> {
+    assertProviderRequestActive(context);
     if (!validDescriptor(descriptor)) {
       return {
         ok: false,
@@ -220,7 +227,9 @@ export class HttpEvidenceDownloadPort implements EvidenceDownloadPort {
     let accessToken: string;
     try {
       accessToken = (await this.getAccessToken()).trim();
-    } catch {
+      assertProviderRequestActive(context);
+    } catch (error) {
+      rethrowProviderCancellation(error, context);
       return offline();
     }
     if (!accessToken) {
@@ -245,10 +254,13 @@ export class HttpEvidenceDownloadPort implements EvidenceDownloadPort {
             Authorization: `Bearer ${accessToken}`,
             "Content-Type": "application/json"
           },
-          body: JSON.stringify(descriptor)
+          body: JSON.stringify(descriptor),
+          ...(context ? { signal: context.signal } : {})
         }
       );
-    } catch {
+      assertProviderRequestActive(context);
+    } catch (error) {
+      rethrowProviderCancellation(error, context);
       return offline();
     }
 
@@ -256,7 +268,9 @@ export class HttpEvidenceDownloadPort implements EvidenceDownloadPort {
       let payload: unknown;
       try {
         payload = JSON.parse(await response.text()) as unknown;
-      } catch {
+        assertProviderRequestActive(context);
+      } catch (error) {
+        rethrowProviderCancellation(error, context);
         return malformed();
       }
       const error = errorFromPayload(payload);
@@ -296,7 +310,9 @@ export class HttpEvidenceDownloadPort implements EvidenceDownloadPort {
     let bytes: Uint8Array;
     try {
       bytes = new Uint8Array(await response.arrayBuffer());
-    } catch {
+      assertProviderRequestActive(context);
+    } catch (error) {
+      rethrowProviderCancellation(error, context);
       return offline();
     }
     if (bytes.byteLength !== descriptor.byteSize) {
@@ -314,8 +330,10 @@ export class HttpEvidenceDownloadPort implements EvidenceDownloadPort {
     let checksum: string;
     try {
       checksum = (await this.digestBytes(bytes)).toLowerCase();
-    } catch {
+      assertProviderRequestActive(context);
+    } catch (error) {
       bytes.fill(0);
+      rethrowProviderCancellation(error, context);
       return malformed();
     }
     if (
