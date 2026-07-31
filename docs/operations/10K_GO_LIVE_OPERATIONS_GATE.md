@@ -61,6 +61,7 @@ unit suite.
 | Authenticated backup-freshness check | `heldat-backup.mjs freshness` | Automated |
 | Deep latest-backup authentication | `heldat-backup.mjs freshness --verify-artifacts` | Automated |
 | Failure-delivery canary | `heldat-backup.mjs freshness --failure-canary` | Automated; alert route still pending |
+| Free-tier 50/70/85% quota decision | `npm run guard:supabase:free-tier -- --snapshot=PATH` | Automated evaluator; fresh source collection and alert delivery still pending |
 | CI regression gate | `.github/workflows/ci.yml` | Automated |
 | Operator procedure | `BACKUP_RESTORE_RUNBOOK.md` | Documented |
 
@@ -103,6 +104,8 @@ The launch dashboard and alerts must cover:
 
 Alerts need an owner, severity, acknowledgement path and recovery runbook.
 Provider dashboards without tested alert delivery do not satisfy this gate.
+The manual fail-closed snapshot procedure and JSON decision contract are in
+`FREE_TIER_QUOTA_GUARD.md`.
 
 ## Backup operating policy
 
