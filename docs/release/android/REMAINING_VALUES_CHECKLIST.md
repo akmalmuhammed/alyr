@@ -39,6 +39,9 @@
       certificate fingerprints.
 - [ ] Add the Play app-signing SHA-256 certificate to `assetlinks.json`; the
       local upload certificate alone does not verify store-installed builds.
+- [ ] Add the Play app-signing SHA-1 certificate to the Android restriction on
+      the Google Maps API key; the upload certificate alone does not authorize
+      maps inside a Play-installed build.
 - [ ] Recheck package, version code/name, target/min SDK, permissions, native
       libraries, privacy manifests, and embedded SDK versions from the Play
       artifact.
