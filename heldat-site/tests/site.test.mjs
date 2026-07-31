@@ -87,6 +87,23 @@ test("legal and support pages expose stable Heldat contacts", async () => {
   }
 });
 
+test("account deletion page matches the released in-app navigation path", async () => {
+  const page = await read("delete-account/index.html");
+  const orderedSteps = [
+    "<strong>Vault</strong>",
+    "<strong>Settings</strong>",
+    "<strong>Account</strong>",
+    "<strong>Delete account and data</strong>"
+  ];
+  let cursor = -1;
+  for (const step of orderedSteps) {
+    const next = page.indexOf(step, cursor + 1);
+    assert.ok(next > cursor, `${step} must appear in the released path order`);
+    cursor = next;
+  }
+  assert.doesNotMatch(page, /Privacy and support/);
+});
+
 test("Android app links publish only the verified Heldat identity", async () => {
   const apple = JSON.parse(
     await readFile(
