@@ -1,5 +1,4 @@
 import { useRouter } from "expo-router";
-import { StatusBar } from "expo-status-bar";
 import {
   ArrowRight,
   FileText,
@@ -114,7 +113,6 @@ export default function AuthWelcomeScreen() {
       style={styles.screen}
       testID="auth-welcome-screen"
     >
-      <StatusBar style="light" />
       <View
         style={[
           styles.header,

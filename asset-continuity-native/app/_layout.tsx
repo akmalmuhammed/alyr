@@ -20,7 +20,7 @@ import {
   InstrumentSans_700Bold,
   useFonts as useInstrumentSans
 } from "@expo-google-fonts/instrument-sans";
-import { Stack, useRouter } from "expo-router";
+import { Stack, useRouter, useSegments } from "expo-router";
 import * as SplashScreen from "expo-splash-screen";
 import { StatusBar } from "expo-status-bar";
 import {
@@ -60,6 +60,7 @@ import { useWorkspace } from "@/state/WorkspaceProvider";
 import { useCoreJourneyCopy } from "@/i18n/coreJourneyCopy";
 import { useInviteCopy } from "@/i18n/inviteCopy";
 import { LocaleProvider } from "@/i18n/LocaleProvider";
+import { heldatStatusBarStyle } from "@/navigation/statusBar";
 import {
   PrivacyShield,
   usePrivacyShielded
@@ -287,6 +288,7 @@ function SignedWorkspaceBoundary() {
 
 function RootNavigator() {
   const router = useRouter();
+  const segments = useSegments();
   const deliveredFirstRecordHandoffRef = useRef<string | null>(
     null
   );
@@ -390,7 +392,6 @@ function RootNavigator() {
         {...navigatorAccessibilityProps}
         style={styles.navigatorLayer}
       >
-        <StatusBar style="dark" />
         <Stack
           screenOptions={{
             animation: reduceMotion
@@ -646,6 +647,7 @@ function RootNavigator() {
             />
           </Stack.Protected>
         </Stack>
+        <StatusBar style={heldatStatusBarStyle(segments)} />
       </View>
       <PrivacyShield visible={privacyShielded} />
     </View>

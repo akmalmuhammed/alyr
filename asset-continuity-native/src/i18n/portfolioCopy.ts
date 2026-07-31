@@ -4,16 +4,38 @@ import type {
   NativeLiability
 } from "@/domain/model";
 import type { NetPositionStatus } from "@/domain/netPosition";
+import {
+  formatArabicDisplayNumber,
+  selectArabicCardinalPlural
+} from "@/i18n/arabicPlural";
 
-const arabicPluralRules = new Intl.PluralRules("ar");
-const arabicInteger = new Intl.NumberFormat("ar-QA", {
-  maximumFractionDigits: 0,
-  useGrouping: false
-});
+let arabicInteger: Intl.NumberFormat | null | undefined;
+
+function formatArabicInteger(value: number): string {
+  if (arabicInteger === undefined) {
+    if (
+      typeof Intl !== "undefined" &&
+      typeof Intl.NumberFormat === "function"
+    ) {
+      try {
+        arabicInteger = new Intl.NumberFormat("ar-QA", {
+          maximumFractionDigits: 0,
+          useGrouping: false
+        });
+      } catch {
+        arabicInteger = null;
+      }
+    } else {
+      arabicInteger = null;
+    }
+  }
+
+  return arabicInteger?.format(value) ?? formatArabicDisplayNumber(value, 0);
+}
 
 function additionalArabicCurrencies(count: number): string {
-  const value = arabicInteger.format(count);
-  switch (arabicPluralRules.select(count)) {
+  const value = formatArabicInteger(count);
+  switch (selectArabicCardinalPlural(count)) {
     case "one":
       return "+عملة إضافية";
     case "two":
@@ -470,7 +492,7 @@ const ARABIC: PortfolioExperienceCopy = {
       "لم تعد مراجعتك السابقة لعدم وجود التزامات سارية بعد نشاط لاحق. راجِع مجددًا لتأكيد أن الأسرة ما زالت بلا التزامات.",
     archivedCount: (count) => `التزامات مؤرشفة: ${count}`,
     viewAll: (count) =>
-      `عرض كل الالتزامات (${arabicInteger.format(count)})`,
+      `عرض كل الالتزامات (${formatArabicInteger(count)})`,
     showFewer: "عرض التزامات أقل"
   },
   create: {

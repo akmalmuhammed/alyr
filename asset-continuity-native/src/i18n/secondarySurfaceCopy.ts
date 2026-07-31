@@ -5,6 +5,10 @@ import {
   type AtlasPinDisclosure
 } from "@/domain/atlas";
 import type { LanguageCode } from "@/domain/model";
+import {
+  formatArabicDisplayNumber,
+  selectArabicCardinalPlural
+} from "@/i18n/arabicPlural";
 import { useLocale } from "@/i18n/LocaleProvider";
 import { RecoveryKitError } from "@/recovery/types";
 import { recoveryErrorMessage } from "@/recovery/uiMessages";
@@ -579,6 +583,15 @@ export function formatLocalizedNumber(
   value: number,
   language: LanguageCode
 ): string {
+  if (
+    typeof Intl === "undefined" ||
+    typeof Intl.NumberFormat !== "function"
+  ) {
+    return language === "ar"
+      ? formatArabicDisplayNumber(value)
+      : String(value);
+  }
+
   let formatter = numberFormatters.get(language);
   if (!formatter) {
     formatter = new Intl.NumberFormat(
@@ -603,7 +616,7 @@ function arabicCount(
   if (value === 0) return forms.zero;
   if (value === 1) return forms.one;
   if (value === 2) return forms.two;
-  const plural = new Intl.PluralRules("ar").select(value);
+  const plural = selectArabicCardinalPlural(value);
   return `${formatLocalizedNumber(value, "ar")} ${
     plural === "few" ? forms.few : forms.many
   }`;

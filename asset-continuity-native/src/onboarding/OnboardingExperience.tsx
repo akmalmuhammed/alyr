@@ -1,5 +1,4 @@
 import { LinearGradient } from "expo-linear-gradient";
-import { StatusBar } from "expo-status-bar";
 import {
   ArrowLeft,
   ArrowRight,
@@ -186,7 +185,6 @@ export function OnboardingExperience({
 
   return (
     <View style={styles.screen} testID="onboarding-screen">
-      <StatusBar style="light" />
       <LinearGradient
         colors={worldline.backgroundGradient}
         end={{ x: 0.9, y: 1 }}
