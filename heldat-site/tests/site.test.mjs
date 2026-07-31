@@ -19,6 +19,7 @@ const requiredFiles = [
   "reset-password/index.html",
   "join/index.html",
   ".well-known/security.txt",
+  ".well-known/assetlinks.json",
   "robots.txt",
   "sitemap.xml",
   "styles.css",
@@ -82,7 +83,7 @@ test("legal and support pages expose stable Heldat contacts", async () => {
   }
 });
 
-test("association templates stay outside public until release identities exist", async () => {
+test("Android app links publish only the verified Heldat identity", async () => {
   const apple = JSON.parse(
     await readFile(
       new URL("../association-templates/apple-app-site-association.json", import.meta.url),
@@ -95,6 +96,9 @@ test("association templates stay outside public until release identities exist",
       "utf8"
     )
   );
+  const publishedAndroid = JSON.parse(
+    await read(".well-known/assetlinks.json")
+  );
   assert.equal(
     apple.applinks.details[0].appIDs[0],
     "APPLE_TEAM_ID.app.heldat.mobile"
@@ -104,9 +108,10 @@ test("association templates stay outside public until release identities exist",
     "APPLE_TEAM_ID.app.heldat.mobile"
   );
   assert.equal(android[0].target.package_name, "app.heldat.mobile");
-  assert.equal(
+  assert.deepEqual(publishedAndroid, android);
+  assert.match(
     android[0].target.sha256_cert_fingerprints[0],
-    "ANDROID_PRODUCTION_CERT_SHA256"
+    /^(?:[0-9A-F]{2}:){31}[0-9A-F]{2}$/u
   );
 });
 

@@ -28,9 +28,13 @@ npm run deploy:dry-run --workspace=@heldat/site
 3. Deploy `wrangler.jsonc` to the proxied `heldat.app/*` zone route.
 4. Add a proxied originless `www` record and the matching Worker route, then
    verify its permanent redirect to the apex.
-5. Publish the files under `association-templates/` to `public/.well-known/`
-   only after replacing both release identity values with verified values.
+5. Publish each file under `association-templates/` to `public/.well-known/`
+   only after replacing its release identity values with verified values.
 
-Association files are deliberately absent from the public build because Apple
-and Android cache them. Publishing a placeholder or empty response would slow
-down signed-build verification later.
+Android `assetlinks.json` is published for `app.heldat.mobile` and the verified
+EAS signing certificate used by the current direct-install build. Add the
+Google Play app-signing certificate before distributing through Play.
+
+The Apple association remains a private template until the final Apple Team ID
+and signed iOS application are available. Publishing an Apple placeholder or
+empty response would slow down signed-build verification later.

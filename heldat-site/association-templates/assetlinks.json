@@ -4,7 +4,9 @@
     "target": {
       "namespace": "android_app",
       "package_name": "app.heldat.mobile",
-      "sha256_cert_fingerprints": ["ANDROID_PRODUCTION_CERT_SHA256"]
+      "sha256_cert_fingerprints": [
+        "95:0A:3A:A2:B3:1E:DB:C0:06:DF:36:B8:72:C0:89:E2:C1:68:3D:5C:81:6A:4A:1B:32:D2:B5:64:A8:AC:89:2F"
+      ]
     }
   }
 ]
