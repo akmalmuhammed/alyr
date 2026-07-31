@@ -126,3 +126,15 @@ export interface ContractError {
   readonly retryable: boolean;
   readonly details?: Readonly<Record<string, JsonPrimitive>>;
 }
+
+/**
+ * QUOTA_EXCEEDED is an action-required capacity boundary, including household
+ * and service storage saturation. Clients must not put it into an automatic
+ * retry loop; a user or operator must first release or extend capacity.
+ */
+export function apiErrorRetryabilityIsValid(
+  code: ApiErrorCode,
+  retryable: boolean,
+): boolean {
+  return code !== "QUOTA_EXCEEDED" || retryable === false;
+}

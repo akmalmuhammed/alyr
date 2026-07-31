@@ -285,11 +285,13 @@ paths:
         "401":
           $ref: "#/components/responses/Unauthorized"
         "409":
-          description: The household storage allowance was reached.
+          description: >
+            Household or Heldat cloud storage is at capacity. This response is
+            action-required and is never eligible for automatic retry.
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/ApiErrorEnvelope"
+                $ref: "#/components/schemas/StorageCapacityErrorEnvelope"
   /uploads/{uploadId}/complete:
     post:
       operationId: completeUpload
@@ -560,7 +562,14 @@ paths:
         "404":
           $ref: "#/components/responses/NotFound"
         "409":
-          $ref: "#/components/responses/Conflict"
+          description: >
+            The request conflicts with an acknowledged snapshot, an export
+            allowance was reached, or cloud storage is at capacity. Storage
+            capacity returns QUOTA_EXCEEDED with retryable set to false.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiErrorEnvelope"
         "429":
           $ref: "#/components/responses/TooManyRequests"
         "503":
@@ -2070,8 +2079,35 @@ components:
               type: string
             retryable:
               type: boolean
+    StorageCapacityErrorEnvelope:
+      type: object
+      additionalProperties: false
+      required: [error]
+      properties:
+        error:
+          type: object
+          additionalProperties: false
+          required: [errorVersion, code, message, retryable]
+          properties:
+            errorVersion:
+              type: integer
+              const: 1
+            code:
+              type: string
+              const: QUOTA_EXCEEDED
+            message:
+              type: string
+              description: >
+                Provider-neutral user action. Database sentinels, configured
+                limits, usage totals, and storage-provider details are omitted.
+            retryable:
+              type: boolean
+              const: false
     ApiErrorCode:
       type: string
+      description: >
+        QUOTA_EXCEEDED is action-required, including household or Heldat
+        storage saturation, and must always carry retryable=false.
       enum:
         - AUTHENTICATION_REQUIRED
         - AUTHORIZATION_DENIED

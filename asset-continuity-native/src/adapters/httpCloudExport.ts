@@ -5,6 +5,7 @@ import {
 
 import {
   API_ERROR_VERSION,
+  apiErrorRetryabilityIsValid,
   type ApiErrorCode,
   type ContractError,
   type ExportStatusResponse,
@@ -92,6 +93,7 @@ function isContractError(value: unknown): value is ContractError {
     isApiErrorCode(value.code) &&
     typeof value.message === "string" &&
     typeof value.retryable === "boolean" &&
+    apiErrorRetryabilityIsValid(value.code, value.retryable) &&
     (!Object.prototype.hasOwnProperty.call(value, "details") ||
       (isRecord(value.details) &&
         Object.values(value.details).every(isJsonPrimitive)))

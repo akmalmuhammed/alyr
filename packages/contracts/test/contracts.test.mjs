@@ -4,11 +4,27 @@ import test from "node:test";
 import {
   ANALYTICS_EVENT_ALLOW_LIST,
   ANALYTICS_PROHIBITED_KEY_FRAGMENTS,
+  apiErrorRetryabilityIsValid,
   DOMAIN_COMMAND_TYPES,
   LOCALE_DIRECTIONS,
   ROLE_CAPABILITIES,
   SUPPORTED_LOCALES,
 } from "../dist/index.js";
+
+test("quota capacity errors are always action-required", () => {
+  assert.equal(
+    apiErrorRetryabilityIsValid("QUOTA_EXCEEDED", false),
+    true,
+  );
+  assert.equal(
+    apiErrorRetryabilityIsValid("QUOTA_EXCEEDED", true),
+    false,
+  );
+  assert.equal(
+    apiErrorRetryabilityIsValid("STORAGE_UNAVAILABLE", true),
+    true,
+  );
+});
 
 test("Place documents have explicit sync commands without weakening Evidence commands", () => {
   assert.ok(DOMAIN_COMMAND_TYPES.includes("place-document.create"));

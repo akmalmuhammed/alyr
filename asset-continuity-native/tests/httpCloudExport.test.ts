@@ -3,6 +3,7 @@ import {
   type ExportByteDigest
 } from "@/adapters/httpCloudExport";
 import type { CloudExportCreateRequest } from "@/data/cloudExport";
+import { exportErrorMessage } from "@/i18n/exportCopy";
 import type { ExportStatusResponse } from "@alyr/contracts";
 
 const householdId = "11111111-1111-4111-8111-111111111111";
@@ -42,6 +43,15 @@ function response(
 }
 
 describe("HttpCloudExport", () => {
+  it("presents quota capacity as an action-required Vault decision", () => {
+    expect(exportErrorMessage("QUOTA_EXCEEDED", "en")).toMatch(
+      /review Vault storage.*Heldat support/u
+    );
+    expect(exportErrorMessage("QUOTA_EXCEEDED", "ar")).toMatch(
+      /الخزنة.*دعم Heldat/u
+    );
+  });
+
   it("creates an idempotent authenticated export and parses a ready receipt", async () => {
     const fetchImpl = jest.fn(async () => response(ready, 201));
     const port = new HttpCloudExport({
@@ -207,6 +217,33 @@ describe("HttpCloudExport", () => {
         errorVersion: 1,
         code: "QUOTA_EXCEEDED",
         message: "Export is too large.",
+        retryable: false
+      }
+    });
+  });
+
+  it("rejects retryable quota responses instead of polling capacity errors", async () => {
+    const port = new HttpCloudExport({
+      baseUrl: "https://project.supabase.co/functions/v1/api",
+      getAccessToken: async () => "token",
+      fetchImpl: async () =>
+        response(
+          {
+            error: {
+              errorVersion: 1,
+              code: "QUOTA_EXCEEDED",
+              message: "Cloud storage is at capacity.",
+              retryable: true
+            }
+          },
+          409
+        )
+    });
+
+    await expect(port.create(request)).resolves.toMatchObject({
+      ok: false,
+      error: {
+        code: "VALIDATION_FAILED",
         retryable: false
       }
     });

@@ -79,7 +79,7 @@ const english = {
       stale:
         "The selected records changed while the snapshot was created. Sync and try again.",
       size:
-        "This export is over the current file allowance. Create a redacted copy or reduce the item scope.",
+        "This export or cloud storage is over the current allowance. Reduce the export scope, review Vault storage, or contact Heldat support.",
       offline:
         "The export service is not reachable. Your household records remain unchanged.",
       invalid:
@@ -163,7 +163,7 @@ const arabic = {
       stale:
         "تغيّرت السجلات أثناء إنشاء اللقطة. زامن البيانات وحاول مجددًا.",
       size:
-        "يتجاوز هذا التصدير الحد المتاح في النسخة التجريبية. أنشئ نسخة منقّحة أو قلّل نطاق الأغراض.",
+        "يتجاوز هذا التصدير أو التخزين السحابي الحد الحالي. قلّل نطاق التصدير أو راجع مساحة الخزنة أو تواصل مع دعم Heldat.",
       offline:
         "خدمة التصدير غير متاحة الآن. تبقى سجلات المنزل دون تغيير.",
       invalid:

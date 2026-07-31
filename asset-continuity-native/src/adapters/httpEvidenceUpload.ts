@@ -7,6 +7,7 @@ import { File } from "expo-file-system";
 import {
   API_ERROR_VERSION,
   CONTRACT_API_VERSION,
+  apiErrorRetryabilityIsValid,
   type ApiErrorCode,
   type ContractError,
   type ProviderRequestContext,
@@ -83,7 +84,8 @@ function isContractError(value: unknown): value is ContractError {
     value.errorVersion === API_ERROR_VERSION &&
     isApiErrorCode(value.code) &&
     typeof value.message === "string" &&
-    typeof value.retryable === "boolean"
+    typeof value.retryable === "boolean" &&
+    apiErrorRetryabilityIsValid(value.code, value.retryable)
   );
 }
 

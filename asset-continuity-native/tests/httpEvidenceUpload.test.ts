@@ -491,4 +491,33 @@ describe("user-authenticated Supabase Evidence upload adapter", () => {
       requestedUrls.filter((url) => url.includes("/complete"))
     ).toHaveLength(1);
   });
+
+  it("rejects a retryable quota response so capacity never enters the upload retry loop", async () => {
+    const port = new HttpEvidenceUploadPort({
+      apiBaseUrl:
+        "https://project-ref.supabase.co/functions/v1/api",
+      projectUrl: "https://project-ref.supabase.co",
+      getAccessToken: async () => "user-token",
+      fetchImpl: async () =>
+        new Response(
+          JSON.stringify({
+            error: {
+              errorVersion: 1,
+              code: "QUOTA_EXCEEDED",
+              message: "Cloud storage is at capacity.",
+              retryable: true
+            }
+          }),
+          { status: 409 }
+        )
+    });
+
+    await expect(port.createIntent(descriptor)).resolves.toMatchObject({
+      ok: false,
+      error: {
+        code: "VALIDATION_FAILED",
+        retryable: false
+      }
+    });
+  });
 });

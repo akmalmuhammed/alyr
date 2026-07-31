@@ -52,13 +52,16 @@ export function apiError(
   status = 400,
   retryable = false,
 ): Response {
+  const effectiveRetryable = code === "QUOTA_EXCEEDED"
+    ? false
+    : retryable;
   return json(
     {
       error: {
         errorVersion: 1,
         code,
         message,
-        retryable,
+        retryable: effectiveRetryable,
       },
     } satisfies ApiError,
     status,

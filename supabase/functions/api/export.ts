@@ -9,6 +9,7 @@ import {
   json,
 } from "../_shared/http.ts";
 import { readBoundedJsonObject } from "../_shared/requestBody.ts";
+import { classifyStorageCapacityFailure } from "../_shared/storageCapacity.ts";
 
 const supabaseUrl = Deno.env.get("SUPABASE_URL") ?? "";
 const supabaseServiceRoleKey =
@@ -1292,20 +1293,22 @@ export async function handleExportCreate(
     });
   artifact.bytes.fill(0);
   if (completionError || !completed) {
-    const quotaExceeded = completionError?.message.includes(
+    const capacityFailure = classifyStorageCapacityFailure(completionError);
+    const exportQuotaExceeded = completionError?.message.includes(
       "EXPORT_QUOTA_EXCEEDED",
     );
+    const quotaExceeded = capacityFailure !== null || exportQuotaExceeded;
+    const failureMessage = capacityFailure?.message ??
+      (exportQuotaExceeded
+        ? "This household has reached the pilot export allowance."
+        : "The export acknowledgement was not recorded.");
     await cleanupStoredArtifact(
       quotaExceeded ? "QUOTA_EXCEEDED" : "STORAGE_UNAVAILABLE",
-      quotaExceeded
-        ? "This household has reached the pilot export allowance."
-        : "The export acknowledgement was not recorded.",
+      failureMessage,
     );
     return apiError(
       quotaExceeded ? "QUOTA_EXCEEDED" : "STORAGE_UNAVAILABLE",
-      quotaExceeded
-        ? "This household has reached the pilot export allowance."
-        : "The export acknowledgement was not recorded.",
+      failureMessage,
       quotaExceeded ? 409 : 503,
       !quotaExceeded,
     );

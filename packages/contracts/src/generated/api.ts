@@ -951,7 +951,22 @@ export interface components {
                 retryable: boolean;
             };
         };
-        /** @enum {string} */
+        StorageCapacityErrorEnvelope: {
+            error: {
+                /** @constant */
+                errorVersion: 1;
+                /** @constant */
+                code: "QUOTA_EXCEEDED";
+                /** @description Provider-neutral user action. Database sentinels, configured limits, usage totals, and storage-provider details are omitted. */
+                message: string;
+                /** @constant */
+                retryable: false;
+            };
+        };
+        /**
+         * @description QUOTA_EXCEEDED is action-required, including household or Heldat storage saturation, and must always carry retryable=false.
+         * @enum {string}
+         */
         ApiErrorCode: "AUTHENTICATION_REQUIRED" | "AUTHORIZATION_DENIED" | "CONFLICT_REQUIRES_REVIEW" | "IDEMPOTENCY_CONFLICT" | "INVALID_COMMAND" | "INVALID_CURSOR" | "INVALID_FILE" | "NOT_FOUND" | "OFFLINE" | "QUOTA_EXCEEDED" | "RATE_LIMITED" | "SESSION_EXPIRED" | "STORAGE_UNAVAILABLE" | "UNSUPPORTED_CONTRACT_VERSION" | "VALIDATION_FAILED";
     };
     responses: {
@@ -1320,13 +1335,13 @@ export interface operations {
             };
             400: components["responses"]["ApiError"];
             401: components["responses"]["Unauthorized"];
-            /** @description The household storage allowance was reached. */
+            /** @description Household or Heldat cloud storage is at capacity. This response is action-required and is never eligible for automatic retry. */
             409: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["ApiErrorEnvelope"];
+                    "application/json": components["schemas"]["StorageCapacityErrorEnvelope"];
                 };
             };
         };
@@ -1611,7 +1626,15 @@ export interface operations {
             401: components["responses"]["Unauthorized"];
             403: components["responses"]["Forbidden"];
             404: components["responses"]["NotFound"];
-            409: components["responses"]["Conflict"];
+            /** @description The request conflicts with an acknowledged snapshot, an export allowance was reached, or cloud storage is at capacity. Storage capacity returns QUOTA_EXCEEDED with retryable set to false. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorEnvelope"];
+                };
+            };
             429: components["responses"]["TooManyRequests"];
             503: components["responses"]["ServiceUnavailable"];
         };

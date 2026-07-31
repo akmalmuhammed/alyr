@@ -26,6 +26,7 @@ import {
   withOperationalHeaders,
 } from "../_shared/requestControls.ts";
 import { readBoundedJsonObject } from "../_shared/requestBody.ts";
+import { classifyStorageCapacityFailure } from "../_shared/storageCapacity.ts";
 import {
   handleExportCreate,
   handleExportDownload,
@@ -2489,23 +2490,29 @@ async function handleUploadIntent(
   );
 
   if (insertError) {
-    const quotaReached = insertError.message.includes("HOUSEHOLD_STORAGE_LIMIT");
+    const capacityFailure = classifyStorageCapacityFailure(insertError);
     const accountingBusy = insertError.code === "40001" ||
       insertError.code === "40P01" ||
       insertError.message.includes("STORAGE_ACCOUNTING_BUSY") ||
       insertError.message.includes("STORAGE_UPLOAD_AUTHORIZATION_ACTIVE");
+    if (capacityFailure) {
+      return apiError(
+        capacityFailure.code,
+        capacityFailure.message,
+        capacityFailure.status,
+        capacityFailure.retryable,
+      );
+    }
     if (accountingBusy) {
       return storageAccountingBusyResponse(
         "Storage is changing for this household. Retry the upload shortly.",
       );
     }
     return apiError(
-      quotaReached ? "QUOTA_EXCEEDED" : "STORAGE_UNAVAILABLE",
-      quotaReached
-        ? "This pilot household has reached its cloud file allowance."
-        : "Unable to prepare this upload.",
-      quotaReached ? 409 : 400,
-      !quotaReached,
+      "STORAGE_UNAVAILABLE",
+      "Unable to prepare this upload.",
+      400,
+      true,
     );
   }
 
