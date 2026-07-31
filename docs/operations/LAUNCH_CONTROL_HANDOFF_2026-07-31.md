@@ -3,92 +3,215 @@
 This snapshot records verified controls only. It contains no credentials or
 secret values.
 
-## Verified state
+## Release decision
+
+Android build 6 is the current **static and Android-emulator candidate**. It is
+not yet approved for public distribution. Builds 3, 4, and 5 are superseded
+and non-distributable because each has a reproduced release blocker recorded
+below. Build 6 still requires physical Android-device acceptance and parity
+testing of the exact Play-distributed binary.
+
+Heldat otherwise remains in a controlled-pilot posture. Physical iOS/TestFlight,
+real backup and restore, migration `202607310007`, transactional email, legal
+and store identities, distribution accounts/fees, and the documented 10K
+capacity, abuse, observability, storage, and cost gates remain open.
+
+## Verified platform state
 
 | Control | Verified result | Release consequence |
 |---|---|---|
 | Public TLS | `https://heldat.app` is live. Cloudflare minimum TLS is `1.2`; a TLS 1.0 probe exited `35`, while TLS 1.2 returned HTTP `200`. | TLS versions below 1.2 are rejected. |
+| Cloudflare operator | The operator confirmed that the `heldat.app` zone is verified in the approved Cloudflare account. Public DNS and edge behavior were independently verified. | Keep account recovery and MFA evidence in the private operator runbook. |
 | HTTPS enforcement | **Always Use HTTPS** is enabled. Plain HTTP returns `301` to HTTPS. | Public web traffic is redirected to HTTPS. |
-| HTTPS headers | HTTPS responses include HSTS `max-age=31536000; includeSubDomains`, CSP, `X-Content-Type-Options: nosniff`, Referrer-Policy and Permissions-Policy. | The verified edge security-header baseline is active. |
-| DNSSEC | Spaceship accepted the exact DS record below and displayed `DS record added successfully`. Public Google DNS returned status `0`, `AD=True` and the exact DS; Cloudflare reports `Success! heldat.app is protected with DNSSEC.` | DNSSEC publication and public validation are complete. |
-| Email authentication | Cloudflare serves the exact `_dmarc.heldat.app` monitoring record below, and Google Public DNS returned it exactly (`DMARC_PUBLIC=verified`). | The non-blocking DMARC monitoring baseline is complete; enforcement and transactional sending remain pending. |
+| HTTPS headers | HTTPS responses include HSTS `max-age=31536000; includeSubDomains`, CSP, `X-Content-Type-Options: nosniff`, Referrer-Policy, and Permissions-Policy. | The verified edge security-header baseline is active. |
+| DNSSEC | Spaceship accepted the exact DS record below. Public Google DNS returned status `0`, `AD=True`, and the same DS; Cloudflare reports that the domain is protected with DNSSEC. | DNSSEC publication and public validation are complete. |
+| Email authentication | Cloudflare and Google Public DNS return the exact `_dmarc.heldat.app` monitoring record below. | The non-blocking DMARC baseline is complete; enforcement and transactional sending remain pending. |
+| Google Cloud operator | The active CLI identity matches the approved operator profile and dedicated Heldat release project. Billing is disabled. The Play publisher service account has zero user-managed keys and no project-level IAM role. | Play Console access remains a later distribution gate. |
 | Supabase database transport | The pooler route completed certificate verification over TLS 1.3 using AES-256-GCM. | Keep certificate verification enabled for operator database connections. |
-| Backup operator access | The Windows DPAPI operator vault was updated. The real-project `backup --dry-run` passed with `writes: false`. | The preflight is ready; no actual backup or restore drill has run. |
-| iOS simulator | Fresh simulator artifact verified as detailed below. | Simulator evidence is current, but it is not a physical-device or App Store binary. |
-| Android | The hardened production AAB and installable preview APK both passed integrity, package/version, signing-certificate continuity and payload checks as detailed below. | The AAB is the Play upload candidate and the APK is the pilot handoff. Physical-device and Play-track acceptance remain release gates. |
+| Backup operator access | The Windows DPAPI operator vault was updated. The real-project `backup --dry-run` passed with `writes: false`. | No actual backup, off-project copy, restore drill, or migration `202607310007` execution has run. |
+| iOS simulator | The fresh simulator artifact described below passed its recorded checks. | This is not physical-device, signed TestFlight, or App Store evidence. |
+| Android build 6 | Source, AAB, APK, static validation, and the scoped Android 15/API 35 emulator journey passed as described below. | Physical Android and exact Play-track parity remain release gates. |
 
-## DNSSEC verified state
+## DNS and email records
 
-Spaceship accepted these exact fields: key tag `2371`, algorithm `13`
-(`ECDSA-SHA256`), digest type `2` (`SHA256`) and the digest below.
+Spaceship accepted key tag `2371`, algorithm `13` (`ECDSA-SHA256`), digest
+type `2` (`SHA256`), and this digest:
 
 ```text
 heldat.app. 3600 IN DS 2371 13 2 BA918EC223C1EE65100CB5E98121F81A84A7D1C40FC36776A02BF69C58D4B324
 ```
 
-Public Google DNS returned `DNS_STATUS=0`, `AD=True` and the exact DS record.
-Cloudflare now reports `Success! heldat.app is protected with DNSSEC.`
-
-## Email authentication baseline
-
-Cloudflare now serves this public DMARC monitoring record:
+Cloudflare serves this public DMARC monitoring record:
 
 ```text
 v=DMARC1; p=none; rua=mailto:security@heldat.app; adkim=r; aspf=r; fo=1; pct=100
 ```
 
-Google Public DNS returned the exact value (`DMARC_PUBLIC=verified`). This
-`p=none` policy collects monitoring reports and does not enforce quarantine or
-rejection. Tighten enforcement only after Brevo SPF, DKIM and sender alignment
-are verified and the DMARC reports have been reviewed. Transactional SMTP and
-the transactional sender address remain pending.
+`p=none` collects reports; it does not quarantine or reject. Tighten the
+policy only after Brevo SPF, DKIM, sender alignment, and transactional flows
+are verified and the reports are reviewed.
 
-## Fresh iOS simulator artifact
+## iOS simulator evidence
 
 - EAS build: `f5e5bc9c-4217-4597-9917-2a2287276aee`
 - Source commit: `eccba3bf4bae708e5b463b872b789e5586bce9df`
-- Archive: `output/release/heldat-ios-simulator-v0.1.0-build1-eccba3b-f5e5bc9c.tar.gz`
+- Archive: `D:\HeldatArtifacts\current\eccba3b\heldat-ios-simulator-v0.1.0-build1-eccba3b-f5e5bc9c.tar.gz`
+- Workspace location manifest:
+  `output/release/heldat-ios-simulator-v0.1.0-build1-eccba3b-f5e5bc9c.tar.gz.location.txt`
 - SHA-256: `717686EB6C7DE438073DAEED8C7B0CE61C5E2D3FEE28AC0302175E05F136A106`
 - Archive verification: `136` entries; gzip/tar integrity passed
-- App identity: `app.heldat.mobile`; Heldat `0.1.0` (`1`)
+- Identity: `app.heldat.mobile`; Heldat `0.1.0` (`1`)
 - Runtime: iOS minimum `16.4`; simulator architectures `x86_64` and `arm64`
 - Verified metadata: privacy manifest, required privacy usage strings, URL
-  schemes and development-update configuration are present
-- Known boundary: the simulator signature has no universal-link entitlement;
-  validate associated domains and universal links again in a signed physical
-  device/TestFlight build
+  schemes, and development-update configuration are present
+- Boundary: the simulator signature has no universal-link entitlement;
+  associated domains and universal links require a signed physical
+  device/TestFlight rerun
 
-## Fresh Android artifacts
+## Superseded Android builds
 
-- Production EAS build: `0877527d-c5e6-4939-be1c-197078a2b8cc`
-- Source commit: `eccba3bf4bae708e5b463b872b789e5586bce9df`
-- AAB: `output/release/heldat-android-production-eccba3b-v0.1.0-build3.aab`
-- Bytes: `130447511`
-- SHA-256: `F597345DC2F14B1AA69C6D2B08A22C07A0AD91597B0F83C75383A0474CE45D13`
-- App identity: `app.heldat.mobile`; Heldat `0.1.0` (`versionCode 3`)
-- Android SDK: minimum `24`; target `36`
-- Verification passed: bundletool, every ZIP CRC, jarsigner,
-  upload-certificate continuity and Expo Doctor `20/20`
-- Static package scan: `1,557` archive entries and `123` executable
-  payloads inspected; reviewed build/test advisory packages were absent
-- Distribution boundary: the production AAB is a Play upload artifact, not a
-  directly installable APK
-- Preview APK EAS build: `721dc7f5-ff91-478e-a4b6-a0f021ab4ef1` — `FINISHED`
-- APK: `output/release/heldat-android-preview-eccba3b-v0.1.0-build3.apk`
-- APK bytes: `183288180`
-- APK SHA-256: `5DD4BCE19959261D00DC21453B9CE69E26E56CE6B484E6CCCF230E2C6DEAFDDE`
-- APK verification passed: identity/version, SDK 24/36, APK Signature Scheme
-  v2, known certificate continuity, 16 KiB page alignment, all `1484` ZIP
-  entries, four ABIs and the standalone Hermes bundle
-- Install page:
-  `https://expo.dev/accounts/alyr-app/projects/alyr-asset-continuity/builds/721dc7f5-ff91-478e-a4b6-a0f021ab4ef1`
+| Build | Source | Status | Exact release blocker |
+|---|---|---|---|
+| 3 | `eccba3bf4bae708e5b463b872b789e5586bce9df` | **Superseded; non-distributable** | Expo SQLite exclusive transactions opened a new native connection without reapplying the connection-local SQLCipher key. `Explore sample` deterministically returned `NativeDatabase.prepareAsync` / `file is not a database`. |
+| 4 | `82e9f856b59fda7c9490531a864842f6010fc9ba` | **Superseded; non-distributable** | SQLCipher was fixed, but the tabs route crashed under Hermes because `Intl.PluralRules` was undefined; the route produced `TypeError: undefined cannot be used as a constructor` and a blank tabs surface. A separate P2 white-on-light Android status-bar contrast issue was also present. |
+| 5 | `f6f24213f5319f64fff3d4541a044656689c45d3` | **Superseded; non-distributable** | The tabs and status-bar defects were fixed, but both force-stop and verified `kill -9` cold launches raced the signed-sample workspace bootstrap and redirected to Welcome/Workspace Choice. The encrypted data remained intact, but direct cold resume failed. |
 
-## Owner actions
+No build 3, 4, or 5 artifact is an approved pilot or store handoff.
 
-| Owner | Next action | Completion evidence |
+## Android build 6 candidate
+
+### Source and cloud records
+
+- Source commit: `faa751a86d73021c2883bf1deb31f5b9ae8e8bee`
+- Production EAS build: `7db5077a-f866-40e1-807c-b4eb32afbfeb` — `FINISHED`
+- Preview EAS build: `21657ca8-8f37-4fc0-94f4-6e50995654fc` — `FINISHED`
+- Shared fingerprint ID: `019fb8af-c863-7073-8f09-005a060979e5`
+- Shared fingerprint hash: `7ae0a98ef3705af37415a790c136cee0504838fb`
+- App identity: `app.heldat.mobile`; Heldat `0.1.0` (`versionCode 6`)
+- Android SDK: minimum `24`; target/compile `36`
+
+### Artifacts
+
+| Artifact | Path | Bytes | SHA-256 |
+|---|---|---:|---|
+| Production AAB | `D:\HeldatArtifacts\current\faa751a\heldat-android-production-faa751a-v0.1.0-build6.aab` | `117896044` | `FF6C1A9D4CDE60BFFB764646253A08877AA2872869DCDED512C950EAD4FAF12E` |
+| Preview APK | `D:\HeldatArtifacts\current\faa751a\heldat-android-preview-faa751a-v0.1.0-build6.apk` | `158901232` | `CB31B380EBE959F6DAD400FEA6AAD8D53C1472EB894390824633B5A27C269F8E` |
+
+The AAB and APK have matching known signing-certificate continuity. The AAB
+is a Play upload format; the APK is the directly installable validation
+artifact. Neither is yet a public-distribution approval.
+
+### Source and static gates
+
+- Authoritative native source gate: `202` suites and `1,274` tests passed.
+- Maestro inventory: `10` flows, `5` subflows, and `57` selectors passed.
+- Typecheck, production configuration, and recovery-crypto checks passed.
+- Dual-artifact static verification: `69/69` checks passed.
+- AAB and APK identity, hashes, signing continuity, SDK contract, manifests,
+  ZIP integrity, Hermes bundle, SQLCipher/crypto native libraries, and all four
+  ABIs passed.
+- AAB: `1,520` entries, `5` DEX files, `104` native libraries, and `110`
+  executable payload entries.
+- APK: `1,447` entries, `5` DEX files, `104` native libraries, and `110`
+  executable payload entries.
+- Denied executable dependency markers: `0` in both artifacts.
+- Secret-leak file results: `0`.
+
+### Build 6 runtime scope
+
+Build 6 reran all of the following on a fresh offline Android 15/API 35 Pixel
+7 emulator using the signed preview APK:
+
+1. Artifact identity, bytes, hash, signature, SDK, and ABIs.
+2. Fresh uninstall/install and cold launch.
+3. Onboarding and Workspace Choice.
+4. Signed-out sample activation to populated Today.
+5. Encrypted database path, files, and non-plaintext header.
+6. `am force-stop` followed by a plain MainActivity cold launch directly to
+   the populated sample tabs.
+7. A verified Heldat PID `kill -9` followed by the same plain MainActivity
+   cold launch directly to the populated sample tabs.
+8. Today, Assets, Family, and Vault smoke checks.
+9. Light-surface status-icon contrast.
+10. A consolidated scan across eight build-6 logcat captures: `PluralRules=0`,
+    `SQL=0`, `Native=0`, and `React=0`; no Heldat ANR was observed.
+
+No deep link or manual second navigation was used to obtain either passing
+cold-resume result. The encrypted database and WAL/SHM remained present.
+
+### Inherited capability evidence, not rerun on build 6
+
+The build-6 delta only changes the signed-sample cold-bootstrap route and its
+tests. The following device-capability journeys were **not rerun on build 6**:
+
+- camera deny, retry, grant, capture, and return;
+- Android Photo Picker privacy and import;
+- location deny, retry, precise grant, GPS accuracy truth, exact-pin
+  confirmation, and offline map behavior;
+- signed-out reminder disabled state, no permission prompt, and no alarm.
+
+Those capability branches passed on build 4 of the unchanged signed lineage.
+Quick Passport, Settings, and route-aware status-bar confirmation passed on
+build 5. This inherited evidence supports regression confidence but does not
+replace physical-device or Play-distributed build-6 parity testing.
+
+## Evidence inventory and integrity
+
+| Record | Path | SHA-256 / result |
 |---|---|---|
-| Email owner | Configure the Brevo transactional sender, SPF, DKIM and alignment; review DMARC reports before proposing a stricter policy. | Verified transactional SMTP/address, aligned SPF and DKIM results, reviewed DMARC reports and an approved enforcement change. |
-| Operations owner | Obtain explicit approval for `backup --execute`, verify the encrypted backup, then run a separately approved restore drill against a disposable project. | Dated backup ID, offline verification result and successful restore/verify-restore record. |
-| iOS release owner | Produce a signed physical-device/TestFlight build from the approved source and test associated-domain entitlements and universal links. | Signed build ID, source commit, artifact checksum and device test record. |
-| Android release owner | Run the verified APK on the intended pilot devices. Upload the exact AAB to the Play internal track only after release approval, then record the Play App Signing certificate and update App Links/Maps restrictions for it. | Dated physical-device results, internal-track release record and Play signing fingerprints tied to version `0.1.0 (3)`. |
-| Release owner | Keep public mobile distribution gated until the pending backup/restore, signed physical-iOS and Android physical-device evidence is reviewed. | Dated release decision linked to all completed evidence. |
+| Build 6 artifact record | `D:\HeldatArtifacts\current\faa751a\build6-artifact-hashes-and-records.json` | `C3C320A51B400442A5EB4C600D0113E2D293E2234D07F8BA838CCA2ED8C3F0C1` |
+| Build 6 static summary | `D:\HeldatArtifacts\current\faa751a\build6-static-verification-summary.json` | `985E78DD35FFF532646FC59BDF4D0C449E40F19A19ED6D583165D8FF529CE182`; `69/69`, no failed checks, no secret-leak files |
+| Runtime report | `D:\HeldatAndroidRuntime\evidence\ANDROID_RUNTIME_VALIDATION_2026-07-31.md` | `0BEB0768F4BDC804585F37FE4BB09E0431728D89046FD138207A7565DFDB6CC3` |
+| Runtime evidence manifest | `D:\HeldatAndroidRuntime\evidence\ANDROID_RUNTIME_VALIDATION_2026-07-31.sha256` | `AEE12462323A938A737F0D23EF32A6E2803BBCB7DFF8F3D9677313ED897842F7`; `230` entries, `0` failures, report cross-check true |
+| Build 6 runtime evidence root | `D:\HeldatAndroidRuntime\evidence\official-v6-faa751a8` | Screenshots, accessibility trees, launch records, DB evidence, and eight logcat captures |
+| Consolidated error scan | `D:\HeldatAndroidRuntime\evidence\official-v6-faa751a8\07-consolidated-error-scan.txt` | `16431962939797BC86B17D459643E826865F22AA059FA27D96C69F0F8775D0F1`; all categories zero |
+
+## Remaining gates
+
+### Android distribution
+
+1. Install the exact build-6 APK on representative physical Android devices
+   and rerun the critical journey, interruptions, permissions, large text,
+   TalkBack, background/foreground, and offline/reconnect cases.
+2. Upload the exact build-6 AAB to the approved Play test track, record the
+   Play App Signing certificate, and update/verify App Links and Maps key
+   restrictions for that certificate.
+3. Prove parity on the exact Play-delivered split APK set before expanding the
+   test cohort.
+
+### iOS distribution
+
+1. Activate the Apple developer membership/signing path.
+2. Produce a signed physical-device/TestFlight build from the approved source.
+3. Rerun the core journey, camera/photo/document import, location, persistence,
+   background/foreground reconciliation, VoiceOver, Dynamic Type, Arabic RTL,
+   privacy shielding, associated domains, and universal links.
+
+### Data durability and backend changes
+
+1. Obtain explicit approval for a real encrypted database-plus-private-Storage
+   backup, verify it outside the active-project boundary, and complete an
+   isolated restore drill.
+2. After the backup gate, separately approve and deploy migration
+   `202607310007`, then witness and record retention/blob-maintenance results.
+3. Enable database SSL enforcement and reviewed network restrictions after
+   the pre-change backup.
+
+### Email, legal, stores, and 10K readiness
+
+1. Configure Brevo transactional SMTP, sender identity, SPF, DKIM, alignment,
+   and tested signup, confirmation, recovery, and invitation delivery.
+2. Supply and approve privacy policy, terms, support, business postal address,
+   store listing, reviewer identity, age/content declarations, and developer
+   account/payment details.
+3. Replace the controlled-pilot storage envelope before public 10K expansion.
+   The current `800 MiB` app allowance supports at most `20` households at the
+   declared `40 MiB` allowance; the verified three-request public probe is not
+   authenticated sync/upload or 10K throughput evidence.
+4. Complete representative authenticated sync/upload/download/bootstrap,
+   conflict, cleanup, export, projected-10K database, bot/abuse, Security and
+   Performance Advisor, metrics, alerting, crash, on-call, quota, backup
+   freshness, storage, egress, and cost gates.
+
+Public mobile distribution and a 10K launch decision remain gated until these
+controls have dated evidence.
