@@ -245,9 +245,25 @@ async function runOneRequest({ url, fetchImpl, timeoutMs }) {
     const cacheControl = response.headers.get("cache-control") ?? "";
     const contentType = response.headers.get("content-type") ?? "";
     let validPayload = false;
-    if (response.status === 200 && contentType.toLowerCase().includes("application/json")) {
+    let errorCode = null;
+    let retryable = null;
+    if (contentType.toLowerCase().includes("application/json")) {
       try {
-        validPayload = validSignupModePayload(await response.json());
+        const payload = await response.json();
+        if (response.status === 200) {
+          validPayload = validSignupModePayload(payload);
+        } else {
+          const candidateCode = payload?.error?.code;
+          if (
+            typeof candidateCode === "string" &&
+            /^[A-Z][A-Z0-9_]{1,63}$/u.test(candidateCode)
+          ) {
+            errorCode = candidateCode;
+          }
+          retryable = typeof payload?.error?.retryable === "boolean"
+            ? payload.error.retryable
+            : null;
+        }
       } catch {
         validPayload = false;
       }
@@ -260,6 +276,8 @@ async function runOneRequest({ url, fetchImpl, timeoutMs }) {
       requestIdPreserved: responseId === id,
       noStore: /(?:^|,)\s*no-store(?:\s|,|$)/iu.test(cacheControl),
       validPayload,
+      errorCode,
+      retryable,
       validRetryAfter:
         response.status !== 429 || /^[1-9][0-9]*$/u.test(retryAfter ?? ""),
       transportError: null,
@@ -271,6 +289,8 @@ async function runOneRequest({ url, fetchImpl, timeoutMs }) {
       requestIdPreserved: false,
       noStore: false,
       validPayload: false,
+      errorCode: null,
+      retryable: null,
       validRetryAfter: false,
       transportError: error?.name === "AbortError" ? "timeout" : "network",
     };
@@ -340,8 +360,14 @@ export async function runReadProbe({
 
   const durations = results.map(({ durationMs }) => durationMs);
   const statusCounts = {};
+  const errorCodeCounts = {};
   for (const result of results) {
     statusCounts[result.status] = (statusCounts[result.status] ?? 0) + 1;
+    if (result.status !== 200) {
+      const key = result.errorCode ??
+        (result.status === 0 ? "TRANSPORT_ERROR" : `HTTP_${result.status}`);
+      errorCodeCounts[key] = (errorCodeCounts[key] ?? 0) + 1;
+    }
   }
   const p95Ms = percentile(durations, 0.95);
   const passed =
@@ -363,6 +389,7 @@ export async function runReadProbe({
     requestsPerSecond: normalizedRate,
     p95BudgetMs: normalizedBudget,
     statusCounts,
+    errorCodeCounts,
     latencyMs: {
       min: Math.round(Math.min(...durations)),
       p50: Math.round(percentile(durations, 0.5)),
@@ -377,7 +404,17 @@ export async function runReadProbe({
       payload: results.filter(({ validPayload }) => !validPayload).length,
       retryAfter: results.filter(({ validRetryAfter }) => !validRetryAfter).length,
       rateLimited: results.filter(({ status }) => status === 429).length,
+      serverErrors: results.filter(({ status }) => status >= 500).length,
     },
+    failureSamples: results
+      .filter(({ status }) => status !== 200)
+      .slice(0, 5)
+      .map(({ status, errorCode, retryable, validRetryAfter }) => ({
+        status,
+        errorCode,
+        retryable,
+        validRetryAfter,
+      })),
     passed,
     note:
       "This bounded public-route probe does not replace authenticated sync/upload staging load tests.",

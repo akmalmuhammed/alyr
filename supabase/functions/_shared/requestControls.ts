@@ -55,10 +55,6 @@ const authenticatedPolicies: ReadonlyArray<{
 
 const publicPolicies = new Map<string, RateLimitPolicy>([
   [
-    "GET /signup/mode",
-    { routeGroup: "signup.mode", limit: 30, windowSeconds: 60 },
-  ],
-  [
     "POST /signup/preflight",
     { routeGroup: "signup.preflight", limit: 8, windowSeconds: 600 },
   ],

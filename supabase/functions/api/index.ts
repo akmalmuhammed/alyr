@@ -56,6 +56,10 @@ type LaunchMode =
   | "closed_pilot"
   | "public_email"
   | "public_email_google";
+type LaunchModeState = {
+  readonly signupMode: LaunchMode;
+  readonly configVersion: string;
+};
 type LaunchModeAttestation = {
   readonly contract: typeof launchModeContract;
   readonly signupMode: LaunchMode;
@@ -64,6 +68,14 @@ type LaunchModeAttestation = {
   readonly expiresAt: string;
   readonly signature: string;
 };
+const launchModeCacheFreshMilliseconds = 15_000;
+const launchModeCacheStaleIfErrorMilliseconds = 60_000;
+let launchModeCache: {
+  readonly value: LaunchModeState;
+  readonly freshUntil: number;
+  readonly staleUntil: number;
+} | null = null;
+let launchModeRefreshPromise: Promise<LaunchModeState | null> | null = null;
 const allowedEvidenceMimeTypes = new Set([
   "application/msword",
   "application/pdf",
@@ -173,6 +185,17 @@ function routePath(request: Request): string {
   return pathname.replace(/\/+$/, "") || "/";
 }
 
+function requiresPersistentNetworkRateLimit(
+  request: Request,
+  path: string,
+): boolean {
+  // This signed, user-independent read is coalesced and cached per Edge
+  // isolate. Avoiding one database write per app open is essential for the
+  // 10K-user envelope; every state-changing/public credential route remains
+  // behind the persistent network limiter below.
+  return !(request.method === "GET" && path === "/signup/mode");
+}
+
 function serviceControlClient(): SupabaseClient | null {
   if (!supabaseUrl || !supabaseServiceRoleKey) return null;
   return createClient(supabaseUrl, supabaseServiceRoleKey, {
@@ -194,10 +217,7 @@ function normalizedConfigVersion(value: unknown): string | null {
   return /^[1-9][0-9]{0,18}$/u.test(candidate) ? candidate : null;
 }
 
-async function readLaunchMode(): Promise<{
-  readonly signupMode: LaunchMode;
-  readonly configVersion: string;
-} | null> {
+async function readLaunchModeFromStore(): Promise<LaunchModeState | null> {
   const client = serviceControlClient();
   if (!client) return null;
   const { data, error } = await client.rpc("read_launch_enrollment_mode");
@@ -223,6 +243,40 @@ async function readLaunchMode(): Promise<{
     signupMode: signupMode as LaunchMode,
     configVersion,
   };
+}
+
+async function readLaunchMode(): Promise<LaunchModeState | null> {
+  const now = Date.now();
+  if (launchModeCache && launchModeCache.freshUntil > now) {
+    return launchModeCache.value;
+  }
+  if (launchModeRefreshPromise) return await launchModeRefreshPromise;
+
+  const previous = launchModeCache;
+  launchModeRefreshPromise = (async () => {
+    const current = await readLaunchModeFromStore();
+    const refreshedAt = Date.now();
+    if (current) {
+      launchModeCache = {
+        value: current,
+        freshUntil: refreshedAt + launchModeCacheFreshMilliseconds,
+        staleUntil:
+          refreshedAt + launchModeCacheStaleIfErrorMilliseconds,
+      };
+      return current;
+    }
+    // A stale public attestation still cannot create an account after the
+    // control-plane version changes: both preflight paths re-read and compare
+    // the current server version. This short grace removes transient database
+    // reads from the public app-open path without weakening signup admission.
+    if (previous && previous.staleUntil > refreshedAt) return previous.value;
+    return null;
+  })();
+  try {
+    return await launchModeRefreshPromise;
+  } finally {
+    launchModeRefreshPromise = null;
+  }
 }
 
 function launchModeMessage(
@@ -305,12 +359,15 @@ async function launchModeAttestationIsCurrent(
 ): Promise<boolean> {
   const attestation = parseLaunchModeAttestation(value);
   if (!attestation || !allowedModes.has(attestation.signupMode)) return false;
-  const current = await readLaunchMode();
+  // Admission never trusts the public read cache. Re-read the control plane so
+  // an emergency switch back to closed pilot takes effect immediately.
+  const current = await readLaunchModeFromStore();
   if (
     !current ||
     current.signupMode !== attestation.signupMode ||
     current.configVersion !== attestation.configVersion
   ) {
+    if (current) launchModeCache = null;
     return false;
   }
   return constantTimeHexMatch(
@@ -3307,8 +3364,10 @@ async function dispatchRequest(
   const path = routePath(request);
 
   try {
-    const networkLimit = await enforceNetworkRateLimit(request, path);
-    if (networkLimit) return networkLimit;
+    if (requiresPersistentNetworkRateLimit(request, path)) {
+      const networkLimit = await enforceNetworkRateLimit(request, path);
+      if (networkLimit) return networkLimit;
+    }
 
     if (
       request.method === "GET" &&

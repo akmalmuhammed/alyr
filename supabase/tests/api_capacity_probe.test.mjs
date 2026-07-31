@@ -109,6 +109,8 @@ test("read probe verifies signed payload, request correlation, cache policy, and
   });
   assert.equal(result.passed, true);
   assert.deepEqual(result.statusCounts, { 200: 3 });
+  assert.deepEqual(result.errorCodeCounts, {});
+  assert.deepEqual(result.failureSamples, []);
   assert.equal(result.failures.transport, 0);
   assert.equal(result.failures.requestId, 0);
   assert.equal(result.failures.cachePolicy, 0);
@@ -136,4 +138,44 @@ test("rate limiting below the probe envelope is surfaced as a failed readiness s
   assert.equal(result.passed, false);
   assert.equal(result.failures.rateLimited, 1);
   assert.equal(result.failures.retryAfter, 0);
+  assert.deepEqual(result.errorCodeCounts, { HTTP_429: 1 });
+});
+
+test("read probe records bounded structured diagnostics for server failures", async () => {
+  const fetchImpl = async (_url, options) =>
+    new Response(
+      JSON.stringify({
+        error: {
+          errorVersion: 1,
+          code: "STORAGE_UNAVAILABLE",
+          retryable: true,
+        },
+      }),
+      {
+        status: 503,
+        headers: {
+          "content-type": "application/json",
+          "cache-control": "no-store",
+          "retry-after": "30",
+          "x-request-id": options.headers["X-Request-Id"],
+        },
+      },
+    );
+  const result = await runReadProbe({
+    url: "http://localhost/functions/v1/api/signup/mode",
+    requests: 1,
+    fetchImpl,
+    allowLocal: true,
+  });
+  assert.equal(result.passed, false);
+  assert.equal(result.failures.serverErrors, 1);
+  assert.deepEqual(result.errorCodeCounts, { STORAGE_UNAVAILABLE: 1 });
+  assert.deepEqual(result.failureSamples, [
+    {
+      status: 503,
+      errorCode: "STORAGE_UNAVAILABLE",
+      retryable: true,
+      validRetryAfter: true,
+    },
+  ]);
 });

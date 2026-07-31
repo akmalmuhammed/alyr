@@ -45,6 +45,11 @@ test("public and authenticated routes have bounded policies", () => {
   assert.match(api, /await enforceNetworkRateLimit\(request, path\)/u);
   assert.match(api, /await enforceUserRateLimit\([\s\S]*context\.userId/u);
   assert.match(api, /"RATE_LIMITED"/u);
+  assert.match(
+    api,
+    /function requiresPersistentNetworkRateLimit\([\s\S]*request\.method === "GET" && path === "\/signup\/mode"[\s\S]*if \(requiresPersistentNetworkRateLimit\(request, path\)\)[\s\S]*await enforceNetworkRateLimit\(request, path\)/u,
+  );
+  assert.doesNotMatch(controls, /routeGroup: "signup\.mode"/u);
 });
 
 test("shared-network limits do not make signed-in users share a tiny NAT bucket", () => {

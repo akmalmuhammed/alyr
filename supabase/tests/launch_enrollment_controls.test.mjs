@@ -266,7 +266,11 @@ test("signup mode is server-attested, short-lived, and checked again by each pre
   );
   assert.match(
     api,
-    /async function readLaunchMode\([\s\S]*client\.rpc\("read_launch_enrollment_mode"\)[\s\S]*signup_mode[\s\S]*config_version/u,
+    /async function readLaunchModeFromStore\([\s\S]*client\.rpc\("read_launch_enrollment_mode"\)[\s\S]*signup_mode[\s\S]*config_version/u,
+  );
+  assert.match(
+    api,
+    /launchModeCacheFreshMilliseconds = 15_000[\s\S]*launchModeRefreshPromise[\s\S]*if \(launchModeCache && launchModeCache\.freshUntil > now\)[\s\S]*if \(launchModeRefreshPromise\)[\s\S]*previous\.staleUntil > refreshedAt/u,
   );
   assert.match(
     api,
@@ -286,10 +290,14 @@ test("signup mode is server-attested, short-lived, and checked again by each pre
   );
   assert.match(
     api,
+    /async function launchModeAttestationIsCurrent\([\s\S]*await readLaunchModeFromStore\(\)[\s\S]*if \(current\) launchModeCache = null/u,
+  );
+  assert.match(
+    api,
     /request\.method === "GET"[\s\S]*path === "\/signup\/mode"[\s\S]*handleSignupMode/u,
   );
   assert.match(
-    requestControls,
-    /"GET \/signup\/mode"[\s\S]*routeGroup: "signup\.mode"/u,
+    api,
+    /requiresPersistentNetworkRateLimit\([\s\S]*"GET" && path === "\/signup\/mode"/u,
   );
 });
