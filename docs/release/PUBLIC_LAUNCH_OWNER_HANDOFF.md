@@ -18,7 +18,7 @@ is not owner or legal approval.
 |---|---|---|
 | `https://heldat.app/privacy/` | HTTP 200; matches repository | Controller identity/jurisdiction, retention periods, processors/transfers, and legal approval |
 | `https://heldat.app/terms/` | HTTP 200; matches repository | Responsible entity, eligibility/age, governing law/disputes, liability review, and legal approval |
-| `https://heldat.app/delete-account/` | HTTP 200; matches repository | Correct in-app path, backed retention timing, and production end-to-end deletion evidence |
+| `https://heldat.app/delete-account/` | HTTP 200; route reachable | Deploy the checked-in current in-app path, then verify backed retention timing and production end-to-end deletion evidence |
 | `https://heldat.app/support/` | HTTP 200; matches repository | Monitored delivery, escalation owner, and response target |
 
 Private-beta wording is appropriate only for a closed pilot or TestFlight. A
@@ -32,6 +32,7 @@ the binary, store metadata, website, support copy, privacy notice, and terms.
 | Product name | Heldat |
 | Public domain | `https://heldat.app` |
 | Registrar / DNS | Spaceship / Cloudflare |
+| Cloudflare zone owner | `akmalmuhammed93@gmail.com` (Wrangler OAuth and owner-confirmed zone, 2026-08-01) |
 | Android package | `app.heldat.mobile` |
 | iOS bundle identifier | `app.heldat.mobile` |
 | Expo project | `@alyr-app/alyr-asset-continuity` (`85cab1f2-111f-4e20-abd5-8dff0df2fabb`) |
@@ -48,6 +49,12 @@ the binary, store metadata, website, support copy, privacy notice, and terms.
 Cloudflare verification does not require moving registration away from
 Spaceship. Keep registrar auto-renew, transfer lock, WHOIS privacy, and MFA
 enabled.
+
+The domain-control gate is complete: public DNS delegates to Cloudflare,
+`https://heldat.app/` returns `200`, `https://www.heldat.app/` permanently
+redirects to the apex, and the Android association route returns `200` over
+HTTPS. This establishes control and transport only; it does not approve the
+pending legal copy or production release.
 
 ## Owner values needed once
 

@@ -17,7 +17,7 @@ documents.
 | Google Cloud | Active named configuration `heldat-operator` | `akmalmuhammed93@gmail.com`; project `heldat-mobile-prod-93` is active |
 | Expo/EAS | `eas whoami`, project and build history | `akmalmuhammed93`; `@alyr-app/alyr-asset-continuity`; project `85cab1f2-111f-4e20-abd5-8dff0df2fabb` |
 | Supabase | Linked CLI project and project list | `ifiyragzeizaxdqzxvpk`; `ALYR Pilot`; `ap-south-1`; healthy |
-| Cloudflare | Wrangler OAuth, Worker history and DNS | Matching Google identity; `heldat-site`; Cloudflare nameservers active |
+| Cloudflare | Wrangler OAuth, owner confirmation, Worker routes and DNS | `akmalmuhammed93@gmail.com`; `heldat-site`; Cloudflare nameservers active |
 
 Inactive cached Google identities were not selected. Future Google mutations
 must keep using the named configuration and an explicit
@@ -32,6 +32,13 @@ Direct HTTPS checks returned `200` with certificate verification success for:
 - `https://heldat.app/terms/`
 - `https://heldat.app/delete-account/`
 - `https://heldat.app/support/`
+
+A fresh 2026-08-01 transport check also proved the apex `200`, the `www`
+hostname `308` redirect to `https://heldat.app/`, the Android association route
+`/.well-known/assetlinks.json` `200`, and the account-deletion route `200`.
+Responses were served through Cloudflare with HSTS and the checked security
+header policy. This verifies domain routing and TLS, not approval of the
+currently deployed legal/deletion wording.
 
 The A records resolved through Cloudflare and the authoritative nameservers
 were `bristol.ns.cloudflare.com` and `rex.ns.cloudflare.com`.
