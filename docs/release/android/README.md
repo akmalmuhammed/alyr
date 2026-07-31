@@ -9,6 +9,9 @@ This folder is the source-aligned worksheet for publishing the Android app
   safety form.
 - `REMAINING_VALUES_CHECKLIST.md` separates completed engineering evidence
   from account-owner, legal, tester, and signed-release inputs.
+- `../PUBLIC_LAUNCH_OWNER_HANDOFF.md` is the cross-store owner/legal input sheet.
+- `../../operations/TRANSACTIONAL_EMAIL_LAUNCH_GATE.md` is the custom-SMTP,
+  deliverability, and authentication-email production gate.
 
 The exact AAB submitted to Play must be reconciled with these files. Google
 Play Console remains the final validator for field limits, policy answers, and

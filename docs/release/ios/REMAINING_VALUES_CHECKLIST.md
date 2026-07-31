@@ -24,6 +24,8 @@ Do not create a production submission while any required typed slot remains.
 - [ ] Operator legal name: `[OPERATOR_LEGAL_NAME]`.
 - [x] Public support URL: `https://heldat.app/support/`.
 - [x] Public privacy-policy URL: `https://heldat.app/privacy/`.
+- [x] User Privacy Choices URL candidate:
+      `https://heldat.app/delete-account/`.
 - [x] Marketing URL: `https://heldat.app/`.
 - [x] Public support email: `support@heldat.app`.
 - [x] Privacy contact: `privacy@heldat.app`.
@@ -34,7 +36,12 @@ Do not create a production submission while any required typed slot remains.
       `[MINIMUM_USER_AGE_AND_PARENTAL_POLICY]`.
 - [ ] Terms and privacy policy have named owner approval:
       `[LEGAL_REVIEWER_AND_DATE]`.
-- [ ] No closed-pilot-only contact wording remains in the public submission.
+- [ ] Controller identity/jurisdiction, governing law/dispute handling, and
+      applicable processor/transfer disclosures are approved for every launch
+      region.
+- [ ] Private-beta wording is retained only for TestFlight/closed pilot; website,
+      binary, support/legal pages, screenshots, and metadata use
+      production-accurate wording before App Store production submission.
 
 ## Metadata and localization
 
@@ -55,6 +62,9 @@ Do not create a production submission while any required typed slot remains.
       binary.
 - [ ] Every production SDK has been reviewed for additional collection or
       tracking.
+- [ ] Google sign-in is absent from the submitted iOS binary and visible UI,
+      unless Sign in with Apple/equivalent privacy-preserving login has been
+      implemented, configured, and reviewed with updated privacy/deletion tests.
 - [ ] Public privacy policy matches collected data, purposes, retention,
       processors, roles, export, and deletion.
 - [ ] Final age rating recorded: `[FINAL_APPLE_AGE_RATING]`.
@@ -79,6 +89,8 @@ Do not create a production submission while any required typed slot remains.
 - [ ] Fresh-signup instructions are supplied only if Apple needs them:
       `[FRESH_SIGNUP_REVIEW_INSTRUCTIONS_OR_NOT_APPLICABLE]`.
 - [ ] App Review notes were clean-installed and followed verbatim.
+- [ ] Review notes accurately state that Explore sample uses persistent,
+      encrypted device-local storage and has no cloud account/sync/backup claim.
 - [ ] Support contact will monitor the review window.
 
 ## Backend and runtime readiness
@@ -89,6 +101,8 @@ Do not create a production submission while any required typed slot remains.
 - [ ] Live RLS negative tests pass across two households.
 - [ ] Account creation, confirmation, sign-in, reset, invitation review, sync,
       upload, export, and deletion pass against production.
+- [ ] Supabase custom SMTP and the complete matrix in
+      `docs/operations/TRANSACTIONAL_EMAIL_LAUNCH_GATE.md` pass.
 - [ ] Storage and egress pilot guardrails are active.
 - [ ] Restore has been tested from a separately stored Recovery Kit.
 - [ ] Universal-link decision is recorded:
@@ -113,6 +127,9 @@ Do not create a production submission while any required typed slot remains.
       search residue.
 - [ ] Recovery Kit valid/wrong-password/tampered-version cases pass.
 - [ ] Account deletion completes and the device vault is cleared as described.
+- [ ] The exact deletion route
+      `Vault > Settings > Account > Delete account and data` is verified in the
+      submitted build and matches the public deletion page.
 - [ ] No P0/P1 defect or high-severity privacy/security issue remains.
 
 ## Screenshots and listing assets

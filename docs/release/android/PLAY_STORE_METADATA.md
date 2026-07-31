@@ -12,9 +12,20 @@ Status: **English source copy ready for final account-owner review**
 | App or game | App |
 | Category | Productivity |
 | Contains ads | No |
-| Pricing | Free for the closed pilot |
+| Pricing | `[FINAL_PLAY_PRICE]` (working decision: Free) |
+| Public developer name | `[PUBLIC_LEGAL_OR_DEVELOPER_NAME]` |
+| Public contact email | `[PLAY_PUBLIC_CONTACT_EMAIL]` (working candidate: `support@heldat.app`) |
+| Public contact phone | `[PLAY_PUBLIC_CONTACT_PHONE_WITH_COUNTRY_CODE_OR_NOT_REQUIRED]` |
+| Developer website | `https://heldat.app/` |
 
 The app name is 6 characters, below Google Play's 30-character limit.
+
+Confirm the public developer identity and contact visibility inside the selected
+Play account type before release. Every published contact route must be working
+and monitored. Once this package has been offered free on Google Play, the same
+app/package does not later switch to paid; charging for the download would use a
+new package. Future in-app products or subscriptions are separate product,
+billing, tax, and legal decisions.
 
 ## Short description
 
@@ -76,6 +87,13 @@ inside Play Console before submission.
 The native app also exposes account deletion from account settings. The
 external page remains necessary for people who no longer have the app.
 
+These URLs were reachable on 31 July 2026, but their current copy is
+private-beta/provisional. Reachability is not legal approval. Before a public
+production listing, deploy the owner/legal-approved privacy, terms, deletion,
+and support text; replace private-beta wording across the website, app, and
+store metadata; then archive the exact deployed responses with release
+evidence.
+
 ## App access for review
 
 Heldat remains in `closed_pilot` mode. Before uploading a release, create a
@@ -96,6 +114,11 @@ Credentials verified on: [PLAY_REVIEW_CREDENTIALS_VERIFIED_AT]
 ```
 
 Do not place credentials in repository files or public listing copy.
+
+The Play Data safety form is required for closed, open, and production tracks;
+an app exclusively active on the internal-testing track is the documented
+exemption. Complete the form from the exact submitted AAB, Play SDK Index, live
+backend behavior, and approved privacy notice before closed-track promotion.
 
 ## Graphic assets and declarations
 

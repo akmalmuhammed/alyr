@@ -93,9 +93,10 @@ Heldat is a household record and retrieval tool. It is not an appraisal, insuran
 The owned public Heldat pages below were verified reachable without
 authentication on 31 July 2026.
 
-| App Store field | Required value |
+| App Store field | Release value |
 |---|---|
 | Privacy Policy URL | `https://heldat.app/privacy/` |
+| User Privacy Choices URL, if shown for this record | `https://heldat.app/delete-account/` |
 | Support URL | `https://heldat.app/support/` |
 | Marketing URL, if used | `https://heldat.app/` |
 | App Review contact first name | `[APP_REVIEW_CONTACT_FIRST_NAME]` |
@@ -109,6 +110,14 @@ records, photos, documents, diagnostics, product interaction analytics,
 retention, access, and deletion. An in-app notice does not fill the public URL
 field.
 
+These URLs were reachable on 31 July 2026, but their current copy is
+private-beta/provisional. Reachability is not owner/legal approval. Before a
+public App Store production release, deploy the approved controller identity,
+jurisdiction, retention/deletion periods, processor/transfer disclosures,
+terms, and support commitments; replace private-beta wording across the public
+site, binary, screenshots, and metadata; then archive the exact deployed
+responses with the release evidence.
+
 ## Store classification worksheet
 
 | Field | Working value |
@@ -121,6 +130,7 @@ field.
 | Availability | `[COUNTRIES_AND_REGIONS]` |
 | Copyright | `[YEAR] [RIGHTS_HOLDER_LEGAL_NAME]` |
 | SKU | `[APP_STORE_SKU]` |
+| Account holder / seller identity | `[PUBLIC_LEGAL_OR_DEVELOPER_NAME]` |
 
 The product records user-entered financial amounts, but the checked-in terms
 state that it is not a bank balance, appraisal, live valuation, insurance

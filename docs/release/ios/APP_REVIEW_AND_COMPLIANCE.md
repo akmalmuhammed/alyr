@@ -11,7 +11,7 @@ Heldat is a private household record and retrieval app for items, Places, proof,
 
 REVIEW ACCESS
 - There is no purchase or paywall in this build.
-- To inspect a local sample without an account, launch Heldat and tap "Explore sample". The sample is isolated to the device/session and is not a cloud backup.
+- To inspect a local sample without an account, launch Heldat and tap "Explore sample". The sample persists in encrypted device-local storage across restart/force-stop; it has no cloud account, cloud sync, or cloud-backup claim.
 - To review signed personal-household features, use:
   Email: [APP_REVIEW_EMAIL]
   Password: [APP_REVIEW_PASSWORD]
@@ -29,7 +29,7 @@ KEY PATHS
 5. Atlas: geographic Place overview plus an accessible Place list.
 6. Family: household roles and invitations.
 7. Vault: proof, Recovery Kit, readable export, privacy, support, and sync diagnostics.
-8. Account deletion: Vault -> Settings -> Account -> Delete account.
+8. Account deletion: Vault -> Settings -> Account -> Delete account and data.
 
 PERMISSIONS
 - Camera and selected-photo access are requested only after the reviewer chooses to add a photo or supporting material.
@@ -62,6 +62,20 @@ before submission.
 - [ ] Recovery Kit and readable export can be reviewed with test material.
 - [ ] Account deletion completes against the deployed production backend.
 - [ ] Support contact monitors review questions for the full review window.
+
+## Third-party login policy gate
+
+The reviewed source policy returns `false` for Google OAuth on iOS. The iOS
+submission must therefore retain the complete email/password path and keep
+Google sign-in absent from the binary and visible UI until Sign in with Apple or
+another option that satisfies Apple's current login-services rule is
+implemented, configured for the production Apple Team, and reviewed.
+
+- [ ] Clean-installed submitted iOS build shows no Google sign-in action.
+- [ ] App Review notes describe only the login methods present in that build.
+- [ ] If Google sign-in is later enabled, Sign in with Apple/equivalent privacy
+      option, token/revocation handling, App Privacy answers, deletion behavior,
+      deep links, and reviewer access are retested together.
 
 ## Provisional age-rating assumptions
 

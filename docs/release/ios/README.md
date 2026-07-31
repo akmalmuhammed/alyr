@@ -47,6 +47,10 @@ the privacy, encryption, metadata, and feature review against that exact build.
    internal and external beta instructions with result reporting.
 6. [`REMAINING_VALUES_CHECKLIST.md`](./REMAINING_VALUES_CHECKLIST.md) - values and
    release evidence that still need to be supplied.
+7. [`../PUBLIC_LAUNCH_OWNER_HANDOFF.md`](../PUBLIC_LAUNCH_OWNER_HANDOFF.md) -
+   cross-store owner, legal, and public-production decisions.
+8. [`../../operations/TRANSACTIONAL_EMAIL_LAUNCH_GATE.md`](../../operations/TRANSACTIONAL_EMAIL_LAUNCH_GATE.md) -
+   custom-SMTP, deliverability, and authentication-email production evidence.
 
 ## Typed-slot convention
 

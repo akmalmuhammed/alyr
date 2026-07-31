@@ -12,9 +12,10 @@ below. Build 6 still requires physical Android-device acceptance and parity
 testing of the exact Play-distributed binary.
 
 Heldat otherwise remains in a controlled-pilot posture. Physical iOS/TestFlight,
-real backup and restore, migration `202607310007`, transactional email, legal
-and store identities, distribution accounts/fees, and the documented 10K
-capacity, abuse, observability, storage, and cost gates remain open.
+real backup and restore, migrations `202607310007` and `202607310008`,
+transactional email, legal and store identities, distribution accounts/fees,
+and the documented 10K capacity, abuse, observability, storage, and cost gates
+remain open.
 
 ## Verified platform state
 
@@ -28,7 +29,7 @@ capacity, abuse, observability, storage, and cost gates remain open.
 | Email authentication | Cloudflare and Google Public DNS return the exact `_dmarc.heldat.app` monitoring record below. | The non-blocking DMARC baseline is complete; enforcement and transactional sending remain pending. |
 | Google Cloud operator | The active CLI identity matches the approved operator profile and dedicated Heldat release project. Billing is disabled. The Play publisher service account has zero user-managed keys and no project-level IAM role. | Play Console access remains a later distribution gate. |
 | Supabase database transport | The pooler route completed certificate verification over TLS 1.3 using AES-256-GCM. | Keep certificate verification enabled for operator database connections. |
-| Backup operator access | The Windows DPAPI operator vault was updated. The real-project `backup --dry-run` passed with `writes: false`. | No actual backup, off-project copy, restore drill, or migration `202607310007` execution has run. |
+| Backup operator access | The Windows DPAPI operator vault was updated. The real-project `backup --dry-run` passed with `writes: false`. | No actual backup, off-project copy, restore drill, or migration `202607310007`/`202607310008` execution has run. |
 | iOS simulator | The fresh simulator artifact described below passed its recorded checks. | This is not physical-device, signed TestFlight, or App Store evidence. |
 | Android build 6 | Source, AAB, APK, static validation, and the scoped Android 15/API 35 emulator journey passed as described below. | Physical Android and exact Play-track parity remain release gates. |
 
@@ -47,26 +48,31 @@ Cloudflare serves this public DMARC monitoring record:
 v=DMARC1; p=none; rua=mailto:security@heldat.app; adkim=r; aspf=r; fo=1; pct=100
 ```
 
-`p=none` collects reports; it does not quarantine or reject. Tighten the
-policy only after Brevo SPF, DKIM, sender alignment, and transactional flows
-are verified and the reports are reviewed.
+`p=none` collects reports; it does not quarantine or reject. Tighten the policy
+only after Brevo domain verification/DKIM, delivered SPF and DMARC alignment,
+transactional flows, and aggregate reports are verified. Add an SPF or custom
+return-path DNS record only when the selected provider setup explicitly
+supplies it; preserve a single SPF policy and a single DMARC record.
 
 ## iOS simulator evidence
 
-- EAS build: `f5e5bc9c-4217-4597-9917-2a2287276aee`
-- Source commit: `eccba3bf4bae708e5b463b872b789e5586bce9df`
-- Archive: `D:\HeldatArtifacts\current\eccba3b\heldat-ios-simulator-v0.1.0-build1-eccba3b-f5e5bc9c.tar.gz`
-- Workspace location manifest:
-  `output/release/heldat-ios-simulator-v0.1.0-build1-eccba3b-f5e5bc9c.tar.gz.location.txt`
-- SHA-256: `717686EB6C7DE438073DAEED8C7B0CE61C5E2D3FEE28AC0302175E05F136A106`
-- Archive verification: `136` entries; gzip/tar integrity passed
-- Identity: `app.heldat.mobile`; Heldat `0.1.0` (`1`)
-- Runtime: iOS minimum `16.4`; simulator architectures `x86_64` and `arm64`
-- Verified metadata: privacy manifest, required privacy usage strings, URL
-  schemes, and development-update configuration are present
-- Boundary: the simulator signature has no universal-link entitlement;
-  associated domains and universal links require a signed physical
-  device/TestFlight rerun
+- Production-posture EAS build `6ec7707a-c146-4237-9631-fb506c72df47`
+  finished with Xcode 26.6 and the iOS 26.5 Simulator SDK. Its downloaded
+  artifact passed all `13/13` release checks and has SHA-256
+  `706B76ABA589ABC728E8E95D3779077A92E8448C87CE04AA8E0820AD071E063F`.
+- Clean-source development-simulator build
+  `eeb18e56-ffcd-45b4-b937-2c24a62730fd` finished from
+  `afd72f2eb76494cf68d694575bcef119006cbb54`; its artifact passed `14/14`
+  expected development checks and has SHA-256
+  `AEC635AC9F81118B9B6D3378BBA91518F76DC133E5A6485002A191EA152B311B`.
+- Full native validation passed `202` suites / `1,274` tests, `10` Maestro
+  flows / `57` selector contracts, Expo Doctor `20/20`, and the production
+  Hermes export.
+- Exact paths, provenance distinctions, and artifact checks are recorded in
+  `docs/release/ios/IOS_SIMULATOR_BUILD_EVIDENCE_2026-07-31.md`.
+- Boundary: neither simulator artifact is signed for an iPhone or accepted by
+  TestFlight/App Store. Associated-domain entitlement and universal-link proof
+  remain part of the Apple-signed physical-device gate.
 
 ## Superseded Android builds
 
@@ -194,13 +200,17 @@ replace physical-device or Play-distributed build-6 parity testing.
    isolated restore drill.
 2. After the backup gate, separately approve and deploy migration
    `202607310007`, then witness and record retention/blob-maintenance results.
-3. Enable database SSL enforcement and reviewed network restrictions after
-   the pre-change backup.
+3. After migration 007 verification, separately approve and deploy migration
+   `202607310008` with the reviewed Edge API, then verify storage counters,
+   readiness telemetry, request limits, account-deletion holds, and rollback.
+4. Enable database SSL enforcement and reviewed network restrictions after
+   the migration verification gates.
 
 ### Email, legal, stores, and 10K readiness
 
-1. Configure Brevo transactional SMTP, sender identity, SPF, DKIM, alignment,
-   and tested signup, confirmation, recovery, and invitation delivery.
+1. Complete `docs/operations/TRANSACTIONAL_EMAIL_LAUNCH_GATE.md`: Brevo sender
+   identity/domain authentication, Supabase custom SMTP, aligned delivered
+   headers, and tested signup, confirmation, recovery, and invitation delivery.
 2. Supply and approve privacy policy, terms, support, business postal address,
    store listing, reviewer identity, age/content declarations, and developer
    account/payment details.
