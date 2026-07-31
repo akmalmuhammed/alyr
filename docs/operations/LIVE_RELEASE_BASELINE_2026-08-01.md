@@ -62,13 +62,35 @@ recovery evidence, not production capacity evidence.
 | Platform | Proven | Still open |
 |---|---|---|
 | Android | EAS production AAB build 6 finished; artifact hash and upload certificate recorded; API 35 emulator journey passed | Correct-project Maps key, physical device, Play App Signing lineage, Play internal/closed-track delivery |
-| iOS | Production-simulator build finished; privacy/config checks pass | New source build, bundle auth scan, Apple membership/Team ID, distribution signing, physical iPhone, App Store Connect and TestFlight |
+| iOS | Clean production-simulator build from commit `468ce41`; privacy/config checks and extracted Hermes auth scan pass | Apple membership/Team ID, distribution signing, physical iPhone, App Store Connect and TestFlight |
 
 The prior iOS simulator bundle included Android Google-OAuth runtime markers
 even though the iOS UI hid the provider. The source now resolves provider
 options by platform: Android includes the browser provider, while iOS and the
 fallback omit it. A Hermes bundle scanner is part of the production config
 gate. The old simulator artifact is superseded and must not be submitted.
+
+### Verified iOS simulator artifact
+
+The replacement artifact was built by EAS from a clean detached worktree and
+then downloaded, extracted, and inspected locally:
+
+| Evidence | Verified value |
+|---|---|
+| EAS build ID | `e02635c0-5d28-400b-b163-b2ec66e31c85` |
+| Exact Git commit | `468ce414cfbc14a52507c34bdf53f441de082767` |
+| EAS profile / channel | `production-simulator` / `production` |
+| Build status | `FINISHED` |
+| App version / build | `0.1.0` / `1` |
+| EAS fingerprint | `98d516162ec3a0cb74cdbfabf41e9bc29c29bf6e` |
+| Downloaded archive | 43,303,913 bytes; SHA-256 `CD0C751CCA7B082FB7947CCB9808E7DF796CBCD0040EAE042DD4616357531AC4` |
+| Extracted app | `Heldat`; bundle ID `app.heldat.mobile`; minimum iOS `16.4`; 142 files |
+| Hermes bundle | 13,411,994 bytes; SHA-256 `806A6719482D89B643101F695EA9E4ED16B46DA0142810FF5F4BD35FC5814534` |
+| Auth-runtime gate | Passed; all three Android-only Google OAuth runtime markers absent |
+
+This is simulator evidence, not an App Store-signed or physical-device build.
+The archive remains unsuitable for TestFlight submission because the Apple
+distribution identity and Team have not yet been attached.
 
 ## Android Maps mismatch
 
@@ -125,8 +147,8 @@ million Class B operations, but that is still only about 1 MB per user at
    probe plus authenticated sync/upload/export probes.
 5. Resolve the Maps billing/key provenance gate and rebuild Android from the
    clean release commit.
-6. Create a clean iOS simulator build, scan its Hermes bundle, then attach an
-   Apple Team and produce the physical/TestFlight build.
+6. Attach an Apple Team to the verified iOS source and produce the
+   physical/TestFlight build; repeat the bundle and signed-artifact gates.
 7. Load a disposable staging project with a representative 10K synthetic
    metadata fixture and measure authenticated p50/p95/p99, errors, database
    growth, WAL, connections, locks, egress and retained object bytes.
