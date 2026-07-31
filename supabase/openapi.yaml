@@ -429,6 +429,12 @@ paths:
               schema:
                 type: string
                 const: no-store
+            Content-Length:
+              description: Exact UTF-8 response-body length for bounded native parsing.
+              schema:
+                type: integer
+                minimum: 1
+                maximum: 2048
           content:
             application/json:
               schema:

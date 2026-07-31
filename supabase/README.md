@@ -212,12 +212,19 @@ validation.
 
 ## Edge secrets
 
-Apply migrations, then deploy the API with JWT gateway verification disabled:
+Production migrations and Edge deployment are deliberately separate. Complete
+the encrypted backup/restore gate, then apply and verify only the migration that
+has its recorded approval: exact `202607310007`, verify, then exact
+`202607310008`, verify. The published `202607310009` one-argument reader is
+superseded and must not execute on the linked project. The reviewed wrapper
+records 009 as superseded without running its SQL and applies only append-only
+`202607310010`; an interrupted repair is capability-absent rather than publicly
+callable. Deploy the API only after the 010 ledger, privilege, and tenant tests
+have been witnessed. The Edge deploy command never pushes pending migrations.
 
-```sh
-supabase db push
-supabase functions deploy api --no-verify-jwt
-```
+Use the checksum-pinned package commands and the complete fail-closed procedure
+in [`docs/operations/EXACT_ONE_SUPABASE_MIGRATION_ROLLOUT.md`](../docs/operations/EXACT_ONE_SUPABASE_MIGRATION_ROLLOUT.md).
+There is deliberately no `apply:supabase:migration-009` command.
 
 For the current linked pilot, authenticate the pinned Supabase CLI once, then
 run the deterministic deployment gate from the repository root:
@@ -227,11 +234,11 @@ npx --yes supabase@2.109.1 login
 npm run deploy:supabase:api
 ```
 
-The npm command runs all static Supabase checks, applies pending reviewed
-migrations to the linked database before the dependent Edge code, deploys only
-`api` to `ifiyragzeizaxdqzxvpk` with `--no-verify-jwt --use-api`, then waits
-for propagation and verifies these public boundaries without printing any key,
-token, response message, invitation or household data:
+The npm command runs all static Supabase checks, deploys only `api` to
+`ifiyragzeizaxdqzxvpk` with `--no-verify-jwt --use-api`, then waits for
+propagation and verifies these public boundaries without printing any key,
+token, response message, invitation or household data. It does not run `db
+push`, `migration up`, `migration repair`, or any equivalent schema mutation:
 
 - invalid recipient invitation: `403 AUTHORIZATION_DENIED`;
 - invalid pilot invitation: `403 AUTHORIZATION_DENIED`;
@@ -247,6 +254,39 @@ It rejects secret and service-role keys. Run the probe by itself with:
 ```powershell
 npm run probe:supabase:live
 ```
+
+After migration 010 and the Edge source are both verified, run the opt-in
+authenticated household-storage probe with a dedicated synthetic household.
+Its user access token and household UUID are accepted only through the current
+process environment. The token must be project-bound, authenticated, currently
+valid, and issued with a total lifetime no longer than two hours. Never place
+either value in `.env.local`, a command argument, shell history, a tracked file,
+CI output, or release evidence. The interactive wrapper below collects the
+token with PowerShell's secure prompt, runs configuration validation followed
+by the one-request probe, and clears all three temporary process variables in a
+`finally` block. Public URL/key configuration may still come from the ignored
+native `.env.local` file.
+
+```powershell
+& .\supabase\scripts\invoke-household-storage-live-probe.ps1
+```
+
+Use `-CheckConfigOnly` when the reviewed gate requires validation with zero
+network requests. The direct npm commands are reserved for a protected runner
+or vault integration that injects and clears those environment values without
+placing their contents in a command line or log.
+
+The probe performs one GET, validates exact bounded content length, `no-store`,
+request correlation, strict response fields, safe byte integers, and a fresh
+server timestamp. Its report contains status, latency, boolean checks, and a
+bounded error code only—never the token, public key, household UUID, byte
+values, response body, or account identity.
+
+Rollback starts with the Edge boundary: restore the previously verified Edge
+version and rerun the public probe before changing database objects. Migration
+008 accounting and the hardened 010 reader remain in place. Any database
+reversal uses a newly reviewed forward migration with separate approval; never
+edit history or mark 010 reverted as a rollback shortcut.
 
 The gateway setting is required only because pilot preflight runs before an
 account exists. Every other route still verifies the bearer with

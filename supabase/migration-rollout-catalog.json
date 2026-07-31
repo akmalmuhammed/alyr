@@ -1,0 +1,37 @@
+{
+  "format": "heldat-exact-migration-rollout-v1",
+  "projectRef": "ifiyragzeizaxdqzxvpk",
+  "supabaseCliVersion": "2.109.1",
+  "migrations": [
+    {
+      "version": "202607310007",
+      "filename": "202607310007_sync_and_blob_maintenance_schedule.sql",
+      "sha256": "b4b85a14896b5b2f6db82ac094ee5cfa8a478166fe10828604c678e75cc6aae3",
+      "predecessor": "202607310006",
+      "action": "apply-exactly-one"
+    },
+    {
+      "version": "202607310008",
+      "filename": "202607310008_storage_accounting_and_readiness.sql",
+      "sha256": "fcdc103c6daf4b8cca4a845d6b6ef87e4e249e57c7e037f5398e563a6f5ec8ca",
+      "predecessor": "202607310007",
+      "action": "apply-exactly-one"
+    },
+    {
+      "version": "202607310009",
+      "filename": "202607310009_household_storage_usage_reader.sql",
+      "sha256": "9fe4bb6cb8f82070daf80fc4f47e298a440d7774b997abb0eca941a4c6987a0b",
+      "predecessor": "202607310008",
+      "action": "ledger-superseded-only",
+      "replacement": "202607310010"
+    },
+    {
+      "version": "202607310010",
+      "filename": "202607310010_household_storage_usage_reader_hardening.sql",
+      "sha256": "3f7d3720477c62cc4806975b25e21d8f2a85e4363133d9129a03943c000f6218",
+      "predecessor": "202607310009",
+      "action": "repair-predecessor-then-apply-exactly-one",
+      "supersedes": "202607310009"
+    }
+  ]
+}

@@ -213,9 +213,11 @@ test("redaction and generated API contracts cover Liability records", () => {
   assert.match(generatedApi, /"liability-review\.set"/u);
 });
 
-test("the one-command handoff applies schema before dependent Edge code", () => {
+test("the Edge deployment command never applies approval-gated migrations", () => {
   assert.match(
     rootPackage,
-    /deploy:supabase:api[\s\S]*db push --linked --include-all --yes[\s\S]*functions deploy api/u,
+    /deploy:supabase:api[\s\S]*functions deploy api/u,
   );
+  const deploymentScript = JSON.parse(rootPackage).scripts["deploy:supabase:api"];
+  assert.doesNotMatch(deploymentScript, /db push|migration (?:up|repair)|include-all/u);
 });

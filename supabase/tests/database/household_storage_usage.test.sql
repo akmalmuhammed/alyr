@@ -2,31 +2,45 @@ begin;
 
 create extension if not exists pgtap with schema extensions;
 
-select plan(19);
+select plan(22);
+
+select is(
+  to_regprocedure('public.read_household_storage_usage(uuid)'),
+  null::regprocedure,
+  'the legacy directly authenticated one-argument reader is absent'
+);
 
 select ok(
-  has_function_privilege(
+  not has_function_privilege(
     'authenticated',
-    'public.read_household_storage_usage(uuid)',
+    'public.read_household_storage_usage(uuid,uuid)',
     'EXECUTE'
   ),
-  'authenticated members may invoke the narrow usage reader'
+  'authenticated clients cannot bypass Edge usage-read controls'
 );
 select ok(
   not has_function_privilege(
     'anon',
-    'public.read_household_storage_usage(uuid)',
+    'public.read_household_storage_usage(uuid,uuid)',
     'EXECUTE'
   ),
   'anonymous callers cannot invoke the usage reader'
 );
 select ok(
-  not has_function_privilege(
+  has_function_privilege(
     'service_role',
-    'public.read_household_storage_usage(uuid)',
+    'public.read_household_storage_usage(uuid,uuid)',
     'EXECUTE'
   ),
-  'service authority does not bypass the active-member reader'
+  'only Edge service authority may invoke the active-member reader'
+);
+select ok(
+  not has_function_privilege(
+    'supabase_auth_admin',
+    'public.read_household_storage_usage(uuid,uuid)',
+    'EXECUTE'
+  ),
+  'auth administration cannot invoke the Edge-service reader'
 );
 select ok(
   not has_table_privilege(
@@ -48,7 +62,7 @@ select ok(
   (
     select prosecdef
     from pg_proc
-    where oid = 'public.read_household_storage_usage(uuid)'::regprocedure
+    where oid = 'public.read_household_storage_usage(uuid,uuid)'::regprocedure
   ),
   'the tenant projection is security definer'
 );
@@ -56,17 +70,26 @@ select is(
   (
     select provolatile::text
     from pg_proc
-    where oid = 'public.read_household_storage_usage(uuid)'::regprocedure
+    where oid = 'public.read_household_storage_usage(uuid,uuid)'::regprocedure
   ),
   's',
   'the read-only projection is stable'
 );
 select is(
   pg_get_function_result(
-    'public.read_household_storage_usage(uuid)'::regprocedure
+    'public.read_household_storage_usage(uuid,uuid)'::regprocedure
   ),
   'TABLE(household_id uuid, used_bytes bigint, allowance_bytes bigint, measured_at timestamp with time zone)',
   'the database projection contains only the four reviewed fields'
+);
+select is(
+  (
+    select proconfig
+    from pg_proc
+    where oid = 'public.read_household_storage_usage(uuid,uuid)'::regprocedure
+  ),
+  array['search_path=public, pg_temp']::text[],
+  'the security-definer reader has a fixed non-auth search path'
 );
 
 insert into auth.users (
@@ -107,15 +130,14 @@ on conflict (household_id) do update
 set retained_bytes = excluded.retained_bytes,
     updated_at = excluded.updated_at;
 
-set local role authenticated;
-set local request.jwt.claim.role = 'authenticated';
-set local request.jwt.claim.sub = 'd1000000-0000-4000-8000-000000000001';
+set local role service_role;
 
 select results_eq(
   $$
     select household_id::text, used_bytes
     from public.read_household_storage_usage(
-      'd2000000-0000-4000-8000-000000000001'
+      'd2000000-0000-4000-8000-000000000001',
+      'd1000000-0000-4000-8000-000000000001'
     )
   $$,
   $$ values ('d2000000-0000-4000-8000-000000000001'::text, 1234567::bigint) $$,
@@ -125,7 +147,8 @@ select is(
   (
     select allowance_bytes
     from public.read_household_storage_usage(
-      'd2000000-0000-4000-8000-000000000001'
+      'd2000000-0000-4000-8000-000000000001',
+      'd1000000-0000-4000-8000-000000000001'
     )
   ),
   41943040::bigint,
@@ -136,55 +159,50 @@ select ok(
     select measured_at between statement_timestamp() - interval '5 seconds'
       and statement_timestamp() + interval '5 seconds'
     from public.read_household_storage_usage(
-      'd2000000-0000-4000-8000-000000000001'
+      'd2000000-0000-4000-8000-000000000001',
+      'd1000000-0000-4000-8000-000000000001'
     )
   ),
   'the server supplies a bounded measurement timestamp'
 );
 
-set local request.jwt.claim.sub = 'd1000000-0000-4000-8000-000000000002';
 select is(
-  (select used_bytes from public.read_household_storage_usage('d2000000-0000-4000-8000-000000000001')),
+  (select used_bytes from public.read_household_storage_usage('d2000000-0000-4000-8000-000000000001', 'd1000000-0000-4000-8000-000000000002')),
   1234567::bigint,
   'an active editor receives the same tenant usage'
 );
 
-set local request.jwt.claim.sub = 'd1000000-0000-4000-8000-000000000003';
 select is(
-  (select used_bytes from public.read_household_storage_usage('d2000000-0000-4000-8000-000000000001')),
+  (select used_bytes from public.read_household_storage_usage('d2000000-0000-4000-8000-000000000001', 'd1000000-0000-4000-8000-000000000003')),
   1234567::bigint,
   'an active viewer receives the same tenant usage'
 );
 
-set local request.jwt.claim.sub = 'd1000000-0000-4000-8000-000000000004';
 select is(
-  (select used_bytes from public.read_household_storage_usage('d2000000-0000-4000-8000-000000000002')),
+  (select used_bytes from public.read_household_storage_usage('d2000000-0000-4000-8000-000000000002', 'd1000000-0000-4000-8000-000000000004')),
   0::bigint,
   'an authorized household without a counter row reports zero bytes'
 );
 select is(
-  (select count(*) from public.read_household_storage_usage('d2000000-0000-4000-8000-000000000001')),
+  (select count(*) from public.read_household_storage_usage('d2000000-0000-4000-8000-000000000001', 'd1000000-0000-4000-8000-000000000004')),
   0::bigint,
   'a cross-household caller receives no identifying row'
 );
 
-set local request.jwt.claim.sub = 'd1000000-0000-4000-8000-000000000005';
 select is(
-  (select count(*) from public.read_household_storage_usage('d2000000-0000-4000-8000-000000000001')),
+  (select count(*) from public.read_household_storage_usage('d2000000-0000-4000-8000-000000000001', 'd1000000-0000-4000-8000-000000000005')),
   0::bigint,
   'a revoked member receives no identifying row'
 );
 
-set local request.jwt.claim.sub = 'd1000000-0000-4000-8000-000000000006';
 select is(
-  (select count(*) from public.read_household_storage_usage('d2000000-0000-4000-8000-000000000001')),
+  (select count(*) from public.read_household_storage_usage('d2000000-0000-4000-8000-000000000001', 'd1000000-0000-4000-8000-000000000006')),
   0::bigint,
   'a soft-deleted membership receives no identifying row'
 );
 
-set local request.jwt.claim.sub = 'd1000000-0000-4000-8000-000000000001';
 select is(
-  (select count(*) from public.read_household_storage_usage('d2000000-0000-4000-8000-000000000099')),
+  (select count(*) from public.read_household_storage_usage('d2000000-0000-4000-8000-000000000099', 'd1000000-0000-4000-8000-000000000001')),
   0::bigint,
   'a nonexistent household is indistinguishable from denied access'
 );
@@ -193,11 +211,9 @@ reset role;
 update public.households
 set deleted_at = now()
 where id = 'd2000000-0000-4000-8000-000000000002';
-set local role authenticated;
-set local request.jwt.claim.role = 'authenticated';
-set local request.jwt.claim.sub = 'd1000000-0000-4000-8000-000000000004';
+set local role service_role;
 select is(
-  (select count(*) from public.read_household_storage_usage('d2000000-0000-4000-8000-000000000002')),
+  (select count(*) from public.read_household_storage_usage('d2000000-0000-4000-8000-000000000002', 'd1000000-0000-4000-8000-000000000004')),
   0::bigint,
   'a soft-deleted household is indistinguishable from denied access'
 );

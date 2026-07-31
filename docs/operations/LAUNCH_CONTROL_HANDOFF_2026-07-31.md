@@ -12,7 +12,9 @@ below. Build 6 still requires physical Android-device acceptance and parity
 testing of the exact Play-distributed binary.
 
 Heldat otherwise remains in a controlled-pilot posture. Physical iOS/TestFlight,
-real backup and restore, migrations `202607310007` and `202607310008`,
+real backup and restore, migrations `202607310007`, `202607310008`, and
+append-only hardening migration `202607310010` (with legacy `009` recorded as
+superseded without execution),
 transactional email, legal and store identities, distribution accounts/fees,
 and the documented 10K capacity, abuse, observability, storage, and cost gates
 remain open.
@@ -29,7 +31,7 @@ remain open.
 | Email authentication | Cloudflare and Google Public DNS return the exact `_dmarc.heldat.app` monitoring record below. | The non-blocking DMARC baseline is complete; enforcement and transactional sending remain pending. |
 | Google Cloud operator | The active CLI identity matches the approved operator profile and dedicated Heldat release project. Billing is disabled. The Play publisher service account has zero user-managed keys and no project-level IAM role. | Play Console access remains a later distribution gate. |
 | Supabase database transport | The pooler route completed certificate verification over TLS 1.3 using AES-256-GCM. | Keep certificate verification enabled for operator database connections. |
-| Backup operator access | The Windows DPAPI operator vault was updated. The real-project `backup --dry-run` passed with `writes: false`. | No actual backup, off-project copy, restore drill, or migration `202607310007`/`202607310008` execution has run. |
+| Backup operator access | The Windows DPAPI operator vault was updated. The real-project `backup --dry-run` passed with `writes: false`. | No actual backup, off-project copy, restore drill, exact migration `202607310007`/`202607310008`/`202607310010`, or 009-supersession ledger action has run. |
 | iOS simulator | The fresh simulator artifact described below passed its recorded checks. | This is not physical-device, signed TestFlight, or App Store evidence. |
 | Android build 6 | Source, AAB, APK, static validation, and the scoped Android 15/API 35 emulator journey passed as described below. | Physical Android and exact Play-track parity remain release gates. |
 
@@ -201,9 +203,21 @@ replace physical-device or Play-distributed build-6 parity testing.
 2. After the backup gate, separately approve and deploy migration
    `202607310007`, then witness and record retention/blob-maintenance results.
 3. After migration 007 verification, separately approve and deploy migration
-   `202607310008` with the reviewed Edge API, then verify storage counters,
-   readiness telemetry, request limits, account-deletion holds, and rollback.
-4. Enable database SSL enforcement and reviewed network restrictions after
+   `202607310008`, then verify storage counters, readiness telemetry,
+   account-deletion holds, and rollback independently of Edge code.
+4. After migration 008 verification, approve target `202607310010`. Use the
+   checksum-pinned wrapper to record legacy `009` as superseded without running
+   its SQL, then apply only 010. If 009 is already recorded, apply 010
+   immediately; never leave its legacy reader exposed for a verification pause.
+5. Prove the old signature is absent, only `service_role` executes the
+   two-argument reader, and owner/editor/viewer plus denied/deleted tenant cases
+   pass. Then separately approve the Edge API deploy.
+   Run the public probe, then the opt-in authenticated `/household-storage`
+   probe with an ephemeral token and synthetic household environment values.
+6. For rollback, restore the prior Edge version first and rerun the public
+   probe. Keep migrations 008 and 010; any database reversal requires a newly
+   reviewed forward migration and separate approval.
+7. Enable database SSL enforcement and reviewed network restrictions after
    the migration verification gates.
 
 ### Email, legal, stores, and 10K readiness

@@ -95,7 +95,11 @@ Do not create a production submission while any required typed slot remains.
 
 ## Backend and runtime readiness
 
-- [ ] Current Supabase migrations and Edge Function are deployed together.
+- [ ] A verified encrypted backup precedes separately approved migrations
+      `202607310007` and `202607310008`; each is verified before the next. The
+      reviewed wrapper then records legacy `202607310009` as superseded without
+      executing it and applies only `202607310010`. The Edge Function is
+      deployed only after the final database gate without applying migrations.
 - [ ] Production environment supplies only the public Supabase URL and public
       publishable key; no service-role secret is in the client build.
 - [ ] Live RLS negative tests pass across two households.

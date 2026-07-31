@@ -2240,6 +2240,26 @@ function householdStorageAuthorizationDenied(): Response {
   );
 }
 
+function householdStorageSuccess(usage: HouseholdStorageRpcRow): Response {
+  const body = JSON.stringify({
+    householdId: usage.household_id,
+    source: "server-confirmed",
+    usedBytes: usage.used_bytes,
+    allowanceBytes: usage.allowance_bytes,
+    measuredAt: usage.measured_at,
+  });
+  const byteLength = new TextEncoder().encode(body).byteLength;
+  return new Response(body, {
+    status: 200,
+    headers: {
+      ...corsHeaders,
+      "Content-Type": "application/json; charset=utf-8",
+      "Cache-Control": "no-store",
+      "Content-Length": String(byteLength),
+    },
+  });
+}
+
 async function handleHouseholdStorageUsage(
   request: Request,
   context: AuthenticatedContext,
@@ -2262,9 +2282,22 @@ async function handleHouseholdStorageUsage(
   }
   const householdId = rawHouseholdId.toLowerCase();
 
-  const { data, error } = await context.client.rpc(
+  const readerClient = serviceControlClient();
+  if (readerClient === null) {
+    return apiError(
+      "STORAGE_UNAVAILABLE",
+      "Cloud storage usage is temporarily unavailable.",
+      503,
+      true,
+    );
+  }
+
+  const { data, error } = await readerClient.rpc(
     "read_household_storage_usage",
-    { p_household_id: householdId },
+    {
+      p_household_id: householdId,
+      p_actor_id: context.userId,
+    },
   );
   if (error) {
     return apiError(
@@ -2302,13 +2335,7 @@ async function handleHouseholdStorageUsage(
     );
   }
 
-  return json({
-    householdId: usage.household_id,
-    source: "server-confirmed",
-    usedBytes: usage.used_bytes,
-    allowanceBytes: usage.allowance_bytes,
-    measuredAt: usage.measured_at,
-  }, 200, { "Cache-Control": "no-store" });
+  return householdStorageSuccess(usage);
 }
 
 async function handleHouseholdAccessSnapshot(

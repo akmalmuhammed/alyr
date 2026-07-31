@@ -1503,6 +1503,8 @@ export interface operations {
             200: {
                 headers: {
                     "Cache-Control"?: "no-store";
+                    /** @description Exact UTF-8 response-body length for bounded native parsing. */
+                    "Content-Length"?: number;
                     [name: string]: unknown;
                 };
                 content: {

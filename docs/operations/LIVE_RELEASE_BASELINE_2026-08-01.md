@@ -47,7 +47,7 @@ were `bristol.ns.cloudflare.com` and `rex.ns.cloudflare.com`.
 
 | Gate | Evidence | Result |
 |---|---|---|
-| Migration ledger | `supabase migration list --linked` | Production matches through `202607310006`; `202607310007` and `202607310008` remain local-only |
+| Migration ledger | `supabase migration list --linked` | Production matches through `202607310006`; exact `202607310007`/`008`, superseded-ledger-only `009`, and exact `010` remain pending |
 | Edge deployment | `supabase functions list` | `api` active at deployed version 9; the current worktree changes are newer |
 | Low-rate public read | 5 requests, concurrency 1, 1 req/s | 5/5 HTTP 200; p95 556 ms |
 | Release-envelope public read | Two runs of 20 requests, concurrency 3, 5 req/s | Each produced 19 HTTP 200 and one structured `503 STORAGE_UNAVAILABLE`; p95 1.8 s then 1.124 s |
@@ -65,6 +65,29 @@ cleanup preserves the same classification, and native upload/export parsers
 reject a malformed retryable quota envelope. This source passed 134/134 static
 backend checks and 17/17 focused native adapter checks; it is not live until
 the approved migration and Edge deployment sequence completes.
+
+Append-only migration `010` and the current Edge source add the narrow authenticated
+`GET /household-storage` projection. It returns only the selected household ID,
+server-confirmed used bytes and allowance, and measurement time; active owners,
+editors, and viewers are admitted, while missing, deleted, revoked, and
+cross-household requests share one `403`. The routed native Vault now fetches
+that value only for a verified personal cloud household, keeps it in memory,
+makes zero requests in sample/local-only mode, and shows no configured-byte
+placeholder when the server value is absent. Full Supabase static checks pass
+171/171 and the complete native gate passes 205 suites / 1,302 tests plus
+TypeScript, Maestro, production config, clean EAS packaging, and Recovery Kit
+crypto. Legacy migration `009` is never executed on the linked project: after
+exact 007/008 verification the reviewed wrapper records 009 as superseded and
+applies only 010. These changes are not live until that fail-closed sequence and
+the new Edge source complete their separate approvals.
+
+The hardened reader body was validated only on the disposable local stack:
+database lint returned no schema errors and all 12 pgTAP files / 405 assertions
+passed, including the 22-assertion owner/editor/viewer, denied/missing/deleted,
+raw-counter privilege, and exact-projection test. The source was then moved to
+append-only migration 010. Applying final 010 to the local ledger and repeating
+lint/pgTAP remains pending because Docker Desktop stopped under host disk
+pressure. The linked production project was not changed.
 
 The first local run immediately after recovering Docker from a full disk had
 four unstructured gateway `502` responses. After the runtime warmed, five
@@ -155,6 +178,12 @@ Connect record, and signed-device checks are complete. EAS warned that 80% of
 the included build credits were already used before this build, so the
 remaining free-build capacity must be reserved for signed release gates.
 
+The native source has advanced beyond commit `d1a2566` with the routed
+authoritative Vault usage flow. Because production EAS Update is disabled, the
+recorded simulator artifact remains valid historical evidence but is no longer
+a source-identical release candidate. Reserve the next iOS build for the final
+Apple-signed source after the remaining native gates settle.
+
 ## Android Maps mismatch
 
 The intended Google project currently has billing disabled, the Maps SDK for
@@ -194,13 +223,12 @@ The application-level 800 MiB storage ceiling is about 83.9 KB per user. With
 the current 2 MiB primary-image planning assumption it supports only 400
 primary images, not 10,000 media-active users.
 
-Migration `008` contains the authoritative constant-time household retained-
-byte counter, but there is not yet an authenticated household-usage endpoint.
-The routed Vault therefore presents the truthful `Usage unknown` state rather
-than substituting local bytes or the configured 40 MiB allowance. This does not
-block the controlled pilot because server quotas still enforce admission; it
-does block a public promise that every household can inspect its live cloud
-allowance and consumption.
+Migration `008` contains the authoritative constant-time retained-byte counter;
+migration `010`, the Edge contract, and the native Vault now complete the
+tenant-safe read path in source. Until that sequence is deployed, production
+continues to show the truthful `Usage unknown` state rather than local bytes or
+a configured allowance. The public usage-inspection gate therefore remains
+open operationally even though its application code is complete.
 
 The existing `BlobStore` adapter supports an R2/S3 transition. Cloudflare R2's
 current free tier includes 10 GB-month, one million Class A operations, and ten
@@ -224,12 +252,24 @@ Auth/RLS, object-storage, egress, and full 10K measurements remain open.
 2. Execute backup plus isolated restore verification.
 3. Apply migration `007`, verify its bounded maintenance behavior, then obtain
    the separate approval for migration `008`.
-4. Apply migration `008`, deploy the current Edge API, and repeat the 20/3/5
-   probe plus authenticated sync/upload/export probes.
-5. Resolve the Maps billing/key provenance gate and rebuild Android from the
+4. Apply exact migration `008` and verify retained-byte accounting.
+5. Approve target `010`. The reviewed wrapper must record legacy `009` as
+   superseded without executing its SQL, apply only `010`, and prove the exact
+   ledger delta. If 009 is already recorded, apply 010 immediately.
+6. Verify the old one-argument RPC is absent, the two-argument reader is
+   service-role-only, and owner/editor/viewer plus uniform-denial tenant cases
+   pass. Never pause after executing legacy 009 on the linked project.
+7. Deploy the current Edge API without applying migrations, repeat the 20/3/5
+   public probe, then run the opt-in authenticated storage probe with ephemeral
+   token/household environment values plus authenticated sync/upload/export
+   probes.
+8. If rollback is needed, restore the prior Edge version first and rerun the
+   public probe. Keep migration `008` and `010`; database reversal requires a
+   newly reviewed forward migration.
+9. Resolve the Maps billing/key provenance gate and rebuild Android from the
    clean release commit that includes camera normalization.
-6. Attach an Apple Team to the verified iOS source and produce the
+10. Attach an Apple Team to the verified iOS source and produce the
    physical/TestFlight build; repeat the Hermes and signed-artifact gates.
-7. Load a disposable staging project with a representative 10K synthetic
+11. Load a disposable staging project with a representative 10K synthetic
    metadata fixture and measure authenticated p50/p95/p99, errors, database
    growth, WAL, connections, locks, egress and retained object bytes.

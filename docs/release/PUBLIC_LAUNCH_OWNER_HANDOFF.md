@@ -261,14 +261,29 @@ therefore retain separate, recorded approvals:
 3. `Approve migration 008 after migration 007 verification` — activates
    cross-export/Evidence retained-byte accounting and aggregate readiness
    signals after its final review and database tests pass.
-4. `Approve Edge API deployment after migration 008 verification` — deploys
+4. `Approve superseding 009 and applying exact migration 010 after migration
+   008 verification` — the checksum-pinned wrapper records legacy 009 as
+   applied/superseded without executing its one-argument authenticated RPC,
+   then applies only append-only 010. If 009 is already recorded, 010 is applied
+   immediately. The gate proves the old signature absent and the replacement
+   executable only by `service_role`.
+5. `Approve Edge API deployment after migration 010 verification` — deploys
    the current API source and runs the live signed-read plus authenticated
-   sync/upload/export probes.
-5. `Approve Supabase SSL enforcement after migration verification` — changes
+   storage/sync/upload/export probes. The deployment command does not apply
+   pending migrations. The storage probe requires an ephemeral authenticated
+   access token and synthetic household UUID in process-only environment
+   values; its report excludes credentials, identity, household IDs, byte
+   values, and response bodies.
+6. `Approve Supabase SSL enforcement after migration verification` — changes
    the production database connection requirement.
 
 These approvals are sequential. A dry run or unit test does not replace the
 real backup and isolated restore evidence required for public launch.
+
+For a household-storage rollback, restore the previously verified Edge version
+first and rerun the public probe. Migrations `008` and `010` stay in place. Any
+database reversal requires a newly reviewed forward migration and separate
+approval; never edit migration history or mark 010 reverted as a rollback.
 
 ## Review-account rule
 

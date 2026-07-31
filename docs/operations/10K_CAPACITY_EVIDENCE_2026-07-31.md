@@ -76,28 +76,39 @@ sync/upload load** and is not proof of 10K throughput.
 
 ## Remaining hard gates
 
-1. Deploy the reviewed migration `202607310007` after change approval so sync
-   retention and blob-maintenance schedules are active and then record a
-   witnessed successful run.
-2. Execute and verify a real encrypted database-plus-private-Storage backup,
+1. Execute and verify a real encrypted database-plus-private-Storage backup,
    copy it outside the active project/account boundary, and complete an
    isolated full restore drill.
-3. Approve recovery objectives, escrow and rotate the backup key, schedule the
+2. After the verified backup, separately approve migration `202607310007`,
+   activate sync-retention and blob-maintenance schedules, and record a
+   witnessed successful run.
+3. After migration 007 verification, separately approve migration
+   `202607310008` and verify retained-byte accounting and readiness signals.
+4. After migration 008 verification, approve target `202607310010`. The
+   checksum-pinned wrapper records legacy `009` as superseded without executing
+   its SQL and applies only 010; if 009 is already recorded, apply 010
+   immediately. Verify the old signature is absent, the replacement is
+   service-role-only, and the admitted/denied tenant matrix passes.
+5. After migration 010 verification, separately deploy the Edge API without a
+   database push; run the public and opt-in authenticated household-storage
+   probes. Rollback restores the prior Edge version first and retains migrations
+   008 and 010; database reversal requires a new forward migration.
+6. Approve recovery objectives, escrow and rotate the backup key, schedule the
    backup, and prove freshness and deliberately failed-canary alert delivery.
-4. Activate a storage provider and paid capacity envelope sized for expected
+7. Activate a storage provider and paid capacity envelope sized for expected
    files and egress; the 800 MiB application cap fits neither 10K household
    allowances nor the expected evidence workload.
-5. Configure custom transactional SMTP, aligned SPF/DKIM, and tested signup,
+8. Configure custom transactional SMTP, aligned SPF/DKIM, and tested signup,
    confirmation, recovery, and invitation delivery before public enrollment.
-6. Enable and verify database SSL enforcement and reviewed network
+9. Enable and verify database SSL enforcement and reviewed network
    restrictions after the pre-change backup.
-7. Run representative authenticated sync, upload, checksum, download,
+10. Run representative authenticated sync, upload, checksum, download,
    bootstrap, conflict, cleanup, and export load against staging; also measure
    database size using a projected 10K fixture.
-8. Establish durable metrics and alerting for API latency/errors, auth,
+11. Establish durable metrics and alerting for API latency/errors, auth,
    database pressure, Storage/egress, sync backlog, cleanup, backup freshness,
    mobile crashes, and 50%/70%/85% quota thresholds.
-9. Add and validate signup/sign-in/recovery bot controls, export current
+12. Add and validate signup/sign-in/recovery bot controls, export current
    Security and Performance Advisor findings, and test the on-call
    acknowledgement path.
 

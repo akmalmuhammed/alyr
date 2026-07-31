@@ -4,7 +4,7 @@ import test from "node:test";
 
 const migration = await readFile(
   new URL(
-    "../migrations/202607310009_household_storage_usage_reader.sql",
+    "../migrations/202607310010_household_storage_usage_reader_hardening.sql",
     import.meta.url,
   ),
   "utf8",
@@ -45,25 +45,30 @@ function section(source, start, end) {
 test("the database reader is an active-member-only narrow projection", () => {
   assert.match(
     migration,
-    /create or replace function public\.read_household_storage_usage\(\s*p_household_id uuid\s*\)[\s\S]*returns table\(\s*household_id uuid,\s*used_bytes bigint,\s*allowance_bytes bigint,\s*measured_at timestamptz\s*\)/u,
+    /create or replace function public\.read_household_storage_usage\(\s*p_household_id uuid,\s*p_actor_id uuid\s*\)[\s\S]*returns table\(\s*household_id uuid,\s*used_bytes bigint,\s*allowance_bytes bigint,\s*measured_at timestamptz\s*\)/u,
   );
   assert.match(migration, /security definer/u);
   assert.match(migration, /stable/u);
-  assert.match(migration, /v_actor uuid := auth\.uid\(\)/u);
   assert.match(
     migration,
-    /membership\.user_id = v_actor[\s\S]*membership\.status = 'active'[\s\S]*membership\.deleted_at is null[\s\S]*household\.deleted_at is null/u,
+    /drop function if exists public\.read_household_storage_usage\(uuid\)/u,
+  );
+  assert.doesNotMatch(migration, /auth\.uid\(\)/u);
+  assert.match(
+    migration,
+    /membership\.user_id = p_actor_id[\s\S]*membership\.status = 'active'[\s\S]*membership\.deleted_at is null[\s\S]*household\.deleted_at is null/u,
   );
   assert.match(migration, /if not found then\s*return;/u);
   assert.match(migration, /STORAGE_CONTROL_UNAVAILABLE/u);
   assert.match(
     migration,
-    /revoke all on function public\.read_household_storage_usage\(uuid\)[\s\S]*from public, anon, authenticated, supabase_auth_admin, service_role[\s\S]*grant execute on function public\.read_household_storage_usage\(uuid\)[\s\S]*to authenticated/u,
+    /revoke all on function public\.read_household_storage_usage\(uuid, uuid\)[\s\S]*from public, anon, authenticated, supabase_auth_admin, service_role[\s\S]*grant execute on function public\.read_household_storage_usage\(uuid, uuid\)[\s\S]*to service_role/u,
   );
   assert.doesNotMatch(
     migration,
-    /grant execute on function public\.read_household_storage_usage\(uuid\)[\s\S]{0,80}to (?:anon|service_role)/u,
+    /grant execute on function public\.read_household_storage_usage\(uuid, uuid\)[\s\S]{0,80}to (?:anon|authenticated)/u,
   );
+  assert.match(migration, /set search_path = public, pg_temp/u);
 });
 
 test("the raw counter remains service-only", () => {
@@ -87,18 +92,35 @@ test("the authenticated GET is bounded, strictly validated, and privacy uniform"
     "async function handleHouseholdStorageUsage(",
     "async function handleHouseholdAccessSnapshot(",
   );
+  const implementation = section(
+    api,
+    "function householdStorageSuccess(",
+    "async function handleHouseholdAccessSnapshot(",
+  );
   assert.match(handler, /queryEntries\.length === 1/u);
   assert.match(handler, /queryEntries\[0\]\?\.\[0\] === "householdId"/u);
   assert.match(handler, /url\.search\.length > 64/u);
   assert.match(handler, /uuidPattern\.test\(rawHouseholdId\)/u);
+  assert.match(handler, /const readerClient = serviceControlClient\(\)/u);
+  assert.match(
+    handler,
+    /readerClient === null[\s\S]*"STORAGE_UNAVAILABLE"[\s\S]*503/u,
+  );
   assert.match(handler, /"read_household_storage_usage"/u);
+  assert.match(handler, /p_actor_id: context\.userId/u);
+  assert.match(handler, /p_household_id: householdId/u);
+  assert.doesNotMatch(handler, /context\.client\.rpc/u);
   assert.match(handler, /data\.length === 0/u);
   assert.match(handler, /householdStorageAuthorizationDenied\(\)/u);
   assert.match(handler, /data\.length !== 1/u);
   assert.match(handler, /parseHouseholdStorageRpcRow\(data\[0\], householdId\)/u);
-  assert.match(handler, /"Cache-Control": "no-store"/u);
+  assert.match(api, /function householdStorageSuccess\(usage: HouseholdStorageRpcRow\)/u);
+  assert.match(api, /new TextEncoder\(\)\.encode\(body\)\.byteLength/u);
+  assert.match(api, /"Cache-Control": "no-store"/u);
+  assert.match(api, /"Content-Length": String\(byteLength\)/u);
+  assert.match(handler, /return householdStorageSuccess\(usage\)/u);
   assert.match(
-    handler,
+    implementation,
     /householdId: usage\.household_id,\s*source: "server-confirmed",\s*usedBytes: usage\.used_bytes,\s*allowanceBytes: usage\.allowance_bytes,\s*measuredAt: usage\.measured_at/u,
   );
   for (const forbidden of [
@@ -108,7 +130,7 @@ test("the authenticated GET is bounded, strictly validated, and privacy uniform"
     /reservation/u,
     /planId/u,
   ]) {
-    assert.doesNotMatch(handler, forbidden);
+    assert.doesNotMatch(implementation, forbidden);
   }
   assert.match(
     api,
@@ -143,6 +165,10 @@ test("OpenAPI and shared contracts expose exactly the audited response", () => {
   assert.match(openapiPath, /operationId: getHouseholdStorageUsage/u);
   assert.match(openapiPath, /name: householdId[\s\S]*format: uuid/u);
   assert.match(openapiPath, /const: no-store/u);
+  assert.match(
+    openapiPath,
+    /Content-Length:[\s\S]*minimum: 1[\s\S]*maximum: 2048/u,
+  );
   assert.match(
     openapiPath,
     /\$ref: "#\/components\/schemas\/HouseholdStorageUsageResponse"/u,
@@ -188,4 +214,5 @@ test("OpenAPI and shared contracts expose exactly the audited response", () => {
   assert.match(generatedApi, /"\/household-storage":/u);
   assert.match(generatedApi, /getHouseholdStorageUsage:/u);
   assert.match(generatedApi, /HouseholdStorageUsageResponse:/u);
+  assert.match(generatedApi, /"Content-Length"\?: number/u);
 });
