@@ -52,6 +52,13 @@ caches them for 15 seconds inside an Edge isolate. Signup preflight always
 re-reads the control plane and invalidates a stale read cache on a version or
 mode change, so closing enrollment is not delayed by the read cache.
 
+Current Edge and client source also maps both household and global retained-
+storage saturation to `QUOTA_EXCEEDED`, HTTP `409`, `retryable: false`. Export
+cleanup preserves the same classification, and native upload/export parsers
+reject a malformed retryable quota envelope. This source passed 134/134 static
+backend checks and 17/17 focused native adapter checks; it is not live until
+the approved migration and Edge deployment sequence completes.
+
 The first local run immediately after recovering Docker from a full disk had
 four unstructured gateway `502` responses. After the runtime warmed, five
 sequential checks and the full 20-request probe passed. This is workstation
@@ -62,7 +69,7 @@ recovery evidence, not production capacity evidence.
 | Platform | Proven | Still open |
 |---|---|---|
 | Android | EAS production AAB build 6 finished; artifact hash and upload certificate recorded; API 35 emulator journey passed | Fresh build after native camera normalization, correct-project Maps key, physical device, Play App Signing lineage, Play internal/closed-track delivery |
-| iOS | Clean production-simulator build from commit `468ce41`; privacy/config checks and extracted Hermes auth scan pass | Fresh build after native camera normalization, Apple membership/Team ID, distribution signing, physical iPhone, App Store Connect and TestFlight |
+| iOS | Clean production-simulator build from commit `d1a2566`; native camera module, privacy/config, extracted Hermes auth scan, and archive integrity pass | Apple membership/Team ID, distribution signing, physical iPhone, App Store Connect and TestFlight |
 
 The prior iOS simulator bundle included Android Google-OAuth runtime markers
 even though the iOS UI hid the provider. The source now resolves provider
@@ -70,7 +77,7 @@ options by platform: Android includes the browser provider, while iOS and the
 fallback omit it. A Hermes bundle scanner is part of the production config
 gate. The old simulator artifact is superseded and must not be submitted.
 
-### Verified iOS simulator artifact
+### Superseded pre-camera iOS simulator artifact
 
 The replacement artifact was built by EAS from a clean detached worktree and
 then downloaded, extracted, and inspected locally:
@@ -99,9 +106,47 @@ tests passed 25/25, TypeScript passed, and the Expo production configuration
 and EAS packaging gates passed. Library images and imported documents preserve
 their selected bytes and retain the separate 10 MiB import ceiling.
 
-Because this changes the native dependency graph, every previously recorded
-iOS and Android binary is now historical evidence rather than a current release
-candidate. Both platforms require a clean EAS rebuild and artifact verification.
+Because this changed the native dependency graph, previously recorded iOS and
+Android binaries became historical evidence rather than current release
+candidates. The iOS simulator has now been rebuilt and verified; Android still
+requires a clean rebuild after the Maps provenance gate is resolved.
+
+### Current iOS simulator artifact
+
+The current source was built from a clean same-drive detached worktree after
+its local iOS fingerprint completed successfully. The archive was downloaded
+to the release-artifact drive, path-checked, extracted, and inspected:
+
+| Evidence | Verified value |
+|---|---|
+| EAS build ID | `c5aa1a96-7234-43f4-8713-c2186089b41d` |
+| Exact Git commit | `d1a25662998d0dc675d369fa7c30c9c278f9e28b` |
+| EAS profile / channel | `production-simulator` / `production` |
+| Build status / target | `FINISHED` / iOS Simulator |
+| App version / build / SDK | `0.1.0` / `1` / `57.0.0` |
+| EAS fingerprint | `a54261d75da8910fc2ce32ddf59406678192f683` |
+| Downloaded archive | 44,400,666 bytes; SHA-256 `8D542EAE1BD38810D7BB61FAFFD1849E7A7F9AB87CFDA244B9E917E4362F6518` |
+| Archive structure | 243 entries; one `Heldat.app` root; zero unsafe, symlink, or hard-link entries |
+| Extracted app | `Heldat`; bundle ID `app.heldat.mobile`; minimum iOS `16.4`; 151 files |
+| Hermes bundle | 13,424,081 bytes; SHA-256 `3B2FB4898656001D2DCA2AFC48E54D6D299872F2C3373AD33517D61029166829` |
+| Auth-runtime gate | Passed; all three Android-only Google OAuth runtime markers absent |
+| Native camera module | `ExpoImageManipulator` appears 14 times in the compiled executable |
+| Release updates | Disabled; check-on-launch `NEVER`; no update URL |
+| Privacy manifest | Tracking false; zero tracking domains; 11 collected-data types; four required-reason API groups |
+
+The compiled executable is 48,773,824 bytes with SHA-256
+`068DB498D5A929FE4C5F06A51D31D75D304B2338CC2EABF840B69956A7024900`.
+The privacy manifest is 5,518 bytes with SHA-256
+`38EB64B2FA739A83F72CDAC50374F1448112B43A2FDFB065183DE07F56A4165B`.
+Camera, selected-photo, foreground-location and Face ID purpose strings are
+present; microphone and always-location purpose keys are absent. Arbitrary and
+local-network loads are disabled in this production artifact.
+
+This remains simulator evidence. It is not signed for a physical iPhone and
+cannot enter TestFlight until the Apple Team, distribution identity, App Store
+Connect record, and signed-device checks are complete. EAS warned that 80% of
+the included build credits were already used before this build, so the
+remaining free-build capacity must be reserved for signed release gates.
 
 ## Android Maps mismatch
 
@@ -142,6 +187,14 @@ The application-level 800 MiB storage ceiling is about 83.9 KB per user. With
 the current 2 MiB primary-image planning assumption it supports only 400
 primary images, not 10,000 media-active users.
 
+Migration `008` contains the authoritative constant-time household retained-
+byte counter, but there is not yet an authenticated household-usage endpoint.
+The routed Vault therefore presents the truthful `Usage unknown` state rather
+than substituting local bytes or the configured 40 MiB allowance. This does not
+block the controlled pilot because server quotas still enforce admission; it
+does block a public promise that every household can inspect its live cloud
+allowance and consumption.
+
 The existing `BlobStore` adapter supports an R2/S3 transition. Cloudflare R2's
 current free tier includes 10 GB-month, one million Class A operations, and ten
 million Class B operations, but that is still only about 1 MB per user at
@@ -158,9 +211,8 @@ million Class B operations, but that is still only about 1 MB per user at
    probe plus authenticated sync/upload/export probes.
 5. Resolve the Maps billing/key provenance gate and rebuild Android from the
    clean release commit that includes camera normalization.
-6. Rebuild the production iOS simulator from the same source, repeat the Hermes
-   bundle gate, then attach an Apple Team and produce the physical/TestFlight
-   build with the signed-artifact gates.
+6. Attach an Apple Team to the verified iOS source and produce the
+   physical/TestFlight build; repeat the Hermes and signed-artifact gates.
 7. Load a disposable staging project with a representative 10K synthetic
    metadata fixture and measure authenticated p50/p95/p99, errors, database
    growth, WAL, connections, locks, egress and retained object bytes.
