@@ -1,6 +1,6 @@
 # Heldat public-launch owner handoff
 
-Last updated: 2026-07-31
+Last updated: 2026-08-01
 
 This is the single owner-input sheet for the Android, iOS, transactional-email,
 and public-legal release tracks. It contains no passwords, API keys, recovery
@@ -151,9 +151,10 @@ Checked-in text that needs an explicit decision before public production:
 - The terms do not settle the responsible party, eligibility/minimum age,
   governing law, or dispute forum/process. The free-beta liability wording also
   needs named legal review for every launch region.
-- The public deletion page currently says
-  `Vault > Privacy and support > Delete account`; the build uses
-  `Vault > Settings > Account > Delete account and data`.
+- The checked-in deletion page now matches
+  `Vault > Settings > Account > Delete account and data`; the public route
+  remains on the prior wording until the reviewed site change is deployed and
+  its response is re-verified.
 
 - [ ] Privacy notice names the accountable controller and jurisdiction.
 - [ ] Privacy notice lists actual data categories, purposes, processors,
@@ -253,7 +254,10 @@ therefore retain separate, recorded approvals:
 3. `Approve migration 008 after migration 007 verification` — activates
    cross-export/Evidence retained-byte accounting and aggregate readiness
    signals after its final review and database tests pass.
-4. `Approve Supabase SSL enforcement after migration verification` — changes
+4. `Approve Edge API deployment after migration 008 verification` — deploys
+   the current API source and runs the live signed-read plus authenticated
+   sync/upload/export probes.
+5. `Approve Supabase SSL enforcement after migration verification` — changes
    the production database connection requirement.
 
 These approvals are sequential. A dry run or unit test does not replace the
