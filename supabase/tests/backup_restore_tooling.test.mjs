@@ -61,6 +61,12 @@ import {
   assertServiceRoleKey,
   createStorageClient
 } from "../scripts/backup-storage-rest.mjs";
+import {
+  backupMonitorFailureCanary,
+  evaluateBackupFreshness,
+  inspectBackupFreshness,
+  validateFreshnessHours
+} from "../scripts/backup-monitor.mjs";
 
 const FIXED_KEY = createHash("sha256")
   .update("heldat deterministic backup test key")
@@ -1756,7 +1762,7 @@ test("Storage adapter backs up private buckets, recursively enumerates objects, 
   );
 });
 
-test("CLI advertises backup, verification, restore, retention, and requires explicit mutation mode", () => {
+test("CLI advertises backup, restore, retention, freshness, and explicit mutation modes", () => {
   const cli = path.resolve(
     "supabase/scripts/heldat-backup.mjs"
   );
@@ -1770,6 +1776,8 @@ test("CLI advertises backup, verification, restore, retention, and requires expl
     Object.keys(helpBody.commands).sort(),
     [
       "backup",
+      "freshness",
+      "freshness-canary",
       "restore",
       "retention",
       "verify",
@@ -2016,4 +2024,129 @@ test("CLI backup and restore dry runs are credential-validated but network-free 
     (await readdir(fixtureDestination)).sort(),
     before
   );
+});
+
+test("backup freshness uses authenticated completion time and strict bounds", () => {
+  assert.equal(validateFreshnessHours("30"), 30);
+  assert.throws(
+    () => validateFreshnessHours(0),
+    (error) => error.code === "INVALID_FRESHNESS_WINDOW"
+  );
+  assert.throws(
+    () => validateFreshnessHours(8_785),
+    (error) => error.code === "INVALID_FRESHNESS_WINDOW"
+  );
+
+  const fresh = evaluateBackupFreshness({
+    backupId: FIXED_BACKUP_ID,
+    completedAt: "2026-07-31T12:35:00.000Z",
+    maxAgeHours: 1,
+    now: new Date("2026-07-31T13:34:59.000Z")
+  });
+  assert.equal(fresh.status, "fresh");
+  assert.equal(fresh.ageSeconds, 3_599);
+  assert.equal(fresh.maxAgeSeconds, 3_600);
+
+  assert.throws(
+    () =>
+      evaluateBackupFreshness({
+        backupId: FIXED_BACKUP_ID,
+        completedAt: "2026-07-31T12:35:00.000Z",
+        maxAgeHours: 1,
+        now: new Date("2026-07-31T13:35:01.000Z")
+      }),
+    (error) => error.code === "BACKUP_FRESHNESS_EXCEEDED"
+  );
+  assert.throws(
+    () =>
+      evaluateBackupFreshness({
+        backupId: FIXED_BACKUP_ID,
+        completedAt: "2026-07-31T13:10:01.000Z",
+        maxAgeHours: 1,
+        now: new Date("2026-07-31T13:00:00.000Z")
+      }),
+    (error) => error.code === "BACKUP_COMPLETION_IN_FUTURE"
+  );
+});
+
+test("backup freshness authenticates the latest committed backup", async () => {
+  const destinationRoot = await mkdtemp(
+    path.join(tmpdir(), "heldat-backup-freshness-")
+  );
+  const adapter = new LocalDestinationAdapter({
+    destinationRoot,
+    projectRoot: path.resolve(".")
+  });
+  try {
+    await writeFixtureBackup(adapter);
+    const progress = [];
+    const result = await inspectBackupFreshness({
+      adapter,
+      key: FIXED_KEY,
+      maxAgeHours: 1,
+      now: new Date("2026-07-31T13:00:00.000Z"),
+      verifyArtifacts: true,
+      onProgress: (event) => progress.push(event.step)
+    });
+    assert.equal(result.backupId, FIXED_BACKUP_ID);
+    assert.equal(result.status, "fresh");
+    assert.equal(result.artifactsVerified, true);
+    assert.equal(result.committedBackupsSeen, 1);
+    assert.deepEqual(progress, [
+      "freshness-list",
+      "freshness-authenticate"
+    ]);
+  } finally {
+    await rm(destinationRoot, { recursive: true, force: true });
+  }
+});
+
+test("backup freshness fails closed for an empty destination", async () => {
+  const destinationRoot = await mkdtemp(
+    path.join(tmpdir(), "heldat-backup-empty-")
+  );
+  const adapter = new LocalDestinationAdapter({
+    destinationRoot,
+    projectRoot: path.resolve(".")
+  });
+  try {
+    await assert.rejects(
+      inspectBackupFreshness({
+        adapter,
+        key: FIXED_KEY,
+        maxAgeHours: 30
+      }),
+      (error) => error.code === "NO_COMMITTED_BACKUP"
+    );
+  } finally {
+    await rm(destinationRoot, { recursive: true, force: true });
+  }
+});
+
+test("backup monitor exposes a deterministic failure-delivery canary", () => {
+  assert.throws(
+    () =>
+      backupMonitorFailureCanary(
+        new Date("2026-07-31T15:00:00.000Z")
+      ),
+    (error) =>
+      error.code === "BACKUP_MONITOR_CANARY_FAILURE" &&
+      error.message.includes("2026-07-31T15:00:00.000Z")
+  );
+
+  const cli = path.resolve(
+    "supabase/scripts/heldat-backup.mjs"
+  );
+  const canary = spawnSync(
+    process.execPath,
+    [cli, "freshness", "--failure-canary"],
+    { encoding: "utf8", windowsHide: true }
+  );
+  assert.equal(canary.status, 1);
+  const failure = JSON.parse(canary.stderr);
+  assert.equal(
+    failure.error.code,
+    "BACKUP_MONITOR_CANARY_FAILURE"
+  );
+  assert.equal(canary.stdout, "");
 });

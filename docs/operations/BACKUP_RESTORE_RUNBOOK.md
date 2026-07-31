@@ -348,6 +348,7 @@ node supabase/scripts/heldat-backup.mjs backup --execute
 node supabase/scripts/heldat-backup.mjs verify --backup-id BACKUP_ID
 copy the encrypted committed directory to independent storage
 verify the independent copy
+node supabase/scripts/heldat-backup.mjs freshness --max-age-hours 30 --verify-artifacts
 ```
 
 The runner must retain no workspace, process environment, or command log after
@@ -370,6 +371,45 @@ Record only: backup identifier, UTC time, tool versions, destination generation,
 verification result, restore-drill result, and operator role. Do not record URLs
 containing credentials, service-role keys, encryption keys, object names, or
 decrypted manifests.
+
+## Freshness and failure-delivery monitoring
+
+The monitor authenticates every committed completion envelope, decrypts and
+validates the newest manifest, and compares the authenticated `completedAt`
+timestamp with a bounded age policy. It fails closed when the destination is
+empty, an envelope or manifest is invalid, the newest completion time is too
+old, or the completion time is unreasonably ahead of the runner clock.
+
+```powershell
+$env:HELDAT_BACKUP_DESTINATION = 'local:D:\HeldatBackups'
+$env:HELDAT_BACKUP_MAX_AGE_HOURS = '30'
+$env:HELDAT_BACKUP_ENCRYPTION_KEY_BASE64 = '<read from the approved secret manager>'
+
+# Lightweight scheduled check: authenticated envelope + manifest.
+node supabase/scripts/heldat-backup.mjs freshness
+
+# Periodic deep check: also decrypt and authenticate every database and
+# private-Storage artifact in the newest backup.
+node supabase/scripts/heldat-backup.mjs freshness --verify-artifacts
+```
+
+A successful check emits one JSON document containing `backupId`,
+`completedAt`, `checkedAt`, `ageSeconds`, `maxAgeSeconds`,
+`committedBackupsSeen`, `artifactsVerified`, and `status: fresh`. It never emits
+the encryption key, database URL, service-role key, object names or decrypted
+manifest.
+
+Wire every nonzero exit to the on-call alert route. Test that route deliberately
+with the secret-free failure canary:
+
+```powershell
+node supabase/scripts/heldat-backup.mjs freshness --failure-canary
+```
+
+The canary exits nonzero with code `BACKUP_MONITOR_CANARY_FAILURE`. Record the
+runner timestamp, alert receipt timestamp and acknowledgement timestamp. The
+canary proves alert delivery only; the next real freshness check must also pass
+before the backup gate is healthy.
 
 ## Clear process secrets
 

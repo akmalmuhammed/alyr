@@ -40,7 +40,8 @@ observability and support are separate launch gates.
 - Storage capture and restore are intentionally sequential and a failed job is
   restarted. There is no resumable remote multipart destination or measured
   retry envelope for projected 10K volume.
-- No repository scheduler, backup-freshness alarm, tested alert route or
+- The repository now has an authenticated backup-freshness check and an
+  intentional failure canary, but no deployed scheduler, tested alert route or
   dated real-provider restore drill currently proves recovery readiness.
 
 These are capacity and operations blockers, not defects hidden by the passing
@@ -57,6 +58,9 @@ unit suite.
 | Restore-to-production prevention | `assertNonProductionRestoreTarget` tests | Automated |
 | Offline artifact verification | `heldat-backup.mjs verify` | Implemented |
 | Retention survivor verification | `heldat-backup.mjs retention` | Implemented |
+| Authenticated backup-freshness check | `heldat-backup.mjs freshness` | Automated |
+| Deep latest-backup authentication | `heldat-backup.mjs freshness --verify-artifacts` | Automated |
+| Failure-delivery canary | `heldat-backup.mjs freshness --failure-canary` | Automated; alert route still pending |
 | CI regression gate | `.github/workflows/ci.yml` | Automated |
 | Operator procedure | `BACKUP_RESTORE_RUNBOOK.md` | Documented |
 

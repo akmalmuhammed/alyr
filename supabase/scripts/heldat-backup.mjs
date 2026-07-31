@@ -22,6 +22,10 @@ import {
   restoreOperatorBackup,
   verifyRestoredTarget
 } from "./backup-operations.mjs";
+import {
+  backupMonitorFailureCanary,
+  inspectBackupFreshness
+} from "./backup-monitor.mjs";
 import { createStorageClient } from "./backup-storage-rest.mjs";
 
 const scriptDirectory = path.dirname(fileURLToPath(import.meta.url));
@@ -45,7 +49,15 @@ function parseArguments(argv) {
         `Option --${name} was supplied more than once.`
       );
     }
-    if (["dry-run", "execute", "help"].includes(name)) {
+    if (
+      [
+        "dry-run",
+        "execute",
+        "failure-canary",
+        "help",
+        "verify-artifacts"
+      ].includes(name)
+    ) {
       options[name] = true;
       continue;
     }
@@ -88,6 +100,13 @@ function assertAllowedOptions(command, options) {
       "execute",
       "keep-count",
       "keep-days",
+      "help"
+    ]),
+    freshness: new Set([
+      "destination",
+      "max-age-hours",
+      "verify-artifacts",
+      "failure-canary",
       "help"
     ])
   };
@@ -324,6 +343,34 @@ async function retentionCommand(options) {
   });
 }
 
+async function freshnessCommand(options) {
+  if (options["failure-canary"] === true) {
+    if (Object.keys(options).some((name) => name !== "failure-canary")) {
+      throw new BackupError(
+        "INVALID_ARGUMENT",
+        "The freshness failure canary does not accept destination or verification options."
+      );
+    }
+    backupMonitorFailureCanary();
+  }
+
+  const key = loadEncryptionKey();
+  const adapter = destination(options);
+  const maxAgeHours = positiveInteger(
+    options["max-age-hours"],
+    process.env.HELDAT_BACKUP_MAX_AGE_HOURS ?? 30,
+    "max-age-hours"
+  );
+  const result = await inspectBackupFreshness({
+    adapter,
+    key,
+    maxAgeHours,
+    verifyArtifacts: options["verify-artifacts"] === true,
+    onProgress: progress
+  });
+  output({ action: "freshness", ...result });
+}
+
 function help() {
   output({
     commands: {
@@ -334,7 +381,11 @@ function help() {
       "verify-restore":
         "verify-restore --destination local:<absolute-path> --backup-id <id> (--dry-run|--execute) [--confirm-target non-production:<fingerprint>]",
       retention:
-        "retention --destination local:<absolute-path> (--dry-run|--execute) [--keep-count 7] [--keep-days 30]"
+        "retention --destination local:<absolute-path> (--dry-run|--execute) [--keep-count 7] [--keep-days 30]",
+      freshness:
+        "freshness --destination local:<absolute-path> [--max-age-hours 30] [--verify-artifacts]",
+      "freshness-canary":
+        "freshness --failure-canary"
     },
     encryptionKeyEnvironment: "HELDAT_BACKUP_ENCRYPTION_KEY_BASE64",
     note:
@@ -364,6 +415,9 @@ async function main() {
       break;
     case "retention":
       await retentionCommand(options);
+      break;
+    case "freshness":
+      await freshnessCommand(options);
       break;
     default:
       throw new BackupError("UNKNOWN_COMMAND", `Unknown command: ${command}.`);
