@@ -2,7 +2,7 @@ import {
   createClient,
   type SupabaseClient,
 } from "npm:@supabase/supabase-js@2.110.8";
-import { createHash } from "node:crypto";
+import { createHash, createHmac } from "node:crypto";
 import { apiError, corsHeaders, json } from "../_shared/http.ts";
 import {
   assessBlobHead,
@@ -44,6 +44,25 @@ const blobMaintenanceToken =
   "";
 const uuidPattern =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+const launchModeContract = "heldat-signup-mode-v1";
+const launchModeLifetimeMilliseconds = 5 * 60 * 1000;
+const launchModes = new Set([
+  "closed_pilot",
+  "public_email",
+  "public_email_google",
+]);
+type LaunchMode =
+  | "closed_pilot"
+  | "public_email"
+  | "public_email_google";
+type LaunchModeAttestation = {
+  readonly contract: typeof launchModeContract;
+  readonly signupMode: LaunchMode;
+  readonly configVersion: string;
+  readonly issuedAt: string;
+  readonly expiresAt: string;
+  readonly signature: string;
+};
 const allowedEvidenceMimeTypes = new Set([
   "application/msword",
   "application/pdf",
@@ -161,6 +180,142 @@ function serviceControlClient(): SupabaseClient | null {
       autoRefreshToken: false,
     },
   });
+}
+
+function normalizedConfigVersion(value: unknown): string | null {
+  const candidate = typeof value === "number"
+    ? Number.isSafeInteger(value) && value >= 1
+      ? String(value)
+      : ""
+    : typeof value === "string"
+    ? value
+    : "";
+  return /^[1-9][0-9]{0,18}$/u.test(candidate) ? candidate : null;
+}
+
+async function readLaunchMode(): Promise<{
+  readonly signupMode: LaunchMode;
+  readonly configVersion: string;
+} | null> {
+  const client = serviceControlClient();
+  if (!client) return null;
+  const { data, error } = await client.rpc("read_launch_enrollment_mode");
+  if (error?.code === "PGRST202") {
+    // Migration 007 deliberately remains approval-gated because its separate
+    // cron jobs can delete orphaned blobs. Until that reviewed migration is
+    // installed, the already-verified pilot may only stay closed; it can never
+    // fall forward into public registration.
+    return { signupMode: "closed_pilot", configVersion: "1" };
+  }
+  const row = Array.isArray(data) ? data[0] : data;
+  const signupMode = row?.signup_mode;
+  const configVersion = normalizedConfigVersion(row?.config_version);
+  if (
+    error ||
+    typeof signupMode !== "string" ||
+    !launchModes.has(signupMode) ||
+    !configVersion
+  ) {
+    return null;
+  }
+  return {
+    signupMode: signupMode as LaunchMode,
+    configVersion,
+  };
+}
+
+function launchModeMessage(
+  value: Omit<LaunchModeAttestation, "signature">,
+): string {
+  return [
+    value.contract,
+    value.signupMode,
+    value.configVersion,
+    value.issuedAt,
+    value.expiresAt,
+  ].join("\n");
+}
+
+function signLaunchMode(
+  value: Omit<LaunchModeAttestation, "signature">,
+): string {
+  return createHmac("sha256", supabaseServiceRoleKey)
+    .update(launchModeMessage(value), "utf8")
+    .digest("hex");
+}
+
+function constantTimeHexMatch(expected: string, candidate: string): boolean {
+  if (!/^[a-f0-9]{64}$/u.test(expected) || !/^[a-f0-9]{64}$/u.test(candidate)) {
+    return false;
+  }
+  const expectedHash = createHash("sha256").update(expected).digest();
+  const candidateHash = createHash("sha256").update(candidate).digest();
+  let difference = 0;
+  for (let index = 0; index < expectedHash.byteLength; index += 1) {
+    difference |= (expectedHash[index] ?? 0) ^ (candidateHash[index] ?? 0);
+  }
+  expectedHash.fill(0);
+  candidateHash.fill(0);
+  return difference === 0;
+}
+
+function parseLaunchModeAttestation(value: unknown): LaunchModeAttestation | null {
+  if (typeof value !== "object" || value === null || Array.isArray(value)) {
+    return null;
+  }
+  const candidate = value as Record<string, unknown>;
+  if (
+    !hasOnlyKeys(candidate, [
+      "contract",
+      "signupMode",
+      "configVersion",
+      "issuedAt",
+      "expiresAt",
+      "signature",
+    ]) ||
+    candidate.contract !== launchModeContract ||
+    typeof candidate.signupMode !== "string" ||
+    !launchModes.has(candidate.signupMode) ||
+    normalizedConfigVersion(candidate.configVersion) !== candidate.configVersion ||
+    typeof candidate.issuedAt !== "string" ||
+    typeof candidate.expiresAt !== "string" ||
+    typeof candidate.signature !== "string" ||
+    !/^[a-f0-9]{64}$/u.test(candidate.signature)
+  ) {
+    return null;
+  }
+  const issuedAt = Date.parse(candidate.issuedAt);
+  const expiresAt = Date.parse(candidate.expiresAt);
+  if (
+    Number.isNaN(issuedAt) ||
+    Number.isNaN(expiresAt) ||
+    expiresAt <= Date.now() ||
+    issuedAt > Date.now() + 30_000 ||
+    expiresAt - issuedAt !== launchModeLifetimeMilliseconds
+  ) {
+    return null;
+  }
+  return candidate as unknown as LaunchModeAttestation;
+}
+
+async function launchModeAttestationIsCurrent(
+  value: unknown,
+  allowedModes: ReadonlySet<LaunchMode>,
+): Promise<boolean> {
+  const attestation = parseLaunchModeAttestation(value);
+  if (!attestation || !allowedModes.has(attestation.signupMode)) return false;
+  const current = await readLaunchMode();
+  if (
+    !current ||
+    current.signupMode !== attestation.signupMode ||
+    current.configVersion !== attestation.configVersion
+  ) {
+    return false;
+  }
+  return constantTimeHexMatch(
+    signLaunchMode(attestation),
+    attestation.signature,
+  );
 }
 
 function maintenanceTokenMatches(candidate: string): boolean {
@@ -398,6 +553,50 @@ async function handleBlobMaintenance(request: Request): Promise<Response> {
     released,
     completionFailed,
   }, completionFailed > 0 || released > 0 ? 503 : 200);
+}
+
+async function handleSyncMaintenance(request: Request): Promise<Response> {
+  const suppliedToken =
+    request.headers.get("X-Heldat-Maintenance-Token") ??
+    request.headers.get("X-ALYR-Maintenance-Token") ??
+    "";
+  if (!maintenanceTokenMatches(suppliedToken)) {
+    return apiError(
+      "AUTHORIZATION_DENIED",
+      "Sync maintenance authorization failed.",
+      403,
+    );
+  }
+
+  const client = serviceControlClient();
+  if (client === null) {
+    return apiError(
+      "STORAGE_UNAVAILABLE",
+      "Sync maintenance is not configured.",
+      503,
+      true,
+    );
+  }
+
+  const { data, error } = await client.rpc("maintain_due_sync_households", {
+    p_limit: 20,
+    p_due_interval: "24 hours",
+  });
+  if (
+    error !== null ||
+    typeof data !== "object" ||
+    data === null ||
+    Array.isArray(data)
+  ) {
+    return apiError(
+      "STORAGE_UNAVAILABLE",
+      "Sync retention could not be completed.",
+      503,
+      true,
+    );
+  }
+
+  return json(data);
 }
 
 function rateLimitResponse(
@@ -815,6 +1014,41 @@ async function handleProductEvent(
   }, 202);
 }
 
+async function handleSignupMode(): Promise<Response> {
+  if (!supabaseUrl || !supabaseServiceRoleKey) {
+    return apiError(
+      "STORAGE_UNAVAILABLE",
+      "Account registration availability is temporarily unavailable.",
+      503,
+      true,
+    );
+  }
+  const current = await readLaunchMode();
+  if (!current) {
+    return apiError(
+      "STORAGE_UNAVAILABLE",
+      "Account registration availability is temporarily unavailable.",
+      503,
+      true,
+    );
+  }
+  const issuedAtDate = new Date();
+  const launchMode: Omit<LaunchModeAttestation, "signature"> = {
+    contract: launchModeContract,
+    signupMode: current.signupMode,
+    configVersion: current.configVersion,
+    issuedAt: issuedAtDate.toISOString(),
+    expiresAt: new Date(
+      issuedAtDate.getTime() + launchModeLifetimeMilliseconds,
+    ).toISOString(),
+  };
+  return json({
+    apiVersion: 1,
+    ...launchMode,
+    signature: signLaunchMode(launchMode),
+  });
+}
+
 async function handlePilotPreflight(request: Request): Promise<Response> {
   if (!supabaseUrl || !supabaseServiceRoleKey) {
     return apiError(
@@ -833,7 +1067,12 @@ async function handlePilotPreflight(request: Request): Promise<Response> {
     ? body.accessCode.trim().toUpperCase().replace(/[\s-]+/gu, "")
     : "";
   if (
-    !hasOnlyKeys(body, ["apiVersion", "email", "accessCode"]) ||
+    !hasOnlyKeys(body, [
+      "apiVersion",
+      "email",
+      "accessCode",
+      "launchMode",
+    ]) ||
     email.length < 3 ||
     email.length > 254 ||
     !email.includes("@") ||
@@ -845,6 +1084,19 @@ async function handlePilotPreflight(request: Request): Promise<Response> {
       "AUTHORIZATION_DENIED",
       "This pilot invitation is not available.",
       403,
+    );
+  }
+  if (
+    !await launchModeAttestationIsCurrent(
+      body.launchMode,
+      new Set<LaunchMode>(["closed_pilot"]),
+    )
+  ) {
+    return apiError(
+      "CONFLICT_REQUIRES_REVIEW",
+      "Refresh account registration availability and try again.",
+      409,
+      true,
     );
   }
 
@@ -923,7 +1175,12 @@ async function handlePublicSignupPreflight(
       ? body.idempotencyKey.trim().toLowerCase()
       : "";
   if (
-    !hasOnlyKeys(body, ["apiVersion", "email", "idempotencyKey"]) ||
+    !hasOnlyKeys(body, [
+      "apiVersion",
+      "email",
+      "idempotencyKey",
+      "launchMode",
+    ]) ||
     email.length < 3 ||
     email.length > 254 ||
     !/^[^\s@]+@[^\s@]+\.[^\s@]+$/u.test(email) ||
@@ -933,6 +1190,19 @@ async function handlePublicSignupPreflight(
       "VALIDATION_FAILED",
       "Enter a valid email address and retry identity.",
       400,
+    );
+  }
+  if (
+    !await launchModeAttestationIsCurrent(
+      body.launchMode,
+      new Set<LaunchMode>(["public_email", "public_email_google"]),
+    )
+  ) {
+    return apiError(
+      "CONFLICT_REQUIRES_REVIEW",
+      "Refresh account registration availability and try again.",
+      409,
+      true,
     );
   }
 
@@ -2944,6 +3214,12 @@ async function dispatchRequest(
     if (networkLimit) return networkLimit;
 
     if (
+      request.method === "GET" &&
+      path === "/signup/mode"
+    ) {
+      return await handleSignupMode();
+    }
+    if (
       request.method === "POST" &&
       path === "/signup/preflight"
     ) {
@@ -2972,6 +3248,12 @@ async function dispatchRequest(
       path === "/maintenance/blobs"
     ) {
       return await handleBlobMaintenance(request);
+    }
+    if (
+      request.method === "POST" &&
+      path === "/maintenance/sync"
+    ) {
+      return await handleSyncMaintenance(request);
     }
 
     const context = await authenticate(request);

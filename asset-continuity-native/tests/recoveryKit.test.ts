@@ -228,6 +228,37 @@ function expectCode(
   );
 }
 
+function replaceHeaderNumber(
+  container: Uint8Array,
+  key: "memoryKiB" | "iterations" | "parallelism",
+  current: number,
+  replacement: number
+): Uint8Array {
+  const headerLength = NodeBuffer.from(
+    container.slice(10, 14)
+  ).readUInt32BE(0);
+  const headerOffset = 18;
+  const headerEnd = headerOffset + headerLength;
+  const header = NodeBuffer.from(
+    container.slice(headerOffset, headerEnd)
+  ).toString("utf8");
+  const currentField = `"${key}":${current}`;
+  const replacementField = `"${key}":${replacement}`;
+  if (
+    !header.includes(currentField) ||
+    currentField.length !== replacementField.length
+  ) {
+    throw new Error(`Recovery Kit test header is missing ${currentField}.`);
+  }
+  const replacementHeader = header.replace(
+    currentField,
+    replacementField
+  );
+  const result = container.slice();
+  result.set(NodeBuffer.from(replacementHeader, "utf8"), headerOffset);
+  return result;
+}
+
 describe("Heldat Recovery Kit v1", () => {
   test("round-trips a canonical workspace, vault key, and protected bytes", async () => {
     const artifact = await createRecoveryKit(
@@ -404,6 +435,36 @@ describe("Heldat Recovery Kit v1", () => {
       "INVALID_PASSPHRASE"
     );
   });
+
+  test.each([
+    ["memoryKiB", 65_536, 65_537],
+    ["iterations", 3, 4],
+    ["parallelism", 1, 2]
+  ] as const)(
+    "rejects a non-v1 Argon2 %s profile before invoking the KDF",
+    async (field, current, replacement) => {
+      const artifact = await createRecoveryKit(
+        request(),
+        PASSPHRASE,
+        new DeterministicTestCrypto(),
+        reader()
+      );
+      const modified = replaceHeaderNumber(
+        artifact.bytes,
+        field,
+        current,
+        replacement
+      );
+      const crypto = new DeterministicTestCrypto();
+      const deriveKey = jest.spyOn(crypto, "deriveKey");
+
+      await expectCode(
+        openRecoveryKit(modified, PASSPHRASE, crypto),
+        "CORRUPT_CONTAINER"
+      );
+      expect(deriveKey).not.toHaveBeenCalled();
+    }
+  );
 
   test("Expo adapter is explicitly gated without Argon2id", async () => {
     await expectCode(

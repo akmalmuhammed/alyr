@@ -62,15 +62,6 @@ const DEFAULT_KDF = Object.freeze({
   keyBytes: 32 as const
 });
 
-const KDF_LIMITS = Object.freeze({
-  minMemoryKiB: 65_536,
-  maxMemoryKiB: 262_144,
-  minIterations: 3,
-  maxIterations: 10,
-  minParallelism: 1,
-  maxParallelism: 4
-});
-
 interface ContainerHeader {
   readonly format: "alyr-recovery-kit";
   readonly containerVersion: 1;
@@ -799,21 +790,9 @@ function parseContainerHeader(value: unknown): ContainerHeader {
     value.kdf.algorithm !== "argon2id" ||
     typeof value.kdf.salt !== "string" ||
     value.kdf.keyBytes !== 32 ||
-    !isSafeIntegerInRange(
-      value.kdf.memoryKiB,
-      KDF_LIMITS.minMemoryKiB,
-      KDF_LIMITS.maxMemoryKiB
-    ) ||
-    !isSafeIntegerInRange(
-      value.kdf.iterations,
-      KDF_LIMITS.minIterations,
-      KDF_LIMITS.maxIterations
-    ) ||
-    !isSafeIntegerInRange(
-      value.kdf.parallelism,
-      KDF_LIMITS.minParallelism,
-      KDF_LIMITS.maxParallelism
-    )
+    value.kdf.memoryKiB !== DEFAULT_KDF.memoryKiB ||
+    value.kdf.iterations !== DEFAULT_KDF.iterations ||
+    value.kdf.parallelism !== DEFAULT_KDF.parallelism
   ) {
     corrupt("Recovery Kit header is invalid or uses unsupported parameters.");
   }

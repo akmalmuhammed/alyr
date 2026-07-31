@@ -89,6 +89,13 @@ test("auth allow-list matches the native callback scheme", () => {
   assert.doesNotMatch(config, /"alyr:\/\//);
 });
 
+test("unimplemented TOTP enrollment and verification stay disabled", () => {
+  assert.match(
+    config,
+    /\[auth\.mfa\.totp\]\s+enroll_enabled = false\s+verify_enabled = false/u,
+  );
+});
+
 test("closed-pilot signup is preflighted before account creation", () => {
   assert.match(
     pilotSignupMigration,

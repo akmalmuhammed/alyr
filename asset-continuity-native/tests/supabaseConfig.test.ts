@@ -23,6 +23,10 @@ describe("signed Supabase public configuration", () => {
         publishableKey: `sb_publishable_${"a".repeat(24)}`,
         apiBaseUrl:
           "https://project-ref.supabase.co/functions/v1/api",
+        signupModeEndpoint:
+          "https://project-ref.supabase.co/functions/v1/api/signup/mode",
+        publicSignupEndpoint:
+          "https://project-ref.supabase.co/functions/v1/api/signup/preflight",
         pilotAccessEndpoint:
           "https://project-ref.supabase.co/functions/v1/api/pilot/preflight",
         householdInviteAccessEndpoint:

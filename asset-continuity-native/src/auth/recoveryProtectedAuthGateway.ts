@@ -174,6 +174,13 @@ export function createRecoveryProtectedAuthGateway(
 
   const gateway: AccountAuthGateway = {
     mode: base.mode,
+    ...(base.readSignupMode
+      ? {
+          readSignupMode() {
+            return base.readSignupMode!();
+          }
+        }
+      : {}),
     currentSession,
     ...(base.refreshSession
       ? {

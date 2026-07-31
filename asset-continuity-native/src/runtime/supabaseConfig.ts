@@ -11,6 +11,8 @@ export interface SignedSupabaseConfiguration {
   readonly projectUrl: string;
   readonly publishableKey: string;
   readonly apiBaseUrl: string;
+  readonly signupModeEndpoint: string;
+  readonly publicSignupEndpoint: string;
   readonly pilotAccessEndpoint: string;
   readonly householdInviteAccessEndpoint: string;
   readonly emailRedirectTo: "heldat://callback";
@@ -104,6 +106,10 @@ export function decideSignedSupabaseRuntime(
       projectUrl,
       publishableKey: publicKey,
       apiBaseUrl: `${projectUrl}/functions/v1/api`,
+      signupModeEndpoint:
+        `${projectUrl}/functions/v1/api/signup/mode`,
+      publicSignupEndpoint:
+        `${projectUrl}/functions/v1/api/signup/preflight`,
       pilotAccessEndpoint:
         `${projectUrl}/functions/v1/api/pilot/preflight`,
       householdInviteAccessEndpoint:

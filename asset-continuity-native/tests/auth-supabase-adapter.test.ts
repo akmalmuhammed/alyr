@@ -70,24 +70,67 @@ function clientWith(
   };
 }
 
-const pilotPreflightFetch = jest.fn(async () => ({
-  ok: true,
-  status: 200,
-  json: async () => ({
-    apiVersion: 1,
-    enrollmentGrant: "a".repeat(64),
-    expiresAt: "2026-07-27T10:10:00.000Z"
-  })
-})) as unknown as typeof fetch;
+const closedSignupMode = {
+  apiVersion: 1,
+  contract: "heldat-signup-mode-v1",
+  signupMode: "closed_pilot",
+  configVersion: "1",
+  issuedAt: "2026-07-27T10:00:00.000Z",
+  expiresAt: "2026-07-27T10:05:00.000Z",
+  signature: "c".repeat(64)
+} as const;
+
+const signupModeAttestation = {
+  contract: closedSignupMode.contract,
+  signupMode: closedSignupMode.signupMode,
+  configVersion: closedSignupMode.configVersion,
+  issuedAt: closedSignupMode.issuedAt,
+  expiresAt: closedSignupMode.expiresAt,
+  signature: closedSignupMode.signature
+} as const;
+
+function jsonResponse(
+  body: unknown,
+  status = 200,
+  cacheControl = "no-store"
+): Response {
+  return {
+    ok: status >= 200 && status < 300,
+    status,
+    headers: {
+      get: (name: string) =>
+        name.toLowerCase() === "cache-control"
+          ? cacheControl
+          : null
+    },
+    json: async () => body
+  } as unknown as Response;
+}
+
+const pilotPreflightFetch = jest.fn(async (endpoint: RequestInfo | URL) =>
+  String(endpoint).endsWith("/signup/mode")
+    ? jsonResponse(closedSignupMode)
+    : jsonResponse({
+        apiVersion: 1,
+        enrollmentGrant: "a".repeat(64),
+        expiresAt: "2026-07-27T10:10:00.000Z"
+      })
+) as unknown as typeof fetch;
 
 const options = {
   emailRedirectTo: "heldat://callback",
+  signupModeEndpoint:
+    "https://project-ref.supabase.co/functions/v1/api/signup/mode",
+  publicSignupEndpoint:
+    "https://project-ref.supabase.co/functions/v1/api/signup/preflight",
   pilotAccessEndpoint:
     "https://project-ref.supabase.co/functions/v1/api/pilot/preflight",
   householdInviteAccessEndpoint:
     "https://project-ref.supabase.co/functions/v1/api/invites/preflight",
   publicApiKey: `sb_publishable_${"a".repeat(24)}`,
   fetchImpl: pilotPreflightFetch,
+  createIdempotencyKey: () =>
+    "00000000-0000-4000-8000-000000000001",
   passwordRecoveryRedirectTo: "heldat://reset-password",
   now: () => new Date("2026-07-27T10:00:00.000Z")
 };
@@ -141,7 +184,8 @@ describe("Supabase auth adapter contract", () => {
         body: JSON.stringify({
           apiVersion: 1,
           email: "owner@example.com",
-          accessCode: "ALYRAAAABBBBCCCC"
+          accessCode: "ALYRAAAABBBBCCCC",
+          launchMode: signupModeAttestation
         })
       })
     );
@@ -149,7 +193,9 @@ describe("Supabase auth adapter contract", () => {
 
   it("does not call Supabase signup before a pilot credential is present", async () => {
     const client = clientWith();
-    const fetchImpl = jest.fn() as unknown as typeof fetch;
+    const fetchImpl = jest.fn(async () =>
+      jsonResponse(closedSignupMode)
+    ) as unknown as typeof fetch;
     const gateway = createSupabaseAuthGateway(client, {
       ...options,
       fetchImpl
@@ -168,21 +214,23 @@ describe("Supabase auth adapter contract", () => {
         retryable: false
       }
     });
-    expect(fetchImpl).not.toHaveBeenCalled();
+    expect(fetchImpl).toHaveBeenCalledTimes(1);
+    expect(fetchImpl).toHaveBeenCalledWith(
+      options.signupModeEndpoint,
+      expect.objectContaining({ method: "GET", redirect: "error" })
+    );
     expect(client.auth.signUp).not.toHaveBeenCalled();
   });
 
   it("uses an email-bound household invitation grant without an operator pilot code", async () => {
     const client = clientWith();
-    const fetchImpl = jest.fn(async () => ({
-      ok: true,
-      status: 200,
-      json: async () => ({
+    const fetchImpl = jest.fn(async () =>
+      jsonResponse({
         apiVersion: 1,
         enrollmentGrant: "b".repeat(64),
         expiresAt: "2026-07-27T10:10:00.000Z"
       })
-    })) as unknown as typeof fetch;
+    ) as unknown as typeof fetch;
     const gateway = createSupabaseAuthGateway(client, {
       ...options,
       fetchImpl
@@ -224,13 +272,11 @@ describe("Supabase auth adapter contract", () => {
 
   it("fails closed on an invalid household invitation before identity creation", async () => {
     const client = clientWith();
-    const fetchImpl = jest.fn(async () => ({
-      ok: false,
-      status: 403,
-      json: async () => ({
+    const fetchImpl = jest.fn(async () =>
+      jsonResponse({
         error: { code: "AUTHORIZATION_DENIED" }
-      })
-    })) as unknown as typeof fetch;
+      }, 403)
+    ) as unknown as typeof fetch;
     const gateway = createSupabaseAuthGateway(client, {
       ...options,
       fetchImpl
@@ -254,15 +300,13 @@ describe("Supabase auth adapter contract", () => {
 
   it("fails closed when the pilot credential is denied", async () => {
     const client = clientWith();
-    const fetchImpl = jest.fn(async () => ({
-      ok: false,
-      status: 403,
-      json: async () => ({
-        error: {
-          code: "AUTHORIZATION_DENIED"
-        }
-      })
-    })) as unknown as typeof fetch;
+    const fetchImpl = jest.fn(async (endpoint: RequestInfo | URL) =>
+      String(endpoint) === options.signupModeEndpoint
+        ? jsonResponse(closedSignupMode)
+        : jsonResponse({
+            error: { code: "AUTHORIZATION_DENIED" }
+          }, 403)
+    ) as unknown as typeof fetch;
     const gateway = createSupabaseAuthGateway(client, {
       ...options,
       fetchImpl
@@ -312,15 +356,15 @@ describe("Supabase auth adapter contract", () => {
 
   it("rejects a malformed pilot acknowledgement before Supabase signup", async () => {
     const client = clientWith();
-    const fetchImpl = jest.fn(async () => ({
-      ok: true,
-      status: 200,
-      json: async () => ({
-        apiVersion: 1,
-        enrollmentGrant: "not-a-server-grant",
-        expiresAt: "2026-07-27T10:10:00.000Z"
-      })
-    })) as unknown as typeof fetch;
+    const fetchImpl = jest.fn(async (endpoint: RequestInfo | URL) =>
+      String(endpoint) === options.signupModeEndpoint
+        ? jsonResponse(closedSignupMode)
+        : jsonResponse({
+            apiVersion: 1,
+            enrollmentGrant: "not-a-server-grant",
+            expiresAt: "2026-07-27T10:10:00.000Z"
+          })
+    ) as unknown as typeof fetch;
     const gateway = createSupabaseAuthGateway(client, {
       ...options,
       fetchImpl
@@ -338,6 +382,161 @@ describe("Supabase auth adapter contract", () => {
         code: "unexpected",
         retryable: true
       }
+    });
+    expect(client.auth.signUp).not.toHaveBeenCalled();
+  });
+
+  it("creates a public email account without an early-access code only after an attested mode", async () => {
+    const client = clientWith();
+    const publicMode = {
+      ...closedSignupMode,
+      signupMode: "public_email" as const,
+      signature: "d".repeat(64)
+    };
+    const publicAttestation = {
+      contract: publicMode.contract,
+      signupMode: publicMode.signupMode,
+      configVersion: publicMode.configVersion,
+      issuedAt: publicMode.issuedAt,
+      expiresAt: publicMode.expiresAt,
+      signature: publicMode.signature
+    };
+    const fetchImpl = jest.fn(async (endpoint: RequestInfo | URL) =>
+      String(endpoint) === options.signupModeEndpoint
+        ? jsonResponse(publicMode)
+        : jsonResponse({
+            apiVersion: 1,
+            enrollmentGrant: "e".repeat(64),
+            expiresAt: "2026-07-27T10:10:00.000Z",
+            signupChannel: "heldat-public-email-v1"
+          })
+    ) as unknown as typeof fetch;
+    const gateway = createSupabaseAuthGateway(client, {
+      ...options,
+      fetchImpl
+    });
+
+    await expect(
+      gateway.signUp({
+        email: "owner@example.com",
+        password: "correct horse battery staple"
+      })
+    ).resolves.toMatchObject({
+      ok: true,
+      value: { kind: "confirmation-required" }
+    });
+    expect(fetchImpl).toHaveBeenCalledWith(
+      options.publicSignupEndpoint,
+      expect.objectContaining({
+        method: "POST",
+        body: JSON.stringify({
+          apiVersion: 1,
+          email: "owner@example.com",
+          idempotencyKey:
+            "00000000-0000-4000-8000-000000000001",
+          launchMode: publicAttestation
+        })
+      })
+    );
+    expect(client.auth.signUp).toHaveBeenCalledWith(
+      expect.objectContaining({
+        options: expect.objectContaining({
+          data: {
+            alyr_signup_channel: "heldat-public-email-v1",
+            public_signup_grant: "e".repeat(64)
+          }
+        })
+      })
+    );
+  });
+
+  it("invalidates and classifies a signup-mode conflict before identity creation", async () => {
+    const client = clientWith();
+    const publicMode = {
+      ...closedSignupMode,
+      signupMode: "public_email" as const,
+      signature: "d".repeat(64)
+    };
+    let modeRead = 0;
+    const fetchImpl = jest.fn(async (endpoint: RequestInfo | URL) => {
+      if (String(endpoint) === options.signupModeEndpoint) {
+        modeRead += 1;
+        return jsonResponse(modeRead === 1 ? publicMode : closedSignupMode);
+      }
+      return jsonResponse({
+        error: { code: "CONFLICT_REQUIRES_REVIEW" }
+      }, 409);
+    }) as unknown as typeof fetch;
+    const gateway = createSupabaseAuthGateway(client, {
+      ...options,
+      fetchImpl
+    });
+
+    await expect(
+      gateway.signUp({
+        email: "owner@example.com",
+        password: "correct horse battery staple"
+      })
+    ).resolves.toEqual({
+      ok: false,
+      error: {
+        code: "unexpected",
+        message: "Account registration availability changed. Try again.",
+        retryable: true,
+        reason: "signup_mode_changed"
+      }
+    });
+    expect(client.auth.signUp).not.toHaveBeenCalled();
+    await expect(gateway.readSignupMode?.()).resolves.toMatchObject({
+      ok: true,
+      value: { signupMode: "closed_pilot" }
+    });
+    expect(modeRead).toBe(2);
+  });
+
+  it.each([
+    {
+      name: "an unknown mode",
+      body: { ...closedSignupMode, signupMode: "unreviewed_mode" },
+      cacheControl: "no-store"
+    },
+    {
+      name: "a cacheable response",
+      body: closedSignupMode,
+      cacheControl: "public, max-age=300"
+    },
+    {
+      name: "an expired attestation",
+      body: {
+        ...closedSignupMode,
+        issuedAt: "2026-07-27T09:50:00.000Z",
+        expiresAt: "2026-07-27T09:55:00.000Z"
+      },
+      cacheControl: "no-store"
+    }
+  ])("fails closed for $name", async ({ body, cacheControl }) => {
+    const client = clientWith();
+    const fetchImpl = jest.fn(async () =>
+      jsonResponse(body, 200, cacheControl)
+    ) as unknown as typeof fetch;
+    const gateway = createSupabaseAuthGateway(client, {
+      ...options,
+      fetchImpl
+    });
+
+    await expect(gateway.readSignupMode?.()).resolves.toMatchObject({
+      ok: false,
+      error: { code: "unexpected", retryable: true }
+    });
+    await expect(
+      gateway.signUp({
+        email: "owner@example.com",
+        password: "correct horse battery staple",
+        pilotAccessCode: "ALYR-AAAA-BBBB-CCCC"
+      })
+    ).resolves.toMatchObject({
+      ok: false,
+      error: { code: "unexpected", retryable: true }
     });
     expect(client.auth.signUp).not.toHaveBeenCalled();
   });
@@ -363,7 +562,35 @@ describe("Supabase auth adapter contract", () => {
   });
 
   it("exchanges a PKCE confirmation code before exposing a session", async () => {
-    const client = clientWith();
+    const listeners = new Set<ProviderListener>();
+    const providerSession = {
+      user: user(true),
+      expires_at: 1_800_000_000
+    };
+    const client = clientWith({
+      onAuthStateChange: jest.fn((listener) => {
+        listeners.add(listener);
+        return {
+          data: {
+            subscription: {
+              unsubscribe: () => listeners.delete(listener)
+            }
+          }
+        };
+      }),
+      exchangeCodeForSession: jest.fn(async () => {
+        listeners.forEach((listener) =>
+          listener("SIGNED_IN", providerSession)
+        );
+        return {
+          data: {
+            user: providerSession.user,
+            session: providerSession
+          },
+          error: null
+        };
+      })
+    });
     const gateway = createSupabaseAuthGateway(client, options);
     const result = await gateway.exchangeConfirmationCode("pkce-code");
 
@@ -376,6 +603,72 @@ describe("Supabase auth adapter contract", () => {
     expect(client.auth.exchangeCodeForSession).toHaveBeenCalledWith(
       "pkce-code"
     );
+    expect(client.auth.signOut).not.toHaveBeenCalled();
+    expect(listeners.size).toBe(0);
+  });
+
+  it("rejects and purges a PASSWORD_RECOVERY code sent to the generic callback", async () => {
+    const listeners = new Set<ProviderListener>();
+    const providerSession = {
+      user: user(true),
+      expires_at: 1_800_000_000
+    };
+    const client = clientWith({
+      onAuthStateChange: jest.fn((listener) => {
+        listeners.add(listener);
+        return {
+          data: {
+            subscription: {
+              unsubscribe: () => listeners.delete(listener)
+            }
+          }
+        };
+      }),
+      exchangeCodeForSession: jest.fn(async () => {
+        listeners.forEach((listener) =>
+          listener("PASSWORD_RECOVERY", providerSession)
+        );
+        return {
+          data: {
+            user: providerSession.user,
+            session: providerSession
+          },
+          error: null
+        };
+      }),
+      signOut: jest.fn(async () => {
+        listeners.forEach((listener) => listener("SIGNED_OUT", null));
+        return { data: {}, error: null };
+      })
+    });
+    const gateway = createSupabaseAuthGateway(client, options);
+    const globallyObserved = jest.fn();
+    gateway.onSessionChanged(globallyObserved);
+
+    await expect(
+      gateway.exchangeConfirmationCode("recovery-code-on-callback")
+    ).resolves.toMatchObject({
+      ok: false,
+      error: { code: "invalid_request", retryable: false }
+    });
+    expect(client.auth.signOut).toHaveBeenCalledWith({ scope: "local" });
+    expect(globallyObserved).toHaveBeenCalledWith(null);
+    expect(globallyObserved).not.toHaveBeenCalledWith(
+      expect.objectContaining({ identity: expect.anything() })
+    );
+  });
+
+  it("purges a callback session whose provider event was not observed", async () => {
+    const client = clientWith();
+    const gateway = createSupabaseAuthGateway(client, options);
+
+    await expect(
+      gateway.exchangeConfirmationCode("unclassified-pkce-code")
+    ).resolves.toMatchObject({
+      ok: false,
+      error: { code: "unexpected", retryable: true }
+    });
+    expect(client.auth.signOut).toHaveBeenCalledWith({ scope: "local" });
   });
 
   it("requires a PASSWORD_RECOVERY event and consumes its grant exactly once", async () => {

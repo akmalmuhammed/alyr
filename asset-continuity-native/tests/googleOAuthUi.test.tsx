@@ -13,6 +13,7 @@ const mockRouter = {
   replace: jest.fn()
 };
 let mockAuthState: Record<string, unknown>;
+let mockGoogleOAuthSupported = true;
 
 jest.mock("expo-router", () => ({
   useRouter: () => mockRouter
@@ -20,6 +21,10 @@ jest.mock("expo-router", () => ({
 
 jest.mock("@/auth/AuthFlowProvider", () => ({
   useAuthFlow: () => mockAuthState
+}));
+
+jest.mock("@/auth/oauthProviderPolicy", () => ({
+  canOfferGoogleOAuth: () => mockGoogleOAuthSupported
 }));
 
 jest.mock("@/i18n/LocaleProvider", () => ({
@@ -66,6 +71,7 @@ describe("Google OAuth sign-in entry", () => {
   beforeEach(() => {
     jest.clearAllMocks();
     mockAuthState = signedAuthState();
+    mockGoogleOAuthSupported = true;
   });
 
   it("offers a localized signed-build entry and continues through the existing callback", async () => {
@@ -88,5 +94,13 @@ describe("Google OAuth sign-in entry", () => {
     const screen = await render(<SignInScreen />);
 
     expect(screen.queryByText("Continue with Google")).toBeNull();
+  });
+
+  it("keeps Google OAuth out of iOS until Apple login parity is configured", async () => {
+    mockGoogleOAuthSupported = false;
+    const screen = await render(<SignInScreen />);
+
+    expect(screen.queryByText("Continue with Google")).toBeNull();
+    expect(screen.getByText("Email")).toBeTruthy();
   });
 });

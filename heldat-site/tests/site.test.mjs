@@ -6,6 +6,10 @@ import test from "node:test";
 
 const root = new URL("../public/", import.meta.url);
 const read = (path) => readFile(new URL(path, root), "utf8");
+const productionWranglerUrl = new URL(
+  "../wrangler.jsonc",
+  import.meta.url
+);
 
 const requiredFiles = [
   "index.html",
@@ -169,6 +173,19 @@ test("worker sets baseline security headers and canonical www redirect", async (
   );
   assert.match(worker, /ACCOUNT_CONTINUATION_SCRIPT/);
   assert.match(worker, /headers\.set\("Cache-Control", "no-store"\)/);
+});
+
+test("production observability excludes automatic request invocation logs", async () => {
+  const wrangler = JSON.parse(
+    await readFile(productionWranglerUrl, "utf8")
+  );
+  assert.equal(wrangler.observability?.enabled, true);
+  assert.equal(wrangler.observability?.logs?.enabled, true);
+  assert.equal(
+    wrangler.observability?.logs?.invocation_logs,
+    false,
+    "query strings and request metadata must not enter automatic invocation logs"
+  );
 });
 
 test("account fallback pages preserve signed continuation parameters", async () => {

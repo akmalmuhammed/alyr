@@ -25,6 +25,8 @@ const PUBLIC_APP_LINK_PATHS = [
   "/callback",
   "/reset-password"
 ] as const;
+const EAS_UPDATE_URL =
+  "https://u.expo.dev/85cab1f2-111f-4e20-abd5-8dff0df2fabb";
 
 function allowsLocalDevelopmentNetworking(): boolean {
   const profile = process.env.EAS_BUILD_PROFILE;
@@ -86,6 +88,25 @@ function googleMapsAndroidConfig(): {
   return apiKey
     ? { config: { googleMaps: { apiKey } } }
     : {};
+}
+
+function remoteUpdatesConfig(): NonNullable<
+  ExpoConfig["updates"]
+> {
+  if (allowsLocalDevelopmentNetworking()) {
+    return {
+      enabled: true,
+      checkAutomatically: "ON_LOAD",
+      fallbackToCacheTimeout: 0,
+      url: EAS_UPDATE_URL
+    };
+  }
+
+  return {
+    enabled: false,
+    checkAutomatically: "NEVER",
+    fallbackToCacheTimeout: 0
+  };
 }
 
 export default ({ config }: ConfigContext): ExpoConfig => ({
@@ -368,9 +389,7 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
   experiments: {
     typedRoutes: true
   },
-  updates: {
-    url: "https://u.expo.dev/85cab1f2-111f-4e20-abd5-8dff0df2fabb"
-  },
+  updates: remoteUpdatesConfig(),
   runtimeVersion: {
     policy: "appVersion"
   },

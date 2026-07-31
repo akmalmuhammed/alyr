@@ -106,7 +106,7 @@ remain open gates.
 - Generated iOS transport configuration sets
   `NSAllowsArbitraryLoads = false`. The local-network transport allowance
   remains only to support Expo development-client discovery; public Supabase
-  traffic and EAS updates use HTTPS.
+  traffic and development-profile EAS updates use HTTPS.
 - `.easignore` mirrors the repository security exclusions and removes local
   client work, output, credentials, databases, recovery files, build products,
   and developer state from the EAS archive while retaining every npm workspace
@@ -117,9 +117,11 @@ remain open gates.
   declaration entry points before a signed build is requested.
 - EAS builds now require a clean commit, keeping signed source reproducible
   and preventing ignored local collateral from entering a dirty Windows archive.
-- `expo-updates` is installed. Generated iOS configuration resolves
-  `EXUpdatesEnabled = true`, runtime `0.1.0`, and
-  `https://u.expo.dev/85cab1f2-111f-4e20-abd5-8dff0df2fabb`.
+- `expo-updates` remains installed for development-client iteration. Preview
+  and production profiles generate `updates.enabled = false`, automatic checks
+  set to `NEVER`, and no update URL, so the free-tier release receives changes
+  only through a newly reviewed signed store build. Development profiles keep
+  runtime `0.1.0` and the linked Expo update URL.
 - The focused release is iPhone-only; iPad support is not advertised.
 - The current signed source includes `expo-background-task`,
   `expo-task-manager`, and local-only `expo-notifications` configuration.

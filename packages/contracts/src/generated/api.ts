@@ -4,6 +4,23 @@
  */
 
 export interface paths {
+    "/signup/mode": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Read a short-lived, server-attested account registration mode. */
+        get: operations["getSignupMode"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/signup/preflight": {
         parameters: {
             query?: never;
@@ -419,6 +436,7 @@ export interface components {
             /** Format: email */
             email: string;
             accessCode: string;
+            launchMode: components["schemas"]["SignupModeAttestation"];
         };
         PublicSignupPreflightRequest: {
             /** @constant */
@@ -427,6 +445,33 @@ export interface components {
             email: string;
             /** Format: uuid */
             idempotencyKey: string;
+            launchMode: components["schemas"]["SignupModeAttestation"];
+        };
+        SignupModeResponse: {
+            /** @constant */
+            apiVersion: 1;
+            /** @constant */
+            contract: "heldat-signup-mode-v1";
+            /** @enum {string} */
+            signupMode: "closed_pilot" | "public_email" | "public_email_google";
+            configVersion: string;
+            /** Format: date-time */
+            issuedAt: string;
+            /** Format: date-time */
+            expiresAt: string;
+            signature: string;
+        };
+        SignupModeAttestation: {
+            /** @constant */
+            contract: "heldat-signup-mode-v1";
+            /** @enum {string} */
+            signupMode: "closed_pilot" | "public_email" | "public_email_google";
+            configVersion: string;
+            /** Format: date-time */
+            issuedAt: string;
+            /** Format: date-time */
+            expiresAt: string;
+            signature: string;
         };
         PublicSignupPreflightResponse: {
             /** @constant */
@@ -999,6 +1044,29 @@ export interface components {
 }
 export type $defs = Record<string, never>;
 export interface operations {
+    getSignupMode: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The current operator-controlled signup path. */
+            200: {
+                headers: {
+                    "Cache-Control"?: "no-store";
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SignupModeResponse"];
+                };
+            };
+            429: components["responses"]["TooManyRequests"];
+            503: components["responses"]["ServiceUnavailable"];
+        };
+    };
     preflightPublicSignup: {
         parameters: {
             query?: never;

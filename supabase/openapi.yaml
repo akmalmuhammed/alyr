@@ -13,6 +13,27 @@ servers:
 security:
   - bearerAuth: []
 paths:
+  /signup/mode:
+    get:
+      operationId: getSignupMode
+      summary: Read a short-lived, server-attested account registration mode.
+      security: []
+      responses:
+        "200":
+          description: The current operator-controlled signup path.
+          headers:
+            Cache-Control:
+              schema:
+                type: string
+                const: no-store
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SignupModeResponse"
+        "429":
+          $ref: "#/components/responses/TooManyRequests"
+        "503":
+          $ref: "#/components/responses/ServiceUnavailable"
   /signup/preflight:
     post:
       operationId: preflightPublicSignup
@@ -785,7 +806,7 @@ components:
     PilotPreflightRequest:
       type: object
       additionalProperties: false
-      required: [apiVersion, email, accessCode]
+      required: [apiVersion, email, accessCode, launchMode]
       properties:
         apiVersion:
           type: integer
@@ -799,10 +820,12 @@ components:
           minLength: 16
           maxLength: 64
           pattern: "^[A-Z0-9]+$"
+        launchMode:
+          $ref: "#/components/schemas/SignupModeAttestation"
     PublicSignupPreflightRequest:
       type: object
       additionalProperties: false
-      required: [apiVersion, email, idempotencyKey]
+      required: [apiVersion, email, idempotencyKey, launchMode]
       properties:
         apiVersion:
           type: integer
@@ -814,6 +837,70 @@ components:
         idempotencyKey:
           type: string
           format: uuid
+        launchMode:
+          $ref: "#/components/schemas/SignupModeAttestation"
+    SignupModeResponse:
+      type: object
+      additionalProperties: false
+      required:
+        - apiVersion
+        - contract
+        - signupMode
+        - configVersion
+        - issuedAt
+        - expiresAt
+        - signature
+      properties:
+        apiVersion:
+          type: integer
+          const: 1
+        contract:
+          type: string
+          const: heldat-signup-mode-v1
+        signupMode:
+          type: string
+          enum: [closed_pilot, public_email, public_email_google]
+        configVersion:
+          type: string
+          pattern: "^[1-9][0-9]{0,18}$"
+        issuedAt:
+          type: string
+          format: date-time
+        expiresAt:
+          type: string
+          format: date-time
+        signature:
+          type: string
+          pattern: "^[a-f0-9]{64}$"
+    SignupModeAttestation:
+      type: object
+      additionalProperties: false
+      required:
+        - contract
+        - signupMode
+        - configVersion
+        - issuedAt
+        - expiresAt
+        - signature
+      properties:
+        contract:
+          type: string
+          const: heldat-signup-mode-v1
+        signupMode:
+          type: string
+          enum: [closed_pilot, public_email, public_email_google]
+        configVersion:
+          type: string
+          pattern: "^[1-9][0-9]{0,18}$"
+        issuedAt:
+          type: string
+          format: date-time
+        expiresAt:
+          type: string
+          format: date-time
+        signature:
+          type: string
+          pattern: "^[a-f0-9]{64}$"
     PublicSignupPreflightResponse:
       type: object
       additionalProperties: false

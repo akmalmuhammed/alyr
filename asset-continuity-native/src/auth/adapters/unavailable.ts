@@ -24,6 +24,9 @@ function unavailable<T>(): AuthGatewayResult<T> {
 export function createUnavailableAuthGateway(): AccountAuthGateway {
   return {
     mode: "unavailable",
+    async readSignupMode() {
+      return unavailable();
+    },
     async currentSession() {
       return unavailable();
     },

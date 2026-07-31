@@ -2,6 +2,27 @@ import type { HouseholdRole } from "@alyr/contracts";
 
 export type AuthGatewayMode = "preview" | "supabase" | "unavailable";
 
+export type SignupLaunchMode =
+  | "closed_pilot"
+  | "public_email"
+  | "public_email_google";
+
+/**
+ * Short-lived server attestation for the operator-controlled signup path.
+ *
+ * The app accepts this only from its configured HTTPS API origin after exact
+ * shape and lifetime validation. The matching preflight endpoint verifies the
+ * signature and current config version before an identity may be created.
+ */
+export interface SignupModeAttestation {
+  readonly contract: "heldat-signup-mode-v1";
+  readonly signupMode: SignupLaunchMode;
+  readonly configVersion: string;
+  readonly issuedAt: string;
+  readonly expiresAt: string;
+  readonly signature: string;
+}
+
 export type AuthFailureCode =
   | "account_exists"
   | "confirmation_required"
@@ -20,6 +41,8 @@ export interface AuthFailure {
   readonly code: AuthFailureCode;
   readonly message: string;
   readonly retryable: boolean;
+  /** Stable machine-readable recovery signal; never provider-supplied text. */
+  readonly reason?: "signup_mode_changed";
 }
 
 export type AuthGatewayResult<T> =
@@ -152,6 +175,9 @@ export interface OAuthCallbackCode {
  */
 export interface AccountAuthGateway {
   readonly mode: AuthGatewayMode;
+  readSignupMode?(): Promise<
+    AuthGatewayResult<SignupModeAttestation>
+  >;
   currentSession(): Promise<AuthGatewayResult<AuthSessionDescriptor | null>>;
   /**
    * Requests a fresh provider session after server-side app metadata changes.

@@ -95,12 +95,63 @@ describe("signed iOS release configuration", () => {
     ]);
   });
 
-  it("enables app-version-scoped EAS updates for the linked project", () => {
+  it("disables remote updates in distributable builds and preserves development updates", () => {
+    const originalProfile = process.env.EAS_BUILD_PROFILE;
+    const originalPlatform = process.env.EAS_BUILD_PLATFORM;
+    const originalNodeEnvironment = process.env.NODE_ENV;
+    const resolveUpdates = () =>
+      createConfig({
+        config: {
+          name: "Heldat",
+          slug: "alyr-asset-continuity"
+        }
+      } as Parameters<typeof createConfig>[0]).updates;
+
     expect(config.runtimeVersion).toEqual({ policy: "appVersion" });
-    expect(config.updates?.url).toBe(
-      "https://u.expo.dev/85cab1f2-111f-4e20-abd5-8dff0df2fabb"
-    );
     expect(nativePackage.dependencies["expo-updates"]).toMatch(/^~57\./u);
+
+    try {
+      process.env.EAS_BUILD_PLATFORM = "ios";
+      process.env.NODE_ENV = "production";
+      for (const profile of ["preview", "production"]) {
+        process.env.EAS_BUILD_PROFILE = profile;
+        expect(resolveUpdates()).toEqual({
+          enabled: false,
+          checkAutomatically: "NEVER",
+          fallbackToCacheTimeout: 0
+        });
+      }
+
+      process.env.NODE_ENV = "development";
+      for (const profile of [
+        "development",
+        "development-simulator"
+      ]) {
+        process.env.EAS_BUILD_PROFILE = profile;
+        expect(resolveUpdates()).toEqual({
+          enabled: true,
+          checkAutomatically: "ON_LOAD",
+          fallbackToCacheTimeout: 0,
+          url: "https://u.expo.dev/85cab1f2-111f-4e20-abd5-8dff0df2fabb"
+        });
+      }
+    } finally {
+      if (originalProfile === undefined) {
+        delete process.env.EAS_BUILD_PROFILE;
+      } else {
+        process.env.EAS_BUILD_PROFILE = originalProfile;
+      }
+      if (originalPlatform === undefined) {
+        delete process.env.EAS_BUILD_PLATFORM;
+      } else {
+        process.env.EAS_BUILD_PLATFORM = originalPlatform;
+      }
+      if (originalNodeEnvironment === undefined) {
+        delete process.env.NODE_ENV;
+      } else {
+        process.env.NODE_ENV = originalNodeEnvironment;
+      }
+    }
   });
 
   it("uses an opaque full-bleed 1024px PNG for the iOS app icon", () => {

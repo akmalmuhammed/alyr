@@ -1,4 +1,5 @@
 import { COPY } from "@/i18n/copy";
+import { CORE_JOURNEY_COPY } from "@/i18n/coreJourneyCopy";
 
 describe("native bilingual copy contract", () => {
   it("keeps English and Arabic keys in parity", () => {
@@ -45,5 +46,24 @@ describe("native bilingual copy contract", () => {
       spaces: "المساحات",
       proof: "إثبات"
     });
+  });
+
+  it("localizes public registration and fail-closed availability states", () => {
+    expect(CORE_JOURNEY_COPY.en.createAccount).toMatchObject({
+      publicNotice:
+        "Registration is open. Create your private account with your email.",
+      availabilityChecking: "Checking registration availability…",
+      availabilityRetry: "Check availability again",
+      terms: "Terms"
+    });
+    const arabic = [
+      CORE_JOURNEY_COPY.ar.createAccount.publicNotice,
+      CORE_JOURNEY_COPY.ar.createAccount.availabilityChecking,
+      CORE_JOURNEY_COPY.ar.createAccount.availabilityUnavailable,
+      CORE_JOURNEY_COPY.ar.createAccount.availabilityRetry,
+      CORE_JOURNEY_COPY.ar.createAccount.terms
+    ].join(" ");
+    expect(arabic).toMatch(/[\u0600-\u06ff]/u);
+    expect(arabic).not.toMatch(/[ÃƒÃ‚Ã˜Ã™ï¿½\u0080-\u009f]/u);
   });
 });

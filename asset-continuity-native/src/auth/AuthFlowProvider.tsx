@@ -46,7 +46,8 @@ import type {
   ConfirmationRequest,
   FirstCaptureIntent,
   PasswordRecoveryGrant,
-  PasswordRecoveryRequest
+  PasswordRecoveryRequest,
+  SignupLaunchMode
 } from "./types";
 import { normalizeEmail } from "./validation";
 
@@ -83,6 +84,9 @@ interface AuthFlowContextValue {
     | "ready"
     | "error";
   readonly householdAccessError: ContractError | null;
+  readonly signupMode: SignupLaunchMode | null;
+  readonly signupModeState: "idle" | "loading" | "ready" | "error";
+  readonly refreshSignupMode: () => Promise<SignupLaunchMode | null>;
   readonly createAccount: (
     email: string,
     password: string,
@@ -302,6 +306,11 @@ export function AuthFlowProvider({
   >("idle");
   const [householdAccessError, setHouseholdAccessError] =
     useState<ContractError | null>(null);
+  const [signupMode, setSignupMode] =
+    useState<SignupLaunchMode | null>(null);
+  const [signupModeState, setSignupModeState] = useState<
+    "idle" | "loading" | "ready" | "error"
+  >(gatewayRef.current.mode === "supabase" ? "idle" : "ready");
   const activeAccountIdRef = useRef<string | null>(null);
   const activeSessionRef = useRef<AuthSessionDescriptor | null>(null);
   const pendingHouseholdInviteRef =
@@ -687,6 +696,40 @@ export function AuthFlowProvider({
     setConfirmation(attempt.confirmation);
   }, [acceptSession]);
 
+  const refreshSignupMode = useCallback(
+    async (): Promise<SignupLaunchMode | null> => {
+      if (gatewayRef.current.mode !== "supabase") {
+        setSignupMode(null);
+        setSignupModeState("ready");
+        return null;
+      }
+      const readSignupMode = gatewayRef.current.readSignupMode;
+      if (!readSignupMode) {
+        setSignupMode(null);
+        setSignupModeState("error");
+        return null;
+      }
+      setSignupModeState("loading");
+      let result: Awaited<ReturnType<typeof readSignupMode>>;
+      try {
+        result = await readSignupMode.call(gatewayRef.current);
+      } catch {
+        setSignupMode(null);
+        setSignupModeState("error");
+        return null;
+      }
+      if (!result.ok) {
+        setSignupMode(null);
+        setSignupModeState("error");
+        return null;
+      }
+      setSignupMode(result.value.signupMode);
+      setSignupModeState("ready");
+      return result.value.signupMode;
+    },
+    []
+  );
+
   const createAccount = useCallback(
     async (
       emailValue: string,
@@ -708,6 +751,14 @@ export function AuthFlowProvider({
         });
         if (!result.ok) {
           setError(result.error);
+          if (result.error.reason === "signup_mode_changed") {
+            /*
+             * Do not replay account creation. Refresh only the short-lived
+             * operator mode so the form can render the newly required fields
+             * before the user deliberately submits again.
+             */
+            await refreshSignupMode();
+          }
           if (
             householdInviteCode &&
             result.error.code === "pilot_access_denied"
@@ -725,7 +776,8 @@ export function AuthFlowProvider({
     [
       discardPendingHouseholdInvite,
       finishAttempt,
-      prepareRequest
+      prepareRequest,
+      refreshSignupMode
     ]
   );
 
@@ -2296,6 +2348,10 @@ export function AuthFlowProvider({
     googleOAuthCallbackCodeRef.current = null;
     setGoogleOAuthInProgress(false);
     setGoogleOAuthCallbackPending(false);
+    setSignupMode(null);
+    setSignupModeState(
+      gatewayRef.current.mode === "supabase" ? "idle" : "ready"
+    );
     updateHouseholdName("");
     updateFirstCaptureIntent(null);
     void discardPendingHouseholdInvite();
@@ -2331,6 +2387,9 @@ export function AuthFlowProvider({
       householdAccessSnapshot,
       householdAccessStatus,
       householdAccessError,
+      signupMode,
+      signupModeState,
+      refreshSignupMode,
       createAccount,
       signIn,
       beginGoogleSignIn,
@@ -2398,6 +2457,9 @@ export function AuthFlowProvider({
       householdAccessSnapshot,
       householdAccessStatus,
       householdAccessError,
+      signupMode,
+      signupModeState,
+      refreshSignupMode,
       identity,
       provisionHousehold,
       passwordRecovery,

@@ -1,3 +1,5 @@
+import { randomUUID } from "expo-crypto";
+
 import { normalizeEmail } from "../validation";
 import type {
   AccountAuthGateway,
@@ -10,7 +12,9 @@ import type {
   OAuthCallbackCode,
   PasswordRecoveryExchange,
   PasswordRecoveryGrant,
-  PasswordRecoveryRequest
+  PasswordRecoveryRequest,
+  SignupLaunchMode,
+  SignupModeAttestation
 } from "../types";
 
 interface SupabaseUserLike {
@@ -153,6 +157,8 @@ export interface SupabaseAuthAdapterOptions {
   readonly emailRedirectTo: string;
   readonly passwordRecoveryRedirectTo: string;
   readonly pilotAccessEndpoint: string;
+  readonly signupModeEndpoint?: string;
+  readonly publicSignupEndpoint?: string;
   readonly householdInviteAccessEndpoint?: string;
   readonly publicApiKey: string;
   readonly googleOAuth?: {
@@ -160,6 +166,7 @@ export interface SupabaseAuthAdapterOptions {
     readonly browser: OAuthSessionPort;
   };
   readonly fetchImpl?: typeof fetch;
+  readonly createIdempotencyKey?: () => string;
   readonly now?: () => Date;
 }
 
@@ -440,16 +447,121 @@ type PilotPreflightBody = {
   readonly apiVersion?: unknown;
   readonly enrollmentGrant?: unknown;
   readonly expiresAt?: unknown;
+  readonly signupChannel?: unknown;
+  readonly error?: unknown;
 };
+
+function responseErrorCode(body: PilotPreflightBody | null): string {
+  if (
+    typeof body?.error !== "object" ||
+    body.error === null ||
+    Array.isArray(body.error)
+  ) {
+    return "";
+  }
+  const code = (body.error as Record<string, unknown>).code;
+  return typeof code === "string" ? code : "";
+}
+
+type SignupModeBody = {
+  readonly apiVersion?: unknown;
+  readonly contract?: unknown;
+  readonly signupMode?: unknown;
+  readonly configVersion?: unknown;
+  readonly issuedAt?: unknown;
+  readonly expiresAt?: unknown;
+  readonly signature?: unknown;
+};
+
+const signupLaunchModes = new Set<SignupLaunchMode>([
+  "closed_pilot",
+  "public_email",
+  "public_email_google"
+]);
+
+function exactKeys(
+  value: Readonly<Record<string, unknown>>,
+  expected: readonly string[]
+): boolean {
+  const keys = Object.keys(value);
+  return (
+    keys.length === expected.length &&
+    keys.every((key) => expected.includes(key))
+  );
+}
+
+function validatedSignupMode(
+  value: unknown,
+  now: Date
+): SignupModeAttestation | null {
+  if (
+    typeof value !== "object" ||
+    value === null ||
+    Array.isArray(value)
+  ) {
+    return null;
+  }
+  const body = value as SignupModeBody & Record<string, unknown>;
+  if (
+    !exactKeys(body, [
+      "apiVersion",
+      "contract",
+      "signupMode",
+      "configVersion",
+      "issuedAt",
+      "expiresAt",
+      "signature"
+    ]) ||
+    body.apiVersion !== 1 ||
+    body.contract !== "heldat-signup-mode-v1" ||
+    typeof body.signupMode !== "string" ||
+    !signupLaunchModes.has(body.signupMode as SignupLaunchMode) ||
+    typeof body.configVersion !== "string" ||
+    !/^[1-9][0-9]{0,18}$/u.test(body.configVersion) ||
+    typeof body.issuedAt !== "string" ||
+    typeof body.expiresAt !== "string" ||
+    typeof body.signature !== "string" ||
+    !/^[a-f0-9]{64}$/u.test(body.signature)
+  ) {
+    return null;
+  }
+  const issuedAt = Date.parse(body.issuedAt);
+  const expiresAt = Date.parse(body.expiresAt);
+  if (
+    Number.isNaN(issuedAt) ||
+    Number.isNaN(expiresAt) ||
+    new Date(issuedAt).toISOString() !== body.issuedAt ||
+    new Date(expiresAt).toISOString() !== body.expiresAt ||
+    issuedAt > now.getTime() + 30_000 ||
+    expiresAt <= now.getTime() ||
+    expiresAt - issuedAt !== 5 * 60 * 1000
+  ) {
+    return null;
+  }
+  return {
+    contract: body.contract,
+    signupMode: body.signupMode as SignupLaunchMode,
+    configVersion: body.configVersion,
+    issuedAt: body.issuedAt,
+    expiresAt: body.expiresAt,
+    signature: body.signature
+  };
+}
 
 function pilotFailure(
   code: AuthFailure["code"],
   message: string,
-  retryable: boolean
+  retryable: boolean,
+  reason?: AuthFailure["reason"]
 ): AuthGatewayResult<never> {
   return {
     ok: false,
-    error: { code, message, retryable }
+    error: {
+      code,
+      message,
+      retryable,
+      ...(reason ? { reason } : {})
+    }
   };
 }
 
@@ -461,6 +573,7 @@ export function createSupabaseAuthGateway(
   const fetchImpl = options.fetchImpl ?? fetch;
   let recoverySequence = 0;
   let recoveryGrant: PasswordRecoveryGrant | null = null;
+  let pendingConfirmationExchange = false;
   let pendingRecoveryExchange: {
     readonly id: number;
     cancelled: boolean;
@@ -496,9 +609,90 @@ export function createSupabaseAuthGateway(
     delivery: "requested"
   });
 
+  const signupModeEndpoint =
+    options.signupModeEndpoint ??
+    options.pilotAccessEndpoint.replace(
+      /\/pilot\/preflight$/u,
+      "/signup/mode"
+    );
+  const publicSignupEndpoint =
+    options.publicSignupEndpoint ??
+    options.pilotAccessEndpoint.replace(
+      /\/pilot\/preflight$/u,
+      "/signup/preflight"
+    );
+  const createIdempotencyKey =
+    options.createIdempotencyKey ?? randomUUID;
+  let cachedSignupMode: SignupModeAttestation | null = null;
+
+  const readSignupMode = async (): Promise<
+    AuthGatewayResult<SignupModeAttestation>
+  > => {
+    if (
+      cachedSignupMode &&
+      Date.parse(cachedSignupMode.expiresAt) - now().getTime() > 15_000
+    ) {
+      return { ok: true, value: cachedSignupMode };
+    }
+    cachedSignupMode = null;
+    let response: Response;
+    try {
+      response = await fetchImpl(signupModeEndpoint, {
+        method: "GET",
+        headers: {
+          Accept: "application/json",
+          apikey: options.publicApiKey
+        },
+        redirect: "error"
+      });
+    } catch {
+      return pilotFailure(
+        "network_unavailable",
+        "Heldat could not verify account registration availability.",
+        true
+      );
+    }
+    if (!response.ok) {
+      return pilotFailure(
+        response.status === 429
+          ? "rate_limited"
+          : "network_unavailable",
+        response.status === 429
+          ? "Too many availability checks. Wait a moment, then try again."
+          : "Account registration availability could not be verified.",
+        true
+      );
+    }
+    const cacheControl = response.headers.get("cache-control") ?? "";
+    if (!/(?:^|,)\s*no-store\s*(?:,|$)/iu.test(cacheControl)) {
+      return pilotFailure(
+        "unexpected",
+        "Account registration returned an untrusted availability response.",
+        true
+      );
+    }
+    let candidate: unknown = null;
+    try {
+      candidate = await response.json() as unknown;
+    } catch {
+      candidate = null;
+    }
+    const mode = validatedSignupMode(candidate, now());
+    if (!mode) {
+      return pilotFailure(
+        "unexpected",
+        "Account registration returned an invalid availability response.",
+        true
+      );
+    }
+    cachedSignupMode = mode;
+    return { ok: true, value: mode };
+  };
+
   const preflightPilotSignup = async (
     email: string,
-    accessCode: string
+    accessCode: string,
+    launchMode: SignupModeAttestation
   ): Promise<AuthGatewayResult<string>> => {
     const normalizedAccessCode = accessCode
       .trim()
@@ -523,7 +717,8 @@ export function createSupabaseAuthGateway(
         body: JSON.stringify({
           apiVersion: 1,
           email,
-          accessCode: normalizedAccessCode
+          accessCode: normalizedAccessCode,
+          launchMode
         })
       });
     } catch {
@@ -554,6 +749,15 @@ export function createSupabaseAuthGateway(
         );
       }
       if (response.status === 409) {
+        if (responseErrorCode(body) === "CONFLICT_REQUIRES_REVIEW") {
+          cachedSignupMode = null;
+          return pilotFailure(
+            "unexpected",
+            "Account registration availability changed. Try again.",
+            true,
+            "signup_mode_changed"
+          );
+        }
         return pilotFailure(
           "pilot_capacity_reached",
           "The current pilot group is full.",
@@ -589,6 +793,109 @@ export function createSupabaseAuthGateway(
       );
     }
 
+    return { ok: true, value: body.enrollmentGrant };
+  };
+
+  const preflightPublicSignup = async (
+    email: string,
+    launchMode: SignupModeAttestation
+  ): Promise<AuthGatewayResult<string>> => {
+    const idempotencyKey = createIdempotencyKey();
+    if (
+      !/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/iu.test(
+        idempotencyKey
+      )
+    ) {
+      return pilotFailure(
+        "unexpected",
+        "Account registration could not create a secure retry identity.",
+        true
+      );
+    }
+    let response: Response;
+    try {
+      response = await fetchImpl(publicSignupEndpoint, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          apikey: options.publicApiKey
+        },
+        body: JSON.stringify({
+          apiVersion: 1,
+          email,
+          idempotencyKey,
+          launchMode
+        })
+      });
+    } catch {
+      return pilotFailure(
+        "network_unavailable",
+        "Heldat could not reserve account registration capacity.",
+        true
+      );
+    }
+    let body: PilotPreflightBody | null = null;
+    try {
+      const candidate = await response.json() as unknown;
+      body = candidate && typeof candidate === "object"
+        ? candidate as PilotPreflightBody
+        : null;
+    } catch {
+      body = null;
+    }
+    if (!response.ok) {
+      if (response.status === 429) {
+        return pilotFailure(
+          "rate_limited",
+          "Too many registration attempts. Wait a moment, then try again.",
+          true
+        );
+      }
+      if (response.status === 409) {
+        if (responseErrorCode(body) === "CONFLICT_REQUIRES_REVIEW") {
+          cachedSignupMode = null;
+          return pilotFailure(
+            "unexpected",
+            "Account registration availability changed. Try again.",
+            true,
+            "signup_mode_changed"
+          );
+        }
+        return pilotFailure(
+          "pilot_capacity_reached",
+          "New account capacity is temporarily full.",
+          false
+        );
+      }
+      if (response.status >= 500) {
+        return pilotFailure(
+          "network_unavailable",
+          "Account registration is temporarily unavailable.",
+          true
+        );
+      }
+      cachedSignupMode = null;
+      return pilotFailure(
+        "unexpected",
+        "Account registration availability changed. Try again.",
+        true
+      );
+    }
+    if (
+      body?.apiVersion !== 1 ||
+      typeof body.enrollmentGrant !== "string" ||
+      !/^[a-f0-9]{64}$/u.test(body.enrollmentGrant) ||
+      typeof body.expiresAt !== "string" ||
+      Number.isNaN(Date.parse(body.expiresAt)) ||
+      Date.parse(body.expiresAt) <= now().getTime() ||
+      body.signupChannel !== "heldat-public-email-v1"
+    ) {
+      return pilotFailure(
+        "unexpected",
+        "Account registration returned an incomplete verification.",
+        true
+      );
+    }
     return { ok: true, value: body.enrollmentGrant };
   };
 
@@ -687,6 +994,8 @@ export function createSupabaseAuthGateway(
   return {
     mode: "supabase",
 
+    readSignupMode,
+
     async currentSession() {
       const response = await client.auth.getSession();
       if (response.error) return fail(response.error);
@@ -735,7 +1044,7 @@ export function createSupabaseAuthGateway(
          * exchange method exposes it only together with the one-use grant.
          */
         if (
-          pendingRecoveryExchange &&
+          (pendingRecoveryExchange || pendingConfirmationExchange) &&
           event !== "SIGNED_OUT"
         ) {
           return;
@@ -761,24 +1070,46 @@ export function createSupabaseAuthGateway(
           false
         );
       }
-      const preflight = credentials.householdInviteCode
-        ? await preflightHouseholdInviteSignup(
+      let preflight: AuthGatewayResult<string>;
+      let signupChannel: "mobile-pilot-v1" | "heldat-public-email-v1";
+      if (credentials.householdInviteCode) {
+        preflight = await preflightHouseholdInviteSignup(
+          email,
+          credentials.householdInviteCode
+        );
+        signupChannel = "mobile-pilot-v1";
+      } else {
+        const launchMode = await readSignupMode();
+        if (!launchMode.ok) return launchMode;
+        if (launchMode.value.signupMode === "closed_pilot") {
+          preflight = await preflightPilotSignup(
             email,
-            credentials.householdInviteCode
-          )
-        : await preflightPilotSignup(
-            email,
-            credentials.pilotAccessCode ?? ""
+            credentials.pilotAccessCode ?? "",
+            launchMode.value
           );
+          signupChannel = "mobile-pilot-v1";
+        } else {
+          preflight = await preflightPublicSignup(
+            email,
+            launchMode.value
+          );
+          signupChannel = "heldat-public-email-v1";
+        }
+      }
       if (!preflight.ok) return preflight;
       const response = await client.auth.signUp({
         email,
         password: credentials.password,
         options: {
-          data: {
-            alyr_signup_channel: "mobile-pilot-v1",
-            pilot_signup_grant: preflight.value
-          },
+          data: signupChannel === "mobile-pilot-v1"
+            ? {
+                alyr_signup_channel: signupChannel,
+                pilot_signup_grant: preflight.value
+              }
+            : {
+                alyr_signup_channel: signupChannel,
+                public_signup_grant: preflight.value
+              },
           emailRedirectTo: options.emailRedirectTo
         }
       });
@@ -924,7 +1255,11 @@ export function createSupabaseAuthGateway(
 
     async exchangePasswordRecoveryCode(code) {
       if (!code.trim()) return missingRecoveryGrant();
-      if (pendingRecoveryExchange || recoveryGrant) {
+      if (
+        pendingRecoveryExchange ||
+        pendingConfirmationExchange ||
+        recoveryGrant
+      ) {
         return {
           ok: false,
           error: {
@@ -1036,7 +1371,6 @@ export function createSupabaseAuthGateway(
     },
 
     async exchangeConfirmationCode(code) {
-      clearRecoveryGrant();
       if (!code.trim()) {
         return {
           ok: false,
@@ -1047,11 +1381,131 @@ export function createSupabaseAuthGateway(
           }
         };
       }
-      const response = await client.auth.exchangeCodeForSession(code);
-      if (response.error) return fail(response.error);
-      if (!response.data.session) return missingSession();
-      const session = sessionFrom(response.data.session);
-      return session ? { ok: true, value: session } : missingSession();
+      if (
+        pendingRecoveryExchange ||
+        pendingConfirmationExchange ||
+        recoveryGrant
+      ) {
+        return {
+          ok: false,
+          error: {
+            code: "invalid_request",
+            message:
+              "Finish or cancel password recovery before opening another account link.",
+            retryable: false
+          }
+        };
+      }
+
+      clearRecoveryGrant();
+      pendingConfirmationExchange = true;
+      const observed: {
+        signedIn: AuthSessionDescriptor | null;
+        passwordRecovery: boolean;
+      } = {
+        signedIn: null,
+        passwordRecovery: false
+      };
+      const {
+        data: { subscription }
+      } = client.auth.onAuthStateChange((event, providerSession) => {
+        if (
+          (event !== "SIGNED_IN" && event !== "PASSWORD_RECOVERY") ||
+          !providerSession
+        ) {
+          return;
+        }
+        if (event === "PASSWORD_RECOVERY") {
+          observed.passwordRecovery = true;
+          return;
+        }
+        const session = sessionFrom(providerSession);
+        if (!session) return;
+        observed.signedIn = session;
+      });
+
+      const purgeCallbackSession = async (
+        failure: AuthFailure
+      ): Promise<AuthGatewayResult<never>> => {
+        clearRecoveryGrant();
+        const signOut = await client.auth.signOut({ scope: "local" });
+        return signOut.error
+          ? fail(signOut.error)
+          : { ok: false, error: failure };
+      };
+
+      try {
+        let response: Awaited<
+          ReturnType<SupabaseAuthClientLike["auth"]["exchangeCodeForSession"]>
+        > | null = null;
+        try {
+          response = await client.auth.exchangeCodeForSession(code);
+        } catch {
+          response = null;
+        }
+
+        if (observed.passwordRecovery) {
+          return await purgeCallbackSession({
+            code: "invalid_request",
+            message:
+              "Open password reset links from Heldat's password-recovery screen.",
+            retryable: false
+          });
+        }
+        if (!response) {
+          if (observed.signedIn) {
+            return await purgeCallbackSession({
+              code: "network_unavailable",
+              message:
+                "Heldat could not verify the account link after it opened.",
+              retryable: true
+            });
+          }
+          return fail({
+            message: "network request failed",
+            status: 0
+          });
+        }
+        if (response.error) {
+          if (observed.signedIn) {
+            return await purgeCallbackSession(mapFailure(response.error));
+          }
+          return fail(response.error);
+        }
+        if (!response.data.session) {
+          return observed.signedIn
+            ? await purgeCallbackSession({
+                code: "unexpected",
+                message:
+                  "Heldat could not verify the account link's provider session.",
+                retryable: true
+              })
+            : missingSession();
+        }
+        const session = sessionFrom(response.data.session);
+        if (!session) {
+          return await purgeCallbackSession({
+            code: "session_missing",
+            message: "No confirmed account session is available yet.",
+            retryable: true
+          });
+        }
+        if (
+          !observed.signedIn ||
+          observed.signedIn.identity.id !== session.identity.id
+        ) {
+          return await purgeCallbackSession({
+            code: "unexpected",
+            message:
+              "Heldat could not verify the account link's authentication event.",
+            retryable: true
+          });
+        }
+        return { ok: true, value: session };
+      } finally {
+        subscription.unsubscribe();
+        pendingConfirmationExchange = false;
+      }
     },
 
     async beginPreviewSession() {

@@ -145,6 +145,12 @@ const english = {
     previewNotice: "This private preview keeps the account on this device for the session. No email is sent.",
     pilotNotice:
       "Heldat is in limited early access. We verify your email and access code before creating an account.",
+    publicNotice:
+      "Registration is open. Create your private account with your email.",
+    availabilityChecking: "Checking registration availability…",
+    availabilityUnavailable:
+      "Registration availability could not be verified. Check your connection and try again.",
+    availabilityRetry: "Check availability again",
     email: "Email",
     emailPlaceholder: "name@example.com",
     pilotAccessCode: "Early access code",
@@ -158,8 +164,11 @@ const english = {
     confirmPasswordPlaceholder: "Enter it again",
     legalAcknowledgement:
       "By creating an account, you agree to the early access terms and acknowledge the privacy notice.",
+    publicLegalAcknowledgement:
+      "By creating an account, you agree to the terms and acknowledge the privacy notice.",
     privacyNotice: "Privacy notice",
-    pilotTerms: "Early access terms"
+    pilotTerms: "Early access terms",
+    terms: "Terms"
   },
   confirmEmail: {
     continuePreview: "Open private preview",
@@ -781,6 +790,12 @@ const arabic = {
       "تحتفظ هذه المعاينة الخاصة بالحساب على هذا الجهاز خلال الجلسة. لا يُرسل بريد إلكتروني.",
     pilotNotice:
       "Heldat متاح حاليًا ضمن وصول مبكر محدود. نتحقق من البريد ورمز الوصول قبل إنشاء الحساب.",
+    publicNotice:
+      "التسجيل متاح الآن. أنشئ حسابك الخاص باستخدام بريدك الإلكتروني.",
+    availabilityChecking: "جارٍ التحقق من إتاحة التسجيل…",
+    availabilityUnavailable:
+      "تعذر التحقق من إتاحة التسجيل. تحقق من اتصالك وحاول مرة أخرى.",
+    availabilityRetry: "إعادة التحقق من الإتاحة",
     email: "البريد الإلكتروني",
     emailPlaceholder: "name@example.com",
     pilotAccessCode: "رمز الوصول المبكر",
@@ -794,8 +809,11 @@ const arabic = {
     confirmPasswordPlaceholder: "أدخلها مرة أخرى",
     legalAcknowledgement:
       "بإنشاء الحساب، فإنك توافق على شروط الوصول المبكر وتقر بإشعار الخصوصية.",
+    publicLegalAcknowledgement:
+      "بإنشاء الحساب، فإنك توافق على الشروط وتقر بإشعار الخصوصية.",
     privacyNotice: "إشعار الخصوصية",
-    pilotTerms: "شروط الوصول المبكر"
+    pilotTerms: "شروط الوصول المبكر",
+    terms: "الشروط"
   },
   confirmEmail: {
     continuePreview: "فتح المعاينة الخاصة",

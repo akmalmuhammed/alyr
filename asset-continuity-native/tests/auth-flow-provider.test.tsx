@@ -191,6 +191,72 @@ describe("global auth session state", () => {
     await screen.unmount();
   });
 
+  it("refreshes a changed signup mode without replaying account creation", async () => {
+    const gateway = gatewayWithSession(null);
+    gateway.readSignupMode = jest
+      .fn()
+      .mockResolvedValueOnce({
+        ok: true as const,
+        value: {
+          contract: "heldat-signup-mode-v1" as const,
+          signupMode: "public_email" as const,
+          configVersion: "1",
+          issuedAt: "2026-07-31T10:00:00.000Z",
+          expiresAt: "2026-07-31T10:05:00.000Z",
+          signature: "a".repeat(64)
+        }
+      })
+      .mockResolvedValueOnce({
+        ok: true as const,
+        value: {
+          contract: "heldat-signup-mode-v1" as const,
+          signupMode: "closed_pilot" as const,
+          configVersion: "2",
+          issuedAt: "2026-07-31T10:01:00.000Z",
+          expiresAt: "2026-07-31T10:06:00.000Z",
+          signature: "b".repeat(64)
+        }
+      });
+    gateway.signUp = jest.fn(async () => ({
+      ok: false as const,
+      error: {
+        code: "unexpected" as const,
+        message: "Account registration availability changed. Try again.",
+        retryable: true,
+        reason: "signup_mode_changed" as const
+      }
+    }));
+    const screen = await render(
+      <AuthFlowProvider gateway={gateway}>
+        <Probe />
+      </AuthFlowProvider>
+    );
+    await waitFor(() => expect(latestAuth?.bootstrapState).toBe("ready"));
+
+    await act(async () => {
+      await expect(latestAuth!.refreshSignupMode()).resolves.toBe(
+        "public_email"
+      );
+    });
+    expect(latestAuth?.signupMode).toBe("public_email");
+
+    await act(async () => {
+      await expect(
+        latestAuth!.createAccount(
+          "owner@example.com",
+          "correct horse battery staple"
+        )
+      ).resolves.toBeNull();
+    });
+
+    expect(gateway.signUp).toHaveBeenCalledTimes(1);
+    expect(gateway.readSignupMode).toHaveBeenCalledTimes(2);
+    expect(latestAuth?.signupModeState).toBe("ready");
+    expect(latestAuth?.signupMode).toBe("closed_pilot");
+    expect(latestAuth?.session).toBeNull();
+    await screen.unmount();
+  });
+
   it("stages a Google PKCE callback until the canonical exchange consumes it", async () => {
     const gateway = gatewayWithSession(null);
     gateway.beginGoogleOAuthSignIn = jest.fn(async () => ({

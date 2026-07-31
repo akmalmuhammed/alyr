@@ -196,6 +196,43 @@ async function executeProbe(apiBaseUrl, publicKey, definition) {
   };
 }
 
+async function readLaunchMode(apiBaseUrl, publicKey) {
+  try {
+    const response = await fetch(`${apiBaseUrl}/signup/mode`, {
+      method: "GET",
+      headers: { apikey: publicKey, Accept: "application/json" },
+      redirect: "error",
+      signal: AbortSignal.timeout(15_000)
+    });
+    const body = JSON.parse(await response.text());
+    const keys = [
+      "contract",
+      "signupMode",
+      "configVersion",
+      "issuedAt",
+      "expiresAt",
+      "signature"
+    ];
+    if (
+      response.status !== 200 ||
+      body?.apiVersion !== 1 ||
+      !["closed_pilot", "public_email", "public_email_google"].includes(
+        body?.signupMode
+      ) ||
+      body?.contract !== "heldat-signup-mode-v1" ||
+      !/^[1-9][0-9]{0,18}$/u.test(body?.configVersion ?? "") ||
+      !/^[a-f0-9]{64}$/u.test(body?.signature ?? "") ||
+      Date.parse(body?.expiresAt ?? "") <= Date.now() ||
+      !response.headers.get("cache-control")?.includes("no-store")
+    ) {
+      return null;
+    }
+    return Object.fromEntries(keys.map((key) => [key, body[key]]));
+  } catch {
+    return null;
+  }
+}
+
 async function run() {
   const { apiBaseUrl, publicKey } = configuration();
   if (process.argv.includes("--check-config")) {
@@ -207,9 +244,27 @@ async function run() {
 
   const attempts = process.argv.includes("--once") ? 1 : 12;
   for (let attempt = 1; attempt <= attempts; attempt += 1) {
+    const launchMode = await readLaunchMode(apiBaseUrl, publicKey);
     const results = [];
-    for (const definition of probeDefinitions) {
-      results.push(await executeProbe(apiBaseUrl, publicKey, definition));
+    if (!launchMode) {
+      results.push({
+        name: "signup mode attestation",
+        actualStatus: 0,
+        actualCode: "INVALID_MODE_ATTESTATION",
+        expectedStatus: 200,
+        expectedCode: "ATTESTED_MODE",
+        passed: false
+      });
+    } else {
+      for (const definition of probeDefinitions) {
+        const resolved = definition.path === "/pilot/preflight"
+          ? {
+              ...definition,
+              body: { ...definition.body, launchMode }
+            }
+          : definition;
+        results.push(await executeProbe(apiBaseUrl, publicKey, resolved));
+      }
     }
     if (results.every((result) => result.passed)) {
       for (const result of results) {

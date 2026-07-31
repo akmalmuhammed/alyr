@@ -119,10 +119,16 @@ export function postgresEnvironment(
     "DATABASE_CREDENTIALS_MISSING",
     "Database URL must include a username and password."
   );
+  const localHost = [
+    "localhost",
+    "127.0.0.1",
+    "::1",
+    "[::1]"
+  ].includes(parsed.hostname);
   const sslMode =
     parsed.searchParams.get("sslmode") ??
     environment.HELDAT_PG_SSLMODE ??
-    "require";
+    (localHost ? "require" : "verify-full");
   invariant(
     [
       "disable",
@@ -135,21 +141,10 @@ export function postgresEnvironment(
     "INVALID_PG_SSLMODE",
     "HELDAT_PG_SSLMODE is invalid."
   );
-  const localHost = [
-    "localhost",
-    "127.0.0.1",
-    "::1",
-    "[::1]"
-  ].includes(parsed.hostname);
-  if (
-    !localHost &&
-    !["require", "verify-ca", "verify-full"].includes(
-      sslMode
-    )
-  ) {
+  if (!localHost && sslMode !== "verify-full") {
     throw new BackupError(
-      "INSECURE_DATABASE_TRANSPORT",
-      "TLS cannot be disabled for a remote database."
+      "DATABASE_IDENTITY_VERIFICATION_REQUIRED",
+      "Remote database backup and restore connections require sslmode=verify-full."
     );
   }
   const connectTimeout =
@@ -170,6 +165,11 @@ export function postgresEnvironment(
         !sslRootCertificate.includes("\0")),
     "INVALID_PG_SSLROOTCERT",
     "HELDAT_PG_SSLROOTCERT is invalid."
+  );
+  invariant(
+    localHost || Boolean(sslRootCertificate),
+    "DATABASE_CA_REQUIRED",
+    "Remote database backup and restore connections require HELDAT_PG_SSLROOTCERT."
   );
   return {
     ...sanitizedProcessEnvironment(environment),

@@ -72,6 +72,9 @@ Verified on 2026-07-28:
 ## Honest pilot limitations
 
 - Supabase Free can pause and does not include managed backups.
+- TOTP enrollment and verification remain disabled until the native app ships
+  an enrollment, challenge, recovery-code, and account-recovery flow with
+  real-device tests. The UI must not promise MFA before that release gate.
 - Upload completion downloads the stored object in the Edge Function and
   confirms byte size and SHA-256 before the server marks it stored.
 - Migration `202607310001` provides the service-only enqueue, claim,

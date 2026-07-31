@@ -2,6 +2,7 @@ import { useRouter } from "expo-router";
 import { ArrowRight } from "phosphor-react-native";
 import { useRef, useState } from "react";
 import {
+  Platform,
   StyleSheet,
   Text,
   TextInput,
@@ -21,6 +22,7 @@ import {
   isCompactAuthViewport
 } from "@/auth/components";
 import { AUTH_ROUTES, CONFIRM_EMAIL_ROUTES } from "@/auth/routes";
+import { canOfferGoogleOAuth } from "@/auth/oauthProviderPolicy";
 import {
   hasFieldErrors,
   normalizeEmail,
@@ -169,7 +171,7 @@ export default function SignInScreen() {
             {copy.signIn.previewNotice}
           </AuthNotice>
         ) : null}
-        {mode === "supabase" ? (
+        {mode === "supabase" && canOfferGoogleOAuth(Platform.OS) ? (
           <View
             style={styles.provider}
             testID="auth-google-sign-in-entry"

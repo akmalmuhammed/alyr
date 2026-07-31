@@ -164,9 +164,10 @@ invariant(
   "Production runtime version is not scoped to the app version."
 );
 invariant(
-  config?.updates?.url ===
-    "https://u.expo.dev/85cab1f2-111f-4e20-abd5-8dff0df2fabb",
-  "Production EAS Update URL does not match the linked ALYR project."
+  config?.updates?.enabled === false &&
+    config?.updates?.checkAutomatically === "NEVER" &&
+    !("url" in (config?.updates ?? {})),
+  "Production remote updates must stay disabled and omit the update URL."
 );
 invariant(
   autolinkedModules.includes("expo-web-browser") &&

@@ -235,7 +235,7 @@ test("verified Google identities can claim only a hashed closed-pilot approval",
 test("public preflight API binds email, network scope, and idempotency", () => {
   assert.match(
     api,
-    /async function handlePublicSignupPreflight\([\s\S]*hasOnlyKeys\(body, \["apiVersion", "email", "idempotencyKey"\]\)/u,
+    /async function handlePublicSignupPreflight\([\s\S]*"apiVersion",[\s\S]*"email",[\s\S]*"idempotencyKey",[\s\S]*"launchMode"/u,
   );
   assert.match(
     api,
@@ -256,5 +256,40 @@ test("public preflight API binds email, network scope, and idempotency", () => {
   assert.match(
     requestControls,
     /"POST \/signup\/preflight"[\s\S]*routeGroup: "signup\.preflight"/u,
+  );
+});
+
+test("signup mode is server-attested, short-lived, and checked again by each preflight", () => {
+  assert.match(
+    api,
+    /const launchModeContract = "heldat-signup-mode-v1"[\s\S]*const launchModeLifetimeMilliseconds = 5 \* 60 \* 1000/u,
+  );
+  assert.match(
+    api,
+    /async function readLaunchMode\([\s\S]*client\.rpc\("read_launch_enrollment_mode"\)[\s\S]*signup_mode[\s\S]*config_version/u,
+  );
+  assert.match(
+    api,
+    /createHmac\("sha256", supabaseServiceRoleKey\)[\s\S]*launchModeMessage/u,
+  );
+  assert.match(
+    api,
+    /async function handleSignupMode\([\s\S]*signature: signLaunchMode\(launchMode\)/u,
+  );
+  assert.match(
+    api,
+    /handlePilotPreflight\([\s\S]*launchModeAttestationIsCurrent\([\s\S]*"closed_pilot"/u,
+  );
+  assert.match(
+    api,
+    /handlePublicSignupPreflight\([\s\S]*launchModeAttestationIsCurrent\([\s\S]*"public_email"[\s\S]*"public_email_google"/u,
+  );
+  assert.match(
+    api,
+    /request\.method === "GET"[\s\S]*path === "\/signup\/mode"[\s\S]*handleSignupMode/u,
+  );
+  assert.match(
+    requestControls,
+    /"GET \/signup\/mode"[\s\S]*routeGroup: "signup\.mode"/u,
   );
 });

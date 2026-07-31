@@ -85,6 +85,8 @@ function createServices(
     client as unknown as SupabaseAuthClientLike,
     {
       emailRedirectTo: configuration.emailRedirectTo,
+      signupModeEndpoint: configuration.signupModeEndpoint,
+      publicSignupEndpoint: configuration.publicSignupEndpoint,
       pilotAccessEndpoint: configuration.pilotAccessEndpoint,
       householdInviteAccessEndpoint:
         configuration.householdInviteAccessEndpoint,

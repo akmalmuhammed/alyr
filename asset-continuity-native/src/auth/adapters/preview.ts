@@ -89,6 +89,13 @@ export function createPreviewAuthGateway(
   const gateway: AccountAuthGateway = {
     mode: "preview",
 
+    async readSignupMode() {
+      return failure(
+        "unsupported",
+        "Signup availability is not used by the local preview."
+      );
+    },
+
     async currentSession() {
       return { ok: true, value: current };
     },

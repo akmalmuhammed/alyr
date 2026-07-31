@@ -1,6 +1,6 @@
 import { useRouter } from "expo-router";
 import { ArrowRight } from "phosphor-react-native";
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
   Pressable,
   StyleSheet,
@@ -48,27 +48,55 @@ export default function CreateAccountScreen() {
     createAccount,
     error,
     mode,
-    pendingHouseholdInvite
+    pendingHouseholdInvite,
+    refreshSignupMode,
+    signupMode,
+    signupModeState
   } = useAuthFlow();
   const { copy, language, rtl } = useCoreJourneyCopy();
   const inviteCopy = useInviteCopy();
   const joiningHousehold =
     mode === "supabase" && Boolean(pendingHouseholdInvite);
+  const standaloneSignedSignup =
+    mode === "supabase" && !joiningHousehold;
+  const trustedSignupMode =
+    signupModeState === "ready" && signupMode !== null;
+  const closedPilotSignup =
+    standaloneSignedSignup &&
+    trustedSignupMode &&
+    signupMode === "closed_pilot";
+  const publicSignup =
+    standaloneSignedSignup &&
+    trustedSignupMode &&
+    signupMode !== "closed_pilot";
   const [email, setEmail] = useState("");
   const [pilotAccessCode, setPilotAccessCode] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [fieldErrors, setFieldErrors] = useState<FieldErrors>({});
 
+  useEffect(() => {
+    if (standaloneSignedSignup && signupModeState === "idle") {
+      void refreshSignupMode();
+    }
+  }, [
+    refreshSignupMode,
+    signupModeState,
+    standaloneSignedSignup
+  ]);
+
   const submit = async () => {
+    if (standaloneSignedSignup && !trustedSignupMode) {
+      await refreshSignupMode();
+      return;
+    }
     const errors = localizeFieldErrors(
       validateCreateAccount({
         email,
         password,
         confirmPassword,
         pilotAccessCode,
-        requirePilotAccess:
-          mode === "supabase" && !joiningHousehold
+        requirePilotAccess: closedPilotSignup
       }),
       language
     );
@@ -76,7 +104,7 @@ export default function CreateAccountScreen() {
     if (hasFieldErrors(errors)) {
       focusFirstInvalidAuthField([
         { error: errors.email, ref: emailRef },
-        ...(mode === "supabase" && !joiningHousehold
+        ...(closedPilotSignup
           ? [{
               error: errors.pilotAccessCode,
               ref: pilotAccessRef
@@ -91,7 +119,7 @@ export default function CreateAccountScreen() {
     const attempt = await createAccount(
       normalizeEmail(email),
       password,
-      mode === "supabase" && !joiningHousehold
+      closedPilotSignup
         ? normalizePilotAccessCode(pilotAccessCode)
         : undefined
     );
@@ -131,15 +159,28 @@ export default function CreateAccountScreen() {
               mode === "supabase"
                 ? joiningHousehold
                   ? inviteCopy.account.createAction
-                  : copy.createAccount.signedSubmit
+                  : !trustedSignupMode
+                    ? signupModeState === "error"
+                      ? copy.createAccount.availabilityRetry
+                      : copy.createAccount.availabilityChecking
+                    : closedPilotSignup
+                      ? copy.createAccount.signedSubmit
+                      : copy.createAccount.submit
                 : copy.createAccount.submit,
             icon: ArrowRight,
-            loading: busy,
+            loading:
+              busy ||
+              (standaloneSignedSignup &&
+                (signupModeState === "idle" ||
+                  signupModeState === "loading")),
             onPress: () => void submit()
           }}
           secondary={{
             label: copy.createAccount.existingAccount,
-            disabled: busy,
+            disabled:
+              busy ||
+              (standaloneSignedSignup &&
+                signupModeState === "loading"),
             onPress: () => router.replace(AUTH_ROUTES.signIn)
           }}
         />
@@ -173,9 +214,15 @@ export default function CreateAccountScreen() {
           <AuthNotice tone="neutral">
             {inviteCopy.account.signupNotice}
           </AuthNotice>
-        ) : mode === "supabase" ? (
-          <AuthNotice tone="attention">
-            {copy.createAccount.pilotNotice}
+        ) : standaloneSignedSignup ? (
+          <AuthNotice tone="attention" live>
+            {!trustedSignupMode
+              ? signupModeState === "error"
+                ? copy.createAccount.availabilityUnavailable
+                : copy.createAccount.availabilityChecking
+              : closedPilotSignup
+                ? copy.createAccount.pilotNotice
+                : copy.createAccount.publicNotice}
           </AuthNotice>
         ) : null}
         <View style={styles.fields}>
@@ -191,7 +238,7 @@ export default function CreateAccountScreen() {
               clearFieldError("email");
             }}
             onSubmitEditing={() =>
-              mode === "supabase" && !joiningHousehold
+              closedPilotSignup
                 ? pilotAccessRef.current?.focus()
                 : passwordRef.current?.focus()
             }
@@ -202,7 +249,7 @@ export default function CreateAccountScreen() {
             textContentType="emailAddress"
             value={email}
           />
-          {mode === "supabase" && !joiningHousehold ? (
+          {closedPilotSignup ? (
             <AuthField
               autoCapitalize="characters"
               autoComplete="off"
@@ -281,7 +328,9 @@ export default function CreateAccountScreen() {
               rtl && styles.rtlText
             ]}
           >
-            {copy.createAccount.legalAcknowledgement}
+            {publicSignup
+              ? copy.createAccount.publicLegalAcknowledgement
+              : copy.createAccount.legalAcknowledgement}
           </Text>
           <View style={[styles.legalLinks, rtl && styles.rowReverse]}>
             <LegalLink
@@ -290,7 +339,9 @@ export default function CreateAccountScreen() {
               rtl={rtl}
             />
             <LegalLink
-              label={copy.createAccount.pilotTerms}
+              label={publicSignup
+                ? copy.createAccount.terms
+                : copy.createAccount.pilotTerms}
               onPress={() => router.push("/terms")}
               rtl={rtl}
             />

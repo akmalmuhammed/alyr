@@ -71,11 +71,11 @@ const FIXED_BACKUP_ID = createBackupId(
   "a1b2c3d4"
 );
 const SOURCE_DATABASE_URL =
-  "postgresql://postgres.sourceproject01:secret@aws-0-ap-south-1.pooler.supabase.com:6543/postgres?sslmode=require";
+  "postgresql://postgres.sourceproject01:secret@aws-0-ap-south-1.pooler.supabase.com:6543/postgres?sslmode=verify-full";
 const SOURCE_SUPABASE_URL =
   "https://sourceproject01.supabase.co";
 const TARGET_DATABASE_URL =
-  "postgresql://postgres.restoreproject1:secret@aws-0-ap-south-1.pooler.supabase.com:6543/postgres?sslmode=require";
+  "postgresql://postgres.restoreproject1:secret@aws-0-ap-south-1.pooler.supabase.com:6543/postgres?sslmode=verify-full";
 const TARGET_SUPABASE_URL =
   "https://restoreproject1.supabase.co";
 
@@ -1095,7 +1095,7 @@ test("destination parser exposes a pluggable but fail-closed R2/S3 boundary", as
   }
 });
 
-test("database subprocess environment keeps secrets out of arguments and enforces TLS remotely", () => {
+test("database subprocess environment keeps secrets out of arguments and verifies remote identity", () => {
   const environment = postgresEnvironment(
     "postgresql://operator:p%40ss@db.example.test:6543/heldat?sslmode=verify-full",
     {
@@ -1142,18 +1142,36 @@ test("database subprocess environment keeps secrets out of arguments and enforce
   assert.throws(
     () =>
       postgresEnvironment(
-        "postgresql://u:p@remote.example.test/db?sslmode=disable"
+        "postgresql://u:p@remote.example.test/db?sslmode=disable",
+        { HELDAT_PG_SSLROOTCERT: "/certs/root.pem" }
       ),
     (error) =>
-      error.code === "INSECURE_DATABASE_TRANSPORT"
+      error.code ===
+      "DATABASE_IDENTITY_VERIFICATION_REQUIRED"
   );
   assert.throws(
     () =>
       postgresEnvironment(
-        "postgresql://u:p@remote.example.test/db?sslmode=prefer"
+        "postgresql://u:p@remote.example.test/db?sslmode=require",
+        { HELDAT_PG_SSLROOTCERT: "/certs/root.pem" }
       ),
     (error) =>
-      error.code === "INSECURE_DATABASE_TRANSPORT"
+      error.code ===
+      "DATABASE_IDENTITY_VERIFICATION_REQUIRED"
+  );
+  assert.throws(
+    () =>
+      postgresEnvironment(
+        "postgresql://u:p@remote.example.test/db?sslmode=verify-full"
+      ),
+    (error) => error.code === "DATABASE_CA_REQUIRED"
+  );
+  assert.equal(
+    postgresEnvironment(
+      "postgresql://u:p@remote.example.test/db",
+      { HELDAT_PG_SSLROOTCERT: "/certs/root.pem" }
+    ).PGSSLMODE,
+    "verify-full"
   );
   const fullDumpArguments = databaseDumpArguments();
   const schemaArguments = databaseDumpArguments({
@@ -1865,7 +1883,11 @@ test("CLI backup and restore dry runs are credential-validated but network-free 
     [ENCRYPTION_KEY_ENV]: FIXED_KEY.toString("base64"),
     HELDAT_PG_DUMP_BIN: process.execPath,
     HELDAT_PG_RESTORE_BIN: process.execPath,
-    HELDAT_PSQL_BIN: process.execPath
+    HELDAT_PSQL_BIN: process.execPath,
+    HELDAT_PG_SSLROOTCERT: path.join(
+      projectRoot,
+      "reviewed-ca.pem"
+    )
   };
 
   const backupPlan = spawnSync(

@@ -74,6 +74,16 @@ const eas = JSON.parse(
       android?: { buildType?: string };
     }
   >;
+  submit?: {
+    production?: {
+      android?: {
+        applicationId?: string;
+        track?: string;
+        releaseStatus?: string;
+        changesNotSentForReview?: boolean;
+      };
+    };
+  };
 };
 
 function resolveConfig(
@@ -232,6 +242,15 @@ describe("Android production release configuration", () => {
     });
     expect(eas.build.production).toMatchObject({
       environment: "production"
+    });
+  });
+
+  it("keeps first Google Play submissions on an internal draft gate", () => {
+    expect(eas.submit?.production?.android).toEqual({
+      applicationId: "app.heldat.mobile",
+      track: "internal",
+      releaseStatus: "draft",
+      changesNotSentForReview: true
     });
   });
 

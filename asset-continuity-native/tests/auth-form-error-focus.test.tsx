@@ -17,6 +17,17 @@ const mockAuthState = {
   error: null,
   householdName: "My household",
   mode: "preview" as "preview" | "supabase",
+  refreshSignupMode: jest.fn(async () => "closed_pilot"),
+  signupMode: "closed_pilot" as
+    | "closed_pilot"
+    | "public_email"
+    | "public_email_google"
+    | null,
+  signupModeState: "ready" as
+    | "idle"
+    | "loading"
+    | "ready"
+    | "error",
   pendingHouseholdInvite: null as {
     oneTimeCode: string;
     capturedAt: string;
@@ -98,6 +109,8 @@ describe("auth form first-invalid-field wiring", () => {
   beforeEach(() => {
     jest.clearAllMocks();
     mockAuthState.mode = "preview";
+    mockAuthState.signupMode = "closed_pilot";
+    mockAuthState.signupModeState = "ready";
     mockAuthState.householdName = "";
     mockAuthState.pendingHouseholdInvite = null;
   });
@@ -197,6 +210,78 @@ describe("auth form first-invalid-field wiring", () => {
       "correct horse battery staple",
       "ALYRAAAABBBBCCCC"
     );
+    await screen.unmount();
+  });
+
+  it("removes the operator code and uses public signup copy only for a trusted public mode", async () => {
+    mockAuthState.mode = "supabase";
+    mockAuthState.signupMode = "public_email";
+    const screen = await render(<CreateAccountScreen />);
+
+    expect(screen.queryByLabelText("Early access code")).toBeNull();
+    expect(
+      screen.getByText(
+        "Registration is open. Create your private account with your email."
+      )
+    ).toBeTruthy();
+    await fireEvent.changeText(
+      screen.getByLabelText("Email"),
+      "owner@example.com"
+    );
+    await fireEvent.changeText(
+      screen.getByLabelText("Password"),
+      "correct horse battery staple"
+    );
+    await fireEvent.changeText(
+      screen.getByLabelText("Confirm password"),
+      "correct horse battery staple"
+    );
+    await fireEvent.press(screen.getByText("Create account"));
+
+    expect(mockAuthState.createAccount).toHaveBeenCalledWith(
+      "owner@example.com",
+      "correct horse battery staple",
+      undefined
+    );
+    await screen.unmount();
+  });
+
+  it("rerenders the required operator field after public signup closes", async () => {
+    mockAuthState.mode = "supabase";
+    mockAuthState.signupMode = "public_email";
+    const screen = await render(<CreateAccountScreen />);
+    expect(screen.queryByLabelText("Early access code")).toBeNull();
+
+    mockAuthState.signupMode = "closed_pilot";
+    await screen.rerender(<CreateAccountScreen />);
+
+    expect(screen.getByLabelText("Early access code")).toBeTruthy();
+    expect(
+      screen.getByText(
+        "Heldat is in limited early access. We verify your email and access code before creating an account."
+      )
+    ).toBeTruthy();
+    await screen.unmount();
+  });
+
+  it("fails closed and offers a retry when launch mode is unavailable", async () => {
+    mockAuthState.mode = "supabase";
+    mockAuthState.signupMode = null;
+    mockAuthState.signupModeState = "error";
+    const screen = await render(<CreateAccountScreen />);
+
+    expect(screen.queryByLabelText("Early access code")).toBeNull();
+    expect(
+      screen.getByText(
+        "Registration availability could not be verified. Check your connection and try again."
+      )
+    ).toBeTruthy();
+    await fireEvent.press(
+      screen.getByText("Check availability again")
+    );
+
+    expect(mockAuthState.refreshSignupMode).toHaveBeenCalledTimes(1);
+    expect(mockAuthState.createAccount).not.toHaveBeenCalled();
     await screen.unmount();
   });
 

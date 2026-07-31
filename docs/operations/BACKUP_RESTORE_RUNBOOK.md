@@ -79,18 +79,20 @@ $env:HELDAT_PG_RESTORE_BIN = 'C:\Program Files\PostgreSQL\17\bin\pg_restore.exe'
 $env:HELDAT_PSQL_BIN = 'C:\Program Files\PostgreSQL\17\bin\psql.exe'
 ```
 
-Remote database connections accept only `require`, `verify-ca`, or
-`verify-full`; `disable`, `allow`, and `prefer` are accepted only for
-`localhost`, `127.0.0.1`, or `::1`. Prefer `sslmode=verify-full` with a
-correctly configured trust chain. The connection timeout defaults to 30 seconds and can
-be set from 1–120 seconds with `HELDAT_PG_CONNECT_TIMEOUT`. When a custom CA is
-required, set `HELDAT_PG_SSLROOTCERT` to its local path; ambient `PG*` variables
-are discarded so an inherited `PGSERVICE`, `PGPASSFILE`, or `PGOPTIONS` cannot
-silently redirect the operation. PostgreSQL subprocesses inherit only a minimal
-allow-list of operating-system path, locale, temporary-directory, and user
-variables; unrelated ambient credentials are not forwarded. Tool output is
-forced to the stable `C` locale so version parsing and schema fingerprints do
-not depend on the operator machine's language.
+Remote database connections default to and require `sslmode=verify-full`.
+Set `HELDAT_PG_SSLROOTCERT` to the reviewed CA bundle path before every remote
+backup or restore; the command fails closed when the CA path is absent or a
+weaker TLS mode is requested. `disable`, `allow`, and `prefer` remain available
+only as an explicit local-development override for `localhost`, `127.0.0.1`, or
+`::1` (for example, append `?sslmode=disable` to a local Supabase URL). The
+connection timeout defaults to 30 seconds and can be set from 1–120 seconds with
+`HELDAT_PG_CONNECT_TIMEOUT`. Ambient `PG*` variables are discarded so an
+inherited `PGSERVICE`, `PGPASSFILE`, or `PGOPTIONS` cannot silently redirect the
+operation. PostgreSQL subprocesses inherit only a minimal allow-list of
+operating-system path, locale, temporary-directory, and user variables;
+unrelated ambient credentials are not forwarded. Tool output is forced to the
+stable `C` locale so version parsing and schema fingerprints do not depend on
+the operator machine's language.
 
 Each PostgreSQL subprocess has a 30-minute wall-clock limit. Override it from
 1,000–21,600,000 milliseconds with `HELDAT_PG_OPERATION_TIMEOUT_MS`. Database
@@ -138,6 +140,7 @@ not literal credentials:
 ```powershell
 $env:HELDAT_BACKUP_DESTINATION = 'local:E:\HeldatBackups\generation-001'
 $env:HELDAT_SOURCE_DATABASE_URL = 'postgresql://ROLE:PASSWORD@HOST:5432/postgres?sslmode=verify-full'
+$env:HELDAT_PG_SSLROOTCERT = 'C:\HeldatOperator\certificates\supabase-ca.pem'
 $env:HELDAT_SOURCE_SUPABASE_URL = 'https://PROJECT_REF.supabase.co'
 $env:HELDAT_SOURCE_SUPABASE_SERVICE_ROLE_KEY = 'SERVICE_ROLE_KEY'
 ```
@@ -251,6 +254,7 @@ Set target values:
 
 ```powershell
 $env:HELDAT_RESTORE_DATABASE_URL = 'postgresql://ROLE:PASSWORD@RESTORE_HOST:5432/postgres?sslmode=verify-full'
+$env:HELDAT_PG_SSLROOTCERT = 'C:\HeldatOperator\certificates\supabase-ca.pem'
 $env:HELDAT_RESTORE_SUPABASE_URL = 'https://RESTORE_PROJECT_REF.supabase.co'
 ```
 
@@ -377,6 +381,7 @@ Remove-Item Env:HELDAT_SOURCE_SUPABASE_SERVICE_ROLE_KEY -ErrorAction SilentlyCon
 Remove-Item Env:HELDAT_RESTORE_DATABASE_URL -ErrorAction SilentlyContinue
 Remove-Item Env:HELDAT_RESTORE_SUPABASE_SERVICE_ROLE_KEY -ErrorAction SilentlyContinue
 Remove-Item Env:HELDAT_BACKUP_ENCRYPTION_KEY_BASE64 -ErrorAction SilentlyContinue
+Remove-Item Env:HELDAT_PG_SSLROOTCERT -ErrorAction SilentlyContinue
 ```
 
 Also close the operator shell and follow the workstation's secret-handling and
@@ -398,6 +403,8 @@ memory-clearing procedure.
 | `DATABASE_TOOL_TIMEOUT` | The configured wall clock expired; inspect locks/connectivity, adjust only after review, and retry. |
 | `DATABASE_TOOL_VERSION_MISMATCH` | Install one matching PostgreSQL client major for pg_dump, pg_restore, and psql. |
 | `DATABASE_RESTORE_VERSION_MISMATCH` | Use the same PostgreSQL client major that created the backup. |
+| `DATABASE_IDENTITY_VERIFICATION_REQUIRED` | Use `sslmode=verify-full`; weaker modes are limited to an explicit loopback development connection. |
+| `DATABASE_CA_REQUIRED` | Set `HELDAT_PG_SSLROOTCERT` to the reviewed CA bundle path for the remote database. |
 | `SUPABASE_PROJECT_IDENTITY_MISMATCH` | Pair a standard direct/pooler database URL with the same project-ref Supabase origin. |
 | `PUBLIC_STORAGE_BUCKET_UNSUPPORTED` | Make the bucket private and review exposure, or wait for an explicitly scoped public-bucket format. |
 | `BACKUP_SOURCE_CHANGED_DURING_CAPTURE` | Quiesce writes and retry; boundary schema or row-count checks changed. |
