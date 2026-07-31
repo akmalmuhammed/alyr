@@ -208,6 +208,16 @@ million Class B operations, but that is still only about 1 MB per user at
 10,000 users and requires enforced capture budgets plus capacity alerts:
 <https://developers.cloudflare.com/r2/pricing/>.
 
+A deterministic disposable-local capacity harness now models 10,000 users,
+25 Assets each, and 1,030,000 metadata rows without accepting hosted URLs,
+credentials, linked projects, or production targets. Its verified two-user
+smoke reconciled 22/22 rows with zero errors, p95 499.25 ms, zero waiting load
+locks, and zero retained bytes after cleanup. The full local run correctly
+stopped before mutation because 2,118,950,912 bytes were required while only
+606,834,688 were available. The committed JSON report and harness limitations
+are documented in `STAGING_10K_METADATA_CAPACITY_HARNESS.md`; hosted API,
+Auth/RLS, object-storage, egress, and full 10K measurements remain open.
+
 ## Next production sequence
 
 1. Obtain and record approval for the real encrypted production backup.

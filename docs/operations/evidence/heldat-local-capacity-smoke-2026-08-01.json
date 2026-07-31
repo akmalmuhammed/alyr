@@ -1,0 +1,179 @@
+{
+  "harnessVersion": 1,
+  "fixtureVersion": 1,
+  "mode": "execute",
+  "target": {
+    "container": "supabase_db_alyr-local",
+    "projectLabel": "alyr-local",
+    "state": "healthy",
+    "diskPreflight": {
+      "availableBytes": 608280576,
+      "requiredBytes": 536904704,
+      "minimumReserveBytes": 536870912,
+      "passed": true
+    }
+  },
+  "startedAt": "2026-07-31T22:04:12.143Z",
+  "finishedAt": "2026-07-31T22:04:17.325Z",
+  "durationMs": 5180.93,
+  "workload": {
+    "users": 2,
+    "households": 2,
+    "memberships": 2,
+    "placesPerUser": 1,
+    "places": 2,
+    "assetsPerUser": 2,
+    "assets": 4,
+    "locationRevisions": 4,
+    "evidencePerAsset": 1,
+    "evidenceMetadata": 4,
+    "syncOperationsPerAsset": 1,
+    "syncOperations": 4,
+    "totalRows": 22,
+    "logicalAttachmentBytes": 8388608,
+    "estimatedMetadataBytes": 11264,
+    "estimatedPeakLocalBytes": 33792
+  },
+  "execution": {
+    "batchUsers": 1,
+    "batches": 2,
+    "concurrency": 1,
+    "statementTimeoutMs": 120000,
+    "p95BatchBudgetMs": 5000,
+    "retainedAfterRun": false
+  },
+  "latency": {
+    "samples": 2,
+    "minimumMs": 385.82,
+    "p50Ms": 385.82,
+    "p95Ms": 499.25,
+    "p99Ms": 499.25,
+    "maximumMs": 499.25
+  },
+  "throughput": {
+    "usersPerSecond": 0.39,
+    "rowsPerSecond": 4.25
+  },
+  "errors": {
+    "totalFailedBatches": 0,
+    "counts": {},
+    "samples": [],
+    "observerSamplesFailed": 0,
+    "observerErrorSamples": []
+  },
+  "database": {
+    "bytesBeforeSetup": 19000467,
+    "bytesBeforeLoad": 19319955,
+    "bytesAfterLoad": 19541139,
+    "growthBytes": 221184,
+    "walBytes": 15344,
+    "retainedBytesBeforeCleanup": 475136,
+    "retainedBytesAfterCleanup": 0,
+    "retainedBytesPerUser": 237568,
+    "retainedBytesPerRow": 21597.09,
+    "tableSizes": [
+      {
+        "table_name": "asset_location_revisions",
+        "heap_bytes": 8192,
+        "index_bytes": 49152,
+        "retained_bytes": 65536
+      },
+      {
+        "table_name": "assets",
+        "heap_bytes": 8192,
+        "index_bytes": 65536,
+        "retained_bytes": 81920
+      },
+      {
+        "table_name": "evidence_metadata",
+        "heap_bytes": 8192,
+        "index_bytes": 49152,
+        "retained_bytes": 65536
+      },
+      {
+        "table_name": "households",
+        "heap_bytes": 8192,
+        "index_bytes": 16384,
+        "retained_bytes": 32768
+      },
+      {
+        "table_name": "memberships",
+        "heap_bytes": 8192,
+        "index_bytes": 32768,
+        "retained_bytes": 49152
+      },
+      {
+        "table_name": "places",
+        "heap_bytes": 8192,
+        "index_bytes": 49152,
+        "retained_bytes": 65536
+      },
+      {
+        "table_name": "run_manifest",
+        "heap_bytes": 8192,
+        "index_bytes": 16384,
+        "retained_bytes": 32768
+      },
+      {
+        "table_name": "sync_operations",
+        "heap_bytes": 8192,
+        "index_bytes": 65536,
+        "retained_bytes": 81920
+      }
+    ]
+  },
+  "connections": {
+    "configuredMaximum": 100,
+    "peakObservedAll": 19,
+    "peakObservedLoad": 1,
+    "peakObservedActiveLoad": 1,
+    "observationSamples": 2
+  },
+  "locks": {
+    "peakObservedDatabaseLocks": 52,
+    "peakObservedDatabaseWaiting": 0,
+    "peakObservedLoadLocks": 2,
+    "peakObservedLoadWaiting": 0
+  },
+  "reconciliation": {
+    "expected": {
+      "households": 2,
+      "memberships": 2,
+      "places": 2,
+      "assets": 4,
+      "asset_location_revisions": 4,
+      "evidence_metadata": 4,
+      "sync_operations": 4
+    },
+    "actual": {
+      "households": 2,
+      "memberships": 2,
+      "places": 2,
+      "assets": 4,
+      "asset_location_revisions": 4,
+      "evidence_metadata": 4,
+      "sync_operations": 4
+    },
+    "matched": true
+  },
+  "gates": {
+    "allBatchesSucceeded": true,
+    "rowCountsMatched": true,
+    "p95WithinBudget": true,
+    "noWaitingLoadLocks": true,
+    "cleanupCompleted": true,
+    "passed": true
+  },
+  "assumptions": [
+    "One synthetic household and one synthetic membership represent each modeled user.",
+    "The default register contains one place and 25 assets per modeled user.",
+    "Every asset has one current location revision, one evidence metadata row, and one sync operation by default.",
+    "Evidence rows declare a 2 MiB logical attachment but the harness stores metadata only; object bytes and egress are not exercised.",
+    "Fixtures use deterministic UUIDs and clearly synthetic names; no personal, customer, production, or copied data is used.",
+    "The isolated schema mirrors important production metadata widths and indexes but does not measure Auth, RLS, Edge Functions, Storage, Realtime, mobile sync, or network latency.",
+    "Batch latency includes local docker-exec and psql startup overhead; performance timing itself is environment-dependent.",
+    "The local disk preflight reserves 512 MiB beyond a conservative 1,536-byte estimate per modeled metadata row; Docker/WSL allocation behavior can still vary.",
+    "Passing this harness is capacity evidence for its stated metadata workload, not a public-launch or 10K-concurrent-user claim."
+  ],
+  "note": "This report measures deterministic synthetic metadata on the fixed disposable local Supabase database. It is not hosted-project, API, object-storage, network, or concurrency-at-10K evidence."
+}
