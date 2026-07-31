@@ -1,8 +1,15 @@
-import type { HouseholdId } from "@alyr/contracts";
+import type {
+  HouseholdId,
+  HouseholdStorageUsagePort
+} from "@alyr/contracts";
 
 import { createPreviewAuthGateway } from "@/auth/adapters/preview";
 import type { AccountAuthGateway } from "@/auth/types";
-import { createAuthenticatedCloudTransports } from "@/runtime/cloudServices";
+import {
+  configureRuntimeHouseholdStoragePort,
+  createAuthenticatedCloudTransports,
+  getRuntimeHouseholdStoragePort
+} from "@/runtime/cloudServices";
 
 const householdId =
   "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa" as HouseholdId;
@@ -75,5 +82,23 @@ describe("authenticated cloud transport composition", () => {
     expect(requests[1]?.url).toBe(
       "https://project-ref.supabase.co/functions/v1/api/invites"
     );
+    expect(cloud.householdStorage).toBeDefined();
+  });
+
+  it("registers and identity-safely disposes the signed household storage port", () => {
+    const first: HouseholdStorageUsagePort = {
+      getUsage: jest.fn()
+    };
+    const second: HouseholdStorageUsagePort = {
+      getUsage: jest.fn()
+    };
+    const removeFirst = configureRuntimeHouseholdStoragePort(first);
+    const removeSecond = configureRuntimeHouseholdStoragePort(second);
+
+    expect(getRuntimeHouseholdStoragePort()).toBe(second);
+    removeFirst();
+    expect(getRuntimeHouseholdStoragePort()).toBe(second);
+    removeSecond();
+    expect(getRuntimeHouseholdStoragePort()).toBeNull();
   });
 });

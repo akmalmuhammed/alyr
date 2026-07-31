@@ -1,6 +1,7 @@
 import type {
   AccountDeletionPort,
   HouseholdAccessPort,
+  HouseholdStorageUsagePort,
   SyncTransport
 } from "@alyr/contracts";
 
@@ -8,6 +9,7 @@ import { HttpAccountDeletion } from "@/adapters/httpAccountDeletion";
 import { HttpEvidenceDownloadPort } from "@/adapters/httpEvidenceDownload";
 import { HttpEvidenceUploadPort } from "@/adapters/httpEvidenceUpload";
 import { HttpHouseholdAccess } from "@/adapters/httpHouseholdAccess";
+import { HttpHouseholdStorage } from "@/adapters/httpHouseholdStorage";
 import { HttpProductEventTransport } from "@/adapters/httpProductEvents";
 import {
   HttpSyncTransport,
@@ -24,6 +26,7 @@ import type { ProductEventTransport } from "@/analytics";
 export interface AuthenticatedCloudTransports {
   readonly sync: SyncTransport;
   readonly householdAccess: HouseholdAccessPort;
+  readonly householdStorage: HouseholdStorageUsagePort;
   readonly evidenceUploads: EvidenceUploadPort;
   readonly evidenceDownloads: EvidenceDownloadPort;
   readonly accountDeletion: AccountDeletionPort;
@@ -37,6 +40,7 @@ let runtimeSyncTransport: SyncTransport | null = null;
 let runtimeEvidenceUploadPort: EvidenceUploadPort | null = null;
 let runtimeEvidenceDownloadPort: EvidenceDownloadPort | null = null;
 let runtimeCloudExportPort: CloudExportPort | null = null;
+let runtimeHouseholdStoragePort: HouseholdStorageUsagePort | null = null;
 let runtimeProductEventTransportFactory:
   | ((householdId: string) => ProductEventTransport)
   | null = null;
@@ -106,6 +110,21 @@ export function getRuntimeCloudExportPort(): CloudExportPort | null {
   return runtimeCloudExportPort;
 }
 
+export function configureRuntimeHouseholdStoragePort(
+  port: HouseholdStorageUsagePort
+): () => void {
+  runtimeHouseholdStoragePort = port;
+  return () => {
+    if (runtimeHouseholdStoragePort === port) {
+      runtimeHouseholdStoragePort = null;
+    }
+  };
+}
+
+export function getRuntimeHouseholdStoragePort(): HouseholdStorageUsagePort | null {
+  return runtimeHouseholdStoragePort;
+}
+
 export function configureRuntimeProductEventTransportFactory(
   factory: (householdId: string) => ProductEventTransport
 ): () => void {
@@ -143,6 +162,7 @@ export function createAuthenticatedCloudTransports(
   return {
     sync: new HttpSyncTransport(common),
     householdAccess: new HttpHouseholdAccess(common),
+    householdStorage: new HttpHouseholdStorage(common),
     accountDeletion: new HttpAccountDeletion(common),
     cloudExports: new HttpCloudExport(common),
     productEventsForHousehold: (householdId) =>

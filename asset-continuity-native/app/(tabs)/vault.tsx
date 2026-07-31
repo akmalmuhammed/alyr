@@ -23,8 +23,9 @@ import {
   Warning,
   WarningCircle
 } from "phosphor-react-native";
-import { useCallback, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import {
+  AccessibilityInfo,
   Alert,
   Platform,
   Pressable,
@@ -82,6 +83,7 @@ import {
   cloudStorageUsageTruth,
   type AuthoritativeCloudStorageUsage
 } from "@/domain/vaultStorage";
+import { getRuntimeHouseholdStoragePort } from "@/runtime/cloudServices";
 import {
   reviewReminderSettingsCopy,
   type ReviewReminderSettingsCopy
@@ -100,6 +102,7 @@ import {
   useWorkspace,
   type WorkspaceSyncRuntimeState
 } from "@/state/WorkspaceProvider";
+import { useFocusedHouseholdStorageUsage } from "@/vault/focusedHouseholdStorageUsage";
 import {
   colors,
   radius,
@@ -214,6 +217,7 @@ export function archiveSyncPresentation(
 function ArchiveStatusMasthead({
   canReadEvidence,
   cloudAllowanceLabel,
+  cloudUsageAuthoritative,
   cloudUsageDescription,
   cloudUsageStatus,
   encryptedAtRest,
@@ -228,6 +232,7 @@ function ArchiveStatusMasthead({
 }: {
   readonly canReadEvidence: boolean;
   readonly cloudAllowanceLabel: string;
+  readonly cloudUsageAuthoritative: boolean;
   readonly cloudUsageDescription: string;
   readonly cloudUsageStatus: string;
   readonly encryptedAtRest: boolean;
@@ -430,6 +435,8 @@ function ArchiveStatusMasthead({
                 `${copy.vault.cloudPilotAllowance}: ${cloudAllowanceLabel}`,
                 cloudUsageDescription
               ].join(". ")}
+              accessibilityLiveRegion="polite"
+              announceChanges={cloudUsageAuthoritative}
               detail={`${copy.vault.cloudPilotAllowance}: ${cloudAllowanceLabel}`}
               description={cloudUsageDescription}
               label={copy.vault.cloudPilotStorage}
@@ -470,6 +477,8 @@ function ArchiveStatusMasthead({
 
 function ArchiveFact({
   accessibilityLabel,
+  accessibilityLiveRegion,
+  announceChanges = false,
   description,
   detail,
   label,
@@ -478,6 +487,8 @@ function ArchiveFact({
   value
 }: {
   readonly accessibilityLabel: string;
+  readonly accessibilityLiveRegion?: "none" | "polite" | "assertive";
+  readonly announceChanges?: boolean;
   readonly description?: string;
   readonly detail: string;
   readonly label: string;
@@ -485,9 +496,24 @@ function ArchiveFact({
   readonly testID?: string;
   readonly value: string;
 }) {
+  const previousAccessibilityLabel = useRef(accessibilityLabel);
+
+  useEffect(() => {
+    const previous = previousAccessibilityLabel.current;
+    previousAccessibilityLabel.current = accessibilityLabel;
+    if (
+      announceChanges &&
+      previous !== accessibilityLabel &&
+      Platform.OS === "ios"
+    ) {
+      AccessibilityInfo.announceForAccessibility(accessibilityLabel);
+    }
+  }, [accessibilityLabel, announceChanges]);
+
   return (
     <View
       accessibilityLabel={accessibilityLabel}
+      accessibilityLiveRegion={accessibilityLiveRegion}
       accessible
       style={[styles.archiveFactRow, rtl && styles.rowReverse]}
       testID={testID}
@@ -673,7 +699,7 @@ export function VaultScreen({
     workspace.household.id
   );
   const cloudStorage = cloudStorageUsageTruth({
-    verifiedCloudAccess: Boolean(verifiedCloudAccess),
+    verifiedHouseholdId: verifiedCloudAccess?.householdId ?? null,
     authoritativeUsage: authoritativeCloudStorageUsage
   });
   const authoritativeAccess = authoritativeHouseholdAccessSnapshot(
@@ -716,10 +742,10 @@ export function VaultScreen({
     placeDocuments
   );
   const localSizeLabel = formatByteSize(localBytes, language);
-  const cloudAllowanceLabel = formatByteSize(
-    cloudStorage.allowanceBytes,
-    language
-  );
+  const cloudAllowanceLabel =
+    cloudStorage.allowanceBytes === null
+      ? copy.vault.cloudAllowanceUnknown
+      : formatByteSize(cloudStorage.allowanceBytes, language);
   const cloudUsageStatus =
     cloudStorage.kind === "authoritative"
       ? `${formatByteSize(cloudStorage.usedBytes, language)} ${
@@ -736,7 +762,7 @@ export function VaultScreen({
         )}. ${copy.vault.cloudAllowanceDescription}`
       : cloudStorage.reason === "not-connected"
         ? copy.vault.cloudNotConnectedDescription
-        : `${copy.vault.cloudUsageUnknownDescription} ${copy.vault.cloudAllowanceDescription}`;
+        : copy.vault.cloudUsageUnknownDescription;
 
   const shareSnapshot = async (): Promise<void> => {
     let file: File | null = null;
@@ -887,6 +913,7 @@ export function VaultScreen({
       <ArchiveStatusMasthead
         canReadEvidence={canReadEvidence}
         cloudAllowanceLabel={cloudAllowanceLabel}
+        cloudUsageAuthoritative={cloudStorage.kind === "authoritative"}
         cloudUsageDescription={cloudUsageDescription}
         cloudUsageStatus={cloudUsageStatus}
         encryptedAtRest={repository.encryptedAtRest}
@@ -1506,7 +1533,37 @@ export function VaultScreen({
 }
 
 export default function VaultRoute() {
-  return <VaultScreen />;
+  const { mode, session } = useAuthFlow();
+  const { pendingOperationCount, sync, workspace } = useWorkspace();
+  const access = workspace
+    ? verifiedHouseholdAccessForWorkspace(
+        mode,
+        session,
+        workspace.household.id
+      )
+    : null;
+  const authoritativeCloudStorageUsage =
+    useFocusedHouseholdStorageUsage({
+      access,
+      workspaceMode: workspace?.mode ?? null,
+      requestPaused:
+        sync.status === "local-only" ||
+        sync.status === "offline" ||
+        sync.status === "syncing",
+      refreshKey: [
+        sync.status,
+        String(pendingOperationCount),
+        sync.lastAttemptAt ?? "never-attempted",
+        sync.lastSyncedAt ?? "never-synced"
+      ].join(":"),
+      port: getRuntimeHouseholdStoragePort()
+    });
+
+  return (
+    <VaultScreen
+      authoritativeCloudStorageUsage={authoritativeCloudStorageUsage}
+    />
+  );
 }
 
 function reviewReminderStatusLabel(

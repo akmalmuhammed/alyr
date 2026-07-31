@@ -5,7 +5,12 @@ import {
   waitFor
 } from "@testing-library/react-native";
 import type { PropsWithChildren } from "react";
-import { Alert, StyleSheet } from "react-native";
+import {
+  AccessibilityInfo,
+  Alert,
+  Platform,
+  StyleSheet
+} from "react-native";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 
 import {
@@ -33,7 +38,6 @@ import {
   signedAccountExitPrompt
 } from "@/i18n/coreJourneyCopy";
 import { LocaleProvider } from "@/i18n/LocaleProvider";
-import { PILOT_CLOUD_STORAGE_ALLOWANCE_BYTES } from "@/domain/vaultStorage";
 import type { LocalRecoveryKitRecord } from "@/recovery";
 
 const mockRouter = {
@@ -380,10 +384,6 @@ describe("Family and Vault localization", () => {
       wrapper: localeWrapper("en")
     });
     const englishCopy = CORE_JOURNEY_COPY.en.vault;
-    const englishAllowance = formatByteSize(
-      PILOT_CLOUD_STORAGE_ALLOWANCE_BYTES,
-      "en"
-    );
     const englishLocal = english.getByTestId(
       "vault-local-proof-storage"
     );
@@ -400,17 +400,18 @@ describe("Family and Vault localization", () => {
     ).toBeTruthy();
     expect(
       within(englishCloud).getByText(
-        `${englishCopy.cloudPilotAllowance}: ${englishAllowance}`
+        `${englishCopy.cloudPilotAllowance}: ${englishCopy.cloudAllowanceUnknown}`
       )
     ).toBeTruthy();
     expect(englishCloud.props.accessibilityLabel).toBe(
       [
         englishCopy.cloudPilotStorage,
         englishCopy.cloudUsageUnknown,
-        `${englishCopy.cloudPilotAllowance}: ${englishAllowance}`,
-        `${englishCopy.cloudUsageUnknownDescription} ${englishCopy.cloudAllowanceDescription}`
+        `${englishCopy.cloudPilotAllowance}: ${englishCopy.cloudAllowanceUnknown}`,
+        englishCopy.cloudUsageUnknownDescription
       ].join(". ")
     );
+    expect(englishCloud.props.accessibilityLiveRegion).toBe("polite");
     expect(
       within(englishCloud).queryByText(formatByteSize(0, "en"))
     ).toBeNull();
@@ -420,10 +421,6 @@ describe("Family and Vault localization", () => {
       wrapper: localeWrapper("ar")
     });
     const arabicCopy = CORE_JOURNEY_COPY.ar.vault;
-    const arabicAllowance = formatByteSize(
-      PILOT_CLOUD_STORAGE_ALLOWANCE_BYTES,
-      "ar"
-    );
     const arabicCloud = arabic.getByTestId(
       "vault-cloud-storage-usage"
     );
@@ -433,7 +430,7 @@ describe("Family and Vault localization", () => {
     ).toBeTruthy();
     expect(
       within(arabicCloud).getByText(
-        `${arabicCopy.cloudPilotAllowance}: ${arabicAllowance}`
+        `${arabicCopy.cloudPilotAllowance}: ${arabicCopy.cloudAllowanceUnknown}`
       )
     ).toBeTruthy();
     expect(arabicCloud.props.accessibilityLabel).toContain(
@@ -529,8 +526,10 @@ describe("Family and Vault localization", () => {
     const screen = await render(
       <VaultScreen
         authoritativeCloudStorageUsage={{
+          householdId: mockWorkspace.household.id,
           source: "server-confirmed",
           usedBytes: 2 * 1024 * 1024,
+          allowanceBytes: 48 * 1024 * 1024,
           measuredAt
         }}
       />,
@@ -556,6 +555,48 @@ describe("Family and Vault localization", () => {
     expect(
       within(cloud).queryByText(copy.cloudUsageUnknown)
     ).toBeNull();
+  });
+
+  it("announces an asynchronously confirmed cloud measurement on iOS", async () => {
+    const platformDescriptor = Object.getOwnPropertyDescriptor(
+      Platform,
+      "OS"
+    );
+    Object.defineProperty(Platform, "OS", {
+      configurable: true,
+      value: "ios"
+    });
+    const announce = jest
+      .spyOn(AccessibilityInfo, "announceForAccessibility")
+      .mockImplementation(() => undefined);
+
+    try {
+      const screen = await render(<VaultScreen />, {
+        wrapper: localeWrapper("en")
+      });
+      expect(announce).not.toHaveBeenCalled();
+
+      await screen.rerender(
+        <VaultScreen
+          authoritativeCloudStorageUsage={{
+            householdId: mockWorkspace.household.id,
+            source: "server-confirmed",
+            usedBytes: 3 * 1024 * 1024,
+            allowanceBytes: 48 * 1024 * 1024,
+            measuredAt: "2026-07-28T08:00:00.000Z"
+          }}
+        />
+      );
+      const cloud = screen.getByTestId("vault-cloud-storage-usage");
+      expect(announce).toHaveBeenCalledWith(
+        cloud.props.accessibilityLabel
+      );
+    } finally {
+      announce.mockRestore();
+      if (platformDescriptor) {
+        Object.defineProperty(Platform, "OS", platformDescriptor);
+      }
+    }
   });
 
   it("keeps account, household, language and diagnostics on Settings in Arabic", async () => {

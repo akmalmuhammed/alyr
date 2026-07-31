@@ -547,6 +547,7 @@ const english = {
     cloudPilotAllowance: "Household allowance",
     cloudUsed: "used",
     cloudUsageUnknown: "Usage unknown",
+    cloudAllowanceUnknown: "Allowance unknown",
     cloudNotConnected: "Not connected",
     cloudUsageConfirmedDescription:
       "Server-confirmed usage measured on",
@@ -1184,6 +1185,7 @@ const arabic = {
     cloudPilotAllowance: "حصة الأسرة",
     cloudUsed: "مستخدمة",
     cloudUsageUnknown: "الاستخدام غير معروف",
+    cloudAllowanceUnknown: "الحصة غير معروفة",
     cloudNotConnected: "غير متصل",
     cloudUsageConfirmedDescription:
       "استخدام مؤكد من الخادم بتاريخ",
