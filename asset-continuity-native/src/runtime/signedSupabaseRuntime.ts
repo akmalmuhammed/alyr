@@ -11,12 +11,9 @@ import {
 } from "@/auth/adapters/supabase";
 import { createExpoPendingHouseholdInviteStore } from "@/auth/expoPendingHouseholdInvite";
 import { createExpoPendingHouseholdProvisionStore } from "@/auth/expoPendingHouseholdProvision";
-import {
-  createExpoGoogleOAuthBrowser,
-  heldatGoogleOAuthRedirectUri
-} from "@/auth/googleOAuthBrowser";
 import { configurePendingHouseholdInviteStoreFactory } from "@/auth/pendingHouseholdInvite";
 import { configurePendingHouseholdProvisionStoreFactory } from "@/auth/pendingHouseholdProvision";
+import { platformAuthProviderOptions } from "@/auth/platformAuthProviderOptions";
 import { createRecoveryProtectedAuthGateway } from "@/auth/recoveryProtectedAuthGateway";
 import { configureAuthGatewayFactory } from "@/auth/runtime";
 import type { AccountAuthGateway } from "@/auth/types";
@@ -91,10 +88,7 @@ function createServices(
       householdInviteAccessEndpoint:
         configuration.householdInviteAccessEndpoint,
       publicApiKey: configuration.publishableKey,
-      googleOAuth: {
-        redirectTo: heldatGoogleOAuthRedirectUri(),
-        browser: createExpoGoogleOAuthBrowser()
-      },
+      ...platformAuthProviderOptions(),
       passwordRecoveryRedirectTo:
         configuration.passwordRecoveryRedirectTo
     }

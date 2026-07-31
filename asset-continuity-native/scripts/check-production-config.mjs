@@ -1,4 +1,5 @@
 import { spawnSync } from "node:child_process";
+import { readFileSync } from "node:fs";
 import { createRequire } from "node:module";
 import process from "node:process";
 
@@ -25,6 +26,24 @@ const {
 const configCheckGoogleMapsApiKey =
   process.env.GOOGLE_MAPS_ANDROID_API_KEY ??
   `AIza${"A".repeat(35)}`;
+const signedRuntimeSource = readFileSync(
+  new URL("../src/runtime/signedSupabaseRuntime.ts", import.meta.url),
+  "utf8"
+);
+const androidAuthProviderSource = readFileSync(
+  new URL(
+    "../src/auth/platformAuthProviderOptions.android.ts",
+    import.meta.url
+  ),
+  "utf8"
+);
+const iosAuthProviderSource = readFileSync(
+  new URL(
+    "../src/auth/platformAuthProviderOptions.ios.ts",
+    import.meta.url
+  ),
+  "utf8"
+);
 const result = spawnSync(
   process.execPath,
   [expoCli, "config", "--type", "introspect", "--json"],
@@ -185,7 +204,30 @@ invariant(
 invariant(
   autolinkedModules.includes("expo-web-browser") &&
     webBrowserPlugin?.[1]?.experimentalLauncherActivity === false,
-  "Production Google OAuth is missing the reviewed Expo WebBrowser bridge."
+  "The reviewed Android OAuth browser dependency/config changed."
+);
+invariant(
+  signedRuntimeSource.includes(
+    'from "@/auth/platformAuthProviderOptions"'
+  ) &&
+    signedRuntimeSource.includes("...platformAuthProviderOptions()") &&
+    !signedRuntimeSource.includes("@/auth/googleOAuthBrowser"),
+  "Signed runtime must resolve provider options through the platform boundary."
+);
+invariant(
+  androidAuthProviderSource.includes(
+    'from "./googleOAuthBrowser"'
+  ) &&
+    androidAuthProviderSource.includes(
+      "createExpoGoogleOAuthBrowser()"
+    ),
+  "Android signed runtime is missing the reviewed Google OAuth provider."
+);
+invariant(
+  !/google|oauth|web-browser|auth-session/iu.test(
+    iosAuthProviderSource
+  ),
+  "iOS auth-provider boundary must not import or configure the Android Google OAuth runtime."
 );
 invariant(
   autolinkedModules.includes("expo-image-picker") &&
@@ -400,5 +442,5 @@ invariant(
 );
 
 console.log(
-  "Production native config passed: iOS privacy/security and Android Maps, permission, deep-link, network-inspector, and local-notifications-only release policies verified."
+  "Production native config passed: iOS privacy/security/provider exclusion and Android OAuth, Maps, permission, deep-link, network-inspector, and local-notifications-only release policies verified."
 );

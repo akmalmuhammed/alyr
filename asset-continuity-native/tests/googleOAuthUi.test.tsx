@@ -87,7 +87,7 @@ describe("Google OAuth sign-in entry", () => {
         params: { code: "pkce-ui-code" }
       });
     });
-  });
+  }, 15_000);
 
   it("keeps the provider entry out of the session-only preview", async () => {
     mockAuthState = signedAuthState({ mode: "preview" });

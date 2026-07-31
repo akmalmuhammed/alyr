@@ -18,7 +18,9 @@
     "test": "jest --runInBand",
     "test:watch": "jest --watch",
     "config:check": "expo config --type public",
-    "config:check:production": "node scripts/check-production-config.mjs",
+    "config:check:production": "node scripts/check-production-config.mjs && node --test scripts/check-ios-auth-bundle.test.mjs",
+    "test:ios-auth-bundle-gate": "node --test scripts/check-ios-auth-bundle.test.mjs",
+    "verify:ios-auth-bundle": "node scripts/check-ios-auth-bundle.mjs",
     "generate:atlas-coastline": "node scripts/generate-atlas-coastline.mjs",
     "build:preview": "expo export --platform web --output-dir dist-preview"
   },

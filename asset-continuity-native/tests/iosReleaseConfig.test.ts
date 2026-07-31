@@ -347,7 +347,7 @@ describe("signed iOS release configuration", () => {
     expect(runtimeConfig).toContain('"heldat://reset-password"');
   });
 
-  it("ships the reviewed browser PKCE bridge for Google sign-in", () => {
+  it("ships the reviewed browser PKCE bridge on Android but omits it from the iOS runtime", () => {
     expect(nativePackage.dependencies["expo-auth-session"]).toMatch(
       /^~57\./u
     );
@@ -371,6 +371,59 @@ describe("signed iOS release configuration", () => {
     );
     expect(googleOAuthBoundary).toContain(
       "WebBrowser.openAuthSessionAsync"
+    );
+
+    const signedRuntime = readFileSync(
+      path.join(
+        appRoot,
+        "src",
+        "runtime",
+        "signedSupabaseRuntime.ts"
+      ),
+      "utf8"
+    );
+    const androidProvider = readFileSync(
+      path.join(
+        appRoot,
+        "src",
+        "auth",
+        "platformAuthProviderOptions.android.ts"
+      ),
+      "utf8"
+    );
+    const iosProvider = readFileSync(
+      path.join(
+        appRoot,
+        "src",
+        "auth",
+        "platformAuthProviderOptions.ios.ts"
+      ),
+      "utf8"
+    );
+
+    expect(signedRuntime).toContain(
+      'from "@/auth/platformAuthProviderOptions"'
+    );
+    expect(signedRuntime).toContain(
+      "...platformAuthProviderOptions()"
+    );
+    expect(signedRuntime).not.toContain(
+      "@/auth/googleOAuthBrowser"
+    );
+    expect(androidProvider).toContain(
+      'from "./googleOAuthBrowser"'
+    );
+    expect(androidProvider).toContain(
+      "createExpoGoogleOAuthBrowser()"
+    );
+    expect(iosProvider).not.toMatch(
+      /google|oauth|web-browser|auth-session/iu
+    );
+    expect(nativePackage.scripts["test:ios-auth-bundle-gate"]).toBe(
+      "node --test scripts/check-ios-auth-bundle.test.mjs"
+    );
+    expect(nativePackage.scripts["verify:ios-auth-bundle"]).toBe(
+      "node scripts/check-ios-auth-bundle.mjs"
     );
   });
 
