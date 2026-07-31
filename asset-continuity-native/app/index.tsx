@@ -68,6 +68,17 @@ export default function IndexScreen() {
   ) {
     return <Redirect href={AUTH_ROUTES.join} />;
   }
+  const signedOutSampleOpening =
+    (mode === "supabase" || mode === "unavailable") &&
+    session === null &&
+    loading;
+  if (signedOutSampleOpening) {
+    return (
+      <View style={styles.loading} testID="signed-sample-bootstrap">
+        <ActivityIndicator color={colors.action} size="small" />
+      </View>
+    );
+  }
   if (mode === "preview") {
     return workspace ? <Redirect href="/(tabs)" /> : publicEntry();
   }

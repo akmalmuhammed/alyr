@@ -51,6 +51,14 @@ describe("first-viewport onboarding decisions", () => {
       'return workspace ? <Redirect href="/(tabs)" /> : publicEntry();'
     );
     expect(indexRoute).toContain(
+      'testID="signed-sample-bootstrap"'
+    );
+    expect(
+      indexRoute.indexOf("signedOutSampleOpening")
+    ).toBeLessThan(
+      indexRoute.indexOf("signedOutSampleWorkspaceReady(")
+    );
+    expect(indexRoute).toContain(
       'if (mode !== "supabase" || !session) {\n    return publicEntry();'
     );
     expect(
