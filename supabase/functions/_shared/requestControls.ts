@@ -82,7 +82,41 @@ const publicPolicies = new Map<string, RateLimitPolicy>([
     "POST /maintenance/sync",
     { routeGroup: "maintenance.sync", limit: 20, windowSeconds: 60 },
   ],
+  [
+    "POST /maintenance/readiness",
+    { routeGroup: "maintenance.readiness", limit: 12, windowSeconds: 60 },
+  ],
 ]);
+
+const sharedNetworkPolicies: ReadonlyArray<{
+  readonly matches: (method: string, path: string) => boolean;
+  readonly policy: RateLimitPolicy;
+}> = [
+  {
+    matches: (method, path) => method === "POST" && path === "/sync/push",
+    policy: {
+      routeGroup: "network.authenticated.sync.push",
+      limit: 1_200,
+      windowSeconds: 60,
+    },
+  },
+  {
+    matches: (method, path) => method === "GET" && path === "/sync/pull",
+    policy: {
+      routeGroup: "network.authenticated.sync.pull",
+      limit: 2_400,
+      windowSeconds: 60,
+    },
+  },
+  {
+    matches: (_method, path) => path.startsWith("/uploads/"),
+    policy: {
+      routeGroup: "network.authenticated.uploads",
+      limit: 300,
+      windowSeconds: 60,
+    },
+  },
+];
 
 function normalizeOrigin(value: string): string | null {
   try {
@@ -146,9 +180,17 @@ export function publicRateLimitPolicy(
   method: string,
   path: string,
 ): RateLimitPolicy {
-  return publicPolicies.get(`${method.toUpperCase()} ${path}`) ?? {
-    routeGroup: "network.default",
-    limit: 120,
+  const normalizedMethod = method.toUpperCase();
+  const publicPolicy = publicPolicies.get(`${normalizedMethod} ${path}`);
+  if (publicPolicy) return publicPolicy;
+  return sharedNetworkPolicies.find(({ matches }) =>
+    matches(normalizedMethod, path)
+  )?.policy ?? {
+    // Authenticated requests receive a second, actor-specific limiter after
+    // token verification. Keep this pre-auth network ceiling high enough that
+    // carrier/corporate NAT does not make unrelated users share 120 requests.
+    routeGroup: "network.authenticated-or-unknown",
+    limit: 600,
     windowSeconds: 60,
   };
 }

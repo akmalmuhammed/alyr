@@ -47,6 +47,24 @@ test("public and authenticated routes have bounded policies", () => {
   assert.match(api, /"RATE_LIMITED"/u);
 });
 
+test("shared-network limits do not make signed-in users share a tiny NAT bucket", () => {
+  assert.match(controls, /network\.authenticated\.sync\.push/u);
+  assert.match(controls, /network\.authenticated\.sync\.pull/u);
+  assert.match(controls, /network\.authenticated\.uploads/u);
+  assert.match(
+    controls,
+    /routeGroup: "network\.authenticated-or-unknown"[\s\S]*limit: 600/u,
+  );
+  assert.match(
+    controls,
+    /authenticated requests receive a second, actor-specific limiter/iu,
+  );
+  assert.doesNotMatch(
+    controls,
+    /routeGroup: "network\.default"[\s\S]{0,80}limit: 120/u,
+  );
+});
+
 test("operational telemetry is structured and free of query or payload data", () => {
   assert.match(controls, /X-Request-Id/u);
   assert.match(controls, /api\.request\.completed/u);

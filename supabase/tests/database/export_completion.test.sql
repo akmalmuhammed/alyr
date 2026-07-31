@@ -673,6 +673,13 @@ select throws_ok(
 
 reset role;
 
+-- The manifest assertions above exercised the four-byte Evidence object. Free
+-- that fixture before filling the independent export-retention quota exactly.
+delete from public.evidence_versions
+where id = '79000000-0000-4000-8000-000000000001';
+delete from public.blob_objects
+where id = '78000000-0000-4000-8000-000000000001';
+
 insert into public.export_object_cleanup_queue(
   object_key,
   household_id,

@@ -286,27 +286,50 @@ try {
   }));
 } finally {
   if (objectKey) {
-    await service.storage.from("evidence").remove([objectKey]);
+    const providerDeletion = await service.storage
+      .from("evidence")
+      .remove([objectKey]);
+    assert.equal(
+      providerDeletion.error,
+      null,
+      `delete provider Evidence object: ${providerDeletion.error?.message}`,
+    );
+    assert.equal(
+      Number(
+        operatorSql(
+          `select count(*)
+           from storage.objects
+           where bucket_id = 'evidence'
+             and name = ${sqlLiteral(objectKey)};`,
+        ),
+      ),
+      0,
+      "provider Evidence object must be gone before fixture rows are removed",
+    );
   }
   if (householdId) {
-    try {
-      operatorSql(
-        `delete from public.households
-         where id = ${sqlLiteral(householdId)}::uuid;`,
-      );
-    } catch {
-      // Preserve the original assertion failure.
-    }
+    // The signed PUT cannot be revoked. After provider removal is verified and
+    // this process is discarding its URL, expire only the fixture's lease so
+    // the production cascade guard can remain enabled during teardown.
+    operatorSql(
+      `${objectKey
+        ? `update public.blob_objects
+           set provider_delete_not_before = clock_timestamp()
+           where household_id = ${sqlLiteral(householdId)}::uuid
+             and object_key = ${sqlLiteral(objectKey)};`
+        : ""}
+       delete from public.households
+       where id = ${sqlLiteral(householdId)}::uuid;`,
+    );
   }
   if (ownerId) {
-    try {
-      operatorSql(
-        `delete from public.pilot_enrollments
-         where user_id = ${sqlLiteral(ownerId)}::uuid;`,
-      );
-    } catch {
-      // Preserve the original assertion failure.
-    }
-    await service.auth.admin.deleteUser(ownerId);
+    operatorSql(
+      `delete from public.pilot_enrollments
+       where user_id = ${sqlLiteral(ownerId)}::uuid;`,
+    );
+    await expectNoError(
+      service.auth.admin.deleteUser(ownerId, false),
+      "delete owner",
+    );
   }
 }

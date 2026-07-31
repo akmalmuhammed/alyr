@@ -25,6 +25,7 @@ import {
   requestId,
   withOperationalHeaders,
 } from "../_shared/requestControls.ts";
+import { readBoundedJsonObject } from "../_shared/requestBody.ts";
 import {
   handleExportCreate,
   handleExportDownload,
@@ -421,6 +422,17 @@ async function handleBlobMaintenance(request: Request): Promise<Response> {
     },
   );
   if (enqueueError !== null) {
+    if (
+      enqueueError.code === "40001" ||
+      enqueueError.code === "40P01" ||
+      enqueueError.message.includes("STORAGE_ACCOUNTING_BUSY") ||
+      enqueueError.message.includes("STORAGE_UPLOAD_AUTHORIZATION_ACTIVE")
+    ) {
+      return storageAccountingBusyResponse(
+        "Private-file cleanup is waiting for an active upload authorization.",
+        60,
+      );
+    }
     return apiError(
       "STORAGE_UNAVAILABLE",
       "Blob cleanup candidates could not be queued.",
@@ -599,6 +611,46 @@ async function handleSyncMaintenance(request: Request): Promise<Response> {
   return json(data);
 }
 
+async function handleReadinessMaintenance(request: Request): Promise<Response> {
+  const suppliedToken =
+    request.headers.get("X-Heldat-Maintenance-Token") ??
+    request.headers.get("X-ALYR-Maintenance-Token") ??
+    "";
+  if (!maintenanceTokenMatches(suppliedToken)) {
+    return apiError(
+      "AUTHORIZATION_DENIED",
+      "Readiness monitoring authorization failed.",
+      403,
+    );
+  }
+
+  const client = serviceControlClient();
+  if (client === null) {
+    return apiError(
+      "STORAGE_UNAVAILABLE",
+      "Readiness monitoring is not configured.",
+      503,
+      true,
+    );
+  }
+
+  const { data, error } = await client.rpc("read_backend_readiness_summary");
+  if (
+    error !== null ||
+    typeof data !== "object" ||
+    data === null ||
+    Array.isArray(data)
+  ) {
+    return apiError(
+      "STORAGE_UNAVAILABLE",
+      "Backend readiness signals are temporarily unavailable.",
+      503,
+      true,
+    );
+  }
+  return json(data);
+}
+
 function rateLimitResponse(
   retryAfterSeconds: number,
   unavailable = false,
@@ -616,6 +668,25 @@ function rateLimitResponse(
       429,
       true,
     );
+  const headers = new Headers(response.headers);
+  headers.set("Retry-After", String(Math.max(retryAfterSeconds, 1)));
+  return new Response(response.body, {
+    status: response.status,
+    statusText: response.statusText,
+    headers,
+  });
+}
+
+function storageAccountingBusyResponse(
+  message: string,
+  retryAfterSeconds = 5,
+): Response {
+  const response = apiError(
+    "STORAGE_UNAVAILABLE",
+    message,
+    503,
+    true,
+  );
   const headers = new Headers(response.headers);
   headers.set("Retry-After", String(Math.max(retryAfterSeconds, 1)));
   return new Response(response.body, {
@@ -698,28 +769,7 @@ async function authenticate(
 }
 
 async function readJson(request: Request): Promise<Record<string, unknown>> {
-  const contentType = request.headers.get("Content-Type") ?? "";
-  if (!contentType.toLowerCase().includes("application/json")) {
-    throw new Error("CONTENT_TYPE_REQUIRED");
-  }
-  const declaredLength = Number(request.headers.get("Content-Length") ?? "0");
-  if (Number.isFinite(declaredLength) && declaredLength > 1_048_576) {
-    throw new Error("REQUEST_TOO_LARGE");
-  }
-  const raw = await request.text();
-  if (new TextEncoder().encode(raw).byteLength > 1_048_576) {
-    throw new Error("REQUEST_TOO_LARGE");
-  }
-  let parsed: unknown;
-  try {
-    parsed = JSON.parse(raw);
-  } catch {
-    throw new Error("INVALID_JSON");
-  }
-  if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) {
-    throw new Error("INVALID_JSON");
-  }
-  return parsed as Record<string, unknown>;
+  return await readBoundedJsonObject(request);
 }
 
 function requireApiVersion(body: Record<string, unknown>): void {
@@ -2383,6 +2433,15 @@ async function handleUploadIntent(
 
   if (insertError) {
     const quotaReached = insertError.message.includes("HOUSEHOLD_STORAGE_LIMIT");
+    const accountingBusy = insertError.code === "40001" ||
+      insertError.code === "40P01" ||
+      insertError.message.includes("STORAGE_ACCOUNTING_BUSY") ||
+      insertError.message.includes("STORAGE_UPLOAD_AUTHORIZATION_ACTIVE");
+    if (accountingBusy) {
+      return storageAccountingBusyResponse(
+        "Storage is changing for this household. Retry the upload shortly.",
+      );
+    }
     return apiError(
       quotaReached ? "QUOTA_EXCEEDED" : "STORAGE_UNAVAILABLE",
       quotaReached
@@ -2408,6 +2467,19 @@ async function handleUploadIntent(
       "Unable to prepare this upload.",
       503,
       true,
+    );
+  }
+
+  const { error: authorizationRecordError } = await context.client.rpc(
+    "record_blob_upload_authorization",
+    {
+      p_blob_id: blobId,
+      p_expires_at: signedUpload.expiresAt,
+    },
+  );
+  if (authorizationRecordError) {
+    return storageAccountingBusyResponse(
+      "The upload authorization was not activated. Retry to get a new upload URL.",
     );
   }
 
@@ -3056,6 +3128,15 @@ async function handleAccountDeletion(
       const stateChanged = deletionError.message.includes(
         "ACCOUNT_STATE_CHANGED",
       );
+      const uploadAuthorizationActive = deletionError.message.includes(
+        "STORAGE_UPLOAD_AUTHORIZATION_ACTIVE",
+      );
+      if (uploadAuthorizationActive) {
+        return storageAccountingBusyResponse(
+          "A private-file upload authorization is still active. Retry account deletion after it expires.",
+          60,
+        );
+      }
       return apiError(
         ownershipTransferRequired || stateChanged
           ? "CONFLICT_REQUIRES_REVIEW"
@@ -3168,6 +3249,22 @@ async function handleAccountDeletion(
     }
   }
 
+  // The byte hold represents physical provider objects, not the identity row.
+  // Release it only after both providers acknowledge deletion, and before
+  // identity removal so a failed release remains retryable by this account.
+  const { error: storageHoldReleaseError } = await serviceClient.rpc(
+    "release_account_deletion_storage_hold",
+    { p_account_id: context.userId },
+  );
+  if (storageHoldReleaseError) {
+    return apiError(
+      "STORAGE_UNAVAILABLE",
+      "Private files were removed, but storage accounting needs another attempt.",
+      503,
+      true,
+    );
+  }
+
   const authDeletion = await serviceClient.auth.admin.deleteUser(
     context.userId,
     false,
@@ -3254,6 +3351,12 @@ async function dispatchRequest(
       path === "/maintenance/sync"
     ) {
       return await handleSyncMaintenance(request);
+    }
+    if (
+      request.method === "POST" &&
+      path === "/maintenance/readiness"
+    ) {
+      return await handleReadinessMaintenance(request);
     }
 
     const context = await authenticate(request);
@@ -3358,6 +3461,26 @@ async function dispatchRequest(
         "VALIDATION_FAILED",
         "Use application/json for this request.",
         415,
+      );
+    }
+    if (
+      error instanceof Error &&
+      error.message === "CONTENT_ENCODING_UNSUPPORTED"
+    ) {
+      return apiError(
+        "VALIDATION_FAILED",
+        "Compressed API request bodies are not supported.",
+        415,
+      );
+    }
+    if (
+      error instanceof Error &&
+      error.message === "CONTENT_LENGTH_INVALID"
+    ) {
+      return apiError(
+        "VALIDATION_FAILED",
+        "The request body length is invalid.",
+        400,
       );
     }
     if (error instanceof Error && error.message === "REQUEST_TOO_LARGE") {

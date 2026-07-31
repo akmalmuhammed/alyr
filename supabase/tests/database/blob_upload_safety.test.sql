@@ -2,7 +2,7 @@ begin;
 
 create extension if not exists pgtap with schema extensions;
 
-select plan(58);
+select plan(59);
 
 insert into auth.users (
   id, instance_id, aud, role, email, encrypted_password,
@@ -203,31 +203,39 @@ select ok(
 
 select ok(
   position(
-    'for update'
+    'heldat.blob-intent:'
     in lower(
       pg_get_functiondef(
         'public.create_blob_upload_intent(uuid,uuid,uuid,uuid,text,text,bigint,text)'::regprocedure
       )
     )
   ) < position(
-    'select coalesce(sum'
+    'from public.blob_objects'
     in lower(
       pg_get_functiondef(
         'public.create_blob_upload_intent(uuid,uuid,uuid,uuid,text,text,bigint,text)'::regprocedure
       )
     )
   ),
-  'household locking precedes quota accounting for concurrency safety'
+  'a Blob-scoped lock precedes the existing-row lock for retry safety'
 );
 
 select ok(
   position(
+    'sum('
+    in lower(
+      pg_get_functiondef(
+        'public.create_blob_upload_intent(uuid,uuid,uuid,uuid,text,text,bigint,text)'::regprocedure
+      )
+    )
+  ) = 0
+  and position(
     'blob_object_cleanup_queue'
     in pg_get_functiondef(
-      'public.create_blob_upload_intent(uuid,uuid,uuid,uuid,text,text,bigint,text)'::regprocedure
+      'public.track_retained_storage_bytes()'::regprocedure
     )
   ) > 0,
-  'pending cleanup bytes remain part of reservation quota'
+  'constant-time accounting keeps cleanup bytes in the shared reservation quota'
 );
 
 set local role authenticated;
@@ -890,38 +898,44 @@ select is(
 
 reset role;
 
--- Simulate a legacy one-byte over-quota object to prove that exact active
--- retries re-evaluate retained bytes instead of blindly extending expiry.
-insert into public.blob_objects(
-  id,
-  household_id,
-  expected_evidence_id,
-  expected_evidence_version_id,
-  object_key,
-  checksum_sha256,
-  byte_size,
-  mime_type,
-  status,
-  created_by
-)
-values (
-  'b7100000-0000-4000-8000-000000000009',
-  'a2000000-0000-4000-8000-000000000002',
-  'a6000000-0000-4000-8000-000000000003',
-  'b8100000-0000-4000-8000-000000000009',
-  'a2000000-0000-4000-8000-000000000002/b7100000-0000-4000-8000-000000000009/b8100000-0000-4000-8000-000000000009',
-  repeat('9', 64),
-  1,
-  'text/plain',
-  'stored',
-  'a1000000-0000-4000-8000-000000000002'
+-- The accounting trigger makes legacy over-quota state unrepresentable.
+select throws_ok(
+  $$
+    insert into public.blob_objects(
+      id,
+      household_id,
+      expected_evidence_id,
+      expected_evidence_version_id,
+      object_key,
+      checksum_sha256,
+      byte_size,
+      mime_type,
+      status,
+      created_by
+    )
+    values (
+      'b7100000-0000-4000-8000-000000000009',
+      'a2000000-0000-4000-8000-000000000002',
+      'a6000000-0000-4000-8000-000000000003',
+      'b8100000-0000-4000-8000-000000000009',
+      'a2000000-0000-4000-8000-000000000002/b7100000-0000-4000-8000-000000000009/b8100000-0000-4000-8000-000000000009',
+      repeat('9', 64),
+      1,
+      'text/plain',
+      'stored',
+      'a1000000-0000-4000-8000-000000000002'
+    )
+  $$,
+  'P0001',
+  'HOUSEHOLD_STORAGE_LIMIT',
+  'direct writes cannot create a one-byte over-quota object'
 );
 
 set local role authenticated;
 set local request.jwt.claim.role = 'authenticated';
 set local request.jwt.claim.sub = 'a1000000-0000-4000-8000-000000000002';
 
-select throws_ok(
+select lives_ok(
   $$
     select public.create_blob_upload_intent(
       'b7100000-0000-4000-8000-000000000002',
@@ -934,15 +948,10 @@ select throws_ok(
       'application/pdf'
     )
   $$,
-  'P0001',
-  'HOUSEHOLD_STORAGE_LIMIT',
-  'an active retry rechecks quota while cleanup bytes remain retained'
+  'an exact active retry at the cap does not consume retained bytes twice'
 );
 
 reset role;
-
-delete from public.blob_objects
-where id = 'b7100000-0000-4000-8000-000000000009';
 
 set local role service_role;
 

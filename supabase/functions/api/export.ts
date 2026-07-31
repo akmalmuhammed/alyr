@@ -8,6 +8,7 @@ import {
   corsHeaders,
   json,
 } from "../_shared/http.ts";
+import { readBoundedJsonObject } from "../_shared/requestBody.ts";
 
 const supabaseUrl = Deno.env.get("SUPABASE_URL") ?? "";
 const supabaseServiceRoleKey =
@@ -152,14 +153,9 @@ function hasOnlyKeys(
 }
 
 async function readCreateBody(request: Request): Promise<ExportCreateBody | null> {
-  const contentType = request.headers.get("Content-Type") ?? "";
-  if (!contentType.toLowerCase().includes("application/json")) return null;
-  const raw = await request.text();
-  if (new TextEncoder().encode(raw).byteLength > 64 * 1024) return null;
-
-  let parsed: unknown;
+  let parsed: Record<string, unknown>;
   try {
-    parsed = JSON.parse(raw);
+    parsed = await readBoundedJsonObject(request, 64 * 1024);
   } catch {
     return null;
   }
