@@ -59,7 +59,8 @@ const eas = JSON.parse(
       distribution?: string;
       environment?: string;
       channel?: string;
-      ios?: { simulator?: boolean };
+      autoIncrement?: boolean;
+      ios?: { simulator?: boolean; image?: string };
     }
   >;
 };
@@ -113,7 +114,11 @@ describe("signed iOS release configuration", () => {
     try {
       process.env.EAS_BUILD_PLATFORM = "ios";
       process.env.NODE_ENV = "production";
-      for (const profile of ["preview", "production"]) {
+      for (const profile of [
+        "preview",
+        "production",
+        "production-simulator"
+      ]) {
         process.env.EAS_BUILD_PROFILE = profile;
         expect(resolveUpdates()).toEqual({
           enabled: false,
@@ -392,6 +397,14 @@ describe("signed iOS release configuration", () => {
     });
     expect(eas.build.production?.environment).toBe("production");
     expect(eas.build.production?.distribution).toBeUndefined();
+    expect(eas.build.production?.ios).toEqual({
+      image: "macos-tahoe-26.5-xcode-26.6"
+    });
+    expect(eas.build["production-simulator"]).toEqual({
+      extends: "production",
+      autoIncrement: false,
+      ios: { simulator: true }
+    });
   });
 
   it("ships local notification APIs without push entitlements or remote background mode", () => {
