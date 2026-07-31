@@ -37,7 +37,7 @@ describe("inactive-app privacy accessibility contract", () => {
 
   it("provides Arabic lock-screen copy without changing the English contract", () => {
     expect(PRIVACY_SHIELD_COPY.en.accessibilityLabel).toBe(
-      "ALYR is locked while the app is not active"
+      "Heldat is locked while the app is not active"
     );
     expect(PRIVACY_SHIELD_COPY.en.message).toBe(
       "Private while you are away"
@@ -62,7 +62,7 @@ describe("inactive-app privacy accessibility contract", () => {
     const style = StyleSheet.flatten(message.props.style);
 
     expect(
-      screen.getByLabelText("تطبيق ALYR مقفل أثناء عدم استخدامه")
+      screen.getByLabelText("تطبيق Heldat مقفل أثناء عدم استخدامه")
     ).toBeTruthy();
     expect(style.fontFamily).toBe("IBMPlexSansArabic_400Regular");
     expect(style.writingDirection).toBe("rtl");

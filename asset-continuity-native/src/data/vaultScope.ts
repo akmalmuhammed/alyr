@@ -87,7 +87,7 @@ function validateIdentityComponent(
     value.trim() !== value ||
     CONTROL_CHARACTER_PATTERN.test(value)
   ) {
-    throw new Error(`A valid ${label} is required to open an ALYR vault.`);
+    throw new Error(`A valid ${label} is required to open a Heldat vault.`);
   }
 }
 

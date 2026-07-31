@@ -85,7 +85,7 @@ describe("Expo device-auth capability adapter", () => {
       biometricEnrolled: false
     });
     expect(deviceAuthCopy("en", capability).unlockBody).toBe(
-      "Use your device passcode to continue. ALYR never sees the code."
+      "Use your device passcode to continue. Heldat never sees the code."
     );
     expect(deviceAuthCopy("ar", capability).unlockBody).not.toContain(
       "Face ID"
@@ -118,7 +118,7 @@ describe("Expo device-auth capability adapter", () => {
     authenticate.mockResolvedValue({ success: true });
     await expect(
       expoDeviceAuthPort.authenticate({
-        title: "Unlock ALYR",
+        title: "Unlock Heldat",
         subtitle: "Private household record",
         description: "Verify on this device",
         cancelLabel: "Keep locked",

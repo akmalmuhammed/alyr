@@ -125,7 +125,7 @@ describe("localized startup status", () => {
     expect(status.props.accessibilityLabel).toBe(
       STARTUP_COPY.en.application
     );
-    expect(STARTUP_COPY.en.application).toBe("Starting ALYR");
+    expect(STARTUP_COPY.en.application).toBe("Starting Heldat");
     expect(status.props.accessibilityRole).toBe("progressbar");
     expect(status.props.accessibilityLiveRegion).toBe("polite");
     expect(status.props.accessibilityState).toEqual({ busy: true });

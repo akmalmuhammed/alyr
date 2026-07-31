@@ -417,7 +417,7 @@ export class MemoryPreviewAttachmentStore implements ScopedAttachmentStore {
     this.assertUnlocked();
     throw new AttachmentReadError(
       "PROTECTED_ATTACHMENT_UNAVAILABLE",
-      "Protected draft previews require an ALYR signed build."
+      "Protected draft previews require an Heldat signed build."
     );
   }
 
@@ -436,7 +436,7 @@ export class MemoryPreviewAttachmentStore implements ScopedAttachmentStore {
     ) {
       throw new AttachmentReadError(
         "PROTECTED_ATTACHMENT_UNAVAILABLE",
-        "Protected attachments open only in an ALYR signed build."
+        "Protected attachments open only in an Heldat signed build."
       );
     }
     if (
@@ -1055,7 +1055,7 @@ export class EncryptedFileAttachmentStore implements ScopedAttachmentStore {
     ) {
       throw new AttachmentReadError(
         "CLEANUP_REJECTED",
-        "The attachment URI is outside ALYR's temporary viewing directory."
+        "The attachment URI is outside Heldat's temporary viewing directory."
       );
     }
 

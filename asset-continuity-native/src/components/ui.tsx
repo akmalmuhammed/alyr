@@ -126,21 +126,51 @@ export function BrandMark({
   readonly compact?: boolean;
   readonly reversed?: boolean;
 }) {
-  return (
+  const symbol = (
     <Image
-      accessibilityLabel="ALYR"
+      accessible={false}
       resizeMode="contain"
       source={
-        compact
-          ? reversed
-            ? require("../../assets/alyr/logos/png-exports/standalone-symbol-reversed-256w.png")
-            : require("../../assets/alyr/logos/png-exports/standalone-symbol-carbon-volt-256w.png")
-          : reversed
-            ? require("../../assets/alyr/logos/png-exports/primary-horizontal-reversed-480w.png")
-            : require("../../assets/alyr/logos/png-exports/primary-horizontal-carbon-volt-480w.png")
+        reversed
+          ? require("../../assets/alyr/logos/png-exports/standalone-symbol-reversed-256w.png")
+          : require("../../assets/alyr/logos/png-exports/standalone-symbol-carbon-volt-256w.png")
       }
-      style={compact ? styles.brandCompact : styles.brand}
+      style={compact ? styles.brandCompact : styles.brandSymbol}
     />
+  );
+
+  if (compact) {
+    return (
+      <View
+        accessible
+        accessibilityLabel="Heldat"
+        accessibilityRole="image"
+        style={styles.brandCompact}
+      >
+        {symbol}
+      </View>
+    );
+  }
+
+  return (
+    <View
+      accessible
+      accessibilityLabel="Heldat"
+      accessibilityRole="image"
+      style={styles.brand}
+    >
+      {symbol}
+      <Text
+        accessibilityElementsHidden
+        importantForAccessibility="no-hide-descendants"
+        style={[
+          styles.brandWordmark,
+          reversed ? styles.brandWordmarkReversed : undefined
+        ]}
+      >
+        Heldat
+      </Text>
+    </View>
   );
 }
 
@@ -665,12 +695,29 @@ const styles = StyleSheet.create({
     backgroundColor: colors.canvas
   },
   brand: {
-    width: 128,
-    height: 40
+    minWidth: 136,
+    height: 40,
+    alignItems: "center",
+    flexDirection: "row",
+    gap: 10
   },
   brandCompact: {
     width: 34,
     height: 34
+  },
+  brandSymbol: {
+    width: 34,
+    height: 34
+  },
+  brandWordmark: {
+    color: colors.carbon,
+    fontFamily: typography.displayBold,
+    fontSize: 25,
+    letterSpacing: -0.8,
+    lineHeight: 30
+  },
+  brandWordmarkReversed: {
+    color: colors.white
   },
   eyebrow: {
     color: colors.textMuted,

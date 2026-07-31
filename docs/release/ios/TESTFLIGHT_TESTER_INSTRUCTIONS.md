@@ -1,11 +1,11 @@
-# ALYR TestFlight tester instructions
+# Heldat TestFlight tester instructions
 
 Status: **release-candidate template**
 
 ## Build under test
 
 ```text
-App: ALYR
+App: Heldat
 Version: [TESTFLIGHT_VERSION]
 Build: [TESTFLIGHT_BUILD]
 Testing window: [START_DATE] to [END_DATE]
@@ -19,10 +19,10 @@ or personal household records in a beta build.
 
 ## Installation and first launch
 
-1. Install the named ALYR build from TestFlight.
-2. Record the iPhone model, iOS version, ALYR version/build, language, and
+1. Install the named Heldat build from TestFlight.
+2. Record the iPhone model, iOS version, Heldat version/build, language, and
    whether the install is clean or upgraded.
-3. Launch ALYR and confirm the welcome screen renders without clipping.
+3. Launch Heldat and confirm the welcome screen renders without clipping.
 4. Switch English/Arabic once and confirm the layout direction changes.
 5. Choose the assigned path:
    - **Sample path:** tap **Explore sample**; or
@@ -38,7 +38,7 @@ For a new signed account:
 
 1. Enter email, early access code, and a unique password.
 2. Complete email confirmation using the newest confirmation message.
-3. Return to ALYR and confirm automatic continuation or use **Check
+3. Return to Heldat and confirm automatic continuation or use **Check
    confirmation**.
 4. Accept the prefilled private-record name or edit it.
 5. Confirm the account-activation progress reads:
@@ -59,11 +59,11 @@ Report the elapsed time from first launch to first saved Passport:
 1. Enable Airplane Mode.
 2. Create an Item Passport with a test photo, name, category, Place/space, and
    one test document.
-3. Background and reopen ALYR during capture; confirm the protected draft
+3. Background and reopen Heldat during capture; confirm the protected draft
    resumes.
 4. Save and force-close the app.
 5. Reopen and confirm the local record still exists.
-6. Reconnect, keep ALYR foregrounded, and confirm the status progresses without
+6. Reconnect, keep Heldat foregrounded, and confirm the status progresses without
    creating a duplicate.
 
 ### B. Location truth
@@ -72,7 +72,7 @@ Report the elapsed time from first launch to first saved Passport:
 2. Deny location once; confirm manual placement remains understandable.
 3. Allow in-use location and observe the shown accuracy.
 4. Adjust the pin manually.
-5. Confirm ALYR identifies the adjusted pin as user-placed and does not present
+5. Confirm Heldat identifies the adjusted pin as user-placed and does not present
    it as measured GPS precision.
 6. Add a room/space and retrieval clue, then find the Item through search.
 
@@ -110,7 +110,7 @@ Report the elapsed time from first launch to first saved Passport:
 1. Review local proof storage and cloud/sync state as separate facts.
 2. Create a Recovery Kit with a unique test passphrase.
 3. Save an independent copy through the iOS share sheet and confirm that action
-   in ALYR.
+   in Heldat.
 4. Restore on the designated clean test workspace.
 5. Open one recovered image and one recovered document.
 6. Verify that a wrong passphrase and a modified kit fail without replacing the

@@ -1,4 +1,4 @@
-appId: com.alyr.continuity
+appId: app.heldat.mobile
 name: Local-first Passport survives an offline process restart
 tags:
   - smoke
@@ -13,6 +13,8 @@ onFlowComplete:
     clearState: true
     permissions:
       all: deny
+- runFlow:
+    file: "../subflows/complete-worldline-intro.yaml"
 - extendedWaitUntil:
     visible:
       id: "auth-welcome-screen"

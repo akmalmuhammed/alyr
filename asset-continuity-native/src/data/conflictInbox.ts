@@ -330,6 +330,8 @@ const REAPPLY_COMMANDS = new Set([
   "place.update",
   "space.update",
   "asset.update",
+  "asset.category.set",
+  "asset.primary-photo.set",
   "asset.move",
   "asset.archive",
   "asset.restore",
@@ -496,7 +498,11 @@ export function conflictFieldLabel(
   if (conflict.conflictKind === "identifier") return "Identifier";
   if (conflict.conflictKind === "value") return "Recorded value";
   if (!isDurableSyncConflict(conflict)) {
-    return conflict.conflictKind === "location" ? "Location" : "Record";
+    return conflict.conflictKind === "location"
+      ? "Location"
+      : conflict.conflictKind === "metadata"
+        ? "Asset details"
+        : "Record";
   }
   const type = conflict.clientContext.localOperation.command.type;
   const payload = conflict.clientContext.localOperation.command.payload;
@@ -504,6 +510,8 @@ export function conflictFieldLabel(
   if (type === "asset.update") {
     return typeof payload.name === "string" ? "Item name" : "Item details";
   }
+  if (type === "asset.category.set") return "Category";
+  if (type === "asset.primary-photo.set") return "Primary photo";
   if (type === "place.update") {
     return ["latitude", "longitude", "locationSource"].some(
       (key) => Object.prototype.hasOwnProperty.call(payload, key)
@@ -619,7 +627,10 @@ function detailSummary(
   payload: Readonly<Record<string, JsonValue>>,
   commandType: string | null
 ): string | null {
-  if (commandType === "asset.update") {
+  if (
+    commandType === "asset.update" ||
+    commandType === "asset.category.set"
+  ) {
     if (typeof payload.name === "string" && payload.name.trim()) {
       return payload.name.trim();
     }
@@ -629,6 +640,13 @@ function detailSummary(
     ) {
       return payload.categoryId.trim().replace(/[._-]+/gu, " ");
     }
+  }
+  if (
+    commandType === "asset.primary-photo.set" &&
+    typeof payload.evidenceId === "string" &&
+    payload.evidenceId.trim()
+  ) {
+    return `Photo ${payload.evidenceId.trim().slice(0, 8)}`;
   }
   if (commandType === "place.update") {
     const location = locationSummary(payload);

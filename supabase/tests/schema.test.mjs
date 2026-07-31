@@ -38,6 +38,10 @@ const explicitInviteReviewMigrationUrl = new URL(
   "../migrations/202607280010_explicit_household_invite_review.sql",
   import.meta.url,
 );
+const blobUploadSafetyMigrationUrl = new URL(
+  "../migrations/202607310001_blob_upload_safety.sql",
+  import.meta.url,
+);
 const functionUrl = new URL("../functions/api/index.ts", import.meta.url);
 const configUrl = new URL("../config.toml", import.meta.url);
 
@@ -71,13 +75,18 @@ const explicitInviteReviewMigration = await readFile(
   explicitInviteReviewMigrationUrl,
   "utf8",
 );
+const blobUploadSafetyMigration = await readFile(
+  blobUploadSafetyMigrationUrl,
+  "utf8",
+);
 const apiFunction = await readFile(functionUrl, "utf8");
 const config = await readFile(configUrl, "utf8");
 
 test("auth allow-list matches the native callback scheme", () => {
-  assert.match(config, /"alyr:\/\/callback"/);
-  assert.match(config, /"alyr:\/\/reset-password"/);
-  assert.doesNotMatch(config, /"alyr:\/\/auth\/callback"/);
+  assert.match(config, /"heldat:\/\/callback"/);
+  assert.match(config, /"heldat:\/\/reset-password"/);
+  assert.doesNotMatch(config, /"heldat:\/\/auth\/callback"/);
+  assert.doesNotMatch(config, /"alyr:\/\//);
 });
 
 test("closed-pilot signup is preflighted before account creation", () => {
@@ -430,6 +439,65 @@ test("evidence storage is private, household-scoped, and size limited", () => {
   assert.doesNotMatch(config, /schemas = \[[^\]]*"storage"/);
 });
 
+test("upload reservations are parent-bound, quota-safe on retry, and cleanup-ledgered", () => {
+  assert.match(
+    blobUploadSafetyMigration,
+    /constraint blob_objects_expected_evidence_parent[\s\S]*foreign key \(household_id, expected_evidence_id\)[\s\S]*references public\.evidence\(household_id, id\)[\s\S]*validate constraint/,
+  );
+  assert.match(
+    blobUploadSafetyMigration,
+    /from public\.households[\s\S]*for update[\s\S]*from public\.evidence parent/,
+  );
+  assert.match(
+    blobUploadSafetyMigration,
+    /parent\.household_id = p_household_id[\s\S]*parent\.deleted_at is null[\s\S]*public\.assets asset[\s\S]*public\.places place/,
+  );
+  assert.match(
+    blobUploadSafetyMigration,
+    /v_blob\.created_by is distinct from auth\.uid\(\)/,
+  );
+  assert.match(
+    blobUploadSafetyMigration,
+    /v_blob\.intent_expires_at <= now\(\)[\s\S]*UPLOAD_INTENT_EXPIRED/,
+  );
+  assert.match(
+    blobUploadSafetyMigration,
+    /select cleanup\.byte_size[\s\S]*from public\.blob_object_cleanup_queue cleanup[\s\S]*if v_usage > 41943040/,
+  );
+  assert.doesNotMatch(
+    blobUploadSafetyMigration,
+    /where blob\.household_id = p_household_id[\s\S]{0,220}blob\.status <> 'upload-intent'/,
+  );
+  assert.match(
+    blobUploadSafetyMigration,
+    /create or replace function public\.mark_blob_stored[\s\S]*from public\.households[\s\S]*for update[\s\S]*UPLOAD_INTENT_EXPIRED/,
+  );
+  assert.match(
+    blobUploadSafetyMigration,
+    /create table public\.blob_object_cleanup_queue[\s\S]*force row level security[\s\S]*revoke all on table public\.blob_object_cleanup_queue[\s\S]*service_role/,
+  );
+  assert.match(
+    blobUploadSafetyMigration,
+    /create or replace function public\.enqueue_blob_object_cleanup[\s\S]*p_limit > 100[\s\S]*limit p_limit[\s\S]*for update of blob skip locked/,
+  );
+  assert.match(
+    blobUploadSafetyMigration,
+    /create or replace function public\.claim_blob_object_cleanup[\s\S]*for update of cleanup skip locked/,
+  );
+  assert.match(
+    blobUploadSafetyMigration,
+    /create or replace function public\.complete_blob_object_cleanup[\s\S]*BLOB_CLEANUP_REFERENCED[\s\S]*delete from public\.blob_objects/,
+  );
+  assert.match(
+    blobUploadSafetyMigration,
+    /create or replace function public\.release_blob_object_cleanup[\s\S]*available_at = now\(\) \+ p_retry_delay/,
+  );
+  assert.doesNotMatch(
+    blobUploadSafetyMigration,
+    /grant execute on function public\.(?:enqueue|claim|complete|release)_blob_object_cleanup[\s\S]{0,120}to authenticated/,
+  );
+});
+
 test("evidence downloads stay user-authenticated, RLS-scoped, and checksum-bound", () => {
   assert.match(
     apiFunction,
@@ -441,11 +509,11 @@ test("evidence downloads stay user-authenticated, RLS-scoped, and checksum-bound
   );
   assert.match(
     apiFunction,
-    /handleEvidenceDownload[\s\S]*context\.client\.storage[\s\S]*\.download\(blob\.object_key\)/,
+    /handleEvidenceDownload[\s\S]*activeBlobStore\(\)[\s\S]*store\.headObject[\s\S]*store\.createSignedDownload/,
   );
   assert.match(
     apiFunction,
-    /handleEvidenceDownload[\s\S]*crypto\.subtle\.digest\("SHA-256", storedBytes\)/,
+    /handleUploadComplete[\s\S]*store\.openReadStream[\s\S]*digestBlobStream/,
   );
   assert.match(apiFunction, /"Cache-Control": "no-store"/);
 });
@@ -464,9 +532,9 @@ test("the edge function confines service authority to verified completion", () =
   assert.match(apiFunction, /SUPABASE_ANON_KEY/);
   assert.match(apiFunction, /SUPABASE_SERVICE_ROLE_KEY/);
   assert.match(apiFunction, /Authorization/);
-  assert.match(apiFunction, /createSignedUploadUrl/);
-  assert.match(apiFunction, /\.download\(blob\.object_key\)/);
-  assert.match(apiFunction, /crypto\.subtle\.digest\("SHA-256"/);
+  assert.match(apiFunction, /store\.createSignedUpload/);
+  assert.match(apiFunction, /store\.openReadStream/);
+  assert.match(apiFunction, /digestBlobStream/);
   assert.match(apiFunction, /verificationClient\.rpc\(\s*"mark_blob_stored"/);
   assert.match(apiFunction, /create_blob_upload_intent/);
   assert.match(
@@ -562,7 +630,7 @@ test("account deletion re-authenticates, preserves shared records, and fails clo
   assert.match(apiFunction, /expectedActiveHouseholdRole/);
   assert.match(apiFunction, /acknowledgeIrreversibleDeletion !== true/);
   assert.match(apiFunction, /CONFLICT_REQUIRES_REVIEW/);
-  assert.match(apiFunction, /serviceClient\.storage[\s\S]*\.remove\(/);
+  assert.match(apiFunction, /activeBlobStore\(\)[\s\S]*store\.deleteBatch/);
   assert.match(apiFunction, /delete_account_domain_data/);
   assert.match(apiFunction, /auth\.admin\.deleteUser/);
   assert.match(accountDeletionMigration, /OWNERSHIP_TRANSFER_REQUIRED/);

@@ -38,6 +38,16 @@ assert.equal(
   "^2.2.0",
   "The signed Recovery Kit must pin its reviewed Argon2id dependency range."
 );
+assert.match(
+  nativePackage.dependencies?.["expo-auth-session"] ?? "",
+  /^~57\./u,
+  "The Google OAuth PKCE bridge must use the SDK 57 AuthSession line."
+);
+assert.match(
+  nativePackage.dependencies?.["expo-web-browser"] ?? "",
+  /^~57\./u,
+  "The Google OAuth PKCE bridge must use the SDK 57 WebBrowser line."
+);
 
 for (const directoryName of sharedPackages) {
   const packageRoot = path.join(

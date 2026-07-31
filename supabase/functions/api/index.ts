@@ -1,5 +1,30 @@
-import { createClient, type SupabaseClient } from "npm:@supabase/supabase-js@2";
+import {
+  createClient,
+  type SupabaseClient,
+} from "npm:@supabase/supabase-js@2.110.8";
+import { createHash } from "node:crypto";
 import { apiError, corsHeaders, json } from "../_shared/http.ts";
+import {
+  assessBlobHead,
+  asImmutableBlobKey,
+  BlobStoreError,
+  chunkValues,
+  createImmutableBlobKey,
+  type BlobStore,
+  type BlobUploadDescriptor,
+  type ImmutableBlobKey,
+} from "../_shared/blobStore.ts";
+import { createBlobStoreFromEnv } from "../_shared/blobStoreFactory.ts";
+import {
+  authenticatedRateLimitPolicy,
+  browserOriginAllowed,
+  consumeRateLimit,
+  logRequestCompletion,
+  networkScope,
+  publicRateLimitPolicy,
+  requestId,
+  withOperationalHeaders,
+} from "../_shared/requestControls.ts";
 import {
   handleExportCreate,
   handleExportDownload,
@@ -11,6 +36,12 @@ const supabaseUrl = Deno.env.get("SUPABASE_URL") ?? "";
 const supabaseAnonKey = Deno.env.get("SUPABASE_ANON_KEY") ?? "";
 const supabaseServiceRoleKey =
   Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "";
+const allowedBrowserOrigins =
+  Deno.env.get("HELDAT_ALLOWED_WEB_ORIGINS") ?? "";
+const blobMaintenanceToken =
+  Deno.env.get("HELDAT_MAINTENANCE_TOKEN") ??
+  Deno.env.get("ALYR_EXPORT_MAINTENANCE_TOKEN") ??
+  "";
 const uuidPattern =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 const allowedEvidenceMimeTypes = new Set([
@@ -27,10 +58,81 @@ const allowedEvidenceMimeTypes = new Set([
   "text/plain",
 ]);
 
-function bytesToHex(bytes: Uint8Array): string {
-  return [...bytes]
-    .map((byte) => byte.toString(16).padStart(2, "0"))
-    .join("");
+let blobStorePromise: Promise<BlobStore> | null = null;
+
+function activeBlobStore(): Promise<BlobStore> {
+  if (blobStorePromise === null) {
+    const publicSupabaseUrl =
+      Deno.env.get("SUPABASE_PUBLIC_URL") ??
+      (
+          supabaseUrl === "http://kong:8000"
+        ? "http://127.0.0.1:54321"
+        : supabaseUrl
+      );
+    blobStorePromise = createBlobStoreFromEnv({
+      ...Deno.env.toObject(),
+      SUPABASE_PUBLIC_URL: publicSupabaseUrl,
+      BLOB_STORE_PROVIDER:
+        Deno.env.get("BLOB_STORE_PROVIDER") ?? "supabase",
+      BLOB_STORE_BUCKET:
+        Deno.env.get("BLOB_STORE_BUCKET") ?? "evidence",
+      BLOB_SIGNED_DOWNLOAD_TTL_SECONDS:
+        Deno.env.get("BLOB_SIGNED_DOWNLOAD_TTL_SECONDS") ?? "300",
+    });
+  }
+  return blobStorePromise;
+}
+
+async function digestBlobStream(
+  stream: ReadableStream<Uint8Array>,
+  maximumBytes: number,
+): Promise<{
+  readonly byteSize: number;
+  readonly checksumSha256: string;
+  readonly overflowed: boolean;
+}> {
+  const hash = createHash("sha256");
+  const reader = stream.getReader();
+  let byteSize = 0;
+  let overflowed = false;
+  try {
+    while (true) {
+      const chunk = await reader.read();
+      if (chunk.done) break;
+      byteSize += chunk.value.byteLength;
+      if (byteSize > maximumBytes) {
+        chunk.value.fill(0);
+        overflowed = true;
+        await reader.cancel("bounded Evidence verification exceeded size");
+        break;
+      }
+      hash.update(chunk.value);
+      chunk.value.fill(0);
+    }
+  } finally {
+    reader.releaseLock();
+  }
+  return {
+    byteSize,
+    checksumSha256: overflowed ? "" : hash.digest("hex"),
+    overflowed,
+  };
+}
+
+function providerFailure(
+  error: unknown,
+  missingMessage: string,
+  unavailableMessage: string,
+): Response {
+  if (error instanceof BlobStoreError && error.code === "OBJECT_NOT_FOUND") {
+    return apiError("NOT_FOUND", missingMessage, 404);
+  }
+  return apiError(
+    "STORAGE_UNAVAILABLE",
+    unavailableMessage,
+    503,
+    error instanceof BlobStoreError ? error.retryable : true,
+  );
 }
 
 type AuthenticatedContext = {
@@ -49,6 +151,316 @@ function routePath(request: Request): string {
     }
   }
   return pathname.replace(/\/+$/, "") || "/";
+}
+
+function serviceControlClient(): SupabaseClient | null {
+  if (!supabaseUrl || !supabaseServiceRoleKey) return null;
+  return createClient(supabaseUrl, supabaseServiceRoleKey, {
+    auth: {
+      persistSession: false,
+      autoRefreshToken: false,
+    },
+  });
+}
+
+function maintenanceTokenMatches(candidate: string): boolean {
+  if (
+    blobMaintenanceToken.length < 32 ||
+    blobMaintenanceToken.length > 256 ||
+    candidate.length < 32 ||
+    candidate.length > 256
+  ) {
+    return false;
+  }
+  const expectedHash = createHash("sha256")
+    .update(blobMaintenanceToken)
+    .digest();
+  const candidateHash = createHash("sha256").update(candidate).digest();
+  let difference = expectedHash.byteLength ^ candidateHash.byteLength;
+  for (
+    let index = 0;
+    index < Math.min(expectedHash.byteLength, candidateHash.byteLength);
+    index += 1
+  ) {
+    difference |= (expectedHash[index] ?? 0) ^ (candidateHash[index] ?? 0);
+  }
+  expectedHash.fill(0);
+  candidateHash.fill(0);
+  return difference === 0;
+}
+
+type BlobCleanupClaim = {
+  readonly blob_object_id: string;
+  readonly object_key: string;
+  readonly claim_token: string;
+};
+
+function validBlobCleanupClaim(value: unknown): value is BlobCleanupClaim {
+  if (typeof value !== "object" || value === null || Array.isArray(value)) {
+    return false;
+  }
+  const row = value as Record<string, unknown>;
+  return (
+    typeof row.blob_object_id === "string" &&
+    uuidPattern.test(row.blob_object_id) &&
+    typeof row.object_key === "string" &&
+    typeof row.claim_token === "string" &&
+    uuidPattern.test(row.claim_token)
+  );
+}
+
+function cleanupErrorCode(value: string): string {
+  const normalized = value
+    .toUpperCase()
+    .replace(/[^A-Z0-9_]+/g, "_")
+    .replace(/^_+|_+$/g, "")
+    .slice(0, 64);
+  return normalized || "PROVIDER_UNAVAILABLE";
+}
+
+async function releaseBlobCleanupClaim(
+  client: SupabaseClient,
+  claim: BlobCleanupClaim,
+  errorCode: string,
+): Promise<boolean> {
+  const { data, error } = await client.rpc(
+    "release_blob_object_cleanup",
+    {
+      p_blob_object_id: claim.blob_object_id,
+      p_claim_token: claim.claim_token,
+      p_error_code: cleanupErrorCode(errorCode),
+      p_retry_delay: "5 minutes",
+    },
+  );
+  return error === null && data === true;
+}
+
+async function handleBlobMaintenance(request: Request): Promise<Response> {
+  const suppliedToken =
+    request.headers.get("X-Heldat-Maintenance-Token") ??
+    request.headers.get("X-ALYR-Maintenance-Token") ??
+    "";
+  if (!maintenanceTokenMatches(suppliedToken)) {
+    return apiError(
+      "AUTHORIZATION_DENIED",
+      "Blob maintenance authorization failed.",
+      403,
+    );
+  }
+
+  const client = serviceControlClient();
+  if (client === null) {
+    return apiError(
+      "STORAGE_UNAVAILABLE",
+      "Blob maintenance is not configured.",
+      503,
+      true,
+    );
+  }
+
+  const { data: enqueuedData, error: enqueueError } = await client.rpc(
+    "enqueue_blob_object_cleanup",
+    {
+      p_limit: 100,
+      p_orphan_grace: "24 hours",
+    },
+  );
+  if (enqueueError !== null) {
+    return apiError(
+      "STORAGE_UNAVAILABLE",
+      "Blob cleanup candidates could not be queued.",
+      503,
+      true,
+    );
+  }
+
+  const { data: claimedData, error: claimError } = await client.rpc(
+    "claim_blob_object_cleanup",
+    {
+      p_limit: 25,
+      p_lease: "5 minutes",
+    },
+  );
+  if (claimError !== null) {
+    return apiError(
+      "STORAGE_UNAVAILABLE",
+      "Blob cleanup candidates could not be claimed.",
+      503,
+      true,
+    );
+  }
+  const claims = Array.isArray(claimedData)
+    ? claimedData.filter(validBlobCleanupClaim)
+    : [];
+  if (claims.length === 0) {
+    return json({
+      enqueued: Number(enqueuedData ?? 0),
+      claimed: 0,
+      deleted: 0,
+      released: 0,
+      completionFailed: 0,
+    });
+  }
+
+  const validClaims: Array<{
+    readonly claim: BlobCleanupClaim;
+    readonly objectKey: ImmutableBlobKey;
+  }> = [];
+  let released = 0;
+  for (const claim of claims) {
+    try {
+      validClaims.push({
+        claim,
+        objectKey: asImmutableBlobKey(claim.object_key),
+      });
+    } catch {
+      if (
+        await releaseBlobCleanupClaim(
+          client,
+          claim,
+          "INVALID_OBJECT_KEY",
+        )
+      ) {
+        released += 1;
+      }
+    }
+  }
+
+  let deleted = 0;
+  let completionFailed = 0;
+  if (validClaims.length > 0) {
+    let result;
+    try {
+      const store = await activeBlobStore();
+      result = await store.deleteBatch(
+        validClaims.map((entry) => entry.objectKey),
+      );
+    } catch {
+      for (const { claim } of validClaims) {
+        if (
+          await releaseBlobCleanupClaim(
+            client,
+            claim,
+            "PROVIDER_UNAVAILABLE",
+          )
+        ) {
+          released += 1;
+        }
+      }
+      return json({
+        enqueued: Number(enqueuedData ?? 0),
+        claimed: claims.length,
+        deleted,
+        released,
+        completionFailed,
+      }, 503);
+    }
+
+    const deletedKeys = new Set(result.deleted);
+    const failures = new Map(
+      result.failed.map((failure) => [
+        failure.objectKey,
+        failure.code,
+      ]),
+    );
+    for (const { claim, objectKey } of validClaims) {
+      if (deletedKeys.has(objectKey)) {
+        const completion = await client.rpc(
+          "complete_blob_object_cleanup",
+          {
+            p_blob_object_id: claim.blob_object_id,
+            p_claim_token: claim.claim_token,
+          },
+        );
+        if (completion.error === null && completion.data === true) {
+          deleted += 1;
+        } else {
+          completionFailed += 1;
+        }
+        continue;
+      }
+      if (
+        await releaseBlobCleanupClaim(
+          client,
+          claim,
+          failures.get(objectKey) ?? "DELETE_UNCONFIRMED",
+        )
+      ) {
+        released += 1;
+      }
+    }
+  }
+
+  return json({
+    enqueued: Number(enqueuedData ?? 0),
+    claimed: claims.length,
+    deleted,
+    released,
+    completionFailed,
+  }, completionFailed > 0 || released > 0 ? 503 : 200);
+}
+
+function rateLimitResponse(
+  retryAfterSeconds: number,
+  unavailable = false,
+): Response {
+  const response = unavailable
+    ? apiError(
+      "STORAGE_UNAVAILABLE",
+      "Request protection is temporarily unavailable.",
+      503,
+      true,
+    )
+    : apiError(
+      "RATE_LIMITED",
+      "Too many requests. Try again shortly.",
+      429,
+      true,
+    );
+  const headers = new Headers(response.headers);
+  headers.set("Retry-After", String(Math.max(retryAfterSeconds, 1)));
+  return new Response(response.body, {
+    status: response.status,
+    statusText: response.statusText,
+    headers,
+  });
+}
+
+async function enforceNetworkRateLimit(
+  request: Request,
+  path: string,
+): Promise<Response | null> {
+  const client = serviceControlClient();
+  if (!client) return rateLimitResponse(30, true);
+  const result = await consumeRateLimit(
+    client,
+    networkScope(request),
+    publicRateLimitPolicy(request.method, path),
+  );
+  if (result.ok) return null;
+  return rateLimitResponse(
+    result.retryAfterSeconds,
+    result.unavailable === true,
+  );
+}
+
+async function enforceUserRateLimit(
+  request: Request,
+  path: string,
+  userId: string,
+): Promise<Response | null> {
+  const client = serviceControlClient();
+  if (!client) return rateLimitResponse(30, true);
+  const result = await consumeRateLimit(
+    client,
+    `user:${userId}`,
+    authenticatedRateLimitPolicy(request.method, path),
+  );
+  if (result.ok) return null;
+  return rateLimitResponse(
+    result.retryAfterSeconds,
+    result.unavailable === true,
+  );
 }
 
 async function authenticate(
@@ -490,6 +902,145 @@ async function handlePilotPreflight(request: Request): Promise<Response> {
   });
 }
 
+async function handlePublicSignupPreflight(
+  request: Request,
+): Promise<Response> {
+  if (!supabaseUrl || !supabaseServiceRoleKey) {
+    return apiError(
+      "STORAGE_UNAVAILABLE",
+      "Account registration is temporarily unavailable.",
+      503,
+      true,
+    );
+  }
+
+  const body = await readJson(request);
+  requireApiVersion(body);
+  const email =
+    typeof body.email === "string" ? body.email.trim().toLowerCase() : "";
+  const idempotencyKey =
+    typeof body.idempotencyKey === "string"
+      ? body.idempotencyKey.trim().toLowerCase()
+      : "";
+  if (
+    !hasOnlyKeys(body, ["apiVersion", "email", "idempotencyKey"]) ||
+    email.length < 3 ||
+    email.length > 254 ||
+    !/^[^\s@]+@[^\s@]+\.[^\s@]+$/u.test(email) ||
+    !uuidPattern.test(idempotencyKey)
+  ) {
+    return apiError(
+      "VALIDATION_FAILED",
+      "Enter a valid email address and retry identity.",
+      400,
+    );
+  }
+
+  const networkScopeHash = createHash("sha256")
+    .update(networkScope(request), "utf8")
+    .digest("hex");
+  const serviceClient = createClient(
+    supabaseUrl,
+    supabaseServiceRoleKey,
+    {
+      auth: { persistSession: false, autoRefreshToken: false },
+    },
+  );
+  const { data, error } = await serviceClient.rpc(
+    "issue_public_email_signup_grant",
+    {
+      p_email: email,
+      p_network_scope_hash: networkScopeHash,
+      p_idempotency_key: idempotencyKey,
+    },
+  );
+  if (error) {
+    const message = error.message;
+    if (message.includes("PUBLIC_SIGNUP_RATE_LIMITED")) {
+      return apiError(
+        "RATE_LIMITED",
+        "Too many registration attempts. Try again later.",
+        429,
+        true,
+      );
+    }
+    if (message.includes("PUBLIC_SIGNUP_CAPACITY_REACHED")) {
+      return apiError(
+        "QUOTA_EXCEEDED",
+        "New account capacity is temporarily full.",
+        409,
+      );
+    }
+    if (message.includes("PUBLIC_SIGNUP_IDEMPOTENCY_CONFLICT")) {
+      return apiError(
+        "IDEMPOTENCY_CONFLICT",
+        "This registration retry identity was used for another request.",
+        409,
+      );
+    }
+    if (
+      message.includes("PUBLIC_SIGNUP_ALREADY_PENDING") ||
+      message.includes("PUBLIC_SIGNUP_REQUEST_EXPIRED")
+    ) {
+      return apiError(
+        "AUTHORIZATION_DENIED",
+        "A current registration request already exists. Restart account setup.",
+        409,
+      );
+    }
+    if (message.includes("PUBLIC_SIGNUP_CLOSED")) {
+      return apiError(
+        "AUTHORIZATION_DENIED",
+        "New account registration is not open yet.",
+        403,
+      );
+    }
+    if (message.includes("PUBLIC_SIGNUP_REQUEST_INVALID")) {
+      return apiError(
+        "VALIDATION_FAILED",
+        "The registration request is invalid.",
+        400,
+      );
+    }
+    return apiError(
+      "STORAGE_UNAVAILABLE",
+      "Account registration is temporarily unavailable.",
+      503,
+      true,
+    );
+  }
+
+  const grant = Array.isArray(data) ? data[0] : data;
+  const enrollmentGrant =
+    typeof grant?.enrollment_grant === "string"
+      ? grant.enrollment_grant
+      : "";
+  const expiresAt =
+    typeof grant?.expires_at === "string" ? grant.expires_at : "";
+  const signupChannel =
+    typeof grant?.signup_channel === "string" ? grant.signup_channel : "";
+  if (
+    !/^[a-f0-9]{64}$/u.test(enrollmentGrant) ||
+    !expiresAt ||
+    Number.isNaN(Date.parse(expiresAt)) ||
+    signupChannel !== "heldat-public-email-v1"
+  ) {
+    return apiError(
+      "STORAGE_UNAVAILABLE",
+      "Account registration returned an invalid acknowledgement.",
+      503,
+      true,
+    );
+  }
+
+  return json({
+    apiVersion: 1,
+    enrollmentGrant,
+    expiresAt,
+    signupChannel,
+  });
+}
+
 async function handleHouseholdInvitePreflight(
   request: Request,
 ): Promise<Response> {
@@ -702,6 +1253,9 @@ async function handleSyncPush(
           ? "location"
           : commandType.startsWith("value.")
           ? "value"
+          : commandType === "asset.category.set" ||
+              commandType === "asset.primary-photo.set"
+          ? "metadata"
           : commandType.startsWith("place.") ||
               commandType.startsWith("space.")
           ? "location"
@@ -1533,7 +2087,16 @@ async function handleUploadIntent(
     return apiError("INVALID_FILE", "The file metadata is invalid.");
   }
 
-  const objectKey = `${householdId}/${blobId}/${versionId}`;
+  let objectKey;
+  try {
+    objectKey = createImmutableBlobKey({
+      householdId,
+      blobId,
+      versionId,
+    });
+  } catch {
+    return apiError("INVALID_FILE", "The file identifiers are invalid.");
+  }
   const { error: insertError } = await context.client.rpc(
     "create_blob_upload_intent",
     {
@@ -1560,11 +2123,16 @@ async function handleUploadIntent(
     );
   }
 
-  const { data, error } = await context.client.storage
-    .from("evidence")
-    .createSignedUploadUrl(objectKey);
-
-  if (error || !data) {
+  let signedUpload;
+  try {
+    const store = await activeBlobStore();
+    signedUpload = await store.createSignedUpload({
+      objectKey,
+      byteSize,
+      contentType: mimeType,
+      checksumSha256: checksum,
+    });
+  } catch {
     return apiError(
       "STORAGE_UNAVAILABLE",
       "Unable to prepare this upload.",
@@ -1576,14 +2144,8 @@ async function handleUploadIntent(
   return json({
     uploadId: blobId,
     blobObjectId: blobId,
-    expiresAt: new Date(Date.now() + 120_000).toISOString(),
-    uploadTarget: {
-      provider: "supabase-storage",
-      bucket: "evidence",
-      objectKey,
-      token: data.token,
-      path: data.path,
-    },
+    expiresAt: signedUpload.expiresAt,
+    uploadTarget: signedUpload,
   }, 201);
 }
 
@@ -1611,7 +2173,9 @@ async function handleUploadComplete(
 
   const { data: blob, error: blobError } = await context.client
     .from("blob_objects")
-    .select("id, household_id, object_key, checksum_sha256, byte_size, status")
+    .select(
+      "id, household_id, object_key, checksum_sha256, byte_size, mime_type, status",
+    )
     .eq("id", uploadId)
     .maybeSingle();
 
@@ -1636,21 +2200,82 @@ async function handleUploadComplete(
     );
   }
 
-  const { data: storedFile, error: downloadError } = await context.client.storage
-    .from("evidence")
-    .download(blob.object_key);
+  if (blob.status === "stored") {
+    return json({
+      upload: {
+        id: blob.id,
+        objectKey: blob.object_key,
+        status: "stored",
+      },
+      note:
+        "Cloud presence, byte size, and SHA-256 checksum were previously confirmed.",
+    });
+  }
 
-  if (downloadError || !storedFile) {
+  let descriptor: BlobUploadDescriptor;
+  try {
+    descriptor = {
+      objectKey: asImmutableBlobKey(blob.object_key),
+      byteSize: Number(blob.byte_size),
+      contentType: blob.mime_type,
+      checksumSha256: checksum,
+    };
+  } catch {
     return apiError(
-      "STORAGE_UNAVAILABLE",
-      "The file is not yet available in cloud storage.",
+      "INVALID_FILE",
+      "The cloud object identity is invalid.",
       409,
-      true,
     );
   }
 
-  const storedBytes = await storedFile.arrayBuffer();
-  const serverSize = storedBytes.byteLength;
+  let serverSize = 0;
+  let serverChecksum = "";
+  try {
+    const store = await activeBlobStore();
+    const head = await store.headObject(descriptor.objectKey);
+    const headAssessment = assessBlobHead(head, descriptor);
+    if (!headAssessment.ok) {
+      return apiError(
+        headAssessment.code === "OBJECT_MISSING"
+          ? "STORAGE_UNAVAILABLE"
+          : "INVALID_FILE",
+        headAssessment.code === "OBJECT_MISSING"
+          ? "The file is not yet available in cloud storage."
+          : "The uploaded file metadata does not match the capture record.",
+        409,
+        headAssessment.code === "OBJECT_MISSING",
+      );
+    }
+    const opened = await store.openReadStream(descriptor.objectKey);
+    const streamHeadAssessment = assessBlobHead(opened.head, descriptor);
+    if (!streamHeadAssessment.ok) {
+      return apiError(
+        "INVALID_FILE",
+        "The uploaded file metadata changed during verification.",
+        409,
+      );
+    }
+    const digest = await digestBlobStream(
+      opened.stream,
+      descriptor.byteSize,
+    );
+    serverSize = digest.byteSize;
+    serverChecksum = digest.checksumSha256;
+    if (digest.overflowed) {
+      return apiError(
+        "INVALID_FILE",
+        "The uploaded file size does not match the capture record.",
+        409,
+      );
+    }
+  } catch (error) {
+    return providerFailure(
+      error,
+      "The file is not yet available in cloud storage.",
+      "The uploaded file could not be verified.",
+    );
+  }
+
   if (serverSize !== Number(blob.byte_size)) {
     return apiError(
       "INVALID_FILE",
@@ -1658,10 +2283,6 @@ async function handleUploadComplete(
       409,
     );
   }
-
-  const serverChecksum = bytesToHex(
-    new Uint8Array(await crypto.subtle.digest("SHA-256", storedBytes)),
-  );
   if (serverChecksum !== checksum) {
     return apiError(
       "INVALID_FILE",
@@ -1849,47 +2470,46 @@ async function handleEvidenceDownload(
     return apiError("NOT_FOUND", "Evidence file not found.", 404);
   }
 
-  const { data: storedFile, error: downloadError } = await context.client.storage
-    .from("evidence")
-    .download(blob.object_key);
-  if (downloadError || !storedFile) {
+  let descriptor: BlobUploadDescriptor;
+  try {
+    descriptor = {
+      objectKey: asImmutableBlobKey(blob.object_key),
+      byteSize,
+      contentType: mimeType,
+      checksumSha256: checksum,
+    };
+  } catch {
     return apiError(
-      "STORAGE_UNAVAILABLE",
+      "INVALID_FILE",
+      "The cloud Evidence object identity is invalid.",
+      409,
+    );
+  }
+
+  try {
+    const store = await activeBlobStore();
+    const head = await store.headObject(descriptor.objectKey);
+    const assessment = assessBlobHead(head, descriptor);
+    if (!assessment.ok) {
+      return apiError(
+        assessment.code === "OBJECT_MISSING" ? "NOT_FOUND" : "INVALID_FILE",
+        assessment.code === "OBJECT_MISSING"
+          ? "Evidence file not found."
+          : "The cloud Evidence metadata does not match its immutable record.",
+        assessment.code === "OBJECT_MISSING" ? 404 : 409,
+      );
+    }
+    const downloadTarget = await store.createSignedDownload(
+      descriptor.objectKey,
+    );
+    return json({ downloadTarget });
+  } catch (error) {
+    return providerFailure(
+      error,
+      "Evidence file not found.",
       "The Evidence file is temporarily unavailable.",
-      503,
-      true,
     );
   }
-
-  const storedBytes = await storedFile.arrayBuffer();
-  if (storedBytes.byteLength !== byteSize) {
-    return apiError(
-      "INVALID_FILE",
-      "The cloud Evidence file does not match its recorded size.",
-      409,
-    );
-  }
-  const storedChecksum = bytesToHex(
-    new Uint8Array(await crypto.subtle.digest("SHA-256", storedBytes)),
-  );
-  if (storedChecksum !== checksum) {
-    return apiError(
-      "INVALID_FILE",
-      "The cloud Evidence file does not match its recorded checksum.",
-      409,
-    );
-  }
-
-  return new Response(storedBytes, {
-    status: 200,
-    headers: {
-      ...corsHeaders,
-      "Cache-Control": "no-store",
-      "Content-Type": mimeType,
-      "Content-Length": String(storedBytes.byteLength),
-      "X-Content-Type-Options": "nosniff",
-    },
-  });
 }
 
 type AccountDeletionMembership = {
@@ -2205,22 +2825,53 @@ async function handleAccountDeletion(
     exportObjectKeys = createdJob.export_object_keys ?? [];
   }
 
-  const uniqueObjectKeys = [...new Set(
-    objectKeys.filter((key) =>
-      typeof key === "string" && key.length > 0
-    ),
-  )];
-  for (let index = 0; index < uniqueObjectKeys.length; index += 100) {
-    const removal = await serviceClient.storage
-      .from("evidence")
-      .remove(uniqueObjectKeys.slice(index, index + 100));
-    if (removal.error) {
+  let uniqueObjectKeys: ImmutableBlobKey[];
+  try {
+    uniqueObjectKeys = [...new Set(
+      objectKeys.filter((key) =>
+        typeof key === "string" && key.length > 0
+      ),
+    )].map(asImmutableBlobKey);
+  } catch {
+    return apiError(
+      "STORAGE_UNAVAILABLE",
+      "Account records were removed, but an invalid private evidence pointer requires operator review.",
+      503,
+      false,
+    );
+  }
+  if (uniqueObjectKeys.length > 0) {
+    let store: BlobStore;
+    try {
+      store = await activeBlobStore();
+    } catch {
       return apiError(
         "STORAGE_UNAVAILABLE",
         "Account records were removed, but private evidence deletion needs another attempt.",
         503,
         true,
       );
+    }
+    for (const batch of chunkValues(uniqueObjectKeys, 10_000)) {
+      let removal;
+      try {
+        removal = await store.deleteBatch(batch);
+      } catch {
+        return apiError(
+          "STORAGE_UNAVAILABLE",
+          "Account records were removed, but private evidence deletion needs another attempt.",
+          503,
+          true,
+        );
+      }
+      if (removal.failed.length > 0) {
+        return apiError(
+          "STORAGE_UNAVAILABLE",
+          "Account records were removed, but private evidence deletion needs another attempt.",
+          503,
+          removal.failed.some((failure) => failure.retryable),
+        );
+      }
     }
   }
 
@@ -2270,7 +2921,18 @@ async function handleAccountDeletion(
   return json(receipt);
 }
 
-Deno.serve(async (request) => {
+async function dispatchRequest(
+  request: Request,
+  operationalRequestId: string,
+): Promise<Response> {
+  if (!browserOriginAllowed(request, allowedBrowserOrigins)) {
+    return apiError(
+      "AUTHORIZATION_DENIED",
+      "This browser origin is not allowed.",
+      403,
+    );
+  }
+
   if (request.method === "OPTIONS") {
     return new Response("ok", { headers: corsHeaders });
   }
@@ -2278,6 +2940,15 @@ Deno.serve(async (request) => {
   const path = routePath(request);
 
   try {
+    const networkLimit = await enforceNetworkRateLimit(request, path);
+    if (networkLimit) return networkLimit;
+
+    if (
+      request.method === "POST" &&
+      path === "/signup/preflight"
+    ) {
+      return await handlePublicSignupPreflight(request);
+    }
     if (
       request.method === "POST" &&
       path === "/pilot/preflight"
@@ -2296,9 +2967,21 @@ Deno.serve(async (request) => {
     ) {
       return await handleExportMaintenance(request);
     }
+    if (
+      request.method === "POST" &&
+      path === "/maintenance/blobs"
+    ) {
+      return await handleBlobMaintenance(request);
+    }
 
     const context = await authenticate(request);
     if (context instanceof Response) return context;
+    const userLimit = await enforceUserRateLimit(
+      request,
+      path,
+      context.userId,
+    );
+    if (userLimit) return userLimit;
 
     if (request.method === "POST" && path === "/product-events") {
       return await handleProductEvent(request, context);
@@ -2420,7 +3103,13 @@ Deno.serve(async (request) => {
       );
     }
 
-    console.error(error);
+    console.error(JSON.stringify({
+      event: "api.request.failed",
+      requestId: operationalRequestId,
+      method: request.method,
+      path,
+      errorName: error instanceof Error ? error.name : "UnknownError",
+    }));
     return apiError(
       "STORAGE_UNAVAILABLE",
       "The request could not be completed.",
@@ -2428,4 +3117,25 @@ Deno.serve(async (request) => {
       true,
     );
   }
+}
+
+Deno.serve(async (request) => {
+  const id = requestId(request);
+  const path = routePath(request);
+  const startedAt = performance.now();
+  const response = await dispatchRequest(request, id);
+  const protectedResponse = withOperationalHeaders(
+    response,
+    id,
+    request,
+    allowedBrowserOrigins,
+  );
+  logRequestCompletion({
+    id,
+    method: request.method,
+    path,
+    status: protectedResponse.status,
+    durationMs: performance.now() - startedAt,
+  });
+  return protectedResponse;
 });

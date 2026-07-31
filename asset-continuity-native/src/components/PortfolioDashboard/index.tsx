@@ -290,7 +290,7 @@ const ENGLISH: DashboardCopy = {
   startEyebrow: "START PORTFOLIO",
   startTitle: "Choose your first financial record",
   startBody:
-    "Add an item or property you want to value, or record a liability. ALYR never estimates an amount for you.",
+    "Add an item or property you want to value, or record a liability. Heldat never estimates an amount for you.",
   startWithDocumentsBody:
     "Your documents remain protected in the continuity register without becoming financial assets. Add an item, property or liability when it is useful.",
   startAsset: "Add an item or property",
@@ -400,7 +400,7 @@ const ARABIC: DashboardCopy = {
   startEyebrow: "ابدأ المحفظة",
   startTitle: "اختر أول سجل مالي",
   startBody:
-    "أضف غرضًا أو عقارًا تريد تسجيل قيمته، أو سجّل التزامًا. لا يقدّر ALYR أي مبلغ نيابةً عنك.",
+    "أضف غرضًا أو عقارًا تريد تسجيل قيمته، أو سجّل التزامًا. لا يقدّر Heldat أي مبلغ نيابةً عنك.",
   startWithDocumentsBody:
     "تبقى مستنداتك محمية في سجل الاستمرارية من دون احتسابها كأصول مالية. أضف غرضًا أو عقارًا أو التزامًا عندما يكون ذلك مفيدًا.",
   startAsset: "إضافة غرض أو عقار",

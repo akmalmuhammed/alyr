@@ -347,15 +347,21 @@ function uploadingPort(options: {
       blobObjectId: descriptor.blobId,
       expiresAt: "2026-07-28T08:05:00.000Z",
       uploadTarget: {
-        provider: "supabase-storage",
-        bucket: "evidence",
+        provider: "supabase" as const,
         objectKey:
           `${descriptor.householdId}/${descriptor.blobId}/` +
           descriptor.evidenceVersionId,
-        path:
+        method: "PUT" as const,
+        url:
+          "https://project-ref.supabase.co/storage/v1/object/upload/sign/evidence/" +
           `${descriptor.householdId}/${descriptor.blobId}/` +
-          descriptor.evidenceVersionId,
-        token: "background-token-safe"
+          `${descriptor.evidenceVersionId}?token=background-token-safe`,
+        requiredHeaders: {
+          "cache-control": "max-age=3600",
+          "content-type": descriptor.mimeType,
+          "x-upsert": "false"
+        },
+        expiresAt: "2026-07-28T08:05:00.000Z"
       }
     }
   }));

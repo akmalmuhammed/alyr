@@ -11,7 +11,8 @@ import type {
 
 import {
   applyServerChanges,
-  reconcileForeground
+  reconcileForeground,
+  selectPushableOperations
 } from "@/data/foregroundSync";
 import {
   createConflictReapplyOperation,
@@ -165,13 +166,22 @@ class TestSyncServer {
         result = { locationVersion };
       } else if (
         command.type === "asset.update" ||
+        command.type === "asset.category.set" ||
+        command.type === "asset.primary-photo.set" ||
         command.type === "asset.archive" ||
         command.type === "asset.restore"
       ) {
         const current = this.assetVersions.get(entityId) ?? 0;
         if (command.observedVersion !== current) {
           conflicts.push(
-            this.conflict(operation, current, "lifecycle")
+            this.conflict(
+              operation,
+              current,
+              command.type === "asset.category.set" ||
+                command.type === "asset.primary-photo.set"
+                ? "metadata"
+                : "lifecycle"
+            )
           );
           continue;
         }
@@ -648,6 +658,205 @@ describe("production-truthful foreground reconciliation", () => {
     });
   });
 
+  it("converges category and verified primary-photo fields from one ordered ledger", () => {
+    const evidenceId =
+      "00000000-0000-4000-8000-000000000351";
+    const evidenceVersionId =
+      "00000000-0000-4000-8000-000000000352";
+    const blobObjectId =
+      "00000000-0000-4000-8000-000000000353";
+    const changes: SyncChange[] = [
+      {
+        sequence: 1,
+        entityType: "asset",
+        entityId: ASSET_ID,
+        householdId: HOUSEHOLD_ID,
+        version: 3,
+        tombstoned: false,
+        body: {
+          operationId: "remote-category",
+          command: "asset.category.set",
+          payload: {
+            categoryId: "art.collectible",
+            categoryPath: ["art", "collectible"]
+          },
+          result: {}
+        },
+        changedAt: FIXED_TIME
+      },
+      {
+        sequence: 2,
+        entityType: "evidence",
+        entityId: evidenceId,
+        householdId: HOUSEHOLD_ID,
+        version: 1,
+        tombstoned: false,
+        body: {
+          operationId: "remote-photo-evidence",
+          command: "evidence.create",
+          payload: {
+            assetId: ASSET_ID,
+            kind: "media",
+            relation: "condition",
+            title: "camera.jpg"
+          },
+          result: {}
+        },
+        changedAt: FIXED_TIME
+      },
+      {
+        sequence: 3,
+        entityType: "evidence",
+        entityId: evidenceVersionId,
+        householdId: HOUSEHOLD_ID,
+        version: 2,
+        tombstoned: false,
+        body: {
+          operationId: "remote-photo-version",
+          command: "evidence.version.add",
+          payload: {
+            evidenceId,
+            blobObjectId,
+            fileName: "camera.jpg",
+            mimeType: "image/jpeg",
+            byteSize: 2_048,
+            checksumSha256: "c".repeat(64)
+          },
+          result: {
+            evidenceVersionNumber: 1
+          }
+        },
+        changedAt: FIXED_TIME
+      },
+      {
+        sequence: 4,
+        entityType: "asset",
+        entityId: ASSET_ID,
+        householdId: HOUSEHOLD_ID,
+        version: 4,
+        tombstoned: false,
+        body: {
+          operationId: "remote-primary-photo",
+          command: "asset.primary-photo.set",
+          payload: { evidenceId },
+          result: {}
+        },
+        changedAt: FIXED_TIME
+      }
+    ];
+    const applyToDevice = (deviceSuffix: string) =>
+      applyServerChanges(seededWorkspace(deviceSuffix).workspace, changes, {
+        householdId: HOUSEHOLD_ID,
+        localOperationIds: new Set(),
+        conflictedEntityIds: new Set()
+      });
+
+    const deviceA = applyToDevice("41");
+    const deviceB = applyToDevice("42");
+
+    expect(deviceB.assets).toEqual(deviceA.assets);
+    expect(deviceB.evidence).toEqual(deviceA.evidence);
+    expect(deviceB.assets[0]).toMatchObject({
+      version: 4,
+      categoryId: "art.collectible",
+      categoryLabel: "Collectible",
+      photoEvidenceId: evidenceId
+    });
+    expect(deviceB.assets[0]?.localOnlyFields).toBeUndefined();
+    expect(deviceB.evidence[0]).toMatchObject({
+      id: evidenceId,
+      version: 2,
+      versionId: evidenceVersionId,
+      blobObjectId,
+      storageState: "synced"
+    });
+  });
+
+  it("does not let a later Asset command overtake a byte-gated primary-photo selection", () => {
+    const workspace = seededWorkspace("45").workspace;
+    const operation = (
+      operationId: string,
+      type: SyncOperation["command"]["type"],
+      aggregateId: string,
+      observedVersion: number,
+      payload: SyncOperation["command"]["payload"],
+      prerequisites: SyncOperation["prerequisites"] = []
+    ) =>
+      createLocalOperation(workspace, {
+        type,
+        aggregateId,
+        payload,
+        operationId,
+        idempotencyKey: `idem-${operationId}`,
+        observedVersion,
+        occurredAt: FIXED_TIME,
+        prerequisites
+      });
+    const blobObjectId =
+      "00000000-0000-4000-8000-000000000354";
+    const category = operation(
+      "ordered-category",
+      "asset.category.set",
+      ASSET_ID,
+      2,
+      {
+        categoryId: "art.collectible",
+        categoryPath: ["art", "collectible"]
+      }
+    );
+    const primary = operation(
+      "ordered-primary",
+      "asset.primary-photo.set",
+      ASSET_ID,
+      3,
+      {
+        evidenceId:
+          "00000000-0000-4000-8000-000000000351"
+      },
+      [{ kind: "blob-stored", blobObjectId }]
+    );
+    const move = operation(
+      "ordered-move",
+      "asset.move",
+      ASSET_ID,
+      1,
+      {
+        assignmentId:
+          "00000000-0000-4000-8000-000000000355",
+        placeId: PLACE_ID,
+        spaceId: null,
+        status: "known",
+        locationDetail: "Display cabinet",
+        source: "user"
+      }
+    );
+    const independentPlace = operation(
+      "ordered-independent-place",
+      "place.update",
+      PLACE_ID,
+      1,
+      { name: "West Bay archive" }
+    );
+
+    expect(
+      selectPushableOperations(
+        [category, primary, move, independentPlace],
+        new Set()
+      ).map((candidate) => candidate.operationId)
+    ).toEqual(["ordered-category", "ordered-independent-place"]);
+    expect(
+      selectPushableOperations(
+        [category, primary, move, independentPlace],
+        new Set([blobObjectId])
+      ).map((candidate) => candidate.operationId)
+    ).toEqual([
+      "ordered-category",
+      "ordered-primary",
+      "ordered-move",
+      "ordered-independent-place"
+    ]);
+  });
+
   it("applies Place metadata without erasing its exact pin", () => {
     const seeded = seededWorkspace("31").workspace;
     const place = seeded.places[0]!;
@@ -990,6 +1199,173 @@ describe("production-truthful foreground reconciliation", () => {
       name: "GMT watch · offline draft",
       syncStatus: "synced"
     });
+  });
+
+  it("preserves a concurrent category draft and converges after explicit reapply", async () => {
+    const server = new TestSyncServer();
+    const seeded = seededWorkspace("43");
+    const deviceA = await repositoryWith(
+      seeded.workspace,
+      seeded.operations
+    );
+    const deviceB = await repositoryWith(emptyWorkspace("44"));
+    assertSuccess(
+      await reconcileForeground({
+        repository: deviceA,
+        transport: server.transport(),
+        householdId: HOUSEHOLD_ID
+      })
+    );
+    assertSuccess(
+      await reconcileForeground({
+        repository: deviceB,
+        transport: server.transport(),
+        householdId: HOUSEHOLD_ID
+      })
+    );
+
+    const queueCategory = async (
+      repository: MemoryWorkspaceRepository,
+      categoryId: string,
+      categoryLabel: string,
+      operationId: string
+    ) => {
+      const loaded = await repository.load();
+      const workspace = loaded.snapshot as NativeWorkspace;
+      const previous = workspace.assets[0]!;
+      const asset: NativeAsset = {
+        ...previous,
+        categoryId,
+        categoryLabel,
+        version: previous.version + 1,
+        syncStatus: "on-device",
+        updatedAt: FIXED_TIME
+      };
+      const operation = createLocalOperation(workspace, {
+        type: "asset.category.set",
+        aggregateId: asset.id,
+        payload: {
+          categoryId,
+          categoryPath: categoryId.split(".")
+        },
+        operationId,
+        idempotencyKey: `idem-${operationId}`,
+        observedVersion: previous.version,
+        occurredAt: FIXED_TIME
+      });
+      const committed = await repository.commit({
+        expectedRevision: loaded.revision,
+        nextRevision: loaded.revision + 1,
+        snapshot: { ...workspace, assets: [asset] },
+        operations: [operation]
+      });
+      expect(committed.ok).toBe(true);
+    };
+
+    await queueCategory(
+      deviceA,
+      "art.collectible",
+      "Collectible",
+      "op-category-a"
+    );
+    assertSuccess(
+      await reconcileForeground({
+        repository: deviceA,
+        transport: server.transport(),
+        householdId: HOUSEHOLD_ID
+      })
+    );
+
+    await queueCategory(
+      deviceB,
+      "digital.asset",
+      "Digital reference",
+      "op-category-b"
+    );
+    const conflicted = assertSuccess(
+      await reconcileForeground({
+        repository: deviceB,
+        transport: server.transport(),
+        householdId: HOUSEHOLD_ID
+      })
+    );
+    expect(conflicted.workspace.assets[0]).toMatchObject({
+      categoryId: "digital.asset",
+      categoryLabel: "Digital reference",
+      syncStatus: "needs-attention"
+    });
+    expect(conflicted.conflicts).toEqual([
+      expect.objectContaining({
+        operationId: "op-category-b",
+        conflictKind: "metadata",
+        serverVersion: 3,
+        clientContext: expect.objectContaining({
+          serverChange: expect.objectContaining({
+            version: 3,
+            body: expect.objectContaining({
+              command: "asset.category.set",
+              payload: expect.objectContaining({
+                categoryId: "art.collectible"
+              })
+            })
+          })
+        })
+      })
+    ]);
+
+    const conflict = conflicted.conflicts[0]!;
+    expect(isDurableSyncConflict(conflict, HOUSEHOLD_ID)).toBe(true);
+    if (!isDurableSyncConflict(conflict, HOUSEHOLD_ID)) {
+      throw new Error("Expected a durable category conflict.");
+    }
+    const replacement = createConflictReapplyOperation(
+      conflict,
+      "op-category-b-reapply",
+      "2026-07-27T08:02:00.000Z"
+    );
+    expect(replacement.command.observedVersion).toBe(3);
+    const syncState = await deviceB.loadSyncState();
+    const queued = await deviceB.commitSync({
+      expectedRevision: conflicted.revision,
+      nextRevision: conflicted.revision + 1,
+      snapshot: conflicted.workspace,
+      cursor: syncState.cursor,
+      operations: [replacement],
+      acknowledgedOperationIds: [],
+      conflicts: [
+        markConflictReapplying(
+          conflict,
+          replacement.operationId,
+          replacement.createdAt
+        )
+      ]
+    });
+    expect(queued.ok).toBe(true);
+
+    const resolvedB = assertSuccess(
+      await reconcileForeground({
+        repository: deviceB,
+        transport: server.transport(),
+        householdId: HOUSEHOLD_ID
+      })
+    );
+    const resolvedA = assertSuccess(
+      await reconcileForeground({
+        repository: deviceA,
+        transport: server.transport(),
+        householdId: HOUSEHOLD_ID
+      })
+    );
+    expect(resolvedB.conflicts).toEqual([]);
+    expect(resolvedA.workspace.assets[0]).toMatchObject({
+      version: 4,
+      categoryId: "digital.asset",
+      categoryLabel: "Digital reference",
+      syncStatus: "synced"
+    });
+    expect(resolvedB.workspace.assets).toEqual(
+      resolvedA.workspace.assets
+    );
   });
 
   it("recovers after an offline push without losing the committed local record", async () => {

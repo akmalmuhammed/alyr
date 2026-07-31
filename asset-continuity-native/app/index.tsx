@@ -14,6 +14,7 @@ import {
   localizedWorkspaceError,
   useCoreJourneyCopy
 } from "@/i18n/coreJourneyCopy";
+import { useOnboardingIntro } from "@/onboarding/OnboardingIntroProvider";
 import { signedOutSampleWorkspaceReady } from "@/state/SessionBoundWorkspaceProvider";
 import { useWorkspace } from "@/state/WorkspaceProvider";
 import { colors, spacing } from "@/theme/tokens";
@@ -35,6 +36,25 @@ export default function IndexScreen() {
     workspace
   } = useWorkspace();
   const { language } = useCoreJourneyCopy();
+  const { status: introStatus } = useOnboardingIntro();
+  const publicEntry = () => {
+    if (introStatus === "loading") {
+      return (
+        <View
+          style={styles.loading}
+          testID="onboarding-intro-bootstrap"
+        >
+          <ActivityIndicator color={colors.action} size="small" />
+        </View>
+      );
+    }
+    return introStatus === "unseen" ? (
+      <Redirect href="/(onboarding)" />
+    ) : (
+      <Redirect href={AUTH_ROUTES.welcome} />
+    );
+  };
+
   if (bootstrapState === "bootstrapping") {
     return (
       <View style={styles.loading}>
@@ -49,11 +69,7 @@ export default function IndexScreen() {
     return <Redirect href={AUTH_ROUTES.join} />;
   }
   if (mode === "preview") {
-    return workspace ? (
-      <Redirect href="/(tabs)" />
-    ) : (
-      <Redirect href={AUTH_ROUTES.welcome} />
-    );
+    return workspace ? <Redirect href="/(tabs)" /> : publicEntry();
   }
   if (
     signedOutSampleWorkspaceReady(
@@ -65,7 +81,7 @@ export default function IndexScreen() {
     return <Redirect href="/(tabs)" />;
   }
   if (mode !== "supabase" || !session) {
-    return <Redirect href={AUTH_ROUTES.welcome} />;
+    return publicEntry();
   }
   if (
     !session.activeHouseholdId ||
@@ -103,15 +119,15 @@ export default function IndexScreen() {
       : "This account is no longer an active member of this household. No new household was created and no stale data was opened."
     : terminalError
       ? arabic
-        ? "أوقف ALYR فتح الخزنة لحماية بياناتك. لم تتم الكتابة فوق أي سجل."
-        : "ALYR stopped opening the vault to protect your data. No record was overwritten."
+        ? "أوقف Heldat فتح الخزنة لحماية بياناتك. لم تتم الكتابة فوق أي سجل."
+        : "Heldat stopped opening the vault to protect your data. No record was overwritten."
     : arabic
       ? "نقوم الآن بتنزيل أحدث الأماكن والعناصر والأدلة بأمان إلى هذا الجهاز."
-      : "ALYR is securely bringing your latest Places, items and evidence to this device.";
+      : "Heldat is securely bringing your latest Places, items and evidence to this device.";
   const status = waiting
     ? arabic
       ? "اترك التطبيق مفتوحاً أثناء تجهيز الخزنة المشفرة."
-      : "Keep ALYR open while the encrypted vault is prepared."
+      : "Keep Heldat open while the encrypted vault is prepared."
     : (bootstrap.lastError?.message
         ? localizedWorkspaceError(
             bootstrap.lastError.message,

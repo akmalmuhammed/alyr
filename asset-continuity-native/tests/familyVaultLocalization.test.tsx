@@ -456,15 +456,15 @@ describe("Family and Vault localization", () => {
     };
     mockRecoveryListRecent.mockResolvedValue([
       {
-        reference: "file:///ALYR-Recovery-2026-07-28.alyrkit",
-        fileName: "ALYR-Recovery-2026-07-28.alyrkit",
+        reference: "file:///Heldat-Recovery-2026-07-28.alyrkit",
+        fileName: "Heldat-Recovery-2026-07-28.alyrkit",
         byteSize: 2048,
         createdAt: "2026-07-28T08:00:00.000Z",
         externalBackupConfirmedAt: null
       },
       {
-        reference: "file:///ALYR-Recovery-2026-07-27.alyrkit",
-        fileName: "ALYR-Recovery-2026-07-27.alyrkit",
+        reference: "file:///Heldat-Recovery-2026-07-27.alyrkit",
+        fileName: "Heldat-Recovery-2026-07-27.alyrkit",
         byteSize: 1024,
         createdAt: "2026-07-27T08:00:00.000Z",
         externalBackupConfirmedAt: "2026-07-27T08:05:00.000Z"
@@ -485,7 +485,7 @@ describe("Family and Vault localization", () => {
 
     await fireEvent.press(
       screen.getByRole("button", {
-        name: new RegExp("ALYR-Recovery-2026-07-28", "u")
+        name: new RegExp("Heldat-Recovery-2026-07-28", "u")
       })
     );
     expect(mockRouter.push).toHaveBeenCalledWith("/recovery-create");

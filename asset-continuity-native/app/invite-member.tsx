@@ -3,7 +3,6 @@ import type {
   HouseholdRole
 } from "@alyr/contracts";
 import * as Clipboard from "expo-clipboard";
-import * as Linking from "expo-linking";
 import { Redirect, useRouter } from "expo-router";
 import {
   Check,
@@ -40,6 +39,7 @@ import {
 } from "@/i18n/inviteCopy";
 import { useLocale } from "@/i18n/LocaleProvider";
 import { PRIMARY_ROUTES } from "@/navigation/primaryRoutes";
+import { heldatPublicJoinUrl } from "@/release/publicEndpoints";
 import { useWorkspace } from "@/state/WorkspaceProvider";
 import {
   colors,
@@ -150,9 +150,7 @@ export default function InviteMemberScreen() {
         invite.role,
         invite.expiresAt,
         language,
-        Linking.createURL("/join", {
-          queryParams: { code: invite.oneTimeCode }
-        })
+        heldatPublicJoinUrl(invite.oneTimeCode)
       )
     });
   };

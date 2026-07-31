@@ -1,4 +1,4 @@
-# ALYR native account and first-use contract
+# Heldat native account and first-use contract
 
 ## Route contract
 
@@ -17,8 +17,8 @@
 
 `AUTH_ROUTES` is the canonical internal route map. The public deep-link target
 for the route group is `/callback`; with the configured scheme it is
-`alyr://callback`. Password recovery returns through
-`alyr://reset-password`.
+`heldat://callback`. Password recovery returns through
+`heldat://reset-password`.
 
 Verified signed sessions never reopen Welcome, account creation, sign-in or
 forgot-password forms. Deep links resume household setup when onboarding or
@@ -34,6 +34,7 @@ the only exception while the provider-backed recovery session is active.
 - short-lived user access token retrieval for transport injection
 - account-provider session change subscription
 - sign in
+- begin Google OAuth in an operating-system authentication session
 - sign up
 - resend confirmation
 - request password recovery
@@ -54,8 +55,8 @@ Call `configureAuthGatewayFactory` before the root `AuthFlowProvider` mounts:
 ```ts
 configureAuthGatewayFactory(() =>
   createSupabaseAuthGateway(userScopedSupabaseClient, {
-    emailRedirectTo: "alyr://callback",
-    passwordRecoveryRedirectTo: "alyr://reset-password"
+    emailRedirectTo: "heldat://callback",
+    passwordRecoveryRedirectTo: "heldat://reset-password"
   })
 );
 ```
@@ -73,12 +74,22 @@ Legacy projects may use an `anon`-role JWT in
 `EXPO_PUBLIC_SUPABASE_ANON_KEY`; `service_role` JWTs and `sb_secret_` keys are
 rejected. The URL must use HTTPS. The API base is derived as
 `/functions/v1/api`, and the confirmation redirect remains
-`alyr://callback`; the password recovery redirect is
-`alyr://reset-password`.
+`heldat://callback`; the password recovery redirect is
+`heldat://reset-password`.
 
 The production client follows the Supabase React Native lifecycle:
 
 - `persistSession`, `autoRefreshToken`, and PKCE are enabled;
+- Google OAuth uses `expo-auth-session` to resolve the signed
+  `heldat://callback` URI and `expo-web-browser` to open the system
+  authentication session;
+- the provider authorization URL must be HTTPS, use the configured Supabase
+  project origin, point to `/auth/v1/authorize`, and name Google before it is
+  opened;
+- the browser result must return to the exact app callback with one PKCE code;
+  implicit-flow access, refresh, provider, and ID tokens are rejected;
+- the existing callback route remains the only owner of the one-time code
+  exchange, preventing browser-return and Expo Router deep-link races;
 - URL session detection is disabled because Expo Router owns the callback;
 - auth operations use the Supabase process lock;
 - a regular signed-in session or ordinary PKCE confirmation code never enables
@@ -137,17 +148,19 @@ The root app must:
 
 1. register the auth route group and direct a signed-out first user to
    `/(auth)`;
-2. allow-list `alyr://callback` in Supabase Auth redirect URLs;
-3. allow-list `alyr://reset-password` for password recovery;
-4. use a user-scoped Supabase client with secure refresh-token persistence in a
+2. allow-list `heldat://callback` in Supabase Auth redirect URLs;
+3. enable Google in Supabase Auth with a Google Web OAuth client whose
+   authorized redirect URI is the project's Supabase callback URL;
+4. allow-list `heldat://reset-password` for password recovery;
+5. use a user-scoped Supabase client with secure refresh-token persistence in a
    signed build;
-5. resolve the selected active membership from reviewed membership data and
+6. resolve the selected active membership from reviewed membership data and
    expose `active_household_id`, `active_membership_id`, and
    `active_household_role` together in server-controlled `app_metadata`;
    partial tuples and user-editable metadata are never authorization sources;
-6. complete cloud membership/workspace reconciliation before declaring a
+7. complete cloud membership/workspace reconciliation before declaring a
    returning account's workspace ready;
-7. inject `currentAccessToken()` into sync/invite transports without logging,
+8. inject `currentAccessToken()` into sync/invite transports without logging,
    persisting or placing the token in analytics.
 
 The local boundary now derives an opaque account+household scope for the

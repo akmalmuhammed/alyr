@@ -1,9 +1,11 @@
-appId: com.alyr.continuity
+appId: app.heldat.mobile
 ---
 - launchApp:
     clearState: true
     permissions:
       all: deny
+- runFlow:
+    file: "./complete-worldline-intro.yaml"
 - extendedWaitUntil:
     visible:
       id: "auth-welcome-screen"

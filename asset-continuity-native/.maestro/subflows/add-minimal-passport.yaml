@@ -1,4 +1,4 @@
-appId: com.alyr.continuity
+appId: app.heldat.mobile
 ---
 - tapOn:
     text: "Add an item"

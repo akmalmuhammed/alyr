@@ -1,4 +1,4 @@
-appId: com.alyr.continuity
+appId: app.heldat.mobile
 name: Native-secure preconfirmed account completes first Passport
 tags:
   - smoke
@@ -17,6 +17,8 @@ env:
     clearState: true
     permissions:
       all: allow
+- runFlow:
+    file: "../subflows/complete-worldline-intro.yaml"
 - extendedWaitUntil:
     visible:
       id: "auth-welcome-screen"

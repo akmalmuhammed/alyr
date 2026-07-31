@@ -135,6 +135,14 @@ export interface SignUpCredentials extends AuthCredentials {
   readonly householdInviteCode?: string;
 }
 
+export interface OAuthCallbackCode {
+  /**
+   * Short-lived PKCE authorization code returned through the app-owned
+   * callback. Provider tokens are deliberately excluded from this boundary.
+   */
+  readonly code: string;
+}
+
 /**
  * Account authentication boundary for the native client.
  *
@@ -163,6 +171,16 @@ export interface AccountAuthGateway {
   signIn(
     credentials: AuthCredentials
   ): Promise<AuthGatewayResult<AuthAttempt>>;
+  /**
+   * Opens Supabase's Google OAuth authorization endpoint in the operating
+   * system authentication session. A successful result contains only the
+   * callback PKCE code; the existing callback route owns the one-time exchange.
+   *
+   * Preview and unavailable gateways omit this capability.
+   */
+  beginGoogleOAuthSignIn?(): Promise<
+    AuthGatewayResult<OAuthCallbackCode | null>
+  >;
   signUp(
     credentials: SignUpCredentials
   ): Promise<AuthGatewayResult<AuthAttempt>>;

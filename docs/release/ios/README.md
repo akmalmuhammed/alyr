@@ -1,9 +1,9 @@
-# ALYR iOS release materials
+# Heldat iOS release materials
 
 Status: **submission template, not a submission claim**
 
 This directory contains a source-backed App Store and TestFlight handoff for
-the current ALYR native application. It deliberately leaves operator,
+the current Heldat native application. It deliberately leaves operator,
 credential, legal, URL, binary, and territory values as typed slots.
 
 ## Source of truth reviewed
@@ -21,9 +21,9 @@ Configuration represented here:
 
 | Field | Current source value |
 |---|---|
-| Product name | ALYR |
+| Product name | Heldat |
 | Version | `0.1.0` |
-| iOS bundle identifier | `com.alyr.continuity` |
+| iOS bundle identifier | `app.heldat.mobile` |
 | iPhone-only | Yes (`supportsTablet: false`) |
 | Primary in-app languages | English and Arabic |
 | Tracking declared | No |

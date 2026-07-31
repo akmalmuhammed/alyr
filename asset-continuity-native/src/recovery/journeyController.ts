@@ -74,7 +74,7 @@ function previewWorkspace(
   if (!isNativeWorkspace(recovered.workspace)) {
     throw new RecoveryKitError(
       "UNSUPPORTED_VERSION",
-      "This Recovery Kit contains an unsupported ALYR workspace."
+      "This Recovery Kit contains an unsupported Heldat workspace."
     );
   }
   const workspace = recovered.workspace;

@@ -1,4 +1,4 @@
-# ALYR iOS remaining-values checklist
+# Heldat iOS remaining-values checklist
 
 Status: **all unchecked items are release gates or unresolved metadata**
 
@@ -9,8 +9,8 @@ Do not create a production submission while any required typed slot remains.
 - [ ] Paid Apple Developer Program membership is active.
 - [ ] App Store Connect agreements, tax, and banking requirements applicable
       to `[PRICE_TIER]` are complete.
-- [ ] App record exists for `com.alyr.continuity`.
-- [ ] App name availability is confirmed for `ALYR`.
+- [ ] App record exists for `app.heldat.mobile`.
+- [ ] App name availability is confirmed for `Heldat`.
 - [ ] SKU is set: `[APP_STORE_SKU]`.
 - [ ] Primary category is approved: `[PRIMARY_CATEGORY]`.
 - [ ] Secondary category is approved: `[SECONDARY_CATEGORY_OR_BLANK]`.
@@ -22,11 +22,11 @@ Do not create a production submission while any required typed slot remains.
 ## Public operator and legal values
 
 - [ ] Operator legal name: `[OPERATOR_LEGAL_NAME]`.
-- [ ] Public support URL: `[SUPPORT_URL_HTTPS]`.
-- [ ] Public privacy-policy URL: `[PRIVACY_POLICY_URL_HTTPS]`.
-- [ ] Marketing URL, if used: `[MARKETING_URL_HTTPS_OR_BLANK]`.
-- [ ] Public support email: `[SUPPORT_EMAIL]`.
-- [ ] Privacy contact: `[PRIVACY_CONTACT]`.
+- [x] Public support URL: `https://heldat.app/support/`.
+- [x] Public privacy-policy URL: `https://heldat.app/privacy/`.
+- [x] Marketing URL: `https://heldat.app/`.
+- [x] Public support email: `support@heldat.app`.
+- [x] Privacy contact: `privacy@heldat.app`.
 - [ ] App Review contact name/email/phone are verified.
 - [ ] Retention and deletion periods are stated:
       `[RETENTION_AND_DELETION_POLICY]`.

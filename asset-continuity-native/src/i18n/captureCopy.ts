@@ -340,7 +340,7 @@ export const CAPTURE_COPY: Readonly<Record<LanguageCode, CaptureCopy>> = {
     reviewSaving: "Saving",
     savedDeviceFirst: "Saved on this device first",
     privateTitle: "Private by default",
-    privateBody: "The record stays in your household. Saving it does not invite anyone, and ALYR always shows whether cloud backup is available.",
+    privateBody: "The record stays in your household. Saving it does not invite anyone, and Heldat always shows whether cloud backup is available.",
     sizeUnavailable: "Size unavailable",
     categoryLabels: {
       "lifestyle.watch": "Watch",
@@ -544,7 +544,7 @@ export const CAPTURE_COPY: Readonly<Record<LanguageCode, CaptureCopy>> = {
     reviewSaving: "الحفظ",
     savedDeviceFirst: "يُحفظ على هذا الجهاز أولًا",
     privateTitle: "خاص افتراضيًا",
-    privateBody: "يبقى السجل داخل منزلك. لا يدعو الحفظ أي شخص، ويعرض ALYR دائمًا مدى توفر النسخ الاحتياطي السحابي.",
+    privateBody: "يبقى السجل داخل منزلك. لا يدعو الحفظ أي شخص، ويعرض Heldat دائمًا مدى توفر النسخ الاحتياطي السحابي.",
     sizeUnavailable: "الحجم غير متاح",
     categoryLabels: {
       "lifestyle.watch": "ساعة",

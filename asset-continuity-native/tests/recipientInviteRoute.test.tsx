@@ -136,7 +136,7 @@ describe("recipient invitation route", () => {
     expect(screen.getByText("Protecting the invitation")).toBeTruthy();
     expect(
       screen.getAllByText(
-        "ALYR is moving the one-time code into encrypted storage on this device."
+        "Heldat is moving the one-time code into encrypted storage on this device."
       ).length
     ).toBeGreaterThan(0);
     expect(screen.queryByText("Joining the household")).toBeNull();

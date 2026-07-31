@@ -27,6 +27,8 @@ export const DOMAIN_COMMAND_TYPES = [
   "space.update",
   "asset.create",
   "asset.update",
+  "asset.category.set",
+  "asset.primary-photo.set",
   "asset.move",
   "asset.archive",
   "asset.restore",
@@ -47,6 +49,34 @@ export const DOMAIN_COMMAND_TYPES = [
 ] as const;
 
 export type DomainCommandType = (typeof DOMAIN_COMMAND_TYPES)[number];
+
+/**
+ * Replaces the complete category projection for one Asset. The path is
+ * carried for contract readability; authoritative services must verify that
+ * it is the segment-by-segment expansion of `categoryId`.
+ */
+export interface AssetCategorySetPayload extends JsonObject {
+  readonly categoryId: string;
+  readonly categoryPath: string[];
+}
+
+/**
+ * Selects an immutable, byte-verified media Evidence record as the Asset's
+ * primary photo. The Evidence must already belong to the same Asset.
+ */
+export interface AssetPrimaryPhotoSetPayload extends JsonObject {
+  readonly evidenceId: EntityId;
+}
+
+export type AssetCategorySetCommand = DomainCommand<
+  "asset.category.set",
+  AssetCategorySetPayload
+>;
+
+export type AssetPrimaryPhotoSetCommand = DomainCommand<
+  "asset.primary-photo.set",
+  AssetPrimaryPhotoSetPayload
+>;
 
 /**
  * One dated, user-entered Portfolio assertion targets exactly one subject.
@@ -203,6 +233,7 @@ export interface SyncConflict {
     | "permission"
     | "value"
     | "identifier"
+    | "metadata"
     | "lifecycle";
   readonly serverVersion: number;
   readonly message: string;

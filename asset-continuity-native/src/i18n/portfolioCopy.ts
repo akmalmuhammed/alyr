@@ -273,7 +273,7 @@ const ENGLISH: PortfolioExperienceCopy = {
     eyebrow: "FINANCIAL CONTINUITY",
     title: "Add a liability",
     introduction:
-      "Record the obligation and the latest balance you know. ALYR does not connect to an account or estimate the balance.",
+      "Record the obligation and the latest balance you know. Heldat does not connect to an account or estimate the balance.",
     name: "Liability name",
     namePlaceholder: "Home mortgage",
     nameDescription: "Use a name your household will recognize.",
@@ -345,7 +345,7 @@ const ENGLISH: PortfolioExperienceCopy = {
     markPaidOff: "Record zero balance",
     paidOffTitle: "Record a zero balance for this liability?",
     paidOffBody:
-      "ALYR will append a zero balance dated today. Earlier balances remain in history; this does not verify lender closure or change the Active status.",
+      "Heldat will append a zero balance dated today. Earlier balances remain in history; this does not verify lender closure or change the Active status.",
     paidOffConfirm: "Record zero balance",
     zeroBalanceRecorded: "Zero balance recorded",
     delete: "Delete liability",
@@ -357,7 +357,7 @@ const ENGLISH: PortfolioExperienceCopy = {
     archivedNotice:
       "Archived liabilities stay in history and are excluded from tracked net position.",
     dataBoundary:
-      "Balances are user-entered records. ALYR does not verify account ownership, interest, payoff fees or lender data."
+      "Balances are user-entered records. Heldat does not verify account ownership, interest, payoff fees or lender data."
   },
   balance: {
     eyebrow: "LIABILITY BALANCE",
@@ -377,7 +377,7 @@ const ENGLISH: PortfolioExperienceCopy = {
       "Draft confirmed. Record the balance to append your dated entry.",
     truthTitle: "Dated assertion",
     truthBody:
-      "Enter the balance shown by your own source. ALYR does not contact the lender or calculate interest."
+      "Enter the balance shown by your own source. Heldat does not contact the lender or calculate interest."
   },
   common: {
     back: "Back",
@@ -477,7 +477,7 @@ const ARABIC: PortfolioExperienceCopy = {
     eyebrow: "الاستمرارية المالية",
     title: "إضافة التزام",
     introduction:
-      "سجّل الالتزام وأحدث رصيد تعرفه. لا يتصل ALYR بالحساب ولا يقدّر الرصيد.",
+      "سجّل الالتزام وأحدث رصيد تعرفه. لا يتصل Heldat بالحساب ولا يقدّر الرصيد.",
     name: "اسم الالتزام",
     namePlaceholder: "رهن المنزل",
     nameDescription: "استخدم اسمًا واضحًا لأفراد الأسرة.",
@@ -549,7 +549,7 @@ const ARABIC: PortfolioExperienceCopy = {
     markPaidOff: "تسجيل رصيد صفري",
     paidOffTitle: "هل تريد تسجيل رصيد صفري لهذا الالتزام؟",
     paidOffBody:
-      "سيضيف ALYR رصيدًا صفريًا بتاريخ اليوم. تبقى الأرصدة السابقة في السجل، ولا يُعد ذلك تحققًا من إغلاق الحساب لدى الجهة الممولة أو تغييرًا لحالة «نشط».",
+      "سيضيف Heldat رصيدًا صفريًا بتاريخ اليوم. تبقى الأرصدة السابقة في السجل، ولا يُعد ذلك تحققًا من إغلاق الحساب لدى الجهة الممولة أو تغييرًا لحالة «نشط».",
     paidOffConfirm: "تسجيل رصيد صفري",
     zeroBalanceRecorded: "تم تسجيل رصيد صفري",
     delete: "حذف الالتزام",
@@ -561,7 +561,7 @@ const ARABIC: PortfolioExperienceCopy = {
     archivedNotice:
       "تبقى الالتزامات المؤرشفة في السجل وتُستبعد من صافي المركز المسجّل.",
     dataBoundary:
-      "الأرصدة سجلات أدخلها المستخدم. لا يتحقق ALYR من ملكية الحساب أو الفوائد أو رسوم السداد أو بيانات الجهة الممولة."
+      "الأرصدة سجلات أدخلها المستخدم. لا يتحقق Heldat من ملكية الحساب أو الفوائد أو رسوم السداد أو بيانات الجهة الممولة."
   },
   balance: {
     eyebrow: "رصيد الالتزام",
@@ -581,7 +581,7 @@ const ARABIC: PortfolioExperienceCopy = {
       "تم تأكيد المسودة. سجّل الرصيد لإضافة القيد المؤرخ.",
     truthTitle: "إقرار مؤرّخ",
     truthBody:
-      "أدخل الرصيد من مصدرك. لا يتواصل ALYR مع الجهة الممولة ولا يحتسب الفوائد."
+      "أدخل الرصيد من مصدرك. لا يتواصل Heldat مع الجهة الممولة ولا يحتسب الفوائد."
   },
   common: {
     back: "رجوع",

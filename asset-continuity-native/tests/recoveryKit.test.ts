@@ -228,7 +228,7 @@ function expectCode(
   );
 }
 
-describe("ALYR Recovery Kit v1", () => {
+describe("Heldat Recovery Kit v1", () => {
   test("round-trips a canonical workspace, vault key, and protected bytes", async () => {
     const artifact = await createRecoveryKit(
       request(),
@@ -240,7 +240,7 @@ describe("ALYR Recovery Kit v1", () => {
     expect(Array.from(artifact.bytes.slice(0, 8))).toEqual([
       65, 76, 89, 82, 75, 73, 84, 0
     ]);
-    expect(artifact.fileName).toBe("ALYR-Recovery-2026-07-27.alyrkit");
+    expect(artifact.fileName).toBe("Heldat-Recovery-2026-07-27.alyrkit");
     expect(artifact.byteSize).toBe(artifact.bytes.byteLength);
     expect(artifact.sha256).toMatch(/^[a-f0-9]{64}$/u);
     expect(artifact.attachmentCount).toBe(2);

@@ -1,4 +1,4 @@
-# ALYR App Review and compliance notes
+# Heldat App Review and compliance notes
 
 Status: **paste-ready structure with unresolved release slots**
 
@@ -7,11 +7,11 @@ Status: **paste-ready structure with unresolved release slots**
 Replace every slot before submission.
 
 ```text
-ALYR is a private household record and retrieval app for items, Places, proof, and user-entered dated values.
+Heldat is a private household record and retrieval app for items, Places, proof, and user-entered dated values.
 
 REVIEW ACCESS
 - There is no purchase or paywall in this build.
-- To inspect a local sample without an account, launch ALYR and tap "Explore sample". The sample is isolated to the device/session and is not a cloud backup.
+- To inspect a local sample without an account, launch Heldat and tap "Explore sample". The sample is isolated to the device/session and is not a cloud backup.
 - To review signed personal-household features, use:
   Email: [APP_REVIEW_EMAIL]
   Password: [APP_REVIEW_PASSWORD]
@@ -38,7 +38,7 @@ PERMISSIONS
 - Background location, microphone recording, barcode scanning, advertising, and remote-push delivery are not part of this build.
 
 PRODUCT BOUNDARY
-ALYR is not an appraisal, insurance policy, title register, password manager, bank balance, live valuation, or complete statement of net worth. Recorded values and liabilities are entered by the user.
+Heldat is not an appraisal, insurance policy, title register, password manager, bank balance, live valuation, or complete statement of net worth. Recorded values and liabilities are entered by the user.
 
 REVIEW CONTACT
 [APP_REVIEW_CONTACT_NAME]

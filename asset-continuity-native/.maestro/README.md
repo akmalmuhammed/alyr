@@ -1,6 +1,6 @@
 # ALYR local Maestro journeys
 
-This workspace exercises the installed ALYR binary (`com.alyr.continuity`) through
+This workspace exercises the installed ALYR binary (`app.heldat.mobile`) through
 the same accessibility tree used by VoiceOver and TalkBack. It does not add a
 test SDK to the application.
 
@@ -32,7 +32,7 @@ rely on tap coordinates.
 ## Run locally
 
 1. Install a native development or simulator build whose bundle/package ID is
-   `com.alyr.continuity`.
+   `app.heldat.mobile`.
 2. Start an Android emulator/device, or an iOS Simulator on macOS.
 3. From the repository root:
 

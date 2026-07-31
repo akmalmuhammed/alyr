@@ -66,11 +66,18 @@ function intent(expiresAt = "2026-07-27T10:02:00.000Z"): UploadIntentResponse {
     blobObjectId: BLOB_ID,
     expiresAt,
     uploadTarget: {
-      provider: "supabase-storage",
-      bucket: "evidence",
+      provider: "supabase",
       objectKey,
-      path: objectKey,
-      token: "signed-upload-token-with-entropy"
+      method: "PUT",
+      url:
+        `https://project-ref.supabase.co/storage/v1/object/upload/sign/evidence/${objectKey}` +
+        "?token=signed-upload-token-with-entropy",
+      requiredHeaders: {
+        "cache-control": "max-age=3600",
+        "content-type": "application/pdf",
+        "x-upsert": "false"
+      },
+      expiresAt
     }
   };
 }

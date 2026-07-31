@@ -42,10 +42,16 @@ describe("ALYR native visual-system boundary", () => {
     expect(violations).toEqual([]);
   });
 
-  it("keeps gradients and blur-glass effects out of product screens", () => {
+  it("keeps blur-glass out and confines the selected Worldline gradient to onboarding", () => {
     const violations = visibleFiles.flatMap((file) => {
       const matches = source(file).match(/\b(?:LinearGradient|BlurView)\b/g) ?? [];
-      return matches.map((effect) => ({ effect, file }));
+      return matches
+        .filter(
+          (effect) =>
+            effect === "BlurView" ||
+            !file.startsWith("src/onboarding/")
+        )
+        .map((effect) => ({ effect, file }));
     });
 
     expect(violations).toEqual([]);

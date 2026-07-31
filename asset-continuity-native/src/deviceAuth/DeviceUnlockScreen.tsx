@@ -216,8 +216,8 @@ export function DeviceUnlockScreen() {
             ]}
           >
             {language === "ar"
-              ? "يتم التحقق بواسطة نظام الجهاز. لا يحتفظ ALYR ببصمتك أو رمز الدخول."
-              : "Verification stays with the device. ALYR stores neither your biometrics nor your passcode."}
+              ? "يتم التحقق بواسطة نظام الجهاز. لا يحتفظ Heldat ببصمتك أو رمز الدخول."
+              : "Verification stays with the device. Heldat stores neither your biometrics nor your passcode."}
           </Text>
         </View>
       </ScrollView>

@@ -15,7 +15,7 @@ function pluginOptions(
 describe("signed device protection configuration", () => {
   const config = createConfig({
     config: {
-      name: "ALYR",
+      name: "Heldat",
       slug: "alyr-asset-continuity"
     }
   } as Parameters<typeof createConfig>[0]);
@@ -23,13 +23,13 @@ describe("signed device protection configuration", () => {
 
   it("ships a specific Face ID purpose string through config and plugin", () => {
     expect(config.ios?.infoPlist?.NSFaceIDUsageDescription).toBe(
-      "ALYR uses Face ID only to unlock your private household record on this device."
+      "Heldat uses Face ID only to unlock your private household record on this device."
     );
     expect(
       pluginOptions(plugins, "expo-local-authentication")
     ).toEqual({
       faceIDPermission:
-        "Allow ALYR to use Face ID to unlock your private household record on this device."
+        "Allow Heldat to use Face ID to unlock your private household record on this device."
     });
   });
 

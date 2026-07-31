@@ -22,8 +22,8 @@ export const REVIEW_REMINDER_NOTIFICATION_ID =
  * carries a household, item, proof, location, balance, currency or date.
  */
 export const REVIEW_REMINDER_PAYLOAD = Object.freeze({
-  title: "ALYR",
-  body: "Open ALYR for a private review.",
+  title: "Heldat",
+  body: "Open Heldat for a private review.",
   data: Object.freeze({
     kind: "review" as const
   })

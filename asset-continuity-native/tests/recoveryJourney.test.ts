@@ -87,7 +87,7 @@ describe("Recovery Kit journey controller", () => {
         externalBackupConfirmedAt = confirmedAt;
         return {
           reference,
-          fileName: "ALYR-Recovery-2026-07-27.alyrkit",
+          fileName: "Heldat-Recovery-2026-07-27.alyrkit",
           byteSize: storage.files.get(reference)?.byteLength ?? 0,
           createdAt: CREATED_AT,
           externalBackupConfirmedAt: confirmedAt

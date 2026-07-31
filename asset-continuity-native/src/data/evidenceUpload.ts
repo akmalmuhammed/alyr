@@ -25,6 +25,7 @@ import {
   runSyncProviderBoundary,
   type SyncExecutionControl
 } from "@/data/syncExecution";
+import { parseSignedBlobUploadTarget } from "@/adapters/signedBlobTarget";
 
 const CHECKSUM_PATTERN = /^[a-f0-9]{64}$/u;
 const EXPIRY_SAFETY_WINDOW_MS = 5_000;
@@ -205,22 +206,17 @@ function validIntent(
   const expectedObjectKey =
     `${descriptor.householdId}/${descriptor.blobId}/` +
     descriptor.evidenceVersionId;
-  const provider = intent.uploadTarget.provider;
-  const bucket = intent.uploadTarget.bucket;
-  const objectKey = intent.uploadTarget.objectKey;
-  const path = intent.uploadTarget.path;
-  const token = intent.uploadTarget.token;
+  const target = parseSignedBlobUploadTarget(intent.uploadTarget, {
+    objectKey: expectedObjectKey,
+    expiresAt: intent.expiresAt,
+    mimeType: descriptor.mimeType
+  });
   const expiresAt = Date.parse(intent.expiresAt);
   const currentTime = Date.parse(now);
   if (
     intent.uploadId !== descriptor.blobId ||
     intent.blobObjectId !== descriptor.blobId ||
-    provider !== "supabase-storage" ||
-    bucket !== "evidence" ||
-    objectKey !== expectedObjectKey ||
-    path !== expectedObjectKey ||
-    typeof token !== "string" ||
-    token.length < 16 ||
+    target === null ||
     !Number.isFinite(expiresAt) ||
     !Number.isFinite(currentTime)
   ) {
@@ -233,7 +229,7 @@ function validIntent(
   if (expiresAt - currentTime <= EXPIRY_SAFETY_WINDOW_MS) {
     return failure(
       "STORAGE_UNAVAILABLE",
-      "The signed upload target expired before transfer. ALYR will request a fresh target.",
+      "The signed upload target expired before transfer. Heldat will request a fresh target.",
       true
     );
   }

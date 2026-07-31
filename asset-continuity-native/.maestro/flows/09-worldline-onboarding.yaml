@@ -1,0 +1,55 @@
+appId: app.heldat.mobile
+name: Worldline introduction teaches item, place and proof
+tags:
+  - smoke
+  - onboarding
+  - motion
+---
+- launchApp:
+    clearState: true
+    permissions:
+      all: deny
+- extendedWaitUntil:
+    visible:
+      id: "onboarding-screen"
+    timeout: 20000
+- assertVisible:
+    id: "onboarding-scene-1"
+- assertVisible:
+    id: "onboarding-progress"
+- tapOn:
+    id: "onboarding-next"
+    enabled: true
+- assertVisible:
+    id: "onboarding-scene-2"
+- assertVisible:
+    id: "onboarding-globe"
+- tapOn:
+    id: "onboarding-next"
+    enabled: true
+- assertVisible:
+    id: "onboarding-scene-3"
+- tapOn:
+    id: "onboarding-back"
+    enabled: true
+- assertVisible:
+    id: "onboarding-scene-2"
+- tapOn:
+    id: "onboarding-next"
+    enabled: true
+- tapOn:
+    id: "onboarding-next"
+    enabled: true
+- assertVisible:
+    id: "onboarding-scene-4"
+- assertVisible:
+    id: "onboarding-explore-sample"
+- assertVisible:
+    id: "onboarding-sign-in"
+- tapOn:
+    id: "onboarding-start-first-item"
+    enabled: true
+- extendedWaitUntil:
+    visible:
+      id: "auth-create-account-screen"
+    timeout: 20000

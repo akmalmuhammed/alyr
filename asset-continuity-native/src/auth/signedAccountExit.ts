@@ -33,7 +33,7 @@ export function signedAccountExitMessage(
 ): string {
   const account = email.trim() || "this account";
   const household = householdName.trim() || "this household";
-  return `ALYR will sign out ${account}, lock “${household}” on this device, and return to account access. Local records and pending changes remain in this account’s protected vault. This does not delete household data or move it to another account.`;
+  return `Heldat will sign out ${account}, lock “${household}” on this device, and return to account access. Local records and pending changes remain in this account’s protected vault. This does not delete household data or move it to another account.`;
 }
 
 /**

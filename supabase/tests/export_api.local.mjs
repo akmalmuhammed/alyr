@@ -118,7 +118,8 @@ try {
     service.auth.admin.createUser({
       email: ownerEmail,
       password,
-      email_confirm: true
+      email_confirm: true,
+      app_metadata: { heldat_operator_provisioned: true }
     }),
     "create owner"
   );
@@ -127,7 +128,8 @@ try {
     service.auth.admin.createUser({
       email: viewerEmail,
       password,
-      email_confirm: true
+      email_confirm: true,
+      app_metadata: { heldat_operator_provisioned: true }
     }),
     "create viewer"
   );
@@ -148,6 +150,9 @@ try {
   const createdHousehold = await api("/households", ownerToken, {
     method: "POST",
     body: JSON.stringify({
+      apiVersion: 1,
+      operationId: randomUUID(),
+      householdId: randomUUID(),
       name: "ALYR export integration"
     })
   });
@@ -519,7 +524,7 @@ try {
   );
   const pdfAscii = new TextDecoder("latin1").decode(pdfDownload.payload);
   assert.ok(pdfAscii.startsWith("%PDF-1.7"));
-  assert.match(pdfAscii, /alyr-manifest\.json/u);
+  assert.match(pdfAscii, /heldat-manifest\.json/u);
   assert.match(pdfAscii, /startxref/u);
   assert.equal(sha256(pdfDownload.payload), pdf.payload.checksumSha256);
   if (process.env.ALYR_EXPORT_PDF_PATH) {

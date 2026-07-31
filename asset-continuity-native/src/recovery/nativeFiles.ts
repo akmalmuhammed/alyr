@@ -14,7 +14,7 @@ import type { PickedRecoveryKit } from "./journeyController";
 import type { LocalRecoveryKitRecord } from "./journey";
 
 const FILE_NAME_PATTERN =
-  /^ALYR-Recovery-\d{4}-\d{2}-\d{2}\.alyrkit$/u;
+  /^(?:ALYR|Heldat)-Recovery-\d{4}-\d{2}-\d{2}\.alyrkit$/u;
 
 function recoveryDirectory(): Directory {
   return new Directory(Paths.document, "alyr-recovery-kits");
@@ -225,7 +225,7 @@ export class ExpoRecoveryKitStorage implements RecoveryKitStoragePort {
     ) {
       throw new RecoveryKitError(
         "LIMIT_EXCEEDED",
-        "Choose one ALYR Recovery Kit within the 64 MB limit."
+        "Choose one Heldat Recovery Kit within the 64 MB limit."
       );
     }
     return file.bytes();
@@ -285,8 +285,8 @@ export async function shareEncryptedRecoveryKit(
     );
   }
   await Sharing.shareAsync(file.uri, {
-    dialogTitle: "Save encrypted ALYR Recovery Kit",
+    dialogTitle: "Save encrypted Heldat Recovery Kit",
     mimeType: RECOVERY_KIT_MIME_TYPE,
-    UTI: "com.alyr.recovery-kit"
+    UTI: "app.heldat.recovery-kit"
   });
 }

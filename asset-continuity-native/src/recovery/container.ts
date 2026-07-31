@@ -749,7 +749,7 @@ export async function createRecoveryKit(
     const checksum = await sha256Hex(crypto, bytes);
     return {
       bytes,
-      fileName: `ALYR-Recovery-${request.createdAt.slice(0, 10)}${RECOVERY_KIT_EXTENSION}`,
+      fileName: `Heldat-Recovery-${request.createdAt.slice(0, 10)}${RECOVERY_KIT_EXTENSION}`,
       mimeType: RECOVERY_KIT_MIME_TYPE,
       byteSize: bytes.byteLength,
       sha256: checksum,

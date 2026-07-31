@@ -10,7 +10,7 @@ const flowDirectory = resolve(fileURLToPath(new URL("flows", workspace)));
 const subflowDirectory = resolve(
   fileURLToPath(new URL("subflows", workspace))
 );
-const expectedAppId = "com.alyr.continuity";
+const expectedAppId = "app.heldat.mobile";
 const failures = [];
 
 const flowFiles = readdirSync(flowDirectory)
@@ -77,6 +77,8 @@ function readNativeSource(relativePath) {
 }
 
 const allSources = [
+  "app/index.tsx",
+  "app/(onboarding)/index.tsx",
   "app/(auth)/index.tsx",
   "app/(auth)/create-account.tsx",
   "app/(auth)/confirm-email.tsx",
@@ -96,10 +98,24 @@ const allSources = [
   "src/state/SessionBoundWorkspaceProvider.tsx",
   "src/state/WorkspaceProvider.tsx",
   "src/components/PortfolioDashboard/index.tsx",
+  "src/onboarding/OnboardingExperience.tsx",
+  "src/onboarding/OnboardingGlobe.tsx",
+  "src/onboarding/OnboardingScenes.tsx",
+  "src/onboarding/WorldlineProgress.tsx",
   "app/atlas.tsx"
 ].map(readNativeSource).join("\n");
 
 const requiredIds = [
+  "onboarding-screen",
+  "onboarding-progress",
+  "onboarding-next",
+  "onboarding-back",
+  "onboarding-skip",
+  "onboarding-sign-in",
+  "onboarding-globe",
+  "onboarding-start-first-item",
+  "onboarding-explore-sample",
+  "onboarding-intro-bootstrap",
   "auth-welcome-screen",
   "auth-create-account-screen",
   "auth-create-email",
@@ -154,6 +170,15 @@ for (const id of requiredIds) {
 }
 if (!allSources.includes("testID={`capture-step-${step}`}")) {
   failures.push("Native selector contract is missing dynamic capture step IDs.");
+}
+if (
+  !allSources.includes(
+    "testID={`onboarding-scene-${scene + 1}`}"
+  )
+) {
+  failures.push(
+    "Native selector contract is missing dynamic Worldline scene IDs."
+  );
 }
 for (const contract of [
   'profile === "native-secure"',
@@ -272,6 +297,25 @@ if (
   !offline?.source.includes("setAirplaneMode: disabled")
 ) {
   failures.push("Offline flow must enable airplane mode and always restore it.");
+}
+
+const worldline = parsedFiles.get(
+  resolve(flowDirectory, "09-worldline-onboarding.yaml")
+);
+for (const selector of [
+  "onboarding-screen",
+  "onboarding-scene-1",
+  "onboarding-progress",
+  "onboarding-globe",
+  "onboarding-back",
+  "onboarding-scene-4",
+  "onboarding-start-first-item"
+]) {
+  if (!worldline?.source.includes(`"${selector}"`)) {
+    failures.push(
+      `Worldline flow must exercise selector ${selector}.`
+    );
+  }
 }
 
 const liabilityLifecycle = parsedFiles.get(

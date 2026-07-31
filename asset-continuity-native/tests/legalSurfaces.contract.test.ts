@@ -40,9 +40,11 @@ describe("versioned pilot policy and support surfaces", () => {
       "src/components/LegalDocumentScreen.tsx"
     );
 
-    expect(document).toContain('version: "Effective 28 July 2026"');
     expect(document).toContain(
-      "Closed pilot · Last revised 28 July 2026"
+      'version: "Effective 31 July 2026 · Version 1.0"'
+    );
+    expect(document).toContain(
+      "Public notice · Last revised 31 July 2026"
     );
     expect(document).toContain(
       "The sample workspace stays isolated on this device"
@@ -56,8 +58,10 @@ describe("versioned pilot policy and support surfaces", () => {
     expect(document).not.toContain(
       "Expo Go"
     );
-    expect(document).toContain("ساري من 28 يوليو 2026");
-    expect(document).toContain("تجربة مغلقة");
+    expect(document).toContain("ساري من 31 يوليو 2026 · الإصدار 1.0");
+    expect(document).toContain("إشعار عام");
     expect(document).toContain("قياس استخدام التجربة المغلقة");
+    expect(document).toContain("HELDAT_PUBLIC_ENDPOINTS[kind]");
+    expect(document).toContain("HELDAT_PUBLIC_CONTACTS.support");
   });
 });

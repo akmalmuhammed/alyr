@@ -512,6 +512,75 @@ describe("WorkspaceProvider Asset create preparation", () => {
     ).resolves.toEqual(prepared.operations);
   });
 
+  it("projects a new primary photo through the verified Evidence command chain", async () => {
+    const workspace = workspaceWithPlace();
+    const checksum = "b".repeat(64);
+    const store: AttachmentStore = {
+      kind: "encrypted-files",
+      encryptedAtRest: true,
+      ingest: jest.fn(async (file: CapturedFile) => ({
+        ...file,
+        localUri: `file:///protected/${file.fileName}.alyrblob`,
+        protectedUri: `file:///protected/${file.fileName}.alyrblob`,
+        checksumSha256: checksum,
+        encryptedAtRest: true
+      })),
+      materializeForViewing: jest.fn(),
+      cleanupMaterialized: jest.fn()
+    };
+    const prepared = await prepareNewAssetCreation(
+      workspace,
+      {
+        ...validInput(workspace),
+        photo: {
+          localUri: "file:///watch.jpg",
+          fileName: "watch.jpg",
+          mimeType: "image/jpeg",
+          byteSize: 4_096
+        }
+      },
+      store,
+      context(),
+      {
+        operationId: identityFactory("operation"),
+        idempotencyKey: identityFactory("idempotency"),
+        locationRevisionId: identityFactory("location-revision")
+      }
+    );
+
+    expect(
+      prepared.operations.map((operation) => operation.command.type)
+    ).toEqual([
+      "asset.create",
+      "asset.move",
+      "evidence.create",
+      "evidence.version.add",
+      "asset.primary-photo.set"
+    ]);
+    expect(prepared.result.asset.version).toBe(3);
+    expect(
+      prepared.operations.at(-1)
+    ).toMatchObject({
+      command: {
+        type: "asset.primary-photo.set",
+        aggregateId: prepared.result.asset.id,
+        observedVersion: 2,
+        payload: {
+          evidenceId: prepared.result.asset.photoEvidenceId
+        }
+      },
+      prerequisites: [
+        {
+          kind: "blob-stored",
+          blobObjectId: prepared.result.workspace.evidence.find(
+            (evidence) =>
+              evidence.id === prepared.result.asset.photoEvidenceId
+          )!.blobObjectId
+        }
+      ]
+    });
+  });
+
   it("queues an unresolved Place pin as needs-detail without dropping indoor detail", async () => {
     const workspace = workspaceWithPlacePatch({
       latitude: 25.2854,

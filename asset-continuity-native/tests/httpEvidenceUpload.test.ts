@@ -32,13 +32,20 @@ const objectKey = `${HOUSEHOLD_ID}/${BLOB_ID}/${VERSION_ID}`;
 const intent = {
   uploadId: BLOB_ID,
   blobObjectId: BLOB_ID,
-  expiresAt: "2026-07-27T12:02:00.000Z",
+  expiresAt: "2099-07-27T12:02:00.000Z",
   uploadTarget: {
-    provider: "supabase-storage",
-    bucket: "evidence",
+    provider: "supabase",
     objectKey,
-    path: objectKey,
-    token: "short-lived-signed-upload-token"
+    method: "PUT",
+    url:
+      `https://project-ref.supabase.co/storage/v1/object/upload/sign/evidence/${objectKey}` +
+      "?token=short-lived-signed-upload-token",
+    requiredHeaders: {
+      "cache-control": "max-age=3600",
+      "content-type": "application/pdf",
+      "x-upsert": "false"
+    },
+    expiresAt: "2099-07-27T12:02:00.000Z"
   }
 } as const;
 

@@ -4,6 +4,7 @@ import {
   INVITE_COPY,
   invitationShareMessage
 } from "@/i18n/inviteCopy";
+import { heldatPublicJoinUrl } from "@/release/publicEndpoints";
 
 const { readFileSync } = jest.requireActual("fs") as {
   readFileSync(path: string, encoding: "utf8"): string;
@@ -39,9 +40,14 @@ describe("household invitation journey", () => {
         "viewer",
         "2026-07-30T12:00:00.000Z",
         "en",
-        "alyr://join?code=ABCD1234"
+        heldatPublicJoinUrl("ABCD1234")
       )
-    ).toContain("Open invitation: alyr://join?code=ABCD1234");
+    ).toContain(
+      "Open invitation: https://heldat.app/join?code=ABCD1234"
+    );
+    expect(heldatPublicJoinUrl("ABCD 1234")).toBe(
+      "https://heldat.app/join?code=ABCD%201234"
+    );
     expect(groupInvitationCode("ABCD1234EFGH")).toEqual([
       "ABCD",
       "1234",
@@ -97,7 +103,9 @@ describe("household invitation journey", () => {
     expect(provider).not.toContain("console.");
     expect(provider).not.toContain("Analytics");
     expect(inviteScreen).toContain("Share.share");
-    expect(inviteScreen).toContain('Linking.createURL("/join"');
+    expect(inviteScreen).toContain(
+      "heldatPublicJoinUrl(invite.oneTimeCode)"
+    );
     expect(inviteScreen).toContain(
       "Clipboard.setStringAsync(invite.oneTimeCode)"
     );

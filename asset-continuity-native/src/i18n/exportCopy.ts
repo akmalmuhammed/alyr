@@ -54,7 +54,7 @@ const english = {
     creating: "Creating verified export…",
     readyTitle: "Export ready",
     readyBody:
-      "ALYR verified the stored byte size and SHA-256 checksum. Share or save the file before it expires.",
+      "Heldat verified the stored byte size and SHA-256 checksum. Share or save the file before it expires.",
     share: "Share export",
     createAnother: "Create another",
     expires: (date: string) => `Available until ${date}`,
@@ -70,7 +70,7 @@ const english = {
       "The verified file remains ready. Open this screen from an installed native build to share it.",
     shareFailedTitle: "Export not shared",
     shareFailedBody:
-      "The verified cloud file remains unchanged. Keep ALYR open and try sharing again.",
+      "The verified cloud file remains unchanged. Keep Heldat open and try sharing again.",
     errorTitle: "Export not created",
     error: {
       authentication: "Sign in again, then reopen this export.",
@@ -83,7 +83,7 @@ const english = {
       offline:
         "The export service is not reachable. Your household records remain unchanged.",
       invalid:
-        "The export response did not pass ALYR’s integrity checks.",
+        "The export response did not pass Heldat’s integrity checks.",
       unexpected:
         "The export did not finish. Your household records remain unchanged."
     }
@@ -139,7 +139,7 @@ const arabic = {
     creating: "جارٍ إنشاء تصدير موثّق…",
     readyTitle: "التصدير جاهز",
     readyBody:
-      "تحقق ALYR من حجم الملف وبصمة SHA-256. احفظ الملف أو شاركه قبل انتهاء صلاحيته.",
+      "تحقق Heldat من حجم الملف وبصمة SHA-256. احفظ الملف أو شاركه قبل انتهاء صلاحيته.",
     share: "مشاركة التصدير",
     createAnother: "إنشاء تصدير آخر",
     expires: (date: string) => `متاح حتى ${date}`,
@@ -155,7 +155,7 @@ const arabic = {
       "يبقى الملف الموثّق جاهزًا. افتح هذه الشاشة من تطبيق أصلي مثبّت لمشاركته.",
     shareFailedTitle: "لم تتم مشاركة التصدير",
     shareFailedBody:
-      "يبقى الملف السحابي الموثّق دون تغيير. أبقِ ALYR مفتوحًا وحاول المشاركة مجددًا.",
+      "يبقى الملف السحابي الموثّق دون تغيير. أبقِ Heldat مفتوحًا وحاول المشاركة مجددًا.",
     errorTitle: "لم يتم إنشاء التصدير",
     error: {
       authentication: "سجّل الدخول مجددًا ثم أعد فتح شاشة التصدير.",
@@ -167,7 +167,7 @@ const arabic = {
       offline:
         "خدمة التصدير غير متاحة الآن. تبقى سجلات المنزل دون تغيير.",
       invalid:
-        "لم يجتز رد التصدير اختبارات سلامة البيانات في ALYR.",
+        "لم يجتز رد التصدير اختبارات سلامة البيانات في Heldat.",
       unexpected:
         "لم يكتمل التصدير. تبقى سجلات المنزل دون تغيير."
     }

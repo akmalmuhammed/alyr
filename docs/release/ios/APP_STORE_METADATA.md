@@ -1,4 +1,4 @@
-# ALYR App Store metadata
+# Heldat App Store metadata
 
 Status: **English source copy ready for final account-owner review**
 
@@ -10,10 +10,10 @@ them in App Store Connect because Apple, not this file, is the final validator.
 ### Product name
 
 ```text
-ALYR
+Heldat
 ```
 
-- Characters: 4
+- Characters: 6
 - Source basis: `app.config.ts`
 
 ### Subtitle
@@ -49,7 +49,7 @@ inventory,assets,property,collectibles,receipts,household,portfolio,location,doc
 ```
 
 - UTF-8 bytes: 92
-- Does not repeat `ALYR`
+- Does not repeat `Heldat`
 - Revalidate keyword policy and byte count in the final App Store Connect form
 
 ## Full description
@@ -57,7 +57,7 @@ inventory,assets,property,collectibles,receipts,household,portfolio,location,doc
 ```text
 Know what you own. Know exactly where it is.
 
-ALYR is a private household record that connects important items and Places with the photos, documents and retrieval details that help you find and understand them.
+Heldat is a private household record that connects important items and Places with the photos, documents and retrieval details that help you find and understand them.
 
 CREATE A PASSPORT
 Start with an item or a Place. Give it a recognizable name, add the details you know, and leave unknown information visible for later.
@@ -66,13 +66,13 @@ PLACE IT PRECISELY
 Organize property, rooms, spaces and containers. Use an accurate map pin when you choose, adjust it yourself, and record an indoor retrieval clue.
 
 KEEP PROOF BESIDE THE RECORD
-Attach a selected photo, receipt, appraisal, certificate or another useful document. ALYR keeps proof connected to the relevant Passport and shows whether work is on this device, queued or synced.
+Attach a selected photo, receipt, appraisal, certificate or another useful document. Heldat keeps proof connected to the relevant Passport and shows whether work is on this device, queued or synced.
 
 SEE WHAT NEEDS ATTENTION
 Today highlights missing locations, photos, proof, identity details and dated-value reviews so you always have a clear next step.
 
 REVIEW YOUR RECORDED PORTFOLIO
-Record dated values for assets, properties and liabilities. Currencies remain separate, missing values stay missing, and ALYR never fills in a price or exchange rate for you.
+Record dated values for assets, properties and liabilities. Currencies remain separate, missing values stay missing, and Heldat never fills in a price or exchange rate for you.
 
 FIND IT AGAIN
 Browse Assets and Places or search by name, room, Place or retrieval clue. Atlas provides a geographic overview backed by a complete Place list.
@@ -85,19 +85,19 @@ Vault brings together proof, sync diagnostics, readable exports and password-pro
 
 Core capture is designed to continue without a network connection. English and Arabic are supported, including right-to-left layouts.
 
-ALYR is a household record and retrieval tool. It is not an appraisal, insurance policy, title register, password manager, bank balance, live valuation or complete statement of net worth. Do not store passwords, seed phrases or authentication secrets.
+Heldat is a household record and retrieval tool. It is not an appraisal, insurance policy, title register, password manager, bank balance, live valuation or complete statement of net worth. Do not store passwords, seed phrases or authentication secrets.
 ```
 
 ## URLs and contact fields
 
-No verified public operator URL is present in the current repository. Supply
-only owned, public, HTTPS destinations that work without authentication.
+The owned public Heldat pages below were verified reachable without
+authentication on 31 July 2026.
 
 | App Store field | Required value |
 |---|---|
-| Privacy Policy URL | `[PRIVACY_POLICY_URL_HTTPS]` |
-| Support URL | `[SUPPORT_URL_HTTPS]` |
-| Marketing URL, if used | `[MARKETING_URL_HTTPS_OR_BLANK]` |
+| Privacy Policy URL | `https://heldat.app/privacy/` |
+| Support URL | `https://heldat.app/support/` |
+| Marketing URL, if used | `https://heldat.app/` |
 | App Review contact first name | `[APP_REVIEW_CONTACT_FIRST_NAME]` |
 | App Review contact last name | `[APP_REVIEW_CONTACT_LAST_NAME]` |
 | App Review contact email | `[APP_REVIEW_CONTACT_EMAIL]` |
@@ -139,6 +139,6 @@ needs human linguistic review; do not publish a machine-generated translation.
 | Promotional text | `[AR_PROMOTIONAL_TEXT]` |
 | Keywords | `[AR_KEYWORDS]` |
 | Full description | `[AR_FULL_DESCRIPTION]` |
-| Privacy Policy URL | `[AR_PRIVACY_POLICY_URL_HTTPS_OR_SHARED_URL]` |
-| Support URL | `[AR_SUPPORT_URL_HTTPS_OR_SHARED_URL]` |
+| Privacy Policy URL | `https://heldat.app/privacy/` |
+| Support URL | `https://heldat.app/support/` |
 | Reviewer | `[ARABIC_NATIVE_REVIEWER_NAME_AND_DATE]` |

@@ -17,11 +17,18 @@ port = 54323
 
 [auth]
 enabled = true
-site_url = "http://localhost:8081"
+site_url = "https://heldat.app"
 additional_redirect_urls = [
-  "alyr://callback",
-  "alyr://reset-password",
+  "heldat://callback",
+  "heldat://reset-password",
+  "https://heldat.app/callback",
+  "https://heldat.app/auth/callback",
+  "https://heldat.app/join",
+  "https://heldat.app/join/*",
+  "https://heldat.app/reset-password",
+  "https://heldat.app/reset-password/*",
   "http://localhost:8081/auth/callback",
+  "http://localhost:8081/reset-password",
 ]
 enable_signup = true
 
@@ -35,6 +42,10 @@ otp_length = 8
 [auth.mfa.totp]
 enroll_enabled = true
 verify_enabled = true
+
+[auth.hook.before_user_created]
+enabled = true
+uri = "pg-functions://postgres/public/heldat_before_user_created"
 
 [storage]
 enabled = true

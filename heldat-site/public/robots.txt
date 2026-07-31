@@ -1,0 +1,5 @@
+User-agent: *
+Allow: /
+Disallow: /auth/
+
+Sitemap: https://heldat.app/sitemap.xml

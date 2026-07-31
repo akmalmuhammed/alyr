@@ -12,7 +12,7 @@ export const HOUSEHOLD_ADMIN_COPY = {
     refreshIdle: "Cloud roster not checked yet",
     refreshFailedTitle: "Access needs a refresh",
     refreshFailedBody:
-      "The last verified roster stays hidden until ALYR confirms your active membership.",
+      "The last verified roster stays hidden until Heldat confirms your active membership.",
     peopleSection: "Active access",
     pendingSection: "Pending invitations",
     pendingName: "Unclaimed invitation",
@@ -71,7 +71,7 @@ export const HOUSEHOLD_ADMIN_COPY = {
     errorReview:
       "Return to Family and review your account or role.",
     errorFallback:
-      "ALYR could not verify household access.",
+      "Heldat could not verify household access.",
     errorByCode: {
       AUTHENTICATION_REQUIRED:
         "Sign-in confirmation is needed before household access can be managed.",
@@ -82,15 +82,15 @@ export const HOUSEHOLD_ADMIN_COPY = {
       IDEMPOTENCY_CONFLICT:
         "This request conflicts with an access change already recorded.",
       INVALID_COMMAND:
-        "ALYR could not apply this access request.",
+        "Heldat could not apply this access request.",
       INVALID_CURSOR:
-        "ALYR could not verify the latest roster position.",
+        "Heldat could not verify the latest roster position.",
       INVALID_FILE:
-        "ALYR rejected unexpected data in this access request.",
+        "Heldat rejected unexpected data in this access request.",
       NOT_FOUND:
         "This member or invitation is no longer in the household roster.",
       OFFLINE:
-        "ALYR could not reach the household service.",
+        "Heldat could not reach the household service.",
       QUOTA_EXCEEDED:
         "The household service has reached its current capacity.",
       RATE_LIMITED:
@@ -102,7 +102,7 @@ export const HOUSEHOLD_ADMIN_COPY = {
       UNSUPPORTED_CONTRACT_VERSION:
         "This app version no longer matches the household service.",
       VALIDATION_FAILED:
-        "ALYR could not verify the household service response."
+        "Heldat could not verify the household service response."
     } satisfies Record<ApiErrorCode, string>,
     done: "Done"
   },
@@ -114,7 +114,7 @@ export const HOUSEHOLD_ADMIN_COPY = {
     refreshIdle: "لم يتم التحقق من قائمة السحابة بعد",
     refreshFailedTitle: "تحتاج الصلاحيات إلى تحديث",
     refreshFailedBody:
-      "تظل آخر قائمة موثّقة مخفية حتى يؤكد ALYR عضويتك النشطة.",
+      "تظل آخر قائمة موثّقة مخفية حتى يؤكد Heldat عضويتك النشطة.",
     peopleSection: "الصلاحيات النشطة",
     pendingSection: "الدعوات المعلّقة",
     pendingName: "دعوة لم تُستخدم",
@@ -173,7 +173,7 @@ export const HOUSEHOLD_ADMIN_COPY = {
     errorReview:
       "ارجع إلى الأسرة وراجع حسابك أو دورك.",
     errorFallback:
-      "تعذّر على ALYR التحقق من صلاحيات الأسرة.",
+      "تعذّر على Heldat التحقق من صلاحيات الأسرة.",
     errorByCode: {
       AUTHENTICATION_REQUIRED:
         "يلزم تأكيد تسجيل الدخول قبل إدارة صلاحيات الأسرة.",
@@ -184,15 +184,15 @@ export const HOUSEHOLD_ADMIN_COPY = {
       IDEMPOTENCY_CONFLICT:
         "يتعارض هذا الطلب مع تغيير مسجّل سابقًا في الصلاحيات.",
       INVALID_COMMAND:
-        "تعذّر على ALYR تطبيق طلب الصلاحيات هذا.",
+        "تعذّر على Heldat تطبيق طلب الصلاحيات هذا.",
       INVALID_CURSOR:
-        "تعذّر على ALYR التحقق من أحدث موضع في القائمة.",
+        "تعذّر على Heldat التحقق من أحدث موضع في القائمة.",
       INVALID_FILE:
-        "رفض ALYR بيانات غير متوقعة في طلب الصلاحيات.",
+        "رفض Heldat بيانات غير متوقعة في طلب الصلاحيات.",
       NOT_FOUND:
         "لم يعد هذا العضو أو هذه الدعوة موجودًا في قائمة الأسرة.",
       OFFLINE:
-        "تعذّر على ALYR الاتصال بخدمة الأسرة.",
+        "تعذّر على Heldat الاتصال بخدمة الأسرة.",
       QUOTA_EXCEEDED:
         "بلغت خدمة الأسرة سعتها الحالية.",
       RATE_LIMITED:
@@ -204,7 +204,7 @@ export const HOUSEHOLD_ADMIN_COPY = {
       UNSUPPORTED_CONTRACT_VERSION:
         "لم يعد إصدار التطبيق هذا متوافقًا مع خدمة الأسرة.",
       VALIDATION_FAILED:
-        "تعذّر على ALYR التحقق من استجابة خدمة الأسرة."
+        "تعذّر على Heldat التحقق من استجابة خدمة الأسرة."
     } satisfies Record<ApiErrorCode, string>,
     done: "تم"
   }

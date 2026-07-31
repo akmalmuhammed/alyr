@@ -1,6 +1,7 @@
 import { useRouter } from "expo-router";
 import { ArrowLeft, ArrowRight, CheckCircle } from "phosphor-react-native";
 import {
+  Linking,
   Pressable,
   StyleSheet,
   Text,
@@ -15,6 +16,10 @@ import {
   Section
 } from "@/components/ui";
 import { useCoreJourneyCopy } from "@/i18n/coreJourneyCopy";
+import {
+  HELDAT_PUBLIC_CONTACTS,
+  HELDAT_PUBLIC_ENDPOINTS
+} from "@/release/publicEndpoints";
 import { colors, spacing, typography } from "@/theme/tokens";
 
 export type LegalDocumentKind = "privacy" | "terms" | "support";
@@ -31,6 +36,7 @@ interface LegalDocument {
   readonly summary: string;
   readonly version: string;
   readonly updated: string;
+  readonly publicLinkLabel: string;
   readonly sections: readonly LegalSection[];
 }
 
@@ -39,12 +45,13 @@ const ENGLISH: Record<LegalDocumentKind, LegalDocument> = {
     eyebrow: "PRIVACY",
     title: "Pilot privacy notice",
     summary:
-      "ALYR keeps a private household record of the items, places and proof you choose to add.",
-    version: "Effective 28 July 2026",
-    updated: "Closed pilot · Last revised 28 July 2026",
+      "Heldat keeps a private household record of the items, places and proof you choose to add.",
+    version: "Effective 31 July 2026 · Version 1.0",
+    updated: "Public notice · Last revised 31 July 2026",
+    publicLinkLabel: "Open the current privacy notice",
     sections: [
       {
-        title: "What ALYR stores",
+        title: "What Heldat stores",
         points: [
           "The sample workspace stays isolated on this device and is not synchronized with a personal household.",
           "A personal household can store your email, membership, item and Place details, location records, photos, documents and sync diagnostics.",
@@ -62,7 +69,7 @@ const ENGLISH: Record<LegalDocumentKind, LegalDocument> = {
       {
         title: "Closed-pilot product measurement",
         paragraphs: [
-          "For signed personal households, ALYR records a small set of product-interaction events to measure pilot activation, retention and reliability. Events can show that setup, a Passport, retrieval confirmation, invitation or export was completed."
+          "For signed personal households, Heldat records a small set of product-interaction events to measure pilot activation, retention and reliability. Events can show that setup, a Passport, retrieval confirmation, invitation or export was completed."
         ],
         points: [
           "Event properties are limited to reviewed categories such as platform, app version, language, offline state, action source and coarse time or count bands.",
@@ -73,7 +80,7 @@ const ENGLISH: Record<LegalDocumentKind, LegalDocument> = {
       {
         title: "Sharing and access",
         paragraphs: [
-          "Records begin private to the household. Household roles control who can view, edit or manage access. ALYR does not use the register for advertising or sell household records."
+          "Records begin private to the household. Household roles control who can view, edit or manage access. Heldat does not use the register for advertising or sell household records."
         ]
       },
       {
@@ -89,14 +96,15 @@ const ENGLISH: Record<LegalDocumentKind, LegalDocument> = {
     eyebrow: "TERMS",
     title: "Pilot terms",
     summary:
-      "These terms describe personal use and the closed ALYR pilot.",
-    version: "Effective 28 July 2026",
-    updated: "Closed pilot · Last revised 28 July 2026",
+      "These terms describe personal use and the closed Heldat pilot.",
+    version: "Effective 31 July 2026 · Version 1.0",
+    updated: "Public terms · Last revised 31 July 2026",
+    publicLinkLabel: "Open the current terms",
     sections: [
       {
         title: "Purpose",
         paragraphs: [
-          "ALYR is a household record and retrieval tool. It is not an appraisal, insurance policy, title register, password manager or live market valuation service."
+          "Heldat is a household record and retrieval tool. It is not an appraisal, insurance policy, title register, password manager or live market valuation service."
         ]
       },
       {
@@ -127,13 +135,14 @@ const ENGLISH: Record<LegalDocumentKind, LegalDocument> = {
     summary:
       "Use these steps to get help without exposing private household material.",
     version: "Support guide",
-    updated: "Closed pilot · Last revised 28 July 2026",
+    updated: "Public support · Last revised 31 July 2026",
+    publicLinkLabel: "Open Heldat support",
     sections: [
       {
         title: "Before reporting an issue",
         points: [
           "Open Vault → Advanced diagnostics and note the visible sync state.",
-          "Include the device model, operating-system version, ALYR build and the step where the issue occurred.",
+          "Include the device model, operating-system version, Heldat build and the step where the issue occurred.",
           "Remove names, addresses, coordinates, photos and document contents from screenshots."
         ]
       },
@@ -148,7 +157,7 @@ const ENGLISH: Record<LegalDocumentKind, LegalDocument> = {
       {
         title: "Contact",
         paragraphs: [
-          "Closed-pilot support and privacy contact details are supplied with the pilot invitation. The final public support address is added before store distribution."
+          `Product support: ${HELDAT_PUBLIC_CONTACTS.support}. Privacy requests: ${HELDAT_PUBLIC_CONTACTS.privacy}. Security reports: ${HELDAT_PUBLIC_CONTACTS.security}.`
         ]
       }
     ]
@@ -160,9 +169,10 @@ const ARABIC: Record<LegalDocumentKind, LegalDocument> = {
     eyebrow: "الخصوصية",
     title: "إشعار خصوصية النسخة التجريبية",
     summary:
-      "يحفظ ALYR سجلًا منزليًا خاصًا للأغراض والأماكن والإثباتات التي تختار إضافتها.",
-    version: "ساري من 28 يوليو 2026",
-    updated: "تجربة مغلقة · آخر مراجعة 28 يوليو 2026",
+      "يحفظ Heldat سجلًا منزليًا خاصًا للأغراض والأماكن والإثباتات التي تختار إضافتها.",
+    version: "ساري من 31 يوليو 2026 · الإصدار 1.0",
+    updated: "إشعار عام · آخر مراجعة 31 يوليو 2026",
+    publicLinkLabel: "فتح إشعار الخصوصية الحالي",
     sections: [
       {
         title: "ما الذي تحفظه هذه النسخة",
@@ -183,7 +193,7 @@ const ARABIC: Record<LegalDocumentKind, LegalDocument> = {
       {
         title: "قياس استخدام التجربة المغلقة",
         paragraphs: [
-          "في المنازل الشخصية المسجّلة، يسجل ALYR مجموعة محدودة من أحداث التفاعل لقياس بدء الاستخدام والعودة إلى المنتج وموثوقيته. قد يبين الحدث اكتمال إعداد المنزل أو جواز غرض أو تأكيد استرجاع أو دعوة أو تصدير."
+          "في المنازل الشخصية المسجّلة، يسجل Heldat مجموعة محدودة من أحداث التفاعل لقياس بدء الاستخدام والعودة إلى المنتج وموثوقيته. قد يبين الحدث اكتمال إعداد المنزل أو جواز غرض أو تأكيد استرجاع أو دعوة أو تصدير."
         ],
         points: [
           "تقتصر خصائص الحدث على فئات مراجَعة مثل المنصة وإصدار التطبيق واللغة وحالة الاتصال ومصدر الإجراء ونطاقات زمنية أو عددية عامة.",
@@ -210,14 +220,15 @@ const ARABIC: Record<LegalDocumentKind, LegalDocument> = {
     eyebrow: "الشروط",
     title: "شروط النسخة التجريبية",
     summary:
-      "تصف هذه الشروط نسخة الاختبار الشخصي وتجربة ALYR المغلقة.",
-    version: "ساري من 28 يوليو 2026",
-    updated: "تجربة مغلقة · آخر مراجعة 28 يوليو 2026",
+      "تصف هذه الشروط نسخة الاختبار الشخصي وتجربة Heldat المغلقة.",
+    version: "ساري من 31 يوليو 2026 · الإصدار 1.0",
+    updated: "شروط عامة · آخر مراجعة 31 يوليو 2026",
+    publicLinkLabel: "فتح الشروط الحالية",
     sections: [
       {
         title: "الغرض",
         paragraphs: [
-          "ALYR أداة لسجل المنزل والاسترجاع، وليس تقييمًا أو وثيقة تأمين أو سجل ملكية أو مدير كلمات مرور أو خدمة أسعار سوق مباشرة."
+          "Heldat أداة لسجل المنزل والاسترجاع، وليس تقييمًا أو وثيقة تأمين أو سجل ملكية أو مدير كلمات مرور أو خدمة أسعار سوق مباشرة."
         ]
       },
       {
@@ -248,13 +259,14 @@ const ARABIC: Record<LegalDocumentKind, LegalDocument> = {
     summary:
       "اتبع هذه الخطوات لطلب المساعدة من دون كشف مواد المنزل الخاصة.",
     version: "دليل الدعم",
-    updated: "تجربة مغلقة · آخر مراجعة 28 يوليو 2026",
+    updated: "دعم عام · آخر مراجعة 31 يوليو 2026",
+    publicLinkLabel: "فتح دعم Heldat",
     sections: [
       {
         title: "قبل الإبلاغ عن مشكلة",
         points: [
           "افتح الخزنة ← التشخيصات المتقدمة وسجّل حالة المزامنة الظاهرة.",
-          "اذكر طراز الجهاز وإصدار النظام وإصدار ALYR والخطوة التي حدثت فيها المشكلة.",
+          "اذكر طراز الجهاز وإصدار النظام وإصدار Heldat والخطوة التي حدثت فيها المشكلة.",
           "احذف الأسماء والعناوين والإحداثيات والصور ومحتوى المستندات من لقطات الشاشة."
         ]
       },
@@ -269,7 +281,7 @@ const ARABIC: Record<LegalDocumentKind, LegalDocument> = {
       {
         title: "التواصل",
         paragraphs: [
-          "تُرسل بيانات دعم التجربة المغلقة والتواصل بشأن الخصوصية مع دعوة التجربة. يُضاف عنوان الدعم العام قبل النشر في المتجر."
+          `دعم المنتج: ${HELDAT_PUBLIC_CONTACTS.support}. طلبات الخصوصية: ${HELDAT_PUBLIC_CONTACTS.privacy}. بلاغات الأمان: ${HELDAT_PUBLIC_CONTACTS.security}.`
         ]
       }
     ]
@@ -284,6 +296,7 @@ export function LegalDocumentScreen({
   const router = useRouter();
   const { language, rtl } = useCoreJourneyCopy();
   const document = (language === "ar" ? ARABIC : ENGLISH)[kind];
+  const publicUrl = HELDAT_PUBLIC_ENDPOINTS[kind];
   const BackIcon = rtl ? ArrowRight : ArrowLeft;
 
   return (
@@ -363,6 +376,43 @@ export function LegalDocumentScreen({
             : "A sample stays on this device. Personal households can use encrypted local storage and cloud synchronization after sign-in."}
         </Text>
       </CommandSurface>
+
+      <Pressable
+        accessibilityHint={
+          language === "ar"
+            ? "يفتح صفحة Heldat العامة في المتصفح"
+            : "Opens the public Heldat page in your browser"
+        }
+        accessibilityLabel={document.publicLinkLabel}
+        accessibilityRole="link"
+        onPress={() => {
+          void Linking.openURL(publicUrl);
+        }}
+        style={({ pressed }) => [
+          styles.publicLink,
+          rtl && styles.rowReverse,
+          pressed && styles.pressed
+        ]}
+        testID={`legal-${kind}-public-link`}
+      >
+        <Text
+          style={[
+            styles.publicLinkText,
+            rtl && styles.arabicMedium,
+            rtl && styles.rtlText
+          ]}
+        >
+          {document.publicLinkLabel}
+        </Text>
+        <Text
+          style={[
+            styles.publicLinkUrl,
+            rtl && styles.rtlText
+          ]}
+        >
+          {publicUrl}
+        </Text>
+      </Pressable>
 
       {document.sections.map((section) => (
         <Section key={section.title}>
@@ -468,6 +518,29 @@ const styles = StyleSheet.create({
     fontFamily: typography.body,
     fontSize: 14,
     lineHeight: 21
+  },
+  publicLink: {
+    minHeight: 72,
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderRadius: 18,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm,
+    backgroundColor: colors.surface,
+    justifyContent: "center",
+    gap: 3
+  },
+  publicLinkText: {
+    color: colors.action,
+    fontFamily: typography.bodyBold,
+    fontSize: 15,
+    lineHeight: 21
+  },
+  publicLinkUrl: {
+    color: colors.textMuted,
+    fontFamily: typography.body,
+    fontSize: 12,
+    lineHeight: 18
   },
   sectionTitle: {
     color: colors.text,

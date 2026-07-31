@@ -38,7 +38,7 @@ export interface RecoveryKitVerification {
   readonly verifiedAt: string;
   readonly protection: "Argon2id + AES-256-GCM";
   /**
-   * User-confirmed evidence that another copy was saved outside ALYR's
+   * User-confirmed evidence that another copy was saved outside Heldat's
    * application sandbox. A locally created file alone is never called backup.
    */
   readonly externalBackupConfirmedAt: string | null;
@@ -91,11 +91,11 @@ function unavailableMessage(
     return {
       kind: "unavailable",
       reason: "preview-runtime",
-      title: "Recovery Kit is available in the installed ALYR app",
+      title: "Recovery Kit is available in the installed Heldat app",
       description:
         "This personal preview does not include the device-grade encryption and protected storage required for a Recovery Kit. Nothing has been exported or restored.",
       nextStep:
-        "Continue testing the rest of ALYR here. Recovery stays off in this preview."
+        "Continue testing the rest of Heldat here. Recovery stays off in this preview."
     };
   }
   return {
@@ -105,7 +105,7 @@ function unavailableMessage(
     description:
       "This build is missing the device-grade protection required to create or open a Recovery Kit. Nothing has been exported or restored.",
     nextStep:
-      "Install a newer signed ALYR build before using Recovery Kit."
+      "Install a newer signed Heldat build before using Recovery Kit."
   };
 }
 

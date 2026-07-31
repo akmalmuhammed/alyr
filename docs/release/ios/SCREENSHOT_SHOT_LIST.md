@@ -1,4 +1,4 @@
-# ALYR iPhone screenshot shot list
+# Heldat iPhone screenshot shot list
 
 Status: **capture blueprint; no rendered screenshot is claimed here**
 
@@ -10,7 +10,7 @@ by the current App Store Connect record and derive only the sizes Apple permits.
 
 | Order | Screen/state | Proposed headline | What the image must prove |
 |---:|---|---|---|
-| 1 | Welcome | **Know what you own. Know exactly where it is.** | ALYR's private household-record value proposition and clear Create/Explore actions |
+| 1 | Welcome | **Know what you own. Know exactly where it is.** | Heldat's private household-record value proposition and clear Create/Explore actions |
 | 2 | Today with a realistic non-personal household | **One clear next step** | Readiness, one priority action, Place overview, and a restrained Portfolio entry |
 | 3 | Assets / Items photo library | **Every important item has a Passport** | Recognizable item cards, useful filters, and a visible add action |
 | 4 | Quick Passport review | **Photo, location and proof together** | A coherent record with a selected photo, precise Place/space, and one document |

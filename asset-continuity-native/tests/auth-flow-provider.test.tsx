@@ -191,6 +191,39 @@ describe("global auth session state", () => {
     await screen.unmount();
   });
 
+  it("stages a Google PKCE callback until the canonical exchange consumes it", async () => {
+    const gateway = gatewayWithSession(null);
+    gateway.beginGoogleOAuthSignIn = jest.fn(async () => ({
+      ok: true as const,
+      value: { code: "google-pkce-provider-code" }
+    }));
+    const screen = await render(
+      <AuthFlowProvider gateway={gateway}>
+        <Probe />
+      </AuthFlowProvider>
+    );
+    await waitFor(() => expect(latestAuth?.bootstrapState).toBe("ready"));
+
+    await act(async () => {
+      await expect(
+        latestAuth!.beginGoogleSignIn()
+      ).resolves.toBe("google-pkce-provider-code");
+    });
+    expect(latestAuth?.googleOAuthInProgress).toBe(false);
+    expect(latestAuth?.googleOAuthCallbackPending).toBe(true);
+
+    await act(async () => {
+      await expect(
+        latestAuth!.exchangeConfirmationCode(
+          "google-pkce-provider-code"
+        )
+      ).resolves.toEqual(restoredSession);
+    });
+    expect(latestAuth?.googleOAuthCallbackPending).toBe(false);
+    expect(latestAuth?.session).toEqual(restoredSession);
+    await screen.unmount();
+  });
+
   it("binds destructive deletion to the verified session and clears the local provider session", async () => {
     const gateway = gatewayWithSession(restoredSession);
     gateway.purgeLocalSession = jest.fn(async () => undefined);

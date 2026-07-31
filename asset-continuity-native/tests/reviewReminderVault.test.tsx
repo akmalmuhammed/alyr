@@ -80,7 +80,7 @@ describe("Vault review reminder settings", () => {
       expect(mockEnable).toHaveBeenCalledTimes(1);
       expect(alert).toHaveBeenCalledWith(
         "Notifications are off",
-        "Allow ALYR notifications in device Settings, then turn the reminder on again.",
+        "Allow Heldat notifications in device Settings, then turn the reminder on again.",
         [{ text: "OK" }]
       );
     });

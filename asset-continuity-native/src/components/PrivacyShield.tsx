@@ -14,11 +14,11 @@ import { colors, typography } from "@/theme/tokens";
 
 export const PRIVACY_SHIELD_COPY = {
   en: {
-    accessibilityLabel: "ALYR is locked while the app is not active",
+    accessibilityLabel: "Heldat is locked while the app is not active",
     message: "Private while you are away"
   },
   ar: {
-    accessibilityLabel: "تطبيق ALYR مقفل أثناء عدم استخدامه",
+    accessibilityLabel: "تطبيق Heldat مقفل أثناء عدم استخدامه",
     message: "خصوصيتك محفوظة أثناء ابتعادك"
   }
 } as const;

@@ -57,6 +57,7 @@ const conflictKinds: readonly SyncConflict["conflictKind"][] = [
   "permission",
   "value",
   "identifier",
+  "metadata",
   "lifecycle"
 ]
 const uuidPattern =

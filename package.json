@@ -2,23 +2,29 @@
   "name": "alyr-platform",
   "version": "0.1.0",
   "private": true,
-  "description": "ALYR web, prototype, native, and shared product contracts.",
+  "description": "Heldat web, prototype, native, and shared product contracts.",
   "workspaces": [
     "asset-continuity-web",
     "asset-continuity-mobile",
     "asset-continuity-native",
     "asset-continuity-ios-preview",
+    "heldat-site",
     "packages/*"
   ],
   "scripts": {
-    "check": "npm run check:shared && npm run check:api-contract && npm run check:supabase:static && npm run check:web && npm run check:mobile-prototype && npm run check:native && npm run check:ios-preview",
+    "check": "npm run check:shared && npm run check:api-contract && npm run check:supabase:static && npm run check:backup-restore && npm run check:site && npm run check:web && npm run check:mobile-prototype && npm run check:native && npm run check:ios-preview",
     "check:shared": "npm run check --workspace=@alyr/contracts --workspace=@alyr/domain --workspace=@alyr/design-tokens --workspace=@alyr/analytics --workspace=@alyr/fixtures --if-present",
     "build:shared": "npm run build --workspace=@alyr/contracts --workspace=@alyr/domain --workspace=@alyr/design-tokens --workspace=@alyr/analytics --workspace=@alyr/fixtures --if-present",
     "generate:api": "openapi-typescript supabase/openapi.yaml --output packages/contracts/src/generated/api.ts",
     "check:api-contract": "npm run generate:api && git diff --exit-code -- packages/contracts/src/generated/api.ts",
-    "check:supabase:static": "node --test supabase/tests/schema.test.mjs supabase/tests/household_creation_idempotency.test.mjs supabase/tests/export_completion.test.mjs supabase/tests/property_value_sync.test.mjs supabase/tests/liability_net_position.test.mjs supabase/tests/product_event_idempotency.test.mjs",
+    "check:supabase:static": "node --test supabase/tests/schema.test.mjs supabase/tests/household_creation_idempotency.test.mjs supabase/tests/export_completion.test.mjs supabase/tests/property_value_sync.test.mjs supabase/tests/liability_net_position.test.mjs supabase/tests/product_event_idempotency.test.mjs supabase/tests/signup_and_api_controls.test.mjs supabase/tests/launch_enrollment_controls.test.mjs supabase/tests/asset_metadata_sync.test.mjs supabase/tests/request_controls.test.mjs supabase/tests/blob_store.test.mjs supabase/tests/blob_store_static.test.mjs supabase/tests/sync_retention_and_bootstrap.test.mjs",
+    "check:backup-restore": "node --test supabase/tests/backup_restore_tooling.test.mjs",
+    "check:site": "npm run check --workspace=@heldat/site",
     "check:supabase:local": "npx --yes supabase@2.109.1 db lint --local --level warning && npx --yes supabase@2.109.1 test db",
     "test:supabase:export-local": "node supabase/tests/export_api.local.mjs",
+    "test:supabase:export-local:auto": "node supabase/scripts/run-local-export-test.mjs",
+    "test:supabase:evidence-local": "node supabase/tests/evidence_api.local.mjs",
+    "test:supabase:evidence-local:auto": "node supabase/scripts/run-local-evidence-test.mjs",
     "probe:supabase:live": "node supabase/scripts/probe-live-api.mjs",
     "deploy:supabase:api": "npm run check:supabase:static && npx --yes supabase@2.109.1 db push --linked --include-all --yes && npx --yes supabase@2.109.1 functions deploy api --project-ref ifiyragzeizaxdqzxvpk --no-verify-jwt --use-api --yes && npm run probe:supabase:live",
     "check:web": "npm run test:domain --workspace=asset-continuity-web && npm run test:server --workspace=asset-continuity-web && npm run test:ui --workspace=asset-continuity-web -- --maxWorkers=2 --testTimeout=15000 && npm run test:sites --workspace=asset-continuity-web && npm run build --workspace=asset-continuity-web",
@@ -41,10 +47,10 @@
     "openapi-typescript": "7.13.0",
     "react": "19.2.3",
     "react-dom": "19.2.3",
-    "react-native": "0.86.0",
-    "react-native-reanimated": "4.5.0",
+    "react-native": "0.86.2",
+    "react-native-reanimated": "4.5.1",
     "react-native-safe-area-context": "5.7.0",
     "react-native-svg": "15.15.4",
-    "react-native-worklets": "0.10.0"
+    "react-native-worklets": "0.10.1"
   }
 }

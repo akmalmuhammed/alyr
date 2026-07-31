@@ -43,6 +43,12 @@ jobs:
       - name: Run static Supabase boundary checks
         run: npm run check:supabase:static
 
+      - name: Validate encrypted backup and restore tooling
+        run: npm run check:backup-restore
+
+      - name: Validate Heldat public site
+        run: npm run check:site
+
       - name: Install Supabase CLI
         uses: supabase/setup-cli@v1
         with:

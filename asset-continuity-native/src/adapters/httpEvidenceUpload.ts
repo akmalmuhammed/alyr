@@ -9,8 +9,6 @@ import {
   CONTRACT_API_VERSION,
   type ApiErrorCode,
   type ContractError,
-  type JsonObject,
-  type JsonPrimitive,
   type ProviderRequestContext,
   type Result,
   type UploadCompletionRequest,
@@ -32,6 +30,7 @@ import {
   assertProviderRequestActive,
   rethrowProviderCancellation
 } from "@/adapters/providerRequest";
+import { parseSignedBlobUploadTarget } from "@/adapters/signedBlobTarget";
 
 const apiErrorCodes: readonly ApiErrorCode[] = [
   "AUTHENTICATION_REQUIRED",
@@ -76,25 +75,6 @@ function isApiErrorCode(value: unknown): value is ApiErrorCode {
     typeof value === "string" &&
     apiErrorCodes.some((candidate) => candidate === value)
   );
-}
-
-function isJsonPrimitive(value: unknown): value is JsonPrimitive {
-  return (
-    value === null ||
-    typeof value === "string" ||
-    (typeof value === "number" && Number.isFinite(value)) ||
-    typeof value === "boolean"
-  );
-}
-
-function isJsonValue(value: unknown): boolean {
-  if (isJsonPrimitive(value)) return true;
-  if (Array.isArray(value)) return value.every(isJsonValue);
-  return isRecord(value) && Object.values(value).every(isJsonValue);
-}
-
-function isJsonObject(value: unknown): value is JsonObject {
-  return isRecord(value) && Object.values(value).every(isJsonValue);
 }
 
 function isContractError(value: unknown): value is ContractError {
@@ -197,7 +177,7 @@ function isUploadIntentResponse(
     typeof value.blobObjectId === "string" &&
     typeof value.expiresAt === "string" &&
     Number.isFinite(Date.parse(value.expiresAt)) &&
-    isJsonObject(value.uploadTarget)
+    isRecord(value.uploadTarget)
   );
 }
 
@@ -214,22 +194,15 @@ function isUploadCompletionResponse(
   );
 }
 
-function encodedObjectPath(path: string): string {
-  return path
-    .split("/")
-    .map((segment) => encodeURIComponent(segment))
-    .join("/");
-}
-
 /**
  * Upload adapter for signed native builds. Intent/completion calls use a fresh
- * user bearer. The raw byte transfer is sent only to a URL reconstructed from
- * the trusted project origin plus the opaque short-lived token; the bearer is
- * deliberately omitted from that request.
+ * user bearer. The raw byte transfer is sent only to a validated short-lived
+ * provider target returned by the reviewed API; the bearer is deliberately
+ * omitted from that request.
  */
 export class HttpEvidenceUploadPort implements EvidenceUploadPort {
   private readonly apiBaseUrl: string;
-  private readonly storageBaseUrl: string;
+  private readonly trustedSupabaseOrigin: string;
   private readonly getAccessToken: AccessTokenProvider;
   private readonly fetchImpl: SyncFetch;
   private readonly readBytes: MaterializedByteReader;
@@ -251,7 +224,7 @@ export class HttpEvidenceUploadPort implements EvidenceUploadPort {
         "The API and storage project must use the same trusted origin."
       );
     }
-    this.storageBaseUrl = `${projectUrl}/storage/v1`;
+    this.trustedSupabaseOrigin = new URL(projectUrl).origin;
     this.getAccessToken = options.getAccessToken;
     this.fetchImpl =
       options.fetchImpl ??
@@ -309,19 +282,19 @@ export class HttpEvidenceUploadPort implements EvidenceUploadPort {
     context?: ProviderRequestContext
   ): Promise<Result<EvidenceUploadTransfer>> {
     assertProviderRequestActive(context);
-    const target = intent.uploadTarget;
     const expectedPath =
       `${descriptor.householdId}/${descriptor.blobId}/` +
       descriptor.evidenceVersionId;
+    const target = parseSignedBlobUploadTarget(intent.uploadTarget, {
+      objectKey: expectedPath,
+      expiresAt: intent.expiresAt,
+      mimeType: descriptor.mimeType,
+      trustedSupabaseOrigin: this.trustedSupabaseOrigin
+    });
     if (
       intent.uploadId !== descriptor.blobId ||
       intent.blobObjectId !== descriptor.blobId ||
-      target.provider !== "supabase-storage" ||
-      target.bucket !== "evidence" ||
-      target.objectKey !== expectedPath ||
-      target.path !== expectedPath ||
-      typeof target.token !== "string" ||
-      target.token.length < 16 ||
+      target === null ||
       !attachment.temporary ||
       attachment.integrity !== "aes-gcm-and-sha256"
     ) {
@@ -378,19 +351,11 @@ export class HttpEvidenceUploadPort implements EvidenceUploadPort {
       // Copy into a tightly sized ArrayBuffer for React Native fetch. Both the
       // source and transfer copy are zeroed after the request resolves.
       body = new Uint8Array(bytes).buffer;
-      const url =
-        `${this.storageBaseUrl}/object/upload/sign/` +
-        `${encodedObjectPath(expectedPath)}?token=` +
-        encodeURIComponent(target.token);
       let response: Response;
       try {
-        response = await this.fetchImpl(url, {
-          method: "PUT",
-          headers: {
-            "Cache-Control": "max-age=3600",
-            "Content-Type": descriptor.mimeType,
-            "x-upsert": "false"
-          },
+        response = await this.fetchImpl(target.url, {
+          method: target.method,
+          headers: target.requiredHeaders,
           body,
           ...(context ? { signal: context.signal } : {})
         });
@@ -402,8 +367,8 @@ export class HttpEvidenceUploadPort implements EvidenceUploadPort {
 
       // A conflict means the immutable object already exists. It is not
       // labelled stored here; the coordinator immediately calls `/complete`,
-      // whose server-side download/checksum is the only success boundary.
-      if (response.status === 409) {
+      // whose server-side stream/checksum is the only success boundary.
+      if (response.status === 409 || response.status === 412) {
         return {
           ok: true,
           value: { outcome: "already-present" }
@@ -425,7 +390,7 @@ export class HttpEvidenceUploadPort implements EvidenceUploadPort {
             ok: false,
             error: failure(
               "RATE_LIMITED",
-              "The upload service is busy. ALYR will retry.",
+              "The upload service is busy. Heldat will retry.",
               true
             )
           };

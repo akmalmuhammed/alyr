@@ -205,8 +205,8 @@ describe("private review reminder selection", () => {
         minute: 0
       },
       payload: {
-        title: "ALYR",
-        body: "Open ALYR for a private review.",
+        title: "Heldat",
+        body: "Open Heldat for a private review.",
         data: { kind: "review" }
       }
     });

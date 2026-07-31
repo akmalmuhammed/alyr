@@ -754,7 +754,7 @@ export function VaultScreen({
       }
       file = new File(
         Paths.cache,
-        `alyr-readable-snapshot-${Date.now()}.json`
+        `heldat-readable-snapshot-${Date.now()}.json`
       );
       file.create({ overwrite: true });
       file.write(snapshot);

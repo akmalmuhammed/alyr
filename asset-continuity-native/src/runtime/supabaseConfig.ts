@@ -13,8 +13,8 @@ export interface SignedSupabaseConfiguration {
   readonly apiBaseUrl: string;
   readonly pilotAccessEndpoint: string;
   readonly householdInviteAccessEndpoint: string;
-  readonly emailRedirectTo: "alyr://callback";
-  readonly passwordRecoveryRedirectTo: "alyr://reset-password";
+  readonly emailRedirectTo: "heldat://callback";
+  readonly passwordRecoveryRedirectTo: "heldat://reset-password";
 }
 
 export type SignedRuntimeDecision =
@@ -108,8 +108,8 @@ export function decideSignedSupabaseRuntime(
         `${projectUrl}/functions/v1/api/pilot/preflight`,
       householdInviteAccessEndpoint:
         `${projectUrl}/functions/v1/api/invites/preflight`,
-      emailRedirectTo: "alyr://callback",
-      passwordRecoveryRedirectTo: "alyr://reset-password"
+      emailRedirectTo: "heldat://callback",
+      passwordRecoveryRedirectTo: "heldat://reset-password"
     }
   };
 }

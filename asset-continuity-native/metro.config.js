@@ -12,5 +12,8 @@ config.resolver.nodeModulesPaths = [
   path.resolve(projectRoot, "node_modules"),
   path.resolve(workspaceRoot, "node_modules")
 ];
+config.resolver.assetExts = [
+  ...new Set([...(config.resolver.assetExts ?? []), "wasm"])
+];
 
 module.exports = config;

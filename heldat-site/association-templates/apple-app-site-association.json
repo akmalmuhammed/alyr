@@ -1,0 +1,24 @@
+{
+  "applinks": {
+    "apps": [],
+    "details": [
+      {
+        "appIDs": ["APPLE_TEAM_ID.app.heldat.mobile"],
+        "components": [
+          {
+            "/": "/join/*"
+          },
+          {
+            "/": "/callback*"
+          },
+          {
+            "/": "/reset-password/*"
+          }
+        ]
+      }
+    ]
+  },
+  "webcredentials": {
+    "apps": ["APPLE_TEAM_ID.app.heldat.mobile"]
+  }
+}

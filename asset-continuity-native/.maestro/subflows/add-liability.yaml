@@ -1,4 +1,4 @@
-appId: com.alyr.continuity
+appId: app.heldat.mobile
 env:
   LIABILITY_NAME: "Pilot home mortgage"
   LIABILITY_CATEGORY: "Mortgage"

@@ -274,7 +274,7 @@ describe("WorkspaceProvider existing Passport update transaction", () => {
     );
   });
 
-  it("keeps the primary-photo pointer local while syncing supported evidence metadata", async () => {
+  it("queues a byte-gated primary-photo selection after its Evidence version", async () => {
     const personal = createWorkspace("personal");
     const seeded = addAsset(
       personal,
@@ -314,14 +314,33 @@ describe("WorkspaceProvider existing Passport update transaction", () => {
     );
     expect(prepared.operations.map((item) => item.command.type)).toEqual([
       "evidence.create",
-      "evidence.version.add"
+      "evidence.version.add",
+      "asset.primary-photo.set"
     ]);
-    expect(
-      prepared.result.asset
-    ).toMatchObject({
+    expect(prepared.result.asset).toMatchObject({
       photoEvidenceId: prepared.result.asset.photoEvidenceId,
-      localOnlyFields: ["primary-photo"],
+      version: target.version + 1,
       syncStatus: "on-device"
+    });
+    expect(prepared.result.asset.localOnlyFields).toBeUndefined();
+    expect(
+      prepared.operations.find(
+        (item) => item.command.type === "asset.primary-photo.set"
+      )
+    ).toMatchObject({
+      command: {
+        aggregateId: target.id,
+        observedVersion: target.version,
+        payload: {
+          evidenceId: prepared.result.asset.photoEvidenceId
+        }
+      },
+      prerequisites: [
+        {
+          kind: "blob-stored",
+          blobObjectId: prepared.result.newEvidence[0]!.blobObjectId
+        }
+      ]
     });
   });
 
@@ -351,9 +370,23 @@ describe("WorkspaceProvider existing Passport update transaction", () => {
     );
 
     expect(prepared.operations.map((item) => item.command.type)).toEqual([
+      "asset.category.set",
       "asset.move"
     ]);
-    expect(prepared.result.asset.localOnlyFields).toContain("category");
+    expect(prepared.result.asset.localOnlyFields).toBeUndefined();
+    expect(prepared.result.asset.version).toBe(target.version + 2);
+    expect(
+      prepared.operations.find(
+        (item) => item.command.type === "asset.category.set"
+      )?.command
+    ).toMatchObject({
+      aggregateId: target.id,
+      observedVersion: target.version,
+      payload: {
+        categoryId: "digital.asset",
+        categoryPath: ["digital", "asset"]
+      }
+    });
     expect(
       prepared.operations.find(
         (item) => item.command.type === "asset.move"

@@ -1,0 +1,5 @@
+Contact: mailto:security@heldat.app
+Canonical: https://heldat.app/.well-known/security.txt
+Policy: https://heldat.app/security/
+Preferred-Languages: en
+Expires: 2027-07-31T23:59:59Z

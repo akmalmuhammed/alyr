@@ -7,6 +7,10 @@ const VERSION_ID = "00000000-0000-4000-8000-000000000603";
 const BLOB_ID = "00000000-0000-4000-8000-000000000604";
 const CHECKSUM = "a".repeat(64);
 const BYTES = new Uint8Array([65, 76, 89, 82]);
+const OBJECT_KEY = `${HOUSEHOLD_ID}/${BLOB_ID}/${VERSION_ID}`;
+const DOWNLOAD_URL =
+  `https://project-ref.supabase.co/storage/v1/object/sign/evidence/${OBJECT_KEY}` +
+  "?token=short-lived-download-token";
 
 const descriptor: EvidenceDownloadDescriptor = {
   apiVersion: 1,
@@ -31,11 +35,36 @@ function byteResponse(bytes = BYTES): Response {
   });
 }
 
+function intentResponse(): Response {
+  return new Response(
+    JSON.stringify({
+      downloadTarget: {
+        provider: "supabase",
+        objectKey: OBJECT_KEY,
+        method: "GET",
+        url: DOWNLOAD_URL,
+        requiredHeaders: {},
+        expiresAt: "2099-07-27T12:02:00.000Z"
+      }
+    }),
+    {
+      status: 200,
+      headers: {
+        "Cache-Control": "no-store",
+        "Content-Type": "application/json"
+      }
+    }
+  );
+}
+
 describe("authenticated Evidence download adapter", () => {
   it("downloads with a fresh user bearer and returns only SHA-256 verified bytes", async () => {
     const getAccessToken = jest.fn(async () => "fresh-user-token");
     const fetchImpl = jest.fn(
-      async (_url: string, _init: RequestInit) => byteResponse()
+      async (url: string, _init: RequestInit) =>
+        String(url).endsWith("/evidence/download")
+          ? intentResponse()
+          : byteResponse()
     );
     const port = new HttpEvidenceDownloadPort({
       apiBaseUrl:
@@ -53,7 +82,7 @@ describe("authenticated Evidence download adapter", () => {
 
     expect(result).toEqual({ ok: true, value: BYTES });
     expect(getAccessToken).toHaveBeenCalledTimes(1);
-    expect(fetchImpl).toHaveBeenCalledTimes(1);
+    expect(fetchImpl).toHaveBeenCalledTimes(2);
     const [url, init] = fetchImpl.mock.calls[0]!;
     expect(url).toBe(
       "https://project-ref.supabase.co/functions/v1/api/evidence/download"
@@ -63,6 +92,11 @@ describe("authenticated Evidence download adapter", () => {
     );
     expect(init.signal).toBe(controller.signal);
     expect(JSON.parse(String(init.body))).toEqual(descriptor);
+    const [providerUrl, providerInit] = fetchImpl.mock.calls[1]!;
+    expect(providerUrl).toBe(DOWNLOAD_URL);
+    expect(providerInit.method).toBe("GET");
+    expect(new Headers(providerInit.headers).get("Authorization")).toBeNull();
+    expect(providerInit.signal).toBe(controller.signal);
   });
 
   it("rejects and wipes bytes when the cloud response checksum is tampered", async () => {
@@ -70,7 +104,10 @@ describe("authenticated Evidence download adapter", () => {
       apiBaseUrl:
         "https://project-ref.supabase.co/functions/v1/api",
       getAccessToken: async () => "user-token",
-      fetchImpl: async () => byteResponse(),
+      fetchImpl: async (url) =>
+        String(url).endsWith("/evidence/download")
+          ? intentResponse()
+          : byteResponse(),
       digestBytes: async () => "b".repeat(64)
     });
 
@@ -111,6 +148,7 @@ describe("authenticated Evidence download adapter", () => {
     const fetchImpl = jest
       .fn()
       .mockRejectedValueOnce(new Error("offline"))
+      .mockResolvedValueOnce(intentResponse())
       .mockResolvedValueOnce(byteResponse());
     const port = new HttpEvidenceDownloadPort({
       apiBaseUrl:
@@ -131,7 +169,7 @@ describe("authenticated Evidence download adapter", () => {
       })
     });
     expect(retried).toEqual({ ok: true, value: BYTES });
-    expect(fetchImpl).toHaveBeenCalledTimes(2);
+    expect(fetchImpl).toHaveBeenCalledTimes(3);
   });
 
   it("preserves an authorization denial returned by the reviewed API", async () => {

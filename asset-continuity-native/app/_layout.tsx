@@ -78,6 +78,7 @@ import {
   ReviewReminderProvider,
   ReviewReminderWorkspaceObserver
 } from "@/notifications/ReviewReminderProvider";
+import { OnboardingIntroProvider } from "@/onboarding/OnboardingIntroProvider";
 import { colors } from "@/theme/tokens";
 
 const signedRuntimeInstallation =
@@ -146,20 +147,22 @@ function LocalizedRootLayout() {
   return (
     <GestureHandlerRootView style={styles.root}>
       <SafeAreaProvider>
-        <AuthFlowProvider
-          {...(signedRuntimeInstallation.kind === "configured"
-            ? {
-                householdAccess:
-                  signedRuntimeInstallation.services.cloud.householdAccess,
-                accountDeletion:
-                  signedRuntimeInstallation.services.cloud.accountDeletion
-              }
-            : {})}
-        >
-          <AuthBootstrapBoundary>
-            <SignedWorkspaceBoundary />
-          </AuthBootstrapBoundary>
-        </AuthFlowProvider>
+        <OnboardingIntroProvider>
+          <AuthFlowProvider
+            {...(signedRuntimeInstallation.kind === "configured"
+              ? {
+                  householdAccess:
+                    signedRuntimeInstallation.services.cloud.householdAccess,
+                  accountDeletion:
+                    signedRuntimeInstallation.services.cloud.accountDeletion
+                }
+              : {})}
+          >
+            <AuthBootstrapBoundary>
+              <SignedWorkspaceBoundary />
+            </AuthBootstrapBoundary>
+          </AuthFlowProvider>
+        </OnboardingIntroProvider>
       </SafeAreaProvider>
     </GestureHandlerRootView>
   );
@@ -457,7 +460,7 @@ function RootNavigator() {
           <Stack.Screen name="join" options={{ headerShown: false }} />
           <Stack.Screen
             name="(onboarding)"
-            options={{ headerShown: false }}
+            options={{ animation: "none", headerShown: false }}
           />
           <Stack.Screen
             name="privacy-policy"

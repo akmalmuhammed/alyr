@@ -103,9 +103,9 @@ export const VALUE_SUBJECT_COPY = {
     assetTitle: "Record an item value",
     placeTitle: "Record a property value",
     assetIntro:
-      "Enter a value you know. ALYR keeps currencies separate and never fills in a price for you.",
+      "Enter a value you know. Heldat keeps currencies separate and never fills in a price for you.",
     placeIntro:
-      "Enter your own dated property value. ALYR does not estimate it or fetch a market price.",
+      "Enter your own dated property value. Heldat does not estimate it or fetch a market price.",
     assetNoValue: "No value has been recorded for this item.",
     placeNoValue: "No value has been recorded for this property.",
     assetNotFound: "Item not found",
@@ -135,9 +135,9 @@ export const VALUE_SUBJECT_COPY = {
     assetTitle: "سجّل قيمة الغرض",
     placeTitle: "سجّل قيمة العقار",
     assetIntro:
-      "أدخل قيمة تعرفها. يحفظ ALYR كل عملة على حدة ولا يقدّر السعر نيابةً عنك.",
+      "أدخل قيمة تعرفها. يحفظ Heldat كل عملة على حدة ولا يقدّر السعر نيابةً عنك.",
     placeIntro:
-      "أدخل قيمة مؤرخة دوّنتها للعقار. لا يقدّرها ALYR ولا يجلب سعرًا من السوق.",
+      "أدخل قيمة مؤرخة دوّنتها للعقار. لا يقدّرها Heldat ولا يجلب سعرًا من السوق.",
     assetNoValue: "لم تُسجّل قيمة لهذا الغرض.",
     placeNoValue: "لم تُسجّل قيمة لهذا العقار.",
     assetNotFound: "الغرض غير موجود",

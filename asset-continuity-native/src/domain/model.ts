@@ -184,9 +184,9 @@ export interface NativeAsset extends JsonObject {
   readonly lifecycleStatus: "active" | "archived";
   readonly archivedAt: string | null;
   /**
-   * Fields deliberately retained on this device because the reviewed server
-   * command does not yet persist them. This prevents a successful name sync
-   * from mislabelling an unsupported category/photo-pointer edit as synced.
+   * Backward-compatible markers written by builds that predate cloud category
+   * and primary-photo commands. Current mutations no longer add these values;
+   * an authoritative matching change removes the corresponding legacy marker.
    */
   readonly localOnlyFields?: (
     | "category"

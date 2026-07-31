@@ -14,7 +14,11 @@ backup, end-to-end encryption, or verified legal evidence.
 - Private Storage policies with a 10 MiB file limit.
 - An authenticated, RLS-scoped Evidence download route that rechecks cloud
   byte size and SHA-256 before returning an immutable version.
-- A 40 MiB per-household application quota in the upload-intent API.
+- A 40 MiB per-household application quota in the upload-intent API, with
+  household-serialized reservation/retry accounting and pending-cleanup bytes
+  retained until Storage deletion is acknowledged.
+- Household-bound Asset Evidence and Place Document upload parents, strict
+  expired-intent rejection, and a service-only bounded orphan cleanup ledger.
 - A serialized 20-household closed-pilot admission cap.
 - One-time manual household invitation codes.
 - Durable household, membership and role selection stored as one
@@ -45,6 +49,11 @@ Verified on 2026-07-28:
   recorded-net-position cloud boundary. It passed local reset, lint and
   pgTAP verification and remains pending the authenticated live deployment
   gate below.
+- Repository migration `202607310001` closes expired-intent quota reactivation,
+  rejects completion after expiry, binds reservations to active Evidence
+  parents, and adds the bounded Evidence-object cleanup protocol. It passed
+  local schema lint and pgTAP verification and is not included in the live
+  state listed above.
 - The `api` Edge Function reports `ACTIVE`, version **3**. The reviewed local
   source contains the recipient-preflight and subject-aware export changes and
   still needs the authenticated function deployment described below.
@@ -65,6 +74,11 @@ Verified on 2026-07-28:
 - Supabase Free can pause and does not include managed backups.
 - Upload completion downloads the stored object in the Edge Function and
   confirms byte size and SHA-256 before the server marks it stored.
+- Migration `202607310001` provides the service-only enqueue, claim,
+  acknowledgement, and delayed-retry primitives for expired/unattached
+  Evidence objects. A trusted maintenance worker must call those primitives
+  and delete the corresponding private Storage object; the database never
+  treats queued bytes as reclaimed before that acknowledgement.
 - Clean devices request Evidence bytes through the provider-neutral API; the
   native client verifies them again before encrypting them into its local vault.
 - Export retention is bounded to 100 object pointers per daily maintenance
@@ -84,7 +98,7 @@ The static contract checks require only Node:
 npm run check:supabase:static
 ```
 
-Latest verified result: **38/38** static checks.
+Latest verified result: **57/57** static checks.
 
 The local database suite proves cross-household RLS, role-negative paths,
 idempotent nested commands, analytics rejection, upload reservation binding,
@@ -96,7 +110,7 @@ supabase db lint --local --level warning
 supabase test db --local
 ```
 
-Latest verified result: **131/131** pgTAP checks. The real local export API
+Latest verified result: **242/242** pgTAP checks. The real local export API
 journey also passed **47** checks, including parallel same-key creation,
 authorization denial, full Liability history, selective-export isolation,
 JSON/PDF rendering, download integrity, and redaction:
@@ -104,6 +118,32 @@ JSON/PDF rendering, download integrity, and redaction:
 ```sh
 npm run test:supabase:export-local
 ```
+
+## Evidence-object cleanup worker contract
+
+Only a trusted service-role maintenance worker may operate this queue:
+
+1. Call `enqueue_blob_object_cleanup(p_limit, p_orphan_grace)` with a limit
+   from 1 through 100. Expired upload intents are eligible immediately;
+   verified-but-unattached objects use a one-hour to thirty-day grace period
+   and default to 24 hours. An expired reservation remains quota-counted until
+   its Storage deletion is acknowledged; changing the blob ID does not release
+   or bypass that capacity.
+2. Call `claim_blob_object_cleanup(p_limit, p_lease)`. `SKIP LOCKED`, a claim
+   token, and a one-minute to one-hour lease prevent duplicate concurrent work.
+3. Delete `object_key` from the private `evidence` bucket. A provider-confirmed
+   missing object is an idempotent successful deletion.
+4. After deletion, call
+   `complete_blob_object_cleanup(blob_object_id, claim_token)`. This removes
+   the database BlobObject and its cleanup pointer atomically, releasing quota.
+5. On a retryable provider failure, call
+   `release_blob_object_cleanup(blob_object_id, claim_token, error_code,
+   retry_delay)`. The pointer remains quota-counted and cannot be redelivered
+   before the bounded retry delay.
+
+Never call `complete_blob_object_cleanup` before Storage confirms deletion.
+The completion RPC also refuses to remove a BlobObject referenced by an
+immutable EvidenceVersion.
 
 ## Closed-pilot admission
 

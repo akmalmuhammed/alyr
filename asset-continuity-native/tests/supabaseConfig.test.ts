@@ -27,8 +27,8 @@ describe("signed Supabase public configuration", () => {
           "https://project-ref.supabase.co/functions/v1/api/pilot/preflight",
         householdInviteAccessEndpoint:
           "https://project-ref.supabase.co/functions/v1/api/invites/preflight",
-        emailRedirectTo: "alyr://callback",
-        passwordRecoveryRedirectTo: "alyr://reset-password"
+        emailRedirectTo: "heldat://callback",
+        passwordRecoveryRedirectTo: "heldat://reset-password"
       }
     });
   });

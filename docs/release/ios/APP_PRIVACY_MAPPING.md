@@ -1,4 +1,4 @@
-# ALYR App Privacy questionnaire mapping
+# Heldat App Privacy questionnaire mapping
 
 Status: **source-aligned worksheet; final binary reconciliation required**
 
@@ -44,7 +44,7 @@ first-party analysis.
 
 ## Data-purpose detail for the public privacy policy
 
-The public policy at `[PRIVACY_POLICY_URL_HTTPS]` must reconcile, at minimum:
+The public policy at `https://heldat.app/privacy/` must reconcile, at minimum:
 
 1. What is stored locally and what may be synchronized.
 2. How email, account, household, and installation identifiers are used.

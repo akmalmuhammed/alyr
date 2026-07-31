@@ -69,6 +69,8 @@ interface AuthFlowContextValue {
    * true after a password update so the completion screen can finish cleanup.
    */
   readonly passwordRecoverySessionActive: boolean;
+  readonly googleOAuthInProgress: boolean;
+  readonly googleOAuthCallbackPending: boolean;
   readonly pendingHouseholdInvite: PendingHouseholdInvite | null;
   readonly pendingHouseholdInviteReview: HouseholdInviteReview | null;
   readonly pendingHouseholdInviteDeferred: boolean;
@@ -90,6 +92,7 @@ interface AuthFlowContextValue {
     email: string,
     password: string
   ) => Promise<AuthAttempt | null>;
+  readonly beginGoogleSignIn: () => Promise<string | null>;
   readonly continuePreview: () => Promise<AuthSessionDescriptor | null>;
   readonly retryBootstrap: () => Promise<boolean>;
   readonly checkConfirmedSession: () => Promise<AuthSessionDescriptor | null>;
@@ -267,6 +270,12 @@ export function AuthFlowProvider({
     useState<PasswordRecoveryRequest | null>(null);
   const [passwordRecoveryGrant, setPasswordRecoveryGrant] =
     useState<PasswordRecoveryGrant | null>(null);
+  const [googleOAuthInProgress, setGoogleOAuthInProgress] =
+    useState(false);
+  const [
+    googleOAuthCallbackPending,
+    setGoogleOAuthCallbackPending
+  ] = useState(false);
   const [
     pendingHouseholdInvite,
     setPendingHouseholdInviteState
@@ -301,6 +310,7 @@ export function AuthFlowProvider({
     useRef<HouseholdInviteReview | null>(null);
   const pendingHouseholdProvisionRef =
     useRef<PendingHouseholdProvision | null>(null);
+  const googleOAuthCallbackCodeRef = useRef<string | null>(null);
   const pendingHouseholdProvisionStoreStateRef = useRef<
     "pending" | "ready" | "blocked"
   >("pending");
@@ -745,6 +755,39 @@ export function AuthFlowProvider({
     [finishAttempt, prepareRequest]
   );
 
+  const beginGoogleSignIn = useCallback(
+    async (): Promise<string | null> => {
+      prepareRequest();
+      googleOAuthCallbackCodeRef.current = null;
+      setGoogleOAuthCallbackPending(false);
+      setGoogleOAuthInProgress(true);
+      try {
+        const begin = gatewayRef.current.beginGoogleOAuthSignIn;
+        if (!begin) {
+          setError({
+            code: "unsupported",
+            message: "Google sign-in is not configured for this build.",
+            retryable: false
+          });
+          return null;
+        }
+        const result = await begin.call(gatewayRef.current);
+        if (!result.ok) {
+          setError(result.error);
+          return null;
+        }
+        if (!result.value) return null;
+        googleOAuthCallbackCodeRef.current = result.value.code;
+        setGoogleOAuthCallbackPending(true);
+        return result.value.code;
+      } finally {
+        setGoogleOAuthInProgress(false);
+        setBusy(false);
+      }
+    },
+    [prepareRequest]
+  );
+
   const continuePreview = useCallback(async () => {
     prepareRequest();
     try {
@@ -777,7 +820,7 @@ export function AuthFlowProvider({
         setError({
           code: "session_missing",
           message:
-            "No confirmed session is available yet. Open the latest verification link, then return to ALYR.",
+            "No confirmed session is available yet. Open the latest verification link, then return to Heldat.",
           retryable: true
         });
         return null;
@@ -791,6 +834,8 @@ export function AuthFlowProvider({
 
   const exchangeConfirmationCode = useCallback(
     async (code: string) => {
+      const completesGoogleOAuth =
+        googleOAuthCallbackCodeRef.current === code;
       prepareRequest();
       try {
         const result =
@@ -802,6 +847,10 @@ export function AuthFlowProvider({
         acceptSession(result.value);
         return result.value;
       } finally {
+        if (completesGoogleOAuth) {
+          googleOAuthCallbackCodeRef.current = null;
+          setGoogleOAuthCallbackPending(false);
+        }
         setBusy(false);
       }
     },
@@ -2181,6 +2230,9 @@ export function AuthFlowProvider({
       setPasswordRecovery(null);
       setPasswordRecoveryGrant(null);
       setPasswordRecoverySessionActive(false);
+      googleOAuthCallbackCodeRef.current = null;
+      setGoogleOAuthInProgress(false);
+      setGoogleOAuthCallbackPending(false);
       updateHouseholdName("");
       updateFirstCaptureIntent(null);
       setStatusMessage(null);
@@ -2209,6 +2261,9 @@ export function AuthFlowProvider({
       setPasswordRecovery(null);
       setPasswordRecoveryGrant(null);
       setPasswordRecoverySessionActive(false);
+      googleOAuthCallbackCodeRef.current = null;
+      setGoogleOAuthInProgress(false);
+      setGoogleOAuthCallbackPending(false);
       updateHouseholdName("");
       updateFirstCaptureIntent(null);
       setStatusMessage(null);
@@ -2238,6 +2293,9 @@ export function AuthFlowProvider({
     setPasswordRecovery(null);
     setPasswordRecoveryGrant(null);
     setPasswordRecoverySessionActive(false);
+    googleOAuthCallbackCodeRef.current = null;
+    setGoogleOAuthInProgress(false);
+    setGoogleOAuthCallbackPending(false);
     updateHouseholdName("");
     updateFirstCaptureIntent(null);
     void discardPendingHouseholdInvite();
@@ -2263,6 +2321,8 @@ export function AuthFlowProvider({
       passwordRecovery,
       passwordRecoveryGrant,
       passwordRecoverySessionActive,
+      googleOAuthInProgress,
+      googleOAuthCallbackPending,
       pendingHouseholdInvite,
       pendingHouseholdInviteReview,
       pendingHouseholdInviteDeferred,
@@ -2273,6 +2333,7 @@ export function AuthFlowProvider({
       householdAccessError,
       createAccount,
       signIn,
+      beginGoogleSignIn,
       continuePreview,
       retryBootstrap,
       checkConfirmedSession,
@@ -2331,6 +2392,8 @@ export function AuthFlowProvider({
       exchangeConfirmationCode,
       exchangePasswordRecoveryCode,
       firstCaptureIntent,
+      googleOAuthCallbackPending,
+      googleOAuthInProgress,
       householdName,
       householdAccessSnapshot,
       householdAccessStatus,
@@ -2351,6 +2414,7 @@ export function AuthFlowProvider({
       session,
       deleteAccount,
       finalizeAccountDeletion,
+      beginGoogleSignIn,
       signOut,
       signIn,
       stageHouseholdInvite,

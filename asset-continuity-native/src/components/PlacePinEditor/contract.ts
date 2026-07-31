@@ -85,7 +85,7 @@ const ENGLISH_LABELS: PlacePinEditorLabels = {
   sectionLabel: "Property pin",
   noPinTitle: "No coordinates yet",
   noPinBody:
-    "Use the device location or enter coordinates. ALYR does not guess a property.",
+    "Use the device location or enter coordinates. Heldat does not guess a property.",
   mapAccessibilityLabel: "Property pin map",
   markerAccessibilityLabel: "Draggable property pin",
   dragInstruction: "Drag the pin onto the property, then confirm it.",
@@ -122,7 +122,7 @@ const ARABIC_LABELS: PlacePinEditorLabels = {
   sectionLabel: "دبوس العقار",
   noPinTitle: "لا توجد إحداثيات بعد",
   noPinBody:
-    "استخدم موقع الجهاز أو أدخل الإحداثيات. لا يحدّد ALYR العقار بالتخمين.",
+    "استخدم موقع الجهاز أو أدخل الإحداثيات. لا يحدّد Heldat العقار بالتخمين.",
   mapAccessibilityLabel: "خريطة دبوس العقار",
   markerAccessibilityLabel: "دبوس عقار قابل للسحب",
   dragInstruction: "اسحب الدبوس إلى العقار، ثم أكّد موقعه.",
@@ -325,7 +325,7 @@ export function formatCoordinate(value: number): string {
 /**
  * Formats a coordinate for a passive readout without implying precision that
  * the recorded source did not measure. Editable fields retain six decimals so
- * ALYR never mutates user-entered coordinates.
+ * Heldat never mutates user-entered coordinates.
  */
 export function formatCoordinateReadout(
   value: number,

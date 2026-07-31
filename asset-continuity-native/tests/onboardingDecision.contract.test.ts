@@ -28,6 +28,48 @@ describe("first-viewport onboarding decisions", () => {
     );
   });
 
+  it("gates ordinary first launch through Worldline without competing with auth or restored workspaces", () => {
+    const indexRoute = read("app/index.tsx");
+    const rootLayout = read("app/_layout.tsx");
+    const authLayout = read("app/(auth)/_layout.tsx");
+    const onboardingRoute = read("app/(onboarding)/index.tsx");
+
+    expect(rootLayout).toContain("<OnboardingIntroProvider>");
+    expect(rootLayout).toContain(
+      'options={{ animation: "none", headerShown: false }}'
+    );
+    expect(indexRoute).toContain(
+      "const { status: introStatus } = useOnboardingIntro();"
+    );
+    expect(indexRoute).toContain(
+      'introStatus === "unseen"'
+    );
+    expect(indexRoute).toContain(
+      '<Redirect href="/(onboarding)" />'
+    );
+    expect(indexRoute).toContain(
+      'return workspace ? <Redirect href="/(tabs)" /> : publicEntry();'
+    );
+    expect(indexRoute).toContain(
+      'if (mode !== "supabase" || !session) {\n    return publicEntry();'
+    );
+    expect(
+      indexRoute.indexOf("signedOutSampleWorkspaceReady(")
+    ).toBeLessThan(
+      indexRoute.indexOf(
+        'if (mode !== "supabase" || !session)'
+      )
+    );
+    expect(authLayout).not.toContain("OnboardingIntro");
+    expect(onboardingRoute).toContain("await markSeen();");
+    expect(onboardingRoute).toContain(
+      "router.replace(AUTH_ROUTES.createAccount);"
+    );
+    expect(onboardingRoute).toContain(
+      "await startWorkspace(\"sample\");"
+    );
+  });
+
   it("places the first-record decision before trust explanation", () => {
     const source = read("app/(auth)/privacy.tsx");
 

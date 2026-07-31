@@ -276,6 +276,55 @@ describe("durable sync conflict inbox", () => {
     expect(conflictFieldLabel(captured!)).toBe("Item name");
   });
 
+  it("keeps Asset metadata conflicts field-specific and reapplicable", () => {
+    const { workspace, conflict, serverChange } = fixture();
+    const operation = createLocalOperation(workspace, {
+      type: "asset.category.set",
+      aggregateId: conflict.entityId,
+      payload: {
+        categoryId: "digital.asset",
+        categoryPath: ["digital", "asset"]
+      },
+      operationId: conflict.operationId,
+      idempotencyKey: conflict.operationId,
+      observedVersion: 2,
+      occurredAt: TIME
+    });
+    const [captured] = captureConflictContexts(
+      [{ ...conflict, conflictKind: "metadata", serverVersion: 3 }],
+      [operation],
+      [
+        {
+          ...serverChange,
+          version: 3,
+          body: {
+            operationId: "operation-cloud-category",
+            command: "asset.category.set",
+            payload: {
+              categoryId: "art.collectible",
+              categoryPath: ["art", "collectible"]
+            },
+            result: {}
+          }
+        }
+      ],
+      workspace.household.id,
+      TIME
+    );
+
+    expect(conflictFieldLabel(captured!)).toBe("Category");
+    expect(conflictProvenanceValues(captured!)).toEqual({
+      local: "digital asset",
+      cloud: "art collectible",
+      cloudVerified: true
+    });
+    expect(conflictResolutionOptions(captured!)).toEqual([
+      "keep-cloud",
+      "reapply-local",
+      "review-manually"
+    ]);
+  });
+
   it("persists a reviewed reapply operation and clears only after its acknowledgement", async () => {
     const { workspace, operation, conflict, serverChange } = fixture();
     const repository = new MemoryWorkspaceRepository();

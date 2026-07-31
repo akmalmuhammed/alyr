@@ -1,4 +1,7 @@
-import { createClient, type SupabaseClient } from "npm:@supabase/supabase-js@2";
+import {
+  createClient,
+  type SupabaseClient,
+} from "npm:@supabase/supabase-js@2.110.8";
 
 import {
   apiError,
@@ -221,9 +224,17 @@ function bytesToHex(bytes: Uint8Array): string {
 }
 
 async function sha256(bytes: Uint8Array): Promise<string> {
-  return bytesToHex(
-    new Uint8Array(await crypto.subtle.digest("SHA-256", bytes)),
-  );
+  const owned = new Uint8Array(bytes.byteLength);
+  owned.set(bytes);
+  try {
+    return bytesToHex(
+      new Uint8Array(
+        await crypto.subtle.digest("SHA-256", owned.buffer as ArrayBuffer),
+      ),
+    );
+  } finally {
+    owned.fill(0);
+  }
 }
 
 async function maintenanceTokenMatches(candidate: string): Promise<boolean> {
@@ -627,7 +638,7 @@ async function buildManifest(
     evidenceOriginals: {
       included: false,
       note:
-        "This manifest records immutable evidence identifiers, byte sizes, MIME types and SHA-256 checksums. Original evidence bytes remain in the private ALYR vault.",
+        "This manifest records immutable evidence identifiers, byte sizes, MIME types and SHA-256 checksums. Original evidence bytes remain in the private Heldat vault.",
     },
   };
   return manifest;
@@ -659,10 +670,10 @@ function buildPdfWithAttachedManifest(
     "BT",
     "/F1 22 Tf",
     "54 760 Td",
-    `(ALYR Continuity Export) Tj`,
+    `(Heldat Continuity Export) Tj`,
     "0 -36 Td",
     "/F1 11 Tf",
-    `(Household: ${escapePdfText(String(manifest.household.name ?? "ALYR household"))}) Tj`,
+    `(Household: ${escapePdfText(String(manifest.household.name ?? "Heldat household"))}) Tj`,
     "0 -20 Td",
     `(Created: ${escapePdfText(manifest.export.generatedAt)}) Tj`,
     "0 -20 Td",
@@ -670,15 +681,15 @@ function buildPdfWithAttachedManifest(
     "0 -20 Td",
     `(Evidence records: ${manifest.summary.evidence}) Tj`,
     "0 -32 Td",
-    `(The complete UTF-8 JSON manifest is attached as alyr-manifest.json.) Tj`,
+    `(The complete UTF-8 JSON manifest is attached as heldat-manifest.json.) Tj`,
     "0 -20 Td",
-    `(Evidence originals stay in the private ALYR vault.) Tj`,
+    `(Evidence originals stay in the private Heldat vault.) Tj`,
     "ET",
   ].join("\n");
   const contentBytes = encoder.encode(content);
   const objectBodies: Uint8Array[] = [
     encoder.encode(
-      "<< /Type /Catalog /Pages 2 0 R /Names << /EmbeddedFiles << /Names [(alyr-manifest.json) 7 0 R] >> >> >>",
+      "<< /Type /Catalog /Pages 2 0 R /Names << /EmbeddedFiles << /Names [(heldat-manifest.json) 7 0 R] >> >> >>",
     ),
     encoder.encode("<< /Type /Pages /Kids [3 0 R] /Count 1 >>"),
     encoder.encode(
@@ -700,7 +711,7 @@ function buildPdfWithAttachedManifest(
       encoder.encode("\nendstream"),
     ]),
     encoder.encode(
-      "<< /Type /Filespec /F (alyr-manifest.json) /UF (alyr-manifest.json) /Desc (ALYR continuity manifest) /EF << /F 6 0 R >> >>",
+      "<< /Type /Filespec /F (heldat-manifest.json) /UF (heldat-manifest.json) /Desc (Heldat continuity manifest) /EF << /F 6 0 R >> >>",
     ),
   ];
   const header = encoder.encode("%PDF-1.7\n%\xE2\xE3\xCF\xD3\n");
@@ -745,7 +756,7 @@ async function renderArtifact(
     : manifestBytes;
   return {
     bytes,
-    fileName: `alyr-continuity-${date}.${format === "pdf" ? "pdf" : "json"}`,
+    fileName: `heldat-continuity-${date}.${format === "pdf" ? "pdf" : "json"}`,
     mimeType: format === "pdf" ? "application/pdf" : "application/json",
     checksumSha256: await sha256(bytes),
   };

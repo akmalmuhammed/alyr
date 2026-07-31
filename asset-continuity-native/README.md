@@ -1,6 +1,6 @@
-# ALYR native
+# Heldat native
 
-The real iOS and Android client for ALYR Asset Continuity. It is an Expo Router
+The real iOS and Android client for Heldat. It is an Expo Router
 application, not a WebView wrapper and not the existing phone-frame prototype.
 
 ## Current vertical slice

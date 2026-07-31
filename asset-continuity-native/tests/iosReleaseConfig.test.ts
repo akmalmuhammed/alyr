@@ -38,7 +38,7 @@ const nativePackage = JSON.parse(
 
 const config = createConfig({
   config: {
-    name: "ALYR",
+    name: "Heldat",
     slug: "alyr-asset-continuity"
   }
 } as Parameters<typeof createConfig>[0]);
@@ -87,9 +87,12 @@ describe("signed iOS release configuration", () => {
       projectId: "85cab1f2-111f-4e20-abd5-8dff0df2fabb"
     });
     expect(config.slug).toBe("alyr-asset-continuity");
-    expect(config.ios?.bundleIdentifier).toBe("com.alyr.continuity");
-    expect(config.scheme).toBe("alyr");
+    expect(config.ios?.bundleIdentifier).toBe("app.heldat.mobile");
+    expect(config.scheme).toBe("heldat");
     expect(config.ios?.supportsTablet).toBe(false);
+    expect(config.ios?.associatedDomains).toEqual([
+      "applinks:heldat.app"
+    ]);
   });
 
   it("enables app-version-scoped EAS updates for the linked project", () => {
@@ -208,17 +211,19 @@ describe("signed iOS release configuration", () => {
 
   it("keeps iOS transport security fail-closed outside the local dev network", () => {
     const originalProfile = process.env.EAS_BUILD_PROFILE;
+    const originalPlatform = process.env.EAS_BUILD_PLATFORM;
     const originalNodeEnvironment = process.env.NODE_ENV;
     const resolveTransportSecurity = () =>
       createConfig({
         config: {
-          name: "ALYR",
+          name: "Heldat",
           slug: "alyr-asset-continuity"
         }
       } as Parameters<typeof createConfig>[0]).ios?.infoPlist
         ?.NSAppTransportSecurity;
 
     try {
+      process.env.EAS_BUILD_PLATFORM = "ios";
       process.env.NODE_ENV = "production";
       delete process.env.EAS_BUILD_PROFILE;
       expect(resolveTransportSecurity()).toEqual({
@@ -256,6 +261,12 @@ describe("signed iOS release configuration", () => {
         process.env.EAS_BUILD_PROFILE = originalProfile;
       }
 
+      if (originalPlatform === undefined) {
+        delete process.env.EAS_BUILD_PLATFORM;
+      } else {
+        process.env.EAS_BUILD_PLATFORM = originalPlatform;
+      }
+
       if (originalNodeEnvironment === undefined) {
         delete process.env.NODE_ENV;
       } else {
@@ -276,8 +287,35 @@ describe("signed iOS release configuration", () => {
       path.join(appRoot, "src", "runtime", "supabaseConfig.ts"),
       "utf8"
     );
-    expect(runtimeConfig).toContain('"alyr://callback"');
-    expect(runtimeConfig).toContain('"alyr://reset-password"');
+    expect(runtimeConfig).toContain('"heldat://callback"');
+    expect(runtimeConfig).toContain('"heldat://reset-password"');
+  });
+
+  it("ships the reviewed browser PKCE bridge for Google sign-in", () => {
+    expect(nativePackage.dependencies["expo-auth-session"]).toMatch(
+      /^~57\./u
+    );
+    expect(nativePackage.dependencies["expo-web-browser"]).toMatch(
+      /^~57\./u
+    );
+    expect(pluginOptions("expo-web-browser")).toEqual({
+      experimentalLauncherActivity: false
+    });
+    const googleOAuthBoundary = readFileSync(
+      path.join(
+        appRoot,
+        "src",
+        "auth",
+        "googleOAuthBrowser.ts"
+      ),
+      "utf8"
+    );
+    expect(googleOAuthBoundary).toContain(
+      '"heldat://callback" as const'
+    );
+    expect(googleOAuthBoundary).toContain(
+      "WebBrowser.openAuthSessionAsync"
+    );
   });
 
   it("separates physical-device, simulator, preview, and store profiles", () => {

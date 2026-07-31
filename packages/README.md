@@ -1,7 +1,10 @@
-# ALYR shared foundation
+# Heldat shared foundation
 
 These packages contain the provider-neutral product contract shared by web,
 iOS, Android, tests, and future service adapters.
+
+Heldat is the public product name. The private `@alyr/*` package namespace
+remains stable for workspace and import compatibility.
 
 | Package | Responsibility |
 |---|---|

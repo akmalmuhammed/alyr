@@ -141,7 +141,7 @@ const ASSET_SEEDS: readonly AssetSeed[] = [
     locationDetail: "Desk drawer",
     reference: "DEVICE-001",
     valueMinor: 620_000,
-    notes: "Never store its password in ALYR.",
+    notes: "Never store its password in Heldat.",
     proofType: "Purchase receipt",
   },
   {
@@ -153,7 +153,7 @@ const ASSET_SEEDS: readonly AssetSeed[] = [
     locationDetail: "Media cabinet",
     reference: "DEVICE-002",
     valueMinor: 260_000,
-    notes: "Never store its password in ALYR.",
+    notes: "Never store its password in Heldat.",
     proofType: "Current photo",
   },
   {
@@ -568,7 +568,7 @@ export function createFocusedHouseholdFixture(): FocusedWorkspace {
   return {
     household: {
       id: "household-focused-pilot",
-      name: "ALYR Pilot Household",
+      name: "Heldat Pilot Household",
       locale: "en",
       defaultCurrency: "QAR",
       createdAt: FOCUSED_FIXTURE_TIMESTAMP,

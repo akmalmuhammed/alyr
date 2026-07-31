@@ -1,4 +1,4 @@
-appId: com.alyr.continuity
+appId: app.heldat.mobile
 name: Arabic selection reaches the RTL Today experience
 tags:
   - smoke
@@ -9,6 +9,8 @@ tags:
     clearState: true
     permissions:
       all: deny
+- runFlow:
+    file: "../subflows/complete-worldline-intro.yaml"
 - extendedWaitUntil:
     visible:
       id: "auth-welcome-screen"

@@ -8,9 +8,9 @@ export function recoveryErrorMessage(error: unknown): string {
     case "AUTHENTICATION_FAILED":
       return "The passphrase is wrong or the Recovery Kit has changed. Nothing was restored.";
     case "CORRUPT_CONTAINER":
-      return "This file is not an intact ALYR Recovery Kit. Nothing was restored.";
+      return "This file is not an intact Heldat Recovery Kit. Nothing was restored.";
     case "UNSUPPORTED_VERSION":
-      return "This Recovery Kit needs a newer compatible ALYR build.";
+      return "This Recovery Kit needs a newer compatible Heldat build.";
     case "INVALID_PASSPHRASE":
       return "Use a passphrase with at least 12 characters.";
     case "LIMIT_EXCEEDED":

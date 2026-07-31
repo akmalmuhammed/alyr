@@ -56,6 +56,9 @@ const english = {
   },
   signIn: {
     submit: "Sign in",
+    google: "Continue with Google",
+    googleHint: "Opens Google's secure sign-in in your browser",
+    orEmail: "OR USE EMAIL",
     createAccount: "Create an account",
     eyebrow: "WELCOME BACK",
     title: "Return to your record.",
@@ -73,13 +76,13 @@ const english = {
     invalid_credentials: "The email or password is not correct.",
     invalid_request: "Check the request and try again.",
     network_unavailable:
-      "ALYR could not reach the account service. Check your connection.",
+      "Heldat could not reach the account service. Check your connection.",
     pilot_access_denied:
       "This early access invitation does not match the email, has expired, or was already used.",
     pilot_access_required:
       "Enter the early access code from your invitation.",
     pilot_capacity_reached:
-      "The current early access group is full. Ask the ALYR team about the next opening.",
+      "The current early access group is full. Ask the Heldat team about the next opening.",
     rate_limited: "Too many attempts. Wait a moment, then try again.",
     session_missing: "This account session is no longer available. Start again.",
     unsupported: "This account action is not available in this build.",
@@ -88,13 +91,13 @@ const english = {
   forgotPassword: {
     eyebrow: "ACCOUNT RECOVERY",
     title: "Reset your password.",
-    body: "Enter the email for your ALYR account. We will send the next step without revealing whether an account exists.",
+    body: "Enter the email for your Heldat account. We will send the next step without revealing whether an account exists.",
     email: "Email",
     emailPlaceholder: "name@example.com",
     submit: "Send reset instructions",
     sentEyebrow: "REQUEST RECORDED",
     sentTitle: "If an account matches, use the latest reset message.",
-    sentBody: "The provider accepted the request. ALYR does not reveal whether the address matched an account or whether a message arrived.",
+    sentBody: "The provider accepted the request. Heldat does not reveal whether the address matched an account or whether a message arrived.",
     previewSentEyebrow: "PREVIEW RECOVERY",
     previewSentTitle: "Continue on this device.",
     previewBody: "Private preview does not send email. Continue on this device.",
@@ -109,7 +112,7 @@ const english = {
   resetPassword: {
     eyebrow: "SECURE YOUR ACCOUNT",
     title: "Choose a new password.",
-    body: "Use a password that is unique to ALYR. Your existing household record stays unchanged.",
+    body: "Use a password that is unique to Heldat. Your existing household record stays unchanged.",
     password: "New password",
     passwordDescription: "At least 10 characters. Password managers are supported.",
     passwordPlaceholder: "Create a strong password",
@@ -141,13 +144,13 @@ const english = {
     body: "Your private record starts with you. Share access later, one person at a time.",
     previewNotice: "This private preview keeps the account on this device for the session. No email is sent.",
     pilotNotice:
-      "ALYR is in limited early access. We verify your email and access code before creating an account.",
+      "Heldat is in limited early access. We verify your email and access code before creating an account.",
     email: "Email",
     emailPlaceholder: "name@example.com",
     pilotAccessCode: "Early access code",
     pilotAccessDescription:
       "Use the code included with your invitation.",
-    pilotAccessPlaceholder: "ALYR-XXXX-XXXX-XXXX",
+    pilotAccessPlaceholder: "Heldat-XXXX-XXXX-XXXX",
     password: "Password",
     passwordDescription: "At least 10 characters. Password managers are supported.",
     passwordPlaceholder: "Create a strong password",
@@ -166,7 +169,7 @@ const english = {
     previewBody:
       "Explore the private-record experience without creating or verifying an account. Preview details stay on this device for this session.",
     liveBody:
-      "Open the secure link sent to your email. When you return to ALYR, we’ll check automatically.",
+      "Open the secure link sent to your email. When you return to Heldat, we’ll check automatically.",
     previewEyebrow: "PRIVATE PREVIEW",
     liveEyebrow: "ACCOUNT SECURITY",
     previewTitle: "See how your private record works.",
@@ -176,13 +179,13 @@ const english = {
     previewNotice:
       "Preview details are temporary and clear when this session ends.",
     liveNotice:
-      "For your security, use the newest confirmation link. Keep this screen open; ALYR will continue automatically when you return.",
+      "For your security, use the newest confirmation link. Keep this screen open; Heldat will continue automatically when you return.",
     foregroundChecking:
       "Welcome back. Checking your email confirmation…",
     notConfirmedYet:
       "Your email is not confirmed yet. Use the newest link, then return here or check again.",
     resendAccepted:
-      "A new confirmation link was requested. Use the newest email, then return to ALYR.",
+      "A new confirmation link was requested. Use the newest email, then return to Heldat.",
     dismissStatus: "Got it"
   },
   callback: {
@@ -194,25 +197,35 @@ const english = {
     signIn: "Sign in instead",
     resend: "Resend confirmation email",
     recover: "Recover account access",
-    continue: "Continue to ALYR",
+    continue: "Continue to Heldat",
     otherOptions: "Other account access options",
-    body: "ALYR is asking the account provider for a verified session. Nothing is marked complete until that session is returned.",
+    body: "Heldat is asking the account provider for a verified session. Nothing is marked complete until that session is returned.",
     failedBody: "The account provider did not return a verified session. Your household record is unchanged.",
     eyebrow: "ACCOUNT VERIFICATION",
     confirmedTitle: "Email confirmed.",
     checkingTitle: "Checking the confirmation link.",
     failedTitle: "Confirmation needs another try.",
+    oauthConfirmedTitle: "Google account connected.",
+    oauthCheckingTitle: "Finishing Google sign-in.",
+    oauthFailedTitle: "Google sign-in needs another try.",
+    oauthReturn: "Return to sign in",
+    oauthBody:
+      "Heldat is completing the protected account exchange. Your browser credentials never enter the app.",
+    oauthFailedNotice:
+      "Return to sign in and start a fresh Google session. Your household record is unchanged.",
+    oauthComplete:
+      "Google sign-in is complete. Continue to your private record.",
     inviteFailedTitle: "Email confirmed. Invitation needs another try.",
     checkingLabel: "Checking confirmation",
     waiting: "Waiting for a verified account session.",
     incompleteLink:
-      "This confirmation link is incomplete. Return to ALYR and request a new one.",
+      "This confirmation link is incomplete. Return to Heldat and request a new one.",
     exchangeFailed:
       "This confirmation link did not return a verified account session.",
     failedNotice:
       "Retry this link, request a new confirmation email, or choose another account access path below.",
     inviteFailedBody:
-      "Your verified account session is ready, but ALYR did not finish joining the household.",
+      "Your verified account session is ready, but Heldat did not finish joining the household.",
     inviteFailedNotice:
       "Retry the household invitation, sign in instead, or use the account recovery options below.",
     complete:
@@ -407,7 +420,7 @@ const english = {
     recordHint: "Adds this dated value to the private workspace.",
     passport: "ITEM PASSPORT",
     recordTitle: "Record an item value",
-    intro: "Enter a value you know. ALYR keeps currencies separate and never fills in a price for you.",
+    intro: "Enter a value you know. Heldat keeps currencies separate and never fills in a price for you.",
     valueLabel: "RECORDED VALUE",
     currentEntry: "Current entry",
     asOf: "as of",
@@ -470,7 +483,7 @@ const english = {
     privacySupport: "Privacy and support",
     privacyNotice: "Privacy notice",
     privacyNoticeDescription:
-      "What ALYR stores and how household records are handled.",
+      "What Heldat stores and how household records are handled.",
     pilotTerms: "Early access terms",
     pilotTermsDescription:
       "Terms, responsibilities and service limits.",
@@ -480,14 +493,14 @@ const english = {
     installedAppRequiredTitle: "Installed app required",
     installedAppRequiredBody:
       "A readable export can be shared from an installed native build. It is not an encrypted Recovery Kit.",
-    shareDialogTitle: "Export readable ALYR snapshot",
+    shareDialogTitle: "Export readable Heldat snapshot",
     exportFailedTitle: "Readable copy not exported",
     exportFailedBody:
-      "The export file was not created or shared. Your household records are unchanged. Keep ALYR open, then try the export again.",
+      "The export file was not created or shared. Your household records are unchanged. Keep Heldat open, then try the export again.",
     exportTryAgain: "Try export again",
     temporaryCopyCleanupTitle: "Temporary copy still on this device",
     temporaryCopyCleanupBody:
-      "The readable copy was shared, but ALYR did not confirm removal of its temporary cache file. Keep this device private and clear ALYR’s app cache before handing it to someone else.",
+      "The readable copy was shared, but Heldat did not confirm removal of its temporary cache file. Keep this device private and clear Heldat’s app cache before handing it to someone else.",
     replaceDemoTitle: "Replace this demo?",
     replaceDemoBody:
       "This creates a new private household on this device. Export anything you need first.",
@@ -508,12 +521,12 @@ const english = {
     previewBypassBody:
       "Expo Go and web do not invoke Face ID or a device passcode. This session resets when it ends, so use test information only.",
     deviceUnlockBody:
-      "ALYR asks this device to verify you before releasing the encrypted household vault. Device passcode fallback remains available.",
+      "Heldat asks this device to verify you before releasing the encrypted household vault. Device passcode fallback remains available.",
     protectedBody:
       "Your local register and attachments are stored in the protected app vault.",
     previewBody:
       "This preview resets when the session ends. Use test information only.",
-    lockNow: "Lock ALYR now",
+    lockNow: "Lock Heldat now",
     language: "Language",
     english: "English",
     arabic: "العربية",
@@ -562,7 +575,7 @@ const english = {
       "Create a portable encrypted copy you control",
     recentRecoveryKits: "Recent local kits",
     recentRecoveryKitsDescription:
-      "Encrypted files still inside ALYR on this device. File names, dates and backup state are shown; passphrases and contents stay hidden.",
+      "Encrypted files still inside Heldat on this device. File names, dates and backup state are shown; passphrases and contents stay hidden.",
     recoveryHistoryUnavailable:
       "Recent Recovery Kits could not be read from this device.",
     retryRecoveryHistory: "Try device storage again",
@@ -600,10 +613,10 @@ const english = {
       "Return to Welcome and remove this sample’s items, Places and files from this device. Signed accounts are not changed.",
     exitSampleConfirmTitle: "Exit this sample?",
     exitSampleConfirmBody:
-      "ALYR will remove this sample workspace, its local files and unfinished sample changes from this device, then return to Welcome. This does not sign out, delete or change any account.",
+      "Heldat will remove this sample workspace, its local files and unfinished sample changes from this device, then return to Welcome. This does not sign out, delete or change any account.",
     exitSampleFailedTitle: "Sample reset not finished",
     exitSampleFailedBody:
-      "ALYR did not confirm removal of every local sample record. Account data was not touched. Restart ALYR, then try again.",
+      "Heldat did not confirm removal of every local sample record. Account data was not touched. Restart Heldat, then try again.",
     advancedDiagnostics: "Advanced diagnostics",
     diagnosticsMeta: "Local queue and sync details",
     deviceQueue: "Device queue",
@@ -672,6 +685,9 @@ const arabic = {
   },
   signIn: {
     submit: "تسجيل الدخول",
+    google: "المتابعة باستخدام Google",
+    googleHint: "يفتح تسجيل الدخول الآمن من Google في المتصفح",
+    orEmail: "أو استخدم البريد الإلكتروني",
     createAccount: "إنشاء حساب",
     eyebrow: "مرحبًا بعودتك",
     title: "عُد إلى سجلك.",
@@ -690,13 +706,13 @@ const arabic = {
     invalid_credentials: "البريد الإلكتروني أو كلمة المرور غير صحيحة.",
     invalid_request: "راجع الطلب وحاول مرة أخرى.",
     network_unavailable:
-      "تعذر على ALYR الوصول إلى خدمة الحسابات. تحقق من اتصالك.",
+      "تعذر على Heldat الوصول إلى خدمة الحسابات. تحقق من اتصالك.",
     pilot_access_denied:
       "لا تتطابق دعوة الوصول المبكر مع البريد الإلكتروني، أو انتهت صلاحيتها، أو استُخدمت من قبل.",
     pilot_access_required:
       "أدخل رمز الوصول المبكر من دعوتك.",
     pilot_capacity_reached:
-      "اكتملت مجموعة الوصول المبكر الحالية. تواصل مع فريق ALYR لمعرفة موعد الإتاحة التالي.",
+      "اكتملت مجموعة الوصول المبكر الحالية. تواصل مع فريق Heldat لمعرفة موعد الإتاحة التالي.",
     rate_limited: "محاولات كثيرة. انتظر قليلًا ثم حاول مرة أخرى.",
     session_missing: "لم تعد جلسة الحساب متاحة. ابدأ من جديد.",
     unsupported: "إجراء الحساب هذا غير متاح في هذه النسخة.",
@@ -705,13 +721,13 @@ const arabic = {
   forgotPassword: {
     eyebrow: "استعادة الحساب",
     title: "أعد تعيين كلمة المرور.",
-    body: "أدخل البريد المرتبط بحساب ALYR. سنرسل الخطوة التالية من دون الكشف عن وجود حساب مطابق.",
+    body: "أدخل البريد المرتبط بحساب Heldat. سنرسل الخطوة التالية من دون الكشف عن وجود حساب مطابق.",
     email: "البريد الإلكتروني",
     emailPlaceholder: "name@example.com",
     submit: "إرسال تعليمات التعيين",
     sentEyebrow: "تم تسجيل الطلب",
     sentTitle: "إذا وُجد حساب مطابق، فاستخدم أحدث رسالة لإعادة التعيين.",
-    sentBody: "قبل مزوّد الحساب الطلب. لا يكشف ALYR ما إذا كان العنوان يطابق حسابًا أو ما إذا وصلت رسالة.",
+    sentBody: "قبل مزوّد الحساب الطلب. لا يكشف Heldat ما إذا كان العنوان يطابق حسابًا أو ما إذا وصلت رسالة.",
     previewSentEyebrow: "استعادة المعاينة",
     previewSentTitle: "تابع على هذا الجهاز.",
     previewBody:
@@ -727,7 +743,7 @@ const arabic = {
   resetPassword: {
     eyebrow: "تأمين الحساب",
     title: "اختر كلمة مرور جديدة.",
-    body: "استخدم كلمة مرور مخصصة لـ ALYR. سيبقى سجل منزلك الحالي من دون تغيير.",
+    body: "استخدم كلمة مرور مخصصة لـ Heldat. سيبقى سجل منزلك الحالي من دون تغيير.",
     password: "كلمة المرور الجديدة",
     passwordDescription: "10 أحرف على الأقل. يدعم التطبيق برامج إدارة كلمات المرور.",
     passwordPlaceholder: "أنشئ كلمة مرور قوية",
@@ -764,13 +780,13 @@ const arabic = {
     previewNotice:
       "تحتفظ هذه المعاينة الخاصة بالحساب على هذا الجهاز خلال الجلسة. لا يُرسل بريد إلكتروني.",
     pilotNotice:
-      "ALYR متاح حاليًا ضمن وصول مبكر محدود. نتحقق من البريد ورمز الوصول قبل إنشاء الحساب.",
+      "Heldat متاح حاليًا ضمن وصول مبكر محدود. نتحقق من البريد ورمز الوصول قبل إنشاء الحساب.",
     email: "البريد الإلكتروني",
     emailPlaceholder: "name@example.com",
     pilotAccessCode: "رمز الوصول المبكر",
     pilotAccessDescription:
       "استخدم الرمز المرفق بدعوتك.",
-    pilotAccessPlaceholder: "ALYR-XXXX-XXXX-XXXX",
+    pilotAccessPlaceholder: "Heldat-XXXX-XXXX-XXXX",
     password: "كلمة المرور",
     passwordDescription: "10 أحرف على الأقل. يدعم التطبيق برامج إدارة كلمات المرور.",
     passwordPlaceholder: "أنشئ كلمة مرور قوية",
@@ -789,7 +805,7 @@ const arabic = {
     previewBody:
       "استكشف تجربة السجل الخاص من دون إنشاء حساب أو تأكيده. تبقى بيانات المعاينة على هذا الجهاز خلال هذه الجلسة.",
     liveBody:
-      "افتح الرابط الآمن الذي أُرسل إلى بريدك. عند عودتك إلى ALYR، سنتحقق تلقائيًا.",
+      "افتح الرابط الآمن الذي أُرسل إلى بريدك. عند عودتك إلى Heldat، سنتحقق تلقائيًا.",
     previewEyebrow: "معاينة خاصة",
     liveEyebrow: "أمان الحساب",
     previewTitle: "تعرّف على طريقة عمل سجلك الخاص.",
@@ -799,13 +815,13 @@ const arabic = {
     previewNotice:
       "بيانات المعاينة مؤقتة وتُحذف عند انتهاء هذه الجلسة.",
     liveNotice:
-      "لأمانك، استخدم أحدث رابط تأكيد. اترك هذه الشاشة مفتوحة؛ سيتابع ALYR تلقائيًا عند عودتك.",
+      "لأمانك، استخدم أحدث رابط تأكيد. اترك هذه الشاشة مفتوحة؛ سيتابع Heldat تلقائيًا عند عودتك.",
     foregroundChecking:
       "مرحبًا بعودتك. جارٍ التحقق من تأكيد بريدك…",
     notConfirmedYet:
       "لم يتم تأكيد بريدك بعد. استخدم أحدث رابط، ثم عُد إلى هنا أو تحقق مرة أخرى.",
     resendAccepted:
-      "طُلب رابط تأكيد جديد. استخدم أحدث رسالة، ثم عُد إلى ALYR.",
+      "طُلب رابط تأكيد جديد. استخدم أحدث رسالة، ثم عُد إلى Heldat.",
     dismissStatus: "حسنًا"
   },
   callback: {
@@ -817,26 +833,36 @@ const arabic = {
     signIn: "تسجيل الدخول بدلاً من ذلك",
     resend: "إعادة إرسال رسالة التأكيد",
     recover: "استعادة الوصول إلى الحساب",
-    continue: "المتابعة إلى ALYR",
+    continue: "المتابعة إلى Heldat",
     otherOptions: "خيارات أخرى للوصول إلى الحساب",
-    body: "يطلب ALYR جلسة مؤكدة من مزوّد الحساب. ولا يكتمل أي إجراء قبل استلامها.",
+    body: "يطلب Heldat جلسة مؤكدة من مزوّد الحساب. ولا يكتمل أي إجراء قبل استلامها.",
     failedBody: "لم يُرجع مزوّد الحساب جلسة مؤكدة. لم يتغير سجل منزلك.",
     eyebrow: "التحقق من الحساب",
     confirmedTitle: "تم تأكيد البريد الإلكتروني.",
     checkingTitle: "جارٍ التحقق من رابط التأكيد.",
     failedTitle: "يحتاج التأكيد إلى محاولة أخرى.",
+    oauthConfirmedTitle: "تم ربط حساب Google.",
+    oauthCheckingTitle: "جارٍ إكمال تسجيل الدخول باستخدام Google.",
+    oauthFailedTitle: "يحتاج تسجيل الدخول باستخدام Google إلى محاولة أخرى.",
+    oauthReturn: "العودة إلى تسجيل الدخول",
+    oauthBody:
+      "يكمل Heldat تبادل الحساب المحمي. لا تدخل بيانات اعتماد المتصفح إلى التطبيق.",
+    oauthFailedNotice:
+      "عُد إلى تسجيل الدخول وابدأ جلسة Google جديدة. لم يتغير سجلك الخاص.",
+    oauthComplete:
+      "اكتمل تسجيل الدخول باستخدام Google. تابع إلى سجلك الخاص.",
     inviteFailedTitle:
       "تم تأكيد البريد. تحتاج دعوة المنزل إلى محاولة أخرى.",
     checkingLabel: "جارٍ التحقق من التأكيد",
     waiting: "في انتظار جلسة حساب مؤكدة.",
     incompleteLink:
-      "رابط التأكيد غير مكتمل. عُد إلى ALYR واطلب رابطًا جديدًا.",
+      "رابط التأكيد غير مكتمل. عُد إلى Heldat واطلب رابطًا جديدًا.",
     exchangeFailed:
       "لم يُرجع رابط التأكيد هذا جلسة حساب مؤكدة.",
     failedNotice:
       "أعد محاولة هذا الرابط، أو اطلب رسالة تأكيد جديدة، أو اختر مسارًا آخر للوصول إلى الحساب أدناه.",
     inviteFailedBody:
-      "جلسة حسابك المؤكدة جاهزة، لكن ALYR لم يُكمل الانضمام إلى المنزل.",
+      "جلسة حسابك المؤكدة جاهزة، لكن Heldat لم يُكمل الانضمام إلى المنزل.",
     inviteFailedNotice:
       "أعد محاولة دعوة المنزل، أو سجّل الدخول بدلاً من ذلك، أو استخدم خيارات استعادة الحساب أدناه.",
     complete: "تم استلام جلسة مؤكدة. تابع إلى سجلك المنزلي."
@@ -1023,7 +1049,7 @@ const arabic = {
     recordHint: "يضيف هذه القيمة المؤرخة إلى المساحة الخاصة.",
     passport: "جواز الغرض",
     recordTitle: "سجّل قيمة الغرض",
-    intro: "أدخل قيمة تعرفها. يحفظ ALYR كل عملة على حدة ولا يقدّر السعر نيابة عنك.",
+    intro: "أدخل قيمة تعرفها. يحفظ Heldat كل عملة على حدة ولا يقدّر السعر نيابة عنك.",
     valueLabel: "القيمة المسجلة",
     currentEntry: "السجل الحالي",
     asOf: "بتاريخ",
@@ -1085,7 +1111,7 @@ const arabic = {
     privacySupport: "الخصوصية والدعم",
     privacyNotice: "إشعار الخصوصية",
     privacyNoticeDescription:
-      "ما الذي يحفظه ALYR وكيف تُدار السجلات.",
+      "ما الذي يحفظه Heldat وكيف تُدار السجلات.",
     pilotTerms: "شروط الوصول المبكر",
     pilotTermsDescription:
       "الشروط والمسؤوليات وحدود الخدمة.",
@@ -1095,14 +1121,14 @@ const arabic = {
     installedAppRequiredTitle: "يلزم تثبيت التطبيق",
     installedAppRequiredBody:
       "يمكن مشاركة نسخة مقروءة من التطبيق المثبّت. هذه النسخة ليست حزمة استعادة مشفّرة.",
-    shareDialogTitle: "تصدير نسخة ALYR المقروءة",
+    shareDialogTitle: "تصدير نسخة Heldat المقروءة",
     exportFailedTitle: "لم تُصدَّر النسخة المقروءة",
     exportFailedBody:
-      "لم يُنشأ ملف التصدير أو لم تتم مشاركته. لم تتغير سجلات المنزل. أبقِ ALYR مفتوحًا ثم حاول التصدير مرة أخرى.",
+      "لم يُنشأ ملف التصدير أو لم تتم مشاركته. لم تتغير سجلات المنزل. أبقِ Heldat مفتوحًا ثم حاول التصدير مرة أخرى.",
     exportTryAgain: "محاولة التصدير مرة أخرى",
     temporaryCopyCleanupTitle: "لا تزال النسخة المؤقتة على هذا الجهاز",
     temporaryCopyCleanupBody:
-      "تمت مشاركة النسخة المقروءة، لكن ALYR لم يؤكد إزالة ملفها المؤقت. حافظ على خصوصية هذا الجهاز وامسح ذاكرة التخزين المؤقتة لـ ALYR قبل تسليمه لشخص آخر.",
+      "تمت مشاركة النسخة المقروءة، لكن Heldat لم يؤكد إزالة ملفها المؤقت. حافظ على خصوصية هذا الجهاز وامسح ذاكرة التخزين المؤقتة لـ Heldat قبل تسليمه لشخص آخر.",
     replaceDemoTitle: "استبدال هذا النموذج؟",
     replaceDemoBody:
       "سيؤدي ذلك إلى إنشاء منزل خاص جديد على هذا الجهاز. صدّر ما تحتاج إليه أولًا.",
@@ -1123,12 +1149,12 @@ const arabic = {
     previewBypassBody:
       "لا تستدعي Expo Go ونسخة الويب بصمة الوجه أو رمز قفل الجهاز. تُصفّر هذه الجلسة عند انتهائها، لذا استخدم بيانات تجريبية فقط.",
     deviceUnlockBody:
-      "يتحقق هذا الجهاز من هويتك قبل أن يفتح ALYR الخزنة المنزلية المشفّرة. ويبقى رمز قفل الجهاز خيارًا متاحًا.",
+      "يتحقق هذا الجهاز من هويتك قبل أن يفتح Heldat الخزنة المنزلية المشفّرة. ويبقى رمز قفل الجهاز خيارًا متاحًا.",
     protectedBody:
       "سجلك المحلي ومرفقاته محفوظان داخل خزنة التطبيق المحمية.",
     previewBody:
       "تُصفّر هذه المعاينة عند انتهاء الجلسة. استخدم بيانات تجريبية فقط.",
-    lockNow: "قفل ALYR الآن",
+    lockNow: "قفل Heldat الآن",
     language: "اللغة",
     english: "English",
     arabic: "العربية",
@@ -1178,7 +1204,7 @@ const arabic = {
       "أنشئ نسخة مشفّرة محمولة تتحكم بها",
     recentRecoveryKits: "حزم محلية حديثة",
     recentRecoveryKitsDescription:
-      "ملفات مشفّرة ما زالت داخل ALYR على هذا الجهاز. تظهر أسماء الملفات والتواريخ وحالة النسخ فقط؛ وتبقى عبارات المرور والمحتويات مخفية.",
+      "ملفات مشفّرة ما زالت داخل Heldat على هذا الجهاز. تظهر أسماء الملفات والتواريخ وحالة النسخ فقط؛ وتبقى عبارات المرور والمحتويات مخفية.",
     recoveryHistoryUnavailable:
       "تعذّرت قراءة حزم الاستعادة الحديثة من هذا الجهاز.",
     retryRecoveryHistory: "إعادة محاولة تخزين الجهاز",
@@ -1216,10 +1242,10 @@ const arabic = {
       "العودة إلى شاشة الترحيب وإزالة أغراض التجربة وأماكنها وملفاتها من هذا الجهاز. لن تتغير أي حسابات مسجّلة.",
     exitSampleConfirmTitle: "إنهاء هذه التجربة؟",
     exitSampleConfirmBody:
-      "سيزيل ALYR مساحة التجربة وملفاتها المحلية والتغييرات غير المكتملة من هذا الجهاز، ثم يعيدك إلى شاشة الترحيب. لن يسجّل الخروج من أي حساب ولن يحذف أي حساب أو يغيّره.",
+      "سيزيل Heldat مساحة التجربة وملفاتها المحلية والتغييرات غير المكتملة من هذا الجهاز، ثم يعيدك إلى شاشة الترحيب. لن يسجّل الخروج من أي حساب ولن يحذف أي حساب أو يغيّره.",
     exitSampleFailedTitle: "لم تكتمل إعادة ضبط التجربة",
     exitSampleFailedBody:
-      "لم يؤكد ALYR إزالة جميع سجلات التجربة المحلية. لم تتأثر بيانات الحساب. أعد تشغيل ALYR ثم حاول مرة أخرى.",
+      "لم يؤكد Heldat إزالة جميع سجلات التجربة المحلية. لم تتأثر بيانات الحساب. أعد تشغيل Heldat ثم حاول مرة أخرى.",
     advancedDiagnostics: "التشخيصات المتقدمة",
     diagnosticsMeta: "تفاصيل قائمة الانتظار والمزامنة المحلية",
     deviceQueue: "قائمة الجهاز",
@@ -1757,8 +1783,8 @@ export function signedAccountExitPrompt(
     householdName.trim() || (language === "ar" ? "هذا المنزل" : "this household")
   );
   return language === "ar"
-    ? `سيُخرج ALYR الحساب ${account}، ويقفل «${household}» على هذا الجهاز، ثم يعيدك إلى شاشة الوصول إلى الحساب. تبقى السجلات المحلية والتغييرات المعلّقة في خزنة الحساب المحمية. لا يحذف ذلك بيانات المنزل ولا ينقلها إلى حساب آخر.`
-    : `ALYR will sign out ${account}, lock “${household}” on this device, and return to account access. Local records and pending changes remain in this account’s protected vault. This does not delete household data or move it to another account.`;
+    ? `سيُخرج Heldat الحساب ${account}، ويقفل «${household}» على هذا الجهاز، ثم يعيدك إلى شاشة الوصول إلى الحساب. تبقى السجلات المحلية والتغييرات المعلّقة في خزنة الحساب المحمية. لا يحذف ذلك بيانات المنزل ولا ينقلها إلى حساب آخر.`
+    : `Heldat will sign out ${account}, lock “${household}” on this device, and return to account access. Local records and pending changes remain in this account’s protected vault. This does not delete household data or move it to another account.`;
 }
 
 export function portfolioAccessibilityLabel(

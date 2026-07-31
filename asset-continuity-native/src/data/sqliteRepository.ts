@@ -142,7 +142,7 @@ export class SQLiteWorkspaceRepository
       );
       if (!cipher?.cipher_version) {
         throw new Error(
-          "SQLCipher is unavailable; ALYR will not open a plaintext vault."
+          "SQLCipher is unavailable; Heldat will not open a plaintext vault."
         );
       }
       await database.execAsync("PRAGMA foreign_keys = ON;");

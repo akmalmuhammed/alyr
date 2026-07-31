@@ -3,6 +3,7 @@ import { ArrowRight } from "phosphor-react-native";
 import { useRef, useState } from "react";
 import {
   StyleSheet,
+  Text,
   TextInput,
   useWindowDimensions,
   View
@@ -26,13 +27,13 @@ import {
   validateSignIn,
   type FieldErrors
 } from "@/auth/validation";
-import { ErrorBanner } from "@/components/ui";
+import { ErrorBanner, SecondaryButton } from "@/components/ui";
 import {
   localizeAuthFailure,
   localizeFieldErrors,
   useCoreJourneyCopy
 } from "@/i18n/coreJourneyCopy";
-import { spacing } from "@/theme/tokens";
+import { colors, spacing } from "@/theme/tokens";
 
 export default function SignInScreen() {
   const router = useRouter();
@@ -45,7 +46,9 @@ export default function SignInScreen() {
     mode,
     pendingHouseholdInvite,
     resendConfirmation,
-    signIn
+    signIn,
+    beginGoogleSignIn,
+    googleOAuthInProgress
   } = useAuthFlow();
   const { copy, language, rtl } = useCoreJourneyCopy();
   const compact = isCompactAuthViewport(useWindowDimensions());
@@ -84,6 +87,15 @@ export default function SignInScreen() {
         ? "/"
         : AUTH_ROUTES.household
     );
+  };
+
+  const submitGoogle = async () => {
+    const code = await beginGoogleSignIn();
+    if (!code) return;
+    router.replace({
+      pathname: "/(auth)/callback",
+      params: { code }
+    });
   };
 
   const actions = (
@@ -156,6 +168,30 @@ export default function SignInScreen() {
           <AuthNotice tone="attention">
             {copy.signIn.previewNotice}
           </AuthNotice>
+        ) : null}
+        {mode === "supabase" ? (
+          <View
+            style={styles.provider}
+            testID="auth-google-sign-in-entry"
+          >
+            <SecondaryButton
+              accessibilityHint={copy.signIn.googleHint}
+              label={copy.signIn.google}
+              loading={googleOAuthInProgress}
+              onPress={() => void submitGoogle()}
+            />
+            <View
+              accessibilityElementsHidden
+              importantForAccessibility="no-hide-descendants"
+              style={styles.divider}
+            >
+              <View style={styles.dividerRule} />
+              <Text style={styles.dividerLabel}>
+                {copy.signIn.orEmail}
+              </Text>
+              <View style={styles.dividerRule} />
+            </View>
+          </View>
         ) : null}
         <View style={[styles.fields, compact && styles.fieldsCompact]}>
           <AuthField
@@ -248,6 +284,25 @@ const styles = StyleSheet.create({
   },
   errorBlock: {
     gap: spacing.xs
+  },
+  provider: {
+    gap: spacing.md
+  },
+  divider: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: spacing.sm
+  },
+  dividerRule: {
+    flex: 1,
+    height: StyleSheet.hairlineWidth,
+    backgroundColor: colors.border
+  },
+  dividerLabel: {
+    color: colors.textMuted,
+    fontSize: 12,
+    lineHeight: 16,
+    letterSpacing: 1.1
   },
   inlineAction: {
     alignItems: "flex-end",

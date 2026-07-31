@@ -429,7 +429,7 @@ describe("PortfolioDashboard", () => {
     ).toBeTruthy();
     expect(
       screen.getByText(
-        "Add an item or property you want to value, or record a liability. ALYR never estimates an amount for you."
+        "Add an item or property you want to value, or record a liability. Heldat never estimates an amount for you."
       )
     ).toBeTruthy();
     expect(screen.queryByTestId("portfolio-net-position")).toBeNull();

@@ -29,7 +29,7 @@ const copy = {
       "The verified cloud value will replace the conflicting local field on this iPhone. Other local records stay unchanged.",
     reapplyConfirmTitle: "Reapply your local edit?",
     reapplyConfirmBody:
-      "ALYR will send a new versioned operation. The difference remains visible until the cloud acknowledges it.",
+      "Heldat will send a new versioned operation. The difference remains visible until the cloud acknowledges it.",
     cancel: "Cancel",
     confirmCloud: "Use cloud",
     confirmLocal: "Reapply edit",
@@ -68,7 +68,7 @@ const copy = {
       "ستحل قيمة السحابة المؤكدة محل الحقل المحلي المختلف على هذا الآيفون. لن تتغير السجلات المحلية الأخرى.",
     reapplyConfirmTitle: "إعادة تطبيق تعديلك المحلي؟",
     reapplyConfirmBody:
-      "سيرسل ALYR عملية جديدة بإصدار محدّث. سيبقى الاختلاف ظاهرًا حتى تؤكده السحابة.",
+      "سيرسل Heldat عملية جديدة بإصدار محدّث. سيبقى الاختلاف ظاهرًا حتى تؤكده السحابة.",
     cancel: "إلغاء",
     confirmCloud: "استخدام السحابة",
     confirmLocal: "إعادة التطبيق",

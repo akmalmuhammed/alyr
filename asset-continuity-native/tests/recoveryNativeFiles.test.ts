@@ -172,7 +172,7 @@ describe("local Recovery Kit history", () => {
     const storage = new ExpoRecoveryKitStorage();
     const first = await storage.writeEncryptedKitAtomically({
       bytes: Uint8Array.from([1, 2, 3]),
-      fileName: "ALYR-Recovery-2026-07-28.alyrkit",
+      fileName: "Heldat-Recovery-2026-07-28.alyrkit",
       mimeType: RECOVERY_KIT_MIME_TYPE
     });
 
@@ -208,6 +208,19 @@ describe("local Recovery Kit history", () => {
         externalBackupConfirmedAt: null
       }
     ]);
+  });
+
+  it("continues to accept legacy ALYR Recovery Kit file names", async () => {
+    const storage = new ExpoRecoveryKitStorage();
+    await expect(
+      storage.writeEncryptedKitAtomically({
+        bytes: Uint8Array.from([1, 2, 3]),
+        fileName: "ALYR-Recovery-2026-07-28.alyrkit",
+        mimeType: RECOVERY_KIT_MIME_TYPE
+      })
+    ).resolves.toMatchObject({
+      fileName: "ALYR-Recovery-2026-07-28.alyrkit"
+    });
   });
 
   it("does not confirm an arbitrary external reference", async () => {

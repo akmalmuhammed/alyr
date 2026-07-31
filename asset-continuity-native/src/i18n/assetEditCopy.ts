@@ -103,7 +103,7 @@ export const ASSET_EDIT_COPY: Readonly<
       evidence: () =>
         "A receipt, appraisal, certificate, or useful document is enough.",
       location: () =>
-        "Record only what you know. ALYR keeps an unknown location visible.",
+        "Record only what you know. Heldat keeps an unknown location visible.",
       identity: () =>
         "Use a specific name and the closest category. Both remain editable."
     },
@@ -217,7 +217,7 @@ export const ASSET_EDIT_COPY: Readonly<
       evidence: () =>
         "يكفي إرفاق إيصال أو تقييم أو شهادة أو مستند مفيد.",
       location: () =>
-        "سجّل ما تعرفه فقط. يبقي ALYR الموقع غير المعروف ظاهرًا.",
+        "سجّل ما تعرفه فقط. يبقي Heldat الموقع غير المعروف ظاهرًا.",
       identity: () =>
         "استخدم اسمًا محددًا وأقرب فئة مناسبة. ويمكن تعديلهما لاحقًا."
     },

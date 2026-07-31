@@ -40,6 +40,37 @@ const dark = {
 
 export const themes = { light, dark } as const;
 
+/**
+ * First-use motion palette for the selected Worldline direction.
+ *
+ * These values are deliberately isolated from the product-shell themes: the
+ * signed-in application remains Carbon + Volt, while onboarding may use one
+ * controlled violet-to-cyan signal to explain how item, place and proof join.
+ */
+export const worldline = {
+  canvas: "#070912",
+  canvasRaised: "#0D1220",
+  canvasDeep: "#04060C",
+  surface: "rgba(255, 255, 255, 0.055)",
+  surfaceStrong: "rgba(255, 255, 255, 0.09)",
+  border: "rgba(255, 255, 255, 0.14)",
+  borderQuiet: "rgba(255, 255, 255, 0.08)",
+  text: "#F7F8FC",
+  textMuted: "rgba(247, 248, 252, 0.68)",
+  textFaint: "rgba(247, 248, 252, 0.44)",
+  violet: "#8B5CF6",
+  blue: "#2F6BFF",
+  cyan: "#36D7F2",
+  cyanQuiet: "rgba(54, 215, 242, 0.14)",
+  violetQuiet: "rgba(139, 92, 246, 0.18)",
+  endpoint: "#B7F34A",
+  endpointQuiet: "rgba(183, 243, 74, 0.18)",
+  scrim: "rgba(4, 6, 12, 0.72)",
+  shadow: "#000000",
+  gradient: ["#8B5CF6", "#2F6BFF", "#36D7F2"] as const,
+  backgroundGradient: ["#12102A", "#071020", "#04060C"] as const
+} as const;
+
 export const colors = {
   ...light,
   carbon: nativeTokens.palette.carbon,

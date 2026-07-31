@@ -276,52 +276,6 @@ select ok(
 
 select lives_ok(
   $$
-    select public.create_blob_upload_intent(
-      '80000000-0000-4000-8000-000000000001',
-      '20000000-0000-4000-8000-000000000001',
-      '81000000-0000-4000-8000-000000000001',
-      '90000000-0000-4000-8000-000000000001',
-      '20000000-0000-4000-8000-000000000001/80000000-0000-4000-8000-000000000001/90000000-0000-4000-8000-000000000001',
-      'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa',
-      1,
-      'text/plain'
-    )
-  $$,
-  'owner can reserve a quota-counted upload intent'
-);
-
-set local role service_role;
-
-select lives_ok(
-  $$
-    select public.mark_blob_stored(
-      '80000000-0000-4000-8000-000000000001',
-      'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa',
-      1,
-      '10000000-0000-4000-8000-000000000001'
-    )
-  $$,
-  'trusted verification can mark a matching blob stored'
-);
-
-select lives_ok(
-  $$
-    select public.mark_blob_stored(
-      '80000000-0000-4000-8000-000000000001',
-      'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa',
-      1,
-      '10000000-0000-4000-8000-000000000001'
-    )
-  $$,
-  'upload completion is idempotent after a lost acknowledgement'
-);
-
-set local role authenticated;
-set local request.jwt.claim.role = 'authenticated';
-set local request.jwt.claim.sub = '10000000-0000-4000-8000-000000000001';
-
-select lives_ok(
-  $$
     select public.apply_sync_operation(
       jsonb_build_object(
         'operationVersion', 1,
@@ -366,6 +320,52 @@ select results_eq(
   array[1::bigint],
   'Place document has exactly one Place parent and no Asset parent'
 );
+
+select lives_ok(
+  $$
+    select public.create_blob_upload_intent(
+      '80000000-0000-4000-8000-000000000001',
+      '20000000-0000-4000-8000-000000000001',
+      '81000000-0000-4000-8000-000000000001',
+      '90000000-0000-4000-8000-000000000001',
+      '20000000-0000-4000-8000-000000000001/80000000-0000-4000-8000-000000000001/90000000-0000-4000-8000-000000000001',
+      'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa',
+      1,
+      'text/plain'
+    )
+  $$,
+  'owner can reserve an upload only after its Place Document parent exists'
+);
+
+set local role service_role;
+
+select lives_ok(
+  $$
+    select public.mark_blob_stored(
+      '80000000-0000-4000-8000-000000000001',
+      'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa',
+      1,
+      '10000000-0000-4000-8000-000000000001'
+    )
+  $$,
+  'trusted verification can mark a matching blob stored'
+);
+
+select lives_ok(
+  $$
+    select public.mark_blob_stored(
+      '80000000-0000-4000-8000-000000000001',
+      'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa',
+      1,
+      '10000000-0000-4000-8000-000000000001'
+    )
+  $$,
+  'upload completion is idempotent after a lost acknowledgement'
+);
+
+set local role authenticated;
+set local request.jwt.claim.role = 'authenticated';
+set local request.jwt.claim.sub = '10000000-0000-4000-8000-000000000001';
 
 select lives_ok(
   $$

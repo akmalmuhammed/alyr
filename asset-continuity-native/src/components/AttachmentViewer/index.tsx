@@ -150,7 +150,7 @@ export function attachmentReadErrorMessage(
       case "PROTECTED_FILE_MISSING":
         return `${label} لم يعد متاحًا على هذا الجهاز.`;
       case "PROTECTED_ATTACHMENT_UNAVAILABLE":
-        return `يُفتح ${label} في نسخة ALYR موقّعة.`;
+        return `يُفتح ${label} في نسخة Heldat موقّعة.`;
       default:
         return `تعذّر فتح ${label}.`;
     }
@@ -173,7 +173,7 @@ export function attachmentReadErrorMessage(
     case "PROTECTED_FILE_MISSING":
       return `${label} is no longer available on this device.`;
     case "PROTECTED_ATTACHMENT_UNAVAILABLE":
-      return `${label} opens in an ALYR signed build.`;
+      return `${label} opens in an Heldat signed build.`;
     default:
       return `${label} could not be opened.`;
   }

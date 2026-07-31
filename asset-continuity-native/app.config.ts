@@ -1,5 +1,31 @@
 import type { ConfigContext, ExpoConfig } from "expo/config";
 
+/**
+ * EAS environment contract:
+ * - name: GOOGLE_MAPS_ANDROID_API_KEY
+ * - environments: preview and production
+ * - visibility: Sensitive
+ * The value is embedded in the APK/AAB, so Google Cloud Android-app
+ * restrictions for app.heldat.mobile and each signing certificate are the
+ * security boundary; EAS visibility only prevents accidental log/UI exposure.
+ */
+const GOOGLE_MAPS_ANDROID_API_KEY_ENV =
+  "GOOGLE_MAPS_ANDROID_API_KEY";
+const HELDAT_PUBLIC_APPLICATION_ID = "app.heldat.mobile";
+const HELDAT_PUBLIC_SCHEME = "heldat";
+const DISTRIBUTABLE_ANDROID_PROFILES = new Set([
+  "preview",
+  "production"
+]);
+const GOOGLE_MAPS_ANDROID_API_KEY_PATTERN =
+  /^AIza[0-9A-Za-z_-]{35}$/u;
+const PUBLIC_APP_LINK_HOST = "heldat.app";
+const PUBLIC_APP_LINK_PATHS = [
+  "/join",
+  "/callback",
+  "/reset-password"
+] as const;
+
 function allowsLocalDevelopmentNetworking(): boolean {
   const profile = process.env.EAS_BUILD_PROFILE;
   if (profile !== undefined && profile.length > 0) {
@@ -11,19 +37,71 @@ function allowsLocalDevelopmentNetworking(): boolean {
   return process.env.NODE_ENV === "development";
 }
 
+function isDistributableAndroidBuild(): boolean {
+  const platform = process.env.EAS_BUILD_PLATFORM;
+  if (
+    platform !== undefined &&
+    platform.length > 0 &&
+    platform !== "android"
+  ) {
+    return false;
+  }
+
+  const profile = process.env.EAS_BUILD_PROFILE;
+  if (profile !== undefined && profile.length > 0) {
+    return DISTRIBUTABLE_ANDROID_PROFILES.has(profile);
+  }
+  return process.env.NODE_ENV === "production";
+}
+
+function resolveGoogleMapsAndroidApiKey(): string | undefined {
+  const apiKey =
+    process.env[GOOGLE_MAPS_ANDROID_API_KEY_ENV]?.trim();
+
+  if (!apiKey) {
+    if (isDistributableAndroidBuild()) {
+      throw new Error(
+          `[Heldat config] ${GOOGLE_MAPS_ANDROID_API_KEY_ENV} is required for preview and production Android builds. ` +
+          "Create it in the matching EAS environment and restrict the Google Maps key to Android package " +
+          `${HELDAT_PUBLIC_APPLICATION_ID} plus the signing certificate fingerprint.`
+      );
+    }
+    return undefined;
+  }
+
+  if (!GOOGLE_MAPS_ANDROID_API_KEY_PATTERN.test(apiKey)) {
+    throw new Error(
+      `[Heldat config] ${GOOGLE_MAPS_ANDROID_API_KEY_ENV} must be a complete Google Android API key ` +
+        "(AIza followed by 35 URL-safe characters). Placeholder or malformed values are rejected."
+    );
+  }
+
+  return apiKey;
+}
+
+function googleMapsAndroidConfig(): {
+  config?: { googleMaps: { apiKey: string } };
+} {
+  const apiKey = resolveGoogleMapsAndroidApiKey();
+  return apiKey
+    ? { config: { googleMaps: { apiKey } } }
+    : {};
+}
+
 export default ({ config }: ConfigContext): ExpoConfig => ({
   ...config,
-  name: "ALYR",
+  name: "Heldat",
   slug: "alyr-asset-continuity",
   owner: "alyr-app",
   version: "0.1.0",
   orientation: "portrait",
-  scheme: "alyr",
+  scheme: HELDAT_PUBLIC_SCHEME,
   userInterfaceStyle: "light",
   icon: "./assets/alyr/app-and-favicon/01_App_Icon/PNG/app-icon-1024.png",
   ios: {
-    bundleIdentifier: "com.alyr.continuity",
+    bundleIdentifier: HELDAT_PUBLIC_APPLICATION_ID,
     supportsTablet: false,
+    associatedDomains: [`applinks:${PUBLIC_APP_LINK_HOST}`],
     icon: "./assets/alyr/app-and-favicon/01_App_Icon/PNG/app-icon-ios-1024.png",
     config: {
       usesNonExemptEncryption: false
@@ -158,16 +236,29 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
         NSAllowsLocalNetworking: allowsLocalDevelopmentNetworking()
       },
       NSCameraUsageDescription:
-        "ALYR uses the camera only when you choose to photograph an asset or its supporting material.",
+        "Heldat uses the camera only when you choose to photograph an asset or its supporting material.",
       NSFaceIDUsageDescription:
-        "ALYR uses Face ID only to unlock your private household record on this device.",
+        "Heldat uses Face ID only to unlock your private household record on this device.",
       NSLocationWhenInUseUsageDescription:
-        "ALYR uses your location only when you ask to place a property accurately."
+        "Heldat uses your location only when you ask to place a property accurately."
     }
   },
   android: {
-    package: "com.alyr.continuity",
+    package: HELDAT_PUBLIC_APPLICATION_ID,
     blockedPermissions: ["android.permission.RECORD_AUDIO"],
+    intentFilters: [
+      {
+        action: "VIEW",
+        autoVerify: true,
+        category: ["BROWSABLE", "DEFAULT"],
+        data: PUBLIC_APP_LINK_PATHS.map((pathPrefix) => ({
+          scheme: "https",
+          host: PUBLIC_APP_LINK_HOST,
+          pathPrefix
+        }))
+      }
+    ],
+    ...googleMapsAndroidConfig(),
     adaptiveIcon: {
       foregroundImage:
         "./assets/alyr/app-and-favicon/01_App_Icon/PNG/app-icon-1024.png",
@@ -189,6 +280,13 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
   plugins: [
     "expo-router",
     "expo-background-task",
+    "expo-sharing",
+    [
+      "expo-web-browser",
+      {
+        experimentalLauncherActivity: false
+      }
+    ],
     "./plugins/with-local-notifications-only",
     [
       "expo-splash-screen",
@@ -217,7 +315,7 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
       "expo-camera",
       {
         cameraPermission:
-          "Allow ALYR to photograph an asset or supporting material.",
+          "Allow Heldat to photograph an asset or supporting material.",
         microphonePermission: false,
         recordAudioAndroid: false,
         barcodeScannerEnabled: false
@@ -227,16 +325,16 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
       "expo-image-picker",
       {
         photosPermission:
-          "Allow ALYR to attach only the photos you choose.",
+          "Allow Heldat to attach only the photos you choose.",
         cameraPermission:
-          "Allow ALYR to photograph an asset or supporting material."
+          "Allow Heldat to photograph an asset or supporting material."
       }
     ],
     [
       "expo-location",
       {
         locationWhenInUsePermission:
-          "Allow ALYR to place a property when you request accurate location.",
+          "Allow Heldat to place a property when you request accurate location.",
         locationAlwaysAndWhenInUsePermission: false,
         locationAlwaysPermission: false,
         motionUsagePermission: false,
@@ -250,13 +348,20 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
       "expo-local-authentication",
       {
         faceIDPermission:
-          "Allow ALYR to use Face ID to unlock your private household record on this device."
+          "Allow Heldat to use Face ID to unlock your private household record on this device."
       }
     ],
     [
       "./plugins/with-production-network-privacy",
       {
         allowLocalNetworking: allowsLocalDevelopmentNetworking()
+      }
+    ],
+    [
+      "./plugins/with-production-android-release",
+      {
+        enabled: !allowsLocalDevelopmentNetworking(),
+        requireGoogleMapsApiKey: isDistributableAndroidBuild()
       }
     ]
   ],

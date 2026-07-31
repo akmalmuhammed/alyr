@@ -248,6 +248,29 @@ function categoryLabel(categoryId: string): string {
   );
 }
 
+function clearLegacyAssetField(
+  asset: NativeAsset,
+  field: "category" | "primary-photo"
+): NativeAsset {
+  const remaining = (asset.localOnlyFields ?? []).filter(
+    (candidate) => candidate !== field
+  );
+  if (remaining.length === (asset.localOnlyFields?.length ?? 0)) {
+    return asset;
+  }
+  const {
+    localOnlyFields: legacyLocalOnlyFields,
+    ...withoutLegacyFields
+  } = asset;
+  void legacyLocalOnlyFields;
+  return {
+    ...withoutLegacyFields,
+    ...(remaining.length > 0
+      ? { localOnlyFields: remaining }
+      : {})
+  };
+}
+
 function placePinFrom(
   payload: Readonly<Record<string, JsonValue>>
 ): Pick<
@@ -829,6 +852,52 @@ function applyAssetChange(
       version: Math.max(current.version, change.version),
       updatedAt: change.changedAt
     };
+  } else if (body.command === "asset.category.set") {
+    const categoryId = requiredString(
+      body.payload,
+      "categoryId",
+      180
+    );
+    asset = {
+      ...clearLegacyAssetField(current, "category"),
+      categoryId,
+      categoryLabel: categoryLabel(categoryId),
+      version: Math.max(current.version, change.version),
+      updatedAt: change.changedAt
+    };
+  } else if (body.command === "asset.primary-photo.set") {
+    const evidenceId = requiredString(body.payload, "evidenceId");
+    const selectedEvidence = workspace.evidence.find(
+      (evidence) =>
+        evidence.id === evidenceId &&
+        evidence.assetId === current.id &&
+        evidence.householdId === current.householdId &&
+        evidence.kind === "media"
+    );
+    if (!selectedEvidence) {
+      throw new SyncApplyError(
+        "The server primary photo references unavailable media Evidence."
+      );
+    }
+    const preserveLocalCopy =
+      localOperationIds.has(body.operationId) &&
+      current.photoEvidenceId === evidenceId;
+    asset = {
+      ...clearLegacyAssetField(current, "primary-photo"),
+      photoEvidenceId: evidenceId,
+      evidenceIds: current.evidenceIds.filter(
+        (candidate) => candidate !== evidenceId
+      ),
+      ...(preserveLocalCopy
+        ? {}
+        : {
+            photoUri: null,
+            photoProtectedUri: null,
+            photoChecksumSha256: null
+          }),
+      version: Math.max(current.version, change.version),
+      updatedAt: change.changedAt
+    };
   } else if (
     body.command === "asset.archive" ||
     body.command === "asset.restore"
@@ -1002,9 +1071,13 @@ function applyEvidenceChange(
     };
     const assets = [...workspace.assets];
     const asset = assets[assetIndex]!;
+    const shouldInferLegacyPrimaryPhoto =
+      kind === "media" &&
+      relation === "condition" &&
+      asset.photoEvidenceId === null;
     assets[assetIndex] = {
       ...asset,
-      ...(kind === "media" && relation === "condition"
+      ...(shouldInferLegacyPrimaryPhoto
         ? { photoEvidenceId: evidence.id }
         : { evidenceIds: [...asset.evidenceIds, evidence.id] })
     };
@@ -1930,6 +2003,49 @@ function prerequisitesSatisfied(
   );
 }
 
+function operationOrderingKey(operation: SyncOperation): string {
+  const command = operation.command;
+  if (
+    command.type === "evidence.version.add" &&
+    typeof command.payload.evidenceId === "string"
+  ) {
+    return `evidence:${command.payload.evidenceId}`;
+  }
+  if (
+    command.type === "place-document.version.add" &&
+    typeof command.payload.placeDocumentId === "string"
+  ) {
+    return `place-document:${command.payload.placeDocumentId}`;
+  }
+  return `${command.type.split(".", 1)[0]}:${command.aggregateId ?? operation.operationId}`;
+}
+
+/**
+ * Preserves per-record command order when an earlier operation is waiting on
+ * verified bytes. Independent records may continue syncing, but a later
+ * Asset command can never overtake its pending primary-photo selection and
+ * manufacture a version conflict.
+ */
+export function selectPushableOperations(
+  operations: readonly SyncOperation[],
+  storedBlobObjectIds: ReadonlySet<string>,
+  limit = 100
+): readonly SyncOperation[] {
+  const blockedOrderingKeys = new Set<string>();
+  const pushable: SyncOperation[] = [];
+  for (const operation of operations) {
+    if (pushable.length >= limit) break;
+    const orderingKey = operationOrderingKey(operation);
+    if (blockedOrderingKeys.has(orderingKey)) continue;
+    if (!prerequisitesSatisfied(operation, storedBlobObjectIds)) {
+      blockedOrderingKeys.add(orderingKey);
+      continue;
+    }
+    pushable.push(operation);
+  }
+  return pushable;
+}
+
 function validateBootstrapDescriptor(
   descriptor: WorkspaceBootstrapDescriptor,
   request: Pick<ForegroundSyncRequest, "householdId" | "accountId">
@@ -2356,7 +2472,14 @@ export async function reconcileForeground(
       )
   );
   let uploadError: ContractError | null = null;
-  let storedBlobObjectIds: ReadonlySet<string> = new Set();
+  let storedBlobObjectIds: ReadonlySet<string> = new Set([
+    ...initialWorkspace.evidence
+      .filter((evidence) => evidence.storageState === "synced")
+      .map((evidence) => evidence.blobObjectId),
+    ...(initialWorkspace.placeDocuments ?? [])
+      .filter((document) => document.storageState === "synced")
+      .map((document) => document.blobObjectId)
+  ]);
   if (hasEvidenceUploadPrerequisites) {
     if (request.attachmentStore && request.evidenceUploadPort) {
       const uploadResult = await reconcileEvidenceUploads({
@@ -2383,11 +2506,11 @@ export async function reconcileForeground(
       );
     }
   }
-  const pushable = allPending
-    .filter((operation) =>
-      prerequisitesSatisfied(operation, storedBlobObjectIds)
-    )
-    .slice(0, 100);
+  const pushable = selectPushableOperations(
+    allPending,
+    storedBlobObjectIds,
+    100
+  );
   let acknowledgedOperationIds: readonly string[] = [];
   let incomingConflicts: readonly SyncConflict[] = [];
   if (pushable.length > 0) {

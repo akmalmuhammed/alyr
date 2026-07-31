@@ -27,7 +27,7 @@ const english = {
       "This device still has local changes waiting. Export anything you need before continuing.",
     password: "Current password",
     passwordDescription:
-      "ALYR verifies it on the server and does not store it.",
+      "Heldat verifies it on the server and does not store it.",
     confirmationEmail: "Type the signed-in email",
     confirmationDescription:
       "This must exactly match the account shown above.",
@@ -37,9 +37,9 @@ const english = {
     deleting: "Deleting account…",
     finishLocalCleanup: "Finish clearing this device",
     localCleanupFailure:
-      "The cloud account was deleted, but this device did not finish clearing its protected vault. Keep ALYR open and try the local cleanup again.",
+      "The cloud account was deleted, but this device did not finish clearing its protected vault. Keep Heldat open and try the local cleanup again.",
     ownerConsequence: (householdName: string) =>
-      `If this account is the only active member of “${householdName}”, ALYR permanently deletes that household, every Place, item, proof file and invitation. If another person still has access, deletion stops until ownership is transferred.`,
+      `If this account is the only active member of “${householdName}”, Heldat permanently deletes that household, every Place, item, proof file and invitation. If another person still has access, deletion stops until ownership is transferred.`,
     memberConsequence: (householdName: string) =>
       `This account leaves “${householdName}”. The owner keeps the household, its Places, items and proof. Historical records remain without this account as their attributed actor.`,
     multiHousehold:
@@ -75,7 +75,7 @@ const english = {
     action: "Reset test session",
     resetting: "Resetting test session…",
     error:
-      "The test workspace did not finish clearing. Keep ALYR open and try again."
+      "The test workspace did not finish clearing. Keep Heldat open and try again."
   },
   common: {
     cancel: "Cancel",
@@ -103,7 +103,7 @@ const arabic = {
       "لا تزال على هذا الجهاز تغييرات محلية قيد الانتظار. صدّر ما تحتاج إليه قبل المتابعة.",
     password: "كلمة المرور الحالية",
     passwordDescription:
-      "يتحقق منها ALYR على الخادم ولا يحتفظ بها.",
+      "يتحقق منها Heldat على الخادم ولا يحتفظ بها.",
     confirmationEmail: "اكتب بريد الحساب المسجّل",
     confirmationDescription:
       "يجب أن يطابق تمامًا الحساب الظاهر أعلاه.",
@@ -113,9 +113,9 @@ const arabic = {
     deleting: "جارٍ حذف الحساب…",
     finishLocalCleanup: "إكمال مسح هذا الجهاز",
     localCleanupFailure:
-      "حُذف الحساب السحابي، لكن هذا الجهاز لم يُكمل مسح خزنته المحمية. أبقِ ALYR مفتوحًا وأعد محاولة المسح المحلي.",
+      "حُذف الحساب السحابي، لكن هذا الجهاز لم يُكمل مسح خزنته المحمية. أبقِ Heldat مفتوحًا وأعد محاولة المسح المحلي.",
     ownerConsequence: (householdName: string) =>
-      `إذا كان هذا الحساب العضو النشط الوحيد في «${householdName}»، يحذف ALYR المنزل وكل الأماكن والأغراض وملفات الإثبات والدعوات نهائيًا. إذا بقي شخص آخر لديه صلاحية، يتوقف الحذف إلى أن تُنقل الملكية.`,
+      `إذا كان هذا الحساب العضو النشط الوحيد في «${householdName}»، يحذف Heldat المنزل وكل الأماكن والأغراض وملفات الإثبات والدعوات نهائيًا. إذا بقي شخص آخر لديه صلاحية، يتوقف الحذف إلى أن تُنقل الملكية.`,
     memberConsequence: (householdName: string) =>
       `يغادر هذا الحساب «${householdName}». يحتفظ المالك بالمنزل وأماكنه وأغراضه وإثباتاته، وتبقى السجلات التاريخية من دون نسبة صاحب هذا الحساب إليها.`,
     multiHousehold:
@@ -151,7 +151,7 @@ const arabic = {
     action: "إعادة ضبط جلسة الاختبار",
     resetting: "جارٍ إعادة ضبط جلسة الاختبار…",
     error:
-      "لم يكتمل مسح مساحة الاختبار. أبقِ ALYR مفتوحًا وأعد المحاولة."
+      "لم يكتمل مسح مساحة الاختبار. أبقِ Heldat مفتوحًا وأعد المحاولة."
   },
   common: {
     cancel: "إلغاء",

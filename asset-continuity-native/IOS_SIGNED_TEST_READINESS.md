@@ -1,22 +1,28 @@
-# ALYR signed iPhone test readiness
+# Heldat signed iPhone test readiness
 
-**Last local packaging review:** 2026-07-28
+**Last public-identity review:** 2026-07-31
 **Expo project:** `@alyr-app/alyr-asset-continuity`
 **Expo project ID:** `85cab1f2-111f-4e20-abd5-8dff0df2fabb`
-**iOS bundle identifier:** `com.alyr.continuity`
+**iOS bundle identifier:** `app.heldat.mobile`
 
-This document separates the free Expo Go walkthrough from a signed ALYR
+This document separates the free Expo Go walkthrough from a signed Heldat
 installation and from TestFlight. No physical-device pass, signed iOS build, or
 store submission is claimed.
+
+The public identifier migrated before store enrollment from the legacy
+`com.alyr.continuity` / `alyr://` pair to `app.heldat.mobile` / `heldat://`.
+Previously recorded simulator and Android artifacts retain the legacy identity
+and are historical evidence only. A fresh build is required for the current
+public identity.
 
 ## Current gate matrix
 
 | Path | Status | Cost/account gate | Evidence produced |
 |---|---|---|---|
-| App Store Expo Go companion | **READY TO SCAN; DEVICE WALKTHROUGH OPEN** | No Apple Developer membership or ALYR App Store listing | Session-only product, design and permission-flow walkthrough |
-| EAS `development-simulator` build | **FINISHED / VERIFIED / INSPECTED** | No Apple signing credentials; macOS is required to run iOS Simulator | Current-source cloud-built `ALYR.app`, exact metadata/privacy manifest, archive hashes and decoded build logs |
+| App Store Expo Go companion | **READY TO SCAN; DEVICE WALKTHROUGH OPEN** | No Apple Developer membership or Heldat App Store listing | Session-only product, design and permission-flow walkthrough |
+| EAS `development-simulator` build | **LEGACY IDENTITY VERIFIED; REBUILD REQUIRED** | No Apple signing credentials; macOS is required to run iOS Simulator | Historical cloud-built artifact, exact metadata/privacy manifest, archive hashes and decoded build logs |
 | Signed EAS development build | **CONFIG READY; EXTERNAL GATES OPEN** | Current Edge deployment, paid Apple membership and test-iPhone UDID | Native modules, SQLCipher, SecureStore, Face ID and Metro development |
-| Signed EAS preview build | **CONFIG READY; EXTERNAL GATES OPEN** | Current Edge deployment, paid membership and test-iPhone UDID | Standalone ad hoc ALYR build without Metro |
+| Signed EAS preview build | **CONFIG READY; EXTERNAL GATES OPEN** | Current Edge deployment, paid membership and test-iPhone UDID | Standalone ad hoc Heldat build without Metro |
 | TestFlight production build | **CONFIG READY; EXTERNAL GATES OPEN** | Current Edge deployment, paid membership, App Store Connect record and distribution credentials | Store-signed installation; internal TestFlight does not require the device UDID |
 
 The separate `asset-continuity-ios-preview` Expo Go companion remains on SDK 54
@@ -88,9 +94,9 @@ remain open gates.
   `development`, `preview`, or `production`. The simulator profile inherits
   `development`. This prevents distribution heuristics from selecting a
   different public Supabase configuration.
-- The iOS bundle ID is fixed at `com.alyr.continuity`.
-- The `alyr` custom URL scheme matches the implemented callback routes:
-  `alyr://callback` and `alyr://reset-password`.
+- The iOS bundle ID is fixed at `app.heldat.mobile`.
+- The `heldat` custom URL scheme matches the implemented callback routes:
+  `heldat://callback` and `heldat://reset-password`.
 - The iOS icon is a 1024 × 1024, opaque, full-bleed RGB PNG. iOS applies the
   platform mask; the source does not contain a baked rounded mask.
 - Splash artwork remains a separate 512px asset on the ALYR light background.
@@ -172,7 +178,7 @@ Simulator artifact below has now been independently inspected; a
 physical-device signed build and physical-device run remain required before
 signed-device promotion.
 
-### EAS iOS Simulator development artifact
+### Historical EAS iOS Simulator development artifact (legacy identity)
 
 EAS build
 [`71351749-9f72-42ba-86d2-e2b4156827f0`](https://expo.dev/accounts/alyr-app/projects/alyr-asset-continuity/builds/71351749-9f72-42ba-86d2-e2b4156827f0)
@@ -198,7 +204,7 @@ documentation and audit artifacts.
   rooted only at `ALYR.app`, with no unsafe path, symlink, or hard link.
 - `Info.plist` is **2,518 bytes**, SHA-256
   `516F6071AA7A2D31DEFFF386A5EBDE24D471B99AC725129BD8F605354687B346`.
-  It confirms bundle `com.alyr.continuity`, version/build `0.1.0` / `1`,
+  It confirms the former bundle `com.alyr.continuity`, version/build `0.1.0` / `1`,
   `iPhoneSimulator`, `UIDeviceFamily = [1]`, minimum iOS `16.4`, the reviewed
   purpose strings, `NSAllowsArbitraryLoads = false`, development-only local
   networking/Bonjour discovery, `ITSAppUsesNonExemptEncryption = false`,
@@ -296,13 +302,11 @@ Two local P1s were corrected after build `b9bb7206`:
    server receipt. An unexpected pre-receipt exception now remains retryable
    and cannot switch the UI to device-cleanup-only mode.
 
-One store-submission P1 remains intentionally explicit: no verified public
-operator contact, support URL, or privacy-policy URL exists in repository
-configuration. The in-app pilot documents remain reachable before
-authentication, but their invitation-only contact wording is not public-store
-metadata. Supply and verify `SUPPORT_URL`, `PRIVACY_POLICY_URL`, and
-`OPERATOR_CONTACT` before creating a production submission. Do not substitute
-placeholder or unrelated domains.
+The public support and privacy-policy URLs are now verified at
+`https://heldat.app/support/` and `https://heldat.app/privacy/`; the native
+support surface publishes `support@heldat.app`, `privacy@heldat.app`, and
+`security@heldat.app`. The operator legal identity and App Review contact
+name/email/phone remain submission inputs.
 
 ## Encryption and export-compliance setting
 
@@ -389,7 +393,7 @@ yet been observed or claimed by this repository.
 ### Signed development or ad hoc preview
 
 1. Activate the paid Apple Developer Program membership.
-2. Register `com.alyr.continuity` in that Apple team.
+2. Register `app.heldat.mobile` in that Apple team.
 3. Create development/distribution credentials and an ad hoc profile.
 4. Register the test iPhone UDID in that profile.
 5. Deploy and verify the current Supabase migrations and Edge Function.
@@ -400,9 +404,10 @@ yet been observed or claimed by this repository.
 ### TestFlight
 
 1. Complete the paid membership and App Store Connect agreements.
-2. Create the ALYR app record for `com.alyr.continuity`.
+2. Create the Heldat app record for `app.heldat.mobile`.
 3. Complete App Privacy, export-compliance, age-rating and beta metadata,
-   including verified operator contact, support URL and privacy-policy URL.
+   including the operator/App Review contact; use the verified Heldat support
+   and privacy-policy URLs.
 4. Run `eas build --platform ios --profile production`, submit the build, add
    the account as an internal tester and install from TestFlight.
 5. Run signed-build parity checks. External testers additionally require
@@ -410,19 +415,24 @@ yet been observed or claimed by this repository.
 
 ### External-beta and public-link hardening
 
-The personal/internal pilot currently uses the installed-app-only custom scheme
-for confirmation, password reset and household invitations:
-`alyr://callback`, `alyr://reset-password`, and `alyr://join?...`.
-Before invitations or account links are sent to external testers or public
-users, provision an owned HTTPS domain and complete all three linked changes:
+The PKCE account flow retains the installed-app custom scheme for confirmation,
+Google OAuth and password reset: `heldat://callback` and
+`heldat://reset-password`. The native config also declares verified HTTPS links
+for `https://heldat.app/join`, `/callback`, and `/reset-password`, plus the iOS
+`applinks:heldat.app` entitlement.
 
-1. Host a valid Apple App Site Association file for the ALYR application
-   identifier and link paths.
-2. Add the matching `applinks:` domain to `ios.associatedDomains`, then create a
-   fresh signed binary and verify both installed and not-installed behavior.
-3. Add the HTTPS callback/reset URLs to Supabase's redirect allow-list and make
-   invitation sharing prefer the HTTPS join URL, with the custom scheme kept as
-   an installed-app fallback.
+Before those HTTPS links are relied on for external distribution:
+
+1. Publish a valid Apple App Site Association file using the final Apple Team
+   ID. The endpoint is currently intentionally absent until that identity
+   exists.
+2. Publish Android `assetlinks.json` with the Play App Signing SHA-256
+   certificate. The EAS internal-build certificate alone is not sufficient for
+   Play installs.
+3. Create fresh signed binaries and verify installed and not-installed link
+   behavior, then add the HTTPS callback/reset URLs to Supabase's redirect
+   allow-list before switching outbound account links from the PKCE custom
+   scheme.
 
 This gate does not block the owner's first ad hoc iPhone test. It is a release
 reliability and scheme-hijack boundary for external distribution.

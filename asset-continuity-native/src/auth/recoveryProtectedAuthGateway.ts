@@ -119,7 +119,7 @@ export function createRecoveryProtectedAuthGateway(
       auditState = "blocked";
       markerPresent = true;
       return markerFailure(
-        "ALYR could not verify the protected password-recovery state on this device."
+        "Heldat could not verify the protected password-recovery state on this device."
       );
     }
 
@@ -209,6 +209,13 @@ export function createRecoveryProtectedAuthGateway(
     signIn(credentials) {
       return base.signIn(credentials);
     },
+    ...(base.beginGoogleOAuthSignIn
+      ? {
+          beginGoogleOAuthSignIn() {
+            return base.beginGoogleOAuthSignIn!();
+          }
+        }
+      : {}),
     signUp(credentials) {
       return base.signUp(credentials);
     },
@@ -258,7 +265,7 @@ export function createRecoveryProtectedAuthGateway(
           );
         } catch {
           return markerFailure(
-            "ALYR could not protect this password-recovery exchange on the device."
+            "Heldat could not protect this password-recovery exchange on the device."
           );
         }
 
@@ -279,7 +286,7 @@ export function createRecoveryProtectedAuthGateway(
           const cleaned = await cleanupRecoverySession();
           return cleaned.ok
             ? markerFailure(
-                "ALYR closed a recovery session that could not be protected on this device."
+                "Heldat closed a recovery session that could not be protected on this device."
               )
             : cleaned;
         }

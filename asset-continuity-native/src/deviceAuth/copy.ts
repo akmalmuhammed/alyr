@@ -67,18 +67,18 @@ export interface OnboardingDevicePreflightCopy {
 const englishBase = {
   eyebrow: "PRIVATE DEVICE ACCESS",
   checkingTitle: "Securing your private record.",
-  checkingBody: "Checking this device's protection before opening ALYR.",
+  checkingBody: "Checking this device's protection before opening Heldat.",
   restoreCheckingTitle: "Restoring your private handoff.",
   restoreCheckingBody:
     "Checking this device for the first item or Place you chose before opening the household vault.",
   restoreFailedTitle: "Resume details need another check.",
   restoreFailedBody:
-    "Your household vault is still sealed. Try device storage again so ALYR can resume the exact first record you chose.",
+    "Your household vault is still sealed. Try device storage again so Heldat can resume the exact first record you chose.",
   unlockTitle: "Unlock your private record.",
   unavailableTitle: "Protect this device first.",
   unavailableBody:
     "Set a device passcode in Settings, then return and check again.",
-  unlockAction: "Unlock ALYR",
+  unlockAction: "Unlock Heldat",
   retryAction: "Check device again",
   retryRestoreAction: "Try device storage again",
   unlockHint: "Opens the encrypted household vault after device verification",
@@ -88,34 +88,34 @@ const englishBase = {
   signOutAction: "Sign out instead",
   promptSubtitle: "Private household record",
   promptDescription:
-    "Verify on this device to release your ALYR workspace.",
+    "Verify on this device to release your Heldat workspace.",
   cancelLabel: "Keep locked",
   fallbackLabel: "Use device passcode",
   notices: {
-    cancelled: "ALYR stayed locked.",
+    cancelled: "Heldat stayed locked.",
     failed: "Device verification did not finish. Try again.",
     "locked-out":
       "Device verification is temporarily locked. Use your device passcode or try again later.",
-    "timed-out": "ALYR locked after you were away.",
-    "manually-locked": "ALYR was locked."
+    "timed-out": "Heldat locked after you were away.",
+    "manually-locked": "Heldat was locked."
   }
 } as const;
 
 const arabicBase = {
   eyebrow: "وصول خاص على هذا الجهاز",
   checkingTitle: "جارٍ تأمين سجلك الخاص.",
-  checkingBody: "يتحقق ALYR من حماية هذا الجهاز قبل فتح سجلك.",
+  checkingBody: "يتحقق Heldat من حماية هذا الجهاز قبل فتح سجلك.",
   restoreCheckingTitle: "جارٍ استعادة نقطة المتابعة الخاصة بك.",
   restoreCheckingBody:
-    "يتحقق ALYR من هذا الجهاز لمعرفة الغرض أو المكان الأول الذي اخترته قبل فتح سجل المنزل.",
+    "يتحقق Heldat من هذا الجهاز لمعرفة الغرض أو المكان الأول الذي اخترته قبل فتح سجل المنزل.",
   restoreFailedTitle: "تحتاج تفاصيل المتابعة إلى فحص آخر.",
   restoreFailedBody:
-    "لا يزال سجل المنزل مقفلاً. أعد محاولة قراءة تخزين الجهاز ليعود ALYR إلى السجل الأول الذي اخترته.",
+    "لا يزال سجل المنزل مقفلاً. أعد محاولة قراءة تخزين الجهاز ليعود Heldat إلى السجل الأول الذي اخترته.",
   unlockTitle: "افتح سجلك الخاص.",
   unavailableTitle: "فعّل حماية الجهاز أولاً.",
   unavailableBody:
     "عيّن رمز دخول للجهاز من الإعدادات، ثم ارجع وتحقق مرة أخرى.",
-  unlockAction: "فتح ALYR",
+  unlockAction: "فتح Heldat",
   retryAction: "التحقق من الجهاز",
   retryRestoreAction: "إعادة محاولة تخزين الجهاز",
   unlockHint: "يفتح سجل المنزل المشفر بعد التحقق على هذا الجهاز",
@@ -124,46 +124,46 @@ const arabicBase = {
     "يتحقق من هذا الجهاز مرة أخرى لاستعادة السجل الأول الذي اخترته",
   signOutAction: "تسجيل الخروج بدلاً من ذلك",
   promptSubtitle: "سجل منزلي خاص",
-  promptDescription: "تحقق على هذا الجهاز لفتح مساحة عمل ALYR.",
+  promptDescription: "تحقق على هذا الجهاز لفتح مساحة عمل Heldat.",
   cancelLabel: "إبقاء السجل مقفلاً",
   fallbackLabel: "استخدام رمز دخول الجهاز",
   notices: {
-    cancelled: "بقي ALYR مقفلاً.",
+    cancelled: "بقي Heldat مقفلاً.",
     failed: "لم يكتمل التحقق من الجهاز. حاول مرة أخرى.",
     "locked-out":
       "التحقق من الجهاز مقفل مؤقتًا. استخدم رمز دخول الجهاز أو حاول لاحقًا.",
-    "timed-out": "قفل ALYR السجل بعد ابتعادك.",
-    "manually-locked": "تم قفل ALYR."
+    "timed-out": "قفل Heldat السجل بعد ابتعادك.",
+    "manually-locked": "تم قفل Heldat."
   }
 } as const;
 
 function englishUnlockBody(method: DeviceAuthMethod): string {
   switch (method) {
     case "face":
-      return "Use Face ID or your device passcode. ALYR never receives your biometric data.";
+      return "Use Face ID or your device passcode. Heldat never receives your biometric data.";
     case "fingerprint":
-      return "Use your fingerprint or device passcode. ALYR never receives your biometric data.";
+      return "Use your fingerprint or device passcode. Heldat never receives your biometric data.";
     case "iris":
-      return "Use iris recognition or your device passcode. ALYR never receives your biometric data.";
+      return "Use iris recognition or your device passcode. Heldat never receives your biometric data.";
     case "biometric":
-      return "Use device biometrics or your passcode. ALYR never receives your biometric data.";
+      return "Use device biometrics or your passcode. Heldat never receives your biometric data.";
     case "device-passcode":
-      return "Use your device passcode to continue. ALYR never sees the code.";
+      return "Use your device passcode to continue. Heldat never sees the code.";
   }
 }
 
 function arabicUnlockBody(method: DeviceAuthMethod): string {
   switch (method) {
     case "face":
-      return "استخدم Face ID أو رمز دخول الجهاز. لا يتلقى ALYR بياناتك الحيوية.";
+      return "استخدم Face ID أو رمز دخول الجهاز. لا يتلقى Heldat بياناتك الحيوية.";
     case "fingerprint":
-      return "استخدم بصمة الإصبع أو رمز دخول الجهاز. لا يتلقى ALYR بياناتك الحيوية.";
+      return "استخدم بصمة الإصبع أو رمز دخول الجهاز. لا يتلقى Heldat بياناتك الحيوية.";
     case "iris":
-      return "استخدم بصمة العين أو رمز دخول الجهاز. لا يتلقى ALYR بياناتك الحيوية.";
+      return "استخدم بصمة العين أو رمز دخول الجهاز. لا يتلقى Heldat بياناتك الحيوية.";
     case "biometric":
-      return "استخدم التحقق الحيوي أو رمز دخول الجهاز. لا يتلقى ALYR بياناتك الحيوية.";
+      return "استخدم التحقق الحيوي أو رمز دخول الجهاز. لا يتلقى Heldat بياناتك الحيوية.";
     case "device-passcode":
-      return "استخدم رمز دخول جهازك للمتابعة. لا يطّلع ALYR على الرمز.";
+      return "استخدم رمز دخول جهازك للمتابعة. لا يطّلع Heldat على الرمز.";
   }
 }
 
@@ -181,7 +181,7 @@ export function deviceAuthCopy(
       unavailableBody:
         capability?.kind === "unavailable" &&
         capability.reason !== "passcode-not-set"
-          ? "تعذر على ALYR تأكيد حماية الجهاز. تحقق من إعدادات الأمان، ثم حاول مرة أخرى."
+          ? "تعذر على Heldat تأكيد حماية الجهاز. تحقق من إعدادات الأمان، ثم حاول مرة أخرى."
           : arabicBase.unavailableBody,
       unlockBody: arabicUnlockBody(method)
     };
@@ -191,7 +191,7 @@ export function deviceAuthCopy(
     unavailableBody:
       capability?.kind === "unavailable" &&
       capability.reason !== "passcode-not-set"
-        ? "ALYR could not confirm device protection. Check your security settings, then try again."
+        ? "Heldat could not confirm device protection. Check your security settings, then try again."
         : englishBase.unavailableBody,
     unlockBody: englishUnlockBody(method)
   };
@@ -234,9 +234,9 @@ const englishPreflight: Omit<
   eyebrow: "DEVICE PROTECTION",
   checkingTitle: "Checking this device",
   checkingBody:
-    "ALYR is checking for a device passcode or enrolled biometrics before setup is completed.",
+    "Heldat is checking for a device passcode or enrolled biometrics before setup is completed.",
   readyBody:
-    "Verification stays on this device; ALYR receives no biometric or passcode. Verify once, then the exact item or Place you selected opens.",
+    "Verification stays on this device; Heldat receives no biometric or passcode. Verify once, then the exact item or Place you selected opens.",
   unavailableTitle: "Device passcode required",
   unavailableBody:
     "Set a device passcode in Settings, then return. Setup and the local workspace stay unchanged until this check passes.",
@@ -256,10 +256,10 @@ const englishPreflight: Omit<
     "Device Settings did not open. Open Settings manually, set a passcode, then return.",
   preparingAction: "Preparing private record\u2026",
   retryStorageAction: "Try device storage again",
-  promptTitle: "Verify to finish ALYR setup",
+  promptTitle: "Verify to finish Heldat setup",
   promptSubtitle: "Private household record",
   promptDescription:
-    "Verify on this device before ALYR completes setup and opens your first private record.",
+    "Verify on this device before Heldat completes setup and opens your first private record.",
   cancelLabel: "Keep setup open",
   fallbackLabel: "Use device passcode",
   notices: {
@@ -279,9 +279,9 @@ const arabicPreflight: Omit<
   eyebrow: "حماية الجهاز",
   checkingTitle: "جارٍ التحقق من هذا الجهاز",
   checkingBody:
-    "يتحقق ALYR من وجود رمز دخول للجهاز أو تحقق حيوي مسجّل قبل إكمال الإعداد.",
+    "يتحقق Heldat من وجود رمز دخول للجهاز أو تحقق حيوي مسجّل قبل إكمال الإعداد.",
   readyBody:
-    "يبقى التحقق على هذا الجهاز ولا يتلقى ALYR بياناتك الحيوية أو رمز الدخول. تحقق مرة واحدة، ثم يُفتح الغرض أو المكان الذي اخترته مباشرة.",
+    "يبقى التحقق على هذا الجهاز ولا يتلقى Heldat بياناتك الحيوية أو رمز الدخول. تحقق مرة واحدة، ثم يُفتح الغرض أو المكان الذي اخترته مباشرة.",
   unavailableTitle: "يلزم تعيين رمز دخول للجهاز",
   unavailableBody:
     "عيّن رمز دخول للجهاز من الإعدادات ثم ارجع. يبقى الإعداد وسجل الجهاز دون تغيير حتى ينجح هذا التحقق.",
@@ -301,10 +301,10 @@ const arabicPreflight: Omit<
     "تعذّر فتح إعدادات الجهاز. افتح الإعدادات يدويًا وعيّن رمز دخول ثم ارجع.",
   preparingAction: "جارٍ تجهيز السجل الخاص…",
   retryStorageAction: "إعادة محاولة فتح مساحة الجهاز",
-  promptTitle: "تحقق لإكمال إعداد ALYR",
+  promptTitle: "تحقق لإكمال إعداد Heldat",
   promptSubtitle: "سجل منزلي خاص",
   promptDescription:
-    "تحقق على هذا الجهاز قبل أن يكمل ALYR الإعداد ويفتح أول سجل خاص بك.",
+    "تحقق على هذا الجهاز قبل أن يكمل Heldat الإعداد ويفتح أول سجل خاص بك.",
   cancelLabel: "إبقاء الإعداد مفتوحًا",
   fallbackLabel: "استخدام رمز دخول الجهاز",
   notices: {
@@ -331,7 +331,7 @@ export function onboardingDevicePreflightCopy(
       unavailableBody:
         capability?.kind === "unavailable" &&
         capability.reason !== "passcode-not-set"
-          ? "تعذر على ALYR تأكيد حماية الجهاز. تحقق من إعدادات الأمان ثم حاول مرة أخرى. لن يُحفظ الإعداد قبل نجاح الفحص."
+          ? "تعذر على Heldat تأكيد حماية الجهاز. تحقق من إعدادات الأمان ثم حاول مرة أخرى. لن يُحفظ الإعداد قبل نجاح الفحص."
           : arabicPreflight.unavailableBody
     };
   }
@@ -341,7 +341,7 @@ export function onboardingDevicePreflightCopy(
     unavailableBody:
       capability?.kind === "unavailable" &&
       capability.reason !== "passcode-not-set"
-        ? "ALYR could not confirm device protection. Check your security settings, then try again. Setup will not be saved before the check succeeds."
+        ? "Heldat could not confirm device protection. Check your security settings, then try again. Setup will not be saved before the check succeeds."
         : englishPreflight.unavailableBody
   };
 }

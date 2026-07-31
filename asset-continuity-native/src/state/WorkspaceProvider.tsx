@@ -631,6 +631,35 @@ function createAssetOperations(
     }
   }
 
+  const primaryPhoto = asset.photoEvidenceId
+    ? evidence.find((item) => item.id === asset.photoEvidenceId)
+    : undefined;
+  if (
+    primaryPhoto?.checksumSha256 &&
+    /^[a-f0-9]{64}$/u.test(primaryPhoto.checksumSha256) &&
+    primaryPhoto.byteSize > 0
+  ) {
+    operations.push(
+      createLocalOperation(workspace, {
+        type: "asset.primary-photo.set",
+        aggregateId: asset.id,
+        payload: {
+          evidenceId: primaryPhoto.id
+        },
+        operationId: identity.operationId(),
+        idempotencyKey: identity.idempotencyKey(),
+        observedVersion: Math.max(2, asset.version ?? 2),
+        occurredAt,
+        prerequisites: [
+          {
+            kind: "blob-stored",
+            blobObjectId: primaryPhoto.blobObjectId
+          }
+        ]
+      })
+    );
+  }
+
   return operations;
 }
 
@@ -673,18 +702,40 @@ export async function prepareNewAssetCreation(
     (item) => item.assetId === result.asset.id
   );
 
+  const operations =
+    workspace.mode === "sample"
+      ? []
+      : createAssetOperations(
+          workspace,
+          result.asset,
+          newEvidence,
+          result.asset.createdAt,
+          operationIdentity
+        );
+  const primaryPhotoQueued = operations.some(
+    (operation) =>
+      operation.command.type === "asset.primary-photo.set"
+  );
+  const projectedAsset = primaryPhotoQueued
+    ? { ...result.asset, version: result.asset.version + 1 }
+    : result.asset;
+  const projectedResult =
+    projectedAsset === result.asset
+      ? result
+      : {
+          ...result,
+          asset: projectedAsset,
+          workspace: {
+            ...result.workspace,
+            assets: result.workspace.assets.map((asset) =>
+              asset.id === projectedAsset.id ? projectedAsset : asset
+            )
+          }
+        };
+
   return {
-    result,
-    operations:
-      workspace.mode === "sample"
-        ? []
-        : createAssetOperations(
-            workspace,
-            result.asset,
-            newEvidence,
-            result.asset.createdAt,
-            operationIdentity
-          )
+    result: projectedResult,
+    operations
   };
 }
 
@@ -1166,6 +1217,10 @@ export function createAssetUpdateOperations(
 
   const nameChanged =
     result.asset.name !== result.previousAsset.name;
+  let observedAssetVersion = Math.max(
+    1,
+    result.previousAsset.version ?? 1
+  );
   if (nameChanged) {
     operations.push(
       createLocalOperation(workspace, {
@@ -1176,13 +1231,65 @@ export function createAssetUpdateOperations(
         },
         operationId: identity.operationId(),
         idempotencyKey: identity.idempotencyKey(),
-        observedVersion: Math.max(
-          1,
-          result.previousAsset.version ?? 1
-        ),
+        observedVersion: observedAssetVersion,
         occurredAt
       })
     );
+    observedAssetVersion += 1;
+  }
+
+  const categoryChanged =
+    result.asset.categoryId !== result.previousAsset.categoryId;
+  if (categoryChanged) {
+    operations.push(
+      createLocalOperation(workspace, {
+        type: "asset.category.set",
+        aggregateId: result.asset.id,
+        payload: {
+          categoryId: result.asset.categoryId,
+          categoryPath: result.asset.categoryId
+            .split(".")
+            .filter(Boolean)
+        },
+        operationId: identity.operationId(),
+        idempotencyKey: identity.idempotencyKey(),
+        observedVersion: observedAssetVersion,
+        occurredAt
+      })
+    );
+    observedAssetVersion += 1;
+  }
+
+  const primaryPhoto = result.changes.photo
+    ? result.newEvidence.find(
+        (item) => item.id === result.asset.photoEvidenceId
+      )
+    : undefined;
+  if (
+    primaryPhoto?.checksumSha256 &&
+    /^[a-f0-9]{64}$/u.test(primaryPhoto.checksumSha256) &&
+    primaryPhoto.byteSize > 0
+  ) {
+    operations.push(
+      createLocalOperation(workspace, {
+        type: "asset.primary-photo.set",
+        aggregateId: result.asset.id,
+        payload: {
+          evidenceId: primaryPhoto.id
+        },
+        operationId: identity.operationId(),
+        idempotencyKey: identity.idempotencyKey(),
+        observedVersion: observedAssetVersion,
+        occurredAt,
+        prerequisites: [
+          {
+            kind: "blob-stored",
+            blobObjectId: primaryPhoto.blobObjectId
+          }
+        ]
+      })
+    );
+    observedAssetVersion += 1;
   }
 
   if (result.changes.location) {
@@ -1244,12 +1351,23 @@ export async function prepareExistingAssetUpdate(
     },
     context
   );
-  const supportedNameChange =
-    localResult.asset.name !== localResult.previousAsset.name;
+  const operations =
+    workspace.mode === "sample" || localResult.workspace === workspace
+      ? []
+      : createAssetUpdateOperations(
+          workspace,
+          localResult,
+          occurredAt,
+          operationIdentity
+        );
+  const authoritativeAssetOperationCount = operations.filter(
+    (operation) =>
+      operation.command.aggregateId === localResult.asset.id &&
+      operation.command.type.startsWith("asset.")
+  ).length;
   const authoritativeVersion =
     Math.max(1, localResult.previousAsset.version ?? 1) +
-    (supportedNameChange ? 1 : 0) +
-    (localResult.changes.location ? 1 : 0);
+    authoritativeAssetOperationCount;
   const locationRevisionVersion =
     Math.max(
       0,
@@ -1259,20 +1377,29 @@ export async function prepareExistingAssetUpdate(
     localResult.previousAsset.localOnlyFields ?? []
   );
   if (
-    localResult.changes.identity &&
-    localResult.asset.categoryId !==
-      localResult.previousAsset.categoryId
+    operations.some(
+      (operation) => operation.command.type === "asset.category.set"
+    )
   ) {
-    localOnlyFields.add("category");
+    localOnlyFields.delete("category");
   }
-  if (localResult.changes.photo) {
-    localOnlyFields.add("primary-photo");
+  if (
+    operations.some(
+      (operation) =>
+        operation.command.type === "asset.primary-photo.set"
+    )
+  ) {
+    localOnlyFields.delete("primary-photo");
   }
+  const {
+    localOnlyFields: _legacyLocalOnlyFields,
+    ...assetWithoutLegacyMarkers
+  } = localResult.asset;
   const authoritativeAsset: NativeAsset =
     localResult.workspace === workspace
       ? localResult.asset
       : {
-          ...localResult.asset,
+          ...assetWithoutLegacyMarkers,
           version: authoritativeVersion,
           locationRevisionVersion,
           ...(localOnlyFields.size > 0
@@ -1296,15 +1423,7 @@ export async function prepareExistingAssetUpdate(
         };
   return {
     result,
-    operations:
-      workspace.mode === "sample" || result.workspace === workspace
-        ? []
-        : createAssetUpdateOperations(
-            workspace,
-            result,
-            occurredAt,
-            operationIdentity
-          )
+    operations
   };
 }
 
@@ -2114,7 +2233,7 @@ export function WorkspaceProvider({
               ? caught.message
               : isSessionPreview
                 ? "The preview store could not be opened. Nothing was overwritten."
-                : "The encrypted vault could not be opened. Saving is blocked so ALYR never falls back to plaintext storage.";
+                : "The encrypted vault could not be opened. Saving is blocked so Heldat never falls back to plaintext storage.";
           setError(openingError);
           setBootstrap({
             status:

@@ -219,20 +219,20 @@ export const SECONDARY_SURFACE_COPY: Readonly<
         successEyebrow: "VERIFIED ENCRYPTED FILE",
         successTitle: "Encrypted kit created on this device",
         successBody:
-          "ALYR read the stored encrypted bytes again and matched their SHA-256 checksum. This local file is not yet an independent backup.",
+          "Heldat read the stored encrypted bytes again and matched their SHA-256 checksum. This local file is not yet an independent backup.",
         protectedEyebrow: "INDEPENDENT COPY CONFIRMED",
         protectedTitle: "Recovery backup protected",
         protectedBody:
-          "You confirmed that another encrypted copy is stored outside ALYR on this device. Keep its passphrase separately.",
+          "You confirmed that another encrypted copy is stored outside Heldat on this device. Keep its passphrase separately.",
         backupNeededTitle: "Save another copy before leaving",
         backupNeededBody:
-          "A kit inside ALYR can be lost with this device. Share it to Files, a trusted drive or another device, then confirm below.",
+          "A kit inside Heldat can be lost with this device. Share it to Files, a trusted drive or another device, then confirm below.",
         shareSheetReturnedTitle: "Did you save it somewhere else?",
         shareSheetReturnedBody:
-          "Returning from the share sheet does not prove that a copy was saved. Confirm only after you can find the .alyrkit file outside ALYR.",
+          "Returning from the share sheet does not prove that a copy was saved. Confirm only after you can find the .alyrkit file outside Heldat.",
         confirmExternalCopy: "I saved another copy",
         confirmExternalCopyHint:
-          "Confirms that an encrypted copy now exists outside ALYR on this device",
+          "Confirms that an encrypted copy now exists outside Heldat on this device",
         confirmedAt: "External copy confirmed",
         verification: "Verification",
         file: "File",
@@ -245,17 +245,17 @@ export const SECONDARY_SURFACE_COPY: Readonly<
         protectsEyebrow: "WHAT THIS PROTECTS",
         protectsTitle: "Register, Places and proof",
         protectsBody:
-          "The passphrase is processed with Argon2id. The resulting key protects the kit with AES-256-GCM. ALYR does not save the passphrase.",
+          "The passphrase is processed with Argon2id. The resulting key protects the kit with AES-256-GCM. Heldat does not save the passphrase.",
         choosePassphrase: "Choose a passphrase",
         choosePassphraseBody:
-          "Use 12 or more characters. Store it separately; ALYR has no reset link for a local Recovery Kit.",
+          "Use 12 or more characters. Store it separately; Heldat has no reset link for a local Recovery Kit.",
         passphrase: "Passphrase",
         confirmPassphrase: "Confirm passphrase",
         minimumError: "Use at least 12 characters.",
         mismatchError: "The two passphrases do not match.",
         create: "Create encrypted kit",
         createHint:
-          "Creates and verifies one encrypted ALYR Recovery Kit",
+          "Creates and verifies one encrypted Heldat Recovery Kit",
         footnote:
           "This is a file you control, not automatic cloud backup. Keep a second copy somewhere you trust."
       },
@@ -290,10 +290,10 @@ export const SECONDARY_SURFACE_COPY: Readonly<
         localCheckEyebrow: "PRIVATE LOCAL CHECK",
         localCheckTitle: "Nothing changes during preview",
         localCheckBody:
-          "The selected encrypted file is read into bounded memory. ALYR does not create a plaintext temporary workspace or proof file.",
+          "The selected encrypted file is read into bounded memory. Heldat does not create a plaintext temporary workspace or proof file.",
         openVerify: "Open and verify",
         openVerifyBody:
-          "Enter the passphrase first. The file picker accepts one ALYR Recovery Kit up to 64 MB.",
+          "Enter the passphrase first. The file picker accepts one Heldat Recovery Kit up to 64 MB.",
         passphrase: "Recovery Kit passphrase",
         chooseVerify: "Choose kit and verify",
         chooseVerifyHint:
@@ -302,11 +302,11 @@ export const SECONDARY_SURFACE_COPY: Readonly<
       unavailable: {
         "preview-runtime": {
           eyebrow: "RECOVERY PROTECTION",
-          title: "Recovery Kit is available in the installed ALYR app",
+          title: "Recovery Kit is available in the installed Heldat app",
           description:
             "This personal preview does not include the device-grade encryption and protected storage required for a Recovery Kit. Nothing has been exported or restored.",
           nextStep:
-            "Continue testing the rest of ALYR here. Recovery stays off in this preview."
+            "Continue testing the rest of Heldat here. Recovery stays off in this preview."
         },
         "argon2id-unavailable": {
           eyebrow: "RECOVERY PROTECTION",
@@ -314,13 +314,13 @@ export const SECONDARY_SURFACE_COPY: Readonly<
           description:
             "This build is missing the device-grade protection required to create or open a Recovery Kit. Nothing has been exported or restored.",
           nextStep:
-            "Install a newer signed ALYR build before using Recovery Kit."
+            "Install a newer signed Heldat build before using Recovery Kit."
         },
         "vault-locked": {
           eyebrow: "RECOVERY PROTECTION",
           title: "Unlock the private vault first",
           description:
-            "ALYR has not opened the encrypted household register, so no Recovery Kit has been exported or restored.",
+            "Heldat has not opened the encrypted household register, so no Recovery Kit has been exported or restored.",
           nextStep: "Unlock the vault, then return to Recovery Kit."
         }
       }
@@ -421,20 +421,20 @@ export const SECONDARY_SURFACE_COPY: Readonly<
         successEyebrow: "ملف مشفّر تم التحقق منه",
         successTitle: "أُنشئت حزمة مشفّرة على هذا الجهاز",
         successBody:
-          "أعادت ALYR قراءة البيانات المشفّرة وطابقت بصمة SHA-256. هذا الملف المحلي ليس نسخة احتياطية مستقلة بعد.",
+          "أعادت Heldat قراءة البيانات المشفّرة وطابقت بصمة SHA-256. هذا الملف المحلي ليس نسخة احتياطية مستقلة بعد.",
         protectedEyebrow: "تم تأكيد النسخة المستقلة",
         protectedTitle: "نسخة الاستعادة الاحتياطية محمية",
         protectedBody:
-          "أكدتَ حفظ نسخة مشفّرة أخرى خارج ALYR على هذا الجهاز. احتفظ بعبارة المرور في مكان منفصل.",
+          "أكدتَ حفظ نسخة مشفّرة أخرى خارج Heldat على هذا الجهاز. احتفظ بعبارة المرور في مكان منفصل.",
         backupNeededTitle: "احفظ نسخة أخرى قبل المغادرة",
         backupNeededBody:
-          "قد تُفقد الحزمة الموجودة داخل ALYR مع هذا الجهاز. شاركها إلى تطبيق الملفات أو مساحة موثوقة أو جهاز آخر، ثم أكد ذلك أدناه.",
+          "قد تُفقد الحزمة الموجودة داخل Heldat مع هذا الجهاز. شاركها إلى تطبيق الملفات أو مساحة موثوقة أو جهاز آخر، ثم أكد ذلك أدناه.",
         shareSheetReturnedTitle: "هل حفظت النسخة في مكان آخر؟",
         shareSheetReturnedBody:
-          "العودة من نافذة المشاركة لا تثبت حفظ نسخة. أكد فقط بعد العثور على ملف .alyrkit خارج ALYR.",
+          "العودة من نافذة المشاركة لا تثبت حفظ نسخة. أكد فقط بعد العثور على ملف .alyrkit خارج Heldat.",
         confirmExternalCopy: "حفظت نسخة أخرى",
         confirmExternalCopyHint:
-          "يؤكد وجود نسخة مشفّرة خارج ALYR على هذا الجهاز",
+          "يؤكد وجود نسخة مشفّرة خارج Heldat على هذا الجهاز",
         confirmedAt: "تم تأكيد النسخة الخارجية",
         verification: "التحقق",
         file: "الملف",
@@ -447,7 +447,7 @@ export const SECONDARY_SURFACE_COPY: Readonly<
         protectsEyebrow: "ما الذي تحميه هذه الحزمة",
         protectsTitle: "السجل والأماكن والإثباتات",
         protectsBody:
-          "تُعالج عبارة المرور باستخدام Argon2id، ثم يحمي المفتاح الناتج الحزمة بتشفير AES-256-GCM. لا تحفظ ALYR عبارة المرور.",
+          "تُعالج عبارة المرور باستخدام Argon2id، ثم يحمي المفتاح الناتج الحزمة بتشفير AES-256-GCM. لا تحفظ Heldat عبارة المرور.",
         choosePassphrase: "اختر عبارة مرور",
         choosePassphraseBody:
           "استخدم 12 حرفًا أو أكثر واحفظها في مكان منفصل؛ لا يوجد رابط لإعادة تعيين عبارة مرور حزمة الاسترداد المحلية.",
@@ -457,7 +457,7 @@ export const SECONDARY_SURFACE_COPY: Readonly<
         mismatchError: "عبارتا المرور غير متطابقتين.",
         create: "إنشاء الحزمة المشفرة",
         createHint:
-          "ينشئ حزمة استرداد ALYR مشفرة واحدة ويتحقق منها",
+          "ينشئ حزمة استرداد Heldat مشفرة واحدة ويتحقق منها",
         footnote:
           "هذا ملف تتحكم فيه، وليس نسخًا احتياطيًا سحابيًا تلقائيًا. احتفظ بنسخة ثانية في مكان تثق به."
       },
@@ -492,10 +492,10 @@ export const SECONDARY_SURFACE_COPY: Readonly<
         localCheckEyebrow: "فحص محلي خاص",
         localCheckTitle: "لا يتغير شيء أثناء المعاينة",
         localCheckBody:
-          "يُقرأ الملف المشفر المحدد في ذاكرة محدودة. لا تنشئ ALYR مساحة عمل مؤقتة أو ملف إثبات بنص مكشوف.",
+          "يُقرأ الملف المشفر المحدد في ذاكرة محدودة. لا تنشئ Heldat مساحة عمل مؤقتة أو ملف إثبات بنص مكشوف.",
         openVerify: "الفتح والتحقق",
         openVerifyBody:
-          "أدخل عبارة المرور أولًا. يقبل منتقي الملفات حزمة استرداد ALYR واحدة حتى 64 م.ب.",
+          "أدخل عبارة المرور أولًا. يقبل منتقي الملفات حزمة استرداد Heldat واحدة حتى 64 م.ب.",
         passphrase: "عبارة مرور حزمة الاسترداد",
         chooseVerify: "اختيار الحزمة والتحقق",
         chooseVerifyHint:
@@ -504,11 +504,11 @@ export const SECONDARY_SURFACE_COPY: Readonly<
       unavailable: {
         "preview-runtime": {
           eyebrow: "حماية الاسترداد",
-          title: "تتوفر حزمة الاسترداد في تطبيق ALYR المثبت",
+          title: "تتوفر حزمة الاسترداد في تطبيق Heldat المثبت",
           description:
             "لا تتضمن هذه المعاينة الشخصية تشفير الجهاز والتخزين المحمي اللازمين لحزمة الاسترداد. لم يُصدّر أو يُستعد أي شيء.",
           nextStep:
-            "تابع اختبار بقية ALYR هنا. تبقى الاستعادة متوقفة في هذه المعاينة."
+            "تابع اختبار بقية Heldat هنا. تبقى الاستعادة متوقفة في هذه المعاينة."
         },
         "argon2id-unavailable": {
           eyebrow: "حماية الاسترداد",
@@ -516,13 +516,13 @@ export const SECONDARY_SURFACE_COPY: Readonly<
           description:
             "يفتقد هذا الإصدار حماية الجهاز اللازمة لإنشاء حزمة استرداد أو فتحها. لم يُصدّر أو يُستعد أي شيء.",
           nextStep:
-            "ثبّت إصدارًا أحدث وموقّعًا من ALYR قبل استخدام حزمة الاسترداد."
+            "ثبّت إصدارًا أحدث وموقّعًا من Heldat قبل استخدام حزمة الاسترداد."
         },
         "vault-locked": {
           eyebrow: "حماية الاسترداد",
           title: "افتح الخزنة الخاصة أولًا",
           description:
-            "لم تفتح ALYR سجل الأسرة المشفر، لذلك لم يُصدّر أو يُستعد أي شيء.",
+            "لم تفتح Heldat سجل الأسرة المشفر، لذلك لم يُصدّر أو يُستعد أي شيء.",
           nextStep: "افتح الخزنة، ثم ارجع إلى حزمة الاسترداد."
         }
       }
@@ -820,9 +820,9 @@ export function localizedRecoveryErrorMessage(
     case "AUTHENTICATION_FAILED":
       return "عبارة المرور غير صحيحة أو تغيرت حزمة الاسترداد. لم تُستعد أي بيانات.";
     case "CORRUPT_CONTAINER":
-      return "هذا الملف ليس حزمة استرداد ALYR سليمة. لم تُستعد أي بيانات.";
+      return "هذا الملف ليس حزمة استرداد Heldat سليمة. لم تُستعد أي بيانات.";
     case "UNSUPPORTED_VERSION":
-      return "تحتاج حزمة الاسترداد هذه إلى إصدار أحدث ومتوافق من ALYR.";
+      return "تحتاج حزمة الاسترداد هذه إلى إصدار أحدث ومتوافق من Heldat.";
     case "INVALID_PASSPHRASE":
       return "استخدم عبارة مرور من 12 حرفًا على الأقل.";
     case "LIMIT_EXCEEDED":

@@ -48,7 +48,7 @@ export const REVIEW_REMINDER_SETTINGS_COPY: Readonly<
       "Review reminders become available in your signed-in personal workspace.",
     permissionDeniedTitle: "Notifications are off",
     permissionDeniedBody:
-      "Allow ALYR notifications in device Settings, then turn the reminder on again.",
+      "Allow Heldat notifications in device Settings, then turn the reminder on again.",
     permissionDeniedAction: "OK"
   },
   ar: {
@@ -74,7 +74,7 @@ export const REVIEW_REMINDER_SETTINGS_COPY: Readonly<
       "تتوفر التذكيرات في مساحة شخصية مسجّل الدخول إليها.",
     permissionDeniedTitle: "الإشعارات متوقفة",
     permissionDeniedBody:
-      "اسمح بإشعارات ALYR من إعدادات الجهاز، ثم فعّل التذكير مرة أخرى.",
+      "اسمح بإشعارات Heldat من إعدادات الجهاز، ثم فعّل التذكير مرة أخرى.",
     permissionDeniedAction: "حسنًا"
   }
 };

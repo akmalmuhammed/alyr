@@ -7,6 +7,7 @@ import {
   API_ERROR_VERSION,
   type ApiErrorCode,
   type ContractError,
+  type EvidenceDownloadIntentResponse,
   type JsonPrimitive,
   type ProviderRequestContext,
   type Result
@@ -24,8 +25,10 @@ import {
   assertProviderRequestActive,
   rethrowProviderCancellation
 } from "@/adapters/providerRequest";
+import { parseSignedBlobDownloadTarget } from "@/adapters/signedBlobTarget";
 
 const MAX_ATTACHMENT_BYTES = 10 * 1024 * 1024;
+const EXPIRY_SAFETY_WINDOW_MS = 5_000;
 const CHECKSUM_PATTERN = /^[a-f0-9]{64}$/u;
 const UUID_PATTERN =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/iu;
@@ -190,17 +193,21 @@ function malformed(): Result<Uint8Array> {
 }
 
 /**
- * Authenticated API adapter. Storage-provider credentials, object URLs, and
- * service-role keys never cross this boundary; only verified bytes do.
+ * Authenticated API adapter. Service credentials never cross this boundary.
+ * The reviewed API returns one short-lived, provider-neutral GET target; the
+ * target is validated and used without the account bearer, and the downloaded
+ * bytes are SHA-256 verified before they enter the encrypted local vault.
  */
 export class HttpEvidenceDownloadPort implements EvidenceDownloadPort {
   private readonly apiBaseUrl: string;
+  private readonly trustedSupabaseOrigin: string;
   private readonly getAccessToken: AccessTokenProvider;
   private readonly fetchImpl: SyncFetch;
   private readonly digestBytes: EvidenceByteDigest;
 
   constructor(options: HttpEvidenceDownloadOptions) {
     this.apiBaseUrl = normalizeHttpsBase(options.apiBaseUrl);
+    this.trustedSupabaseOrigin = new URL(this.apiBaseUrl).origin;
     this.getAccessToken = options.getAccessToken;
     this.fetchImpl =
       options.fetchImpl ??
@@ -243,14 +250,14 @@ export class HttpEvidenceDownloadPort implements EvidenceDownloadPort {
       };
     }
 
-    let response: Response;
+    let intentResponse: Response;
     try {
-      response = await this.fetchImpl(
+      intentResponse = await this.fetchImpl(
         `${this.apiBaseUrl}/evidence/download`,
         {
           method: "POST",
           headers: {
-            Accept: "application/octet-stream",
+            Accept: "application/json",
             Authorization: `Bearer ${accessToken}`,
             "Content-Type": "application/json"
           },
@@ -264,10 +271,10 @@ export class HttpEvidenceDownloadPort implements EvidenceDownloadPort {
       return offline();
     }
 
-    if (!response.ok) {
+    if (!intentResponse.ok) {
       let payload: unknown;
       try {
-        payload = JSON.parse(await response.text()) as unknown;
+        payload = JSON.parse(await intentResponse.text()) as unknown;
         assertProviderRequestActive(context);
       } catch (error) {
         rethrowProviderCancellation(error, context);
@@ -275,6 +282,67 @@ export class HttpEvidenceDownloadPort implements EvidenceDownloadPort {
       }
       const error = errorFromPayload(payload);
       return error ? { ok: false, error } : malformed();
+    }
+
+    let intentPayload: unknown;
+    try {
+      intentPayload = JSON.parse(await intentResponse.text()) as unknown;
+      assertProviderRequestActive(context);
+    } catch (error) {
+      rethrowProviderCancellation(error, context);
+      return malformed();
+    }
+    if (
+      !isRecord(intentPayload) ||
+      !isRecord(intentPayload.downloadTarget) ||
+      typeof intentPayload.downloadTarget.expiresAt !== "string"
+    ) {
+      return malformed();
+    }
+    const expectedObjectKey =
+      `${descriptor.householdId}/${descriptor.blobId}/` +
+      descriptor.evidenceVersionId;
+    const target = parseSignedBlobDownloadTarget(
+      intentPayload.downloadTarget,
+      {
+        objectKey: expectedObjectKey,
+        expiresAt: intentPayload.downloadTarget.expiresAt,
+        trustedSupabaseOrigin: this.trustedSupabaseOrigin
+      }
+    );
+    if (
+      target === null ||
+      Date.parse(target.expiresAt) - Date.now() <= EXPIRY_SAFETY_WINDOW_MS
+    ) {
+      return malformed();
+    }
+    const intent: EvidenceDownloadIntentResponse = {
+      downloadTarget: target
+    };
+
+    let response: Response;
+    try {
+      response = await this.fetchImpl(intent.downloadTarget.url, {
+        method: intent.downloadTarget.method,
+        headers: intent.downloadTarget.requiredHeaders,
+        ...(context ? { signal: context.signal } : {})
+      });
+      assertProviderRequestActive(context);
+    } catch (error) {
+      rethrowProviderCancellation(error, context);
+      return offline();
+    }
+    if (!response.ok) {
+      return {
+        ok: false,
+        error: failure(
+          response.status === 404 ? "NOT_FOUND" : "STORAGE_UNAVAILABLE",
+          response.status === 404
+            ? "The Evidence file is no longer available."
+            : "The signed Evidence download target expired or was rejected.",
+          response.status !== 404
+        )
+      };
     }
 
     const declaredLength = response.headers.get("Content-Length");

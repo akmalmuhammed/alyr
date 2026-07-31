@@ -4,7 +4,7 @@ import { useLocale } from "@/i18n/LocaleProvider";
 const english = {
   back: "Back to Vault",
   reviewEyebrow: "PERSONAL RECORD",
-  reviewTitle: "Make ALYR yours.",
+  reviewTitle: "Make Heldat yours.",
   reviewBody:
     "Start with an empty household record, then add one item or Place that matters.",
   consequenceTitle: "Before you continue",
@@ -23,7 +23,7 @@ const english = {
   failure:
     "Your personal workspace was not created. The sample is still available. Try again.",
   readyEyebrow: "YOUR RECORD IS READY",
-  readyTitle: "What should ALYR remember first?",
+  readyTitle: "What should Heldat remember first?",
   readyBody:
     "Choose one useful starting point. You can add the other from Today at any time.",
   firstItem: "Add my first item",
@@ -47,7 +47,7 @@ type WidenStrings<T> = {
 const arabic = {
   back: "العودة إلى الخزنة",
   reviewEyebrow: "سجلك الشخصي",
-  reviewTitle: "اجعل ALYR سجلك الخاص.",
+  reviewTitle: "اجعل Heldat سجلك الخاص.",
   reviewBody:
     "ابدأ بسجل منزلي فارغ، ثم أضف غرضًا أو مكانًا يهمك.",
   consequenceTitle: "قبل المتابعة",
@@ -66,7 +66,7 @@ const arabic = {
   failure:
     "لم تُنشأ مساحتك الشخصية، ولا يزال النموذج متاحًا. حاول مرة أخرى.",
   readyEyebrow: "سجلك جاهز",
-  readyTitle: "ما أول شيء تريد أن يتذكره ALYR؟",
+  readyTitle: "ما أول شيء تريد أن يتذكره Heldat؟",
   readyBody:
     "اختر نقطة بداية مفيدة، ويمكنك إضافة الخيار الآخر من شاشة اليوم في أي وقت.",
   firstItem: "إضافة أول غرض",

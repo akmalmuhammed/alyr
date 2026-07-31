@@ -18,6 +18,11 @@ test("Place documents have explicit sync commands without weakening Evidence com
   assert.equal(new Set(DOMAIN_COMMAND_TYPES).size, DOMAIN_COMMAND_TYPES.length);
 });
 
+test("Asset category and primary-photo selections are explicit sync commands", () => {
+  assert.ok(DOMAIN_COMMAND_TYPES.includes("asset.category.set"));
+  assert.ok(DOMAIN_COMMAND_TYPES.includes("asset.primary-photo.set"));
+});
+
 test("role capability sets remain deny-by-default and ordered by authority", () => {
   const owner = new Set(ROLE_CAPABILITIES.owner);
   const editor = new Set(ROLE_CAPABILITIES.editor);

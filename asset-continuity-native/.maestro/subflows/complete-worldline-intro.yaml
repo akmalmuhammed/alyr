@@ -1,0 +1,15 @@
+appId: app.heldat.mobile
+---
+- extendedWaitUntil:
+    visible:
+      id: "onboarding-screen"
+    timeout: 20000
+- assertVisible:
+    id: "onboarding-scene-1"
+- tapOn:
+    id: "onboarding-skip"
+    enabled: true
+- extendedWaitUntil:
+    visible:
+      id: "auth-welcome-screen"
+    timeout: 20000

@@ -52,7 +52,7 @@ jest.mock("react-native-safe-area-context", () => {
 
 const preview: RecoveryImportPreview = {
   previewId: "preview-1",
-  fileName: "ALYR-Recovery-2026-07-27.alyrkit",
+  fileName: "Heldat-Recovery-2026-07-27.alyrkit",
   kitIdSuffix: "1234abcd",
   createdAt: "2026-07-27T10:00:00.000Z",
   workspaceSchemaVersion: 2,
@@ -75,7 +75,7 @@ function availableRuntime(
     },
     create: jest.fn(async () => ({
       reference: "file:///kit.alyrkit",
-      fileName: "ALYR-Recovery-2026-07-27.alyrkit",
+      fileName: "Heldat-Recovery-2026-07-27.alyrkit",
       byteSize: 2048,
       sha256: "b".repeat(64),
       attachmentCount: 5,
@@ -88,7 +88,7 @@ function availableRuntime(
     listRecent: jest.fn(async () => []),
     confirmExternalBackup: jest.fn(async (reference: string) => ({
       reference,
-      fileName: "ALYR-Recovery-2026-07-27.alyrkit",
+      fileName: "Heldat-Recovery-2026-07-27.alyrkit",
       byteSize: 2048,
       createdAt: "2026-07-27T10:00:00.000Z",
       externalBackupConfirmedAt: "2026-07-27T10:02:00.000Z"
@@ -113,7 +113,7 @@ describe("Recovery Kit routes", () => {
       </RecoveryJourneyProvider>
     );
     expect(
-      screen.getByText("Recovery Kit is available in the installed ALYR app")
+      screen.getByText("Recovery Kit is available in the installed Heldat app")
     ).toBeTruthy();
     expect(screen.queryByLabelText("Passphrase")).toBeNull();
     expect(screen.getByText(/device-grade encryption and protected storage/u))

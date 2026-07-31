@@ -119,12 +119,20 @@ export default function AuthCallbackScreen() {
     email,
     error,
     exchangeConfirmationCode,
+    googleOAuthCallbackPending,
+    googleOAuthInProgress,
     pendingHouseholdInvite,
     resendConfirmation,
     session
   } = useAuthFlow();
   const { copy, language, rtl } = useCoreJourneyCopy();
   const started = useRef(false);
+  const googleOAuthCallback = useRef(
+    googleOAuthInProgress || googleOAuthCallbackPending
+  );
+  if (googleOAuthInProgress || googleOAuthCallbackPending) {
+    googleOAuthCallback.current = true;
+  }
   const attemptVersion = useRef(0);
   const code = Array.isArray(params.code) ? params.code[0] : params.code;
   const [phase, setPhase] = useState<ConfirmationCallbackPhase>(
@@ -208,7 +216,7 @@ export default function AuthCallbackScreen() {
   ]);
 
   useEffect(() => {
-    if (started.current) return;
+    if (started.current || googleOAuthInProgress) return;
     started.current = true;
     if (!code?.trim() && session?.identity.emailVerified) {
       const attempt = attemptVersion.current + 1;
@@ -223,6 +231,7 @@ export default function AuthCallbackScreen() {
     checkConfirmation,
     code,
     continueWithVerifiedSession,
+    googleOAuthInProgress,
     session
   ]);
 
@@ -278,27 +287,44 @@ export default function AuthCallbackScreen() {
     await checkConfirmation();
   }, [checkConfirmation]);
 
-  const headingTitle =
-    phase === "complete"
+  const isGoogleOAuth = googleOAuthCallback.current;
+  const headingTitle = isGoogleOAuth
+    ? phase === "complete"
+      ? copy.callback.oauthConfirmedTitle
+      : phase === "failed"
+        ? copy.callback.oauthFailedTitle
+        : copy.callback.oauthCheckingTitle
+    : phase === "complete"
       ? copy.callback.confirmedTitle
       : phase === "failed"
         ? copy.callback.failedTitle
         : copy.callback.checkingTitle;
   const headingBody =
-    phase === "failed"
-      ? copy.callback.failedBody
-      : copy.callback.body;
-  const failureMessage = !code?.trim()
-    ? copy.callback.incompleteLink
-    : callbackFailure
+    isGoogleOAuth && phase !== "failed"
+      ? copy.callback.oauthBody
+      : phase === "failed"
+        ? copy.callback.failedBody
+        : copy.callback.body;
+  const failureMessage = callbackFailure
       ? localizeAuthFailure(callbackFailure.failure, language)
       : error
         ? localizeAuthFailure(error, language)
-        : copy.callback.exchangeFailed;
+        : !code?.trim()
+          ? copy.callback.incompleteLink
+          : copy.callback.exchangeFailed;
   return (
     <AuthScaffold
       footer={
-        phase === "failed" ? (
+        phase === "failed" && isGoogleOAuth ? (
+          <AuthActions
+            primary={{
+              label: copy.callback.oauthReturn,
+              icon: rtl ? ArrowLeft : ArrowRight,
+              disabled: busy,
+              onPress: () => leaveCallback(AUTH_ROUTES.signIn)
+            }}
+          />
+        ) : phase === "failed" ? (
           <AuthActions
             primary={{
               label: code?.trim()
@@ -362,29 +388,33 @@ export default function AuthCallbackScreen() {
               />
             ) : null}
             <AuthNotice live tone="attention">
-              {copy.callback.failedNotice}
+              {isGoogleOAuth
+                ? copy.callback.oauthFailedNotice
+                : copy.callback.failedNotice}
             </AuthNotice>
-            <View
-              accessibilityLabel={copy.callback.otherOptions}
-              style={styles.recoveryActions}
-            >
-              <TextAction
-                disabled={busy}
-                label={
-                  email.trim()
-                    ? copy.callback.resend
-                    : copy.callback.signInToResend
-                }
-                onPress={() => void requestAnotherConfirmation()}
-              />
-              <TextAction
-                disabled={busy}
-                label={copy.callback.recover}
-                onPress={() =>
-                  leaveCallback(AUTH_ROUTES.forgotPassword)
-                }
-              />
-            </View>
+            {!isGoogleOAuth ? (
+              <View
+                accessibilityLabel={copy.callback.otherOptions}
+                style={styles.recoveryActions}
+              >
+                <TextAction
+                  disabled={busy}
+                  label={
+                    email.trim()
+                      ? copy.callback.resend
+                      : copy.callback.signInToResend
+                  }
+                  onPress={() => void requestAnotherConfirmation()}
+                />
+                <TextAction
+                  disabled={busy}
+                  label={copy.callback.recover}
+                  onPress={() =>
+                    leaveCallback(AUTH_ROUTES.forgotPassword)
+                  }
+                />
+              </View>
+            ) : null}
           </View>
         ) : null}
         {phase === "complete" ? (
@@ -393,7 +423,11 @@ export default function AuthCallbackScreen() {
             testID="auth-callback-complete"
           >
             <CheckCircle color={colors.success} size={24} weight="fill" />
-            <AuthNotice live>{copy.callback.complete}</AuthNotice>
+            <AuthNotice live>
+              {isGoogleOAuth
+                ? copy.callback.oauthComplete
+                : copy.callback.complete}
+            </AuthNotice>
           </View>
         ) : null}
       </View>

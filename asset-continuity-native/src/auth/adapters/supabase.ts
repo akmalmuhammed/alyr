@@ -7,6 +7,7 @@ import type {
   AuthIdentity,
   AuthSessionDescriptor,
   ConfirmationRequest,
+  OAuthCallbackCode,
   PasswordRecoveryExchange,
   PasswordRecoveryGrant,
   PasswordRecoveryRequest
@@ -37,6 +38,23 @@ interface SupabaseResponse<T> {
   readonly error: SupabaseErrorLike | null;
 }
 
+export type OAuthSessionResult =
+  | { readonly type: "success"; readonly url: string }
+  | {
+      readonly type:
+        | "cancel"
+        | "dismiss"
+        | "locked"
+        | "opened";
+    };
+
+export interface OAuthSessionPort {
+  open(
+    authorizationUrl: string,
+    redirectTo: string
+  ): Promise<OAuthSessionResult>;
+}
+
 /**
  * Minimal shape consumed from `supabase.auth`. The caller constructs the
  * Supabase client with a publishable/anon key and owns secure token storage.
@@ -64,6 +82,18 @@ export interface SupabaseAuthClientLike {
       SupabaseResponse<{
         readonly user: SupabaseUserLike | null;
         readonly session: SupabaseSessionLike | null;
+      }>
+    >;
+    signInWithOAuth?(input: {
+      readonly provider: "google";
+      readonly options: {
+        readonly redirectTo: string;
+        readonly skipBrowserRedirect: true;
+      };
+    }): Promise<
+      SupabaseResponse<{
+        readonly provider: "google";
+        readonly url: string | null;
       }>
     >;
     resend(input: {
@@ -125,8 +155,134 @@ export interface SupabaseAuthAdapterOptions {
   readonly pilotAccessEndpoint: string;
   readonly householdInviteAccessEndpoint?: string;
   readonly publicApiKey: string;
+  readonly googleOAuth?: {
+    readonly redirectTo: string;
+    readonly browser: OAuthSessionPort;
+  };
   readonly fetchImpl?: typeof fetch;
   readonly now?: () => Date;
+}
+
+function unexpectedFailure(
+  message: string,
+  retryable = false
+): AuthGatewayResult<never> {
+  return {
+    ok: false,
+    error: {
+      code: "unexpected",
+      message,
+      retryable
+    }
+  };
+}
+
+function normalizedCallbackIdentity(url: URL): string {
+  const pathname = url.pathname.replace(/\/+$/u, "");
+  return `${url.protocol}//${url.host}${pathname}`;
+}
+
+/**
+ * Accepts only the app-owned callback and a single PKCE code. Tokens in a
+ * redirect are rejected even if a provider configuration accidentally falls
+ * back to the implicit flow.
+ */
+export function extractGoogleOAuthCallbackCode(
+  callbackUrl: string,
+  expectedRedirectTo: string
+): AuthGatewayResult<OAuthCallbackCode> {
+  let callback: URL;
+  let expected: URL;
+  try {
+    callback = new URL(callbackUrl);
+    expected = new URL(expectedRedirectTo);
+  } catch {
+    return unexpectedFailure(
+      "Google sign-in returned an invalid app callback."
+    );
+  }
+
+  if (
+    callback.username ||
+    callback.password ||
+    normalizedCallbackIdentity(callback) !==
+      normalizedCallbackIdentity(expected)
+  ) {
+    return unexpectedFailure(
+      "Google sign-in returned to an unrecognized app destination."
+    );
+  }
+
+  const fragment = new URLSearchParams(
+    callback.hash.startsWith("#")
+      ? callback.hash.slice(1)
+      : callback.hash
+  );
+  const prohibitedTokenNames = [
+    "access_token",
+    "refresh_token",
+    "provider_token",
+    "provider_refresh_token",
+    "id_token"
+  ];
+  if (
+    prohibitedTokenNames.some(
+      (name) =>
+        callback.searchParams.has(name) || fragment.has(name)
+    )
+  ) {
+    return unexpectedFailure(
+      "Google sign-in did not return a protected PKCE callback."
+    );
+  }
+
+  if (
+    callback.searchParams.has("error") ||
+    callback.searchParams.has("error_code")
+  ) {
+    return {
+      ok: false,
+      error: {
+        code: "invalid_request",
+        message: "Google sign-in was not completed.",
+        retryable: false
+      }
+    };
+  }
+
+  const codes = callback.searchParams.getAll("code");
+  const code = codes.length === 1 ? codes[0]?.trim() ?? "" : "";
+  if (
+    !code ||
+    code.length > 4096 ||
+    /[\u0000-\u0020\u007f-\u009f]/u.test(code)
+  ) {
+    return unexpectedFailure(
+      "Google sign-in returned an incomplete authorization code."
+    );
+  }
+  return { ok: true, value: { code } };
+}
+
+function isExpectedGoogleAuthorizationUrl(
+  authorizationUrl: string,
+  pilotAccessEndpoint: string
+): boolean {
+  try {
+    const authorization = new URL(authorizationUrl);
+    const project = new URL(pilotAccessEndpoint);
+    return (
+      authorization.protocol === "https:" &&
+      authorization.origin === project.origin &&
+      authorization.pathname === "/auth/v1/authorize" &&
+      authorization.searchParams.get("provider") === "google" &&
+      !authorization.username &&
+      !authorization.password &&
+      !authorization.hash
+    );
+  } catch {
+    return false;
+  }
 }
 
 function mapFailure(error: SupabaseErrorLike): AuthFailure {
@@ -182,7 +338,7 @@ function mapFailure(error: SupabaseErrorLike): AuthFailure {
   if (status === 0 || source.includes("network") || source.includes("fetch")) {
     return {
       code: "network_unavailable",
-      message: "ALYR could not reach the account service. Check your connection.",
+      message: "Heldat could not reach the account service. Check your connection.",
       retryable: true
     };
   }
@@ -373,7 +529,7 @@ export function createSupabaseAuthGateway(
     } catch {
       return pilotFailure(
         "network_unavailable",
-        "ALYR could not verify pilot access. Check your connection.",
+        "Heldat could not verify pilot access. Check your connection.",
         true
       );
     }
@@ -475,7 +631,7 @@ export function createSupabaseAuthGateway(
     } catch {
       return pilotFailure(
         "network_unavailable",
-        "ALYR could not verify the household invitation. Check your connection.",
+        "Heldat could not verify the household invitation. Check your connection.",
         true
       );
     }
@@ -574,7 +730,7 @@ export function createSupabaseAuthGateway(
       } = client.auth.onAuthStateChange((event, providerSession) => {
         /*
          * A recovery exchange can produce an otherwise valid signed-in
-         * session before ALYR has verified the PASSWORD_RECOVERY event. Keep
+         * session before Heldat has verified the PASSWORD_RECOVERY event. Keep
          * that transient session outside global app state; the dedicated
          * exchange method exposes it only together with the one-use grant.
          */
@@ -677,6 +833,72 @@ export function createSupabaseAuthGateway(
       }
       const value: AuthAttempt = { kind: "authenticated", session };
       return { ok: true, value };
+    },
+
+    async beginGoogleOAuthSignIn() {
+      clearRecoveryGrant();
+      const oauth = options.googleOAuth;
+      const signInWithOAuth = client.auth.signInWithOAuth;
+      if (!oauth || !signInWithOAuth) {
+        return {
+          ok: false,
+          error: {
+            code: "unsupported",
+            message: "Google sign-in is not configured for this build.",
+            retryable: false
+          }
+        };
+      }
+
+      const authorization = await signInWithOAuth.call(client.auth, {
+        provider: "google",
+        options: {
+          redirectTo: oauth.redirectTo,
+          skipBrowserRedirect: true
+        }
+      });
+      if (authorization.error) return fail(authorization.error);
+      const authorizationUrl = authorization.data.url;
+      if (
+        typeof authorizationUrl !== "string" ||
+        !isExpectedGoogleAuthorizationUrl(
+          authorizationUrl,
+          options.pilotAccessEndpoint
+        )
+      ) {
+        return unexpectedFailure(
+          "Google sign-in returned an unrecognized authorization destination."
+        );
+      }
+
+      let browserResult: OAuthSessionResult;
+      try {
+        browserResult = await oauth.browser.open(
+          authorizationUrl,
+          oauth.redirectTo
+        );
+      } catch {
+        return fail({
+          message: "network request failed",
+          status: 0
+        });
+      }
+      if (
+        browserResult.type === "cancel" ||
+        browserResult.type === "dismiss"
+      ) {
+        return { ok: true, value: null };
+      }
+      if (browserResult.type !== "success") {
+        return unexpectedFailure(
+          "Google sign-in did not return to Heldat.",
+          true
+        );
+      }
+      return extractGoogleOAuthCallbackCode(
+        browserResult.url,
+        oauth.redirectTo
+      );
     },
 
     async resendConfirmation(emailValue) {

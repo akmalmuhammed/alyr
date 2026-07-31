@@ -4,7 +4,6 @@ import type {
   HouseholdId,
   HouseholdRole,
   IsoDateTime,
-  JsonObject,
   Result,
 } from "./core.js";
 import type { SyncChange, SyncConflict, SyncCursor, SyncOperation } from "./sync.js";
@@ -80,11 +79,22 @@ export interface UploadIntentRequest {
   readonly checksumSha256: string;
 }
 
+export type BlobStoreProvider = "supabase" | "r2" | "s3";
+
+export interface SignedBlobUploadTarget {
+  readonly provider: BlobStoreProvider;
+  readonly objectKey: string;
+  readonly method: "PUT";
+  readonly url: string;
+  readonly requiredHeaders: Readonly<Record<string, string>>;
+  readonly expiresAt: IsoDateTime;
+}
+
 export interface UploadIntentResponse {
   readonly uploadId: string;
   readonly blobObjectId: string;
   readonly expiresAt: IsoDateTime;
-  readonly uploadTarget: JsonObject;
+  readonly uploadTarget: SignedBlobUploadTarget;
 }
 
 export interface UploadCompletionRequest {
@@ -122,6 +132,19 @@ export interface EvidenceDownloadRequest {
   readonly checksumSha256: string;
 }
 
+export interface SignedBlobDownloadTarget {
+  readonly provider: BlobStoreProvider;
+  readonly objectKey: string;
+  readonly method: "GET";
+  readonly url: string;
+  readonly requiredHeaders: Readonly<Record<string, string>>;
+  readonly expiresAt: IsoDateTime;
+}
+
+export interface EvidenceDownloadIntentResponse {
+  readonly downloadTarget: SignedBlobDownloadTarget;
+}
+
 export interface InviteAcceptRequest {
   readonly apiVersion: typeof CONTRACT_API_VERSION;
   readonly oneTimeCode: string;
@@ -143,6 +166,17 @@ export interface SignupEnrollmentGrantResponse {
   readonly apiVersion: typeof CONTRACT_API_VERSION;
   readonly enrollmentGrant: string;
   readonly expiresAt: IsoDateTime;
+}
+
+export interface PublicSignupPreflightRequest {
+  readonly apiVersion: typeof CONTRACT_API_VERSION;
+  readonly email: string;
+  readonly idempotencyKey: string;
+}
+
+export interface PublicSignupPreflightResponse
+  extends SignupEnrollmentGrantResponse {
+  readonly signupChannel: "heldat-public-email-v1";
 }
 
 export interface HouseholdMemberDescriptor {

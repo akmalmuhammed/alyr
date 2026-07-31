@@ -182,7 +182,7 @@ export const ASSET_PASSPORT_COPY = {
     valueAsOf: (date: string) => `As of ${date} · entered by you`,
     valueOptional: "Optional · add only a value you know",
     valueTruth:
-      "A dated amount you add yourself. ALYR does not estimate or convert it.",
+      "A dated amount you add yourself. Heldat does not estimate or convert it.",
     restoreBeforeValue: " Restore the Passport before changing it.",
     manageTitle: "Manage Passport",
     editDetails: "Edit details",
@@ -320,7 +320,7 @@ export const ASSET_PASSPORT_COPY = {
     valueAsOf: (date: string) => `بتاريخ ${date} · أدخلتها أنت`,
     valueOptional: "اختياري · أضف فقط قيمة تعرفها",
     valueTruth:
-      "مبلغ مؤرّخ تضيفه بنفسك. لا تقدّر ALYR القيمة ولا تحوّل العملات.",
+      "مبلغ مؤرّخ تضيفه بنفسك. لا تقدّر Heldat القيمة ولا تحوّل العملات.",
     restoreBeforeValue: " استعد جواز الغرض قبل تعديلها.",
     manageTitle: "إدارة جواز الغرض",
     editDetails: "تعديل التفاصيل",

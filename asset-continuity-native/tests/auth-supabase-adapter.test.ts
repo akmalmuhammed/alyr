@@ -81,14 +81,14 @@ const pilotPreflightFetch = jest.fn(async () => ({
 })) as unknown as typeof fetch;
 
 const options = {
-  emailRedirectTo: "alyr://callback",
+  emailRedirectTo: "heldat://callback",
   pilotAccessEndpoint:
     "https://project-ref.supabase.co/functions/v1/api/pilot/preflight",
   householdInviteAccessEndpoint:
     "https://project-ref.supabase.co/functions/v1/api/invites/preflight",
   publicApiKey: `sb_publishable_${"a".repeat(24)}`,
   fetchImpl: pilotPreflightFetch,
-  passwordRecoveryRedirectTo: "alyr://reset-password",
+  passwordRecoveryRedirectTo: "heldat://reset-password",
   now: () => new Date("2026-07-27T10:00:00.000Z")
 };
 
@@ -131,7 +131,7 @@ describe("Supabase auth adapter contract", () => {
           alyr_signup_channel: "mobile-pilot-v1",
           pilot_signup_grant: "a".repeat(64)
         },
-        emailRedirectTo: "alyr://callback"
+        emailRedirectTo: "heldat://callback"
       }
     });
     expect(pilotPreflightFetch).toHaveBeenCalledWith(
@@ -422,7 +422,7 @@ describe("Supabase auth adapter contract", () => {
     });
     expect(client.auth.resetPasswordForEmail).toHaveBeenCalledWith(
       "owner@example.com",
-      { redirectTo: "alyr://reset-password" }
+      { redirectTo: "heldat://reset-password" }
     );
 
     await expect(
@@ -620,7 +620,7 @@ describe("Supabase auth adapter contract", () => {
       error: {
         code: "network_unavailable",
         message:
-          "ALYR could not reach the account service. Check your connection.",
+          "Heldat could not reach the account service. Check your connection.",
         retryable: true
       }
     });

@@ -1,9 +1,9 @@
 openapi: 3.1.0
 info:
-  title: ALYR Pilot API
+  title: Heldat Pilot API
   version: 0.1.0
   description: >
-    Provider-neutral authenticated API for the focused ALYR household,
+    Provider-neutral authenticated API for the focused Heldat household,
     asset, evidence, and offline-sync pilot.
 servers:
   - url: https://{project}.supabase.co/functions/v1/api
@@ -13,6 +13,34 @@ servers:
 security:
   - bearerAuth: []
 paths:
+  /signup/preflight:
+    post:
+      operationId: preflightPublicSignup
+      summary: Reserve public email signup capacity and issue an email-bound grant.
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PublicSignupPreflightRequest"
+      responses:
+        "200":
+          description: A short-lived grant that may be consumed by one email signup.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PublicSignupPreflightResponse"
+        "400":
+          $ref: "#/components/responses/ApiError"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "409":
+          $ref: "#/components/responses/Conflict"
+        "429":
+          $ref: "#/components/responses/TooManyRequests"
+        "503":
+          $ref: "#/components/responses/ServiceUnavailable"
   /pilot/preflight:
     post:
       operationId: preflightPilotSignup
@@ -283,18 +311,18 @@ paths:
       responses:
         "200":
           description: >
-            Authoritative evidence bytes. The client must verify byte size and
-            SHA-256 against the requested immutable version before persistence.
+            A short-lived provider-neutral GET target for the authorized
+            immutable EvidenceVersion. The client must verify the returned
+            bytes against the requested size and SHA-256 before persistence.
           headers:
             Cache-Control:
               schema:
                 type: string
                 const: no-store
           content:
-            application/octet-stream:
+            application/json:
               schema:
-                type: string
-                format: binary
+                $ref: "#/components/schemas/EvidenceDownloadIntentResponse"
         "400":
           $ref: "#/components/responses/ApiError"
         "401":
@@ -771,6 +799,38 @@ components:
           minLength: 16
           maxLength: 64
           pattern: "^[A-Z0-9]+$"
+    PublicSignupPreflightRequest:
+      type: object
+      additionalProperties: false
+      required: [apiVersion, email, idempotencyKey]
+      properties:
+        apiVersion:
+          type: integer
+          const: 1
+        email:
+          type: string
+          format: email
+          maxLength: 254
+        idempotencyKey:
+          type: string
+          format: uuid
+    PublicSignupPreflightResponse:
+      type: object
+      additionalProperties: false
+      required: [apiVersion, enrollmentGrant, expiresAt, signupChannel]
+      properties:
+        apiVersion:
+          type: integer
+          const: 1
+        enrollmentGrant:
+          type: string
+          pattern: "^[a-f0-9]{64}$"
+        expiresAt:
+          type: string
+          format: date-time
+        signupChannel:
+          type: string
+          const: heldat-public-email-v1
     PilotPreflightResponse:
       type: object
       additionalProperties: false
@@ -998,6 +1058,8 @@ components:
             - space.update
             - asset.create
             - asset.update
+            - asset.category.set
+            - asset.primary-photo.set
             - asset.move
             - asset.archive
             - asset.restore
@@ -1129,7 +1191,8 @@ components:
           type: string
         conflictKind:
           type: string
-          enum: [location, ownership, permission, value, identifier, lifecycle]
+          enum:
+            [location, ownership, permission, value, identifier, metadata, lifecycle]
         serverVersion:
           type: integer
           minimum: 0
@@ -1315,7 +1378,67 @@ components:
           type: string
           format: date-time
         uploadTarget:
-          $ref: "#/components/schemas/JsonObject"
+          $ref: "#/components/schemas/SignedBlobUploadTarget"
+    BlobStoreProvider:
+      type: string
+      enum: [supabase, r2, s3]
+    SignedBlobHeaders:
+      type: object
+      additionalProperties:
+        type: string
+    SignedBlobUploadTarget:
+      type: object
+      additionalProperties: false
+      required:
+        [provider, objectKey, method, url, requiredHeaders, expiresAt]
+      properties:
+        provider:
+          $ref: "#/components/schemas/BlobStoreProvider"
+        objectKey:
+          type: string
+          minLength: 110
+          maxLength: 110
+        method:
+          type: string
+          const: PUT
+        url:
+          type: string
+          format: uri
+        requiredHeaders:
+          $ref: "#/components/schemas/SignedBlobHeaders"
+        expiresAt:
+          type: string
+          format: date-time
+    SignedBlobDownloadTarget:
+      type: object
+      additionalProperties: false
+      required:
+        [provider, objectKey, method, url, requiredHeaders, expiresAt]
+      properties:
+        provider:
+          $ref: "#/components/schemas/BlobStoreProvider"
+        objectKey:
+          type: string
+          minLength: 110
+          maxLength: 110
+        method:
+          type: string
+          const: GET
+        url:
+          type: string
+          format: uri
+        requiredHeaders:
+          $ref: "#/components/schemas/SignedBlobHeaders"
+        expiresAt:
+          type: string
+          format: date-time
+    EvidenceDownloadIntentResponse:
+      type: object
+      additionalProperties: false
+      required: [downloadTarget]
+      properties:
+        downloadTarget:
+          $ref: "#/components/schemas/SignedBlobDownloadTarget"
     UploadCompletionRequest:
       type: object
       additionalProperties: false

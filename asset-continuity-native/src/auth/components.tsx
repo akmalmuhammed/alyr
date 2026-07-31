@@ -134,10 +134,7 @@ export function AuthScaffold({
                 language
               )
             }}
-            style={[
-              styles.progressBlock,
-              rtl && styles.progressBlockRtl
-            ]}
+            style={styles.progressBlock}
             testID="auth-activation-progress"
           >
             <Text
@@ -828,9 +825,6 @@ const styles = StyleSheet.create({
     maxWidth: 200,
     gap: 6,
     alignItems: "stretch"
-  },
-  progressBlockRtl: {
-    direction: "rtl"
   },
   progressLabel: {
     flexShrink: 1,

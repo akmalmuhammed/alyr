@@ -71,7 +71,7 @@ describe("secondary surface localization", () => {
       "preview-runtime",
       "ar"
     );
-    expect(unavailable.title).toContain("ALYR");
+    expect(unavailable.title).toContain("Heldat");
     expect(unavailable.description).not.toContain("preview");
     expect(
       localizedRecoveryErrorMessage(

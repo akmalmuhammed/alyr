@@ -4,6 +4,23 @@
  */
 
 export interface paths {
+    "/signup/preflight": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Reserve public email signup capacity and issue an email-bound grant. */
+        post: operations["preflightPublicSignup"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/pilot/preflight": {
         parameters: {
             query?: never;
@@ -403,6 +420,23 @@ export interface components {
             email: string;
             accessCode: string;
         };
+        PublicSignupPreflightRequest: {
+            /** @constant */
+            apiVersion: 1;
+            /** Format: email */
+            email: string;
+            /** Format: uuid */
+            idempotencyKey: string;
+        };
+        PublicSignupPreflightResponse: {
+            /** @constant */
+            apiVersion: 1;
+            enrollmentGrant: string;
+            /** Format: date-time */
+            expiresAt: string;
+            /** @constant */
+            signupChannel: "heldat-public-email-v1";
+        };
         PilotPreflightResponse: {
             /** @constant */
             apiVersion: 1;
@@ -499,7 +533,7 @@ export interface components {
             actorMemberId: string;
             deviceId: string;
             /** @enum {string} */
-            type: "place.create" | "place.update" | "space.create" | "space.update" | "asset.create" | "asset.update" | "asset.move" | "asset.archive" | "asset.restore" | "evidence.create" | "evidence.version.add" | "evidence.review" | "place-document.create" | "place-document.version.add" | "value.create" | "value.update" | "value.delete" | "liability.create" | "liability.update" | "liability.archive" | "liability.restore" | "liability.delete" | "liability-review.set";
+            type: "place.create" | "place.update" | "space.create" | "space.update" | "asset.create" | "asset.update" | "asset.category.set" | "asset.primary-photo.set" | "asset.move" | "asset.archive" | "asset.restore" | "evidence.create" | "evidence.version.add" | "evidence.review" | "place-document.create" | "place-document.version.add" | "value.create" | "value.update" | "value.delete" | "liability.create" | "liability.update" | "liability.archive" | "liability.restore" | "liability.delete" | "liability-review.set";
             aggregateId: string | null;
             observedVersion: number | null;
             /** Format: date-time */
@@ -542,7 +576,7 @@ export interface components {
             operationId: string;
             entityId: string;
             /** @enum {string} */
-            conflictKind: "location" | "ownership" | "permission" | "value" | "identifier" | "lifecycle";
+            conflictKind: "location" | "ownership" | "permission" | "value" | "identifier" | "metadata" | "lifecycle";
             serverVersion: number;
             message: string;
         };
@@ -617,7 +651,37 @@ export interface components {
             blobObjectId: string;
             /** Format: date-time */
             expiresAt: string;
-            uploadTarget: components["schemas"]["JsonObject"];
+            uploadTarget: components["schemas"]["SignedBlobUploadTarget"];
+        };
+        /** @enum {string} */
+        BlobStoreProvider: "supabase" | "r2" | "s3";
+        SignedBlobHeaders: {
+            [key: string]: string;
+        };
+        SignedBlobUploadTarget: {
+            provider: components["schemas"]["BlobStoreProvider"];
+            objectKey: string;
+            /** @constant */
+            method: "PUT";
+            /** Format: uri */
+            url: string;
+            requiredHeaders: components["schemas"]["SignedBlobHeaders"];
+            /** Format: date-time */
+            expiresAt: string;
+        };
+        SignedBlobDownloadTarget: {
+            provider: components["schemas"]["BlobStoreProvider"];
+            objectKey: string;
+            /** @constant */
+            method: "GET";
+            /** Format: uri */
+            url: string;
+            requiredHeaders: components["schemas"]["SignedBlobHeaders"];
+            /** Format: date-time */
+            expiresAt: string;
+        };
+        EvidenceDownloadIntentResponse: {
+            downloadTarget: components["schemas"]["SignedBlobDownloadTarget"];
         };
         UploadCompletionRequest: {
             /** @constant */
@@ -935,6 +999,35 @@ export interface components {
 }
 export type $defs = Record<string, never>;
 export interface operations {
+    preflightPublicSignup: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PublicSignupPreflightRequest"];
+            };
+        };
+        responses: {
+            /** @description A short-lived grant that may be consumed by one email signup. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PublicSignupPreflightResponse"];
+                };
+            };
+            400: components["responses"]["ApiError"];
+            403: components["responses"]["Forbidden"];
+            409: components["responses"]["Conflict"];
+            429: components["responses"]["TooManyRequests"];
+            503: components["responses"]["ServiceUnavailable"];
+        };
+    };
     preflightPilotSignup: {
         parameters: {
             query?: never;
@@ -1212,14 +1305,14 @@ export interface operations {
             };
         };
         responses: {
-            /** @description Authoritative evidence bytes. The client must verify byte size and SHA-256 against the requested immutable version before persistence. */
+            /** @description A short-lived provider-neutral GET target for the authorized immutable EvidenceVersion. The client must verify the returned bytes against the requested size and SHA-256 before persistence. */
             200: {
                 headers: {
                     "Cache-Control"?: "no-store";
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/octet-stream": string;
+                    "application/json": components["schemas"]["EvidenceDownloadIntentResponse"];
                 };
             };
             400: components["responses"]["ApiError"];

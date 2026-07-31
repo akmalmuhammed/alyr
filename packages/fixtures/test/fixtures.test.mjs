@@ -15,6 +15,13 @@ test("focused fixture contains exactly 25 deterministic active assets", () => {
 
   assert.equal(first.assets.length, FOCUSED_FIXTURE_ASSET_TARGET);
   assert.equal(first.assets.every((asset) => asset.lifecycleStatus === "active"), true);
+  assert.equal(first.household.name, "Heldat Pilot Household");
+  assert.equal(
+    first.assets
+      .filter((asset) => ["asset-work-laptop", "asset-tablet"].includes(asset.id))
+      .every((asset) => asset.notes === "Never store its password in Heldat."),
+    true,
+  );
   assert.deepEqual(first, second);
   assert.equal(Object.isFrozen(FOCUSED_HOUSEHOLD_FIXTURE), true);
   assert.equal(Object.isFrozen(FOCUSED_HOUSEHOLD_FIXTURE.assets), true);

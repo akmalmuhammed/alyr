@@ -70,7 +70,7 @@ export const PLACE_DOCUMENT_COPY = {
     lockedError: "The Place document is locked on this device.",
     missingError: "The Place document file is missing from this device.",
     protectedPreviewError:
-      "Protected Place documents open in the signed ALYR build."
+      "Protected Place documents open in the signed Heldat build."
   },
   ar: {
     open: "فتح",
@@ -93,7 +93,7 @@ export const PLACE_DOCUMENT_COPY = {
     lockedError: "مستند المكان مقفل على هذا الجهاز.",
     missingError: "ملف مستند المكان غير موجود على هذا الجهاز.",
     protectedPreviewError:
-      "تُفتح مستندات المكان المحمية في نسخة ALYR الموقّعة."
+      "تُفتح مستندات المكان المحمية في نسخة Heldat الموقّعة."
   }
 } as const satisfies Record<LanguageCode, PlaceDocumentCopy>;
 
