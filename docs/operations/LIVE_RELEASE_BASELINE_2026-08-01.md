@@ -61,8 +61,8 @@ recovery evidence, not production capacity evidence.
 
 | Platform | Proven | Still open |
 |---|---|---|
-| Android | EAS production AAB build 6 finished; artifact hash and upload certificate recorded; API 35 emulator journey passed | Correct-project Maps key, physical device, Play App Signing lineage, Play internal/closed-track delivery |
-| iOS | Clean production-simulator build from commit `468ce41`; privacy/config checks and extracted Hermes auth scan pass | Apple membership/Team ID, distribution signing, physical iPhone, App Store Connect and TestFlight |
+| Android | EAS production AAB build 6 finished; artifact hash and upload certificate recorded; API 35 emulator journey passed | Fresh build after native camera normalization, correct-project Maps key, physical device, Play App Signing lineage, Play internal/closed-track delivery |
+| iOS | Clean production-simulator build from commit `468ce41`; privacy/config checks and extracted Hermes auth scan pass | Fresh build after native camera normalization, Apple membership/Team ID, distribution signing, physical iPhone, App Store Connect and TestFlight |
 
 The prior iOS simulator bundle included Android Google-OAuth runtime markers
 even though the iOS UI hid the provider. The source now resolves provider
@@ -91,6 +91,17 @@ then downloaded, extracted, and inspected locally:
 This is simulator evidence, not an App Store-signed or physical-device build.
 The archive remains unsuitable for TestFlight submission because the Apple
 distribution identity and Team have not yet been attached.
+
+Commit `d1b60f8` subsequently added Expo ImageManipulator as a native dependency
+and constrained newly captured camera originals to an adaptive, metadata-free
+JPEG of at most 2 MiB. Focused capture tests passed 9/9, related capture-screen
+tests passed 25/25, TypeScript passed, and the Expo production configuration
+and EAS packaging gates passed. Library images and imported documents preserve
+their selected bytes and retain the separate 10 MiB import ceiling.
+
+Because this changes the native dependency graph, every previously recorded
+iOS and Android binary is now historical evidence rather than a current release
+candidate. Both platforms require a clean EAS rebuild and artifact verification.
 
 ## Android Maps mismatch
 
@@ -146,9 +157,10 @@ million Class B operations, but that is still only about 1 MB per user at
 4. Apply migration `008`, deploy the current Edge API, and repeat the 20/3/5
    probe plus authenticated sync/upload/export probes.
 5. Resolve the Maps billing/key provenance gate and rebuild Android from the
-   clean release commit.
-6. Attach an Apple Team to the verified iOS source and produce the
-   physical/TestFlight build; repeat the bundle and signed-artifact gates.
+   clean release commit that includes camera normalization.
+6. Rebuild the production iOS simulator from the same source, repeat the Hermes
+   bundle gate, then attach an Apple Team and produce the physical/TestFlight
+   build with the signed-artifact gates.
 7. Load a disposable staging project with a representative 10K synthetic
    metadata fixture and measure authenticated p50/p95/p99, errors, database
    growth, WAL, connections, locks, egress and retained object bytes.
