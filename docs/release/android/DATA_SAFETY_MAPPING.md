@@ -69,9 +69,23 @@ completing Play Console.
 - Camera: requested only when the user captures an asset or proof image.
 - Fine/coarse location: requested only when the user asks to place a record.
 - Photo/document picker: exposes only user-selected content.
+- Broad external-storage and media-library permissions: excluded from the
+  production manifest; imports stay on the system-picker boundary.
 - Biometrics: used locally to unlock the device vault; biometric templates are
   not transmitted by Heldat.
 - Microphone/audio recording: excluded from the production manifest.
+- Exact-alarm access: excluded from the production manifest. A quiet review
+  reminder is not alarm-clock/calendar core functionality and must tolerate
+  operating-system delivery windows.
+- Barcode scanning: excluded. Heldat captures photos through
+  `expo-image-picker`; the unused `expo-camera` package and its ML Kit barcode
+  dependency must be absent from the next clean release artifact.
+- Local notifications: `expo-notifications` remains the scheduling port. Its
+  Android library compiles Firebase Messaging, but production removes the
+  Firebase auto-init, component-discovery, transport, receiver, and remote
+  messaging service entries. Heldat does not request a push token or register
+  a remote-notification task. Reconcile the compiled SDK against the current
+  Play SDK Index even when those runtime entry points are absent.
 - Contacts, SMS, call logs, calendar, health data, and advertising ID: not
   represented in the current release source.
 - Local encrypted SQLite and attachment files remain on the device until the
@@ -81,6 +95,11 @@ completing Play Console.
 ## Final reconciliation
 
 - [ ] Inspect permissions and embedded SDKs from the exact signed AAB.
+- [ ] Confirm the final merged manifest contains local notification components
+      but no Firebase Messaging receiver/service/provider or data-transport
+      scheduler entry point.
+- [ ] Confirm no ML Kit barcode/code-scanner package or manifest component is
+      present in the final clean-install AAB.
 - [ ] Review the current Google Play SDK Index entry for every embedded SDK.
 - [ ] Compare Maps SDK collection against its current official disclosure.
 - [ ] Confirm product analytics still rejects names, amounts, coordinates,

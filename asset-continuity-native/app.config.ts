@@ -265,6 +265,11 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
     }
   },
   android: {
+    // SQLCipher and attachment keys are intentionally device-bound. Android
+    // Auto Backup can restore encrypted bytes onto a device that has no
+    // matching SecureStore/Keystore key, so cloud sync and explicit Recovery
+    // Kits—not OS backup—are the reviewed recovery paths.
+    allowBackup: false,
     package: HELDAT_PUBLIC_APPLICATION_ID,
     blockedPermissions: ["android.permission.RECORD_AUDIO"],
     intentFilters: [
@@ -329,17 +334,12 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
     [
       "expo-secure-store",
       {
+        // Keep Expo's restrictive backup XML installed even though the
+        // manifest also disables backup. The rules include only ordinary
+        // shared preferences and exclude SecureStore for both cloud restore
+        // and device transfer; databases and attachment files stay outside
+        // the OS backup set.
         configureAndroidBackup: true
-      }
-    ],
-    [
-      "expo-camera",
-      {
-        cameraPermission:
-          "Allow Heldat to photograph an asset or supporting material.",
-        microphonePermission: false,
-        recordAudioAndroid: false,
-        barcodeScannerEnabled: false
       }
     ],
     [
@@ -348,7 +348,8 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
         photosPermission:
           "Allow Heldat to attach only the photos you choose.",
         cameraPermission:
-          "Allow Heldat to photograph an asset or supporting material."
+          "Allow Heldat to photograph an asset or supporting material.",
+        microphonePermission: false
       }
     ],
     [

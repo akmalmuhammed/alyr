@@ -79,19 +79,20 @@ external page remains necessary for people who no longer have the app.
 ## App access for review
 
 Heldat remains in `closed_pilot` mode. Before uploading a release, create a
-dedicated reviewer identity and one-time early-access code, then enter only in
-Play Console's private App access instructions:
+dedicated, pre-confirmed reviewer identity and fixture household. Enter its
+reusable credentials only in Play Console's private App access instructions.
+The reviewer path must not depend on an email inbox, one-time code, OTP,
+operator action, or geographic location:
 
 ```text
-1. Open Heldat and choose Create account.
-2. Enter the review email and password supplied below.
-3. Enter the one-time early-access code when prompted.
-4. Confirm the email if Play review uses a newly created identity.
-5. A sample household may be selected during onboarding; no real asset data is required.
+1. Open Heldat and choose Sign in.
+2. Enter the reusable review email and password supplied below.
+3. Open the preconfigured review household. No real asset data is required.
 
 Review email: [PLAY_REVIEW_EMAIL]
 Review password: [PLAY_REVIEW_PASSWORD]
-Early-access code: [PLAY_REVIEW_ONE_TIME_CODE]
+Review household: [PLAY_REVIEW_HOUSEHOLD_NAME]
+Credentials verified on: [PLAY_REVIEW_CREDENTIALS_VERIFIED_AT]
 ```
 
 Do not place credentials in repository files or public listing copy.

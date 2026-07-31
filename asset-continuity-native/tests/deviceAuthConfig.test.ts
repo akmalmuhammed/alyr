@@ -1,5 +1,11 @@
 import createConfig from "../app.config";
 
+declare function require(moduleName: string): unknown;
+
+const nativePackage = require("../package.json") as {
+  dependencies: Record<string, string>;
+};
+
 function pluginOptions(
   plugins: NonNullable<ReturnType<typeof createConfig>["plugins"]>,
   name: string
@@ -37,10 +43,19 @@ describe("signed device protection configuration", () => {
     expect(config.android?.blockedPermissions).toContain(
       "android.permission.RECORD_AUDIO"
     );
-    expect(pluginOptions(plugins, "expo-camera")).toMatchObject({
-      microphonePermission: false,
-      recordAudioAndroid: false,
-      barcodeScannerEnabled: false
+    expect(nativePackage.dependencies).not.toHaveProperty(
+      "expo-camera"
+    );
+    expect(nativePackage.dependencies).toHaveProperty(
+      "expo-notifications"
+    );
+    expect(pluginOptions(plugins, "expo-camera")).toBeUndefined();
+    expect(pluginOptions(plugins, "expo-image-picker")).toMatchObject({
+      photosPermission:
+        "Allow Heldat to attach only the photos you choose.",
+      cameraPermission:
+        "Allow Heldat to photograph an asset or supporting material.",
+      microphonePermission: false
     });
     expect(pluginOptions(plugins, "expo-location")).toMatchObject({
       locationAlwaysAndWhenInUsePermission: false,

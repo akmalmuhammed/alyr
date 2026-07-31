@@ -20,7 +20,9 @@
 - [ ] Enter legal developer name, address, support phone, and public contact.
 - [ ] Accept Play distribution and developer agreements.
 - [ ] Select countries/regions and confirm a free initial price.
-- [ ] Supply a private app-review identity and one-time pilot code.
+- [ ] Supply a pre-confirmed, reusable private app-review identity and fixture
+      household that require no inbox, one-time code, OTP, operator action, or
+      location-dependent step.
 - [ ] Approve final English listing copy.
 - [ ] Obtain native-speaker review before publishing Arabic store metadata.
 

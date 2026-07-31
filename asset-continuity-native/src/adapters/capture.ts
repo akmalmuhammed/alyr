@@ -63,11 +63,10 @@ export async function takeAssetPhoto(): Promise<CaptureOutcome> {
 
 export async function chooseAssetPhoto(): Promise<CaptureOutcome> {
   try {
-    const permission =
-      await ImagePicker.requestMediaLibraryPermissionsAsync();
-    if (!permission.granted) {
-      return { ok: false, reason: "permission" };
-    }
+    // `launchImageLibraryAsync` uses the operating-system picker. It grants
+    // access only to the image the user selects, so requesting broad media
+    // library access first would expand Heldat's permission surface without
+    // improving the import flow.
     const result = await ImagePicker.launchImageLibraryAsync({
       mediaTypes: ["images"],
       allowsMultipleSelection: false,

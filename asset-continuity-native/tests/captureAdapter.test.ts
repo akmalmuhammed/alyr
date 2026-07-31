@@ -48,9 +48,6 @@ describe("native capture adapter", () => {
     requestCamera.mockResolvedValue({
       granted: true
     } as Awaited<ReturnType<typeof requestCamera>>);
-    requestLibrary.mockResolvedValue({
-      granted: true
-    } as Awaited<ReturnType<typeof requestLibrary>>);
     mockFileSize.mockReturnValue(2_048);
   });
 
@@ -76,6 +73,19 @@ describe("native capture adapter", () => {
       }
     });
     expect(mockFileSize).toHaveBeenCalledWith("file:///camera.jpg");
+    expect(requestCamera).toHaveBeenCalledTimes(1);
+  });
+
+  it("keeps camera capture behind an explicit camera permission", async () => {
+    requestCamera.mockResolvedValue({
+      granted: false
+    } as Awaited<ReturnType<typeof requestCamera>>);
+
+    await expect(takeAssetPhoto()).resolves.toEqual({
+      ok: false,
+      reason: "permission"
+    });
+    expect(launchCamera).not.toHaveBeenCalled();
   });
 
   it("uses a valid picker size without a filesystem lookup", async () => {
@@ -96,6 +106,14 @@ describe("native capture adapter", () => {
     await expect(chooseAssetPhoto()).resolves.toMatchObject({
       ok: true,
       file: { byteSize: 4_096 }
+    });
+    expect(requestLibrary).not.toHaveBeenCalled();
+    expect(launchLibrary).toHaveBeenCalledWith({
+      mediaTypes: ["images"],
+      allowsMultipleSelection: false,
+      allowsEditing: false,
+      quality: 1,
+      exif: false
     });
     expect(mockFileSize).not.toHaveBeenCalled();
   });

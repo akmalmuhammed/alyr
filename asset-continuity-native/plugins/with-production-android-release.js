@@ -10,6 +10,28 @@ const HELDAT_NATIVE_SCHEME = "heldat";
 const DEVELOPMENT_SCHEME_PREFIX = "exp+";
 const NETWORK_INSPECTOR_GRADLE_PROPERTY =
   "EX_DEV_CLIENT_NETWORK_INSPECTOR";
+/**
+ * expo-notifications compiles Firebase Messaging on Android even when Heldat
+ * uses only on-device schedules. Production removes its remote delivery and
+ * auto-initialization entry points while retaining NotificationsService and
+ * NotificationForwarderActivity, which serve local notification behavior.
+ * The compile-time Firebase dependency remains an SDK-review item until Expo
+ * offers a local-only Android artifact or Heldat adopts a smaller native port.
+ */
+const ANDROID_REMOTE_NOTIFICATION_SERVICE_DENYLIST = Object.freeze([
+  "com.google.android.datatransport.runtime.backends.TransportBackendDiscovery",
+  "com.google.android.datatransport.runtime.scheduling.jobscheduling.JobInfoSchedulerService",
+  "com.google.firebase.components.ComponentDiscoveryService",
+  "com.google.firebase.messaging.FirebaseMessagingService",
+  "expo.modules.notifications.service.ExpoFirebaseMessagingService"
+]);
+const ANDROID_REMOTE_NOTIFICATION_RECEIVER_DENYLIST = Object.freeze([
+  "com.google.android.datatransport.runtime.scheduling.jobscheduling.AlarmManagerSchedulerBroadcastReceiver",
+  "com.google.firebase.iid.FirebaseInstanceIdReceiver"
+]);
+const ANDROID_REMOTE_NOTIFICATION_PROVIDER_DENYLIST = Object.freeze([
+  "com.google.firebase.provider.FirebaseInitProvider"
+]);
 
 /**
  * Permissions reviewed for Heldat's focused Android release. This list covers
@@ -26,17 +48,11 @@ const ANDROID_RELEASE_PERMISSION_ALLOWLIST = Object.freeze([
   "android.permission.FOREGROUND_SERVICE_DATA_SYNC",
   "android.permission.INTERNET",
   "android.permission.POST_NOTIFICATIONS",
-  "android.permission.READ_EXTERNAL_STORAGE",
-  "android.permission.READ_MEDIA_IMAGES",
-  "android.permission.READ_MEDIA_VISUAL_USER_SELECTED",
   "android.permission.RECEIVE_BOOT_COMPLETED",
-  "android.permission.SCHEDULE_EXACT_ALARM",
   "android.permission.USE_BIOMETRIC",
-  "android.permission.USE_EXACT_ALARM",
   "android.permission.USE_FINGERPRINT",
   "android.permission.VIBRATE",
-  "android.permission.WAKE_LOCK",
-  "android.permission.WRITE_EXTERNAL_STORAGE"
+  "android.permission.WAKE_LOCK"
 ]);
 
 /**
@@ -56,9 +72,15 @@ const ANDROID_RELEASE_PERMISSION_DENYLIST = Object.freeze([
   "android.permission.MANAGE_EXTERNAL_STORAGE",
   "android.permission.PACKAGE_USAGE_STATS",
   "android.permission.QUERY_ALL_PACKAGES",
+  "android.permission.READ_EXTERNAL_STORAGE",
+  "android.permission.READ_MEDIA_IMAGES",
+  "android.permission.READ_MEDIA_VISUAL_USER_SELECTED",
   "android.permission.RECORD_AUDIO",
   "android.permission.REQUEST_INSTALL_PACKAGES",
+  "android.permission.SCHEDULE_EXACT_ALARM",
   "android.permission.SYSTEM_ALERT_WINDOW",
+  "android.permission.USE_EXACT_ALARM",
+  "android.permission.WRITE_EXTERNAL_STORAGE",
   "android.permission.READ_APP_BADGE",
   "com.anddoes.launcher.permission.UPDATE_COUNT",
   "com.android.vending.INSTALL_REFERRER",
@@ -171,6 +193,37 @@ function enforcePermissionPolicy(manifest) {
   ];
 }
 
+function enforceLocalNotificationsOnly(manifest) {
+  const application = manifest.application?.[0];
+  if (!application) {
+    throw new Error(
+      "[Heldat Android release] Android application manifest entry is missing."
+    );
+  }
+
+  const componentDenylists = [
+    ["service", ANDROID_REMOTE_NOTIFICATION_SERVICE_DENYLIST],
+    ["receiver", ANDROID_REMOTE_NOTIFICATION_RECEIVER_DENYLIST],
+    ["provider", ANDROID_REMOTE_NOTIFICATION_PROVIDER_DENYLIST]
+  ];
+
+  for (const [componentType, names] of componentDenylists) {
+    const denied = new Set(names);
+    const retained = (application[componentType] ?? []).filter(
+      (entry) => !denied.has(entry?.$?.["android:name"])
+    );
+    application[componentType] = [
+      ...retained,
+      ...names.map((name) => ({
+        $: {
+          "android:name": name,
+          "tools:node": "remove"
+        }
+      }))
+    ];
+  }
+}
+
 function findGoogleMapsApiKey(manifest) {
   const application = manifest.application?.[0];
   const metadata = application?.["meta-data"] ?? [];
@@ -198,6 +251,7 @@ function enforceManifest(
 
   removeDevelopmentSchemes(manifest);
   enforcePermissionPolicy(manifest);
+  enforceLocalNotificationsOnly(manifest);
   enforcePublicIdentity(manifest);
 
   if (
@@ -264,6 +318,12 @@ module.exports.ANDROID_RELEASE_PERMISSION_ALLOWLIST =
   ANDROID_RELEASE_PERMISSION_ALLOWLIST;
 module.exports.ANDROID_RELEASE_PERMISSION_DENYLIST =
   ANDROID_RELEASE_PERMISSION_DENYLIST;
+module.exports.ANDROID_REMOTE_NOTIFICATION_PROVIDER_DENYLIST =
+  ANDROID_REMOTE_NOTIFICATION_PROVIDER_DENYLIST;
+module.exports.ANDROID_REMOTE_NOTIFICATION_RECEIVER_DENYLIST =
+  ANDROID_REMOTE_NOTIFICATION_RECEIVER_DENYLIST;
+module.exports.ANDROID_REMOTE_NOTIFICATION_SERVICE_DENYLIST =
+  ANDROID_REMOTE_NOTIFICATION_SERVICE_DENYLIST;
 module.exports.DEVELOPMENT_SCHEME_PREFIX =
   DEVELOPMENT_SCHEME_PREFIX;
 module.exports.GOOGLE_MAPS_METADATA_NAME =

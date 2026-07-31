@@ -36,6 +36,9 @@ const androidReleasePlugin = require(
 ) as {
   ANDROID_RELEASE_PERMISSION_ALLOWLIST: readonly string[];
   ANDROID_RELEASE_PERMISSION_DENYLIST: readonly string[];
+  ANDROID_REMOTE_NOTIFICATION_PROVIDER_DENYLIST: readonly string[];
+  ANDROID_REMOTE_NOTIFICATION_RECEIVER_DENYLIST: readonly string[];
+  ANDROID_REMOTE_NOTIFICATION_SERVICE_DENYLIST: readonly string[];
   DEVELOPMENT_SCHEME_PREFIX: string;
   GOOGLE_MAPS_METADATA_NAME: string;
   HELDAT_ANDROID_APPLICATION_ID: string;
@@ -326,6 +329,9 @@ describe("Android production release configuration", () => {
                   "meta-data"?: {
                     $?: Record<string, string>;
                   }[];
+                  provider?: AndroidPermission[];
+                  receiver?: AndroidPermission[];
+                  service?: AndroidPermission[];
                   activity?: {
                     "intent-filter"?: {
                       $?: Record<string, string>;
@@ -365,6 +371,20 @@ describe("Android production release configuration", () => {
         )
     );
     const application = manifest?.application?.[0];
+    const componentRemovalMarkers = (
+      componentType: "provider" | "receiver" | "service"
+    ) =>
+      new Set(
+        (application?.[componentType] ?? [])
+          .filter(
+            (component) =>
+              component.$?.["tools:node"] === "remove"
+          )
+          .map((component) => component.$?.["android:name"])
+          .filter(
+            (name): name is string => typeof name === "string"
+          )
+      );
     const metadata = application?.["meta-data"] ?? [];
     const mapsMetadata = metadata.find(
       (entry) =>
@@ -441,6 +461,36 @@ describe("Android production release configuration", () => {
         value: "false"
       }
     ]);
+    for (const [componentType, deniedNames] of [
+      [
+        "provider",
+        androidReleasePlugin.ANDROID_REMOTE_NOTIFICATION_PROVIDER_DENYLIST
+      ],
+      [
+        "receiver",
+        androidReleasePlugin.ANDROID_REMOTE_NOTIFICATION_RECEIVER_DENYLIST
+      ],
+      [
+        "service",
+        androidReleasePlugin.ANDROID_REMOTE_NOTIFICATION_SERVICE_DENYLIST
+      ]
+    ] as const) {
+      const markers = componentRemovalMarkers(componentType);
+      for (const deniedName of deniedNames) {
+        expect(markers).toContain(deniedName);
+      }
+    }
+    const remoteComponents = [
+      ...androidReleasePlugin.ANDROID_REMOTE_NOTIFICATION_PROVIDER_DENYLIST,
+      ...androidReleasePlugin.ANDROID_REMOTE_NOTIFICATION_RECEIVER_DENYLIST,
+      ...androidReleasePlugin.ANDROID_REMOTE_NOTIFICATION_SERVICE_DENYLIST
+    ];
+    expect(remoteComponents).not.toContain(
+      "expo.modules.notifications.service.NotificationsService"
+    );
+    expect(remoteComponents).not.toContain(
+      "expo.modules.notifications.service.NotificationForwarderActivity"
+    );
 
     const allowlist = new Set(
       androidReleasePlugin.ANDROID_RELEASE_PERMISSION_ALLOWLIST
@@ -454,5 +504,29 @@ describe("Android production release configuration", () => {
       expect(removalMarkers).toContain(deniedPermission);
       expect(activePermissions).not.toContain(deniedPermission);
     }
+    expect(
+      androidReleasePlugin.ANDROID_RELEASE_PERMISSION_DENYLIST
+    ).toEqual(
+      expect.arrayContaining([
+        "android.permission.READ_EXTERNAL_STORAGE",
+        "android.permission.READ_MEDIA_IMAGES",
+        "android.permission.READ_MEDIA_VISUAL_USER_SELECTED",
+        "android.permission.SCHEDULE_EXACT_ALARM",
+        "android.permission.USE_EXACT_ALARM",
+        "android.permission.WRITE_EXTERNAL_STORAGE"
+      ])
+    );
+    expect(
+      androidReleasePlugin.ANDROID_RELEASE_PERMISSION_ALLOWLIST
+    ).not.toEqual(
+      expect.arrayContaining([
+        "android.permission.READ_EXTERNAL_STORAGE",
+        "android.permission.READ_MEDIA_IMAGES",
+        "android.permission.READ_MEDIA_VISUAL_USER_SELECTED",
+        "android.permission.SCHEDULE_EXACT_ALARM",
+        "android.permission.USE_EXACT_ALARM",
+        "android.permission.WRITE_EXTERNAL_STORAGE"
+      ])
+    );
   }, 30_000);
 });

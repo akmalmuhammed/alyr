@@ -17,6 +17,60 @@ export const ATTACHMENT_KEY_NAME =
 
 const AES_256_KEY_BYTES = 32;
 
+/**
+ * SecureStore does not expose compare-and-set. React effects, account
+ * transitions, and adjacent providers can therefore request the same new
+ * vault key concurrently. Without one process-wide queue, two callers can
+ * both observe a missing key, generate different values, and leave SQLCipher
+ * bound to one value while SecureStore retains the other.
+ *
+ * Queue by the opaque SecureStore key name rather than by store instance:
+ * production resource factories create independent ExpoSecureKeyStore
+ * wrappers over the same native store. Removal joins the same queue so purge
+ * cannot interleave with first creation inside this process. The Android
+ * release manifest is separately tested to declare no secondary process; a
+ * future `android:process` component requires native/interprocess locking.
+ */
+const keyOperationTails = new Map<string, Promise<unknown>>();
+
+async function runKeyOperationExclusive<T>(
+  keyName: string,
+  operation: () => Promise<T>
+): Promise<T> {
+  const preceding = keyOperationTails.get(keyName) ?? Promise.resolve();
+  const current = preceding.catch(() => undefined).then(operation);
+  keyOperationTails.set(keyName, current);
+  try {
+    return await current;
+  } finally {
+    if (keyOperationTails.get(keyName) === current) {
+      keyOperationTails.delete(keyName);
+    }
+  }
+}
+
+async function getOrCreateKey(
+  store: SecureKeyStore,
+  keyName: string,
+  invalidExistingMessage: string
+): Promise<Uint8Array> {
+  return runKeyOperationExclusive(keyName, async () => {
+    const existing = await store.get(keyName);
+    if (existing) {
+      if (existing.length !== AES_256_KEY_BYTES) {
+        throw new Error(invalidExistingMessage);
+      }
+      return new Uint8Array(existing);
+    }
+    const created = Crypto.getRandomBytes(AES_256_KEY_BYTES);
+    if (created.length !== AES_256_KEY_BYTES) {
+      throw new Error("The generated device-bound vault key was invalid.");
+    }
+    await store.set(keyName, created);
+    return new Uint8Array(created);
+  });
+}
+
 function encodeBase64(value: Uint8Array): string {
   let binary = "";
   value.forEach((byte) => {
@@ -54,16 +108,11 @@ export async function getOrCreateDatabaseKey(
   scope: VaultScope = DEVICE_PREVIEW_VAULT_SCOPE
 ): Promise<Uint8Array> {
   const keyName = assertValidVaultScope(scope).databaseKeyName;
-  const existing = await store.get(keyName);
-  if (existing) {
-    if (existing.length !== AES_256_KEY_BYTES) {
-      throw new Error("The protected local database key is invalid.");
-    }
-    return existing;
-  }
-  const created = Crypto.getRandomBytes(AES_256_KEY_BYTES);
-  await store.set(keyName, created);
-  return created;
+  return getOrCreateKey(
+    store,
+    keyName,
+    "The protected local database key is invalid."
+  );
 }
 
 /**
@@ -77,29 +126,25 @@ export async function getOrCreateAttachmentKey(
   scope: VaultScope = DEVICE_PREVIEW_VAULT_SCOPE
 ): Promise<Uint8Array> {
   const keyName = assertValidVaultScope(scope).attachmentKeyName;
-  const existing = await store.get(keyName);
-  if (existing) {
-    if (existing.length !== AES_256_KEY_BYTES) {
-      throw new Error("The protected attachment key is invalid.");
-    }
-    return existing;
-  }
-
-  const created = Crypto.getRandomBytes(AES_256_KEY_BYTES);
-  await store.set(keyName, created);
-  return created;
+  return getOrCreateKey(
+    store,
+    keyName,
+    "The protected attachment key is invalid."
+  );
 }
 
 export async function removeDatabaseKey(
   store: SecureKeyStore,
   scope: VaultScope = DEVICE_PREVIEW_VAULT_SCOPE
 ): Promise<void> {
-  await store.remove(assertValidVaultScope(scope).databaseKeyName);
+  const keyName = assertValidVaultScope(scope).databaseKeyName;
+  await runKeyOperationExclusive(keyName, () => store.remove(keyName));
 }
 
 export async function removeAttachmentKey(
   store: SecureKeyStore,
   scope: VaultScope = DEVICE_PREVIEW_VAULT_SCOPE
 ): Promise<void> {
-  await store.remove(assertValidVaultScope(scope).attachmentKeyName);
+  const keyName = assertValidVaultScope(scope).attachmentKeyName;
+  await runKeyOperationExclusive(keyName, () => store.remove(keyName));
 }

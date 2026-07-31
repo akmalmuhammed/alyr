@@ -107,10 +107,20 @@ test("Android app links publish only the verified Heldat identity", async () => 
     apple.applinks.details[0].appIDs[0],
     "APPLE_TEAM_ID.app.heldat.mobile"
   );
-  assert.equal(
-    apple.webcredentials.apps[0],
-    "APPLE_TEAM_ID.app.heldat.mobile"
+  assert.deepEqual(
+    apple.applinks.details[0].components.map(
+      (component) => component["/"]
+    ),
+    [
+      "/join",
+      "/join/*",
+      "/callback",
+      "/callback/*",
+      "/reset-password",
+      "/reset-password/*"
+    ]
   );
+  assert.equal("webcredentials" in apple, false);
   assert.equal(android[0].target.package_name, "app.heldat.mobile");
   assert.deepEqual(publishedAndroid, android);
   assert.match(

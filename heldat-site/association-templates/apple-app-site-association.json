@@ -6,10 +6,19 @@
         "appIDs": ["APPLE_TEAM_ID.app.heldat.mobile"],
         "components": [
           {
+            "/": "/join"
+          },
+          {
             "/": "/join/*"
           },
           {
-            "/": "/callback*"
+            "/": "/callback"
+          },
+          {
+            "/": "/callback/*"
+          },
+          {
+            "/": "/reset-password"
           },
           {
             "/": "/reset-password/*"
@@ -17,8 +26,5 @@
         ]
       }
     ]
-  },
-  "webcredentials": {
-    "apps": ["APPLE_TEAM_ID.app.heldat.mobile"]
   }
 }

@@ -85,6 +85,56 @@ function bytesToHex(bytes: Uint8Array): string {
   return [...bytes].map((byte) => byte.toString(16).padStart(2, "0")).join("");
 }
 
+/**
+ * The production manifest is tested to keep every component in the main app
+ * process, making this process-wide gate authoritative for all JS repository
+ * instances. Adding `android:process` requires a reviewed native/interprocess
+ * lock before this invariant may change.
+ */
+const databaseOperationTails = new Map<string, Promise<unknown>>();
+
+async function runDatabaseOperationExclusive<T>(
+  databaseName: string,
+  operation: () => Promise<T>
+): Promise<T> {
+  const preceding =
+    databaseOperationTails.get(databaseName) ?? Promise.resolve();
+  const current = preceding.catch(() => undefined).then(operation);
+  databaseOperationTails.set(databaseName, current);
+  try {
+    return await current;
+  } finally {
+    if (databaseOperationTails.get(databaseName) === current) {
+      databaseOperationTails.delete(databaseName);
+    }
+  }
+}
+
+async function applySqlCipherKey(
+  database: SQLite.SQLiteDatabase,
+  key: Uint8Array
+): Promise<void> {
+  const keyHex = bytesToHex(key);
+  if (!/^[a-f0-9]{64}$/u.test(keyHex)) {
+    throw new Error("The generated local database key was invalid.");
+  }
+  await database.execAsync(`PRAGMA key = "x'${keyHex}'";`);
+  const cipher = await database.getFirstAsync<CipherVersionRow>(
+    "PRAGMA cipher_version;"
+  );
+  if (!cipher?.cipher_version) {
+    throw new Error(
+      "SQLCipher is unavailable; Heldat will not open a plaintext vault."
+    );
+  }
+  // `cipher_version` proves the library is present, while sqlite_master makes
+  // SQLCipher authenticate the actual file with this connection-local key.
+  await database.getFirstAsync<{ readonly count: number }>(
+    "SELECT COUNT(*) AS count FROM sqlite_master;"
+  );
+  await database.execAsync("PRAGMA foreign_keys = ON;");
+}
+
 export class SQLiteWorkspaceRepository
   implements NativeWorkspaceRepository, AnalyticsQueueStore {
   readonly kind = "sqlite-sqlcipher" as const;
@@ -92,6 +142,7 @@ export class SQLiteWorkspaceRepository
   readonly encryptedAtRest = true;
 
   private database: SQLite.SQLiteDatabase | null = null;
+  private databaseKey: Uint8Array | null = null;
   private locked = false;
   private readonly vaultScope: VaultScope;
 
@@ -123,31 +174,27 @@ export class SQLiteWorkspaceRepository
     if (this.database) {
       return;
     }
-    const key = await getOrCreateDatabaseKey(
-      this.keyStore,
-      this.vaultScope
-    );
-    const keyHex = bytesToHex(key);
-    if (!/^[a-f0-9]{64}$/u.test(keyHex)) {
-      throw new Error("The generated local database key was invalid.");
-    }
-
-    const database = await SQLite.openDatabaseAsync(
-      this.vaultScope.databaseName
-    );
-    try {
-      await database.execAsync(`PRAGMA key = "x'${keyHex}'";`);
-      const cipher = await database.getFirstAsync<CipherVersionRow>(
-        "PRAGMA cipher_version;"
-      );
-      if (!cipher?.cipher_version) {
-        throw new Error(
-          "SQLCipher is unavailable; Heldat will not open a plaintext vault."
+    await runDatabaseOperationExclusive(
+      this.vaultScope.databaseName,
+      async () => {
+        if (this.locked) {
+          throw new Error("The local vault is locked.");
+        }
+        if (this.database) return;
+        const key = await getOrCreateDatabaseKey(
+          this.keyStore,
+          this.vaultScope
         );
-      }
-      await database.execAsync("PRAGMA foreign_keys = ON;");
-      await database.execAsync("PRAGMA journal_mode = WAL;");
-      await database.execAsync(`
+        let database: SQLite.SQLiteDatabase | null = null;
+        let didFail = false;
+        let failure: unknown;
+        try {
+          database = await SQLite.openDatabaseAsync(
+            this.vaultScope.databaseName
+          );
+          await applySqlCipherKey(database, key);
+          await database.execAsync("PRAGMA journal_mode = WAL;");
+          await database.execAsync(`
         CREATE TABLE IF NOT EXISTS workspace_snapshot (
           id INTEGER PRIMARY KEY CHECK (id = 1),
           revision INTEGER NOT NULL,
@@ -195,12 +242,26 @@ export class SQLiteWorkspaceRepository
             '[]',
             '1970-01-01T00:00:00.000Z'
           );
-      `);
-      this.database = database;
-    } catch (error) {
-      await database.closeAsync();
-      throw error;
-    }
+          `);
+          this.databaseKey = new Uint8Array(key);
+          this.database = database;
+        } catch (error) {
+          didFail = true;
+          failure = error;
+        } finally {
+          key.fill(0);
+          if (didFail && database) {
+            try {
+              await database.closeAsync();
+            } catch {
+              // Preserve the opening, keying, or schema error that explains
+              // why the vault could not initialize.
+            }
+          }
+        }
+        if (didFail) throw failure;
+      }
+    );
   }
 
   /**
@@ -209,11 +270,20 @@ export class SQLiteWorkspaceRepository
    * `lock()` instead.
    */
   async close(): Promise<void> {
-    const database = this.database;
-    this.database = null;
-    if (database) {
-      await database.closeAsync();
-    }
+    await runDatabaseOperationExclusive(
+      this.vaultScope.databaseName,
+      async () => {
+        const database = this.database;
+        const key = this.databaseKey;
+        this.database = null;
+        this.databaseKey = null;
+        try {
+          if (database) await database.closeAsync();
+        } finally {
+          key?.fill(0);
+        }
+      }
+    );
   }
 
   /**
@@ -231,14 +301,26 @@ export class SQLiteWorkspaceRepository
    * Attachment files/keys are purged by the matching scoped attachment store.
    */
   async purge(): Promise<void> {
-    await this.lock();
-    const results = await Promise.allSettled([
-      SQLite.deleteDatabaseAsync(this.vaultScope.databaseName),
-      removeDatabaseKey(this.keyStore, this.vaultScope)
-    ]);
-    if (results.some((result) => result.status === "rejected")) {
-      throw new Error("The local database vault could not be fully purged.");
-    }
+    this.locked = true;
+    await runDatabaseOperationExclusive(
+      this.vaultScope.databaseName,
+      async () => {
+        const database = this.database;
+        const key = this.databaseKey;
+        this.database = null;
+        this.databaseKey = null;
+        try {
+          if (database) await database.closeAsync();
+        } finally {
+          key?.fill(0);
+        }
+
+        // Delete encrypted bytes first. If deletion fails, retain the matching
+        // SecureStore key so a later retry can still authenticate the file.
+        await SQLite.deleteDatabaseAsync(this.vaultScope.databaseName);
+        await removeDatabaseKey(this.keyStore, this.vaultScope);
+      }
+    );
   }
 
   async load(): Promise<{
@@ -289,8 +371,7 @@ export class SQLiteWorkspaceRepository
     journal: RecoveryRestoreCrashJournal
   ): Promise<void> {
     assertRecoveryRestoreCrashJournal(journal);
-    const database = this.requireDatabase();
-    await database.withExclusiveTransactionAsync(async (transaction) => {
+    await this.withKeyedExclusiveTransaction(async (transaction) => {
       const existing =
         await transaction.getFirstAsync<RecoveryRestoreJournalRow>(
           `SELECT transaction_id, journal_json
@@ -330,8 +411,7 @@ export class SQLiteWorkspaceRepository
     ) {
       throw new Error("The Recovery Kit journal transition is invalid.");
     }
-    const database = this.requireDatabase();
-    await database.withExclusiveTransactionAsync(async (transaction) => {
+    await this.withKeyedExclusiveTransaction(async (transaction) => {
       const row =
         await transaction.getFirstAsync<RecoveryRestoreJournalRow>(
           `SELECT transaction_id, journal_json
@@ -372,8 +452,7 @@ export class SQLiteWorkspaceRepository
     if (!/^[a-f0-9]{32}$/u.test(transactionId)) {
       throw new Error("The Recovery Kit journal identity is invalid.");
     }
-    const database = this.requireDatabase();
-    await database.withExclusiveTransactionAsync(async (transaction) => {
+    await this.withKeyedExclusiveTransaction(async (transaction) => {
       const row =
         await transaction.getFirstAsync<RecoveryRestoreJournalRow>(
           `SELECT transaction_id, journal_json
@@ -395,11 +474,10 @@ export class SQLiteWorkspaceRepository
   }
 
   async commit(commit: NativeWorkspaceCommit) {
-    const database = this.requireDatabase();
     let actualRevision = commit.expectedRevision;
     let committed = false;
 
-    await database.withExclusiveTransactionAsync(async (transaction) => {
+    await this.withKeyedExclusiveTransaction(async (transaction) => {
       const row = await transaction.getFirstAsync<SnapshotRow>(
         "SELECT revision, snapshot_json FROM workspace_snapshot WHERE id = 1"
       );
@@ -461,17 +539,17 @@ export class SQLiteWorkspaceRepository
   }
 
   async acknowledgeOperation(operationId: string): Promise<void> {
-    const database = this.requireDatabase();
-    await database.runAsync(
-      "DELETE FROM sync_outbox WHERE operation_id = ?",
-      operationId
-    );
+    await this.withKeyedExclusiveTransaction(async (transaction) => {
+      await transaction.runAsync(
+        "DELETE FROM sync_outbox WHERE operation_id = ?",
+        operationId
+      );
+    });
   }
 
   async enqueueAnalyticsEvent(
     entry: Omit<QueuedAnalyticsEvent, "attemptCount">
   ): Promise<"queued" | "duplicate"> {
-    const database = this.requireDatabase();
     const errors = validateAnalyticsEvent(entry.event);
     if (errors.length > 0) throw errors[0];
     if (
@@ -486,7 +564,7 @@ export class SQLiteWorkspaceRepository
     }
 
     let outcome: "queued" | "duplicate" = "duplicate";
-    await database.withExclusiveTransactionAsync(async (transaction) => {
+    await this.withKeyedExclusiveTransaction(async (transaction) => {
       const existing = await transaction.getFirstAsync<AnalyticsEventRow>(
         `SELECT idempotency_key, dedupe_key, event_json, created_at,
                 attempt_count
@@ -567,21 +645,21 @@ export class SQLiteWorkspaceRepository
     idempotencyKey: string,
     attemptedAt: string
   ): Promise<void> {
-    const database = this.requireDatabase();
-    await database.runAsync(
-      `UPDATE analytics_outbox
-       SET attempt_count = attempt_count + 1, last_attempt_at = ?
-       WHERE idempotency_key = ?`,
-      attemptedAt,
-      idempotencyKey
-    );
+    await this.withKeyedExclusiveTransaction(async (transaction) => {
+      await transaction.runAsync(
+        `UPDATE analytics_outbox
+         SET attempt_count = attempt_count + 1, last_attempt_at = ?
+         WHERE idempotency_key = ?`,
+        attemptedAt,
+        idempotencyKey
+      );
+    });
   }
 
   async acknowledgeAnalyticsEvent(
     idempotencyKey: string
   ): Promise<void> {
-    const database = this.requireDatabase();
-    await database.withExclusiveTransactionAsync(async (transaction) => {
+    await this.withKeyedExclusiveTransaction(async (transaction) => {
       const row = await transaction.getFirstAsync<{
         readonly dedupe_key: string | null;
       }>(
@@ -633,11 +711,10 @@ export class SQLiteWorkspaceRepository
   }
 
   async commitSync(commit: NativeWorkspaceSyncCommit) {
-    const database = this.requireDatabase();
     let actualRevision = commit.expectedRevision;
     let committed = false;
 
-    await database.withExclusiveTransactionAsync(async (transaction) => {
+    await this.withKeyedExclusiveTransaction(async (transaction) => {
       const row = await transaction.getFirstAsync<SnapshotRow>(
         "SELECT revision, snapshot_json FROM workspace_snapshot WHERE id = 1"
       );
@@ -761,5 +838,76 @@ export class SQLiteWorkspaceRepository
       throw new Error("Repository must be initialized before use.");
     }
     return this.database;
+  }
+
+  /**
+   * Expo SQLite's `withExclusiveTransactionAsync` opens a separate native
+   * connection. SQLCipher keys are connection-local, so that connection sees
+   * encrypted bytes before any key is applied and rejects its first prepared
+   * statement. Open the exclusive connection ourselves, key and authenticate
+   * it before BEGIN, and always rollback/close it on failure.
+   */
+  private async withKeyedExclusiveTransaction<T>(
+    operation: (transaction: SQLite.SQLiteDatabase) => Promise<T>
+  ): Promise<T> {
+    return runDatabaseOperationExclusive(
+      this.vaultScope.databaseName,
+      async () => {
+        this.requireDatabase();
+        if (!this.databaseKey) {
+          throw new Error("The local database key is unavailable.");
+        }
+        const key = new Uint8Array(this.databaseKey);
+        let transaction: SQLite.SQLiteDatabase | null = null;
+        let transactionStarted = false;
+        let committed = false;
+        let result: T | undefined;
+        let didFail = false;
+        let failure: unknown;
+        try {
+          transaction = await SQLite.openDatabaseAsync(
+            this.vaultScope.databaseName,
+            { useNewConnection: true }
+          );
+          await applySqlCipherKey(transaction, key);
+          await transaction.execAsync("BEGIN IMMEDIATE;");
+          transactionStarted = true;
+          result = await operation(transaction);
+          await transaction.execAsync("COMMIT;");
+          transactionStarted = false;
+          committed = true;
+        } catch (error) {
+          didFail = true;
+          failure = error;
+          if (transaction && transactionStarted) {
+            try {
+              await transaction.execAsync("ROLLBACK;");
+            } catch {
+              // Preserve the original database/operation error. Closing the
+              // isolated connection below is the final containment boundary.
+            }
+          }
+        } finally {
+          key.fill(0);
+          if (transaction) {
+            try {
+              await transaction.closeAsync();
+            } catch (closeError) {
+              if (!didFail && !committed) {
+                didFail = true;
+                failure = closeError;
+              }
+              // Once COMMIT has been acknowledged, the write is durable.
+              // Reporting an isolated-handle cleanup error as a failed write
+              // would invite a duplicate retry. This repository has no
+              // non-recursive diagnostics channel, so a close-only error is
+              // contained here; the next operation opens a fresh connection.
+            }
+          }
+        }
+        if (didFail) throw failure;
+        return result as T;
+      }
+    );
   }
 }

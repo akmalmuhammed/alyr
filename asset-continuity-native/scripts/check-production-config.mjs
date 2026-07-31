@@ -13,6 +13,9 @@ const expoCli = require.resolve("expo/bin/cli");
 const {
   ANDROID_RELEASE_PERMISSION_ALLOWLIST,
   ANDROID_RELEASE_PERMISSION_DENYLIST,
+  ANDROID_REMOTE_NOTIFICATION_PROVIDER_DENYLIST,
+  ANDROID_REMOTE_NOTIFICATION_RECEIVER_DENYLIST,
+  ANDROID_REMOTE_NOTIFICATION_SERVICE_DENYLIST,
   DEVELOPMENT_SCHEME_PREFIX,
   GOOGLE_MAPS_METADATA_NAME,
   HELDAT_ANDROID_APPLICATION_ID,
@@ -73,6 +76,16 @@ const backgroundTaskIdentifiers = [
 const transportSecurity = infoPlist.NSAppTransportSecurity ?? {};
 const androidManifest = android?.manifest?.manifest;
 const androidApplication = androidManifest?.application?.[0];
+const removedAndroidComponents = (componentType) =>
+  new Set(
+    (androidApplication?.[componentType] ?? [])
+      .filter(
+        (component) =>
+          component?.$?.["tools:node"] === "remove"
+      )
+      .map((component) => component?.$?.["android:name"])
+      .filter((name) => typeof name === "string")
+  );
 const androidPermissions =
   androidManifest?.["uses-permission"] ?? [];
 const activeAndroidPermissions = androidPermissions
@@ -173,6 +186,12 @@ invariant(
   autolinkedModules.includes("expo-web-browser") &&
     webBrowserPlugin?.[1]?.experimentalLauncherActivity === false,
   "Production Google OAuth is missing the reviewed Expo WebBrowser bridge."
+);
+invariant(
+  autolinkedModules.includes("expo-image-picker") &&
+    autolinkedModules.includes("expo-notifications") &&
+    !autolinkedModules.includes("expo-camera"),
+  "Production capture/reminder modules changed: image picker and local notifications must remain, while the unused barcode-capable camera module stays excluded."
 );
 invariant(
   !("NSBonjourServices" in infoPlist),
@@ -284,6 +303,17 @@ invariant(
   ),
   "Production Android config is missing a manifest-merger removal marker for a denied permission."
 );
+for (const [componentType, deniedNames] of [
+  ["provider", ANDROID_REMOTE_NOTIFICATION_PROVIDER_DENYLIST],
+  ["receiver", ANDROID_REMOTE_NOTIFICATION_RECEIVER_DENYLIST],
+  ["service", ANDROID_REMOTE_NOTIFICATION_SERVICE_DENYLIST]
+]) {
+  const removed = removedAndroidComponents(componentType);
+  invariant(
+    deniedNames.every((name) => removed.has(name)),
+    `Production Android config is missing remote-notification ${componentType} removal markers.`
+  );
+}
 invariant(
   !activeAndroidPermissions.includes(
     "android.permission.SYSTEM_ALERT_WINDOW"
