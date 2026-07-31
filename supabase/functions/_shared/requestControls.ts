@@ -39,6 +39,15 @@ const authenticatedPolicies: ReadonlyArray<{
     policy: { routeGroup: "sync.pull", limit: 240, windowSeconds: 60 },
   },
   {
+    matches: (method, path) =>
+      method === "GET" && path === "/household-storage",
+    policy: {
+      routeGroup: "household.storage.read",
+      limit: 60,
+      windowSeconds: 60,
+    },
+  },
+  {
     matches: (_method, path) => path.startsWith("/uploads/"),
     policy: { routeGroup: "uploads", limit: 30, windowSeconds: 60 },
   },
@@ -101,6 +110,15 @@ const sharedNetworkPolicies: ReadonlyArray<{
     policy: {
       routeGroup: "network.authenticated.sync.pull",
       limit: 2_400,
+      windowSeconds: 60,
+    },
+  },
+  {
+    matches: (method, path) =>
+      method === "GET" && path === "/household-storage",
+    policy: {
+      routeGroup: "network.authenticated.household.storage.read",
+      limit: 600,
       windowSeconds: 60,
     },
   },

@@ -238,6 +238,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/household-storage": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Read authoritative retained cloud bytes for one active household.
+         * @description Available to active owners, editors, and viewers. Missing households, deleted households, and absent or revoked memberships all return the same authorization response. The response excludes object identifiers, filenames, global usage, reservations, and internal plan controls.
+         */
+        get: operations["getHouseholdStorageUsage"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/household-access/member-role": {
         parameters: {
             query?: never;
@@ -884,6 +904,16 @@ export interface components {
             receipt: components["schemas"]["HouseholdAccessMutationReceipt"];
             snapshot: components["schemas"]["HouseholdAccessSnapshot"];
         };
+        HouseholdStorageUsageResponse: {
+            /** Format: uuid */
+            householdId: string;
+            /** @constant */
+            source: "server-confirmed";
+            usedBytes: number;
+            allowanceBytes: number;
+            /** Format: date-time */
+            measuredAt: string;
+        };
         ExportCreateRequest: {
             /** @constant */
             apiVersion: 1;
@@ -1456,6 +1486,34 @@ export interface operations {
             };
             401: components["responses"]["Unauthorized"];
             403: components["responses"]["Forbidden"];
+        };
+    };
+    getHouseholdStorageUsage: {
+        parameters: {
+            query: {
+                householdId: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Server-confirmed retained bytes and household allowance. */
+            200: {
+                headers: {
+                    "Cache-Control"?: "no-store";
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HouseholdStorageUsageResponse"];
+                };
+            };
+            400: components["responses"]["ApiError"];
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            429: components["responses"]["TooManyRequests"];
+            503: components["responses"]["ServiceUnavailable"];
         };
     };
     changeHouseholdMemberRole: {

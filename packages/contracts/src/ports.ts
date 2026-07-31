@@ -21,6 +21,7 @@ import type {
   CreateHouseholdRequest,
   HouseholdAccessMutationReceipt,
   HouseholdAccessSnapshot,
+  HouseholdStorageUsageResponse,
   WorkspaceBootstrapDescriptor,
 } from "./api.js";
 
@@ -157,6 +158,18 @@ export interface HouseholdAccessPort {
       readonly snapshot: HouseholdAccessSnapshot;
     }>
   >;
+}
+
+/**
+ * Reads the narrow server-confirmed cloud-usage projection for the selected
+ * household. Authorization denial carries no household-existence or storage
+ * metadata.
+ */
+export interface HouseholdStorageUsagePort {
+  getUsage(
+    householdId: HouseholdId,
+    context?: ProviderRequestContext,
+  ): Promise<Result<HouseholdStorageUsageResponse>>;
 }
 
 export interface AccountDeletionPort {

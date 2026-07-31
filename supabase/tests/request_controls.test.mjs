@@ -35,6 +35,8 @@ test("public and authenticated routes have bounded policies", () => {
     "maintenance.exports",
     "sync.push",
     "sync.pull",
+    "household.storage.read",
+    "network.authenticated.household.storage.read",
     "uploads",
     "exports.create",
     "account.delete",

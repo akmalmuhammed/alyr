@@ -405,6 +405,44 @@ paths:
           $ref: "#/components/responses/Unauthorized"
         "403":
           $ref: "#/components/responses/Forbidden"
+  /household-storage:
+    get:
+      operationId: getHouseholdStorageUsage
+      summary: Read authoritative retained cloud bytes for one active household.
+      description: >
+        Available to active owners, editors, and viewers. Missing households,
+        deleted households, and absent or revoked memberships all return the
+        same authorization response. The response excludes object identifiers,
+        filenames, global usage, reservations, and internal plan controls.
+      parameters:
+        - in: query
+          name: householdId
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "200":
+          description: Server-confirmed retained bytes and household allowance.
+          headers:
+            Cache-Control:
+              schema:
+                type: string
+                const: no-store
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/HouseholdStorageUsageResponse"
+        "400":
+          $ref: "#/components/responses/ApiError"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "429":
+          $ref: "#/components/responses/TooManyRequests"
+        "503":
+          $ref: "#/components/responses/ServiceUnavailable"
   /household-access/member-role:
     post:
       operationId: changeHouseholdMemberRole
@@ -1895,6 +1933,29 @@ components:
           $ref: "#/components/schemas/HouseholdAccessMutationReceipt"
         snapshot:
           $ref: "#/components/schemas/HouseholdAccessSnapshot"
+    HouseholdStorageUsageResponse:
+      type: object
+      additionalProperties: false
+      required:
+        [householdId, source, usedBytes, allowanceBytes, measuredAt]
+      properties:
+        householdId:
+          type: string
+          format: uuid
+        source:
+          type: string
+          const: server-confirmed
+        usedBytes:
+          type: integer
+          minimum: 0
+          maximum: 1099511627776
+        allowanceBytes:
+          type: integer
+          minimum: 1
+          maximum: 1099511627776
+        measuredAt:
+          type: string
+          format: date-time
     ExportCreateRequest:
       type: object
       additionalProperties: false

@@ -2180,6 +2180,137 @@ async function householdAccessSnapshot(
   return { data, error };
 }
 
+type HouseholdStorageRpcRow = {
+  readonly household_id: string;
+  readonly used_bytes: number;
+  readonly allowance_bytes: number;
+  readonly measured_at: string;
+};
+
+const householdStorageRpcFields = [
+  "allowance_bytes",
+  "household_id",
+  "measured_at",
+  "used_bytes",
+] as const;
+
+function parseHouseholdStorageRpcRow(
+  value: unknown,
+  expectedHouseholdId: string,
+): HouseholdStorageRpcRow | null {
+  if (value === null || typeof value !== "object" || Array.isArray(value)) {
+    return null;
+  }
+  const row = value as Record<string, unknown>;
+  const fields = Object.keys(row).sort();
+  if (
+    fields.length !== householdStorageRpcFields.length ||
+    fields.some((field, index) => field !== householdStorageRpcFields[index])
+  ) {
+    return null;
+  }
+  if (
+    row.household_id !== expectedHouseholdId ||
+    typeof row.used_bytes !== "number" ||
+    !Number.isSafeInteger(row.used_bytes) ||
+    row.used_bytes < 0 ||
+    typeof row.allowance_bytes !== "number" ||
+    !Number.isSafeInteger(row.allowance_bytes) ||
+    row.allowance_bytes <= 0 ||
+    typeof row.measured_at !== "string"
+  ) {
+    return null;
+  }
+  const measuredAtMilliseconds = Date.parse(row.measured_at);
+  if (!Number.isFinite(measuredAtMilliseconds)) return null;
+
+  return {
+    household_id: row.household_id,
+    used_bytes: row.used_bytes,
+    allowance_bytes: row.allowance_bytes,
+    measured_at: new Date(measuredAtMilliseconds).toISOString(),
+  };
+}
+
+function householdStorageAuthorizationDenied(): Response {
+  return apiError(
+    "AUTHORIZATION_DENIED",
+    "You no longer have access to this household.",
+    403,
+  );
+}
+
+async function handleHouseholdStorageUsage(
+  request: Request,
+  context: AuthenticatedContext,
+): Promise<Response> {
+  const url = new URL(request.url);
+  const queryEntries = [...url.searchParams.entries()];
+  const rawHouseholdId = queryEntries.length === 1 &&
+      queryEntries[0]?.[0] === "householdId"
+    ? queryEntries[0][1]
+    : "";
+  if (
+    url.search.length > 64 ||
+    !uuidPattern.test(rawHouseholdId)
+  ) {
+    return apiError(
+      "VALIDATION_FAILED",
+      "Choose a valid household before loading storage usage.",
+      400,
+    );
+  }
+  const householdId = rawHouseholdId.toLowerCase();
+
+  const { data, error } = await context.client.rpc(
+    "read_household_storage_usage",
+    { p_household_id: householdId },
+  );
+  if (error) {
+    return apiError(
+      "STORAGE_UNAVAILABLE",
+      "Cloud storage usage is temporarily unavailable.",
+      503,
+      true,
+    );
+  }
+  if (!Array.isArray(data)) {
+    return apiError(
+      "STORAGE_UNAVAILABLE",
+      "Cloud storage usage is temporarily unavailable.",
+      503,
+      true,
+    );
+  }
+  if (data.length === 0) return householdStorageAuthorizationDenied();
+  if (data.length !== 1) {
+    return apiError(
+      "STORAGE_UNAVAILABLE",
+      "Cloud storage usage is temporarily unavailable.",
+      503,
+      true,
+    );
+  }
+
+  const usage = parseHouseholdStorageRpcRow(data[0], householdId);
+  if (!usage) {
+    return apiError(
+      "STORAGE_UNAVAILABLE",
+      "Cloud storage usage is temporarily unavailable.",
+      503,
+      true,
+    );
+  }
+
+  return json({
+    householdId: usage.household_id,
+    source: "server-confirmed",
+    usedBytes: usage.used_bytes,
+    allowanceBytes: usage.allowance_bytes,
+    measuredAt: usage.measured_at,
+  }, 200, { "Cache-Control": "no-store" });
+}
+
 async function handleHouseholdAccessSnapshot(
   request: Request,
   context: AuthenticatedContext,
@@ -3476,6 +3607,9 @@ async function dispatchRequest(
     }
     if (request.method === "GET" && path === "/household-access") {
       return await handleHouseholdAccessSnapshot(request, context);
+    }
+    if (request.method === "GET" && path === "/household-storage") {
+      return await handleHouseholdStorageUsage(request, context);
     }
     if (
       request.method === "POST" &&

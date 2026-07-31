@@ -222,6 +222,19 @@ export interface HouseholdAccessSnapshot {
   readonly refreshedAt: IsoDateTime;
 }
 
+/**
+ * The complete public household-storage projection. It is issued only for an
+ * active owner/editor/viewer membership and intentionally excludes object
+ * identifiers, filenames, global usage, reservations, and plan internals.
+ */
+export interface HouseholdStorageUsageResponse {
+  readonly householdId: HouseholdId;
+  readonly source: "server-confirmed";
+  readonly usedBytes: number;
+  readonly allowanceBytes: number;
+  readonly measuredAt: IsoDateTime;
+}
+
 export interface HouseholdAccessMutationReceipt {
   readonly operationId: string;
   readonly kind:
