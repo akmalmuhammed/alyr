@@ -51,8 +51,8 @@ has no SLA.
 - Expo config plugin: `@maplibre/maplibre-react-native`.
 - Android location engine: `default`, not the Google Play Services engine.
 - Foreground GPS: `expo-location`, unchanged.
-- Connectivity state: `expo-network` `57.0.1`; its hook owns and cleans up the
-  native change listener when the editor unmounts.
+- Connectivity state: `expo-network` `57.0.1`; its hook removes its JS
+  subscription on unmount. The Expo module owns the native callback lifecycle.
 - The Expo module's Android library manifest adds the normal permissions
   `android.permission.ACCESS_NETWORK_STATE` and
   `android.permission.ACCESS_WIFI_STATE`. Neither is a runtime permission;

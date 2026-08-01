@@ -55,9 +55,9 @@ configuration and the release plugin rejects legacy
 user-initiated foreground GPS port; coordinates are never sent to a geocoder by
 this map component.
 
-The source also pins `expo-network` `57.0.1`. Its hook observes native
-operating-system connectivity state and unregisters its native listener on
-unmount. Heldat does not add a reachability endpoint, persist a network
+The source pins `expo-network` `57.0.1`. Its hook removes its JS subscription on
+unmount; the Expo module owns the Android native callback lifecycle. Heldat
+does not add a reachability endpoint, persist a network
 identifier, poll tiles, or prefetch tiles. The Android library manifest adds
 normal `android.permission.ACCESS_NETWORK_STATE` and
 `android.permission.ACCESS_WIFI_STATE` permissions; neither is a user-facing
