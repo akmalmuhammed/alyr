@@ -4,12 +4,14 @@ import {
   Layer,
   Map,
   ViewAnnotation,
-  type LngLat
+  type LngLat,
+  type ViewAnnotationEvent
 } from "@maplibre/maplibre-react-native";
 import { useNetworkState } from "expo-network";
 import { useEffect, useRef, useState } from "react";
 import {
   AccessibilityInfo,
+  type NativeSyntheticEvent,
   Platform,
   StyleSheet,
   Text,
@@ -43,6 +45,7 @@ export function PlacePinEditor(props: PlacePinEditorProps) {
   } = props;
   const labels = placePinEditorLabels(language, labelOverrides);
   const networkState = useNetworkState();
+  const isAndroid = Platform.OS === "android";
   const rtl = language === "ar";
   const hasPin = hasValidCoordinates(value);
   const isConfirmedOffline =
@@ -222,7 +225,7 @@ export function PlacePinEditor(props: PlacePinEditorProps) {
             minZoom={2}
             testID={`${testID}-native-camera`}
           />
-          {Platform.OS === "android" ? (
+          {isAndroid ? (
             <GeoJSONSource
               data={renderedPin}
               id={`${testID}-pin-visual-source`}
@@ -252,12 +255,20 @@ export function PlacePinEditor(props: PlacePinEditorProps) {
             draggable={!disabled}
             id="property-pin"
             lngLat={center}
-            onDrag={(event) => {
-              setDragVisualCenter(event.nativeEvent.lngLat);
-            }}
+            {...(isAndroid
+              ? {
+                  onDrag: (
+                    event: NativeSyntheticEvent<ViewAnnotationEvent>
+                  ) => {
+                    setDragVisualCenter(event.nativeEvent.lngLat);
+                  }
+                }
+              : {})}
             onDragEnd={(event) => {
               const [longitude, latitude] = event.nativeEvent.lngLat;
-              setDragVisualCenter(event.nativeEvent.lngLat);
+              if (isAndroid) {
+                setDragVisualCenter(event.nativeEvent.lngLat);
+              }
               onChange(
                 createDraggedPlacePin(
                   value,

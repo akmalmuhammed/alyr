@@ -209,6 +209,46 @@ describe("PlacePinEditor MapLibre pilot", () => {
     }
   });
 
+  it("keeps iOS on the native end-of-drag path without Android GL layers", async () => {
+    expect(Platform.OS).toBe("ios");
+    const onChange = jest.fn();
+    const { screen } = await renderEditor(onChange);
+    const annotation = screen.getByTestId("property-pin-annotation");
+
+    expect(annotation.props.onDrag).toBeUndefined();
+    expect(annotation.props.onDragEnd).toEqual(expect.any(Function));
+    expect(
+      screen.queryByTestId("place-pin-editor-pin-visual-source")
+    ).toBeNull();
+    expect(
+      screen.queryByTestId("place-pin-editor-pin-visual-outer")
+    ).toBeNull();
+    expect(
+      screen.queryByTestId("place-pin-editor-pin-visual-core")
+    ).toBeNull();
+
+    await act(async () => {
+      annotation.props.onDragEnd({
+        nativeEvent: {
+          id: "property-pin",
+          lngLat: [51.6, 25.4],
+          point: [100, 100]
+        }
+      });
+    });
+
+    expect(onChange).toHaveBeenCalledWith({
+      ...initial,
+      latitude: 25.4,
+      longitude: 51.6,
+      source: "user_pin",
+      precision: "user_placed",
+      horizontalAccuracyMeters: null,
+      observedAt: "2026-08-01T10:05:00.000Z",
+      confirmedAt: null
+    });
+  });
+
   it("falls back to authoritative coordinates and the Places-list path on map failure", async () => {
     const { screen } = await renderEditor();
     const map = screen.getByTestId("place-pin-editor-native-map");
