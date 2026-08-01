@@ -1,1 +1,13 @@
+# Keep byte-sensitive source and contract fixtures deterministic on Windows.
+*.ts text eol=lf
+*.tsx text eol=lf
+*.json text eol=lf
+.easignore text eol=lf
+
+# Keep binary release assets outside text and EOL conversion.
+*.png binary
+*.jpg binary
+*.ico binary
+*.woff2 binary
+
 supabase/migrations/*.sql text eol=lf
