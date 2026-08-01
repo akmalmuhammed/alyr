@@ -54,6 +54,9 @@ export interface PlacePinEditorLabels {
   readonly noPinBody: string;
   readonly mapAccessibilityLabel: string;
   readonly markerAccessibilityLabel: string;
+  readonly mapUnavailableTitle: string;
+  readonly mapUnavailableBody: string;
+  readonly mapAttributionLabel: string;
   readonly dragInstruction: string;
   readonly webPreviewLabel: string;
   readonly webPreviewBody: string;
@@ -88,6 +91,11 @@ const ENGLISH_LABELS: PlacePinEditorLabels = {
     "Use the device location or enter coordinates. Heldat does not guess a property.",
   mapAccessibilityLabel: "Property pin map",
   markerAccessibilityLabel: "Draggable property pin",
+  mapUnavailableTitle: "Map unavailable",
+  mapUnavailableBody:
+    "Map tiles could not load. The coordinates below remain editable and authoritative; return to the Places list to continue without the map.",
+  mapAttributionLabel:
+    "Map attribution: OpenFreeMap, OpenMapTiles and OpenStreetMap",
   dragInstruction: "Drag the pin onto the property, then confirm it.",
   webPreviewLabel: "Coordinate preview",
   webPreviewBody:
@@ -125,6 +133,11 @@ const ARABIC_LABELS: PlacePinEditorLabels = {
     "استخدم موقع الجهاز أو أدخل الإحداثيات. لا يحدّد Heldat العقار بالتخمين.",
   mapAccessibilityLabel: "خريطة دبوس العقار",
   markerAccessibilityLabel: "دبوس عقار قابل للسحب",
+  mapUnavailableTitle: "\u0627\u0644\u062e\u0631\u064a\u0637\u0629 \u063a\u064a\u0631 \u0645\u062a\u0627\u062d\u0629",
+  mapUnavailableBody:
+    "\u062a\u0639\u0630\u0631 \u062a\u062d\u0645\u064a\u0644 \u0645\u0631\u0628\u0639\u0627\u062a \u0627\u0644\u062e\u0631\u064a\u0637\u0629. \u062a\u0628\u0642\u0649 \u0627\u0644\u0625\u062d\u062f\u0627\u062b\u064a\u0627\u062a \u0623\u062f\u0646\u0627\u0647 \u0642\u0627\u0628\u0644\u0629 \u0644\u0644\u062a\u0639\u062f\u064a\u0644 \u0648\u0647\u064a \u0627\u0644\u0645\u0631\u062c\u0639 \u0627\u0644\u0645\u0639\u062a\u0645\u062f\u061b \u064a\u0645\u0643\u0646\u0643 \u0627\u0644\u0631\u062c\u0648\u0639 \u0625\u0644\u0649 \u0642\u0627\u0626\u0645\u0629 \u0627\u0644\u0623\u0645\u0627\u0643\u0646 \u0644\u0644\u0645\u062a\u0627\u0628\u0639\u0629 \u0645\u0646 \u062f\u0648\u0646 \u0627\u0644\u062e\u0631\u064a\u0637\u0629.",
+  mapAttributionLabel:
+    "\u0625\u0633\u0646\u0627\u062f \u0627\u0644\u062e\u0631\u064a\u0637\u0629: OpenFreeMap \u0648OpenMapTiles \u0648OpenStreetMap",
   dragInstruction: "اسحب الدبوس إلى العقار، ثم أكّد موقعه.",
   webPreviewLabel: "معاينة الإحداثيات",
   webPreviewBody:

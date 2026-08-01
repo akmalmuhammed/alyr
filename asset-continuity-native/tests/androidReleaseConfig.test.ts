@@ -40,7 +40,7 @@ const androidReleasePlugin = require(
   ANDROID_REMOTE_NOTIFICATION_RECEIVER_DENYLIST: readonly string[];
   ANDROID_REMOTE_NOTIFICATION_SERVICE_DENYLIST: readonly string[];
   DEVELOPMENT_SCHEME_PREFIX: string;
-  GOOGLE_MAPS_METADATA_NAME: string;
+  LEGACY_GOOGLE_MAPS_METADATA_NAME: string;
   HELDAT_ANDROID_APPLICATION_ID: string;
   HELDAT_NATIVE_SCHEME: string;
   NETWORK_INSPECTOR_GRADLE_PROPERTY: string;
@@ -51,8 +51,7 @@ const androidReleasePlugin = require(
         "uses-permission"?: AndroidPermission[];
         application?: unknown[];
       };
-    },
-    options: { requireGoogleMapsApiKey: boolean }
+    }
   ): unknown;
 };
 
@@ -65,7 +64,6 @@ const expoCli = path.join(
   "bin",
   "cli"
 );
-const testGoogleMapsApiKey = `AIza${"A".repeat(35)}`;
 
 const eas = JSON.parse(
   readFileSync(path.join(appRoot, "eas.json"), "utf8")
@@ -95,9 +93,7 @@ function resolveConfig(
   const originalEnvironment = {
     EAS_BUILD_PLATFORM: process.env.EAS_BUILD_PLATFORM,
     EAS_BUILD_PROFILE: process.env.EAS_BUILD_PROFILE,
-    NODE_ENV: process.env.NODE_ENV,
-    GOOGLE_MAPS_ANDROID_API_KEY:
-      process.env.GOOGLE_MAPS_ANDROID_API_KEY
+    NODE_ENV: process.env.NODE_ENV
   };
 
   try {
@@ -141,40 +137,49 @@ function pluginOptions(
 }
 
 describe("Android production release configuration", () => {
-  it("fails closed when distributable profiles lack the Maps key", () => {
+  it("uses MapLibre without a distributable map credential", () => {
     for (const profile of ["preview", "production"]) {
-      expect(() =>
-        resolveConfig({
-          NODE_ENV: "production",
-          EAS_BUILD_PLATFORM: "android",
-          EAS_BUILD_PROFILE: profile,
-          GOOGLE_MAPS_ANDROID_API_KEY: undefined
-        })
-      ).toThrow(
-        "GOOGLE_MAPS_ANDROID_API_KEY is required for preview and production Android builds"
-      );
+      const config = resolveConfig({
+        NODE_ENV: "production",
+        EAS_BUILD_PLATFORM: "android",
+        EAS_BUILD_PROFILE: profile
+      });
+
+      expect(config.android?.config?.googleMaps).toBeUndefined();
+      expect(
+        pluginOptions(config, "@maplibre/maplibre-react-native")
+      ).toEqual({ android: { locationEngine: "default" } });
+      expect(
+        pluginOptions(
+          config,
+          "./plugins/with-production-android-release"
+        )
+      ).toEqual({ enabled: true });
     }
   });
 
-  it("rejects placeholder or malformed Maps key values", () => {
-    expect(() =>
-      resolveConfig({
-        NODE_ENV: "production",
-        EAS_BUILD_PLATFORM: "android",
-        EAS_BUILD_PROFILE: "production",
-        GOOGLE_MAPS_ANDROID_API_KEY: "replace-me"
-      })
-    ).toThrow(
-      "GOOGLE_MAPS_ANDROID_API_KEY must be a complete Google Android API key"
-    );
+  it("keeps foreground GPS on expo-location and MapLibre on its default engine", () => {
+    const config = resolveConfig({
+      NODE_ENV: "production",
+      EAS_BUILD_PLATFORM: "android",
+      EAS_BUILD_PROFILE: "production"
+    });
+
+    expect(pluginOptions(config, "expo-location")).toMatchObject({
+      isAndroidBackgroundLocationEnabled: false,
+      isAndroidForegroundServiceEnabled: false,
+      isIosBackgroundLocationEnabled: false
+    });
+    expect(
+      pluginOptions(config, "@maplibre/maplibre-react-native")
+    ).toEqual({ android: { locationEngine: "default" } });
   });
 
-  it("allows development without Maps credentials", () => {
+  it("disables the release manifest policy only for local development", () => {
     const config = resolveConfig({
       NODE_ENV: "development",
       EAS_BUILD_PLATFORM: "android",
-      EAS_BUILD_PROFILE: "development",
-      GOOGLE_MAPS_ANDROID_API_KEY: undefined
+      EAS_BUILD_PROFILE: "development"
     });
 
     expect(config.android?.config?.googleMaps).toBeUndefined();
@@ -183,23 +188,17 @@ describe("Android production release configuration", () => {
         config,
         "./plugins/with-production-android-release"
       )
-    ).toEqual({
-      enabled: false,
-      requireGoogleMapsApiKey: false
-    });
+    ).toEqual({ enabled: false });
   });
 
-  it("injects a validated key and enables the release policy", () => {
+  it("enables the credential-free production release policy", () => {
     const config = resolveConfig({
       NODE_ENV: "production",
       EAS_BUILD_PLATFORM: "android",
-      EAS_BUILD_PROFILE: "production",
-      GOOGLE_MAPS_ANDROID_API_KEY: testGoogleMapsApiKey
+      EAS_BUILD_PROFILE: "production"
     });
 
-    expect(config.android?.config?.googleMaps?.apiKey).toBe(
-      testGoogleMapsApiKey
-    );
+    expect(config.android?.config?.googleMaps).toBeUndefined();
     expect(config.android?.package).toBe(
       androidReleasePlugin.HELDAT_ANDROID_APPLICATION_ID
     );
@@ -208,26 +207,15 @@ describe("Android production release configuration", () => {
         config,
         "./plugins/with-production-android-release"
       )
-    ).toEqual({
-      enabled: true,
-      requireGoogleMapsApiKey: true
-    });
+    ).toEqual({ enabled: true });
     expect(config.android?.intentFilters).toEqual([
       {
         action: "VIEW",
         autoVerify: true,
         category: ["BROWSABLE", "DEFAULT"],
         data: [
-          {
-            scheme: "https",
-            host: "heldat.app",
-            pathPrefix: "/join"
-          },
-          {
-            scheme: "https",
-            host: "heldat.app",
-            pathPrefix: "/callback"
-          },
+          { scheme: "https", host: "heldat.app", pathPrefix: "/join" },
+          { scheme: "https", host: "heldat.app", pathPrefix: "/callback" },
           {
             scheme: "https",
             host: "heldat.app",
@@ -272,11 +260,43 @@ describe("Android production release configuration", () => {
             ],
             application: []
           }
-        },
-        { requireGoogleMapsApiKey: false }
+        }
       )
     ).toThrow(
       "Unreviewed manifest permissions: android.permission.READ_CONTACTS"
+    );
+  });
+
+  it("rejects legacy Google Maps API key metadata", () => {
+    expect(() =>
+      androidReleasePlugin.enforceManifest({
+        manifest: {
+          application: [
+            {
+              activity: [
+                {
+                  "intent-filter": [
+                    {
+                      data: [{ $: { "android:scheme": "heldat" } }]
+                    }
+                  ]
+                }
+              ],
+              "meta-data": [
+                {
+                  $: {
+                    "android:name":
+                      androidReleasePlugin.LEGACY_GOOGLE_MAPS_METADATA_NAME,
+                    "android:value": "legacy-key"
+                  }
+                }
+              ]
+            }
+          ]
+        }
+      })
+    ).toThrow(
+      "Legacy Google Maps API key metadata is prohibited for the MapLibre release"
     );
   });
 
@@ -299,9 +319,7 @@ describe("Android production release configuration", () => {
             FORCE_COLOR: "0",
             NODE_ENV: "production",
             EAS_BUILD_PLATFORM: "android",
-            EAS_BUILD_PROFILE: "production",
-            GOOGLE_MAPS_ANDROID_API_KEY:
-              testGoogleMapsApiKey
+            EAS_BUILD_PROFILE: "production"
           },
           maxBuffer: 32 * 1024 * 1024
         }
@@ -386,10 +404,10 @@ describe("Android production release configuration", () => {
           )
       );
     const metadata = application?.["meta-data"] ?? [];
-    const mapsMetadata = metadata.find(
+    const legacyMapsMetadata = metadata.find(
       (entry) =>
         entry.$?.["android:name"] ===
-        androidReleasePlugin.GOOGLE_MAPS_METADATA_NAME
+        androidReleasePlugin.LEGACY_GOOGLE_MAPS_METADATA_NAME
     );
     const schemes = (application?.activity ?? []).flatMap(
       (activity) =>
@@ -429,13 +447,23 @@ describe("Android production release configuration", () => {
         entry.key ===
           androidReleasePlugin.NETWORK_INSPECTOR_GRADLE_PROPERTY
     );
-
-    expect(
-      introspected.android.config?.googleMaps?.apiKey
-    ).toBe(testGoogleMapsApiKey);
-    expect(mapsMetadata?.$?.["android:value"]).toBe(
-      testGoogleMapsApiKey
+    const mapLibreLocationEngineProperties = (
+      android.gradleProperties ?? []
+    ).filter(
+      (entry) =>
+        entry.type === "property" &&
+        entry.key === "org.maplibre.reactnative.locationEngine"
     );
+
+    expect(introspected.android.config?.googleMaps).toBeUndefined();
+    expect(legacyMapsMetadata).toBeUndefined();
+    expect(mapLibreLocationEngineProperties).toEqual([
+      {
+        type: "property",
+        key: "org.maplibre.reactnative.locationEngine",
+        value: "default"
+      }
+    ]);
     expect(schemes).toContain(
       androidReleasePlugin.HELDAT_NATIVE_SCHEME
     );

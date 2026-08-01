@@ -3,7 +3,7 @@ const {
   withGradleProperties
 } = require("expo/config-plugins");
 
-const GOOGLE_MAPS_METADATA_NAME =
+const LEGACY_GOOGLE_MAPS_METADATA_NAME =
   "com.google.android.geo.API_KEY";
 const HELDAT_ANDROID_APPLICATION_ID = "app.heldat.mobile";
 const HELDAT_NATIVE_SCHEME = "heldat";
@@ -224,19 +224,16 @@ function enforceLocalNotificationsOnly(manifest) {
   }
 }
 
-function findGoogleMapsApiKey(manifest) {
+function findLegacyGoogleMapsApiKey(manifest) {
   const application = manifest.application?.[0];
   const metadata = application?.["meta-data"] ?? [];
   return metadata.find(
     (entry) =>
-      entry?.$?.["android:name"] === GOOGLE_MAPS_METADATA_NAME
+      entry?.$?.["android:name"] === LEGACY_GOOGLE_MAPS_METADATA_NAME
   )?.$?.["android:value"];
 }
 
-function enforceManifest(
-  androidManifest,
-  { requireGoogleMapsApiKey }
-) {
+function enforceManifest(androidManifest) {
   const manifest = androidManifest.manifest;
   if (!manifest) {
     throw new Error(
@@ -254,12 +251,9 @@ function enforceManifest(
   enforceLocalNotificationsOnly(manifest);
   enforcePublicIdentity(manifest);
 
-  if (
-    requireGoogleMapsApiKey &&
-    typeof findGoogleMapsApiKey(manifest) !== "string"
-  ) {
+  if (typeof findLegacyGoogleMapsApiKey(manifest) === "string") {
     throw new Error(
-      "[Heldat Android release] Google Maps Android API key metadata was not generated."
+      "[Heldat Android release] Legacy Google Maps API key metadata is prohibited for the MapLibre release."
     );
   }
 
@@ -282,10 +276,7 @@ function disableNetworkInspector(gradleProperties) {
 
 function withProductionAndroidRelease(
   config,
-  {
-    enabled = false,
-    requireGoogleMapsApiKey = false
-  } = {}
+  { enabled = false } = {}
 ) {
   if (!enabled) {
     return config;
@@ -299,9 +290,7 @@ function withProductionAndroidRelease(
   }
 
   config = withAndroidManifest(config, (resolved) => {
-    resolved.modResults = enforceManifest(resolved.modResults, {
-      requireGoogleMapsApiKey
-    });
+    resolved.modResults = enforceManifest(resolved.modResults);
     return resolved;
   });
 
@@ -326,8 +315,8 @@ module.exports.ANDROID_REMOTE_NOTIFICATION_SERVICE_DENYLIST =
   ANDROID_REMOTE_NOTIFICATION_SERVICE_DENYLIST;
 module.exports.DEVELOPMENT_SCHEME_PREFIX =
   DEVELOPMENT_SCHEME_PREFIX;
-module.exports.GOOGLE_MAPS_METADATA_NAME =
-  GOOGLE_MAPS_METADATA_NAME;
+module.exports.LEGACY_GOOGLE_MAPS_METADATA_NAME =
+  LEGACY_GOOGLE_MAPS_METADATA_NAME;
 module.exports.HELDAT_ANDROID_APPLICATION_ID =
   HELDAT_ANDROID_APPLICATION_ID;
 module.exports.HELDAT_NATIVE_SCHEME =

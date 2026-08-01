@@ -102,8 +102,7 @@ describe("Android device-bound backup boundary", () => {
             EAS_BUILD_PLATFORM: "android",
             EAS_BUILD_PROFILE: "production",
             NODE_ENV: "production",
-            FORCE_COLOR: "0",
-            GOOGLE_MAPS_ANDROID_API_KEY: `AIza${"A".repeat(35)}`
+            FORCE_COLOR: "0"
           },
           maxBuffer: 32 * 1024 * 1024
         }

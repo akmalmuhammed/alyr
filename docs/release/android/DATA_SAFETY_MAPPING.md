@@ -1,11 +1,12 @@
 # Heldat Google Play Data safety mapping
 
-Status: **build-6 static artifact reconciled; Play-delivered SDK and Console reconciliation required**
+Status: **MapLibre/OpenFreeMap source migration complete; fresh Play artifact and Console reconciliation required**
 
 Google defines collection as transmitting data off the device, including
-transmission performed by an SDK. The current mobile client syncs to a private
-Supabase project and includes Google Maps SDK behavior. The form must therefore
-describe both Heldat's own processing and the latest submitted SDK behavior.
+transmission performed by an SDK. The current source syncs to a private
+Supabase project and renders maps with MapLibre using OpenFreeMap's public
+Liberty style. The form must therefore describe Heldat's own processing, map
+style/tile requests, and the exact SDK graph in the newly submitted binary.
 
 ## Top-level answers
 
@@ -20,9 +21,9 @@ describe both Heldat's own processing and the latest submitted SDK behavior.
 
 Supabase is used as a contracted processor for app functionality. Confirm the
 final service agreements before selecting whether a transfer counts as
-"sharing" under Google's service-provider exception. Google Maps SDK data is
-listed separately and should be declared conservatively where Google processes
-it to maintain and improve Google services.
+"sharing" under Google's service-provider exception. OpenFreeMap/Cloudflare
+map requests are listed separately and require the same conservative final
+policy review; a zero-price provider is still an external network recipient.
 
 ## Heldat-controlled data
 
@@ -45,30 +46,40 @@ For optional data, the user chooses the feature that sends it. Do not mark a
 field as ephemeral: cloud-synced records persist until the user deletes them or
 the documented retention process applies.
 
-## Google Maps SDK for Android
+## MapLibre and OpenFreeMap map boundary
 
-Google's current Maps SDK disclosure says the SDK automatically collects
-request/device metadata, crash metrics, IP address, and a Maps-specific
-pseudonymous identifier, and may collect map panning/zooming events. Reconcile
-the final SDK version and conservatively consider these Play categories:
+The current source pins `@maplibre/maplibre-react-native` `11.3.6` and uses
+`https://tiles.openfreemap.org/styles/liberty`. It contains no Google Maps key
+configuration and the release plugin rejects legacy
+`com.google.android.geo.API_KEY` metadata. `expo-location` remains the separate,
+user-initiated foreground GPS port; coordinates are never sent to a geocoder by
+this map component.
 
-| Maps SDK signal | Candidate Play type | Handling to declare |
+OpenFreeMap states that its public instance needs no account, API key, or
+payment and that attribution is required. Its terms provide the service as-is
+without an availability guarantee. Style and vector-tile requests still leave
+the device and may pass through Cloudflare. Reconcile the current OpenFreeMap
+privacy policy, terms, requested tile URLs, and the Play definition of
+collection/sharing before submission.
+
+| Map-network signal | Candidate Play type | Conservative review action |
 |---|---|---|
-| IP address | Approximate location | Collected by the SDK for service operation/improvement |
-| Device and request metadata | Device or other IDs; App info and performance | Collected by the SDK |
-| Maps SDK pseudonymous identifier | Device or other IDs | Collected by the SDK |
-| Stack traces and crash metrics | Crash logs; Diagnostics | Collected by the SDK |
-| Pan and zoom interactions | App interactions | Collected depending on map use |
+| IP/network request metadata | Approximate location; App info and performance | Determine provider/CDN processing and disclosure treatment |
+| Requested map style/tile coordinates | Approximate location or App activity | Verify whether viewport-derived tile paths meet Play's collection definition |
+| Pan/zoom interaction | App interactions | Confirm it remains on device; declare only if the submitted SDK/provider transmits it |
+| Renderer crash/diagnostic data | Crash logs; Diagnostics | Inspect the exact binary and runtime configuration; do not infer collection from package presence |
 
-Whether these transfers are marked as "shared" is a final policy/legal answer,
-not an engineering assumption. Use the latest official Maps disclosure when
-completing Play Console.
+The UI keeps the MapLibre attribution control plus a visible
+OpenFreeMap/OpenMapTiles/OpenStreetMap label. If style/tile loading fails or
+stalls, it replaces the map with a truthful coordinate readout and directs the
+user back to the Places list; it does not guess or overwrite location.
 
-## Exact build-6 static evidence
+## Historical build-6 static evidence
 
 The production AAB at source commit
 `faa751a86d73021c2883bf1deb31f5b9ae8e8bee` passed all 69 static release
-checks. This is artifact evidence, not physical-device, Play-delivered, backend,
+checks. It predates the MapLibre migration and is now historical evidence only;
+it must not be submitted. It is not physical-device, Play-delivered, backend,
 or policy approval.
 
 | Field | Verified value |
@@ -161,7 +172,7 @@ points above are absent.
 - [ ] Re-run the exact static checks if the submitted AAB differs by one byte,
       source commit, dependency graph, version, signing lineage, or build profile.
 - [ ] Review the current Google Play SDK Index entry for every embedded SDK.
-- [ ] Compare Maps SDK collection against its current official disclosure.
+- [ ] Reconcile MapLibre plus OpenFreeMap/Cloudflare network behavior against current provider policies and the Play collection/sharing definitions.
 - [ ] Confirm product analytics still rejects names, amounts, coordinates,
       retrieval clues, filenames, and document contents.
 - [ ] Confirm privacy policy categories and processors match this form.

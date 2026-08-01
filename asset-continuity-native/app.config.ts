@@ -1,24 +1,8 @@
 import type { ConfigContext, ExpoConfig } from "expo/config";
 
-/**
- * EAS environment contract:
- * - name: GOOGLE_MAPS_ANDROID_API_KEY
- * - environments: preview and production
- * - visibility: Sensitive
- * The value is embedded in the APK/AAB, so Google Cloud Android-app
- * restrictions for app.heldat.mobile and each signing certificate are the
- * security boundary; EAS visibility only prevents accidental log/UI exposure.
- */
-const GOOGLE_MAPS_ANDROID_API_KEY_ENV =
-  "GOOGLE_MAPS_ANDROID_API_KEY";
 const HELDAT_PUBLIC_APPLICATION_ID = "app.heldat.mobile";
 const HELDAT_PUBLIC_SCHEME = "heldat";
-const DISTRIBUTABLE_ANDROID_PROFILES = new Set([
-  "preview",
-  "production"
-]);
-const GOOGLE_MAPS_ANDROID_API_KEY_PATTERN =
-  /^AIza[0-9A-Za-z_-]{35}$/u;
+
 const PUBLIC_APP_LINK_HOST = "heldat.app";
 const PUBLIC_APP_LINK_PATHS = [
   "/join",
@@ -37,57 +21,6 @@ function allowsLocalDevelopmentNetworking(): boolean {
     );
   }
   return process.env.NODE_ENV === "development";
-}
-
-function isDistributableAndroidBuild(): boolean {
-  const platform = process.env.EAS_BUILD_PLATFORM;
-  if (
-    platform !== undefined &&
-    platform.length > 0 &&
-    platform !== "android"
-  ) {
-    return false;
-  }
-
-  const profile = process.env.EAS_BUILD_PROFILE;
-  if (profile !== undefined && profile.length > 0) {
-    return DISTRIBUTABLE_ANDROID_PROFILES.has(profile);
-  }
-  return process.env.NODE_ENV === "production";
-}
-
-function resolveGoogleMapsAndroidApiKey(): string | undefined {
-  const apiKey =
-    process.env[GOOGLE_MAPS_ANDROID_API_KEY_ENV]?.trim();
-
-  if (!apiKey) {
-    if (isDistributableAndroidBuild()) {
-      throw new Error(
-          `[Heldat config] ${GOOGLE_MAPS_ANDROID_API_KEY_ENV} is required for preview and production Android builds. ` +
-          "Create it in the matching EAS environment and restrict the Google Maps key to Android package " +
-          `${HELDAT_PUBLIC_APPLICATION_ID} plus the signing certificate fingerprint.`
-      );
-    }
-    return undefined;
-  }
-
-  if (!GOOGLE_MAPS_ANDROID_API_KEY_PATTERN.test(apiKey)) {
-    throw new Error(
-      `[Heldat config] ${GOOGLE_MAPS_ANDROID_API_KEY_ENV} must be a complete Google Android API key ` +
-        "(AIza followed by 35 URL-safe characters). Placeholder or malformed values are rejected."
-    );
-  }
-
-  return apiKey;
-}
-
-function googleMapsAndroidConfig(): {
-  config?: { googleMaps: { apiKey: string } };
-} {
-  const apiKey = resolveGoogleMapsAndroidApiKey();
-  return apiKey
-    ? { config: { googleMaps: { apiKey } } }
-    : {};
 }
 
 function remoteUpdatesConfig(): NonNullable<
@@ -284,7 +217,6 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
         }))
       }
     ],
-    ...googleMapsAndroidConfig(),
     adaptiveIcon: {
       foregroundImage:
         "./assets/alyr/app-and-favicon/01_App_Icon/PNG/app-icon-1024.png",
@@ -353,6 +285,14 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
       }
     ],
     [
+      "@maplibre/maplibre-react-native",
+      {
+        // Heldat reads foreground GPS through expo-location. The map renderer
+        // uses MapLibre's provider-neutral engine and never adds Play Services.
+        android: { locationEngine: "default" }
+      }
+    ],
+    [
       "expo-location",
       {
         locationWhenInUsePermission:
@@ -382,8 +322,7 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
     [
       "./plugins/with-production-android-release",
       {
-        enabled: !allowsLocalDevelopmentNetworking(),
-        requireGoogleMapsApiKey: isDistributableAndroidBuild()
+        enabled: !allowsLocalDevelopmentNetworking()
       }
     ]
   ],

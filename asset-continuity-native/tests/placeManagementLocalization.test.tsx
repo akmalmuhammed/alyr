@@ -99,23 +99,32 @@ jest.mock("@/state/WorkspaceProvider", () => ({
   useWorkspace: () => mockWorkspaceState
 }));
 
-jest.mock("react-native-maps", () => {
+jest.mock("@maplibre/maplibre-react-native", () => {
   const React = jest.requireActual("react") as typeof import("react");
-  const { View: MockView } = jest.requireActual("react-native") as typeof import("react-native");
+  const { View: MockView } = jest.requireActual(
+    "react-native"
+  ) as typeof import("react-native");
   const MockMap = ({
     children,
     ...props
   }: PropsWithChildren<Record<string, unknown>>) =>
     React.createElement(MockView, props, children);
-  const MockMarker = ({
+  const MockCamera = (props: Record<string, unknown>) =>
+    React.createElement(MockView, props);
+  const MockViewAnnotation = ({
     children,
+    id,
     ...props
-  }: PropsWithChildren<Record<string, unknown>>) =>
-    React.createElement(MockView, props, children);
+  }: PropsWithChildren<Record<string, unknown> & { id?: string }>) =>
+    React.createElement(
+      MockView,
+      { ...props, testID: `${id ?? "map"}-annotation` },
+      children
+    );
   return {
-    __esModule: true,
-    default: MockMap,
-    Marker: MockMarker
+    Camera: MockCamera,
+    Map: MockMap,
+    ViewAnnotation: MockViewAnnotation
   };
 });
 
@@ -318,8 +327,7 @@ describe("localized Place management routes", () => {
     );
     expect(pinSectionStyle.writingDirection).toBe("rtl");
     const markerStyle = StyleSheet.flatten(
-      screen.getByTestId("place-pin-editor-native-marker").props.children
-        .props.style
+      screen.getByTestId("place-pin-editor-native-marker").props.style
     );
     expect(markerStyle.width).toBeGreaterThanOrEqual(44);
     expect(markerStyle.height).toBeGreaterThanOrEqual(44);

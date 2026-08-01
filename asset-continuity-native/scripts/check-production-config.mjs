@@ -18,14 +18,11 @@ const {
   ANDROID_REMOTE_NOTIFICATION_RECEIVER_DENYLIST,
   ANDROID_REMOTE_NOTIFICATION_SERVICE_DENYLIST,
   DEVELOPMENT_SCHEME_PREFIX,
-  GOOGLE_MAPS_METADATA_NAME,
+  LEGACY_GOOGLE_MAPS_METADATA_NAME,
   HELDAT_ANDROID_APPLICATION_ID,
   HELDAT_NATIVE_SCHEME,
   NETWORK_INSPECTOR_GRADLE_PROPERTY
 } = require("../plugins/with-production-android-release");
-const configCheckGoogleMapsApiKey =
-  process.env.GOOGLE_MAPS_ANDROID_API_KEY ??
-  `AIza${"A".repeat(35)}`;
 const signedRuntimeSource = readFileSync(
   new URL("../src/runtime/signedSupabaseRuntime.ts", import.meta.url),
   "utf8"
@@ -44,6 +41,9 @@ const iosAuthProviderSource = readFileSync(
   ),
   "utf8"
 );
+const nativePackage = JSON.parse(
+  readFileSync(new URL("../package.json", import.meta.url), "utf8")
+);
 const result = spawnSync(
   process.execPath,
   [expoCli, "config", "--type", "introspect", "--json"],
@@ -54,9 +54,7 @@ const result = spawnSync(
       ...process.env,
       NODE_ENV: "production",
       EAS_BUILD_PROFILE: "production",
-      EAS_BUILD_PLATFORM: "android",
-      GOOGLE_MAPS_ANDROID_API_KEY:
-        configCheckGoogleMapsApiKey
+      EAS_BUILD_PLATFORM: "android"
     },
     maxBuffer: 16 * 1024 * 1024
   }
@@ -84,6 +82,11 @@ const autolinkedModules =
 const webBrowserPlugin = (config?.plugins ?? []).find(
   (entry) =>
     Array.isArray(entry) && entry[0] === "expo-web-browser"
+);
+const mapLibrePlugin = (config?.plugins ?? []).find(
+  (entry) =>
+    Array.isArray(entry) &&
+    entry[0] === "@maplibre/maplibre-react-native"
 );
 const urlSchemes = (infoPlist.CFBundleURLTypes ?? []).flatMap(
   (entry) => entry?.CFBundleURLSchemes ?? []
@@ -148,12 +151,12 @@ const androidAppLinks = (
       }))
   )
 );
-const googleMapsMetadata = (
+const legacyGoogleMapsMetadata = (
   androidApplication?.["meta-data"] ?? []
 ).find(
   (entry) =>
     entry?.$?.["android:name"] ===
-    GOOGLE_MAPS_METADATA_NAME
+    LEGACY_GOOGLE_MAPS_METADATA_NAME
 );
 const networkInspectorProperties = (
   android?.gradleProperties ?? []
@@ -161,6 +164,13 @@ const networkInspectorProperties = (
   (entry) =>
     entry?.type === "property" &&
     entry?.key === NETWORK_INSPECTOR_GRADLE_PROPERTY
+);
+const mapLibreLocationEngineProperties = (
+  android?.gradleProperties ?? []
+).filter(
+  (entry) =>
+    entry?.type === "property" &&
+    entry?.key === "org.maplibre.reactnative.locationEngine"
 );
 const expectedCollectedDataTypes = [
   "NSPrivacyCollectedDataTypeEmailAddress",
@@ -236,6 +246,13 @@ invariant(
   "Production capture/reminder modules changed: image picker and local notifications must remain, while the unused barcode-capable camera module stays excluded."
 );
 invariant(
+  nativePackage?.dependencies?.["@maplibre/maplibre-react-native"] ===
+    "11.3.6" &&
+    !("react-native-maps" in (nativePackage?.dependencies ?? {})) &&
+    mapLibrePlugin?.[1]?.android?.locationEngine === "default",
+  "Production map dependency/plugin must pin MapLibre 11.3.6, exclude react-native-maps, and use the default location engine."
+);
+invariant(
   !("NSBonjourServices" in infoPlist),
   "Production iOS config still advertises Expo Bonjour discovery."
 );
@@ -292,11 +309,14 @@ invariant(
   "Production Android config resolved an unexpected package identifier."
 );
 invariant(
-  config?.android?.config?.googleMaps?.apiKey ===
-    configCheckGoogleMapsApiKey &&
-    googleMapsMetadata?.$?.["android:value"] ===
-      configCheckGoogleMapsApiKey,
-  "Production Android Google Maps key was not propagated to manifest metadata."
+  config?.android?.config?.googleMaps === undefined &&
+    legacyGoogleMapsMetadata === undefined,
+  "Production Android config must exclude legacy Google Maps key configuration and manifest metadata."
+);
+invariant(
+  mapLibreLocationEngineProperties.length === 1 &&
+    mapLibreLocationEngineProperties[0]?.value === "default",
+  "Production Android MapLibre must use the provider-neutral default location engine."
 );
 invariant(
   androidSchemes.includes(HELDAT_NATIVE_SCHEME),
@@ -442,5 +462,5 @@ invariant(
 );
 
 console.log(
-  "Production native config passed: iOS privacy/security/provider exclusion and Android OAuth, Maps, permission, deep-link, network-inspector, and local-notifications-only release policies verified."
+  "Production native config passed: iOS privacy/security/provider exclusion and Android OAuth, MapLibre/OpenFreeMap, permission, deep-link, network-inspector, and local-notifications-only release policies verified."
 );

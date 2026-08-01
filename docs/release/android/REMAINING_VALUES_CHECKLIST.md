@@ -5,7 +5,7 @@
 - [x] Package name fixed as `app.heldat.mobile`.
 - [x] Production AAB profile configured with remote version-code increment.
 - [x] Target SDK 36 and minimum SDK 24 verified on the baseline AAB.
-- [x] Production Maps key restricted to Android application identity.
+- [x] Native map provider migrated in source to MapLibre `11.3.6` with the OpenFreeMap Liberty style; no Google Maps API key or billing-enabled map project is required.
 - [x] Android App Links published at `https://heldat.app/.well-known/assetlinks.json`.
 - [x] Public privacy, support, security, terms, and account-deletion routes are
       reachable; content approval remains a separate gate below.
@@ -52,16 +52,18 @@ account. Record the Console's exact requirement with the release evidence.
 
 ## Final signed release gate
 
-- [ ] Confirm the submitted AAB is byte-identical to build 6 above, or repeat
-      the complete static review and record the replacement path/hash/version.
+- [ ] Do not submit build 6: the MapLibre provider change alters the native
+      dependency graph. Produce a fresh AAB, repeat the complete static review,
+      and record its path, hash, version, source commit, and signing lineage.
 - [ ] Upload the final hardened AAB, not an earlier baseline artifact.
 - [ ] Enroll in Play App Signing and archive both upload and app-signing
       certificate fingerprints.
 - [ ] Add the Play app-signing SHA-256 certificate to `assetlinks.json`; the
       local upload certificate alone does not verify store-installed builds.
-- [ ] Add the Play app-signing SHA-1 certificate to the Android restriction on
-      the Google Maps API key; the upload certificate alone does not authorize
-      maps inside a Play-installed build.
+- [ ] Confirm the Play-delivered binary includes MapLibre, excludes
+      `react-native-maps` and `com.google.android.geo.API_KEY`, preserves visible
+      OpenMapTiles/OpenStreetMap attribution, and exercises the coordinate/list
+      fallback with map networking unavailable.
 - [ ] Recheck package, version code/name, target/min SDK, permissions, native
       libraries, Data safety disclosures, SDK Index results, and embedded SDK
       versions from the Play-delivered artifact.
