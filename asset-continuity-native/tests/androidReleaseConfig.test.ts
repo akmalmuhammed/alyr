@@ -523,6 +523,15 @@ describe("Android production release configuration", () => {
     const allowlist = new Set(
       androidReleasePlugin.ANDROID_RELEASE_PERMISSION_ALLOWLIST
     );
+
+    expect(
+      androidReleasePlugin.ANDROID_RELEASE_PERMISSION_ALLOWLIST
+    ).toEqual(
+      expect.arrayContaining([
+        "android.permission.ACCESS_NETWORK_STATE",
+        "android.permission.ACCESS_WIFI_STATE"
+      ])
+    );
     expect(
       activePermissions.filter(
         (permission) => !allowlist.has(permission)

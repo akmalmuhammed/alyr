@@ -4,8 +4,15 @@ import {
   ViewAnnotation,
   type LngLat
 } from "@maplibre/maplibre-react-native";
-import { useEffect, useState } from "react";
-import { StyleSheet, Text, View } from "react-native";
+import { useNetworkState } from "expo-network";
+import { useEffect, useRef, useState } from "react";
+import {
+  AccessibilityInfo,
+  Platform,
+  StyleSheet,
+  Text,
+  View
+} from "react-native";
 
 import { colors, radius, spacing, typography } from "@/theme/tokens";
 
@@ -33,18 +40,56 @@ export function PlacePinEditor(props: PlacePinEditorProps) {
     now = () => new Date().toISOString()
   } = props;
   const labels = placePinEditorLabels(language, labelOverrides);
+  const networkState = useNetworkState();
   const rtl = language === "ar";
   const hasPin = hasValidCoordinates(value);
+  const isConfirmedOffline =
+    networkState.isConnected === false ||
+    networkState.isInternetReachable === false;
   const mapKey = hasPin
     ? `${value.latitude.toFixed(6)}:${value.longitude.toFixed(6)}`
     : "no-pin";
   const [mapStatus, setMapStatus] = useState<
     "loading" | "ready" | "failed"
   >("loading");
+  const [networkFallbackLatched, setNetworkFallbackLatched] =
+    useState(false);
+  const fallbackWasVisible = useRef(false);
+  const coordinateReadout = hasPin
+    ? `${formatCoordinateReadout(
+        value.latitude,
+        value
+      )}, ${formatCoordinateReadout(value.longitude, value)}`
+    : "";
+  const showMapFallback =
+    hasPin &&
+    (mapStatus === "failed" ||
+      isConfirmedOffline ||
+      networkFallbackLatched);
+  const fallbackAnnouncement = `${labels.mapUnavailableTitle}. ${labels.mapUnavailableBody} ${coordinateReadout}`;
+
+  useEffect(() => {
+    if (!hasPin) {
+      setNetworkFallbackLatched(false);
+      return;
+    }
+
+    if (isConfirmedOffline) {
+      // Once native connectivity proves the map transport unavailable, keep
+      // the truthful coordinate fallback stable until this editor remounts.
+      // This avoids a flickering map while the operating system revalidates
+      // the connection and never retries or prefetches tiles in this state.
+      setNetworkFallbackLatched(true);
+    }
+  }, [hasPin, isConfirmedOffline]);
 
   useEffect(() => {
     if (!hasPin) {
       setMapStatus("loading");
+      return undefined;
+    }
+
+    if (isConfirmedOffline || networkFallbackLatched) {
       return undefined;
     }
 
@@ -55,7 +100,21 @@ export function PlacePinEditor(props: PlacePinEditorProps) {
       );
     }, MAP_LOAD_TIMEOUT_MS);
     return () => clearTimeout(timer);
-  }, [hasPin, mapKey]);
+  }, [hasPin, isConfirmedOffline, mapKey, networkFallbackLatched]);
+
+  useEffect(() => {
+    if (
+      Platform.OS === "ios" &&
+      showMapFallback &&
+      !fallbackWasVisible.current
+    ) {
+      AccessibilityInfo.announceForAccessibility(
+        fallbackAnnouncement
+      );
+    }
+
+    fallbackWasVisible.current = showMapFallback;
+  }, [fallbackAnnouncement, showMapFallback]);
 
   let mapContent: React.ReactNode;
   if (!hasPin) {
@@ -73,14 +132,10 @@ export function PlacePinEditor(props: PlacePinEditorProps) {
         </View>
       </View>
     );
-  } else if (mapStatus === "failed") {
-    const coordinateReadout = `${formatCoordinateReadout(
-      value.latitude,
-      value
-    )}, ${formatCoordinateReadout(value.longitude, value)}`;
+  } else if (showMapFallback) {
     mapContent = (
       <View
-        accessibilityLabel={`${labels.mapUnavailableTitle}. ${labels.mapUnavailableBody}. ${coordinateReadout}`}
+        accessibilityLabel={fallbackAnnouncement}
         accessibilityLiveRegion="polite"
         accessibilityRole="summary"
         style={styles.mapFallback}

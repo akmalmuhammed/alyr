@@ -253,6 +253,11 @@ invariant(
   "Production map dependency/plugin must pin MapLibre 11.3.6, exclude react-native-maps, and use the default location engine."
 );
 invariant(
+  nativePackage?.dependencies?.["expo-network"] === "57.0.1" &&
+    autolinkedModules.includes("expo-network"),
+  "Production network-state dependency must pin and autolink expo-network 57.0.1."
+);
+invariant(
   !("NSBonjourServices" in infoPlist),
   "Production iOS config still advertises Expo Bonjour discovery."
 );
@@ -462,5 +467,5 @@ invariant(
 );
 
 console.log(
-  "Production native config passed: iOS privacy/security/provider exclusion and Android OAuth, MapLibre/OpenFreeMap, permission, deep-link, network-inspector, and local-notifications-only release policies verified."
+  "Production native config passed: iOS privacy/security/provider exclusion and Android OAuth, MapLibre/OpenFreeMap, expo-network listener, permission, deep-link, network-inspector, and local-notifications-only release policies verified."
 );

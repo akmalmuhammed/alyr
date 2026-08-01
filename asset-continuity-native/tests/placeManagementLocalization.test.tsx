@@ -99,6 +99,13 @@ jest.mock("@/state/WorkspaceProvider", () => ({
   useWorkspace: () => mockWorkspaceState
 }));
 
+jest.mock("expo-network", () => ({
+  useNetworkState: () => ({
+    isConnected: true,
+    isInternetReachable: true
+  })
+}));
+
 jest.mock("@maplibre/maplibre-react-native", () => {
   const React = jest.requireActual("react") as typeof import("react");
   const { View: MockView } = jest.requireActual(

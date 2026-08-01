@@ -55,6 +55,15 @@ configuration and the release plugin rejects legacy
 user-initiated foreground GPS port; coordinates are never sent to a geocoder by
 this map component.
 
+The source also pins `expo-network` `57.0.1`. Its hook observes native
+operating-system connectivity state and unregisters its native listener on
+unmount. Heldat does not add a reachability endpoint, persist a network
+identifier, poll tiles, or prefetch tiles. The Android library manifest adds
+normal `android.permission.ACCESS_NETWORK_STATE` and
+`android.permission.ACCESS_WIFI_STATE` permissions; neither is a user-facing
+runtime permission. Inspect both in the exact submitted merged manifest and
+reconcile the SDK behavior against the final Data safety form.
+
 OpenFreeMap states that its public instance needs no account, API key, or
 payment and that attribution is required. Its terms provide the service as-is
 without an availability guarantee. Style and vector-tile requests still leave
@@ -71,8 +80,11 @@ collection/sharing before submission.
 
 The UI keeps the MapLibre attribution control plus a visible
 OpenFreeMap/OpenMapTiles/OpenStreetMap label. If style/tile loading fails or
-stalls, it replaces the map with a truthful coordinate readout and directs the
-user back to the Places list; it does not guess or overwrite location.
+stalls, or a ready map receives a confirmed offline native state, it replaces
+that map with a truthful coordinate readout and directs the user back to the
+Places list; it does not guess or overwrite location. Unknown initial network
+state does not claim failure. A network-triggered fallback remains latched
+until the editor remounts, preventing automatic retry or prefetch on recovery.
 
 ## Historical build-6 static evidence
 
@@ -137,6 +149,10 @@ points above are absent.
 
 - Camera: requested only when the user captures an asset or proof image.
 - Fine/coarse location: requested only when the user asks to place a record.
+- Network/Wi-Fi state: `expo-network` adds the normal
+  `ACCESS_NETWORK_STATE`/`ACCESS_WIFI_STATE` permissions to observe connection
+  transitions. Heldat does not use this dependency to read SSID/BSSID, persist
+  network identifiers, or perform its own reachability request.
 - Photo/document picker: exposes only user-selected content.
 - Broad external-storage and media-library permissions: excluded from the
   production manifest; imports stay on the system-picker boundary.
@@ -173,6 +189,9 @@ points above are absent.
       source commit, dependency graph, version, signing lineage, or build profile.
 - [ ] Review the current Google Play SDK Index entry for every embedded SDK.
 - [ ] Reconcile MapLibre plus OpenFreeMap/Cloudflare network behavior against current provider policies and the Play collection/sharing definitions.
+- [ ] Reconcile `expo-network` `57.0.1`, both auto-added normal Android
+      permissions, and observed native-only connection state against the exact
+      submitted SDK graph and Console answers.
 - [ ] Confirm product analytics still rejects names, amounts, coordinates,
       retrieval clues, filenames, and document contents.
 - [ ] Confirm privacy policy categories and processors match this form.

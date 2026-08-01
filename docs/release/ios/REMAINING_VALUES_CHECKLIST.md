@@ -125,6 +125,11 @@ Do not create a production submission while any required typed slot remains.
       Today.
 - [ ] Camera, image import, document import, location, Face ID/device passcode,
       offline restart, sync, and privacy shielding pass.
+- [ ] With the Place map fully rendered, disconnect networking and verify the
+      coordinate fallback appears immediately, VoiceOver announces the
+      localized fallback exactly once, repeated state/render events do not
+      duplicate it, and the map retries only after leaving/remounting the
+      editor.
 - [ ] English, Arabic RTL, VoiceOver, and Dynamic Type pass.
 - [ ] Two-device convergence creates no duplicate record or proof version.
 - [ ] Account and household revocation expose no name, count, thumbnail, or

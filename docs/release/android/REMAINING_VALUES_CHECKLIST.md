@@ -6,6 +6,9 @@
 - [x] Production AAB profile configured with remote version-code increment.
 - [x] Target SDK 36 and minimum SDK 24 verified on the baseline AAB.
 - [x] Native map provider migrated in source to MapLibre `11.3.6` with the OpenFreeMap Liberty style; no Google Maps API key or billing-enabled map project is required.
+- [x] Native map availability uses `expo-network` `57.0.1`; unknown startup
+      state remains neutral and a confirmed ready-to-offline transition latches
+      the truthful coordinate fallback without tile polling or prefetch.
 - [x] Android App Links published at `https://heldat.app/.well-known/assetlinks.json`.
 - [x] Public privacy, support, security, terms, and account-deletion routes are
       reachable; content approval remains a separate gate below.
@@ -63,7 +66,13 @@ account. Record the Console's exact requirement with the release evidence.
 - [ ] Confirm the Play-delivered binary includes MapLibre, excludes
       `react-native-maps` and `com.google.android.geo.API_KEY`, preserves visible
       OpenMapTiles/OpenStreetMap attribution, and exercises the coordinate/list
-      fallback with map networking unavailable.
+      fallback after a ready map loses networking. Confirm recovery occurs only
+      after leaving/remounting the editor, as documented.
+- [ ] Confirm the merged manifest contains the expected normal permissions
+      `android.permission.ACCESS_NETWORK_STATE` and
+      `android.permission.ACCESS_WIFI_STATE` added by `expo-network`, requires
+      no runtime prompt for either, and contains no unexpected network or Wi-Fi
+      permission.
 - [ ] Recheck package, version code/name, target/min SDK, permissions, native
       libraries, Data safety disclosures, SDK Index results, and embedded SDK
       versions from the Play-delivered artifact.
