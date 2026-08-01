@@ -18,8 +18,15 @@ has no SLA.
 
 ## Product behavior
 
-- `PlacePinEditor` uses MapLibre `Map`, `Camera`, and a draggable
-  `ViewAnnotation`.
+- `PlacePinEditor` uses MapLibre `Map` and `Camera`. Its proven native drag
+  path remains a draggable `ViewAnnotation`.
+- On Android, a non-interactive GeoJSON point with two `CircleLayer`s renders
+  the 44 px Carbon/white/Volt pin inside MapLibre's GL scene. The rendered
+  point follows `onDrag` while `ViewAnnotation` remains the source of native
+  drag events, coordinate order, and provenance.
+- MapLibre `11.3.6` `Marker` is intended for interactive React views but does
+  not expose `draggable`, `onDrag`, or `onDragEnd`; replacing the proven drag
+  path with `Marker` would remove Heldat's direct-manipulation contract.
 - Longitude/latitude ordering at the renderer boundary is converted back to
   Heldat's latitude/longitude domain command without changing provenance.
 - A drag remains `user_pin` / `user_placed`, clears measured GPS accuracy, and
@@ -49,6 +56,8 @@ has no SLA.
 ## Native configuration boundary
 
 - Expo config plugin: `@maplibre/maplibre-react-native`.
+- Android pin visual: `GeoJSONSource` plus two non-pressable `circle` layers;
+  no native overlay Marker is allowed to intercept the draggable annotation.
 - Android location engine: `default`, not the Google Play Services engine.
 - Foreground GPS: `expo-location`, unchanged.
 - Connectivity state: `expo-network` `57.0.1`; its hook removes its JS
@@ -75,16 +84,20 @@ must not silently switch providers, infer a Place, or download offline regions.
 
 ## Validation gates
 
-1. Focused component tests: style URL, attribution, camera coordinate order,
-   drag provenance, explicit failure, stall timeout, ready-to-offline change,
-   neutral initial unknown state, fallback latching, and one iOS announcement
-   per transition.
+1. Focused component tests: style URL, attribution, Android outer/core pin
+   layers, live visual-coordinate updates during native drag, camera coordinate
+   order, drag provenance, explicit failure, stall timeout, ready-to-offline
+   change, neutral initial unknown state, fallback latching, and one iOS
+   announcement per transition.
 2. Exact-location contract and English/Arabic management tests.
 3. TypeScript and complete native Jest suite.
 4. Expo public/production config, EAS packaging, and recovery-crypto gates.
 5. Clean Android prebuild and native dependency/manifest inspection.
 6. Android compile when the local SDK/Gradle environment permits it.
-7. Physical Android and iPhone checks with map networking on/off before store
+7. Fresh API 35 Android native-build check proving the rendered pin is visible
+   and follows drag over live tiles. Source/component tests do not close the
+   original invisible-marker runtime defect.
+8. Physical Android and iPhone checks with map networking on/off before store
    promotion.
 
 ## Primary references

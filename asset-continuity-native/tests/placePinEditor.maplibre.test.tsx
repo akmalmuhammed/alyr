@@ -29,6 +29,17 @@ jest.mock("@maplibre/maplibre-react-native", () => {
     React.createElement(View, props, children);
   const Camera = (props: Record<string, unknown>) =>
     React.createElement(View, props);
+  const GeoJSONSource = ({
+    children,
+    id,
+    ...props
+  }: PropsWithChildren<Record<string, unknown> & { id?: string }>) =>
+    React.createElement(View, { ...props, id, testID: id }, children);
+  const Layer = ({
+    id,
+    ...props
+  }: Record<string, unknown> & { id?: string }) =>
+    React.createElement(View, { ...props, id, testID: id });
   const ViewAnnotation = ({
     children,
     id,
@@ -39,7 +50,7 @@ jest.mock("@maplibre/maplibre-react-native", () => {
       { ...props, testID: `${id ?? "map"}-annotation` },
       children
     );
-  return { Camera, Map, ViewAnnotation };
+  return { Camera, GeoJSONSource, Layer, Map, ViewAnnotation };
 });
 
 const initial = createManualPlacePin(
@@ -135,6 +146,67 @@ describe("PlacePinEditor MapLibre pilot", () => {
       observedAt: "2026-08-01T10:05:00.000Z",
       confirmedAt: null
     });
+  });
+
+  it("renders and moves the Android pin visual without replacing native drag semantics", async () => {
+    const platformDescriptor = Object.getOwnPropertyDescriptor(
+      Platform,
+      "OS"
+    );
+    Object.defineProperty(Platform, "OS", {
+      configurable: true,
+      value: "android"
+    });
+
+    try {
+      const { screen } = await renderEditor();
+      const visualSource = screen.getByTestId(
+        "place-pin-editor-pin-visual-source"
+      );
+      const outer = screen.getByTestId(
+        "place-pin-editor-pin-visual-outer"
+      );
+      const core = screen.getByTestId(
+        "place-pin-editor-pin-visual-core"
+      );
+
+      expect(visualSource.props.data.geometry.coordinates).toEqual([
+        51.531,
+        25.2854
+      ]);
+      expect(outer.props.paint).toEqual({
+        "circle-color": "#15171A",
+        "circle-radius": 19,
+        "circle-stroke-color": "#FFFFFF",
+        "circle-stroke-width": 3
+      });
+      expect(core.props.paint).toEqual({
+        "circle-color": "#B7F34A",
+        "circle-radius": 4.5
+      });
+
+      await act(async () => {
+        screen.getByTestId("property-pin-annotation").props.onDrag({
+          nativeEvent: {
+            id: "property-pin",
+            lngLat: [51.6, 25.4],
+            point: [100, 100]
+          }
+        });
+      });
+
+      expect(
+        screen.getByTestId("place-pin-editor-pin-visual-source").props
+          .data.geometry.coordinates
+      ).toEqual([51.6, 25.4]);
+      expect(
+        screen.getByTestId("property-pin-annotation").props.draggable
+      ).toBe(true);
+    } finally {
+      if (platformDescriptor) {
+        Object.defineProperty(Platform, "OS", platformDescriptor);
+      }
+    }
   });
 
   it("falls back to authoritative coordinates and the Places-list path on map failure", async () => {

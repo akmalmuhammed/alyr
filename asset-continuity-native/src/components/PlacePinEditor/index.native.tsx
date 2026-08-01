@@ -1,5 +1,7 @@
 import {
   Camera,
+  GeoJSONSource,
+  Layer,
   Map,
   ViewAnnotation,
   type LngLat
@@ -52,6 +54,8 @@ export function PlacePinEditor(props: PlacePinEditorProps) {
   const [mapStatus, setMapStatus] = useState<
     "loading" | "ready" | "failed"
   >("loading");
+  const [dragVisualCenter, setDragVisualCenter] =
+    useState<LngLat | null>(null);
   const [networkFallbackLatched, setNetworkFallbackLatched] =
     useState(false);
   const fallbackWasVisible = useRef(false);
@@ -67,6 +71,10 @@ export function PlacePinEditor(props: PlacePinEditorProps) {
       isConfirmedOffline ||
       networkFallbackLatched);
   const fallbackAnnouncement = `${labels.mapUnavailableTitle}. ${labels.mapUnavailableBody} ${coordinateReadout}`;
+
+  useEffect(() => {
+    setDragVisualCenter(null);
+  }, [mapKey]);
 
   useEffect(() => {
     if (!hasPin) {
@@ -175,6 +183,15 @@ export function PlacePinEditor(props: PlacePinEditorProps) {
     );
   } else {
     const center: LngLat = [value.longitude, value.latitude];
+    const renderedCenter = dragVisualCenter ?? center;
+    const renderedPin = {
+      type: "Feature" as const,
+      properties: {},
+      geometry: {
+        type: "Point" as const,
+        coordinates: [renderedCenter[0], renderedCenter[1]]
+      }
+    };
     mapContent = (
       <View style={styles.mapFrame} testID={`${testID}-map-frame`}>
         <Map
@@ -205,13 +222,42 @@ export function PlacePinEditor(props: PlacePinEditorProps) {
             minZoom={2}
             testID={`${testID}-native-camera`}
           />
+          {Platform.OS === "android" ? (
+            <GeoJSONSource
+              data={renderedPin}
+              id={`${testID}-pin-visual-source`}
+            >
+              <Layer
+                id={`${testID}-pin-visual-outer`}
+                paint={{
+                  "circle-color": colors.carbon,
+                  "circle-radius": 19,
+                  "circle-stroke-color": colors.white,
+                  "circle-stroke-width": 3
+                }}
+                type="circle"
+              />
+              <Layer
+                id={`${testID}-pin-visual-core`}
+                paint={{
+                  "circle-color": colors.action,
+                  "circle-radius": 4.5
+                }}
+                type="circle"
+              />
+            </GeoJSONSource>
+          ) : null}
           <ViewAnnotation
             anchor="center"
             draggable={!disabled}
             id="property-pin"
             lngLat={center}
+            onDrag={(event) => {
+              setDragVisualCenter(event.nativeEvent.lngLat);
+            }}
             onDragEnd={(event) => {
               const [longitude, latitude] = event.nativeEvent.lngLat;
+              setDragVisualCenter(event.nativeEvent.lngLat);
               onChange(
                 createDraggedPlacePin(
                   value,
