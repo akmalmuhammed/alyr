@@ -3,9 +3,12 @@
 ## Decision
 
 Heldat remains a controlled-pilot release. The domain, cloud identities,
-Android store artifact, and local backend gates are established; production
-migrations, signed iPhone distribution, store delivery, map-key provenance,
-and measured 10K storage/load evidence remain open.
+current-source Android technical artifact, and local backend gates are
+established. The approved live-map check, Android marker correction, and
+exact-binary API 35 rerun now pass. Production
+migrations remain blocked by the failed exact restore-parity gate; signed store
+distribution, first-launch performance investigation, and measured 10K
+storage/load evidence also remain open.
 
 This record contains no credential values, tenant payloads, or identity
 documents.
@@ -109,8 +112,8 @@ recovery evidence, not production capacity evidence.
 
 | Platform | Proven | Still open |
 |---|---|---|
-| Android | EAS production AAB build 6 finished; artifact hash and upload certificate recorded; API 35 emulator journey passed | Fresh build after native camera normalization, correct-project Maps key, physical device, Play App Signing lineage, Play internal/closed-track delivery |
-| iOS | Clean production-simulator build from commit `d1a2566`; native camera module, privacy/config, extracted Hermes auth scan, and archive integrity pass | Apple membership/Team ID, distribution signing, physical iPhone, App Store Connect and TestFlight |
+| Android | Exact `caccf5b` MapLibre APK built, inspected and exercised on API 35; visible marker, live drag alignment, attribution/tiles, offline fallback and restart persistence passed | First-clean-launch profiling, release-signed arm64/AAB, physical device, Play App Signing lineage, Play internal/closed-track delivery |
+| iOS | Clean historical production-simulator build plus current-source static, Hermes, config, packaging and auth-runtime gates | Apple membership/Team ID, public AASA Team ID, signed native rebuild, physical iPhone, App Store Connect and TestFlight |
 
 The prior iOS simulator bundle included Android Google-OAuth runtime markers
 even though the iOS UI hid the provider. The source now resolves provider
@@ -195,28 +198,108 @@ recorded simulator artifact remains valid historical evidence but is no longer
 a source-identical release candidate. Reserve the next iOS build for the final
 Apple-signed source after the remaining native gates settle.
 
+### Current-source iOS static gate
+
+The exact `f6dc78f` source passed 206/206 Jest suites and 1,334/1,334 tests,
+TypeScript, all 10 Maestro flows / 5 subflows / 57 selectors, public and
+production configuration, clean EAS packaging, iOS auth-runtime checks, and
+Recovery Kit Argon2id verification. Its locally exported Hermes bundle is
+13,503,682 bytes with SHA-256
+`26FC8E4E187634077ADB1CAF00596FA6E983962AA506AFE291BA4E33A6A586A9`.
+The report is
+`D:\HeldatiOSStatic\evidence\f6dc78f\IOS_STATIC_VALIDATION_REPORT.md`
+(SHA-256
+`69D0AD81EBEBB49D189ECEDA63AF2DCC5A8C1AA6B8EA758CE45D788CCE569DE1`).
+The later Android-marker commits retain the original iOS end-of-drag path and
+their exact tree passed 206/206 suites and 1,336/1,336 tests.
+
+iOS intentionally exposes email/password only; Google OAuth remains absent
+unless an Apple-equivalent sign-in option is added. A signed-device claim still
+requires the Apple Team and app record, public AASA Team ID, native
+CocoaPods/privacy merge on a Mac or EAS, physical iPhone/TestFlight execution,
+and production-environment journeys.
+
+Commit `ff8b28f` also pins shared TypeScript, JSON and test-contract sources to
+LF on Windows. A clean autocrlf clone matched 927/927 blobs and passed 66/66
+focused tests plus TypeScript/config gates with zero renormalization diff. The
+validation report SHA-256 is
+`3e5ffc8d66165c6e6a86d50c1fc6ff5c7b57f194db8123a535322686f8eecf3b`.
+
 ### Current-source local Android technical artifact
 
-Commit `966f684` was also compiled from a clean, D:-rooted clone with a portable
-JDK/Android SDK and warmed D:-rooted Gradle cache. The x86_64 local release build
-completed in 12 minutes 12 seconds after shortening the Windows build path and
-raising Gradle metaspace.
+Commit `f6dc78f` was compiled from a clean, D:-rooted clone with a portable
+JDK/Android SDK and D:-rooted Gradle cache. The x86_64 local release build
+completed in 12 minutes 56 seconds.
 
 | Evidence | Verified value |
 |---|---|
-| Artifact | `D:\HeldatAndroidRuntime\evidence\current-head-966f684\heldat-966f684-android-x86_64-local-release-debugsigned.apk` |
-| Size / SHA-256 | 78,818,700 bytes / `7F9BC9CACE299E01255E10E90E09C19CDD55F2DD753089001B946B8AC0B69115` |
+| Artifact | `D:\HeldatAndroidRuntime\evidence\maplibre-f6dc78f\heldat-f6dc78f-maplibre-x86_64-local-release-debugsigned.apk` |
+| Size / SHA-256 | 90,237,443 bytes / `77CD52F98A02178ED461866433593139069E15A12CD66F8E0DF374B9CBA1110E` |
 | Package / version | `app.heldat.mobile` / `0.1.0` (`1`) |
 | Android range / ABI | min 24; target 36; x86_64 |
 | Artifact checks | `apksigner`, `zipalign`, and `aapt` passed |
 | Installed target | API 35 x86_64 emulator |
 | Cold launch | Activity resumed; no fatal or ANR |
 
-This is deliberately a local technical artifact, not a release candidate: it
-is debug-signed, x86_64-only, used a synthetic map placeholder, and its first
-bundle lacked the public native runtime environment, so the app correctly
-entered the fail-closed unavailable-account screen. A configured rebuild and
-the focused device journeys remain in progress.
+The package contains `libmaplibre.so`, Expo Network, the reviewed camera,
+foreground-location, Internet and network-state permissions, and zero Google
+Maps key/metadata hits. Focused checks passed 9/9 suites and 88/88 tests plus
+TypeScript and the production configuration gate.
+
+Fresh-data device validation passed animated onboarding, sample Home, truthful
+Vault states, Camera2 permission and capture, normalized UUID JPEG persistence,
+Passport completion, Assets and Places navigation, authoritative offline
+coordinates, manual coordinate confirmation/provenance, and two force-stop
+cold launches with the edited Place still intact. Visual review found no
+clipped primary action or contradictory state. The emulator recorded zero
+fatal exceptions. Evidence is in
+`D:\HeldatAndroidRuntime\evidence\maplibre-f6dc78f\DEVICE-MATRIX-INTERIM.md` and
+the accompanying `SHA256SUMS.txt`.
+
+The separately approved live-network check then passed after panning the sample
+viewport inland: vector roads, buildings, coastline and the Liberty style
+rendered; visible attribution remained present; a full drag changed
+`25.359181, 51.531421` to `25.358873, 51.532147`; provenance became `Pin
+adjusted by you`; and confirmation reset. Network loss produced the truthful
+coordinate fallback within seven seconds, and an offline save survived a cold
+restart. The emulator recorded zero fatal exceptions. The final report is
+`D:\HeldatAndroidRuntime\evidence\maplibre-f6dc78f\DEVICE-MATRIX-FINAL.md`
+(SHA-256
+`05B3E4DC1C54AFB5042B8662A1DE33FB9F1A977484C4707B137B399E029CC631`).
+
+That run also found one release blocker: the 44 px draggable
+`ViewAnnotation` hit target worked, but its graphic was invisible on Android.
+Commits `73f5d74` and `caccf5b` retain the proven native drag path and render a
+non-interactive Carbon/white/Volt GeoJSON circle marker inside MapLibre's GL
+scene. Android alone tracks live drag visuals; iOS retains its end-of-drag path.
+The exact imported blobs match the independently reviewed tree. Its full gate
+passed 206/206 suites and 1,336/1,336 tests plus TypeScript, Maestro, production
+configuration, packaging and Recovery Kit crypto; the focused test also passed
+10/10 after import.
+
+The exact `caccf5b` rebuild then closed the marker defect on API 35. Its APK is
+90,238,891 bytes with SHA-256
+`F2DF3EAC666C83B206E39E24D9F7D934D85ED327C239659B8066989772A9AB2A`.
+The GL marker was visible initially and objectively followed a four-second
+native drag: its image centroid moved from `(540.47, 1374.44)` to
+`(643.67, 1423)` near the expected touch `(650, 1428)`, then recentered after
+commit. Final coordinates were `25.358797, 51.532311`; provenance and explicit
+reconfirmation reset passed. Live inland cartography and attribution passed,
+the ready-to-offline transition completed in seven seconds, and offline
+confirmation/save survived a cold restart. Focused tests passed 9/9 suites and
+90/90 tests, with zero fatal exceptions or ANRs.
+
+The exact report is
+`D:\HeldatAndroidRuntime\evidence\maplibre-caccf5b\DEVICE-MATRIX-FINAL.md`
+(SHA-256
+`E421F4951FFB123CABFB755871939419D81FDC1733855EE5D4D410743C897A0E`).
+The first clean launch remained on `Starting Heldat` for about 32 seconds on
+the emulator without an ANR or fatal exception. That requires profiling before
+store promotion even though subsequent map/runtime gates passed.
+
+Both APKs remain local technical artifacts rather than release candidates:
+they are debug-signed and x86_64-only. The emulator is left attached with the
+package force-stopped and airplane mode enabled.
 
 ## Hosted Auth configuration
 
@@ -227,31 +310,60 @@ token rotation is enabled. Custom SMTP is not configured, CAPTCHA is disabled,
 and the production allow-list still contains two localhost development routes.
 See `HOSTED_AUTH_CONFIG_SNAPSHOT_2026-08-01.md`; no hosted setting was changed.
 
-## Android Maps mismatch
+## Android map provider
 
-The intended Google project currently has billing disabled, the Maps SDK for
-Android disabled, and zero API keys. EAS preview and production contain the
-same syntactically valid key (recorded only by a SHA-256 fingerprint), so its
-origin, application restriction, certificate restriction, and API restriction
-are not attributable to the intended project.
+The release source no longer depends on the unattributable Google Maps key.
+It pins `@maplibre/maplibre-react-native` `11.3.6`, uses the OpenFreeMap Liberty
+style, preserves `expo-location` as the separate foreground GPS source, and
+provides a native authoritative-coordinate fallback when tiles are unavailable.
+The production configuration rejects legacy Google Maps metadata.
 
-Creating the canonical key requires a separately approved billing-enabled
-Google project. The resulting key must be restricted to:
-
-1. Android application `app.heldat.mobile`.
-2. Every exact EAS/Play signing SHA-1 that must load maps.
-3. Maps SDK for Android only.
-
-Google documents billing, SDK enablement, and an API key as setup requirements:
-<https://developers.google.com/maps/documentation/android-sdk/start>.
+OpenFreeMap requires no account or key and permits commercial use, but provides
+no SLA. It is therefore the zero-payment controlled-pilot provider rather than
+proof of 10K reliability: <https://openfreemap.org/>. MapLibre's Expo setup also
+requires the custom native build that is now present:
+<https://maplibre.org/maplibre-react-native/docs/setup/expo/>.
 
 ## Backup evidence
 
-`D:\HeldatBackups` contains a DPAPI-protected pre-migration ciphertext created
-for the linked project. Its stored SHA-256 matches the ciphertext and its
-metadata names the correct project. The plaintext staging files are empty.
-There is no authenticated backup-tool completion record or isolated restore
-evidence, so this artifact does not satisfy the public-launch backup gate.
+The explicitly approved production backup completed without applying a
+migration or changing hosted data. Its encrypted artifact authenticates and
+decrypts offline to an 829,345-byte database archive with SHA-256
+`f97d908b54bb507a6fe3df01de4794edf782f06a475ac6f7dcb31b841fe857f0`.
+An isolated restore matched all 67 tracked table counts, both private bucket
+descriptors, and the exactly empty Storage-object set.
+
+The strict rollback gate nevertheless **failed closed**. The unchanged schema
+comparator found the same 941 blocks with zero missing or extra blocks, but 51
+extension-ACL blocks differed: source 607,641 canonical bytes / `006ced2d...`
+versus target 602,004 bytes / `6bf58556...`. Production extension
+owners/grantors are `postgres`; the matching disposable image recreated those
+members under `supabase_admin`. Source catalog evidence proves OID 10 is
+`supabase_admin` and `postgres` is a non-superuser OID 16388, so changing the
+disposable bootstrap identity would not be source-equivalent.
+
+This proves encrypted artifact, row and empty-Storage recoverability, not
+production-fidelity permissions or a verified rollback point. Migration `007`
+therefore remains blocked. All six disposable restore containers are stopped,
+ports 55435 through 55440 are closed, and `production_changed=false`.
+The final report is
+`D:\HeldatBackupRuns\backup-restore-20260801T142731Z\FINAL_BACKUP_RESTORE_REPORT.md`
+(SHA-256
+`f2ffac4bfa3b727ce239ea0c78676093bbf0b845a144784fbb6ff2d8ad03a658`);
+its 92-file checksum manifest has SHA-256
+`c72cb60fbf560a4548bb0a0a84223fb1e8f53a051141abd1e8a6f55f1992bd80`.
+
+## Local workspace integrity
+
+The system drive reached zero free bytes during evidence generation. A
+dependency-tree relocation followed npm workspace junctions and temporarily
+removed linked workspace contents from the source tree. Staging stopped
+immediately; the preserved bytes were restored without checkout, reset or
+clean. All 981 tracked and 123 non-ignored untracked files matched the preserved
+copy by SHA-256 (1,104/1,104; zero missing or mismatched), ten workspace links
+were recreated, and shared build, TypeScript and 66/66 focused tests passed.
+The recovery record is `LOCAL_WORKSPACE_RECOVERY_2026-08-01.md`. No hosted
+system changed, and unrelated dirty/untracked user work remains preserved.
 
 ## 10K free-tier boundary
 
@@ -291,8 +403,13 @@ Auth/RLS, object-storage, egress, and full 10K measurements remain open.
 
 ## Next production sequence
 
-1. Obtain and record approval for the real encrypted production backup.
-2. Execute backup plus isolated restore verification.
+1. Revise the authenticated backup format to capture and reproduce global role
+   attributes/memberships, database owner/normalized ACL, and extension/member
+   ownership, ACL and initial-privilege semantics. Correct JIT-login parsing
+   and downstream restore-error classification.
+2. Produce a new encrypted production backup and pass the unchanged exact
+   schema, row, bucket and object restore comparators. Do not apply a migration
+   until this gate passes.
 3. Apply migration `007`, verify its bounded maintenance behavior, then obtain
    the separate approval for migration `008`.
 4. Apply exact migration `008` and verify retained-byte accounting.
@@ -309,8 +426,9 @@ Auth/RLS, object-storage, egress, and full 10K measurements remain open.
 8. If rollback is needed, restore the prior Edge version first and rerun the
    public probe. Keep migration `008` and `010`; database reversal requires a
    newly reviewed forward migration.
-9. Resolve the Maps billing/key provenance gate and rebuild Android from the
-   clean release commit that includes camera normalization.
+9. Profile and bound the 32-second first-clean-launch observation, then build
+   the release-signed arm64/AAB from the reviewed source and verify it on a
+   physical Android device.
 10. Attach an Apple Team to the verified iOS source and produce the
    physical/TestFlight build; repeat the Hermes and signed-artifact gates.
 11. Load a disposable staging project with a representative 10K synthetic
