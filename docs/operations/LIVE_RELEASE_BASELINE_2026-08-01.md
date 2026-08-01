@@ -81,13 +81,24 @@ exact 007/008 verification the reviewed wrapper records 009 as superseded and
 applies only 010. These changes are not live until that fail-closed sequence and
 the new Edge source complete their separate approvals.
 
-The hardened reader body was validated only on the disposable local stack:
+The hardened reader body was validated on the disposable local Supabase stack:
 database lint returned no schema errors and all 12 pgTAP files / 405 assertions
 passed, including the 22-assertion owner/editor/viewer, denied/missing/deleted,
 raw-counter privilege, and exact-projection test. The source was then moved to
-append-only migration 010. Applying final 010 to the local ledger and repeating
-lint/pgTAP remains pending because Docker Desktop stopped under host disk
-pressure. The linked production project was not changed.
+append-only migration 010.
+
+Final migration 010 was subsequently applied to an isolated, D:-rooted
+PostgreSQL 17.10 fixture and the exact checked-in household-storage pgTAP passed
+22/22 assertions with zero failures. Direct postconditions also proved the
+legacy signature absent, the actor-bound signature present, service-role
+execution allowed, and authenticated execution denied. The evidence transcript
+SHA-256 is
+`707D5416A7FE6BF01B3CAC513D5E1AD1EEE23ED0AC3E57BE1DE1202F5FE1F14D`;
+see `STANDALONE_MIGRATION_010_VALIDATION_2026-08-01.md`.
+
+The standalone distribution lacks `plpgsql_check`, so Supabase CLI lint could
+not run against that fixture. A final Docker-backed full-Supabase ledger/lint
+rerun remains pending. The linked production project was not changed.
 
 The first local run immediately after recovering Docker from a full disk had
 four unstructured gateway `502` responses. After the runtime warmed, five
@@ -183,6 +194,38 @@ authoritative Vault usage flow. Because production EAS Update is disabled, the
 recorded simulator artifact remains valid historical evidence but is no longer
 a source-identical release candidate. Reserve the next iOS build for the final
 Apple-signed source after the remaining native gates settle.
+
+### Current-source local Android technical artifact
+
+Commit `966f684` was also compiled from a clean, D:-rooted clone with a portable
+JDK/Android SDK and warmed D:-rooted Gradle cache. The x86_64 local release build
+completed in 12 minutes 12 seconds after shortening the Windows build path and
+raising Gradle metaspace.
+
+| Evidence | Verified value |
+|---|---|
+| Artifact | `D:\HeldatAndroidRuntime\evidence\current-head-966f684\heldat-966f684-android-x86_64-local-release-debugsigned.apk` |
+| Size / SHA-256 | 78,818,700 bytes / `7F9BC9CACE299E01255E10E90E09C19CDD55F2DD753089001B946B8AC0B69115` |
+| Package / version | `app.heldat.mobile` / `0.1.0` (`1`) |
+| Android range / ABI | min 24; target 36; x86_64 |
+| Artifact checks | `apksigner`, `zipalign`, and `aapt` passed |
+| Installed target | API 35 x86_64 emulator |
+| Cold launch | Activity resumed; no fatal or ANR |
+
+This is deliberately a local technical artifact, not a release candidate: it
+is debug-signed, x86_64-only, used a synthetic map placeholder, and its first
+bundle lacked the public native runtime environment, so the app correctly
+entered the fail-closed unavailable-account screen. A configured rebuild and
+the focused device journeys remain in progress.
+
+## Hosted Auth configuration
+
+A read-only Management API snapshot verified `https://heldat.app` as the site
+URL and recorded ten allowed redirect entries. Email/password and Google auth
+are enabled, email autoconfirm and anonymous auth are disabled, and refresh
+token rotation is enabled. Custom SMTP is not configured, CAPTCHA is disabled,
+and the production allow-list still contains two localhost development routes.
+See `HOSTED_AUTH_CONFIG_SNAPSHOT_2026-08-01.md`; no hosted setting was changed.
 
 ## Android Maps mismatch
 
