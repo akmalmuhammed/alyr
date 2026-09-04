@@ -1,0 +1,85 @@
+{
+  "title": "Personal Asset App Onboarding Research Sources",
+  "updated": "2026-07-30",
+  "publicProductName": null,
+  "sources": [
+    {
+      "id": "antonio-b2c-subscription-onboarding",
+      "type": "practitioner_synthesis",
+      "title": "The Ultimate Guide to Onboarding in B2C Subscription-Based Apps",
+      "url": "https://antoniodesigns.substack.com/p/how-to-design-the-onboarding-in-subscription",
+      "published": "2024-06-26",
+      "ownerSupplied": true
+    },
+    {
+      "id": "designerup-200-onboarding-flows",
+      "type": "practitioner_review",
+      "title": "I studied the UX/UI of over 200 onboarding flows",
+      "url": "https://designerup.co/blog/i-studied-the-ux-ui-of-over-200-onboarding-flows-heres-everything-i-learned/",
+      "published": "2025-02-25",
+      "ownerSupplied": true
+    },
+    {
+      "id": "sendbird-mobile-onboarding",
+      "type": "practitioner_examples",
+      "title": "Top 6 examples of app onboarding experiences",
+      "url": "https://sendbird.com/blog/mobile-app-onboarding",
+      "published": "2024-05-01",
+      "ownerSupplied": true
+    },
+    {
+      "id": "apple-hig-onboarding",
+      "type": "platform_guidance",
+      "title": "Apple Human Interface Guidelines: Onboarding",
+      "url": "https://developer.apple.com/design/human-interface-guidelines/onboarding"
+    },
+    {
+      "id": "android-onboarding",
+      "type": "platform_guidance",
+      "title": "Android onboarding guidance",
+      "url": "https://developer.android.com/design/ui/mobile/guides/patterns/onboarding"
+    },
+    {
+      "id": "apple-capwords",
+      "type": "platform_case_study",
+      "title": "CapWords",
+      "url": "https://developer.apple.com/articles/capwords/"
+    },
+    {
+      "id": "apple-flighty",
+      "type": "platform_case_study",
+      "title": "Flighty",
+      "url": "https://developer.apple.com/news/?id=970ncww4"
+    },
+    {
+      "id": "google-fabulous",
+      "type": "platform_case_study",
+      "title": "Engagement is Fabulous",
+      "url": "https://design.google/library/engagement-is-fabulous-health-app"
+    },
+    {
+      "id": "monzo-onboarding",
+      "type": "designer_case_study",
+      "title": "Monzo onboarding",
+      "url": "https://www.domingowiden.com/projects/monzo-onboarding"
+    },
+    {
+      "id": "phantom-account-setup",
+      "type": "product_documentation",
+      "title": "Create a Phantom wallet",
+      "url": "https://help.phantom.com/hc/en-us/articles/32775281256851-Create-a-new-wallet-with-a-Google-or-Apple-account"
+    },
+    {
+      "id": "onepassword-emergency-kit",
+      "type": "product_documentation",
+      "title": "1Password Emergency Kit",
+      "url": "https://support.1password.com/emergency-kit/"
+    },
+    {
+      "id": "google-airbnb",
+      "type": "platform_case_study",
+      "title": "Airbnb invites you in",
+      "url": "https://design.google/library/airbnb-invites-you-in"
+    }
+  ]
+}
