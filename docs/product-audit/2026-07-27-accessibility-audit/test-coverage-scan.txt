@@ -1,0 +1,27 @@
+Accessibility/platform test coverage scan
+Generated 2026-07-27 from current working tree
+
+Query: VoiceOver|TalkBack|Dynamic Type|font scaling|reduced motion|privacy shield|touch target|contrast|320|accessibilityViewIsModal|announceForAccessibility
+
+packages\design-tokens\test\tokens.test.mjs:21:test("touch targets and spacing meet mobile foundation constraints", () => {
+asset-continuity-native\tests\domain.test.ts:291:          byteSize: 3200,
+
+Existing RTL/content-specific coverage:
+
+asset-continuity-ios-preview\tests\preview-contract.test.mjs:37:    "@expo-google-fonts/ibm-plex-sans-arabic",
+asset-continuity-native\tests\httpSyncTransport.test.ts:147:      message: "Try again shortly.",
+packages\contracts\test\contracts.test.mjs:24:test("English and Arabic retain explicit reading directions", () => {
+packages\contracts\test\contracts.test.mjs:27:  assert.equal(LOCALE_DIRECTIONS.ar, "rtl");
+asset-continuity-native\tests\i18n-copy.test.ts:4:  it("keeps English and Arabic keys in parity", () => {
+asset-continuity-native\tests\i18n-copy.test.ts:8:  it("uses native UTF-8 Arabic without mojibake", () => {
+asset-continuity-native\tests\i18n-copy.test.ts:9:    const arabic = Object.values(COPY.ar).join(" ");
+asset-continuity-native\tests\i18n-copy.test.ts:11:    expect(arabic).toMatch(/[\u0600-\u06ff]/u);
+asset-continuity-native\tests\i18n-copy.test.ts:12:    expect(arabic).not.toMatch(/[ÃÂØÙ�\u0080-\u009f]/u);
+asset-continuity-native\tests\placePinEditor.contract.test.ts:155:  it("ships a complete Arabic contract instead of mixed-language fallbacks", () => {
+asset-continuity-native\tests\placePinEditor.contract.test.ts:156:    const arabic = placePinEditorLabels("ar");
+asset-continuity-native\tests\placePinEditor.contract.test.ts:157:    expect(Object.keys(arabic).sort()).toEqual(Object.keys(labels).sort());
+asset-continuity-native\tests\placePinEditor.contract.test.ts:158:    expect(arabic.confirmPin).toMatch(/[\u0600-\u06ff]/);
+asset-continuity-native\tests\placePinEditor.contract.test.ts:159:    expect(arabic.locationUnavailable).toMatch(/[\u0600-\u06ff]/);
+asset-continuity-native\tests\portfolioDashboard.test.tsx:127:  it("renders an RTL Arabic dashboard with the same truth boundary", async () => {
+
+Conclusion: content/token contracts have some RTL checks; no automated VoiceOver order, accessibility-size reflow, target-size, contrast, reduced-motion, or PrivacyShield isolation coverage was found.

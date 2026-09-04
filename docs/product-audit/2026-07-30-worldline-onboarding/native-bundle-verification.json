@@ -1,0 +1,28 @@
+[
+  {
+    "platform": "ios",
+    "manifestStatus": 200,
+    "manifestContentType": "application/expo+json",
+    "hostUri": "192.168.1.3:8083",
+    "sdkVersion": "57.0.0",
+    "runtimeVersion": "0.1.0",
+    "bundleStatus": 200,
+    "bundleContentType": "application/javascript; charset=UTF-8",
+    "bundleBytes": 22658709,
+    "bundleSha256": "97e3171f6bd5087f78402d74ea52d2e7883266a765580736f8f3fb1dfa8465d9",
+    "launchAssetUrl": "http://192.168.1.3:8083/node_modules/expo-router/entry.bundle?platform=ios&dev=true&hot=false&lazy=true&transform.engine=hermes&transform.bytecode=1&transform.routerRoot=app&unstable_transformProfile=hermes-stable"
+  },
+  {
+    "platform": "android",
+    "manifestStatus": 200,
+    "manifestContentType": "application/expo+json",
+    "hostUri": "192.168.1.3:8083",
+    "sdkVersion": "57.0.0",
+    "runtimeVersion": "0.1.0",
+    "bundleStatus": 200,
+    "bundleContentType": "application/javascript; charset=UTF-8",
+    "bundleBytes": 22974359,
+    "bundleSha256": "1d538b2774b2b5d4f26a6a4a12c810a25ce9739a6bf0e9bc03243599053f24ee",
+    "launchAssetUrl": "http://192.168.1.3:8083/node_modules/expo-router/entry.bundle?platform=android&dev=true&hot=false&lazy=true&transform.engine=hermes&transform.bytecode=1&transform.routerRoot=app&unstable_transformProfile=hermes-stable"
+  }
+]

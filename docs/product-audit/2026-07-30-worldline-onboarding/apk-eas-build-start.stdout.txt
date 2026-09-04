@@ -1,0 +1,39 @@
+[
+  {
+    "id": "59b16ae9-e01b-48d3-94ae-71084afe5dd6",
+    "status": "NEW",
+    "platform": "ANDROID",
+    "artifacts": {},
+    "fingerprint": {
+      "id": "019fb424-a525-7bb4-a1cd-2811e656af5c",
+      "hash": "c77c7139384014b28564628755e76592b928781f"
+    },
+    "initiatingActor": {
+      "id": "a33dc47b-8a5e-491b-9bb9-5def9cc909db",
+      "displayName": "akmalmuhammed93"
+    },
+    "logFiles": [],
+    "project": {
+      "id": "85cab1f2-111f-4e20-abd5-8dff0df2fabb",
+      "name": "ALYR",
+      "slug": "alyr-asset-continuity",
+      "ownerAccount": {
+        "id": "6550517e-7b0e-4761-b0fb-694ba753b078",
+        "name": "alyr-app"
+      }
+    },
+    "channel": "preview",
+    "distribution": "INTERNAL",
+    "buildProfile": "preview",
+    "sdkVersion": "57.0.0",
+    "appVersion": "0.1.0",
+    "appBuildVersion": "1",
+    "runtimeVersion": "0.1.0",
+    "priority": "NORMAL",
+    "createdAt": "2026-07-30T17:48:48.216Z",
+    "updatedAt": "2026-07-30T17:48:48.216Z",
+    "message": "Worldline onboarding personal test APK 2026-07-30",
+    "expirationDate": "2026-08-13T17:48:48.283Z",
+    "isForIosSimulator": false
+  }
+]

@@ -1,0 +1,24 @@
+{
+  "buildId": "4a23648d-1e14-4989-8728-913915f00e7b",
+  "gitCommit": "fd95bf9707c1d7b92b611891a28ec080578b573b",
+  "artifactUrl": "https://expo.dev/artifacts/eas/AC09AwDCY3W_JTLRDAZWz0D5vQMrW1wK3Uxqe9P2gpM.tar.gz",
+  "sha256": "4793EC8B9A3F2258DF2D9958E51234608D499E8FE59E609BC4909AD5A94425CE",
+  "archiveBytes": 57515257,
+  "memberCount": 137,
+  "uncompressedFileBytes": 306575475,
+  "appExecutablePresent": true,
+  "infoPlistPresent": true,
+  "privacyManifestPresent": true,
+  "bundleIdentifier": "com.alyr.continuity",
+  "displayName": "ALYR",
+  "version": "0.1.0",
+  "buildNumber": "1",
+  "minimumOSVersion": "16.4",
+  "supportedDeviceFamilies": [
+    1
+  ],
+  "backgroundModes": [],
+  "privacyAccessedApiCategoryCount": 4,
+  "privacyCollectedDataCategoryCount": 10,
+  "archiveIntegrity": "full-read-pass"
+}

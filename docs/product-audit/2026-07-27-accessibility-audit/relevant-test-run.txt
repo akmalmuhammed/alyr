@@ -1,0 +1,20 @@
+
+> @alyr/native@0.1.0 test
+> jest --runInBand --runInBand tests/i18n-copy.test.ts tests/portfolioDashboard.test.tsx tests/placePinEditor.contract.test.ts
+
+node.exe : PASS tests/portfolioDashboard.test.tsx (5.8 s)
+At line:1 char:1
++ & "C:\Program Files\nodejs/node.exe" "C:\Program Files\nodejs/node_mo ...
++ ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: (PASS tests/port...est.tsx (5.8 s):String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+
+PASS tests/i18n-copy.test.ts
+PASS tests/placePinEditor.contract.test.ts
+
+Test Suites: 3 passed, 3 total
+Tests:       17 passed, 17 total
+Snapshots:   0 total
+Time:        6.704 s
+Ran all test suites matching
+/tests\\i18n-copy.test.ts|tests\\portfolioDashboard.test.tsx|tests\\placePinEditor.contract.test.ts/i.

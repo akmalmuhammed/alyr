@@ -1,0 +1,10 @@
+ALYR accessibility audit scope
+Captured: 2026-07-27 (Asia/Qatar)
+Repository root: C:\Users\akmal\OneDrive\Documents\alyr
+Audit target: current working tree (not HEAD-only)
+Expo: ^57.0.8
+React Native: ^0.86.0
+Expo Router: ^57.0.8
+React: 19.2.3
+Source mutation: none; audit artifacts only
+Visual capture: pending parent/device evidence

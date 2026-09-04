@@ -1,0 +1,231 @@
+{
+  "verificationVersion": 1,
+  "generatedAtUtc": "2026-07-28T07:41:20.048881Z",
+  "result": "PASS",
+  "build": {
+    "id": "4d4d77bf-9e68-4aff-997c-51c9a5c5c388",
+    "status": "FINISHED",
+    "platform": "IOS",
+    "profile": "development-simulator",
+    "isForIosSimulator": true,
+    "gitCommitHash": "a2133a37e387ff4aafc07c43b183ca733f201cce",
+    "sdkVersion": "57.0.0",
+    "appVersion": "0.1.0",
+    "buildVersion": "1",
+    "runtimeVersion": "0.1.0",
+    "createdAt": "2026-07-28T07:30:42.357Z",
+    "completedAt": "2026-07-28T07:38:24.253Z",
+    "expirationDate": "2026-08-11T07:30:42.397Z",
+    "applicationArchiveUrl": "https://expo.dev/artifacts/eas/EBT5iQdvk4t6s4wNwmpkdsfMSlgqlzMB2QSkhck47tg.tar.gz"
+  },
+  "archive": {
+    "path": "C:\\Users\\akmal\\OneDrive\\Documents\\alyr\\docs\\product-audit\\2026-07-28-ios-simulator-a2133a3\\ALYR-ios-simulator-a2133a3.tar.gz",
+    "fileName": "ALYR-ios-simulator-a2133a3.tar.gz",
+    "bytes": 58277511,
+    "sha256": "748ae713dab62b65ed37dfed0b84cf1ad383dbc9f80b307cea95197d1477cb36",
+    "entryCount": 146,
+    "rootAppEntry": "ALYR.app/",
+    "rootAppPresent": true,
+    "listingPath": "C:\\Users\\akmal\\OneDrive\\Documents\\alyr\\docs\\product-audit\\2026-07-28-ios-simulator-a2133a3\\archive-contents.txt"
+  },
+  "bundle": {
+    "displayName": "ALYR",
+    "bundleIdentifier": "com.alyr.continuity",
+    "executable": "ALYR",
+    "supportedPlatforms": [
+      "iPhoneSimulator"
+    ],
+    "minimumOSVersion": "16.4",
+    "version": "0.1.0",
+    "build": "1",
+    "urlSchemes": [
+      "alyr",
+      "com.alyr.continuity",
+      "exp+alyr-asset-continuity"
+    ],
+    "cameraUsageDescriptionPresent": true,
+    "locationUsageDescriptionPresent": true,
+    "faceIdUsageDescriptionPresent": true,
+    "photoLibraryUsageDescriptionPresent": true,
+    "privacyManifestPresent": true,
+    "appCodeResourcesPresent": true
+  },
+  "updates": {
+    "enabled": true,
+    "channel": "development",
+    "runtimeVersion": "0.1.0",
+    "url": "https://u.expo.dev/85cab1f2-111f-4e20-abd5-8dff0df2fabb"
+  },
+  "configuredNativePlugins": {
+    "expo-router": true,
+    "expo-background-task": true,
+    "local-notifications-only": true,
+    "expo-sqlite": {
+      "enableFTS": true,
+      "useSQLCipher": true
+    },
+    "expo-secure-store": {
+      "configureAndroidBackup": true
+    },
+    "expo-camera": {
+      "cameraPermission": "Allow ALYR to photograph an asset or supporting material.",
+      "microphonePermission": false,
+      "recordAudioAndroid": false,
+      "barcodeScannerEnabled": false
+    },
+    "expo-image-picker": {
+      "photosPermission": "Allow ALYR to attach only the photos you choose.",
+      "cameraPermission": "Allow ALYR to photograph an asset or supporting material."
+    },
+    "expo-location": {
+      "locationWhenInUsePermission": "Allow ALYR to place a property when you request accurate location.",
+      "locationAlwaysAndWhenInUsePermission": false,
+      "locationAlwaysPermission": false,
+      "motionUsagePermission": false,
+      "isIosBackgroundLocationEnabled": false,
+      "isAndroidBackgroundLocationEnabled": false,
+      "isAndroidForegroundServiceEnabled": false,
+      "isAndroidMotionActivityEnabled": false
+    },
+    "expo-local-authentication": {
+      "faceIDPermission": "Allow ALYR to use Face ID to unlock your private household record on this device."
+    }
+  },
+  "compiledNativeEvidence": {
+    "expoSQLite": {
+      "needle": "ExpoSQLite",
+      "present": true
+    },
+    "sqlcipher": {
+      "needle": "SQLCipher",
+      "present": true
+    },
+    "sqliteKeyApi": {
+      "needle": "sqlite3_key",
+      "present": true
+    },
+    "expoSecureStore": {
+      "needle": "ExpoSecureStore",
+      "present": true
+    },
+    "expoLocalAuthentication": {
+      "needle": "ExpoLocalAuthentication",
+      "present": true
+    },
+    "expoImagePicker": {
+      "needle": "ExpoImagePicker",
+      "present": true
+    },
+    "expoDocumentPicker": {
+      "needle": "ExpoDocumentPicker",
+      "present": true
+    },
+    "expoBackgroundTask": {
+      "needle": "ExpoBackgroundTask",
+      "present": true
+    },
+    "expoNotifications": {
+      "needle": "ExpoNotifications",
+      "present": true
+    },
+    "expoTaskManager": {
+      "needle": "ExpoTaskManager",
+      "present": true
+    },
+    "expoCamera": {
+      "needle": "ExpoCamera",
+      "present": true
+    },
+    "expoLocation": {
+      "needle": "ExpoLocation",
+      "present": true
+    }
+  },
+  "embeddedFrameworks": [
+    {
+      "name": "ExpoCamera.framework",
+      "infoPlist": true,
+      "codeResources": true
+    },
+    {
+      "name": "ExpoFileSystem.framework",
+      "infoPlist": true,
+      "codeResources": true
+    },
+    {
+      "name": "ExpoFont.framework",
+      "infoPlist": true,
+      "codeResources": true
+    },
+    {
+      "name": "ExpoLocation.framework",
+      "infoPlist": true,
+      "codeResources": true
+    },
+    {
+      "name": "ExpoModulesCore.framework",
+      "infoPlist": true,
+      "codeResources": true
+    },
+    {
+      "name": "ExpoModulesJSI.framework",
+      "infoPlist": true,
+      "codeResources": true
+    },
+    {
+      "name": "ExpoModulesWorklets.framework",
+      "infoPlist": true,
+      "codeResources": true
+    },
+    {
+      "name": "hermesvm.framework",
+      "infoPlist": true,
+      "codeResources": true
+    },
+    {
+      "name": "React.framework",
+      "infoPlist": true,
+      "codeResources": true
+    },
+    {
+      "name": "ReactNativeDependencies.framework",
+      "infoPlist": true,
+      "codeResources": true
+    },
+    {
+      "name": "RNReanimated.framework",
+      "infoPlist": true,
+      "codeResources": true
+    },
+    {
+      "name": "RNWorklets.framework",
+      "infoPlist": true,
+      "codeResources": true
+    }
+  ],
+  "signatureEvidence": {
+    "appCodeResources": true,
+    "frameworkCount": 12,
+    "frameworksWithCodeResources": 12,
+    "allEmbeddedFrameworksHaveCodeResources": true
+  },
+  "checks": {
+    "buildFinished": true,
+    "commitMatches": true,
+    "simulatorTarget": true,
+    "archiveNonEmpty": true,
+    "appBundlePresent": true,
+    "configurationPresent": true,
+    "sqlcipherConfigured": true,
+    "sqlcipherCompiled": true,
+    "requiredNativeModulesCompiled": true,
+    "privacyManifestPresent": true,
+    "appSignatureResourcesPresent": true,
+    "frameworkSignatureResourcesPresent": true
+  },
+  "notes": [
+    "The archive is an iPhone Simulator development build, not an installable physical-device IPA.",
+    "Code-signature evidence is based on embedded _CodeSignature/CodeResources records. Cryptographic codesign validation requires macOS tooling.",
+    "Some Expo modules are statically linked into ALYR.debug.dylib; compiled symbol needles plus bundled app.config establish their inclusion."
+  ]
+}

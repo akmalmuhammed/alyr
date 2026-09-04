@@ -1,0 +1,30 @@
+npx.cmd : ★ eas-cli@21.4.0 is now available.
+At line:2 char:330
++ ... tderr.txt'; & npx.cmd --yes eas-cli@21.2.0 build --platform android - ...
++                 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: (★ eas-cli@21.4.0 is now available.:String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+
+To upgrade, run:
+npm install -g eas-cli
+Proceeding with outdated version.
+
+Using EAS CLI without version control system is not recommended, use this mode only if you know what you are doing.
+Environment variables with visibility "Plain text" and "Sensitive" loaded from the "preview" environment on EAS:
+EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY, EXPO_PUBLIC_SUPABASE_URL.
+
+
+
+√ Using remote Android credentials (Expo server)
+√ Using Keystore from configuration: Build Credentials w1iVmfwmH7 (default)
+
+Compressing project files and uploading to EAS Build. Learn more: https://expo.fyi/eas-build-archive
+- Compressing project files
+- Uploading to EAS Build (0 / 13.3 MB)
+√ Uploaded to EAS 3s
+- Computing project fingerprint
+⌛️ Computing the project fingerprint is taking longer than expected...
+⏩ To skip this step, set the environment variable: EAS_SKIP_AUTO_FINGERPRINT=1
+√ Computed project fingerprint
+
+See logs: https://expo.dev/accounts/alyr-app/projects/alyr-asset-continuity/builds/59b16ae9-e01b-48d3-94ae-71084afe5dd6

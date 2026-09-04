@@ -1,4 +1,4 @@
-﻿# ALYR personal iPhone preview verification
+# ALYR personal iPhone preview verification
 
 Verified on **28 July 2026** for the zero-cost Expo Go walkthrough.
 

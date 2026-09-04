@@ -1,0 +1,30 @@
+{
+  "artifact": "C:\\Users\\akmal\\OneDrive\\Documents\\alyr\\output\\android\\Worldline-Android-Test-arm64-v0.1.0.apk",
+  "bytes": 86617287,
+  "sha256": "1698c66c92f21b566625b4bff4bfea2c46f13021b0587ec1dd4c231dfd57c24c",
+  "zipEntries": 1395,
+  "zipCrcFailure": null,
+  "uncompressedBytes": 128646325,
+  "abis": [
+    "arm64-v8a"
+  ],
+  "assetEntryCount": 9,
+  "bundleCandidates": [
+    "assets/index.android.bundle"
+  ],
+  "worldlineStaticStringEvidence": {
+    "Know what you have. Know where it is.": [
+      "assets/index.android.bundle"
+    ],
+    "Show me how": [
+      "assets/index.android.bundle"
+    ],
+    "ONE CONNECTED RECORD": [
+      "assets/index.android.bundle"
+    ]
+  },
+  "worldlineStaticMarkersFound": 3,
+  "manifestPackage": "com.alyr.continuity",
+  "manifestVersionName": "0.1.0",
+  "manifestVersionCode": "1"
+}

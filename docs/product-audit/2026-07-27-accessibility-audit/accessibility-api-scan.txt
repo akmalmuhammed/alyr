@@ -1,0 +1,32 @@
+Static accessibility API absence/presence scan
+Generated 2026-07-27 from current working tree
+
+=== AccessibilityInfo ===
+(no matches)
+
+=== announceForAccessibility ===
+(no matches)
+
+=== isReduceMotionEnabled ===
+(no matches)
+
+=== reduceMotionChanged ===
+(no matches)
+
+=== accessibilityViewIsModal ===
+(no matches)
+
+=== accessibilityLanguage ===
+(no matches)
+
+=== I18nManager ===
+(no matches)
+
+=== allowFontScaling ===
+(no matches)
+
+=== maxFontSizeMultiplier ===
+(no matches)
+
+=== adjustsFontSizeToFit ===
+(no matches)

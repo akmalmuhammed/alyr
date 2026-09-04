@@ -1,0 +1,31 @@
+{
+    "canonicalCommit":  "94db80e1ddf39bec41cb496974f5f24e1c0bc888",
+    "expoUrl":  "exp://192.168.1.32:8081",
+    "sdkVersion":  "54.0.0",
+    "manifestHttpStatus":  200,
+    "manifestBytes":  2339,
+    "manifestSha256":  "1388BE80D57274523B78AEEF19EB5DC05CC5DB44688FD5FD1730BEB0CD870988",
+    "liveBundleBytes":  22480136,
+    "liveBundleSha256":  "0540A842A63CF48E47247D9709FE40B92B9B613253C9A50EC3DAD796AC7D5FC4",
+    "staticBundleFile":  "entry-c60c5c6cfe833793c14a25cf8b6ca78e.hbc",
+    "staticBundleBytes":  12992522,
+    "staticBundleSha256":  "EC53460D7FFB8C68F1D03B9D63395F9DABD7D82647EE64FE50CAB6AFFA445A30",
+    "staticExportFiles":  63,
+    "staticExportBytes":  26355590,
+    "previewContractsPassed":  10,
+    "nativeSuitesPassed":  161,
+    "nativeTestsPassed":  972,
+    "qrFile":  "ALYR-EXPO-GO-QR-94db80e.png",
+    "qrPixels":  [
+                     768,
+                     768
+                 ],
+    "qrSha256":  "D54169C85FCBA89EFE0D41CA28468D51532ECADC97285404C1776C0CD3C5923E",
+    "qrDecodedUrl":  "exp://192.168.1.32:8081",
+    "qrDecodeCheck":  "pass",
+    "dataPolicy":  "session-only",
+    "verifiedAt":  "2026-07-28T12:51:55.4456723+03:00",
+    "staticBundleModules":  4933,
+    "staticExportTreeSha256":  "80470EB3D14E5CAF3E2AEB4074CF368A66E23BB66368B0208DB417A8D00CC006",
+    "staticExportTreeMethod":  "SHA-256 over sorted relative-path NUL file-SHA256 newline records"
+}

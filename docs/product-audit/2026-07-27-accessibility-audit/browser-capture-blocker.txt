@@ -1,0 +1,4 @@
+No in-app browser connection existed in this child run.
+agent.browsers.getDefault(): No browser is available
+agent.browsers.get("iab"): Browser is not available: iab
+No screenshot-based assertions are treated as verified.

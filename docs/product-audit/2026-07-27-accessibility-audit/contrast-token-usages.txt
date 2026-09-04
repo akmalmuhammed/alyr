@@ -1,0 +1,7 @@
+asset-continuity-native/app\(tabs)\vault.tsx:481:    color: colors.warning,
+asset-continuity-native/app\(tabs)\search.tsx:76:          placeholderTextColor={colors.textFaint}
+asset-continuity-native/app\capture\index.tsx:1367:    color: colors.textFaint,
+asset-continuity-native/app\capture\index.tsx:1596:    color: colors.textFaint,
+asset-continuity-native/src\components\AssetListItem.tsx:179:    color: colors.warning,
+asset-continuity-native/src\components\ui.tsx:481:        placeholderTextColor={colors.textFaint}
+asset-continuity-native/src\auth\components.tsx:162:        placeholderTextColor={colors.textFaint}

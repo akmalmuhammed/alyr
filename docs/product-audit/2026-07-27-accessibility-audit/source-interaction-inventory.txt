@@ -1,0 +1,419 @@
+asset-continuity-native/app\_layout.tsx:92:          animation: "default",
+asset-continuity-native/app\space-edit.tsx:10:  Pressable,
+asset-continuity-native/app\space-edit.tsx:158:        Alert.alert(
+asset-continuity-native/app\space-edit.tsx:239:        returnKeyType="done"
+asset-continuity-native/app\space-edit.tsx:245:        <View accessibilityRole="radiogroup" style={styles.kindGrid}>
+asset-continuity-native/app\space-edit.tsx:249:              <Pressable
+asset-continuity-native/app\space-edit.tsx:250:                accessibilityRole="radio"
+asset-continuity-native/app\space-edit.tsx:251:                accessibilityState={{ checked: active }}
+asset-continuity-native/app\space-edit.tsx:264:              </Pressable>
+asset-continuity-native/app\space-edit.tsx:276:        <View accessibilityRole="radiogroup" style={styles.parentList}>
+asset-continuity-native/app\space-edit.tsx:322:    <Pressable
+asset-continuity-native/app\space-edit.tsx:323:      accessibilityRole="radio"
+asset-continuity-native/app\space-edit.tsx:324:      accessibilityState={{ checked: active }}
+asset-continuity-native/app\space-edit.tsx:339:    </Pressable>
+asset-continuity-native/app\place-pin.tsx:112:        Alert.alert(
+asset-continuity-native/app\place-pin.tsx:150:        Alert.alert(
+asset-continuity-native/app\place-pin.tsx:167:      Alert.alert(
+asset-continuity-native/app\place-edit.tsx:79:        Alert.alert(
+asset-continuity-native/app\place-edit.tsx:153:          returnKeyType="next"
+asset-continuity-native/app\place-edit.tsx:163:          returnKeyType="next"
+asset-continuity-native/app\atlas.tsx:10:  Pressable,
+asset-continuity-native/app\atlas.tsx:176:        accessibilityLabel={`Globe overview. ${visibleCount} of ${pinnedPlaces.length} recorded Place pins are on the visible hemisphere.`}
+asset-continuity-native/app\atlas.tsx:180:          accessibilityElementsHidden
+asset-continuity-native/app\atlas.tsx:181:          importantForAccessibility="no-hide-descendants"
+asset-continuity-native/app\atlas.tsx:279:                <Pressable
+asset-continuity-native/app\atlas.tsx:280:                  accessibilityHint="Centers this Place on the globe"
+asset-continuity-native/app\atlas.tsx:281:                  accessibilityLabel={`${entry.place.name}, ${entry.assetCount} ${
+asset-continuity-native/app\atlas.tsx:284:                  accessibilityRole="button"
+asset-continuity-native/app\atlas.tsx:285:                  accessibilityState={{ selected: selectedPin }}
+asset-continuity-native/app\atlas.tsx:286:                  hitSlop={6}
+asset-continuity-native/app\atlas.tsx:354:            <Pressable
+asset-continuity-native/app\atlas.tsx:355:              accessibilityRole="button"
+asset-continuity-native/app\atlas.tsx:364:            </Pressable>
+asset-continuity-native/app\atlas.tsx:434:            <Pressable
+asset-continuity-native/app\atlas.tsx:435:              accessibilityHint="Opens the exact Place record"
+asset-continuity-native/app\atlas.tsx:436:              accessibilityRole="button"
+asset-continuity-native/app\atlas.tsx:469:            </Pressable>
+asset-continuity-native/app\atlas.tsx:478:            <Pressable
+asset-continuity-native/app\atlas.tsx:479:              accessibilityRole="button"
+asset-continuity-native/app\atlas.tsx:488:            </Pressable>
+asset-continuity-native/app\family.tsx:71:                accessibilityLabel={`${member.name} avatar`}
+asset-continuity-native/src\auth\components.tsx:10:  Pressable,
+asset-continuity-native/src\auth\components.tsx:13:  TextInput,
+asset-continuity-native/src\auth\components.tsx:14:  type TextInputProps,
+asset-continuity-native/src\auth\components.tsx:49:          <Pressable
+asset-continuity-native/src\auth\components.tsx:50:            accessibilityLabel="Back"
+asset-continuity-native/src\auth\components.tsx:51:            accessibilityRole="button"
+asset-continuity-native/src\auth\components.tsx:52:            hitSlop={8}
+asset-continuity-native/src\auth\components.tsx:60:          </Pressable>
+asset-continuity-native/src\auth\components.tsx:66:            accessibilityLabel={`Step ${progress.current} of ${progress.total}`}
+asset-continuity-native/src\auth\components.tsx:67:            accessibilityRole="progressbar"
+asset-continuity-native/src\auth\components.tsx:110:        accessibilityRole="header"
+asset-continuity-native/src\auth\components.tsx:122:type AuthFieldProps = TextInputProps & {
+asset-continuity-native/src\auth\components.tsx:126:  readonly style?: TextInputProps["style"] | undefined;
+asset-continuity-native/src\auth\components.tsx:129:export const AuthField = forwardRef<TextInput, AuthFieldProps>(
+asset-continuity-native/src\auth\components.tsx:143:  const hint = [props.accessibilityHint, description, error]
+asset-continuity-native/src\auth\components.tsx:154:      <TextInput
+asset-continuity-native/src\auth\components.tsx:156:        accessibilityHint={hint || undefined}
+asset-continuity-native/src\auth\components.tsx:157:        accessibilityLabel={props.accessibilityLabel ?? label}
+asset-continuity-native/src\auth\components.tsx:173:          accessibilityLiveRegion="polite"
+asset-continuity-native/src\auth\components.tsx:232:      {...(live ? { accessibilityLiveRegion: "polite" as const } : {})}
+asset-continuity-native/src\auth\components.tsx:287:    <Pressable
+asset-continuity-native/src\auth\components.tsx:288:      accessibilityRole="radio"
+asset-continuity-native/src\auth\components.tsx:289:      accessibilityState={{ checked: active }}
+asset-continuity-native/src\auth\components.tsx:309:    </Pressable>
+asset-continuity-native/src\auth\components.tsx:323:    <Pressable
+asset-continuity-native/src\auth\components.tsx:324:      accessibilityRole="button"
+asset-continuity-native/src\auth\components.tsx:325:      accessibilityState={{ disabled }}
+asset-continuity-native/src\auth\components.tsx:335:    </Pressable>
+asset-continuity-native/app\asset-value.tsx:15:  Pressable,
+asset-continuity-native/app\asset-value.tsx:161:        Alert.alert(
+asset-continuity-native/app\asset-value.tsx:240:          accessibilityHint={
+asset-continuity-native/app\asset-value.tsx:297:          accessibilityHint="Do not include a currency symbol or grouping commas."
+asset-continuity-native/app\asset-value.tsx:304:          returnKeyType="done"
+asset-continuity-native/app\asset-value.tsx:309:          accessibilityLabel="Common currencies"
+asset-continuity-native/app\asset-value.tsx:310:          accessibilityRole="radiogroup"
+asset-continuity-native/app\asset-value.tsx:317:              <Pressable
+asset-continuity-native/app\asset-value.tsx:318:                accessibilityHint={choice.label}
+asset-continuity-native/app\asset-value.tsx:319:                accessibilityLabel={choice.code}
+asset-continuity-native/app\asset-value.tsx:320:                accessibilityRole="radio"
+asset-continuity-native/app\asset-value.tsx:321:                accessibilityState={{ checked: active }}
+asset-continuity-native/app\asset-value.tsx:341:              </Pressable>
+asset-continuity-native/app\asset-value.tsx:401:                accessibilityLabel={`${index === 0 ? "Current" : "Previous"} value, ${formatPortfolioMoney(
+asset-continuity-native/app\asset-edit.tsx:28:  Pressable,
+asset-continuity-native/app\asset-edit.tsx:199:        Alert.alert(
+asset-continuity-native/app\asset-edit.tsx:223:      Alert.alert(
+asset-continuity-native/app\asset-edit.tsx:233:    Alert.alert(title, message, [
+asset-continuity-native/app\asset-edit.tsx:252:      Alert.alert(
+asset-continuity-native/app\asset-edit.tsx:269:      Alert.alert(
+asset-continuity-native/app\asset-edit.tsx:281:      Alert.alert(
+asset-continuity-native/app\asset-edit.tsx:566:        accessibilityLabel="Asset category"
+asset-continuity-native/app\asset-edit.tsx:567:        accessibilityRole="radiogroup"
+asset-continuity-native/app\asset-edit.tsx:574:            <Pressable
+asset-continuity-native/app\asset-edit.tsx:575:              accessibilityRole="radio"
+asset-continuity-native/app\asset-edit.tsx:576:              accessibilityState={{ checked: active }}
+asset-continuity-native/app\asset-edit.tsx:589:            </Pressable>
+asset-continuity-native/app\asset-edit.tsx:626:        accessibilityLabel="What you know about the item's location"
+asset-continuity-native/app\asset-edit.tsx:627:        accessibilityRole="radiogroup"
+asset-continuity-native/app\asset-edit.tsx:654:            accessibilityLabel="Place"
+asset-continuity-native/app\asset-edit.tsx:655:            accessibilityRole="radiogroup"
+asset-continuity-native/app\asset-edit.tsx:660:              <Pressable
+asset-continuity-native/app\asset-edit.tsx:661:                accessibilityRole="button"
+asset-continuity-native/app\asset-edit.tsx:666:              </Pressable>
+asset-continuity-native/app\asset-edit.tsx:692:                  accessibilityLabel="Room or space"
+asset-continuity-native/app\asset-edit.tsx:693:                  accessibilityRole="radiogroup"
+asset-continuity-native/app\asset-edit.tsx:741:    <Pressable
+asset-continuity-native/app\asset-edit.tsx:742:      accessibilityRole="radio"
+asset-continuity-native/app\asset-edit.tsx:743:      accessibilityState={{ checked: active }}
+asset-continuity-native/app\asset-edit.tsx:758:    </Pressable>
+asset-continuity-native/app\place\[id].tsx:12:import { Alert, Pressable, StyleSheet, Text, View } from "react-native";
+asset-continuity-native/app\place\[id].tsx:99:        Alert.alert(
+asset-continuity-native/app\place\[id].tsx:107:      Alert.alert(
+asset-continuity-native/app\place\[id].tsx:137:          <Pressable
+asset-continuity-native/app\place\[id].tsx:138:            accessibilityLabel="Edit Place name and address"
+asset-continuity-native/app\place\[id].tsx:139:            accessibilityRole="button"
+asset-continuity-native/app\place\[id].tsx:152:          </Pressable>
+asset-continuity-native/app\place\[id].tsx:206:            <Pressable
+asset-continuity-native/app\place\[id].tsx:207:              accessibilityLabel="Add a space"
+asset-continuity-native/app\place\[id].tsx:208:              accessibilityRole="button"
+asset-continuity-native/app\place\[id].tsx:221:            </Pressable>
+asset-continuity-native/app\place\[id].tsx:234:              <Pressable
+asset-continuity-native/app\place\[id].tsx:235:                accessibilityHint="Edit this retrieval space without changing its stable ID."
+asset-continuity-native/app\place\[id].tsx:236:                accessibilityLabel={`${room.name}, ${room.kind}, ${count} ${count === 1 ? "item" : "items"}`}
+asset-continuity-native/app\place\[id].tsx:237:                accessibilityRole="button"
+asset-continuity-native/app\place\[id].tsx:262:              </Pressable>
+asset-continuity-native/app\place\[id].tsx:289:            <Pressable
+asset-continuity-native/app\place\[id].tsx:290:              accessibilityLabel="Attach a Place document"
+asset-continuity-native/app\place\[id].tsx:291:              accessibilityRole="button"
+asset-continuity-native/app\place\[id].tsx:292:              accessibilityState={{ busy: saving, disabled: saving }}
+asset-continuity-native/app\place\[id].tsx:303:            </Pressable>
+asset-continuity-native/app\place\[id].tsx:353:          <Pressable
+asset-continuity-native/app\place\[id].tsx:354:            accessibilityRole="button"
+asset-continuity-native/app\place\[id].tsx:369:          </Pressable>
+asset-continuity-native/app\evidence\[id].tsx:99:      Alert.alert(
+asset-continuity-native/app\evidence\[id].tsx:117:    Alert.alert(
+asset-continuity-native/app\evidence\[id].tsx:262:      accessibilityLabel={`${label}: ${value}`}
+asset-continuity-native/src\components\ui.tsx:11:  KeyboardAvoidingView,
+asset-continuity-native/src\components\ui.tsx:13:  Pressable,
+asset-continuity-native/src\components\ui.tsx:17:  TextInput,
+asset-continuity-native/src\components\ui.tsx:18:  type TextInputProps,
+asset-continuity-native/src\components\ui.tsx:104:        <KeyboardAvoidingView
+asset-continuity-native/src\components\ui.tsx:109:        </KeyboardAvoidingView>
+asset-continuity-native/src\components\ui.tsx:126:      accessibilityLabel="ALYR"
+asset-continuity-native/src\components\ui.tsx:174:      accessibilityRole="header"
+asset-continuity-native/src\components\ui.tsx:258:  accessibilityHint
+asset-continuity-native/src\components\ui.tsx:265:  readonly accessibilityHint?: string;
+asset-continuity-native/src\components\ui.tsx:269:    <Pressable
+asset-continuity-native/src\components\ui.tsx:270:      accessibilityHint={accessibilityHint}
+asset-continuity-native/src\components\ui.tsx:271:      accessibilityRole="button"
+asset-continuity-native/src\components\ui.tsx:272:      accessibilityState={{ disabled: disabled || loading, busy: loading }}
+asset-continuity-native/src\components\ui.tsx:291:    </Pressable>
+asset-continuity-native/src\components\ui.tsx:310:    <Pressable
+asset-continuity-native/src\components\ui.tsx:311:      accessibilityRole="button"
+asset-continuity-native/src\components\ui.tsx:312:      accessibilityState={{ disabled }}
+asset-continuity-native/src\components\ui.tsx:339:    </Pressable>
+asset-continuity-native/src\components\ui.tsx:355:    <Pressable
+asset-continuity-native/src\components\ui.tsx:356:      accessibilityLabel={label}
+asset-continuity-native/src\components\ui.tsx:357:      accessibilityRole="button"
+asset-continuity-native/src\components\ui.tsx:370:    </Pressable>
+asset-continuity-native/src\components\ui.tsx:402:      accessibilityLabel={label}
+asset-continuity-native/src\components\ui.tsx:403:      accessibilityRole="progressbar"
+asset-continuity-native/src\components\ui.tsx:446:  accessibilityHint,
+asset-continuity-native/src\components\ui.tsx:447:  accessibilityLabel,
+asset-continuity-native/src\components\ui.tsx:450:}: TextInputProps & {
+asset-continuity-native/src\components\ui.tsx:459:  const effectiveHint = [accessibilityHint, description, error]
+asset-continuity-native/src\components\ui.tsx:475:      <TextInput
+asset-continuity-native/src\components\ui.tsx:477:        accessibilityHint={effectiveHint || undefined}
+asset-continuity-native/src\components\ui.tsx:478:        accessibilityLabel={accessibilityLabel ?? label}
+asset-continuity-native/src\components\ui.tsx:493:          accessibilityLiveRegion="polite"
+asset-continuity-native/src\components\ui.tsx:512:    <View accessibilityLiveRegion="assertive" style={styles.errorBanner}>
+asset-continuity-native/src\components\ui.tsx:514:      <Pressable
+asset-continuity-native/src\components\ui.tsx:515:        accessibilityLabel="Dismiss message"
+asset-continuity-native/src\components\ui.tsx:516:        accessibilityRole="button"
+asset-continuity-native/src\components\ui.tsx:517:        hitSlop={8}
+asset-continuity-native/src\components\ui.tsx:525:      </Pressable>
+asset-continuity-native/src\components\PlaceDocumentRow.tsx:6:  Pressable,
+asset-continuity-native/src\components\PlaceDocumentRow.tsx:166:      <Pressable
+asset-continuity-native/src\components\PlaceDocumentRow.tsx:167:        accessibilityHint="Creates a temporary verified copy, then opens the system document viewer."
+asset-continuity-native/src\components\PlaceDocumentRow.tsx:168:        accessibilityLabel={`Open ${document.fileName}`}
+asset-continuity-native/src\components\PlaceDocumentRow.tsx:169:        accessibilityRole="button"
+asset-continuity-native/src\components\PlaceDocumentRow.tsx:170:        accessibilityState={{ busy: opening, disabled: opening }}
+asset-continuity-native/src\components\PlaceDocumentRow.tsx:203:      </Pressable>
+asset-continuity-native/src\components\PlaceDocumentRow.tsx:206:          accessibilityLiveRegion="polite"
+asset-continuity-native/src\components\PlaceDocumentRow.tsx:207:          accessibilityRole="alert"
+asset-continuity-native/app\dashboard.tsx:32:          accessibilityLabel="Preparing portfolio"
+asset-continuity-native/app\dashboard.tsx:33:          accessibilityLiveRegion="polite"
+asset-continuity-native/src\components\AssetListItem.tsx:11:import { Image, Pressable, StyleSheet, Text, View } from "react-native";
+asset-continuity-native/src\components\AssetListItem.tsx:79:    <Pressable
+asset-continuity-native/src\components\AssetListItem.tsx:80:      accessibilityHint="Opens this Asset Passport"
+asset-continuity-native/src\components\AssetListItem.tsx:81:      accessibilityRole="button"
+asset-continuity-native/src\components\AssetListItem.tsx:125:    </Pressable>
+asset-continuity-native/src\components\PrivacyShield.tsx:29:      accessibilityLabel="ALYR is locked while the app is not active"
+asset-continuity-native/src\components\PrivacyShield.tsx:30:      accessibilityRole="summary"
+asset-continuity-native/src\components\PrivacyShield.tsx:31:      importantForAccessibility="yes"
+asset-continuity-native/app\capture\index.tsx:24:  KeyboardAvoidingView,
+asset-continuity-native/app\capture\index.tsx:27:  Pressable,
+asset-continuity-native/app\capture\index.tsx:165:        Alert.alert(
+asset-continuity-native/app\capture\index.tsx:202:    Alert.alert(title, message, [
+asset-continuity-native/app\capture\index.tsx:234:      Alert.alert(
+asset-continuity-native/app\capture\index.tsx:253:      Alert.alert(
+asset-continuity-native/app\capture\index.tsx:270:      Alert.alert(
+asset-continuity-native/app\capture\index.tsx:282:      Alert.alert(
+asset-continuity-native/app\capture\index.tsx:310:      Alert.alert(
+asset-continuity-native/app\capture\index.tsx:437:        <KeyboardAvoidingView
+asset-continuity-native/app\capture\index.tsx:483:        </KeyboardAvoidingView>
+asset-continuity-native/app\capture\index.tsx:500:      <KeyboardAvoidingView
+asset-continuity-native/app\capture\index.tsx:661:      </KeyboardAvoidingView>
+asset-continuity-native/app\capture\index.tsx:731:          accessibilityLabel="Asset category"
+asset-continuity-native/app\capture\index.tsx:732:          accessibilityRole="radiogroup"
+asset-continuity-native/app\capture\index.tsx:745:          <Text accessibilityLiveRegion="polite" style={styles.inlineError}>
+asset-continuity-native/app\capture\index.tsx:849:        accessibilityLabel="What you know about the item's location"
+asset-continuity-native/app\capture\index.tsx:850:        accessibilityRole="radiogroup"
+asset-continuity-native/app\capture\index.tsx:873:        <Text accessibilityLiveRegion="polite" style={styles.inlineError}>
+asset-continuity-native/app\capture\index.tsx:883:              <Pressable
+asset-continuity-native/app\capture\index.tsx:884:                accessibilityRole="button"
+asset-continuity-native/app\capture\index.tsx:890:              </Pressable>
+asset-continuity-native/app\capture\index.tsx:893:              <View accessibilityRole="radiogroup" style={styles.placeChoices}>
+asset-continuity-native/app\capture\index.tsx:917:                <View accessibilityRole="radiogroup" style={styles.placeChoices}>
+asset-continuity-native/app\capture\index.tsx:1070:        <Pressable
+asset-continuity-native/app\capture\index.tsx:1071:          accessibilityRole="button"
+asset-continuity-native/app\capture\index.tsx:1085:        </Pressable>
+asset-continuity-native/app\capture\index.tsx:1181:    <Pressable
+asset-continuity-native/app\capture\index.tsx:1182:      accessibilityRole="radio"
+asset-continuity-native/app\capture\index.tsx:1183:      accessibilityState={{ checked: active }}
+asset-continuity-native/app\capture\index.tsx:1204:    </Pressable>
+asset-continuity-native/app\capture\index.tsx:1220:    <Pressable
+asset-continuity-native/app\capture\index.tsx:1221:      accessibilityRole="radio"
+asset-continuity-native/app\capture\index.tsx:1222:      accessibilityState={{ checked: active }}
+asset-continuity-native/app\capture\index.tsx:1237:    </Pressable>
+asset-continuity-native/app\asset\[id].tsx:22:  Pressable,
+asset-continuity-native/app\asset\[id].tsx:161:      Alert.alert(
+asset-continuity-native/app\asset\[id].tsx:179:    Alert.alert(
+asset-continuity-native/app\asset\[id].tsx:212:          accessibilityLabel={`Primary photo of ${asset.name}`}
+asset-continuity-native/app\asset\[id].tsx:230:                    accessibilityLiveRegion: "polite" as const,
+asset-continuity-native/app\asset\[id].tsx:231:                    accessibilityRole: "alert" as const
+asset-continuity-native/app\asset\[id].tsx:289:        <Pressable
+asset-continuity-native/app\asset\[id].tsx:290:          accessibilityHint={
+asset-continuity-native/app\asset\[id].tsx:295:          accessibilityLabel={
+asset-continuity-native/app\asset\[id].tsx:304:          accessibilityRole="button"
+asset-continuity-native/app\asset\[id].tsx:305:          accessibilityState={{ disabled: archived }}
+asset-continuity-native/app\asset\[id].tsx:348:        </Pressable>
+asset-continuity-native/app\asset\[id].tsx:386:              <Pressable
+asset-continuity-native/app\asset\[id].tsx:387:                accessibilityHint={`Opens a focused editor for ${missingAction(
+asset-continuity-native/app\asset\[id].tsx:390:                accessibilityRole="button"
+asset-continuity-native/app\asset\[id].tsx:412:              </Pressable>
+asset-continuity-native/app\asset\[id].tsx:506:    <Pressable
+asset-continuity-native/app\asset\[id].tsx:507:      accessibilityHint="Opens evidence metadata, stored original and review controls."
+asset-continuity-native/app\asset\[id].tsx:508:      accessibilityLabel={`${evidence.fileName}, ${
+asset-continuity-native/app\asset\[id].tsx:511:      accessibilityRole="button"
+asset-continuity-native/app\asset\[id].tsx:537:    </Pressable>
+asset-continuity-native/app\asset\[id].tsx:549:    <Pressable
+asset-continuity-native/app\asset\[id].tsx:550:      accessibilityRole="button"
+asset-continuity-native/app\asset\[id].tsx:559:    </Pressable>
+asset-continuity-native/src\components\AttachmentViewer\index.tsx:10:  Pressable,
+asset-continuity-native/src\components\AttachmentViewer\index.tsx:338:      <Pressable
+asset-continuity-native/src\components\AttachmentViewer\index.tsx:339:        accessibilityHint="Opens a temporary copy in the system share sheet."
+asset-continuity-native/src\components\AttachmentViewer\index.tsx:340:        accessibilityLabel={`Open ${evidence.fileName}`}
+asset-continuity-native/src\components\AttachmentViewer\index.tsx:341:        accessibilityRole="button"
+asset-continuity-native/src\components\AttachmentViewer\index.tsx:342:        accessibilityState={{ busy: opening, disabled: opening }}
+asset-continuity-native/src\components\AttachmentViewer\index.tsx:374:      </Pressable>
+asset-continuity-native/src\components\AttachmentViewer\index.tsx:377:          accessibilityLiveRegion="polite"
+asset-continuity-native/src\components\AttachmentViewer\index.tsx:378:          accessibilityRole="alert"
+asset-continuity-native/app\(tabs)\assets.tsx:10:import { Pressable, StyleSheet, Text, View } from "react-native";
+asset-continuity-native/app\(tabs)\assets.tsx:101:      <View accessibilityRole="tablist" style={styles.segment}>
+asset-continuity-native/app\(tabs)\assets.tsx:118:            <Pressable
+asset-continuity-native/app\(tabs)\assets.tsx:119:              accessibilityRole="button"
+asset-continuity-native/app\(tabs)\assets.tsx:125:            </Pressable>
+asset-continuity-native/app\(tabs)\assets.tsx:145:                <Pressable
+asset-continuity-native/app\(tabs)\assets.tsx:146:                  accessibilityRole="button"
+asset-continuity-native/app\(tabs)\assets.tsx:170:                </Pressable>
+asset-continuity-native/app\(tabs)\assets.tsx:192:            accessibilityRole="radiogroup"
+asset-continuity-native/app\(tabs)\assets.tsx:255:              <Pressable
+asset-continuity-native/app\(tabs)\assets.tsx:256:                accessibilityRole="button"
+asset-continuity-native/app\(tabs)\assets.tsx:261:              </Pressable>
+asset-continuity-native/app\(tabs)\assets.tsx:280:    <Pressable
+asset-continuity-native/app\(tabs)\assets.tsx:281:      accessibilityRole="tab"
+asset-continuity-native/app\(tabs)\assets.tsx:282:      accessibilityState={{ selected: active }}
+asset-continuity-native/app\(tabs)\assets.tsx:298:    </Pressable>
+asset-continuity-native/app\(tabs)\assets.tsx:312:    <Pressable
+asset-continuity-native/app\(tabs)\assets.tsx:313:      accessibilityRole="radio"
+asset-continuity-native/app\(tabs)\assets.tsx:314:      accessibilityState={{ checked: active }}
+asset-continuity-native/app\(tabs)\assets.tsx:325:    </Pressable>
+asset-continuity-native/src\components\PortfolioDashboard\index.tsx:17:  Pressable,
+asset-continuity-native/src\components\PortfolioDashboard\index.tsx:273:      accessibilityLabel={copy.portfolio}
+asset-continuity-native/src\components\PortfolioDashboard\index.tsx:280:            accessibilityRole="header"
+asset-continuity-native/src\components\PortfolioDashboard\index.tsx:291:              accessibilityLabel={copy.sample}
+asset-continuity-native/src\components\PortfolioDashboard\index.tsx:330:          accessibilityLabel={copy.noRecordedValues}
+asset-continuity-native/src\components\PortfolioDashboard\index.tsx:395:        <View accessibilityLiveRegion="polite" style={styles.integrityNotice}>
+asset-continuity-native/src\components\PortfolioDashboard\index.tsx:454:          accessibilityLabel={copy.noTotal}
+asset-continuity-native/src\components\PortfolioDashboard\index.tsx:465:          accessibilityLabel={snapshot.currencyTotals
+asset-continuity-native/src\components\PortfolioDashboard\index.tsx:558:      <Pressable
+asset-continuity-native/src\components\PortfolioDashboard\index.tsx:559:        accessibilityHint={copy.explanationTitle}
+asset-continuity-native/src\components\PortfolioDashboard\index.tsx:560:        accessibilityRole="button"
+asset-continuity-native/src\components\PortfolioDashboard\index.tsx:561:        accessibilityState={{ expanded: explanationOpen }}
+asset-continuity-native/src\components\PortfolioDashboard\index.tsx:584:      </Pressable>
+asset-continuity-native/src\components\PortfolioDashboard\index.tsx:589:            accessibilityRole="header"
+asset-continuity-native/src\components\PortfolioDashboard\index.tsx:741:          accessibilityLabel={`${label}: ${progress.complete} of ${progress.total}`}
+asset-continuity-native/src\components\PortfolioDashboard\index.tsx:742:          accessibilityRole="progressbar"
+asset-continuity-native/src\components\PortfolioDashboard\index.tsx:761:    <Pressable
+asset-continuity-native/src\components\PortfolioDashboard\index.tsx:762:      accessibilityLabel={`${label}. ${value}. ${detail}`}
+asset-continuity-native/src\components\PortfolioDashboard\index.tsx:763:      accessibilityRole="button"
+asset-continuity-native/src\components\PortfolioDashboard\index.tsx:771:    </Pressable>
+asset-continuity-native/src\components\PortfolioDashboard\index.tsx:774:      accessibilityLabel={`${label}. ${value}. ${detail}`}
+asset-continuity-native/src\components\PortfolioDashboard\index.tsx:800:            accessibilityLabel={`${bucket.label}: ${copy.items(bucket.count)}, ${bucket.percent}%`}
+asset-continuity-native/src\components\PortfolioDashboard\index.tsx:986:    <Pressable
+asset-continuity-native/src\components\PortfolioDashboard\index.tsx:987:      accessibilityLabel={`${label}: ${count}`}
+asset-continuity-native/src\components\PortfolioDashboard\index.tsx:988:      accessibilityRole="button"
+asset-continuity-native/src\components\PortfolioDashboard\index.tsx:997:    </Pressable>
+asset-continuity-native/src\components\PortfolioDashboard\index.tsx:1000:      accessibilityLabel={`${label}: ${count}`}
+asset-continuity-native/src\components\PortfolioDashboard\index.tsx:1188:    <Pressable
+asset-continuity-native/src\components\PortfolioDashboard\index.tsx:1189:      accessibilityLabel={`${item.assetName}, ${formatPortfolioMoney(
+asset-continuity-native/src\components\PortfolioDashboard\index.tsx:1194:      accessibilityRole="button"
+asset-continuity-native/src\components\PortfolioDashboard\index.tsx:1203:    </Pressable>
+asset-continuity-native/src\components\PortfolioDashboard\index.tsx:1229:            accessibilityRole="header"
+asset-continuity-native/src\components\PortfolioDashboard\index.tsx:1267:    <Pressable
+asset-continuity-native/src\components\PortfolioDashboard\index.tsx:1268:      accessibilityRole="button"
+asset-continuity-native/src\components\PortfolioDashboard\index.tsx:1290:    </Pressable>
+asset-continuity-native/src\components\PortfolioDashboard\index.tsx:1306:    writingDirection: "rtl"
+asset-continuity-native/app\(tabs)\vault.tsx:15:import { Alert, Platform, Pressable, StyleSheet, Text, View } from "react-native";
+asset-continuity-native/app\(tabs)\vault.tsx:67:      Alert.alert(
+asset-continuity-native/app\(tabs)\vault.tsx:86:    Alert.alert(
+asset-continuity-native/app\(tabs)\vault.tsx:105:      Alert.alert(
+asset-continuity-native/app\(tabs)\vault.tsx:114:    Alert.alert(
+asset-continuity-native/app\(tabs)\vault.tsx:195:        <Pressable
+asset-continuity-native/app\(tabs)\vault.tsx:196:          accessibilityRole="button"
+asset-continuity-native/app\(tabs)\vault.tsx:212:        </Pressable>
+asset-continuity-native/app\(tabs)\vault.tsx:235:              accessibilityLabel="Verified account"
+asset-continuity-native/app\(tabs)\vault.tsx:236:              accessibilityRole="image"
+asset-continuity-native/app\(tabs)\vault.tsx:265:        <View accessibilityRole="radiogroup" style={styles.languageOptions}>
+asset-continuity-native/app\(tabs)\vault.tsx:285:        <Pressable
+asset-continuity-native/app\(tabs)\vault.tsx:286:          accessibilityRole="button"
+asset-continuity-native/app\(tabs)\vault.tsx:287:          accessibilityState={{ expanded: showDiagnostics }}
+asset-continuity-native/app\(tabs)\vault.tsx:305:        </Pressable>
+asset-continuity-native/app\(tabs)\vault.tsx:373:    <Pressable
+asset-continuity-native/app\(tabs)\vault.tsx:374:      accessibilityRole="radio"
+asset-continuity-native/app\(tabs)\vault.tsx:375:      accessibilityState={{ checked: active, disabled }}
+asset-continuity-native/app\(tabs)\vault.tsx:393:    </Pressable>
+asset-continuity-native/app\(auth)\_layout.tsx:10:        animation: "default",
+asset-continuity-native/src\components\PlacePinEditor\index.web.tsx:26:      accessibilityLabel={
+asset-continuity-native/src\components\PlacePinEditor\index.web.tsx:33:      accessibilityRole="image"
+asset-continuity-native/src\components\PlacePinEditor\index.web.tsx:43:          accessibilityLabel={labels.markerAccessibilityLabel}
+asset-continuity-native/src\components\PlacePinEditor\index.web.tsx:44:          accessibilityRole="image"
+asset-continuity-native/app\(tabs)\search.tsx:4:import { Pressable, StyleSheet, Text, TextInput, View } from "react-native";
+asset-continuity-native/app\(tabs)\search.tsx:71:        <TextInput
+asset-continuity-native/app\(tabs)\search.tsx:72:          accessibilityLabel="Search your private register"
+asset-continuity-native/app\(tabs)\search.tsx:77:          returnKeyType="search"
+asset-continuity-native/app\(tabs)\search.tsx:127:                <Pressable
+asset-continuity-native/app\(tabs)\search.tsx:128:                  accessibilityRole="button"
+asset-continuity-native/app\(tabs)\search.tsx:144:                </Pressable>
+asset-continuity-native/app\(tabs)\search.tsx:170:              <Pressable
+asset-continuity-native/app\(tabs)\search.tsx:171:                accessibilityRole="button"
+asset-continuity-native/app\(tabs)\search.tsx:176:              </Pressable>
+asset-continuity-native/src\components\PlacePinEditor\EditorControls.tsx:5:  Pressable,
+asset-continuity-native/src\components\PlacePinEditor\EditorControls.tsx:8:  TextInput,
+asset-continuity-native/src\components\PlacePinEditor\EditorControls.tsx:120:      accessibilityLabel={labels.sectionLabel}
+asset-continuity-native/src\components\PlacePinEditor\EditorControls.tsx:135:                accessibilityLiveRegion="polite"
+asset-continuity-native/src\components\PlacePinEditor\EditorControls.tsx:228:          accessibilityLiveRegion="assertive"
+asset-continuity-native/src\components\PlacePinEditor\EditorControls.tsx:237:        <Pressable
+asset-continuity-native/src\components\PlacePinEditor\EditorControls.tsx:238:          accessibilityHint={labels.confirmationHint}
+asset-continuity-native/src\components\PlacePinEditor\EditorControls.tsx:239:          accessibilityRole="button"
+asset-continuity-native/src\components\PlacePinEditor\EditorControls.tsx:240:          accessibilityState={{
+asset-continuity-native/src\components\PlacePinEditor\EditorControls.tsx:258:        </Pressable>
+asset-continuity-native/src\components\PlacePinEditor\EditorControls.tsx:262:        <Pressable
+asset-continuity-native/src\components\PlacePinEditor\EditorControls.tsx:263:          accessibilityRole="button"
+asset-continuity-native/src\components\PlacePinEditor\EditorControls.tsx:277:        </Pressable>
+asset-continuity-native/src\components\PlacePinEditor\EditorControls.tsx:305:      <TextInput
+asset-continuity-native/src\components\PlacePinEditor\EditorControls.tsx:306:        accessibilityLabel={label}
+asset-continuity-native/src\components\PlacePinEditor\EditorControls.tsx:307:        accessibilityState={{ disabled }}
+asset-continuity-native/src\components\PlacePinEditor\EditorControls.tsx:324:          accessibilityLiveRegion="polite"
+asset-continuity-native/src\components\PlacePinEditor\EditorControls.tsx:350:    <Pressable
+asset-continuity-native/src\components\PlacePinEditor\EditorControls.tsx:351:      accessibilityRole="button"
+asset-continuity-native/src\components\PlacePinEditor\EditorControls.tsx:352:      accessibilityState={{ disabled }}
+asset-continuity-native/src\components\PlacePinEditor\EditorControls.tsx:367:    </Pressable>
+asset-continuity-native/app\(tabs)\index.tsx:10:import { Pressable, StyleSheet, Text, View } from "react-native";
+asset-continuity-native/app\(tabs)\index.tsx:209:              <Pressable
+asset-continuity-native/app\(tabs)\index.tsx:210:                accessibilityRole="button"
+asset-continuity-native/app\(tabs)\index.tsx:226:              </Pressable>
+asset-continuity-native/app\(tabs)\index.tsx:235:            <Pressable
+asset-continuity-native/app\(tabs)\index.tsx:236:              accessibilityRole="button"
+asset-continuity-native/app\(tabs)\index.tsx:241:            </Pressable>
+asset-continuity-native/app\(tabs)\index.tsx:245:        <Pressable
+asset-continuity-native/app\(tabs)\index.tsx:246:          accessibilityLabel={`${atlasPins.length} ${
+asset-continuity-native/app\(tabs)\index.tsx:251:          accessibilityHint="Opens the globe overview and complete Place list"
+asset-continuity-native/app\(tabs)\index.tsx:252:          accessibilityRole="button"
+asset-continuity-native/app\(tabs)\index.tsx:260:            accessibilityElementsHidden
+asset-continuity-native/app\(tabs)\index.tsx:327:        </Pressable>
+asset-continuity-native/app\(tabs)\index.tsx:334:            <Pressable
+asset-continuity-native/app\(tabs)\index.tsx:335:              accessibilityRole="button"
+asset-continuity-native/app\(tabs)\index.tsx:354:            </Pressable>
+asset-continuity-native/app\(tabs)\index.tsx:359:          <Pressable
+asset-continuity-native/app\(tabs)\index.tsx:360:            accessibilityRole="button"
+asset-continuity-native/app\(tabs)\index.tsx:366:          </Pressable>
+asset-continuity-native/app\(tabs)\index.tsx:374:              <Pressable
+asset-continuity-native/app\(tabs)\index.tsx:375:                accessibilityRole="button"
+asset-continuity-native/app\(tabs)\index.tsx:380:              </Pressable>
+asset-continuity-native/app\(auth)\household.tsx:74:          onSubmitEditing={advance}
+asset-continuity-native/app\(auth)\household.tsx:76:          returnKeyType="next"
+asset-continuity-native/app\(auth)\callback.tsx:67:            accessibilityLabel="Checking confirmation"
+asset-continuity-native/app\(auth)\callback.tsx:68:            accessibilityRole="progressbar"
+asset-continuity-native/src\components\PlacePinEditor\index.native.tsx:33:        accessibilityLabel={labels.mapAccessibilityLabel}
+asset-continuity-native/src\components\PlacePinEditor\index.native.tsx:53:          accessibilityLabel={labels.markerAccessibilityLabel}
+asset-continuity-native/src\components\PlacePinEditor\index.native.tsx:84:      accessibilityLabel={labels.noPinBody}
+asset-continuity-native/src\components\PlacePinEditor\index.native.tsx:85:      accessibilityRole="summary"
+asset-continuity-native/app\(auth)\create-account.tsx:4:import { StyleSheet, TextInput, View } from "react-native";
+asset-continuity-native/app\(auth)\create-account.tsx:26:  const passwordRef = useRef<TextInput>(null);
+asset-continuity-native/app\(auth)\create-account.tsx:27:  const confirmRef = useRef<TextInput>(null);
+asset-continuity-native/app\(auth)\create-account.tsx:116:            onSubmitEditing={() => passwordRef.current?.focus()}
+asset-continuity-native/app\(auth)\create-account.tsx:118:            returnKeyType="next"
+asset-continuity-native/app\(auth)\create-account.tsx:133:            onSubmitEditing={() => confirmRef.current?.focus()}
+asset-continuity-native/app\(auth)\create-account.tsx:137:            returnKeyType="next"
+asset-continuity-native/app\(auth)\create-account.tsx:152:            onSubmitEditing={() => void submit()}
+asset-continuity-native/app\(auth)\create-account.tsx:155:            returnKeyType="go"
+asset-continuity-native/app\(auth)\privacy.tsx:134:        <View accessibilityLabel="Choose first record" accessibilityRole="radiogroup">
+asset-continuity-native/app\(auth)\sign-in.tsx:4:import { StyleSheet, TextInput, View } from "react-native";
+asset-continuity-native/app\(auth)\sign-in.tsx:26:  const passwordRef = useRef<TextInput>(null);
+asset-continuity-native/app\(auth)\sign-in.tsx:111:            onSubmitEditing={() => passwordRef.current?.focus()}
+asset-continuity-native/app\(auth)\sign-in.tsx:113:            returnKeyType="next"
+asset-continuity-native/app\(auth)\sign-in.tsx:133:            onSubmitEditing={() => void submit()}
+asset-continuity-native/app\(auth)\sign-in.tsx:136:            returnKeyType="go"

@@ -1,0 +1,28 @@
+{
+    "canonicalCommit":  "deece47f971ce73d13ae5386918f249c5393bb23",
+    "expoUrl":  "exp://192.168.1.32:8081",
+    "sdkVersion":  "54.0.0",
+    "manifestHttpStatus":  200,
+    "manifestBytes":  2324,
+    "manifestSha256":  "D723B4920B816A9C8929D33C2CC32D9F396B1609E08863A7BCD9410E94BE9FDA",
+    "liveBundleBytes":  22319604,
+    "liveBundleSha256":  "4F11FF5C84D068F22475B68BB51DF5DD8E4CB6DE9E2AAEDFD1AED3CC8A4BF5D8",
+    "staticBundleFile":  "entry-502e758cf31ca54421b3f62208d83762.hbc",
+    "staticBundleBytes":  12859707,
+    "staticBundleSha256":  "C4915C523FC4221F3893BEA447A411AE31843F8E1EA2F574D9C4DEF50F04D229",
+    "staticExportFiles":  49,
+    "staticExportBytes":  24273495,
+    "previewContractsPassed":  10,
+    "qrFile":  "ALYR-EXPO-GO-QR-deece47.png",
+    "qrPixels":  [
+                     768,
+                     768
+                 ],
+    "qrSha256":  "9B71E6F2E8E3770F64497D4F350AF006D9A8391F35B9B1B292891790C461351E",
+    "qrDecodedUrl":  "exp://192.168.1.32:8081",
+    "qrDecodeCheck":  "pass",
+    "dataPolicy":  "session-only",
+    "verifiedAt":  "2026-07-28T10:24:21+03:00",
+    "staticExportTreeSha256":  "85D3F7872715EB849E518ED63AFF36D16C2D426687D1375F4F45266F64B8A7C3",
+    "staticExportTreeMethod":  "SHA-256 over sorted relative-path NUL file-SHA256 newline records"
+}

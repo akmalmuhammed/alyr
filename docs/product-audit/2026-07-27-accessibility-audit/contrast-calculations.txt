@@ -1,0 +1,16 @@
+WCAG relative-luminance contrast calculations (sRGB)
+Generated 2026-07-27
+
+text/carbon on paper: #15171A / #F6F7F3 = 16.690:1
+textMuted on paper: #5F666D / #F6F7F3 = 5.409:1
+textSubtle/textFaint on paper: #737A81 / #F6F7F3 = 4.041:1
+textSubtle/textFaint on white: #737A81 / #FFFFFF = 4.348:1
+warning on paper: #A96400 / #F6F7F3 = 4.328:1
+warning on white: #A96400 / #FFFFFF = 4.656:1
+danger on paper: #B42318 / #F6F7F3 = 6.110:1
+information on paper: #1769AA / #F6F7F3 = 5.365:1
+white on carbon: #FFFFFF / #15171A = 17.959:1
+concrete on carbon: #A7ADB5 / #15171A = 7.943:1
+carbon on volt: #15171A / #B7F34A = 13.625:1
+
+Thresholds: 4.5:1 for normal text; 3:1 for large text and non-text UI boundaries.

@@ -1,0 +1,17 @@
+asset-continuity-native/app\(auth)\create-account.tsx:116:            onSubmitEditing={() => passwordRef.current?.focus()}
+asset-continuity-native/app\(auth)\create-account.tsx:118:            returnKeyType="next"
+asset-continuity-native/app\(auth)\create-account.tsx:133:            onSubmitEditing={() => confirmRef.current?.focus()}
+asset-continuity-native/app\(auth)\create-account.tsx:137:            returnKeyType="next"
+asset-continuity-native/app\(auth)\create-account.tsx:152:            onSubmitEditing={() => void submit()}
+asset-continuity-native/app\(auth)\create-account.tsx:155:            returnKeyType="go"
+asset-continuity-native/app\(auth)\household.tsx:74:          onSubmitEditing={advance}
+asset-continuity-native/app\(auth)\household.tsx:76:          returnKeyType="next"
+asset-continuity-native/app\(auth)\sign-in.tsx:111:            onSubmitEditing={() => passwordRef.current?.focus()}
+asset-continuity-native/app\(auth)\sign-in.tsx:113:            returnKeyType="next"
+asset-continuity-native/app\(auth)\sign-in.tsx:133:            onSubmitEditing={() => void submit()}
+asset-continuity-native/app\(auth)\sign-in.tsx:136:            returnKeyType="go"
+asset-continuity-native/app\(tabs)\search.tsx:77:          returnKeyType="search"
+asset-continuity-native/app\asset-value.tsx:304:          returnKeyType="done"
+asset-continuity-native/app\place-edit.tsx:153:          returnKeyType="next"
+asset-continuity-native/app\place-edit.tsx:163:          returnKeyType="next"
+asset-continuity-native/app\space-edit.tsx:239:        returnKeyType="done"

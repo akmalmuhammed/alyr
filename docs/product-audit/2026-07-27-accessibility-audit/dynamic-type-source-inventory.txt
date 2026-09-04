@@ -1,0 +1,18 @@
+asset-continuity-native/app\(tabs)\assets.tsx:439:    flexWrap: "wrap",
+asset-continuity-native/app\asset\[id].tsx:526:        <Text numberOfLines={2} style={styles.evidenceName}>
+asset-continuity-native/app\asset\[id].tsx:603:    flexWrap: "wrap",
+asset-continuity-native/app\asset-edit.tsx:483:            <Text numberOfLines={2} style={styles.fileName}>
+asset-continuity-native/app\asset-edit.tsx:519:            <Text numberOfLines={3} style={styles.fileName}>
+asset-continuity-native/app\asset-value.tsx:484:    flexWrap: "wrap",
+asset-continuity-native/app\atlas.tsx:13:  useWindowDimensions,
+asset-continuity-native/app\atlas.tsx:321:            <Text numberOfLines={1} style={styles.positionName}>
+asset-continuity-native/app\atlas.tsx:63:  const { width } = useWindowDimensions();
+asset-continuity-native/app\capture\index.tsx:1058:              <Text numberOfLines={1} style={styles.fileName}>
+asset-continuity-native/app\capture\index.tsx:1317:    flexWrap: "wrap",
+asset-continuity-native/src\auth\components.tsx:105:  const { width } = useWindowDimensions();
+asset-continuity-native/src\auth\components.tsx:15:  useWindowDimensions,
+asset-continuity-native/src\components\AttachmentViewer\index.tsx:353:          <Text numberOfLines={2} style={styles.evidenceName}>
+asset-continuity-native/src\components\PlaceDocumentRow.tsx:183:          <Text numberOfLines={2} style={styles.name}>
+asset-continuity-native/src\components\PlacePinEditor\EditorControls.tsx:452:    flexWrap: "wrap",
+asset-continuity-native/src\components\PortfolioDashboard\index.tsx:1145:          numberOfLines={2}
+asset-continuity-native/src\components\PortfolioDashboard\index.tsx:811:                numberOfLines={2}
