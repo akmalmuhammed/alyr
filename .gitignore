@@ -66,6 +66,31 @@ asset-continuity-web/server/data/
 supabase/.branches/
 supabase/.temp/
 
+# Root-local validation and generated deliverables
+/.codex-tmp/
+/output/
+/-out
+/tmp-ios-introspect-preview.json
+
+# Local release binaries and heavyweight audit captures
+**/*.apk
+**/*.aab
+/docs/product-audit/**/*.tar.gz
+/docs/product-audit/**/*.bundle
+/docs/product-audit/**/*.hbc
+/docs/product-audit/**/*.pid
+
+# Separate local projects and parked design explorations
+/client-work/
+/ALYR_Lead_Intelligence/
+/ALYR_Design_System/
+/Heldat_Logo_System/
+/LUCID_Logo_System/
+/alyr-welcome-390*
+/app.json
+/build_pdfs.py
+/content_data.py
+
 # Python and operating-system noise
 **/__pycache__/
 **/.pytest_cache/
