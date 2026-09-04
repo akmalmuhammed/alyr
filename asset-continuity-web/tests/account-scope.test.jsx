@@ -2,6 +2,7 @@
 
 import React from "react";
 import {
+  act,
   cleanup,
   render,
   screen,
@@ -36,6 +37,7 @@ const accountHarness = vi.hoisted(() => ({
   currentSession: null,
   registerSession: null,
   loginSession: null,
+  sessionRequest: null,
 }));
 const recoveryHarness = vi.hoisted(() => ({
   states: new Map(),
@@ -134,7 +136,10 @@ vi.mock("../src/continuityApi.js", () => {
   return {
     ContinuityApiError,
     continuityApi: {
-      getSession: vi.fn(async () => accountHarness.currentSession),
+      getSession: vi.fn(() =>
+        accountHarness.sessionRequest ||
+        Promise.resolve(accountHarness.currentSession),
+      ),
       register: vi.fn(async () => {
         accountHarness.currentSession = accountHarness.registerSession;
         return accountHarness.currentSession;
@@ -262,6 +267,7 @@ describe("authenticated browser workspace boundaries", () => {
     accountHarness.currentSession = null;
     accountHarness.registerSession = null;
     accountHarness.loginSession = null;
+    accountHarness.sessionRequest = null;
     recoveryHarness.states.clear();
     recoveryHarness.receipts.clear();
     window.localStorage.clear();
@@ -272,6 +278,163 @@ describe("authenticated browser workspace boundaries", () => {
   afterEach(() => {
     cleanup();
     vi.restoreAllMocks();
+  });
+
+  it.each([
+    ["/welcome"],
+    ["/assets"],
+    ["/vault?mode=restore"],
+  ])(
+    "shows one neutral account gate while session resolution is delayed at %s",
+    async (path) => {
+      let resolveSession;
+      accountHarness.sessionRequest = new Promise((resolve) => {
+        resolveSession = resolve;
+      });
+      window.history.replaceState({}, "", path);
+
+      render(<App />);
+
+      expect(
+        screen.getByRole("heading", { name: "Checking your account" }),
+      ).toBeTruthy();
+      expect(screen.getByText("Preparing the correct workspace on this device.")).toBeTruthy();
+      expect(
+        screen.queryByRole("heading", { name: "Start with what matters." }),
+      ).toBeNull();
+      expect(screen.queryByRole("heading", { name: "Vault" })).toBeNull();
+
+      await act(async () => {
+        accountHarness.sessionRequest = null;
+        resolveSession(null);
+        await Promise.resolve();
+      });
+
+      expect(
+        await screen.findByRole("heading", { name: "Start with what matters." }),
+      ).toBeTruthy();
+    },
+  );
+
+  it("keeps local capture visible while exposing separate account entry actions", async () => {
+    const user = userEvent.setup();
+    render(<App />);
+
+    await screen.findByRole("heading", { name: "Start with what matters." });
+    const accountActions = screen.getByRole("navigation", {
+      name: "Account and recovery",
+    });
+    const createAccount = within(accountActions).getByRole("button", {
+      name: "Create account",
+    });
+    const signIn = within(accountActions).getByRole("button", {
+      name: "Sign in / recover",
+    });
+
+    expect(
+      screen.getByRole("button", { name: "Add my first item" }),
+    ).toBeTruthy();
+    expect(
+      screen.getByRole("button", { name: "Add a place" }),
+    ).toBeTruthy();
+
+    await user.click(signIn);
+    expect(
+      screen.getByRole("tab", { name: "Sign in" }).getAttribute(
+        "aria-selected",
+      ),
+    ).toBe("true");
+    expect(signIn.getAttribute("aria-expanded")).toBe("true");
+    expect(
+      screen.getByRole("button", { name: "Add my first item" }),
+    ).toBeTruthy();
+
+    await user.click(createAccount);
+    expect(
+      screen.getByRole("tab", { name: "Create account" }).getAttribute(
+        "aria-selected",
+      ),
+    ).toBe("true");
+    expect(createAccount.getAttribute("aria-expanded")).toBe("true");
+  });
+
+  it("offers restore immediately after sign-in and opens the restore console before capture", async () => {
+    const user = userEvent.setup();
+    const accountA = session("account-a", "household-a", "Archive A");
+    accountHarness.loginSession = accountA;
+
+    render(<App />);
+
+    await screen.findByRole("heading", { name: "Start with what matters." });
+    await user.click(
+      within(
+        screen.getByRole("navigation", { name: "Account and recovery" }),
+      ).getByRole("button", { name: "Sign in / recover" }),
+    );
+    await user.type(screen.getByLabelText("Email"), accountA.email);
+    await user.type(
+      screen.getByLabelText("Account password"),
+      "correct horse battery staple",
+    );
+    await user.click(screen.getByRole("button", { name: "Sign in" }));
+
+    const restoreEntry = await screen.findByRole("button", {
+      name: "Restore encrypted household backup",
+    });
+    expect(
+      screen.getByRole("button", { name: "Add my first item" }),
+    ).toBeTruthy();
+    await user.click(restoreEntry);
+
+    await waitFor(() => {
+      expect(window.location.pathname).toBe("/vault");
+      expect(new URLSearchParams(window.location.search).get("mode")).toBe(
+        "restore",
+      );
+    });
+    expect(
+      await screen.findByRole("heading", { name: "Restore before you start" }),
+    ).toBeTruthy();
+    expect(
+      screen.getByRole("tab", { name: "Restore kit" }).getAttribute(
+        "aria-selected",
+      ),
+    ).toBe("true");
+    expect(
+      screen.getByRole("button", {
+        name: /Choose encrypted recovery kit/i,
+      }),
+    ).toBeTruthy();
+  });
+
+  it("keeps a signed-in sample workspace on the welcome route so the user can exit it", async () => {
+    const user = userEvent.setup();
+    const accountA = session("account-a", "household-a", "Archive A");
+    accountHarness.currentSession = accountA;
+    const sample = createSampleWorkspace();
+    sample.household = {
+      ...sample.household,
+      id: accountA.householdId,
+      demoOnly: false,
+    };
+    window.localStorage.setItem(
+      accountWorkspaceKey(accountA),
+      JSON.stringify(sample),
+    );
+    window.history.replaceState({}, "", "/home");
+
+    render(<App />);
+
+    await user.click(
+      await screen.findByRole("button", { name: /Sample data/i }),
+    );
+    expect(
+      await screen.findByRole("heading", { name: "Start with what matters." }),
+    ).toBeTruthy();
+    expect(window.location.pathname).toBe("/welcome");
+    expect(
+      screen.getByRole("button", { name: "Add my first item" }),
+    ).toBeTruthy();
   });
 
   it("rejects backup or restore material from another household", () => {
@@ -428,10 +591,14 @@ describe("authenticated browser workspace boundaries", () => {
 
     await user.click(
       screen.getByRole("button", {
-        name: "Sign in or recover an existing household",
+        name: "Sign in / recover",
       }),
     );
-    await user.click(screen.getByRole("tab", { name: "Sign in" }));
+    expect(
+      screen.getByRole("tab", { name: "Sign in" }).getAttribute(
+        "aria-selected",
+      ),
+    ).toBe("true");
     await user.type(screen.getByLabelText("Email"), accountB.email);
     await user.type(
       screen.getByLabelText("Account password"),

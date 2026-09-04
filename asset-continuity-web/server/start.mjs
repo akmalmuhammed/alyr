@@ -29,7 +29,7 @@ const localApi = await createLocalApiServer({
 await localApi.listen(port, host);
 
 console.log(
-  `Continuity local API listening on http://${host}:${port} (local filesystem only; no cloud backup).`,
+  `Heldat local API listening on http://${host}:${port} (local filesystem only; no cloud backup).`,
 );
 
 async function shutdown() {

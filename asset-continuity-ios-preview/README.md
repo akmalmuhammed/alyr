@@ -1,7 +1,7 @@
-# ALYR iPhone Preview
+# Heldat iPhone Preview
 
 This is a zero-cost, session-only Expo Go companion for testing the canonical
-ALYR native screens on a physical iPhone from Windows.
+Heldat native screens on a physical iPhone from Windows.
 
 - It re-exports the routes from `asset-continuity-native`.
 - It intentionally uses Expo SDK 54 while the signed application remains on

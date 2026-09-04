@@ -80,7 +80,7 @@ function normalizeSession(value) {
   if (!source || typeof source !== "object" || !source.accountId) return null;
   return {
     accountId: String(source.accountId),
-    displayName: String(source.displayName || "Continuity member"),
+    displayName: String(source.displayName || "Heldat member"),
     email: String(source.email || ""),
     householdId: String(source.householdId || ""),
     householdName: String(source.householdName || "My household"),

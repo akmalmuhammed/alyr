@@ -983,7 +983,7 @@ export function decodeAssetLabel(value) {
     text,
   );
   if (!match) {
-    fail("INVALID_LABEL_PAYLOAD", "This is not a supported ALYR asset label.");
+    fail("INVALID_LABEL_PAYLOAD", "This is not a supported Heldat asset label.");
   }
   const [, labelId, checksum] = match;
   const expected = checksumText(`${ASSET_LABEL_PREFIX}:${labelId}`);

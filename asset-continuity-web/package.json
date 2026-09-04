@@ -12,7 +12,7 @@
     "test": "npm run test:domain && npm run test:server && npm run test:ui && npm run test:sites",
     "test:domain": "node --test tests/domain.test.mjs tests/taxonomy.test.mjs tests/property-linkage.test.mjs tests/first-useful-vault.test.mjs tests/collector-domain.test.mjs tests/collector-workspace.test.mjs tests/memory-continuity.test.mjs tests/capture-pipeline.test.mjs tests/security-sync.test.mjs tests/recovery-kit.test.mjs tests/backup-preflight.test.mjs tests/file-store.test.mjs tests/storage-scope.test.mjs",
     "test:server": "node --test tests/server-local-api.test.mjs",
-    "test:ui": "vitest run tests/app-flow.test.jsx tests/account-scope.test.jsx tests/secure-account-backup.test.jsx tests/globe.test.jsx tests/document-scan-panel.test.jsx tests/room-capture.test.jsx tests/asset-label-panel.test.jsx tests/location-picker.test.jsx",
+    "test:ui": "vitest run tests/app-flow.test.jsx tests/account-scope.test.jsx tests/secure-account-backup.test.jsx tests/globe.test.jsx tests/document-scan-panel.test.jsx tests/room-capture.test.jsx tests/asset-label-panel.test.jsx tests/location-picker.test.jsx tests/portfolio-value-summary.test.jsx",
     "test:sites": "node --test tests/sites-worker.test.mjs"
   },
   "engines": {

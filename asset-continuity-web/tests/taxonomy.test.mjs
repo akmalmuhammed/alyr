@@ -109,6 +109,16 @@ test("category paths and profiles expose capture-ready field metadata", () => {
   assert.equal(getAssetCategory("vehicle.car").pathLabel, "Vehicles & mobility / Car");
 });
 
+test("acquisition date is canonical and never duplicated in category profiles", () => {
+  for (const profile of CATEGORY_PROFILES) {
+    assert.equal(
+      profile.fields.some((field) => field.id === "acquired-on"),
+      false,
+      `${profile.id} must use the asset acquiredAt field`,
+    );
+  }
+});
+
 test("custom categories are deterministic, validated, searchable, and portable", () => {
   const input = {
     name: "Falconry equipment",

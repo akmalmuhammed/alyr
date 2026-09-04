@@ -91,7 +91,6 @@ export const CATEGORY_PROFILES = deepFreeze([
         placeholder: "Serial, chassis, or identifying number",
         privacy: "sensitive",
       }),
-      profileField("acquired-on", "Acquired on", "date"),
       profileField("condition", "Condition", "select", {
         options: [
           "new",
@@ -144,7 +143,6 @@ export const CATEGORY_PROFILES = deepFreeze([
         privacy: "sensitive",
       }),
       profileField("ownership-share", "Ownership share", "percentage"),
-      profileField("acquired-on", "Acquired on", "date"),
     ],
   },
   {
@@ -161,7 +159,6 @@ export const CATEGORY_PROFILES = deepFreeze([
         privacy: "sensitive",
       }),
       profileField("case-material", "Case material", "text"),
-      profileField("acquired-on", "Acquired on", "date"),
     ],
   },
   {

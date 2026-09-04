@@ -1,21 +1,21 @@
-# ALYR personal iPhone test
+# Heldat personal iPhone test
 
 **Verified on Windows:** 2026-07-28
 
 This companion runs in **Expo Go** and does not require the App Store developer
-fee. It is a session-only product test, not the signed durable ALYR vault.
+fee. It is a session-only product test, not the signed durable Heldat vault.
 
 > **Compatibility checkpoint:** Expo's current physical-iPhone guidance says
 > the App Store Expo Go client supports SDK 54. Only that store version can be
 > installed on an iPhone without Apple signing. Recheck this before scanning if
-> Expo Go has updated. The signed ALYR app itself remains on SDK 57.
+> Expo Go has updated. The signed Heldat app itself remains on SDK 57.
 
 ## Before scanning
 
 1. Install the current **Expo Go** from the iPhone App Store.
 2. Connect the iPhone and this Windows PC to the same Wi-Fi network.
 3. Allow Expo Go to access the iPhone's local network, camera, photos, files,
-   and location only when the related ALYR action is being tested.
+   and location only when the related Heldat action is being tested.
 4. Use test photos, places, documents, email addresses, and passwords. Closing
    the running preview or restarting its JavaScript session can reset all data.
 
@@ -63,7 +63,7 @@ physical iPhone.
 
 ### Fast product tour
 
-1. Open ALYR from the QR code.
+1. Open Heldat from the QR code.
 2. Choose **Explore sample**.
 3. Review Today, Assets and Places, open Search from Assets, then review
    Portfolio, Atlas, an Asset Passport, Family, and Vault.
@@ -109,7 +109,7 @@ this rehearsal. Use only a test code and test accounts.
 2. Create or sign in to a second session-only test account.
 3. On household setup, choose **Join a household**.
 4. Paste the complete code and choose **Join household**.
-5. Confirm that ALYR validates the code before opening household records and
+5. Confirm that Heldat validates the code before opening household records and
    that the resulting access matches the role selected by the owner.
 6. To replay the screen without relying on the generated code, use
    **Review a sample invitation**. This is explicitly labelled as a
@@ -136,7 +136,7 @@ cross-device invitation, production membership, or durable access record.
 - [ ] Record a retrieval clue on an item.
 - [ ] Reopen the Asset Passport and update identity, photo, location, or proof.
 - [ ] Open Evidence, inspect its metadata, mark the test file reviewed, and confirm
-      ALYR does not call review proof of authenticity, ownership, or value.
+      Heldat does not call review proof of authenticity, ownership, or value.
 - [ ] Record an asset value and confirm that Portfolio groups currencies
       separately, uses Day / Month / Year entry, and never calls the result net
       worth.
@@ -146,7 +146,7 @@ cross-device invitation, production membership, or durable access record.
       mirror correctly, then switch back to English from Vault.
 - [ ] Archive a test item, find it with the **Archived** filter, and restore it.
 - [ ] Search by item, category, Place, room, or retrieval clue.
-- [ ] Background ALYR and confirm the app-switcher privacy shield appears.
+- [ ] Background Heldat and confirm the app-switcher privacy shield appears.
 - [ ] Increase iPhone text size and confirm primary actions remain visible.
 - [ ] Repeat one camera/location permission path after denying permission.
 
@@ -171,10 +171,10 @@ cross-device invitation, production membership, or durable access record.
   current JavaScript session. A reload or server restart may reset them.
 - Invitation codes and accepted preview roles exist only in that same
   JavaScript session. The iOS share sheet shares text; it does not create a
-  cloud membership or deliver an ALYR email/SMS.
+  cloud membership or deliver a Heldat email/SMS.
 - Test files are limited to 10 MB each. They remain picker-owned, unencrypted
   session references, so use test material only.
-- Location testing is foreground-only. ALYR shows reported GPS accuracy and
+- Location testing is foreground-only. Heldat shows reported GPS accuracy and
   keeps a manually adjusted pin distinct from a measured position.
 - Recovery Kit creation and restore stay off in Expo Go. Their routes remain
   visible and explain that the signed build is required instead of applying
@@ -195,5 +195,5 @@ cross-device invitation, production membership, or durable access record.
 - Final signed permission prompts, entitlements, and App Store distribution
 
 No physical-iPhone run is claimed in this handoff. The free Expo Go walkthrough
-above is the next personal-device check; it is separate from a signed ALYR
+above is the next personal-device check; it is separate from a signed Heldat
 installation.

@@ -1,6 +1,6 @@
-# Continuity — web-first product build
+# Heldat — web-first product build
 
-Continuity is a private asset-continuity product concept for organizing places,
+Heldat is a private asset-continuity product for organizing places,
 rooms/zones, physical and digital assets, memories, and supporting evidence.
 
 This repository is the canonical responsive web build used to validate product

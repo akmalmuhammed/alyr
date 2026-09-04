@@ -34,17 +34,17 @@ if (-not $lanAddress) {
 }
 
 Write-Host ""
-Write-Host "ALYR iPhone Preview" -ForegroundColor Green
+Write-Host "Heldat iPhone Preview" -ForegroundColor Green
 Write-Host "Expo URL: exp://${lanAddress}:${Port}"
 Write-Host "Keep this window open and connect the iPhone to the same Wi-Fi."
 Write-Host ""
 
 Push-Location -LiteralPath $workspaceDirectory
 try {
-  Write-Host "Building shared ALYR packages..." -ForegroundColor DarkGray
+  Write-Host "Building shared Heldat packages..." -ForegroundColor DarkGray
   & $npm run build:shared
   if ($LASTEXITCODE -ne 0) {
-    throw "The shared ALYR package build failed with exit code $LASTEXITCODE."
+    throw "The shared Heldat package build failed with exit code $LASTEXITCODE."
   }
 }
 finally {

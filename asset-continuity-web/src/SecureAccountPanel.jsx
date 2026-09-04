@@ -1169,7 +1169,7 @@ function EncryptedBackup({
         <LockKey weight="duotone" />
         <p>
           This proves authenticated, persistent retrieval against the local
-          Continuity service. Production still requires HTTPS deployment,
+          Heldat service. Production still requires HTTPS deployment,
           passkeys, managed keys, monitored backups, malware isolation, and
           independent restore drills.
         </p>
@@ -1185,9 +1185,12 @@ export function SecureAccountPanel({
   storageScopeId,
   recoveryHeadRevision,
   adoptRecoveryHead,
+  initialMode = "register",
 }) {
   const account = useSecureAccount();
-  const [mode, setMode] = useState("register");
+  const [mode, setMode] = useState(
+    initialMode === "login" ? "login" : "register",
+  );
   const [busy, setBusy] = useState(false);
   const [authError, setAuthError] = useState("");
 
@@ -1234,7 +1237,7 @@ export function SecureAccountPanel({
             <h2>Secure accounts are not connected on this preview server</h2>
             <p>
               The app remains local and manual recovery kits still work. Start the
-              full-stack Continuity service to test real sessions and durable
+              full-stack Heldat service to test real sessions and durable
               encrypted retrieval.
             </p>
           </div>

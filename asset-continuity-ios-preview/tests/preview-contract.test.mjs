@@ -53,6 +53,8 @@ async function collectRouteFiles(root, directory = root) {
 }
 
 test("the iPhone companion remains on the App Store Expo Go SDK", () => {
+  assert.match(configSource, /name: "Heldat iPhone Preview"/u);
+  assert.match(packageJson.description, /\bHeldat\b/u);
   assert.match(packageJson.dependencies.expo, /^~54\./u);
   assert.match(packageJson.devDependencies["babel-preset-expo"], /^~54\./u);
   assert.equal(
@@ -123,6 +125,10 @@ test("the preview is explicitly session-only and cannot select secure adapters",
   assert.match(
     previewAttachmentStoreSource,
     /export function isVerifiedAttachmentSink/u
+  );
+  assert.match(
+    previewAttachmentStoreSource,
+    /Protected attachments open only in a Heldat signed build\./u
   );
   assert.doesNotMatch(
     previewAttachmentStoreSource,

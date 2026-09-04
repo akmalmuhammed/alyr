@@ -12,6 +12,9 @@ When implementing from a selected generated mock, treat that image as the source
 
 ## Current Product Direction
 
+- The product name is **Heldat**. Keep legacy `alyr` package, storage, protocol,
+  and asset-path identifiers stable until a versioned compatibility migration
+  is planned.
 - The approved opening-screen direction is Product Design ideation option 3, stored at `C:\Users\akmal\.codex\generated_images\019f917c-1cff-7b02-a9f7-1c4225dee436\call_sUjN6yMMISdgIXEHyzVAawON.png`.
 - Preserve its premium midnight-navy globe-led Home, restrained violet/cyan accents, one next-best action, and bottom navigation order: Home, Assets, Family, Vault.
 - The core product journey is Home globe → place → room → asset. Show physical assets through place-level clusters, keep digital assets in Vault, and surface unknown locations explicitly.

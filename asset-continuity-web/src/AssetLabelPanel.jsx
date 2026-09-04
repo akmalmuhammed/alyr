@@ -262,7 +262,7 @@ async function detectQrPayload(file) {
     if (!supportedPayload) {
       const error = new Error(
         detections?.length
-          ? "A code was found, but it is not an ALYR asset label."
+          ? "A code was found, but it is not a Heldat asset label."
           : "No QR code was found. Try a sharper, evenly lit image.",
       );
       error.code = "LABEL_NOT_FOUND";
@@ -613,7 +613,7 @@ export function AssetLabelPanel({
         setScanStatus({
           tone: "warning",
           message:
-            "This is a valid ALYR label, but it is not assigned in this workspace.",
+            "This is a valid Heldat label, but it is not assigned in this workspace.",
         });
         return null;
       }
@@ -776,7 +776,7 @@ export function AssetLabelPanel({
         if (!nfcPayload) {
           setNfcStatus({
             tone: "danger",
-            message: "The NFC tag does not contain a supported ALYR label.",
+            message: "The NFC tag does not contain a supported Heldat label.",
           });
           return;
         }
@@ -1182,7 +1182,7 @@ export function AssetLabelPanel({
                 <a
                   className="alp-secondary-button"
                   href={createdQr.qrImage}
-                  download={`alyr-label-${createdQr.labelId}.svg`}
+                  download={`heldat-label-${createdQr.labelId}.svg`}
                 >
                   <DownloadSimple size={18} aria-hidden="true" />
                   Download SVG

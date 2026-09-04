@@ -110,6 +110,7 @@ import {
   selectNextAction,
   selectPlaceSummary,
   selectPortfolioSummary,
+  selectPortfolioValueSummary,
   selectSpacePath,
   selectWorkspaceActorMemberId,
   workspaceReducer,
@@ -185,6 +186,7 @@ import { CollectionCarePanel } from "./CollectionCarePanel.jsx";
 import { MemoryPeopleEditor } from "./MemoryPeopleEditor.jsx";
 import EvidenceVersionHistory from "./EvidenceVersionHistory.jsx";
 import FirstUsefulVaultCard from "./FirstUsefulVaultCard.jsx";
+import PortfolioValueSummary from "./PortfolioValueSummary.jsx";
 import { selectFirstUsefulVaultProgress } from "./firstUsefulVault.js";
 import {
   buildMemoryPeopleCommands,
@@ -617,6 +619,70 @@ function formatDateTime(value) {
   }
 }
 
+const LEGACY_ACQUIRED_PROFILE_KEYS = ["acquired-on"];
+
+function stripLegacyAcquiredProfile(profile) {
+  const next =
+    profile && typeof profile === "object" && !Array.isArray(profile)
+      ? { ...profile }
+      : {};
+  for (const key of LEGACY_ACQUIRED_PROFILE_KEYS) delete next[key];
+  return next;
+}
+
+function normalizeCaptureAcquiredFields(form) {
+  const source =
+    form && typeof form === "object" && !Array.isArray(form) ? form : {};
+  const legacyAcquiredAt = LEGACY_ACQUIRED_PROFILE_KEYS.map(
+    (key) => source.profile?.[key],
+  ).find((value) => typeof value === "string" && value.trim());
+  const acquiredAt =
+    typeof source.acquiredAt === "string" && source.acquiredAt.trim()
+      ? source.acquiredAt.trim()
+      : legacyAcquiredAt?.trim() || "";
+
+  return {
+    ...source,
+    profile: stripLegacyAcquiredProfile(source.profile),
+    acquiredAt: acquiredAt.slice(0, 10),
+  };
+}
+
+function countCaptureIdentityDetails(form) {
+  if (!form || typeof form !== "object") return 0;
+  const profileCount = Object.values(form.profile || {}).filter(
+    (value) =>
+      (typeof value === "string" && value.trim()) ||
+      (Array.isArray(value) && value.length) ||
+      (value !== null &&
+        value !== undefined &&
+        typeof value !== "string" &&
+        !Array.isArray(value)),
+  ).length;
+  const textCount = [
+    form.reference,
+    form.value,
+    form.notes,
+    form.meaningFacets,
+    form.sentimentalValue,
+    form.acquiredAt,
+    form.memoryPeriod,
+    form.memoryOrigin,
+  ].filter((value) => typeof value === "string" && value.trim()).length;
+  const peopleCount = form.memoryPeopleEntries?.length ? 1 : 0;
+  const futureCount =
+    form.legacyIntent && form.legacyIntent !== "undecided" ? 1 : 0;
+  const visibilityCount =
+    form.visibility && form.visibility !== "private" ? 1 : 0;
+  return (
+    profileCount +
+    textCount +
+    peopleCount +
+    futureCount +
+    visibilityCount
+  );
+}
+
 function isSafeReferenceUrl(value) {
   try {
     const url = new URL(String(value || "").trim());
@@ -856,7 +922,7 @@ function createAccountWorkspace(session, now = new Date().toISOString()) {
     },
     member: {
       id: session.accountId,
-      name: session.displayName || "Continuity member",
+      name: session.displayName || "Heldat member",
       email: session.email || null,
     },
     now,
@@ -1216,7 +1282,7 @@ function scopedWorkspaceReducer(state, action, session) {
             name:
               session.displayName ||
               action.member?.name ||
-              "Continuity member",
+              "Heldat member",
             email: session.email || action.member?.email || null,
           },
         }
@@ -1594,7 +1660,7 @@ function WorkspaceProvider({
             incomingVersion > SNAPSHOT_VERSION
           ) {
             throw new Error(
-              "The durable workspace uses a newer version of Continuity.",
+              "The durable workspace uses a newer version of Heldat.",
             );
           }
           const normalized = normalizeWorkspace(
@@ -2028,7 +2094,7 @@ function WorkspaceProvider({
             <strong>Browser save failed</strong>
             <small>
               Changes remain only in this tab. Keep it open and use Vault → Export
-              demo JSON before leaving.
+              records JSON before leaving.
             </small>
           </span>
         </div>
@@ -2037,9 +2103,9 @@ function WorkspaceProvider({
         <div className="recovery-warning-banner" role="alert">
           <Warning weight="bold" />
           <span>
-            <strong>A saved demo could not be opened</strong>
+            <strong>A saved workspace could not be opened</strong>
             <small>
-              The original browser snapshot is preserved. Download it before
+              The original device snapshot is preserved. Download it before
               starting over.
             </small>
           </span>
@@ -2077,19 +2143,28 @@ function useWorkspace() {
   return context;
 }
 
-function Brand({ compact = false }) {
+function Brand({ compact = false, reversed = false }) {
+  const logoFile = reversed
+    ? "standalone-symbol-reversed.svg"
+    : "standalone-symbol-carbon-volt.svg";
+
   return (
-    <Link to="/home" className={cx("brand", compact && "is-compact")} aria-label="Continuity home">
-      <span className="brand-mark">
-        <Shield weight="duotone" />
-        <span className="brand-pulse" />
-      </span>
-      {!compact && (
-        <span className="brand-copy">
-          <strong>Continuity</strong>
-          <small>Everything you own</small>
-        </span>
+    <Link
+      to="/home"
+      className={cx(
+        "brand",
+        compact && "is-compact",
+        reversed && "is-reversed",
       )}
+      aria-label="Heldat home"
+    >
+      <img
+        className="brand-logo"
+        src={`/alyr/logos/master-svg/${logoFile}`}
+        alt=""
+        aria-hidden="true"
+      />
+      {!compact && <span className="brand-wordmark">Heldat</span>}
     </Link>
   );
 }
@@ -2128,32 +2203,49 @@ function StatusPill({ tone = "neutral", icon: Icon, children }) {
   );
 }
 
+export function workspaceSaveCopy(workspace, session) {
+  if (workspace?.mode === "sample") {
+    return {
+      status: "Saved to sample workspace",
+      destination: "the isolated sample workspace",
+      searchable:
+        "The record is now searchable in the isolated sample workspace.",
+    };
+  }
+  if (session?.accountId && session?.householdId) {
+    return {
+      status: "Saved to signed-in workspace",
+      destination: "your signed-in household workspace on this device",
+      searchable:
+        "The record is now searchable in your signed-in household workspace on this device.",
+    };
+  }
+  return {
+    status: "Saved on this device",
+    destination: "your personal workspace on this device",
+    searchable:
+      "The record is now searchable in your personal workspace on this device.",
+  };
+}
+
 function AppRoutes() {
   const { workspace } = useWorkspace();
   const account = useSecureAccount();
   const location = useLocation();
-  if (
-    account.status === "checking" &&
-    !account.session &&
+  const hasAuthenticatedSession = Boolean(
+    account.session?.accountId && account.session?.householdId,
+  );
+  const isAuthenticatedRestoreEntry =
+    hasAuthenticatedSession &&
     workspace.mode === "unstarted" &&
-    location.pathname !== "/welcome"
-  ) {
-    return (
-      <main className="account-route-gate" aria-live="polite">
-        <span><FolderLock weight="duotone" /></span>
-        <div>
-          <strong>Opening the right workspace</strong>
-          <small>Authenticated records stay locked during this check.</small>
-        </div>
-      </main>
-    );
-  }
+    location.pathname === "/vault" &&
+    new URLSearchParams(location.search).get("mode") === "restore";
   return (
     <Routes>
       <Route
         path="/welcome"
         element={
-          account.session && workspace.mode !== "unstarted" ? (
+          hasAuthenticatedSession && workspace.mode === "personal" ? (
             <Navigate to="/home" replace />
           ) : (
             <WelcomeScreen />
@@ -2162,7 +2254,13 @@ function AppRoutes() {
       />
       <Route
         path="/*"
-        element={workspace.mode === "unstarted" ? <Navigate to="/welcome" replace /> : <AppShell />}
+        element={
+          workspace.mode === "unstarted" && !isAuthenticatedRestoreEntry ? (
+            <Navigate to="/welcome" replace />
+          ) : (
+            <AppShell />
+          )
+        }
       />
     </Routes>
   );
@@ -2182,6 +2280,7 @@ function WelcomeScreen() {
   const navigate = useNavigate();
   const [showHow, setShowHow] = useState(false);
   const [showAccount, setShowAccount] = useState(false);
+  const [accountEntryMode, setAccountEntryMode] = useState("register");
   const [claimBusy, setClaimBusy] = useState(false);
   const [claimError, setClaimError] = useState("");
   const regionSummaries = useRegionSummaries(workspace);
@@ -2225,16 +2324,21 @@ function WelcomeScreen() {
     if (
       hasPersonalRecords &&
       !window.confirm(
-        "Open the isolated sample workspace? Your current personal demo records will be replaced on this device.",
+        "Open the isolated sample workspace? Your current personal records will be replaced on this device.",
       )
     ) {
       return;
     }
     dispatch({ type: "RESET_DEMO" });
     setAnnouncement(
-      "Isolated sample workspace opened. It does not contain personal demo records.",
+      "Isolated sample workspace opened. It does not contain your personal records.",
     );
     navigate("/home", { replace: true });
+  }
+
+  function openAccountEntry(mode) {
+    setAccountEntryMode(mode);
+    setShowAccount(true);
   }
 
   function startPersonal(captureType) {
@@ -2256,7 +2360,7 @@ function WelcomeScreen() {
   return (
     <main className="welcome-page">
       <section className="welcome-copy-panel">
-        <Brand />
+        <Brand reversed />
         <div className="welcome-copy">
           <StatusPill tone="violet" icon={Sparkle}>
             Your private continuity map
@@ -2284,7 +2388,7 @@ function WelcomeScreen() {
                   {localClaimSummary.assets} assets,{" "}
                   {localClaimSummary.places} places, and{" "}
                   {localClaimSummary.materials} linked materials can become this
-                  signed-in household&apos;s workspace. Continuity verifies the
+                  signed-in household&apos;s workspace. Heldat verifies the
                   account copy before removing the local workspace.
                 </p>
                 <div className="welcome-claim-actions">
@@ -2318,6 +2422,29 @@ function WelcomeScreen() {
               </div>
             </section>
           )}
+          {session && workspace.mode === "unstarted" && (
+            <section
+              className="welcome-recovery-entry"
+              aria-labelledby="welcome-recovery-title"
+            >
+              <div>
+                <small>Already have a Heldat archive?</small>
+                <strong id="welcome-recovery-title">
+                  Restore before adding anything new
+                </strong>
+              </div>
+              <button
+                type="button"
+                className="secondary-button"
+                onClick={() =>
+                  navigate("/vault?mode=restore", { replace: true })
+                }
+              >
+                <UploadSimple weight="bold" />
+                Restore encrypted household backup
+              </button>
+            </section>
+          )}
           <div className="welcome-actions">
             <button className="primary-button" onClick={() => startPersonal("asset")}>
               Add my first item <ArrowRight weight="bold" />
@@ -2326,27 +2453,55 @@ function WelcomeScreen() {
               Add a place
             </button>
           </div>
-          <button className="text-button" onClick={exploreSample}>
-            <GlobeHemisphereWest weight="bold" /> Explore a sample workspace
-          </button>
-          <button className="text-button" onClick={() => setShowHow((value) => !value)}>
-            <Info weight="bold" /> How Continuity works
-          </button>
           {!session && (
+            <nav
+              className="welcome-account-actions"
+              aria-label="Account and recovery"
+            >
+              <button
+                type="button"
+                className="secondary-button"
+                onClick={() => openAccountEntry("register")}
+                aria-controls="welcome-account-entry"
+                aria-expanded={
+                  showAccount && accountEntryMode === "register"
+                }
+              >
+                <UserPlus weight="bold" />
+                Create account
+              </button>
+              <button
+                type="button"
+                className="secondary-button"
+                onClick={() => openAccountEntry("login")}
+                aria-controls="welcome-account-entry"
+                aria-expanded={showAccount && accountEntryMode === "login"}
+              >
+                <LockKey weight="bold" />
+                Sign in / recover
+              </button>
+            </nav>
+          )}
+          <nav
+            className="welcome-secondary-actions"
+            aria-label="Other ways to continue"
+          >
+            <button className="text-button" onClick={exploreSample}>
+              <GlobeHemisphereWest weight="bold" /> Explore a sample workspace
+            </button>
             <button
               className="text-button"
-              onClick={() => setShowAccount((value) => !value)}
-              aria-expanded={showAccount}
+              onClick={() => setShowHow((value) => !value)}
+              aria-controls="welcome-how-list"
+              aria-expanded={showHow}
             >
-              <LockKey weight="bold" />
-              {showAccount
-                ? "Hide secure account"
-                : "Sign in or recover an existing household"}
+              <Info weight="bold" /> How Heldat works
             </button>
-          )}
+          </nav>
           <AnimatePresence initial={false}>
             {showHow && (
               <motion.ol
+                id="welcome-how-list"
                 className="how-list"
                 initial={{ opacity: 0, height: 0 }}
                 animate={{ opacity: 1, height: "auto" }}
@@ -2362,12 +2517,15 @@ function WelcomeScreen() {
           <AnimatePresence initial={false}>
             {!session && showAccount && (
               <motion.div
+                id="welcome-account-entry"
                 className="welcome-account-entry"
                 initial={{ opacity: 0, height: 0 }}
                 animate={{ opacity: 1, height: "auto" }}
                 exit={{ opacity: 0, height: 0 }}
               >
                 <SecureAccountPanel
+                  key={accountEntryMode}
+                  initialMode={accountEntryMode}
                   workspace={workspace}
                   dispatch={dispatch}
                   setAnnouncement={setAnnouncement}
@@ -2376,12 +2534,33 @@ function WelcomeScreen() {
               </motion.div>
             )}
           </AnimatePresence>
-          <p className="honesty-note">
-            This web build is a local product prototype. It stores records and
-            selected originals on this device. Vault can create a manual
-            encrypted recovery kit; the optional local account service can store
-            an encrypted recovery copy, but automatic live sync is not connected.
-          </p>
+          <aside
+            className="welcome-disclosure"
+            role="note"
+            aria-labelledby="welcome-disclosure-title"
+          >
+            <details>
+              <summary>
+                <div className="welcome-disclosure-heading">
+                  <LockKey weight="bold" aria-hidden="true" />
+                  <div>
+                    <strong id="welcome-disclosure-title">
+                      Stored on this device
+                    </strong>
+                    <small>Web prototype</small>
+                  </div>
+                </div>
+                <CaretDown weight="bold" aria-hidden="true" />
+              </summary>
+              <p>
+                This web build is a local product prototype. It stores records and
+                selected originals on this device. Vault can create a manual
+                encrypted recovery kit; the optional local account service can
+                store an encrypted recovery copy, but automatic live sync is not
+                connected.
+              </p>
+            </details>
+          </aside>
         </div>
       </section>
       <section className="welcome-visual" aria-label="Preview of the asset map">
@@ -2479,7 +2658,6 @@ function AppShell() {
     profileMember?.initials ||
     "MY";
   const isDarkRoute =
-    location.pathname.startsWith("/home") ||
     location.pathname.startsWith("/vault") ||
     location.pathname.startsWith("/collections") ||
     (location.pathname.startsWith("/assets") &&
@@ -2599,14 +2777,14 @@ function AppShell() {
     anchor.download = `continuity-${new Date().toISOString().slice(0, 10)}.json`;
     anchor.click();
     URL.revokeObjectURL(url);
-    setAnnouncement("Demo workspace exported as JSON.");
+    setAnnouncement("Readable workspace JSON download started.");
   }
 
   return (
     <div className={cx("app-shell", isDarkRoute ? "route-dark" : "route-light")}>
       <a className="skip-link" href="#main-content">Skip to content</a>
       <aside className="sidebar">
-        <Brand />
+        <Brand reversed />
         <nav className="primary-nav" aria-label="Primary navigation">
           {NAV_ITEMS.map(({ to, label, icon: Icon }) => (
             <NavLink
@@ -2677,8 +2855,7 @@ function AppShell() {
       <div className="app-column">
         <header className="utility-header">
           <div className="mobile-brand">
-            <Brand compact />
-            <span>Continuity</span>
+            <Brand compact reversed={isDarkRoute} />
           </div>
           <button
             className="global-search-trigger"
@@ -2871,6 +3048,7 @@ function HomeScreen({ openCapture }) {
   const navigate = useNavigate();
   const summaries = useRegionSummaries(workspace);
   const portfolio = selectPortfolioSummary(workspace);
+  const portfolioValues = selectPortfolioValueSummary(workspace);
   const nextAction = selectNextAction(workspace);
   const firstVaultProgress = useMemo(
     () => selectFirstUsefulVaultProgress(workspace),
@@ -2975,6 +3153,9 @@ function HomeScreen({ openCapture }) {
             <MapPin weight="bold" /> Add a place
           </button>
         </div>
+        {personalActiveAssets.length > 0 && (
+          <PortfolioValueSummary summary={portfolioValues} />
+        )}
         {personalActiveAssets.length > 0 && <Link className="text-button" to="/assets">View unplaced items</Link>}
         <button className="text-button" onClick={() => navigate("/welcome")}>
           Explore the sample instead
@@ -2988,7 +3169,7 @@ function HomeScreen({ openCapture }) {
       <div className="home-heading">
         <div>
           <span className="eyebrow">Your private asset atlas</span>
-          <h1>Everything you own</h1>
+          <h1>Your documented assets</h1>
           <span className="mobile-home-subtitle">One living map</span>
           <p>Places, possessions, records, and memories—mapped together so nothing important gets lost again.</p>
         </div>
@@ -3015,6 +3196,8 @@ function HomeScreen({ openCapture }) {
           onAction={runFirstVaultAction}
         />
       )}
+
+      <PortfolioValueSummary summary={portfolioValues} />
 
       <div className="home-layout">
         <section className="world-panel" aria-labelledby="world-heading">
@@ -3841,7 +4024,7 @@ function PrivateReferenceScreen({
           </div>
         </div>
         <div className="private-ledger-summary">
-          <span className="eyebrow">Continuity view</span>
+          <span className="eyebrow">Heldat view</span>
           <dl>
             <div><dt>Financial references</dt><dd>{financial.length}</dd></div>
             <div><dt>Institutions named</dt><dd>{institutions.length}</dd></div>
@@ -3979,7 +4162,7 @@ function PrivateReferenceScreen({
                   }
                 >
                   {selectAssetReadiness(asset, workspace).percent === 100
-                    ? "Continuity noted"
+                    ? "Context noted"
                     : "Needs context"}
                 </StatusPill>
                 <CaretRight />
@@ -4382,7 +4565,7 @@ function AssetDetail({ openCapture }) {
             <p>
               {hasPhysicalMemoryLocation
                 ? fullLocationPath || "No room or zone assigned"
-                : "This record preserves a person, moment, or story. Continuity does not invent a place for it."}
+                : "This record preserves a person, moment, or story. Heldat does not invent a place for it."}
             </p>
             <StatusPill
               tone={
@@ -5256,7 +5439,7 @@ function FamilyScreen({ openCapture }) {
               <p>{selected.email || "Email hidden in sample mode"}</p>
               <div className="permission-summary">
                 <div><ShieldCheck /><span><strong>{titleCase(selected.accessRole)}</strong><small>Household role</small></span></div>
-                <div><MapPin /><span><strong>{workspace.places.filter((place) => place.status !== "archived").length} places</strong><small>Demo visibility</small></span></div>
+                <div><MapPin /><span><strong>{workspace.places.filter((place) => place.status !== "archived").length} places</strong><small>Workspace visibility</small></span></div>
                 <div><Clock /><span><strong>No live log</strong><small>Backend required</small></span></div>
               </div>
               <button className="secondary-button" disabled title="Available after authenticated access control is built">
@@ -5327,8 +5510,11 @@ function VaultScreen({ exportWorkspace, openCapture }) {
     adoptRecoveryHead,
     session,
   } = useWorkspace();
+  const [searchParams] = useSearchParams();
   const [selectedKind, setSelectedKind] = useState("all");
   const [showAllMaterials, setShowAllMaterials] = useState(false);
+  const initialRecoveryMode =
+    searchParams.get("mode") === "restore" ? "restore" : "create";
   const activeAssets = workspace.assets.filter(
     (asset) => asset.lifecycleStatus !== "archived",
   );
@@ -5352,6 +5538,28 @@ function VaultScreen({ exportWorkspace, openCapture }) {
   const displayedMaterials = showAllMaterials
     ? visibleMaterials
     : visibleMaterials.slice(0, 8);
+
+  if (workspace.mode === "unstarted" && initialRecoveryMode === "restore") {
+    return (
+      <div className="vault-page vault-restore-entry">
+        <BackLink to="/welcome" label="Back to getting started" />
+        <PageHeader
+          eyebrow="Household recovery"
+          title="Restore before you start"
+          copy="Open an encrypted Heldat kit, inspect its contents, then activate it on this device only after every included record passes validation."
+        />
+        <EncryptedRecoveryKit initialMode="restore" />
+        <SecureAccountPanel
+          workspace={workspace}
+          dispatch={dispatch}
+          setAnnouncement={setAnnouncement}
+          storageScopeId={storageScopeId}
+          recoveryHeadRevision={recoveryHeadRevision}
+          adoptRecoveryHead={adoptRecoveryHead}
+        />
+      </div>
+    );
+  }
 
   return (
     <div className="vault-page">
@@ -5451,7 +5659,7 @@ function VaultScreen({ exportWorkspace, openCapture }) {
             </span>
             <span className="is-pending"><Clock /> Production cloud and passkeys still require deployment</span>
           </div>
-          <button className="secondary-button" onClick={exportWorkspace}><DownloadSimple /> Export readable demo JSON</button>
+          <button className="secondary-button" onClick={exportWorkspace}><DownloadSimple /> Export readable records JSON</button>
         </aside>
       </div>
       <SecureAccountPanel
@@ -5462,12 +5670,15 @@ function VaultScreen({ exportWorkspace, openCapture }) {
         recoveryHeadRevision={recoveryHeadRevision}
         adoptRecoveryHead={adoptRecoveryHead}
       />
-      <EncryptedRecoveryKit />
+      <EncryptedRecoveryKit
+        key={initialRecoveryMode}
+        initialMode={initialRecoveryMode}
+      />
     </div>
   );
 }
 
-function EncryptedRecoveryKit() {
+function EncryptedRecoveryKit({ initialMode = "create" }) {
   const {
     workspace,
     dispatch,
@@ -5477,7 +5688,9 @@ function EncryptedRecoveryKit() {
     adoptRecoveryHead,
     session,
   } = useWorkspace();
-  const [mode, setMode] = useState("create");
+  const [mode, setMode] = useState(
+    initialMode === "restore" ? "restore" : "create",
+  );
   const [exportPassphrase, setExportPassphrase] = useState("");
   const [exportConfirmation, setExportConfirmation] = useState("");
   const [importPassphrase, setImportPassphrase] = useState("");
@@ -5880,12 +6093,24 @@ function EncryptedRecoveryKit() {
           <Key weight="duotone" />
         </span>
         <span className="eyebrow">Portable recovery</span>
-        <h2 id="recovery-kit-title">Take your continuity archive with you.</h2>
-        <p>
-          Create one passphrase-protected file containing this workspace and
-          every original currently available on this device. Move it manually
-          to another trusted device, then inspect it before restoring.
-        </p>
+        <h2 id="recovery-kit-title">
+          {mode === "restore"
+            ? "Restore an encrypted continuity archive."
+            : "Take your continuity archive with you."}
+        </h2>
+        {mode === "restore" ? (
+          <p>
+            Choose a passphrase-protected Heldat kit from a trusted device.
+            Its workspace and available originals are inspected before anything
+            on this device is replaced.
+          </p>
+        ) : (
+          <p>
+            Create one passphrase-protected file containing this workspace and
+            every original currently available on this device. Move it manually
+            to another trusted device, then inspect it before restoring.
+          </p>
+        )}
         <div className="recovery-trust-lines">
           <span><ShieldCheck /> AES-GCM encryption and integrity validation</span>
           <span><LockKey /> Passphrase stays in memory and is never saved</span>
@@ -6100,7 +6325,7 @@ function EncryptedRecoveryKit() {
                     ? `${formatFileSize(selectedFile.size)} · created ${formatDate(
                         selectedKit?.createdAt,
                       )}`
-                    : "Continuity kit · encrypted JSON envelope"}
+                    : "Heldat kit · encrypted JSON envelope"}
                 </small>
               </span>
               <CaretRight />
@@ -7341,7 +7566,7 @@ function EvidenceDetail() {
         now: new Date().toISOString(),
       });
       setAnnouncement(
-        `${record.fileName} attached. Continuity is checking the original before review.`,
+        `${record.fileName} attached. Heldat is checking the original before review.`,
       );
     } catch (error) {
       const message =
@@ -8034,6 +8259,7 @@ function CaptureDrawer({
     storageScopeId,
     commitWorkspaceActions,
     commitWorkspaceActionsWithFiles,
+    session,
   } = useWorkspace();
   const navigate = useNavigate();
   const captureIntent = [
@@ -8115,6 +8341,22 @@ function CaptureDrawer({
     ["identity", "location", "materials"].includes(context.stage)
       ? context.stage
       : null;
+  const editingAssetHasIdentityDetails =
+    Boolean(editingAsset) &&
+    countCaptureIdentityDetails({
+      profile: stripLegacyAcquiredProfile(editingAsset.profile),
+      reference: editingAsset.reference,
+      value: editingAsset.value ? String(editingAsset.value.amountMinor) : "",
+      notes: editingAsset.notes,
+      meaningFacets: editingAsset.meaningFacets?.join(", "),
+      sentimentalValue: editingAsset.sentimentalValue,
+      acquiredAt:
+        editingAsset.acquiredAt ||
+        editingAsset.profile?.["acquired-on"] ||
+        "",
+      legacyIntent: editingAsset.legacyIntent,
+      visibility: editingAsset.visibility,
+    }) > 0;
   const [type, setType] = useState(initialType);
   const [step, setStep] = useState(initialType ? "details" : "choose");
   const [assetStage, setAssetStage] = useState(
@@ -8125,6 +8367,12 @@ function CaptureDrawer({
         : configuredAssetStages[0],
   );
   const [categoryBrowseGroupId, setCategoryBrowseGroupId] = useState(null);
+  const [categoryBrowserOpen, setCategoryBrowserOpen] = useState(false);
+  const [identityDetailsOpen, setIdentityDetailsOpen] = useState(
+    () =>
+      editingAssetHasIdentityDetails ||
+      ["memory", "private-reference"].includes(captureIntent),
+  );
   const [continuation, setContinuation] = useState(null);
   const [dirty, setDirty] = useState(false);
   const [savedRecord, setSavedRecord] = useState(null);
@@ -8145,6 +8393,10 @@ function CaptureDrawer({
             ? "custom.other"
             : "";
     const materialAsset = contextAsset || asset;
+    const normalizedAssetAcquisition = normalizeCaptureAcquiredFields({
+      profile: asset?.profile,
+      acquiredAt: asset?.acquiredAt?.slice(0, 10) || "",
+    });
     const placeLocationMethod =
       placeRecord?.locationSource === "device_gps"
         ? "current"
@@ -8185,7 +8437,7 @@ function CaptureDrawer({
       assetQuery: materialAsset?.name || "",
       categoryId: category?.id || intentCategoryId,
       customCategory: asset?.customCategory || "",
-      profile: asset?.profile || {},
+      profile: normalizedAssetAcquisition.profile,
       memoryPeople: asset?.profile?.people || "",
       memoryPeopleEntries: asset
         ? selectMemoryPeopleForAsset(workspace, asset.id)
@@ -8232,7 +8484,7 @@ function CaptureDrawer({
         captureIntent === "private-reference"
           ? "private"
           : asset?.visibility || "private",
-      acquiredAt: asset?.acquiredAt?.slice(0, 10) || "",
+      acquiredAt: normalizedAssetAcquisition.acquiredAt,
       evidenceType: materialAsset?.requiredProofTypes?.[0] || "Purchase receipt",
       materialKind: "paper",
       materialRelation: "ownership",
@@ -8307,7 +8559,7 @@ function CaptureDrawer({
     window.localStorage.setItem(
       storageKeys.captureDraft,
       JSON.stringify({
-        version: 4,
+        version: 5,
         contextKey: draftContextKey,
         type,
         step,
@@ -8329,7 +8581,7 @@ function CaptureDrawer({
       const draft = JSON.parse(raw);
       const age = Date.now() - Date.parse(draft.updatedAt || "");
       if (
-        ![1, 2, 3, 4].includes(draft.version) ||
+        ![1, 2, 3, 4, 5].includes(draft.version) ||
         draft.contextKey !== draftContextKey ||
         !draft.form ||
         !Number.isFinite(age) ||
@@ -8347,16 +8599,23 @@ function CaptureDrawer({
           .some((item) =>
             ["memory", "heirloom", "family-history"].includes(item),
           );
-      const restoredForm = draftHasMemoryContext
+      const memoryNormalizedForm = draftHasMemoryContext
         ? normalizeMemoryCaptureDraftForm(draft.form, {
             preferLegacyProfile: draft.version === 1,
           })
         : draft.form;
+      const restoredForm = normalizeCaptureAcquiredFields(
+        memoryNormalizedForm,
+      );
       setType(draft.type || initialType);
       setStep(draft.step === "review" ? "review" : "details");
       setAssetStage(draft.assetStage || configuredAssetStages[0]);
       setContinuation(draft.continuation || null);
       setForm((current) => ({ ...current, ...restoredForm }));
+      setIdentityDetailsOpen(
+        ["financial", "memory"].includes(draftCategory?.kind) ||
+          countCaptureIdentityDetails(restoredForm) > 0,
+      );
       if (
         draft.captureCommitIdentity &&
         typeof draft.captureCommitIdentity.evidenceId === "string" &&
@@ -8647,8 +8906,8 @@ function CaptureDrawer({
   function chooseCategory(categoryId) {
     const category = getAssetCategory(categoryId);
     if (!category) return;
+    const categoryChanged = form.categoryId !== category.id;
     setForm((current) => {
-      const categoryChanged = current.categoryId !== category.id;
       const locationPolicy = getAssetLocationPolicy({
         kind: category.kind,
         profile: {
@@ -8680,7 +8939,9 @@ function CaptureDrawer({
         ...current,
         categoryId: category.id,
         customCategory: category.id === "custom.other" ? current.customCategory : "",
-        profile: categoryChanged ? {} : current.profile,
+        profile: categoryChanged
+          ? {}
+          : stripLegacyAcquiredProfile(current.profile),
         locationMode,
         locationStatus: locationMode === "physical" ? current.locationStatus : "unknown",
         placeId: locationMode === "physical" ? current.placeId : "",
@@ -8689,6 +8950,11 @@ function CaptureDrawer({
         materialKind: inferMaterialKind(evidenceType),
       };
     });
+    setCategoryBrowserOpen(false);
+    setIdentityDetailsOpen((current) =>
+      ["financial", "memory"].includes(category.kind) ||
+      (!categoryChanged && current),
+    );
     setDirty(true);
     setError("");
   }
@@ -8700,17 +8966,20 @@ function CaptureDrawer({
     setError("");
     if (option.categoryId) {
       setCategoryBrowseGroupId(null);
+      setCategoryBrowserOpen(false);
       chooseCategory(option.categoryId);
       setAssetStage("identity");
       return;
     }
     setCategoryBrowseGroupId(option.groupId || null);
+    setCategoryBrowserOpen(true);
     setAssetStage("category");
   }
 
   function browseAssetCategories(groupId = null) {
     setContinuation(null);
     setCategoryBrowseGroupId(groupId);
+    setCategoryBrowserOpen(true);
     setType("asset");
     setAssetStage("category");
     setStep("details");
@@ -8756,6 +9025,8 @@ function CaptureDrawer({
   function startMaterialParentAsset() {
     setContinuation("material-after-asset");
     setCategoryBrowseGroupId(null);
+    setCategoryBrowserOpen(false);
+    setIdentityDetailsOpen(false);
     setForm(createCaptureForm());
     setType("asset");
     setAssetStage("category");
@@ -8921,7 +9192,7 @@ function CaptureDrawer({
       combined.includes("recovery secret") ||
       combined.includes("not allowed")
     ) {
-      return "Remove passwords, PINs, credentials, recovery phrases, tokens, private keys, and security answers. Continuity stores references only.";
+      return "Remove passwords, PINs, credentials, recovery phrases, tokens, private keys, and security answers. Heldat stores references only.";
     }
     if (
       combined.includes("full account number") ||
@@ -9283,7 +9554,7 @@ function CaptureDrawer({
       persistCaptureDraftSnapshot();
     } catch {
       const message =
-        "Continuity could not secure this draft's retry identity in browser storage. Nothing was saved; keep this tab open and try again.";
+        "Heldat could not secure this draft's retry identity in browser storage. Nothing was saved; keep this tab open and try again.";
       setError(message);
       setAnnouncement(message);
       setStep("details");
@@ -9453,7 +9724,7 @@ function CaptureDrawer({
           ? editingAsset.requiredProofTypes
           : selectedCategory.recommendedEvidenceTypes?.slice(0, 1) || [];
       const hasPhysicalLocation = form.locationMode === "physical";
-      const profile = { ...form.profile };
+      const profile = stripLegacyAcquiredProfile(form.profile);
       const peopleLabel = memoryPeopleLabel(
         form.memoryPeopleEntries || [],
       );
@@ -9816,13 +10087,14 @@ function CaptureDrawer({
     clearCaptureDraft();
     setSelectedFile(null);
     setStep("success");
+    const saveCopy = workspaceSaveCopy(workspace, session);
     setAnnouncement(
       type === "place" &&
         !editingPlace &&
         isOwnedPropertyTenure(form.tenure) &&
         form.createPropertyPassport
-        ? `${form.name.trim()} and its linked property passport were added.`
-        : `${type === "evidence" ? "Material" : "Record"} added to the local demo workspace.`,
+        ? `${form.name.trim()} and its linked property passport were saved to ${saveCopy.destination}.`
+        : `${type === "evidence" ? "Material" : "Record"} saved to ${saveCopy.destination}.`,
     );
   }
 
@@ -9904,6 +10176,8 @@ function CaptureDrawer({
       setType(null);
       setStep("choose");
       setCategoryBrowseGroupId(null);
+      setCategoryBrowserOpen(false);
+      setIdentityDetailsOpen(false);
       setContinuation(null);
       setError("");
       setSelectedFile(null);
@@ -10086,6 +10360,21 @@ function CaptureDrawer({
     (field) =>
       !showsMemoryContext || !MEMORY_CANONICAL_PROFILE_FIELDS.has(field.id),
   );
+  const identityDetailCount = countCaptureIdentityDetails(form);
+  const reviewAssetValue =
+    showsPhysicalMemoryFields &&
+    typeof form.value === "string" &&
+    form.value.trim()
+      ? formatMoney({
+          amountMinor: Math.round(
+            Number(form.value.replace(/,/g, "")) * 100,
+          ),
+          currency: "QAR",
+        })
+      : null;
+  const reviewAcquiredAt = showsPhysicalMemoryFields && form.acquiredAt
+    ? formatDate(`${form.acquiredAt}T00:00:00.000Z`)
+    : null;
   const materialSuggestions = [
     ...(selectedCategory?.recommendedEvidenceTypes || []),
     ...EVIDENCE_TYPES,
@@ -10148,11 +10437,6 @@ function CaptureDrawer({
       (city) => !workspace.regions.some((region) => region.id === city.id),
     ),
   ];
-  const savedAsset =
-    savedRecord?.type === "asset"
-      ? workspace.assets.find((asset) => asset.id === savedRecord.id)
-      : null;
-
   if (initialContextError) {
     return (
       <motion.div
@@ -10245,7 +10529,11 @@ function CaptureDrawer({
               </span>
             </div>
           ) : (
-            <ol className="capture-stepper" aria-label="Asset capture progress">
+            <ol
+              className="capture-stepper"
+              aria-label="Asset capture progress"
+              style={{ "--capture-step-count": assetStageLabels.length }}
+            >
               {assetStageLabels.map((label, index) => (
                 <li
                   key={label}
@@ -10395,7 +10683,7 @@ function CaptureDrawer({
               </div>
               <div className="prototype-disclosure">
                 <ShieldCheck />
-                Supporting materials belong to an asset. If you do not have one yet, Continuity will help you create it first.
+                Supporting materials belong to an asset. If you do not have one yet, Heldat will help you create it first.
               </div>
             </div>
           )}
@@ -10726,15 +11014,63 @@ function CaptureDrawer({
                   {assetStage === "category" && (
                     <>
                       <div className="capture-intro">
-                        <span className="eyebrow">A real ownership taxonomy</span>
+                        <span className="eyebrow">Quick Passport</span>
                         <h3>What kind of item is this?</h3>
-                        <p>Search “car,” “motorbike,” “watch,” “land,” or browse a group. You can change this later without losing details.</p>
+                        <p>
+                          Start with a common type, or open the complete
+                          taxonomy. You can change this later without losing
+                          details.
+                        </p>
                       </div>
-                      <CategoryPicker
-                        value={form.categoryId}
-                        initialGroupId={categoryBrowseGroupId}
-                        onSelect={chooseCategory}
-                      />
+                      <div
+                        className="quick-capture-grid quick-category-grid"
+                        aria-label="Common asset categories"
+                      >
+                        {QUICK_CAPTURE_OPTIONS.map((option) => (
+                          <QuickCaptureChoice
+                            key={option.id}
+                            option={option}
+                            onClick={() => startQuickAsset(option)}
+                          />
+                        ))}
+                      </div>
+                      <details
+                        className="category-browser-disclosure"
+                        open={categoryBrowserOpen}
+                        onToggle={(event) =>
+                          setCategoryBrowserOpen(event.currentTarget.open)
+                        }
+                      >
+                        <summary className="category-browser-entry">
+                          <span>
+                            <MagnifyingGlass weight="bold" />
+                          </span>
+                          <span>
+                            <strong>
+                              Browse all {ASSET_CATEGORY_COUNT} categories
+                            </strong>
+                            <small>
+                              Search the complete taxonomy by type or group
+                            </small>
+                          </span>
+                          <CaretDown weight="bold" />
+                        </summary>
+                        <div className="category-browser-panel">
+                          <CategoryPicker
+                            key={categoryBrowseGroupId || "all-categories"}
+                            value={form.categoryId}
+                            initialGroupId={categoryBrowseGroupId}
+                            onSelect={chooseCategory}
+                          />
+                        </div>
+                      </details>
+                      {selectedCategory && (
+                        <CategorySummary
+                          category={selectedCategory}
+                          customLabel={form.customCategory}
+                          onChange={() => setCategoryBrowserOpen(true)}
+                        />
+                      )}
                       {form.categoryId === "custom.other" && (
                         <FormField
                           label="Custom category name"
@@ -10816,7 +11152,10 @@ function CaptureDrawer({
                       <CategorySummary
                         category={selectedCategory}
                         customLabel={form.customCategory}
-                        onChange={() => setAssetStage("category")}
+                        onChange={() => {
+                          setCategoryBrowserOpen(true);
+                          setAssetStage("category");
+                        }}
                       />
                       <FormField
                         label={
@@ -10844,65 +11183,95 @@ function CaptureDrawer({
                           }
                         />
                       </FormField>
-                      {categoryProfileFields.length > 0 && (
-                        <div className="profile-field-section">
-                          <div className="subsection-heading">
-                            <span>
-                              <small>{categoryProfile.label}</small>
-                              <strong>Useful identity details</strong>
-                            </span>
-                            <StatusPill>Optional now</StatusPill>
-                          </div>
-                          <div className="form-grid">
-                            {categoryProfileFields.map((field) => (
-                              <ProfileFieldInput
-                                key={field.id}
-                                field={field}
-                                value={form.profile[field.id] || ""}
-                                onChange={(value) => updateProfile(field.id, value)}
-                              />
-                            ))}
-                          </div>
-                        </div>
-                      )}
-                      {showsPhysicalMemoryFields && (
-                        <div className="form-grid">
-                          <FormField label="Quick reference" hint="Serial, deed, plate, or account alias">
-                            <input value={form.reference} onChange={(e) => update("reference", e.target.value)} placeholder="Optional" />
-                          </FormField>
-                          <FormField label="Value (QAR)" hint="Optional and user supplied">
-                            <input inputMode="decimal" value={form.value} onChange={(e) => update("value", e.target.value)} placeholder="46,000" />
-                          </FormField>
-                        </div>
-                      )}
-                      <FormField
-                        label={
-                          showsMemoryContext
-                            ? memoryFormCopy.notesLabel
-                            : "Notes or story"
+                      <details
+                        className="capture-optional-details"
+                        open={identityDetailsOpen}
+                        onToggle={(event) =>
+                          setIdentityDetailsOpen(event.currentTarget.open)
                         }
                       >
-                        <textarea
-                          rows="3"
-                          value={form.notes}
-                          onChange={(e) => update("notes", e.target.value)}
-                          placeholder={
-                            showsMemoryContext
-                              ? memoryFormCopy.notesPlaceholder
-                              : "Provenance, condition, memory, or instructions"
-                          }
-                        />
-                      </FormField>
-                      {selectedCategory?.kind === "financial" && (
-                        <div className="sensitive-reference-notice is-compact">
-                          <LockKey weight="duotone" />
+                        <summary>
                           <span>
-                            <strong>Keep a safe reference—not the secret.</strong>
-                            <small>Never enter a password, PIN, full account number, private key, seed phrase, or recovery code.</small>
+                            <strong>Add identity details</strong>
+                            <small>
+                              Brand, reference, value, date, notes, and meaning
+                            </small>
                           </span>
-                        </div>
-                      )}
-                      <div className="profile-field-section meaning-section">
+                          <span className="capture-optional-details__count">
+                            {identityDetailCount
+                              ? `${identityDetailCount} added`
+                              : selectedCategory?.kind === "financial"
+                                ? "Required details"
+                                : "Optional"}
+                          </span>
+                          <CaretDown weight="bold" />
+                        </summary>
+                        <div className="capture-optional-details__body">
+                          {categoryProfileFields.length > 0 && (
+                            <div className="profile-field-section">
+                              <div className="subsection-heading">
+                                <span>
+                                  <small>{categoryProfile.label}</small>
+                                  <strong>Useful identity details</strong>
+                                </span>
+                                <StatusPill>
+                                  {selectedCategory?.kind === "financial"
+                                    ? "Reference only"
+                                    : "Optional now"}
+                                </StatusPill>
+                              </div>
+                              <div className="form-grid">
+                                {categoryProfileFields.map((field) => (
+                                  <ProfileFieldInput
+                                    key={field.id}
+                                    field={field}
+                                    value={form.profile[field.id] || ""}
+                                    onChange={(value) =>
+                                      updateProfile(field.id, value)
+                                    }
+                                  />
+                                ))}
+                              </div>
+                            </div>
+                          )}
+                          {showsPhysicalMemoryFields && (
+                            <div className="form-grid">
+                              <FormField label="Quick reference" hint="Serial, deed, plate, or account alias">
+                                <input value={form.reference} onChange={(e) => update("reference", e.target.value)} placeholder="Optional" />
+                              </FormField>
+                              <FormField label="Value (QAR)" hint="Optional and user supplied">
+                                <input inputMode="decimal" value={form.value} onChange={(e) => update("value", e.target.value)} placeholder="46,000" />
+                              </FormField>
+                            </div>
+                          )}
+                          <FormField
+                            label={
+                              showsMemoryContext
+                                ? memoryFormCopy.notesLabel
+                                : "Notes or story"
+                            }
+                          >
+                            <textarea
+                              rows="3"
+                              value={form.notes}
+                              onChange={(e) => update("notes", e.target.value)}
+                              placeholder={
+                                showsMemoryContext
+                                  ? memoryFormCopy.notesPlaceholder
+                                  : "Provenance, condition, memory, or instructions"
+                              }
+                            />
+                          </FormField>
+                          {selectedCategory?.kind === "financial" && (
+                            <div className="sensitive-reference-notice is-compact">
+                              <LockKey weight="duotone" />
+                              <span>
+                                <strong>Keep a safe reference—not the secret.</strong>
+                                <small>Never enter a password, PIN, full account number, private key, seed phrase, or recovery code.</small>
+                              </span>
+                            </div>
+                          )}
+                          <div className="profile-field-section meaning-section">
                         <div className="subsection-heading">
                           <span>
                             <small>More than a category</small>
@@ -11035,7 +11404,9 @@ function CaptureDrawer({
                             />
                           </FormField>
                         )}
-                      </div>
+                          </div>
+                        </div>
+                      </details>
                     </>
                   )}
 
@@ -11045,7 +11416,7 @@ function CaptureDrawer({
                       <div className="capture-intro is-compact">
                         <h3>Record what you actually know</h3>
                         <p>
-                          Continuity never guesses. A physical item is only
+                          Heldat never guesses. A physical item is only
                           marked findable when it has a Place plus a room,
                           container, or useful locator clue.
                         </p>
@@ -11444,6 +11815,21 @@ function CaptureDrawer({
                     {showsPhysicalMemoryFields && (
                       <div><dt>Reference</dt><dd>{form.reference || "Not set"}</dd></div>
                     )}
+                    {reviewAssetValue && (
+                      <div>
+                        <dt>Value</dt>
+                        <dd>
+                          {reviewAssetValue}
+                          <small>User supplied · no currency conversion</small>
+                        </dd>
+                      </div>
+                    )}
+                    {reviewAcquiredAt && (
+                      <div>
+                        <dt>Acquired</dt>
+                        <dd>{reviewAcquiredAt}</dd>
+                      </div>
+                    )}
                     <div><dt>Paper or artifact</dt><dd>{form.addMaterial ? form.evidenceType : "Add later"}</dd></div>
                     {form.addMaterial && (
                       <div>
@@ -11469,33 +11855,44 @@ function CaptureDrawer({
           )}
 
           {step === "success" && (
-            <div className="capture-success">
-              {savedAsset && (
-                <div className="capture-success-cover">
-                  <AssetCoverMedia
-                    asset={savedAsset}
-                    workspace={workspace}
-                    alt={`Newly saved ${savedAsset.name}`}
-                    fallback={<AssetGlyph asset={savedAsset} />}
-                  />
-                </div>
+            <section
+              className={cx(
+                "capture-success",
+                storageStatus === "error" && "is-warning",
               )}
-              <span>
-                {storageStatus === "error" ? (
-                  <Warning weight="bold" />
-                ) : (
-                  <Check weight="bold" />
-                )}
-              </span>
-              <StatusPill tone={storageStatus === "error" ? "warning" : "success"}>
-                {storageStatus === "error"
-                  ? "Added for this session only"
-                  : "Added to workspace"}
-              </StatusPill>
-              <h3>{savedRecord?.name}</h3>
+              aria-labelledby="capture-success-title"
+              aria-live="polite"
+            >
+              <header className="capture-success-heading">
+                <span className="capture-success-mark" aria-hidden="true">
+                  {storageStatus === "error" ? (
+                    <Warning weight="bold" />
+                  ) : (
+                    <Check weight="bold" />
+                  )}
+                </span>
+                <div>
+                  <span className="eyebrow">
+                    {storageStatus === "error" ? "Save needs attention" : "Saved"}
+                  </span>
+                  <h3 id="capture-success-title">{savedRecord?.name}</h3>
+                </div>
+              </header>
+              <div className="capture-success-status" role="status">
+                <strong>
+                  {storageStatus === "error"
+                    ? "Kept in this tab only"
+                    : workspaceSaveCopy(workspace, session).status}
+                </strong>
+                <small>
+                  {storageStatus === "error"
+                    ? "Export before closing this tab."
+                    : "Ready to find, review, and improve later."}
+                </small>
+              </div>
               <p>
                 {storageStatus === "error"
-                  ? "Browser storage failed. Keep this tab open and export the demo JSON from Vault before leaving."
+                  ? "Browser storage failed. Keep this tab open and export records JSON from Vault before leaving."
                   : type === "evidence"
                     ? form.fileName
                       ? "The material and its original file are stored on this device, pending your review."
@@ -11514,28 +11911,23 @@ function CaptureDrawer({
                           ? "The reference is private, masked in general browsing, and excluded from showcases."
                           : captureIntent === "collection-piece" && contextCollection
                             ? `Added to ${contextCollection.name}. Any saved photograph can now become its cover or a featured piece.`
-                            : "The record is now searchable in this local demo workspace."}
+                            : workspaceSaveCopy(workspace, session).searchable}
               </p>
-              {type === "asset" && !form.addMaterial && (
-                <button className="primary-button" onClick={addMaterialAfterSave}>
-                  <Paperclip weight="bold" /> Add paper or artifact
+              <div className="capture-success-actions">
+                {type === "asset" && !form.addMaterial && (
+                  <button className="secondary-button" onClick={addMaterialAfterSave}>
+                    <Paperclip weight="bold" /> Add paper or artifact
+                  </button>
+                )}
+                <button className="primary-button" onClick={viewSaved}>
+                  {captureIntent === "collection-piece" && contextCollection
+                    ? `See in ${contextCollection.name}`
+                    : "View record"}{" "}
+                  <ArrowRight />
                 </button>
-              )}
-              <button
-                className={
-                  type === "asset" && !form.addMaterial
-                    ? "secondary-button"
-                    : "primary-button"
-                }
-                onClick={viewSaved}
-              >
-                {captureIntent === "collection-piece" && contextCollection
-                  ? `See in ${contextCollection.name}`
-                  : "View record"}{" "}
-                <ArrowRight />
-              </button>
-              <button className="text-button" onClick={onClose}>Done</button>
-            </div>
+                <button className="text-button" onClick={onClose}>Done</button>
+              </div>
+            </section>
           )}
         </div>
 
@@ -12476,8 +12868,30 @@ function NavigationEffects() {
   return null;
 }
 
+function AccountCheckingScreen() {
+  return (
+    <main
+      className="account-route-gate"
+      aria-labelledby="account-checking-title"
+      aria-live="polite"
+      aria-busy="true"
+    >
+      <span aria-hidden="true">
+        <FolderLock weight="duotone" />
+      </span>
+      <div>
+        <h1 id="account-checking-title">Checking your account</h1>
+        <small>Preparing the correct workspace on this device.</small>
+      </div>
+    </main>
+  );
+}
+
 function WorkspaceBoundary() {
   const account = useSecureAccount();
+  if (account.status === "checking") {
+    return <AccountCheckingScreen />;
+  }
   const session =
     account.session?.accountId && account.session?.householdId
       ? account.session

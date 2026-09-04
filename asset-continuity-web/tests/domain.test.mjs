@@ -15,6 +15,7 @@ import {
   selectNextAction,
   selectPlaceSummary,
   selectPortfolioSummary,
+  selectPortfolioValueSummary,
   selectWorkspaceActorMemberId,
   workspaceReducer,
 } from "../src/domain.js";
@@ -61,6 +62,215 @@ test("sample snapshot is versioned, serializable, and derives portfolio counts",
   assert.equal(selectPlaceSummary(state, "family-archive").assetCount, 5);
   assert.equal(selectPlaceSummary(state, "dubai-storage").assetCount, 3);
   assert.equal(selectPlaceSummary(state, "missing"), null);
+});
+
+test("portfolio value summary aggregates one currency from explicit active asset values", () => {
+  const summary = selectPortfolioValueSummary({
+    assets: [
+      {
+        id: "watch",
+        lifecycleStatus: "active",
+        value: { amountMinor: 125_000, currency: "QAR" },
+      },
+      {
+        id: "car",
+        lifecycleStatus: "active",
+        value: { amountMinor: 2_750_000, currency: "qar" },
+      },
+      {
+        id: "camera",
+        lifecycleStatus: "active",
+        value: null,
+      },
+    ],
+  });
+
+  assert.deepEqual(summary, {
+    basis: "user-supplied",
+    scope: "active-assets-only",
+    activeAssetCount: 3,
+    valuedAssetCount: 2,
+    unvaluedAssetCount: 1,
+    currencyTotals: [
+      { currency: "QAR", amountMinor: 2_875_000, assetCount: 2 },
+    ],
+    currencyConversionApplied: false,
+    includesLiabilities: false,
+  });
+  assert.equal(Object.hasOwn(summary, "netWorth"), false);
+});
+
+test("portfolio value summary keeps currencies separate without conversion", () => {
+  const summary = selectPortfolioValueSummary({
+    assets: [
+      {
+        id: "watch",
+        lifecycleStatus: "active",
+        value: { amountMinor: 100_000, currency: "QAR" },
+      },
+      {
+        id: "vehicle",
+        lifecycleStatus: "active",
+        value: { amountMinor: 250_000, currency: " qar " },
+      },
+      {
+        id: "art",
+        lifecycleStatus: "active",
+        value: { amountMinor: 75_000, currency: "USD" },
+      },
+      {
+        id: "digital",
+        lifecycleStatus: "active",
+        value: { amountMinor: 60_000, currency: "AED" },
+      },
+    ],
+  });
+
+  assert.deepEqual(summary.currencyTotals, [
+    { currency: "AED", amountMinor: 60_000, assetCount: 1 },
+    { currency: "QAR", amountMinor: 350_000, assetCount: 2 },
+    { currency: "USD", amountMinor: 75_000, assetCount: 1 },
+  ]);
+  assert.equal(summary.valuedAssetCount, 4);
+  assert.equal(summary.unvaluedAssetCount, 0);
+  assert.equal(summary.currencyConversionApplied, false);
+});
+
+test("portfolio value summary treats missing and malformed values as unvalued", () => {
+  const summary = selectPortfolioValueSummary({
+    assets: [
+      { id: "missing", lifecycleStatus: "active", value: null },
+      {
+        id: "string-amount",
+        lifecycleStatus: "active",
+        value: { amountMinor: "100", currency: "QAR" },
+      },
+      {
+        id: "negative",
+        lifecycleStatus: "active",
+        value: { amountMinor: -1, currency: "QAR" },
+      },
+      {
+        id: "unsafe",
+        lifecycleStatus: "active",
+        value: { amountMinor: Number.MAX_SAFE_INTEGER + 1, currency: "QAR" },
+      },
+      {
+        id: "blank-currency",
+        lifecycleStatus: "active",
+        value: { amountMinor: 500, currency: " " },
+      },
+      {
+        id: "invalid-currency",
+        lifecycleStatus: "active",
+        value: { amountMinor: 500, currency: "QAR!" },
+      },
+      {
+        id: "zero-is-recorded",
+        lifecycleStatus: "active",
+        value: { amountMinor: 0, currency: "QAR" },
+      },
+    ],
+  });
+
+  assert.equal(summary.activeAssetCount, 7);
+  assert.equal(summary.valuedAssetCount, 1);
+  assert.equal(summary.unvaluedAssetCount, 6);
+  assert.deepEqual(summary.currencyTotals, [
+    { currency: "QAR", amountMinor: 0, assetCount: 1 },
+  ]);
+});
+
+test("portfolio value summary excludes archived assets and their values", () => {
+  const summary = selectPortfolioValueSummary({
+    assets: [
+      {
+        id: "active",
+        lifecycleStatus: "active",
+        value: { amountMinor: 100_000, currency: "QAR" },
+      },
+      {
+        id: "archived-valued",
+        lifecycleStatus: "archived",
+        value: { amountMinor: 900_000, currency: "QAR" },
+      },
+      {
+        id: "archived-unvalued",
+        lifecycleStatus: "archived",
+        value: null,
+      },
+    ],
+  });
+
+  assert.equal(summary.activeAssetCount, 1);
+  assert.equal(summary.valuedAssetCount, 1);
+  assert.equal(summary.unvaluedAssetCount, 0);
+  assert.deepEqual(summary.currencyTotals, [
+    { currency: "QAR", amountMinor: 100_000, assetCount: 1 },
+  ]);
+});
+
+test("portfolio value summary marks an overflowing currency bucket uncalculable", () => {
+  const summary = selectPortfolioValueSummary({
+    assets: [
+      {
+        id: "large-a",
+        lifecycleStatus: "active",
+        value: { amountMinor: Number.MAX_SAFE_INTEGER, currency: "QAR" },
+      },
+      {
+        id: "large-b",
+        lifecycleStatus: "active",
+        value: { amountMinor: 1, currency: "QAR" },
+      },
+      {
+        id: "large-c",
+        lifecycleStatus: "active",
+        value: { amountMinor: 10, currency: "QAR" },
+      },
+    ],
+  });
+
+  assert.equal(summary.valuedAssetCount, 3);
+  assert.deepEqual(summary.currencyTotals, [
+    { currency: "QAR", amountMinor: null, assetCount: 3 },
+  ]);
+});
+
+test("linked property passport contributes once and its Place projection is not duplicated", () => {
+  const summary = selectPortfolioValueSummary({
+    places: [
+      {
+        id: "home-place",
+        status: "active",
+        tenure: "owned",
+        propertyAssetId: "home-passport",
+        // A legacy/display projection must never become a second value entry.
+        value: { amountMinor: 8_000_000, currency: "QAR" },
+      },
+    ],
+    assets: [
+      {
+        id: "home-passport",
+        lifecycleStatus: "active",
+        kind: "real-estate",
+        categoryId: "property.house",
+        propertyPlaceId: "home-place",
+        value: { amountMinor: 8_000_000, currency: "QAR" },
+      },
+      {
+        id: "watch",
+        lifecycleStatus: "active",
+        value: { amountMinor: 100_000, currency: "QAR" },
+      },
+    ],
+  });
+
+  assert.equal(summary.activeAssetCount, 2);
+  assert.equal(summary.valuedAssetCount, 2);
+  assert.deepEqual(summary.currencyTotals, [
+    { currency: "QAR", amountMinor: 8_100_000, assetCount: 2 },
+  ]);
 });
 
 test("pending proof does not satisfy a requirement and verification is idempotent", () => {

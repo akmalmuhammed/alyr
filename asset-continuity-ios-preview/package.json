@@ -2,7 +2,7 @@
   "name": "@alyr/ios-preview",
   "version": "0.1.0",
   "private": true,
-  "description": "Session-only Expo Go companion for zero-cost ALYR testing on a physical iPhone.",
+  "description": "Session-only Expo Go companion for zero-cost Heldat testing on a physical iPhone.",
   "main": "expo-router/entry",
   "scripts": {
     "start": "expo start --go",

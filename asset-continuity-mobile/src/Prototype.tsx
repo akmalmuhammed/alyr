@@ -2558,7 +2558,7 @@ function FirstRunGuide({
     {
       eyebrow: "Your living asset map",
       title: "Begin with one place",
-      copy: "Continuity organizes every home, property and archive by where it belongs. The sample map shows the finished idea.",
+      copy: "Heldat organizes every home, property and archive by where it belongs. The sample map shows the finished idea.",
       icon: PhGlobe,
     },
     {

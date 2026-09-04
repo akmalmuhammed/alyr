@@ -184,7 +184,7 @@ class ExpoGoAttachmentStore implements ScopedAttachmentStore {
     ) {
       throw new AttachmentReadError(
         "PROTECTED_ATTACHMENT_UNAVAILABLE",
-        "Protected attachments open only in an ALYR signed build."
+        "Protected attachments open only in a Heldat signed build."
       );
     }
     if (

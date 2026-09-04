@@ -4194,6 +4194,70 @@ export function selectPortfolioSummary(state) {
   };
 }
 
+/**
+ * Aggregates only explicit, user-supplied values on active Asset Passports.
+ *
+ * Currency buckets remain separate: this selector has no exchange-rate input
+ * and therefore never invents a converted total. A linked property is counted
+ * through its Asset Passport once; its Place projection is organizational and
+ * is not a second financial entry. The current web model has no liabilities,
+ * so callers must present this as recorded asset value rather than a complete
+ * financial position.
+ */
+export function selectPortfolioValueSummary(state) {
+  const assets = activeAssets(state);
+  const currencyTotals = new Map();
+  let valuedAssetCount = 0;
+
+  for (const asset of assets) {
+    const amountMinor = asset?.value?.amountMinor;
+    const currency =
+      typeof asset?.value?.currency === "string"
+        ? asset.value.currency.trim().toUpperCase()
+        : "";
+    const hasValidValue =
+      Number.isSafeInteger(amountMinor) &&
+      amountMinor >= 0 &&
+      /^[A-Z]{3}$/u.test(currency);
+    if (!hasValidValue) continue;
+
+    valuedAssetCount += 1;
+    const current = currencyTotals.get(currency);
+    if (!current) {
+      currencyTotals.set(currency, {
+        currency,
+        amountMinor,
+        assetCount: 1,
+      });
+      continue;
+    }
+
+    const nextAmount =
+      current.amountMinor === null ? null : current.amountMinor + amountMinor;
+    currencyTotals.set(currency, {
+      currency,
+      amountMinor:
+        nextAmount !== null && Number.isSafeInteger(nextAmount)
+          ? nextAmount
+          : null,
+      assetCount: current.assetCount + 1,
+    });
+  }
+
+  return {
+    basis: "user-supplied",
+    scope: "active-assets-only",
+    activeAssetCount: assets.length,
+    valuedAssetCount,
+    unvaluedAssetCount: assets.length - valuedAssetCount,
+    currencyTotals: [...currencyTotals.values()].sort((left, right) =>
+      left.currency.localeCompare(right.currency),
+    ),
+    currencyConversionApplied: false,
+    includesLiabilities: false,
+  };
+}
+
 const PRIORITY_ORDER = {
   urgent: 0,
   high: 1,
@@ -4350,7 +4414,7 @@ export function selectNextAction(state) {
   return {
     kind: "review",
     id: "portfolio-review",
-    title: "Review your continuity map",
+    title: "Review your Heldat record",
     description: "Priority records are current in this demo workspace.",
     ctaLabel: "Open assets",
     destination: { type: "assets" },

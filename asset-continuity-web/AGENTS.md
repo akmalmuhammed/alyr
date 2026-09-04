@@ -13,11 +13,25 @@ Build app UI in `src/`. Keep `.openai/hosting.json`, `worker/index.js`, `scripts
 - Web is the canonical product-validation client. iOS and Android will later
   implement the same product contract with native presentation; do not stretch
   web JSX into a native app or invent different mobile flows.
-- The approved visual reference is Product Design option 3:
-  `C:\Users\akmal\.codex\generated_images\019f917c-1cff-7b02-a9f7-1c4225dee436\call_sUjN6yMMISdgIXEHyzVAawON.png`.
-- Preserve the premium midnight globe-led Home, restrained violet/cyan
-  emphasis, one next-best action, and primary navigation order: Home, Assets,
-  Family, Vault.
+- The product name is **Heldat**. Until a dedicated Heldat identity system is
+  approved, retain the existing Carbon / Paper / Volt visual tokens installed
+  under `public/alyr/`: Paper is the light-first product canvas, Carbon is
+  reserved for focused command moments such as first entry and Vault, and Volt
+  marks the primary action or confirmed state.
+- Do not present the retired ALYR wordmark as Heldat. During the transition,
+  the existing standalone symbol may remain as a temporary app symbol beside a
+  plainly typeset Heldat product label. Do not reconstruct the old mark or
+  invent a final Heldat logo.
+- Preserve a premium globe-led Home, one next-best action, and primary
+  navigation order: Home, Assets, Family, Vault. The globe may be cinematic,
+  but it must sit inside the restrained ALYR system rather than turning the
+  whole product into a dark neon dashboard.
+- Do not use purple/cyan gradients, glow, glassmorphism, decorative status
+  pills, excessive cards, or excessive shadows. Prefer rules, spacing,
+  typography, 4/8/12px radii, 44px targets, and restrained depth.
+- Product identity in user-facing copy is **Heldat**, not ALYR or Continuity. Use
+  truthful language such as “Your documented assets” rather than implying
+  every possession has already been captured.
 - Search is a global overlay. Capture is a contextual action. Neither is a
   fifth navigation destination.
 - Desktop uses a quiet left rail and contextual workspace; tablet uses a

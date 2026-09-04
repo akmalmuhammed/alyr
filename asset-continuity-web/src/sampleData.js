@@ -465,7 +465,7 @@ const featuredAssets = [
     valueLabel: "Recorded estimate",
     requiredEvidenceTypes: ["Recovery note"],
     description:
-      "Continuity reference only. Credentials, PINs, and full account numbers are never stored here.",
+      "Heldat reference only. Credentials, PINs, and full account numbers are never stored here.",
     tags: ["bank", "reserve", "private-reference"],
     meaningFacets: ["financial-continuity"],
     visibility: "private",

@@ -16,7 +16,7 @@ const canonicalNativeRoot = path.resolve(
   "asset-continuity-native"
 );
 
-// ALYR deliberately keeps SDK 54 only in this preview shell while the signed
+// Heldat deliberately keeps SDK 54 only in this preview shell while the signed
 // application stays on SDK 57. Watch only canonical product sources: watching
 // the whole repository also subscribes Metro to temporary browser/build
 // directories whose removal can terminate the iPhone session.

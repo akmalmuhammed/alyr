@@ -987,7 +987,7 @@ function inspectCredentialLikeData(value, path = "record", errors = []) {
   if (!isObject(value)) return errors;
   for (const [key, item] of Object.entries(value)) {
     if (isForbiddenFinancialKey(key)) {
-      errors.push(`${path}.${key} is not allowed in Continuity.`);
+      errors.push(`${path}.${key} is not allowed in Heldat.`);
       continue;
     }
     inspectCredentialLikeData(item, `${path}.${key}`, errors);

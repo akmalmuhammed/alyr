@@ -2,7 +2,7 @@ import type { ConfigContext, ExpoConfig } from "expo/config";
 
 export default ({ config }: ConfigContext): ExpoConfig => ({
   ...config,
-  name: "ALYR iPhone Preview",
+  name: "Heldat iPhone Preview",
   slug: "alyr-iphone-preview",
   version: "0.1.0",
   orientation: "portrait",

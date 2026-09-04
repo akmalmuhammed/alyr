@@ -532,7 +532,7 @@ async function inputToText(input) {
     return input;
   }
   throw new RecoveryKitError(
-    "Choose a Continuity recovery-kit file.",
+    "Choose a Heldat recovery-kit file.",
     "RECOVERY_KIT_FILE_REQUIRED",
   );
 }
@@ -544,11 +544,11 @@ export async function parseEncryptedRecoveryKit(input) {
   } catch (error) {
     if (error instanceof RecoveryKitError) throw error;
     throw new RecoveryKitError(
-      "That file is not a valid Continuity recovery kit.",
+      "That file is not a valid Heldat recovery kit.",
       "RECOVERY_KIT_MALFORMED",
     );
   }
-  requireObject(parsed, "That file is not a valid Continuity recovery kit.");
+  requireObject(parsed, "That file is not a valid Heldat recovery kit.");
   if (
     parsed.format !== RECOVERY_KIT_FORMAT ||
     parsed.version !== RECOVERY_KIT_VERSION

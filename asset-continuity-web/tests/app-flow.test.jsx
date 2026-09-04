@@ -7,7 +7,7 @@ import { resolve } from "node:path";
 import { cleanup, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { App } from "../src/App.jsx";
+import { App, workspaceSaveCopy } from "../src/App.jsx";
 import {
   LEGACY_STORAGE_KEYS,
   RECOVERY_STORAGE_KEY,
@@ -367,23 +367,79 @@ describe("canonical web journeys", () => {
     vi.restoreAllMocks();
   });
 
+  it("describes save destinations truthfully for device, account, and sample workspaces", () => {
+    expect(workspaceSaveCopy({ mode: "personal" }, null)).toEqual({
+      status: "Saved on this device",
+      destination: "your personal workspace on this device",
+      searchable:
+        "The record is now searchable in your personal workspace on this device.",
+    });
+    expect(
+      workspaceSaveCopy(
+        { mode: "personal" },
+        { accountId: "account-1", householdId: "household-1" },
+      ),
+    ).toEqual({
+      status: "Saved to signed-in workspace",
+      destination: "your signed-in household workspace on this device",
+      searchable:
+        "The record is now searchable in your signed-in household workspace on this device.",
+    });
+    expect(
+      workspaceSaveCopy(
+        { mode: "sample" },
+        { accountId: "account-1", householdId: "household-1" },
+      ),
+    ).toEqual({
+      status: "Saved to sample workspace",
+      destination: "the isolated sample workspace",
+      searchable:
+        "The record is now searchable in the isolated sample workspace.",
+    });
+  });
+
   it("explains first open and enters an isolated sample workspace", async () => {
     const user = userEvent.setup();
     renderApp();
 
     expect(
-      screen.getByRole("heading", { name: "Start with what matters." }),
+      await screen.findByRole("heading", { name: "Start with what matters." }),
     ).toBeTruthy();
+    const brandLink = screen.getByRole("link", { name: "Heldat home" });
+    expect(within(brandLink).getByText("Heldat")).toBeTruthy();
+    expect(
+      screen.getByRole("navigation", { name: "Other ways to continue" }),
+    ).toBeTruthy();
+    const disclosure = screen.getByRole("note", {
+      name: "Stored on this device",
+    });
+    expect(disclosure).toBeTruthy();
     expect(
       screen.getByText(
         /manual encrypted recovery kit.*optional local account service.*automatic live sync is not connected/i,
       ),
     ).toBeTruthy();
+    const disclosureDetails = disclosure.querySelector("details");
+    expect(disclosureDetails.open).toBe(false);
+    await user.click(
+      within(disclosure).getByText("Stored on this device"),
+    );
+    expect(disclosureDetails.open).toBe(true);
+
+    const howButton = screen.getByRole("button", {
+      name: "How Heldat works",
+    });
+    expect(howButton.getAttribute("aria-expanded")).toBe("false");
+    await user.click(howButton);
+    expect(howButton.getAttribute("aria-expanded")).toBe("true");
+    expect(
+      screen.getByText(/Capture any item, even when its location is unknown/i),
+    ).toBeTruthy();
 
     await user.click(screen.getByRole("button", { name: /Explore a sample workspace/i }));
 
     expect(
-      await screen.findByRole("heading", { name: "Everything you own" }),
+      await screen.findByRole("heading", { name: "Your documented assets" }),
     ).toBeTruthy();
     expect(screen.getAllByText("17").length).toBeGreaterThan(0);
     expect(screen.getByRole("button", { name: /Sample data/i })).toBeTruthy();
@@ -393,6 +449,7 @@ describe("canonical web journeys", () => {
     const user = userEvent.setup();
     renderApp();
 
+    await screen.findByRole("heading", { name: "Start with what matters." });
     await user.click(
       screen.getByRole("button", { name: /^Add a place$/i }),
     );
@@ -409,7 +466,12 @@ describe("canonical web journeys", () => {
     expect(within(dialog).getByText("Doha")).toBeTruthy();
     await user.click(within(dialog).getByRole("button", { name: /Save record/i }));
 
-    expect(await within(dialog).findByText("Added to workspace")).toBeTruthy();
+    expect(await within(dialog).findByText("Saved on this device")).toBeTruthy();
+    expect(
+      within(dialog).getByText(
+        "The Place is ready for rooms and item locations. No ownership record was inferred.",
+      ),
+    ).toBeTruthy();
     await user.click(within(dialog).getByRole("button", { name: /View record/i }));
     expect(
       await screen.findByRole("heading", { name: "Al Waab Home" }),
@@ -1184,9 +1246,15 @@ describe("canonical web journeys", () => {
     const user = userEvent.setup();
     renderApp();
 
+    await screen.findByRole("heading", { name: "Start with what matters." });
     await user.click(screen.getByRole("button", { name: /Add my first item/i }));
     const dialog = await screen.findByRole("dialog", { name: "Choose a category" });
 
+    await user.click(
+      within(dialog)
+        .getByText(/Browse all 64 categories/i)
+        .closest("summary"),
+    );
     await user.click(
       within(dialog).getByRole("button", { name: /Vehicles & mobility/i }),
     );
@@ -1281,6 +1349,110 @@ describe("canonical web journeys", () => {
       (item) => item.name === "Quick-add roadster",
     );
     expect(asset.categoryId).toBe("vehicle.car");
+  });
+
+  it("keeps Quick Passport compact, reveals optional identity details, and reviews the entered value and date", async () => {
+    const user = userEvent.setup();
+    seedSample("/home?capture=asset");
+    renderApp();
+
+    const categoryDialog = await screen.findByRole("dialog", {
+      name: "Choose a category",
+    });
+    const categoryDisclosure = within(categoryDialog)
+      .getByText(/Browse all 64 categories/i)
+      .closest("details");
+    expect(categoryDisclosure.open).toBe(false);
+    [
+      /Add Car — Vehicle/i,
+      /Add Motorbike — Vehicle/i,
+      /Add Watch — Lifestyle/i,
+      /Browse Real estate — Owned property/i,
+      /Add Digital asset — Digital/i,
+      /Add Physical item — Home & storage/i,
+    ].forEach((name) => {
+      expect(
+        within(categoryDialog).getByRole("button", { name }),
+      ).toBeTruthy();
+    });
+    expect(
+      within(categoryDialog)
+        .getByRole("list", { name: "Asset capture progress" })
+        .style.getPropertyValue("--capture-step-count"),
+    ).toBe("5");
+
+    await user.click(
+      within(categoryDialog).getByRole("button", {
+        name: /Add Watch — Lifestyle/i,
+      }),
+    );
+    const identityDialog = await screen.findByRole("dialog", {
+      name: "Identify the item",
+    });
+    const optionalDetails = within(identityDialog)
+      .getByText("Add identity details")
+      .closest("details");
+    expect(optionalDetails.open).toBe(false);
+    await user.type(
+      within(identityDialog).getByLabelText(/Asset name/i),
+      "Pilot watch",
+    );
+    await user.click(optionalDetails.querySelector("summary"));
+    expect(optionalDetails.open).toBe(true);
+    await user.type(
+      within(identityDialog).getByLabelText(/Brand/i),
+      "Rolex",
+    );
+    await user.type(
+      within(identityDialog).getByLabelText(/Value \(QAR\)/i),
+      "46000",
+    );
+    await user.type(
+      within(identityDialog).getByLabelText(/Acquired on/i),
+      "2026-07-20",
+    );
+
+    await user.click(
+      within(identityDialog).getByRole("button", { name: "Continue" }),
+    );
+    await user.click(
+      within(identityDialog).getByRole("button", { name: "Continue" }),
+    );
+    await user.click(
+      within(identityDialog).getByRole("button", { name: "Review" }),
+    );
+
+    expect(
+      await within(identityDialog).findByRole("heading", {
+        name: "Review asset",
+      }),
+    ).toBeTruthy();
+    expect(within(identityDialog).getByText(/46,000/)).toBeTruthy();
+    expect(
+      within(identityDialog).getByText(
+        "User supplied · no currency conversion",
+      ),
+    ).toBeTruthy();
+    expect(within(identityDialog).getByText("Jul 20, 2026")).toBeTruthy();
+    await user.click(
+      within(identityDialog).getByRole("button", { name: "Save record" }),
+    );
+
+    const successHeading = await within(identityDialog).findByRole("heading", {
+      name: "Pilot watch",
+    });
+    expect(successHeading.closest("section").className).toContain(
+      "capture-success",
+    );
+    expect(
+      within(identityDialog).getByText("Saved to sample workspace"),
+    ).toBeTruthy();
+    const saved = JSON.parse(window.localStorage.getItem(STORAGE_KEY));
+    const asset = saved.assets.find((item) => item.name === "Pilot watch");
+    expect(asset.value).toEqual({ amountMinor: 4600000, currency: "QAR" });
+    expect(asset.acquiredAt).toBe("2026-07-20T00:00:00.000Z");
+    expect(asset.profile.brand).toBe("Rolex");
+    expect(asset.profile["acquired-on"]).toBeUndefined();
   });
 
   it("keeps a quick Digital asset virtual even when Add starts from a Place", async () => {
@@ -1519,6 +1691,7 @@ describe("canonical web journeys", () => {
     window.history.replaceState({}, "", "/welcome");
     renderApp();
 
+    await screen.findByRole("heading", { name: "Start with what matters." });
     await user.click(
       screen.getByRole("button", { name: /Add my first item/i }),
     );
@@ -1530,6 +1703,41 @@ describe("canonical web journeys", () => {
         (asset) => asset.id === "personal-keepsake",
       ),
     ).toBe(true);
+  });
+
+  it("shows known asset value before the first Place exists", async () => {
+    const personal = workspaceReducer(
+      workspaceReducer(createSampleWorkspace(), {
+        type: "START_PERSONAL",
+        now: "2026-07-24T10:00:00.000Z",
+      }),
+      {
+        type: "ADD_ASSET",
+        asset: {
+          id: "valued-unplaced-watch",
+          name: "Unplaced watch",
+          categoryId: "lifestyle.watch",
+          category: "Watch",
+          value: { amountMinor: 4_600_000, currency: "QAR" },
+          requiredProofTypes: [],
+        },
+        now: "2026-07-24T10:01:00.000Z",
+      },
+    );
+    window.localStorage.setItem(STORAGE_KEY, JSON.stringify(personal));
+    window.history.replaceState({}, "", "/home");
+    renderApp();
+
+    await screen.findByRole("heading", { name: "Give your items a place" });
+    const valueSummary = screen.getByRole("region", {
+      name: "Known asset value",
+    });
+    expect(within(valueSummary).getByText("QAR")).toBeTruthy();
+    expect(within(valueSummary).getByText("46,000")).toBeTruthy();
+    expect(valueSummary.textContent).toContain(
+      "User supplied · no currency conversion",
+    );
+    expect(valueSummary.textContent.toLowerCase()).not.toContain("net worth");
   });
 
   it("replaces personal records only when the isolated sample is confirmed", async () => {
@@ -1555,10 +1763,11 @@ describe("canonical web journeys", () => {
     window.history.replaceState({}, "", "/welcome");
     renderApp();
 
+    await screen.findByRole("heading", { name: "Start with what matters." });
     await user.click(
       screen.getByRole("button", { name: /Explore a sample workspace/i }),
     );
-    await screen.findByRole("heading", { name: "Everything you own" });
+    await screen.findByRole("heading", { name: "Your documented assets" });
     const saved = JSON.parse(window.localStorage.getItem(STORAGE_KEY));
     expect(window.confirm).toHaveBeenCalled();
     expect(saved.mode).toBe("sample");
@@ -1590,6 +1799,7 @@ describe("canonical web journeys", () => {
     window.confirm.mockReturnValue(false);
     renderApp();
 
+    await screen.findByRole("heading", { name: "Start with what matters." });
     await user.click(
       screen.getByRole("button", { name: /Explore a sample workspace/i }),
     );
@@ -1612,7 +1822,7 @@ describe("canonical web journeys", () => {
     window.localStorage.setItem(STORAGE_KEY, JSON.stringify(sample));
     window.history.replaceState({}, "", "/home");
     renderApp();
-    await screen.findByRole("heading", { name: "Everything you own" });
+    await screen.findByRole("heading", { name: "Your documented assets" });
 
     await user.keyboard("{Control>}k{/Control}");
     const search = await screen.findByRole("dialog", {
@@ -1645,7 +1855,7 @@ describe("canonical web journeys", () => {
     renderApp();
 
     expect(
-      await screen.findByRole("heading", { name: "Everything you own" }),
+      await screen.findByRole("heading", { name: "Your documented assets" }),
     ).toBeTruthy();
     await waitFor(() => {
       expect(window.location.search).toBe("");
@@ -1724,7 +1934,7 @@ describe("canonical web journeys", () => {
     const user = userEvent.setup();
     seedSample("/home");
     renderApp();
-    await screen.findByRole("heading", { name: "Everything you own" });
+    await screen.findByRole("heading", { name: "Your documented assets" });
 
     await user.click(
       screen.getAllByRole("button", {
@@ -1961,7 +2171,7 @@ describe("canonical web journeys", () => {
     renderApp();
 
     await screen.findByRole("heading", {
-      name: "Everything you own",
+      name: "Your documented assets",
     });
     await user.keyboard("{Control>}k{/Control}");
     const search = await screen.findByRole("dialog", {
@@ -2050,7 +2260,7 @@ describe("canonical web journeys", () => {
       within(help).getByRole("button", { name: /Show my next action/i }),
     );
     expect(
-      await screen.findByRole("heading", { name: "Everything you own" }),
+      await screen.findByRole("heading", { name: "Your documented assets" }),
     ).toBeTruthy();
     expect(window.location.pathname).toBe("/home");
     expect(window.location.search).toBe("");
@@ -2278,7 +2488,9 @@ describe("canonical web journeys", () => {
       within(dialog).getByRole("button", { name: "Save record" }),
     );
 
-    expect(await within(dialog).findByText("Added to workspace")).toBeTruthy();
+    expect(
+      await within(dialog).findByText("Saved to sample workspace"),
+    ).toBeTruthy();
     await waitFor(() => {
       const saved = JSON.parse(window.localStorage.getItem(STORAGE_KEY));
       const asset = saved.assets.find((item) => item.id === "gmt-master-ii");
@@ -2353,7 +2565,9 @@ describe("canonical web journeys", () => {
     await user.click(
       within(placeDialog).getByRole("button", { name: "Save record" }),
     );
-    expect(await within(placeDialog).findByText("Added to workspace")).toBeTruthy();
+    expect(
+      await within(placeDialog).findByText("Saved to sample workspace"),
+    ).toBeTruthy();
 
     await waitFor(() => {
       const saved = JSON.parse(window.localStorage.getItem(STORAGE_KEY));
@@ -2448,9 +2662,11 @@ describe("canonical web journeys", () => {
     renderApp();
 
     const dialog = await screen.findByRole("dialog", { name: "Add a place" });
-    expect(within(dialog).getByLabelText(/Place name/i).value).toBe(
-      "Recovered family villa",
-    );
+    await waitFor(() => {
+      expect(within(dialog).getByLabelText(/Place name/i).value).toBe(
+        "Recovered family villa",
+      );
+    });
     expect(
       within(dialog).getByText(/unfinished capture was restored/i),
     ).toBeTruthy();
@@ -2496,21 +2712,83 @@ describe("canonical web journeys", () => {
     const dialog = await screen.findByRole("dialog", {
       name: "Preserve what you remember",
     });
-    expect(within(dialog).getByLabelText(/^Origin$/i).value).toBe(
-      "Doha courtyard",
-    );
-    expect(within(dialog).getByLabelText(/^Time or period$/i).value).toBe(
-      "Childhood · 1999",
-    );
-    expect(within(dialog).getByLabelText(/Person 1 name/i).value).toBe(
-      "Mariam",
-    );
+    await waitFor(() => {
+      expect(within(dialog).getByLabelText(/^Origin$/i).value).toBe(
+        "Doha courtyard",
+      );
+      expect(within(dialog).getByLabelText(/^Time or period$/i).value).toBe(
+        "Childhood · 1999",
+      );
+      expect(within(dialog).getByLabelText(/Person 1 name/i).value).toBe(
+        "Mariam",
+      );
+    });
     expect(
       within(dialog).queryByLabelText(/^People connected$/i),
     ).toBeNull();
     expect(
       within(dialog).queryByLabelText(/^Date or period$/i),
     ).toBeNull();
+  });
+
+  it("promotes a legacy acquired-on draft value and saves only canonical acquiredAt", async () => {
+    const user = userEvent.setup();
+    seedSample("/home?capture=asset");
+    window.localStorage.setItem(
+      "alyr.asset-continuity.capture-draft",
+      JSON.stringify({
+        version: 4,
+        contextKey: "asset||||",
+        type: "asset",
+        step: "details",
+        assetStage: "identity",
+        continuation: null,
+        form: {
+          name: "Recovered watch draft",
+          categoryId: "lifestyle.watch",
+          profile: {
+            brand: "Rolex",
+            "acquired-on": "2014-02-03",
+          },
+        },
+        hasFile: false,
+        updatedAt: new Date().toISOString(),
+      }),
+    );
+    renderApp();
+
+    const dialog = await screen.findByRole("dialog", {
+      name: "Identify the item",
+    });
+    await waitFor(() => {
+      expect(within(dialog).getByLabelText(/Acquired on/i).value).toBe(
+        "2014-02-03",
+      );
+    });
+    expect(
+      within(dialog).getByText("Add identity details").closest("details").open,
+    ).toBe(true);
+    await user.click(
+      within(dialog).getByRole("button", { name: "Continue" }),
+    );
+    await user.click(
+      within(dialog).getByRole("button", { name: "Continue" }),
+    );
+    await user.click(
+      within(dialog).getByRole("button", { name: "Review" }),
+    );
+    expect(await within(dialog).findByText("Feb 3, 2014")).toBeTruthy();
+    await user.click(
+      within(dialog).getByRole("button", { name: "Save record" }),
+    );
+
+    const saved = JSON.parse(window.localStorage.getItem(STORAGE_KEY));
+    const asset = saved.assets.find(
+      (item) => item.name === "Recovered watch draft",
+    );
+    expect(asset.acquiredAt).toBe("2014-02-03T00:00:00.000Z");
+    expect(asset.profile.brand).toBe("Rolex");
+    expect(asset.profile["acquired-on"]).toBeUndefined();
   });
 
   it("shows the full nested retrieval path and preserves prior location assignments", async () => {
@@ -3263,7 +3541,7 @@ describe("canonical web journeys", () => {
     renderApp();
 
     expect(
-      await screen.findByRole("heading", { name: "Everything you own" }),
+      await screen.findByRole("heading", { name: "Your documented assets" }),
     ).toBeTruthy();
     await waitFor(() => {
       expect(window.localStorage.getItem(STORAGE_KEY)).toBeTruthy();
@@ -3283,9 +3561,9 @@ describe("canonical web journeys", () => {
     ).toBeTruthy();
     expect(window.localStorage.getItem(RECOVERY_STORAGE_KEY)).toBe(corrupt);
     expect(
-      screen.getByText("A saved demo could not be opened")
+      screen.getByText("A saved workspace could not be opened")
         .closest('[role="alert"]').textContent,
-    ).toMatch(/saved demo could not be opened/i);
+    ).toMatch(/saved workspace could not be opened/i);
     expect(
       screen.getByRole("button", { name: /Download recovery copy/i }),
     ).toBeTruthy();
@@ -3304,7 +3582,7 @@ describe("canonical web journeys", () => {
   it("has no automatically detectable accessibility violations on the home workspace", async () => {
     seedSample("/home");
     renderApp();
-    await screen.findByRole("heading", { name: "Everything you own" });
+    await screen.findByRole("heading", { name: "Your documented assets" });
     const result = await axe.run(document.body, {
       rules: {
         "color-contrast": { enabled: false },
