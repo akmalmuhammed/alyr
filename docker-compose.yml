@@ -1,0 +1,19 @@
+services:
+  postgres:
+    image: postgres:16
+    environment:
+      POSTGRES_USER: alyr
+      POSTGRES_PASSWORD: alyr_local
+      POSTGRES_DB: alyr
+    ports:
+      - "5432:5432"
+    volumes:
+      - alyr_pg:/var/lib/postgresql/data
+
+  redis:
+    image: redis:7
+    ports:
+      - "6379:6379"
+
+volumes:
+  alyr_pg:
