@@ -7,8 +7,15 @@ class Settings(BaseSettings):
     model_config = SettingsConfigDict(env_prefix="ALYR_", env_file=".env", extra="ignore")
 
     env: str = "local"
-    database_url: str = ""
-    redis_url: str = ""
+
+    # The app connects as a role that cannot bypass Row-Level Security.
+    database_url: str = "postgresql://alyr_app:alyr_app_local@localhost:5432/alyr"
+    # Migrations and demo-tenant setup connect as the owner.
+    migration_url: str = "postgresql://alyr:alyr_local@localhost:5432/alyr"
+    redis_url: str = "redis://localhost:6379/0"
+
+    # Where payment links point. The web app serves /pay/...
+    public_web_url: str = "http://localhost:3100"
 
     meta_app_secret: str = ""
     meta_verify_token: str = ""

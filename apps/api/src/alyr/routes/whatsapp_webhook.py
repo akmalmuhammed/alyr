@@ -27,9 +27,7 @@ async def receive(request: Request, background: BackgroundTasks) -> dict:
     if not verify_signature(get_settings().meta_app_secret, raw, signature):
         raise HTTPException(status_code=401, detail="bad signature")
 
-    handler = request.app.state.inbound
-    channel = request.app.state.meta_channel
     # Meta expects a fast 200, so handling runs after the response is sent.
     for message in parse_webhook(json.loads(raw)):
-        background.add_task(handler.handle, message, channel)
+        background.add_task(request.app.state.inbound.handle, message)
     return {"status": "ok"}

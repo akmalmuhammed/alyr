@@ -75,7 +75,7 @@ def test_missing_signature_is_rejected(client):
 
 def test_wrong_signature_is_rejected_and_nothing_is_sent(client):
     channel = RecordingChannel()
-    client.app.state.meta_channel = channel
+    client.app.state.outbound.channels["meta"] = channel
     response = signed_post(client, meta_payload(), secret="someone-else")
     assert response.status_code == 401
     assert channel.sent == []
@@ -83,7 +83,7 @@ def test_wrong_signature_is_rejected_and_nothing_is_sent(client):
 
 def test_valid_message_gets_a_reply(client):
     channel = RecordingChannel()
-    client.app.state.meta_channel = channel
+    client.app.state.outbound.channels["meta"] = channel
     response = signed_post(client, meta_payload())
     assert response.status_code == 200
     assert len(channel.sent) == 1
@@ -92,7 +92,7 @@ def test_valid_message_gets_a_reply(client):
 
 def test_duplicate_delivery_is_handled_once(client):
     channel = RecordingChannel()
-    client.app.state.meta_channel = channel
+    client.app.state.outbound.channels["meta"] = channel
     signed_post(client, meta_payload(message_id="wamid.dup"))
     signed_post(client, meta_payload(message_id="wamid.dup"))
     assert len(channel.sent) == 1
@@ -100,7 +100,7 @@ def test_duplicate_delivery_is_handled_once(client):
 
 def test_message_for_unknown_number_is_acknowledged_and_dropped(client):
     channel = RecordingChannel()
-    client.app.state.meta_channel = channel
+    client.app.state.outbound.channels["meta"] = channel
     response = signed_post(client, meta_payload(number_id="not-ours"))
     assert response.status_code == 200
     assert channel.sent == []
@@ -108,7 +108,7 @@ def test_message_for_unknown_number_is_acknowledged_and_dropped(client):
 
 def test_status_updates_without_messages_are_ignored(client):
     channel = RecordingChannel()
-    client.app.state.meta_channel = channel
+    client.app.state.outbound.channels["meta"] = channel
     payload = {"entry": [{"changes": [{"value": {"statuses": [{"status": "delivered"}]}}]}]}
     assert signed_post(client, payload).status_code == 200
     assert channel.sent == []
