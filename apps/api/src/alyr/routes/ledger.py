@@ -51,8 +51,7 @@ async def reminders(
     body: ReminderRun, request: Request, tenant_id: UUID = Depends(current_tenant)
 ) -> dict:
     async with request.app.state.db.tenant(tenant_id) as conn:
-        sent = await service.send_reminders(
+        return await service.send_reminders(
             conn, tenant_id, request.app.state.outbound,
             get_settings().public_web_url, body.min_days,
         )
-    return {"sent": sent}

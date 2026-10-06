@@ -60,7 +60,7 @@ async def reset_demo_data(db: Database) -> None:
     now = datetime.now(UTC)
     async with db.tenant(DEMO_TENANT_ID) as conn:
         for table in ("messages", "processed_messages", "payment_requests",
-                      "ledger_entries", "contacts", "tenant_modules"):
+                      "ledger_entries", "ledger_accounts", "contacts", "tenant_modules"):
             await conn.execute(f"delete from {table}")
         await conn.execute("insert into tenant_modules (module_key) values ('ledger')")
         await conn.execute(
@@ -73,7 +73,10 @@ async def reset_demo_data(db: Database) -> None:
             contact_id = await conn.fetchval(
                 "insert into contacts (phone, name, credit_limit, number_id) "
                 "values ($1, $2, $3, $4) returning id",
-                phone, name, rng.choice([500_000, 1_000_000, 2_000_000]), SIMULATOR_NUMBER_ID,
+                phone, name,
+                # Ahmed's limit is fixed so the over-limit warning can be shown on cue.
+                500_000 if index == 0 else rng.choice([1_000_000, 2_000_000, 3_000_000]),
+                SIMULATOR_NUMBER_ID,
             )
             if index == 0:
                 # Ahmed is the customer the demo script follows: QAR 1,850 owed, 41 days old.

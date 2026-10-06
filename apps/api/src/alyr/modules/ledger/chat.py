@@ -1,6 +1,7 @@
 """What the credit ledger says in a chat.
 
-Staff record sales and payments by message. Customers ask for their balance and pay.
+Staff record sales and payments by message. Customers ask for their balance, pay all or
+part of it, or promise a date.
 """
 
 import re
@@ -49,7 +50,7 @@ async def handle(
     text = western_digits(message.text).strip()
 
     if contact["role"] == "staff":
-        return [await _staff(conn, contact, message.from_number, text)]
+        return await _staff(conn, tenant_id, contact, message.from_number, text)
 
     lang = contact["lang"]
     if has_arabic(text) and lang != "ar":
@@ -57,15 +58,17 @@ async def handle(
         await conn.execute("update contacts set lang = 'ar' where id = $1", contact["id"])
 
     lowered = text.lower()
-    wants_pay = message.reply_id == "pay" or (
-        not message.reply_id and any(w in lowered for w in PAY_WORDS)
-    )
+    typed = not message.reply_id
+    wants_pay = message.reply_id == "pay" or (typed and any(w in lowered for w in PAY_WORDS))
     wants_balance = message.reply_id == "balance" or (
-        not message.reply_id and any(w in lowered for w in BALANCE_WORDS)
+        typed and any(w in lowered for w in BALANCE_WORDS)
     )
 
+    if message.reply_id == "promise":
+        return [await _promise(conn, contact, message.from_number, lang)]
     if wants_pay and not wants_balance:
-        return [await _pay(conn, tenant_id, contact, message.from_number, lang, web_url)]
+        part = parse_amount(text) if typed else None
+        return [await _pay(conn, tenant_id, contact, message.from_number, lang, web_url, part)]
     if wants_balance:
         return [await _balance(conn, contact, message.from_number, lang)]
     if message.reply_id == "human":
@@ -109,22 +112,45 @@ async def _balance(conn, contact, to: str, lang: str) -> OutboundMessage:
     )
 
 
-async def _pay(conn, tenant_id, contact, to: str, lang: str, web_url: str) -> OutboundMessage:
+async def _pay(
+    conn, tenant_id, contact, to: str, lang: str, web_url: str, part: int | None
+) -> OutboundMessage:
     balance = (await service.aged(conn, contact["id"])).balance
     if balance <= 0:
         body = "لا يوجد عليك مبلغ مستحق." if lang == "ar" else "You have nothing to pay."
         return OutboundMessage(to_number=to, body=body)
-    link = await service.create_payment_request(conn, tenant_id, contact["id"], balance, web_url)
-    body = (
-        f"لدفع {fmt_qar(balance)} افتح الرابط: {link}" if lang == "ar"
-        else f"To pay {fmt_qar(balance)}, open this link: {link}"
-    )
+    # "pay 500" pays part of the balance; never more than is owed.
+    amount = min(part, balance) if part else balance
+    link = await service.create_payment_request(conn, tenant_id, contact["id"], amount, web_url)
+    if lang == "ar":
+        body = f"لدفع {fmt_qar(amount)} افتح الرابط: {link}"
+        if amount == balance:
+            body += "\nلدفع جزء من المبلغ اكتب مثلاً: ادفع 500"
+    else:
+        body = f"To pay {fmt_qar(amount)}, open this link: {link}"
+        if amount == balance:
+            body += '\nTo pay part of it, send for example "pay 500".'
     return OutboundMessage(to_number=to, body=body)
 
 
-async def _staff(conn, staff, to: str, text: str) -> OutboundMessage:
-    def say(body: str) -> OutboundMessage:
-        return OutboundMessage(to_number=to, body=body)
+async def _promise(conn, contact, to: str, lang: str) -> OutboundMessage:
+    until = await service.promise_to_pay(conn, contact["id"])
+    if lang == "ar":
+        body = (
+            f"شكراً لك. سجلنا أنك ستدفع قبل {until:%d/%m}. "
+            "لن نرسل تذكيرات حتى ذلك التاريخ."
+        )
+    else:
+        body = (
+            f"Thank you. We have noted that you will pay by {until:%d %b}. "
+            "No reminders will be sent until then."
+        )
+    return OutboundMessage(to_number=to, body=body)
+
+
+async def _staff(conn, tenant_id, staff, to: str, text: str) -> list[OutboundMessage]:
+    def say(body: str) -> list[OutboundMessage]:
+        return [OutboundMessage(to_number=to, body=body)]
 
     match = _ENTRY.match(text)
     amount = parse_amount(match.group("rest")) if match else None
@@ -135,14 +161,13 @@ async def _staff(conn, staff, to: str, text: str) -> OutboundMessage:
         )
     name = match.group("name").strip()
     lowered = text.lower()
-    # A trailing or leading "paid" inside the name part still means a payment.
     kind = "payment" if any(w in lowered for w in PAYMENT_WORDS) else "sale"
     for word in PAYMENT_WORDS + SALE_WORDS:
         name = re.sub(rf"\b{re.escape(word)}\b", "", name, flags=re.IGNORECASE).strip()
 
     found = await conn.fetch(
-        "select id, name from contacts where role = 'customer' and name ilike $1 "
-        "order by name limit 4",
+        "select id, name, phone, lang, credit_limit from contacts "
+        "where role = 'customer' and name ilike $1 order by name limit 4",
         f"%{name}%",
     )
     if not found:
@@ -155,7 +180,22 @@ async def _staff(conn, staff, to: str, text: str) -> OutboundMessage:
     await service.add_entry(conn, customer["id"], kind, amount, created_by=staff["name"])
     balance = (await service.aged(conn, customer["id"])).balance
     what = "payment of" if kind == "payment" else "credit sale of"
-    return say(
+    reply = (
         f"Recorded: {customer['name']}, {what} {fmt_qar(amount)}. "
-        f"Balance is now {fmt_qar(balance)}."
+        f"Balance is now {fmt_qar(balance)}. The customer has been told."
     )
+    if kind == "sale" and 0 < customer["credit_limit"] < balance:
+        limit = fmt_qar(customer["credit_limit"])
+        reply += f"\nWarning: this is over their credit limit of {limit}."
+
+    shop = await conn.fetchrow("select name, name_ar from tenants where id = $1", tenant_id)
+    notice = OutboundMessage(
+        to_number=customer["phone"],
+        kind="template",
+        body=service.entry_notice(
+            customer["lang"], shop["name"], shop["name_ar"], kind, amount, balance
+        ),
+        template_name="entry_recorded",
+        template_category="utility",
+    )
+    return [*say(reply), notice]

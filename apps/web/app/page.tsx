@@ -13,12 +13,13 @@ type Message = {
 type Buckets = { d0_30: number; d31_60: number; d61_90: number; d90_plus: number };
 type Customer = {
   id: string; name: string; phone: string; balance: number; balance_text: string;
-  oldest_days: number; buckets: Buckets;
+  oldest_days: number; buckets: Buckets; over_limit: boolean; promised_until: string | null;
 };
 type Summary = {
   shop: { name: string; name_ar: string };
   outstanding_text: string; outstanding: number; buckets: Buckets;
   customers_owing: number; customers: Customer[];
+  collected_by_link_text: string; payments_by_link: number;
 };
 type Entry = { kind: string; amount_text: string; note: string; created_at: string };
 type Persona = { name: string; phone: string; kind: "staff" | "customer" };
@@ -30,7 +31,10 @@ const T = {
     ledger: "Credit ledger", sub: "Who owes what, and for how long", outstanding: "Outstanding",
     owing: (n: number) => `${n} customers owe money`, remind: "Send reminders",
     remindHint: "To customers whose oldest unpaid purchase is 30+ days old",
-    sent: (n: number) => `${n} reminders sent`, customer: "Customer", balance: "Balance", age: "Oldest debt",
+    sent: (n: number, skipped: number) =>
+      `${n} reminders sent` + (skipped ? `, ${skipped} skipped (promised a date or reminded in the last 3 days)` : ""),
+    collected: "Collected through payment links", payments: (n: number) => `${n} payments`,
+    promised: (d: string) => `Promised by ${d}`, overLimit: "Over credit limit", customer: "Customer", balance: "Balance", age: "Oldest debt",
     days: (n: number) => `${n} days`, settled: "Settled", entries: "Entries",
     buckets: ["0–30 days", "31–60 days", "61–90 days", "Over 90 days"],
     kinds: { sale: "Credit sale", payment: "Payment", adjustment: "Adjustment" } as Record<string, string>,
@@ -40,7 +44,10 @@ const T = {
     ledger: "دفتر الديون", sub: "من عليه مبلغ، ومنذ متى", outstanding: "إجمالي المستحق",
     owing: (n: number) => `${n} عميل عليهم مبالغ`, remind: "إرسال التذكيرات",
     remindHint: "للعملاء الذين مضى على أقدم فاتورة غير مدفوعة ٣٠ يوماً أو أكثر",
-    sent: (n: number) => `تم إرسال ${n} تذكير`, customer: "العميل", balance: "الرصيد", age: "أقدم دين",
+    sent: (n: number, skipped: number) =>
+      `تم إرسال ${n} تذكير` + (skipped ? `، وتم تخطي ${skipped} (وعدوا بتاريخ أو تم تذكيرهم خلال ٣ أيام)` : ""),
+    collected: "المحصّل عبر روابط الدفع", payments: (n: number) => `${n} دفعة`,
+    promised: (d: string) => `وعد بالدفع قبل ${d}`, overLimit: "تجاوز حد الائتمان", customer: "العميل", balance: "الرصيد", age: "أقدم دين",
     days: (n: number) => `${n} يوم`, settled: "مسدد", entries: "الحركات",
     buckets: ["٠–٣٠ يوم", "٣١–٦٠ يوم", "٦١–٩٠ يوم", "أكثر من ٩٠ يوم"],
     kinds: { sale: "بيع آجل", payment: "دفعة", adjustment: "تعديل" } as Record<string, string>,
@@ -158,12 +165,12 @@ export default function Demo() {
   async function remind() {
     setBusy(true);
     try {
-      const data = await getJson<{ sent: number }>("/api/ledger/reminders", {
+      const data = await getJson<{ sent: number; skipped_promised: number; skipped_recent: number }>("/api/ledger/reminders", {
         method: "POST",
         headers: { "content-type": "application/json" },
         body: JSON.stringify({ min_days: 30 }),
       });
-      setNote(t.sent(data.sent));
+      setNote(t.sent(data.sent, data.skipped_promised + data.skipped_recent));
       refresh();
     } finally {
       setBusy(false);
@@ -275,6 +282,7 @@ export default function Demo() {
 
           {summary && (
             <>
+              <div className="tiles">
               <div className="totals">
                 <span className="label">{t.outstanding}</span>
                 <span className="big num" dir="ltr">{summary.outstanding_text}</span>
@@ -292,6 +300,13 @@ export default function Demo() {
                     </div>
                   ))}
                 </div>
+              </div>
+
+              <div className="totals">
+                <span className="label">{t.collected}</span>
+                <span className="big num" dir="ltr">{summary.collected_by_link_text}</span>
+                <span>{t.payments(summary.payments_by_link)}</span>
+              </div>
               </div>
 
               <div className="actions">
@@ -312,11 +327,21 @@ export default function Demo() {
                   <tbody>
                     {summary.customers.map((c) => (
                       <tr key={c.id} className={c.id === selected ? "sel" : ""} onClick={() => setSelected(c.id)}>
-                        <td>{c.name}</td>
+                        <td>
+                          {c.name}
+                          {c.over_limit && <span className="pill p3 gap">{t.overLimit}</span>}
+                        </td>
                         <td className="r num" dir="ltr">{c.balance_text}</td>
                         <td>
                           {c.balance > 0 ? (
-                            <span className={`pill p${bucketIndex(c.oldest_days)}`}>{t.days(c.oldest_days)}</span>
+                            <>
+                              <span className={`pill p${bucketIndex(c.oldest_days)}`}>{t.days(c.oldest_days)}</span>
+                              {c.promised_until && (
+                                <span className="pill promise gap">
+                                  {t.promised(new Date(c.promised_until).toLocaleDateString("en-GB", { day: "2-digit", month: "short" }))}
+                                </span>
+                              )}
+                            </>
                           ) : (
                             <span className="pill none">{t.settled}</span>
                           )}
