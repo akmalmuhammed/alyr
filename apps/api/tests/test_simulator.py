@@ -167,7 +167,8 @@ def test_reminder_tone_follows_the_age_of_the_debt(client):
     summary = client.get("/api/ledger/summary").json()["customers"]
     oldest = max(summary, key=lambda c: c["oldest_days"])
     assert oldest["oldest_days"] >= 90
-    assert "Final notice" in conversation(client, oldest["phone"])[-1]["body"]
+    key = oldest["phone"] or oldest["user_id"]
+    assert "Final notice" in conversation(client, key)[-1]["body"]
     assert "friendly reminder" in conversation(client, AHMED_PHONE)[-1]["body"]
 
 
@@ -179,3 +180,63 @@ def test_money_collected_through_links_is_counted(client):
     summary = client.get("/api/ledger/summary").json()
     assert summary["collected_by_link_text"] == "QAR 500"
     assert summary["payments_by_link"] == 1
+
+
+# WhatsApp usernames (D-009): the demo shop has one customer with a user ID and no phone.
+
+
+def username_only(client):
+    customers = client.get("/api/ledger/summary").json()["customers"]
+    return next(c for c in customers if c["phone"] is None)
+
+
+def say_as_user(client, user_id, text="", reply_id=""):
+    response = client.post(
+        "/sim/messages", json={"from_user_id": user_id, "text": text, "reply_id": reply_id}
+    )
+    assert response.status_code == 200
+    return response.json()["messages"]
+
+
+def test_customer_without_a_phone_number_can_ask_be_reminded_and_pay(client):
+    customer = username_only(client)
+    assert customer["username"] == "cornichedecor"
+    assert customer["balance"] > 0
+
+    balance = say_as_user(client, customer["user_id"], "balance")[-1]
+    assert customer["balance_text"] in balance["body"]
+
+    client.post("/api/ledger/reminders", json={"min_days": 0})
+    reminder = conversation(client, customer["user_id"])[-1]
+    assert reminder["kind"] == "template"
+
+    tenant_id, payment_id = re.search(r"/pay/(\S+)/(\S+)", reminder["body"]).groups()
+    client.post(f"/api/pay/{tenant_id}/{payment_id}/complete")
+    assert username_only(client)["balance"] == 0
+    assert "Received" in conversation(client, customer["user_id"])[-1]["body"]
+
+
+def test_a_message_must_say_who_it_is_from(client):
+    assert client.post("/sim/messages", json={"text": "hello"}).status_code == 422
+
+
+def test_phone_contact_and_username_contact_merge_when_seen_together(client):
+    """Ahmed was created by phone. He first writes with only a user ID (a second record),
+    then a message carries both identifiers: the two records become one, ledger intact."""
+    new_id = "QA.55555555555555555555"
+    say_as_user(client, new_id, "hello")
+    customers = client.get("/api/ledger/summary").json()["customers"]
+    assert len(customers) == 26
+
+    response = client.post(
+        "/sim/messages",
+        json={"from_number": AHMED_PHONE, "from_user_id": new_id, "text": "balance"},
+    )
+    assert "QAR 1,850" in response.json()["messages"][-1]["body"]
+
+    customers = client.get("/api/ledger/summary").json()["customers"]
+    assert len(customers) == 25
+    merged = next(c for c in customers if c["phone"] == AHMED_PHONE)
+    assert merged["user_id"] == new_id
+    assert merged["balance_text"] == "QAR 1,850"
+    assert len(conversation(client, new_id)) == 4

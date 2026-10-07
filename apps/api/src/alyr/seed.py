@@ -31,7 +31,17 @@ CUSTOMERS = [
 ]
 
 
-async def ensure_demo_tenant(owner_dsn: str, meta_number_id: str = "") -> None:
+USERNAME_ONLY = "Corniche Decor"
+
+
+def demo_user_id(index: int) -> str:
+    """A made-up WhatsApp user ID in Meta's format: country code, dot, digits."""
+    return f"QA.{90000000000000000000 + index}"
+
+
+async def ensure_demo_tenant(
+    owner_dsn: str, meta_number_id: str = "", meta_waba_id: str = ""
+) -> None:
     """Create the tenant row and its numbers. Needs the owner role: the app role cannot
     write to the global tables."""
     conn = await asyncpg.connect(owner_dsn)
@@ -46,9 +56,10 @@ async def ensure_demo_tenant(owner_dsn: str, meta_number_id: str = "") -> None:
             numbers.append((meta_number_id, "meta"))
         for number_id, channel in numbers:
             await conn.execute(
-                "insert into channel_numbers (number_id, tenant_id, channel) values ($1, $2, $3) "
-                "on conflict (number_id) do nothing",
+                "insert into channel_numbers (number_id, tenant_id, channel, waba_id) "
+                "values ($1, $2, $3, $4) on conflict (number_id) do update set waba_id = $4",
                 number_id, DEMO_TENANT_ID, channel,
+                (meta_waba_id or None) if channel == "meta" else None,
             )
     finally:
         await conn.close()
@@ -69,11 +80,14 @@ async def reset_demo_data(db: Database) -> None:
             STAFF_PHONE, SIMULATOR_NUMBER_ID,
         )
         for index, name in enumerate(CUSTOMERS):
-            phone = f"974555{index + 1:05d}"
+            # One customer has a WhatsApp username and no visible phone number, so the
+            # username-only path is exercised in every demo and test run.
+            username_only = name == USERNAME_ONLY
+            phone = None if username_only else f"974555{index + 1:05d}"
             contact_id = await conn.fetchval(
-                "insert into contacts (phone, name, credit_limit, number_id) "
-                "values ($1, $2, $3, $4) returning id",
-                phone, name,
+                "insert into contacts (phone, wa_user_id, username, name, credit_limit, number_id) "
+                "values ($1, $2, $3, $4, $5, $6) returning id",
+                phone, demo_user_id(index), "cornichedecor" if username_only else None, name,
                 # Ahmed's limit is fixed so the over-limit warning can be shown on cue.
                 500_000 if index == 0 else rng.choice([1_000_000, 2_000_000, 3_000_000]),
                 SIMULATOR_NUMBER_ID,
@@ -100,7 +114,9 @@ async def reset_demo_data(db: Database) -> None:
 
 async def main() -> None:
     settings = get_settings()
-    await ensure_demo_tenant(settings.migration_url, settings.meta_phone_number_id)
+    await ensure_demo_tenant(
+        settings.migration_url, settings.meta_phone_number_id, settings.meta_waba_id
+    )
     db = Database(settings.database_url)
     await db.connect()
     try:

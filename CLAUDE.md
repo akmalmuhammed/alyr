@@ -41,7 +41,7 @@ These are not style preferences. Do not write code that breaks them, and stop an
 apps/api/                   FastAPI service (Python 3.13, managed with uv)
   migrations/               Plain SQL, applied in order by `python -m alyr.migrate`
   src/alyr/channels/        Message channels: Meta Cloud API and the local simulator, same interface
-  src/alyr/core/            Inbound path, outbound layer, Arabic normaliser
+  src/alyr/core/            Inbound path, contact identity (BSUID), outbound layer, Arabic normaliser
   src/alyr/modules/ledger/  Module B: credit ledger and reminders
   src/alyr/routes/          HTTP routes
   src/alyr/db.py            `Database.tenant(id)`: one transaction scoped to one tenant
