@@ -1,0 +1,16 @@
+{
+  // SPIKE: Alyr API as a Cloudflare Python Worker. See src/worker_entry.py.
+  "name": "alyr-api",
+  "main": "src/worker_entry.py",
+  "compatibility_date": "2026-10-07",
+  "compatibility_flags": ["python_workers"],
+  "vars": { "ALYR_ENV": "staging" },
+  "hyperdrive": [
+    {
+      "binding": "HYPERDRIVE",
+      "id": "REPLACE_WITH_HYPERDRIVE_ID",
+      // Local development talks to the Docker database directly.
+      "localConnectionString": "postgresql://alyr_app:alyr_app_local@localhost:5432/alyr"
+    }
+  ]
+}
