@@ -55,7 +55,7 @@ def test_step_2_customer_asks_for_balance_in_arabic_and_is_answered_in_arabic(cl
 def test_customer_gets_a_menu_for_anything_else(client):
     reply = say(client, AHMED_PHONE, "hello")[-1]
     assert reply["kind"] == "buttons"
-    assert [c["id"] for c in reply["payload"]["choices"]] == ["balance", "pay", "human"]
+    assert [c["id"] for c in reply["payload"]["choices"]] == ["order", "balance", "pay"]
 
 
 def test_a_customer_only_ever_sees_their_own_balance(client):

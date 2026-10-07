@@ -5,7 +5,7 @@ from alyr.channels.meta import UserIdUpdate
 from alyr.core import identity
 from alyr.core.outbound import Outbound
 from alyr.db import Database
-from alyr.modules.ledger import chat as ledger_chat
+from alyr.modules import router
 
 log = logging.getLogger("alyr.inbound")
 
@@ -54,8 +54,7 @@ class InboundHandler:
                 contact["id"], message.kind, message.text,
                 {"reply_id": message.reply_id} if message.reply_id else {},
             )
-            # Module B is the only module so far. Routing by enabled module comes with the next one.
-            replies = await ledger_chat.handle(conn, tenant_id, contact, message, self._web)
+            replies = await router.handle(conn, tenant_id, contact, message, self._web)
             for reply in replies:
                 await self._outbound.send(conn, reply)
         return True

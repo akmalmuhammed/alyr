@@ -22,8 +22,8 @@ SALE_WORDS = ("credit", "sale", "on account", "دين", "آجل", "اجل", "ح�
 _ENTRY = re.compile(r"^(?P<name>[^\d]+?)\s+(?P<rest>.*\d.*)$")
 
 MENU = {
-    "en": ("My balance", "Pay now", "Talk to staff"),
-    "ar": ("رصيدي", "ادفع الآن", "تحدث مع موظف"),
+    "en": ("Place an order", "My balance", "Pay now"),
+    "ar": ("اطلب الآن", "رصيدي", "ادفع الآن"),
 }
 
 
@@ -31,8 +31,8 @@ def _menu(to: UUID, lang: str, body: str) -> OutboundMessage:
     titles = MENU[lang]
     return OutboundMessage(
         to=to, kind="buttons", body=body,
-        choices=(Choice("balance", titles[0]), Choice("pay", titles[1]),
-                 Choice("human", titles[2])),
+        choices=(Choice("order", titles[0]), Choice("balance", titles[1]),
+                 Choice("pay", titles[2])),
     )
 
 
