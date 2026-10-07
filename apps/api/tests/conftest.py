@@ -14,17 +14,33 @@ NUMBER_ID = "100200300"
 
 HOST = os.environ.get("ALYR_TEST_DB_HOST", "localhost:5432")
 OWNER_SERVER = f"postgresql://alyr:alyr_local@{HOST}"
-OWNER_DSN = f"{OWNER_SERVER}/alyr_test"
-APP_DSN = f"postgresql://alyr_app:alyr_app_local@{HOST}/alyr_test"
+
+# By default the suite uses the local Docker database. To run it against any other
+# PostgreSQL (a hosted one, for example), set both of these to an empty test database.
+EXTERNAL = bool(os.environ.get("ALYR_TEST_OWNER_DSN") and os.environ.get("ALYR_TEST_APP_DSN"))
+OWNER_DSN = os.environ.get("ALYR_TEST_OWNER_DSN") or f"{OWNER_SERVER}/alyr_test"
+APP_DSN = (
+    os.environ.get("ALYR_TEST_APP_DSN")
+    or f"postgresql://alyr_app:alyr_app_local@{HOST}/alyr_test"
+)
 
 
 async def _fresh_database() -> None:
-    conn = await asyncpg.connect(f"{OWNER_SERVER}/postgres")
-    try:
-        await conn.execute("drop database if exists alyr_test with (force)")
-        await conn.execute("create database alyr_test")
-    finally:
-        await conn.close()
+    if EXTERNAL:
+        # Hosted databases rarely allow dropping a database; empty the schema instead.
+        conn = await asyncpg.connect(OWNER_DSN)
+        try:
+            await conn.execute("drop schema public cascade")
+            await conn.execute("create schema public")
+        finally:
+            await conn.close()
+    else:
+        conn = await asyncpg.connect(f"{OWNER_SERVER}/postgres")
+        try:
+            await conn.execute("drop database if exists alyr_test with (force)")
+            await conn.execute("create database alyr_test")
+        finally:
+            await conn.close()
     await migrate(OWNER_DSN, APP_DSN)
 
 
