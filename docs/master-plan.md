@@ -154,10 +154,11 @@ The tracker is the clearest example. Bid security, visa renewals, insurance and 
 6. **Broadcasts.** To customers who agreed, with a cost preview and automatic opt-out.
 7. **Arabic and English**, right to left, on a phone.
 8. **Sign-in and roles.** Code sent by WhatsApp. Owner, manager, agent, accountant.
+9. **Order link** (added 7 Oct, decision D-016). Products on one shareable page, a cart, and checkout that lands in the chat. Pay by link or put it on account.
 
 ### 6.2 What is deliberately not in it
 
-Flow builder, catalog, bookings, payroll, AI auto-replies beyond the ledger's commands, SMS, public API, native mobile app.
+Flow builder, product options and stock, delivery zones, sync with WhatsApp's own catalog, bookings, payroll, AI auto-replies beyond the ledger's commands, SMS, public API, native mobile app.
 
 ### 6.3 A day with it
 

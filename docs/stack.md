@@ -22,7 +22,10 @@ Checked 7 October 2026. Free tiers change often; re-check a row before relying o
 | Development | Docker Desktop, local PostgreSQL 16 and Redis 7 | Unlimited | None | — | — | In use |
 | WhatsApp test traffic | Meta test number | Free; up to 5 recipient phones | Cannot message real customers | Merchant's own number via Embedded Signup | Phase 2 exit test | Planned |
 | Webhook during development | Cloudflare Tunnel | Free | Needs a small program installed on the laptop; address changes unless a domain is attached | A hosted server | Phase 2 hosting exists | Planned |
-| Hosting, database, storage | See decision D-013 | — | — | — | — | Founder to choose |
+| Web app hosting | Vercel Hobby | Free | Terms forbid commercial use | Vercel Pro (about USD 20 a month) | First paying customer | Planned |
+| Database (hosted) | Neon Free | 0.5 GB, sleeps after 5 idle minutes | Outside Qatar; about 100 ms further away; no salary or QID data until ALY-51 | Azure PostgreSQL in Qatar Central | First paying customer, or 0.4 GB used, or Product 2 starts | Planned |
+| API and worker hosting | Founder's laptop through Cloudflare Tunnel | Free | Only up while the laptop is on | Azure Qatar Central on startup credits | Alpha merchants need it always on | Planned |
+| Tunnel, Vercel and Neon command-line tools | cloudflared, vercel, neonctl | Free | None | — | — | Installed 7 Oct |
 | DNS and TLS | Cloudflare Free | Unlimited DNS, free certificates | None that matter | — | — | Planned |
 | Domain name | Any registrar | **Not free**: about USD 10 to 15 a year for .com, more for .qa | — | — | — | Needed before Meta app review |
 | Error tracking | Sentry Developer | 5,000 errors a month, 1 user | One seat; short history | Sentry Team | A second person needs access | Planned |
@@ -37,11 +40,9 @@ Checked 7 October 2026. Free tiers change often; re-check a row before relying o
 
 | Tool | Why not |
 |---|---|
-| Vercel Hobby | Its terms forbid commercial use |
 | Render Free, Koyeb Free | The service sleeps when idle. Meta retries a webhook that is not answered promptly, so customers would wait or messages would arrive late |
 | Fly.io | No free tier for new accounts |
 | Supabase Free | Pauses after a week idle; pulls us toward its own auth and client libraries |
-| Neon Free | Fine for previews. 0.5 GB and sleep after 5 minutes; no Middle East region |
 | Gemini or Groq free API tiers | Free-tier prompts may be used for training and read by reviewers. Not for real customer messages |
 | Google Cloud Run free tier | Free usage only in three US regions |
 | Unofficial WhatsApp libraries | Numbers get banned |

@@ -18,9 +18,12 @@ Status: **Accepted** (in force), **Proposed** (waiting for the founder), **Super
 | D-010 | Jobs and outbox live in PostgreSQL | Accepted |
 | D-011 | Free tiers first; everything runs from Docker Compose so it can move | Accepted |
 | D-012 | No AI model is required for Product 1 | Accepted |
-| D-013 | Where production runs until the first 10 customers | Proposed |
+| D-013 | Where things run until the first 10 customers | Accepted |
 | D-014 | Branch per issue, pull request, green CI before merge | Accepted |
 | D-015 | WhatsApp is the mobile app; no native app, no offline engine | Accepted |
+| D-016 | Product 1 includes a slim order-and-pay link | Accepted |
+| D-017 | Launch pricing: flat per number with seats included | Proposed |
+| D-018 | Company registration starts now, not when the product is ready | Proposed |
 
 ---
 
@@ -127,9 +130,9 @@ The ledger's chat commands, balance questions and payment intents work from rule
 **Revisit when.** The rule-based test set's accuracy on real merchant messages is not good enough, and the legal opinion (ALY-51) says where a model may run.
 
 ## D-013 · Where production runs until the first 10 customers
-**Date** 7 Oct 2026 · **Status** Proposed, founder to choose
+**Date** 7 Oct 2026 · **Status** Accepted (founder chose on 7 Oct; see "Chosen" below)
 
-Options, all at no cost:
+Options considered, all at no cost:
 
 | Option | Where | For | Against |
 |---|---|---|---|
@@ -137,7 +140,14 @@ Options, all at no cost:
 | B. Oracle Cloud Always Free | Dubai or Jeddah | Free indefinitely, commercial use allowed, never sleeps. 2 cores and 12 GB runs everything | Not in Qatar. We run PostgreSQL and backups ourselves. Free capacity is sometimes unavailable at signup. Idle machines can be reclaimed |
 | C. Free developer platforms (Neon, Render, Upstash) | Europe | Fastest to set up | Not in the region. Free services sleep, and a sleeping server misses Meta's webhook deadline. Limits are tight |
 
-Recommendation: apply for A now, since it only waits. Develop locally meanwhile. If credits have not arrived when Phase 2's exit test needs a public server, use B as the bridge. C only for throwaway previews.
+**Chosen, in three stages.**
+
+1. **Now, for development and the Meta test number:** everything on the founder's laptop in Docker, reached by Meta through a Cloudflare Tunnel. Costs nothing and needs no account beyond Cloudflare. Works only while the laptop is on.
+2. **For demos and the alpha, until credits arrive:** web app on Vercel (free plan while there is no revenue; its terms forbid commercial use, so upgrade to the paid plan with the first paying customer), database on Neon's free PostgreSQL, DNS and certificates on Cloudflare. The API and worker still need an always-on home; that is the gap in this stage, filled by stage 3 or, if credits are late, by the laptop tunnel or Oracle's free server.
+3. **Target:** Azure Qatar Central on Microsoft for Startups credits. Moving the database is a dump and restore, because we use only standard PostgreSQL.
+
+**Neon and Qatar's privacy law.** We found no rule that stops a private company hosting SMB customer data outside Qatar: the law's general principle is against restricting cross-border flows, and localisation duties fall on government bodies and some regulated sectors. That is our reading, not a lawyer's (ALY-51 is still open). Two limits follow until it is confirmed: only the fictional demo shop and consenting alpha merchants go on Neon, and no salary or QID data goes there at all, which means Product 2 waits for Qatar hosting or the written opinion.
+**Neon's free limits.** 0.5 GB and the database sleeps after five idle minutes, waking in about a second. No Middle East region, so expect roughly 100 ms extra per query from Qatar. Swap trigger: storage near 0.4 GB, or the first paying customer, whichever comes first.
 
 ## D-014 · Branch, pull request, green CI
 **Date** 7 Oct 2026 · **Status** Accepted
@@ -154,3 +164,35 @@ Staff use WhatsApp itself plus an installable web workspace. No native app, no o
 
 **Why.** WhatsApp already works on a bad connection and queues messages. Building on it is the product's premise.
 **Revisit when.** A paying segment needs something a web app cannot do (for example background location).
+
+## D-016 · Product 1 includes a slim order-and-pay link
+**Date** 7 Oct 2026 · **Status** Accepted (founder's request)
+
+Product 1 gains "Order link": a merchant's products on one shareable page, a cart, and checkout that lands the order in the chat and the workspace. The customer pays by link or, if they have a credit account, puts it on account, which writes to the ledger.
+
+**Why.** The founder needs a live demo in which a customer buys and pays in under a minute; it closes sales better than a ledger alone. It reuses what exists: contacts, payment requests, the ledger and the outbound layer.
+**Kept out, deliberately.** Product options and variants, stock counts, delivery zones and fees, customer-specific price lists, and sync with WhatsApp's own catalog. Those stay in Phase 5 with the full ordering product.
+**Risk.** Product 1 is now three things (inbox, ledger, orders). If the alpha slips, orders is the part to cut back, not the inbox.
+
+## D-017 · Launch pricing
+**Date** 7 Oct 2026 · **Status** Proposed (founder said "ok" to the range; exact figures to confirm)
+
+Flat monthly price per connected WhatsApp number, with seats included rather than charged per person:
+
+| Plan | Monthly | Includes |
+|---|---|---|
+| Starter | QAR 490 | 1 number, 3 seats, inbox and ledger |
+| Team | QAR 890 | 1 number, 8 seats, adds order link and broadcasts |
+| Extra seat | QAR 40 | Beyond the plan's seats |
+| Setup | QAR 2,500 once | Number connection, data load, staff training |
+
+**Why seats are included.** Small shops share logins when seats cost money, which breaks assignment and the audit trail. Three covers an owner and two counter staff; eight covers a service business with a dispatcher and technicians. Competitors that sell to this market price the same way.
+**Revisit when.** Five merchants have paid, or two prospects in a row object to the same number.
+
+## D-018 · Company registration starts now
+**Date** 7 Oct 2026 · **Status** Proposed (the founder plans to register once the product is ready)
+
+Recommendation: start the Qatar commercial registration now, in parallel with building.
+
+**Why.** Three things on the path to the first customer need a registered company and cannot be started without one: Meta's business verification and Tech Provider review (which is what lets a merchant connect their own number), a payment provider merchant account for Alyr's own billing, and the startup credit programmes. Each has its own queue. If registration starts when the product is ready, the product then waits weeks for paperwork.
+**What works without it.** Everything on the simulator, and the Meta test number with up to five phones. That is enough for demos, not for a merchant's real number.
