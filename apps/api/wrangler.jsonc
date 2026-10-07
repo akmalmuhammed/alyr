@@ -8,7 +8,7 @@
   "hyperdrive": [
     {
       "binding": "HYPERDRIVE",
-      "id": "REPLACE_WITH_HYPERDRIVE_ID",
+      "id": "033345e9b8f446a4ab88251acfd4a1ca",
       // Local development talks to the Docker database directly.
       "localConnectionString": "postgresql://alyr_app:alyr_app_local@localhost:5432/alyr"
     }

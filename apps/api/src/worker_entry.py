@@ -27,13 +27,6 @@ def _configure(env) -> None:
     _configured = True
 
 
-@app.middleware("http")
-async def use_worker_env(request: Request, call_next):
-    if not _configured:
-        _configure(request.scope["env"])
-    return await call_next(request)
-
-
 @app.get("/__spike/rls")
 async def rls_check(request: Request) -> dict:
     """What a tenant-scoped query sees, then what a query with no tenant sees straight
@@ -47,4 +40,14 @@ async def rls_check(request: Request) -> dict:
     return {"scoped": scoped, "unscoped": unscoped, "setting_after": setting}
 
 
-Default = asgi.entrypoint(app)
+class WithWorkerEnv:
+    """Plain ASGI wrapper (not Starlette middleware, which nests tasks in a way the
+    Worker runtime rejects). Reads the Hyperdrive binding on the first request."""
+
+    async def __call__(self, scope, receive, send):
+        if not _configured and scope.get("env") is not None:
+            _configure(scope["env"])
+        await app(scope, receive, send)
+
+
+Default = asgi.entrypoint(WithWorkerEnv())

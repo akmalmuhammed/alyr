@@ -24,6 +24,7 @@ Status: **Accepted** (in force), **Proposed** (waiting for the founder), **Super
 | D-016 | Product 1 includes a slim order-and-pay link | Accepted |
 | D-017 | Launch pricing: flat per number with seats included | Proposed |
 | D-018 | Company registration starts now, not when the product is ready | Proposed |
+| D-019 | The API does not run on Cloudflare Python Workers (for now) | Accepted |
 
 ---
 
@@ -196,3 +197,22 @@ Recommendation: start the Qatar commercial registration now, in parallel with bu
 
 **Why.** Three things on the path to the first customer need a registered company and cannot be started without one: Meta's business verification and Tech Provider review (which is what lets a merchant connect their own number), a payment provider merchant account for Alyr's own billing, and the startup credit programmes. Each has its own queue. If registration starts when the product is ready, the product then waits weeks for paperwork.
 **What works without it.** Everything on the simulator, and the Meta test number with up to five phones. That is enough for demos, not for a merchant's real number.
+
+## D-019 · The API does not run on Cloudflare Python Workers, for now
+**Date** 7 Oct 2026 · **Status** Accepted, on the evidence of a deployed trial (pull request 4)
+
+We deployed the unchanged API to a Cloudflare Python Worker on the free plan, with the database on Neon reached through Hyperdrive, and measured it.
+
+| Check | Result |
+|---|---|
+| Runs unchanged (FastAPI, asyncpg, pydantic) | Yes |
+| Code size against the 3 MiB free limit | 2.69 MiB compressed. Passes with about 10% to spare |
+| Tenant separation through Hyperdrive's pooler | Held in 43 of 43 successful rounds: a scoped query saw 26 contacts and the next unscoped query saw 0 |
+| CPU per request against the 10 ms free limit | **553 to 787 ms** for the ledger summary. Fifty times over |
+| Reliability | **About 10% of requests failed**, including the trivial health check, with the runtime's own error: "Cannot enter a promising task from inside another running promising task. This is a bug in Pyodide." |
+
+**Why not.** A webhook endpoint that drops one request in ten is not usable, and the cause is inside Cloudflare's Python runtime, not our code. The CPU figure means the free plan would throttle us under any real traffic; the paid plan would absorb it but the requests are slow.
+**Also learned.** Hyperdrive caches read queries by default. Our tenant is set per transaction, not in the query text, so a cached result could be served to another tenant. Caching must stay disabled on any Hyperdrive configuration we ever use. Cloudflare's Python tooling does not run natively on Windows; it was run in a Linux container.
+**Kept from the trial.** `Database` can open one connection per use; the test suite can target any PostgreSQL; `uvicorn` is in its own dependency group; Neon is proven for our schema.
+**Still good uses of Cloudflare.** DNS, certificates, the tunnel, and possibly the web app. Cloudflare Containers would run our Docker image unchanged on the USD 5 plan, and is the Cloudflare option to try next if we want one.
+**Revisit when.** Cloudflare fixes the runtime error and Python CPU cost falls, or we rewrite the webhook intake as a small JavaScript Worker in front of the API.
