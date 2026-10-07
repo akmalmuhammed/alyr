@@ -11,7 +11,7 @@ Review this list at the end of every phase. Add a row when something bites us.
 | # | What goes wrong | How it shows up | Our guard | Status |
 |---|---|---|---|---|
 | 1 | **"Done" that is not done** | The agent reports success; the feature only works on the happy path, or was never run | Every issue has a "Done when" test. The agent runs the feature, not just the tests, and reports what it did not verify. Phase exit tests run on a real number | ✅ |
-| 2 | **Demo-quality internals** | Great first screen, fragile underneath: no retries, no idempotency, lost messages | Job queue and outbox (D-010). Idempotent webhooks and payments, each with a test that sends the event twice | 🟡 queue not built yet (ALY-50) |
+| 2 | **Demo-quality internals** | Great first screen, fragile underneath: no retries, no idempotency, lost messages | Job queue and outbox (D-010). Idempotent webhooks and payments, each with a test that sends the event twice | ✅ |
 | 3 | **Tenant data leak** | A query without a tenant filter shows one merchant another's customers | The database enforces it (D-002). A test fails if a new table has no policy | ✅ |
 | 4 | **Secrets in git or in chat** | A token is committed, pasted into a prompt, or read by the agent | `.env` is ignored. A pre-commit hook blocks token shapes. CI scans every push. Claude is denied permission to read `.env` files. The founder types secrets into `.env` himself | ✅ |
 | 5 | **Destructive commands** | A database or branch is wiped by one confident command | Claude's permissions deny force-push, volume deletion and `terraform destroy`, and ask before hard resets. Tests use their own `alyr_test` database. Production credentials are never on the laptop | 🟡 no production yet; rule to keep when it exists |

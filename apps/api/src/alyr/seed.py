@@ -87,7 +87,7 @@ async def reset_demo_data(db: Database) -> None:
     rng = random.Random(7)
     now = datetime.now(UTC)
     async with db.tenant(DEMO_TENANT_ID) as conn:
-        for table in ("messages", "processed_messages", "order_items", "payment_requests",
+        for table in ("jobs", "messages", "processed_messages", "order_items", "payment_requests",
                       "orders", "products", "ledger_entries", "ledger_accounts", "contacts",
                       "tenant_modules"):
             await conn.execute(f"delete from {table}")

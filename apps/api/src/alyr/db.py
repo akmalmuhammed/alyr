@@ -26,6 +26,9 @@ class Database:
         self._dsn = dsn
         self._connect_kwargs = connect_kwargs
         self.pool: asyncpg.Pool | None = None
+        # Called after each tenant transaction commits. The app uses it to run the
+        # jobs that transaction queued, when jobs run in-process.
+        self.after_commit = None
 
     def use_single_connections(self, **connect_kwargs) -> None:
         """Switch to one connection per use, with these asyncpg.connect arguments."""
@@ -62,6 +65,9 @@ class Database:
         async with self._connection() as conn, conn.transaction():
             await conn.execute("select set_config('app.tenant_id', $1, true)", str(tenant_id))
             yield conn
+        # Only reached when the transaction committed; an exception skips it.
+        if self.after_commit is not None:
+            await self.after_commit()
 
     @asynccontextmanager
     async def unscoped(self) -> AsyncIterator[asyncpg.Connection]:

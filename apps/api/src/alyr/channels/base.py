@@ -79,4 +79,7 @@ class Channel(Protocol):
 
     async def send(
         self, from_number_id: str, message: OutboundMessage, address: Address
-    ) -> None: ...
+    ) -> str | None:
+        """Deliver the message. Return the channel's own ID for it, if it has one, so
+        later delivery reports can be matched to it."""
+        ...

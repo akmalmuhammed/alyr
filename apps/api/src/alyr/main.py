@@ -5,9 +5,11 @@ from fastapi import FastAPI
 from alyr.channels.meta import MetaChannel
 from alyr.channels.simulator import SimulatorChannel
 from alyr.config import get_settings
-from alyr.core.inbound import InboundHandler
-from alyr.core.outbound import Outbound
+from alyr.core.inbound import INBOUND, InboundHandler
+from alyr.core.jobs import JobRunner
+from alyr.core.outbound import SEND, Outbound
 from alyr.db import Database
+from alyr.routes import jobs as jobs_routes
 from alyr.routes import ledger, orders, pay, simulator, store, whatsapp_webhook
 
 
@@ -26,9 +28,16 @@ def create_app() -> FastAPI:
         {
             "simulator": SimulatorChannel(),
             "meta": MetaChannel(settings.meta_access_token, settings.meta_graph_version),
-        }
+        },
+        app.state.db,
     )
     app.state.inbound = InboundHandler(app.state.db, app.state.outbound, settings.public_web_url)
+
+    app.state.jobs = JobRunner(app.state.db, settings.jobs_backoff_seconds)
+    app.state.jobs.register(SEND, app.state.outbound.deliver, app.state.outbound.gave_up)
+    app.state.jobs.register(INBOUND, app.state.inbound.process)
+    if settings.jobs_inline:
+        app.state.db.after_commit = app.state.jobs.drain
 
     @app.get("/health")
     async def health() -> dict:
@@ -39,6 +48,7 @@ def create_app() -> FastAPI:
     app.include_router(pay.router)
     app.include_router(orders.router)
     app.include_router(store.router)
+    app.include_router(jobs_routes.router)
     if settings.env != "production":
         app.include_router(simulator.router)
     return app

@@ -101,6 +101,37 @@ def parse_user_id_updates(payload: dict) -> list[UserIdUpdate]:
     return found
 
 
+@dataclass(frozen=True)
+class DeliveryStatus:
+    """Meta's report on a message we sent: sent, delivered, read or failed."""
+
+    number_id: str
+    message_id: str
+    status: str
+    error: str = ""
+
+
+def parse_statuses(payload: dict) -> list[DeliveryStatus]:
+    found: list[DeliveryStatus] = []
+    for entry in payload.get("entry", []):
+        for change in entry.get("changes", []):
+            value = change.get("value", {})
+            number_id = value.get("metadata", {}).get("phone_number_id", "")
+            for status in value.get("statuses", []):
+                if not (status.get("id") and status.get("status")):
+                    continue
+                errors = status.get("errors") or [{}]
+                found.append(
+                    DeliveryStatus(
+                        number_id=number_id,
+                        message_id=status["id"],
+                        status=status["status"],
+                        error=errors[0].get("title", ""),
+                    )
+                )
+    return found
+
+
 def to_graph_payload(message: OutboundMessage, address: Address) -> dict:
     base: dict = {"messaging_product": "whatsapp", "recipient_type": "individual"}
     # Meta takes a phone number in `to`, or a business-scoped user ID in `recipient`.
@@ -142,7 +173,7 @@ class MetaChannel:
 
     async def send(
         self, from_number_id: str, message: OutboundMessage, address: Address
-    ) -> None:
+    ) -> str | None:
         async with httpx.AsyncClient(timeout=10) as client:
             response = await client.post(
                 f"{self._base}/{from_number_id}/messages",
@@ -150,3 +181,5 @@ class MetaChannel:
                 json=to_graph_payload(message, address),
             )
             response.raise_for_status()
+            sent = response.json().get("messages") or [{}]
+            return sent[0].get("id")

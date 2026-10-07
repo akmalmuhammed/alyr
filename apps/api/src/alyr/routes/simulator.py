@@ -33,7 +33,7 @@ async def _conversation(request: Request, key: str) -> dict:
     column = "wa_user_id" if _is_user_id(key) else "phone"
     async with request.app.state.db.tenant(DEMO_TENANT_ID) as conn:
         rows = await conn.fetch(
-            "select m.direction, m.kind, m.body, m.payload, m.created_at "
+            "select m.direction, m.kind, m.body, m.payload, m.status, m.created_at "
             f"from messages m join contacts c on c.id = m.contact_id where c.{column} = $1 "
             "order by m.created_at",
             key,
@@ -50,7 +50,7 @@ async def send(body: SimulatedMessage, request: Request) -> dict:
     """Act as a phone sending a WhatsApp message; returns the conversation so far."""
     if not (body.from_number or body.from_user_id):
         raise HTTPException(status_code=422, detail="give from_number or from_user_id")
-    await request.app.state.inbound.handle(
+    await request.app.state.inbound.accept(
         InboundMessage(
             channel="simulator",
             message_id=f"sim-{uuid4()}",
