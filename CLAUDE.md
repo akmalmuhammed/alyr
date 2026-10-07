@@ -2,6 +2,8 @@
 
 WhatsApp-native operating tools for small businesses in Qatar. One multi-tenant core, with modules switched on per merchant.
 
+What we are building and why, including what we decided not to build: [docs/master-plan.md](docs/master-plan.md). Read it before proposing new features.
+
 Plan and tasks live in Linear, team `Alyrtech`, project `Alyr Launch`. Work one issue per branch; name the branch after the issue (`aly-12-...`). Phases, not dates: a phase is finished when its demo works.
 
 ## Hard rules

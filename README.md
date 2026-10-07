@@ -2,7 +2,8 @@
 
 WhatsApp-native operating tools for small businesses in Qatar.
 
-- Plan: Linear project "Alyr Launch" (team Alyrtech)
+- Master plan: [docs/master-plan.md](docs/master-plan.md)
+- Tasks: Linear project "Alyr Launch" (team Alyrtech)
 - Rules the code must follow: [CLAUDE.md](CLAUDE.md)
 - Core platform spec: [specs/000-core-platform/spec.md](specs/000-core-platform/spec.md)
 
