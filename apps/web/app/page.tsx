@@ -9,12 +9,14 @@ type Message = {
   body: string;
   payload: { choices?: Choice[]; template?: string; category?: string };
   status?: string;
+  error?: string | null;
   created_at: string;
 };
 type Buckets = { d0_30: number; d31_60: number; d61_90: number; d90_plus: number };
 type Customer = {
   id: string; name: string; phone: string | null; balance: number; balance_text: string;
   oldest_days: number; buckets: Buckets; over_limit: boolean; promised_until: string | null;
+  opted_out: boolean;
 };
 type Summary = {
   shop: { name: string; name_ar: string };
@@ -42,9 +44,9 @@ const T = {
     owing: (n: number) => `${n} customers owe money`, remind: "Send reminders",
     remindHint: "To customers whose oldest unpaid purchase is 30+ days old",
     sent: (n: number, skipped: number) =>
-      `${n} reminders sent` + (skipped ? `, ${skipped} skipped (promised a date or reminded in the last 3 days)` : ""),
+      `${n} reminders sent` + (skipped ? `, ${skipped} skipped (promised a date, reminded in the last 3 days, or said stop)` : ""),
     collected: "Collected through payment links", payments: (n: number) => `${n} payments`,
-    promised: (d: string) => `Promised by ${d}`, overLimit: "Over credit limit", customer: "Customer", balance: "Balance", age: "Oldest debt",
+    promised: (d: string) => `Promised by ${d}`, overLimit: "Over credit limit", optedOut: "Said stop", customer: "Customer", balance: "Balance", age: "Oldest debt",
     days: (n: number) => `${n} days`, settled: "Settled", entries: "Entries",
     buckets: ["0–30 days", "31–60 days", "61–90 days", "Over 90 days"],
     kinds: { sale: "Credit sale", payment: "Payment", adjustment: "Adjustment" } as Record<string, string>,
@@ -61,9 +63,9 @@ const T = {
     owing: (n: number) => `${n} عميل عليهم مبالغ`, remind: "إرسال التذكيرات",
     remindHint: "للعملاء الذين مضى على أقدم فاتورة غير مدفوعة ٣٠ يوماً أو أكثر",
     sent: (n: number, skipped: number) =>
-      `تم إرسال ${n} تذكير` + (skipped ? `، وتم تخطي ${skipped} (وعدوا بتاريخ أو تم تذكيرهم خلال ٣ أيام)` : ""),
+      `تم إرسال ${n} تذكير` + (skipped ? `، وتم تخطي ${skipped} (وعدوا بتاريخ أو تم تذكيرهم خلال ٣ أيام أو طلبوا الإيقاف)` : ""),
     collected: "المحصّل عبر روابط الدفع", payments: (n: number) => `${n} دفعة`,
-    promised: (d: string) => `وعد بالدفع قبل ${d}`, overLimit: "تجاوز حد الائتمان", customer: "العميل", balance: "الرصيد", age: "أقدم دين",
+    promised: (d: string) => `وعد بالدفع قبل ${d}`, overLimit: "تجاوز حد الائتمان", optedOut: "طلب الإيقاف", customer: "العميل", balance: "الرصيد", age: "أقدم دين",
     days: (n: number) => `${n} يوم`, settled: "مسدد", entries: "الحركات",
     buckets: ["٠–٣٠ يوم", "٣١–٦٠ يوم", "٦١–٩٠ يوم", "أكثر من ٩٠ يوم"],
     kinds: { sale: "بيع آجل", payment: "دفعة", adjustment: "تعديل" } as Record<string, string>,
@@ -77,6 +79,12 @@ const T = {
   },
 };
 
+const BLOCK_REASON: Record<string, string> = {
+  opted_out: "customer said stop",
+  no_consent: "customer has not agreed to messages",
+  no_marketing_consent: "customer has not agreed to offers",
+  window_closed: "more than 24 hours since their last message",
+};
 const NEXT_STATUS: Record<string, string> = { new: "confirmed", confirmed: "ready", ready: "done" };
 
 const qar = (dirhams: number) =>
@@ -195,12 +203,14 @@ export default function Demo() {
   async function remind() {
     setBusy(true);
     try {
-      const data = await getJson<{ sent: number; skipped_promised: number; skipped_recent: number }>("/api/ledger/reminders", {
+      const data = await getJson<{
+        sent: number; skipped_promised: number; skipped_recent: number; skipped_opted_out: number;
+      }>("/api/ledger/reminders", {
         method: "POST",
         headers: { "content-type": "application/json" },
         body: JSON.stringify({ min_days: 30 }),
       });
-      setNote(t.sent(data.sent, data.skipped_promised + data.skipped_recent));
+      setNote(t.sent(data.sent, data.skipped_promised + data.skipped_recent + data.skipped_opted_out));
       refresh();
     } finally {
       setBusy(false);
@@ -276,6 +286,9 @@ export default function Demo() {
                   </div>
                 )}
                 {m.status === "failed" && <span className="tag bad" dir="ltr">Not delivered</span>}
+                {m.status === "blocked" && (
+                  <span className="tag bad" dir="ltr">Not sent: {BLOCK_REASON[m.error ?? ""] ?? "blocked"}</span>
+                )}
                 {m.status === "queued" && <span className="tag" dir="ltr">Sending…</span>}
                 {m.kind === "template" && (
                   <span className="tag" dir="ltr">
@@ -415,6 +428,7 @@ export default function Demo() {
                         <td>
                           {c.name}
                           {c.over_limit && <span className="pill p3 gap">{t.overLimit}</span>}
+                          {c.opted_out && <span className="pill none gap">{t.optedOut}</span>}
                         </td>
                         <td className="r num" dir="ltr">{c.balance_text}</td>
                         <td>

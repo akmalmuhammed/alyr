@@ -1,18 +1,32 @@
+from dataclasses import dataclass
 from uuid import UUID
 
 import asyncpg
 
 from alyr.channels.base import Address, Channel, Choice, OutboundMessage
-from alyr.core import jobs
+from alyr.core import consent, jobs
 from alyr.db import Database
 
 SEND = "send_message"
 
 
+@dataclass(frozen=True)
+class SendResult:
+    """What the outbound layer did with a message. `blocked` is the reason it was
+    refused (window_closed, no_consent, opted_out, no_marketing_consent), or None."""
+
+    message_id: UUID
+    blocked: str | None = None
+
+
 class Outbound:
     """The only way a message leaves Alyr. Modules hand messages here; they never call a
-    channel themselves. Consent, the 24-hour window and messaging limits are enforced
-    here when they are built (ALY-40, ALY-41).
+    channel themselves. Meta's rules are enforced here, in one place: free-form text only
+    inside the 24-hour window, templates only to customers who agreed, nothing to a
+    customer who said stop. Messaging limits come next (ALY-41).
+
+    A refused message is still recorded, marked blocked with the reason, so the shop
+    can see that something was not sent and why.
 
     `send` records the message and queues a job in the caller's transaction. The job
     runner calls `deliver` afterwards, so a slow or failing channel never loses a
@@ -23,11 +37,18 @@ class Outbound:
         self.channels = channels
         self._db = db
 
-    async def send(self, conn: asyncpg.Connection, message: OutboundMessage) -> UUID:
-        """Queue a message to a contact. `conn` must be tenant-scoped."""
-        exists = await conn.fetchval("select 1 from contacts where id = $1", message.to)
-        if not exists:
+    async def send(self, conn: asyncpg.Connection, message: OutboundMessage) -> SendResult:
+        """Queue a message to a contact, or record why it may not be sent.
+        `conn` must be tenant-scoped."""
+        contact = await conn.fetchrow(
+            "select consent_service, consent_marketing, "
+            "coalesce(last_inbound_at > now() - interval '24 hours', false) as window_open "
+            "from contacts where id = $1",
+            message.to,
+        )
+        if contact is None:
             raise LookupError("no such contact for this tenant")
+        blocked = consent.refusal(contact, message)
         payload: dict = {}
         if message.choices:
             payload["choices"] = [{"id": c.id, "title": c.title} for c in message.choices]
@@ -35,12 +56,14 @@ class Outbound:
             payload["template"] = message.template_name
             payload["category"] = message.template_category
         message_id = await conn.fetchval(
-            "insert into messages (contact_id, direction, kind, body, payload, status) "
-            "values ($1, 'out', $2, $3, $4, 'queued') returning id",
+            "insert into messages (contact_id, direction, kind, body, payload, status, error) "
+            "values ($1, 'out', $2, $3, $4, $5, $6) returning id",
             message.to, message.kind, message.body, payload,
+            "blocked" if blocked else "queued", blocked,
         )
-        await jobs.enqueue(conn, SEND, {"message_id": str(message_id)})
-        return message_id
+        if not blocked:
+            await jobs.enqueue(conn, SEND, {"message_id": str(message_id)})
+        return SendResult(message_id, blocked)
 
     async def deliver(self, tenant_id: UUID, payload: dict) -> None:
         """Job handler: hand one queued message to its channel."""

@@ -5,7 +5,7 @@ from uuid import UUID
 
 from alyr.channels.base import InboundMessage
 from alyr.channels.meta import DeliveryStatus, UserIdUpdate
-from alyr.core import identity, jobs
+from alyr.core import consent, identity, jobs
 from alyr.core.outbound import Outbound
 from alyr.db import Database
 from alyr.modules import router
@@ -78,7 +78,16 @@ class InboundHandler:
                 {"reply_id": message.reply_id} if message.reply_id else {},
                 message.message_id,
             )
-            replies = await router.handle(conn, tenant_id, contact, message, self._web)
+            shop = await conn.fetchrow(
+                "select name, name_ar from tenants where id = $1", tenant_id
+            )
+            arabic_name = contact["lang"] == "ar" and shop["name_ar"]
+            shop_name = shop["name_ar"] if arabic_name else shop["name"]
+            reply = await consent.on_inbound(conn, contact, message, shop_name)
+            if reply is not None:
+                replies = [reply]
+            else:
+                replies = await router.handle(conn, tenant_id, contact, message, self._web)
             for reply in replies:
                 await self._outbound.send(conn, reply)
 
