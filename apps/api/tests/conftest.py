@@ -1,4 +1,5 @@
 import asyncio
+import contextlib
 import os
 
 import asyncpg
@@ -50,7 +51,8 @@ def database():
 
 
 @pytest.fixture
-def client(monkeypatch):
+def client_factory(monkeypatch):
+    """Build an app after the test has set any environment it needs."""
     monkeypatch.setenv("ALYR_ENV", "local")
     monkeypatch.setenv("ALYR_DATABASE_URL", APP_DSN)
     monkeypatch.setenv("ALYR_MIGRATION_URL", OWNER_DSN)
@@ -58,10 +60,21 @@ def client(monkeypatch):
     monkeypatch.setenv("ALYR_META_APP_SECRET", APP_SECRET)
     monkeypatch.setenv("ALYR_META_VERIFY_TOKEN", VERIFY_TOKEN)
     monkeypatch.setenv("ALYR_META_PHONE_NUMBER_ID", NUMBER_ID)
-    get_settings.cache_clear()
-    from alyr.main import create_app
+    stack = contextlib.ExitStack()
 
-    with TestClient(create_app()) as test_client:
+    def build() -> TestClient:
+        get_settings.cache_clear()
+        from alyr.main import create_app
+
+        test_client = stack.enter_context(TestClient(create_app()))
         assert test_client.post("/sim/reset").status_code == 200
-        yield test_client
+        return test_client
+
+    yield build
+    stack.close()
     get_settings.cache_clear()
+
+
+@pytest.fixture
+def client(client_factory):
+    return client_factory()

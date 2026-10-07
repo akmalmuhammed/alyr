@@ -111,6 +111,8 @@ A `jobs` table claimed with `FOR UPDATE SKIP LOCKED`, written in the same transa
 **Why.** A message row and its send job commit together or not at all, with no broker to run. It also costs nothing extra, which matters under D-011.
 **Rejected.** Redis-based queues (a job can be lost between the database commit and the enqueue); Celery or a hosted queue (more to operate, not free).
 **Limit.** Comfortable to a few hundred jobs a second, far beyond the first hundred merchants.
+**Built 7 Oct (ALY-50).** Sends and inbound webhooks are jobs. Retries double from 5 seconds, six attempts, then the job is parked and the message is marked failed. A job left running by a dead process is requeued after five minutes. Delivery is at least once: if the process dies after Meta accepts a message and before we record it, the retry can send it twice. Meta offers no way to make a send idempotent, so that window is accepted.
+**How it runs.** Locally and in tests the API runs jobs itself right after each request (`ALYR_JOBS_INLINE=true`). In production that is switched off and `python -m alyr.worker` runs them.
 **Revisit when.** Queue latency grows under load, or we need fan-out to many workers.
 
 ## D-011 · Free tiers first, built to move

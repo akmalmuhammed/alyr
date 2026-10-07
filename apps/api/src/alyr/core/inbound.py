@@ -1,44 +1,66 @@
 import logging
+from dataclasses import asdict
+from datetime import datetime
+from uuid import UUID
 
 from alyr.channels.base import InboundMessage
-from alyr.channels.meta import UserIdUpdate
-from alyr.core import identity
+from alyr.channels.meta import DeliveryStatus, UserIdUpdate
+from alyr.core import identity, jobs
 from alyr.core.outbound import Outbound
 from alyr.db import Database
 from alyr.modules import router
 
 log = logging.getLogger("alyr.inbound")
 
+INBOUND = "inbound_message"
+
 
 class InboundHandler:
-    """Shared path for every customer message: find the tenant, drop duplicates, work out
-    who is writing, record the message, let the module answer, send the answers."""
+    """Shared path for every customer message.
+
+    `accept` is all the webhook does: find the tenant, drop duplicates, queue a job.
+    `process` is the job: work out who is writing, record the message, let a module
+    answer, and queue the answers.
+    """
 
     def __init__(self, db: Database, outbound: Outbound, public_web_url: str) -> None:
         self._db = db
         self._outbound = outbound
         self._web = public_web_url
 
-    async def handle(self, message: InboundMessage) -> bool:
-        """Return True if the message was processed, False if it was dropped."""
+    async def _tenant_for(self, number_id: str):
         async with self._db.unscoped() as conn:
-            tenant_id = await conn.fetchval(
-                "select tenant_id from channel_numbers where number_id = $1",
-                message.to_number_id,
+            return await conn.fetchval(
+                "select tenant_id from channel_numbers where number_id = $1", number_id
             )
+
+    async def accept(self, message: InboundMessage) -> bool:
+        """Return True if the message was queued, False if it was dropped."""
+        tenant_id = await self._tenant_for(message.to_number_id)
         if tenant_id is None:
             # Content is deliberately not logged: it is a customer's message.
             log.warning("message for unknown number id %s dropped", message.to_number_id)
             return False
-
+        queued = False
         async with self._db.tenant(tenant_id) as conn:
             first_time = await conn.fetchval(
                 "insert into processed_messages (message_id) values ($1) "
                 "on conflict do nothing returning true",
                 message.message_id,
             )
-            if not first_time:
-                return False
+            if first_time:
+                payload = asdict(message)
+                payload["received_at"] = message.received_at.isoformat()
+                await jobs.enqueue(conn, INBOUND, payload)
+                queued = True
+        return queued
+
+    async def process(self, tenant_id: UUID, payload: dict) -> None:
+        """Job handler for one inbound message."""
+        fields = dict(payload)
+        fields["received_at"] = datetime.fromisoformat(fields["received_at"])
+        message = InboundMessage(**fields)
+        async with self._db.tenant(tenant_id) as conn:
             contact = await identity.resolve_contact(
                 conn, message.from_number, message.from_user_id,
                 message.username, message.profile_name,
@@ -49,15 +71,26 @@ class InboundHandler:
                 message.to_number_id, contact["id"],
             )
             await conn.execute(
-                "insert into messages (contact_id, direction, kind, body, payload) "
-                "values ($1, 'in', $2, $3, $4)",
+                "insert into messages (contact_id, direction, kind, body, payload, status, "
+                "                      wa_message_id) "
+                "values ($1, 'in', $2, $3, $4, 'received', $5)",
                 contact["id"], message.kind, message.text,
                 {"reply_id": message.reply_id} if message.reply_id else {},
+                message.message_id,
             )
             replies = await router.handle(conn, tenant_id, contact, message, self._web)
             for reply in replies:
                 await self._outbound.send(conn, reply)
-        return True
+
+    async def handle_status(self, status: DeliveryStatus) -> bool:
+        """A delivery report from the channel: sent, delivered, read or failed."""
+        tenant_id = await self._tenant_for(status.number_id)
+        if tenant_id is None:
+            return False
+        async with self._db.tenant(tenant_id) as conn:
+            return await self._outbound.record_status(
+                conn, status.message_id, status.status, status.error
+            )
 
     async def handle_user_id_update(self, update: UserIdUpdate) -> bool:
         """A customer's WhatsApp user ID changed. Return True if a contact was moved."""

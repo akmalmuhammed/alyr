@@ -11,5 +11,5 @@ class SimulatorChannel:
 
     async def send(
         self, from_number_id: str, message: OutboundMessage, address: Address
-    ) -> None:
+    ) -> str | None:
         return None

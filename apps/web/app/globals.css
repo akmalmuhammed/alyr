@@ -173,3 +173,5 @@ tbody tr.norow:hover { background: transparent; }
 .cart-total { display: flex; justify-content: space-between; gap: 12px; }
 .cart-actions { display: flex; gap: 8px; flex-wrap: wrap; }
 .cart-actions .btn { flex: 1; padding: 11px; font-size: 16px; }
+
+.bub .tag.bad { color: var(--bad); }

@@ -8,6 +8,7 @@ type Message = {
   kind: string;
   body: string;
   payload: { choices?: Choice[]; template?: string; category?: string };
+  status?: string;
   created_at: string;
 };
 type Buckets = { d0_30: number; d31_60: number; d61_90: number; d90_plus: number };
@@ -274,6 +275,8 @@ export default function Demo() {
                     ))}
                   </div>
                 )}
+                {m.status === "failed" && <span className="tag bad" dir="ltr">Not delivered</span>}
+                {m.status === "queued" && <span className="tag" dir="ltr">Sending…</span>}
                 {m.kind === "template" && (
                   <span className="tag" dir="ltr">
                     Template · {m.payload.category} · charged when sent outside the 24-hour window

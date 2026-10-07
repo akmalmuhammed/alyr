@@ -66,6 +66,7 @@ uv run python -m alyr.seed                # load or reset the demo shop
 uv run pytest                             # uses its own alyr_test database
 uv run ruff check .
 uv run uvicorn alyr.main:app --port 8000
+uv run python -m alyr.worker              # only when ALYR_JOBS_INLINE=false
 cd ../web && pnpm dev                     # http://localhost:3100 (3000 is used by another project)
 ```
 
@@ -78,7 +79,7 @@ cd ../web && pnpm dev                     # http://localhost:3100 (3000 is used 
 ## Conventions
 
 - Modules receive `InboundMessage` and return `OutboundMessage` objects. They do not know which channel is in use, so everything works against the simulator first.
-- Every outgoing message goes through `core/outbound.py`, which also records it in `messages`.
+- Every outgoing message goes through `core/outbound.py`, which records it and queues a job; `core/jobs.py` delivers it with retries. Never call a channel or a slow outside service directly from a request: enqueue a job.
 - Compliance outputs (SIF files, UBL invoices) are tested against golden files in `fixtures/`, byte for byte.
 - User-facing text exists in Arabic and English. No hard-coded strings in UI code.
 - Amounts are integers in dirhams (1 QAR = 100 dirhams). Never floats.

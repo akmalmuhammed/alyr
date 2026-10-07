@@ -14,6 +14,12 @@ class Settings(BaseSettings):
     migration_url: str = "postgresql://alyr:alyr_local@localhost:5432/alyr"
     redis_url: str = "redis://localhost:6379/0"
 
+    # Run queued jobs inside the API process after each request. Convenient locally
+    # and in tests. In production set this to false and run `python -m alyr.worker`.
+    jobs_inline: bool = True
+    # First retry delay; it doubles on each further attempt.
+    jobs_backoff_seconds: float = 5.0
+
     # Where payment links point. The web app serves /pay/...
     public_web_url: str = "http://localhost:3100"
 
