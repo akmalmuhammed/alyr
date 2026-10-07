@@ -175,3 +175,26 @@ tbody tr.norow:hover { background: transparent; }
 .cart-actions .btn { flex: 1; padding: 11px; font-size: 16px; }
 
 .bub .tag.bad { color: var(--bad); }
+
+/* shared inbox */
+.inbox { display: grid; grid-template-columns: minmax(200px, 280px) 1fr; gap: 12px; align-items: start; }
+.inbox-list { display: flex; flex-direction: column; gap: 6px; min-width: 0; }
+.seg { display: flex; gap: 4px; margin-bottom: 4px; }
+.seg button { flex: 1; padding: 5px 8px; border: 1px solid var(--line); border-radius: 6px; background: var(--surface); color: var(--muted); font-size: 13.5px; }
+.seg button[aria-pressed="true"] { color: var(--fg); border-color: var(--accent); background: var(--accent-soft); }
+.conv { display: flex; flex-direction: column; gap: 3px; text-align: start; padding: 9px 10px; background: var(--surface); border: 1px solid var(--line); border-radius: 8px; min-width: 0; }
+.conv.sel { border-color: var(--accent); }
+.conv-top { display: flex; justify-content: space-between; gap: 8px; align-items: center; }
+.conv-last { color: var(--muted); font-size: 13.5px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.conv-flags { display: flex; gap: 4px; flex-wrap: wrap; }
+.conv-flags:empty { display: none; }
+.inbox-thread { background: var(--surface); border: 1px solid var(--line); border-radius: 8px; min-width: 0; display: flex; flex-direction: column; }
+.inbox-thread > .empty-note { border: 0; margin: 0; }
+.thread-head { display: flex; align-items: center; gap: 8px; padding: 10px 12px; border-bottom: 1px solid var(--line); flex-wrap: wrap; }
+.thread-head .mono { display: block; color: var(--muted); font-size: 12.5px; }
+.thread-msgs { flex: none; max-height: 46vh; background: var(--bg); }
+.thread-note { margin: 0; padding: 6px 12px; font-size: 12.5px; color: var(--muted); border-top: 1px solid var(--line); }
+.thread-note.warn { color: var(--warn); background: var(--warn-soft); }
+.bub .who { display: block; font-size: 11px; color: var(--muted); margin-bottom: 2px; }
+.composer input:disabled { opacity: .55; }
+@media (max-width: 720px) { .inbox { grid-template-columns: 1fr; } }
