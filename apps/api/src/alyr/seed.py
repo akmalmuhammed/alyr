@@ -32,6 +32,23 @@ CUSTOMERS = [
 
 
 USERNAME_ONLY = "Corniche Decor"
+DEMO_SLUG = "al-noor"
+
+# (name, Arabic name, category, price in dirhams). Invented catalogue and prices.
+PRODUCTS = [
+    ("Cable 1.5 mm, 100 m roll", "كيبل 1.5 مم، لفة 100 م", "Cables", 14_500),
+    ("Cable 2.5 mm, 100 m roll", "كيبل 2.5 مم، لفة 100 م", "Cables", 22_500),
+    ("Cable 4 mm, 100 m roll", "كيبل 4 مم، لفة 100 م", "Cables", 36_000),
+    ("Flexible conduit 20 mm, 50 m", "خرطوم مرن 20 مم، 50 م", "Cables", 8_500),
+    ("Breaker 16 A single pole", "قاطع 16 أمبير", "Breakers", 1_800),
+    ("Breaker 32 A single pole", "قاطع 32 أمبير", "Breakers", 2_400),
+    ("Breaker 63 A three pole", "قاطع 63 أمبير ثلاثي", "Breakers", 9_500),
+    ("Distribution board 12 way", "لوحة توزيع 12 خط", "Breakers", 18_500),
+    ("LED panel 60 x 60, 40 W", "لوحة ليد 60×60، 40 واط", "Lighting", 4_500),
+    ("LED flood light 100 W", "كشاف ليد 100 واط", "Lighting", 7_500),
+    ("Socket 13 A double", "مقبس 13 أمبير مزدوج", "Fittings", 1_600),
+    ("Switch 1 gang", "مفتاح إنارة مفرد", "Fittings", 900),
+]
 
 
 def demo_user_id(index: int) -> str:
@@ -47,9 +64,9 @@ async def ensure_demo_tenant(
     conn = await asyncpg.connect(owner_dsn)
     try:
         await conn.execute(
-            "insert into tenants (id, name, name_ar) values ($1, $2, $3) "
-            "on conflict (id) do nothing",
-            DEMO_TENANT_ID, "Al Noor Electricals", "النور للكهربائيات",
+            "insert into tenants (id, name, name_ar, slug) values ($1, $2, $3, $4) "
+            "on conflict (id) do update set slug = $4",
+            DEMO_TENANT_ID, "Al Noor Electricals", "النور للكهربائيات", DEMO_SLUG,
         )
         numbers = [(SIMULATOR_NUMBER_ID, "simulator")]
         if meta_number_id:
@@ -70,10 +87,19 @@ async def reset_demo_data(db: Database) -> None:
     rng = random.Random(7)
     now = datetime.now(UTC)
     async with db.tenant(DEMO_TENANT_ID) as conn:
-        for table in ("messages", "processed_messages", "payment_requests",
-                      "ledger_entries", "ledger_accounts", "contacts", "tenant_modules"):
+        for table in ("messages", "processed_messages", "order_items", "payment_requests",
+                      "orders", "products", "ledger_entries", "ledger_accounts", "contacts",
+                      "tenant_modules"):
             await conn.execute(f"delete from {table}")
-        await conn.execute("insert into tenant_modules (module_key) values ('ledger')")
+        await conn.execute(
+            "insert into tenant_modules (module_key) values ('ledger'), ('orders')"
+        )
+        for sort, (name, name_ar, category, price) in enumerate(PRODUCTS):
+            await conn.execute(
+                "insert into products (name, name_ar, category, price, sort) "
+                "values ($1, $2, $3, $4, $5)",
+                name, name_ar, category, price, sort,
+            )
         await conn.execute(
             "insert into contacts (phone, name, role, number_id) "
             "values ($1, 'Yusuf (counter)', 'staff', $2)",

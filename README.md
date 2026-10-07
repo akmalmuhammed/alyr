@@ -45,6 +45,8 @@ Needs Docker Desktop, Python 3.13 with [uv](https://docs.astral.sh/uv/), and Nod
 4. Press **Send reminders**. Ahmed's chat receives a reminder with a payment link.
 5. Open the link and press **Pay**. The chat confirms and the balance drops to zero.
 6. Press **العربية** to switch the workspace to Arabic.
+7. As Ahmed, tap **Place an order**. Open the link, add items, and choose **Put on my account** or **Pay now**.
+8. In the workspace open the **Orders** tab and move the order along. Ahmed is told at each step.
 
 **Reset demo** (top right) puts everything back.
 

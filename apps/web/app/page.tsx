@@ -21,6 +21,10 @@ type Summary = {
   customers_owing: number; customers: Customer[];
   collected_by_link_text: string; payments_by_link: number;
 };
+type OrderRow = {
+  id: string; number: number; status: string; payment: string; total_text: string;
+  customer: string; items: { name: string; quantity: number; line_text: string }[];
+};
 type Entry = { kind: string; amount_text: string; note: string; created_at: string };
 // `key` is what the simulator addresses the phone by: its number, or its WhatsApp user ID
 // when the customer uses a username and shows no number.
@@ -44,6 +48,12 @@ const T = {
     buckets: ["0–30 days", "31–60 days", "61–90 days", "Over 90 days"],
     kinds: { sale: "Credit sale", payment: "Payment", adjustment: "Adjustment" } as Record<string, string>,
     lang: "العربية",
+    tabLedger: "Credit ledger", tabOrders: "Orders", ordersSub: "Placed through the order link",
+    noOrders: "No orders yet. In the chat, tap \"Place an order\" as a customer.",
+    orderNo: "Order", items: "Items", payment: "Payment", status: "Status",
+    pay: { unpaid: "Not paid", paid: "Paid", on_account: "On account" } as Record<string, string>,
+    st: { new: "New", confirmed: "Confirmed", ready: "Ready", done: "Done", cancelled: "Cancelled" } as Record<string, string>,
+    next: { new: "Confirm", confirmed: "Mark ready", ready: "Mark done" } as Record<string, string>,
   },
   ar: {
     ledger: "دفتر الديون", sub: "من عليه مبلغ، ومنذ متى", outstanding: "إجمالي المستحق",
@@ -57,8 +67,16 @@ const T = {
     buckets: ["٠–٣٠ يوم", "٣١–٦٠ يوم", "٦١–٩٠ يوم", "أكثر من ٩٠ يوم"],
     kinds: { sale: "بيع آجل", payment: "دفعة", adjustment: "تعديل" } as Record<string, string>,
     lang: "English",
+    tabLedger: "دفتر الديون", tabOrders: "الطلبات", ordersSub: "الطلبات الواردة من رابط الطلب",
+    noOrders: "لا توجد طلبات بعد. في المحادثة اضغط \"اطلب الآن\" كعميل.",
+    orderNo: "الطلب", items: "الأصناف", payment: "الدفع", status: "الحالة",
+    pay: { unpaid: "غير مدفوع", paid: "مدفوع", on_account: "على الحساب" } as Record<string, string>,
+    st: { new: "جديد", confirmed: "مؤكد", ready: "جاهز", done: "منجز", cancelled: "ملغي" } as Record<string, string>,
+    next: { new: "تأكيد", confirmed: "جاهز للاستلام", ready: "تم الإنجاز" } as Record<string, string>,
   },
 };
+
+const NEXT_STATUS: Record<string, string> = { new: "confirmed", confirmed: "ready", ready: "done" };
 
 const qar = (dirhams: number) =>
   "QAR " + (dirhams / 100).toLocaleString("en", { maximumFractionDigits: 2 });
@@ -96,6 +114,8 @@ export default function Demo() {
   const [summary, setSummary] = useState<Summary | null>(null);
   const [selected, setSelected] = useState<string | null>(null);
   const [entries, setEntries] = useState<Entry[]>([]);
+  const [tab, setTab] = useState<"ledger" | "orders">("ledger");
+  const [orders, setOrders] = useState<OrderRow[]>([]);
   const [lang, setLang] = useState<"en" | "ar">("en");
   const [note, setNote] = useState("");
   const [error, setError] = useState("");
@@ -127,6 +147,7 @@ export default function Demo() {
       ]);
       setSummary(s);
       setMessages(c.messages);
+      setOrders((await getJson<{ orders: OrderRow[] }>("/api/orders")).orders);
       if (selected) {
         const e = await getJson<{ entries: Entry[] }>(`/api/ledger/customers/${selected}/entries`);
         setEntries(e.entries);
@@ -185,6 +206,15 @@ export default function Demo() {
     }
   }
 
+  async function advance(order: OrderRow) {
+    await getJson(`/api/orders/${order.id}/status`, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ status: NEXT_STATUS[order.status] }),
+    });
+    refresh();
+  }
+
   async function reset() {
     setBusy(true);
     try {
@@ -202,7 +232,7 @@ export default function Demo() {
   const suggestions =
     persona?.kind === "staff"
       ? ["Ahmed 450 credit", "Ahmed paid 200"]
-      : ["كم حسابي؟", "hello", "balance"];
+      : ["كم حسابي؟", "hello", "I want to order"];
   const total = summary ? Math.max(summary.outstanding, 1) : 1;
   const selectedCustomer = summary?.customers.find((c) => c.id === selected);
 
@@ -282,14 +312,57 @@ export default function Demo() {
           {error && <div className="error" dir="ltr">{error}</div>}
           <div className="work-head">
             <div>
-              <h1>{t.ledger}</h1>
-              <p>{lang === "ar" ? summary?.shop.name_ar : summary?.shop.name} · {t.sub}</p>
+              <div className="tabs" role="tablist">
+                <button role="tab" aria-selected={tab === "ledger"} onClick={() => setTab("ledger")}>{t.tabLedger}</button>
+                <button role="tab" aria-selected={tab === "orders"} onClick={() => setTab("orders")}>
+                  {t.tabOrders}{orders.length ? ` (${orders.length})` : ""}
+                </button>
+              </div>
+              <p>
+                {lang === "ar" ? summary?.shop.name_ar : summary?.shop.name} · {tab === "ledger" ? t.sub : t.ordersSub}
+              </p>
             </div>
             <span className="spacer" />
             <button className="btn" onClick={() => setLang(lang === "en" ? "ar" : "en")}>{t.lang}</button>
           </div>
 
-          {summary && (
+          {tab === "orders" && (
+            orders.length === 0 ? (
+              <p className="empty-note">{t.noOrders}</p>
+            ) : (
+              <div className="tablewrap">
+                <table>
+                  <thead>
+                    <tr>
+                      <th>{t.orderNo}</th>
+                      <th>{t.items}</th>
+                      <th className="r">{t.balance}</th>
+                      <th>{t.payment}</th>
+                      <th>{t.status}</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {orders.map((o) => (
+                      <tr key={o.id} className="norow">
+                        <td><b className="num">#{o.number}</b><br />{o.customer}</td>
+                        <td>{o.items.map((i, k) => <div key={k}>{i.quantity} × {i.name}</div>)}</td>
+                        <td className="r num" dir="ltr">{o.total_text}</td>
+                        <td><span className={`pill ${o.payment === "unpaid" ? "p1" : "p0"}`}>{t.pay[o.payment]}</span></td>
+                        <td>
+                          <span className="pill none">{t.st[o.status]}</span>
+                          {NEXT_STATUS[o.status] && (
+                            <button className="btn small" onClick={() => advance(o)}>{t.next[o.status]}</button>
+                          )}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )
+          )}
+
+          {tab === "ledger" && summary && (
             <>
               <div className="tiles">
               <div className="totals">

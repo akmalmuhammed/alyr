@@ -8,7 +8,7 @@ from alyr.config import get_settings
 from alyr.core.inbound import InboundHandler
 from alyr.core.outbound import Outbound
 from alyr.db import Database
-from alyr.routes import ledger, pay, simulator, whatsapp_webhook
+from alyr.routes import ledger, orders, pay, simulator, store, whatsapp_webhook
 
 
 def create_app() -> FastAPI:
@@ -37,6 +37,8 @@ def create_app() -> FastAPI:
     app.include_router(whatsapp_webhook.router)
     app.include_router(ledger.router)
     app.include_router(pay.router)
+    app.include_router(orders.router)
+    app.include_router(store.router)
     if settings.env != "production":
         app.include_router(simulator.router)
     return app

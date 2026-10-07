@@ -43,6 +43,8 @@ apps/api/                   FastAPI service (Python 3.13, managed with uv)
   src/alyr/channels/        Message channels: Meta Cloud API and the local simulator, same interface
   src/alyr/core/            Inbound path, contact identity (BSUID), outbound layer, Arabic normaliser
   src/alyr/modules/ledger/  Module B: credit ledger and reminders
+  src/alyr/modules/orders/  Order link: products, orders, pay or put on account
+  src/alyr/modules/router.py  Which module answers a message
   src/alyr/routes/          HTTP routes
   src/alyr/db.py            `Database.tenant(id)`: one transaction scoped to one tenant
   src/alyr/seed.py          The demo shop (fictional)

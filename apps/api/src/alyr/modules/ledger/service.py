@@ -63,7 +63,7 @@ async def summary(conn: asyncpg.Connection) -> dict:
         by_contact.setdefault(r["contact_id"], []).append((r["kind"], r["amount"], r["created_at"]))
     collected = await conn.fetchrow(
         "select coalesce(sum(amount), 0)::bigint as total, count(*) as payments "
-        "from payment_requests where status = 'paid'"
+        "from payment_requests where status = 'paid' and order_id is null"
     )
     now = datetime.now(UTC)
     out, totals = [], Aged()
@@ -225,17 +225,30 @@ async def complete_payment(
     """
     row = await conn.fetchrow(
         "update payment_requests set status = 'paid', paid_at = now() "
-        "where id = $1 and status = 'pending' returning contact_id, amount, provider",
+        "where id = $1 and status = 'pending' "
+        "returning contact_id, amount, provider, order_id",
         payment_id,
     )
     if row is None:
         exists = await conn.fetchval("select 1 from payment_requests where id = $1", payment_id)
         return "paid" if exists else "not_found"
+    lang = await conn.fetchval("select lang from contacts where id = $1", row["contact_id"])
+    if row["order_id"] is not None:
+        # Paying for an order settles the order. It was never a debt, so the ledger
+        # is not touched.
+        number = await conn.fetchval(
+            "update orders set payment = 'paid' where id = $1 returning number", row["order_id"]
+        )
+        body = (
+            f"تم استلام {fmt_qar(row['amount'])} للطلب رقم {number}. شكراً لك." if lang == "ar"
+            else f"Received {fmt_qar(row['amount'])} for order #{number}. Thank you."
+        )
+        await outbound.send(conn, OutboundMessage(to=row["contact_id"], body=body))
+        return "paid"
     await add_entry(
         conn, row["contact_id"], "payment", row["amount"],
         note="Paid by payment link", created_by=row["provider"],
     )
-    lang = await conn.fetchval("select lang from contacts where id = $1", row["contact_id"])
     balance = (await aged(conn, row["contact_id"])).balance
     if lang == "ar":
         body = f"تم استلام {fmt_qar(row['amount'])}. رصيدك الآن {fmt_qar(balance)}. شكراً لك."
