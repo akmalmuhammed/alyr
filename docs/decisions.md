@@ -25,6 +25,7 @@ Status: **Accepted** (in force), **Proposed** (waiting for the founder), **Super
 | D-017 | Launch pricing: flat per number with seats included | Proposed |
 | D-018 | Company registration starts now, not when the product is ready | Proposed |
 | D-019 | The API does not run on Cloudflare Python Workers (for now) | Accepted |
+| D-020 | Consent and the 24-hour window are enforced in the outbound layer | Accepted |
 
 ---
 
@@ -220,3 +221,25 @@ We deployed the unchanged API to a Cloudflare Python Worker on the free plan, wi
 **Kept from the trial.** `Database` can open one connection per use; the test suite can target any PostgreSQL; `uvicorn` is in its own dependency group; Neon is proven for our schema.
 **Still good uses of Cloudflare.** DNS, certificates, the tunnel, and possibly the web app. Cloudflare Containers would run our Docker image unchanged on the USD 5 plan, and is the Cloudflare option to try next if we want one.
 **Revisit when.** Cloudflare fixes the runtime error and Python CPU cost falls, or we rewrite the webhook intake as a small JavaScript Worker in front of the API.
+
+## D-020 · Consent and the 24-hour window are enforced in the outbound layer
+**Date** 7 Oct 2026 · **Status** Accepted · Linear ALY-40
+
+Every message passes one check in `core/outbound.py` before it is queued. A refused message is still recorded, marked blocked with the reason.
+
+| Message | Allowed when | Otherwise |
+|---|---|---|
+| Free-form text, buttons, lists | The customer wrote to the shop in the last 24 hours | Blocked: `window_closed` |
+| Utility or authentication template | The customer has agreed to service messages and has not said stop | Blocked: `no_consent` or `opted_out` |
+| Marketing template | The customer has separately agreed to marketing | Blocked: `no_marketing_consent` |
+
+**How consent is gained and lost.**
+- Writing to the shop first counts as agreeing to service messages, recorded as `customer_initiated`. It is never agreement to marketing.
+- A merchant's existing credit customers are recorded as `merchant_record` when their data is loaded. The merchant is attesting that those customers agreed; the onboarding checklist must make them confirm it.
+- A message that is exactly a stop word, in English or Arabic, withdraws both kinds of consent at once. A start word restores service consent only.
+- Every change is appended to `consents` with its source and the customer's wording. The application can add and read rows but cannot change or delete them; the database refuses.
+
+**Why in one place.** A module that forgets the rules cannot break them, and a merchant's number cannot be restricted because of a bug in one feature.
+**Consequence.** Anything Alyr sends that is not a direct reply must be a template. Payment confirmations were changed from free text to a template for this reason: a customer may pay days after their last message.
+**Not built yet.** Marketing opt-in capture (it arrives with broadcasts, ALY-44), a consent export, Meta's own messaging limits (ALY-41), and telling a utility template sent inside an open window (free) from one sent outside it (charged).
+**Legal note.** What counts as valid consent under Qatar's privacy law is a question for the lawyer (ALY-51). This implements Meta's rule and keeps the evidence.

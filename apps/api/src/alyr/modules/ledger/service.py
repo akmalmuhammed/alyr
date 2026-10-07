@@ -53,6 +53,7 @@ async def recent_entries(conn: asyncpg.Connection, contact_id: UUID, limit: int 
 async def summary(conn: asyncpg.Connection) -> dict:
     customers = await conn.fetch(
         "select c.id, c.name, c.phone, c.wa_user_id, c.username, c.lang, c.credit_limit, "
+        "c.consent_service, "
         "a.promised_until, a.last_reminded_at "
         "from contacts c left join ledger_accounts a on a.contact_id = c.id "
         "where c.role = 'customer' order by c.name"
@@ -74,6 +75,7 @@ async def summary(conn: asyncpg.Connection) -> dict:
             {
                 "id": str(c["id"]), "name": c["name"], "phone": c["phone"],
                 "user_id": c["wa_user_id"], "username": c["username"], "lang": c["lang"],
+                "opted_out": c["consent_service"] == "revoked",
                 "balance": a.balance, "balance_text": fmt_qar(a.balance),
                 "oldest_days": a.oldest_days, "buckets": a.buckets,
                 "over_limit": c["credit_limit"] > 0 and a.balance > c["credit_limit"],
@@ -152,9 +154,12 @@ async def send_reminders(
     """
     shop = await conn.fetchrow("select name, name_ar from tenants where id = $1", tenant_id)
     now = datetime.now(UTC)
-    result = {"sent": 0, "skipped_promised": 0, "skipped_recent": 0}
+    result = {"sent": 0, "skipped_promised": 0, "skipped_recent": 0, "skipped_opted_out": 0}
     for customer in (await summary(conn))["customers"]:
         if customer["balance"] <= 0 or customer["oldest_days"] < min_days:
+            continue
+        if customer["opted_out"]:
+            result["skipped_opted_out"] += 1
             continue
         if customer["promised_until"]:
             result["skipped_promised"] += 1
@@ -216,6 +221,15 @@ def entry_notice(lang: str, shop: str, shop_ar: str, kind: str, amount: int, bal
     return f"{shop}: we recorded {what} {money}. Your balance is now {total}."
 
 
+def _receipt(contact_id: UUID, body: str) -> OutboundMessage:
+    """A payment confirmation. A template, because the customer may pay days after their
+    last message, when free-form text is no longer allowed."""
+    return OutboundMessage(
+        to=contact_id, kind="template", body=body,
+        template_name="payment_received", template_category="utility",
+    )
+
+
 async def complete_payment(
     conn: asyncpg.Connection, payment_id: UUID, outbound: Outbound
 ) -> str:
@@ -243,7 +257,7 @@ async def complete_payment(
             f"تم استلام {fmt_qar(row['amount'])} للطلب رقم {number}. شكراً لك." if lang == "ar"
             else f"Received {fmt_qar(row['amount'])} for order #{number}. Thank you."
         )
-        await outbound.send(conn, OutboundMessage(to=row["contact_id"], body=body))
+        await outbound.send(conn, _receipt(row["contact_id"], body))
         return "paid"
     await add_entry(
         conn, row["contact_id"], "payment", row["amount"],
@@ -257,5 +271,5 @@ async def complete_payment(
             f"Received {fmt_qar(row['amount'])}. Your balance is now {fmt_qar(balance)}. "
             "Thank you."
         )
-    await outbound.send(conn, OutboundMessage(to=row["contact_id"], body=body))
+    await outbound.send(conn, _receipt(row["contact_id"], body))
     return "paid"

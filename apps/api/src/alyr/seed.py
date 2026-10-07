@@ -12,6 +12,7 @@ import asyncpg
 
 from alyr.channels.simulator import SIMULATOR_NUMBER_ID
 from alyr.config import get_settings
+from alyr.core import consent
 from alyr.db import Database
 from alyr.modules.ledger import service
 
@@ -118,6 +119,9 @@ async def reset_demo_data(db: Database) -> None:
                 500_000 if index == 0 else rng.choice([1_000_000, 2_000_000, 3_000_000]),
                 SIMULATOR_NUMBER_ID,
             )
+            # These are the shop's existing credit customers, who agreed to account
+            # notices when the account was opened. Not agreement to marketing.
+            await consent.record(conn, contact_id, "service", "granted", "merchant_record")
             if index == 0:
                 # Ahmed is the customer the demo script follows: QAR 1,850 owed, 41 days old.
                 await service.add_entry(conn, contact_id, "sale", 240_000, "Cables and breakers",

@@ -33,7 +33,7 @@ async def _conversation(request: Request, key: str) -> dict:
     column = "wa_user_id" if _is_user_id(key) else "phone"
     async with request.app.state.db.tenant(DEMO_TENANT_ID) as conn:
         rows = await conn.fetch(
-            "select m.direction, m.kind, m.body, m.payload, m.status, m.created_at "
+            "select m.direction, m.kind, m.body, m.payload, m.status, m.error, m.created_at "
             f"from messages m join contacts c on c.id = m.contact_id where c.{column} = $1 "
             "order by m.created_at",
             key,

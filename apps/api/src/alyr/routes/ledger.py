@@ -4,6 +4,7 @@ from fastapi import APIRouter, Depends, HTTPException, Request
 from pydantic import BaseModel, Field
 
 from alyr.config import get_settings
+from alyr.core import consent
 from alyr.core.normalise import fmt_qar
 from alyr.modules.ledger import service
 from alyr.routes.deps import current_tenant
@@ -35,6 +36,7 @@ async def entries(
         rows = await service.recent_entries(conn, contact_id)
         return {
             "customer": dict(contact),
+            "consent": await consent.history(conn, contact_id),
             "entries": [
                 {
                     "kind": r["kind"], "amount": r["amount"],

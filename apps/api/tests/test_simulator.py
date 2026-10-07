@@ -159,7 +159,10 @@ def test_pressing_the_button_twice_does_not_remind_twice(client):
     first = client.post("/api/ledger/reminders", json={"min_days": 30}).json()
     second = client.post("/api/ledger/reminders", json={"min_days": 30}).json()
     assert first["sent"] > 0
-    assert second == {"sent": 0, "skipped_promised": 0, "skipped_recent": first["sent"]}
+    assert second == {
+        "sent": 0, "skipped_promised": 0, "skipped_recent": first["sent"],
+        "skipped_opted_out": 0,
+    }
 
 
 def test_reminder_tone_follows_the_age_of_the_debt(client):
