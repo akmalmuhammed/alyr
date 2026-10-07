@@ -2,9 +2,27 @@
 
 WhatsApp-native operating tools for small businesses in Qatar. One multi-tenant core, with modules switched on per merchant.
 
-What we are building and why, including what we decided not to build: [docs/master-plan.md](docs/master-plan.md). Read it before proposing new features.
+Read these before working, in this order:
+
+- [docs/master-plan.md](docs/master-plan.md): what we are building, in what order, and what we decided not to build.
+- [docs/decisions.md](docs/decisions.md): every decision with its reason. Add an entry in the same pull request as any new decision.
+- [docs/stack.md](docs/stack.md): every tool, its free limit and when we swap it. Free tiers first; nothing paid without the founder agreeing.
+- [docs/working-with-claude.md](docs/working-with-claude.md): the ways AI-built projects fail and the guard against each. Follow it, and say so when a guard is missing.
 
 Plan and tasks live in Linear, team `Alyrtech`, project `Alyr Launch`. Work one issue per branch; name the branch after the issue (`aly-12-...`). Phases, not dates: a phase is finished when its demo works.
+
+## How work is done
+
+1. One Linear issue per branch, branch named after the issue. Never commit to `main` directly.
+2. Before using any outside API or library feature, check its current documentation. Do not rely on memory.
+3. Tests go through the real path: real PostgreSQL, the simulator channel, HTTP in and out.
+4. Run `scripts/check.sh`, and run the feature itself, before opening a pull request.
+5. The pull request says in plain words what changed, how it was checked and what was not checked.
+6. Merge only on green CI. Then update the Linear issue honestly, including what is still missing.
+7. Anything outside the issue becomes a new issue, not extra code.
+8. Never edit a migration that has been applied anywhere shared. Add a new one.
+9. A new dependency needs a one-line reason in the pull request.
+10. Development data is the fictional demo shop only. Real customer data never enters the repo or a chat.
 
 ## Hard rules
 
