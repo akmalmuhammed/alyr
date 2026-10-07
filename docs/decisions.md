@@ -1,0 +1,156 @@
+# Decision log
+
+Every decision that shapes Alyr, newest last. One entry per decision: what we chose, why, what we rejected, and what would make us revisit it. Add an entry in the same pull request as the change it explains. Never rewrite an old entry; add a new one that supersedes it.
+
+Status: **Accepted** (in force), **Proposed** (waiting for the founder), **Superseded by D-xxx**.
+
+| # | Decision | Status |
+|---|---|---|
+| D-001 | One deployable service (modular monolith) | Accepted |
+| D-002 | PostgreSQL with forced row-level security for tenant separation | Accepted |
+| D-003 | Plain SQL migrations, never edited after they are applied | Accepted |
+| D-004 | Modules never call a channel; one outbound layer | Accepted |
+| D-005 | Chat simulator as a first-class channel | Accepted |
+| D-006 | Product 1 is Inbox and Collect; launch before payroll | Accepted |
+| D-007 | Meta Tech Provider route; no message markup | Accepted |
+| D-008 | E-invoicing parked | Accepted |
+| D-009 | Contacts are keyed on WhatsApp's BSUID; phone is optional | Accepted |
+| D-010 | Jobs and outbox live in PostgreSQL | Accepted |
+| D-011 | Free tiers first; everything runs from Docker Compose so it can move | Accepted |
+| D-012 | No AI model is required for Product 1 | Accepted |
+| D-013 | Where production runs until the first 10 customers | Proposed |
+| D-014 | Branch per issue, pull request, green CI before merge | Accepted |
+| D-015 | WhatsApp is the mobile app; no native app, no offline engine | Accepted |
+
+---
+
+## D-001 · One deployable service
+**Date** 6 Oct 2026 · **Status** Accepted
+
+FastAPI modular monolith: modules are folders with clear boundaries, deployed as one service plus one worker process.
+
+**Why.** Two people cannot operate many services. Module boundaries give most of the benefit; a network between them gives mostly failure modes.
+**Rejected.** Microservices; serverless functions per feature.
+**Revisit when.** One module's load or release cadence is clearly hurting the others.
+
+## D-002 · Row-level security in the database
+**Date** 6 Oct 2026 · **Status** Accepted
+
+Every tenant-owned table has `tenant_id` and a forced RLS policy. The app connects as `alyr_app`, which owns nothing and cannot bypass RLS. Tested in `tests/test_tenant_isolation.py`, including a check that fails when a new table has no policy.
+
+**Why.** A forgotten `WHERE tenant_id = ...` is the classic multi-tenant leak, and code written quickly with an AI agent is exactly where it would happen. The database refuses instead.
+**Rejected.** Filtering in application code; a database per tenant (too costly on free tiers and to migrate).
+**Revisit when.** A customer contractually requires a physically separate database.
+
+## D-003 · Plain SQL migrations
+**Date** 6 Oct 2026 · **Status** Accepted
+
+Numbered `.sql` files applied in order by `python -m alyr.migrate`. A migration that has been applied anywhere other than a developer's own machine is never edited; changes go in a new file.
+
+**Why.** RLS policies, grants and roles are clearer in SQL than through an ORM migration tool, and there is no ORM here.
+**Rejected.** Alembic (was in the original issue).
+**Revisit when.** We need down-migrations or branching migration histories.
+**Note.** `0001_core.sql` was edited twice on 6 Oct before any shared environment existed. That window is now closed.
+
+## D-004 · One outbound layer
+**Date** 6 Oct 2026 · **Status** Accepted
+
+Modules return `OutboundMessage` objects. `core/outbound.py` is the only code that sends, and it records every message. Consent, the 24-hour window and messaging limits are enforced there.
+
+**Why.** Meta's rules are per message. Enforcing them in one place is the only way a new module cannot break them and get a merchant's number restricted.
+
+## D-005 · The simulator is a real channel
+**Date** 6 Oct 2026 · **Status** Accepted
+
+A second channel with the same interface as Meta's. Everything is built and demoed against it first.
+
+**Why.** Development and sales demos do not wait on Meta, payment providers or the internet. It also keeps test runs free.
+**Risk.** The simulator can drift from Meta's real behaviour. Each phase's exit test therefore runs on a real number.
+
+## D-006 · Product 1 is Inbox and Collect
+**Date** 7 Oct 2026 · **Status** Accepted (founder said "start building end to end" on 7 Oct)
+
+Shared team inbox, contacts, credit ledger, payment links, reminders, broadcasts. Sold before payroll, jobs or ordering are built. Full reasoning: `master-plan.md` sections 4 and 6.
+
+**Revisit when.** Alpha merchants will not pay for it, or ask for payroll first.
+
+## D-007 · Tech Provider, no markup
+**Date** 7 Oct 2026 · **Status** Accepted
+
+Alyr applies to Meta as a Tech Provider. Merchants pay Meta for messages with their own card. Alyr earns from subscriptions only.
+
+**Why.** Only Solution Partners hold a credit line and may invoice clients for messages; that programme is slow to join.
+**Cost.** The plan's 10% message margin is gone. At Qatar rates it was small: a merchant sending 2,000 utility templates a month pays Meta about USD 18.
+**Revisit when.** We have enough merchants that carrying their message bill becomes a selling point.
+
+## D-008 · E-invoicing parked
+**Date** 7 Oct 2026 · **Status** Accepted
+
+Nothing is built until Qatar's General Tax Authority publishes the technical specification. Invoices keep sequential numbers and a clean record so a serializer can be added.
+
+**Why.** The law is a Cabinet-approved draft (6 May 2026) and is expected to follow VAT, which has not started. The brief's signing details were Saudi Arabia's.
+**Revisit when.** The GTA publishes a specification or announces a date.
+
+## D-009 · Contacts keyed on BSUID
+**Date** 7 Oct 2026 · **Status** Accepted
+
+`contacts.wa_user_id` (Meta's business-scoped user ID) is the identity. `phone` is optional. Inbound matching tries BSUID, then phone, and fills in whichever was missing. Meta's `user_id_update` webhook moves a contact to its new ID.
+
+**Why.** WhatsApp usernames roll out in 2026. A customer with a username may reach us with no phone number in the webhook.
+**Source.** https://developers.facebook.com/documentation/business-messaging/whatsapp/business-scoped-user-ids/
+
+## D-010 · Jobs and outbox in PostgreSQL
+**Date** 7 Oct 2026 · **Status** Accepted
+
+A `jobs` table claimed with `FOR UPDATE SKIP LOCKED`, written in the same transaction as the data it belongs to. One worker process from the same codebase.
+
+**Why.** A message row and its send job commit together or not at all, with no broker to run. It also costs nothing extra, which matters under D-011.
+**Rejected.** Redis-based queues (a job can be lost between the database commit and the enqueue); Celery or a hosted queue (more to operate, not free).
+**Limit.** Comfortable to a few hundred jobs a second, far beyond the first hundred merchants.
+**Revisit when.** Queue latency grows under load, or we need fan-out to many workers.
+
+## D-011 · Free tiers first, built to move
+**Date** 7 Oct 2026 · **Status** Accepted
+
+Until the first 10 paying customers we do not pay for infrastructure where a free option is adequate. To keep that from becoming a trap, the whole system runs from `docker-compose.yml` using only standard PostgreSQL, Redis and S3-compatible storage. No feature may depend on a hosting vendor's proprietary service.
+
+**Why.** No money goes out before money comes in, and nothing has to be rewritten when we move.
+**Tracked in.** `stack.md` lists every tool, its free limit, what we lose by staying on it, what we swap to, and the trigger.
+**Unavoidable costs.** A domain name, Meta's fees for our own sign-in codes, the lawyer.
+
+## D-012 · No AI model required for Product 1
+**Date** 7 Oct 2026 · **Status** Accepted
+
+The ledger's chat commands, balance questions and payment intents work from rules (`core/normalise.py`). A model is an optional improvement behind one gateway, off by default.
+
+**Why.** Free model tiers use prompts for training and human review, which rules them out for real customer messages. Rules cost nothing, are testable, and never send a customer's text anywhere.
+**Revisit when.** The rule-based test set's accuracy on real merchant messages is not good enough, and the legal opinion (ALY-51) says where a model may run.
+
+## D-013 · Where production runs until the first 10 customers
+**Date** 7 Oct 2026 · **Status** Proposed, founder to choose
+
+Options, all at no cost:
+
+| Option | Where | For | Against |
+|---|---|---|---|
+| **A. Microsoft for Startups credits** (recommended) | Azure Qatar Central | In Qatar. USD 1,000 on signup, USD 5,000 after verification, enough for a year or more at our size. Managed PostgreSQL and backups | An application with a review of about 17 business days. Reports of capacity limits in the region |
+| B. Oracle Cloud Always Free | Dubai or Jeddah | Free indefinitely, commercial use allowed, never sleeps. 2 cores and 12 GB runs everything | Not in Qatar. We run PostgreSQL and backups ourselves. Free capacity is sometimes unavailable at signup. Idle machines can be reclaimed |
+| C. Free developer platforms (Neon, Render, Upstash) | Europe | Fastest to set up | Not in the region. Free services sleep, and a sleeping server misses Meta's webhook deadline. Limits are tight |
+
+Recommendation: apply for A now, since it only waits. Develop locally meanwhile. If credits have not arrived when Phase 2's exit test needs a public server, use B as the bridge. C only for throwaway previews.
+
+## D-014 · Branch, pull request, green CI
+**Date** 7 Oct 2026 · **Status** Accepted
+
+One branch per Linear issue, named after it. A pull request with green CI before anything reaches `main`. See `working-with-claude.md`.
+
+**Why.** Until 7 Oct work went straight to `main`. That was acceptable for a scaffold and is not acceptable once there is anything to break. A pull request is also the only place a founder who does not read every line can see what changed.
+**Limit.** GitHub's free plan cannot enforce branch protection on a private repository, so this is a rule we keep, not one GitHub enforces.
+
+## D-015 · WhatsApp is the mobile app
+**Date** 7 Oct 2026 · **Status** Accepted
+
+Staff use WhatsApp itself plus an installable web workspace. No native app, no offline sync engine.
+
+**Why.** WhatsApp already works on a bad connection and queues messages. Building on it is the product's premise.
+**Revisit when.** A paying segment needs something a web app cannot do (for example background location).
