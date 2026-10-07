@@ -1,4 +1,4 @@
-from alyr.channels.base import OutboundMessage
+from alyr.channels.base import Address, OutboundMessage
 
 SIMULATOR_NUMBER_ID = "sim-al-noor"
 
@@ -9,5 +9,7 @@ class SimulatorChannel:
 
     name = "simulator"
 
-    async def send(self, from_number_id: str, message: OutboundMessage) -> None:
+    async def send(
+        self, from_number_id: str, message: OutboundMessage, address: Address
+    ) -> None:
         return None

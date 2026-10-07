@@ -27,30 +27,28 @@ MENU = {
 }
 
 
-def _menu(to: str, lang: str, body: str) -> OutboundMessage:
+def _menu(to: UUID, lang: str, body: str) -> OutboundMessage:
     titles = MENU[lang]
     return OutboundMessage(
-        to_number=to, kind="buttons", body=body,
+        to=to, kind="buttons", body=body,
         choices=(Choice("balance", titles[0]), Choice("pay", titles[1]),
                  Choice("human", titles[2])),
     )
 
 
 async def handle(
-    conn: asyncpg.Connection, tenant_id: UUID, message: InboundMessage, web_url: str
+    conn: asyncpg.Connection,
+    tenant_id: UUID,
+    contact: asyncpg.Record,
+    message: InboundMessage,
+    web_url: str,
 ) -> list[OutboundMessage]:
-    contact = await conn.fetchrow(
-        "select id, name, role, lang from contacts where phone = $1", message.from_number
-    )
-    if contact is None:
-        contact = await conn.fetchrow(
-            "insert into contacts (phone, name) values ($1, $2) returning id, name, role, lang",
-            message.from_number, f"+{message.from_number}",
-        )
+    """`contact` is whoever sent the message, already resolved by core identity."""
     text = western_digits(message.text).strip()
+    me = contact["id"]
 
     if contact["role"] == "staff":
-        return await _staff(conn, tenant_id, contact, message.from_number, text)
+        return await _staff(conn, tenant_id, contact, text)
 
     lang = contact["lang"]
     if has_arabic(text) and lang != "ar":
@@ -65,28 +63,29 @@ async def handle(
     )
 
     if message.reply_id == "promise":
-        return [await _promise(conn, contact, message.from_number, lang)]
+        return [await _promise(conn, contact, lang)]
     if wants_pay and not wants_balance:
         part = parse_amount(text) if typed else None
-        return [await _pay(conn, tenant_id, contact, message.from_number, lang, web_url, part)]
+        return [await _pay(conn, tenant_id, contact, lang, web_url, part)]
     if wants_balance:
-        return [await _balance(conn, contact, message.from_number, lang)]
+        return [await _balance(conn, contact, lang)]
     if message.reply_id == "human":
         body = (
             "سيتواصل معك أحد الموظفين قريباً." if lang == "ar"
             else "A member of staff will reply here shortly."
         )
-        return [OutboundMessage(to_number=message.from_number, body=body)]
+        return [OutboundMessage(to=me, body=body)]
 
     shop = await conn.fetchrow("select name, name_ar from tenants where id = $1", tenant_id)
     greeting = (
         f"أهلاً بك في {shop['name_ar'] or shop['name']}. كيف نقدر نساعدك؟" if lang == "ar"
         else f"Welcome to {shop['name']}. How can we help?"
     )
-    return [_menu(message.from_number, lang, greeting)]
+    return [_menu(me, lang, greeting)]
 
 
-async def _balance(conn, contact, to: str, lang: str) -> OutboundMessage:
+async def _balance(conn, contact, lang: str) -> OutboundMessage:
+    to = contact["id"]
     aged = await service.aged(conn, contact["id"])
     recent = await service.recent_entries(conn, contact["id"], limit=3)
     labels = (
@@ -105,20 +104,21 @@ async def _balance(conn, contact, to: str, lang: str) -> OutboundMessage:
         if lines:
             body += "\nLatest entries:\n" + "\n".join(lines)
     if aged.balance <= 0:
-        return OutboundMessage(to_number=to, body=body)
+        return OutboundMessage(to=to, body=body)
     title = "ادفع الآن" if lang == "ar" else "Pay now"
     return OutboundMessage(
-        to_number=to, kind="buttons", body=body, choices=(Choice("pay", title),)
+        to=to, kind="buttons", body=body, choices=(Choice("pay", title),)
     )
 
 
 async def _pay(
-    conn, tenant_id, contact, to: str, lang: str, web_url: str, part: int | None
+    conn, tenant_id, contact, lang: str, web_url: str, part: int | None
 ) -> OutboundMessage:
+    to = contact["id"]
     balance = (await service.aged(conn, contact["id"])).balance
     if balance <= 0:
         body = "لا يوجد عليك مبلغ مستحق." if lang == "ar" else "You have nothing to pay."
-        return OutboundMessage(to_number=to, body=body)
+        return OutboundMessage(to=to, body=body)
     # "pay 500" pays part of the balance; never more than is owed.
     amount = min(part, balance) if part else balance
     link = await service.create_payment_request(conn, tenant_id, contact["id"], amount, web_url)
@@ -130,10 +130,11 @@ async def _pay(
         body = f"To pay {fmt_qar(amount)}, open this link: {link}"
         if amount == balance:
             body += '\nTo pay part of it, send for example "pay 500".'
-    return OutboundMessage(to_number=to, body=body)
+    return OutboundMessage(to=to, body=body)
 
 
-async def _promise(conn, contact, to: str, lang: str) -> OutboundMessage:
+async def _promise(conn, contact, lang: str) -> OutboundMessage:
+    to = contact["id"]
     until = await service.promise_to_pay(conn, contact["id"])
     if lang == "ar":
         body = (
@@ -145,12 +146,12 @@ async def _promise(conn, contact, to: str, lang: str) -> OutboundMessage:
             f"Thank you. We have noted that you will pay by {until:%d %b}. "
             "No reminders will be sent until then."
         )
-    return OutboundMessage(to_number=to, body=body)
+    return OutboundMessage(to=to, body=body)
 
 
-async def _staff(conn, tenant_id, staff, to: str, text: str) -> list[OutboundMessage]:
+async def _staff(conn, tenant_id, staff, text: str) -> list[OutboundMessage]:
     def say(body: str) -> list[OutboundMessage]:
-        return [OutboundMessage(to_number=to, body=body)]
+        return [OutboundMessage(to=staff["id"], body=body)]
 
     match = _ENTRY.match(text)
     amount = parse_amount(match.group("rest")) if match else None
@@ -166,7 +167,7 @@ async def _staff(conn, tenant_id, staff, to: str, text: str) -> list[OutboundMes
         name = re.sub(rf"\b{re.escape(word)}\b", "", name, flags=re.IGNORECASE).strip()
 
     found = await conn.fetch(
-        "select id, name, phone, lang, credit_limit from contacts "
+        "select id, name, lang, credit_limit from contacts "
         "where role = 'customer' and name ilike $1 order by name limit 4",
         f"%{name}%",
     )
@@ -190,7 +191,7 @@ async def _staff(conn, tenant_id, staff, to: str, text: str) -> list[OutboundMes
 
     shop = await conn.fetchrow("select name, name_ar from tenants where id = $1", tenant_id)
     notice = OutboundMessage(
-        to_number=customer["phone"],
+        to=customer["id"],
         kind="template",
         body=service.entry_notice(
             customer["lang"], shop["name"], shop["name_ar"], kind, amount, balance

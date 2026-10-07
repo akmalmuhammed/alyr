@@ -12,7 +12,7 @@ type Message = {
 };
 type Buckets = { d0_30: number; d31_60: number; d61_90: number; d90_plus: number };
 type Customer = {
-  id: string; name: string; phone: string; balance: number; balance_text: string;
+  id: string; name: string; phone: string | null; balance: number; balance_text: string;
   oldest_days: number; buckets: Buckets; over_limit: boolean; promised_until: string | null;
 };
 type Summary = {
@@ -22,7 +22,12 @@ type Summary = {
   collected_by_link_text: string; payments_by_link: number;
 };
 type Entry = { kind: string; amount_text: string; note: string; created_at: string };
-type Persona = { name: string; phone: string; kind: "staff" | "customer" };
+// `key` is what the simulator addresses the phone by: its number, or its WhatsApp user ID
+// when the customer uses a username and shows no number.
+type Persona = {
+  key: string; name: string; phone: string | null; user_id: string | null;
+  username?: string | null; kind: "staff" | "customer";
+};
 
 const BUCKET_KEYS = ["d0_30", "d31_60", "d61_90", "d90_plus"] as const;
 
@@ -97,16 +102,16 @@ export default function Demo() {
   const [busy, setBusy] = useState(false);
   const bottom = useRef<HTMLDivElement>(null);
   const t = T[lang];
-  const persona = personas.find((p) => p.phone === phone);
+  const persona = personas.find((p) => p.key === phone);
 
   const loadPersonas = useCallback(async () => {
     const data = await getJson<{
-      staff: { name: string; phone: string };
-      customers: { name: string; phone: string }[];
+      staff: { name: string; phone: string; user_id: null };
+      customers: { name: string; phone: string | null; user_id: string | null; username: string | null }[];
     }>("/sim/personas");
     const list: Persona[] = [
-      ...data.customers.map((c) => ({ ...c, kind: "customer" as const })),
-      { ...data.staff, kind: "staff" as const },
+      ...data.customers.map((c) => ({ ...c, key: c.phone ?? c.user_id ?? "", kind: "customer" as const })),
+      { ...data.staff, key: data.staff.phone, kind: "staff" as const },
     ];
     setPersonas(list);
     setPhone((current) => current || data.staff.phone);
@@ -151,12 +156,15 @@ export default function Demo() {
   }, [messages.length]);
 
   async function send(text: string, replyId = "") {
-    if (!phone || (!text.trim() && !replyId)) return;
+    if (!persona || (!text.trim() && !replyId)) return;
     setDraft("");
     const data = await getJson<{ messages: Message[] }>("/sim/messages", {
       method: "POST",
       headers: { "content-type": "application/json" },
-      body: JSON.stringify({ from_number: phone, text, reply_id: replyId }),
+      body: JSON.stringify({
+        from_number: persona.phone ?? "", from_user_id: persona.user_id ?? "",
+        username: persona.username ?? "", text, reply_id: replyId,
+      }),
     });
     setMessages(data.messages);
     refresh();
@@ -213,8 +221,9 @@ export default function Demo() {
             <label htmlFor="persona">Chat simulator · you are holding this phone</label>
             <select id="persona" value={phone} onChange={(e) => setPhone(e.target.value)}>
               {personas.map((p) => (
-                <option key={p.phone} value={p.phone}>
+                <option key={p.key} value={p.key}>
                   {p.kind === "staff" ? "Staff · " : "Customer · "}{p.name}
+                  {p.username ? ` · @${p.username}, no phone number` : ""}
                 </option>
               ))}
             </select>

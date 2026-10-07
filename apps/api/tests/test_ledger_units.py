@@ -1,8 +1,9 @@
 from datetime import UTC, datetime, timedelta
+from uuid import uuid4
 
 import pytest
 
-from alyr.channels.base import Choice, OutboundMessage
+from alyr.channels.base import Address, Choice, OutboundMessage
 from alyr.channels.meta import to_graph_payload
 from alyr.core.normalise import fmt_qar, has_arabic, parse_amount, western_digits
 from alyr.modules.ledger.ageing import age
@@ -66,21 +67,34 @@ def test_overpayment_shows_as_credit():
 def test_more_than_three_buttons_is_refused():
     choices = tuple(Choice(str(i), f"Option {i}") for i in range(4))
     with pytest.raises(ValueError):
-        OutboundMessage(to_number="97455500001", kind="buttons", body="Pick", choices=choices)
+        OutboundMessage(to=uuid4(), kind="buttons", body="Pick", choices=choices)
 
 
 def test_template_needs_name_and_category():
     with pytest.raises(ValueError):
-        OutboundMessage(to_number="97455500001", kind="template")
+        OutboundMessage(to=uuid4(), kind="template")
 
 
 def test_buttons_are_serialised_for_the_graph_api():
     message = OutboundMessage(
-        to_number="97455500001", kind="buttons", body="Pay now?",
+        to=uuid4(), kind="buttons", body="Pay now?",
         choices=(Choice("pay", "Pay now"), Choice("later", "Later")),
     )
-    payload = to_graph_payload(message)
+    payload = to_graph_payload(message, Address(phone="97455500001"))
+    assert payload["to"] == "97455500001"
     assert payload["interactive"]["type"] == "button"
     assert [b["reply"]["id"] for b in payload["interactive"]["action"]["buttons"]] == [
         "pay", "later",
     ]
+
+
+def test_a_user_id_is_sent_as_recipient_when_there_is_no_phone():
+    message = OutboundMessage(to=uuid4(), body="hello")
+    payload = to_graph_payload(message, Address(user_id="QA.123"))
+    assert payload["recipient"] == "QA.123"
+    assert "to" not in payload
+
+
+def test_an_address_needs_something_to_deliver_to():
+    with pytest.raises(ValueError):
+        Address()

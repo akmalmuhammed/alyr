@@ -52,7 +52,7 @@ async def recent_entries(conn: asyncpg.Connection, contact_id: UUID, limit: int 
 
 async def summary(conn: asyncpg.Connection) -> dict:
     customers = await conn.fetch(
-        "select c.id, c.name, c.phone, c.lang, c.credit_limit, "
+        "select c.id, c.name, c.phone, c.wa_user_id, c.username, c.lang, c.credit_limit, "
         "a.promised_until, a.last_reminded_at "
         "from contacts c left join ledger_accounts a on a.contact_id = c.id "
         "where c.role = 'customer' order by c.name"
@@ -72,7 +72,8 @@ async def summary(conn: asyncpg.Connection) -> dict:
         promised = c["promised_until"]
         out.append(
             {
-                "id": str(c["id"]), "name": c["name"], "phone": c["phone"], "lang": c["lang"],
+                "id": str(c["id"]), "name": c["name"], "phone": c["phone"],
+                "user_id": c["wa_user_id"], "username": c["username"], "lang": c["lang"],
                 "balance": a.balance, "balance_text": fmt_qar(a.balance),
                 "oldest_days": a.oldest_days, "buckets": a.buckets,
                 "over_limit": c["credit_limit"] > 0 and a.balance > c["credit_limit"],
@@ -170,7 +171,7 @@ async def send_reminders(
         await outbound.send(
             conn,
             OutboundMessage(
-                to_number=customer["phone"],
+                to=contact_id,
                 kind="template",
                 body=reminder_text(
                     customer["lang"], shop["name"], shop["name_ar"], customer["balance"],
@@ -234,16 +235,14 @@ async def complete_payment(
         conn, row["contact_id"], "payment", row["amount"],
         note="Paid by payment link", created_by=row["provider"],
     )
-    contact = await conn.fetchrow(
-        "select phone, lang from contacts where id = $1", row["contact_id"]
-    )
+    lang = await conn.fetchval("select lang from contacts where id = $1", row["contact_id"])
     balance = (await aged(conn, row["contact_id"])).balance
-    if contact["lang"] == "ar":
+    if lang == "ar":
         body = f"تم استلام {fmt_qar(row['amount'])}. رصيدك الآن {fmt_qar(balance)}. شكراً لك."
     else:
         body = (
             f"Received {fmt_qar(row['amount'])}. Your balance is now {fmt_qar(balance)}. "
             "Thank you."
         )
-    await outbound.send(conn, OutboundMessage(to_number=contact["phone"], body=body))
+    await outbound.send(conn, OutboundMessage(to=row["contact_id"], body=body))
     return "paid"
