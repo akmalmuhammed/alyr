@@ -84,8 +84,18 @@ class InboundHandler:
             arabic_name = contact["lang"] == "ar" and shop["name_ar"]
             shop_name = shop["name_ar"] if arabic_name else shop["name"]
             reply = await consent.on_inbound(conn, contact, message, shop_name)
+            # A new message reopens a closed conversation. While a person is handling
+            # the customer, the assistant stays quiet for typed messages; a tapped
+            # button still works, so "Pay now" never goes unanswered.
+            paused = await conn.fetchval(
+                "update contacts set inbox_status = 'open' where id = $1 "
+                "returning assistant_paused",
+                contact["id"],
+            )
             if reply is not None:
                 replies = [reply]
+            elif paused and contact["role"] == "customer" and not message.reply_id:
+                replies = []
             else:
                 replies = await router.handle(conn, tenant_id, contact, message, self._web)
             for reply in replies:

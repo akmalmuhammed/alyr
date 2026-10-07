@@ -9,8 +9,8 @@ from alyr.core.inbound import INBOUND, InboundHandler
 from alyr.core.jobs import JobRunner
 from alyr.core.outbound import SEND, Outbound
 from alyr.db import Database
+from alyr.routes import inbox, ledger, orders, pay, simulator, store, whatsapp_webhook
 from alyr.routes import jobs as jobs_routes
-from alyr.routes import ledger, orders, pay, simulator, store, whatsapp_webhook
 
 
 def create_app() -> FastAPI:
@@ -49,6 +49,7 @@ def create_app() -> FastAPI:
     app.include_router(orders.router)
     app.include_router(store.router)
     app.include_router(jobs_routes.router)
+    app.include_router(inbox.router)
     if settings.env != "production":
         app.include_router(simulator.router)
     return app

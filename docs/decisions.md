@@ -26,6 +26,7 @@ Status: **Accepted** (in force), **Proposed** (waiting for the founder), **Super
 | D-018 | Company registration starts now, not when the product is ready | Proposed |
 | D-019 | The API does not run on Cloudflare Python Workers (for now) | Accepted |
 | D-020 | Consent and the 24-hour window are enforced in the outbound layer | Accepted |
+| D-021 | A person answering from the inbox pauses the assistant for that customer | Accepted |
 
 ---
 
@@ -243,3 +244,16 @@ Every message passes one check in `core/outbound.py` before it is queued. A refu
 **Consequence.** Anything Alyr sends that is not a direct reply must be a template. Payment confirmations were changed from free text to a template for this reason: a customer may pay days after their last message.
 **Not built yet.** Marketing opt-in capture (it arrives with broadcasts, ALY-44), a consent export, Meta's own messaging limits (ALY-41), and telling a utility template sent inside an open window (free) from one sent outside it (charged).
 **Legal note.** What counts as valid consent under Qatar's privacy law is a question for the lawyer (ALY-51). This implements Meta's rule and keeps the evidence.
+
+## D-021 · A person answering from the inbox pauses the assistant for that customer
+**Date** 7 Oct 2026 · **Status** Accepted · Linear ALY-28
+
+When a staff member replies from the inbox, the assistant stops answering that customer's typed messages. It starts again when the conversation is closed or staff press "Hand back to assistant".
+
+- **Still automatic while paused:** stop and start words, and tapped buttons such as "Pay now". A customer who taps a button must never get silence.
+- **A closed conversation reopens** on the customer's next message, with the assistant on.
+- **Only customers who have written appear in the inbox.** A reminder run to 200 customers does not create 200 open conversations.
+- **Staff replies obey the same rules as the assistant.** They go through the outbound layer, so a typed reply after 24 hours is refused and shown as not sent. A refused reply does not pause the assistant.
+
+**Why.** Two voices answering one customer is the most common complaint about chatbot inboxes, and the pause must not depend on staff remembering a switch.
+**Not built yet.** Staff names on replies and assignment to a person (both need sign-in, ALY-18), internal notes, labels (ALY-53), sending a template from the inbox when the window is closed (ALY-20), search, and automatic hand-back after a period of silence.
