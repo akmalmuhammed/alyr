@@ -1,5 +1,6 @@
 "use client";
 
+import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useRef, useState } from "react";
 
 type Choice = { id: string; title: string };
@@ -36,6 +37,8 @@ type InboxRow = {
 };
 type InboxMessage = Message & { id: string; sent_by: string };
 type Thread = { customer: Omit<InboxRow, "unread" | "last">; messages: InboxMessage[] };
+type Me = { signed_in: boolean; id: string | null; name: string; email: string; role: string };
+type Member = { id: string; name: string; email: string; role: string };
 type Entry = { kind: string; amount_text: string; note: string; created_at: string };
 // `key` is what the simulator addresses the phone by: its number, or its WhatsApp user ID
 // when the customer uses a username and shows no number.
@@ -59,6 +62,10 @@ const T = {
     buckets: ["0–30 days", "31–60 days", "61–90 days", "Over 90 days"],
     kinds: { sale: "Credit sale", payment: "Payment", adjustment: "Adjustment" } as Record<string, string>,
     lang: "العربية",
+    tabTeam: "Team", teamSub: "Who can sign in to this workspace",
+    roles: { owner: "Owner", admin: "Admin", agent: "Agent" } as Record<string, string>,
+    addMember: "Add", remove: "Remove", name: "Name", email: "Email", role: "Role",
+    teamAgent: "Only an owner or admin can change the team.",
     tabInbox: "Inbox", inboxSub: "Every customer conversation, answered by the assistant or by you",
     open: "Open", closed: "Closed", noChats: "No conversations here. As a customer in the chat, send \"hello\".",
     pick: "Choose a conversation to read it.", you: "You", assistant: "Assistant", customerSays: "Customer",
@@ -86,6 +93,10 @@ const T = {
     buckets: ["٠–٣٠ يوم", "٣١–٦٠ يوم", "٦١–٩٠ يوم", "أكثر من ٩٠ يوم"],
     kinds: { sale: "بيع آجل", payment: "دفعة", adjustment: "تعديل" } as Record<string, string>,
     lang: "English",
+    tabTeam: "الفريق", teamSub: "من يستطيع الدخول إلى مساحة العمل",
+    roles: { owner: "مالك", admin: "مدير", agent: "موظف" } as Record<string, string>,
+    addMember: "إضافة", remove: "إزالة", name: "الاسم", email: "البريد الإلكتروني", role: "الدور",
+    teamAgent: "تعديل الفريق متاح للمالك أو المدير فقط.",
     tabInbox: "المحادثات", inboxSub: "كل محادثات العملاء، يرد عليها المساعد أو أنت",
     open: "مفتوحة", closed: "مغلقة", noChats: "لا توجد محادثات. أرسل \"hello\" كعميل في المحادثة.",
     pick: "اختر محادثة لقراءتها.", you: "أنت", assistant: "المساعد", customerSays: "العميل",
@@ -140,6 +151,7 @@ function Linked({ text }: { text: string }) {
 }
 
 export default function Demo() {
+  const router = useRouter();
   const [personas, setPersonas] = useState<Persona[]>([]);
   const [phone, setPhone] = useState("");
   const [messages, setMessages] = useState<Message[]>([]);
@@ -147,7 +159,12 @@ export default function Demo() {
   const [summary, setSummary] = useState<Summary | null>(null);
   const [selected, setSelected] = useState<string | null>(null);
   const [entries, setEntries] = useState<Entry[]>([]);
-  const [tab, setTab] = useState<"inbox" | "ledger" | "orders">("ledger");
+  const [tab, setTab] = useState<"inbox" | "ledger" | "orders" | "team">("ledger");
+  const [me, setMe] = useState<Me | null>(null);
+  const [members, setMembers] = useState<Member[]>([]);
+  const [canManage, setCanManage] = useState(false);
+  const [newMember, setNewMember] = useState({ name: "", email: "", role: "agent" });
+  const [teamError, setTeamError] = useState("");
   const [inboxRows, setInboxRows] = useState<InboxRow[]>([]);
   const [inboxFilter, setInboxFilter] = useState<"open" | "closed">("open");
   const [chatId, setChatId] = useState<string | null>(null);
@@ -188,6 +205,12 @@ export default function Demo() {
       setSummary(s);
       setMessages(c.messages);
       setOrders((await getJson<{ orders: OrderRow[] }>("/api/orders")).orders);
+      setMe(await getJson<Me>("/api/auth/me"));
+      if (tab === "team") {
+        const team = await getJson<{ members: Member[]; can_manage: boolean }>("/api/team");
+        setMembers(team.members);
+        setCanManage(team.can_manage);
+      }
       const rows = (
         await getJson<{ conversations: InboxRow[] }>(`/api/inbox/conversations?status=${inboxFilter}`)
       ).conversations;
@@ -284,6 +307,23 @@ export default function Demo() {
     await inboxPost("reply", { text });
   }
 
+  async function teamCall(url: string, method: string, body?: object) {
+    const response = await fetch(url, {
+      method,
+      headers: { "content-type": "application/json" },
+      body: body ? JSON.stringify(body) : undefined,
+    });
+    const data = await response.json().catch(() => ({}));
+    setTeamError(response.ok ? "" : String(data.detail ?? "That did not work."));
+    if (response.ok) setNewMember({ name: "", email: "", role: "agent" });
+    refresh();
+  }
+
+  async function signOut() {
+    await fetch("/api/auth/logout", { method: "POST" });
+    router.push("/login");
+  }
+
   async function advance(order: OrderRow) {
     await getJson(`/api/orders/${order.id}/status`, {
       method: "POST",
@@ -324,6 +364,14 @@ export default function Demo() {
         <span className="brand">Alyr</span>
         <span className="where">Demo 1 · the credit ledger in a chat · sample data, fictional shop</span>
         <span className="spacer" />
+        {me && (me.signed_in ? (
+          <span className="who-am-i">
+            {me.name} · {T.en.roles[me.role]}
+            <button className="btn small" onClick={signOut}>Sign out</button>
+          </span>
+        ) : (
+          <span className="who-am-i">Open demo, not signed in <a className="btn small" href="/login">Sign in</a></span>
+        ))}
         <button className="btn" onClick={reset} disabled={busy}>Reset demo</button>
       </header>
 
@@ -407,9 +455,10 @@ export default function Demo() {
                 <button role="tab" aria-selected={tab === "orders"} onClick={() => setTab("orders")}>
                   {t.tabOrders}{orders.length ? ` (${orders.length})` : ""}
                 </button>
+                <button role="tab" aria-selected={tab === "team"} onClick={() => setTab("team")}>{t.tabTeam}</button>
               </div>
               <p>
-                {lang === "ar" ? summary?.shop.name_ar : summary?.shop.name} · {tab === "ledger" ? t.sub : tab === "orders" ? t.ordersSub : t.inboxSub}
+                {lang === "ar" ? summary?.shop.name_ar : summary?.shop.name} · {tab === "ledger" ? t.sub : tab === "orders" ? t.ordersSub : tab === "team" ? t.teamSub : t.inboxSub}
               </p>
             </div>
             <span className="spacer" />
@@ -475,7 +524,7 @@ export default function Demo() {
                       {openThread.messages.map((m) => (
                         <div key={m.id} className={`bub ${m.direction === "out" ? "me" : ""}`} dir="auto">
                           <span className="who" dir={lang === "ar" ? "rtl" : "ltr"}>
-                            {m.direction === "in" ? t.customerSays : m.sent_by ? t.you : t.assistant}
+                            {m.direction === "in" ? t.customerSays : m.sent_by || t.assistant}
                           </span>
                           <Linked text={m.body} />
                           {m.payload.choices && (
@@ -509,6 +558,51 @@ export default function Demo() {
                 )}
               </div>
             </div>
+          )}
+
+          {tab === "team" && (
+            <>
+              <div className="tablewrap">
+                <table>
+                  <thead>
+                    <tr><th>{t.name}</th><th>{t.email}</th><th>{t.role}</th><th /></tr>
+                  </thead>
+                  <tbody>
+                    {members.map((m) => (
+                      <tr key={m.id} className="norow">
+                        <td>{m.name}</td>
+                        <td dir="ltr">{m.email}</td>
+                        <td><span className="pill none">{t.roles[m.role]}</span></td>
+                        <td className="r">
+                          {canManage && m.id !== me?.id && (
+                            <button className="btn small" onClick={() => teamCall(`/api/team/${m.id}`, "DELETE")}>{t.remove}</button>
+                          )}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+              {canManage ? (
+                <form
+                  className="team-add"
+                  onSubmit={(e) => { e.preventDefault(); teamCall("/api/team", "POST", newMember); }}
+                >
+                  <input aria-label={t.name} placeholder={t.name} required value={newMember.name}
+                    onChange={(e) => setNewMember({ ...newMember, name: e.target.value })} />
+                  <input aria-label={t.email} placeholder={t.email} type="email" required dir="ltr" value={newMember.email}
+                    onChange={(e) => setNewMember({ ...newMember, email: e.target.value })} />
+                  <select aria-label={t.role} value={newMember.role}
+                    onChange={(e) => setNewMember({ ...newMember, role: e.target.value })}>
+                    {["agent", "admin", "owner"].map((r) => <option key={r} value={r}>{t.roles[r]}</option>)}
+                  </select>
+                  <button className="btn primary" type="submit">{t.addMember}</button>
+                </form>
+              ) : (
+                <p className="empty-note">{t.teamAgent}</p>
+              )}
+              {teamError && <p className="error" dir="ltr" role="alert">{teamError}</p>}
+            </>
           )}
 
           {tab === "orders" && (

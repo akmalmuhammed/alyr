@@ -2,7 +2,7 @@
 
 Read this first in a new session, on any machine. It is the hand-over note between sessions: what works, what is next, and what is waiting on the founder. Update it in the same pull request as the work. Linear (team `Alyrtech`, project `Alyr Launch`) holds the detail; this page is the summary.
 
-Last updated: 8 Oct 2026, after pull request 8.
+Last updated: 8 Oct 2026, after pull request 10.
 
 ## What works today
 
@@ -18,14 +18,15 @@ All of it runs against the chat simulator. Nothing has been tested against Meta'
 | Job queue with retries and dead letters | Built | `core/jobs.py` |
 | Consent, stop and start words, 24-hour window | Built | `core/consent.py`, `core/outbound.py` |
 | Shared inbox with human takeover | First version | `modules/inbox/`, D-021 |
+| Sign-in by one-time code, sessions, team and roles | Built; no email provider, so codes only work locally | `core/auth.py`, D-022 |
 | Demo page: chat simulator plus workspace tabs | Built | `apps/web/app/page.tsx` |
 
-Tests: 104, all passing. CI runs api, web and a secrets scan on every pull request.
+Tests: 120, all passing. CI runs api, web and a secrets scan on every pull request.
 
 ## Next on the build side, in order
 
-1. **Sign-in and roles (ALY-18).** Blocks staff names, assignment and letting a real merchant in. Recommendation given to the founder: build it ourselves (one-time code, sessions in our database). Awaiting "own" or "hosted"; default is our own.
-2. **Rest of the inbox (ALY-28):** assignment, internal notes, saved replies, typing warning, live updates.
+1. **Rest of the inbox (ALY-28):** assignment to a person (now possible), internal notes, saved replies, typing warning, live updates.
+2. **Email provider for sign-in codes (part of ALY-18).** Needs research and the founder's choice; blocks any hosted environment.
 3. **Contacts and labels (ALY-53).**
 4. **Templates (ALY-20)** and sending one from the inbox when the window is closed.
 5. **Messaging limits (ALY-41), Redis sessions (ALY-14).**
@@ -40,14 +41,15 @@ Tests: 104, all passing. CI runs api, web and a secrets scan on every pull reque
 | Meta values | Five values into `apps/api/.env`; names and where to find each are in `apps/api/.env.example`. The Meta app exists; the values are not in yet. |
 | Domain | `alyr.online` is bought but did not resolve on 8 Oct. Needs its nameservers pointed at the Cloudflare account so the tunnel can serve `api.alyr.online`. Registrar not yet known. |
 | WhatsApp Business Tools MCP | Optional. Connector URL `https://mcp.facebook.com/whatsapp_business_tools`; lets a session register the number, create templates and set the webhook. Beta, gradual rollout. |
-| Sign-in choice | "own" or "hosted" (see above). |
+| Sign-in choice | Built as our own (D-022, proposed). Say so if you want a hosted service instead. |
 | Prices | Confirm D-017 (QAR 490 / 890, seat 40, setup 2,500). |
 | Company registration | D-018 is proposed, not accepted. |
 | Others | Payment provider applications (ALY-5), startup credits (ALY-55), lawyer on data location (ALY-51), an Arabic reviewer, two alpha businesses. |
 
 ## Known gaps and risks
 
-- No sign-in: the workspace acts as the demo shop, and production refuses every workspace request.
+- Sign-in codes are not emailed yet: sign-in works on a local machine only.
+- No sign-up: a shop and its first owner are created by hand in the database.
 - Marketing consent cannot be captured yet, so every marketing template is blocked.
 - Arabic wording has not been reviewed by a native speaker.
 - The order link identifies the customer by an unguessable ID only.

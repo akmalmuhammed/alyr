@@ -20,6 +20,10 @@ class Settings(BaseSettings):
     # First retry delay; it doubles on each further attempt.
     jobs_backoff_seconds: float = 5.0
 
+    # Local only: let the workspace be used without signing in, as the demo shop.
+    # Ignored everywhere except env "local".
+    demo_open: bool = True
+
     # Where payment links point. The web app serves /pay/...
     public_web_url: str = "http://localhost:3100"
 

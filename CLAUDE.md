@@ -42,7 +42,7 @@ These are not style preferences. Do not write code that breaks them, and stop an
 apps/api/                   FastAPI service (Python 3.13, managed with uv)
   migrations/               Plain SQL, applied in order by `python -m alyr.migrate`
   src/alyr/channels/        Message channels: Meta Cloud API and the local simulator, same interface
-  src/alyr/core/            Inbound path, contact identity (BSUID), outbound layer, Arabic normaliser
+  src/alyr/core/            Inbound path, contact identity (BSUID), outbound layer, sign-in, Arabic normaliser
   src/alyr/modules/ledger/  Module B: credit ledger and reminders
   src/alyr/modules/orders/  Order link: products, orders, pay or put on account
   src/alyr/modules/inbox/   Shared inbox: staff read and answer conversations by hand
@@ -78,6 +78,7 @@ cd ../web && pnpm dev                     # http://localhost:3100 (3000 is used 
 - Query tenant data only inside `async with db.tenant(tenant_id) as conn`. Outside it, RLS returns no rows.
 - New tenant-owned tables copy the pattern in `migrations/0001_core.sql`: `tenant_id` with the `current_setting` default, RLS enabled and forced, the `tenant_isolation` policy, grants to `alyr_app`. `tests/test_tenant_isolation.py` fails if any of that is missing.
 - The app role cannot write `tenants` or `channel_numbers`. Creating a tenant is an owner-role action.
+- Workspace routes take the tenant from `Depends(current_tenant)` or `Depends(current_staff)` in `routes/deps.py`, which read the session. Never take a tenant ID from the request.
 
 ## Conventions
 
