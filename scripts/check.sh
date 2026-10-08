@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 # Everything CI runs, in one command. Run before opening a pull request.
-# Needs Docker Postgres running (docker compose up -d).
+# Needs PostgreSQL on localhost:5432: `docker compose up -d`, or `scripts/cloud-setup.sh`
+# where there is no Docker.
 set -euo pipefail
 root="$(cd "$(dirname "$0")/.." && pwd)"
 
