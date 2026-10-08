@@ -39,7 +39,7 @@ Tests: 130, all passing. CI runs api, web and a secrets scan on every pull reque
 | Item | Detail |
 |---|---|
 | Meta values | Five values into `apps/api/.env`; names and where to find each are in `apps/api/.env.example`. The Meta app exists; the values are not in yet. |
-| Domain | `alyr.online` is bought but did not resolve on 8 Oct. Needs its nameservers pointed at the Cloudflare account so the tunnel can serve `api.alyr.online`. Registrar not yet known. |
+| Domain and tunnel | Done 8 Oct. `alyr.online` is on Cloudflare. Tunnel `alyr-dev` publishes only `/webhooks/whatsapp` and `/health` of the laptop's API at `https://api.alyr.online`; everything else answers 404 from outside. Config is in `~/.cloudflared/config.yml` on the laptop. Start it with `cloudflared tunnel run alyr-dev`. |
 | WhatsApp Business Tools MCP | Optional. Connector URL `https://mcp.facebook.com/whatsapp_business_tools`; lets a session register the number, create templates and set the webhook. Beta, gradual rollout. |
 | Sign-in choice | Built as our own (D-022, proposed). Say so if you want a hosted service instead. |
 | Prices | Confirm D-017 (QAR 490 / 890, seat 40, setup 2,500). |
@@ -62,7 +62,7 @@ A cloud session does not have these, by design:
 
 - `apps/api/.env` and `apps/api/.env.neon` (secrets; never committed).
 - The Cloudflare and Neon command-line sign-ins. Neon project `fragrant-firefly-99152608` (Frankfurt) holds demo data only.
-- The Cloudflare Tunnel, once set up: the live WhatsApp webhook is served from the laptop until always-on hosting is chosen (D-013). Live Meta testing therefore happens on the laptop, not in a cloud session.
+- The Cloudflare Tunnel `alyr-dev` and its credentials: the live WhatsApp webhook is served from the laptop until always-on hosting is chosen (D-013). It only answers while the laptop, the API and the tunnel are all running. Live Meta testing therefore happens on the laptop, not in a cloud session.
 
 ## Working in a cloud session
 
