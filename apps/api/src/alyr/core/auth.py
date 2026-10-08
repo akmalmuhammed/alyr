@@ -241,3 +241,5 @@ async def remove_member(conn: asyncpg.Connection, actor_role: str, user_id: UUID
         "and tenant_id = nullif(current_setting('app.tenant_id', true), '')::uuid",
         user_id,
     )
+    # Their conversations go back to nobody, so a colleague picks them up.
+    await conn.execute("update contacts set assigned_to = null where assigned_to = $1", user_id)

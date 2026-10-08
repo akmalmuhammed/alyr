@@ -57,6 +57,12 @@ def demo_user_id(index: int) -> str:
     return f"QA.{90000000000000000000 + index}"
 
 
+SAVED_REPLIES = [
+    ("Opening hours", "We are open Saturday to Thursday 8 am to 9 pm, and Friday 4 pm to 9 pm."),
+    ("Location", "We are on Salwa Road, next to the petrol station. Parking is behind the shop."),
+    ("أوقات العمل", "نعمل من السبت إلى الخميس من ٨ صباحاً إلى ٩ مساءً، والجمعة من ٤ إلى ٩ مساءً."),
+]
+
 # Fictional staff of the demo shop. The .example domain can never receive real email.
 OWNER_EMAIL = "fatima@alnoor.example"
 AGENT_EMAIL = "yusuf@alnoor.example"
@@ -101,13 +107,17 @@ async def reset_demo_data(db: Database) -> None:
         await conn.execute(
             "delete from login_codes where email = any($1)", [email for email, _, _ in TEAM]
         )
-        for table in ("memberships", "jobs", "messages", "processed_messages", "order_items",
-                      "payment_requests", "orders", "products", "ledger_entries",
-                      "ledger_accounts", "contacts", "tenant_modules"):
+        for table in ("saved_replies", "memberships", "jobs", "messages", "processed_messages",
+                      "order_items", "payment_requests", "orders", "products",
+                      "ledger_entries", "ledger_accounts", "contacts", "tenant_modules"):
             await conn.execute(f"delete from {table}")
         await conn.execute(
             "insert into tenant_modules (module_key) values ('ledger'), ('orders')"
         )
+        for title, body in SAVED_REPLIES:
+            await conn.execute(
+                "insert into saved_replies (title, body) values ($1, $2)", title, body
+            )
         for email, name, role in TEAM:
             user_id = await conn.fetchval(
                 "insert into users (email, name) values ($1, $2) "
