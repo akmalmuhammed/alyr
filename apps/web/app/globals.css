@@ -198,3 +198,16 @@ tbody tr.norow:hover { background: transparent; }
 .bub .who { display: block; font-size: 11px; color: var(--muted); margin-bottom: 2px; }
 .composer input:disabled { opacity: .55; }
 @media (max-width: 720px) { .inbox { grid-template-columns: 1fr; } }
+
+/* sign-in and team */
+.who-am-i { display: inline-flex; align-items: center; gap: 8px; color: var(--muted); font-size: 13.5px; margin-inline-end: 8px; }
+.login { max-width: 380px; margin: 12vh auto 0; padding: 0 16px; display: flex; flex-direction: column; gap: 10px; }
+.login h1 { margin: 0; color: var(--accent); }
+.login .lead { margin: 0 0 8px; color: var(--muted); }
+.login form { display: flex; flex-direction: column; gap: 8px; }
+.login label { font-size: 13.5px; color: var(--muted); }
+.login input, .team-add input, .team-add select { padding: 9px 10px; border: 1px solid var(--line); border-radius: 8px; background: var(--surface); color: var(--fg); font: inherit; min-width: 0; }
+.login .hint { margin: 0; font-size: 13px; color: var(--muted); }
+.login .devcode { margin: 0; padding: 8px 10px; border-radius: 8px; background: var(--warn-soft); color: var(--warn); font-size: 13.5px; }
+.team-add { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 12px; }
+.team-add input { flex: 1 1 160px; }

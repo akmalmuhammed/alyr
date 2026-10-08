@@ -5,14 +5,11 @@ from uuid import UUID
 from fastapi import APIRouter, Depends, HTTPException, Query, Request
 from pydantic import BaseModel, Field
 
+from alyr.core.auth import Staff
 from alyr.modules.inbox import service
-from alyr.routes.deps import current_tenant
+from alyr.routes.deps import current_staff, current_tenant
 
 router = APIRouter(prefix="/api/inbox", tags=["inbox"])
-
-# Sign-in does not exist yet (ALY-18), so every reply is attributed to the workspace.
-STAFF_NAME = "Workspace"
-
 
 class Reply(BaseModel):
     text: str = Field(min_length=1, max_length=4000)
@@ -65,13 +62,13 @@ async def read(
 @router.post("/conversations/{contact_id}/reply")
 async def reply(
     contact_id: UUID, body: Reply, request: Request,
-    tenant_id: UUID = Depends(current_tenant),
+    staff: Staff = Depends(current_staff),
 ) -> dict:
     """`blocked` in the answer is why the reply was not sent, or null if it was."""
     try:
-        async with request.app.state.db.tenant(tenant_id) as conn:
+        async with request.app.state.db.tenant(staff.tenant_id) as conn:
             return await service.reply(
-                conn, request.app.state.outbound, contact_id, body.text, STAFF_NAME
+                conn, request.app.state.outbound, contact_id, body.text, staff.name
             )
     except service.InboxError as error:
         raise HTTPException(status_code=422, detail=str(error)) from error

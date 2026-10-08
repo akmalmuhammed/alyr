@@ -57,6 +57,15 @@ def demo_user_id(index: int) -> str:
     return f"QA.{90000000000000000000 + index}"
 
 
+# Fictional staff of the demo shop. The .example domain can never receive real email.
+OWNER_EMAIL = "fatima@alnoor.example"
+AGENT_EMAIL = "yusuf@alnoor.example"
+TEAM = [
+    (OWNER_EMAIL, "Fatima Al-Noor", "owner"),
+    (AGENT_EMAIL, "Yusuf Rahman", "agent"),
+]
+
+
 async def ensure_demo_tenant(
     owner_dsn: str, meta_number_id: str = "", meta_waba_id: str = ""
 ) -> None:
@@ -88,13 +97,26 @@ async def reset_demo_data(db: Database) -> None:
     rng = random.Random(7)
     now = datetime.now(UTC)
     async with db.tenant(DEMO_TENANT_ID) as conn:
-        for table in ("jobs", "messages", "processed_messages", "order_items", "payment_requests",
-                      "orders", "products", "ledger_entries", "ledger_accounts", "contacts",
-                      "tenant_modules"):
+        await conn.execute("delete from sessions where tenant_id = $1", DEMO_TENANT_ID)
+        await conn.execute(
+            "delete from login_codes where email = any($1)", [email for email, _, _ in TEAM]
+        )
+        for table in ("memberships", "jobs", "messages", "processed_messages", "order_items",
+                      "payment_requests", "orders", "products", "ledger_entries",
+                      "ledger_accounts", "contacts", "tenant_modules"):
             await conn.execute(f"delete from {table}")
         await conn.execute(
             "insert into tenant_modules (module_key) values ('ledger'), ('orders')"
         )
+        for email, name, role in TEAM:
+            user_id = await conn.fetchval(
+                "insert into users (email, name) values ($1, $2) "
+                "on conflict (email) do update set name = excluded.name returning id",
+                email, name,
+            )
+            await conn.execute(
+                "insert into memberships (user_id, role) values ($1, $2)", user_id, role
+            )
         for sort, (name, name_ar, category, price) in enumerate(PRODUCTS):
             await conn.execute(
                 "insert into products (name, name_ar, category, price, sort) "

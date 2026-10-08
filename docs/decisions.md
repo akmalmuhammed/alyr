@@ -27,6 +27,7 @@ Status: **Accepted** (in force), **Proposed** (waiting for the founder), **Super
 | D-019 | The API does not run on Cloudflare Python Workers (for now) | Accepted |
 | D-020 | Consent and the 24-hour window are enforced in the outbound layer | Accepted |
 | D-021 | A person answering from the inbox pauses the assistant for that customer | Accepted |
+| D-022 | Sign-in is our own: one-time code by email, sessions in our database | Proposed |
 
 ---
 
@@ -257,3 +258,29 @@ When a staff member replies from the inbox, the assistant stops answering that c
 
 **Why.** Two voices answering one customer is the most common complaint about chatbot inboxes, and the pause must not depend on staff remembering a switch.
 **Not built yet.** Staff names on replies and assignment to a person (both need sign-in, ALY-18), internal notes, labels (ALY-53), sending a template from the inbox when the window is closed (ALY-20), search, and automatic hand-back after a period of silence.
+
+## D-022 · Sign-in is our own: one-time code by email, sessions in our database
+**Date** 8 Oct 2026 · **Status** Proposed (built as the default; the founder was offered "own" or "hosted" and has not answered) · Linear ALY-18
+
+Staff sign in with a 6-digit code sent to their email. A session cookie then identifies them for 30 days. There are no passwords.
+
+| Choice | Why |
+|---|---|
+| Our own, not a hosted service such as Clerk | Free at any size, staff identities stay in our database (the Qatar data rule), and nothing to migrate away from later. |
+| Codes, not passwords | Nothing to leak, reuse or reset. A small shop's staff will not manage passwords well. |
+| Email first, WhatsApp later | An owner must be able to sign in before their WhatsApp number is connected, and when it is restricted. |
+
+**How it is protected.** Codes and session tokens are stored only as hashes. A code lasts 10 minutes, 5 wrong guesses burn it, and an email may request 5 codes an hour. The form answers the same way for unknown emails. The cookie is HttpOnly and SameSite=Lax, and Secure outside local. Membership is checked on every request, so removing someone signs them out at once.
+
+**Data model.** `users`, `login_codes` and `sessions` belong to a person, not a tenant, so they are on the short list of global tables. `memberships` (who works for which shop, as owner, admin or agent) is tenant-owned with row-level security; its policy also lets sign-in read the memberships of the person who has just proved who they are. The tenant for every request comes from the session, never from the browser.
+
+**Roles today.** Owners and admins manage the team; only an owner can create, change or remove an owner; a shop always keeps one owner. Agents can use everything else. Finer permissions (who may send reminders, see totals) are not built.
+
+**Open demo.** On a local machine with `ALYR_DEMO_OPEN=true` (the default) the workspace still works without signing in, as the demo shop. Everywhere else every workspace request needs a session.
+
+**Not built yet.**
+- **No email is sent.** No provider is chosen. Locally the code is shown on the sign-in page; outside local, sign-in answers 503. This must be solved before any hosted environment. Options to research: Resend, Amazon SES, Cloudflare Email.
+- A person who works for several shops lands in the first; there is no shop switcher.
+- No list of signed-in devices and no "sign out everywhere".
+- Creating a shop and its first owner is still a database-owner action; there is no sign-up.
+- No separate protection against cross-site form posts beyond SameSite=Lax.

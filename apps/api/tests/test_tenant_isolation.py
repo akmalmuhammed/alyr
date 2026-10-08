@@ -7,7 +7,10 @@ import pytest
 from alyr.db import Database
 from conftest import APP_DSN, OWNER_DSN
 
-GLOBAL_TABLES = {"tenants", "channel_numbers", "schema_migrations"}
+# users, login_codes and sessions belong to a person, not a tenant (D-022).
+GLOBAL_TABLES = {
+    "tenants", "channel_numbers", "schema_migrations", "users", "login_codes", "sessions",
+}
 
 
 def run(coro):
