@@ -33,10 +33,13 @@ type InboxRow = {
   id: string; name: string; phone: string | null; username: string | null;
   status: "open" | "closed"; assistant_paused: boolean; opted_out: boolean;
   window_open: boolean; window_closes_at: string | null; unread: number;
+  assigned: { id: string; name: string } | null;
   last: { body: string; direction: "in" | "out"; kind: string; status: string; created_at: string };
 };
 type InboxMessage = Message & { id: string; sent_by: string };
-type Thread = { customer: Omit<InboxRow, "unread" | "last">; messages: InboxMessage[] };
+type StaffNote = { id: string; body: string; author_name: string; created_at: string };
+type Thread = { customer: Omit<InboxRow, "unread" | "last">; messages: InboxMessage[]; notes: StaffNote[] };
+type SavedReply = { id: string; title: string; body: string };
 type Me = { signed_in: boolean; id: string | null; name: string; email: string; role: string };
 type Member = { id: string; name: string; email: string; role: string };
 type Entry = { kind: string; amount_text: string; note: string; created_at: string };
@@ -66,6 +69,9 @@ const T = {
     roles: { owner: "Owner", admin: "Admin", agent: "Agent" } as Record<string, string>,
     addMember: "Add", remove: "Remove", name: "Name", email: "Email", role: "Role",
     teamAgent: "Only an owner or admin can change the team.",
+    everyone: "Everyone", mine: "Mine", unassigned: "Unassigned", assignedTo: "Handled by", nobody: "Nobody",
+    noteMode: "Note", noteHere: "Write a note only your team can see", addNote: "Add note",
+    noteLabel: "Staff note, not sent to the customer", saveReply: "Save as quick reply", quick: "Quick replies",
     tabInbox: "Inbox", inboxSub: "Every customer conversation, answered by the assistant or by you",
     open: "Open", closed: "Closed", noChats: "No conversations here. As a customer in the chat, send \"hello\".",
     pick: "Choose a conversation to read it.", you: "You", assistant: "Assistant", customerSays: "Customer",
@@ -97,6 +103,9 @@ const T = {
     roles: { owner: "مالك", admin: "مدير", agent: "موظف" } as Record<string, string>,
     addMember: "إضافة", remove: "إزالة", name: "الاسم", email: "البريد الإلكتروني", role: "الدور",
     teamAgent: "تعديل الفريق متاح للمالك أو المدير فقط.",
+    everyone: "الكل", mine: "محادثاتي", unassigned: "غير مسندة", assignedTo: "المسؤول", nobody: "لا أحد",
+    noteMode: "ملاحظة", noteHere: "اكتب ملاحظة يراها فريقك فقط", addNote: "إضافة ملاحظة",
+    noteLabel: "ملاحظة داخلية، لا تُرسل للعميل", saveReply: "حفظ كرد سريع", quick: "ردود سريعة",
     tabInbox: "المحادثات", inboxSub: "كل محادثات العملاء، يرد عليها المساعد أو أنت",
     open: "مفتوحة", closed: "مغلقة", noChats: "لا توجد محادثات. أرسل \"hello\" كعميل في المحادثة.",
     pick: "اختر محادثة لقراءتها.", you: "أنت", assistant: "المساعد", customerSays: "العميل",
@@ -167,6 +176,9 @@ export default function Demo() {
   const [teamError, setTeamError] = useState("");
   const [inboxRows, setInboxRows] = useState<InboxRow[]>([]);
   const [inboxFilter, setInboxFilter] = useState<"open" | "closed">("open");
+  const [assignedFilter, setAssignedFilter] = useState<"any" | "me" | "none">("any");
+  const [savedReplies, setSavedReplies] = useState<SavedReply[]>([]);
+  const [composeMode, setComposeMode] = useState<"reply" | "note">("reply");
   const [chatId, setChatId] = useState<string | null>(null);
   const [thread, setThread] = useState<Thread | null>(null);
   const [replyDraft, setReplyDraft] = useState("");
@@ -206,15 +218,20 @@ export default function Demo() {
       setMessages(c.messages);
       setOrders((await getJson<{ orders: OrderRow[] }>("/api/orders")).orders);
       setMe(await getJson<Me>("/api/auth/me"));
-      if (tab === "team") {
+      if (tab === "team" || tab === "inbox") {
         const team = await getJson<{ members: Member[]; can_manage: boolean }>("/api/team");
         setMembers(team.members);
         setCanManage(team.can_manage);
       }
       const rows = (
-        await getJson<{ conversations: InboxRow[] }>(`/api/inbox/conversations?status=${inboxFilter}`)
+        await getJson<{ conversations: InboxRow[] }>(
+          `/api/inbox/conversations?status=${inboxFilter}&assigned=${assignedFilter}`,
+        )
       ).conversations;
       setInboxRows(rows);
+      if (tab === "inbox") {
+        setSavedReplies((await getJson<{ replies: SavedReply[] }>("/api/inbox/saved-replies")).replies);
+      }
       if (tab === "inbox" && chatId) {
         const loaded = await getJson<Thread>(`/api/inbox/conversations/${chatId}`);
         setThread(loaded);
@@ -233,7 +250,7 @@ export default function Demo() {
     } catch {
       setError("Cannot reach the Alyr API. Start it on port 8000, then this page recovers by itself.");
     }
-  }, [phone, selected, inboxFilter, tab, chatId]);
+  }, [phone, selected, inboxFilter, assignedFilter, tab, chatId]);
 
   useEffect(() => {
     const first = setTimeout(() => loadPersonas().catch(() => undefined), 0);
@@ -304,7 +321,23 @@ export default function Demo() {
     const text = replyDraft.trim();
     if (!text) return;
     setReplyDraft("");
-    await inboxPost("reply", { text });
+    await inboxPost(composeMode === "note" ? "notes" : "reply", { text });
+  }
+
+  async function saveQuickReply() {
+    const body = replyDraft.trim();
+    if (!body) return;
+    await getJson("/api/inbox/saved-replies", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ title: body.slice(0, 28), body }),
+    });
+    refresh();
+  }
+
+  async function deleteQuickReply(id: string) {
+    await getJson(`/api/inbox/saved-replies/${id}`, { method: "DELETE" });
+    refresh();
   }
 
   async function teamCall(url: string, method: string, body?: object) {
@@ -357,6 +390,10 @@ export default function Demo() {
   const selectedCustomer = summary?.customers.find((c) => c.id === selected);
   const unreadChats = inboxRows.filter((r) => r.unread > 0).length;
   const openThread = thread && thread.customer.id === chatId ? thread : null;
+  // Customer messages and staff notes in one timeline, oldest first.
+  const timeline = openThread
+    ? [...openThread.messages, ...openThread.notes].sort((a, b) => a.created_at.localeCompare(b.created_at))
+    : [];
 
   return (
     <div className="shell">
@@ -473,6 +510,14 @@ export default function Demo() {
                     <button key={f} aria-pressed={inboxFilter === f} onClick={() => setInboxFilter(f)}>{t[f]}</button>
                   ))}
                 </div>
+                <div className="seg">
+                  {([["any", t.everyone], ["me", t.mine], ["none", t.unassigned]] as const).map(([f, label]) => (
+                    <button
+                      key={f} aria-pressed={assignedFilter === f} onClick={() => setAssignedFilter(f)}
+                      disabled={f === "me" && !me?.signed_in}
+                    >{label}</button>
+                  ))}
+                </div>
                 {inboxRows.length === 0 && <p className="empty-note">{t.noChats}</p>}
                 {inboxRows.map((r) => (
                   <button
@@ -488,7 +533,8 @@ export default function Demo() {
                       {r.last.direction === "out" ? "↩ " : ""}{r.last.body}
                     </span>
                     <span className="conv-flags">
-                      {r.assistant_paused && <span className="pill promise">{t.paused}</span>}
+                      {r.assigned && <span className="pill p0">{r.assigned.name}</span>}
+                      {r.assistant_paused && !r.assigned && <span className="pill promise">{t.paused}</span>}
                       {r.opted_out && <span className="pill none">{t.optedOut}</span>}
                       {r.last.status === "blocked" && <span className="pill p3">{t.notSent}</span>}
                     </span>
@@ -509,6 +555,16 @@ export default function Demo() {
                         </span>
                       </div>
                       <span className="spacer" />
+                      <label className="assign">
+                        {t.assignedTo}
+                        <select
+                          value={openThread.customer.assigned?.id ?? ""}
+                          onChange={(e) => inboxPost("assign", { user_id: e.target.value || null })}
+                        >
+                          <option value="">{t.nobody}</option>
+                          {members.map((m) => <option key={m.id} value={m.id}>{m.name}</option>)}
+                        </select>
+                      </label>
                       {openThread.customer.assistant_paused && (
                         <button className="btn small" onClick={() => inboxPost("assistant", { paused: false })}>{t.handBack}</button>
                       )}
@@ -521,7 +577,12 @@ export default function Demo() {
                     </div>
                     {openThread.customer.assistant_paused && <p className="thread-note">{t.pausedHint}</p>}
                     <div className="msgs thread-msgs">
-                      {openThread.messages.map((m) => (
+                      {timeline.map((m) => "author_name" in m ? (
+                        <div key={m.id} className="bub staffnote" dir="auto">
+                          <span className="who" dir={lang === "ar" ? "rtl" : "ltr"}>{m.author_name} · {t.noteLabel}</span>
+                          {m.body}
+                        </div>
+                      ) : (
                         <div key={m.id} className={`bub ${m.direction === "out" ? "me" : ""}`} dir="auto">
                           <span className="who" dir={lang === "ar" ? "rtl" : "ltr"}>
                             {m.direction === "in" ? t.customerSays : m.sent_by || t.assistant}
@@ -541,18 +602,39 @@ export default function Demo() {
                     <p className={`thread-note ${openThread.customer.window_open ? "" : "warn"}`}>
                       {openThread.customer.window_open ? t.windowOpen(hoursLeft) : t.windowClosed}
                     </p>
-                    <form className="composer" onSubmit={(e) => { e.preventDefault(); sendReply(); }}>
+                    <div className="quick" aria-label={t.quick}>
+                      <div className="seg small">
+                        <button aria-pressed={composeMode === "reply"} onClick={() => setComposeMode("reply")}>{t.reply}</button>
+                        <button aria-pressed={composeMode === "note"} onClick={() => setComposeMode("note")}>{t.noteMode}</button>
+                      </div>
+                      {composeMode === "reply" && savedReplies.map((r) => (
+                        <span key={r.id} className="quickchip">
+                          <button dir="auto" title={r.body} onClick={() => setReplyDraft(r.body)}>{r.title}</button>
+                          <button aria-label={`${t.remove}: ${r.title}`} onClick={() => deleteQuickReply(r.id)}>×</button>
+                        </span>
+                      ))}
+                    </div>
+                    <form
+                      className={`composer ${composeMode === "note" ? "noting" : ""}`}
+                      onSubmit={(e) => { e.preventDefault(); sendReply(); }}
+                    >
                       <input
                         id="reply"
-                        aria-label={t.replyHere}
+                        aria-label={composeMode === "note" ? t.noteHere : t.replyHere}
                         value={replyDraft}
                         onChange={(e) => setReplyDraft(e.target.value)}
-                        placeholder={t.replyHere}
-                        disabled={!openThread.customer.window_open}
+                        placeholder={composeMode === "note" ? t.noteHere : t.replyHere}
+                        disabled={composeMode === "reply" && !openThread.customer.window_open}
                         dir="auto"
                         autoComplete="off"
                       />
-                      <button className="btn primary" type="submit" disabled={!openThread.customer.window_open}>{t.reply}</button>
+                      {composeMode === "reply" && replyDraft.trim() && (
+                        <button className="btn small" type="button" onClick={saveQuickReply}>{t.saveReply}</button>
+                      )}
+                      <button
+                        className="btn primary" type="submit"
+                        disabled={composeMode === "reply" && !openThread.customer.window_open}
+                      >{composeMode === "note" ? t.addNote : t.reply}</button>
                     </form>
                   </>
                 )}

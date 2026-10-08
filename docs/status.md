@@ -2,7 +2,7 @@
 
 Read this first in a new session, on any machine. It is the hand-over note between sessions: what works, what is next, and what is waiting on the founder. Update it in the same pull request as the work. Linear (team `Alyrtech`, project `Alyr Launch`) holds the detail; this page is the summary.
 
-Last updated: 8 Oct 2026, after pull request 10.
+Last updated: 8 Oct 2026, after pull request 11.
 
 ## What works today
 
@@ -17,17 +17,17 @@ All of it runs against the chat simulator. Nothing has been tested against Meta'
 | Order link: products, order page, pay or on account | Built | `modules/orders/`, `apps/web/app/s/` |
 | Job queue with retries and dead letters | Built | `core/jobs.py` |
 | Consent, stop and start words, 24-hour window | Built | `core/consent.py`, `core/outbound.py` |
-| Shared inbox with human takeover | First version | `modules/inbox/`, D-021 |
+| Shared inbox: human takeover, assignment, staff notes, saved replies | Built; no live updates or typing warning | `modules/inbox/`, D-021 |
 | Sign-in by one-time code, sessions, team and roles | Built; no email provider, so codes only work locally | `core/auth.py`, D-022 |
 | Demo page: chat simulator plus workspace tabs | Built | `apps/web/app/page.tsx` |
 
-Tests: 120, all passing. CI runs api, web and a secrets scan on every pull request.
+Tests: 130, all passing. CI runs api, web and a secrets scan on every pull request.
 
 ## Next on the build side, in order
 
-1. **Rest of the inbox (ALY-28):** assignment to a person (now possible), internal notes, saved replies, typing warning, live updates.
+1. **Contacts and labels (ALY-53).**
 2. **Email provider for sign-in codes (part of ALY-18).** Needs research and the founder's choice; blocks any hosted environment.
-3. **Contacts and labels (ALY-53).**
+3. **Inbox leftovers (ALY-28):** live updates instead of polling, a warning when a colleague is typing.
 4. **Templates (ALY-20)** and sending one from the inbox when the window is closed.
 5. **Messaging limits (ALY-41), Redis sessions (ALY-14).**
 6. **Products screen and remaining order-link items (ALY-24); remaining ledger items (ALY-22).**

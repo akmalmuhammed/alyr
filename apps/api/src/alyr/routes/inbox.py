@@ -23,6 +23,19 @@ class AssistantChange(BaseModel):
     paused: bool
 
 
+class Assignment(BaseModel):
+    user_id: UUID | None = Field(description="A team member, or null for nobody")
+
+
+class Note(BaseModel):
+    text: str = Field(min_length=1, max_length=4000)
+
+
+class SavedReply(BaseModel):
+    title: str = Field(min_length=1, max_length=60)
+    body: str = Field(min_length=1, max_length=4000)
+
+
 def _found(ok: bool) -> None:
     if not ok:
         raise HTTPException(status_code=404, detail="conversation not found")
@@ -32,10 +45,11 @@ def _found(ok: bool) -> None:
 async def conversations(
     request: Request,
     status: str = Query("open", pattern="^(open|closed|all)$"),
-    tenant_id: UUID = Depends(current_tenant),
+    assigned: str = Query("any", pattern="^(any|me|none)$"),
+    staff: Staff = Depends(current_staff),
 ) -> dict:
-    async with request.app.state.db.tenant(tenant_id) as conn:
-        rows = await service.conversations(conn, status)
+    async with request.app.state.db.tenant(staff.tenant_id) as conn:
+        rows = await service.conversations(conn, status, assigned, staff.user_id)
     return {"conversations": rows, "unread": sum(1 for r in rows if r["unread"])}
 
 
@@ -68,7 +82,8 @@ async def reply(
     try:
         async with request.app.state.db.tenant(staff.tenant_id) as conn:
             return await service.reply(
-                conn, request.app.state.outbound, contact_id, body.text, staff.name
+                conn, request.app.state.outbound, contact_id, body.text, staff.name,
+                staff.user_id,
             )
     except service.InboxError as error:
         raise HTTPException(status_code=422, detail=str(error)) from error
@@ -97,3 +112,59 @@ async def change_assistant(
     async with request.app.state.db.tenant(tenant_id) as conn:
         _found(await service.set_assistant(conn, contact_id, body.paused))
     return {"paused": body.paused}
+
+
+@router.post("/conversations/{contact_id}/assign")
+async def assign(
+    contact_id: UUID, body: Assignment, request: Request,
+    tenant_id: UUID = Depends(current_tenant),
+) -> dict:
+    try:
+        async with request.app.state.db.tenant(tenant_id) as conn:
+            _found(await service.assign(conn, contact_id, body.user_id))
+    except service.InboxError as error:
+        raise HTTPException(status_code=422, detail=str(error)) from error
+    return {"assigned_to": str(body.user_id) if body.user_id else None}
+
+
+@router.post("/conversations/{contact_id}/notes")
+async def add_note(
+    contact_id: UUID, body: Note, request: Request, staff: Staff = Depends(current_staff)
+) -> dict:
+    try:
+        async with request.app.state.db.tenant(staff.tenant_id) as conn:
+            note_id = await service.add_note(
+                conn, contact_id, body.text, staff.user_id, staff.name
+            )
+    except service.InboxError as error:
+        raise HTTPException(status_code=422, detail=str(error)) from error
+    except LookupError as error:
+        raise HTTPException(status_code=404, detail="conversation not found") from error
+    return {"id": note_id}
+
+
+@router.get("/saved-replies")
+async def saved_replies(request: Request, tenant_id: UUID = Depends(current_tenant)) -> dict:
+    async with request.app.state.db.tenant(tenant_id) as conn:
+        return {"replies": await service.saved_replies(conn)}
+
+
+@router.post("/saved-replies")
+async def save_reply(
+    body: SavedReply, request: Request, tenant_id: UUID = Depends(current_tenant)
+) -> dict:
+    try:
+        async with request.app.state.db.tenant(tenant_id) as conn:
+            return {"id": await service.save_reply(conn, body.title, body.body)}
+    except service.InboxError as error:
+        raise HTTPException(status_code=422, detail=str(error)) from error
+
+
+@router.delete("/saved-replies/{reply_id}")
+async def delete_saved_reply(
+    reply_id: UUID, request: Request, tenant_id: UUID = Depends(current_tenant)
+) -> dict:
+    async with request.app.state.db.tenant(tenant_id) as conn:
+        if not await service.delete_saved_reply(conn, reply_id):
+            raise HTTPException(status_code=404, detail="saved reply not found")
+    return {"deleted": True}

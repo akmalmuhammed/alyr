@@ -211,3 +211,16 @@ tbody tr.norow:hover { background: transparent; }
 .login .devcode { margin: 0; padding: 8px 10px; border-radius: 8px; background: var(--warn-soft); color: var(--warn); font-size: 13.5px; }
 .team-add { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 12px; }
 .team-add input { flex: 1 1 160px; }
+
+/* inbox: assignment, notes, quick replies */
+.assign { display: inline-flex; align-items: center; gap: 6px; font-size: 12.5px; color: var(--muted); }
+.assign select { padding: 4px 6px; border: 1px solid var(--line); border-radius: 6px; background: var(--surface); color: var(--fg); font: inherit; font-size: 13px; }
+.bub.staffnote { align-self: center; max-width: 92%; background: var(--warn-soft); border-style: dashed; }
+.quick { display: flex; gap: 6px; flex-wrap: wrap; align-items: center; padding: 8px 12px 0; }
+.seg.small { margin: 0; }
+.seg.small button { flex: none; padding: 3px 10px; font-size: 12.5px; }
+.seg button:disabled { opacity: .5; }
+.quickchip { display: inline-flex; border: 1px solid var(--line); border-radius: 99px; overflow: hidden; font-size: 12.5px; }
+.quickchip button { background: var(--bg); border: 0; padding: 3px 9px; color: var(--fg); }
+.quickchip button + button { border-inline-start: 1px solid var(--line); color: var(--muted); padding: 3px 7px; }
+.composer.noting input { background: var(--warn-soft); }
