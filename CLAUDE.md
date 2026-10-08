@@ -4,6 +4,7 @@ WhatsApp-native operating tools for small businesses in Qatar. One multi-tenant 
 
 Read these before working, in this order:
 
+- [docs/status.md](docs/status.md): where things stand right now, what is next and what is waiting on the founder. Update it in the same pull request as the work.
 - [docs/master-plan.md](docs/master-plan.md): what we are building, in what order, and what we decided not to build.
 - [docs/decisions.md](docs/decisions.md): every decision with its reason. Add an entry in the same pull request as any new decision.
 - [docs/stack.md](docs/stack.md): every tool, its free limit and when we swap it. Free tiers first; nothing paid without the founder agreeing.
@@ -44,6 +45,7 @@ apps/api/                   FastAPI service (Python 3.13, managed with uv)
   src/alyr/core/            Inbound path, contact identity (BSUID), outbound layer, Arabic normaliser
   src/alyr/modules/ledger/  Module B: credit ledger and reminders
   src/alyr/modules/orders/  Order link: products, orders, pay or put on account
+  src/alyr/modules/inbox/   Shared inbox: staff read and answer conversations by hand
   src/alyr/modules/router.py  Which module answers a message
   src/alyr/routes/          HTTP routes
   src/alyr/db.py            `Database.tenant(id)`: one transaction scoped to one tenant
@@ -59,6 +61,7 @@ infra/                      Bicep for Azure Qatar Central (not created yet)
 
 ```
 docker compose up -d                      # PostgreSQL 16 and Redis 7
+scripts/cloud-setup.sh                    # instead of the line above where there is no Docker (cloud sessions)
 cd apps/api
 uv sync
 uv run python -m alyr.migrate             # create tables
