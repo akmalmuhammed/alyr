@@ -28,6 +28,8 @@ Status: **Accepted** (in force), **Proposed** (waiting for the founder), **Super
 | D-020 | Consent and the 24-hour window are enforced in the outbound layer | Accepted |
 | D-021 | A person answering from the inbox pauses the assistant for that customer | Accepted |
 | D-022 | Sign-in is our own: one-time code by email, sessions in our database | Proposed |
+| D-023 | ALYR is the company; the WhatsApp product is its first product | Accepted |
+| D-024 | Bookings join Product 1; the first customers book, order, pay and track | Accepted |
 
 ---
 
@@ -284,3 +286,31 @@ Staff sign in with a 6-digit code sent to their email. A session cookie then ide
 - No list of signed-in devices and no "sign out everywhere".
 - Creating a shop and its first owner is still a database-owner action; there is no sign-up.
 - No separate protection against cross-site form posts beyond SameSite=Lax.
+
+## D-023 · ALYR is the company; the WhatsApp product is its first product
+**Date** 11 Oct 2026 · **Status** Accepted (founder, 11 Oct) · Linear ALY-56
+
+ALYR is a technology company for businesses in Qatar and the GCC, with several products to come. The WhatsApp product is Product 1, not the company. The founder had said the same on 7 Oct ("alyr is the main name ill have multiple product").
+
+- **The public site** (`/`, `/ar`) presents the company first and Product 1 as the thing available now. The demo and workspace moved from `/` to `/whatsapp`.
+- **Transformation services** (audits, custom programs) are the long-term direction, not something sold today. The site therefore does not offer an audit; its one request is early access to the product.
+- **Brand.** The approved design system v1.0 applies to everything public. See `docs/brand.md`.
+
+**Consequence.** `docs/master-plan.md` still opens by describing Alyr as the WhatsApp layer only. Read it as the plan for Product 1 until it is revised.
+**Not decided.** Legal company name, what the second product is, and services pricing.
+
+## D-024 · Bookings join Product 1; the first customers book, order, pay and track
+**Date** 11 Oct 2026 · **Status** Accepted (founder, 11 Oct) · Linear ALY-27
+
+The founder named the first customers as businesses that need booking, scheduling, ordering, paying and tracking. That widens the first buyer from the credit trader in the master plan to service businesses: clinics and salons, home and field services, shops, and travel or document offices.
+
+| Need | State |
+|---|---|
+| Ordering | Built: order link |
+| Paying | Built against a stand-in gateway; a real gateway is ALY-17 |
+| Tracking | Built for orders: each status change messages the customer |
+| Booking and scheduling | API built (pull request 13); screens not built |
+| Team inbox | Built |
+
+**Consequence.** Bookings moved from "next products" into Product 1. The credit ledger stays, as one tool among several rather than the centre.
+**The first gap a booking customer will hit:** one customer at a time per shop. A salon with three chairs needs bookable staff or resources.
