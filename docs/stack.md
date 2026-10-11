@@ -22,7 +22,8 @@ Checked 7 October 2026. Free tiers change often; re-check a row before relying o
 | Development | Docker Desktop, local PostgreSQL 16 and Redis 7 | Unlimited | None | — | — | In use |
 | WhatsApp test traffic | Meta test number | Free; up to 5 recipient phones | Cannot message real customers | Merchant's own number via Embedded Signup | Phase 2 exit test | Planned |
 | Webhook during development | Cloudflare Tunnel | Free | Needs a small program installed on the laptop; address changes unless a domain is attached | A hosted server | Phase 2 hosting exists | Planned |
-| Web app hosting | Vercel Hobby | Free | Terms forbid commercial use | Vercel Pro (about USD 20 a month) | First paying customer | Planned |
+| Public site hosting | Cloudflare Workers static assets (`alyr-site`) | Free: unlimited static requests | Static files only; no server rendering | Not needed for a static site | When the site needs server code | Live 11 Oct |
+| Workspace web app hosting | Not chosen (Vercel Hobby forbids commercial use) | — | — | Cloudflare (OpenNext) or Vercel Pro | When the API has an always-on home (ALY-10) | Open |
 | Database (hosted) | Neon Free | 0.5 GB, sleeps after 5 idle minutes | Outside Qatar; about 100 ms further away; no salary or QID data until ALY-51 | Azure PostgreSQL in Qatar Central | First paying customer, or 0.4 GB used, or Product 2 starts | Planned |
 | API and worker hosting | Founder's laptop through Cloudflare Tunnel | Free | Only up while the laptop is on | Azure Qatar Central on startup credits | Alpha merchants need it always on | Planned |
 | Tunnel, Vercel and Neon command-line tools | cloudflared, vercel, neonctl | Free | None | — | — | Installed 7 Oct |

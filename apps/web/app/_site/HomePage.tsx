@@ -1,7 +1,7 @@
 import { Icon, Logo, Symbol } from "./brand";
 import { copy, type Locale } from "./copy";
 import { ProductDemo } from "./ProductDemo";
-import { CONTACT_EMAIL, PATHS } from "./site";
+import { CONTACT_EMAIL, PATHS, WORKSPACE_URL } from "./site";
 import { SiteMotion } from "./SiteMotion";
 
 /** The ALYR company homepage. One component for both languages; all words come from
@@ -271,7 +271,7 @@ export function HomePage({ locale }: { locale: Locale }) {
               <a key={href} href={href}>{label}</a>
             ))}
             <a href={other} lang={locale === "en" ? "ar" : "en"}>{t.nav.other}</a>
-            <a href={PATHS.workspace}>{t.footer.workspace}</a>
+            {WORKSPACE_URL && <a href={WORKSPACE_URL}>{t.footer.workspace}</a>}
           </nav>
           <p className="foot-rights">
             <span dir="ltr">© 2026</span> {t.footer.rights}

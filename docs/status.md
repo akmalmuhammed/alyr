@@ -2,7 +2,7 @@
 
 Read this first in a new session, on any machine. It is the hand-over note between sessions: what works, what is next, and what is waiting on the founder. Update it in the same pull request as the work. Linear (team `Alyrtech`, project `Alyr Launch`) holds the detail; this page is the summary.
 
-Last updated: 11 Oct 2026, after the ALYR company site (ALY-56).
+Last updated: 11 Oct 2026, after the public site went live (ALY-10, ALY-56).
 
 ## What works today
 
@@ -20,7 +20,7 @@ All of it runs against the chat simulator. Nothing has been tested against Meta'
 | Shared inbox: human takeover, assignment, staff notes, saved replies | Built; no live updates or typing warning | `modules/inbox/`, D-021 |
 | Sign-in by one-time code, sessions, team and roles | Built; no email provider, so codes only work locally | `core/auth.py`, D-022 |
 | Bookings: services, opening hours, free times, book, move, cancel, reminders | API only, no screens | `modules/bookings/` |
-| ALYR company homepage, English and Arabic | Built, not hosted | `apps/web/app/_site/`, `docs/brand.md`, D-023 |
+| ALYR company homepage, English and Arabic | **Live at https://alyr.online** (published 11 Oct on the founder's instruction) | `apps/web/app/_site/`, `docs/brand.md`, D-023 |
 | Demo page: chat simulator plus workspace tabs, now at `/whatsapp` | Built | `apps/web/app/(product)/whatsapp/page.tsx` |
 
 Tests: 148, all passing. CI runs api, web and a secrets scan on every pull request.
@@ -52,7 +52,7 @@ Tests: 148, all passing. CI runs api, web and a secrets scan on every pull reque
 
 ## Known gaps and risks
 
-- The public site has no contact address, no hosting and unreviewed Arabic. Several product claims on it describe what is built on the simulator, not what runs live. See `docs/brand.md`.
+- The public site is live with no contact address and unreviewed Arabic. Several product claims on it describe what is built on the simulator, not what runs live. See `docs/brand.md`.
 - Bookings have no screens: no customer booking page and no workspace tab.
 - On the founder's laptop Windows blocks Python's compiled database driver, so the API and its tests run through `scripts/api-in-docker.sh`.
 
@@ -63,6 +63,12 @@ Tests: 148, all passing. CI runs api, web and a secrets scan on every pull reque
 - The order link identifies the customer by an unguessable ID only.
 - Failed jobs have an API route but no screen.
 - The demo page polls every 1.5 seconds.
+
+## Publishing the public site
+
+- Only `/` and `/ar` are published, as plain files on Cloudflare (Worker `alyr-site`, static assets, free plan). The workspace, sign-in and the API are not there: `/whatsapp`, `/login` and `/api/...` answer 404 on `alyr.online`.
+- To publish a change: `scripts/build-site.sh`, then `npx wrangler deploy` from `apps/web`. It needs the Cloudflare sign-in on the founder's laptop and the founder's go-ahead each time. Nothing deploys automatically.
+- The bare domain is attached as a route because it already had a proxied DNS record; `www.alyr.online` is a custom domain. See `apps/web/wrangler.jsonc`.
 
 ## Things that only exist on the founder's laptop
 
