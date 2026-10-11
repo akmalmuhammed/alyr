@@ -42,3 +42,6 @@ next-env.d.ts
 
 # the example lists variable names only, never values
 !.env.example
+
+# the published public site, built by scripts/build-site.sh
+/out-site/

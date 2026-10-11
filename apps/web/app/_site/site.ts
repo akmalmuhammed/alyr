@@ -7,4 +7,8 @@ export const SITE_URL = process.env.NEXT_PUBLIC_ALYR_SITE_URL ?? "https://alyr.o
  * the page then says so plainly instead of showing an address nobody reads. */
 export const CONTACT_EMAIL = process.env.NEXT_PUBLIC_ALYR_CONTACT_EMAIL ?? "";
 
-export const PATHS = { en: "/", ar: "/ar", workspace: "/login" } as const;
+/** Where staff sign in. Empty on the published site, which is the public pages only:
+ * the workspace is not hosted there, so the footer shows no link to it. */
+export const WORKSPACE_URL = process.env.NEXT_PUBLIC_ALYR_WORKSPACE_URL ?? "";
+
+export const PATHS = { en: "/", ar: "/ar" } as const;
