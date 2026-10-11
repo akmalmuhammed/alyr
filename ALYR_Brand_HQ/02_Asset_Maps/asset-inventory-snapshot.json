@@ -1,0 +1,22 @@
+{
+  "generated_at": "2026-10-11T21:57:07.1573209+03:00",
+  "source": "ALYR_Design_System",
+  "total_files": 198,
+  "groups": {
+    "04_App_and_Favicon": 23,
+    "10_Showcase": 4,
+    "09_Content_and_Motion": 3,
+    "06_UI_UX_System": 11,
+    "03_Icon_System": 26,
+    "00_Source_References": 3,
+    "11_Handoff": 3,
+    "05_Social_Media": 21,
+    "README.md": 1,
+    "00_Governance": 7,
+    "01_Brand_Foundation": 8,
+    "02_Logo_System": 64,
+    "08_Document_System": 12,
+    "_tools": 2,
+    "07_Website_Assets": 10
+  }
+}

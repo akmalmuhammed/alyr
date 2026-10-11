@@ -1,3 +1,14 @@
+# ALYR Workspace
+
+## ALYR brand and delivery systems
+
+The ALYR brand source of truth is organized in:
+
+- [`ALYR_Brand_HQ/`](ALYR_Brand_HQ/) — why/what/how, strategic operating model, transformation pipeline, UX principles, governance, font policy and handoff maps.
+- [`ALYR_Design_System/`](ALYR_Design_System/) — approved Carbon Volt + Monochrome identity, F1 Command Fold logo system, cut-Y wordmark, icons, tokens, UI/UX rules, website assets, social assets, document templates, motion/content rules and interactive showcase.
+
+Start with [`ALYR_Brand_HQ/README.md`](ALYR_Brand_HQ/README.md), then open [`ALYR_Design_System/10_Showcase/index.html`](ALYR_Design_System/10_Showcase/index.html).
+
 # Heldat
 
 Heldat is a local-first asset passport for physical, digital, collectible, and
