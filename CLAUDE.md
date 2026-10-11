@@ -1,10 +1,11 @@
-# Alyr
+# ALYR
 
-WhatsApp-native operating tools for small businesses in Qatar. One multi-tenant core, with modules switched on per merchant.
+ALYR is a technology company for businesses in Qatar and the GCC. This repository holds its public site and its first product: WhatsApp-native operating tools (bookings, orders, payments, tracking, team inbox). One multi-tenant core, with modules switched on per merchant.
 
 Read these before working, in this order:
 
 - [docs/status.md](docs/status.md): where things stand right now, what is next and what is waiting on the founder. Update it in the same pull request as the work.
+- [docs/brand.md](docs/brand.md): the brand rules the public site follows and where the design system lives. Read it before touching anything a customer sees.
 - [docs/master-plan.md](docs/master-plan.md): what we are building, in what order, and what we decided not to build.
 - [docs/decisions.md](docs/decisions.md): every decision with its reason. Add an entry in the same pull request as any new decision.
 - [docs/stack.md](docs/stack.md): every tool, its free limit and when we swap it. Free tiers first; nothing paid without the founder agreeing.
@@ -51,7 +52,10 @@ apps/api/                   FastAPI service (Python 3.13, managed with uv)
   src/alyr/db.py            `Database.tenant(id)`: one transaction scoped to one tenant
   src/alyr/seed.py          The demo shop (fictional)
   tests/
-apps/web/                   Next.js: Demo 1 page (chat simulator + ledger) and the stand-in payment page
+apps/web/                   Next.js. Three root layouts, one per route group:
+  app/(site)/, (site-ar)/   The public company site in English (/) and Arabic (/ar)
+  app/_site/                Its components, styles and every word (copy.ts)
+  app/(product)/            The demo and workspace (/whatsapp), sign-in, payment and order pages
 packages/compliance/        WPS SIF and e-invoice libraries (not created yet)
 specs/                      One folder per spec; write or update the spec before building
 infra/                      Bicep for Azure Qatar Central (not created yet)
@@ -70,7 +74,8 @@ uv run pytest                             # uses its own alyr_test database
 uv run ruff check .
 uv run uvicorn alyr.main:app --port 8000
 uv run python -m alyr.worker              # only when ALYR_JOBS_INLINE=false
-cd ../web && pnpm dev                     # http://localhost:3100 (3000 is used by another project)
+cd ../web && pnpm dev                     # http://localhost:3100 (3000 is used by another project); demo at /whatsapp
+scripts/api-in-docker.sh uv run pytest -q # where Windows blocks the compiled database driver
 ```
 
 ## Database rules in practice

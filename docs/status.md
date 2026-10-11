@@ -2,7 +2,7 @@
 
 Read this first in a new session, on any machine. It is the hand-over note between sessions: what works, what is next, and what is waiting on the founder. Update it in the same pull request as the work. Linear (team `Alyrtech`, project `Alyr Launch`) holds the detail; this page is the summary.
 
-Last updated: 8 Oct 2026, after pull request 11.
+Last updated: 11 Oct 2026, after the ALYR company site (ALY-56).
 
 ## What works today
 
@@ -19,12 +19,16 @@ All of it runs against the chat simulator. Nothing has been tested against Meta'
 | Consent, stop and start words, 24-hour window | Built | `core/consent.py`, `core/outbound.py` |
 | Shared inbox: human takeover, assignment, staff notes, saved replies | Built; no live updates or typing warning | `modules/inbox/`, D-021 |
 | Sign-in by one-time code, sessions, team and roles | Built; no email provider, so codes only work locally | `core/auth.py`, D-022 |
-| Demo page: chat simulator plus workspace tabs | Built | `apps/web/app/page.tsx` |
+| Bookings: services, opening hours, free times, book, move, cancel, reminders | API only, no screens | `modules/bookings/` |
+| ALYR company homepage, English and Arabic | Built, not hosted | `apps/web/app/_site/`, `docs/brand.md`, D-023 |
+| Demo page: chat simulator plus workspace tabs, now at `/whatsapp` | Built | `apps/web/app/(product)/whatsapp/page.tsx` |
 
-Tests: 130, all passing. CI runs api, web and a secrets scan on every pull request.
+Tests: 148, all passing. CI runs api, web and a secrets scan on every pull request.
 
 ## Next on the build side, in order
 
+1. **Booking screens (ALY-27):** the customer booking page and a workspace bookings tab.
+1. **Product screens on ALYR tokens**, so the workspace matches the public site.
 1. **Contacts and labels (ALY-53).**
 2. **Email provider for sign-in codes (part of ALY-18).** Needs research and the founder's choice; blocks any hosted environment.
 3. **Inbox leftovers (ALY-28):** live updates instead of polling, a warning when a colleague is typing.
@@ -47,6 +51,10 @@ Tests: 130, all passing. CI runs api, web and a secrets scan on every pull reque
 | Others | Payment provider applications (ALY-5), startup credits (ALY-55), lawyer on data location (ALY-51), an Arabic reviewer, two alpha businesses. |
 
 ## Known gaps and risks
+
+- The public site has no contact address, no hosting and unreviewed Arabic. Several product claims on it describe what is built on the simulator, not what runs live. See `docs/brand.md`.
+- Bookings have no screens: no customer booking page and no workspace tab.
+- On the founder's laptop Windows blocks Python's compiled database driver, so the API and its tests run through `scripts/api-in-docker.sh`.
 
 - Sign-in codes are not emailed yet: sign-in works on a local machine only.
 - No sign-up: a shop and its first owner are created by hand in the database.

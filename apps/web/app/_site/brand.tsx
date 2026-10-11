@@ -1,0 +1,101 @@
+// The ALYR logo and icons, drawn from the master artwork in the design system
+// (02_Logo_System/01_Master_SVG, 03_Icon_System/UI_Icons_SVG). The geometry is copied
+// point for point. Never redraw, retype, stretch or recolor it: the only variants are
+// Carbon on light and white on Carbon, each with the Volt plane.
+
+const VOLT = "#B7F34A";
+
+function FoldPlanes() {
+  return (
+    <>
+      <polygon fill="currentColor" points="50,0 180,0 130,62 0,62" />
+      <polygon fill="currentColor" points="0,72 126,72 39,160" />
+      <polygon fill={VOLT} points="134,72 190,72 142,160 46,160" />
+    </>
+  );
+}
+
+/** Primary horizontal logo. Keep it at least 140px wide; below that use `Symbol`. */
+export function Logo({ label, className }: { label: string; className?: string }) {
+  return (
+    <svg
+      className={className}
+      xmlns="http://www.w3.org/2000/svg"
+      viewBox="20 30 1000 160"
+      role="img"
+      aria-label={label}
+      shapeRendering="geometricPrecision"
+    >
+      <g transform="translate(20 30)">
+        <FoldPlanes />
+      </g>
+      <g transform="translate(300 35)" fill="currentColor">
+        <polygon points="0,150 69,10 92,10 28,150" />
+        <polygon points="76,37 92,10 164,150 134,150" />
+        <polygon points="190,10 216,10 216,124 326,124 326,150 190,150" />
+        <polygon points="348,10 379,10 433,80 414,107" />
+        <polygon points="478,10 511,10 421,150 389,150" />
+        <path d="M540 10H646C689 10 716 35 716 72C716 105 693 126 653 126H589V100H650C674 100 688 90 688 70C688 49 674 36 649 36H540Z" />
+        <rect x="540" y="100" width="29" height="50" />
+        <polygon points="638,100 673,100 720,150 683,150" />
+      </g>
+    </svg>
+  );
+}
+
+/** The Command Fold symbol on its own. Decorative unless given a label. */
+export function Symbol({ label, className }: { label?: string; className?: string }) {
+  return (
+    <svg
+      className={className}
+      xmlns="http://www.w3.org/2000/svg"
+      viewBox="0 0 190 160"
+      role={label ? "img" : undefined}
+      aria-label={label}
+      aria-hidden={label ? undefined : true}
+      shapeRendering="geometricPrecision"
+    >
+      <FoldPlanes />
+    </svg>
+  );
+}
+
+const ICONS = {
+  "arrow-right": ["M5 12h14", "m14 7 5 5-5 5"],
+  "arrow-up-right": ["M7 17 17 7", "M9 7h8v8"],
+  check: ["m5 12 4 4L19 6"],
+  security: ["M12 3 4 6v5c0 5.2 3.4 8.4 8 10 4.6-1.6 8-4.8 8-10V6z", "m8.5 12 2.2 2.2 4.8-5"],
+  users: [
+    "M9 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8Z",
+    "M3 21v-2a6 6 0 0 1 12 0v2",
+    "M16 4.5a3.5 3.5 0 0 1 0 6.5",
+    "M17 15a5 5 0 0 1 4 4.9V21",
+  ],
+  data: ["M4 19V9", "M10 19V4", "M16 19v-7", "M22 19H2"],
+  document: ["M6 3h8l4 4v14H6z", "M14 3v5h5", "M9 13h6", "M9 17h5"],
+  menu: ["M4 7h16", "M4 12h16", "M4 17h16"],
+} as const;
+
+export type IconName = keyof typeof ICONS;
+
+/** A 24px-grid ALYR interface icon. Always decorative: pair it with a text label. */
+export function Icon({ name, className }: { name: IconName; className?: string }) {
+  return (
+    <svg
+      className={className}
+      xmlns="http://www.w3.org/2000/svg"
+      viewBox="0 0 24 24"
+      aria-hidden="true"
+      focusable="false"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.7"
+      strokeLinecap="square"
+      strokeLinejoin="miter"
+    >
+      {ICONS[name].map((d) => (
+        <path key={d} d={d} />
+      ))}
+    </svg>
+  );
+}

@@ -1,0 +1,54 @@
+import { ImageResponse } from "next/og";
+
+// The card shown when a link to ALYR is shared, for example in a WhatsApp chat.
+// Reversed logo on Carbon, as the logo rules require on dark surfaces.
+
+export const alt = "ALYR. Transform the business. Not just the interface.";
+export const size = { width: 1200, height: 630 };
+export const contentType = "image/png";
+
+const VOLT = "#B7F34A";
+
+export default function OpenGraphImage() {
+  return new ImageResponse(
+    (
+      <div
+        style={{
+          width: "100%", height: "100%", display: "flex", flexDirection: "column",
+          justifyContent: "space-between", padding: 80, background: "#15171A", color: "#FFFFFF",
+        }}
+      >
+        <svg width="400" height="64" viewBox="20 30 1000 160">
+          <g transform="translate(20 30)">
+            <polygon fill="#FFFFFF" points="50,0 180,0 130,62 0,62" />
+            <polygon fill="#FFFFFF" points="0,72 126,72 39,160" />
+            <polygon fill={VOLT} points="134,72 190,72 142,160 46,160" />
+          </g>
+          <g transform="translate(300 35)" fill="#FFFFFF">
+            <polygon points="0,150 69,10 92,10 28,150" />
+            <polygon points="76,37 92,10 164,150 134,150" />
+            <polygon points="190,10 216,10 216,124 326,124 326,150 190,150" />
+            <polygon points="348,10 379,10 433,80 414,107" />
+            <polygon points="478,10 511,10 421,150 389,150" />
+            <path d="M540 10H646C689 10 716 35 716 72C716 105 693 126 653 126H589V100H650C674 100 688 90 688 70C688 49 674 36 649 36H540Z" />
+            <rect x="540" y="100" width="29" height="50" />
+            <polygon points="638,100 673,100 720,150 683,150" />
+          </g>
+        </svg>
+        <div style={{ display: "flex", flexDirection: "column" }}>
+          <div style={{ fontSize: 84, fontWeight: 600, letterSpacing: -2, lineHeight: 1.02 }}>
+            Transform the business.
+          </div>
+          <div style={{ fontSize: 84, fontWeight: 600, letterSpacing: -2, lineHeight: 1.02, color: "#A7ADB5" }}>
+            Not just the interface.
+          </div>
+        </div>
+        <div style={{ display: "flex", alignItems: "center", fontSize: 26, color: "#A7ADB5" }}>
+          <div style={{ width: 28, height: 6, background: VOLT, marginRight: 18 }} />
+          alyr.online
+        </div>
+      </div>
+    ),
+    size,
+  );
+}
