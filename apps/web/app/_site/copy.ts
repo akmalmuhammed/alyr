@@ -1,4 +1,7 @@
 // Every word on the public site, in English and Arabic. Components contain no text.
+// Positioning and voice follow the Brand & Growth Playbook (11 Oct 2026): the local tech
+// partner that sets it up for you. Plain words, one idea per sentence, no hype, and no
+// number or promise we cannot yet show (see docs/brand.md).
 // The Arabic is written natively, not translated line by line, and still needs a
 // native speaker's review before launch (docs/brand.md).
 
@@ -85,38 +88,38 @@ export type Copy = {
     items: { icon: "security" | "data" | "users" | "document"; title: string; body: string }[];
   };
   company: { eyebrow: string; body: string };
-  cta: { title: string; body: string; button: string; write: string; pending: string };
-  footer: { line: string; rights: string; workspace: string };
+  cta: { title: string; body: string; whatsapp: string; email: string; write: string; pending: string };
+  footer: { line: string; rights: string; workspace: string; disclaimer: string };
 };
 
 const en: Copy = {
   meta: {
-    title: "ALYR · Transform the business. Not just the interface.",
+    title: "ALYR · Go digital without the IT team",
     description:
-      "ALYR builds the systems businesses in Qatar and the GCC run on. The first product turns your WhatsApp number into bookings, orders, payments and tracking, with your whole team in one inbox.",
+      "ALYR turns your customers' chats into orders, bookings and payments, set up for you. For restaurants, cafes, clinics, salons and shops in Qatar, in Arabic and English.",
   },
   skip: "Skip to content",
   nav: {
     product: "Product",
-    approach: "Approach",
+    approach: "Why ALYR",
     who: "Who it's for",
-    cta: "Request early access",
+    cta: "Talk to us",
     other: "العربية",
     home: "ALYR home",
     menu: "Menu",
     sections: "Sections",
   },
   hero: {
-    eyebrow: "Built in Qatar for the GCC",
-    title: ["Transform the business.", "Not just the interface."],
+    eyebrow: "We do the tech. You run the business.",
+    title: ["Go digital.", "Without the IT team."],
     body:
-      "ALYR builds the systems businesses in Qatar and the GCC run on. Our first product turns the WhatsApp number you already have into bookings, orders, payments and tracking, with your whole team in one inbox.",
-    primary: "See the product",
-    secondary: "How we work",
+      "ALYR turns your customers' chats into orders, bookings and payments, and we set it up for you. It works on the WhatsApp number you already have, in Arabic and English.",
+    primary: "See how it works",
+    secondary: "Why owners choose it",
     facts: [
-      "Official WhatsApp Business Platform",
-      "Arabic and English",
-      "Your number, your payment account",
+      "Set up for you",
+      "Your customers stay yours",
+      "Arabic and English, side by side",
     ],
     visual: {
       label: "From scattered work to one system",
@@ -129,33 +132,33 @@ const en: Copy = {
     },
   },
   approach: {
-    eyebrow: "Approach",
+    eyebrow: "Why it matters",
     statement:
-      "A business does not become digital when it gets a new website. It becomes digital when its customers, its team, its money and its data move through one system.",
+      "Your customers already message you before they visit or order. Those chats get lost, orders end up on paper, and payment means a transfer screenshot. The businesses that win treat the chat as their shop counter.",
     steps: [
       {
-        title: "See the real system",
-        body: "We start with how work actually moves: the chats, the paper, the spreadsheet, the handoffs.",
+        title: "Sell more",
+        body: "Stop losing orders in the chat, even after hours or in the Friday rush.",
       },
       {
-        title: "Design the better model",
-        body: "Remove the steps nobody needs. Decide who owns each one that stays.",
+        title: "Keep more",
+        body: "Orders that come to you direct carry no delivery-app commission. Your customer list stays yours.",
       },
       {
-        title: "Build what makes it run",
-        body: "Software and automation that fit the new model, not the old habit.",
+        title: "Easy",
+        body: "We set it up for you, on the number you already use. Your customers need no new app.",
       },
       {
-        title: "Stay until it is used",
-        body: "Train the team, measure what changed, and keep improving it.",
+        title: "Trusted",
+        body: "A local team, Arabic and English, built on WhatsApp's official Business Platform.",
       },
     ],
   },
   product: {
-    eyebrow: "Product 01 · Early access",
-    title: "Your WhatsApp number, running the front desk.",
+    eyebrow: "ALYR Chat · Early access",
+    title: "Sell, book and get paid in the chat.",
     body:
-      "Customers keep chatting the way they already do. Behind the chat, ALYR books the visit, takes the order, collects the payment and keeps everyone updated.",
+      "Your customers keep messaging you the way they already do. ALYR Chat adds the booking, the order, the payment link and the updates, and your team sees it all in one place.",
     business: "Dana Home Services",
     businessMeta: "Business account",
     workspace: "Workspace",
@@ -279,6 +282,11 @@ const en: Copy = {
     title: "For businesses that already run on WhatsApp.",
     rows: [
       {
+        name: "Restaurants and cafes",
+        body: "Your menu in your customers' chat. Orders come to you direct, and your regulars stay yours.",
+        tags: ["Order", "Pay"],
+      },
+      {
         name: "Clinics and salons",
         body: "Bookings and reminders taken in the chat, without the phone tag.",
         tags: ["Book", "Remind"],
@@ -293,13 +301,8 @@ const en: Copy = {
         body: "Orders, payment links, and credit accounts with reminders that stay polite.",
         tags: ["Order", "Collect"],
       },
-      {
-        name: "Travel, visa and document services",
-        body: "Every request tracked from the first message to done, with the customer kept informed.",
-        tags: ["Track", "Update"],
-      },
     ],
-    other: "Run something else? Tell us how the work moves today.",
+    other: "Run something else? Tell us how you work today.",
   },
   built: {
     eyebrow: "How it is built",
@@ -328,50 +331,52 @@ const en: Copy = {
     ],
   },
   company: {
-    eyebrow: "The company",
+    eyebrow: "What comes next",
     body:
-      "ALYR is building the operating tools GCC businesses actually need. WhatsApp is where we start. More products are on the way.",
+      "We start with the chat. As you grow, ALYR adds payments, books and a website, all on the same customer list.",
   },
   cta: {
-    title: "See it on your own number.",
+    title: "Let us set it up for you.",
     body:
-      "We are onboarding the first businesses in Qatar. Tell us how you take bookings and orders today, and we will show you the same work in ALYR.",
-    button: "Request early access",
+      "Tell us how you take orders and bookings today. A person from ALYR replies, in Arabic or English, and shows you the same work on your own menu or price list.",
+    whatsapp: "Message us on WhatsApp",
+    email: "Write to us",
     write: "Or write to",
-    pending: "Our contact address is being set up. Please check back shortly.",
+    pending: "Our WhatsApp line is being set up. Please check back shortly.",
   },
   footer: {
-    line: "Transform the business. Not just the interface.",
+    line: "We do the tech. You run the business.",
     rights: "ALYR. Built in Qatar.",
     workspace: "Staff sign-in",
+    disclaimer: "ALYR works with WhatsApp Business. It is not affiliated with WhatsApp or Meta.",
   },
 };
 
 const ar: Copy = {
   meta: {
-    title: "ALYR · نغيّر طريقة العمل، لا شكل الواجهة فقط",
+    title: "ALYR · خلّ شغلك رقمي بدون فريق تقنية",
     description:
-      "تبني ALYR الأنظمة التي تعمل عليها الشركات في قطر والخليج. منتجنا الأول يحوّل رقم واتساب الخاص بك إلى حجوزات وطلبات ومدفوعات ومتابعة، مع فريقك كله في صندوق واحد.",
+      "تحوّل ALYR محادثات عملائك إلى طلبات وحجوزات ومدفوعات، ونحن نجهّزها لك. للمطاعم والمقاهي والعيادات والصالونات والمحلات في قطر، بالعربية والإنجليزية.",
   },
   skip: "انتقل إلى المحتوى",
   nav: {
     product: "المنتج",
-    approach: "منهجنا",
+    approach: "لماذا ALYR",
     who: "لمن",
-    cta: "اطلب الوصول المبكر",
+    cta: "تواصل معنا",
     other: "English",
     home: "الصفحة الرئيسية لـ ALYR",
     menu: "القائمة",
     sections: "الأقسام",
   },
   hero: {
-    eyebrow: "من قطر إلى الخليج",
-    title: ["نغيّر طريقة العمل.", "لا شكل الواجهة فقط."],
+    eyebrow: "علينا التقنية، وعليك شغلك",
+    title: ["خلّ شغلك رقمي.", "بدون فريق تقنية."],
     body:
-      "تبني ALYR الأنظمة التي تعمل عليها الشركات في قطر والخليج. منتجنا الأول يحوّل رقم واتساب الذي تملكه اليوم إلى حجوزات وطلبات ومدفوعات ومتابعة، مع فريقك كله في صندوق واحد.",
-    primary: "شاهد المنتج",
-    secondary: "كيف نعمل",
-    facts: ["منصة واتساب للأعمال الرسمية", "بالعربية والإنجليزية", "رقمك وحساب الدفع الخاص بك"],
+      "تحوّل ALYR محادثات عملائك إلى طلبات وحجوزات ومدفوعات، ونحن نجهّزها لك. تعمل على رقم واتساب الذي تستخدمه اليوم، بالعربية والإنجليزية.",
+    primary: "شاهد كيف تعمل",
+    secondary: "لماذا يختارها أصحاب الأعمال",
+    facts: ["نجهّزها لك", "عملاؤك يبقون لك", "العربية والإنجليزية جنباً إلى جنب"],
     visual: {
       label: "من عمل متفرّق إلى نظام واحد",
       before: "اليوم",
@@ -383,33 +388,33 @@ const ar: Copy = {
     },
   },
   approach: {
-    eyebrow: "منهجنا",
+    eyebrow: "لماذا يهمّك",
     statement:
-      "لا تصبح الشركة رقمية حين تحصل على موقع جديد. تصبح رقمية حين يتحرك عملاؤها وفريقها وأموالها وبياناتها داخل نظام واحد.",
+      "عملاؤك يراسلونك قبل أن يزوروك أو يطلبوا. تضيع المحادثات، وتُكتب الطلبات على الورق، ويصير الدفع صورة تحويل. والأعمال الرابحة تجعل المحادثة واجهة محلها.",
     steps: [
       {
-        title: "نرى النظام كما هو",
-        body: "نبدأ من الطريقة التي يسير بها العمل فعلاً: المحادثات والأوراق والجداول وتسليم المهام.",
+        title: "بِع أكثر",
+        body: "لا تضيع الطلبات في المحادثة، حتى بعد الدوام أو في زحمة الجمعة.",
       },
       {
-        title: "نصمّم النموذج الأفضل",
-        body: "نحذف الخطوات التي لا يحتاجها أحد، ونحدد من المسؤول عن كل خطوة تبقى.",
+        title: "احتفظ بأكثر",
+        body: "الطلبات التي تصلك مباشرة بلا عمولة تطبيقات التوصيل، وقائمة عملائك تبقى لك.",
       },
       {
-        title: "نبني ما يشغّله",
-        body: "برمجيات وأتمتة تناسب النموذج الجديد، لا العادة القديمة.",
+        title: "سهل",
+        body: "نجهّزها لك على الرقم الذي تستخدمه اليوم، وعملاؤك لا يحتاجون تطبيقاً جديداً.",
       },
       {
-        title: "نبقى حتى يُستخدم",
-        body: "ندرّب الفريق، ونقيس ما تغيّر، ونواصل التحسين.",
+        title: "موثوق",
+        body: "فريق محلي، بالعربية والإنجليزية، ومبني على منصة واتساب للأعمال الرسمية.",
       },
     ],
   },
   product: {
-    eyebrow: "المنتج 01 · وصول مبكر",
-    title: "رقم واتساب الخاص بك يدير الاستقبال.",
+    eyebrow: "ALYR Chat · وصول مبكر",
+    title: "استقبل الطلبات والحجوزات والدفع في المحادثة.",
     body:
-      "يواصل عملاؤك المراسلة كما اعتادوا. وخلف المحادثة تحجز ALYR الموعد، وتستلم الطلب، وتحصّل المبلغ، وتُبقي الجميع على اطلاع.",
+      "يواصل عملاؤك مراسلتك كما اعتادوا. ويضيف ALYR Chat الحجز والطلب ورابط الدفع والتحديثات، وفريقك يرى كل شيء في مكان واحد.",
     business: "دانة للخدمات المنزلية",
     businessMeta: "حساب أعمال",
     workspace: "مساحة العمل",
@@ -533,6 +538,11 @@ const ar: Copy = {
     title: "للشركات التي تعمل على واتساب أصلاً.",
     rows: [
       {
+        name: "المطاعم والمقاهي",
+        body: "قائمتك داخل محادثة عملائك. الطلبات تصلك مباشرة، وزبائنك الدائمون يبقون لك.",
+        tags: ["طلب", "دفع"],
+      },
+      {
         name: "العيادات والصالونات",
         body: "حجوزات وتذكيرات داخل المحادثة، بلا اتصالات متكررة.",
         tags: ["حجز", "تذكير"],
@@ -546,11 +556,6 @@ const ar: Copy = {
         name: "المحلات والتجارة",
         body: "طلبات وروابط دفع وحسابات آجلة مع تذكيرات لبقة.",
         tags: ["طلب", "تحصيل"],
-      },
-      {
-        name: "السفر والتأشيرات وتخليص المعاملات",
-        body: "كل طلب متابَع من أول رسالة حتى الإنجاز، والعميل على اطلاع دائم.",
-        tags: ["متابعة", "تحديث"],
       },
     ],
     other: "نشاطك مختلف؟ أخبرنا كيف يسير العمل لديك اليوم.",
@@ -582,22 +587,24 @@ const ar: Copy = {
     ],
   },
   company: {
-    eyebrow: "الشركة",
+    eyebrow: "ما القادم",
     body:
-      "تبني ALYR أدوات التشغيل التي تحتاجها شركات الخليج فعلاً. نبدأ من واتساب، ومنتجات أخرى في الطريق.",
+      "نبدأ من المحادثة. ومع نموّ عملك تضيف ALYR المدفوعات والحسابات والموقع، كلها على قائمة العملاء نفسها.",
   },
   cta: {
-    title: "شاهده يعمل على رقمك.",
+    title: "دعنا نجهّزها لك.",
     body:
-      "نستقبل الآن أولى الشركات في قطر. أخبرنا كيف تستقبل الحجوزات والطلبات اليوم، وسنريك العمل نفسه داخل ALYR.",
-    button: "اطلب الوصول المبكر",
+      "أخبرنا كيف تستقبل الطلبات والحجوزات اليوم. يردّ عليك شخص من ALYR بالعربية أو الإنجليزية، ويريك العمل نفسه على قائمتك أو أسعارك.",
+    whatsapp: "راسلنا على واتساب",
+    email: "اكتب لنا",
     write: "أو راسلنا على",
-    pending: "عنوان التواصل قيد الإعداد. نرجو العودة قريباً.",
+    pending: "رقم واتساب الخاص بنا قيد الإعداد. نرجو العودة قريباً.",
   },
   footer: {
-    line: "نغيّر طريقة العمل، لا شكل الواجهة فقط.",
+    line: "علينا التقنية، وعليك شغلك.",
     rights: "ALYR. صُنع في قطر.",
     workspace: "دخول الموظفين",
+    disclaimer: "تعمل ALYR مع واتساب للأعمال، وليست تابعة لواتساب أو Meta.",
   },
 };
 

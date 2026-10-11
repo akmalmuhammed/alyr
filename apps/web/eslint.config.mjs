@@ -10,6 +10,9 @@ const eslintConfig = defineConfig([
     // Default ignores of eslint-config-next:
     ".next/**",
     "out/**",
+    // The published public site, built by scripts/build-site.sh.
+    "out-site/**",
+    ".wrangler/**",
     "build/**",
     "next-env.d.ts",
   ]),
