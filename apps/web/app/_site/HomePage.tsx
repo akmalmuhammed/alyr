@@ -1,7 +1,7 @@
 import { Icon, Logo, Symbol } from "./brand";
 import { copy, type Locale } from "./copy";
 import { ProductDemo } from "./ProductDemo";
-import { CONTACT_EMAIL, PATHS, WORKSPACE_URL } from "./site";
+import { CONTACT_EMAIL, PATHS, WHATSAPP_NUMBER, WORKSPACE_URL } from "./site";
 import { SiteMotion } from "./SiteMotion";
 
 /** The ALYR company homepage. One component for both languages; all words come from
@@ -9,7 +9,10 @@ import { SiteMotion } from "./SiteMotion";
 export function HomePage({ locale }: { locale: Locale }) {
   const t = copy[locale];
   const other = locale === "en" ? PATHS.ar : PATHS.en;
-  const contact = CONTACT_EMAIL ? `mailto:${CONTACT_EMAIL}` : "#contact";
+  // WhatsApp first, as the playbook asks; email if that is all there is; otherwise the
+  // contact section, which says plainly that the line is being set up.
+  const chat = WHATSAPP_NUMBER ? `https://wa.me/${WHATSAPP_NUMBER}` : "";
+  const contact = chat || (CONTACT_EMAIL ? `mailto:${CONTACT_EMAIL}` : "#contact");
   const links = [
     ["#product", t.nav.product],
     ["#approach", t.nav.approach],
@@ -243,15 +246,17 @@ export function HomePage({ locale }: { locale: Locale }) {
             <Symbol className="cta-mark" />
             <h2 className="display display-sm">{t.cta.title}</h2>
             <p className="lead">{t.cta.body}</p>
-            {CONTACT_EMAIL ? (
+            {chat || CONTACT_EMAIL ? (
               <div className="cta-actions">
-                <a className="btn btn-volt" href={`mailto:${CONTACT_EMAIL}`}>
-                  {t.cta.button}
+                <a className="btn btn-volt" href={contact}>
+                  {chat ? t.cta.whatsapp : t.cta.email}
                   <Icon name="arrow-right" className="ico ico-flip" />
                 </a>
-                <p className="cta-write">
-                  {t.cta.write} <a href={`mailto:${CONTACT_EMAIL}`} dir="ltr">{CONTACT_EMAIL}</a>
-                </p>
+                {CONTACT_EMAIL && (
+                  <p className="cta-write">
+                    {t.cta.write} <a href={`mailto:${CONTACT_EMAIL}`} dir="ltr">{CONTACT_EMAIL}</a>
+                  </p>
+                )}
               </div>
             ) : (
               <p className="cta-pending">{t.cta.pending}</p>
@@ -274,7 +279,8 @@ export function HomePage({ locale }: { locale: Locale }) {
             {WORKSPACE_URL && <a href={WORKSPACE_URL}>{t.footer.workspace}</a>}
           </nav>
           <p className="foot-rights">
-            <span dir="ltr">© 2026</span> {t.footer.rights}
+            <span><span dir="ltr">© 2026</span> {t.footer.rights}</span>
+            <span>{t.footer.disclaimer}</span>
           </p>
         </div>
       </footer>

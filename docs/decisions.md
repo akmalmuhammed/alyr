@@ -30,6 +30,7 @@ Status: **Accepted** (in force), **Proposed** (waiting for the founder), **Super
 | D-022 | Sign-in is our own: one-time code by email, sessions in our database | Proposed |
 | D-023 | ALYR is the company; the WhatsApp product is its first product | Accepted |
 | D-024 | Bookings join Product 1; the first customers book, order, pay and track | Accepted |
+| D-025 | The public site uses the playbook's words on the design system's look | Proposed |
 
 ---
 
@@ -314,3 +315,21 @@ The founder named the first customers as businesses that need booking, schedulin
 
 **Consequence.** Bookings moved from "next products" into Product 1. The credit ledger stays, as one tool among several rather than the centre.
 **The first gap a booking customer will hit:** one customer at a time per shop. A salon with three chairs needs bookable staff or resources.
+
+## D-025 · The public site uses the playbook's words on the design system's look
+**Date** 11 Oct 2026 · **Status** Proposed (the founder said "update the homepage based on the findings" without choosing a look) · Linear ALY-56
+
+Two brand sources disagree. The design system v1.0 (branch `codex/alyr-native-foundation`) defines the look now live: uppercase ALYR, Carbon and Volt, the Command Fold logo, "Transform the business." The founder's Brand & Growth Playbook (a Claude Docs document, 11 Oct) defines a different brand: lowercase "alyr", cobalt blue, an "a" mark, "Go digital without the IT team", products alyr Chat, Pay, Books and Sites.
+
+**What was done.** The site keeps the design system's look and takes the playbook's positioning and voice: the local tech partner that sets it up for you.
+
+| Taken from the playbook | Held back, and why |
+|---|---|
+| Master line "Go digital without the IT team" and brand idea "We do the tech. You run the business." | "Live in 48 hours": nothing is live on Meta yet, so the promise cannot be kept today |
+| Four pillars: sell more, keep more, easy, trusted | Prices: the playbook says QAR 199 a month, D-017 proposes QAR 490 and 890 |
+| Product name "ALYR Chat" and its line "Sell, book and get paid in the chat" | "Free 14-day pilot": an offer only the founder can make |
+| Restaurants and cafes as the first audience | "Licensed Qatari payment partner": no provider is signed |
+| Call to action is WhatsApp first (`NEXT_PUBLIC_ALYR_WHATSAPP`) | The WhatsApp button itself: ALYR has no number yet |
+| "Not affiliated with WhatsApp or Meta" line; no hype words; no sample statistics | Lowercase "alyr" in text, cobalt, the "a" mark: these belong to the other look |
+
+**Open, for the founder.** Which look is ALYR's; the Arabic spelling of the name; the launch price; whether the 48-hour and pilot promises are made publicly.

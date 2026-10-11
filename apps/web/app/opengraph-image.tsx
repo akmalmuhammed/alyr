@@ -3,7 +3,7 @@ import { ImageResponse } from "next/og";
 // The card shown when a link to ALYR is shared, for example in a WhatsApp chat.
 // Reversed logo on Carbon, as the logo rules require on dark surfaces.
 
-export const alt = "ALYR. Transform the business. Not just the interface.";
+export const alt = "ALYR. Go digital without the IT team.";
 export const size = { width: 1200, height: 630 };
 export const contentType = "image/png";
 
@@ -37,10 +37,10 @@ export default function OpenGraphImage() {
         </svg>
         <div style={{ display: "flex", flexDirection: "column" }}>
           <div style={{ fontSize: 84, fontWeight: 600, letterSpacing: -2, lineHeight: 1.02 }}>
-            Transform the business.
+            Go digital.
           </div>
           <div style={{ fontSize: 84, fontWeight: 600, letterSpacing: -2, lineHeight: 1.02, color: "#A7ADB5" }}>
-            Not just the interface.
+            Without the IT team.
           </div>
         </div>
         <div style={{ display: "flex", alignItems: "center", fontSize: 26, color: "#A7ADB5" }}>

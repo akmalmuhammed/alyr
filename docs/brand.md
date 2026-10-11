@@ -12,6 +12,10 @@ The approved design system (v1.0) and strategy are on the branch `codex/alyr-nat
 | `apps/web/app/_site/site.css` (colors, type, motion) | `06_UI_UX_System/Design_Tokens/tokens.css` |
 | `apps/web/app/icon.svg` | `04_App_and_Favicon/02_Favicon/favicon.svg` |
 
+## Two brand sources, not yet reconciled
+
+The founder's **Brand & Growth Playbook** (a Claude Docs document in the founder's account, 11 Oct 2026) sets the positioning, voice, content and sales plan, and describes a different visual identity from the design system. The public site currently uses the playbook's words on the design system's look. See decision D-025 for exactly what was taken and what was held back.
+
 ## Rules the public site follows
 
 - **Logo.** Drawn point for point from the master artwork. Never retyped, redrawn, stretched or recolored. Carbon on light, white on Carbon, each with the Volt plane. The horizontal logo is never narrower than 140 px; below that, use the symbol.
@@ -29,7 +33,8 @@ One deliberate addition: `--line-strong` in `site.css` is darker than the design
 
 | Item | Owner |
 |---|---|
-| A contact address for "Request early access" (`NEXT_PUBLIC_ALYR_CONTACT_EMAIL`); until it is set the page says the address is being set up | Founder |
+| ALYR's own WhatsApp number (`NEXT_PUBLIC_ALYR_WHATSAPP`) so the call to action is "Message us on WhatsApp"; an email address is the fallback. Until one is set the page says the line is being set up | Founder |
+| Which look is ALYR's, the launch price, and whether "live in 48 hours" and a free pilot are promised publicly (D-025) | Founder |
 | Native review of all Arabic copy | A native reviewer |
 | Check every product claim on the page against what is live (see `docs/status.md`): keeping your number, payment links through your own gateway, and the product on Meta's platform are designed and built on the simulator, not yet running live | Founder |
 | Hosting for the site. Vercel's free plan forbids commercial use; Cloudflare, where the domain already is, allows it | Founder |
