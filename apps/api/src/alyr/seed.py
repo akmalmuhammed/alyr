@@ -57,6 +57,18 @@ def demo_user_id(index: int) -> str:
     return f"QA.{90000000000000000000 + index}"
 
 
+# What the demo shop takes bookings for: name, Arabic name, minutes, price in dirhams.
+SERVICES = [
+    ("Electrician site visit", "زيارة كهربائي للموقع", 60, 15_000),
+    ("Lighting consultation", "استشارة إضاءة", 30, 0),
+    ("Generator service", "صيانة مولد", 120, 45_000),
+]
+# Saturday to Thursday 8 to 12 and 4 to 9; Friday 4 to 9. Weekday 0 is Sunday.
+HOURS = [
+    *[(day, "08:00", "12:00") for day in (6, 0, 1, 2, 3, 4)],
+    *[(day, "16:00", "21:00") for day in (6, 0, 1, 2, 3, 4, 5)],
+]
+
 SAVED_REPLIES = [
     ("Opening hours", "We are open Saturday to Thursday 8 am to 9 pm, and Friday 4 pm to 9 pm."),
     ("Location", "We are on Salwa Road, next to the petrol station. Parking is behind the shop."),
@@ -107,13 +119,27 @@ async def reset_demo_data(db: Database) -> None:
         await conn.execute(
             "delete from login_codes where email = any($1)", [email for email, _, _ in TEAM]
         )
-        for table in ("saved_replies", "memberships", "jobs", "messages", "processed_messages",
-                      "order_items", "payment_requests", "orders", "products",
-                      "ledger_entries", "ledger_accounts", "contacts", "tenant_modules"):
+        for table in ("bookings", "services", "business_hours", "saved_replies", "memberships",
+                      "jobs", "messages", "processed_messages", "order_items",
+                      "payment_requests", "orders", "products", "ledger_entries",
+                      "ledger_accounts", "contacts", "tenant_modules"):
             await conn.execute(f"delete from {table}")
         await conn.execute(
-            "insert into tenant_modules (module_key) values ('ledger'), ('orders')"
+            "insert into tenant_modules (module_key) values "
+            "('ledger'), ('orders'), ('bookings')"
         )
+        for sort, (name, name_ar, minutes, price) in enumerate(SERVICES):
+            await conn.execute(
+                "insert into services (name, name_ar, duration_minutes, price, sort) "
+                "values ($1, $2, $3, $4, $5)",
+                name, name_ar, minutes, price, sort,
+            )
+        for weekday, opens, closes in HOURS:
+            await conn.execute(
+                "insert into business_hours (weekday, opens, closes) "
+                "values ($1, $2::text::time, $3::text::time)",
+                weekday, opens, closes,
+            )
         for title, body in SAVED_REPLIES:
             await conn.execute(
                 "insert into saved_replies (title, body) values ($1, $2)", title, body

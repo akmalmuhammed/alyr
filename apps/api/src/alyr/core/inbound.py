@@ -97,7 +97,9 @@ class InboundHandler:
             elif paused and contact["role"] == "customer" and not message.reply_id:
                 replies = []
             else:
-                replies = await router.handle(conn, tenant_id, contact, message, self._web)
+                replies = await router.handle(
+                    conn, tenant_id, contact, message, self._web, self._outbound
+                )
             for reply in replies:
                 await self._outbound.send(conn, reply)
 
