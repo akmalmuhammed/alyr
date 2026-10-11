@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" role="img" aria-labelledby="title" shape-rendering="geometricPrecision" >
+  <title id="title">ALYR interface icon</title>
+  <g fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="square" stroke-linejoin="miter"><path d="M5 4h14v16H5z"/>
+  <path d="M8 2v4"/>
+  <path d="M16 2v4"/>
+  <path d="M5 9h14"/></g>
+</svg>

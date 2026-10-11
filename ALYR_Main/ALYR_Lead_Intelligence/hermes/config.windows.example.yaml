@@ -1,0 +1,39 @@
+mcp_servers:
+  alyr_market:
+    command: "node"
+    args:
+      - "C:/Users/akmal/OneDrive/Documents/alyr/ALYR_Lead_Intelligence/server-dist/mcp.js"
+    env:
+      ALYR_MARKET_DB: "C:/Users/akmal/OneDrive/Documents/alyr/ALYR_Lead_Intelligence/data/alyr-market.sqlite"
+      OUTREACH_MODE: "disabled"
+    timeout: 120
+    connect_timeout: 30
+    supports_parallel_tool_calls: false
+    tools:
+      include:
+        - alyr_command_dashboard
+        - alyr_market_summary
+        - alyr_list_prospects
+        - alyr_get_prospect
+        - alyr_verify_website
+        - alyr_upsert_prospect_contact
+        - alyr_create_outreach_draft
+        - alyr_list_outreach_queue
+        - alyr_execute_approved_action
+        - alyr_record_operational_event
+        - alyr_upsert_client_account
+        - alyr_upsert_delivery_project
+        - alyr_suppress_prospect
+      prompts: false
+      resources: false
+
+skills:
+  external_dirs:
+    - "C:/Users/akmal/OneDrive/Documents/alyr/ALYR_Lead_Intelligence/hermes/skills"
+  write_approval: true
+  guard_agent_created: true
+
+memory:
+  memory_enabled: true
+  user_profile_enabled: true
+  write_approval: true

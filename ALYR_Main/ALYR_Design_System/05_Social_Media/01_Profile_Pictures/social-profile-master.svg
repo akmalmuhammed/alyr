@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="1080" height="1080" viewBox="0 0 1080 1080" role="img" aria-labelledby="title" shape-rendering="geometricPrecision" >
+  <title id="title">ALYR social profile avatar</title>
+  <rect width="1080" height="1080" fill="#15171A"/>
+     <circle cx="907.1999999999999" cy="172.8" r="12.96" fill="#B7F34A"/>
+     <g transform="translate(66 96) scale(4.21875)">
+    <polygon fill="#FFFFFF" points="50,0 180,0 130,62 0,62"/>
+    <polygon fill="#FFFFFF" points="0,72 126,72 39,160"/>
+    <polygon fill="#B7F34A" points="134,72 190,72 142,160 46,160"/>
+  </g>
+</svg>

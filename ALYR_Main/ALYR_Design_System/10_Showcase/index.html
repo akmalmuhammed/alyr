@@ -1,0 +1,396 @@
+<!doctype html>
+<html lang="en" data-theme="light">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="ALYR Carbon Volt design system, UI/UX foundations and production asset library.">
+  <meta name="theme-color" content="#15171A">
+  <title>ALYR Design System · Carbon Volt</title>
+  <link rel="icon" href="../04_App_and_Favicon/02_Favicon/favicon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <a class="skip-link" href="#main">Skip to content</a>
+
+  <aside class="rail" id="rail" aria-label="Design system navigation">
+    <div class="rail__brand">
+      <img src="../02_Logo_System/01_Master_SVG/primary-horizontal-reversed.svg" alt="ALYR">
+      <span class="version">DS / 1.0</span>
+    </div>
+    <nav class="rail__nav">
+      <a href="#overview" class="is-active">Overview</a>
+      <a href="#identity">Identity</a>
+      <a href="#color">Color</a>
+      <a href="#type">Typography</a>
+      <a href="#icons">Icons</a>
+      <a href="#components">Components</a>
+      <a href="#patterns">UX patterns</a>
+      <a href="#applications">Applications</a>
+      <a href="#governance">Governance</a>
+    </nav>
+    <div class="rail__footer">
+      <span class="signal-dot" aria-hidden="true"></span>
+      <span>Approved system</span>
+      <small>July 2026</small>
+    </div>
+  </aside>
+
+  <header class="mobile-header">
+    <img src="../02_Logo_System/01_Master_SVG/wordmark-carbon.svg" alt="ALYR">
+    <button class="icon-button" id="navToggle" type="button" aria-expanded="false" aria-controls="rail" aria-label="Open navigation">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h16M4 12h16M4 17h16"/></svg>
+    </button>
+  </header>
+
+  <div class="utility-bar">
+    <span class="utility-bar__path">ALYR / Design system / Carbon Volt</span>
+    <div class="utility-bar__actions">
+      <button class="text-action" id="densityToggle" type="button">Compact density</button>
+      <button class="theme-toggle" id="themeToggle" type="button" aria-pressed="false">
+        <span class="theme-toggle__track" aria-hidden="true"><span></span></span>
+        <span class="theme-label">Dark theme</span>
+      </button>
+    </div>
+  </div>
+
+  <main id="main">
+    <section class="hero" id="overview" aria-labelledby="hero-title">
+      <div class="hero__grid" aria-hidden="true"></div>
+      <div class="hero__content">
+        <p class="eyebrow"><span>01</span> Identity operating system</p>
+        <h1 id="hero-title">Precision for the<br><em>business in motion.</em></h1>
+        <p class="hero__lede">A complete brand and product language for ALYR—built from Carbon, Monochrome and one disciplined Volt signal.</p>
+        <div class="hero__actions">
+          <a class="button button--primary" href="#identity">Explore the system <span aria-hidden="true">↗</span></a>
+          <a class="button button--ghost" href="../00_Governance/Asset_Inventory.csv">Open asset inventory</a>
+        </div>
+      </div>
+      <div class="hero__mark" aria-label="F1 Command Fold construction">
+        <img class="theme-mark theme-mark--light" src="../02_Logo_System/01_Master_SVG/standalone-symbol-carbon-volt.svg" alt="">
+        <img class="theme-mark theme-mark--dark" src="../02_Logo_System/01_Master_SVG/standalone-symbol-reversed.svg" alt="">
+        <div class="hero__mark-meta">
+          <span>F1 / COMMAND FOLD</span>
+          <span>LOCKED MASTER</span>
+        </div>
+      </div>
+      <div class="hero__proof">
+        <div><strong>2</strong><span>core palettes</span></div>
+        <div><strong>5</strong><span>logo forms</span></div>
+        <div><strong>AA</strong><span>accessibility target</span></div>
+      </div>
+    </section>
+
+    <section class="section strategy-strip" aria-label="Brand principles">
+      <div class="section-label">Brand direction</div>
+      <div class="strategy-strip__statement">
+        <p>Transform the business.</p>
+        <p class="muted">Not just the interface.</p>
+      </div>
+      <ol class="principle-list">
+        <li><span>01</span>Clarity is premium.</li>
+        <li><span>02</span>Signal, do not decorate.</li>
+        <li><span>03</span>Operations before optics.</li>
+        <li><span>04</span>Human judgment stays visible.</li>
+      </ol>
+    </section>
+
+    <section class="section" id="identity" aria-labelledby="identity-title">
+      <div class="section-heading">
+        <p class="eyebrow"><span>02</span> Identity</p>
+        <h2 id="identity-title">One mark. Every operating context.</h2>
+        <p>The Command Fold and cut‑Y wordmark are locked vector artwork. Choose the correct composition; never redraw it.</p>
+      </div>
+
+      <div class="logo-stage logo-stage--light">
+        <span class="spec-label">Primary / light surface</span>
+        <img src="../02_Logo_System/01_Master_SVG/primary-horizontal-carbon-volt.svg" alt="ALYR primary horizontal logo in Carbon and Volt">
+        <a class="asset-link" href="../02_Logo_System/01_Master_SVG/primary-horizontal-carbon-volt.svg">SVG master ↗</a>
+      </div>
+      <div class="logo-stage logo-stage--dark">
+        <span class="spec-label">Primary / Carbon surface</span>
+        <img src="../02_Logo_System/01_Master_SVG/primary-horizontal-reversed.svg" alt="ALYR reversed horizontal logo">
+        <a class="asset-link" href="../02_Logo_System/01_Master_SVG/primary-horizontal-reversed.svg">SVG master ↗</a>
+      </div>
+
+      <div class="identity-matrix">
+        <article>
+          <span class="spec-label">Vertical lockup</span>
+          <img src="../02_Logo_System/01_Master_SVG/secondary-vertical-carbon-volt.svg" alt="ALYR vertical logo">
+        </article>
+        <article>
+          <span class="spec-label">Standalone symbol</span>
+          <img class="symbol" src="../02_Logo_System/01_Master_SVG/standalone-symbol-carbon-volt.svg" alt="ALYR Command Fold symbol">
+        </article>
+        <article>
+          <span class="spec-label">Custom wordmark</span>
+          <img src="../02_Logo_System/01_Master_SVG/wordmark-carbon.svg" alt="ALYR custom wordmark">
+        </article>
+        <article>
+          <span class="spec-label">AY monogram</span>
+          <img src="../02_Logo_System/01_Master_SVG/monogram-ay-carbon-volt.svg" alt="ALYR AY monogram">
+        </article>
+      </div>
+
+      <div class="rule-callout">
+        <strong>The cut‑Y is the recognition device.</strong>
+        <p>Never typeset the wordmark, close the Y, move the cut, or apply the sliced form to ordinary typography.</p>
+        <a href="../02_Logo_System/Logo_Usage_Rules.md">Read logo rules</a>
+      </div>
+    </section>
+
+    <section class="section color-section" id="color" aria-labelledby="color-title">
+      <div class="section-heading">
+        <p class="eyebrow"><span>03</span> Color</p>
+        <h2 id="color-title">Monochrome carries the system.<br>Volt carries the decision.</h2>
+      </div>
+      <div class="swatch-grid">
+        <button class="swatch swatch--carbon" type="button" data-copy="#15171A">
+          <span class="swatch__index">C01</span><strong>Carbon</strong><code>#15171A</code>
+        </button>
+        <button class="swatch swatch--volt" type="button" data-copy="#B7F34A">
+          <span class="swatch__index">V01</span><strong>Volt</strong><code>#B7F34A</code>
+        </button>
+        <button class="swatch swatch--mist" type="button" data-copy="#E9ECEF">
+          <span class="swatch__index">N02</span><strong>Mist</strong><code>#E9ECEF</code>
+        </button>
+        <button class="swatch swatch--concrete" type="button" data-copy="#A7ADB5">
+          <span class="swatch__index">N04</span><strong>Concrete</strong><code>#A7ADB5</code>
+        </button>
+        <button class="swatch swatch--black" type="button" data-copy="#050505">
+          <span class="swatch__index">M01</span><strong>Mono Black</strong><code>#050505</code>
+        </button>
+        <button class="swatch swatch--paper" type="button" data-copy="#F6F7F3">
+          <span class="swatch__index">S01</span><strong>Paper</strong><code>#F6F7F3</code>
+        </button>
+      </div>
+      <div class="color-logic">
+        <div>
+          <span class="percentage">70</span><span>%</span>
+          <p>neutral space</p>
+        </div>
+        <div>
+          <span class="percentage">20</span><span>%</span>
+          <p>Carbon structure</p>
+        </div>
+        <div>
+          <span class="percentage">08</span><span>%</span>
+          <p>Mist support</p>
+        </div>
+        <div class="color-logic__signal">
+          <span class="percentage">02</span><span>%</span>
+          <p>Volt signal</p>
+        </div>
+      </div>
+      <div class="contrast-line">
+        <span class="status status--pass">PASS</span>
+        <strong>Carbon on Volt</strong>
+        <span>Approved for primary controls and short emphasis.</span>
+        <span class="status status--fail">FAIL</span>
+        <strong>Volt text on White</strong>
+        <span>Never use for body or interface text.</span>
+      </div>
+    </section>
+
+    <section class="section type-section" id="type" aria-labelledby="type-title">
+      <div class="section-heading">
+        <p class="eyebrow"><span>04</span> Typography</p>
+        <h2 id="type-title">Instrument Sans<br><em>with operational range.</em></h2>
+        <p>The wordmark stays custom. Product and editorial typography stays clear, flexible and multilingual.</p>
+      </div>
+      <div class="type-specimen">
+        <div class="type-specimen__hero">
+          <span>Aa</span>
+          <div><strong>Instrument Sans Variable</strong><p>Primary UI + editorial family</p></div>
+        </div>
+        <p class="type-alphabet">ABCDEFGHIJKLMNOPQRSTUVWXYZ<br>abcdefghijklmnopqrstuvwxyz<br>0123456789 / QAR % ↗</p>
+      </div>
+      <div class="type-scale">
+        <div><span>Display / 72</span><p class="display-1">Make work visible.</p></div>
+        <div><span>H1 / 44</span><p class="heading-1">A better operating model.</p></div>
+        <div><span>H2 / 34</span><p class="heading-2">Decisions become momentum.</p></div>
+        <div><span>Body / 16</span><p class="body-copy">ALYR connects strategy, workflow, software, AI, data and adoption into one accountable transformation system.</p></div>
+        <div><span>Metadata / 12</span><p class="metadata">PROJECT 014 · UPDATED 15 JUL 2026 · 14:00 AST</p></div>
+      </div>
+    </section>
+
+    <section class="section" id="icons" aria-labelledby="icons-title">
+      <div class="section-heading">
+        <p class="eyebrow"><span>05</span> Iconography</p>
+        <h2 id="icons-title">Square construction.<br>Unambiguous actions.</h2>
+      </div>
+      <div class="icon-grid" aria-label="ALYR icon examples">
+        <div><img src="../03_Icon_System/UI_Icons_SVG/strategy.svg" alt=""><span>Strategy</span></div>
+        <div><img src="../03_Icon_System/UI_Icons_SVG/workflow.svg" alt=""><span>Workflow</span></div>
+        <div><img src="../03_Icon_System/UI_Icons_SVG/automation.svg" alt=""><span>Automation</span></div>
+        <div><img src="../03_Icon_System/UI_Icons_SVG/ai.svg" alt=""><span>AI</span></div>
+        <div><img src="../03_Icon_System/UI_Icons_SVG/data.svg" alt=""><span>Data</span></div>
+        <div><img src="../03_Icon_System/UI_Icons_SVG/security.svg" alt=""><span>Security</span></div>
+        <div><img src="../03_Icon_System/UI_Icons_SVG/document.svg" alt=""><span>Document</span></div>
+        <div><img src="../03_Icon_System/UI_Icons_SVG/users.svg" alt=""><span>People</span></div>
+        <div><img src="../03_Icon_System/UI_Icons_SVG/growth.svg" alt=""><span>Growth</span></div>
+        <div><img src="../03_Icon_System/UI_Icons_SVG/calendar.svg" alt=""><span>Calendar</span></div>
+        <div><img src="../03_Icon_System/UI_Icons_SVG/notification.svg" alt=""><span>Notification</span></div>
+        <div><img src="../03_Icon_System/UI_Icons_SVG/settings.svg" alt=""><span>Settings</span></div>
+      </div>
+      <a class="inline-link" href="../03_Icon_System/UI_Icons_SVG/">Browse SVG icon folder ↗</a>
+    </section>
+
+    <section class="section component-section" id="components" aria-labelledby="components-title">
+      <div class="section-heading">
+        <p class="eyebrow"><span>06</span> Components</p>
+        <h2 id="components-title">Built for decisions,<br>not decoration.</h2>
+      </div>
+
+      <div class="component-tabs" role="tablist" aria-label="Component examples">
+        <button role="tab" aria-selected="true" aria-controls="actionsPanel" id="actionsTab">Actions</button>
+        <button role="tab" aria-selected="false" aria-controls="formsPanel" id="formsTab">Forms</button>
+        <button role="tab" aria-selected="false" aria-controls="dataPanel" id="dataTab">Data</button>
+        <button role="tab" aria-selected="false" aria-controls="feedbackPanel" id="feedbackTab">Feedback</button>
+      </div>
+
+      <div class="component-panel" id="actionsPanel" role="tabpanel" aria-labelledby="actionsTab">
+        <div class="component-row">
+          <button class="button button--primary" type="button">Start the audit</button>
+          <button class="button button--secondary" type="button">Review scope</button>
+          <button class="button button--outline" type="button">Download report</button>
+          <button class="button button--ghost" type="button">Save draft</button>
+          <button class="button button--danger" type="button">Remove access</button>
+          <button class="button button--primary" type="button" disabled>Processing…</button>
+        </div>
+        <p class="spec-note">One primary action per decision area. Labels name the outcome.</p>
+      </div>
+
+      <div class="component-panel" id="formsPanel" role="tabpanel" aria-labelledby="formsTab" hidden>
+        <form class="form-specimen" action="#" onsubmit="return false">
+          <label class="field">
+            <span>Work email</span>
+            <input type="email" value="owner@example.com" aria-describedby="emailHint">
+            <small id="emailHint">We’ll use this for the audit workspace.</small>
+          </label>
+          <label class="field">
+            <span>Transformation priority</span>
+            <select><option>Manual operations and workflow</option><option>Sales and customer journey</option><option>Data and reporting</option></select>
+          </label>
+          <label class="field field--error">
+            <span>Commercial registration</span>
+            <input type="text" value="" aria-invalid="true" aria-describedby="crError">
+            <small id="crError">Enter the CR number or choose “Not applicable.”</small>
+          </label>
+          <label class="check"><input type="checkbox" checked><span>I confirm this information can be used for the audit.</span></label>
+        </form>
+      </div>
+
+      <div class="component-panel" id="dataPanel" role="tabpanel" aria-labelledby="dataTab" hidden>
+        <div class="table-wrap">
+          <table>
+            <caption>Active transformation workstreams</caption>
+            <thead><tr><th>Workstream</th><th>Owner</th><th>Status</th><th>Next decision</th><th>Due</th></tr></thead>
+            <tbody>
+              <tr><td>Customer intake</td><td>Product</td><td><span class="badge badge--progress">In progress</span></td><td>Approve bilingual flow</td><td>17 Jul</td></tr>
+              <tr><td>CRM migration</td><td>Operations</td><td><span class="badge badge--waiting">Waiting for you</span></td><td>Confirm field mapping</td><td>18 Jul</td></tr>
+              <tr><td>Executive dashboard</td><td>Data</td><td><span class="badge badge--complete">Complete</span></td><td>—</td><td>14 Jul</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <div class="component-panel" id="feedbackPanel" role="tabpanel" aria-labelledby="feedbackTab" hidden>
+        <div class="alert alert--info"><strong>Review ready.</strong><span>The workflow map has 3 decisions requiring your input.</span><button type="button">Open review</button></div>
+        <div class="alert alert--success"><strong>Approved.</strong><span>The decision was recorded in the project audit log.</span></div>
+        <div class="alert alert--danger"><strong>Upload failed.</strong><span>Your case is saved. Try the PDF again or contact secure support.</span></div>
+      </div>
+    </section>
+
+    <section class="section patterns-section" id="patterns" aria-labelledby="patterns-title">
+      <div class="section-heading">
+        <p class="eyebrow"><span>07</span> UX patterns</p>
+        <h2 id="patterns-title">The system always reveals<br>the next meaningful action.</h2>
+      </div>
+
+      <article class="portal-pattern">
+        <header class="portal-pattern__header">
+          <div><span class="spec-label">Client portal / action queue</span><h3>Good morning, Aisha.</h3></div>
+          <div class="avatar" aria-label="Aisha account">AS</div>
+        </header>
+        <div class="portal-pattern__grid">
+          <div class="action-queue">
+            <span class="queue-count">2 actions need you</span>
+            <div class="queue-item">
+              <span class="queue-item__number">01</span>
+              <div><strong>Approve the future workflow</strong><p>Customer intake · 6-minute review</p></div>
+              <button class="icon-button" type="button" aria-label="Review future workflow">↗</button>
+            </div>
+            <div class="queue-item">
+              <span class="queue-item__number">02</span>
+              <div><strong>Confirm CRM field mapping</strong><p>Sales system · Due tomorrow</p></div>
+              <button class="icon-button" type="button" aria-label="Confirm CRM field mapping">↗</button>
+            </div>
+          </div>
+          <aside class="phase-panel">
+            <span class="spec-label">Current phase</span>
+            <strong>03 / Build</strong>
+            <div class="progress" aria-label="Project is 62 percent complete"><span style="width:62%"></span></div>
+            <p>Next milestone<br><b>Portal alpha · 24 July</b></p>
+          </aside>
+        </div>
+      </article>
+
+      <article class="ai-review">
+        <div class="ai-review__meta"><span>AI-assisted draft</span><span>Human review required</span></div>
+        <div class="ai-review__content">
+          <div><span class="spec-label">Suggested workflow risk</span><h3>Identity documents are copied into three disconnected locations.</h3><p>Based on 14 mapped steps and the evidence files selected for this audit.</p></div>
+          <div class="ai-review__actions"><button class="button button--primary" type="button">Accept and assign</button><button class="button button--outline" type="button">Edit finding</button><button class="text-action" type="button">Reject</button></div>
+        </div>
+        <details><summary>View source boundary and limitations</summary><p>The suggestion uses only files explicitly attached to this audit. It has not verified legal retention requirements.</p></details>
+      </article>
+    </section>
+
+    <section class="section applications-section" id="applications" aria-labelledby="applications-title">
+      <div class="section-heading">
+        <p class="eyebrow"><span>08</span> Applications</p>
+        <h2 id="applications-title">One system, delivered<br>at the right resolution.</h2>
+      </div>
+      <div class="application-grid">
+        <figure class="application application--app">
+          <img src="../04_App_and_Favicon/01_App_Icon/PNG/app-icon-512.png" alt="ALYR app icon">
+          <figcaption><strong>App icon</strong><span>512 × 512</span></figcaption>
+        </figure>
+        <figure class="application application--social">
+          <img src="../05_Social_Media/02_Covers/linkedin-company-banner-1584x396.png" alt="ALYR LinkedIn company banner">
+          <figcaption><strong>LinkedIn company banner</strong><span>1584 × 396</span></figcaption>
+        </figure>
+        <figure class="application application--document">
+          <img src="../08_Document_System/Preview_PNG/proposal-cover.png" alt="ALYR proposal cover">
+          <figcaption><strong>Proposal system</strong><span>A4 master</span></figcaption>
+        </figure>
+        <figure class="application application--slide">
+          <img src="../08_Document_System/Preview_PNG/presentation-cover.png" alt="ALYR presentation cover">
+          <figcaption><strong>Executive deck</strong><span>16:9 master</span></figcaption>
+        </figure>
+      </div>
+    </section>
+
+    <section class="section governance-section" id="governance" aria-labelledby="governance-title">
+      <div class="section-heading section-heading--inverse">
+        <p class="eyebrow"><span>09</span> Governance</p>
+        <h2 id="governance-title">Consistency is an operating practice.</h2>
+        <p>Source artwork, rules, tokens and exports move together. Every release is traceable.</p>
+      </div>
+      <div class="governance-grid">
+        <a href="../00_Governance/Design_System_Charter.md"><span>01</span><strong>System charter</strong><small>Purpose, principles and ownership</small></a>
+        <a href="../00_Governance/Asset_Inventory.csv"><span>02</span><strong>Asset inventory</strong><small>Paths, sizes and SHA-256 hashes</small></a>
+        <a href="../06_UI_UX_System/Design_Tokens/tokens.css"><span>03</span><strong>CSS tokens</strong><small>Production semantic variables</small></a>
+        <a href="../11_Handoff/Startup_Launch_Checklist.md"><span>04</span><strong>Launch checklist</strong><small>Identity, product, channels and handoff</small></a>
+      </div>
+      <footer class="system-footer">
+        <img src="../02_Logo_System/01_Master_SVG/primary-horizontal-reversed.svg" alt="ALYR">
+        <p>Transform the business. Not just the interface.</p>
+        <span>Design system v1.0 · Qatar · 2026</span>
+      </footer>
+    </section>
+  </main>
+
+  <div class="toast" id="toast" role="status" aria-live="polite">Copied</div>
+  <script src="app.js"></script>
+</body>
+</html>

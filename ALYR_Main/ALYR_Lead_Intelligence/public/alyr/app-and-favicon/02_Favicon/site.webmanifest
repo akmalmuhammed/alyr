@@ -1,0 +1,20 @@
+{
+  "name": "ALYR Digital Transformation",
+  "short_name": "ALYR",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#15171A",
+  "theme_color": "#15171A",
+  "icons": [
+    {
+      "src": "favicon-192x192.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "favicon-512x512.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ]
+}

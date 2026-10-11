@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="1050" height="600" viewBox="0 0 1050 600" role="img" aria-labelledby="title" shape-rendering="geometricPrecision" >
+  <title id="title">ALYR business card back</title>
+  <rect width="1050" height="600" fill="#F6F7F3"/>
+    <rect width="18" height="600" fill="#B7F34A"/>
+    <text x="80" y="125" font-family="Instrument Sans, Bahnschrift, sans-serif" font-size="44" font-weight="650" fill="#15171A">Name Surname</text>
+    <text x="82" y="176" font-family="Instrument Sans, Bahnschrift, sans-serif" font-size="22" letter-spacing="3" fill="#2A2E33">ROLE / DISCIPLINE</text>
+    <text x="82" y="360" font-family="Instrument Sans, Bahnschrift, sans-serif" font-size="24" fill="#15171A">+974 0000 0000</text>
+    <text x="82" y="407" font-family="Instrument Sans, Bahnschrift, sans-serif" font-size="24" fill="#15171A">name@alyr.com</text>
+    <text x="82" y="454" font-family="Instrument Sans, Bahnschrift, sans-serif" font-size="24" fill="#15171A">alyr.com</text>
+    <g transform="translate(800 360) scale(0.72)">
+    <polygon fill="#15171A" points="50,0 180,0 130,62 0,62"/>
+    <polygon fill="#15171A" points="0,72 126,72 39,160"/>
+    <polygon fill="#B7F34A" points="134,72 190,72 142,160 46,160"/>
+  </g>
+</svg>

@@ -82,14 +82,17 @@ supabase/.temp/
 
 # Separate local projects and parked design explorations
 /client-work/
-/ALYR_Lead_Intelligence/
-/ALYR_Design_System/
 /Heldat_Logo_System/
 /LUCID_Logo_System/
 /alyr-welcome-390*
 /app.json
 /build_pdfs.py
 /content_data.py
+
+# ALYR main product-local caches and data; source and brand assets remain tracked
+/ALYR_Main/ALYR_Lead_Intelligence/node_modules/
+/ALYR_Main/ALYR_Lead_Intelligence/data/
+/ALYR_Main/ALYR_Lead_Intelligence/.playwright-cli/
 
 # Python and operating-system noise
 **/__pycache__/

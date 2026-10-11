@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="1240" height="1754" viewBox="0 0 1240 1754" role="img" aria-labelledby="title" shape-rendering="geometricPrecision" >
+  <title id="title">ALYR A4 letterhead template</title>
+  <rect width="1240" height="1754" fill="#FFFFFF"/>
+     <g transform="translate(72 70) scale(0.45)">
+    <polygon fill="#15171A" points="50,0 180,0 130,62 0,62"/>
+    <polygon fill="#15171A" points="0,72 126,72 39,160"/>
+    <polygon fill="#B7F34A" points="134,72 190,72 142,160 46,160"/>
+  </g>
+     <g transform="translate(205 79) scale(0.32)" fill="#15171A">
+    <!-- Custom A: open, crossbar-free construction -->
+    <polygon points="0,150 69,10 92,10 28,150"/>
+    <polygon points="76,37 92,10 164,150 134,150"/>
+    <!-- L -->
+    <polygon points="190,10 216,10 216,124 326,124 326,150 190,150"/>
+    <!-- Locked cut-Y: detached left arm + continuous slash -->
+    <polygon points="348,10 379,10 433,80 414,107"/>
+    <polygon points="478,10 511,10 421,150 389,150"/>
+    <!-- Cut-R: floating crown, open left bowl, grounded leg -->
+    <path d="M540 10H646C689 10 716 35 716 72C716 105 693 126 653 126H589V100H650C674 100 688 90 688 70C688 49 674 36 649 36H540Z"/>
+    <rect x="540" y="100" width="29" height="50"/>
+    <polygon points="638,100 673,100 720,150 683,150"/>
+  </g>
+     <line x1="72" y1="210" x2="1168" y2="210" stroke="#E9ECEF" stroke-width="2"/>
+     <rect x="72" y="210" width="180" height="5" fill="#B7F34A"/>
+     <line x1="72" y1="1600" x2="1168" y2="1600" stroke="#E9ECEF" stroke-width="2"/>
+     <text x="72" y="1650" font-family="Instrument Sans, Bahnschrift, sans-serif" font-size="21" fill="#2A2E33">ALYR Digital Transformation · Doha, Qatar</text>
+     <text x="72" y="1690" font-family="Instrument Sans, Bahnschrift, sans-serif" font-size="21" fill="#2A2E33">hello@alyr.com · alyr.com</text>
+     <text x="1168" y="1690" text-anchor="end" font-family="Instrument Sans, Bahnschrift, sans-serif" font-size="21" fill="#2A2E33">CONFIDENTIAL</text>
+</svg>

@@ -1,0 +1,15 @@
+node_modules/
+dist/
+server-dist/
+.env
+.env.local
+data/leads.json
+data/*.sqlite
+data/*.sqlite-shm
+data/*.sqlite-wal
+data/outbox/
+data/exports/
+playwright-report/
+test-results/
+.playwright-cli/
+*.log

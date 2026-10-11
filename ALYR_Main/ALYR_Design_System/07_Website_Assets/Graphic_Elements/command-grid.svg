@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="1600" height="900" viewBox="0 0 1600 900" role="img" aria-labelledby="title" shape-rendering="geometricPrecision" >
+  <title id="title">ALYR command grid</title>
+  <rect width="1600" height="900" fill="#F6F7F3"/>
+      <g stroke="#A7ADB5" stroke-opacity=".26" fill="none">
+        <path d="M80 0V900"/><path d="M160 0V900"/><path d="M240 0V900"/><path d="M320 0V900"/><path d="M400 0V900"/><path d="M480 0V900"/><path d="M560 0V900"/><path d="M640 0V900"/><path d="M720 0V900"/><path d="M800 0V900"/><path d="M880 0V900"/><path d="M960 0V900"/><path d="M1040 0V900"/><path d="M1120 0V900"/><path d="M1200 0V900"/><path d="M1280 0V900"/><path d="M1360 0V900"/><path d="M1440 0V900"/><path d="M1520 0V900"/>
+        <path d="M0 50H1600"/><path d="M0 130H1600"/><path d="M0 210H1600"/><path d="M0 290H1600"/><path d="M0 370H1600"/><path d="M0 450H1600"/><path d="M0 530H1600"/><path d="M0 610H1600"/><path d="M0 690H1600"/><path d="M0 770H1600"/><path d="M0 850H1600"/>
+      </g>
+      <g fill="#B7F34A"><circle cx="1200" cy="290" r="7"/><circle cx="960" cy="610" r="7"/><circle cx="320" cy="210" r="7"/></g>
+</svg>

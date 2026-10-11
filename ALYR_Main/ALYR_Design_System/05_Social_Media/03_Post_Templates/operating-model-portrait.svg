@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="1080" height="1350" viewBox="0 0 1080 1350" role="img" aria-labelledby="title" shape-rendering="geometricPrecision" >
+  <title id="title">ALYR operating-model post</title>
+  <rect width="1080" height="1350" fill="#F6F7F3"/>
+      <g transform="translate(68 65) scale(0.45)">
+    <polygon fill="#15171A" points="50,0 180,0 130,62 0,62"/>
+    <polygon fill="#15171A" points="0,72 126,72 39,160"/>
+    <polygon fill="#B7F34A" points="134,72 190,72 142,160 46,160"/>
+  </g>
+      <text x="68" y="270" fill="#15171A" font-family="Instrument Sans, Bahnschrift, sans-serif" font-size="58" font-weight="650">From manual follow-up</text>
+      <text x="68" y="340" fill="#15171A" font-family="Instrument Sans, Bahnschrift, sans-serif" font-size="58" font-weight="650">to measurable delivery.</text>
+      <g font-family="Instrument Sans, Bahnschrift, sans-serif" font-size="24" fill="#15171A">
+        <rect x="70" y="500" width="250" height="100" rx="8" fill="#FFFFFF" stroke="#A7ADB5"/><text x="105" y="560">Lead captured</text>
+        <path d="M320 550h115" stroke="#15171A" stroke-width="3"/><circle cx="435" cy="550" r="8" fill="#B7F34A"/>
+        <rect x="450" y="500" width="250" height="100" rx="8" fill="#FFFFFF" stroke="#A7ADB5"/><text x="485" y="560">Owner assigned</text>
+        <path d="M700 550h115" stroke="#15171A" stroke-width="3"/><circle cx="815" cy="550" r="8" fill="#B7F34A"/>
+        <rect x="830" y="500" width="180" height="100" rx="8" fill="#15171A"/><text x="875" y="560" fill="#FFFFFF">Tracked</text>
+      </g>
+      <text x="68" y="1278" fill="#2A2E33" font-family="Instrument Sans, Bahnschrift, sans-serif" font-size="21" letter-spacing="3">OPERATING MODEL / ALYR</text>
+</svg>

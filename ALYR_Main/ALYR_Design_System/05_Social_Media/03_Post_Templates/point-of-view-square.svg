@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="1080" height="1080" viewBox="0 0 1080 1080" role="img" aria-labelledby="title" shape-rendering="geometricPrecision" >
+  <title id="title">ALYR square point-of-view post</title>
+  <rect width="1080" height="1080" fill="#15171A"/>
+      <g transform="translate(72 72) scale(0.55)">
+    <polygon fill="#FFFFFF" points="50,0 180,0 130,62 0,62"/>
+    <polygon fill="#FFFFFF" points="0,72 126,72 39,160"/>
+    <polygon fill="#B7F34A" points="134,72 190,72 142,160 46,160"/>
+  </g>
+      <text x="72" y="507.59999999999997" fill="#FFFFFF" font-family="Instrument Sans, Bahnschrift, sans-serif" font-size="82" font-weight="650">Your workflow</text>
+      <text x="72" y="615.5999999999999" fill="#FFFFFF" font-family="Instrument Sans, Bahnschrift, sans-serif" font-size="82" font-weight="650">is the product.</text>
+      <rect x="72" y="691.2" width="250" height="12" fill="#B7F34A"/>
+      <text x="72" y="998" fill="#A7ADB5" font-family="Instrument Sans, Bahnschrift, sans-serif" font-size="22" letter-spacing="3">ALYR POINT OF VIEW / 01</text>
+</svg>

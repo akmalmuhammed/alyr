@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 512 512" role="img" aria-labelledby="title" shape-rendering="geometricPrecision" >
+  <title id="title">ALYR app icon</title>
+  <rect width="512" height="512" rx="104" fill="#15171A"/>
+     <g transform="translate(66 96) scale(2)">
+    <polygon fill="#FFFFFF" points="50,0 180,0 130,62 0,62"/>
+    <polygon fill="#FFFFFF" points="0,72 126,72 39,160"/>
+    <polygon fill="#FFFFFF" points="134,72 190,72 142,160 46,160"/>
+  </g>
+</svg>

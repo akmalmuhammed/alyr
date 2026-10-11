@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="630" viewBox="0 0 1200 630" role="img" aria-labelledby="title" shape-rendering="geometricPrecision" >
+  <title id="title">ALYR website open graph image</title>
+  <rect width="1200" height="630" fill="#15171A"/>
+    <path d="M850 0 580 630M1070 0 800 630M1250 100 1020 630" stroke="#2A2E33" stroke-width="2"/>
+    <g transform="translate(70 70) scale(0.5)">
+    <polygon fill="#FFFFFF" points="50,0 180,0 130,62 0,62"/>
+    <polygon fill="#FFFFFF" points="0,72 126,72 39,160"/>
+    <polygon fill="#B7F34A" points="134,72 190,72 142,160 46,160"/>
+  </g>
+    <g transform="translate(240 78) scale(0.39)" fill="#FFFFFF">
+    <!-- Custom A: open, crossbar-free construction -->
+    <polygon points="0,150 69,10 92,10 28,150"/>
+    <polygon points="76,37 92,10 164,150 134,150"/>
+    <!-- L -->
+    <polygon points="190,10 216,10 216,124 326,124 326,150 190,150"/>
+    <!-- Locked cut-Y: detached left arm + continuous slash -->
+    <polygon points="348,10 379,10 433,80 414,107"/>
+    <polygon points="478,10 511,10 421,150 389,150"/>
+    <!-- Cut-R: floating crown, open left bowl, grounded leg -->
+    <path d="M540 10H646C689 10 716 35 716 72C716 105 693 126 653 126H589V100H650C674 100 688 90 688 70C688 49 674 36 649 36H540Z"/>
+    <rect x="540" y="100" width="29" height="50"/>
+    <polygon points="638,100 673,100 720,150 683,150"/>
+  </g>
+    <text x="70" y="380" fill="#FFFFFF" font-family="Instrument Sans, Bahnschrift, sans-serif" font-size="68" font-weight="650">Transform the business.</text>
+    <text x="70" y="455" fill="#A7ADB5" font-family="Instrument Sans, Bahnschrift, sans-serif" font-size="32">Not just the interface.</text>
+    <rect x="70" y="510" width="220" height="10" fill="#B7F34A"/>
+</svg>

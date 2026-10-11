@@ -1,0 +1,323 @@
+import type { PlaceDetails, PlaceSummary, WebsiteEnrichment } from './types.js';
+
+interface DemoBusiness extends PlaceDetails {
+  demoEnrichment: WebsiteEnrichment;
+}
+
+const observedAt = '2026-07-16T08:00:00.000Z';
+
+export const demoBusinesses: DemoBusiness[] = [
+  {
+    placeId: 'demo-northstar-travel',
+    name: 'Northstar Travel House',
+    address: 'West Bay, Doha, Qatar',
+    primaryType: 'travel_agency',
+    typeLabel: 'Travel agency',
+    types: ['travel_agency', 'tourist_information_center'],
+    businessStatus: 'OPERATIONAL',
+    googleMapsUri: 'https://maps.google.com/',
+    source: 'demo',
+    phone: '+974 4400 1188',
+    website: 'https://northstar-travel.example',
+    rating: 4.2,
+    userRatingCount: 86,
+    openingHours: ['Sunday–Thursday 08:30–19:00', 'Saturday 09:00–16:00'],
+    demoEnrichment: {
+      businessName: 'Northstar Travel House',
+      sourceUrl: 'https://northstar-travel.example',
+      crawledUrls: ['https://northstar-travel.example', 'https://northstar-travel.example/contact'],
+      emails: ['bookings@northstar-travel.example'],
+      phones: ['+974 4400 1188'],
+      socialLinks: ['https://instagram.com/northstartravel.demo'],
+      whatsappLinks: ['https://wa.me/97455001188'],
+      contactPage: 'https://northstar-travel.example/contact',
+      languages: ['English'],
+      technologies: ['WordPress', 'Google Tag Manager'],
+      signals: [
+        { key: 'whatsapp-led', label: 'WhatsApp-led enquiry flow', state: 'opportunity', evidence: 'WhatsApp is the only prominent conversion path.', weight: 14 },
+        { key: 'no-booking', label: 'No self-service booking', state: 'opportunity', evidence: 'No booking or package-builder flow found on the reviewed pages.', weight: 18 },
+        { key: 'single-language', label: 'Single-language journey', state: 'opportunity', evidence: 'Only English page metadata was observed.', weight: 8 },
+        { key: 'analytics', label: 'Analytics foundation present', state: 'strength', evidence: 'Google Tag Manager was detected.', weight: -4 },
+      ],
+      fitScore: 84,
+      observedAt,
+      robotsAllowed: true,
+      isDemo: true,
+    },
+  },
+  {
+    placeId: 'demo-safa-domestic',
+    name: 'Safa Family Staffing',
+    address: 'Al Sadd, Doha, Qatar',
+    primaryType: 'employment_agency',
+    typeLabel: 'Domestic staffing service',
+    types: ['employment_agency'],
+    businessStatus: 'OPERATIONAL',
+    googleMapsUri: 'https://maps.google.com/',
+    source: 'demo',
+    phone: '+974 4466 2209',
+    website: 'https://safa-staffing.example',
+    rating: 3.9,
+    userRatingCount: 43,
+    demoEnrichment: {
+      businessName: 'Safa Family Staffing',
+      sourceUrl: 'https://safa-staffing.example',
+      crawledUrls: ['https://safa-staffing.example'],
+      emails: ['care@safa-staffing.example'],
+      phones: ['+974 4466 2209'],
+      socialLinks: ['https://facebook.com/safastaffing.demo'],
+      whatsappLinks: ['https://wa.me/97466002209'],
+      languages: ['English', 'Arabic'],
+      technologies: ['Wix'],
+      signals: [
+        { key: 'no-catalogue', label: 'No verified candidate catalogue', state: 'opportunity', evidence: 'No searchable profiles or availability experience was found.', weight: 18 },
+        { key: 'no-portal', label: 'No customer case portal', state: 'opportunity', evidence: 'No contract, replacement or case-status portal was observed.', weight: 16 },
+        { key: 'bilingual', label: 'Bilingual content present', state: 'strength', evidence: 'Arabic and English page variants were observed.', weight: -4 },
+      ],
+      fitScore: 88,
+      observedAt,
+      robotsAllowed: true,
+      isDemo: true,
+    },
+  },
+  {
+    placeId: 'demo-clearpath-pro',
+    name: 'ClearPath Corporate Services',
+    address: 'C-Ring Road, Doha, Qatar',
+    primaryType: 'business_to_business_service',
+    typeLabel: 'Business services',
+    types: ['business_to_business_service', 'consultant'],
+    businessStatus: 'OPERATIONAL',
+    googleMapsUri: 'https://maps.google.com/',
+    source: 'demo',
+    phone: '+974 4431 9060',
+    website: 'https://clearpath-pro.example',
+    rating: 4.5,
+    userRatingCount: 121,
+    demoEnrichment: {
+      businessName: 'ClearPath Corporate Services',
+      sourceUrl: 'https://clearpath-pro.example',
+      crawledUrls: ['https://clearpath-pro.example', 'https://clearpath-pro.example/services'],
+      emails: ['hello@clearpath-pro.example'],
+      phones: ['+974 4431 9060'],
+      socialLinks: ['https://linkedin.com/company/clearpath-pro-demo'],
+      whatsappLinks: [],
+      languages: ['English'],
+      technologies: ['Webflow', 'HubSpot forms'],
+      signals: [
+        { key: 'form-led', label: 'Generic form-led intake', state: 'opportunity', evidence: 'All services route through one unstructured enquiry form.', weight: 12 },
+        { key: 'no-status', label: 'No case-status experience', state: 'opportunity', evidence: 'No customer case tracker or document checklist was found.', weight: 18 },
+        { key: 'crm-form', label: 'CRM capture present', state: 'strength', evidence: 'HubSpot form assets were detected.', weight: -5 },
+      ],
+      fitScore: 79,
+      observedAt,
+      robotsAllowed: true,
+      isDemo: true,
+    },
+  },
+  {
+    placeId: 'demo-luma-clinic',
+    name: 'Luma Specialist Clinics',
+    address: 'Lusail Marina, Lusail, Qatar',
+    primaryType: 'medical_clinic',
+    typeLabel: 'Medical clinic',
+    types: ['medical_clinic', 'health'],
+    businessStatus: 'OPERATIONAL',
+    googleMapsUri: 'https://maps.google.com/',
+    source: 'demo',
+    phone: '+974 4477 8181',
+    website: 'https://luma-clinics.example',
+    rating: 4.6,
+    userRatingCount: 208,
+    demoEnrichment: {
+      businessName: 'Luma Specialist Clinics',
+      sourceUrl: 'https://luma-clinics.example',
+      crawledUrls: ['https://luma-clinics.example'],
+      emails: ['appointments@luma-clinics.example'],
+      phones: ['+974 4477 8181'],
+      socialLinks: ['https://instagram.com/lumaclinics.demo'],
+      whatsappLinks: ['https://wa.me/97466778181'],
+      languages: ['English', 'Arabic'],
+      technologies: ['WordPress', 'Google Analytics'],
+      signals: [
+        { key: 'booking', label: 'Appointment request is manual', state: 'opportunity', evidence: 'The site offers request forms but no real-time scheduling.', weight: 14 },
+        { key: 'privacy', label: 'Privacy notice not found', state: 'opportunity', evidence: 'No privacy link was observed on the reviewed page.', weight: 12 },
+        { key: 'bilingual', label: 'Bilingual content present', state: 'strength', evidence: 'Arabic and English variants were observed.', weight: -4 },
+      ],
+      fitScore: 76,
+      observedAt,
+      robotsAllowed: true,
+      isDemo: true,
+    },
+  },
+  {
+    placeId: 'demo-harbor-hotel',
+    name: 'Harborline Boutique Hotel',
+    address: 'The Pearl-Qatar, Doha, Qatar',
+    primaryType: 'hotel',
+    typeLabel: 'Hotel',
+    types: ['hotel', 'lodging'],
+    businessStatus: 'OPERATIONAL',
+    googleMapsUri: 'https://maps.google.com/',
+    source: 'demo',
+    phone: '+974 4498 7400',
+    website: 'https://harborline-hotel.example',
+    rating: 4.3,
+    userRatingCount: 164,
+    demoEnrichment: {
+      businessName: 'Harborline Boutique Hotel',
+      sourceUrl: 'https://harborline-hotel.example',
+      crawledUrls: ['https://harborline-hotel.example'],
+      emails: ['stay@harborline-hotel.example'],
+      phones: ['+974 4498 7400'],
+      socialLinks: ['https://instagram.com/harborline.demo'],
+      whatsappLinks: [],
+      languages: ['English'],
+      technologies: ['Cloudbeds booking widget', 'Google Tag Manager'],
+      signals: [
+        { key: 'booking', label: 'Online booking present', state: 'strength', evidence: 'A third-party booking widget was detected.', weight: -7 },
+        { key: 'direct-retention', label: 'No visible loyalty journey', state: 'opportunity', evidence: 'No loyalty, referral or post-stay lifecycle flow was observed.', weight: 12 },
+        { key: 'single-language', label: 'Single-language journey', state: 'opportunity', evidence: 'Only English page metadata was observed.', weight: 8 },
+      ],
+      fitScore: 64,
+      observedAt,
+      robotsAllowed: true,
+      isDemo: true,
+    },
+  },
+  {
+    placeId: 'demo-axis-logistics',
+    name: 'Axis Mile Logistics',
+    address: 'Industrial Area, Al Rayyan, Qatar',
+    primaryType: 'logistics_service',
+    typeLabel: 'Logistics service',
+    types: ['logistics_service', 'moving_company'],
+    businessStatus: 'OPERATIONAL',
+    googleMapsUri: 'https://maps.google.com/',
+    source: 'demo',
+    phone: '+974 4455 3290',
+    website: 'https://axis-mile.example',
+    rating: 4.0,
+    userRatingCount: 59,
+    demoEnrichment: {
+      businessName: 'Axis Mile Logistics',
+      sourceUrl: 'https://axis-mile.example',
+      crawledUrls: ['https://axis-mile.example', 'https://axis-mile.example/contact'],
+      emails: ['operations@axis-mile.example'],
+      phones: ['+974 4455 3290'],
+      socialLinks: ['https://linkedin.com/company/axis-mile-demo'],
+      whatsappLinks: ['https://wa.me/97466553290'],
+      contactPage: 'https://axis-mile.example/contact',
+      languages: ['English'],
+      technologies: ['WordPress'],
+      signals: [
+        { key: 'quote', label: 'Quote workflow is unstructured', state: 'opportunity', evidence: 'The quote path is email and WhatsApp only.', weight: 16 },
+        { key: 'tracking', label: 'No customer tracking portal', state: 'opportunity', evidence: 'No shipment or service status experience was found.', weight: 18 },
+        { key: 'single-language', label: 'Single-language journey', state: 'opportunity', evidence: 'Only English page metadata was observed.', weight: 8 },
+      ],
+      fitScore: 91,
+      observedAt,
+      robotsAllowed: true,
+      isDemo: true,
+    },
+  },
+  {
+    placeId: 'demo-crescent-school',
+    name: 'Crescent Learning Academy',
+    address: 'Al Wakrah, Qatar',
+    primaryType: 'school',
+    typeLabel: 'School',
+    types: ['school', 'education'],
+    businessStatus: 'OPERATIONAL',
+    googleMapsUri: 'https://maps.google.com/',
+    source: 'demo',
+    phone: '+974 4464 7712',
+    website: 'https://crescent-learning.example',
+    rating: 4.1,
+    userRatingCount: 77,
+    demoEnrichment: {
+      businessName: 'Crescent Learning Academy',
+      sourceUrl: 'https://crescent-learning.example',
+      crawledUrls: ['https://crescent-learning.example'],
+      emails: ['admissions@crescent-learning.example'],
+      phones: ['+974 4464 7712'],
+      socialLinks: ['https://instagram.com/crescentlearning.demo'],
+      whatsappLinks: [],
+      languages: ['English', 'Arabic'],
+      technologies: ['WordPress', 'Microsoft Clarity'],
+      signals: [
+        { key: 'admissions', label: 'Admissions are document-heavy', state: 'opportunity', evidence: 'Downloadable PDFs and email are the primary admissions path.', weight: 16 },
+        { key: 'parent-portal', label: 'No public parent portal entry', state: 'opportunity', evidence: 'No portal entry or case-status experience was observed.', weight: 13 },
+        { key: 'bilingual', label: 'Bilingual content present', state: 'strength', evidence: 'Arabic and English page variants were observed.', weight: -4 },
+      ],
+      fitScore: 82,
+      observedAt,
+      robotsAllowed: true,
+      isDemo: true,
+    },
+  },
+  {
+    placeId: 'demo-majlis-retail',
+    name: 'Majlis & Loom Interiors',
+    address: 'Umm Salal Mohammed, Qatar',
+    primaryType: 'home_goods_store',
+    typeLabel: 'Home and interiors',
+    types: ['home_goods_store', 'furniture_store'],
+    businessStatus: 'OPERATIONAL',
+    googleMapsUri: 'https://maps.google.com/',
+    source: 'demo',
+    phone: '+974 4411 6033',
+    website: 'https://majlis-loom.example',
+    rating: 4.4,
+    userRatingCount: 95,
+    demoEnrichment: {
+      businessName: 'Majlis & Loom Interiors',
+      sourceUrl: 'https://majlis-loom.example',
+      crawledUrls: ['https://majlis-loom.example'],
+      emails: ['studio@majlis-loom.example'],
+      phones: ['+974 4411 6033'],
+      socialLinks: ['https://instagram.com/majlisloom.demo'],
+      whatsappLinks: ['https://wa.me/97466116033'],
+      languages: ['English', 'Arabic'],
+      technologies: ['Shopify', 'Meta Pixel'],
+      signals: [
+        { key: 'commerce', label: 'Commerce foundation present', state: 'strength', evidence: 'Shopify storefront assets were detected.', weight: -7 },
+        { key: 'consultation', label: 'Design consultation is manual', state: 'opportunity', evidence: 'Custom enquiries move to WhatsApp without structured requirements.', weight: 13 },
+        { key: 'lifecycle', label: 'No visible retention programme', state: 'opportunity', evidence: 'No loyalty or lifecycle capture was observed.', weight: 9 },
+      ],
+      fitScore: 67,
+      observedAt,
+      robotsAllowed: true,
+      isDemo: true,
+    },
+  },
+];
+
+export function searchDemo(query: string, location: string, category: string): PlaceSummary[] {
+  const terms = `${query} ${category}`.trim().toLowerCase().split(/\s+/).filter(Boolean);
+  const locationNeedle = location.trim().toLowerCase();
+
+  let matches = demoBusinesses.filter((business) => {
+    const haystack = `${business.name} ${business.typeLabel} ${business.primaryType} ${business.types.join(' ')}`.toLowerCase();
+    const termMatch = terms.length === 0 || terms.some((term) => haystack.includes(term));
+    const locationMatch = !locationNeedle || locationNeedle === 'all qatar' || business.address.toLowerCase().includes(locationNeedle);
+    return termMatch && locationMatch;
+  });
+
+  if (matches.length === 0) {
+    matches = demoBusinesses.filter((business) => !locationNeedle || business.address.toLowerCase().includes(locationNeedle));
+  }
+
+  return matches.map(({ demoEnrichment: _demo, ...business }) => business).slice(0, 20);
+}
+
+export function getDemoDetails(placeId: string): PlaceDetails | undefined {
+  const business = demoBusinesses.find((item) => item.placeId === placeId);
+  if (!business) return undefined;
+  const { demoEnrichment: _demo, ...details } = business;
+  return details;
+}
+
+export function getDemoEnrichment(url: string): WebsiteEnrichment | undefined {
+  return demoBusinesses.find((item) => item.website === url)?.demoEnrichment;
+}

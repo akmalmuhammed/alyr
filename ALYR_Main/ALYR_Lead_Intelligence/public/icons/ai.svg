@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" role="img" aria-labelledby="title" shape-rendering="geometricPrecision" >
+  <title id="title">ALYR interface icon</title>
+  <g fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="square" stroke-linejoin="miter"><path d="M8 18h8"/>
+  <path d="M9 21h6"/>
+  <path d="M7 14a7 7 0 1 1 10 0c-1.4 1.2-2 2.2-2 4H9c0-1.8-.6-2.8-2-4Z"/>
+  <path d="M12 2V0.8"/>
+  <path d="M4.9 4.9 4 4"/>
+  <path d="m19.1 4.9.9-.9"/></g>
+</svg>

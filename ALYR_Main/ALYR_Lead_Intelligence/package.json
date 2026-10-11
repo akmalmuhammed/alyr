@@ -1,0 +1,47 @@
+{
+  "name": "alyr-lead-intelligence",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "scripts": {
+    "dev": "concurrently -k -n WEB,API -c green,white \"vite\" \"tsx watch server/index.ts\"",
+    "dev:web": "vite",
+    "dev:api": "tsx watch server/index.ts",
+    "build": "tsc --noEmit && vite build && tsc -p server/tsconfig.json",
+    "start": "node server-dist/index.js",
+    "scan:qatar": "tsx server/scanCli.ts",
+    "verify:market": "tsx server/verifyMarketCli.ts",
+    "export:market": "tsx server/exportMarketCli.ts",
+    "reclassify:market": "tsx server/reclassifyMarketCli.ts",
+    "mcp": "tsx server/mcp.ts",
+    "mcp:built": "node server-dist/mcp.js",
+    "smoke:hermes": "tsx server/mcpSmokeCli.ts",
+    "test": "vitest run",
+    "check": "npm run test && npm run build"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.29.0",
+    "cheerio": "^1.2.0",
+    "express": "^5.2.1",
+    "express-rate-limit": "^8.5.2",
+    "helmet": "^8.3.0",
+    "nodemailer": "^9.0.3",
+    "react": "^19.2.7",
+    "react-dom": "^19.2.7",
+    "robots-parser": "^3.0.1",
+    "zod": "^4.4.3"
+  },
+  "devDependencies": {
+    "@types/express": "^5.0.6",
+    "@types/node": "^24.10.1",
+    "@types/nodemailer": "^8.0.1",
+    "@types/react": "^19.2.17",
+    "@types/react-dom": "^19.2.3",
+    "@vitejs/plugin-react": "^6.0.3",
+    "concurrently": "^9.2.1",
+    "tsx": "^4.23.1",
+    "typescript": "^7.0.2",
+    "vite": "^8.1.5",
+    "vitest": "^4.1.10"
+  }
+}

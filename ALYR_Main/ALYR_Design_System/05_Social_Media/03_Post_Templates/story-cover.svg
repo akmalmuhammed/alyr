@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="1080" height="1920" viewBox="0 0 1080 1920" role="img" aria-labelledby="title" shape-rendering="geometricPrecision" >
+  <title id="title">ALYR vertical story template</title>
+  <rect width="1080" height="1920" fill="#15171A"/>
+    <path d="M594 0 162 1920M864 0 432 1920" stroke="#2A2E33" stroke-width="3"/>
+    <g transform="translate(72 90) scale(0.55)">
+    <polygon fill="#FFFFFF" points="50,0 180,0 130,62 0,62"/>
+    <polygon fill="#FFFFFF" points="0,72 126,72 39,160"/>
+    <polygon fill="#B7F34A" points="134,72 190,72 142,160 46,160"/>
+  </g>
+    <text x="72" y="1094.3999999999999" fill="#FFFFFF" font-family="Instrument Sans, Bahnschrift, sans-serif" font-size="80" font-weight="650">Make the work</text>
+    <text x="72" y="1209.6" fill="#FFFFFF" font-family="Instrument Sans, Bahnschrift, sans-serif" font-size="80" font-weight="650">visible.</text>
+    <rect x="72" y="1286.4" width="240" height="12" fill="#B7F34A"/>
+    <text x="72" y="1790" fill="#A7ADB5" font-family="Instrument Sans, Bahnschrift, sans-serif" font-size="28">ALYR DIGITAL TRANSFORMATION</text>
+</svg>

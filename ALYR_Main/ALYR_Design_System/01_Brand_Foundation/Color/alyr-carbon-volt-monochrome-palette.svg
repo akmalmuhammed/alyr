@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="1800" height="1100" viewBox="0 0 1800 1100" role="img" aria-labelledby="title" shape-rendering="geometricPrecision" >
+  <title id="title">ALYR color palette board</title>
+  <rect width="1800" height="1100" fill="#FFFFFF"/>
+    <text x="80" y="100" fill="#15171A" font-family="Instrument Sans, Bahnschrift, sans-serif" font-size="56" font-weight="650">ALYR / CARBON VOLT + MONOCHROME</text>
+    <rect x="80" y="170" width="500" height="340" fill="#15171A" stroke="#E9ECEF"/>
+        <text x="110" y="430" fill="#FFFFFF" font-family="Instrument Sans, Bahnschrift, sans-serif" font-size="32" font-weight="650">CARBON</text>
+        <text x="110" y="475" fill="#FFFFFF" opacity=".72" font-family="IBM Plex Mono, monospace" font-size="22">#15171A</text><rect x="635" y="170" width="500" height="340" fill="#B7F34A" stroke="#E9ECEF"/>
+        <text x="665" y="430" fill="#15171A" font-family="Instrument Sans, Bahnschrift, sans-serif" font-size="32" font-weight="650">VOLT</text>
+        <text x="665" y="475" fill="#15171A" opacity=".72" font-family="IBM Plex Mono, monospace" font-size="22">#B7F34A</text><rect x="1190" y="170" width="500" height="340" fill="#E9ECEF" stroke="#E9ECEF"/>
+        <text x="1220" y="430" fill="#15171A" font-family="Instrument Sans, Bahnschrift, sans-serif" font-size="32" font-weight="650">MIST</text>
+        <text x="1220" y="475" fill="#15171A" opacity=".72" font-family="IBM Plex Mono, monospace" font-size="22">#E9ECEF</text><rect x="80" y="590" width="500" height="340" fill="#A7ADB5" stroke="#E9ECEF"/>
+        <text x="110" y="850" fill="#15171A" font-family="Instrument Sans, Bahnschrift, sans-serif" font-size="32" font-weight="650">CONCRETE</text>
+        <text x="110" y="895" fill="#15171A" opacity=".72" font-family="IBM Plex Mono, monospace" font-size="22">#A7ADB5</text><rect x="635" y="590" width="500" height="340" fill="#050505" stroke="#E9ECEF"/>
+        <text x="665" y="850" fill="#FFFFFF" font-family="Instrument Sans, Bahnschrift, sans-serif" font-size="32" font-weight="650">MONO BLACK</text>
+        <text x="665" y="895" fill="#FFFFFF" opacity=".72" font-family="IBM Plex Mono, monospace" font-size="22">#050505</text><rect x="1190" y="590" width="500" height="340" fill="#F6F7F3" stroke="#E9ECEF"/>
+        <text x="1220" y="850" fill="#15171A" font-family="Instrument Sans, Bahnschrift, sans-serif" font-size="32" font-weight="650">PAPER</text>
+        <text x="1220" y="895" fill="#15171A" opacity=".72" font-family="IBM Plex Mono, monospace" font-size="22">#F6F7F3</text>
+    <text x="80" y="1050" fill="#2A2E33" font-family="IBM Plex Mono, monospace" font-size="20">VOLT = ACTION · PROGRESS · CONFIRMATION · STRATEGIC SIGNAL</text>
+</svg>
