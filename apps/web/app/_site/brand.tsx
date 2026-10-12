@@ -1,3 +1,6 @@
+// The R in the wordmark was redrawn on 12 Oct 2026 at the founder's request (full stem,
+// chamfered bowl with a tighter counter). It differs from the design system's master
+// files until those are regenerated; see docs/brand.md.
 // The ALYR logo and icons, drawn from the master artwork in the design system
 // (02_Logo_System/01_Master_SVG, 03_Icon_System/UI_Icons_SVG). The geometry is copied
 // point for point. Never redraw, retype, stretch or recolor it: the only variants are
@@ -21,7 +24,7 @@ export function Logo({ label, className }: { label: string; className?: string }
     <svg
       className={className}
       xmlns="http://www.w3.org/2000/svg"
-      viewBox="20 30 1000 160"
+      viewBox="20 30 986 160"
       role="img"
       aria-label={label}
       shapeRendering="geometricPrecision"
@@ -35,9 +38,8 @@ export function Logo({ label, className }: { label: string; className?: string }
         <polygon points="190,10 216,10 216,124 326,124 326,150 190,150" />
         <polygon points="348,10 379,10 433,80 414,107" />
         <polygon points="478,10 511,10 421,150 389,150" />
-        <path d="M540 10H646C689 10 716 35 716 72C716 105 693 126 653 126H589V100H650C674 100 688 90 688 70C688 49 674 36 649 36H540Z" />
-        <rect x="540" y="100" width="29" height="50" />
-        <polygon points="638,100 673,100 720,150 683,150" />
+        <path fillRule="evenodd" d="M540 10H672L702 40V84L672 114H569V150H540ZM569 36V88H661L674 75V49L661 36Z" />
+        <polygon points="620,88 655,88 706,150 671,150" />
       </g>
     </svg>
   );
