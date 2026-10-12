@@ -55,6 +55,15 @@ export function ProductDemo({ product, locale }: Props) {
     };
   }, []);
 
+  // On a narrow screen the tab row scrolls sideways. Keep the selected tab in view
+  // without moving the page itself.
+  useEffect(() => {
+    const tab = tabs.current[active];
+    const row = tab?.parentElement;
+    if (!tab || !row || row.scrollWidth <= row.clientWidth) return;
+    row.scrollTo({ left: tab.offsetLeft - row.offsetLeft - 8, behavior: "smooth" });
+  }, [active]);
+
   const playing = auto && onScreen && !still;
   const demo = demos[active];
 
@@ -131,7 +140,7 @@ export function ProductDemo({ product, locale }: Props) {
                 <b>{product.business}</b>
                 <small>{product.businessMeta}</small>
               </span>
-              <svg className="wa-act" viewBox="0 0 24 24" aria-hidden="true"><path d="M17 10.5V7a1 1 0 0 0-1-1H4a1 1 0 0 0-1 1v10a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-3.5l4 4v-11z" /></svg>
+              <svg className="wa-act wa-video" viewBox="0 0 24 24" aria-hidden="true"><path d="M17 10.5V7a1 1 0 0 0-1-1H4a1 1 0 0 0-1 1v10a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-3.5l4 4v-11z" /></svg>
               <svg className="wa-act" viewBox="0 0 24 24" aria-hidden="true"><path d="M6.6 10.8a15.1 15.1 0 0 0 6.6 6.6l2.2-2.2a1 1 0 0 1 1-.25 11.4 11.4 0 0 0 3.6.57 1 1 0 0 1 1 1V20a1 1 0 0 1-1 1A17 17 0 0 1 3 4a1 1 0 0 1 1-1h3.5a1 1 0 0 1 1 1c0 1.25.2 2.45.57 3.57a1 1 0 0 1-.25 1z" /></svg>
               <svg className="wa-act" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="5" r="2" /><circle cx="12" cy="12" r="2" /><circle cx="12" cy="19" r="2" /></svg>
             </header>
