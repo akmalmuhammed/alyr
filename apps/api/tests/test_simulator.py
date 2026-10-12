@@ -82,7 +82,7 @@ def test_steps_4_and_5_reminder_then_payment_clears_the_balance(client):
 
     assert client.post(f"/api/pay/{tenant_id}/{payment_id}/complete").json() == {"status": "paid"}
     confirmation = client.get(f"/sim/conversations/{AHMED_PHONE}").json()["messages"][-1]
-    assert "Received QAR 1,850" in confirmation["body"]
+    assert "received your payment of QAR 1,850" in confirmation["body"]
     assert ahmed(client)["balance"] == 0
 
 
@@ -171,7 +171,9 @@ def test_reminder_tone_follows_the_age_of_the_debt(client):
     oldest = max(summary, key=lambda c: c["oldest_days"])
     assert oldest["oldest_days"] >= 90
     key = oldest["phone"] or oldest["user_id"]
-    assert "Final notice" in conversation(client, key)[-1]["body"]
+    final = conversation(client, key)[-1]
+    assert "Final notice" in final["body"]
+    assert final["payload"]["template"] == "payment_reminder_final"
     assert "friendly reminder" in conversation(client, AHMED_PHONE)[-1]["body"]
 
 

@@ -7,7 +7,7 @@ from uuid import UUID
 
 import asyncpg
 
-from alyr.channels.base import OutboundMessage
+from alyr.core import templates
 from alyr.core.normalise import fmt_qar
 from alyr.core.outbound import Outbound
 from alyr.modules.ledger import service as ledger
@@ -106,6 +106,11 @@ async def create_order(
         f"  {fmt_qar(product['price'] * quantity)}"
         for product, quantity in lines
     )
+    # A template blank cannot hold a line break, so the items go on one line there.
+    items = ", ".join(
+        f"{quantity} x {(product['name_ar'] if arabic and product['name_ar'] else product['name'])}"
+        for product, quantity in lines
+    )
     pay_url = None
     if payment == "account":
         await ledger.add_entry(
@@ -127,14 +132,11 @@ async def create_order(
 
     head = f"تم استلام الطلب رقم {number}." if arabic else f"Order #{number} received."
     total_line = f"الإجمالي: {fmt_qar(total)}" if arabic else f"Total: {fmt_qar(total)}"
-    await outbound.send(
-        conn,
-        OutboundMessage(
-            to=contact_id, kind="template",
-            body=f"{head}\n{summary}\n{total_line}\n{closing}",
-            template_name="order_received", template_category="utility",
-        ),
-    )
+    await outbound.send(conn, templates.notice(
+        contact_id, "order_received_account" if payment == "account" else "order_received_pay",
+        contact["lang"], f"{head}\n{summary}\n{total_line}\n{closing}",
+        number, items, fmt_qar(total), fmt_qar(balance) if payment == "account" else pay_url,
+    ))
     return {
         "order_id": str(order_id), "number": number, "total": total,
         "total_text": fmt_qar(total), "payment": payment, "pay_url": pay_url,
@@ -165,13 +167,9 @@ async def set_status(
     lang = await conn.fetchval("select lang from contacts where id = $1", row["contact_id"])
     english, arabic = _STATUS_TEXT[status]
     body = (arabic if lang == "ar" else english).format(n=row["number"])
-    await outbound.send(
-        conn,
-        OutboundMessage(
-            to=row["contact_id"], kind="template", body=body,
-            template_name=f"order_{status}", template_category="utility",
-        ),
-    )
+    await outbound.send(conn, templates.notice(
+        row["contact_id"], f"order_{status}", lang, body, row["number"],
+    ))
     return True
 
 

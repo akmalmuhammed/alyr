@@ -10,6 +10,7 @@ from uuid import UUID
 import asyncpg
 
 from alyr.channels.base import Choice, InboundMessage, OutboundMessage
+from alyr.core import templates
 from alyr.core.normalise import fmt_qar, has_arabic, parse_amount, western_digits
 from alyr.modules.ledger import service
 
@@ -190,13 +191,17 @@ async def _staff(conn, tenant_id, staff, text: str) -> list[OutboundMessage]:
         reply += f"\nWarning: this is over their credit limit of {limit}."
 
     shop = await conn.fetchrow("select name, name_ar from tenants where id = $1", tenant_id)
-    notice = OutboundMessage(
-        to=customer["id"],
-        kind="template",
-        body=service.entry_notice(
+    arabic = customer["lang"] == "ar"
+    if arabic:
+        what = "دفعة" if kind == "payment" else "شراء آجل"
+    else:
+        what = "a payment" if kind == "payment" else "a credit purchase"
+    notice = templates.notice(
+        customer["id"], "entry_recorded", customer["lang"],
+        service.entry_notice(
             customer["lang"], shop["name"], shop["name_ar"], kind, amount, balance
         ),
-        template_name="entry_recorded",
-        template_category="utility",
+        shop["name_ar"] if arabic and shop["name_ar"] else shop["name"],
+        what, fmt_qar(amount), fmt_qar(balance),
     )
     return [*say(reply), notice]

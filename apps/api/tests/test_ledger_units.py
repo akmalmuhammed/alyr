@@ -1,3 +1,4 @@
+import re
 from datetime import UTC, datetime, timedelta
 from uuid import uuid4
 
@@ -5,6 +6,7 @@ import pytest
 
 from alyr.channels.base import Address, Choice, OutboundMessage
 from alyr.channels.meta import to_graph_payload
+from alyr.core import templates
 from alyr.core.normalise import fmt_qar, has_arabic, parse_amount, western_digits
 from alyr.modules.ledger.ageing import age
 
@@ -98,3 +100,37 @@ def test_a_user_id_is_sent_as_recipient_when_there_is_no_phone():
 def test_an_address_needs_something_to_deliver_to():
     with pytest.raises(ValueError):
         Address()
+
+
+def test_a_template_carries_its_language_and_the_values_for_its_blanks():
+    message = templates.notice(uuid4(), "order_ready", "ar", "الطلب جاهز", 1001)
+    template = to_graph_payload(message, Address(phone="97455500001"))["template"]
+    assert template["name"] == "order_ready"
+    assert template["language"] == {"code": "ar"}
+    assert template["components"] == [
+        {"type": "body", "parameters": [{"type": "text", "text": "1001"}]}
+    ]
+
+
+def test_every_template_follows_metas_rules():
+    for name, template in templates.CATALOGUE.items():
+        assert re.fullmatch(r"[a-z0-9_]+", name), name
+        for text in (template.en, template.ar):
+            blanks = re.findall(r"\{\{(\d+)\}\}", text)
+            # Numbered 1..n in order, one of each, matching the sample values.
+            assert blanks == [str(i) for i in range(1, len(template.samples) + 1)], name
+            assert not text.startswith("{{") and not text.rstrip().endswith("}}"), name
+            assert "\n" not in text and len(text) <= 1024, name
+
+
+def test_a_value_with_a_line_break_is_put_on_one_line():
+    message = templates.notice(uuid4(), "order_ready", "en", "Ready", "10\n  01")
+    assert message.template_params == ("10 01",)
+    assert templates.render("order_ready", "en", message.template_params) == (
+        "Your order 10 01 is ready for collection. See you soon."
+    )
+
+
+def test_a_notice_with_the_wrong_number_of_values_is_refused():
+    with pytest.raises(ValueError):
+        templates.notice(uuid4(), "order_ready", "en", "Ready")

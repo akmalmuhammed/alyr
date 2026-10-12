@@ -52,6 +52,9 @@ class OutboundMessage:
     choices: tuple[Choice, ...] = ()
     template_name: str = ""
     template_category: TemplateCategory | None = None
+    # The values for the template's numbered blanks, and the language to send it in.
+    template_params: tuple[str, ...] = ()
+    lang: str = "en"
 
     def __post_init__(self) -> None:
         if self.kind == "buttons" and not 1 <= len(self.choices) <= MAX_BUTTONS:

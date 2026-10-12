@@ -68,9 +68,10 @@ def test_order_paid_by_link_is_marked_paid_and_leaves_the_ledger_alone(client):
     assert order["number"] == 1001
 
     summary = client.get(f"/sim/conversations/{AHMED_PHONE}").json()["messages"][-1]
-    assert "Order #1001 received." in summary["body"]
-    assert "2 x Cable 2.5 mm, 100 m roll  QAR 450" in summary["body"]
-    assert "Total: QAR 630" in summary["body"]
+    # The customer has not written, so this is the approved template: items on one line.
+    assert "Order 1001 received: 2 x Cable 2.5 mm, 100 m roll, 10 x Breaker" in summary["body"]
+    assert "The total is QAR 630." in summary["body"]
+    assert order["pay_url"] in summary["body"]
 
     tenant_id, payment_id = re.search(r"/pay/(\S+)/(\S+)", order["pay_url"]).groups()
     assert client.get(f"/api/pay/{tenant_id}/{payment_id}").json()["order_number"] == 1001
@@ -81,7 +82,7 @@ def test_order_paid_by_link_is_marked_paid_and_leaves_the_ledger_alone(client):
         1001, "paid", "Ahmed Al-Kuwari",
     )
     confirmation = client.get(f"/sim/conversations/{AHMED_PHONE}").json()["messages"][-1]
-    assert "Received QAR 630 for order #1001" in confirmation["body"]
+    assert "received QAR 630 for order 1001" in confirmation["body"]
     assert customer(client)["balance_text"] == "QAR 1,850"
     assert client.get("/api/ledger/summary").json()["collected_by_link"] == 0
 
@@ -92,7 +93,7 @@ def test_order_on_account_raises_the_ledger_balance(client):
     assert order["pay_url"] is None
     assert customer(client)["balance_text"] == "QAR 2,030"
     message = client.get(f"/sim/conversations/{AHMED_PHONE}").json()["messages"][-1]
-    assert "Put on your account. Your balance is now QAR 2,030." in message["body"]
+    assert "is on your account, and your balance is now QAR 2,030." in message["body"]
     assert client.get("/api/orders").json()["orders"][0]["payment"] == "on_account"
 
 

@@ -11,8 +11,7 @@ from uuid import UUID
 
 import asyncpg
 
-from alyr.channels.base import OutboundMessage
-from alyr.core import jobs
+from alyr.core import jobs, templates
 from alyr.core.normalise import fmt_qar
 from alyr.core.outbound import Outbound
 
@@ -140,14 +139,6 @@ async def _shop_name(conn: asyncpg.Connection, arabic: bool) -> str:
     return shop["name_ar"] if arabic and shop["name_ar"] else shop["name"]
 
 
-def _notice(contact_id: UUID, name: str, body: str) -> OutboundMessage:
-    # A template, because the customer may have last written more than 24 hours ago.
-    return OutboundMessage(
-        to=contact_id, kind="template", body=body, template_name=name,
-        template_category="utility",
-    )
-
-
 async def _schedule_reminder(conn: asyncpg.Connection, booking_id: UUID, starts_at: datetime):
     run_at = starts_at - REMIND_BEFORE
     if await conn.fetchval("select $1::timestamptz > now()", run_at):
@@ -209,7 +200,9 @@ async def create_booking(
         else f"Booking {number} confirmed at {shop}: {name}, {when}. "
              "To cancel, send \"my booking\"."
     )
-    await outbound.send(conn, _notice(contact_id, "booking_confirmed", body))
+    await outbound.send(conn, templates.notice(
+        contact_id, "booking_confirmed", contact["lang"], body, number, shop, name, when,
+    ))
     await _schedule_reminder(conn, booking_id, starts_at)
     return {"id": str(booking_id), "number": number, "when_text": when,
             "starts_at": starts_at.isoformat(), "service": service["name"]}
@@ -235,7 +228,10 @@ async def cancel(
             f"تم إلغاء حجزك رقم {row['number']} ({when})." if arabic
             else f"Booking {row['number']} ({when}) has been cancelled."
         )
-        await outbound.send(conn, _notice(row["contact_id"], "booking_cancelled", body))
+        await outbound.send(conn, templates.notice(
+            row["contact_id"], "booking_cancelled", "ar" if arabic else "en", body,
+            row["number"], when,
+        ))
     return True
 
 
@@ -266,7 +262,10 @@ async def reschedule(
         f"تم تغيير موعد حجزك رقم {current['number']} إلى {when}." if arabic
         else f"Booking {current['number']} has been moved to {when}."
     )
-    await outbound.send(conn, _notice(current["contact_id"], "booking_moved", body))
+    await outbound.send(conn, templates.notice(
+        current["contact_id"], "booking_moved", "ar" if arabic else "en", body,
+        current["number"], when,
+    ))
     await _schedule_reminder(conn, booking_id, starts_at)
     return {"id": str(booking_id), "when_text": when, "starts_at": starts_at.isoformat()}
 
@@ -344,6 +343,7 @@ class Reminders:
                 f"تذكير: حجزك رقم {row['number']} لدى {shop}، {when}." if arabic
                 else f"Reminder: booking {row['number']} at {shop}, {when}."
             )
-            await self._outbound.send(
-                conn, _notice(row["contact_id"], "booking_reminder", body)
-            )
+            await self._outbound.send(conn, templates.notice(
+                row["contact_id"], "booking_reminder", "ar" if arabic else "en", body,
+                row["number"], shop, when,
+            ))

@@ -4,6 +4,7 @@ from uuid import UUID
 import asyncpg
 
 from alyr.channels.base import Choice, OutboundMessage
+from alyr.core import templates
 from alyr.core.normalise import fmt_qar
 from alyr.core.outbound import Outbound
 from alyr.modules.ledger.ageing import Aged, age
@@ -173,6 +174,7 @@ async def send_reminders(
             conn, tenant_id, contact_id, customer["balance"], web_url
         )
         arabic = customer["lang"] == "ar"
+        tier = reminder_tier(customer["oldest_days"])
         await outbound.send(
             conn,
             OutboundMessage(
@@ -180,14 +182,22 @@ async def send_reminders(
                 kind="template",
                 body=reminder_text(
                     customer["lang"], shop["name"], shop["name_ar"], customer["balance"],
-                    customer["oldest_days"], link, reminder_tier(customer["oldest_days"]),
+                    customer["oldest_days"], link, tier,
                 ),
                 choices=(
                     Choice("pay", "ادفع الآن" if arabic else "Pay now"),
                     Choice("promise", "سأدفع خلال أسبوع" if arabic else "I'll pay within a week"),
                 ),
-                template_name="payment_reminder",
+                template_name={
+                    "gentle": "payment_reminder", "firm": "payment_reminder_overdue",
+                    "final": "payment_reminder_final",
+                }[tier],
                 template_category="utility",
+                template_params=(
+                    shop["name_ar"] if arabic and shop["name_ar"] else shop["name"],
+                    fmt_qar(customer["balance"]), str(customer["oldest_days"]), link,
+                ),
+                lang="ar" if arabic else "en",
             ),
         )
         await conn.execute(
@@ -221,15 +231,6 @@ def entry_notice(lang: str, shop: str, shop_ar: str, kind: str, amount: int, bal
     return f"{shop}: we recorded {what} {money}. Your balance is now {total}."
 
 
-def _receipt(contact_id: UUID, body: str) -> OutboundMessage:
-    """A payment confirmation. A template, because the customer may pay days after their
-    last message, when free-form text is no longer allowed."""
-    return OutboundMessage(
-        to=contact_id, kind="template", body=body,
-        template_name="payment_received", template_category="utility",
-    )
-
-
 async def complete_payment(
     conn: asyncpg.Connection, payment_id: UUID, outbound: Outbound
 ) -> str:
@@ -257,7 +258,11 @@ async def complete_payment(
             f"تم استلام {fmt_qar(row['amount'])} للطلب رقم {number}. شكراً لك." if lang == "ar"
             else f"Received {fmt_qar(row['amount'])} for order #{number}. Thank you."
         )
-        await outbound.send(conn, _receipt(row["contact_id"], body))
+        # A template, because the customer may pay days after their last message.
+        await outbound.send(conn, templates.notice(
+            row["contact_id"], "payment_received_order", lang, body,
+            fmt_qar(row["amount"]), number,
+        ))
         return "paid"
     await add_entry(
         conn, row["contact_id"], "payment", row["amount"],
@@ -271,5 +276,8 @@ async def complete_payment(
             f"Received {fmt_qar(row['amount'])}. Your balance is now {fmt_qar(balance)}. "
             "Thank you."
         )
-    await outbound.send(conn, _receipt(row["contact_id"], body))
+    await outbound.send(conn, templates.notice(
+        row["contact_id"], "payment_received_account", lang, body,
+        fmt_qar(row["amount"]), fmt_qar(balance),
+    ))
     return "paid"
