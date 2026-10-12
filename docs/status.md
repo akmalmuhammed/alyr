@@ -1,8 +1,10 @@
 # Where Alyr stands
 
+How the work is divided, and the one goal for this stage, are in [operating-model.md](operating-model.md). Each lane keeps its own detail in `docs/lanes/`.
+
 Read this first in a new session, on any machine. It is the hand-over note between sessions: what works, what is next, and what is waiting on the founder. Update it in the same pull request as the work. Linear (team `Alyrtech`, project `Alyr Launch`) holds the detail; this page is the summary.
 
-Last updated: 11 Oct 2026, after the public site went live (ALY-10, ALY-56).
+Last updated: 12 Oct 2026, after the operating model and lanes were set up.
 
 ## What works today
 

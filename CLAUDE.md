@@ -4,6 +4,7 @@ ALYR is a technology company for businesses in Qatar and the GCC. This repositor
 
 Read these before working, in this order:
 
+- [docs/operating-model.md](docs/operating-model.md): how the company is divided into six lanes of agents, what only the founder does, and the rules every agent follows. Then read your lane's brief in `docs/lanes/`.
 - [docs/status.md](docs/status.md): where things stand right now, what is next and what is waiting on the founder. Update it in the same pull request as the work.
 - [docs/brand.md](docs/brand.md): the brand rules the public site follows and where the design system lives. Read it before touching anything a customer sees.
 - [docs/master-plan.md](docs/master-plan.md): what we are building, in what order, and what we decided not to build.
