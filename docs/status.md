@@ -4,11 +4,11 @@ How the work is divided, and the one goal for this stage, are in [operating-mode
 
 Read this first in a new session, on any machine. It is the hand-over note between sessions: what works, what is next, and what is waiting on the founder. Update it in the same pull request as the work. Linear (team `Alyrtech`, project `Alyr Launch`) holds the detail; this page is the summary.
 
-Last updated: 12 Oct 2026, after the booking screens (ALY-27).
+Last updated: 12 Oct 2026, after the first live WhatsApp round trip.
 
 ## What works today
 
-All of it runs against the chat simulator. Nothing has been tested against Meta's live API yet.
+**First live round trip on 12 Oct 2026.** A real phone sent "Hello" to Meta's test number (+1 555 638 3300); the welcome menu came back, a button tap was received, and the order link was delivered and read. Everything else below has still only run against the chat simulator: templates, payments, bookings and the inbox have not been exercised on Meta.
 
 | Area | State | Where |
 |---|---|---|
@@ -44,7 +44,7 @@ Tests: 148, all passing. CI runs api, web and a secrets scan on every pull reque
 
 | Item | Detail |
 |---|---|
-| Meta values | Five values into `apps/api/.env`; names and where to find each are in `apps/api/.env.example`. The Meta app exists; the values are not in yet. |
+| Meta values | Done 12 Oct. `apps/api/.env` holds the five values (app `alyr`, id 1071845795713841, test number id 1431880183331516). The webhook is verified, the app is subscribed to the `messages` field and to the WhatsApp account. **The access token is a temporary one that expires within a day**; replace it with a system-user token. |
 | Domain and tunnel | Done 8 Oct. `alyr.online` is on Cloudflare. Tunnel `alyr-dev` publishes only `/webhooks/whatsapp` and `/health` of the laptop's API at `https://api.alyr.online`; everything else answers 404 from outside. Config is in `~/.cloudflared/config.yml` on the laptop. Start it with `cloudflared tunnel run alyr-dev`. |
 | WhatsApp Business Tools MCP | Optional. Connector URL `https://mcp.facebook.com/whatsapp_business_tools`; lets a session register the number, create templates and set the webhook. Beta, gradual rollout. |
 | Sign-in choice | Built as our own (D-022, proposed). Say so if you want a hosted service instead. |
@@ -65,6 +65,12 @@ Tests: 148, all passing. CI runs api, web and a secrets scan on every pull reque
 - The order link identifies the customer by an unguessable ID only.
 - Failed jobs have an API route but no screen.
 - The demo page polls every 1.5 seconds.
+
+## Live testing from the laptop
+
+- The API runs in Docker (`ALYR_DOCKER_FLAGS="-p 8000:8000 --name alyr-api-dev" scripts/api-in-docker.sh uv run uvicorn alyr.main:app --host 0.0.0.0 --port 8000`), the web app with `pnpm dev`, the tunnel with `cloudflared tunnel run alyr-dev`. All three must be running, on the founder's laptop.
+- The tunnel publishes two addresses and nothing else: `api.alyr.online` (only `/webhooks/whatsapp` and `/health`) and `app.alyr.online` (only the customer pages `/s/`, `/b/`, `/pay/` and the API routes they call). The workspace, sign-in and the simulator answer 404 from outside.
+- `ALYR_PUBLIC_WEB_URL=https://app.alyr.online` in `apps/api/.env` makes links in chats point there. It is the Next.js dev server behind the tunnel, which is acceptable for testing only (ALY-63 replaces it).
 
 ## Publishing the public site
 
