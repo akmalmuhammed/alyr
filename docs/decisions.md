@@ -31,6 +31,7 @@ Status: **Accepted** (in force), **Proposed** (waiting for the founder), **Super
 | D-023 | ALYR is the company; the WhatsApp product is its first product | Accepted |
 | D-024 | Bookings join Product 1; the first customers book, order, pay and track | Accepted |
 | D-025 | The public site uses the playbook's words on the design system's look | Proposed |
+| D-026 | The homepage is about ALYR the company; ALYR Chat has its own page | Accepted |
 
 ---
 
@@ -333,3 +334,22 @@ Two brand sources disagree. The design system v1.0 (branch `codex/alyr-native-fo
 | "Not affiliated with WhatsApp or Meta" line; no hype words; no sample statistics | Lowercase "alyr" in text, cobalt, the "a" mark: these belong to the other look |
 
 **Open, for the founder.** Which look is ALYR's; the Arabic spelling of the name; the launch price; whether the 48-hour and pilot promises are made publicly.
+
+## D-026 · The homepage is about ALYR the company; ALYR Chat has its own page
+**Date** 12 Oct 2026 · **Status** Accepted (founder, 12 Oct) · Linear ALY-56
+
+The founder said the homepage had become a page about WhatsApp. ALYR is a company that digitalizes small and mid-sized businesses and supports them in anything to do with technology, within its licensed activities. The WhatsApp product is its first product and matters, but it is one thing ALYR does.
+
+| Page | Is about | Address |
+|---|---|---|
+| Homepage | ALYR: what it is, the services, how it works, who it works with, and a short section on the product | `/`, `/ar` |
+| ALYR Chat | The product: the demo, why owners choose it, who it suits, what comes next | `/chat`, `/ar/chat` |
+
+**Services named on the homepage:** websites and online stores; customer systems; automation and integrations; dashboards and reporting; AI assistants; setup, training and support.
+
+**This reverses part of an earlier position.** On 11 Oct the founder said services were the long-term direction and the product the only thing for sale, so the site offered only the product. Services are now offered publicly.
+
+**Open, for the founder.**
+- The company is not registered, so there are no licensed activities yet. Each service on the page must be covered by the licence chosen in ALY-59; remove any that is not.
+- Who delivers a service when an owner asks for one, while the founder is also building the product.
+- No prices are shown for services or the product (ALY-62).

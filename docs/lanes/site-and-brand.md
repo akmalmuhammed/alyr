@@ -23,7 +23,7 @@ Anything else belongs to another lane. If a task needs it, keep the change small
 
 Last updated 12 Oct 2026.
 
-- The site is live in English and Arabic with the playbook's words on the design system v1.0 look.
+- The site has two pages in each language: a company homepage (`/`) and the ALYR Chat product page (`/chat`), decision D-026. The R in the wordmark was redrawn on 12 Oct; the design system's master files still carry the old one.
 - Two brand systems disagree and the founder has not chosen (ALY-61). Do not produce new branded material until that is decided.
 - No contact method on the live page (ALY-60). Arabic unreviewed (ALY-66). No privacy or terms pages (ALY-68, Company lane).
 

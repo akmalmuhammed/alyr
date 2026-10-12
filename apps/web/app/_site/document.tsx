@@ -1,7 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import { IBM_Plex_Mono, IBM_Plex_Sans_Arabic, Instrument_Sans } from "next/font/google";
 import { copy, type Locale } from "./copy";
-import { PATHS, SITE_URL } from "./site";
+import { PATHS, SITE_URL, type PageKey } from "./site";
 import "./site.css";
 
 // The design system's type: Instrument Sans for Latin, IBM Plex Sans Arabic for Arabic,
@@ -21,19 +21,19 @@ export const siteViewport: Viewport = {
   ],
 };
 
-export function siteMetadata(locale: Locale): Metadata {
-  const t = copy[locale].meta;
+export function siteMetadata(locale: Locale, page: PageKey = "home"): Metadata {
+  const t = copy[locale].meta[page];
   return {
     metadataBase: new URL(SITE_URL),
     title: t.title,
     description: t.description,
     alternates: {
-      canonical: PATHS[locale],
-      languages: { en: PATHS.en, ar: PATHS.ar, "x-default": PATHS.en },
+      canonical: PATHS[page][locale],
+      languages: { en: PATHS[page].en, ar: PATHS[page].ar, "x-default": PATHS[page].en },
     },
     openGraph: {
       type: "website", siteName: "ALYR", title: t.title, description: t.description,
-      url: PATHS[locale], locale: locale === "ar" ? "ar_QA" : "en_US",
+      url: PATHS[page][locale], locale: locale === "ar" ? "ar_QA" : "en_US",
       images: [{ url: "/opengraph-image", width: 1200, height: 630, alt: "ALYR" }],
     },
     twitter: { card: "summary_large_image", title: t.title, description: t.description },
