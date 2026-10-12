@@ -6,7 +6,7 @@
   "compatibility_date": "2026-10-06",
   // A few lines that redirect every other address to alyr.qa, then serve the files.
   "main": "./site-worker.js",
-  "vars": { "REDIRECT": "off" },
+  "vars": { "REDIRECT": "on" },
   "assets": {
     "directory": "./out-site",
     "binding": "ASSETS",
