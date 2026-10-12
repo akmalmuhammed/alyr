@@ -244,7 +244,7 @@ svg { display: block; }
 .demo-bar { display: flex; align-items: center; justify-content: space-between; gap: 1rem; flex-wrap: wrap; }
 .demo-tabs { display: flex; gap: .25rem; padding: .25rem; border: 1px solid var(--dark-line); border-radius: .75rem; background: var(--dark-canvas); overflow-x: auto; scrollbar-width: none; max-width: 100%; }
 .demo-tabs::-webkit-scrollbar { display: none; }
-.demo-tab { position: relative; display: inline-flex; align-items: center; gap: .5rem; min-height: 2.75rem; padding: 0 1rem; border: 0; border-radius: .5rem; background: transparent; color: var(--concrete); font: inherit; font-weight: 600; font-size: .9375rem; white-space: nowrap; cursor: pointer; overflow: hidden; transition: color var(--fast) var(--ease), background var(--fast) var(--ease); }
+.demo-tab { flex: none; position: relative; display: inline-flex; align-items: center; gap: .5rem; min-height: 2.75rem; padding: 0 1rem; border: 0; border-radius: .5rem; background: transparent; color: var(--concrete); font: inherit; font-weight: 600; font-size: .9375rem; white-space: nowrap; cursor: pointer; overflow: hidden; transition: color var(--fast) var(--ease), background var(--fast) var(--ease); }
 .demo-tab:hover { color: var(--dark-text); }
 .demo-tab[aria-selected="true"] { background: var(--graphite); color: #fff; }
 .demo-tab:focus-visible { outline-color: var(--volt); outline-offset: -2px; }
@@ -284,7 +284,7 @@ svg { display: block; }
 .wa-avatar { display: grid; place-items: center; width: 2.25rem; height: 2.25rem; border-radius: 50%; background: #dfe5e7; color: #54656f; font-weight: 600; font-size: .9375rem; flex: none; }
 .wa-who { min-width: 0; flex: 1; line-height: 1.25; }
 .wa-who b { display: block; font-size: .9375rem; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.wa-who small { display: block; font-size: .75rem; color: var(--wa-soft); }
+.wa-who small { display: block; font-size: .75rem; color: var(--wa-soft); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .wa-thread {
   flex: 1; display: flex; flex-direction: column; justify-content: flex-end; gap: .125rem; padding: .75rem .75rem .625rem; overflow: hidden;
   background-color: var(--wa-paper);
@@ -475,6 +475,39 @@ svg { display: block; }
   .foot-nav { justify-content: flex-start; }
 }
 @media (max-width: 30rem) {
+  :root { --header: 3.75rem; }
+  .top[data-scrolled] .top-in { height: 3.5rem; }
+  .hero { padding-top: 1.5rem; }
+  .hero-title { gap: 1.125rem; }
+  .eyebrow { font-size: .6875rem; letter-spacing: .07em; }
+  .btn { min-height: 3rem; }
+  .hero-actions { gap: .25rem 1.5rem; }
+  .flow-chips { gap: .5rem; }
+  .flow-chips li { font-size: .8125rem; padding: .5rem .625rem; }
+  .flow-fold { height: 6.5rem; }
+  .sec { padding-block: 3.5rem; }
+  .statement, .company-say { font-size: 1.5rem; }
+  .steps li { grid-template-columns: 2.25rem 1fr; padding-block: 1.375rem; }
+  .product { padding-inline: 0; }
+  .product-in, .cta-in { border-radius: 0; }
+  .cta { padding-inline: 0; }
+  .cta-in { padding-inline: var(--gutter); }
+  .product-in { padding-block: 3.5rem 2.5rem; }
+  /* the tab row scrolls sideways; a fade on the far edge says there is more */
+  .demo-bar { gap: .25rem; }
+  .demo-tabs { width: 100%; scroll-snap-type: x proximity; mask-image: linear-gradient(to right, #000 calc(100% - 2rem), transparent); -webkit-mask-image: linear-gradient(to right, #000 calc(100% - 2rem), transparent); }
+  [dir="rtl"] .demo-tabs { mask-image: linear-gradient(to left, #000 calc(100% - 2rem), transparent); -webkit-mask-image: linear-gradient(to left, #000 calc(100% - 2rem), transparent); }
+  .demo-tab { scroll-snap-align: start; padding: 0 .8125rem; }
+  .demo-tab-n { display: none; }
+  .demo-stage { border-radius: .5rem; min-height: 0; }
+  .phone { padding: 1rem .5rem; }
+  .wa { height: 31rem; border-radius: 1.5rem; }
+  .wa-top .wa-video { display: none; }
+  .panel-caption { font-size: .8125rem; }
+  .who-rows > li { padding-block: 1.25rem; }
+  .built-grid li { padding: 1.25rem 1.125rem 1.5rem; }
+  .built-ico { margin-bottom: .75rem; }
+  .foot-nav { gap: .25rem 1.25rem; }
   .logo { width: 8.75rem; }
   .top .btn-sm { display: none; }
   .built-grid { grid-template-columns: minmax(0, 1fr); }
