@@ -18,7 +18,7 @@ The founder's **Brand & Growth Playbook** (a Claude Docs document in the founder
 
 ## Rules the public site follows
 
-- **Logo.** Drawn point for point from the master artwork. Never retyped, redrawn, stretched or recolored. Carbon on light, white on Carbon, each with the Volt plane. The horizontal logo is never narrower than 140 px; below that, use the symbol.
+- **Logo.** Drawn point for point from the master artwork, with one change: the founder had the R redrawn on 12 Oct 2026 (full stem, chamfered bowl, tighter counter). The master SVGs on the design-system branch, and everything made from them (cards, letterhead, social covers), still carry the old R and need regenerating; the new R also needs the designer's proof before print or trademark filing. Never retyped, redrawn, stretched or recolored. Carbon on light, white on Carbon, each with the Volt plane. The horizontal logo is never narrower than 140 px; below that, use the symbol.
 - **Volt means one of four things:** the main action, the current state, confirmed progress, or one strategic signal. Never body text on a light surface, never a decorative background.
 - **Type.** Instrument Sans for Latin, IBM Plex Sans Arabic for Arabic, IBM Plex Mono for small labels and identifiers. Arabic is never letter-spaced and is set with looser line height than Latin.
 - **Layout.** Light first, Carbon for command moments, rules and whitespace before cards, asymmetry over centering.
