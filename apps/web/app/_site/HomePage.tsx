@@ -169,7 +169,7 @@ export function HomePage({ locale }: { locale: Locale }) {
                 <h2 className="h1">{t.product.title}</h2>
                 <p className="lead">{t.product.body}</p>
               </div>
-              <ProductDemo product={t.product} />
+              <ProductDemo product={t.product} locale={locale} />
               <ul className="product-facts">
                 {t.product.facts.map((fact, index) => (
                   <li key={fact.title} data-reveal style={{ "--n": index } as React.CSSProperties}>

@@ -259,19 +259,66 @@ svg { display: block; }
 .demo-play { width: 0; height: 0; border-block: .34rem solid transparent; border-inline-start: .58rem solid currentColor; }
 
 .demo-stage { display: grid; grid-template-columns: minmax(0, 5fr) minmax(0, 7fr); gap: 1px; margin-top: 1rem; background: var(--dark-line); border: 1px solid var(--dark-line); border-radius: .75rem; overflow: hidden; min-height: 27rem; }
-.chat, .panel { background: var(--dark-surface); display: flex; flex-direction: column; min-width: 0; }
-.chat-top, .panel-top { display: flex; align-items: center; gap: .75rem; padding: .875rem 1.125rem; border-bottom: 1px solid var(--dark-line); min-height: 3.75rem; }
-.chat-avatar { display: grid; place-items: center; width: 2rem; height: 2rem; border-radius: 50%; background: var(--graphite); font-weight: 600; font-size: .875rem; }
-.chat-top b, .panel-top b { display: block; font-size: .9375rem; font-weight: 600; }
-.chat-top small { display: block; font-size: .75rem; color: var(--concrete); }
-.chat-lines { display: flex; flex-direction: column; gap: .625rem; padding: 1.25rem 1.125rem 1.5rem; flex: 1; justify-content: flex-end; background: var(--dark-canvas); }
-.msg { max-width: 86%; padding: .625rem .8125rem; border-radius: .75rem; font-size: .9375rem; line-height: 1.45; display: grid; gap: .5rem; }
-.msg-customer { align-self: flex-start; background: var(--dark-subtle); border-end-start-radius: .25rem; }
-.msg-business, .msg-staff { align-self: flex-end; background: var(--graphite); border-end-end-radius: .25rem; }
-.msg-name { font-family: var(--mono); font-size: .6875rem; letter-spacing: .06em; text-transform: uppercase; color: var(--concrete); }
-[lang="ar"] .msg-name { font-family: var(--arabic); letter-spacing: 0; font-size: .75rem; }
-.msg-action { display: inline-flex; align-items: center; justify-content: space-between; gap: .75rem; padding: .5rem .6875rem; border: 1px solid #555d65; border-radius: .5rem; font-weight: 600; font-size: .875rem; }
-.msg-action .ico { width: 1rem; height: 1rem; }
+.demo-stage { grid-template-columns: minmax(0, 23.5rem) minmax(0, 1fr); }
+.panel { background: var(--dark-surface); display: flex; flex-direction: column; min-width: 0; }
+.panel-top { display: flex; align-items: center; gap: .75rem; padding: .875rem 1.125rem; border-bottom: 1px solid var(--dark-line); min-height: 3.75rem; }
+.panel-top b { display: block; font-size: .9375rem; font-weight: 600; }
+
+/* The customer's phone. Colours and proportions follow WhatsApp's own light chat screen so
+   the conversation reads at a glance as the app the customer already uses. It is a
+   drawing of a chat, with no WhatsApp logo: ALYR is not affiliated with WhatsApp or Meta. */
+.phone { background: var(--dark-canvas); display: grid; place-items: center; padding: 1.5rem 1.25rem; min-width: 0; }
+.wa {
+  --wa-head: #ffffff; --wa-paper: #efeae2; --wa-in: #ffffff; --wa-out: #d9fdd3;
+  --wa-ink: #111b21; --wa-soft: #667781; --wa-green: #1daa61; --wa-link: #027eb5; --wa-tick: #53bdeb;
+  width: 100%; max-width: 21rem; height: 34rem; display: flex; flex-direction: column; overflow: hidden;
+  border-radius: 1.75rem; border: .375rem solid #050505; outline: 1px solid #3a3f45;
+  background: var(--wa-paper); color: var(--wa-ink);
+  font-family: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", sans-serif; font-weight: 400; letter-spacing: 0;
+}
+[lang="ar"] .wa { font-family: "Segoe UI", "Geeza Pro", "Noto Sans Arabic", system-ui, sans-serif; }
+.wa svg { width: 1.375rem; height: 1.375rem; flex: none; fill: none; stroke: currentColor; stroke-width: 1.7; stroke-linecap: round; stroke-linejoin: round; }
+.wa-top { display: flex; align-items: center; gap: .625rem; padding: .625rem .75rem; background: var(--wa-head); border-bottom: 1px solid #e3e0da; }
+.wa-top .wa-back, .wa-top .wa-act { fill: var(--wa-ink); stroke: none; }
+.wa-top .wa-act { width: 1.25rem; height: 1.25rem; margin-inline-start: .375rem; }
+.wa-avatar { display: grid; place-items: center; width: 2.25rem; height: 2.25rem; border-radius: 50%; background: #dfe5e7; color: #54656f; font-weight: 600; font-size: .9375rem; flex: none; }
+.wa-who { min-width: 0; flex: 1; line-height: 1.25; }
+.wa-who b { display: block; font-size: .9375rem; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.wa-who small { display: block; font-size: .75rem; color: var(--wa-soft); }
+.wa-thread {
+  flex: 1; display: flex; flex-direction: column; justify-content: flex-end; gap: .125rem; padding: .75rem .75rem .625rem; overflow: hidden;
+  background-color: var(--wa-paper);
+  background-image: radial-gradient(rgb(17 27 33 / .045) 1px, transparent 1.4px), radial-gradient(rgb(17 27 33 / .03) 1px, transparent 1.4px);
+  background-size: 1.375rem 1.375rem, 1.375rem 1.375rem; background-position: 0 0, .6875rem .6875rem;
+}
+.wa-day { align-self: center; margin-bottom: .5rem; }
+.wa-day span { display: inline-block; background: #ffffff; color: var(--wa-soft); font-size: .75rem; padding: .3125rem .75rem; border-radius: .5rem; box-shadow: 0 1px .5px rgb(11 20 26 / .13); }
+.wa-msg { position: relative; max-width: 82%; display: flex; flex-direction: column; filter: drop-shadow(0 1px .5px rgb(11 20 26 / .13)); }
+.wa-msg.wa-tail { margin-top: .5rem; }
+.wa-in { align-self: flex-start; }
+.wa-out { align-self: flex-end; }
+.wa-bubble { position: relative; padding: .375rem .5625rem .4375rem; border-radius: .5rem; font-size: .890625rem; line-height: 1.34; }
+.wa-in .wa-bubble { background: var(--wa-in); }
+.wa-out .wa-bubble { background: var(--wa-out); }
+.wa-in.wa-tail .wa-bubble { border-start-start-radius: 0; }
+.wa-out.wa-tail .wa-bubble { border-start-end-radius: 0; }
+/* the little tail on the first bubble of a run */
+.wa-tail .wa-bubble::before { content: ""; position: absolute; top: 0; width: .5rem; height: .8125rem; }
+.wa-in.wa-tail .wa-bubble::before { inset-inline-start: -.5rem; background: var(--wa-in); clip-path: polygon(100% 0, 0 0, 100% 100%); }
+.wa-out.wa-tail .wa-bubble::before { inset-inline-end: -.5rem; background: var(--wa-out); clip-path: polygon(0 0, 100% 0, 0 100%); }
+[dir="rtl"] .wa-in.wa-tail .wa-bubble::before { clip-path: polygon(0 0, 100% 0, 0 100%); }
+[dir="rtl"] .wa-out.wa-tail .wa-bubble::before { clip-path: polygon(100% 0, 0 0, 100% 100%); }
+.wa-text { overflow-wrap: anywhere; }
+.wa-meta { float: inline-end; display: inline-flex; align-items: center; gap: .1875rem; margin: .4375rem 0 -.1875rem .625rem; font-size: .6875rem; color: var(--wa-soft); white-space: nowrap; }
+[dir="rtl"] .wa-meta { margin: .4375rem .625rem -.1875rem 0; }
+.wa .wa-ticks { width: 1rem; height: .6875rem; stroke: var(--wa-tick); stroke-width: 1.5; }
+.wa-in:has(.wa-cta) .wa-bubble { border-end-start-radius: 0; border-end-end-radius: 0; }
+.wa-cta { display: flex; align-items: center; justify-content: center; gap: .375rem; padding: .5625rem .75rem; background: var(--wa-in); border-top: 1px solid #e9edef; border-radius: 0 0 .5rem .5rem; color: var(--wa-link); font-size: .890625rem; font-weight: 500; }
+.wa .wa-cta svg { width: 1rem; height: 1rem; }
+.wa-bar { display: flex; align-items: center; gap: .375rem; padding: .375rem .375rem .5rem; background: var(--wa-paper); }
+.wa-input { flex: 1; display: flex; align-items: center; gap: .625rem; min-height: 2.625rem; padding: 0 .75rem; background: #ffffff; border-radius: 1.5rem; color: #54656f; font-size: .9375rem; }
+.wa-input span { flex: 1; color: #8696a0; }
+.wa-mic { display: grid; place-items: center; width: 2.75rem; height: 2.75rem; border-radius: 50%; background: var(--wa-green); color: #ffffff; flex: none; }
 
 .panel-top { justify-content: flex-start; }
 .panel-kicker { font-family: var(--mono); font-size: .6875rem; letter-spacing: .08em; text-transform: uppercase; color: var(--concrete); }
@@ -397,7 +444,7 @@ svg { display: block; }
   .al-js .company-in.is-in .company-path .company-path-volt { animation: draw 700ms var(--ease) both 1500ms; }
 
   /* the demo plays message by message */
-  .msg, .row, .panel-total { animation: rise 520ms var(--ease) both; animation-delay: calc(160ms + var(--i) * 620ms); }
+  .wa-msg, .row, .panel-total { animation: rise 520ms var(--ease) both; animation-delay: calc(160ms + var(--i) * 620ms); }
 }
 
 /* ------------------------------------------------------------- responsive */
@@ -410,7 +457,7 @@ svg { display: block; }
   .built-grid li:nth-child(3) { border-inline-start: 0; }
   .built-grid li:nth-child(n+3) { border-top: 1px solid var(--line); }
   .demo-stage { grid-template-columns: minmax(0, 1fr); }
-  .chat-lines { min-height: 17rem; }
+  .phone { padding-inline: .75rem; }
 }
 @media (max-width: 53rem) {
   .cta-mark { display: none; }

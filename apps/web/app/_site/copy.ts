@@ -68,6 +68,8 @@ export type Copy = {
     body: string;
     business: string;
     businessMeta: string;
+    today: string;
+    typeHere: string;
     workspace: string;
     note: string;
     tabsLabel: string;
@@ -161,6 +163,8 @@ const en: Copy = {
       "Your customers keep messaging you the way they already do. ALYR Chat adds the booking, the order, the payment link and the updates, and your team sees it all in one place.",
     business: "Dana Home Services",
     businessMeta: "Business account",
+    today: "Today",
+    typeHere: "Message",
     workspace: "Workspace",
     note: "Sample conversation with a fictional business.",
     tabsLabel: "What the product does",
@@ -248,7 +252,7 @@ const en: Copy = {
         tab: "Team inbox",
         chat: [
           { from: "customer", text: "Is the thermostat covered by a warranty?" },
-          { from: "staff", name: "Yusuf", text: "Yes, 12 months. I will bring the receipt with me tomorrow." },
+          { from: "staff", text: "Yes, 12 months. I will bring the receipt with me tomorrow." },
         ],
         panel: {
           title: "Inbox",
@@ -417,6 +421,8 @@ const ar: Copy = {
       "يواصل عملاؤك مراسلتك كما اعتادوا. ويضيف ALYR Chat الحجز والطلب ورابط الدفع والتحديثات، وفريقك يرى كل شيء في مكان واحد.",
     business: "دانة للخدمات المنزلية",
     businessMeta: "حساب أعمال",
+    today: "اليوم",
+    typeHere: "مراسلة",
     workspace: "مساحة العمل",
     note: "محادثة توضيحية مع شركة غير حقيقية.",
     tabsLabel: "ماذا يفعل المنتج",
@@ -504,7 +510,7 @@ const ar: Copy = {
         tab: "صندوق الفريق",
         chat: [
           { from: "customer", text: "هل الثرموستات عليه ضمان؟" },
-          { from: "staff", name: "يوسف", text: "نعم، ضمان ١٢ شهراً. سأحضر الفاتورة معي غداً." },
+          { from: "staff", text: "نعم، ضمان ١٢ شهراً. سأحضر الفاتورة معي غداً." },
         ],
         panel: {
           title: "الوارد",
