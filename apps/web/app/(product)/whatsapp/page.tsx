@@ -25,6 +25,10 @@ type Summary = {
   customers_owing: number; customers: Customer[];
   collected_by_link_text: string; payments_by_link: number;
 };
+type BookingRow = {
+  id: string; number: number; service: string; when_text: string; status: string;
+  customer: string; note: string; starts_at: string;
+};
 type OrderRow = {
   id: string; number: number; status: string; payment: string; total_text: string;
   customer: string; items: { name: string; quantity: number; line_text: string }[];
@@ -80,6 +84,10 @@ const T = {
     windowOpen: (h: number) => (h < 1 ? "Free replies allowed for less than an hour" : `Free replies allowed for ${h} more hours`),
     windowClosed: "More than 24 hours since their last message. WhatsApp only allows an approved template now; typed replies are refused.",
     notSent: "Not sent",
+    tabBookings: "Bookings", bookingsSub: "Today and the next seven days, booked from the chat",
+    noBookings: "No bookings in the next week. In the chat, send \"book\" as a customer.",
+    when: "When", service: "Service", came: "Came", noShow: "No-show", cancel: "Cancel",
+    bk: { booked: "Booked", completed: "Came", cancelled: "Cancelled", no_show: "No-show" } as Record<string, string>,
     tabLedger: "Credit ledger", tabOrders: "Orders", ordersSub: "Placed through the order link",
     noOrders: "No orders yet. In the chat, tap \"Place an order\" as a customer.",
     orderNo: "Order", items: "Items", payment: "Payment", status: "Status",
@@ -114,6 +122,10 @@ const T = {
     windowOpen: (h: number) => (h < 1 ? "الرد الحر متاح لأقل من ساعة" : `الرد الحر متاح لمدة ${h} ساعة`),
     windowClosed: "مضى أكثر من ٢٤ ساعة على آخر رسالة من العميل. واتساب يسمح الآن بالقوالب المعتمدة فقط، والردود المكتوبة مرفوضة.",
     notSent: "لم تُرسل",
+    tabBookings: "الحجوزات", bookingsSub: "اليوم والأيام السبعة القادمة، من المحادثة",
+    noBookings: "لا توجد حجوزات خلال الأسبوع القادم. أرسل \"book\" كعميل في المحادثة.",
+    when: "الموعد", service: "الخدمة", came: "حضر", noShow: "لم يحضر", cancel: "إلغاء",
+    bk: { booked: "محجوز", completed: "حضر", cancelled: "ملغي", no_show: "لم يحضر" } as Record<string, string>,
     tabLedger: "دفتر الديون", tabOrders: "الطلبات", ordersSub: "الطلبات الواردة من رابط الطلب",
     noOrders: "لا توجد طلبات بعد. في المحادثة اضغط \"اطلب الآن\" كعميل.",
     orderNo: "الطلب", items: "الأصناف", payment: "الدفع", status: "الحالة",
@@ -168,7 +180,7 @@ export default function Demo() {
   const [summary, setSummary] = useState<Summary | null>(null);
   const [selected, setSelected] = useState<string | null>(null);
   const [entries, setEntries] = useState<Entry[]>([]);
-  const [tab, setTab] = useState<"inbox" | "ledger" | "orders" | "team">("ledger");
+  const [tab, setTab] = useState<"inbox" | "ledger" | "orders" | "bookings" | "team">("ledger");
   const [me, setMe] = useState<Me | null>(null);
   const [members, setMembers] = useState<Member[]>([]);
   const [canManage, setCanManage] = useState(false);
@@ -183,8 +195,11 @@ export default function Demo() {
   const [thread, setThread] = useState<Thread | null>(null);
   const [replyDraft, setReplyDraft] = useState("");
   const [hoursLeft, setHoursLeft] = useState(0);
+  // Refreshed with the data, so "has this visit started" never calls the clock while rendering.
+  const [now, setNow] = useState(0);
   const threadEnd = useRef<HTMLDivElement>(null);
   const [orders, setOrders] = useState<OrderRow[]>([]);
+  const [bookings, setBookings] = useState<BookingRow[]>([]);
   const [lang, setLang] = useState<"en" | "ar">("en");
   const [note, setNote] = useState("");
   const [error, setError] = useState("");
@@ -217,7 +232,9 @@ export default function Demo() {
       setSummary(s);
       setMessages(c.messages);
       setOrders((await getJson<{ orders: OrderRow[] }>("/api/orders")).orders);
+      setBookings((await getJson<{ bookings: BookingRow[] }>("/api/bookings")).bookings);
       setMe(await getJson<Me>("/api/auth/me"));
+      setNow(Date.now());
       if (tab === "team" || tab === "inbox") {
         const team = await getJson<{ members: Member[]; can_manage: boolean }>("/api/team");
         setMembers(team.members);
@@ -357,6 +374,16 @@ export default function Demo() {
     router.push("/login");
   }
 
+  async function bookingAction(booking: BookingRow, action: "completed" | "no_show" | "cancel") {
+    const cancel = action === "cancel";
+    await getJson(`/api/bookings/${booking.id}/${cancel ? "cancel" : "outcome"}`, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: cancel ? undefined : JSON.stringify({ status: action }),
+    });
+    refresh();
+  }
+
   async function advance(order: OrderRow) {
     await getJson(`/api/orders/${order.id}/status`, {
       method: "POST",
@@ -385,8 +412,9 @@ export default function Demo() {
   const suggestions =
     persona?.kind === "staff"
       ? ["Ahmed 450 credit", "Ahmed paid 200"]
-      : ["كم حسابي؟", "hello", "I want to order"];
+      : ["كم حسابي؟", "hello", "I want to order", "book a visit", "my booking"];
   const total = summary ? Math.max(summary.outstanding, 1) : 1;
+  const upcoming = bookings.filter((b) => b.status === "booked").length;
   const selectedCustomer = summary?.customers.find((c) => c.id === selected);
   const unreadChats = inboxRows.filter((r) => r.unread > 0).length;
   const openThread = thread && thread.customer.id === chatId ? thread : null;
@@ -492,10 +520,13 @@ export default function Demo() {
                 <button role="tab" aria-selected={tab === "orders"} onClick={() => setTab("orders")}>
                   {t.tabOrders}{orders.length ? ` (${orders.length})` : ""}
                 </button>
+                <button role="tab" aria-selected={tab === "bookings"} onClick={() => setTab("bookings")}>
+                  {t.tabBookings}{upcoming ? ` (${upcoming})` : ""}
+                </button>
                 <button role="tab" aria-selected={tab === "team"} onClick={() => setTab("team")}>{t.tabTeam}</button>
               </div>
               <p>
-                {lang === "ar" ? summary?.shop.name_ar : summary?.shop.name} · {tab === "ledger" ? t.sub : tab === "orders" ? t.ordersSub : tab === "team" ? t.teamSub : t.inboxSub}
+                {lang === "ar" ? summary?.shop.name_ar : summary?.shop.name} · {tab === "ledger" ? t.sub : tab === "orders" ? t.ordersSub : tab === "bookings" ? t.bookingsSub : tab === "team" ? t.teamSub : t.inboxSub}
               </p>
             </div>
             <span className="spacer" />
@@ -685,6 +716,48 @@ export default function Demo() {
               )}
               {teamError && <p className="error" dir="ltr" role="alert">{teamError}</p>}
             </>
+          )}
+
+          {tab === "bookings" && (
+            bookings.length === 0 ? (
+              <p className="empty-note">{t.noBookings}</p>
+            ) : (
+              <div className="tablewrap">
+                <table>
+                  <thead>
+                    <tr>
+                      <th>{t.when}</th>
+                      <th>{t.service}</th>
+                      <th>{t.customer}</th>
+                      <th>{t.status}</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {bookings.map((b) => (
+                      <tr key={b.id} className="norow">
+                        <td><b className="num" dir="ltr">{b.when_text}</b><br /><span className="mono">#{b.number}</span></td>
+                        <td>{b.service}{b.note && <div className="booking-said" dir="auto">{b.note}</div>}</td>
+                        <td>{b.customer}</td>
+                        <td>
+                          <span className={`pill ${b.status === "booked" ? "p0" : b.status === "completed" ? "none" : "p1"}`}>{t.bk[b.status]}</span>
+                          {b.status === "booked" && (
+                            <span className="booking-acts">
+                              {new Date(b.starts_at).getTime() < now && (
+                                <>
+                                  <button className="btn small" onClick={() => bookingAction(b, "completed")}>{t.came}</button>
+                                  <button className="btn small" onClick={() => bookingAction(b, "no_show")}>{t.noShow}</button>
+                                </>
+                              )}
+                              <button className="btn small" onClick={() => bookingAction(b, "cancel")}>{t.cancel}</button>
+                            </span>
+                          )}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )
           )}
 
           {tab === "orders" && (

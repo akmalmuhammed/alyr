@@ -224,3 +224,16 @@ tbody tr.norow:hover { background: transparent; }
 .quickchip button { background: var(--bg); border: 0; padding: 3px 9px; color: var(--fg); }
 .quickchip button + button { border-inline-start: 1px solid var(--line); color: var(--muted); padding: 3px 7px; }
 .composer.noting input { background: var(--warn-soft); }
+
+/* booking page and bookings tab */
+.booking .choice { display: flex; justify-content: space-between; align-items: center; gap: 12px; width: 100%; background: transparent; border: 0; padding: 0; text-align: start; }
+.booking .choice > span:first-child { display: flex; flex-direction: column; min-width: 0; }
+.choice-mark { width: 18px; height: 18px; border-radius: 50%; border: 2px solid var(--line); flex: none; }
+.choice[aria-checked="true"] .choice-mark { border-color: var(--accent); background: radial-gradient(var(--accent) 45%, transparent 50%); }
+.daystrip { display: flex; gap: 6px; overflow-x: auto; padding-bottom: 4px; scrollbar-width: thin; }
+.daystrip button, .timegrid button { flex: none; padding: 9px 12px; min-height: 44px; border: 1px solid var(--line); border-radius: 8px; background: var(--surface); white-space: nowrap; }
+.daystrip button[aria-checked="true"], .timegrid button[aria-checked="true"] { border-color: var(--accent); background: var(--accent-soft); color: var(--accent); font-weight: 600; }
+.timegrid { display: grid; grid-template-columns: repeat(auto-fill, minmax(92px, 1fr)); gap: 6px; }
+.booking-note { width: 100%; padding: 10px 12px; border: 1px solid var(--line); border-radius: 8px; background: var(--bg); }
+.booking-said { color: var(--muted); font-size: 13px; }
+.booking-acts { display: inline-flex; gap: 4px; flex-wrap: wrap; margin-inline-start: 6px; }
