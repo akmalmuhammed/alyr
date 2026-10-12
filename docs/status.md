@@ -4,7 +4,7 @@ How the work is divided, and the one goal for this stage, are in [operating-mode
 
 Read this first in a new session, on any machine. It is the hand-over note between sessions: what works, what is next, and what is waiting on the founder. Update it in the same pull request as the work. Linear (team `Alyrtech`, project `Alyr Launch`) holds the detail; this page is the summary.
 
-Last updated: 12 Oct 2026, after the operating model and lanes were set up.
+Last updated: 12 Oct 2026, after the booking screens (ALY-27).
 
 ## What works today
 
@@ -21,7 +21,7 @@ All of it runs against the chat simulator. Nothing has been tested against Meta'
 | Consent, stop and start words, 24-hour window | Built | `core/consent.py`, `core/outbound.py` |
 | Shared inbox: human takeover, assignment, staff notes, saved replies | Built; no live updates or typing warning | `modules/inbox/`, D-021 |
 | Sign-in by one-time code, sessions, team and roles | Built; no email provider, so codes only work locally | `core/auth.py`, D-022 |
-| Bookings: services, opening hours, free times, book, move, cancel, reminders | API only, no screens | `modules/bookings/` |
+| Bookings: services, opening hours, free times, book, move, cancel, reminders | Built: customer booking page at `/b/{slug}` and a workspace Bookings tab. One customer at a time per shop; no deposits | `modules/bookings/`, `apps/web/app/(product)/b/` |
 | ALYR public site, English and Arabic: company homepage and the ALYR Chat product page | **Live at https://alyr.qa** (company-first version, D-026, published 12 Oct) | `apps/web/app/_site/`, `docs/brand.md` |
 | Demo page: chat simulator plus workspace tabs, now at `/whatsapp` | Built | `apps/web/app/(product)/whatsapp/page.tsx` |
 
@@ -29,7 +29,7 @@ Tests: 148, all passing. CI runs api, web and a secrets scan on every pull reque
 
 ## Next on the build side, in order
 
-1. **Booking screens (ALY-27):** the customer booking page and a workspace bookings tab.
+1. **Bookable staff or resources (ALY-27),** so a salon or clinic can serve more than one customer at a time; then services and opening-hours screens.
 1. **Product screens on ALYR tokens**, so the workspace matches the public site.
 1. **Contacts and labels (ALY-53).**
 2. **Email provider for sign-in codes (part of ALY-18).** Needs research and the founder's choice; blocks any hosted environment.
@@ -55,7 +55,7 @@ Tests: 148, all passing. CI runs api, web and a secrets scan on every pull reque
 ## Known gaps and risks
 
 - The public site is live with no contact address and unreviewed Arabic. Several product claims on it describe what is built on the simulator, not what runs live. See `docs/brand.md`.
-- Bookings have no screens: no customer booking page and no workspace tab.
+- Bookings: one customer at a time per shop; services and opening hours can only be changed through the API; staff cannot move a booking or add a walk-in from the screen.
 - On the founder's laptop Windows blocks Python's compiled database driver, so the API and its tests run through `scripts/api-in-docker.sh`.
 
 - Sign-in codes are not emailed yet: sign-in works on a local machine only.
