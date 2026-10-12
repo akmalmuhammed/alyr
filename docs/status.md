@@ -8,7 +8,7 @@ Last updated: 12 Oct 2026, after the first live WhatsApp round trip.
 
 ## What works today
 
-**First live round trip on 12 Oct 2026.** A real phone sent "Hello" to Meta's test number (+1 555 638 3300); the welcome menu came back, a button tap was received, and the order link was delivered and read. Everything else below has still only run against the chat simulator: templates, payments, bookings and the inbox have not been exercised on Meta.
+**First live round trip on 12 Oct 2026.** A real phone sent "Hello" to Meta's test number (+1 555 638 3300); the welcome menu came back, a button tap was received, and the order link was delivered and read. The same evening a real order (#1001, QAR 179) was placed from the phone and paid on the stand-in payment page, and both confirmations were delivered. **No template exists on Meta yet (ALY-20):** notices inside a customer's 24-hour window go as ordinary messages, but anything sent after it closes (reminders, a booking reminder the next day) will fail until templates are created and approved. Bookings and the inbox have not been exercised on Meta.
 
 | Area | State | Where |
 |---|---|---|

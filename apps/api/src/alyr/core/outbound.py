@@ -49,16 +49,25 @@ class Outbound:
         if contact is None:
             raise LookupError("no such contact for this tenant")
         blocked = consent.refusal(contact, message)
+        kind = message.kind
         payload: dict = {}
         if message.choices:
             payload["choices"] = [{"id": c.id, "title": c.title} for c in message.choices]
         if message.kind == "template":
             payload["template"] = message.template_name
             payload["category"] = message.template_category
+            # While the customer's 24-hour window is open, a notice goes as an ordinary
+            # message: it costs nothing and needs no template approved by Meta. Outside
+            # the window only the template will do. Consent was checked above on the
+            # original, so a customer who said stop still gets nothing. Marketing always
+            # stays a template, so every offer is counted and can be opted out of.
+            if contact["window_open"] and message.template_category != "marketing":
+                kind = "text"
+                payload["sent_as"] = "text"
         message_id = await conn.fetchval(
             "insert into messages (contact_id, direction, kind, body, payload, status, error) "
             "values ($1, 'out', $2, $3, $4, $5, $6) returning id",
-            message.to, message.kind, message.body, payload,
+            message.to, kind, message.body, payload,
             "blocked" if blocked else "queued", blocked,
         )
         if not blocked:

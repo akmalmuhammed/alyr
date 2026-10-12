@@ -211,7 +211,8 @@ def test_customer_without_a_phone_number_can_ask_be_reminded_and_pay(client):
 
     client.post("/api/ledger/reminders", json={"min_days": 0})
     reminder = conversation(client, customer["user_id"])[-1]
-    assert reminder["kind"] == "template"
+    # The customer just asked for their balance, so the window is open.
+    assert reminder["kind"] == "text"
 
     tenant_id, payment_id = re.search(r"/pay/(\S+)/(\S+)", reminder["body"]).groups()
     client.post(f"/api/pay/{tenant_id}/{payment_id}/complete")
