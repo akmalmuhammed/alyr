@@ -9,7 +9,7 @@ const mono = IBM_Plex_Mono({ variable: "--font-mono", subsets: ["latin"], weight
 // Product screens are for signed-in staff and for customers arriving by a private link.
 // None of them belongs in a search engine.
 export const metadata: Metadata = {
-  metadataBase: new URL(process.env.NEXT_PUBLIC_ALYR_SITE_URL ?? "https://alyr.online"),
+  metadataBase: new URL(process.env.NEXT_PUBLIC_ALYR_SITE_URL ?? "https://alyr.qa"),
   title: "ALYR workspace",
   description: "The ALYR workspace for bookings, orders, payments and the team inbox.",
   robots: { index: false, follow: false },

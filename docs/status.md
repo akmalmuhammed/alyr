@@ -20,7 +20,7 @@ All of it runs against the chat simulator. Nothing has been tested against Meta'
 | Shared inbox: human takeover, assignment, staff notes, saved replies | Built; no live updates or typing warning | `modules/inbox/`, D-021 |
 | Sign-in by one-time code, sessions, team and roles | Built; no email provider, so codes only work locally | `core/auth.py`, D-022 |
 | Bookings: services, opening hours, free times, book, move, cancel, reminders | API only, no screens | `modules/bookings/` |
-| ALYR company homepage, English and Arabic | **Live at https://alyr.online** (published 11 Oct on the founder's instruction) | `apps/web/app/_site/`, `docs/brand.md`, D-023 |
+| ALYR company homepage, English and Arabic | **Live at https://alyr.online**; `alyr.qa` attached and waiting for its certificate (published 11 Oct on the founder's instruction) | `apps/web/app/_site/`, `docs/brand.md`, D-023 |
 | Demo page: chat simulator plus workspace tabs, now at `/whatsapp` | Built | `apps/web/app/(product)/whatsapp/page.tsx` |
 
 Tests: 148, all passing. CI runs api, web and a secrets scan on every pull request.
@@ -69,6 +69,7 @@ Tests: 148, all passing. CI runs api, web and a secrets scan on every pull reque
 - Only `/` and `/ar` are published, as plain files on Cloudflare (Worker `alyr-site`, static assets, free plan). The workspace, sign-in and the API are not there: `/whatsapp`, `/login` and `/api/...` answer 404 on `alyr.online`.
 - To publish a change: `scripts/build-site.sh`, then `npx wrangler deploy` from `apps/web`. It needs the Cloudflare sign-in on the founder's laptop and the founder's go-ahead each time. Nothing deploys automatically.
 - The bare domain is attached as a route because it already had a proxied DNS record; `www.alyr.online` is a custom domain. See `apps/web/wrangler.jsonc`.
+- **`alyr.qa` is the intended main address** (bought 12 Oct, nameservers moved to Cloudflare). It is attached, but on 12 Oct it did not yet answer over HTTPS: the certificate for the new domain had not been issued. Until it does, `REDIRECT` in `apps/web/wrangler.jsonc` stays `"off"` and every address serves the site itself. Once `https://alyr.qa/` answers 200, set it to `"on"` and deploy: `alyr.online` and the `www` forms then redirect to `alyr.qa`. Canonical links and the sitemap already point at `alyr.qa`.
 
 ## Things that only exist on the founder's laptop
 
