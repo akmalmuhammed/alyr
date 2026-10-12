@@ -1,10 +1,12 @@
 import { Icon } from "./brand";
 import { copy, type Locale } from "./copy";
+import { FlowDiagram } from "./FlowDiagram";
 import { ProductDemo } from "./ProductDemo";
 import { contactHref, Shell } from "./Shell";
 
-/** The page for ALYR Chat, the first product: what it does, shown as it is used, why
- * owners choose it, who it suits and what comes after it. */
+/** The page for ALYR Chat, the first product: what it does, shown as it is used, how it
+ * works behind the chat, everything in it today, why owners choose it, who it suits and
+ * what comes after it. */
 export function ProductPage({ locale }: { locale: Locale }) {
   const t = copy[locale];
   const p = t.product;
@@ -33,6 +35,47 @@ export function ProductPage({ locale }: { locale: Locale }) {
               ))}
             </ul>
           </div>
+        </div>
+      </section>
+
+      <section className="sec how" id="how">
+        <div className="wrap">
+          <div className="how-head" data-reveal>
+            <p className="eyebrow">{p.flow.eyebrow}</p>
+            <h2 className="h1">{p.flow.title}</h2>
+            <p className="lead">{p.flow.body}</p>
+          </div>
+          <div className="how-panel" data-reveal>
+            <FlowDiagram flow={p.flow} />
+          </div>
+        </div>
+      </section>
+
+      <section className="sec inside" id="inside">
+        <div className="wrap">
+          <div className="built-head" data-reveal>
+            <p className="eyebrow">{p.inside.eyebrow}</p>
+            <h2 className="h1">{p.inside.title}</h2>
+          </div>
+          <div className="inside-grid">
+            {p.inside.groups.map((group, index) => (
+              <div key={group.name} data-reveal style={{ "--n": index } as React.CSSProperties}>
+                <h3 className="inside-name">
+                  <span className="signal" aria-hidden="true" />
+                  {group.name}
+                </h3>
+                <ul className="inside-list">
+                  {group.items.map((item) => (
+                    <li key={item.title}>
+                      <h4>{item.title}</h4>
+                      <p>{item.body}</p>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            ))}
+          </div>
+          <p className="inside-note" data-reveal>{p.inside.note}</p>
         </div>
       </section>
 

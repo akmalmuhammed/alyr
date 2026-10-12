@@ -7,7 +7,7 @@ type Props = { product: Copy["product"]; locale: Locale };
 
 // When each sample conversation starts, in minutes after midnight, so the times on the
 // messages agree with what the workspace panel beside them shows.
-const START: Record<string, number> = { book: 16 * 60 + 12, order: 9 * 60 + 58, pay: 10 * 60 + 6, track: 10 * 60 + 5, inbox: 17 * 60 + 20 };
+const START: Record<string, number> = { book: 16 * 60 + 12, order: 9 * 60 + 58, pay: 10 * 60 + 6, track: 10 * 60 + 5, collect: 11 * 60 + 15, inbox: 17 * 60 + 20 };
 
 const ARABIC_DIGITS = "٠١٢٣٤٥٦٧٨٩";
 

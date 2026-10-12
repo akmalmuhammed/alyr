@@ -22,7 +22,7 @@ The founder's **Brand & Growth Playbook** (a Claude Docs document in the founder
 - **Volt means one of four things:** the main action, the current state, confirmed progress, or one strategic signal. Never body text on a light surface, never a decorative background.
 - **Type.** Instrument Sans for Latin, IBM Plex Sans Arabic for Arabic, IBM Plex Mono for small labels and identifiers. Arabic is never letter-spaced and is set with looser line height than Latin.
 - **Layout.** Light first, Carbon for command moments, rules and whitespace before cards, asymmetry over centering.
-- **Motion.** One signature gesture: text resolves along the logo's diagonal, then a short Volt signal. Everything plays once. Hover movement is 1 to 2 px. With reduced motion, nothing travels and nothing plays by itself.
+- **Motion.** One signature gesture: text resolves along the logo's diagonal, then a short Volt signal. Everything plays once. Hover movement is 1 to 2 px. With reduced motion, nothing travels and nothing plays by itself. Two figures on the ALYR Chat page are allowed to keep moving, because they explain the product: the demo and the how-it-works flow. Both play only while on screen, can be paused, and stay still with reduced motion.
 - **Voice.** Sentence case, short and declarative, name the result. No "Learn more", no "unlock", no "supercharge".
 - **Honesty.** No invented metrics, logos or testimonials. Sample screens are labelled as samples and use a fictional business.
 - **Words.** Every word is in `apps/web/app/_site/copy.ts`, in English and Arabic. Components hold no text.

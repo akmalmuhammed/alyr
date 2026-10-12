@@ -119,10 +119,19 @@ export function HomePage({ locale }: { locale: Locale }) {
               </p>
               <h2 className="h1">{t.teaser.title}</h2>
               <p className="lead">{t.teaser.body}</p>
-              <a className="btn btn-volt" href={PATHS.chat[locale]}>
-                {t.teaser.cta}
-                <Icon name="arrow-right" className="ico ico-flip" />
-              </a>
+              <ul className="teaser-points">
+                {t.teaser.points.map((point) => <li key={point}>{point}</li>)}
+              </ul>
+              <div className="hero-actions">
+                <a className="btn btn-volt" href={PATHS.chat[locale]}>
+                  {t.teaser.cta}
+                  <Icon name="arrow-right" className="ico ico-flip" />
+                </a>
+                <a className="link" href={`${PATHS.chat[locale]}#how`}>
+                  {t.teaser.how}
+                  <Icon name="arrow-right" className="ico ico-flip" />
+                </a>
+              </div>
             </div>
             <div data-reveal>
               <ChatFigure figure={t.teaser.figure} />
