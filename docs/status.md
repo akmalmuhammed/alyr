@@ -8,7 +8,7 @@ Last updated: 12 Oct 2026, after the first live WhatsApp round trip.
 
 ## What works today
 
-**First live round trip on 12 Oct 2026.** A real phone sent "Hello" to Meta's test number (+1 555 638 3300); the welcome menu came back, a button tap was received, and the order link was delivered and read. The same evening a real order (#1001, QAR 179) was placed from the phone and paid on the stand-in payment page, and both confirmations were delivered. **No template exists on Meta yet (ALY-20):** notices inside a customer's 24-hour window go as ordinary messages, but anything sent after it closes (reminders, a booking reminder the next day) will fail until templates are created and approved. Bookings and the inbox have not been exercised on Meta.
+**First live round trip on 12 Oct 2026.** A real phone sent "Hello" to Meta's test number (+1 555 638 3300); the welcome menu came back, a button tap was received, and the order link was delivered and read. The same evening a real order (#1001, QAR 179) was placed from the phone and paid on the stand-in payment page, and both confirmations were delivered. A booking was made and confirmed the same way. **Templates (ALY-20):** notices inside a customer's 24-hour window go as ordinary messages in the module's own wording; after it closes they go as one of 16 templates in `core/templates.py`, each in English and Arabic. All 32 were submitted to Meta on 12 Oct and were pending review when this was written; until Meta approves one, sending it fails. `scripts/api-in-docker.sh uv run python -m alyr.templates_sync` shows where each stands, and `--create` submits any that are missing. A template sent outside the window has not yet been seen arriving on a phone.
 
 | Area | State | Where |
 |---|---|---|
@@ -25,7 +25,7 @@ Last updated: 12 Oct 2026, after the first live WhatsApp round trip.
 | ALYR public site, English and Arabic: company homepage and the ALYR Chat product page | **Live at https://alyr.qa** (company-first version, D-026, published 12 Oct) | `apps/web/app/_site/`, `docs/brand.md` |
 | Demo page: chat simulator plus workspace tabs, now at `/whatsapp` | Built | `apps/web/app/(product)/whatsapp/page.tsx` |
 
-Tests: 148, all passing. CI runs api, web and a secrets scan on every pull request.
+Tests: 157, all passing. CI runs api, web and a secrets scan on every pull request.
 
 ## Next on the build side, in order
 
@@ -34,7 +34,7 @@ Tests: 148, all passing. CI runs api, web and a secrets scan on every pull reque
 1. **Contacts and labels (ALY-53).**
 2. **Email provider for sign-in codes (part of ALY-18).** Needs research and the founder's choice; blocks any hosted environment.
 3. **Inbox leftovers (ALY-28):** live updates instead of polling, a warning when a colleague is typing.
-4. **Templates (ALY-20)** and sending one from the inbox when the window is closed.
+4. **Templates, the rest of ALY-20:** sending one from the inbox when the window is closed, buttons on the reminder template, and templates per customer account once shops connect their own number (ALY-39).
 5. **Messaging limits (ALY-41), Redis sessions (ALY-14).**
 6. **Products screen and remaining order-link items (ALY-24); remaining ledger items (ALY-22).**
 7. **Broadcasts with marketing opt-in (ALY-44), Embedded Signup (ALY-39).**
@@ -44,7 +44,7 @@ Tests: 148, all passing. CI runs api, web and a secrets scan on every pull reque
 
 | Item | Detail |
 |---|---|
-| Meta values | Done 12 Oct. `apps/api/.env` holds the five values (app `alyr`, id 1071845795713841, test number id 1431880183331516). The webhook is verified, the app is subscribed to the `messages` field and to the WhatsApp account. **The access token is a temporary one that expires within a day**; replace it with a system-user token. |
+| Meta values | Done 12 Oct. `apps/api/.env` holds the five values (app `alyr`, id 1071845795713841, test number id 1431880183331516). The webhook is verified, the app is subscribed to the `messages` field and to the WhatsApp account. The access token is a system-user token (`alyradmin`, never expires, `whatsapp_business_messaging` and `whatsapp_business_management`), set 12 Oct. |
 | Domain and tunnel | Done 8 Oct. `alyr.online` is on Cloudflare. Tunnel `alyr-dev` publishes only `/webhooks/whatsapp` and `/health` of the laptop's API at `https://api.alyr.online`; everything else answers 404 from outside. Config is in `~/.cloudflared/config.yml` on the laptop. Start it with `cloudflared tunnel run alyr-dev`. |
 | WhatsApp Business Tools MCP | Optional. Connector URL `https://mcp.facebook.com/whatsapp_business_tools`; lets a session register the number, create templates and set the webhook. Beta, gradual rollout. |
 | Sign-in choice | Built as our own (D-022, proposed). Say so if you want a hosted service instead. |
@@ -58,6 +58,7 @@ Tests: 148, all passing. CI runs api, web and a secrets scan on every pull reque
 - Bookings: one customer at a time per shop; services and opening hours can only be changed through the API; staff cannot move a booking or add a walk-in from the screen.
 - On the founder's laptop Windows blocks Python's compiled database driver, so the API and its tests run through `scripts/api-in-docker.sh`.
 
+- Templates carry no buttons, so a payment reminder sent outside the 24-hour window has the pay link but not the "pay now" and "I'll pay within a week" buttons. Templates exist on ALYR's test account only.
 - Sign-in codes are not emailed yet: sign-in works on a local machine only.
 - No sign-up: a shop and its first owner are created by hand in the database.
 - Marketing consent cannot be captured yet, so every marketing template is blocked.

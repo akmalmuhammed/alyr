@@ -4,7 +4,7 @@ from uuid import UUID
 import asyncpg
 
 from alyr.channels.base import Address, Channel, Choice, OutboundMessage
-from alyr.core import consent, jobs
+from alyr.core import consent, jobs, templates
 from alyr.db import Database
 
 SEND = "send_message"
@@ -49,7 +49,7 @@ class Outbound:
         if contact is None:
             raise LookupError("no such contact for this tenant")
         blocked = consent.refusal(contact, message)
-        kind = message.kind
+        kind, body = message.kind, message.body
         payload: dict = {}
         if message.choices:
             payload["choices"] = [{"id": c.id, "title": c.title} for c in message.choices]
@@ -64,10 +64,17 @@ class Outbound:
             if contact["window_open"] and message.template_category != "marketing":
                 kind = "text"
                 payload["sent_as"] = "text"
+            elif message.template_params:
+                params = [templates.clean(value) for value in message.template_params]
+                payload["params"] = params
+                payload["lang"] = message.lang
+                # Record the wording the customer will actually receive, which is the
+                # approved template's, not the module's own.
+                body = templates.render(message.template_name, message.lang, params) or body
         message_id = await conn.fetchval(
             "insert into messages (contact_id, direction, kind, body, payload, status, error) "
             "values ($1, 'out', $2, $3, $4, $5, $6) returning id",
-            message.to, kind, message.body, payload,
+            message.to, kind, body, payload,
             "blocked" if blocked else "queued", blocked,
         )
         if not blocked:
@@ -101,6 +108,8 @@ class Outbound:
             choices=tuple(Choice(c["id"], c["title"]) for c in stored.get("choices", [])),
             template_name=stored.get("template", ""),
             template_category=stored.get("category"),
+            template_params=tuple(stored.get("params", [])),
+            lang=stored.get("lang", "en"),
         )
         provider_id = await self.channels[number["channel"]].send(
             number["number_id"], message,

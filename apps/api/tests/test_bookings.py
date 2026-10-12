@@ -75,7 +75,7 @@ def test_a_booking_is_confirmed_in_the_chat_and_takes_the_time(client):
     assert made.json()["number"] == 101
 
     last = conversation(client)[-1]
-    assert "Booking 101 confirmed at Al Noor Electricals" in last["body"]
+    assert "Booking 101 is confirmed at Al Noor Electricals" in last["body"]
     assert (last["kind"], last["status"]) == ("template", "sent")
 
     left = times(client, sid)

@@ -159,8 +159,13 @@ def to_graph_payload(message: OutboundMessage, address: Address) -> dict:
             "action": {"button": "Choose", "sections": [{"title": "Options", "rows": rows}]},
         }
         return base | {"type": "interactive", "interactive": interactive}
-    # Template parameters and language are added with template management (ALY-20).
-    template = {"name": message.template_name, "language": {"code": "en"}}
+    template: dict = {
+        "name": message.template_name,
+        "language": {"code": "ar" if message.lang == "ar" else "en"},
+    }
+    if message.template_params:
+        values = [{"type": "text", "text": value} for value in message.template_params]
+        template["components"] = [{"type": "body", "parameters": values}]
     return base | {"type": "template", "template": template}
 
 

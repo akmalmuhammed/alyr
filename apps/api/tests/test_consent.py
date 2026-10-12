@@ -190,7 +190,7 @@ def test_payment_confirmation_still_arrives_days_after_the_last_message(client):
     )
     client.post(f"/api/pay/{tenant_id}/{payment_id}/complete")
     last = conversation(client)[-1]
-    assert "Received QAR 1,850" in last["body"]
+    assert "received your payment of QAR 1,850" in last["body"]
     assert (last["kind"], last["status"]) == ("template", "sent")
 
 
@@ -215,6 +215,20 @@ def test_outside_the_window_the_same_notice_stays_a_template(client):
     last = conversation(client)[-1]
     assert last["kind"] == "template"
     assert "sent_as" not in last["payload"]
+
+
+def test_outside_the_window_the_record_shows_the_approved_wording(client):
+    """The customer receives Meta's approved template, so that is what the shop sees."""
+    send_directly(
+        client, ahmed(client)["id"], kind="template", body="Order #1001 is ready.",
+        template_name="order_ready", template_category="utility",
+        template_params=("1001",),
+    )
+    last = conversation(client)[-1]
+    assert last["kind"] == "template"
+    assert last["body"] == "Your order 1001 is ready for collection. See you soon."
+    assert last["payload"]["params"] == ["1001"]
+    assert last["payload"]["lang"] == "en"
 
 
 def test_an_open_window_does_not_get_a_notice_past_someone_who_said_stop(client):
