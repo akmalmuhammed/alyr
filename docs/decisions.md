@@ -247,7 +247,8 @@ Every message passes one check in `core/outbound.py` before it is queued. A refu
 
 **Why in one place.** A module that forgets the rules cannot break them, and a merchant's number cannot be restricted because of a bug in one feature.
 **Consequence.** Anything Alyr sends that is not a direct reply must be a template. Payment confirmations were changed from free text to a template for this reason: a customer may pay days after their last message.
-**Not built yet.** Marketing opt-in capture (it arrives with broadcasts, ALY-44), a consent export, Meta's own messaging limits (ALY-41), and telling a utility template sent inside an open window (free) from one sent outside it (charged).
+**Added 12 Oct 2026, after the first live test.** A utility or authentication notice sent while the customer's 24-hour window is open goes as an ordinary message instead of a template. It is free there and needs no template approved by Meta; the first live order showed its confirmations failing because the templates do not exist on Meta yet. Outside the window the template is still required, and marketing always stays a template.
+**Not built yet.** Marketing opt-in capture (it arrives with broadcasts, ALY-44), a consent export, and Meta's own messaging limits (ALY-41).
 **Legal note.** What counts as valid consent under Qatar's privacy law is a question for the lawyer (ALY-51). This implements Meta's rule and keeps the evidence.
 
 ## D-021 · A person answering from the inbox pauses the assistant for that customer

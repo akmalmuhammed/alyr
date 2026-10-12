@@ -77,7 +77,9 @@ def test_start_turns_notices_back_on(client):
     assert "again" in say(client, AHMED_PHONE, "start")[-1]["body"]
     assert ahmed(client)["opted_out"] is False
     assert client.post("/api/ledger/reminders", json={"min_days": 30}).json()["sent"] >= 1
-    assert conversation(client)[-1]["kind"] == "template"
+    # He wrote a moment ago, so the reminder goes as an ordinary message, not a template.
+    last = conversation(client)[-1]
+    assert (last["kind"], last["payload"]["template"]) == ("text", "payment_reminder")
 
 
 def test_the_outbound_layer_blocks_a_template_to_someone_who_said_stop(client):
@@ -190,3 +192,47 @@ def test_payment_confirmation_still_arrives_days_after_the_last_message(client):
     last = conversation(client)[-1]
     assert "Received QAR 1,850" in last["body"]
     assert (last["kind"], last["status"]) == ("template", "sent")
+
+
+def test_inside_the_window_a_notice_goes_as_a_plain_message(client):
+    """It is free there and needs no template approved by Meta."""
+    say(client, AHMED_PHONE, "hello")
+    result = send_directly(
+        client, ahmed(client)["id"], kind="template", body="Your order is ready.",
+        template_name="order_ready", template_category="utility",
+    )
+    assert result.blocked is None
+    last = conversation(client)[-1]
+    assert (last["kind"], last["status"]) == ("text", "sent")
+    assert last["payload"] == {"template": "order_ready", "category": "utility", "sent_as": "text"}
+
+
+def test_outside_the_window_the_same_notice_stays_a_template(client):
+    send_directly(
+        client, ahmed(client)["id"], kind="template", body="Your order is ready.",
+        template_name="order_ready", template_category="utility",
+    )
+    last = conversation(client)[-1]
+    assert last["kind"] == "template"
+    assert "sent_as" not in last["payload"]
+
+
+def test_an_open_window_does_not_get_a_notice_past_someone_who_said_stop(client):
+    say(client, AHMED_PHONE, "stop")
+    result = send_directly(
+        client, ahmed(client)["id"], kind="template", body="Your order is ready.",
+        template_name="order_ready", template_category="utility",
+    )
+    assert result.blocked == "opted_out"
+
+
+def test_marketing_stays_a_template_even_inside_the_window(client):
+    say(client, AHMED_PHONE, "hello")
+    owner_sql(
+        "update contacts set consent_marketing = 'granted' where phone = $1", AHMED_PHONE
+    )
+    send_directly(
+        client, ahmed(client)["id"], kind="template", body="New stock has arrived.",
+        template_name="new_stock", template_category="marketing",
+    )
+    assert conversation(client)[-1]["kind"] == "template"
