@@ -35,6 +35,7 @@ cat > out-site/_headers <<'EOF'
 /_next/static/*
   Cache-Control: public, max-age=31536000, immutable
 /*
+  Strict-Transport-Security: max-age=31536000
   X-Content-Type-Options: nosniff
   Referrer-Policy: strict-origin-when-cross-origin
   X-Frame-Options: DENY
