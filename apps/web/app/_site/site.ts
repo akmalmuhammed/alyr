@@ -16,4 +16,10 @@ export const WHATSAPP_NUMBER = (process.env.NEXT_PUBLIC_ALYR_WHATSAPP ?? "").rep
  * the workspace is not hosted there, so the footer shows no link to it. */
 export const WORKSPACE_URL = process.env.NEXT_PUBLIC_ALYR_WORKSPACE_URL ?? "";
 
-export const PATHS = { en: "/", ar: "/ar" } as const;
+/** Every public page, and its address in each language. */
+export const PATHS = {
+  home: { en: "/", ar: "/ar" },
+  chat: { en: "/chat", ar: "/ar/chat" },
+} as const;
+
+export type PageKey = keyof typeof PATHS;

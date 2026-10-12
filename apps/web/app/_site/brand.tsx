@@ -77,6 +77,11 @@ const ICONS = {
   document: ["M6 3h8l4 4v14H6z", "M14 3v5h5", "M9 13h6", "M9 17h5"],
   menu: ["M4 7h16", "M4 12h16", "M4 17h16"],
   calendar: ["M5 4h14v16H5z", "M8 2v4", "M16 2v4", "M5 9h14"],
+  workflow: ["M5 5h5v5H5z", "M14 14h5v5h-5z", "M10 7.5h4a3 3 0 0 1 3 3V14", "M7.5 10v4a3 3 0 0 0 3 3H14"],
+  cloud: ["M7 18h10a4 4 0 0 0 .7-7.9A6 6 0 0 0 6.2 9 4.5 4.5 0 0 0 7 18Z"],
+  dashboard: ["M4 4h6v6H4z", "M14 4h6v10h-6z", "M4 14h6v6H4z", "M14 18h6v2h-6z"],
+  ai: ["M8 18h8", "M9 21h6", "M7 14a7 7 0 1 1 10 0c-1.4 1.2-2 2.2-2 4H9c0-1.8-.6-2.8-2-4Z"],
+  settings: ["M7 7h10v10H7z", "M9 3v4", "M15 3v4", "M9 17v4", "M15 17v4", "M3 9h4", "M17 9h4", "M3 15h4", "M17 15h4", "M10 12h4"],
 } as const;
 
 export type IconName = keyof typeof ICONS;

@@ -54,7 +54,7 @@ apps/api/                   FastAPI service (Python 3.13, managed with uv)
   src/alyr/seed.py          The demo shop (fictional)
   tests/
 apps/web/                   Next.js. Three root layouts, one per route group:
-  app/(site)/, (site-ar)/   The public company site in English (/) and Arabic (/ar)
+  app/(site)/, (site-ar)/   The public site in English and Arabic: company homepage (/, /ar) and the ALYR Chat product page (/chat, /ar/chat)
   app/_site/                Its components, styles and every word (copy.ts)
   app/(product)/            The demo and workspace (/whatsapp), sign-in, payment and order pages
 packages/compliance/        WPS SIF and e-invoice libraries (not created yet)

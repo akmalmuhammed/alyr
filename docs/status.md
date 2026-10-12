@@ -22,7 +22,7 @@ All of it runs against the chat simulator. Nothing has been tested against Meta'
 | Shared inbox: human takeover, assignment, staff notes, saved replies | Built; no live updates or typing warning | `modules/inbox/`, D-021 |
 | Sign-in by one-time code, sessions, team and roles | Built; no email provider, so codes only work locally | `core/auth.py`, D-022 |
 | Bookings: services, opening hours, free times, book, move, cancel, reminders | API only, no screens | `modules/bookings/` |
-| ALYR company homepage, English and Arabic | **Live at https://alyr.online**; `alyr.qa` attached and waiting for its certificate (published 11 Oct on the founder's instruction) | `apps/web/app/_site/`, `docs/brand.md`, D-023 |
+| ALYR public site, English and Arabic: company homepage and the ALYR Chat product page | Built; the company-first version (D-026) is merged but **not yet published**. Live at https://alyr.online is the previous product-led page | `apps/web/app/_site/`, `docs/brand.md` |
 | Demo page: chat simulator plus workspace tabs, now at `/whatsapp` | Built | `apps/web/app/(product)/whatsapp/page.tsx` |
 
 Tests: 148, all passing. CI runs api, web and a secrets scan on every pull request.
