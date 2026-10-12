@@ -4,15 +4,21 @@
 {
   "name": "alyr-site",
   "compatibility_date": "2026-10-06",
+  // A few lines that redirect every other address to alyr.qa, then serve the files.
+  "main": "./site-worker.js",
+  "vars": { "REDIRECT": "off" },
   "assets": {
     "directory": "./out-site",
+    "binding": "ASSETS",
     "html_handling": "auto-trailing-slash",
-    "not_found_handling": "404-page"
+    "not_found_handling": "404-page",
+    "run_worker_first": true
   },
-  // The bare domain already has a proxied DNS record in the Cloudflare zone, so the site
-  // is attached to it as a route, which leaves that record in place. `www` had no record
-  // and is attached as a custom domain, which creates one.
+  // alyr.qa is the main address. The bare alyr.online already had a proxied DNS record,
+  // so it is attached as a route, which leaves that record in place.
   "routes": [
+    { "pattern": "alyr.qa", "custom_domain": true },
+    { "pattern": "www.alyr.qa", "custom_domain": true },
     { "pattern": "alyr.online/*", "zone_name": "alyr.online" },
     { "pattern": "www.alyr.online", "custom_domain": true }
   ]

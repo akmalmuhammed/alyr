@@ -45,7 +45,7 @@ export default function OpenGraphImage() {
         </div>
         <div style={{ display: "flex", alignItems: "center", fontSize: 26, color: "#A7ADB5" }}>
           <div style={{ width: 28, height: 6, background: VOLT, marginRight: 18 }} />
-          alyr.online
+          alyr.qa
         </div>
       </div>
     ),
