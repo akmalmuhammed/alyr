@@ -170,39 +170,38 @@ svg { display: block; }
 [dir="rtl"] .facts li + li { padding-inline-start: 1.25rem; }
 .facts-n { font-family: var(--mono); font-size: .75rem; color: var(--text-muted); letter-spacing: .06em; }
 
-/* The hero figure: scattered work folding into one tracked line. */
-.flow { position: relative; border: 1px solid var(--line); background: color-mix(in srgb, var(--surface) 62%, transparent); padding: 1.5rem 1.5rem 1.25rem; display: grid; }
+/* The hero figure: one conversation, and the three records it becomes. */
+.flow { position: relative; border: 1px solid var(--line); background: color-mix(in srgb, var(--surface) 62%, transparent); padding: 1.25rem; display: grid; gap: 0; }
 .tick { position: absolute; width: .6875rem; height: .6875rem; pointer-events: none; }
 .tick::before, .tick::after { content: ""; position: absolute; background: var(--line-strong); }
 .tick::before { inset: 50% 0 auto; height: 1px; translate: 0 -.5px; }
 .tick::after { inset: 0 auto 0 50%; width: 1px; translate: -.5px 0; }
 .tick-a { top: -.375rem; left: -.375rem; } .tick-b { top: -.375rem; right: -.375rem; }
 .tick-c { bottom: -.375rem; left: -.375rem; } .tick-d { bottom: -.375rem; right: -.375rem; }
-.flow-before, .flow-after { display: grid; gap: .875rem; }
-.flow-chips { display: grid; grid-template-columns: 1fr 1fr; gap: .625rem; }
-.flow-chips li { background: var(--surface); border: 1px solid var(--line); border-radius: .25rem; padding: .625rem .75rem; font-size: .875rem; line-height: 1.3; color: var(--text-muted); box-shadow: 0 1px 2px rgb(21 23 26 / .06); }
-.flow-chips li:nth-child(1) { rotate: -1.6deg; translate: -2px 2px; }
-.flow-chips li:nth-child(2) { rotate: 1.2deg; translate: 3px -1px; }
-.flow-chips li:nth-child(3) { rotate: .9deg; translate: 4px 1px; }
-.flow-chips li:nth-child(4) { rotate: -1.1deg; translate: -3px 3px; }
-.flow-fold { position: relative; height: 8.25rem; }
-.flow-fold svg { position: absolute; inset: 0; width: 100%; height: 100%; overflow: visible; }
-.flow-wire { fill: none; stroke: var(--line-strong); stroke-width: 1.25; vector-effect: non-scaling-stroke; stroke-dasharray: 1; stroke-dashoffset: 0; }
-.flow-mark { position: absolute; left: 50%; top: 79%; translate: -50% -50%; display: grid; place-items: center; width: 3.25rem; height: 3.25rem; background: var(--carbon); border-radius: .5rem; color: #fff; }
-.flow-symbol { width: 1.75rem; }
-.flow-rail { position: relative; display: grid; grid-template-columns: repeat(4, 1fr); padding-top: 1.375rem; }
-.flow-rail::before, .flow-rail::after { content: ""; position: absolute; top: .3125rem; inset-inline-start: 12.5%; height: 2px; }
-.flow-rail::before { width: 75%; background: var(--line); }
-.flow-rail::after { width: 50%; background: var(--carbon); transform-origin: left; }
-[dir="rtl"] .flow-rail::after { transform-origin: right; }
-.flow-rail li { position: relative; text-align: center; font-size: .8125rem; font-weight: 600; }
-.flow-dot { position: absolute; top: -1.375rem; left: 50%; translate: -50% 0; width: .75rem; height: .75rem; border-radius: 50%; background: var(--canvas); border: 2px solid var(--line-strong); z-index: 1; }
-.flow-rail li:nth-child(-n+3) .flow-dot { background: var(--carbon); border-color: var(--carbon); }
-.flow-rail li:nth-child(3) .flow-dot { background: var(--volt); border-color: var(--carbon); }
-.flow-rail li:nth-child(4) { color: var(--text-muted); font-weight: 500; }
-.flow-record { font-family: var(--mono); font-size: .75rem; color: var(--text-muted); text-align: center; padding-top: .25rem; }
-[lang="ar"] .flow-record { font-family: var(--arabic); font-size: .8125rem; }
-.flow figcaption { margin-top: 1rem; padding-top: .75rem; border-top: 1px dashed var(--line); font-size: .75rem; color: var(--text-muted); }
+.wa.wa-mini { max-width: none; height: auto; border: 1px solid var(--line); outline: 0; border-radius: .75rem; }
+.wa-mini .wa-top { padding: .5rem .75rem; }
+.wa-mini .wa-avatar { width: 1.75rem; height: 1.75rem; font-size: .8125rem; }
+.wa-mini .wa-thread { padding: .625rem .75rem .875rem; gap: .25rem; }
+.wa-mini .wa-msg { max-width: 86%; }
+.wa-mini .wa-msg.wa-tail { margin-top: .25rem; }
+.flow-via { display: grid; grid-template-columns: 1fr auto auto 1fr; align-items: center; gap: .75rem; padding-block: .875rem; }
+.flow-line { height: 1px; background: var(--line-strong); transform-origin: left; }
+[dir="rtl"] .flow-line { transform-origin: right; }
+.flow-via .flow-line:first-child { grid-column: 1; }
+.flow-mark { display: grid; place-items: center; width: 2.25rem; height: 2.25rem; background: var(--carbon); border-radius: .5rem; color: #fff; }
+.flow-symbol { width: 1.25rem; }
+.flow-rows { display: grid; border: 1px solid var(--line); border-radius: .5rem; background: var(--surface); }
+.flow-rows li { display: flex; align-items: center; gap: .875rem; padding: .75rem .875rem; border-inline-start: 2px solid transparent; }
+.flow-rows li + li { border-top: 1px solid var(--line); }
+.flow-ico { width: 1.25rem; height: 1.25rem; flex: none; color: var(--text-muted); }
+.flow-what { display: grid; min-width: 0; flex: 1; line-height: 1.3; }
+.flow-what b { font-size: .9375rem; font-weight: 600; }
+.flow-what small { font-size: .8125rem; color: var(--text-muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.flow-status { font-size: .8125rem; font-weight: 600; white-space: nowrap; padding: .25rem .5rem; border-radius: .25rem; border: 1px solid var(--line); font-variant-numeric: tabular-nums; }
+.flow-rows li.is-done { border-inline-start-color: var(--carbon); }
+.flow-rows li.is-done .flow-ico { color: var(--text); }
+.flow-rows li.is-done .flow-status { background: var(--volt); border-color: var(--volt); color: #151a0f; }
+.flow figcaption { margin-top: .875rem; font-size: .75rem; color: var(--text-muted); }
 
 /* --------------------------------------------------------------- sections */
 .sec { padding-block: clamp(4.5rem, 10vw, 8rem); }
@@ -421,14 +420,11 @@ svg { display: block; }
   .hero-actions { animation: rise 700ms var(--ease) both 540ms; }
   .facts li { animation: rise 700ms var(--ease) both; animation-delay: calc(760ms + var(--n, 0) * 80ms); }
   .flow { animation: fade 700ms var(--ease) both 300ms; }
-  .flow-chips li { animation: fade var(--slow) var(--ease) both; animation-delay: calc(520ms + var(--n) * 90ms); }
-  .flow-wire { animation: draw 800ms var(--ease) both 950ms; }
-  .flow-wire-out { animation-delay: 1750ms; animation-duration: 300ms; }
-  .flow-mark { animation: pop var(--slow) var(--ease) both 1500ms; }
-  .flow-rail::before { animation: fade var(--slow) var(--ease) both 1900ms; }
-  .flow-rail::after { animation: grow 1100ms var(--ease) both 2100ms; }
-  .flow-rail li { animation: fade var(--slow) var(--ease) both; animation-delay: calc(2050ms + var(--n) * 260ms); }
-  .flow-record { animation: fade var(--slow) var(--ease) both 3100ms; }
+  .flow .wa-msg { animation: rise 520ms var(--ease) both; animation-delay: calc(650ms + var(--n) * 700ms); }
+  .flow-line { animation: grow 500ms var(--ease) both 2000ms; }
+  .flow-mark { animation: pop var(--slow) var(--ease) both 2150ms; }
+  .flow-via .eyebrow { animation: fade var(--slow) var(--ease) both 2250ms; }
+  .flow-rows li { animation: rise 520ms var(--ease) both; animation-delay: calc(2500ms + var(--n) * 260ms); }
 
   /* sections arrive once, when read */
   .al-js [data-reveal] { opacity: 0; translate: 0 1rem; transition: opacity 700ms var(--ease), translate 700ms var(--ease); transition-delay: calc(var(--n, 0) * 70ms); }
@@ -444,7 +440,7 @@ svg { display: block; }
   .al-js .company-in.is-in .company-path .company-path-volt { animation: draw 700ms var(--ease) both 1500ms; }
 
   /* the demo plays message by message */
-  .wa-msg, .row, .panel-total { animation: rise 520ms var(--ease) both; animation-delay: calc(160ms + var(--i) * 620ms); }
+  .demo .wa-msg, .row, .panel-total { animation: rise 520ms var(--ease) both; animation-delay: calc(160ms + var(--i) * 620ms); }
 }
 
 /* ------------------------------------------------------------- responsive */
@@ -482,9 +478,8 @@ svg { display: block; }
   .eyebrow { font-size: .6875rem; letter-spacing: .07em; }
   .btn { min-height: 3rem; }
   .hero-actions { gap: .25rem 1.5rem; }
-  .flow-chips { gap: .5rem; }
-  .flow-chips li { font-size: .8125rem; padding: .5rem .625rem; }
-  .flow-fold { height: 6.5rem; }
+  .flow { padding: .875rem; }
+  .flow-via { gap: .5rem; }
   .sec { padding-block: 3.5rem; }
   .statement, .company-say { font-size: 1.5rem; }
   .steps li { grid-template-columns: 2.25rem 1fr; padding-block: 1.375rem; }
@@ -512,8 +507,6 @@ svg { display: block; }
   .top .btn-sm { display: none; }
   .built-grid { grid-template-columns: minmax(0, 1fr); }
   .built-grid li + li { border-inline-start: 0; border-top: 1px solid var(--line); }
-  .flow { padding: 1.125rem 1rem 1rem; }
-  .flow-rail li { font-size: .75rem; }
   .row { gap: .625rem; padding-inline: .875rem; }
   .row-lead { min-width: 3.5rem; }
 }

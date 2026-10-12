@@ -74,6 +74,7 @@ const ICONS = {
   data: ["M4 19V9", "M10 19V4", "M16 19v-7", "M22 19H2"],
   document: ["M6 3h8l4 4v14H6z", "M14 3v5h5", "M9 13h6", "M9 17h5"],
   menu: ["M4 7h16", "M4 12h16", "M4 17h16"],
+  calendar: ["M5 4h14v16H5z", "M8 2v4", "M16 2v4", "M5 9h14"],
 } as const;
 
 export type IconName = keyof typeof ICONS;

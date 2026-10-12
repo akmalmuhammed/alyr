@@ -49,11 +49,10 @@ export type Copy = {
     facts: string[];
     visual: {
       label: string;
-      before: string;
-      chips: string[];
-      after: string;
-      nodes: string[];
-      record: string;
+      business: string;
+      chat: { from: "customer" | "business"; text: string; time: string; action?: string }[];
+      via: string;
+      rows: { icon: "calendar" | "document" | "check"; title: string; detail: string; status: string; done?: boolean }[];
       note: string;
     };
   };
@@ -124,13 +123,19 @@ const en: Copy = {
       "Arabic and English, side by side",
     ],
     visual: {
-      label: "From scattered work to one system",
-      before: "Today",
-      chips: ["Who booked 4 pm?", "Order on a paper slip", "Transfer screenshot", "3 missed messages"],
-      after: "One system",
-      nodes: ["Booked", "Ordered", "Paid", "Delivered"],
-      record: "Order 1042 · paid · out for delivery",
-      note: "Illustrative",
+      label: "One chat becomes a booking, an order and a payment",
+      business: "Zaitoon Grill",
+      chat: [
+        { from: "customer", text: "Table for 4 tonight at 8? And the mixed grill ready when we arrive.", time: "6:42 PM" },
+        { from: "business", text: "Done. Table for 4 at 8:00 PM, and the grill is ordered. Pay ahead here.", time: "6:42 PM", action: "Pay QAR 180" },
+      ],
+      via: "ALYR turns it into",
+      rows: [
+        { icon: "calendar", title: "Booking", detail: "Table for 4 · today 8:00 PM", status: "Confirmed" },
+        { icon: "document", title: "Order 1042", detail: "Mixed grill platter", status: "QAR 180" },
+        { icon: "check", title: "Payment", detail: "By link, to your own account", status: "Paid", done: true },
+      ],
+      note: "Illustrative, with a fictional restaurant",
     },
   },
   approach: {
@@ -382,13 +387,19 @@ const ar: Copy = {
     secondary: "لماذا يختارها أصحاب الأعمال",
     facts: ["نجهّزها لك", "عملاؤك يبقون لك", "العربية والإنجليزية جنباً إلى جنب"],
     visual: {
-      label: "من عمل متفرّق إلى نظام واحد",
-      before: "اليوم",
-      chips: ["من حجز الساعة ٤؟", "طلب على ورقة", "صورة تحويل بنكي", "٣ رسائل لم يُردّ عليها"],
-      after: "نظام واحد",
-      nodes: ["حُجز", "طُلب", "دُفع", "سُلّم"],
-      record: "الطلب 1042 · مدفوع · في الطريق",
-      note: "مثال توضيحي",
+      label: "محادثة واحدة تصير حجزاً وطلباً ودفعة",
+      business: "مشاوي زيتون",
+      chat: [
+        { from: "customer", text: "طاولة لأربعة الليلة الساعة ٨؟ ونبي المشاوي المشكلة جاهزة أول ما نوصل.", time: "٦:٤٢ م" },
+        { from: "business", text: "تم. طاولة لأربعة الساعة ٨:٠٠ م، وطلب المشاوي مسجّل. ادفع مقدماً من هنا.", time: "٦:٤٢ م", action: "ادفع ١٨٠ ر.ق" },
+      ],
+      via: "ALYR تحوّلها إلى",
+      rows: [
+        { icon: "calendar", title: "حجز", detail: "طاولة لأربعة · اليوم ٨:٠٠ م", status: "مؤكد" },
+        { icon: "document", title: "الطلب 1042", detail: "طبق مشاوي مشكلة", status: "١٨٠ ر.ق" },
+        { icon: "check", title: "دفعة", detail: "برابط، إلى حسابك مباشرة", status: "مدفوع", done: true },
+      ],
+      note: "مثال توضيحي لمطعم غير حقيقي",
     },
   },
   approach: {
