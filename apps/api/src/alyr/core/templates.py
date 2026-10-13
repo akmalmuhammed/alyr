@@ -5,7 +5,9 @@ Meta only delivers a template whose wording it has approved in advance, with num
 blanks filled in at send time. This file is that fixed wording, in English and Arabic.
 
 Meta's rules the wording follows: a blank cannot be the first or last thing in the text,
-a value cannot contain a line break, and each name must exist in every language we send.
+a value cannot contain a line break, each name must exist in every language we send,
+and the text must be long enough for its blanks (Meta refuses about three blanks in
+fewer than ten other words).
 
 `python -m alyr.templates_sync` creates any of these that Meta does not have yet.
 The Arabic has not been reviewed by a native speaker (ALY-66).
@@ -132,7 +134,8 @@ CATALOGUE: dict[str, Template] = {
     "booking_reminder": Template(
         "utility",
         "Reminder: booking {{1}} at {{2}} is at {{3}}. See you soon.",
-        "تذكير: الحجز رقم {{1}} لدى {{2}} موعده {{3}}. بانتظارك.",
+        "تذكير بموعدك: الحجز رقم {{1}} لدى {{2}} موعده {{3}}. "
+        "نرجو الحضور في الوقت المحدد، وبانتظارك.",
         ("101", "Al Noor Electricals", "Tue 13 Oct, 8:30 AM"),
     ),
 }
