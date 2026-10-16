@@ -1,0 +1,936 @@
+"use client";
+
+import { useRouter } from "next/navigation";
+import { useCallback, useEffect, useRef, useState } from "react";
+
+type Choice = { id: string; title: string };
+type Message = {
+  direction: "in" | "out";
+  kind: string;
+  body: string;
+  payload: { choices?: Choice[]; template?: string; category?: string };
+  status?: string;
+  error?: string | null;
+  created_at: string;
+};
+type Buckets = { d0_30: number; d31_60: number; d61_90: number; d90_plus: number };
+type Customer = {
+  id: string; name: string; phone: string | null; balance: number; balance_text: string;
+  oldest_days: number; buckets: Buckets; over_limit: boolean; promised_until: string | null;
+  opted_out: boolean;
+};
+type Summary = {
+  shop: { name: string; name_ar: string };
+  outstanding_text: string; outstanding: number; buckets: Buckets;
+  customers_owing: number; customers: Customer[];
+  collected_by_link_text: string; payments_by_link: number;
+};
+type BookingRow = {
+  id: string; number: number; service: string; when_text: string; status: string;
+  customer: string; note: string; starts_at: string;
+};
+type OrderRow = {
+  id: string; number: number; status: string; payment: string; total_text: string;
+  customer: string; items: { name: string; quantity: number; line_text: string }[];
+};
+type InboxRow = {
+  id: string; name: string; phone: string | null; username: string | null;
+  status: "open" | "closed"; assistant_paused: boolean; opted_out: boolean;
+  window_open: boolean; window_closes_at: string | null; unread: number;
+  assigned: { id: string; name: string } | null;
+  last: { body: string; direction: "in" | "out"; kind: string; status: string; created_at: string };
+};
+type InboxMessage = Message & { id: string; sent_by: string };
+type StaffNote = { id: string; body: string; author_name: string; created_at: string };
+type Thread = { customer: Omit<InboxRow, "unread" | "last">; messages: InboxMessage[]; notes: StaffNote[] };
+type SavedReply = { id: string; title: string; body: string };
+type Me = { signed_in: boolean; id: string | null; name: string; email: string; role: string };
+type Member = { id: string; name: string; email: string; role: string };
+type Entry = { kind: string; amount_text: string; note: string; created_at: string };
+// `key` is what the simulator addresses the phone by: its number, or its WhatsApp user ID
+// when the customer uses a username and shows no number.
+type Persona = {
+  key: string; name: string; phone: string | null; user_id: string | null;
+  username?: string | null; kind: "staff" | "customer";
+};
+
+const BUCKET_KEYS = ["d0_30", "d31_60", "d61_90", "d90_plus"] as const;
+
+const T = {
+  en: {
+    ledger: "Credit ledger", sub: "Who owes what, and for how long", outstanding: "Outstanding",
+    owing: (n: number) => `${n} customers owe money`, remind: "Send reminders",
+    remindHint: "To customers whose oldest unpaid purchase is 30+ days old",
+    sent: (n: number, skipped: number) =>
+      `${n} reminders sent` + (skipped ? `, ${skipped} skipped (promised a date, reminded in the last 3 days, or said stop)` : ""),
+    collected: "Collected through payment links", payments: (n: number) => `${n} payments`,
+    promised: (d: string) => `Promised by ${d}`, overLimit: "Over credit limit", optedOut: "Said stop", customer: "Customer", balance: "Balance", age: "Oldest debt",
+    days: (n: number) => `${n} days`, settled: "Settled", entries: "Entries",
+    buckets: ["0–30 days", "31–60 days", "61–90 days", "Over 90 days"],
+    kinds: { sale: "Credit sale", payment: "Payment", adjustment: "Adjustment" } as Record<string, string>,
+    lang: "العربية",
+    tabTeam: "Team", teamSub: "Who can sign in to this workspace",
+    roles: { owner: "Owner", admin: "Admin", agent: "Agent" } as Record<string, string>,
+    addMember: "Add", remove: "Remove", name: "Name", email: "Email", role: "Role",
+    teamAgent: "Only an owner or admin can change the team.",
+    everyone: "Everyone", mine: "Mine", unassigned: "Unassigned", assignedTo: "Handled by", nobody: "Nobody",
+    noteMode: "Note", noteHere: "Write a note only your team can see", addNote: "Add note",
+    noteLabel: "Staff note, not sent to the customer", saveReply: "Save as quick reply", quick: "Quick replies",
+    tabInbox: "Inbox", inboxSub: "Every customer conversation, answered by the assistant or by you",
+    open: "Open", closed: "Closed", noChats: "No conversations here. As a customer in the chat, send \"hello\".",
+    pick: "Choose a conversation to read it.", you: "You", assistant: "Assistant", customerSays: "Customer",
+    paused: "You are answering", pausedHint: "The assistant is quiet for this customer until you close the conversation or hand it back.",
+    handBack: "Hand back to assistant", close: "Close", reopen: "Reopen", reply: "Reply", replyHere: "Write a reply",
+    windowOpen: (h: number) => (h < 1 ? "Free replies allowed for less than an hour" : `Free replies allowed for ${h} more hours`),
+    windowClosed: "More than 24 hours since their last message. WhatsApp only allows an approved template now; typed replies are refused.",
+    notSent: "Not sent",
+    tabBookings: "Bookings", bookingsSub: "Today and the next seven days, booked from the chat",
+    noBookings: "No bookings in the next week. In the chat, send \"book\" as a customer.",
+    when: "When", service: "Service", came: "Came", noShow: "No-show", cancel: "Cancel",
+    bk: { booked: "Booked", completed: "Came", cancelled: "Cancelled", no_show: "No-show" } as Record<string, string>,
+    tabLedger: "Credit ledger", tabOrders: "Orders", ordersSub: "Placed through the order link",
+    noOrders: "No orders yet. In the chat, tap \"Place an order\" as a customer.",
+    orderNo: "Order", items: "Items", payment: "Payment", status: "Status",
+    pay: { unpaid: "Not paid", paid: "Paid", on_account: "On account" } as Record<string, string>,
+    st: { new: "New", confirmed: "Confirmed", ready: "Ready", done: "Done", cancelled: "Cancelled" } as Record<string, string>,
+    next: { new: "Confirm", confirmed: "Mark ready", ready: "Mark done" } as Record<string, string>,
+  },
+  ar: {
+    ledger: "دفتر الديون", sub: "من عليه مبلغ، ومنذ متى", outstanding: "إجمالي المستحق",
+    owing: (n: number) => `${n} عميل عليهم مبالغ`, remind: "إرسال التذكيرات",
+    remindHint: "للعملاء الذين مضى على أقدم فاتورة غير مدفوعة ٣٠ يوماً أو أكثر",
+    sent: (n: number, skipped: number) =>
+      `تم إرسال ${n} تذكير` + (skipped ? `، وتم تخطي ${skipped} (وعدوا بتاريخ أو تم تذكيرهم خلال ٣ أيام أو طلبوا الإيقاف)` : ""),
+    collected: "المحصّل عبر روابط الدفع", payments: (n: number) => `${n} دفعة`,
+    promised: (d: string) => `وعد بالدفع قبل ${d}`, overLimit: "تجاوز حد الائتمان", optedOut: "طلب الإيقاف", customer: "العميل", balance: "الرصيد", age: "أقدم دين",
+    days: (n: number) => `${n} يوم`, settled: "مسدد", entries: "الحركات",
+    buckets: ["٠–٣٠ يوم", "٣١–٦٠ يوم", "٦١–٩٠ يوم", "أكثر من ٩٠ يوم"],
+    kinds: { sale: "بيع آجل", payment: "دفعة", adjustment: "تعديل" } as Record<string, string>,
+    lang: "English",
+    tabTeam: "الفريق", teamSub: "من يستطيع الدخول إلى مساحة العمل",
+    roles: { owner: "مالك", admin: "مدير", agent: "موظف" } as Record<string, string>,
+    addMember: "إضافة", remove: "إزالة", name: "الاسم", email: "البريد الإلكتروني", role: "الدور",
+    teamAgent: "تعديل الفريق متاح للمالك أو المدير فقط.",
+    everyone: "الكل", mine: "محادثاتي", unassigned: "غير مسندة", assignedTo: "المسؤول", nobody: "لا أحد",
+    noteMode: "ملاحظة", noteHere: "اكتب ملاحظة يراها فريقك فقط", addNote: "إضافة ملاحظة",
+    noteLabel: "ملاحظة داخلية، لا تُرسل للعميل", saveReply: "حفظ كرد سريع", quick: "ردود سريعة",
+    tabInbox: "المحادثات", inboxSub: "كل محادثات العملاء، يرد عليها المساعد أو أنت",
+    open: "مفتوحة", closed: "مغلقة", noChats: "لا توجد محادثات. أرسل \"hello\" كعميل في المحادثة.",
+    pick: "اختر محادثة لقراءتها.", you: "أنت", assistant: "المساعد", customerSays: "العميل",
+    paused: "أنت من يرد", pausedHint: "المساعد متوقف لهذا العميل حتى تغلق المحادثة أو تعيدها إليه.",
+    handBack: "إعادة للمساعد", close: "إغلاق", reopen: "إعادة فتح", reply: "إرسال", replyHere: "اكتب رداً",
+    windowOpen: (h: number) => (h < 1 ? "الرد الحر متاح لأقل من ساعة" : `الرد الحر متاح لمدة ${h} ساعة`),
+    windowClosed: "مضى أكثر من ٢٤ ساعة على آخر رسالة من العميل. واتساب يسمح الآن بالقوالب المعتمدة فقط، والردود المكتوبة مرفوضة.",
+    notSent: "لم تُرسل",
+    tabBookings: "الحجوزات", bookingsSub: "اليوم والأيام السبعة القادمة، من المحادثة",
+    noBookings: "لا توجد حجوزات خلال الأسبوع القادم. أرسل \"book\" كعميل في المحادثة.",
+    when: "الموعد", service: "الخدمة", came: "حضر", noShow: "لم يحضر", cancel: "إلغاء",
+    bk: { booked: "محجوز", completed: "حضر", cancelled: "ملغي", no_show: "لم يحضر" } as Record<string, string>,
+    tabLedger: "دفتر الديون", tabOrders: "الطلبات", ordersSub: "الطلبات الواردة من رابط الطلب",
+    noOrders: "لا توجد طلبات بعد. في المحادثة اضغط \"اطلب الآن\" كعميل.",
+    orderNo: "الطلب", items: "الأصناف", payment: "الدفع", status: "الحالة",
+    pay: { unpaid: "غير مدفوع", paid: "مدفوع", on_account: "على الحساب" } as Record<string, string>,
+    st: { new: "جديد", confirmed: "مؤكد", ready: "جاهز", done: "منجز", cancelled: "ملغي" } as Record<string, string>,
+    next: { new: "تأكيد", confirmed: "جاهز للاستلام", ready: "تم الإنجاز" } as Record<string, string>,
+  },
+};
+
+const BLOCK_REASON: Record<string, string> = {
+  opted_out: "customer said stop",
+  no_consent: "customer has not agreed to messages",
+  no_marketing_consent: "customer has not agreed to offers",
+  window_closed: "more than 24 hours since their last message",
+};
+const NEXT_STATUS: Record<string, string> = { new: "confirmed", confirmed: "ready", ready: "done" };
+
+const qar = (dirhams: number) =>
+  "QAR " + (dirhams / 100).toLocaleString("en", { maximumFractionDigits: 2 });
+
+function bucketIndex(days: number) {
+  return days <= 30 ? 0 : days <= 60 ? 1 : days <= 90 ? 2 : 3;
+}
+
+/** Like getJson, but a module the shop has not switched on (403) gives `fallback`. */
+async function maybe<R>(url: string, fallback: R): Promise<R> {
+  const response = await fetch(url, { cache: "no-store" });
+  if (response.status === 403) return fallback;
+  if (!response.ok) throw new Error(`${url} answered ${response.status}`);
+  return response.json();
+}
+
+async function getJson<R>(url: string, init?: RequestInit): Promise<R> {
+  const response = await fetch(url, { cache: "no-store", ...init });
+  if (!response.ok) throw new Error(`${url} answered ${response.status}`);
+  return response.json();
+}
+
+function Linked({ text }: { text: string }) {
+  const parts = text.split(/(https?:\/\/\S+)/g);
+  return (
+    <>
+      {parts.map((part, i) =>
+        /^https?:\/\//.test(part) ? (
+          <a key={i} href={part} target="_blank" rel="noreferrer">{part}</a>
+        ) : (
+          <span key={i}>{part}</span>
+        ),
+      )}
+    </>
+  );
+}
+
+export type WorkspaceTab = "inbox" | "ledger" | "orders" | "bookings" | "team";
+
+type ScreensProps = {
+  /** Inside the workspace shell: no demo header, no chat simulator, no tab bar. */
+  embedded?: boolean;
+  /** Which screen to show; the shell's navigation decides. */
+  section?: WorkspaceTab;
+  lang?: "en" | "ar";
+};
+
+/**
+ * The workspace's working screens: inbox, credit accounts, orders, bookings and team.
+ * The sales demo at /whatsapp shows them beside the chat simulator; the workspace shell
+ * at /app shows one at a time under its own navigation.
+ */
+export function Screens({ embedded = false, section, lang: langProp }: ScreensProps = {}) {
+  const router = useRouter();
+  const [personas, setPersonas] = useState<Persona[]>([]);
+  const [phone, setPhone] = useState("");
+  const [messages, setMessages] = useState<Message[]>([]);
+  const [draft, setDraft] = useState("");
+  const [summary, setSummary] = useState<Summary | null>(null);
+  const [selected, setSelected] = useState<string | null>(null);
+  const [entries, setEntries] = useState<Entry[]>([]);
+  const [tabState, setTab] = useState<WorkspaceTab>("ledger");
+  const tab = section ?? tabState;
+  const [me, setMe] = useState<Me | null>(null);
+  const [members, setMembers] = useState<Member[]>([]);
+  const [canManage, setCanManage] = useState(false);
+  const [newMember, setNewMember] = useState({ name: "", email: "", role: "agent" });
+  const [teamError, setTeamError] = useState("");
+  const [inboxRows, setInboxRows] = useState<InboxRow[]>([]);
+  const [inboxFilter, setInboxFilter] = useState<"open" | "closed">("open");
+  const [assignedFilter, setAssignedFilter] = useState<"any" | "me" | "none">("any");
+  const [savedReplies, setSavedReplies] = useState<SavedReply[]>([]);
+  const [composeMode, setComposeMode] = useState<"reply" | "note">("reply");
+  const [chatId, setChatId] = useState<string | null>(null);
+  const [thread, setThread] = useState<Thread | null>(null);
+  const [replyDraft, setReplyDraft] = useState("");
+  const [hoursLeft, setHoursLeft] = useState(0);
+  // Refreshed with the data, so "has this visit started" never calls the clock while rendering.
+  const [now, setNow] = useState(0);
+  const threadEnd = useRef<HTMLDivElement>(null);
+  const [orders, setOrders] = useState<OrderRow[]>([]);
+  const [bookings, setBookings] = useState<BookingRow[]>([]);
+  const [langState, setLang] = useState<"en" | "ar">("en");
+  const lang = langProp ?? langState;
+  const [note, setNote] = useState("");
+  const [error, setError] = useState("");
+  const [busy, setBusy] = useState(false);
+  const bottom = useRef<HTMLDivElement>(null);
+  const t = T[lang];
+  const persona = personas.find((p) => p.key === phone);
+
+  const loadPersonas = useCallback(async () => {
+    const data = await getJson<{
+      staff: { name: string; phone: string; user_id: null };
+      customers: { name: string; phone: string | null; user_id: string | null; username: string | null }[];
+    }>("/sim/personas");
+    const list: Persona[] = [
+      ...data.customers.map((c) => ({ ...c, key: c.phone ?? c.user_id ?? "", kind: "customer" as const })),
+      { ...data.staff, key: data.staff.phone, kind: "staff" as const },
+    ];
+    setPersonas(list);
+    setPhone((current) => current || data.staff.phone);
+  }, []);
+
+  const refresh = useCallback(async () => {
+    try {
+      const [s, c] = await Promise.all([
+        maybe<Summary | null>("/api/ledger/summary", null),
+        phone
+          ? getJson<{ messages: Message[] }>(`/sim/conversations/${phone}`)
+          : Promise.resolve({ messages: [] }),
+      ]);
+      setSummary(s);
+      setMessages(c.messages);
+      setOrders((await maybe<{ orders: OrderRow[] }>("/api/orders", { orders: [] })).orders);
+      setBookings((await maybe<{ bookings: BookingRow[] }>("/api/bookings", { bookings: [] })).bookings);
+      setMe(await getJson<Me>("/api/auth/me"));
+      setNow(Date.now());
+      if (tab === "team" || tab === "inbox") {
+        const team = await getJson<{ members: Member[]; can_manage: boolean }>("/api/team");
+        setMembers(team.members);
+        setCanManage(team.can_manage);
+      }
+      const rows = (
+        await maybe<{ conversations: InboxRow[] }>(
+          `/api/inbox/conversations?status=${inboxFilter}&assigned=${assignedFilter}`,
+          { conversations: [] },
+        )
+      ).conversations;
+      setInboxRows(rows);
+      if (tab === "inbox") {
+        setSavedReplies((await getJson<{ replies: SavedReply[] }>("/api/inbox/saved-replies")).replies);
+      }
+      if (tab === "inbox" && chatId) {
+        const loaded = await getJson<Thread>(`/api/inbox/conversations/${chatId}`);
+        setThread(loaded);
+        const closes = loaded.customer.window_closes_at;
+        setHoursLeft(closes ? Math.floor((new Date(closes).getTime() - Date.now()) / 3_600_000) : 0);
+        // Reading a conversation on screen is what marks it read.
+        if (rows.find((r) => r.id === chatId)?.unread) {
+          await getJson(`/api/inbox/conversations/${chatId}/read`, { method: "POST" });
+        }
+      }
+      if (selected) {
+        const e = await getJson<{ entries: Entry[] }>(`/api/ledger/customers/${selected}/entries`);
+        setEntries(e.entries);
+      }
+      setError("");
+    } catch {
+      setError("Cannot reach the Alyr API. Start it on port 8000, then this page recovers by itself.");
+    }
+  }, [phone, selected, inboxFilter, assignedFilter, tab, chatId]);
+
+  useEffect(() => {
+    // The simulator only exists in the demo.
+    const first = setTimeout(() => { if (!embedded) loadPersonas().catch(() => undefined); }, 0);
+    return () => clearTimeout(first);
+  }, [loadPersonas, embedded]);
+
+  useEffect(() => {
+    const first = setTimeout(refresh, 0);
+    const timer = setInterval(refresh, 1500);
+    return () => {
+      clearTimeout(first);
+      clearInterval(timer);
+    };
+  }, [refresh]);
+
+  useEffect(() => {
+    bottom.current?.scrollIntoView({ block: "end" });
+  }, [messages.length]);
+
+  const threadLength = thread?.messages.length ?? 0;
+  useEffect(() => {
+    threadEnd.current?.scrollIntoView({ block: "nearest" });
+  }, [threadLength, chatId]);
+
+  async function send(text: string, replyId = "") {
+    if (!persona || (!text.trim() && !replyId)) return;
+    setDraft("");
+    const data = await getJson<{ messages: Message[] }>("/sim/messages", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({
+        from_number: persona.phone ?? "", from_user_id: persona.user_id ?? "",
+        username: persona.username ?? "", text, reply_id: replyId,
+      }),
+    });
+    setMessages(data.messages);
+    refresh();
+  }
+
+  async function remind() {
+    setBusy(true);
+    try {
+      const data = await getJson<{
+        sent: number; skipped_promised: number; skipped_recent: number; skipped_opted_out: number;
+      }>("/api/ledger/reminders", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ min_days: 30 }),
+      });
+      setNote(t.sent(data.sent, data.skipped_promised + data.skipped_recent + data.skipped_opted_out));
+      refresh();
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function inboxPost(path: string, body?: object) {
+    if (!chatId) return;
+    await getJson(`/api/inbox/conversations/${chatId}/${path}`, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: body ? JSON.stringify(body) : undefined,
+    });
+    refresh();
+  }
+
+  async function sendReply() {
+    const text = replyDraft.trim();
+    if (!text) return;
+    setReplyDraft("");
+    await inboxPost(composeMode === "note" ? "notes" : "reply", { text });
+  }
+
+  async function saveQuickReply() {
+    const body = replyDraft.trim();
+    if (!body) return;
+    await getJson("/api/inbox/saved-replies", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ title: body.slice(0, 28), body }),
+    });
+    refresh();
+  }
+
+  async function deleteQuickReply(id: string) {
+    await getJson(`/api/inbox/saved-replies/${id}`, { method: "DELETE" });
+    refresh();
+  }
+
+  async function teamCall(url: string, method: string, body?: object) {
+    const response = await fetch(url, {
+      method,
+      headers: { "content-type": "application/json" },
+      body: body ? JSON.stringify(body) : undefined,
+    });
+    const data = await response.json().catch(() => ({}));
+    setTeamError(response.ok ? "" : String(data.detail ?? "That did not work."));
+    if (response.ok) setNewMember({ name: "", email: "", role: "agent" });
+    refresh();
+  }
+
+  async function signOut() {
+    await fetch("/api/auth/logout", { method: "POST" });
+    router.push("/login");
+  }
+
+  async function bookingAction(booking: BookingRow, action: "completed" | "no_show" | "cancel") {
+    const cancel = action === "cancel";
+    await getJson(`/api/bookings/${booking.id}/${cancel ? "cancel" : "outcome"}`, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: cancel ? undefined : JSON.stringify({ status: action }),
+    });
+    refresh();
+  }
+
+  async function advance(order: OrderRow) {
+    await getJson(`/api/orders/${order.id}/status`, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ status: NEXT_STATUS[order.status] }),
+    });
+    refresh();
+  }
+
+  async function reset() {
+    setBusy(true);
+    try {
+      await getJson("/sim/reset", { method: "POST" });
+      setSelected(null);
+      setChatId(null);
+      setThread(null);
+      setEntries([]);
+      setNote("");
+      await loadPersonas();
+      await refresh();
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  const suggestions =
+    persona?.kind === "staff"
+      ? ["Ahmed 450 credit", "Ahmed paid 200"]
+      : ["كم حسابي؟", "hello", "I want to order", "book a visit", "my booking"];
+  const total = summary ? Math.max(summary.outstanding, 1) : 1;
+  const upcoming = bookings.filter((b) => b.status === "booked").length;
+  const selectedCustomer = summary?.customers.find((c) => c.id === selected);
+  const unreadChats = inboxRows.filter((r) => r.unread > 0).length;
+  const openThread = thread && thread.customer.id === chatId ? thread : null;
+  // Customer messages and staff notes in one timeline, oldest first.
+  const timeline = openThread
+    ? [...openThread.messages, ...openThread.notes].sort((a, b) => a.created_at.localeCompare(b.created_at))
+    : [];
+
+  return (
+    <div className="shell">
+      {!embedded && (
+      <header className="topbar">
+        <span className="brand">Alyr</span>
+        <span className="where">Demo 1 · the credit ledger in a chat · sample data, fictional shop</span>
+        <span className="spacer" />
+        {me && (me.signed_in ? (
+          <span className="who-am-i">
+            {me.name} · {T.en.roles[me.role]}
+            <button className="btn small" onClick={signOut}>Sign out</button>
+          </span>
+        ) : (
+          <span className="who-am-i">Open demo, not signed in <a className="btn small" href="/login">Sign in</a></span>
+        ))}
+        <button className="btn" onClick={reset} disabled={busy}>Reset demo</button>
+      </header>
+      )}
+
+      <div className={embedded ? "panes embedded" : "panes"}>
+        {!embedded && (
+        <section className="chat" aria-label="Chat simulator">
+          <div className="chat-head">
+            <label htmlFor="persona">Chat simulator · you are holding this phone</label>
+            <select id="persona" value={phone} onChange={(e) => setPhone(e.target.value)}>
+              {personas.map((p) => (
+                <option key={p.key} value={p.key}>
+                  {p.kind === "staff" ? "Staff · " : "Customer · "}{p.name}
+                  {p.username ? ` · @${p.username}, no phone number` : ""}
+                </option>
+              ))}
+            </select>
+            <span className="to">Chatting with: {summary?.shop.name ?? "…"}</span>
+          </div>
+
+          <div className="msgs">
+            {messages.length === 0 && (
+              <p className="empty">No messages yet. Tap a suggestion below or type one.</p>
+            )}
+            {messages.map((m, i) => (
+              <div key={i} className={`bub ${m.direction === "in" ? "me" : ""}`} dir="auto">
+                <Linked text={m.body} />
+                {m.payload.choices && (
+                  <div className="choices">
+                    {m.payload.choices.map((c) => (
+                      <button key={c.id} onClick={() => send(c.title, c.id)}>{c.title}</button>
+                    ))}
+                  </div>
+                )}
+                {m.status === "failed" && <span className="tag bad" dir="ltr">Not delivered</span>}
+                {m.status === "blocked" && (
+                  <span className="tag bad" dir="ltr">Not sent: {BLOCK_REASON[m.error ?? ""] ?? "blocked"}</span>
+                )}
+                {m.status === "queued" && <span className="tag" dir="ltr">Sending…</span>}
+                {m.kind === "template" && (
+                  <span className="tag" dir="ltr">
+                    Template · {m.payload.category} · charged when sent outside the 24-hour window
+                  </span>
+                )}
+              </div>
+            ))}
+            <div ref={bottom} />
+          </div>
+
+          <div className="chips">
+            {suggestions.map((s) => (
+              <button key={s} onClick={() => send(s)} dir="auto">{s}</button>
+            ))}
+          </div>
+          <form
+            className="composer"
+            onSubmit={(e) => {
+              e.preventDefault();
+              send(draft);
+            }}
+          >
+            <input
+              id="draft"
+              value={draft}
+              onChange={(e) => setDraft(e.target.value)}
+              placeholder="Type a message"
+              dir="auto"
+              autoComplete="off"
+            />
+            <button className="btn primary" type="submit">Send</button>
+          </form>
+        </section>
+        )}
+
+        <main className="work" dir={lang === "ar" ? "rtl" : "ltr"} lang={lang}>
+          {error && <div className="error" dir="ltr">{error}</div>}
+          <div className="work-head">
+            <div>
+              {embedded && (
+                <h1 className="work-title">
+                  {{ inbox: t.tabInbox, ledger: t.tabLedger, orders: t.tabOrders, bookings: t.tabBookings, team: t.tabTeam }[tab]}
+                </h1>
+              )}
+              {!embedded && (
+              <div className="tabs" role="tablist">
+                <button role="tab" aria-selected={tab === "ledger"} onClick={() => setTab("ledger")}>{t.tabLedger}</button>
+                <button role="tab" aria-selected={tab === "inbox"} onClick={() => setTab("inbox")}>
+                  {t.tabInbox}{inboxFilter === "open" && unreadChats ? ` (${unreadChats})` : ""}
+                </button>
+                <button role="tab" aria-selected={tab === "orders"} onClick={() => setTab("orders")}>
+                  {t.tabOrders}{orders.length ? ` (${orders.length})` : ""}
+                </button>
+                <button role="tab" aria-selected={tab === "bookings"} onClick={() => setTab("bookings")}>
+                  {t.tabBookings}{upcoming ? ` (${upcoming})` : ""}
+                </button>
+                <button role="tab" aria-selected={tab === "team"} onClick={() => setTab("team")}>{t.tabTeam}</button>
+              </div>
+              )}
+              <p>
+                {lang === "ar" ? summary?.shop.name_ar : summary?.shop.name} · {tab === "ledger" ? t.sub : tab === "orders" ? t.ordersSub : tab === "bookings" ? t.bookingsSub : tab === "team" ? t.teamSub : t.inboxSub}
+              </p>
+            </div>
+            <span className="spacer" />
+            {!embedded && (
+              <button className="btn" onClick={() => setLang(lang === "en" ? "ar" : "en")}>{t.lang}</button>
+            )}
+          </div>
+
+          {tab === "inbox" && (
+            <div className="inbox">
+              <div className="inbox-list">
+                <div className="seg">
+                  {(["open", "closed"] as const).map((f) => (
+                    <button key={f} aria-pressed={inboxFilter === f} onClick={() => setInboxFilter(f)}>{t[f]}</button>
+                  ))}
+                </div>
+                <div className="seg">
+                  {([["any", t.everyone], ["me", t.mine], ["none", t.unassigned]] as const).map(([f, label]) => (
+                    <button
+                      key={f} aria-pressed={assignedFilter === f} onClick={() => setAssignedFilter(f)}
+                      disabled={f === "me" && !me?.signed_in}
+                    >{label}</button>
+                  ))}
+                </div>
+                {inboxRows.length === 0 && <p className="empty-note">{t.noChats}</p>}
+                {inboxRows.map((r) => (
+                  <button
+                    key={r.id}
+                    className={`conv ${r.id === chatId ? "sel" : ""}`}
+                    onClick={() => { setChatId(r.id); setReplyDraft(""); }}
+                  >
+                    <span className="conv-top">
+                      <b>{r.name}</b>
+                      {r.unread > 0 && <span className="pill p1 num">{r.unread}</span>}
+                    </span>
+                    <span className="conv-last" dir="auto">
+                      {r.last.direction === "out" ? "↩ " : ""}{r.last.body}
+                    </span>
+                    <span className="conv-flags">
+                      {r.assigned && <span className="pill p0">{r.assigned.name}</span>}
+                      {r.assistant_paused && !r.assigned && <span className="pill promise">{t.paused}</span>}
+                      {r.opted_out && <span className="pill none">{t.optedOut}</span>}
+                      {r.last.status === "blocked" && <span className="pill p3">{t.notSent}</span>}
+                    </span>
+                  </button>
+                ))}
+              </div>
+
+              <div className="inbox-thread">
+                {!openThread ? (
+                  <p className="empty-note">{t.pick}</p>
+                ) : (
+                  <>
+                    <div className="thread-head">
+                      <div>
+                        <b>{openThread.customer.name}</b>
+                        <span className="mono" dir="ltr">
+                          {openThread.customer.phone ? `+${openThread.customer.phone}` : `@${openThread.customer.username}`}
+                        </span>
+                      </div>
+                      <span className="spacer" />
+                      <label className="assign">
+                        {t.assignedTo}
+                        <select
+                          value={openThread.customer.assigned?.id ?? ""}
+                          onChange={(e) => inboxPost("assign", { user_id: e.target.value || null })}
+                        >
+                          <option value="">{t.nobody}</option>
+                          {members.map((m) => <option key={m.id} value={m.id}>{m.name}</option>)}
+                        </select>
+                      </label>
+                      {openThread.customer.assistant_paused && (
+                        <button className="btn small" onClick={() => inboxPost("assistant", { paused: false })}>{t.handBack}</button>
+                      )}
+                      <button
+                        className="btn small"
+                        onClick={() => inboxPost("status", { status: openThread.customer.status === "open" ? "closed" : "open" })}
+                      >
+                        {openThread.customer.status === "open" ? t.close : t.reopen}
+                      </button>
+                    </div>
+                    {openThread.customer.assistant_paused && <p className="thread-note">{t.pausedHint}</p>}
+                    <div className="msgs thread-msgs">
+                      {timeline.map((m) => "author_name" in m ? (
+                        <div key={m.id} className="bub staffnote" dir="auto">
+                          <span className="who" dir={lang === "ar" ? "rtl" : "ltr"}>{m.author_name} · {t.noteLabel}</span>
+                          {m.body}
+                        </div>
+                      ) : (
+                        <div key={m.id} className={`bub ${m.direction === "out" ? "me" : ""}`} dir="auto">
+                          <span className="who" dir={lang === "ar" ? "rtl" : "ltr"}>
+                            {m.direction === "in" ? t.customerSays : m.sent_by || t.assistant}
+                          </span>
+                          <Linked text={m.body} />
+                          {m.payload.choices && (
+                            <span className="tag" dir="ltr">Buttons: {m.payload.choices.map((c) => c.title).join(" · ")}</span>
+                          )}
+                          {m.status === "failed" && <span className="tag bad" dir="ltr">Not delivered</span>}
+                          {m.status === "blocked" && (
+                            <span className="tag bad" dir="ltr">Not sent: {BLOCK_REASON[m.error ?? ""] ?? "blocked"}</span>
+                          )}
+                        </div>
+                      ))}
+                      <div ref={threadEnd} />
+                    </div>
+                    <p className={`thread-note ${openThread.customer.window_open ? "" : "warn"}`}>
+                      {openThread.customer.window_open ? t.windowOpen(hoursLeft) : t.windowClosed}
+                    </p>
+                    <div className="quick" aria-label={t.quick}>
+                      <div className="seg small">
+                        <button aria-pressed={composeMode === "reply"} onClick={() => setComposeMode("reply")}>{t.reply}</button>
+                        <button aria-pressed={composeMode === "note"} onClick={() => setComposeMode("note")}>{t.noteMode}</button>
+                      </div>
+                      {composeMode === "reply" && savedReplies.map((r) => (
+                        <span key={r.id} className="quickchip">
+                          <button dir="auto" title={r.body} onClick={() => setReplyDraft(r.body)}>{r.title}</button>
+                          <button aria-label={`${t.remove}: ${r.title}`} onClick={() => deleteQuickReply(r.id)}>×</button>
+                        </span>
+                      ))}
+                    </div>
+                    <form
+                      className={`composer ${composeMode === "note" ? "noting" : ""}`}
+                      onSubmit={(e) => { e.preventDefault(); sendReply(); }}
+                    >
+                      <input
+                        id="reply"
+                        aria-label={composeMode === "note" ? t.noteHere : t.replyHere}
+                        value={replyDraft}
+                        onChange={(e) => setReplyDraft(e.target.value)}
+                        placeholder={composeMode === "note" ? t.noteHere : t.replyHere}
+                        disabled={composeMode === "reply" && !openThread.customer.window_open}
+                        dir="auto"
+                        autoComplete="off"
+                      />
+                      {composeMode === "reply" && replyDraft.trim() && (
+                        <button className="btn small" type="button" onClick={saveQuickReply}>{t.saveReply}</button>
+                      )}
+                      <button
+                        className="btn primary" type="submit"
+                        disabled={composeMode === "reply" && !openThread.customer.window_open}
+                      >{composeMode === "note" ? t.addNote : t.reply}</button>
+                    </form>
+                  </>
+                )}
+              </div>
+            </div>
+          )}
+
+          {tab === "team" && (
+            <>
+              <div className="tablewrap">
+                <table>
+                  <thead>
+                    <tr><th>{t.name}</th><th>{t.email}</th><th>{t.role}</th><th /></tr>
+                  </thead>
+                  <tbody>
+                    {members.map((m) => (
+                      <tr key={m.id} className="norow">
+                        <td>{m.name}</td>
+                        <td dir="ltr">{m.email}</td>
+                        <td><span className="pill none">{t.roles[m.role]}</span></td>
+                        <td className="r">
+                          {canManage && m.id !== me?.id && (
+                            <button className="btn small" onClick={() => teamCall(`/api/team/${m.id}`, "DELETE")}>{t.remove}</button>
+                          )}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+              {canManage ? (
+                <form
+                  className="team-add"
+                  onSubmit={(e) => { e.preventDefault(); teamCall("/api/team", "POST", newMember); }}
+                >
+                  <input aria-label={t.name} placeholder={t.name} required value={newMember.name}
+                    onChange={(e) => setNewMember({ ...newMember, name: e.target.value })} />
+                  <input aria-label={t.email} placeholder={t.email} type="email" required dir="ltr" value={newMember.email}
+                    onChange={(e) => setNewMember({ ...newMember, email: e.target.value })} />
+                  <select aria-label={t.role} value={newMember.role}
+                    onChange={(e) => setNewMember({ ...newMember, role: e.target.value })}>
+                    {["agent", "admin", "owner"].map((r) => <option key={r} value={r}>{t.roles[r]}</option>)}
+                  </select>
+                  <button className="btn primary" type="submit">{t.addMember}</button>
+                </form>
+              ) : (
+                <p className="empty-note">{t.teamAgent}</p>
+              )}
+              {teamError && <p className="error" dir="ltr" role="alert">{teamError}</p>}
+            </>
+          )}
+
+          {tab === "bookings" && (
+            bookings.length === 0 ? (
+              <p className="empty-note">{t.noBookings}</p>
+            ) : (
+              <div className="tablewrap">
+                <table>
+                  <thead>
+                    <tr>
+                      <th>{t.when}</th>
+                      <th>{t.service}</th>
+                      <th>{t.customer}</th>
+                      <th>{t.status}</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {bookings.map((b) => (
+                      <tr key={b.id} className="norow">
+                        <td><b className="num" dir="ltr">{b.when_text}</b><br /><span className="mono">#{b.number}</span></td>
+                        <td>{b.service}{b.note && <div className="booking-said" dir="auto">{b.note}</div>}</td>
+                        <td>{b.customer}</td>
+                        <td>
+                          <span className={`pill ${b.status === "booked" ? "p0" : b.status === "completed" ? "none" : "p1"}`}>{t.bk[b.status]}</span>
+                          {b.status === "booked" && (
+                            <span className="booking-acts">
+                              {new Date(b.starts_at).getTime() < now && (
+                                <>
+                                  <button className="btn small" onClick={() => bookingAction(b, "completed")}>{t.came}</button>
+                                  <button className="btn small" onClick={() => bookingAction(b, "no_show")}>{t.noShow}</button>
+                                </>
+                              )}
+                              <button className="btn small" onClick={() => bookingAction(b, "cancel")}>{t.cancel}</button>
+                            </span>
+                          )}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )
+          )}
+
+          {tab === "orders" && (
+            orders.length === 0 ? (
+              <p className="empty-note">{t.noOrders}</p>
+            ) : (
+              <div className="tablewrap">
+                <table>
+                  <thead>
+                    <tr>
+                      <th>{t.orderNo}</th>
+                      <th>{t.items}</th>
+                      <th className="r">{t.balance}</th>
+                      <th>{t.payment}</th>
+                      <th>{t.status}</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {orders.map((o) => (
+                      <tr key={o.id} className="norow">
+                        <td><b className="num">#{o.number}</b><br />{o.customer}</td>
+                        <td>{o.items.map((i, k) => <div key={k}>{i.quantity} × {i.name}</div>)}</td>
+                        <td className="r num" dir="ltr">{o.total_text}</td>
+                        <td><span className={`pill ${o.payment === "unpaid" ? "p1" : "p0"}`}>{t.pay[o.payment]}</span></td>
+                        <td>
+                          <span className="pill none">{t.st[o.status]}</span>
+                          {NEXT_STATUS[o.status] && (
+                            <button className="btn small" onClick={() => advance(o)}>{t.next[o.status]}</button>
+                          )}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )
+          )}
+
+          {tab === "ledger" && summary && (
+            <>
+              <div className="tiles">
+              <div className="totals">
+                <span className="label">{t.outstanding}</span>
+                <span className="big num" dir="ltr">{summary.outstanding_text}</span>
+                <span>{t.owing(summary.customers_owing)}</span>
+                <div className="agebar" aria-hidden="true">
+                  {BUCKET_KEYS.map((k, i) => (
+                    <span key={k} className={`a${i}`} style={{ width: `${(summary.buckets[k] / total) * 100}%` }} />
+                  ))}
+                </div>
+                <div className="legend">
+                  {BUCKET_KEYS.map((k, i) => (
+                    <div key={k}>
+                      <small><i className={`a${i}`} />{t.buckets[i]}</small>
+                      <b className="num" dir="ltr">{qar(summary.buckets[k])}</b>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              <div className="totals">
+                <span className="label">{t.collected}</span>
+                <span className="big num" dir="ltr">{summary.collected_by_link_text}</span>
+                <span>{t.payments(summary.payments_by_link)}</span>
+              </div>
+              </div>
+
+              <div className="actions">
+                <button className="btn primary" onClick={remind} disabled={busy}>{t.remind}</button>
+                <span style={{ color: "var(--muted)", fontSize: 13.5 }}>{t.remindHint}</span>
+                {note && <span className="note">{note}</span>}
+              </div>
+
+              <div className="tablewrap">
+                <table>
+                  <thead>
+                    <tr>
+                      <th>{t.customer}</th>
+                      <th className="r">{t.balance}</th>
+                      <th>{t.age}</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {summary.customers.map((c) => (
+                      <tr key={c.id} className={c.id === selected ? "sel" : ""} onClick={() => setSelected(c.id)}>
+                        <td>
+                          {c.name}
+                          {c.over_limit && <span className="pill p3 gap">{t.overLimit}</span>}
+                          {c.opted_out && <span className="pill none gap">{t.optedOut}</span>}
+                        </td>
+                        <td className="r num" dir="ltr">{c.balance_text}</td>
+                        <td>
+                          {c.balance > 0 ? (
+                            <>
+                              <span className={`pill p${bucketIndex(c.oldest_days)}`}>{t.days(c.oldest_days)}</span>
+                              {c.promised_until && (
+                                <span className="pill promise gap">
+                                  {t.promised(new Date(c.promised_until).toLocaleDateString("en-GB", { day: "2-digit", month: "short" }))}
+                                </span>
+                              )}
+                            </>
+                          ) : (
+                            <span className="pill none">{t.settled}</span>
+                          )}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+
+              {selectedCustomer && (
+                <div className="entries">
+                  <h2>{t.entries} · {selectedCustomer.name}</h2>
+                  <ul>
+                    {entries.map((e, i) => (
+                      <li key={i}>
+                        <span className="mono" dir="ltr">
+                          {new Date(e.created_at).toLocaleDateString("en-GB", { day: "2-digit", month: "short" })}
+                        </span>
+                        <span>{t.kinds[e.kind]}{e.note ? ` · ${e.note}` : ""}</span>
+                        <b className={`num ${e.kind === "payment" ? "minus" : "plus"}`} dir="ltr">
+                          {e.kind === "payment" ? "−" : "+"}{e.amount_text}
+                        </b>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+            </>
+          )}
+        </main>
+      </div>
+    </div>
+  );
+}
