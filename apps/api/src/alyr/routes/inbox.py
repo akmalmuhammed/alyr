@@ -6,6 +6,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query, Request
 from pydantic import BaseModel, Field
 
 from alyr.core.auth import Staff
+from alyr.core.team import actor_of
 from alyr.modules.inbox import service
 from alyr.routes.deps import current_staff, current_tenant
 
@@ -17,6 +18,8 @@ class Reply(BaseModel):
 
 class StatusChange(BaseModel):
     status: str
+    outcome: str | None = Field(default=None, description="sold, booked, answered or lost")
+    reason: str | None = Field(default=None, description="Why a lost customer was lost")
 
 
 class AssistantChange(BaseModel):
@@ -94,11 +97,13 @@ async def reply(
 @router.post("/conversations/{contact_id}/status")
 async def change_status(
     contact_id: UUID, body: StatusChange, request: Request,
-    tenant_id: UUID = Depends(current_tenant),
+    staff: Staff = Depends(current_staff),
 ) -> dict:
     try:
-        async with request.app.state.db.tenant(tenant_id) as conn:
-            _found(await service.set_status(conn, contact_id, body.status))
+        async with request.app.state.db.tenant(staff.tenant_id) as conn:
+            _found(await service.set_status(
+                conn, contact_id, body.status, actor_of(staff), body.outcome, body.reason
+            ))
     except service.InboxError as error:
         raise HTTPException(status_code=422, detail=str(error)) from error
     return {"status": body.status}
@@ -117,11 +122,11 @@ async def change_assistant(
 @router.post("/conversations/{contact_id}/assign")
 async def assign(
     contact_id: UUID, body: Assignment, request: Request,
-    tenant_id: UUID = Depends(current_tenant),
+    staff: Staff = Depends(current_staff),
 ) -> dict:
     try:
-        async with request.app.state.db.tenant(tenant_id) as conn:
-            _found(await service.assign(conn, contact_id, body.user_id))
+        async with request.app.state.db.tenant(staff.tenant_id) as conn:
+            _found(await service.assign(conn, contact_id, body.user_id, actor_of(staff)))
     except service.InboxError as error:
         raise HTTPException(status_code=422, detail=str(error)) from error
     return {"assigned_to": str(body.user_id) if body.user_id else None}

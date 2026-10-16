@@ -243,3 +243,15 @@ tbody tr.norow:hover { background: transparent; }
 .booking-note { width: 100%; padding: 10px 12px; border: 1px solid var(--line); border-radius: 8px; background: var(--bg); }
 .booking-said { color: var(--muted); font-size: 13px; }
 .booking-acts { display: inline-flex; gap: 4px; flex-wrap: wrap; margin-inline-start: 6px; }
+
+/* who handles what (D-028) */
+.assign-select { padding: 4px 6px; border: 1px solid var(--line); border-radius: 6px; background: var(--surface); color: var(--fg); font: inherit; font-size: 13px; max-width: 11rem; }
+.sysline { align-self: center; display: flex; align-items: baseline; gap: 8px; max-width: 92%; padding: 3px 10px; border-radius: 99px; background: var(--sunk); color: var(--muted); font-size: 12px; text-align: center; }
+.sysline time { font-size: 11px; opacity: .8; }
+.closing { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; padding: 10px 12px; border-bottom: 1px solid var(--line); background: var(--sunk); font-size: 13px; }
+.closing > span { color: var(--muted); margin-inline-end: 4px; }
+.outcome { padding: 5px 11px; border-radius: 99px; border: 1px solid var(--line); background: var(--surface); font-size: 13px; font-weight: 500; }
+.outcome:hover { border-color: var(--fg); }
+.outcome.o-sold:hover, .outcome.o-booked:hover { background: var(--ok-soft); color: var(--ok); border-color: var(--ok); }
+.outcome.o-lost:hover { background: var(--bad-soft); color: var(--bad); border-color: var(--bad); }
+.entries-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; }

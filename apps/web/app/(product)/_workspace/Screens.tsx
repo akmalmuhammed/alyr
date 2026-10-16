@@ -17,7 +17,12 @@ type Buckets = { d0_30: number; d31_60: number; d61_90: number; d90_plus: number
 type Customer = {
   id: string; name: string; phone: string | null; balance: number; balance_text: string;
   oldest_days: number; buckets: Buckets; over_limit: boolean; promised_until: string | null;
-  opted_out: boolean;
+  opted_out: boolean; assigned: Person | null;
+};
+type Person = { id: string; name: string };
+type Activity = {
+  id: string; subject: "conversation" | "order" | "booking" | "account"; action: string;
+  detail: Record<string, string | number>; actor_name: string; created_at: string;
 };
 type Summary = {
   shop: { name: string; name_ar: string };
@@ -27,11 +32,12 @@ type Summary = {
 };
 type BookingRow = {
   id: string; number: number; service: string; when_text: string; status: string;
-  customer: string; note: string; starts_at: string;
+  customer: string; note: string; starts_at: string; assigned: Person | null;
 };
 type OrderRow = {
   id: string; number: number; status: string; payment: string; total_text: string;
   customer: string; items: { name: string; quantity: number; line_text: string }[];
+  assigned: Person | null;
 };
 type InboxRow = {
   id: string; name: string; phone: string | null; username: string | null;
@@ -42,7 +48,10 @@ type InboxRow = {
 };
 type InboxMessage = Message & { id: string; sent_by: string };
 type StaffNote = { id: string; body: string; author_name: string; created_at: string };
-type Thread = { customer: Omit<InboxRow, "unread" | "last">; messages: InboxMessage[]; notes: StaffNote[] };
+type Thread = {
+  customer: Omit<InboxRow, "unread" | "last">; messages: InboxMessage[]; notes: StaffNote[];
+  activity: Activity[];
+};
 type SavedReply = { id: string; title: string; body: string };
 type Me = { signed_in: boolean; id: string | null; name: string; email: string; role: string };
 type Member = { id: string; name: string; email: string; role: string };
@@ -94,6 +103,34 @@ const T = {
     pay: { unpaid: "Not paid", paid: "Paid", on_account: "On account" } as Record<string, string>,
     st: { new: "New", confirmed: "Confirmed", ready: "Ready", done: "Done", cancelled: "Cancelled" } as Record<string, string>,
     next: { new: "Confirm", confirmed: "Mark ready", ready: "Mark done" } as Record<string, string>,
+    followsUp: "Follows up", total: "Total",
+    howEnded: "How did it end?", cancelClose: "Keep open", why: "Why was it lost?",
+    outcomes: { sold: "Sold", booked: "Booked", answered: "Answered", lost: "Lost" } as Record<string, string>,
+    reasons: {
+      price: "Price", not_available: "Not available", no_reply: "Stopped replying",
+      went_elsewhere: "Went elsewhere", other: "Other",
+    } as Record<string, string>,
+    did: (a: Activity, outcomes: Record<string, string>, reasons: Record<string, string>) => {
+      const who = a.actor_name;
+      const n = a.detail.number ? ` #${a.detail.number}` : "";
+      const thing = { conversation: "this conversation", order: `order${n}`, booking: `booking${n}`, account: "the credit account" }[a.subject];
+      switch (a.action) {
+        case "took": return `${who} took ${thing}`;
+        case "assigned": return a.detail.to ? `${who} gave ${thing} to ${a.detail.to}` : `${who} took ${thing} back from ${a.detail.from}`;
+        case "closed": return a.detail.outcome
+          ? `${who} closed it: ${outcomes[a.detail.outcome]}${a.detail.reason ? `, ${reasons[a.detail.reason].toLowerCase()}` : ""}`
+          : `${who} closed it`;
+        case "reopened": return `${who} reopened it`;
+        case "placed": return `Customer placed order${n}, ${a.detail.total}`;
+        case "booked": return `Customer booked${n}: ${a.detail.service}`;
+        case "paid": return a.subject === "order" ? `Customer paid order${n}` : `Customer paid ${a.detail.amount} on account`;
+        case "reminded": return `${who} sent a payment reminder for ${a.detail.balance}`;
+        case "completed": return `${who} marked booking${n}: came`;
+        case "no_show": return `${who} marked booking${n}: no-show`;
+        case "moved": return `${who} moved booking${n}`;
+        default: return `${who}: ${thing} ${a.action}`;
+      }
+    },
   },
   ar: {
     ledger: "دفتر الديون", sub: "من عليه مبلغ، ومنذ متى", outstanding: "إجمالي المستحق",
@@ -132,6 +169,34 @@ const T = {
     pay: { unpaid: "غير مدفوع", paid: "مدفوع", on_account: "على الحساب" } as Record<string, string>,
     st: { new: "جديد", confirmed: "مؤكد", ready: "جاهز", done: "منجز", cancelled: "ملغي" } as Record<string, string>,
     next: { new: "تأكيد", confirmed: "جاهز للاستلام", ready: "تم الإنجاز" } as Record<string, string>,
+    followsUp: "المتابع", total: "المجموع",
+    howEnded: "كيف انتهت؟", cancelClose: "أبقِها مفتوحة", why: "لماذا خسرناه؟",
+    outcomes: { sold: "تم البيع", booked: "تم الحجز", answered: "تمت الإجابة", lost: "خسرناه" } as Record<string, string>,
+    reasons: {
+      price: "السعر", not_available: "غير متوفر", no_reply: "توقف عن الرد",
+      went_elsewhere: "ذهب لغيرنا", other: "سبب آخر",
+    } as Record<string, string>,
+    did: (a: Activity, outcomes: Record<string, string>, reasons: Record<string, string>) => {
+      const who = a.actor_name === "Customer" ? "العميل" : a.actor_name === "Assistant" ? "المساعد" : a.actor_name;
+      const n = a.detail.number ? ` رقم ${a.detail.number}` : "";
+      const thing = { conversation: "المحادثة", order: `الطلب${n}`, booking: `الحجز${n}`, account: "الحساب الآجل" }[a.subject];
+      switch (a.action) {
+        case "took": return `${who} تولّى ${thing}`;
+        case "assigned": return a.detail.to ? `${who} أسند ${thing} إلى ${a.detail.to}` : `${who} سحب ${thing} من ${a.detail.from}`;
+        case "closed": return a.detail.outcome
+          ? `${who} أغلقها: ${outcomes[a.detail.outcome]}${a.detail.reason ? `، ${reasons[a.detail.reason]}` : ""}`
+          : `${who} أغلقها`;
+        case "reopened": return `${who} أعاد فتحها`;
+        case "placed": return `العميل طلب${n}، ${a.detail.total}`;
+        case "booked": return `العميل حجز${n}: ${a.detail.service}`;
+        case "paid": return a.subject === "order" ? `العميل دفع الطلب${n}` : `العميل دفع ${a.detail.amount} على الحساب`;
+        case "reminded": return `${who} أرسل تذكيراً بالدفع بمبلغ ${a.detail.balance}`;
+        case "completed": return `${who}: العميل حضر${n ? ` (الحجز${n})` : ""}`;
+        case "no_show": return `${who}: العميل لم يحضر${n ? ` (الحجز${n})` : ""}`;
+        case "moved": return `${who} غيّر موعد الحجز${n}`;
+        default: return `${who}: ${thing} ${a.action}`;
+      }
+    },
   },
 };
 
@@ -179,6 +244,20 @@ function Linked({ text }: { text: string }) {
   );
 }
 
+/** Who is responsible for one item. Changing it is recorded in the item's history. */
+function AssignSelect({ value, members, label, nobody, onChange }: {
+  value: Person | null; members: Member[]; label: string; nobody: string;
+  onChange: (userId: string | null) => void;
+}) {
+  return (
+    <select className="assign-select" aria-label={label} value={value?.id ?? ""}
+      onChange={(e) => onChange(e.target.value || null)} onClick={(e) => e.stopPropagation()}>
+      <option value="">{nobody}</option>
+      {members.map((m) => <option key={m.id} value={m.id}>{m.name}</option>)}
+    </select>
+  );
+}
+
 export type WorkspaceTab = "inbox" | "ledger" | "orders" | "bookings" | "team";
 
 type ScreensProps = {
@@ -187,6 +266,8 @@ type ScreensProps = {
   /** Which screen to show; the shell's navigation decides. */
   section?: WorkspaceTab;
   lang?: "en" | "ar";
+  /** Shown under the screen's title, before its own content (the shell's team report). */
+  intro?: React.ReactNode;
 };
 
 /**
@@ -194,7 +275,7 @@ type ScreensProps = {
  * The sales demo at /whatsapp shows them beside the chat simulator; the workspace shell
  * at /app shows one at a time under its own navigation.
  */
-export function Screens({ embedded = false, section, lang: langProp }: ScreensProps = {}) {
+export function Screens({ embedded = false, section, lang: langProp, intro }: ScreensProps = {}) {
   const router = useRouter();
   const [personas, setPersonas] = useState<Persona[]>([]);
   const [phone, setPhone] = useState("");
@@ -215,6 +296,7 @@ export function Screens({ embedded = false, section, lang: langProp }: ScreensPr
   const [assignedFilter, setAssignedFilter] = useState<"any" | "me" | "none">("any");
   const [savedReplies, setSavedReplies] = useState<SavedReply[]>([]);
   const [composeMode, setComposeMode] = useState<"reply" | "note">("reply");
+  const [closing, setClosing] = useState<"" | "outcome" | "reason">("");
   const [chatId, setChatId] = useState<string | null>(null);
   const [thread, setThread] = useState<Thread | null>(null);
   const [replyDraft, setReplyDraft] = useState("");
@@ -260,7 +342,7 @@ export function Screens({ embedded = false, section, lang: langProp }: ScreensPr
       setBookings((await maybe<{ bookings: BookingRow[] }>("/api/bookings", { bookings: [] })).bookings);
       setMe(await getJson<Me>("/api/auth/me"));
       setNow(Date.now());
-      if (tab === "team" || tab === "inbox") {
+      {
         const team = await getJson<{ members: Member[]; can_manage: boolean }>("/api/team");
         setMembers(team.members);
         setCanManage(team.can_manage);
@@ -411,6 +493,20 @@ export function Screens({ embedded = false, section, lang: langProp }: ScreensPr
     refresh();
   }
 
+  async function giveTo(path: string, userId: string | null) {
+    await getJson(path, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ user_id: userId }),
+    });
+    refresh();
+  }
+
+  async function closeAs(outcome: string, reason?: string) {
+    setClosing("");
+    await inboxPost("status", { status: "closed", outcome, ...(reason ? { reason } : {}) });
+  }
+
   async function advance(order: OrderRow) {
     await getJson(`/api/orders/${order.id}/status`, {
       method: "POST",
@@ -445,9 +541,10 @@ export function Screens({ embedded = false, section, lang: langProp }: ScreensPr
   const selectedCustomer = summary?.customers.find((c) => c.id === selected);
   const unreadChats = inboxRows.filter((r) => r.unread > 0).length;
   const openThread = thread && thread.customer.id === chatId ? thread : null;
-  // Customer messages and staff notes in one timeline, oldest first.
+  // Customer messages, staff notes and what the team did, in one timeline, oldest first.
   const timeline = openThread
-    ? [...openThread.messages, ...openThread.notes].sort((a, b) => a.created_at.localeCompare(b.created_at))
+    ? [...openThread.messages, ...openThread.notes, ...(openThread.activity ?? [])]
+        .sort((a, b) => a.created_at.localeCompare(b.created_at))
     : [];
 
   return (
@@ -573,6 +670,8 @@ export function Screens({ embedded = false, section, lang: langProp }: ScreensPr
             )}
           </div>
 
+          {intro}
+
           {tab === "inbox" && (
             <div className="inbox">
               <div className="inbox-list">
@@ -641,14 +740,40 @@ export function Screens({ embedded = false, section, lang: langProp }: ScreensPr
                       )}
                       <button
                         className="btn small"
-                        onClick={() => inboxPost("status", { status: openThread.customer.status === "open" ? "closed" : "open" })}
+                        aria-expanded={openThread.customer.status === "open" ? closing !== "" : undefined}
+                        onClick={() => openThread.customer.status === "open"
+                          ? setClosing(closing ? "" : "outcome")
+                          : inboxPost("status", { status: "open" })}
                       >
                         {openThread.customer.status === "open" ? t.close : t.reopen}
                       </button>
                     </div>
+                    {closing && (
+                      <div className="closing" role="group" aria-label={closing === "outcome" ? t.howEnded : t.why}>
+                        <span>{closing === "outcome" ? t.howEnded : t.why}</span>
+                        {closing === "outcome"
+                          ? (["sold", "booked", "answered", "lost"] as const).map((o) => (
+                              <button key={o} className={`outcome o-${o}`}
+                                onClick={() => (o === "lost" ? setClosing("reason") : closeAs(o))}>
+                                {t.outcomes[o]}
+                              </button>
+                            ))
+                          : Object.keys(t.reasons).map((r) => (
+                              <button key={r} className="outcome o-lost" onClick={() => closeAs("lost", r)}>{t.reasons[r]}</button>
+                            ))}
+                        <button className="btn small" onClick={() => setClosing("")}>{t.cancelClose}</button>
+                      </div>
+                    )}
                     {openThread.customer.assistant_paused && <p className="thread-note">{t.pausedHint}</p>}
                     <div className="msgs thread-msgs">
-                      {timeline.map((m) => "author_name" in m ? (
+                      {timeline.map((m) => "action" in m ? (
+                        <div key={m.id} className="sysline" dir={lang === "ar" ? "rtl" : "ltr"}>
+                          <span>{t.did(m, t.outcomes, t.reasons)}</span>
+                          <time className="mono" dir="ltr">
+                            {new Date(m.created_at).toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" })}
+                          </time>
+                        </div>
+                      ) : "author_name" in m ? (
                         <div key={m.id} className="bub staffnote" dir="auto">
                           <span className="who" dir={lang === "ar" ? "rtl" : "ltr"}>{m.author_name} · {t.noteLabel}</span>
                           {m.body}
@@ -769,6 +894,7 @@ export function Screens({ embedded = false, section, lang: langProp }: ScreensPr
                       <th>{t.when}</th>
                       <th>{t.service}</th>
                       <th>{t.customer}</th>
+                      <th>{t.assignedTo}</th>
                       <th>{t.status}</th>
                     </tr>
                   </thead>
@@ -778,6 +904,10 @@ export function Screens({ embedded = false, section, lang: langProp }: ScreensPr
                         <td><b className="num" dir="ltr">{b.when_text}</b><br /><span className="mono">#{b.number}</span></td>
                         <td>{b.service}{b.note && <div className="booking-said" dir="auto">{b.note}</div>}</td>
                         <td>{b.customer}</td>
+                        <td>
+                          <AssignSelect value={b.assigned} members={members} label={t.assignedTo} nobody={t.nobody}
+                            onChange={(id) => giveTo(`/api/bookings/${b.id}/assign`, id)} />
+                        </td>
                         <td>
                           <span className={`pill ${b.status === "booked" ? "p0" : b.status === "completed" ? "none" : "p1"}`}>{t.bk[b.status]}</span>
                           {b.status === "booked" && (
@@ -810,8 +940,9 @@ export function Screens({ embedded = false, section, lang: langProp }: ScreensPr
                     <tr>
                       <th>{t.orderNo}</th>
                       <th>{t.items}</th>
-                      <th className="r">{t.balance}</th>
+                      <th className="r">{t.total}</th>
                       <th>{t.payment}</th>
+                      <th>{t.assignedTo}</th>
                       <th>{t.status}</th>
                     </tr>
                   </thead>
@@ -822,6 +953,10 @@ export function Screens({ embedded = false, section, lang: langProp }: ScreensPr
                         <td>{o.items.map((i, k) => <div key={k}>{i.quantity} × {i.name}</div>)}</td>
                         <td className="r num" dir="ltr">{o.total_text}</td>
                         <td><span className={`pill ${o.payment === "unpaid" ? "p1" : "p0"}`}>{t.pay[o.payment]}</span></td>
+                        <td>
+                          <AssignSelect value={o.assigned} members={members} label={t.assignedTo} nobody={t.nobody}
+                            onChange={(id) => giveTo(`/api/orders/${o.id}/assign`, id)} />
+                        </td>
                         <td>
                           <span className="pill none">{t.st[o.status]}</span>
                           {NEXT_STATUS[o.status] && (
@@ -885,6 +1020,7 @@ export function Screens({ embedded = false, section, lang: langProp }: ScreensPr
                       <tr key={c.id} className={c.id === selected ? "sel" : ""} onClick={() => setSelected(c.id)}>
                         <td>
                           {c.name}
+                          {c.assigned && <span className="pill none gap">{c.assigned.name}</span>}
                           {c.over_limit && <span className="pill p3 gap">{t.overLimit}</span>}
                           {c.opted_out && <span className="pill none gap">{t.optedOut}</span>}
                         </td>
@@ -911,7 +1047,14 @@ export function Screens({ embedded = false, section, lang: langProp }: ScreensPr
 
               {selectedCustomer && (
                 <div className="entries">
-                  <h2>{t.entries} · {selectedCustomer.name}</h2>
+                  <div className="entries-head">
+                    <h2>{t.entries} · {selectedCustomer.name}</h2>
+                    <label className="assign">
+                      {t.followsUp}
+                      <AssignSelect value={selectedCustomer.assigned} members={members} label={t.followsUp} nobody={t.nobody}
+                        onChange={(id) => giveTo(`/api/ledger/customers/${selectedCustomer.id}/assign`, id)} />
+                    </label>
+                  </div>
                   <ul>
                     {entries.map((e, i) => (
                       <li key={i}>

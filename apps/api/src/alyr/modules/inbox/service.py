@@ -11,7 +11,9 @@ from uuid import UUID
 import asyncpg
 
 from alyr.channels.base import OutboundMessage
+from alyr.core import team
 from alyr.core.outbound import Outbound
+from alyr.core.team import Actor
 
 _WINDOW = "coalesce(c.last_inbound_at > now() - interval '24 hours', false)"
 
@@ -110,6 +112,7 @@ async def thread(conn: asyncpg.Connection, contact_id: UUID) -> dict | None:
         "notes": [
             {**dict(n), "id": str(n["id"]), "created_at": _iso(n["created_at"])} for n in notes
         ],
+        "activity": await team.history(conn, contact_id),
         "messages": [
             {**dict(r), "id": str(r["id"]), "created_at": _iso(r["created_at"])} for r in rows
         ],
@@ -130,7 +133,8 @@ async def reply(
     sender_id: UUID | None = None,
 ) -> dict:
     """Send a typed reply from a staff member. Answering by hand pauses the assistant for
-    this customer, reopens the conversation, and takes it if nobody has it yet."""
+    this customer, reopens the conversation, and takes it if nobody has it yet. If the
+    shop signs replies, the sender's first name goes under the text."""
     text = text.strip()
     if not text:
         raise InboxError("the reply is empty")
@@ -139,30 +143,55 @@ async def reply(
     )
     if not known:
         raise LookupError("no such customer")
+    if await team.sign_replies(conn):
+        text = team.signed(text, sent_by)
     result = await outbound.send(conn, OutboundMessage(to=contact_id, body=text))
-    await conn.execute("update messages set sent_by = $2 where id = $1", result.message_id, sent_by)
+    await conn.execute(
+        "update messages set sent_by = $2, sent_by_user = $3 where id = $1",
+        result.message_id, sent_by, sender_id,
+    )
     if result.blocked is None:
         await conn.execute(
             "update contacts set assistant_paused = true, inbox_status = 'open', "
-            "inbox_read_at = clock_timestamp(), assigned_to = coalesce(assigned_to, $2) "
-            "where id = $1",
-            contact_id, sender_id,
+            "inbox_read_at = clock_timestamp() where id = $1",
+            contact_id,
         )
+        await team.claim(conn, "conversation", contact_id, Actor(sender_id, sent_by))
     return {"message_id": str(result.message_id), "blocked": result.blocked}
 
 
-async def set_status(conn: asyncpg.Connection, contact_id: UUID, status: str) -> bool:
-    """Close or reopen a conversation. Closing hands the customer back to the assistant."""
+async def set_status(
+    conn: asyncpg.Connection, contact_id: UUID, status: str, actor: Actor = team.ASSISTANT,
+    outcome: str | None = None, reason: str | None = None,
+) -> bool:
+    """Close or reopen a conversation. Closing hands the customer back to the assistant
+    and records how it ended: sold, booked, answered, or lost and why."""
     if status not in ("open", "closed"):
         raise InboxError("status must be open or closed")
-    updated = await conn.execute(
+    if status == "closed":
+        if outcome is not None and outcome not in team.OUTCOMES:
+            raise InboxError("outcome must be sold, booked, answered or lost")
+        if reason is not None and (outcome != "lost" or reason not in team.LOST_REASONS):
+            raise InboxError("a reason is given only for a lost customer, from the list")
+    before = await conn.fetchval(
+        "select inbox_status from contacts where id = $1 and role = 'customer'", contact_id
+    )
+    if before is None:
+        return False
+    await conn.execute(
         "update contacts set inbox_status = $2, "
         "assistant_paused = assistant_paused and $2 = 'open', "
         "inbox_read_at = case when $2 = 'closed' then clock_timestamp() else inbox_read_at end "
-        "where id = $1 and role = 'customer'",
+        "where id = $1",
         contact_id, status,
     )
-    return updated == "UPDATE 1"
+    if before != status:
+        await team.record(
+            conn, "conversation", contact_id, "closed" if status == "closed" else "reopened",
+            actor, contact_id,
+            {"outcome": outcome, "reason": reason} if status == "closed" else None,
+        )
+    return True
 
 
 async def set_assistant(conn: asyncpg.Connection, contact_id: UUID, paused: bool) -> bool:
@@ -173,22 +202,16 @@ async def set_assistant(conn: asyncpg.Connection, contact_id: UUID, paused: bool
     return updated == "UPDATE 1"
 
 
-async def assign(conn: asyncpg.Connection, contact_id: UUID, user_id: UUID | None) -> bool:
+async def assign(
+    conn: asyncpg.Connection, contact_id: UUID, user_id: UUID | None,
+    actor: Actor = team.ASSISTANT,
+) -> bool:
     """Give a conversation to a team member, or to nobody. Only people who work for
     this shop can be given one."""
-    if user_id is not None:
-        member = await conn.fetchval(
-            "select true from memberships where user_id = $1 "
-            "and tenant_id = nullif(current_setting('app.tenant_id', true), '')::uuid",
-            user_id,
-        )
-        if not member:
-            raise InboxError("that person is not on this shop's team")
-    updated = await conn.execute(
-        "update contacts set assigned_to = $2 where id = $1 and role = 'customer'",
-        contact_id, user_id,
-    )
-    return updated == "UPDATE 1"
+    try:
+        return await team.assign(conn, "conversation", contact_id, user_id, actor)
+    except team.TeamError as error:
+        raise InboxError(str(error)) from error
 
 
 async def add_note(

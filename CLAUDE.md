@@ -49,6 +49,7 @@ apps/api/                   FastAPI service (Python 3.13, managed with uv)
   src/alyr/modules/orders/  Order link: products, orders, pay or put on account
   src/alyr/modules/inbox/   Shared inbox: staff read and answer conversations by hand
   src/alyr/catalog.py       What ALYR sells: modules and products. Every new product is declared here (D-027)
+  src/alyr/core/team.py     Who is responsible for what, the activity record, and the team report (D-028)
   src/alyr/modules/router.py  Which module answers a message
   src/alyr/routes/          HTTP routes
   src/alyr/db.py            `Database.tenant(id)`: one transaction scoped to one tenant

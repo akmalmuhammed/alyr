@@ -30,7 +30,7 @@ Last updated 12 Oct 2026.
 1. ALY-59 compare registration routes and file
 2. ALY-5 payment provider applications
 3. ALY-62 one price list
-4. ALY-68 privacy notice and terms
+4. ALY-72 privacy notice and terms
 
 ## Never
 
