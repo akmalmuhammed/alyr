@@ -35,6 +35,7 @@ Status: **Accepted** (in force), **Proposed** (waiting for the founder), **Super
 | D-027 | One workspace for every product, driven by a catalogue; ALYR has a back office | Accepted |
 | D-028 | Every item has one person responsible, and the team's work is on the record | Accepted |
 | D-029 | Email at @alyr.qa: Cloudflare Email Routing in, Resend out | Accepted |
+| D-030 | A weekly result report to the owner, one section per product | Accepted |
 
 ---
 
@@ -444,3 +445,27 @@ Several third-party sources (Techpoint, ChatArmin, Techweez, Nordflux) report th
 4. **Replying as akmal@alyr.qa (optional).** In Gmail → Settings → Accounts → **Send mail as** → add akmal@alyr.qa with SMTP server `smtp.resend.com`, port 465, username `resend`, password a second Resend API key.
 5. **DMARC.** Cloudflare DNS → add TXT `_dmarc` = `v=DMARC1; p=none; rua=mailto:akmal@alyr.qa`.
 6. **Check.** Sign in at `/login` with your email: the code arrives by email as well as on the page.
+
+## D-030 · A weekly result report to the owner, one section per product
+**Date** 16 Oct 2026 · **Status** Accepted (founder, 16 Oct: "implement these items wherever required, depends on the category") · Linear ALY-75
+
+**Why.** An owner who reads "QAR 4,300 collected this week" renews without being asked. The report is how ALYR proves its value every week, so it is part of the product, not a dashboard someone has to open.
+
+**What it is.** Every Sunday at 9:00 in the shop's time zone, the owner gets the numbers for the seven days before (Sunday to Saturday, the Qatar working week). Each product the shop has switched on adds its own section, in this order:
+
+| Section | What it says |
+|---|---|
+| Credit accounts | Money collected (and how much through ALYR links), new credit, reminders ALYR sent, who promised to pay, what is still owed today, what is more than 60 days late, and a next step when money is late and no reminders went out |
+| Orders | Orders and their value, paid online, put on account, customers who ordered again, the most ordered item, cancellations |
+| Bookings | Who came, no-shows, cancellations, visits not yet marked, new bookings, reminders ALYR sent, what is booked for next week, the busiest day |
+| Team inbox | Customers who wrote, new customers, replies by the team, messages ALYR sent |
+
+The first line of each section is compared with the week before. A product that was quiet gets one line instead of a list of zeros.
+
+**Who gets it.** The shop's own WhatsApp numbers (staff contacts) that the owner marks to receive it, and the owners by email when email is set up (D-029). Marking a number counts as that number's agreement to receive it. Owners and admins see and change it in the workspace API (`/api/reports`); agents cannot. A shop can switch it off.
+
+**How it reaches WhatsApp.** Inside the 24-hour window the whole report goes as one ordinary message. Outside it, the approved `weekly_report` template carries a one-line summary and asks the owner to send REPORT; REPORT (or «تقرير») brings the whole report, because the owner's message opens the window.
+
+**How it runs.** One `weekly_report` job per shop. Each run queues the next week first, so a skipped week never breaks the chain. The worker checks every hour that every shop has one queued, so new shops are picked up. What was sent is stored in `weekly_reports`, so a week is never sent twice, even if the job is retried. Email is sent after the WhatsApp messages are committed and is never retried, so a failed email cannot cause a second WhatsApp message.
+
+**Not yet.** A screen in the workspace (the API is ready), wording by business type (a salon says "appointments", a garage "jobs"), a chosen day and hour per shop, and money saved against delivery-app commission for restaurants (it needs the shop's own commission rate).

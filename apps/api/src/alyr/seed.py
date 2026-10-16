@@ -18,6 +18,8 @@ from alyr.modules.ledger import service
 
 DEMO_TENANT_ID = UUID("0a1f0000-0000-4000-8000-00000000a1f0")
 STAFF_PHONE = "97455500100"
+# The owner's own WhatsApp, which receives the weekly report.
+OWNER_PHONE = "97455500101"
 AHMED_PHONE = "97455500001"
 
 # All names are invented.
@@ -147,7 +149,8 @@ async def reset_demo_data(db: Database) -> None:
         await conn.execute(
             "delete from login_codes where email = any($1)", [email for email, _, _ in TEAM]
         )
-        for table in ("bookings", "services", "business_hours", "saved_replies", "memberships",
+        for table in ("weekly_reports", "bookings", "services", "business_hours",
+                      "saved_replies", "memberships",
                       "jobs", "messages", "processed_messages", "order_items",
                       "payment_requests", "orders", "products", "ledger_entries",
                       "ledger_accounts", "contacts", "tenant_modules", "shop_settings"):
@@ -192,6 +195,12 @@ async def reset_demo_data(db: Database) -> None:
             "values ($1, 'Yusuf (counter)', 'staff', $2)",
             STAFF_PHONE, SIMULATOR_NUMBER_ID,
         )
+        owner = await conn.fetchval(
+            "insert into contacts (phone, name, role, number_id, weekly_report) "
+            "values ($1, 'Fatima (owner)', 'staff', $2, true) returning id",
+            OWNER_PHONE, SIMULATOR_NUMBER_ID,
+        )
+        await consent.record(conn, owner, "service", "granted", "weekly_report_setting")
         for index, name in enumerate(CUSTOMERS):
             # One customer has a WhatsApp username and no visible phone number, so the
             # username-only path is exercised in every demo and test run.
