@@ -10,6 +10,8 @@ from conftest import APP_DSN, OWNER_DSN
 # users, login_codes and sessions belong to a person, not a tenant (D-022).
 GLOBAL_TABLES = {
     "tenants", "channel_numbers", "schema_migrations", "users", "login_codes", "sessions",
+    # ALYR's own staff list; belongs to ALYR, not to a shop (D-027).
+    "platform_admins",
 }
 
 

@@ -4,7 +4,7 @@ How the work is divided, and the one goal for this stage, are in [operating-mode
 
 Read this first in a new session, on any machine. It is the hand-over note between sessions: what works, what is next, and what is waiting on the founder. Update it in the same pull request as the work. Linear (team `Alyrtech`, project `Alyr Launch`) holds the detail; this page is the summary.
 
-Last updated: 13 Oct 2026, after message templates and the ALYR Chat page update.
+Last updated: 16 Oct 2026, after the workspace shell and back office (ALY-18, D-027).
 
 ## What works today
 
@@ -23,9 +23,11 @@ Last updated: 13 Oct 2026, after message templates and the ALYR Chat page update
 | Sign-in by one-time code, sessions, team and roles | Built; no email provider, so codes only work locally | `core/auth.py`, D-022 |
 | Bookings: services, opening hours, free times, book, move, cancel, reminders | Built: customer booking page at `/b/{slug}` and a workspace Bookings tab. One customer at a time per shop; no deposits | `modules/bookings/`, `apps/web/app/(product)/b/` |
 | ALYR public site, English and Arabic: company homepage and the ALYR Chat product page | **Live at https://alyr.qa** (company-first version, D-026, published 12 Oct). Merged since and not yet published: the how-it-works figure and the list of what is built on `/chat` (ALY-71) | `apps/web/app/_site/`, `docs/brand.md` |
+| Workspace shell at `/app`: navigation from the shop's products, home dashboard with setup checklist, products (switch on and off), connections, "ask ALYR"; product catalogue in `catalog.py` | Built (D-027) | `apps/api/src/alyr/catalog.py`, `core/workspace.py`, `apps/web/app/(product)/app/` |
+| ALYR back office at `/ops`: every shop, help requests, create a shop and its owner | Built; ALYR staff only (`platform_admins`) | `routes/admin.py`, `apps/web/app/(product)/ops/` |
 | Demo page: chat simulator plus workspace tabs, now at `/whatsapp` | Built | `apps/web/app/(product)/whatsapp/page.tsx` |
 
-Tests: 157, all passing. CI runs api, web and a secrets scan on every pull request.
+Tests: 170, all passing. CI runs api, web and a secrets scan on every pull request.
 
 ## Next on the build side, in order
 
@@ -60,7 +62,7 @@ Tests: 157, all passing. CI runs api, web and a secrets scan on every pull reque
 
 - Templates carry no buttons, so a payment reminder sent outside the 24-hour window has the pay link but not the "pay now" and "I'll pay within a week" buttons. Templates exist on ALYR's test account only.
 - Sign-in codes are not emailed yet: sign-in works on a local machine only.
-- No sign-up: a shop and its first owner are created by hand in the database.
+- No self-serve sign-up: ALYR staff create a shop and its owner in the back office at `/ops`.
 - Marketing consent cannot be captured yet, so every marketing template is blocked.
 - Arabic wording has not been reviewed by a native speaker.
 - The order link identifies the customer by an unguessable ID only.

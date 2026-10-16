@@ -32,6 +32,7 @@ Status: **Accepted** (in force), **Proposed** (waiting for the founder), **Super
 | D-024 | Bookings join Product 1; the first customers book, order, pay and track | Accepted |
 | D-025 | The public site uses the playbook's words on the design system's look | Proposed |
 | D-026 | The homepage is about ALYR the company; ALYR Chat has its own page | Accepted |
+| D-027 | One workspace for every product, driven by a catalogue; ALYR has a back office | Accepted |
 
 ---
 
@@ -354,3 +355,27 @@ The founder said the homepage had become a page about WhatsApp. ALYR is a compan
 - The company is not registered, so there are no licensed activities yet. Each service on the page must be covered by the licence chosen in ALY-59; remove any that is not.
 - Who delivers a service when an owner asks for one, while the founder is also building the product.
 - No prices are shown for services or the product (ALY-62).
+
+## D-027 · One workspace for every product, driven by a catalogue; ALYR has a back office
+**Date** 16 Oct 2026 · **Status** Accepted (founder, 16 Oct: one workspace rather than a separate portal; switch modules underneath, sell products on top; build phase A, keep phase B easy) · Linear ALY-18
+
+A shop manages everything from one ALYR workspace at `/app`. There is no separate client portal.
+
+| Audience | Where | What they do |
+|---|---|---|
+| Staff at the counter | The workspace's working screens | Inbox, bookings, orders, credit accounts |
+| The owner | The same workspace, owner sections | Products, connections, team, the home numbers |
+| ALYR staff | The back office at `/ops` | Create a shop and its owner, see every shop, do the setup steps shops ask for |
+| The shop's customers | WhatsApp and the links we send | Never see any of this |
+
+**How products plug in.** `apps/api/src/alyr/catalog.py` declares each module once: its screens and who may see them, what must be connected first, its setup steps, and the numbers it adds to the home dashboard. Products are named bundles of modules (ALYR Chat = inbox, bookings, orders, payment links; Credit accounts = ledger; Payroll is listed as coming). The shell, the setup checklist, the home dashboard and the back office read the catalogue. Adding a product means declaring it there and building its modules; nothing in the shell changes.
+
+**Switching is real, not cosmetic.** A module's routes answer only for shops that have it on (`require_module`), the public booking and order pages close when their module is off, and the chat only offers switched-on modules. Switching off keeps every record.
+
+**Setup is part of switching on.** Each module's steps show as a checklist on the home screen, with "do it now" when the shop can and "ask ALYR" when it is our job. An ask lands in the back office queue.
+
+**The back office crosses shops without weakening row-level security.** It works only through five database functions that refuse to run unless the API has set a transaction-local flag after checking the caller is on the `platform_admins` list. ALYR itself is a shop on the platform, which is how its staff sign in.
+
+**Built for phase B.** Self-serve sign-up, connecting a shop's own WhatsApp number (Embedded Signup, after Meta approval), billing on switch-on (ALY-35) and a payment provider connection all attach to points that now exist: `admin_create_business` becomes the sign-up path, connections gain real "connect" actions, and enabling a product gains a price step.
+
+**Not built.** Sign-up, billing, price preview, real connect buttons, per-role permissions inside a module, live updates, and a customers screen. The workspace screens inside the shell are the existing ones, embedded.

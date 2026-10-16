@@ -1,0 +1,83 @@
+/* The workspace shell: navigation built from the shop's switched-on products, the home
+   dashboard, products and connections. Uses the ALYR tokens set in globals.css. */
+.sh { display: grid; grid-template-columns: 15.5rem minmax(0, 1fr); min-height: 100%; background: var(--bg); }
+.sh[dir="rtl"] { font-family: var(--font-arabic), var(--font-sans), system-ui, sans-serif; }
+.sh-side { display: flex; flex-direction: column; gap: 6px; padding: 14px 10px; background: var(--surface); border-inline-end: 1px solid var(--line); position: sticky; top: 0; height: 100vh; overflow-y: auto; }
+.sh-brand { display: flex; align-items: center; gap: 10px; padding: 6px 8px 14px; font-weight: 600; }
+.sh-brand span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.sh-mark { width: 26px; flex: none; color: var(--fg); }
+.sh-side nav { display: flex; flex-direction: column; gap: 2px; flex: 1; }
+.sh-link { display: flex; align-items: center; gap: 10px; min-height: 40px; padding: 0 10px; border-radius: 8px; color: var(--muted); text-decoration: none; font-weight: 500; }
+.sh-link:hover { background: var(--sunk); color: var(--fg); }
+.sh-link.on { background: var(--sunk); color: var(--fg); box-shadow: inset 3px 0 0 var(--action); }
+.sh[dir="rtl"] .sh-link.on { box-shadow: inset -3px 0 0 var(--action); }
+.sh-add { color: var(--fg); }
+.sh-ico { width: 18px; height: 18px; flex: none; }
+.sh-group { font-size: 11px; font-weight: 600; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); padding: 14px 10px 4px; }
+.sh[dir="rtl"] .sh-group { letter-spacing: 0; font-size: 12px; }
+.sh-foot { display: flex; gap: 6px; flex-wrap: wrap; padding: 10px 6px 0; border-top: 1px solid var(--line); }
+.sh-foot .btn.small { margin: 0; }
+.sh-main { min-width: 0; padding: 26px clamp(16px, 3vw, 36px) 48px; display: flex; flex-direction: column; gap: 18px; max-width: 72rem; }
+.sh-main > .panes.embedded { display: block; }
+.sh-main .work { padding: 0; overflow: visible; }
+.sh-main .work-title { margin: 0; font-size: 26px; letter-spacing: -.02em; }
+.sh[dir="rtl"] .work-title { letter-spacing: 0; }
+.sh-head h1 { margin: 0; font-size: 26px; letter-spacing: -.02em; }
+.sh[dir="rtl"] .sh-head h1 { letter-spacing: 0; }
+.sh-head p { margin: 4px 0 0; color: var(--muted); }
+.sh-note { color: var(--muted); margin: 0; }
+.sh-empty { display: grid; place-items: center; min-height: 60vh; color: var(--muted); }
+.sh-empty-inline { padding: 28px; border: 1px dashed var(--line); border-radius: 10px; display: grid; gap: 12px; justify-items: start; color: var(--muted); }
+
+.sh-setup { background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 16px 18px; }
+.sh-setup h2 { margin: 0 0 10px; font-size: 16px; }
+.sh-bar { height: 4px; background: var(--sunk); border-radius: 2px; overflow: hidden; margin-bottom: 6px; }
+.sh-bar span { display: block; height: 100%; background: var(--action); }
+.sh-setup ul { list-style: none; margin: 0; padding: 0; }
+.sh-setup li { display: flex; align-items: center; gap: 12px; min-height: 48px; border-top: 1px solid var(--line); }
+.sh-setup li:first-child { border-top: 0; }
+.sh-check { width: 18px; height: 18px; border-radius: 50%; border: 2px solid var(--line); flex: none; }
+.sh-setup li.done .sh-check { background: var(--fg); border-color: var(--fg); box-shadow: inset 0 0 0 3px var(--surface); }
+.sh-setup li.done .sh-step { color: var(--muted); text-decoration: line-through; }
+.sh-step { flex: 1; }
+.sh-setup .btn.small { margin: 0; }
+
+.sh-cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(12rem, 1fr)); gap: 10px; }
+.sh-card { background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 14px 16px; display: grid; gap: 6px; }
+.sh-card span { color: var(--muted); font-size: 13px; }
+.sh-card b { font-size: 24px; font-weight: 600; letter-spacing: -.01em; }
+
+.sh-products { list-style: none; margin: 0; padding: 0; display: grid; gap: 10px; }
+.sh-products li { display: flex; align-items: center; justify-content: space-between; gap: 16px; background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 16px 18px; }
+.sh-products li.coming { opacity: .75; }
+.sh-products h2 { margin: 0; font-size: 16px; display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.sh-products p { margin: 4px 0 0; color: var(--muted); max-width: 40rem; }
+.sh-pill { font-size: 12px; font-weight: 600; padding: 2px 8px; border-radius: 4px; border: 1px solid var(--line); color: var(--muted); white-space: nowrap; }
+.sh-pill.active { background: var(--action); border-color: var(--action); color: var(--action-fg); }
+.sh-pill.wait { background: var(--warn-soft); border-color: transparent; color: var(--warn); }
+
+.sh-help { background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 16px 18px; display: grid; gap: 8px; }
+.sh-help h2 { margin: 0; font-size: 16px; }
+.sh-help p { margin: 0; color: var(--muted); }
+.sh-help form { display: flex; gap: 8px; flex-wrap: wrap; }
+.sh-help input { flex: 1 1 16rem; min-height: 40px; padding: 0 12px; border: 1px solid var(--line); border-radius: 8px; background: var(--bg); }
+
+@media (max-width: 54rem) {
+  .sh { grid-template-columns: minmax(0, 1fr); }
+  .sh-side { position: sticky; top: 0; z-index: 5; height: auto; flex-direction: row; align-items: center; gap: 4px; padding: 8px 10px; border-inline-end: 0; border-bottom: 1px solid var(--line); overflow-x: auto; overflow-y: hidden; }
+  .sh-brand { padding: 0 6px 0 0; }
+  .sh-brand span, .sh-group, .sh-foot { display: none; }
+  .sh-side nav { flex-direction: row; gap: 2px; }
+  .sh-link { white-space: nowrap; min-height: 40px; padding: 0 10px; }
+  .sh-link.on, .sh[dir="rtl"] .sh-link.on { box-shadow: inset 0 -3px 0 var(--action); }
+  .sh-products li { flex-direction: column; align-items: flex-start; }
+}
+
+/* back office */
+.ops { max-width: 72rem; margin: 0 auto; padding: 26px clamp(16px, 3vw, 36px) 64px; display: grid; gap: 28px; }
+.ops h2 { font-size: 17px; margin: 0 0 10px; }
+.ops-form { display: grid; grid-template-columns: repeat(auto-fill, minmax(16rem, 1fr)); gap: 12px; align-items: end; background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 16px 18px; }
+.ops-field { display: grid; gap: 4px; border: 0; padding: 0; margin: 0; }
+.ops-field > span { font-size: 13px; color: var(--muted); }
+.ops-field input:not([type="checkbox"]) { min-height: 40px; padding: 0 10px; border: 1px solid var(--line); border-radius: 8px; background: var(--bg); }
+.ops-check { display: flex; align-items: center; gap: 8px; min-height: 32px; }

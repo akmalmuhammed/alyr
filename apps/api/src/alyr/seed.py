@@ -75,6 +75,14 @@ SAVED_REPLIES = [
     ("أوقات العمل", "نعمل من السبت إلى الخميس من ٨ صباحاً إلى ٩ مساءً، والجمعة من ٤ إلى ٩ مساءً."),
 ]
 
+# The demo shop has ALYR Chat and Credit accounts switched on.
+DEMO_MODULES = ["inbox", "bookings", "orders", "payments", "ledger"]
+
+# ALYR itself is a shop on its own platform: its staff sign in through it, and it
+# is where the back office lives. Fictional address for local use.
+ALYR_TENANT_ID = "0a1f0000-0000-4000-8000-0000000a1f00"
+ALYR_STAFF_EMAIL = "ops@alyr.example"
+
 # Fictional staff of the demo shop. The .example domain can never receive real email.
 OWNER_EMAIL = "fatima@alnoor.example"
 AGENT_EMAIL = "yusuf@alnoor.example"
@@ -106,6 +114,26 @@ async def ensure_demo_tenant(
                 number_id, DEMO_TENANT_ID, channel,
                 (meta_waba_id or None) if channel == "meta" else None,
             )
+        # ALYR's own shop and its first staff member, who may use the back office.
+        await conn.execute(
+            "insert into tenants (id, name, name_ar, slug) values ($1, 'ALYR', 'ALYR', 'alyr') "
+            "on conflict (id) do nothing",
+            ALYR_TENANT_ID,
+        )
+        staff_id = await conn.fetchval(
+            "insert into users (email, name) values ($1, 'ALYR operations') "
+            "on conflict (email) do update set email = excluded.email returning id",
+            ALYR_STAFF_EMAIL,
+        )
+        await conn.execute(
+            "insert into memberships (tenant_id, user_id, role) values ($1, $2, 'owner') "
+            "on conflict do nothing",
+            ALYR_TENANT_ID, staff_id,
+        )
+        await conn.execute(
+            "insert into platform_admins (email) values ($1) on conflict do nothing",
+            ALYR_STAFF_EMAIL,
+        )
     finally:
         await conn.close()
 
@@ -125,8 +153,8 @@ async def reset_demo_data(db: Database) -> None:
                       "ledger_accounts", "contacts", "tenant_modules"):
             await conn.execute(f"delete from {table}")
         await conn.execute(
-            "insert into tenant_modules (module_key) values "
-            "('ledger'), ('orders'), ('bookings')"
+            "insert into tenant_modules (module_key, enabled_by) "
+            "select unnest($1::text[]), 'demo setup'", DEMO_MODULES,
         )
         for sort, (name, name_ar, minutes, price) in enumerate(SERVICES):
             await conn.execute(

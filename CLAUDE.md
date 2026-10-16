@@ -48,6 +48,7 @@ apps/api/                   FastAPI service (Python 3.13, managed with uv)
   src/alyr/modules/ledger/  Module B: credit ledger and reminders
   src/alyr/modules/orders/  Order link: products, orders, pay or put on account
   src/alyr/modules/inbox/   Shared inbox: staff read and answer conversations by hand
+  src/alyr/catalog.py       What ALYR sells: modules and products. Every new product is declared here (D-027)
   src/alyr/modules/router.py  Which module answers a message
   src/alyr/routes/          HTTP routes
   src/alyr/db.py            `Database.tenant(id)`: one transaction scoped to one tenant
@@ -56,7 +57,8 @@ apps/api/                   FastAPI service (Python 3.13, managed with uv)
 apps/web/                   Next.js. Three root layouts, one per route group:
   app/(site)/, (site-ar)/   The public site in English and Arabic: company homepage (/, /ar) and the ALYR Chat product page (/chat, /ar/chat)
   app/_site/                Its components, styles and every word (copy.ts)
-  app/(product)/            The demo and workspace (/whatsapp), sign-in, payment and order pages
+  app/(product)/            The workspace shell (/app), the back office (/ops), the sales demo (/whatsapp),
+                            sign-in, and the customer pages (/pay, /s, /b)
 packages/compliance/        WPS SIF and e-invoice libraries (not created yet)
 specs/                      One folder per spec; write or update the spec before building
 infra/                      Bicep for Azure Qatar Central (not created yet)

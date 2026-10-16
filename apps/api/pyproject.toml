@@ -43,3 +43,7 @@ extend-immutable-calls = ["fastapi.Depends"]
 
 [tool.uv]
 default-groups = ["dev", "server"]
+
+[tool.ruff.lint.per-file-ignores]
+# The catalogue is mostly customer-facing sentences and SQL; breaking them hurts reading.
+"src/alyr/catalog.py" = ["E501"]
