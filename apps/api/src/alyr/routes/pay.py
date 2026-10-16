@@ -17,7 +17,8 @@ async def details(tenant_id: UUID, payment_id: UUID, request: Request) -> dict:
     async with request.app.state.db.tenant(tenant_id) as conn:
         row = await conn.fetchrow(
             "select p.amount, p.status, p.provider, c.name as customer, t.name as shop, "
-            "o.number as order_number "
+            "t.name_ar as shop_ar, "
+            "o.number as order_number, p.order_id "
             "from payment_requests p join contacts c on c.id = p.contact_id "
             "join tenants t on t.id = p.tenant_id left join orders o on o.id = p.order_id "
             "where p.id = $1",
@@ -25,7 +26,10 @@ async def details(tenant_id: UUID, payment_id: UUID, request: Request) -> dict:
         )
     if row is None:
         raise HTTPException(status_code=404, detail="payment not found")
-    return {**dict(row), "amount_text": fmt_qar(row["amount"])}
+    return {
+        **dict(row), "amount_text": fmt_qar(row["amount"]),
+        "order_id": str(row["order_id"]) if row["order_id"] else None,
+    }
 
 
 @router.post("/{tenant_id}/{payment_id}/complete")

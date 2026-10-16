@@ -5,6 +5,7 @@ from uuid import UUID
 from fastapi import APIRouter, Depends, HTTPException, Request
 from pydantic import BaseModel, Field
 
+from alyr.config import get_settings
 from alyr.core import team
 from alyr.core.auth import Staff
 from alyr.core.normalise import fmt_qar
@@ -48,7 +49,8 @@ async def change_status(
     try:
         async with request.app.state.db.tenant(staff.tenant_id) as conn:
             found = await service.set_status(
-                conn, order_id, body.status, request.app.state.outbound, team.actor_of(staff)
+                conn, order_id, body.status, request.app.state.outbound, team.actor_of(staff),
+                get_settings().public_web_url,
             )
     except service.OrderError as error:
         raise HTTPException(status_code=422, detail=str(error)) from error

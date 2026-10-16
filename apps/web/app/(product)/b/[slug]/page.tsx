@@ -2,6 +2,7 @@
 
 import { useParams, useSearchParams } from "next/navigation";
 import { Suspense, useEffect, useMemo, useState } from "react";
+import { Done, Empty, Frame, Glyph, Who, type Lang } from "../../_customer/Frame";
 
 type Service = { id: string; name: string; name_ar: string; duration_minutes: number; price_text: string };
 type BookingPage = {
@@ -15,24 +16,28 @@ const DAYS_AHEAD = 14;
 
 const T = {
   en: {
-    book: "Book with", hello: (n: string) => `Booking as ${n}`,
+    context: "Booking", eyebrow: "Book from your chat", title: "Book a visit",
+    hello: (n: string) => <>Booking as <b>{n}</b></>,
     noCustomer: "Open this page from the link in your chat so we know who is booking.",
-    service: "What do you need?", day: "Which day?", time: "What time?", minutes: (n: number) => `${n} min`,
-    noTimes: "No free times on this day. Try another day.", loading: "Checking free times…",
+    service: "Choose a service", day: "Choose a day", time: "Choose a time", minutes: (n: number) => `${n} min`,
+    noTimes: "No free times on this day. Try another day.",
     note: "Anything we should know? (optional)", confirm: "Confirm booking",
-    booked: (n: number) => `Booking ${n} confirmed`, backToChat: "You can return to the chat. We sent the details there and will remind you before the visit.",
+    booked: (n: number) => `Booking ${n} confirmed`,
+    backToChat: "You can go back to WhatsApp. We sent the details there and will remind you before the visit.",
     notFound: "This booking page was not found.", noServices: "This shop is not taking bookings yet.",
-    failed: "The booking could not be made. Please try again.", lang: "العربية", today: "Today",
+    failed: "The booking could not be made. Please try again.", today: "Today",
   },
   ar: {
-    book: "احجز لدى", hello: (n: string) => `الحجز باسم ${n}`,
+    context: "حجز", eyebrow: "حجز من المحادثة", title: "احجز موعداً",
+    hello: (n: string) => <>الحجز باسم <b>{n}</b></>,
     noCustomer: "افتح هذه الصفحة من الرابط في المحادثة لنعرف صاحب الحجز.",
-    service: "ما الخدمة المطلوبة؟", day: "أي يوم؟", time: "أي وقت؟", minutes: (n: number) => `${n} دقيقة`,
-    noTimes: "لا توجد أوقات متاحة في هذا اليوم. جرّب يوماً آخر.", loading: "جارٍ التحقق من الأوقات المتاحة…",
+    service: "اختر الخدمة", day: "اختر اليوم", time: "اختر الوقت", minutes: (n: number) => `${n} دقيقة`,
+    noTimes: "لا توجد أوقات متاحة في هذا اليوم. جرّب يوماً آخر.",
     note: "هل من ملاحظة؟ (اختياري)", confirm: "تأكيد الحجز",
-    booked: (n: number) => `تم تأكيد الحجز رقم ${n}`, backToChat: "يمكنك العودة إلى المحادثة. أرسلنا التفاصيل هناك وسنذكّرك قبل الموعد.",
+    booked: (n: number) => `تم تأكيد الحجز رقم ${n}`,
+    backToChat: "يمكنك العودة إلى واتساب. أرسلنا التفاصيل هناك وسنذكّرك قبل الموعد.",
     notFound: "لم يتم العثور على صفحة الحجز.", noServices: "هذا المحل لا يستقبل الحجوزات بعد.",
-    failed: "تعذّر إتمام الحجز. حاول مرة أخرى.", lang: "English", today: "اليوم",
+    failed: "تعذّر إتمام الحجز. حاول مرة أخرى.", today: "اليوم",
   },
 };
 
@@ -47,7 +52,7 @@ function BookingForm() {
   const contact = useSearchParams().get("c");
   const [page, setPage] = useState<BookingPage | null>(null);
   const [missing, setMissing] = useState(false);
-  const [lang, setLang] = useState<"en" | "ar">("en");
+  const [lang, setLang] = useState<Lang>("en");
   const [serviceId, setServiceId] = useState("");
   const [day, setDay] = useState("");
   const [times, setTimes] = useState<string[] | null>(null);
@@ -58,7 +63,6 @@ function BookingForm() {
   const [booked, setBooked] = useState<Booked | null>(null);
   const t = T[lang];
   const locale = lang === "ar" ? "ar-QA" : "en-GB";
-  // Shops in Qatar quote times on the 12-hour clock.
 
   useEffect(() => {
     fetch(`/api/book/${slug}${contact ? `?c=${contact}` : ""}`, { cache: "no-store" })
@@ -83,8 +87,9 @@ function BookingForm() {
 
   const days = useMemo(() => (page ? upcomingDays(page.shop.timezone) : []), [page]);
   const zone = page?.shop.timezone ?? "Asia/Qatar";
-  const dayLabel = (value: string, index: number) =>
-    index === 0 ? t.today : new Intl.DateTimeFormat(locale, { weekday: "short", day: "numeric", month: "short", timeZone: "UTC" }).format(new Date(`${value}T12:00:00Z`));
+  const part = (value: string, options: Intl.DateTimeFormatOptions) =>
+    new Intl.DateTimeFormat(locale, { ...options, timeZone: "UTC" }).format(new Date(`${value}T12:00:00Z`));
+  // Shops in Qatar quote times on the 12-hour clock.
   const timeLabel = (value: string) =>
     new Intl.DateTimeFormat(locale, { hour: "numeric", minute: "2-digit", hour12: true, timeZone: zone }).format(new Date(value));
 
@@ -114,63 +119,45 @@ function BookingForm() {
     setBooked(data);
   }
 
-  if (missing) return <div className="pay"><div className="paycard"><p>{t.notFound}</p></div></div>;
+  if (missing) return <Empty text={t.notFound} />;
   if (!page) return null;
+  const shop = lang === "ar" && page.shop.name_ar ? page.shop.name_ar : page.shop.name;
+  const toggle = () => setLang(lang === "en" ? "ar" : "en");
+  const chosen = page.services.find((s) => s.id === serviceId);
 
   if (booked) {
     return (
-      <div className="pay" dir={lang === "ar" ? "rtl" : "ltr"}>
-        <div className="paycard">
-          <p className="paid">{t.booked(booked.number)}</p>
-          <div className="row"><span>{booked.service}</span><b dir="ltr">{booked.when_text}</b></div>
-          <p style={{ color: "var(--muted)" }}>{t.backToChat}</p>
-        </div>
-      </div>
+      <Frame lang={lang} onLang={toggle} shop={shop} context={t.context} short>
+        <Done title={t.booked(booked.number)}>
+          <p><b>{booked.service}</b> · <span className="num" dir="ltr">{booked.when_text}</span></p>
+          <p>{t.backToChat}</p>
+        </Done>
+      </Frame>
     );
   }
 
   return (
-    <div className="store booking" dir={lang === "ar" ? "rtl" : "ltr"} lang={lang}>
-      <header className="store-head">
-        <div>
-          <span className="label">{t.book}</span>
-          <h1>{lang === "ar" && page.shop.name_ar ? page.shop.name_ar : page.shop.name}</h1>
-          <p>{page.customer ? t.hello(page.customer.name) : t.noCustomer}</p>
-        </div>
-        <button className="btn" onClick={() => setLang(lang === "en" ? "ar" : "en")}>{t.lang}</button>
-      </header>
+    <Frame lang={lang} onLang={toggle} shop={shop} context={t.context}>
+      <section className="cx-hero" style={{ "--i": 0 } as React.CSSProperties}>
+        <span className="cx-eyebrow">{t.eyebrow}</span>
+        <h1>{t.title}</h1>
+        {page.customer ? <Who label={t.hello(page.customer.name)} /> : <p className="cx-warn">{t.noCustomer}</p>}
+      </section>
 
-      {page.services.length === 0 && <p className="empty-note">{t.noServices}</p>}
+      {page.services.length === 0 && <p className="cx-warn">{t.noServices}</p>}
 
       {page.services.length > 0 && (
-        <section className="store-cat">
-          <h2>{t.service}</h2>
-          <ul role="radiogroup" aria-label={t.service}>
+        <section className="cx-section" style={{ "--i": 1 } as React.CSSProperties}>
+          <h2><span className={`cx-step ${serviceId ? "done" : ""}`}>1</span>{t.service}</h2>
+          <div className="cx-card" role="radiogroup" aria-label={t.service}>
             {page.services.map((s) => (
-              <li key={s.id}>
-                <button
-                  role="radio" aria-checked={serviceId === s.id} className="choice"
-                  onClick={() => pick(setServiceId, s.id)}
-                >
-                  <span>
-                    <b>{lang === "ar" && s.name_ar ? s.name_ar : s.name}</b>
-                    <span className="num">{t.minutes(s.duration_minutes)}{s.price_text ? ` · ${s.price_text}` : ""}</span>
-                  </span>
-                  <span className="choice-mark" aria-hidden="true" />
-                </button>
-              </li>
-            ))}
-          </ul>
-        </section>
-      )}
-
-      {serviceId && (
-        <section className="store-cat">
-          <h2>{t.day}</h2>
-          <div className="daystrip" role="radiogroup" aria-label={t.day}>
-            {days.map((value, index) => (
-              <button key={value} role="radio" aria-checked={day === value} onClick={() => pick(setDay, value)}>
-                {dayLabel(value, index)}
+              <button key={s.id} role="radio" aria-checked={serviceId === s.id} className="cx-choice"
+                onClick={() => pick(setServiceId, s.id)}>
+                <span className="cx-row-text">
+                  <b>{lang === "ar" && s.name_ar ? s.name_ar : s.name}</b>
+                  <span className="num">{t.minutes(s.duration_minutes)}{s.price_text ? ` · ${s.price_text}` : ""}</span>
+                </span>
+                <span className="cx-radio"><svg viewBox="0 0 24 24"><path d="M5 12.5l4.5 4.5L19 7.5" /></svg></span>
               </button>
             ))}
           </div>
@@ -178,14 +165,30 @@ function BookingForm() {
       )}
 
       {serviceId && (
-        <section className="store-cat">
-          <h2>{t.time}</h2>
-          {times === null && <p className="empty-note">{t.loading}</p>}
-          {times?.length === 0 && <p className="empty-note">{t.noTimes}</p>}
+        <section className="cx-section">
+          <h2><span className={`cx-step ${day ? "done" : ""}`}>2</span>{t.day}</h2>
+          <div className="cx-days" role="radiogroup" aria-label={t.day}>
+            {days.map((value, index) => (
+              <button key={value} role="radio" aria-checked={day === value} className="cx-day" onClick={() => pick(setDay, value)}>
+                <small>{index === 0 ? t.today : part(value, { weekday: "short" })}</small>
+                <b className="num">{part(value, { day: "numeric" })}</b>
+                <span>{part(value, { month: "short" })}</span>
+              </button>
+            ))}
+          </div>
+        </section>
+      )}
+
+      {serviceId && (
+        <section className="cx-section">
+          <h2><span className={`cx-step ${start ? "done" : ""}`}>3</span>{t.time}</h2>
+          {times === null && <div className="cx-times" aria-hidden="true">{[0, 1, 2, 3, 4, 5].map((i) => <span key={i} className="cx-skel" />)}</div>}
+          {times?.length === 0 && <p className="cx-note">{t.noTimes}</p>}
           {times && times.length > 0 && (
-            <div className="timegrid" role="radiogroup" aria-label={t.time}>
+            <div className="cx-times" role="radiogroup" aria-label={t.time}>
               {times.map((value) => (
-                <button key={value} role="radio" aria-checked={start === value} onClick={() => { setStart(value); setError(""); }} dir="ltr">
+                <button key={value} role="radio" aria-checked={start === value} className="cx-time num"
+                  onClick={() => { setStart(value); setError(""); }} dir="ltr">
                   {timeLabel(value)}
                 </button>
               ))}
@@ -194,22 +197,25 @@ function BookingForm() {
         </section>
       )}
 
-      {start && (
-        <footer className="cartbar">
-          {error && <div className="error">{error}</div>}
-          <input
-            className="booking-note" value={note} maxLength={500} placeholder={t.note} aria-label={t.note}
-            onChange={(e) => setNote(e.target.value)} dir="auto"
-          />
-          <div className="cart-actions">
-            <button className="btn primary" disabled={busy || !page.customer} onClick={confirm}>
-              {t.confirm} · <span dir="ltr">{timeLabel(start)}</span>
+      {!start && error && <div className="cx-error" role="alert">{error}</div>}
+
+      {start && chosen && (
+        <div className="cx-bar">
+          <div className="cx-bar-in">
+            {error && <div className="cx-error" role="alert">{error}</div>}
+            <div className="cx-sum">
+              <span>{lang === "ar" && chosen.name_ar ? chosen.name_ar : chosen.name}</span>
+              <b className="num" dir="ltr">{part(day, { weekday: "short", day: "numeric", month: "short" })} · {timeLabel(start)}</b>
+            </div>
+            <input className="cx-input" value={note} maxLength={500} placeholder={t.note} aria-label={t.note}
+              onChange={(e) => setNote(e.target.value)} dir="auto" />
+            <button className="cx-btn" disabled={busy || !page.customer} onClick={confirm}>
+              <Glyph name="check" />{t.confirm}
             </button>
           </div>
-        </footer>
+        </div>
       )}
-      {!start && error && <div className="error">{error}</div>}
-    </div>
+    </Frame>
   );
 }
 

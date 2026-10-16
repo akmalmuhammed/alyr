@@ -16,6 +16,7 @@ from alyr.routes import bookings as bookings_routes
 from alyr.routes import inbox, ledger, orders, pay, simulator, store, whatsapp_webhook
 from alyr.routes import jobs as jobs_routes
 from alyr.routes import team as team_routes
+from alyr.routes import track as track_routes
 from alyr.routes import workspace as workspace_routes
 from alyr.routes.deps import require_module, require_module_for_slug
 
@@ -55,6 +56,7 @@ def create_app() -> FastAPI:
     # Each module's routes answer only for shops that have switched that module on.
     app.include_router(ledger.router, dependencies=[Depends(require_module("ledger"))])
     app.include_router(pay.router)
+    app.include_router(track_routes.router)
     app.include_router(orders.router, dependencies=[Depends(require_module("orders"))])
     app.include_router(store.router, dependencies=[Depends(require_module_for_slug("orders"))])
     app.include_router(jobs_routes.router)
