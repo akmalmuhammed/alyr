@@ -7,9 +7,10 @@ from uuid import UUID
 
 import asyncpg
 
-from alyr.core import templates
+from alyr.core import team, templates
 from alyr.core.normalise import fmt_qar
 from alyr.core.outbound import Outbound
+from alyr.core.team import Actor
 from alyr.modules.ledger import service as ledger
 
 MAX_QUANTITY = 999
@@ -52,7 +53,7 @@ async def create_order(
 ) -> dict:
     """Place an order. Prices always come from the database, never from the caller."""
     contact = await conn.fetchrow(
-        "select id, lang, credit_limit from contacts where id = $1", contact_id
+        "select id, lang, credit_limit, assigned_to from contacts where id = $1", contact_id
     )
     if contact is None:
         raise OrderError("unknown_customer", "We could not find this customer.")
@@ -88,10 +89,16 @@ async def create_order(
     # One order number at a time per shop, so numbers never repeat.
     await conn.execute("select pg_advisory_xact_lock(hashtext($1))", f"orders:{tenant_id}")
     number = await conn.fetchval("select coalesce(max(number), 1000) + 1 from orders")
+    # Whoever is looking after this customer's chat looks after the order too.
     order_id = await conn.fetchval(
-        "insert into orders (contact_id, number, total, payment) values ($1, $2, $3, $4) "
-        "returning id",
+        "insert into orders (contact_id, number, total, payment, assigned_to) "
+        "values ($1, $2, $3, $4, $5) returning id",
         contact_id, number, total, "on_account" if payment == "account" else "unpaid",
+        contact["assigned_to"],
+    )
+    await team.record(
+        conn, "order", order_id, "placed", team.CUSTOMER, contact_id,
+        {"number": number, "total": fmt_qar(total), "payment": payment},
     )
     for product, quantity in lines:
         await conn.execute(
@@ -152,9 +159,11 @@ _STATUS_TEXT = {
 
 
 async def set_status(
-    conn: asyncpg.Connection, order_id: UUID, status: str, outbound: Outbound
+    conn: asyncpg.Connection, order_id: UUID, status: str, outbound: Outbound,
+    actor: Actor = team.ASSISTANT,
 ) -> bool:
-    """Move an order along and tell the customer. Returns False if there is no such order."""
+    """Move an order along and tell the customer. Returns False if there is no such order.
+    Whoever moves an order nobody has becomes responsible for it."""
     if status not in _STATUS_TEXT:
         raise OrderError("bad_status", "Unknown order status.")
     row = await conn.fetchrow(
@@ -164,6 +173,10 @@ async def set_status(
     )
     if row is None:
         return bool(await conn.fetchval("select 1 from orders where id = $1", order_id))
+    await team.claim(conn, "order", order_id, actor)
+    await team.record(
+        conn, "order", order_id, status, actor, row["contact_id"], {"number": row["number"]}
+    )
     lang = await conn.fetchval("select lang from contacts where id = $1", row["contact_id"])
     english, arabic = _STATUS_TEXT[status]
     body = (arabic if lang == "ar" else english).format(n=row["number"])
@@ -175,8 +188,10 @@ async def set_status(
 
 async def list_orders(conn: asyncpg.Connection) -> list[dict]:
     orders = await conn.fetch(
-        "select o.id, o.number, o.status, o.payment, o.total, o.created_at, c.name as customer "
-        "from orders o join contacts c on c.id = o.contact_id order by o.number desc"
+        "select o.id, o.number, o.status, o.payment, o.total, o.created_at, c.name as customer, "
+        "       o.assigned_to, u.name as assignee "
+        "from orders o join contacts c on c.id = o.contact_id "
+        "left join users u on u.id = o.assigned_to order by o.number desc"
     )
     items = await conn.fetch("select order_id, name, price, quantity from order_items")
     by_order: dict[UUID, list[dict]] = {}
@@ -191,6 +206,8 @@ async def list_orders(conn: asyncpg.Connection) -> list[dict]:
             "payment": o["payment"], "total": o["total"], "total_text": fmt_qar(o["total"]),
             "customer": o["customer"], "created_at": o["created_at"].isoformat(),
             "items": by_order.get(o["id"], []),
+            "assigned": {"id": str(o["assigned_to"]), "name": o["assignee"]}
+            if o["assigned_to"] else None,
         }
         for o in orders
     ]

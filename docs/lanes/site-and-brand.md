@@ -26,7 +26,7 @@ Last updated 13 Oct 2026.
 - **Merged, not published (ALY-71):** the ALYR Chat page has a moving "how it works" figure (`FlowDiagram.tsx`: a customer's message through WhatsApp into ALYR, what ALYR does in the background, the team's screen, the reply), a list of everything built today, and a sixth demo tab for credit accounts. The homepage teaser names what the product does. The live site shows the 12 Oct version until the founder says publish.
 - The site has two pages in each language: a company homepage (`/`) and the ALYR Chat product page (`/chat`), decision D-026. The R in the wordmark was redrawn on 12 Oct; the design system's master files still carry the old one.
 - Two brand systems disagree and the founder has not chosen (ALY-61). Do not produce new branded material until that is decided.
-- No contact method on the live page (ALY-60). Arabic unreviewed (ALY-66). No privacy or terms pages (ALY-68, Company lane).
+- No contact method on the live page (ALY-60). Arabic unreviewed (ALY-66). No privacy or terms pages (ALY-72, Company lane).
 
 ## Next, in order
 

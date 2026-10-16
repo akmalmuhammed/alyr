@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Screens, type WorkspaceTab } from "../../_workspace/Screens";
+import { TeamReport } from "../../_workspace/Team";
 import "../../_workspace/shell.css";
 
 type Text = { en: string; ar: string };
@@ -548,7 +549,12 @@ export default function WorkspaceShell() {
       </>
     );
   } else if ((WORK_SCREENS as string[]).includes(section) && enabledScreens.has(section)) {
-    body = <Screens embedded section={section as WorkspaceTab} lang={lang} />;
+    body = (
+      <Screens embedded section={section as WorkspaceTab} lang={lang}
+        intro={section === "team"
+          ? <TeamReport lang={lang} canManage={state.can_manage} signer={state.me.signed_in ? state.me.name : "Ali"} />
+          : undefined} />
+    );
   } else {
     body = (
       <div className="sh-empty-inline">

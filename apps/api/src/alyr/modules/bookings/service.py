@@ -11,9 +11,10 @@ from uuid import UUID
 
 import asyncpg
 
-from alyr.core import jobs, templates
+from alyr.core import jobs, team, templates
 from alyr.core.normalise import fmt_qar
 from alyr.core.outbound import Outbound
+from alyr.core.team import Actor
 
 REMINDER = "booking_reminder"
 SLOT_STEP_MINUTES = 30
@@ -169,7 +170,8 @@ async def create_booking(
     service_id: UUID, starts_at: datetime, note: str = "",
 ) -> dict:
     contact = await conn.fetchrow(
-        "select id, lang from contacts where id = $1 and role = 'customer'", contact_id
+        "select id, lang, assigned_to from contacts where id = $1 and role = 'customer'",
+        contact_id,
     )
     if contact is None:
         raise BookingError("unknown_customer", "Open the booking link from your chat again.")
@@ -179,17 +181,22 @@ async def create_booking(
     number = await conn.fetchval("select coalesce(max(number), 100) + 1 from bookings")
     try:
         async with conn.transaction():
+            # Whoever is looking after this customer's chat looks after the visit too.
             booking_id = await conn.fetchval(
                 "insert into bookings (number, contact_id, service_id, service_name, "
-                "                      starts_at, ends_at, note) "
-                "values ($1, $2, $3, $4, $5, $6, $7) returning id",
+                "                      starts_at, ends_at, note, assigned_to) "
+                "values ($1, $2, $3, $4, $5, $6, $7, $8) returning id",
                 number, contact_id, service_id, service["name"], starts_at, ends_at,
-                note.strip()[:500],
+                note.strip()[:500], contact["assigned_to"],
             )
     except asyncpg.ExclusionViolationError as error:
         raise BookingError(
             "not_free", "That time was just taken. Please pick another."
         ) from error
+    await team.record(
+        conn, "booking", booking_id, "booked", team.CUSTOMER, contact_id,
+        {"number": number, "service": service["name"], "starts_at": starts_at.isoformat()},
+    )
     arabic = contact["lang"] == "ar"
     when = await _when_text(conn, starts_at, arabic)
     shop = await _shop_name(conn, arabic)
@@ -209,7 +216,8 @@ async def create_booking(
 
 
 async def cancel(
-    conn: asyncpg.Connection, outbound: Outbound, booking_id: UUID, notify: bool = True
+    conn: asyncpg.Connection, outbound: Outbound, booking_id: UUID, notify: bool = True,
+    actor: Actor = team.CUSTOMER,
 ) -> bool:
     """Cancel a booking that has not been finished. The time becomes free again."""
     row = await conn.fetchrow(
@@ -219,6 +227,10 @@ async def cancel(
     )
     if row is None:
         return False
+    await team.record(
+        conn, "booking", booking_id, "cancelled", actor, row["contact_id"],
+        {"number": row["number"]},
+    )
     if notify:
         arabic = await conn.fetchval(
             "select lang = 'ar' from contacts where id = $1", row["contact_id"]
@@ -236,7 +248,8 @@ async def cancel(
 
 
 async def reschedule(
-    conn: asyncpg.Connection, outbound: Outbound, booking_id: UUID, starts_at: datetime
+    conn: asyncpg.Connection, outbound: Outbound, booking_id: UUID, starts_at: datetime,
+    actor: Actor = team.CUSTOMER,
 ) -> dict:
     current = await conn.fetchrow(
         "select number, contact_id, service_id, starts_at, ends_at from bookings "
@@ -254,6 +267,11 @@ async def reschedule(
         "reminded_at = null where id = $1",
         booking_id, starts_at, ends_at,
     )
+    await team.claim(conn, "booking", booking_id, actor)
+    await team.record(
+        conn, "booking", booking_id, "moved", actor, current["contact_id"],
+        {"number": current["number"], "starts_at": starts_at.isoformat()},
+    )
     arabic = await conn.fetchval(
         "select lang = 'ar' from contacts where id = $1", current["contact_id"]
     )
@@ -270,15 +288,25 @@ async def reschedule(
     return {"id": str(booking_id), "when_text": when, "starts_at": starts_at.isoformat()}
 
 
-async def set_outcome(conn: asyncpg.Connection, booking_id: UUID, status: str) -> bool:
-    """Mark what happened: the customer came, or did not."""
+async def set_outcome(
+    conn: asyncpg.Connection, booking_id: UUID, status: str, actor: Actor = team.ASSISTANT
+) -> bool:
+    """Mark what happened: the customer came, or did not. Whoever marks a visit nobody
+    had becomes responsible for it."""
     if status not in ("completed", "no_show"):
         raise BookingError("bad_status", "Status must be completed or no_show.")
-    updated = await conn.execute(
-        "update bookings set status = $2 where id = $1 and status = 'booked'",
+    row = await conn.fetchrow(
+        "update bookings set status = $2 where id = $1 and status = 'booked' "
+        "returning number, contact_id",
         booking_id, status,
     )
-    return updated == "UPDATE 1"
+    if row is None:
+        return False
+    await team.claim(conn, "booking", booking_id, actor)
+    await team.record(
+        conn, "booking", booking_id, status, actor, row["contact_id"], {"number": row["number"]}
+    )
+    return True
 
 
 async def list_bookings(
@@ -288,8 +316,10 @@ async def list_bookings(
         f"""
         select b.id, b.number, b.service_name, b.starts_at, b.ends_at, b.status, b.note,
                c.id as contact_id, c.name as customer, c.phone,
+               b.assigned_to, u.name as assignee,
                to_char(b.starts_at at time zone {_TZ}, 'FMDy FMDD Mon, FMHH12:MI AM') as when_text
         from bookings b join contacts c on c.id = b.contact_id
+        left join users u on u.id = b.assigned_to
         where (b.starts_at at time zone {_TZ})::date between $1 and $2
           and ($3::uuid is null or b.contact_id = $3)
         order by b.starts_at
@@ -302,6 +332,8 @@ async def list_bookings(
             "starts_at": r["starts_at"].isoformat(), "ends_at": r["ends_at"].isoformat(),
             "when_text": r["when_text"], "status": r["status"], "note": r["note"],
             "customer": r["customer"], "contact_id": str(r["contact_id"]), "phone": r["phone"],
+            "assigned": {"id": str(r["assigned_to"]), "name": r["assignee"]}
+            if r["assigned_to"] else None,
         }
         for r in rows
     ]

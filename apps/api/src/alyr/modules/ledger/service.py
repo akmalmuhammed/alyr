@@ -4,9 +4,10 @@ from uuid import UUID
 import asyncpg
 
 from alyr.channels.base import Choice, OutboundMessage
-from alyr.core import templates
+from alyr.core import team, templates
 from alyr.core.normalise import fmt_qar
 from alyr.core.outbound import Outbound
+from alyr.core.team import Actor
 from alyr.modules.ledger.ageing import Aged, age
 
 # Every function takes a tenant-scoped connection (Database.tenant). RLS does the filtering.
@@ -55,8 +56,9 @@ async def summary(conn: asyncpg.Connection) -> dict:
     customers = await conn.fetch(
         "select c.id, c.name, c.phone, c.wa_user_id, c.username, c.lang, c.credit_limit, "
         "c.consent_service, "
-        "a.promised_until, a.last_reminded_at "
+        "a.promised_until, a.last_reminded_at, a.assigned_to, u.name as assignee "
         "from contacts c left join ledger_accounts a on a.contact_id = c.id "
+        "left join users u on u.id = a.assigned_to "
         "where c.role = 'customer' order by c.name"
     )
     rows = await conn.fetch("select contact_id, kind, amount, created_at from ledger_entries")
@@ -84,6 +86,8 @@ async def summary(conn: asyncpg.Connection) -> dict:
                 if promised and promised >= now.date() else None,
                 "last_reminded_at": c["last_reminded_at"].isoformat()
                 if c["last_reminded_at"] else None,
+                "assigned": {"id": str(c["assigned_to"]), "name": c["assignee"]}
+                if c["assigned_to"] else None,
             }
         )
         if a.balance > 0:
@@ -146,7 +150,8 @@ def reminder_text(
 
 
 async def send_reminders(
-    conn: asyncpg.Connection, tenant_id: UUID, outbound: Outbound, web_url: str, min_days: int
+    conn: asyncpg.Connection, tenant_id: UUID, outbound: Outbound, web_url: str, min_days: int,
+    actor: Actor = team.ASSISTANT,
 ) -> dict:
     """Remind customers whose oldest unpaid purchase is at least `min_days` old.
 
@@ -206,6 +211,10 @@ async def send_reminders(
             "set last_reminded_at = now(), reminder_count = ledger_accounts.reminder_count + 1",
             contact_id,
         )
+        await team.record(
+            conn, "account", contact_id, "reminded", actor, contact_id,
+            {"balance": fmt_qar(customer["balance"]), "tier": tier},
+        )
         result["sent"] += 1
     return result
 
@@ -254,6 +263,10 @@ async def complete_payment(
         number = await conn.fetchval(
             "update orders set payment = 'paid' where id = $1 returning number", row["order_id"]
         )
+        await team.record(
+            conn, "order", row["order_id"], "paid", team.CUSTOMER, row["contact_id"],
+            {"number": number, "amount": fmt_qar(row["amount"])},
+        )
         body = (
             f"تم استلام {fmt_qar(row['amount'])} للطلب رقم {number}. شكراً لك." if lang == "ar"
             else f"Received {fmt_qar(row['amount'])} for order #{number}. Thank you."
@@ -267,6 +280,10 @@ async def complete_payment(
     await add_entry(
         conn, row["contact_id"], "payment", row["amount"],
         note="Paid by payment link", created_by=row["provider"],
+    )
+    await team.record(
+        conn, "account", row["contact_id"], "paid", team.CUSTOMER, row["contact_id"],
+        {"amount": fmt_qar(row["amount"])},
     )
     balance = (await aged(conn, row["contact_id"])).balance
     if lang == "ar":

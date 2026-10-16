@@ -10,8 +10,10 @@ from uuid import UUID
 from fastapi import APIRouter, Depends, HTTPException, Request
 from pydantic import BaseModel, Field
 
+from alyr.core import team
+from alyr.core.auth import Staff
 from alyr.modules.bookings import service
-from alyr.routes.deps import current_tenant
+from alyr.routes.deps import current_staff, current_tenant
 
 public = APIRouter(prefix="/api/book", tags=["booking page"])
 router = APIRouter(prefix="/api", tags=["bookings"])
@@ -53,6 +55,10 @@ class Outcome(BaseModel):
 
 class Move(BaseModel):
     starts_at: datetime
+
+
+class Assignment(BaseModel):
+    user_id: UUID | None = Field(description="A team member, or null for nobody")
 
 
 def _refuse(error: service.BookingError) -> HTTPException:
@@ -143,11 +149,13 @@ async def bookings(
 @router.post("/bookings/{booking_id}/outcome")
 async def outcome(
     booking_id: UUID, body: Outcome, request: Request,
-    tenant_id: UUID = Depends(current_tenant),
+    staff: Staff = Depends(current_staff),
 ) -> dict:
     try:
-        async with request.app.state.db.tenant(tenant_id) as conn:
-            found = await service.set_outcome(conn, booking_id, body.status)
+        async with request.app.state.db.tenant(staff.tenant_id) as conn:
+            found = await service.set_outcome(
+                conn, booking_id, body.status, team.actor_of(staff)
+            )
     except service.BookingError as error:
         raise _refuse(error) from error
     if not found:
@@ -157,10 +165,12 @@ async def outcome(
 
 @router.post("/bookings/{booking_id}/cancel")
 async def cancel(
-    booking_id: UUID, request: Request, tenant_id: UUID = Depends(current_tenant)
+    booking_id: UUID, request: Request, staff: Staff = Depends(current_staff)
 ) -> dict:
-    async with request.app.state.db.tenant(tenant_id) as conn:
-        if not await service.cancel(conn, request.app.state.outbound, booking_id):
+    async with request.app.state.db.tenant(staff.tenant_id) as conn:
+        if not await service.cancel(
+            conn, request.app.state.outbound, booking_id, actor=team.actor_of(staff)
+        ):
             raise HTTPException(status_code=404, detail="booking not found or already finished")
     return {"status": "cancelled"}
 
@@ -168,17 +178,34 @@ async def cancel(
 @router.post("/bookings/{booking_id}/move")
 async def move(
     booking_id: UUID, body: Move, request: Request,
-    tenant_id: UUID = Depends(current_tenant),
+    staff: Staff = Depends(current_staff),
 ) -> dict:
     try:
-        async with request.app.state.db.tenant(tenant_id) as conn:
+        async with request.app.state.db.tenant(staff.tenant_id) as conn:
             return await service.reschedule(
-                conn, request.app.state.outbound, booking_id, _aware(body.starts_at)
+                conn, request.app.state.outbound, booking_id, _aware(body.starts_at),
+                team.actor_of(staff),
             )
     except service.BookingError as error:
         raise _refuse(error) from error
     except LookupError as error:
         raise HTTPException(status_code=404, detail="booking not found") from error
+
+
+@router.post("/bookings/{booking_id}/assign")
+async def assign(
+    booking_id: UUID, body: Assignment, request: Request, staff: Staff = Depends(current_staff)
+) -> dict:
+    try:
+        async with request.app.state.db.tenant(staff.tenant_id) as conn:
+            found = await team.assign(
+                conn, "booking", booking_id, body.user_id, team.actor_of(staff)
+            )
+    except team.TeamError as error:
+        raise HTTPException(status_code=422, detail=str(error)) from error
+    if not found:
+        raise HTTPException(status_code=404, detail="booking not found")
+    return {"assigned_to": str(body.user_id) if body.user_id else None}
 
 
 @router.get("/services")

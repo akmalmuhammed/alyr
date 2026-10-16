@@ -5,15 +5,21 @@ from uuid import UUID
 from fastapi import APIRouter, Depends, HTTPException, Request
 from pydantic import BaseModel, Field
 
+from alyr.core import team
+from alyr.core.auth import Staff
 from alyr.core.normalise import fmt_qar
 from alyr.modules.orders import service
-from alyr.routes.deps import current_tenant
+from alyr.routes.deps import current_staff, current_tenant
 
 router = APIRouter(prefix="/api", tags=["orders"])
 
 
 class StatusChange(BaseModel):
     status: str
+
+
+class Assignment(BaseModel):
+    user_id: UUID | None = Field(description="A team member, or null for nobody")
 
 
 class NewProduct(BaseModel):
@@ -37,18 +43,32 @@ async def orders(request: Request, tenant_id: UUID = Depends(current_tenant)) ->
 @router.post("/orders/{order_id}/status")
 async def change_status(
     order_id: UUID, body: StatusChange, request: Request,
-    tenant_id: UUID = Depends(current_tenant),
+    staff: Staff = Depends(current_staff),
 ) -> dict:
     try:
-        async with request.app.state.db.tenant(tenant_id) as conn:
+        async with request.app.state.db.tenant(staff.tenant_id) as conn:
             found = await service.set_status(
-                conn, order_id, body.status, request.app.state.outbound
+                conn, order_id, body.status, request.app.state.outbound, team.actor_of(staff)
             )
     except service.OrderError as error:
         raise HTTPException(status_code=422, detail=str(error)) from error
     if not found:
         raise HTTPException(status_code=404, detail="order not found")
     return {"status": body.status}
+
+
+@router.post("/orders/{order_id}/assign")
+async def assign(
+    order_id: UUID, body: Assignment, request: Request, staff: Staff = Depends(current_staff)
+) -> dict:
+    try:
+        async with request.app.state.db.tenant(staff.tenant_id) as conn:
+            found = await team.assign(conn, "order", order_id, body.user_id, team.actor_of(staff))
+    except team.TeamError as error:
+        raise HTTPException(status_code=422, detail=str(error)) from error
+    if not found:
+        raise HTTPException(status_code=404, detail="order not found")
+    return {"assigned_to": str(body.user_id) if body.user_id else None}
 
 
 @router.get("/products")

@@ -15,6 +15,7 @@ from alyr.routes import auth as auth_routes
 from alyr.routes import bookings as bookings_routes
 from alyr.routes import inbox, ledger, orders, pay, simulator, store, whatsapp_webhook
 from alyr.routes import jobs as jobs_routes
+from alyr.routes import team as team_routes
 from alyr.routes import workspace as workspace_routes
 from alyr.routes.deps import require_module, require_module_for_slug
 
@@ -58,6 +59,7 @@ def create_app() -> FastAPI:
     app.include_router(store.router, dependencies=[Depends(require_module_for_slug("orders"))])
     app.include_router(jobs_routes.router)
     app.include_router(inbox.router, dependencies=[Depends(require_module("inbox"))])
+    app.include_router(team_routes.router)
     app.include_router(auth_routes.router)
     app.include_router(
         bookings_routes.public, dependencies=[Depends(require_module_for_slug("bookings"))]

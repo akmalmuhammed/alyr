@@ -33,6 +33,7 @@ Status: **Accepted** (in force), **Proposed** (waiting for the founder), **Super
 | D-025 | The public site uses the playbook's words on the design system's look | Proposed |
 | D-026 | The homepage is about ALYR the company; ALYR Chat has its own page | Accepted |
 | D-027 | One workspace for every product, driven by a catalogue; ALYR has a back office | Accepted |
+| D-028 | Every item has one person responsible, and the team's work is on the record | Accepted |
 
 ---
 
@@ -379,3 +380,31 @@ A shop manages everything from one ALYR workspace at `/app`. There is no separat
 **Built for phase B.** Self-serve sign-up, connecting a shop's own WhatsApp number (Embedded Signup, after Meta approval), billing on switch-on (ALY-35) and a payment provider connection all attach to points that now exist: `admin_create_business` becomes the sign-up path, connections gain real "connect" actions, and enabling a product gains a price step.
 
 **Not built.** Sign-up, billing, price preview, real connect buttons, per-role permissions inside a module, live updates, and a customers screen. The workspace screens inside the shell are the existing ones, embedded.
+
+## D-028 · Every item has one person responsible, and the team's work is on the record
+**Date** 16 Oct 2026 · **Status** Accepted (founder, 16 Oct: "implement this thoughtfully"; follows the discussion of worker-level accountability and revenue models) · Linear ALY-72
+
+**Why.** The owner's real worry is not automation; it is "I can't see what my staff tell customers, who dropped the order, or whose WhatsApp the customers are really on." Moving staff off personal phones onto one shop number, with every conversation, order, booking and credit account tied to a named person, is visible value on day one. It is also why seats stay included in the price (D-017): accountability only works if every worker has their own sign-in.
+
+**What is built.**
+
+| Part | How it works |
+|---|---|
+| One person responsible | Conversations (already), orders, bookings and credit accounts each have `assigned_to`. An order or booking starts with whoever looks after that customer's chat. Whoever acts on an item nobody has (replies, moves an order, marks a visit) becomes responsible. Anyone on the team can hand an item to someone else on the team, and to nobody outside it. |
+| A record nobody can edit | `activity` holds who did what: took, assigned (to and from), closed with its outcome, reopened, order placed, moved, paid, booking made, cancelled, came or no-show, reminder sent. The app can add rows and read them, never change or remove them, like the consent log and staff notes. The inbox thread shows it between the messages. |
+| How a conversation ended | Closing asks: sold, booked, answered, or lost. Lost asks why: price, not available, stopped replying, went elsewhere, other. Closing without an answer still works, so the assistant and older screens are not broken. |
+| Team report | `/api/team/performance` for today, 7 or 30 days, in the shop's own calendar. Per person: open conversations, customers waiting (last message from them, unanswered for 10 minutes), replies, median time to first answer, closed by outcome, orders and sales they look after, visits that happened or were missed. Customers waiting with nobody on them are counted separately and shown as an alert. Owners and admins see everyone; an agent sees only their own numbers. |
+| Signed replies | A shop setting adds the sender's first name under each staff reply ("— Yusuf"), so the customer knows who is looking after them. Off by default; only an owner or admin can turn it on. Stored in `shop_settings`, which row-level security protects, because `tenants` is shared and read-only to the app. |
+
+**How the numbers are defined.**
+- *Waiting*: an open conversation whose newest message (not counting blocked ones) is from the customer and older than 10 minutes.
+- *Time to first answer*: for each staff reply, the time since the first customer message after the last answer of any kind. An answer from the assistant counts as an answer, so this measures how long customers are left with nothing, not how long until a person speaks.
+- *Sales*: orders placed in the period, not cancelled, by the person responsible for the order.
+- Messages now record the replying person's ID (`messages.sent_by_user`), so reply times belong to someone even if they rename themselves.
+
+**Not built yet (next).** Routing new conversations by turn and by language, moving a conversation on when nobody answers in time, shifts, field workers' "on the way" and "done" updates, and commission from attributed sales flowing into Payroll.
+
+**Watch.** A league table can turn colleagues against each other. The report lists people by name, not by rank, and shows workload (open, waiting) next to results.
+
+### Note on Meta pricing, checked 16 Oct 2026
+Several third-party sources (Techpoint, ChatArmin, Techweez, Nordflux) report that from 1 October 2026 Meta bills service replies inside the 24-hour window beyond about 1,000 a month per number. Meta's own pricing page, as fetched today, still says all non-template messages are free within an open customer service window and lists only market rate changes for 1 October. Treat the change as unconfirmed. The master plan's pricing line stands until Meta's rate card or a Meta notice says otherwise. If it is confirmed, D-017's prices need a message allowance or a pass-through at cost.
