@@ -4,7 +4,7 @@ How the work is divided, and the one goal for this stage, are in [operating-mode
 
 Read this first in a new session, on any machine. It is the hand-over note between sessions: what works, what is next, and what is waiting on the founder. Update it in the same pull request as the work. Linear (team `Alyrtech`, project `Alyr Launch`) holds the detail; this page is the summary.
 
-Last updated: 17 Oct 2026, after prices set per client from the back office (ALY-78, D-032).
+Last updated: 17 Oct 2026, after the 2026 homepage was built for review (ALY-56, D-033), and prices set per client from the back office (ALY-78, D-032).
 
 ## What works today
 
@@ -23,7 +23,7 @@ Last updated: 17 Oct 2026, after prices set per client from the back office (ALY
 | Sign-in by one-time code, sessions, team and roles | Built; codes are emailed through Resend once `ALYR_EMAIL_API_KEY` is set (D-029). Until then codes only work locally | `core/auth.py`, D-022 |
 | Weekly result report to the owner: one section per product, Sunday 9:00 shop time, REPORT in the chat | Built; API only, no workspace screen yet; the `weekly_report` template must be approved on Meta | `modules/report.py`, `modules/*/report.py`, D-030 |
 | Bookings: services, opening hours, free times, book, move, cancel, reminders | Built: customer booking page at `/b/{slug}` and a workspace Bookings tab. One customer at a time per shop; no deposits | `modules/bookings/`, `apps/web/app/(product)/b/` |
-| ALYR public site, English and Arabic: company homepage and the ALYR Chat product page | **Live at https://alyr.qa** (company-first version, D-026, published 12 Oct). Merged since and not yet published: the how-it-works figure and the list of what is built on `/chat` (ALY-71) | `apps/web/app/_site/`, `docs/brand.md` |
+| ALYR public site, English and Arabic: company homepage and the ALYR Chat product page | **Live at https://alyr.qa** (company-first version, D-026, published 12 Oct). Merged since and not yet published: the how-it-works figure and the list of what is built on `/chat` (ALY-71). **New homepage built for review (ALY-56, D-033), not merged or published:** product first, a working order page in the hero, the price (from QAR 449), the money-back first month, contact by email (hello@alyr.qa), light and dark, motion. Design notes in `docs/site-redesign/` | `apps/web/app/_site/`, `docs/brand.md` |
 | Workspace shell at `/app`: navigation from the shop's products, home dashboard with setup checklist, products (switch on and off), connections, "ask ALYR"; product catalogue in `catalog.py` | Built (D-027) | `apps/api/src/alyr/catalog.py`, `core/workspace.py`, `apps/web/app/(product)/app/` |
 | Team accountability: one person responsible for every conversation, order, booking and credit account; an uneditable activity record shown in the inbox; closing records sold, booked, answered or lost and why; team report per person (waiting, first-answer time, outcomes, sales); signed replies | Built (D-028) | `apps/api/src/alyr/core/team.py`, `routes/team.py`, `apps/web/app/(product)/_workspace/Team.tsx` |
 | Customer pages from chat links (order `/s/`, booking `/b/`, payment `/pay/`, tracking `/t/`) in the workspace design, light and dark, English and Arabic, phone first | Built (ALY-73) | `apps/web/app/(product)/_customer/` |
@@ -61,13 +61,13 @@ Tests: 245, all passing. CI runs api, web and a secrets scan on every pull reque
 | WhatsApp Business Tools MCP | Optional. Connector URL `https://mcp.facebook.com/whatsapp_business_tools`; lets a session register the number, create templates and set the webhook. Beta, gradual rollout. |
 | Email at alyr.qa (ALY-74) | Set up Cloudflare Email Routing and a Resend account, put the key in `apps/api/.env`. Steps in D-029 (about 20 minutes, free). |
 | Sign-in choice | Built as our own (D-022, proposed). Say so if you want a hosted service instead. |
-| Prices | Confirm D-017 (QAR 490 / 890, seat 40, setup 2,500). |
+| Prices and the first month | Decided 16 Oct (D-033): from QAR 449 a month, setup from QAR 1,500 quoted at the visit, month to month, first month's subscription back if the agreed result is missed. Before the new homepage is published: write those terms into the customer agreement, and say whether the back office's draft setup of QAR 2,500 (D-032) should start lower. |
 | Company registration | D-018 is proposed, not accepted. |
 | Others | Payment provider applications (ALY-5), startup credits (ALY-55), lawyer on data location (ALY-51), an Arabic reviewer, two alpha businesses. |
 
 ## Known gaps and risks
 
-- The public site is live with no contact address and unreviewed Arabic. Several product claims on it describe what is built on the simulator, not what runs live. See `docs/brand.md`.
+- The public site is live with no contact address and unreviewed Arabic (the new homepage, once published, gives hello@alyr.qa). Several product claims on it describe what is built on the simulator, not what runs live. See `docs/brand.md`.
 - Bookings: one customer at a time per shop; services and opening hours can only be changed through the API; staff cannot move a booking or add a walk-in from the screen.
 - On the founder's laptop Windows blocks Python's compiled database driver, so the API and its tests run through `scripts/api-in-docker.sh`.
 

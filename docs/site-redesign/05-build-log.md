@@ -33,6 +33,43 @@ All ten sections are built in one pass, because the shared pieces (copy types, c
 - **Arabic digits.** Western digits for money and times everywhere, including the drawn tracking and booking pages, although the product's own `/t/` and `/b/` pages print Eastern digits through `Intl` `ar-QA` (a product inconsistency, see 03 C8).
 - **Capture script.** `baseline/shoot.mjs` now finishes running CSS animations before a full-page capture: Edge repainted the headline's width animation from its first frame in captures beyond the viewport.
 
-## Open questions
+## 17 Oct, polish after the first review (commit 2)
 
-(filled in as they come)
+Every section checked in both languages at 1440 and 390, light and dark, and with reduced motion. What changed:
+
+- **Phones.** The hero's record card sits under the phone up to 62 rem instead of being hidden. The Carbon band's figures are shorter phones with the shop's strip below them, so nothing is cropped empty. The trust section's English/Arabic pair is a horizontal scroll on phones, so its entrance there is a fade only (a slide fought the scroll snap). The fold planes in the Carbon band are clipped (`overflow: clip`): they pushed the page sideways on phones. Checked: no horizontal scroll at 390 in both languages, and at 320 in Arabic.
+- **Captions** run inline with their separators, instead of wrapping as blocks. `rich()` inside a flex row lost or doubled the spaces around ALYR, so its pieces are wrapped in spans.
+- **Arabic headings are not split.** SplitText left the full stop alone on a line after the `<bdi>` around "ALYR Chat", and splitting Arabic into characters is ruled out by section 9 anyway. Arabic headings rise and unclip as one block; English headings rise line by line behind a mask. «لـ ALYR» and «بـ ALYR» use a no-break space.
+- **Accessibility.** axe flagged the trust pair as a scrollable region without focus: it is now a focusable group with a name and a focus ring.
+- **Contact states.** The three states were built and looked at with temporary builds: WhatsApp (test number 97400000000, never committed), email (the default, hello@alyr.qa) and pending (no address: the buttons go and the page says the line opens soon). The temporary builds and their servers are gone.
+- **Sticky phone bar** shows once the hero's button has scrolled away and stays hidden from the closing call onwards.
+
+## 17 Oct, performance and the social card (commit 3)
+
+- **First Lighthouse run: performance 85, LCP 3.8 s.** Causes, in order: about 40 ScrollTriggers created at start, SplitText measuring every heading at once, the GSAP chunk loading during the first screen, a 45° clip wipe on the hero record, three Arabic weights and the mono font preloaded on every page.
+- **Fixes.** One IntersectionObserver adds `is-in` to everything that arrives when read; ScrollTrigger is kept for the two scrubbed rules only (the band's progress line and the how-it-works rail). Headings are split when they come near the screen, not at start. The choreography chunk loads after the window's `load` event, when the browser is idle. The hero record slides with transform and opacity only. Arabic loads 400 and 600 (500 fell back to 400 in practice). The mono font is not preloaded.
+- **Tried and reverted: a font preload per language.** Turbopack shares font preloads across the three root layouts and names font files by their content, so a per-language font module downloaded Arabic twice. Back to one `document.tsx`.
+- **Final numbers** (production build served locally, Lighthouse mobile, simulated throttling): `/` performance 92, 92, 92 over three runs; `/ar` 93, 90, 92; accessibility, best practices and SEO 100 on both; LCP 3.2 to 3.3 s; FCP 1.4 s; CLS 0.008 or less; total blocking time 30 to 180 ms. The live alyr.qa scores 90 with LCP 3.4 s on the same machine, so the new page is a little faster than the old one, but LCP is still above the brief's 2.5 s. The LCP element is the hero headline; what is left is font download time under simulated 4G.
+- **JavaScript added:** about 48 KB gzipped (190.3 KB against the live site's 142.4 KB, not counting Cloudflare's beacon). The GSAP chunk is 48.4 KB and arrives after `load`, so the first screen does not wait for it.
+- **axe-core** (installed outside the repo, `C:		ools`): zero violations on `/` and `/ar`, at 1440 and 390, light and dark, before and after scrolling. `/chat` has two old findings (contrast of the dim statement words, heading order) that this branch did not touch.
+- **Social card** now uses the brand's type: Instrument Sans SemiBold and IBM Plex Mono as TTF files in `app/_site/fonts/`, taken from the design-system branch `codex/alyr-native-foundation` (OFL, not merged). The default font in `next/og` spaced the headline unevenly.
+
+## 17 Oct, close-out
+
+- Rebased on `main` after ALY-78 merged (D-032 was taken, so this branch's decision is **D-033**).
+- Docs: D-033 in `docs/decisions.md` (the 16 Oct decisions and the founder's table from `00`), the Prices row in `docs/status.md` replaced, `docs/brand.md` (new extensions, the motion system, font files), the lane brief's "Now".
+- Final screenshots in `shots/`, taken from the production build. Full-page captures show the composed end state (see the capture script). On wide screens the Carbon band's figure is sticky, so a full-page capture shows it once beside the first module and leaves the rest of the column empty; `home-en-1440-story-payment.png` and `home-ar-1440-story-inbox.png` show it in place at two steps, and the reduced-motion capture shows every module with its own figure.
+- Not committed: `baseline/*.png`, `shots/*.png`, `_playbook-extract.txt`.
+
+## Open questions for the founder
+
+1. **Money-back terms.** The page promises the first month's subscription back if the agreed result is missed. That needs to be in the customer agreement before the page goes live.
+2. **Arabic review** (ALY-66). Every Arabic line on the page is ours, not a native reviewer's.
+3. **hello@alyr.qa.** Confirm it forwards to you (D-029) before the page shows it as the only way in.
+4. **WhatsApp number.** When it exists, set `NEXT_PUBLIC_ALYR_WHATSAPP` and every call to action becomes "Message us on WhatsApp".
+5. **Setup price.** The page says setup from QAR 1,500; the back office's draft default is QAR 2,500 (D-032).
+6. **"We add nothing" on WhatsApp fees.** Third-party sources say Meta bills service replies beyond about 1,000 a month per number from 1 Oct 2026; Meta's own page did not say so when D-028 was written. The page's line (Meta bills its fees directly, ALYR adds nothing) still holds either way, but check before publishing whether any "free" wording needs to go.
+7. **"When you need more."** The custom work below the dashed rule (more products, a website, connecting other tools): confirm you want to offer it, and whether any of it needs a licence.
+8. **Left out until true** (from `00` and `02`, marked [F] or [G]): clinics and salons as "soon", "your number connected to WhatsApp", "payment account connected", the card fee line, the "Can I keep my number?" question, the licensed provider sentence, "your customer list belongs to you", a go-live date, support hours, Privacy and Terms links, the CR number.
+9. **Brand.** The lane brief says no new branded material until ALY-61 picks a system. This was built at your request in the current ALYR system; ALY-61 is still open.
+10. **Publish.** Nothing is merged or deployed. The go-ahead is yours.

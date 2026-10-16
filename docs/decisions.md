@@ -38,6 +38,7 @@ Status: **Accepted** (in force), **Proposed** (waiting for the founder), **Super
 | D-030 | A weekly result report to the owner, one section per product | Accepted |
 | D-031 | Self-serve onboarding: sign up, create the business, start from a preset, try it on a private test line | Accepted |
 | D-032 | Prices are set per client from the back office: a price list, a quote per client, published live to the owner | Accepted |
+| D-033 | Product first and paid from the first customer; the homepage leads with what ALYR sells today | Accepted |
 
 ---
 
@@ -534,3 +535,28 @@ A new owner can create their own business at `/start` without ALYR's back office
 - invoices and taking payment;
 - a separate price list for partners;
 - telling the owner by email or WhatsApp that their price is ready.
+
+## D-033 · Product first and paid from the first customer; the homepage leads with what ALYR sells today
+**Date** 16 Oct 2026 · **Status** Accepted (founder, 16 Oct, in conversation; recorded in `docs/site-redesign/00-founder-decisions.md`) · Linear ALY-56 · Updates D-017, D-025 and D-026
+
+**The decision.** ALYR is the company that sets up and runs the tech for owner-run businesses. It sells a product first: ALYR Chat. Services appear only as part of the subscription, not as a business of their own (this narrows D-026, which put six services on the homepage). There is no free plan and no free trial; the first month is paid, with the money back if an agreed result is missed. The founder sells in person.
+
+**What the public site says, as the founder decided it:**
+
+| Topic | Decision | On the page |
+|---|---|---|
+| Positioning | Product first: ALYR Chat is the first product; services only within the subscription | The homepage is about ALYR and leads with what is sold today |
+| Monthly price | From QAR 449 a month (the field-sold plan). No free plan, no free trial | "From QAR 449 a month" |
+| Setup fee | Varies by customer; a starting figure is shown | "Setup from QAR 1,500, quoted at your visit" |
+| First month | Paid, money back if an agreed result is missed. The refund is the first month's subscription, not the setup fee. One result, counted in the workspace where the owner sees it too, over the first 30 days after going live. The owner's part: share the chat link and QR codes in the first week | "Your first month, with your money back" |
+| Term | Month to month; stop at the end of any month | "Month to month. Stop at the end of any month." |
+| Founder on the page | Left out: no name, no photo | The trust section speaks as ALYR |
+| Contact | hello@alyr.qa (Cloudflare Email Routing, D-029); the WhatsApp number comes later | The email state until `NEXT_PUBLIC_ALYR_WHATSAPP` is set |
+
+**Why.** The founder has the runway for a product-first path and wants revenue and real commitment from the start, not free sign-ups. A price on the page matches what he says at the counter; no competitor in Qatar shows one (`docs/site-redesign/02-messaging.md` §1). A money-back first month replaces the logo wall ALYR cannot have.
+
+**Conditions before the homepage is published.**
+- The money-back terms are written into the customer agreement. Qatar penalises misleading claims, so the promise goes live only once the agreement says it (a check at publish time, not a code switch).
+- The Arabic is reviewed by a native speaker (ALY-66).
+
+**Relation to other decisions.** D-017's 490 / 890 plans are superseded for field sales by "from QAR 449". D-025's held-back items stay held back (no "live in 48 hours", no free pilot). D-032 starts the back office's draft quote at a setup of QAR 2,500 per business; the page says "from QAR 1,500, quoted at your visit", so a quote can be lower than the draft. The founder should align the default or accept the gap.

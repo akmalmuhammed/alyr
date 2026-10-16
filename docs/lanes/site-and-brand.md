@@ -21,8 +21,10 @@ Anything else belongs to another lane. If a task needs it, keep the change small
 
 ## Now (update this section in the same pull request as the work)
 
-Last updated 13 Oct 2026.
+Last updated 17 Oct 2026.
 
+- **Built for review, not merged or published (ALY-56, D-033):** the 2026 homepage on branch `aly-56-homepage-2026`. Product first, ten sections, one sample business (Qirfa Bakery) on every figure, the price and the money-back first month, contact by email (hello@alyr.qa) with WhatsApp and "opens soon" states built, light and dark, motion (GSAP after the load event, CSS before it). The shared header, contact section, footer and button changed on `/chat` too; `/chat`'s own sections did not. Design notes, build log and the capture script are in `docs/site-redesign/`.
+- Before the new homepage can be published: the money-back terms in the customer agreement, the Arabic review (ALY-66), the founder's go-ahead.
 - **Merged, not published (ALY-71):** the ALYR Chat page has a moving "how it works" figure (`FlowDiagram.tsx`: a customer's message through WhatsApp into ALYR, what ALYR does in the background, the team's screen, the reply), a list of everything built today, and a sixth demo tab for credit accounts. The homepage teaser names what the product does. The live site shows the 12 Oct version until the founder says publish.
 - The site has two pages in each language: a company homepage (`/`) and the ALYR Chat product page (`/chat`), decision D-026. The R in the wordmark was redrawn on 12 Oct; the design system's master files still carry the old one.
 - Two brand systems disagree and the founder has not chosen (ALY-61). Do not produce new branded material until that is decided.
