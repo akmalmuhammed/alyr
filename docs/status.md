@@ -51,6 +51,7 @@ Tests: 207, all passing. CI runs api, web and a secrets scan on every pull reque
 
 | Item | Detail |
 |---|---|
+| WhatsApp backup route (ALY-77) | If the CR or Meta's review is slow: researched options in `docs/company/whatsapp-backup-plan/`. Recommended backup for a first pilot: the shop opens its own provider account (for example 360dialog, about €49 a month) and connects it to ALYR. Choose, and say whether ALYR pays that fee for pilots. Not built. |
 | Meta values | Done 12 Oct. `apps/api/.env` holds the five values (app `alyr`, id 1071845795713841, test number id 1431880183331516). The webhook is verified, the app is subscribed to the `messages` field and to the WhatsApp account. The access token is a system-user token (`alyradmin`, never expires, `whatsapp_business_messaging` and `whatsapp_business_management`), set 12 Oct. |
 | Domain and tunnel | Done 8 Oct. `alyr.online` is on Cloudflare. Tunnel `alyr-dev` publishes only `/webhooks/whatsapp` and `/health` of the laptop's API at `https://api.alyr.online`; everything else answers 404 from outside. Config is in `~/.cloudflared/config.yml` on the laptop. Start it with `cloudflared tunnel run alyr-dev`. |
 | WhatsApp Business Tools MCP | Optional. Connector URL `https://mcp.facebook.com/whatsapp_business_tools`; lets a session register the number, create templates and set the webhook. Beta, gradual rollout. |
