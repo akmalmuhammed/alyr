@@ -163,8 +163,9 @@ async def change(body: Change, request: Request, staff: Staff = Depends(current_
 async def finish(request: Request, staff: Staff = Depends(current_staff)) -> dict:
     _owner(staff)
     async with request.app.state.db.tenant(staff.tenant_id) as conn:
+        cleared = await onboarding.end_test(conn, staff)
         await onboarding.update(conn, step="", finished=True)
-    return {"finished": True}
+    return {"finished": True, "test_bookings_cancelled": cleared}
 
 
 @router.get("/test-chat")

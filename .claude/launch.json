@@ -2,6 +2,7 @@
   "version": "0.0.1",
   "configurations": [
     { "name": "api", "runtimeExecutable": "uv", "runtimeArgs": ["run", "--directory", "apps/api", "uvicorn", "alyr.main:app", "--port", "8000"], "port": 8000 },
-    { "name": "web", "runtimeExecutable": "pnpm", "runtimeArgs": ["--dir", "apps/web", "dev"], "port": 3100 }
+    { "name": "web", "runtimeExecutable": "pnpm", "runtimeArgs": ["--dir", "apps/web", "dev"], "port": 3100 },
+    { "name": "web-preview", "runtimeExecutable": "pnpm", "runtimeArgs": ["--dir", "apps/web", "exec", "next", "dev", "-p", "3101"], "env": { "ALYR_DIST_DIR": ".next-preview" }, "port": 3101 }
   ]
 }

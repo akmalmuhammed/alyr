@@ -212,6 +212,31 @@ def test_a_test_booking_goes_through_the_real_booking_page(client):
     assert reminder_jobs(tenant) == 1
 
 
+def test_a_customer_who_writes_in_arabic_gets_the_confirmation_in_arabic(client):
+    _, slug, _ = new_business(client)
+    greeting = client.post(f"{BASE}/test-chat", json={"text": "مرحبا"}).json()["messages"][-1]
+    assert greeting["body"].startswith("أهلاً بك في حلاق السد")
+    assert book_from_test_line(client, slug).status_code == 200
+    last = client.get(f"{BASE}/test-chat").json()["messages"][-1]
+    assert last["body"].startswith("تم تأكيد حجزك") and "قص شعر" in last["body"]
+
+
+def test_finishing_clears_the_test_so_the_workspace_starts_clean(client):
+    tenant, slug, _ = new_business(client)
+    client.post(f"{BASE}/test-chat", json={"text": "hello"})
+    assert book_from_test_line(client, slug).status_code == 200
+    unanswered = {c["key"]: c for c in client.get("/api/workspace/home").json()["cards"]}
+    assert unanswered["unanswered"]["value"] == 1
+
+    assert client.post(f"{BASE}/finish").json() == {"finished": True, "test_bookings_cancelled": 1}
+    cards = {c["key"]: c for c in client.get("/api/workspace/home").json()["cards"]}
+    assert cards["unanswered"]["value"] == 0
+    statuses = owner_sql("select status from bookings where tenant_id = $1", tenant)
+    assert [r["status"] for r in statuses] == ["cancelled"]
+    # The history is kept: the test chat is still there to look back at.
+    assert client.get(f"{BASE}/test-chat").json()["messages"]
+
+
 def test_reminders_can_be_switched_off(client):
     tenant, slug, _ = new_business(client)
     client.patch(f"{BASE}/state", json={"reminders": False})

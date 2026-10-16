@@ -23,6 +23,19 @@ def booking_link(web_url: str, slug: str, contact_id: UUID) -> str:
     return f"{web_url}/b/{slug}?c={contact_id}"
 
 
+async def _arabic(
+    conn: asyncpg.Connection, contact: asyncpg.Record, message: InboundMessage
+) -> bool:
+    """Arabic once the customer writes in Arabic, and remembered, so the confirmation and
+    the reminder that come later are in Arabic too (the ledger chat does the same)."""
+    if contact["lang"] == "ar":
+        return True
+    if has_arabic(message.text):
+        await conn.execute("update contacts set lang = 'ar' where id = $1", contact["id"])
+        return True
+    return False
+
+
 async def maybe_handle(
     conn: asyncpg.Connection,
     tenant_id: UUID,
@@ -34,7 +47,7 @@ async def maybe_handle(
     """Answer if this message is about a booking; otherwise return None."""
     if contact["role"] == "staff":
         return None
-    arabic = contact["lang"] == "ar" or has_arabic(message.text)
+    arabic = await _arabic(conn, contact, message)
 
     if message.reply_id.startswith(CANCEL_PREFIX):
         try:
@@ -119,7 +132,7 @@ async def greeting(
     conn: asyncpg.Connection, tenant_id: UUID, contact: asyncpg.Record, message: InboundMessage
 ) -> list[OutboundMessage]:
     """The menu a booking business answers with when nothing more specific applies."""
-    arabic = contact["lang"] == "ar" or has_arabic(message.text)
+    arabic = await _arabic(conn, contact, message)
     shop = await conn.fetchrow("select name, name_ar from tenants where id = $1", tenant_id)
     name = shop["name_ar"] if arabic and shop["name_ar"] else shop["name"]
     if arabic:

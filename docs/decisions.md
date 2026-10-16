@@ -484,6 +484,12 @@ A new owner can create their own business at `/start` without ALYR's back office
 
 **Smaller changes that came with it.** A business that takes bookings but has no credit accounts answers a greeting with its own menu (book, my booking, prices). A product counts as on when any of its modules is on. Services can be renamed and repriced. Booking reminders can be switched off.
 
+**The screens** (`/start`, one page). On a phone: one column, a progress bar, the action pinned at the bottom. On a laptop: the step rail, the work, and from 1280 px a live WhatsApp preview of what the owner is setting up (their greeting, their price list, a reminder, then the test chat itself). English and Arabic with right-to-left layout, light and dark. A refresh never loses the owner's place: before the business exists, the sign-up so far is kept in the tab (the token is single-use); after, the step is saved on the business.
+
+**Ending the test.** When the owner opens their workspace, their test booking is cancelled, so its time is free and no reminder goes out, and the test chat is closed, so the inbox does not start with an unanswered chat. Both stay in the history. The go-live list says so.
+
+**A customer who writes in Arabic is remembered as Arabic** by the bookings chat, as the ledger chat already did, so the confirmation and the reminder that follow are in Arabic too.
+
 **Sign-up is closed outside a local machine** (`ALYR_SIGNUP_OPEN`) until the founder decides to open it. Existing staff can always sign in through it.
 
 **Not built yet.** Sign-in by WhatsApp code, more than one customer at a time, the advisor's tablet mode, the restaurant, wholesale and document-office paths, connecting the shop's own number (needs ALYR's Tech Provider approval, ALY-39), and taking payment for the plan.
