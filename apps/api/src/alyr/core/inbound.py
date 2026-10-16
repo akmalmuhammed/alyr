@@ -5,7 +5,7 @@ from uuid import UUID
 
 from alyr.channels.base import InboundMessage
 from alyr.channels.meta import DeliveryStatus, UserIdUpdate
-from alyr.core import consent, identity, jobs
+from alyr.core import consent, identity, jobs, team
 from alyr.core.outbound import Outbound
 from alyr.db import Database
 from alyr.modules import router
@@ -87,11 +87,19 @@ class InboundHandler:
             # A new message reopens a closed conversation. While a person is handling
             # the customer, the assistant stays quiet for typed messages; a tapped
             # button still works, so "Pay now" never goes unanswered.
+            was_closed = await conn.fetchval(
+                "select inbox_status = 'closed' from contacts where id = $1", contact["id"]
+            )
             paused = await conn.fetchval(
                 "update contacts set inbox_status = 'open' where id = $1 "
                 "returning assistant_paused",
                 contact["id"],
             )
+            if was_closed and contact["role"] == "customer":
+                # On the record, so a manager sees why a "sold" conversation is open again.
+                await team.record(
+                    conn, "conversation", contact["id"], "reopened", team.CUSTOMER, contact["id"]
+                )
             if reply is not None:
                 replies = [reply]
             elif paused and contact["role"] == "customer" and not message.reply_id:
