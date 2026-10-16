@@ -440,8 +440,9 @@ function Trust({ locale, other }: { locale: Locale; other: Locale }) {
             )}
             <p className="trust-closing">{rich(tr.closing)}</p>
           </div>
-          <figure className="trust-fig" aria-label={tr.figure.label} data-m>
-            <div className="pair">
+          <figure className="trust-fig" data-m>
+            {/* On phones the pair scrolls sideways, so it takes keyboard focus. */}
+            <div className="pair" tabIndex={0} role="group" aria-label={tr.figure.label}>
               {[locale, other].map((lang) => (
                 <div key={lang} className={`pair-item pair-${lang}`} dir={lang === "ar" ? "rtl" : "ltr"} lang={lang}>
                   <Phone className="pair-phone"><TrackScreen sample={copy[lang].home.sample} lang={lang} /></Phone>

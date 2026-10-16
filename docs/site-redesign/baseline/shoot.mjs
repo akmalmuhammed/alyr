@@ -232,9 +232,16 @@ async function main() {
         await evaluate(
           "document.querySelectorAll('[data-reveal]').forEach((n) => n.classList.add('is-in'));" +
             "document.querySelectorAll('[data-statement] [data-w]').forEach((w) => w.setAttribute('data-on', ''));" +
-            // A capture beyond the viewport can repaint running CSS animations from their first
-            // frame, so settle every finite one at its end state first.
-            "document.getAnimations().forEach((a) => { try { a.finish() } catch (e) {} })",
+            // A capture beyond the viewport restarted some CSS animations (the homepage
+            // headline's width settle) and painted them from an early frame. So the capture
+            // shows the composed end state instead: the homepage's `motion` class goes (its
+            // start states and entrances live under it), the two scroll-filled rules show
+            // full, and every other finite animation is finished, kept and removed.
+            "document.documentElement.classList.remove('motion');" +
+            "document.querySelectorAll('[data-fill],[data-rail-fill]').forEach((n) => { n.style.transform = '' });" +
+            "document.querySelectorAll('[data-rail-step]').forEach((n) => n.classList.add('is-on'));" +
+            "document.getAnimations().forEach((a) => { try { if (a.effect.getComputedTiming().endTime === Infinity) return; a.finish(); a.commitStyles(); a.cancel(); } catch (e) {} });" +
+            "document.head.insertAdjacentHTML('beforeend', '<style>*,*::before,*::after{transition:none!important}</style>')",
         );
       }
       await sleep(1100);

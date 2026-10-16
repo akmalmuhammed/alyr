@@ -409,7 +409,8 @@ main[data-page="home"] {
 
 /* ----------------------------------------------- 3.3 the Carbon band */
 .band { position: relative; color: var(--dark-text); }
-.band-fold { position: relative; height: clamp(3rem, 6vw, 5.5rem); --fold: clamp(3rem, 6vw, 5.5rem); --x: 62%; }
+/* the planes start outside their strip, so the strip clips them: nothing may widen the page */
+.band-fold { position: relative; overflow: clip; height: clamp(3rem, 6vw, 5.5rem); --fold: clamp(3rem, 6vw, 5.5rem); --x: 62%; }
 .band-fold i { position: absolute; inset: 0; background: var(--carbon); }
 .band-fold i:nth-child(1) { clip-path: polygon(0 0, 100% 0, 100% 46%, 0 46%); }
 .band-fold i:nth-child(2) { clip-path: polygon(0 calc(46% - 1px), var(--x) calc(46% - 1px), calc(var(--x) - var(--fold) * .54) 100%, 0 100%); }
@@ -604,6 +605,7 @@ main[data-page="home"] {
 .trust-fig { grid-column: 9 / -1; position: sticky; top: calc(var(--header) + 2rem); }
 .pair { position: relative; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 1rem; }
 .pair::before { content: ""; position: absolute; inset-block: -.75rem; inset-inline-start: 50%; width: 1px; border-inline-start: 1px dashed var(--line-strong); opacity: 0; }
+.pair:focus-visible { outline: 2px solid var(--focus); outline-offset: 6px; }
 .pair-phone { height: 30rem; }
 .pair-phone .d-main { padding-top: 14px; }
 
@@ -632,19 +634,22 @@ main[data-page="home"] {
   .hero-grid { grid-template-columns: minmax(0, 1fr); }
   .hero-copy, .hero-fig { grid-column: 1; grid-row: auto; }
   .hero-fig { justify-self: center; max-width: 30rem; margin-top: 2.5rem; }
-  .hero-stage { height: 44rem; }
-  .hero-record { top: auto; bottom: 0; }
+  /* the phone, then the order's record below it, tucked behind its lower edge */
+  .hero-stage { height: auto; display: grid; }
+  .hero-stage .hero-phone { position: relative; justify-self: end; width: min(20rem, 86%); height: 40.5rem; }
+  .hero-record { position: relative; top: auto; inset-inline-start: auto; justify-self: start; width: min(15.5rem, 78%); margin-top: -1.25rem; padding-top: 1.75rem; }
   .problem .head, .prows { grid-column: 1 / -1; position: static; }
   .story-text, .story-fig { grid-column: 1 / -1; }
   .story-step > * { grid-row: auto !important; }
   .story-fig { padding-top: 0; }
   .story-step + .story-step .story-fig { border-top: 0; }
   .story-text { padding-block: 2.25rem 1.25rem; }
-  .story-stage { height: 23rem; overflow: clip; place-items: start center; padding-top: 1.25rem; clip-path: polygon(0 0, 100% 0, 100% calc(100% - 2.5rem), calc(100% - 2.5rem) 100%, 0 100%); }
-  [dir="rtl"] .story-stage { clip-path: polygon(0 0, 100% 0, 100% 100%, 2.5rem 100%, 0 calc(100% - 2.5rem)); }
-  .sf-phone { height: 34rem; }
-  .sf-strip { bottom: 1.5rem; }
-  .sf-inbox .story-stage { place-items: start stretch; }
+  /* each module keeps its own figure: a shorter phone (a chat then shows its latest
+     messages, a page its top) and the shop's row below it, tucked under its edge */
+  .story-stage { height: auto; display: grid; justify-items: end; padding: .5rem 0 0; }
+  .sf-phone { width: min(17.5rem, 82%); height: 21rem; }
+  .sf-strip { position: relative; inset: auto; justify-self: start; width: min(18rem, 88%); margin-top: -1.25rem; }
+  .sf-inbox .story-stage { justify-items: stretch; }
   .also-cols { grid-template-columns: minmax(0, 1fr); }
   .also-cols li, [dir="rtl"] .also-cols li { padding: 1.25rem 0; }
   .also-cols li + li { border-inline-start: 0; padding-inline-start: 0; border-top: 1px solid var(--dark-line); }
@@ -694,17 +699,13 @@ main[data-page="home"] {
   .hero-facts li, [dir="rtl"] .hero-facts li { padding: .6875rem 0; }
   .hero-facts li + li, [dir="rtl"] .hero-facts li + li { border-inline-start: 0; padding-inline-start: 0; border-top: 1px solid var(--line); }
   .hero-fig { margin-top: 1.5rem; }
-  .hero-stage { height: 42rem; }
-  .hero-stage .hero-phone { width: min(19rem, 84%); height: 38rem; }
-  .hero-record { width: 13.5rem; }
+  .hero-stage .hero-phone { width: min(19rem, 86%); height: 38rem; }
   .prow { flex-direction: column; gap: .25rem; }
   .prow-when { order: -1; }
   .turn { font-size: 1.75rem; }
   .for { gap: .75rem 1rem; }
   .for-group { width: 100%; }
-  .story-stage { height: 21rem; }
-  .sf-phone { width: 16.5rem; }
-  .sf-strip { width: 15rem; inset-inline-start: 0; }
+  .sf-phone { height: 20rem; }
   .rail { grid-template-columns: minmax(0, 1fr); }
   .facts6 { grid-template-columns: minmax(0, 1fr); }
   .facts6 li:nth-child(n), [dir="rtl"] .facts6 li:nth-child(n) { border-inline-start: 0; padding: 1.25rem 0; }
@@ -825,6 +826,11 @@ main[data-page="home"] {
   .hero .hero-title .hl { white-space: nowrap; }
   :root:not([lang="ar"]).motion .hl > span { animation: hp-line var(--dur-4) var(--ease) both, hp-settle var(--dur-4) var(--ease) both; }
   :root:not([lang="ar"]).motion .hl + .hl > span { animation-delay: 90ms, 90ms; }
+}
+/* on phones the two pages sit in a snapping scroller, so they only fade in: sliding would fight the snap */
+@media (prefers-reduced-motion: no-preference) and (max-width: 53rem) {
+  .motion .trust-fig:not(.is-in) .pair-item:first-child, .motion .trust-fig:not(.is-in) .pair-item:last-child,
+  .motion[dir="rtl"] .trust-fig:not(.is-in) .pair-item:first-child, .motion[dir="rtl"] .trust-fig:not(.is-in) .pair-item:last-child { translate: none; }
 }
 @media (min-width: 62rem) {
   .hero .hero-title { font-size: min(var(--display), 6.1vw); }

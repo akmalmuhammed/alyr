@@ -32,7 +32,21 @@ export default function Choreography() {
     // Section headings rise line by line out of a mask. Lines only, never characters:
     // splitting Arabic into letters would break how they join. Screen readers get the
     // whole heading (aria: "auto"), and it splits again when the width or fonts change.
+    // Arabic headings are not split at all: the split put a full stop that follows
+    // "ALYR Chat" (in its <bdi>) on a line of its own. They rise whole, from a mask.
+    const arabic = root.lang === "ar";
     gsap.utils.toArray<HTMLElement>("[data-split]").forEach((heading) => {
+      if (arabic) {
+        gsap.fromTo(
+          heading,
+          { clipPath: "inset(0 0 100% 0)", y: 24 },
+          {
+            clipPath: "inset(0 0 -10% 0)", y: 0, duration: 0.72, ease: ARRIVE,
+            scrollTrigger: { trigger: heading, start: ONCE, once: true },
+          },
+        );
+        return;
+      }
       SplitText.create(heading, {
         type: "lines",
         mask: "lines",
