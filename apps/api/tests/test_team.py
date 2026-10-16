@@ -272,3 +272,12 @@ def test_the_record_cannot_be_rewritten_by_the_app(client):
     for sql in ("update activity set actor_name = 'Someone else'", "delete from activity"):
         with pytest.raises(asyncpg.InsufficientPrivilegeError):
             asyncio.run(tamper(sql))
+
+
+def test_a_customer_writing_again_reopens_the_conversation_on_the_record(client):
+    say(client, AHMED_PHONE, "hello")
+    contact_id = ahmed(client)["id"]
+    client.post(f"{INBOX}/{contact_id}/status", json={"status": "closed", "outcome": "sold"})
+    say(client, AHMED_PHONE, "One more thing")
+    assert thread(client, contact_id)["customer"]["status"] == "open"
+    assert actions(client, contact_id)[-1] == ("conversation", "reopened", "Customer")
