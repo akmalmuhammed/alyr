@@ -32,7 +32,8 @@ Checked 7 October 2026. Free tiers change often; re-check a row before relying o
 | Error tracking | Sentry Developer | 5,000 errors a month, 1 user | One seat; short history | Sentry Team | A second person needs access | Planned |
 | Product analytics | PostHog Free | 1 million events a month | None at our size | — | — | Planned |
 | Uptime checks | UptimeRobot or Better Stack Free | A handful of monitors | 5-minute checks, not 1-minute | Paid tier | A customer SLA exists | Planned |
-| Email (sign-in backup, invoices) | Resend Free | 3,000 emails a month, 100 a day | Daily cap | Resend Pro | Daily cap is hit | Planned |
+| Email in (akmal@, hello@ at alyr.qa) | Cloudflare Email Routing | Unlimited forwarding; 200 rules and destinations; 25 MiB per message (checked 16 Oct) | Forwarding only, no shared mailbox | Google Workspace (12 months free with Google for Startups) | A shared team inbox is needed | Chosen 16 Oct (D-029) |
+| Email out (sign-in codes; replies as @alyr.qa) | Resend Free, EU region | 3,000 emails a month, 100 a day, one domain (checked 16 Oct) | Daily cap | Resend Pro (USD 20 a month) | Daily cap is hit | Chosen 16 Oct (D-029) |
 | AI model | None in Product 1 (D-012) | — | Rule-based understanding only | A paid model tier, or cloud credits | Rule accuracy is not good enough, and ALY-51 is answered | Planned |
 | Payments | SADAD, SkipCash, Dibsy | No monthly fee on entry plans; a percentage per payment | Fees are the merchant's, paid on their own account | — | — | Planned |
 | Design | None; built in code | — | — | Figma Free | We need to hand designs to someone | — |

@@ -4,7 +4,7 @@ How the work is divided, and the one goal for this stage, are in [operating-mode
 
 Read this first in a new session, on any machine. It is the hand-over note between sessions: what works, what is next, and what is waiting on the founder. Update it in the same pull request as the work. Linear (team `Alyrtech`, project `Alyr Launch`) holds the detail; this page is the summary.
 
-Last updated: 16 Oct 2026, after order tracking, the customer pages redesign and the demo command (ALY-73).
+Last updated: 16 Oct 2026, after email for @alyr.qa (ALY-74, D-029).
 
 ## What works today
 
@@ -20,7 +20,7 @@ Last updated: 16 Oct 2026, after order tracking, the customer pages redesign and
 | Job queue with retries and dead letters | Built | `core/jobs.py` |
 | Consent, stop and start words, 24-hour window | Built | `core/consent.py`, `core/outbound.py` |
 | Shared inbox: human takeover, assignment, staff notes, saved replies | Built; no live updates or typing warning | `modules/inbox/`, D-021 |
-| Sign-in by one-time code, sessions, team and roles | Built; no email provider, so codes only work locally | `core/auth.py`, D-022 |
+| Sign-in by one-time code, sessions, team and roles | Built; codes are emailed through Resend once `ALYR_EMAIL_API_KEY` is set (D-029). Until then codes only work locally | `core/auth.py`, D-022 |
 | Bookings: services, opening hours, free times, book, move, cancel, reminders | Built: customer booking page at `/b/{slug}` and a workspace Bookings tab. One customer at a time per shop; no deposits | `modules/bookings/`, `apps/web/app/(product)/b/` |
 | ALYR public site, English and Arabic: company homepage and the ALYR Chat product page | **Live at https://alyr.qa** (company-first version, D-026, published 12 Oct). Merged since and not yet published: the how-it-works figure and the list of what is built on `/chat` (ALY-71) | `apps/web/app/_site/`, `docs/brand.md` |
 | Workspace shell at `/app`: navigation from the shop's products, home dashboard with setup checklist, products (switch on and off), connections, "ask ALYR"; product catalogue in `catalog.py` | Built (D-027) | `apps/api/src/alyr/catalog.py`, `core/workspace.py`, `apps/web/app/(product)/app/` |
@@ -31,14 +31,14 @@ Last updated: 16 Oct 2026, after order tracking, the customer pages redesign and
 | ALYR back office at `/ops`: every shop, help requests, create a shop and its owner | Built; ALYR staff only (`platform_admins`) | `routes/admin.py`, `apps/web/app/(product)/ops/` |
 | Demo page: chat simulator plus workspace tabs, now at `/whatsapp` | Built | `apps/web/app/(product)/whatsapp/page.tsx` |
 
-Tests: 189, all passing. CI runs api, web and a secrets scan on every pull request.
+Tests: 194, all passing. CI runs api, web and a secrets scan on every pull request.
 
 ## Next on the build side, in order
 
 1. **Bookable staff or resources (ALY-27),** so a salon or clinic can serve more than one customer at a time; then services and opening-hours screens.
 1. **Product screens on ALYR tokens**, so the workspace matches the public site.
 1. **Contacts and labels (ALY-53).**
-2. **Email provider for sign-in codes (part of ALY-18).** Needs research and the founder's choice; blocks any hosted environment.
+2. **Email provider for sign-in codes:** built (D-029). Waiting on the founder's Resend account and key.
 3. **Inbox leftovers (ALY-28):** live updates instead of polling, a warning when a colleague is typing.
 4. **Templates, the rest of ALY-20:** sending one from the inbox when the window is closed, buttons on the reminder template, and templates per customer account once shops connect their own number (ALY-39).
 5. **Messaging limits (ALY-41), Redis sessions (ALY-14).**
@@ -53,6 +53,7 @@ Tests: 189, all passing. CI runs api, web and a secrets scan on every pull reque
 | Meta values | Done 12 Oct. `apps/api/.env` holds the five values (app `alyr`, id 1071845795713841, test number id 1431880183331516). The webhook is verified, the app is subscribed to the `messages` field and to the WhatsApp account. The access token is a system-user token (`alyradmin`, never expires, `whatsapp_business_messaging` and `whatsapp_business_management`), set 12 Oct. |
 | Domain and tunnel | Done 8 Oct. `alyr.online` is on Cloudflare. Tunnel `alyr-dev` publishes only `/webhooks/whatsapp` and `/health` of the laptop's API at `https://api.alyr.online`; everything else answers 404 from outside. Config is in `~/.cloudflared/config.yml` on the laptop. Start it with `cloudflared tunnel run alyr-dev`. |
 | WhatsApp Business Tools MCP | Optional. Connector URL `https://mcp.facebook.com/whatsapp_business_tools`; lets a session register the number, create templates and set the webhook. Beta, gradual rollout. |
+| Email at alyr.qa (ALY-74) | Set up Cloudflare Email Routing and a Resend account, put the key in `apps/api/.env`. Steps in D-029 (about 20 minutes, free). |
 | Sign-in choice | Built as our own (D-022, proposed). Say so if you want a hosted service instead. |
 | Prices | Confirm D-017 (QAR 490 / 890, seat 40, setup 2,500). |
 | Company registration | D-018 is proposed, not accepted. |
