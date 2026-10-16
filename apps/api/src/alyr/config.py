@@ -34,6 +34,12 @@ class Settings(BaseSettings):
     meta_waba_id: str = ""
     meta_graph_version: str = "v21.0"
 
+    # Email ALYR sends (sign-in codes) goes through Resend (D-029). Empty key: no email
+    # is sent, and on a local machine the sign-in page shows the code instead.
+    email_api_key: str = ""
+    email_from: str = "ALYR <no-reply@alyr.qa>"
+    email_reply_to: str = "hello@alyr.qa"
+
 
 @lru_cache
 def get_settings() -> Settings:

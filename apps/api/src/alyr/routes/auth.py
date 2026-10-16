@@ -7,7 +7,7 @@ from fastapi import APIRouter, Depends, HTTPException, Request, Response
 from pydantic import BaseModel, Field
 
 from alyr.config import get_settings
-from alyr.core import auth
+from alyr.core import auth, mail
 from alyr.core.auth import Staff
 from alyr.routes.deps import current_staff
 
@@ -50,11 +50,19 @@ async def send_code(body: CodeRequest, request: Request) -> dict:
     except auth.TooManyCodes as error:
         raise HTTPException(status_code=429, detail=str(error)) from error
     answer: dict = {"sent": True}
+    if code is not None and mail.configured():
+        subject, text, html = mail.sign_in_message(code, auth.CODE_MINUTES)
+        try:
+            await mail.send(auth.clean_email(body.email), subject, text, html)
+        except mail.MailError as error:
+            raise HTTPException(
+                status_code=503, detail="the code could not be emailed; try again in a minute"
+            ) from error
     if settings.env == "local":
-        # No email provider is connected yet. On a developer's machine the code is
-        # handed back so the sign-in page can show it. Never outside local.
+        # On a developer's machine the code is also handed back, so the sign-in page can
+        # show it without an inbox. Never outside local.
         answer["dev_code"] = code
-    elif code is not None:
+    elif code is not None and not mail.configured():
         log.error("a sign-in code was created but no email provider is configured")
         raise HTTPException(status_code=503, detail="sign-in codes cannot be delivered yet")
     return answer

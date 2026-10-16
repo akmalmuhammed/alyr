@@ -34,6 +34,7 @@ Status: **Accepted** (in force), **Proposed** (waiting for the founder), **Super
 | D-026 | The homepage is about ALYR the company; ALYR Chat has its own page | Accepted |
 | D-027 | One workspace for every product, driven by a catalogue; ALYR has a back office | Accepted |
 | D-028 | Every item has one person responsible, and the team's work is on the record | Accepted |
+| D-029 | Email at @alyr.qa: Cloudflare Email Routing in, Resend out | Accepted |
 
 ---
 
@@ -408,3 +409,38 @@ A shop manages everything from one ALYR workspace at `/app`. There is no separat
 
 ### Note on Meta pricing, checked 16 Oct 2026
 Several third-party sources (Techpoint, ChatArmin, Techweez, Nordflux) report that from 1 October 2026 Meta bills service replies inside the 24-hour window beyond about 1,000 a month per number. Meta's own pricing page, as fetched today, still says all non-template messages are free within an open customer service window and lists only market rate changes for 1 October. Treat the change as unconfirmed. The master plan's pricing line stands until Meta's rate card or a Meta notice says otherwise. If it is confirmed, D-017's prices need a message allowance or a pass-through at cost.
+
+## D-029 · Email at @alyr.qa: Cloudflare Email Routing in, Resend out
+**Date** 16 Oct 2026 · **Status** Accepted (founder, 16 Oct: "choose free option as of now") · Linear ALY-74
+
+**What we need.** Addresses at alyr.qa for the founder and for customers to write to (the Google and Microsoft startup programmes require a matching domain, ALY-55; the website needs a contact address, ALY-60). And a way for the app to send sign-in codes (D-022), which until now only worked on the founder's laptop.
+
+**Chosen, at no cost.**
+
+| Job | Tool | Free allowance (checked 16 Oct 2026) |
+|---|---|---|
+| Receiving: akmal@, hello@ and any other address, forwarded to the founder's existing inbox | Cloudflare Email Routing | Unlimited forwarding; up to 200 rules and 200 destination addresses; messages up to 25 MiB |
+| Sending from the app: sign-in codes from no-reply@alyr.qa | Resend, REST API | 3,000 emails a month, 100 a day, one domain |
+| Replying as akmal@alyr.qa from the founder's inbox | Resend SMTP in Gmail's "Send mail as" | Counts against the same allowance |
+
+**Considered and not chosen.**
+- *Zoho Mail Forever Free*: a real mailbox for up to five people, but web-only (no IMAP), offered only in some data centres, and it would take over the domain's mail records from Cloudflare.
+- *Cloudflare Email Sending*: in public beta since April 2026, but sending to anyone other than our own verified addresses needs the paid Workers plan.
+- *Brevo*: 300 emails a day free, but we could not confirm that the free plan signs mail with our own domain.
+- *Google Workspace*: not free; the Google for Startups Start tier includes 12 months free after acceptance, which can replace forwarding later.
+
+**How the pieces fit.** Cloudflare's records sit on `alyr.qa` itself (MX and SPF). Resend's sit on `send.alyr.qa` (MX and SPF, used for bounces) and `resend._domainkey.alyr.qa` (DKIM), so the two never conflict. A DMARC record starts at `p=none` and tightens once both are verified.
+
+**How sign-in codes are sent.** Directly while the request waits, with an 8-second timeout, not through the job queue. Codes are stored only as hashes; a job would keep the code in plain text in its payload, and a code is useless after ten minutes anyway. If Resend refuses, the person is told to try again. With no key set, nothing is sent and a local machine shows the code on the page as before. Tracking of opens and clicks stays off.
+
+**Data.** Resend receives a staff member's email address and their code, nothing about customers. Use its EU region (Ireland). Listed in `docs/data-residency.md`; the legal basis is our reading until ALY-51 is answered.
+
+**Swap when.** The daily cap of 100 is reached (Resend Pro, USD 20 a month), or a shared team mailbox is needed (Google Workspace through the startup programme).
+
+### Setting it up (founder, about 20 minutes, all free)
+1. **Receiving.** Cloudflare dashboard → alyr.qa → **Email → Email Routing** → enable; accept the records Cloudflare adds. Add `akmal@alyr.qa` and `hello@alyr.qa`, both forwarding to your personal inbox, and confirm the email Cloudflare sends.
+2. **Sending account.** Sign up at resend.com with akmal@alyr.qa (Claude cannot create accounts). Domains → Add domain → `alyr.qa`, region **Ireland (eu-west-1)** → **Sign in to Cloudflare** so Resend adds its records → wait for "Verified". In the domain's settings, turn **open tracking and click tracking off**.
+3. **The app's key.** Resend → API keys → create one with **sending access** for alyr.qa only. Put it in `apps/api/.env` as `ALYR_EMAIL_API_KEY=...` yourself (never in chat or in git), then `scripts/demo.sh up`.
+4. **Replying as akmal@alyr.qa (optional).** In Gmail → Settings → Accounts → **Send mail as** → add akmal@alyr.qa with SMTP server `smtp.resend.com`, port 465, username `resend`, password a second Resend API key.
+5. **DMARC.** Cloudflare DNS → add TXT `_dmarc` = `v=DMARC1; p=none; rua=mailto:akmal@alyr.qa`.
+6. **Check.** Sign in at `/login` with your email: the code arrives by email as well as on the page.
