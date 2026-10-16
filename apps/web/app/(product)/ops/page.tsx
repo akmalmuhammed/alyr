@@ -77,26 +77,56 @@ export default function BackOffice() {
 
   if (denied) return <div className="sh-empty"><p>{denied} <a href="/login">Sign in</a></p></div>;
 
+  const connected = businesses.filter((b) => b.whatsapp_connected).length;
+  const stats: [string, number][] = [
+    ["Shops on ALYR", businesses.length],
+    ["WhatsApp connected", connected],
+    ["Waiting on us", requests.length],
+    ["People signed up", businesses.reduce((sum, b) => sum + b.members, 0)],
+  ];
+
   return (
-    <div className="ops">
+    <div className="sh ops">
+      <div className="sh-sheet">
+        <header className="sh-top">
+          <div className="sh-crumbs">
+            <svg className="sh-mark" viewBox="0 0 190 160" aria-hidden="true">
+              <polygon fill="currentColor" points="50,0 180,0 130,62 0,62" />
+              <polygon fill="currentColor" points="0,72 126,72 39,160" />
+              <polygon fill="#B7F34A" points="134,72 190,72 142,160 46,160" />
+            </svg>
+            <b>ALYR</b><i>/</i><span>Back office</span>
+          </div>
+          <span className="spacer" />
+          <span className="sh-live on"><span className="sh-dot" />Staff only</span>
+        </header>
+        <div className="sh-scroll">
+    <main className="sh-main sh-enter">
       <header className="sh-head">
-        <h1>ALYR back office</h1>
+        <span className="sh-eyebrow">Internal · ALYR staff</span>
+        <h1>Back office</h1>
         <p>Shops on ALYR, the help they asked for, and setting up a new one.</p>
       </header>
 
-      <section>
-        <h2>Asked for help ({requests.length})</h2>
-        {requests.length === 0 ? <p className="sh-note">Nothing waiting.</p> : (
+      <section className="ops-stats" style={{ "--i": 1 } as React.CSSProperties}>
+        {stats.map(([label, value]) => (
+          <div key={label} className="sh-tile"><span>{label}</span><b className="num">{value}</b></div>
+        ))}
+      </section>
+
+      <section style={{ "--i": 2 } as React.CSSProperties}>
+        <h2>Asked for help <span className="sh-count">{requests.length}</span></h2>
+        {requests.length === 0 ? <p className="empty-note sh-note">Nothing waiting. Every ask is answered.</p> : (
           <div className="tablewrap"><table>
             <thead><tr><th>Shop</th><th>Product · step</th><th>Note</th><th>Asked by</th><th /></tr></thead>
             <tbody>
               {requests.map((r) => (
                 <tr key={r.id} className="norow">
-                  <td><b>{r.business}</b><br /><span className="mono">{new Date(r.created_at).toLocaleString("en-GB")}</span></td>
+                  <td><b>{r.business}</b><br /><small>{new Date(r.created_at).toLocaleString("en-GB")}</small></td>
                   <td>{r.product_key} · {r.step_key || "general"}</td>
                   <td dir="auto">{r.note}</td>
                   <td>{r.requested_by}</td>
-                  <td><button className="btn small" onClick={() => done(r.id)}>Mark done</button></td>
+                  <td className="r"><button className="btn small" onClick={() => done(r.id)}>Mark done</button></td>
                 </tr>
               ))}
             </tbody>
@@ -104,16 +134,16 @@ export default function BackOffice() {
         )}
       </section>
 
-      <section>
-        <h2>Shops ({businesses.length})</h2>
+      <section style={{ "--i": 3 } as React.CSSProperties}>
+        <h2>Shops <span className="sh-count">{businesses.length}</span></h2>
         <div className="tablewrap"><table>
           <thead><tr><th>Shop</th><th>Products</th><th>WhatsApp</th><th>Team</th><th>Open asks</th></tr></thead>
           <tbody>
             {businesses.map((b) => (
               <tr key={b.id} className="norow">
-                <td><b>{b.name}</b><br /><span className="mono">{b.slug}</span></td>
+                <td><b>{b.name}</b><br /><small>{b.slug}</small></td>
                 <td>{b.products.join(", ") || "none"}</td>
-                <td>{b.whatsapp_connected ? "Connected" : "Not yet"}</td>
+                <td><span className={`sh-pill ${b.whatsapp_connected ? "active" : "coming"}`}>{b.whatsapp_connected ? "Connected" : "Not yet"}</span></td>
                 <td className="num">{b.members}</td>
                 <td className="num">{b.open_requests}</td>
               </tr>
@@ -122,7 +152,7 @@ export default function BackOffice() {
         </table></div>
       </section>
 
-      <section>
+      <section style={{ "--i": 4 } as React.CSSProperties}>
         <h2>Set up a new shop</h2>
         <form className="ops-form" onSubmit={create}>
           {field("name", "Shop name")}
@@ -144,9 +174,12 @@ export default function BackOffice() {
             ))}
           </fieldset>
           <button className="btn primary" type="submit">Create shop</button>
-          {message && <p className="sh-note" role="status">{message}</p>}
+          {message && <p className="ops-ok" role="status">{message}</p>}
         </form>
       </section>
+    </main>
+        </div>
+      </div>
     </div>
   );
 }
