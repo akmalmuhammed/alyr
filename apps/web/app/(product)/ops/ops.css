@@ -1,0 +1,59 @@
+/* Back office: clients, quotes, the price list and the sign-up switches (D-032). Builds
+   on the workspace shell (shell.css): same tokens, tiles, tables and buttons. */
+.ops-main { display: grid; gap: 22px; }
+.ops-main > section { display: grid; gap: 12px; }
+.ops-tabs { justify-self: start; }
+.ops-tabs button[aria-selected="true"] { background: var(--sheet); color: var(--ink); box-shadow: var(--lift); }
+.ops-tabs button .num { font-family: var(--mono); font-size: 11px; color: var(--ink-3); }
+.ops-lead { margin: -4px 0 0; max-width: 62rem; }
+.ops-gap { margin-top: 18px !important; }
+.ops select { height: 34px; padding: 0 8px; border: 0; border-radius: 9px; background: var(--sheet); color: var(--ink); box-shadow: var(--lift); font: inherit; font-size: 13px; max-width: 100%; }
+.ops-field select { height: 40px; font-size: 14px; }
+.ops-error { margin: 0; padding: 10px 14px; border-radius: 10px; background: var(--bad-soft, rgba(180, 35, 24, 0.08)); color: var(--bad, #b42318); font-size: 13.5px; font-weight: 500; }
+.ops-wide { grid-column: 1 / -1; }
+.ops code { font-family: var(--mono); font-size: 12px; color: var(--ink-2); }
+
+/* the client list and the open client side by side */
+.ops-split { display: grid; gap: 18px; align-items: start; }
+.ops-back { justify-self: start; }
+.ops-list, .ops-detail { display: grid; gap: 12px; min-width: 0; }
+.ops-detail { padding: 18px; border-radius: 16px; background: var(--raise); box-shadow: 0 0 0 1px var(--hair) inset; }
+.ops-detail h3 { margin: 10px 0 0; font-size: 13px; font-weight: 600; color: var(--ink-2); font-family: var(--mono); text-transform: uppercase; letter-spacing: 0.06em; }
+.ops-detail-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+.ops-title { margin: 4px 0 0 !important; font-size: 22px !important; letter-spacing: -0.02em; }
+.ops-row { cursor: pointer; }
+.ops-row:hover td { background: var(--raise); }
+.ops-row.on td { background: var(--volt-wash); }
+.ops-row:focus-visible { outline: 2px solid var(--ink); outline-offset: -2px; }
+.ops-biz { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 2px 0; }
+.ops-biz small { font-family: var(--display) !important; }
+
+/* the quote editor */
+.ops-quote { display: grid; gap: 12px; padding: 16px; border-radius: 14px; background: var(--sheet); box-shadow: 0 0 0 1px var(--hair) inset; }
+.ops-quote.empty { background: transparent; box-shadow: 0 0 0 1px var(--hair-2) inset; }
+.ops-quote-top { display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap; }
+.ops-quote-top small { color: var(--ink-3); font-size: 12px; }
+.ops-lines { min-width: 760px; }
+.ops-lines td { vertical-align: middle; padding-block: 8px; }
+.ops-lines input:not([type="checkbox"]) { height: 34px; padding: 0 9px; border: 0; border-radius: 9px; background: var(--raise); color: var(--ink); font: inherit; font-size: 13.5px; outline: none; min-width: 0; }
+.ops-lines input:focus, .ops select:focus { box-shadow: 0 0 0 1px var(--ink), 0 0 0 4px var(--volt-wash); outline: none; }
+.ops-names { display: grid; gap: 4px; min-width: 12rem; }
+.ops-qty { width: 4.2rem; }
+.ops-money { width: 7rem; font-variant-numeric: tabular-nums; }
+.ops-new td { background: var(--raise); }
+.ops-add { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.ops-add .spacer, .ops-actions .spacer { flex: 1; }
+.ops-terms { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 13rem), 1fr)); gap: 12px; align-items: end; }
+.ops-sum { display: flex; flex-wrap: wrap; gap: 8px; margin: 0; }
+.ops-sum div { display: grid; gap: 2px; padding: 10px 14px; border-radius: 12px; background: var(--raise); min-width: 9rem; }
+.ops-sum dt { font-size: 12px; color: var(--ink-3); }
+.ops-sum dd { margin: 0; font-size: 16px; font-weight: 600; }
+.ops-sum .big { background: var(--ink); color: var(--sheet); }
+.ops-sum .big dt { color: color-mix(in srgb, var(--sheet) 65%, transparent); }
+.ops-sum .big dd { font-size: 20px; }
+.ops-actions { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.ops-actions .btn:disabled, .ops-add .btn:disabled { opacity: 0.45; cursor: not-allowed; }
+.ops-history { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; }
+.ops-history li { padding: 10px 12px; border-radius: 10px; background: var(--sheet); box-shadow: 0 0 0 1px var(--hair) inset; font-size: 13.5px; }
+.ops-history small { color: var(--ink-3); }
+.ops-tick { width: 16px; height: 16px; accent-color: var(--ink); }

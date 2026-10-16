@@ -37,6 +37,7 @@ Status: **Accepted** (in force), **Proposed** (waiting for the founder), **Super
 | D-029 | Email at @alyr.qa: Cloudflare Email Routing in, Resend out | Accepted |
 | D-030 | A weekly result report to the owner, one section per product | Accepted |
 | D-031 | Self-serve onboarding: sign up, create the business, start from a preset, try it on a private test line | Accepted |
+| D-032 | Prices are set per client from the back office: a price list, a quote per client, published live to the owner | Accepted |
 
 ---
 
@@ -493,3 +494,43 @@ A new owner can create their own business at `/start` without ALYR's back office
 **Sign-up is closed outside a local machine** (`ALYR_SIGNUP_OPEN`) until the founder decides to open it. Existing staff can always sign in through it.
 
 **Not built yet.** Sign-in by WhatsApp code, more than one customer at a time, the advisor's tablet mode, the restaurant, wholesale and document-office paths, connecting the shop's own number (needs ALYR's Tech Provider approval, ALY-39), and taking payment for the plan.
+
+## D-032 · Prices are set per client from the back office
+**Date** 17 Oct 2026 · **Status** Accepted (the founder's direction, refined) · Linear ALY-78 · Updates D-017 and D-031
+
+**The founder's direction.** Pricing is not fixed yet and will differ by client. One client can own several businesses. ALYR sets each client's price in its internal tool, and the owner sees it live as the last step of onboarding.
+
+**What was added to it, and why.**
+- **A price list, and a quote drafted from it,** rather than one number typed per client. Every new client starts from a consistent draft, ALYR edits it per client, and we keep a record of exactly what each client accepted. The price list can change at any time; quotes already made keep their own prices.
+- **A switch for when the owner sees a price,** per business type and overridable per client. "Prepared": the owner sees "ALYR is preparing your price" until ALYR publishes it. "Automatic": the draft is published at sign-up. Everything starts on "prepared" while the founder works out pricing; "automatic" is there for when self-serve sign-up opens.
+- **A client above businesses.** One quote per client, with lines per business, so a multi-business discount is just a line.
+- **The same tool controls sign-up.** Per business type ALYR chooses between:
+  - self-serve, every step;
+  - set up with ALYR (the business is created and a request reaches the back office);
+  - not offered.
+
+  A type whose screens are not built can only be set up with ALYR. A business keeps the path it started on.
+
+**How it works.**
+- **Price list items.** Each item has a monthly or one-time price and a rule for when a drafted quote includes it:
+  - every business;
+  - once per client;
+  - per product in use;
+  - per module switched on;
+  - only when added by hand.
+- **Starting values:** ALYR Chat QAR 449 a month per business, setup QAR 2,500 per business, an extra team member QAR 40 a month (added by hand), and credit accounts at QAR 0. All are editable.
+- **A quote** has lines (any line can be edited, and a negative line is a discount), a percentage off the monthly items, a billing period of 1, 3, 6 or 12 months, a note the owner sees, and whether the promise shows. It moves draft → published → accepted. A newer accepted quote supersedes the old one, and ALYR can withdraw a draft or a published quote.
+- **Locks.**
+  - An accepted quote cannot change. Database triggers refuse edits to its terms and lines.
+  - Owners read only their own client and its published or accepted quotes, enforced by row-level security on new global tables.
+  - Only the back office writes, using the same staff check as D-027.
+  - The owner accepts through a database function that checks the quote is theirs and still published.
+- **Live.** The plan step asks for the quote every 4 seconds, says when ALYR changed it, and accepting a price that changed a moment ago is refused. An owner who finished onboarding before the price was ready sees "Your ALYR price is ready" on the workspace home, and `/start` opens on the plan step for them.
+- **The promise** is edited in the back office. The `ALYR_PLAN_*` settings are gone. It starts as the founder's choice of 16 Oct: if no customer books through WhatsApp in the first 30 days, the first month is free.
+
+**Not built yet:**
+- owners choosing paid extras themselves;
+- an owner adding a second business on their own (ALYR adds it in the back office for now);
+- invoices and taking payment;
+- a separate price list for partners;
+- telling the owner by email or WhatsApp that their price is ready.

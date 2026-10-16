@@ -1,14 +1,14 @@
 """Self-serve onboarding at /start (D-031)."""
 
 import logging
+from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, Request, Response
 from pydantic import BaseModel, Field
 
 from alyr.config import get_settings
-from alyr.core import auth, mail, onboarding
+from alyr.core import auth, mail, onboarding, pricing
 from alyr.core.auth import Staff
-from alyr.core.normalise import fmt_qar
 from alyr.routes.deps import current_staff
 
 log = logging.getLogger("alyr.onboarding")
@@ -40,6 +40,10 @@ class Change(BaseModel):
     reminders: bool | None = None
 
 
+class Acceptance(BaseModel):
+    quote_id: UUID
+
+
 class TestMessage(BaseModel):
     text: str = Field(default="", max_length=1000)
     reply_id: str = Field(default="", max_length=120)
@@ -50,17 +54,6 @@ def signup_open() -> bool:
     return settings.signup_open if settings.signup_open is not None else settings.env == "local"
 
 
-def _plan() -> dict:
-    settings = get_settings()
-    return {
-        "price": settings.plan_price, "price_text": fmt_qar(settings.plan_price),
-        "promise": {
-            "en": settings.plan_promise,
-            "ar": settings.plan_promise_ar or settings.plan_promise,
-        },
-    }
-
-
 def _cookie(response: Response, token: str) -> None:
     response.set_cookie(
         auth.COOKIE, token, max_age=auth.SESSION_DAYS * 86400, httponly=True,
@@ -69,8 +62,9 @@ def _cookie(response: Response, token: str) -> None:
 
 
 @router.get("/types")
-async def types() -> dict:
-    return {"types": onboarding.types(), "signup_open": signup_open()}
+async def types(request: Request) -> dict:
+    async with request.app.state.db.unscoped() as conn:
+        return {"types": await onboarding.types(conn), "signup_open": signup_open()}
 
 
 @router.post("/code")
@@ -142,7 +136,7 @@ def _owner(staff: Staff) -> Staff:
 @router.get("/state")
 async def state(request: Request, staff: Staff = Depends(current_staff)) -> dict:
     async with request.app.state.db.tenant(staff.tenant_id) as conn:
-        return await onboarding.state(conn, staff, _plan())
+        return await onboarding.state(conn, staff)
 
 
 @router.patch("/state")
@@ -154,9 +148,30 @@ async def change(body: Change, request: Request, staff: Staff = Depends(current_
                 conn, name=body.name, name_ar=body.name_ar, area=body.area, step=body.step,
                 reminders=body.reminders,
             )
-            return await onboarding.state(conn, staff, _plan())
+            return await onboarding.state(conn, staff)
     except onboarding.OnboardingError as error:
         raise HTTPException(status_code=422, detail=str(error)) from error
+
+
+@router.get("/quote")
+async def quote(request: Request, staff: Staff = Depends(current_staff)) -> dict:
+    """The owner's price as ALYR prepared it (D-032). The plan step asks again every few
+    seconds, so a change ALYR publishes shows up while the owner is looking."""
+    async with request.app.state.db.tenant(staff.tenant_id) as conn:
+        return await pricing.own_quote(conn)
+
+
+@router.post("/quote/accept")
+async def accept_quote(
+    body: Acceptance, request: Request, staff: Staff = Depends(current_staff)
+) -> dict:
+    _owner(staff)
+    async with request.app.state.db.tenant(staff.tenant_id) as conn:
+        if not await pricing.accept(conn, body.quote_id, staff.user_id, staff.name):
+            raise HTTPException(
+                status_code=409, detail="this price has changed; look at the new one"
+            )
+        return await pricing.own_quote(conn)
 
 
 @router.post("/finish")

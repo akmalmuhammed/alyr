@@ -18,7 +18,7 @@ import asyncpg
 
 from alyr import presets
 from alyr.channels.base import InboundMessage
-from alyr.core import auth, team
+from alyr.core import auth, pricing, team
 from alyr.core.auth import Staff
 from alyr.core.normalise import fmt_qar
 from alyr.db import Database
@@ -39,11 +39,15 @@ def _text(value) -> dict:
     return {"en": value.en, "ar": value.ar}
 
 
-def types() -> list[dict]:
+async def types(conn: asyncpg.Connection) -> list[dict]:
+    """The types of business an owner may choose, as ALYR has switched them (D-032):
+    hidden types are left out, and `way` is the path a new business of that type takes."""
+    settings = await pricing.type_settings(conn)
     return [
         {"key": p.key, "name": _text(p.name), "hint": _text(p.hint), "icon": p.icon,
-         "way": p.way}
+         "way": pricing.way_for(p, settings[p.key]["availability"])}
         for p in presets.PRESETS
+        if settings[p.key]["availability"] != "hidden"
     ]
 
 
@@ -87,17 +91,22 @@ async def create_business(
     name, owner_name = name.strip(), owner_name.strip()
     if not name or not owner_name:
         raise OnboardingError("give the business name and your name")
-    first_step = presets.STEPS[preset.way][0]
     tenant_id = None
     async with db.unscoped() as conn:
+        availability = (await pricing.type_settings(conn))[preset.key]["availability"]
+        if availability == "hidden":
+            raise OnboardingError("choose the type of business")
+        way = pricing.way_for(preset, availability)
+        first_step = presets.STEPS[way][0]
+        price_list = await pricing.items(conn, only_active=True)
         for _ in range(5):
             slug = await _free_slug(conn, name)
             try:
                 async with conn.transaction():
                     tenant_id = await conn.fetchval(
-                        "select signup_create_business($1, $2, $3, $4, $5, $6, $7, $8, $9)",
+                        "select signup_create_business($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)",
                         _hash(token), owner_name, name, name_ar.strip(), slug, preset.key,
-                        area.strip(), first_step, list(preset.modules),
+                        area.strip(), way, first_step, list(preset.modules),
                     )
                 break
             except asyncpg.UniqueViolationError:
@@ -122,7 +131,10 @@ async def create_business(
                 "values ($1, $2::text::time, $3::text::time)",
                 weekday, opens, closes,
             )
-        if preset.way == "assisted":
+        await pricing.create_first_quote(
+            conn, pricing.Business(tenant_id, name, frozenset(preset.modules)), price_list
+        )
+        if way == "assisted":
             await conn.execute(
                 "insert into setup_requests (product_key, step_key, note, requested_by) "
                 "values ($1, 'onboarding', $2, $3)",
@@ -135,15 +147,15 @@ async def create_business(
     return tenant_id, session
 
 
-async def state(conn: asyncpg.Connection, staff: Staff, plan: dict) -> dict:
+async def state(conn: asyncpg.Connection, staff: Staff) -> dict:
     """Everything the onboarding screens need, for the signed-in owner's business."""
     shop = await conn.fetchrow(
-        "select name, name_ar, slug, business_type, area, onboarding_step, onboarded_at, "
-        "booking_reminders from tenants "
+        "select name, name_ar, slug, business_type, area, onboarding_way, onboarding_step, "
+        "onboarded_at, booking_reminders from tenants "
         "where id = nullif(current_setting('app.tenant_id', true), '')::uuid"
     )
     preset = presets.PRESET_BY_KEY.get(shop["business_type"])
-    way = preset.way if preset else "appointments"
+    way = shop["onboarding_way"] or (preset.way if preset else "appointments")
     services = await conn.fetch(
         "select id, name, name_ar, duration_minutes, price from services "
         "where active order by sort, created_at"
@@ -173,7 +185,7 @@ async def state(conn: asyncpg.Connection, staff: Staff, plan: dict) -> dict:
              "closes": r["closes"].strftime("%H:%M")}
             for r in hours
         ],
-        "plan": plan,
+        "quote": await pricing.own_quote(conn),
         "areas": list(presets.AREAS),
     }
 

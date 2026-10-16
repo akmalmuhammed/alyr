@@ -209,7 +209,9 @@ def test_the_team_report_counts_each_persons_work(client):
     )
 
     sign_in(client, OWNER_EMAIL)
-    report = performance(client)
+    # A week, not today: the test moves messages back in time, and just after midnight
+    # in the shop "today" would leave some of them in yesterday.
+    report = performance(client, days=7)
     yusuf = person(report, "Yusuf Rahman")
     assert yusuf["replies"] == 2
     assert 290 <= yusuf["median_reply_seconds"] <= 320
