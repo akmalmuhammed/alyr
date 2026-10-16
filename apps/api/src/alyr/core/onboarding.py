@@ -18,7 +18,7 @@ import asyncpg
 
 from alyr import presets
 from alyr.channels.base import InboundMessage
-from alyr.core import auth
+from alyr.core import auth, team
 from alyr.core.auth import Staff
 from alyr.core.normalise import fmt_qar
 from alyr.db import Database
@@ -220,6 +220,30 @@ async def test_send(db: Database, inbound, staff: Staff, text: str, reply_id: st
             profile_name=f"{staff.name} (test)", text=text, reply_id=reply_id,
         )
     )
+
+
+async def end_test(conn: asyncpg.Connection, staff: Staff) -> int:
+    """When the owner opens their workspace the test is over. Their test booking is
+    cancelled, so its time is free for real customers and no reminder goes out, and the
+    test chat is closed, so it does not wait in the inbox as unanswered. Both stay in the
+    history. Answers how many bookings were cancelled."""
+    contact_id = await conn.fetchval(
+        "select id from contacts where wa_user_id = $1", test_key(staff)
+    )
+    if contact_id is None:
+        return 0
+    rows = await conn.fetch(
+        "update bookings set status = 'cancelled' where contact_id = $1 and status = 'booked' "
+        "returning id, number",
+        contact_id,
+    )
+    for row in rows:
+        await team.record(
+            conn, "booking", row["id"], "cancelled", team.actor_of(staff), contact_id,
+            {"number": row["number"], "test": True},
+        )
+    await conn.execute("update contacts set inbox_status = 'closed' where id = $1", contact_id)
+    return len(rows)
 
 
 async def test_conversation(conn: asyncpg.Connection, staff: Staff) -> list[dict]:

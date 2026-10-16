@@ -4,7 +4,7 @@ How the work is divided, and the one goal for this stage, are in [operating-mode
 
 Read this first in a new session, on any machine. It is the hand-over note between sessions: what works, what is next, and what is waiting on the founder. Update it in the same pull request as the work. Linear (team `Alyrtech`, project `Alyr Launch`) holds the detail; this page is the summary.
 
-Last updated: 16 Oct 2026, after the weekly result report (ALY-75, D-030).
+Last updated: 16 Oct 2026, after self-serve onboarding at `/start` (ALY-76, D-031).
 
 ## What works today
 
@@ -31,12 +31,13 @@ Last updated: 16 Oct 2026, after the weekly result report (ALY-75, D-030).
 | `scripts/demo.sh up / check / reset / down` and `python -m alyr.doctor`: start the demo pieces and check database, Meta token, templates, tunnel and public pages | Built (ALY-73) | `scripts/demo.sh`, `apps/api/src/alyr/doctor.py` |
 | ALYR back office at `/ops`: every shop, help requests, create a shop and its owner | Built; ALYR staff only (`platform_admins`) | `routes/admin.py`, `apps/web/app/(product)/ops/` |
 | Demo page: chat simulator plus workspace tabs, now at `/whatsapp` | Built | `apps/web/app/(product)/whatsapp/page.tsx` |
+| Self-serve onboarding at `/start`: email code, type of business, a filled-in price list and opening hours to edit, a private test line to book as a customer, the plan, a go-live checklist, then the workspace. Phone and laptop layouts, English and Arabic | Built (D-031) for appointment businesses (salon, spa, clinic, home services). Restaurants, shops, wholesale and document offices get their business created and a setup request for ALYR. Sign-up is closed outside a local machine until the founder opens it | `apps/api/src/alyr/core/onboarding.py`, `presets.py`, `apps/web/app/(product)/start/` |
 
-Tests: 207, all passing. CI runs api, web and a secrets scan on every pull request.
+Tests: 230, all passing. CI runs api, web and a secrets scan on every pull request.
 
 ## Next on the build side, in order
 
-0. **Onboarding (ALY-76, D-031):** the API is built: sign-up, business presets, the private test line. The `/start` screens are next.
+0. **Onboarding (ALY-76, D-031):** built. Left for later phases: sign-in by WhatsApp code, the advisor's tablet mode, the restaurant and shop paths, taking payment for the plan.
 
 1. **Bookable staff or resources (ALY-27),** so a salon or clinic can serve more than one customer at a time; then services and opening-hours screens.
 1. **Product screens on ALYR tokens**, so the workspace matches the public site.
@@ -53,6 +54,7 @@ Tests: 207, all passing. CI runs api, web and a secrets scan on every pull reque
 
 | Item | Detail |
 |---|---|
+| Onboarding decisions (ALY-76) | Built with placeholders, each one setting to change: the plan price (QAR 449 a month, `ALYR_PLAN_PRICE`), the promise under it (hidden until written, `ALYR_PLAN_PROMISE`), which business types get the full flow at launch (now the four appointment trades), and when to open sign-up to the public (`ALYR_SIGNUP_OPEN`, closed outside a local machine). Sign-in is by email code for now; a WhatsApp code needs a live number. |
 | WhatsApp backup route (ALY-77) | If the CR or Meta's review is slow: researched options in `docs/company/whatsapp-backup-plan/`. Recommended backup for a first pilot: the shop opens its own provider account (for example 360dialog, about €49 a month) and connects it to ALYR. Choose, and say whether ALYR pays that fee for pilots. Not built. |
 | Meta values | Done 12 Oct. `apps/api/.env` holds the five values (app `alyr`, id 1071845795713841, test number id 1431880183331516). The webhook is verified, the app is subscribed to the `messages` field and to the WhatsApp account. The access token is a system-user token (`alyradmin`, never expires, `whatsapp_business_messaging` and `whatsapp_business_management`), set 12 Oct. |
 | Domain and tunnel | Done 8 Oct. `alyr.online` is on Cloudflare. Tunnel `alyr-dev` publishes only `/webhooks/whatsapp` and `/health` of the laptop's API at `https://api.alyr.online`; everything else answers 404 from outside. Config is in `~/.cloudflared/config.yml` on the laptop. Start it with `cloudflared tunnel run alyr-dev`. |
