@@ -4,7 +4,7 @@ How the work is divided, and the one goal for this stage, are in [operating-mode
 
 Read this first in a new session, on any machine. It is the hand-over note between sessions: what works, what is next, and what is waiting on the founder. Update it in the same pull request as the work. Linear (team `Alyrtech`, project `Alyr Launch`) holds the detail; this page is the summary.
 
-Last updated: 16 Oct 2026, after team accountability (ALY-72, D-028).
+Last updated: 16 Oct 2026, after order tracking, the customer pages redesign and the demo command (ALY-73).
 
 ## What works today
 
@@ -25,10 +25,13 @@ Last updated: 16 Oct 2026, after team accountability (ALY-72, D-028).
 | ALYR public site, English and Arabic: company homepage and the ALYR Chat product page | **Live at https://alyr.qa** (company-first version, D-026, published 12 Oct). Merged since and not yet published: the how-it-works figure and the list of what is built on `/chat` (ALY-71) | `apps/web/app/_site/`, `docs/brand.md` |
 | Workspace shell at `/app`: navigation from the shop's products, home dashboard with setup checklist, products (switch on and off), connections, "ask ALYR"; product catalogue in `catalog.py` | Built (D-027) | `apps/api/src/alyr/catalog.py`, `core/workspace.py`, `apps/web/app/(product)/app/` |
 | Team accountability: one person responsible for every conversation, order, booking and credit account; an uneditable activity record shown in the inbox; closing records sold, booked, answered or lost and why; team report per person (waiting, first-answer time, outcomes, sales); signed replies | Built (D-028) | `apps/api/src/alyr/core/team.py`, `routes/team.py`, `apps/web/app/(product)/_workspace/Team.tsx` |
+| Customer pages from chat links (order `/s/`, booking `/b/`, payment `/pay/`, tracking `/t/`) in the workspace design, light and dark, English and Arabic, phone first | Built (ALY-73) | `apps/web/app/(product)/_customer/` |
+| Order tracking: every order message inside the 24-hour window links to `/t/{shop}/{order}` with the steps and times, who is looking after it, the items and a pay button if unpaid | Built (ALY-73). Approved templates cannot carry the link, so a notice sent after the window arrives without it | `modules/orders/service.py`, `routes/track.py` |
+| `scripts/demo.sh up / check / reset / down` and `python -m alyr.doctor`: start the demo pieces and check database, Meta token, templates, tunnel and public pages | Built (ALY-73) | `scripts/demo.sh`, `apps/api/src/alyr/doctor.py` |
 | ALYR back office at `/ops`: every shop, help requests, create a shop and its owner | Built; ALYR staff only (`platform_admins`) | `routes/admin.py`, `apps/web/app/(product)/ops/` |
 | Demo page: chat simulator plus workspace tabs, now at `/whatsapp` | Built | `apps/web/app/(product)/whatsapp/page.tsx` |
 
-Tests: 182, all passing. CI runs api, web and a secrets scan on every pull request.
+Tests: 189, all passing. CI runs api, web and a secrets scan on every pull request.
 
 ## Next on the build side, in order
 
@@ -73,8 +76,9 @@ Tests: 182, all passing. CI runs api, web and a secrets scan on every pull reque
 ## Live testing from the laptop
 
 - If a dev server is already running in `apps/web` (another session's, for example), start a second one beside it with its own output folder: `ALYR_DIST_DIR=.next-preview pnpm exec next dev -p 3101`. Next rewrites `tsconfig.json` when it does this; discard that change.
+- **For a demo, run `scripts/demo.sh up`.** It starts whatever is not running and ends with `check`, which says what to fix. `scripts/demo.sh reset` puts the demo shop back to its starting data (it asks first; it wipes chats).
 - The API runs in Docker (`ALYR_DOCKER_FLAGS="-p 8000:8000 --name alyr-api-dev" scripts/api-in-docker.sh uv run uvicorn alyr.main:app --host 0.0.0.0 --port 8000`), the web app with `pnpm dev`, the tunnel with `cloudflared tunnel run alyr-dev`. All three must be running, on the founder's laptop.
-- The tunnel publishes two addresses and nothing else: `api.alyr.online` (only `/webhooks/whatsapp` and `/health`) and `app.alyr.online` (only the customer pages `/s/`, `/b/`, `/pay/` and the API routes they call). The workspace, sign-in and the simulator answer 404 from outside.
+- The tunnel publishes two addresses and nothing else: `api.alyr.online` (only `/webhooks/whatsapp` and `/health`) and `app.alyr.online` (only the customer pages `/s/`, `/b/`, `/pay/`, `/t/` and the API routes they call). The workspace, sign-in and the simulator answer 404 from outside.
 - `ALYR_PUBLIC_WEB_URL=https://app.alyr.online` in `apps/api/.env` makes links in chats point there. It is the Next.js dev server behind the tunnel, which is acceptable for testing only (ALY-63 replaces it).
 
 ## Publishing the public site

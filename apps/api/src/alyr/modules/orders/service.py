@@ -17,6 +17,16 @@ MAX_QUANTITY = 999
 STATUSES = ("new", "confirmed", "ready", "done", "cancelled")
 
 
+def track_url(web_url: str, tenant_id: UUID, order_id: UUID) -> str:
+    """The customer's own page for one order. Like a payment link, it carries the shop's
+    ID because the customer is not signed in, and the order's ID, which cannot be guessed."""
+    return f"{web_url}/t/{tenant_id}/{order_id}"
+
+
+def _track_line(url: str, arabic: bool) -> str:
+    return f"تتبّع طلبك: {url}" if arabic else f"Track your order: {url}"
+
+
 class OrderError(Exception):
     """The order cannot be placed as asked. `code` tells the caller why."""
 
@@ -139,14 +149,18 @@ async def create_order(
 
     head = f"تم استلام الطلب رقم {number}." if arabic else f"Order #{number} received."
     total_line = f"الإجمالي: {fmt_qar(total)}" if arabic else f"Total: {fmt_qar(total)}"
+    track = _track_line(track_url(web_url, tenant_id, order_id), arabic)
+    # The tracking link goes in the module's own wording. An approved template cannot
+    # change, so a notice sent after the 24-hour window arrives without it.
     await outbound.send(conn, templates.notice(
         contact_id, "order_received_account" if payment == "account" else "order_received_pay",
-        contact["lang"], f"{head}\n{summary}\n{total_line}\n{closing}",
+        contact["lang"], f"{head}\n{summary}\n{total_line}\n{closing}\n{track}",
         number, items, fmt_qar(total), fmt_qar(balance) if payment == "account" else pay_url,
     ))
     return {
         "order_id": str(order_id), "number": number, "total": total,
         "total_text": fmt_qar(total), "payment": payment, "pay_url": pay_url,
+        "track_url": track_url(web_url, tenant_id, order_id),
     }
 
 
@@ -160,7 +174,7 @@ _STATUS_TEXT = {
 
 async def set_status(
     conn: asyncpg.Connection, order_id: UUID, status: str, outbound: Outbound,
-    actor: Actor = team.ASSISTANT,
+    actor: Actor = team.ASSISTANT, web_url: str | None = None,
 ) -> bool:
     """Move an order along and tell the customer. Returns False if there is no such order.
     Whoever moves an order nobody has becomes responsible for it."""
@@ -180,6 +194,11 @@ async def set_status(
     lang = await conn.fetchval("select lang from contacts where id = $1", row["contact_id"])
     english, arabic = _STATUS_TEXT[status]
     body = (arabic if lang == "ar" else english).format(n=row["number"])
+    if web_url and status != "cancelled":
+        tenant_id = await conn.fetchval(
+            "select nullif(current_setting('app.tenant_id', true), '')::uuid"
+        )
+        body += "\n" + _track_line(track_url(web_url, tenant_id, order_id), lang == "ar")
     await outbound.send(conn, templates.notice(
         row["contact_id"], f"order_{status}", lang, body, row["number"],
     ))
@@ -211,3 +230,56 @@ async def list_orders(conn: asyncpg.Connection) -> list[dict]:
         }
         for o in orders
     ]
+
+
+# What the customer sees on the tracking page, in the order it happens.
+TRACK_STEPS = ("placed", "confirmed", "ready", "done")
+
+
+async def tracking(conn: asyncpg.Connection, order_id: UUID) -> dict | None:
+    """One order as its customer may see it: what they bought, where it has got to and
+    when, who at the shop is looking after it, and how to pay if they have not.
+    Nothing about other customers, and only the first name of the staff member."""
+    order = await conn.fetchrow(
+        "select o.id, o.number, o.status, o.payment, o.total, o.created_at, c.lang, "
+        "       split_part(u.name, ' ', 1) as handler "
+        "from orders o join contacts c on c.id = o.contact_id "
+        "left join users u on u.id = o.assigned_to where o.id = $1",
+        order_id,
+    )
+    if order is None:
+        return None
+    items = await conn.fetch(
+        "select o.name, p.name_ar, o.price, o.quantity from order_items o "
+        "left join products p on p.id = o.product_id where o.order_id = $1 order by o.name",
+        order_id,
+    )
+    events = await conn.fetch(
+        "select action, min(created_at) as at from activity "
+        "where subject = 'order' and subject_id = $1 group by action",
+        order_id,
+    )
+    when = {e["action"]: e["at"] for e in events}
+    when.setdefault("placed", order["created_at"])
+    pending = await conn.fetchval(
+        "select id from payment_requests where order_id = $1 and status = 'pending' "
+        "order by created_at desc limit 1",
+        order_id,
+    )
+    return {
+        "number": order["number"], "status": order["status"], "payment": order["payment"],
+        "total_text": fmt_qar(order["total"]), "lang": order["lang"],
+        "handler": order["handler"] or None,
+        "items": [
+            {"name": i["name"], "name_ar": i["name_ar"] or "", "quantity": i["quantity"],
+             "line_text": fmt_qar(i["price"] * i["quantity"])}
+            for i in items
+        ],
+        "steps": [
+            {"key": key, "at": when[key].isoformat() if key in when else None}
+            for key in TRACK_STEPS
+        ],
+        "cancelled_at": when["cancelled"].isoformat() if "cancelled" in when else None,
+        "paid_at": when["paid"].isoformat() if "paid" in when else None,
+        "payment_id": str(pending) if pending and order["payment"] == "unpaid" else None,
+    }
