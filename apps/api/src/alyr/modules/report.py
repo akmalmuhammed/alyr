@@ -242,10 +242,11 @@ RESERVED_DOMAINS = (".example", ".test", ".invalid", ".localhost")
 
 
 def _deliverable(address: str) -> bool:
-    domain = address.rpartition("@")[2].lower()
-    return bool(domain) and not domain.endswith(RESERVED_DOMAINS) and domain not in {
-        d.lstrip(".") for d in RESERVED_DOMAINS
-    }
+    local, at, domain = address.rpartition("@")
+    domain = domain.lower()
+    if not (local and at and "." in domain):
+        return False
+    return not domain.endswith(RESERVED_DOMAINS)
 
 
 async def _owner_emails(conn: asyncpg.Connection) -> list[str]:
