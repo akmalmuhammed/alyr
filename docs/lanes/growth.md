@@ -18,9 +18,10 @@ Anything else belongs to another lane. If a task needs it, keep the change small
 
 ## Now (update this section in the same pull request as the work)
 
-Last updated 12 Oct 2026.
+Last updated 16 Oct 2026.
 
 - Nothing has been published. This lane should stay quiet until the first customer and the look are decided and there is one true story to tell.
+- Cloud credit applications drafted (ALY-55): `docs/growth/cloud-credit-applications.md`. Microsoft first, Google Start tier second; both wait on an @alyr.qa email address.
 
 ## Next, in order
 
