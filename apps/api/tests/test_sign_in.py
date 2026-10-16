@@ -29,6 +29,8 @@ def other_shop_with_owner(email="omar@other.example"):
         "insert into memberships (tenant_id, user_id, role) values ($1, $2, 'owner')",
         tenant, user,
     )
+    # A shop only sees the modules it has switched on (D-027); give this one the ledger.
+    owner_sql("insert into tenant_modules (tenant_id, module_key) values ($1, 'ledger')", tenant)
     return tenant
 
 
