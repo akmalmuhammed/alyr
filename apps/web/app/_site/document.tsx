@@ -11,11 +11,16 @@ import "./site.css";
 const instrument = Instrument_Sans({
   variable: "--font-instrument", subsets: ["latin"], axes: ["wdth"], display: "swap",
 });
+// Two weights: every preloaded file counts against the first paint, and Arabic set at 500
+// falls back to 400, which reads almost the same at these sizes.
 const plexArabic = IBM_Plex_Sans_Arabic({
-  variable: "--font-plex-arabic", subsets: ["arabic"], weight: ["400", "500", "600"], display: "swap",
+  variable: "--font-plex-arabic", subsets: ["arabic"], weight: ["400", "600"], display: "swap",
 });
+// Mono only sets small labels, so it is not preloaded: the first screen's large type is
+// what must not wait. (Preloads cannot be set per language here: this build shares font
+// preloads across root layouts, so the Arabic weights are preloaded on English pages too.)
 const plexMono = IBM_Plex_Mono({
-  variable: "--font-plex-mono", subsets: ["latin"], weight: ["400", "500"], display: "swap",
+  variable: "--font-plex-mono", subsets: ["latin"], weight: ["400", "500"], display: "swap", preload: false,
 });
 
 export const siteViewport: Viewport = {

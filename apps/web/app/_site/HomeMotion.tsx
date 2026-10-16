@@ -115,12 +115,16 @@ export function HomeMotion() {
       steps?.disconnect();
     });
 
-    // The choreography, after first paint and when the browser is idle.
+    // The choreography, once the page has loaded and the browser is idle, so its chunk never
+    // competes with the first screen. If that takes longer than the failsafe (2.5 s from
+    // the first byte), the page simply stays still.
     const idle = window.requestIdleCallback
       ? (run: () => void) => window.requestIdleCallback(run, { timeout: 1200 })
       : (run: () => void) => window.setTimeout(run, 200);
-    const frame = window.requestAnimationFrame(() => idle(() => setChoreograph(true)));
-    undo.push(() => window.cancelAnimationFrame(frame));
+    const start = () => idle(() => setChoreograph(true));
+    if (document.readyState === "complete") start();
+    else window.addEventListener("load", start, { once: true });
+    undo.push(() => window.removeEventListener("load", start));
 
     return () => undo.forEach((fn) => fn());
   }, []);

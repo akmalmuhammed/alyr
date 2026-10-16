@@ -189,7 +189,7 @@ function Does({ locale }: { locale: Locale }) {
 
   return (
     <section className="band" id="what" aria-labelledby="what-title">
-      <div className="band-fold" aria-hidden="true" data-m data-start="top 92%">
+      <div className="band-fold" aria-hidden="true" data-m>
         <i />
         <i />
         <i />

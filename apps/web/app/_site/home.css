@@ -718,15 +718,16 @@ main[data-page="home"] {
 /* ------------------------------------------------------------------ motion */
 @keyframes hp-rise { from { opacity: 0; translate: 0 8px; } }
 @keyframes hp-fade { from { opacity: 0; } }
-@keyframes hp-line { from { translate: 0 105%; } }
+/* the line starts partly risen, so the headline is painted with the first frame (it is the
+   page's largest paint: hidden until hydration, it would count as late) */
+@keyframes hp-line { from { translate: 0 42%; } }
 @keyframes hp-settle { from { font-stretch: 88%; } }
 @keyframes hp-phone { from { opacity: 0; translate: 0 24px; } }
-@keyframes hp-slide { from { opacity: 0; translate: calc(var(--dir) * 28px) -28px; --reveal: 0px; } to { --reveal: 34rem; } }
+@keyframes hp-slide { from { opacity: 0; translate: calc(var(--dir) * 28px) -28px; } }
 @keyframes hp-pop { from { scale: 0; } }
 @keyframes hp-roll-out { to { translate: 0 var(--to, -100%); opacity: 0; } }
 @keyframes hp-roll-in { from { translate: 0 var(--from, 100%); opacity: 0; } }
 @keyframes hp-flash { 0% { opacity: 1; } 100% { opacity: 0; } }
-@property --reveal { syntax: "<length>"; inherits: false; initial-value: 34rem; }
 
 @media (prefers-reduced-motion: no-preference) {
   /* the hero, before hydration: the headline rises out of its mask and settles to width
@@ -740,17 +741,17 @@ main[data-page="home"] {
   .motion .hero-note { animation: hp-rise var(--dur-3) var(--ease) both 420ms; }
   .motion .hero-facts li { animation: hp-rise var(--dur-3) var(--ease) both; animation-delay: calc(480ms + var(--i, 0) * var(--stagger)); }
   .motion .hero-phone { animation: hp-phone var(--dur-4) var(--ease) both 600ms; }
-  .motion .hero-record {
-    animation: hp-slide var(--dur-3) var(--ease) both 900ms;
-    clip-path: polygon(100% 0, 100% var(--reveal), calc(100% - var(--reveal)) 0);
-  }
-  [dir="rtl"] .motion .hero-record, .motion[dir="rtl"] .hero-record { clip-path: polygon(0 0, 0 var(--reveal), var(--reveal) 0); }
+  /* transform and opacity only, so it runs off the main thread while the page hydrates */
+  .motion .hero-record { animation: hp-slide var(--dur-3) var(--ease) both 900ms; }
   .motion .rec-dot { animation: hp-pop var(--dur-3) var(--spring) both 1350ms; }
   .motion .hero-fig .cap, .motion .hero-hint { animation: hp-fade var(--dur-3) var(--ease) both 1100ms; }
 
   /* the steppers: the quantity and the total roll on the spring */
   .roll-old { visibility: visible; animation: hp-roll-out var(--dur-2) var(--ease) both; }
   .roll-new { animation: hp-roll-in var(--dur-3) var(--spring) both; }
+
+  /* section headings stay masked until the choreography splits them as they are reached */
+  .motion [data-split]:not(.is-split) { clip-path: inset(0 0 100% 0); }
 
   /* problem: each row's rule draws in from the start edge, then its words */
   .prow::before { transition: transform var(--dur-4) var(--ease); }

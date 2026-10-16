@@ -1,13 +1,29 @@
+import { readFile } from "node:fs/promises";
+import { join } from "node:path";
 import { ImageResponse } from "next/og";
+import { copy } from "./_site/copy";
 
 // The card shown when a link to ALYR is shared, for example in a WhatsApp chat.
-// Reversed logo on Carbon, as the logo rules require on dark surfaces.
+// Reversed logo on Carbon, as the logo rules require on dark surfaces. The words are the
+// homepage's own (copy.ts), in English: one card serves both languages, and the image
+// renderer has no Arabic font. The two fonts are the design system's own files, copied from
+// the branch codex/alyr-native-foundation (asset-continuity-web/public/alyr/fonts), both
+// under the SIL Open Font Licence. They are read at build time and never sent to browsers.
 
-export const alt = "ALYR. Go digital without the IT team.";
+const fonts = join(process.cwd(), "app/_site/fonts");
+const instrument = await readFile(join(fonts, "InstrumentSans-SemiBold.ttf"));
+const plexMono = await readFile(join(fonts, "IBMPlexMono-Regular.ttf"));
+
+const t = copy.en.home.hero;
+// The headline's no-break spaces are for narrow phones; here they would only widen gaps.
+const title = t.title.map((line) => line.replace(/ /g, " "));
+
+export const alt = `ALYR. ${title.join(" ")}`;
 export const size = { width: 1200, height: 630 };
 export const contentType = "image/png";
 
 const VOLT = "#B7F34A";
+const CONCRETE = "#A7ADB5";
 
 export default function OpenGraphImage() {
   return new ImageResponse(
@@ -16,8 +32,13 @@ export default function OpenGraphImage() {
         style={{
           width: "100%", height: "100%", display: "flex", flexDirection: "column",
           justifyContent: "space-between", padding: 80, background: "#15171A", color: "#FFFFFF",
+          position: "relative",
         }}
       >
+        {/* the 45° cut corner the homepage uses on its figures and its button */}
+        <svg width="120" height="120" viewBox="0 0 120 120" style={{ position: "absolute", top: 0, right: 0 }}>
+          <polygon fill={VOLT} points="0,0 120,0 120,120" />
+        </svg>
         <svg width="400" height="64" viewBox="20 30 1000 160">
           <g transform="translate(20 30)">
             <polygon fill="#FFFFFF" points="50,0 180,0 130,62 0,62" />
@@ -35,19 +56,32 @@ export default function OpenGraphImage() {
           </g>
         </svg>
         <div style={{ display: "flex", flexDirection: "column" }}>
-          <div style={{ fontSize: 84, fontWeight: 600, letterSpacing: -2, lineHeight: 1.02 }}>
-            Go digital.
+          <div style={{ fontFamily: "IBM Plex Mono", fontSize: 22, color: CONCRETE, letterSpacing: 2, textTransform: "uppercase", marginBottom: 30 }}>
+            {t.eyebrow}
           </div>
-          <div style={{ fontSize: 84, fontWeight: 600, letterSpacing: -2, lineHeight: 1.02, color: "#A7ADB5" }}>
-            Without the IT team.
-          </div>
+          {title.map((line, index) => (
+            <div key={line} style={{ fontFamily: "Instrument Sans", fontSize: 88, fontWeight: 600, letterSpacing: -3, lineHeight: 1.02, color: index ? CONCRETE : "#FFFFFF" }}>
+              {line}
+            </div>
+          ))}
         </div>
-        <div style={{ display: "flex", alignItems: "center", fontSize: 26, color: "#A7ADB5" }}>
-          <div style={{ width: 28, height: 6, background: VOLT, marginRight: 18 }} />
-          alyr.qa
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", fontFamily: "Instrument Sans", fontSize: 26, color: CONCRETE }}>
+          <div style={{ display: "flex", alignItems: "center" }}>
+            <div style={{ width: 28, height: 6, background: VOLT, marginRight: 18 }} />
+            alyr.qa
+          </div>
+          <div style={{ display: "flex", gap: 12, fontSize: 22 }}>
+            {t.facts.flatMap((fact, index) => (index ? [<span key={`s${index}`} style={{ color: "#5F666D" }}>·</span>, <span key={fact}>{fact}</span>] : [<span key={fact}>{fact}</span>]))}
+          </div>
         </div>
       </div>
     ),
-    size,
+    {
+      ...size,
+      fonts: [
+        { name: "Instrument Sans", data: instrument, style: "normal", weight: 600 },
+        { name: "IBM Plex Mono", data: plexMono, style: "normal", weight: 400 },
+      ],
+    },
   );
 }
