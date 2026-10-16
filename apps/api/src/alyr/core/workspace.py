@@ -10,6 +10,7 @@ from uuid import UUID
 import asyncpg
 
 from alyr import catalog
+from alyr.core import pricing
 from alyr.core.auth import Staff
 from alyr.core.normalise import fmt_qar
 from alyr.db import Database
@@ -116,8 +117,17 @@ async def state(conn: asyncpg.Connection, staff: Staff) -> dict:
         for screen in module.screens
         if _visible(screen, staff.role)
     ]
+    # The owner's ALYR price, so home can say when one is waiting for their answer.
+    plan = None
+    if staff.role in catalog.MANAGERS:
+        quote = await pricing.own_quote(conn)
+        plan = {"status": quote["status"]}
+        if quote["status"] != "preparing":
+            plan |= {"monthly_total_text": quote["totals"]["monthly_total_text"],
+                     "number": quote["number"]}
     return {
         "business": dict(shop),
+        "plan": plan,
         "me": {"name": staff.name, "role": staff.role, "signed_in": staff.user_id is not None},
         "can_manage": staff.role in catalog.MANAGERS,
         "modules": sorted(modules),

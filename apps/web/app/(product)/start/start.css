@@ -253,6 +253,20 @@
 .ob-price ul { list-style: none; margin: 18px 0 0; padding: 16px 0 0; display: grid; gap: 10px; border-top: 1px solid color-mix(in srgb, var(--sheet) 16%, transparent); font-size: 14.5px; }
 .ob-price li { display: flex; gap: 10px; align-items: center; }
 .ob-price li svg { color: var(--volt); flex: none; }
+.ob-price.preparing { background: var(--sheet); color: var(--ink); box-shadow: var(--lift); }
+.ob-price.preparing > small { color: var(--ink-2); }
+.ob-price.preparing ul { border-top-color: var(--hair); }
+.ob-price.preparing li svg { color: var(--volt-ink); }
+.ob-preparing { display: flex; align-items: center; gap: 12px; }
+.ob-price .ob-preparing b { font-size: 20px; letter-spacing: -0.01em; }
+.ob-lines { list-style: none; }
+.ob-price .ob-lines li { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; }
+.ob-lines li > span { display: grid; gap: 1px; }
+.ob-lines li small { font-size: 12px; color: color-mix(in srgb, var(--sheet) 55%, transparent); }
+.ob-lines li b { font-weight: 600; white-space: nowrap; }
+.ob-quote-note { margin: 14px 0 0; padding: 10px 12px; border-radius: 12px; background: color-mix(in srgb, var(--sheet) 8%, transparent); font-size: 13.5px; line-height: 1.5; }
+.ob-accepted { display: inline-flex !important; align-items: center; gap: 6px; margin: 0 0 12px !important; padding: 4px 10px; border-radius: 999px; background: var(--volt); color: #15171a; font-size: 12.5px; font-weight: 600; }
+.ob-flash { display: flex; align-items: center; gap: 8px; margin: 0; padding: 10px 14px; border-radius: 12px; background: var(--volt-wash); color: var(--volt-ink); font-size: 14px; font-weight: 500; animation: ob-in 0.3s var(--ease); }
 .ob-promise { display: grid; gap: 6px; padding: 18px; border-radius: 22px; background: var(--volt-wash); color: var(--ink); }
 .ob-promise svg { color: var(--volt-ink); }
 .ob-promise p { margin: 0; color: var(--ink-2); font-size: 14.5px; line-height: 1.5; }

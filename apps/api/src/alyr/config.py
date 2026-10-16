@@ -27,11 +27,7 @@ class Settings(BaseSettings):
     # Self-serve sign-up at /start (D-031). Unset: open on a local machine, closed
     # everywhere else until the founder decides to open it.
     signup_open: bool | None = None
-    # The plan shown at the end of onboarding, in dirhams (D-017, not yet confirmed),
-    # and the money-back promise; an empty promise is not shown.
-    plan_price: int = 44900
-    plan_promise: str = ""
-    plan_promise_ar: str = ""
+    # Prices and the promise are set in the back office, not here (D-032).
 
     # Where payment links point. The web app serves /pay/...
     public_web_url: str = "http://localhost:3100"

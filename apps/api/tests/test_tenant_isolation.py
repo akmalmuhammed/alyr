@@ -14,6 +14,10 @@ GLOBAL_TABLES = {
     "platform_admins",
     # A verified email before its business exists (D-031).
     "signup_tokens",
+    # The paying client spans businesses; the price list and the switches are ALYR's.
+    # Each has its own forced row-level security (D-032).
+    "clients", "price_items", "business_type_settings", "platform_settings", "quotes",
+    "quote_lines",
 }
 
 

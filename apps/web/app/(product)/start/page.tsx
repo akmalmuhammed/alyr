@@ -7,7 +7,7 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Logo } from "../../_site/brand";
 import { Chat, initialsOf, type ChatMessage, type Choice } from "./Chat";
 import { COPY, type Lang } from "./copy";
@@ -26,8 +26,16 @@ type State = {
   finished: boolean;
   services: Service[];
   hours: Period[];
-  plan: { price: number; price_text: string; promise: Text };
+  quote: Quote;
   areas: string[];
+};
+type QuoteLine = { id: string; business: string; business_ar: string; name: string; name_ar: string; kind: "monthly" | "one_time"; quantity: number; amount_text: string };
+type Quote = {
+  status: "preparing" | "published" | "accepted";
+  id?: string; number?: number; period_months?: number; discount_pct?: number; note?: string;
+  lines?: QuoteLine[];
+  totals?: { monthly_subtotal_text: string; monthly_total_text: string; period_total_text: string; one_time_total: number; one_time_total_text: string };
+  promise?: Text | null; accepted_at?: string | null;
 };
 type WsStep = { key: string; done: boolean; asked: boolean; connection: string };
 type Workspace = { products: { key: string; steps: WsStep[] }[]; connections: { key: string; connected: boolean }[] };
@@ -105,6 +113,9 @@ export default function Start() {
   const [draft, setDraft] = useState("");
   const [tested, setTested] = useState<Booking | null>(null);
   const [ws, setWs] = useState<Workspace | null>(null);
+  const [quote, setQuote] = useState<Quote | null>(null);
+  const [quoteFlash, setQuoteFlash] = useState(false);
+  const quoteSeen = useRef("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
 
@@ -124,6 +135,8 @@ export default function Start() {
     setState(answer.data);
     setRows(answer.data.services);
     setHours(answer.data.hours);
+    setQuote(answer.data.quote);
+    quoteSeen.current = JSON.stringify(answer.data.quote);
     return answer.data;
   }, []);
 
@@ -151,6 +164,8 @@ export default function Start() {
         const loaded = await loadState();
         if (!alive) return;
         if (!loaded) return setStep("account");
+        // A finished owner comes back here only to answer a price ALYR published since.
+        if (loaded.finished && loaded.quote.status === "published") return setStep("plan");
         if (loaded.finished) router.replace("/app");
         setStep(loaded.finished ? "finished" : ((loaded.step || loaded.steps[0]) as Step));
       } catch {
@@ -285,6 +300,41 @@ export default function Start() {
     setDraft("");
     const answer = await call<{ messages: ChatMessage[] }>("/api/onboarding/test-chat", "POST", { text: choice ? choice.title : text, reply_id: choice?.id ?? "" });
     if (answer.ok) setChat(answer.data.messages);
+  });
+
+  // ── the price ALYR prepared (D-032) ───────────────────
+  // While the owner looks at the plan, ask again every few seconds: ALYR may publish or
+  // change the price from the back office at that very moment.
+  useEffect(() => {
+    if (step !== "plan") return;
+    let alive = true;
+    const tick = async () => {
+      const answer = await call<Quote>("/api/onboarding/quote").catch(() => null);
+      if (!alive || !answer?.ok) return;
+      const seen = JSON.stringify(answer.data);
+      if (quoteSeen.current && seen !== quoteSeen.current && answer.data.status !== "preparing") {
+        setQuoteFlash(true);
+        setTimeout(() => setQuoteFlash(false), 5000);
+      }
+      quoteSeen.current = seen;
+      setQuote(answer.data);
+    };
+    const timer = setInterval(tick, 4000);
+    return () => { alive = false; clearInterval(timer); };
+  }, [step]);
+  const acceptQuote = (then: () => void) => guard(async () => {
+    if (!quote?.id) return;
+    const answer = await call<Quote>("/api/onboarding/quote/accept", "POST", { quote_id: quote.id });
+    if (answer.status === 409) {
+      setError(t.plan.changed);
+      const fresh = await call<Quote>("/api/onboarding/quote");
+      if (fresh.ok) { quoteSeen.current = JSON.stringify(fresh.data); setQuote(fresh.data); }
+      return;
+    }
+    if (!answer.ok) return setError(t.offline);
+    quoteSeen.current = JSON.stringify(answer.data);
+    setQuote(answer.data);
+    then();
   });
 
   // ── go live ──────────────────────────────────────────
@@ -548,27 +598,71 @@ export default function Start() {
       </>
     );
   } else if (step === "plan") {
-    const promise = state?.plan.promise[lang];
+    const q = quote;
+    const ready = q && q.status !== "preparing" && q.totals;
+    const multi = new Set((q?.lines ?? []).map((l) => l.business).filter(Boolean)).size > 1;
+    const promise = q?.promise?.[lang];
+    const accepted = q?.status === "accepted";
+    const acceptedOn = q?.accepted_at
+      ? new Date(q.accepted_at).toLocaleDateString(lang === "ar" ? "ar-QA" : "en-GB", { day: "numeric", month: "short", year: "numeric" })
+      : "";
     main = (
       <>
-        {head(t.plan.title, t.plan.sub)}
-        <div className="ob-plan">
-          <section className="ob-price">
-            <p><b className="num">{state?.plan.price_text}</b> <span>{t.plan.perMonth}</span></p>
-            <small>{t.plan.setup}</small>
+        {head(t.plan.title, ready ? t.plan.sub : t.plan.preparingSub)}
+        {quoteFlash && <p className="ob-flash" role="status"><Ico name="check" size={16} />{t.plan.updated}</p>}
+        {ready && q.totals ? (
+          <div className="ob-plan">
+            <section className="ob-price">
+              {accepted && <p className="ob-accepted"><Ico name="check" size={15} />{t.plan.acceptedOn(acceptedOn)}</p>}
+              <p><b className="num"><bdi dir="ltr">{q.totals.monthly_total_text}</bdi></b> <span>{t.plan.perMonth}</span></p>
+              {(q.discount_pct ?? 0) > 0 && <small>{t.plan.discount(q.discount_pct ?? 0, q.totals.monthly_subtotal_text)}</small>}
+              {(q.period_months ?? 1) > 1 && <small>{t.plan.paidEvery(q.period_months ?? 1, q.totals.period_total_text)}</small>}
+              {q.totals.one_time_total > 0 && <small>{t.plan.oneTime(q.totals.one_time_total_text)}</small>}
+              <ul className="ob-lines">
+                {(q.lines ?? []).map((l) => (
+                  <li key={l.id}>
+                    <span>
+                      {lang === "ar" && l.name_ar ? l.name_ar : l.name}
+                      {l.quantity > 1 && <span className="num"> × {l.quantity}</span>}
+                      {multi && l.business && <small>{lang === "ar" && l.business_ar ? l.business_ar : l.business}</small>}
+                    </span>
+                    <b className="num"><bdi dir="ltr">{l.amount_text}</bdi>{l.kind === "one_time" && <small> · {t.plan.once}</small>}</b>
+                  </li>
+                ))}
+              </ul>
+              {q.note && <p className="ob-quote-note" dir="auto">{q.note}</p>}
+            </section>
+            {promise && <section className="ob-promise"><Ico name="shield" size={22} /><b>{t.plan.promise}</b><p>{promise}</p></section>}
+          </div>
+        ) : (
+          <section className="ob-price preparing">
+            <p className="ob-preparing"><span className="ob-pulse" /><b>{t.plan.preparing}</b></p>
+            <small>{t.plan.preparingNote}</small>
             <ul>{t.plan.includes.map((x) => <li key={x}><Ico name="check" size={16} />{x}</li>)}</ul>
           </section>
-          {promise && <section className="ob-promise"><Ico name="shield" size={22} /><b>{t.plan.promise}</b><p>{promise}</p></section>}
-        </div>
+        )}
         <section className="ob-note-card"><b>{t.plan.meta}</b><small>{t.plan.metaSub}</small></section>
       </>
     );
-    actions = (
-      <>
-        <button className="ob-btn ghost" type="button" onClick={() => go(way === "assisted" ? "assisted" : "try")}>{t.back}</button>
-        <button className="ob-btn primary" type="button" onClick={() => go("golive")}>{t.continue}<Ico name="arrow" /></button>
-      </>
-    );
+    const waiting = q?.status === "published";
+    if (state?.finished) {
+      actions = (
+        <>
+          <button className="ob-btn ghost" type="button" onClick={() => router.push("/app")}>{t.plan.backToWorkspace}</button>
+          {waiting && <button className="ob-btn primary" type="button" disabled={busy} onClick={() => acceptQuote(() => router.push("/app"))}>{t.plan.acceptOnly}<Ico name="arrow" /></button>}
+        </>
+      );
+    } else {
+      actions = (
+        <>
+          <button className="ob-btn ghost" type="button" onClick={() => go(way === "assisted" ? "assisted" : "try")}>{t.back}</button>
+          {waiting && <button className="ob-link" type="button" onClick={() => go("golive")}>{t.plan.later}</button>}
+          {waiting
+            ? <button className="ob-btn primary" type="button" disabled={busy} onClick={() => acceptQuote(() => go("golive"))}>{t.plan.accept}<Ico name="arrow" /></button>
+            : <button className="ob-btn primary" type="button" onClick={() => go("golive")}>{t.continue}<Ico name="arrow" /></button>}
+        </>
+      );
+    }
   } else if (step === "golive") {
     const whatsapp = wsStep("whatsapp");
     const provider = wsStep("provider");

@@ -20,6 +20,7 @@ type State = {
   nav: { core: NavItem[]; products: NavItem[]; account: NavItem[] };
   products: Product[];
   connections: Connection[];
+  plan: { status: "preparing" | "published" | "accepted"; monthly_total_text?: string } | null;
 };
 type Card = { key: string; module: string; label: Text; value: number; text: string };
 type Lang = "en" | "ar";
@@ -40,6 +41,9 @@ const T = {
     setupSub: (done: number, total: number) => `${done} of ${total} steps done. Each one you finish switches more of it on.`,
     doIt: "Do it now", ask: "Ask ALYR", asked: "ALYR is on it", allSet: "Everything is set up",
     allSetSub: "Every product you use is ready for customers.",
+    planReady: "Your ALYR price is ready",
+    planReadySub: (amount: string) => `${amount} a month. Review it and accept it to go ahead.`,
+    planReview: "Review and accept",
     productsTitle: "Products", productsEyebrow: "Your plan",
     productsSub: "Switch on what your business needs. Switching off hides the screens and keeps every record.",
     active: "Active", available: "Available", coming: "Coming", on: "On", off: "Off",
@@ -71,6 +75,9 @@ const T = {
     setupSub: (done: number, total: number) => `أنجزت ${done} من ${total}. كل خطوة تفعّل جزءاً أكبر.`,
     doIt: "نفّذها الآن", ask: "اطلب من ALYR", asked: "ALYR تعمل عليها", allSet: "كل شيء جاهز",
     allSetSub: "كل منتج تستخدمه جاهز لعملائك.",
+    planReady: "سعرك من ALYR جاهز",
+    planReadySub: (amount: string) => `${amount} شهرياً. راجعه واقبله للمتابعة.`,
+    planReview: "راجع واقبل",
     productsTitle: "المنتجات", productsEyebrow: "خطتك",
     productsSub: "فعّل ما يحتاجه عملك. الإيقاف يخفي الشاشات ويحفظ كل السجلات.",
     active: "مفعّل", available: "متاح", coming: "قريباً", on: "مفعّل", off: "متوقف",
@@ -387,6 +394,13 @@ export default function WorkspaceShell() {
         </section>
 
         <div className="sh-bento" style={stagger(2)}>
+          {state.plan?.status === "published" && (
+            <section className="sh-tile raised sh-span-12 sh-allset sh-plan-ready">
+              <span className="sh-check"><Tick /></span>
+              <div><h2>{t.planReady}</h2><p className="sh-note">{t.planReadySub(state.plan.monthly_total_text ?? "")}</p></div>
+              <Link className="btn small" href="/start">{t.planReview}<Icon name="arrow" className="sh-ico arrow" /></Link>
+            </section>
+          )}
           {pending.length === 0 && (
             <section className="sh-tile raised sh-span-7 sh-allset">
               <span className="sh-check"><Tick /></span>

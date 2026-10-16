@@ -179,6 +179,7 @@
 .sh-step { flex: 1; min-width: 0; font-size: 14px; }
 .sh-step small { display: block; font-size: 12px; color: var(--ink-3); }
 .sh-allset { display: flex; align-items: center; gap: 14px; }
+.sh-plan-ready > div { flex: 1; }
 .sh-allset .sh-check { width: 34px; height: 34px; background: var(--volt); box-shadow: none; }
 .sh-allset .sh-check svg { width: 16px; height: 16px; animation: sh-draw 0.6s 0.2s var(--ease) forwards; }
 
