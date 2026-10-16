@@ -288,3 +288,12 @@ def test_a_quiet_week_says_so_in_one_line_and_late_money_gets_a_next_step(client
     assert "Next step: send reminders from Credit accounts." in text
     summary = report.render(built, {"en": "Al Noor", "ar": "النور"}, "en")["summary"]
     assert "no orders" not in summary
+
+
+def test_made_up_addresses_are_never_emailed():
+    assert report._deliverable("owner@realshop.qa")
+    assert not report._deliverable("fatima@alnoor.example")
+    assert not report._deliverable("ops@alyr.example")
+    assert not report._deliverable("someone@shop.test")
+    assert not report._deliverable("broken-address")
+

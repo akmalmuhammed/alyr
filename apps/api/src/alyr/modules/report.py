@@ -236,11 +236,24 @@ async def update_settings(
     return await settings(conn)
 
 
+# Domains reserved for examples and tests (RFC 2606). The demo shops' people use them,
+# and nothing should ever be emailed there.
+RESERVED_DOMAINS = (".example", ".test", ".invalid", ".localhost")
+
+
+def _deliverable(address: str) -> bool:
+    local, at, domain = address.rpartition("@")
+    domain = domain.lower()
+    if not (local and at and "." in domain):
+        return False
+    return not domain.endswith(RESERVED_DOMAINS)
+
+
 async def _owner_emails(conn: asyncpg.Connection) -> list[str]:
     rows = await conn.fetch(
         "select u.email from memberships m join users u on u.id = m.user_id where m.role = 'owner'"
     )
-    return [r["email"] for r in rows]
+    return [r["email"] for r in rows if _deliverable(r["email"])]
 
 
 # ------------------------------------------------------------------ sending it
