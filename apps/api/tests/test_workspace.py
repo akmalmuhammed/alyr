@@ -56,10 +56,12 @@ def test_switching_a_product_off_hides_it_everywhere_and_back_on_restores_it(cli
     state = shell(client)
     assert product(state, "credit")["status"] == "available"
     assert "ledger" not in nav_keys(state)
-    # Its routes refuse, and the chat no longer offers it.
+    # Its routes refuse, and the chat no longer offers it: the shop still takes
+    # bookings, so a greeting gets the booking menu, with no balance or pay buttons.
     assert client.get("/api/ledger/summary").status_code == 403
     reply = say(client, AHMED_PHONE, "hello")[-1]
-    assert reply["body"] == "Thanks for your message. We will reply shortly."
+    assert reply["body"] == "Welcome to Al Noor Electricals. How can we help?"
+    assert [c["id"] for c in reply["payload"]["choices"]] == ["book", "my_booking", "prices"]
 
     assert client.post("/api/workspace/products/credit/enable").json() == {"enabled": ["ledger"]}
     summary = client.get("/api/ledger/summary").json()

@@ -36,6 +36,8 @@ Tests: 207, all passing. CI runs api, web and a secrets scan on every pull reque
 
 ## Next on the build side, in order
 
+0. **Onboarding (ALY-76, D-031):** the API is built: sign-up, business presets, the private test line. The `/start` screens are next.
+
 1. **Bookable staff or resources (ALY-27),** so a salon or clinic can serve more than one customer at a time; then services and opening-hours screens.
 1. **Product screens on ALYR tokens**, so the workspace matches the public site.
 1. **Contacts and labels (ALY-53).**

@@ -64,6 +64,22 @@ async def add_service(
     return str(service_id)
 
 
+async def update_service(
+    conn: asyncpg.Connection, service_id: UUID, name: str | None, name_ar: str | None,
+    duration_minutes: int | None, price: int | None,
+) -> bool:
+    """Change a service's name, length or price. Bookings already made keep the name they
+    were made with."""
+    updated = await conn.execute(
+        "update services set name = coalesce(nullif($2, ''), name), "
+        "name_ar = coalesce($3, name_ar), duration_minutes = coalesce($4, duration_minutes), "
+        "price = coalesce($5, price) where id = $1",
+        service_id, name.strip() if name is not None else None,
+        name_ar.strip() if name_ar is not None else None, duration_minutes, price,
+    )
+    return updated == "UPDATE 1"
+
+
 async def set_service_active(conn: asyncpg.Connection, service_id: UUID, active: bool) -> bool:
     updated = await conn.execute(
         "update services set active = $2 where id = $1", service_id, active
@@ -141,6 +157,8 @@ async def _shop_name(conn: asyncpg.Connection, arabic: bool) -> str:
 
 
 async def _schedule_reminder(conn: asyncpg.Connection, booking_id: UUID, starts_at: datetime):
+    if not await conn.fetchval(f"select booking_reminders from tenants where id = {_TENANT}"):
+        return  # the business switched reminders off during onboarding or later
     run_at = starts_at - REMIND_BEFORE
     if await conn.fetchval("select $1::timestamptz > now()", run_at):
         await jobs.enqueue(

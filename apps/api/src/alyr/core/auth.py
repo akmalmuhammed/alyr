@@ -52,14 +52,15 @@ def clean_email(email: str) -> str:
     return email.strip().lower()
 
 
-async def request_code(db: Database, email: str) -> str | None:
+async def request_code(db: Database, email: str, allow_new: bool = False) -> str | None:
     """Create a code for a known person and return it for delivery. Returns None for an
     unknown email; the caller must answer the same either way, so nobody can use the
-    form to learn who has an account."""
+    form to learn who has an account. With `allow_new` (sign-up, D-031) a code is made
+    for any address, so the person can prove they own it."""
     email = clean_email(email)
     async with db.unscoped() as conn:
         known = await conn.fetchval("select true from users where email = $1", email)
-        if not known:
+        if not known and not allow_new:
             return None
         recent = await conn.fetchval(
             "select count(*) from login_codes "
@@ -78,8 +79,8 @@ async def request_code(db: Database, email: str) -> str | None:
     return code
 
 
-async def verify_code(db: Database, email: str, code: str) -> str:
-    """Exchange a correct code for a session token. Raises AuthError otherwise."""
+async def check_code(db: Database, email: str, code: str) -> None:
+    """Spend a correct code, or count a wrong guess. Raises AuthError when refused."""
     email = clean_email(email)
     refused = AuthError("that code is wrong or has expired")
     async with db.unscoped() as conn, conn.transaction():
@@ -91,30 +92,51 @@ async def verify_code(db: Database, email: str, code: str) -> str:
         )
         if row is None or row["attempts"] >= MAX_GUESSES:
             raise refused
-        if not hmac.compare_digest(row["code_hash"], _hash(f"{email}:{code.strip()}")):
-            # Counted outside this transaction's fate: the raise below must not undo it.
-            wrong = row["id"]
-        else:
-            wrong = None
+        if hmac.compare_digest(row["code_hash"], _hash(f"{email}:{code.strip()}")):
             await conn.execute("update login_codes set used = true where id = $1", row["id"])
-            user_id = await conn.fetchval("select id from users where email = $1", email)
-            await conn.execute("select set_config('app.user_id', $1, true)", str(user_id))
-            tenant_id = await conn.fetchval(
-                "select tenant_id from memberships where user_id = $1 order by created_at limit 1",
-                user_id,
-            )
-            if tenant_id is None:
-                raise AuthError("this account is not a member of any shop")
-            token = secrets.token_urlsafe(32)
-            await conn.execute(
-                "insert into sessions (token_hash, user_id, tenant_id, expires_at) "
-                f"values ($1, $2, $3, now() + interval '{SESSION_DAYS} days')",
-                _hash(token), user_id, tenant_id,
-            )
-            return token
+            return
+        # Counted outside this transaction's fate: the raise below must not undo it.
+        wrong = row["id"]
     async with db.unscoped() as conn:
         await conn.execute("update login_codes set attempts = attempts + 1 where id = $1", wrong)
     raise refused
+
+
+async def create_session(conn: asyncpg.Connection, user_id: UUID, tenant_id: UUID) -> str:
+    """A new session cookie value for this person in this shop. `conn` is unscoped."""
+    token = secrets.token_urlsafe(32)
+    await conn.execute(
+        "insert into sessions (token_hash, user_id, tenant_id, expires_at) "
+        f"values ($1, $2, $3, now() + interval '{SESSION_DAYS} days')",
+        _hash(token), user_id, tenant_id,
+    )
+    return token
+
+
+async def session_for(db: Database, email: str) -> str | None:
+    """A session in the person's first shop, or None if they work for no shop yet."""
+    email = clean_email(email)
+    async with db.unscoped() as conn, conn.transaction():
+        user_id = await conn.fetchval("select id from users where email = $1", email)
+        if user_id is None:
+            return None
+        await conn.execute("select set_config('app.user_id', $1, true)", str(user_id))
+        tenant_id = await conn.fetchval(
+            "select tenant_id from memberships where user_id = $1 order by created_at limit 1",
+            user_id,
+        )
+        if tenant_id is None:
+            return None
+        return await create_session(conn, user_id, tenant_id)
+
+
+async def verify_code(db: Database, email: str, code: str) -> str:
+    """Exchange a correct code for a session token. Raises AuthError otherwise."""
+    await check_code(db, email, code)
+    token = await session_for(db, email)
+    if token is None:
+        raise AuthError("this account is not a member of any shop")
+    return token
 
 
 async def resolve(db: Database, token: str) -> Staff | None:

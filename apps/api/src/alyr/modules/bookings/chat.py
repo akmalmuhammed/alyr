@@ -56,11 +56,15 @@ async def maybe_handle(
             )
         return [OutboundMessage(to=contact["id"], body=body)]
 
-    if message.reply_id and message.reply_id != "book":
+    if message.reply_id == "prices":
+        return [await _prices(conn, contact, arabic)]
+    if message.reply_id and message.reply_id not in ("book", "my_booking"):
         return None
     text = message.text.lower()
 
-    if not message.reply_id and any(word in text for word in MINE_WORDS):
+    if message.reply_id == "my_booking" or (
+        not message.reply_id and any(word in text for word in MINE_WORDS)
+    ):
         upcoming = await service.next_booking(conn, contact["id"])
         if upcoming is None:
             body = (
@@ -92,3 +96,40 @@ async def maybe_handle(
         )
         return [OutboundMessage(to=contact["id"], body=body)]
     return None
+
+
+async def _prices(
+    conn: asyncpg.Connection, contact: asyncpg.Record, arabic: bool
+) -> OutboundMessage:
+    services = await service.list_services(conn, only_active=True)
+    lines = []
+    for s in services:
+        name = s["name_ar"] if arabic and s["name_ar"] else s["name"]
+        minutes = f"{s['duration_minutes']} دقيقة" if arabic else f"{s['duration_minutes']} min"
+        price = f": {s['price_text']}" if s["price_text"] else ""
+        lines.append(f"{name}{price} ({minutes})")
+    head = "خدماتنا:" if arabic else "Our services:"
+    return OutboundMessage(
+        to=contact["id"], kind="buttons", body="\n".join([head, *lines]),
+        choices=(Choice("book", "احجز موعداً" if arabic else "Book a visit"),),
+    )
+
+
+async def greeting(
+    conn: asyncpg.Connection, tenant_id: UUID, contact: asyncpg.Record, message: InboundMessage
+) -> list[OutboundMessage]:
+    """The menu a booking business answers with when nothing more specific applies."""
+    arabic = contact["lang"] == "ar" or has_arabic(message.text)
+    shop = await conn.fetchrow("select name, name_ar from tenants where id = $1", tenant_id)
+    name = shop["name_ar"] if arabic and shop["name_ar"] else shop["name"]
+    if arabic:
+        body = f"أهلاً بك في {name}. كيف نقدر نخدمك؟"
+        titles = ("احجز موعداً", "حجزي", "الأسعار")
+    else:
+        body = f"Welcome to {name}. How can we help?"
+        titles = ("Book a visit", "My booking", "Prices")
+    keys = ("book", "my_booking", "prices")
+    return [OutboundMessage(
+        to=contact["id"], kind="buttons", body=body,
+        choices=tuple(Choice(k, t) for k, t in zip(keys, titles, strict=True)),
+    )]
