@@ -6,7 +6,11 @@ import "./site.css";
 
 // The design system's type: Instrument Sans for Latin, IBM Plex Sans Arabic for Arabic,
 // IBM Plex Mono for small labels and identifiers. Self-hosted by Next at build time.
-const instrument = Instrument_Sans({ variable: "--font-instrument", subsets: ["latin"], display: "swap" });
+// Instrument Sans carries its width axis, so display type can settle from slightly
+// condensed to normal width as it arrives (homepage motion, Latin only).
+const instrument = Instrument_Sans({
+  variable: "--font-instrument", subsets: ["latin"], axes: ["wdth"], display: "swap",
+});
 const plexArabic = IBM_Plex_Sans_Arabic({
   variable: "--font-plex-arabic", subsets: ["arabic"], weight: ["400", "500", "600"], display: "swap",
 });
@@ -18,6 +22,14 @@ export const siteViewport: Viewport = {
   themeColor: [
     { media: "(prefers-color-scheme: light)", color: "#f6f7f3" },
     { media: "(prefers-color-scheme: dark)", color: "#f6f7f3" },
+  ],
+};
+
+/** The homepage follows the device into dark mode; the ALYR Chat page stays light. */
+export const homeViewport: Viewport = {
+  themeColor: [
+    { media: "(prefers-color-scheme: light)", color: "#f6f7f3" },
+    { media: "(prefers-color-scheme: dark)", color: "#0e1012" },
   ],
 };
 
@@ -40,6 +52,16 @@ export function siteMetadata(locale: Locale, page: PageKey = "home"): Metadata {
   };
 }
 
+// Runs in <head> before the first paint.
+// `al-js`: scripts run, so sections that animate in never flash (the ALYR Chat page).
+// `motion`: the homepage's start states apply. Only when the visitor has not asked for
+// reduced motion, and only for 2.5 s unless the motion code arrives and keeps it: if
+// that code never loads, the class goes and every section simply shows.
+const BEFORE_PAINT =
+  "(function(){var d=document.documentElement;d.classList.add('al-js');try{" +
+  "if(!window.matchMedia('(prefers-reduced-motion: reduce)').matches){d.classList.add('motion');" +
+  "window.__alyrMotion=setTimeout(function(){d.classList.remove('motion')},2500)}}catch(e){}})()";
+
 /** The whole document for a public page. Each language has its own root layout so the
  * `lang` and `dir` on `<html>` are right from the first byte. */
 export function SiteDocument({ locale, children }: { locale: Locale; children: React.ReactNode }) {
@@ -51,9 +73,7 @@ export function SiteDocument({ locale, children }: { locale: Locale; children: R
       suppressHydrationWarning
     >
       <head>
-        {/* Marks that scripts run, before the first paint, so sections that animate in
-            never flash. Without scripts the class is absent and everything is visible. */}
-        <script dangerouslySetInnerHTML={{ __html: "document.documentElement.classList.add('al-js')" }} />
+        <script dangerouslySetInnerHTML={{ __html: BEFORE_PAINT }} />
       </head>
       <body>{children}</body>
     </html>
