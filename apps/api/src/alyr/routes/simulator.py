@@ -7,7 +7,13 @@ from alyr.channels.base import InboundMessage
 from alyr.channels.simulator import SIMULATOR_NUMBER_ID
 from alyr.config import get_settings
 from alyr.modules.ledger import service
-from alyr.seed import DEMO_TENANT_ID, STAFF_PHONE, ensure_demo_tenant, reset_demo_data
+from alyr.seed import (
+    DEMO_TENANT_ID,
+    OWNER_PHONE,
+    STAFF_PHONE,
+    ensure_demo_tenant,
+    reset_demo_data,
+)
 
 router = APIRouter(prefix="/sim", tags=["simulator"])
 
@@ -78,6 +84,7 @@ async def personas(request: Request) -> dict:
         customers = (await service.summary(conn))["customers"]
     return {
         "staff": {"name": "Yusuf (counter)", "phone": STAFF_PHONE, "user_id": None},
+        "owner": {"name": "Fatima (owner)", "phone": OWNER_PHONE, "user_id": None},
         "customers": [
             {
                 "name": c["name"], "phone": c["phone"], "user_id": c["user_id"],

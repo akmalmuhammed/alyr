@@ -9,12 +9,14 @@ from alyr.core.inbound import INBOUND, InboundHandler
 from alyr.core.jobs import JobRunner
 from alyr.core.outbound import SEND, Outbound
 from alyr.db import Database
+from alyr.modules import report
 from alyr.modules.bookings.service import REMINDER, Reminders
 from alyr.routes import admin as admin_routes
 from alyr.routes import auth as auth_routes
 from alyr.routes import bookings as bookings_routes
 from alyr.routes import inbox, ledger, orders, pay, simulator, store, whatsapp_webhook
 from alyr.routes import jobs as jobs_routes
+from alyr.routes import reports as reports_routes
 from alyr.routes import team as team_routes
 from alyr.routes import track as track_routes
 from alyr.routes import workspace as workspace_routes
@@ -45,6 +47,7 @@ def create_app() -> FastAPI:
     app.state.jobs.register(SEND, app.state.outbound.deliver, app.state.outbound.gave_up)
     app.state.jobs.register(INBOUND, app.state.inbound.process)
     app.state.jobs.register(REMINDER, Reminders(app.state.db, app.state.outbound).send)
+    app.state.jobs.register(report.JOB, report.WeeklyReports(app.state.db, app.state.outbound).send)
     if settings.jobs_inline:
         app.state.db.after_commit = app.state.jobs.drain
 
@@ -70,6 +73,7 @@ def create_app() -> FastAPI:
         bookings_routes.router, dependencies=[Depends(require_module("bookings"))]
     )
     app.include_router(workspace_routes.router)
+    app.include_router(reports_routes.router)
     app.include_router(admin_routes.router)
     if settings.env != "production":
         app.include_router(simulator.router)

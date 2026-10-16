@@ -131,6 +131,18 @@ CATALOGUE: dict[str, Template] = {
         "تم تغيير موعد الحجز رقم {{1}} إلى {{2}}. بانتظارك.",
         ("101", "Wed 14 Oct, 4:00 PM"),
     ),
+    # The owner's weekly result report (D-030). Inside the window the whole report goes
+    # as a plain message; outside it, this one line, and REPORT brings the rest.
+    "weekly_report": Template(
+        "utility",
+        "Your ALYR weekly report for {{1}}, {{2}}: {{3}}. "
+        "Send REPORT to read the whole report here.",
+        "تقريرك الأسبوعي من ALYR لـ {{1}}، {{2}}: {{3}}. أرسل «تقرير» لقراءة التقرير كاملاً هنا.",
+        (
+            "Al Noor Electricals", "11 to 17 Oct",
+            "QAR 4,300 collected; 38 orders worth QAR 5,640; 41 visits, 3 no-shows",
+        ),
+    ),
     "booking_reminder": Template(
         "utility",
         "Reminder: booking {{1}} at {{2}} is at {{3}}. See you soon.",

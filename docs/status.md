@@ -4,7 +4,7 @@ How the work is divided, and the one goal for this stage, are in [operating-mode
 
 Read this first in a new session, on any machine. It is the hand-over note between sessions: what works, what is next, and what is waiting on the founder. Update it in the same pull request as the work. Linear (team `Alyrtech`, project `Alyr Launch`) holds the detail; this page is the summary.
 
-Last updated: 16 Oct 2026, after email for @alyr.qa (ALY-74, D-029).
+Last updated: 16 Oct 2026, after the weekly result report (ALY-75, D-030).
 
 ## What works today
 
@@ -21,6 +21,7 @@ Last updated: 16 Oct 2026, after email for @alyr.qa (ALY-74, D-029).
 | Consent, stop and start words, 24-hour window | Built | `core/consent.py`, `core/outbound.py` |
 | Shared inbox: human takeover, assignment, staff notes, saved replies | Built; no live updates or typing warning | `modules/inbox/`, D-021 |
 | Sign-in by one-time code, sessions, team and roles | Built; codes are emailed through Resend once `ALYR_EMAIL_API_KEY` is set (D-029). Until then codes only work locally | `core/auth.py`, D-022 |
+| Weekly result report to the owner: one section per product, Sunday 9:00 shop time, REPORT in the chat | Built; API only, no workspace screen yet; the `weekly_report` template must be approved on Meta | `modules/report.py`, `modules/*/report.py`, D-030 |
 | Bookings: services, opening hours, free times, book, move, cancel, reminders | Built: customer booking page at `/b/{slug}` and a workspace Bookings tab. One customer at a time per shop; no deposits | `modules/bookings/`, `apps/web/app/(product)/b/` |
 | ALYR public site, English and Arabic: company homepage and the ALYR Chat product page | **Live at https://alyr.qa** (company-first version, D-026, published 12 Oct). Merged since and not yet published: the how-it-works figure and the list of what is built on `/chat` (ALY-71) | `apps/web/app/_site/`, `docs/brand.md` |
 | Workspace shell at `/app`: navigation from the shop's products, home dashboard with setup checklist, products (switch on and off), connections, "ask ALYR"; product catalogue in `catalog.py` | Built (D-027) | `apps/api/src/alyr/catalog.py`, `core/workspace.py`, `apps/web/app/(product)/app/` |
@@ -31,7 +32,7 @@ Last updated: 16 Oct 2026, after email for @alyr.qa (ALY-74, D-029).
 | ALYR back office at `/ops`: every shop, help requests, create a shop and its owner | Built; ALYR staff only (`platform_admins`) | `routes/admin.py`, `apps/web/app/(product)/ops/` |
 | Demo page: chat simulator plus workspace tabs, now at `/whatsapp` | Built | `apps/web/app/(product)/whatsapp/page.tsx` |
 
-Tests: 194, all passing. CI runs api, web and a secrets scan on every pull request.
+Tests: 207, all passing. CI runs api, web and a secrets scan on every pull request.
 
 ## Next on the build side, in order
 

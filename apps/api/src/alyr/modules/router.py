@@ -12,6 +12,7 @@ import asyncpg
 from alyr.channels.base import InboundMessage, OutboundMessage
 from alyr.core.normalise import has_arabic
 from alyr.core.outbound import Outbound
+from alyr.modules import report
 from alyr.modules.bookings import chat as bookings_chat
 from alyr.modules.ledger import chat as ledger_chat
 from alyr.modules.orders import chat as orders_chat
@@ -25,6 +26,10 @@ async def handle(
     web_url: str,
     outbound: Outbound,
 ) -> list[OutboundMessage]:
+    if contact["role"] == "staff":
+        replies = await report.on_staff_message(conn, contact, message)
+        if replies is not None:
+            return replies
     rows = await conn.fetch("select module_key from tenant_modules where enabled")
     modules = {r["module_key"] for r in rows}
     if "bookings" in modules:
