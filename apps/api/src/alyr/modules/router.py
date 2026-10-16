@@ -44,6 +44,8 @@ async def handle(
             return replies
     if "ledger" in modules:
         return await ledger_chat.handle(conn, tenant_id, contact, message, web_url)
+    if "bookings" in modules and contact["role"] != "staff":
+        return await bookings_chat.greeting(conn, tenant_id, contact, message)
     return _acknowledge(contact, message)
 
 

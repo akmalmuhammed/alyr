@@ -12,6 +12,8 @@ GLOBAL_TABLES = {
     "tenants", "channel_numbers", "schema_migrations", "users", "login_codes", "sessions",
     # ALYR's own staff list; belongs to ALYR, not to a shop (D-027).
     "platform_admins",
+    # A verified email before its business exists (D-031).
+    "signup_tokens",
 }
 
 

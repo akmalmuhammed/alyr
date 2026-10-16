@@ -36,6 +36,7 @@ Status: **Accepted** (in force), **Proposed** (waiting for the founder), **Super
 | D-028 | Every item has one person responsible, and the team's work is on the record | Accepted |
 | D-029 | Email at @alyr.qa: Cloudflare Email Routing in, Resend out | Accepted |
 | D-030 | A weekly result report to the owner, one section per product | Accepted |
+| D-031 | Self-serve onboarding: sign up, create the business, start from a preset, try it on a private test line | Accepted |
 
 ---
 
@@ -469,3 +470,20 @@ The first line of each section is compared with the week before. A product that 
 **How it runs.** One `weekly_report` job per shop. Each run queues the next week first, so a skipped week never breaks the chain. The worker checks every hour that every shop has one queued, so new shops are picked up. What was sent is stored in `weekly_reports`, so a week is never sent twice, even if the job is retried. Email is sent after the WhatsApp messages are committed and is never retried, so a failed email cannot cause a second WhatsApp message.
 
 **Not yet.** A screen in the workspace (the API is ready), wording by business type (a salon says "appointments", a garage "jobs"), a chosen day and hour per shop, and money saved against delivery-app commission for restaurants (it needs the shop's own commission rate).
+
+## D-031 · Self-serve onboarding: sign up, create the business, start from a preset, try it on a private test line
+**Date** 16 Oct 2026 · **Status** Accepted (the flow follows the founder's prototype, ALY-76) · Linear ALY-76
+
+A new owner can create their own business at `/start` without ALYR's back office.
+
+**How a business is created.** The owner proves their email with the same one-time code as sign-in. A new address then gets a single-use sign-up token (an hour, hash stored, table `signup_tokens`). The business, its owner and their membership are created by the database function `signup_create_business`, which spends that token. The app role still cannot write `tenants`; a business changes its own name, area, onboarding step and reminder setting only through `update_own_business`, which acts on the tenant in scope and nothing else.
+
+**Presets.** The type of business (`presets.py`) decides the modules switched on, the way of working, and the filled-in services and opening hours the owner starts from. Prices are samples and the screens say so. Appointment businesses (salon and barber, spa, clinic, home services) have the full flow. Restaurants, shops, wholesale and document offices are created with their modules on and a setup request for ALYR, because their onboarding screens are not built yet.
+
+**The test line.** Every new business gets a private simulator number (`sim-<slug>`). The owner tries their business as a customer through it: the message goes through the real inbound path, so the answer is exactly what a customer gets, and a booking made from it goes through the real booking page. Messages on it never leave ALYR. A WhatsApp test number shared by every business comes later, if the founder wants one.
+
+**Smaller changes that came with it.** A business that takes bookings but has no credit accounts answers a greeting with its own menu (book, my booking, prices). A product counts as on when any of its modules is on. Services can be renamed and repriced. Booking reminders can be switched off.
+
+**Sign-up is closed outside a local machine** (`ALYR_SIGNUP_OPEN`) until the founder decides to open it. Existing staff can always sign in through it.
+
+**Not built yet.** Sign-in by WhatsApp code, more than one customer at a time, the advisor's tablet mode, the restaurant, wholesale and document-office paths, connecting the shop's own number (needs ALYR's Tech Provider approval, ALY-39), and taking payment for the plan.

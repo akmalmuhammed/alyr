@@ -89,10 +89,12 @@ async def state(conn: asyncpg.Connection, staff: Staff) -> dict:
 
     products = []
     for product in catalog.PRODUCTS:
-        active = bool(product.modules) and set(product.modules) <= modules
+        active = bool(set(product.modules) & modules)
         steps = []
         if active:
             for key in product.modules:
+                if key not in modules:
+                    continue
                 for step in await _steps(conn, catalog.MODULE_BY_KEY[key], connected):
                     step["asked"] = (product.key, step["key"]) in asked
                     steps.append(step)

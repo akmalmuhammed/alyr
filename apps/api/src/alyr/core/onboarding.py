@@ -1,0 +1,232 @@
+"""Self-serve onboarding: a new owner creates their business and sets it up (D-031).
+
+The order matches the prototype (ALY-76): prove the email, pick the type of business,
+give its name and area, then edit the starting setup the type comes with, try it as a
+customer on a private test line, see the plan, and finish on the go-live checklist.
+
+Creating a business is the one thing the app role cannot do directly. It goes through
+the database function `signup_create_business`, which spends a single-use token this
+module issues only after the email's code was checked.
+"""
+
+import hashlib
+import re
+import secrets
+from uuid import UUID, uuid4
+
+import asyncpg
+
+from alyr import presets
+from alyr.channels.base import InboundMessage
+from alyr.core import auth
+from alyr.core.auth import Staff
+from alyr.core.normalise import fmt_qar
+from alyr.db import Database
+
+SIGNUP_MINUTES = 60
+TEST_PREFIX = "TEST."
+
+
+class OnboardingError(Exception):
+    """A request onboarding cannot carry out; the message is safe to show."""
+
+
+def _hash(value: str) -> str:
+    return hashlib.sha256(value.encode()).hexdigest()
+
+
+def _text(value) -> dict:
+    return {"en": value.en, "ar": value.ar}
+
+
+def types() -> list[dict]:
+    return [
+        {"key": p.key, "name": _text(p.name), "hint": _text(p.hint), "icon": p.icon,
+         "way": p.way}
+        for p in presets.PRESETS
+    ]
+
+
+async def issue_signup_token(db: Database, email: str) -> str:
+    """After the code was checked: a token that may create one business."""
+    token = secrets.token_urlsafe(32)
+    async with db.unscoped() as conn:
+        await conn.execute(
+            "insert into signup_tokens (token_hash, email, expires_at) "
+            f"values ($1, $2, now() + interval '{SIGNUP_MINUTES} minutes')",
+            _hash(token), auth.clean_email(email),
+        )
+        await conn.execute("delete from signup_tokens where expires_at < now() - interval '1 day'")
+    return token
+
+
+def slug_base(name: str) -> str:
+    """A web-address-safe version of the name. Arabic-only names fall back to 'shop'."""
+    base = re.sub(r"[^a-z0-9]+", "-", name.lower()).strip("-")[:32].strip("-")
+    return base if len(base) >= 2 else "shop"
+
+
+async def _free_slug(conn: asyncpg.Connection, name: str) -> str:
+    base = slug_base(name)
+    for n in range(1, 200):
+        slug = base if n == 1 else f"{base}-{n}"
+        if not await conn.fetchval("select true from tenants where slug = $1", slug):
+            return slug
+    return f"{base}-{secrets.token_hex(3)}"
+
+
+async def create_business(
+    db: Database, token: str, owner_name: str, name: str, name_ar: str, type_key: str,
+    area: str,
+) -> tuple[UUID, str]:
+    """Create the business, its owner and its starting setup. Returns the tenant and a
+    session cookie value for the owner."""
+    preset = presets.PRESET_BY_KEY.get(type_key)
+    if preset is None:
+        raise OnboardingError("choose the type of business")
+    name, owner_name = name.strip(), owner_name.strip()
+    if not name or not owner_name:
+        raise OnboardingError("give the business name and your name")
+    first_step = presets.STEPS[preset.way][0]
+    tenant_id = None
+    async with db.unscoped() as conn:
+        for _ in range(5):
+            slug = await _free_slug(conn, name)
+            try:
+                async with conn.transaction():
+                    tenant_id = await conn.fetchval(
+                        "select signup_create_business($1, $2, $3, $4, $5, $6, $7, $8, $9)",
+                        _hash(token), owner_name, name, name_ar.strip(), slug, preset.key,
+                        area.strip(), first_step, list(preset.modules),
+                    )
+                break
+            except asyncpg.UniqueViolationError:
+                continue  # someone took the same address a moment ago; try the next
+            except asyncpg.InsufficientPrivilegeError as error:
+                raise auth.AuthError("this sign-up has expired; ask for a new code") from error
+        if tenant_id is None:
+            raise OnboardingError("could not create the business; try again")
+        email = await conn.fetchval(
+            "select email from signup_tokens where token_hash = $1", _hash(token)
+        )
+    async with db.tenant(tenant_id) as conn:
+        for sort, s in enumerate(preset.services):
+            await conn.execute(
+                "insert into services (name, name_ar, duration_minutes, price, sort) "
+                "values ($1, $2, $3, $4, $5)",
+                s.name, s.name_ar, s.minutes, s.price, sort,
+            )
+        for weekday, opens, closes in preset.hours:
+            await conn.execute(
+                "insert into business_hours (weekday, opens, closes) "
+                "values ($1, $2::text::time, $3::text::time)",
+                weekday, opens, closes,
+            )
+        if preset.way == "assisted":
+            await conn.execute(
+                "insert into setup_requests (product_key, step_key, note, requested_by) "
+                "values ($1, 'onboarding', $2, $3)",
+                "credit" if "ledger" in preset.modules else "chat",
+                f"New {preset.name.en} business: set up its "
+                f"{preset.hint.en.lower()} with the owner.",
+                owner_name,
+            )
+    session = await auth.session_for(db, email)
+    return tenant_id, session
+
+
+async def state(conn: asyncpg.Connection, staff: Staff, plan: dict) -> dict:
+    """Everything the onboarding screens need, for the signed-in owner's business."""
+    shop = await conn.fetchrow(
+        "select name, name_ar, slug, business_type, area, onboarding_step, onboarded_at, "
+        "booking_reminders from tenants "
+        "where id = nullif(current_setting('app.tenant_id', true), '')::uuid"
+    )
+    preset = presets.PRESET_BY_KEY.get(shop["business_type"])
+    way = preset.way if preset else "appointments"
+    services = await conn.fetch(
+        "select id, name, name_ar, duration_minutes, price from services "
+        "where active order by sort, created_at"
+    )
+    hours = await conn.fetch(
+        "select weekday, opens, closes from business_hours order by weekday, opens"
+    )
+    return {
+        "business": {
+            "name": shop["name"], "name_ar": shop["name_ar"], "slug": shop["slug"],
+            "type": shop["business_type"], "area": shop["area"],
+            "reminders": shop["booking_reminders"],
+        },
+        "owner": {"name": staff.name, "email": staff.email},
+        "way": way,
+        "steps": list(presets.STEPS[way]),
+        "step": shop["onboarding_step"],
+        "finished": shop["onboarded_at"] is not None,
+        "services": [
+            {"id": str(r["id"]), "name": r["name"], "name_ar": r["name_ar"],
+             "duration_minutes": r["duration_minutes"], "price": r["price"],
+             "price_text": fmt_qar(r["price"]) if r["price"] else ""}
+            for r in services
+        ],
+        "hours": [
+            {"weekday": r["weekday"], "opens": r["opens"].strftime("%H:%M"),
+             "closes": r["closes"].strftime("%H:%M")}
+            for r in hours
+        ],
+        "plan": plan,
+        "areas": list(presets.AREAS),
+    }
+
+
+async def update(
+    conn: asyncpg.Connection, *, name: str | None = None, name_ar: str | None = None,
+    area: str | None = None, step: str | None = None, reminders: bool | None = None,
+    finished: bool = False,
+) -> None:
+    """Change the business's own onboarding details. `conn` is tenant-scoped."""
+    every_step = {s for steps in presets.STEPS.values() for s in steps} | {""}
+    if step is not None and step not in every_step:
+        raise OnboardingError("unknown step")
+    await conn.execute(
+        "select update_own_business($1, $2, $3, $4, $5, $6)",
+        name, name_ar, area, step, reminders, finished,
+    )
+
+
+def test_key(staff: Staff) -> str:
+    """The owner's private test customer on their business's test line."""
+    return f"{TEST_PREFIX}{staff.user_id or 'demo'}"
+
+
+async def test_line(conn: asyncpg.Connection) -> str:
+    number = await conn.fetchval(
+        "select number_id from channel_numbers where channel = 'simulator' and tenant_id = "
+        "nullif(current_setting('app.tenant_id', true), '')::uuid order by number_id limit 1"
+    )
+    if number is None:
+        raise OnboardingError("this business has no test line")
+    return number
+
+
+async def test_send(db: Database, inbound, staff: Staff, text: str, reply_id: str) -> None:
+    """Send a message to the business as the owner's test customer. It goes through the
+    real inbound path, so the answer is exactly what a customer would get."""
+    async with db.tenant(staff.tenant_id) as conn:
+        number = await test_line(conn)
+    await inbound.accept(
+        InboundMessage(
+            channel="simulator", message_id=f"test-{uuid4()}", to_number_id=number,
+            kind="interactive" if reply_id else "text", from_user_id=test_key(staff),
+            profile_name=f"{staff.name} (test)", text=text, reply_id=reply_id,
+        )
+    )
+
+
+async def test_conversation(conn: asyncpg.Connection, staff: Staff) -> list[dict]:
+    rows = await conn.fetch(
+        "select m.direction, m.kind, m.body, m.payload, m.status, m.created_at "
+        "from messages m join contacts c on c.id = m.contact_id "
+        "where c.wa_user_id = $1 order by m.created_at",
+        test_key(staff),
+    )
+    return [{**dict(r), "created_at": r["created_at"].isoformat()} for r in rows]

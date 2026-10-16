@@ -16,6 +16,7 @@ from alyr.routes import auth as auth_routes
 from alyr.routes import bookings as bookings_routes
 from alyr.routes import inbox, ledger, orders, pay, simulator, store, whatsapp_webhook
 from alyr.routes import jobs as jobs_routes
+from alyr.routes import onboarding as onboarding_routes
 from alyr.routes import reports as reports_routes
 from alyr.routes import team as team_routes
 from alyr.routes import track as track_routes
@@ -75,6 +76,7 @@ def create_app() -> FastAPI:
     app.include_router(workspace_routes.router)
     app.include_router(reports_routes.router)
     app.include_router(admin_routes.router)
+    app.include_router(onboarding_routes.router)
     if settings.env != "production":
         app.include_router(simulator.router)
     return app

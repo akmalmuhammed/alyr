@@ -28,6 +28,13 @@ class NewBooking(BaseModel):
     note: str = Field(default="", max_length=500)
 
 
+class ServiceChange(BaseModel):
+    name: str | None = Field(default=None, max_length=120)
+    name_ar: str | None = Field(default=None, max_length=120)
+    duration_minutes: int | None = Field(default=None, ge=5, le=600)
+    price: int | None = Field(default=None, ge=0, description="In dirhams: 100 is QAR 1")
+
+
 class NewService(BaseModel):
     name: str = Field(min_length=1, max_length=120)
     name_ar: str = Field(default="", max_length=120)
@@ -222,6 +229,19 @@ async def add_service(
         return {"id": await service.add_service(
             conn, body.name, body.name_ar, body.duration_minutes, body.price
         )}
+
+
+@router.patch("/services/{service_id}")
+async def change_service(
+    service_id: UUID, body: ServiceChange, request: Request,
+    tenant_id: UUID = Depends(current_tenant),
+) -> dict:
+    async with request.app.state.db.tenant(tenant_id) as conn:
+        if not await service.update_service(
+            conn, service_id, body.name, body.name_ar, body.duration_minutes, body.price
+        ):
+            raise HTTPException(status_code=404, detail="service not found")
+        return {"services": await service.list_services(conn)}
 
 
 @router.post("/services/{service_id}/active")
