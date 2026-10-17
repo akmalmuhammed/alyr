@@ -26,7 +26,7 @@
   --ag-pending: var(--ag-ink-2);
   --ag-sans: var(--font-ui);
   --ag-arabic: var(--font-ui-arabic);
-  --ag-mono: var(--mono);
+  --ag-mono: var(--font-ui-mono);
   --ag-ease: var(--ease);
 
   container: ag / inline-size;

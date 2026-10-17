@@ -331,7 +331,7 @@ The founder named the first customers as businesses that need booking, schedulin
 **The first gap a booking customer will hit:** one customer at a time per shop. A salon with three chairs needs bookable staff or resources.
 
 ## D-025 · The public site uses the playbook's words on the design system's look
-**Date** 11 Oct 2026 · **Status** Proposed (the founder said "update the homepage based on the findings" without choosing a look) · Linear ALY-56
+**Date** 11 Oct 2026 · **Status** Look decided by D-040 (17 Oct: Carbon and Volt; the playbook's cobalt retired). The rest stands as written · Linear ALY-56
 
 Two brand sources disagree. The design system v1.0 (branch `codex/alyr-native-foundation`) defines the look now live: uppercase ALYR, Carbon and Volt, the Command Fold logo, "Transform the business." The founder's Brand & Growth Playbook (a Claude Docs document, 11 Oct) defines a different brand: lowercase "alyr", cobalt blue, an "a" mark, "Go digital without the IT team", products alyr Chat, Pay, Books and Sites.
 
@@ -737,3 +737,17 @@ There is no separate Pay product: payment links stay a module of Chat and Bookin
 **Why.** The founder does not want a bad first impression: an owner who cannot change their own menu, or finds a "coming soon" label, will not trust the rest. Research (in the plan) also shows spreadsheets are the real competition, so setup must take minutes from a phone, and staff must be able to update stock without opening a screen.
 
 **Risks.** The scope is large, so packages 1 and 2 come first and anything not ready stays hidden. Meta may classify a back-in-stock message as marketing: test the template category first. The listing policy (no counterfeit or prohibited goods) needs the terms (ALY-68) and a legal look (ALY-51). Demo shops use simple drawn tiles, not copyrighted photos.
+
+## D-040 · ALYR's look is Carbon and Volt, and its values live in one token file
+**Date** 17 Oct 2026 · **Status** Accepted (founder, 17 Oct: Carbon and Volt is the brand, ALY-61) · Linear ALY-61, ALY-126 · Replaces the open question in D-025
+
+**The decision.**
+- **Carbon and Volt is ALYR's brand.** The design system v1.0 look stays: uppercase ALYR, the Command Fold logo with its redrawn R, Carbon, Volt, Paper, Instrument Sans, IBM Plex Sans Arabic and IBM Plex Mono, the 45° cut. **The playbook's visual identity is retired:** cobalt blue, a colour per product, lowercase "alyr", the rounded "a" mark, Bricolage Grotesque and Geist. The playbook's positioning, voice and content plan still apply (D-025's left column).
+- **One source for every value.** `design/tokens.json` (DTCG-style, `design/README.md`) holds every colour in light and dark, the faces, the type scales, spacing, radii, rules, the cut, shadows, motion, breakpoints, z-index and focus. `scripts/tokens-build.mjs` generates the CSS custom properties, a TypeScript module and a Python module from it; nothing else defines a colour or a font. `scripts/design-check.mjs` fails CI on a hard-coded hex colour or font name in site, product or renderer code, with a short list of exceptions in `design/allow.json`.
+- **The semantic names are the API**: canvas, surface, text, text-muted, line, volt, on-volt, band and the rest. Pages and screens use those, never a primitive.
+- **The product screens use the same tokens and follow the public site's theme switch** (`data-theme`, stored as `alyr-theme`), as briefed for ALY-126. With it, three visible changes to the workspace, onboarding and customer pages: the canvas is Paper (was #eceee9 in light), the dark surfaces are the site's (#0e1012, #15171a, #1b1e22 instead of #0a0b0d, #131518, #1a1d21), and type sizes sit on one scale (11, 12, 13, 14, 15, 16, 18, 20, 24, 28, 36, 56 px; half pixels rounded up).
+- **Not changed:** the public site, the report card and the social cards look exactly as before (pixel and byte comparisons in `docs/design-system/01-tokens-log.md`). The logo's master files stay on the design-system branch until ALY-124 moves them.
+
+**Why.** The values had been copied by hand into eleven places, with one name meaning two colours (`--canvas`), two curves under one name (`--ease`), three focus styles and thirteen near-blacks where the brand names three (`docs/design-system/00-audit.md`). The design skills (ALY-126) need one file to read, and a check that keeps it true.
+
+**Still open, for the founder.** Whether product buttons take the 45° notch (the workspace's four button systems are the next step); the Arabic spelling of the name.

@@ -35,17 +35,17 @@
 .sh-brand { display: flex; align-items: center; gap: 10px; padding: 8px; border-radius: 10px; }
 .sh-brand-text { display: grid; min-width: 0; line-height: 1.15; }
 .sh-brand-text b { font-weight: 600; font-size: var(--ui-body-sm); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.sh-brand-text small { font-family: var(--mono); font-size: var(--ui-micro); letter-spacing: 0.06em; text-transform: uppercase; color: var(--ink-3); }
+.sh-brand-text small { font-family: var(--font-ui-mono); font-size: var(--ui-micro); letter-spacing: 0.06em; text-transform: uppercase; color: var(--ink-3); }
 .sh[dir="rtl"] .sh-brand-text small { letter-spacing: 0; }
 .sh-mark { width: 28px; height: 24px; flex: none; color: var(--ink); }
 
 .sh-search { display: flex; align-items: center; gap: 8px; margin: 6px 0 10px; padding: 0 8px 0 10px; height: 34px; border: 0; border-radius: 9px; background: var(--sheet); box-shadow: var(--lift); color: var(--ink-3); font-size: var(--ui-small); text-align: start; transition: color 0.2s var(--ease-product); }
 .sh-search:hover { color: var(--ink-2); }
 .sh-search span { flex: 1; }
-.sh-kbd { font-family: var(--mono); font-size: var(--ui-micro); padding: 1px 5px; border-radius: 5px; background: var(--raise); box-shadow: 0 0 0 1px var(--hair); color: var(--ink-3); }
+.sh-kbd { font-family: var(--font-ui-mono); font-size: var(--ui-micro); padding: 1px 5px; border-radius: 5px; background: var(--raise); box-shadow: 0 0 0 1px var(--hair); color: var(--ink-3); }
 
 .sh-side nav { display: flex; flex-direction: column; gap: 1px; flex: 1; }
-.sh-group { font-family: var(--mono); font-size: var(--ui-micro); font-weight: 500; letter-spacing: 0.08em; text-transform: uppercase; color: var(--ink-3); padding: 16px 10px 6px; }
+.sh-group { font-family: var(--font-ui-mono); font-size: var(--ui-micro); font-weight: 500; letter-spacing: 0.08em; text-transform: uppercase; color: var(--ink-3); padding: 16px 10px 6px; }
 .sh[dir="rtl"] .sh-group { font-family: var(--face); letter-spacing: 0; font-size: var(--ui-caption); }
 .sh-link { position: relative; display: flex; align-items: center; gap: 10px; min-height: 34px; padding: 0 10px; border-radius: 8px; color: var(--ink-2); text-decoration: none; font-size: var(--ui-body-sm); font-weight: 500; transition: background 0.18s var(--ease-product), color 0.18s var(--ease-product); }
 .sh-link:hover { color: var(--ink); background: var(--hair); }
@@ -53,7 +53,7 @@
 /* the current-page notch: a sliver of the Command Fold */
 .sh-link.on::before { content: ""; position: absolute; inset-inline-start: -12px; top: 9px; bottom: 9px; width: 5px; background: var(--volt); clip-path: polygon(0 0, 100% 22%, 100% 78%, 0 100%); }
 .sh[dir="rtl"] .sh-link.on::before { clip-path: polygon(0 22%, 100% 0, 100% 100%, 0 78%); }
-.sh-link .sh-count { margin-inline-start: auto; font-family: var(--mono); font-size: var(--ui-micro); min-width: 20px; height: 18px; padding: 0 6px; display: grid; place-items: center; border-radius: 9px; background: var(--ink); color: var(--sheet); }
+.sh-link .sh-count { margin-inline-start: auto; font-family: var(--font-ui-mono); font-size: var(--ui-micro); min-width: 20px; height: 18px; padding: 0 6px; display: grid; place-items: center; border-radius: 9px; background: var(--ink); color: var(--sheet); }
 .sh-add { color: var(--ink-3); }
 .sh-add .sh-ico { padding: 1px; border-radius: 5px; box-shadow: 0 0 0 1px var(--hair-2); }
 .sh-ico { width: 18px; height: 18px; flex: none; }
@@ -81,7 +81,7 @@
 .sh-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--ink-3); flex: none; }
 .sh-live.on .sh-dot { background: var(--volt); box-shadow: 0 0 0 0 rgba(183, 243, 74, 0.6); animation: sh-pulse 2.4s var(--ease-product) 1; }
 @keyframes sh-pulse { 0% { box-shadow: 0 0 0 0 rgba(183, 243, 74, 0.55); } 70%, 100% { box-shadow: 0 0 0 7px rgba(183, 243, 74, 0); } }
-.sh-clock { font-family: var(--mono); font-size: var(--ui-caption); color: var(--ink-3); letter-spacing: 0.02em; white-space: nowrap; }
+.sh-clock { font-family: var(--font-ui-mono); font-size: var(--ui-caption); color: var(--ink-3); letter-spacing: 0.02em; white-space: nowrap; }
 .sh-scroll { flex: 1; min-height: 0; overflow-y: auto; scrollbar-gutter: stable; }
 .sh-main { max-width: 76rem; margin: 0 auto; padding: clamp(20px, 3.5vw, 40px) clamp(16px, 3vw, 32px) 64px; display: flex; flex-direction: column; gap: 22px; }
 .sh-enter > * { animation: sh-rise 0.55s var(--ease-product) both; animation-delay: calc(var(--i, 0) * 55ms); }
@@ -89,7 +89,7 @@
 
 /* headings */
 .sh-head { display: grid; gap: 6px; }
-.sh-eyebrow { font-family: var(--mono); font-size: var(--ui-micro); letter-spacing: 0.08em; text-transform: uppercase; color: var(--ink-3); }
+.sh-eyebrow { font-family: var(--font-ui-mono); font-size: var(--ui-micro); letter-spacing: 0.08em; text-transform: uppercase; color: var(--ink-3); }
 .sh[dir="rtl"] .sh-eyebrow { font-family: var(--face); letter-spacing: 0; font-size: var(--ui-caption); }
 .sh-head h1, .sh-main .work-title { margin: 0; font-family: var(--face); font-size: clamp(26px, 3.2vw, 36px); line-height: 1.08; font-weight: 600; letter-spacing: -0.032em; text-wrap: balance; }
 .sh[dir="rtl"] .sh-head h1, .sh[dir="rtl"] .work-title { letter-spacing: 0; line-height: 1.3; }
@@ -173,7 +173,7 @@
 .sh-stat-body { margin-top: auto; display: grid; gap: 8px; }
 .sh-stat-label { font-size: var(--ui-small); color: var(--ink-2); }
 .sh-stat-value { display: flex; align-items: baseline; gap: 8px; font-size: clamp(30px, 3.4vw, 42px); font-weight: 600; letter-spacing: -0.045em; line-height: 1; }
-.sh-stat-value small { font-family: var(--mono); font-size: var(--ui-caption); font-weight: 500; letter-spacing: 0.04em; color: var(--ink-3); }
+.sh-stat-value small { font-family: var(--font-ui-mono); font-size: var(--ui-caption); font-weight: 500; letter-spacing: 0.04em; color: var(--ink-3); }
 .sh-stat.hot .sh-stat-value::after { content: ""; width: 8px; height: 8px; border-radius: 50%; background: var(--volt); align-self: flex-start; margin-top: 4px; animation: sh-pulse 2.4s var(--ease-product) 1; }
 .sh-stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(10.5rem, 1fr)); gap: 12px; }
 
@@ -264,7 +264,7 @@
 .sh-palette-in { display: flex; align-items: center; gap: 10px; padding: 0 16px; border-bottom: 1px solid var(--hair); color: var(--ink-3); }
 .sh-palette-in input { flex: 1; min-width: 0; height: 52px; border: 0; background: transparent; outline: none; font-size: var(--ui-input); color: var(--ink); }
 .sh-palette ul { list-style: none; margin: 0; padding: 6px; max-height: min(55vh, 24rem); overflow-y: auto; }
-.sh-palette .grp { padding: 10px 10px 4px; font-family: var(--mono); font-size: var(--ui-micro); letter-spacing: 0.08em; text-transform: uppercase; color: var(--ink-3); }
+.sh-palette .grp { padding: 10px 10px 4px; font-family: var(--font-ui-mono); font-size: var(--ui-micro); letter-spacing: 0.08em; text-transform: uppercase; color: var(--ink-3); }
 .sh[dir="rtl"] .sh-palette .grp { font-family: var(--face); letter-spacing: 0; font-size: var(--ui-caption); }
 .sh-palette li button { display: flex; align-items: center; gap: 12px; width: 100%; min-height: 40px; padding: 0 10px; border: 0; border-radius: 9px; background: transparent; text-align: start; font-size: var(--ui-body-sm); color: var(--ink-2); }
 .sh-palette li button[aria-selected="true"] { background: var(--hair); color: var(--ink); }
@@ -280,7 +280,7 @@
 .sh-main .work { padding: 0; overflow: visible; gap: 20px; }
 .sh-main .work-head { align-items: flex-end; }
 .sh-main .tablewrap, .sh-main .totals, .sh-main .entries, .sh-main .inbox-thread { border: 0; border-radius: 14px; background: var(--sheet); box-shadow: 0 0 0 1px var(--hair) inset; }
-.sh-main .totals .label, .sh-main th { font-family: var(--mono); font-weight: 500; letter-spacing: 0.06em; font-size: var(--ui-micro); color: var(--ink-3); }
+.sh-main .totals .label, .sh-main th { font-family: var(--font-ui-mono); font-weight: 500; letter-spacing: 0.06em; font-size: var(--ui-micro); color: var(--ink-3); }
 .sh[dir="rtl"] .sh-main .totals .label, .sh[dir="rtl"] .sh-main th { font-family: var(--face); letter-spacing: 0; font-size: var(--ui-caption); }
 .sh-main .totals .big { font-size: var(--ui-display-sm); letter-spacing: -0.04em; }
 .sh-main th { background: transparent; border-bottom: 1px solid var(--hair-2); padding-top: 12px; }
@@ -336,11 +336,11 @@
 .ops-stats span { font-size: var(--ui-small); color: var(--ink-2); }
 .ops-stats b { font-size: var(--ui-display-sm); font-weight: 600; letter-spacing: -0.04em; line-height: 1; }
 .ops h2 { font-size: var(--ui-body); font-weight: 600; margin: 0 0 12px; display: flex; align-items: center; gap: 10px; }
-.ops h2 .sh-count { font-family: var(--mono); font-size: var(--ui-micro); height: 20px; min-width: 22px; padding: 0 7px; display: grid; place-items: center; border-radius: 10px; background: var(--raise); box-shadow: 0 0 0 1px var(--hair-2) inset; color: var(--ink-2); }
+.ops h2 .sh-count { font-family: var(--font-ui-mono); font-size: var(--ui-micro); height: 20px; min-width: 22px; padding: 0 7px; display: grid; place-items: center; border-radius: 10px; background: var(--raise); box-shadow: 0 0 0 1px var(--hair-2) inset; color: var(--ink-2); }
 .ops .tablewrap { border: 0; border-radius: 14px; box-shadow: 0 0 0 1px var(--hair) inset; background: var(--sheet); }
-.ops th { background: transparent; font-family: var(--mono); font-weight: 500; font-size: var(--ui-micro); color: var(--ink-3); border-bottom: 1px solid var(--hair-2); padding-top: 12px; }
+.ops th { background: transparent; font-family: var(--font-ui-mono); font-weight: 500; font-size: var(--ui-micro); color: var(--ink-3); border-bottom: 1px solid var(--hair-2); padding-top: 12px; }
 .ops td, .ops th { border-bottom-color: var(--hair); padding-inline: 16px; }
-.ops td small { color: var(--ink-3); font-family: var(--mono); font-size: var(--ui-caption); }
+.ops td small { color: var(--ink-3); font-family: var(--font-ui-mono); font-size: var(--ui-caption); }
 .ops-form { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 16rem), 1fr)); gap: 16px; align-items: end; padding: 22px; border-radius: 16px; background: var(--raise); box-shadow: 0 0 0 1px var(--hair) inset; }
 .ops-field { display: grid; gap: 6px; border: 0; padding: 0; margin: 0; min-width: 0; }
 .ops-field > span { font-size: var(--ui-small); font-weight: 500; color: var(--ink-2); }

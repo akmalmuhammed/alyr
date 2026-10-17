@@ -227,9 +227,10 @@ FONT = {
     "arabic": ("IBM Plex Sans Arabic", "Segoe UI", "Geeza Pro", "sans-serif"),
     "mono": ("IBM Plex Mono", "Cascadia Mono", "ui-monospace", "monospace"),
     "ui": ("Instrument Sans", "IBM Plex Sans Arabic", "system-ui", "sans-serif"),
-    "ui-arabic": ("IBM Plex Sans Arabic", "Instrument Sans", "system-ui", "sans-serif"),
+    "ui-arabic": ("IBM Plex Sans Arabic", "Instrument Sans", "sans-serif"),
     "chat": ("system-ui", "-apple-system", "Segoe UI", "Roboto", "Helvetica Neue", "sans-serif"),
     "chat-arabic": ("Segoe UI", "Geeza Pro", "Noto Sans Arabic", "system-ui", "sans-serif"),
+    "ui-mono": ("IBM Plex Mono", "ui-monospace", "monospace"),
     "email": ("Arial", "sans-serif"),
     "email-mono": ("Courier New", "monospace"),
 }
@@ -240,9 +241,10 @@ CSS_FONT = {
     "arabic": "'IBM Plex Sans Arabic','Segoe UI','Geeza Pro',sans-serif",
     "mono": "'IBM Plex Mono','Cascadia Mono',ui-monospace,monospace",
     "ui": "'Instrument Sans','IBM Plex Sans Arabic',system-ui,sans-serif",
-    "ui-arabic": "'IBM Plex Sans Arabic','Instrument Sans',system-ui,sans-serif",
+    "ui-arabic": "'IBM Plex Sans Arabic','Instrument Sans',sans-serif",
     "chat": "system-ui,-apple-system,'Segoe UI',Roboto,'Helvetica Neue',sans-serif",
     "chat-arabic": "'Segoe UI','Geeza Pro','Noto Sans Arabic',system-ui,sans-serif",
+    "ui-mono": "'IBM Plex Mono',ui-monospace,monospace",
     "email": "Arial,sans-serif",
     "email-mono": "'Courier New',monospace",
 }

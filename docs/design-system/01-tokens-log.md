@@ -52,3 +52,43 @@ ALY-126, branch `aly-design-system`. One entry per stage, newest last. The audit
 - **`design/allow.json`**, three entries, each with its reason: `mask-image` and `-webkit-mask-image` (a mask reads only alpha; `#000` there is not a colour anyone sees), and the booking references in `copy.ts` (`ref: "#398"`).
 - Tested by planting a hex, a font name, a font-family list and a custom property with a font in a stylesheet, a TypeScript file and a Python file: all seven caught; the mask and "Order #1042" passed. The existing code passes: 173 files clean.
 - Not in the check yet: `rgb()` colours (shadows, washes and the WhatsApp drawing keep some in site CSS), font sizes, radii, durations and z-index off the scale. The audit's ratchet (6.1, point 4) is the next step for those.
+
+## Stage 5 · proof
+
+**The public site is unchanged.**
+- `scripts/build-site.sh` was run on `main` as this branch started (c319b16, before any change) and on this branch; both outputs were served by a small static server (`/ar` to `ar.html`, as Cloudflare does) and captured with `docs/site-redesign/baseline/shoot.mjs` (headless Edge, `--profile=C:\t\tokprof`, `--full`, `--wait=5000`): `/`, `/agent`, `/chat`, `/ar`, light and dark, 1440 and 390, 16 captures each. A small Node script decodes the PNGs and compares them pixel by pixel.
+- **Noise first:** the baseline was captured twice. The two runs differ in one place on every page, the footer's live clock ("Doha 23:31" against "23:38"), and on the light homepage in 7 pixels of the main button's arrow (the pointer lean), by 1/255.
+- **Result, final build against the baseline:** on all 16 captures every difference stronger than 1/255 is inside the footer clock (checked by crop; the clock had passed midnight between the runs). The rest are 1/255 on one channel in a few hundred pixels of text and disc edges on four captures (`/ar` at 390 and 1440, the light homepage at 1440): rasterisation, not style. 0 pixels differ outside those.
+- **Computed styles, the stronger proof:** every element and its `::before` and `::after` on the same four pages, light and dark, at 1440 (and `/` and `/ar` at 390), with reduced motion so nothing is mid-animation: **0 of 6.4 million property values differ** between the two builds. The first comparison found 1,852 differences, all in the Agent's font fallback lists (the mono stack had gained "Cascadia Mono", the Arabic stack "system-ui"), never in the face that renders; `--font-ui-mono` was added and `--font-ui-arabic` trimmed so both match the old stacks exactly, and the comparison was run again.
+- The five social cards (`opengraph-image` and the four product pages') are byte-identical.
+
+**The report card and the emails.**
+- All 12 committed sample cards (three businesses, two languages, Carbon and Paper) re-rendered from their JSON with the old and the new `card.py`: **byte-identical**, and identical to the committed PNGs.
+- The sign-in email's HTML is byte-identical. The report email differs only in `#fff` becoming `#ffffff` for its panel (the same white).
+
+**The workspace changed on purpose.** Captured before and after from a dev server on port 3106 with an API of its own (Docker, database `alyr_agent`, port 8006), signed in as the fictional Qirfa owner. A few in `shots/`. Sampled pixels:
+
+| Capture | Sidebar (canvas) | Sheet |
+|---|---|---|
+| `/app` light | #eceee9 → #f6f7f3 (Paper) | #ffffff → #ffffff |
+| `/app` dark | #0a0b0d → #0e1012 | #131518 → #15171a |
+| `/app`, dark device, "light" stored by the site's switch | #0a0b0d → #f6f7f3 (now follows the choice) | #131518 → #ffffff |
+| `/app`, light device, "dark" stored | #eceee9 → #0e1012 | #ffffff → #15171a |
+| `/start` light | #eceee9 → #f6f7f3 | |
+
+Text sizes moved by up to half a pixel (most) or two pixels (22, 26, 34 and 40 px headings). `/agent-sample` in light is pixel-identical; in dark only its captions changed, whose text and rule were hard-coded light colours. The numbers on the dashboard differ between the captures because the week rolled over at midnight between them.
+
+## Stage 6 · checks
+
+- `pnpm lint`, `pnpm exec tsc --noEmit`: clean. `bash scripts/build-site.sh` (which runs `pnpm build`): 130 files, one more than before (the tokens stylesheet).
+- `node scripts/design-check.mjs`: 173 files clean, 3 allowed exceptions.
+- API in Docker, `ruff check .` clean; **383 tests pass** (`alyr_agent_test`, through `ALYR_TEST_OWNER_DSN` and `ALYR_TEST_APP_DSN`). Disclosed: a first run without those two variables began on the shared `alyr_test`, which the suite drops and recreates; it was stopped and rerun on `alyr_agent_test`.
+- axe-core 4.14 on the built `/` and `/agent`, 1440 and 390, light and dark: 0 violations of any impact.
+
+## Next step (a follow-up pull request)
+
+1. **The workspace's four button systems** (`globals.css .btn`, `.sh .btn`, `.cx-btn`, `.ob-btn`): one button, and whether product buttons take the 45° notch (the founder's call). Radii (up to 999 px) come with it.
+2. **Icons:** five icon components and four stroke weights, the tick in five files, the mark's polygons in seven; one icon set at 1.7 px and the mark from one file.
+3. **The drawn product screens on the site** still copy the product's old surfaces (`component.drawing`, the "retire" greys). Moving them to the semantic surfaces changes the site in dark mode, so it needs the founder to see it first.
+4. **The ratchet:** `rgb()` colours left in site CSS, font sizes, radii, durations and z-index off the scale, the site's `--fast`, `--medium` and `--slow`; the product's `--ease-product` and `--spring-product` onto the site's curves (a feel check); product breakpoints and the five fluid product headings onto the scale.
+5. The stored theme choice is per origin: the site (alyr.qa) and the workspace share it only when served from one address. Locally they do; in production that depends on where the workspace is hosted (ALY-63).

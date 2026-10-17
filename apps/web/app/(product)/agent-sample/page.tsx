@@ -46,7 +46,7 @@ export default async function AgentSamplePage({ searchParams }: { searchParams: 
         .agent-sample { max-width: 1168px; margin: 0 auto; padding: 48px 24px 96px; display: grid; gap: 96px; }
         .agent-sample figure { margin: 0; display: grid; gap: 24px; }
         .agent-sample figcaption {
-          font-family: var(--mono); font-size: 11px; letter-spacing: 0.08em;
+          font-family: var(--font-ui-mono); font-size: 11px; letter-spacing: 0.08em;
           text-transform: uppercase; color: var(--text-muted); border-top: 1px solid var(--line); padding-top: 8px;
         }
         .agent-sample[dir="rtl"] figcaption { font-family: var(--arabic); font-size: 13px; letter-spacing: 0; text-transform: none; }

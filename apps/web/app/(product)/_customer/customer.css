@@ -47,7 +47,7 @@
 @keyframes cx-rise { from { opacity: 0; transform: translateY(8px); } }
 
 .cx-hero { display: grid; gap: 10px; }
-.cx-eyebrow { font-family: var(--mono); font-size: var(--ui-micro); letter-spacing: 0.08em; text-transform: uppercase; color: var(--ink-3); }
+.cx-eyebrow { font-family: var(--font-ui-mono); font-size: var(--ui-micro); letter-spacing: 0.08em; text-transform: uppercase; color: var(--ink-3); }
 .cx[dir="rtl"] .cx-eyebrow { font-family: var(--face); letter-spacing: 0; font-size: var(--ui-small); }
 .cx-hero h1 { margin: 0; font-size: clamp(28px, 8vw, 36px); line-height: 1.06; font-weight: 600; letter-spacing: -0.035em; text-wrap: balance; }
 .cx[dir="rtl"] .cx-hero h1 { letter-spacing: 0; line-height: 1.3; }
@@ -66,7 +66,7 @@
 /* ── sections and cards ── */
 .cx-section { display: grid; gap: 10px; }
 .cx-section > h2 { margin: 0; display: flex; align-items: center; gap: 10px; font-size: var(--ui-body); font-weight: 600; letter-spacing: -0.01em; }
-.cx-step { width: 22px; height: 22px; flex: none; display: grid; place-items: center; border-radius: 50%; background: var(--ink); color: var(--card); font-family: var(--mono); font-size: var(--ui-micro); font-weight: 500; }
+.cx-step { width: 22px; height: 22px; flex: none; display: grid; place-items: center; border-radius: 50%; background: var(--ink); color: var(--card); font-family: var(--font-ui-mono); font-size: var(--ui-micro); font-weight: 500; }
 .cx-step.done { background: var(--volt); color: var(--on-volt); }
 .cx-card { border-radius: 18px; background: var(--card); box-shadow: var(--lift); overflow: hidden; }
 .cx-row { display: flex; align-items: center; gap: 12px; min-height: 64px; padding: 12px 16px; }
@@ -138,7 +138,7 @@
 .cx-amount { display: grid; gap: 4px; padding: 22px 18px 18px; }
 .cx-amount span { font-size: var(--ui-body-sm); color: var(--ink-2); }
 .cx-amount b { display: flex; align-items: baseline; gap: 8px; font-size: clamp(40px, 13vw, 52px); font-weight: 600; letter-spacing: -0.05em; line-height: 1; }
-.cx-amount b small { font-family: var(--mono); font-size: var(--ui-body-sm); font-weight: 500; letter-spacing: 0.04em; color: var(--ink-3); }
+.cx-amount b small { font-family: var(--font-ui-mono); font-size: var(--ui-body-sm); font-weight: 500; letter-spacing: 0.04em; color: var(--ink-3); }
 .cx-kv { display: flex; justify-content: space-between; gap: 16px; padding: 13px 18px; border-top: 1px solid var(--hair); font-size: var(--ui-body-sm); color: var(--ink-2); }
 .cx-kv b { color: var(--ink); font-weight: 500; text-align: end; }
 .cx-card-brand { display: inline-flex; align-items: center; gap: 6px; }

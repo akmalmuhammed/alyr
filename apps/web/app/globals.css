@@ -30,7 +30,7 @@ button, input, select { font: inherit; color: inherit; }
 button { cursor: pointer; }
 a { color: var(--accent); }
 :focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
-.mono { font-family: var(--mono); }
+.mono { font-family: var(--font-ui-mono); }
 .num { font-variant-numeric: tabular-nums; }
 
 /* shell */

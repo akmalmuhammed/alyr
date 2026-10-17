@@ -4,21 +4,21 @@
 .ops-main > section { display: grid; gap: 12px; }
 .ops-tabs { justify-self: start; }
 .ops-tabs button[aria-selected="true"] { background: var(--sheet); color: var(--ink); box-shadow: var(--lift); }
-.ops-tabs button .num { font-family: var(--mono); font-size: var(--ui-micro); color: var(--ink-3); }
+.ops-tabs button .num { font-family: var(--font-ui-mono); font-size: var(--ui-micro); color: var(--ink-3); }
 .ops-lead { margin: -4px 0 0; max-width: 62rem; }
 .ops-gap { margin-top: 18px !important; }
 .ops select { height: 34px; padding: 0 8px; border: 0; border-radius: 9px; background: var(--sheet); color: var(--ink); box-shadow: var(--lift); font: inherit; font-size: var(--ui-small); max-width: 100%; }
 .ops-field select { height: 40px; font-size: var(--ui-body-sm); }
 .ops-error { margin: 0; padding: 10px 14px; border-radius: 10px; background: var(--bad-soft); color: var(--bad); font-size: var(--ui-body-sm); font-weight: 500; }
 .ops-wide { grid-column: 1 / -1; }
-.ops code { font-family: var(--mono); font-size: var(--ui-caption); color: var(--ink-2); }
+.ops code { font-family: var(--font-ui-mono); font-size: var(--ui-caption); color: var(--ink-2); }
 
 /* the client list and the open client side by side */
 .ops-split { display: grid; gap: 18px; align-items: start; }
 .ops-back { justify-self: start; }
 .ops-list, .ops-detail { display: grid; gap: 12px; min-width: 0; }
 .ops-detail { padding: 18px; border-radius: 16px; background: var(--raise); box-shadow: 0 0 0 1px var(--hair) inset; }
-.ops-detail h3 { margin: 10px 0 0; font-size: var(--ui-small); font-weight: 600; color: var(--ink-2); font-family: var(--mono); text-transform: uppercase; letter-spacing: 0.06em; }
+.ops-detail h3 { margin: 10px 0 0; font-size: var(--ui-small); font-weight: 600; color: var(--ink-2); font-family: var(--font-ui-mono); text-transform: uppercase; letter-spacing: 0.06em; }
 .ops-detail-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
 .ops-title { margin: 4px 0 0 !important; font-size: var(--ui-heading) !important; letter-spacing: -0.02em; }
 .ops-row { cursor: pointer; }
@@ -75,7 +75,7 @@
 .ops-queue-text small { font-size: var(--ui-small); color: var(--ink-3); }
 .ops-queue-actions { display: flex; align-items: center; gap: 6px; }
 .ops-queue-actions select { height: 28px; font-size: var(--ui-small); }
-.ops-age { font-family: var(--mono); font-size: var(--ui-caption); color: var(--ink-3); text-align: end; }
+.ops-age { font-family: var(--font-ui-mono); font-size: var(--ui-caption); color: var(--ink-3); text-align: end; }
 .ops-queue.quiet li { grid-template-columns: 9.5rem minmax(0, 1fr) 0 auto; }
 .ops-more { position: fixed; z-index: 21; inset-inline: 12px; bottom: calc(84px + env(safe-area-inset-bottom, 0px)); display: grid; padding: 8px; border-radius: 16px; background: var(--sheet); box-shadow: var(--float); }
 .ops-more a { display: flex; align-items: center; gap: 10px; padding: 12px; border-radius: 10px; color: var(--ink); text-decoration: none; font-size: var(--ui-body); }

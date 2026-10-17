@@ -103,9 +103,10 @@
   --arabic: var(--font-plex-arabic), "Segoe UI", "Geeza Pro", sans-serif;
   --mono: var(--font-plex-mono), "Cascadia Mono", ui-monospace, monospace;
   --font-ui: var(--font-instrument), var(--font-plex-arabic), system-ui, sans-serif;
-  --font-ui-arabic: var(--font-plex-arabic), var(--font-instrument), system-ui, sans-serif;
+  --font-ui-arabic: var(--font-plex-arabic), var(--font-instrument), sans-serif;
   --font-chat: system-ui, -apple-system, "Segoe UI", "Roboto", "Helvetica Neue", sans-serif;
   --font-chat-arabic: "Segoe UI", "Geeza Pro", "Noto Sans Arabic", system-ui, sans-serif;
+  --font-ui-mono: var(--font-plex-mono), ui-monospace, monospace;
   --weight-regular: 400;
   --weight-body: 430;
   --weight-medium: 500;

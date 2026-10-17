@@ -304,7 +304,6 @@ export const font = {
     "ui-arabic": [
       "IBM Plex Sans Arabic",
       "Instrument Sans",
-      "system-ui",
       "sans-serif"
     ],
     "chat": [
@@ -321,6 +320,11 @@ export const font = {
       "Noto Sans Arabic",
       "system-ui",
       "sans-serif"
+    ],
+    "ui-mono": [
+      "IBM Plex Mono",
+      "ui-monospace",
+      "monospace"
     ],
     "email": [
       "Arial",
