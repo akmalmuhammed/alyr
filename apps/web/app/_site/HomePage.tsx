@@ -9,7 +9,7 @@ import { Phone, TickPath } from "./Frames";
 import { HomeMotion } from "./HomeMotion";
 import { OrderFigure } from "./OrderFigure";
 import { Shell } from "./Shell";
-import { PATHS, TRUST_RECORDS, type TrustRecord } from "./site";
+import { CONTACT_STATE, PATHS, TRUST_RECORDS, type TrustRecord } from "./site";
 import { rich } from "./Text";
 import "./home.css";
 
@@ -248,6 +248,10 @@ function Does({ locale }: { locale: Locale }) {
             {d.rail.slots.map((slot) => (
               <div key={slot} className="rail-item rail-slot">
                 <span className="rail-k">{slot}</span>
+                <span className="status-line rail-pending">
+                  <span className="dot-pending" aria-hidden="true" />
+                  <span>{d.rail.pending}</span>
+                </span>
               </div>
             ))}
             <p className="rail-line">{rich(d.rail.line)}</p>
@@ -277,10 +281,17 @@ function How({ locale }: { locale: Locale }) {
               </li>
             ))}
           </ol>
-          <figure className="how-report" data-m>
-            <ReportBubble report={w.report} />
-            <FigCaption locale={locale} caption={w.report.caption} />
-          </figure>
+          {/* step 4 opens into its report; beside it, the early-access note and a second way in */}
+          <div className="how-foot">
+            <div className="how-next">
+              <p className="how-note">{rich(w.note)}</p>
+              <ContactButton locale={locale} variant="line" />
+            </div>
+            <figure className="how-report" data-m>
+              <ReportBubble report={w.report} />
+              <FigCaption locale={locale} caption={w.report.caption} />
+            </figure>
+          </div>
         </div>
       </div>
     </section>
@@ -329,6 +340,7 @@ function Included({ locale }: { locale: Locale }) {
 // -------------------------------------------------- 3.6 price and the first month
 function Price({ locale }: { locale: Locale }) {
   const p = copy[locale].home.price;
+  const early = copy[locale].home.how.note;
   const a = p.agreement;
   return (
     <section className="hs price" id="price" aria-labelledby="price-title">
@@ -340,19 +352,24 @@ function Price({ locale }: { locale: Locale }) {
             <p className="sheet-price">
               <span className="sheet-from">{p.from}</span>
               <span className="sheet-figure">
+                {p.currencyFirst && <span className="sheet-cur">{p.currency}</span>}
                 <bdi className="sheet-digits">
                   {p.amount.split("").map((digit, index) => (
                     <span key={index} className="digit" style={n(index)}><span>{digit}</span></span>
                   ))}
                 </bdi>
                 <span className="sheet-unit">
-                  <span>{p.currency}</span>
+                  {!p.currencyFirst && <span>{p.currency}</span>}
                   <span>{p.period}</span>
                 </span>
               </span>
             </p>
             <p className="sheet-setup">{rich(p.setup)}</p>
             <p className="sheet-incl">{rich(p.includes)}</p>
+            <p className="status-line sheet-early">
+              <span className="dot-pending" aria-hidden="true" />
+              <span>{rich(early)}</span>
+            </p>
             <h3 className="mono-k">{p.ledgerLabel}</h3>
             <dl className="ledger">
               {p.ledger.map((row) => (
@@ -469,7 +486,7 @@ function Questions({ locale }: { locale: Locale }) {
             <Head eyebrow={q.eyebrow} title={q.title} id="questions-title" />
           </div>
           <div className="faq-list">
-            {q.items.map((item, index) => (
+            {q.items.filter((item) => !item.state || item.state === CONTACT_STATE).map((item, index) => (
               <details key={item.id} id={`q-${item.id}`} className="qa" open={index === 0}>
                 <summary>
                   <span>{rich(item.q)}</span>

@@ -8,25 +8,28 @@ import { rich } from "./Text";
 // `copy.ts` under `contact`.
 
 /** Where the main button goes: a chat with the message filled in, or an email with a
- * subject, or the contact section. */
+ * subject and the few lines a first visit needs, or the contact section. */
 export function contactLink(locale: Locale): string {
   const c = copy[locale].contact;
   if (CONTACT_STATE === "whatsapp") return `https://wa.me/${WHATSAPP_NUMBER}?text=${encodeURIComponent(c.prefill)}`;
-  if (CONTACT_STATE === "email") return `mailto:${CONTACT_EMAIL}?subject=${encodeURIComponent(c.subject)}`;
+  if (CONTACT_STATE === "email") {
+    return `mailto:${CONTACT_EMAIL}?subject=${encodeURIComponent(c.subject)}&body=${encodeURIComponent(c.body)}`;
+  }
   return "#contact";
 }
 
-/** The Volt button with the 45° notch. Absent in the pending state: there is nothing to
+/** The Volt button with the 45° notch, or its outlined twin for a second way in further
+ * down the page (`variant="line"`). Absent in the pending state: there is nothing to
  * press yet, so the page says so in words instead (`ContactPending`). */
 export function ContactButton({
-  locale, className, lean = false, id,
-}: { locale: Locale; className?: string; lean?: boolean; id?: string }) {
+  locale, className, lean = false, id, variant = "volt",
+}: { locale: Locale; className?: string; lean?: boolean; id?: string; variant?: "volt" | "line" }) {
   if (CONTACT_STATE === "pending") return null;
   const c = copy[locale].contact;
   return (
     <a
       id={id}
-      className={`btn btn-volt btn-notch${className ? ` ${className}` : ""}`}
+      className={`btn btn-${variant} btn-notch${className ? ` ${className}` : ""}`}
       href={contactLink(locale)}
       data-lean={lean || undefined}
     >
@@ -37,7 +40,8 @@ export function ContactButton({
   );
 }
 
-/** The address, set in mono, as a link that opens mail. */
+/** The address as a link that opens mail: in mono in the closing call, in the sentence's own
+ * type everywhere else (home.css). */
 export function ContactAddress({ locale, className }: { locale: Locale; className?: string }) {
   if (!CONTACT_EMAIL) return null;
   return (
@@ -59,14 +63,15 @@ export function ContactPending({ locale, className }: { locale: Locale; classNam
   );
 }
 
-/** The line under the hero button: who replies, or, before WhatsApp opens, where to write. */
+/** The line under a contact button: who replies, and in the email state the address too.
+ * The WhatsApp line not being open yet is said once, in the questions, not here. */
 export function ContactNote({ locale, className }: { locale: Locale; className?: string }) {
   const c = copy[locale].contact;
   if (CONTACT_STATE === "pending") return <ContactPending locale={locale} className={className} />;
   if (CONTACT_STATE === "email") {
     return (
       <p className={`contact-note${className ? ` ${className}` : ""}`}>
-        {rich(c.soon)} <ContactAddress locale={locale} />
+        {rich(c.replyShort)} <ContactAddress locale={locale} />
       </p>
     );
   }

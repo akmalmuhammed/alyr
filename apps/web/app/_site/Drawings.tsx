@@ -35,7 +35,8 @@ function Line({ line }: { line: BubbleLine }) {
 }
 
 /** One drawn chat message. Business and assistant messages sit on the start side, the
- * customer's own on the end side, as on the customer's phone. */
+ * customer's own on the end side, as on the customer's phone. A message without a time
+ * is drawn without one, as the workspace inbox shows them. */
 export function ChatBubble({ bubble, label, signal = false }: { bubble: Bubble; label?: string; signal?: boolean }) {
   const side = bubble.from === "customer" ? "out" : "in";
   return (
@@ -43,7 +44,7 @@ export function ChatBubble({ bubble, label, signal = false }: { bubble: Bubble; 
       {label && <span className="d-said">{label}</span>}
       <p className="d-bubble" dir="auto">
         {bubble.lines.map((line, index) => <Line key={index} line={line} />)}
-        <span className="d-time" dir="ltr">{bubble.time}</span>
+        {bubble.time && <span className="d-time" dir="ltr">{bubble.time}</span>}
       </p>
     </li>
   );

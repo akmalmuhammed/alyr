@@ -94,7 +94,7 @@ export function OrderFigure({ order, other }: { order: OrderPage; other: string 
                   <div key={item.id} className="d-row">
                     <span className="d-row-text">
                       <b>{item.name}</b>
-                      <span dir="ltr">{money(item.price)}</span>
+                      <span dir="auto">{money(item.price)}</span>
                     </span>
                     {qty[item.id] ? (
                       <span className="d-stepper">
@@ -133,7 +133,7 @@ export function OrderFigure({ order, other }: { order: OrderPage; other: string 
         <div className="d-bar" data-empty={count === 0 || undefined} aria-hidden="true">
           <div className="d-sum">
             <span><Roll value={counted(count)} /></span>
-            <b dir="ltr"><Roll value={money(total)} /></b>
+            <b dir="auto"><Roll value={money(total)} /></b>
           </div>
           <span className="d-btn">
             <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 6h18v12H3z M3 10h18" /></svg>

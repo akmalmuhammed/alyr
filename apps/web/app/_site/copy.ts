@@ -9,7 +9,7 @@
 // The Arabic is written natively, not translated line by line, and still needs a
 // native speaker's review before launch (ALY-66).
 
-import type { TrustRecord } from "./site";
+import type { ContactState, TrustRecord } from "./site";
 
 export type Locale = "en" | "ar";
 
@@ -138,7 +138,7 @@ type Home = {
     storyLabel: string;
     modules: { id: "orders" | "pay" | "track" | "inbox" | "book"; title: string; body: string; caption: Caption }[];
     also: { title: string; items: Titled[] };
-    rail: { label: string; state: string; slots: string[]; line: string; link: string };
+    rail: { label: string; state: string; slots: string[]; pending: string; line: string; link: string };
   };
   sample: {
     shop: string;
@@ -186,6 +186,8 @@ type Home = {
     eyebrow: string;
     title: string;
     steps: Titled[];
+    /** The early-access line: under the steps, and again under the price. */
+    note: string;
     report: {
       caption: Caption;
       heading: string;
@@ -221,6 +223,8 @@ type Home = {
     from: string;
     amount: string;
     currency: string;
+    /** English reads "QAR 449"; Arabic reads "449 ر.ق". */
+    currencyFirst: boolean;
     period: string;
     setup: string;
     includes: string;
@@ -246,7 +250,8 @@ type Home = {
     records: { label: string; items: Record<TrustRecord, string> };
     figure: { caption: Caption; label: string };
   };
-  faq: { eyebrow: string; title: string; items: { id: string; q: string; a: string }[] };
+  /** A question with a `state` shows only in that contact state (site.ts). */
+  faq: { eyebrow: string; title: string; items: { id: string; q: string; a: string; state?: ContactState }[] };
   final: Titled;
 };
 
@@ -264,11 +269,12 @@ export type Copy = {
     email: string;
     reply: string;
     replyShort: string;
-    soon: string;
     pending: string;
     commits: string;
     prefill: string;
     subject: string;
+    /** The email's first lines: what the visit needs to know. */
+    body: string;
     draft: string;
     bar: string;
   };
@@ -318,12 +324,12 @@ const en: Copy = {
     home: {
       title: "ALYR · Go digital without the IT team",
       description:
-        "ALYR sets up and looks after the technology for owner-run businesses in Qatar, starting with ALYR Chat: orders, bookings and payments in the chat. From QAR 449 a month, in Arabic and English.",
+        "ALYR sets up and looks after the technology for owner-run businesses in Qatar. First, ALYR Chat: orders and bookings in the WhatsApp chat, set up in your shop. From QAR 449 a month, plus setup.",
     },
     chat: {
       title: "ALYR Chat · Sell, book and get paid in the chat",
       description:
-        "ALYR Chat turns your customers' WhatsApp messages into orders, bookings and payments, set up for you. For restaurants, cafes, clinics, salons and shops in Qatar.",
+        "ALYR Chat turns your customers' WhatsApp messages into orders, bookings and payments, set up for you. For restaurants, cafes, shops and home services in Qatar.",
     },
   },
   skip: "Skip to content",
@@ -342,13 +348,13 @@ const en: Copy = {
   contact: {
     whatsapp: "Message us on WhatsApp",
     email: "Email us",
-    reply: "A person from ALYR replies, in Arabic or English.",
+    reply: "A person from ALYR replies.",
     replyShort: "A person from ALYR replies.",
-    soon: "Our WhatsApp line opens soon. Until then, write to",
     pending: "Our WhatsApp line opens soon. Please check back shortly.",
     commits: "A message commits you to nothing.",
     prefill: "Hello ALYR, I'd like to see how it works for my business.",
     subject: "How ALYR works for my business",
+    body: "Shop name:\nArea:\nHow orders reach you today:\nBest time to visit:\n",
     draft: "The message we fill in for you",
     bar: "Contact ALYR",
   },
@@ -356,23 +362,23 @@ const en: Copy = {
     line: "We do the tech. You run the business.",
     rights: "ALYR. Built in Qatar.",
     workspace: "Staff sign-in",
-    disclaimer: "ALYR works with WhatsApp Business. It is not affiliated with WhatsApp or Meta.",
+    disclaimer: "ALYR uses the WhatsApp Business Platform. ALYR is not affiliated with, or endorsed by, WhatsApp or Meta.",
     doha: "Doha",
     links: "Site",
   },
-  fig: { label: "Fig", fictional: "Sample, fictional bakery" },
+  fig: { label: "Fig", fictional: "Fictional bakery" },
   home: {
     hero: {
       eyebrow: "We do the tech. You run the business.",
       // No-break spaces: on a narrow phone the line breaks only as "Without the / IT team."
       title: ["Go digital.", "Without the IT team."],
       body:
-        "ALYR sets up and looks after the technology for owner-run businesses in Qatar. We start with your WhatsApp: orders, bookings and payments in the chat, and your whole team on one number.",
+        "ALYR sets up and looks after the technology for owner-run businesses in Qatar. We start with your WhatsApp: orders, bookings and order tracking in the chat, and your whole team on one number.",
       how: "See how it works",
       facts: ["Set up for you, in your shop", "From QAR 449 a month", "Arabic and English"],
       figure: {
         label: "A sample order page on a customer’s phone, and the order it makes on the shop’s screen",
-        caption: { n: "01", text: "Order page and the record it makes, sample prices" },
+        caption: { n: "01", text: "Order page and its record, sample prices" },
         hint: "Try + and −. Nothing is ordered.",
         order: {
           shop: "Qirfa Bakery",
@@ -382,7 +388,7 @@ const en: Copy = {
           eyebrow: "Order from your chat",
           title: "What would you like?",
           as: "Ordering as",
-          customer: "Aisha Al-Kuwari",
+          customer: "Aisha Hamad",
           categories: ["Bakery", "Cakes", "Drinks"],
           sections: [
             {
@@ -409,7 +415,7 @@ const en: Copy = {
           screen: "Orders",
           title: "Order 1043",
           status: "New",
-          customer: "Aisha Al-Kuwari",
+          customer: "Aisha Hamad",
           by: "Looked after by Yusuf",
           initial: "Y",
         },
@@ -420,12 +426,12 @@ const en: Copy = {
       title: "Your customers already message you. The trouble starts after that.",
       rows: [
         { text: "Orders arrive on WhatsApp and get copied onto paper. Some never make it." },
-        { text: "In the Friday rush nobody can answer, so the customer orders from an app instead.", when: "Fri 13:10" },
+        { text: "In the Friday rush nobody can answer, so the customer orders from an app instead.", when: "Fri 1:10 PM" },
         { text: "Payment is a transfer screenshot that someone has to check." },
-        { text: "Bookings live in one person’s phone. On their day off, nobody knows who is coming.", when: "Sat 09:00" },
+        { text: "Bookings live in one person’s phone. On their day off, nobody knows who is coming.", when: "Sat 9:00 AM" },
         { text: "Staff answer from their own numbers. You can’t see what they told the customer, or who dropped the order." },
         { text: "Customers on credit forget, and chasing them feels awkward." },
-        { text: "At the end of the week, you can’t say how many orders came through the chat.", when: "Sat 22:00" },
+        { text: "At the end of the week, you can’t say how many orders came through the chat.", when: "Sat 10:00 PM" },
       ],
       strong: "None of this needs an IT team.",
       muted: "It needs the chat set up properly, and someone to look after it.",
@@ -441,8 +447,8 @@ const en: Copy = {
       eyebrow: "What ALYR does",
       title: "One workspace for your business. It starts with ALYR Chat.",
       body:
-        "ALYR products share one workspace, one customer list and one team, and you switch on what you need. The first, ALYR Chat, turns the WhatsApp messages you already get into orders, bookings and payments.",
-      product: { name: "ALYR Chat", line: "Sell, book and get paid in the chat.", state: "Early access" },
+        "ALYR products share one workspace, one customer list and one team, and you switch on what you need. The first, ALYR Chat, answers the WhatsApp messages you already get with an order page and a booking page, and with a payment link once card payments are live.",
+      product: { name: "ALYR Chat", line: "Orders, bookings and one team inbox, in the chat.", state: "Early access" },
       storyLabel: "What ALYR Chat does, one step at a time",
       modules: [
         {
@@ -489,7 +495,7 @@ const en: Copy = {
           },
           {
             title: "Your Sunday report",
-            body: "Every Sunday morning, last week’s numbers arrive on your WhatsApp: orders, bookings, money collected, and customers who wrote.",
+            body: "Every Sunday morning, a short report of last week on your WhatsApp: orders, bookings, money collected, and customers who wrote.",
           },
         ],
       },
@@ -497,6 +503,7 @@ const en: Copy = {
         label: "ALYR products",
         state: "Early access",
         slots: ["Next", "After that"],
+        pending: "Not named yet",
         line: "More products will join the same workspace, in the order our first businesses ask for them.",
         link: "See ALYR Chat",
       },
@@ -544,16 +551,16 @@ const en: Copy = {
       },
       inbox: {
         screen: "Inbox",
-        customer: "Aisha Al-Kuwari",
+        customer: "Aisha Hamad",
         handled: "Handled by",
         handler: "Yusuf",
         close: "Close",
         labels: { customer: "Customer", assistant: "Assistant" },
         thread: [
-          { from: "customer", lines: ["Can I get a whole saffron cake for Thursday?"], time: "4:12 PM" },
-          { from: "assistant", lines: ["Thanks for your message. We will reply shortly."], time: "4:12 PM" },
-          { activity: "Yusuf took this conversation", time: "4:14 PM" },
-          { from: "staff", who: "Yusuf", lines: ["Yes. A whole one is QAR 145. Shall I put one aside for Thursday?"], time: "4:15 PM" },
+          { from: "customer", lines: ["Can I get a whole saffron cake for Thursday?"], time: "" },
+          { from: "assistant", lines: ["Thanks for your message. We will reply shortly."], time: "" },
+          { activity: "Yusuf took this conversation", time: "16:14" },
+          { from: "staff", who: "Yusuf", lines: ["Yes. A whole one is QAR 145. Shall I put one aside for Thursday?"], time: "" },
         ],
         paused: {
           title: "You are answering",
@@ -565,7 +572,7 @@ const en: Copy = {
         eyebrow: "Book from your chat",
         title: "Book a visit",
         as: "Booking as",
-        customer: "Aisha Al-Kuwari",
+        customer: "Aisha Hamad",
         steps: ["Choose a service", "Choose a day", "Choose a time"],
         services: [
           { name: "Cake tasting", meta: "30 min · QAR 50", on: true },
@@ -578,17 +585,17 @@ const en: Copy = {
           { top: "Mon", day: "19", month: "Oct" },
           { top: "Tue", day: "20", month: "Oct" },
         ],
-        times: ["4:00 PM", "4:30 PM", "5:00 PM", "5:30 PM", "6:00 PM", "6:30 PM"],
-        time: "4:30 PM",
-        summary: ["Cake tasting", "Sun 18 Oct · 4:30 PM"],
+        times: ["4:00 pm", "4:30 pm", "5:00 pm", "5:30 pm", "6:00 pm", "6:30 pm"],
+        time: "4:30 pm",
+        summary: ["Cake tasting", "Sun 18 Oct · 4:30 pm"],
         confirm: "Confirm booking",
       },
       rows: {
-        order: { screen: "Orders", ref: "1043", name: "Aisha Al-Kuwari", status: "New", by: "Yusuf" },
-        paid: { screen: "Orders", ref: "1043", name: "Aisha Al-Kuwari", status: "Paid", by: "Yusuf" },
-        ready: { screen: "Orders", ref: "1043", name: "Aisha Al-Kuwari", status: "Ready", by: "Yusuf" },
-        inbox: { screen: "Inbox", ref: "Open", name: "Aisha Al-Kuwari", status: "Yusuf", by: "Yusuf" },
-        booking: { screen: "Bookings", ref: "Sun 4:30 PM", name: "Cake tasting · Aisha Al-Kuwari", status: "Booked", by: "Yusuf" },
+        order: { screen: "Orders", ref: "1043", name: "Aisha Hamad", status: "New", by: "Yusuf" },
+        paid: { screen: "Orders", ref: "1043", name: "Aisha Hamad", status: "Paid", by: "Yusuf" },
+        ready: { screen: "Orders", ref: "1043", name: "Aisha Hamad", status: "Ready", by: "Yusuf" },
+        inbox: { screen: "Inbox", ref: "Open", name: "Aisha Hamad", status: "Yusuf", by: "Yusuf" },
+        booking: { screen: "Bookings", ref: "Sun 4:30 PM", name: "Cake tasting · Aisha Hamad", status: "Booked", by: "Yusuf" },
       },
     },
     how: {
@@ -609,9 +616,10 @@ const en: Copy = {
         },
         {
           title: "You see what changed.",
-          body: "Every Sunday your numbers arrive on WhatsApp. Want something changed? Message us and we change it.",
+          body: "Every Sunday a short report of your week arrives on WhatsApp. Want something changed? Message us and we change it.",
         },
       ],
+      note: "ALYR Chat is in early access. We set it up with each business ourselves, and agree your go-live date at the visit.",
       report: {
         caption: { n: "07", text: "The Sunday report on WhatsApp, sample figures" },
         heading: "ALYR weekly report: Qirfa Bakery",
@@ -651,9 +659,9 @@ const en: Copy = {
     },
     included: {
       eyebrow: "Set up for you",
-      title: "You run the business. We do the tech.",
+      title: "Setup, training and changes: we do them.",
       body:
-        "Setup is part of every plan, not a job we leave to you. And for as long as you subscribe, we look after the rest of your tech too.",
+        "We do the setup ourselves, in your shop. It is never a job we leave to you. And while you subscribe, we help with the rest of your tech too.",
       start: {
         title: "When you start",
         items: [
@@ -668,7 +676,7 @@ const en: Copy = {
         title: "Every month",
         items: [
           "Menu, price and hours changes whenever you ask",
-          "A person from ALYR, whenever you message",
+          "A person from ALYR answers your messages",
           "Your Sunday report",
           "Every product update, with nothing to install",
         ],
@@ -695,9 +703,9 @@ const en: Copy = {
         heads: { shop: "Shop", step: "Product · step", note: "Note", by: "Asked by" },
         row: {
           shop: "Qirfa Bakery",
-          when: "16/10/2026, 14:05",
+          when: "16/10/2026, 14:05:00",
           step: "chat · hours",
-          note: "Friday: 2 pm to 11 pm",
+          note: "Friday: 2 PM to 11 PM",
           by: "Hessa",
           done: "Mark done",
         },
@@ -705,13 +713,15 @@ const en: Copy = {
     },
     price: {
       eyebrow: "Price",
-      title: "One clear price, in QAR.",
+      title: "What it costs, in QAR.",
       from: "From",
       amount: "449",
       currency: "QAR",
+      currencyFirst: true,
       period: "a month",
       setup: "Setup from QAR 1,500, quoted at your visit.",
-      includes: "Every month includes ALYR Chat, sign-ins for your team, your Sunday report, and changes whenever you ask.",
+      includes:
+        "Every month includes ALYR Chat, sign-ins for your team, your Sunday report, a person from ALYR when you message, and menu, price and hours changes when you ask. Your monthly price is confirmed in writing at the visit.",
       ledgerLabel: "Fees, said plainly",
       ledger: [
         { label: "Commission on your orders", value: "None. ALYR takes no commission.", strong: true },
@@ -725,12 +735,12 @@ const en: Copy = {
         titleLead: "Your first month,",
         titleMark: "with your money back.",
         body:
-          "Before we start, we agree one result with you, for example a number of orders or bookings taken through the chat in your first 30 days. If we don’t reach it, we refund your first month.",
+          "Before we start, we agree one result with you, for example a number of orders or bookings taken through the chat in the 30 days after you go live. If we don’t reach it, we refund your first month’s subscription.",
         fields: [
           { label: "The result", value: "Agreed with you at the visit", blank: true },
           { label: "Counted", value: "In your workspace, where you see it too" },
           { label: "Period", value: "30 days from go-live" },
-          { label: "Your part", value: "Share your chat link and QR codes in the first week" },
+          { label: "Your part", value: "Put up your QR codes and share your chat link with customers in the first week." },
           { label: "If we miss it", value: "Your first month’s subscription back. The setup fee is not refunded." },
         ],
         print: "The terms are written into your agreement.",
@@ -773,7 +783,7 @@ const en: Copy = {
           body: "Automatic replies handle the routine, and anyone on your team can step into any chat.",
         },
       ],
-      closing: "And if the first month doesn’t deliver what we agreed, you get your money back.",
+      closing: "And if the first month misses the result we agreed, you get that month’s subscription back.",
       records: {
         label: "On record",
         items: { cr: "Commercial registration", provider: "Payment provider", meta: "Meta Tech Provider" },
@@ -790,7 +800,7 @@ const en: Copy = {
         {
           id: "whatsapp-business",
           q: "I already use WhatsApp Business. It’s free.",
-          a: "Keep using WhatsApp. ALYR adds what the app doesn’t have: an order page, bookings, payment links and one inbox for your whole team, so orders stop ending up on paper.",
+          a: "Your customers keep using WhatsApp. ALYR adds what the app doesn’t have: an order page, bookings, payment links and one inbox for your whole team, so orders stop ending up on paper. Which number they message, and what that means for the app on your phone, we go through with you at the visit.",
         },
         {
           id: "delivery-apps",
@@ -800,7 +810,7 @@ const en: Copy = {
         {
           id: "price",
           q: "QAR 449 a month is a lot.",
-          a: "It is a real cost, which is why your first month comes with a result we agree in advance. If we miss it, you get the month back.",
+          a: "It is a real cost, which is why your first month comes with a result we agree in advance. If we miss it, you get that month’s subscription back.",
         },
         {
           id: "staff",
@@ -810,7 +820,7 @@ const en: Copy = {
         {
           id: "busy-night",
           q: "What if something breaks on a busy night?",
-          a: "Message us and a person from ALYR answers. Every message is saved before it is sent and tried again if WhatsApp is slow, so orders are not lost.",
+          a: "Message us and the person who set you up picks it up. Behind the scenes, every message is saved before it is sent and tried again if WhatsApp is slow, so a slow moment doesn’t lose it.",
         },
         {
           id: "pay-online",
@@ -824,24 +834,30 @@ const en: Copy = {
         },
         {
           id: "data",
-          q: "Is my data safe? Is this approved?",
-          a: "ALYR uses WhatsApp’s official Business Platform, and each business’s records are kept apart inside the database.",
+          q: "Is my data safe?",
+          a: "Each business’s records are kept apart inside the database itself, and ALYR uses WhatsApp’s official Business Platform. ALYR is built never to hold your money.",
         },
         {
           id: "message-fees",
           q: "What do WhatsApp messages cost?",
-          a: "Meta charges for some messages, mostly reminders and notices sent more than 24 hours after a customer last wrote. Meta bills you directly at its own rates, and ALYR adds nothing.",
+          a: "Meta charges for some WhatsApp messages, at its own rates, and decides which ones. Meta bills you directly, and ALYR adds nothing. We go through the current rates with you at the visit.",
         },
         {
           id: "contract",
-          q: "Is there a contract?",
-          a: "Month to month. You can stop at the end of any month.",
+          q: "Am I tied in?",
+          a: "No. There is a written agreement, but it runs month to month. You can stop at the end of any month.",
+        },
+        {
+          id: "whatsapp-line",
+          q: "Can I message you on WhatsApp?",
+          a: "Our WhatsApp line opens soon. Until then, email us and a person from ALYR replies.",
+          state: "email",
         },
       ],
     },
     final: {
       title: "Tell us how you take orders today.",
-      body: "Send us a message. A person from ALYR replies in Arabic or English, then comes to show you ALYR on your own menu or price list.",
+      body: "Send us a message. A person from ALYR replies, then comes to show you ALYR on your own phone.",
     },
   },
   product: {
@@ -865,16 +881,16 @@ const en: Copy = {
         chat: [
           { from: "customer", text: "Hi, the AC in the majlis is leaking. Can someone come tomorrow?" },
           { from: "business", text: "We can. Pick a time that suits you.", action: "Choose a time" },
-          { from: "business", text: "Booking 214 confirmed: AC service visit, Tue 14 Oct, 4:30 PM." },
+          { from: "business", text: "Booking 214 confirmed: AC service visit, Wed 14 Oct, 4:30 PM." },
           { from: "business", text: "Reminder: your visit is today at 4:30 PM." },
         ],
         panel: {
           title: "Bookings",
-          badge: "Tue 14 Oct",
+          badge: "Wed 14 Oct",
           rows: [
-            { lead: "2:00 PM", main: "Generator service", sub: "Khalid Al-Naimi", trail: "Booked", tone: "done" },
-            { lead: "4:30 PM", main: "AC service visit", sub: "Mariam Al-Kuwari", trail: "New", tone: "signal" },
-            { lead: "6:00 PM", main: "Electrical inspection", sub: "Yousef Al-Emadi", trail: "Booked", tone: "done" },
+            { lead: "2:00 PM", main: "Generator service", sub: "Khalid Nasser", trail: "Booked", tone: "done" },
+            { lead: "4:30 PM", main: "AC service visit", sub: "Mariam Saleh", trail: "New", tone: "signal" },
+            { lead: "6:00 PM", main: "Electrical inspection", sub: "Omar Ali", trail: "Booked", tone: "done" },
           ],
         },
         caption: "Free times come from your opening hours. Two customers can never take the same slot.",
@@ -909,11 +925,11 @@ const en: Copy = {
           title: "Payments",
           badge: "Today",
           rows: [
-            { main: "Order 1042", sub: "Mariam Al-Kuwari", trail: "QAR 385 · Paid", tone: "signal" },
+            { main: "Order 1042", sub: "Mariam Saleh", trail: "QAR 385 · Paid", tone: "signal" },
             { main: "On account", sub: "Al Rayyan Villas · 41 days", trail: "QAR 1,850 · Reminded", tone: "done" },
           ],
         },
-        caption: "Payments settle in your own gateway account. ALYR never holds your money.",
+        caption: "Payment links are built and tested on a test page. ALYR is built never to hold your money.",
       },
       {
         id: "track",
@@ -949,7 +965,7 @@ const en: Copy = {
           badge: "3 accounts",
           rows: [
             { main: "Al Rayyan Villas", sub: "Oldest unpaid: 41 days", trail: "QAR 1,850 · Promised", tone: "signal" },
-            { main: "Khalid Al-Naimi", sub: "Oldest unpaid: 12 days", trail: "QAR 900", tone: "done" },
+            { main: "Khalid Nasser", sub: "Oldest unpaid: 12 days", trail: "QAR 900", tone: "done" },
             { main: "Gulf Lights Trading", sub: "Oldest unpaid: 96 days", trail: "QAR 3,650 · Final notice", tone: "quiet" },
           ],
         },
@@ -966,8 +982,8 @@ const en: Copy = {
           title: "Inbox",
           badge: "3 open",
           rows: [
-            { main: "Mariam Al-Kuwari", sub: "Is the thermostat covered by a warranty?", trail: "Yusuf", tone: "signal" },
-            { main: "Khalid Al-Naimi", sub: "Is the generator part in?", trail: "Unassigned", tone: "quiet" },
+            { main: "Mariam Saleh", sub: "Is the thermostat covered by a warranty?", trail: "Yusuf", tone: "signal" },
+            { main: "Khalid Nasser", sub: "Is the generator part in?", trail: "Unassigned", tone: "quiet" },
             { main: "Staff note", sub: "Mariam prefers calls after 5 PM.", trail: "Team only", tone: "done" },
           ],
         },
@@ -976,12 +992,12 @@ const en: Copy = {
     ],
     facts: [
       {
-        title: "Keep your number",
-        body: "Connect the WhatsApp Business number your customers already know. The app stays on your phone.",
+        title: "Your number, agreed at setup",
+        body: "Which number your customers message is agreed with you at setup. We go through Meta's requirements with you first.",
       },
       {
-        title: "Paid straight to you",
-        body: "Payment links use your own gateway account. ALYR never holds or moves your money.",
+        title: "Built never to hold your money",
+        body: "Payment links are built and tested on a test page. Real payments will go through your own account with a Qatari payment provider; that connection is not live yet.",
       },
       {
         title: "No message without consent",
@@ -1017,7 +1033,7 @@ const en: Copy = {
             {
               title: "ALYR checks who is asking",
               body: "It confirms the message really came from WhatsApp, finds Mariam in your customer list, and sees that she writes in English.",
-              work: ["Sender checked: it is WhatsApp", "Customer found: Mariam Al-Kuwari"],
+              work: ["Sender checked: it is WhatsApp", "Customer found: Mariam Saleh"],
             },
             {
               title: "It works out what she needs",
@@ -1035,21 +1051,21 @@ const en: Copy = {
               move: "in",
               title: "She picks a time",
               body: "The page opens on her phone with no app and no sign-up. When she confirms, ALYR checks the time once more and locks it, so two customers can never take the same slot.",
-              chat: { from: "event", text: "Picked Tue 14 Oct, 4:30 PM" },
+              chat: { from: "event", text: "Picked Wed 14 Oct, 4:30 PM" },
               work: ["Time checked again and locked"],
             },
             {
               move: "team",
               title: "Your team sees the booking",
               body: "It appears on your team's screen the moment it is made. Nobody copied anything out of a chat.",
-              record: { id: "booking", lead: "4:30 PM", main: "AC service visit", sub: "Mariam Al-Kuwari", trail: "New", tone: "signal" },
+              record: { id: "booking", lead: "4:30 PM", main: "AC service visit", sub: "Mariam Saleh", trail: "New", tone: "signal" },
               work: ["Booking 214 saved"],
             },
             {
               move: "out",
               title: "Confirmation now, reminder later",
               body: "ALYR confirms the booking and sets a reminder for two hours before the visit. Your team typed nothing.",
-              chat: { from: "business", text: "Booking 214 confirmed: AC service visit, Tue 14 Oct, 4:30 PM." },
+              chat: { from: "business", text: "Booking 214 confirmed: AC service visit, Wed 14 Oct, 4:30 PM." },
               work: ["Confirmation sent", "Reminder set for 2:30 PM"],
             },
           ],
@@ -1077,14 +1093,14 @@ const en: Copy = {
               move: "out",
               title: "The reminder arrives",
               body: "It reaches her phone from your number, in the language she uses with you.",
-              chat: { from: "business", text: "Reminder: booking 214 at Dana Home Services is at Tue 14 Oct, 4:30 PM. See you soon." },
+              chat: { from: "business", text: "Reminder: booking 214 at Dana Home Services is at Wed 14 Oct, 4:30 PM. See you soon." },
               work: ["Reminder sent"],
             },
             {
               move: "team",
               title: "Your team knows it was read",
               body: "WhatsApp reports back when a message is delivered and when it is read. ALYR keeps both on record.",
-              record: { id: "reminder", lead: "2:30 PM", main: "Reminder, booking 214", sub: "Mariam Al-Kuwari", trail: "Read", tone: "signal" },
+              record: { id: "reminder", lead: "2:30 PM", main: "Reminder, booking 214", sub: "Mariam Saleh", trail: "Read", tone: "signal" },
               work: ["Delivered", "Read"],
             },
           ],
@@ -1104,14 +1120,14 @@ const en: Copy = {
               move: "team",
               title: "It lands in the shared inbox",
               body: "Every chat on your number is in one inbox the whole team can see, whoever is on shift.",
-              record: { id: "chat", main: "Mariam Al-Kuwari", sub: "Is the thermostat covered by a warranty?", trail: "Unassigned", tone: "quiet" },
+              record: { id: "chat", main: "Mariam Saleh", sub: "Is the thermostat covered by a warranty?", trail: "Unassigned", tone: "quiet" },
               work: ["Saved to the shared inbox"],
             },
             {
               move: "back",
               title: "Yusuf answers from his screen",
               body: "He types the reply in the workspace. The chat becomes his, so the team can see who is handling it.",
-              record: { id: "chat", main: "Mariam Al-Kuwari", sub: "Is the thermostat covered by a warranty?", trail: "Yusuf", tone: "signal" },
+              record: { id: "chat", main: "Mariam Saleh", sub: "Is the thermostat covered by a warranty?", trail: "Yusuf", tone: "signal" },
               work: ["Chat taken by Yusuf"],
             },
             {
@@ -1140,7 +1156,7 @@ const en: Copy = {
     inside: {
       eyebrow: "What is in it",
       title: "Everything it does today.",
-      note: "ALYR Chat is in early access. Everything listed here is built. We connect it to your number when we set you up.",
+      note: "ALYR Chat is in early access. Everything listed here is built. We agree your number with you when we set you up.",
       groups: [
         {
           name: "For your customers",
@@ -1165,7 +1181,7 @@ const en: Copy = {
         {
           name: "Behind the scenes",
           items: [
-            { title: "WhatsApp's rules, handled", body: "Free replies for 24 hours after a customer writes, approved wording after that. ALYR picks the right one each time." },
+            { title: "WhatsApp's rules, handled", body: "Ordinary replies for 24 hours after a customer writes, approved wording after that. ALYR picks the right one each time." },
             { title: "Stop means stop", body: "A customer who says stop is not messaged again, and every consent is on record." },
             { title: "Nothing lost", body: "Each message is saved before it is sent, and tried again if WhatsApp is slow. A failure is shown, never hidden." },
             { title: "Your records, kept apart", body: "Each business is separated inside the database itself, not by a setting someone can forget." },
@@ -1175,7 +1191,7 @@ const en: Copy = {
       ],
     },
     why: {
-      eyebrow: "Why owners choose it",
+      eyebrow: "Why it helps",
       statement:
         "Your customers already message you before they visit or order. Those chats get lost, orders end up on paper, and payment means a transfer screenshot. The businesses that win treat the chat as their shop counter.",
       pillars: [
@@ -1189,11 +1205,11 @@ const en: Copy = {
         },
         {
           title: "Easy",
-          body: "We set it up for you, on the number you already use. Your customers need no new app.",
+          body: "We set it up for you. Your customers need no new app.",
         },
         {
           title: "Trusted",
-          body: "A local team, Arabic and English, built on WhatsApp's official Business Platform.",
+          body: "A person from ALYR to talk to, a product in Arabic and English, and WhatsApp's official Business Platform.",
         },
       ],
     },
@@ -1227,12 +1243,12 @@ const en: Copy = {
     next: {
       eyebrow: "What comes next",
       body:
-        "We start with the chat. As you grow, ALYR adds payments, books and a website, all on the same customer list.",
+        "We start with the chat. More products will join the same workspace and the same customer list, in the order our first businesses ask for them.",
     },
     cta: {
       title: "Let us set it up for you.",
       body:
-        "Tell us how you take orders and bookings today. A person from ALYR replies, in Arabic or English, and shows you the same work on your own menu or price list.",
+        "Tell us how you take orders and bookings today. A person from ALYR replies and shows you the same work on your own menu or price list.",
     },
   },
 };
@@ -1240,21 +1256,21 @@ const en: Copy = {
 const ar: Copy = {
   meta: {
     home: {
-      title: "ALYR · خلّ شغلك رقمي بدون فريق تقنية",
+      title: "ALYR · تحوّل رقمياً بلا فريق تقنية",
       description:
-        "تجهّز ALYR التقنية للمنشآت التي يديرها أصحابها في قطر وتتابعها عنك، بدءاً بـ\u00a0ALYR Chat: طلبات وحجوزات ومدفوعات داخل المحادثة. ابتداءً من 449 ر.ق شهرياً، بالعربية والإنجليزية.",
+        "تجهّز ALYR التقنية للمنشآت التي يديرها أصحابها في قطر وتتولى متابعتها. أول منتجاتها ALYR Chat: الطلبات والحجوزات داخل محادثة واتساب، ونجهّزه لك في محلك. من 449 ر.ق شهرياً، إضافة إلى رسوم التجهيز.",
     },
     chat: {
       title: "ALYR Chat · استقبل الطلبات والحجوزات والدفع في المحادثة",
       description:
-        "يحوّل ALYR Chat رسائل عملائك على واتساب إلى طلبات وحجوزات ومدفوعات، ونحن نجهّزه لك. للمطاعم والمقاهي والعيادات والصالونات والمحلات في قطر.",
+        "يحوّل ALYR Chat رسائل عملائك على واتساب إلى طلبات وحجوزات ومدفوعات، ونحن نجهّزه لك. للمطاعم والمقاهي والمحلات والخدمات المنزلية في قطر.",
     },
   },
   skip: "انتقل إلى المحتوى",
   nav: {
     what: "ماذا نقدّم",
     product: "ALYR Chat",
-    how: "كيف يعمل",
+    how: "كيف نعمل",
     price: "السعر",
     questions: "أسئلة",
     other: "English",
@@ -1266,13 +1282,13 @@ const ar: Copy = {
   contact: {
     whatsapp: "راسلنا على واتساب",
     email: "راسلنا بالبريد",
-    reply: "يردّ عليك شخص من ALYR، بالعربية أو الإنجليزية.",
+    reply: "يردّ عليك شخص من ALYR.",
     replyShort: "يردّ عليك شخص من ALYR.",
-    soon: "رقم واتساب الخاص بنا يُفتح قريباً. وحتى ذلك الحين راسلنا على",
-    pending: "رقم واتساب الخاص بنا يُفتح قريباً. نرجو العودة لاحقاً.",
+    pending: "سيتوفر رقم واتساب الخاص بنا قريباً. نرجو العودة لاحقاً.",
     commits: "الرسالة لا تُلزمك بشيء.",
-    prefill: "السلام عليكم، أبي أشوف كيف يشتغل ALYR مع محلي.",
-    subject: "كيف يعمل ALYR مع محلي",
+    prefill: "السلام عليكم، أبي أعرف كيف تشتغل ALYR مع محلي.",
+    subject: "كيف تعمل ALYR مع محلي",
+    body: "اسم المحل:\nالمنطقة:\nكيف تصلك الطلبات اليوم:\nأنسب وقت للزيارة:\n",
     draft: "الرسالة التي نكتبها لك مسبقاً",
     bar: "تواصل مع ALYR",
   },
@@ -1280,78 +1296,78 @@ const ar: Copy = {
     line: "علينا التقنية، وعليك شغلك.",
     rights: "ALYR. صُنع في قطر.",
     workspace: "دخول الموظفين",
-    disclaimer: "تعمل ALYR مع واتساب للأعمال، وليست تابعة لواتساب أو Meta.",
+    disclaimer: "تستخدم ALYR منصة واتساب للأعمال، وليست تابعة لواتساب أو Meta، ولا معتمدة منهما.",
     doha: "الدوحة",
     links: "الموقع",
   },
-  fig: { label: "الشكل", fictional: "مثال لمخبز غير حقيقي" },
+  fig: { label: "الشكل", fictional: "مخبز غير حقيقي" },
   home: {
     hero: {
       eyebrow: "علينا التقنية، وعليك شغلك.",
-      title: ["خلّ شغلك رقمي.", "بدون فريق تقنية."],
+      title: ["تحوّل رقمياً.", "بلا فريق تقنية."],
       body:
-        "تجهّز ALYR التقنية للمنشآت التي يديرها أصحابها في قطر، وتتابعها عنك. ونبدأ من واتساب: طلبات وحجوزات ومدفوعات داخل المحادثة، وفريقك كله على رقم واحد.",
-      how: "شاهد كيف يعمل",
+        "تجهّز ALYR التقنية للمنشآت التي يديرها أصحابها في قطر، وتتولى متابعتها. ونبدأ معك من واتساب: الطلبات والحجوزات وتتبّع الطلبات داخل المحادثة، وفريقك كله على رقم واحد.",
+      how: "تعرّف على طريقة العمل",
       facts: ["نجهّزها لك في محلك", "ابتداءً من 449 ر.ق شهرياً", "بالعربية والإنجليزية"],
       figure: {
         label: "صفحة طلب توضيحية على هاتف العميل، والطلب الذي تنشئه على شاشة المحل",
-        caption: { n: "01", text: "صفحة الطلب والسجل الذي تنشئه، بأسعار للتوضيح" },
+        caption: { n: "01", text: "صفحة الطلب وسجلّها، بأسعار توضيحية" },
         hint: "جرّب + و −. لن يُرسل أي طلب.",
         order: {
           shop: "مخبز قرفة",
-          monogram: "م",
+          monogram: "ق",
           context: "طلب",
           other: "English",
           eyebrow: "طلب من المحادثة",
           title: "ماذا تود أن تطلب؟",
           as: "الطلب باسم",
-          customer: "عائشة الكواري",
+          customer: "عائشة حمد",
           categories: ["المخبوزات", "الكيك", "المشروبات"],
           sections: [
             {
               name: "المخبوزات",
               items: [
                 { id: "manakish", name: "مناقيش زعتر", price: 8, qty: 2 },
-                { id: "fatayer", name: "فطاير جبن", price: 6, qty: 0 },
-                { id: "maamoul", name: "معمول تمر، علبة من 6", price: 30, qty: 0 },
+                { id: "fatayer", name: "فطائر جبن", price: 6, qty: 0 },
+                { id: "maamoul", name: "معمول بالتمر، 6 حبات", price: 30, qty: 0 },
               ],
             },
-            { name: "الكيك", items: [{ id: "saffron", name: "كيك الزعفران، قطعة", price: 22, qty: 1 }] },
+            { name: "الكيك", items: [{ id: "saffron", name: "كيكة الزعفران، قطعة", price: 22, qty: 1 }] },
           ],
-          money: "QAR {n}",
-          count: { one: "{n} صنف", other: "{n} صنف" },
+          money: "{n} ر.ق",
+          count: { one: "الأصناف: {n}", other: "الأصناف: {n}" },
           pay: "ادفع {total} ر.ق",
-          add: "أضف: {item}",
-          more: "إضافة واحد: {item}",
-          less: "إزالة واحد: {item}",
-          max: "{item}: الحد الأعلى في هذا المثال 9.",
+          add: "أضف {item}",
+          more: "أضف واحداً: {item}",
+          less: "أنقص واحداً: {item}",
+          max: "{item}: الحد الأقصى في هذا المثال 9.",
           announce: "{item}: {qty}. {count}، {total} ر.ق.",
           powered: "مدعوم من",
         },
         record: {
           screen: "الطلبات",
-          title: "الطلب 1043",
+          title: "الطلب رقم 1043",
           status: "جديد",
-          customer: "عائشة الكواري",
+          customer: "عائشة حمد",
           by: "يتابعه يوسف",
           initial: "ي",
         },
       },
     },
     problem: {
-      eyebrow: "مألوف لك؟",
+      eyebrow: "مواقف تعرفها",
       title: "عملاؤك يراسلونك أصلاً. والمشكلة تبدأ بعد ذلك.",
       rows: [
-        { text: "تصل الطلبات على واتساب ثم تُنقل إلى الورق، وبعضها لا يصل أبداً." },
-        { text: "في زحمة الجمعة لا أحد يتفرّغ للرد، فيطلب العميل من تطبيق آخر.", when: "الجمعة 13:10" },
+        { text: "تصل الطلبات على واتساب ثم تُنقل إلى الورق، وبعضها يضيع في الطريق." },
+        { text: "في زحمة الجمعة لا أحد يتفرّغ للرد، فيطلب العميل من تطبيق توصيل بدلاً منك.", when: "الجمعة 1:10 م" },
         { text: "الدفع صورة تحويل، ولا بد أن يتحقق منها أحد." },
-        { text: "الحجوزات في هاتف شخص واحد، وفي يوم إجازته لا أحد يعرف من سيأتي.", when: "السبت 09:00" },
+        { text: "الحجوزات في هاتف شخص واحد، وفي يوم إجازته لا أحد يعرف من سيأتي.", when: "السبت 9:00 ص" },
         { text: "الموظفون يردّون من أرقامهم الخاصة، فلا تعرف ماذا قالوا للعميل ولا من أضاع الطلب." },
         { text: "عملاء الآجل ينسون، ومطالبتهم محرجة." },
-        { text: "وفي آخر الأسبوع لا تعرف كم طلباً جاءك عبر المحادثة.", when: "السبت 22:00" },
+        { text: "وفي آخر الأسبوع لا تعرف كم طلباً جاءك عبر المحادثة.", when: "السبت 10:00 م" },
       ],
-      strong: "كل هذا لا يحتاج فريق تقنية.",
-      muted: "يحتاج محادثة مجهّزة كما يجب، ومن يتابعها عنك.",
+      strong: "كل هذا لا يحتاج إلى فريق تقنية.",
+      muted: "يحتاج إلى محادثة مجهّزة كما يجب، ومن يتابعها عنك.",
       who: {
         label: "لمن صُمّم",
         first: "البداية مع",
@@ -1362,17 +1378,17 @@ const ar: Copy = {
     },
     does: {
       eyebrow: "ماذا تقدّم ALYR",
-      title: "مساحة عمل واحدة لنشاطك. والبداية ALYR Chat.",
+      title: "مساحة عمل واحدة لنشاطك. والبداية مع ALYR Chat.",
       body:
-        "منتجات ALYR تتشارك مساحة عمل واحدة وقائمة عملاء واحدة وفريقاً واحداً، وتفعّل منها ما تحتاجه. وأولها ALYR Chat، يحوّل رسائل واتساب التي تصلك أصلاً إلى طلبات وحجوزات ومدفوعات.",
-      product: { name: "ALYR Chat", line: "استقبل الطلبات والحجوزات والدفع في المحادثة.", state: "وصول مبكر" },
+        "منتجات ALYR تتشارك مساحة عمل واحدة وقائمة عملاء واحدة وفريقاً واحداً، وتفعّل منها ما تحتاجه. وأولها ALYR Chat، الذي يردّ على رسائل واتساب التي تصلك أصلاً بصفحة للطلب وصفحة للحجز، وبرابط دفع حين يبدأ الدفع بالبطاقات.",
+      product: { name: "ALYR Chat", line: "الطلبات والحجوزات وصندوق واحد للفريق، داخل المحادثة.", state: "إطلاق مبكر" },
       storyLabel: "ماذا يفعل ALYR Chat، خطوة بعد خطوة",
       modules: [
         {
           id: "orders",
           title: "الطلبات",
           body: "يطلب العميل من صفحة مصمّمة لهاتفه، بلا تطبيق ولا حساب. ويصل الطلب إلى شاشتك، لا إلى الورق.",
-          caption: { n: "02", text: "طلب في المحادثة وعلى شاشة المحل، بأسعار للتوضيح" },
+          caption: { n: "02", text: "طلب في المحادثة وعلى شاشة المحل، بأسعار توضيحية" },
         },
         {
           id: "pay",
@@ -1382,9 +1398,9 @@ const ar: Copy = {
         },
         {
           id: "track",
-          title: "متابعة الطلب",
-          body: "لكل طلب صفحته، فيها كل خطوة ومن يتولاه. وتقلّ رسائل «وين طلبي؟».",
-          caption: { n: "04", text: "صفحة متابعة الطلب" },
+          title: "تتبّع الطلب",
+          body: "لكل طلب صفحة خاصة به، تُظهر كل خطوة ومن يتولاه. فتقلّ رسائل «وين طلبي؟».",
+          caption: { n: "04", text: "صفحة تتبّع الطلب" },
         },
         {
           id: "inbox",
@@ -1396,7 +1412,7 @@ const ar: Copy = {
           id: "book",
           title: "الحجوزات",
           body: "يختار العميل من الأوقات المتاحة فعلاً لديك. يصله التأكيد فوراً، وتذكير قبل الموعد بساعتين.",
-          caption: { n: "06", text: "حجز موعد لتذوّق الكيك، بسعر للتوضيح" },
+          caption: { n: "06", text: "حجز موعد لتذوّق الكيك، بسعر توضيحي" },
         },
       ],
       also: {
@@ -1407,26 +1423,27 @@ const ar: Copy = {
             body: "سجّل البيع بالآجل في المحادثة، وأرسل تذكيرات لبقة برابط دفع، واعرف من وعد بالسداد ومتى.",
           },
           {
-            title: "اسم على كل شيء",
+            title: "لكل شيء مسؤول",
             body: "لكل محادثة وطلب وحجز وحساب آجل موظف مسؤول. ترى من ردّ، وبأي سرعة، وما الذي بيع أو ضاع.",
           },
           {
             title: "تقرير الأحد",
-            body: "كل أحد صباحاً تصلك أرقام الأسبوع الماضي على واتساب: الطلبات والحجوزات والمبالغ المحصّلة والعملاء الذين راسلوك.",
+            body: "صباح كل يوم أحد يصلك على واتساب تقرير قصير عن الأسبوع الماضي: الطلبات والحجوزات والمبالغ المحصّلة والعملاء الذين راسلوك.",
           },
         ],
       },
       rail: {
         label: "منتجات ALYR",
-        state: "وصول مبكر",
+        state: "إطلاق مبكر",
         slots: ["التالي", "وبعده"],
+        pending: "لم يُسمَّ بعد",
         line: "ستنضم منتجات أخرى إلى مساحة العمل نفسها، بالترتيب الذي يطلبه أوائل عملائنا.",
-        link: "شاهد ALYR Chat",
+        link: "تعرّف على ALYR Chat",
       },
     },
     sample: {
       shop: "مخبز قرفة",
-      monogram: "م",
+      monogram: "ق",
       business: "حساب أعمال",
       typeHere: "مراسلة",
       powered: "مدعوم من",
@@ -1441,15 +1458,15 @@ const ar: Copy = {
           from: "business",
           lines: [
             "تم استلام الطلب رقم 1043.",
-            "2 x مناقيش زعتر  QAR 16",
-            "1 x كيك الزعفران، قطعة  QAR 22",
-            "الإجمالي: QAR 38",
+            "2 × مناقيش زعتر  16 ر.ق",
+            "1 × كيكة الزعفران، قطعة  22 ر.ق",
+            "الإجمالي: 38 ر.ق",
             { text: "للدفع: ", link: "alyr.qa/pay/…" },
             { text: "تتبّع طلبك: ", link: "alyr.qa/t/…" },
           ],
           time: "4:05 م",
         },
-        receipt: { from: "business", lines: ["تم استلام QAR 38 للطلب رقم 1043. شكراً لك."], time: "4:07 م" },
+        receipt: { from: "business", lines: ["تم استلام 38 ر.ق للطلب رقم 1043. شكراً لك."], time: "4:07 م" },
       },
       track: {
         context: "تتبّع الطلب",
@@ -1467,19 +1484,19 @@ const ar: Copy = {
       },
       inbox: {
         screen: "المحادثات",
-        customer: "عائشة الكواري",
+        customer: "عائشة حمد",
         handled: "المسؤول",
         handler: "يوسف",
         close: "إغلاق",
         labels: { customer: "العميل", assistant: "المساعد" },
         thread: [
-          { from: "customer", lines: ["ممكن كيكة زعفران كاملة يوم الخميس؟"], time: "4:12 م" },
-          { from: "assistant", lines: ["شكراً لرسالتك، سنرد عليك قريباً."], time: "4:12 م" },
-          { activity: "يوسف تولّى المحادثة", time: "4:14 م" },
-          { from: "staff", who: "يوسف", lines: ["نعم، الكاملة بـ 145 ر.ق. أخلي لك وحدة ليوم الخميس؟"], time: "4:15 م" },
+          { from: "customer", lines: ["ممكن كيكة زعفران كاملة يوم الخميس؟"], time: "" },
+          { from: "assistant", lines: ["شكراً لرسالتك، سنرد عليك قريباً."], time: "" },
+          { activity: "يوسف تولّى المحادثة", time: "16:14" },
+          { from: "staff", who: "يوسف", lines: ["أكيد، الكيكة الكاملة بـ 145 ر.ق. أخلّيها لك ليوم الخميس؟"], time: "" },
         ],
         paused: {
-          title: "أنت من يرد",
+          title: "أنت تردّ الآن",
           hint: "المساعد متوقف لهذا العميل حتى تغلق المحادثة أو تعيدها إليه.",
         },
       },
@@ -1488,10 +1505,10 @@ const ar: Copy = {
         eyebrow: "حجز من المحادثة",
         title: "احجز موعداً",
         as: "الحجز باسم",
-        customer: "عائشة الكواري",
+        customer: "عائشة حمد",
         steps: ["اختر الخدمة", "اختر اليوم", "اختر الوقت"],
         services: [
-          { name: "تذوّق الكيك", meta: "30 دقيقة · QAR 50", on: true },
+          { name: "تذوّق الكيك", meta: "30 دقيقة · 50 ر.ق", on: true },
           { name: "استشارة كيك الزفاف", meta: "60 دقيقة" },
         ],
         days: [
@@ -1507,16 +1524,16 @@ const ar: Copy = {
         confirm: "تأكيد الحجز",
       },
       rows: {
-        order: { screen: "الطلبات", ref: "1043", name: "عائشة الكواري", status: "جديد", by: "يوسف" },
-        paid: { screen: "الطلبات", ref: "1043", name: "عائشة الكواري", status: "مدفوع", by: "يوسف" },
-        ready: { screen: "الطلبات", ref: "1043", name: "عائشة الكواري", status: "جاهز", by: "يوسف" },
-        inbox: { screen: "المحادثات", ref: "مفتوحة", name: "عائشة الكواري", status: "يوسف", by: "يوسف" },
-        booking: { screen: "الحجوزات", ref: "الأحد 4:30 م", name: "تذوّق الكيك · عائشة الكواري", status: "محجوز", by: "يوسف" },
+        order: { screen: "الطلبات", ref: "1043", name: "عائشة حمد", status: "جديد", by: "يوسف" },
+        paid: { screen: "الطلبات", ref: "1043", name: "عائشة حمد", status: "مدفوع", by: "يوسف" },
+        ready: { screen: "الطلبات", ref: "1043", name: "عائشة حمد", status: "جاهز", by: "يوسف" },
+        inbox: { screen: "المحادثات", ref: "مفتوحة", name: "عائشة حمد", status: "يوسف", by: "يوسف" },
+        booking: { screen: "الحجوزات", ref: "الأحد 4:30 م", name: "تذوّق الكيك · عائشة حمد", status: "محجوز", by: "يوسف" },
       },
     },
     how: {
-      eyebrow: "كيف يعمل",
-      title: "من الزيارة الأولى إلى أول طلب.",
+      eyebrow: "كيف نعمل",
+      title: "من أول زيارة إلى أول طلب.",
       steps: [
         {
           title: "نزورك.",
@@ -1524,19 +1541,20 @@ const ar: Copy = {
         },
         {
           title: "نجهّزه لك.",
-          body: "ندخل قائمتك أو خدماتك وأسعارك بالعربية والإنجليزية، ونضبط ساعات العمل، ونعطي كل موظف في فريقك حساب دخول خاصاً به.",
+          body: "نضيف قائمتك أو خدماتك وأسعارك بالعربية والإنجليزية، ونضبط ساعات العمل، ونعطي كل موظف في فريقك حساب دخول خاصاً به.",
         },
         {
-          title: "تبدأ العمل.",
+          title: "يبدأ التشغيل.",
           body: "ندرّب فريقك عند الكاونتر، وتشارك رابط المحادثة ورموز QR، فتصل الطلبات إلى مكان واحد.",
         },
         {
           title: "ترى ما تغيّر.",
-          body: "كل أحد تصلك أرقامك على واتساب. تريد تعديل شيء؟ راسلنا ونعدّله.",
+          body: "صباح كل يوم أحد يصلك تقرير أسبوعك على واتساب. تحتاج تعديلاً؟ راسلنا ونعدّله لك.",
         },
       ],
+      note: "ALYR Chat في مرحلة الإطلاق المبكر. نجهّزه مع كل منشأة بأنفسنا، ونتفق معك على موعد بدء التشغيل خلال الزيارة.",
       report: {
-        caption: { n: "07", text: "تقرير الأحد على واتساب، بأرقام للتوضيح" },
+        caption: { n: "07", text: "تقرير الأحد على واتساب، بأرقام توضيحية" },
         heading: "تقرير ALYR الأسبوعي: مخبز قرفة",
         week: "من 4/10 إلى 10/10",
         time: "9:00 ص",
@@ -1544,7 +1562,7 @@ const ar: Copy = {
           {
             title: "الطلبات",
             lines: [
-              "طلبات وصلتك: 64، بقيمة QAR 2,310 (الأسبوع الماضي 52)",
+              "طلبات وصلتك: 64، بقيمة 2,310 ر.ق (الأسبوع الماضي 52)",
               "عملاء طلبوا مرة أخرى: 21",
               "الأكثر طلباً: مناقيش زعتر (118)",
             ],
@@ -1574,9 +1592,9 @@ const ar: Copy = {
     },
     included: {
       eyebrow: "نجهّزه لك",
-      title: "أنت تدير شغلك. ونحن نتولى التقنية.",
+      title: "التجهيز والتدريب والتعديلات: كلها علينا.",
       body:
-        "التجهيز جزء من كل باقة، لا مهمة نتركها لك. وطوال اشتراكك نتابع بقية أمورك التقنية أيضاً.",
+        "نتولى التجهيز بأنفسنا في محلك، ولا نتركه عليك. وطوال اشتراكك نساعدك في بقية أمورك التقنية أيضاً.",
       start: {
         title: "عند البداية",
         items: [
@@ -1591,7 +1609,7 @@ const ar: Copy = {
         title: "كل شهر",
         items: [
           "تعديل القائمة والأسعار والساعات متى طلبت",
-          "شخص من ALYR يردّ متى راسلتنا",
+          "شخص من ALYR يردّ على رسائلك",
           "تقرير الأحد",
           "كل تحديثات المنتج، بلا تثبيت",
         ],
@@ -1599,7 +1617,7 @@ const ar: Copy = {
       more: {
         title: "حين تحتاج أكثر",
         body:
-          "موقع، أو صفحتك على جوجل، أو أداة تدفع ثمنها وتريد أن تعمل مع ALYR؟ اطلب منا. المهام الصغيرة جزء من متابعتنا لك، والكبيرة نسعّرها قبل أن نبدأ.",
+          "موقع إلكتروني، أو ملف نشاطك على خرائط جوجل، أو أداة تشترك فيها وتريد ربطها بـ\u00a0ALYR؟ أخبرنا. المهام الصغيرة ضمن متابعتنا لك، والكبيرة نسعّرها قبل أن نبدأ.",
       },
       figure: {
         caption: { n: "08", text: "«اطلب من ALYR» في مساحة عملك، والطلب في المكتب الداخلي لـ\u00a0ALYR" },
@@ -1618,7 +1636,7 @@ const ar: Copy = {
         heads: { shop: "المحل", step: "المنتج · الخطوة", note: "ملاحظة", by: "الطلب من" },
         row: {
           shop: "مخبز قرفة",
-          when: "16/10/2026، 14:05",
+          when: "16/10/2026، 14:05:00",
           step: "ALYR Chat · ساعات العمل",
           note: "الجمعة: من 2 م إلى 11 م",
           by: "حصة",
@@ -1628,18 +1646,20 @@ const ar: Copy = {
     },
     price: {
       eyebrow: "السعر",
-      title: "سعر واحد واضح، بالريال القطري.",
+      title: "كم يكلّف، بالريال القطري.",
       from: "ابتداءً من",
       amount: "449",
       currency: "ر.ق",
+      currencyFirst: false,
       period: "شهرياً",
-      setup: "ورسوم تجهيز تبدأ من 1,500 ر.ق، نحددها معك خلال الزيارة.",
-      includes: "يشمل كل شهر ALYR Chat، وحسابات دخول لفريقك، وتقرير الأحد، والتعديلات متى طلبت.",
+      setup: "ورسوم تجهيز تبدأ من 1,500 ر.ق، ونحدد مبلغها خلال زيارتنا لك.",
+      includes:
+        "يشمل اشتراكك الشهري ALYR Chat، وحسابات دخول لفريقك، وتقرير الأحد، وشخصاً من ALYR يردّ على رسائلك، وتعديل القائمة والأسعار والساعات عند الطلب. ونؤكد لك سعرك الشهري كتابةً خلال الزيارة.",
       ledgerLabel: "الرسوم بوضوح",
       ledger: [
-        { label: "العمولة على طلباتك", value: "لا شيء. لا تأخذ ALYR أي عمولة.", strong: true },
+        { label: "العمولة على طلباتك", value: "لا عمولة. ALYR لا تأخذ أي نسبة من طلباتك.", strong: true },
         { label: "رسوم رسائل واتساب", value: "تحتسبها Meta عليك مباشرة بأسعارها، ولا نضيف عليها شيئاً." },
-        { label: "مدة الاشتراك", value: "شهراً بشهر. يمكنك التوقف في نهاية أي شهر." },
+        { label: "مدة الاشتراك", value: "اشتراك شهري. يمكنك إيقافه في نهاية أي شهر." },
       ],
       agreement: {
         caption: { n: "09", text: "الشهر الأول كما يُكتب في اتفاقك" },
@@ -1648,12 +1668,12 @@ const ar: Copy = {
         titleLead: "شهرك الأول،",
         titleMark: "بضمان استرداد المبلغ.",
         body:
-          "قبل أن نبدأ نتفق معك على نتيجة واحدة، مثل عدد الطلبات أو الحجوزات عبر المحادثة في أول 30 يوماً. وإن لم نحققها نعيد لك مبلغ الشهر الأول.",
+          "قبل أن نبدأ نتفق معك على نتيجة واحدة، مثل عدد الطلبات أو الحجوزات عبر المحادثة خلال 30 يوماً من بدء التشغيل. وإن لم نحققها نعيد لك اشتراك الشهر الأول.",
         fields: [
           { label: "النتيجة", value: "نتفق عليها معك خلال الزيارة", blank: true },
-          { label: "طريقة العدّ", value: "في مساحة عملك، وتراها أنت أيضاً" },
+          { label: "أين تُحسب", value: "في مساحة عملك، وتراها أنت أيضاً" },
           { label: "المدة", value: "30 يوماً من بدء التشغيل" },
-          { label: "دورك", value: "أن تشارك رابط المحادثة ورموز QR في الأسبوع الأول" },
+          { label: "دورك", value: "أن تضع رموز QR في محلك وتشارك رابط المحادثة مع عملائك في الأسبوع الأول." },
           { label: "إن لم نحققها", value: "نعيد لك اشتراك الشهر الأول. رسوم التجهيز لا تُسترد." },
         ],
         print: "الشروط مكتوبة في اتفاقك معنا.",
@@ -1661,12 +1681,12 @@ const ar: Copy = {
     },
     trust: {
       eyebrow: "لماذا تثق بنا",
-      title: "شركة جديدة. بلا طرق مختصرة.",
+      title: "شركة جديدة. ونعمل بالأصول.",
       body:
-        "نختار الآن أوائل عملائنا في الدوحة، لذلك لن ترى هنا شعارات أو أرقاماً بعد. وهذا ما نستطيع أن نريك إياه بدلاً منها.",
+        "نختار الآن أوائل عملائنا في الدوحة، لذلك لن ترى هنا بعدُ شعارات عملاء أو أرقاماً. وإليك ما نستطيع أن نريك إياه بدلاً من ذلك.",
       facts: [
         {
-          label: "من تتعامل معه",
+          label: "الشخص",
           title: "تعرف من تتعامل معه.",
           body: "الشخص الذي يزورك هو من يجهّز لك، وهو من يردّ حين تراسلنا.",
         },
@@ -1696,13 +1716,13 @@ const ar: Copy = {
           body: "الردود الآلية تتولى المتكرر، وأي موظف يستطيع الدخول إلى أي محادثة.",
         },
       ],
-      closing: "وإن لم يحقق الشهر الأول ما اتفقنا عليه، نعيد لك مبلغك.",
+      closing: "وإن لم يحقق الشهر الأول النتيجة التي اتفقنا عليها، نعيد لك اشتراك ذلك الشهر.",
       records: {
         label: "موثّق",
         items: { cr: "السجل التجاري", provider: "مزوّد الدفع", meta: "مزوّد تقنية معتمد لدى Meta" },
       },
       figure: {
-        caption: { n: "10", text: "صفحة المتابعة نفسها بالعربية والإنجليزية" },
+        caption: { n: "10", text: "صفحة تتبّع الطلب نفسها بالعربية والإنجليزية" },
         label: "صفحة العميل نفسها بالعربية والإنجليزية، جنباً إلى جنب",
       },
     },
@@ -1713,7 +1733,7 @@ const ar: Copy = {
         {
           id: "whatsapp-business",
           q: "أستخدم واتساب للأعمال، وهو مجاني.",
-          a: "واصل استخدام واتساب. تضيف ALYR ما لا يوفّره التطبيق: صفحة طلب، وحجوزات، وروابط دفع، وصندوقاً واحداً لفريقك كله، فلا تنتهي الطلبات على الورق.",
+          a: "عملاؤك يواصلون استخدام واتساب. وتضيف ALYR ما لا يوفّره التطبيق: صفحة طلب، وحجوزات، وروابط دفع، وصندوقاً واحداً لفريقك كله، فلا تنتهي الطلبات على الورق. أما الرقم الذي يراسلك عليه عملاؤك، وما يعنيه ذلك للتطبيق على هاتفك، فنراجعه معك خلال الزيارة.",
         },
         {
           id: "delivery-apps",
@@ -1723,7 +1743,7 @@ const ar: Copy = {
         {
           id: "price",
           q: "449 ر.ق شهرياً مبلغ كبير.",
-          a: "هو تكلفة حقيقية، ولهذا يأتي شهرك الأول مع نتيجة نتفق عليها مسبقاً. وإن لم نحققها نعيد لك مبلغ الشهر.",
+          a: "صحيح أنه مبلغ له وزنه، ولهذا نتفق معك مسبقاً على نتيجة لشهرك الأول. وإن لم نحققها نعيد لك اشتراك ذلك الشهر.",
         },
         {
           id: "staff",
@@ -1733,7 +1753,7 @@ const ar: Copy = {
         {
           id: "busy-night",
           q: "وإذا تعطّل شيء في ليلة مزدحمة؟",
-          a: "راسلنا ويردّ عليك شخص من ALYR. كل رسالة تُحفظ قبل إرسالها ويُعاد إرسالها إن تأخر واتساب، فلا تضيع الطلبات.",
+          a: "راسلنا ويتولى الأمر الشخص الذي جهّز لك النظام. وفي الخلفية تُحفظ كل رسالة قبل إرسالها، ويُعاد إرسالها إن تأخر واتساب، فلا تضيع في لحظة بطء.",
         },
         {
           id: "pay-online",
@@ -1743,32 +1763,38 @@ const ar: Copy = {
         {
           id: "not-technical",
           q: "لست خبيراً بالتقنية.",
-          a: "لا تحتاج أن تكون. نحن نجهّز، وندرّب فريقك، ونعدّل متى طلبت.",
+          a: "ولا تحتاج إلى ذلك. نحن نجهّز كل شيء، وندرّب فريقك، ونعدّل متى طلبت.",
         },
         {
           id: "data",
-          q: "هل بياناتي آمنة؟ وهل هذا معتمد؟",
-          a: "تستخدم ALYR منصة واتساب للأعمال الرسمية، وسجلات كل منشأة مفصولة داخل قاعدة البيانات.",
+          q: "هل بياناتي آمنة؟",
+          a: "سجلات كل منشأة مفصولة داخل قاعدة البيانات نفسها، وتستخدم ALYR منصة واتساب للأعمال الرسمية. وصُمّمت ALYR بحيث لا تحتفظ بأموالك أبداً.",
         },
         {
           id: "message-fees",
           q: "كم تكلّف رسائل واتساب؟",
-          a: "تحتسب Meta رسوماً على بعض الرسائل، وأغلبها التذكيرات والإشعارات التي تُرسل بعد مرور 24 ساعة على آخر رسالة من العميل. وتحتسبها Meta عليك مباشرة بأسعارها، ولا تضيف ALYR شيئاً.",
+          a: "تحتسب Meta رسوماً على بعض رسائل واتساب بأسعارها، وهي التي تحدد أي الرسائل تُحتسب. وتصلك فاتورتها من Meta مباشرة، ولا تضيف ALYR شيئاً. ونراجع معك الأسعار الحالية خلال الزيارة.",
         },
         {
           id: "contract",
-          q: "هل هناك عقد ملزم؟",
-          a: "الاشتراك شهراً بشهر، ويمكنك التوقف في نهاية أي شهر.",
+          q: "هل أنا ملزم بمدة طويلة؟",
+          a: "لا. بيننا اتفاق مكتوب، لكن الاشتراك شهري، ويمكنك إيقافه في نهاية أي شهر.",
+        },
+        {
+          id: "whatsapp-line",
+          q: "هل أستطيع مراسلتكم على واتساب؟",
+          a: "سيتوفر رقم واتساب الخاص بنا قريباً. وحتى ذلك الحين راسلنا بالبريد، ويردّ عليك شخص من ALYR.",
+          state: "email",
         },
       ],
     },
     final: {
       title: "أخبرنا كيف تستقبل الطلبات اليوم.",
-      body: "أرسل لنا رسالة. يردّ عليك شخص من ALYR بالعربية أو الإنجليزية، ثم يأتيك ليريك ALYR على قائمتك أو أسعارك أنت.",
+      body: "أرسل لنا رسالة. يردّ عليك شخص من ALYR، ثم يزورك ليريك ALYR على هاتفك أنت.",
     },
   },
   product: {
-    eyebrow: "ALYR Chat · وصول مبكر",
+    eyebrow: "ALYR Chat · إطلاق مبكر",
     title: "استقبل الطلبات والحجوزات والدفع في المحادثة.",
     body:
       "يواصل عملاؤك مراسلتك كما اعتادوا. ويضيف ALYR Chat الحجز والطلب ورابط الدفع والتحديثات، وفريقك يرى كل شيء في مكان واحد.",
@@ -1788,16 +1814,16 @@ const ar: Copy = {
         chat: [
           { from: "customer", text: "السلام عليكم، مكيف المجلس يسرّب ماء. ممكن أحد يجي بكرة؟" },
           { from: "business", text: "وعليكم السلام، أكيد. اختر الوقت المناسب لك.", action: "اختر الوقت" },
-          { from: "business", text: "تم تأكيد الحجز 214: زيارة صيانة مكيف، الثلاثاء ١٤ أكتوبر، ٤:٣٠ م." },
-          { from: "business", text: "تذكير: موعد زيارتك اليوم الساعة ٤:٣٠ م." },
+          { from: "business", text: "تم تأكيد الحجز 214: زيارة صيانة مكيف، الأربعاء 14 أكتوبر، 4:30 م." },
+          { from: "business", text: "تذكير: موعد زيارتك اليوم الساعة 4:30 م." },
         ],
         panel: {
           title: "الحجوزات",
-          badge: "الثلاثاء ١٤ أكتوبر",
+          badge: "الأربعاء 14 أكتوبر",
           rows: [
-            { lead: "٢:٠٠ م", main: "صيانة مولّد", sub: "خالد النعيمي", trail: "محجوز", tone: "done" },
-            { lead: "٤:٣٠ م", main: "زيارة صيانة مكيف", sub: "مريم الكواري", trail: "جديد", tone: "signal" },
-            { lead: "٦:٠٠ م", main: "فحص كهربائي", sub: "يوسف العمادي", trail: "محجوز", tone: "done" },
+            { lead: "2:00 م", main: "صيانة مولّد", sub: "خالد ناصر", trail: "محجوز", tone: "done" },
+            { lead: "4:30 م", main: "زيارة صيانة مكيف", sub: "مريم صالح", trail: "جديد", tone: "signal" },
+            { lead: "6:00 م", main: "فحص كهربائي", sub: "عمر علي", trail: "محجوز", tone: "done" },
           ],
         },
         caption: "الأوقات المتاحة تأتي من ساعات عملك، ولا يمكن لعميلين أن يحجزا الموعد نفسه.",
@@ -1808,16 +1834,16 @@ const ar: Copy = {
         chat: [
           { from: "customer", text: "أحتاج فلترين للمكيف وثرموستات." },
           { from: "business", text: "تفضل صفحة الطلب، اختر ما تحتاجه.", action: "افتح صفحة الطلب" },
-          { from: "business", text: "تم استلام الطلب 1042: ٣ أصناف، ٣٨٥ ر.ق." },
+          { from: "business", text: "تم استلام الطلب 1042: 3 أصناف، 385 ر.ق." },
         ],
         panel: {
           title: "الطلب 1042",
           badge: "جديد",
           rows: [
-            { lead: "٢ ×", main: "فلتر مكيف", trail: "١٢٠ ر.ق", tone: "signal" },
-            { lead: "١ ×", main: "ثرموستات ذكي", trail: "٢٦٥ ر.ق", tone: "signal" },
+            { lead: "2 ×", main: "فلتر مكيف", trail: "120 ر.ق", tone: "signal" },
+            { lead: "1 ×", main: "ثرموستات ذكي", trail: "265 ر.ق", tone: "signal" },
           ],
-          total: ["الإجمالي", "٣٨٥ ر.ق"],
+          total: ["الإجمالي", "385 ر.ق"],
         },
         caption: "يطلب العميل من صفحة مصممة لهاتفه، ويراها فريقك لحظة وصولها.",
       },
@@ -1825,18 +1851,18 @@ const ar: Copy = {
         id: "pay",
         tab: "الدفع",
         chat: [
-          { from: "business", text: "تم تأكيد الطلب 1042. يمكنك الدفع من هنا.", action: "ادفع ٣٨٥ ر.ق" },
-          { from: "business", text: "تم استلام ٣٨٥ ر.ق عن الطلب 1042. شكراً لك." },
+          { from: "business", text: "تم تأكيد الطلب 1042. يمكنك الدفع من هنا.", action: "ادفع 385 ر.ق" },
+          { from: "business", text: "تم استلام 385 ر.ق عن الطلب 1042. شكراً لك." },
         ],
         panel: {
           title: "المدفوعات",
           badge: "اليوم",
           rows: [
-            { main: "الطلب 1042", sub: "مريم الكواري", trail: "٣٨٥ ر.ق · مدفوع", tone: "signal" },
-            { main: "على الحساب", sub: "فلل الريان · ٤١ يوماً", trail: "١٬٨٥٠ ر.ق · تم التذكير", tone: "done" },
+            { main: "الطلب 1042", sub: "مريم صالح", trail: "385 ر.ق · مدفوع", tone: "signal" },
+            { main: "على الحساب", sub: "فلل الريان · 41 يوماً", trail: "1,850 ر.ق · تم التذكير", tone: "done" },
           ],
         },
-        caption: "تُسوّى المدفوعات في حساب بوابة الدفع الخاص بك. ALYR لا تحتفظ بأموالك أبداً.",
+        caption: "روابط الدفع جاهزة ومجرّبة على صفحة تجريبية. وصُمّمت ALYR بحيث لا تحتفظ بأموالك.",
       },
       {
         id: "track",
@@ -1850,9 +1876,9 @@ const ar: Copy = {
           title: "الطلب 1042",
           badge: "جاهز",
           rows: [
-            { lead: "١٠:٠٢", main: "تم الاستلام", tone: "done" },
-            { lead: "١٠:٠٥", main: "تم التأكيد", tone: "done" },
-            { lead: "١١:٤٠", main: "جاهز للاستلام", trail: "أُبلغ العميل", tone: "signal" },
+            { lead: "10:02", main: "تم الاستلام", tone: "done" },
+            { lead: "10:05", main: "تم التأكيد", tone: "done" },
+            { lead: "11:40", main: "جاهز للاستلام", trail: "أُبلغ العميل", tone: "signal" },
             { lead: "", main: "تم التسليم", tone: "quiet" },
           ],
         },
@@ -1862,18 +1888,18 @@ const ar: Copy = {
         id: "collect",
         tab: "التحصيل",
         chat: [
-          { from: "business", text: "دانة للخدمات المنزلية: تم تسجيل شراء آجل بمبلغ ٤٥٠ ر.ق. رصيدك الآن ١٬٨٥٠ ر.ق." },
-          { from: "business", text: "تذكير ودي من دانة للخدمات المنزلية: عليك مبلغ ١٬٨٥٠ ر.ق. يمكنك الدفع من هنا.", action: "ادفع الآن" },
+          { from: "business", text: "دانة للخدمات المنزلية: تم تسجيل شراء آجل بمبلغ 450 ر.ق. رصيدك الآن 1,850 ر.ق." },
+          { from: "business", text: "تذكير ودي من دانة للخدمات المنزلية: عليك مبلغ 1,850 ر.ق. يمكنك الدفع من هنا.", action: "ادفع الآن" },
           { from: "customer", text: "سأدفع خلال أسبوع" },
-          { from: "business", text: "شكراً لك. سجلنا أنك ستدفع قبل ٢١ أكتوبر. لن نرسل تذكيرات حتى ذلك التاريخ." },
+          { from: "business", text: "شكراً لك. سجلنا أنك ستدفع قبل 21 أكتوبر. لن نرسل تذكيرات حتى ذلك التاريخ." },
         ],
         panel: {
           title: "حسابات الآجل",
-          badge: "٣ حسابات",
+          badge: "3 حسابات",
           rows: [
-            { main: "فلل الريان", sub: "أقدم فاتورة: ٤١ يوماً", trail: "١٬٨٥٠ ر.ق · وعد بالسداد", tone: "signal" },
-            { main: "خالد النعيمي", sub: "أقدم فاتورة: ١٢ يوماً", trail: "٩٠٠ ر.ق", tone: "done" },
-            { main: "أنوار الخليج للتجارة", sub: "أقدم فاتورة: ٩٦ يوماً", trail: "٣٬٦٥٠ ر.ق · إشعار أخير", tone: "quiet" },
+            { main: "فلل الريان", sub: "أقدم فاتورة: 41 يوماً", trail: "1,850 ر.ق · وعد بالسداد", tone: "signal" },
+            { main: "خالد ناصر", sub: "أقدم فاتورة: 12 يوماً", trail: "900 ر.ق", tone: "done" },
+            { main: "أنوار الخليج للتجارة", sub: "أقدم فاتورة: 96 يوماً", trail: "3,650 ر.ق · إشعار أخير", tone: "quiet" },
           ],
         },
         caption: "الوعد بالسداد يوقف التذكيرات حتى موعده. ولا يُذكَّر أحد مرتين خلال أيام قليلة.",
@@ -1883,15 +1909,15 @@ const ar: Copy = {
         tab: "صندوق الفريق",
         chat: [
           { from: "customer", text: "هل الثرموستات عليه ضمان؟" },
-          { from: "staff", text: "نعم، ضمان ١٢ شهراً. سأحضر الفاتورة معي غداً." },
+          { from: "staff", text: "نعم، ضمان 12 شهراً. سأحضر الفاتورة معي غداً." },
         ],
         panel: {
           title: "الوارد",
-          badge: "٣ مفتوحة",
+          badge: "3 مفتوحة",
           rows: [
-            { main: "مريم الكواري", sub: "هل الثرموستات عليه ضمان؟", trail: "يوسف", tone: "signal" },
-            { main: "خالد النعيمي", sub: "هل وصلت قطعة المولّد؟", trail: "غير مسندة", tone: "quiet" },
-            { main: "ملاحظة داخلية", sub: "مريم تفضّل الاتصال بعد ٥ مساءً.", trail: "للفريق فقط", tone: "done" },
+            { main: "مريم صالح", sub: "هل الثرموستات عليه ضمان؟", trail: "يوسف", tone: "signal" },
+            { main: "خالد ناصر", sub: "هل وصلت قطعة المولّد؟", trail: "غير مسندة", tone: "quiet" },
+            { main: "ملاحظة داخلية", sub: "مريم تفضّل الاتصال بعد 5 مساءً.", trail: "للفريق فقط", tone: "done" },
           ],
         },
         caption: "رقم واحد والفريق كله. وحين يردّ أحد الموظفين يتوقف المساعد الآلي.",
@@ -1899,12 +1925,12 @@ const ar: Copy = {
     ],
     facts: [
       {
-        title: "احتفظ برقمك",
-        body: "اربط رقم واتساب للأعمال الذي يعرفه عملاؤك. ويبقى التطبيق على هاتفك.",
+        title: "رقمك، نتفق عليه عند التجهيز",
+        body: "نتفق معك عند التجهيز على الرقم الذي يراسلك عليه عملاؤك، ونراجع معك متطلبات Meta أولاً.",
       },
       {
-        title: "المبلغ يصلك مباشرة",
-        body: "روابط الدفع تستخدم حساب بوابة الدفع الخاص بك. ALYR لا تحتفظ بأموالك ولا تنقلها.",
+        title: "لا تحتفظ بأموالك",
+        body: "روابط الدفع جاهزة ومجرّبة على صفحة تجريبية. وسيمرّ الدفع الفعلي عبر حسابك لدى مزوّد دفع قطري، وهذا الربط لم يبدأ بعد.",
       },
       {
         title: "لا رسالة بلا موافقة",
@@ -1940,7 +1966,7 @@ const ar: Copy = {
             {
               title: "ALYR تتحقق من المرسل",
               body: "تتأكد أن الرسالة جاءت فعلاً من واتساب، وتجد مريم في قائمة عملائك، وتلاحظ أنها تكتب بالعربية.",
-              work: ["المصدر مؤكد: واتساب", "العميل: مريم الكواري"],
+              work: ["المصدر مؤكد: واتساب", "العميل: مريم صالح"],
             },
             {
               title: "تفهم ما تحتاجه",
@@ -1958,22 +1984,22 @@ const ar: Copy = {
               move: "in",
               title: "تختار الوقت",
               body: "تُفتح الصفحة على هاتفها بلا تطبيق ولا تسجيل. وعند التأكيد تتحقق ALYR من الموعد مرة أخرى وتحجزه، فلا يأخذ عميلان الوقت نفسه.",
-              chat: { from: "event", text: "اختارت الثلاثاء ١٤ أكتوبر، ٤:٣٠ م" },
+              chat: { from: "event", text: "اختارت الأربعاء 14 أكتوبر، 4:30 م" },
               work: ["تم التحقق من الموعد وحجزه"],
             },
             {
               move: "team",
               title: "فريقك يرى الحجز",
               body: "يظهر على شاشة فريقك لحظة إتمامه. لم ينسخ أحد شيئاً من المحادثة.",
-              record: { id: "booking", lead: "٤:٣٠ م", main: "زيارة صيانة مكيف", sub: "مريم الكواري", trail: "جديد", tone: "signal" },
+              record: { id: "booking", lead: "4:30 م", main: "زيارة صيانة مكيف", sub: "مريم صالح", trail: "جديد", tone: "signal" },
               work: ["تم حفظ الحجز 214"],
             },
             {
               move: "out",
               title: "تأكيد الآن، وتذكير لاحقاً",
               body: "تؤكد ALYR الحجز وتضبط تذكيراً قبل الزيارة بساعتين. وفريقك لم يكتب حرفاً.",
-              chat: { from: "business", text: "تم تأكيد الحجز 214: زيارة صيانة مكيف، الثلاثاء ١٤ أكتوبر، ٤:٣٠ م." },
-              work: ["تم إرسال التأكيد", "تذكير مضبوط الساعة ٢:٣٠ م"],
+              chat: { from: "business", text: "تم تأكيد الحجز 214: زيارة صيانة مكيف، الأربعاء 14 أكتوبر، 4:30 م." },
+              work: ["تم إرسال التأكيد", "تذكير مضبوط الساعة 2:30 م"],
             },
           ],
         },
@@ -1993,21 +2019,21 @@ const ar: Copy = {
             },
             {
               title: "تراجع قواعد واتساب",
-              body: "آخر رسالة من مريم مضى عليها أكثر من ٢٤ ساعة. عندها لا يسمح واتساب إلا بصياغة وافق عليها مسبقاً، فتستخدمها ALYR. ولو طلبت مريم الإيقاف لما أُرسل شيء.",
-              work: ["الموافقة: مسجّلة", "آخر رسالة: قبل أكثر من ٢٤ ساعة", "اختيرت الصياغة المعتمدة"],
+              body: "آخر رسالة من مريم مضى عليها أكثر من 24 ساعة. عندها لا يسمح واتساب إلا بصياغة وافق عليها مسبقاً، فتستخدمها ALYR. ولو طلبت مريم الإيقاف لما أُرسل شيء.",
+              work: ["الموافقة: مسجّلة", "آخر رسالة: قبل أكثر من 24 ساعة", "اختيرت الصياغة المعتمدة"],
             },
             {
               move: "out",
               title: "يصل التذكير",
               body: "يصل إلى هاتفها من رقمك، وباللغة التي تراسلك بها.",
-              chat: { from: "business", text: "تذكير: الحجز 214 لدى دانة للخدمات المنزلية موعده الثلاثاء ١٤ أكتوبر، ٤:٣٠ م. بانتظارك." },
+              chat: { from: "business", text: "تذكير: الحجز 214 لدى دانة للخدمات المنزلية موعده الأربعاء 14 أكتوبر، 4:30 م. بانتظارك." },
               work: ["تم إرسال التذكير"],
             },
             {
               move: "team",
               title: "فريقك يعرف أنها قرأته",
               body: "يبلّغ واتساب حين تُسلَّم الرسالة وحين تُقرأ، وتحفظ ALYR ذلك في السجل.",
-              record: { id: "reminder", lead: "٢:٣٠ م", main: "تذكير، الحجز 214", sub: "مريم الكواري", trail: "قُرئ", tone: "signal" },
+              record: { id: "reminder", lead: "2:30 م", main: "تذكير، الحجز 214", sub: "مريم صالح", trail: "قُرئ", tone: "signal" },
               work: ["تم التسليم", "قُرئت"],
             },
           ],
@@ -2027,14 +2053,14 @@ const ar: Copy = {
               move: "team",
               title: "تصل إلى الوارد المشترك",
               body: "كل محادثة على رقمك في صندوق واحد يراه الفريق كله، أياً كان المناوب.",
-              record: { id: "chat", main: "مريم الكواري", sub: "هل الثرموستات عليه ضمان؟", trail: "غير مسندة", tone: "quiet" },
+              record: { id: "chat", main: "مريم صالح", sub: "هل الثرموستات عليه ضمان؟", trail: "غير مسندة", tone: "quiet" },
               work: ["حُفظت في الوارد المشترك"],
             },
             {
               move: "back",
               title: "يوسف يردّ من شاشته",
               body: "يكتب الرد في مساحة العمل، وتصير المحادثة باسمه، فيعرف الفريق من يتولاها.",
-              record: { id: "chat", main: "مريم الكواري", sub: "هل الثرموستات عليه ضمان؟", trail: "يوسف", tone: "signal" },
+              record: { id: "chat", main: "مريم صالح", sub: "هل الثرموستات عليه ضمان؟", trail: "يوسف", tone: "signal" },
               work: ["المحادثة مع يوسف"],
             },
             {
@@ -2046,14 +2072,14 @@ const ar: Copy = {
               move: "out",
               title: "الرد يخرج من رقمك",
               body: "مريم ترى شركة واحدة ورقماً واحداً، ولا يهمها من أي شاشة جاء الرد.",
-              chat: { from: "business", text: "نعم، ضمان ١٢ شهراً. سأحضر الفاتورة معي غداً." },
+              chat: { from: "business", text: "نعم، ضمان 12 شهراً. سأحضر الفاتورة معي غداً." },
               work: ["أُرسل الرد من رقمك"],
             },
             {
               move: "team",
               title: "ملاحظة تبقى مع العميل",
               body: "يترك يوسف ملاحظة لزميله القادم. الملاحظات للفريق فقط ولا تُرسل للعميل أبداً.",
-              record: { id: "note", main: "ملاحظة داخلية", sub: "مريم تفضّل الاتصال بعد ٥ مساءً.", trail: "للفريق فقط", tone: "done" },
+              record: { id: "note", main: "ملاحظة داخلية", sub: "مريم تفضّل الاتصال بعد 5 مساءً.", trail: "للفريق فقط", tone: "done" },
               work: ["حُفظت الملاحظة، للفريق فقط"],
             },
           ],
@@ -2063,7 +2089,7 @@ const ar: Copy = {
     inside: {
       eyebrow: "ماذا يتضمن",
       title: "كل ما يفعله اليوم.",
-      note: "ALYR Chat في مرحلة الوصول المبكر. كل ما في هذه القائمة جاهز، ونربطه برقمك عند تجهيزه لك.",
+      note: "ALYR Chat في مرحلة الإطلاق المبكر. كل ما في هذه القائمة جاهز، ونتفق معك على الرقم عند تجهيزه لك.",
       groups: [
         {
           name: "لعملائك",
@@ -2088,7 +2114,7 @@ const ar: Copy = {
         {
           name: "في الخلفية",
           items: [
-            { title: "قواعد واتساب علينا", body: "ردود حرة خلال ٢٤ ساعة من رسالة العميل، وبعدها صياغة معتمدة. تختار ALYR الصحيح في كل مرة." },
+            { title: "قواعد واتساب علينا", body: "ردود عادية خلال 24 ساعة من رسالة العميل، وبعدها صياغة معتمدة. وتختار ALYR المناسب في كل مرة." },
             { title: "الإيقاف يعني الإيقاف", body: "من يطلب الإيقاف لا تصله رسائل بعدها، وكل موافقة مسجّلة." },
             { title: "لا شيء يضيع", body: "تُحفظ كل رسالة قبل إرسالها، ويُعاد إرسالها إن تأخر واتساب. والتعذّر يظهر ولا يُخفى." },
             { title: "سجلاتك منفصلة", body: "بيانات كل شركة مفصولة داخل قاعدة البيانات نفسها، لا بإعداد قد يُنسى." },
@@ -2098,7 +2124,7 @@ const ar: Copy = {
       ],
     },
     why: {
-      eyebrow: "لماذا يختاره أصحاب الأعمال",
+      eyebrow: "كيف يفيدك",
       statement:
         "عملاؤك يراسلونك قبل أن يزوروك أو يطلبوا. تضيع المحادثات، وتُكتب الطلبات على الورق، ويصير الدفع صورة تحويل. والأعمال الرابحة تجعل المحادثة واجهة محلها.",
       pillars: [
@@ -2112,11 +2138,11 @@ const ar: Copy = {
         },
         {
           title: "سهل",
-          body: "نجهّزها لك على الرقم الذي تستخدمه اليوم، وعملاؤك لا يحتاجون تطبيقاً جديداً.",
+          body: "نجهّزه لك، وعملاؤك لا يحتاجون تطبيقاً جديداً.",
         },
         {
           title: "موثوق",
-          body: "فريق محلي، بالعربية والإنجليزية، ومبني على منصة واتساب للأعمال الرسمية.",
+          body: "شخص من ALYR تتحدث إليه، ومنتج بالعربية والإنجليزية، ومنصة واتساب للأعمال الرسمية.",
         },
       ],
     },
@@ -2150,12 +2176,12 @@ const ar: Copy = {
     next: {
       eyebrow: "ما القادم",
       body:
-        "نبدأ من المحادثة. ومع نموّ عملك تضيف ALYR المدفوعات والحسابات والموقع، كلها على قائمة العملاء نفسها.",
+        "نبدأ من المحادثة. وستنضم منتجات أخرى إلى مساحة العمل نفسها وقائمة العملاء نفسها، بالترتيب الذي يطلبه أوائل عملائنا.",
     },
     cta: {
       title: "دعنا نجهّزها لك.",
       body:
-        "أخبرنا كيف تستقبل الطلبات والحجوزات اليوم. يردّ عليك شخص من ALYR بالعربية أو الإنجليزية، ويريك العمل نفسه على قائمتك أو أسعارك.",
+        "أخبرنا كيف تستقبل الطلبات والحجوزات اليوم. يردّ عليك شخص من ALYR، ويريك العمل نفسه على قائمتك أو أسعارك.",
     },
   },
 };

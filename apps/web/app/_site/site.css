@@ -138,6 +138,17 @@ svg { display: block; }
 .btn-volt:hover::before { background: var(--volt-hover); }
 .btn-volt:active::before { background: var(--volt-pressed); }
 .btn-volt:active { transform: translateY(1px); }
+/* The outlined twin, for a second way in further down a page: a 1.5 px Carbon line that
+   follows the same notch (the inner cut is moved in by 1.5 px × (√2 − 1) so the line keeps
+   its width along the diagonal). */
+.btn-line { color: var(--text); }
+.btn-line::before, .btn-line::after { content: ""; position: absolute; z-index: -1; border-radius: 2px; }
+.btn-line::before { inset: 0; background: var(--text); clip-path: polygon(0 0, calc(100% - var(--notch)) 0, 100% var(--notch), 100% 100%, 0 100%); }
+.btn-line::after { inset: 1.5px; border-radius: 1px; background: var(--canvas); clip-path: polygon(0 0, calc(100% - var(--notch) + .88px) 0, 100% calc(var(--notch) - .88px), 100% 100%, 0 100%); transition: background var(--dur-2) var(--ease); }
+[dir="rtl"] .btn-line::before { clip-path: polygon(var(--notch) 0, 100% 0, 100% 100%, 0 100%, 0 var(--notch)); }
+[dir="rtl"] .btn-line::after { clip-path: polygon(calc(var(--notch) - .88px) 0, 100% 0, 100% 100%, 0 100%, 0 calc(var(--notch) - .88px)); }
+.btn-line:hover::after { background: var(--surface-subtle); }
+.btn-line:active { transform: translateY(1px); }
 .btn:focus-visible { outline: 2px solid var(--focus); outline-offset: 3px; border-radius: 3px; }
 .btn-notch { padding-inline: 1.125rem .875rem; }
 .btn-sm.btn-notch { padding-inline: .9375rem .875rem; }
@@ -155,6 +166,7 @@ svg { display: block; }
 
 /* Words that must stay whole: amounts never break, and sit in <bdi> (Text.tsx). */
 .money { white-space: nowrap; font-variant-numeric: tabular-nums; }
+.ref { white-space: nowrap; }
 .sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; border: 0; }
 
 /* The contact states (Contact.tsx). Pending is a status line, never an error box. */

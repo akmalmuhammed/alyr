@@ -494,6 +494,9 @@ main[data-page="home"] {
 .rail-say { color: var(--concrete); }
 .rail-item .link { justify-self: start; margin-top: .25rem; color: #fff; }
 .rail-slot { border-top: 1px dashed #6b7480; }
+/* an unnamed slot says it is waiting, with the hollow pending dot */
+.rail-pending { margin-top: .25rem; font-size: .9375rem; color: var(--concrete); }
+.band .dot-pending { border-color: #6b7480; }
 .rail-k { font-family: var(--mono); font-size: .6875rem; letter-spacing: .08em; text-transform: uppercase; color: var(--concrete); }
 [lang="ar"] .rail-k { font-family: var(--arabic); letter-spacing: 0; text-transform: none; font-size: .8125rem; }
 .rail-line { grid-column: 1 / -1; color: var(--concrete); max-width: 40rem; }
@@ -510,9 +513,15 @@ main[data-page="home"] {
 .how-step h3 { font-size: var(--h3); font-weight: 600; line-height: 1.25; letter-spacing: -.012em; }
 [lang="ar"] .how-step h3 { letter-spacing: 0; line-height: 1.5; }
 .how-step p { color: var(--text-muted); }
-.how-report { margin-top: clamp(2.5rem, 5vw, 3.5rem); margin-inline-start: auto; width: min(100%, 31rem); position: relative; }
-/* a dashed line down from step 4's node: the step opens into its report */
-.how-report::before { content: ""; position: absolute; top: calc(clamp(2.5rem, 5vw, 3.5rem) * -1 + .5rem); inset-inline-start: calc(31rem + 1.25rem + var(--col-gap) * .75 - 25cqi); width: 1px; height: calc(clamp(2.5rem, 5vw, 3.5rem) - .5rem); border-inline-start: 1px dashed var(--line-strong); }
+/* under the steps: the early-access note and a second way in (columns 1 to 6), and the
+   report that step 4 opens into (columns 7 to 12) */
+.how-foot { display: grid; grid-template-columns: repeat(12, minmax(0, 1fr)); column-gap: var(--col-gap); row-gap: 2.5rem; margin-top: clamp(2.5rem, 5vw, 3.5rem); align-items: start; }
+.how-next { grid-column: 1 / span 6; align-self: center; display: grid; justify-items: start; gap: 1.75rem; padding-inline-end: clamp(0rem, 4vw, 4rem); }
+.how-note { font-size: var(--h3); font-weight: 560; line-height: 1.35; letter-spacing: -.012em; text-wrap: pretty; max-width: 30rem; }
+[lang="ar"] .how-note { letter-spacing: 0; line-height: 1.6; }
+.how-report { grid-column: 7 / -1; width: min(100%, 31rem); position: relative; }
+/* a dashed line down from step 4's node (column 10) to the report (column 7): the step opens into it */
+.how-report::before { content: ""; position: absolute; top: calc(clamp(2.5rem, 5vw, 3.5rem) * -1 + .5rem); inset-inline-start: calc(25cqi + var(--col-gap) * .25 + 1.25rem - .5px); width: 1px; height: calc(clamp(2.5rem, 5vw, 3.5rem) - .5rem); border-inline-start: 1px dashed var(--line-strong); }
 
 /* --------------------------------------------------- 3.5 what is included */
 .inc-grid { display: grid; grid-template-columns: repeat(12, minmax(0, 1fr)); column-gap: var(--col-gap); row-gap: clamp(2.5rem, 5vw, 3.5rem); align-items: start; }
@@ -544,6 +553,9 @@ main[data-page="home"] {
 [lang="ar"] .sheet-unit { font-family: var(--arabic); letter-spacing: 0; text-transform: none; font-size: .9375rem; }
 .sheet-setup { margin-top: 1.5rem; font-size: 1.1875rem; font-weight: 560; }
 .sheet-incl { margin-top: .5rem; color: var(--text-muted); max-width: 34rem; }
+.sheet-early { margin-top: 1.25rem; max-width: 34rem; }
+/* English sets the currency before the amount ("QAR 449"), at the top of the digits */
+.sheet-cur { align-self: flex-start; padding-top: .375rem; font-family: var(--mono); font-size: .8125rem; line-height: 1.3; letter-spacing: .06em; text-transform: uppercase; color: var(--text-muted); }
 .sheet .mono-k { margin-top: 2.5rem; margin-bottom: .75rem; }
 .ledger { border-bottom: 1px solid var(--line); }
 .ledger > div { display: grid; grid-template-columns: minmax(0, .85fr) minmax(0, 1.15fr); gap: 1rem; padding-block: .9375rem; border-top: 1px solid var(--line); }
@@ -663,7 +675,9 @@ main[data-page="home"] {
   .how-step h3 { padding-top: .375rem; }
   .how-step:not(:last-child)::after { content: ""; position: absolute; inset-inline-start: calc(1.25rem - .5px); top: 2.75rem; bottom: .25rem; width: 1px; background: var(--line); transition: background var(--dur-3) var(--ease); }
   .how-step:has(+ .how-step.is-on)::after { background: var(--volt); }
-  .how-report { margin-inline-start: 0; margin-top: .5rem; }
+  .how-foot { grid-template-columns: minmax(0, 1fr); margin-top: .5rem; }
+  .how-next, .how-report { grid-column: 1; }
+  .how-next { order: 2; padding-inline-end: 0; }
   .how-report::before { display: none; }
   .included .head, .inc-list-1, .inc-list-2, .inc-fig, .inc-more h3, .inc-more p { grid-column: 1 / -1; grid-row: auto; }
   .inc-fig { max-width: 30rem; }

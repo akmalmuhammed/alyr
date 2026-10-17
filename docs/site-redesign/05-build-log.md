@@ -73,3 +73,32 @@ Every section checked in both languages at 1440 and 390, light and dark, and wit
 8. **Left out until true** (from `00` and `02`, marked [F] or [G]): clinics and salons as "soon", "your number connected to WhatsApp", "payment account connected", the card fee line, the "Can I keep my number?" question, the licensed provider sentence, "your customer list belongs to you", a go-live date, support hours, Privacy and Terms links, the CR number.
 9. **Brand.** The lane brief says no new branded material until ALY-61 picks a system. This was built at your request in the current ALYR system; ALY-61 is still open.
 10. **Publish.** Nothing is merged or deployed. The go-ahead is yours.
+
+## 17 Oct, fix pass after the two critiques (06, 07) with the rulings (08)
+
+Port 3102 for the preview (3101 is another session's). Captures with `C:\t\fix\crit.mjs`, the reviewers' stepped-scroll tool copied outside the repo, and `baseline/shoot.mjs`, both with the profile `C:\t\fixprof`.
+
+### Stage 1: copy and claims (commit "fix pass 1")
+
+Done:
+- **07 P0-1 `/chat`, option (b):** strings swapped (number agreed at setup, never holds your money, ordinary replies for 24 hours, the inside note, "Why it helps", the Easy and Trusted pillars, the meta description's end). Also, as string fixes: "Tue 14 Oct" is now "Wed 14 Oct" (14 Oct 2026 is a Wednesday), Arabic on `/chat` uses Western digits, the sample names are Mariam Saleh, Khalid Nasser and Omar Ali, and "ALYR adds payments, books and a website" now says more products will join in the order the first businesses ask (06 P2-13). Two more `/chat` strings went for the same reason, beyond the critique's list: the Pay demo caption ("Payments settle in your own gateway account", a must-not-claim in 03 §3) and "in Arabic or English" in `/chat`'s closing body (ruling on P1-5). The Trusted pillar keeps the language with the product, not the person: "A person from ALYR to talk to, a product in Arabic and English, and WhatsApp's official Business Platform."
+- **07 P0-2 to P0-4, every P1, P2 1–14,** with the rulings: hero body without the payments sentence; Modern Standard headline «تحوّل رقمياً.» / «بلا فريق تقنية.»; no "in Arabic or English" in `contact.reply` or `final.body`; Aisha Hamad / «عائشة حمد»; monogram «ق»; Latin "Meta" kept; `«إطلاق مبكر»`; one currency rule on `/ar` (amount, then «ر.ق»); «الأصناف: {n}»; ALYR feminine in Arabic; «تتبّع» for tracking; mailto body with the four visit questions; the disclaimer now says "uses the WhatsApp Business Platform … not affiliated with, or endorsed by".
+- **New keys:** `how.note` (the early-access line, shown under the steps and under the price), `rail.pending` ("Not named yet"), `price.currencyFirst` (English reads "QAR 449"), `contact.body`, and a question `whatsapp-line` that shows only in the email state. `contact.soon` is gone: the hero and price notes now read "A person from ALYR replies. hello@alyr.qa" (06 P1-4), and "Our WhatsApp line opens soon" appears once, in that question.
+- **`fig.fictional`:** 06 says «مخبز غير حقيقي», 07 says «مخبز افتراضي». Took 06's: «افتراضي» also reads as "virtual", an online bakery, and the caption must not be ambiguous about being made up. FIG 01 is "Order page and its record, sample prices".
+- **Time formats (06 P2-1, ruling):** each drawn screen prints what the product prints. Tracking `/t/` and booking `/b/` use `en-GB` with a 12-hour clock, so "Wed 4:05 pm" and "4:30 pm" (lowercase is the product's). The workspace inbox prints no time on messages and "16:14" on the activity line. The back office prints `toLocaleString("en-GB")`, so "16/10/2026, 14:05:00". Chat timestamps (the customer's phone) stay "4:02 PM". The page's own text: "Fri 1:10 PM", «الجمعة 1:10 م». Arabic keeps Western digits in drawn screens although the product's `/t/` and `/b/` print Eastern digits through `ar-QA` (listed for the product lane below).
+- **`<bdi>` around order numbers** ("#1043", «رقم 1043») in `Text.tsx`, beside amounts and ALYR.
+- **Arabic social card: tried and left out.** With IBM Plex Sans Arabic from the design-system branch, `next/og` joins the letters but does not order the words right to left, and measures each word as if its letters stood alone, so word gaps come out uneven even when the words are laid out one by one. Not good enough to send; `/ar` keeps the English card, and the reason is in `opengraph-image.tsx`.
+
+### For the product lane (the operator files the ticket; no product code was changed)
+
+- `fmt_qar` should be language-aware: Arabic messages write "38 ر.ق", not "QAR 38" (07 P1-8).
+- `s/[slug]/page.tsx`: «{n} صنف» is wrong Arabic for most numbers; the drawing now uses «الأصناف: {n}» (07 P1-9).
+- `seed.py`: "Ahmed Al-Kuwari" is a prominent Qatari family name; use a first and father's name (07 P1-13).
+- The inbox label "Assistant" / «المساعد» could read as AI (07, smaller items).
+- The setup checklist's "Each one you finish switches more of it on" implies self-serve setup (03 C10).
+- The inbox's paused title in Arabic: «أنت من يرد» → «أنت تردّ الآن» (07 P2-13); the drawing uses the new wording.
+- `/t/` and `/b/` print Eastern Arabic digits through `ar-QA`, while chat messages use Western digits (03 C8).
+
+### Left from 08 after stage 1
+
+Layout and phone (06 P0-1, P1-3, P1-6 styling check, P1-7, P1-9, P2-2 to P2-5, P2-8, P2-9, P2-11), motion and the fold (06 P0-2, P1-1, P1-2, P1-8, P2-6, P2-10, the fold at the closing call), the hero plate (lift 2), polish, then the checks in 08 and fresh `shots/`.

@@ -5,8 +5,11 @@ import { copy } from "./_site/copy";
 
 // The card shown when a link to ALYR is shared, for example in a WhatsApp chat.
 // Reversed logo on Carbon, as the logo rules require on dark surfaces. The words are the
-// homepage's own (copy.ts), in English: one card serves both languages, and the image
-// renderer has no Arabic font. The two fonts are the design system's own files, copied from
+// homepage's own (copy.ts), in English: one card serves both languages. An Arabic card was
+// tried on 17 Oct with IBM Plex Sans Arabic from the design system: the renderer (next/og)
+// loads the font and joins the letters, but does not order Arabic words right to left and
+// measures each word as if its letters stood alone, so the gaps between words come out
+// uneven. Not good enough to send. The two fonts are the design system's own files, copied from
 // the branch codex/alyr-native-foundation (asset-continuity-web/public/alyr/fonts), both
 // under the SIL Open Font Licence. They are read at build time and never sent to browsers.
 
