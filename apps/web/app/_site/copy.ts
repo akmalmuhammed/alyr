@@ -879,7 +879,7 @@ const en: Copy = {
   },
   product: {
     eyebrow: "ALYR Chat · Early access",
-    title: "Sell, book and get paid in the chat.",
+    title: "Orders and bookings, in the chat.",
     body:
       "Your customers keep messaging you the way they already do. ALYR Chat adds the booking, the order, the payment link and the updates, and your team sees it all in one place.",
     business: "Dana Home Services",
@@ -1823,7 +1823,7 @@ const ar: Copy = {
   },
   product: {
     eyebrow: "ALYR Chat · إطلاق مبكر",
-    title: "استقبل الطلبات والحجوزات والدفع في المحادثة.",
+    title: "الطلبات والحجوزات، داخل المحادثة.",
     body:
       "يواصل عملاؤك مراسلتك كما اعتادوا. ويضيف ALYR Chat الحجز والطلب ورابط الدفع والتحديثات، وفريقك يرى كل شيء في مكان واحد.",
     business: "دانة للخدمات المنزلية",
