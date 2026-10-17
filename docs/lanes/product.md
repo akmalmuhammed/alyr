@@ -23,7 +23,7 @@ Anything else belongs to another lane. If a task needs it, keep the change small
 
 Last updated 18 Oct 2026.
 
-- **ALY-102, the Catalog's engine (package 1 of ALY-101, D-039), branch `aly-102-catalog-engine`, in review, not merged.** Spec: `specs/001-catalog-engine/spec.md` (read it before building on this).
+- **ALY-102, the Catalog's engine (package 1 of ALY-101, D-039), branch `aly-102-catalog-engine`, PR #67, in review, not merged.** Spec: `specs/001-catalog-engine/spec.md` (read it before building on this).
   - Built: items with English and Arabic names, price with sale price and history, variants with their own stock and price difference, options (required choices, priced extras), availability rules (always, switch, count, daily limit, a schedule with lead time, cut-off and date-range overrides, the shop's day start), an append-only stock log, stock taken in one statement at checkout, 30-minute holds for pay-link orders that release on expiry (the job queue, a per-order job and a worker sweep), restock on cancel, a copy of the variant and options on each order line, and the REST API under `/api/items`. Migration 0022; the old `products` table is now `items`.
   - Nothing is visible yet: no module registered, no screen, photo slots (`photo_id`) left for ALY-103.
   - Still missing for the other packages: screens (ALY-104), the order page (ALY-112; it must handle `expired` payments and the `unavailable` list), WhatsApp (ALY-106), alerts (ALY-109), and customer price groups, which D-039 puts in release 1 but no package lists.
