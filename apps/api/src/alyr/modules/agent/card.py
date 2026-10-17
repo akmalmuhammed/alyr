@@ -24,6 +24,8 @@ from functools import lru_cache
 from pathlib import Path
 from xml.sax.saxutils import escape
 
+from alyr import brand
+
 FONTS = Path(__file__).parent / "fonts"
 W, H = 1080, 566
 M = 56  # the side margin
@@ -31,27 +33,22 @@ M = 56  # the side margin
 # 31 px here is about 9.5 px there (the founder, 17 Oct: nothing smaller is readable).
 SMALL = 31
 
-SANS = "Instrument Sans"
-ARABIC = "IBM Plex Sans Arabic"
-MONO = "IBM Plex Mono"
+# The brand's faces and colours come from the design tokens (design/tokens.json, generated
+# into alyr/brand.py); nothing here names a colour or a font.
+SANS = brand.FONT["sans"][0]
+ARABIC = brand.FONT["arabic"][0]
+MONO = brand.FONT["mono"][0]
 FILES = {
-    (SANS, 400): "InstrumentSans-Regular.ttf",
-    (SANS, 600): "InstrumentSans-SemiBold.ttf",
-    (ARABIC, 400): "IBMPlexSansArabic-Regular.ttf",
-    (ARABIC, 600): "IBMPlexSansArabic-SemiBold.ttf",
-    (MONO, 400): "IBMPlexMono-Regular.ttf",
+    (SANS, 400): brand.FONT_FILE["sans-400"],
+    (SANS, 600): brand.FONT_FILE["sans-600"],
+    (ARABIC, 400): brand.FONT_FILE["arabic-400"],
+    (ARABIC, 600): brand.FONT_FILE["arabic-600"],
+    (MONO, 400): brand.FONT_FILE["mono-400"],
 }
 
-THEMES = {
-    # Carbon: the brand's command surface. The default, since it reads in a light and a dark
-    # chat alike.
-    "carbon": {"bg": "#15171a", "ink": "#f3f5f0", "ink2": "#a7adb5", "rule": "#2f3338",
-               "bar": "#c9ccc6", "ghost": "#3a3e44", "volt": "#b7f34a", "edge": "none",
-               "logo": "#ffffff"},
-    "paper": {"bg": "#f6f7f3", "ink": "#15171a", "ink2": "#5f666d", "rule": "#dcdfda",
-              "bar": "#2c2f33", "ghost": "#d6d9d3", "volt": "#b7f34a", "edge": "#15171a",
-              "logo": "#15171a"},
-}
+# Carbon: the brand's command surface, and the default, since it reads in a light and a dark
+# chat alike. Paper for a light page.
+THEMES = brand.CARD
 
 RLE, LRE, PDF = "\u202b", "\u202a", "\u202c"
 _ARABIC = re.compile(r"[؀-ۿ]")

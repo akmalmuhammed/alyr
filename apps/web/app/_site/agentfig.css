@@ -47,24 +47,24 @@ main .ag { font-weight: 400; }
 .af-status {
   display: inline-flex; align-items: center; gap: .5rem; min-height: 2rem; padding: 0 .875rem 0 .75rem; white-space: nowrap;
   border: 1px solid var(--dark-line); border-radius: 1rem; background: var(--dark-canvas);
-  font-family: var(--mono); font-size: .6875rem; font-weight: 500; letter-spacing: .08em; text-transform: uppercase; color: #fff;
+  font-family: var(--mono); font-size: .6875rem; font-weight: 500; letter-spacing: .08em; text-transform: uppercase; color: var(--on-band);
 }
 [lang="ar"] .af-status { font-family: var(--arabic); letter-spacing: 0; text-transform: none; font-size: .8125rem; }
 .af-dot { width: .5rem; height: .5rem; border-radius: 50%; background: var(--volt); flex: none; }
 .af-view { margin-top: .875rem; overflow: hidden; }
 .af-list { position: relative; display: grid; border-bottom: 1px solid var(--dark-line); }
 .af-item { display: grid; grid-template-columns: 2.875rem 1.25rem minmax(0, 1fr); column-gap: .75rem; align-items: start; padding-block: .875rem .9375rem; border-top: 1px solid var(--dark-line); }
-.af-at { padding-top: .1875rem; font-family: var(--mono); font-size: .75rem; color: #a7adb5; font-variant-numeric: tabular-nums; }
+.af-at { padding-top: .1875rem; font-family: var(--mono); font-size: .75rem; color: var(--concrete); font-variant-numeric: tabular-nums; }
 .af-tick { display: grid; place-items: center; width: 1.25rem; height: 1.25rem; margin-top: .0625rem; border-radius: 50%; background: var(--volt); color: var(--on-volt); }
 .af-tick svg { width: .75rem; height: .75rem; }
 /* a flag is something that needs you, not something done: the tick is drawn, not filled */
 .af-item.is-flag .af-tick { background: transparent; color: var(--volt); box-shadow: inset 0 0 0 1.5px var(--volt); }
 .af-what { display: grid; gap: .25rem; min-width: 0; }
-.af-what b { font-size: .9375rem; font-weight: 600; line-height: 1.3; color: #fff; }
-.af-line { font-size: .8125rem; line-height: 1.45; color: #c4c9cf; text-wrap: pretty; }
+.af-what b { font-size: .9375rem; font-weight: 600; line-height: 1.3; color: var(--on-band); }
+.af-line { font-size: .8125rem; line-height: 1.45; color: var(--on-band-quiet); text-wrap: pretty; }
 [lang="ar"] .af-line { line-height: 1.7; }
 .af-line bdi { white-space: nowrap; }
-.af-rule { margin-top: .25rem; padding-inline-start: .625rem; border-inline-start: 1px solid var(--volt); font-family: var(--mono); font-size: .6875rem; line-height: 1.5; letter-spacing: .02em; color: #a7adb5; }
+.af-rule { margin-top: .25rem; padding-inline-start: .625rem; border-inline-start: 1px solid var(--volt); font-family: var(--mono); font-size: .6875rem; line-height: 1.5; letter-spacing: .02em; color: var(--concrete); }
 [lang="ar"] .af-rule { font-family: var(--arabic); letter-spacing: 0; font-size: .75rem; line-height: 1.7; }
 
 /* motion: before the page's scripts run, the feed is hidden only when motion is wanted
@@ -77,12 +77,12 @@ main .ag { font-weight: 400; }
   .af-feed[data-phase="playing"]:not([data-start]) .af-list { transition: translate var(--dur-3) var(--ease); }
   .af-feed[data-phase="playing"] .af-item.is-on .af-tick { animation: af-pop var(--dur-3) var(--spring) both 80ms; }
   /* the status dot lights once, with one ring, when the feed starts */
-  .af-feed[data-phase="waiting"] .af-dot, .motion .af-feed[data-phase="composed"] .af-dot { background: #6b7480; }
+  .af-feed[data-phase="waiting"] .af-dot, .motion .af-feed[data-phase="composed"] .af-dot { background: var(--band-mark); }
   .af-feed[data-phase="playing"] .af-dot { animation: af-light var(--dur-4) var(--ease) both var(--af-light, 0ms); }
 }
 @keyframes af-pop { from { scale: 0; } }
 @keyframes af-light {
-  0% { background: #6b7480; box-shadow: 0 0 0 0 rgb(183 243 74 / .55); }
+  0% { background: var(--band-mark); box-shadow: 0 0 0 0 rgb(183 243 74 / .55); }
   40% { background: var(--volt); }
   100% { background: var(--volt); box-shadow: 0 0 0 7px rgb(183 243 74 / 0); }
 }
@@ -146,7 +146,7 @@ main .ag { font-weight: 400; }
 .afig-spot .ag :is(.ag-head, .ag-needs, .ag-kpis-block, .ag-cards, .ag-done)::after {
   position: absolute; top: 0; inset-inline-end: 0; translate: 0 -50%; z-index: 1;
   display: grid; place-items: center; width: 1.5rem; height: 1.5rem; border-radius: 50%;
-  background: var(--carbon); color: #fff; box-shadow: 0 0 0 3px var(--window), inset 0 0 0 1.5px var(--mark-ring);
+  background: var(--carbon); color: var(--on-band); box-shadow: 0 0 0 3px var(--window), inset 0 0 0 1.5px var(--mark-ring);
   font-family: var(--mono); font-size: .75rem; font-weight: 500; line-height: 1;
 }
 .afig-spot .ag .ag-head::after { content: "1" / ""; top: .25rem; translate: none; }
@@ -169,8 +169,8 @@ main .ag { font-weight: 400; }
 .afig-agent .af-switch-k { color: var(--concrete); }
 .afig-agent .af-switch-row { border-color: var(--dark-line); background: var(--dark-canvas); }
 .afig-agent .af-opt { color: var(--concrete); }
-.afig-agent .af-opt:hover { color: #fff; }
-.afig-agent .af-opt[aria-pressed="true"] { background: var(--graphite); color: #fff; }
+.afig-agent .af-opt:hover { color: var(--on-band); }
+.afig-agent .af-opt[aria-pressed="true"] { background: var(--graphite); color: var(--on-band); }
 .afig-agent .af-opt:focus-visible { outline-color: var(--volt); }
 .afig-agent .af-stage { display: grid; grid-template-columns: minmax(0, 1fr) 18.5rem; column-gap: 2rem; row-gap: 1.5rem; align-items: start; }
 .afig-agent .aw { grid-column: 1; grid-row: 1; }

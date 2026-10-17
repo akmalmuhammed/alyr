@@ -46,10 +46,10 @@ export default async function AgentSamplePage({ searchParams }: { searchParams: 
         .agent-sample { max-width: 1168px; margin: 0 auto; padding: 48px 24px 96px; display: grid; gap: 96px; }
         .agent-sample figure { margin: 0; display: grid; gap: 24px; }
         .agent-sample figcaption {
-          font-family: var(--font-mono), ui-monospace, monospace; font-size: 11px; letter-spacing: 0.08em;
-          text-transform: uppercase; color: #5f666d; border-top: 1px solid #d8dcd7; padding-top: 8px;
+          font-family: var(--font-ui-mono); font-size: 11px; letter-spacing: 0.08em;
+          text-transform: uppercase; color: var(--text-muted); border-top: 1px solid var(--line); padding-top: 8px;
         }
-        .agent-sample[dir="rtl"] figcaption { font-family: var(--font-arabic), sans-serif; font-size: 13px; letter-spacing: 0; text-transform: none; }
+        .agent-sample[dir="rtl"] figcaption { font-family: var(--arabic); font-size: 13px; letter-spacing: 0; text-transform: none; }
         @media (max-width: 600px) { .agent-sample { padding: 24px 16px 64px; gap: 64px; } }
       `}</style>
       <h1 style={{ position: "absolute", width: 1, height: 1, overflow: "hidden", clipPath: "inset(50%)" }}>

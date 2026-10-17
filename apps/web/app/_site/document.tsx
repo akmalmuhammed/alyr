@@ -2,6 +2,8 @@ import type { Metadata, Viewport } from "next";
 import { IBM_Plex_Mono, IBM_Plex_Sans_Arabic, Instrument_Sans } from "next/font/google";
 import { copy, type Locale } from "./copy";
 import { OFFER_LIVE, PATHS, SITE_URL, type PageKey } from "./site";
+import { dark, semantic } from "../_tokens/tokens";
+import "../_tokens/tokens.css";
 import "./site.css";
 
 // The design system's type: Instrument Sans for Latin, IBM Plex Sans Arabic for Arabic,
@@ -29,7 +31,7 @@ const plexMono = IBM_Plex_Mono({
 /** Where the visitor's choice of theme is kept (localStorage), and the colour the browser
  * puts around the page in each theme: the page's own canvas. */
 const THEME_KEY = "alyr-theme";
-const THEME_COLOR = { light: "#f6f7f3", dark: "#0e1012" } as const;
+const THEME_COLOR = { light: semantic.canvas, dark: dark.semantic.canvas } as const;
 
 /** Every public page follows the device into dark mode until the visitor chooses; the
  * script below keeps theme-color with the theme they choose. */
