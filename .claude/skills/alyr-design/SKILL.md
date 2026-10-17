@@ -104,8 +104,10 @@ the semantic tier, never a primitive, in components. Full list and usage:
   `component.social` for the API and images.
 - **Dark mode is the same system turned down, from tokens.** A component never has a dark
   rule of its own. If it needs a colour that changes, add a token with both values.
-- **Contrast is a property of the token.** Each text token states its minimum contrast; the
-  check tests it. Never pick a near-black by eye: dark surfaces step on the ramp.
+- **Contrast is a property of the token.** Its description states its bar (`--text-muted`
+  4.5:1, `--text-faint` and `--line-strong` 3:1); keep it when you change a value, and measure
+  it in both themes (the drift check does not test contrast). Never pick a near-black by eye:
+  dark surfaces step on the ramp.
 
 ## 3. Type, spacing and the grid
 
