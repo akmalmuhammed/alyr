@@ -30,7 +30,7 @@ Also read `alyr-design` (tokens, Arabic, honesty) and, for a QR card, the router
 
 | Piece | Brand that leads | ALYR's place |
 |---|---|---|
-| A shop's QR card, table tent, sticker | **The shop:** its name in both languages (and its own logo if it has one), its colours only if it has them, else ALYR's neutral Carbon and Paper | Small at the foot: "Set up by ALYR · alyr.qa" / «من تجهيز ALYR · alyr.qa», in `<bdi>`-safe order. Never the main mark |
+| A shop's QR card, table tent, sticker | **The shop:** its name in both languages (and its own logo if it has one), its colours only if it has them, else ALYR's neutral Carbon and Paper | Small at the foot: "Set up by ALYR · alyr.qa" / «من تجهيز ALYR · alyr.qa», with "ALYR" kept whole inside the Arabic line. Never the main mark |
 | ALYR's leave-behind, one-pager, business card, letterhead | ALYR | The whole system |
 | An invoice, receipt or quote | The issuer (the shop for its customers; ALYR for its clients) | ALYR's invoices to clients only after the CR (D-034) |
 
@@ -71,7 +71,7 @@ glyph from the icon set beside the word "WhatsApp" is enough.
   before the run, and the reply checked: the word arrives and the right link comes back.
 
 **Sizes** (choose with the founder): counter card A6 (105 × 148 mm), table tent A6 folded or
-100 × 210 mm, window sticker 100 mm square or round-free square, menu insert A5.
+100 × 210 mm, window sticker 100 mm square, menu insert A5.
 
 ## ALYR's leave-behind (A5, both sides)
 
