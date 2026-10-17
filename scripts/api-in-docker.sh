@@ -17,6 +17,7 @@ MSYS_NO_PATHCONV=1 docker run --rm ${ALYR_DOCKER_FLAGS:-} \
   -v "$root:/src" -v alyr_uv_cache:/root/.cache/uv -v alyr_api_venv:/venv \
   -e UV_PROJECT_ENVIRONMENT=/venv -e UV_LINK_MODE=copy \
   -e ALYR_TEST_DB_HOST=postgres:5432 \
+  -e ALYR_ENV="${ALYR_ENV:-local}" \
   -e ALYR_DATABASE_URL=postgresql://alyr_app:alyr_app_local@postgres:5432/alyr \
   -e ALYR_MIGRATION_URL=postgresql://alyr:alyr_local@postgres:5432/alyr \
   -w /src/apps/api \

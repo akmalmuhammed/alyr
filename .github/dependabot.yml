@@ -1,0 +1,24 @@
+# Weekly dependency updates, grouped so they arrive as a few pull requests, not dozens.
+# Security fixes come as soon as GitHub knows about them. CI must pass before merge (ALY-114).
+version: 2
+updates:
+  - package-ecosystem: uv
+    directory: /apps/api
+    schedule: { interval: weekly, day: sunday }
+    open-pull-requests-limit: 3
+    groups:
+      python:
+        patterns: ["*"]
+  - package-ecosystem: npm
+    directory: /apps/web
+    schedule: { interval: weekly, day: sunday }
+    open-pull-requests-limit: 3
+    groups:
+      web:
+        patterns: ["*"]
+  - package-ecosystem: github-actions
+    directory: /
+    schedule: { interval: monthly }
+    groups:
+      actions:
+        patterns: ["*"]

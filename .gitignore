@@ -16,3 +16,24 @@ dist/
 python_modules/
 pylock.toml
 .demo/
+
+# Keys and credentials never belong in git (ALY-114)
+*.pem
+*.key
+*.p12
+credentials*.json
+# Personal and company paperwork (registration, IDs) stays out of the repo
+*.pdf
+alyr-registration/
+# Working files dropped at the repository root
+/*.html
+# Build, coverage and editor output
+.next-*/
+out-site/
+coverage/
+.coverage
+htmlcov/
+*.tsbuildinfo
+.idea/
+.vscode/
+Thumbs.db

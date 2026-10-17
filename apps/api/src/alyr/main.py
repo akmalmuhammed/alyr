@@ -34,7 +34,14 @@ def create_app() -> FastAPI:
         yield
         await app.state.db.close()
 
-    app = FastAPI(title="Alyr API", lifespan=lifespan)
+    # Interactive API docs only on a developer machine; elsewhere they map our surface
+    # for anyone who asks (ALY-114).
+    local = settings.env == "local"
+    app = FastAPI(
+        title="ALYR API", lifespan=lifespan,
+        docs_url="/docs" if local else None, redoc_url=None,
+        openapi_url="/openapi.json" if local else None,
+    )
     app.state.db = Database(settings.database_url)
     app.state.outbound = Outbound(
         {
@@ -79,7 +86,7 @@ def create_app() -> FastAPI:
     app.include_router(reports_routes.router)
     app.include_router(admin_routes.router)
     app.include_router(onboarding_routes.router)
-    if settings.env != "production":
+    if local:
         app.include_router(simulator.router)
     return app
 

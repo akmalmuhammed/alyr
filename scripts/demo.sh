@@ -32,7 +32,7 @@ up() {
   (cd "$root" && docker compose up -d postgres redis >/dev/null)
   say "  ok  database"
   bash "$root/scripts/api-in-docker.sh" uv run python -m alyr.migrate | sed 's/^/      /'
-  CMD=(uv run uvicorn alyr.main:app --host 0.0.0.0 --port 8000) container alyr-api-dev "-p 8000:8000"
+  CMD=(uv run uvicorn alyr.main:app --host 0.0.0.0 --port 8000) container alyr-api-dev "-p 127.0.0.1:8000:8000"
   CMD=(uv run python -m alyr.worker) container alyr-worker-dev
   if listening 3100; then
     say "  ok  web app on port 3100"

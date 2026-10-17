@@ -10,6 +10,8 @@ Read these before working, in this order:
 - [docs/master-plan.md](docs/master-plan.md): what we are building, in what order, and what we decided not to build.
 - [docs/decisions.md](docs/decisions.md): every decision with its reason. Add an entry in the same pull request as any new decision.
 - [docs/stack.md](docs/stack.md): every tool, its free limit and when we swap it. Free tiers first; nothing paid without the founder agreeing.
+- [docs/hygiene.md](docs/hygiene.md): where every kind of file lives, what each change must include, and how docs stay true. The PR template repeats its checklist. Read it before your first change.
+- [docs/access.md](docs/access.md) and [docs/runbooks/](docs/runbooks/): who holds which account, and what to do when something breaks or a secret leaks.
 - [docs/working-with-claude.md](docs/working-with-claude.md): the ways AI-built projects fail and the guard against each. Follow it, and say so when a guard is missing.
 
 Plan and tasks live in Linear, team `Alyrtech`, project `Alyr Launch`. Work one issue per branch; name the branch after the issue (`aly-12-...`). Phases, not dates: a phase is finished when its demo works.
@@ -41,28 +43,35 @@ These are not style preferences. Do not write code that breaks them, and stop an
 ## Layout
 
 ```
-apps/api/                   FastAPI service (Python 3.13, managed with uv)
-  migrations/               Plain SQL, applied in order by `python -m alyr.migrate`
-  src/alyr/channels/        Message channels: Meta Cloud API and the local simulator, same interface
-  src/alyr/core/            Inbound path, contact identity (BSUID), outbound layer, sign-in, Arabic normaliser
-  src/alyr/modules/ledger/  Module B: credit ledger and reminders
-  src/alyr/modules/orders/  Order link: products, orders, pay or put on account
-  src/alyr/modules/inbox/   Shared inbox: staff read and answer conversations by hand
-  src/alyr/catalog.py       What ALYR sells: modules and products. Every new product is declared here (D-027)
-  src/alyr/core/team.py     Who is responsible for what, the activity record, and the team report (D-028)
-  src/alyr/modules/router.py  Which module answers a message
-  src/alyr/routes/          HTTP routes
-  src/alyr/db.py            `Database.tenant(id)`: one transaction scoped to one tenant
-  src/alyr/seed.py          The demo shop (fictional)
-  tests/
-apps/web/                   Next.js. Three root layouts, one per route group:
-  app/(site)/, (site-ar)/   The public site in English and Arabic: company homepage (/, /ar) and the ALYR Chat product page (/chat, /ar/chat)
-  app/_site/                Its components, styles and every word (copy.ts)
-  app/(product)/            The workspace shell (/app), the back office (/ops), the sales demo (/whatsapp),
-                            sign-in, and the customer pages (/pay, /s, /b)
-packages/compliance/        WPS SIF and e-invoice libraries (not created yet)
-specs/                      One folder per spec; write or update the spec before building
-infra/                      Bicep for Azure Qatar Central (not created yet)
+apps/api/                     FastAPI service (Python 3.13, managed with uv)
+  migrations/                 Plain SQL, applied in order by `python -m alyr.migrate`. Never edit an applied one
+  src/alyr/channels/          Message channels: Meta Cloud API and the local simulator, same interface
+  src/alyr/core/              Inbound path, contact identity, outbound layer (consent, 24-hour window), jobs,
+                              sign-in (auth), email (mail), sign-up (onboarding), pricing, back office,
+                              team accountability (team, D-028), workspace shell (workspace), templates
+  src/alyr/modules/           What answers customers: ledger, orders, bookings, inbox, agent (the owner's
+                              weekly view), report.py (weekly report card); router.py picks the module
+  src/alyr/routes/            HTTP routes. deps.py: who is calling, which shop, which modules are on
+  src/alyr/catalog.py         What ALYR sells: modules and products (D-027)
+  src/alyr/db.py              `Database.tenant(id)`: one transaction scoped to one tenant
+  src/alyr/seed*.py           The fictional demo shops
+  src/alyr/doctor.py          Read-only health check behind `scripts/demo.sh check`
+  src/alyr/worker.py          Background job runner
+  tests/                      Real PostgreSQL, the simulator, HTTP in and out
+apps/web/                     Next.js. Three root layouts, one per route group:
+  app/(site)/, (site-ar)/     Public site, English and Arabic (/, /ar, /chat, /ar/chat); words in app/_site/copy.ts
+  app/(product)/              Workspace (/app), back office (/ops), sign-in (/login), sign-up (/start),
+                              sales demo (/whatsapp), owner view sample (/agent-sample), and the customer pages
+                              opened from WhatsApp: order /s, booking /b, payment /pay, tracking /t
+  app/(product)/_customer/    Shared frame and styles of the customer pages
+  app/(product)/_workspace/   Workspace screens and styles
+  app/_agent/                 The owner's weekly view (ALYR Agent)
+docs/                         See docs/README.md for what lives where (docs/hygiene.md section 1)
+scripts/                      check.sh (everything CI runs), demo.sh (start and check the live demo),
+                              api-in-docker.sh, build-site.sh, hooks/pre-commit
+specs/                        One folder per spec; write or update the spec before building
+infra/                        Cloud infrastructure as code (proposed in PR #52, not merged)
+packages/compliance/          WPS SIF and e-invoice libraries (not created yet)
 ```
 
 ## Running things
@@ -74,7 +83,7 @@ cd apps/api
 uv sync
 uv run python -m alyr.migrate             # create tables
 uv run python -m alyr.seed                # load or reset the demo shop
-uv run pytest                             # uses its own alyr_test database
+ALYR_ENV=local uv run pytest              # uses its own alyr_test database; the app defaults to production
 uv run ruff check .
 uv run uvicorn alyr.main:app --port 8000
 uv run python -m alyr.worker              # only when ALYR_JOBS_INLINE=false
@@ -93,6 +102,6 @@ scripts/api-in-docker.sh uv run pytest -q # where Windows blocks the compiled da
 
 - Modules receive `InboundMessage` and return `OutboundMessage` objects. They do not know which channel is in use, so everything works against the simulator first.
 - Every outgoing message goes through `core/outbound.py`, which records it and queues a job; `core/jobs.py` delivers it with retries. Never call a channel or a slow outside service directly from a request: enqueue a job.
-- Compliance outputs (SIF files, UBL invoices) are tested against golden files in `fixtures/`, byte for byte.
+- Compliance outputs (SIF files, UBL invoices), when they exist, are tested against golden files in `fixtures/` (to be created with them), byte for byte.
 - User-facing text exists in Arabic and English. No hard-coded strings in UI code.
 - Amounts are integers in dirhams (1 QAR = 100 dirhams). Never floats.

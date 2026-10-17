@@ -1,0 +1,7 @@
+Copyright (c) 2026 Alyr Technology (ألير للتكنولوجيا). All rights reserved.
+
+This repository and everything in it is proprietary and confidential. No part of it may be
+copied, modified, distributed or used without written permission from Alyr Technology.
+
+Third-party components keep their own licences (see apps/web/package.json, apps/api/uv.lock
+and the licence files next to bundled fonts).

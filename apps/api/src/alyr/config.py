@@ -6,7 +6,10 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 class Settings(BaseSettings):
     model_config = SettingsConfigDict(env_prefix="ALYR_", env_file=".env", extra="ignore")
 
-    env: str = "local"
+    # Fails safe: anything that is not explicitly "local" gets sign-in, Secure cookies, no
+    # simulator and no stand-in payments. Local tooling (scripts/api-in-docker.sh, tests,
+    # CI) sets ALYR_ENV=local on purpose (ALY-114).
+    env: str = "production"
 
     # The app connects as a role that cannot bypass Row-Level Security.
     database_url: str = "postgresql://alyr_app:alyr_app_local@localhost:5432/alyr"
