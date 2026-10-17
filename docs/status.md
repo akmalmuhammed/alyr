@@ -4,7 +4,7 @@ How the work is divided, and the one goal for this stage, are in [operating-mode
 
 Read this first in a new session, on any machine. It is the hand-over note between sessions: what works, what is next, and what is waiting on the founder. Update it in the same pull request as the work. Linear (team `Alyrtech`, project `Alyr Launch`) holds the detail; this page is the summary.
 
-Last updated: 17 Oct 2026, after the internal tool's first phase (ALY-80, D-033).
+Last updated: 17 Oct 2026, after the customer agreement's first draft (ALY-98, D-034 proposed).
 
 ## What works today
 
@@ -63,7 +63,8 @@ Tests: 253, all passing. CI runs api, web and a secrets scan on every pull reque
 | Email at alyr.qa (ALY-74) | Set up Cloudflare Email Routing and a Resend account, put the key in `apps/api/.env`. Steps in D-029 (about 20 minutes, free). |
 | Sign-in choice | Built as our own (D-022, proposed). Say so if you want a hosted service instead. |
 | Prices | Confirm D-017 (QAR 490 / 890, seat 40, setup 2,500). |
-| Company registration | D-018 is proposed, not accepted. |
+| Customer agreement (ALY-98, D-034) | Draft 1 is in `docs/company/customer-agreement/`. Read `notes.md` section 1 and accept or change the proposed terms (notice to stop, setup fee back if ALYR cannot get a shop live, Arabic prevailing, and others). Then a lawyer reviews it with ALY-51. Before any owner signs: ALYR registered, the Arabic version, and the back office's promise text changed to match clause 5 (it still says "your first month is free"). The new homepage's money-back promise must not go live before the agreement can be signed. |
+| Company registration | D-018 is proposed, not accepted. Research for ALY-98 says ALYR cannot lawfully sign customers or take their money before it is registered (a lawyer must confirm). With no free pilot, the CR is now the gate to the first sale: see `docs/company/customer-agreement/notes.md` section 2. |
 | Others | Payment provider applications (ALY-5), startup credits (ALY-55), lawyer on data location (ALY-51), an Arabic reviewer, two alpha businesses. |
 
 ## Known gaps and risks

@@ -39,6 +39,7 @@ Status: **Accepted** (in force), **Proposed** (waiting for the founder), **Super
 | D-031 | Self-serve onboarding: sign up, create the business, start from a preset, try it on a private test line | Accepted |
 | D-032 | Prices are set per client from the back office: a price list, a quote per client, published live to the owner | Accepted |
 | D-033 | The internal tool: one console for every client, built in three levels; staff never see customer conversations | Accepted |
+| D-034 | The customer agreement: the founder's terms as written, plus proposed notice, refund and data rules | Proposed |
 
 ---
 
@@ -562,3 +563,24 @@ A new owner can create their own business at `/start` without ALYR's back office
 - Every staff change is written to an audit log in the same transaction. The log cannot be edited, by the app or by a database trigger.
 - Cross-business reads go through guarded `admin_*` functions.
 - No route returns message bodies to staff: failures are shown as counts.
+
+## D-034 · The customer agreement: the founder's terms as written, plus proposed notice, refund and data rules
+**Date** 17 Oct 2026 · **Status** Proposed (draft 1 for the founder and a lawyer) · Linear ALY-98 (under ALY-32) · Draft: `docs/company/customer-agreement/`
+
+**What is fixed.** The commercial terms the founder set on 16 and 17 Oct go into the agreement word for word: from QAR 449 a month and a setup fee from QAR 1,500, both confirmed in a schedule at the visit; month to month; the first month's subscription back if one agreed result, counted in the workspace over the 30 days after go-live, is missed, provided the owner puts up the QR codes and shares the chat link in the first week; the setup fee not refunded for a missed result; no commission; Meta's message fees billed by Meta to the account holder with nothing added. These are recorded as D-033 on the homepage branch (ALY-56). **That number is already taken on `main`** by the internal tool, so the homepage entry needs a new number when it merges.
+
+**What is proposed, for the founder to accept or change** (reasons in `notes.md`):
+- 7 days' notice to stop, except in the first month, when the owner can stop up to its last day.
+- The setup fee is paid at signing and refunded in full if ALYR has not got the business live within 30 days of the agreed date, unless the owner caused the delay.
+- The first month is charged on the go-live date; months run from go-live.
+- Late payment: a pause after 14 days and 7 days' notice; no interest, no late fee.
+- Price changes with 30 days' notice; the owner may leave at the old price.
+- The owner may leave at once after a fault on ALYR's side lasting more than 3 days.
+- A free copy of the owner's data on leaving; deletion 60 days after the end.
+- Liability capped at 12 months' fees.
+- Arabic and English side by side, Arabic prevailing (to confirm).
+- Qatari law, the competent Qatari courts.
+
+**Why.** The page tells owners the terms are in the agreement, and Qatar penalises misleading claims, so the agreement has to exist and match the page before the page is published. The proposals keep to what ALYR can do today: no uptime, no response time, no sign-in count.
+
+**Before any owner signs.** ALYR is registered (D-018, ALY-59); a Qatar-qualified lawyer has reviewed it (ALY-32, ALY-51); the Arabic version exists; the back office's promise wording matches clause 5; and always-on hosting exists (ALY-63).
