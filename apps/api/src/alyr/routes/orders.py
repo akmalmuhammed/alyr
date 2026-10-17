@@ -114,6 +114,7 @@ async def add_product(
     not asked for here; `/api/items` asks for it before an item goes live."""
     try:
         async with request.app.state.db.tenant(staff.tenant_id) as conn:
+            await request.app.state.media.assert_can_add_item(conn)
             result = await items.create_item(
                 conn,
                 {"name": body.name, "name_ar": body.name_ar, "category": body.category,

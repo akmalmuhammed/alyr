@@ -182,6 +182,8 @@ async def add_item(
     _manager(staff)
     try:
         async with request.app.state.db.tenant(staff.tenant_id) as conn:
+            # A shop at its item limit is told so plainly and loses nothing (ALY-103).
+            await request.app.state.media.assert_can_add_item(conn)
             result = await items.create_item(
                 conn, _changes(body), team.actor_of(staff), await clock.load(conn)
             )

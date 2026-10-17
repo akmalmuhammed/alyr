@@ -92,6 +92,7 @@ Kept working on the same items: `GET/POST /api/products`, `POST /api/products/{i
 * The Arabic name is required to go live through `/api/items`. `POST /api/products` keeps its first, permissive behaviour until the screens replace it.
 * The first variant added to an item takes over the item's own stock (its default variant becomes that variant). Variants left out of a save are switched off, never deleted.
 * An item's changes (created, edited, switched, archived) are on the activity record with who made them.
+* The photo meters and the shop's item limit (ALY-103, `core/media.py`) count items that are not archived (`items.service.count_active`, set as `app.state.media.item_counter`), and `POST /api/items` asks the limit before it creates one. Linking photos to items (`attach`, `detach`, the 8-photo rule, the cover) is the follow-up both packages name; the `photo_id` columns are only slots.
 * `DELETE` removes an item only if it has no orders, no stock movements and no price changes; otherwise it archives it, so the stock log and price history are never lost. (Deleting an item cascades to them in the database, and the app role has no right to delete them directly.)
 * A daily-limit allowance is a row per variant and day that the first take creates, then a conditional update. A take is refused if it would overdraw the day (limit plus the day's top-ups, less what was sold); putting units back, or topping up, always fits.
 

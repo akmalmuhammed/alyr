@@ -523,6 +523,22 @@ def test_changes_to_an_item_are_on_the_record_with_who_made_them(client):
     assert (price["price_from"], price["price_to"]) == ("QAR 5", "QAR 7")
 
 
+def test_the_photo_meters_and_the_item_cap_count_the_shops_real_items(client, monkeypatch):
+    """ALY-103 counts a shop's items for its meters and its limit; the catalog tells it how."""
+    used = lambda: client.get("/api/media/usage").json()["items"]["used"]  # noqa: E731
+    before = used()
+    assert before == 12  # the demo shop's twelve items
+    item = mk(client, name="Tea", name_ar="شاي")
+    assert used() == before + 1
+    client.post(f"/api/items/{item['id']}/status", json={"status": "archived"})
+    assert used() == before  # an archived item no longer counts
+
+    monkeypatch.setattr(client.app.state.media.settings, "catalog_max_items", before)
+    full = client.post("/api/items", json={"name": "One more", "price": 100})
+    assert (full.status_code, full.json()["code"]) == (409, "item_limit_reached")
+    assert used() == before  # and nothing was deleted or half-made
+
+
 def test_an_item_cannot_be_left_without_a_choice_that_can_be_sold(client):
     item = mk(client)
     empty = client.put(f"/api/items/{item['id']}", json={"variants": []})

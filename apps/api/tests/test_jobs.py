@@ -6,8 +6,9 @@ from uuid import uuid4
 import asyncpg
 import pytest
 
+from alyr.core import jobs
 from alyr.db import Database
-from alyr.seed import AHMED_PHONE
+from alyr.seed import AHMED_PHONE, DEMO_TENANT_ID
 from conftest import APP_DSN, NUMBER_ID, OWNER_DSN
 from test_whatsapp_webhook import meta_payload, signed_post
 
@@ -115,6 +116,68 @@ def test_a_job_abandoned_by_a_dead_process_is_picked_up_again(client_factory, mo
     asyncio.run(abandon())
     drain(client)
     assert len(channel.sent) == 1
+
+
+def test_a_job_can_ask_for_more_attempts_and_its_retry_delay_stops_growing(
+    client_factory, monkeypatch
+):
+    """Work that may wait hours for an outside service (a photo waiting for the store,
+    ALY-103) asks for many attempts, and no single wait passes an hour."""
+    monkeypatch.setenv("ALYR_JOBS_BACKOFF_SECONDS", "5")
+    client = client_factory()
+
+    async def never(tenant_id, payload):
+        raise ConnectionError("still down")
+
+    client.app.state.jobs.register("test.cap", never)
+
+    async def queue():
+        async with client.app.state.db.tenant(DEMO_TENANT_ID) as conn:
+            plain = await jobs.enqueue(conn, "test.cap", {})
+            patient = await jobs.enqueue(conn, "test.cap", {}, max_attempts=48)
+            return plain, patient
+
+    plain, patient = client.portal.call(queue)
+
+    async def attempts():
+        conn = await asyncpg.connect(OWNER_DSN)
+        try:
+            return [r["max_attempts"] for r in await conn.fetch(
+                "select max_attempts from jobs where id = any($1) order by max_attempts",
+                [plain, patient])]
+        finally:
+            await conn.close()
+
+    assert asyncio.run(attempts()) == [6, 48]
+
+    async def late():
+        conn = await asyncpg.connect(OWNER_DSN)
+        try:
+            # On its 20th try, 5 * 2**19 seconds would be a month without the cap.
+            await conn.execute(
+                "update jobs set attempts = 19, run_at = now(), status = 'queued' where id = $1",
+                patient,
+            )
+            await conn.execute("update jobs set status = 'failed' where id = $1", plain)
+            return None
+        finally:
+            await conn.close()
+
+    asyncio.run(late())
+    drain(client)
+
+    async def wait():
+        conn = await asyncpg.connect(OWNER_DSN)
+        try:
+            seconds = await conn.fetchval(
+                "select extract(epoch from run_at - now()) from jobs where id = $1", patient
+            )
+            await conn.execute("delete from jobs where kind = 'test.cap'")
+            return seconds
+        finally:
+            await conn.close()
+
+    assert 3500 < asyncio.run(wait()) <= 3600
 
 
 def test_delivery_reports_move_a_message_forward_only(client):

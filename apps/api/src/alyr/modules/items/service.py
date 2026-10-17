@@ -68,6 +68,12 @@ class Loaded:
 
 # ---------------------------------------------------------------------- reading
 
+async def count_active(conn: asyncpg.Connection) -> int:
+    """How many items the shop has that are not archived: the number the photo meters and
+    the shop's item cap read (core/media.py, ALY-103)."""
+    return await conn.fetchval("select count(*) from items where status <> 'archived'")
+
+
 async def load(
     conn: asyncpg.Connection, clock: ShopClock, where: str = "true", args: tuple = ()
 ) -> list[Loaded]:
