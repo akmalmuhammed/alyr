@@ -159,13 +159,26 @@ def to_graph_payload(message: OutboundMessage, address: Address) -> dict:
             "action": {"button": "Choose", "sections": [{"title": "Options", "rows": rows}]},
         }
         return base | {"type": "interactive", "interactive": interactive}
+    if message.kind == "image":
+        image = {"id": message.media_id}
+        if message.body:
+            image["caption"] = message.body
+        return base | {"type": "image", "image": image}
     template: dict = {
         "name": message.template_name,
         "language": {"code": "ar" if message.lang == "ar" else "en"},
     }
+    components = []
+    if message.media_id:
+        # The template's image header, uploaded at send time (`upload_media`).
+        components.append({"type": "header", "parameters": [
+            {"type": "image", "image": {"id": message.media_id}}
+        ]})
     if message.template_params:
         values = [{"type": "text", "text": value} for value in message.template_params]
-        template["components"] = [{"type": "body", "parameters": values}]
+        components.append({"type": "body", "parameters": values})
+    if components:
+        template["components"] = components
     return base | {"type": "template", "template": template}
 
 
@@ -188,3 +201,19 @@ class MetaChannel:
             response.raise_for_status()
             sent = response.json().get("messages") or [{}]
             return sent[0].get("id")
+
+    async def upload_media(self, from_number_id: str, data: bytes, content_type: str) -> str:
+        """Upload a file with the Media API and return its media ID, which a message
+        then refers to. Meta keeps it for 30 days. Checked against Meta's media page,
+        17 Oct 2026: POST /{phone-number-id}/media with `messaging_product`, `type`
+        and `file` as multipart form data."""
+        async with httpx.AsyncClient(timeout=30) as client:
+            response = await client.post(
+                f"{self._base}/{from_number_id}/media",
+                headers={"Authorization": f"Bearer {self._token}"},
+                data={"messaging_product": "whatsapp", "type": content_type},
+                files={"file": ("card.png" if content_type == "image/png" else "card.jpg",
+                                data, content_type)},
+            )
+            response.raise_for_status()
+            return response.json()["id"]

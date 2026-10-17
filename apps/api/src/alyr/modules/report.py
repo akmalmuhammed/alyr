@@ -1,4 +1,4 @@
-"""The weekly result report (ALY-75, decision D-030).
+"""The weekly result report (ALY-75, decision D-030; the report card, ALY-99).
 
 Every Sunday at 9 in the morning, shop time, the owner hears in numbers what ALYR did
 for the shop in the seven days before. The report is part of ALYR Agent, which every
@@ -8,10 +8,12 @@ reads about money collected and still owed (ALYR Accounts), a restaurant about o
 by module, not product, so the product line-up can change without touching a stored
 report. An owner who sees the result every week renews without being asked.
 
-It goes on WhatsApp to the shop's own numbers marked to receive it, and by email to the
-shop's owners when email is set up. Outside WhatsApp's 24-hour window only an approved
-template may be sent, so the owner then gets a one-line summary and sends REPORT to read
-the whole report. Inside the window the whole report arrives at once.
+On WhatsApp it is a report card: a branded image with about eight lines under it, drawn
+by ALYR Agent's engine (`modules/agent/week.py`, `card.py`), so it agrees with the
+dashboard. It goes to the shop's own numbers marked to receive it. Inside WhatsApp's
+24-hour window the card and its text arrive at once; outside it only an approved template
+may be sent (see `deliver`), and REPORT brings the card. The sections below (one per
+product) are what is stored each week, what the workspace shows, and the owners' email.
 
 What was sent is kept in `weekly_reports`, so a week is never reported twice.
 """
@@ -25,6 +27,7 @@ from zoneinfo import ZoneInfo
 import asyncpg
 
 from alyr.channels.base import InboundMessage, OutboundMessage
+from alyr.config import get_settings
 from alyr.core import consent, jobs, mail, templates
 from alyr.core.normalise import has_arabic
 from alyr.core.outbound import Outbound
@@ -260,18 +263,65 @@ async def _owner_emails(conn: asyncpg.Connection) -> list[str]:
 
 # ------------------------------------------------------------------ sending it
 
+def _draw(read, lang: str) -> tuple[bytes, dict]:
+    """The card (PNG) and the text under it in one language. A card that cannot be drawn
+    is logged and comes back empty, so the text still goes."""
+    from alyr.modules.agent import card, week  # the Agent's engine reads this module
+
+    text = week.message(read, lang)
+    try:
+        image = card.render(week.card(read, lang))
+    except Exception:  # noqa: BLE001 - a missing picture must not stop the report
+        log.exception("weekly report card not drawn")
+        image = b""
+    return image, text
+
+
+async def card_and_text(
+    conn: asyncpg.Connection, week_start: date, langs: set[str] | tuple[str, ...] = ("en",),
+    now: datetime | None = None,
+) -> dict[str, tuple[bytes, dict]]:
+    """The report card and the short text under it for one week, in each language asked
+    for, from ALYR Agent's engine (`modules/agent/week.py`, `card.py`), so the report
+    agrees with the dashboard."""
+    from alyr.modules.agent import week
+
+    read = await week.read(conn, week_start, now)
+    return {lang: _draw(read, lang) for lang in sorted(set(langs))}
+
+
 async def deliver(conn: asyncpg.Connection, outbound: Outbound, report: dict) -> int:
     """Send the report to every staff number marked to receive it. `conn` is
-    tenant-scoped. Returns how many messages were queued."""
+    tenant-scoped. Returns how many messages were queued.
+
+    Inside the 24-hour window it is the card with the short text under it. Outside it,
+    the approved template: `weekly_report_card`, with the card as its image header, once
+    ALYR_REPORT_CARD_TEMPLATE is on; until then the text-only `weekly_report`, whose
+    REPORT brings the card."""
     shop = await _shop(conn)
+    people = await recipients(conn)
+    if not people:
+        return 0
+    week_start = date.fromisoformat(report["week_start"])
+    langs = {"ar" if p["lang"] == "ar" else "en" for p in people}
+    cards = await card_and_text(conn, week_start, langs)
+    with_card = get_settings().report_card_template
     sent = 0
-    for person in await recipients(conn):
-        view = render(report, shop, person["lang"])
-        result = await outbound.send(conn, templates.notice(
-            person["id"], "weekly_report", person["lang"], view["text"],
-            shop[person["lang"] if person["lang"] == "ar" else "en"], view["label"],
-            view["summary"],
-        ))
+    for person in people:
+        lang = "ar" if person["lang"] == "ar" else "en"
+        image, text = cards[lang]
+        if with_card and image:
+            notice = templates.notice(
+                person["id"], "weekly_report_card", lang, text["caption"], *text["template"],
+                image=image,
+            )
+        else:
+            view = render(report, shop, lang)
+            notice = templates.notice(
+                person["id"], "weekly_report", lang, text["caption"], shop[lang],
+                view["label"], view["summary"], image=image,
+            )
+        result = await outbound.send(conn, notice)
         sent += result.blocked is None
     return sent
 
@@ -404,5 +454,8 @@ async def on_staff_message(
             else "Nothing the report covers is switched on yet, so there is nothing to report."
         )
         return [OutboundMessage(to=staff["id"], body=body)]
-    view = render(report, await _shop(conn), lang)
-    return [OutboundMessage(to=staff["id"], body=view["text"])]
+    image, text = (await card_and_text(conn, await last_week(conn), (lang,)))[lang]
+    # The owner just wrote, so the window is open: the card goes as an ordinary image.
+    if not image:
+        return [OutboundMessage(to=staff["id"], body=text["caption"])]
+    return [OutboundMessage(to=staff["id"], kind="image", body=text["caption"], image=image)]

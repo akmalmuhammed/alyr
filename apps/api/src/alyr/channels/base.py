@@ -3,11 +3,13 @@ from datetime import UTC, datetime
 from typing import Literal, Protocol
 from uuid import UUID
 
-MessageKind = Literal["text", "buttons", "list", "template"]
+MessageKind = Literal["text", "buttons", "list", "template", "image"]
 TemplateCategory = Literal["utility", "marketing", "authentication"]
 
 MAX_BUTTONS = 3
 MAX_LIST_ROWS = 10
+# WhatsApp's limit on the text under an image.
+MAX_CAPTION = 1024
 
 
 @dataclass(frozen=True)
@@ -55,6 +57,11 @@ class OutboundMessage:
     # The values for the template's numbered blanks, and the language to send it in.
     template_params: tuple[str, ...] = ()
     lang: str = "en"
+    # A PNG to go with the message: an image whose caption is `body`, or the image header
+    # of a template that has one. The outbound layer keeps it beside the message, and the
+    # delivering job uploads it to the channel and sets `media_id`.
+    image: bytes = b""
+    media_id: str = ""
 
     def __post_init__(self) -> None:
         if self.kind == "buttons" and not 1 <= len(self.choices) <= MAX_BUTTONS:
@@ -63,6 +70,10 @@ class OutboundMessage:
             raise ValueError(f"lists need 1 to {MAX_LIST_ROWS} choices")
         if self.kind == "template" and not (self.template_name and self.template_category):
             raise ValueError("templates need a name and a category")
+        if self.kind == "image" and not (self.image or self.media_id):
+            raise ValueError("an image message needs an image")
+        if self.kind == "image" and len(self.body) > MAX_CAPTION:
+            raise ValueError(f"an image caption is at most {MAX_CAPTION} characters")
 
 
 @dataclass(frozen=True)
@@ -85,4 +96,8 @@ class Channel(Protocol):
     ) -> str | None:
         """Deliver the message. Return the channel's own ID for it, if it has one, so
         later delivery reports can be matched to it."""
+        ...
+
+    async def upload_media(self, from_number_id: str, data: bytes, content_type: str) -> str:
+        """Store a file with the channel and return the ID a message refers to it by."""
         ...
