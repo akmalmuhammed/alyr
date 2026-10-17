@@ -47,6 +47,7 @@ Last updated 17 Oct 2026 (evening).
 
 ## Next, in order
 
+0. The Catalog, ALY-101 and its packages ALY-102 to ALY-110, ALY-112 and ALY-113 (D-039; plan in the Eraser file named there). Start with ALY-102 and ALY-103. Nothing the Catalog adds is visible to an owner or customer until it works.
 0. The internal tool, ALY-81 to ALY-96, in order (`docs/internal-tool.md`)
 1. ALY-27 bookable staff or resources, then services and hours screens
 2. ALY-53 contacts and labels
@@ -54,7 +55,7 @@ Last updated 17 Oct 2026 (evening).
 
 ## Never
 
-- Start a new module before the Customers lane names a pilot business that needs it (gate B).
+- Start a new module before the Customers lane names a pilot business that needs it (gate B). The Catalog (ALY-101) is the one exception, by D-039.
 - Query tenant data outside `db.tenant()`, or call a channel directly instead of the outbound layer.
 - Edit a migration that has been applied; add a new one.
 

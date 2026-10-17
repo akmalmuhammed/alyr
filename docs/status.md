@@ -4,7 +4,7 @@ How the work is divided, and the one goal for this stage, are in [operating-mode
 
 Read this first in a new session, on any machine. It is the hand-over note between sessions: what works, what is next, and what is waiting on the founder. Update it in the same pull request as the work. Linear (team `Alyrtech`, project `Alyr Launch`) holds the detail; this page is the summary.
 
-Last updated: 17 Oct 2026, after the suite site (ALY-99, D-037: a homepage led by ALYR Agent at work, a page for each live product, a Products menu; branch `aly-99-suite-site`, PR #53, built, not published, depends on PR #50), ALYR Agent and the product line-up (ALY-99, D-035: ALYR Chat, Bookings, Agent, Accounts, Payroll coming; combination pricing; the Agent dashboard on `/app`, redrawn after the design critique, with a showcase mode for the homepage; branch `aly-agent-dashboard`, in review), the internal tool's first phase (ALY-80, D-033), the 2026 homepage (ALY-56, D-034: published 17 Oct without prices, which wait for the commercial registration), and prices set per client from the back office (ALY-78, D-032).
+Last updated: 17 Oct 2026, after the Catalog plan (ALY-101, D-039: items, stock and photos built complete before go-live; planned, nothing built yet), and before that the suite site (ALY-99, D-037: a homepage led by ALYR Agent at work, a page for each live product, a Products menu; branch `aly-99-suite-site`, PR #53, built, not published, depends on PR #50), ALYR Agent and the product line-up (ALY-99, D-035: ALYR Chat, Bookings, Agent, Accounts, Payroll coming; combination pricing; the Agent dashboard on `/app`, redrawn after the design critique, with a showcase mode for the homepage; branch `aly-agent-dashboard`, in review), the internal tool's first phase (ALY-80, D-033), the 2026 homepage (ALY-56, D-034: published 17 Oct without prices, which wait for the commercial registration), and prices set per client from the back office (ALY-78, D-032).
 
 ## What works today
 
@@ -40,6 +40,7 @@ Tests: 253 on `main`, all passing; 353 on `aly-agent-dashboard`. CI runs api, we
 
 ## Next on the build side, in order
 
+0. **The Catalog (ALY-101, D-039):** planned, nothing built. Order: ALY-102 (items and stock) and ALY-103 (photos and R2) first, which can run together; then ALY-104 (workspace screens), ALY-112 (order page), ALY-106 (WhatsApp); then ALY-107 to ALY-110; ALY-113 (go-live sweep) last. This replaces the old line below about a products screen. Runs alongside the internal tool; which comes first is the founder's call.
 0. **The internal tool (ALY-79, D-033):** phase 1 of 17 built. Next: Client 360 (ALY-81), business controls (ALY-82), onboarding board and tickets (ALY-83), leads (ALY-84), billing (ALY-85), switches (ALY-86), then levels 2 and 3.
 1. **Onboarding (ALY-76, D-031) and per-client pricing (ALY-78, D-032):** built. Left for later phases: sign-in by WhatsApp code, the advisor's tablet mode, the restaurant and shop paths, owners adding a second business themselves, invoices and taking payment, telling the owner their price is ready.
 
@@ -58,6 +59,7 @@ Tests: 253 on `main`, all passing; 353 on `aly-agent-dashboard`. CI runs api, we
 
 | Item | Detail |
 |---|---|
+| Enable Cloudflare R2 (ALY-103, D-039) | It cannot be done from the command line or the API (Cloudflare error 10042); it is one step in the dashboard: Storage and databases, R2 object storage. The free tier is 10 GB; Cloudflare's pricing page does not say whether a card is needed, so you will see. Then we create the bucket and `media.alyr.qa`, and you create one R2 API token limited to that bucket and give it to us as you gave the Meta values. Nothing else in the Catalog waits on this except photo uploads. |
 | Pricing (ALY-78, D-032) | Set your price list and each client's price in the back office at `/ops`. The starting values are QAR 449 a month and QAR 2,500 setup per business, all editable. Every business type starts on "ALYR prepares the price". Sign-up stays closed outside a local machine (`ALYR_SIGNUP_OPEN`) until shops can connect their own WhatsApp number (decided 17 Oct). Sign-in by WhatsApp code comes after a live number. |
 | WhatsApp backup route (ALY-77) | If the CR or Meta's review is slow: researched options in `docs/company/whatsapp-backup-plan/`. Recommended backup for a first pilot: the shop opens its own provider account (for example 360dialog, about €49 a month) and connects it to ALYR. Choose, and say whether ALYR pays that fee for pilots. Not built. |
 | Meta values | Done 12 Oct. `apps/api/.env` holds the five values (app `alyr`, id 1071845795713841, test number id 1431880183331516). The webhook is verified, the app is subscribed to the `messages` field and to the WhatsApp account. The access token is a system-user token (`alyradmin`, never expires, `whatsapp_business_messaging` and `whatsapp_business_management`), set 12 Oct. |
@@ -71,6 +73,8 @@ Tests: 253 on `main`, all passing; 353 on `aly-agent-dashboard`. CI runs api, we
 
 ## Known gaps and risks
 
+- **Owners cannot manage their own menu or stock.** There is no screen to add or edit items, no photos and no quantities; ALYR loads a shop's items for it. The Catalog (ALY-101, D-039) fixes this before go-live.
+- **"Coming" labels are still visible** (Payroll in the Products menu and on the site, "Early access" on the site). D-039 removes them before go-live (ALY-113).
 - The public site's Arabic is unreviewed (ALY-66); the suite site (ALY-99) adds about three times as much Arabic, all of it a draft. Several product claims on it describe what is built on the simulator, not what runs live. See `docs/brand.md`.
 - Bookings: one customer at a time per shop; services and opening hours can only be changed through the API; staff cannot move a booking or add a walk-in from the screen.
 - On the founder's laptop Windows blocks Python's compiled database driver, so the API and its tests run through `scripts/api-in-docker.sh`.
