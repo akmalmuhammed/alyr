@@ -10,6 +10,7 @@ dependencies = [
     "asyncpg>=0.30",
     "resvg-py==0.5.0",
     "fonttools>=4.55",
+    "pillow>=12.3,<13",
 ]
 
 [dependency-groups]

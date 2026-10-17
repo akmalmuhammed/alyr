@@ -8,6 +8,7 @@ from alyr.core import team, templates
 from alyr.core.normalise import fmt_qar
 from alyr.core.outbound import Outbound
 from alyr.core.team import Actor
+from alyr.modules.items import holds as stock_holds
 from alyr.modules.ledger.ageing import Aged, age
 
 # Every function takes a tenant-scoped connection (Database.tenant). RLS does the filtering.
@@ -252,7 +253,8 @@ async def complete_payment(
 ) -> str:
     """Mark a payment request paid, record it in the ledger and tell the customer.
 
-    Safe to call twice: the second call changes nothing.
+    Safe to call twice: the second call changes nothing. A link that has expired (the
+    order's hold ran out, or it was cancelled) cannot be paid: the answer is "expired".
     """
     row = await conn.fetchrow(
         "update payment_requests set status = 'paid', paid_at = now() "
@@ -261,15 +263,18 @@ async def complete_payment(
         payment_id,
     )
     if row is None:
-        exists = await conn.fetchval("select 1 from payment_requests where id = $1", payment_id)
-        return "paid" if exists else "not_found"
+        status = await conn.fetchval(
+            "select status from payment_requests where id = $1", payment_id
+        )
+        return status or "not_found"
     lang = await conn.fetchval("select lang from contacts where id = $1", row["contact_id"])
     if row["order_id"] is not None:
         # Paying for an order settles the order. It was never a debt, so the ledger
-        # is not touched.
+        # is not touched. The stock the order held is now sold.
         number = await conn.fetchval(
             "update orders set payment = 'paid' where id = $1 returning number", row["order_id"]
         )
+        await stock_holds.commit(conn, row["order_id"])
         await team.record(
             conn, "order", row["order_id"], "paid", team.CUSTOMER, row["contact_id"],
             {"number": number, "amount": fmt_qar(row["amount"])},

@@ -27,17 +27,22 @@ Handler = Callable[[UUID, dict], Awaitable[None]]
 
 STUCK_AFTER_SECONDS = 300
 BATCH = 20
+# The retry delay doubles on each failure but never passes this, so a job that is allowed
+# many attempts (a photo waiting for the object store, ALY-103) keeps trying about hourly.
+MAX_BACKOFF_SECONDS = 3600
 
 
 async def enqueue(
-    conn: asyncpg.Connection, kind: str, payload: dict, run_at: datetime | None = None
+    conn: asyncpg.Connection, kind: str, payload: dict, run_at: datetime | None = None,
+    max_attempts: int | None = None,
 ) -> UUID:
     """Add a job for the current tenant. `conn` must be tenant-scoped, so the job commits
-    or rolls back with everything else in the transaction."""
+    or rolls back with everything else in the transaction. `max_attempts` overrides the
+    table's default of 6 for work that should keep trying for hours."""
     return await conn.fetchval(
-        "insert into jobs (kind, payload, run_at) values ($1, $2, coalesce($3, now())) "
-        "returning id",
-        kind, payload, run_at,
+        "insert into jobs (kind, payload, run_at, max_attempts) "
+        "values ($1, $2, coalesce($3, now()), coalesce($4, 6)) returning id",
+        kind, payload, run_at, max_attempts,
     )
 
 
@@ -126,7 +131,7 @@ class JobRunner:
         reason = f"{type(error).__name__}: {error}"[:500]
         log.warning("job %s (%s) attempt %s failed: %s", job["id"], job["kind"],
                     job["attempts"], type(error).__name__)
-        delay = self._backoff * (2 ** (job["attempts"] - 1))
+        delay = min(self._backoff * (2 ** (job["attempts"] - 1)), MAX_BACKOFF_SECONDS)
         async with self._db.tenant(job["tenant_id"]) as conn:
             await conn.execute(
                 "update jobs set status = $2, last_error = $3, locked_at = null, "

@@ -192,7 +192,7 @@ MODULES: tuple[Module, ...] = (
             Step(
                 "products",
                 Text("Add your menu or price list", "أضف قائمتك أو أسعارك"),
-                done="exists (select 1 from products where available)",
+                done="exists (select 1 from items where available and status = 'live')",
                 screen="orders",
             ),
         ),

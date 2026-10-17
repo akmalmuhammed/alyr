@@ -331,7 +331,7 @@ The founder named the first customers as businesses that need booking, schedulin
 **The first gap a booking customer will hit:** one customer at a time per shop. A salon with three chairs needs bookable staff or resources.
 
 ## D-025 · The public site uses the playbook's words on the design system's look
-**Date** 11 Oct 2026 · **Status** Proposed (the founder said "update the homepage based on the findings" without choosing a look) · Linear ALY-56
+**Date** 11 Oct 2026 · **Status** Look decided by D-040 (17 Oct: Carbon and Volt; the playbook's cobalt retired). The rest stands as written · Linear ALY-56
 
 Two brand sources disagree. The design system v1.0 (branch `codex/alyr-native-foundation`) defines the look now live: uppercase ALYR, Carbon and Volt, the Command Fold logo, "Transform the business." The founder's Brand & Growth Playbook (a Claude Docs document, 11 Oct) defines a different brand: lowercase "alyr", cobalt blue, an "a" mark, "Go digital without the IT team", products alyr Chat, Pay, Books and Sites.
 
@@ -737,3 +737,27 @@ There is no separate Pay product: payment links stay a module of Chat and Bookin
 **Why.** The founder does not want a bad first impression: an owner who cannot change their own menu, or finds a "coming soon" label, will not trust the rest. Research (in the plan) also shows spreadsheets are the real competition, so setup must take minutes from a phone, and staff must be able to update stock without opening a screen.
 
 **Risks.** The scope is large, so packages 1 and 2 come first and anything not ready stays hidden. Meta may classify a back-in-stock message as marketing: test the template category first. The listing policy (no counterfeit or prohibited goods) needs the terms (ALY-68) and a legal look (ALY-51). Demo shops use simple drawn tiles, not copyrighted photos.
+
+**As built (ALY-103, 17 Oct 2026; PR #65).** Where the code fixed a detail this entry left open. None of it changes the decision.
+- Sizes are measured on the **long side** (320, 800, 1,600), not the width, so a portrait photo is not larger than a landscape one. A photo is never enlarged: a 600-pixel photo is stored as 320 and 600.
+- File names are `shops/<shop id>/<SHA-256 of the file as uploaded>-<size>.webp`. A shop that uploads the same file twice, or two staff who both do, store it once; two shops never share a file. The name is of the upload, not of the cleaned result, so the same picture re-saved by a phone with different metadata is a new photo.
+- The type is decided by the first bytes (JPEG, PNG, WebP only; no GIF, HEIC, AVIF or TIFF). Animated images are refused. A file that contains `<script`, `<html`, `<svg` and similar words is refused as hidden code, though re-encoding would have dropped them anyway.
+- Photos are written to the store by a **background job** with its own queue table, not inside the upload request, following the rule that a slow outside service is never called from a request. R2 being down therefore delays a photo and fails nothing; the job tries up to 48 times, about an hour apart at the end, then the photo is marked failed and a person can retry it from the failed-jobs list or by uploading it again.
+- A shop deleting its own photo removes it for good. Taking one down under the listing policy keeps a marked row, so the same file cannot be uploaded again.
+- Caps count photos and items per shop, one setting each (`ALYR_CATALOG_MAX_PHOTOS`, `ALYR_CATALOG_MAX_ITEMS`); there is no per-shop override yet. The alert at 80% compares all shops' stored bytes with 10 decimal gigabytes.
+- The meters keep, per shop and month in shop time: photos and bytes stored at the last change, the month's peak (R2 bills on the daily peak), uploads, duplicates, refused uploads and active items.
+- Photos and owners are linked by kind and id (`media_links`), with no foreign key to the items table, so the catalog can link items, variants and anything later. New dependency: Pillow, for decoding and re-encoding images.
+
+## D-040 · ALYR's look is Carbon and Volt, and its values live in one token file
+**Date** 17 Oct 2026 · **Status** Accepted (founder, 17 Oct: Carbon and Volt is the brand, ALY-61) · Linear ALY-61, ALY-126 · Replaces the open question in D-025
+
+**The decision.**
+- **Carbon and Volt is ALYR's brand.** The design system v1.0 look stays: uppercase ALYR, the Command Fold logo with its redrawn R, Carbon, Volt, Paper, Instrument Sans, IBM Plex Sans Arabic and IBM Plex Mono, the 45° cut. **The playbook's visual identity is retired:** cobalt blue, a colour per product, lowercase "alyr", the rounded "a" mark, Bricolage Grotesque and Geist. The playbook's positioning, voice and content plan still apply (D-025's left column).
+- **One source for every value.** `design/tokens.json` (DTCG-style, `design/README.md`) holds every colour in light and dark, the faces, the type scales, spacing, radii, rules, the cut, shadows, motion, breakpoints, z-index and focus. `scripts/tokens-build.mjs` generates the CSS custom properties, a TypeScript module and a Python module from it; nothing else defines a colour or a font. `scripts/design-check.mjs` fails CI on a hard-coded hex colour or font name in site, product or renderer code, with a short list of exceptions in `design/allow.json`.
+- **The semantic names are the API**: canvas, surface, text, text-muted, line, volt, on-volt, band and the rest. Pages and screens use those, never a primitive.
+- **The product screens use the same tokens and follow the public site's theme switch** (`data-theme`, stored as `alyr-theme`), as briefed for ALY-126. With it, three visible changes to the workspace, onboarding and customer pages: the canvas is Paper (was #eceee9 in light), the dark surfaces are the site's (#0e1012, #15171a, #1b1e22 instead of #0a0b0d, #131518, #1a1d21), and type sizes sit on one scale (11, 12, 13, 14, 15, 16, 18, 20, 24, 28, 36, 56 px; half pixels rounded up).
+- **Not changed:** the public site, the report card and the social cards look exactly as before (pixel and byte comparisons in `docs/design-system/01-tokens-log.md`). The logo's master files stay on the design-system branch until ALY-124 moves them.
+
+**Why.** The values had been copied by hand into eleven places, with one name meaning two colours (`--canvas`), two curves under one name (`--ease`), three focus styles and thirteen near-blacks where the brand names three (`docs/design-system/00-audit.md`). The design skills (ALY-126) need one file to read, and a check that keeps it true.
+
+**Still open, for the founder.** Whether product buttons take the 45° notch (the workspace's four button systems are the next step); the Arabic spelling of the name.

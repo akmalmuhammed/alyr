@@ -50,7 +50,9 @@ apps/api/                     FastAPI service (Python 3.13, managed with uv)
                               sign-in (auth), email (mail), sign-up (onboarding), pricing, back office,
                               team accountability (team, D-028), workspace shell (workspace), templates
   src/alyr/modules/           What answers customers: ledger, orders, bookings, inbox, agent (the owner's
-                              weekly view), report.py (weekly report card); router.py picks the module
+                              weekly view), report.py (weekly report card); router.py picks the module.
+                              items/ is the Catalog's engine (what a shop sells: variants, availability,
+                              stock log, holds; specs/001-catalog-engine), used by orders at checkout
   src/alyr/routes/            HTTP routes. deps.py: who is calling, which shop, which modules are on
   src/alyr/catalog.py         What ALYR sells: modules and products (D-027)
   src/alyr/db.py              `Database.tenant(id)`: one transaction scoped to one tenant

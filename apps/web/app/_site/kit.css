@@ -5,13 +5,8 @@
    button, header, captions, fold, closing call and footer are in site.css; the drawings in
    drawings.css. Nothing here restyles a class the ALYR Chat page already had. */
 
-main {
-  --display: clamp(2.75rem, 1.4rem + 5vw, 5.5rem);
-  --h2: clamp(2rem, 1.3rem + 2.6vw, 3.25rem);
-  --h3: 1.375rem;
-  --col-gap: 1.5rem;
-  --sec: clamp(3.5rem, 7vw, 6rem);
-}
+/* The type scale and rhythm (--display, --h2, --h3, --col-gap, --sec) are tokens:
+   design/tokens.json, generated into ../_tokens/tokens.css. */
 :root { interpolate-size: allow-keywords; }
 
 /* ---------------------------------------------------- type and structure */
@@ -67,7 +62,7 @@ main {
 /* -------------------------------------------------------- callouts beside a figure */
 .callouts { display: grid; align-content: start; border-bottom: 1px solid var(--line); counter-reset: none; }
 .callouts li { display: grid; grid-template-columns: 1.75rem minmax(0, 1fr); gap: .875rem; align-items: start; padding-block: 1rem; border-top: 1px solid var(--line); font-size: .9375rem; line-height: 1.5; }
-.co-n { display: inline-grid; place-items: center; width: 1.5rem; height: 1.5rem; border-radius: 50%; background: var(--carbon); color: #fff; box-shadow: inset 0 0 0 1.5px var(--mark-ring); font-family: var(--mono); font-size: .75rem; font-weight: 500; line-height: 1; translate: 0 -.05rem; }
+.co-n { display: inline-grid; place-items: center; width: 1.5rem; height: 1.5rem; border-radius: 50%; background: var(--carbon); color: var(--on-band); box-shadow: inset 0 0 0 1.5px var(--mark-ring); font-family: var(--mono); font-size: .75rem; font-weight: 500; line-height: 1; translate: 0 -.05rem; }
 
 /* ===================================================== the product pages */
 
@@ -95,14 +90,14 @@ main:has(.pbar) section[id] { scroll-margin-top: calc(var(--header) + 4rem); }
 [lang="ar"] .pk-title { max-width: 20ch; }
 .pk-title > span { display: block; }
 .pk-title > span + span { color: var(--concrete); }
-.pk-facts li p { font-size: 1.0625rem; font-weight: 600; line-height: 1.35; color: #fff; }
+.pk-facts li p { font-size: 1.0625rem; font-weight: 600; line-height: 1.35; color: var(--on-band); }
 [lang="ar"] .pk-facts li p { line-height: 1.6; }
 .pk-facts.is-four { grid-template-columns: repeat(4, minmax(0, 1fr)); }
 
 /* the demo, for a tab that has only the team's screen, and buttons on a row */
 .demo-stage.is-panel { grid-template-columns: minmax(0, 1fr); }
 .row-acts { display: inline-flex; gap: .375rem; margin-inline-start: auto; }
-.row-act { display: inline-flex; align-items: center; height: 1.75rem; padding: 0 .625rem; border-radius: .375rem; border: 1px solid #6b7480; color: #fff; font-size: .75rem; font-weight: 600; white-space: nowrap; }
+.row-act { display: inline-flex; align-items: center; height: 1.75rem; padding: 0 .625rem; border-radius: .375rem; border: 1px solid var(--band-mark); color: var(--on-band); font-size: .75rem; font-weight: 600; white-space: nowrap; }
 
 /* the screen used every day, at true scale, with its callouts */
 .pk-screen-grid { display: grid; grid-template-columns: minmax(0, 9fr) minmax(0, 3fr); column-gap: clamp(1.5rem, 4vw, 4rem); row-gap: 2rem; align-items: start; }

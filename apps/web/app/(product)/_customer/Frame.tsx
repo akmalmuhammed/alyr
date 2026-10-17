@@ -1,4 +1,5 @@
 import type { ReactNode } from "react";
+import { color } from "../../_tokens/tokens";
 import "./customer.css";
 
 // Shared pieces of the customer pages (order, book, pay, track). Server-safe: no state.
@@ -34,7 +35,7 @@ function AlyrMark() {
     <svg viewBox="0 0 190 160" aria-hidden="true">
       <polygon fill="currentColor" points="50,0 180,0 130,62 0,62" />
       <polygon fill="currentColor" points="0,72 126,72 39,160" />
-      <polygon fill="#B7F34A" points="134,72 190,72 142,160 46,160" />
+      <polygon fill={color.brand.volt} points="134,72 190,72 142,160 46,160" />
     </svg>
   );
 }

@@ -1,73 +1,8 @@
 /* Drawings of real ALYR screens on the public pages (docs/site-redesign/04-brief.md):
    customer pages on a flat phone, the workspace's screens in a window, the Sunday report as
    one message, all at true proportions and in the product's own words. Shared by the
-   homepage and the product pages; every colour comes from the tokens below, which copy the
-   product's own (_customer/customer.css, _workspace/shell.css), with a dark pair on the
-   site's pattern (a dark device with no choice made, then a dark choice). */
-
-main {
-  --d-bg: #f2f3ef;
-  --d-card: #ffffff;
-  --d-raise: #f7f8f5;
-  --d-hair: rgb(21 23 26 / .08);
-  --d-hair-2: rgb(21 23 26 / .14);
-  --d-ink: #15171a;
-  --d-ink-2: #5f666d;
-  --d-ink-3: #646a71;
-  --d-volt-ink: #3f6a0b;
-  --d-wash: rgb(183 243 74 / .22);
-  --d-chat: #eceee9;
-  --d-out: #e3e9dc;
-  --d-link: #1f63a3;
-  --d-bezel: #0b0c0d;
-  --d-lift: 0 1px 0 rgb(255 255 255 / .7) inset, 0 1px 2px rgb(21 23 26 / .05), 0 0 0 1px var(--d-hair);
-  --d-float: 0 18px 50px -14px rgb(21 23 26 / .32), 0 0 0 1px var(--d-hair-2);
-  /* the construction grid behind the hero */
-  --grid: rgb(167 173 181 / .2);
-}
-
-/* Dark: the drawings' own tokens, on the pattern in site.css (a dark device with no choice
-   made, then a dark choice). Keep the two blocks identical. */
-@media (prefers-color-scheme: dark) {
-  :root:not([data-theme="light"]) main {
-    --d-bg: #0a0b0d;
-    --d-card: #131518;
-    --d-raise: #1a1d21;
-    --d-hair: rgb(255 255 255 / .07);
-    --d-hair-2: rgb(255 255 255 / .13);
-    --d-ink: #f3f5f0;
-    --d-ink-2: #a7adb5;
-    --d-ink-3: #8a9199;
-    --d-volt-ink: #b7f34a;
-    --d-wash: rgb(183 243 74 / .12);
-    --d-chat: #0f1113;
-    --d-out: #222a1c;
-    --d-link: #8cc2f2;
-    --d-bezel: #2a2e33;
-    --d-lift: 0 1px 0 rgb(255 255 255 / .04) inset, 0 0 0 1px var(--d-hair);
-    --d-float: 0 24px 60px -18px rgb(0 0 0 / .8), 0 0 0 1px var(--d-hair-2);
-    --grid: rgb(167 173 181 / .07);
-  }
-}
-:root[data-theme="dark"] main {
-  --d-bg: #0a0b0d;
-  --d-card: #131518;
-  --d-raise: #1a1d21;
-  --d-hair: rgb(255 255 255 / .07);
-  --d-hair-2: rgb(255 255 255 / .13);
-  --d-ink: #f3f5f0;
-  --d-ink-2: #a7adb5;
-  --d-ink-3: #8a9199;
-  --d-volt-ink: #b7f34a;
-  --d-wash: rgb(183 243 74 / .12);
-  --d-chat: #0f1113;
-  --d-out: #222a1c;
-  --d-link: #8cc2f2;
-  --d-bezel: #2a2e33;
-  --d-lift: 0 1px 0 rgb(255 255 255 / .04) inset, 0 0 0 1px var(--d-hair);
-  --d-float: 0 24px 60px -18px rgb(0 0 0 / .8), 0 0 0 1px var(--d-hair-2);
-  --grid: rgb(167 173 181 / .07);
-}
+   homepage and the product pages. Every colour is a --d-* token (component.drawing in
+   design/tokens.json, light and dark), which copies the product as it was drawn. */
 
 /* --------------------------------------------------------- the drawings */
 .d-phone {
@@ -87,7 +22,7 @@ main {
 .d-cx { position: relative; display: flex; flex-direction: column; height: 100%; color: var(--d-ink); font-family: var(--sans); font-size: 12.5px; line-height: 1.35; letter-spacing: 0; }
 .d-cx:lang(ar), .d-chat:lang(ar), .d-sheet:lang(ar), .d-strip:lang(ar) { font-family: var(--arabic); }
 .d-top { display: flex; align-items: center; gap: 8px; min-height: 48px; padding: 0 12px; padding-inline-end: 22px; border-bottom: 1px solid var(--d-hair); flex: none; }
-.d-mono { position: relative; width: 28px; height: 28px; flex: none; display: grid; place-items: center; border-radius: 8px; background: #15171a; color: #f3f5f0; font-size: 11px; font-weight: 600; overflow: hidden; box-shadow: 0 0 0 1px var(--d-hair-2); }
+.d-mono { position: relative; width: 28px; height: 28px; flex: none; display: grid; place-items: center; border-radius: 8px; background: var(--monogram-bg); color: var(--monogram-ink); font-size: 11px; font-weight: 600; overflow: hidden; box-shadow: 0 0 0 1px var(--d-hair-2); }
 .d-mono::after { content: ""; position: absolute; top: 0; inset-inline-end: 0; width: 9px; height: 9px; background: var(--volt); clip-path: polygon(0 0, 100% 0, 100% 100%); }
 .d-mono:dir(rtl)::after { clip-path: polygon(0 0, 100% 0, 0 100%); }
 .d-shop { flex: 1; min-width: 0; display: grid; line-height: 1.2; }
@@ -221,7 +156,7 @@ main {
 }
 .aw-bar { display: flex; align-items: center; gap: .625rem; min-height: 2.75rem; padding: 0 1rem; border-bottom: 1px solid var(--window-line); flex: none; font-size: .8125rem; line-height: 1.2; }
 .aw-bar b { font-weight: 600; white-space: nowrap; }
-.aw-mono { position: relative; width: 1.5rem; height: 1.5rem; flex: none; display: grid; place-items: center; border-radius: .375rem; background: #15171a; color: #f3f5f0; font-size: .625rem; font-weight: 600; overflow: hidden; box-shadow: 0 0 0 1px var(--window-line); }
+.aw-mono { position: relative; width: 1.5rem; height: 1.5rem; flex: none; display: grid; place-items: center; border-radius: .375rem; background: var(--monogram-bg); color: var(--monogram-ink); font-size: .625rem; font-weight: 600; overflow: hidden; box-shadow: 0 0 0 1px var(--window-line); }
 .aw-mono::after { content: ""; position: absolute; top: 0; inset-inline-end: 0; width: 7px; height: 7px; background: var(--volt); clip-path: polygon(0 0, 100% 0, 100% 100%); }
 .aw-mono:dir(rtl)::after { clip-path: polygon(0 0, 100% 0, 0 100%); }
 .aw-path { font-family: var(--mono); font-size: .6875rem; letter-spacing: .08em; text-transform: uppercase; color: var(--text-muted); white-space: nowrap; }
@@ -301,7 +236,7 @@ main {
 /* The numbered marks that match the callouts beside a figure. */
 .ws-mark {
   display: inline-grid; place-items: center; width: 1.375rem; height: 1.375rem; margin-inline-start: .5rem; flex: none;
-  border-radius: 50%; background: var(--carbon); color: #fff; vertical-align: middle;
+  border-radius: 50%; background: var(--carbon); color: var(--on-band); vertical-align: middle;
   font-family: var(--mono); font-size: .6875rem; font-weight: 500; line-height: 1; letter-spacing: 0; text-transform: none;
   box-shadow: 0 0 0 3px var(--window), inset 0 0 0 1.5px var(--mark-ring);
 }

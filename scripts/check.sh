@@ -8,6 +8,8 @@ root="$(cd "$(dirname "$0")/.." && pwd)"
 # Make sure this clone uses the repository's secret-blocking hook.
 git -C "$root" config core.hooksPath scripts/hooks
 
+echo "== design: tokens and drift"
+node "$root/scripts/design-check.mjs"
 echo "== api: lint"
 (cd "$root/apps/api" && uv run ruff check .)
 echo "== api: tests"

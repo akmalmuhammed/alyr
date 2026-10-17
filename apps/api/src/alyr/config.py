@@ -61,6 +61,32 @@ class Settings(BaseSettings):
     email_from: str = "ALYR <no-reply@alyr.qa>"
     email_reply_to: str = "hello@alyr.qa"
 
+    # Product photos (D-039, ALY-103). With the account ID and both keys set, photos go to
+    # Cloudflare R2 and are served from `media_base_url`. With any of the three missing
+    # they go to local disk under `media_local_dir` and the API serves them itself, so a
+    # developer machine, a test run and a half-configured server all keep working.
+    r2_account_id: str = ""
+    r2_access_key_id: str = ""
+    r2_secret_access_key: str = ""
+    r2_bucket: str = "alyr-media"
+    media_base_url: str = "https://media.alyr.qa"
+    media_local_dir: str = ".media"
+
+    # What one upload may be. The web page shrinks a photo before sending it, so these
+    # only stop a damaged or hostile file. A 12-megapixel phone photo is about 4 MB.
+    media_max_upload_bytes: int = 15 * 1024 * 1024
+    media_max_pixels: int = 40_000_000
+
+    # Per shop, to start (D-039; our estimate). A cap stops new items or photos with a
+    # clear message and never deletes anything.
+    catalog_max_items: int = 1000
+    catalog_max_photos: int = 3000
+
+    # R2's free tier is 10 GB-month of storage (checked 17 Oct 2026). Gigabytes here are
+    # decimal, which is the smaller reading, so the alert comes early rather than late.
+    media_free_bytes: int = 10_000_000_000
+    media_alert_percent: int = 80
+
 
 @lru_cache
 def get_settings() -> Settings:

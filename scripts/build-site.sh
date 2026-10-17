@@ -15,6 +15,8 @@ root="$(cd "$(dirname "$0")/.." && pwd)"
 cd "$root/apps/web"
 
 rm -rf .next out-site
+# The design tokens (design/tokens.json) generate the CSS and TypeScript the pages read.
+node "$root/scripts/tokens-build.mjs"
 # The published site has no workspace behind it, so the footer shows no staff link.
 NEXT_PUBLIC_ALYR_WORKSPACE_URL="" pnpm build >/dev/null
 

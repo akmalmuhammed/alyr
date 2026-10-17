@@ -1,6 +1,7 @@
 import { readFile } from "node:fs/promises";
 import { join } from "node:path";
 import { ImageResponse } from "next/og";
+import { component, font } from "../_tokens/tokens";
 
 // The card shown when a link to an ALYR page is shared, for example in a WhatsApp chat:
 // the page's eyebrow, its headline and up to three facts, in the page's own words (copy.ts).
@@ -14,8 +15,8 @@ import { ImageResponse } from "next/og";
 // read at build time and never sent to browsers.
 
 const fonts = join(process.cwd(), "app/_site/fonts");
-const instrument = readFile(join(fonts, "InstrumentSans-SemiBold.ttf"));
-const plexMono = readFile(join(fonts, "IBMPlexMono-Regular.ttf"));
+const instrument = readFile(join(fonts, font.file["sans-600"]));
+const plexMono = readFile(join(fonts, font.file["mono-400"]));
 
 export const cardSize = { width: 1200, height: 630 };
 
@@ -27,8 +28,9 @@ export function cardTitle(lines: string[]): string[] {
   return lines.flatMap((line) => line.split(/\n/)).map((line) => line.replace(/ /g, " "));
 }
 
-const VOLT = "#B7F34A";
-const CONCRETE = "#A7ADB5";
+const { bg: CARBON, ink: WHITE, ink2: CONCRETE, sep: SEPARATOR, volt: VOLT } = component.social;
+const SANS = font.family.sans[0];
+const MONO = font.family.mono[0];
 
 export async function socialCard({ eyebrow, title, facts }: Card) {
   // the headline is as large as its longest line allows, up to 88 px
@@ -39,7 +41,7 @@ export async function socialCard({ eyebrow, title, facts }: Card) {
       <div
         style={{
           width: "100%", height: "100%", display: "flex", flexDirection: "column",
-          justifyContent: "space-between", padding: 80, background: "#15171A", color: "#FFFFFF",
+          justifyContent: "space-between", padding: 80, background: CARBON, color: WHITE,
           position: "relative",
         }}
       >
@@ -49,11 +51,11 @@ export async function socialCard({ eyebrow, title, facts }: Card) {
         </svg>
         <svg width="400" height="64" viewBox="20 30 1000 160">
           <g transform="translate(20 30)">
-            <polygon fill="#FFFFFF" points="50,0 180,0 130,62 0,62" />
-            <polygon fill="#FFFFFF" points="0,72 126,72 39,160" />
+            <polygon fill={WHITE} points="50,0 180,0 130,62 0,62" />
+            <polygon fill={WHITE} points="0,72 126,72 39,160" />
             <polygon fill={VOLT} points="134,72 190,72 142,160 46,160" />
           </g>
-          <g transform="translate(300 35)" fill="#FFFFFF">
+          <g transform="translate(300 35)" fill={WHITE}>
             <polygon points="0,150 69,10 92,10 28,150" />
             <polygon points="76,37 92,10 164,150 134,150" />
             <polygon points="190,10 216,10 216,124 326,124 326,150 190,150" />
@@ -64,22 +66,22 @@ export async function socialCard({ eyebrow, title, facts }: Card) {
           </g>
         </svg>
         <div style={{ display: "flex", flexDirection: "column" }}>
-          <div style={{ fontFamily: "IBM Plex Mono", fontSize: 22, color: CONCRETE, letterSpacing: 2, textTransform: "uppercase", marginBottom: 30 }}>
+          <div style={{ fontFamily: MONO, fontSize: 22, color: CONCRETE, letterSpacing: 2, textTransform: "uppercase", marginBottom: 30 }}>
             {eyebrow}
           </div>
           {title.map((line, index) => (
-            <div key={line} style={{ fontFamily: "Instrument Sans", fontSize, fontWeight: 600, letterSpacing: -3, lineHeight: 1.02, color: index ? CONCRETE : "#FFFFFF" }}>
+            <div key={line} style={{ fontFamily: SANS, fontSize, fontWeight: 600, letterSpacing: -3, lineHeight: 1.02, color: index ? CONCRETE : WHITE }}>
               {line}
             </div>
           ))}
         </div>
-        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", fontFamily: "Instrument Sans", fontSize: 26, color: CONCRETE }}>
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", fontFamily: SANS, fontSize: 26, color: CONCRETE }}>
           <div style={{ display: "flex", alignItems: "center" }}>
             <div style={{ width: 28, height: 6, background: VOLT, marginRight: 18 }} />
             alyr.qa
           </div>
           <div style={{ display: "flex", gap: 12, fontSize: 22 }}>
-            {facts.flatMap((fact, index) => (index ? [<span key={`s${index}`} style={{ color: "#5F666D" }}>·</span>, <span key={fact}>{fact}</span>] : [<span key={fact}>{fact}</span>]))}
+            {facts.flatMap((fact, index) => (index ? [<span key={`s${index}`} style={{ color: SEPARATOR }}>·</span>, <span key={fact}>{fact}</span>] : [<span key={fact}>{fact}</span>]))}
           </div>
         </div>
       </div>
@@ -87,8 +89,8 @@ export async function socialCard({ eyebrow, title, facts }: Card) {
     {
       ...cardSize,
       fonts: [
-        { name: "Instrument Sans", data: await instrument, style: "normal", weight: 600 },
-        { name: "IBM Plex Mono", data: await plexMono, style: "normal", weight: 400 },
+        { name: SANS, data: await instrument, style: "normal", weight: 600 },
+        { name: MONO, data: await plexMono, style: "normal", weight: 400 },
       ],
     },
   );

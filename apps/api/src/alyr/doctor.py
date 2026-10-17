@@ -53,6 +53,19 @@ async def _database(report: Report) -> None:
             )
         else:
             report.line(OK, f"Database up to date ({len(done)} migrations)")
+            # The catalog's stock number is the total of its log; the two must never differ.
+            drifted = await conn.fetchval(
+                "select count(*) from item_variants v left join (select variant_id, "
+                "sum(delta) as total from stock_movements where day is null "
+                "group by variant_id) m on m.variant_id = v.id "
+                "where v.on_hand <> coalesce(m.total, 0)"
+            )
+            report.line(
+                OK if not drifted else BAD,
+                "Stock numbers match their logs" if not drifted
+                else f"{drifted} item variants have a stock number that differs from its log",
+                "" if not drifted else "Do not edit stock by hand; see specs/001-catalog-engine",
+            )
         shop = await conn.fetchval("select name from tenants where slug = $1", DEMO_SLUG)
         report.line(
             OK if shop else BAD,
