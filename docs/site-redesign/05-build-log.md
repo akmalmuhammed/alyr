@@ -139,3 +139,10 @@ The geometry in 06 (a 45° gap "between the phone and the order record") cannot 
 - The plate fades in with the phone; it has no text, so it cannot be the largest paint.
 
 Checked at 1440, 1280, 1200, 1100 (Arabic), 1024 and 390, light and dark.
+
+### Stage 5: polish (commit "fix pass 5")
+
+- **06 P1-5:** captions balance their lines (`text-wrap: balance`).
+- **Rhythm, toward 12,500 px:** the statement's margins, the band's bottom padding, "Also in your workspace", "When you need more", and the closing call's top padding after its new fold are tighter. English at 1440 is now 12,896 px (13,934 before the fix pass), Arabic 12,618. Not 12,500: the fold above the closing call (86 px), the WhatsApp-line question, the how-it-works note and the taller hero plate added height, and nothing was removed.
+- Every section looked at in English and Arabic at 1440 and 390, light and dark (captures in `C:\t\fix\r\`, outside the repo).
+- `docs/brand.md`: the fold, the hero plate, `--band`, the outlined button, the new display cap and section rhythm, the 10 s failsafe.

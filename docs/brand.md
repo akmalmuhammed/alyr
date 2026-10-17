@@ -36,11 +36,14 @@ The homepage is "a working drawing of an owner's business" (`docs/site-redesign/
 
 | Extension | Rule |
 |---|---|
-| Fluid type scale | Display `clamp(2.75rem, 1.4rem + 5vw, 5.5rem)` at 1.0 (on two-column widths also capped at `6.1vw`, so the headline never runs into the hero figure); H2 `clamp(2rem, 1.3rem + 2.6vw, 3.25rem)`; H3 1.375rem; body 1.0625rem at 1.55; mono 0.75rem, tracked +0.08em in English only. Arabic: same sizes, display 1.25, body 1.7, never tracked or set in capitals |
-| Rhythm | 8 px steps: 8, 16, 24, 40, 64, 104; sections `clamp(4rem, 10vw, 8rem)` |
+| Fluid type scale | Display `clamp(2.75rem, 1.4rem + 5vw, 5.5rem)` at 1.0 (on two-column widths also capped at `min(5.75vw, 5.2rem)`, and at `5.1vw` between 62 and 84 rem where copy and figure take six columns each, so the headline ends before the hero plate); H2 `clamp(2rem, 1.3rem + 2.6vw, 3.25rem)`; H3 1.375rem; body 1.0625rem at 1.55; mono 0.75rem, tracked +0.08em in English only. Arabic: same sizes, display 1.25, body 1.7, never tracked or set in capitals |
+| Rhythm | 8 px steps: 8, 16, 24, 40, 64, 104; sections `clamp(3.5rem, 7vw, 6rem)`; section rules leave `clamp(2rem, 4vw, 3.5rem)` below them |
 | Colour, two additions only | `--volt-wash` (the product's pale Volt, for the current row) and `--pending`, a hollow grey dot for something not yet available. The pending contact state is a status line with that dot, never an error box or a disabled button |
 | Solid and dashed rules | A solid rule is true today; a dashed rule is a slot waiting to become true (the next products, "When you need more", the agreement's blank) |
-| The 45° cut corner | On the main button (the arrow sits under it and moves 1 px along the diagonal when pressed), the drawn phones, the agreement and the shop monogram. Every cut and diagonal is mirrored in Arabic, because `clip-path` does not flip |
+| The 45° cut corner | On the main button (the arrow sits under it and moves 1 px along the diagonal when pressed), its outlined twin (`btn-line`, a 1.5 px line along the same notch, for a second way in further down the page), the drawn phones, the agreement, the shop monogram and the hero plate. Every cut and diagonal is mirrored in Arabic, because `clip-path` does not flip |
+| The fold | The page's signature: three Carbon planes with the symbol's gaps (a 6 px Paper line across and a 6 px line down the 45° diagonal), at the entry to the Carbon band and again at the top of the closing call. The page shows through the gaps, so the fold stays drawn |
+| The hero plate | The hero figure sits on a Carbon plate with its top start corner cut at 45° (6 rem) and a 0.5 rem Paper slit along the same angle above the order record |
+| `--band` | The full-bleed Carbon of the band, the plate and the closing call: Carbon in light mode, `#1d2024` in dark mode so it still stands apart from the dark page; the header turns `--band` at 92 % while it sits over one |
 | FIG captions | Every product drawing has a mono caption on a hairline ending in a tick: "FIG 01 · what it shows · SAMPLE, FICTIONAL BAKERY" (Arabic: its own words, no capitals) |
 | One sample business | Qirfa Bakery / مخبز قرفة on every homepage figure, with sample prices said so |
 | Money | Tabular figures; amounts and "ALYR" sit in `<bdi>` and never break (`Text.tsx`) |
@@ -51,7 +54,7 @@ The homepage is "a working drawing of an owner's business" (`docs/site-redesign/
 
 - **Tokens** (`site.css`): durations `--dur-1` 120 ms, `--dur-2` 240, `--dur-3` 480, `--dur-4` 720; `--ease` `cubic-bezier(.16, 1, .3, 1)` for things arriving (`expo.out` in GSAP); `--spring`, a `linear()` spring for things the visitor presses; `--stagger` 60 ms; one travel vector at 45° (`--travel`, `--dir` is -1 in Arabic).
 - **Stack.** CSS for the hero's entrance (it runs before hydration), hovers, presses, springs and one-shot arrivals keyed on `.is-in`. GSAP 3.15 with ScrollTrigger and SplitText (`Choreography.tsx`) loads after the page's load event, only when motion is wanted: it says when things arrive, splits headings into lines (never characters, and Arabic headings are not split), scrubs the two progress rules and leans the main buttons 2 to 3 px toward a fine pointer. Cross-document View Transitions keep the header still while the next page arrives along the diagonal. No smooth-scroll library, no WebGL.
-- **Nothing hidden in the HTML.** A script in `<head>` adds `motion` before the first paint unless reduced motion is asked for; start states exist only under that class, and a 2.5 s failsafe removes it if the motion code never loads. Reduced motion runs no timeline and shows every end state.
+- **Nothing hidden in the HTML.** A script in `<head>` adds `motion` before the first paint unless reduced motion is asked for; start states exist only under that class, and a 2.5 s failsafe removes it if the motion code never loads; hydration replaces that with a 10 s one, so a slow phone keeps its motion. Reduced motion runs no timeline and shows every end state.
 - **Budget** (Lighthouse mobile on the built site): Performance at least 90, Accessibility 100, CLS under 0.05; JavaScript added by the motion layer under 70 KB gzipped.
 
 ## Open before the site goes public
