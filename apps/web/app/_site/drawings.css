@@ -193,12 +193,14 @@ main {
 /* the weekly report, as one WhatsApp message */
 .d-report { max-width: 27rem; padding: 12px 14px 8px; background: var(--d-card); color: var(--d-ink); border-radius: 2px 14px 14px 14px; box-shadow: var(--d-lift), 0 24px 60px -32px rgb(21 23 26 / .4); }
 .d-report:dir(rtl), [dir="rtl"] .d-report { border-radius: 14px 2px 14px 14px; }
-.d-report-text { display: grid; font-family: var(--mono); font-size: .8125rem; line-height: 1.6; font-variant-numeric: tabular-nums; }
+/* the report is plain text, which WhatsApp sets in its own sans: the site sets it in the sans too */
+.d-report-text { display: grid; font-family: var(--sans); font-size: .875rem; line-height: 1.55; font-variant-numeric: tabular-nums; }
 [lang="ar"] .d-report-text { font-family: var(--arabic); font-size: .875rem; line-height: 1.75; }
 .d-rl { display: block; }
 .d-report-head, .d-report-title { font-weight: 600; }
 .d-report-sec { display: grid; margin-top: .75rem; }
-.d-report .d-time { font-family: var(--sans); font-size: .6875rem; }
+/* the time in the bubble's corner; a message the owner receives carries no ticks */
+.d-report .d-time { justify-self: end; margin-top: .375rem; font-family: var(--sans); font-size: .6875rem; color: var(--d-ink-2); }
 
 
 /* ------------------------------------------------- a window of the workspace */
@@ -208,7 +210,7 @@ main {
 .aw {
   position: relative; z-index: 1; display: flex; flex-direction: column; min-width: 0;
   background: var(--window); color: var(--text); border-radius: 14px; overflow: clip;
-  box-shadow: 0 0 0 1px var(--window-line), 0 34px 80px -44px rgb(0 0 0 / .55);
+  box-shadow: 0 0 0 1px var(--window-line), var(--window-shadow);
 }
 .aw-bar { display: flex; align-items: center; gap: .625rem; min-height: 2.75rem; padding: 0 1rem; border-bottom: 1px solid var(--window-line); flex: none; font-size: .8125rem; line-height: 1.2; }
 .aw-bar b { font-weight: 600; white-space: nowrap; }
@@ -292,9 +294,9 @@ main {
 /* The numbered marks that match the callouts beside a figure. */
 .ws-mark {
   display: inline-grid; place-items: center; width: 1.375rem; height: 1.375rem; margin-inline-start: .5rem; flex: none;
-  border-radius: 50%; background: var(--volt); color: var(--on-volt); vertical-align: middle;
+  border-radius: 50%; background: var(--carbon); color: #fff; vertical-align: middle;
   font-family: var(--mono); font-size: .6875rem; font-weight: 500; line-height: 1; letter-spacing: 0; text-transform: none;
-  box-shadow: 0 0 0 3px var(--window);
+  box-shadow: 0 0 0 3px var(--window), inset 0 0 0 1.5px var(--mark-ring);
 }
 
 /* ------------------------------------------- a corner of each product's screen */
@@ -321,3 +323,33 @@ main {
 .panel-page { flex: 1; display: grid; place-items: center; padding: 1.25rem; background: var(--dark-canvas); }
 .d-book-phone { width: min(17.5rem, 100%); height: 31rem; }
 .panel-phone .d-main { padding-top: 12px; }
+
+/* Phones: the workspace's own phone layout, one card per visit or customer, so who looks
+   after a visit, its buttons and every balance are on screen without scrolling sideways. */
+@media (max-width: 47.99rem) {
+  .ws-scroll { overflow-x: visible; mask-image: none; -webkit-mask-image: none; }
+  .ws-scroll:dir(rtl) { mask-image: none; -webkit-mask-image: none; }
+  .ws-body { min-width: 0; padding: 1rem .875rem 1.125rem; }
+  .ws-table { gap: .5rem; border: 0; border-radius: 0; overflow: visible; }
+  .ws-tr, .ws-tr + .ws-tr { border: 1px solid var(--window-line); border-radius: 10px; padding: .75rem .875rem; }
+  /* the column heads: only "Handled by", which carries a mark, stays, as a label over the cards */
+  .ws-th { border: 0; }
+  .ws-th { display: flex; padding: 0 .125rem; background: none; }
+  .ws-bookings .ws-th > span:not(:nth-child(4)), .ws-credit .ws-th { display: none; }
+  .ws-bookings .ws-tr:not(.ws-th) {
+    grid-template-columns: minmax(0, 1fr) auto;
+    grid-template-areas: "when by" "service customer" "status status";
+    gap: .5rem .75rem;
+  }
+  .ws-bookings .ws-tr > :nth-child(1) { grid-area: when; }
+  .ws-bookings .ws-tr > :nth-child(2) { grid-area: service; font-weight: 600; }
+  .ws-bookings .ws-tr > :nth-child(3) { grid-area: customer; justify-self: end; color: var(--text-muted); }
+  .ws-bookings .ws-tr > :nth-child(4) { grid-area: by; }
+  .ws-bookings .ws-tr > :nth-child(5) { grid-area: status; }
+  .ws-select { min-width: 0; }
+  .ws-credit .ws-tr:not(.ws-th) { grid-template-columns: minmax(0, 1fr) auto; grid-template-areas: "name balance" "ages ages"; gap: .5rem .75rem; }
+  .ws-credit .ws-tr > :nth-child(1) { grid-area: name; font-weight: 600; }
+  .ws-credit .ws-tr > :nth-child(2) { grid-area: balance; }
+  .ws-credit .ws-tr > :nth-child(3) { grid-area: ages; }
+  .ws-legend { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}

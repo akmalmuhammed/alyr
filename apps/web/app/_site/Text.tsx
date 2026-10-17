@@ -24,9 +24,11 @@ const kind = (part: string) =>
  * own span, set as a block (`.line`), so a phone and a laptop break it in the same place. */
 export function lines(text: string): ReactNode {
   if (!text.includes("\n")) return rich(text);
-  return text.split("\n").map((line, index) => (
-    <span key={index} className="line">{rich(line)}</span>
-  ));
+  // a space between the lines, so a screen reader does not run "workspace.A product" together
+  return text.split("\n").flatMap((line, index) => [
+    ...(index ? [" "] : []),
+    <span key={index} className="line">{rich(line)}</span>,
+  ]);
 }
 
 /** A sentence from `copy.ts` with its amounts, order numbers and product names protected. */

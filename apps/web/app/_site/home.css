@@ -284,7 +284,7 @@ main[data-page="home"] { --grid: rgb(167 173 181 / .2); }
   .hero-side { margin-top: 1.25rem; }
   .hero-actions { margin-top: 1.25rem; display: grid; width: 100%; }
   .hero-actions .btn { width: 100%; }
-  .hero-more { display: none; }
+  .hero-more { justify-self: start; }
   .hero-note { margin-top: .75rem; font-size: .875rem; }
   .hero-facts { grid-template-columns: minmax(0, 1fr); margin-top: 1.5rem; }
   .hero-facts li, [dir="rtl"] .hero-facts li { padding: .6875rem 0; }
@@ -308,13 +308,14 @@ main[data-page="home"] { --grid: rgb(167 173 181 / .2); }
 @keyframes hp-line { from { translate: 0 42%; } }
 @keyframes hp-settle { from { font-stretch: 88%; } }
 @keyframes hp-plate { from { opacity: 0; translate: calc(var(--dir) * 24px) 24px; } }
-@keyframes hp-window { from { translate: 0 28px; } }
+@keyframes hp-window { from { opacity: 0; translate: 0 28px; } }
 @keyframes hp-flash { 0% { opacity: 1; } 100% { opacity: 0; } }
 
 @media (prefers-reduced-motion: no-preference) {
   /* the hero, before hydration: the headline rises out of its mask and settles to width
      (Latin only, and only where the lines never wrap); the plate arrives along 45°; the
-     window rises onto it; then the feed (AgentFigure) plays. */
+     window rises onto it; the status chip, then its dot, then the feed (AgentFigure), whose
+     first event arrives at 1.2 s at the earliest. */
   .motion .hero-eyebrow { animation: hp-fade var(--dur-2) var(--ease) both; }
   .motion .hl > span { animation: hp-line var(--dur-4) var(--ease) both; }
   .motion .hl + .hl > span { animation-delay: 90ms; }
@@ -322,9 +323,9 @@ main[data-page="home"] { --grid: rgb(167 173 181 / .2); }
   .motion .hero-actions { animation: hp-rise-solid var(--dur-3) var(--ease) both 360ms; }
   .motion .hero-note { animation: hp-rise-solid var(--dur-3) var(--ease) both 420ms; }
   .motion .hero-facts li { animation: hp-rise-solid var(--dur-3) var(--ease) both; animation-delay: calc(480ms + var(--i, 0) * var(--stagger)); }
-  .motion .afig-hero .af-plate { animation: hp-plate var(--dur-4) var(--ease) both 420ms; }
-  .motion .afig-hero .aw { animation: hp-window var(--dur-4) var(--ease) both 560ms; }
-  .motion .afig-hero .af-status { animation: hp-fade var(--dur-3) var(--ease) both 900ms; }
+  .motion .afig-hero .af-plate { animation: hp-plate var(--dur-4) var(--ease) both; }
+  .motion .afig-hero .aw { animation: hp-window var(--dur-4) var(--ease) both 240ms; }
+  .motion .afig-hero .af-status { animation: hp-fade var(--dur-3) var(--ease) both 500ms; }
   .motion .afig-hero .cap { animation: hp-fade var(--dur-3) var(--ease) both 1000ms; }
 
   /* section headings stay masked until the choreography splits them as they are reached */
@@ -385,4 +386,27 @@ main[data-page="home"] { --grid: rgb(167 173 181 / .2); }
   /* the headline's second line ends before the body beside it, at every width */
   .hero .hero-title { font-size: min(var(--display), 6.2vw); }
   .hero .hero-title .hl { white-space: nowrap; }
+}
+
+/* A short laptop screen (1366 x 768, 1440 x 900): the plate starts higher, so the newest
+   events, the flag and its rule among them, are in the first screen. */
+@media (min-width: 62rem) and (max-height: 57.5rem) {
+  .hero { padding-top: clamp(1rem, 2vw, 1.5rem); }
+  .hero-grid { padding-top: 0; }
+  .hero-facts { margin-top: 1.5rem; }
+  .afig-hero { margin-top: 1.5rem; }
+}
+/* Between tablet and laptop the body column is taller than the headline: both start at the top. */
+@media (min-width: 62rem) and (max-width: 74.99rem) {
+  .hero-grid { align-items: start; }
+  .hero-eyebrow, .hero-side { align-self: start; }
+}
+/* Phones: the agent comes before the facts, which follow the figure as one wrapped line. */
+@media (max-width: 47.99rem) {
+  .hero > .wrap { display: flex; flex-direction: column; }
+  .hero-facts { order: 1; display: flex; flex-wrap: wrap; gap: .25rem .625rem; margin-top: 1.25rem; border-top: 0; color: var(--text-muted); }
+  .hero-facts li, [dir="rtl"] .hero-facts li { padding: 0; font-size: .875rem; }
+  .hero-facts li + li, [dir="rtl"] .hero-facts li + li { border: 0; padding: 0; }
+  .hero-facts li + li::before { content: "·"; margin-inline-end: .625rem; }
+  .afig-hero { margin-top: 1.75rem; }
 }

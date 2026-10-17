@@ -6,13 +6,18 @@
 // its time and a Volt tick, while the dashboard's "Done for you" count steps up with each
 // (07-site-brief.md §1). Every word arrives as props from `copy.ts`, so no copy is bundled.
 //
+// - The static HTML has the "Done for you" count as it stood before the feed's events, so
+//   the count only ever goes up: the feed then plays and each event adds to it.
 // - Without JavaScript: the dashboard of the first sample, and the whole feed, composed.
-// - With reduced motion, or once the 4 s failsafe has removed `motion`: the same, composed.
+// - With reduced motion, or once the 4 s failsafe has removed `motion`: the same, composed,
+//   and the count at its final value.
 // - Otherwise the feed waits until the figure is on screen, then plays once (under 5 s, so
-//   it needs no pause control), and again when the visitor picks another sample.
+//   it needs no pause control), and again whenever the visitor picks another sample.
+// - The newest event is on top. Events are drawn newest first and the list slides down by
+//   one event as each arrives (a transform, so nothing around it moves).
 // The switch (Bakery, Salon, Home services) shows only when scripts run (`.al-js`).
 
-import { useEffect, useMemo, useRef, useState, type CSSProperties, type ReactNode } from "react";
+import { useEffect, useLayoutEffect, useMemo, useRef, useState, type CSSProperties, type ReactNode } from "react";
 import { AgentDashboard, Rich } from "../_agent/AgentDashboard";
 import type { AgentView, Rich as RichParts } from "../_agent/types";
 import type { AgentFigure as FigureCopy, Caption, FeedEvent, SampleKey } from "./copy";
@@ -23,8 +28,10 @@ import "./agentfig.css";
 type Props = {
   variant: "hero" | "spot" | "agent";
   views: Partial<Record<SampleKey, AgentView>>;
-  /** The samples the switch offers, in order; the first shows first. */
+  /** The samples the switch offers, in order. */
   order: SampleKey[];
+  /** The sample shown first (by default the first in `order`). */
+  start?: SampleKey;
   text: FigureCopy;
   figLabel: string;
   caption: Caption;
@@ -41,8 +48,15 @@ type Props = {
   id?: string;
 };
 
-const FIRST = 600;
-const STEP = 880;
+/** The first event arrives no earlier than this after navigation: after the plate, the
+ * window and the status chip (home.css), so the hero builds in one order. */
+const FIRST_AT = 1200;
+const STEP = 700;
+/** The status dot lights this long before the first event. */
+const LIGHT_LEAD = 400;
+
+// useLayoutEffect warns on the server; the placement only matters in the browser.
+const useIsoLayoutEffect = typeof window === "undefined" ? useEffect : useLayoutEffect;
 
 function count(value: string): number {
   return Number(value.replace(/[^\d]/g, "")) || 0;
@@ -84,16 +98,19 @@ function Tick() {
 }
 
 export function AgentFigure({
-  variant, views, order, text, figLabel, caption, label, switcher = false, feed = false, crop = false,
+  variant, views, order, start, text, figLabel, caption, label, switcher = false, feed = false, crop = false,
   headingLevel = 2, aside, under, id,
 }: Props) {
-  const [sample, setSample] = useState<SampleKey>(order[0]);
+  const [sample, setSample] = useState<SampleKey>(start ?? order[0]);
   const [phase, setPhase] = useState<"composed" | "waiting" | "playing">("composed");
-  const [shown, setShown] = useState(Number.POSITIVE_INFINITY);
+  // With a feed, the page is drawn with the count before the feed (see above).
+  const [shown, setShown] = useState(feed ? 0 : Number.POSITIVE_INFINITY);
   const [run, setRun] = useState(0);
+  const [wait, setWait] = useState(0);
   const [announce, setAnnounce] = useState("");
   const root = useRef<HTMLElement>(null);
   const feedBox = useRef<HTMLDivElement>(null);
+  const list = useRef<HTMLOListElement>(null);
   const timers = useRef<number[]>([]);
 
   const s = text.samples[sample];
@@ -109,22 +126,30 @@ export function AgentFigure({
   // Plays the feed from its first event: the count goes back to where it stood, and each
   // event then arrives in turn. The dashboard is drawn afresh first (its key), so going back
   // is not mistaken for a change worth a tick.
-  const play = (length: number, wait = FIRST) => {
+  const play = (length: number, delay: number) => {
     clear();
     setShown(0);
     setRun((r) => r + 1);
+    setWait(delay);
     setPhase("playing");
     for (let i = 1; i <= length; i++) {
-      timers.current.push(window.setTimeout(() => setShown(i), wait + (i - 1) * STEP));
+      timers.current.push(window.setTimeout(() => setShown(i), delay + (i - 1) * STEP));
     }
   };
 
-  const moving = () =>
-    document.documentElement.classList.contains("motion") &&
-    !window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+  const still = () => window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+  // On hydration the feed plays only while the page still wants motion: once the failsafe
+  // has removed it (a slow phone), the composed feed is already on screen and stays.
+  const moving = () => document.documentElement.classList.contains("motion") && !still();
 
   useEffect(() => {
-    if (!feed || !moving()) return;
+    if (!feed) return;
+    if (!moving()) {
+      // still: the count goes straight to its final value, beside the composed feed
+      const done = window.setTimeout(() => setShown(Number.POSITIVE_INFINITY), 0);
+      timers.current.push(done);
+      return clear;
+    }
     // The feed starts when the feed itself is in view (on a phone it sits under the window,
     // just below "Done for you", which is then in view too).
     const node = feedBox.current ?? root.current;
@@ -133,8 +158,8 @@ export function AgentFigure({
     const box = node?.getBoundingClientRect();
     const visible = !!box && box.top < window.innerHeight * 0.85 && box.bottom > 0;
     if (visible) {
-      const start = window.setTimeout(() => play(length), 0);
-      timers.current.push(start);
+      const begin = window.setTimeout(() => play(length, Math.max(300, FIRST_AT - performance.now())), 0);
+      timers.current.push(begin);
       return clear;
     }
     const wait = window.setTimeout(() => {
@@ -164,13 +189,37 @@ export function AgentFigure({
     if (key === sample) return;
     setSample(key);
     setAnnounce(text.samples[key].announce);
-    if (feed && moving()) play(text.samples[key].feed.length, 300);
+    // A choice replays the feed whenever motion is allowed, failsafe or not.
+    if (feed && !still()) play(text.samples[key].feed.length, 300);
     else {
       clear();
       setShown(Number.POSITIVE_INFINITY);
       setPhase("composed");
     }
   };
+
+  // Newest first: the list is drawn newest at the top and moved up past the events still to
+  // come, so the newest one shown sits at the top. In a row of events (the hero between
+  // phone and wide screens) every event has its own place and nothing moves.
+  useIsoLayoutEffect(() => {
+    const node = list.current;
+    if (!node) return;
+    const place = () => {
+      const items = Array.from(node.children) as HTMLElement[];
+      const n = items.length;
+      const column = n > 1 && items[0].offsetTop !== items[n - 1].offsetTop;
+      let offset = 0;
+      if (phase !== "composed" && column && shown < n) {
+        const last = items[n - 1];
+        offset = shown <= 0 ? last.offsetTop + last.offsetHeight : items[n - shown].offsetTop;
+      }
+      node.style.translate = offset ? `0 ${-offset}px` : "";
+    };
+    place();
+    const watch = new ResizeObserver(place);
+    watch.observe(node);
+    return () => watch.disconnect();
+  }, [phase, shown, sample, run]);
 
   const window_ = (
     <div className={`aw${crop ? " is-crop" : ""}`} inert={crop || undefined}>
@@ -186,7 +235,7 @@ export function AgentFigure({
   );
 
   return (
-    <figure ref={root} id={id} className={`afig afig-${variant}`} aria-label={label}>
+    <figure ref={root} id={id} className={`afig afig-${variant}`} aria-label={label} data-feed={feed || undefined} data-phase={feed ? phase : undefined}>
       {switcher && (
         <div className="af-switch" role="group" aria-label={text.switchLabel}>
           <span className="af-switch-k" aria-hidden="true">{text.switchLabel}</span>
@@ -204,13 +253,20 @@ export function AgentFigure({
         {variant === "hero" && <span className="af-plate" aria-hidden="true" />}
         {window_}
         {feed && (
-          <div className="af-feed" data-phase={phase} ref={feedBox}>
+          <div
+            className="af-feed"
+            data-phase={phase}
+            data-start={shown <= 0 || undefined}
+            ref={feedBox}
+            style={{ "--af-light": `${wait - LIGHT_LEAD}ms` } as CSSProperties}
+          >
             <p className="af-status">
               <span className="af-dot" aria-hidden="true" />
               <bdi>{text.status}</bdi>
             </p>
-            <ol className="af-list" aria-label={text.feedLabel}>
-              {events.map((event, index) => {
+            <div className="af-view">
+            <ol className="af-list" aria-label={text.feedLabel} ref={list}>
+              {events.map((event, index) => ({ event, index })).reverse().map(({ event, index }) => {
                 const flag = event.flag ? flagged(view, event.flag) : null;
                 return (
                   <li
@@ -233,6 +289,7 @@ export function AgentFigure({
                 );
               })}
             </ol>
+            </div>
           </div>
         )}
         {aside && <div className="af-aside">{aside}</div>}

@@ -33,6 +33,15 @@ cp "$app/robots.txt.body" out-site/robots.txt
 cp "$app/sitemap.xml.body" out-site/sitemap.xml
 cp "$app/icon.svg.body" out-site/icon.svg
 cp "$app/opengraph-image.body" out-site/opengraph-image
+# each English product page has its own card, which Next names with a hash
+for page in $pages; do
+  for card in "$app/$page"/opengraph-image-*.body; do
+    [ -e "$card" ] || { echo "no social card for /$page" >&2; exit 1; }
+    name="$(basename "$card" .body)"
+    mkdir -p "out-site/$page"
+    cp "$card" "out-site/$page/$name"
+  done
+done
 cp -r .next/static out-site/_next/static
 
 # The pages are drawn first and the framework's scripts start after the first paint

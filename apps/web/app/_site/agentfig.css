@@ -8,6 +8,7 @@
 
 /* the dashboard keeps the product's own base weight (the site's body text is 430) */
 main .ag { font-weight: 400; }
+.afig .ag .ag-summary { text-wrap: pretty; }
 .afig { position: relative; display: grid; grid-template-columns: minmax(0, 1fr); gap: 1rem; min-width: 0; margin: 0; }
 .af-stage { position: relative; min-width: 0; }
 .af-under { margin-top: .25rem; font-size: .9375rem; color: var(--text-muted); max-width: 40rem; }
@@ -28,6 +29,8 @@ main .ag { font-weight: 400; }
 .af-opt:hover { color: var(--text); }
 /* on the narrowest phones the three samples still fit on one row */
 @media (max-width: 24rem) { .af-opt { padding: 0 .625rem; } }
+/* the narrowest phones: the status chip stays on one line */
+@media (max-width: 22.5rem) { .af-status { letter-spacing: .04em; } }
 .af-opt[aria-pressed="true"] { background: var(--text); color: var(--canvas); }
 .af-opt:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
 
@@ -42,13 +45,14 @@ main .ag { font-weight: 400; }
 /* --------------------------------------------------------------------- the feed */
 .af-feed { position: relative; z-index: 2; min-width: 0; color: var(--dark-text); }
 .af-status {
-  display: inline-flex; align-items: center; gap: .5rem; min-height: 2rem; padding: 0 .875rem 0 .75rem;
+  display: inline-flex; align-items: center; gap: .5rem; min-height: 2rem; padding: 0 .875rem 0 .75rem; white-space: nowrap;
   border: 1px solid var(--dark-line); border-radius: 1rem; background: var(--dark-canvas);
   font-family: var(--mono); font-size: .6875rem; font-weight: 500; letter-spacing: .08em; text-transform: uppercase; color: #fff;
 }
 [lang="ar"] .af-status { font-family: var(--arabic); letter-spacing: 0; text-transform: none; font-size: .8125rem; }
 .af-dot { width: .5rem; height: .5rem; border-radius: 50%; background: var(--volt); flex: none; }
-.af-list { margin-top: .875rem; display: grid; border-bottom: 1px solid var(--dark-line); }
+.af-view { margin-top: .875rem; overflow: hidden; }
+.af-list { position: relative; display: grid; border-bottom: 1px solid var(--dark-line); }
 .af-item { display: grid; grid-template-columns: 2.875rem 1.25rem minmax(0, 1fr); column-gap: .75rem; align-items: start; padding-block: .875rem .9375rem; border-top: 1px solid var(--dark-line); }
 .af-at { padding-top: .1875rem; font-family: var(--mono); font-size: .75rem; color: #a7adb5; font-variant-numeric: tabular-nums; }
 .af-tick { display: grid; place-items: center; width: 1.25rem; height: 1.25rem; margin-top: .0625rem; border-radius: 50%; background: var(--volt); color: var(--on-volt); }
@@ -68,12 +72,13 @@ main .ag { font-weight: 400; }
 @media (prefers-reduced-motion: no-preference) {
   .motion .af-feed[data-phase="composed"] .af-item { opacity: 0; }
   .af-feed[data-phase="waiting"] .af-item,
-  .af-feed[data-phase="playing"] .af-item:not(.is-on) { opacity: 0; translate: calc(var(--dir) * -6px) 6px; }
+  .af-feed[data-phase="playing"] .af-item:not(.is-on) { opacity: 0; translate: 0 -6px; }
   .af-feed[data-phase="playing"] .af-item { transition: opacity var(--dur-3) var(--ease), translate var(--dur-3) var(--ease); }
+  .af-feed[data-phase="playing"]:not([data-start]) .af-list { transition: translate var(--dur-3) var(--ease); }
   .af-feed[data-phase="playing"] .af-item.is-on .af-tick { animation: af-pop var(--dur-3) var(--spring) both 80ms; }
   /* the status dot lights once, with one ring, when the feed starts */
   .af-feed[data-phase="waiting"] .af-dot, .motion .af-feed[data-phase="composed"] .af-dot { background: #6b7480; }
-  .af-feed[data-phase="playing"] .af-dot { animation: af-light var(--dur-4) var(--ease) both; }
+  .af-feed[data-phase="playing"] .af-dot { animation: af-light var(--dur-4) var(--ease) both var(--af-light, 0ms); }
 }
 @keyframes af-pop { from { scale: 0; } }
 @keyframes af-light {
@@ -96,6 +101,7 @@ main .ag { font-weight: 400; }
 }
 [dir="rtl"] .af-plate { clip-path: polygon(0 0, calc(100% - var(--cut)) 0, 100% var(--cut), 100% 100%, 0 100%); }
 .afig-hero .aw { --crop: 35rem; grid-column: 1; }
+.afig-hero .aw.is-crop { border-end-start-radius: 0; border-end-end-radius: 0; box-shadow: 0 0 0 1px var(--window-line); }
 .afig-hero .af-feed { grid-column: 2; padding-top: .25rem; }
 /* the figure is a picture of the screen below it, so it does not rise again on its own */
 .afig-hero .ag :is(.ag-kpi, .ag-bar) { animation: none !important; opacity: 1 !important; }
@@ -115,14 +121,18 @@ main .ag { font-weight: 400; }
 }
 @media (max-width: 47.99rem) {
   .af-plate { --cut: 3rem; }
-  .afig-hero .af-stage { padding: 1.25rem .75rem 0; }
-  /* down to the end of "Done for you", whose count steps up as the feed below plays */
-  .afig-hero .aw { --crop: 46rem; }
-  .afig-hero .af-feed { margin: -3rem .25rem 0 1.75rem; padding: 1rem 1.125rem .25rem; box-shadow: 0 0 0 1px var(--dark-line), 0 34px 80px -30px rgb(0 0 0 / .8); }
-  [dir="rtl"] .afig-hero .af-feed { margin: -3rem 1.75rem 0 .25rem; }
-  .afig-hero .af-list { grid-template-columns: minmax(0, 1fr); }
-  .afig-hero .af-item { grid-template-columns: 2.875rem 1.25rem minmax(0, 1fr); grid-template-areas: "at tick what"; row-gap: 0; }
+  .afig-hero .af-stage { padding: 1.25rem .75rem .75rem; }
+  .afig-hero .af-feed { grid-row: 1; margin: 0 .5rem 1.25rem; padding: 0; border-radius: 0; background: none; box-shadow: none; }
+  .afig-hero .aw { grid-row: 2; }
+  /* the chip and the newest three events; the oldest fade out under the edge */
+  .afig-hero .af-view { max-height: 15.5rem; mask-image: linear-gradient(to bottom, #000 calc(100% - 2.5rem), transparent); -webkit-mask-image: linear-gradient(to bottom, #000 calc(100% - 2.5rem), transparent); }
+  .afig-hero .af-list { grid-template-columns: minmax(0, 1fr); border-bottom: 0; }
+  .afig-hero .af-item { grid-template-columns: 2.875rem 1.25rem minmax(0, 1fr); grid-template-areas: "at tick what"; row-gap: 0; padding-block: .6875rem .75rem; }
   .afig-hero .af-at { padding-top: .1875rem; align-self: start; }
+  /* the window ends after "Done for you", whose count steps up as the feed above plays */
+  .afig-hero .aw.is-crop { border-radius: 14px; box-shadow: 0 0 0 1px var(--window-line); }
+  .afig-hero .aw.is-crop .aw-body { height: auto; mask-image: none; -webkit-mask-image: none; }
+  .afig-hero .ag-grid > .ag-kpis-block, .afig-hero .ag-grid > .ag-kpis-block ~ * { display: none; }
 }
 
 /* ---------------------------------------------- spot: the whole screen, explained */
@@ -136,7 +146,7 @@ main .ag { font-weight: 400; }
 .afig-spot .ag :is(.ag-head, .ag-needs, .ag-kpis-block, .ag-cards, .ag-done)::after {
   position: absolute; top: 0; inset-inline-end: 0; translate: 0 -50%; z-index: 1;
   display: grid; place-items: center; width: 1.5rem; height: 1.5rem; border-radius: 50%;
-  background: var(--volt); color: var(--on-volt); box-shadow: 0 0 0 3px var(--window);
+  background: var(--carbon); color: #fff; box-shadow: 0 0 0 3px var(--window), inset 0 0 0 1.5px var(--mark-ring);
   font-family: var(--mono); font-size: .75rem; font-weight: 500; line-height: 1;
 }
 .afig-spot .ag .ag-head::after { content: "1" / ""; top: .25rem; translate: none; }

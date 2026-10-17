@@ -32,6 +32,9 @@
   /* a window of the workspace drawn on the page (the Agent figure, the product screens) */
   --window: #ffffff;
   --window-line: rgb(21 23 26 / .1);
+  --window-shadow: 0 34px 80px -44px rgb(0 0 0 / .55);
+  /* the numbered marks beside a figure: Carbon discs, ringed in Volt only in dark */
+  --mark-ring: transparent;
 
   /* Inside a Carbon block: a well a step under it, a panel a step over it. */
   --dark-canvas: #0e1012;
@@ -121,8 +124,10 @@
     --focus: #b7f34a;
     --volt-wash: rgb(183 243 74 / .12);
     --menu-shadow: 0 24px 70px rgb(0 0 0 / .5);
-    --window: #202428;
+    --window: #262a2f;
     --window-line: rgb(255 255 255 / .09);
+    --window-shadow: 0 24px 60px -30px #000;
+    --mark-ring: var(--volt);
     /* Carbon on a dark page is lifted a step (#15171a on #0e1012 is 1.05:1), and what sits
        inside it keeps its place: wells under it, panels over it */
     --band: #1d2024;
@@ -171,8 +176,10 @@
   --focus: #b7f34a;
   --volt-wash: rgb(183 243 74 / .12);
   --menu-shadow: 0 24px 70px rgb(0 0 0 / .5);
-  --window: #202428;
+  --window: #262a2f;
   --window-line: rgb(255 255 255 / .09);
+  --window-shadow: 0 24px 60px -30px #000;
+  --mark-ring: var(--volt);
   --band: #1d2024;
   --band-edge: var(--dark-line);
   --dark-canvas: #15171a;
@@ -272,7 +279,7 @@ svg { display: block; }
   font-weight: 600; font-size: 1rem; line-height: 1; white-space: nowrap;
   transition: transform var(--dur-1) var(--ease);
 }
-.btn-sm { --notch: 9px; min-height: 2.5rem; padding: 0 .9375rem; font-size: .9375rem; }
+.btn-sm { --notch: 9px; min-height: 2.75rem; padding: 0 .9375rem; font-size: .9375rem; }
 .btn-volt { color: var(--on-volt); }
 .btn-volt::before {
   content: ""; position: absolute; inset: 0; z-index: -1; border-radius: 2px; background: var(--volt);
@@ -347,7 +354,7 @@ svg { display: block; }
 .top-logo { display: inline-flex; align-items: center; min-height: 2.75rem; }
 .logo { width: 9.25rem; height: auto; color: var(--text); }
 .top-nav { display: flex; gap: 1.75rem; margin-inline-start: 1rem; }
-.top-nav a, .top-lang { font-size: .9375rem; font-weight: 500; color: var(--text-muted); padding: .5rem 0; transition: color var(--fast) var(--ease); }
+.top-nav a, .top-lang { display: inline-flex; align-items: center; min-height: 2.75rem; font-size: .9375rem; font-weight: 500; color: var(--text-muted); padding: .5rem 0; transition: color var(--fast) var(--ease); }
 /* room inside the focus ring, without moving the links */
 .top-nav a { padding-inline: .375rem; margin-inline: -.375rem; }
 .top-nav a:hover, .top-lang:hover { color: var(--text); }
@@ -374,7 +381,7 @@ svg { display: block; }
    group of the menu. */
 .pm { position: static; }
 .pm-btn {
-  list-style: none; display: inline-flex; align-items: center; gap: .25rem; cursor: pointer;
+  list-style: none; display: inline-flex; align-items: center; gap: .25rem; min-height: 2.75rem; cursor: pointer;
   font-size: .9375rem; font-weight: 500; color: var(--text-muted); padding: .5rem .375rem; margin-inline: -.375rem;
   border-radius: 2px; transition: color var(--fast) var(--ease); white-space: nowrap;
 }
@@ -472,7 +479,13 @@ a.pm-link[aria-current="page"] .pm-name::after { content: ""; display: inline-bl
 
 /* product: the Carbon command moment */
 .product { padding: 0 clamp(.5rem, 1.5vw, 1.25rem); }
-.product-in { background: var(--band); color: var(--dark-text); border-radius: 1rem; padding-block: clamp(4rem, 9vw, 7.5rem) clamp(3rem, 6vw, 5rem); position: relative; overflow: clip; }
+.product-in {
+  --cut: 6rem;
+  background: var(--band); color: var(--dark-text); padding-block: clamp(4rem, 9vw, 7.5rem) clamp(3rem, 6vw, 5rem); position: relative; overflow: clip;
+  /* the homepage plate's 45-degree cut, mirrored in Arabic */
+  clip-path: polygon(var(--cut) 0, 100% 0, 100% 100%, 0 100%, 0 var(--cut));
+}
+[dir="rtl"] .product-in { clip-path: polygon(0 0, calc(100% - var(--cut)) 0, 100% var(--cut), 100% 100%, 0 100%); }
 .product-in::before {
   content: ""; position: absolute; inset: 0; pointer-events: none;
   background-image: radial-gradient(rgb(167 173 181 / .16) 1px, transparent 1px);
@@ -663,7 +676,8 @@ a.pm-link[aria-current="page"] .pm-name::after { content: ""; display: inline-bl
    across). The page shows through, so the fold stays drawn once the planes have landed.
    It opens the Carbon band on the homepage and the closing call on every page. The planes
    start outside their strip, so the strip clips them: nothing may widen the page. */
-.band-fold { position: relative; overflow: clip; height: clamp(3rem, 6vw, 5.5rem); --fold: clamp(3rem, 6vw, 5.5rem); --x: 62%; }
+/* tall enough that its first plane reads as a plane (4 rem at full width), not a thin strip */
+.band-fold { position: relative; overflow: clip; height: clamp(4rem, 10vw, 9rem); --fold: clamp(4rem, 10vw, 9rem); --x: 62%; }
 .band-fold i { position: absolute; inset: 0; background: var(--band); }
 .band-fold i:nth-child(1) { clip-path: polygon(0 0, 100% 0, 100% calc(46% - 3px), 0 calc(46% - 3px)); }
 .band-fold i:nth-child(2) { clip-path: polygon(0 calc(46% + 3px), calc(var(--x) - 7.25px) calc(46% + 3px), calc(var(--x) - var(--fold) * .54 - 4.25px) 100%, 0 100%); }
@@ -824,7 +838,7 @@ a.pm-link[aria-current="page"] .pm-name::after { content: ""; display: inline-bl
   .statement, .company-say { font-size: 1.5rem; }
   .steps li { grid-template-columns: 2.25rem 1fr; padding-block: 1.375rem; }
   .product { padding-inline: 0; }
-  .product-in { border-radius: 0; }
+  .product-in { --cut: 3rem; }
   .product-in { padding-block: 3.5rem 2.5rem; }
   /* the tab row scrolls sideways; a fade on the far edge says there is more */
   .demo-bar { gap: .25rem; }
@@ -996,3 +1010,15 @@ h4 { margin: 0; }
   .how-panel { border-radius: .75rem; padding: .75rem; }
   .fx-now { min-height: 13.5rem; }
 }
+
+/* The homepage's hero has its own Volt button. Until it scrolls away (HomeMotion sets
+   data-hero-gone), the header's button is its outlined twin, so one Volt button is on screen. */
+:root:has([data-hero-cta]):not([data-hero-gone]) .top .btn-volt { color: var(--text); }
+:root:has([data-hero-cta]):not([data-hero-gone]) .top .btn-volt::before { background: var(--text); }
+:root:has([data-hero-cta]):not([data-hero-gone]) .top .btn-volt::after {
+  content: ""; position: absolute; z-index: -1; inset: 1.5px; border-radius: 1px; background: var(--canvas);
+  clip-path: polygon(0 0, calc(100% - var(--notch) + .88px) 0, 100% calc(var(--notch) - .88px), 100% 100%, 0 100%);
+}
+[dir="rtl"]:has([data-hero-cta]):not([data-hero-gone]) .top .btn-volt::after { clip-path: polygon(calc(var(--notch) - .88px) 0, 100% 0, 100% 100%, 0 100%, 0 calc(var(--notch) - .88px)); }
+/* "+ Agent": it comes with every product, so its tag is lighter */
+.tag.tag-plus { background: transparent; box-shadow: inset 0 0 0 1px var(--line); color: var(--text-muted); }

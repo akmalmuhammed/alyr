@@ -545,7 +545,7 @@ const en: Copy = {
         announce: "Showing Qirfa Bakery, a fictional bakery.",
         fictional: "Sample data, fictional bakery",
         feed: [
-          { at: "16:00", title: "Booking reminder sent", line: "Cake tasting, today at 18:00\u00a0· Noor A.", adds: ["sent", "booking_reminders"] },
+          { at: "16:00", title: "Booking reminder sent", line: "Cake tasting, today at 18:00\u00a0·\u00a0Noor A.", adds: ["sent", "booking_reminders"] },
           { at: "16:04", title: "Welcome menu sent", line: "To a new customer: “Welcome to Qirfa Bakery. How can we help?”", adds: ["sent"] },
           { at: "16:09", title: "Order confirmation sent", line: "Order #1441 from Lina F., with its tracking page", adds: ["sent"] },
           { at: "16:13", title: "Order page sent", line: "Sara M. wrote “order”. The link went back at once.", adds: ["sent"] },
@@ -560,7 +560,7 @@ const en: Copy = {
         fictional: "Sample data, fictional salon",
         feed: [
           { at: "15:58", title: "Welcome menu sent", line: "To a new customer: “Welcome to Dafira Salon. How can we help?”", adds: ["sent"] },
-          { at: "16:00", title: "Booking reminder sent", line: "Blow-dry, today at 18:00\u00a0· Dana R.", adds: ["sent", "booking_reminders"] },
+          { at: "16:00", title: "Booking reminder sent", line: "Blow-dry, today at 18:00\u00a0·\u00a0Dana R.", adds: ["sent", "booking_reminders"] },
           { at: "16:01", title: "Flagged by rule", flag: { from: "needs", key: "unmarked" }, adds: [] },
           { at: "16:07", title: "Booking page sent", line: "Rania H. tapped “Book a visit”. The link went back at once.", adds: ["sent"] },
           { at: "16:16", title: "Flagged by rule", flag: { from: "suggestion", key: "repeat_no_show" }, adds: [] },
@@ -574,7 +574,7 @@ const en: Copy = {
         fictional: "Sample data, fictional AC company",
         feed: [
           { at: "15:56", title: "Welcome menu sent", line: "To a new customer: “Welcome to Zilal Cooling. How can we help?”", adds: ["sent"] },
-          { at: "16:00", title: "Booking reminder sent", line: "AC service, split unit, today at 18:00\u00a0· Hassan D.", adds: ["sent", "booking_reminders"] },
+          { at: "16:00", title: "Booking reminder sent", line: "AC service, split unit, today at 18:00\u00a0·\u00a0Hassan D.", adds: ["sent", "booking_reminders"] },
           { at: "16:06", title: "Booking page sent", line: "Omar K. wrote “book”. The link went back at once.", adds: ["sent"] },
           { at: "16:12", title: "Booking details sent", line: "Ali T. wrote “my booking”: his visit, with a Cancel button.", adds: ["sent"] },
           { at: "16:17", title: "Flagged by rule", flag: { from: "suggestion", key: "overdue" }, adds: [] },
@@ -715,7 +715,7 @@ const en: Copy = {
         caption: { n: "04", text: "The Sunday report on WhatsApp" },
         heading: "ALYR weekly report: Qirfa Bakery",
         week: "4 to 10 Oct",
-        time: "9:00 AM",
+        time: "09:00",
         sections: [
           {
             title: "Credit accounts",
@@ -972,7 +972,7 @@ const en: Copy = {
       track: {
         context: "Order tracking",
         eyebrow: "Your order",
-        title: "Order #1043",
+        title: "Order #1439",
         status: "Ready for collection",
         steps: [
           { label: "Order received", at: "Wed 4:05 pm", reached: true },
@@ -1371,7 +1371,7 @@ const en: Copy = {
         title: ["Customers book in the chat.", "ALYR reminds them before they come."],
         lead:
           "Your customers pick a service and a free time from a page that opens in the chat, with no app. The confirmation goes at once, a reminder two hours before, and your team marks who came.",
-        facts: ["Free times from your opening hours", "A reminder 2 hours before", "One booking at a time, for one chair or one room"],
+        facts: ["Free times from your opening hours", "A reminder 2 hours before", "One booking at a time, for one chair or one\u00a0room"],
         factsOffer: ["From QAR 449 a month, or QAR 150 added to another ALYR product"],
       },
       demo: {
@@ -1807,7 +1807,7 @@ const en: Copy = {
           caption: { n: "03", text: "The Sunday report on WhatsApp" },
           heading: "ALYR weekly report: Qirfa Bakery",
           week: "4 to 10 Oct",
-          time: "9:00 AM",
+          time: "09:00",
           sections: [
             {
               title: "Credit accounts",
@@ -2484,7 +2484,7 @@ const ar: Copy = {
         announce: "يُعرض الآن مخبز قرفة، وهو مخبز غير حقيقي.",
         fictional: "مثال: مخبز غير حقيقي",
         feed: [
-          { at: "16:00", title: "أُرسل تذكير بموعد", line: "تذوّق الكيك، اليوم الساعة 18:00\u00a0· نور أ.", adds: ["sent", "booking_reminders"] },
+          { at: "16:00", title: "أُرسل تذكير بموعد", line: "تذوّق الكيك، اليوم الساعة 18:00\u00a0·\u00a0نور أ.", adds: ["sent", "booking_reminders"] },
           { at: "16:04", title: "أُرسلت قائمة الترحيب", line: "لعميل جديد: «أهلاً بك في مخبز قرفة. كيف نقدر نساعدك؟»", adds: ["sent"] },
           { at: "16:09", title: "أُرسل تأكيد الطلب", line: "الطلب رقم 1441 من لينا ف.، مع صفحة تتبّعه", adds: ["sent"] },
           { at: "16:13", title: "أُرسلت صفحة الطلب", line: "كتبت سارة م. «طلب»، فوصلها الرابط فوراً.", adds: ["sent"] },
@@ -2499,7 +2499,7 @@ const ar: Copy = {
         fictional: "مثال: صالون غير حقيقي",
         feed: [
           { at: "15:58", title: "أُرسلت قائمة الترحيب", line: "لعميلة جديدة: «أهلاً بك في صالون ضفيرة. كيف نقدر نخدمك؟»", adds: ["sent"] },
-          { at: "16:00", title: "أُرسل تذكير بموعد", line: "تسشوار، اليوم الساعة 18:00\u00a0· دانة ر.", adds: ["sent", "booking_reminders"] },
+          { at: "16:00", title: "أُرسل تذكير بموعد", line: "تسشوار، اليوم الساعة 18:00\u00a0·\u00a0دانة ر.", adds: ["sent", "booking_reminders"] },
           { at: "16:01", title: "تنبيه حسب القاعدة", flag: { from: "needs", key: "unmarked" }, adds: [] },
           { at: "16:07", title: "أُرسلت صفحة الحجز", line: "ضغطت رانيا ح. «احجز موعداً»، فوصلها الرابط فوراً.", adds: ["sent"] },
           { at: "16:16", title: "تنبيه حسب القاعدة", flag: { from: "suggestion", key: "repeat_no_show" }, adds: [] },
@@ -2513,7 +2513,7 @@ const ar: Copy = {
         fictional: "مثال: شركة تكييف غير حقيقية",
         feed: [
           { at: "15:56", title: "أُرسلت قائمة الترحيب", line: "لعميل جديد: «أهلاً بك في ظلال للتكييف. كيف نقدر نساعدك؟»", adds: ["sent"] },
-          { at: "16:00", title: "أُرسل تذكير بموعد", line: "صيانة مكيف سبليت، اليوم الساعة 18:00\u00a0· حسن د.", adds: ["sent", "booking_reminders"] },
+          { at: "16:00", title: "أُرسل تذكير بموعد", line: "صيانة مكيف سبليت، اليوم الساعة 18:00\u00a0·\u00a0حسن د.", adds: ["sent", "booking_reminders"] },
           { at: "16:06", title: "أُرسلت صفحة الحجز", line: "كتب عمر ك. «حجز»، فوصله الرابط فوراً.", adds: ["sent"] },
           { at: "16:12", title: "أُرسلت تفاصيل الحجز", line: "كتب علي ت. «حجزي»، فوصله موعده مع زر للإلغاء.", adds: ["sent"] },
           { at: "16:17", title: "تنبيه حسب القاعدة", flag: { from: "suggestion", key: "overdue" }, adds: [] },
@@ -2654,7 +2654,7 @@ const ar: Copy = {
         caption: { n: "04", text: "تقرير الأحد على واتساب" },
         heading: "تقرير ALYR الأسبوعي: مخبز قرفة",
         week: "من 4/10 إلى 10/10",
-        time: "9:00 ص",
+        time: "09:00",
         sections: [
           {
             title: "الحسابات الآجلة",
@@ -2911,7 +2911,7 @@ const ar: Copy = {
       track: {
         context: "تتبّع الطلب",
         eyebrow: "طلبك",
-        title: "الطلب رقم 1043",
+        title: "الطلب رقم 1439",
         status: "جاهز للاستلام",
         steps: [
           { label: "تم استلام الطلب", at: "الأربعاء 4:05 م", reached: true },
@@ -3747,7 +3747,7 @@ const ar: Copy = {
           caption: { n: "03", text: "تقرير الأحد على واتساب" },
           heading: "تقرير ALYR الأسبوعي: مخبز قرفة",
           week: "من 4/10 إلى 10/10",
-          time: "9:00 ص",
+          time: "09:00",
           sections: [
             {
               title: "الحسابات الآجلة",

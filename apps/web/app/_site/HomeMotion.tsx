@@ -46,6 +46,8 @@ export function HomeMotion() {
           if (entry.target === closing) closingSeen = entry.isIntersecting || entry.boundingClientRect.top < 0;
         }
         bar.toggleAttribute("data-show", heroGone && !closingSeen);
+        // the header's button turns Volt once the hero's own has scrolled away (site.css)
+        root.toggleAttribute("data-hero-gone", heroGone);
       });
       watch.observe(heroButton);
       watch.observe(closing);

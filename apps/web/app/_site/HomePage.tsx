@@ -143,6 +143,7 @@ function Spotlight({ locale }: { locale: Locale }) {
           variant="spot"
           views={SAMPLES[locale]}
           order={SAMPLE_ORDER}
+          start="salon"
           text={t.agent}
           figLabel={t.fig.label}
           caption={s.caption}
@@ -240,13 +241,19 @@ function Business({ locale }: { locale: Locale }) {
               <p className="biz-uses">
                 <span className="biz-k">{b.uses}</span>
                 <span className="biz-tags">
-                {row.products.map((key) => {
+                {/* in the suite's order; ALYR Agent comes with each, so it closes the row, lighter */}
+                {[...row.products]
+                  .sort((a, b) => (a === "agent" ? 1 : b === "agent" ? -1 : PRODUCTS.indexOf(a) - PRODUCTS.indexOf(b)))
+                  .map((key) => {
                   const href = productPath(key, locale);
                   const name = t.products.items[key].name;
                   // the tag shows the product's own word ("Chat"); its name is the whole one
                   const short = name.replace(/^ALYR\s+/, "");
+                  const agent = key === "agent";
                   return href ? (
-                    <a key={key} className="tag tag-link" href={href} aria-label={name}><bdi>{short}</bdi></a>
+                    <a key={key} className={`tag tag-link${agent ? " tag-plus" : ""}`} href={href} aria-label={name}>
+                      {agent && <span aria-hidden="true">{"+ "}</span>}<bdi>{short}</bdi>
+                    </a>
                   ) : (
                     <span key={key} className="tag"><bdi>{short}</bdi></span>
                   );

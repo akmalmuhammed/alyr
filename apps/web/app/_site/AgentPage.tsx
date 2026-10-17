@@ -57,7 +57,7 @@ export function AgentPage({ locale }: { locale: Locale }) {
           label={p.figure.label}
           switcher
           feed
-          headingLevel={2}
+          headingLevel={3}
         />
       </ProductHero>
 
