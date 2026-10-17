@@ -82,7 +82,7 @@ Text sizes moved by up to half a pixel (most) or two pixels (22, 26, 34 and 40 p
 
 - `pnpm lint`, `pnpm exec tsc --noEmit`: clean. `bash scripts/build-site.sh` (which runs `pnpm build`): 130 files, one more than before (the tokens stylesheet).
 - `node scripts/design-check.mjs`: 173 files clean, 3 allowed exceptions.
-- API in Docker, `ruff check .` clean; **383 tests pass** (`alyr_agent_test`, through `ALYR_TEST_OWNER_DSN` and `ALYR_TEST_APP_DSN`). Disclosed: a first run without those two variables began on the shared `alyr_test`, which the suite drops and recreates; it was stopped and rerun on `alyr_agent_test`.
+- API in Docker, `ruff check .` clean; **383 tests pass**, and **563 pass (2 skipped)** after merging `main` (the Catalog, ALY-102 and ALY-103), whose new code also passes the drift check (189 files) (`alyr_agent_test`, through `ALYR_TEST_OWNER_DSN` and `ALYR_TEST_APP_DSN`). Disclosed: a first run without those two variables began on the shared `alyr_test`, which the suite drops and recreates; it was stopped and rerun on `alyr_agent_test`.
 - axe-core 4.14 on the built `/` and `/agent`, 1440 and 390, light and dark: 0 violations of any impact.
 
 ## Next step (a follow-up pull request)
