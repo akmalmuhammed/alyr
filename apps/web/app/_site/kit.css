@@ -75,15 +75,14 @@ main {
    read. It sits under the header, which tightens when the page scrolls. */
 .pbar {
   position: sticky; top: var(--header); z-index: 15;
-  background: color-mix(in srgb, var(--canvas) 94%, transparent);
-  backdrop-filter: saturate(1.3) blur(12px); -webkit-backdrop-filter: saturate(1.3) blur(12px);
+  background: var(--canvas);
   border-bottom: 1px solid var(--line);
   transition: top var(--medium) var(--ease);
 }
 :root:has(.top[data-scrolled]) .pbar { top: 3.75rem; }
 .pbar-in { display: flex; align-items: center; gap: 2rem; min-height: 3rem; }
 .pbar-name { display: inline-flex; align-items: center; gap: .625rem; min-height: 2.75rem; font-weight: 600; font-size: .9375rem; white-space: nowrap; }
-.pbar-nav { display: flex; gap: 1.5rem; overflow-x: auto; scrollbar-width: none; }
+.pbar-nav { display: flex; gap: 1.5rem; min-width: 0; overflow-x: auto; scrollbar-width: none; }
 .pbar-nav::-webkit-scrollbar { display: none; }
 .pbar-nav a { display: inline-flex; align-items: center; min-height: 2.75rem; padding-inline: .25rem; margin-inline: -.25rem; font-size: .875rem; font-weight: 500; color: var(--text-muted); white-space: nowrap; }
 .pbar-nav a:hover { color: var(--text); }
@@ -189,6 +188,9 @@ main:has(.pbar) section[id] { scroll-margin-top: calc(var(--header) + 4rem); }
 }
 @media (max-width: 53rem) {
   .pbar-in { gap: 1.25rem; }
+  /* the sections scroll sideways; a fade on the far edge says there are more */
+  .pbar-nav { padding-inline-end: 1.5rem; mask-image: linear-gradient(to right, #000 calc(100% - 2rem), transparent); -webkit-mask-image: linear-gradient(to right, #000 calc(100% - 2rem), transparent); }
+  [dir="rtl"] .pbar-nav { mask-image: linear-gradient(to left, #000 calc(100% - 2rem), transparent); -webkit-mask-image: linear-gradient(to left, #000 calc(100% - 2rem), transparent); }
   .pk-who > li { grid-template-columns: minmax(0, 1fr); }
   .pk-who .tags { justify-content: flex-start; }
   .pk-facts.is-four { grid-template-columns: minmax(0, 1fr); }

@@ -543,9 +543,9 @@ const en: Copy = {
         announce: "Showing Qirfa Bakery, a fictional bakery.",
         fictional: "Sample data, fictional bakery",
         feed: [
-          { at: "16:00", title: "Booking reminder sent", line: "Cake tasting, today at 18:00 · Noor A.", adds: ["sent", "booking_reminders"] },
+          { at: "16:00", title: "Booking reminder sent", line: "Cake tasting, today at 18:00\u00a0· Noor A.", adds: ["sent", "booking_reminders"] },
           { at: "16:04", title: "Menu sent", line: "To a new customer: “Welcome to Qirfa Bakery. How can we help?”", adds: ["sent"] },
-          { at: "16:09", title: "Order confirmation sent", line: "Order #1441 · Lina F. · with its tracking page", adds: ["sent"] },
+          { at: "16:09", title: "Order confirmation sent", line: "Order #1441\u00a0· Lina F.\u00a0· with its tracking page", adds: ["sent"] },
           { at: "16:13", title: "Order page sent", line: "Sara M. wrote “order”. The link went back at once.", adds: ["sent"] },
           { at: "16:18", title: "Flagged by rule", flag: { from: "suggestion", key: "overdue" }, adds: [] },
         ],
@@ -558,7 +558,7 @@ const en: Copy = {
         fictional: "Sample data, fictional salon",
         feed: [
           { at: "15:58", title: "Menu sent", line: "To a new customer: “Welcome to Sadaf Salon. How can we help?”", adds: ["sent"] },
-          { at: "16:00", title: "Booking reminder sent", line: "Blow-dry, today at 18:00 · Dana R.", adds: ["sent", "booking_reminders"] },
+          { at: "16:00", title: "Booking reminder sent", line: "Blow-dry, today at 18:00\u00a0· Dana R.", adds: ["sent", "booking_reminders"] },
           { at: "16:01", title: "Flagged by rule", flag: { from: "needs", key: "unmarked" }, adds: [] },
           { at: "16:07", title: "Booking page sent", line: "Rania H. tapped “Book a visit”. The link went back at once.", adds: ["sent"] },
           { at: "16:16", title: "Flagged by rule", flag: { from: "suggestion", key: "repeat_no_show" }, adds: [] },
@@ -572,7 +572,7 @@ const en: Copy = {
         fictional: "Sample data, fictional AC company",
         feed: [
           { at: "15:56", title: "Menu sent", line: "To a new customer: “Welcome to Nasma Cooling. How can we help?”", adds: ["sent"] },
-          { at: "16:00", title: "Booking reminder sent", line: "AC service, split unit, today at 18:00 · Hassan D.", adds: ["sent", "booking_reminders"] },
+          { at: "16:00", title: "Booking reminder sent", line: "AC service, split unit, today at 18:00\u00a0· Hassan D.", adds: ["sent", "booking_reminders"] },
           { at: "16:06", title: "Booking page sent", line: "Omar K. wrote “book”. The link went back at once.", adds: ["sent"] },
           { at: "16:12", title: "Booking details sent", line: "Ali T. wrote “my booking”: his visit, with a Cancel button.", adds: ["sent"] },
           { at: "16:17", title: "Flagged by rule", flag: { from: "suggestion", key: "overdue" }, adds: [] },
@@ -1914,7 +1914,7 @@ const en: Copy = {
       },
       who: {
         eyebrow: "Who it’s for",
-        title: "Every ALYR business has it. What leads depends on yours.",
+        title: "Every ALYR business has it.\nWhat leads depends on yours.",
         rows: [
           { name: "Restaurants, cafes and bakeries", tags: ["Sales this week", "Orders this week", "Owed to you", "Came back this week"] },
           { name: "Salons and barbers", tags: ["Visits this week", "Booked, next 7 days", "No-shows, 30 days", "New bookings this week"] },
@@ -2488,9 +2488,9 @@ const ar: Copy = {
         announce: "يُعرض الآن مخبز قرفة، وهو مخبز غير حقيقي.",
         fictional: "مثال: مخبز غير حقيقي",
         feed: [
-          { at: "16:00", title: "أُرسل تذكير بموعد", line: "تذوّق الكيك، اليوم الساعة 18:00 · Noor A.", adds: ["sent", "booking_reminders"] },
+          { at: "16:00", title: "أُرسل تذكير بموعد", line: "تذوّق الكيك، اليوم الساعة 18:00\u00a0· Noor A.", adds: ["sent", "booking_reminders"] },
           { at: "16:04", title: "أُرسلت القائمة", line: "لعميل جديد: «أهلاً بك في مخبز قرفة. كيف نقدر نساعدك؟»", adds: ["sent"] },
-          { at: "16:09", title: "أُرسل تأكيد الطلب", line: "الطلب رقم 1441 · Lina F. · مع صفحة تتبّعه", adds: ["sent"] },
+          { at: "16:09", title: "أُرسل تأكيد الطلب", line: "الطلب رقم 1441\u00a0· Lina F.\u00a0· مع صفحة تتبّعه", adds: ["sent"] },
           { at: "16:13", title: "أُرسلت صفحة الطلب", line: "كتبت Sara M. «طلب»، فوصلها الرابط فوراً.", adds: ["sent"] },
           { at: "16:18", title: "تنبيه حسب القاعدة", flag: { from: "suggestion", key: "overdue" }, adds: [] },
         ],
@@ -2503,7 +2503,7 @@ const ar: Copy = {
         fictional: "مثال: صالون غير حقيقي",
         feed: [
           { at: "15:58", title: "أُرسلت القائمة", line: "لعميلة جديدة: «أهلاً بك في صالون صدف. كيف نقدر نخدمك؟»", adds: ["sent"] },
-          { at: "16:00", title: "أُرسل تذكير بموعد", line: "تسشوار، اليوم الساعة 18:00 · Dana R.", adds: ["sent", "booking_reminders"] },
+          { at: "16:00", title: "أُرسل تذكير بموعد", line: "تسشوار، اليوم الساعة 18:00\u00a0· Dana R.", adds: ["sent", "booking_reminders"] },
           { at: "16:01", title: "تنبيه حسب القاعدة", flag: { from: "needs", key: "unmarked" }, adds: [] },
           { at: "16:07", title: "أُرسلت صفحة الحجز", line: "ضغطت Rania H. «احجز موعداً»، فوصلها الرابط فوراً.", adds: ["sent"] },
           { at: "16:16", title: "تنبيه حسب القاعدة", flag: { from: "suggestion", key: "repeat_no_show" }, adds: [] },
@@ -2517,7 +2517,7 @@ const ar: Copy = {
         fictional: "مثال: شركة تكييف غير حقيقية",
         feed: [
           { at: "15:56", title: "أُرسلت القائمة", line: "لعميل جديد: «أهلاً بك في نسمة للتكييف. كيف نقدر نساعدك؟»", adds: ["sent"] },
-          { at: "16:00", title: "أُرسل تذكير بموعد", line: "صيانة مكيف سبليت، اليوم الساعة 18:00 · Hassan D.", adds: ["sent", "booking_reminders"] },
+          { at: "16:00", title: "أُرسل تذكير بموعد", line: "صيانة مكيف سبليت، اليوم الساعة 18:00\u00a0· Hassan D.", adds: ["sent", "booking_reminders"] },
           { at: "16:06", title: "أُرسلت صفحة الحجز", line: "كتب Omar K. «حجز»، فوصله الرابط فوراً.", adds: ["sent"] },
           { at: "16:12", title: "أُرسلت تفاصيل الحجز", line: "كتب Ali T. «حجزي»، فوصله موعده مع زر للإلغاء.", adds: ["sent"] },
           { at: "16:17", title: "تنبيه حسب القاعدة", flag: { from: "suggestion", key: "overdue" }, adds: [] },
@@ -3859,7 +3859,7 @@ const ar: Copy = {
       },
       who: {
         eyebrow: "لمن صُمّم",
-        title: "لكل نشاط مع ALYR. وما يتصدّر يتبع نشاطك.",
+        title: "لكل نشاط مع ALYR.\nوما يتصدّر يتبع نشاطك.",
         rows: [
           { name: "المطاعم والمقاهي والمخابز", tags: ["المبيعات هذا الأسبوع", "الطلبات هذا الأسبوع", "مستحق لك", "عادوا للطلب هذا الأسبوع"] },
           { name: "الصالونات ومحلات الحلاقة", tags: ["الزيارات هذا الأسبوع", "محجوز للأيام السبعة القادمة", "الغياب خلال 30 يوماً", "حجوزات جديدة هذا الأسبوع"] },

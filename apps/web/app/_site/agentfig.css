@@ -6,7 +6,7 @@
    - agent: ALYR Agent's own page, on its Carbon block, with the switch and the feed.
    Logical properties throughout, and the plate's cut mirrored, so Arabic mirrors itself. */
 
-.afig { position: relative; display: grid; gap: 1rem; min-width: 0; margin: 0; }
+.afig { position: relative; display: grid; grid-template-columns: minmax(0, 1fr); gap: 1rem; min-width: 0; margin: 0; }
 .af-stage { position: relative; min-width: 0; }
 .af-under { margin-top: .25rem; font-size: .9375rem; color: var(--text-muted); max-width: 40rem; }
 
@@ -96,24 +96,28 @@
 .afig-hero .ag :is(.ag-kpi, .ag-bar) { animation: none !important; opacity: 1 !important; }
 .afig-hero .cap { margin-top: 1.25rem; }
 
-@media (max-width: 77.49rem) {
-  /* the window takes the plate; the feed hangs over its lower end, off the plate's edge */
-  .afig-hero .af-stage { grid-template-columns: minmax(0, 1fr); padding: 2rem 2rem 0; }
-  .afig-hero .aw { --crop: 33rem; }
-  .afig-hero .af-feed {
-    position: absolute; inset-inline-end: -.75rem; bottom: -3rem; width: min(19.5rem, 46%);
-    padding: 1rem 1.125rem .25rem; border-radius: 12px; background: var(--band);
-    box-shadow: 0 0 0 1px var(--dark-line), 0 34px 80px -30px rgb(0 0 0 / .8);
-  }
-  .afig-hero .cap { margin-top: 4.25rem; }
+@media (max-width: 81.99rem) {
+  /* the window takes the plate's width; the feed runs under it as one row of events, over
+     its faded lower edge, so "Done for you" above stays in view as it counts */
+  .afig-hero .af-stage { grid-template-columns: minmax(0, 1fr); padding: 2rem 2rem 2rem; }
+  .afig-hero .aw { --crop: 31rem; }
+  .afig-hero .af-feed { grid-column: 1; margin-top: -3.5rem; padding: 1rem 1.25rem .25rem; border-radius: 12px; background: var(--band); box-shadow: 0 0 0 1px var(--dark-line), 0 24px 60px -30px rgb(0 0 0 / .8); }
+  .afig-hero .af-list { grid-template-columns: repeat(auto-fill, minmax(9.25rem, 1fr)); column-gap: 1.25rem; border-bottom: 0; }
+  .afig-hero .af-item { grid-template-columns: 1.25rem minmax(0, 1fr); grid-template-areas: "tick at" "what what"; row-gap: .5rem; align-content: start; }
+  .afig-hero .af-tick { grid-area: tick; }
+  .afig-hero .af-at { grid-area: at; padding-top: 0; align-self: center; }
+  .afig-hero .af-what { grid-area: what; }
 }
 @media (max-width: 47.99rem) {
   .af-plate { --cut: 3rem; }
   .afig-hero .af-stage { padding: 1.25rem .75rem 0; }
-  .afig-hero .aw { --crop: 40rem; }
-  .afig-hero .af-feed { grid-column: 1; position: relative; inset: auto; width: auto; margin: -4.5rem .25rem 0 1.75rem; }
-  [dir="rtl"] .afig-hero .af-feed { margin: -4.5rem 1.75rem 0 .25rem; }
-  .afig-hero .cap { margin-top: 1.25rem; }
+  /* down to the end of "Done for you", whose count steps up as the feed below plays */
+  .afig-hero .aw { --crop: 46rem; }
+  .afig-hero .af-feed { margin: -3rem .25rem 0 1.75rem; padding: 1rem 1.125rem .25rem; box-shadow: 0 0 0 1px var(--dark-line), 0 34px 80px -30px rgb(0 0 0 / .8); }
+  [dir="rtl"] .afig-hero .af-feed { margin: -3rem 1.75rem 0 .25rem; }
+  .afig-hero .af-list { grid-template-columns: minmax(0, 1fr); }
+  .afig-hero .af-item { grid-template-columns: 2.875rem 1.25rem minmax(0, 1fr); grid-template-areas: "at tick what"; row-gap: 0; }
+  .afig-hero .af-at { padding-top: .1875rem; align-self: start; }
 }
 
 /* ---------------------------------------------- spot: the whole screen, explained */
@@ -135,7 +139,7 @@
 .afig-spot .ag .ag-kpis-block::after { content: "3" / ""; }
 .afig-spot .ag .ag-cards::after { content: "4" / ""; }
 .afig-spot .ag .ag-done::after { content: "5" / ""; }
-@media (max-width: 74.99rem) {
+@media (max-width: 81.99rem) {
   .afig-spot .af-stage { grid-template-columns: minmax(0, 1fr); }
   .afig-spot .af-aside { position: static; }
   .afig-spot .callouts { grid-template-columns: repeat(2, minmax(0, 1fr)); column-gap: var(--col-gap); }
@@ -157,8 +161,22 @@
 .afig-agent .aw { grid-column: 1; grid-row: 1; }
 .afig-agent .af-feed { grid-column: 2; grid-row: 1; position: sticky; top: calc(var(--header) + 4.5rem); }
 .afig-agent .af-under { color: var(--concrete); }
-@media (max-width: 77.49rem) {
+@media (max-width: 81.99rem) {
   .afig-agent .af-stage { grid-template-columns: minmax(0, 1fr); }
   .afig-agent .af-feed { grid-column: 1; grid-row: 1; position: static; }
   .afig-agent .aw { grid-row: 2; }
+}
+
+/* On a phone the dashboard scrolls its four numbers sideways. In showcase mode the numbers
+   are not links, so that scroller would hold nothing to focus, and a keyboard could not
+   reach what is off to the side (axe: scrollable-region-focusable). On the site the four
+   sit two by two instead. (Noted for the product lane in 08-site-log.md.) */
+@container ag (max-width: 47.99rem) {
+  .afig .ag .ag-kpis {
+    grid-auto-flow: row; grid-template-columns: repeat(2, minmax(0, 1fr)); grid-auto-columns: auto;
+    overflow: visible; scroll-snap-type: none;
+  }
+  .afig .ag .ag-kpi:nth-child(odd)::before { display: none; }
+  .afig .ag .ag-kpi:nth-child(odd) .ag-kpi-link { padding-inline-start: 0; }
+  .afig .ag .ag-kpi:nth-child(n + 3) { border-top: 1px solid var(--ag-rule); }
 }

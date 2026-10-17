@@ -93,6 +93,7 @@ export function AgentFigure({
   const [run, setRun] = useState(0);
   const [announce, setAnnounce] = useState("");
   const root = useRef<HTMLElement>(null);
+  const feedBox = useRef<HTMLDivElement>(null);
   const timers = useRef<number[]>([]);
 
   const s = text.samples[sample];
@@ -124,7 +125,9 @@ export function AgentFigure({
 
   useEffect(() => {
     if (!feed || !moving()) return;
-    const node = root.current;
+    // The feed starts when the feed itself is in view (on a phone it sits under the window,
+    // just below "Done for you", which is then in view too).
+    const node = feedBox.current ?? root.current;
     const length = events.length;
     // Not on screen yet: the feed waits, hidden, with the count where it stood before it.
     const box = node?.getBoundingClientRect();
@@ -201,7 +204,7 @@ export function AgentFigure({
         {variant === "hero" && <span className="af-plate" aria-hidden="true" />}
         {window_}
         {feed && (
-          <div className="af-feed" data-phase={phase}>
+          <div className="af-feed" data-phase={phase} ref={feedBox}>
             <p className="af-status">
               <span className="af-dot" aria-hidden="true" />
               <bdi>{text.status}</bdi>

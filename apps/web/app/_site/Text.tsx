@@ -3,16 +3,18 @@ import type { ReactNode } from "react";
 // Amounts ("QAR 1,850", "449 ر.ق"), order numbers ("#1043", "رقم 1043") and the names
 // ALYR and its products are kept whole: they sit in <bdi> so an Arabic line never reorders
 // them, and an amount never breaks across two lines.
-const KEEP = /([−+]?QAR\s?[\d,]+(?:\.\d+)?|[−+]?[\d,]+(?:\.\d+)?\s?ر\.ق|#\d{3,}|رقم\s\d+|ALYR(?: (?:Chat|Bookings|Agent|Accounts|Payroll))?)/g;
+const KEEP = /([−+]?QAR\s?[\d,]+(?:\.\d+)?|[−+]?[\d,]+(?:\.\d+)?\s?ر\.ق|#\d{3,}|رقم\s\d+|\d+–\d+|ALYR(?: (?:Chat|Bookings|Agent|Accounts|Payroll))?)/g;
 
 // In an Arabic sentence, a run of Latin words (a sample customer's name, "Noor A.", or
 // "Marina Desk Co-working") is kept whole too, with its own trailing full stop: otherwise
 // the stop of an initial lands on the wrong side of the name.
 const KEEP_AR = new RegExp(`${KEEP.source.slice(0, -1)}|[A-Za-z][A-Za-z'’.\\-]*(?: [A-Za-z][A-Za-z'’.\\-]*)*)`, "g");
 const ARABIC = /[؀-ۿ]/;
+// "0–30" stays left to right in an Arabic line, or it reads "30–0".
+const RANGE = /^\d+–\d+$/;
 
 const kind = (part: string) =>
-  /^[−+]?(QAR|[\d,])/.test(part) ? "money" : /^(#|رقم)/.test(part) ? "ref" : undefined;
+  RANGE.test(part) ? undefined : /^[−+]?(QAR|[\d,])/.test(part) ? "money" : /^(#|رقم)/.test(part) ? "ref" : undefined;
 
 /** A heading from `copy.ts` that names where its lines break (a line feed): each line its
  * own span, set as a block (`.line`), so a phone and a laptop break it in the same place. */
@@ -29,7 +31,7 @@ export function rich(text: string): ReactNode {
   if (parts.length === 1) return text;
   return parts.map((part, index) =>
     index % 2 === 1 ? (
-      <bdi key={index} className={kind(part)}>
+      <bdi key={index} className={kind(part)} dir={RANGE.test(part) ? "ltr" : undefined}>
         {part}
       </bdi>
     ) : (

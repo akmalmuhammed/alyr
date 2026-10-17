@@ -197,7 +197,7 @@ function Suite({ locale }: { locale: Locale }) {
                     </span>
                   </div>
                   <div className="suite-say">
-                    <p>{rich(row ? row.body : s.payroll)}</p>
+                    {row && <p>{rich(row.body)}</p>}
                     {row && href && (
                       <a className="link link-dark" href={href}>
                         <span>{rich(row.link)}</span>

@@ -241,7 +241,7 @@ svg { display: block; }
   font-family: var(--mono); font-size: .75rem; font-weight: 500; line-height: 1.35;
   letter-spacing: .09em; text-transform: uppercase; color: var(--text-muted);
 }
-[lang="ar"] .eyebrow { font-family: var(--arabic); letter-spacing: 0; font-size: .875rem; font-weight: 500; }
+[lang="ar"] .eyebrow { font-family: var(--arabic); letter-spacing: 0; text-transform: none; font-size: .875rem; font-weight: 500; }
 .eyebrow-dark { color: var(--concrete); }
 
 .display {

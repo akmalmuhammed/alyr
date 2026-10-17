@@ -221,8 +221,13 @@ main {
 
 /* --------------------------------------------- the workspace's working screens */
 .ws-scroll { overflow-x: auto; scrollbar-width: thin; }
+/* narrower than the screen: it scrolls sideways, as the workspace does, and fades at the far edge */
+@media (max-width: 53rem) {
+  .ws-scroll { mask-image: linear-gradient(to right, #000 calc(100% - 2.5rem), transparent); -webkit-mask-image: linear-gradient(to right, #000 calc(100% - 2.5rem), transparent); }
+  .ws-scroll:dir(rtl) { mask-image: linear-gradient(to left, #000 calc(100% - 2.5rem), transparent); -webkit-mask-image: linear-gradient(to left, #000 calc(100% - 2.5rem), transparent); }
+}
 .ws-scroll:focus-visible { outline: 2px solid var(--focus); outline-offset: -2px; }
-.ws-body { position: relative; min-width: 40rem; padding: 1.25rem 1.5rem 1.5rem; font-size: .875rem; line-height: 1.4; color: var(--text); }
+.ws-body { position: relative; min-width: 50rem; padding: 1.25rem 1.5rem 1.5rem; font-size: .875rem; line-height: 1.4; color: var(--text); }
 .ws-sub { position: relative; color: var(--text-muted); font-size: .8125rem; margin-bottom: 1rem; }
 .ws-table { display: grid; border: 1px solid var(--window-line); border-radius: 10px; overflow: hidden; }
 .ws-tr { position: relative; display: grid; align-items: center; gap: 1rem; padding: .75rem 1rem; }
@@ -236,7 +241,7 @@ main {
 :lang(ar) .ws-when b { justify-self: start; }
 .ws-when small { font-family: var(--mono); font-size: .6875rem; color: var(--text-muted); }
 .ws-select { display: inline-flex; align-items: center; justify-content: space-between; gap: .5rem; min-width: 7rem; height: 1.875rem; padding: 0 .625rem; border-radius: .375rem; box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--text) 16%, transparent); font-size: .8125rem; white-space: nowrap; }
-.ws-select i { width: .375rem; height: .375rem; border-inline-end: 1.5px solid var(--text-muted); border-bottom: 1.5px solid var(--text-muted); rotate: 45deg; translate: 0 -2px; }
+.ws-select i { width: .375rem; height: .375rem; border-right: 1.5px solid var(--text-muted); border-bottom: 1.5px solid var(--text-muted); rotate: 45deg; translate: 0 -2px; }
 .ws-status { display: flex; flex-wrap: wrap; align-items: center; gap: .375rem .625rem; }
 .ws-acts { position: relative; display: inline-flex; flex-wrap: wrap; align-items: center; gap: .375rem; }
 .ws-pill { display: inline-flex; align-items: center; height: 1.5rem; padding: 0 .5rem; border-radius: .75rem; font-size: .75rem; font-weight: 600; white-space: nowrap; background: color-mix(in srgb, var(--text) 7%, transparent); color: var(--text); }

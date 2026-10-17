@@ -5,7 +5,7 @@ import { FigCaption } from "./Drawings";
 import { FlowDiagram } from "./FlowDiagram";
 import { contactHref } from "./Shell";
 import { CONTACT_STATE, OFFER_LIVE, PRODUCTS, productPath, type ProductKey } from "./site";
-import { rich } from "./Text";
+import { lines, rich } from "./Text";
 import "./kit.css";
 
 // The building blocks every product page shares (01-research.md D): the bar under the
@@ -79,7 +79,7 @@ export function FlowSection({ flow }: { flow: FlowSet }) {
       <div className="wrap">
         <div className="how-head" data-reveal>
           <p className="eyebrow">{flow.eyebrow}</p>
-          <h2 className="h1">{rich(flow.title)}</h2>
+          <h2 className="h1">{lines(flow.title)}</h2>
           <p className="lead">{rich(flow.body)}</p>
         </div>
         <div className="how-panel" data-reveal>
@@ -176,7 +176,7 @@ export function WhoBlock({ who }: { who: WhoSection }) {
       <div className="wrap who-in">
         <div className="who-head" data-reveal>
           <p className="eyebrow">{who.eyebrow}</p>
-          <h2 className="h1">{rich(who.title)}</h2>
+          <h2 className="h1">{lines(who.title)}</h2>
         </div>
         <ul className="who-rows pk-who">
           {who.rows.map((row, index) => (
@@ -220,17 +220,19 @@ export function WorksBlock({ locale, works, self }: { locale: Locale; works: Wor
                   <b><bdi>{p.name}</bdi></b>
                   <small>{p.descriptor}</small>
                 </span>
-                <p className="works-say">{rich(works.rows[key]!)}</p>
                 {href ? (
-                  <a className="link works-link" href={href}>
-                    <span>{rich(fill(works.link, { name: p.name }))}</span>
-                    <Icon name="arrow-right" className="ico ico-flip" />
-                  </a>
+                  <>
+                    <p className="works-say">{rich(works.rows[key]!)}</p>
+                    <a className="link works-link" href={href}>
+                      <span>{rich(fill(works.link, { name: p.name }))}</span>
+                      <Icon name="arrow-right" className="ico ico-flip" />
+                    </a>
+                  </>
                 ) : (
-                  <span className="status-line works-link">
+                  <p className="status-line works-say">
                     <span className="dot-pending" aria-hidden="true" />
-                    <span>{p.state}</span>
-                  </span>
+                    <span>{rich(works.rows[key]!)}</span>
+                  </p>
                 )}
               </li>
             );
