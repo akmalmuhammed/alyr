@@ -5,6 +5,8 @@ import { useParams, useRouter } from "next/navigation";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Screens, type WorkspaceTab } from "../../_workspace/Screens";
 import { TeamReport } from "../../_workspace/Team";
+import { AgentDashboard } from "../../../_agent/AgentDashboard";
+import type { AgentView } from "../../../_agent/types";
 import "../../_workspace/shell.css";
 
 type Text = { en: string; ar: string };
@@ -173,37 +175,6 @@ function DoubleTick() {
   );
 }
 
-/** A number that counts up once when it first appears, then follows the live value. */
-function CountUp({ value, text }: { value: number; text: string }) {
-  const unit = text.startsWith("QAR ") ? "QAR" : "";
-  const target = unit ? value / 100 : value;
-  const [shown, setShown] = useState<number | null>(null);
-  const started = useRef(false);
-  useEffect(() => {
-    if (started.current || window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
-    started.current = true;
-    const t0 = performance.now();
-    let frame = 0;
-    const tick = (now: number) => {
-      const k = Math.min(1, (now - t0) / 900);
-      const eased = 1 - Math.pow(1 - k, 4);
-      setShown(k < 1 ? target * eased : null);
-      if (k < 1) frame = requestAnimationFrame(tick);
-    };
-    frame = requestAnimationFrame(tick);
-    return () => cancelAnimationFrame(frame);
-  }, [target]);
-  const body = shown === null ? (unit ? text.slice(4) : text) : Math.round(shown).toLocaleString("en-US");
-  return <span className="sh-stat-value num" dir="ltr">{body}{unit && <small>{unit}</small>}</span>;
-}
-
-/** Lets a tile's light follow the pointer. */
-function glow(event: React.PointerEvent<HTMLElement>) {
-  const box = event.currentTarget.getBoundingClientRect();
-  event.currentTarget.style.setProperty("--mx", `${event.clientX - box.left}px`);
-  event.currentTarget.style.setProperty("--my", `${event.clientY - box.top}px`);
-}
-
 async function send(url: string, body?: object) {
   const response = await fetch(url, {
     method: "POST", headers: { "content-type": "application/json" },
@@ -223,6 +194,9 @@ export default function WorkspaceShell() {
   const section = params.section?.[0] ?? "home";
   const [state, setState] = useState<State | null>(null);
   const [cards, setCards] = useState<Card[]>([]);
+  const [agent, setAgent] = useState<AgentView | null>(null);
+  const [agentRise, setAgentRise] = useState(false);
+  const agentLoaded = useRef(false);
   const [offline, setOffline] = useState(false);
   const [lang, setLang] = useState<Lang>("en");
   const [help, setHelp] = useState("");
@@ -255,6 +229,44 @@ export default function WorkspaceShell() {
     const timer = setInterval(load, 15_000);
     return () => { clearTimeout(first); clearInterval(timer); };
   }, [load]);
+
+  // ALYR Agent on the home screen. A poll replaces the numbers and never re-animates them;
+  // they rise once a session, on the first load.
+  const loadAgent = useCallback(async () => {
+    try {
+      const response = await fetch(`/api/agent?lang=${lang}`, { cache: "no-store" });
+      if (!response.ok) throw new Error(String(response.status));
+      const view: AgentView = await response.json();
+      if (!agentLoaded.current) {
+        agentLoaded.current = true;
+        let first = false;
+        try {
+          first = !sessionStorage.getItem("alyr-agent-rose");
+          sessionStorage.setItem("alyr-agent-rose", "1");
+        } catch {
+          first = false;
+        }
+        setAgentRise(first);
+        // Once a session: a later remount (a language switch) does not rise again.
+        if (first) setTimeout(() => setAgentRise(false), 1500);
+      }
+      setAgent(view);
+    } catch {
+      // The last numbers stay on screen; the shell's offline line says why.
+    }
+  }, [lang]);
+
+  useEffect(() => {
+    if (section !== "home") return;
+    const first = setTimeout(loadAgent, 0);
+    const timer = setInterval(loadAgent, 15_000);
+    return () => { clearTimeout(first); clearInterval(timer); };
+  }, [loadAgent, section]);
+
+  async function notNow(key: string, fingerprint: string) {
+    await send("/api/agent/not-now", { key, fingerprint });
+    await loadAgent();
+  }
 
   // Shop time is Doha time, whatever the laptop says.
   useEffect(() => {
@@ -342,7 +354,6 @@ export default function WorkspaceShell() {
   const pending = state.products.filter((p) => p.status === "active" && p.steps.some((s) => !s.done));
   const whatsapp = state.connections.find((c) => c.key === "whatsapp");
   const current = allNav.find((n) => n.key === section);
-  const firstName = state.me.signed_in ? state.me.name.split(/\s+/)[0] : "";
   const activeProducts = state.products.filter((p) => p.status === "active");
   const roleLabel = state.me.signed_in ? state.me.role.charAt(0).toUpperCase() + state.me.role.slice(1) : t.demo;
 
@@ -372,121 +383,74 @@ export default function WorkspaceShell() {
   if (section === "home") {
     body = (
       <>
-        <header className="sh-head" style={stagger(0)}>
-          <span className="sh-eyebrow">{t.today}{clock && ` · ${clock.text}`}</span>
-          <h1>
-            {clock ? t.greet(clock.hour) : t.today}{firstName && `, ${firstName}`}.<br />
-            <em>{t.shopToday(shopName)}</em>
-          </h1>
-        </header>
-
-        <section className="sh-stats" style={stagger(1)}>
-          {cards.map((card) => {
-            const screen = card.module === "payments" ? "orders" : card.module;
-            const inner = (
-              <>
-                <span className="sh-stat-top"><Icon name={MODULE_ICON[card.module] ?? "apps"} />
-                  <Icon name="arrow" className="sh-ico go" /></span>
-                <span className="sh-stat-body">
-                  <span className="sh-stat-label">{pick(card.label)}</span>
-                  <CountUp value={card.value} text={card.text} />
-                </span>
-              </>
-            );
-            const hot = card.key === "unanswered" && card.value > 0;
-            return enabledScreens.has(screen)
-              ? <Link key={card.key} href={`/app/${screen}`} className={`sh-tile glow sh-stat ${hot ? "hot" : ""}`} onPointerMove={glow}>{inner}</Link>
-              : <div key={card.key} className="sh-tile glow sh-stat" onPointerMove={glow}>{inner}</div>;
-          })}
-        </section>
-
-        <div className="sh-bento" style={stagger(2)}>
-          {state.plan?.status === "published" && (
-            <section className="sh-tile raised sh-span-12 sh-allset sh-plan-ready">
-              <span className="sh-check"><Tick /></span>
-              <div><h2>{t.planReady}</h2><p className="sh-note">{t.planReadySub(state.plan.monthly_total_text ?? "")}</p></div>
-              <Link className="btn small" href="/start">{t.planReview}<Icon name="arrow" className="sh-ico arrow" /></Link>
-            </section>
-          )}
-          {pending.length === 0 && (
-            <section className="sh-tile raised sh-span-7 sh-allset">
-              <span className="sh-check"><Tick /></span>
-              <div><h2>{t.allSet}</h2><p className="sh-note">{t.allSetSub}</p></div>
-            </section>
-          )}
-          {pending.map((product) => {
-            const done = product.steps.filter((s) => s.done).length;
-            const total = product.steps.length;
-            return (
-              <section key={product.key} className="sh-tile raised folded sh-span-7 sh-setup" aria-label={t.setup(pick(product.name))}>
-                <div className="sh-gauge" style={{ "--p": (done / total) * 100 } as React.CSSProperties}>
-                  <b className="num" dir="ltr">{done}<small>/{total}</small></b>
-                </div>
-                <div className="sh-setup-head">
-                  <span className="sh-eyebrow">{pick(product.name)}</span>
-                  <h2>{t.setup(pick(product.name))}</h2>
-                  <p>{t.setupSub(done, total)}</p>
-                </div>
-                <ul className="sh-steps">
-                  {product.steps.map((step) => (
-                    <li key={step.key} className={step.done ? "done" : ""}>
-                      <span className="sh-check"><Tick /></span>
-                      <span className="sh-step">{pick(step.label)}</span>
-                      {stepAction(product, step)}
-                    </li>
-                  ))}
-                </ul>
-              </section>
-            );
-          })}
-
-          <section id="ask" className="sh-tile sh-span-5 sh-ask">
-            <div className="sh-ask-head">
-              <span className="sh-avatar"><Mark volt="#B7F34A" /></span>
-              <div><b>{t.helpTitle}</b><small>{t.helpOnline}</small></div>
-            </div>
-            <p className="sh-bubble">{t.helpHello}</p>
-            {helpSent ? (
-              <>
-                <p className="sh-bubble mine" dir="auto">{helpSent}<DoubleTick /></p>
-                <p className="sh-bubble">{t.sentReply}</p>
-              </>
-            ) : (
-              <div className="sh-suggest">
-                {t.suggestions.map((s) => <button key={s} type="button" onClick={() => setHelp(s)}>{s}</button>)}
-              </div>
-            )}
-            <form className="sh-composer" onSubmit={async (e) => {
-              e.preventDefault();
-              const note = help.trim();
-              if (!note) return;
-              await ask("chat", "help", note);
-              setHelp("");
-              setHelpSent(note);
-            }}>
-              <input value={help} onChange={(e) => setHelp(e.target.value)} placeholder={t.helpPlaceholder}
-                aria-label={t.helpPlaceholder} dir="auto" maxLength={500} />
-              <button className="sh-send" type="submit" disabled={!help.trim()} aria-label={t.send}><Icon name="send" /></button>
-            </form>
+        {state.plan?.status === "published" && (
+          <section className="sh-tile raised sh-allset sh-plan-ready sh-home-row" style={stagger(0)}>
+            <span className="sh-check"><Tick /></span>
+            <div><h2>{t.planReady}</h2><p className="sh-note">{t.planReadySub(state.plan.monthly_total_text ?? "")}</p></div>
+            <Link className="btn small" href="/start">{t.planReview}<Icon name="arrow" className="sh-ico arrow" /></Link>
           </section>
-        </div>
+        )}
+        {pending.map((product) => {
+          const done = product.steps.filter((s) => s.done).length;
+          const total = product.steps.length;
+          return (
+            <section key={product.key} className="sh-tile raised folded sh-setup sh-home-row" aria-label={t.setup(pick(product.name))} style={stagger(0)}>
+              <div className="sh-gauge" style={{ "--p": (done / total) * 100 } as React.CSSProperties}>
+                <b className="num" dir="ltr">{done}<small>/{total}</small></b>
+              </div>
+              <div className="sh-setup-head">
+                <span className="sh-eyebrow">{pick(product.name)}</span>
+                <h2>{t.setup(pick(product.name))}</h2>
+                <p>{t.setupSub(done, total)}</p>
+              </div>
+              <ul className="sh-steps">
+                {product.steps.map((step) => (
+                  <li key={step.key} className={step.done ? "done" : ""}>
+                    <span className="sh-check"><Tick /></span>
+                    <span className="sh-step">{pick(step.label)}</span>
+                    {stepAction(product, step)}
+                  </li>
+                ))}
+              </ul>
+            </section>
+          );
+        })}
 
-        <section className="sh-block" style={stagger(3)}>
-          <div className="sh-section-head">
-            <h2>{t.yourProducts}</h2>
-            <Link href="/app/products">{t.seeAll}</Link>
+        {agent ? (
+          <AgentDashboard view={agent} link={Link} animate={agentRise} onNotNow={state.can_manage ? notNow : undefined}
+            stale={offline ? `${t.offline} ${agent.header.updated}` : null} />
+        ) : (
+          <p className="sh-note">{offline ? t.offline : t.loading}</p>
+        )}
+
+        <section id="ask" className="sh-tile sh-ask sh-home-ask">
+          <div className="sh-ask-head">
+            <span className="sh-avatar"><Mark volt="#B7F34A" /></span>
+            <div><b>{t.helpTitle}</b><small>{t.helpOnline}</small></div>
           </div>
-          <ul className="sh-mini">
-            {state.products.map((p) => (
-              <li key={p.key}>
-                <Link href="/app/products">
-                  <span className={`sh-glyph ${inUse(p) ? "" : "coming"}`}><Icon name={PRODUCT_ICON[p.key] ?? "apps"} /></span>
-                  <b>{pick(p.name)}<small>{pick(p.descriptor)}</small></b>
-                  <span className={`sh-pill ${pillClass(p)}`}>{t[p.status]}</span>
-                </Link>
-              </li>
-            ))}
-          </ul>
+          <p className="sh-bubble">{t.helpHello}</p>
+          {helpSent ? (
+            <>
+              <p className="sh-bubble mine" dir="auto">{helpSent}<DoubleTick /></p>
+              <p className="sh-bubble">{t.sentReply}</p>
+            </>
+          ) : (
+            <div className="sh-suggest">
+              {t.suggestions.map((s) => <button key={s} type="button" onClick={() => setHelp(s)}>{s}</button>)}
+            </div>
+          )}
+          <form className="sh-composer" onSubmit={async (e) => {
+            e.preventDefault();
+            const note = help.trim();
+            if (!note) return;
+            await ask("chat", "help", note);
+            setHelp("");
+            setHelpSent(note);
+          }}>
+            <input value={help} onChange={(e) => setHelp(e.target.value)} placeholder={t.helpPlaceholder}
+              aria-label={t.helpPlaceholder} dir="auto" maxLength={500} />
+            <button className="sh-send" type="submit" disabled={!help.trim()} aria-label={t.send}><Icon name="send" /></button>
+          </form>
         </section>
       </>
     );
