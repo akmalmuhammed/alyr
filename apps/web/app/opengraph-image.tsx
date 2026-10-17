@@ -2,6 +2,7 @@ import { readFile } from "node:fs/promises";
 import { join } from "node:path";
 import { ImageResponse } from "next/og";
 import { copy } from "./_site/copy";
+import { OFFER_LIVE } from "./_site/site";
 
 // The card shown when a link to ALYR is shared, for example in a WhatsApp chat.
 // Reversed logo on Carbon, as the logo rules require on dark surfaces. The words are the
@@ -74,7 +75,7 @@ export default function OpenGraphImage() {
             alyr.qa
           </div>
           <div style={{ display: "flex", gap: 12, fontSize: 22 }}>
-            {t.facts.flatMap((fact, index) => (index ? [<span key={`s${index}`} style={{ color: "#5F666D" }}>·</span>, <span key={fact}>{fact}</span>] : [<span key={fact}>{fact}</span>]))}
+            {(OFFER_LIVE ? t.facts : t.factsNoOffer).flatMap((fact, index) => (index ? [<span key={`s${index}`} style={{ color: "#5F666D" }}>·</span>, <span key={fact}>{fact}</span>] : [<span key={fact}>{fact}</span>]))}
           </div>
         </div>
       </div>
