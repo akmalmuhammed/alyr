@@ -12,15 +12,18 @@ const instrument = Instrument_Sans({
   variable: "--font-instrument", subsets: ["latin"], axes: ["wdth"], display: "swap",
 });
 // Two weights: every preloaded file counts against the first paint, and Arabic set at 500
-// falls back to 400, which reads almost the same at these sizes.
+// falls back to 400, which reads almost the same at these sizes. The Latin subset is
+// preloaded too: digits and "ALYR" inside Arabic text use it, and a font that arrives after
+// the first layout makes the whole page lay out again (three times, one per late file).
 const plexArabic = IBM_Plex_Sans_Arabic({
-  variable: "--font-plex-arabic", subsets: ["arabic"], weight: ["400", "600"], display: "swap",
+  variable: "--font-plex-arabic", subsets: ["arabic", "latin"], weight: ["400", "600"], display: "swap",
 });
-// Mono only sets small labels, so it is not preloaded: the first screen's large type is
-// what must not wait. (Preloads cannot be set per language here: this build shares font
-// preloads across root layouts, so the Arabic weights are preloaded on English pages too.)
+// Mono sets the small labels, at 500 only: the body's 430 resolves to 500, so a 400 file was
+// never used. Preloaded for the same reason as the Latin Arabic subset. (Preloads cannot be
+// set per language here: this build shares font preloads across root layouts, so the
+// Arabic files are preloaded on English pages too.)
 const plexMono = IBM_Plex_Mono({
-  variable: "--font-plex-mono", subsets: ["latin"], weight: ["400", "500"], display: "swap", preload: false,
+  variable: "--font-plex-mono", subsets: ["latin"], weight: ["500"], display: "swap",
 });
 
 export const siteViewport: Viewport = {
@@ -60,12 +63,13 @@ export function siteMetadata(locale: Locale, page: PageKey = "home"): Metadata {
 // Runs in <head> before the first paint.
 // `al-js`: scripts run, so sections that animate in never flash (the ALYR Chat page).
 // `motion`: the homepage's start states apply. Only when the visitor has not asked for
-// reduced motion, and only for 2.5 s unless the motion code arrives and keeps it: if
-// that code never loads, the class goes and every section simply shows.
+// reduced motion, and only for 4 s unless the page hydrates and keeps it: if the code never
+// loads, the class goes and every section simply shows. (4 s, not 2.5: the published pages
+// start their scripts after the first paint, scripts/site-defer-scripts.mjs.)
 const BEFORE_PAINT =
   "(function(){var d=document.documentElement;d.classList.add('al-js');try{" +
   "if(!window.matchMedia('(prefers-reduced-motion: reduce)').matches){d.classList.add('motion');" +
-  "window.__alyrMotion=setTimeout(function(){d.classList.remove('motion')},2500)}}catch(e){}})()";
+  "window.__alyrMotion=setTimeout(function(){d.classList.remove('motion')},4000)}}catch(e){}})()";
 
 /** The whole document for a public page. Each language has its own root layout so the
  * `lang` and `dir` on `<html>` are right from the first byte. */

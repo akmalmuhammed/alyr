@@ -84,6 +84,10 @@ main[data-page="home"] {
 
 /* ---------------------------------------------------- type and structure */
 .hs { padding-block: var(--sec); }
+/* The sections after how it works are laid out only as they come near the screen, so the
+   first screen is drawn sooner. None of them is measured by a scroll trigger, and the
+   size each one last had is kept (auto), so the scrollbar barely moves as they arrive. */
+#included, #price, #trust, #questions { content-visibility: auto; contain-intrinsic-size: auto 1100px; }
 .h2 { font-size: var(--h2); font-weight: 620; line-height: 1.04; letter-spacing: -.03em; text-wrap: balance; }
 [lang="ar"] .h2 { line-height: 1.3; letter-spacing: 0; font-weight: 600; }
 .head { display: grid; gap: 1.25rem; align-content: start; }

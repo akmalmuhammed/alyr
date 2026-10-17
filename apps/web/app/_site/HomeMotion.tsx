@@ -9,7 +9,7 @@ const Choreography = dynamic(() => import("./Choreography"), { ssr: false });
 
 declare global {
   interface Window {
-    /** The failsafe set before paint in document.tsx: removes `motion` after 2.5 s. */
+    /** The failsafe set before paint in document.tsx: removes `motion` after 4 s. */
     __alyrMotion?: number;
   }
 }
@@ -84,7 +84,7 @@ export function HomeMotion() {
     const still = window.matchMedia(STILL).matches;
     if (still || !root.classList.contains("motion")) return () => undo.forEach((fn) => fn());
 
-    // Hydration proves scripts run, so the 2.5 s failsafe set before paint would only take
+    // Hydration proves scripts run, so the 4 s failsafe set before paint would only take
     // the motion away from a slow phone. A longer one replaces it, for the case where the
     // choreography's chunk never arrives; the choreography clears it when it starts.
     window.clearTimeout(window.__alyrMotion);
@@ -125,8 +125,8 @@ export function HomeMotion() {
     });
 
     // The choreography, once the page has loaded and the browser is idle, so its chunk never
-    // competes with the first screen. If that takes longer than the failsafe (2.5 s from
-    // the first byte), the page simply stays still.
+    // competes with the first screen. If that takes longer than the failsafe (10 s from
+    // hydration, set above), the page simply stays still.
     const idle = window.requestIdleCallback
       ? (run: () => void) => window.requestIdleCallback(run, { timeout: 1200 })
       : (run: () => void) => window.setTimeout(run, 200);
