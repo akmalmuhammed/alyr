@@ -124,6 +124,15 @@ def _owner_full() -> PhotoRefused:
     )
 
 
+def _order_changed() -> PhotoRefused:
+    return PhotoRefused(
+        "photos_changed",
+        "The photos on this item changed while you were looking. Reload and try again.",
+        "تغيّرت صور هذا الصنف أثناء عرضك لها. أعد تحميل الصفحة وحاول مرة أخرى.",
+        status=409,
+    )
+
+
 def parse_photo_ref(text: str) -> tuple[UUID, str] | None:
     """The shop and file hash a photo's web address (or stored name) points at."""
     found = PHOTO_KEY.search(text.strip())
@@ -374,6 +383,31 @@ class MediaService:
             asset_id, owner_kind, owner_id,
         )
         return done == "DELETE 1"
+
+    async def reorder(
+        self, conn: asyncpg.Connection, owner_kind: str, owner_id: UUID, asset_ids: list[UUID]
+    ) -> None:
+        """Put an owner's photos in this order; the first is the cover. The list must name
+        exactly the photos the owner has now, so a screen that was out of date (a colleague
+        added one meanwhile) is told to look again instead of losing a photo."""
+        if not _OWNER_KIND.fullmatch(owner_kind):
+            raise ValueError("owner_kind is lowercase letters and underscores")
+        await conn.execute(
+            "select pg_advisory_xact_lock(hashtextextended($1, 0))", f"media-owner:{owner_id}"
+        )
+        have = {
+            r["asset_id"] for r in await conn.fetch(
+                "select asset_id from media_links where owner_kind = $1 and owner_id = $2",
+                owner_kind, owner_id,
+            )
+        }
+        if len(asset_ids) != len(set(asset_ids)) or set(asset_ids) != have:
+            raise _order_changed()
+        for position, asset_id in enumerate(asset_ids):
+            await conn.execute(
+                "update media_links set position = $4 where asset_id = $1 and owner_kind = $2 "
+                "and owner_id = $3", asset_id, owner_kind, owner_id, position,
+            )
 
     async def photos_for(
         self, conn: asyncpg.Connection, owner_kind: str, owner_ids: list[UUID]

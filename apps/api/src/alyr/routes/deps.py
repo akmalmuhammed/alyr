@@ -48,6 +48,23 @@ def require_module(module: str):
     return check
 
 
+def require_any_module(*modules: str):
+    """Like `require_module`, for routes two modules share: refuse only when the shop has
+    switched on none of them (the Catalog's API serves the orders module and its own)."""
+
+    async def check(request: Request, staff: Staff = Depends(current_staff)) -> None:
+        from alyr.core.workspace import module_enabled
+
+        for module in modules:
+            if await module_enabled(request.app.state.db, staff.tenant_id, module):
+                return
+        raise HTTPException(
+            status_code=403, detail=f"{' or '.join(modules)} is not switched on for this shop"
+        )
+
+    return check
+
+
 def require_module_for_slug(module: str):
     """The same check for the public customer pages, where the shop comes from the
     address. An unknown shop is left to the route, which answers 404."""

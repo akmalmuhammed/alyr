@@ -92,13 +92,13 @@ Kept working on the same items: `GET/POST /api/products`, `POST /api/products/{i
 * The Arabic name is required to go live through `/api/items`. `POST /api/products` keeps its first, permissive behaviour until the screens replace it.
 * The first variant added to an item takes over the item's own stock (its default variant becomes that variant). Variants left out of a save are switched off, never deleted.
 * An item's changes (created, edited, switched, archived) are on the activity record with who made them.
-* The photo meters and the shop's item limit (ALY-103, `core/media.py`) count items that are not archived (`items.service.count_active`, set as `app.state.media.item_counter`), and `POST /api/items` asks the limit before it creates one. Linking photos to items (`attach`, `detach`, the 8-photo rule, the cover) is the follow-up both packages name; the `photo_id` columns are only slots.
+* The photo meters and the shop's item limit (ALY-103, `core/media.py`) count items that are not archived (`items.service.count_active`, set as `app.state.media.item_counter`), and `POST /api/items` asks the limit before it creates one. Photos are linked to items by the workspace API (ALY-104, below); the `photo_id` columns stay empty slots and an item's `photo_id` in the JSON is worked out from its first photo.
 * `DELETE` removes an item only if it has no orders, no stock movements and no price changes; otherwise it archives it, so the stock log and price history are never lost. (Deleting an item cascades to them in the database, and the app role has no right to delete them directly.)
 * A daily-limit allowance is a row per variant and day that the first take creates, then a conditional update. A take is refused if it would overdraw the day (limit plus the day's top-ups, less what was sold); putting units back, or topping up, always fits.
 
 ## Left for the other packages
 
-* Photos: only the `photo_id` slots exist (ALY-103). Workspace screens, undo and bulk actions (ALY-104). The order page, search and share links (ALY-112): it must handle `expired` payments (the pay page knows only `pending` and `paid`), the `unavailable` list and `cart/check`.
+* Photos on the order page (they are in the item JSON now, ALY-104). The order page, search and share links (ALY-112): it must handle `expired` payments (the pay page knows only `pending` and `paid`), the `unavailable` list and `cart/check`.
 * WhatsApp (ALY-106): staff commands, "tell me when it is back", telling waiting customers when a hold is released, telling the owner by message that a refund is due, a customer's own cancel entry point (the service takes `team.CUSTOMER`).
 * Low-stock and sold-out alerts, meters and report lines (ALY-109). Import and export (ALY-108). Templates by business type (ALY-107).
 * **Customer price groups for wholesale** are in release 1 (D-039), and ALY-112 lists a wholesale layout "with customer price groups", but no package builds the data: a table of groups, a price per item and group, and a group on the customer. They need a package to own them. SKU and barcode numbers likewise (the wholesale template asks for a SKU).
@@ -109,3 +109,15 @@ Kept working on the same items: `GET/POST /api/products`, `POST /api/products/{i
 ## Acceptance
 
 Scenarios 1 to 12, 18, 19, 21, 22, 27 and 29 of the plan pass as automated tests: `apps/api/tests/test_catalog_scenarios.py`, one test (or more) each, named `test_scenario_NN_...`. The model, rules and API are in `test_items.py` and `test_items_schedule.py`; the migration on a database that already has orders, run as a superuser and as an owner who does not bypass row-level security, is `test_catalog_migration.py`.
+
+## Added for the workspace screens (ALY-104, `specs/002-catalog-screens/spec.md`)
+
+The Catalog's screens needed a few pieces the engine did not have. They are API-only and listed here so this page stays the whole of what the code does.
+
+* **Photos on items.** `POST /api/items/{id}/photos` (`asset_id`, optional `variant_id`), `PUT` (the whole order), `POST .../{asset_id}/cover`, `DELETE .../{asset_id}` and `GET`. An item has up to eight, the first is the cover, a variant has one. Every item the API returns has `photos` (each with a `state`: `ready`, `pending` while the photo store is down, or `failed`) and `cover` (the first photo's state, or `missing`), so a screen can always draw a tile. `core/media.py` gained `reorder`.
+* **Drafts from photos.** `POST /api/items/drafts` makes one draft per uploaded photo (no name, price zero, never for sale). A draft may lack a name and a price; anything else needs both (the database enforces `items_price_set`). A photo already on an item is skipped, and the item limit ends a batch without losing what was made.
+* **The list.** `GET /api/items` takes `q` (Arabic spellings folded: `text.fold`), `filter` (`draft`, `sold_out`, `low_stock`, `stocked`, `archived`), `category`, `limit` and `offset`, and answers with `total`, `counts` for the filter chips, the signed-in person's `access`, and the shop's `low_stock_at`.
+* **Bulk actions.** `POST /api/items/bulk/preview` works out what an action (`sold_out`, `back`, `price_percent`, `move_category`, `archive`) would do and which items it cannot touch, and returns a `hash`. `POST .../apply` must carry that hash, or it is refused (`changed_since_preview`). `GET .../last` and `POST .../undo` put back the newest action once; items edited since are left as they are and named. Table `item_bulk_changes`.
+* **Roles.** Agents flip switches, record stock and count, and mark things sold out in bulk. They may add and edit items and photos only when the owner sets `agents_edit_items` in the shop's settings. Settings and categories stay with owners and admins.
+* **Smaller.** `GET /api/items/stock-log` (every item's latest movements), `GET /api/items/{id}/activity` (who did what), shop settings `agents_edit_items` and `low_stock_at`.
+* **The module.** `catalog` is a module in `catalog.py` with one screen. It is in no product and no preset, so it is off for every shop until the back office switches it on in `tenant_modules`. The items API answers where `orders` or `catalog` is on.

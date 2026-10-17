@@ -748,6 +748,16 @@ There is no separate Pay product: payment links stay a module of Chat and Bookin
 - The meters keep, per shop and month in shop time: photos and bytes stored at the last change, the month's peak (R2 bills on the daily peak), uploads, duplicates, refused uploads and active items.
 - Photos and owners are linked by kind and id (`media_links`), with no foreign key to the items table, so the catalog can link items, variants and anything later. New dependency: Pillow, for decoding and re-encoding images.
 
+**As built (ALY-104, 18 Oct 2026; photos linked to items, and what the screens needed).** Where the code fixed a detail this entry left open, or the founder's brief for the screens went beyond it. None of it changes the decision, and one wording differs from it (the first bullet).
+- **The section is called "Catalog" («الكتالوج»), not "Menu", "Products" or "Price list".** The founder asked for that name on the screens, and it never collides with the Products screen that lists ALYR's own suite. Calling it by the business type (Menu for a restaurant) is left to the templates package (ALY-107), which owns the starting setups.
+- **A module that is in no product.** `catalog` is declared in `catalog.py` with one screen and belongs to no product and no starting setup, so it is off for every shop. Nothing an owner sees mentions it until the back office writes a `tenant_modules` row for the shop; the go-live sweep (ALY-113) decides which shops. The items API answers where `orders` or `catalog` is on.
+- **A draft may be incomplete.** A draft made from a photo has no name and a price of zero. Anything else needs a name and a price above zero, and the database enforces it (`items_price_set`), so a draft cannot be sold by mistake.
+- **Photos on items.** Up to eight, the first is the cover; a size or colour (a variant) has one. Every item the API returns carries `photos` and `cover` with a state (`ready`, `pending` while the photo store is down, `failed`; the cover is `missing` with no photo), so a screen always has something to draw. Adding, removing, reordering and choosing a cover are on the item's activity record.
+- **Bulk actions are previewed, then applied with the preview's hash, and the newest can be undone once.** The hash makes sure an owner applies only what they saw. Marking things sold out is the counter's work, so agents may do it in bulk; prices, categories and archiving need the right to edit.
+- **Agents.** They flip switches, record stock and count the shelf. Adding and editing items and photos is for owners and admins, unless the owner turns on "agents may edit items" in the shop's settings (off to start).
+- **Low stock** is a number per shop (`low_stock_at`, 5 to start): a size counted at or below it, and not gone, is low. ALY-109 (alerts) may refine it per item.
+- **Arabic search** folds the spellings people mix up (the alef and its hamza, ya and alef maqsura, ta marbuta and ha, the marks above letters, Eastern digits) on both sides of the comparison, and a word may be a part of the name's word.
+
 ## D-040 · ALYR's look is Carbon and Volt, and its values live in one token file
 **Date** 17 Oct 2026 · **Status** Accepted (founder, 17 Oct: Carbon and Volt is the brand, ALY-61) · Linear ALY-61, ALY-126 · Replaces the open question in D-025
 

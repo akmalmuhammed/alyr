@@ -357,9 +357,10 @@ def test_scenario_08_a_pay_link_never_paid_releases_its_stock_after_30_minutes(c
 
 
 def test_the_shop_can_change_how_long_an_unpaid_order_holds_its_stock(client):
-    assert client.get("/api/items/settings").json() == {"hold_minutes": 30, "day_starts": "00:00"}
+    rest = {"day_starts": "00:00", "agents_edit_items": False, "low_stock_at": 5}
+    assert client.get("/api/items/settings").json() == {"hold_minutes": 30, **rest}
     saved = client.put("/api/items/settings", json={"hold_minutes": 10})
-    assert saved.json() == {"hold_minutes": 10, "day_starts": "00:00"}
+    assert saved.json() == {"hold_minutes": 10, **rest}
     assert client.put("/api/items/settings", json={"hold_minutes": 2}).status_code == 422
     item = counted(client, 1)
     placed = order(client, customer(client), [line(item)]).json()
