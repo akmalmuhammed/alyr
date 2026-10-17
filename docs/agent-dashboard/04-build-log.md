@@ -15,3 +15,18 @@ ALY-99, branch `aly-agent-dashboard`. One entry per stage, newest last, so a sta
 
 - Committed `01-research.md` and `03-build-brief.md` as the coordinator asked.
 - `origin/main` has not moved since the branch was cut, and D-035 is still free there.
+
+### Stage 1 · combination pricing (the founder's decision, 17 Oct)
+
+- **The rule:** the first product is from QAR 449, and each product a business adds is QAR 150. So Chat + Bookings is 599, adding Accounts is 749, and Agent is included at QAR 0.
+- **Migration 0018:**
+  - the price list accepts a new rule, `extra_product`;
+  - a new item "Each extra product" at QAR 150;
+  - Accounts goes from QAR 0 to QAR 449, only if nobody had changed it.
+- **`pricing.draft_lines`:** charges the dearest product at its own price and every other at the extra price, named "…, added product".
+- **Back office:** the price-list screen names the new rule.
+- **Recorded:** D-035 and `status.md`.
+- **Also in this stage:**
+  - `team.performance()` and `ledger.summary()` take an optional `now`, so the Agent's samples can be read at a fixed moment;
+  - the Qirfa seed uses the lost-chat reasons the inbox records (`no_reply`, not an invented one).
+- **Checks:** 264 API tests pass; eslint and tsc are clean.

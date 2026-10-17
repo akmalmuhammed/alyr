@@ -617,11 +617,19 @@ There is no separate Pay product: payment links stay a module of Chat and Bookin
   - ALYR Bookings gets its own item at QAR 449 a month, so a salon's draft quote stays at QAR 449.
   - ALYR Agent gets a QAR 0 line ("ALYR Agent, included"), so every quote shows what the subscription brings.
   - Prices ALYR already set are never overwritten. Quotes already made keep their own lines.
+- **Combination pricing (the founder, 17 Oct; migration 0018).**
+  - A business's first product is from QAR 449 a month, and each product it adds is QAR 150 more.
+    - ALYR Chat and ALYR Bookings together: QAR 599.
+    - Adding ALYR Accounts: QAR 749.
+    - ALYR Agent is always included, as a QAR 0 "included" line.
+  - In the price list, each product keeps its own price for when it is a business's first: Chat, Bookings and Accounts are QAR 449 each. Accounts was QAR 0.
+  - A new item, "Each extra product" (QAR 150, rule `extra_product`), prices every further product.
+  - A draft charges the dearest product in use at its own price and every other at the extra price. Its line is named "…, added product".
+  - All of it is editable in the back office. Quotes already made keep their own lines.
+  - The public site still shows no prices until the commercial registration (D-034).
 - **Weekly report (D-030).** It is part of ALYR Agent. Its sections stay per module, so no stored report changed.
 
 **Open for the founder.**
-- A business with both Chat and Bookings now drafts at QAR 449 + QAR 449. Before the split it drafted at QAR 449. Set a bundle price in the price list, or edit such quotes by hand.
-- Whether ALYR Agent shows as a QAR 0 line on quotes, or not at all.
 - Agents can read every balance and sale through the existing API (`docs/agent-dashboard/02-data.md` §9). The Agent dashboard will show agents no shop-wide money. Closing the older routes changes what agents can do today, so it is a separate issue.
 
 **Not built yet (phase 2 and after).** The metrics API and the dashboard UI at `/app`, the suggested actions, the product pages `/bookings`, `/agent` and `/accounts`, and the homepage figure with sample data.

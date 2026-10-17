@@ -501,7 +501,7 @@ class Bakery:
         outcome = outcome or rng.choice(["answered"] * 6 + ["lost"] * 2)
         reason = None
         if outcome == "lost":
-            reason = rng.choice(["price", "not_available", "stopped_replying"])
+            reason = rng.choice(["price", "not_available", "no_reply", "went_elsewhere"])
         self.close(person, answered + timedelta(minutes=rng.randint(10, 90)), person.staff,
                    outcome, reason)
 
