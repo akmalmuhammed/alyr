@@ -35,7 +35,7 @@ Last updated 12 Oct 2026.
 2. ALY-63 always-on home for the API
 3. ALY-64 confirm Meta's pricing rule
 4. ALY-20 templates
-5. ALY-103 the R2 bucket and `media.alyr.qa` for Catalog photos (D-039). The founder must enable R2 in the dashboard first; it cannot be done from the command line
+5. ALY-103 photos: R2 is enabled and the bucket `alyr-media` with `media.alyr.qa` exists (17 Oct). Waiting on the founder's R2 API token (bucket-limited, Object Read and Write); then the photo pipeline (D-039).
 
 ## Never
 
