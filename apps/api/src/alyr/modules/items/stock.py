@@ -206,29 +206,47 @@ async def mismatches(conn: asyncpg.Connection) -> list[dict]:
     return [dict(r) for r in rows] + [dict(r) for r in days]
 
 
+_LOG_COLUMNS = (
+    "m.id, m.variant_id, v.name as variant, v.name_ar as variant_ar, v.item_id, "
+    "i.name as item, i.name_ar as item_ar, m.kind, m.delta, m.balance_after, m.day, m.reason, "
+    "m.order_id, o.number as order_number, m.actor_id, m.actor_name, m.created_at"
+)
+_LOG_FROM = (
+    "from stock_movements m join item_variants v on v.id = m.variant_id "
+    "join items i on i.id = v.item_id left join orders o on o.id = m.order_id "
+)
+
+
+def _shown(r: asyncpg.Record) -> dict:
+    return {
+        "id": str(r["id"]), "item_id": str(r["item_id"]), "item": r["item"],
+        "item_ar": r["item_ar"], "variant_id": str(r["variant_id"]), "variant": r["variant"],
+        "variant_ar": r["variant_ar"], "kind": r["kind"], "delta": r["delta"],
+        "balance_after": r["balance_after"],
+        "day": r["day"].isoformat() if r["day"] else None, "reason": r["reason"],
+        "order_id": str(r["order_id"]) if r["order_id"] else None,
+        "order_number": r["order_number"],
+        "actor": {"id": str(r["actor_id"]) if r["actor_id"] else None, "name": r["actor_name"]},
+        "created_at": r["created_at"].isoformat(),
+    }
+
+
 async def log(
     conn: asyncpg.Connection, item_id: UUID, variant_id: UUID | None = None, limit: int = 100
 ) -> list[dict]:
     """The log for one item, newest first."""
     rows = await conn.fetch(
-        "select m.id, m.variant_id, v.name as variant, m.kind, m.delta, m.balance_after, "
-        "       m.day, m.reason, m.order_id, o.number as order_number, m.actor_id, "
-        "       m.actor_name, m.created_at "
-        "from stock_movements m join item_variants v on v.id = m.variant_id "
-        "left join orders o on o.id = m.order_id "
+        f"select {_LOG_COLUMNS} {_LOG_FROM}"
         "where v.item_id = $1 and ($2::uuid is null or m.variant_id = $2) "
         "order by m.created_at desc, m.id limit $3",
         item_id, variant_id, limit,
     )
-    return [
-        {
-            "id": str(r["id"]), "variant_id": str(r["variant_id"]), "variant": r["variant"],
-            "kind": r["kind"], "delta": r["delta"], "balance_after": r["balance_after"],
-            "day": r["day"].isoformat() if r["day"] else None, "reason": r["reason"],
-            "order_id": str(r["order_id"]) if r["order_id"] else None,
-            "order_number": r["order_number"],
-            "actor": {"id": str(r["actor_id"]) if r["actor_id"] else None, "name": r["actor_name"]},
-            "created_at": r["created_at"].isoformat(),
-        }
-        for r in rows
-    ]
+    return [_shown(r) for r in rows]
+
+
+async def recent(conn: asyncpg.Connection, limit: int = 100) -> list[dict]:
+    """The latest movements across every item, newest first: the Stock tab's log."""
+    rows = await conn.fetch(
+        f"select {_LOG_COLUMNS} {_LOG_FROM}order by m.created_at desc, m.id limit $1", limit
+    )
+    return [_shown(r) for r in rows]

@@ -6,6 +6,7 @@ the code and its details, so they never disagree. The Arabic has not been review
 native speaker (ALY-66).
 """
 
+import re
 from datetime import date, datetime, timedelta
 
 WEEKDAYS = {
@@ -160,3 +161,45 @@ class _Blank(dict):
 
     def __missing__(self, key: str) -> str:
         return ""
+
+
+# ── searching the shop's own items (the workspace list) ─────────────────────────────────
+#
+# People write the same Arabic word several ways: with or without the marks above the
+# letters, the alef written four ways, the final yeh as ya or alef maqsura, the round ta as
+# ha, and with a Persian keyboard's kaf and yeh. A search compares both sides after folding
+# all of that to one spelling, so «شاورما» finds «شاورمة» and «أرز» finds «ارز».
+
+_FOLD = str.maketrans({
+    "أ": "ا", "إ": "ا", "آ": "ا", "ٱ": "ا",   # alef with hamza, madda, wasla
+    "ى": "ي", "ی": "ي", "ئ": "ي",             # alef maqsura, Persian yeh, yeh with hamza
+    "ة": "ه",                                  # ta marbuta
+    "ؤ": "و",                                  # waw with hamza
+    "ک": "ك",                                  # Persian kaf
+    "ـ": None,                                 # tatweel, the stretch line
+    "٠": "0", "١": "1", "٢": "2", "٣": "3", "٤": "4",
+    "٥": "5", "٦": "6", "٧": "7", "٨": "8", "٩": "9",
+    "۰": "0", "۱": "1", "۲": "2", "۳": "3", "۴": "4",
+    "۵": "5", "۶": "6", "۷": "7", "۸": "8", "۹": "9",
+})
+_MARKS = re.compile("[ً-ٰٟۖ-ۭ]")  # tashkeel and small marks
+_SEPARATORS = re.compile(r"[\s,.;:/\\|()\[\]{}\-_+*«»\"'`،؛؟]+")
+
+
+def fold(text: str) -> str:
+    """Lower case, one spelling for each Arabic letter people mix up, no marks."""
+    return _MARKS.sub("", text.lower().translate(_FOLD)).strip()
+
+
+def search_words(query: str) -> list[str]:
+    """The words of a search, folded. An empty search has none."""
+    return [w for w in _SEPARATORS.split(fold(query)) if w]
+
+
+def matches(words: list[str], *fields: str) -> bool:
+    """Every word of the search is found somewhere in the fields (part of a word counts,
+    so «شاور» finds «شاورما»)."""
+    if not words:
+        return True
+    haystack = " ".join(fold(f) for f in fields if f)
+    return all(w in haystack for w in words)

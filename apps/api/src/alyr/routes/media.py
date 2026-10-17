@@ -18,6 +18,7 @@ from alyr.core.auth import Staff
 from alyr.core.images import PhotoRefused
 from alyr.core.media import too_large
 from alyr.core.storage import IMMUTABLE, PHOTO_KEY
+from alyr.modules.items import access
 from alyr.routes.deps import current_staff
 
 router = APIRouter(prefix="/api/media", tags=["photos"])
@@ -41,13 +42,26 @@ def _manager(staff: Staff) -> None:
         )
 
 
+async def _may_edit(request: Request, staff: Staff) -> None:
+    """Owners and admins add and remove photos; so do agents when the owner has allowed
+    them to edit items (the shop's catalog settings, ALY-104)."""
+    if staff.role in ("owner", "admin"):
+        return
+    async with request.app.state.db.tenant(staff.tenant_id) as conn:
+        allowed = await access.agents_may_edit(conn)
+    if not allowed:
+        raise HTTPException(
+            status_code=403, detail="Only the owner or an admin can change the shop's photos."
+        )
+
+
 @router.post("/photos", status_code=201)
 async def upload(
     request: Request, response: Response, staff: Staff = Depends(current_staff)
 ) -> dict:
     """Add a photo. 201 when it is stored, 200 when the shop already had it, 202 when it
     is accepted and waiting for the photo store (it shows as a placeholder until then)."""
-    _manager(staff)
+    await _may_edit(request, staff)
     media = request.app.state.media
     limit = media.settings.media_max_upload_bytes
     declared = request.headers.get("content-length", "")
@@ -91,7 +105,7 @@ async def remove(
     asset_id: UUID, request: Request, staff: Staff = Depends(current_staff)
 ) -> dict:
     """Delete one of the shop's photos, which also takes it off every item."""
-    _manager(staff)
+    await _may_edit(request, staff)
     async with request.app.state.db.tenant(staff.tenant_id) as conn:
         await request.app.state.media.delete(conn, asset_id)
     return {"deleted": True}

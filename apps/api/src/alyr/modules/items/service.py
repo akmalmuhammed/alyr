@@ -196,27 +196,7 @@ def view(entry: Loaded, clock: ShopClock) -> dict:
     }
 
 
-async def list_items(
-    conn: asyncpg.Connection, clock: ShopClock, status: str | None = None, q: str = "",
-    category: str | None = None, include_archived: bool = False,
-) -> list[dict]:
-    where, args = ["true"], []
-    if status:
-        args.append(status)
-        where.append(f"i.status = ${len(args)}")
-    elif not include_archived:
-        where.append("i.status <> 'archived'")
-    if category is not None:
-        args.append(category)
-        where.append(f"i.category = ${len(args)}")
-    if q.strip():
-        args.append(f"%{q.strip().lower()}%")
-        where.append(
-            f"(lower(i.name) like ${len(args)} or lower(i.name_ar) like ${len(args)} "
-            f"or lower(array_to_string(i.tags, ' ')) like ${len(args)})"
-        )
-    return [view(e, clock) for e in await load(conn, clock, " and ".join(where), tuple(args))]
-
+# The list the workspace shows (search, filters, counts, pages) is `listing.page`.
 
 # ---------------------------------------------------------------------- writing
 
@@ -231,10 +211,13 @@ def _clean_tags(tags) -> list[str]:
 
 
 def _check_fields(values: dict, variants: list[dict]) -> None:
-    """The rules every item obeys, on the values it would have after the change."""
-    if not values["name"].strip():
+    """The rules every item obeys, on the values it would have after the change. A draft (a
+    photo waiting to be described) and an archived item may still lack a name or a price;
+    anything else needs both."""
+    unfinished = values["status"] in ("draft", "archived")
+    if not values["name"].strip() and not unfinished:
         raise ItemError("name_needed", "Give the item a name.")
-    if values["price"] <= 0:
+    if values["price"] < 0 or (values["price"] == 0 and not unfinished):
         raise ItemError("bad_price", "The price must be more than zero.")
     if values["stock_rule"] not in availability.RULES:
         raise ItemError("bad_rule", "Choose how this item runs out.")
@@ -253,7 +236,7 @@ def _check_fields(values: dict, variants: list[dict]) -> None:
         raise ItemError("bad_sale", "The sale must end after it starts.")
     lowest = min(values["price"], sale if sale is not None else values["price"])
     for v in variants:
-        if v["active"] and lowest + v["price_delta"] <= 0:
+        if v["active"] and values["price"] > 0 and lowest + v["price_delta"] <= 0:
             raise ItemError("bad_price", "A price difference cannot bring a price to zero.")
         if v["active"] and values["stock_rule"] == "daily_limit" and v["daily_limit"] is None:
             raise ItemError("limit_needed", "Set how many can be sold each day.")
@@ -267,7 +250,7 @@ async def _duplicates(
     rows = await conn.fetch(
         "select id, name, name_ar, status from items "
         "where status <> 'archived' and ($1::uuid is null or id <> $1) "
-        "and (lower(btrim(name)) = lower(btrim($2)) "
+        "and ((btrim($2) <> '' and lower(btrim(name)) = lower(btrim($2))) "
         "     or (btrim($3) <> '' and btrim(name_ar) = btrim($3)))",
         skip, name, name_ar,
     )
@@ -319,7 +302,8 @@ async def create_item(
         await _sync_groups(conn, item_id, data["option_groups"])
     if data.get("schedule"):
         await _sync_schedule(conn, item_id, data["schedule"])
-    await _price_row(conn, item_id, values, actor, "First price")
+    if values["price"] > 0:  # a draft made from a photo has no price to remember yet
+        await _price_row(conn, item_id, values, actor, "First price")
     await team.record(
         conn, "item", item_id, "created", actor, None,
         {"name": values["name"], "status": values["status"]},
@@ -382,7 +366,9 @@ async def update_item(
             item_id, *(values[k] for k in changed),
         )
     if any(k in changed for k in ("price", "sale_price", "sale_starts_at", "sale_ends_at")):
-        await _price_row(conn, item_id, values, actor, reason)
+        await _price_row(
+            conn, item_id, values, actor, "First price" if before["price"] == 0 else reason
+        )
     structure = []
     if changes.get("variants") or "daily_limit" in changes:
         await _sync_variants(conn, item_id, changes.get("variants"), changes, actor, clock)
@@ -793,27 +779,37 @@ async def save_categories(conn: asyncpg.Connection, rows: list[dict]) -> list[di
 # ---------------------------------------------------------------------- settings
 
 async def settings(conn: asyncpg.Connection) -> dict:
-    """What the shop chooses about its stock: how long an unpaid pay-link order holds it,
-    and when its day begins (which is when daily limits start again)."""
-    row = await conn.fetchrow("select hold_minutes, day_starts from shop_settings")
+    """What the shop chooses about its catalog: how long an unpaid pay-link order holds its
+    stock, when its day begins (which is when daily limits start again), whether agents may
+    edit items, and the number at which counted stock is called low."""
+    row = await conn.fetchrow(
+        "select hold_minutes, day_starts, agents_edit_items, low_stock_at from shop_settings"
+    )
     return {
         "hold_minutes": row["hold_minutes"] if row else 30,
         "day_starts": (row["day_starts"] if row else time(0)).strftime("%H:%M"),
+        "agents_edit_items": row["agents_edit_items"] if row else False,
+        "low_stock_at": row["low_stock_at"] if row else 5,
     }
 
 
 async def save_settings(
-    conn: asyncpg.Connection, hold_minutes: int | None, day_starts: time | None
+    conn: asyncpg.Connection, hold_minutes: int | None, day_starts: time | None,
+    agents_edit_items: bool | None = None, low_stock_at: int | None = None,
 ) -> dict:
     if hold_minutes is not None and not 5 <= hold_minutes <= 1440:
         raise ItemError("bad_hold", "A hold lasts between 5 minutes and 24 hours.")
+    if low_stock_at is not None and not 0 <= low_stock_at <= 100_000:
+        raise ItemError("bad_low_stock", "Choose a low-stock number between 0 and 100,000.")
     await conn.execute(
-        "insert into shop_settings (hold_minutes, day_starts) "
-        "values (coalesce($1::int, 30), coalesce($2::time, '00:00')) "
+        "insert into shop_settings (hold_minutes, day_starts, agents_edit_items, low_stock_at) "
+        "values (coalesce($1::int, 30), coalesce($2::time, '00:00'), "
+        "coalesce($3::boolean, false), coalesce($4::int, 5)) "
         "on conflict (tenant_id) do update set "
         "hold_minutes = coalesce($1::int, shop_settings.hold_minutes), "
-        "day_starts = coalesce($2::time, shop_settings.day_starts)",
-        hold_minutes, day_starts,
+        "day_starts = coalesce($2::time, shop_settings.day_starts), "
+        "agents_edit_items = coalesce($3::boolean, shop_settings.agents_edit_items), "
+        "low_stock_at = coalesce($4::int, shop_settings.low_stock_at)",
+        hold_minutes, day_starts, agents_edit_items, low_stock_at,
     )
     return await settings(conn)
-

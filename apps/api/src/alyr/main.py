@@ -30,7 +30,7 @@ from alyr.routes import reports as reports_routes
 from alyr.routes import team as team_routes
 from alyr.routes import track as track_routes
 from alyr.routes import workspace as workspace_routes
-from alyr.routes.deps import require_module, require_module_for_slug
+from alyr.routes.deps import require_any_module, require_module, require_module_for_slug
 
 
 def create_app() -> FastAPI:
@@ -88,9 +88,12 @@ def create_app() -> FastAPI:
     app.include_router(pay.router)
     app.include_router(track_routes.router)
     app.include_router(orders.router, dependencies=[Depends(require_module("orders"))])
-    # The Catalog's own API (D-039). Not a module of its own, so it adds nothing to the
-    # workspace navigation or the Products screen: it answers where orders are switched on.
-    app.include_router(items.router, dependencies=[Depends(require_module("orders"))])
+    # The Catalog's own API (D-039). It adds nothing to the Products screen. It answers
+    # where orders are switched on (the order page reads the same items) and where the
+    # Catalog module is on (its workspace screens, hidden until go-live, ALY-104).
+    app.include_router(
+        items.router, dependencies=[Depends(require_any_module("orders", "catalog"))]
+    )
     app.include_router(store.router, dependencies=[Depends(require_module_for_slug("orders"))])
     app.include_router(jobs_routes.router)
     app.include_router(inbox.router, dependencies=[Depends(require_module("inbox"))])

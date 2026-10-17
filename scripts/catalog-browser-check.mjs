@@ -1,0 +1,548 @@
+// Runs the Catalog's screens in a real browser at phone width, in English or Arabic, light
+// or dark, and takes screenshots. No packages: Node 22's built-in WebSocket and fetch, and
+// headless Edge or Chrome driven over the DevTools protocol (ALY-104). Node 22.18 or newer
+// (it reads the screens' words straight from catalogCopy.ts).
+//
+//   node scripts/catalog-browser-check.mjs --photos C:/t/catalog/photos --lang en --items 30 \
+//        --base http://localhost:3101 --api http://127.0.0.1:8000 --out C:/t/catalog/shots \
+//        --axe C:/t/tools/node_modules/axe-core/axe.min.js
+//
+// It needs a dev API and web app (docs/status.md, "Live testing from the laptop"; never the
+// shared database) whose shop is the open demo shop with the Catalog module switched on and
+// no items yet, and a folder of sample photos (dish-01.jpg ... dish-36.jpg, and phone-01.jpg
+// ... for big ones: draw them with a script, never download real ones). `--axe` is the path
+// to axe-core's axe.min.js; without it the accessibility scan is skipped.
+// What it does: adds the photos on a throttled connection, makes a draft for each, drops the
+// connection and retries one photo, walks through the drafts filling in names and prices,
+// types one item, searches by an Arabic spelling, flips a switch, edits one item (sale,
+// sizes, extra, tag, time), counts the shelf with a difference, runs a bulk price change with
+// its preview and undoes it, checks the keyboard, looks at the same screens in dark, with a
+// small window (an on-screen keyboard), as an agent and on a laptop. It checks the API's own
+// numbers after each step and exits with an error if one is wrong.
+//
+// Short folders: Edge fails quietly with long paths, so keep --profile and --out short.
+
+import { spawn } from "node:child_process";
+import { existsSync, mkdirSync, readdirSync, readFileSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { COPY } from "../apps/web/app/(product)/_workspace/catalogCopy.ts";
+
+const args = Object.fromEntries(
+  process.argv.slice(2).reduce((all, a, i, list) => (a.startsWith("--") ? [...all, [a.slice(2), list[i + 1]?.startsWith("--") || list[i + 1] === undefined ? "true" : list[i + 1]]] : all), []),
+);
+const BASE = args.base ?? "http://localhost:3101";
+const LANG = args.lang === "ar" ? "ar" : "en";
+const ITEMS = Number(args.items ?? 30);
+if (!args.photos) { console.error("Give --photos <folder of sample photos>. See the top of this file."); process.exit(2); }
+const PHOTOS = args.photos;
+const OUT = args.out ?? `${tmpdir()}/catalog-shots`;
+const PROFILE = args.profile ?? `${tmpdir()}/catalog-profile-${LANG}`;
+const PORT = Number(args.port ?? (LANG === "ar" ? 9366 : 9355));
+const EDGE = process.env.EDGE_PATH ?? "C:/Program Files (x86)/Microsoft/Edge/Application/msedge.exe";
+const AXE = args.axe ?? "";
+const t = COPY[LANG];
+mkdirSync(OUT, { recursive: true });
+const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+
+// ── the menu: a fictional kitchen, in both languages ─────────────────────────────────────
+const MENU = [
+  ["Chicken shawarma", "شاورما دجاج", 12, "Mains"], ["Beef shawarma", "شاورما لحم", 14, "Mains"],
+  ["Falafel plate", "طبق فلافل", 9, "Mains"], ["Mixed grill", "مشاوي مشكلة", 38, "Mains"],
+  ["Chicken biryani", "برياني دجاج", 24, "Mains"], ["Lamb machboos", "مجبوس لحم", 32, "Mains"],
+  ["Fish and rice", "سمك مع أرز", 28, "Mains"], ["Margherita pizza", "بيتزا مارجريتا", 26, "Mains"],
+  ["Beef burger", "برجر لحم", 22, "Mains"], ["Club sandwich", "كلوب ساندويتش", 20, "Mains"],
+  ["Hummus", "حمص", 10, "Starters"], ["Tabbouleh", "تبولة", 11, "Starters"],
+  ["Fattoush", "فتوش", 12, "Starters"], ["Lentil soup", "شوربة عدس", 8, "Starters"],
+  ["Grape leaves", "ورق عنب", 13, "Starters"], ["Spring rolls", "سبرينغ رول", 14, "Starters"],
+  ["Cheese fatayer", "فطاير جبن", 12, "Starters"], ["Mutabbal", "متبل", 10, "Starters"],
+  ["Kunafa", "كنافة", 15, "Desserts"], ["Umm Ali", "أم علي", 14, "Desserts"],
+  ["Baklava", "بقلاوة", 16, "Desserts"], ["Chocolate cake", "كيكة شوكولاتة", 18, "Desserts"],
+  ["Ice cream", "آيس كريم", 9, "Desserts"], ["Rice pudding", "مهلبية", 8, "Desserts"],
+  ["Karak tea", "شاي كرك", 3, "Drinks"], ["Arabic coffee", "قهوة عربية", 6, "Drinks"],
+  ["Lemon mint", "ليمون بالنعناع", 12, "Drinks"], ["Orange juice", "عصير برتقال", 10, "Drinks"],
+  ["Laban", "لبن", 5, "Drinks"], ["Water", "ماء", 2, "Drinks"],
+];
+
+// ── the browser ──────────────────────────────────────────────────────────────────────────
+async function launch() {
+  mkdirSync(PROFILE, { recursive: true });
+  const proc = spawn(EDGE, [
+    "--headless=new", `--remote-debugging-port=${PORT}`, `--user-data-dir=${PROFILE}`, "--no-first-run",
+    "--no-default-browser-check", "--disable-extensions", "--disable-gpu", "--hide-scrollbars",
+    "--window-size=375,812", "about:blank",
+  ], { stdio: "ignore", windowsHide: true });
+  let page = null;
+  for (let i = 0; i < 80 && !page; i++) {
+    try { page = (await (await fetch(`http://127.0.0.1:${PORT}/json`)).json()).find((x) => x.type === "page"); } catch { /* not up */ }
+    if (!page) await sleep(250);
+  }
+  if (!page) throw new Error("the browser did not start");
+  const ws = new WebSocket(page.webSocketDebuggerUrl);
+  await new Promise((resolve, reject) => { ws.onopen = resolve; ws.onerror = reject; });
+  let counter = 0;
+  const waiting = new Map();
+  const heard = new Map();
+  const problems = [];
+  ws.onmessage = (event) => {
+    const m = JSON.parse(event.data);
+    if (m.id && waiting.has(m.id)) {
+      const { resolve, reject } = waiting.get(m.id);
+      waiting.delete(m.id);
+      if (m.error) reject(new Error(m.error.message)); else resolve(m.result);
+    } else if (m.method) {
+      for (const fn of heard.get(m.method) ?? []) fn(m.params);
+    }
+  };
+  const send = (method, params = {}) => new Promise((resolve, reject) => {
+    const id = ++counter;
+    waiting.set(id, { resolve, reject });
+    ws.send(JSON.stringify({ id, method, params }));
+  });
+  const on = (method, fn) => heard.set(method, [...(heard.get(method) ?? []), fn]);
+  on("Runtime.exceptionThrown", (p) => problems.push(`exception: ${p.exceptionDetails.exception?.description ?? p.exceptionDetails.text}`));
+  on("Runtime.consoleAPICalled", (p) => { if (p.type === "error") problems.push(`console: ${p.args.map((a) => a.value ?? a.description).join(" ").slice(0, 300)}`); });
+  await send("Page.enable"); await send("Runtime.enable"); await send("DOM.enable"); await send("Network.enable");
+  return { send, on, problems, close: async () => { try { await send("Browser.close"); } catch { /* gone */ } ws.close(); proc.kill(); } };
+}
+
+const browser = await launch();
+const { send } = browser;
+const failures = [];
+const log = (...m) => console.log(`[${LANG}]`, ...m);
+const check = (ok, what) => { if (ok) log("ok  ", what); else { failures.push(what); log("FAIL", what); } };
+
+async function setup(scheme) {
+  await send("Emulation.setDeviceMetricsOverride", { width: 375, height: 812, deviceScaleFactor: 2, mobile: true });
+  await send("Emulation.setTouchEmulationEnabled", { enabled: true, maxTouchPoints: 5 });
+  await send("Emulation.setEmulatedMedia", { features: [{ name: "prefers-color-scheme", value: scheme }, { name: "prefers-reduced-motion", value: "reduce" }] });
+}
+async function js(expression) {
+  const r = await send("Runtime.evaluate", { expression, awaitPromise: true, returnByValue: true });
+  if (r.exceptionDetails) throw new Error(r.exceptionDetails.exception?.description ?? r.exceptionDetails.text);
+  return r.result.value;
+}
+async function until(expression, what, timeout = 20000) {
+  const started = Date.now();
+  while (Date.now() - started < timeout) {
+    try { if (await js(expression)) return; } catch { /* the page is changing */ }
+    await sleep(120);
+  }
+  throw new Error(`timed out: ${what}`);
+}
+async function go(path, wait = 800) {
+  const loaded = new Promise((resolve) => browser.on("Page.loadEventFired", resolve));
+  await send("Page.navigate", { url: `${BASE}${path}` });
+  await Promise.race([loaded, sleep(20000)]);
+  await sleep(wait);
+  // The framework's own dev badge is not part of the product.
+  await js("document.querySelectorAll('nextjs-portal').forEach(n => n.remove())");
+}
+async function shot(name) {
+  await js("document.querySelectorAll('nextjs-portal').forEach(n => n.remove())");
+  const r = await send("Page.captureScreenshot", { format: "png" });
+  writeFileSync(`${OUT}/${LANG}-${name}.png`, Buffer.from(r.data, "base64"));
+  log("shot", name);
+}
+async function click(find, wait = 250) {
+  // Press the centre of the element like a thumb would, but only once it has stopped moving
+  // and is really what is under that point (not clipped by the sheet or hidden by another
+  // layer). Mouse events are placed on the visual viewport, element boxes are in layout space.
+  const probe = `(() => { const el = (${find}); if (!el) return null; const r = el.getBoundingClientRect(); const cx = r.left + r.width / 2, cy = r.top + r.height / 2; const top = document.elementFromPoint(cx, cy); const v = visualViewport; return { hit: !!top && (el === top || el.contains(top) || top.contains(el)), x: (cx - v.offsetLeft) * v.scale, y: (cy - v.offsetTop) * v.scale, cover: top ? top.tagName + '.' + String(top.className).slice(0, 40) : null }; })()`;
+  // A thumb on a button takes focus away from the field being typed in; a phone's browser
+  // keeps scrolling the focused field into view until it does, so leave it first.
+  await js("(() => { const a = document.activeElement; if (a && a !== document.body && /^(INPUT|TEXTAREA|SELECT)$/.test(a.tagName)) a.blur(); })()");
+  let last = null;
+  for (let i = 0; i < 14; i++) {
+    const found = await js(`(() => { const el = (${find}); if (!el) return false; el.scrollIntoView({block:'center', inline:'nearest'}); return true; })()`);
+    if (!found) throw new Error(`nothing to press: ${find}`);
+    await sleep(90);
+    const now = await js(probe);
+    if (now && now.hit && last && Math.abs(now.x - last.x) < 0.5 && Math.abs(now.y - last.y) < 0.5) { last = now; break; }
+    last = now;
+    if (i === 13) throw new Error(`could not get a clear press on: ${find} (what is on top: ${last && last.cover})`);
+  }
+  await send("Input.dispatchMouseEvent", { type: "mouseMoved", x: last.x, y: last.y });
+  await send("Input.dispatchMouseEvent", { type: "mousePressed", x: last.x, y: last.y, button: "left", clickCount: 1 });
+  await send("Input.dispatchMouseEvent", { type: "mouseReleased", x: last.x, y: last.y, button: "left", clickCount: 1 });
+  await sleep(wait);
+}
+const norm = "(e => e.textContent.replace(/\\s+/g, ' ').trim())";
+const visible = "(e => e.getClientRects().length > 0)";
+const layer = () => `(document.querySelector('.ct-sheet') || document)`;
+const pressText = (text, tag = "button", wait = 250) =>
+  click(`[...${layer()}.querySelectorAll(${JSON.stringify(tag)})].filter(${visible}).find(e => ${norm}(e).includes(${JSON.stringify(text)}))`, wait);
+const pressExact = (text, tag = "button", wait = 250) =>
+  click(`[...${layer()}.querySelectorAll(${JSON.stringify(tag)})].filter(${visible}).find(e => ${norm}(e) === ${JSON.stringify(text)})`, wait);
+async function fill(label, value, nth = 0) {
+  const ok = await js(`(() => { const ls = [...${layer()}.querySelectorAll('label')].filter(l => ${norm}(l) === ${JSON.stringify(label)}); const l = ls[${nth}]; const el = l && document.getElementById(l.htmlFor); if (!el) return false; el.scrollIntoView({block:'center'}); el.focus(); return true; })()`);
+  if (!ok) {
+    const have = await js(`[...${layer()}.querySelectorAll('label')].filter(${visible}).map(${norm}).filter(x => x.length < 40).slice(-16).join(' | ')`);
+    throw new Error(`no field labelled “${label}”; the labels on screen are: ${have}`);
+  }
+  await clearFocused();
+  if (value) await send("Input.insertText", { text: String(value) });
+  await sleep(50);
+}
+/** Empties the focused field the way React sees it (its own setter, then an input event). */
+async function clearFocused() {
+  await js(`(() => { const el = document.activeElement; const proto = el instanceof HTMLTextAreaElement ? HTMLTextAreaElement.prototype : HTMLInputElement.prototype; Object.getOwnPropertyDescriptor(proto, 'value').set.call(el, ''); el.dispatchEvent(new Event('input', { bubbles: true })); })()`);
+}
+async function files(selector, list) {
+  const { root } = await send("DOM.getDocument", { depth: 0 });
+  const { nodeId } = await send("DOM.querySelector", { nodeId: root.nodeId, selector });
+  if (!nodeId) throw new Error(`no input ${selector}`);
+  await send("DOM.setFileInputFiles", { files: list, nodeId });
+}
+// The API is asked directly (not through the page), so a check still works while the page's
+// network is switched off. The dev shop is the open demo, so no sign-in is needed.
+const API = args.api ?? "http://127.0.0.1:8000";
+const api = async (path) => (await fetch(`${API}${path}`, { cache: "no-store" })).json();
+const items = async (query = "") => (await api(`/api/items?limit=500${query}`)).items;
+const sheetText = () => js("(document.querySelector('.ct-sheet')?.innerText ?? '')");
+const toast = () => js("[...document.querySelectorAll('.ct-toast')].map(e => e.innerText.replace(/\\s+/g,' ')).join(' | ')");
+const scrollSheet = (to) => js(`(() => { const b = document.querySelector('.ct-sheet-body'); if (b) b.scrollTop = ${to === "end" ? "b.scrollHeight" : to}; })()`);
+async function openFold(title) {
+  const summary = `[...document.querySelectorAll('.ct-sheet summary')].find(s => ${norm}(s).includes(${JSON.stringify(title)}))`;
+  await click(summary, 200);
+  check(await js(`${summary}.parentElement.open`), `the “${title}” part opens`);
+}
+async function setLanguage(to) {
+  if (to === LANG && LANG === "en") return;
+  // On a laptop the language button is in the sidebar; on a phone it is in the palette.
+  if (await js("innerWidth >= 900")) { await click("document.querySelector('.sh-lang')", 500); return; }
+  const shell = { en: "Search or jump to", ar: "ابحث أو انتقل إلى" };
+  await click(`document.querySelector('.sh-mtop [aria-label=${JSON.stringify(shell.en)}], .sh-mtop [aria-label=${JSON.stringify(shell.ar)}]')`, 300);
+  await click(`[...document.querySelectorAll('.sh-palette button[role=option]')].find(b => /Switch to Arabic|التبديل إلى الإنجليزية/.test(b.textContent))`, 500);
+}
+/** Nothing on the page, or in the sheet, scrolls sideways (the phone-width rule). */
+async function noSideScroll(name) {
+  const wide = await js(`(() => { const out = []; const w = innerWidth; if (Math.max(document.documentElement.scrollWidth, document.body.scrollWidth) > w) out.push('page ' + document.documentElement.scrollWidth); for (const sel of ['.sh-scroll', '.ct-sheet-body', '.ct-sheet']) { const el = document.querySelector(sel); if (el && el.scrollWidth > el.clientWidth + 1) out.push(sel + ' ' + el.scrollWidth + '>' + el.clientWidth); } return out.join(', '); })()`);
+  check(wide === "", `no sideways scrolling on ${name}${wide ? " (" + wide + ")" : ""}`);
+}
+async function axe(name, exclude = []) {
+  if (!AXE || !existsSync(AXE)) { log("axe skipped: give --axe <path to axe.min.js>"); return; }
+  await js(readFileSync(AXE, "utf8"));
+  const found = await js(`axe.run(${exclude.length ? JSON.stringify({ exclude: exclude.map((x) => [x]) }) : 'document'}, { runOnly: ['wcag2a','wcag2aa','wcag21aa','best-practice'], resultTypes: ['violations'] }).then(r => r.violations.map(v => ({ id: v.id, impact: v.impact, n: v.nodes.length, nodes: v.nodes.slice(0, 8).map(n => ({ target: n.target.join(' '), html: n.html.slice(0, 140), why: (n.any[0] || n.all[0] || n.none[0] || {}).message })) })))`);
+  writeFileSync(`${OUT}/${LANG}-axe-${name}.json`, JSON.stringify(found, null, 2));
+  check(found.filter((v) => v.impact !== "minor").length === 0, `axe: no violations on ${name} (${found.length} found)`);
+  for (const v of found) for (const n of v.nodes.slice(0, 4)) log("   axe", v.impact, v.id, n.target, "|", n.why);
+}
+
+// ── the run ──────────────────────────────────────────────────────────────────────────────
+try {
+  const photos = readdirSync(PHOTOS).filter((f) => /\.jpe?g$/i.test(f)).sort();
+  const dishes = photos.filter((f) => f.startsWith("dish-")), phone = photos.filter((f) => f.startsWith("phone-"));
+  const chosen = [...phone.slice(0, 3), ...dishes.slice(0, Math.max(0, ITEMS - 3))].slice(0, ITEMS).map((f) => `${PHOTOS}/${f}`);
+  if (chosen.length < ITEMS) throw new Error(`need ${ITEMS} sample photos in ${PHOTOS}, found ${chosen.length}`);
+
+  await setup("light");
+  await go("/app/catalog", 1500);
+  await setLanguage(LANG);
+  await sleep(500);
+  check((await items()).length === 0, "the shop starts with no items");
+  await shot("01-empty");
+
+  // 1. add many photos at once; each is shrunk, sent, and made a draft
+  await pressText(t.add);
+  await until("!!document.querySelector('.ct-sheet')", "the add sheet");
+  await shot("02-add-sheet");
+  await send("Network.emulateNetworkConditions", { offline: false, latency: 120, downloadThroughput: 600 * 1024, uploadThroughput: 350 * 1024 });
+  await files(".ct-sheet input.ct-file:not([capture])", chosen);
+  await until("document.querySelectorAll('.ct-up').length > 0", "the first tiles");
+  await sleep(2500);
+  await shot("03-uploading");
+  await send("Network.emulateNetworkConditions", { offline: false, latency: 0, downloadThroughput: -1, uploadThroughput: -1 });
+  await until(`document.querySelectorAll('.ct-up.done').length === ${chosen.length}`, "every photo saved", 240000);
+  await sleep(500);
+  await shot("04-uploaded");
+  check((await items("&filter=draft")).length === chosen.length, `${chosen.length} drafts made from ${chosen.length} photos`);
+  const first = (await items())[0];
+  check(first.photos.length === 1 && first.cover.state === "ready", "each draft has its photo as the cover, ready");
+
+  // 2. the walk-through: a name, a price and a category for each
+  await pressText(t.fillInNow(chosen.length));
+  await until("!!document.querySelector('#ct-walk-form')", "the first draft");
+  await sleep(700);
+  await shot("05-walk-empty");
+  for (let i = 0; i < chosen.length; i++) {
+    const [en, ar, price, category] = MENU[i];
+    await fill(t.nameEn, en); await fill(t.nameAr, ar); await fill(t.walkPrice, String(price)); await fill(t.category, category);
+    if (i === 0) { await shot("06-walk-filled"); }
+    await pressText(i === chosen.length - 1 ? t.walkLast : t.walkSave, "button", 150);
+    if (i < chosen.length - 1) await until(`document.querySelector('.ct-sheet-title h2')?.textContent.includes(${JSON.stringify(t.walkTitle(i + 2, chosen.length))}) && document.querySelector('#ct-walk-form input')?.value === ''`, `draft ${i + 2}`, 15000);
+  }
+  await until("!!document.querySelector('.ct-finish')", "the end of the walk");
+  await shot("07-walk-done");
+  const made = await items();
+  check(made.length === chosen.length && made.every((i) => i.status === "live" && i.price > 0 && i.name_ar), `${chosen.length} items on sale with Arabic names and prices`);
+  await pressText(t.walkClose);
+  await until(`document.querySelectorAll('.ct-card').length >= ${Math.min(chosen.length, 30)}`, "the grid");
+  await sleep(600);
+  await shot("08-grid");
+  await noSideScroll("the grid");
+
+  // 3. the list, search by an Arabic spelling, filters
+  await click("document.querySelector('.ct-seg button[aria-pressed=false]')");
+  await sleep(300);
+  await shot("09-list");
+  await noSideScroll("the list");
+  await click("document.querySelector('.ct-seg button[aria-pressed=false]')");
+  // The stored word ends in the round ta («كنافة», «مشكلة»); people type it with ha as well.
+  const spelled = MENU.findIndex((m) => m[0] === "Kunafa") < chosen.length ? "كنافه" : "مشكله";
+  await click("document.querySelector('.ct-search input')");
+  await send("Input.insertText", { text: spelled });
+  await until("document.querySelectorAll('.ct-card').length === 1", "one result for the variant spelling");
+  await shot("10-search-arabic-spelling");
+  check((await items(`&q=${encodeURIComponent(spelled)}`)).length === 1, "an Arabic spelling variant finds the item");
+  await js("document.querySelector('.ct-search input').focus()");
+  await clearFocused();
+  await until(`document.querySelectorAll('.ct-card').length >= ${Math.min(chosen.length, 30)}`, "everything again");
+
+  // 3b. a weak connection: two more photos while the network drops, retry one, skip the other
+  const extras = [`${PHOTOS}/dish-35.jpg`, `${PHOTOS}/dish-36.jpg`];
+  if (extras.every(existsSync)) {
+    await pressText(t.add);
+    await until("!!document.querySelector('.ct-sheet')", "the add sheet again");
+    await send("Network.emulateNetworkConditions", { offline: true, latency: 0, downloadThroughput: 0, uploadThroughput: 0 });
+    await files(".ct-sheet input.ct-file:not([capture])", extras);
+    await until("document.querySelectorAll('.ct-up.failed').length === 2", "both photos failing while offline", 60000);
+    await shot("10b-offline-failed");
+    await noSideScroll("the add sheet with failed photos");
+    check((await js("document.querySelector('.ct-up.failed')?.innerText ?? ''")).includes(t.noConnection), "a failed photo says there is no connection");
+    check((await items()).length === chosen.length, "nothing was half-saved while offline");
+    await send("Network.emulateNetworkConditions", { offline: false, latency: 0, downloadThroughput: -1, uploadThroughput: -1 });
+    await pressText(t.retryPhoto);
+    await until("document.querySelectorAll('.ct-up.done').length === 1", "the retried photo saved", 40000);
+    await pressText(t.skipPhoto);
+    await shot("10c-retried");
+    check((await items("&filter=draft")).length === 1, "retrying one photo made one draft, skipping the other made none");
+    await pressText(t.fillInNow(1));
+    await until("!!document.querySelector('#ct-walk-form')", "the extra draft");
+    await fill(t.nameEn, "Mint tea"); await fill(t.nameAr, "شاي بالنعناع"); await fill(t.walkPrice, "4"); await fill(t.category, "Drinks");
+    await pressText(t.walkLast, "button", 600);
+    await pressText(t.walkClose);
+    await sleep(500);
+  }
+  // an item added by typing, with no photo
+  await pressText(t.add);
+  await until("!!document.querySelector('.ct-sheet')", "the add sheet to type one item");
+  await pressText(t.typeOne);
+  await until("!!document.querySelector('.ct-sheet input[list=ct-categories]')", "the blank item form");
+  await sleep(400);
+  await shot("10d-new-item-blank");
+  await fill(t.nameEn, "Date cake"); await fill(t.nameAr, "كيكة تمر"); await fill(t.price, "17"); await fill(t.category, "Desserts");
+  await pressText(t.save, "button", 800);
+  await until("!document.querySelector('.ct-sheet')", "the typed item saved");
+  const typed = (await items()).find((i) => i.name === "Date cake");
+  check(typed && typed.status === "live" && typed.cover.state === "missing", "an item added by typing has a placeholder tile, never a broken image");
+  await sleep(400);
+  await shot("10e-typed-item");
+
+  // 4. a switch, with its undo toast
+  const target = MENU[0];
+  await click(`document.querySelector('.ct-card .sh-switch')`, 500);
+  await shot("11-switch-toast");
+  check((await items()).some((i) => i.available === false), "the quick switch marks an item sold out");
+  await click(`document.querySelector('.ct-toast .btn')`, 600);
+  check((await items()).every((i) => i.available), "its undo puts it back");
+
+  // 5. edit one item: a sale, a size, an extra, a tag and opening hours
+  await click(`[...document.querySelectorAll('.ct-card .ct-open')].find(b => b.textContent.includes(${JSON.stringify(LANG === "ar" ? target[1] : target[0])}))`, 600);
+  await until("!!document.querySelector('.ct-sheet')", "the edit sheet");
+  await sleep(500);
+  await shot("12-edit-top");
+  await noSideScroll("the edit sheet");
+  // keyboard: Tab stays inside the sheet, Escape closes it and gives focus back
+  check(await js("document.querySelector('.ct-sheet').contains(document.activeElement)"), "focus starts inside the sheet");
+  for (let i = 0; i < 60; i++) {
+    await send("Input.dispatchKeyEvent", { type: "keyDown", key: "Tab", code: "Tab", windowsVirtualKeyCode: 9 });
+    await send("Input.dispatchKeyEvent", { type: "keyUp", key: "Tab", code: "Tab", windowsVirtualKeyCode: 9 });
+  }
+  check(await js("document.querySelector('.ct-sheet').contains(document.activeElement)"), "Tab never leaves the sheet");
+  await send("Input.dispatchKeyEvent", { type: "keyDown", key: "Escape", code: "Escape", windowsVirtualKeyCode: 27 });
+  await send("Input.dispatchKeyEvent", { type: "keyUp", key: "Escape", code: "Escape", windowsVirtualKeyCode: 27 });
+  await until("!document.querySelector('.ct-sheet')", "Escape closing the sheet");
+  check(await js("document.activeElement?.classList.contains('ct-open') === true"), "focus goes back to the card that opened it");
+  await click(`[...document.querySelectorAll('.ct-card .ct-open')].find(b => b.textContent.includes(${JSON.stringify(LANG === "ar" ? target[1] : target[0])}))`, 600);
+  await until("!!document.querySelector('.ct-sheet')", "the edit sheet again");
+  await fill(t.salePrice, "10.5");
+  await openFold(t.variantsTitle);
+  await pressText(t.addVariant);
+  await fill(t.variantName, "Small"); await fill(t.variantNameAr, "صغير");
+  await pressText(t.addVariant);
+  await fill(t.variantName, "Large", 1); await fill(t.variantNameAr, "كبير", 1); await fill(t.variantExtra, "4", 1);
+  await openFold(t.optionsTitle);
+  await pressText(t.addGroup);
+  await fill(t.groupName, "Extras"); await fill(t.groupNameAr, "إضافات");
+  await fill(t.optionName, "Extra cheese"); await fill(t.optionNameAr, "جبن إضافي"); await fill(t.optionExtra, "2");
+  await openFold(t.scheduleTitle);
+  await pressExact(t.scheduleSet, "label");
+  check(await js("!!document.querySelector('.ct-sheet .ct-days')"), "choosing set times shows the days");
+  await openFold(t.tagsTitle);
+  await pressText(t.tagIdeas[0]);
+  check(await js("document.querySelectorAll('.ct-sheet .ct-tags li').length === 1"), "a tag idea was added");
+  await scrollSheet(1200); await sleep(200);
+  await shot("13-edit-middle");
+  await scrollSheet("end"); await sleep(200);
+  await shot("14-edit-bottom");
+  await pressText(t.save, "button", 800);
+  await until("!document.querySelector('.ct-sheet')", "the sheet closing after a save", 15000);
+  const edited = (await items()).find((i) => i.name === target[0]);
+  check(edited.sale_price === 1050 && edited.variants.filter((v) => !v.is_default).length === 2 && edited.option_groups.length === 1 && edited.tags.length === 1 && edited.schedule.length === 1, "the edit saved the sale, two sizes, an extra, a tag and a time");
+  await sleep(300);
+  await shot("15-after-save");
+
+  // 6. stock: count Falafel, with a difference and a reason
+  const falafel = MENU.find((m) => m[0] === "Falafel plate");
+  await click(`[...document.querySelectorAll('.ct-card .ct-open')].find(b => b.textContent.includes(${JSON.stringify(LANG === "ar" ? falafel[1] : falafel[0])}))`, 600);
+  await until("!!document.querySelector('.ct-sheet')", "the edit sheet for falafel");
+  await pressText(t.rules.count[0], "label");
+  await fill(t.openingStock, "24");
+  await pressText(t.save, "button", 800);
+  await until("!document.querySelector('.ct-sheet')", "falafel saved");
+  check((await items()).find((i) => i.name === falafel[0]).variants[0].on_hand === 24, "an item counted in stock starts from the number typed");
+  await click("document.querySelector('#ct-tab-stock')", 700);
+  await until("document.querySelectorAll('.ct-stockrow').length >= 1", "the stock list");
+  await shot("16-stock");
+  await noSideScroll("the stock tab");
+  await click(`[...document.querySelectorAll('.ct-stockrow')].find(r => r.textContent.includes(${JSON.stringify(LANG === "ar" ? falafel[1] : falafel[0])})).querySelectorAll('button')[2]`, 500);
+  await until("!!document.querySelector('.ct-sheet')", "the count sheet");
+  await fill(t.counted, "20");
+  await sleep(250);
+  await shot("17-count-difference");
+  await noSideScroll("the count sheet");
+  await pressText(t.record, "button", 200); // without a reason: refused on the screen
+  check((await sheetText()).includes(t.reasonRequired), "a count that differs needs a reason");
+  await pressText(t.reasonsCount[1]);
+  await shot("18-count-reason");
+  await pressText(t.record, "button", 800);
+  await until("!document.querySelector('.ct-sheet')", "the count recorded");
+  const counted = (await items()).find((i) => i.name === falafel[0]);
+  check(counted.variants[0].on_hand === 20, "the shelf count replaced the system's number");
+  const movement = (await api("/api/items/stock-log?limit=5")).log[0];
+  check(movement.kind === "counted" && movement.delta === -4 && movement.reason === t.reasonsCount[1], "the difference (−4) and its reason are in the stock log");
+  await shot("19-stock-log");
+
+  // 7. bulk: +10% on five items, preview, apply, undo
+  await click("document.querySelector('#ct-tab-items')", 600);
+  const before = Object.fromEntries((await items()).map((i) => [i.id, i.price]));
+  await pressExact(t.select);
+  for (let i = 0; i < 5; i++) await click(`document.querySelectorAll('.ct-card .ct-open')[${i + 1}]`, 120);
+  await shot("20-select");
+  await pressText(t.chooseAction);
+  await until("!!document.querySelector('.ct-sheet')", "the bulk sheet");
+  await pressText(t.actions.price_percent[0], "label");
+  await fill(t.percent, "10");
+  await shot("21-bulk-choose");
+  await pressText(t.preview, "button", 700);
+  await until("!!document.querySelector('.ct-preview')", "the preview");
+  await shot("22-bulk-preview");
+  await noSideScroll("the bulk preview");
+  check((await items()).every((i) => i.price === before[i.id]), "looking at the preview changed nothing");
+  await pressText(t.apply(5), "button", 900);
+  await until("!document.querySelector('.ct-sheet')", "the bulk change applied");
+  await shot("23-bulk-applied");
+  const after = await items();
+  check(after.filter((i) => i.price !== before[i.id]).length === 5, "five prices changed");
+  await click(`[...document.querySelectorAll('.ct-actions button')].find(b => b.textContent.includes(${JSON.stringify(t.undoNamed("price_percent", 5))}))`, 900);
+  const undone = await items();
+  check(undone.every((i) => i.price === before[i.id]), "undo put every price back");
+  check((await api("/api/items/bulk/last")).last === null, "only one undo");
+  await shot("24-after-undo");
+
+  // 8. the same screens in dark
+  await setup("dark");
+  await go("/app/catalog", 1500);
+  await setLanguage(LANG);
+  await sleep(700);
+  await shot("30-dark-grid");
+  await axe("grid");
+  await click("document.querySelector('.ct-card .ct-open')", 700);
+  await until("!!document.querySelector('.ct-sheet')", "the edit sheet in dark");
+  await sleep(400);
+  await shot("31-dark-edit");
+  await axe("edit-sheet");
+  await js("document.dispatchEvent(new KeyboardEvent('keydown', {key:'Escape', bubbles:true}))");
+  await send("Input.dispatchKeyEvent", { type: "keyDown", key: "Escape" });
+  await send("Input.dispatchKeyEvent", { type: "keyUp", key: "Escape" });
+  await sleep(300);
+  await setup("light");
+  await go("/app/catalog", 1500);
+  await setLanguage(LANG);
+  await sleep(700);
+  await axe("grid-light");
+  await click("document.querySelector('#ct-tab-stock')", 700);
+  await axe("stock");
+  await shot("32-stock-light");
+  // 9. the on-screen keyboard: shrink the window to what is left above one, and look at a form
+  await click("document.querySelector('#ct-tab-items')", 600);
+  await send("Emulation.setDeviceMetricsOverride", { width: 375, height: 430, deviceScaleFactor: 2, mobile: true });
+  await click("document.querySelector('.ct-card .ct-open')", 700);
+  await until("!!document.querySelector('.ct-sheet')", "the edit sheet with the keyboard up");
+  await fill(t.price, "");
+  await sleep(500);
+  const room = await js(`(() => { const f = document.querySelector('.ct-sheet-foot').getBoundingClientRect(); const i = document.activeElement.getBoundingClientRect(); const sh = document.querySelector('.ct-sheet').getBoundingClientRect(); return { footBottom: f.bottom, footTop: f.top, fieldBottom: i.bottom, fieldTop: i.top, sheetTop: sh.top, height: innerHeight }; })()`);
+  check(room.footBottom <= room.height + 1 && room.fieldBottom <= room.footTop && room.fieldTop >= room.sheetTop, "with the keyboard up the buttons stay visible and the field being typed in is above them");
+  await shot("33-keyboard-up");
+  await send("Input.dispatchKeyEvent", { type: "keyDown", key: "Escape", code: "Escape", windowsVirtualKeyCode: 27 });
+  await send("Input.dispatchKeyEvent", { type: "keyUp", key: "Escape", code: "Escape", windowsVirtualKeyCode: 27 });
+  await sleep(300);
+  if (await js("!!document.querySelector('.ct-sheet')")) await pressText(t.leaveGo).catch(() => undefined);
+  await send("Emulation.setDeviceMetricsOverride", { width: 375, height: 812, deviceScaleFactor: 2, mobile: true });
+
+  // 10. an agent sees only what the counter does: switches, stock, sold out in bulk
+  const agentEmail = "yusuf@alnoor.example";
+  const signedIn = await js(`fetch('/api/auth/code', {method:'POST', headers:{'content-type':'application/json'}, body: JSON.stringify({email: ${JSON.stringify(agentEmail)}})}).then(r => r.json()).then(d => fetch('/api/auth/verify', {method:'POST', headers:{'content-type':'application/json'}, body: JSON.stringify({email: ${JSON.stringify(agentEmail)}, code: d.dev_code})})).then(r => r.json()).then(m => m.role)`);
+  check(signedIn === "agent", "signed in as an agent");
+  await go("/app/catalog", 1500);
+  await setLanguage(LANG);
+  await sleep(600);
+  const bodyText = await js("document.body.innerText");
+  check(!bodyText.includes(t.add) && !bodyText.includes(t.settings), "an agent is not offered Add or Settings");
+  check(await js("document.querySelectorAll('.ct-card .sh-switch').length > 0"), "an agent still has the switch on every item");
+  await shot("40-agent-grid");
+  await click("document.querySelector('.ct-card .ct-open')", 700);
+  await until("!!document.querySelector('.ct-sheet')", "the item opened read-only");
+  check((await sheetText()).includes(t.mustBeOwner) && await js("document.querySelector('.ct-sheet fieldset.ct-form').disabled"), "an agent sees the item read-only, with the reason");
+  await shot("41-agent-item");
+  await js("document.dispatchEvent(new KeyboardEvent('keydown', {key:'Escape', bubbles:true}))");
+  await pressText(t.close, "button", 400).catch(() => undefined);
+  await until("!document.querySelector('.ct-sheet')", "the read-only item closed");
+  const refused = await js(`fetch('/api/items', {method:'POST', headers:{'content-type':'application/json'}, body: JSON.stringify({name:'Nope', price: 100})}).then(r => r.status)`);
+  check(refused === 403, "and the API refuses an agent who tries to add an item anyway");
+  await click("[...document.querySelectorAll('button')].find(b => b.textContent.trim() === " + JSON.stringify(t.select) + ")", 400);
+  await click("document.querySelector('.ct-card .ct-open')", 200);
+  await pressText(t.chooseAction);
+  await until("!!document.querySelector('.ct-sheet')", "the bulk sheet for an agent");
+  check(await js("document.querySelectorAll('.ct-sheet input[name=action]').length === 2"), "an agent's bulk actions are only sold out and available again");
+  await shot("42-agent-bulk");
+  await js("fetch('/api/auth/logout', {method:'POST'})");
+
+  // 11. a laptop: the same screens, with the side panel
+  await send("Emulation.setDeviceMetricsOverride", { width: 1280, height: 800, deviceScaleFactor: 1, mobile: false });
+  await send("Emulation.setTouchEmulationEnabled", { enabled: false });
+  await go("/app/catalog", 1500);
+  await setLanguage(LANG);
+  await sleep(600);
+  await shot("50-laptop-grid");
+  await click("document.querySelector('.ct-card .ct-open')", 700);
+  await until("!!document.querySelector('.ct-sheet')", "the side panel");
+  await sleep(500);
+  await shot("51-laptop-edit");
+  // The laptop sidebar's and top bar's greys (search hint, shortcut, group label, clock) are the shell's own.
+  await axe("laptop-edit", [".sh-side", ".sh-top"]);
+  await send("Input.dispatchKeyEvent", { type: "keyDown", key: "Escape", code: "Escape", windowsVirtualKeyCode: 27 });
+  await send("Input.dispatchKeyEvent", { type: "keyUp", key: "Escape", code: "Escape", windowsVirtualKeyCode: 27 });
+  await sleep(300);
+  await axe("laptop-grid", [".sh-side", ".sh-top"]);
+  check(browser.problems.length === 0, `no errors in the browser's console (${browser.problems.length})`);
+  for (const p of browser.problems.slice(0, 8)) log("   ", p);
+} catch (error) {
+  failures.push(String(error.message ?? error));
+  log("STOPPED:", error.message ?? error);
+  try { await shot("99-where-it-stopped"); } catch { /* the page is gone */ }
+} finally {
+  await browser.close();
+}
+if (failures.length) { console.error(`\n${failures.length} problem(s):\n- ${failures.join("\n- ")}`); process.exit(1); }
+console.log("\nAll checks passed.");

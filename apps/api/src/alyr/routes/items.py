@@ -1,20 +1,21 @@
-"""The workspace's view of the Catalog: items, their switches, stock and counts.
+"""The workspace's view of the Catalog: items, their photos, switches, stock and counts,
+bulk actions with an undo, and photo-first drafts (D-039, ALY-102 and ALY-104).
 
 Owners and admins edit everything. Anyone on the team may flip a switch, record stock and
-count the shelf, since that is what the counter does all day (D-039).
+count the shelf, since that is what the counter does all day. An agent may edit items and
+photos too when the owner has allowed it in the shop's settings (`modules/items/access.py`).
 """
 
 from datetime import date, time
 from typing import Annotated, Literal
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, HTTPException, Request
+from fastapi import APIRouter, Depends, HTTPException, Query, Request
 from pydantic import AwareDatetime, BaseModel, Field
 
-from alyr import catalog
 from alyr.core import team
 from alyr.core.auth import Staff
-from alyr.modules.items import clock, stock
+from alyr.modules.items import access, bulk, clock, drafts, listing, photos, stock
 from alyr.modules.items import service as items
 from alyr.routes.deps import current_staff
 
@@ -23,6 +24,7 @@ router = APIRouter(prefix="/api/items", tags=["items"])
 Rule = Literal["always", "switch", "count", "daily_limit"]
 Unit = Literal["piece", "kg", "box", "pack", "portion", "hour"]
 Status = Literal["draft", "live", "hidden", "archived"]
+Filter = Literal["draft", "sold_out", "low_stock", "stocked", "archived"]
 Weekday = Annotated[int, Field(ge=0, le=6)]
 Money = Annotated[int, Field(ge=0, le=100_000_000, description="In dirhams: 100 is QAR 1")]
 # Fields that may be sent as null to clear them; every other field is left alone if null.
@@ -76,7 +78,10 @@ class ItemChanges(BaseModel):
     description: str | None = Field(default=None, max_length=1000)
     description_ar: str | None = Field(default=None, max_length=1000)
     category: str | None = Field(default=None, max_length=60)
-    price: int | None = Field(default=None, gt=0, le=100_000_000, description="In dirhams")
+    price: int | None = Field(
+        default=None, ge=0, le=100_000_000,
+        description="In dirhams. Zero is only for a draft; an item for sale needs a price",
+    )
     sale_price: int | None = Field(default=None, gt=0, le=100_000_000)
     sale_starts_at: AwareDatetime | None = None
     sale_ends_at: AwareDatetime | None = None
@@ -97,7 +102,7 @@ class ItemChanges(BaseModel):
 
 class NewItem(ItemChanges):
     name: str = Field(min_length=1, max_length=120)
-    price: int = Field(gt=0, le=100_000_000, description="In dirhams")
+    price: int = Field(ge=0, le=100_000_000, description="In dirhams; zero only for a draft")
     opening_stock: int | None = Field(
         default=None, ge=0, le=1_000_000,
         description="For an item without variants counted in stock",
@@ -133,6 +138,12 @@ class Count(BaseModel):
 class StockSettings(BaseModel):
     hold_minutes: int | None = Field(default=None, ge=5, le=1440)
     day_starts: time | None = Field(default=None, description="When the shop's day begins")
+    agents_edit_items: bool | None = Field(
+        default=None, description="Agents may add and edit items and photos"
+    )
+    low_stock_at: int | None = Field(
+        default=None, ge=0, le=100_000, description="Counted stock at or below this is low"
+    )
 
 
 class CategoryIn(BaseModel):
@@ -140,9 +151,42 @@ class CategoryIn(BaseModel):
     name_ar: str = Field(default="", max_length=60)
 
 
-def _manager(staff: Staff) -> None:
-    if staff.role not in catalog.MANAGERS:
-        raise HTTPException(status_code=403, detail="Only the owner or an admin can change this.")
+class PhotoIn(BaseModel):
+    asset_id: UUID
+    variant_id: UUID | None = Field(
+        default=None, description="Put the photo on this size or colour instead of the item"
+    )
+
+
+class PhotoOrder(BaseModel):
+    order: list[UUID] = Field(max_length=8, description="Every photo the item has, first is cover")
+
+
+class DraftsIn(BaseModel):
+    photo_ids: list[UUID] = Field(min_length=1, max_length=drafts.MAX_PER_REQUEST)
+
+
+class BulkIn(BaseModel):
+    action: Literal["sold_out", "back", "price_percent", "move_category", "archive"]
+    item_ids: list[UUID] = Field(min_length=1, max_length=bulk.MAX_ITEMS)
+    percent: int | None = Field(default=None, description="For price_percent: 10 or -5")
+    category: str | None = Field(default=None, description="For move_category; empty for none")
+
+    @property
+    def params(self) -> dict:
+        if self.action == "price_percent":
+            return {"percent": self.percent}
+        if self.action == "move_category":
+            return {"category": self.category}
+        return {}
+
+
+class BulkApply(BulkIn):
+    preview: str = Field(min_length=1, max_length=64, description="The preview's hash")
+
+
+def _media(request: Request):
+    return request.app.state.media
 
 
 def _fail(error: Exception) -> HTTPException:
@@ -150,6 +194,13 @@ def _fail(error: Exception) -> HTTPException:
         return HTTPException(status_code=404, detail="item not found")
     code = getattr(error, "code", "bad_request")
     return HTTPException(status_code=422, detail={"code": code, "message": str(error)})
+
+
+def _bulk_fail(error: bulk.BulkError) -> HTTPException:
+    return HTTPException(
+        status_code=error.status,
+        detail={"code": error.code, "message": error.en, "message_ar": error.ar},
+    )
 
 
 def _changes(body: ItemChanges) -> dict:
@@ -162,16 +213,29 @@ def _changes(body: ItemChanges) -> dict:
     return sent
 
 
+# ── the list, settings and shop-wide reads (before the routes that take an item's ID) ──
+
+
 @router.get("")
 async def list_items(
     request: Request, status: Status | None = None, q: str = "", category: str | None = None,
-    archived: bool = False, staff: Staff = Depends(current_staff),
+    archived: bool = False, only: Annotated[Filter | None, Query(alias="filter")] = None,
+    limit: Annotated[int | None, Query(ge=1, le=500)] = None,
+    offset: Annotated[int, Query(ge=0)] = 0, staff: Staff = Depends(current_staff),
 ) -> dict:
+    """Items for the list: search (Arabic spellings are folded), a filter (`draft`,
+    `sold_out`, `low_stock`, `stocked`, `archived`), a category, and a page at a time. The
+    answer carries the counts for the filter chips and what the signed-in person may do."""
     async with request.app.state.db.tenant(staff.tenant_id) as conn:
-        shop_clock = await clock.load(conn)
+        found = await listing.page(
+            conn, await clock.load(conn), status=status, q=q, category=category, only=only,
+            include_archived=archived, limit=limit, offset=offset,
+        )
+        await photos.add_to_views(conn, _media(request), found["items"])
         return {
-            "items": await items.list_items(conn, shop_clock, status, q, category, archived),
+            **found,
             "categories": await items.categories(conn),
+            "access": await access.view(conn, staff),
         }
 
 
@@ -179,17 +243,32 @@ async def list_items(
 async def add_item(
     body: NewItem, request: Request, staff: Staff = Depends(current_staff)
 ) -> dict:
-    _manager(staff)
     try:
         async with request.app.state.db.tenant(staff.tenant_id) as conn:
+            await access.require_edit(conn, staff)
             # A shop at its item limit is told so plainly and loses nothing (ALY-103).
-            await request.app.state.media.assert_can_add_item(conn)
+            await _media(request).assert_can_add_item(conn)
             result = await items.create_item(
                 conn, _changes(body), team.actor_of(staff), await clock.load(conn)
             )
+            await photos.add_to_views(conn, _media(request), [result["item"]])
     except (items.ItemError, stock.StockError) as error:
         raise _fail(error) from error
     return {"id": result["item"]["id"], **result}
+
+
+@router.post("/drafts")
+async def make_drafts(
+    body: DraftsIn, request: Request, staff: Staff = Depends(current_staff)
+) -> dict:
+    """Photo-first adding: one draft item for each photo already uploaded to the shop's
+    library, with the photo as its cover. Photos already on an item are skipped, so
+    sending the request again makes no second draft."""
+    async with request.app.state.db.tenant(staff.tenant_id) as conn:
+        await access.require_edit(conn, staff)
+        return await drafts.create(
+            conn, _media(request), body.photo_ids, team.actor_of(staff), await clock.load(conn)
+        )
 
 
 @router.get("/settings")
@@ -202,11 +281,15 @@ async def get_settings(request: Request, staff: Staff = Depends(current_staff)) 
 async def put_settings(
     body: StockSettings, request: Request, staff: Staff = Depends(current_staff)
 ) -> dict:
-    """How long an unpaid pay-link order holds its stock, and when the shop's day begins."""
-    _manager(staff)
+    """How long an unpaid pay-link order holds its stock, when the shop's day begins,
+    whether agents may edit items, and the low-stock number."""
+    access.require_manager(staff)
     try:
         async with request.app.state.db.tenant(staff.tenant_id) as conn:
-            return await items.save_settings(conn, body.hold_minutes, body.day_starts)
+            return await items.save_settings(
+                conn, body.hold_minutes, body.day_starts, body.agents_edit_items,
+                body.low_stock_at,
+            )
     except items.ItemError as error:
         raise _fail(error) from error
 
@@ -222,13 +305,81 @@ async def put_categories(
     body: list[CategoryIn], request: Request, staff: Staff = Depends(current_staff)
 ) -> dict:
     """Set the order of the shop's categories (the order of the list) and their Arabic names."""
-    _manager(staff)
+    access.require_manager(staff)
     try:
         async with request.app.state.db.tenant(staff.tenant_id) as conn:
             rows = await items.save_categories(conn, [c.model_dump() for c in body])
     except items.ItemError as error:
         raise _fail(error) from error
     return {"categories": rows}
+
+
+@router.get("/stock-log")
+async def shop_stock_log(
+    request: Request, limit: int = Query(default=50, ge=1, le=500),
+    staff: Staff = Depends(current_staff),
+) -> dict:
+    """The latest stock movements across every item, newest first."""
+    async with request.app.state.db.tenant(staff.tenant_id) as conn:
+        return {"log": await stock.recent(conn, limit)}
+
+
+# ── bulk actions: preview, apply, one undo ──
+
+
+@router.post("/bulk/preview")
+async def bulk_preview(
+    body: BulkIn, request: Request, staff: Staff = Depends(current_staff)
+) -> dict:
+    """What the action would do to these items, and which it cannot touch. Writes nothing.
+    The `hash` goes back with the apply, so only what was seen is applied."""
+    try:
+        async with request.app.state.db.tenant(staff.tenant_id) as conn:
+            if body.action not in bulk.AVAILABILITY:
+                await access.require_edit(conn, staff)
+            work = await bulk.plan(
+                conn, await clock.load(conn), body.action, body.item_ids, body.params
+            )
+    except bulk.BulkError as error:
+        raise _bulk_fail(error) from error
+    return work.view()
+
+
+@router.post("/bulk/apply")
+async def bulk_apply(
+    body: BulkApply, request: Request, staff: Staff = Depends(current_staff)
+) -> dict:
+    try:
+        async with request.app.state.db.tenant(staff.tenant_id) as conn:
+            if body.action not in bulk.AVAILABILITY:
+                await access.require_edit(conn, staff)
+            return await bulk.apply(
+                conn, await clock.load(conn), team.actor_of(staff), body.action,
+                body.item_ids, body.params, body.preview,
+            )
+    except bulk.BulkError as error:
+        raise _bulk_fail(error) from error
+
+
+@router.get("/bulk/last")
+async def bulk_last(request: Request, staff: Staff = Depends(current_staff)) -> dict:
+    """The newest bulk action, if it can still be undone."""
+    async with request.app.state.db.tenant(staff.tenant_id) as conn:
+        return {"last": await bulk.last(conn)}
+
+
+@router.post("/bulk/undo")
+async def bulk_undo(request: Request, staff: Staff = Depends(current_staff)) -> dict:
+    """Undo the newest bulk action, once. Items edited since are left as they are."""
+    try:
+        async with request.app.state.db.tenant(staff.tenant_id) as conn:
+            allowed = bulk.ACTIONS if await access.can_edit(conn, staff) else bulk.AVAILABILITY
+            return await bulk.undo(conn, await clock.load(conn), team.actor_of(staff), allowed)
+    except bulk.BulkError as error:
+        raise _bulk_fail(error) from error
+
+
+# ── one item ──
 
 
 @router.get("/{item_id}")
@@ -240,20 +391,24 @@ async def get_item(
         entry = await items.get(conn, shop_clock, item_id)
         if entry is None:
             raise HTTPException(status_code=404, detail="item not found")
-        return items.view(entry, shop_clock)
+        shown = items.view(entry, shop_clock)
+        await photos.add_to_views(conn, _media(request), [shown])
+        return shown
 
 
 @router.put("/{item_id}")
 async def save_item(
     item_id: UUID, body: ItemChanges, request: Request, staff: Staff = Depends(current_staff)
 ) -> dict:
-    _manager(staff)
     try:
         async with request.app.state.db.tenant(staff.tenant_id) as conn:
+            await access.require_edit(conn, staff)
             result = await items.update_item(
                 conn, item_id, _changes(body), team.actor_of(staff), await clock.load(conn),
                 reason=body.reason,
             )
+            if result is not None:
+                await photos.add_to_views(conn, _media(request), [result["item"]])
     except (items.ItemError, stock.StockError) as error:
         raise _fail(error) from error
     if result is None:
@@ -266,8 +421,8 @@ async def delete_item(
     item_id: UUID, request: Request, staff: Staff = Depends(current_staff)
 ) -> dict:
     """Delete an item nobody has ordered; archive one they have, so order history is kept."""
-    _manager(staff)
     async with request.app.state.db.tenant(staff.tenant_id) as conn:
+        await access.require_edit(conn, staff)
         result = await items.remove(conn, item_id, team.actor_of(staff))
     if result is None:
         raise HTTPException(status_code=404, detail="item not found")
@@ -278,9 +433,9 @@ async def delete_item(
 async def change_status(
     item_id: UUID, body: StatusChange, request: Request, staff: Staff = Depends(current_staff)
 ) -> dict:
-    _manager(staff)
     try:
         async with request.app.state.db.tenant(staff.tenant_id) as conn:
+            await access.require_edit(conn, staff)
             result = await items.update_item(
                 conn, item_id, {"status": body.status}, team.actor_of(staff),
                 await clock.load(conn),
@@ -315,6 +470,110 @@ async def price_history(
         if not await conn.fetchval("select true from items where id = $1", item_id):
             raise HTTPException(status_code=404, detail="item not found")
         return {"history": await items.price_history(conn, item_id)}
+
+
+@router.get("/{item_id}/activity")
+async def item_activity(
+    item_id: UUID, request: Request, limit: int = Query(default=50, ge=1, le=200),
+    staff: Staff = Depends(current_staff),
+) -> dict:
+    """What was done to the item and by whom: the record nobody can edit."""
+    async with request.app.state.db.tenant(staff.tenant_id) as conn:
+        if not await conn.fetchval("select true from items where id = $1", item_id):
+            raise HTTPException(status_code=404, detail="item not found")
+        rows = await conn.fetch(
+            "select id, action, detail, actor_id, actor_name, created_at from activity "
+            "where subject = 'item' and subject_id = $1 order by created_at desc, id limit $2",
+            item_id, limit,
+        )
+    return {
+        "activity": [
+            {"id": str(r["id"]), "action": r["action"], "detail": r["detail"],
+             "actor": {"id": str(r["actor_id"]) if r["actor_id"] else None,
+                       "name": r["actor_name"]},
+             "at": r["created_at"].isoformat()}
+            for r in rows
+        ]
+    }
+
+
+@router.get("/{item_id}/photos")
+async def item_photos(
+    item_id: UUID, request: Request, variant_id: UUID | None = None,
+    staff: Staff = Depends(current_staff),
+) -> dict:
+    try:
+        async with request.app.state.db.tenant(staff.tenant_id) as conn:
+            shown = await photos.listed(conn, _media(request), item_id, variant_id)
+    except LookupError as error:
+        raise _fail(error) from error
+    return {"photos": shown, "cover": photos.cover_of(shown)}
+
+
+@router.post("/{item_id}/photos")
+async def add_photo(
+    item_id: UUID, body: PhotoIn, request: Request, staff: Staff = Depends(current_staff)
+) -> dict:
+    """Put a photo from the shop's library on the item (last in its order; the first is the
+    cover), or on one of its sizes or colours. An item has up to eight."""
+    try:
+        async with request.app.state.db.tenant(staff.tenant_id) as conn:
+            await access.require_edit(conn, staff)
+            shown = await photos.attach(
+                conn, _media(request), item_id, body.asset_id, team.actor_of(staff),
+                body.variant_id,
+            )
+    except LookupError as error:
+        raise _fail(error) from error
+    return {"photos": shown, "cover": photos.cover_of(shown)}
+
+
+@router.put("/{item_id}/photos")
+async def order_photos(
+    item_id: UUID, body: PhotoOrder, request: Request, staff: Staff = Depends(current_staff)
+) -> dict:
+    """Set the order of the item's photos. The list must name every photo it has."""
+    try:
+        async with request.app.state.db.tenant(staff.tenant_id) as conn:
+            await access.require_edit(conn, staff)
+            shown = await photos.reorder(
+                conn, _media(request), item_id, body.order, team.actor_of(staff)
+            )
+    except LookupError as error:
+        raise _fail(error) from error
+    return {"photos": shown, "cover": photos.cover_of(shown)}
+
+
+@router.post("/{item_id}/photos/{asset_id}/cover")
+async def make_cover(
+    item_id: UUID, asset_id: UUID, request: Request, staff: Staff = Depends(current_staff)
+) -> dict:
+    try:
+        async with request.app.state.db.tenant(staff.tenant_id) as conn:
+            await access.require_edit(conn, staff)
+            shown = await photos.make_cover(
+                conn, _media(request), item_id, asset_id, team.actor_of(staff)
+            )
+    except LookupError as error:
+        raise _fail(error) from error
+    return {"photos": shown, "cover": photos.cover_of(shown)}
+
+
+@router.delete("/{item_id}/photos/{asset_id}")
+async def remove_photo(
+    item_id: UUID, asset_id: UUID, request: Request, variant_id: UUID | None = None,
+    staff: Staff = Depends(current_staff),
+) -> dict:
+    """Take a photo off the item. It stays in the shop's library."""
+    try:
+        async with request.app.state.db.tenant(staff.tenant_id) as conn:
+            await access.require_edit(conn, staff)
+            shown = await photos.detach(
+                conn, _media(request), item_id, asset_id, team.actor_of(staff), variant_id
+            )
+    except LookupError as error:
+        raise _fail(error) from error
+    return {"photos": shown, "cover": photos.cover_of(shown)}
 
 
 @router.post("/{item_id}/stock")

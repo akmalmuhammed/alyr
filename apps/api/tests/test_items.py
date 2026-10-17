@@ -404,7 +404,7 @@ def test_a_daily_limit_resets_with_the_shop_day_and_the_shop_chooses_when_it_beg
              payment="account")
     # A bakery whose day starts at 4 am: 2 am on Wednesday still belongs to Tuesday.
     saved = client.put("/api/items/settings", json={"day_starts": "04:00"})
-    assert saved.json() == {"hold_minutes": 30, "day_starts": "04:00"}
+    assert (saved.json()["hold_minutes"], saved.json()["day_starts"]) == (30, "04:00")
     with pytest.raises(orders.OrderError):
         place_at(client, ahmed, one, monday_at(2, days=2), payment="account")
     place_at(client, ahmed, one, monday_at(4, days=2), payment="account")

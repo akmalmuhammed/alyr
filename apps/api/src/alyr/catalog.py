@@ -207,6 +207,16 @@ MODULES: tuple[Module, ...] = (
             ),
         ),
     ),
+    # The Catalog: a shop's items, photos and stock (D-039, ALY-104). It belongs to no
+    # product and no starting setup, so it is off for every shop until the back office
+    # switches it on (`tenant_modules`); nothing an owner sees mentions it before then. The
+    # go-live sweep (ALY-113) decides which shops get it. Its API answers where this module
+    # or the orders module is on.
+    Module(
+        "catalog",
+        Text("Catalog", "الكتالوج"),
+        screens=(Screen("catalog", Text("Catalog", "الكتالوج"), "catalog"),),
+    ),
     Module(
         "payments",
         Text("Payment links", "روابط الدفع"),
