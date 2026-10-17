@@ -67,10 +67,11 @@ Needs Docker. Uses its own ports (API 18000, web 13000) and its own data, so it 
 the development setup and other sessions.
 
 ```bash
-docker compose -f docker-compose.prod.yml up -d --build
-docker compose -f docker-compose.prod.yml run --rm migrate python -m alyr.seed   # demo shop, rehearsal only
+scripts/rehearsal-env.sh                       # once: .env.prod with random passwords (git ignores it)
+docker compose --env-file .env.prod -f docker-compose.prod.yml up -d --build
+docker compose --env-file .env.prod -f docker-compose.prod.yml run --rm migrate python -m alyr.seed   # demo shop, rehearsal only
 curl http://localhost:18000/health/worker
-docker compose -f docker-compose.prod.yml down -v
+docker compose --env-file .env.prod -f docker-compose.prod.yml down -v
 ```
 
 What the rehearsal on 17 Oct 2026 showed: all four services healthy; the simulator answers

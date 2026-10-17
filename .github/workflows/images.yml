@@ -30,9 +30,12 @@ jobs:
   rehearsal:
     runs-on: ubuntu-latest
     env:
-      COMPOSE: docker compose -f docker-compose.prod.yml
+      COMPOSE: docker compose --env-file .env.prod -f docker-compose.prod.yml
     steps:
       - uses: actions/checkout@v4
+
+      - name: Random passwords for this run
+        run: scripts/rehearsal-env.sh
 
       - name: Build the images
         run: $COMPOSE --profile backup build
@@ -53,6 +56,7 @@ jobs:
 
       - name: Back up and restore into an empty database
         run: |
+          set -a; . ./.env.prod; set +a
           mkdir -p "$RUNNER_TEMP/key"
           docker run --rm --entrypoint age-keygen alyr-backup > "$RUNNER_TEMP/key/backup.key" 2>/dev/null
           chmod 644 "$RUNNER_TEMP/key/backup.key"
@@ -60,9 +64,9 @@ jobs:
           $COMPOSE exec -T postgres psql -U alyr -d postgres -c "create database alyr_restored"
           file="$(docker run --rm -v alyr-prod_backups:/backups --entrypoint sh alyr-backup -c 'ls /backups | tail -1')"
           docker run --rm --network alyr-prod_default -v alyr-prod_backups:/backups \
-            -v "$RUNNER_TEMP/key:/k:ro" -e BACKUP_AGE_IDENTITY=/k/backup.key -e ALYR_APP_PASSWORD=rehearsal_app \
+            -v "$RUNNER_TEMP/key:/k:ro" -e BACKUP_AGE_IDENTITY=/k/backup.key -e ALYR_APP_PASSWORD="$ALYR_APP_DB_PASSWORD" \
             --entrypoint restore.sh alyr-backup "/backups/$file" \
-            postgresql://alyr:rehearsal_owner@postgres:5432/alyr_restored
+            "postgresql://alyr:${ALYR_OWNER_DB_PASSWORD}@postgres:5432/alyr_restored"
           q="select count(*) from contacts"
           test "$($COMPOSE exec -T postgres psql -U alyr -d alyr -tAc "$q")" = "$($COMPOSE exec -T postgres psql -U alyr -d alyr_restored -tAc "$q")"
 
