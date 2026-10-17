@@ -1,4 +1,8 @@
-"""The workspace's view of orders and products."""
+"""The workspace's view of orders and products.
+
+`/api/products` is the first, simple way to list and add what a shop sells. The Catalog's
+own API is `/api/items` (routes/items.py); these routes now run on the same items.
+"""
 
 from uuid import UUID
 
@@ -9,6 +13,8 @@ from alyr.config import get_settings
 from alyr.core import team
 from alyr.core.auth import Staff
 from alyr.core.normalise import fmt_qar
+from alyr.modules.items import clock
+from alyr.modules.items import service as items
 from alyr.modules.orders import service
 from alyr.routes.deps import current_staff, current_tenant
 
@@ -17,6 +23,11 @@ router = APIRouter(prefix="/api", tags=["orders"])
 
 class StatusChange(BaseModel):
     status: str
+    restock: bool | None = Field(
+        default=None,
+        description="For cancelled: put the stock back (default: yes if the order was not "
+                    "made yet)",
+    )
 
 
 class Assignment(BaseModel):
@@ -46,17 +57,33 @@ async def change_status(
     order_id: UUID, body: StatusChange, request: Request,
     staff: Staff = Depends(current_staff),
 ) -> dict:
+    """Move an order along. Cancelling puts the stock back if the order was not made yet,
+    and says when a refund is due (the shop refunds from its own payment account)."""
+    outbound = request.app.state.outbound
     try:
         async with request.app.state.db.tenant(staff.tenant_id) as conn:
-            found = await service.set_status(
-                conn, order_id, body.status, request.app.state.outbound, team.actor_of(staff),
-                get_settings().public_web_url,
-            )
+            if body.status == "cancelled":
+                result = await service.cancel_order(
+                    conn, order_id, outbound, team.actor_of(staff), body.restock,
+                    "Cancelled by staff",
+                )
+                found = result is not None
+            else:
+                result = None
+                found = await service.set_status(
+                    conn, order_id, body.status, outbound, team.actor_of(staff),
+                    get_settings().public_web_url,
+                )
     except service.OrderError as error:
         raise HTTPException(status_code=422, detail=str(error)) from error
     if not found:
         raise HTTPException(status_code=404, detail="order not found")
-    return {"status": body.status}
+    if result is None:
+        return {"status": body.status}
+    return {
+        "status": body.status, "stock_returned": result["stock_returned"],
+        "refund_due": result["refund_due"], "refund_text": result.get("refund_text"),
+    }
 
 
 @router.post("/orders/{order_id}/assign")
@@ -81,26 +108,32 @@ async def products(request: Request, tenant_id: UUID = Depends(current_tenant)) 
 
 @router.post("/products")
 async def add_product(
-    body: NewProduct, request: Request, tenant_id: UUID = Depends(current_tenant)
+    body: NewProduct, request: Request, staff: Staff = Depends(current_staff)
 ) -> dict:
-    async with request.app.state.db.tenant(tenant_id) as conn:
-        product_id = await conn.fetchval(
-            "insert into products (name, name_ar, category, price) values ($1, $2, $3, $4) "
-            "returning id",
-            body.name, body.name_ar, body.category, body.price,
+    """The first way to add an item: live at once, on the switch rule. An Arabic name is
+    not asked for here; `/api/items` asks for it before an item goes live."""
+    async with request.app.state.db.tenant(staff.tenant_id) as conn:
+        result = await items.create_item(
+            conn,
+            {"name": body.name, "name_ar": body.name_ar, "category": body.category,
+             "price": body.price, "status": "live"},
+            team.actor_of(staff), await clock.load(conn), require_arabic=False,
         )
-    return {"id": str(product_id), "price_text": fmt_qar(body.price)}
+    return {"id": result["item"]["id"], "price_text": fmt_qar(body.price)}
 
 
 @router.post("/products/{product_id}/availability")
 async def set_availability(
     product_id: UUID, body: Availability, request: Request,
-    tenant_id: UUID = Depends(current_tenant),
+    staff: Staff = Depends(current_staff),
 ) -> dict:
-    async with request.app.state.db.tenant(tenant_id) as conn:
-        updated = await conn.execute(
-            "update products set available = $2 where id = $1", product_id, body.available
-        )
-    if updated != "UPDATE 1":
+    try:
+        async with request.app.state.db.tenant(staff.tenant_id) as conn:
+            found = await items.set_available(
+                conn, product_id, body.available, team.actor_of(staff)
+            )
+    except items.ItemError as error:
+        raise HTTPException(status_code=422, detail=str(error)) from error
+    if found is None:
         raise HTTPException(status_code=404, detail="product not found")
     return {"available": body.available}

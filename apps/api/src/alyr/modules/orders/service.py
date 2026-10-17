@@ -1,20 +1,33 @@
 """Order link: a customer orders from a shop's page and pays by link or on account.
 
+An order is only placed once its cart has been checked against the catalog (is each item
+for sale now, is there enough, is it still the price the customer saw) and the stock has
+been taken in one step (`modules/items/stock.py`), so the last item sells once. A pay-link
+order holds its stock for the shop's hold time; see `holds.py`.
+
 Every function takes a tenant-scoped connection.
 """
 
-from uuid import UUID
+from datetime import date, datetime, timedelta
+from uuid import UUID, uuid4
 
 import asyncpg
 
-from alyr.core import team, templates
+from alyr.core import jobs, team, templates
 from alyr.core.normalise import fmt_qar
 from alyr.core.outbound import Outbound
 from alyr.core.team import Actor
+from alyr.modules.items import availability, cart, clock, stock, text
+from alyr.modules.items import holds as stock_holds
+from alyr.modules.items.cart import CartLine
+from alyr.modules.items.clock import ShopClock
+from alyr.modules.items.service import MAX_QUANTITY
+from alyr.modules.items.service import load as load_items
 from alyr.modules.ledger import service as ledger
 
-MAX_QUANTITY = 999
 STATUSES = ("new", "confirmed", "ready", "done", "cancelled")
+# The job that gives back the stock of an order nobody paid for.
+EXPIRE_JOB = "stock_hold_expiry"
 
 
 def track_url(web_url: str, tenant_id: UUID, order_id: UUID) -> str:
@@ -28,22 +41,99 @@ def _track_line(url: str, arabic: bool) -> str:
 
 
 class OrderError(Exception):
-    """The order cannot be placed as asked. `code` tells the caller why."""
+    """The order cannot be placed as asked. `code` tells the caller why; `lines` says what
+    is wrong with each line of the cart when the cart is the problem."""
 
-    def __init__(self, code: str, message: str) -> None:
+    def __init__(
+        self, code: str, message: str, message_ar: str = "", lines: list[dict] | None = None
+    ) -> None:
         super().__init__(message)
         self.code = code
+        self.message_ar = message_ar or message
+        self.lines = lines
+
+
+def _row(entry, state: availability.State, shop_clock: ShopClock) -> dict:
+    """An item as the order page lists it. `id`, `name`, `name_ar`, `category`, `price` and
+    `price_text` are what the first order page read; the rest is for the page that follows."""
+    i = entry.item
+    now = shop_clock.now
+    price = availability.item_price(i, now)
+    row = {
+        "id": str(i["id"]), "name": i["name"], "name_ar": i["name_ar"],
+        "category": i["category"], "price": price, "price_text": fmt_qar(price),
+        "available": i["available"], "status": i["status"], "stock_rule": i["stock_rule"],
+        "description": i["description"], "description_ar": i["description_ar"],
+        "unit": i["unit"], "pack_size": i["pack_size"], "min_order": i["min_order"],
+        "tags": list(i["tags"]),
+        "list_price": i["price"] if availability.sale_active(i, now) else None,
+        "left": state.left, "orderable": state.orderable, "reason": state.reason,
+    }
+    named = [v for v in entry.active_variants if not v["is_default"]]
+    if named:
+        row["variants"] = [
+            {
+                "id": str(v["id"]), "name": v["name"], "name_ar": v["name_ar"],
+                "price": availability.variant_price(i, v, now),
+                "price_text": fmt_qar(availability.variant_price(i, v, now)),
+                "left": availability.variant_left(i, v, entry.deltas, state.day),
+            }
+            for v in named
+        ]
+    if entry.groups:
+        row["option_groups"] = [
+            {
+                "id": str(g["id"]), "name": g["name"], "name_ar": g["name_ar"],
+                "required": g["required"], "max_choices": g["max_choices"],
+                "options": [
+                    {"id": str(o["id"]), "name": o["name"], "name_ar": o["name_ar"],
+                     "price_delta": o["price_delta"],
+                     "price_delta_text": fmt_qar(o["price_delta"])}
+                    for o in g["options"] if o["active"]
+                ],
+            }
+            for g in entry.groups
+        ]
+    if state.dated:
+        row["order_for_date"] = {
+            "earliest": state.next_date.isoformat() if state.next_date else None
+        }
+    if not state.orderable and state.reason not in ("hidden", "off"):
+        row["next_at"] = state.next_at.isoformat() if state.next_at else None
+        row["next_date"] = state.next_date.isoformat() if state.next_date else None
+    return row
 
 
 async def list_products(conn: asyncpg.Connection, only_available: bool = False) -> list[dict]:
-    rows = await conn.fetch(
-        "select id, name, name_ar, category, price, available from products "
-        "where available or not $1 order by category, sort, name",
-        only_available,
+    """The shop's items. For the workspace, every item that is not archived; for the order
+    page (`only_available`), the live ones that can be ordered now."""
+    shop_clock = await clock.load(conn)
+    entries = await load_items(
+        conn, shop_clock, "i.status = 'live'" if only_available else "i.status <> 'archived'"
     )
-    return [
-        {**dict(r), "id": str(r["id"]), "price_text": fmt_qar(r["price"])} for r in rows
-    ]
+    rows = []
+    for entry in entries:
+        state = entry.state(shop_clock)
+        if only_available and not state.orderable:
+            continue
+        rows.append(_row(entry, state, shop_clock))
+    return rows
+
+
+async def storefront(conn: asyncpg.Connection) -> dict:
+    """What the order page shows: items that can be ordered now, and the live items that
+    cannot, with why and when they can (sold out, outside their hours, cut-off passed), so
+    the page can show them greyed or leave them out. An item staff switched off is not on
+    the menu at all."""
+    shop_clock = await clock.load(conn)
+    entries = await load_items(conn, shop_clock, "i.status = 'live'")
+    orderable, unavailable = [], []
+    for entry in entries:
+        state = entry.state(shop_clock)
+        if state.reason == "off":
+            continue
+        (orderable if state.orderable else unavailable).append(_row(entry, state, shop_clock))
+    return {"products": orderable, "unavailable": unavailable}
 
 
 async def can_use_account(conn: asyncpg.Connection, contact_id: UUID) -> bool:
@@ -52,36 +142,84 @@ async def can_use_account(conn: asyncpg.Connection, contact_id: UUID) -> bool:
     return bool(limit and limit > 0)
 
 
+def _name(c: cart.Checked, arabic: bool) -> str:
+    """A line's item with its size or colour and chosen options, as the customer reads it."""
+    item = c.entry.item
+    parts = []
+    if c.variant is not None and c.variant["name"]:
+        parts.append(c.variant["name_ar"] if arabic and c.variant["name_ar"] else c.variant["name"])
+    parts += [o["name_ar"] if arabic and o["name_ar"] else o["name"] for o in c.options]
+    name = item["name_ar"] if arabic and item["name_ar"] else item["name"]
+    return f"{name} ({', '.join(parts)})" if parts else name
+
+
+async def _refusal(
+    conn: asyncpg.Connection, shop_clock: ShopClock, checked: list[cart.Checked]
+) -> OrderError:
+    """The error for a cart with something wrong, naming every line."""
+    lines = await cart.report(conn, shop_clock, checked)
+    bad = next((c for c in checked if not c.ok), None)
+    if bad is None:
+        return OrderError(
+            "cart_changed", text.say("cart_changed", "en", {}),
+            text.say("cart_changed", "ar", {}), lines,
+        )
+    return OrderError(
+        bad.code, cart.message(bad, shop_clock, "en"), cart.message(bad, shop_clock, "ar"), lines
+    )
+
+
+async def check_cart(
+    conn: asyncpg.Connection, lines: list[CartLine], for_date: date | None = None,
+    now: datetime | None = None,
+) -> dict:
+    """Look at a cart without placing it: each line's verdict and the total of those that
+    can be ordered. The order page asks this before it asks for payment."""
+    shop_clock = await clock.load(conn, now)
+    checked = await cart.check(conn, shop_clock, lines, for_date)
+    total = sum(c.unit_price * c.line.quantity for c in checked if c.ok)
+    return {
+        "ok": all(c.ok for c in checked),
+        "lines": await cart.report(conn, shop_clock, checked),
+        "total": total, "total_text": fmt_qar(total),
+    }
+
+
 async def create_order(
     conn: asyncpg.Connection,
     tenant_id: UUID,
     contact_id: UUID,
-    items: list[tuple[UUID, int]],
+    lines: list[CartLine] | list[tuple[UUID, int]],
     payment: str,
     web_url: str,
     outbound: Outbound,
+    for_date: date | None = None,
+    now: datetime | None = None,
+    left_out: list[str] | None = None,
 ) -> dict:
-    """Place an order. Prices always come from the database, never from the caller."""
+    """Place an order. Prices always come from the database, never from the caller; a
+    line may say what price the customer was shown, and if that is no longer the price the
+    order is refused and the new price shown. `for_date` is the day a made-to-order item
+    is wanted. `left_out` names items a repeat order had to leave behind."""
     contact = await conn.fetchrow(
         "select id, lang, credit_limit, assigned_to from contacts where id = $1", contact_id
     )
     if contact is None:
         raise OrderError("unknown_customer", "We could not find this customer.")
-    if not items:
+    if not lines:
         raise OrderError("empty", "The cart is empty.")
-
-    lines, total = [], 0
-    for product_id, quantity in items:
-        if not 1 <= quantity <= MAX_QUANTITY:
+    lines = [
+        line if isinstance(line, CartLine) else CartLine(*line) for line in lines
+    ]
+    for line in lines:
+        if not 1 <= line.quantity <= MAX_QUANTITY:
             raise OrderError("bad_quantity", "Quantity must be between 1 and 999.")
-        product = await conn.fetchrow(
-            "select id, name, name_ar, price from products where id = $1 and available",
-            product_id,
-        )
-        if product is None:
-            raise OrderError("unavailable", "One of the items is no longer available.")
-        lines.append((product, quantity))
-        total += product["price"] * quantity
+
+    shop_clock = await clock.load(conn, now)
+    checked = await cart.check(conn, shop_clock, lines, for_date)
+    if not all(c.ok for c in checked):
+        raise await _refusal(conn, shop_clock, checked)
+    total = sum(c.unit_price * c.line.quantity for c in checked)
 
     if payment == "account":
         if not contact["credit_limit"] > 0:
@@ -96,38 +234,58 @@ async def create_order(
     elif payment != "link":
         raise OrderError("bad_payment", "Choose to pay by link or on account.")
 
+    # Take the stock before anything else is written, in one step per line. Another order
+    # for the same last item may have got there first; then nothing is taken, and the
+    # cart comes back with what is left.
+    order_id = uuid4()
+    takes = [c.take for c in checked if c.take is not None]
+    if takes and await stock.reserve(conn, takes, order_id, team.CUSTOMER):
+        raise await _refusal(conn, shop_clock, await cart.check(conn, shop_clock, lines, for_date))
+
     # One order number at a time per shop, so numbers never repeat.
     await conn.execute("select pg_advisory_xact_lock(hashtext($1))", f"orders:{tenant_id}")
     number = await conn.fetchval("select coalesce(max(number), 1000) + 1 from orders")
+    dates = [c.fulfil_on for c in checked if c.fulfil_on]
     # Whoever is looking after this customer's chat looks after the order too.
-    order_id = await conn.fetchval(
-        "insert into orders (contact_id, number, total, payment, assigned_to) "
-        "values ($1, $2, $3, $4, $5) returning id",
-        contact_id, number, total, "on_account" if payment == "account" else "unpaid",
-        contact["assigned_to"],
+    await conn.execute(
+        "insert into orders (id, contact_id, number, total, payment, assigned_to, fulfil_on) "
+        "values ($1, $2, $3, $4, $5, $6, $7)",
+        order_id, contact_id, number, total, "on_account" if payment == "account" else "unpaid",
+        contact["assigned_to"], max(dates) if dates else None,
     )
     await team.record(
         conn, "order", order_id, "placed", team.CUSTOMER, contact_id,
         {"number": number, "total": fmt_qar(total), "payment": payment},
     )
-    for product, quantity in lines:
-        await conn.execute(
-            "insert into order_items (order_id, product_id, name, price, quantity) "
-            "values ($1, $2, $3, $4, $5)",
-            order_id, product["id"], product["name"], product["price"], quantity,
+    # A pay-link order holds its stock until it is paid or the hold runs out.
+    minutes = await clock.hold_minutes(conn)
+    held_until = (
+        shop_clock.now + timedelta(minutes=minutes) if payment == "link" and takes else None
+    )
+    for c in checked:
+        item, variant = c.entry.item, c.variant
+        order_item_id = await conn.fetchval(
+            "insert into order_items (order_id, item_id, name, name_ar, price, quantity, "
+            "variant_id, variant_name, variant_name_ar, options, fulfil_on) "
+            "values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11) returning id",
+            order_id, item["id"], item["name"], item["name_ar"], c.unit_price, c.line.quantity,
+            variant["id"], variant["name"], variant["name_ar"], c.options, c.fulfil_on,
         )
+        if c.take is not None:
+            await stock_holds.create(
+                conn, order_id, order_item_id, c.take.variant_id, c.take.quantity, c.take.day,
+                held_until,
+            )
+    if held_until is not None:
+        await jobs.enqueue(conn, EXPIRE_JOB, {"order_id": str(order_id)}, held_until)
 
     arabic = contact["lang"] == "ar"
     summary = "\n".join(
-        f"{quantity} x {(product['name_ar'] if arabic and product['name_ar'] else product['name'])}"
-        f"  {fmt_qar(product['price'] * quantity)}"
-        for product, quantity in lines
+        f"{c.line.quantity} x {_name(c, arabic)}  {fmt_qar(c.unit_price * c.line.quantity)}"
+        for c in checked
     )
     # A template blank cannot hold a line break, so the items go on one line there.
-    items = ", ".join(
-        f"{quantity} x {(product['name_ar'] if arabic and product['name_ar'] else product['name'])}"
-        for product, quantity in lines
-    )
+    items = ", ".join(f"{c.line.quantity} x {_name(c, arabic)}" for c in checked)
     pay_url = None
     if payment == "account":
         await ledger.add_entry(
@@ -146,22 +304,96 @@ async def create_order(
         )
         pay_url = f"{web_url}/pay/{tenant_id}/{pay_url}"
         closing = f"للدفع: {pay_url}" if arabic else f"Pay here: {pay_url}"
+        if held_until is not None:
+            closing += (
+                f"\nنحجز لك الأصناف لمدة {minutes} دقيقة." if arabic
+                else f"\nWe are holding your items for {minutes} minutes."
+            )
 
     head = f"تم استلام الطلب رقم {number}." if arabic else f"Order #{number} received."
     total_line = f"الإجمالي: {fmt_qar(total)}" if arabic else f"Total: {fmt_qar(total)}"
     track = _track_line(track_url(web_url, tenant_id, order_id), arabic)
+    skipped = ""
+    if left_out:
+        names = "، ".join(left_out) if arabic else ", ".join(left_out)
+        skipped = (
+            f"\nلم نضف لعدم توفره الآن: {names}" if arabic
+            else f"\nNot included, because it is not available now: {names}"
+        )
     # The tracking link goes in the module's own wording. An approved template cannot
     # change, so a notice sent after the 24-hour window arrives without it.
     await outbound.send(conn, templates.notice(
         contact_id, "order_received_account" if payment == "account" else "order_received_pay",
-        contact["lang"], f"{head}\n{summary}\n{total_line}\n{closing}\n{track}",
+        contact["lang"], f"{head}\n{summary}\n{total_line}\n{closing}{skipped}\n{track}",
         number, items, fmt_qar(total), fmt_qar(balance) if payment == "account" else pay_url,
     ))
     return {
         "order_id": str(order_id), "number": number, "total": total,
         "total_text": fmt_qar(total), "payment": payment, "pay_url": pay_url,
         "track_url": track_url(web_url, tenant_id, order_id),
+        "fulfil_on": max(dates).isoformat() if dates else None,
+        "hold_expires_at": held_until.isoformat() if held_until else None,
     }
+
+
+async def repeat_last_order(
+    conn: asyncpg.Connection, tenant_id: UUID, contact_id: UUID, payment: str, web_url: str,
+    outbound: Outbound, now: datetime | None = None,
+) -> dict:
+    """"Same as last time": order again what the customer's last order held. Anything that
+    can no longer be ordered is left out and named; the rest is ordered, at today's prices
+    (and any price that changed is listed)."""
+    last = await conn.fetchrow(
+        "select id from orders where contact_id = $1 and status <> 'cancelled' "
+        "order by created_at desc, number desc limit 1",
+        contact_id,
+    )
+    if last is None:
+        raise OrderError(
+            "no_previous_order", text.say("no_previous_order", "en", {}),
+            text.say("no_previous_order", "ar", {}),
+        )
+    rows = await conn.fetch(
+        "select item_id, variant_id, quantity, price, options, name, name_ar from order_items "
+        "where order_id = $1 and item_id is not null order by name",
+        last["id"],
+    )
+    lines = [
+        CartLine(
+            r["item_id"], r["quantity"], r["variant_id"],
+            tuple(UUID(o["id"]) for o in r["options"] if "id" in o),
+        )
+        for r in rows
+    ]
+    shop_clock = await clock.load(conn, now)
+    checked = await cart.check(conn, shop_clock, lines)
+    ordered = [c for c in checked if c.ok]
+    left_out = [
+        {
+            "name": r["name"], "name_ar": r["name_ar"], "code": c.code,
+            "message": cart.message(c, shop_clock, "en"),
+            "message_ar": cart.message(c, shop_clock, "ar"),
+        }
+        for r, c in zip(rows, checked, strict=True) if not c.ok
+    ]
+    if not ordered:
+        raise OrderError(
+            "nothing_available", text.say("nothing_available", "en", {}),
+            text.say("nothing_available", "ar", {}), await cart.report(conn, shop_clock, checked),
+        )
+    lang = await conn.fetchval("select lang from contacts where id = $1", contact_id)
+    placed = await create_order(
+        conn, tenant_id, contact_id, [c.line for c in ordered], payment, web_url, outbound,
+        now=now,
+        left_out=[(x["name_ar"] or x["name"]) if lang == "ar" else x["name"] for x in left_out],
+    )
+    placed["left_out"] = left_out
+    placed["price_changes"] = [
+        {"name": r["name"], "was": r["price"], "was_text": fmt_qar(r["price"]),
+         "now": c.unit_price, "now_text": fmt_qar(c.unit_price)}
+        for r, c in zip(rows, checked, strict=True) if c.ok and c.unit_price != r["price"]
+    ]
+    return placed
 
 
 _STATUS_TEXT = {
@@ -172,14 +404,90 @@ _STATUS_TEXT = {
 }
 
 
+async def cancel_order(
+    conn: asyncpg.Connection, order_id: UUID, outbound: Outbound,
+    actor: Actor = team.ASSISTANT, restock: bool | None = None, reason: str = "",
+    held_minutes: int | None = None,
+) -> dict | None:
+    """Cancel an order, and tell the customer.
+
+    Stock goes back when the order had not been made yet (new or confirmed): the customer
+    changed their mind, or nobody paid in time. For an order already ready or done the
+    stock stays sold unless `restock` says otherwise. An order that was paid is cancelled
+    all the same, and the answer says a refund is due: the shop refunds it in its own
+    payment account, because ALYR never holds money. `held_minutes` is set when the hold
+    ran out, which changes what the customer is told.
+
+    Returns None if there is no such order."""
+    # A payment link nobody can use any more. First, in the order a payment arriving takes
+    # its locks, so the two cannot wait on each other.
+    await conn.execute(
+        "update payment_requests set status = 'expired' "
+        "where order_id = $1 and status = 'pending'",
+        order_id,
+    )
+    row = await conn.fetchrow(
+        "select number, status, payment, total, contact_id from orders where id = $1 for update",
+        order_id,
+    )
+    if row is None:
+        return None
+    if row["status"] == "cancelled":
+        return {"number": row["number"], "status": "cancelled", "already": True,
+                "stock_returned": 0, "refund_due": False}
+    if restock is None:
+        restock = row["status"] in ("new", "confirmed")
+    await conn.execute("update orders set status = 'cancelled' where id = $1", order_id)
+    returned = 0
+    if restock:
+        returned = await stock_holds.release(
+            conn, order_id, actor, reason or "Order cancelled"
+        )
+    refund_due = row["payment"] == "paid"
+    await team.claim(conn, "order", order_id, actor)
+    await team.record(
+        conn, "order", order_id, "cancelled", actor, row["contact_id"],
+        {"number": row["number"], "reason": reason, "stock_returned": returned or None,
+         "refund_due": fmt_qar(row["total"]) if refund_due else None},
+    )
+    if refund_due:
+        await team.record(
+            conn, "order", order_id, "refund_due", actor, row["contact_id"],
+            {"number": row["number"], "amount": fmt_qar(row["total"])},
+        )
+    lang = await conn.fetchval("select lang from contacts where id = $1", row["contact_id"])
+    if held_minutes is not None:
+        body = text.say("hold_expired", lang, {"number": row["number"], "minutes": held_minutes})
+    else:
+        english, arabic = _STATUS_TEXT["cancelled"]
+        body = (arabic if lang == "ar" else english).format(n=row["number"])
+    await outbound.send(conn, templates.notice(
+        row["contact_id"], "order_cancelled", lang, body, row["number"],
+    ))
+    return {
+        "number": row["number"], "status": "cancelled", "already": False,
+        "stock_returned": returned,
+        "refund_due": refund_due,
+        "refund_amount": row["total"] if refund_due else 0,
+        "refund_text": fmt_qar(row["total"]) if refund_due else None,
+    }
+
+
 async def set_status(
     conn: asyncpg.Connection, order_id: UUID, status: str, outbound: Outbound,
-    actor: Actor = team.ASSISTANT, web_url: str | None = None,
+    actor: Actor = team.ASSISTANT, web_url: str | None = None, restock: bool | None = None,
 ) -> bool:
     """Move an order along and tell the customer. Returns False if there is no such order.
-    Whoever moves an order nobody has becomes responsible for it."""
+    Whoever moves an order nobody has becomes responsible for it. A cancelled order cannot
+    be moved on: its stock has gone back, so the customer orders again."""
     if status not in _STATUS_TEXT:
         raise OrderError("bad_status", "Unknown order status.")
+    if status == "cancelled":
+        return await cancel_order(conn, order_id, outbound, actor, restock) is not None
+    if await conn.fetchval("select status = 'cancelled' from orders where id = $1", order_id):
+        raise OrderError(
+            "cancelled", "A cancelled order cannot be moved on. Place a new order instead."
+        )
     row = await conn.fetchrow(
         "update orders set status = $2 where id = $1 and status is distinct from $2 "
         "returning contact_id, number",
@@ -194,7 +502,7 @@ async def set_status(
     lang = await conn.fetchval("select lang from contacts where id = $1", row["contact_id"])
     english, arabic = _STATUS_TEXT[status]
     body = (arabic if lang == "ar" else english).format(n=row["number"])
-    if web_url and status != "cancelled":
+    if web_url:
         tenant_id = await conn.fetchval(
             "select nullif(current_setting('app.tenant_id', true), '')::uuid"
         )
@@ -207,16 +515,20 @@ async def set_status(
 
 async def list_orders(conn: asyncpg.Connection) -> list[dict]:
     orders = await conn.fetch(
-        "select o.id, o.number, o.status, o.payment, o.total, o.created_at, c.name as customer, "
-        "       o.assigned_to, u.name as assignee "
+        "select o.id, o.number, o.status, o.payment, o.total, o.created_at, o.fulfil_on, "
+        "       c.name as customer, o.assigned_to, u.name as assignee "
         "from orders o join contacts c on c.id = o.contact_id "
         "left join users u on u.id = o.assigned_to order by o.number desc"
     )
-    items = await conn.fetch("select order_id, name, price, quantity from order_items")
+    items = await conn.fetch(
+        "select order_id, name, price, quantity, variant_name, options from order_items"
+    )
     by_order: dict[UUID, list[dict]] = {}
     for item in items:
         by_order.setdefault(item["order_id"], []).append(
             {"name": item["name"], "quantity": item["quantity"],
+             "variant": item["variant_name"],
+             "options": [o["name"] for o in item["options"]],
              "line_text": fmt_qar(item["price"] * item["quantity"])}
         )
     return [
@@ -224,6 +536,7 @@ async def list_orders(conn: asyncpg.Connection) -> list[dict]:
             "id": str(o["id"]), "number": o["number"], "status": o["status"],
             "payment": o["payment"], "total": o["total"], "total_text": fmt_qar(o["total"]),
             "customer": o["customer"], "created_at": o["created_at"].isoformat(),
+            "fulfil_on": o["fulfil_on"].isoformat() if o["fulfil_on"] else None,
             "items": by_order.get(o["id"], []),
             "assigned": {"id": str(o["assigned_to"]), "name": o["assignee"]}
             if o["assigned_to"] else None,
@@ -241,8 +554,8 @@ async def tracking(conn: asyncpg.Connection, order_id: UUID) -> dict | None:
     when, who at the shop is looking after it, and how to pay if they have not.
     Nothing about other customers, and only the first name of the staff member."""
     order = await conn.fetchrow(
-        "select o.id, o.number, o.status, o.payment, o.total, o.created_at, c.lang, "
-        "       split_part(u.name, ' ', 1) as handler "
+        "select o.id, o.number, o.status, o.payment, o.total, o.created_at, o.fulfil_on, "
+        "       c.lang, split_part(u.name, ' ', 1) as handler "
         "from orders o join contacts c on c.id = o.contact_id "
         "left join users u on u.id = o.assigned_to where o.id = $1",
         order_id,
@@ -250,8 +563,10 @@ async def tracking(conn: asyncpg.Connection, order_id: UUID) -> dict | None:
     if order is None:
         return None
     items = await conn.fetch(
-        "select o.name, p.name_ar, o.price, o.quantity from order_items o "
-        "left join products p on p.id = o.product_id where o.order_id = $1 order by o.name",
+        "select o.name, coalesce(nullif(o.name_ar, ''), p.name_ar, '') as name_ar, o.price, "
+        "       o.quantity, o.variant_name, o.variant_name_ar, o.options "
+        "from order_items o left join items p on p.id = o.item_id "
+        "where o.order_id = $1 order by o.name",
         order_id,
     )
     events = await conn.fetch(
@@ -270,8 +585,11 @@ async def tracking(conn: asyncpg.Connection, order_id: UUID) -> dict | None:
         "number": order["number"], "status": order["status"], "payment": order["payment"],
         "total_text": fmt_qar(order["total"]), "lang": order["lang"],
         "handler": order["handler"] or None,
+        "fulfil_on": order["fulfil_on"].isoformat() if order["fulfil_on"] else None,
         "items": [
             {"name": i["name"], "name_ar": i["name_ar"] or "", "quantity": i["quantity"],
+             "variant": i["variant_name"], "variant_ar": i["variant_name_ar"],
+             "options": [o["name"] for o in i["options"]],
              "line_text": fmt_qar(i["price"] * i["quantity"])}
             for i in items
         ],

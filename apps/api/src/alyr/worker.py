@@ -12,6 +12,7 @@ import logging
 
 from alyr.main import create_app
 from alyr.modules import report
+from alyr.modules.orders import holds as order_holds
 
 log = logging.getLogger("alyr.worker")
 
@@ -26,15 +27,32 @@ async def keep_reports_scheduled(db) -> None:
         await asyncio.sleep(3600)
 
 
+async def keep_holds_swept(db, outbound) -> None:
+    """Give back the stock of orders nobody paid for. The first pass runs the moment the
+    worker starts, so whatever ran out while it was off is caught up at once; after that
+    every few minutes. Each such order also has its own job, so this only matters when a
+    job was lost."""
+    while True:
+        try:
+            cancelled = await order_holds.sweep_all(db, outbound)
+            if cancelled:
+                log.info("released the holds of %s unpaid orders", cancelled)
+        except Exception:  # never let a sweep stop the worker
+            log.exception("could not sweep expired holds")
+        await asyncio.sleep(300)
+
+
 async def main() -> None:
     logging.basicConfig(level=logging.INFO, format="%(asctime)s %(name)s %(message)s")
     app = create_app()
     await app.state.db.connect()
     scheduler = asyncio.create_task(keep_reports_scheduled(app.state.db))
+    sweeper = asyncio.create_task(keep_holds_swept(app.state.db, app.state.outbound))
     try:
         await app.state.jobs.run_forever()
     finally:
         scheduler.cancel()
+        sweeper.cancel()
         await app.state.db.close()
 
 

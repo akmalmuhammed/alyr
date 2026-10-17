@@ -5,6 +5,9 @@ that changes behaviour; internal-only work can be grouped. Versions follow phase
 (`0.<phase>.<n>`), tagged on main when a phase demo works (docs/hygiene.md).
 
 ## Unreleased
+- Catalog engine, not visible yet (ALY-102, D-039): items with variants, options, availability rules,
+  a stock log, holds for unpaid pay-link orders, and a checkout that tells a customer exactly what
+  changed. Products became items; existing shops and orders carry over unchanged.
 - Security: the API now treats any environment that is not explicitly `local` as production;
   stand-in payments, the simulator and the API docs pages only exist on a developer machine (ALY-114).
 - Hygiene: PR and issue templates, CODEOWNERS, SECURITY.md, licence notice, Dependabot,

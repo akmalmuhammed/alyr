@@ -11,11 +11,13 @@ from alyr.core.outbound import SEND, Outbound
 from alyr.db import Database
 from alyr.modules import report
 from alyr.modules.bookings.service import REMINDER, Reminders
+from alyr.modules.orders import holds as order_holds
+from alyr.modules.orders.service import EXPIRE_JOB
 from alyr.routes import admin as admin_routes
 from alyr.routes import agent as agent_routes
 from alyr.routes import auth as auth_routes
 from alyr.routes import bookings as bookings_routes
-from alyr.routes import inbox, ledger, orders, pay, simulator, store, whatsapp_webhook
+from alyr.routes import inbox, items, ledger, orders, pay, simulator, store, whatsapp_webhook
 from alyr.routes import jobs as jobs_routes
 from alyr.routes import onboarding as onboarding_routes
 from alyr.routes import reports as reports_routes
@@ -57,6 +59,9 @@ def create_app() -> FastAPI:
     app.state.jobs.register(INBOUND, app.state.inbound.process)
     app.state.jobs.register(REMINDER, Reminders(app.state.db, app.state.outbound).send)
     app.state.jobs.register(report.JOB, report.WeeklyReports(app.state.db, app.state.outbound).send)
+    app.state.jobs.register(
+        EXPIRE_JOB, order_holds.HoldExpiry(app.state.db, app.state.outbound).run
+    )
     if settings.jobs_inline:
         app.state.db.after_commit = app.state.jobs.drain
 
@@ -70,6 +75,9 @@ def create_app() -> FastAPI:
     app.include_router(pay.router)
     app.include_router(track_routes.router)
     app.include_router(orders.router, dependencies=[Depends(require_module("orders"))])
+    # The Catalog's own API (D-039). Not a module of its own, so it adds nothing to the
+    # workspace navigation or the Products screen: it answers where orders are switched on.
+    app.include_router(items.router, dependencies=[Depends(require_module("orders"))])
     app.include_router(store.router, dependencies=[Depends(require_module_for_slug("orders"))])
     app.include_router(jobs_routes.router)
     app.include_router(inbox.router, dependencies=[Depends(require_module("inbox"))])

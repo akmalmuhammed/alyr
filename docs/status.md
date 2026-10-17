@@ -4,7 +4,7 @@ How the work is divided, and the one goal for this stage, are in [operating-mode
 
 Read this first in a new session, on any machine. It is the hand-over note between sessions: what works, what is next, and what is waiting on the founder. Update it in the same pull request as the work. Linear (team `Alyrtech`, project `Alyr Launch`) holds the detail; this page is the summary.
 
-Last updated: 17 Oct 2026, after the pre-go-live audit (ALY-114, docs/audit/2026-10-17.md). Several lines below are known to be stale; ALY-123 corrects them.
+Last updated: 17 Oct 2026, after the pre-go-live audit (ALY-114, docs/audit/2026-10-17.md) and the Catalog engine (ALY-102, in review). Several lines below are known to be stale; ALY-123 corrects them.
 
 ## What works today
 
@@ -17,6 +17,7 @@ Last updated: 17 Oct 2026, after the pre-go-live audit (ALY-114, docs/audit/2026
 | Contact identity by WhatsApp user ID, phone optional | Built | `core/identity.py` |
 | Credit ledger in chat, ageing, reminders, pay link | Built | `modules/ledger/` |
 | Order link: products, order page, pay or on account | Built | `modules/orders/`, `apps/web/app/s/` |
+| **Catalog engine (D-039, ALY-102, spec 001):** items with English and Arabic names, price with sale price and history, variants with their own stock, options, availability rules (always, switch, count, daily limit, schedule with lead time, cut-off and date overrides), an append-only stock log, stock taken in one step at checkout so the last item sells once, 30-minute holds for unpaid pay-link orders, restock on cancel, a copy of the variant and options on each order line, and `/api/items`. Products became items (migration 0022) | **In PR (ALY-102, branch `aly-102-catalog-engine`), not merged.** API only: no screen, no photo (ALY-103 owns photos), nothing visible to an owner or customer | `modules/items/`, `modules/orders/`, `routes/items.py`, `specs/001-catalog-engine/spec.md` |
 | Job queue with retries and dead letters | Built | `core/jobs.py` |
 | Consent, stop and start words, 24-hour window | Built | `core/consent.py`, `core/outbound.py` |
 | Shared inbox: human takeover, assignment, staff notes, saved replies | Built; no live updates or typing warning | `modules/inbox/`, D-021 |
@@ -36,13 +37,13 @@ Last updated: 17 Oct 2026, after the pre-go-live audit (ALY-114, docs/audit/2026
 | Demo page: chat simulator plus workspace tabs, now at `/whatsapp` | Built | `apps/web/app/(product)/whatsapp/page.tsx` |
 | Self-serve onboarding at `/start`: email code, type of business, a filled-in price list and opening hours to edit, a private test line to book as a customer, the plan, a go-live checklist, then the workspace. Phone and laptop layouts, English and Arabic | Built (D-031) for appointment businesses (salon, spa, clinic, home services). Restaurants, shops, wholesale and document offices get their business created and a setup request for ALYR. Sign-up is closed outside a local machine until the founder opens it | `apps/api/src/alyr/core/onboarding.py`, `presets.py`, `apps/web/app/(product)/start/` |
 
-Tests: 353 on `main`, all passing; 377 on `aly-99-report-card` (24 new). CI runs api, web and a secrets scan on every pull request.
+Tests: 383 on `main` (counted 17 Oct 2026 at the start of ALY-102), all passing. CI runs api, web and a secrets scan on every pull request.
 
 **Audit 17 Oct (ALY-114).** Settings now fail safe (the API is production unless `ALYR_ENV=local`); governance files, runbooks, access register and hygiene rules added; findings tracked as ALY-115 to ALY-125. Before the first real customer: `docs/runbooks/go-live-checklist.md`.
 
 ## Next on the build side, in order
 
-0. **The Catalog (ALY-101, D-039):** planned, nothing built. Order: ALY-102 (items and stock) and ALY-103 (photos and R2) first, which can run together; then ALY-104 (workspace screens), ALY-112 (order page), ALY-106 (WhatsApp); then ALY-107 to ALY-110; ALY-113 (go-live sweep) last. This replaces the old line below about a products screen. Runs alongside the internal tool; which comes first is the founder's call.
+0. **The Catalog (ALY-101, D-039):** the engine (ALY-102) is built and in review. Order: ALY-103 (photos and R2) beside it; then ALY-104 (workspace screens), ALY-112 (order page), ALY-106 (WhatsApp); then ALY-107 to ALY-110; ALY-113 (go-live sweep) last. Customer price groups (wholesale) are in release 1 but in no package yet. This replaces the old line below about a products screen. Runs alongside the internal tool; which comes first is the founder's call.
 0. **The internal tool (ALY-79, D-033):** phase 1 of 17 built. Next: Client 360 (ALY-81), business controls (ALY-82), onboarding board and tickets (ALY-83), leads (ALY-84), billing (ALY-85), switches (ALY-86), then levels 2 and 3.
 1. **Onboarding (ALY-76, D-031) and per-client pricing (ALY-78, D-032):** built. Left for later phases: sign-in by WhatsApp code, the advisor's tablet mode, the restaurant and shop paths, owners adding a second business themselves, invoices and taking payment, telling the owner their price is ready.
 
@@ -74,7 +75,9 @@ Tests: 353 on `main`, all passing; 377 on `aly-99-report-card` (24 new). CI runs
 
 ## Known gaps and risks
 
-- **Owners cannot manage their own menu or stock.** There is no screen to add or edit items, no photos and no quantities; ALYR loads a shop's items for it. The Catalog (ALY-101, D-039) fixes this before go-live.
+- **Owners cannot manage their own menu or stock.** There is no screen to add or edit items and no photos; ALYR loads a shop's items for it. The Catalog (ALY-101, D-039) fixes this before go-live; its engine and API (stock, variants, holds) are in review (ALY-102), its screens are not built.
+- **The pay page does not know an expired payment link.** Once a counted-stock pay-link order is unpaid after its hold, the link answers 409 and the page keeps showing the pay button. Fixed with the order page (ALY-112).
+- **Cancelling an order that was put on a credit account does not reverse the ledger sale.** Long-standing; not part of the Catalog.
 - **"Coming" labels are still visible** (Payroll in the Products menu and on the site, "Early access" on the site). D-039 removes them before go-live (ALY-113).
 - The public site's Arabic is unreviewed (ALY-66); the suite site (ALY-99) adds about three times as much Arabic, all of it a draft. Several product claims on it describe what is built on the simulator, not what runs live. See `docs/brand.md`.
 - Bookings: one customer at a time per shop; services and opening hours can only be changed through the API; staff cannot move a booking or add a walk-in from the screen.
