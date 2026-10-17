@@ -9,6 +9,13 @@ Two layers, on purpose:
 * **Products** are what a shop buys. A product is a named bundle of modules. Pricing
   and packaging can change by editing this file, without touching the modules.
 
+The line-up (17 Oct 2026, `docs/agent-dashboard/00-founder-decisions.md`): ALYR Chat,
+ALYR Bookings, ALYR Agent, ALYR Accounts, and ALYR Payroll as coming. Two modules are
+shared: the team inbox and payment links belong to both Chat and Bookings, because a
+business whose number runs on ALYR answers its customers nowhere else, and a booking can
+be paid by link as an order can. ALYR Agent has no module of its own: it is the home
+dashboard and the Sunday report, and every business has it.
+
 To add a product later: write its modules, declare them here, and add the product. The
 shell, the setup checklist, the home dashboard and the back office pick it up.
 """
@@ -78,12 +85,18 @@ class Module:
 @dataclass(frozen=True)
 class Product:
     key: str
+    # The name stays in Latin in both languages ("ALYR Bookings", D-025); the descriptor
+    # says in plain words what it is.
     name: Text
+    descriptor: Text
     summary: Text
     modules: tuple[str, ...] = ()
     # available: a shop can switch it on. coming: shown so shops know it is planned,
-    # but cannot be switched on.
+    # but cannot be switched on. included: every business has it; it cannot be switched
+    # on or off.
     status: str = "available"
+    # What an included product brings, since it has no modules to list.
+    parts: tuple[Text, ...] = ()
     tags: tuple[str, ...] = field(default_factory=tuple)
 
 
@@ -237,14 +250,46 @@ PRODUCTS: tuple[Product, ...] = (
     Product(
         "chat",
         Text("ALYR Chat", "ALYR Chat"),
+        Text("WhatsApp orders and team inbox", "طلبات واتساب وصندوق الفريق"),
         Text(
-            "Your WhatsApp number as your front desk: team inbox, bookings, orders and payment links.",
-            "رقم واتساب الخاص بك كمكتب استقبال: صندوق للفريق وحجوزات وطلبات وروابط دفع.",
+            "Your WhatsApp number as your front desk: one team inbox, an order page, order "
+            "tracking and payment links.",
+            "رقم واتساب الخاص بك كمكتب استقبال: صندوق واحد للفريق وصفحة للطلب وتتبّع الطلب "
+            "وروابط دفع.",
         ),
-        modules=("inbox", "bookings", "orders", "payments"),
+        modules=("inbox", "orders", "payments"),
     ),
     Product(
-        "credit",
+        "bookings",
+        Text("ALYR Bookings", "ALYR Bookings"),
+        Text("Appointments and reminders", "المواعيد والتذكيرات"),
+        Text(
+            "Customers book from the chat: your services and opening hours, a reminder before "
+            "each visit, and a record of who came and who did not.",
+            "يحجز عملاؤك من المحادثة: خدماتك وساعات عملك، وتذكير قبل كل موعد، وسجلّ بمن حضر "
+            "ومن لم يحضر.",
+        ),
+        modules=("inbox", "bookings", "payments"),
+    ),
+    Product(
+        "agent",
+        Text("ALYR Agent", "ALYR Agent"),
+        Text("Your business in numbers", "نشاطك بالأرقام"),
+        Text(
+            "Your numbers on the home screen, and a report every Sunday morning that compares "
+            "the week with the one before.",
+            "أرقام نشاطك في الشاشة الرئيسية، وتقرير صباح كل أحد يقارن أسبوعك بالأسبوع الذي "
+            "قبله.",
+        ),
+        status="included",
+        parts=(
+            Text("Home dashboard", "لوحة الرئيسية"),
+            Text("Sunday report", "تقرير الأحد"),
+        ),
+    ),
+    Product(
+        "accounts",
+        Text("ALYR Accounts", "ALYR Accounts"),
         Text("Credit accounts", "الحسابات الآجلة"),
         Text(
             "Customer accounts, statements and polite reminders with a payment link.",
@@ -254,6 +299,7 @@ PRODUCTS: tuple[Product, ...] = (
     ),
     Product(
         "payroll",
+        Text("ALYR Payroll", "ALYR Payroll"),
         Text("Payroll and staff documents", "الرواتب ووثائق الموظفين"),
         Text(
             "Salary files for the bank, and reminders before visas and licences expire.",
@@ -275,10 +321,33 @@ MODULE_BY_KEY = {m.key: m for m in MODULES}
 PRODUCT_BY_KEY = {p.key: p for p in PRODUCTS}
 CONNECTION_BY_KEY = {c.key: c for c in CONNECTIONS}
 
+# Modules that more than one product switches on (the team inbox and payment links).
+SHARED_MODULES = frozenset(
+    m for m in MODULE_BY_KEY if sum(m in p.modules for p in PRODUCTS) > 1
+)
 
-def products_for(modules: set[str]) -> list[str]:
-    """The products whose every module is switched on."""
-    return [p.key for p in PRODUCTS if p.modules and set(p.modules) <= modules]
+
+def own_modules(product: Product) -> tuple[str, ...]:
+    """The modules only this product switches on: they say the shop is using it."""
+    return tuple(m for m in product.modules if m not in SHARED_MODULES)
+
+
+def products_for(modules: set[str] | frozenset[str]) -> list[str]:
+    """The products a shop with these modules on is using, in catalogue order.
+
+    An included product is always in use. Otherwise a product is in use when one of its
+    own modules is on. A shared module on its own (the inbox and payment links of a
+    travel office, say) counts for the first product that has it, ALYR Chat, unless a
+    product already in use covers it. So a salon with the inbox, bookings and payment
+    links on is using ALYR Bookings, not ALYR Chat as well."""
+    modules = set(modules)
+    using = [p for p in PRODUCTS if p.status == "included" or set(own_modules(p)) & modules]
+    covered = {m for p in using for m in p.modules}
+    for product in PRODUCTS:
+        if product not in using and set(product.modules) & (modules - covered):
+            using.append(product)
+            covered |= set(product.modules)
+    return [p.key for p in PRODUCTS if p in using]
 
 
 def check() -> None:
@@ -286,6 +355,11 @@ def check() -> None:
     for product in PRODUCTS:
         for key in product.modules:
             assert key in MODULE_BY_KEY, f"product {product.key} names unknown module {key}"
+        assert product.status in ("available", "coming", "included"), product.key
+        # A product made only of shared modules could never be told apart from the
+        # products it shares them with.
+        assert not product.modules or own_modules(product), f"{product.key} has no own module"
+        assert product.status != "included" or not product.modules, product.key
     for module in MODULES:
         for step in module.steps:
             assert not step.connection or step.connection in CONNECTION_BY_KEY, step.key

@@ -10,7 +10,12 @@ import "../../_workspace/shell.css";
 type Text = { en: string; ar: string };
 type NavItem = { key: string; label: Text; icon: string };
 type Step = { key: string; label: Text; done: boolean; screen: string; connection: string; asked: boolean };
-type Product = { key: string; name: Text; summary: Text; status: "active" | "available" | "coming"; modules: string[]; steps: Step[] };
+type Product = {
+  key: string; name: Text; descriptor: Text; summary: Text;
+  // included: every business has it (ALYR Agent); it has no switch.
+  status: "active" | "available" | "coming" | "included";
+  modules: string[]; includes: { key: string; label: Text }[]; steps: Step[];
+};
 type Connection = { key: string; name: Text; detail: Text; connected: boolean; available: boolean };
 type State = {
   business: { name: string; name_ar: string; slug: string };
@@ -47,6 +52,7 @@ const T = {
     productsTitle: "Products", productsEyebrow: "Your plan",
     productsSub: "Switch on what your business needs. Switching off hides the screens and keeps every record.",
     active: "Active", available: "Available", coming: "Coming", on: "On", off: "Off",
+    included: "Included", includedNote: "Included for every business.",
     confirmOff: "Hide its screens from your team? Nothing is deleted.", keep: "Keep on", turnOff: "Switch off",
     managersOnly: "Only an owner or admin can change products.", includes: "Includes",
     connectionsTitle: "Connections", connectionsEyebrow: "Accounts",
@@ -81,6 +87,7 @@ const T = {
     productsTitle: "المنتجات", productsEyebrow: "خطتك",
     productsSub: "فعّل ما يحتاجه عملك. الإيقاف يخفي الشاشات ويحفظ كل السجلات.",
     active: "مفعّل", available: "متاح", coming: "قريباً", on: "مفعّل", off: "متوقف",
+    included: "مشمول", includedNote: "مشمول لكل منشأة.",
     confirmOff: "إخفاء شاشاته عن فريقك؟ لن يُحذف شيء.", keep: "أبقِه", turnOff: "إيقاف",
     managersOnly: "تغيير المنتجات متاح للمالك أو المدير فقط.", includes: "يشمل",
     connectionsTitle: "الاتصالات", connectionsEyebrow: "الحسابات",
@@ -99,19 +106,18 @@ const T = {
   },
 };
 
-const MODULE_LABEL: Record<string, Text> = {
-  inbox: { en: "Team inbox", ar: "صندوق الفريق" },
-  bookings: { en: "Bookings", ar: "الحجوزات" },
-  orders: { en: "Orders", ar: "الطلبات" },
-  payments: { en: "Payment links", ar: "روابط الدفع" },
-  ledger: { en: "Credit accounts", ar: "الحسابات الآجلة" },
-  payroll: { en: "Payroll", ar: "الرواتب" },
-};
+// Module and product names come from the catalogue (`catalog.py`) through the API.
 const MODULE_ICON: Record<string, string> = {
   inbox: "inbox", bookings: "calendar", orders: "receipt", payments: "card", ledger: "book", payroll: "wallet",
 };
-const PRODUCT_ICON: Record<string, string> = { chat: "chat", credit: "book", payroll: "wallet" };
+const PRODUCT_ICON: Record<string, string> = {
+  chat: "chat", bookings: "calendar", agent: "chart", accounts: "book", payroll: "wallet",
+};
 const CONNECTION_ICON: Record<string, string> = { whatsapp: "chat", payments: "card" };
+
+// An included product (ALYR Agent) is in use and looks it, though it has no switch.
+const inUse = (p: Product) => p.status === "active" || p.status === "included";
+const pillClass = (p: Product) => (p.status === "included" ? "active" : p.status);
 
 const ICON: Record<string, string> = {
   home: "M4 11 12 4l8 7v9H4z M10 20v-5h4v5",
@@ -126,6 +132,7 @@ const ICON: Record<string, string> = {
   search: "M11 18a7 7 0 1 0 0-14 7 7 0 0 0 0 14Z M20 20l-4-4",
   chat: "M4 5h16v11H10l-6 4z M8 10h8",
   card: "M3 6h18v12H3z M3 10h18 M7 14h4",
+  chart: "M3 20h18 M6 20v-6 M11 20V8 M16 20v-9 M21 4l-5 4-5-3-5 5",
   wallet: "M4 7h15v12H4z M4 7l11-3v3 M15 13h2",
   arrow: "M5 12h14 M13 6l6 6-6 6",
   out: "M14 4h6v16h-6 M10 8l-4 4 4 4 M6 12h10",
@@ -473,9 +480,9 @@ export default function WorkspaceShell() {
             {state.products.map((p) => (
               <li key={p.key}>
                 <Link href="/app/products">
-                  <span className={`sh-glyph ${p.status === "active" ? "" : "coming"}`}><Icon name={PRODUCT_ICON[p.key] ?? "apps"} /></span>
-                  <b>{pick(p.name)}<small>{p.modules.map((m) => pick(MODULE_LABEL[m] ?? { en: m, ar: m })).join(" · ")}</small></b>
-                  <span className={`sh-pill ${p.status}`}>{t[p.status]}</span>
+                  <span className={`sh-glyph ${inUse(p) ? "" : "coming"}`}><Icon name={PRODUCT_ICON[p.key] ?? "apps"} /></span>
+                  <b>{pick(p.name)}<small>{pick(p.descriptor)}</small></b>
+                  <span className={`sh-pill ${pillClass(p)}`}>{t[p.status]}</span>
                 </Link>
               </li>
             ))}
@@ -496,22 +503,26 @@ export default function WorkspaceShell() {
           {state.products.map((product) => {
             const on = product.status === "active";
             return (
-              <li key={product.key} className={`sh-product ${product.status}`}>
+              <li key={product.key} className={`sh-product ${pillClass(product)}`}>
                 <div className="sh-product-top">
-                  <span className={`sh-glyph ${on ? "" : "coming"}`}><Icon name={PRODUCT_ICON[product.key] ?? "apps"} /></span>
-                  <span className={`sh-pill ${product.status}`}>{t[product.status]}</span>
+                  <span className={`sh-glyph ${inUse(product) ? "" : "coming"}`}><Icon name={PRODUCT_ICON[product.key] ?? "apps"} /></span>
+                  <span className={`sh-pill ${pillClass(product)}`}>{t[product.status]}</span>
                 </div>
                 <div>
+                  <span className="sh-eyebrow">{pick(product.descriptor)}</span>
                   <h2>{pick(product.name)}</h2>
                   <p>{pick(product.summary)}</p>
                 </div>
                 <div className="sh-modules" aria-label={t.includes}>
-                  {product.modules.map((m) => (
-                    <span key={m}><Icon name={MODULE_ICON[m] ?? "apps"} />{pick(MODULE_LABEL[m] ?? { en: m, ar: m })}</span>
+                  {product.includes.map((part) => (
+                    <span key={part.key || part.label.en}>
+                      <Icon name={MODULE_ICON[part.key] ?? PRODUCT_ICON[product.key] ?? "apps"} />{pick(part.label)}
+                    </span>
                   ))}
                 </div>
                 <div className="sh-product-foot">
-                  {product.status === "coming" ? <span className="sh-note">{t.soon}</span>
+                  {product.status === "included" ? <span className="sh-note">{t.includedNote}</span>
+                    : product.status === "coming" ? <span className="sh-note">{t.soon}</span>
                     : confirming === product.key ? (
                       <div className="sh-confirm" role="alertdialog" aria-label={t.confirmOff}>
                         <span>{t.confirmOff}</span>

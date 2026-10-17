@@ -40,6 +40,7 @@ Status: **Accepted** (in force), **Proposed** (waiting for the founder), **Super
 | D-032 | Prices are set per client from the back office: a price list, a quote per client, published live to the owner | Accepted |
 | D-033 | The internal tool: one console for every client, built in three levels; staff never see customer conversations | Accepted |
 | D-034 | Product first and paid from the first customer; the homepage leads with what ALYR sells today | Accepted |
+| D-035 | ALYR is a suite of products led by ALYR Agent: Chat, Bookings, Agent, Accounts, Payroll coming; the workspace home becomes the Agent dashboard | Accepted |
 
 ---
 
@@ -586,3 +587,41 @@ A new owner can create their own business at `/start` without ALYR's back office
 **Prices stay off the published site until the commercial registration (17 Oct).** Research for the customer agreement (PR #47, ALY-98) found that ALYR may not sign customers, take money or sell through its website before it holds a CR (D-018, ALY-59), and that offering a priced service on the site before then may count as trading. So the homepage goes live without the price section, the price in the hero, the money-back lines, the price question and the Price link; a plain "What does it cost?" answer says prices go on the page soon. `NEXT_PUBLIC_ALYR_OFFER=on` turns all of it on, for the day the CR is issued and the agreement (with its Arabic version) is ready. The founder chose this over waiting for the CR and over publishing prices now. He also decided that a native Arabic review (ALY-66) is wanted but does not block publishing.
 
 **Relation to other decisions.** D-017's 490 / 890 plans are superseded for field sales by "from QAR 449". D-025's held-back items stay held back (no "live in 48 hours", no free pilot). D-032 starts the back office's draft quote at a setup of QAR 2,500 per business; the page says "from QAR 1,500, quoted at your visit", so a quote can be lower than the draft. The founder should align the default or accept the gap.
+
+## D-035 · ALYR is a suite of products, led by ALYR Agent
+**Date** 17 Oct 2026 · **Status** Accepted (founder, 17 Oct, in conversation; recorded in `docs/agent-dashboard/00-founder-decisions.md`) · Linear ALY-99 · Updates D-027, D-030, D-032
+
+**The decision.** ALYR is the business agent for owner-run businesses in Qatar, with a suite of products in one workspace:
+
+| Product | Arabic descriptor | What it is | Modules |
+|---|---|---|---|
+| ALYR Chat | طلبات واتساب وصندوق الفريق | WhatsApp orders, team inbox, order tracking | inbox, orders, payment links |
+| ALYR Bookings | المواعيد والتذكيرات | Appointments, services, reminders, no-shows. Split out of Chat | inbox, bookings, payment links |
+| ALYR Agent | نشاطك بالأرقام | The home dashboard and the Sunday report. Suggested actions come next. Included for every business | none of its own |
+| ALYR Accounts | الحسابات الآجلة | Credit accounts: who owes you. Was "Credit accounts" | ledger |
+| ALYR Payroll | الرواتب ووثائق الموظفين | Still coming | none yet |
+
+There is no separate Pay product: payment links stay a module of Chat and Bookings. Names stay in Latin in both languages, each with a plain descriptor (D-025). The workspace home (`/app`) becomes the ALYR Agent dashboard, and the public homepage will show the same component with sample data. Until a model is in the product (D-012), nothing says or implies AI.
+
+**How the split was made (phase 1, ALY-99).**
+- **Shared modules.** The team inbox is shared by Chat and Bookings, like payment links. On ALYR's number a business has nowhere else to answer its customers, so a salon that buys only Bookings still needs the inbox.
+- **Which products a business is using.** Products are still derived from modules, with no table of their own (`catalog.products_for`).
+  - A product is in use when one of its own modules is on: orders for Chat, bookings for Bookings, the ledger for Accounts.
+  - Shared modules alone, as at a travel office, count for Chat.
+  - ALYR Agent is always in use.
+  - So a salon uses Bookings and not Chat as well, and a bakery that takes orders and books tastings uses both. This replaces D-031's "a product counts as on when any of its modules is on", which would have counted Chat as on for every salon.
+- **Switching.** Turning a product off keeps a shared module on while another product still uses it. ALYR Agent cannot be switched on or off.
+- **Setup steps.** A shared module's steps (WhatsApp number, payment provider) show once, under the first product using it. An "ask ALYR" counts whichever product it was filed under.
+- **Price list (D-032), migration 0017.**
+  - Items that applied to Credit accounts now apply to ALYR Accounts. The item keeps its key `credit`, because quotes refer to it.
+  - ALYR Bookings gets its own item at QAR 449 a month, so a salon's draft quote stays at QAR 449.
+  - ALYR Agent gets a QAR 0 line ("ALYR Agent, included"), so every quote shows what the subscription brings.
+  - Prices ALYR already set are never overwritten. Quotes already made keep their own lines.
+- **Weekly report (D-030).** It is part of ALYR Agent. Its sections stay per module, so no stored report changed.
+
+**Open for the founder.**
+- A business with both Chat and Bookings now drafts at QAR 449 + QAR 449. Before the split it drafted at QAR 449. Set a bundle price in the price list, or edit such quotes by hand.
+- Whether ALYR Agent shows as a QAR 0 line on quotes, or not at all.
+- Agents can read every balance and sale through the existing API (`docs/agent-dashboard/02-data.md` §9). The Agent dashboard will show agents no shop-wide money. Closing the older routes changes what agents can do today, so it is a separate issue.
+
+**Not built yet (phase 2 and after).** The metrics API and the dashboard UI at `/app`, the suggested actions, the product pages `/bookings`, `/agent` and `/accounts`, and the homepage figure with sample data.

@@ -77,7 +77,7 @@ SAVED_REPLIES = [
     ("أوقات العمل", "نعمل من السبت إلى الخميس من ٨ صباحاً إلى ٩ مساءً، والجمعة من ٤ إلى ٩ مساءً."),
 ]
 
-# The demo shop has ALYR Chat and Credit accounts switched on.
+# The demo shop has ALYR Chat, ALYR Bookings and ALYR Accounts switched on.
 DEMO_MODULES = ["inbox", "bookings", "orders", "payments", "ledger"]
 
 # ALYR itself is a shop on its own platform: its staff sign in through it, and it

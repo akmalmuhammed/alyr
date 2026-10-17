@@ -178,9 +178,10 @@ def _applies_to(applies: str, modules: frozenset[str]) -> bool:
     if kind == "module":
         return key in modules
     if kind == "product":
-        product = catalog.PRODUCT_BY_KEY.get(key)
-        # A product counts as on when any of its modules is on (as in the workspace).
-        return bool(product and set(product.modules) & modules)
+        # The products the business is using, as the workspace counts them: ALYR Agent
+        # always, and a salon with the inbox, bookings and payment links on uses ALYR
+        # Bookings, not ALYR Chat as well.
+        return key in catalog.products_for(modules)
     return False
 
 
@@ -329,8 +330,10 @@ def _business(row, types: dict[str, dict]) -> dict:
         "type": row["business_type"],
         "type_name": preset.name.en if preset else "",
         "area": row["area"], "way": way, "modules": list(row["modules"]),
-        # A product counts as in use when any of its modules is on (as in the workspace).
-        "products": [p.name.en for p in catalog.PRODUCTS if set(p.modules) & set(row["modules"])],
+        # The products in use, counted as the workspace counts them.
+        "products": [
+            catalog.PRODUCT_BY_KEY[k].name.en for k in catalog.products_for(set(row["modules"]))
+        ],
         "onboarding_step": row["onboarding_step"],
         "onboarded": row["onboarded_at"] is not None,
         "steps": list(presets.STEPS.get(way, ())),

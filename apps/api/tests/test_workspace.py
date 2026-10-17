@@ -27,9 +27,21 @@ def nav_keys(state):
 def test_the_shell_shows_what_the_demo_shop_has(client):
     state = shell(client)
     assert state["business"]["slug"] == DEMO_SLUG
+    # The line-up of 17 Oct 2026, in its order (D-035).
+    assert [p["key"] for p in state["products"]] == [
+        "chat", "bookings", "agent", "accounts", "payroll",
+    ]
     assert product(state, "chat")["status"] == "active"
-    assert product(state, "credit")["status"] == "active"
+    assert product(state, "bookings")["status"] == "active"
+    assert product(state, "agent")["status"] == "included"
+    assert product(state, "accounts")["status"] == "active"
     assert product(state, "payroll")["status"] == "coming"
+    accounts = product(state, "accounts")
+    assert accounts["name"] == {"en": "ALYR Accounts", "ar": "ALYR Accounts"}
+    assert accounts["descriptor"]["ar"] == "الحسابات الآجلة"
+    assert [i["label"]["en"] for i in product(state, "agent")["includes"]] == [
+        "Home dashboard", "Sunday report",
+    ]
     assert nav_keys(state) == [
         "home",
         "inbox",
@@ -47,14 +59,16 @@ def test_agents_do_not_see_the_owner_sections(client):
     state = shell(client)
     assert "products" not in nav_keys(state) and "connections" not in nav_keys(state)
     assert state["can_manage"] is False
-    assert client.post("/api/workspace/products/credit/disable").status_code == 403
+    assert client.post("/api/workspace/products/accounts/disable").status_code == 403
 
 
 def test_switching_a_product_off_hides_it_everywhere_and_back_on_restores_it(client):
     sign_in(client, OWNER_EMAIL)
-    assert client.post("/api/workspace/products/credit/disable").json() == {"disabled": ["ledger"]}
+    assert client.post("/api/workspace/products/accounts/disable").json() == {
+        "disabled": ["ledger"]
+    }
     state = shell(client)
-    assert product(state, "credit")["status"] == "available"
+    assert product(state, "accounts")["status"] == "available"
     assert "ledger" not in nav_keys(state)
     # Its routes refuse, and the chat no longer offers it: the shop still takes
     # bookings, so a greeting gets the booking menu, with no balance or pay buttons.
@@ -63,19 +77,67 @@ def test_switching_a_product_off_hides_it_everywhere_and_back_on_restores_it(cli
     assert reply["body"] == "Welcome to Al Noor Electricals. How can we help?"
     assert [c["id"] for c in reply["payload"]["choices"]] == ["book", "my_booking", "prices"]
 
-    assert client.post("/api/workspace/products/credit/enable").json() == {"enabled": ["ledger"]}
+    assert client.post("/api/workspace/products/accounts/enable").json() == {"enabled": ["ledger"]}
     summary = client.get("/api/ledger/summary").json()
     assert summary["outstanding"] > 0  # the data was kept while it was off
 
 
 def test_turning_off_bookings_closes_the_public_booking_page(client):
     sign_in(client, OWNER_EMAIL)
-    client.post("/api/workspace/products/chat/disable")
+    # The inbox and payment links stay on: ALYR Chat still uses them.
+    off = client.post("/api/workspace/products/bookings/disable").json()
+    assert off == {"disabled": ["bookings"]}
     assert client.get(f"/api/book/{DEMO_SLUG}").status_code == 404
-    assert client.get(f"/api/store/{DEMO_SLUG}").status_code == 404
-    assert client.get("/api/inbox/conversations").status_code == 403
-    client.post("/api/workspace/products/chat/enable")
+    assert client.get(f"/api/store/{DEMO_SLUG}").status_code == 200
+    assert client.get("/api/inbox/conversations").status_code == 200
+    client.post("/api/workspace/products/bookings/enable")
     assert client.get(f"/api/book/{DEMO_SLUG}").status_code == 200
+
+
+def test_the_shared_inbox_goes_off_only_with_the_last_product_using_it(client):
+    sign_in(client, OWNER_EMAIL)
+    # Chat off: its order page closes, but Bookings keeps the inbox and payment links.
+    assert client.post("/api/workspace/products/chat/disable").json() == {"disabled": ["orders"]}
+    assert client.get(f"/api/store/{DEMO_SLUG}").status_code == 404
+    assert client.get("/api/inbox/conversations").status_code == 200
+    state = shell(client)
+    assert product(state, "chat")["status"] == "available"
+    # The WhatsApp and payment steps move to the product still using them.
+    assert {s["key"] for s in product(state, "bookings")["steps"]} == {
+        "whatsapp", "services", "hours", "provider",
+    }
+    # Bookings off as well: nothing uses the inbox any more.
+    off = client.post("/api/workspace/products/bookings/disable").json()
+    assert off == {"disabled": ["inbox", "bookings", "payments"]}
+    assert client.get("/api/inbox/conversations").status_code == 403
+    assert product(shell(client), "agent")["status"] == "included"
+    client.post("/api/workspace/products/chat/enable")
+    client.post("/api/workspace/products/bookings/enable")
+    assert client.get("/api/inbox/conversations").status_code == 200
+
+
+def test_alyr_agent_is_included_and_cannot_be_switched(client):
+    sign_in(client, OWNER_EMAIL)
+    assert client.post("/api/workspace/products/agent/disable").status_code == 422
+    assert client.post("/api/workspace/products/agent/enable").status_code == 422
+    assert product(shell(client), "agent")["status"] == "included"
+
+
+def test_which_products_a_set_of_modules_means():
+    using = catalog.products_for
+    # A salon: the inbox and payment links count for Bookings, not for Chat as well.
+    assert using({"inbox", "bookings", "payments"}) == ["bookings", "agent"]
+    # A restaurant, and a bakery that takes orders and books tastings.
+    assert using({"inbox", "orders", "payments"}) == ["chat", "agent"]
+    assert using({"inbox", "orders", "bookings", "payments"}) == ["chat", "bookings", "agent"]
+    # A travel office has only the shared modules: that is ALYR Chat.
+    assert using({"inbox", "payments"}) == ["chat", "agent"]
+    # A trader.
+    assert using({"inbox", "ledger", "payments"}) == ["chat", "agent", "accounts"]
+    assert using({"ledger"}) == ["agent", "accounts"]
+    # Every business has ALYR Agent, even with nothing switched on.
+    assert using(set()) == ["agent"]
+    assert catalog.SHARED_MODULES == {"inbox", "payments"}
 
 
 def test_a_coming_product_cannot_be_switched_on(client):
@@ -84,11 +146,16 @@ def test_a_coming_product_cannot_be_switched_on(client):
 
 
 def test_the_setup_checklist_reflects_what_the_shop_has_done(client):
-    steps = {s["key"]: s for s in product(shell(client), "chat")["steps"]}
-    assert steps["services"]["done"] and steps["hours"]["done"] and steps["products"]["done"]
-    assert steps["provider"]["done"] is False  # no payment provider can be connected yet
+    state = shell(client)
+    chat = {s["key"]: s for s in product(state, "chat")["steps"]}
+    bookings = {s["key"]: s for s in product(state, "bookings")["steps"]}
+    # Shared steps (WhatsApp, the payment provider) show once, under ALYR Chat.
+    assert set(chat) == {"whatsapp", "products", "provider"}
+    assert set(bookings) == {"services", "hours"}
+    assert bookings["services"]["done"] and bookings["hours"]["done"] and chat["products"]["done"]
+    assert chat["provider"]["done"] is False  # no payment provider can be connected yet
     owner_sql("update services set active = false")
-    steps = {s["key"]: s for s in product(shell(client), "chat")["steps"]}
+    steps = {s["key"]: s for s in product(shell(client), "bookings")["steps"]}
     assert steps["services"]["done"] is False
 
 
@@ -140,7 +207,7 @@ def test_the_back_office_creates_a_shop_whose_owner_can_sign_in(client_factory, 
         },
     )
     assert created.status_code == 200, created.text
-    assert created.json()["modules"] == ["inbox", "bookings", "orders", "payments"]
+    assert created.json()["modules"] == ["inbox", "orders", "payments"]
     assert (
         client.post(
             "/api/admin/businesses",
@@ -154,7 +221,7 @@ def test_the_back_office_creates_a_shop_whose_owner_can_sign_in(client_factory, 
         == 409
     )
     listed = {b["slug"]: b for b in client.get("/api/admin/businesses").json()["businesses"]}
-    assert listed["zaitoon-grill-test"]["products"] == ["chat"]
+    assert listed["zaitoon-grill-test"]["products"] == ["chat", "agent"]
 
     owner = client_factory()
     owner.post(
@@ -164,7 +231,8 @@ def test_the_back_office_creates_a_shop_whose_owner_can_sign_in(client_factory, 
     state = shell(owner)
     assert state["business"]["name"] == "Zaitoon Grill" and state["me"]["role"] == "owner"
     assert product(state, "chat")["status"] == "active"
-    assert product(state, "credit")["status"] == "available"
+    assert product(state, "bookings")["status"] == "available"
+    assert product(state, "accounts")["status"] == "available"
     # A new shop has nothing set up yet, so its checklist is all to do.
     assert not any(s["done"] for s in product(state, "chat")["steps"])
 

@@ -21,8 +21,16 @@ Anything else belongs to another lane. If a task needs it, keep the change small
 
 ## Now (update this section in the same pull request as the work)
 
-Last updated 16 Oct 2026.
+Last updated 17 Oct 2026.
 
+- **ALY-99, ALYR Agent dashboard and the product suite (D-035), branch `aly-agent-dashboard`.**
+  - Phase 1 is done and pushed, with no PR yet:
+    - the catalogue line-up: Chat, Bookings, Agent (included), Accounts, Payroll coming; the inbox and payment links are shared;
+    - migration 0017 for the price list and setup requests;
+    - the Products screen with descriptors and the "Included" state;
+    - the data inventory, `docs/agent-dashboard/02-data.md`;
+    - the Qirfa Bakery sample seed, `alyr.seed_qirfa`.
+  - Phase 2 is next, from `01-research.md`: the metrics API (role-aware: agents see no shop-wide money) and the dashboard UI at `/app`.
 - Built on the simulator: inbox with takeover, assignment and notes; credit ledger; order link; payments stand-in; bookings API; sign-in and roles; workspace shell; weekly report; self-serve onboarding at `/start` (D-031); per-client pricing and sign-up switches in the back office (D-032); the internal tool's first phase: Today, audit log, staff (D-033). 253 tests.
 - Onboarding gives appointment businesses the full flow. Restaurants, shops, wholesale and document offices are created with a setup request for ALYR until their screens exist.
 - Bookings have a customer page and a workspace tab, but only one customer at a time per shop. Sign-in codes are not emailed. Product screens still have the first maroon styling (the Site and brand lane restyles them).

@@ -46,7 +46,7 @@ export type TypeRow = {
 };
 export type Pricing = {
   items: Item[]; types: TypeRow[]; promise: Text;
-  products: { key: string; name: string }[]; modules: { key: string; name: string }[];
+  products: { key: string; name: string; status: string }[]; modules: { key: string; name: string }[];
 };
 
 export async function api<T>(url: string, method = "GET", body?: unknown): Promise<{ ok: boolean; status: number; data: T; error: string }> {
