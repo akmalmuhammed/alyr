@@ -207,7 +207,7 @@ svg { display: block; }
 .sec { padding-block: clamp(4.5rem, 10vw, 8rem); }
 .sec + .sec { border-top: 1px solid var(--line); }
 .sec h3 { font-size: 1.3125rem; font-weight: 600; line-height: 1.25; letter-spacing: -.012em; }
-[lang="ar"] .sec h3, [lang="ar"] .product h3 { letter-spacing: 0; line-height: 1.5; }
+[lang="ar"] .sec h3, [lang="ar"] .product h3, [lang="ar"] .product-facts h2 { letter-spacing: 0; line-height: 1.5; }
 
 /* approach */
 .approach-in { display: grid; grid-template-columns: minmax(0, 7fr) minmax(0, 5fr); gap: clamp(2.5rem, 6vw, 6rem); align-items: start; }
@@ -232,7 +232,8 @@ svg { display: block; }
 .product-in > .wrap { position: relative; }
 .product-head { display: grid; gap: 1.5rem; max-width: 46rem; }
 .product-head .lead { color: var(--concrete); }
-.product h3 { font-size: 1.1875rem; font-weight: 600; line-height: 1.3; }
+/* the facts sit straight under the page's h1, so they are h2s set like the h3s here */
+.product h3, .product-facts h2 { font-size: 1.1875rem; font-weight: 600; line-height: 1.3; }
 .product-facts { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); margin-top: clamp(3rem, 6vw, 4.5rem); border-top: 1px solid var(--dark-line); }
 .product-facts li { padding: 1.75rem 2rem 0 0; }
 [dir="rtl"] .product-facts li { padding: 1.75rem 0 0 2rem; }
@@ -430,8 +431,9 @@ svg { display: block; }
   .al-js [data-reveal] { opacity: 0; translate: 0 1rem; transition: opacity 700ms var(--ease), translate 700ms var(--ease); transition-delay: calc(var(--n, 0) * 70ms); }
   .al-js [data-reveal].is-in { opacity: 1; translate: 0 0; }
 
-  /* the statement lights up as it is read */
-  .al-js [data-statement] [data-w] { color: color-mix(in srgb, var(--text) 24%, transparent); transition: color var(--slow) var(--ease); }
+  /* the statement lights up as it is read; unlit words stay readable (3.35:1 on the
+     canvas, over the 3:1 large text needs) */
+  .al-js [data-statement] [data-w] { color: color-mix(in srgb, var(--text) 50%, transparent); transition: color var(--slow) var(--ease); }
   .al-js [data-statement] [data-w][data-on] { color: var(--text); }
 
   /* the fold path draws itself */
@@ -693,7 +695,8 @@ h4 { margin: 0; }
   .fx[data-playing] .fx-link[data-dir] .fx-pulse { animation-name: fx-fall; }
 }
 @media (max-width: 53rem) {
-  .fx-step-t { display: none; }
+  /* only the numbers show; the title stays as the button's name for screen readers */
+  .fx-step-t { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
   .fx-step { justify-items: center; min-height: 2.75rem; padding: .875rem 0 0; }
   [dir="rtl"] .fx-step { padding: .875rem 0 0; }
   .fx-now { grid-template-columns: minmax(0, 1fr); gap: .5rem; min-height: 11rem; }

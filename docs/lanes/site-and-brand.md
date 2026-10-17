@@ -24,6 +24,7 @@ Anything else belongs to another lane. If a task needs it, keep the change small
 Last updated 13 Oct 2026.
 
 - **Merged, not published (ALY-71):** the ALYR Chat page has a moving "how it works" figure (`FlowDiagram.tsx`: a customer's message through WhatsApp into ALYR, what ALYR does in the background, the team's screen, the reply), a list of everything built today, and a sixth demo tab for credit accounts. The homepage teaser names what the product does. The live site shows the 12 Oct version until the founder says publish.
+- **Merged, not published (ALY-97):** accessibility fixes on `/chat` and `/ar/chat`, with no change to layout or motion. The only visible change: the statement's unlit words are darker (3.35:1 on the canvas; large text needs 3:1), the three facts under the page title are `h2` instead of `h3`, and on phones the how-it-works step buttons keep their titles as names for screen readers. axe-core finds nothing on either page at 1440 and 390 px.
 - The site has two pages in each language: a company homepage (`/`) and the ALYR Chat product page (`/chat`), decision D-026. The R in the wordmark was redrawn on 12 Oct; the design system's master files still carry the old one.
 - Two brand systems disagree and the founder has not chosen (ALY-61). Do not produce new branded material until that is decided.
 - No contact method on the live page (ALY-60). Arabic unreviewed (ALY-66). No privacy or terms pages (ALY-72, Company lane).
