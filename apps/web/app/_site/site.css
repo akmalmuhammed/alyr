@@ -40,6 +40,13 @@
   /* the hairline that closes a full-bleed Carbon section (dark mode only) */
   --band-edge: transparent;
 
+  /* The theme switch reads which theme is showing from these, so it needs no rules of
+     its own per theme: --night turns its glyph, the other two show its label. */
+  --night: 0;
+  --when-light: inline;
+  --when-dark: none;
+
+
   --sans: var(--font-instrument), "Aptos", "Segoe UI Variable", system-ui, sans-serif;
   --mono: var(--font-plex-mono), "Cascadia Mono", ui-monospace, monospace;
   --arabic: var(--font-plex-arabic), "Segoe UI", "Geeza Pro", sans-serif;
@@ -88,6 +95,9 @@
     /* Carbon on a dark page is lifted a step (#15171a on #0e1012 is 1.05:1) */
     --band: #1d2024;
     --band-edge: var(--dark-line);
+    --night: 1;
+    --when-light: none;
+    --when-dark: inline;
   }
 }
 :root[data-theme="dark"] {
@@ -104,6 +114,9 @@
   --menu-shadow: 0 24px 70px rgb(0 0 0 / .5);
   --band: #1d2024;
   --band-edge: var(--dark-line);
+  --night: 1;
+  --when-light: none;
+  --when-dark: inline;
 }
 
 *, *::before, *::after { box-sizing: border-box; }
@@ -264,6 +277,31 @@ svg { display: block; }
 .logo-mark { display: none; width: 2.125rem; height: auto; color: var(--text); }
 .top-menu-list a[lang="ar"] { font-family: var(--arabic); }
 .top-menu-list a[lang="en"] { font-family: var(--sans); }
+
+/* The theme switch (ThemeSwitch.tsx). It shows the moon while the page is light and the sun
+   while it is dark: the glyph names what pressing it does, as its label does. Both come from
+   the theme tokens, so it has no rules per theme. The script in <head> (document.tsx) runs
+   it, so it works before the page's other scripts arrive; without JavaScript it is not
+   shown and the page follows the device. Beside the language link on wide screens, a row
+   under it in the menu on phones. */
+.ts { display: none; margin: 0; border: 0; background: transparent; color: var(--text-muted); font: inherit; cursor: pointer; -webkit-tap-highlight-color: transparent; }
+.al-js .ts-bar { display: grid; }
+.al-js .ts-row { display: flex; }
+.ts-bar { place-items: center; width: 2.75rem; height: 2.75rem; padding: 0; border-radius: .5rem; transition: color var(--fast) var(--ease); }
+.ts-bar:hover { color: var(--text); }
+.ts:focus-visible { outline-offset: -2px; border-radius: .5rem; }
+.top[data-on-dark] .ts-bar { color: var(--concrete); }
+.top[data-on-dark] .ts-bar:hover { color: #fff; }
+.ts-row { align-items: center; gap: .75rem; width: 100%; min-height: 2.75rem; padding: .75rem .875rem; border-radius: .5rem; color: var(--text); font-weight: 500; text-align: start; }
+.ts-row:hover { background: var(--surface-subtle); }
+.ts-row .ts-glyph { color: var(--text-muted); }
+.ts-glyph { width: 1.25rem; height: 1.25rem; overflow: visible; }
+/* the outgoing glyph turns 45° on and fades as the other turns in behind it, mirrored in Arabic */
+.ts-g { transform-box: view-box; transform-origin: center; }
+.ts-moon { opacity: calc(1 - var(--night)); scale: calc(1 - var(--night) * .4); rotate: calc(var(--night) * var(--dir) * 45deg); }
+.ts-sun { opacity: var(--night); scale: calc(.6 + var(--night) * .4); rotate: calc((var(--night) - 1) * var(--dir) * 45deg); }
+.ts-to-dark { display: var(--when-light); }
+.ts-to-light { display: var(--when-dark); }
 
 /* The drawn chat on the ALYR Chat page's figures. */
 .wa.wa-mini { max-width: none; height: auto; border: 1px solid var(--line); outline: 0; border-radius: .75rem; }
@@ -542,7 +580,7 @@ svg { display: block; }
   .phone { padding-inline: .75rem; }
 }
 @media (max-width: 53rem) {
-  .top-nav, .top-lang { display: none; }
+  .top-nav, .top-lang, .al-js .ts-bar { display: none; }
   .top-menu { display: block; }
   .top-end { gap: .625rem; }
   .who-rows > li { grid-template-columns: minmax(0, 1fr); gap: .5rem; }

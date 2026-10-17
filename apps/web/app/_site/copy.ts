@@ -266,6 +266,9 @@ export type Copy = {
     other: string; home: string; menu: string; sections: string;
     cta: { whatsapp: string; email: string; pending: string };
   };
+  /** The light/dark switch in the header: its name says what pressing it does; the menu
+   * row on phones shows the short form, which the name contains. */
+  theme: { toDark: string; toLight: string; dark: string; light: string };
   /** How to reach ALYR, in each of the three contact states (site.ts). */
   contact: {
     whatsapp: string;
@@ -350,6 +353,7 @@ const en: Copy = {
     sections: "Sections",
     cta: { whatsapp: "Message us", email: "Email us", pending: "Talk to us" },
   },
+  theme: { toDark: "Switch to dark mode", toLight: "Switch to light mode", dark: "Dark mode", light: "Light mode" },
   contact: {
     whatsapp: "Message us on WhatsApp",
     email: "Email us",
@@ -1294,6 +1298,7 @@ const ar: Copy = {
     sections: "الأقسام",
     cta: { whatsapp: "راسلنا", email: "راسلنا بالبريد", pending: "تواصل معنا" },
   },
+  theme: { toDark: "التبديل إلى الوضع الداكن", toLight: "التبديل إلى الوضع الفاتح", dark: "الوضع الداكن", light: "الوضع الفاتح" },
   contact: {
     whatsapp: "راسلنا على واتساب",
     email: "راسلنا بالبريد",
