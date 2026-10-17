@@ -116,3 +116,15 @@ Done:
 - Drawn Arabic times (chat, booking slots, report) take their own direction (`dir="auto"`): with `dir="ltr"` «4:30 م» read backwards.
 
 Left: motion and the fold (06 P0-2, P1-1, P1-2, P1-8, P2-6, P2-10, the fold at the closing call), the hero plate, polish, checks, shots.
+
+### Stage 3: motion and the fold (commit "fix pass 3")
+
+Done:
+- **06 P0-2:** the copy under the headline rises without fading (`hp-rise-solid`); the eyebrow, the phone and the record still fade.
+- **06 P1-1 and lift 1:** the three planes keep the symbol's gaps, a 6 px Paper line across and a 6 px line down the diagonal (4.25 px each side, measured across), mirrored in RTL, so the fold stays drawn once the planes land. The same fold now opens the closing call on the homepage (`Shell.tsx`, `page === "home"` only; `/chat` is unchanged).
+- **06 P1-8:** a `--band` token: Carbon in light, `#1d2024` in dark, used by the band, its fold, the sticky figure and the closing call; in dark both sections end on a `--dark-line` rule. Only the bottom rule: a top rule would draw a line under the fold's planes.
+- **06 P1-2:** the story switches when a module's heading crosses 38–48 % of the screen (`[data-text] h3`, `rootMargin: -38% 0px -52% 0px`); steps are 60 vh; step headings `clamp(1.75rem, 1.1rem + 1.6vw, 2.5rem)`, body 1.1875 rem in 26 rem; the figure is centred in its column and the shop strip is placed from the centre.
+- **06 P2-6:** over the band or the closing call the header turns Carbon at 92 % with white words (`data-on-dark`, set in `SiteMotion.tsx` from where the header's middle sits). Applies on `/chat`'s closing call too.
+- **06 P2-10:** hydration clears the 2.5 s failsafe and sets a 10 s one, which the choreography clears when it starts; a slow phone keeps its motion, and a chunk that never loads still cannot leave the page blank.
+
+Measured on the dev server at 1440, English, light: page height 13,016 px (was 13,934); the band 4,041 px. Left: the hero plate, polish (including trimming toward 12,500), checks, shots.

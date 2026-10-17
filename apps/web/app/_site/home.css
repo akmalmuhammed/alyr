@@ -55,7 +55,11 @@ main[data-page="home"] {
     --line-strong: #5f666d;
     --focus: #b7f34a;
     --volt-wash: rgb(183 243 74 / .12);
+    /* Carbon on a dark page is lifted a step, so the band, its fold and the closing call
+       still stand apart (#15171a on #0e1012 was 1.05:1) */
+    --band: #1d2024;
   }
+  :root:has(main[data-page="home"]) .band-in, :root:has(main[data-page="home"]) .cta { border-bottom: 1px solid var(--dark-line); }
   main[data-page="home"] {
     --d-bg: #0a0b0d;
     --d-card: #131518;
@@ -415,13 +419,18 @@ main[data-page="home"] {
 .band { position: relative; color: var(--dark-text); }
 /* the planes start outside their strip, so the strip clips them: nothing may widen the page */
 .band-fold { position: relative; overflow: clip; height: clamp(3rem, 6vw, 5.5rem); --fold: clamp(3rem, 6vw, 5.5rem); --x: 62%; }
-.band-fold i { position: absolute; inset: 0; background: var(--carbon); }
-.band-fold i:nth-child(1) { clip-path: polygon(0 0, 100% 0, 100% 46%, 0 46%); }
-.band-fold i:nth-child(2) { clip-path: polygon(0 calc(46% - 1px), var(--x) calc(46% - 1px), calc(var(--x) - var(--fold) * .54) 100%, 0 100%); }
-.band-fold i:nth-child(3) { clip-path: polygon(calc(var(--x) - 1px) calc(46% - 1px), 100% calc(46% - 1px), 100% 100%, calc(var(--x) - var(--fold) * .54 - 1px) 100%); }
-[dir="rtl"] .band-fold i:nth-child(2) { clip-path: polygon(100% calc(46% - 1px), calc(100% - var(--x)) calc(46% - 1px), calc(100% - var(--x) + var(--fold) * .54) 100%, 100% 100%); }
-[dir="rtl"] .band-fold i:nth-child(3) { clip-path: polygon(calc(100% - var(--x) + 1px) calc(46% - 1px), 0 calc(46% - 1px), 0 100%, calc(100% - var(--x) + var(--fold) * .54 + 1px) 100%); }
-.band-in { position: relative; background: var(--carbon); padding-block: clamp(2rem, 5vw, 4rem) clamp(4.5rem, 9vw, 7.5rem); margin-top: -1px; }
+/* The three planes keep the symbol's gaps (10 of its 160 units): a 6 px Paper line across,
+   and a 6 px Paper line down the 45° diagonal (4.25 px each side, measured across). The
+   page shows through, so the fold stays drawn once the planes have landed. */
+.band-fold i { position: absolute; inset: 0; background: var(--band); }
+.band-fold i:nth-child(1) { clip-path: polygon(0 0, 100% 0, 100% calc(46% - 3px), 0 calc(46% - 3px)); }
+.band-fold i:nth-child(2) { clip-path: polygon(0 calc(46% + 3px), calc(var(--x) - 7.25px) calc(46% + 3px), calc(var(--x) - var(--fold) * .54 - 4.25px) 100%, 0 100%); }
+.band-fold i:nth-child(3) { clip-path: polygon(calc(var(--x) + 1.25px) calc(46% + 3px), 100% calc(46% + 3px), 100% 100%, calc(var(--x) - var(--fold) * .54 + 4.25px) 100%); }
+[dir="rtl"] .band-fold i:nth-child(2) { clip-path: polygon(100% calc(46% + 3px), calc(100% - var(--x) + 7.25px) calc(46% + 3px), calc(100% - var(--x) + var(--fold) * .54 + 4.25px) 100%, 100% 100%); }
+[dir="rtl"] .band-fold i:nth-child(3) { clip-path: polygon(calc(100% - var(--x) - 1.25px) calc(46% + 3px), 0 calc(46% + 3px), 0 100%, calc(100% - var(--x) + var(--fold) * .54 - 4.25px) 100%); }
+/* the same fold opens the closing call */
+.cta-fold + .cta { margin-top: -1px; }
+.band-in { position: relative; background: var(--band); padding-block: clamp(2rem, 5vw, 4rem) clamp(4.5rem, 9vw, 7.5rem); margin-top: -1px; }
 .band-in::before {
   content: ""; position: absolute; inset: 0; pointer-events: none;
   background-image: radial-gradient(rgb(167 173 181 / .14) 1px, transparent 1px); background-size: 1.5rem 1.5rem;
@@ -443,9 +452,9 @@ main[data-page="home"] {
 .story { position: relative; display: grid; grid-template-columns: repeat(12, minmax(0, 1fr)); column-gap: var(--col-gap); margin-top: clamp(1rem, 3vw, 2rem); }
 .story-step { display: contents; }
 .story-text { grid-column: 1 / span 5; align-self: center; padding-block: 2rem; }
-.story-text h3 { color: #fff; font-size: var(--h3); font-weight: 600; line-height: 1.25; letter-spacing: -.012em; }
-[lang="ar"] .story-text h3 { letter-spacing: 0; line-height: 1.5; }
-.story-text p { margin-top: .625rem; color: var(--concrete); max-width: 30rem; }
+.story-text h3 { color: #fff; font-size: clamp(1.75rem, 1.1rem + 1.6vw, 2.5rem); font-weight: 600; line-height: 1.12; letter-spacing: -.02em; }
+[lang="ar"] .story-text h3 { letter-spacing: 0; line-height: 1.45; }
+.story-text p { margin-top: .75rem; color: var(--concrete); font-size: 1.1875rem; max-width: 26rem; }
 .story-fig { grid-column: 7 / -1; padding-block: 2rem; }
 .story-step:nth-child(2) > * { grid-row: 1; }
 .story-step:nth-child(3) > * { grid-row: 2; }
@@ -455,10 +464,10 @@ main[data-page="home"] {
 .story-step + .story-step .story-text, .story-step + .story-step .story-fig { border-top: 1px solid var(--dark-line); }
 .story-rail { display: none; }
 .story-stage { position: relative; height: 35rem; display: grid; grid-template-columns: minmax(0, 1fr); place-items: center; }
-.story-stage { place-items: start end; padding-inline-end: 4rem; }
+.story-stage { place-items: start center; }
 .sf-phone { width: 18.5rem; height: 30.5rem; }
 /* the shop's row sits below the customer's phone, offset along 45° toward the start */
-.sf-strip { position: absolute; inset-inline-end: 14rem; bottom: 1rem; width: 17.5rem; z-index: 2; }
+.sf-strip { position: absolute; inset-inline-end: calc(50% + .75rem); bottom: 1rem; width: 17.5rem; z-index: 2; }
 .sf-inbox .story-stage { place-items: center stretch; }
 /* the booking page shows the chosen service and the times; the bar's summary already gives the day */
 .sf-book .d-choice:not(.on), .sf-book .d-section:nth-child(3) { display: none; }
@@ -469,11 +478,11 @@ main[data-page="home"] {
 .band .cap-sep { color: #555d65; }
 .band .cap-n { color: #fff; }
 
-.story[data-story-on] .story-text { min-height: 74vh; display: grid; align-content: center; border-top: 0; }
+.story[data-story-on] .story-text { min-height: 60vh; display: grid; align-content: center; border-top: 0; }
 .story[data-story-on] .story-fig {
   --wipe: 0px;
   grid-row: 1 / span 5; position: sticky; top: calc(50vh - 20.5rem + var(--header) / 2); align-self: start;
-  height: 41rem; padding-block: 0; border-top: 0; background: var(--carbon); z-index: 1;
+  height: 41rem; padding-block: 0; border-top: 0; background: var(--band); z-index: 1;
   clip-path: polygon(0 0, var(--wipe) 0, calc(var(--wipe) - 41rem) 100%, 0 100%);
   transition: --wipe 0s linear var(--dur-3);
 }
@@ -743,6 +752,9 @@ main[data-page="home"] {
 
 /* ------------------------------------------------------------------ motion */
 @keyframes hp-rise { from { opacity: 0; translate: 0 8px; } }
+/* the copy under the headline rises without fading: an invisible paragraph counts as a late
+   largest paint (LCP), and the body is that paragraph on most screens */
+@keyframes hp-rise-solid { from { translate: 0 8px; } }
 @keyframes hp-fade { from { opacity: 0; } }
 /* the line starts partly risen, so the headline is painted with the first frame (it is the
    page's largest paint: hidden until hydration, it would count as late) */
@@ -762,10 +774,10 @@ main[data-page="home"] {
   .motion .hero-eyebrow { animation: hp-fade var(--dur-2) var(--ease) both; }
   .motion .hl > span { animation: hp-line var(--dur-4) var(--ease) both; }
   .motion .hl + .hl > span { animation-delay: 90ms; }
-  .motion .hero-body { animation: hp-rise var(--dur-3) var(--ease) both 300ms; }
-  .motion .hero-actions { animation: hp-rise var(--dur-3) var(--ease) both 360ms; }
-  .motion .hero-note { animation: hp-rise var(--dur-3) var(--ease) both 420ms; }
-  .motion .hero-facts li { animation: hp-rise var(--dur-3) var(--ease) both; animation-delay: calc(480ms + var(--i, 0) * var(--stagger)); }
+  .motion .hero-body { animation: hp-rise-solid var(--dur-3) var(--ease) both 300ms; }
+  .motion .hero-actions { animation: hp-rise-solid var(--dur-3) var(--ease) both 360ms; }
+  .motion .hero-note { animation: hp-rise-solid var(--dur-3) var(--ease) both 420ms; }
+  .motion .hero-facts li { animation: hp-rise-solid var(--dur-3) var(--ease) both; animation-delay: calc(480ms + var(--i, 0) * var(--stagger)); }
   .motion .hero-phone { animation: hp-phone var(--dur-4) var(--ease) both 600ms; }
   /* transform and opacity only, so it runs off the main thread while the page hydrates */
   .motion .hero-record { animation: hp-slide var(--dur-3) var(--ease) both 900ms; }

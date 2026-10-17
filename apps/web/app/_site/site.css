@@ -33,6 +33,8 @@
   --dark-subtle: #202428;
   --dark-line: #32373c;
   --dark-text: #f3f5f0;
+  /* the full-bleed Carbon sections; the homepage lifts it a step in dark mode (home.css) */
+  --band: var(--carbon);
 
   --sans: var(--font-instrument), "Aptos", "Segoe UI Variable", system-ui, sans-serif;
   --mono: var(--font-plex-mono), "Cascadia Mono", ui-monospace, monospace;
@@ -190,6 +192,13 @@ svg { display: block; }
 .al-js .top:not([data-scrolled]) { background: transparent; backdrop-filter: none; -webkit-backdrop-filter: none; border-bottom-color: transparent; }
 .top-in { display: flex; align-items: center; gap: 2rem; height: var(--header); transition: height var(--medium) var(--ease); }
 .top[data-scrolled] .top-in { height: 3.75rem; }
+/* over a full-bleed Carbon section the header turns Carbon too (SiteMotion), with white words */
+.top[data-on-dark] { background: color-mix(in srgb, var(--band) 92%, transparent); border-bottom-color: var(--dark-line); }
+.top[data-on-dark] .logo, .top[data-on-dark] .logo-mark { color: #fff; }
+.top[data-on-dark] .top-nav a, .top[data-on-dark] .top-lang { color: var(--concrete); }
+.top[data-on-dark] .top-nav a:hover, .top[data-on-dark] .top-lang:hover, .top[data-on-dark] .top-nav a[aria-current="page"] { color: #fff; }
+.top[data-on-dark] .top-menu summary { border-color: #555d65; color: #fff; }
+.top[data-on-dark] :focus-visible { outline-color: var(--volt); }
 .top-logo { display: inline-flex; align-items: center; min-height: 2.75rem; }
 .logo { width: 9.25rem; height: auto; color: var(--text); }
 .top-nav { display: flex; gap: 1.75rem; margin-inline-start: 1rem; }
@@ -384,7 +393,7 @@ svg { display: block; }
 .company-path .company-path-volt { stroke: var(--volt); }
 
 /* cta: the closing call to action, full-bleed Carbon on every page */
-.cta { position: relative; background: var(--carbon); color: var(--dark-text); overflow: clip; }
+.cta { position: relative; background: var(--band); color: var(--dark-text); overflow: clip; }
 .cta-in { position: relative; padding-block: clamp(4.5rem, 10vw, 8.5rem); }
 .cta-copy { display: grid; gap: 1.5rem; justify-items: start; max-width: min(52rem, calc(100% - clamp(11rem, 21vw, 19rem) - 3rem)); }
 .cta-mark { position: absolute; inset-inline-end: var(--gutter); top: 50%; translate: 0 -50%; width: clamp(11rem, 21vw, 19rem); color: #fff; }

@@ -84,6 +84,12 @@ export function HomeMotion() {
     const still = window.matchMedia(STILL).matches;
     if (still || !root.classList.contains("motion")) return () => undo.forEach((fn) => fn());
 
+    // Hydration proves scripts run, so the 2.5 s failsafe set before paint would only take
+    // the motion away from a slow phone. A longer one replaces it, for the case where the
+    // choreography's chunk never arrives; the choreography clears it when it starts.
+    window.clearTimeout(window.__alyrMotion);
+    window.__alyrMotion = window.setTimeout(() => root.classList.remove("motion"), 10_000);
+
     // The Carbon band's sticky story, on wide screens.
     const story = document.querySelector<HTMLElement>("[data-story]");
     const wide = window.matchMedia(WIDE);
@@ -98,15 +104,18 @@ export function HomeMotion() {
       }
       story.setAttribute("data-story-on", "");
       story.setAttribute("data-at", story.getAttribute("data-at") ?? "0");
+      // A module counts as read when its heading crosses a band just above the middle of the
+      // screen, so the figure changes as the visitor starts reading it, not half a step early.
       steps = new IntersectionObserver(
         (entries) => {
           for (const entry of entries) {
-            if (entry.isIntersecting) story.setAttribute("data-at", (entry.target as HTMLElement).dataset.text ?? "0");
+            const text = entry.target.closest<HTMLElement>("[data-text]");
+            if (entry.isIntersecting && text) story.setAttribute("data-at", text.dataset.text ?? "0");
           }
         },
-        { rootMargin: "-45% 0px -45% 0px" },
+        { rootMargin: "-38% 0px -52% 0px" },
       );
-      story.querySelectorAll("[data-text]").forEach((node) => steps?.observe(node));
+      story.querySelectorAll("[data-text] h3").forEach((node) => steps?.observe(node));
     };
     setStory();
     wide.addEventListener("change", setStory);

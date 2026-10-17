@@ -74,6 +74,14 @@ export function Shell({
       <main id="main" data-page={page}>
         {children}
 
+        {/* On the homepage the closing call opens with the same fold as the Carbon band. */}
+        {page === "home" && (
+          <div className="band-fold cta-fold" aria-hidden="true" data-m>
+            <i />
+            <i />
+            <i />
+          </div>
+        )}
         <section className="cta" id="contact" aria-labelledby="contact-title">
           <div className="wrap cta-in">
             <div className="cta-copy">
