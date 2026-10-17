@@ -674,7 +674,13 @@ svg { display: block; }
   .approach-say, .who-head { position: static; }
   .demo-stage { grid-template-columns: minmax(0, 1fr); }
   .phone { padding-inline: .75rem; }
+  /* a narrow laptop holds the logo, four section links, the language, the theme switch and
+     the button on one line: the gaps close up before a link would wrap */
+  .top-in { gap: 1.25rem; }
+  .top-nav { gap: 1.25rem; margin-inline-start: 0; }
+  .top-end { gap: .75rem; }
 }
+.top-nav a { white-space: nowrap; }
 @media (max-width: 53rem) {
   .top-nav, .top-lang, .al-js .ts-bar { display: none; }
   .top-menu { display: block; }
