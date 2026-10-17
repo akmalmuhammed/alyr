@@ -43,7 +43,22 @@ customers message, with a prefilled word the product already answers:
 
 A word the router does not know gets the welcome menu or "We will reply shortly". Make one
 card per job or one card per language, never a prefill sentence the router cannot match.
-Do not put personal data or a tracking parameter in the link.
+URL-encode the Arabic word (`?text=%D8%B7%D9%84%D8%A8` for «طلب»). Do not put personal data or
+a tracking parameter in the link.
+
+**A mock-up is not a card.** For a sample (a leave-behind, a deck, a pitch), use Qirfa Bakery,
+mark it "Sample" / «نموذج», and make the QR code unscannable on purpose (a drawn pattern, or
+a code to ALYR's own contact link): never a working code to a made-up number, which a real
+person could message.
+
+**Which bakery?** A real shop's card needs its name in both languages as the owner writes
+it (never translate a shop's name yourself), its number, its jobs (orders, bookings, or both)
+and its yes to the proof. Without a real shop named in the issue, make the sample described
+above and say so.
+
+**Languages:** one face per language on a table tent (Arabic and English sides); on a
+single-sided counter card, Arabic on the right column and English on the left, each complete,
+the QR code shared between them.
 
 **Layout, front:**
 1. The shop's name, large, Arabic and English (Arabic first on an Arabic-first side).
@@ -111,8 +126,15 @@ Not built (D-032, D-033; e-invoicing parked, D-008). Before designing one:
   Never print grey text below the text-muted token's contrast.
 - **Paper:** matte, uncoated or lightly coated, so it does not glare under shop lights; heavy
   enough to stand (a table tent).
-- Export PDF/X with crop marks; keep the source (SVG or the code that draws it) in the work
-  folder and say where in the PR. Never commit a scan of a real document.
+- **How to make the file on this laptop:** draw the piece as one HTML page with the CSS
+  tokens (`@page { size: 105mm 148mm; margin: 0 }`, the bleed added to the page size, the
+  fonts from `apps/web/app/_site/fonts/` or `apps/api/src/alyr/modules/agent/fonts/`), then
+  print it to PDF with headless Edge (`msedge --headless --print-to-pdf=<out.pdf>
+  --no-pdf-header-footer <file.html>`). Check the PDF's size in millimetres, that the fonts
+  are embedded, and the QR at 100%. Ask the printer whether it wants PDF/X and crop marks;
+  add them in their tool if so.
+- Keep the source (HTML, SVG or the code that draws it) in the work folder and say where in
+  the PR. Never commit a scan of a real document.
 
 ## Don't
 
