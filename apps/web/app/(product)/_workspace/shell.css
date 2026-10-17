@@ -35,7 +35,7 @@
 .sh-brand { display: flex; align-items: center; gap: 10px; padding: 8px; border-radius: 10px; }
 .sh-brand-text { display: grid; min-width: 0; line-height: 1.15; }
 .sh-brand-text b { font-weight: 600; font-size: var(--ui-body-sm); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.sh-brand-text small { font-family: var(--font-ui-mono); font-size: var(--ui-micro); letter-spacing: 0.06em; text-transform: uppercase; color: var(--ink-3); }
+.sh-brand-text small { font-family: var(--font-ui-mono); font-size: var(--ui-micro); letter-spacing: 0.06em; text-transform: uppercase; color: var(--ink-2); }
 .sh[dir="rtl"] .sh-brand-text small { letter-spacing: 0; }
 .sh-mark { width: 28px; height: 24px; flex: none; color: var(--ink); }
 
@@ -307,7 +307,7 @@
   .sh-mtop .sh-brand-text { flex: 1; }
   .sh-main { padding-bottom: calc(96px + env(safe-area-inset-bottom, 0px)); }
   .sh-tabbar { position: fixed; z-index: 20; inset-inline: 12px; bottom: calc(10px + env(safe-area-inset-bottom, 0px)); display: grid; grid-auto-flow: column; grid-auto-columns: minmax(0, 1fr); padding: 6px; border-radius: 18px; background: color-mix(in srgb, var(--sheet) 82%, transparent); backdrop-filter: blur(18px) saturate(1.4); -webkit-backdrop-filter: blur(18px) saturate(1.4); box-shadow: var(--float); }
-  .sh-tabbar a, .sh-tabbar button { display: grid; justify-items: center; gap: 3px; padding: 7px 2px 6px; border: 0; border-radius: 12px; background: transparent; color: var(--ink-3); font-size: var(--ui-micro); font-weight: 500; text-decoration: none; min-width: 0; }
+  .sh-tabbar a, .sh-tabbar button { display: grid; justify-items: center; gap: 3px; padding: 7px 2px 6px; border: 0; border-radius: 12px; background: transparent; color: var(--ink-2); font-size: var(--ui-micro); font-weight: 500; text-decoration: none; min-width: 0; }
   .sh-tabbar span { max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   .sh-tabbar .on { color: var(--ink); background: var(--hair); }
   .sh-tabbar .on .sh-ico { color: var(--ink); }

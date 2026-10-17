@@ -1,0 +1,672 @@
+"use client";
+
+// One item, edited or added: names in both languages, photos, price and sale, category, status,
+// how it runs out, sizes and colours, choices and extras, when it can be ordered, tags, and
+// its history. A bottom sheet on a phone, a side panel on a laptop. An agent without the right
+// to edit sees it read-only; the API refuses them anyway.
+
+import { useEffect, useMemo, useRef, useState } from "react";
+import {
+  activityText, api, fromDirhams, nameOf, sayError, stamp, toDirhams, toInt, toSignedDirhams,
+  type ActivityRow, type Access, type Category, type Group, type Item, type Photo, type PriceRow, type Rule, type Status, type Window,
+} from "./catalogApi";
+import { COPY, type Copy, type Lang } from "./catalogCopy";
+import { CatalogPhotos } from "./CatalogPhotos";
+import { Field, Fold, Icon, Sheet, type Toast } from "./CatalogUi";
+
+type Push = (text: string, options?: { tone?: Toast["tone"]; undo?: () => void }) => number;
+
+type VariantForm = {
+  id?: string; name: string; name_ar: string; delta: string; limit: string; active: boolean;
+  opening: string; onHand: number | null;
+};
+type OptionForm = { id?: string; name: string; name_ar: string; price: string; active: boolean };
+type GroupForm = { id?: string; name: string; name_ar: string; required: boolean; max: string; options: OptionForm[] };
+type WindowForm = {
+  weekdays: number[]; kind: "now" | "dated"; opens: string; closes: string; lead: string; cutoff: string;
+  ranged: boolean; from: string; to: string; closed: boolean;
+};
+export type Form = {
+  name: string; name_ar: string; description: string; description_ar: string; category: string;
+  price: string; sale: string; saleEnds: string; unit: string; packSize: string; minOrder: string;
+  status: Status; rule: Rule; dailyLimit: string; opening: string; scheduled: boolean;
+  variants: VariantForm[]; groups: GroupForm[]; windows: WindowForm[]; tags: string[];
+};
+
+const STATUSES: Status[] = ["draft", "live", "hidden", "archived"];
+const RULES: Rule[] = ["always", "switch", "count", "daily_limit"];
+const UNITS = ["piece", "kg", "box", "pack", "portion", "hour"];
+
+function qatarDay(iso: string | null): string {
+  if (!iso) return "";
+  return new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Qatar", year: "numeric", month: "2-digit", day: "2-digit" }).format(new Date(iso));
+}
+const hhmm = (value: string | null) => (value ? value.slice(0, 5) : "");
+
+function windowForm(w: Window): WindowForm {
+  return {
+    weekdays: w.weekdays, kind: w.lead_days > 0 || w.cutoff ? "dated" : "now", opens: hhmm(w.opens), closes: hhmm(w.closes),
+    lead: String(w.lead_days), cutoff: hhmm(w.cutoff), ranged: Boolean(w.valid_from || w.valid_to),
+    from: w.valid_from ?? "", to: w.valid_to ?? "", closed: w.closed,
+  };
+}
+
+export function blankForm(status: Status = "live"): Form {
+  return {
+    name: "", name_ar: "", description: "", description_ar: "", category: "", price: "", sale: "", saleEnds: "",
+    unit: "piece", packSize: "", minOrder: "1", status, rule: "switch", dailyLimit: "", opening: "",
+    scheduled: false, variants: [], groups: [], windows: [], tags: [],
+  };
+}
+
+export function formOf(item: Item): Form {
+  const named = item.variants.filter((v) => !v.is_default);
+  const only = item.variants.find((v) => v.is_default) ?? item.variants[0];
+  return {
+    name: item.name, name_ar: item.name_ar, description: item.description, description_ar: item.description_ar,
+    category: item.category, price: fromDirhams(item.price || null), sale: fromDirhams(item.sale_price),
+    saleEnds: qatarDay(item.sale_ends_at), unit: item.unit, packSize: item.pack_size ? String(item.pack_size) : "",
+    minOrder: String(item.min_order), status: item.status, rule: item.stock_rule,
+    dailyLimit: only?.daily_limit !== null && only?.daily_limit !== undefined && named.length === 0 ? String(only.daily_limit) : "",
+    opening: "", scheduled: item.schedule.length > 0,
+    variants: named.map((v) => ({
+      id: v.id, name: v.name, name_ar: v.name_ar, delta: fromDirhams(v.price_delta) || "", limit: v.daily_limit === null ? "" : String(v.daily_limit),
+      active: v.active, opening: "", onHand: v.on_hand,
+    })),
+    groups: item.option_groups.map((g: Group) => ({
+      id: g.id, name: g.name, name_ar: g.name_ar, required: g.required, max: String(g.max_choices),
+      options: g.options.map((o) => ({ id: o.id, name: o.name, name_ar: o.name_ar, price: fromDirhams(o.price_delta) || "", active: o.active })),
+    })),
+    windows: item.schedule.map(windowForm), tags: item.tags,
+  };
+}
+
+type Problems = Partial<Record<"name" | "name_ar" | "price" | "sale" | "variants" | "limit" | "schedule" | "groups" | "min" | "opening", string>>;
+
+/** What the person typed, as the API wants it, or what is wrong with it. */
+function build(form: Form, t: Copy, existing: Item | null): { body?: Record<string, unknown>; problems: Problems } {
+  const problems: Problems = {};
+  const unfinished = form.status === "draft" || form.status === "archived";
+  const price = toDirhams(form.price);
+  // A new item is made by typing, so it needs a name; a draft made from a photo does not yet.
+  // A shop that writes only Arabic leaves the English name empty and the Arabic one is used.
+  const name = form.name.trim() || form.name_ar.trim();
+  if (!name && (!unfinished || !existing)) problems.name = t.errors.name_needed;
+  if (form.status === "live" && !form.name_ar.trim()) problems.name_ar = t.errors.arabic_needed;
+  if (form.price.trim() && price === null) problems.price = t.errors.bad_price;
+  else if (!unfinished && (price === null || price <= 0)) problems.price = t.errors.bad_price;
+  const sale = form.sale.trim() ? toDirhams(form.sale) : null;
+  if (form.sale.trim() && (sale === null || sale <= 0 || (price !== null && sale >= price))) problems.sale = t.errors.bad_sale;
+  const minOrder = toInt(form.minOrder);
+  if (minOrder === null || minOrder < 1 || minOrder > 999) problems.min = t.errors.bad_minimum;
+
+  const named = form.variants;
+  if (named.length > 1 && named.some((v) => !v.name.trim())) problems.variants = t.errors.variant_name_needed;
+  const seen = new Set<string>();
+  for (const v of named) {
+    const key = v.name.trim().toLowerCase();
+    if (key && seen.has(key)) problems.variants = t.errors.duplicate_variant;
+    seen.add(key);
+    if (toSignedDirhams(v.delta) === null) problems.variants = t.errors.bad_price;
+  }
+  if (form.rule === "daily_limit") {
+    const need = named.length ? named.filter((v) => v.active) : [{ limit: form.dailyLimit }];
+    if (need.some((v) => toInt(v.limit) === null || (toInt(v.limit) ?? 0) < 0)) problems.limit = t.errors.limit_needed;
+  }
+  for (const g of form.groups) {
+    if (!g.name.trim()) problems.groups = t.errors.group_name_needed;
+    else if (g.options.some((o) => !o.name.trim())) problems.groups = t.errors.option_name_needed;
+    else if (g.required && !g.options.some((o) => o.active)) problems.groups = t.errors.options_needed;
+    if ((toInt(g.max) ?? 0) < 1) problems.groups = t.errors.bad_max;
+    if (g.options.some((o) => toDirhams(o.price || "0") === null)) problems.groups = t.errors.bad_price;
+  }
+  if (form.scheduled) {
+    for (const w of form.windows) {
+      if (w.weekdays.length === 0 || (w.opens && w.closes && w.closes <= w.opens) || (w.ranged && w.from && w.to && w.to < w.from)) {
+        problems.schedule = t.errors.bad_schedule;
+      }
+    }
+  }
+  if (!form.opening.trim() || toInt(form.opening) !== null) { /* ok */ } else problems.opening = t.errors.bad_quantity;
+  if (Object.keys(problems).length) return { problems };
+
+  const body: Record<string, unknown> = {
+    name: name || undefined,
+    name_ar: form.name_ar.trim(),
+    description: form.description.trim(),
+    description_ar: form.description_ar.trim(),
+    category: form.category.trim(),
+    price: price ?? 0,
+    sale_price: sale,
+    sale_ends_at: sale !== null && form.saleEnds ? `${form.saleEnds}T23:59:59+03:00` : null,
+    unit: form.unit,
+    pack_size: toInt(form.packSize),
+    min_order: minOrder,
+    tags: form.tags,
+    stock_rule: form.rule,
+    status: form.status,
+    option_groups: form.groups.map((g) => ({
+      ...(g.id ? { id: g.id } : {}), name: g.name.trim(), name_ar: g.name_ar.trim(), required: g.required,
+      max_choices: toInt(g.max) ?? 1,
+      options: g.options.map((o) => ({
+        ...(o.id ? { id: o.id } : {}), name: o.name.trim(), name_ar: o.name_ar.trim(),
+        price_delta: toDirhams(o.price || "0") ?? 0, active: o.active,
+      })),
+    })),
+    schedule: form.scheduled
+      ? form.windows.map((w) => ({
+        weekdays: w.weekdays, opens: w.kind === "now" && !w.closed ? w.opens || null : null,
+        closes: w.kind === "now" && !w.closed ? w.closes || null : null,
+        lead_days: w.kind === "dated" && !w.closed ? toInt(w.lead) ?? 0 : 0,
+        cutoff: w.kind === "dated" && !w.closed ? w.cutoff || null : null,
+        valid_from: w.ranged ? w.from || null : null, valid_to: w.ranged ? w.to || null : null, closed: w.closed,
+      }))
+      : [],
+  };
+  if (!body.name) delete body.name;
+  if (named.length) {
+    body.variants = named.map((v) => ({
+      ...(v.id ? { id: v.id } : {}), name: v.name.trim(), name_ar: v.name_ar.trim(),
+      price_delta: toSignedDirhams(v.delta) ?? 0,
+      daily_limit: form.rule === "daily_limit" ? toInt(v.limit) : null, active: v.active,
+      ...(!v.id && form.rule === "count" && toInt(v.opening) ? { opening_stock: toInt(v.opening) } : {}),
+    }));
+  } else {
+    if (form.rule === "daily_limit") body.daily_limit = toInt(form.dailyLimit);
+    if (!existing && form.rule === "count" && toInt(form.opening)) body.opening_stock = toInt(form.opening);
+  }
+  return { body, problems };
+}
+
+export function CatalogEdit({ lang, itemId, initial, categories, access, push, onClose, onChanged }: {
+  lang: Lang; itemId: string | null; initial: Item | null; categories: Category[]; access: Access;
+  push: Push; onClose: () => void; onChanged: () => void;
+}) {
+  const t = COPY[lang];
+  const readOnly = !access.can_edit;
+  const [item, setItem] = useState<Item | null>(initial);
+  const [form, setForm] = useState<Form>(() => (initial ? formOf(initial) : blankForm("live")));
+  const [start, setStart] = useState(() => JSON.stringify(initial ? formOf(initial) : blankForm("live")));
+  const [photos, setPhotos] = useState<Photo[]>(initial?.photos ?? []);
+  const [problems, setProblems] = useState<Problems>({});
+  const [failure, setFailure] = useState("");
+  const [saving, setSaving] = useState(false);
+  const [leaving, setLeaving] = useState(false);
+  const [removing, setRemoving] = useState<"" | "archive" | "delete">("");
+  const [tagDraft, setTagDraft] = useState("");
+  const [history, setHistory] = useState<{ did: ActivityRow[]; prices: PriceRow[] } | null>(null);
+  const top = useRef<HTMLDivElement>(null);
+  const now = useRef({ form, start });
+  useEffect(() => { now.current = { form, start }; });
+
+  // Fresh from the API, in case the list was a little old.
+  useEffect(() => {
+    if (!itemId) return;
+    let live = true;
+    api<Item>(`/api/items/${itemId}`).then((fresh) => {
+      if (!live) return;
+      setItem(fresh);
+      setPhotos(fresh.photos);
+      // What is on screen is replaced only if nothing has been typed yet.
+      if (JSON.stringify(now.current.form) === now.current.start) {
+        const next = formOf(fresh);
+        setForm(next);
+        setStart(JSON.stringify(next));
+      }
+    }).catch(() => undefined);
+    return () => { live = false; };
+  }, [itemId]);
+
+  const dirty = useMemo(() => JSON.stringify(form) !== start, [form, start]);
+  const set = (patch: Partial<Form>) => setForm((f) => ({ ...f, ...patch }));
+  const photoLabel = nameOf(form, lang) || t.untitled;
+
+  function close() {
+    if (dirty && !readOnly) setLeaving(true);
+    else onClose();
+  }
+
+  async function save() {
+    // A tag that was typed and not yet added is not lost.
+    const typed = tagDraft.trim();
+    const filled = typed && !form.tags.some((x) => x.toLowerCase() === typed.toLowerCase()) && form.tags.length < 20
+      ? { ...form, tags: [...form.tags, typed] }
+      : form;
+    const { body, problems: found } = build(filled, t, item);
+    setProblems(found);
+    if (!body) {
+      setFailure(Object.values(found)[0] ?? "");
+      top.current?.scrollIntoView({ block: "start", behavior: "smooth" });
+      return;
+    }
+    setFailure("");
+    setSaving(true);
+    try {
+      let saved: { item: Item; warnings?: { name: string }[] };
+      if (itemId) {
+        saved = await api(`/api/items/${itemId}`, "PUT", body);
+      } else {
+        saved = await api("/api/items", "POST", body);
+        // The photos chosen before the item existed go on it now, in order.
+        for (const photo of photos) {
+          if (photo.id) await api(`/api/items/${saved.item.id}/photos`, "POST", { asset_id: photo.id }).catch(() => undefined);
+        }
+        // An item counted in stock starts from the number typed.
+      }
+      if (itemId && form.rule === "count" && toInt(form.opening) && form.variants.length === 0) {
+        await api(`/api/items/${itemId}/stock`, "POST", { kind: "opening", quantity: toInt(form.opening), reason: "Opening count" }).catch(() => undefined);
+      }
+      push(itemId ? t.toastSaved : t.toastAdded);
+      const dup = saved.warnings?.[0];
+      if (dup) push(t.duplicate(dup.name));
+      onChanged();
+      onClose();
+    } catch (error) {
+      setFailure(sayError(error, lang, t));
+      top.current?.scrollIntoView({ block: "start", behavior: "smooth" });
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  async function remove(kind: "archive" | "delete") {
+    if (!itemId) return;
+    setSaving(true);
+    try {
+      if (kind === "archive") await api(`/api/items/${itemId}/status`, "POST", { status: "archived" });
+      else await api(`/api/items/${itemId}`, "DELETE");
+      push(kind === "archive" ? t.toastArchived : t.toastDeleted);
+      onChanged();
+      onClose();
+    } catch (error) {
+      setFailure(sayError(error, lang, t));
+      setRemoving("");
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  async function openHistory(open: boolean) {
+    if (!open || history || !itemId) return;
+    try {
+      const [did, prices] = await Promise.all([
+        api<{ activity: ActivityRow[] }>(`/api/items/${itemId}/activity`),
+        api<{ history: PriceRow[] }>(`/api/items/${itemId}/price-history`),
+      ]);
+      setHistory({ did: did.activity, prices: prices.history });
+    } catch {
+      setHistory({ did: [], prices: [] });
+    }
+  }
+
+  const categoryNames = categories.map((c) => c.name);
+
+  function variantRow(v: VariantForm, i: number) {
+    const patch = (change: Partial<VariantForm>) => set({ variants: form.variants.map((x, k) => (k === i ? { ...x, ...change } : x)) });
+    return (
+      <li key={v.id ?? `new-${i}`} className="ct-card-form">
+        <div className="ct-grid2 names">
+          <Field label={t.variantName}><input value={v.name} dir="auto" maxLength={80} onChange={(e) => patch({ name: e.target.value })} /></Field>
+          <Field label={t.variantNameAr}><input value={v.name_ar} dir="rtl" lang="ar" maxLength={80} onChange={(e) => patch({ name_ar: e.target.value })} /></Field>
+        </div>
+        <div className="ct-grid2">
+          <Field label={t.variantExtra} hint={t.variantExtraHint}>
+            <input value={v.delta} inputMode="decimal" dir="ltr" onChange={(e) => patch({ delta: e.target.value })} />
+          </Field>
+          {form.rule === "count" && (v.id
+            ? <div className="ct-field"><span className="ct-label">{t.stockNow}</span><p className="ct-static num" dir="ltr">{v.onHand ?? 0}</p></div>
+            : <Field label={t.openingStock}><input value={v.opening} inputMode="numeric" dir="ltr" onChange={(e) => patch({ opening: e.target.value })} /></Field>)}
+          {form.rule === "daily_limit" && (
+            <Field label={t.dailyLimit}><input value={v.limit} inputMode="numeric" dir="ltr" onChange={(e) => patch({ limit: e.target.value })} /></Field>
+          )}
+        </div>
+        <div className="ct-row-between">
+          <label className="ct-check"><input type="checkbox" checked={v.active} onChange={(e) => patch({ active: e.target.checked })} />{t.variantActive}</label>
+          <button type="button" className="btn small ghost" onClick={() => set({ variants: form.variants.filter((_, k) => k !== i) })}><Icon name="trash" />{t.variantRemove}</button>
+        </div>
+      </li>
+    );
+  }
+
+  function groupBox(g: GroupForm, gi: number) {
+    const patch = (change: Partial<GroupForm>) => set({ groups: form.groups.map((x, k) => (k === gi ? { ...x, ...change } : x)) });
+    const patchOption = (oi: number, change: Partial<OptionForm>) =>
+      patch({ options: g.options.map((o, k) => (k === oi ? { ...o, ...change } : o)) });
+    return (
+      <li key={g.id ?? `group-${gi}`} className="ct-card-form">
+        <div className="ct-grid2 names">
+          <Field label={t.groupName}><input value={g.name} dir="auto" maxLength={80} onChange={(e) => patch({ name: e.target.value })} /></Field>
+          <Field label={t.groupNameAr}><input value={g.name_ar} dir="rtl" lang="ar" maxLength={80} onChange={(e) => patch({ name_ar: e.target.value })} /></Field>
+        </div>
+        <div className="ct-grid2">
+          <label className="ct-check"><input type="checkbox" checked={g.required} onChange={(e) => patch({ required: e.target.checked })} />{t.groupRequired}</label>
+          <Field label={t.groupMax}><input value={g.max} inputMode="numeric" dir="ltr" onChange={(e) => patch({ max: e.target.value })} /></Field>
+        </div>
+        <ul className="ct-subs">
+          {g.options.map((o, oi) => (
+            <li key={o.id ?? `opt-${oi}`} className="ct-sub">
+              <div className="ct-grid3">
+                <Field label={t.optionName}><input value={o.name} dir="auto" maxLength={80} onChange={(e) => patchOption(oi, { name: e.target.value })} /></Field>
+                <Field label={t.optionNameAr}><input value={o.name_ar} dir="rtl" lang="ar" maxLength={80} onChange={(e) => patchOption(oi, { name_ar: e.target.value })} /></Field>
+                <Field label={t.optionExtra}><input value={o.price} inputMode="decimal" dir="ltr" onChange={(e) => patchOption(oi, { price: e.target.value })} /></Field>
+              </div>
+              <div className="ct-row-between">
+                <label className="ct-check"><input type="checkbox" checked={o.active} onChange={(e) => patchOption(oi, { active: e.target.checked })} />{t.variantActive}</label>
+                <button type="button" className="btn small ghost" onClick={() => patch({ options: g.options.filter((_, k) => k !== oi) })}>{t.removeOption}</button>
+              </div>
+            </li>
+          ))}
+        </ul>
+        <div className="ct-row-between">
+          <button type="button" className="btn small" onClick={() => patch({ options: [...g.options, { name: "", name_ar: "", price: "", active: true }] })}><Icon name="plus" />{t.addOption}</button>
+          <button type="button" className="btn small ghost" onClick={() => set({ groups: form.groups.filter((_, k) => k !== gi) })}><Icon name="trash" />{t.removeGroup}</button>
+        </div>
+      </li>
+    );
+  }
+
+  function windowBox(w: WindowForm, wi: number) {
+    const patch = (change: Partial<WindowForm>) => set({ windows: form.windows.map((x, k) => (k === wi ? { ...x, ...change } : x)) });
+    return (
+      <li key={wi} className="ct-card-form">
+        <div className="ct-row-between">
+          <b>{t.windowTitle(wi + 1)}</b>
+          <button type="button" className="btn small ghost" onClick={() => set({ windows: form.windows.filter((_, k) => k !== wi) })}><Icon name="trash" />{t.removeWindow}</button>
+        </div>
+        <div className="ct-days" role="group" aria-label={t.scheduleTitle}>
+          {t.days.map((d, n) => (
+            <button key={n} type="button" className="ct-chip" aria-pressed={w.weekdays.includes(n)}
+              onClick={() => patch({ weekdays: w.weekdays.includes(n) ? w.weekdays.filter((x) => x !== n) : [...w.weekdays, n].sort() })}>
+              {w.weekdays.includes(n) && <Icon name="check" className="sh-ico ct-chip-tick" />}{d}
+            </button>
+          ))}
+        </div>
+        {!w.closed && (
+          <fieldset className="ct-choices small">
+            <legend className="ct-sr">{t.windowKind}</legend>
+            {(["now", "dated"] as const).map((kind) => (
+              <label key={kind} className={`ct-choice ${w.kind === kind ? "on" : ""}`}>
+                <input type="radio" name={`kind-${wi}`} checked={w.kind === kind} onChange={() => patch({ kind })} />
+                <span className="ct-choice-mark" aria-hidden="true" />
+                <span className="ct-choice-text"><b>{kind === "now" ? t.windowNow : t.windowDated}</b></span>
+              </label>
+            ))}
+          </fieldset>
+        )}
+        {!w.closed && w.kind === "now" && (
+          <div className="ct-grid2">
+            <Field label={t.opens}><input type="time" value={w.opens} dir="ltr" onChange={(e) => patch({ opens: e.target.value })} /></Field>
+            <Field label={t.closes}><input type="time" value={w.closes} dir="ltr" onChange={(e) => patch({ closes: e.target.value })} /></Field>
+          </div>
+        )}
+        {!w.closed && w.kind === "dated" && (
+          <div className="ct-grid2">
+            <Field label={t.leadDays}><input value={w.lead} inputMode="numeric" dir="ltr" onChange={(e) => patch({ lead: e.target.value })} /></Field>
+            <Field label={t.cutoff} hint={t.cutoffHint}><input type="time" value={w.cutoff} dir="ltr" onChange={(e) => patch({ cutoff: e.target.value })} /></Field>
+          </div>
+        )}
+        <label className="ct-check"><input type="checkbox" checked={w.ranged} onChange={(e) => patch({ ranged: e.target.checked })} />{t.between}</label>
+        {w.ranged && (
+          <div className="ct-grid2">
+            <Field label={t.validFrom}><input type="date" value={w.from} dir="ltr" onChange={(e) => patch({ from: e.target.value })} /></Field>
+            <Field label={t.validTo}><input type="date" value={w.to} dir="ltr" onChange={(e) => patch({ to: e.target.value })} /></Field>
+          </div>
+        )}
+        <label className="ct-check"><input type="checkbox" checked={w.closed} onChange={(e) => patch({ closed: e.target.checked })} />{t.closedThen}</label>
+      </li>
+    );
+  }
+
+  const title = itemId ? t.editItem : t.newItem;
+  const subtitle = itemId ? photoLabel : undefined;
+  const footer = readOnly ? (
+    <button type="button" className="btn ct-btn" onClick={onClose}>{t.close}</button>
+  ) : leaving ? (
+    <div className="ct-confirm" role="alertdialog" aria-label={t.leaveTitle}>
+      <span><b>{t.leaveTitle}</b> {t.leaveText}</span>
+      <span className="ct-confirm-btns">
+        <button type="button" className="btn ct-btn" data-autofocus onClick={() => setLeaving(false)}>{t.leaveKeep}</button>
+        <button type="button" className="btn ct-btn danger" onClick={onClose}>{t.leaveGo}</button>
+      </span>
+    </div>
+  ) : (
+    <>
+      <button type="button" className="btn ct-btn" onClick={close}>{t.cancel}</button>
+      <button type="button" className="btn primary ct-btn ct-grow" disabled={saving} onClick={() => void save()}>{saving ? t.saving : t.save}</button>
+    </>
+  );
+
+  return (
+    <Sheet title={title} subtitle={subtitle} onClose={close} closeLabel={t.close} footer={footer} wide>
+      <div ref={top} />
+      {failure && <p className="ct-alert" role="alert"><Icon name="warn" />{failure}</p>}
+      {readOnly && <p className="ct-banner"><span>{t.mustBeOwner}</span></p>}
+      <fieldset className="ct-form" disabled={readOnly || saving}>
+        <section className="ct-sec">
+          <h3>{t.photosTitle}</h3>
+          <CatalogPhotos lang={lang} t={t} itemId={itemId} photos={photos} readOnly={readOnly}
+            onPhotos={(next) => { setPhotos(next); if (itemId) onChanged(); }} push={push} />
+        </section>
+
+        <section className="ct-sec">
+          <h3>{t.namesTitle}</h3>
+          <Field label={t.nameEn} hint={t.nameEnHint} error={problems.name}>
+            <input value={form.name} dir="auto" maxLength={120} autoComplete="off" onChange={(e) => set({ name: e.target.value })} />
+          </Field>
+          <Field label={t.nameAr} hint={t.nameArHint} error={problems.name_ar}>
+            <input value={form.name_ar} dir="rtl" lang="ar" maxLength={120} autoComplete="off" onChange={(e) => set({ name_ar: e.target.value })} />
+          </Field>
+        </section>
+
+        <section className="ct-sec">
+          <h3>{t.priceTitle}</h3>
+          <div className="ct-grid2">
+            <Field label={t.price} error={problems.price}>
+              <input value={form.price} inputMode="decimal" dir="ltr" autoComplete="off" onChange={(e) => set({ price: e.target.value })} />
+            </Field>
+            <Field label={t.salePrice} hint={t.saleHint} error={problems.sale}>
+              <input value={form.sale} inputMode="decimal" dir="ltr" autoComplete="off" onChange={(e) => set({ sale: e.target.value })} />
+            </Field>
+          </div>
+          {form.sale.trim() !== "" && (
+            <Field label={t.saleEnds}><input type="date" value={form.saleEnds} dir="ltr" onChange={(e) => set({ saleEnds: e.target.value })} /></Field>
+          )}
+          <div className="ct-grid2">
+            <Field label={t.unit}>
+              <select value={form.unit} onChange={(e) => set({ unit: e.target.value })}>
+                {UNITS.map((u) => <option key={u} value={u}>{t.units[u]}</option>)}
+              </select>
+            </Field>
+            <Field label={t.minOrder} error={problems.min}>
+              <input value={form.minOrder} inputMode="numeric" dir="ltr" onChange={(e) => set({ minOrder: e.target.value })} />
+            </Field>
+          </div>
+          {form.unit === "pack" && (
+            <Field label={t.packSize}><input value={form.packSize} inputMode="numeric" dir="ltr" onChange={(e) => set({ packSize: e.target.value })} /></Field>
+          )}
+        </section>
+
+        <section className="ct-sec">
+          <Field label={t.category} hint={t.categoryHint}>
+            <input value={form.category} dir="auto" maxLength={60} list="ct-categories" autoComplete="off" onChange={(e) => set({ category: e.target.value })} />
+          </Field>
+          <datalist id="ct-categories">{categoryNames.map((c) => <option key={c} value={c} />)}</datalist>
+          {categories.length > 0 && (
+            <div className="ct-chips wrap" role="group" aria-label={t.category}>
+              {categories.slice(0, 8).map((c) => (
+                <button key={c.name} type="button" className="ct-chip" aria-pressed={form.category === c.name}
+                  onClick={() => set({ category: form.category === c.name ? "" : c.name })}>
+                  {form.category === c.name && <Icon name="check" className="sh-ico ct-chip-tick" />}{lang === "ar" && c.name_ar ? c.name_ar : c.name}
+                </button>
+              ))}
+            </div>
+          )}
+        </section>
+
+        <section className="ct-sec">
+          <h3>{t.statusTitle}</h3>
+          <fieldset className="ct-choices">
+            <legend className="ct-sr">{t.statusTitle}</legend>
+            {STATUSES.map((s) => (
+              <label key={s} className={`ct-choice ${form.status === s ? "on" : ""}`}>
+                <input type="radio" name="status" checked={form.status === s} onChange={() => set({ status: s })} />
+                <span className="ct-choice-mark" aria-hidden="true" />
+                <span className="ct-choice-text"><b>{t.status[s]}</b><small>{t.statusHints[s]}</small></span>
+              </label>
+            ))}
+          </fieldset>
+        </section>
+
+        <section className="ct-sec">
+          <h3>{t.ruleTitle}</h3>
+          <fieldset className="ct-choices">
+            <legend className="ct-sr">{t.ruleTitle}</legend>
+            {RULES.map((r) => (
+              <label key={r} className={`ct-choice ${form.rule === r ? "on" : ""}`}>
+                <input type="radio" name="rule" checked={form.rule === r} onChange={() => set({ rule: r })} />
+                <span className="ct-choice-mark" aria-hidden="true" />
+                <span className="ct-choice-text"><b>{t.rules[r][0]}</b><small>{t.rules[r][1]}</small></span>
+              </label>
+            ))}
+          </fieldset>
+          {form.rule === "daily_limit" && form.variants.length === 0 && (
+            <Field label={t.dailyLimit} error={problems.limit}>
+              <input value={form.dailyLimit} inputMode="numeric" dir="ltr" onChange={(e) => set({ dailyLimit: e.target.value })} />
+            </Field>
+          )}
+          {form.rule === "count" && form.variants.length === 0 && (
+            !itemId || (item && item.variants.every((v) => v.on_hand === 0))
+              ? <Field label={t.openingStock} error={problems.opening}><input value={form.opening} inputMode="numeric" dir="ltr" onChange={(e) => set({ opening: e.target.value })} /></Field>
+              : <p className="ct-hint">{t.inStock(item?.variants.reduce((n, v) => n + v.on_hand, 0) ?? 0)}. {t.changeInStock}</p>
+          )}
+          {form.rule === "count" && itemId && item && item.stock_rule !== "count" && form.variants.length > 0 && <p className="ct-hint">{t.stockLater}</p>}
+        </section>
+
+        <Fold title={t.descTitle} summary={form.description || form.description_ar ? "✓" : undefined} open={form.description || form.description_ar ? true : undefined}>
+          <Field label={t.descEn}><textarea value={form.description} dir="auto" rows={3} maxLength={1000} onChange={(e) => set({ description: e.target.value })} /></Field>
+          <Field label={t.descAr}><textarea value={form.description_ar} dir="rtl" lang="ar" rows={3} maxLength={1000} onChange={(e) => set({ description_ar: e.target.value })} /></Field>
+        </Fold>
+
+        <Fold title={t.variantsTitle} summary={form.variants.length ? String(form.variants.length) : undefined} open={form.variants.length > 0 ? true : undefined}>
+          <p className="ct-hint">{t.variantsHint}</p>
+          {problems.variants && <p className="ct-error">{problems.variants}</p>}
+          <ul className="ct-stack">{form.variants.map(variantRow)}</ul>
+          <button type="button" className="btn ct-btn" onClick={() => set({ variants: [...form.variants, { name: "", name_ar: "", delta: "", limit: form.dailyLimit, active: true, opening: "", onHand: null }] })}>
+            <Icon name="plus" />{t.addVariant}
+          </button>
+          {form.variants.length > 0 && itemId && <p className="ct-hint">{t.variantKept}</p>}
+        </Fold>
+
+        <Fold title={t.optionsTitle} summary={form.groups.length ? String(form.groups.length) : undefined} open={form.groups.length > 0 ? true : undefined}>
+          <p className="ct-hint">{t.optionsHint}</p>
+          {problems.groups && <p className="ct-error">{problems.groups}</p>}
+          <ul className="ct-stack">{form.groups.map(groupBox)}</ul>
+          <button type="button" className="btn ct-btn" onClick={() => set({ groups: [...form.groups, { name: "", name_ar: "", required: false, max: "1", options: [{ name: "", name_ar: "", price: "", active: true }] }] })}>
+            <Icon name="plus" />{t.addGroup}
+          </button>
+        </Fold>
+
+        <Fold title={t.scheduleTitle} summary={form.scheduled ? t.scheduleSet : t.scheduleAny} open={form.scheduled ? true : undefined}>
+          <fieldset className="ct-choices small">
+            <legend className="ct-sr">{t.scheduleTitle}</legend>
+            {[false, true].map((on) => (
+              <label key={String(on)} className={`ct-choice ${form.scheduled === on ? "on" : ""}`}>
+                <input type="radio" name="scheduled" checked={form.scheduled === on}
+                  onChange={() => set({ scheduled: on, windows: on && form.windows.length === 0 ? [{ weekdays: [0, 1, 2, 3, 4, 5, 6], kind: "now", opens: "", closes: "", lead: "0", cutoff: "", ranged: false, from: "", to: "", closed: false }] : form.windows })} />
+                <span className="ct-choice-mark" aria-hidden="true" />
+                <span className="ct-choice-text"><b>{on ? t.scheduleSet : t.scheduleAny}</b></span>
+              </label>
+            ))}
+          </fieldset>
+          {form.scheduled && (
+            <>
+              {problems.schedule && <p className="ct-error">{problems.schedule}</p>}
+              <ul className="ct-stack">{form.windows.map(windowBox)}</ul>
+              <button type="button" className="btn ct-btn" onClick={() => set({ windows: [...form.windows, { weekdays: [0, 1, 2, 3, 4, 5, 6], kind: "now", opens: "", closes: "", lead: "0", cutoff: "", ranged: false, from: "", to: "", closed: false }] })}>
+                <Icon name="plus" />{t.addWindow}
+              </button>
+            </>
+          )}
+        </Fold>
+
+        <Fold title={t.tagsTitle} summary={form.tags.length ? String(form.tags.length) : undefined} open={form.tags.length > 0 ? true : undefined}>
+          <p className="ct-hint">{t.tagsHint}</p>
+          {form.tags.length > 0 && (
+            <ul className="ct-tags">
+              {form.tags.map((tag) => (
+                <li key={tag}><span dir="auto">{tag}</span>
+                  <button type="button" className="sh-iconbtn" aria-label={t.tagRemove(tag)} onClick={() => set({ tags: form.tags.filter((x) => x !== tag) })}><Icon name="x" /></button>
+                </li>
+              ))}
+            </ul>
+          )}
+          <div className="ct-tagadd">
+            <Field label={t.addTag}>
+              <input value={tagDraft} dir="auto" maxLength={30} autoComplete="off" onChange={(e) => setTagDraft(e.target.value)}
+                onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); addTag(tagDraft); } }} />
+            </Field>
+            <button type="button" className="btn ct-btn" disabled={!tagDraft.trim()} onClick={() => addTag(tagDraft)}>{t.tagAdd}</button>
+          </div>
+          <div className="ct-chips wrap" role="group" aria-label={t.tagsTitle}>
+            {t.tagIdeas.filter((x) => !form.tags.some((y) => y.toLowerCase() === x.toLowerCase())).map((idea) => (
+              <button key={idea} type="button" className="ct-chip" onClick={() => addTag(idea)}><Icon name="plus" className="sh-ico ct-chip-tick" />{idea}</button>
+            ))}
+          </div>
+        </Fold>
+
+        {itemId && (
+          <Fold title={t.historyTitle} onToggle={(o) => void openHistory(o)}>
+            {!history ? <p className="ct-hint" role="status">{t.historyLoading}</p> : (
+              <>
+                <h4>{t.historyPrices}</h4>
+                {history.prices.length === 0 ? <p className="ct-hint">{t.historyNone}</p> : (
+                  <ul className="ct-log">
+                    {history.prices.map((p, i) => (
+                      <li key={i}><b className="num" dir="ltr">{p.price_text}{p.sale_price_text ? ` · ${p.sale_price_text}` : ""}</b>
+                        <span>{p.changed_by.name}{p.reason ? ` · ${p.reason}` : ""}</span>
+                        <time className="num" dateTime={p.at} dir="ltr">{stamp(p.at)}</time></li>
+                    ))}
+                  </ul>
+                )}
+                <h4>{t.historyDid}</h4>
+                {history.did.length === 0 ? <p className="ct-hint">{t.historyNone}</p> : (
+                  <ul className="ct-log">
+                    {history.did.map((a) => (
+                      <li key={a.id}><span><b>{a.actor.name}</b> {activityText(a, t)}</span>
+                        <time className="num" dateTime={a.at} dir="ltr">{stamp(a.at)}</time></li>
+                    ))}
+                  </ul>
+                )}
+              </>
+            )}
+          </Fold>
+        )}
+
+        {itemId && !readOnly && item && item.status !== "archived" && (
+          <section className="ct-sec danger">
+            <h3>{t.dangerTitle}</h3>
+            {removing ? (
+              <div className="sh-confirm" role="alertdialog" aria-label={t.confirm}>
+                <span>{t.confirm}</span>
+                <button type="button" className="btn small" data-autofocus onClick={() => setRemoving("")}>{t.leaveKeep}</button>
+                <button type="button" className="btn small danger" disabled={saving} onClick={() => void remove(removing)}>{t.confirmGo}</button>
+              </div>
+            ) : (
+              <div className="ct-stack">
+                <div><button type="button" className="btn ct-btn" onClick={() => setRemoving("archive")}><Icon name="stock" />{t.archive}</button><p className="ct-hint">{t.archiveText}</p></div>
+                <div><button type="button" className="btn ct-btn danger-line" onClick={() => setRemoving("delete")}><Icon name="trash" />{t.deleteItem}</button><p className="ct-hint">{t.deleteText}</p></div>
+              </div>
+            )}
+          </section>
+        )}
+      </fieldset>
+    </Sheet>
+  );
+
+  function addTag(text: string) {
+    const tag = text.trim();
+    if (!tag || form.tags.some((x) => x.toLowerCase() === tag.toLowerCase()) || form.tags.length >= 20) return;
+    set({ tags: [...form.tags, tag] });
+    setTagDraft("");
+  }
+}

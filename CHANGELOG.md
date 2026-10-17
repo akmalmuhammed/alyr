@@ -5,6 +5,7 @@ that changes behaviour; internal-only work can be grouped. Versions follow phase
 (`0.<phase>.<n>`), tagged on main when a phase demo works (docs/hygiene.md).
 
 ## Unreleased
+- Catalog package 3, the workspace screens, hidden until go-live (ALY-104, D-039): the owner's items as photos or a list with Arabic-aware search, filters and a switch on every row; an edit sheet with photos, sizes, extras, times and history; adding many items from photos with a draft for each and a walk through them; a Stock tab with counts that show the difference and need a reason; bulk actions with a preview and one undo; roles. English and Arabic, light and dark, phone first. A new `catalog` module, off for every shop. The API gained photos on items, drafts from photos, bulk actions with undo and the agents setting (ALY-103's follow-up, migration 0024).
 - Catalog package 1, the engine, not visible yet (ALY-102, D-039): items with variants, options,
   availability rules, a stock log, holds for unpaid pay-link orders, and a checkout that tells a
   customer exactly what changed. Products became items; existing shops and orders carry over.

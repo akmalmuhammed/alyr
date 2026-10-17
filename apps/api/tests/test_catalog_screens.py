@@ -6,6 +6,7 @@ people at once), 19 (a count that differs), 23 to 26 (photos) and 29 (one shop c
 another's) are covered here from the screens' side. Everything runs on local disk."""
 
 import re
+from pathlib import Path
 from uuid import UUID
 
 import pytest
@@ -721,6 +722,23 @@ def test_the_workspace_pages_carry_no_coming_soon_words_for_the_catalog():
                                                         for s in module.screens]]).lower()
     for banned in ("coming", "soon", "beta", "early access", "under development", "قريب"):
         assert banned not in words
+
+
+def test_nothing_the_catalog_screens_say_is_coming_soon_or_in_beta():
+    """The founder's rule (D-039): an owner never meets a screen that says a feature is
+    coming. This reads every file of the Catalog screens, in both languages."""
+    root = Path(__file__).resolve().parents[3]
+    folder = root / "apps" / "web" / "app" / "(product)" / "_workspace"
+    files = [folder / "catalogCopy.ts", *sorted(folder.glob("Catalog*.tsx"))]
+    assert len(files) > 6
+    words = (
+        "coming soon", "under development", "beta", "early access", "قريباً", "قريبا",
+        "تحت التطوير",
+    )
+    for path in files:
+        written = path.read_text(encoding="utf-8").lower()
+        for word in words:
+            assert word not in written, f"{path.name} says “{word}”"
 
 
 def test_shop_settings_round_trip(client):

@@ -70,7 +70,8 @@ apps/web/                     Next.js. Three root layouts, one per route group:
   app/_agent/                 The owner's weekly view (ALYR Agent)
 docs/                         See docs/README.md for what lives where (docs/hygiene.md section 1)
 scripts/                      check.sh (everything CI runs), demo.sh (start and check the live demo),
-                              api-in-docker.sh, build-site.sh, hooks/pre-commit
+                              api-in-docker.sh, build-site.sh, catalog-browser-check.mjs (the Catalog's
+                              screens in a real browser at phone width), hooks/pre-commit
 specs/                        One folder per spec; write or update the spec before building
 infra/                        Cloud infrastructure as code (proposed in PR #52, not merged)
 packages/compliance/          WPS SIF and e-invoice libraries (not created yet)
