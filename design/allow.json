@@ -1,0 +1,15 @@
+[
+  {
+    "property": "mask-image",
+    "reason": "A mask reads only the alpha of its gradient; #000 there is not a colour anyone sees."
+  },
+  {
+    "property": "-webkit-mask-image",
+    "reason": "The same mask, prefixed for Safari."
+  },
+  {
+    "file": "apps/web/app/_site/copy.ts",
+    "match": "ref: \"#",
+    "reason": "Booking references in the drawn sample screens (#398), not colours."
+  }
+]

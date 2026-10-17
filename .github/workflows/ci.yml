@@ -70,6 +70,8 @@ jobs:
           cache: pnpm
           cache-dependency-path: apps/web/pnpm-lock.yaml
       - run: pnpm install --frozen-lockfile
+      # Colours and fonts come from design/tokens.json only; the generated files are current.
+      - run: node ../../scripts/design-check.mjs
       # Known vulnerabilities in what the site and workspace ship.
       - run: pnpm audit --prod --audit-level high
       - run: pnpm lint
