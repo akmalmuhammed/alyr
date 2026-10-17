@@ -232,6 +232,11 @@ class Bakery:
         self.messages: list[tuple] = []
         self.activity: list[tuple] = []
         self.taken_slots: set[datetime] = set()
+        # What a subclass for another sample business changes (seed_bookings.py).
+        self.number_id = NUMBER_ID
+        self.slug = QIRFA_SLUG
+        self.fast_staff = AGENT_EMAIL
+        self.account_holders = len(ACCOUNTS)
         self.web_url = web_url.rstrip("/")
 
     # ── small helpers ─────────────────────────────────────
@@ -263,7 +268,7 @@ class Bakery:
             low, high = 6, 45
         weeks_ago = (self.now - at).days / 7
         slow = 1 + 0.12 * weeks_ago
-        if staff != AGENT_EMAIL:
+        if staff != self.fast_staff:
             slow *= 1.4  # Karim is in the kitchen, Huda is out
         return timedelta(minutes=self.rng.uniform(low, high) * slow, seconds=self.rng.randrange(60))
 
@@ -361,7 +366,7 @@ class Bakery:
             "insert into contacts (id, phone, wa_user_id, name, lang, credit_limit, number_id, "
             "created_at, assigned_to) values ($1, $2, $3, $4, $5, $6, $7, $8, $9)",
             contact_id, f"974556{index + 1:05d}", f"QA.{91000000000000000000 + index}", name,
-            lang, credit_limit, NUMBER_ID, first_seen, self.users[staff],
+            lang, credit_limit, self.number_id, first_seen, self.users[staff],
         )
         # They wrote to the shop first, which is what allows the shop to answer.
         await consent.record(self.conn, contact_id, "service", "granted", "customer_initiated")
@@ -430,7 +435,7 @@ class Bakery:
             [(order_id, pid, name, price, quantity) for pid, name, price, quantity in lines],
         )
         lang = person.lang
-        url = f"{self.web_url}/s/{QIRFA_SLUG}?c={person.id}"
+        url = f"{self.web_url}/s/{self.slug}?c={person.id}"
         if kind != "account":
             asked = at - timedelta(minutes=rng.randint(3, 14))
             self.say(person, asked, rng.choice(WANT[lang]))
@@ -543,7 +548,7 @@ class Bakery:
             status, reminded, made, self.users[ADMIN_EMAIL],
         )
         lang = person.lang
-        url = f"{self.web_url}/b/{QIRFA_SLUG}?c={person.id}"
+        url = f"{self.web_url}/b/{self.slug}?c={person.id}"
         asked = made - timedelta(minutes=rng.randint(2, 9))
         self.say(person, asked, BOOK[lang])
         self.auto(person, asked + timedelta(seconds=4), BOOK_LINK[lang].format(url=url))
@@ -797,11 +802,12 @@ class Bakery:
         # and unread, a chat from the last two hours is open, every other one is closed.
         await conn.execute(
             "update contacts c set last_inbound_at = m.last_in, inbox_read_at = m.last_any, "
-            "inbox_status = case when m.last_any > now() - interval '2 hours' "
+            "inbox_status = case when m.last_any > $1::timestamptz - interval '2 hours' "
             "then 'open' else 'closed' end "
             "from (select contact_id, max(created_at) filter (where direction = 'in') as last_in, "
             "max(created_at) as last_any from messages group by contact_id) m "
-            "where m.contact_id = c.id and c.role = 'customer'"
+            "where m.contact_id = c.id and c.role = 'customer'",
+            self.now,
         )
         await conn.execute(
             "update contacts set inbox_status = 'open', "
@@ -809,7 +815,8 @@ class Bakery:
             [p.id for p in waiting],
         )
         # Last week's Sunday report, as it was sent.
-        week = await report.last_week(conn)
+        # The last complete week before this copy's own "now", not the clock's.
+        week = report.last_full_week(self.now, await report._timezone(conn))
         built = await report.build(conn, week)
         sent = datetime.combine(week + timedelta(days=7), time(report.SEND_HOUR), TZ)
         await conn.execute(
@@ -818,7 +825,7 @@ class Bakery:
             week, built["sections"], sent,
         )
         return {
-            "customers": len(people) + len(ACCOUNTS),
+            "customers": len(people) + self.account_holders,
             "orders": self.order_number - 1000,
             "bookings": self.booking_number - 100,
             "messages": len(self.messages),
@@ -866,7 +873,7 @@ async def reset_qirfa(
         await conn.execute(
             "delete from sessions where tenant_id = $1", QIRFA_TENANT_ID
         )
-        for table in ("weekly_reports", "bookings", "services", "business_hours",
+        for table in ("weekly_reports", "agent_snoozes", "bookings", "services", "business_hours",
                       "saved_replies", "memberships", "jobs", "messages", "processed_messages",
                       "order_items", "payment_requests", "orders", "products", "ledger_entries",
                       "ledger_accounts", "contacts", "tenant_modules",

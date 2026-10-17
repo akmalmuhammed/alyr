@@ -1,0 +1,516 @@
+{
+ "version": 1,
+ "lang": "en",
+ "dir": "ltr",
+ "now": "2026-10-15T13:20:00+00:00",
+ "state": "normal",
+ "money": true,
+ "lead": "bookings",
+ "header": {
+  "eyebrow": "Today · Thu 15 Oct · 16:20 Doha",
+  "greeting": "Good afternoon, Faris.",
+  "summary": [
+   {
+    "muted": false,
+    "text": [
+     "Week so far: 24 appointments, 6 no-shows."
+    ]
+   },
+   {
+    "muted": true,
+    "text": [
+     "Down ",
+     {
+      "b": "6"
+     },
+     " on the same days last week."
+    ]
+   },
+   {
+    "muted": false,
+    "text": [
+     "11 appointments booked for the next 7 days."
+    ]
+   },
+   {
+    "muted": false,
+    "text": [
+     "2 customers are waiting for an answer."
+    ]
+   }
+  ],
+  "updated": "Updated 16:20"
+ },
+ "needs": {
+  "items": [
+   {
+    "key": "waiting",
+    "count": 2,
+    "words": [
+     "customers waiting for an answer"
+    ],
+    "detail": [
+     "longest ",
+     {
+      "b": "37 min"
+     }
+    ],
+    "href": "/app/inbox?show=waiting",
+    "rule": "RULE · the customer wrote last and has had no answer for 10 minutes · 2 customers"
+   }
+  ],
+  "empty": "Nothing is waiting."
+ },
+ "kpis": [
+  {
+   "key": "visits",
+   "label": "Appointments this week",
+   "value": "24",
+   "money": false,
+   "href": "/app/bookings",
+   "change": {
+    "dir": "down",
+    "text": [
+     "▼ ",
+     {
+      "b": "20%"
+     },
+     " on last week"
+    ]
+   }
+  },
+  {
+   "key": "booked_ahead",
+   "label": "Booked, next 7 days",
+   "value": "11",
+   "money": false,
+   "href": "/app/bookings",
+   "change": null
+  },
+  {
+   "key": "no_show_rate",
+   "label": "No-shows, 30 days",
+   "value": "10%",
+   "money": false,
+   "href": "/app/bookings?show=no_show",
+   "change": null
+  },
+  {
+   "key": "new_bookings",
+   "label": "New bookings",
+   "value": "33",
+   "money": false,
+   "href": "/app/bookings",
+   "change": {
+    "dir": "up",
+    "text": [
+     "▲ ",
+     {
+      "b": "6%"
+     },
+     " on last week"
+    ]
+   }
+  }
+ ],
+ "placeholders": [],
+ "suggestions": [
+  {
+   "key": "repeat_no_show",
+   "kind": "knowledge",
+   "title": [
+    "2 customers who missed twice are booked again"
+   ],
+   "line": [
+    "Adam W. is booked for Sunday 12:00."
+   ],
+   "rule": "RULE · 2+ no-shows in 90 days, booked in the next 7 · 2 customers",
+   "rows": [
+    {
+     "id": "054e02e8-5e87-4305-9131-b1b56a007e9b",
+     "label": "Adam W."
+    },
+    {
+     "id": "b1edd11d-028e-47cf-913c-ff58904873ec",
+     "label": "Hassan D."
+    }
+   ],
+   "more": 0,
+   "action": {
+    "label": "Show the bookings",
+    "href": "/app/bookings?show=repeat_no_show"
+   },
+   "status": null,
+   "snooze": {
+    "key": "repeat_no_show",
+    "fingerprint": "22b4e8a89777c814"
+   }
+  },
+  {
+   "key": "quiet_regulars",
+   "kind": "knowledge",
+   "title": [
+    "1 regular quiet for over 30 days"
+   ],
+   "line": [
+    "Maha S.: 3 times before, the last 33 days ago."
+   ],
+   "rule": "RULE · 3+ orders or visits 31 to 120 days ago, none in the last 30 · 1 regular",
+   "rows": [
+    {
+     "id": "92223927-fd59-461a-9bb9-a3879e75f3d0",
+     "label": "Maha S."
+    }
+   ],
+   "more": 0,
+   "action": null,
+   "status": "Messages to many customers need marketing consent. Coming.",
+   "snooze": {
+    "key": "quiet_regulars",
+    "fingerprint": "a732e494b6d375f8"
+   }
+  },
+  {
+   "key": "due_back",
+   "kind": "knowledge",
+   "title": [
+    "1 customer due back"
+   ],
+   "line": [
+    "Maha S. usually comes every 11 days; it has been 33 days."
+   ],
+   "rule": "RULE · 3+ visits, the last longer ago than 1.5 × their usual gap, nothing booked · 1 customer",
+   "rows": [
+    {
+     "id": "92223927-fd59-461a-9bb9-a3879e75f3d0",
+     "label": "Maha S."
+    }
+   ],
+   "more": 0,
+   "action": null,
+   "status": "Messages to many customers need marketing consent. Coming.",
+   "snooze": {
+    "key": "due_back",
+    "fingerprint": "ede049c28f4fb386"
+   }
+  }
+ ],
+ "done": {
+  "rows": [
+   {
+    "key": "sent",
+    "value": "95",
+    "label": "messages ALYR sent for you",
+    "href": "/app/inbox"
+   },
+   {
+    "key": "booking_reminders",
+    "value": "30",
+    "label": "booking reminders",
+    "href": "/app/bookings"
+   }
+  ],
+  "empty": "Nothing yet this week."
+ },
+ "week": {
+  "title": "Appointments this week",
+  "format": "count",
+  "max": 10,
+  "days": [
+   {
+    "date": "2026-10-11",
+    "label": "Sun",
+    "state": "past",
+    "value": 4,
+    "value_text": "4",
+    "last": 6,
+    "last_text": "6",
+    "booked": null
+   },
+   {
+    "date": "2026-10-12",
+    "label": "Mon",
+    "state": "past",
+    "value": 1,
+    "value_text": "1",
+    "last": 3,
+    "last_text": "3",
+    "booked": null
+   },
+   {
+    "date": "2026-10-13",
+    "label": "Tue",
+    "state": "past",
+    "value": 8,
+    "value_text": "8",
+    "last": 10,
+    "last_text": "10",
+    "booked": null
+   },
+   {
+    "date": "2026-10-14",
+    "label": "Wed",
+    "state": "past",
+    "value": 7,
+    "value_text": "7",
+    "last": 6,
+    "last_text": "6",
+    "booked": null
+   },
+   {
+    "date": "2026-10-15",
+    "label": "Thu",
+    "state": "today",
+    "value": 4,
+    "value_text": "4",
+    "last": 6,
+    "last_text": "6",
+    "booked": 0.0
+   },
+   {
+    "date": "2026-10-16",
+    "label": "Fri",
+    "state": "coming",
+    "value": null,
+    "value_text": null,
+    "last": 0,
+    "last_text": "0",
+    "booked": null
+   },
+   {
+    "date": "2026-10-17",
+    "label": "Sat",
+    "state": "coming",
+    "value": null,
+    "value_text": null,
+    "last": 5,
+    "last_text": "5",
+    "booked": 0.17
+   }
+  ],
+  "total_text": "24"
+ },
+ "hours": {
+  "title": "Busiest hours, 28 days",
+  "hours": [
+   "08",
+   "09",
+   "10",
+   "11",
+   "12",
+   "13",
+   "14",
+   "15",
+   "16",
+   "17",
+   "18",
+   "19",
+   "20"
+  ],
+  "rows": [
+   {
+    "label": "Sun",
+    "cells": [
+     4,
+     4,
+     2,
+     2,
+     0,
+     0,
+     0,
+     0,
+     2,
+     0,
+     1,
+     0,
+     0
+    ]
+   },
+   {
+    "label": "Mon",
+    "cells": [
+     3,
+     3,
+     1,
+     0,
+     0,
+     0,
+     0,
+     0,
+     0,
+     0,
+     0,
+     0,
+     0
+    ]
+   },
+   {
+    "label": "Tue",
+    "cells": [
+     4,
+     3,
+     4,
+     4,
+     2,
+     0,
+     0,
+     0,
+     3,
+     3,
+     3,
+     4,
+     1
+    ]
+   },
+   {
+    "label": "Wed",
+    "cells": [
+     4,
+     4,
+     4,
+     3,
+     2,
+     0,
+     0,
+     0,
+     2,
+     1,
+     1,
+     1,
+     0
+    ]
+   },
+   {
+    "label": "Thu",
+    "cells": [
+     4,
+     2,
+     1,
+     2,
+     1,
+     0,
+     0,
+     0,
+     1,
+     1,
+     0,
+     0,
+     0
+    ]
+   },
+   {
+    "label": "Fri",
+    "cells": [
+     0,
+     0,
+     0,
+     0,
+     0,
+     0,
+     0,
+     0,
+     0,
+     0,
+     0,
+     0,
+     0
+    ]
+   },
+   {
+    "label": "Sat",
+    "cells": [
+     4,
+     4,
+     3,
+     4,
+     3,
+     0,
+     0,
+     0,
+     3,
+     2,
+     3,
+     3,
+     3
+    ]
+   }
+  ],
+  "top": "Thursdays 08:00–09:00",
+  "top3": [
+   "Thursdays 08:00–09:00",
+   "Sundays 08:00–09:00",
+   "Sundays 09:00–10:00"
+  ]
+ },
+ "top": {
+  "title": "Top services, 28 days",
+  "rows": [
+   {
+    "name": "Consultation",
+    "value": 46,
+    "value_text": "46",
+    "share": 1.0,
+    "change": {
+     "dir": "level",
+     "text": "—"
+    }
+   },
+   {
+    "name": "Dental cleaning",
+    "value": 34,
+    "value_text": "34",
+    "share": 0.739,
+    "change": {
+     "dir": "up",
+     "text": "▲ 1"
+    }
+   },
+   {
+    "name": "Follow-up visit",
+    "value": 28,
+    "value_text": "28",
+    "share": 0.609,
+    "change": {
+     "dir": "down",
+     "text": "▼ 1"
+    }
+   }
+  ]
+ },
+ "owed": null,
+ "team": {
+  "rows": [
+   {
+    "name": "Faris Nabil",
+    "replies": 2,
+    "first_answer": "9 min",
+    "open": 0,
+    "waiting": 0
+   },
+   {
+    "name": "Mira Antoun",
+    "replies": 5,
+    "first_answer": "8 min",
+    "open": 0,
+    "waiting": 0
+   },
+   {
+    "name": "Omar Said",
+    "replies": 4,
+    "first_answer": "5 min",
+    "open": 2,
+    "waiting": 2
+   }
+  ],
+  "unassigned": null,
+  "everyone": true
+ },
+ "report": [
+  "Your report goes to 1 number on Sunday at ",
+  {
+   "b": "9:00"
+  },
+  "."
+ ],
+ "comparisons_from": null
+}

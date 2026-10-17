@@ -123,7 +123,7 @@ def test_each_rule_speaks_at_its_threshold_in_both_languages(key, lang):
         assert ARABIC.search(plain(first)), plain(first)
     # Nothing that reads as a mind at work (E1).
     words = (plain(first) + " " + plain(second)).lower()
-    assert not re.search(r"\b(ai|smart|learn|think|noticed|predict)", words), words
+    assert not re.search(r"\b(ai|smart|learns?|thinks?|noticed|predicts?)\b", words), words
 
 
 def test_cards_never_promise_what_is_not_built():

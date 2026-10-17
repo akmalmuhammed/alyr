@@ -1,0 +1,645 @@
+{
+ "version": 1,
+ "lang": "ar",
+ "dir": "rtl",
+ "now": "2026-10-15T13:20:00+00:00",
+ "state": "normal",
+ "money": true,
+ "lead": "orders",
+ "header": {
+  "eyebrow": "اليوم · الخميس 15 أكتوبر · 16:20 الدوحة",
+  "greeting": "مساء الخير يا Huda.",
+  "summary": [
+   {
+    "muted": false,
+    "text": [
+     "الأسبوع حتى الآن: 52 طلباً، ",
+     {
+      "b": "9,588 ر.ق"
+     },
+     "."
+    ]
+   },
+   {
+    "muted": true,
+    "text": [
+     "أكثر بـ",
+     {
+      "b": "7"
+     },
+     " من الأيام نفسها في الأسبوع الماضي."
+    ]
+   },
+   {
+    "muted": false,
+    "text": [
+     "طلبان بانتظار التأكيد."
+    ]
+   }
+  ],
+  "updated": "حُدّث 16:20"
+ },
+ "needs": {
+  "items": [
+   {
+    "key": "waiting",
+    "count": 3,
+    "words": [
+     "عملاء بانتظار الرد"
+    ],
+    "detail": [
+     "أطولهم منذ ",
+     {
+      "b": "48 د"
+     }
+    ],
+    "href": "/app/inbox?show=waiting",
+    "rule": "القاعدة · آخر رسالة من العميل ولم يُرد عليها منذ 10 دقائق · 3 عملاء"
+   },
+   {
+    "key": "unconfirmed",
+    "count": 2,
+    "words": [
+     "طلبات لم تُؤكَّد بعد"
+    ],
+    "detail": [
+     "أقدمها منذ ",
+     {
+      "b": "33 د"
+     }
+    ],
+    "href": "/app/orders?show=unconfirmed",
+    "rule": "القاعدة · جديد منذ أكثر من 15 دقيقة · طلبان"
+   }
+  ],
+  "empty": "لا شيء ينتظرك."
+ },
+ "kpis": [
+  {
+   "key": "sales",
+   "label": "المبيعات هذا الأسبوع",
+   "value": "9,588 ر.ق",
+   "money": true,
+   "href": "/app/orders",
+   "change": {
+    "dir": "up",
+    "text": [
+     "▲ ",
+     {
+      "b": "33%"
+     },
+     " عن الأسبوع الماضي"
+    ]
+   }
+  },
+  {
+   "key": "orders",
+   "label": "الطلبات هذا الأسبوع",
+   "value": "52",
+   "money": false,
+   "href": "/app/orders",
+   "change": {
+    "dir": "up",
+    "text": [
+     "▲ ",
+     {
+      "b": "16%"
+     },
+     " عن الأسبوع الماضي"
+    ]
+   }
+  },
+  {
+   "key": "owed",
+   "label": "مستحق لك",
+   "value": "12,779 ر.ق",
+   "money": true,
+   "href": "/app/ledger",
+   "change": {
+    "dir": null,
+    "text": [
+     "الأسبوع الماضي ",
+     {
+      "b": "10,385 ر.ق"
+     }
+    ]
+   }
+  },
+  {
+   "key": "waiting",
+   "label": "بانتظار الرد الآن",
+   "value": "3",
+   "money": false,
+   "href": "/app/inbox?show=waiting",
+   "change": null
+  }
+ ],
+ "placeholders": [],
+ "suggestions": [
+  {
+   "key": "overdue",
+   "kind": "money",
+   "title": [
+    {
+     "b": "3,266 ر.ق"
+    },
+    " متأخر ولم يصله تذكير هذا الأسبوع"
+   ],
+   "line": [
+    "على 3 عملاء. أقدمهم Ward Events منذ 104 أيام."
+   ],
+   "rule": "القاعدة · مستحق منذ 30 يوماً أو أكثر، دون وعد ودون تذكير خلال 7 أيام · 3 عملاء",
+   "rows": [
+    {
+     "id": "0b12868a-60fb-47cf-b3ef-f555f5600fa7",
+     "label": "Ward Events"
+    },
+    {
+     "id": "865dbeb5-167b-470b-b619-9e01ea7ea30b",
+     "label": "Bluefin Events"
+    },
+    {
+     "id": "7276ae9e-661f-4e52-bbf6-919456a5b0ce",
+     "label": "Marina Desk Co-working"
+    }
+   ],
+   "more": 0,
+   "action": {
+    "label": "أرسل التذكيرات",
+    "href": "/app/ledger?show=overdue"
+   },
+   "status": null,
+   "snooze": null
+  },
+  {
+   "key": "ready",
+   "kind": "knowledge",
+   "title": [
+    "3 طلبات جاهزة منذ أكثر من ساعتين"
+   ],
+   "line": [
+    "الطلب #1437 لـSameer Y. ينتظر منذ ",
+    {
+     "b": "3 س"
+    },
+    "."
+   ],
+   "rule": "القاعدة · جاهز ولم يُستلم بعد ساعتين · 3 طلبات",
+   "rows": [
+    {
+     "id": "b4eff666-38d5-48ae-8c43-7265008f2fef",
+     "label": "Sameer Y."
+    },
+    {
+     "id": "60ca0137-3925-4f52-ba12-94147caa76e7",
+     "label": "Aisha I."
+    },
+    {
+     "id": "89d41086-c7b5-4507-856f-d083bffe9e21",
+     "label": "Meera V."
+    }
+   ],
+   "more": 0,
+   "action": {
+    "label": "اعرض الطلبات",
+    "href": "/app/orders?show=ready"
+   },
+   "status": null,
+   "snooze": {
+    "key": "ready",
+    "fingerprint": "3472cff406ca9e9f"
+   }
+  },
+  {
+   "key": "no_show_rate",
+   "kind": "knowledge",
+   "title": [
+    {
+     "b": "20%"
+    },
+    " من المواعيد غياب خلال 30 يوماً"
+   ],
+   "line": [
+    {
+     "b": "5"
+    },
+    " غياب. التذكير يصل قبل كل موعد بساعتين."
+   ],
+   "rule": "القاعدة · الغياب ÷ (الحضور + الغياب) خلال 30 يوماً؛ 10% أو أكثر مع 3 حالات أو أكثر · 5 زيارات",
+   "rows": [],
+   "more": 0,
+   "action": null,
+   "status": "للعلم فقط.",
+   "snooze": {
+    "key": "no_show_rate",
+    "fingerprint": "995501c4935e5e82"
+   }
+  }
+ ],
+ "done": {
+  "rows": [
+   {
+    "key": "sent",
+    "value": "186",
+    "label": "رسالة أرسلتها ALYR نيابة عنك",
+    "href": "/app/inbox"
+   },
+   {
+    "key": "booking_reminders",
+    "value": "7",
+    "label": "تذكيرات بالمواعيد",
+    "href": "/app/bookings"
+   },
+   {
+    "key": "paid",
+    "value": "3,706 ر.ق",
+    "label": "دُفعت عبر روابط ALYR",
+    "href": "/app/orders?show=paid"
+   }
+  ],
+  "empty": "لا شيء بعد هذا الأسبوع."
+ },
+ "week": {
+  "title": "المبيعات هذا الأسبوع",
+  "format": "money",
+  "max": 296500,
+  "days": [
+   {
+    "date": "2026-10-11",
+    "label": "أحد",
+    "state": "past",
+    "value": 196100,
+    "value_text": "1,961 ر.ق",
+    "last": 163000,
+    "last_text": "1,630 ر.ق",
+    "booked": null
+   },
+   {
+    "date": "2026-10-12",
+    "label": "إثنين",
+    "state": "past",
+    "value": 135800,
+    "value_text": "1,358 ر.ق",
+    "last": 192300,
+    "last_text": "1,923 ر.ق",
+    "booked": null
+   },
+   {
+    "date": "2026-10-13",
+    "label": "ثلاثاء",
+    "state": "past",
+    "value": 296500,
+    "value_text": "2,965 ر.ق",
+    "last": 110400,
+    "last_text": "1,104 ر.ق",
+    "booked": null
+   },
+   {
+    "date": "2026-10-14",
+    "label": "أربعاء",
+    "state": "past",
+    "value": 93500,
+    "value_text": "935 ر.ق",
+    "last": 165800,
+    "last_text": "1,658 ر.ق",
+    "booked": null
+   },
+   {
+    "date": "2026-10-15",
+    "label": "خميس",
+    "state": "today",
+    "value": 236900,
+    "value_text": "2,369 ر.ق",
+    "last": 287000,
+    "last_text": "2,870 ر.ق",
+    "booked": null
+   },
+   {
+    "date": "2026-10-16",
+    "label": "جمعة",
+    "state": "coming",
+    "value": null,
+    "value_text": null,
+    "last": 21200,
+    "last_text": "212 ر.ق",
+    "booked": null
+   },
+   {
+    "date": "2026-10-17",
+    "label": "سبت",
+    "state": "coming",
+    "value": null,
+    "value_text": null,
+    "last": 165500,
+    "last_text": "1,655 ر.ق",
+    "booked": null
+   }
+  ],
+  "total_text": "9,588 ر.ق"
+ },
+ "hours": {
+  "title": "أكثر الساعات ازدحاماً، 28 يوماً",
+  "hours": [
+   "06",
+   "07",
+   "08",
+   "09",
+   "10",
+   "11",
+   "12",
+   "13",
+   "14",
+   "15",
+   "16",
+   "17",
+   "18",
+   "19",
+   "20",
+   "21"
+  ],
+  "rows": [
+   {
+    "label": "أحد",
+    "cells": [
+     0,
+     0,
+     4,
+     1,
+     1,
+     1,
+     0,
+     1,
+     0,
+     1,
+     1,
+     0,
+     2,
+     1,
+     0,
+     2
+    ]
+   },
+   {
+    "label": "إثنين",
+    "cells": [
+     0,
+     1,
+     3,
+     1,
+     1,
+     2,
+     1,
+     1,
+     0,
+     2,
+     1,
+     1,
+     1,
+     1,
+     1,
+     1
+    ]
+   },
+   {
+    "label": "ثلاثاء",
+    "cells": [
+     0,
+     1,
+     2,
+     2,
+     1,
+     0,
+     0,
+     1,
+     0,
+     1,
+     0,
+     2,
+     1,
+     1,
+     2,
+     2
+    ]
+   },
+   {
+    "label": "أربعاء",
+    "cells": [
+     0,
+     0,
+     1,
+     2,
+     1,
+     1,
+     2,
+     2,
+     0,
+     1,
+     1,
+     2,
+     2,
+     0,
+     1,
+     1
+    ]
+   },
+   {
+    "label": "خميس",
+    "cells": [
+     0,
+     2,
+     2,
+     2,
+     1,
+     1,
+     1,
+     1,
+     0,
+     1,
+     2,
+     2,
+     2,
+     2,
+     1,
+     0
+    ]
+   },
+   {
+    "label": "جمعة",
+    "cells": [
+     0,
+     0,
+     0,
+     0,
+     0,
+     0,
+     0,
+     0,
+     0,
+     0,
+     1,
+     2,
+     1,
+     1,
+     2,
+     1
+    ]
+   },
+   {
+    "label": "سبت",
+    "cells": [
+     0,
+     1,
+     2,
+     2,
+     2,
+     1,
+     1,
+     1,
+     0,
+     1,
+     1,
+     1,
+     2,
+     1,
+     1,
+     1
+    ]
+   }
+  ],
+  "top": "أيام الأحد 08:00–09:00",
+  "top3": [
+   "أيام الأحد 08:00–09:00",
+   "أيام الاثنين 08:00–09:00",
+   "أيام الأحد 18:00–19:00"
+  ]
+ },
+ "top": {
+  "title": "الأكثر طلباً، 28 يوماً",
+  "rows": [
+   {
+    "name": "خبز الهيل",
+    "value": 176,
+    "value_text": "176",
+    "share": 1.0,
+    "change": {
+     "dir": "level",
+     "text": "—"
+    }
+   },
+   {
+    "name": "كرواسون بالزبدة",
+    "value": 172,
+    "value_text": "172",
+    "share": 0.977,
+    "change": {
+     "dir": "up",
+     "text": "▲ 3"
+    }
+   },
+   {
+    "name": "لفائف القرفة",
+    "value": 155,
+    "value_text": "155",
+    "share": 0.881,
+    "change": {
+     "dir": "up",
+     "text": "▲ 3"
+    }
+   },
+   {
+    "name": "خبز العجين المخمّر",
+    "value": 148,
+    "value_text": "148",
+    "share": 0.841,
+    "change": {
+     "dir": "level",
+     "text": "—"
+    }
+   },
+   {
+    "name": "كرواسون بالزعتر",
+    "value": 128,
+    "value_text": "128",
+    "share": 0.727,
+    "change": {
+     "dir": "down",
+     "text": "▼ 2"
+    }
+   }
+  ]
+ },
+ "owed": {
+  "title": "المستحق لك",
+  "total_text": "12,779 ر.ق",
+  "customers": "5 عملاء",
+  "segments": [
+   {
+    "key": "d0_30",
+    "label": "0–30 يوماً",
+    "amount_text": "6,282 ر.ق",
+    "share": 0.492
+   },
+   {
+    "key": "d31_60",
+    "label": "31–60",
+    "amount_text": "3,607 ر.ق",
+    "share": 0.282
+   },
+   {
+    "key": "d61_90",
+    "label": "61–90",
+    "amount_text": "1,640 ر.ق",
+    "share": 0.128
+   },
+   {
+    "key": "d90_plus",
+    "label": "أكثر من 90 يوماً",
+    "amount_text": "1,250 ر.ق",
+    "share": 0.098
+   }
+  ],
+  "oldest": [
+   "الأقدم: Ward Events، منذ 104 أيام، ",
+   {
+    "b": "1,250 ر.ق"
+   },
+   "."
+  ],
+  "empty": "لا أحد عليه مستحقات لك."
+ },
+ "team": {
+  "rows": [
+   {
+    "name": "Huda Rahim",
+    "replies": 4,
+    "first_answer": "5 د",
+    "open": 0,
+    "waiting": 0
+   },
+   {
+    "name": "Karim Nasr",
+    "replies": 8,
+    "first_answer": "5 د",
+    "open": 1,
+    "waiting": 1
+   },
+   {
+    "name": "Yusuf Amin",
+    "replies": 10,
+    "first_answer": "7 د",
+    "open": 5,
+    "waiting": 2
+   }
+  ],
+  "unassigned": null,
+  "everyone": true
+ },
+ "report": [
+  "يصل تقريرك إلى رقم واحد يوم الأحد الساعة ",
+  {
+   "b": "9:00"
+  },
+  "."
+ ],
+ "comparisons_from": null
+}

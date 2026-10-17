@@ -102,3 +102,20 @@ ALY-99, branch `aly-agent-dashboard`. One entry per stage, newest last, so a sta
   - **Credit accounts:** `overdue`, `promised`, `promise_passed`, `over_limit`.
 - The filters apply the same rules as the engine. The ledger summary now marks a customer whose promised date passed (`promise_passed`).
 - "Not now" was small enough to build (stage 2).
+
+### Stage 5 · the salon, the clinic and the sample screens
+
+- **`alyr.seed_bookings`:** Sadaf Salon («صالون صدف») and Ruwaa Dental Clinic («عيادة رؤى للأسنان»). Both take bookings only, from the salon and clinic presets.
+  - **The diary:** eight weeks, filled one customer at a time, as the shop's single-booking rule requires. The days ahead fill as lead times allow.
+  - **What happens in it:**
+    - no-shows, two of them from regulars who missed twice and are booked again;
+    - late cancellations, reminders, regulars, a few who went quiet and customers due back;
+    - questions in each trade's words, answered by a person;
+    - two customers waiting now.
+  - **Both reuse the bakery's helpers.** `seed_qirfa.Bakery` now reads its number, slug and fastest responder from the instance, and its contact states and stored report follow the copy's own moment.
+  - **Other states:** `days=0` gives an empty business, and a few days a business in its first week.
+- **`alyr.agent_samples`:** seeds all three at a fixed moment, Thursday 15 Oct 2026, 16:20 Doha. It reads each owner's real `AgentView` and writes `apps/web/app/_agent/samples/{bakery,salon,clinic}.{en,ar}.json`. Two runs give byte-identical files.
+- **Tests:** `tests/test_agent_samples.py` checks that:
+  - each sample comes out the same every time and has nothing that can reach a phone;
+  - the empty state works;
+  - the committed fixtures match the engine's version and shape and contain no AI words.

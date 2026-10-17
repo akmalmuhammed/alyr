@@ -1,0 +1,540 @@
+{
+ "version": 1,
+ "lang": "ar",
+ "dir": "rtl",
+ "now": "2026-10-15T13:20:00+00:00",
+ "state": "normal",
+ "money": true,
+ "lead": "bookings",
+ "header": {
+  "eyebrow": "اليوم · الخميس 15 أكتوبر · 16:20 الدوحة",
+  "greeting": "مساء الخير يا Lamees.",
+  "summary": [
+   {
+    "muted": false,
+    "text": [
+     "الأسبوع حتى الآن: 26 زيارة، وغياب 2."
+    ]
+   },
+   {
+    "muted": true,
+    "text": [
+     "أكثر بـ",
+     {
+      "b": "3"
+     },
+     " من الأيام نفسها في الأسبوع الماضي."
+    ]
+   },
+   {
+    "muted": false,
+    "text": [
+     "15 زيارة محجوزة للأيام السبعة القادمة."
+    ]
+   },
+   {
+    "muted": false,
+    "text": [
+     "عميلان بانتظار الرد."
+    ]
+   }
+  ],
+  "updated": "حُدّث 16:20"
+ },
+ "needs": {
+  "items": [
+   {
+    "key": "waiting",
+    "count": 2,
+    "words": [
+     "عملاء بانتظار الرد"
+    ],
+    "detail": [
+     "أطولهم منذ ",
+     {
+      "b": "37 د"
+     }
+    ],
+    "href": "/app/inbox?show=waiting",
+    "rule": "القاعدة · آخر رسالة من العميل ولم يُرد عليها منذ 10 دقائق · عميلان"
+   },
+   {
+    "key": "unmarked",
+    "count": 1,
+    "words": [
+     "زيارةة لم تُسجَّل"
+    ],
+    "detail": [
+     "أرقام الغياب ناقصة حتى تُسجَّل."
+    ],
+    "href": "/app/bookings?show=unmarked",
+    "rule": "القاعدة · محجوز وانتهى وقته · زيارة واحدة"
+   }
+  ],
+  "empty": "لا شيء ينتظرك."
+ },
+ "kpis": [
+  {
+   "key": "visits",
+   "label": "الزيارات هذا الأسبوع",
+   "value": "26",
+   "money": false,
+   "href": "/app/bookings",
+   "change": {
+    "dir": "up",
+    "text": [
+     "▲ ",
+     {
+      "b": "13%"
+     },
+     " عن الأسبوع الماضي"
+    ]
+   }
+  },
+  {
+   "key": "booked_ahead",
+   "label": "محجوز للأيام السبعة القادمة",
+   "value": "15",
+   "money": false,
+   "href": "/app/bookings",
+   "change": null
+  },
+  {
+   "key": "no_show_rate",
+   "label": "الغياب خلال 30 يوماً",
+   "value": "7%",
+   "money": false,
+   "href": "/app/bookings?show=no_show",
+   "change": null
+  },
+  {
+   "key": "new_bookings",
+   "label": "حجوزات جديدة",
+   "value": "36",
+   "money": false,
+   "href": "/app/bookings",
+   "change": {
+    "dir": "up",
+    "text": [
+     "▲ ",
+     {
+      "b": "57%"
+     },
+     " عن الأسبوع الماضي"
+    ]
+   }
+  }
+ ],
+ "placeholders": [],
+ "suggestions": [
+  {
+   "key": "repeat_no_show",
+   "kind": "knowledge",
+   "title": [
+    "عميلان تغيّبوا مرتين ولديهم حجز جديد"
+   ],
+   "line": [
+    "Rasha F. محجوز يوم السبت 21:00."
+   ],
+   "rule": "القاعدة · غياب مرتين أو أكثر خلال 90 يوماً، وحجز خلال الأيام السبعة القادمة · عميلان",
+   "rows": [
+    {
+     "id": "e2873419-fddd-4660-96d7-cfe5a63a7d9b",
+     "label": "Rasha F."
+    },
+    {
+     "id": "472b1c08-8314-44f7-89d7-05c99c93e20f",
+     "label": "Rohan J."
+    }
+   ],
+   "more": 0,
+   "action": {
+    "label": "اعرض الحجوزات",
+    "href": "/app/bookings?show=repeat_no_show"
+   },
+   "status": null,
+   "snooze": {
+    "key": "repeat_no_show",
+    "fingerprint": "a54c5cae277d4cbb"
+   }
+  },
+  {
+   "key": "quiet_regulars",
+   "kind": "knowledge",
+   "title": [
+    "زبون دائم واحد غابوا أكثر من 30 يوماً"
+   ],
+   "line": [
+    "Ethan B.: 3 مرات من قبل، آخرها قبل 32 يوماً."
+   ],
+   "rule": "القاعدة · 3 طلبات أو زيارات أو أكثر قبل 31 إلى 120 يوماً، ولا شيء خلال آخر 30 يوماً · زبون دائم واحد",
+   "rows": [
+    {
+     "id": "4ef87403-7627-4ba9-9d52-257fb793b4ea",
+     "label": "Ethan B."
+    }
+   ],
+   "more": 0,
+   "action": null,
+   "status": "الرسائل لعدد كبير من العملاء تحتاج موافقة تسويقية. قريباً.",
+   "snooze": {
+    "key": "quiet_regulars",
+    "fingerprint": "dda85664a4714775"
+   }
+  },
+  {
+   "key": "due_back",
+   "kind": "knowledge",
+   "title": [
+    "عميل واحد حان موعد عودتهم"
+   ],
+   "line": [
+    "Ethan B. يأتي عادة كل 10 أيام، ومضى 32 يوماً."
+   ],
+   "rule": "القاعدة · 3 زيارات أو أكثر، وآخرها أبعد من 1.5 × المعتاد، ولا حجز قادم · عميل واحد",
+   "rows": [
+    {
+     "id": "4ef87403-7627-4ba9-9d52-257fb793b4ea",
+     "label": "Ethan B."
+    }
+   ],
+   "more": 0,
+   "action": null,
+   "status": "الرسائل لعدد كبير من العملاء تحتاج موافقة تسويقية. قريباً.",
+   "snooze": {
+    "key": "due_back",
+    "fingerprint": "04f8e9978f492fab"
+   }
+  }
+ ],
+ "done": {
+  "rows": [
+   {
+    "key": "sent",
+    "value": "103",
+    "label": "رسائل أرسلتها ALYR نيابة عنك",
+    "href": "/app/inbox"
+   },
+   {
+    "key": "booking_reminders",
+    "value": "31",
+    "label": "تذكيراً بالمواعيد",
+    "href": "/app/bookings"
+   }
+  ],
+  "empty": "لا شيء بعد هذا الأسبوع."
+ },
+ "week": {
+  "title": "الزيارات هذا الأسبوع",
+  "format": "count",
+  "max": 8,
+  "days": [
+   {
+    "date": "2026-10-11",
+    "label": "أحد",
+    "state": "past",
+    "value": 5,
+    "value_text": "5",
+    "last": 6,
+    "last_text": "6",
+    "booked": null
+   },
+   {
+    "date": "2026-10-12",
+    "label": "إثنين",
+    "state": "past",
+    "value": 4,
+    "value_text": "4",
+    "last": 7,
+    "last_text": "7",
+    "booked": null
+   },
+   {
+    "date": "2026-10-13",
+    "label": "ثلاثاء",
+    "state": "past",
+    "value": 8,
+    "value_text": "8",
+    "last": 4,
+    "last_text": "4",
+    "booked": null
+   },
+   {
+    "date": "2026-10-14",
+    "label": "أربعاء",
+    "state": "past",
+    "value": 5,
+    "value_text": "5",
+    "last": 3,
+    "last_text": "3",
+    "booked": null
+   },
+   {
+    "date": "2026-10-15",
+    "label": "خميس",
+    "state": "today",
+    "value": 4,
+    "value_text": "4",
+    "last": 3,
+    "last_text": "3",
+    "booked": 0.26
+   },
+   {
+    "date": "2026-10-16",
+    "label": "جمعة",
+    "state": "coming",
+    "value": null,
+    "value_text": null,
+    "last": 2,
+    "last_text": "2",
+    "booked": 0.41
+   },
+   {
+    "date": "2026-10-17",
+    "label": "سبت",
+    "state": "coming",
+    "value": null,
+    "value_text": null,
+    "last": 2,
+    "last_text": "2",
+    "booked": 0.19
+   }
+  ],
+  "total_text": "26"
+ },
+ "hours": {
+  "title": "أكثر الساعات ازدحاماً، 28 يوماً",
+  "hours": [
+   "10",
+   "11",
+   "12",
+   "13",
+   "14",
+   "15",
+   "16",
+   "17",
+   "18",
+   "19",
+   "20",
+   "21"
+  ],
+  "rows": [
+   {
+    "label": "أحد",
+    "cells": [
+     2,
+     2,
+     2,
+     2,
+     0,
+     2,
+     0,
+     1,
+     1,
+     0,
+     0,
+     1
+    ]
+   },
+   {
+    "label": "إثنين",
+    "cells": [
+     3,
+     2,
+     2,
+     0,
+     2,
+     1,
+     1,
+     0,
+     2,
+     1,
+     1,
+     2
+    ]
+   },
+   {
+    "label": "ثلاثاء",
+    "cells": [
+     4,
+     2,
+     1,
+     2,
+     2,
+     1,
+     1,
+     1,
+     0,
+     0,
+     2,
+     2
+    ]
+   },
+   {
+    "label": "أربعاء",
+    "cells": [
+     2,
+     3,
+     1,
+     3,
+     2,
+     0,
+     1,
+     1,
+     0,
+     1,
+     0,
+     0
+    ]
+   },
+   {
+    "label": "خميس",
+    "cells": [
+     4,
+     3,
+     2,
+     3,
+     1,
+     1,
+     1,
+     2,
+     0,
+     0,
+     0,
+     0
+    ]
+   },
+   {
+    "label": "جمعة",
+    "cells": [
+     0,
+     0,
+     0,
+     0,
+     4,
+     2,
+     2,
+     1,
+     1,
+     2,
+     0,
+     1
+    ]
+   },
+   {
+    "label": "سبت",
+    "cells": [
+     2,
+     3,
+     1,
+     2,
+     2,
+     1,
+     1,
+     1,
+     0,
+     1,
+     1,
+     0
+    ]
+   }
+  ],
+  "top": "أيام الثلاثاء 10:00–11:00",
+  "top3": [
+   "أيام الثلاثاء 10:00–11:00",
+   "أيام الخميس 10:00–11:00",
+   "أيام الجمعة 14:00–15:00"
+  ]
+ },
+ "top": {
+  "title": "أكثر الخدمات حجزاً، 28 يوماً",
+  "rows": [
+   {
+    "name": "قص شعر",
+    "value": 42,
+    "value_text": "42",
+    "share": 1.0,
+    "change": {
+     "dir": "level",
+     "text": "—"
+    }
+   },
+   {
+    "name": "تهذيب اللحية",
+    "value": 23,
+    "value_text": "23",
+    "share": 0.548,
+    "change": {
+     "dir": "level",
+     "text": "—"
+    }
+   },
+   {
+    "name": "قص شعر ولحية",
+    "value": 19,
+    "value_text": "19",
+    "share": 0.452,
+    "change": {
+     "dir": "up",
+     "text": "▲ 1"
+    }
+   },
+   {
+    "name": "قص شعر للأطفال",
+    "value": 9,
+    "value_text": "9",
+    "share": 0.214,
+    "change": {
+     "dir": "down",
+     "text": "▼ 1"
+    }
+   },
+   {
+    "name": "صبغ الشعر",
+    "value": 6,
+    "value_text": "6",
+    "share": 0.143,
+    "change": {
+     "dir": "level",
+     "text": "—"
+    }
+   }
+  ]
+ },
+ "owed": null,
+ "team": {
+  "rows": [
+   {
+    "name": "Hiba Taher",
+    "replies": 10,
+    "first_answer": "9 د",
+    "open": 1,
+    "waiting": 1
+   },
+   {
+    "name": "Lamees Adel",
+    "replies": 0,
+    "first_answer": "—",
+    "open": 1,
+    "waiting": 0
+   },
+   {
+    "name": "Sana Rao",
+    "replies": 2,
+    "first_answer": "15 د",
+    "open": 2,
+    "waiting": 1
+   }
+  ],
+  "unassigned": null,
+  "everyone": true
+ },
+ "report": [
+  "يصل تقريرك إلى رقم واحد يوم الأحد الساعة ",
+  {
+   "b": "9:00"
+  },
+  "."
+ ],
+ "comparisons_from": null
+}
