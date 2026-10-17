@@ -21,8 +21,16 @@ Anything else belongs to another lane. If a task needs it, keep the change small
 
 ## Now (update this section in the same pull request as the work)
 
-Last updated 17 Oct 2026 (night).
+Last updated 17 Oct 2026 (late).
 
+- **ALY-103, Catalog package 2: the photo pipeline, Cloudflare R2 storage, caps and meters (D-039), branch `aly-103-photos-r2`, PR #65, not merged.** API only; migration 0023.
+  - Upload: `POST /api/media/photos` takes the photo as the request body. `core/images.py` decides the type by content (JPEG, PNG, WebP), refuses SVG, markup, hidden code, damaged and animated files and anything over the byte or pixel limit, turns it upright, and draws it again from its pixels so no location, camera or other metadata survives (the output is checked for metadata chunks). Three WebP sizes (long side 320, 800, 1,600, never enlarged), named by the upload's SHA-256, in `shops/<shop id>/`. The same file twice is stored once.
+  - Storage: `core/storage.py`, one small interface. `S3Store` is Cloudflare R2 with hand-written SigV4 (region `auto`, path-style); `LocalStore` is disk, for development, every test and when the R2 settings are missing. Settings `ALYR_R2_ACCOUNT_ID`, `ALYR_R2_ACCESS_KEY_ID`, `ALYR_R2_SECRET_ACCESS_KEY`, `ALYR_R2_BUCKET`, `ALYR_MEDIA_BASE_URL`.
+  - Writes go through a queue (`media_ops`, job `media.sync`, up to 48 tries about an hour apart), so R2 being down never fails a request: the photo shows as `pending` (a placeholder) and appears when R2 is back.
+  - Caps (`ALYR_CATALOG_MAX_PHOTOS` 3,000 and `ALYR_CATALOG_MAX_ITEMS` 1,000) refuse with a bilingual message and delete nothing. Monthly meters per shop (`media_usage`): photos, GB stored with the month's peak, uploads, duplicates, refused, active items. `GET /api/media/usage` for the shop, `GET /api/admin/media/usage` for the back office with the 80% flag against 10 GB.
+  - Back office: `POST /api/admin/media/remove` takes a reported photo down (by its web address, with a reason), unlinks it, deletes its files, refuses the same file afterwards, and writes the audit record.
+  - For the catalog (ALY-102 follow-up): `app.state.media.attach / detach / photos_for / covers_for / assert_can_add_item`, and set `app.state.media.item_counter` to count live items. Photos are linked by `media_links` (owner kind `item`, owner id), which has no foreign key to items.
+  - Still missing: linking photos to real items (routes, the 8-photo rule on the item screen, cover choice, showing photos in the item lists and on the order page), the web page that shrinks photos before upload with progress and retry (ALY-104), the back-office usage screen (ALY-109), automatic clean-up of photos never attached to anything, per-shop cap overrides, a native review of the Arabic messages (ALY-66), and a live run of the R2 smoke test (the reviewer's; `docs/runbooks/photo-storage.md`).
 - **ALY-99, the Sunday report as a report card (D-038), branch `aly-99-report-card`, PR #56, not merged.**
   - The card image: `modules/agent/card.py` (SVG rendered with resvg, Arabic in right-to-left embeddings and mirrored, the brand fonts embedded under the OFL), from `modules/agent/week.py`, which reads the closed week with the dashboard's engine.
   - The text under it: a summary by the engine's rules, one line per product with the main product first, what ALYR did, one next step with its rule.
