@@ -1,0 +1,126 @@
+{
+ "sample": true,
+ "sent_at": "2026-10-11T06:00:00+00:00",
+ "week": "4–10 Oct",
+ "caption": "*ALYR weekly report* · Dafira Salon · 4–10 Oct\nLast week: 28 visits, 3 no-shows. Visits up 33% on the week before.\n\n*ALYR Bookings* · 28 visits, 3 no-shows · 17 booked for this week\n*Done for you* · ALYR sent 105 messages and 31 booking reminders for you.\n\n*Next step* · Show the bookings: 4 customers who missed twice are booked again.\n_Rule · 2+ no-shows in 90 days, booked in the next 7 · 4 customers_",
+ "lines": [
+  "*ALYR weekly report* · Dafira Salon · 4–10 Oct",
+  "Last week: 28 visits, 3 no-shows. Visits up 33% on the week before.",
+  "",
+  "*ALYR Bookings* · 28 visits, 3 no-shows · 17 booked for this week",
+  "*Done for you* · ALYR sent 105 messages and 31 booking reminders for you.",
+  "",
+  "*Next step* · Show the bookings: 4 customers who missed twice are booked again.",
+  "_Rule · 2+ no-shows in 90 days, booked in the next 7 · 4 customers_"
+ ],
+ "template": {
+  "name": "weekly_report_card",
+  "values": [
+   "Dafira Salon",
+   "4–10 Oct",
+   "Last week: 28 visits, 3 no-shows. Visits up 33% on the week before.",
+   "ALYR Bookings: 28 visits, 3 no-shows",
+   "Show the bookings: 4 customers who missed twice are booked again (rule · 2+ no-shows in 90 days, booked in the next 7 · 4 customers)"
+  ]
+ },
+ "card": {
+  "lang": "en",
+  "dir": "ltr",
+  "shop": "Dafira Salon",
+  "week": "4–10 Oct",
+  "eyebrow": "Agent · Weekly report",
+  "hero": {
+   "key": "visits",
+   "label": "Visits",
+   "value": "28",
+   "unit": null,
+   "change": {
+    "dir": "up",
+    "text": "up 33% on the week before"
+   }
+  },
+  "days": [
+   {
+    "label": "Sun",
+    "state": "past",
+    "value": 3,
+    "last": 3,
+    "text": "3",
+    "signal": false
+   },
+   {
+    "label": "Mon",
+    "state": "past",
+    "value": 5,
+    "last": 4,
+    "text": "5",
+    "signal": false
+   },
+   {
+    "label": "Tue",
+    "state": "past",
+    "value": 4,
+    "last": 3,
+    "text": "4",
+    "signal": false
+   },
+   {
+    "label": "Wed",
+    "state": "past",
+    "value": 2,
+    "last": 1,
+    "text": "2",
+    "signal": false
+   },
+   {
+    "label": "Thu",
+    "state": "past",
+    "value": 4,
+    "last": 3,
+    "text": "4",
+    "signal": false
+   },
+   {
+    "label": "Fri",
+    "state": "past",
+    "value": 3,
+    "last": 3,
+    "text": "3",
+    "signal": false
+   },
+   {
+    "label": "Sat",
+    "state": "past",
+    "value": 7,
+    "last": 4,
+    "text": "7",
+    "signal": true
+   }
+  ],
+  "legend": {
+   "this": "Last week",
+   "before": "The week before"
+  },
+  "facts": [
+   {
+    "key": "no_shows",
+    "label": "No-shows",
+    "value": "3",
+    "note": "of 31 visits due"
+   },
+   {
+    "key": "booked_ahead",
+    "label": "Booked, this week",
+    "value": "17",
+    "note": "visits, next 7 days"
+   },
+   {
+    "key": "wrote",
+    "label": "Wrote to you",
+    "value": "33",
+    "note": "customers"
+   }
+  ],
+  "state": "normal"
+ }
+}

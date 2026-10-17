@@ -1,0 +1,127 @@
+{
+ "sample": true,
+ "sent_at": "2026-10-11T06:00:00+00:00",
+ "week": "4–10 Oct",
+ "caption": "*ALYR weekly report* · Zilal Cooling · 4–10 Oct\nLast week: 22 jobs, 1 no-show. The week before: 19 jobs.\n\n*ALYR Bookings* · 22 jobs, 1 no-show · 9 booked for this week\n*ALYR Accounts* · QAR 4,500 collected · QAR 13,400 owed by 2 customers · QAR 1,400 over 60 days\n*Done for you* · ALYR sent 85 messages and 23 booking reminders for you.\n\n*Next step* · Send reminders: QAR 7,400 owed 30+ days, not reminded in 7 days.\n_Rule · owed 30+ days, no promise, no reminder in 7 days · 2 customers_",
+ "lines": [
+  "*ALYR weekly report* · Zilal Cooling · 4–10 Oct",
+  "Last week: 22 jobs, 1 no-show. The week before: 19 jobs.",
+  "",
+  "*ALYR Bookings* · 22 jobs, 1 no-show · 9 booked for this week",
+  "*ALYR Accounts* · QAR 4,500 collected · QAR 13,400 owed by 2 customers · QAR 1,400 over 60 days",
+  "*Done for you* · ALYR sent 85 messages and 23 booking reminders for you.",
+  "",
+  "*Next step* · Send reminders: QAR 7,400 owed 30+ days, not reminded in 7 days.",
+  "_Rule · owed 30+ days, no promise, no reminder in 7 days · 2 customers_"
+ ],
+ "template": {
+  "name": "weekly_report_card",
+  "values": [
+   "Zilal Cooling",
+   "4–10 Oct",
+   "Last week: 22 jobs, 1 no-show. The week before: 19 jobs.",
+   "ALYR Bookings: 22 jobs, 1 no-show · ALYR Accounts: QAR 4,500 collected",
+   "Send reminders: QAR 7,400 owed 30+ days, not reminded in 7 days (rule · owed 30+ days, no promise, no reminder in 7 days · 2 customers)"
+  ]
+ },
+ "card": {
+  "lang": "en",
+  "dir": "ltr",
+  "shop": "Zilal Cooling",
+  "week": "4–10 Oct",
+  "eyebrow": "Agent · Weekly report",
+  "hero": {
+   "key": "visits",
+   "label": "Jobs",
+   "value": "22",
+   "unit": null,
+   "change": {
+    "dir": null,
+    "text": "The week before: 19"
+   }
+  },
+  "days": [
+   {
+    "label": "Sun",
+    "state": "past",
+    "value": 3,
+    "last": 4,
+    "text": "3",
+    "signal": false
+   },
+   {
+    "label": "Mon",
+    "state": "past",
+    "value": 5,
+    "last": 2,
+    "text": "5",
+    "signal": true
+   },
+   {
+    "label": "Tue",
+    "state": "past",
+    "value": 3,
+    "last": 2,
+    "text": "3",
+    "signal": false
+   },
+   {
+    "label": "Wed",
+    "state": "past",
+    "value": 4,
+    "last": 4,
+    "text": "4",
+    "signal": false
+   },
+   {
+    "label": "Thu",
+    "state": "past",
+    "value": 3,
+    "last": 3,
+    "text": "3",
+    "signal": false
+   },
+   {
+    "label": "Fri",
+    "state": "closed",
+    "value": null,
+    "last": 0,
+    "text": null,
+    "signal": false
+   },
+   {
+    "label": "Sat",
+    "state": "past",
+    "value": 4,
+    "last": 4,
+    "text": "4",
+    "signal": false
+   }
+  ],
+  "legend": {
+   "this": "Last week",
+   "before": "The week before"
+  },
+  "facts": [
+   {
+    "key": "no_shows",
+    "label": "No-shows",
+    "value": "1",
+    "note": "of 23 jobs due"
+   },
+   {
+    "key": "owed",
+    "label": "Owed to you",
+    "value": "QAR 13,400",
+    "note": "by 2 customers"
+   },
+   {
+    "key": "booked_ahead",
+    "label": "Booked, this week",
+    "value": "9",
+    "note": "jobs, next 7 days"
+   }
+  ],
+  "state": "normal"
+ }
+}
