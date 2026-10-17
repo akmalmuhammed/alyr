@@ -186,14 +186,14 @@ svg { display: block; }
    at the very top of a page once scripts run. */
 .top {
   position: sticky; top: 0; z-index: 20; border-bottom: 1px solid var(--line);
-  background: color-mix(in srgb, var(--canvas) 94%, transparent); backdrop-filter: saturate(1.4) blur(14px); -webkit-backdrop-filter: saturate(1.4) blur(14px);
+  background: var(--canvas);
   transition: background var(--medium) var(--ease), border-color var(--medium) var(--ease);
 }
 .al-js .top:not([data-scrolled]) { background: transparent; backdrop-filter: none; -webkit-backdrop-filter: none; border-bottom-color: transparent; }
 .top-in { display: flex; align-items: center; gap: 2rem; height: var(--header); transition: height var(--medium) var(--ease); }
 .top[data-scrolled] .top-in { height: 3.75rem; }
 /* over a full-bleed Carbon section the header turns Carbon too (SiteMotion), with white words */
-.top[data-on-dark] { background: color-mix(in srgb, var(--band) 92%, transparent); border-bottom-color: var(--dark-line); }
+.top[data-on-dark] { background: var(--band); border-bottom-color: var(--dark-line); }
 .top[data-on-dark] .logo, .top[data-on-dark] .logo-mark { color: #fff; }
 .top[data-on-dark] .top-nav a, .top[data-on-dark] .top-lang { color: var(--concrete); }
 .top[data-on-dark] .top-nav a:hover, .top[data-on-dark] .top-lang:hover, .top[data-on-dark] .top-nav a[aria-current="page"] { color: #fff; }

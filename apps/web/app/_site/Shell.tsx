@@ -101,7 +101,6 @@ export function Shell({
                   ) : (
                     <p className="cta-write">
                       <ContactAddress locale={locale} className="cta-address" />
-                      <span>{rich(t.contact.replyShort)}</span>
                     </p>
                   )}
                   <p className="cta-small">{t.contact.commits}</p>

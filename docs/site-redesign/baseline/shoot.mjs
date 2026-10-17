@@ -16,6 +16,9 @@
 //   --as-scrolled       on a full page, leave scroll-driven text as it is at the top of the page.
 //                       By default a full page shows every section as it looks once read: the
 //                       site's [data-reveal] sections arrived and its [data-statement] words lit
+//   --at=#contact       one screen, scrolled in steps until this CSS selector is at the top
+//   --offset=120        with --at: stop this many px above the element
+//   --settle=1600       with --at: milliseconds to wait at the element before the capture
 //   --profile=C:\t\shotsprof   Edge profile folder. Keep it short: Edge misbehaves with long paths
 //   --edge=<path>       msedge.exe, if it is not in the usual place
 //
@@ -212,6 +215,25 @@ async function main() {
 
     const evaluate = async (expression) =>
       (await send("Runtime.evaluate", { expression, returnByValue: true, awaitPromise: true })).result.value;
+
+    const at = option("at", "");
+    if (!full && at) {
+      // Scroll in steps to an element (a CSS selector), so everything on the way arrives as
+      // it does for a reader, then let its own entrance finish before the capture.
+      const target = await evaluate(
+        `(() => { const n = document.querySelector(${JSON.stringify(at)}); return n ? Math.round(n.getBoundingClientRect().top + scrollY) : -1 })()`,
+      );
+      if (target < 0) throw new Error(`no element matches ${at}`);
+      const goal = Math.max(0, target - Number(option("offset", "0")));
+      for (let y = 0; y < goal; y += Math.round(height * 0.6)) {
+        await evaluate(`window.scrollTo(0, ${y})`);
+        await sleep(220);
+      }
+      await evaluate(`window.scrollTo(0, ${goal})`);
+      await sleep(Number(option("settle", "1600")));
+    }
+    const probe = option("eval", "");
+    if (probe) console.log(JSON.stringify(await evaluate(probe)));
 
     let clip;
     if (full) {
