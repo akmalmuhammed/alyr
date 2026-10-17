@@ -26,18 +26,14 @@ const plexMono = IBM_Plex_Mono({
   variable: "--font-plex-mono", subsets: ["latin"], weight: ["500"], display: "swap",
 });
 
+/** The colour the browser puts around the page in each theme: the page's own canvas. */
+const THEME_COLOR = { light: "#f6f7f3", dark: "#0e1012" } as const;
+
+/** Every public page follows the device into dark mode. */
 export const siteViewport: Viewport = {
   themeColor: [
-    { media: "(prefers-color-scheme: light)", color: "#f6f7f3" },
-    { media: "(prefers-color-scheme: dark)", color: "#f6f7f3" },
-  ],
-};
-
-/** The homepage follows the device into dark mode; the ALYR Chat page stays light. */
-export const homeViewport: Viewport = {
-  themeColor: [
-    { media: "(prefers-color-scheme: light)", color: "#f6f7f3" },
-    { media: "(prefers-color-scheme: dark)", color: "#0e1012" },
+    { media: "(prefers-color-scheme: light)", color: THEME_COLOR.light },
+    { media: "(prefers-color-scheme: dark)", color: THEME_COLOR.dark },
   ],
 };
 
