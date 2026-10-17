@@ -5,18 +5,26 @@ from fastapi import Depends, FastAPI
 from alyr.channels.meta import MetaChannel
 from alyr.channels.simulator import SimulatorChannel
 from alyr.config import get_settings
+from alyr.core.images import PhotoRefused
 from alyr.core.inbound import INBOUND, InboundHandler
 from alyr.core.jobs import JobRunner
+from alyr.core.media import MediaService
 from alyr.core.outbound import SEND, Outbound
+from alyr.core.storage import make_store
 from alyr.db import Database
 from alyr.modules import report
 from alyr.modules.bookings.service import REMINDER, Reminders
+from alyr.modules.items.service import count_active
+from alyr.modules.orders import holds as order_holds
+from alyr.modules.orders.service import EXPIRE_JOB
 from alyr.routes import admin as admin_routes
+from alyr.routes import admin_media as admin_media_routes
 from alyr.routes import agent as agent_routes
 from alyr.routes import auth as auth_routes
 from alyr.routes import bookings as bookings_routes
-from alyr.routes import inbox, ledger, orders, pay, simulator, store, whatsapp_webhook
+from alyr.routes import inbox, items, ledger, orders, pay, simulator, store, whatsapp_webhook
 from alyr.routes import jobs as jobs_routes
+from alyr.routes import media as media_routes
 from alyr.routes import onboarding as onboarding_routes
 from alyr.routes import reports as reports_routes
 from alyr.routes import team as team_routes
@@ -57,6 +65,16 @@ def create_app() -> FastAPI:
     app.state.jobs.register(INBOUND, app.state.inbound.process)
     app.state.jobs.register(REMINDER, Reminders(app.state.db, app.state.outbound).send)
     app.state.jobs.register(report.JOB, report.WeeklyReports(app.state.db, app.state.outbound).send)
+    app.state.jobs.register(
+        EXPIRE_JOB, order_holds.HoldExpiry(app.state.db, app.state.outbound).run
+    )
+    # Product photos (ALY-103): R2 when configured, otherwise local disk. The photo store
+    # is written by a job, so a store that is down never blocks a request.
+    app.state.media = MediaService(app.state.db, make_store(settings), settings)
+    # The meters and the item cap count the shop's real items (not archived ones).
+    app.state.media.item_counter = count_active
+    app.state.media.register(app.state.jobs)
+    app.add_exception_handler(PhotoRefused, media_routes.refused)
     if settings.jobs_inline:
         app.state.db.after_commit = app.state.jobs.drain
 
@@ -70,6 +88,9 @@ def create_app() -> FastAPI:
     app.include_router(pay.router)
     app.include_router(track_routes.router)
     app.include_router(orders.router, dependencies=[Depends(require_module("orders"))])
+    # The Catalog's own API (D-039). Not a module of its own, so it adds nothing to the
+    # workspace navigation or the Products screen: it answers where orders are switched on.
+    app.include_router(items.router, dependencies=[Depends(require_module("orders"))])
     app.include_router(store.router, dependencies=[Depends(require_module_for_slug("orders"))])
     app.include_router(jobs_routes.router)
     app.include_router(inbox.router, dependencies=[Depends(require_module("inbox"))])
@@ -85,6 +106,9 @@ def create_app() -> FastAPI:
     app.include_router(agent_routes.router)
     app.include_router(reports_routes.router)
     app.include_router(admin_routes.router)
+    app.include_router(admin_media_routes.router)
+    app.include_router(media_routes.router)
+    app.include_router(media_routes.public)
     app.include_router(onboarding_routes.router)
     if local:
         app.include_router(simulator.router)

@@ -50,7 +50,7 @@ Rules over data ALYR stores today (migrations 0001–0014, `modules/*/report.py`
 | 6 | Regulars gone quiet | O, B | `orders`; completed `bookings`, by `contact_id` | 3 or more orders or visits 31–120 days ago, none in the last 30 | **Information only** (needs marketing opt-in, ALY-44) |
 | 7 | Came back | O, B | `orders` by contact | Ordered this week and before it (`repeat`) | Information only |
 | 8 | Top item, and the riser | O | `order_items.name`, `quantity` | Top this week; the riser is the biggest increase, 5 or more | Information only |
-| 9 | Nobody orders it | O | `products.available`; `order_items.product_id` | No order lines in 30 days while the shop had 30 or more orders | Information only (no menu screen) |
+| 9 | Nobody orders it | O | `items.available`; `order_items.item_id` | No order lines in 30 days while the shop had 30 or more orders | Information only (no menu screen) |
 | 10 | Busiest hours | All | `orders.created_at`, `bookings.starts_at`, inbound `messages.created_at` | Weekday by hour over 28 days; name the top 3 | Information only |
 | 11 | Visits not marked (task) | B | `bookings.status`, `ends_at` | `booked` and already ended; no-show figures are wrong until they are marked | **Exists:** `/app/bookings` |
 | 12 | No-show rate | B | `bookings.status`; `tenants.booking_reminders` | `no_show ÷ (completed + no_show)` over 30 days, 10% or more with 3 or more; say so if reminders are off | Information only (the switch is only in `/start`) |

@@ -237,7 +237,7 @@ async def gather(conn: asyncpg.Connection, staff: Staff, now: datetime | None = 
     if "orders" in modules:
         f.names_ar |= {
             r["name"]: r["name_ar"]
-            for r in await conn.fetch("select name, name_ar from products where name_ar <> ''")
+            for r in await conn.fetch("select name, name_ar from items where name_ar <> ''")
         }
     if "bookings" in modules:
         f.names_ar |= {
@@ -455,9 +455,10 @@ async def _orders(conn, f: Facts, span, last, chart) -> None:
         now - timedelta(days=30), now,
     )
     f.unused_products = _rows(await conn.fetch(
-        "select p.id, p.name, p.name_ar from products p where p.available and p.created_at < $1 "
+        "select p.id, p.name, p.name_ar from items p "
+        "where p.available and p.status = 'live' and p.created_at < $1 "
         "and not exists (select 1 from order_items i join orders o on o.id = i.order_id "
-        "  where i.product_id = p.id and o.status <> 'cancelled' "
+        "  where i.item_id = p.id and o.status <> 'cancelled' "
         "  and o.created_at >= $1 and o.created_at < $2) order by p.sort, p.name",
         now - timedelta(days=30), now,
     ), name_ar="name_ar")

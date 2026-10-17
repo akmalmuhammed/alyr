@@ -738,6 +738,16 @@ There is no separate Pay product: payment links stay a module of Chat and Bookin
 
 **Risks.** The scope is large, so packages 1 and 2 come first and anything not ready stays hidden. Meta may classify a back-in-stock message as marketing: test the template category first. The listing policy (no counterfeit or prohibited goods) needs the terms (ALY-68) and a legal look (ALY-51). Demo shops use simple drawn tiles, not copyrighted photos.
 
+**As built (ALY-103, 17 Oct 2026; PR #65).** Where the code fixed a detail this entry left open. None of it changes the decision.
+- Sizes are measured on the **long side** (320, 800, 1,600), not the width, so a portrait photo is not larger than a landscape one. A photo is never enlarged: a 600-pixel photo is stored as 320 and 600.
+- File names are `shops/<shop id>/<SHA-256 of the file as uploaded>-<size>.webp`. A shop that uploads the same file twice, or two staff who both do, store it once; two shops never share a file. The name is of the upload, not of the cleaned result, so the same picture re-saved by a phone with different metadata is a new photo.
+- The type is decided by the first bytes (JPEG, PNG, WebP only; no GIF, HEIC, AVIF or TIFF). Animated images are refused. A file that contains `<script`, `<html`, `<svg` and similar words is refused as hidden code, though re-encoding would have dropped them anyway.
+- Photos are written to the store by a **background job** with its own queue table, not inside the upload request, following the rule that a slow outside service is never called from a request. R2 being down therefore delays a photo and fails nothing; the job tries up to 48 times, about an hour apart at the end, then the photo is marked failed and a person can retry it from the failed-jobs list or by uploading it again.
+- A shop deleting its own photo removes it for good. Taking one down under the listing policy keeps a marked row, so the same file cannot be uploaded again.
+- Caps count photos and items per shop, one setting each (`ALYR_CATALOG_MAX_PHOTOS`, `ALYR_CATALOG_MAX_ITEMS`); there is no per-shop override yet. The alert at 80% compares all shops' stored bytes with 10 decimal gigabytes.
+- The meters keep, per shop and month in shop time: photos and bytes stored at the last change, the month's peak (R2 bills on the daily peak), uploads, duplicates, refused uploads and active items.
+- Photos and owners are linked by kind and id (`media_links`), with no foreign key to the items table, so the catalog can link items, variants and anything later. New dependency: Pillow, for decoding and re-encoding images.
+
 ## D-040 · ALYR's look is Carbon and Volt, and its values live in one token file
 **Date** 17 Oct 2026 · **Status** Accepted (founder, 17 Oct: Carbon and Volt is the brand, ALY-61) · Linear ALY-61, ALY-126 · Replaces the open question in D-025
 

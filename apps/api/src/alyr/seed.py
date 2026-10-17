@@ -163,7 +163,8 @@ async def reset_demo_data(db: Database) -> None:
         for table in ("weekly_reports", "bookings", "services", "business_hours",
                       "saved_replies", "memberships",
                       "jobs", "messages", "processed_messages", "order_items",
-                      "payment_requests", "orders", "products", "ledger_entries",
+                      "payment_requests", "orders", "items", "item_categories",
+                      "ledger_entries",
                       "ledger_accounts", "contacts", "tenant_modules", "shop_settings"):
             await conn.execute(f"delete from {table}")
         await conn.execute(
@@ -198,7 +199,7 @@ async def reset_demo_data(db: Database) -> None:
             )
         for sort, (name, name_ar, category, price) in enumerate(PRODUCTS):
             await conn.execute(
-                "insert into products (name, name_ar, category, price, sort) "
+                "insert into items (name, name_ar, category, price, sort) "
                 "values ($1, $2, $3, $4, $5)",
                 name, name_ar, category, price, sort,
             )

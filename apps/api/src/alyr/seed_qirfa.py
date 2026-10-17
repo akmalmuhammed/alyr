@@ -347,7 +347,7 @@ class Bakery:
             self.names[email] = name
         for sort, (name, name_ar, category, price) in enumerate(PRODUCTS):
             product_id = await conn.fetchval(
-                "insert into products (name, name_ar, category, price, sort) "
+                "insert into items (name, name_ar, category, price, sort) "
                 "values ($1, $2, $3, $4, $5) returning id",
                 name, name_ar, category, price, sort,
             )
@@ -436,7 +436,7 @@ class Bakery:
             order_id, person.id, number, status, payment, total, at, self.users[staff],
         )
         await conn.executemany(
-            "insert into order_items (order_id, product_id, name, price, quantity) "
+            "insert into order_items (order_id, item_id, name, price, quantity) "
             "values ($1, $2, $3, $4, $5)",
             [(order_id, pid, name, price, quantity) for pid, name, price, quantity in lines],
         )
@@ -881,8 +881,8 @@ async def reset_qirfa(
         )
         for table in ("weekly_reports", "agent_snoozes", "bookings", "services", "business_hours",
                       "saved_replies", "memberships", "jobs", "messages", "processed_messages",
-                      "order_items", "payment_requests", "orders", "products", "ledger_entries",
-                      "ledger_accounts", "contacts", "tenant_modules",
+                      "order_items", "payment_requests", "orders", "items", "item_categories",
+                      "ledger_entries", "ledger_accounts", "contacts", "tenant_modules",
                       "shop_settings"):
             await conn.execute(f"delete from {table}")
         web_url = web_url or get_settings().public_web_url

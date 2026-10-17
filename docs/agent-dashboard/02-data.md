@@ -15,8 +15,8 @@
 
 **Stored.**
 - `orders`: `id`, `contact_id`, `number` (from 1001), `status` (`new`, `confirmed`, `ready`, `done`, `cancelled`), `payment` (`unpaid`, `paid`, `on_account`), `total`, `created_at`, `assigned_to`.
-- `order_items`: `name`, `price`, `quantity`, `product_id` (set to null if the product is deleted).
-- `products`: `name`, `name_ar`, `category`, `price`, `available`.
+- `order_items`: `name`, `name_ar`, `price`, `quantity`, `item_id` (an item that has been ordered cannot be deleted; it is archived), and since ALY-102 a copy of the variant and options as ordered.
+- `items` (called `products` until ALY-102): `name`, `name_ar`, `category`, `price`, `available`, and since ALY-102 `status` (only `live` items are sold), variants and stock. See `specs/001-catalog-engine/spec.md`.
 - Status-change times exist only as `activity` rows (`subject = 'order'`, actions `placed`, `confirmed`, `ready`, `done`, `cancelled`, `paid`, `assigned`, `took`). `modules/orders/service.py` `tracking()` reads them.
 
 | Number | How | Existing code |
@@ -26,7 +26,7 @@
 | How orders were paid | `sum(total)` by `payment`. `paid` means paid on the test page (see 2). `on_account` means on credit. `unpaid` with a pending link usually means cash at the counter, which is not recorded | `orders/report.numbers()` (paid_online, paid_orders, on_account) |
 | Customers who came back | distinct `contact_id` this period with an earlier order | `orders/report.numbers()` (`repeat`) |
 | Top items and the riser | `sum(quantity)` from `order_items` joined to `orders`, by `name`, this period against the last | `orders/report.numbers()` (`top` only) |
-| Items nobody orders | `products where available` with no `order_items` in 30 days | none |
+| Items nobody orders | `items where available and status = 'live'` with no `order_items` in 30 days | none |
 | Busiest hours | `extract(isodow, hour from created_at at time zone tz)` over 28 days | none |
 | Orders not confirmed; ready but not collected | `status = 'new'` older than 15 min; `status = 'ready'` and the `ready` activity row older than 2 h | the `/app/orders` screen lists them; no count |
 | Time to ready, time to done | `activity` `placed` to `ready` or `done` for each order | `tracking()` for one order |
@@ -37,7 +37,7 @@
 - **Cash at the counter is not recorded.** An order collected and paid in cash stays `unpaid` with an open link, so paid-versus-unpaid is not true revenue collection.
 - No completion timestamp on the order itself; it comes from `activity`.
 - No delivery or pickup, pickup time, address, discount, tax, refund, or cost of goods.
-- An order item keeps no category: it reaches `products.category` through `product_id`, which is lost if the product is deleted.
+- An order item keeps no category: it reaches `items.category` through `item_id`, which always survives now, because an ordered item is archived and not deleted (ALY-102).
 - The home card "Orders today" counts cancelled orders (catalogue card `orders_today`); the report does not. The Agent should use the report's rule.
 
 ## 2. Payment requests (test page only)
