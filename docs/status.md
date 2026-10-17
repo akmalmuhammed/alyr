@@ -93,6 +93,7 @@ Tests: 253, all passing. CI runs api, web and a secrets scan on every pull reque
 
 - Only `/` and `/ar` are published, as plain files on Cloudflare (Worker `alyr-site`, static assets, free plan). The workspace, sign-in and the API are not there: `/whatsapp`, `/login` and `/api/...` answer 404 on `alyr.online`.
 - To publish a change: `scripts/build-site.sh`, then `npx wrangler deploy` from `apps/web`. It needs the Cloudflare sign-in on the founder's laptop and the founder's go-ahead each time. Nothing deploys automatically.
+- Waiting for the next publish: the `/chat` accessibility fixes (ALY-97). With them, axe-core finds no issues on `/chat` and `/ar/chat` at 1440 and 390 px.
 - The bare domain is attached as a route because it already had a proxied DNS record; `www.alyr.online` is a custom domain. See `apps/web/wrangler.jsonc`.
 - **`alyr.qa` is the main address** since 12 Oct. `alyr.online` and both `www` forms redirect to it (`REDIRECT` is `"on"` in `apps/web/wrangler.jsonc`), and every plain `http` request is moved to `https`. If `alyr.qa` ever stops resolving, set `REDIRECT` to `"off"` and deploy: every address then serves the site itself. `api.alyr.online` is not affected.
 

@@ -29,7 +29,7 @@ export function ProductPage({ locale }: { locale: Locale }) {
             <ul className="product-facts">
               {p.facts.map((fact, index) => (
                 <li key={fact.title} data-reveal style={{ "--n": index } as React.CSSProperties}>
-                  <h3>{fact.title}</h3>
+                  <h2>{fact.title}</h2>
                   <p>{fact.body}</p>
                 </li>
               ))}
