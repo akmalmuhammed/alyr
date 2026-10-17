@@ -92,3 +92,13 @@ ALY-99, branch `aly-agent-dashboard`. One entry per stage, newest last, so a sta
 - **Left for later:**
   - A11's tap to open a number's week inline: the numbers link to their screens instead.
   - A sticky stale banner: the offline line and "Updated" sit above the numbers.
+
+### Stage 4 · filtered screens
+
+- `/app/inbox`, `/app/orders`, `/app/bookings` and `/app/ledger` take `?show=` and list exactly the rows the rule counted, under a line naming the filter with "Show all".
+  - **Inbox:** `waiting`.
+  - **Orders:** `unconfirmed`, `ready`, `unpaid`, `paid`.
+  - **Bookings:** `unmarked`, `no_show`, `repeat_no_show`. These look back 90 days, since the screen normally loads only the coming week.
+  - **Credit accounts:** `overdue`, `promised`, `promise_passed`, `over_limit`.
+- The filters apply the same rules as the engine. The ledger summary now marks a customer whose promised date passed (`promise_passed`).
+- "Not now" was small enough to build (stage 2).

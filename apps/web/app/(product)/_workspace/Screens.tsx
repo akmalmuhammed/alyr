@@ -18,6 +18,7 @@ type Customer = {
   id: string; name: string; phone: string | null; balance: number; balance_text: string;
   oldest_days: number; buckets: Buckets; over_limit: boolean; promised_until: string | null;
   opted_out: boolean; assigned: Person | null;
+  last_reminded_at?: string | null; promise_passed?: boolean;
 };
 type Person = { id: string; name: string };
 type Activity = {
@@ -260,6 +261,24 @@ function AssignSelect({ value, members, label, nobody, onChange }: {
 
 export type WorkspaceTab = "inbox" | "ledger" | "orders" | "bookings" | "team";
 
+/** The lists ALYR Agent links to (`/app/orders?show=unconfirmed`): exactly the rows its rule
+ * counted, so "Show me" lands on them. */
+export const SHOWS: Record<string, { tab: WorkspaceTab; en: string; ar: string }> = {
+  waiting: { tab: "inbox", en: "Customers waiting for an answer", ar: "عملاء بانتظار الرد" },
+  unconfirmed: { tab: "orders", en: "Orders not confirmed", ar: "طلبات لم تُؤكَّد بعد" },
+  ready: { tab: "orders", en: "Orders ready, not collected", ar: "طلبات جاهزة لم تُستلم" },
+  unpaid: { tab: "orders", en: "Orders with a payment link still open", ar: "طلبات برابط دفع مفتوح" },
+  paid: { tab: "orders", en: "Orders paid by link", ar: "طلبات مدفوعة عبر الرابط" },
+  unmarked: { tab: "bookings", en: "Visits not marked yet", ar: "زيارات لم تُسجَّل بعد" },
+  no_show: { tab: "bookings", en: "No-shows", ar: "حالات الغياب" },
+  repeat_no_show: { tab: "bookings", en: "Booked again after missing twice", ar: "محجوزون بعد غياب مرتين" },
+  overdue: { tab: "ledger", en: "Owed 30+ days, no promise, no reminder in 7 days", ar: "مستحق منذ 30 يوماً أو أكثر دون وعد ودون تذكير خلال 7 أيام" },
+  promised: { tab: "ledger", en: "Promised to pay", ar: "وعدوا بالسداد" },
+  promise_passed: { tab: "ledger", en: "Promised date passed, nothing paid", ar: "مضى موعد الوعد ولم يُدفع شيء" },
+  over_limit: { tab: "ledger", en: "Over their credit limit", ar: "تجاوزوا حد الائتمان" },
+};
+const DAY_MS = 86_400_000;
+
 type ScreensProps = {
   /** Inside the workspace shell: no demo header, no chat simulator, no tab bar. */
   embedded?: boolean;
@@ -268,6 +287,9 @@ type ScreensProps = {
   lang?: "en" | "ar";
   /** Shown under the screen's title, before its own content (the shell's team report). */
   intro?: React.ReactNode;
+  /** A filter from ALYR Agent (`?show=`), and how to clear it. */
+  show?: string | null;
+  onClearShow?: () => void;
 };
 
 /**
@@ -275,7 +297,7 @@ type ScreensProps = {
  * The sales demo at /whatsapp shows them beside the chat simulator; the workspace shell
  * at /app shows one at a time under its own navigation.
  */
-export function Screens({ embedded = false, section, lang: langProp, intro }: ScreensProps = {}) {
+export function Screens({ embedded = false, section, lang: langProp, intro, show = null, onClearShow }: ScreensProps = {}) {
   const router = useRouter();
   const [personas, setPersonas] = useState<Persona[]>([]);
   const [phone, setPhone] = useState("");
@@ -313,6 +335,13 @@ export function Screens({ embedded = false, section, lang: langProp, intro }: Sc
   const [busy, setBusy] = useState(false);
   const bottom = useRef<HTMLDivElement>(null);
   const t = T[lang];
+  const filter = show && SHOWS[show] && SHOWS[show].tab === (section ?? tabState) ? show : null;
+  const filterLine = filter ? (
+    <p className="show-filter" role="status">
+      <span>{SHOWS[filter][lang]}</span>
+      {onClearShow && <button type="button" className="btn small" onClick={onClearShow}>{lang === "ar" ? "اعرض الكل" : "Show all"}</button>}
+    </p>
+  ) : null;
   const persona = personas.find((p) => p.key === phone);
 
   const loadPersonas = useCallback(async () => {
@@ -339,7 +368,11 @@ export function Screens({ embedded = false, section, lang: langProp, intro }: Sc
       setSummary(s);
       setMessages(c.messages);
       setOrders((await maybe<{ orders: OrderRow[] }>("/api/orders", { orders: [] })).orders);
-      setBookings((await maybe<{ bookings: BookingRow[] }>("/api/bookings", { bookings: [] })).bookings);
+      const lookBack = show && SHOWS[show]?.tab === "bookings";
+      const range = lookBack
+        ? `?first=${new Date(Date.now() - 90 * DAY_MS).toISOString().slice(0, 10)}&last=${new Date(Date.now() + 8 * DAY_MS).toISOString().slice(0, 10)}`
+        : "";
+      setBookings((await maybe<{ bookings: BookingRow[] }>(`/api/bookings${range}`, { bookings: [] })).bookings);
       setMe(await getJson<Me>("/api/auth/me"));
       setNow(Date.now());
       {
@@ -375,7 +408,7 @@ export function Screens({ embedded = false, section, lang: langProp, intro }: Sc
     } catch {
       setError("Cannot reach the Alyr API. Start it on port 8000, then this page recovers by itself.");
     }
-  }, [phone, selected, inboxFilter, assignedFilter, tab, chatId]);
+  }, [phone, selected, inboxFilter, assignedFilter, tab, chatId, show]);
 
   useEffect(() => {
     // The simulator only exists in the demo.
@@ -538,6 +571,41 @@ export function Screens({ embedded = false, section, lang: langProp, intro }: Sc
       : ["كم حسابي؟", "hello", "I want to order", "book a visit", "my booking"];
   const total = summary ? Math.max(summary.outstanding, 1) : 1;
   const upcoming = bookings.filter((b) => b.status === "booked").length;
+  // The rows each ALYR Agent filter counts, with the same rules as the engine's.
+  const missedTwice = new Set(
+    Object.entries(
+      bookings.filter((b) => b.status === "no_show").reduce<Record<string, number>>(
+        (n, b) => ({ ...n, [b.customer]: (n[b.customer] ?? 0) + 1 }), {}),
+    ).filter(([, n]) => n >= 2).map(([name]) => name),
+  );
+  const shownChats = filter === "waiting"
+    ? inboxRows.filter((r) => r.status === "open" && r.last.direction === "in"
+        && now - new Date(r.last.created_at).getTime() > 10 * 60_000)
+    : inboxRows;
+  const shownOrders = orders.filter((o) => {
+    if (filter === "unconfirmed") return o.status === "new";
+    if (filter === "ready") return o.status === "ready";
+    if (filter === "unpaid") return o.payment === "unpaid" && !["cancelled", "done"].includes(o.status);
+    if (filter === "paid") return o.payment === "paid";
+    return true;
+  });
+  const shownBookings = bookings.filter((b) => {
+    const started = new Date(b.starts_at).getTime() < now;
+    if (filter === "unmarked") return b.status === "booked" && started;
+    if (filter === "no_show") return b.status === "no_show";
+    if (filter === "repeat_no_show") return b.status === "booked" && !started && missedTwice.has(b.customer);
+    return true;
+  });
+  const shownCustomers = (summary?.customers ?? []).filter((c) => {
+    if (filter === "overdue") {
+      const reminded = c.last_reminded_at ? new Date(c.last_reminded_at).getTime() : 0;
+      return c.balance > 0 && c.oldest_days >= 30 && !c.promised_until && now - reminded > 7 * DAY_MS;
+    }
+    if (filter === "promised") return Boolean(c.promised_until);
+    if (filter === "promise_passed") return Boolean(c.promise_passed) && c.balance > 0;
+    if (filter === "over_limit") return c.over_limit;
+    return true;
+  });
   const selectedCustomer = summary?.customers.find((c) => c.id === selected);
   const unreadChats = inboxRows.filter((r) => r.unread > 0).length;
   const openThread = thread && thread.customer.id === chatId ? thread : null;
@@ -688,8 +756,9 @@ export function Screens({ embedded = false, section, lang: langProp, intro }: Sc
                     >{label}</button>
                   ))}
                 </div>
-                {inboxRows.length === 0 && <p className="empty-note">{t.noChats}</p>}
-                {inboxRows.map((r) => (
+                {filterLine}
+                {shownChats.length === 0 && <p className="empty-note">{t.noChats}</p>}
+                {shownChats.map((r) => (
                   <button
                     key={r.id}
                     className={`conv ${r.id === chatId ? "sel" : ""}`}
@@ -883,8 +952,9 @@ export function Screens({ embedded = false, section, lang: langProp, intro }: Sc
             </>
           )}
 
+          {tab === "bookings" && filterLine}
           {tab === "bookings" && (
-            bookings.length === 0 ? (
+            shownBookings.length === 0 ? (
               <p className="empty-note">{t.noBookings}</p>
             ) : (
               <div className="tablewrap">
@@ -899,7 +969,7 @@ export function Screens({ embedded = false, section, lang: langProp, intro }: Sc
                     </tr>
                   </thead>
                   <tbody>
-                    {bookings.map((b) => (
+                    {shownBookings.map((b) => (
                       <tr key={b.id} className="norow">
                         <td><b className="num" dir="ltr">{b.when_text}</b><br /><span className="mono">#{b.number}</span></td>
                         <td>{b.service}{b.note && <div className="booking-said" dir="auto">{b.note}</div>}</td>
@@ -930,8 +1000,9 @@ export function Screens({ embedded = false, section, lang: langProp, intro }: Sc
             )
           )}
 
+          {tab === "orders" && filterLine}
           {tab === "orders" && (
-            orders.length === 0 ? (
+            shownOrders.length === 0 ? (
               <p className="empty-note">{t.noOrders}</p>
             ) : (
               <div className="tablewrap">
@@ -947,7 +1018,7 @@ export function Screens({ embedded = false, section, lang: langProp, intro }: Sc
                     </tr>
                   </thead>
                   <tbody>
-                    {orders.map((o) => (
+                    {shownOrders.map((o) => (
                       <tr key={o.id} className="norow">
                         <td><b className="num">#{o.number}</b><br />{o.customer}</td>
                         <td>{o.items.map((i, k) => <div key={k}>{i.quantity} × {i.name}</div>)}</td>
@@ -1006,6 +1077,7 @@ export function Screens({ embedded = false, section, lang: langProp, intro }: Sc
                 {note && <span className="note">{note}</span>}
               </div>
 
+              {filterLine}
               <div className="tablewrap">
                 <table>
                   <thead>
@@ -1016,7 +1088,7 @@ export function Screens({ embedded = false, section, lang: langProp, intro }: Sc
                     </tr>
                   </thead>
                   <tbody>
-                    {summary.customers.map((c) => (
+                    {shownCustomers.map((c) => (
                       <tr key={c.id} className={c.id === selected ? "sel" : ""} onClick={() => setSelected(c.id)}>
                         <td>
                           {c.name}

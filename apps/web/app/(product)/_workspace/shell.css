@@ -437,3 +437,9 @@
   --ag-pending: var(--ink-3);
 }
 .sh-main .ag tbody th { font-family: inherit; letter-spacing: 0; font-size: inherit; color: inherit; text-transform: none; font-weight: 500; padding-inline: 0; }
+
+/* A list opened from ALYR Agent shows which rule filtered it, and how to see everything. */
+.sh-main .show-filter {
+  display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px 16px;
+  padding: 10px 0; border-block: 1px solid var(--hair-2); font-size: 14px; font-weight: 500;
+}

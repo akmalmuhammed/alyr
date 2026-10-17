@@ -568,7 +568,7 @@ INSIGHTS: tuple[Insight, ...] = (
         "promise_passed", 19, "money", "ledger",
         Text("the promised date passed with nothing paid", "مضى موعد الوعد ولم يُدفع شيء"),
         _find_promise_passed, _say_promise_passed,
-        Action(SEND_REMINDERS, "/app/ledger?show=promised"), money=True,
+        Action(SEND_REMINDERS, "/app/ledger?show=promise_passed"), money=True,
     ),
     Insight(
         "open_links", 4, "money", "orders",

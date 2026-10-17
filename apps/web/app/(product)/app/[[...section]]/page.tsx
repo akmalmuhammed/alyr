@@ -196,6 +196,8 @@ export default function WorkspaceShell() {
   const [cards, setCards] = useState<Card[]>([]);
   const [agent, setAgent] = useState<AgentView | null>(null);
   const [agentRise, setAgentRise] = useState(false);
+  // ALYR Agent's links open a screen filtered to the rows a rule counted (`?show=`).
+  const [show, setShow] = useState<string | null>(null);
   const agentLoaded = useRef(false);
   const [offline, setOffline] = useState(false);
   const [lang, setLang] = useState<Lang>("en");
@@ -262,6 +264,11 @@ export default function WorkspaceShell() {
     const timer = setInterval(loadAgent, 15_000);
     return () => { clearTimeout(first); clearInterval(timer); };
   }, [loadAgent, section]);
+
+  useEffect(() => {
+    const read = setTimeout(() => setShow(new URLSearchParams(window.location.search).get("show")), 0);
+    return () => clearTimeout(read);
+  }, [section]);
 
   async function notNow(key: string, fingerprint: string) {
     await send("/api/agent/not-now", { key, fingerprint });
@@ -539,7 +546,8 @@ export default function WorkspaceShell() {
     );
   } else if ((WORK_SCREENS as string[]).includes(section) && enabledScreens.has(section)) {
     body = (
-      <Screens embedded section={section as WorkspaceTab} lang={lang}
+      <Screens embedded section={section as WorkspaceTab} lang={lang} show={show}
+        onClearShow={() => { setShow(null); router.replace(`/app/${section}`); }}
         intro={section === "team"
           ? <TeamReport lang={lang} canManage={state.can_manage} signer={state.me.signed_in ? state.me.name : "Ali"} />
           : undefined} />

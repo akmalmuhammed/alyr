@@ -89,6 +89,8 @@ async def summary(conn: asyncpg.Connection, now: datetime | None = None) -> dict
                 "over_limit": c["credit_limit"] > 0 and a.balance > c["credit_limit"],
                 "promised_until": promised.isoformat()
                 if promised and promised >= now.date() else None,
+                # A promise whose date passed: a payment would have cleared it.
+                "promise_passed": bool(promised and promised < now.date()),
                 "last_reminded_at": c["last_reminded_at"].isoformat()
                 if c["last_reminded_at"] else None,
                 "assigned": {"id": str(c["assigned_to"]), "name": c["assignee"]}
