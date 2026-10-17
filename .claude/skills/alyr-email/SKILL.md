@@ -25,9 +25,8 @@ the two existing emails; these are derived from the brand and the known breaks.
 ## Known breaks to fix when you touch them
 
 - The wordmark is retyped as "ALYR" in Arial 700: it must be the logo.
-- Colours are literals (`#f6f7f3`, `#15171a`, `#5f666d`, `#e3e6e1`): use the generated
-  Python tokens once they exist.
-- Arial and Courier New instead of the brand's fallbacks.
+- Colours are literals (`#f6f7f3`, `#15171a`, `#5f666d`, `#e3e6e1`): use `brand.EMAIL` once
+  `apps/api/src/alyr/brand.py` is generated (ALY-126); `design-check.mjs` will fail on them.
 - No dark-mode handling.
 - 16 px rounded panels: the brand uses rules and at most a 2 px radius.
 - «خلال {minutes} دقائق» is right only for 3 to 10: use `counted()`.
@@ -46,14 +45,13 @@ the two existing emails; these are derived from the brand and the known breaks.
 - **One button at most,** Volt with on-signal text and a 2 px radius, a real link with its
   address written beside it for clients that strip buttons. Sign-in emails have no button.
 - Rules (1 px line token) between blocks instead of boxes and shadows.
-- **Type:** the brand family names first, then safe fallbacks:
-  Latin `'Instrument Sans', 'Segoe UI', Helvetica, Arial, sans-serif`; Arabic
-  `'IBM Plex Sans Arabic', Tahoma, 'Segoe UI', Arial, sans-serif`; codes and references in
-  `'IBM Plex Mono', Consolas, 'Courier New', monospace`. Body at least 15 px, small print at
-  least 13 px, line height 1.5 (1.8 in Arabic).
-- **Colours** from the tokens: canvas behind, surface for the panel, text and text-muted
-  (4.5:1), line for rules. Volt only on the one button or the one figure that is the
-  signal, never as text on light.
+- **Type** from `brand.FONT` (`font.family.email`, `font.family.email-mono`): email clients do
+  not load web fonts, so the token is a system stack. If you want the brand faces named first
+  for clients that have them, change the token, not the email. Body at least 15 px, small
+  print at least 13 px, line height 1.5 (`--leading-arabic-body` in Arabic).
+- **Colours** from `brand.EMAIL` (`component.email`: bg, panel, text, muted, rule; light only
+  for now). Volt only on the one button or the one figure that is the signal, never as text
+  on light; add an email token for it rather than a literal.
 
 ## Dark mode
 

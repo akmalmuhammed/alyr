@@ -33,8 +33,10 @@ from and be true on its own, at the size a phone shows it.
 - **Fonts embedded,** never system fonts (`skip_system_fonts` in resvg): Instrument Sans,
   IBM Plex Sans Arabic, IBM Plex Mono, each with its SIL OFL file beside it, copied from the
   design-system branch and named in `docs/brand.md`.
-- **Colours from the tokens** (the generated Python module for the API, the generated TS
-  module for the site), never literals in the renderer. Two themes: **Carbon** (the default
+- **Colours from the tokens:** `brand.CARD` in Python (`component.card.carbon` and
+  `.paper`: bg, ink, ink2, rule, bar, ghost, volt, edge, logo), `social` and `card` from
+  `_tokens/tokens.ts` in TypeScript; never literals in the renderer (`design-check.mjs` fails on
+  them). Fonts from `brand.FONT_FILE` / `font.file.*`; the floor is `font.size.card.min`. Two themes: **Carbon** (the default
   in chats: it stands out in light and dark chats alike) and **Paper**. Volt only for the
   one signal (the busiest day, the logo's plane). No red or green; ▲▼ in ink.
 - **The logo** from the mark's polygons, never retyped. Reversed on Carbon.

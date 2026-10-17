@@ -43,9 +43,10 @@ how it looks (`docs/lanes/`). Say in the PR which lane's files you touch.
   `--ink`, `--ease`, `--spring` with values that differ from the site's under the same names
   (audit 1.2, 5). When you touch a screen, move what you touch onto the generated tokens; do
   not add a value to the old blocks.
-- **Dark mode** from tokens. Today the product follows the device only (no `data-theme`);
-  whether it follows the site's switch is the founder's call (audit 6.4). Do not build it
-  either way without his answer.
+- **Dark mode** from tokens. With ALY-126 the product layout reads the site's stored choice
+  (`alyr-theme` on `<html>` as `data-theme`), so a theme picked on the site holds after
+  signing in; until that merges the product follows the device only. A switch control inside
+  the product is a visible change: ask the founder before adding one.
 - **Buttons:** one primary (Volt) action per screen, the rest secondary or quiet. Whether
   product buttons take the 45° notch is open (audit 6.4); until then do not mix shapes on
   one screen, and never radius 999 on a new button.
@@ -60,8 +61,9 @@ how it looks (`docs/lanes/`). Say in the PR which lane's files you touch.
 - **Money:** amounts are integers in dirhams in the API; format in the API or one helper
   ("QAR 1,234" / «1,234 ر.ق»), tabular figures, inside `<bdi>`, never wrapped. Agents see no
   shop-wide money on the Agent screen.
-- **Dense type scale** (the dense tokens: the Agent's 11 / 13 / 15 / 18 / 28 / 56 steps), 4 and
-  8 px spacing, rules before boxes. Mono for labels, references and rule lines; figures in
+- **Dense type scale:** `--ui-*` (`--ui-body` for text, `--ui-input` for inputs so phones do
+  not zoom, `--ui-display` for the one hero number), `--font-ui` / `--font-ui-arabic`,
+  `--leading-ui`, weights 400 / 500 / 600 only; `--space-*` steps, rules before boxes. Mono for labels, references and rule lines; figures in
   Instrument Sans with tabular digits.
 - **Tables** become one card per row on phones (below 48 rem), keeping every column that
   carries meaning (who handles it, its status buttons, the balance and age). A table that

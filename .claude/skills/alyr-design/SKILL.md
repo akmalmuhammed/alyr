@@ -9,7 +9,8 @@ The rules every agent follows when it makes anything with the ALYR brand on it. 
 page whole; open the linked files when the task touches them. The content skill for your
 medium adds what is specific to it. Then `alyr-design-review` checks the work.
 
-**The brand is Carbon and Volt** (the founder, 17 Oct 2026, closing ALY-61). The playbook's
+**The brand is Carbon and Volt** (the founder, 17 Oct 2026, ALY-61; recorded as D-040 with the
+tokens, ALY-126). The playbook's
 look is retired: no cobalt, no colour per product, no lowercase "alyr", no rounded "a" mark,
 no Bricolage Grotesque or Geist, no pill buttons or 22 px card radii. The playbook's
 *voice* still applies (D-025), except the promises listed as retired in
@@ -93,10 +94,14 @@ Generated files are the only places values appear; each says "generated, do not 
 the semantic tier, never a primitive, in components. Full list and usage:
 [tokens.md](tokens.md).
 
-- **Colour roles:** canvas, surface, surface-subtle, text, text-muted, line, line-strong,
-  focus, signal (Volt), on-signal, volt-wash (the current row), pending, band (Carbon blocks),
-  window, and the status hues for the product. WhatsApp's own colours are a separate group,
-  used only in drawings of WhatsApp.
+- **Colour, semantic:** `--canvas`, `--surface`, `--surface-subtle`, `--text`,
+  `--text-muted`, `--text-faint` (labels only), `--line`, `--line-strong`, `--hair`,
+  `--focus`, `--volt` (with `--on-volt`, `--volt-ink`, `--volt-wash`), `--pending`, and
+  `--ok`, `--warn`, `--bad` for the product only.
+- **Colour, components:** `--band` and the `--on-band-*` ramp for Carbon blocks, `--window`,
+  `--mark-ring`, `--monogram-*`; `--wa-*` (WhatsApp's own colours, drawings of WhatsApp
+  only); `--d-*` (drawn product screens); `component.card`, `component.email`,
+  `component.social` for the API and images.
 - **Dark mode is the same system turned down, from tokens.** A component never has a dark
   rule of its own. If it needs a colour that changes, add a token with both values.
 - **Contrast is a property of the token.** Each text token states its minimum contrast; the
@@ -107,19 +112,19 @@ the semantic tier, never a primitive, in components. Full list and usage:
 - **Families:** Instrument Sans for Latin (with its width axis on the site), IBM Plex Sans
   Arabic for Arabic, IBM Plex Mono for small labels, rule lines and identifiers. Figures are
   Instrument Sans with tabular digits, not mono. Arabic mono labels switch to Plex Sans Arabic.
-- **Scale:** the site's fluid steps (display, h2, h3, body, small, mono label) and the dense
-  fixed steps for product screens and the Agent (from the tokens). Use a step; never a
-  one-off size or a half-pixel. Generated images have their own minimums
-  (`alyr-generated-image`).
-- **Weights:** 400, 500, 600 in the product and the Agent; the site's body weight comes
-  from its token. No 700 except where a token says so.
+- **Scale:** the site's `--display`, `--h2`, `--h3`, `--fs-*` steps and the product's
+  `--ui-*` steps (`--ui-input` for inputs). Use a step; never a one-off size or a half-pixel.
+  Generated images have their own floor (`font.size.card.min`, `alyr-generated-image`).
+- **Weights:** `--weight-regular`, `--weight-medium`, `--weight-semibold` (400, 500, 600) in
+  the product, the Agent and images; the site's in-between weights from `--weight-*`. No 700.
 - **Latin labels** in mono capitals, tracked by the token. **Arabic is never tracked, never in
   capitals, never italic, never with kashida**, and takes the looser line heights.
-- **Spacing:** the 8 px rhythm (the space tokens); the Agent's denser 4 and 8 steps with its
-  section gap. Section rules leave their token gap below them.
-- **Grid:** 12 columns up to the wide token, logical start and end; 4 columns on phones;
-  16 px minimum side gutter. Layout breakpoints come from the tokens; do not add one for
-  one component unless it is a container query on that component.
+- **Spacing:** `--space-1` to `--space-7` (4, then 8 px steps); sections `--sec`, and
+  `--rule-gap` under a section rule.
+- **Grid:** 12 columns (`--col-gap`) up to `--wide`, inside `--gutter`; logical start and end;
+  4 columns on phones; at least 16 px side gutter. Breakpoints only from the tokens' list
+  (media queries cannot read custom properties, so write the listed numbers); do not add one
+  for one component unless it is a container query on that component.
 - **Line breaks are written, not hoped for:** name heading breaks in copy (`lines()`), keep a
   count and its noun together with a no-break space, and balance captions.
 
@@ -153,8 +158,9 @@ moving: [motion.md](motion.md).
   images (Carbon and Paper), email where the client allows. Light is the first impression.
 - On the site the theme follows the device until the visitor uses the switch
   (`data-theme` on `<html>`, applied before the first paint). Dark values live in two
-  identical blocks, written by the token generator. Whether product screens follow the
-  site's switch is open (founder, audit 6.4); until then they follow the device.
+  identical blocks, written by the token generator. With the tokens (ALY-126) the product
+  layout reads the same stored choice (`alyr-theme`), so a visitor who picks a theme keeps it
+  after signing in; until that lands, product screens follow the device.
 - **Logical CSS only:** `margin-inline`, `padding-inline`, `inset-inline-start`,
   `border-inline-start`, `text-align: start`. Override under `[dir="rtl"]` only what a
   logical property cannot mirror: `clip-path`, transforms, gradients, masks,

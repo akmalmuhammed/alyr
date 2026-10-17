@@ -6,12 +6,12 @@ signal confirms them, once. Each move says something; none is there for its own 
 ## Tokens
 
 Durations, eases, stagger and travel come from the motion tokens (`design/tokens.json`,
-[tokens.md](tokens.md)): four durations, one ease for things
-arriving (the CSS cubic-bezier and GSAP's `expo.out` are the same curve), one spring
-(`linear()`) for things the visitor presses, one stagger, one travel distance along 45° whose
-direction flips in Arabic. Never a literal duration or curve, and never a second scale. Known
-debt: `site.css` still has an older fast/medium/slow scale, and the workspace's `.sh` defines
-its own `--ease` and `--spring` with different curves under the same names.
+[tokens.md](tokens.md)): `--dur-1` to `--dur-4`; `--ease` for things arriving (GSAP's
+`expo.out` is the same curve); `--spring` (a `linear()` spring) for things the visitor presses;
+`--stagger`; `--travel` along 45° with `--dir` (−1 in Arabic). Never a literal duration or
+curve. Old names to retire as you touch them, never to use in new code: `--fast`, `--medium`,
+`--slow` (the site's older scale) and `--ease-product`, `--spring-product` (the product's
+curves, which the workspace's `.sh` still calls `--ease` and `--spring`).
 
 ## Rules
 
