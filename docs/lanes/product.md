@@ -23,7 +23,7 @@ Anything else belongs to another lane. If a task needs it, keep the change small
 
 Last updated 17 Oct 2026 (night).
 
-- **ALY-99, the Sunday report as a report card (D-038), branch `aly-99-report-card`, PR open, not merged.**
+- **ALY-99, the Sunday report as a report card (D-038), branch `aly-99-report-card`, PR #56, not merged.**
   - The card image: `modules/agent/card.py` (SVG rendered with resvg, Arabic in right-to-left embeddings and mirrored, the brand fonts embedded under the OFL), from `modules/agent/week.py`, which reads the closed week with the dashboard's engine.
   - The text under it: a summary by the engine's rules, one line per product with the main product first, what ALYR did, one next step with its rule.
   - Sending: an image inside the window; outside it the text-only `weekly_report` until Meta approves `weekly_report_card` (image header) and `ALYR_REPORT_CARD_TEMPLATE` is on. Images kept in `message_media` (migration 0021) and uploaded through the Media API at send time.
@@ -53,6 +53,7 @@ Last updated 17 Oct 2026 (night).
 
 ## Next, in order
 
+0. The Catalog, ALY-101 and its packages ALY-102 to ALY-110, ALY-112 and ALY-113 (D-039; plan in the Eraser file named there). Start with ALY-102 and ALY-103. Nothing the Catalog adds is visible to an owner or customer until it works.
 0. The internal tool, ALY-81 to ALY-96, in order (`docs/internal-tool.md`)
 1. ALY-27 bookable staff or resources, then services and hours screens
 2. ALY-53 contacts and labels
@@ -60,7 +61,7 @@ Last updated 17 Oct 2026 (night).
 
 ## Never
 
-- Start a new module before the Customers lane names a pilot business that needs it (gate B).
+- Start a new module before the Customers lane names a pilot business that needs it (gate B). The Catalog (ALY-101) is the one exception, by D-039.
 - Query tenant data outside `db.tenant()`, or call a channel directly instead of the outbound layer.
 - Edit a migration that has been applied; add a new one.
 
