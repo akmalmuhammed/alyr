@@ -58,7 +58,8 @@
   --wa-ink: #111b21;
   --wa-icon: #111b21;
   --wa-soft: #667781;
-  --wa-soft-out: #667781;
+  /* WhatsApp's own grey is 4.2:1 on a sent bubble; a shade darker keeps 4.5:1 */
+  --wa-soft-out: #5f6f79;
   --wa-chip: #ffffff;
   --wa-shadow: rgb(11 20 26 / .13);
   --wa-rule: #e9edef;
@@ -126,8 +127,8 @@
     --night: 1;
     --when-light: none;
     --when-dark: inline;
-    /* WhatsApp's own dark chat screen; the two greys in a sent bubble are lighter than
-       WhatsApp's so the times keep 4.5:1 */
+    /* WhatsApp's own dark chat screen; the time in a sent bubble is lighter than WhatsApp's
+       so it keeps 4.5:1 */
     --wa-head: #202c33;
     --wa-head-line: #222e35;
     --wa-paper: #0b141a;
