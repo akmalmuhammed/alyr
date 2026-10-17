@@ -108,7 +108,7 @@ main:has(.pbar) section[id] { scroll-margin-top: calc(var(--header) + 4rem); }
 .pk-screen-grid { display: grid; grid-template-columns: minmax(0, 9fr) minmax(0, 3fr); column-gap: clamp(1.5rem, 4vw, 4rem); row-gap: 2rem; align-items: start; }
 .pk-screen-fig { min-width: 0; }
 .pk-screen-grid .callouts { position: sticky; top: calc(var(--header) + 5rem); }
-.pk-also { display: grid; gap: .625rem; margin-top: 2rem; max-width: 46rem; }
+.pk-also { display: grid; gap: .625rem; margin-top: 2rem; }
 .pk-also-cap { font-size: .875rem; color: var(--text-muted); }
 
 /* everything it does today, then what is not built yet */
@@ -125,7 +125,7 @@ main:has(.pbar) section[id] { scroll-margin-top: calc(var(--header) + 4rem); }
 /* who it's for, as rows with what each uses */
 .pk-who > li { grid-template-columns: minmax(0, 1fr) auto; }
 .pk-who .tags { flex-wrap: wrap; justify-content: flex-end; }
-.who-link { display: inline-flex; min-height: 0; margin-inline-start: .25rem; color: var(--text); font-weight: 600; border-bottom: 1px solid var(--line-strong); }
+.who-link { display: inline-flex; min-height: 0; color: var(--text); font-weight: 600; border-bottom: 1px solid var(--line-strong); }
 .who-link .ico { width: .875rem; height: .875rem; }
 
 /* works with the rest of ALYR: ruled rows, Payroll dashed */
@@ -142,8 +142,7 @@ main:has(.pbar) section[id] { scroll-margin-top: calc(var(--header) + 4rem); }
 
 /* ALYR Agent: four steps in a row, then one suggestion opened */
 .pk-steps { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); column-gap: var(--col-gap); border-top: 1px solid var(--line); }
-.pk-steps li { position: relative; display: grid; gap: .5rem; align-content: start; padding: 1.5rem 1.25rem 1.5rem 0; }
-[dir="rtl"] .pk-steps li { padding: 1.5rem 0 1.5rem 1.25rem; }
+.pk-steps li { position: relative; display: grid; gap: .5rem; align-content: start; padding-block: 1.5rem; padding-inline: 0 1.25rem; }
 .pk-steps li + li { border-inline-start: 1px solid var(--line); padding-inline-start: 1.25rem; }
 .pk-steps h3 { font-size: var(--h3); font-weight: 600; line-height: 1.25; }
 .pk-steps p { color: var(--text-muted); }

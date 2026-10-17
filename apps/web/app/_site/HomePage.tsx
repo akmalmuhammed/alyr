@@ -167,7 +167,7 @@ function Suite({ locale }: { locale: Locale }) {
     bookings: <TimesCrop crops={s.crops} />,
     agent: <SummaryCrop view={bakery} />,
     accounts: <AgeBarCrop view={bakery} label={s.crops.owed} />,
-    payroll: <span className="suite-slot" aria-hidden="true" />,
+    payroll: null,
   };
   return (
     <section className="band suite" id="products" aria-labelledby="products-title">
@@ -239,6 +239,7 @@ function Business({ locale }: { locale: Locale }) {
               <p className="biz-body">{rich(row.body)}</p>
               <p className="biz-uses">
                 <span className="biz-k">{b.uses}</span>
+                <span className="biz-tags">
                 {row.products.map((key) => {
                   const href = productPath(key, locale);
                   const name = t.products.items[key].name;
@@ -250,6 +251,7 @@ function Business({ locale }: { locale: Locale }) {
                     <span key={key} className="tag"><bdi>{short}</bdi></span>
                   );
                 })}
+                </span>
               </p>
               {row.note && (
                 <p className="biz-note status-line">
@@ -376,25 +378,25 @@ function Price({ locale }: { locale: Locale }) {
 
           <figure className="agreement-fig">
             <div className="agreement" data-m>
-              <span className="ag-top">
-                <span className="ag-kicker">{a.kicker}</span>
-                <span className="ag-parties">{rich(a.parties)}</span>
+              <span className="agr-top">
+                <span className="agr-kicker">{a.kicker}</span>
+                <span className="agr-parties">{rich(a.parties)}</span>
               </span>
-              <h3 className="ag-title">
+              <h3 className="agr-title">
                 {a.titleLead}{" "}
-                <span className="ag-mark">
+                <span className="agr-mark">
                   {a.titleMark}
-                  <span className="ag-tick" aria-hidden="true"><TickPath /></span>
+                  <span className="agr-tick" aria-hidden="true"><TickPath /></span>
                 </span>
               </h3>
-              <p className="ag-body">{rich(a.body)}</p>
-              <dl className="ag-fields">
+              <p className="agr-body">{rich(a.body)}</p>
+              <dl className="agr-fields">
                 {a.fields.map((field) => (
                   <div key={field.label} className={field.blank ? "is-blank" : undefined}>
                     <dt>{field.label}</dt>
                     <dd>
                       {field.blank ? (
-                        <span className="ag-blank"><span className="ag-line" aria-hidden="true" /><span>{field.value}</span></span>
+                        <span className="agr-blank"><span className="agr-line" aria-hidden="true" /><span>{field.value}</span></span>
                       ) : (
                         rich(field.value)
                       )}
@@ -402,7 +404,7 @@ function Price({ locale }: { locale: Locale }) {
                   </div>
                 ))}
               </dl>
-              <p className="ag-print">{a.print}</p>
+              <p className="agr-print">{a.print}</p>
             </div>
             <FigCaption locale={locale} caption={a.caption} />
           </figure>

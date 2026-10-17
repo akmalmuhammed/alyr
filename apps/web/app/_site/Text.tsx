@@ -14,7 +14,11 @@ const ARABIC = /[؀-ۿ]/;
 const RANGE = /^\d+–\d+$/;
 
 const kind = (part: string) =>
-  RANGE.test(part) ? undefined : /^[−+]?(QAR|[\d,])/.test(part) ? "money" : /^(#|رقم)/.test(part) ? "ref" : undefined;
+  RANGE.test(part) ? undefined
+    : /^[−+]?(QAR|[\d,])/.test(part) ? "money"
+    : /^(#|رقم)/.test(part) ? "ref"
+    : /^ALYR( |$)/.test(part) ? "pname"
+    : undefined;
 
 /** A heading from `copy.ts` that names where its lines break (a line feed): each line its
  * own span, set as a block (`.line`), so a phone and a laptop break it in the same place. */

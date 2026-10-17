@@ -6,6 +6,8 @@
    - agent: ALYR Agent's own page, on its Carbon block, with the switch and the feed.
    Logical properties throughout, and the plate's cut mirrored, so Arabic mirrors itself. */
 
+/* the dashboard keeps the product's own base weight (the site's body text is 430) */
+main .ag { font-weight: 400; }
 .afig { position: relative; display: grid; grid-template-columns: minmax(0, 1fr); gap: 1rem; min-width: 0; margin: 0; }
 .af-stage { position: relative; min-width: 0; }
 .af-under { margin-top: .25rem; font-size: .9375rem; color: var(--text-muted); max-width: 40rem; }

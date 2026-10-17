@@ -545,7 +545,7 @@ const en: Copy = {
         feed: [
           { at: "16:00", title: "Booking reminder sent", line: "Cake tasting, today at 18:00\u00a0· Noor A.", adds: ["sent", "booking_reminders"] },
           { at: "16:04", title: "Menu sent", line: "To a new customer: “Welcome to Qirfa Bakery. How can we help?”", adds: ["sent"] },
-          { at: "16:09", title: "Order confirmation sent", line: "Order #1441\u00a0· Lina F.\u00a0· with its tracking page", adds: ["sent"] },
+          { at: "16:09", title: "Order confirmation sent", line: "Order #1441 from Lina F., with its tracking page", adds: ["sent"] },
           { at: "16:13", title: "Order page sent", line: "Sara M. wrote “order”. The link went back at once.", adds: ["sent"] },
           { at: "16:18", title: "Flagged by rule", flag: { from: "suggestion", key: "overdue" }, adds: [] },
         ],
@@ -710,7 +710,7 @@ const en: Copy = {
       ],
       note: "ALYR is in early access. We set it up with each business ourselves, and agree your go-live date at the visit.",
       report: {
-        caption: { n: "04", text: "The Sunday report on WhatsApp, sample figures" },
+        caption: { n: "04", text: "The Sunday report on WhatsApp" },
         heading: "ALYR weekly report: Qirfa Bakery",
         week: "4 to 10 Oct",
         time: "9:00 AM",
@@ -1343,7 +1343,7 @@ const en: Copy = {
       other: "Run something else? Tell us how you work today.",
     },
     works: {
-      eyebrow: "Works with",
+      eyebrow: "The products",
       title: "Works with the rest of ALYR.",
       link: "See {name}",
       rows: {
@@ -1637,7 +1637,7 @@ const en: Copy = {
         caption: { n: "02", text: "The Bookings screen" },
         label: "The Bookings screen of a fictional salon’s workspace",
         callouts: [
-          "Today and the next seven days.",
+          "Every visit booked from the chat, in time order.",
           "Who looks after each visit.",
           "Came, No-show or Cancel, one tap each.",
           "Opened from ALYR Agent, it shows only the visits a rule counted.",
@@ -1720,7 +1720,7 @@ const en: Copy = {
         other: "Several chairs or rooms? Tell us how many, and we’ll say honestly whether it fits yet.",
       },
       works: {
-        eyebrow: "Works with",
+        eyebrow: "The products",
         title: "Works with the rest of ALYR.",
         link: "See {name}",
         rows: {
@@ -1808,7 +1808,7 @@ const en: Copy = {
         body:
           "At 9:00 on Sunday, last week’s numbers, one section per product, each compared with the week before. If you have not written to ALYR in the last 24 hours, it arrives as one line first: reply REPORT and the rest follows.",
         report: {
-          caption: { n: "03", text: "The Sunday report on WhatsApp, sample figures" },
+          caption: { n: "03", text: "The Sunday report on WhatsApp" },
           heading: "ALYR weekly report: Qirfa Bakery",
           week: "4 to 10 Oct",
           time: "9:00 AM",
@@ -1924,7 +1924,7 @@ const en: Copy = {
         other: "Run something else? Tell us how you work today.",
       },
       works: {
-        eyebrow: "Works with",
+        eyebrow: "The products",
         title: "Works with the rest of ALYR.",
         link: "See {name}",
         rows: {
@@ -2325,7 +2325,7 @@ const en: Copy = {
         other: "Run something else? Tell us how you work today.",
       },
       works: {
-        eyebrow: "Works with",
+        eyebrow: "The products",
         title: "Works with the rest of ALYR.",
         link: "See {name}",
         rows: {
@@ -2490,7 +2490,7 @@ const ar: Copy = {
         feed: [
           { at: "16:00", title: "أُرسل تذكير بموعد", line: "تذوّق الكيك، اليوم الساعة 18:00\u00a0· Noor A.", adds: ["sent", "booking_reminders"] },
           { at: "16:04", title: "أُرسلت القائمة", line: "لعميل جديد: «أهلاً بك في مخبز قرفة. كيف نقدر نساعدك؟»", adds: ["sent"] },
-          { at: "16:09", title: "أُرسل تأكيد الطلب", line: "الطلب رقم 1441\u00a0· Lina F.\u00a0· مع صفحة تتبّعه", adds: ["sent"] },
+          { at: "16:09", title: "أُرسل تأكيد الطلب", line: "الطلب رقم 1441 من Lina F.، مع صفحة تتبّعه", adds: ["sent"] },
           { at: "16:13", title: "أُرسلت صفحة الطلب", line: "كتبت Sara M. «طلب»، فوصلها الرابط فوراً.", adds: ["sent"] },
           { at: "16:18", title: "تنبيه حسب القاعدة", flag: { from: "suggestion", key: "overdue" }, adds: [] },
         ],
@@ -2655,7 +2655,7 @@ const ar: Copy = {
       ],
       note: "ALYR في مرحلة الإطلاق المبكر. نجهّزها مع كل منشأة بأنفسنا، ونتفق معك على موعد بدء التشغيل خلال الزيارة.",
       report: {
-        caption: { n: "04", text: "تقرير الأحد على واتساب، بأرقام توضيحية" },
+        caption: { n: "04", text: "تقرير الأحد على واتساب" },
         heading: "تقرير ALYR الأسبوعي: مخبز قرفة",
         week: "من 4/10 إلى 10/10",
         time: "9:00 ص",
@@ -3288,7 +3288,7 @@ const ar: Copy = {
       other: "نشاطك مختلف؟ أخبرنا كيف يسير العمل لديك اليوم.",
     },
     works: {
-      eyebrow: "يعمل مع",
+      eyebrow: "المنتجات",
       title: "يعمل مع بقية منتجات ALYR.",
       link: "تعرّف على {name}",
       rows: {
@@ -3582,7 +3582,7 @@ const ar: Copy = {
         caption: { n: "02", text: "شاشة الحجوزات" },
         label: "شاشة الحجوزات في مساحة عمل صالون غير حقيقي",
         callouts: [
-          "اليوم والأيام السبعة القادمة.",
+          "كل زيارة حُجزت من المحادثة، بترتيب الوقت.",
           "من يتولى كل زيارة.",
           "حضر أو لم يحضر أو إلغاء، بنقرة واحدة.",
           "حين تفتحها من ALYR Agent، لا تعرض إلا الزيارات التي عدّتها القاعدة.",
@@ -3665,7 +3665,7 @@ const ar: Copy = {
         other: "أكثر من كرسي أو غرفة؟ أخبرنا كم لديك، ونقول لك بصراحة إن كان يناسبك الآن.",
       },
       works: {
-        eyebrow: "يعمل مع",
+        eyebrow: "المنتجات",
         title: "يعمل مع بقية منتجات ALYR.",
         link: "تعرّف على {name}",
         rows: {
@@ -3753,7 +3753,7 @@ const ar: Copy = {
         body:
           "الساعة 9:00 صباح الأحد تصلك أرقام الأسبوع الماضي، قسم لكل منتج، وكل قسم مقارن بالأسبوع الذي قبله. وإن لم تراسل ALYR خلال آخر 24 ساعة، يصلك أولاً في سطر واحد: أرسل «تقرير» فيصلك الباقي.",
         report: {
-          caption: { n: "03", text: "تقرير الأحد على واتساب، بأرقام توضيحية" },
+          caption: { n: "03", text: "تقرير الأحد على واتساب" },
           heading: "تقرير ALYR الأسبوعي: مخبز قرفة",
           week: "من 4/10 إلى 10/10",
           time: "9:00 ص",
@@ -3869,7 +3869,7 @@ const ar: Copy = {
         other: "نشاطك مختلف؟ أخبرنا كيف يسير العمل لديك اليوم.",
       },
       works: {
-        eyebrow: "يعمل مع",
+        eyebrow: "المنتجات",
         title: "يعمل مع بقية منتجات ALYR.",
         link: "تعرّف على {name}",
         rows: {
@@ -4270,7 +4270,7 @@ const ar: Copy = {
         other: "نشاطك مختلف؟ أخبرنا كيف يسير العمل لديك اليوم.",
       },
       works: {
-        eyebrow: "يعمل مع",
+        eyebrow: "المنتجات",
         title: "يعمل مع بقية منتجات ALYR.",
         link: "تعرّف على {name}",
         rows: {
