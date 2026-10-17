@@ -150,10 +150,11 @@ svg { display: block; }
 .btn-line:hover::after { background: var(--surface-subtle); }
 .btn-line:active { transform: translateY(1px); }
 .btn:focus-visible { outline: 2px solid var(--focus); outline-offset: 3px; border-radius: 3px; }
-.btn-notch { padding-inline: 1.125rem .875rem; }
+.btn-notch { padding-inline: 1.125rem .625rem; }
 .btn-sm.btn-notch { padding-inline: .9375rem .875rem; }
 .btn-glyph { width: 1.125rem; height: 1.125rem; }
-.btn .btn-arrow { width: 1rem; height: 1rem; margin-inline-start: .125rem; align-self: flex-start; margin-top: .9rem; transition: translate var(--dur-2) var(--spring); }
+/* the arrow tucks under the notch */
+.btn .btn-arrow { width: 1rem; height: 1rem; margin-inline-start: .125rem; align-self: flex-start; margin-top: .5rem; transition: translate var(--dur-2) var(--spring); }
 .btn:active .btn-arrow { translate: 1px -1px; }
 [dir="rtl"] .btn:active .btn-arrow { translate: -1px -1px; }
 .btn .ico, .link .ico { transition: translate var(--fast) var(--ease); }
@@ -175,16 +176,26 @@ svg { display: block; }
 .address { font-family: var(--mono); font-size: .9375rem; color: var(--text); border-bottom: 1px solid var(--line-strong); padding-block: .125rem; overflow-wrap: anywhere; }
 .address:hover { border-bottom-color: currentColor; }
 .contact-note { color: var(--text-muted); font-size: .9375rem; line-height: 1.5; }
+/* in a sentence the address takes the sentence's own type; mono is for the closing call */
+.contact-note .address { font-family: inherit; font-weight: 500; }
 
 /* ----------------------------------------------------------------- header */
-.top { position: sticky; top: 0; z-index: 20; border-bottom: 1px solid transparent; transition: background var(--medium) var(--ease), border-color var(--medium) var(--ease); }
-.top[data-scrolled] { background: color-mix(in srgb, var(--canvas) 94%, transparent); backdrop-filter: saturate(1.4) blur(14px); -webkit-backdrop-filter: saturate(1.4) blur(14px); border-bottom-color: var(--line); }
+/* Opaque by default, so the header reads over every section without JavaScript; clear only
+   at the very top of a page once scripts run. */
+.top {
+  position: sticky; top: 0; z-index: 20; border-bottom: 1px solid var(--line);
+  background: color-mix(in srgb, var(--canvas) 94%, transparent); backdrop-filter: saturate(1.4) blur(14px); -webkit-backdrop-filter: saturate(1.4) blur(14px);
+  transition: background var(--medium) var(--ease), border-color var(--medium) var(--ease);
+}
+.al-js .top:not([data-scrolled]) { background: transparent; backdrop-filter: none; -webkit-backdrop-filter: none; border-bottom-color: transparent; }
 .top-in { display: flex; align-items: center; gap: 2rem; height: var(--header); transition: height var(--medium) var(--ease); }
 .top[data-scrolled] .top-in { height: 3.75rem; }
 .top-logo { display: inline-flex; align-items: center; min-height: 2.75rem; }
 .logo { width: 9.25rem; height: auto; color: var(--text); }
 .top-nav { display: flex; gap: 1.75rem; margin-inline-start: 1rem; }
 .top-nav a, .top-lang { font-size: .9375rem; font-weight: 500; color: var(--text-muted); padding: .5rem 0; transition: color var(--fast) var(--ease); }
+/* room inside the focus ring, without moving the links */
+.top-nav a { padding-inline: .375rem; margin-inline: -.375rem; }
 .top-nav a:hover, .top-lang:hover { color: var(--text); }
 .top-end { margin-inline-start: auto; display: flex; align-items: center; gap: 1.25rem; }
 .top-lang[lang="ar"] { font-family: var(--arabic); }
@@ -404,7 +415,7 @@ svg { display: block; }
 .foot-nav a[lang="en"] { font-family: var(--sans); }
 .foot-legal { display: grid; gap: .375rem; font-family: var(--mono); font-size: .75rem; line-height: 1.6; color: var(--text-muted); }
 [lang="ar"] .foot-legal { font-family: var(--arabic); font-size: .8125rem; }
-.foot-legal p:first-child { display: flex; flex-wrap: wrap; justify-content: space-between; gap: .25rem 2rem; }
+.foot-legal p:first-child { display: flex; flex-wrap: wrap; justify-content: flex-start; gap: .25rem 1.5rem; }
 .doha { display: inline-flex; align-items: center; gap: .5rem; }
 .doha-dot { width: .375rem; height: .375rem; border-radius: 50%; background: currentColor; }
 .doha-time { display: inline-block; min-width: 5ch; font-family: var(--mono); font-variant-numeric: tabular-nums; }
@@ -423,6 +434,8 @@ svg { display: block; }
   }
   .bar[data-show] { transform: none; visibility: visible; transition: transform var(--dur-3) var(--ease), visibility 0s; }
   .bar .btn { width: 100%; }
+  /* one Volt button on screen at a time: the header's steps aside while the bar is up */
+  :root:has(.bar[data-show]) .top .btn-volt { visibility: hidden; }
 }
 
 /* Moving between pages and languages: the header stays where it is and the new page
@@ -493,6 +506,7 @@ svg { display: block; }
   .top[data-scrolled] .top-in { height: 3.5rem; }
   .eyebrow { font-size: .6875rem; letter-spacing: .07em; }
   .btn { min-height: 3rem; }
+  .cta-actions { justify-items: stretch; }
   .btn-sm { min-height: 2.75rem; }
   .sec { padding-block: 3.5rem; }
   .statement, .company-say { font-size: 1.5rem; }

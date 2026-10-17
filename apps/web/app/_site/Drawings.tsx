@@ -44,7 +44,7 @@ export function ChatBubble({ bubble, label, signal = false }: { bubble: Bubble; 
       {label && <span className="d-said">{label}</span>}
       <p className="d-bubble" dir="auto">
         {bubble.lines.map((line, index) => <Line key={index} line={line} />)}
-        {bubble.time && <span className="d-time" dir="ltr">{bubble.time}</span>}
+        {bubble.time && <span className="d-time" dir="auto">{bubble.time}</span>}
       </p>
     </li>
   );
@@ -117,7 +117,8 @@ export function TrackScreen({ sample, lang }: { sample: Sample; lang: Locale }) 
   );
 }
 
-/** The booking page (`/b/`) with a service, a day and a time chosen. */
+/** The booking page (`/b/`) with a service, a day and a time chosen. Its steps are numbered
+ * by a CSS counter, so a step the figure leaves out (home.css) leaves no gap in the count. */
 export function BookingScreen({ sample }: { sample: Sample }) {
   const b = sample.booking;
   return (
@@ -130,7 +131,7 @@ export function BookingScreen({ sample }: { sample: Sample }) {
           <span className="d-who-chip">{b.as} <b>{b.customer}</b></span>
         </div>
         <div className="d-section">
-          <b className="d-h2"><span className="d-step done">1</span>{b.steps[0]}</b>
+          <b className="d-h2"><span className="d-step done" />{b.steps[0]}</b>
           <div className="d-card">
             {b.services.map((s) => (
               <div key={s.name} className={`d-choice${s.on ? " on" : ""}`}>
@@ -141,7 +142,7 @@ export function BookingScreen({ sample }: { sample: Sample }) {
           </div>
         </div>
         <div className="d-section">
-          <b className="d-h2"><span className="d-step done">2</span>{b.steps[1]}</b>
+          <b className="d-h2"><span className="d-step done" />{b.steps[1]}</b>
           <div className="d-days">
             {b.days.map((d) => (
               <span key={d.day} className={`d-day${d.on ? " on" : ""}`}>
@@ -151,10 +152,10 @@ export function BookingScreen({ sample }: { sample: Sample }) {
           </div>
         </div>
         <div className="d-section">
-          <b className="d-h2"><span className="d-step done">3</span>{b.steps[2]}</b>
+          <b className="d-h2"><span className="d-step done" />{b.steps[2]}</b>
           <div className="d-times">
             {b.times.map((time) => (
-              <span key={time} className={`d-time-slot${time === b.time ? " on" : ""}`} dir="ltr">{time}</span>
+              <span key={time} className={`d-time-slot${time === b.time ? " on" : ""}`} dir="auto">{time}</span>
             ))}
           </div>
         </div>
@@ -222,7 +223,7 @@ export function ReportBubble({ report }: { report: Home["how"]["report"] }) {
             ))}
           </span>
         ))}
-        <span className="d-time" dir="ltr">{report.time}</span>
+        <span className="d-time" dir="auto">{report.time}</span>
       </p>
     </div>
   );

@@ -15,7 +15,7 @@ main[data-page="home"] {
   --h2: clamp(2rem, 1.3rem + 2.6vw, 3.25rem);
   --h3: 1.375rem;
   --col-gap: 1.5rem;
-  --sec: clamp(4rem, 10vw, 8rem);
+  --sec: clamp(3.5rem, 7vw, 6rem);
   font-size: 1.0625rem;
   line-height: 1.55;
 }
@@ -90,7 +90,7 @@ main[data-page="home"] {
 .split-line { padding-block-end: .06em; }
 
 /* A section rule with a cross at each end: the construction grid showing through. */
-.rule { position: relative; height: 1px; background: var(--line); margin-bottom: clamp(2.5rem, 6vw, 4.5rem); }
+.rule { position: relative; height: 1px; background: var(--line); margin-bottom: clamp(2rem, 4vw, 3.5rem); }
 .rule i { position: absolute; top: -4px; width: 9px; height: 9px; }
 .rule i:first-child { inset-inline-start: -4px; }
 .rule i:last-child { inset-inline-end: -4px; }
@@ -142,7 +142,7 @@ main[data-page="home"] {
 [lang="ar"] .hero-body { line-height: 1.7; }
 .hero-actions { display: flex; flex-wrap: wrap; align-items: center; gap: .75rem 1.75rem; margin-top: 2rem; }
 .hero-note { margin-top: 1rem; max-width: 30rem; }
-.hero-facts { display: grid; grid-template-columns: repeat(3, auto); justify-content: start; margin-top: 2.5rem; border-top: 1px solid var(--line); width: 100%; max-width: 40rem; }
+.hero-facts { display: grid; grid-template-columns: repeat(3, auto); justify-content: start; margin-top: 2.5rem; border-top: 1px solid var(--line); width: 100%; }
 .hero-facts li { padding: .875rem 1.25rem 0 0; font-size: .9375rem; font-weight: 500; line-height: 1.35; }
 .hero-facts li + li { border-inline-start: 1px solid var(--line); padding-inline-start: 1.25rem; }
 [dir="rtl"] .hero-facts li { padding: .875rem 0 0 1.25rem; }
@@ -195,6 +195,8 @@ main[data-page="home"] {
 .d-lang:lang(ar) { font-family: var(--arabic); }
 .d-lang:lang(en) { font-family: var(--sans); }
 .d-main { flex: 1; min-height: 0; overflow: hidden; display: flex; flex-direction: column; gap: 15px; padding: 16px 12px 0; }
+/* nothing in a drawn page shrinks: a short phone crops it at the screen's edge, as a real one does */
+.d-main > * { flex-shrink: 0; }
 .d-hero { display: grid; gap: 7px; }
 .d-eyebrow { font-family: var(--mono); font-size: 9px; letter-spacing: .08em; text-transform: uppercase; color: var(--d-ink-3); }
 .d-cx:lang(ar) .d-eyebrow { font-family: var(--arabic); letter-spacing: 0; font-size: 10.5px; }
@@ -224,9 +226,9 @@ main[data-page="home"] {
 .d-stepper button[aria-disabled] { opacity: .4; cursor: default; }
 .d-stepper .ico { width: 13px; height: 13px; }
 .d-stepper .roll { min-width: 18px; justify-content: center; font-size: 12px; font-weight: 600; }
-/* targets of at least 44 px on phones, without changing the drawing */
-.d-add::after, .d-stepper button::after { content: ""; position: absolute; inset: -7px; }
-.d-stepper button + .roll + button::after, .d-stepper button:first-child::after { inset-block: -7px; }
+/* targets of at least 44 px on phones, without changing the drawing: 28 + 2 × 8 for a
+   stepper button (the two reach 8 px into the 18 px digit between them, never meeting) */
+.d-add::after, .d-stepper button::after { content: ""; position: absolute; inset: -8px; }
 .d-cx :focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
 
 .d-bar { position: absolute; z-index: 2; inset-inline: 8px; bottom: 8px; display: grid; gap: 8px; padding: 10px; border-radius: 18px; background: color-mix(in srgb, var(--d-card) 92%, transparent); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px); box-shadow: var(--d-float); transition: transform var(--dur-3) var(--spring), opacity var(--dur-2) var(--ease); }
@@ -268,7 +270,7 @@ main[data-page="home"] {
 .d-said { font-size: 9.5px; color: var(--d-ink-3); padding-inline: 4px; }
 
 /* one row of the shop's workspace */
-.d-strip { display: grid; gap: 6px; padding: 10px 12px; background: var(--d-card); color: var(--d-ink); border-radius: 10px; box-shadow: var(--d-lift), 0 22px 50px -26px rgb(0 0 0 / .55); font-family: var(--sans); font-size: 12px; line-height: 1.3; }
+.d-strip { display: grid; grid-template-columns: minmax(0, 1fr); gap: 6px; padding: 10px 12px; background: var(--d-card); color: var(--d-ink); border-radius: 10px; box-shadow: var(--d-lift), 0 22px 50px -26px rgb(0 0 0 / .55); font-family: var(--sans); font-size: 12px; line-height: 1.3; }
 .d-strip-path { font-family: var(--mono); font-size: 9.5px; letter-spacing: .07em; text-transform: uppercase; color: var(--d-ink-3); }
 .d-strip:lang(ar) .d-strip-path { font-family: var(--arabic); letter-spacing: 0; text-transform: none; font-size: 10.5px; }
 .d-strip-row { display: flex; align-items: center; gap: 8px; }
@@ -302,6 +304,8 @@ main[data-page="home"] {
 .d-note { font-size: 10.5px; line-height: 1.45; color: var(--d-ink-2); text-align: center; }
 
 /* booking page */
+.d-cx { counter-reset: d-step; }
+.d-step::before { counter-increment: d-step; content: counter(d-step); }
 .d-step { width: 18px; height: 18px; flex: none; display: grid; place-items: center; border-radius: 50%; background: var(--d-ink); color: var(--d-card); font-family: var(--mono); font-size: 9.5px; font-weight: 500; }
 .d-step.done { background: var(--volt); color: var(--on-volt); }
 .d-choice { display: flex; align-items: center; gap: 10px; min-height: 50px; padding: 8px 12px; }
@@ -310,7 +314,7 @@ main[data-page="home"] {
 .d-radio { width: 18px; height: 18px; flex: none; display: grid; place-items: center; border-radius: 50%; box-shadow: inset 0 0 0 1.5px var(--d-hair-2); color: var(--on-volt); }
 .d-choice.on .d-radio { background: var(--volt); box-shadow: none; }
 .d-radio svg { width: 10px; height: 10px; stroke-width: 3; }
-.d-days { display: flex; gap: 6px; overflow: hidden; }
+.d-days { display: flex; gap: 6px; overflow: hidden; min-width: 0; }
 .d-day { flex: none; width: 50px; height: 60px; display: grid; place-content: center; justify-items: center; gap: 1px; border-radius: 13px; background: var(--d-card); box-shadow: var(--d-lift); }
 .d-day small { font-size: 9px; color: var(--d-ink-3); text-transform: uppercase; letter-spacing: .04em; }
 .d-cx:lang(ar) .d-day small { text-transform: none; letter-spacing: 0; font-size: 9.5px; }
@@ -450,12 +454,15 @@ main[data-page="home"] {
 .story-step:nth-child(6) > * { grid-row: 5; }
 .story-step + .story-step .story-text, .story-step + .story-step .story-fig { border-top: 1px solid var(--dark-line); }
 .story-rail { display: none; }
-.story-stage { position: relative; height: 35rem; display: grid; place-items: center; }
+.story-stage { position: relative; height: 35rem; display: grid; grid-template-columns: minmax(0, 1fr); place-items: center; }
 .story-stage { place-items: start end; padding-inline-end: 4rem; }
 .sf-phone { width: 18.5rem; height: 30.5rem; }
 /* the shop's row sits below the customer's phone, offset along 45° toward the start */
 .sf-strip { position: absolute; inset-inline-end: 14rem; bottom: 1rem; width: 17.5rem; z-index: 2; }
 .sf-inbox .story-stage { place-items: center stretch; }
+/* the booking page shows the chosen service and the times; the bar's summary already gives the day */
+.sf-book .d-choice:not(.on), .sf-book .d-section:nth-child(3) { display: none; }
+.story-fig .d-bar { background: var(--d-card); backdrop-filter: none; -webkit-backdrop-filter: none; }
 .sf-inbox .d-sheet { width: min(100%, 33rem); justify-self: center; }
 .band .cap { border-top-color: var(--dark-line); color: #8a9199; }
 .band .cap::before { background: #555d65; }
@@ -555,7 +562,7 @@ main[data-page="home"] {
 .sheet-incl { margin-top: .5rem; color: var(--text-muted); max-width: 34rem; }
 .sheet-early { margin-top: 1.25rem; max-width: 34rem; }
 /* English sets the currency before the amount ("QAR 449"), at the top of the digits */
-.sheet-cur { align-self: flex-start; padding-top: .375rem; font-family: var(--mono); font-size: .8125rem; line-height: 1.3; letter-spacing: .06em; text-transform: uppercase; color: var(--text-muted); }
+.sheet-cur { align-self: flex-start; margin-inline-end: -.375rem; padding-top: .375rem; font-family: var(--mono); font-size: .8125rem; line-height: 1.3; letter-spacing: .06em; text-transform: uppercase; color: var(--text-muted); }
 .sheet .mono-k { margin-top: 2.5rem; margin-bottom: .75rem; }
 .ledger { border-bottom: 1px solid var(--line); }
 .ledger > div { display: grid; grid-template-columns: minmax(0, .85fr) minmax(0, 1.15fr); gap: 1rem; padding-block: .9375rem; border-top: 1px solid var(--line); }
@@ -662,6 +669,11 @@ main[data-page="home"] {
   .sf-phone { width: min(17.5rem, 82%); height: 21rem; }
   .sf-strip { position: relative; inset: auto; justify-self: start; width: min(18rem, 88%); margin-top: -1.25rem; }
   .sf-inbox .story-stage { justify-items: stretch; }
+  /* the shorter phone keeps the tracking steps whole and the booking's times in view */
+  .sf-track .d-person, .sf-track .d-note { display: none; }
+  .sf-book .sf-phone { height: 24rem; }
+  /* the chosen time shows in Volt and the shop's row below says Booked, so the bar can go */
+  .sf-book .d-bar { display: none; }
   .also-cols { grid-template-columns: minmax(0, 1fr); }
   .also-cols li, [dir="rtl"] .also-cols li { padding: 1.25rem 0; }
   .also-cols li + li { border-inline-start: 0; padding-inline-start: 0; border-top: 1px solid var(--dark-line); }

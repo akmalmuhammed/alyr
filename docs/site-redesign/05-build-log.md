@@ -102,3 +102,17 @@ Done:
 ### Left from 08 after stage 1
 
 Layout and phone (06 P0-1, P1-3, P1-6 styling check, P1-7, P1-9, P2-2 to P2-5, P2-8, P2-9, P2-11), motion and the fold (06 P0-2, P1-1, P1-2, P1-8, P2-6, P2-10, the fold at the closing call), the hero plate (lift 2), polish, then the checks in 08 and fresh `shots/`.
+
+### Stage 2: layout and phone (commit "fix pass 2")
+
+Done:
+- **06 P0-1:** the story stage, the shop strip and the day row size to their column (`minmax(0, 1fr)`, `min-width: 0`). At 320 × 700, English and Arabic: `scrollWidth` 320, the sticky bar at 631–700 and showing, no element outside the page.
+- **06 P1-3:** nothing in a drawn page shrinks (`.d-main > * { flex-shrink: 0 }`); the band's booking page drops the unchosen service and the day row (the bar's summary gives the day), and its steps are numbered by a CSS counter so they read 1, 2 rather than 1, 3; the bar is opaque in the band. On phones the tracking page drops the person and note, the booking phone is 24 rem, and its bar goes (the chosen time is Volt and the shop's row below says Booked).
+- **06 P1-6:** under the steps, a 12-column row: the early-access note at H3 size with an outlined contact button (`ContactButton variant="line"`, a 1.5 px line along the same notch) in columns 1–6, the report in 7–12, and the dashed line from step 4's node recomputed for column 7. On phones the report comes first, then the note.
+- **06 P1-7:** the header is opaque by default and clear only at the top of a page once scripts run (`.al-js`).
+- **06 P1-9:** stepper targets measure 44 × 44 (add buttons 48 × 48), at 320 in both languages.
+- **06 P2-2, P2-3, P2-4, P2-5, P2-8, P2-9, P2-11:** facts rule to column 7; the address in a sentence takes the sentence's type; the arrow tucks under the notch; room inside the nav focus ring; the header's Volt button hides while the phone bar is up, and the closing button is full width at ≤ 30 rem; section rhythm `clamp(3.5rem, 7vw, 6rem)`; Doha time beside "Built in Qatar.".
+- **Price sheet (07 P1-3):** English reads "QAR 449 a month", the currency at the top of the digits; Arabic keeps «449 ر.ق شهرياً». The early-access line sits under the price with the hollow pending dot.
+- Drawn Arabic times (chat, booking slots, report) take their own direction (`dir="auto"`): with `dir="ltr"` «4:30 م» read backwards.
+
+Left: motion and the fold (06 P0-2, P1-1, P1-2, P1-8, P2-6, P2-10, the fold at the closing call), the hero plate, polish, checks, shots.
