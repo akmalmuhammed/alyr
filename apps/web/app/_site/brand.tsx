@@ -82,6 +82,11 @@ const ICONS = {
   dashboard: ["M4 4h6v6H4z", "M14 4h6v10h-6z", "M4 14h6v6H4z", "M14 18h6v2h-6z"],
   ai: ["M8 18h8", "M9 21h6", "M7 14a7 7 0 1 1 10 0c-1.4 1.2-2 2.2-2 4H9c0-1.8-.6-2.8-2-4Z"],
   settings: ["M7 7h10v10H7z", "M9 3v4", "M15 3v4", "M9 17v4", "M15 17v4", "M3 9h4", "M17 9h4", "M3 15h4", "M17 15h4", "M10 12h4"],
+  // A drawn speech bubble for "message us": deliberately not WhatsApp's mark.
+  chat: ["M4 5h16v11H9l-5 4z"],
+  mail: ["M3 5h18v14H3z", "m3 6 9 7 9-7"],
+  plus: ["M12 5v14", "M5 12h14"],
+  minus: ["M5 12h14"],
 } as const;
 
 export type IconName = keyof typeof ICONS;

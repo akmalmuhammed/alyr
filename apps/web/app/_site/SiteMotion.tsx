@@ -3,8 +3,9 @@
 import { useEffect } from "react";
 
 /**
- * The page's scroll behaviour, in one place: the header tightening, sections arriving,
- * and the approach statement lighting up word by word as it is read.
+ * The page's scroll behaviour, in one place: the header tightening, the header turning
+ * Carbon while it sits over a full-bleed Carbon section, sections arriving, and the
+ * approach statement lighting up word by word as it is read.
  *
  * Everything here is an enhancement. Without JavaScript, or with reduced motion on, the
  * page is complete and still (see the `.al-js` and `prefers-reduced-motion` rules).
@@ -28,6 +29,25 @@ export function SiteMotion() {
       { rootMargin: "0px 0px -12% 0px", threshold: 0.08 },
     );
     document.querySelectorAll("[data-reveal]").forEach((node) => seen.observe(node));
+
+    // The header turns Carbon while its middle line (about 30 px down) is over a full-bleed
+    // Carbon section. An observer on that one line, so nothing measures the page as it loads.
+    const over = new Map<Element, boolean>();
+    let dark: IntersectionObserver | null = null;
+    const watchDark = () => {
+      dark?.disconnect();
+      over.clear();
+      if (!header) return;
+      dark = new IntersectionObserver(
+        (entries) => {
+          for (const entry of entries) over.set(entry.target, entry.isIntersecting);
+          header.toggleAttribute("data-on-dark", Array.from(over.values()).some(Boolean));
+        },
+        { rootMargin: `-30px 0px -${Math.max(0, window.innerHeight - 31)}px 0px` },
+      );
+      document.querySelectorAll(".band-in, .cta").forEach((node) => dark?.observe(node));
+    };
+    watchDark();
 
     let lit = -1;
     let queued = false;
@@ -54,10 +74,13 @@ export function SiteMotion() {
     update();
     window.addEventListener("scroll", onScroll, { passive: true });
     window.addEventListener("resize", onScroll);
+    window.addEventListener("resize", watchDark);
     return () => {
       seen.disconnect();
+      dark?.disconnect();
       window.removeEventListener("scroll", onScroll);
       window.removeEventListener("resize", onScroll);
+      window.removeEventListener("resize", watchDark);
     };
   }, []);
   return null;
