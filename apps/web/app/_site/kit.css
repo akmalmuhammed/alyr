@@ -1,0 +1,211 @@
+/* The pieces the homepage and the product pages share (ProductKit.tsx, HomePage.tsx): the
+   type and rhythm tokens, section rules with their crosses, the questions, and the product
+   page template of 01-research.md D (the bar under the header, the screen with callouts,
+   "Not yet" under a dashed rule, "Works with the rest of ALYR"). Shared tokens, the
+   button, header, captions, fold, closing call and footer are in site.css; the drawings in
+   drawings.css. Nothing here restyles a class the ALYR Chat page already had. */
+
+main {
+  --display: clamp(2.75rem, 1.4rem + 5vw, 5.5rem);
+  --h2: clamp(2rem, 1.3rem + 2.6vw, 3.25rem);
+  --h3: 1.375rem;
+  --col-gap: 1.5rem;
+  --sec: clamp(3.5rem, 7vw, 6rem);
+}
+:root { interpolate-size: allow-keywords; }
+
+/* ---------------------------------------------------- type and structure */
+.hs { padding-block: var(--sec); }
+.h2 { font-size: var(--h2); font-weight: 620; line-height: 1.04; letter-spacing: -.03em; text-wrap: balance; }
+[lang="ar"] .h2 { line-height: 1.3; letter-spacing: 0; font-weight: 600; }
+.head { display: grid; gap: 1.25rem; align-content: start; }
+.head .lead { margin-top: .25rem; }
+.mono-k { font-family: var(--mono); font-size: .75rem; font-weight: 500; line-height: 1.35; letter-spacing: .09em; text-transform: uppercase; color: var(--text-muted); }
+[lang="ar"] .mono-k { font-family: var(--arabic); letter-spacing: 0; text-transform: none; font-size: .875rem; }
+.mono-dark { color: var(--concrete); }
+.split-line { padding-block-end: .06em; }
+/* a heading whose lines break where its words say (Text.tsx `lines`) */
+.line { display: block; }
+
+/* A section rule with a cross at each end: the construction grid showing through. */
+.rule { position: relative; height: 1px; background: var(--line); margin-bottom: clamp(2rem, 4vw, 3.5rem); }
+.rule i { position: absolute; top: -4px; width: 9px; height: 9px; }
+.rule i:first-child { inset-inline-start: -4px; }
+.rule i:last-child { inset-inline-end: -4px; }
+.rule i::before, .rule i::after { content: ""; position: absolute; background: var(--line-strong); }
+.rule i::before { inset: 4px 0 auto; height: 1px; }
+.rule i::after { inset: 0 auto 0 4px; width: 1px; }
+/* dashed = a slot waiting to become true */
+.rule-dashed { height: 0; background: none; border-top: 1px dashed var(--line-strong); margin-bottom: 1.5rem; }
+.rule-dashed i { top: -5px; }
+
+/* ------------------------------------------------------------- questions */
+.faq-grid { display: grid; grid-template-columns: repeat(12, minmax(0, 1fr)); column-gap: var(--col-gap); row-gap: 2rem; align-items: start; }
+.faq-head { grid-column: 1 / span 4; align-self: stretch; }
+.faq-head .head { position: sticky; top: calc(var(--header) + 2rem); }
+.faq-list { grid-column: 5 / -1; border-bottom: 1px solid var(--line); }
+.qa { position: relative; border-top: 1px solid var(--line); transition: border-color var(--dur-3) var(--ease); }
+.qa[open] { border-top-color: var(--text); }
+.qa::before { content: ""; position: absolute; inset-inline: 0; top: -1px; height: 2px; background: var(--volt); opacity: 0; pointer-events: none; }
+.qa summary { display: flex; align-items: center; justify-content: space-between; gap: 1.5rem; min-height: 3.5rem; padding-block: 1.0625rem; cursor: pointer; list-style: none; font-size: clamp(1.0625rem, 1rem + .3vw, 1.1875rem); font-weight: 560; line-height: 1.4; }
+.qa summary::-webkit-details-marker { display: none; }
+.qa summary:hover > span:first-child { text-decoration: underline; text-decoration-thickness: 1px; text-underline-offset: .2em; }
+.qa summary:focus-visible { outline-offset: 4px; }
+.qa-mark { position: relative; width: .875rem; height: .875rem; flex: none; }
+.qa-mark::before, .qa-mark::after { content: ""; position: absolute; inset: 50% 0 auto; height: 1.5px; translate: 0 -50%; background: currentColor; transition: rotate var(--dur-3) var(--spring); }
+.qa-mark::after { rotate: 90deg; }
+.qa[open] .qa-mark::after { rotate: 0deg; }
+.qa-a p { padding-bottom: 1.375rem; color: var(--text-muted); max-width: 42rem; text-wrap: pretty; }
+.qa::details-content { block-size: 0; overflow-y: clip; }
+.qa[open]::details-content { block-size: auto; }
+@media (prefers-reduced-motion: no-preference) {
+  .qa::details-content { transition: block-size var(--dur-3) var(--ease), content-visibility var(--dur-3) allow-discrete; }
+  .motion .qa[open]::before { animation: kit-flash var(--dur-3) var(--ease) both; }
+}
+@keyframes kit-flash { 0% { opacity: 1; } 100% { opacity: 0; } }
+
+/* -------------------------------------------------------- callouts beside a figure */
+.callouts { display: grid; align-content: start; border-bottom: 1px solid var(--line); counter-reset: none; }
+.callouts li { display: grid; grid-template-columns: 1.75rem minmax(0, 1fr); gap: .875rem; align-items: start; padding-block: 1rem; border-top: 1px solid var(--line); font-size: .9375rem; line-height: 1.5; }
+.co-n { display: inline-grid; place-items: center; width: 1.5rem; height: 1.5rem; border-radius: 50%; background: var(--carbon); color: #fff; box-shadow: inset 0 0 0 1.5px var(--mark-ring); font-family: var(--mono); font-size: .75rem; font-weight: 500; line-height: 1; translate: 0 -.05rem; }
+
+/* ===================================================== the product pages */
+
+/* The bar under the header: the product's name and its sections, held while the page is
+   read. It sits under the header, which tightens when the page scrolls. */
+.pbar {
+  position: sticky; top: var(--header); z-index: 15;
+  background: var(--canvas);
+  border-bottom: 1px solid var(--line);
+  transition: top var(--medium) var(--ease);
+}
+:root:has(.top[data-scrolled]) .pbar { top: 3.75rem; }
+.pbar-in { display: flex; align-items: center; gap: 2rem; min-height: 3rem; }
+.pbar-name { display: inline-flex; align-items: center; gap: .625rem; min-height: 2.75rem; font-weight: 600; font-size: .9375rem; white-space: nowrap; }
+.pbar-nav { display: flex; gap: 1.5rem; min-width: 0; overflow-x: auto; scrollbar-width: none; }
+.pbar-nav::-webkit-scrollbar { display: none; }
+.pbar-nav a { display: inline-flex; align-items: center; min-height: 2.75rem; padding-inline: .25rem; margin-inline: -.25rem; font-size: .875rem; font-weight: 500; color: var(--text-muted); white-space: nowrap; }
+.pbar-nav a:hover { color: var(--text); }
+.pbar-nav a:focus-visible { outline-offset: -2px; }
+/* the page's sections land below both bars */
+main:has(.pbar) section[id] { scroll-margin-top: calc(var(--header) + 4rem); }
+
+/* the opening's headline: two lines, the second muted */
+.pk-title { max-width: 18ch; }
+[lang="ar"] .pk-title { max-width: 20ch; }
+.pk-title > span { display: block; }
+.pk-title > span + span { color: var(--concrete); }
+.pk-facts li p { font-size: 1.0625rem; font-weight: 600; line-height: 1.35; color: #fff; }
+[lang="ar"] .pk-facts li p { line-height: 1.6; }
+.pk-facts.is-four { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+
+/* the demo, for a tab that has only the team's screen, and buttons on a row */
+.demo-stage.is-panel { grid-template-columns: minmax(0, 1fr); }
+.row-acts { display: inline-flex; gap: .375rem; margin-inline-start: auto; }
+.row-act { display: inline-flex; align-items: center; height: 1.75rem; padding: 0 .625rem; border-radius: .375rem; border: 1px solid #6b7480; color: #fff; font-size: .75rem; font-weight: 600; white-space: nowrap; }
+
+/* the screen used every day, at true scale, with its callouts */
+.pk-screen-grid { display: grid; grid-template-columns: minmax(0, 9fr) minmax(0, 3fr); column-gap: clamp(1.5rem, 4vw, 4rem); row-gap: 2rem; align-items: start; }
+.pk-screen-fig { min-width: 0; }
+.pk-screen-grid .callouts { position: sticky; top: calc(var(--header) + 5rem); }
+.pk-also { display: grid; gap: .625rem; margin-top: 2rem; }
+.pk-also-cap { font-size: .875rem; color: var(--text-muted); }
+
+/* everything it does today, then what is not built yet */
+.pk-list li p { margin-top: 0; color: var(--text); font-size: 1rem; line-height: 1.5; }
+[lang="ar"] .pk-list li p { line-height: 1.7; }
+.notyet { position: relative; margin-top: clamp(2.5rem, 5vw, 3.5rem); padding-top: 1.5rem; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); column-gap: clamp(1.5rem, 3.5vw, 3.5rem); }
+.notyet-rule { position: absolute; inset: 0 0 auto; border-top: 1px dashed var(--line-strong); }
+.notyet-k { grid-column: 1 / -1; }
+.notyet .notyet-k .dot-pending { width: .625rem; height: .625rem; }
+.notyet-list { grid-column: 1 / -1; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); column-gap: clamp(1.5rem, 3.5vw, 3.5rem); }
+.notyet-list li { position: relative; padding-block: .875rem 1rem; padding-inline-start: 1.25rem; border-top: 1px dashed var(--line); color: var(--text-muted); font-size: .9375rem; line-height: 1.5; }
+.notyet-list li::before { content: ""; position: absolute; inset-inline-start: 0; top: 1.3rem; width: .5625rem; height: .5625rem; border-radius: 50%; border: 1.5px solid var(--pending); }
+
+/* who it's for, as rows with what each uses */
+.pk-who > li { grid-template-columns: minmax(0, 1fr) auto; }
+.pk-who .tags { flex-wrap: wrap; justify-content: flex-end; }
+.who-link { display: inline-flex; min-height: 0; color: var(--text); font-weight: 600; border-bottom: 1px solid var(--line-strong); }
+.who-link .ico { width: .875rem; height: .875rem; }
+
+/* works with the rest of ALYR: ruled rows, Payroll dashed */
+.works-rows { border-bottom: 1px solid var(--line); }
+.works-rows > li { display: grid; grid-template-columns: minmax(0, 4fr) minmax(0, 6fr) minmax(0, 3fr); gap: .5rem 2rem; align-items: baseline; padding-block: 1.5rem; border-top: 2px solid var(--text); }
+.works-rows > li + li { border-top-width: 1px; border-top-color: var(--line); }
+.works-rows > li.is-soon { border-top: 1px dashed var(--line-strong); }
+.works-name { display: grid; gap: .125rem; }
+.works-name b { font-size: 1.25rem; font-weight: 600; letter-spacing: -.01em; }
+.works-name small { font-size: .875rem; color: var(--text-muted); }
+.works-say { color: var(--text-muted); max-width: 34rem; }
+.works-link { justify-self: end; }
+.is-soon .works-name b { color: var(--text-muted); }
+
+/* ALYR Agent: four steps in a row, then one suggestion opened */
+.pk-steps { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); column-gap: var(--col-gap); border-top: 1px solid var(--line); }
+.pk-steps li { position: relative; display: grid; gap: .5rem; align-content: start; padding-block: 1.5rem; padding-inline: 0 1.25rem; }
+.pk-steps li + li { border-inline-start: 1px solid var(--line); padding-inline-start: 1.25rem; }
+.pk-steps h3 { font-size: var(--h3); font-weight: 600; line-height: 1.25; }
+.pk-steps p { color: var(--text-muted); }
+.pk-step-n { display: inline-grid; place-items: center; width: 2rem; height: 2rem; border-radius: 50%; margin-bottom: .5rem; box-shadow: inset 0 0 0 1.5px var(--line-strong); font-family: var(--mono); font-size: .8125rem; }
+.pk-steps li:nth-child(3) .pk-step-n { background: var(--volt); color: var(--on-volt); box-shadow: none; }
+.pk-card-fig { margin-top: clamp(2rem, 4vw, 3rem); max-width: 44rem; margin-inline-start: calc((100% + var(--col-gap)) * .5); }
+.pk-card { padding: 0 1.5rem; }
+.pk-card .ag-card { border-bottom: 0; }
+.pk-card .ag-btn { cursor: default; }
+.pk-card .ag-btn.is-volt { background: transparent; color: var(--ag-ink); border-color: var(--ag-ink); }
+.pk-card-under { margin-top: 1rem; color: var(--text-muted); max-width: 38rem; }
+
+/* ALYR Agent: the Sunday report */
+.pk-report-grid { display: grid; grid-template-columns: minmax(0, 6fr) minmax(0, 6fr); column-gap: clamp(2rem, 5vw, 5rem); row-gap: 2.5rem; align-items: start; }
+.pk-report-fig { min-width: 0; }
+
+/* ALYR Agent: the rules, as the screen shows them */
+.rules-table { width: 100%; border-collapse: collapse; border-bottom: 1px solid var(--line); }
+.rules-table th, .rules-table td { text-align: start; vertical-align: top; padding: 1.125rem 1.5rem 1.125rem 0; border-top: 1px solid var(--line); }
+[dir="rtl"] .rules-table th, [dir="rtl"] .rules-table td { padding: 1.125rem 0 1.125rem 1.5rem; }
+.rules-table thead th { padding-block: .75rem; border-top: 2px solid var(--text); font-family: var(--mono); font-size: .75rem; font-weight: 500; letter-spacing: .09em; text-transform: uppercase; color: var(--text-muted); }
+[lang="ar"] .rules-table thead th { font-family: var(--arabic); letter-spacing: 0; text-transform: none; font-size: .875rem; }
+.rules-table tbody th { width: 34%; font-size: 1.0625rem; font-weight: 600; }
+.rules-line { display: block; font-family: var(--mono); font-size: .875rem; line-height: 1.55; color: var(--text); }
+[lang="ar"] .rules-line { font-family: var(--arabic); font-size: .9375rem; line-height: 1.7; }
+.rules-note { margin-top: .5rem; font-size: .875rem; }
+.rules-notes { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); column-gap: var(--col-gap); margin-top: 1.5rem; }
+.rules-notes li { color: var(--text-muted); max-width: 32rem; }
+
+/* ------------------------------------------------------------- narrower */
+@media (max-width: 61.99rem) {
+  .faq-head, .faq-list { grid-column: 1 / -1; }
+  .faq-head .head { position: static; }
+  .pk-screen-grid, .pk-report-grid { grid-template-columns: minmax(0, 1fr); }
+  .pk-screen-grid .callouts { position: static; }
+  .notyet, .notyet-list { grid-template-columns: minmax(0, 1fr); }
+  .pk-steps { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .pk-steps li:nth-child(3) { border-inline-start: 0; padding-inline-start: 0; }
+  .pk-steps li:nth-child(n + 3) { border-top: 1px solid var(--line); }
+  .pk-card-fig { margin-inline-start: 0; }
+  .works-rows > li { grid-template-columns: minmax(0, 1fr); }
+  .works-link { justify-self: start; }
+  .pk-facts.is-four { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+@media (max-width: 53rem) {
+  .pbar-in { gap: 1.25rem; }
+  /* the sections scroll sideways; a fade on the far edge says there are more */
+  .pbar-nav { padding-inline-end: 1.5rem; mask-image: linear-gradient(to right, #000 calc(100% - 2rem), transparent); -webkit-mask-image: linear-gradient(to right, #000 calc(100% - 2rem), transparent); }
+  [dir="rtl"] .pbar-nav { mask-image: linear-gradient(to left, #000 calc(100% - 2rem), transparent); -webkit-mask-image: linear-gradient(to left, #000 calc(100% - 2rem), transparent); }
+  .pk-who > li { grid-template-columns: minmax(0, 1fr); }
+  .pk-who .tags { justify-content: flex-start; }
+  .pk-facts.is-four { grid-template-columns: minmax(0, 1fr); }
+  .rules-notes { grid-template-columns: minmax(0, 1fr); row-gap: .75rem; }
+}
+@media (max-width: 30rem) {
+  :root:has(.top[data-scrolled]) .pbar { top: 3.5rem; }
+  .pbar-name { font-size: .875rem; }
+  .pk-steps { grid-template-columns: minmax(0, 1fr); }
+  .pk-steps li, [dir="rtl"] .pk-steps li { border-inline-start: 0; padding-inline: 0; }
+  .pk-steps li + li { border-top: 1px solid var(--line); }
+  .rules-table, .rules-table thead, .rules-table tbody, .rules-table tr, .rules-table th, .rules-table td { display: block; }
+  .rules-table thead { display: none; }
+  .rules-table tbody th { width: auto; padding-bottom: .25rem; }
+  .rules-table td { border-top: 0; padding-top: 0; }
+  .pk-card { padding: 0 1rem; }
+}

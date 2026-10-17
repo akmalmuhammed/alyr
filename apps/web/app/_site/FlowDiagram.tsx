@@ -2,14 +2,14 @@
 
 import { useEffect, useRef, useState } from "react";
 import { Icon, Symbol } from "./brand";
-import type { Copy, PanelRow } from "./copy";
+import type { FlowSet, PanelRow } from "./copy";
 
-type Props = { flow: Copy["product"]["flow"] };
+type Props = { flow: FlowSet };
 
 const two = (value: number) => String(value).padStart(2, "0");
 
 /**
- * How ALYR Chat works, drawn as it happens: a message leaves the customer's phone, passes
+ * How an ALYR product works, drawn as it happens: a message leaves the customer's phone, passes
  * through WhatsApp, ALYR does its work in the background, the team's screen updates and
  * the reply travels back. Each story is a list of steps from `copy.ts`; the figure shows
  * everything that has happened up to the current one.

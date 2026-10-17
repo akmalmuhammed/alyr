@@ -14,19 +14,15 @@ declare global {
   }
 }
 
-const WIDE = "(min-width: 62rem)";
 const STILL = "(prefers-reduced-motion: reduce)";
 
 /**
  * The homepage's behaviour after hydration. Everything here is an enhancement: without
- * JavaScript, or with reduced motion, every section is complete and still.
+ * JavaScript, or with reduced motion, every section is complete and still. (The language
+ * link and questions opened by their address are SiteMotion's, on every page.)
  *
- * - The language link lands on the section being read (`/ar#price`).
- * - A question linked by its address opens.
  * - On phones, the contact bar shows once the hero's button has scrolled away and hides
  *   while the closing call to action is on screen.
- * - On wide screens, the Carbon band's figures stay in place and change as each module
- *   is read (only with motion; otherwise each module keeps its own figure beside it).
  * - The scroll choreography (GSAP) loads after first paint and keeps the `motion` class.
  */
 export function HomeMotion() {
@@ -35,30 +31,6 @@ export function HomeMotion() {
   useEffect(() => {
     const root = document.documentElement;
     const undo: (() => void)[] = [];
-
-    // ---------------------------------------------- the language link keeps the section
-    const sections = Array.from(document.querySelectorAll<HTMLElement>("main section[id]"));
-    const onLanguage = (event: MouseEvent) => {
-      const link = (event.target as Element | null)?.closest?.<HTMLAnchorElement>("a[data-lang]");
-      if (!link) return;
-      const reading = window.innerHeight * 0.35;
-      let here = "";
-      for (const section of sections) if (section.getBoundingClientRect().top <= reading) here = section.id;
-      const url = new URL(link.href);
-      url.hash = here ? `#${here}` : "";
-      link.href = url.toString();
-    };
-    document.addEventListener("click", onLanguage, true);
-    undo.push(() => document.removeEventListener("click", onLanguage, true));
-
-    // -------------------------------------------- a question's address opens the question
-    const openQuestion = () => {
-      const target = window.location.hash ? document.getElementById(window.location.hash.slice(1)) : null;
-      if (target instanceof HTMLDetailsElement) target.open = true;
-    };
-    openQuestion();
-    window.addEventListener("hashchange", openQuestion);
-    undo.push(() => window.removeEventListener("hashchange", openQuestion));
 
     // ------------------------------------------------------------- the phone contact bar
     const bar = document.querySelector<HTMLElement>("[data-bar]");
@@ -74,6 +46,8 @@ export function HomeMotion() {
           if (entry.target === closing) closingSeen = entry.isIntersecting || entry.boundingClientRect.top < 0;
         }
         bar.toggleAttribute("data-show", heroGone && !closingSeen);
+        // the header's button turns Volt once the hero's own has scrolled away (site.css)
+        root.toggleAttribute("data-hero-gone", heroGone);
       });
       watch.observe(heroButton);
       watch.observe(closing);
@@ -89,41 +63,6 @@ export function HomeMotion() {
     // choreography's chunk never arrives; the choreography clears it when it starts.
     window.clearTimeout(window.__alyrMotion);
     window.__alyrMotion = window.setTimeout(() => root.classList.remove("motion"), 10_000);
-
-    // The Carbon band's sticky story, on wide screens.
-    const story = document.querySelector<HTMLElement>("[data-story]");
-    const wide = window.matchMedia(WIDE);
-    let steps: IntersectionObserver | null = null;
-    const setStory = () => {
-      steps?.disconnect();
-      steps = null;
-      if (!story) return;
-      if (!wide.matches) {
-        story.removeAttribute("data-story-on");
-        return;
-      }
-      story.setAttribute("data-story-on", "");
-      story.setAttribute("data-at", story.getAttribute("data-at") ?? "0");
-      // A module counts as read when its heading comes into the middle band of the screen
-      // (35 to 65 %): with 60 vh steps the previous module's words have just left the top,
-      // so the figure changes as the visitor starts reading, neither early nor late.
-      steps = new IntersectionObserver(
-        (entries) => {
-          for (const entry of entries) {
-            const text = entry.target.closest<HTMLElement>("[data-text]");
-            if (entry.isIntersecting && text) story.setAttribute("data-at", text.dataset.text ?? "0");
-          }
-        },
-        { rootMargin: "-35% 0px -35% 0px" },
-      );
-      story.querySelectorAll("[data-text] h3").forEach((node) => steps?.observe(node));
-    };
-    setStory();
-    wide.addEventListener("change", setStory);
-    undo.push(() => {
-      wide.removeEventListener("change", setStory);
-      steps?.disconnect();
-    });
 
     // The choreography, once the page has loaded and the browser is idle, so its chunk never
     // competes with the first screen. If that takes longer than the failsafe (10 s from

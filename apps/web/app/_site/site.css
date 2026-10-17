@@ -29,6 +29,12 @@
   --pending: #8a918b;
   --on-volt: #151a0f;
   --menu-shadow: 0 24px 70px rgb(21 23 26 / .14);
+  /* a window of the workspace drawn on the page (the Agent figure, the product screens) */
+  --window: #ffffff;
+  --window-line: rgb(21 23 26 / .1);
+  --window-shadow: 0 34px 80px -44px rgb(0 0 0 / .55);
+  /* the numbered marks beside a figure: Carbon discs, ringed in Volt only in dark */
+  --mark-ring: transparent;
 
   /* Inside a Carbon block: a well a step under it, a panel a step over it. */
   --dark-canvas: #0e1012;
@@ -118,6 +124,10 @@
     --focus: #b7f34a;
     --volt-wash: rgb(183 243 74 / .12);
     --menu-shadow: 0 24px 70px rgb(0 0 0 / .5);
+    --window: #262a2f;
+    --window-line: rgb(255 255 255 / .09);
+    --window-shadow: 0 24px 60px -30px #000;
+    --mark-ring: var(--volt);
     /* Carbon on a dark page is lifted a step (#15171a on #0e1012 is 1.05:1), and what sits
        inside it keeps its place: wells under it, panels over it */
     --band: #1d2024;
@@ -166,6 +176,10 @@
   --focus: #b7f34a;
   --volt-wash: rgb(183 243 74 / .12);
   --menu-shadow: 0 24px 70px rgb(0 0 0 / .5);
+  --window: #262a2f;
+  --window-line: rgb(255 255 255 / .09);
+  --window-shadow: 0 24px 60px -30px #000;
+  --mark-ring: var(--volt);
   --band: #1d2024;
   --band-edge: var(--dark-line);
   --dark-canvas: #15171a;
@@ -234,7 +248,7 @@ svg { display: block; }
   font-family: var(--mono); font-size: .75rem; font-weight: 500; line-height: 1.35;
   letter-spacing: .09em; text-transform: uppercase; color: var(--text-muted);
 }
-[lang="ar"] .eyebrow { font-family: var(--arabic); letter-spacing: 0; font-size: .875rem; font-weight: 500; }
+[lang="ar"] .eyebrow { font-family: var(--arabic); letter-spacing: 0; text-transform: none; font-size: .875rem; font-weight: 500; }
 .eyebrow-dark { color: var(--concrete); }
 
 .display {
@@ -265,7 +279,7 @@ svg { display: block; }
   font-weight: 600; font-size: 1rem; line-height: 1; white-space: nowrap;
   transition: transform var(--dur-1) var(--ease);
 }
-.btn-sm { --notch: 9px; min-height: 2.5rem; padding: 0 .9375rem; font-size: .9375rem; }
+.btn-sm { --notch: 9px; min-height: 2.75rem; padding: 0 .9375rem; font-size: .9375rem; }
 .btn-volt { color: var(--on-volt); }
 .btn-volt::before {
   content: ""; position: absolute; inset: 0; z-index: -1; border-radius: 2px; background: var(--volt);
@@ -306,6 +320,8 @@ svg { display: block; }
 /* Words that must stay whole: amounts never break, and sit in <bdi> (Text.tsx). */
 .money { white-space: nowrap; font-variant-numeric: tabular-nums; }
 .ref { white-space: nowrap; }
+/* a product's name, "ALYR Agent", is never split across two lines */
+.pname { white-space: nowrap; }
 .sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; border: 0; }
 
 /* The contact states (Contact.tsx). Pending is a status line, never an error box. */
@@ -338,7 +354,7 @@ svg { display: block; }
 .top-logo { display: inline-flex; align-items: center; min-height: 2.75rem; }
 .logo { width: 9.25rem; height: auto; color: var(--text); }
 .top-nav { display: flex; gap: 1.75rem; margin-inline-start: 1rem; }
-.top-nav a, .top-lang { font-size: .9375rem; font-weight: 500; color: var(--text-muted); padding: .5rem 0; transition: color var(--fast) var(--ease); }
+.top-nav a, .top-lang { display: inline-flex; align-items: center; min-height: 2.75rem; font-size: .9375rem; font-weight: 500; color: var(--text-muted); padding: .5rem 0; transition: color var(--fast) var(--ease); }
 /* room inside the focus ring, without moving the links */
 .top-nav a { padding-inline: .375rem; margin-inline: -.375rem; }
 .top-nav a:hover, .top-lang:hover { color: var(--text); }
@@ -349,13 +365,68 @@ svg { display: block; }
 .top-menu summary { list-style: none; display: grid; place-items: center; width: 2.75rem; height: 2.75rem; border: 1px solid var(--line-strong); border-radius: .5rem; cursor: pointer; }
 .top-menu summary::-webkit-details-marker { display: none; }
 .top-menu .ico { width: 1.25rem; height: 1.25rem; }
-.top-menu-list { position: absolute; inset-inline-end: 0; top: calc(100% + .5rem); min-width: 13rem; background: var(--surface); border: 1px solid var(--line); border-radius: .75rem; padding: .5rem; box-shadow: var(--menu-shadow); display: grid; }
+.top-menu-list { position: absolute; inset-inline-end: 0; top: calc(100% + .5rem); min-width: 17.5rem; max-height: calc(100dvh - var(--header) - 1.5rem); overflow-y: auto; background: var(--surface); border: 1px solid var(--line); border-radius: .75rem; padding: .5rem; box-shadow: var(--menu-shadow); display: grid; }
 .top-menu-list a { padding: .75rem .875rem; border-radius: .5rem; font-weight: 500; }
 .top-menu-list a:hover { background: var(--surface-subtle); }
 
 .logo-mark { display: none; width: 2.125rem; height: auto; color: var(--text); }
 .top-menu-list a[lang="ar"] { font-family: var(--arabic); }
 .top-menu-list a[lang="en"] { font-family: var(--sans); }
+
+/* The Products menu (Shell.tsx): a native <details>, so it opens by keyboard and without
+   JavaScript; the script in <head> (document.tsx) closes it on Escape, a click outside or
+   focus leaving. On wide screens its panel spans the header, under it: the five products
+   in the suite's fixed order, each on a rule with its one line and its state. Payroll has
+   no page: a dashed rule, the pending dot, no link. On phones the same list is the first
+   group of the menu. */
+.pm { position: static; }
+.pm-btn {
+  list-style: none; display: inline-flex; align-items: center; gap: .25rem; min-height: 2.75rem; cursor: pointer;
+  font-size: .9375rem; font-weight: 500; color: var(--text-muted); padding: .5rem .375rem; margin-inline: -.375rem;
+  border-radius: 2px; transition: color var(--fast) var(--ease); white-space: nowrap;
+}
+.pm-btn::-webkit-details-marker { display: none; }
+.pm-btn:hover, .pm[open] .pm-btn { color: var(--text); }
+.pm-chev { width: 1rem; height: 1rem; transition: rotate var(--dur-2) var(--ease); }
+.pm[open] .pm-chev { rotate: 180deg; }
+.pm-panel {
+  position: absolute; inset-inline: 0; top: 100%; z-index: 30;
+  background: var(--canvas); border-block: 1px solid var(--line); box-shadow: var(--menu-shadow);
+  padding-block: 1.5rem 2rem;
+}
+.pm-grid { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); column-gap: 1.5rem; }
+.pm-item { border-top: 2px solid var(--text); }
+.pm-item.pm-soon { border-top: 1px dashed var(--line-strong); }
+.pm-link { position: relative; display: grid; align-content: start; gap: .375rem; min-height: 9rem; padding: 1rem .25rem .5rem 0; color: var(--text); }
+[dir="rtl"] .pm-link { padding: 1rem 0 .5rem .25rem; }
+.pm-soon-in { display: contents; }
+.pm-name { font-size: 1.0625rem; font-weight: 600; letter-spacing: -.01em; }
+.pm-line { font-size: .875rem; line-height: 1.45; color: var(--text-muted); max-width: 15rem; text-wrap: pretty; }
+.pm-state { display: inline-flex; align-items: center; gap: .5rem; margin-top: .25rem; font-family: var(--mono); font-size: .6875rem; letter-spacing: .08em; text-transform: uppercase; color: var(--text-muted); }
+[lang="ar"] .pm-state { font-family: var(--arabic); letter-spacing: 0; text-transform: none; font-size: .8125rem; }
+.pm-soon .pm-name, .pm-soon .pm-line { color: var(--text-muted); }
+.pm-arrow { position: absolute; top: 1.125rem; inset-inline-end: .25rem; width: 1rem; height: 1rem; color: var(--text-muted); transition: translate var(--fast) var(--ease), color var(--fast) var(--ease); }
+a.pm-link:hover .pm-name { text-decoration: underline; text-decoration-thickness: 1px; text-underline-offset: .2em; }
+a.pm-link:hover .pm-arrow { color: var(--text); translate: calc(var(--dir) * 2px) 0; }
+a.pm-link[aria-current="page"] .pm-name::after { content: ""; display: inline-block; width: .375rem; height: .375rem; margin-inline-start: .5rem; border-radius: 50%; background: var(--volt); vertical-align: .2em; }
+.pm-link:focus-visible { outline-offset: 4px; }
+.top[data-on-dark] .pm-btn { color: var(--concrete); }
+.top[data-on-dark] .pm-btn:hover, .top[data-on-dark] .pm[open] .pm-btn { color: #fff; }
+@media (prefers-reduced-motion: no-preference) {
+  .pm[open] .pm-panel { animation: pm-open var(--dur-2) var(--ease) both; }
+}
+@keyframes pm-open { from { opacity: 0; translate: 0 -6px; } }
+
+/* the phone menu: the products first, then the page's sections */
+.tm-k { padding: .5rem .875rem .25rem; font-family: var(--mono); font-size: .6875rem; letter-spacing: .08em; text-transform: uppercase; color: var(--text-muted); }
+[lang="ar"] .tm-k { font-family: var(--arabic); letter-spacing: 0; text-transform: none; font-size: .8125rem; }
+.tm-products a, .tm-soon { display: flex; align-items: baseline; justify-content: space-between; gap: 1rem; min-height: 2.75rem; padding: .625rem .875rem; border-radius: .5rem; font-weight: 600; }
+.tm-products a:hover { background: var(--surface-subtle); }
+.tm-products small, .tm-soon small { font-size: .75rem; font-weight: 500; color: var(--text-muted); white-space: nowrap; }
+.tm-soon { color: var(--text-muted); }
+.tm-soon > span[aria-hidden] { display: flex; align-items: baseline; justify-content: space-between; gap: 1rem; width: 100%; }
+.tm-products a[aria-current="page"] { background: var(--surface-subtle); }
+.tm-rule { display: block; height: 1px; margin: .375rem .875rem; background: var(--line); }
 
 /* The theme switch (ThemeSwitch.tsx). It shows the moon while the page is light and the sun
    while it is dark: the glyph names what pressing it does, as its label does. Both come from
@@ -394,7 +465,7 @@ svg { display: block; }
 .sec { padding-block: clamp(4.5rem, 10vw, 8rem); }
 .sec + .sec { border-top: 1px solid var(--line); }
 .sec h3 { font-size: 1.3125rem; font-weight: 600; line-height: 1.25; letter-spacing: -.012em; }
-[lang="ar"] .sec h3, [lang="ar"] .product h3, [lang="ar"] .product-facts h2 { letter-spacing: 0; line-height: 1.5; }
+[lang="ar"] .sec h3:not(.ag h3), [lang="ar"] .product h3:not(.ag h3), [lang="ar"] .product-facts h2 { letter-spacing: 0; line-height: 1.5; }
 
 /* approach */
 .approach-in { display: grid; grid-template-columns: minmax(0, 7fr) minmax(0, 5fr); gap: clamp(2.5rem, 6vw, 6rem); align-items: start; }
@@ -408,7 +479,13 @@ svg { display: block; }
 
 /* product: the Carbon command moment */
 .product { padding: 0 clamp(.5rem, 1.5vw, 1.25rem); }
-.product-in { background: var(--band); color: var(--dark-text); border-radius: 1rem; padding-block: clamp(4rem, 9vw, 7.5rem) clamp(3rem, 6vw, 5rem); position: relative; overflow: clip; }
+.product-in {
+  --cut: 6rem;
+  background: var(--band); color: var(--dark-text); padding-block: clamp(4rem, 9vw, 7.5rem) clamp(3rem, 6vw, 5rem); position: relative; overflow: clip;
+  /* the homepage plate's 45-degree cut, mirrored in Arabic */
+  clip-path: polygon(var(--cut) 0, 100% 0, 100% 100%, 0 100%, 0 var(--cut));
+}
+[dir="rtl"] .product-in { clip-path: polygon(0 0, calc(100% - var(--cut)) 0, 100% var(--cut), 100% 100%, 0 100%); }
 .product-in::before {
   content: ""; position: absolute; inset: 0; pointer-events: none;
   background-image: radial-gradient(rgb(167 173 181 / .16) 1px, transparent 1px);
@@ -420,10 +497,10 @@ svg { display: block; }
 .product-head { display: grid; gap: 1.5rem; max-width: 46rem; }
 .product-head .lead { color: var(--concrete); }
 /* the facts sit straight under the page's h1, so they are h2s set like the h3s here */
-.product h3, .product-facts h2 { font-size: 1.1875rem; font-weight: 600; line-height: 1.3; }
+/* not inside ALYR Agent's dashboard, which keeps its own headings */
+.product h3:not(.ag h3), .product-facts h2 { font-size: 1.1875rem; font-weight: 600; line-height: 1.3; }
 .product-facts { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); margin-top: clamp(3rem, 6vw, 4.5rem); border-top: 1px solid var(--dark-line); }
-.product-facts li { padding: 1.75rem 2rem 0 0; }
-[dir="rtl"] .product-facts li { padding: 1.75rem 0 0 2rem; }
+.product-facts li { padding-block: 1.75rem 0; padding-inline: 0 2rem; }
 .product-facts li + li { border-inline-start: 1px solid var(--dark-line); padding-inline-start: 2rem; }
 .product-facts p { margin-top: .5rem; color: var(--concrete); font-size: .9375rem; }
 
@@ -533,10 +610,12 @@ svg { display: block; }
 /* who */
 .who-in { display: grid; grid-template-columns: minmax(0, 4fr) minmax(0, 8fr); gap: clamp(2rem, 5vw, 5rem); align-items: start; }
 .who-head { display: grid; gap: 1.5rem; position: sticky; top: calc(var(--header) + 2rem); }
-.who-rows > li { display: grid; grid-template-columns: minmax(0, 5fr) minmax(0, 6fr) auto; gap: 1rem 2rem; align-items: baseline; padding-block: 1.625rem; border-top: 1px solid var(--line); }
+.who-rows > li { display: grid; grid-template-columns: minmax(0, 5fr) minmax(0, 6fr) 8.5rem; gap: 1rem 2rem; align-items: baseline; padding-block: 1.625rem; border-top: 1px solid var(--line); }
 .who-rows > li:last-child { border-bottom: 1px solid var(--line); }
 .who-rows p { color: var(--text-muted); }
 .tags { display: flex; gap: .375rem; }
+/* the tags sit in a fixed track at the end, so every row's text starts on the same line */
+.who-rows .tags { justify-content: flex-end; }
 .tags span { font-family: var(--mono); font-size: .6875rem; letter-spacing: .07em; text-transform: uppercase; color: var(--text-muted); border: 1px solid var(--line-strong); border-radius: .25rem; padding: .1875rem .4375rem; white-space: nowrap; }
 [lang="ar"] .tags span { font-family: var(--arabic); letter-spacing: 0; font-size: .75rem; }
 .who-rows > li.who-other { display: block; padding-block: 1rem; }
@@ -590,6 +669,57 @@ svg { display: block; }
 .doha { display: inline-flex; align-items: center; gap: .5rem; }
 .doha-dot { width: .375rem; height: .375rem; border-radius: 50%; background: currentColor; }
 .doha-time { display: inline-block; min-width: 5ch; font-family: var(--mono); font-variant-numeric: tabular-nums; }
+
+/* ----------------------------------------------- shared by every public page */
+/* The fold: three Carbon planes with the symbol's gaps (10 of its 160 units): a 6 px Paper
+   line across, and a 6 px Paper line down the 45° diagonal (4.25 px each side, measured
+   across). The page shows through, so the fold stays drawn once the planes have landed.
+   It opens the Carbon band on the homepage and the closing call on every page. The planes
+   start outside their strip, so the strip clips them: nothing may widen the page. */
+/* tall enough that its first plane reads as a plane (4 rem at full width), not a thin strip */
+.band-fold { position: relative; overflow: clip; height: clamp(4rem, 10vw, 9rem); --fold: clamp(4rem, 10vw, 9rem); --x: 62%; }
+.band-fold i { position: absolute; inset: 0; background: var(--band); }
+.band-fold i:nth-child(1) { clip-path: polygon(0 0, 100% 0, 100% calc(46% - 3px), 0 calc(46% - 3px)); }
+.band-fold i:nth-child(2) { clip-path: polygon(0 calc(46% + 3px), calc(var(--x) - 7.25px) calc(46% + 3px), calc(var(--x) - var(--fold) * .54 - 4.25px) 100%, 0 100%); }
+.band-fold i:nth-child(3) { clip-path: polygon(calc(var(--x) + 1.25px) calc(46% + 3px), 100% calc(46% + 3px), 100% 100%, calc(var(--x) - var(--fold) * .54 + 4.25px) 100%); }
+[dir="rtl"] .band-fold i:nth-child(2) { clip-path: polygon(100% calc(46% + 3px), calc(100% - var(--x) + 7.25px) calc(46% + 3px), calc(100% - var(--x) + var(--fold) * .54 + 4.25px) 100%, 100% 100%); }
+[dir="rtl"] .band-fold i:nth-child(3) { clip-path: polygon(calc(100% - var(--x) - 1.25px) calc(46% + 3px), 0 calc(46% + 3px), 0 100%, calc(100% - var(--x) + var(--fold) * .54 - 4.25px) 100%); }
+.cta-fold + .cta { margin-top: -1px; }
+.cta-fold + .cta .cta-in { padding-top: clamp(3rem, 6vw, 5rem); }
+@media (prefers-reduced-motion: no-preference) {
+  .band-fold i { transition: translate 600ms var(--ease), opacity var(--dur-2) var(--ease); }
+  .band-fold i:nth-child(2) { transition-delay: 60ms; }
+  .band-fold i:nth-child(3) { transition-delay: 120ms; }
+  .motion .band-fold:not(.is-in) i { opacity: 0; }
+  .motion .band-fold:not(.is-in) i:nth-child(1) { translate: calc(var(--dir) * 48px) -48px; }
+  .motion .band-fold:not(.is-in) i:nth-child(2) { translate: calc(var(--dir) * -48px) 48px; }
+  .motion .band-fold:not(.is-in) i:nth-child(3) { translate: calc(var(--dir) * 64px) 64px; }
+}
+
+/* FIG captions: a mono line on a hairline that ends in a tick. */
+.cap {
+  position: relative; display: block;
+  margin-top: 1rem; padding-top: .625rem; border-top: 1px solid var(--line);
+  font-family: var(--mono); font-size: .6875rem; font-weight: 500; line-height: 1.55; letter-spacing: .08em; text-transform: uppercase; color: var(--text-muted);
+  text-wrap: balance;
+}
+.cap::before { content: ""; position: absolute; top: -5px; inset-inline-start: 0; width: 1px; height: 9px; background: var(--line-strong); }
+[lang="ar"] .cap { font-family: var(--arabic); letter-spacing: 0; text-transform: none; font-size: .8125rem; font-weight: 500; }
+.cap-n { color: var(--text); }
+.cap > span { display: inline; }
+.cap-sep { margin-inline: .5rem; color: var(--line-strong); }
+/* on a Carbon block */
+.on-dark .cap, .product .cap, .band .cap { border-top-color: var(--dark-line); color: #8a9199; }
+.on-dark .cap::before, .product .cap::before, .band .cap::before { background: #555d65; }
+.on-dark .cap-sep, .product .cap-sep, .band .cap-sep { color: #555d65; }
+.on-dark .cap-n, .product .cap-n, .band .cap-n { color: #fff; }
+
+/* footer: the products in their order, then the site */
+.foot-products { padding-top: 1rem; border-top: 1px solid var(--line); }
+.foot-products a { color: var(--text); font-weight: 600; }
+.foot-products a[aria-current="page"] { text-decoration: underline; text-decoration-thickness: 1px; text-underline-offset: .25em; }
+.foot-soon { display: inline-flex; align-items: center; min-height: 2.75rem; color: var(--text-muted); font-size: .9375rem; font-weight: 500; }
+.foot-site { padding-top: 0; border-top: 0; margin-top: -1rem; }
 
 /* The phone's contact bar: in once the hero's button has gone, out at the closing call. */
 .bar { display: none; }
@@ -689,6 +819,7 @@ svg { display: block; }
   .top-end { gap: .625rem; }
   .who-rows > li { grid-template-columns: minmax(0, 1fr); gap: .5rem; }
   .tags { margin-top: .375rem; }
+  .who-rows .tags { justify-content: flex-start; }
   .product-facts { grid-template-columns: minmax(0, 1fr); }
   .product-facts li, [dir="rtl"] .product-facts li { padding: 1.5rem 0; }
   .product-facts li + li { border-inline-start: 0; padding-inline-start: 0; border-top: 1px solid var(--dark-line); }
@@ -707,7 +838,7 @@ svg { display: block; }
   .statement, .company-say { font-size: 1.5rem; }
   .steps li { grid-template-columns: 2.25rem 1fr; padding-block: 1.375rem; }
   .product { padding-inline: 0; }
-  .product-in { border-radius: 0; }
+  .product-in { --cut: 3rem; }
   .product-in { padding-block: 3.5rem 2.5rem; }
   /* the tab row scrolls sideways; a fade on the far edge says there is more */
   .demo-bar { gap: .25rem; }
@@ -879,3 +1010,15 @@ h4 { margin: 0; }
   .how-panel { border-radius: .75rem; padding: .75rem; }
   .fx-now { min-height: 13.5rem; }
 }
+
+/* The homepage's hero has its own Volt button. Until it scrolls away (HomeMotion sets
+   data-hero-gone), the header's button is its outlined twin, so one Volt button is on screen. */
+:root:has([data-hero-cta]):not([data-hero-gone]) .top .btn-volt { color: var(--text); }
+:root:has([data-hero-cta]):not([data-hero-gone]) .top .btn-volt::before { background: var(--text); }
+:root:has([data-hero-cta]):not([data-hero-gone]) .top .btn-volt::after {
+  content: ""; position: absolute; z-index: -1; inset: 1.5px; border-radius: 1px; background: var(--canvas);
+  clip-path: polygon(0 0, calc(100% - var(--notch) + .88px) 0, 100% calc(var(--notch) - .88px), 100% 100%, 0 100%);
+}
+[dir="rtl"]:has([data-hero-cta]):not([data-hero-gone]) .top .btn-volt::after { clip-path: polygon(calc(var(--notch) - .88px) 0, 100% 0, 100% 100%, 0 100%, 0 calc(var(--notch) - .88px)); }
+/* "+ Agent": it comes with every product, so its tag is lighter */
+.tag.tag-plus { background: transparent; box-shadow: inset 0 0 0 1px var(--line); color: var(--text-muted); }
