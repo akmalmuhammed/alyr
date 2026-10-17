@@ -159,4 +159,40 @@ Checked at 1440, 1280, 1200, 1100 (Arabic), 1024 and 390, light and dark.
 
 Lighthouse mobile, simulated throttling, on `out-site` served locally with brotli (a Node server in `C:\t\fix`, outside the repo), three runs each: English Performance 96, 96, 95; Arabic 94, 92, 95; Accessibility, Best practices and SEO 100; LCP 2.27 s; FCP 1.12–1.36 s; CLS 0.000; TBT 180–300 ms. Earlier runs against a server without compression gave LCP 6.2 s: Lighthouse must be run against a compressing server, as Cloudflare is.
 
-axe-core 4.11 (injected, `C:\t\tools`): zero violations on `/` and `/ar`, at 1440 and 390, light and dark, at the top and after scrolling to the end. Run with the four `content-visibility` sections laid out (`content-visibility: visible` injected): with them skipped off screen, axe reports contrast on their half-arrived items, which a visitor never sees because those sections are laid out before they come into view. `/chat` keeps its two old findings (the statement's dim words before they light, heading order).
+axe-core 4.14 (injected, `C:\t\tools`): zero violations on `/` and `/ar`, at 1440 and 390, light and dark, at the top and after scrolling to the end. Run with the four `content-visibility` sections laid out (`content-visibility: visible` injected): with them skipped off screen, axe reports contrast on their half-arrived items, which a visitor never sees because those sections are laid out before they come into view. `/chat` keeps its two old findings (the statement's dim words before they light, heading order).
+
+### Stage 7: checks and shots (commit "fix pass 7")
+
+- **Story timing, again.** With 08's band (38–48 %) and 60 vh steps, the previous module's words had already left the top while the figure still showed it (the critique's complaint in reverse). The switch is now at 35–65 %: measured while scrolling, each figure changes when its heading reaches about 60 % of the screen, after the previous heading has gone under the header.
+- **Capture script:** `baseline/shoot.mjs` lays out `content-visibility` sections for a full-page capture (otherwise they are blank beyond the viewport).
+
+**The checks in 08**, on the built site (`out-site`) unless noted:
+- 320 × 700, English and Arabic: `scrollWidth` 320, the sticky bar at 631–700 and showing, no element outside the page; stepper targets 44 × 44.
+- Lighthouse mobile: LCP 2.27 s in both languages; Performance 92–96; Accessibility 100 (stage 6 has the runs).
+- axe-core: zero violations, both languages, 1440 and 390, light and dark (stage 6).
+- Without JavaScript the header is opaque Paper over every section, the Carbon wordmark readable over the band and the closing call.
+- Dark mode: the band, its fold, the plate and the closing call are `#1d2024` on `#0e1012`, each ending on a rule.
+- Page height at 1440: English 12,896 px, Arabic 12,618 (13,934 and 13,631 before).
+- `pnpm lint`, `pnpm build` and `bash scripts/build-site.sh` pass.
+
+**Shots** (`shots/`, not committed): `/` and `/ar` at 1440 × 900 and 390 × 844, first screen and full page; dark full pages; a reduced-motion full page; `/chat` and `/ar/chat` first screens; `fold-{en,ar}-1440-band.png`, `fold-{en,ar}-1440-closing.png` and `fold-en-390-band.png` (dark) with the fold at rest; `home-{en,ar}-1440-story-inbox.png` with the sticky figure in step.
+
+### Not applied, and why
+
+- **The Arabic social card** (ruling: only if the renderer can do it): it loads the font but not right-to-left word order or joined-letter widths (stage 1).
+- **"A 0.5 rem Paper gap between the phone and the record"**: no straight 45° line separates them; the slit runs above the record instead (stage 4).
+- **The `border-block` on the band and closing call in dark mode**: bottom rule only (stage 3).
+- **08's 38–48 % story band**: 35–65 % instead (above).
+- **The 07 "smaller items"** (not among P2 1–14): "chat · hours" in the back-office drawing stays as the product prints it; the inbox "Assistant" label and the setup checklist line are product-lane items.
+- **12,500 px**: 12,896 with nothing removed; see stage 5.
+
+### Open for the founder
+
+1. **Blocking publication:** write the money-back terms into the customer agreement (the agreement figure and the trust line promise them); send a test mail to hello@alyr.qa from outside; the native Arabic review (ALY-66); check "Qirfa" / «مخبز قرفة» by hand on Instagram, Google Maps and Qatar's trademark register.
+2. **Setup fee:** is it one-time? If yes, the page can say "One-time setup from QAR 1,500" (07 P1-3). The back office's draft default is still QAR 2,500.
+3. **"From QAR 449":** what makes a price higher, and is Credit accounts included? The page now says the monthly price is confirmed in writing at the visit.
+4. **"Your part" in the agreement:** "Put up your QR codes and share your chat link with customers in the first week" is the reviewer's suggestion; confirm or change it, and say how it is checked.
+5. **Written Arabic replies:** the promise "in Arabic or English" is gone from the contact lines (ruling). Say if you can reply in written Arabic and want it back.
+6. **"We help with the rest of your tech"** and "When you need more": confirm the scope you will offer for QAR 449.
+7. **`/chat`:** "Which number your customers message is agreed with you at setup; we go through Meta's requirements with you first" (03 asks you to confirm even this).
+8. **Brand (ALY-61)** is still open, and publishing needs your go-ahead.

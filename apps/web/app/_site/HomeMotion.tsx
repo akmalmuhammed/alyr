@@ -104,8 +104,9 @@ export function HomeMotion() {
       }
       story.setAttribute("data-story-on", "");
       story.setAttribute("data-at", story.getAttribute("data-at") ?? "0");
-      // A module counts as read when its heading crosses a band just above the middle of the
-      // screen, so the figure changes as the visitor starts reading it, not half a step early.
+      // A module counts as read when its heading comes into the middle band of the screen
+      // (35 to 65 %): with 60 vh steps the previous module's words have just left the top,
+      // so the figure changes as the visitor starts reading, neither early nor late.
       steps = new IntersectionObserver(
         (entries) => {
           for (const entry of entries) {
@@ -113,7 +114,7 @@ export function HomeMotion() {
             if (entry.isIntersecting && text) story.setAttribute("data-at", text.dataset.text ?? "0");
           }
         },
-        { rootMargin: "-38% 0px -52% 0px" },
+        { rootMargin: "-35% 0px -35% 0px" },
       );
       story.querySelectorAll("[data-text] h3").forEach((node) => steps?.observe(node));
     };

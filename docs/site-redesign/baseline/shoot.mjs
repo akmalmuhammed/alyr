@@ -241,7 +241,8 @@ async function main() {
             "document.querySelectorAll('[data-fill],[data-rail-fill]').forEach((n) => { n.style.transform = '' });" +
             "document.querySelectorAll('[data-rail-step]').forEach((n) => n.classList.add('is-on'));" +
             "document.getAnimations().forEach((a) => { try { if (a.effect.getComputedTiming().endTime === Infinity) return; a.finish(); a.commitStyles(); a.cancel(); } catch (e) {} });" +
-            "document.head.insertAdjacentHTML('beforeend', '<style>*,*::before,*::after{transition:none!important}</style>')",
+            // Sections laid out only near the screen (content-visibility) are laid out for the capture.
+            "document.head.insertAdjacentHTML('beforeend', '<style>*,*::before,*::after{transition:none!important}*{content-visibility:visible!important}</style>')",
         );
       }
       await sleep(1100);
