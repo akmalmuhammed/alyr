@@ -2,11 +2,15 @@ import { Icon } from "./brand";
 import { copy, type Locale } from "./copy";
 import { FlowDiagram } from "./FlowDiagram";
 import { ProductDemo } from "./ProductDemo";
+import { ProductBar, WorksBlock } from "./ProductKit";
 import { contactHref, Shell } from "./Shell";
+import { productPath } from "./site";
+import { lines, rich } from "./Text";
 
-/** The page for ALYR Chat, the first product: what it does, shown as it is used, how it
- * works behind the chat, everything in it today, why owners choose it, who it suits and
- * what comes after it. */
+/** The page for ALYR Chat: WhatsApp orders, order tracking and the team inbox. What it does,
+ * shown as it is used, how it works behind the chat, everything in it today, why owners
+ * choose it, who it suits, and how it works with the rest of ALYR. Bookings have their
+ * own page now (/bookings), and credit accounts theirs (/accounts). */
 export function ProductPage({ locale }: { locale: Locale }) {
   const t = copy[locale];
   const p = t.product;
@@ -14,6 +18,7 @@ export function ProductPage({ locale }: { locale: Locale }) {
 
   return (
     <Shell locale={locale} page="chat" cta={p.cta}>
+      <ProductBar bar={p.bar} />
       <section className="product product-page" id="product">
         <div className="product-in">
           <div className="wrap">
@@ -22,7 +27,7 @@ export function ProductPage({ locale }: { locale: Locale }) {
                 <span className="signal" aria-hidden="true" />
                 {p.eyebrow}
               </p>
-              <h1 className="display display-sm">{p.title}</h1>
+              <h1 className="display display-sm pk-title">{lines(p.title)}</h1>
               <p className="lead">{p.body}</p>
             </div>
             <ProductDemo product={p} locale={locale} />
@@ -113,7 +118,18 @@ export function ProductPage({ locale }: { locale: Locale }) {
             {p.who.rows.map((row, index) => (
               <li key={row.name} data-reveal style={{ "--n": index } as React.CSSProperties}>
                 <h3>{row.name}</h3>
-                <p>{row.body}</p>
+                <p>
+                  {rich(row.body)}
+                  {row.link && productPath(row.link.key, locale) && (
+                    <>
+                      {" "}
+                      <a className="link who-link" href={productPath(row.link.key, locale)!}>
+                        <span>{rich(row.link.label)}</span>
+                        <Icon name="arrow-right" className="ico ico-flip" />
+                      </a>
+                    </>
+                  )}
+                </p>
                 <span className="tags">
                   {row.tags.map((tag) => <span key={tag}>{tag}</span>)}
                 </span>
@@ -129,16 +145,7 @@ export function ProductPage({ locale }: { locale: Locale }) {
         </div>
       </section>
 
-      <section className="sec company">
-        <div className="wrap company-in" data-reveal>
-          <p className="eyebrow">{p.next.eyebrow}</p>
-          <p className="company-say">{p.next.body}</p>
-          <svg className="company-path" viewBox="0 0 1600 200" preserveAspectRatio="none" aria-hidden="true">
-            <path pathLength="1" d="M0 164H520L700 36H1000L820 164H1180L1360 36H1600" />
-            <path className="company-path-volt" pathLength="1" d="M1180 164L1360 36H1600" />
-          </svg>
-        </div>
-      </section>
+      <WorksBlock locale={locale} works={p.works} self="chat" />
     </Shell>
   );
 }
