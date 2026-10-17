@@ -1,13 +1,10 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import type { Copy, Locale } from "./copy";
+import type { DemoSet, Locale } from "./copy";
+import { BookingPhone } from "./PageDrawings";
 
-type Props = { product: Copy["product"]; locale: Locale };
-
-// When each sample conversation starts, in minutes after midnight, so the times on the
-// messages agree with what the workspace panel beside them shows.
-const START: Record<string, number> = { book: 16 * 60 + 12, order: 9 * 60 + 58, pay: 10 * 60 + 6, track: 10 * 60 + 5, collect: 11 * 60 + 15, inbox: 17 * 60 + 20 };
+type Props = { product: DemoSet; locale: Locale };
 
 const ARABIC_DIGITS = "٠١٢٣٤٥٦٧٨٩";
 
@@ -24,9 +21,12 @@ function clock(locale: Locale, minutes: number): string {
 
 /**
  * The product, shown as it is used: a conversation on one side and what the team sees
- * on the other. It plays through the five jobs by itself while on screen, stops for
- * good the moment the visitor picks a tab, and can be paused. With reduced motion it
- * does not play at all and every message is simply there.
+ * on the other. It plays through the jobs by itself while on screen, stops for good the
+ * moment the visitor picks a tab, and can be paused. With reduced motion it does not play
+ * at all and every message is simply there. Each conversation starts at its own time
+ * (`start`), so the times on the messages agree with the panel beside them. A tab with no
+ * conversation shows the team's screen alone; a panel with a `page` shows the page the
+ * customer opened (the booking page) instead of the team's rows.
  */
 export function ProductDemo({ product, locale }: Props) {
   const demos = product.demos;
@@ -123,7 +123,7 @@ export function ProductDemo({ product, locale }: Props) {
       </div>
 
       <div
-        className="demo-stage"
+        className={`demo-stage${demo.chat.length === 0 ? " is-panel" : ""}`}
         id="demo-stage"
         role="tabpanel"
         aria-labelledby={`demo-tab-${demo.id}`}
@@ -131,6 +131,7 @@ export function ProductDemo({ product, locale }: Props) {
       >
         {/* The customer's own phone, drawn to look like the WhatsApp chat they already use:
             their messages on the sending side, the business's replies on the other. */}
+        {demo.chat.length > 0 && (
         <section className="phone" aria-label={product.business}>
           <div className="wa">
             <header className="wa-top">
@@ -159,7 +160,7 @@ export function ProductDemo({ product, locale }: Props) {
                     <div className="wa-bubble">
                       <span className="wa-text" dir="auto">{line.text}</span>
                       <span className="wa-meta">
-                        <span dir="ltr">{clock(locale, START[demo.id] + index * 2)}</span>
+                        <span dir="ltr">{clock(locale, demo.start + index * 2)}</span>
                         {mine && (
                           <svg className="wa-ticks" viewBox="0 0 18 12" aria-hidden="true">
                             <path d="M1 6.5 4.2 9.7 10.6 2.3" />
@@ -168,12 +169,12 @@ export function ProductDemo({ product, locale }: Props) {
                         )}
                       </span>
                     </div>
-                    {line.action && (
-                      <div className="wa-cta">
+                    {[...(line.action ? [line.action] : []), ...(line.actions ?? [])].map((action) => (
+                      <div key={action} className="wa-cta">
                         <svg viewBox="0 0 24 24" aria-hidden="true" className="ico-flip"><path d="M14 4h6v6M20 4l-9 9M18 14v5a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1h5" /></svg>
-                        {line.action}
+                        {action}
                       </div>
-                    )}
+                    ))}
                   </li>
                 );
               })}
@@ -192,13 +193,20 @@ export function ProductDemo({ product, locale }: Props) {
             </footer>
           </div>
         </section>
+        )}
 
-        <section className="panel" aria-label={product.workspace}>
+        <section className="panel" aria-label={demo.panel.kicker ?? product.workspace}>
           <header className="panel-top">
-            <span className="panel-kicker">{product.workspace}</span>
+            <span className="panel-kicker">{demo.panel.kicker ?? product.workspace}</span>
             <b>{demo.panel.title}</b>
             <span className="panel-badge">{demo.panel.badge}</span>
           </header>
+          {demo.panel.page && (
+            <div className="panel-page">
+              <BookingPhone page={demo.panel.page} className="panel-phone" />
+            </div>
+          )}
+          {demo.panel.rows.length > 0 && (
           <ul className="panel-rows">
             {demo.panel.rows.map((row, index) => (
               <li
@@ -212,9 +220,15 @@ export function ProductDemo({ product, locale }: Props) {
                   {row.sub && <small dir="auto">{row.sub}</small>}
                 </span>
                 {row.trail && <span className="row-trail">{row.trail}</span>}
+                {row.acts && (
+                  <span className="row-acts">
+                    {row.acts.map((act) => <span key={act} className="row-act">{act}</span>)}
+                  </span>
+                )}
               </li>
             ))}
           </ul>
+          )}
           {demo.panel.total && (
             <p
               className="panel-total"
