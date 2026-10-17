@@ -95,6 +95,9 @@ function Hero({ locale, other }: { locale: Locale; other: Locale }) {
 
         <figure className="hero-fig" aria-label={hero.figure.label}>
           <div className="hero-stage">
+            {/* the Carbon plate the figure is set on: its top start corner cut at 45°, and a
+                Paper slit along the same angle, which the record slides out along */}
+            <span className="hero-plate" aria-hidden="true" />
             <OrderFigure order={hero.figure.order} other={other} />
             <div className="hero-record" aria-hidden="true">
               <span className="rec-path">{hero.figure.order.shop} <span>/</span> {record.screen}</span>

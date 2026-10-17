@@ -128,3 +128,14 @@ Done:
 - **06 P2-10:** hydration clears the 2.5 s failsafe and sets a 10 s one, which the choreography clears when it starts; a slow phone keeps its motion, and a chunk that never loads still cannot leave the page blank.
 
 Measured on the dev server at 1440, English, light: page height 13,016 px (was 13,934); the band 4,041 px. Left: the hero plate, polish (including trimming toward 12,500), checks, shots.
+
+### Stage 4: the hero plate (commit "fix pass 4", lift 2)
+
+The geometry in 06 (a 45° gap "between the phone and the order record") cannot be one straight line: the phone runs the plate's full height and the record overlaps its start edge, so no 45° line separates them. Built instead, keeping every part of the ruling:
+- A Carbon plate (`--band`, so a step lighter in dark mode) behind the figure in columns 8–12, its top start corner cut at 45° (6 rem; 4 rem on phones).
+- A 0.5 rem Paper slit at 45° from the plate's start edge, just above the record, up behind the phone (it reappears above the phone's top). The record's entrance already slides along that same diagonal, so it reads as coming out of the fold. On phones the slit sits at the plate's start edge below the phone.
+- The phone sits 1.5 rem inside the plate's top and end. The record hangs 1.5 rem off the plate's start edge, and the phone narrows (`min(18.5rem, 100% − 13.5rem)`) before the record could hide behind it. Mirrored in RTL.
+- The headline is capped so its second line always ends before the plate (`min(display, 5.75vw, 5.2rem)`: 82.8 px at 1440, from 88). Between 62 and 84 rem the copy and the figure take six columns each and the headline is capped at 5.1 vw; before this, the record was mostly hidden behind the phone at 1024–1280 (the reviews only looked at 1440 and 390).
+- The plate fades in with the phone; it has no text, so it cannot be the largest paint.
+
+Checked at 1440, 1280, 1200, 1100 (Arabic), 1024 and 390, light and dark.
