@@ -87,9 +87,14 @@ def _rows_for(windows: list[Window], day: date) -> list[Window] | None:
 
 
 def _open_on(rows: list[Window] | None, day: date) -> list[Window]:
+    """The windows that are open on `day`. A closed window on that weekday wins over an
+    open one, so "closed Fridays" closes the item even beside an every-day window."""
     if rows is None:
         return [Window()]
-    return [w for w in rows if not w.closed and weekday(day) in w.weekdays]
+    today = [w for w in rows if weekday(day) in w.weekdays]
+    if any(w.closed for w in today):
+        return []
+    return today
 
 
 def evaluate(windows: list[Window], now: datetime, for_date: date | None = None) -> Verdict:
@@ -120,6 +125,15 @@ def _right_now(windows: list[Window], now: datetime) -> Verdict:
             best = datetime.combine(day, min(starts), tzinfo=now.tzinfo)
             break
     return Verdict(False, "not_now" if best else "closed", next_at=best)
+
+
+def next_date(windows: list[Window], now: datetime, after: date) -> date | None:
+    """The first date after `after` that an order placed now can be for, or None."""
+    for k in range(1, LOOK_AHEAD_DAYS + 1):
+        day = after + timedelta(days=k)
+        if not _can_order_for(windows, now, day):
+            return day
+    return None
 
 
 def _order_by(w: Window, day: date, tzinfo) -> datetime:

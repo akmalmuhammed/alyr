@@ -28,6 +28,8 @@ from alyr.modules.ledger import service as ledger
 STATUSES = ("new", "confirmed", "ready", "done", "cancelled")
 # The job that gives back the stock of an order nobody paid for.
 EXPIRE_JOB = "stock_hold_expiry"
+# How many unpaid pay-link orders may hold stock for one customer at a time.
+MAX_UNPAID_HOLDS = 3
 
 
 def track_url(web_url: str, tenant_id: UUID, order_id: UUID) -> str:
@@ -239,6 +241,21 @@ async def create_order(
     # cart comes back with what is left.
     order_id = uuid4()
     takes = [c.take for c in checked if c.take is not None]
+    if takes and payment == "link":
+        # An order link is a capability, so one person must not be able to hold everything
+        # a shop has by ordering again and again without paying.
+        waiting = await conn.fetchval(
+            "select count(distinct h.order_id) from stock_holds h "
+            "join orders o on o.id = h.order_id "
+            "where o.contact_id = $1 and h.status = 'held'",
+            contact_id,
+        )
+        if waiting >= MAX_UNPAID_HOLDS:
+            details = {"n": waiting}
+            raise OrderError(
+                "too_many_holds", text.say("too_many_holds", "en", details),
+                text.say("too_many_holds", "ar", details),
+            )
     if takes and await stock.reserve(conn, takes, order_id, team.CUSTOMER):
         raise await _refusal(conn, shop_clock, await cart.check(conn, shop_clock, lines, for_date))
 
@@ -484,17 +501,19 @@ async def set_status(
         raise OrderError("bad_status", "Unknown order status.")
     if status == "cancelled":
         return await cancel_order(conn, order_id, outbound, actor, restock) is not None
-    if await conn.fetchval("select status = 'cancelled' from orders where id = $1", order_id):
-        raise OrderError(
-            "cancelled", "A cancelled order cannot be moved on. Place a new order instead."
-        )
     row = await conn.fetchrow(
         "update orders set status = $2 where id = $1 and status is distinct from $2 "
-        "returning contact_id, number",
+        "and status <> 'cancelled' returning contact_id, number",
         order_id, status,
     )
     if row is None:
-        return bool(await conn.fetchval("select 1 from orders where id = $1", order_id))
+        current = await conn.fetchval("select status from orders where id = $1", order_id)
+        if current == "cancelled":
+            # Its stock has gone back, so it cannot be brought back; the customer orders again.
+            raise OrderError(
+                "cancelled", "A cancelled order cannot be moved on. Place a new order instead."
+            )
+        return current is not None
     await team.claim(conn, "order", order_id, actor)
     await team.record(
         conn, "order", order_id, status, actor, row["contact_id"], {"number": row["number"]}

@@ -42,7 +42,7 @@ One rule per item, and an optional schedule on top.
 * ordered **now** (no `lead_days`, no `cutoff`): orderable while the shop's clock is inside a window (`opens` to `closes`, on its `weekdays`). The refusal carries `next_at`.
 * ordered **for a date** (`lead_days` or `cutoff`): the customer chooses the day. The order must be placed `lead_days` before it and before `cutoff` on that day: "order before 6 pm for tomorrow" is `lead_days = 1`, `cutoff = 18:00`. Without a chosen day the earliest one is used. A day that is too late is refused with `after_cutoff` and `next_date`. A daily limit then counts against the day the order is for.
 
-`pure rules`: `schedule.py` (no database), `availability.py`, `clock.py` (the shop's local clock and day start). Weekdays count from Sunday as 0, like `business_hours`.
+The rules are plain functions with no database: `schedule.py`, `availability.py` and `clock.py` (the shop's local clock and where its day begins), so a test can hold the clock still. Weekdays count from Sunday as 0, like `business_hours`. A window cannot run past midnight. A closed window on a weekday beats an open one for the same day ("closed Fridays" beside an every-day window). A row with dates replaces the whole usual week on its days, so list every weekday it should be open. When no day is chosen for a made-to-order item with a daily limit, the first day that still has room is offered, not just the first day the schedule allows.
 
 ## Stock (`stock.py`)
 
@@ -72,7 +72,9 @@ A shelf count (`counted`) records the difference from the system with a reason, 
 
 A line of a **counted** item (rules `count`, `daily_limit`) gets a hold. A pay-link order is held for the shop's `hold_minutes`; a credit-account order is committed at once; payment (`ledger.complete_payment`) commits the hold. Orders with no counted stock hold nothing and never expire, exactly as before.
 
-When a hold runs out unpaid, the order is cancelled, its stock goes back (`cancelled_restocked`), its payment link becomes `expired` (paying it answers 409) and the customer is told (the existing `order_cancelled` template outside the window). Three things make sure it happens after downtime: a job per order at its expiry (the job queue runs everything due when the worker starts); the job releases **every** expired hold in its shop, not only its own; and the worker sweeps every shop at start and every five minutes.
+When a hold runs out unpaid, the order is cancelled, its stock goes back (`cancelled_restocked`), its payment link becomes `expired` (paying it answers 409) and the customer is told (the existing `order_cancelled` template outside the window). Only a `new` order with an unpaid link is cancelled: one staff have already confirmed, made or handed over (the customer paid at the counter, say) keeps its stock sold. Three things make sure it happens after downtime: a job per order at its expiry (the job queue runs everything due when the worker starts); the job releases **every** expired hold in its shop, not only its own; and the worker sweeps every shop at start and every five minutes. Each order is released in its own transaction, so one that fails is logged and tried again at the next sweep, and the others still go back.
+
+An order link is a capability, so one customer may have at most three unpaid pay-link orders holding stock at a time (`too_many_holds`, 409); credit-account orders hold nothing and are not counted.
 
 Cancelling an order (`orders/service.cancel_order`) returns the stock if the order was not made yet (`new`, `confirmed`); a `ready` or `done` order keeps its stock sold unless staff say `restock`. If it had been paid, the answer says `refund_due` and the activity record keeps `refund_due`: the shop refunds from its own payment account. A cancelled order cannot be moved on.
 
@@ -90,13 +92,17 @@ Kept working on the same items: `GET/POST /api/products`, `POST /api/products/{i
 * The Arabic name is required to go live through `/api/items`. `POST /api/products` keeps its first, permissive behaviour until the screens replace it.
 * The first variant added to an item takes over the item's own stock (its default variant becomes that variant). Variants left out of a save are switched off, never deleted.
 * An item's changes (created, edited, switched, archived) are on the activity record with who made them.
+* `DELETE` removes an item only if it has no orders, no stock movements and no price changes; otherwise it archives it, so the stock log and price history are never lost. (Deleting an item cascades to them in the database, and the app role has no right to delete them directly.)
+* A daily-limit allowance is a row per variant and day that the first take creates, then a conditional update. A take is refused if it would overdraw the day (limit plus the day's top-ups, less what was sold); putting units back, or topping up, always fits.
 
 ## Left for the other packages
 
 * Photos: only the `photo_id` slots exist (ALY-103). Workspace screens, undo and bulk actions (ALY-104). The order page, search and share links (ALY-112): it must handle `expired` payments (the pay page knows only `pending` and `paid`), the `unavailable` list and `cart/check`.
 * WhatsApp (ALY-106): staff commands, "tell me when it is back", telling waiting customers when a hold is released, telling the owner by message that a refund is due, a customer's own cancel entry point (the service takes `team.CUSTOMER`).
 * Low-stock and sold-out alerts, meters and report lines (ALY-109). Import and export (ALY-108). Templates by business type (ALY-107).
-* **Customer price groups for wholesale** are in release 1 (D-039) but in none of the packages' lists; they need a table and a customer field, and a package to own them. SKU and barcode numbers likewise.
+* **Customer price groups for wholesale** are in release 1 (D-039), and ALY-112 lists a wholesale layout "with customer price groups", but no package builds the data: a table of groups, a price per item and group, and a group on the customer. They need a package to own them. SKU and barcode numbers likewise (the wholesale template asks for a SKU).
+* The public order page's API returns how many are left (`left`) so a page can say "only 3 left"; ALY-112 decides how much of that to show, since it also tells a competitor the shop's stock.
+* `POST /api/products`, the first way to add an item, is open to every staff role, as it always was; `/api/items` limits editing to owners and admins. ALY-117 covers agents' rights.
 * Cancelling an order that was put on a credit account does not reverse the ledger sale. That is how orders already worked; it is a separate issue.
 
 ## Acceptance

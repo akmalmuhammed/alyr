@@ -40,12 +40,19 @@ select id, $3, $2::int, on_hand, $4, $5::uuid, $6::uuid, $7 from moved
 returning balance_after
 """
 
+# A day's allowance has a row from its first use. Two statements, not one upsert, because
+# whether a take fits depends on what the day already holds (a top-up, an earlier sale).
+_DAY_ROW = """
+insert into variant_day_stock (variant_id, day) values ($1, $2) on conflict do nothing
+"""
+
+# Only a take can overdraw the day; putting units back always fits, even if the limit was
+# lowered below what the day has already sold.
 _DAILY_STEP = """
 with moved as (
-    insert into variant_day_stock (variant_id, day, delta)
-    select $1::uuid, $2::date, $3::int where $4::int + $3::int >= 0
-    on conflict (variant_id, day) do update set delta = variant_day_stock.delta + $3::int
-        where $4::int + variant_day_stock.delta + $3::int >= 0
+    update variant_day_stock set delta = delta + $3::int
+    where variant_id = $1 and day = $2::date
+      and ($3::int >= 0 or $4::int + delta + $3::int >= 0)
     returning delta
 )
 insert into stock_movements
@@ -85,8 +92,8 @@ async def move(
     limit: int | None = None,
 ) -> int | None:
     """Change one variant's stock by `delta` and write the log row, in one statement.
-    Returns the number after, or None when the change would take it below zero (nothing
-    is written). Give `day` for a daily-limit variant, and its `limit` if you have it."""
+    Returns the number after, or None when a take would overdraw it (nothing is written).
+    Give `day` for a daily-limit variant, and its `limit` if you have it."""
     if kind not in KINDS:
         raise ValueError(f"unknown stock movement {kind!r}")
     if day is None:
@@ -97,6 +104,7 @@ async def move(
         limit = await conn.fetchval(
             "select daily_limit from item_variants where id = $1", variant_id
         )
+    await conn.execute(_DAY_ROW, variant_id, day)
     return await conn.fetchval(
         _DAILY_STEP, variant_id, day, delta, limit or 0, kind, reason, order_id, actor.id,
         actor.name,
@@ -155,7 +163,7 @@ async def count(
     if counted < 0:
         raise StockError("bad_quantity", "A count cannot be below zero.")
     locked = await conn.fetchrow(
-        "select id, daily_limit from item_variants where id = $1 for update", variant_id
+        "select id, daily_limit from item_variants where id = $1 for no key update", variant_id
     )
     if locked is None:
         raise StockError("unknown_variant", "We could not find that item.")

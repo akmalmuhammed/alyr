@@ -37,7 +37,7 @@ Last updated: 17 Oct 2026, after the pre-go-live audit (ALY-114, docs/audit/2026
 | Demo page: chat simulator plus workspace tabs, now at `/whatsapp` | Built | `apps/web/app/(product)/whatsapp/page.tsx` |
 | Self-serve onboarding at `/start`: email code, type of business, a filled-in price list and opening hours to edit, a private test line to book as a customer, the plan, a go-live checklist, then the workspace. Phone and laptop layouts, English and Arabic | Built (D-031) for appointment businesses (salon, spa, clinic, home services). Restaurants, shops, wholesale and document offices get their business created and a setup request for ALYR. Sign-up is closed outside a local machine until the founder opens it | `apps/api/src/alyr/core/onboarding.py`, `presets.py`, `apps/web/app/(product)/start/` |
 
-Tests: 383 on `main` (counted 17 Oct 2026 at the start of ALY-102), all passing. CI runs api, web and a secrets scan on every pull request.
+Tests: 383 on `main` (counted 17 Oct 2026 at the start of ALY-102), all passing; 482 on `aly-102-catalog-engine` (99 new). CI runs api, web and a secrets scan on every pull request.
 
 **Audit 17 Oct (ALY-114).** Settings now fail safe (the API is production unless `ALYR_ENV=local`); governance files, runbooks, access register and hygiene rules added; findings tracked as ALY-115 to ALY-125. Before the first real customer: `docs/runbooks/go-live-checklist.md`.
 

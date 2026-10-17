@@ -245,8 +245,9 @@ def _check_fields(values: dict, variants: list[dict]) -> None:
         raise ItemError("bad_sale", "Give the sale a price, or clear its dates.")
     if starts and ends and ends <= starts:
         raise ItemError("bad_sale", "The sale must end after it starts.")
+    lowest = min(values["price"], sale if sale is not None else values["price"])
     for v in variants:
-        if v["active"] and values["price"] + v["price_delta"] <= 0:
+        if v["active"] and lowest + v["price_delta"] <= 0:
             raise ItemError("bad_price", "A price difference cannot bring a price to zero.")
         if v["active"] and values["stock_rule"] == "daily_limit" and v["daily_limit"] is None:
             raise ItemError("limit_needed", "Set how many can be sold each day.")
@@ -328,7 +329,9 @@ async def update_item(
     """Save changes to an item. Only the keys in `changes` are touched; a `variants`,
     `option_groups` or `schedule` list replaces the whole set. Returns None if there is no
     such item."""
-    row = await conn.fetchrow("select * from items where id = $1 for update", item_id)
+    # `no key update`: a checkout writing an order line for this item takes a lighter lock
+    # on it, and saving the item must not make that checkout wait for a lock it needs.
+    row = await conn.fetchrow("select * from items where id = $1 for no key update", item_id)
     if row is None:
         return None
     if changes.get("variants") == []:
@@ -420,23 +423,31 @@ async def set_available(
 
 
 async def remove(conn: asyncpg.Connection, item_id: UUID, actor: Actor) -> str | None:
-    """Delete an item nobody has ordered, or archive one they have, so that order history
-    always keeps its item. Returns "deleted", "archived", or None if there is no such item."""
+    """Delete an item that has no history, or archive one that has (orders, stock movements,
+    price changes), so that nothing on the record is lost. Returns "deleted", "archived", or
+    None if there is no such item."""
     row = await conn.fetchrow(
-        "select name, status, exists (select 1 from order_items o where o.item_id = items.id) "
-        "as has_orders from items where id = $1 for update",
+        "select name, status, "
+        "exists (select 1 from order_items o where o.item_id = items.id) as has_orders, "
+        # Deleting an item would take its stock log and price history with it, so an item
+        # that has either (beyond the first price) is archived like one that was ordered.
+        "(exists (select 1 from stock_movements m join item_variants v on v.id = m.variant_id "
+        "         where v.item_id = items.id) "
+        " or (select count(*) from item_price_history h where h.item_id = items.id) > 1) "
+        "as has_history from items where id = $1 for update",
         item_id,
     )
     if row is None:
         return None
-    if row["has_orders"]:
+    if row["has_orders"] or row["has_history"]:
         if row["status"] != "archived":
             await conn.execute(
                 "update items set status = 'archived', updated_at = now() where id = $1", item_id
             )
             await team.record(
                 conn, "item", item_id, "archived", actor, None,
-                {"name": row["name"], "because": "it has orders"},
+                {"name": row["name"],
+                 "because": "it has orders" if row["has_orders"] else "it has a history"},
             )
         return "archived"
     await conn.execute("delete from items where id = $1", item_id)

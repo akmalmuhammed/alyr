@@ -96,6 +96,35 @@ def test_a_holiday_row_closes_the_item_on_those_days_only():
     assert schedule.evaluate([usual, holiday], at(20, 8)).next_at == at(22, 6)
 
 
+def test_a_closed_row_beats_an_open_row_for_the_same_day():
+    open_every_day = Window(EVERY_DAY, time(6), time(11))
+    closed_fridays = Window(frozenset({5}), closed=True)
+    windows = [open_every_day, closed_fridays]
+    assert schedule.evaluate(windows, at(22, 8)).ok  # Thursday
+    friday = schedule.evaluate(windows, at(23, 8))
+    assert (friday.ok, friday.code, friday.next_at) == (False, "not_now", at(24, 6))
+
+
+def test_the_next_date_that_can_be_ordered_for_skips_to_the_following_one():
+    cake = [Window(EVERY_DAY, lead_days=1, cutoff=time(18))]
+    assert schedule.next_date(cake, at(19, 12), date(2026, 10, 20)) == date(2026, 10, 21)
+    # Too late for tomorrow, so the day after is the first one on offer, and the next after it.
+    assert schedule.next_date(cake, at(19, 19), date(2026, 10, 20)) == date(2026, 10, 21)
+    fridays = [Window(frozenset({5}), lead_days=1)]
+    assert schedule.next_date(fridays, at(19, 12), date(2026, 10, 23)) == date(2026, 10, 30)
+
+
+def test_the_first_day_with_room_walks_past_the_days_that_are_full():
+    cake = [Window(EVERY_DAY, lead_days=1, cutoff=time(18))]
+    clock = ShopClock(at(19, 12), QATAR)
+    found = availability.first_day_with_room(
+        cake, clock, date(2026, 10, 20), lambda day: day >= date(2026, 10, 22)
+    )
+    assert found == date(2026, 10, 22)
+    never = availability.first_day_with_room(cake, clock, date(2026, 10, 20), lambda day: False)
+    assert never is None
+
+
 def test_only_dated_rows_leave_every_other_day_unrestricted():
     only_a_holiday = [Window(EVERY_DAY, valid_from=date(2026, 10, 20), valid_to=date(2026, 10, 21),
                              closed=True)]

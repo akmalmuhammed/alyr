@@ -5,7 +5,7 @@ a clock held still. An item is for sale when it is live, its switch is on (for e
 but "always"), its schedule allows an order now, and there is stock left.
 """
 
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from datetime import date, datetime
 
 from alyr.modules.items import schedule
@@ -68,6 +68,19 @@ def windows_of(rows) -> list[schedule.Window]:
     ]
 
 
+def first_day_with_room(
+    windows: list[schedule.Window], clock: ShopClock, start: date, room
+) -> date | None:
+    """Starting at `start`, the first date an order can be for on which `room(day)` is true
+    (a made-to-order item with a daily limit, whose first day may be taken)."""
+    day: date | None = start
+    for _ in range(schedule.LOOK_AHEAD_DAYS):
+        if day is None or room(day):
+            return day
+        day = schedule.next_date(windows, clock.local, day)
+    return None
+
+
 def evaluate(
     item, variants, windows: list[schedule.Window], deltas: dict, clock: ShopClock,
     for_date: date | None = None,
@@ -80,6 +93,17 @@ def evaluate(
     if rule != "always" and not item["available"]:
         return State(False, "off")
     verdict = schedule.evaluate(windows, clock.local, for_date)
+    if verdict.dated and verdict.ok and for_date is None and rule == "daily_limit":
+        # No day was chosen: offer the first day that still has some left, not just the
+        # first day the schedule allows.
+        def room(day: date) -> bool:
+            return any(
+                variant_left(item, v, deltas, day) for v in variants if v["active"]
+            )
+
+        found = first_day_with_room(windows, clock, verdict.for_date, room)
+        if found is not None:
+            verdict = replace(verdict, for_date=found, next_date=found)
     # A made-to-order item is limited per day it is made for; the rest per shop day.
     day = (verdict.for_date or verdict.next_date or clock.shop_day) if verdict.dated else (
         clock.shop_day

@@ -18,7 +18,7 @@ from uuid import UUID
 import asyncpg
 
 from alyr.core.normalise import fmt_qar
-from alyr.modules.items import availability, text
+from alyr.modules.items import availability, schedule, text
 from alyr.modules.items import service as items
 from alyr.modules.items.clock import ShopClock
 from alyr.modules.items.stock import Take
@@ -27,6 +27,7 @@ from alyr.modules.items.stock import Take
 OFFER_ALTERNATIVES = ("unavailable", "sold_out", "not_enough", "not_now", "closed")
 SCHEDULE_CODES = ("not_now", "closed", "after_cutoff", "not_that_day", "past")
 MAX_ALTERNATIVES = 3
+MAX_LINES_WITH_ALTERNATIVES = 5
 
 
 @dataclass(frozen=True)
@@ -139,6 +140,16 @@ def _check_line(
 
     c.fulfil_on = state.for_date if state.dated else None
     day = state.day
+    if state.dated and for_date is None and item["stock_rule"] == "daily_limit":
+        # No day chosen: the first day this size or colour still has enough for.
+        earliest = schedule.evaluate(entry.windows, clock.local).for_date
+
+        def enough(d: date) -> bool:
+            left = availability.variant_left(item, variant, entry.deltas, d)
+            return left - asked.get((variant["id"], d), 0) >= line.quantity
+
+        day = availability.first_day_with_room(entry.windows, clock, earliest, enough) or earliest
+        c.fulfil_on = day
     if item["stock_rule"] in availability.STOCKED:
         key = (variant["id"], day)
         have = availability.variant_left(item, variant, entry.deltas, day) - asked.get(key, 0)
@@ -207,11 +218,12 @@ def _choices(c: Checked, entry: items.Loaded, line: CartLine) -> list[dict] | No
 # ---------------------------------------------------------------- alternatives
 
 async def alternatives(
-    conn: asyncpg.Connection, clock: ShopClock, c: Checked
+    conn: asyncpg.Connection, clock: ShopClock, c: Checked, categories: dict | None = None
 ) -> list[dict]:
     """Things to offer instead of a line that cannot be ordered: other sizes or colours of
     the same item that are in stock, then other items of its category that can be ordered
-    now. At most three."""
+    now. At most three. `categories` remembers a category once it has been read, so a cart
+    with many bad lines reads each category once."""
     if c.entry is None:
         return []
     item = c.entry.item
@@ -227,13 +239,16 @@ async def alternatives(
                 "name_ar": item["name_ar"], "price": availability.variant_price(item, v, clock.now),
             })
     if len(out) < MAX_ALTERNATIVES:
-        same = await items.load(
-            conn, clock, "i.category = $1 and i.id <> $2 and i.status = 'live'",
-            (item["category"], item["id"]),
-        )
-        for other in same:
+        categories = categories if categories is not None else {}
+        if item["category"] not in categories:
+            categories[item["category"]] = await items.load(
+                conn, clock, "i.category = $1 and i.status = 'live'", (item["category"],)
+            )
+        for other in categories[item["category"]]:
             if len(out) >= MAX_ALTERNATIVES:
                 break
+            if other.item["id"] == item["id"]:
+                continue
             plain = len(other.active_variants) == 1 and not any(
                 g["required"] for g in other.groups
             )
@@ -259,8 +274,8 @@ async def report(
 ) -> list[dict]:
     """Every line of the cart as a screen can show it: what is wrong with it, in words in
     both languages, with the details to act on (what is left, the new price, the next day
-    it can be ordered for) and things to offer instead."""
-    out = []
+    it can be ordered for) and things to offer instead (for the first few bad lines)."""
+    out, categories, offered = [], {}, 0
     for c in checked:
         line = {
             "index": c.index, "item_id": str(c.line.item_id), "quantity": c.line.quantity,
@@ -279,7 +294,8 @@ async def report(
                 "code": c.code, "message": message(c, clock, "en"),
                 "message_ar": message(c, clock, "ar"), **c.data,
             }
-            if c.code in OFFER_ALTERNATIVES:
-                line["alternatives"] = await alternatives(conn, clock, c)
+            if c.code in OFFER_ALTERNATIVES and offered < MAX_LINES_WITH_ALTERNATIVES:
+                offered += 1
+                line["alternatives"] = await alternatives(conn, clock, c, categories)
         out.append(line)
     return out

@@ -12,7 +12,10 @@ worker was off for hours:
 * the worker also sweeps every shop when it starts and every few minutes after, which
   covers a job that was lost.
 
-An order paid in the meantime is not touched: its hold becomes a sale.
+An order paid in the meantime is not touched: its hold becomes a sale. So is an order
+staff have taken on (confirmed, ready or done) without waiting for the link to be paid,
+for instance because the customer paid at the counter. Each order is released in its own
+transaction, so one that fails does not hold up the rest.
 """
 
 import logging
@@ -30,35 +33,53 @@ from alyr.modules.orders import service
 log = logging.getLogger("alyr.orders")
 
 
-async def expire_due(conn: asyncpg.Connection, outbound: Outbound) -> list[UUID]:
-    """Cancel every order in this shop whose hold has run out unpaid, and give its stock
-    back. Safe to run any number of times, and from several workers at once. Returns the
-    orders it cancelled."""
-    orders = [
-        r["order_id"] for r in await conn.fetch(
-            "select distinct order_id from stock_holds "
-            "where status = 'held' and expires_at <= now()"
-        )
-    ]
-    cancelled = []
-    minutes = await clock.hold_minutes(conn)
+async def due_orders(conn: asyncpg.Connection) -> list[UUID]:
+    """The orders in this shop whose hold has run out and is still unresolved."""
+    rows = await conn.fetch(
+        "select distinct order_id from stock_holds "
+        "where status = 'held' and expires_at <= now() order by order_id"
+    )
+    return [r["order_id"] for r in rows]
+
+
+async def expire_order(
+    conn: asyncpg.Connection, outbound: Outbound, order_id: UUID, minutes: int
+) -> bool:
+    """Resolve one order whose hold ran out. Returns True if it was cancelled.
+
+    Only a new order whose payment link is still unpaid is cancelled. The link is claimed
+    first, in the order a payment arriving takes its locks, so the two cannot wait on each
+    other. If there is nothing to claim, the order was paid, cancelled, or taken on by
+    staff a moment ago, and what it holds is a sale, not a hold."""
+    claimed = await conn.fetchval(
+        "update payment_requests p set status = 'expired' from orders o "
+        "where p.order_id = $1 and p.status = 'pending' and o.id = p.order_id "
+        "and o.status = 'new' returning p.id",
+        order_id,
+    )
+    if claimed is None:
+        await stock_holds.commit(conn, order_id)
+        return False
+    result = await service.cancel_order(
+        conn, order_id, outbound, team.ASSISTANT, restock=True,
+        reason="Not paid in time", held_minutes=minutes,
+    )
+    return bool(result and not result["already"])
+
+
+async def expire_shop(db: Database, outbound: Outbound, tenant_id: UUID) -> int:
+    """Release every hold in one shop that has run out. Safe to run any number of times,
+    and from several workers at once. Returns how many orders it cancelled."""
+    async with db.tenant(tenant_id) as conn:
+        orders = await due_orders(conn)
+        minutes = await clock.hold_minutes(conn)
+    cancelled = 0
     for order_id in orders:
-        # Claim the unpaid payment link first. If there is none, the order was paid (or
-        # cancelled) a moment ago, and what it holds is a sale, not a hold.
-        claimed = await conn.fetchval(
-            "update payment_requests set status = 'expired' "
-            "where order_id = $1 and status = 'pending' returning id",
-            order_id,
-        )
-        if claimed is None:
-            await stock_holds.commit(conn, order_id)
-            continue
-        result = await service.cancel_order(
-            conn, order_id, outbound, team.ASSISTANT, restock=True,
-            reason="Not paid in time", held_minutes=minutes,
-        )
-        if result and not result["already"]:
-            cancelled.append(order_id)
+        try:
+            async with db.tenant(tenant_id) as conn:
+                cancelled += await expire_order(conn, outbound, order_id, minutes)
+        except Exception:  # noqa: BLE001 - the next order, and the next sweep, still go on
+            log.exception("could not release the hold of order %s", order_id)
     return cancelled
 
 
@@ -70,8 +91,7 @@ class HoldExpiry:
         self._outbound = outbound
 
     async def run(self, tenant_id: UUID, payload: dict) -> None:
-        async with self._db.tenant(tenant_id) as conn:
-            await expire_due(conn, self._outbound)
+        await expire_shop(self._db, self._outbound, tenant_id)
 
 
 async def sweep_all(db: Database, outbound: Outbound) -> int:
@@ -82,11 +102,8 @@ async def sweep_all(db: Database, outbound: Outbound) -> int:
         shops = [r["id"] for r in await conn.fetch("select id from tenants")]
     total = 0
     for tenant_id in shops:
-        async with db.tenant(tenant_id) as conn:
-            due = await conn.fetchval(
-                "select exists (select 1 from stock_holds "
-                "where status = 'held' and expires_at <= now())"
-            )
-            if due:
-                total += len(await expire_due(conn, outbound))
+        try:
+            total += await expire_shop(db, outbound, tenant_id)
+        except Exception:  # noqa: BLE001 - one shop must not stop the sweep of the others
+            log.exception("could not sweep the holds of shop %s", tenant_id)
     return total

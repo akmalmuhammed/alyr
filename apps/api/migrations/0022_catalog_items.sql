@@ -240,6 +240,9 @@ alter table order_items drop constraint order_items_product_id_fkey;
 alter table order_items add constraint order_items_item_id_fkey
     foreign key (item_id) references items(id) on delete restrict;
 
+-- "Has this item been ordered?" is asked for every item on every list.
+create index order_items_item on order_items (item_id);
+
 alter table order_items
     add column variant_id uuid references item_variants(id) on delete set null,
     add column variant_name text not null default '',

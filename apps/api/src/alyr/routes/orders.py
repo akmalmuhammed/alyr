@@ -112,13 +112,16 @@ async def add_product(
 ) -> dict:
     """The first way to add an item: live at once, on the switch rule. An Arabic name is
     not asked for here; `/api/items` asks for it before an item goes live."""
-    async with request.app.state.db.tenant(staff.tenant_id) as conn:
-        result = await items.create_item(
-            conn,
-            {"name": body.name, "name_ar": body.name_ar, "category": body.category,
-             "price": body.price, "status": "live"},
-            team.actor_of(staff), await clock.load(conn), require_arabic=False,
-        )
+    try:
+        async with request.app.state.db.tenant(staff.tenant_id) as conn:
+            result = await items.create_item(
+                conn,
+                {"name": body.name, "name_ar": body.name_ar, "category": body.category,
+                 "price": body.price, "status": "live"},
+                team.actor_of(staff), await clock.load(conn), require_arabic=False,
+            )
+    except items.ItemError as error:
+        raise HTTPException(status_code=422, detail=str(error)) from error
     return {"id": result["item"]["id"], "price_text": fmt_qar(body.price)}
 
 

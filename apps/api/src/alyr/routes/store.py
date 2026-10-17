@@ -21,6 +21,7 @@ router = APIRouter(prefix="/api/store", tags=["order page"])
 _CHANGED = (
     "over_limit", "sold_out", "not_enough", "price_changed", "not_now", "closed",
     "after_cutoff", "not_that_day", "past", "cart_changed", "nothing_available",
+    "too_many_holds",
 )
 _STATUS_FOR = {
     "unknown_customer": 404, "no_account": 403, "no_previous_order": 404,

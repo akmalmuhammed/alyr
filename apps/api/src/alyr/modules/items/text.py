@@ -85,6 +85,11 @@ MESSAGES: dict[str, tuple[str, str]] = {
         "Choose at most {max} for {group} on {name}.",
         "اختر {max} على الأكثر من {group} لـ«{name}».",
     ),
+    "too_many_holds": (
+        "You already have {n} orders waiting to be paid. Pay for one, or wait for it to "
+        "lapse, before ordering more.",
+        "لديك {n} طلبات بانتظار الدفع. ادفع أحدها أو انتظر انتهاء مهلته قبل طلب المزيد.",
+    ),
     "cart_changed": (
         "Some items in your cart changed. Please check them and try again.",
         "تغيّرت بعض الأصناف في سلتك. راجعها وحاول مرة أخرى.",

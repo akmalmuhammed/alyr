@@ -5,7 +5,7 @@ that this package owns are in test_catalog_scenarios.py, which uses the helpers 
 
 import json
 import re
-from datetime import UTC, datetime, timedelta
+from datetime import UTC, date, datetime, time, timedelta
 from uuid import UUID, uuid4
 from zoneinfo import ZoneInfo
 
@@ -18,6 +18,7 @@ from alyr.modules.items.cart import CartLine
 from alyr.modules.orders import service as orders
 from alyr.seed import AGENT_EMAIL, DEMO_SLUG, DEMO_TENANT_ID
 from test_consent import owner_sql
+from test_orders import customer
 from test_sign_in import sign_in
 
 STORE = f"/api/store/{DEMO_SLUG}"
@@ -102,6 +103,20 @@ def place_at(client, contact: dict, lines: list[CartLine], now: datetime, **more
             "http://web.test", client.app.state.outbound, now=now, **more,
         ),
     )
+
+
+def monday_at(hour: int, minute: int = 0, days: int = 0) -> datetime:
+    """A moment on a Monday (plus `days`) at least two weeks from now, on the shop's wall
+    clock. Always in the future, so a hold taken then has not run out by the time the test
+    looks, and the same weekday whenever the test runs."""
+    today = datetime.now(QATAR).date()
+    monday = today + timedelta(days=(7 - today.weekday()) % 7 + 14)
+    return datetime.combine(monday + timedelta(days=days), time(hour, minute), QATAR)
+
+
+def day_text(moment: datetime | date) -> str:
+    """"Wed 21 Oct", as a customer is told it."""
+    return f"{moment:%a} {moment.day} {moment:%b}"
 
 
 def drain(client):
@@ -376,24 +391,23 @@ def test_a_counted_item_sells_down_to_zero_and_a_sold_out_item_stays_listed_apar
 def test_a_daily_limit_resets_with_the_shop_day_and_the_shop_chooses_when_it_begins(client):
     cake = mk(client, name="Date cake", name_ar="كعكة التمر", stock_rule="daily_limit",
               daily_limit=3)
-    ahmed = people(client)[0]
-    monday = datetime(2026, 10, 19, 14, 0, tzinfo=QATAR)
+    ahmed = customer(client)
+    one = [CartLine(UUID(cake["id"]), 1)]
+    monday = monday_at(14)
     for _ in range(3):
-        place_at(client, ahmed, [CartLine(UUID(cake["id"]), 1)], monday)
+        place_at(client, ahmed, one, monday, payment="account")
     with pytest.raises(orders.OrderError) as sold_out:
-        place_at(client, ahmed, [CartLine(UUID(cake["id"]), 1)], monday)
+        place_at(client, ahmed, one, monday, payment="account")
     assert sold_out.value.code == "sold_out"
     # The next morning the limit is back.
-    tuesday = monday + timedelta(days=1)
-    place_at(client, ahmed, [CartLine(UUID(cake["id"]), 3)], tuesday)
+    place_at(client, ahmed, [CartLine(UUID(cake["id"]), 3)], monday_at(14, days=1),
+             payment="account")
     # A bakery whose day starts at 4 am: 2 am on Wednesday still belongs to Tuesday.
     saved = client.put("/api/items/settings", json={"day_starts": "04:00"})
     assert saved.json() == {"hold_minutes": 30, "day_starts": "04:00"}
     with pytest.raises(orders.OrderError):
-        place_at(client, ahmed, [CartLine(UUID(cake["id"]), 1)],
-                 datetime(2026, 10, 21, 2, 0, tzinfo=QATAR))
-    place_at(client, ahmed, [CartLine(UUID(cake["id"]), 1)],
-             datetime(2026, 10, 21, 4, 0, tzinfo=QATAR))
+        place_at(client, ahmed, one, monday_at(2, days=2), payment="account")
+    place_at(client, ahmed, one, monday_at(4, days=2), payment="account")
     assert reconciled(client)
 
 

@@ -53,11 +53,15 @@ async def release(conn: asyncpg.Connection, order_id: UUID, actor: Actor, reason
         "returning variant_id, quantity, day",
         order_id, reason,
     )
-    for hold in holds:
-        await stock.move(
+    # In the same order checkout takes stock in, so two orders being given back (or one being
+    # given back while another is taken) cannot wait on each other.
+    for hold in sorted(holds, key=lambda h: (str(h["variant_id"]), h["day"] or date.min)):
+        balance = await stock.move(
             conn, hold["variant_id"], "cancelled_restocked", hold["quantity"], actor, reason,
             hold["day"], order_id,
         )
+        if balance is None:  # putting units back always fits; a None means the variant is gone
+            raise RuntimeError(f"could not put stock back for order {order_id}")
     return sum(hold["quantity"] for hold in holds)
 
 

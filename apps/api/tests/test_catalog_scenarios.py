@@ -584,11 +584,13 @@ def test_stock_stays_equal_to_its_log_under_a_mix_of_orders_restocks_and_cancels
         n, who = n_who
         start.wait()
         placed = order(client, who, [line(item)])
+        cancelled = False
         if placed.status_code == 200 and n % 2 == 0:
             client.post(
                 f"/api/orders/{placed.json()['order_id']}/status", json={"status": "cancelled"}
             )
-        return placed.status_code
+            cancelled = True
+        return placed.status_code, cancelled
 
     def receive(_):
         start.wait()
@@ -599,13 +601,15 @@ def test_stock_stays_equal_to_its_log_under_a_mix_of_orders_restocks_and_cancels
     with ThreadPoolExecutor(len(buyers) + 3) as pool:
         buying = [pool.submit(buy, pair) for pair in enumerate(buyers)]
         receiving = [pool.submit(receive, n) for n in range(3)]
-        placed = [f.result() for f in buying]
+        results = [f.result() for f in buying]
         received = [f.result() for f in receiving]
     assert set(received) == {200}
     kinds = Counter(r["kind"] for r in log_rows(client, item))
-    # The number is what the log adds up to, and never went below zero.
+    # What the log holds is what really happened: one sale per order placed, one restock
+    # per order cancelled, and the number is their total, never below zero.
+    assert kinds["sold"] == [status for status, _ in results].count(200)
+    assert kinds["cancelled_restocked"] == sum(1 for _, cancelled in results if cancelled)
     assert on_hand(client, item) == 6 + 3 + kinds["cancelled_restocked"] - kinds["sold"]
-    assert kinds["sold"] == placed.count(200)
     assert on_hand(client, item) >= 0
     assert reconciled(client)
 
