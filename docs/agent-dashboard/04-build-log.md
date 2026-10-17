@@ -201,3 +201,43 @@ ALY-99, branch `aly-agent-dashboard`. One entry per stage, newest last, so a sta
 **Local-only `ALYR_AGENT_CLOCK`:** reads the Agent at a fixed moment, so screenshots can be taken on a weekday.
 
 **Tests:** rewritten for all of the above. 353 API tests pass.
+
+### Fix stage 2 · the dashboard redrawn, and showcase mode
+
+**Hierarchy and layout (P1-1, P1-7):**
+- The summary is the headline (28 px, 24 on a phone). The greeting, date and "Updated" move into one eyebrow line.
+- One hero number (56 px, 40 on a phone); the others are 28 px with the unit at half size. The numbers share the sections' twelve columns, and their labels, values and changes line up across (subgrid).
+- Order: Needs (8) beside Done (4); the numbers; Suggestions (8) beside a compact week (4); hours, top and owed in thirds; the team at most 48 rem, one line per person.
+- Done's counts share one right-aligned column, wider when a sum needs it.
+
+**Type and spacing (P0-3, P1-6):**
+- The reset selectors carry one class of weight (`.ag :where(ul, ol)`), so every rule after them wins and a host's bare element styles do not. What the host puts in the setup slot keeps its own styles.
+- Sizes 11/13/15/18/28/56, spacing on 4 and 8, 56 px between sections. Figures are Instrument Sans with tabular digits; mono is for labels and rules only.
+- One strong rule, above Needs; 10% hairlines everywhere else. Small text is ink-2.
+
+**Charts (P1-4):**
+- The week: bars 56% wide (40 px at most) on one baseline, 88% ink (78% in dark). Last week is a 10% ghost behind each day.
+- Today has a 3 px Volt cap, a tick at last week's figure to this time, and last week's whole day as a 12% ghost. Only today's value shows; the rest are in screen-reader sentences.
+- Days ahead: last week as a dashed outline, and what is booked as a lighter bar with its count. Today's bookings still to come sit on top of what is done. A closed day says "Closed"; a day before the business joined is left empty. The legend lists only what is drawn.
+- Busiest hours: 4% empty cells with no outline, 2 px gaps, closed hours blank. The top three are words on a phone and screen-reader text on desktop.
+- Top items: 4 px bars, a "Rank vs previous 28 days" heading, 9 px triangles read as "up" or "down".
+
+**Cards and states (P1-8, P1-10, P1-11):**
+- "Who (n)" opens the list. A folded card on a phone has a chevron button; the title is a plain heading. On desktop every card is open and the toggles are not drawn.
+- The empty state draws dashed outlines of the week, the hours and a list, captioned; "Nothing is waiting" has no Volt tick before anything has happened.
+- Ids come from `useId()`; the rise is no longer frozen by `useState(animate)` (P2-6). Number ranges stay left to right in Arabic (P2-4).
+
+**Showcase mode (P0-6):** `mode="showcase"`, `headingLevel` and `link` props.
+- Links are plain text unless the host passes a link component. No "Not now", "Updated", stale line, team, report or setup.
+- The eyebrow is the moment ("Thursday · 16:20"); "Who (n)" still opens; the figure rises once when it comes into view.
+- `/agent-sample` (noindex, under the product layout) shows the three samples, `?sample=` and `?lang=ar` pick one.
+
+**Workspace (P0-4, P1-2):**
+- The full setup checklist shows only while the business is empty and only to managers, inside the Agent under the header. Otherwise setup is a row in Needs.
+- The ALYR team box reads "A person from ALYR reads every message." After sending, one status line: "Sent to the ALYR team. We answer on WhatsApp or by email." No bubbles, no ticks.
+
+**Engine:** placeholders carry their shape; the samples leave out the setup row; the week's maximum includes today's bookings on top of what is done; no last-week tick before a business joined; a "Booked" legend; "Until it is marked, the no-show figures are short."
+
+**Checks:** 353 API tests and ruff; eslint and tsc are clean. Screenshots are in `docs/agent-dashboard/shots/` (not committed), taken with the API's Agent clock at Thursday 15 Oct, 16:20 Doha:
+- workspace: the bakery in English and Arabic at 1440 and 390; the salon and the AC company in English at 1440 and Arabic at 390; the bakery in dark and as the agent role; the salon empty and in its first week (1440 and 390);
+- showcase: `showcase-{bakery,salon,homeservices}-{en,ar}-{960,390}.png`, and the bakery in dark.

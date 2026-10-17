@@ -21,7 +21,7 @@ Anything else belongs to another lane. If a task needs it, keep the change small
 
 ## Now (update this section in the same pull request as the work)
 
-Last updated 17 Oct 2026 (afternoon).
+Last updated 17 Oct 2026 (evening).
 
 - **ALY-99, ALYR Agent dashboard and the product suite (D-035), branch `aly-agent-dashboard`.**
   - Phase 1 is done and pushed, with no PR yet:
@@ -35,8 +35,11 @@ Last updated 17 Oct 2026 (afternoon).
     - the Agent engine `GET /api/agent` (20 rules, roles, "Not now");
     - the `AgentDashboard` component in `apps/web/app/_agent/`, rendered on `/app`;
     - filtered screens (`?show=`);
-    - the salon and clinic samples, and the sample screens for the site (`alyr.agent_samples`).
-  - Next for this lane: whatever review asks. The site builder takes the component and the samples for `/`, `/agent`, `/bookings` and `/accounts`. The agent-role API task (money in older routes) is separate.
+    - the salon and AC company samples, and the sample screens for the site (`alyr.agent_samples`).
+  - The fix pass on the design critique (`docs/agent-dashboard/05-critique.md`) is done and pushed to the same PR:
+    - stage 1, the engine: the summary names its measure and agrees with the numbers; the week compares like with like; Arabic agreement and bidi; setup as a Needs row; credible samples (Sadaf a women's salon, Nasma Cooling instead of the clinic, D-035);
+    - stage 2, the component: the summary as headline, one hero number, Done beside Needs, a type and spacing scale, the charts redrawn, showcase mode (`mode`, `headingLevel`, `link`), `/agent-sample`; the ALYR team box without a reply-time promise or a fake chat.
+  - Next for this lane: whatever review asks. The site builder takes the component in showcase mode and the samples for `/`, `/agent`, `/bookings` and `/accounts`. The agent-role API task (money in older routes) is separate.
 - Built on the simulator: inbox with takeover, assignment and notes; credit ledger; order link; payments stand-in; bookings API; sign-in and roles; workspace shell; weekly report; self-serve onboarding at `/start` (D-031); per-client pricing and sign-up switches in the back office (D-032); the internal tool's first phase: Today, audit log, staff (D-033). 253 tests.
 - Onboarding gives appointment businesses the full flow. Restaurants, shops, wholesale and document offices are created with a setup request for ALYR until their screens exist.
 - Bookings have a customer page and a workspace tab, but only one customer at a time per shop. Sign-in codes are not emailed. Product screens still have the first maroon styling (the Site and brand lane restyles them).

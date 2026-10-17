@@ -641,7 +641,10 @@ There is no separate Pay product: payment links stay a module of Chat and Bookin
 - **Roles.** Staff with the agent role get the view without money: no sales, owed, collected, amounts or report line. They cannot set cards aside. Owners and admins see everything. Closing the older routes that already show agents money is a separate task.
 - **"Not now"** sets a knowledge card aside until its numbers change or until Sunday (migration 0019, `agent_snoozes`, row-level security).
 - **Filtered screens.** Every action opens its screen filtered to the rows the rule counted (`?show=`).
-- **Samples.** Qirfa Bakery, Sadaf Salon and Ruwaa Dental Clinic are fictional, seeded at a fixed moment, Thursday 15 Oct 2026 at 16:20 Doha.
+- **Samples.** Qirfa Bakery, Sadaf Salon (a women's salon) and Nasma Cooling (an AC repair and maintenance company) are fictional, seeded at a fixed moment, Thursday 15 Oct 2026 at 16:20 Doha. Files: `samples/{bakery,salon,homeservices}.{en,ar}.json`.
+  - **AC company, not a clinic (the founder, 17 Oct).** A clinic sample could carry health data under the PDPPL, which the lawyer has not checked. The clinic preset stays in the product.
+  - **No "paid through ALYR links" in the samples.** There is no payment provider yet (ALY-17), so it would read as live card payments. The product keeps the row.
+- **Showcase mode (the design critique, `05-critique.md`).** `mode="showcase"` is the homepage figure: no links into the workspace unless the host passes its own, no "Not now", team, report or setup, heading levels the host sets, the moment ("Thursday · 16:20") instead of a date. `/agent-sample` (not indexed) shows the three samples for the site builder.
 - **Why.** The owner sees in one sentence how the week is going, what needs them, and what ALYR did. That is the weekly proof of the subscription on a month-to-month term, and the same screen is what the homepage shows.
 
-**Not built yet.** The suggestions beyond the 20 rules (for example answered after hours), tapping a number to open its week on a phone, the product pages `/bookings`, `/agent` and `/accounts`, and the homepage figure (the site builder takes the component and the samples).
+**Not built yet.** The suggestions beyond the 20 rules (for example answered after hours), tapping a number to open its week on a phone, the product pages `/bookings`, `/agent` and `/accounts`, and the homepage figure itself (the site builder takes the component in showcase mode and the samples).
