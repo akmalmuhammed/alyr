@@ -1,215 +1,122 @@
 "use client";
 
+// Today (D-033): one queue of everything that needs ALYR, most urgent and oldest first.
+// Anything can be set aside for a few days; it comes back on its own.
+
+import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
-import "../_workspace/shell.css";
-import "./ops.css";
-import { api, type ClientSummary, type Pricing } from "./api";
-import { Clients } from "./Clients";
-import { PriceList, SignUpSettings } from "./PriceList";
+import { api } from "./api";
 
-// ALYR's back office, for ALYR staff only (the API refuses anyone else). English only:
-// it is an internal tool. Clients and their price, the help shops asked for, the price
-// list, and who may sign up on their own (D-027, D-032).
-
-type Business = {
-  id: string; name: string; slug: string; created_at: string; modules: string[]; products: string[];
-  members: number; open_requests: number; whatsapp_connected: boolean;
+type Item = {
+  key: string; kind: string; title: string; detail: string; since: string | null;
+  client_id: string | null; business_id: string | null; urgent: boolean; until?: string;
 };
-type Request = {
-  id: string; business: string; product_key: string; step_key: string; note: string;
-  requested_by: string; status: string; created_at: string;
+type Today = { items: Item[]; later: Item[]; counts: Record<string, number> };
+
+const KIND: Record<string, string> = {
+  price: "To price", answer: "Waiting for owner", request: "Asked for help",
+  whatsapp: "Go-live", stuck: "Stuck", delivery: "Failing",
 };
-type Product = { key: string; name: { en: string }; status: string };
-type Tab = "clients" | "asks" | "prices" | "signup";
 
-const TABS: [Tab, string][] = [["clients", "Clients"], ["asks", "Asked for help"], ["prices", "Price list"], ["signup", "Sign-up"]];
-const EMPTY = { name: "", name_ar: "", slug: "", owner_name: "", owner_email: "", products: ["chat"] as string[], client_id: "" };
+function age(since: string | null) {
+  if (!since) return "";
+  const hours = (Date.now() - new Date(since).getTime()) / 3_600_000;
+  if (hours < 1) return "now";
+  if (hours < 24) return `${Math.floor(hours)}h`;
+  return `${Math.floor(hours / 24)}d`;
+}
 
-export default function BackOffice() {
-  const [tab, setTab] = useState<Tab>("clients");
-  const [businesses, setBusinesses] = useState<Business[]>([]);
-  const [requests, setRequests] = useState<Request[]>([]);
-  const [products, setProducts] = useState<Product[]>([]);
-  const [clients, setClients] = useState<ClientSummary[]>([]);
-  const [pricing, setPricing] = useState<Pricing | null>(null);
-  const [form, setForm] = useState(EMPTY);
-  const [message, setMessage] = useState("");
-  const [denied, setDenied] = useState("");
-  const [round, setRound] = useState(0);
+function target(item: Item) {
+  if (item.kind === "request" && !item.client_id) return "/ops/requests";
+  return item.client_id ? `/ops/clients?client=${item.client_id}` : "/ops/clients";
+}
 
-  const loadPricing = useCallback(async () => {
-    const answer = await api<Pricing>("/api/admin/pricing");
-    if (answer.ok) setPricing(answer.data);
-  }, []);
+export default function TodayPage() {
+  const [data, setData] = useState<Today | null>(null);
+  const [error, setError] = useState("");
 
   const load = useCallback(async () => {
-    const [b, r, w, c] = await Promise.all([
-      fetch("/api/admin/businesses", { cache: "no-store" }),
-      fetch("/api/admin/setup-requests", { cache: "no-store" }),
-      fetch("/api/workspace", { cache: "no-store" }),
-      fetch("/api/admin/clients", { cache: "no-store" }),
-    ]);
-    if (!b.ok) {
-      setDenied(b.status === 403 ? "This page is for ALYR staff." : "Sign in as ALYR staff to use the back office.");
-      return;
-    }
-    setDenied("");
-    setBusinesses((await b.json()).businesses);
-    setRequests((await r.json()).requests);
-    if (w.ok) setProducts((await w.json()).products);
-    if (c.ok) setClients((await c.json()).clients);
-    await loadPricing();
-  }, [loadPricing]);
+    const answer = await api<Today>("/api/admin/today");
+    if (answer.ok) setData(answer.data); else setError(answer.error);
+  }, []);
 
   useEffect(() => {
     const first = setTimeout(load, 0);
-    return () => clearTimeout(first);
+    const timer = setInterval(load, 30_000);
+    return () => { clearTimeout(first); clearInterval(timer); };
   }, [load]);
 
-  async function create(event: React.FormEvent) {
-    event.preventDefault();
-    setMessage("");
-    const response = await fetch("/api/admin/businesses", {
-      method: "POST", headers: { "content-type": "application/json" },
-      body: JSON.stringify({ ...form, client_id: form.client_id || null }),
-    });
-    const data = await response.json().catch(() => ({}));
-    if (!response.ok) {
-      setMessage(typeof data.detail === "string" ? data.detail : "That did not work. Check the fields.");
-      return;
-    }
-    setMessage(`Created ${form.name}. ${form.owner_email} can now sign in.`);
-    setForm(EMPTY);
-    setRound((n) => n + 1);
+  async function later(key: string, days: number) {
+    const answer = await api("/api/admin/today/snooze", "POST", { key, days });
+    if (!answer.ok) return setError(answer.error);
+    load();
+  }
+  async function back(key: string) {
+    await api("/api/admin/today/unsnooze", "POST", { key, days: 1 });
     load();
   }
 
-  async function done(id: string) {
-    await fetch(`/api/admin/setup-requests/${id}/done`, { method: "POST" });
-    load();
-  }
-
-  const field = (key: "name" | "name_ar" | "slug" | "owner_name" | "owner_email", label: string, extra = {}) => (
-    <label className="ops-field">
-      <span>{label}</span>
-      <input value={form[key]} onChange={(e) => setForm({ ...form, [key]: e.target.value })} required={key !== "name_ar"} {...extra} />
-    </label>
-  );
-
-  if (denied) return <div className="sh-empty"><p>{denied} <a href="/login">Sign in</a></p></div>;
-
-  const waitingOnOwner = clients.filter((c) => c.quote?.status === "published").length;
-  const toPrice = clients.filter((c) => c.businesses.length > 0 && (!c.quote || c.quote.status === "draft")).length;
-  const stats: [string, number][] = [
-    ["Clients", clients.length],
-    ["Shops on ALYR", businesses.length],
-    ["To price", toPrice],
-    ["Price waiting for owner", waitingOnOwner],
-    ["Asked for help", requests.length],
-  ];
+  const date = new Intl.DateTimeFormat("en-GB", { timeZone: "Asia/Qatar", weekday: "long", day: "numeric", month: "long" }).format(new Date());
+  const urgent = data?.items.filter((i) => i.urgent).length ?? 0;
 
   return (
-    <div className="sh ops">
-      <div className="sh-sheet">
-        <header className="sh-top">
-          <div className="sh-crumbs">
-            <svg className="sh-mark" viewBox="0 0 190 160" aria-hidden="true">
-              <polygon fill="currentColor" points="50,0 180,0 130,62 0,62" />
-              <polygon fill="currentColor" points="0,72 126,72 39,160" />
-              <polygon fill="#B7F34A" points="134,72 190,72 142,160 46,160" />
-            </svg>
-            <b>ALYR</b><i>/</i><span>Back office</span>
-          </div>
-          <span className="spacer" />
-          <span className="sh-live on"><span className="sh-dot" />Staff only</span>
-        </header>
-        <div className="sh-scroll">
-    <main className="sh-main sh-enter ops-main">
+    <>
       <header className="sh-head">
-        <span className="sh-eyebrow">Internal · ALYR staff</span>
-        <h1>Back office</h1>
-        <p>Clients and their price, the help shops asked for, the price list, and who may sign up on their own.</p>
+        <span className="sh-eyebrow">{date} · Doha</span>
+        <h1>Today</h1>
+        <p>{!data ? "Loading…" : data.items.length === 0 ? "Nothing needs you right now." : `${data.items.length} things need ALYR${urgent ? `, ${urgent} of them urgent` : ""}.`}</p>
       </header>
+      {error && <p className="ops-error" role="alert">{error}</p>}
 
-      <section className="ops-stats" style={{ "--i": 1 } as React.CSSProperties}>
-        {stats.map(([label, value]) => (
-          <div key={label} className="sh-tile"><span>{label}</span><b className="num">{value}</b></div>
-        ))}
-      </section>
-
-      <nav className="tm-seg ops-tabs" role="tablist" aria-label="Back office">
-        {TABS.map(([key, label]) => (
-          <button key={key} type="button" role="tab" aria-selected={tab === key} onClick={() => setTab(key)}>
-            {label}{key === "asks" && requests.length > 0 && <span className="num"> {requests.length}</span>}
-          </button>
-        ))}
-      </nav>
-
-      {tab === "clients" && (
-        <>
-          <Clients key={round} pricing={pricing} onChange={load} />
-          <section>
-            <h2>Set up a new shop</h2>
-            <form className="ops-form" onSubmit={create}>
-              {field("name", "Shop name")}
-              {field("name_ar", "Arabic name", { dir: "rtl" })}
-              {field("slug", "Short name for links (a-z, 0-9, dashes)", { pattern: "[a-z0-9-]{2,40}", dir: "ltr" })}
-              {field("owner_name", "Owner's name")}
-              {field("owner_email", "Owner's email", { type: "email", dir: "ltr" })}
-              <label className="ops-field">
-                <span>Client (who pays)</span>
-                <select value={form.client_id} onChange={(e) => setForm({ ...form, client_id: e.target.value })}>
-                  <option value="">A new client</option>
-                  {clients.map((c) => <option key={c.id} value={c.id}>Add to {c.name}</option>)}
-                </select>
-              </label>
-              <fieldset className="ops-field">
-                <span>Switch on</span>
-                {products.filter((p) => p.status !== "coming").map((p) => (
-                  <label key={p.key} className="ops-check">
-                    <input type="checkbox" checked={form.products.includes(p.key)}
-                      onChange={(e) => setForm({
-                        ...form,
-                        products: e.target.checked ? [...form.products, p.key] : form.products.filter((k) => k !== p.key),
-                      })} />
-                    {p.name.en}
-                  </label>
-                ))}
-              </fieldset>
-              <button className="btn primary" type="submit">Create shop</button>
-              {message && <p className="ops-ok" role="status">{message}</p>}
-            </form>
-          </section>
-        </>
-      )}
-
-      {tab === "asks" && (
-        <section>
-          <h2>Asked for help <span className="sh-count">{requests.length}</span></h2>
-          {requests.length === 0 ? <p className="empty-note sh-note">Nothing waiting. Every ask is answered.</p> : (
-            <div className="tablewrap"><table>
-              <thead><tr><th>Shop</th><th>Product · step</th><th>Note</th><th>Asked by</th><th /></tr></thead>
-              <tbody>
-                {requests.map((r) => (
-                  <tr key={r.id} className="norow">
-                    <td><b>{r.business}</b><br /><small>{new Date(r.created_at).toLocaleString("en-GB")}</small></td>
-                    <td>{r.product_key} · {r.step_key || "general"}</td>
-                    <td dir="auto">{r.note}</td>
-                    <td>{r.requested_by}</td>
-                    <td className="r"><button className="btn small" onClick={() => done(r.id)}>Mark done</button></td>
-                  </tr>
-                ))}
-              </tbody>
-            </table></div>
-          )}
+      {data && (
+        <section className="ops-stats ops-kinds">
+          {Object.entries(KIND).map(([kind, label]) => (
+            <div key={kind} className={`sh-tile ${data.counts[kind] ? "" : "ops-quiet"}`}><span>{label}</span><b className="num">{data.counts[kind] ?? 0}</b></div>
+          ))}
         </section>
       )}
 
-      {tab === "prices" && pricing && <PriceList pricing={pricing} reload={loadPricing} />}
-      {tab === "signup" && pricing && <SignUpSettings pricing={pricing} reload={loadPricing} />}
-    </main>
-        </div>
-      </div>
-    </div>
+      {data && data.items.length > 0 && (
+        <section>
+          <ul className="ops-queue">
+            {data.items.map((item) => (
+              <li key={item.key} className={item.urgent ? "urgent" : ""}>
+                <span className={`sh-pill ${item.urgent ? "wait" : "coming"}`}>{KIND[item.kind] ?? item.kind}</span>
+                <div className="ops-queue-text">
+                  <b>{item.title}</b>
+                  <small dir="auto">{item.detail}</small>
+                </div>
+                <span className="ops-age num" title={item.since ? new Date(item.since).toLocaleString("en-GB") : ""}>{age(item.since)}</span>
+                <div className="ops-queue-actions">
+                  <Link className="btn small" href={target(item)}>Open</Link>
+                  <select aria-label={`Set aside ${item.title}`} value="" onChange={(e) => e.target.value && later(item.key, Number(e.target.value))}>
+                    <option value="">Later…</option>
+                    <option value="1">Tomorrow</option>
+                    <option value="3">In 3 days</option>
+                    <option value="7">Next week</option>
+                  </select>
+                </div>
+              </li>
+            ))}
+          </ul>
+        </section>
+      )}
+
+      {data && data.later.length > 0 && (
+        <section>
+          <h2>Set aside <span className="sh-count">{data.later.length}</span></h2>
+          <ul className="ops-queue quiet">
+            {data.later.map((item) => (
+              <li key={item.key}>
+                <span className="sh-pill coming">{KIND[item.kind] ?? item.kind}</span>
+                <div className="ops-queue-text"><b>{item.title}</b><small>Back on {new Date(item.until ?? "").toLocaleDateString("en-GB", { weekday: "short", day: "numeric", month: "short" })}</small></div>
+                <span />
+                <div className="ops-queue-actions"><button className="btn small ghost" type="button" onClick={() => back(item.key)}>Bring back</button></div>
+              </li>
+            ))}
+          </ul>
+        </section>
+      )}
+    </>
   );
 }

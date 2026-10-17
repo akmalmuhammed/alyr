@@ -31,7 +31,7 @@ function progress(b: ClientSummary["businesses"][number]) {
   );
 }
 
-export function Clients({ pricing, onChange }: { pricing: Pricing | null; onChange: () => void }) {
+export function Clients({ pricing, onChange, initialClient }: { pricing: Pricing | null; onChange: () => void; initialClient?: string }) {
   const [list, setList] = useState<ClientSummary[]>([]);
   const [openId, setOpenId] = useState("");
   const [detail, setDetail] = useState<ClientDetail | null>(null);
@@ -66,9 +66,12 @@ export function Clients({ pricing, onChange }: { pricing: Pricing | null; onChan
   }, [show]);
 
   useEffect(() => {
-    const first = setTimeout(loadList, 0);
+    const first = setTimeout(() => {
+      loadList();
+      if (initialClient) openClient(initialClient);
+    }, 0);
     return () => clearTimeout(first);
-  }, [loadList]);
+  }, [loadList, openClient, initialClient]);
 
   async function run(work: () => Promise<{ ok: boolean; data: ClientDetail; error: string }>, done: string) {
     setBusy(true); setMessage(""); setError("");
@@ -177,8 +180,11 @@ export function Clients({ pricing, onChange }: { pricing: Pricing | null; onChan
                 <span className="sh-eyebrow">Client since {new Date(detail.created_at).toLocaleDateString("en-GB")}</span>
                 <h2 className="ops-title">{detail.name}</h2>
               </div>
-              <span className={`sh-pill ${detail.effective_price_mode === "automatic" ? "active" : "coming"}`}>
-                Price {detail.effective_price_mode === "automatic" ? "shown automatically" : "prepared by ALYR"}
+              <span className="ops-head-actions">
+                <span className={`sh-pill ${detail.effective_price_mode === "automatic" ? "active" : "coming"}`}>
+                  Price {detail.effective_price_mode === "automatic" ? "shown automatically" : "prepared by ALYR"}
+                </span>
+                <a className="btn small ghost" href={`/ops/audit?client=${detail.id}`}>History</a>
               </span>
             </header>
             {message && <p className="ops-ok" role="status">{message}</p>}
@@ -288,7 +294,7 @@ export function Clients({ pricing, onChange }: { pricing: Pricing | null; onChan
                 {badLine && <p className="ops-error">Every line needs a name and a price.</p>}
               </div>
             ) : (
-              <div className="ops-quote empty">
+              <div className="ops-quote none">
                 <p className="sh-note">
                   {latest?.status === "accepted"
                     ? `Quote ${latest.number} was accepted by ${latest.accepted_by || "the owner"} on ${new Date(latest.accepted_at ?? "").toLocaleDateString("en-GB")}: ${latest.totals.monthly_total_text} a month. To change the price, make a new quote; the owner accepts it again.`

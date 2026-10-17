@@ -56,8 +56,8 @@ Every section checked in both languages at 1440 and 390, light and dark, and wit
 
 ## 17 Oct, close-out
 
-- Rebased on `main` after ALY-78 merged (D-032 was taken, so this branch's decision is **D-033**).
-- Docs: D-033 in `docs/decisions.md` (the 16 Oct decisions and the founder's table from `00`), the Prices row in `docs/status.md` replaced, `docs/brand.md` (new extensions, the motion system, font files), the lane brief's "Now".
+- Rebased on `main` after ALY-78 merged (D-032 was taken, so this branch's decision was **D-033**; on 17 Oct ALY-80 merged its own D-033 first, so it is now **D-034**).
+- Docs: D-034 (was D-033) in `docs/decisions.md` (the 16 Oct decisions and the founder's table from `00`), the Prices row in `docs/status.md` replaced, `docs/brand.md` (new extensions, the motion system, font files), the lane brief's "Now".
 - Final screenshots in `shots/`, taken from the production build. Full-page captures show the composed end state (see the capture script). On wide screens the Carbon band's figure is sticky, so a full-page capture shows it once beside the first module and leaves the rest of the column empty; `home-en-1440-story-payment.png` and `home-ar-1440-story-inbox.png` show it in place at two steps, and the reduced-motion capture shows every module with its own figure.
 - Not committed: `baseline/*.png`, `shots/*.png`, `_playbook-extract.txt`.
 

@@ -9,6 +9,7 @@ import hmac
 import logging
 import secrets
 from dataclasses import dataclass
+from datetime import datetime
 from uuid import UUID
 
 import asyncpg
@@ -159,6 +160,17 @@ async def resolve(db: Database, token: str) -> Staff | None:
     if role is None:
         return None
     return Staff(row["user_id"], row["name"], row["email"], role, row["tenant_id"])
+
+
+async def session_started(db: Database, token: str) -> datetime | None:
+    """When a session cookie was issued, or None if it is unknown or expired."""
+    if not token:
+        return None
+    async with db.unscoped() as conn:
+        return await conn.fetchval(
+            "select created_at from sessions where token_hash = $1 and expires_at > now()",
+            _hash(token),
+        )
 
 
 async def sign_out(db: Database, token: str) -> None:

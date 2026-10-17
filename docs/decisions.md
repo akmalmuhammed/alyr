@@ -38,7 +38,8 @@ Status: **Accepted** (in force), **Proposed** (waiting for the founder), **Super
 | D-030 | A weekly result report to the owner, one section per product | Accepted |
 | D-031 | Self-serve onboarding: sign up, create the business, start from a preset, try it on a private test line | Accepted |
 | D-032 | Prices are set per client from the back office: a price list, a quote per client, published live to the owner | Accepted |
-| D-033 | Product first and paid from the first customer; the homepage leads with what ALYR sells today | Accepted |
+| D-033 | The internal tool: one console for every client, built in three levels; staff never see customer conversations | Accepted |
+| D-034 | Product first and paid from the first customer; the homepage leads with what ALYR sells today | Accepted |
 
 ---
 
@@ -536,7 +537,34 @@ A new owner can create their own business at `/start` without ALYR's back office
 - a separate price list for partners;
 - telling the owner by email or WhatsApp that their price is ready.
 
-## D-033 · Product first and paid from the first customer; the homepage leads with what ALYR sells today
+## D-033 · The internal tool: one console for every client
+**Date** 17 Oct 2026 · **Status** Accepted · Linear ALY-79 (phases ALY-80 to ALY-96) · Plan: `docs/internal-tool.md`
+
+**Decision.** ALYR runs every client from one console: Today, leads, clients, businesses, onboarding, requests, billing, settings, staff and audit. It is built in three levels, in order:
+1. Run the first 10 clients.
+2. Operate with a small team: roles, messaging health, usage, revenue.
+3. Scale: data compliance, partners, other countries, integrations.
+
+**The founder's choices (17 Oct).**
+- Build all three levels.
+- Our own simple invoices.
+- Leads live in the tool.
+- **Staff see a shop's setup but never customer conversations.**
+
+**Why one console, built here.**
+- The tool reads the product's database, so there is one truth about every client.
+- The founder sells in person, so the parts he uses in the field work on a phone.
+- An outside CRM or admin tool would hold a second copy of client data, and would still need our guarded database functions to act on businesses.
+
+**A cofounder's note on the order.** On 16 Oct the founder ruled to build only what a paying pilot needs until 10 customers. Building all three levels goes beyond that rule, so they are built strictly in order. Level 1 is usable on its own. The country-specific parts of level 3 (VAT, e-invoicing) are researched when ALYR enters that country.
+
+**Rules for every phase.**
+- Back-office sign-ins last 12 hours.
+- Every staff change is written to an audit log in the same transaction. The log cannot be edited, by the app or by a database trigger.
+- Cross-business reads go through guarded `admin_*` functions.
+- No route returns message bodies to staff: failures are shown as counts.
+
+## D-034 · Product first and paid from the first customer; the homepage leads with what ALYR sells today
 **Date** 16 Oct 2026 · **Status** Accepted (founder, 16 Oct, in conversation; recorded in `docs/site-redesign/00-founder-decisions.md`) · Linear ALY-56 · Updates D-017, D-025 and D-026
 
 **The decision.** ALYR is the company that sets up and runs the tech for owner-run businesses. It sells a product first: ALYR Chat. Services appear only as part of the subscription, not as a business of their own (this narrows D-026, which put six services on the homepage). There is no free plan and no free trial; the first month is paid, with the money back if an agreed result is missed. The founder sells in person.

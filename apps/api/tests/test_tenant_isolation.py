@@ -18,6 +18,8 @@ GLOBAL_TABLES = {
     # Each has its own forced row-level security (D-032).
     "clients", "price_items", "business_type_settings", "platform_settings", "quotes",
     "quote_lines",
+    # The internal tool's own records: the audit log and Today's set-aside items (D-033).
+    "platform_audit", "today_snoozes",
 }
 
 

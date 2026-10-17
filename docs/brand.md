@@ -62,7 +62,7 @@ The homepage is "a working drawing of an owner's business" (`docs/site-redesign/
 | Item | Owner |
 |---|---|
 | ALYR's own WhatsApp number (`NEXT_PUBLIC_ALYR_WHATSAPP`) so the call to action is "Message us on WhatsApp". Until it is set the pages offer hello@alyr.qa (the default of `NEXT_PUBLIC_ALYR_CONTACT_EMAIL`); set that to an empty value and they say the line opens soon. The founder confirms the address forwards | Founder |
-| Which look is ALYR's (ALY-61). The price is decided (D-033); "live in 48 hours" and a free pilot stay off the site (D-025) | Founder |
+| Which look is ALYR's (ALY-61). The price is decided (D-034); "live in 48 hours" and a free pilot stay off the site (D-025) | Founder |
 | Native review of all Arabic copy | A native reviewer |
 | Check every product claim on the page against what is live (see `docs/status.md`): keeping your number, payment links through your own gateway, and the product on Meta's platform are designed and built on the simulator, not yet running live | Founder |
 | Hosting for the site. Vercel's free plan forbids commercial use; Cloudflare, where the domain already is, allows it | Founder |
