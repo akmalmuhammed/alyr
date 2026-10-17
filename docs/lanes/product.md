@@ -21,8 +21,14 @@ Anything else belongs to another lane. If a task needs it, keep the change small
 
 ## Now (update this section in the same pull request as the work)
 
-Last updated 17 Oct 2026 (evening).
+Last updated 17 Oct 2026 (night).
 
+- **ALY-99, the Sunday report as a report card (D-038), branch `aly-99-report-card`, PR open, not merged.**
+  - The card image: `modules/agent/card.py` (SVG rendered with resvg, Arabic in right-to-left embeddings and mirrored, the brand fonts embedded under the OFL), from `modules/agent/week.py`, which reads the closed week with the dashboard's engine.
+  - The text under it: a summary by the engine's rules, one line per product with the main product first, what ALYR did, one next step with its rule.
+  - Sending: an image inside the window; outside it the text-only `weekly_report` until Meta approves `weekly_report_card` (image header) and `ALYR_REPORT_CARD_TEMPLATE` is on. Images kept in `message_media` (migration 0021) and uploaded through the Media API at send time.
+  - Samples for the site: `apps/web/app/_agent/samples/report/` (`python -m alyr.report_samples`).
+  - Still missing: submitting the template (the founder, D-038), the card in the owners' email and in a workspace screen, a native review of the Arabic. Log: `docs/agent-dashboard/12-report-card-log.md`.
 - **ALY-99, ALYR Agent dashboard and the product suite (D-035), branch `aly-agent-dashboard`.**
   - Phase 1 is done and pushed, with no PR yet:
     - the catalogue line-up: Chat, Bookings, Agent (included), Accounts, Payroll coming; the inbox and payment links are shared;

@@ -42,6 +42,7 @@ Status: **Accepted** (in force), **Proposed** (waiting for the founder), **Super
 | D-034 | Product first and paid from the first customer; the homepage leads with what ALYR sells today | Accepted |
 | D-035 | ALYR is a suite of products led by ALYR Agent: Chat, Bookings, Agent, Accounts, Payroll coming; the workspace home becomes the Agent dashboard | Accepted |
 | D-037 | The public site presents the suite: the homepage leads with ALYR Agent at work, and every live product has its own page | Accepted |
+| D-038 | The Sunday report is a report card: a branded image from ALYR Agent's engine with about eight lines under it | Accepted |
 
 ---
 
@@ -665,3 +666,22 @@ There is no separate Pay product: payment links stay a module of Chat and Bookin
 **Why.** D-035 made ALYR a suite led by ALYR Agent. The site now says so: the first thing a visitor sees is the screen an owner would open every morning, and each product can be read on its own before the visit.
 
 **Open for the founder.** Publishing (the go-ahead each time), the Arabic review (ALY-66), the clinics question (ALY-51), a manual name check for Dafira Salon and Zilal Cooling as for Qirfa (renamed from Sadaf Salon and Nasma Cooling, too close to real businesses), and whether the hero may keep calling the replies and reminders the agent's work while `/agent` explains that ALYR Chat and ALYR Bookings send them and ALYR Agent counts them.
+
+## D-038 · The Sunday report is a report card
+**Date** 17 Oct 2026 · **Status** Accepted (founder, 17 Oct, in conversation: the redesign was approved) · Linear ALY-99 · Updates D-030
+
+**The decision.** The weekly report on WhatsApp is a branded card image with about eight lines of text under it, both drawn from ALYR Agent's engine, so the report, the card and the dashboard never disagree. Build notes in `docs/agent-dashboard/12-report-card-log.md`.
+- **The card** (1080 × 566, WhatsApp's 1.91:1 header): the shop and the week; one hero number with its change against the week before, the same days, a percentage only when both weeks count 20 or more; seven day bars with the week before as a ghost and the busiest day as the one Volt signal; two or three key facts chosen by the products switched on and the type of business. Carbon by default, Paper as well; Instrument Sans, IBM Plex Sans Arabic, IBM Plex Mono and the logo's 45° fold; mirrored in Arabic. Drawn on the server with resvg (`resvg-py`, free), with every Arabic line in a right-to-left embedding, since resvg lays lines out left to right. The fonts are embedded under the SIL Open Font Licence.
+- **The text:** a summary by the dashboard's rules, one line per product with the business's main product first (a bakery's report no longer opens with credit accounts), what ALYR did for the business, and one next step with its rule from the dashboard's own cards. WhatsApp's bold and italics. Arabic from whole templates with agreement, every line opening with a right-to-left mark.
+- **Sending.** Inside the 24-hour window, the card as an ordinary image with the text as its caption: no template needed. Outside it, the text-only `weekly_report` template stays until Meta approves the new `weekly_report_card` (utility, an image header and five blanks) and `ALYR_REPORT_CARD_TEMPLATE` is set to `true`; REPORT always brings the card. The image is kept beside its message (`message_media`, row-level security) and uploaded through Meta's Media API when the message is sent, so no image is hosted in public. Media IDs expire after 30 days on Meta's side.
+- **Unchanged from D-030:** the day and hour, who receives it, the stored sections per product, the workspace API and the owners' email (still the sectioned text).
+
+**Why.** An owner reads one number and seven bars faster than 25 lines, and a card is the weekly proof of the subscription that can be shown at the counter. Drawing it from the engine keeps one set of rules for every number ALYR shows.
+
+**For the founder: submitting the template to Meta.**
+1. Put the Meta app's ID in `apps/api/.env` as `ALYR_META_APP_ID=1071845795713841` (the app `alyr`, in `docs/status.md`).
+2. On the laptop: `scripts/api-in-docker.sh uv run python -m alyr.templates_sync` to see where things stand, then `... templates_sync --create`. It uploads the sample cards (`apps/web/app/_agent/samples/report/bakery.en.png` and `.ar.png`) and submits `weekly_report_card` in English and Arabic as utility templates.
+3. Wait for Meta's review; run `templates_sync` again to see "APPROVED" for both languages. If Meta moves it to marketing or refuses it, nothing changes for owners: the text-only report keeps going.
+4. Once both are approved, set `ALYR_REPORT_CARD_TEMPLATE=true` in `apps/api/.env` (Key Vault in production) and restart the API and the worker.
+
+**Not yet.** The card in the owners' email and in a workspace screen, and a native speaker's review of the Arabic (ALY-66).
