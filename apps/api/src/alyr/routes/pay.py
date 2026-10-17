@@ -43,4 +43,10 @@ async def complete(tenant_id: UUID, payment_id: UUID, request: Request) -> dict:
         status = await service.complete_payment(conn, payment_id, request.app.state.outbound)
     if status == "not_found":
         raise HTTPException(status_code=404, detail="payment not found")
+    if status == "expired":
+        # The order's hold ran out or it was cancelled, so its stock may be gone.
+        raise HTTPException(
+            status_code=409,
+            detail={"code": "expired", "message": "This payment link has expired."},
+        )
     return {"status": status}

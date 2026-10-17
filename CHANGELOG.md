@@ -5,6 +5,9 @@ that changes behaviour; internal-only work can be grouped. Versions follow phase
 (`0.<phase>.<n>`), tagged on main when a phase demo works (docs/hygiene.md).
 
 ## Unreleased
+- Catalog package 1, the engine, not visible yet (ALY-102, D-039): items with variants, options,
+  availability rules, a stock log, holds for unpaid pay-link orders, and a checkout that tells a
+  customer exactly what changed. Products became items; existing shops and orders carry over.
 - Catalog package 2, API only: product photos are checked by content, cleaned of location and
   camera data, saved in three WebP sizes on Cloudflare R2 (local disk when unset), with
   per-shop limits that never delete, monthly usage meters, an 80% free-tier flag, and a

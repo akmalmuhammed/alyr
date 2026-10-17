@@ -21,9 +21,14 @@ Anything else belongs to another lane. If a task needs it, keep the change small
 
 ## Now (update this section in the same pull request as the work)
 
-Last updated 17 Oct 2026 (late).
+Last updated 18 Oct 2026.
 
-- **ALY-103, Catalog package 2: the photo pipeline, Cloudflare R2 storage, caps and meters (D-039), branch `aly-103-photos-r2`, PR #65, not merged.** API only; migration 0023.
+- **ALY-102, the Catalog's engine (package 1 of ALY-101, D-039), branch `aly-102-catalog-engine`, PR #67, in review, not merged.** Spec: `specs/001-catalog-engine/spec.md` (read it before building on this).
+  - Built: items with English and Arabic names, price with sale price and history, variants with their own stock and price difference, options (required choices, priced extras), availability rules (always, switch, count, daily limit, a schedule with lead time, cut-off and date-range overrides, the shop's day start), an append-only stock log, stock taken in one statement at checkout, 30-minute holds for pay-link orders that release on expiry (the job queue, a per-order job and a worker sweep), restock on cancel, a copy of the variant and options on each order line, and the REST API under `/api/items`. Migration 0022; the old `products` table is now `items`.
+  - Nothing is visible yet: no module registered, no screen, photo slots (`photo_id`) left for ALY-103.
+  - Still missing for the other packages: screens (ALY-104), the order page (ALY-112; it must handle `expired` payments and the `unavailable` list), WhatsApp (ALY-106), alerts (ALY-109), and customer price groups, which D-039 puts in release 1 but no package lists.
+  - ALY-103's meters and item limit now read the real items (`item_counter` is set, and `POST /api/items` asks the limit first). Joining photos to items is the follow-up both packages name: `media_links` holds `item` and `variant` owners with no foreign key, so the item routes should call `app.state.media.attach` and `detach`; the `photo_id` columns on items and variants are only slots.
+- **ALY-103, Catalog package 2: the photo pipeline, Cloudflare R2 storage, caps and meters (D-039), branch `aly-103-photos-r2`, PR #65, merged.** API only; migration 0023.
   - Upload: `POST /api/media/photos` takes the photo as the request body. `core/images.py` decides the type by content (JPEG, PNG, WebP), refuses SVG, markup, hidden code, damaged and animated files and anything over the byte or pixel limit, turns it upright, and draws it again from its pixels so no location, camera or other metadata survives (the output is checked for metadata chunks). Three WebP sizes (long side 320, 800, 1,600, never enlarged), named by the upload's SHA-256, in `shops/<shop id>/`. The same file twice is stored once.
   - Storage: `core/storage.py`, one small interface. `S3Store` is Cloudflare R2 with hand-written SigV4 (region `auto`, path-style); `LocalStore` is disk, for development, every test and when the R2 settings are missing. Settings `ALYR_R2_ACCOUNT_ID`, `ALYR_R2_ACCESS_KEY_ID`, `ALYR_R2_SECRET_ACCESS_KEY`, `ALYR_R2_BUCKET`, `ALYR_MEDIA_BASE_URL`.
   - Writes go through a queue (`media_ops`, job `media.sync`, up to 48 tries about an hour apart), so R2 being down never fails a request: the photo shows as `pending` (a placeholder) and appears when R2 is back.
@@ -61,7 +66,7 @@ Last updated 17 Oct 2026 (late).
 
 ## Next, in order
 
-0. The Catalog, ALY-101 and its packages ALY-102 to ALY-110, ALY-112 and ALY-113 (D-039; plan in the Eraser file named there). Start with ALY-102 and ALY-103. Nothing the Catalog adds is visible to an owner or customer until it works.
+0. The Catalog, ALY-101 and its packages ALY-102 to ALY-110, ALY-112 and ALY-113 (D-039; plan in the Eraser file named there). ALY-102 (the engine) is built and in review; ALY-103 (photos) runs beside it; then ALY-104 (workspace screens), ALY-112 (order page), ALY-106 (WhatsApp). Nothing the Catalog adds is visible to an owner or customer until it works.
 0. The internal tool, ALY-81 to ALY-96, in order (`docs/internal-tool.md`)
 1. ALY-27 bookable staff or resources, then services and hours screens
 2. ALY-53 contacts and labels
