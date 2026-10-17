@@ -88,7 +88,7 @@
 ## 4. The ledger and what is owed (ALYR Accounts, module `ledger`)
 
 **Stored.**
-- `ledger_entries`: `contact_id`, `kind` (`sale`, `payment`, `adjustment`), `amount`, `note`, `created_by` (a name, not a user), `created_at`.
+- `ledger_entries`: `contact_id`, `kind` (`sale`, `payment`, `adjustment`, `reversal`), `amount`, `note`, `created_by` (a name, not a user), `created_at`, `order_id` (set on a credit sale from the order link and on its reversal, ALY-128).
 - `ledger_accounts`: `promised_until`, `last_reminded_at`, `reminder_count`, `assigned_to`.
 - `contacts.credit_limit`.
 - Reminder messages carry `payload->>'template'` in `payment_reminder`, `payment_reminder_overdue` or `payment_reminder_final`. A tap on "I'll pay within a week" is an inbound message with `payload->>'reply_id' = 'promise'`.
@@ -105,7 +105,7 @@
 **Use `summary().outstanding`, not the home card.** The card "Owed to you" nets every entry, including customers who are in credit. That makes it lower than what is actually owed whenever someone has paid ahead. On the sample bakery no account is in credit, so both say QAR 12,548. Ageing counts days in UTC, not shop time. `summary()` reads every contact and entry into Python; fine at one shop's size.
 
 **Missing.**
-- An entry does not point to its order; the link is only the note "Order #N".
+- Entries written before ALY-128 point to their order only by the note "Order #N"; the migration linked the ones that matched exactly. A `reversal` (a cancelled order's credit sale taken off) cancels the sale of the same order in `ageing.age()`, and the report and the Agent leave a reversed sale out of "credit given".
 - No payment method; `created_by` is a name.
 - Nothing writes `adjustment` entries.
 - No workspace screen sets `credit_limit`.
