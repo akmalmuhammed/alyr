@@ -4,7 +4,7 @@ How the work is divided, and the one goal for this stage, are in [operating-mode
 
 Read this first in a new session, on any machine. It is the hand-over note between sessions: what works, what is next, and what is waiting on the founder. Update it in the same pull request as the work. Linear (team `Alyrtech`, project `Alyr Launch`) holds the detail; this page is the summary.
 
-Last updated: 17 Oct 2026, after the product line-up (ALY-99 phase 1, D-035: ALYR Chat, Bookings, Agent, Accounts, Payroll coming; branch `aly-agent-dashboard`, not merged yet), the internal tool's first phase (ALY-80, D-033), the 2026 homepage (ALY-56, D-034: published 17 Oct without prices, which wait for the commercial registration), and prices set per client from the back office (ALY-78, D-032).
+Last updated: 17 Oct 2026, after ALYR Agent and the product line-up (ALY-99, D-035: ALYR Chat, Bookings, Agent, Accounts, Payroll coming; combination pricing; the Agent dashboard on `/app`; branch `aly-agent-dashboard`, in review), the internal tool's first phase (ALY-80, D-033), the 2026 homepage (ALY-56, D-034: published 17 Oct without prices, which wait for the commercial registration), and prices set per client from the back office (ALY-78, D-032).
 
 ## What works today
 
