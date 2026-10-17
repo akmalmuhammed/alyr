@@ -26,18 +26,17 @@ const plexMono = IBM_Plex_Mono({
   variable: "--font-plex-mono", subsets: ["latin"], weight: ["500"], display: "swap",
 });
 
+/** Where the visitor's choice of theme is kept (localStorage), and the colour the browser
+ * puts around the page in each theme: the page's own canvas. */
+const THEME_KEY = "alyr-theme";
+const THEME_COLOR = { light: "#f6f7f3", dark: "#0e1012" } as const;
+
+/** Every public page follows the device into dark mode until the visitor chooses; the
+ * script below keeps theme-color with the theme they choose. */
 export const siteViewport: Viewport = {
   themeColor: [
-    { media: "(prefers-color-scheme: light)", color: "#f6f7f3" },
-    { media: "(prefers-color-scheme: dark)", color: "#f6f7f3" },
-  ],
-};
-
-/** The homepage follows the device into dark mode; the ALYR Chat page stays light. */
-export const homeViewport: Viewport = {
-  themeColor: [
-    { media: "(prefers-color-scheme: light)", color: "#f6f7f3" },
-    { media: "(prefers-color-scheme: dark)", color: "#0e1012" },
+    { media: "(prefers-color-scheme: light)", color: THEME_COLOR.light },
+    { media: "(prefers-color-scheme: dark)", color: THEME_COLOR.dark },
   ],
 };
 
@@ -72,6 +71,90 @@ const BEFORE_PAINT =
   "if(!window.matchMedia('(prefers-reduced-motion: reduce)').matches){d.classList.add('motion');" +
   "window.__alyrMotion=setTimeout(function(){d.classList.remove('motion')},4000)}}catch(e){}})()";
 
+/**
+ * The theme, also before the first paint, so a stored dark choice never flashes light. This
+ * function is not run on the server: its source goes into the page as it is (so it may use
+ * nothing from outside itself), and it runs in the browser.
+ *
+ * - With no choice stored, nothing is set and the CSS follows the device, live.
+ * - A stored choice ("light" or "dark") goes on <html> as `data-theme`, and theme-color
+ *   follows it.
+ * - It answers the switch (ThemeSwitch.tsx) itself, so the switch works before the page's
+ *   other scripts start. The new theme sweeps in with a View Transition (site.css); without
+ *   one, or with reduced motion, it simply changes. Other open tabs follow.
+ * - localStorage can be missing or refuse (private windows): then the choice lasts for the
+ *   page only.
+ */
+function theme(key: string, colors: { light: string; dark: string }) {
+  const root = document.documentElement;
+  const device = window.matchMedia("(prefers-color-scheme: dark)");
+  const still = window.matchMedia("(prefers-reduced-motion: reduce)");
+  const stored = () => {
+    try {
+      const value = localStorage.getItem(key);
+      return value === "light" || value === "dark" ? value : null;
+    } catch {
+      return null;
+    }
+  };
+  // The browser's own colour around the page. The two theme-color tags from the viewport
+  // above follow the device; a choice adds one of its own, without a media query, first in
+  // <head>, which browsers then use (the first that matches wins). The page's own tags are
+  // never edited: React checks them when the page hydrates and would add copies.
+  const chrome = (value: "light" | "dark" | null) => {
+    let meta = document.head.querySelector<HTMLMetaElement>("meta[data-alyr-theme]");
+    if (!value) return meta?.remove();
+    if (!meta) {
+      meta = document.createElement("meta");
+      meta.name = "theme-color";
+      meta.setAttribute("data-alyr-theme", "");
+    }
+    meta.content = colors[value];
+    if (document.head.firstElementChild !== meta) document.head.prepend(meta);
+  };
+  const set = (value: "light" | "dark" | null) => {
+    if (value) root.setAttribute("data-theme", value);
+    else root.removeAttribute("data-theme");
+    chrome(value);
+  };
+  set(stored());
+  window.addEventListener("storage", (event) => {
+    if (event.key === key || event.key === null) set(stored());
+  });
+
+  let turn = 0;
+  document.addEventListener("click", (event) => {
+    const target = event.target;
+    if (!(target instanceof Element) || !target.closest("[data-theme-switch]")) return;
+    const now = root.getAttribute("data-theme") ?? (device.matches ? "dark" : "light");
+    const next = now === "dark" ? "light" : "dark";
+    try {
+      localStorage.setItem(key, next);
+    } catch {
+      // not remembered; it still changes for this page
+    }
+    // The new colours apply at once, with every transition off, so nothing fades through
+    // the old theme; the switch's glyph keeps its turn (site.css).
+    const swap = () => {
+      root.setAttribute("data-theme-snap", "");
+      set(next);
+      void getComputedStyle(document.body).backgroundColor;
+      requestAnimationFrame(() => root.removeAttribute("data-theme-snap"));
+    };
+    const doc = document as Document & {
+      startViewTransition?: (update: () => void) => { finished: Promise<void> };
+    };
+    if (!doc.startViewTransition || still.matches) return swap();
+    const mine = ++turn;
+    root.setAttribute("data-theme-sweep", "");
+    doc.startViewTransition(swap).finished.finally(() => {
+      if (mine === turn) root.removeAttribute("data-theme-sweep");
+    });
+  });
+}
+
+const THEME = `(${theme.toString()})(${JSON.stringify(THEME_KEY)},${JSON.stringify(THEME_COLOR)})`;
+
 /** The whole document for a public page. Each language has its own root layout so the
  * `lang` and `dir` on `<html>` are right from the first byte. */
 export function SiteDocument({ locale, children }: { locale: Locale; children: React.ReactNode }) {
@@ -83,7 +166,7 @@ export function SiteDocument({ locale, children }: { locale: Locale; children: R
       suppressHydrationWarning
     >
       <head>
-        <script dangerouslySetInnerHTML={{ __html: BEFORE_PAINT }} />
+        <script dangerouslySetInnerHTML={{ __html: `${THEME};${BEFORE_PAINT}` }} />
       </head>
       <body>{children}</body>
     </html>

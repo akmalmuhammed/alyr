@@ -5,6 +5,7 @@ import { DohaTime } from "./DohaTime";
 import { CONTACT_EMAIL, CONTACT_STATE, OFFER_LIVE, PATHS, WHATSAPP_NUMBER, WORKSPACE_URL, type PageKey } from "./site";
 import { SiteMotion } from "./SiteMotion";
 import { rich } from "./Text";
+import { ThemeSwitch } from "./ThemeSwitch";
 
 /** Where a plain "talk to us" link goes, without a filled-in message: WhatsApp first, as
  * the playbook asks; email if that is all there is; otherwise the contact section. */
@@ -57,6 +58,7 @@ export function Shell({
             <a className="top-lang" href={other} lang={otherLocale} hrefLang={otherLocale} data-lang>
               {t.nav.other}
             </a>
+            <ThemeSwitch locale={locale} place="bar" />
             <a className="btn btn-volt btn-sm btn-notch" href={contact}>{t.nav.cta[CONTACT_STATE]}</a>
             <details className="top-menu">
               <summary aria-label={t.nav.menu}><Icon name="menu" className="ico" /></summary>
@@ -65,6 +67,7 @@ export function Shell({
                   <a key={href} href={href}>{label}</a>
                 ))}
                 <a href={other} lang={otherLocale} hrefLang={otherLocale} data-lang>{t.nav.other}</a>
+                <ThemeSwitch locale={locale} place="menu" />
               </div>
             </details>
           </div>

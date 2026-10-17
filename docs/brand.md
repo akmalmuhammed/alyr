@@ -43,19 +43,42 @@ The homepage is "a working drawing of an owner's business" (`docs/site-redesign/
 | The 45° cut corner | On the main button (the arrow sits under it and moves 1 px along the diagonal when pressed), its outlined twin (`btn-line`, a 1.5 px line along the same notch, for a second way in further down the page), the drawn phones, the agreement, the shop monogram and the hero plate. Every cut and diagonal is mirrored in Arabic, because `clip-path` does not flip |
 | The fold | The page's signature: three Carbon planes with the symbol's gaps (a 6 px Paper line across and a 6 px line down the 45° diagonal), at the entry to the Carbon band and again at the top of the closing call. The page shows through the gaps, so the fold stays drawn |
 | The hero plate | The hero figure sits on a Carbon plate with its top start corner cut at 45° (6 rem) and a 0.5 rem Paper slit along the same angle above the order record |
-| `--band` | The full-bleed Carbon of the band, the plate and the closing call: Carbon in light mode, `#1d2024` in dark mode so it still stands apart from the dark page; the header turns `--band` at 92 % while it sits over one |
+| `--band` | The Carbon blocks: the band, the plate, the closing call and the ALYR Chat page's two panels. Carbon in light mode, `#1d2024` in dark mode so it still stands apart from the dark page; the header turns `--band` while it sits over a full-bleed one |
 | FIG captions | Every product drawing has a mono caption on a hairline ending in a tick: "FIG 01 · what it shows · SAMPLE, FICTIONAL BAKERY" (Arabic: its own words, no capitals) |
 | One sample business | Qirfa Bakery / مخبز قرفة on every homepage figure, with sample prices said so |
 | Money | Tabular figures; amounts and "ALYR" sit in `<bdi>` and never break (`Text.tsx`) |
 | Drawn chats | A neutral chat with no messaging app's logo or colours |
-| Dark mode | The homepage follows the device into dark mode; the ALYR Chat page stays light because it has no dark design |
+| Light and dark | Every public page has both, and a switch in the header (below) |
 
 ### Motion system (homepage)
 
 - **Tokens** (`site.css`): durations `--dur-1` 120 ms, `--dur-2` 240, `--dur-3` 480, `--dur-4` 720; `--ease` `cubic-bezier(.16, 1, .3, 1)` for things arriving (`expo.out` in GSAP); `--spring`, a `linear()` spring for things the visitor presses; `--stagger` 60 ms; one travel vector at 45° (`--travel`, `--dir` is -1 in Arabic).
-- **Stack.** CSS for the hero's entrance (it runs before hydration), hovers, presses, springs and one-shot arrivals keyed on `.is-in`. GSAP 3.15 with ScrollTrigger and SplitText (`Choreography.tsx`) loads after the page's load event, only when motion is wanted: it says when things arrive, splits headings into lines (never characters, and Arabic headings are not split), scrubs the two progress rules and leans the main buttons 2 to 3 px toward a fine pointer. Cross-document View Transitions keep the header still while the next page arrives along the diagonal. No smooth-scroll library, no WebGL.
+- **Stack.** CSS for the hero's entrance (it runs before hydration), hovers, presses, springs and one-shot arrivals keyed on `.is-in`. GSAP 3.15 with ScrollTrigger and SplitText (`Choreography.tsx`) loads after the page's load event, only when motion is wanted: it says when things arrive, splits headings into lines (never characters, and Arabic headings are not split), scrubs the two progress rules and leans the main buttons 2 to 3 px toward a fine pointer. Cross-document View Transitions keep the header still while the next page arrives along the diagonal; the theme switch uses the same wipe, mirrored (below). No smooth-scroll library, no WebGL.
 - **Nothing hidden in the HTML.** A script in `<head>` adds `motion` before the first paint unless reduced motion is asked for; start states exist only under that class, and a 4 s failsafe removes it if the page never hydrates; hydration replaces that with a 10 s one, so a slow phone keeps its motion. The published pages start the framework's scripts after the first paint (`scripts/site-defer-scripts.mjs`, run by `scripts/build-site.sh`). Reduced motion runs no timeline and shows every end state.
 - **Budget** (Lighthouse mobile on the built site): Performance at least 90, Accessibility 100, CLS under 0.05; JavaScript added by the motion layer under 70 KB gzipped.
+
+## Light and dark (added 17 Oct 2026)
+
+Every public page, in both languages, has a light and a dark theme. Light is still the brand's first impression; dark is the same system turned down, not a second look.
+
+**Behaviour.**
+- The site follows the visitor's device until they use the switch. The choice is kept in `localStorage` (`alyr-theme`, `light` or `dark`) and applies on every page in both languages. With no choice stored, a change of the device's setting is followed at once.
+- A script in `<head>` (`document.tsx`) puts the stored choice on `<html>` as `data-theme` before the first paint, so a stored dark choice never flashes light. The same script answers the switch, so it works before the framework's scripts start (they start after the first paint). Without JavaScript the switch is not shown and the page follows the device.
+- `theme-color` follows the theme: the page sets one pair for the device (`#f6f7f3`, `#0e1012`), and a choice adds its own tag first in `<head>`. The page's own tags are never edited, because React would add copies when it hydrates.
+
+**The switch.**
+- A 44 px icon button beside the language link: the moon while the page is light, the sun while it is dark, so the glyph names what pressing it does. Its name says the same: "Switch to dark mode" / «التبديل إلى الوضع الداكن», and the light pair. Drawn on the 24 px icon grid in the icon set's line (1.7 px, square ends, mitred corners); the moon's bite comes in along 45° from the top end.
+- On phones it is a row in the menu, under the language link, with the short label shown ("Dark mode" / «الوضع الداكن») and the full one as its name. The phone's bar already holds the logo, the one Volt action and the menu, and in Arabic the action's label is the longest; a fourth control would crowd it at 390 px and not fit at 320. Choosing a theme is rare and set once, and a row with words is clearer than one more icon.
+- Over the Carbon header state it turns Concrete, white on hover, with a Volt focus ring.
+
+**The moment.** Pressing it, the new theme sweeps in along 45° from the switch's own corner (top inline-end, so top left in Arabic), with its edge on the button notch's angle: the page navigation's wipe, mirrored. A same-document View Transition, `--dur-3` on `--ease`. The header is part of the page for it, and nothing else transitions while the colours change; the switch's glyph turns 45° as the other comes in. Without View Transitions, or with reduced motion, the theme simply changes.
+
+**Rules for dark.**
+- **Tokens only.** Dark values live in two blocks that must stay identical: under `@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) }` and under `:root[data-theme="dark"]` (`site.css`; the homepage's drawings have their own pair in `home.css`). `[data-theme="light"]` keeps a page light on a dark device. `color-scheme` is set in all three. A component never has a dark rule of its own: if it needs a colour that changes, add a token to both blocks. The switch itself follows this (`--night`, `--when-light`, `--when-dark`).
+- **Surfaces.** Canvas `#0e1012`, surface `#15171a`, lines `#2a2e33`, strong lines `#5f666d` (3.3:1). Text `#f3f5f0`, muted text `#a7adb5`. Carbon blocks lift to `--band` `#1d2024`, with a hairline closing a full-bleed one; inside a block, wells sit a step under it (`#15171a`) and panels a step over it (`#23272b`), as they do in light.
+- **Volt** stays a signal: the main action, the current state, confirmed progress. The focus ring is Volt in dark (green `#6a9320` in light).
+- **The drawn WhatsApp chat** on the ALYR Chat page takes WhatsApp's own dark chat screen (`#0b141a` behind, `#202c33` received, `#005c4b` sent, `#e9edef` text), still with no WhatsApp logo. The time in a sent bubble is a shade lighter than WhatsApp's (`#b3cdc9`) to keep 4.5:1, and a shade darker in light (`#5f6f79`) for the same reason.
+- **Contrast.** AA in both themes, checked with axe-core and, for text under a filter (the chat bubbles), by a direct scan.
 
 ## Open before the site goes public
 
