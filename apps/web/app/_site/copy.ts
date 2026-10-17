@@ -61,7 +61,8 @@ export type FlowStory = { id: string; tab: string; steps: FlowStep[] };
 
 type Named = { name: string; sub: string };
 
-type Meta = { title: string; description: string };
+/** `descriptionNoOffer` is used while prices are off the page (`OFFER_LIVE` in site.ts). */
+type Meta = { title: string; description: string; descriptionNoOffer?: string };
 type Titled = { title: string; body: string };
 
 // ------------------------------------------------------------- the homepage
@@ -114,6 +115,8 @@ type Home = {
     body: string;
     how: string;
     facts: string[];
+    /** The facts while prices are off the page (`OFFER_LIVE`). */
+    factsNoOffer: string[];
     figure: {
       label: string;
       caption: Caption;
@@ -251,7 +254,7 @@ type Home = {
     figure: { caption: Caption; label: string };
   };
   /** A question with a `state` shows only in that contact state (site.ts). */
-  faq: { eyebrow: string; title: string; items: { id: string; q: string; a: string; state?: ContactState }[] };
+  faq: { eyebrow: string; title: string; items: { id: string; q: string; a: string; state?: ContactState; offer?: boolean }[] };
   final: Titled;
 };
 
@@ -325,11 +328,13 @@ const en: Copy = {
       title: "ALYR · Go digital without the IT team",
       description:
         "ALYR sets up and looks after the technology for owner-run businesses in Qatar. First, ALYR Chat: orders and bookings in the WhatsApp chat, set up in your shop. From QAR 449 a month, plus setup.",
+      descriptionNoOffer:
+        "ALYR sets up and looks after the technology for owner-run businesses in Qatar. First, ALYR Chat: orders and bookings in the WhatsApp chat, set up in your shop.",
     },
     chat: {
-      title: "ALYR Chat · Sell, book and get paid in the chat",
+      title: "ALYR Chat · Orders and bookings in the WhatsApp chat",
       description:
-        "ALYR Chat turns your customers' WhatsApp messages into orders, bookings and payments, set up for you. For restaurants, cafes, shops and home services in Qatar.",
+        "ALYR Chat answers your customers' WhatsApp messages with an order page, a booking page and order tracking, set up for you. For restaurants, cafes, shops and home services in Qatar.",
     },
   },
   skip: "Skip to content",
@@ -376,6 +381,7 @@ const en: Copy = {
         "ALYR sets up and looks after the technology for owner-run businesses in Qatar. We start with your WhatsApp: orders, bookings and order tracking in the chat, and your whole team on one number.",
       how: "See how it works",
       facts: ["Set up for you, in your shop", "From QAR 449 a month", "Arabic and English"],
+      factsNoOffer: ["Set up for you, in your shop", "No commission on your orders", "Arabic and English"],
       figure: {
         label: "A sample order page on a customer’s phone, and the order it makes on the shop’s screen",
         caption: { n: "01", text: "Order page and its record, sample prices" },
@@ -726,7 +732,7 @@ const en: Copy = {
       ledger: [
         { label: "Commission on your orders", value: "None. ALYR takes no commission.", strong: true },
         { label: "WhatsApp message fees", value: "Billed to you by Meta, at Meta’s rates. We add nothing." },
-        { label: "Term", value: "Month to month. Stop at the end of any month." },
+        { label: "Term", value: "Month to month. Stop at the end of any month, with 7 days’ notice." },
       ],
       agreement: {
         caption: { n: "09", text: "The first month, as it goes into your agreement" },
@@ -808,7 +814,14 @@ const en: Copy = {
           a: "Keep them for new customers. ALYR is for the regulars who already message you. Their orders come to you direct, and ALYR takes no commission on them.",
         },
         {
+          id: "cost",
+          offer: false,
+          q: "What does it cost?",
+          a: "Our prices go on this page soon. Until then, message us and we will take you through them.",
+        },
+        {
           id: "price",
+          offer: true,
           q: "QAR 449 a month is a lot.",
           a: "It is a real cost, which is why your first month comes with a result we agree in advance. If we miss it, you get that month’s subscription back.",
         },
@@ -845,7 +858,7 @@ const en: Copy = {
         {
           id: "contract",
           q: "Am I tied in?",
-          a: "No. There is a written agreement, but it runs month to month. You can stop at the end of any month.",
+          a: "No. There is a written agreement, but it runs month to month. You can stop at the end of any month, with 7 days’ notice.",
         },
         {
           id: "whatsapp-line",
@@ -1259,11 +1272,13 @@ const ar: Copy = {
       title: "ALYR · تحوّل رقمياً بلا فريق تقنية",
       description:
         "تجهّز ALYR التقنية للمنشآت التي يديرها أصحابها في قطر وتتولى متابعتها. أول منتجاتها ALYR Chat: الطلبات والحجوزات داخل محادثة واتساب، ونجهّزه لك في محلك. من 449 ر.ق شهرياً، إضافة إلى رسوم التجهيز.",
+      descriptionNoOffer:
+        "تجهّز ALYR التقنية للمنشآت التي يديرها أصحابها في قطر وتتولى متابعتها. أول منتجاتها ALYR Chat: الطلبات والحجوزات داخل محادثة واتساب، ونجهّزه لك في محلك.",
     },
     chat: {
-      title: "ALYR Chat · استقبل الطلبات والحجوزات والدفع في المحادثة",
+      title: "ALYR Chat · الطلبات والحجوزات في محادثة واتساب",
       description:
-        "يحوّل ALYR Chat رسائل عملائك على واتساب إلى طلبات وحجوزات ومدفوعات، ونحن نجهّزه لك. للمطاعم والمقاهي والمحلات والخدمات المنزلية في قطر.",
+        "يردّ ALYR Chat على رسائل عملائك في واتساب بصفحة للطلب وصفحة للحجز وصفحة لتتبّع الطلب، ونحن نجهّزه لك. للمطاعم والمقاهي والمحلات والخدمات المنزلية في قطر.",
     },
   },
   skip: "انتقل إلى المحتوى",
@@ -1309,6 +1324,7 @@ const ar: Copy = {
         "تجهّز ALYR التقنية للمنشآت التي يديرها أصحابها في قطر، وتتولى متابعتها. ونبدأ معك من واتساب: الطلبات والحجوزات وتتبّع الطلبات داخل المحادثة، وفريقك كله على رقم واحد.",
       how: "تعرّف على طريقة العمل",
       facts: ["نجهّزها لك في محلك", "ابتداءً من 449 ر.ق شهرياً", "بالعربية والإنجليزية"],
+      factsNoOffer: ["نجهّزها لك في محلك", "بلا عمولة على طلباتك", "بالعربية والإنجليزية"],
       figure: {
         label: "صفحة طلب توضيحية على هاتف العميل، والطلب الذي تنشئه على شاشة المحل",
         caption: { n: "01", text: "صفحة الطلب وسجلّها، بأسعار توضيحية" },
@@ -1659,7 +1675,7 @@ const ar: Copy = {
       ledger: [
         { label: "العمولة على طلباتك", value: "لا عمولة. ALYR لا تأخذ أي نسبة من طلباتك.", strong: true },
         { label: "رسوم رسائل واتساب", value: "تحتسبها Meta عليك مباشرة بأسعارها، ولا نضيف عليها شيئاً." },
-        { label: "مدة الاشتراك", value: "اشتراك شهري. يمكنك إيقافه في نهاية أي شهر." },
+        { label: "مدة الاشتراك", value: "اشتراك شهري. يمكنك إيقافه في نهاية أي شهر، على أن تُبلغنا قبل 7 أيام." },
       ],
       agreement: {
         caption: { n: "09", text: "الشهر الأول كما يُكتب في اتفاقك" },
@@ -1741,7 +1757,14 @@ const ar: Copy = {
           a: "أبقِ عليها للعملاء الجدد. ALYR لعملائك الدائمين الذين يراسلونك أصلاً؛ طلباتهم تصلك مباشرة، ولا تأخذ ALYR عليها عمولة.",
         },
         {
+          id: "cost",
+          offer: false,
+          q: "كم تكلّف؟",
+          a: "سننشر أسعارنا على هذه الصفحة قريباً. وحتى ذلك الحين، راسلنا ونشرحها لك.",
+        },
+        {
           id: "price",
+          offer: true,
           q: "449 ر.ق شهرياً مبلغ كبير.",
           a: "صحيح أنه مبلغ له وزنه، ولهذا نتفق معك مسبقاً على نتيجة لشهرك الأول. وإن لم نحققها نعيد لك اشتراك ذلك الشهر.",
         },
@@ -1778,7 +1801,7 @@ const ar: Copy = {
         {
           id: "contract",
           q: "هل أنا ملزم بمدة طويلة؟",
-          a: "لا. بيننا اتفاق مكتوب، لكن الاشتراك شهري، ويمكنك إيقافه في نهاية أي شهر.",
+          a: "لا. بيننا اتفاق مكتوب، لكن الاشتراك شهري، ويمكنك إيقافه في نهاية أي شهر، على أن تُبلغنا قبل 7 أيام.",
         },
         {
           id: "whatsapp-line",

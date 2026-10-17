@@ -549,14 +549,12 @@ A new owner can create their own business at `/start` without ALYR's back office
 | Monthly price | From QAR 449 a month (the field-sold plan). No free plan, no free trial | "From QAR 449 a month" |
 | Setup fee | Varies by customer; a starting figure is shown | "Setup from QAR 1,500, quoted at your visit" |
 | First month | Paid, money back if an agreed result is missed. The refund is the first month's subscription, not the setup fee. One result, counted in the workspace where the owner sees it too, over the first 30 days after going live. The owner's part: share the chat link and QR codes in the first week | "Your first month, with your money back" |
-| Term | Month to month; stop at the end of any month | "Month to month. Stop at the end of any month." |
+| Term | Month to month; stop at the end of any month with 7 days' notice (17 Oct; in the first month, up to its last day) | "Month to month. Stop at the end of any month, with 7 days' notice." |
 | Founder on the page | Left out: no name, no photo | The trust section speaks as ALYR |
 | Contact | hello@alyr.qa (Cloudflare Email Routing, D-029); the WhatsApp number comes later | The email state until `NEXT_PUBLIC_ALYR_WHATSAPP` is set |
 
 **Why.** The founder has the runway for a product-first path and wants revenue and real commitment from the start, not free sign-ups. A price on the page matches what he says at the counter; no competitor in Qatar shows one (`docs/site-redesign/02-messaging.md` §1). A money-back first month replaces the logo wall ALYR cannot have.
 
-**Conditions before the homepage is published.**
-- The money-back terms are written into the customer agreement. Qatar penalises misleading claims, so the promise goes live only once the agreement says it (a check at publish time, not a code switch).
-- The Arabic is reviewed by a native speaker (ALY-66).
+**Prices stay off the published site until the commercial registration (17 Oct).** Research for the customer agreement (PR #47, ALY-98) found that ALYR may not sign customers, take money or sell through its website before it holds a CR (D-018, ALY-59), and that offering a priced service on the site before then may count as trading. So the homepage goes live without the price section, the price in the hero, the money-back lines, the price question and the Price link; a plain "What does it cost?" answer says prices go on the page soon. `NEXT_PUBLIC_ALYR_OFFER=on` turns all of it on, for the day the CR is issued and the agreement (with its Arabic version) is ready. The founder chose this over waiting for the CR and over publishing prices now. He also decided that a native Arabic review (ALY-66) is wanted but does not block publishing.
 
 **Relation to other decisions.** D-017's 490 / 890 plans are superseded for field sales by "from QAR 449". D-025's held-back items stay held back (no "live in 48 hours", no free pilot). D-032 starts the back office's draft quote at a setup of QAR 2,500 per business; the page says "from QAR 1,500, quoted at your visit", so a quote can be lower than the draft. The founder should align the default or accept the gap.

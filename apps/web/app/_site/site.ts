@@ -18,6 +18,13 @@ export const WHATSAPP_NUMBER = (process.env.NEXT_PUBLIC_ALYR_WHATSAPP ?? "").rep
 export type ContactState = "whatsapp" | "email" | "pending";
 export const CONTACT_STATE: ContactState = WHATSAPP_NUMBER ? "whatsapp" : CONTACT_EMAIL ? "email" : "pending";
 
+/** Whether the page shows prices and the first-month offer: the price section, the price in
+ * the hero facts, the money-back lines, the price question and the Price link. Off until
+ * ALYR holds its commercial registration (ALY-59): research for the customer agreement
+ * (PR #47) found that offering a priced service before the CR may count as trading. Set
+ * `NEXT_PUBLIC_ALYR_OFFER=on` and rebuild the day the CR is issued. */
+export const OFFER_LIVE = process.env.NEXT_PUBLIC_ALYR_OFFER === "on";
+
 /** Where staff sign in. Empty on the published site, which is the public pages only:
  * the workspace is not hosted there, so the footer shows no link to it. */
 export const WORKSPACE_URL = process.env.NEXT_PUBLIC_ALYR_WORKSPACE_URL ?? "";

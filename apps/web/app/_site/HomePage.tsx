@@ -9,7 +9,7 @@ import { Phone, TickPath } from "./Frames";
 import { HomeMotion } from "./HomeMotion";
 import { OrderFigure } from "./OrderFigure";
 import { Shell } from "./Shell";
-import { CONTACT_STATE, PATHS, TRUST_RECORDS, type TrustRecord } from "./site";
+import { CONTACT_STATE, OFFER_LIVE, PATHS, TRUST_RECORDS, type TrustRecord } from "./site";
 import { rich } from "./Text";
 import "./home.css";
 
@@ -31,7 +31,7 @@ export function HomePage({ locale }: { locale: Locale }) {
       <Does locale={locale} />
       <How locale={locale} />
       <Included locale={locale} />
-      <Price locale={locale} />
+      {OFFER_LIVE && <Price locale={locale} />}
       <Trust locale={locale} other={other} />
       <Questions locale={locale} />
       <HomeMotion />
@@ -89,7 +89,7 @@ function Hero({ locale, other }: { locale: Locale; other: Locale }) {
           </div>
           <ContactNote locale={locale} className="hero-note" />
           <ul className="hero-facts">
-            {hero.facts.map((fact, index) => <li key={fact} style={n(index)}>{rich(fact)}</li>)}
+            {(OFFER_LIVE ? hero.facts : hero.factsNoOffer).map((fact, index) => <li key={fact} style={n(index)}>{rich(fact)}</li>)}
           </ul>
         </div>
 
@@ -458,7 +458,7 @@ function Trust({ locale, other }: { locale: Locale; other: Locale }) {
                 ))}
               </dl>
             )}
-            <p className="trust-closing">{rich(tr.closing)}</p>
+            {OFFER_LIVE && <p className="trust-closing">{rich(tr.closing)}</p>}
           </div>
           <figure className="trust-fig" data-m>
             {/* On phones the pair scrolls sideways, so it takes keyboard focus. */}
@@ -489,7 +489,7 @@ function Questions({ locale }: { locale: Locale }) {
             <Head eyebrow={q.eyebrow} title={q.title} id="questions-title" />
           </div>
           <div className="faq-list">
-            {q.items.filter((item) => !item.state || item.state === CONTACT_STATE).map((item, index) => (
+            {q.items.filter((item) => (!item.state || item.state === CONTACT_STATE) && (item.offer === undefined || item.offer === OFFER_LIVE)).map((item, index) => (
               <details key={item.id} id={`q-${item.id}`} className="qa" open={index === 0}>
                 <summary>
                   <span>{rich(item.q)}</span>

@@ -2,7 +2,7 @@ import { Icon, Logo, Symbol } from "./brand";
 import { ContactAddress, ContactButton, contactLink, ContactPending } from "./Contact";
 import { copy, type Locale } from "./copy";
 import { DohaTime } from "./DohaTime";
-import { CONTACT_EMAIL, CONTACT_STATE, PATHS, WHATSAPP_NUMBER, WORKSPACE_URL, type PageKey } from "./site";
+import { CONTACT_EMAIL, CONTACT_STATE, OFFER_LIVE, PATHS, WHATSAPP_NUMBER, WORKSPACE_URL, type PageKey } from "./site";
 import { SiteMotion } from "./SiteMotion";
 import { rich } from "./Text";
 
@@ -33,7 +33,7 @@ export function Shell({
     [at("#what"), t.nav.what],
     [PATHS.chat[locale], t.nav.product],
     [at("#how"), t.nav.how],
-    [at("#price"), t.nav.price],
+    ...(OFFER_LIVE ? [[at("#price"), t.nav.price] as const] : []),
   ] as const;
   const contact = contactLink(locale);
   const other = PATHS[page][otherLocale];
