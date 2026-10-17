@@ -1,19 +1,27 @@
-/* ALYR Agent, the dashboard (ALY-99). Scoped to .ag; every colour and face is a custom
-   property with ALYR's defaults, so the workspace and the public site can theme it.
-   Rules and whitespace, no tiles, no glow. Volt marks only three things: the first
-   suggestion's button, today's bar and the done tick (01-research.md, C and E). */
+/* ALYR Agent, the dashboard (ALY-99, 05-critique.md). Scoped to .ag; every colour and face
+   is a custom property with ALYR's defaults, so the workspace and the public site can theme
+   it. Rules and whitespace, no tiles, no glow: one strong rule, above "Needs you now", and
+   10% hairlines everywhere else. Volt marks only three things: the first money
+   suggestion's button, today's bar and the done tick.
+
+   Type: 11 / 13 / 15 / 18 / 28 / 56 px (24 for the summary on a phone, 20 for the done
+   counts). Figures are the sans face with tabular digits; mono is for labels and rules.
+   Spacing is on 4 and 8, with 56 px between sections (P1-6). */
 
 .ag {
   --ag-bg: transparent;
   --ag-ink: #15171a;
   --ag-ink-2: #5f666d;
   --ag-ink-3: #8a918b;
-  --ag-rule: #d8dcd7;
-  --ag-rule-strong: #8a918b;
+  --ag-rule: color-mix(in srgb, var(--ag-ink) 10%, transparent);
+  --ag-rule-strong: var(--ag-ink);
+  --ag-dash: color-mix(in srgb, var(--ag-ink) 30%, transparent);
+  --ag-bar: color-mix(in srgb, var(--ag-ink) 88%, transparent);
+  --ag-ghost: color-mix(in srgb, var(--ag-ink) 10%, transparent);
   --ag-volt: #b7f34a;
   --ag-on-volt: #151a0f;
   --ag-volt-ink: #3f6a0b;
-  --ag-pending: #8a918b;
+  --ag-pending: var(--ag-ink-2);
   --ag-sans: var(--font-sans, var(--font-instrument, system-ui)), var(--font-arabic, var(--font-plex-arabic, sans-serif)), system-ui, sans-serif;
   --ag-arabic: var(--font-arabic, var(--font-plex-arabic, "Segoe UI")), var(--font-sans, var(--font-instrument, system-ui)), sans-serif;
   --ag-mono: var(--font-mono, var(--font-plex-mono, ui-monospace)), ui-monospace, monospace;
@@ -23,288 +31,342 @@
   color: var(--ag-ink);
   background: var(--ag-bg);
   font-family: var(--ag-sans);
+  font-size: 15px;
   font-variant-numeric: tabular-nums;
   line-height: 1.45;
 }
 .ag[dir="rtl"] { font-family: var(--ag-arabic); }
 
-/* Dark: follows the system unless the host says light, or the host says dark. */
+/* Dark: follows the system unless the host says light, or the host says dark. Wrapped in
+   :where() so a host that maps the tokens (the workspace shell) still wins. */
 @media (prefers-color-scheme: dark) {
-  :root:not([data-theme="light"]) .ag {
+  :where(:root:not([data-theme="light"])) .ag {
     --ag-ink: #f3f5f0;
     --ag-ink-2: #a7adb5;
     --ag-ink-3: #6f767e;
-    --ag-rule: #32373c;
-    --ag-rule-strong: #6f767e;
     --ag-volt-ink: #b7f34a;
-    --ag-pending: #6f767e;
+    --ag-bar: color-mix(in srgb, var(--ag-ink) 78%, transparent);
+    --ag-ghost: color-mix(in srgb, var(--ag-ink) 14%, transparent);
   }
 }
-:root[data-theme="dark"] .ag {
+:where(:root[data-theme="dark"]) .ag {
   --ag-ink: #f3f5f0;
   --ag-ink-2: #a7adb5;
   --ag-ink-3: #6f767e;
-  --ag-rule: #32373c;
-  --ag-rule-strong: #6f767e;
   --ag-volt-ink: #b7f34a;
-  --ag-pending: #6f767e;
+  --ag-bar: color-mix(in srgb, var(--ag-ink) 78%, transparent);
+  --ag-ghost: color-mix(in srgb, var(--ag-ink) 14%, transparent);
 }
 
-.ag *, .ag *::before, .ag *::after { box-sizing: border-box; }
-.ag a { color: inherit; text-decoration: none; }
-.ag ul, .ag ol { list-style: none; margin: 0; padding: 0; }
-.ag h1, .ag h2, .ag h3, .ag p { margin: 0; }
+/* The reset carries one class of weight, so every rule below it wins by order and a host's
+   bare element styles do not (P0-3). What the host puts in the setup slot keeps its own. */
+.ag :where(*), .ag :where(*)::before, .ag :where(*)::after { box-sizing: border-box; }
+.ag :where(a):where(:not(.ag-slot *)) { color: inherit; text-decoration: none; }
+.ag :where(ul, ol):where(:not(.ag-slot *)) { list-style: none; margin: 0; padding: 0; }
+.ag :where(h1, h2, h3, h4, h5, h6, p):where(:not(.ag-slot *)) { margin: 0; font: inherit; letter-spacing: inherit; }
+.ag :where(button):where(:not(.ag-slot *)) { font: inherit; color: inherit; }
+.ag-slot { display: grid; gap: 16px; margin-bottom: 40px; }
 .ag bdi { unicode-bidi: isolate; white-space: nowrap; }
 .ag :focus-visible { outline: 2px solid var(--ag-ink); outline-offset: 2px; border-radius: 4px; }
-.ag-sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+.ag-sr {
+  position: absolute; width: 1px; height: 1px; margin: -1px; padding: 0; overflow: hidden;
+  clip-path: inset(50%); white-space: nowrap; border: 0;
+}
+.ag-tri { font-size: 9px; vertical-align: 0.15em; }
 
 /* Small mono labels; in Arabic, Plex Sans Arabic with no capitals and no tracking. */
-.ag-label, .ag-eyebrow, .ag-rule, .ag-updated, .ag-legend {
-  font-family: var(--ag-mono); font-size: 11px; font-weight: 500; letter-spacing: 0.08em;
-  text-transform: uppercase; color: var(--ag-ink-2);
+.ag-label, .ag-eyebrow, .ag-rule, .ag-legend, .ag-kpi-label, .ag-day-label, .ag-hour-day, .ag-top-key {
+  font-family: var(--ag-mono); font-size: 11px; font-weight: 500; line-height: 1.45;
+  letter-spacing: 0.08em; text-transform: uppercase; color: var(--ag-ink-2);
 }
-.ag-rule { text-transform: none; letter-spacing: 0.02em; font-size: 11.5px; }
-.ag[dir="rtl"] :is(.ag-label, .ag-eyebrow, .ag-rule, .ag-updated, .ag-legend) {
-  font-family: var(--ag-arabic); letter-spacing: 0; text-transform: none; font-size: 12.5px;
+.ag-rule { text-transform: none; letter-spacing: 0.02em; }
+.ag[dir="rtl"] :is(.ag-label, .ag-eyebrow, .ag-rule, .ag-legend, .ag-kpi-label, .ag-day-label, .ag-hour-day, .ag-top-key) {
+  font-family: var(--ag-arabic); letter-spacing: 0; text-transform: none; font-size: 13px;
 }
+.ag-caption { font-size: 13px; color: var(--ag-ink-2); }
 
-.ag-stale {
-  margin-bottom: 16px; padding: 10px 0; border-bottom: 1px solid var(--ag-rule);
-  font-size: 13px; color: var(--ag-ink-2);
-}
+.ag-stale { margin-bottom: 16px; padding-block: 8px; border-bottom: 1px solid var(--ag-rule); font-size: 13px; color: var(--ag-ink-2); }
 
-/* 1. Header */
-.ag-head { display: grid; gap: 10px; padding-bottom: 24px; }
-.ag-greeting {
-  font-size: clamp(26px, 4cqi, 36px); line-height: 1.08; font-weight: 600; letter-spacing: -0.03em;
-  text-wrap: balance;
+/* 1. The header: the summary is the headline (P1-1). */
+.ag-head { display: grid; gap: 12px; padding-bottom: 40px; }
+.ag-summary {
+  max-width: 38rem; font-size: 28px; font-weight: 500; line-height: 1.25; letter-spacing: -0.015em;
+  text-wrap: pretty;
 }
-.ag[dir="rtl"] .ag-greeting { letter-spacing: 0; }
-.ag-summary { font-size: 17px; line-height: 1.5; max-width: 44rem; text-wrap: pretty; }
+.ag[dir="rtl"] .ag-summary { letter-spacing: 0; line-height: 1.4; }
 .ag-summary .is-muted { color: var(--ag-ink-2); }
-.ag-updated { color: var(--ag-ink-3); }
+
+/* The grid of sections: one column on a phone, twelve when there is room. */
+.ag-grid { display: grid; grid-template-columns: minmax(0, 1fr); row-gap: 40px; }
+.ag-grid > :is(section, p, div) { min-width: 0; }
+.ag-grid > section { border-top: 1px solid var(--ag-rule); padding-top: 16px; }
+.ag-grid > .ag-needs { border-top-color: var(--ag-rule-strong); }
 
 /* 2. Needs you now */
-.ag-needs { border-top: 1px solid var(--ag-ink); padding-top: 12px; }
-.ag-needs-list { margin-top: 6px; }
+.ag-needs-list { margin-top: 8px; }
 .ag-needs-list li + li { border-top: 1px solid var(--ag-rule); }
 .ag-need {
-  display: grid; grid-template-columns: 3.5rem minmax(0, 1fr) 20px; align-items: center; gap: 12px;
-  min-height: 56px; padding: 8px 0;
+  display: grid; grid-template-columns: 3rem minmax(0, 1fr) 16px; align-items: center; gap: 16px;
+  min-height: 56px; padding-block: 8px;
 }
-.ag-need-count { font-family: var(--ag-mono); font-size: 26px; font-weight: 500; letter-spacing: -0.02em; }
-.ag-need-words { display: grid; gap: 2px; font-size: 16px; font-weight: 500; }
+.ag-need-count { font-size: 28px; font-weight: 600; line-height: 1; letter-spacing: -0.02em; }
+.ag-need-words { display: grid; gap: 4px; font-size: 15px; font-weight: 500; }
 .ag-need-words small { font-size: 13px; font-weight: 400; color: var(--ag-ink-2); }
-.ag-arrow { width: 16px; height: 16px; color: var(--ag-ink-2); flex: none; }
+.ag-arrow { width: 16px; height: 16px; color: var(--ag-ink-2); flex: none; transition: translate 160ms var(--ag-ease); }
 .ag[dir="rtl"] .ag-arrow { transform: scaleX(-1); }
 a.ag-need:hover .ag-arrow { color: var(--ag-ink); translate: 2px 0; }
 .ag[dir="rtl"] a.ag-need:hover .ag-arrow { translate: -2px 0; }
-.ag-nothing { display: flex; align-items: center; gap: 10px; min-height: 56px; font-size: 16px; }
+.ag-nothing { display: flex; align-items: center; gap: 12px; min-height: 56px; margin-top: 8px; font-size: 15px; }
 .ag-done-tick {
-  display: inline-grid; place-items: center; width: 22px; height: 22px; border-radius: 50%;
+  display: inline-grid; place-items: center; width: 24px; height: 24px; border-radius: 50%;
   background: var(--ag-volt); color: var(--ag-on-volt); flex: none;
 }
+.ag-done-tick.small { width: 16px; height: 16px; margin-inline-start: 8px; vertical-align: -3px; }
 .ag-tick-mark { width: 14px; height: 14px; }
+.ag-done-tick.small .ag-tick-mark { width: 10px; height: 10px; }
 
-/* 3. The four numbers: one ruled row, divided by vertical rules. */
+/* Done for you: the proof of value, beside Needs (P1-7). */
+/* One column of counts for every row: at least 5.5 rem, wider when a sum needs it. */
+.ag-ledger { display: grid; grid-template-columns: minmax(5.5rem, max-content) minmax(0, 1fr); column-gap: 16px; margin-top: 8px; }
+.ag-ledger li { grid-column: 1 / -1; display: grid; grid-template-columns: subgrid; }
+.ag-ledger li + li { border-top: 1px solid var(--ag-rule); }
+.ag-ledger-row {
+  grid-column: 1 / -1; display: grid; grid-template-columns: subgrid; align-items: baseline;
+  min-height: 56px; padding-block: 16px 12px;
+}
+.ag-ledger-value { text-align: end; font-size: 20px; font-weight: 600; line-height: 1; letter-spacing: -0.01em; }
+.ag-ledger-label { font-size: 13px; color: var(--ag-ink-2); }
+a.ag-ledger-row:hover .ag-ledger-label { color: var(--ag-ink); }
+.ag-quiet-line { margin-top: 8px; font-size: 13px; color: var(--ag-ink-2); }
+
+/* 3. The numbers: one hero, then the rest, on the same twelve columns as the sections
+   (P1-1, P1-5). Rows are shared, so labels, values and changes line up across. */
 .ag-kpis {
-  display: grid; grid-auto-flow: column; grid-auto-columns: minmax(0, 1fr);
-  border-block: 1px solid var(--ag-rule); margin: 24px 0 32px;
+  display: grid; grid-template-columns: repeat(12, minmax(0, 1fr)); grid-template-rows: auto auto auto;
+  column-gap: 40px; border-block: 1px solid var(--ag-rule);
 }
-.ag-kpi + .ag-kpi { border-inline-start: 1px solid var(--ag-rule); }
-.ag-kpi-link { display: grid; gap: 6px; padding: 18px 20px 20px; height: 100%; }
-.ag-kpi:first-child .ag-kpi-link { padding-inline-start: 0; }
-.ag-kpi-value { font-size: 40px; line-height: 1; font-weight: 600; letter-spacing: -0.03em; }
+.ag-kpi { grid-column: span 3; grid-row: span 3; display: grid; grid-template-rows: subgrid; position: relative; min-width: 0; }
+.ag-kpi + .ag-kpi::before {
+  content: ""; position: absolute; inset-block: 24px; inset-inline-start: -20px;
+  border-inline-start: 1px solid var(--ag-rule);
+}
+.ag-kpi-link { grid-row: 1 / -1; display: grid; grid-template-rows: subgrid; align-content: start; row-gap: 8px; padding-block: 24px; }
+.ag-kpi-value { align-self: end; font-size: 28px; font-weight: 600; line-height: 1; letter-spacing: -0.02em; }
+.ag-kpi.is-hero .ag-kpi-value { font-size: clamp(40px, 5.2cqi, 56px); letter-spacing: -0.035em; }
+.ag-unit { font-size: 0.5em; font-weight: 500; letter-spacing: 0; color: var(--ag-ink-2); }
 .ag-kpi-change { font-size: 13px; color: var(--ag-ink-2); }
-.ag-kpi-link:hover .ag-kpi-value { text-decoration: underline; text-decoration-thickness: 1px; text-underline-offset: 6px; }
+a.ag-kpi-link:hover .ag-figure { text-decoration: underline; text-decoration-thickness: 1px; text-underline-offset: 6px; }
+.ag-kpis-block .ag-caption { margin-top: 8px; }
 
-.ag-slots { display: grid; grid-template-columns: repeat(auto-fit, minmax(12rem, 1fr)); gap: 12px; margin: 24px 0 32px; }
-.ag-slot-box {
-  min-height: 96px; display: grid; place-items: center; padding: 16px; text-align: center;
-  border: 1px dashed var(--ag-rule-strong); border-radius: 4px; color: var(--ag-ink-2); font-size: 14px;
-}
-
-/* The grid of sections: one column on a phone, twelve when there is room. */
-.ag-grid { display: grid; grid-template-columns: minmax(0, 1fr); gap: 32px; }
-.ag-grid > section, .ag-grid > p { min-width: 0; border-top: 1px solid var(--ag-rule); padding-top: 12px; }
-.ag-section-head { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; }
-.ag-section-total { font-size: 15px; font-weight: 600; }
+/* The empty state keeps the real shape: dashed outlines of the week, the hours and a list. */
+.ag-skeleton { display: grid; grid-template-columns: repeat(auto-fit, minmax(14rem, 1fr)); gap: 24px; }
+.ag-skel { display: grid; grid-template-rows: 120px auto; gap: 12px; padding: 16px; border: 1px dashed var(--ag-dash); border-radius: 4px; }
+.ag-skel-shape { display: grid; min-height: 0; }
+.ag-skel.is-week .ag-skel-shape { grid-template-columns: repeat(7, minmax(0, 1fr)); align-items: end; border-bottom: 1px solid var(--ag-dash); }
+.ag-skel.is-week .ag-skel-shape span { width: 56%; max-width: 32px; margin-inline: auto; border: 1px dashed var(--ag-dash); border-bottom: 0; border-radius: 3px 3px 0 0; }
+.ag-skel.is-hours .ag-skel-shape { grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 4px; align-content: center; }
+.ag-skel.is-hours .ag-skel-shape span { aspect-ratio: 1; max-height: 24px; border-radius: 2px; background: color-mix(in srgb, var(--ag-ink) 4%, transparent); }
+.ag-skel.is-list .ag-skel-shape { align-content: center; gap: 16px; }
+.ag-skel.is-list .ag-skel-shape span { height: 12px; border-bottom: 1px dashed var(--ag-dash); }
+.ag-skel.is-list .ag-skel-shape span:nth-child(2) { width: 80%; }
+.ag-skel.is-list .ag-skel-shape span:nth-child(3) { width: 60%; }
+.ag-skel-caption { font-size: 13px; color: var(--ag-ink-2); }
 
 /* 4. Suggestions */
-.ag-cards { display: grid; gap: 0; }
-.ag-card { padding: 16px 0 18px; border-bottom: 1px solid var(--ag-rule); }
-.ag-card:last-child { border-bottom: 0; }
-.ag-card-title { font-size: 18px; line-height: 1.3; font-weight: 600; letter-spacing: -0.01em; }
+.ag-cards { display: grid; align-content: start; }
+.ag-card { padding-block: 16px 24px; border-bottom: 1px solid var(--ag-rule); }
+.ag-card:last-child { border-bottom: 0; padding-bottom: 0; }
+.ag-card-head { display: flex; align-items: flex-start; gap: 16px; }
+.ag-card-title { flex: 1; font-size: 18px; font-weight: 600; line-height: 1.3; letter-spacing: -0.01em; text-wrap: pretty; }
+.ag[dir="rtl"] .ag-card-title { letter-spacing: 0; }
 .ag-card-toggle {
-  all: unset; display: block; width: 100%; cursor: pointer; text-align: start; min-height: 24px;
+  all: unset; box-sizing: border-box; display: none; place-items: center; flex: none;
+  width: 44px; height: 44px; margin-block: -10px; margin-inline-end: -12px; cursor: pointer;
+  color: var(--ag-ink-2); border-radius: 8px;
 }
-.ag-card-toggle:disabled { cursor: default; }
-.ag-card-body { display: grid; gap: 8px; margin-top: 6px; }
-.ag-card:not(.is-open) .ag-card-body { display: none; }
-.ag-card-line { font-size: 15px; color: var(--ag-ink-2); }
-.ag-rows { display: flex; flex-wrap: wrap; gap: 6px 14px; font-size: 14px; padding: 4px 0; }
-.ag-rows li::before { content: "· "; color: var(--ag-ink-3); }
+.ag-card-toggle:focus-visible { outline: 2px solid var(--ag-ink); }
+.ag-chevron { width: 16px; height: 16px; transition: rotate 200ms var(--ag-ease); }
+.ag-card:not(.is-folded) .ag-chevron { rotate: 180deg; }
+.ag-card-body { display: grid; gap: 8px; margin-top: 8px; }
+.ag-card-line { font-size: 15px; color: var(--ag-ink-2); max-width: 40rem; }
+.ag-rows { display: flex; flex-wrap: wrap; gap: 4px 16px; padding-block: 4px; font-size: 13px; }
+.ag-rows li::before { content: "· "; color: var(--ag-ink-2); }
 .ag-rows-more { color: var(--ag-ink-2); }
-.ag-card-foot { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 18px; margin-top: 6px; }
+.ag-card-foot { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 24px; margin-top: 8px; }
 .ag-btn {
-  display: inline-flex; align-items: center; gap: 8px; min-height: 40px; padding: 0 16px;
-  border-radius: 8px; border: 1px solid var(--ag-ink); font-size: 14px; font-weight: 600;
+  display: inline-flex; align-items: center; gap: 8px; min-height: 40px; padding-inline: 16px;
+  border-radius: 8px; border: 1px solid var(--ag-ink); font-size: 15px; font-weight: 600;
 }
 .ag-btn .ag-arrow { color: currentColor; }
 .ag-btn.is-volt { background: var(--ag-volt); color: var(--ag-on-volt); border-color: var(--ag-volt); }
-.ag-btn:hover { background: color-mix(in srgb, var(--ag-ink) 6%, transparent); }
-.ag-btn.is-volt:hover { background: #a5e238; }
+a.ag-btn:hover { background: color-mix(in srgb, var(--ag-ink) 6%, transparent); }
+a.ag-btn.is-volt:hover { background: color-mix(in srgb, var(--ag-volt) 88%, var(--ag-on-volt)); }
 .ag-link-btn {
-  all: unset; cursor: pointer; font-size: 14px; color: var(--ag-ink-2); min-height: 40px;
+  all: unset; box-sizing: border-box; cursor: pointer; font-size: 15px; color: var(--ag-ink-2); min-height: 40px;
   display: inline-flex; align-items: center; text-decoration: underline; text-underline-offset: 4px;
-  text-decoration-color: var(--ag-rule-strong);
+  text-decoration-color: var(--ag-dash);
 }
 .ag-link-btn:hover { color: var(--ag-ink); }
-.ag-status { display: inline-flex; align-items: center; gap: 8px; font-size: 14px; color: var(--ag-ink-2); }
+.ag-link-btn:focus-visible { outline: 2px solid var(--ag-ink); outline-offset: 2px; border-radius: 4px; }
+.ag-status { display: inline-flex; align-items: baseline; gap: 8px; font-size: 13px; color: var(--ag-ink-2); max-width: 36rem; }
 .ag-status::before {
-  content: ""; width: 8px; height: 8px; border-radius: 50%; flex: none;
+  content: ""; width: 8px; height: 8px; border-radius: 50%; flex: none; translate: 0 -1px;
   box-shadow: inset 0 0 0 1.5px var(--ag-pending);
 }
 
-/* Done for you: a ledger, counts only. */
-.ag-ledger li + li { border-top: 1px solid var(--ag-rule); }
-.ag-ledger-row {
-  display: grid; grid-template-columns: auto minmax(0, 1fr) auto; align-items: baseline; gap: 12px;
-  min-height: 44px; padding: 10px 0;
+/* 5. The week, Sunday to Saturday (time runs right to left in Arabic, as the row does).
+   Narrow bars on one baseline; last week a ghost behind; today capped in Volt (P1-4). */
+.ag-bars { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); margin-top: 16px; }
+.ag-day { display: grid; grid-template-columns: minmax(0, 1fr); gap: 8px; justify-items: center; text-align: center; position: relative; min-width: 0; }
+.ag-col { position: relative; justify-self: stretch; height: 120px; border-bottom: 1px solid var(--ag-dash); }
+.ag-week.is-wide .ag-col { height: 160px; }
+.ag-col > span {
+  position: absolute; bottom: 0; inset-inline: 0; margin-inline: auto; width: 56%; max-width: 40px;
+  border-radius: 3px 3px 0 0;
 }
-.ag-ledger-value { font-family: var(--ag-mono); font-size: 15px; font-weight: 500; }
-.ag-ledger-label { font-size: 14px; color: var(--ag-ink-2); }
-.ag-ledger .ag-done-tick { width: 18px; height: 18px; align-self: center; }
-.ag-quiet-line { margin-top: 10px; font-size: 14px; color: var(--ag-ink-2); }
-
-/* 5. The week: Sunday to Saturday; time runs right to left in Arabic, as the row does. */
-.ag-bars {
-  display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 10px; align-items: end;
-  margin-top: 16px;
+.ag-ghost { background: var(--ag-ghost); }
+.ag-day.is-today .ag-ghost { background: color-mix(in srgb, var(--ag-ink) 12%, transparent); }
+.ag-ghost.is-dashed { background: transparent; border: 1px dashed var(--ag-dash); border-bottom: 0; }
+.ag-bar { min-height: 2px; background: var(--ag-bar); }
+.ag-day.is-today .ag-bar { box-shadow: inset 0 3px 0 var(--ag-volt); min-height: 4px; }
+.ag-booked { background: color-mix(in srgb, var(--ag-ink) 32%, transparent); }
+.ag-day.is-today .ag-booked { border-radius: 3px 3px 0 0; }
+.ag-col > .ag-by-now {
+  height: 0; width: calc(56% + 12px); max-width: 52px; border-radius: 0;
+  border-top: 2px solid var(--ag-ink-2); translate: 0 1px;
 }
-.ag-day { display: grid; gap: 6px; justify-items: stretch; text-align: center; }
-.ag-col { position: relative; height: 140px; display: flex; align-items: flex-end; }
-.ag-bar { position: relative; width: 100%; min-height: 2px; background: var(--ag-ink); }
-.ag-day.is-today .ag-bar::after {
-  content: ""; position: absolute; top: 0; inset-inline-end: 0; width: 10px; height: 10px;
-  background: var(--ag-volt); clip-path: polygon(0 0, 100% 0, 100% 100%);
-}
-.ag[dir="rtl"] .ag-day.is-today .ag-bar::after { clip-path: polygon(0 0, 100% 0, 0 100%); }
-.ag-slot { position: relative; width: 100%; height: 100%; border: 1px dashed var(--ag-rule-strong); }
-.ag-booked { position: absolute; inset-inline: 3px; bottom: 3px; max-height: calc(100% - 6px); border: 1.5px solid var(--ag-ink-2); }
-.ag-last { position: absolute; inset-inline: -4px; height: 0; border-top: 1.5px solid var(--ag-ink-2); }
-.ag-day-label { font-family: var(--ag-mono); font-size: 11px; color: var(--ag-ink-2); text-transform: uppercase; }
-.ag[dir="rtl"] .ag-day-label { font-family: var(--ag-arabic); font-size: 12px; text-transform: none; }
+.ag-day-label { white-space: nowrap; letter-spacing: 0.02em; }
+.ag[dir="rtl"] .ag-day-label { font-size: 12px; }
 .ag-day.is-today .ag-day-label { color: var(--ag-ink); font-weight: 600; }
-.ag-day-value { font-size: 12px; color: var(--ag-ink-2); min-height: 1.2em; }
-.ag-legend { display: flex; align-items: center; gap: 8px; margin-top: 10px; }
-.ag-legend-tick { width: 16px; border-top: 1.5px solid var(--ag-ink-2); }
+.ag-day-value { font-size: 11px; line-height: 1.3; color: var(--ag-ink-2); min-height: 1.3em; white-space: nowrap; }
+.ag-day.is-today .ag-day-value { font-size: 13px; font-weight: 600; color: var(--ag-ink); }
+.ag-legend { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 16px; margin-top: 16px; }
+.ag-legend > span { display: inline-flex; align-items: center; gap: 8px; }
+.ag-legend-ghost { width: 12px; height: 8px; border-radius: 2px 2px 0 0; background: var(--ag-ghost); box-shadow: inset 0 0 0 1px var(--ag-dash); }
+.ag-legend-tick { width: 16px; border-top: 2px solid var(--ag-ink-2); }
+.ag-legend-booked { width: 12px; height: 8px; border-radius: 2px 2px 0 0; background: color-mix(in srgb, var(--ag-ink) 32%, transparent); }
 
-/* Busiest hours: Carbon tints, never Volt. */
-.ag-hours-top { margin-top: 10px; font-size: 18px; font-weight: 600; }
-.ag-hours-words { display: grid; gap: 4px; margin-top: 8px; font-size: 14px; color: var(--ag-ink-2); }
-.ag-hours-words li:first-child { display: none; }
+/* Busiest hours: soft Carbon tints, never Volt; closed hours left blank (P1-4). */
+.ag-hours-top { margin-top: 16px; font-size: 18px; font-weight: 600; }
+.ag-hours-words { display: grid; gap: 4px; margin-top: 8px; font-size: 13px; color: var(--ag-ink-2); }
 .ag-hours-toggle { margin-top: 4px; }
 .ag-hours-grid {
-  display: none; grid-template-columns: 2.5rem repeat(var(--cols), minmax(0, 1fr)); gap: 3px;
-  margin-top: 12px; align-items: center;
+  display: none; grid-template-columns: 2.5rem repeat(var(--cols), minmax(0, 1fr)); gap: 2px;
+  margin-top: 16px; align-items: center;
 }
 .ag-hours-grid.is-open { display: grid; }
-.ag-hour-label { font-family: var(--ag-mono); font-size: 10px; color: var(--ag-ink-3); direction: ltr; }
-.ag-hour-day { font-family: var(--ag-mono); font-size: 10.5px; color: var(--ag-ink-2); text-transform: uppercase; }
-.ag[dir="rtl"] .ag-hour-day { font-family: var(--ag-arabic); font-size: 11px; text-transform: none; }
-.ag-cell { aspect-ratio: 1; min-height: 10px; border-radius: 2px; }
-.ag-cell.l0 { box-shadow: inset 0 0 0 1px var(--ag-rule); }
-.ag-cell.l1 { background: color-mix(in srgb, var(--ag-ink) 14%, transparent); }
-.ag-cell.l2 { background: color-mix(in srgb, var(--ag-ink) 32%, transparent); }
-.ag-cell.l3 { background: color-mix(in srgb, var(--ag-ink) 56%, transparent); }
-.ag-cell.l4 { background: var(--ag-ink); }
+.ag-hour-label { font-family: var(--ag-mono); font-size: 11px; color: var(--ag-ink-2); direction: ltr; white-space: nowrap; overflow: visible; }
+.ag-hour-day { font-size: 11px; white-space: nowrap; overflow: hidden; }
+.ag[dir="rtl"] .ag-hour-day { font-size: 11px; }
+.ag-cell { aspect-ratio: 1; border-radius: 2px; }
+.ag-cell.l0 { background: color-mix(in srgb, var(--ag-ink) 4%, transparent); }
+.ag-cell.l1 { background: color-mix(in srgb, var(--ag-ink) 16%, transparent); }
+.ag-cell.l2 { background: color-mix(in srgb, var(--ag-ink) 34%, transparent); }
+.ag-cell.l3 { background: color-mix(in srgb, var(--ag-ink) 58%, transparent); }
+.ag-cell.l4 { background: var(--ag-bar); }
+.ag-cell.is-closed { background: transparent; }
 
-/* 6. Top items or services, and money owed by age */
-.ag-top-list { margin-top: 6px; }
+/* 6. Top items or services */
+.ag-top-key { margin-top: 8px; text-align: end; }
+.ag-top-list { margin-top: 4px; }
 .ag-top-list li {
-  display: grid; grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr) 3rem 2.75rem; align-items: center;
-  gap: 12px; min-height: 40px; border-bottom: 1px solid var(--ag-rule); font-size: 14px;
+  display: grid; grid-template-columns: minmax(0, 1fr) auto 3rem; align-items: baseline;
+  column-gap: 12px; row-gap: 4px; padding-block: 8px; border-bottom: 1px solid var(--ag-rule); font-size: 13px;
 }
 .ag-top-list li:last-child { border-bottom: 0; }
 .ag-top-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.ag-top-bar { height: 6px; background: var(--ag-rule); }
-.ag-top-bar span { display: block; height: 100%; background: var(--ag-ink); }
+.ag-top-name bdi { white-space: nowrap; }
 .ag-top-value { text-align: end; font-weight: 600; }
-.ag-top-change { text-align: end; font-family: var(--ag-mono); font-size: 12px; color: var(--ag-ink-2); }
+.ag-top-change { text-align: end; font-size: 11px; color: var(--ag-ink-2); white-space: nowrap; }
+.ag-top-bar { grid-column: 1 / -1; height: 4px; border-radius: 2px; background: var(--ag-ghost); overflow: hidden; }
+.ag-top-bar span { display: block; height: 100%; border-radius: 2px; background: var(--ag-bar); }
 
-.ag-owed-total { display: flex; flex-wrap: wrap; align-items: baseline; gap: 10px; margin-top: 10px; font-size: 32px; font-weight: 600; letter-spacing: -0.02em; }
-.ag-owed-total small { font-size: 14px; font-weight: 400; color: var(--ag-ink-2); letter-spacing: 0; }
-.ag-age-bar { display: flex; gap: 2px; height: 12px; margin-top: 14px; }
-.ag-age-bar .seg { flex-basis: 0; min-width: 4px; }
-.ag .s0 { background: color-mix(in srgb, var(--ag-ink) 22%, transparent); }
-.ag .s1 { background: color-mix(in srgb, var(--ag-ink) 45%, transparent); }
-.ag .s2 { background: color-mix(in srgb, var(--ag-ink) 72%, transparent); }
-.ag .s3 { background: var(--ag-ink); }
-.ag-age-legend { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 6px 16px; margin-top: 12px; font-size: 13px; color: var(--ag-ink-2); }
-.ag-age-legend li { display: flex; align-items: center; gap: 8px; }
+/* Money owed, by age */
+.ag-owed-total { margin-top: 16px; font-size: 28px; font-weight: 600; line-height: 1; letter-spacing: -0.02em; }
+.ag-owed-who { margin-top: 8px; font-size: 13px; color: var(--ag-ink-2); }
+.ag-age-bar { display: flex; gap: 2px; height: 8px; margin-top: 16px; }
+.ag-age-bar .seg { flex-basis: 0; min-width: 4px; border-radius: 2px; }
+.ag .s0 { background: color-mix(in srgb, var(--ag-ink) 18%, transparent); }
+.ag .s1 { background: color-mix(in srgb, var(--ag-ink) 38%, transparent); }
+.ag .s2 { background: color-mix(in srgb, var(--ag-ink) 62%, transparent); }
+.ag .s3 { background: var(--ag-bar); }
+.ag-age-legend { display: grid; gap: 4px; margin-top: 12px; font-size: 13px; color: var(--ag-ink-2); }
+.ag-age-legend li { display: flex; align-items: center; gap: 8px; min-height: 24px; }
 .ag-age-legend bdi { margin-inline-start: auto; color: var(--ag-ink); font-weight: 500; }
-.ag-age-legend .swatch { width: 10px; height: 10px; flex: none; }
-.ag-owed-oldest { margin-top: 12px; font-size: 14px; }
+.ag-age-legend .swatch { width: 8px; height: 8px; border-radius: 2px; flex: none; }
+.ag-owed-oldest { margin-top: 12px; font-size: 13px; }
 
-/* 7. Team: by name, not ranked (D-028). */
-.ag-team-table { width: 100%; border-collapse: collapse; margin-top: 6px; font-size: 14px; }
-.ag-team-table th, .ag-team-table td { padding: 10px 0; text-align: end; border-bottom: 1px solid var(--ag-rule); }
-.ag-team-table th:first-child { text-align: start; font-weight: 500; }
-.ag-team-table thead th { font-family: var(--ag-mono); font-size: 11px; font-weight: 500; color: var(--ag-ink-2); letter-spacing: 0.06em; text-transform: uppercase; }
-.ag[dir="rtl"] .ag-team-table thead th { font-family: var(--ag-arabic); text-transform: none; letter-spacing: 0; font-size: 12px; }
-.ag-team-table tbody tr:last-child :is(th, td) { border-bottom: 0; }
-.ag-team-nobody { margin-top: 8px; font-size: 14px; color: var(--ag-ink-2); }
+/* 7. Team: by name, not ranked (D-028), one line each (P1-8). */
+.ag-team { max-width: 48rem; }
+.ag-team-list { margin-top: 8px; }
+.ag-team-list li {
+  display: grid; grid-template-columns: minmax(0, 12rem) minmax(0, 1fr); gap: 4px 24px; align-items: baseline;
+  padding-block: 12px; border-bottom: 1px solid var(--ag-rule);
+}
+.ag-team-list li:last-child { border-bottom: 0; }
+.ag-team-name { font-size: 15px; font-weight: 500; }
+.ag-team-line { font-size: 13px; color: var(--ag-ink-2); }
+.ag-team-nobody { margin-top: 8px; font-size: 13px; color: var(--ag-ink-2); }
 
 /* 8. The report line */
-.ag-report { display: flex; flex-wrap: wrap; align-items: baseline; gap: 6px 16px; font-size: 14px; color: var(--ag-ink-2); }
+.ag-report { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 16px; padding-top: 16px; border-top: 1px solid var(--ag-rule); font-size: 13px; color: var(--ag-ink-2); }
 
-/* Phone: the four numbers scroll sideways, two and a half in view. */
+/* Showcase: nothing on the figure is a link. */
+.ag.is-showcase :is(.ag-need, .ag-ledger-row, .ag-kpi-link, .ag-btn) { cursor: default; }
+
+/* Phone */
 @container ag (max-width: 47.99rem) {
-  .ag-kpis { grid-auto-columns: minmax(42%, max-content); overflow-x: auto; scroll-snap-type: x mandatory; scrollbar-width: none; }
+  .ag-summary { font-size: 24px; }
+  .ag-head { padding-bottom: 32px; }
+  /* The numbers scroll sideways, two and a bit in view (P1-5). */
+  .ag-kpis {
+    grid-template-columns: none; grid-auto-flow: column; grid-auto-columns: minmax(46%, max-content);
+    column-gap: 0; overflow-x: auto; scroll-snap-type: x mandatory; scrollbar-width: none;
+  }
   .ag-kpis::-webkit-scrollbar { display: none; }
-  .ag-kpi { scroll-snap-align: start; }
-  .ag-kpi-link { padding: 14px 14px 16px; }
-  .ag-kpi-value { font-size: 28px; }
+  .ag-kpi { grid-column: auto; scroll-snap-align: start; }
+  .ag-kpi + .ag-kpi::before { inset-inline-start: 0; inset-block: 16px; }
+  .ag-kpi-link { padding-block: 16px; padding-inline: 16px; }
   .ag-kpi:first-child .ag-kpi-link { padding-inline-start: 0; }
-  .ag-summary { font-size: 16px; }
-  .ag-card-title { font-size: 16px; }
+  .ag-kpi-label { min-height: 2lh; }
+  .ag-kpi.is-hero .ag-kpi-value { font-size: 40px; }
+  .ag-card-toggle { display: grid; }
+  .ag-card.is-folded .ag-card-body { display: none; }
+  .ag-card.is-folded { padding-bottom: 16px; }
   .ag-btn, .ag-link-btn { min-height: 44px; }
-  .ag-col { height: 110px; }
-  .ag-bars { gap: 6px; }
-  .ag-day-value { visibility: hidden; font-size: 10.5px; }
-  .ag-day.is-today .ag-day-value { visibility: visible; }
-  .ag-age-legend { grid-template-columns: minmax(0, 1fr); }
-  .ag-team-table, .ag-team-table tbody { display: block; }
-  .ag-team-table thead { display: none; }
-  .ag-team-table tr { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 0 8px; padding: 10px 0; border-bottom: 1px solid var(--ag-rule); }
-  .ag-team-table th[scope="row"] { grid-column: 1 / -1; border: 0; padding: 0 0 4px; }
-  .ag-team-table td { border: 0; padding: 0; text-align: start; font-size: 13px; }
-  .ag-team-table td::before { content: attr(data-label); display: block; font-size: 11px; color: var(--ag-ink-2); }
+  .ag-team-list li { grid-template-columns: minmax(0, 1fr); }
+  /* Under Needs, Done's counts take the same column as the Needs counts. */
+  .ag-ledger { grid-template-columns: minmax(3rem, max-content) minmax(0, 1fr); }
+  .ag-ledger-value { text-align: start; }
 }
 
-/* Desktop: twelve columns; every suggestion open; the hours as a grid. */
+/* Desktop: twelve columns. Needs (8) beside Done (4); the numbers; Suggestions (8) beside
+   the week (4); hours, top and owed (4 each); the team at most 48 rem (P1-7). */
 @container ag (min-width: 48rem) {
-  .ag-grid { grid-template-columns: repeat(12, minmax(0, 1fr)); column-gap: 40px; row-gap: 40px; }
+  .ag-grid { grid-template-columns: repeat(12, minmax(0, 1fr)); column-gap: 40px; row-gap: 56px; }
   .ag-span-12 { grid-column: span 12; }
   .ag-span-8 { grid-column: span 8; }
   .ag-span-6 { grid-column: span 6; }
   .ag-span-4 { grid-column: span 4; }
-  .ag .ag-card:not(.is-open) .ag-card-body, .ag .ag-card-body { display: grid; }
-  .ag-card-toggle { cursor: default; pointer-events: none; }
   .ag-hours-grid { display: grid; }
-  .ag-hours-toggle, .ag-hours-words { display: none; }
+  .ag-hours-toggle { display: none; }
+  .ag-hours-words {
+    position: absolute; width: 1px; height: 1px; margin: -1px; overflow: hidden;
+    clip-path: inset(50%); white-space: nowrap;
+  }
 }
 
-/* Motion. The numbers and the bars rise 6 px along the 45° diagonal once a session; a
-   suggestion whose rule stopped being true closes along the same diagonal from the
-   inline-end top corner ("the fold closes it"). Nothing else moves. */
+/* Motion. The numbers and the bars rise 6 px along the 45° diagonal once (a session in the
+   workspace, once in view in showcase); a suggestion whose rule stopped being true closes
+   along the same diagonal from the inline-end top corner ("the fold closes it"). Nothing
+   else moves. */
 @media (prefers-reduced-motion: no-preference) {
-  .ag.is-rising :is(.ag-kpi, .ag-bar, .ag-slot) {
+  .ag.is-waiting :is(.ag-kpi, .ag-bar) { opacity: 0; }
+  .ag.is-rising :is(.ag-kpi, .ag-bar) {
     animation: ag-rise 480ms var(--ag-ease) both;
     animation-delay: calc(var(--i, 0) * 60ms);
   }
-  .ag[dir="rtl"].is-rising :is(.ag-kpi, .ag-bar, .ag-slot) { animation-name: ag-rise-rtl; }
+  .ag[dir="rtl"].is-rising :is(.ag-kpi, .ag-bar) { animation-name: ag-rise-rtl; }
   .ag-card.is-closing { animation: ag-fold 240ms var(--ag-ease) forwards; pointer-events: none; }
   .ag[dir="rtl"] .ag-card.is-closing { animation-name: ag-fold-rtl; }
 }

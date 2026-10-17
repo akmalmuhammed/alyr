@@ -69,21 +69,6 @@
     ],
     "href": "/app/orders?show=unconfirmed",
     "rule": "RULE · new for over 15 minutes · 2 orders"
-   },
-   {
-    "key": "setup",
-    "count": 2,
-    "words": [
-     "setup steps left for ",
-     {
-      "b": "ALYR Chat"
-     }
-    ],
-    "detail": [
-     "Connect your WhatsApp number"
-    ],
-    "href": "/app/connections",
-    "rule": "RULE · a step of a product you use, not done yet"
    }
   ],
   "empty": "Nothing is waiting."
@@ -418,7 +403,8 @@
   "legend": {
    "last": "Same day last week",
    "by_now": "Last week by this time",
-   "closed": "Closed"
+   "closed": "Closed",
+   "booked": "Booked"
   }
  },
  "hours": {

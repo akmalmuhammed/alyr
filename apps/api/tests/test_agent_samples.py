@@ -95,5 +95,6 @@ def test_the_captured_sample_screens_match_the_engine(key, lang):
     assert len(sample["kpis"]) == 4 and sample["week"] and sample["needs"]["items"]
     # Money through ALYR links reads as live payments; there is no provider yet (ALY-17).
     assert not any(r["key"] == "paid" for r in sample["done"]["rows"])
+    assert not any(i["key"] == "setup" for i in sample["needs"]["items"])
     text = json.dumps(sample, ensure_ascii=False).lower()
     assert not re.search(r"\b(ai|smart|learns|thinks|noticed|predicts?)\b", text)

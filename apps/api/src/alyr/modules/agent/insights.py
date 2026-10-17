@@ -197,7 +197,8 @@ def _say_unmarked(x: Finding, f: Facts, lang: str):
     noun = noun_after(x.n, x.noun, lang)
     if lang == "ar":
         return rich(f"{noun} بلا تسجيل حضور"), rich("أرقام الغياب ناقصة حتى تُسجَّل.")
-    return rich(f"{noun} not marked"), rich("No-show figures stay wrong until they are.")
+    which = "it is" if x.n == 1 else "they are"
+    return rich(f"{noun} not marked"), rich(f"Until {which} marked, the no-show figures are short.")
 
 
 # ── money ─────────────────────────────────────────────────

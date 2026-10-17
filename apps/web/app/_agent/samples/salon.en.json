@@ -64,25 +64,10 @@
      "visit not marked"
     ],
     "detail": [
-     "No-show figures stay wrong until they are."
+     "Until it is marked, the no-show figures are short."
     ],
     "href": "/app/bookings?show=unmarked",
     "rule": "RULE · booked and already over · 1 visit"
-   },
-   {
-    "key": "setup",
-    "count": 2,
-    "words": [
-     "setup steps left for ",
-     {
-      "b": "ALYR Bookings"
-     }
-    ],
-    "detail": [
-     "Connect your WhatsApp number"
-    ],
-    "href": "/app/connections",
-    "rule": "RULE · a step of a product you use, not done yet"
    }
   ],
   "empty": "Nothing is waiting."
@@ -361,7 +346,8 @@
   "legend": {
    "last": "Same day last week",
    "by_now": "Last week by this time",
-   "closed": "Closed"
+   "closed": "Closed",
+   "booked": "Booked"
   }
  },
  "hours": {

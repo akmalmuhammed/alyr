@@ -223,6 +223,9 @@ def test_the_states_empty_first_week_and_quiet():
     assert plain(empty["header"]["summary"][0]["text"]) == (
         "Nothing yet. This page fills in as customers write and order."
     )
+    # the real shape, drawn as outlines: the week, the hours, a list (P1-10)
+    assert [p["kind"] for p in empty["placeholders"]][:2] == ["week", "hours"]
+    assert {p["kind"] for p in empty["placeholders"]} <= {"week", "hours", "list"}
 
     first = view.render(busy(started=NOW - timedelta(days=3),
                              quiet_regulars=[row(times=3, days=40)]), "en")
@@ -232,6 +235,8 @@ def test_the_states_empty_first_week_and_quiet():
     assert "quiet_regulars" not in keys(first["suggestions"])  # tasks and actions only
     states = [d["state"] for d in first["week"]["days"]]
     assert states[:1] == ["before"]  # days before ALYR are not drawn as zeros
+    today = next(d for d in first["week"]["days"] if d["state"] == "today")
+    assert today["last"] is None and today["last_by_now"] is None  # no week to compare with
 
     quiet = view.render(facts(orders=3, orders_last=4), "ar")
     assert quiet["state"] == "quiet"

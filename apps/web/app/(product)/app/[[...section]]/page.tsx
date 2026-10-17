@@ -62,10 +62,10 @@ const T = {
     connected: "Connected", notConnected: "Not connected", notYet: "Not available yet",
     askSetup: "Ask ALYR to set it up",
     notOn: "This isn't switched on for your shop.", seeProducts: "See products",
-    helpTitle: "ALYR team", helpOnline: "A person replies, usually within the hour",
+    helpTitle: "ALYR team", helpOnline: "A person from ALYR reads every message.",
     helpHello: "What should we set up or change for you?",
     helpPlaceholder: "Write to ALYR…", send: "Send to ALYR",
-    sentReply: "Got it. Someone from ALYR will pick this up and reply on WhatsApp or by email.",
+    sentReply: "Sent to the ALYR team. We answer on WhatsApp or by email.",
     suggestions: ["Connect our WhatsApp number", "Add our services and prices", "Add a team member"],
     live: "WhatsApp live", sim: "Simulator", seeAll: "See all", soon: "Coming soon",
     go: "Go to", actions: "Actions", noMatch: "Nothing matches that.", navigate: "Move", choose: "Open", close: "Close",
@@ -97,10 +97,10 @@ const T = {
     connected: "متصل", notConnected: "غير متصل", notYet: "غير متاح بعد",
     askSetup: "اطلب من ALYR إعداده",
     notOn: "هذا غير مفعّل لمتجرك.", seeProducts: "عرض المنتجات",
-    helpTitle: "فريق ALYR", helpOnline: "يرد عليك شخص، عادةً خلال ساعة",
+    helpTitle: "فريق ALYR", helpOnline: "يقرأ كل رسالة شخص من فريق ALYR.",
     helpHello: "ماذا نُعدّ أو نغيّر لك؟",
     helpPlaceholder: "اكتب إلى ALYR…", send: "أرسل إلى ALYR",
-    sentReply: "وصلتنا. سيتابعها شخص من ALYR ويرد عبر واتساب أو البريد.",
+    sentReply: "أُرسلت إلى فريق ALYR. نرد عبر واتساب أو البريد.",
     suggestions: ["اربطوا رقم واتساب", "أضيفوا خدماتنا وأسعارنا", "أضيفوا عضواً للفريق"],
     live: "واتساب يعمل", sim: "المحاكي", seeAll: "عرض الكل", soon: "قريباً",
     go: "انتقل إلى", actions: "إجراءات", noMatch: "لا نتائج.", navigate: "تنقّل", choose: "افتح", close: "إغلاق",
@@ -165,14 +165,6 @@ function Mark({ volt = "#B7F34A" }: { volt?: string }) {
 
 function Tick() {
   return <svg viewBox="0 0 12 12" aria-hidden="true"><path d="M2.5 6.5 5 9l4.5-6" /></svg>;
-}
-
-function DoubleTick() {
-  return (
-    <svg className="ticks" width="16" height="11" viewBox="0 0 16 11" aria-hidden="true" fill="none" stroke="currentColor" strokeWidth="1.6">
-      <path d="M1 6l3 3 6-7.5" /><path d="M6.5 9l.5.5L13 2" />
-    </svg>
-  );
 }
 
 async function send(url: string, body?: object) {
@@ -386,6 +378,36 @@ export default function WorkspaceShell() {
 
   const stagger = (i: number) => ({ "--i": i }) as React.CSSProperties;
 
+  // The full setup checklist leads only while nothing has happened yet, and only for people
+  // who can act on it; after that it is one row in "Needs you now" (05-critique P1-2).
+  const setupTiles = state.can_manage && (!agent || agent.state === "empty")
+    ? pending.map((product) => {
+      const done = product.steps.filter((s) => s.done).length;
+      const total = product.steps.length;
+      return (
+        <section key={product.key} className="sh-tile raised folded sh-setup sh-home-row" aria-label={t.setup(pick(product.name))} style={stagger(0)}>
+          <div className="sh-gauge" style={{ "--p": (done / total) * 100 } as React.CSSProperties}>
+            <b className="num" dir="ltr">{done}<small>/{total}</small></b>
+          </div>
+          <div className="sh-setup-head">
+            <span className="sh-eyebrow">{pick(product.name)}</span>
+            <h2>{t.setup(pick(product.name))}</h2>
+            <p>{t.setupSub(done, total)}</p>
+          </div>
+          <ul className="sh-steps">
+            {product.steps.map((step) => (
+              <li key={step.key} className={step.done ? "done" : ""}>
+                <span className="sh-check"><Tick /></span>
+                <span className="sh-step">{pick(step.label)}</span>
+                {stepAction(product, step)}
+              </li>
+            ))}
+          </ul>
+        </section>
+      );
+      })
+    : null;
+
   let body: React.ReactNode;
   if (section === "home") {
     body = (
@@ -397,37 +419,14 @@ export default function WorkspaceShell() {
             <Link className="btn small" href="/start">{t.planReview}<Icon name="arrow" className="sh-ico arrow" /></Link>
           </section>
         )}
-        {pending.map((product) => {
-          const done = product.steps.filter((s) => s.done).length;
-          const total = product.steps.length;
-          return (
-            <section key={product.key} className="sh-tile raised folded sh-setup sh-home-row" aria-label={t.setup(pick(product.name))} style={stagger(0)}>
-              <div className="sh-gauge" style={{ "--p": (done / total) * 100 } as React.CSSProperties}>
-                <b className="num" dir="ltr">{done}<small>/{total}</small></b>
-              </div>
-              <div className="sh-setup-head">
-                <span className="sh-eyebrow">{pick(product.name)}</span>
-                <h2>{t.setup(pick(product.name))}</h2>
-                <p>{t.setupSub(done, total)}</p>
-              </div>
-              <ul className="sh-steps">
-                {product.steps.map((step) => (
-                  <li key={step.key} className={step.done ? "done" : ""}>
-                    <span className="sh-check"><Tick /></span>
-                    <span className="sh-step">{pick(step.label)}</span>
-                    {stepAction(product, step)}
-                  </li>
-                ))}
-              </ul>
-            </section>
-          );
-        })}
-
         {agent ? (
           <AgentDashboard view={agent} link={Link} animate={agentRise} onNotNow={state.can_manage ? notNow : undefined}
-            stale={offline ? `${t.offline} ${agent.header.updated}` : null} />
+            stale={offline ? `${t.offline} ${agent.header.updated}` : null} setup={setupTiles} />
         ) : (
-          <p className="sh-note">{offline ? t.offline : t.loading}</p>
+          <>
+            {setupTiles}
+            <p className="sh-note">{offline ? t.offline : t.loading}</p>
+          </>
         )}
 
         <section id="ask" className="sh-tile sh-ask sh-home-ask">
@@ -435,12 +434,11 @@ export default function WorkspaceShell() {
             <span className="sh-avatar"><Mark volt="#B7F34A" /></span>
             <div><b>{t.helpTitle}</b><small>{t.helpOnline}</small></div>
           </div>
-          <p className="sh-bubble">{t.helpHello}</p>
+          {/* No chat bubbles and no read ticks: nobody has answered yet, and no reply time is
+              promised (05-critique P0-4). */}
+          <p className="sh-ask-prompt">{t.helpHello}</p>
           {helpSent ? (
-            <>
-              <p className="sh-bubble mine" dir="auto">{helpSent}<DoubleTick /></p>
-              <p className="sh-bubble">{t.sentReply}</p>
-            </>
+            <p className="sh-ask-sent" role="status">{t.sentReply}</p>
           ) : (
             <div className="sh-suggest">
               {t.suggestions.map((s) => <button key={s} type="button" onClick={() => setHelp(s)}>{s}</button>)}

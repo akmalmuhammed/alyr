@@ -509,17 +509,23 @@ def _kpis(f: Facts, main: str, state: str, lang: str) -> list[dict]:
     return out
 
 
-def _placeholders(f: Facts, lang: str) -> list[str]:
-    """The empty state keeps the real shape, saying what will appear (C, States)."""
+def _placeholders(f: Facts, lang: str) -> list[dict]:
+    """The empty state keeps the real shape, saying what will appear (C, States; 05-critique
+    P1-10): the week, the hours and a list, each drawn as a dashed outline."""
     slots = []
     if "orders" in f.modules:
-        slots.append(T(lang, "Orders, by day", "الطلبات حسب اليوم"))
-    if "bookings" in f.modules:
-        slots.append(T(lang, "Visits, by day", "الزيارات حسب اليوم"))
+        slots.append({"kind": "week", "text": T(lang, "Orders, by day", "الطلبات حسب اليوم")})
+    elif "bookings" in f.modules:
+        slots.append({"kind": "week", "text": T(lang, "Visits, by day", "الزيارات حسب اليوم")})
+    if "orders" in f.modules or "bookings" in f.modules:
+        slots.append({"kind": "hours",
+                      "text": T(lang, "Busiest hours", "أكثر الساعات ازدحاماً")})
     if "ledger" in f.modules:
-        slots.append(T(lang, "Money owed, by age", "المستحق حسب العمر"))
+        slots.append({"kind": "list",
+                      "text": T(lang, "Money owed, by age", "المستحق حسب العمر")})
     if "inbox" in f.modules:
-        slots.append(T(lang, "Customers who wrote", "العملاء الذين راسلوك"))
+        slots.append({"kind": "list",
+                      "text": T(lang, "Customers who wrote", "العملاء الذين راسلوك")})
     return slots
 
 
@@ -667,7 +673,8 @@ def _week(f: Facts, main: str, lang: str) -> dict | None:
         last = data.get(day - timedelta(days=7), 0)
         if day - timedelta(days=7) < started:
             last = None
-        by_now = f.last_by_now.get(key) if state == "today" else None
+        # last week to this time, only when the business was on ALYR on that day
+        by_now = f.last_by_now.get(key) if state == "today" and last is not None else None
         n_booked = booked.get(day) if state in ("today", "coming") else None
         days.append({
             "date": day.isoformat(),
@@ -684,7 +691,7 @@ def _week(f: Facts, main: str, lang: str) -> dict | None:
                             if n_booked else None),
         })
     values = [d["value"] or 0 for d in days] + [d["last"] or 0 for d in days]
-    values += [d["booked"] or 0 for d in days]
+    values += [(d["value"] or 0) + (d["booked"] or 0) for d in days]  # today: done + booked
     return {
         "title": T(lang, "By day", "حسب اليوم"),
         "format": fmt,
@@ -694,6 +701,7 @@ def _week(f: Facts, main: str, lang: str) -> dict | None:
             "last": T(lang, "Same day last week", "اليوم نفسه من الأسبوع الماضي"),
             "by_now": T(lang, "Last week by this time", "الأسبوع الماضي حتى هذا الوقت"),
             "closed": T(lang, "Closed", "مغلق"),
+            "booked": T(lang, "Booked", "محجوز"),
         },
     }
 

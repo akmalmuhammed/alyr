@@ -43,8 +43,11 @@ async def _owner(db: Database, tenant_id) -> Staff:
 def sample_view(agent_view: dict) -> dict:
     """What a homepage figure may show. Money paid through ALYR links reads as live card
     payments, and there is no payment provider yet (ALY-17), so the samples leave it out;
-    the product keeps it."""
+    the product keeps it. Setup steps are the workspace's own chrome: a sample business has
+    finished setting up."""
     agent_view["done"]["rows"] = [r for r in agent_view["done"]["rows"] if r["key"] != "paid"]
+    agent_view["needs"]["items"] = [i for i in agent_view["needs"]["items"]
+                                    if i["key"] != "setup"]
     agent_view["kpis"] = [k for k in agent_view["kpis"] if k["key"] != "paid_link"]
     return agent_view
 

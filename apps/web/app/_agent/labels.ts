@@ -6,22 +6,18 @@ export type AgentLabels = {
   suggestions: string;
   done: string;
   doneTick: string;
-  showMe: string;
+  who: (n: number) => string;
   hide: string;
   more: (n: number) => string;
   notNow: string;
-  lastWeek: string;
-  today: string;
-  coming: string;
-  allHours: string;
-  team: string;
-  replies: string;
-  firstAnswer: string;
   open: string;
-  waiting: string;
+  closeCard: string;
+  today: string;
+  allHours: string;
+  busiest: string;
+  team: string;
   report: string;
-  stale: string;
-  owedOf: string;
+  owedBy: string;
 };
 
 export const AGENT_LABELS: Record<"en" | "ar", AgentLabels> = {
@@ -30,43 +26,35 @@ export const AGENT_LABELS: Record<"en" | "ar", AgentLabels> = {
     suggestions: "Suggestions, by rule",
     done: "Done for you this week",
     doneTick: "Done",
-    showMe: "Show me",
+    who: (n) => `Who (${n})`,
     hide: "Hide",
     more: (n) => `and ${n} more`,
     notNow: "Not now",
-    lastWeek: "Last week",
+    open: "Show this suggestion",
+    closeCard: "Fold this suggestion",
     today: "Today",
-    coming: "Still to come",
     allHours: "See all hours",
+    busiest: "Busiest",
     team: "Team, last 7 days",
-    replies: "Replies",
-    firstAnswer: "First answer",
-    open: "Open",
-    waiting: "Waiting",
     report: "Sunday report",
-    stale: "Cannot reach ALYR right now. The numbers below are from",
-    owedOf: "owed by",
+    owedBy: "owed by",
   },
   ar: {
     needs: "يحتاجك الآن",
     suggestions: "اقتراحات حسب القاعدة",
     done: "أنجزته ALYR لك هذا الأسبوع",
     doneTick: "تم",
-    showMe: "اعرضها",
+    who: (n) => `من هم (${n})`,
     hide: "إخفاء",
     more: (n) => `و${n} غيرهم`,
     notNow: "ليس الآن",
-    lastWeek: "الأسبوع الماضي",
+    open: "اعرض هذا الاقتراح",
+    closeCard: "اطوِ هذا الاقتراح",
     today: "اليوم",
-    coming: "لم يأتِ بعد",
     allHours: "كل الساعات",
+    busiest: "الأكثر ازدحاماً",
     team: "الفريق، آخر 7 أيام",
-    replies: "الردود",
-    firstAnswer: "أول رد",
-    open: "مفتوحة",
-    waiting: "بانتظار الرد",
     report: "تقرير الأحد",
-    stale: "تعذّر الوصول إلى ALYR الآن. الأرقام أدناه من",
-    owedOf: "على",
+    owedBy: "على",
   },
 };
