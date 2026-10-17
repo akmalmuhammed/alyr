@@ -13,6 +13,7 @@ Run this once a week, or when the founder asks "where are we".
    - Merged pull requests: `gh pr list --state merged --limit 30`
    - Linear issues in project `Alyr Launch`: what changed status, what is In Progress with no change in a week, everything labelled "Needs Akmal".
    - What is live: `curl` the public site and the API health address named in `docs/status.md`.
+   - Hygiene (docs/hygiene.md 8): open Dependabot PRs; branches merged but not deleted (`git branch -r --merged origin/main`); worktrees and containers left by finished work; failed jobs; renewal or expiry dates in `docs/access.md` within 30 days; open issues from the latest `docs/audit/` report.
 3. Find the gaps: an issue marked In Progress that nobody touched; a lane brief whose "Now" section is out of date; a claim in `docs/status.md` that is no longer true; work done with no issue.
 4. Fix them: update `docs/status.md`, the lane briefs and the Linear statuses. One branch, one pull request, documents only.
 5. Report to the founder, in this order:

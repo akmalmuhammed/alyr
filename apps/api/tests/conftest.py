@@ -2,6 +2,9 @@ import asyncio
 import contextlib
 import os
 
+# Tests run as a developer machine; the app itself defaults to production (ALY-114).
+os.environ.setdefault("ALYR_ENV", "local")
+
 import asyncpg
 import pytest
 from fastapi.testclient import TestClient

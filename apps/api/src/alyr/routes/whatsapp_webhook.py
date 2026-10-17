@@ -1,3 +1,4 @@
+import hmac
 import json
 
 from fastapi import APIRouter, HTTPException, Query, Request, Response
@@ -20,7 +21,7 @@ async def verify(
     challenge: str = Query("", alias="hub.challenge"),
 ) -> Response:
     expected = get_settings().meta_verify_token
-    if mode == "subscribe" and expected and token == expected:
+    if mode == "subscribe" and expected and hmac.compare_digest(token, expected):
         return Response(content=challenge, media_type="text/plain")
     raise HTTPException(status_code=403, detail="verification failed")
 

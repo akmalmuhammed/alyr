@@ -4,7 +4,7 @@ How the work is divided, and the one goal for this stage, are in [operating-mode
 
 Read this first in a new session, on any machine. It is the hand-over note between sessions: what works, what is next, and what is waiting on the founder. Update it in the same pull request as the work. Linear (team `Alyrtech`, project `Alyr Launch`) holds the detail; this page is the summary.
 
-Last updated: 17 Oct 2026, after the real report card on the public site (ALY-99, branch `aly-99-report-site`: the homepage's step 4 and `/agent` show the API's card and text as a WhatsApp message, following `/agent`'s sample switch; built, not merged or published), the Sunday report card (ALY-99, D-038: the weekly report as a branded image with about eight lines under it, from ALYR Agent's engine; branch `aly-99-report-card`, PR #56), the Catalog plan (ALY-101, D-039: items, stock and photos built complete before go-live; planned, nothing built yet), and before that the suite site (ALY-99, D-037: a homepage led by ALYR Agent at work, a page for each live product, a Products menu; branch `aly-99-suite-site`, PR #53, built, not published, depends on PR #50), ALYR Agent and the product line-up (ALY-99, D-035: ALYR Chat, Bookings, Agent, Accounts, Payroll coming; combination pricing; the Agent dashboard on `/app`, redrawn after the design critique, with a showcase mode for the homepage; branch `aly-agent-dashboard`, in review), the internal tool's first phase (ALY-80, D-033), the 2026 homepage (ALY-56, D-034: published 17 Oct without prices, which wait for the commercial registration), and prices set per client from the back office (ALY-78, D-032).
+Last updated: 17 Oct 2026, after the pre-go-live audit (ALY-114, docs/audit/2026-10-17.md). Several lines below are known to be stale; ALY-123 corrects them.
 
 ## What works today
 
@@ -37,6 +37,8 @@ Last updated: 17 Oct 2026, after the real report card on the public site (ALY-99
 | Self-serve onboarding at `/start`: email code, type of business, a filled-in price list and opening hours to edit, a private test line to book as a customer, the plan, a go-live checklist, then the workspace. Phone and laptop layouts, English and Arabic | Built (D-031) for appointment businesses (salon, spa, clinic, home services). Restaurants, shops, wholesale and document offices get their business created and a setup request for ALYR. Sign-up is closed outside a local machine until the founder opens it | `apps/api/src/alyr/core/onboarding.py`, `presets.py`, `apps/web/app/(product)/start/` |
 
 Tests: 353 on `main`, all passing; 377 on `aly-99-report-card` (24 new). CI runs api, web and a secrets scan on every pull request.
+
+**Audit 17 Oct (ALY-114).** Settings now fail safe (the API is production unless `ALYR_ENV=local`); governance files, runbooks, access register and hygiene rules added; findings tracked as ALY-115 to ALY-125. Before the first real customer: `docs/runbooks/go-live-checklist.md`.
 
 ## Next on the build side, in order
 

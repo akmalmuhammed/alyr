@@ -36,7 +36,8 @@ async def details(tenant_id: UUID, payment_id: UUID, request: Request) -> dict:
 async def complete(tenant_id: UUID, payment_id: UUID, request: Request) -> dict:
     """Stand-in for a gateway's "payment succeeded" callback. A real gateway (ALY-17)
     calls a signed webhook instead; this route does not exist in production."""
-    if get_settings().env == "production":
+    # Allowed only where we say so explicitly, never by default (ALY-114).
+    if get_settings().env != "local":
         raise HTTPException(status_code=404)
     async with request.app.state.db.tenant(tenant_id) as conn:
         status = await service.complete_payment(conn, payment_id, request.app.state.outbound)
