@@ -632,4 +632,16 @@ There is no separate Pay product: payment links stay a module of Chat and Bookin
 **Open for the founder.**
 - Agents can read every balance and sale through the existing API (`docs/agent-dashboard/02-data.md` §9). The Agent dashboard will show agents no shop-wide money. Closing the older routes changes what agents can do today, so it is a separate issue.
 
-**Not built yet (phase 2 and after).** The metrics API and the dashboard UI at `/app`, the suggested actions, the product pages `/bookings`, `/agent` and `/accounts`, and the homepage figure with sample data.
+**The ALYR Agent dashboard (phase 2, 17 Oct).** Built to `docs/agent-dashboard/03-build-brief.md` and `01-research.md`.
+- **One engine.** `GET /api/agent?lang=en|ar` returns one `AgentView`, every word rendered from fixed templates in that language, never Arabic assembled from fragments.
+  - The rules live in one registry (`apps/api/src/alyr/modules/agent/insights.py`). Each has its rule in plain words, a minimum, both languages, and either an action on a screen that exists or an honest status line. Each is tested at its threshold.
+  - Cards are shown in order: tasks under "Needs you now", then money, then knowledge with an action, then knowledge for information. At most three.
+  - The screen says "By rule" and shows the rule line. Nothing says or implies AI.
+- **One component, two homes.** `AgentDashboard` in `apps/web/app/_agent/` draws an `AgentView` and fetches nothing. The workspace home renders it from the API; the public site will render it from sample files captured from the same engine (`apps/web/app/_agent/samples/`). It is themed by `--ag-*` custom properties and follows the host's light and dark.
+- **Roles.** Staff with the agent role get the view without money: no sales, owed, collected, amounts or report line. They cannot set cards aside. Owners and admins see everything. Closing the older routes that already show agents money is a separate task.
+- **"Not now"** sets a knowledge card aside until its numbers change or until Sunday (migration 0019, `agent_snoozes`, row-level security).
+- **Filtered screens.** Every action opens its screen filtered to the rows the rule counted (`?show=`).
+- **Samples.** Qirfa Bakery, Sadaf Salon and Ruwaa Dental Clinic are fictional, seeded at a fixed moment, Thursday 15 Oct 2026 at 16:20 Doha.
+- **Why.** The owner sees in one sentence how the week is going, what needs them, and what ALYR did. That is the weekly proof of the subscription on a month-to-month term, and the same screen is what the homepage shows.
+
+**Not built yet.** The suggestions beyond the 20 rules (for example answered after hours), tapping a number to open its week on a phone, the product pages `/bookings`, `/agent` and `/accounts`, and the homepage figure (the site builder takes the component and the samples).

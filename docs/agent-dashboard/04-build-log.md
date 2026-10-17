@@ -119,3 +119,21 @@ ALY-99, branch `aly-agent-dashboard`. One entry per stage, newest last, so a sta
   - each sample comes out the same every time and has nothing that can reach a phone;
   - the empty state works;
   - the committed fixtures match the engine's version and shape and contain no AI words.
+
+### Stage 6 · checks, screenshots and docs
+
+- **Screenshots:** in `docs/agent-dashboard/shots/`, not committed. Taken with headless Edge (profile `C:\t\agentprof`), signed in as each sample's owner, on today's data.
+  - Each sample in English and Arabic, at 1440 and 390: `{bakery,salon,clinic}-{en,ar}-{1440,390}.png`.
+  - The empty and first-week states: `salon-empty-en-1440.png`, `salon-first-week-en-1440.png`.
+  - The agent role: `bakery-agent-role-en-1440.png`.
+  - Dark: `bakery-dark-en-1440.png`.
+- **Checks:**
+  - API: 347 tests pass in Docker, including tenant isolation for `agent_snoozes` and the endpoint; ruff is clean.
+  - Web: `pnpm lint` and `pnpm build` pass (built into `.next-build`, then removed).
+- **Docs:** D-035 records the dashboard; `status.md` and the lane brief are updated.
+- **Not checked:**
+  - The Arabic wording by a native speaker.
+  - Screen readers beyond the semantic structure (headings, a real table, `aria-label` on each day of the week).
+  - Lighthouse or axe on `/app`.
+  - Safari: container queries and `clip-path` keyframes are standard but untested there.
+  - Running the migrations on any database but this session's own.
