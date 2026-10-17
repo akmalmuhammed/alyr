@@ -664,4 +664,4 @@ There is no separate Pay product: payment links stay a module of Chat and Bookin
 
 **Why.** D-035 made ALYR a suite led by ALYR Agent. The site now says so: the first thing a visitor sees is the screen an owner would open every morning, and each product can be read on its own before the visit.
 
-**Open for the founder.** Publishing (the go-ahead each time), the Arabic review (ALY-66), the clinics question (ALY-51), a manual name check for Sadaf Salon and Nasma Cooling as for Qirfa, and whether the hero may keep calling the replies and reminders the agent's work while `/agent` explains that ALYR Chat and ALYR Bookings send them and ALYR Agent counts them.
+**Open for the founder.** Publishing (the go-ahead each time), the Arabic review (ALY-66), the clinics question (ALY-51), a manual name check for Dafira Salon and Zilal Cooling as for Qirfa (renamed from Sadaf Salon and Nasma Cooling, too close to real businesses), and whether the hero may keep calling the replies and reminders the agent's work while `/agent` explains that ALYR Chat and ALYR Bookings send them and ALYR Agent counts them.

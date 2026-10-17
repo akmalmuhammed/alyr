@@ -6,7 +6,7 @@
 // Voice follows the Brand & Growth Playbook (11 Oct 2026): plain words, one idea per
 // sentence, no hype, and no number or promise we cannot yet show (docs/brand.md,
 // docs/agent-dashboard/06-messaging.md, 07-site-brief.md). Nothing says or implies AI.
-// Sample screens use fictional businesses (Qirfa Bakery, Sadaf Salon, Nasma Cooling) and
+// Sample screens use fictional businesses (Qirfa Bakery, Dafira Salon, Zilal Cooling) and
 // the product's own wording for its screens and messages; every one is captioned so.
 // The Arabic is written natively, not translated line by line, and still needs a
 // native speaker's review before launch (ALY-66).
@@ -552,12 +552,12 @@ const en: Copy = {
       },
       salon: {
         tab: "Salon",
-        shop: "Sadaf Salon",
-        monogram: "SS",
-        announce: "Showing Sadaf Salon, a fictional salon.",
+        shop: "Dafira Salon",
+        monogram: "DS",
+        announce: "Showing Dafira Salon, a fictional salon.",
         fictional: "Sample data, fictional salon",
         feed: [
-          { at: "15:58", title: "Menu sent", line: "To a new customer: “Welcome to Sadaf Salon. How can we help?”", adds: ["sent"] },
+          { at: "15:58", title: "Menu sent", line: "To a new customer: “Welcome to Dafira Salon. How can we help?”", adds: ["sent"] },
           { at: "16:00", title: "Booking reminder sent", line: "Blow-dry, today at 18:00\u00a0· Dana R.", adds: ["sent", "booking_reminders"] },
           { at: "16:01", title: "Flagged by rule", flag: { from: "needs", key: "unmarked" }, adds: [] },
           { at: "16:07", title: "Booking page sent", line: "Rania H. tapped “Book a visit”. The link went back at once.", adds: ["sent"] },
@@ -566,12 +566,12 @@ const en: Copy = {
       },
       homeservices: {
         tab: "Home services",
-        shop: "Nasma Cooling",
-        monogram: "NC",
-        announce: "Showing Nasma Cooling, a fictional AC company.",
+        shop: "Zilal Cooling",
+        monogram: "ZC",
+        announce: "Showing Zilal Cooling, a fictional AC company.",
         fictional: "Sample data, fictional AC company",
         feed: [
-          { at: "15:56", title: "Menu sent", line: "To a new customer: “Welcome to Nasma Cooling. How can we help?”", adds: ["sent"] },
+          { at: "15:56", title: "Menu sent", line: "To a new customer: “Welcome to Zilal Cooling. How can we help?”", adds: ["sent"] },
           { at: "16:00", title: "Booking reminder sent", line: "AC service, split unit, today at 18:00\u00a0· Hassan D.", adds: ["sent", "booking_reminders"] },
           { at: "16:06", title: "Booking page sent", line: "Omar K. wrote “book”. The link went back at once.", adds: ["sent"] },
           { at: "16:12", title: "Booking details sent", line: "Ali T. wrote “my booking”: his visit, with a Cancel button.", adds: ["sent"] },
@@ -1379,7 +1379,7 @@ const en: Copy = {
         factsOffer: ["From QAR 449 a month, or QAR 150 added to another ALYR product"],
       },
       demo: {
-        business: "Sadaf Salon",
+        business: "Dafira Salon",
         businessMeta: "Business account",
         today: "Today",
         typeHere: "Message",
@@ -1395,7 +1395,7 @@ const en: Copy = {
             start: 16 * 60 + 40,
             chat: [
               { from: "customer", text: "Hi, can I book a haircut and blow-dry for Saturday?" },
-              { from: "business", text: "Pick a service and a time that suits you: alyr.qa/b/sadaf" },
+              { from: "business", text: "Pick a service and a time that suits you: alyr.qa/b/dafira" },
             ],
             panel: {
               kicker: "Her phone",
@@ -1403,8 +1403,8 @@ const en: Copy = {
               badge: "Sat 17 Oct",
               rows: [],
               page: {
-                shop: "Sadaf Salon",
-                monogram: "SS",
+                shop: "Dafira Salon",
+                monogram: "DS",
                 context: "Booking",
                 eyebrow: "Book from your chat",
                 title: "Book a visit",
@@ -1435,7 +1435,7 @@ const en: Copy = {
             tab: "Confirm",
             start: 16 * 60 + 43,
             chat: [
-              { from: "business", text: "Booking 412 confirmed at Sadaf Salon: Haircut and blow-dry, Sat 17 Oct, 7:30 PM. To cancel, send “my booking”." },
+              { from: "business", text: "Booking 412 confirmed at Dafira Salon: Haircut and blow-dry, Sat 17 Oct, 7:30 PM. To cancel, send “my booking”." },
             ],
             panel: {
               title: "Bookings",
@@ -1453,7 +1453,7 @@ const en: Copy = {
             tab: "Remind",
             start: 17 * 60 + 30,
             chat: [
-              { from: "business", text: "Reminder: booking 412 at Sadaf Salon, Sat 17 Oct, 7:30 PM." },
+              { from: "business", text: "Reminder: booking 412 at Dafira Salon, Sat 17 Oct, 7:30 PM." },
             ],
             panel: {
               title: "Booking 412",
@@ -1538,7 +1538,7 @@ const en: Copy = {
                 move: "out",
                 title: "The link comes back straight away",
                 body: "Her message is in English, so the reply is too.",
-                chat: { from: "business", text: "Pick a service and a time that suits you: alyr.qa/b/sadaf" },
+                chat: { from: "business", text: "Pick a service and a time that suits you: alyr.qa/b/dafira" },
                 work: ["Reply sent"],
               },
               {
@@ -1559,7 +1559,7 @@ const en: Copy = {
                 move: "out",
                 title: "Confirmation now, reminder later",
                 body: "ALYR confirms the booking at once and sets a reminder for two hours before. Your team typed nothing.",
-                chat: { from: "business", text: "Booking 412 confirmed at Sadaf Salon: Haircut and blow-dry, Sat 17 Oct, 7:30 PM." },
+                chat: { from: "business", text: "Booking 412 confirmed at Dafira Salon: Haircut and blow-dry, Sat 17 Oct, 7:30 PM." },
                 work: ["Confirmation sent", "Reminder set for 5:30 PM"],
               },
             ],
@@ -1587,7 +1587,7 @@ const en: Copy = {
                 move: "out",
                 title: "The reminder arrives",
                 body: "It reaches her phone from your number, in the language she uses with you.",
-                chat: { from: "business", text: "Reminder: booking 412 at Sadaf Salon, Sat 17 Oct, 7:30 PM." },
+                chat: { from: "business", text: "Reminder: booking 412 at Dafira Salon, Sat 17 Oct, 7:30 PM." },
                 work: ["Reminder sent"],
               },
               {
@@ -2497,12 +2497,12 @@ const ar: Copy = {
       },
       salon: {
         tab: "صالون",
-        shop: "صالون صدف",
-        monogram: "ص",
-        announce: "يُعرض الآن صالون صدف، وهو صالون غير حقيقي.",
+        shop: "صالون ضفيرة",
+        monogram: "ض",
+        announce: "يُعرض الآن صالون ضفيرة، وهو صالون غير حقيقي.",
         fictional: "مثال: صالون غير حقيقي",
         feed: [
-          { at: "15:58", title: "أُرسلت القائمة", line: "لعميلة جديدة: «أهلاً بك في صالون صدف. كيف نقدر نخدمك؟»", adds: ["sent"] },
+          { at: "15:58", title: "أُرسلت القائمة", line: "لعميلة جديدة: «أهلاً بك في صالون ضفيرة. كيف نقدر نخدمك؟»", adds: ["sent"] },
           { at: "16:00", title: "أُرسل تذكير بموعد", line: "تسشوار، اليوم الساعة 18:00\u00a0· Dana R.", adds: ["sent", "booking_reminders"] },
           { at: "16:01", title: "تنبيه حسب القاعدة", flag: { from: "needs", key: "unmarked" }, adds: [] },
           { at: "16:07", title: "أُرسلت صفحة الحجز", line: "ضغطت Rania H. «احجز موعداً»، فوصلها الرابط فوراً.", adds: ["sent"] },
@@ -2511,12 +2511,12 @@ const ar: Copy = {
       },
       homeservices: {
         tab: "خدمات منزلية",
-        shop: "نسمة للتكييف",
-        monogram: "ن",
-        announce: "يُعرض الآن نسمة للتكييف، وهي شركة تكييف غير حقيقية.",
+        shop: "ظلال للتكييف",
+        monogram: "ظ",
+        announce: "تُعرض الآن ظلال للتكييف، وهي شركة تكييف غير حقيقية.",
         fictional: "مثال: شركة تكييف غير حقيقية",
         feed: [
-          { at: "15:56", title: "أُرسلت القائمة", line: "لعميل جديد: «أهلاً بك في نسمة للتكييف. كيف نقدر نساعدك؟»", adds: ["sent"] },
+          { at: "15:56", title: "أُرسلت القائمة", line: "لعميل جديد: «أهلاً بك في ظلال للتكييف. كيف نقدر نساعدك؟»", adds: ["sent"] },
           { at: "16:00", title: "أُرسل تذكير بموعد", line: "صيانة مكيف سبليت، اليوم الساعة 18:00\u00a0· Hassan D.", adds: ["sent", "booking_reminders"] },
           { at: "16:06", title: "أُرسلت صفحة الحجز", line: "كتب Omar K. «حجز»، فوصله الرابط فوراً.", adds: ["sent"] },
           { at: "16:12", title: "أُرسلت تفاصيل الحجز", line: "كتب Ali T. «حجزي»، فوصله موعده مع زر للإلغاء.", adds: ["sent"] },
@@ -3324,7 +3324,7 @@ const ar: Copy = {
         factsOffer: ["من 449 ر.ق شهرياً، أو 150 ر.ق إضافة إلى منتج آخر من ALYR"],
       },
       demo: {
-        business: "صالون صدف",
+        business: "صالون ضفيرة",
         businessMeta: "حساب أعمال",
         today: "اليوم",
         typeHere: "مراسلة",
@@ -3340,7 +3340,7 @@ const ar: Copy = {
             start: 16 * 60 + 40,
             chat: [
               { from: "customer", text: "السلام عليكم، ممكن أحجز قص وتسشوار يوم السبت؟" },
-              { from: "business", text: "اختر الخدمة والوقت المناسب من هنا: alyr.qa/b/sadaf" },
+              { from: "business", text: "اختر الخدمة والوقت المناسب من هنا: alyr.qa/b/dafira" },
             ],
             panel: {
               kicker: "هاتفها",
@@ -3348,8 +3348,8 @@ const ar: Copy = {
               badge: "السبت 17 أكتوبر",
               rows: [],
               page: {
-                shop: "صالون صدف",
-                monogram: "ص",
+                shop: "صالون ضفيرة",
+                monogram: "ض",
                 context: "حجز",
                 eyebrow: "حجز من المحادثة",
                 title: "احجز موعداً",
@@ -3380,7 +3380,7 @@ const ar: Copy = {
             tab: "التأكيد",
             start: 16 * 60 + 43,
             chat: [
-              { from: "business", text: "تم تأكيد حجزك رقم 412 لدى صالون صدف: قص وتسشوار، 17/10 19:30. للإلغاء أرسل «حجزي»." },
+              { from: "business", text: "تم تأكيد حجزك رقم 412 لدى صالون ضفيرة: قص وتسشوار، 17/10 19:30. للإلغاء أرسل «حجزي»." },
             ],
             panel: {
               title: "الحجوزات",
@@ -3398,7 +3398,7 @@ const ar: Copy = {
             tab: "التذكير",
             start: 17 * 60 + 30,
             chat: [
-              { from: "business", text: "تذكير: حجزك رقم 412 لدى صالون صدف، 17/10 19:30." },
+              { from: "business", text: "تذكير: حجزك رقم 412 لدى صالون ضفيرة، 17/10 19:30." },
             ],
             panel: {
               title: "الحجز 412",
@@ -3483,7 +3483,7 @@ const ar: Copy = {
                 move: "out",
                 title: "يصلها الرابط فوراً",
                 body: "ولأن رسالتها بالعربية، تصلها الردود بالعربية.",
-                chat: { from: "business", text: "اختر الخدمة والوقت المناسب من هنا: alyr.qa/b/sadaf" },
+                chat: { from: "business", text: "اختر الخدمة والوقت المناسب من هنا: alyr.qa/b/dafira" },
                 work: ["تم إرسال الرد"],
               },
               {
@@ -3504,7 +3504,7 @@ const ar: Copy = {
                 move: "out",
                 title: "تأكيد الآن، وتذكير لاحقاً",
                 body: "تؤكد ALYR الحجز فوراً، وتضبط تذكيراً قبل الموعد بساعتين. وفريقك لم يكتب حرفاً.",
-                chat: { from: "business", text: "تم تأكيد حجزك رقم 412 لدى صالون صدف: قص وتسشوار، 17/10 19:30." },
+                chat: { from: "business", text: "تم تأكيد حجزك رقم 412 لدى صالون ضفيرة: قص وتسشوار، 17/10 19:30." },
                 work: ["تم إرسال التأكيد", "تذكير مضبوط الساعة 5:30 م"],
               },
             ],
@@ -3532,7 +3532,7 @@ const ar: Copy = {
                 move: "out",
                 title: "يصل التذكير",
                 body: "يصل إلى هاتفها من رقمك، وباللغة التي تراسلك بها.",
-                chat: { from: "business", text: "تذكير: حجزك رقم 412 لدى صالون صدف، 17/10 19:30." },
+                chat: { from: "business", text: "تذكير: حجزك رقم 412 لدى صالون ضفيرة، 17/10 19:30." },
                 work: ["تم إرسال التذكير"],
               },
               {
