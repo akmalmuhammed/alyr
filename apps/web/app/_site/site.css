@@ -30,12 +30,13 @@
   --on-volt: #151a0f;
   --menu-shadow: 0 24px 70px rgb(21 23 26 / .14);
 
+  /* Inside a Carbon block: a well a step under it, a panel a step over it. */
   --dark-canvas: #0e1012;
   --dark-surface: #191c1f;
   --dark-subtle: #202428;
   --dark-line: #32373c;
   --dark-text: #f3f5f0;
-  /* the full-bleed Carbon sections, the hero plate and the closing call */
+  /* the Carbon blocks: the band, the hero plate, the closing call, /chat's two panels */
   --band: var(--carbon);
   /* the hairline that closes a full-bleed Carbon section (dark mode only) */
   --band-edge: transparent;
@@ -46,6 +47,30 @@
   --when-light: inline;
   --when-dark: none;
 
+  /* The ALYR Chat page's drawn chat: WhatsApp's own light chat screen. */
+  --wa-head: #ffffff;
+  --wa-head-line: #e3e0da;
+  --wa-paper: #efeae2;
+  --wa-dot: rgb(17 27 33 / .045);
+  --wa-dot-2: rgb(17 27 33 / .03);
+  --wa-in: #ffffff;
+  --wa-out: #d9fdd3;
+  --wa-ink: #111b21;
+  --wa-icon: #111b21;
+  --wa-soft: #667781;
+  --wa-soft-out: #667781;
+  --wa-chip: #ffffff;
+  --wa-shadow: rgb(11 20 26 / .13);
+  --wa-rule: #e9edef;
+  --wa-link: #027eb5;
+  --wa-tick: #53bdeb;
+  --wa-avatar: #dfe5e7;
+  --wa-avatar-ink: #54656f;
+  --wa-field: #ffffff;
+  --wa-field-ink: #54656f;
+  --wa-hint: #8696a0;
+  --wa-green: #1daa61;
+  --wa-on-green: #ffffff;
 
   --sans: var(--font-instrument), "Aptos", "Segoe UI Variable", system-ui, sans-serif;
   --mono: var(--font-plex-mono), "Cascadia Mono", ui-monospace, monospace;
@@ -78,7 +103,7 @@
    device. The same values therefore appear twice: for a dark device with no choice made,
    and for a dark choice. Keep the two blocks identical. Every component reads these
    tokens, so no other rule in the site needs a dark version (home.css has the drawings'
-   own pair). The ALYR Chat page has no dark design of its own yet. */
+   own pair). */
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) {
     color-scheme: dark;
@@ -92,12 +117,40 @@
     --focus: #b7f34a;
     --volt-wash: rgb(183 243 74 / .12);
     --menu-shadow: 0 24px 70px rgb(0 0 0 / .5);
-    /* Carbon on a dark page is lifted a step (#15171a on #0e1012 is 1.05:1) */
+    /* Carbon on a dark page is lifted a step (#15171a on #0e1012 is 1.05:1), and what sits
+       inside it keeps its place: wells under it, panels over it */
     --band: #1d2024;
     --band-edge: var(--dark-line);
+    --dark-canvas: #15171a;
+    --dark-surface: #23272b;
     --night: 1;
     --when-light: none;
     --when-dark: inline;
+    /* WhatsApp's own dark chat screen; the two greys in a sent bubble are lighter than
+       WhatsApp's so the times keep 4.5:1 */
+    --wa-head: #202c33;
+    --wa-head-line: #222e35;
+    --wa-paper: #0b141a;
+    --wa-dot: rgb(233 237 239 / .035);
+    --wa-dot-2: rgb(233 237 239 / .025);
+    --wa-in: #202c33;
+    --wa-out: #005c4b;
+    --wa-ink: #e9edef;
+    --wa-icon: #aebac1;
+    --wa-soft: #8696a0;
+    --wa-soft-out: #b3cdc9;
+    --wa-chip: #182229;
+    --wa-shadow: rgb(0 0 0 / .25);
+    --wa-rule: #2c3a41;
+    --wa-link: #53bdeb;
+    --wa-tick: #53bdeb;
+    --wa-avatar: #6a7175;
+    --wa-avatar-ink: #ffffff;
+    --wa-field: #1f2c34;
+    --wa-field-ink: #8696a0;
+    --wa-hint: #8696a0;
+    --wa-green: #21c063;
+    --wa-on-green: #0b141a;
   }
 }
 :root[data-theme="dark"] {
@@ -114,9 +167,34 @@
   --menu-shadow: 0 24px 70px rgb(0 0 0 / .5);
   --band: #1d2024;
   --band-edge: var(--dark-line);
+  --dark-canvas: #15171a;
+  --dark-surface: #23272b;
   --night: 1;
   --when-light: none;
   --when-dark: inline;
+  --wa-head: #202c33;
+  --wa-head-line: #222e35;
+  --wa-paper: #0b141a;
+  --wa-dot: rgb(233 237 239 / .035);
+  --wa-dot-2: rgb(233 237 239 / .025);
+  --wa-in: #202c33;
+  --wa-out: #005c4b;
+  --wa-ink: #e9edef;
+  --wa-icon: #aebac1;
+  --wa-soft: #8696a0;
+  --wa-soft-out: #b3cdc9;
+  --wa-chip: #182229;
+  --wa-shadow: rgb(0 0 0 / .25);
+  --wa-rule: #2c3a41;
+  --wa-link: #53bdeb;
+  --wa-tick: #53bdeb;
+  --wa-avatar: #6a7175;
+  --wa-avatar-ink: #ffffff;
+  --wa-field: #1f2c34;
+  --wa-field-ink: #8696a0;
+  --wa-hint: #8696a0;
+  --wa-green: #21c063;
+  --wa-on-green: #0b141a;
 }
 
 *, *::before, *::after { box-sizing: border-box; }
@@ -329,7 +407,7 @@ svg { display: block; }
 
 /* product: the Carbon command moment */
 .product { padding: 0 clamp(.5rem, 1.5vw, 1.25rem); }
-.product-in { background: var(--carbon); color: var(--dark-text); border-radius: 1rem; padding-block: clamp(4rem, 9vw, 7.5rem) clamp(3rem, 6vw, 5rem); position: relative; overflow: clip; }
+.product-in { background: var(--band); color: var(--dark-text); border-radius: 1rem; padding-block: clamp(4rem, 9vw, 7.5rem) clamp(3rem, 6vw, 5rem); position: relative; overflow: clip; }
 .product-in::before {
   content: ""; position: absolute; inset: 0; pointer-events: none;
   background-image: radial-gradient(rgb(167 173 181 / .16) 1px, transparent 1px);
@@ -371,13 +449,12 @@ svg { display: block; }
 .panel-top { display: flex; align-items: center; gap: .75rem; padding: .875rem 1.125rem; border-bottom: 1px solid var(--dark-line); min-height: 3.75rem; }
 .panel-top b { display: block; font-size: .9375rem; font-weight: 600; }
 
-/* The customer's phone. Colours and proportions follow WhatsApp's own light chat screen so
-   the conversation reads at a glance as the app the customer already uses. It is a
-   drawing of a chat, with no WhatsApp logo: ALYR is not affiliated with WhatsApp or Meta. */
+/* The customer's phone. Colours and proportions follow WhatsApp's own chat screen, light
+   or dark with the page (the --wa- tokens at the top), so the conversation reads at a
+   glance as the app the customer already uses. It is a drawing of a chat, with no WhatsApp
+   logo: ALYR is not affiliated with WhatsApp or Meta. */
 .phone { background: var(--dark-canvas); display: grid; place-items: center; padding: 1.5rem 1.25rem; min-width: 0; }
 .wa {
-  --wa-head: #ffffff; --wa-paper: #efeae2; --wa-in: #ffffff; --wa-out: #d9fdd3;
-  --wa-ink: #111b21; --wa-soft: #667781; --wa-green: #1daa61; --wa-link: #027eb5; --wa-tick: #53bdeb;
   width: 100%; max-width: 21rem; height: 34rem; display: flex; flex-direction: column; overflow: hidden;
   border-radius: 1.75rem; border: .375rem solid #050505; outline: 1px solid #3a3f45;
   background: var(--wa-paper); color: var(--wa-ink);
@@ -385,22 +462,22 @@ svg { display: block; }
 }
 [lang="ar"] .wa { font-family: "Segoe UI", "Geeza Pro", "Noto Sans Arabic", system-ui, sans-serif; }
 .wa svg { width: 1.375rem; height: 1.375rem; flex: none; fill: none; stroke: currentColor; stroke-width: 1.7; stroke-linecap: round; stroke-linejoin: round; }
-.wa-top { display: flex; align-items: center; gap: .625rem; padding: .625rem .75rem; background: var(--wa-head); border-bottom: 1px solid #e3e0da; }
-.wa-top .wa-back, .wa-top .wa-act { fill: var(--wa-ink); stroke: none; }
+.wa-top { display: flex; align-items: center; gap: .625rem; padding: .625rem .75rem; background: var(--wa-head); border-bottom: 1px solid var(--wa-head-line); }
+.wa-top .wa-back, .wa-top .wa-act { fill: var(--wa-icon); stroke: none; }
 .wa-top .wa-act { width: 1.25rem; height: 1.25rem; margin-inline-start: .375rem; }
-.wa-avatar { display: grid; place-items: center; width: 2.25rem; height: 2.25rem; border-radius: 50%; background: #dfe5e7; color: #54656f; font-weight: 600; font-size: .9375rem; flex: none; }
+.wa-avatar { display: grid; place-items: center; width: 2.25rem; height: 2.25rem; border-radius: 50%; background: var(--wa-avatar); color: var(--wa-avatar-ink); font-weight: 600; font-size: .9375rem; flex: none; }
 .wa-who { min-width: 0; flex: 1; line-height: 1.25; }
 .wa-who b { display: block; font-size: .9375rem; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .wa-who small { display: block; font-size: .75rem; color: var(--wa-soft); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .wa-thread {
   flex: 1; display: flex; flex-direction: column; justify-content: flex-end; gap: .125rem; padding: .75rem .75rem .625rem; overflow: hidden;
   background-color: var(--wa-paper);
-  background-image: radial-gradient(rgb(17 27 33 / .045) 1px, transparent 1.4px), radial-gradient(rgb(17 27 33 / .03) 1px, transparent 1.4px);
+  background-image: radial-gradient(var(--wa-dot) 1px, transparent 1.4px), radial-gradient(var(--wa-dot-2) 1px, transparent 1.4px);
   background-size: 1.375rem 1.375rem, 1.375rem 1.375rem; background-position: 0 0, .6875rem .6875rem;
 }
 .wa-day { align-self: center; margin-bottom: .5rem; }
-.wa-day span { display: inline-block; background: #ffffff; color: var(--wa-soft); font-size: .75rem; padding: .3125rem .75rem; border-radius: .5rem; box-shadow: 0 1px .5px rgb(11 20 26 / .13); }
-.wa-msg { position: relative; max-width: 82%; display: flex; flex-direction: column; filter: drop-shadow(0 1px .5px rgb(11 20 26 / .13)); }
+.wa-day span { display: inline-block; background: var(--wa-chip); color: var(--wa-soft); font-size: .75rem; padding: .3125rem .75rem; border-radius: .5rem; box-shadow: 0 1px .5px var(--wa-shadow); }
+.wa-msg { position: relative; max-width: 82%; display: flex; flex-direction: column; filter: drop-shadow(0 1px .5px var(--wa-shadow)); }
 .wa-msg.wa-tail { margin-top: .5rem; }
 .wa-in { align-self: flex-start; }
 .wa-out { align-self: flex-end; }
@@ -417,15 +494,16 @@ svg { display: block; }
 [dir="rtl"] .wa-out.wa-tail .wa-bubble::before { clip-path: polygon(100% 0, 0 0, 100% 100%); }
 .wa-text { overflow-wrap: anywhere; }
 .wa-meta { float: inline-end; display: inline-flex; align-items: center; gap: .1875rem; margin: .4375rem 0 -.1875rem .625rem; font-size: .6875rem; color: var(--wa-soft); white-space: nowrap; }
+.wa-out .wa-meta { color: var(--wa-soft-out); }
 [dir="rtl"] .wa-meta { margin: .4375rem .625rem -.1875rem 0; }
 .wa .wa-ticks { width: 1rem; height: .6875rem; stroke: var(--wa-tick); stroke-width: 1.5; }
 .wa-in:has(.wa-cta) .wa-bubble { border-end-start-radius: 0; border-end-end-radius: 0; }
-.wa-cta { display: flex; align-items: center; justify-content: center; gap: .375rem; padding: .5625rem .75rem; background: var(--wa-in); border-top: 1px solid #e9edef; border-radius: 0 0 .5rem .5rem; color: var(--wa-link); font-size: .890625rem; font-weight: 500; }
+.wa-cta { display: flex; align-items: center; justify-content: center; gap: .375rem; padding: .5625rem .75rem; background: var(--wa-in); border-top: 1px solid var(--wa-rule); border-radius: 0 0 .5rem .5rem; color: var(--wa-link); font-size: .890625rem; font-weight: 500; }
 .wa .wa-cta svg { width: 1rem; height: 1rem; }
 .wa-bar { display: flex; align-items: center; gap: .375rem; padding: .375rem .375rem .5rem; background: var(--wa-paper); }
-.wa-input { flex: 1; display: flex; align-items: center; gap: .625rem; min-height: 2.625rem; padding: 0 .75rem; background: #ffffff; border-radius: 1.5rem; color: #54656f; font-size: .9375rem; }
-.wa-input span { flex: 1; color: #8696a0; }
-.wa-mic { display: grid; place-items: center; width: 2.75rem; height: 2.75rem; border-radius: 50%; background: var(--wa-green); color: #ffffff; flex: none; }
+.wa-input { flex: 1; display: flex; align-items: center; gap: .625rem; min-height: 2.625rem; padding: 0 .75rem; background: var(--wa-field); border-radius: 1.5rem; color: var(--wa-field-ink); font-size: .9375rem; }
+.wa-input span { flex: 1; color: var(--wa-hint); }
+.wa-mic { display: grid; place-items: center; width: 2.75rem; height: 2.75rem; border-radius: 50%; background: var(--wa-green); color: var(--wa-on-green); flex: none; }
 
 .panel-top { justify-content: flex-start; }
 .panel-kicker { font-family: var(--mono); font-size: .6875rem; letter-spacing: .08em; text-transform: uppercase; color: var(--concrete); }
@@ -471,7 +549,7 @@ svg { display: block; }
 [lang="ar"] .company-say { line-height: 1.5; letter-spacing: 0; font-weight: 500; }
 .company-path { width: 100%; height: clamp(5rem, 12vw, 10rem); margin-top: clamp(1rem, 3vw, 2.5rem); overflow: visible; }
 [dir="rtl"] .company-path { transform: scaleX(-1); }
-.company-path path { fill: none; stroke: var(--carbon); stroke-width: 3; vector-effect: non-scaling-stroke; stroke-linejoin: miter; stroke-dasharray: 1; stroke-dashoffset: 0; }
+.company-path path { fill: none; stroke: var(--text); stroke-width: 3; vector-effect: non-scaling-stroke; stroke-linejoin: miter; stroke-dasharray: 1; stroke-dashoffset: 0; }
 .company-path .company-path-volt { stroke: var(--volt); }
 
 /* cta: the closing call to action, full-bleed Carbon on every page */
@@ -653,7 +731,7 @@ svg { display: block; }
 h4 { margin: 0; }
 
 .how-head { display: grid; gap: 1.5rem; max-width: 50rem; margin-bottom: clamp(2rem, 4vw, 3.25rem); }
-.how-panel { position: relative; overflow: clip; background: var(--carbon); color: var(--dark-text); border-radius: 1rem; padding: clamp(1rem, 2.4vw, 2rem); }
+.how-panel { position: relative; overflow: clip; background: var(--band); color: var(--dark-text); border-radius: 1rem; padding: clamp(1rem, 2.4vw, 2rem); }
 .how-panel::before {
   content: ""; position: absolute; inset: 0; pointer-events: none;
   background-image: radial-gradient(rgb(167 173 181 / .16) 1px, transparent 1px);
@@ -700,9 +778,9 @@ h4 { margin: 0; }
 .fx-wire { position: absolute; inset-inline: 0; top: 50%; border-top: 1px dashed #555d65; }
 .fx-link[data-dir] .fx-wire { border-top: 1px solid rgb(183 243 74 / .55); }
 .fx-pulse { position: absolute; top: calc(50% - .3125rem); inset-inline-start: 0; width: 1.75rem; height: .625rem; border-radius: 50%; background: radial-gradient(closest-side, var(--volt) 20%, rgb(183 243 74 / .45) 55%, transparent); opacity: 0; }
-.fx-station { position: relative; width: .625rem; height: .625rem; border-radius: 50%; background: var(--carbon); border: 1px solid #6b7480; transition: border-color var(--medium) var(--ease), background var(--medium) var(--ease); }
+.fx-station { position: relative; width: .625rem; height: .625rem; border-radius: 50%; background: var(--band); border: 1px solid #6b7480; transition: border-color var(--medium) var(--ease), background var(--medium) var(--ease); }
 .fx-link[data-dir] .fx-station { border-color: var(--volt); background: var(--volt); }
-.fx-via { position: absolute; inset-inline: 0; bottom: calc(50% + .875rem); width: max-content; max-width: 100%; margin-inline: auto; display: grid; justify-items: center; gap: .0625rem; padding: .4375rem .625rem; text-align: center; line-height: 1.25; background: var(--carbon); border: 1px solid var(--dark-line); border-radius: .5rem; transition: border-color var(--medium) var(--ease); }
+.fx-via { position: absolute; inset-inline: 0; bottom: calc(50% + .875rem); width: max-content; max-width: 100%; margin-inline: auto; display: grid; justify-items: center; gap: .0625rem; padding: .4375rem .625rem; text-align: center; line-height: 1.25; background: var(--band); border: 1px solid var(--dark-line); border-radius: .5rem; transition: border-color var(--medium) var(--ease); }
 .fx-via b { font-size: .8125rem; font-weight: 600; }
 .fx-via small { font-size: .6875rem; color: var(--concrete); white-space: nowrap; }
 .fx-link[data-dir] .fx-via { border-color: var(--volt); }
