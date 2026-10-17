@@ -144,13 +144,20 @@ export type Bubble = {
 export type Question = { id: string; q: string; a: string; state?: ContactState; offer?: boolean };
 export type Questions = { eyebrow: string; title: string; items: Question[] };
 
-/** The weekly report as one WhatsApp message, in the engine's own format. */
-export type Report = {
-  caption: Caption;
-  heading: string;
-  week: string;
+/** A figure of the Sunday report: the card and its text are the engine's own sample output
+ * (`_agent/samples/report/`), drawn as the WhatsApp message the owner gets (ReportPhone). */
+export type Report = { caption: Caption };
+
+/** The words around the report's sample message, and each sample card in words. */
+export type ReportCopy = {
+  /** Under the sender's name in the chat's header, as WhatsApp shows a business. */
+  meta: string;
+  /** The day chip above the message: the report goes out on Sunday. */
+  day: string;
+  /** When it goes out, shop time (`report.SEND_HOUR`). */
   time: string;
-  sections: { title: string; lines: string[] }[];
+  /** Each sample's card image, said in words from the card's own facts. */
+  alt: Record<SampleKey, string>;
 };
 
 // ------------------------------------------------------------- ALYR Agent's figure
@@ -408,6 +415,7 @@ export type Copy = {
   };
   footer: { line: string; rights: string; workspace: string; disclaimer: string; doha: string; links: string; products: string; coming: string };
   fig: { label: string; fictional: string };
+  report: ReportCopy;
   agent: AgentFigure;
   home: Home;
   product: DemoSet & {
@@ -531,6 +539,19 @@ const en: Copy = {
     coming: "coming",
   },
   fig: { label: "Fig", fictional: "Sample, fictional bakery" },
+  report: {
+    meta: "Business account",
+    day: "Sunday",
+    time: "09:00",
+    alt: {
+      bakery:
+        "Weekly report card: Qirfa Bakery, 4–10 Oct, marked Sample. Sales QAR 12,005, up 1% on the week before. A bar for each day from Sunday to Saturday beside the week before; the busiest, Tuesday, QAR 2,947. Most ordered: butter croissant, 54 ordered. Owed to you: QAR 13,894 by 6 customers. Visits: 3, 0 no-shows.",
+      salon:
+        "Weekly report card: Dafira Salon, 4–10 Oct, marked Sample. Visits 28, up 33% on the week before. A bar for each day from Sunday to Saturday beside the week before; the busiest, Saturday, 7 visits. No-shows: 3 of 31 due. Booked ahead: 17 in the next 7 days. Wrote to you: 33 customers.",
+      homeservices:
+        "Weekly report card: Zilal Cooling, 4–10 Oct, marked Sample. Jobs 22; the week before, 19. A bar for each day from Sunday to Saturday beside the week before, Friday closed; the busiest, Monday, 5 jobs. No-shows: 1 of 23 due. Owed to you: QAR 13,400 by 2 customers. Booked ahead: 9 in the next 7 days.",
+    },
+  },
   agent: {
     path: "Home",
     switchLabel: "Sample business",
@@ -711,52 +732,7 @@ const en: Copy = {
         },
       ],
       note: "ALYR is in early access. We set it up with each business ourselves, and agree your go-live date at the visit.",
-      report: {
-        caption: { n: "04", text: "The Sunday report on WhatsApp" },
-        heading: "ALYR weekly report: Qirfa Bakery",
-        week: "4 to 10 Oct",
-        time: "09:00",
-        sections: [
-          {
-            title: "Credit accounts",
-            lines: [
-              "Collected: QAR 1,600 from 2 customers (last week QAR 2,100)",
-              "New credit given: QAR 1,830",
-              "Still owed to you today: QAR 11,215 from 5 customers",
-              "Overdue more than 60 days: QAR 2,890 from 2 customers",
-              "Next step: send reminders from Credit accounts.",
-            ],
-          },
-          {
-            title: "Orders",
-            lines: [
-              "Orders received: 66, worth QAR 10,555 (last week 58)",
-              "Customers who ordered again: 24",
-              "Most ordered: Za'atar croissant (41)",
-            ],
-          },
-          {
-            title: "Bookings",
-            lines: [
-              "Customers who came: 6 (last week 4)",
-              "No-shows: 1",
-              "New bookings made: 7",
-              "Reminders ALYR sent for you: 7",
-              "Booked for next week: 5",
-              "Busiest day: Thursday",
-            ],
-          },
-          {
-            title: "Team inbox",
-            lines: [
-              "Customers who wrote: 88 (last week 71)",
-              "New customers: 19",
-              "Replies by your team: 142",
-              "Messages ALYR sent for you: 236",
-            ],
-          },
-        ],
-      },
+      report: { caption: { n: "04", text: "The Sunday report on WhatsApp, for 4⁠–⁠10 Oct" } },
       start: {
         title: "When you start",
         items: [
@@ -1802,52 +1778,8 @@ const en: Copy = {
         eyebrow: "The Sunday report · Early access",
         title: "The same week, on your WhatsApp, every Sunday.",
         body:
-          "At 9:00 on Sunday, last week’s numbers, one section per product, each compared with the week before. If you have not written to ALYR in the last 24 hours, it arrives as one line first: reply REPORT and the rest follows. The first reports go out once WhatsApp approves the report’s wording.",
-        report: {
-          caption: { n: "03", text: "The Sunday report on WhatsApp" },
-          heading: "ALYR weekly report: Qirfa Bakery",
-          week: "4 to 10 Oct",
-          time: "09:00",
-          sections: [
-            {
-              title: "Credit accounts",
-              lines: [
-                "Collected: QAR 1,600 from 2 customers (last week QAR 2,100)",
-                "New credit given: QAR 1,830",
-                "Still owed to you today: QAR 11,215 from 5 customers",
-                "Overdue more than 60 days: QAR 2,890 from 2 customers",
-                "Next step: send reminders from Credit accounts.",
-              ],
-            },
-            {
-              title: "Orders",
-              lines: [
-                "Orders received: 66, worth QAR 10,555 (last week 58)",
-                "Customers who ordered again: 24",
-                "Most ordered: Za'atar croissant (41)",
-              ],
-            },
-            {
-              title: "Bookings",
-              lines: [
-                "Customers who came: 6 (last week 4)",
-                "No-shows: 1",
-                "New bookings made: 7",
-                "Reminders ALYR sent for you: 7",
-                "Booked for next week: 5",
-              ],
-            },
-            {
-              title: "Team inbox",
-              lines: [
-                "Customers who wrote: 88 (last week 71)",
-                "New customers: 19",
-                "Replies by your team: 142",
-                "Messages ALYR sent for you: 236",
-              ],
-            },
-          ],
-        },
+          "At 9:00 on Sunday, a card with last week’s main number against the week before, each day beside the same day the week before, and two or three facts for your kind of business. Under it, a line for each product, what ALYR did for you, and one next step with its rule. The first reports go out once WhatsApp approves the report’s wording.",
+        report: { caption: { n: "03", text: "The Sunday report on WhatsApp, for 4⁠–⁠10 Oct" } },
       },
       rules: {
         eyebrow: "The rules",
@@ -2470,6 +2402,19 @@ const ar: Copy = {
     coming: "قريباً",
   },
   fig: { label: "الشكل", fictional: "مثال: مخبز غير حقيقي" },
+  report: {
+    meta: "حساب أعمال",
+    day: "الأحد",
+    time: "09:00",
+    alt: {
+      bakery:
+        "بطاقة التقرير الأسبوعي: مخبز قرفة، 4–10 أكتوبر، وعليها كلمة «عيّنة». المبيعات 12,005 ر.ق، أكثر بـ1% عن الأسبوع السابق. عمود لكل يوم من الأحد إلى السبت بجانب الأسبوع السابق، وأعلاها الثلاثاء: 2,947 ر.ق. الأكثر طلباً: كرواسون بالزبدة، الكمية 54. المستحق لك: 13,894 ر.ق، و6 عملاء مدينون. الزيارات: 3، والغياب 0.",
+      salon:
+        "بطاقة التقرير الأسبوعي: صالون ضفيرة، 4–10 أكتوبر، وعليها كلمة «عيّنة». الزيارات 28، أكثر بـ33% عن الأسبوع السابق. عمود لكل يوم من الأحد إلى السبت بجانب الأسبوع السابق، وأعلاها السبت: 7 زيارات. الغياب: 3 من أصل 31. المحجوز القادم: 17 خلال 7 أيام. راسلوك: 33 عميلاً.",
+      homeservices:
+        "بطاقة التقرير الأسبوعي: ظلال للتكييف، 4–10 أكتوبر، وعليها كلمة «عيّنة». المهام 22، والأسبوع السابق 19. عمود لكل يوم من الأحد إلى السبت بجانب الأسبوع السابق، والجمعة إجازة، وأعلاها الاثنين: 5 مهام. الغياب: 1 من أصل 23. المستحق لك: 13,400 ر.ق، وعميلان مدينان. المحجوز القادم: 9 خلال 7 أيام.",
+    },
+  },
   agent: {
     path: "الرئيسية",
     switchLabel: "نشاط توضيحي",
@@ -2650,52 +2595,7 @@ const ar: Copy = {
         },
       ],
       note: "ALYR في مرحلة الإطلاق المبكر. نجهّزها مع كل منشأة بأنفسنا، ونتفق معك على موعد بدء التشغيل خلال الزيارة.",
-      report: {
-        caption: { n: "04", text: "تقرير الأحد على واتساب" },
-        heading: "تقرير ALYR الأسبوعي: مخبز قرفة",
-        week: "من 4/10 إلى 10/10",
-        time: "09:00",
-        sections: [
-          {
-            title: "الحسابات الآجلة",
-            lines: [
-              "تم تحصيل 1,600 ر.ق من عميلين (الأسبوع الماضي 2,100 ر.ق)",
-              "آجل جديد: 1,830 ر.ق",
-              "المستحق لك اليوم: 11,215 ر.ق على 5 عملاء",
-              "متأخر أكثر من 60 يوماً: 2,890 ر.ق على عميلين",
-              "الخطوة التالية: أرسل التذكيرات من الحسابات الآجلة.",
-            ],
-          },
-          {
-            title: "الطلبات",
-            lines: [
-              "طلبات وصلتك: 66، بقيمة 10,555 ر.ق (الأسبوع الماضي 58)",
-              "عملاء طلبوا مرة أخرى: 24",
-              "الأكثر طلباً: كرواسون بالزعتر (41)",
-            ],
-          },
-          {
-            title: "الحجوزات",
-            lines: [
-              "حضروا: 6 (الأسبوع الماضي 4)",
-              "لم يحضروا: 1",
-              "حجوزات جديدة: 7",
-              "تذكيرات أرسلتها ALYR نيابة عنك: 7",
-              "محجوز للأسبوع القادم: 5",
-              "أكثر الأيام ازدحاماً: الخميس",
-            ],
-          },
-          {
-            title: "صندوق الفريق",
-            lines: [
-              "عملاء راسلوك: 88 (الأسبوع الماضي 71)",
-              "عملاء جدد: 19",
-              "ردود فريقك: 142",
-              "رسائل أرسلتها ALYR نيابة عنك: 236",
-            ],
-          },
-        ],
-      },
+      report: { caption: { n: "04", text: "تقرير الأحد على واتساب، عن 4⁠–⁠10 أكتوبر" } },
       start: {
         title: "عند البداية",
         items: [
@@ -3742,52 +3642,8 @@ const ar: Copy = {
         eyebrow: "تقرير الأحد · إطلاق مبكر",
         title: "الأسبوع نفسه على واتساب، صباح كل يوم أحد.",
         body:
-          "الساعة 9:00 صباح الأحد تصلك أرقام الأسبوع الماضي، قسم لكل منتج، وفي كل قسم مقارنة بالأسبوع الذي قبله. وإن لم تراسل ALYR خلال آخر 24 ساعة، يصلك أولاً في سطر واحد: أرسل «تقرير» فيصلك الباقي. وتبدأ أولى التقارير بعد موافقة واتساب على صياغة التقرير.",
-        report: {
-          caption: { n: "03", text: "تقرير الأحد على واتساب" },
-          heading: "تقرير ALYR الأسبوعي: مخبز قرفة",
-          week: "من 4/10 إلى 10/10",
-          time: "09:00",
-          sections: [
-            {
-              title: "الحسابات الآجلة",
-              lines: [
-                "تم تحصيل 1,600 ر.ق من عميلين (الأسبوع الماضي 2,100 ر.ق)",
-                "آجل جديد: 1,830 ر.ق",
-                "المستحق لك اليوم: 11,215 ر.ق على 5 عملاء",
-                "متأخر أكثر من 60 يوماً: 2,890 ر.ق على عميلين",
-                "الخطوة التالية: أرسل التذكيرات من الحسابات الآجلة.",
-              ],
-            },
-            {
-              title: "الطلبات",
-              lines: [
-                "طلبات وصلتك: 66، بقيمة 10,555 ر.ق (الأسبوع الماضي 58)",
-                "عملاء طلبوا مرة أخرى: 24",
-                "الأكثر طلباً: كرواسون بالزعتر (41)",
-              ],
-            },
-            {
-              title: "الحجوزات",
-              lines: [
-                "حضروا: 6 (الأسبوع الماضي 4)",
-                "لم يحضروا: 1",
-                "حجوزات جديدة: 7",
-                "تذكيرات أرسلتها ALYR نيابة عنك: 7",
-                "محجوز للأسبوع القادم: 5",
-              ],
-            },
-            {
-              title: "صندوق الفريق",
-              lines: [
-                "عملاء راسلوك: 88 (الأسبوع الماضي 71)",
-                "عملاء جدد: 19",
-                "ردود فريقك: 142",
-                "رسائل أرسلتها ALYR نيابة عنك: 236",
-              ],
-            },
-          ],
-        },
+          "الساعة 9:00 صباح الأحد تصلك بطاقة فيها أهم رقم في أسبوعك الماضي مقارنة بالأسبوع الذي قبله، وكل يوم بجانب اليوم نفسه من الأسبوع الذي قبله، واثنان أو ثلاثة من أهم ما يخص نوع نشاطك. وتحتها سطر لكل منتج، وما أنجزته ALYR عنك، وخطوة تالية واحدة مع قاعدتها. وتبدأ أولى التقارير بعد موافقة واتساب على صياغة التقرير.",
+        report: { caption: { n: "03", text: "تقرير الأحد على واتساب، عن 4⁠–⁠10 أكتوبر" } },
       },
       rules: {
         eyebrow: "القواعد",

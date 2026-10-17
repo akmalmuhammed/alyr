@@ -1,7 +1,8 @@
 import { Rich } from "../_agent/AgentDashboard";
 import type { AgentView } from "../_agent/types";
-import { copy, type Caption, type Locale, type Report } from "./copy";
+import { copy, type Caption, type Locale, type SampleKey } from "./copy";
 import { CxTop, TickPath } from "./Frames";
+import type { ReportWords } from "./ReportPhone";
 import { OFFER_LIVE } from "./site";
 import { rich } from "./Text";
 import "./drawings.css";
@@ -61,27 +62,14 @@ export function TrackScreen({ sample, lang }: { sample: Track; lang: Locale }) {
   );
 }
 
-/** The weekly report as the owner reads it: one WhatsApp message in the product's words.
- * Lines arrive one by one under `.motion` (home.css), once. */
-export function ReportBubble({ report }: { report: Report }) {
-  let line = 0;
-  return (
-    <div className="d-report" aria-hidden="true">
-      <p className="d-report-text" dir="auto">
-        <span className="d-rl d-report-head" style={{ "--i": line++ } as React.CSSProperties}>{rich(report.heading)}</span>
-        <span className="d-rl" style={{ "--i": line++ } as React.CSSProperties}>{report.week}</span>
-        {report.sections.map((section) => (
-          <span key={section.title} className="d-report-sec">
-            <span className="d-rl d-report-title" style={{ "--i": line++ } as React.CSSProperties}>{section.title}</span>
-            {section.lines.map((text) => (
-              <span key={text} className="d-rl" style={{ "--i": line++ } as React.CSSProperties}>{rich(text)}</span>
-            ))}
-          </span>
-        ))}
-        <span className="d-time" dir="auto">{report.time}</span>
-      </p>
-    </div>
-  );
+/** The words around the Sunday report's message (ReportPhone), for each sample. */
+export function reportWords(locale: Locale): Record<SampleKey, ReportWords> {
+  const r = copy[locale].report;
+  const samples = copy[locale].agent.samples;
+  const words = (key: SampleKey): ReportWords => ({
+    meta: r.meta, day: r.day, time: r.time, alt: r.alt[key], monogram: samples[key].monogram,
+  });
+  return { bakery: words("bakery"), salon: words("salon"), homeservices: words("homeservices") };
 }
 
 // ----------------------------------------------- a corner of each product's screen
