@@ -4,7 +4,7 @@ How the work is divided, and the one goal for this stage, are in [operating-mode
 
 Read this first in a new session, on any machine. It is the hand-over note between sessions: what works, what is next, and what is waiting on the founder. Update it in the same pull request as the work. Linear (team `Alyrtech`, project `Alyr Launch`) holds the detail; this page is the summary.
 
-Last updated: 17 Oct 2026, after prices set per client from the back office (ALY-78, D-032).
+Last updated: 17 Oct 2026, after the internal tool's first phase (ALY-80, D-033).
 
 ## What works today
 
@@ -29,15 +29,16 @@ Last updated: 17 Oct 2026, after prices set per client from the back office (ALY
 | Customer pages from chat links (order `/s/`, booking `/b/`, payment `/pay/`, tracking `/t/`) in the workspace design, light and dark, English and Arabic, phone first | Built (ALY-73) | `apps/web/app/(product)/_customer/` |
 | Order tracking: every order message inside the 24-hour window links to `/t/{shop}/{order}` with the steps and times, who is looking after it, the items and a pay button if unpaid | Built (ALY-73). Approved templates cannot carry the link, so a notice sent after the window arrives without it | `modules/orders/service.py`, `routes/track.py` |
 | `scripts/demo.sh up / check / reset / down` and `python -m alyr.doctor`: start the demo pieces and check database, Meta token, templates, tunnel and public pages | Built (ALY-73) | `scripts/demo.sh`, `apps/api/src/alyr/doctor.py` |
-| ALYR back office at `/ops`: clients and their businesses with each one's onboarding step, a quote per client (edit, publish, see it accepted), the price list, which business types may sign up on their own and whether their price shows at once, the promise, help requests, create a shop for a new or existing client | Built (D-027, D-032); ALYR staff only (`platform_admins`) | `routes/admin.py`, `core/pricing.py`, `apps/web/app/(product)/ops/` |
+| ALYR console at `/ops` (D-033, plan in `docs/internal-tool.md`): **Today** (one queue: clients to price, prices unanswered for 2+ days, help requests, go-live blockers, shops stuck in onboarding, failing messages as counts; set aside for later), staff list, an audit log of every staff change that cannot be edited, back-office sign-ins of 12 hours, a sidebar on a laptop and a tab bar on a phone. Also: clients and their businesses with each one's onboarding step, a quote per client (edit, publish, see it accepted), the price list, which business types may sign up on their own and whether their price shows at once, the promise, help requests, create a shop for a new or existing client | Built (D-027, D-032); ALYR staff only (`platform_admins`) | `routes/admin.py`, `core/pricing.py`, `apps/web/app/(product)/ops/` |
 | Demo page: chat simulator plus workspace tabs, now at `/whatsapp` | Built | `apps/web/app/(product)/whatsapp/page.tsx` |
 | Self-serve onboarding at `/start`: email code, type of business, a filled-in price list and opening hours to edit, a private test line to book as a customer, the plan, a go-live checklist, then the workspace. Phone and laptop layouts, English and Arabic | Built (D-031) for appointment businesses (salon, spa, clinic, home services). Restaurants, shops, wholesale and document offices get their business created and a setup request for ALYR. Sign-up is closed outside a local machine until the founder opens it | `apps/api/src/alyr/core/onboarding.py`, `presets.py`, `apps/web/app/(product)/start/` |
 
-Tests: 245, all passing. CI runs api, web and a secrets scan on every pull request.
+Tests: 253, all passing. CI runs api, web and a secrets scan on every pull request.
 
 ## Next on the build side, in order
 
-0. **Onboarding (ALY-76, D-031) and per-client pricing (ALY-78, D-032):** built. Left for later phases: sign-in by WhatsApp code, the advisor's tablet mode, the restaurant and shop paths, owners adding a second business themselves, invoices and taking payment, telling the owner their price is ready.
+0. **The internal tool (ALY-79, D-033):** phase 1 of 17 built. Next: Client 360 (ALY-81), business controls (ALY-82), onboarding board and tickets (ALY-83), leads (ALY-84), billing (ALY-85), switches (ALY-86), then levels 2 and 3.
+1. **Onboarding (ALY-76, D-031) and per-client pricing (ALY-78, D-032):** built. Left for later phases: sign-in by WhatsApp code, the advisor's tablet mode, the restaurant and shop paths, owners adding a second business themselves, invoices and taking payment, telling the owner their price is ready.
 
 1. **Bookable staff or resources (ALY-27),** so a salon or clinic can serve more than one customer at a time; then services and opening-hours screens.
 1. **Product screens on ALYR tokens**, so the workspace matches the public site.

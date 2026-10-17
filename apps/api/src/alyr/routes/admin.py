@@ -2,13 +2,15 @@
 the setup steps shops have asked us to do. Also the price list, each client's quote,
 and the switches for which businesses may sign up on their own (D-032).
 
-Only ALYR's own staff (the `platform_admins` list) may call these. They work across
-shops through a few database functions that refuse to run unless this module has
-declared, inside the same transaction, that it checked the caller.
+Only ALYR's own staff (the `platform_admins` list) may call these, signed in within the
+last 12 hours. They work across shops through a few database functions that refuse to
+run unless this module has declared, inside the same transaction, that it checked the
+caller. Every change is written to the audit log in the same transaction (D-033).
 """
 
 import re
 from contextlib import asynccontextmanager
+from datetime import UTC, datetime, timedelta
 from typing import Literal
 from uuid import UUID
 
@@ -18,7 +20,7 @@ from pydantic import BaseModel, Field
 
 from alyr import catalog, presets
 from alyr.config import get_settings
-from alyr.core import pricing
+from alyr.core import auth, backoffice, pricing
 from alyr.core.auth import Staff
 from alyr.routes.deps import current_staff
 
@@ -93,6 +95,16 @@ class MoveBusiness(BaseModel):
     client_id: UUID
 
 
+class Snooze(BaseModel):
+    key: str = Field(min_length=3, max_length=120)
+    days: int = Field(default=1, ge=1, le=30)
+
+
+class NewStaff(BaseModel):
+    email: str = Field(min_length=3, max_length=200)
+    name: str = Field(default="", max_length=120)
+
+
 async def platform_admin(request: Request, staff: Staff = Depends(current_staff)) -> Staff:
     """The caller must be signed in as ALYR staff. On a local machine with the open demo
     on, the unsigned demo user counts as ALYR staff so the back office can be tried."""
@@ -107,7 +119,21 @@ async def platform_admin(request: Request, staff: Staff = Depends(current_staff)
         )
     if not allowed:
         raise HTTPException(status_code=403, detail="ALYR staff only")
+    # The back office sees every client, so its sign-in is short-lived.
+    started = await auth.session_started(
+        request.app.state.db, request.cookies.get(auth.COOKIE, "")
+    )
+    if started is None or started < _hours_ago(backoffice.STAFF_SESSION_HOURS):
+        raise HTTPException(
+            status_code=401,
+            detail="sign in again: back-office sign-ins last "
+            f"{backoffice.STAFF_SESSION_HOURS} hours",
+        )
     return staff
+
+
+def _hours_ago(hours: int) -> datetime:
+    return datetime.now(UTC) - timedelta(hours=hours)
 
 
 async def _admin_call(request: Request, sql: str, *args, fetch: str = "fetch"):
@@ -146,7 +172,7 @@ async def businesses(request: Request, _: Staff = Depends(platform_admin)) -> di
 
 @router.post("/businesses")
 async def create_business(
-    body: NewBusiness, request: Request, _: Staff = Depends(platform_admin)
+    body: NewBusiness, request: Request, staff: Staff = Depends(platform_admin)
 ) -> dict:
     slug = body.slug.strip().lower()
     if not _SLUG.match(slug):
@@ -161,18 +187,21 @@ async def create_business(
             raise HTTPException(status_code=422, detail=f"{key} cannot be switched on")
         modules += [m for m in product.modules if m not in modules]
     try:
-        tenant_id = await _admin_call(
-            request,
-            "select admin_create_business($1, $2, $3, $4, $5, $6, $7)",
-            body.name.strip(),
-            body.name_ar.strip(),
-            slug,
-            email,
-            body.owner_name.strip(),
-            modules,
-            body.client_id,
-            fetch="fetchval",
-        )
+        async with _back_office(request) as conn:
+            tenant_id = await conn.fetchval(
+                "select admin_create_business($1, $2, $3, $4, $5, $6, $7)",
+                body.name.strip(), body.name_ar.strip(), slug, email,
+                body.owner_name.strip(), modules, body.client_id,
+            )
+            client_id = await conn.fetchval(
+                "select client_id from tenants where id = $1", tenant_id
+            )
+            await backoffice.audit(
+                conn, staff, "business.created", "business", tenant_id,
+                client_id=client_id, business_id=tenant_id,
+                detail={"name": body.name.strip(), "slug": slug, "owner": email,
+                        "modules": modules},
+            )
     except asyncpg.UniqueViolationError as error:
         raise HTTPException(status_code=409, detail="that short name is taken") from error
     except asyncpg.ForeignKeyViolationError as error:
@@ -201,26 +230,33 @@ async def setup_requests(
 
 
 @router.post("/setup-requests/{request_id}/done")
-async def resolve(request_id: UUID, request: Request, _: Staff = Depends(platform_admin)) -> dict:
-    done = await _admin_call(
-        request, "select admin_resolve_setup_request($1)", request_id, fetch="fetchval"
-    )
-    if not done:
-        raise HTTPException(status_code=404, detail="no open request with that id")
+async def resolve(
+    request_id: UUID, request: Request, staff: Staff = Depends(platform_admin)
+) -> dict:
+    async with _back_office(request) as conn:
+        if not await conn.fetchval("select admin_resolve_setup_request($1)", request_id):
+            raise HTTPException(status_code=404, detail="no open request with that id")
+        await backoffice.audit(conn, staff, "request.done", "request", request_id)
     return {"status": "done"}
 
 
 @router.post("/businesses/{business_id}/client")
 async def move_business(
-    business_id: UUID, body: MoveBusiness, request: Request, _: Staff = Depends(platform_admin)
+    business_id: UUID, body: MoveBusiness, request: Request,
+    staff: Staff = Depends(platform_admin),
 ) -> dict:
     """Put a business under another client, for an owner who signed up twice."""
-    moved = await _admin_call(
-        request, "select admin_set_business_client($1, $2)", business_id, body.client_id,
-        fetch="fetchval",
-    )
-    if not moved:
-        raise HTTPException(status_code=404, detail="no such business or client")
+    async with _back_office(request) as conn:
+        before = await conn.fetchval("select client_id from tenants where id = $1", business_id)
+        if not await conn.fetchval(
+            "select admin_set_business_client($1, $2)", business_id, body.client_id
+        ):
+            raise HTTPException(status_code=404, detail="no such business or client")
+        await backoffice.audit(
+            conn, staff, "business.moved", "business", business_id,
+            client_id=body.client_id, business_id=business_id,
+            detail={"from_client": str(before) if before else None},
+        )
     return {"moved": True}
 
 
@@ -250,10 +286,20 @@ async def save_item(
 ) -> dict:
     try:
         async with _back_office(request) as conn:
-            return await pricing.save_item(
+            before = await conn.fetchrow(
+                "select price, active from price_items where key = $1", key
+            )
+            saved = await pricing.save_item(
                 conn, key, body.name, body.name_ar, body.kind, body.price, body.applies,
                 body.active, body.sort, _by(staff),
             )
+            await backoffice.audit(
+                conn, staff, "price_item.saved", "price_item", key,
+                detail={"before": dict(before) if before else None,
+                        "after": {"price": body.price, "active": body.active,
+                                  "applies": body.applies, "kind": body.kind}},
+            )
+            return saved
     except pricing.PricingError as error:
         raise HTTPException(status_code=422, detail=str(error)) from error
 
@@ -264,7 +310,12 @@ async def save_type(
 ) -> dict:
     try:
         async with _back_office(request) as conn:
+            before = (await pricing.type_settings(conn)).get(key)
             await pricing.save_type(conn, key, body.availability, body.price_mode, _by(staff))
+            await backoffice.audit(
+                conn, staff, "business_type.saved", "business_type", key,
+                detail={"before": before, "after": body.model_dump()},
+            )
             return (await pricing.type_settings(conn))[key]
     except pricing.PricingError as error:
         raise HTTPException(status_code=422, detail=str(error)) from error
@@ -275,7 +326,12 @@ async def save_promise(
     body: Promise, request: Request, staff: Staff = Depends(platform_admin)
 ) -> dict:
     async with _back_office(request) as conn:
+        before = await pricing.promise(conn)
         await pricing.save_promise(conn, body.en, body.ar, _by(staff))
+        await backoffice.audit(
+            conn, staff, "promise.saved", "setting", "promise",
+            detail={"before": before, "after": body.model_dump()},
+        )
         return await pricing.promise(conn)
 
 
@@ -296,10 +352,15 @@ async def client(client_id: UUID, request: Request, _: Staff = Depends(platform_
 
 @router.patch("/clients/{client_id}")
 async def change_client(
-    client_id: UUID, body: ClientChange, request: Request, _: Staff = Depends(platform_admin)
+    client_id: UUID, body: ClientChange, request: Request,
+    staff: Staff = Depends(platform_admin),
 ) -> dict:
     try:
         async with _back_office(request) as conn:
+            await backoffice.audit(
+                conn, staff, "client.saved", "client", client_id, client_id=client_id,
+                detail=body.model_dump(),
+            )
             await pricing.save_client(
                 conn, client_id, body.name, body.contact_name, body.contact_email,
                 body.contact_phone, body.note, body.price_mode,
@@ -315,7 +376,11 @@ async def new_quote(
 ) -> dict:
     try:
         async with _back_office(request) as conn:
-            await pricing.new_quote(conn, client_id, body.start_from, _by(staff))
+            quote_id = await pricing.new_quote(conn, client_id, body.start_from, _by(staff))
+            await backoffice.audit(
+                conn, staff, "quote.created", "quote", quote_id, client_id=client_id,
+                detail={"start_from": body.start_from},
+            )
             return await pricing.client(conn, client_id)
     except pricing.PricingError as error:
         raise HTTPException(status_code=409, detail=str(error)) from error
@@ -341,6 +406,13 @@ async def save_quote(
                 conn, quote_id, body.period_months, body.discount_pct, body.show_promise,
                 body.note, [line.model_dump() for line in body.lines], _by(staff),
             )
+            lines = [line.model_dump(mode="json") for line in body.lines]
+            await backoffice.audit(
+                conn, staff, "quote.saved", "quote", quote_id, client_id=client_id,
+                detail={"period_months": body.period_months, "discount_pct": body.discount_pct,
+                        "totals": pricing.totals(lines, body.period_months, body.discount_pct),
+                        "lines": lines},
+            )
             return await pricing.client(conn, client_id)
     except pricing.PricingError as error:
         raise HTTPException(status_code=409, detail=str(error)) from error
@@ -355,6 +427,86 @@ async def quote_action(
         async with _back_office(request) as conn:
             client_id = await _client_of(conn, quote_id)
             await pricing.set_quote_status(conn, quote_id, action, _by(staff))
+            await backoffice.audit(
+                conn, staff, f"quote.{action}", "quote", quote_id, client_id=client_id
+            )
             return await pricing.client(conn, client_id)
     except pricing.PricingError as error:
         raise HTTPException(status_code=409, detail=str(error)) from error
+
+
+# ── today, staff and the audit log (D-033) ────────────────
+
+
+@router.get("/today")
+async def today(request: Request, _: Staff = Depends(platform_admin)) -> dict:
+    async with _back_office(request) as conn:
+        return await backoffice.today(conn)
+
+
+@router.post("/today/snooze")
+async def snooze(body: Snooze, request: Request, staff: Staff = Depends(platform_admin)) -> dict:
+    try:
+        async with _back_office(request) as conn:
+            until = await backoffice.snooze(conn, body.key, body.days, staff.email)
+            await backoffice.audit(
+                conn, staff, "today.snoozed", "today_item", body.key, detail={"days": body.days}
+            )
+    except backoffice.BackOfficeError as error:
+        raise HTTPException(status_code=422, detail=str(error)) from error
+    return {"until": until.isoformat()}
+
+
+@router.post("/today/unsnooze")
+async def unsnooze(body: Snooze, request: Request, staff: Staff = Depends(platform_admin)) -> dict:
+    async with _back_office(request) as conn:
+        await backoffice.unsnooze(conn, body.key)
+        await backoffice.audit(conn, staff, "today.unsnoozed", "today_item", body.key)
+    return {"ok": True}
+
+
+@router.get("/staff")
+async def staff_list(request: Request, me: Staff = Depends(platform_admin)) -> dict:
+    async with _back_office(request) as conn:
+        return {"staff": await backoffice.staff_list(conn), "me": me.email}
+
+
+@router.post("/staff")
+async def add_staff(
+    body: NewStaff, request: Request, staff: Staff = Depends(platform_admin)
+) -> dict:
+    try:
+        async with _back_office(request) as conn:
+            await backoffice.add_staff(conn, body.email, body.name, _by(staff))
+            await backoffice.audit(
+                conn, staff, "staff.added", "staff", body.email.strip().lower(),
+                detail={"name": body.name},
+            )
+            return {"staff": await backoffice.staff_list(conn)}
+    except backoffice.BackOfficeError as error:
+        raise HTTPException(status_code=422, detail=str(error)) from error
+
+
+@router.delete("/staff/{email}")
+async def remove_staff(
+    email: str, request: Request, staff: Staff = Depends(platform_admin)
+) -> dict:
+    if email.strip().lower() == (staff.email or "").lower():
+        raise HTTPException(status_code=422, detail="you cannot remove yourself")
+    try:
+        async with _back_office(request) as conn:
+            if not await backoffice.remove_staff(conn, email):
+                raise HTTPException(status_code=404, detail="not on the staff list")
+            await backoffice.audit(conn, staff, "staff.removed", "staff", email.strip().lower())
+            return {"staff": await backoffice.staff_list(conn)}
+    except backoffice.BackOfficeError as error:
+        raise HTTPException(status_code=422, detail=str(error)) from error
+
+
+@router.get("/audit")
+async def audit_log(
+    request: Request, client_id: UUID | None = None,
+    limit: int = Query(200, ge=1, le=1000), _: Staff = Depends(platform_admin),
+) -> dict:
+    async with _back_office(request) as conn:
+        return {"entries": await backoffice.audit_log(conn, client_id, limit)}
