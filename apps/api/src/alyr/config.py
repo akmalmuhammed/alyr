@@ -42,6 +42,15 @@ class Settings(BaseSettings):
     meta_phone_number_id: str = ""
     meta_waba_id: str = ""
     meta_graph_version: str = "v21.0"
+    # The Meta app's ID. Only `templates_sync` needs it, to upload the sample image a
+    # template with an image header is reviewed with (Resumable Upload API).
+    meta_app_id: str = ""
+
+    # The weekly report card (ALY-99). Off: outside the 24-hour window the report goes as
+    # the text-only `weekly_report` template, and REPORT brings the card. On (once Meta
+    # has approved `weekly_report_card` in both languages): the card goes as the
+    # template's image header. Inside the window the card goes either way.
+    report_card_template: bool = False
 
     # Email ALYR sends (sign-in codes) goes through Resend (D-029). Empty key: no email
     # is sent, and on a local machine the sign-in page shows the code instead.

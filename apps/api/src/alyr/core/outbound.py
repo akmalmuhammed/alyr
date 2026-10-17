@@ -19,6 +19,11 @@ class SendResult:
     blocked: str | None = None
 
 
+def _has_image_header(name: str) -> bool:
+    template = templates.CATALOGUE.get(name)
+    return template is not None and template.header == "image"
+
+
 class Outbound:
     """The only way a message leaves Alyr. Modules hand messages here; they never call a
     channel themselves. Meta's rules are enforced here, in one place: free-form text only
@@ -49,7 +54,7 @@ class Outbound:
         if contact is None:
             raise LookupError("no such contact for this tenant")
         blocked = consent.refusal(contact, message)
-        kind, body = message.kind, message.body
+        kind, body, image = message.kind, message.body, message.image
         payload: dict = {}
         if message.choices:
             payload["choices"] = [{"id": c.id, "title": c.title} for c in message.choices]
@@ -62,21 +67,33 @@ class Outbound:
             # original, so a customer who said stop still gets nothing. Marketing always
             # stays a template, so every offer is counted and can be opted out of.
             if contact["window_open"] and message.template_category != "marketing":
-                kind = "text"
-                payload["sent_as"] = "text"
-            elif message.template_params:
-                params = [templates.clean(value) for value in message.template_params]
-                payload["params"] = params
-                payload["lang"] = message.lang
-                # Record the wording the customer will actually receive, which is the
-                # approved template's, not the module's own.
-                body = templates.render(message.template_name, message.lang, params) or body
+                # With an image, the ordinary message is that image with the text under it.
+                kind = "image" if image else "text"
+                payload["sent_as"] = kind
+            else:
+                if message.template_params:
+                    params = [templates.clean(value) for value in message.template_params]
+                    payload["params"] = params
+                    payload["lang"] = message.lang
+                    # Record the wording the customer will actually receive, which is the
+                    # approved template's, not the module's own.
+                    body = templates.render(message.template_name, message.lang, params) or body
+                # A template without an image header cannot carry the image.
+                if not _has_image_header(message.template_name):
+                    image = b""
         message_id = await conn.fetchval(
             "insert into messages (contact_id, direction, kind, body, payload, status, error) "
             "values ($1, 'out', $2, $3, $4, $5, $6) returning id",
             message.to, kind, body, payload,
             "blocked" if blocked else "queued", blocked,
         )
+        if image and not blocked:
+            # Kept beside the message; the delivering job uploads it to the channel.
+            await conn.execute(
+                "insert into message_media (message_id, content_type, data) "
+                "values ($1, 'image/png', $2)",
+                message_id, image,
+            )
         if not blocked:
             await jobs.enqueue(conn, SEND, {"message_id": str(message_id)})
         return SendResult(message_id, blocked)
@@ -100,8 +117,20 @@ class Outbound:
                 "order by (number_id = $1) desc nulls last, channel limit 1",
                 row["number_id"],
             )
+            image = await conn.fetchrow(
+                "select content_type, data from message_media where message_id = $1",
+                message_id,
+            )
         if number is None:
             raise RuntimeError("tenant has no connected number")
+        channel = self.channels[number["channel"]]
+        media_id = ""
+        if image is not None:
+            # Uploaded at send time, so no image is ever hosted in public. A retry uploads
+            # again: Meta's media IDs cost nothing and expire on their own after 30 days.
+            media_id = await channel.upload_media(
+                number["number_id"], bytes(image["data"]), image["content_type"]
+            )
         stored = row["payload"]
         message = OutboundMessage(
             to=row["contact_id"], kind=row["kind"], body=row["body"],
@@ -110,8 +139,9 @@ class Outbound:
             template_category=stored.get("category"),
             template_params=tuple(stored.get("params", [])),
             lang=stored.get("lang", "en"),
+            media_id=media_id,
         )
-        provider_id = await self.channels[number["channel"]].send(
+        provider_id = await channel.send(
             number["number_id"], message,
             Address(phone=row["phone"], user_id=row["wa_user_id"]),
         )

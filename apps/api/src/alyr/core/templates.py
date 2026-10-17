@@ -26,6 +26,13 @@ class Template:
     ar: str
     # What each blank holds, in order. Used as the sample values Meta asks for at review.
     samples: tuple[str, ...]
+    # "image" when the template opens with an image header, filled at send time with an
+    # image uploaded through the Media API. Meta asks for a sample image at review:
+    # `header_sample` names it, relative to this repository's root, `{lang}` for en or ar.
+    header: str = ""
+    header_sample: str = ""
+    # Sample values in Arabic for the Arabic template, when they differ.
+    samples_ar: tuple[str, ...] = ()
 
 
 CATALOGUE: dict[str, Template] = {
@@ -143,6 +150,39 @@ CATALOGUE: dict[str, Template] = {
             "QAR 4,300 collected; 38 orders worth QAR 5,640; 41 visits, 3 no-shows",
         ),
     ),
+    # The report card (ALY-99): the same report as a branded image with a short text.
+    # Sent outside the window once Meta has approved it and ALYR_REPORT_CARD_TEMPLATE is
+    # on; until then "weekly_report" above is the fallback. Inside the window the card goes
+    # as an ordinary image with the text under it, so no approval is needed there.
+    "weekly_report_card": Template(
+        "utility",
+        "Your ALYR weekly report for {{1}}, {{2}}. {{3}} By product: {{4}}. "
+        "Next step: {{5}}. The card above shows the week day by day. "
+        "Send REPORT to get this report again.",
+        "تقريرك الأسبوعي من ALYR لـ {{1}}، {{2}}. {{3}} حسب المنتج: {{4}}. "
+        "الخطوة التالية: {{5}}. البطاقة أعلاه تعرض الأسبوع يوماً بيوم. "
+        "أرسل «تقرير» لتصلك هذه الرسالة مرة أخرى.",
+        # The fictional Qirfa Bakery's report for 4 to 10 October (`alyr.report_samples`).
+        (
+            "Qirfa Bakery", "4–10 Oct",
+            "Last week: 68 orders, QAR 12,005. Orders up 1%, sales up 1% on the week before.",
+            "ALYR Chat: 68 orders, QAR 12,005 · ALYR Bookings: 3 visits, 0 no-shows · "
+            "ALYR Accounts: QAR 13,894 owed by 6 customers",
+            "Send reminders: QAR 3,501 owed 30+ days, not reminded in 7 days (rule · owed "
+            "30+ days, no promise, no reminder in 7 days · 2 customers)",
+        ),
+        header="image",
+        header_sample="apps/web/app/_agent/samples/report/bakery.{lang}.png",
+        samples_ar=(
+            "مخبز قرفة", "4–10 أكتوبر",
+            "الأسبوع الماضي: 68 طلباً، 12,005 ر.ق. الطلبات أكثر بـ1%، والمبيعات أكثر بـ1% "
+            "عن الأسبوع الذي قبله.",
+            "ALYR Chat: 68 طلباً، 12,005 ر.ق · ALYR Bookings: 3 زيارات، والغياب 0 · "
+            "ALYR Accounts: 13,894 ر.ق مستحقة، و6 عملاء لم يسددوا بعد",
+            "أرسل التذكيرات: 3,501 ر.ق مستحقة منذ 30 يوماً أو أكثر، دون تذكير منذ 7 أيام "
+            "(القاعدة · مستحق منذ 30 يوماً أو أكثر، دون وعد ودون تذكير خلال 7 أيام · عميلان)",
+        ),
+    ),
     "booking_reminder": Template(
         "utility",
         "Reminder: booking {{1}} at {{2}} is at {{3}}. See you soon.",
@@ -170,11 +210,15 @@ def render(name: str, lang: str, params: list[str] | tuple[str, ...]) -> str | N
     return text
 
 
-def notice(to: UUID, name: str, lang: str, body: str, *params: object) -> OutboundMessage:
+def notice(
+    to: UUID, name: str, lang: str, body: str, *params: object, image: bytes = b""
+) -> OutboundMessage:
     """A notice to a customer who may have last written more than 24 hours ago.
 
     `body` is the module's own wording, used while the window is open. `params` fill
-    the template's blanks, used when it is closed."""
+    the template's blanks, used when it is closed. With an `image`, the notice inside the
+    window is that image with `body` under it; outside it, the image fills the
+    template's image header, and is left out if the template has none."""
     template = CATALOGUE[name]
     if len(params) != len(template.samples):
         raise ValueError(f"{name} takes {len(template.samples)} values, got {len(params)}")
@@ -182,5 +226,5 @@ def notice(to: UUID, name: str, lang: str, body: str, *params: object) -> Outbou
         to=to, kind="template", body=body, template_name=name,
         template_category=template.category,  # type: ignore[arg-type]
         template_params=tuple(clean(value) for value in params),
-        lang="ar" if lang == "ar" else "en",
+        lang="ar" if lang == "ar" else "en", image=image,
     )
