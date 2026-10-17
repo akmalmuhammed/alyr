@@ -26,6 +26,8 @@ main .ag { font-weight: 400; }
   transition: color var(--fast) var(--ease), background var(--fast) var(--ease);
 }
 .af-opt:hover { color: var(--text); }
+/* on the narrowest phones the three samples still fit on one row */
+@media (max-width: 24rem) { .af-opt { padding: 0 .625rem; } }
 .af-opt[aria-pressed="true"] { background: var(--text); color: var(--canvas); }
 .af-opt:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
 
@@ -81,7 +83,8 @@ main .ag { font-weight: 400; }
 }
 
 /* -------------------------------------------------- hero: the Carbon plate */
-.afig-hero { margin-top: clamp(2rem, 4vw, 3rem); }
+/* clipped sideways, so the plate's 45-degree entrance never widens the page on a phone */
+.afig-hero { margin-top: clamp(2rem, 4vw, 3rem); overflow-x: clip; }
 .afig-hero .af-stage {
   display: grid; grid-template-columns: minmax(0, 1fr) 18.5rem; column-gap: 1.75rem; align-items: start;
   padding: 2.5rem 2.5rem 0; isolation: isolate;

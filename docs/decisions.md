@@ -41,6 +41,7 @@ Status: **Accepted** (in force), **Proposed** (waiting for the founder), **Super
 | D-033 | The internal tool: one console for every client, built in three levels; staff never see customer conversations | Accepted |
 | D-034 | Product first and paid from the first customer; the homepage leads with what ALYR sells today | Accepted |
 | D-035 | ALYR is a suite of products led by ALYR Agent: Chat, Bookings, Agent, Accounts, Payroll coming; the workspace home becomes the Agent dashboard | Accepted |
+| D-037 | The public site presents the suite: the homepage leads with ALYR Agent at work, and every live product has its own page | Accepted |
 
 ---
 
@@ -648,3 +649,19 @@ There is no separate Pay product: payment links stay a module of Chat and Bookin
 - **Why.** The owner sees in one sentence how the week is going, what needs them, and what ALYR did. That is the weekly proof of the subscription on a month-to-month term, and the same screen is what the homepage shows.
 
 **Not built yet.** The suggestions beyond the 20 rules (for example answered after hours), tapping a number to open its week on a phone, the product pages `/bookings`, `/agent` and `/accounts`, and the homepage figure itself (the site builder takes the component in showcase mode and the samples).
+
+## D-037 · The public site presents the suite: the homepage leads with ALYR Agent at work, and every live product has its own page
+**Date** 17 Oct 2026 · **Status** Accepted (founder, 17 Oct, in conversation; recorded in `docs/agent-dashboard/07-site-brief.md` §1) · Linear ALY-99 · Updates D-026 and D-034. Numbered D-037 because the open PRs #51 and #52 both take D-036; renumber at merge if needed.
+
+**The decision.**
+- **Five pages in each language:** the homepage, `/chat`, `/bookings`, `/agent`, `/accounts` (`/ar/...` in Arabic). ALYR Payroll is listed as coming, with no page until it is built. D-026 had two (the homepage and `/chat`).
+- **A Products menu in the header** lists the suite in its fixed order (Chat, Bookings, Agent, Accounts, Payroll), each with one line and its state; Payroll is a dashed row with no link.
+- **The homepage's hero is "Your business just got an agent."** (Arabic draft «صار لنشاطك من يعمل عنه.»), beside the real ALYR Agent dashboard in showcase mode and a live feed of what ALYR did that afternoon for a fictional bakery. The body names only what the product does: it replies to the routine and sends the reminders in WhatsApp, helps the owner follow up what is owed (payment reminders go when the owner presses Send reminders), and tells them what needs them on one screen. The check is in `docs/agent-dashboard/08-site-log.md`.
+- **Real screens only.** The homepage and `/agent` draw the dashboard component itself, from sample files captured from the engine; the product pages draw the workspace's own screens (Bookings, Credit accounts) and the customer's booking page in the product's words. Every sample is captioned as a fictional business.
+- **The three samples are a bakery, a women's salon and an AC company.** Clinics stay off the site until the lawyer has looked at health data (ALY-51): 06's clinic lines claimed how patient data is kept.
+- **Nothing says or implies AI**, not even as "coming". **No "paid through ALYR links"** on a sample. **Prices stay off** until the commercial registration (D-034); with the switch on, the homepage shows from QAR 449 for the first product, QAR 150 for each added one, ALYR Agent included.
+- **One template for every product page** (01-research D): a bar under the header, the opening on Carbon with a demo, how it works from both sides, the screen used every day with numbered callouts, everything it does today and "Not yet" under a dashed rule, who it is for, "Works with the rest of ALYR", questions, the closing call.
+
+**Why.** D-035 made ALYR a suite led by ALYR Agent. The site now says so: the first thing a visitor sees is the screen an owner would open every morning, and each product can be read on its own before the visit.
+
+**Open for the founder.** Publishing (the go-ahead each time), the Arabic review (ALY-66), the clinics question (ALY-51), a manual name check for Sadaf Salon and Nasma Cooling as for Qirfa, and whether the hero may keep calling the replies and reminders the agent's work while `/agent` explains that ALYR Chat and ALYR Bookings send them and ALYR Agent counts them.

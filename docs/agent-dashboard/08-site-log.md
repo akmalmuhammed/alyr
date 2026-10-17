@@ -41,3 +41,78 @@ One tension left for the founder: the hero's "it" is the agent of the H1 and the
 ## Stage 1 to 6, first build
 
 Built in one pass, because the copy, the figure and the page template are shared: `copy.ts` (types for the suite, the Agent figure, the three pages; all words in English and Arabic), the header's Products menu and phone group, footer products row, `AgentFigure.tsx` + `agentfig.css`, `ProductKit.tsx` + `kit.css`, `Sheets.tsx` (Bookings and Credit accounts screens), `PageDrawings.tsx`, `drawings.css` (split out of `home.css`), `samples.ts`, the homepage, `/agent`, `/bookings`, `/accounts`, `/chat` changes, routes, `PATHS`, `build-site.sh`. Committed in stages by group of files; intermediate commits do not all build on their own, the last one does.
+
+## Stage 7 and the final review
+
+Every section of every page looked at in both languages, at 1440 and 390, in light and dark, on the built site (`scripts/build-site.sh`, served with compression on port 3112). Whole-page captures in `shots-site/final/` (40 files, composed); the moments a whole page cannot show in `shots-site/extra/` (the Products menu open, each sample in the switch, the feed starting, mid-run and composed, reduced motion, no scripts, 320 px). Not committed.
+
+Fixed in the first pass (stage 7): the bookings sheet's Cancel cut off, a double space in the order-bar crop, the credit sheet's legend spacing, "Coming" twice for Payroll, the `/chat` title and the suite heading breaking badly (named line breaks now), the product bar showing the page through it, the 320 px overflow on the English homepage, the showcase numbers' sideways scroller at 390 (axe), "Noor A." and "0–30" reversed in Arabic, the Arabic eyebrow set in capitals, the select chevron pointing the wrong way in Arabic.
+
+Fixed in the final pass:
+- **The dashboard on the site now matches the product exactly.** Compared element by element with `/agent-sample` (every `ag-` element's type and colours, light and dark, English and Arabic): the homepage's agreement drawing used the dashboard's own `ag-` class names, so `.ag-top` set the top items in mono capitals and `.ag-tick` could restyle a Done row's tick; it is `agr-` now. On `/agent` the page's `h3` rule made the dashboard's section labels 19 px; the page rules now stop at the dashboard (`:not(.ag h3)`). The site's 430 body weight no longer reaches it (400, as in the product). After the fix: no difference on the homepage hero, the spotlight or `/agent`, in either theme or language.
+- **Arabic ruled rows**: the second and third cells of `/agent`'s how-it-works steps and of every product page's three facts lost their padding beside the rule (a `[dir="rtl"]` shorthand outranked `li + li`). Logical padding now. The same bug was on the live `/ar/chat` facts.
+- **Payroll's empty dashed box** in the suite is gone: it read as a missing picture. The dashed rule and "Coming" say it.
+- **How it works** on the homepage: the early-access note and its button sit at the top beside the Sunday report (they floated in the middle of a tall empty column).
+- **By business**: the product tags wrap under each other, not under "Uses".
+- **`/chat`, Who it's for**: every row's text starts on the same line (the tags' column was as wide as each row's tags); the link inside a row no longer starts indented when it wraps.
+- **`/bookings`**: the filtered sheet ("Visits not marked yet") is as wide as the screen above it; at 46 rem it was clipped and its buttons wrapped into three lines. Callout 1 said "Today and the next seven days" for the third time in the section; it says "Every visit booked from the chat, in time order."
+- **320 px**: the sample switch fits on one row (it scrolled sideways), and the hero figure is clipped sideways so the plate's 45° entrance never widens the page for its first second.
+- **Copy**: the feed's "Order #1441 · Lina F. · with its tracking page" reads "Order #1441 from Lina F., with its tracking page"; the report caption lost "sample figures" (its fictional label already says sample); the product pages' "Works with" section has the eyebrow "The products" instead of repeating its title. Arabic to match.
+
+## Checks (built site, 17 Oct, final build)
+
+`pnpm lint` clean, `pnpm build` and `bash scripts/build-site.sh` pass (89 files, 3.4 MB). `npx tsc --noEmit` clean.
+
+**axe-core** (scrolled through, composed), 10 pages × 1440 and 390 × light and dark = 40 runs: no violations at all, of any impact (so none serious or critical).
+
+**Lighthouse**, mobile (simulated throttling, Edge headless), two runs each; the lower score, the slower LCP and the longer TBT of the two:
+
+| Page | Performance | Accessibility | Best practices | SEO | LCP | CLS | TBT |
+|---|---|---|---|---|---|---|---|
+| `/` | 98 | 100 | 100 | 100 | 2.4 s | 0 | 20 ms |
+| `/ar` | 98 | 100 | 100 | 100 | 2.4 s | 0 | 50 ms |
+| `/chat` | 99 | 100 | 100 | 100 | 2.3 s | 0 | 60 ms |
+| `/ar/chat` | 99 | 100 | 100 | 100 | 2.3 s | 0 | 50 ms |
+| `/bookings` | 99 | 100 | 100 | 100 | 2.3 s | 0 | 30 ms |
+| `/ar/bookings` | 99 | 100 | 100 | 100 | 2.3 s | 0 | 50 ms |
+| `/agent` | 99 | 100 | 100 | 100 | 2.3 s | 0 | 50 ms |
+| `/ar/agent` | 99 | 100 | 100 | 100 | 2.3 s | 0 | 40 ms |
+| `/accounts` | 99 | 100 | 100 | 100 | 2.3 s | 0 | 50 ms |
+| `/ar/accounts` | 98 | 100 | 100 | 100 | 2.3 s | 0 | 70 ms |
+
+The LCP element is the hero's body text (homepage) or the lead (product pages), all render delay: the text waits for the web fonts. JavaScript per page is about 140 to 143 KB gzipped, plus a 38 KB polyfill file only old browsers load; each page's HTML is 21 to 39 KB gzipped (the homepages are the largest, with three dashboards' data).
+
+Also checked: no horizontal scroll at 320 px on the pages tried (`scrollWidth` 320); without scripts the full feed and every section show and the sample switch is hidden; with reduced motion the feed is composed; the Products menu opens by keyboard, closes on Escape (focus back on its button), on a click outside, on a link and when focus leaves, one menu open at a time.
+
+With the offer switch on (`NEXT_PUBLIC_ALYR_OFFER=on`, a second dev server): the price section, "from QAR 449" with the combinations (QAR 599, QAR 749, ALYR Agent included), the money-back agreement and the Price link, in English and Arabic, light and dark, 1440 and 390 (`shots-site/offer/`).
+
+Found and not fixed (not this branch's, both already on the live site):
+- The 404 page's social image points at `http://localhost:3000/opengraph-image` (the default not-found page has no `metadataBase`). `next build` warns about it twice.
+- The header is see-through until the scripts start (`SiteMotion` sets `data-scrolled`): a visitor who scrolls in the first second on a slow phone sees the page under it for a moment.
+
+## For the product lane (not changed here)
+
+- **Showcase numbers on a narrow container** scroll sideways with nothing in them to focus (axe `scrollable-region-focusable`, serious). The site sets the four numbers two by two through its own container; the component could do the same in showcase mode, or make the scroller focusable.
+- **The workspace's Arabic on Credit accounts** (`(product)/_workspace/Screens.tsx`), which the site draws in the product's words except here: the screen is «دفتر الديون» while the product is «الحسابات الآجلة»; «${n} عميل عليهم مبالغ» needs «عملاء» for 3 to 10; the age buckets print Eastern digits and «يوم» («٠–٣٠ يوم») where the rest of the screen has Western digits; the promise date is formatted `en-GB` («وعد بالدفع قبل 19 Oct»). The drawing uses «الحسابات الآجلة», «5 عملاء», «0–30 يوماً» and «19 أكتوبر».
+- `fmt_qar` should be language-aware: Arabic messages write «38 ر.ق», not "QAR 38".
+
+## Open for the founder
+
+1. **Publishing**: the go-ahead, after PR #50 and this one are merged.
+2. **The hero's "it"**: the hero says the agent replies and reminds; in the product ALYR Chat and ALYR Bookings send those and ALYR Agent counts them. `/agent` says so in its questions. Keep, or say "ALYR" in the body?
+3. **Arabic review** (ALY-66), now about three times as much Arabic.
+4. **Clinics** stay off until the lawyer has looked at health data (ALY-51).
+5. **Names**: a manual check of Sadaf Salon and Nasma Cooling, as was done for Qirfa (Instagram, Google Maps, the trademark register).
+6. **The Sunday report** on WhatsApp needs its `weekly_report` template approved before any owner receives it; the site shows it as built, which it is.
+7. **D-037's number**: PRs #51 and #52 both take D-036; renumber at merge if needed.
+8. **hello@alyr.qa**: a test mail from outside before publishing.
+
+## What was not checked
+
+- Real phones and Safari: every capture is headless Edge (Chromium). No iOS Safari, no Firefox.
+- Lighthouse on desktop; on mobile two runs per page, and LCP moves by about 0.1 s between runs.
+- Screen readers by ear (NVDA, VoiceOver): only axe and the accessibility tree.
+- The Arabic by a native speaker.
+- Widths between 390 and 1440 other than spot checks at 768, 1100 and 1280 during the build.
+- The offer switch on beyond the price section's screenshots: no axe or Lighthouse run with it.
+- The contact states other than email (WhatsApp number set, or "opens soon").
