@@ -65,7 +65,7 @@ def noun_after(n: int, noun: Noun, lang: str) -> str:
     if lang == "ar":
         one, _, few, many = noun[1]
         if n == 1:
-            return one.replace(" واحد", "").replace(" واحدة", "")
+            return one.replace(" واحدة", "").replace(" واحد", "")
         if n == 0 or 2 <= n % 100 <= 10:
             return few
         return many
@@ -125,3 +125,25 @@ def pick(text: dict, lang: str) -> str:
 def rule_line(rule: str, counted_rows: str, lang: str) -> str:
     """"RULE · owed 30+ days, no reminder in 7 days · 4 customers"."""
     return f"{RULE[lang]} · {rule} · {counted_rows}"
+
+
+def agree(n: int, one: str, two: str, many: str) -> str:
+    """An Arabic verb or pronoun that agrees with how many people it is about: one, two,
+    or more. (Things that are not people take the singular feminine; say so in the forms.)"""
+    if n == 1:
+        return one
+    if n == 2:
+        return two
+    return many
+
+
+def when_text(moment: datetime, now: datetime, lang: str) -> str:
+    """"today at 16:15", "tomorrow at 10:00", "Saturday at 21:00", in shop time."""
+    day, today = moment.date(), now.date()
+    hhmm = clock(moment)
+    if day == today:
+        return f"اليوم الساعة {hhmm}" if lang == "ar" else f"today at {hhmm}"
+    if (day - today).days == 1:
+        return f"غداً الساعة {hhmm}" if lang == "ar" else f"tomorrow at {hhmm}"
+    name = DAY_LONG[lang][sunday_index(day)]
+    return f"يوم {name} الساعة {hhmm}" if lang == "ar" else f"{name} at {hhmm}"

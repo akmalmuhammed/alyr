@@ -1,8 +1,8 @@
 """The ALYR Agent's sample screens for the public site (ALY-99, `03-build-brief.md` §2).
 
-Seeds the three fictional businesses (Qirfa Bakery, Sadaf Salon, Ruwaa Dental Clinic) as
+Seeds the three fictional businesses (Qirfa Bakery, Sadaf Salon, Nasma Cooling) as
 they stood at one fixed moment, reads each one's real `AgentView` as its owner would, and
-writes it to `apps/web/app/_agent/samples/{bakery,salon,clinic}.{en,ar}.json`. The site
+writes it to `apps/web/app/_agent/samples/{bakery,salon,homeservices}.{en,ar}.json`. The site
 feeds those files to the same `AgentDashboard` the workspace uses, so the homepage shows
 a real screen, captioned as a sample. The moment is fixed, so the files only change when
 the engine or the samples do.
@@ -22,7 +22,7 @@ from alyr.config import get_settings
 from alyr.core.auth import Staff
 from alyr.db import Database
 from alyr.modules.agent import view
-from alyr.seed_bookings import CLINIC, SALON, ensure_sample_tenant, reset_sample
+from alyr.seed_bookings import HOME, SALON, ensure_sample_tenant, reset_sample
 from alyr.seed_qirfa import QIRFA_TENANT_ID, ensure_qirfa_tenant, reset_qirfa
 
 # Thursday 15 October 2026, 16:20 in Doha: a weekday afternoon, most of the week behind it.
@@ -40,20 +40,29 @@ async def _owner(db: Database, tenant_id) -> Staff:
     return Staff(row["id"], row["name"], row["email"], "owner", tenant_id)
 
 
+def sample_view(agent_view: dict) -> dict:
+    """What a homepage figure may show. Money paid through ALYR links reads as live card
+    payments, and there is no payment provider yet (ALY-17), so the samples leave it out;
+    the product keeps it."""
+    agent_view["done"]["rows"] = [r for r in agent_view["done"]["rows"] if r["key"] != "paid"]
+    agent_view["kpis"] = [k for k in agent_view["kpis"] if k["key"] != "paid_link"]
+    return agent_view
+
+
 async def capture(db: Database, owner_dsn: str, out: Path = OUT) -> list[Path]:
     await ensure_qirfa_tenant(owner_dsn)
     await reset_qirfa(db, now=SAMPLE_NOW, web_url=SITE)
-    for sample in (SALON, CLINIC):
+    for sample in (SALON, HOME):
         await ensure_sample_tenant(owner_dsn, sample, SAMPLE_NOW, 56)
         await reset_sample(db, sample, SAMPLE_NOW, web_url=SITE)
     written = []
     out.mkdir(parents=True, exist_ok=True)
     for key, tenant_id in (("bakery", QIRFA_TENANT_ID), ("salon", SALON.tenant_id),
-                           ("clinic", CLINIC.tenant_id)):
+                           ("homeservices", HOME.tenant_id)):
         owner = await _owner(db, tenant_id)
         for lang in ("en", "ar"):
             async with db.tenant(tenant_id) as conn:
-                agent_view = await view.build(conn, owner, lang, now=SAMPLE_NOW)
+                agent_view = sample_view(await view.build(conn, owner, lang, now=SAMPLE_NOW))
             path = out / f"{key}.{lang}.json"
             path.write_text(
                 json.dumps(agent_view, ensure_ascii=False, indent=1) + "\n", encoding="utf-8"

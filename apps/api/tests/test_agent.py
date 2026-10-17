@@ -72,7 +72,8 @@ CASES = {
         {"priced": True, "booked_value_ahead": 5_000, "booked_ahead": 2},
     ),
     "no_show_rate": (
-        [{"completed_30": 27, "no_shows_30": 2}, {"completed_30": 28, "no_shows_30": 3}],
+        # 3 of 31 is 9.7%, shown as 10%, so it fires; 3 of 34 is 9% (rounded once, P2-5).
+        [{"completed_30": 27, "no_shows_30": 2}, {"completed_30": 31, "no_shows_30": 3}],
         {"completed_30": 27, "no_shows_30": 3},
     ),
     "quiet_regulars": ([{}], {"quiet_regulars": [row(times=3, days=31)]}),
@@ -152,65 +153,110 @@ def keys(items) -> list[str]:
     return [i["key"] for i in items]
 
 
-def test_the_owner_sees_sales_first_and_money_throughout():
+def test_the_summary_names_its_measures_and_agrees_with_the_numbers():
     v = view.render(busy(), "en")
     assert v["state"] == "normal" and v["lead"] == "orders"
-    assert keys(v["kpis"]) == ["sales", "orders", "owed", "waiting"]
+    # Waiting is not repeated as a number: Needs you now says it (05-critique P1-3).
+    assert keys(v["kpis"]) == ["sales", "orders", "owed", "came_back"]
     summary = " ".join(plain(s["text"]) for s in v["header"]["summary"])
     assert summary == (
-        "Week so far: 41 orders, QAR 3,120. Up 8 on the same days last week. "
-        "1 order is waiting."
+        "Week so far: 41 orders, QAR\u00a03,120. "
+        "Orders up 24%, sales up 8% on the same days last week. 1 order needs confirming."
     )
     assert [s["muted"] for s in v["header"]["summary"]] == [False, True, False]
-    assert v["owed"]["total_text"] == "QAR 12,500"
-    assert v["suggestions"][0]["key"] == "overdue"
+    orders = next(k for k in v["kpis"] if k["key"] == "orders")
+    assert plain(orders["change"]["text"]) == "▲ 24%" and orders["change"]["said"] == "up 24%"
+    sales = v["kpis"][0]
+    assert (sales["value"], sales["unit"], sales["unit_first"]) == ("3,120", "QAR", True)
+    assert v["kpi_caption"] == "Against Sunday to 16:20 last week"
+    assert v["owed"]["total_text"] == "QAR\u00a012,500"
+    first = v["suggestions"][0]
+    assert first["key"] == "overdue" and first["primary"] is True
+    assert plain(first["title"]) == "QAR\u00a01,150 owed 30+ days, not reminded in 7 days"
 
 
 def test_staff_with_the_agent_role_see_no_money():
     v = view.render(busy(money=False), "en")
     assert not {"sales", "paid_link", "owed", "collected", "over_60"} & set(keys(v["kpis"]))
-    assert keys(v["kpis"]) == ["orders", "waiting", "came_back", "visits"]
+    assert keys(v["kpis"]) == ["orders", "came_back", "visits", "booked_ahead"]
     assert v["owed"] is None and v["report"] is None
     assert not any(c["kind"] == "money" for c in v["suggestions"])
     assert "QAR" not in str(v)
     assert v["week"]["format"] == "count"
+    assert not any(n["key"] == "setup" for n in v["needs"]["items"])
 
 
 def test_a_percentage_only_when_both_weeks_count_twenty_or_more():
     at_twenty = view.render(busy(orders=24, orders_last=20), "en")
     change = next(k for k in at_twenty["kpis"] if k["key"] == "orders")["change"]
-    assert change["dir"] == "up" and plain(change["text"]) == "▲ 20% on last week"
+    assert change["dir"] == "up" and plain(change["text"]) == "▲ 20%"
     small = view.render(busy(orders=24, orders_last=19), "en")
     change = next(k for k in small["kpis"] if k["key"] == "orders")["change"]
     assert change["dir"] is None and plain(change["text"]) == "Last week 19"
+    said = " ".join(plain(s["text"]) for s in small["header"]["summary"])
+    assert "By this time last week: 19 orders." in said
 
 
-def test_a_salon_leads_with_visits_and_says_appointments_for_a_clinic():
+def test_a_salon_leads_with_visits_and_a_clinic_with_appointments_and_patients():
     salon = facts(modules=frozenset({"inbox", "bookings", "payments"}), business_type="salon",
                   visits=23, visits_last=19, made=9, made_last=7, booked_ahead=14,
                   completed_30=80, no_shows_30=9)
     v = view.render(salon, "en")
     assert keys(v["kpis"]) == ["visits", "booked_ahead", "no_show_rate", "new_bookings"]
-    assert next(k for k in v["kpis"] if k["key"] == "no_show_rate")["value"] == "10%"
-    clinic = view.render(facts(**{**salon.__dict__, "business_type": "clinic"}), "ar")
-    assert clinic["kpis"][0]["label"] == "المواعيد هذا الأسبوع"
+    rate = next(k for k in v["kpis"] if k["key"] == "no_show_rate")
+    assert (rate["value"], rate["unit"]) == ("10", "%")
+    # The rule fires at the figure the screen shows, rounded once (P2-5).
+    assert "no_show_rate" in keys(v["suggestions"])
+    few = view.render(facts(**{**salon.__dict__, "completed_30": 13, "no_shows_30": 2}), "en")
+    rate = next(k for k in few["kpis"] if k["key"] == "no_show_rate")
+    assert (rate["value"], rate["unit"]) == ("2", "of 15")  # a percentage needs 20 (A3)
+    clinic = facts(**{**salon.__dict__, "business_type": "clinic",
+                      "waiting": [row(minutes=12)]})
+    ar = view.render(clinic, "ar")
+    assert ar["kpis"][0]["label"] == "المواعيد هذا الأسبوع"
+    assert plain(ar["needs"]["items"][0]["words"]) == "مراجع بانتظار الرد"
 
 
 def test_the_states_empty_first_week_and_quiet():
     empty = view.render(facts(has_records=False), "en")
     assert empty["state"] == "empty" and empty["kpis"] == [] and empty["placeholders"]
-    assert plain(empty["header"]["summary"][0]["text"]).startswith("Nothing yet.")
+    assert plain(empty["header"]["summary"][0]["text"]) == (
+        "Nothing yet. This page fills in as customers write and order."
+    )
 
     first = view.render(busy(started=NOW - timedelta(days=3),
                              quiet_regulars=[row(times=3, days=40)]), "en")
-    assert first["state"] == "first_week"
+    assert first["state"] == "first_week" and first["kpi_caption"] is None
     assert all(k["change"] is None for k in first["kpis"])
     assert "Comparisons start Sunday 25 Oct." in plain(first["header"]["summary"][1]["text"])
     assert "quiet_regulars" not in keys(first["suggestions"])  # tasks and actions only
+    states = [d["state"] for d in first["week"]["days"]]
+    assert states[:1] == ["before"]  # days before ALYR are not drawn as zeros
 
     quiet = view.render(facts(orders=3, orders_last=4), "ar")
     assert quiet["state"] == "quiet"
-    assert plain(quiet["header"]["summary"][0]["text"]) == "أسبوع هادئ حتى الآن: 3 طلبات."
+    assert plain(quiet["header"]["summary"][0]["text"]) == (
+        "3 طلبات حتى الآن، و4 حتى هذا الوقت من الأسبوع الماضي."
+    )
+
+
+def test_setup_left_folds_into_needs_you_now():
+    steps = [{"key": "whatsapp", "label": {"en": "Connect your WhatsApp number",
+                                           "ar": "اربط رقم واتساب"},
+              "done": False, "screen": "", "connection": "whatsapp"},
+             {"key": "provider", "label": {"en": "Connect your payment provider",
+                                           "ar": "اربط بوابة الدفع"},
+              "done": False, "screen": "", "connection": "payments"}]
+    f = busy(setup=[({"en": "ALYR Chat", "ar": "ALYR Chat"}, steps)])
+    row_ = next(n for n in view.render(f, "en")["needs"]["items"] if n["key"] == "setup")
+    assert row_["count"] == 2 and plain(row_["words"]) == "setup steps left for ALYR Chat"
+    assert plain(row_["detail"]) == "Connect your WhatsApp number"
+    assert row_["href"] == "/app/connections"
+    ar = next(n for n in view.render(f, "ar")["needs"]["items"] if n["key"] == "setup")
+    assert plain(ar["words"]) == "خطوتا إعداد متبقيتان في ALYR Chat"
+    # While the business has no records, the workspace shows the whole checklist instead.
+    empty = view.render(facts(has_records=False, setup=f.setup), "en")
+    assert not empty["needs"]["items"]
 
 
 def test_at_most_three_suggestions_money_first_and_not_now_hides_one():
@@ -219,6 +265,7 @@ def test_at_most_three_suggestions_money_first_and_not_now_hides_one():
              quiet_regulars=[row(5, times=4, days=40)], risers=[("Karak", 20, 4)])
     cards = view.render(f, "en")["suggestions"]
     assert keys(cards) == ["overdue", "open_links", "ready"]
+    assert [c["primary"] for c in cards] == [True, False, False]
     ready = cards[2]
     assert ready["snooze"] and cards[0]["snooze"] is None  # only knowledge can be set aside
     again = view.render(f, "en", {"ready": ready["snooze"]["fingerprint"]})["suggestions"]
@@ -230,23 +277,83 @@ def test_at_most_three_suggestions_money_first_and_not_now_hides_one():
     assert "ready" in keys(view.render(changed, "en", snoozed)["suggestions"])
 
 
-def test_arabic_is_written_whole_with_amounts_kept_whole():
+def test_a_knowledge_card_never_takes_volt_and_a_person_is_counted_once():
+    salon = facts(modules=frozenset({"inbox", "bookings", "payments"}), business_type="salon",
+                  visits=23, visits_last=19,
+                  quiet_regulars=[row(7, times=4, days=40)],
+                  due_back=[row(7, days=40, usual=14), row(8, days=30, usual=10)])
+    cards = view.render(salon, "en")["suggestions"]
+    assert keys(cards) == ["quiet_regulars", "due_back"]
+    assert not any(c["primary"] for c in cards)
+    assert [r["id"] for r in cards[1]["rows"]] == ["id-8"]  # id-7 was counted above
+    only = facts(**{**salon.__dict__, "due_back": [row(7, days=40, usual=14)]})
+    assert keys(view.render(only, "en")["suggestions"]) == ["quiet_regulars"]
+
+
+def test_a_bakery_hears_about_its_orders_before_its_tastings():
+    f = busy(completed_30=20, no_shows_30=5, risers=[("Karak", 20, 4)], accounts=[])
+    assert keys(view.render(f, "en")["suggestions"])[:2] == ["riser", "no_show_rate"]
+
+
+def test_arabic_agrees_with_the_count_and_keeps_names_whole():
+    one = view.render(busy(repeat_no_shows=[row(1, no_shows=2, next=NOW + timedelta(hours=2))],
+                           accounts=[]), "ar")
+    card = next(c for c in one["suggestions"] if c["key"] == "repeat_no_show")
+    assert plain(card["title"]) == "عميل واحد تغيّب مرتين ولديه حجز جديد"
+    assert {"b": "Customer 1"} in card["line"]
+    assert plain(card["line"]) == "موعد Customer 1 اليوم الساعة 18:20."
+    two = view.render(busy(repeat_no_shows=[row(1, no_shows=2, next=NOW + timedelta(days=2)),
+                                            row(2, no_shows=3, next=NOW + timedelta(days=3))],
+                           accounts=[]), "ar")
+    card = next(c for c in two["suggestions"] if c["key"] == "repeat_no_show")
+    assert plain(card["title"]) == "عميلان تغيّبا مرتين ولديهما حجز جديد"
     v = view.render(busy(), "ar")
     assert v["dir"] == "rtl"
-    first = v["header"]["summary"][0]["text"]
-    assert {"b": "3,120 ر.ق"} in first
-    assert v["header"]["eyebrow"].startswith("اليوم · الخميس 15 أكتوبر")
+    assert {"b": "3,120\u00a0ر.ق"} in v["header"]["summary"][0]["text"]
+    assert v["header"]["date"] == "الخميس 15 أكتوبر"
     assert v["needs"]["items"][0]["rule"].startswith("القاعدة · ")
+    greeting = view.render(busy(first_name="Huda", first_name_ar="هدى"), "ar")["header"]
+    assert greeting["greeting"] == "مساء الخير يا هدى"
 
 
-def test_the_week_runs_sunday_to_saturday_with_today_marked():
-    f = busy(orders_by_day={THU: (12, 90_000), THU - timedelta(days=7): (9, 70_000)})
+def test_the_week_compares_like_with_like():
+    f = busy(orders_by_day={THU: (12, 90_000), THU - timedelta(days=7): (9, 70_000)},
+             last_by_now={"sales": 50_000, "orders": 6},
+             opening={d: [(7, 22)] for d in (0, 1, 2, 3, 4, 6)})
     week = view.render(f, "en")["week"]
+    assert week["title"] == "By day"
     assert [d["label"] for d in week["days"]] == ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"]
-    assert [d["state"] for d in week["days"]][3:6] == ["past", "today", "coming"]
+    assert [d["state"] for d in week["days"]][3:7] == ["past", "today", "closed", "coming"]
     today = week["days"][4]
-    assert (today["value"], today["last"]) == (90_000, 70_000)
-    assert week["days"][5]["value"] is None
+    # Today so far against last week up to the same time; the whole day stays as a ghost.
+    assert (today["value"], today["last_by_now"], today["last"]) == (90_000, 50_000, 70_000)
+    assert week["days"][5]["value"] is None and week["legend"]["closed"] == "Closed"
+
+
+def test_booked_days_ahead_are_counted_on_the_same_axis():
+    salon = facts(modules=frozenset({"inbox", "bookings", "payments"}), business_type="salon",
+                  visits=23, visits_last=19, booked_by_day={THU + timedelta(days=1): 3})
+    friday = view.render(salon, "en")["week"]["days"][5]
+    assert (friday["state"], friday["booked"], friday["booked_text"]) == ("coming", 3, "3 booked")
+
+
+def test_busiest_hours_wait_for_enough_and_leave_closed_hours_blank():
+    grid = {(4, 9): 30, (4, 10): 10}
+    assert view.render(busy(hours_grid=grid, hours_total=40), "en")["hours"] is None
+    hours = view.render(busy(hours_grid=grid, hours_total=60, hours_range=(8, 12),
+                             opening={4: [(9, 11)]}), "en")["hours"]
+    thursday = hours["rows"][4]["cells"]
+    assert thursday == [-1, 4, 2, -1]
+    assert hours["top"] == {"day": "Thursdays", "range": "09:00–10:00"}
+
+
+def test_top_items_show_no_change_until_there_is_history():
+    fresh = view.render(busy(top_items=[("Karak", 20, 0), ("Cardamom bun", 12, 0)]), "en")
+    assert all(r["change"] is None for r in fresh["top"]["rows"])
+    assert fresh["top"]["change_label"] is None
+    later = view.render(busy(top_items=[("Karak", 20, 8), ("Cardamom bun", 12, 10)]), "en")
+    assert later["top"]["change_label"] == "Rank vs previous 28 days"
+    assert later["top"]["rows"][0]["change"]["said"] == "up 1"
 
 
 # ── the endpoint, on the real path ────────────────────────
@@ -256,7 +363,7 @@ def test_the_owner_reads_the_agent_in_both_languages(client):
     sign_in(client, OWNER_EMAIL)
     en = client.get("/api/agent").json()
     assert en["version"] == view.VERSION and en["money"] is True and en["lang"] == "en"
-    assert en["header"]["greeting"].endswith("Fatima.")
+    assert en["header"]["greeting"].endswith("Fatima")
     assert "owed" in keys(en["kpis"])
     ar = client.get("/api/agent", params={"lang": "ar"}).json()
     assert ar["dir"] == "rtl" and ARABIC.search(ar["header"]["greeting"])
@@ -279,7 +386,7 @@ def test_another_business_sees_none_of_this_ones_numbers(client, client_factory)
     new_business(other)
     theirs = other.get("/api/agent").json()
     assert theirs["owed"] is None  # a salon has no credit accounts
-    assert all(k["value"] in ("0", "0 of 0", "—") for k in theirs["kpis"]), theirs["kpis"]
+    assert all(k["value"] in ("0", "—") for k in theirs["kpis"]), theirs["kpis"]
     assert theirs["suggestions"] == [] or all(
         c["key"] not in ("overdue", "promise_passed") for c in theirs["suggestions"]
     )

@@ -49,6 +49,11 @@ TEAM = [
     (ADMIN_EMAIL, "Karim Nasr", "admin"),
     (AGENT_EMAIL, "Yusuf Amin", "agent"),
 ]
+NAMES_AR = {"Huda Rahim": "هدى رحيم", "Karim Nasr": "كريم نصر", "Yusuf Amin": "يوسف أمين",
+            "Lamees Adel": "لميس عادل", "Sana Rao": "سناء راو", "Hiba Taher": "هبة طاهر",
+            "Faris Nabil": "فارس نبيل", "Mira Antoun": "ميرا أنطون", "Omar Said": "عمر سعيد",
+            "Adel Karim": "عادل كريم", "Ritu Menon": "ريتو مينون", "Arun Pillai": "أرون بيلاي",
+            "Bilal Rafiq": "بلال رفيق"}
 OWNER_PHONE = "97455669001"
 COUNTER_PHONE = "97455669002"
 
@@ -329,9 +334,10 @@ class Bakery:
             )
         for email, name, role in TEAM:
             user_id = await conn.fetchval(
-                "insert into users (email, name) values ($1, $2) "
-                "on conflict (email) do update set name = excluded.name returning id",
-                email, name,
+                "insert into users (email, name, name_ar) values ($1, $2, $3) "
+                "on conflict (email) do update set name = excluded.name, "
+                "name_ar = excluded.name_ar returning id",
+                email, name, NAMES_AR.get(name, ""),
             )
             await conn.execute(
                 "insert into memberships (user_id, role, created_at) values ($1, $2, $3)",
@@ -533,7 +539,7 @@ class Bakery:
             if starts > self.now - timedelta(days=2) and rng.random() < 0.5:
                 status = "booked"  # nobody has marked it yet
             else:
-                status = rng.choices(["completed", "no_show", "cancelled"], [72, 17, 11])[0]
+                status = rng.choices(["completed", "no_show", "cancelled"], [82, 9, 9])[0]
         else:
             status = "booked"
         reminded = starts - timedelta(hours=2)

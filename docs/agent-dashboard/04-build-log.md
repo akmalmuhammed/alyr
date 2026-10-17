@@ -137,3 +137,67 @@ ALY-99, branch `aly-agent-dashboard`. One entry per stage, newest last, so a sta
   - Lighthouse or axe on `/app`.
   - Safari: container queries and `clip-path` keyframes are standard but untested there.
   - Running the migrations on any database but this session's own.
+
+## Fix pass (05-critique.md, 17 Oct)
+
+### Fix 1 · the engine and the samples
+
+**The summary and the numbers (P0-1).**
+- The summary names its measure and uses the numbers' own figures: "Orders up 11%, sales up 20% on the same days last week".
+- With fewer than 20, it gives counts instead: "By this time last week: 13 visits".
+- It says "2 orders need confirming", not "waiting".
+- A number's change is "▲ 20%", and one caption sits on the strip: "Against Sunday to 16:20 last week".
+- Values come apart from their unit, so "QAR" can be drawn small (P1-5).
+
+**The week (P0-2):**
+- Today carries `last_by_now` (last week up to the same time) as well as the full day.
+- Days ahead carry `booked`, a count on the same axis ("3 booked").
+- A weekday with no opening hours is `closed`, and days before the business joined are `before`.
+- The title is "By day", with no total (P1-3).
+
+**Arabic (P0-5):**
+- Verbs and pronouns agree with the count through `agree()`.
+- Every name and figure is a `{b}` part.
+- A sentence about an order reads "الطلب #1436 للعميل Aisha I.".
+- The greeting uses the person's Arabic name (migration 0020, `users.name_ar`), so it reads "مساء الخير يا هدى".
+- A singular noun bug ("زيارةة") is fixed.
+
+**Setup (P1-2):** once a business has records, setup left to do is one row in Needs you now ("2 setup steps left for ALYR Chat · Connect your WhatsApp number"). Only owners and admins see it.
+
+**Duplicates (P1-3):**
+- "Waiting now" left the numbers; "Came back this week" and "New bookings this week" take its place.
+- A person counted by a card above is not counted again, and a card left with nobody is dropped.
+
+**Ordering:**
+- The main product's rules come first within knowledge, so the bakery's third card is about its regulars, not tastings.
+- "Booked value" always comes last.
+- Volt goes only on a money card (P1-10).
+
+**Words (P1-8):**
+- "QAR 3,400 owed 30+ days, not reminded in 7 days".
+- The consent status line uses the critique's wording.
+- No-shows read "2 of 15" until there are 20.
+
+**States (P1-10):** busiest hours wait for 50 events. Rank changes wait for a previous period. The quiet week reads "3 orders so far; 4 by this time last week".
+
+**Polish (P2):**
+- Age labels read "Over 90 days".
+- Under the owed total: "QAR 1,946 more than a week ago".
+- "today at 16:15" instead of a weekday name.
+- The no-show rate is rounded once, so the card and the number agree.
+
+**Samples (P1-9 and the founder's decision):**
+- Sadaf is a women's salon with its own menu and women customers.
+- The third sample is now **Nasma Cooling** («نسمة للتكييف»), an AC repair and maintenance company. It replaces the dental clinic, because of PDPPL health data.
+  - Services: split-unit service, repair, gas top-up, villa duct cleaning, a yearly visit.
+  - Jobs are assigned to two technicians, with notes such as "Majlis AC not cooling".
+  - A household comes back at most twice, 21 days apart.
+  - Friday is closed.
+  - Three customers are on maintenance contracts (credit accounts).
+- The clinic preset stays in the product.
+- Fixtures are now `{bakery,salon,homeservices}.{en,ar}.json`, recaptured.
+- The samples leave out "paid through ALYR links", since there is no payment provider yet (ALY-17); the product keeps it.
+
+**Local-only `ALYR_AGENT_CLOCK`:** reads the Agent at a fixed moment, so screenshots can be taken on a weekday.
+
+**Tests:** rewritten for all of the above. 353 API tests pass.

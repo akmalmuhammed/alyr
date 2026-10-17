@@ -10,6 +10,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query, Request
 from pydantic import BaseModel, Field
 
 from alyr import catalog
+from alyr.config import get_settings
 from alyr.core.auth import Staff
 from alyr.modules.agent import view
 from alyr.modules.agent.facts import Facts
@@ -30,8 +31,12 @@ async def agent_view(
     lang: str = Query("en", pattern="^(en|ar)$"),
     staff: Staff = Depends(current_staff),
 ) -> dict:
+    settings = get_settings()
+    now = None
+    if settings.env == "local" and settings.agent_clock:
+        now = datetime.fromisoformat(settings.agent_clock)
     async with request.app.state.db.tenant(staff.tenant_id) as conn:
-        return await view.build(conn, staff, lang)
+        return await view.build(conn, staff, lang, now=now)
 
 
 @router.post("/not-now")

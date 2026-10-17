@@ -135,6 +135,18 @@ class Facts:
     hours_range: tuple = (7, 22)
     # Arabic names of products and services, for the Arabic view of top items.
     names_ar: dict = field(default_factory=dict)
+    # The person reading, in Arabic, when their Arabic name is known.
+    first_name_ar: str = ""
+    # Opening hours by weekday (0 is Sunday): [(opens, closes)] as hours of the day.
+    # Empty when the business has set none, which means every day counts as open.
+    opening: dict = field(default_factory=dict)
+    # Today's figure last week up to the same time, per measure, for the week chart.
+    last_by_now: dict = field(default_factory=dict)
+    # Bookings still to come, per shop-local day, this week and the next.
+    booked_by_day: dict = field(default_factory=dict)
+    hours_total: int = 0
+    # Setup still to do, for owners and admins: [(product name, [step])].
+    setup: list = field(default_factory=list)
 
     @property
     def zone(self) -> ZoneInfo:
@@ -232,6 +244,17 @@ async def gather(conn: asyncpg.Connection, staff: Staff, now: datetime | None = 
             r["name"]: r["name_ar"]
             for r in await conn.fetch("select name, name_ar from services where name_ar <> ''")
         }
+    if staff.user_id:
+        name_ar = await conn.fetchval("select name_ar from users where id = $1", staff.user_id)
+        f.first_name_ar = (name_ar or "").split()[0] if (name_ar or "").strip() else ""
+    for row in await conn.fetch("select weekday, opens, closes from business_hours"):
+        f.opening.setdefault(row["weekday"], []).append(
+            (row["opens"].hour + row["opens"].minute / 60,
+             row["closes"].hour + row["closes"].minute / 60)
+        )
+    await _last_by_now(conn, f)
+    if f.money:
+        await _setup(conn, f, staff)
     await _done(conn, f, span)
     await _hours(conn, f)
     await _report(conn, f)
@@ -710,6 +733,7 @@ async def _hours(conn, f: Facts) -> None:
             f.now - timedelta(days=28), f.now, f.tz,
         )
     }
+    f.hours_total = sum(f.hours_grid.values())
     span = await conn.fetchrow(
         "select min(extract(hour from opens))::int as first, "
         "max(ceil(extract(epoch from closes) / 3600))::int as last from business_hours"
@@ -722,3 +746,59 @@ async def _report(conn, f: Facts) -> None:
     f.report_on = await report.enabled(conn)
     f.report_numbers = len(await report.recipients(conn))
     _, f.report_at = report.next_send(f.now, f.tz)
+
+
+async def _last_by_now(conn, f: Facts) -> None:
+    """Today's measures on the same weekday last week, up to the same time: a partial day
+    is compared with a partial day."""
+    start = f.at(f.today) - timedelta(days=7)
+    end = f.now - timedelta(days=7)
+    if "orders" in f.modules:
+        row = await conn.fetchrow(
+            "select count(*)::int as n, coalesce(sum(total), 0)::bigint as v from orders "
+            "where status <> 'cancelled' and created_at >= $1 and created_at < $2",
+            start, end,
+        )
+        f.last_by_now["orders"] = row["n"]
+        f.last_by_now["sales"] = row["v"]
+    if "bookings" in f.modules:
+        f.last_by_now["visits"] = await conn.fetchval(
+            "select count(*)::int from bookings where status = 'completed' "
+            "and starts_at >= $1 and starts_at < $2",
+            start, end,
+        )
+        f.booked_by_day = {
+            r["d"]: r["n"]
+            for r in await conn.fetch(
+                "select (starts_at at time zone $3::text)::date as d, count(*)::int as n "
+                "from bookings where status = 'booked' and starts_at >= $1 and starts_at < $2 "
+                "group by 1",
+                f.now, f.at(f.week_start + timedelta(days=7)), f.tz,
+            )
+        }
+    if "ledger" in f.modules:
+        f.last_by_now["collected"] = await conn.fetchval(
+            "select coalesce(sum(amount), 0)::bigint from ledger_entries "
+            "where kind = 'payment' and created_at >= $1 and created_at < $2",
+            start, end,
+        )
+    if "inbox" in f.modules:
+        f.last_by_now["chats"] = await conn.fetchval(
+            "select count(distinct m.contact_id)::int from messages m "
+            "join contacts c on c.id = m.contact_id where c.role = 'customer' "
+            "and m.direction = 'in' and m.created_at >= $1 and m.created_at < $2",
+            start, end,
+        )
+
+
+async def _setup(conn, f: Facts, staff: Staff) -> None:
+    """Setup steps still to do, product by product, as the workspace lists them."""
+    from alyr.core import workspace  # the workspace imports nothing from here
+
+    state = await workspace.state(conn, staff)
+    for product in state["products"]:
+        if product["status"] != "active":
+            continue
+        undone = [s for s in product["steps"] if not s["done"]]
+        if undone:
+            f.setup.append((product["name"], undone))

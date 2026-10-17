@@ -10,6 +10,10 @@ Kinds, in the order the dashboard shows them:
 * `money`: money owed or unpaid. Hidden from staff who may not see money.
 * `knowledge`: worth knowing. Those with an action come before those without.
 
+Arabic is written whole for each count (`count()` for the noun, `agree()` for the verb
+and pronoun), never joined from fragments, and every name or figure is kept whole with
+`B` so a Latin name does not scramble the line (05-critique P0-5).
+
 To add a rule: write `find` and `say`, and add an `Insight` to `INSIGHTS`.
 """
 
@@ -20,9 +24,31 @@ from dataclasses import dataclass, field
 from datetime import timedelta
 
 from alyr.catalog import Text
-from alyr.core.words import APPOINTMENTS, CHATS, CUSTOMERS, DAYS, ITEMS, JOBS, ORDERS, VISITS, Noun
+from alyr.core.words import (
+    APPOINTMENTS,
+    CHATS,
+    CUSTOMERS,
+    DAYS,
+    ITEMS,
+    JOBS,
+    ORDERS,
+    PATIENTS,
+    TIMES,
+    VISITS,
+    Noun,
+)
 from alyr.modules.agent.facts import Facts, Row
-from alyr.modules.agent.words import B, count, day_month, minutes, money, noun_after, rich
+from alyr.modules.agent.words import (
+    B,
+    agree,
+    count,
+    day_month,
+    minutes,
+    money,
+    noun_after,
+    rich,
+    when_text,
+)
 
 WEEKS: Noun = (("week", "weeks"), ("أسبوع واحد", "أسبوعان", "أسابيع", "أسبوعاً"))
 REGULARS: Noun = (
@@ -40,9 +66,10 @@ REASONS = {
     "went_elsewhere": Text("went elsewhere", "ذهب إلى غيرنا"),
     "other": Text("another reason", "سبب آخر"),
 }
-COMING_CONSENT = Text(
-    "Messages to many customers need marketing consent. Coming.",
-    "الرسائل لعدد كبير من العملاء تحتاج موافقة تسويقية. قريباً.",
+NO_CONSENT = Text(
+    "Information only. Writing to them needs their marketing consent, which ALYR does not "
+    "collect yet.",
+    "للعلم فقط. مراسلتهم تحتاج موافقتهم التسويقية، وALYR لا تجمعها بعد.",
 )
 INFO_ONLY = Text("Information only.", "للعلم فقط.")
 
@@ -54,6 +81,11 @@ def visit_noun(business_type: str) -> Noun:
     if business_type == "home":
         return JOBS
     return VISITS
+
+
+def people_noun(business_type: str) -> Noun:
+    """Who the business serves: a clinic's are patients («مراجعون»)."""
+    return PATIENTS if business_type == "clinic" else CUSTOMERS
 
 
 @dataclass(frozen=True)
@@ -105,6 +137,10 @@ def _first(rows: list[Row]) -> Row:
     return rows[0]
 
 
+def _who(f: Facts) -> Noun:
+    return people_noun(f.business_type)
+
+
 # ── tasks: Needs you now ─────────────────────────────────
 
 
@@ -113,23 +149,24 @@ def _find_waiting(f: Facts) -> Finding | None:
         return None
     nobody = sum(1 for r in f.waiting if r.detail.get("nobody"))
     longest = max(r.detail.get("minutes", 0) for r in f.waiting)
-    return Finding(f.waiting, CUSTOMERS, {"nobody": nobody, "longest": longest})
+    return Finding(f.waiting, _who(f), {"nobody": nobody, "longest": longest})
 
 
 def _say_waiting(x: Finding, f: Facts, lang: str):
-    noun = noun_after(x.n, CUSTOMERS, lang)
-    longest = minutes(x.numbers["longest"] * 60, lang)
+    noun = noun_after(x.n, x.noun, lang)
+    longest = B(minutes(x.numbers["longest"] * 60, lang))
+    nobody = x.numbers["nobody"]
     if lang == "ar":
         words = rich(f"{noun} بانتظار الرد")
         detail = (
-            rich("{k} دون مسؤول · أطولهم منذ {t}", k=x.numbers["nobody"], t=B(longest))
-            if x.numbers["nobody"] else rich("أطولهم منذ {t}", t=B(longest))
+            rich("{k} بلا مسؤول · أطول انتظار {t}", k=B(str(nobody)), t=longest) if nobody
+            else rich("أطول انتظار {t}", t=longest)
         )
     else:
         words = rich(f"{noun} waiting for an answer")
         detail = (
-            rich("{k} with nobody on them · longest {t}", k=x.numbers["nobody"], t=B(longest))
-            if x.numbers["nobody"] else rich("longest {t}", t=B(longest))
+            rich("{k} with nobody on them · longest {t}", k=B(str(nobody)), t=longest)
+            if nobody else rich("longest {t}", t=longest)
         )
     return words, detail
 
@@ -143,10 +180,11 @@ def _find_unconfirmed(f: Facts) -> Finding | None:
 
 def _say_unconfirmed(x: Finding, f: Facts, lang: str):
     noun = noun_after(x.n, ORDERS, lang)
-    oldest = minutes(x.numbers["oldest"] * 60, lang)
+    oldest = B(minutes(x.numbers["oldest"] * 60, lang))
     if lang == "ar":
-        return rich(f"{noun} لم تُؤكَّد بعد"), rich("أقدمها منذ {t}", t=B(oldest))
-    return rich(f"{noun} not confirmed"), rich("the oldest for {t}", t=B(oldest))
+        return rich(f"{noun} بحاجة إلى تأكيد"), rich("أقدمها منذ {t}", t=oldest)
+    verb = "needs" if x.n == 1 else "need"
+    return rich(f"{noun} {verb} confirming"), rich("the oldest for {t}", t=oldest)
 
 
 def _find_unmarked(f: Facts) -> Finding | None:
@@ -158,7 +196,7 @@ def _find_unmarked(f: Facts) -> Finding | None:
 def _say_unmarked(x: Finding, f: Facts, lang: str):
     noun = noun_after(x.n, x.noun, lang)
     if lang == "ar":
-        return rich(f"{noun} لم تُسجَّل"), rich("أرقام الغياب ناقصة حتى تُسجَّل.")
+        return rich(f"{noun} بلا تسجيل حضور"), rich("أرقام الغياب ناقصة حتى تُسجَّل.")
     return rich(f"{noun} not marked"), rich("No-show figures stay wrong until they are.")
 
 
@@ -176,41 +214,42 @@ def _find_overdue(f: Facts) -> Finding | None:
     ]
     if not rows:
         return None
-    return Finding(rows, CUSTOMERS, {"amount": sum(r.detail["overdue"] for r in rows)})
+    return Finding(rows, _who(f), {"amount": sum(r.detail["overdue"] for r in rows)})
 
 
 def _say_overdue(x: Finding, f: Facts, lang: str):
     amount = B(money(x.numbers["amount"], lang))
     first = _first(x.rows)
+    name, days = B(first.label), count(first.detail["days"], DAYS, lang)
     if lang == "ar":
-        return (
-            rich("{amount} متأخر ولم يصله تذكير هذا الأسبوع", amount=amount),
-            rich("على {who}. أقدمهم {name} منذ {days}.", who=count(x.n, CUSTOMERS, lang),
-                 name=first.label, days=count(first.detail["days"], DAYS, lang)),
-        )
-    return (
-        rich("{amount} overdue, with no reminder this week", amount=amount),
-        rich("Owed by {who}. The oldest is {name}, {days}.", who=count(x.n, CUSTOMERS, lang),
-             name=first.label, days=count(first.detail["days"], DAYS, lang)),
-    )
+        title = rich("{a} مستحقة منذ 30 يوماً أو أكثر، دون تذكير منذ 7 أيام", a=amount)
+        if x.n == 1:
+            return title, rich("يدين بها {name}، منذ {d}.", name=name, d=days)
+        return title, rich("يدين بها {who}. أقدمهم {name}، منذ {d}.",
+                           who=count(x.n, x.noun, lang), name=name, d=days)
+    title = rich("{a} owed 30+ days, not reminded in 7 days", a=amount)
+    if x.n == 1:
+        return title, rich("Owed by {name}, {d}.", name=name, d=days)
+    return title, rich("Owed by {who}. The oldest is {name}, {d}.",
+                       who=count(x.n, x.noun, lang), name=name, d=days)
 
 
 def _find_promise_passed(f: Facts) -> Finding | None:
-    return Finding(f.promises_passed, CUSTOMERS) if f.promises_passed else None
+    return Finding(f.promises_passed, _who(f)) if f.promises_passed else None
 
 
 def _say_promise_passed(x: Finding, f: Facts, lang: str):
     first = _first(x.rows)
+    name = B(first.label)
     when = day_month(first.detail["promised_until"], lang)
+    who = count(x.n, x.noun, lang)
     if lang == "ar":
-        return (
-            rich("{who} لم يسددوا في الموعد الذي وعدوا به", who=count(x.n, CUSTOMERS, lang)),
-            rich("وعد {name} بالسداد قبل {when}.", name=first.label, when=when),
-        )
-    return (
-        rich("{who} did not pay by the date they promised", who=count(x.n, CUSTOMERS, lang)),
-        rich("{name} promised to pay by {when}.", name=first.label, when=when),
-    )
+        verb = agree(x.n, "لم يسدد في الموعد الذي وعد به", "لم يسددا في الموعد الذي وعدا به",
+                     "لم يسددوا في الموعد الذي وعدوا به")
+        return rich("{who} " + verb, who=who), rich("وعد {name} بالسداد قبل {d}.", name=name,
+                                                    d=when)
+    return (rich("{who} did not pay by the date they promised", who=who),
+            rich("{name} promised to pay by {d}.", name=name, d=when))
 
 
 def _find_open_links(f: Facts) -> Finding | None:
@@ -224,31 +263,28 @@ def _say_open_links(x: Finding, f: Facts, lang: str):
     if lang == "ar":
         return (
             rich("{n} برابط دفع مفتوح منذ أكثر من يوم", n=count(x.n, ORDERS, lang)),
-            rich("{amount} بانتظار الدفع. إعادة إرسال الرابط غير متاحة بعد.", amount=amount),
+            rich("{a} بانتظار الدفع. إعادة إرسال الرابط غير متاحة بعد.", a=amount),
         )
     return (
         rich("{n} with a payment link open for over a day", n=count(x.n, ORDERS, lang)),
-        rich("{amount} still to pay. Sending a link again is not built yet.", amount=amount),
+        rich("{a} still to pay. Sending a link again is not built yet.", a=amount),
     )
 
 
 def _find_over_limit(f: Facts) -> Finding | None:
     rows = [Row(a.id, a.name, {"balance": a.balance}) for a in f.accounts if a.over_limit]
-    return Finding(rows, CUSTOMERS) if rows else None
+    return Finding(rows, _who(f)) if rows else None
 
 
 def _say_over_limit(x: Finding, f: Facts, lang: str):
     first = _first(x.rows)
-    amount = B(money(first.detail["balance"], lang))
+    name, amount = B(first.label), B(money(first.detail["balance"], lang))
+    who = count(x.n, x.noun, lang)
     if lang == "ar":
-        return (
-            rich("{who} تجاوزوا حد الائتمان", who=count(x.n, CUSTOMERS, lang)),
-            rich("على {name} {amount}.", name=first.label, amount=amount),
-        )
-    return (
-        rich("{who} over their credit limit", who=count(x.n, CUSTOMERS, lang)),
-        rich("{name} owes {amount}.", name=first.label, amount=amount),
-    )
+        verb = agree(x.n, "تجاوز حد الائتمان", "تجاوزا حد الائتمان", "تجاوزوا حد الائتمان")
+        return rich("{who} " + verb, who=who), rich("على {name} {a}.", name=name, a=amount)
+    return (rich("{who} over their credit limit", who=who),
+            rich("{name} owes {a}.", name=name, a=amount))
 
 
 def _find_owed_growing(f: Facts) -> Finding | None:
@@ -264,11 +300,11 @@ def _say_owed_growing(x: Finding, f: Facts, lang: str):
     if lang == "ar":
         return (
             rich("زاد المستحق لك ثلاثة أسابيع متتالية"),
-            rich("الآجل الجديد زاد عن المحصَّل بـ{gap} في تلك الأسابيع.", gap=gap),
+            rich("الآجل الجديد زاد عن المحصَّل بـ{g} في تلك الأسابيع.", g=gap),
         )
     return (
         rich("What you are owed grew three weeks running"),
-        rich("{gap} more given on credit than collected in those weeks.", gap=gap),
+        rich("{g} more given on credit than collected in those weeks.", g=gap),
     )
 
 
@@ -281,39 +317,38 @@ def _find_ready(f: Facts) -> Finding | None:
 
 def _say_ready(x: Finding, f: Facts, lang: str):
     first = _first(x.rows)
+    number, name = B(f"#{first.detail['number']}"), B(first.label)
     hours = first.detail["hours"]
     if lang == "ar":
         return (
-            rich("{n} جاهزة منذ أكثر من ساعتين", n=count(x.n, ORDERS, lang)),
-            rich("الطلب #{number} لـ{name} ينتظر منذ {h}.", number=first.detail["number"],
-                 name=first.label, h=B(f"{hours} س")),
+            rich("{n} " + agree(x.n, "جاهز", "جاهزان", "جاهزة") + " منذ أكثر من ساعتين",
+                 n=count(x.n, ORDERS, lang)),
+            rich("الطلب {no} للعميل {name} ينتظر منذ {h}.", no=number, name=name,
+                 h=B(f"{hours} س")),
         )
     return (
         rich("{n} ready for over 2 hours", n=count(x.n, ORDERS, lang)),
-        rich("#{number} for {name} has waited longest, {h}.", number=first.detail["number"],
-             name=first.label, h=B(f"{hours} h")),
+        rich("{no} for {name} has waited longest, {h}.", no=number, name=name,
+             h=B(f"{hours} h")),
     )
 
 
 def _find_repeat_no_show(f: Facts) -> Finding | None:
-    return Finding(f.repeat_no_shows, CUSTOMERS) if f.repeat_no_shows else None
+    return Finding(f.repeat_no_shows, _who(f)) if f.repeat_no_shows else None
 
 
 def _say_repeat_no_show(x: Finding, f: Facts, lang: str):
-    from alyr.modules.agent.words import DAY_LONG, clock, sunday_index
-
     first = _first(x.rows)
-    nxt = first.detail["next"].astimezone(f.zone)
-    when = f"{DAY_LONG[lang][sunday_index(nxt.date())]} {clock(nxt)}"
+    name = B(first.label)
+    when = when_text(first.detail["next"].astimezone(f.zone), f.local, lang)
+    who = count(x.n, x.noun, lang)
     if lang == "ar":
-        return (
-            rich("{who} تغيّبوا مرتين ولديهم حجز جديد", who=count(x.n, CUSTOMERS, lang)),
-            rich("{name} محجوز يوم {when}.", name=first.label, when=when),
-        )
-    return (
-        rich("{who} who missed twice are booked again", who=count(x.n, CUSTOMERS, lang)),
-        rich("{name} is booked for {when}.", name=first.label, when=when),
-    )
+        verb = agree(x.n, "تغيّب مرتين ولديه حجز جديد", "تغيّبا مرتين ولديهما حجز جديد",
+                     "تغيّبوا مرتين ولديهم حجز جديد")
+        return rich("{who} " + verb, who=who), rich("موعد {name} {w}.", name=name, w=when)
+    return (rich("{who} who missed twice {verb} booked again", who=who,
+                 verb="is" if x.n == 1 else "are"),
+            rich("{name} is booked {w}.", name=name, w=when))
 
 
 def _find_slow_answers(f: Facts) -> Finding | None:
@@ -324,15 +359,15 @@ def _find_slow_answers(f: Facts) -> Finding | None:
 
 
 def _say_slow_answers(x: Finding, f: Facts, lang: str):
-    now, before = minutes(x.numbers["now"], lang), minutes(x.numbers["before"], lang)
+    now, before = B(minutes(x.numbers["now"], lang)), B(minutes(x.numbers["before"], lang))
     if lang == "ar":
         return (
-            rich("تباطأ أول رد إلى {t}", t=B(now)),
-            rich("في الأيام السبعة التي قبلها: {t}. وقت كل شخص في شاشة الفريق.", t=B(before)),
+            rich("تباطأ أول رد إلى {t}", t=now),
+            rich("في الأيام السبعة التي قبلها: {t}. وقت كل شخص في شاشة الفريق.", t=before),
         )
     return (
-        rich("First answers slowed to {t}", t=B(now)),
-        rich("The 7 days before: {t}. Each person's time is on the Team screen.", t=B(before)),
+        rich("First answers slowed to {t}", t=now),
+        rich("The 7 days before: {t}. Each person's time is on the Team screen.", t=before),
     )
 
 
@@ -359,29 +394,40 @@ def _say_booked_value(x: Finding, f: Facts, lang: str):
 # ── knowledge, for information ────────────────────────────
 
 
-def _find_no_show_rate(f: Facts) -> Finding | None:
+def no_show_rate(f: Facts) -> tuple[int, int] | None:
+    """No-shows as a whole percentage of visits due in 30 days, rounded once, so the
+    number shown and the rule's threshold always agree (05-critique P2-5)."""
     base = f.completed_30 + f.no_shows_30
-    if f.no_shows_30 < 3 or base == 0 or f.no_shows_30 / base < 0.10:
+    if base == 0:
         return None
-    return Finding([], visit_noun(f.business_type),
-                   {"rate": round(100 * f.no_shows_30 / base), "base": base},
+    return round(100 * f.no_shows_30 / base), base
+
+
+def _find_no_show_rate(f: Facts) -> Finding | None:
+    rate = no_show_rate(f)
+    if rate is None or f.no_shows_30 < 3 or rate[0] < 10:
+        return None
+    return Finding([], visit_noun(f.business_type), {"rate": rate[0], "base": rate[1]},
                    total=f.no_shows_30)
 
 
 def _say_no_show_rate(x: Finding, f: Facts, lang: str):
     rate = B(f"{x.numbers['rate']}%")
+    noun = visit_noun(f.business_type)
     if lang == "ar":
         line = (
-            "{n} غياب. التذكير يصل قبل كل موعد بساعتين." if f.booking_reminders
-            else "{n} غياب، والتذكيرات متوقفة. تشغيلها من صفحة الإعداد."
+            "{n} من {b}. التذكير يصل قبل كل موعد بساعتين." if f.booking_reminders
+            else "{n} من {b}، والتذكيرات متوقفة. تشغيلها من صفحة الإعداد."
         )
-        return (rich("{r} من المواعيد غياب خلال 30 يوماً", r=rate),
-                rich(line, n=B(str(x.n))))
+        plural = {"visits": "الزيارات", "appointments": "المواعيد", "jobs": "المهام"}[noun[0][1]]
+        return (rich("{r} من " + plural + " انتهت بالغياب خلال 30 يوماً", r=rate),
+                rich(line, n=B(str(x.n)), b=B(str(x.numbers["base"]))))
     line = (
-        "{n} no-shows. A reminder goes 2 hours before each visit." if f.booking_reminders
-        else "{n} no-shows, and reminders are off. They are switched on in setup."
+        "{n} of {b}. A reminder goes 2 hours before each visit." if f.booking_reminders
+        else "{n} of {b}, and reminders are off. They are switched on in setup."
     )
-    return rich("{r} of visits were no-shows in 30 days", r=rate), rich(line, n=B(str(x.n)))
+    return (rich("{r} of {noun} were no-shows in 30 days", r=rate, noun=noun[0][1]),
+            rich(line, n=B(str(x.n)), b=B(str(x.numbers["base"]))))
 
 
 def _find_quiet_regulars(f: Facts) -> Finding | None:
@@ -390,38 +436,36 @@ def _find_quiet_regulars(f: Facts) -> Finding | None:
 
 def _say_quiet_regulars(x: Finding, f: Facts, lang: str):
     first = _first(x.rows)
+    name = B(first.label)
+    times = count(first.detail["times"], TIMES, lang)
+    days = count(first.detail["days"], DAYS, lang)
+    who = count(x.n, REGULARS, lang)
     if lang == "ar":
-        return (
-            rich("{who} غابوا أكثر من 30 يوماً", who=count(x.n, REGULARS, lang)),
-            rich("{name}: {times} مرات من قبل، آخرها قبل {days}.", name=first.label,
-                 times=first.detail["times"], days=count(first.detail["days"], DAYS, lang)),
-        )
-    return (
-        rich("{who} quiet for over 30 days", who=count(x.n, REGULARS, lang)),
-        rich("{name}: {times} times before, the last {days} ago.", name=first.label,
-             times=first.detail["times"], days=count(first.detail["days"], DAYS, lang)),
-    )
+        verb = agree(x.n, "غاب أكثر من 30 يوماً", "غابا أكثر من 30 يوماً",
+                     "غابوا أكثر من 30 يوماً")
+        return (rich("{who} " + verb, who=who),
+                rich("{name}: {t} من قبل، آخرها قبل {d}.", name=name, t=times, d=days))
+    return (rich("{who} quiet for over 30 days", who=who),
+            rich("{name}: {t} before, the last {d} ago.", name=name, t=times, d=days))
 
 
 def _find_due_back(f: Facts) -> Finding | None:
-    return Finding(f.due_back, CUSTOMERS) if f.due_back else None
+    return Finding(f.due_back, _who(f)) if f.due_back else None
 
 
 def _say_due_back(x: Finding, f: Facts, lang: str):
     first = _first(x.rows)
+    name = B(first.label)
+    usual = count(first.detail["usual"], DAYS, lang)
+    days = count(first.detail["days"], DAYS, lang)
+    who = count(x.n, x.noun, lang)
     if lang == "ar":
-        return (
-            rich("{who} حان موعد عودتهم", who=count(x.n, CUSTOMERS, lang)),
-            rich("{name} يأتي عادة كل {usual}، ومضى {days}.", name=first.label,
-                 usual=count(first.detail["usual"], DAYS, lang),
-                 days=count(first.detail["days"], DAYS, lang)),
-        )
-    return (
-        rich("{who} due back", who=count(x.n, CUSTOMERS, lang)),
-        rich("{name} usually comes every {usual}; it has been {days}.", name=first.label,
-             usual=count(first.detail["usual"], DAYS, lang),
-             days=count(first.detail["days"], DAYS, lang)),
-    )
+        verb = agree(x.n, "حان موعد عودته", "حان موعد عودتهما", "حان موعد عودتهم")
+        return (rich("{who} " + verb, who=who),
+                rich("يأتي {name} عادة كل {u}، ومضى {d}.", name=name, u=usual, d=days))
+    return (rich("{who} due back", who=who),
+            rich("{name} usually comes every {u}; it has been {d}.", name=name, u=usual,
+                 d=days))
 
 
 def _find_thin_days(f: Facts) -> Finding | None:
@@ -439,8 +483,8 @@ def _say_thin_days(x: Finding, f: Facts, lang: str):
     share = B(f"{x.numbers['share']}%")
     if lang == "ar":
         return (
-            rich("{n} في الأيام السبعة القادمة محجوزة بأقل من 30%", n=count(x.n, DAYS, lang)),
-            rich("الأهدأ: {day}، محجوز {s}.", day=day, s=share),
+            rich("{n} من الأيام السبعة القادمة محجوزة بأقل من 30%", n=count(x.n, DAYS, lang)),
+            rich("أهدأها {day}، محجوز {s}.", day=day, s=share),
         )
     return (
         rich("{n} in the next 7 are under 30% booked", n=count(x.n, DAYS, lang)),
@@ -478,8 +522,10 @@ def _find_lost_reason(f: Facts) -> Finding | None:
 def _say_lost_reason(x: Finding, f: Facts, lang: str):
     reason = REASONS.get(x.numbers["reason"], REASONS["other"]).get(lang)
     if lang == "ar":
+        verb = agree(x.n, "خُسرت", "خُسرتا", "خُسرت")
         return (
-            rich("{n} خُسرت بسبب «{r}» خلال 30 يوماً", n=count(x.n, CHATS, lang), r=reason),
+            rich("{n} " + verb + " بسبب «{r}» خلال 30 يوماً", n=count(x.n, CHATS, lang),
+                 r=reason),
             rich("يُسجَّل السبب عند إغلاق المحادثة كخسارة."),
         )
     return (
@@ -499,12 +545,12 @@ def _say_unused(x: Finding, f: Facts, lang: str):
         names = "، ".join(r.detail.get("name_ar") or r.label for r in x.rows[:3])
         return (
             rich("{n} في قائمتك بلا طلبات خلال 30 يوماً", n=count(x.n, ITEMS, lang)),
-            rich("منها: {names}.", names=names),
+            rich("منها: {names}.", names=B(names)),
         )
     names = ", ".join(r.label for r in x.rows[:3])
     return (
         rich("{n} on your menu had no orders in 30 days", n=count(x.n, ITEMS, lang)),
-        rich("{names}.", names=names),
+        rich("{names}.", names=B(names)),
     )
 
 
@@ -520,14 +566,15 @@ def _find_riser(f: Facts) -> Finding | None:
 def _say_riser(x: Finding, f: Facts, lang: str):
     n = x.numbers
     if lang == "ar":
+        name = f.names_ar.get(n["name"], n["name"])
         return (
-            rich("{name}: زاد {d} عن الأسبوع الماضي", name=n["name"], d=B(str(x.n))),
-            rich("{cur} حتى الآن هذا الأسبوع، و{prev} في الأيام نفسها من الأسبوع الماضي.",
+            rich("{name}: أكثر بـ{d} من الأسبوع الماضي", name=B(name), d=B(str(x.n))),
+            rich("{cur} حتى الآن هذا الأسبوع، و{prev} حتى الوقت نفسه من الأسبوع الماضي.",
                  cur=B(str(n["cur"])), prev=B(str(n["prev"]))),
         )
     return (
-        rich("{name} is up {d} on last week", name=n["name"], d=B(str(x.n))),
-        rich("{cur} sold so far this week; {prev} by the same day last week.",
+        rich("{name} is up {d} on last week", name=B(n["name"]), d=B(str(x.n))),
+        rich("{cur} sold so far this week; {prev} by this time last week.",
              cur=B(str(n["cur"])), prev=B(str(n["prev"]))),
     )
 
@@ -620,17 +667,18 @@ INSIGHTS: tuple[Insight, ...] = (
         "quiet_regulars", 6, "knowledge", "orders|bookings",
         Text("3+ orders or visits 31 to 120 days ago, none in the last 30",
              "3 طلبات أو زيارات أو أكثر قبل 31 إلى 120 يوماً، ولا شيء خلال آخر 30 يوماً"),
-        _find_quiet_regulars, _say_quiet_regulars, status=COMING_CONSENT,
+        _find_quiet_regulars, _say_quiet_regulars, status=NO_CONSENT,
     ),
     Insight(
         "due_back", 17, "knowledge", "bookings",
         Text("3+ visits, the last longer ago than 1.5 × their usual gap, nothing booked",
              "3 زيارات أو أكثر، وآخرها أبعد من 1.5 × المعتاد، ولا حجز قادم"),
-        _find_due_back, _say_due_back, status=COMING_CONSENT,
+        _find_due_back, _say_due_back, status=NO_CONSENT,
     ),
     Insight(
         "thin_days", 14, "knowledge", "bookings",
-        Text("booked minutes ÷ opening minutes, each of the next 7 days, under 30%; 2 days or more",
+        Text("booked minutes ÷ opening minutes, each of the next 7 days, under 30%; "
+             "2 days or more",
              "الدقائق المحجوزة ÷ دقائق العمل لكل يوم من الأيام السبعة القادمة، "
              "أقل من 30%؛ يومان أو أكثر"),
         _find_thin_days, _say_thin_days, status=INFO_ONLY,

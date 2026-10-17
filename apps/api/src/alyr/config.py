@@ -29,6 +29,10 @@ class Settings(BaseSettings):
     signup_open: bool | None = None
     # Prices and the promise are set in the back office, not here (D-032).
 
+    # Local only: read the ALYR Agent as if it were this moment (ISO 8601, with an offset),
+    # to look at the samples on a weekday (ALY-99). Ignored everywhere except env "local".
+    agent_clock: str = ""
+
     # Where payment links point. The web app serves /pay/...
     public_web_url: str = "http://localhost:3100"
 

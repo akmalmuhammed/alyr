@@ -12,7 +12,7 @@ from alyr.agent_samples import OUT, SAMPLE_NOW
 from alyr.core.auth import Staff
 from alyr.db import Database
 from alyr.modules.agent import view
-from alyr.seed_bookings import CLINIC, SALON, ensure_sample_tenant, reset_sample
+from alyr.seed_bookings import HOME, SALON, ensure_sample_tenant, reset_sample
 from conftest import APP_DSN, OWNER_DSN
 from test_consent import owner_sql
 
@@ -34,10 +34,10 @@ def make(sample, days: int = 56) -> tuple[dict, dict]:
     return asyncio.run(go())
 
 
-@pytest.mark.parametrize("sample", [SALON, CLINIC], ids=["salon", "clinic"])
+@pytest.mark.parametrize("sample", [SALON, HOME], ids=["salon", "homeservices"])
 def test_a_bookings_sample_is_the_same_every_time_and_never_reaches_a_phone(sample):
     first, again = make(sample)
-    assert first == again and first["bookings"] > 100 and first["orders"] == 0
+    assert first == again and first["bookings"] > 60 and first["orders"] == 0
     statuses = {
         r["status"]: r["n"]
         for r in owner_sql(
@@ -56,7 +56,8 @@ def test_a_bookings_sample_is_the_same_every_time_and_never_reaches_a_phone(samp
     modules = owner_sql(
         "select module_key from tenant_modules where tenant_id = $1 order by 1", sample.tenant_id
     )
-    assert [r["module_key"] for r in modules] == ["bookings", "inbox", "payments"]
+    expected = ["bookings", "inbox", "payments"] + (["ledger"] if sample.accounts else [])
+    assert [r["module_key"] for r in modules] == sorted(expected)
 
 
 def test_an_empty_sample_shows_the_empty_state():
@@ -81,7 +82,7 @@ def test_an_empty_sample_shows_the_empty_state():
     make(SALON)  # back to the full sample for the tests after this one
 
 
-@pytest.mark.parametrize("key", ["bakery", "salon", "clinic"])
+@pytest.mark.parametrize("key", ["bakery", "salon", "homeservices"])
 @pytest.mark.parametrize("lang", ["en", "ar"])
 def test_the_captured_sample_screens_match_the_engine(key, lang):
     path = OUT / f"{key}.{lang}.json"
@@ -92,5 +93,7 @@ def test_the_captured_sample_screens_match_the_engine(key, lang):
     assert sample["now"] == SAMPLE_NOW.isoformat()
     assert sample["state"] == "normal" and sample["money"] is True
     assert len(sample["kpis"]) == 4 and sample["week"] and sample["needs"]["items"]
+    # Money through ALYR links reads as live payments; there is no provider yet (ALY-17).
+    assert not any(r["key"] == "paid" for r in sample["done"]["rows"])
     text = json.dumps(sample, ensure_ascii=False).lower()
     assert not re.search(r"\b(ai|smart|learns|thinks|noticed|predicts?)\b", text)
