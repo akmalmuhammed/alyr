@@ -4,6 +4,28 @@ ALYR is the company. The WhatsApp product is its first product (decision D-023).
 
 **Every value lives in `design/tokens.json`**: colour in light and dark, faces, type scales, spacing, radii, rules, the cut, shadows, motion, breakpoints, z-index and focus. `scripts/tokens-build.mjs` generates the CSS, TypeScript and Python every page, screen, card and email reads, and `scripts/design-check.mjs` fails CI on a hard-coded colour or font. How to use it: `design/README.md`.
 
+## Design system: the rules live in skills
+
+This page tells the story of the brand and why each rule exists. The rules an agent follows
+when it makes anything with the ALYR brand on it live in Claude Code skills, in
+`.claude/skills/`, and the values live in `design/tokens.json` (ALY-126):
+
+| Skill | For |
+|---|---|
+| `alyr-design` | The core: principles, tokens, type and grid, components, motion, light and dark, RTL, Arabic, accessibility, honesty, verification, the recurring failures |
+| `alyr-site-page` | Public pages, the product page template, adding a product page |
+| `alyr-product-screen` | Workspace, back office, onboarding and customer pages; ALYR Agent's dashboard |
+| `alyr-whatsapp-message` | Replies, notices, templates and the report card's message |
+| `alyr-email` | Emails ALYR sends |
+| `alyr-generated-image` | The report card, social cards and other images drawn by code |
+| `alyr-print` | QR cards, leave-behinds, invoices |
+| `alyr-deck-and-social` | Slides and social posts |
+| `alyr-design-review` | The design cycle: research, brief, build, two critics, rulings, fix, verify, publish |
+
+The look is Carbon and Volt (the founder, 17 Oct 2026, ALY-61; D-040 with the tokens); the
+playbook's cobalt is retired and its voice kept. When this page and a skill disagree, fix
+whichever is out of date in the same pull request.
+
 ## Where the source is
 
 The approved design system (v1.0) and strategy are on the branch `codex/alyr-native-foundation`, under `ALYR_Main/ALYR_Design_System` and `ALYR_Main/ALYR_Brand_HQ`. **Never merge that branch into `main`.** It shares no history with `main` and contains other projects. Copy the asset you need and say where it came from.
