@@ -80,13 +80,15 @@ const BEFORE_PAINT =
  * - A stored choice ("light" or "dark") goes on <html> as `data-theme`, and theme-color
  *   follows it.
  * - It answers the switch (ThemeSwitch.tsx) itself, so the switch works before the page's
- *   other scripts start. Other open tabs follow.
+ *   other scripts start. The new theme sweeps in with a View Transition (site.css); without
+ *   one, or with reduced motion, it simply changes. Other open tabs follow.
  * - localStorage can be missing or refuse (private windows): then the choice lasts for the
  *   page only.
  */
 function theme(key: string, colors: { light: string; dark: string }) {
   const root = document.documentElement;
   const device = window.matchMedia("(prefers-color-scheme: dark)");
+  const still = window.matchMedia("(prefers-reduced-motion: reduce)");
   const stored = () => {
     try {
       const value = localStorage.getItem(key);
@@ -120,6 +122,7 @@ function theme(key: string, colors: { light: string; dark: string }) {
     if (event.key === key || event.key === null) set(stored());
   });
 
+  let turn = 0;
   document.addEventListener("click", (event) => {
     const target = event.target;
     if (!(target instanceof Element) || !target.closest("[data-theme-switch]")) return;
@@ -130,7 +133,23 @@ function theme(key: string, colors: { light: string; dark: string }) {
     } catch {
       // not remembered; it still changes for this page
     }
-    set(next);
+    // The new colours apply at once, with every transition off, so nothing fades through
+    // the old theme; the switch's glyph keeps its turn (site.css).
+    const swap = () => {
+      root.setAttribute("data-theme-snap", "");
+      set(next);
+      void getComputedStyle(document.body).backgroundColor;
+      requestAnimationFrame(() => root.removeAttribute("data-theme-snap"));
+    };
+    const doc = document as Document & {
+      startViewTransition?: (update: () => void) => { finished: Promise<void> };
+    };
+    if (!doc.startViewTransition || still.matches) return swap();
+    const mine = ++turn;
+    root.setAttribute("data-theme-sweep", "");
+    doc.startViewTransition(swap).finished.finally(() => {
+      if (mine === turn) root.removeAttribute("data-theme-sweep");
+    });
   });
 }
 
