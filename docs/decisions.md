@@ -42,6 +42,7 @@ Status: **Accepted** (in force), **Proposed** (waiting for the founder), **Super
 | D-034 | Product first and paid from the first customer; the homepage leads with what ALYR sells today | Accepted |
 | D-035 | ALYR is a suite of products led by ALYR Agent: Chat, Bookings, Agent, Accounts, Payroll coming; the workspace home becomes the Agent dashboard | Accepted |
 | D-037 | The public site presents the suite: the homepage leads with ALYR Agent at work, and every live product has its own page | Accepted |
+| D-039 | The Catalog (items, stock, photos) is built complete before go-live; photos on Cloudflare R2; free now, charged by usage later | Accepted |
 
 ---
 
@@ -665,3 +666,54 @@ There is no separate Pay product: payment links stay a module of Chat and Bookin
 **Why.** D-035 made ALYR a suite led by ALYR Agent. The site now says so: the first thing a visitor sees is the screen an owner would open every morning, and each product can be read on its own before the visit.
 
 **Open for the founder.** Publishing (the go-ahead each time), the Arabic review (ALY-66), the clinics question (ALY-51), a manual name check for Dafira Salon and Zilal Cooling as for Qirfa (renamed from Sadaf Salon and Nasma Cooling, too close to real businesses), and whether the hero may keep calling the replies and reminders the agent's work while `/agent` explains that ALYR Chat and ALYR Bookings send them and ALYR Agent counts them.
+
+## D-039 · The Catalog (items, stock, photos) is built complete before go-live; photos on Cloudflare R2; free now, charged by usage later
+**Date** 17 Oct 2026 · **Status** Accepted (founder, 17 Oct, in chat) · Linear ALY-101 · Plan with diagrams: https://app.eraser.io/workspace/Ww2H0YNEriob3hFIEywg
+
+**Where we were.** An owner cannot manage what they sell. The `products` table holds a name, an Arabic name, a category, a price and an on/off switch. There is no screen to add or edit an item, no photo, no quantity, no sizes or colours, and nothing records stock. ALYR loads a shop's menu for it.
+
+**The decision.**
+- **Build the Catalog complete before go-live.** An owner or a customer must never meet a screen, button or message that says a feature is "coming" or "under development". What is not ready stays hidden.
+- **"Complete" is a fixed list, not "any scenario".** Every business type ALYR sells to has a working catalog template, and the 30 scenarios in the plan are covered by automated tests (the last item sold twice, a price changing at checkout, R2 down, a bad photo, and so on).
+- **It is not a separate product.** It is part of ALYR, free now, with usage meters from day one so a later charge is based on real data. Charging goes through the price list and per-client quote of D-032: an included allowance, usage beyond it billed. No billing screen is built before the founder decides.
+- **Photos live on Cloudflare R2, free tier first** (see below).
+
+**What it changes in earlier decisions.**
+- The 16 Oct rule "build only what a named pilot business needs; no new modules until 10 paying customers" (`operating-model.md`, `lanes/product.md`, D-034) no longer applies to the Catalog. It still applies to every other new module.
+- `master-plan.md` 6.2 listed "product options and stock" as deliberately not in Product 1. They are in scope now.
+- D-035 and D-037 show Payroll as "coming" in the Products menu and on the site. Nothing "coming" is shown to an owner or a customer at go-live. Payroll appears when it is built. ALY-113 sweeps every such label, including "Early access" on the site (the founder chooses the final wording).
+
+**Agreed details (founder, 17 Oct).**
+1. Release 1 includes customer price groups for wholesale and three new business types: bakery and home kitchen, grocery and baqala, fashion and gifts for social sellers.
+2. Syncing with Meta's WhatsApp catalog is tested first on our test number and ships only if it works for Qatar numbers. Meta's documentation says the catalog is uploaded to Meta and connected to the shop's WhatsApp Business Account; it does not say whether this works for Qatar numbers.
+3. An unpaid pay-link order holds its stock for 30 minutes; the shop can change that.
+4. Only WhatsApp numbers the owner has registered as staff can change stock or add items by message. Each change can be undone and is recorded with who made it.
+
+**Naming.** An owner's sellable things are "items" in code, and "Menu", "Products" or "Price list" on screen depending on the business type. The workspace's Products screen, which lists ALYR's own suite (Chat, Bookings, Agent, Accounts), keeps the word "products". Package 1 (ALY-102) decides whether the existing `products` table is renamed or extended in place.
+
+**Item and stock model (summary; the plan has the detail).**
+- An item has English and Arabic names (the Arabic is required before it goes live, because Qatar's consumer law requires prices in Arabic, including for online and social-media sellers), photos, a category, a price with its history, a unit, optional variants (size, colour) and options (required choices, priced extras), and a status of draft, live, hidden or archived. An item with order history is archived, never deleted.
+- **Availability rules,** one per item plus an optional schedule: always, switch, count, daily limit, schedule with lead time and cut-off.
+- **Stock is a log of movements** (opening, received, sold, cancelled and restocked, wasted, counted, adjusted), each with who, when and why. The figure on screen is their total. Stock is reserved in one conditional database step at checkout, so the last item can only sell once.
+
+**Photos and storage.**
+- Cloudflare R2, Standard storage, used only through its S3-compatible interface and a small storage layer of our own (D-011: nothing may depend on a vendor's proprietary service). Local disk for development and tests.
+- Public photos are served on `media.alyr.qa` through Cloudflare's network. One folder per shop.
+- ALYR processes every upload itself: checks the type by content, the size and the pixel count; removes location and camera data; re-saves three WebP sizes (about 320, 800 and 1,600 pixels wide) under content-based names. SVG and other active formats are refused. Cloudflare's separate Images service is not used.
+- **Free allowance** (Cloudflare's pricing page, checked 17 Oct 2026): 10 GB-month of storage, 1 million writes and 10 million reads a month, and no charge for downloads. Beyond that, USD 0.015 per GB-month. At about 350 KB per photo across the three sizes (our estimate) the free tier holds roughly 28,000 photos across all shops.
+- **Caps:** about 1,000 items and 3,000 photos per shop to start (our estimate), and an alert when the total reaches 80% of 10 GB. A cap stops new uploads with a clear message and never deletes anything.
+- **Meters, kept monthly per shop:** photos stored, gigabytes stored, active items, uploads. They exist from day one.
+- **Data residency.** Product photos are public by design and are not personal data. R2 sits outside Qatar. The row is in `data-residency.md`.
+
+**What we could not confirm.**
+- **Whether R2's free tier needs a payment method on the account.** Cloudflare's pricing page does not say. The founder will see when enabling it.
+- **R2 cannot be enabled from the command line or the API.** Checked 17 Oct: `wrangler r2 bucket list` on the founder's laptop fails with Cloudflare error 10042, "Please enable R2 through the Cloudflare Dashboard", and wrangler's sign-in has no R2 permission. Enabling is a one-time step in the dashboard (Storage and databases, R2 object storage). Accepting terms and any card details are the founder's to enter.
+- Whether the WhatsApp catalog features work for Qatar numbers (see agreed detail 2).
+
+**After the founder enables R2** (ALY-103): create the bucket and the `media.alyr.qa` domain with wrangler; the founder creates an R2 API token limited to that bucket (Object Read and Write) in the dashboard and gives it to us the way other secrets are given (clipboard to `apps/api/.env`, never pasted in chat). Planned setting names: `ALYR_R2_ACCOUNT_ID`, `ALYR_R2_ACCESS_KEY_ID`, `ALYR_R2_SECRET_ACCESS_KEY`, `ALYR_R2_BUCKET`, `ALYR_MEDIA_BASE_URL`. Production values go in the secret store (CLAUDE.md rule 6).
+
+**Not in release 1** (shown only when finished, based on what owners use): Meta catalog sync, ingredients and recipes, suppliers and purchase orders, barcode scanning, several branches with separate stock, voice notes (needs the AI-model decision, D-012), Instagram.
+
+**Why.** The founder does not want a bad first impression: an owner who cannot change their own menu, or finds a "coming soon" label, will not trust the rest. Research (in the plan) also shows spreadsheets are the real competition, so setup must take minutes from a phone, and staff must be able to update stock without opening a screen.
+
+**Risks.** The scope is large, so packages 1 and 2 come first and anything not ready stays hidden. Meta may classify a back-in-stock message as marketing: test the template category first. The listing policy (no counterfeit or prohibited goods) needs the terms (ALY-68) and a legal look (ALY-51). Demo shops use simple drawn tiles, not copyrighted photos.
