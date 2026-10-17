@@ -42,9 +42,9 @@ jobs:
           mkdir -p "$RUNNER_TEMP"
           $COMPOSE up -d
           $COMPOSE run --rm migrate python -m alyr.seed
-          for i in $(seq 1 60); do curl -fs http://localhost:18000/health/ready && break; sleep 2; done
+          for _ in $(seq 1 60); do curl -fs http://localhost:18000/health/ready && break; sleep 2; done
           curl -fs http://localhost:18000/health/ready
-          for i in $(seq 1 30); do curl -fs http://localhost:18000/health/worker && break; sleep 2; done
+          for _ in $(seq 1 30); do curl -fs http://localhost:18000/health/worker && break; sleep 2; done
           curl -fs http://localhost:18000/health/worker
           curl -fs -o "$RUNNER_TEMP/login.html" http://localhost:13000/login
           curl -fs -o "$RUNNER_TEMP/book.json" http://localhost:13000/api/book/al-noor
