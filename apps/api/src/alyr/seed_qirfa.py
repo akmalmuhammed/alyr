@@ -401,11 +401,12 @@ class Bakery:
         self.order_number += 1
         number = self.order_number
         age = self.now - at
-        if age > timedelta(hours=20):
+        # Collected within a few hours; only this morning's orders are still in the shop.
+        if age > timedelta(hours=5):
             status = "cancelled" if rng.random() < 0.03 else "done"
         else:
             status = "new" if age < timedelta(minutes=40) else (
-                "confirmed" if age < timedelta(hours=3) else "ready")
+                "confirmed" if age < timedelta(hours=2) else "ready")
         # As in the order link: on account, or a payment link that is paid or still open.
         # An open link on a collected order is usually cash at the counter, which ALYR does
         # not record.
@@ -750,6 +751,12 @@ class Bakery:
             if await self.tasting(person, starts, made) and rng.random() < 0.6:
                 cake = starts + timedelta(days=rng.randint(1, 4), minutes=15)
                 intents.append((cake, person, "cake"))
+
+        # Right now: two orders that came in a little while ago and nobody has confirmed.
+        regulars = [p for p in people if p.kind == "regular"]
+        for minutes_ago in (18, 33):
+            intents.append((self.now - timedelta(minutes=minutes_ago), rng.choice(regulars),
+                            "everyday"))
 
         accounts = []
         for index, spec in enumerate(ACCOUNTS):
