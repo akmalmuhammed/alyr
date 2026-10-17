@@ -1,0 +1,77 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex">
+<title>ALYR sample workspace</title>
+<style>
+  :root { --ink:#15171a; --muted:#5f666d; --line:#d8dcd7; --canvas:#f6f7f3; --surface:#fff; --volt:#b7f34a; --carbon:#15171a; }
+  * { box-sizing: border-box; }
+  body { margin:0; font-family: system-ui, "Segoe UI", sans-serif; background:var(--canvas); color:var(--ink); font-size:15px; line-height:1.5; }
+  .banner { background:var(--carbon); color:#f3f5f0; padding:.7rem 1rem; font-size:.875rem; text-align:center; }
+  .banner strong { color:var(--volt); }
+  .app { display:grid; grid-template-columns: 220px 1fr; min-height: calc(100vh - 3rem); }
+  nav { background:var(--surface); border-inline-end:1px solid var(--line); padding:1.25rem 1rem; }
+  nav .shop { font-weight:600; margin-bottom:1.25rem; }
+  nav a { display:block; padding:.5rem .6rem; border-radius:.4rem; color:var(--muted); text-decoration:none; }
+  nav a[aria-current] { background:var(--canvas); color:var(--ink); font-weight:600; }
+  main { padding:1.5rem clamp(1rem,3vw,2.5rem); }
+  h1 { font-size:1.5rem; margin:0 0 .25rem; }
+  .sub { color:var(--muted); margin:0 0 1.5rem; }
+  .cards { display:grid; grid-template-columns: repeat(auto-fit, minmax(170px,1fr)); gap:.75rem; margin-bottom:1.5rem; }
+  .card { background:var(--surface); border:1px solid var(--line); border-radius:.6rem; padding:1rem; }
+  .card .k { color:var(--muted); font-size:.8rem; }
+  .card .v { font-size:1.5rem; font-weight:600; margin-top:.25rem; }
+  table { width:100%; border-collapse:collapse; background:var(--surface); border:1px solid var(--line); border-radius:.6rem; overflow:hidden; }
+  th, td { text-align:start; padding:.65rem .8rem; border-bottom:1px solid var(--line); font-size:.9rem; }
+  th { color:var(--muted); font-weight:500; font-size:.8rem; background:var(--canvas); }
+  tr:last-child td { border-bottom:0; }
+  .tag { display:inline-block; padding:.1rem .5rem; border-radius:999px; background:var(--canvas); border:1px solid var(--line); font-size:.78rem; }
+  .tag.ok { background:var(--volt); border-color:transparent; }
+  .wrap { overflow-x:auto; }
+  @media (max-width: 640px) {
+    .app { grid-template-columns: 1fr; }
+    nav { display:flex; gap:.25rem; overflow-x:auto; border-inline-end:0; border-bottom:1px solid var(--line); padding:.6rem; }
+    nav .shop { display:none; }
+    nav a { white-space:nowrap; }
+  }
+</style>
+</head>
+<body>
+<div class="banner"><strong>Sample data.</strong> This is a picture of ALYR's client workspace with a made-up bakery. It is not a live product and does not sign in.</div>
+<div class="app">
+  <nav aria-label="Sample sections">
+    <div class="shop">Qirfa Bakery (sample)</div>
+    <a href="#" aria-current="page">Home</a>
+    <a href="#">Conversations</a>
+    <a href="#">Orders</a>
+    <a href="#">Bookings</a>
+    <a href="#">Credit accounts</a>
+    <a href="#">Team</a>
+    <a href="#">Products</a>
+  </nav>
+  <main>
+    <h1>Good afternoon, Huda</h1>
+    <p class="sub">Sample week: what came in, what is waiting for you, what is owed.</p>
+    <div class="cards">
+      <div class="card"><div class="k">Orders today</div><div class="v">23</div></div>
+      <div class="card"><div class="k">Paid online</div><div class="v">QAR 1,184</div></div>
+      <div class="card"><div class="k">Waiting for reply</div><div class="v">4</div></div>
+      <div class="card"><div class="k">Owed to you</div><div class="v">QAR 612</div></div>
+    </div>
+    <div class="wrap">
+      <table>
+        <thead><tr><th>Order</th><th>Customer</th><th>Items</th><th>Total</th><th>Status</th></tr></thead>
+        <tbody>
+          <tr><td>#1042</td><td>Sara</td><td>Date bread, 2 × kunafa</td><td>QAR 96</td><td><span class="tag ok">Paid</span></td></tr>
+          <tr><td>#1041</td><td>Yousef</td><td>Sourdough, 1 × cake</td><td>QAR 143</td><td><span class="tag">On account</span></td></tr>
+          <tr><td>#1040</td><td>Mariam</td><td>Croissant box (6)</td><td>QAR 58</td><td><span class="tag ok">Delivered</span></td></tr>
+          <tr><td>#1039</td><td>Khalid</td><td>Birthday cake</td><td>QAR 220</td><td><span class="tag">Preparing</span></td></tr>
+        </tbody>
+      </table>
+    </div>
+  </main>
+</div>
+</body>
+</html>

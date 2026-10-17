@@ -44,6 +44,10 @@ for page in $pages; do
 done
 cp -r .next/static out-site/_next/static
 
+# A static sample of the client workspace, with made-up data, at /demo. It is not the product.
+mkdir -p out-site/demo
+cp "$root/scripts/site-demo/index.html" out-site/demo/index.html
+
 # The pages are drawn first and the framework's scripts start after the first paint
 # (scripts/site-defer-scripts.mjs says why). It fails the build if Next's markup changes.
 node "$root/scripts/site-defer-scripts.mjs" out-site/index.html out-site/ar.html out-site/404.html \
