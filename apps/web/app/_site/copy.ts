@@ -71,6 +71,8 @@ export type Demo = {
 /** A product page's tabbed demo: a customer's chat beside what the team sees. */
 export type DemoSet = {
   business: string;
+  /** The chat avatar's letter, when the business name's first letter is a generic word («مخبز», «صالون»). */
+  avatar?: string;
   businessMeta: string;
   today: string;
   typeHere: string;
@@ -532,7 +534,7 @@ const en: Copy = {
   agent: {
     path: "Home",
     switchLabel: "Sample business",
-    status: "ALYR Agent · Running",
+    status: "ALYR · Running",
     feedLabel: "What ALYR did this afternoon",
     flagged: "Flagged by rule",
     samples: {
@@ -544,7 +546,7 @@ const en: Copy = {
         fictional: "Sample data, fictional bakery",
         feed: [
           { at: "16:00", title: "Booking reminder sent", line: "Cake tasting, today at 18:00\u00a0· Noor A.", adds: ["sent", "booking_reminders"] },
-          { at: "16:04", title: "Menu sent", line: "To a new customer: “Welcome to Qirfa Bakery. How can we help?”", adds: ["sent"] },
+          { at: "16:04", title: "Welcome menu sent", line: "To a new customer: “Welcome to Qirfa Bakery. How can we help?”", adds: ["sent"] },
           { at: "16:09", title: "Order confirmation sent", line: "Order #1441 from Lina F., with its tracking page", adds: ["sent"] },
           { at: "16:13", title: "Order page sent", line: "Sara M. wrote “order”. The link went back at once.", adds: ["sent"] },
           { at: "16:18", title: "Flagged by rule", flag: { from: "suggestion", key: "overdue" }, adds: [] },
@@ -557,7 +559,7 @@ const en: Copy = {
         announce: "Showing Dafira Salon, a fictional salon.",
         fictional: "Sample data, fictional salon",
         feed: [
-          { at: "15:58", title: "Menu sent", line: "To a new customer: “Welcome to Dafira Salon. How can we help?”", adds: ["sent"] },
+          { at: "15:58", title: "Welcome menu sent", line: "To a new customer: “Welcome to Dafira Salon. How can we help?”", adds: ["sent"] },
           { at: "16:00", title: "Booking reminder sent", line: "Blow-dry, today at 18:00\u00a0· Dana R.", adds: ["sent", "booking_reminders"] },
           { at: "16:01", title: "Flagged by rule", flag: { from: "needs", key: "unmarked" }, adds: [] },
           { at: "16:07", title: "Booking page sent", line: "Rania H. tapped “Book a visit”. The link went back at once.", adds: ["sent"] },
@@ -571,7 +573,7 @@ const en: Copy = {
         announce: "Showing Zilal Cooling, a fictional AC company.",
         fictional: "Sample data, fictional AC company",
         feed: [
-          { at: "15:56", title: "Menu sent", line: "To a new customer: “Welcome to Zilal Cooling. How can we help?”", adds: ["sent"] },
+          { at: "15:56", title: "Welcome menu sent", line: "To a new customer: “Welcome to Zilal Cooling. How can we help?”", adds: ["sent"] },
           { at: "16:00", title: "Booking reminder sent", line: "AC service, split unit, today at 18:00\u00a0· Hassan D.", adds: ["sent", "booking_reminders"] },
           { at: "16:06", title: "Booking page sent", line: "Omar K. wrote “book”. The link went back at once.", adds: ["sent"] },
           { at: "16:12", title: "Booking details sent", line: "Ali T. wrote “my booking”: his visit, with a Cancel button.", adds: ["sent"] },
@@ -582,23 +584,23 @@ const en: Copy = {
   },
   home: {
     hero: {
-      eyebrow: "ALYR Agent · At work for you",
+      eyebrow: "ALYR · At work for you",
       title: ["Your business", "just got an agent."],
       body:
-        "Right in your WhatsApp, it replies to the routine, sends the reminders and helps you follow up what’s owed. On one screen, it tells you what needs you. We set it up in your shop. You run the business.",
+        "In the WhatsApp chat, ALYR replies to routine messages, sends booking reminders and helps you follow up what’s owed. ALYR Agent puts what needs you on one screen, by rules you can check. We set it up in your shop. You run the business.",
       more: "See the products",
       facts: ["Set up for you, in your shop", "From QAR 449 a month, Agent included", "Arabic and English"],
-      factsNoOffer: ["Set up for you, in your shop", "ALYR Agent with every product", "Arabic and English"],
+      factsNoOffer: ["Set up for you, in your shop", "Every suggestion shows its rule", "Arabic and English"],
       figure: {
         label: "The ALYR Agent home screen of a fictional bakery, and what ALYR did for it this afternoon",
         caption: { n: "01", text: "ALYR Agent on a Thursday afternoon" },
       },
     },
     spotlight: {
-      eyebrow: "ALYR Agent · With every product",
+      eyebrow: "ALYR Agent · Your business in numbers",
       title: "Every suggestion shows the rule behind it.",
       body:
-        "ALYR Agent reads the orders, bookings, chats and credit accounts already in your workspace. It compares your week with the same days last week, puts the work that is waiting at the top, and suggests up to three things. Each names its rule and opens the screen where you act.",
+        "ALYR Agent counts the orders, bookings, chats and credit accounts already in your workspace. It compares your week with the same days last week, puts the work that is waiting at the top, and suggests up to three things. Each names its rule and opens the screen where you act.",
       caption: { n: "02", text: "The whole home screen" },
       label: "The ALYR Agent home screen of the sample business you choose",
       calloutsLabel: "What each part shows",
@@ -616,7 +618,7 @@ const en: Copy = {
       eyebrow: "The products",
       title: "One workspace.\nA product for each job.",
       body:
-        "ALYR works on your behalf: we set it up, and our products take the orders and bookings, and send the reminders, in the chat you already use. They share one workspace, one customer list and one team, and you choose the ones you need.",
+        "We set ALYR up in your shop. Our products take the orders and bookings and send the reminders in WhatsApp, and they share one workspace, one customer list and one team. Choose the ones you need.",
       rows: {
         chat: {
           body: "Customers order from a page made for their phone, with no app and no account. Each order has its own tracking page, and your whole team answers from one inbox.",
@@ -627,7 +629,7 @@ const en: Copy = {
           link: "See ALYR Bookings",
         },
         agent: {
-          body: "What needs you now, your week against the same days last week, and up to three suggestions, each with its rule. With every product.",
+          body: "What needs you now, your week against the same days last week, and up to three suggestions, each with its rule.",
           link: "See ALYR Agent",
         },
         accounts: {
@@ -643,7 +645,7 @@ const en: Copy = {
         },
         {
           title: "Payment links",
-          body: "come with ALYR Chat and ALYR Bookings. Live card payments start once your payment account is connected.",
+          body: "come with ALYR Chat and ALYR Bookings. Today they open a test page; card payments start once a payment provider is connected.",
         },
       ],
       caption: { n: "03", text: "A corner of each product’s screen, at true size" },
@@ -685,7 +687,7 @@ const en: Copy = {
           products: ["chat", "accounts", "agent"],
         },
       ],
-      other: "Run something else? Tell us how you work today.",
+      other: "Run something else? Write to us about how you work today.",
     },
     how: {
       eyebrow: "How it works",
@@ -705,7 +707,7 @@ const en: Copy = {
         },
         {
           title: "You see what changed.",
-          body: "ALYR Agent shows what needs you each day, and every Sunday a short report of your week arrives on WhatsApp. Want something changed? Message us and we change it.",
+          body: "ALYR Agent shows what needs you each day. A short report of your week on WhatsApp every Sunday starts once WhatsApp approves its wording. Want something changed? Message us and we change it.",
         },
       ],
       note: "ALYR is in early access. We set it up with each business ourselves, and agree your go-live date at the visit.",
@@ -770,7 +772,7 @@ const en: Copy = {
         items: [
           "Menu, price and hours changes whenever you ask",
           "A person from ALYR answers your messages",
-          "ALYR Agent and your Sunday report",
+          "ALYR Agent, and the Sunday report once WhatsApp approves it",
           "Every product update, with nothing to install",
         ],
       },
@@ -930,7 +932,7 @@ const en: Copy = {
         {
           id: "pay-online",
           q: "My customers won’t pay online.",
-          a: "They don’t have to. A payment link is offered, never forced, and regulars with a credit account can put an order on their account.",
+          a: "They don’t have to. Card payment links aren’t live yet, and when they are, a link is offered, never forced. Regulars with a credit account can put an order on their account.",
         },
         {
           id: "not-technical",
@@ -941,11 +943,6 @@ const en: Copy = {
           id: "data",
           q: "Is my data safe?",
           a: "Each business’s records are kept apart inside the database itself, and ALYR uses WhatsApp’s official Business Platform. ALYR is built never to hold your money.",
-        },
-        {
-          id: "commission",
-          q: "Do you take a commission?",
-          a: "No. ALYR takes no commission on your orders or bookings.",
         },
         {
           id: "message-fees",
@@ -966,8 +963,8 @@ const en: Copy = {
       ],
     },
     final: {
-      title: "Tell us how customers reach you today.",
-      body: "Send us a message. A person from ALYR replies, then comes to show you ALYR on your own phone.",
+      title: "We’ll show you ALYR on your own phone.",
+      body: "Send us a message. A person from ALYR replies, then comes to your shop.",
     },
     sample: {
       shop: "Qirfa Bakery",
@@ -1018,10 +1015,10 @@ const en: Copy = {
         chat: [
           { from: "customer", text: "I need two AC filters and a thermostat." },
           { from: "business", text: "Here is our order page. Pick what you need.", action: "Open the order page" },
-          { from: "business", text: "Order 1042 received: 3 items, QAR 385." },
+          { from: "business", text: "Order #1042 received: 3 items, QAR 385." },
         ],
         panel: {
-          title: "Order 1042",
+          title: "Order #1042",
           badge: "New",
           rows: [
             { lead: "2 ×", main: "AC filter", trail: "QAR 120", tone: "signal" },
@@ -1036,15 +1033,15 @@ const en: Copy = {
         tab: "Pay",
         start: 10 * 60 + 6,
         chat: [
-          { from: "business", text: "Order 1042 is confirmed. You can pay here.", action: "Pay QAR 385" },
-          { from: "business", text: "Received QAR 385 for order 1042. Thank you." },
+          { from: "business", text: "Order #1042 is confirmed. You can pay here.", action: "Pay QAR 385" },
+          { from: "business", text: "Received QAR 385 for order #1042. Thank you." },
         ],
         panel: {
           title: "Payments",
           badge: "Today",
           rows: [
-            { main: "Order 1042", sub: "Mariam Saleh", trail: "QAR 385 · Paid", tone: "signal" },
-            { main: "Order 1039", sub: "Khalid Nasser", trail: "QAR 210 · Paid", tone: "done" },
+            { main: "Order #1042", sub: "Mariam Saleh", trail: "QAR 385 · Paid", tone: "signal" },
+            { main: "Order #1039", sub: "Khalid Nasser", trail: "QAR 210 · Paid", tone: "done" },
           ],
         },
         caption: "Payment links are built and tested on a test page. ALYR is built never to hold your money.",
@@ -1054,17 +1051,17 @@ const en: Copy = {
         tab: "Track",
         start: 10 * 60 + 5,
         chat: [
-          { from: "business", text: "Order 1042 is confirmed." },
-          { from: "business", text: "Order 1042 is ready for pickup." },
+          { from: "business", text: "Order #1042 is confirmed." },
+          { from: "business", text: "Order #1042 is ready for collection." },
           { from: "customer", text: "On my way." },
         ],
         panel: {
-          title: "Order 1042",
+          title: "Order #1042",
           badge: "Ready",
           rows: [
             { lead: "10:02", main: "Received", tone: "done" },
             { lead: "10:05", main: "Confirmed", tone: "done" },
-            { lead: "11:40", main: "Ready for pickup", trail: "Customer told", tone: "signal" },
+            { lead: "11:40", main: "Ready for collection", trail: "Customer told", tone: "signal" },
             { lead: "", main: "Collected", tone: "quiet" },
           ],
         },
@@ -1126,7 +1123,7 @@ const en: Copy = {
             {
               move: "in",
               title: "A customer writes to your number",
-              body: "Mariam messages you on WhatsApp, the way she always has. The message reaches ALYR through WhatsApp's official Business Platform.",
+              body: "Mariam messages you on WhatsApp. The message reaches ALYR through WhatsApp's official Business Platform.",
               chat: { from: "customer", text: "Hi, I'd like to order for pickup" },
               work: ["Message received", "Customer found: Mariam Saleh"],
             },
@@ -1147,20 +1144,20 @@ const en: Copy = {
               title: "She orders on the page",
               body: "Your products and prices, on a page that opens from the chat. No app, no account.",
               chat: { from: "event", text: "Ordered 3 items, QAR 385" },
-              work: ["Order 1042 saved"],
+              work: ["Order #1042 saved"],
             },
             {
               move: "team",
               title: "Your team sees the order",
               body: "It is on your Orders screen the moment it lands. Nobody copied anything out of a chat.",
               record: { id: "order", lead: "#1042", main: "Mariam Saleh · 3 items", sub: "QAR 385", trail: "New", tone: "signal" },
-              work: ["Order 1042: new, unassigned"],
+              work: ["Order #1042: new, unassigned"],
             },
             {
               move: "out",
               title: "She gets the confirmation",
               body: "With the total, a payment link and her own tracking page.",
-              chat: { from: "business", text: "Order 1042 received: 3 items, QAR 385." },
+              chat: { from: "business", text: "Order #1042 received: 3 items, QAR 385." },
               work: ["Confirmation sent", "Tracking page made"],
             },
           ],
@@ -1174,13 +1171,13 @@ const en: Copy = {
               title: "Yusuf presses Confirm",
               body: "On the Orders screen, one press. The order becomes his, so the team can see who has it.",
               record: { id: "order", lead: "#1042", main: "Mariam Saleh · 3 items", sub: "Yusuf", trail: "Confirmed", tone: "signal" },
-              work: ["Order 1042: confirmed by Yusuf"],
+              work: ["Order #1042: confirmed by Yusuf"],
             },
             {
               move: "out",
               title: "The customer hears at once",
               body: "Each change of status goes to her as a message, in her language.",
-              chat: { from: "business", text: "Order 1042 is confirmed." },
+              chat: { from: "business", text: "Order #1042 is confirmed." },
               work: ["Message sent"],
             },
             {
@@ -1188,13 +1185,13 @@ const en: Copy = {
               title: "Ready, with one more press",
               body: "Yusuf marks it ready when it is packed.",
               record: { id: "order", lead: "#1042", main: "Mariam Saleh · 3 items", sub: "Yusuf", trail: "Ready", tone: "signal" },
-              work: ["Order 1042: ready"],
+              work: ["Order #1042: ready"],
             },
             {
               move: "out",
               title: "Her tracking page updates by itself",
               body: "Order received, confirmed by the shop, ready for collection: every step with its time, and who is looking after it.",
-              chat: { from: "business", text: "Order 1042 is ready for pickup." },
+              chat: { from: "business", text: "Order #1042 is ready for collection." },
               work: ["Tracking page: ready for collection"],
             },
             {
@@ -1202,7 +1199,7 @@ const en: Copy = {
               title: "Done when she collects it",
               body: "Marked done, the order closes, and the customer gets one last message.",
               record: { id: "order", lead: "#1042", main: "Mariam Saleh · 3 items", sub: "Yusuf", trail: "Done", tone: "done" },
-              work: ["Order 1042: done"],
+              work: ["Order #1042: done"],
             },
           ],
         },
@@ -1255,7 +1252,7 @@ const en: Copy = {
       ],
     },
     inside: {
-      eyebrow: "What is in it",
+      eyebrow: "What’s in it",
       title: "Everything it does today.",
       note: "ALYR Chat is in early access. Everything listed here is built. We agree your number with you when we set you up.",
       groups: [
@@ -1263,7 +1260,7 @@ const en: Copy = {
           name: "For your customers",
           items: [
             { title: "An order page for their phone", body: "Your products and prices on a page that opens from the chat. No app, no account." },
-            { title: "Pay from a link", body: "A payment link in the chat, and a receipt the moment it is paid." },
+            { title: "Pay from a link", body: "A payment link in the chat, and a receipt the moment it is paid. Built and tested on a test page; card payments are not live yet." },
             { title: "Order tracking", body: "Each order has its own page showing every step and who is looking after it." },
             { title: "Updates without asking", body: "Confirmed, ready, done: each change of status reaches them as a message." },
             { title: "Arabic or English", body: "ALYR answers in the language the customer writes in." },
@@ -1325,7 +1322,7 @@ const en: Copy = {
         {
           name: "Salons and barbers",
           body: "Bookings and reminders have their own product now.",
-          tags: ["Book", "Remind"],
+          tags: [],
           link: { key: "bookings", label: "See ALYR Bookings" },
         },
         {
@@ -1340,7 +1337,7 @@ const en: Copy = {
           link: { key: "accounts", label: "See ALYR Accounts" },
         },
       ],
-      other: "Run something else? Tell us how you work today.",
+      other: "Run something else? Write to us about how you work today.",
     },
     works: {
       eyebrow: "The products",
@@ -1354,9 +1351,8 @@ const en: Copy = {
       },
     },
     cta: {
-      title: "Let us set it up for you.",
-      body:
-        "Tell us how you take orders today. A person from ALYR replies and shows you the same work on your own menu or price list.",
+      title: "Tell us how orders reach you today.",
+      body: "Send us a message. A person from ALYR replies, then comes to show you ALYR Chat on your own phone.",
     },
   },
   pages: {
@@ -1525,7 +1521,7 @@ const en: Copy = {
               {
                 move: "in",
                 title: "A customer writes to your number",
-                body: "Rania writes on WhatsApp, as she always has. The message reaches ALYR through WhatsApp's official Business Platform.",
+                body: "Rania writes on WhatsApp. The message reaches ALYR through WhatsApp's official Business Platform.",
                 chat: { from: "customer", text: "Hi, can I book a haircut and blow-dry for Saturday?" },
                 work: ["Message received", "Customer found: Rania H."],
               },
@@ -1663,7 +1659,7 @@ const en: Copy = {
         },
       },
       inside: {
-        eyebrow: "What is in it",
+        eyebrow: "What’s in it",
         title: "Everything it does today.",
         groups: [
           {
@@ -1780,7 +1776,7 @@ const en: Copy = {
       },
       hero: {
         eyebrow: "ALYR Agent · With every product",
-        title: ["Your business in numbers.", "Daily on your screen, weekly on WhatsApp."],
+        title: ["Your business in numbers.", "What needs you, first."],
         lead:
           "ALYR Agent is the home screen of your workspace. It says in one sentence how the week is going, lists what needs you now, and suggests up to three things, each with the rule behind it.",
         facts: ["With every ALYR product", "Every suggestion shows its rule", "Counted from your own records"],
@@ -1803,10 +1799,10 @@ const en: Copy = {
         caption: { n: "02", text: "One suggestion, opened" },
       },
       report: {
-        eyebrow: "The Sunday report",
+        eyebrow: "The Sunday report · Early access",
         title: "The same week, on your WhatsApp, every Sunday.",
         body:
-          "At 9:00 on Sunday, last week’s numbers, one section per product, each compared with the week before. If you have not written to ALYR in the last 24 hours, it arrives as one line first: reply REPORT and the rest follows.",
+          "At 9:00 on Sunday, last week’s numbers, one section per product, each compared with the week before. If you have not written to ALYR in the last 24 hours, it arrives as one line first: reply REPORT and the rest follows. The first reports go out once WhatsApp approves the report’s wording.",
         report: {
           caption: { n: "03", text: "The Sunday report on WhatsApp" },
           heading: "ALYR weekly report: Qirfa Bakery",
@@ -1876,7 +1872,7 @@ const en: Copy = {
         ],
       },
       inside: {
-        eyebrow: "What is in it",
+        eyebrow: "What’s in it",
         title: "Everything it does today.",
         groups: [
           {
@@ -1897,7 +1893,7 @@ const en: Copy = {
           },
           {
             name: "Every week, everywhere",
-            items: ["The Sunday report on WhatsApp.", "Arabic and English, light and dark, phone and laptop."],
+            items: ["The Sunday report for WhatsApp. The first go out once WhatsApp approves its wording.", "Arabic and English, light and dark, phone and laptop."],
           },
         ],
         notYet: {
@@ -1921,7 +1917,7 @@ const en: Copy = {
           { name: "Home services", tags: ["Jobs this week", "Booked, next 7 days", "Owed to you", "No-shows, 30 days"] },
           { name: "Shops and wholesale", tags: ["Owed to you", "Collected this week", "Over 60 days", "Promised to pay"] },
         ],
-        other: "Run something else? Tell us how you work today.",
+        other: "Run something else? Write to us about how you work today.",
       },
       works: {
         eyebrow: "The products",
@@ -1953,12 +1949,12 @@ const en: Copy = {
           {
             id: "messages",
             q: "Will it message my customers?",
-            a: "No. ALYR Agent shows and suggests. The routine messages, the automatic replies, confirmations and booking reminders, go from the products you use, and ALYR Agent counts them under Done for you. A payment reminder goes only when you press Send reminders in ALYR Accounts.",
+            a: "No. ALYR Agent shows and suggests. Routine messages (automatic replies, confirmations, booking reminders) go from the products you use, and ALYR Agent counts them under Done for you. A payment reminder goes only when you press Send reminders in ALYR Accounts.",
           },
           {
             id: "staff",
             q: "Can my staff see it?",
-            a: "Yes, without the money. On this screen they see the work in front of them and their own numbers. You and your managers see everything.",
+            a: "Yes. On this screen they see the work in front of them and their own numbers, not the shop’s money. You and your managers see everything.",
           },
         ],
       },
@@ -1982,7 +1978,7 @@ const en: Copy = {
         eyebrow: "ALYR Accounts · Early access",
         title: ["Know who owes you.", "Remind them without the awkward call."],
         lead:
-          "Record a credit sale with one line from your staff phone. The customer is told the new balance, reminders go in a tone that follows the age of the debt, and a promise to pay pauses them.",
+          "Record a credit sale with one line from your staff phone, and the customer is told the new balance. One press sends reminders in a tone that follows the age of the debt, and a promise to pay pauses them.",
         facts: ["The oldest debt is settled first", "Never reminded twice within 3 days", "Stop means stop"],
         factsOffer: ["From QAR 449 a month, or QAR 150 added to another ALYR product"],
       },
@@ -2060,18 +2056,18 @@ const en: Copy = {
             tab: "Pay",
             start: 19 * 60 + 5,
             chat: [
-              { from: "customer", text: "pay 500" },
-              { from: "business", text: "To pay QAR 500, open this link: alyr.qa/pay/…" },
-              { from: "business", text: "Received QAR 500. Your balance is now QAR 2,650. Thank you." },
+              { from: "customer", text: "pay 450" },
+              { from: "business", text: "To pay QAR 450, open this link: alyr.qa/pay/…" },
+              { from: "business", text: "Received QAR 450. Your balance is now QAR 2,700. Thank you." },
             ],
             panel: {
               title: "Marina Desk Co-working",
               badge: "Entries",
               rows: [
-                { lead: "15 Oct", main: "Payment · Paid by payment link", trail: "−QAR 500", tone: "signal" },
+                { lead: "15 Oct", main: "Payment · Paid by payment link", trail: "−QAR 450", tone: "signal" },
                 { lead: "15 Oct", main: "Credit sale", trail: "+QAR 450", tone: "done" },
               ],
-              total: ["Balance", "QAR 2,650"],
+              total: ["Balance", "QAR 2,700"],
             },
             caption: "The payment page is still a test page: no money moves.",
           },
@@ -2086,7 +2082,7 @@ const en: Copy = {
               rows: [
                 { main: "Palm Court Offices", sub: "Oldest unpaid: 76 days · Promised by 19 Oct", trail: "QAR 3,875", tone: "done" },
                 { main: "Bluefin Events", sub: "Oldest unpaid: 48 days · Reminded", trail: "QAR 3,450", tone: "done" },
-                { main: "Marina Desk Co-working", sub: "Oldest unpaid: 35 days · Promised by 22 Oct", trail: "QAR 2,650", tone: "signal" },
+                { main: "Marina Desk Co-working", sub: "Oldest unpaid: 35 days · Promised by 22 Oct", trail: "QAR 2,700", tone: "signal" },
                 { main: "Tamr Café", sub: "Oldest unpaid: 12 days", trail: "QAR 1,700", tone: "done" },
                 { main: "Ward Events", sub: "Oldest unpaid: 104 days · Final notice", trail: "QAR 1,250", tone: "quiet" },
               ],
@@ -2117,7 +2113,7 @@ const en: Copy = {
               {
                 move: "back",
                 title: "One line from the staff phone",
-                body: "Karim sends “Marina 450 credit” to the shop’s number, from the phone ALYR knows as staff.",
+                body: "Karim sends “Marina 450 credit” to the shop’s number, from a phone registered in ALYR as staff.",
                 work: ["Staff message: Karim", "Customer: Marina Desk Co-working", "Credit sale: QAR 450"],
               },
               {
@@ -2267,7 +2263,7 @@ const en: Copy = {
         },
       },
       inside: {
-        eyebrow: "What is in it",
+        eyebrow: "What’s in it",
         title: "Everything it does today.",
         groups: [
           {
@@ -2307,7 +2303,7 @@ const en: Copy = {
             "Recording a sale or payment from the screen.",
             "Setting a credit limit yourself. ALYR sets it when you ask.",
             "Statements and invoices.",
-            "Buttons on a reminder sent more than 24 hours after the customer last wrote. It carries the pay link.",
+            "“Pay now” and “I'll pay within a week”, on a reminder sent over 24 hours after the customer last wrote. That one carries the pay link only.",
             "Recording how a customer paid: cash, card or transfer.",
           ],
         },
@@ -2322,7 +2318,7 @@ const en: Copy = {
           { name: "Restaurants and bakeries with office or event accounts", tags: ["Order on account", "Remind"] },
           { name: "Home services with contract customers", tags: ["Record", "Remind"] },
         ],
-        other: "Run something else? Tell us how you work today.",
+        other: "Run something else? Write to us about how you work today.",
       },
       works: {
         eyebrow: "The products",
@@ -2386,7 +2382,7 @@ const ar: Copy = {
     bookings: {
       title: "ALYR Bookings · المواعيد من محادثة واتساب، مع التذكيرات",
       description:
-        "يحجز عملاؤك وقتاً متاحاً من صفحة تُفتح من المحادثة. تؤكد ALYR الحجز فوراً، وتذكّرهم قبل الموعد بساعتين، ويسجّل فريقك من حضر. نجهّزه لك، في قطر.",
+        "يحجز عملاؤك وقتاً متاحاً من صفحة تُفتح من المحادثة. تؤكد ALYR الحجز فوراً، وتذكّرهم قبل الموعد بساعتين، ويسجّل فريقك من حضر. ونجهّزه لك في قطر.",
     },
     agent: {
       title: "ALYR Agent · نشاطك بالأرقام، مع كل منتجات ALYR",
@@ -2396,7 +2392,7 @@ const ar: Copy = {
     accounts: {
       title: "ALYR Accounts · الحسابات الآجلة وتذكيرات لبقة، داخل المحادثة",
       description:
-        "سجّل البيع بالآجل بسطر واحد من هاتف الموظف، واعرف من عليه مستحقات لك ومنذ متى، وأرسل تذكيرات تتدرّج نبرتها مع عمر الدين. نجهّزه لك، في قطر.",
+        "سجّل البيع بالآجل بسطر واحد من هاتف الموظف، واعرف من عليه مستحقات لك ومنذ متى، وأرسل تذكيرات تتدرّج نبرتها مع عمر الدين. ونجهّزه لك في قطر.",
     },
   },
   skip: "انتقل إلى المحتوى",
@@ -2477,7 +2473,7 @@ const ar: Copy = {
   agent: {
     path: "الرئيسية",
     switchLabel: "نشاط توضيحي",
-    status: "ALYR Agent · يعمل",
+    status: "ALYR · تعمل",
     feedLabel: "ما أنجزته ALYR عصر اليوم",
     flagged: "تنبيه حسب القاعدة",
     samples: {
@@ -2488,10 +2484,10 @@ const ar: Copy = {
         announce: "يُعرض الآن مخبز قرفة، وهو مخبز غير حقيقي.",
         fictional: "مثال: مخبز غير حقيقي",
         feed: [
-          { at: "16:00", title: "أُرسل تذكير بموعد", line: "تذوّق الكيك، اليوم الساعة 18:00\u00a0· Noor A.", adds: ["sent", "booking_reminders"] },
-          { at: "16:04", title: "أُرسلت القائمة", line: "لعميل جديد: «أهلاً بك في مخبز قرفة. كيف نقدر نساعدك؟»", adds: ["sent"] },
-          { at: "16:09", title: "أُرسل تأكيد الطلب", line: "الطلب رقم 1441 من Lina F.، مع صفحة تتبّعه", adds: ["sent"] },
-          { at: "16:13", title: "أُرسلت صفحة الطلب", line: "كتبت Sara M. «طلب»، فوصلها الرابط فوراً.", adds: ["sent"] },
+          { at: "16:00", title: "أُرسل تذكير بموعد", line: "تذوّق الكيك، اليوم الساعة 18:00\u00a0· نور أ.", adds: ["sent", "booking_reminders"] },
+          { at: "16:04", title: "أُرسلت قائمة الترحيب", line: "لعميل جديد: «أهلاً بك في مخبز قرفة. كيف نقدر نساعدك؟»", adds: ["sent"] },
+          { at: "16:09", title: "أُرسل تأكيد الطلب", line: "الطلب رقم 1441 من لينا ف.، مع صفحة تتبّعه", adds: ["sent"] },
+          { at: "16:13", title: "أُرسلت صفحة الطلب", line: "كتبت سارة م. «طلب»، فوصلها الرابط فوراً.", adds: ["sent"] },
           { at: "16:18", title: "تنبيه حسب القاعدة", flag: { from: "suggestion", key: "overdue" }, adds: [] },
         ],
       },
@@ -2502,10 +2498,10 @@ const ar: Copy = {
         announce: "يُعرض الآن صالون ضفيرة، وهو صالون غير حقيقي.",
         fictional: "مثال: صالون غير حقيقي",
         feed: [
-          { at: "15:58", title: "أُرسلت القائمة", line: "لعميلة جديدة: «أهلاً بك في صالون ضفيرة. كيف نقدر نخدمك؟»", adds: ["sent"] },
-          { at: "16:00", title: "أُرسل تذكير بموعد", line: "تسشوار، اليوم الساعة 18:00\u00a0· Dana R.", adds: ["sent", "booking_reminders"] },
+          { at: "15:58", title: "أُرسلت قائمة الترحيب", line: "لعميلة جديدة: «أهلاً بك في صالون ضفيرة. كيف نقدر نخدمك؟»", adds: ["sent"] },
+          { at: "16:00", title: "أُرسل تذكير بموعد", line: "تسشوار، اليوم الساعة 18:00\u00a0· دانة ر.", adds: ["sent", "booking_reminders"] },
           { at: "16:01", title: "تنبيه حسب القاعدة", flag: { from: "needs", key: "unmarked" }, adds: [] },
-          { at: "16:07", title: "أُرسلت صفحة الحجز", line: "ضغطت Rania H. «احجز موعداً»، فوصلها الرابط فوراً.", adds: ["sent"] },
+          { at: "16:07", title: "أُرسلت صفحة الحجز", line: "ضغطت رانيا ح. «احجز موعداً»، فوصلها الرابط فوراً.", adds: ["sent"] },
           { at: "16:16", title: "تنبيه حسب القاعدة", flag: { from: "suggestion", key: "repeat_no_show" }, adds: [] },
         ],
       },
@@ -2516,10 +2512,10 @@ const ar: Copy = {
         announce: "تُعرض الآن ظلال للتكييف، وهي شركة تكييف غير حقيقية.",
         fictional: "مثال: شركة تكييف غير حقيقية",
         feed: [
-          { at: "15:56", title: "أُرسلت القائمة", line: "لعميل جديد: «أهلاً بك في ظلال للتكييف. كيف نقدر نساعدك؟»", adds: ["sent"] },
-          { at: "16:00", title: "أُرسل تذكير بموعد", line: "صيانة مكيف سبليت، اليوم الساعة 18:00\u00a0· Hassan D.", adds: ["sent", "booking_reminders"] },
-          { at: "16:06", title: "أُرسلت صفحة الحجز", line: "كتب Omar K. «حجز»، فوصله الرابط فوراً.", adds: ["sent"] },
-          { at: "16:12", title: "أُرسلت تفاصيل الحجز", line: "كتب Ali T. «حجزي»، فوصله موعده مع زر للإلغاء.", adds: ["sent"] },
+          { at: "15:56", title: "أُرسلت قائمة الترحيب", line: "لعميل جديد: «أهلاً بك في ظلال للتكييف. كيف نقدر نساعدك؟»", adds: ["sent"] },
+          { at: "16:00", title: "أُرسل تذكير بموعد", line: "صيانة مكيف سبليت، اليوم الساعة 18:00\u00a0· حسن د.", adds: ["sent", "booking_reminders"] },
+          { at: "16:06", title: "أُرسلت صفحة الحجز", line: "كتب عمر ك. «حجز»، فوصله الرابط فوراً.", adds: ["sent"] },
+          { at: "16:12", title: "أُرسلت تفاصيل الحجز", line: "كتب علي ت. «حجزي»، فوصله موعده مع زر للإلغاء.", adds: ["sent"] },
           { at: "16:17", title: "تنبيه حسب القاعدة", flag: { from: "suggestion", key: "overdue" }, adds: [] },
         ],
       },
@@ -2527,23 +2523,23 @@ const ar: Copy = {
   },
   home: {
     hero: {
-      eyebrow: "ALYR Agent · يعمل عنك",
-      title: ["صار لنشاطك", "من يعمل عنه."],
+      eyebrow: "ALYR · تعمل من أجلك",
+      title: ["صار لنشاطك", "من يتابعه عنك."],
       body:
-        "داخل واتساب، يردّ على الرسائل المعتادة، ويرسل التذكيرات، ويساعدك في متابعة المستحقات. وعلى شاشة واحدة يخبرك بما يحتاجك. نجهّزه لك في محلك، وأنت تدير عملك.",
+        "داخل محادثة واتساب، تردّ ALYR على الرسائل المعتادة، وترسل تذكيرات المواعيد، وتساعدك في متابعة المستحقات. ويضع ALYR Agent ما يحتاجك على شاشة واحدة، بقواعد تستطيع مراجعتها. نجهّز كل شيء في محلك، وأنت تدير عملك.",
       more: "تعرّف على المنتجات",
       facts: ["نجهّزها لك في محلك", "من 449 ر.ق شهرياً، وALYR Agent مشمول", "بالعربية والإنجليزية"],
-      factsNoOffer: ["نجهّزها لك في محلك", "ALYR Agent مع كل منتج", "بالعربية والإنجليزية"],
+      factsNoOffer: ["نجهّزها لك في محلك", "كل اقتراح يُظهر قاعدته", "بالعربية والإنجليزية"],
       figure: {
         label: "الشاشة الرئيسية لـ ALYR Agent في مخبز غير حقيقي، وما أنجزته ALYR له عصر اليوم",
         caption: { n: "01", text: "ALYR Agent عصر يوم خميس" },
       },
     },
     spotlight: {
-      eyebrow: "ALYR Agent · مع كل منتج",
+      eyebrow: "ALYR Agent · نشاطك بالأرقام",
       title: "كل اقتراح يُظهر القاعدة التي وراءه.",
       body:
-        "يقرأ ALYR Agent الطلبات والحجوزات والمحادثات والحسابات الآجلة الموجودة أصلاً في مساحة عملك. يقارن أسبوعك بالأيام نفسها من الأسبوع الماضي، ويضع العمل المنتظر في الأعلى، ويقترح حتى ثلاثة أمور، لكل منها قاعدتها وزرّ يفتح الشاشة التي تتصرف منها.",
+        "يعدّ ALYR Agent الطلبات والحجوزات والمحادثات والحسابات الآجلة الموجودة أصلاً في مساحة عملك. يقارن أسبوعك بالأيام نفسها من الأسبوع الماضي، ويضع العمل المنتظر في الأعلى، ويقترح حتى ثلاثة أمور، لكل منها قاعدتها وزرّ يفتح الشاشة التي تتصرف منها.",
       caption: { n: "02", text: "الشاشة الرئيسية كاملة" },
       label: "الشاشة الرئيسية لـ ALYR Agent للنشاط التوضيحي الذي تختاره",
       calloutsLabel: "ما يعرضه كل جزء",
@@ -2561,7 +2557,7 @@ const ar: Copy = {
       eyebrow: "المنتجات",
       title: "مساحة عمل واحدة.\nولكل مهمة منتج.",
       body:
-        "تعمل ALYR نيابةً عنك: نجهّز كل شيء بأنفسنا، ومنتجاتنا تستقبل الطلبات والحجوزات وترسل التذكيرات في المحادثة التي تستخدمها أصلاً. وهي تتشارك مساحة عمل واحدة وقائمة عملاء واحدة وفريقاً واحداً، وتختار منها ما تحتاجه.",
+        "نجهّز ALYR في محلك. منتجاتنا تستقبل الطلبات والحجوزات وترسل التذكيرات داخل واتساب، وتتشارك مساحة عمل واحدة وقائمة عملاء واحدة وفريقاً واحداً. اختر منها ما تحتاجه.",
       rows: {
         chat: {
           body: "يطلب العميل من صفحة مصمّمة لهاتفه، بلا تطبيق ولا حساب. ولكل طلب صفحة تتبّع، وفريقك كله يردّ من صندوق واحد.",
@@ -2572,7 +2568,7 @@ const ar: Copy = {
           link: "تعرّف على ALYR Bookings",
         },
         agent: {
-          body: "ما يحتاجك الآن، وأسبوعك مقارنةً بالأيام نفسها من الأسبوع الماضي، وحتى ثلاثة اقتراحات، لكل منها قاعدته. مع كل منتج.",
+          body: "ما يحتاجك الآن، وأسبوعك مقارنةً بالأيام نفسها من الأسبوع الماضي، وحتى ثلاثة اقتراحات، لكل منها قاعدته.",
           link: "تعرّف على ALYR Agent",
         },
         accounts: {
@@ -2588,7 +2584,7 @@ const ar: Copy = {
         },
         {
           title: "روابط الدفع",
-          body: "تأتي مع ALYR Chat وALYR Bookings. ويبدأ الدفع الفعلي بالبطاقات بعد ربط حساب الدفع الخاص بك.",
+          body: "تأتي مع ALYR Chat وALYR Bookings. وهي اليوم تفتح صفحة تجريبية، ويبدأ الدفع بالبطاقات بعد ربط مزوّد دفع.",
         },
       ],
       caption: { n: "03", text: "ركن من شاشة كل منتج، بحجمه الحقيقي" },
@@ -2630,7 +2626,7 @@ const ar: Copy = {
           products: ["chat", "accounts", "agent"],
         },
       ],
-      other: "نشاطك مختلف؟ أخبرنا كيف يسير العمل لديك اليوم.",
+      other: "نشاطك مختلف؟ راسلنا وأخبرنا كيف تعمل اليوم.",
     },
     how: {
       eyebrow: "كيف نعمل",
@@ -2641,7 +2637,7 @@ const ar: Copy = {
           body: "نأتي إلى محلك، ونرى كيف تصلك الطلبات والحجوزات اليوم، ونريك ALYR على هاتفك أنت.",
         },
         {
-          title: "نجهّزه لك.",
+          title: "نجهّز كل شيء.",
           body: "نضيف قائمتك أو خدماتك وأسعارك بالعربية والإنجليزية، ونضبط ساعات العمل، ونفعّل المنتجات التي تحتاجها، ونعطي كل موظف في فريقك حساب دخول خاصاً به.",
         },
         {
@@ -2650,7 +2646,7 @@ const ar: Copy = {
         },
         {
           title: "ترى ما تغيّر.",
-          body: "يعرض لك ALYR Agent ما يحتاجك كل يوم، وصباح كل يوم أحد يصلك تقرير أسبوعك على واتساب. تحتاج تعديلاً؟ راسلنا ونعدّله لك.",
+          body: "يعرض لك ALYR Agent ما يحتاجك كل يوم. ويبدأ تقرير أسبوعك على واتساب صباح كل أحد بعد موافقة واتساب على صياغته. تحتاج تعديلاً؟ راسلنا ونعدّله لك.",
         },
       ],
       note: "ALYR في مرحلة الإطلاق المبكر. نجهّزها مع كل منشأة بأنفسنا، ونتفق معك على موعد بدء التشغيل خلال الزيارة.",
@@ -2715,7 +2711,7 @@ const ar: Copy = {
         items: [
           "تعديل القائمة والأسعار والساعات متى طلبت",
           "شخص من ALYR يردّ على رسائلك",
-          "ALYR Agent وتقرير الأحد",
+          "ALYR Agent، وتقرير الأحد بعد موافقة واتساب عليه",
           "كل تحديثات المنتج، بلا تثبيت",
         ],
       },
@@ -2875,7 +2871,7 @@ const ar: Copy = {
         {
           id: "pay-online",
           q: "عملائي لا يدفعون إلكترونياً.",
-          a: "ليس عليهم ذلك. رابط الدفع خيار لا إلزام، والعملاء الدائمون أصحاب الحسابات الآجلة يسجّلون الطلب على حسابهم.",
+          a: "ليس عليهم ذلك. روابط الدفع بالبطاقة لم تُفعَّل بعد، وحين تُفعَّل يكون الرابط خياراً لا إلزاماً. والعملاء الدائمون أصحاب الحسابات الآجلة يسجّلون الطلب على حسابهم.",
         },
         {
           id: "not-technical",
@@ -2886,11 +2882,6 @@ const ar: Copy = {
           id: "data",
           q: "هل بياناتي آمنة؟",
           a: "سجلات كل منشأة مفصولة داخل قاعدة البيانات نفسها، وتستخدم ALYR منصة واتساب للأعمال الرسمية. وصُمّمت ALYR بحيث لا تحتفظ بأموالك أبداً.",
-        },
-        {
-          id: "commission",
-          q: "هل تأخذون عمولة؟",
-          a: "لا. لا تأخذ ALYR أي عمولة على طلباتك أو حجوزاتك.",
         },
         {
           id: "message-fees",
@@ -2911,8 +2902,8 @@ const ar: Copy = {
       ],
     },
     final: {
-      title: "أخبرنا كيف يصل إليك عملاؤك اليوم.",
-      body: "أرسل لنا رسالة. يردّ عليك شخص من ALYR، ثم يزورك ليريك ALYR على هاتفك أنت.",
+      title: "نريك ALYR على هاتفك أنت.",
+      body: "أرسل لنا رسالة، ويردّ عليك شخص من ALYR ثم يزورك في محلك.",
     },
     sample: {
       shop: "مخبز قرفة",
@@ -2963,10 +2954,10 @@ const ar: Copy = {
         chat: [
           { from: "customer", text: "أحتاج فلترين للمكيف وثرموستات." },
           { from: "business", text: "تفضل صفحة الطلب، اختر ما تحتاجه.", action: "افتح صفحة الطلب" },
-          { from: "business", text: "تم استلام الطلب 1042: 3 أصناف، 385 ر.ق." },
+          { from: "business", text: "تم استلام الطلب رقم 1042: 3 أصناف، 385 ر.ق." },
         ],
         panel: {
-          title: "الطلب 1042",
+          title: "الطلب رقم 1042",
           badge: "جديد",
           rows: [
             { lead: "2 ×", main: "فلتر مكيف", trail: "120 ر.ق", tone: "signal" },
@@ -2981,15 +2972,15 @@ const ar: Copy = {
         tab: "الدفع",
         start: 10 * 60 + 6,
         chat: [
-          { from: "business", text: "تم تأكيد الطلب 1042. يمكنك الدفع من هنا.", action: "ادفع 385 ر.ق" },
-          { from: "business", text: "تم استلام 385 ر.ق عن الطلب 1042. شكراً لك." },
+          { from: "business", text: "تم تأكيد الطلب رقم 1042. يمكنك الدفع من هنا.", action: "ادفع 385 ر.ق" },
+          { from: "business", text: "تم استلام 385 ر.ق عن الطلب رقم 1042. شكراً لك." },
         ],
         panel: {
           title: "المدفوعات",
           badge: "اليوم",
           rows: [
-            { main: "الطلب 1042", sub: "مريم صالح", trail: "385 ر.ق · مدفوع", tone: "signal" },
-            { main: "الطلب 1039", sub: "خالد ناصر", trail: "210 ر.ق · مدفوع", tone: "done" },
+            { main: "الطلب رقم 1042", sub: "مريم صالح", trail: "385 ر.ق · مدفوع", tone: "signal" },
+            { main: "الطلب رقم 1039", sub: "خالد ناصر", trail: "210 ر.ق · مدفوع", tone: "done" },
           ],
         },
         caption: "روابط الدفع جاهزة ومجرّبة على صفحة تجريبية. وصُمّمت ALYR بحيث لا تحتفظ بأموالك.",
@@ -2999,12 +2990,12 @@ const ar: Copy = {
         tab: "التتبّع",
         start: 10 * 60 + 5,
         chat: [
-          { from: "business", text: "تم تأكيد الطلب 1042." },
-          { from: "business", text: "الطلب 1042 جاهز للاستلام." },
+          { from: "business", text: "تم تأكيد الطلب رقم 1042." },
+          { from: "business", text: "الطلب رقم 1042 جاهز للاستلام." },
           { from: "customer", text: "أنا في الطريق." },
         ],
         panel: {
-          title: "الطلب 1042",
+          title: "الطلب رقم 1042",
           badge: "جاهز",
           rows: [
             { lead: "10:02", main: "تم الاستلام", tone: "done" },
@@ -3071,7 +3062,7 @@ const ar: Copy = {
             {
               move: "in",
               title: "عميل يراسل رقمك",
-              body: "مريم تراسلك على واتساب كما اعتادت. وتصل الرسالة إلى ALYR عبر منصة واتساب للأعمال الرسمية.",
+              body: "مريم تراسلك على واتساب، وتصل الرسالة إلى ALYR عبر منصة واتساب للأعمال الرسمية.",
               chat: { from: "customer", text: "السلام عليكم، أبي أطلب للاستلام" },
               work: ["تم استلام الرسالة", "العميلة: مريم صالح"],
             },
@@ -3092,20 +3083,20 @@ const ar: Copy = {
               title: "تطلب من الصفحة",
               body: "منتجاتك وأسعارك في صفحة تُفتح من المحادثة، بلا تطبيق ولا حساب.",
               chat: { from: "event", text: "طلبت 3 أصناف، 385 ر.ق" },
-              work: ["تم حفظ الطلب 1042"],
+              work: ["تم حفظ الطلب رقم 1042"],
             },
             {
               move: "team",
               title: "فريقك يرى الطلب",
               body: "يظهر على شاشة الطلبات لحظة وصوله، ولم ينسخ أحد شيئاً من المحادثة.",
               record: { id: "order", lead: "#1042", main: "مريم صالح · 3 أصناف", sub: "385 ر.ق", trail: "جديد", tone: "signal" },
-              work: ["الطلب 1042: جديد، غير مسند"],
+              work: ["الطلب رقم 1042: جديد، غير مسند"],
             },
             {
               move: "out",
               title: "يصلها التأكيد",
               body: "مع الإجمالي ورابط الدفع وصفحة تتبّع خاصة بطلبها.",
-              chat: { from: "business", text: "تم استلام الطلب 1042: 3 أصناف، 385 ر.ق." },
+              chat: { from: "business", text: "تم استلام الطلب رقم 1042: 3 أصناف، 385 ر.ق." },
               work: ["تم إرسال التأكيد", "أُنشئت صفحة التتبّع"],
             },
           ],
@@ -3119,27 +3110,27 @@ const ar: Copy = {
               title: "يضغط يوسف «تأكيد»",
               body: "ضغطة واحدة على شاشة الطلبات، ويصير الطلب باسمه، فيعرف الفريق من يتولاه.",
               record: { id: "order", lead: "#1042", main: "مريم صالح · 3 أصناف", sub: "يوسف", trail: "مؤكد", tone: "signal" },
-              work: ["الطلب 1042: أكّده يوسف"],
+              work: ["الطلب رقم 1042: أكّده يوسف"],
             },
             {
               move: "out",
               title: "يصل الخبر إليها فوراً",
               body: "كل تغيير في الحالة يصلها برسالة، وبلغتها.",
-              chat: { from: "business", text: "تم تأكيد الطلب 1042." },
+              chat: { from: "business", text: "تم تأكيد الطلب رقم 1042." },
               work: ["تم إرسال الرسالة"],
             },
             {
               move: "back",
               title: "جاهز، بضغطة أخرى",
-              body: "يحدّده يوسف جاهزاً حين يُغلَّف.",
+              body: "يضع يوسف عليه «جاهز» حين يُغلَّف.",
               record: { id: "order", lead: "#1042", main: "مريم صالح · 3 أصناف", sub: "يوسف", trail: "جاهز", tone: "signal" },
-              work: ["الطلب 1042: جاهز"],
+              work: ["الطلب رقم 1042: جاهز"],
             },
             {
               move: "out",
               title: "صفحة التتبّع تتحدّث تلقائياً",
               body: "تم استلام الطلب، أكّده المتجر، جاهز للاستلام: كل خطوة بوقتها، ومن يتولى الطلب.",
-              chat: { from: "business", text: "الطلب 1042 جاهز للاستلام." },
+              chat: { from: "business", text: "الطلب رقم 1042 جاهز للاستلام." },
               work: ["صفحة التتبّع: جاهز للاستلام"],
             },
             {
@@ -3147,7 +3138,7 @@ const ar: Copy = {
               title: "مكتمل حين تستلمه",
               body: "حين يُحدَّد مكتملاً يُغلق الطلب، وتصلها رسالة أخيرة.",
               record: { id: "order", lead: "#1042", main: "مريم صالح · 3 أصناف", sub: "يوسف", trail: "مكتمل", tone: "done" },
-              work: ["الطلب 1042: مكتمل"],
+              work: ["الطلب رقم 1042: مكتمل"],
             },
           ],
         },
@@ -3157,7 +3148,7 @@ const ar: Copy = {
           steps: [
             {
               move: "in",
-              title: "سؤال يحتاج إنساناً",
+              title: "سؤال يحتاج إلى موظف",
               body: "ليس كل شيء يصلح أن يكون آلياً. مريم تسأل عن أمر لا يجيب عنه إلا فريقك.",
               chat: { from: "customer", text: "هل الثرموستات عليه ضمان؟" },
               work: ["تم استلام الرسالة"],
@@ -3208,7 +3199,7 @@ const ar: Copy = {
           name: "لعملائك",
           items: [
             { title: "صفحة طلب تناسب الهاتف", body: "منتجاتك وأسعارك في صفحة تُفتح من المحادثة، بلا تطبيق ولا حساب." },
-            { title: "الدفع برابط", body: "رابط دفع في المحادثة، وإيصال لحظة السداد." },
+            { title: "الدفع برابط", body: "رابط دفع في المحادثة، وإيصال لحظة السداد. جاهز ومجرّب على صفحة تجريبية، والدفع بالبطاقات لم يبدأ بعد." },
             { title: "تتبّع الطلب", body: "لكل طلب صفحة خاصة به، تُظهر كل خطوة ومن يتولاه." },
             { title: "تحديثات بلا سؤال", body: "تم التأكيد، جاهز، مكتمل: كل تغيير في الحالة يصلهم برسالة." },
             { title: "بالعربية أو الإنجليزية", body: "تردّ ALYR باللغة التي يكتب بها العميل." },
@@ -3229,7 +3220,7 @@ const ar: Copy = {
             { title: "قواعد واتساب علينا", body: "ردود عادية خلال 24 ساعة من رسالة العميل، وبعدها صياغة معتمدة. وتختار ALYR المناسب في كل مرة." },
             { title: "الإيقاف يعني الإيقاف", body: "من يطلب الإيقاف لا تصله رسائل بعدها، وكل موافقة مسجّلة." },
             { title: "لا شيء يضيع", body: "تُحفظ كل رسالة قبل إرسالها، ويُعاد إرسالها إن تأخر واتساب. والتعذّر يظهر ولا يُخفى." },
-            { title: "سجلاتك منفصلة", body: "بيانات كل شركة مفصولة داخل قاعدة البيانات نفسها، لا بإعداد قد يُنسى." },
+            { title: "سجلاتك منفصلة", body: "بيانات كل منشأة مفصولة داخل قاعدة البيانات نفسها، لا بإعداد قد يُنسى." },
             { title: "سُلّمت وقُرئت", body: "تسجّل ALYR متى سُلّمت كل رسالة ومتى قُرئت." },
           ],
         },
@@ -3245,7 +3236,7 @@ const ar: Copy = {
           body: "لا تضيع الطلبات في المحادثة، حتى بعد الدوام أو في زحمة الجمعة.",
         },
         {
-          title: "احتفظ بأكثر",
+          title: "احتفظ بربحك",
           body: "الطلبات التي تصلك مباشرة بلا عمولة تطبيقات التوصيل، وقائمة عملائك تبقى لك.",
         },
         {
@@ -3259,8 +3250,8 @@ const ar: Copy = {
       ],
     },
     who: {
-      eyebrow: "لمن",
-      title: "للشركات التي تعمل على واتساب أصلاً.",
+      eyebrow: "لمن صُمّم",
+      title: "للأنشطة التي تعمل على واتساب أصلاً.",
       rows: [
         {
           name: "المطاعم والمقاهي",
@@ -3270,7 +3261,7 @@ const ar: Copy = {
         {
           name: "الصالونات ومحلات الحلاقة",
           body: "للحجوزات والتذكيرات منتجها الخاص الآن.",
-          tags: ["حجز", "تذكير"],
+          tags: [],
           link: { key: "bookings", label: "تعرّف على ALYR Bookings" },
         },
         {
@@ -3285,7 +3276,7 @@ const ar: Copy = {
           link: { key: "accounts", label: "تعرّف على ALYR Accounts" },
         },
       ],
-      other: "نشاطك مختلف؟ أخبرنا كيف يسير العمل لديك اليوم.",
+      other: "نشاطك مختلف؟ راسلنا وأخبرنا كيف تعمل اليوم.",
     },
     works: {
       eyebrow: "المنتجات",
@@ -3299,9 +3290,8 @@ const ar: Copy = {
       },
     },
     cta: {
-      title: "دعنا نجهّزها لك.",
-      body:
-        "أخبرنا كيف تستقبل الطلبات اليوم. يردّ عليك شخص من ALYR، ويريك العمل نفسه على قائمتك أو أسعارك.",
+      title: "أخبرنا كيف تصلك الطلبات اليوم.",
+      body: "أرسل لنا رسالة. يردّ عليك شخص من ALYR، ثم يزورك ليريك ALYR Chat على هاتفك أنت.",
     },
   },
   pages: {
@@ -3325,6 +3315,7 @@ const ar: Copy = {
       },
       demo: {
         business: "صالون ضفيرة",
+        avatar: "ض",
         businessMeta: "حساب أعمال",
         today: "اليوم",
         typeHere: "مراسلة",
@@ -3470,7 +3461,7 @@ const ar: Copy = {
               {
                 move: "in",
                 title: "عميل يراسل رقمك",
-                body: "تكتب Rania على واتساب كعادتها، وتصل الرسالة إلى ALYR عبر منصة واتساب للأعمال الرسمية.",
+                body: "تكتب رانيا على واتساب، وتصل الرسالة إلى ALYR عبر منصة واتساب للأعمال الرسمية.",
                 chat: { from: "customer", text: "السلام عليكم، ممكن أحجز قص وتسشوار يوم السبت؟" },
                 work: ["تم استلام الرسالة", "العميلة: Rania H."],
               },
@@ -3520,12 +3511,12 @@ const ar: Copy = {
               },
               {
                 title: "تتأكد أن الحجز ما زال قائماً",
-                body: "الحجز الملغى أو المؤجل يُتجاوز، فلا يُذكَّر أحد بزيارة لن تتم.",
+                body: "الحجز الملغى أو المنقول إلى وقت آخر يُتجاوز، فلا يُذكَّر أحد بزيارة لن تتم.",
                 work: ["الحجز 412: ما زال قائماً"],
               },
               {
                 title: "تراجع قواعد واتساب",
-                body: "آخر رسالة من Rania مضى عليها أكثر من 24 ساعة. عندها لا يسمح واتساب إلا بصياغة وافق عليها مسبقاً، فتستخدمها ALYR. ولو طلبت الإيقاف لما أُرسل شيء.",
+                body: "آخر رسالة من رانيا مضى عليها أكثر من 24 ساعة. عندها لا يسمح واتساب إلا بصياغة وافق عليها مسبقاً، فتستخدمها ALYR. ولو طلبت الإيقاف لما أُرسل شيء.",
                 work: ["الموافقة: مسجّلة", "آخر رسالة: قبل أكثر من 24 ساعة", "اختيرت الصياغة المعتمدة"],
               },
               {
@@ -3724,8 +3715,8 @@ const ar: Copy = {
         ],
       },
       hero: {
-        eyebrow: "ALYR Agent · نشاطك بالأرقام · مع كل منتج",
-        title: ["نشاطك بالأرقام.", "يومياً على شاشتك، وأسبوعياً على واتساب."],
+        eyebrow: "ALYR Agent · مع كل منتج",
+        title: ["نشاطك بالأرقام.", "وما يحتاجك أولاً."],
         lead:
           "ALYR Agent هو الشاشة الرئيسية في مساحة عملك. يقول لك في جملة واحدة كيف يسير أسبوعك، ويعرض ما يحتاجك الآن، ويقترح حتى ثلاثة أمور، لكل منها القاعدة التي وراءه.",
         facts: ["مع كل منتجات ALYR", "كل اقتراح يُظهر قاعدته", "يُحسب من سجلاتك أنت"],
@@ -3748,10 +3739,10 @@ const ar: Copy = {
         caption: { n: "02", text: "اقتراح واحد، مفتوحاً" },
       },
       report: {
-        eyebrow: "تقرير الأحد",
+        eyebrow: "تقرير الأحد · إطلاق مبكر",
         title: "الأسبوع نفسه على واتساب، صباح كل يوم أحد.",
         body:
-          "الساعة 9:00 صباح الأحد تصلك أرقام الأسبوع الماضي، قسم لكل منتج، وكل قسم مقارن بالأسبوع الذي قبله. وإن لم تراسل ALYR خلال آخر 24 ساعة، يصلك أولاً في سطر واحد: أرسل «تقرير» فيصلك الباقي.",
+          "الساعة 9:00 صباح الأحد تصلك أرقام الأسبوع الماضي، قسم لكل منتج، وفي كل قسم مقارنة بالأسبوع الذي قبله. وإن لم تراسل ALYR خلال آخر 24 ساعة، يصلك أولاً في سطر واحد: أرسل «تقرير» فيصلك الباقي. وتبدأ أولى التقارير بعد موافقة واتساب على صياغة التقرير.",
         report: {
           caption: { n: "03", text: "تقرير الأحد على واتساب" },
           heading: "تقرير ALYR الأسبوعي: مخبز قرفة",
@@ -3804,14 +3795,14 @@ const ar: Copy = {
         body: "لا تخمين ولا تقييم بالنقاط. هذه ست من القواعد، كما تظهر على شاشتك.",
         heads: ["ما يبحث عنه", "القاعدة كما تظهر على الشاشة"],
         rows: [
-          { name: "عملاء بانتظار الرد", rule: "القاعدة · آخر رسالة من العميل ولم يُرد عليها منذ 10 دقائق" },
+          { name: "عملاء بانتظار الرد", rule: "القاعدة · آخر رسالة من العميل ولم يُردّ عليها منذ 10 دقائق" },
           { name: "طلبات لم تُؤكَّد", rule: "القاعدة · جديد منذ أكثر من 15 دقيقة" },
           { name: "متأخر بلا تذكير", rule: "القاعدة · مستحق منذ 30 يوماً أو أكثر، دون وعد ودون تذكير خلال 7 أيام" },
           { name: "تغيّب مرتين وحجز من جديد", rule: "القاعدة · غياب مرتين أو أكثر خلال 90 يوماً، وحجز خلال الأيام السبعة القادمة" },
           {
             name: "زبائن دائمون انقطعوا",
             rule: "القاعدة · 3 طلبات أو زيارات أو أكثر قبل 31 إلى 120 يوماً، ولا شيء خلال آخر 30 يوماً",
-            note: "للعلم فقط: مراسلتهم تحتاج موافقتهم التسويقية، وALYR لا تجمعها بعد.",
+            note: "للعلم فقط: مراسلتهم تحتاج إلى موافقتهم التسويقية، وALYR لا تجمعها بعد.",
           },
           { name: "نسبة الغياب", rule: "القاعدة · الغياب ÷ (الحضور + الغياب) خلال 30 يوماً؛ 10% أو أكثر مع 3 حالات أو أكثر" },
         ],
@@ -3842,7 +3833,7 @@ const ar: Copy = {
           },
           {
             name: "كل أسبوع، وفي كل مكان",
-            items: ["تقرير الأحد على واتساب.", "بالعربية والإنجليزية، فاتح وداكن، على الهاتف والحاسوب."],
+            items: ["تقرير الأحد لواتساب. وتبدأ أولى التقارير بعد موافقة واتساب على صياغته.", "بالعربية والإنجليزية، فاتح وداكن، على الهاتف والحاسوب."],
           },
         ],
         notYet: {
@@ -3859,14 +3850,14 @@ const ar: Copy = {
       },
       who: {
         eyebrow: "لمن صُمّم",
-        title: "لكل نشاط مع ALYR.\nوما يتصدّر يتبع نشاطك.",
+        title: "يأتي مع كل نشاط يعمل بـ\u00a0ALYR.\nوما يتصدّر الشاشة يتبع نشاطك.",
         rows: [
           { name: "المطاعم والمقاهي والمخابز", tags: ["المبيعات هذا الأسبوع", "الطلبات هذا الأسبوع", "مستحق لك", "عادوا للطلب هذا الأسبوع"] },
           { name: "الصالونات ومحلات الحلاقة", tags: ["الزيارات هذا الأسبوع", "محجوز للأيام السبعة القادمة", "الغياب خلال 30 يوماً", "حجوزات جديدة هذا الأسبوع"] },
           { name: "الخدمات المنزلية", tags: ["المهام هذا الأسبوع", "محجوز للأيام السبعة القادمة", "مستحق لك", "الغياب خلال 30 يوماً"] },
           { name: "المحلات وتجارة الجملة", tags: ["مستحق لك", "المحصَّل هذا الأسبوع", "متأخر أكثر من 60 يوماً", "وعدوا بالسداد"] },
         ],
-        other: "نشاطك مختلف؟ أخبرنا كيف يسير العمل لديك اليوم.",
+        other: "نشاطك مختلف؟ راسلنا وأخبرنا كيف تعمل اليوم.",
       },
       works: {
         eyebrow: "المنتجات",
@@ -3892,7 +3883,7 @@ const ar: Copy = {
           },
           {
             id: "trust",
-            q: "هل أثق بالأرقام؟",
+            q: "هل يمكنني الوثوق بالأرقام؟",
             a: "كل رقم يُحسب من سجلاتك أنت، وكل اقتراح يفتح السجلات التي وراءه. ومما ينبغي أن تعرفه: الزيارة التي لم يسجّلها أحد لا تدخل نسبة الغياب حتى تُسجَّل، والنقد المستلم عند الكاونتر لا يُسجَّل في ALYR بعد.",
           },
           {
@@ -3902,13 +3893,13 @@ const ar: Copy = {
           },
           {
             id: "staff",
-            q: "هل يراه موظفوني؟",
-            a: "نعم، دون الأموال. يرون على هذه الشاشة العمل الذي أمامهم وأرقامهم هم، وأنت ومديروك ترون كل شيء.",
+            q: "هل يراه موظفيّ؟",
+            a: "نعم. يرون على هذه الشاشة العمل الذي أمامهم وأرقامهم هم، لا أموال المحل، وأنت ومديروك ترون كل شيء.",
           },
         ],
       },
       cta: {
-        title: "أخبرنا ماذا تريد أن تعرف كل صباح.",
+        title: "أخبرنا بما تريد أن تعرفه كل صباح.",
         body: "أرسل لنا رسالة. يردّ عليك شخص من ALYR، ثم يزورك ليريك ALYR Agent على هاتفك أنت.",
       },
     },
@@ -3927,12 +3918,13 @@ const ar: Copy = {
         eyebrow: "ALYR Accounts · الحسابات الآجلة · إطلاق مبكر",
         title: ["اعرف من عليه مستحقات لك.", "وذكّره دون اتصال محرج."],
         lead:
-          "سجّل البيع بالآجل بسطر واحد من هاتف الموظف. يُبلَّغ العميل برصيده الجديد، وتصله تذكيرات بنبرة تتدرّج مع عمر الدين، والوعد بالسداد يوقفها.",
-        facts: ["يُسدَّد الأقدم أولاً", "لا تذكيرين خلال 3 أيام", "الإيقاف يعني الإيقاف"],
+          "سجّل البيع بالآجل بسطر واحد من هاتف الموظف، فيُبلَّغ العميل برصيده الجديد. وبضغطة واحدة تُرسل التذكيرات بنبرة تتدرّج مع عمر الدين، والوعد بالسداد يوقفها.",
+        facts: ["يُسدَّد الأقدم أولاً", "لا تذكير مرتين خلال 3 أيام", "الإيقاف يعني الإيقاف"],
         factsOffer: ["من 449 ر.ق شهرياً، أو 150 ر.ق إضافة إلى منتج آخر من ALYR"],
       },
       demo: {
         business: "مخبز قرفة",
+        avatar: "ق",
         businessMeta: "حساب أعمال",
         today: "اليوم",
         typeHere: "مراسلة",
@@ -3974,14 +3966,14 @@ const ar: Copy = {
               title: "الحسابات الآجلة",
               badge: "إرسال التذكيرات",
               rows: [
-                { main: "Marina Desk Co-working", sub: "أقدم فاتورة: 35 يوماً · ودّي", trail: "تم التذكير", tone: "signal" },
-                { main: "Bluefin Events", sub: "أقدم فاتورة: 48 يوماً · ودّي", trail: "تم التذكير", tone: "done" },
-                { main: "Ward Events", sub: "أقدم فاتورة: 104 أيام · إشعار أخير", trail: "تم التذكير", tone: "done" },
+                { main: "Marina Desk Co-working", sub: "أقدم دين: 35 يوماً · ودّي", trail: "تم التذكير", tone: "signal" },
+                { main: "Bluefin Events", sub: "أقدم دين: 48 يوماً · ودّي", trail: "تم التذكير", tone: "done" },
+                { main: "Ward Events", sub: "أقدم دين: 104 أيام · إشعار أخير", trail: "تم التذكير", tone: "done" },
                 { main: "Palm Court Offices", sub: "وعد بالسداد قبل 19 أكتوبر", trail: "تم التخطي", tone: "quiet" },
               ],
-              total: ["أُرسل", "3 تذكيرات، وتخطٍّ واحد"],
+              total: ["أُرسل", "3 تذكيرات، واستُثني عميل واحد"],
             },
-            caption: "ودّي قبل 60 يوماً، وأشد من 60، وإشعار أخير من 90.",
+            caption: "ودّي قبل 60 يوماً، وأشد لهجة من اليوم 60، وإشعار أخير من اليوم 90.",
           },
           {
             id: "promise",
@@ -3995,7 +3987,7 @@ const ar: Copy = {
               title: "Marina Desk Co-working",
               badge: "حساب آجل",
               rows: [
-                { main: "الرصيد 3,150 ر.ق", sub: "أقدم فاتورة: 35 يوماً", trail: "وعد بالسداد قبل 22 أكتوبر", tone: "signal" },
+                { main: "الرصيد 3,150 ر.ق", sub: "أقدم دين: 35 يوماً", trail: "وعد بالسداد قبل 22 أكتوبر", tone: "signal" },
               ],
             },
             caption: "الوعد بالسداد يوقف التذكيرات حتى موعده، وإن مضى دون دفع يظهر في ALYR Agent.",
@@ -4005,18 +3997,18 @@ const ar: Copy = {
             tab: "الدفع",
             start: 19 * 60 + 5,
             chat: [
-              { from: "customer", text: "ادفع 500" },
-              { from: "business", text: "لدفع 500 ر.ق افتح الرابط: alyr.qa/pay/…" },
-              { from: "business", text: "تم استلام 500 ر.ق. رصيدك الآن 2,650 ر.ق. شكراً لك." },
+              { from: "customer", text: "ادفع 450" },
+              { from: "business", text: "لدفع 450 ر.ق افتح الرابط: alyr.qa/pay/…" },
+              { from: "business", text: "تم استلام 450 ر.ق. رصيدك الآن 2,700 ر.ق. شكراً لك." },
             ],
             panel: {
               title: "Marina Desk Co-working",
               badge: "الحركات",
               rows: [
-                { lead: "15 أكتوبر", main: "دفعة · عبر رابط الدفع", trail: "−500 ر.ق", tone: "signal" },
+                { lead: "15 أكتوبر", main: "دفعة · عبر رابط الدفع", trail: "−450 ر.ق", tone: "signal" },
                 { lead: "15 أكتوبر", main: "بيع آجل", trail: "+450 ر.ق", tone: "done" },
               ],
-              total: ["الرصيد", "2,650 ر.ق"],
+              total: ["الرصيد", "2,700 ر.ق"],
             },
             caption: "صفحة الدفع ما زالت تجريبية، ولا تُنقل فيها أي أموال.",
           },
@@ -4029,11 +4021,11 @@ const ar: Copy = {
               title: "الحسابات الآجلة",
               badge: "5 عملاء عليهم مبالغ",
               rows: [
-                { main: "Palm Court Offices", sub: "أقدم فاتورة: 76 يوماً · وعد بالسداد قبل 19 أكتوبر", trail: "3,875 ر.ق", tone: "done" },
-                { main: "Bluefin Events", sub: "أقدم فاتورة: 48 يوماً · تم التذكير", trail: "3,450 ر.ق", tone: "done" },
-                { main: "Marina Desk Co-working", sub: "أقدم فاتورة: 35 يوماً · وعد بالسداد قبل 22 أكتوبر", trail: "2,650 ر.ق", tone: "signal" },
-                { main: "Tamr Café", sub: "أقدم فاتورة: 12 يوماً", trail: "1,700 ر.ق", tone: "done" },
-                { main: "Ward Events", sub: "أقدم فاتورة: 104 أيام · إشعار أخير", trail: "1,250 ر.ق", tone: "quiet" },
+                { main: "Palm Court Offices", sub: "أقدم دين: 76 يوماً · وعد بالسداد قبل 19 أكتوبر", trail: "3,875 ر.ق", tone: "done" },
+                { main: "Bluefin Events", sub: "أقدم دين: 48 يوماً · تم التذكير", trail: "3,450 ر.ق", tone: "done" },
+                { main: "Marina Desk Co-working", sub: "أقدم دين: 35 يوماً · وعد بالسداد قبل 22 أكتوبر", trail: "2,700 ر.ق", tone: "signal" },
+                { main: "Tamr Café", sub: "أقدم دين: 12 يوماً", trail: "1,700 ر.ق", tone: "done" },
+                { main: "Ward Events", sub: "أقدم دين: 104 أيام · إشعار أخير", trail: "1,250 ر.ق", tone: "quiet" },
               ],
             },
             caption: "تُسدَّد أقدم الديون أولاً، كما يُقرأ الدفتر الورقي.",
@@ -4062,7 +4054,7 @@ const ar: Copy = {
               {
                 move: "back",
                 title: "سطر واحد من هاتف الموظف",
-                body: "يرسل كريم «Marina 450 credit» إلى رقم المحل، من الهاتف الذي تعرفه ALYR هاتفاً لموظف.",
+                body: "يرسل كريم «Marina 450 credit» إلى رقم المحل، من هاتف مسجّل في ALYR على أنه هاتف موظف.",
                 work: ["رسالة موظف: كريم", "العميل: Marina Desk Co-working", "بيع آجل: 450 ر.ق"],
               },
               {
@@ -4095,7 +4087,7 @@ const ar: Copy = {
               {
                 move: "back",
                 title: "تضغط «أرسل التذكيرات»",
-                body: "ضغطة واحدة على شاشة الحسابات الآجلة تذكّر كل عميل مضى على أقدم فاتورة غير مدفوعة له 30 يوماً أو أكثر.",
+                body: "ضغطة واحدة على شاشة الحسابات الآجلة تذكّر كل عميل مضى على أقدم دين غير مسدَّد له 30 يوماً أو أكثر.",
                 work: ["إرسال التذكيرات: حسابات 30 يوماً أو أكثر"],
               },
               {
@@ -4106,7 +4098,7 @@ const ar: Copy = {
               {
                 title: "تتدرّج النبرة مع العمر",
                 body: "قبل 60 يوماً تذكير ودّي، ومن 60 أشد، ومن 90 إشعار أخير.",
-                work: ["أقدم فاتورة: 35 يوماً", "النبرة: ودّية"],
+                work: ["أقدم دين: 35 يوماً", "النبرة: ودّية"],
               },
               {
                 move: "out",
@@ -4188,10 +4180,10 @@ const ar: Copy = {
             { label: "أكثر من 90 يوماً", amount: "1,250 ر.ق", share: 0.096 },
           ],
           remind: "إرسال التذكيرات",
-          remindHint: "للعملاء الذين مضى على أقدم فاتورة غير مدفوعة لهم 30 يوماً أو أكثر",
+          remindHint: "للعملاء الذين مضى على أقدم دين غير مسدَّد لهم 30 يوماً أو أكثر",
           heads: { customer: "العميل", balance: "الرصيد", age: "أقدم دين" },
           rows: [
-            { name: "Palm Court Offices", balance: "3,875 ر.ق", days: "76 يوماً", age: 2, promised: "وعد بالدفع قبل 19 أكتوبر" },
+            { name: "Palm Court Offices", balance: "3,875 ر.ق", days: "76 يوماً", age: 2, promised: "وعد بالسداد قبل 19 أكتوبر" },
             { name: "Bluefin Events", balance: "3,450 ر.ق", days: "48 يوماً", age: 1 },
             { name: "Marina Desk Co-working", balance: "2,700 ر.ق", days: "35 يوماً", age: 1, on: true },
             { name: "Tamr Café", balance: "1,700 ر.ق", days: "12 يوماً", age: 0 },
@@ -4252,7 +4244,7 @@ const ar: Copy = {
             "تسجيل بيع أو دفعة من الشاشة.",
             "تحديد حد الائتمان بنفسك. تحدده ALYR عند طلبك.",
             "كشوف الحساب والفواتير.",
-            "أزرار في التذكير الذي يُرسل بعد مرور 24 ساعة على آخر رسالة من العميل. يصله رابط الدفع فقط.",
+            "زرّا «ادفع الآن» و«سأدفع خلال أسبوع» في التذكير الذي يُرسل بعد 24 ساعة من آخر رسالة للعميل؛ يصله رابط الدفع فقط.",
             "تسجيل طريقة الدفع: نقداً أو بالبطاقة أو بالتحويل.",
           ],
         },
@@ -4267,7 +4259,7 @@ const ar: Copy = {
           { name: "مطاعم ومخابز لها حسابات مكاتب أو مناسبات", tags: ["طلب على الحساب", "تذكير"] },
           { name: "خدمات منزلية مع عملاء عقود", tags: ["تسجيل", "تذكير"] },
         ],
-        other: "نشاطك مختلف؟ أخبرنا كيف يسير العمل لديك اليوم.",
+        other: "نشاطك مختلف؟ راسلنا وأخبرنا كيف تعمل اليوم.",
       },
       works: {
         eyebrow: "المنتجات",

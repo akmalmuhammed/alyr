@@ -136,7 +136,7 @@ export function ProductDemo({ product, locale }: Props) {
           <div className="wa">
             <header className="wa-top">
               <svg className="wa-back ico-flip" viewBox="0 0 24 24" aria-hidden="true"><path d="M20 11H7.8l5.6-5.6L12 4l-8 8 8 8 1.4-1.4L7.8 13H20z" /></svg>
-              <span className="wa-avatar" aria-hidden="true">{product.business.slice(0, 1)}</span>
+              <span className="wa-avatar" aria-hidden="true">{product.avatar ?? product.business.slice(0, 1)}</span>
               <span className="wa-who">
                 <b>{product.business}</b>
                 <small>{product.businessMeta}</small>
