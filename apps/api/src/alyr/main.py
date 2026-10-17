@@ -1,6 +1,7 @@
 from contextlib import asynccontextmanager
 
 from fastapi import Depends, FastAPI
+from fastapi.responses import JSONResponse
 
 from alyr.channels.meta import MetaChannel
 from alyr.channels.simulator import SimulatorChannel
@@ -54,7 +55,41 @@ def create_app() -> FastAPI:
 
     @app.get("/health")
     async def health() -> dict:
+        """Liveness: the process answers. Deliberately does not touch the database, so a
+        database outage does not make the host restart every API container in a loop."""
         return {"status": "ok", "env": settings.env}
+
+    @app.get("/health/ready")
+    async def ready() -> JSONResponse:
+        """Readiness: the API can reach its database. Hosts send traffic only when it can."""
+        try:
+            async with app.state.db.unscoped() as conn:
+                await conn.fetchval("select 1")
+        except Exception:  # noqa: BLE001 - any failure means not ready
+            return JSONResponse({"status": "unavailable", "database": "unreachable"}, 503)
+        return JSONResponse({"status": "ok", "database": "ok"})
+
+    @app.get("/health/worker")
+    async def worker_health() -> JSONResponse:
+        """Whether the background worker is alive. Uptime monitoring calls this: when it
+        is red, reminders and confirmations are not going out."""
+        if settings.jobs_inline:
+            return JSONResponse({"status": "ok", "mode": "inline"})
+        try:
+            async with app.state.db.unscoped() as conn:
+                age = await conn.fetchval(
+                    "select extract(epoch from now() - max(beat_at))::int "
+                    "from worker_heartbeats"
+                )
+        except Exception:  # noqa: BLE001
+            return JSONResponse({"status": "unknown", "database": "unreachable"}, 503)
+        if age is None:
+            return JSONResponse({"status": "down", "reason": "no worker has checked in"}, 503)
+        if age > settings.worker_stale_seconds:
+            return JSONResponse(
+                {"status": "down", "seconds_since_last_check_in": age}, 503
+            )
+        return JSONResponse({"status": "ok", "seconds_since_last_check_in": age})
 
     app.include_router(whatsapp_webhook.router)
     # Each module's routes answer only for shops that have switched that module on.

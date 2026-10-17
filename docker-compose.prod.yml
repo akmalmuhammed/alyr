@@ -1,0 +1,115 @@
+# ALYR in production shape, on one machine (ALY-63).
+#
+# Two uses:
+#   1. Rehearsal on the laptop: the exact images the cloud runs, with production
+#      settings, before anything is deployed. See docs/hosting.md.
+#   2. A reference for any single server: the same file runs on a virtual machine.
+#
+# In Azure the same images run as Container Apps (infra/azure), with the database on
+# PostgreSQL Flexible Server and secrets in Key Vault; this file is not used there.
+#
+#   docker compose -f docker-compose.prod.yml up -d --build
+#   docker compose -f docker-compose.prod.yml run --rm backup
+#   docker compose -f docker-compose.prod.yml down          (add -v to delete its data)
+#
+# Every value below has a rehearsal default. On a real server put the real values in
+# .env.prod beside this file (git ignores it); never edit them in here.
+
+name: alyr-prod
+
+x-api-settings: &api-settings
+  ALYR_ENV: ${ALYR_ENV:-production}
+  ALYR_JOBS_INLINE: "false"
+  ALYR_DATABASE_URL: postgresql://alyr_app:${ALYR_APP_DB_PASSWORD:-rehearsal_app}@postgres:5432/alyr
+  ALYR_MIGRATION_URL: postgresql://alyr:${ALYR_OWNER_DB_PASSWORD:-rehearsal_owner}@postgres:5432/alyr
+  ALYR_BACKUP_URL: postgresql://alyr_backup:${ALYR_BACKUP_DB_PASSWORD:-rehearsal_backup}@postgres:5432/alyr
+  ALYR_PUBLIC_WEB_URL: ${ALYR_PUBLIC_WEB_URL:-http://localhost:13000}
+  ALYR_META_APP_SECRET: ${ALYR_META_APP_SECRET:-rehearsal-app-secret}
+  ALYR_META_VERIFY_TOKEN: ${ALYR_META_VERIFY_TOKEN:-rehearsal-verify-token}
+  ALYR_META_ACCESS_TOKEN: ${ALYR_META_ACCESS_TOKEN:-}
+  ALYR_META_PHONE_NUMBER_ID: ${ALYR_META_PHONE_NUMBER_ID:-}
+  ALYR_META_WABA_ID: ${ALYR_META_WABA_ID:-}
+  ALYR_EMAIL_API_KEY: ${ALYR_EMAIL_API_KEY:-}
+
+services:
+  postgres:
+    image: postgres:16
+    environment:
+      POSTGRES_USER: alyr
+      POSTGRES_PASSWORD: ${ALYR_OWNER_DB_PASSWORD:-rehearsal_owner}
+      POSTGRES_DB: alyr
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U alyr -d alyr"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+    restart: unless-stopped
+
+  # Runs once per start, before the API and the worker: applies new migrations and makes
+  # sure the app and backup roles exist. Two at once take turns (advisory lock).
+  migrate:
+    build: apps/api
+    image: alyr-api
+    command: ["python", "-m", "alyr.migrate"]
+    environment: *api-settings
+    depends_on:
+      postgres: { condition: service_healthy }
+    restart: "no"
+
+  api:
+    image: alyr-api
+    environment: *api-settings
+    ports:
+      - "${ALYR_API_PORT:-18000}:8000"
+    depends_on:
+      migrate: { condition: service_completed_successfully }
+    restart: unless-stopped
+
+  worker:
+    image: alyr-api
+    command: ["python", "-m", "alyr.worker"]
+    environment: *api-settings
+    # The worker serves no HTTP; its health is the heartbeat, read at the API's
+    # /health/worker.
+    healthcheck:
+      disable: true
+    depends_on:
+      migrate: { condition: service_completed_successfully }
+    restart: unless-stopped
+
+  web:
+    build:
+      context: apps/web
+      args:
+        ALYR_API_URL: http://api:8000
+        NEXT_PUBLIC_ALYR_WORKSPACE_URL: ${ALYR_PUBLIC_WEB_URL:-http://localhost:13000}
+    image: alyr-web
+    ports:
+      - "${ALYR_WEB_PORT:-13000}:3000"
+    depends_on:
+      - api
+    restart: unless-stopped
+
+  # Not started by `up`. Run on a schedule: docker compose run --rm backup
+  backup:
+    build: infra/backup
+    image: alyr-backup
+    profiles: ["backup"]
+    environment:
+      BACKUP_DATABASE_URL: postgresql://alyr_backup:${ALYR_BACKUP_DB_PASSWORD:-rehearsal_backup}@postgres:5432/alyr
+      BACKUP_AGE_RECIPIENT: ${BACKUP_AGE_RECIPIENT:-}
+      BACKUP_DESTINATIONS: ${BACKUP_DESTINATIONS:-local:/backups}
+      BACKUP_KEEP_DAYS: ${BACKUP_KEEP_DAYS:-35}
+      # The rehearsal writes to a folder; real servers configure cloud remotes the same way
+      # (RCLONE_CONFIG_GCS_*, RCLONE_CONFIG_R2_*), see docs/hosting.md.
+      RCLONE_CONFIG_LOCAL_TYPE: local
+    volumes:
+      - backups:/backups
+    depends_on:
+      postgres: { condition: service_healthy }
+
+volumes:
+  pgdata:
+  backups:

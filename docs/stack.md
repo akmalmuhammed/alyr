@@ -21,11 +21,13 @@ Checked 7 October 2026. Free tiers change often; re-check a row before relying o
 | Tasks | Linear Free | 250 issues, 2 teams | Hard cap; we are at 54 | Linear Basic, or archive done issues | About 200 active issues | In use |
 | Development | Docker Desktop, local PostgreSQL 16 and Redis 7 | Unlimited | None | — | — | In use |
 | WhatsApp test traffic | Meta test number | Free; up to 5 recipient phones | Cannot message real customers | Merchant's own number via Embedded Signup | Phase 2 exit test | Planned |
-| Webhook during development | Cloudflare Tunnel | Free | Needs a small program installed on the laptop; address changes unless a domain is attached | A hosted server | Phase 2 hosting exists | Planned |
+| Webhook during development | Cloudflare Tunnel | Free | Needs a small program installed on the laptop; address changes unless a domain is attached | Azure Container Apps (D-036) | Azure is live | In use until Azure |
 | Public site hosting | Cloudflare Workers static assets (`alyr-site`) | Free: unlimited static requests | Static files only; no server rendering | Not needed for a static site | When the site needs server code | Live 11 Oct |
-| Workspace web app hosting | Not chosen (Vercel Hobby forbids commercial use) | — | — | Cloudflare (OpenNext) or Vercel Pro | When the API has an always-on home (ALY-10) | Open |
-| Database (hosted) | Neon Free | 0.5 GB, sleeps after 5 idle minutes | Outside Qatar; about 100 ms further away; no salary or QID data until ALY-51 | Azure PostgreSQL in Qatar Central | First paying customer, or 0.4 GB used, or Product 2 starts | Planned |
-| API and worker hosting | Founder's laptop through Cloudflare Tunnel | Free | Only up while the laptop is on | Azure Qatar Central on startup credits | Alpha merchants need it always on | Planned |
+| Workspace web app hosting | Azure Container Apps, Qatar Central (D-036); Vercel Pro as a standby only | Part of the Azure estimate | — | — | — | Planned |
+| Database (hosted) | Azure PostgreSQL Flexible Server B1ms, Qatar Central (D-036). Neon Free dropped: an always-on worker needs about 182 compute-hours a month, the free plan gives 100 | About USD 21 a month at list price | — | General Purpose with a standby | A paying customer needs high availability | Planned |
+| API and worker hosting | Azure Container Apps, Qatar Central (D-036); the laptop until then | About USD 36 a month at list price, on credits | — | More replicas, then a dedicated plan | CPU or job queue signals in `docs/hosting.md` | Planned |
+| Database backups off Azure | Google Cloud Storage, Doha, Nearline; second copy Cloudflare R2 (D-036) | R2: 10 GB free. Google: about USD 0.013 per GB a month | — | — | — | Planned |
+| Emergency host | Google Cloud Run and Cloud SQL, Doha (D-036) | Nothing runs until needed | About USD 110 to 150 a month while running | — | — | Planned |
 | Tunnel, Vercel and Neon command-line tools | cloudflared, vercel, neonctl | Free | None | — | — | Installed 7 Oct |
 | DNS and TLS | Cloudflare Free | Unlimited DNS, free certificates | None that matter | — | — | Planned |
 | Domain name | Any registrar | **Not free**: about USD 10 to 15 a year for .com, more for .qa | — | — | — | Needed before Meta app review |

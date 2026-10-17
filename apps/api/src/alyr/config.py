@@ -13,12 +13,18 @@ class Settings(BaseSettings):
     # Migrations and demo-tenant setup connect as the owner.
     migration_url: str = "postgresql://alyr:alyr_local@localhost:5432/alyr"
     redis_url: str = "redis://localhost:6379/0"
+    # The read-only role the nightly backup signs in as (scripts/backup). Only migrations
+    # use this setting, to create the role; the app never connects with it. Empty: no
+    # backup role is created.
+    backup_url: str = ""
 
     # Run queued jobs inside the API process after each request. Convenient locally
     # and in tests. In production set this to false and run `python -m alyr.worker`.
     jobs_inline: bool = True
     # First retry delay; it doubles on each further attempt.
     jobs_backoff_seconds: float = 5.0
+    # /health/worker answers 503 when the worker has not checked in for this long.
+    worker_stale_seconds: int = 120
 
     # Local only: let the workspace be used without signing in, as the demo shop.
     # Ignored everywhere except env "local".

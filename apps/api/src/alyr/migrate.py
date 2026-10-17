@@ -24,10 +24,39 @@ async def ensure_app_role(conn: asyncpg.Connection, app_dsn: str) -> None:
         await conn.execute(f"create role {role} login password '{quoted}'")
 
 
-async def migrate(owner_dsn: str, app_dsn: str) -> list[str]:
+async def ensure_backup_role(conn: asyncpg.Connection, backup_dsn: str) -> None:
+    """Create the role the nightly backup signs in as, if it is missing.
+
+    Every tenant table forces row-level security, so even the owner sees no rows without
+    a tenant set, and pg_dump refuses to run. The backup role is the one role allowed to
+    read past it: BYPASSRLS plus read-only access to everything. It can change nothing,
+    and only the backup job holds its password. The application role still cannot bypass
+    row-level security (hard rule 1). PostgreSQL 16 or later lets a non-superuser admin,
+    such as Azure's, grant BYPASSRLS.
+    """
+    parsed = urlparse(backup_dsn)
+    role, password = parsed.username, parsed.password
+    if not role or not role.replace("_", "").isalnum():
+        raise ValueError("backup_url must name a simple role")
+    exists = await conn.fetchval("select 1 from pg_roles where rolname = $1", role)
+    if not exists:
+        quoted = (password or "").replace("'", "''")
+        await conn.execute(f"create role {role} login bypassrls password '{quoted}'")
+    await conn.execute(f"grant pg_read_all_data to {role}")
+
+
+# Any two processes that start a migration at once (two API replicas, or a deploy and a
+# person) take turns on this lock instead of applying the same file twice.
+_MIGRATION_LOCK = 7_301_202_610
+
+
+async def migrate(owner_dsn: str, app_dsn: str, backup_dsn: str = "") -> list[str]:
     conn = await asyncpg.connect(owner_dsn)
     try:
+        await conn.execute("select pg_advisory_lock($1)", _MIGRATION_LOCK)
         await ensure_app_role(conn, app_dsn)
+        if backup_dsn:
+            await ensure_backup_role(conn, backup_dsn)
         await conn.execute(
             "create table if not exists schema_migrations "
             "(name text primary key, applied_at timestamptz not null default now())"
@@ -48,5 +77,7 @@ async def migrate(owner_dsn: str, app_dsn: str) -> list[str]:
 
 if __name__ == "__main__":
     settings = get_settings()
-    names = asyncio.run(migrate(settings.migration_url, settings.database_url))
+    names = asyncio.run(
+        migrate(settings.migration_url, settings.database_url, settings.backup_url)
+    )
     print("applied:", ", ".join(names) if names else "nothing new")
