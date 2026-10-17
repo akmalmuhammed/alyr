@@ -3,9 +3,10 @@ import { Rich } from "../_agent/AgentDashboard";
 import type { AgentView } from "../_agent/types";
 import { AgentFigure } from "./AgentFigure";
 import { copy, type Locale } from "./copy";
-import { FigCaption, ReportBubble } from "./Drawings";
+import { FigCaption, reportWords } from "./Drawings";
 import { InsideBlock, ProductBar, ProductHero, QuestionsBlock, WhoBlock, WorksBlock } from "./ProductKit";
-import { SAMPLE_ORDER, SAMPLES } from "./samples";
+import { ReportSwitch } from "./ReportSwitch";
+import { REPORTS, SAMPLE_ORDER, SAMPLES } from "./samples";
 import { Shell } from "./Shell";
 import { rich } from "./Text";
 
@@ -58,6 +59,7 @@ export function AgentPage({ locale }: { locale: Locale }) {
           switcher
           feed
           headingLevel={2}
+          sync="agent"
         />
       </ProductHero>
 
@@ -92,8 +94,19 @@ export function AgentPage({ locale }: { locale: Locale }) {
             <p className="lead">{rich(p.report.body)}</p>
           </div>
           <figure className="pk-report-fig" data-reveal>
-            <ReportBubble report={p.report.report} />
-            <FigCaption locale={locale} caption={p.report.report.caption} />
+            <ReportSwitch
+              sync="agent"
+              start={SAMPLE_ORDER[0]}
+              samples={REPORTS[locale]}
+              words={reportWords(locale)}
+              figLabel={t.fig.label}
+              caption={p.report.report.caption}
+              fictional={{
+                bakery: t.agent.samples.bakery.fictional,
+                salon: t.agent.samples.salon.fictional,
+                homeservices: t.agent.samples.homeservices.fictional,
+              }}
+            />
           </figure>
         </div>
       </section>

@@ -21,6 +21,7 @@ import { useEffect, useLayoutEffect, useMemo, useRef, useState, type CSSProperti
 import { AgentDashboard, Rich } from "../_agent/AgentDashboard";
 import type { AgentView, Rich as RichParts } from "../_agent/types";
 import type { AgentFigure as FigureCopy, Caption, FeedEvent, SampleKey } from "./copy";
+import { SAMPLE_EVENT } from "./ReportSwitch";
 import { rich } from "./Text";
 import "./drawings.css";
 import "./agentfig.css";
@@ -46,6 +47,9 @@ type Props = {
   aside?: ReactNode;
   under?: string;
   id?: string;
+  /** Tells other figures on the page which sample was picked (`alyr:sample` with this id):
+   * /agent's Sunday report follows the switch (ReportSwitch.tsx). */
+  sync?: string;
 };
 
 /** The first event arrives no earlier than this after navigation: after the plate, the
@@ -98,7 +102,7 @@ function Tick() {
 }
 
 export function AgentFigure({
-  variant, views, order, start, text, figLabel, caption, label, switcher = false, feed = false, crop = false,
+  variant, views, order, start, text, figLabel, caption, label, switcher = false, feed = false, crop = false, sync,
   headingLevel = 2, aside, under, id,
 }: Props) {
   const [sample, setSample] = useState<SampleKey>(start ?? order[0]);
@@ -189,6 +193,7 @@ export function AgentFigure({
     if (key === sample) return;
     setSample(key);
     setAnnounce(text.samples[key].announce);
+    if (sync) window.dispatchEvent(new CustomEvent(SAMPLE_EVENT, { detail: { id: sync, key } }));
     // A choice replays the feed whenever motion is allowed, failsafe or not.
     if (feed && !still()) play(text.samples[key].feed.length, 300);
     else {

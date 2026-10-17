@@ -85,7 +85,7 @@ main {
 
 /* a customer page (`/s/`, `/b/`, `/t/`) */
 .d-cx { position: relative; display: flex; flex-direction: column; height: 100%; color: var(--d-ink); font-family: var(--sans); font-size: 12.5px; line-height: 1.35; letter-spacing: 0; }
-.d-cx:lang(ar), .d-chat:lang(ar), .d-sheet:lang(ar), .d-strip:lang(ar), .d-report:lang(ar) { font-family: var(--arabic); }
+.d-cx:lang(ar), .d-chat:lang(ar), .d-sheet:lang(ar), .d-strip:lang(ar) { font-family: var(--arabic); }
 .d-top { display: flex; align-items: center; gap: 8px; min-height: 48px; padding: 0 12px; padding-inline-end: 22px; border-bottom: 1px solid var(--d-hair); flex: none; }
 .d-mono { position: relative; width: 28px; height: 28px; flex: none; display: grid; place-items: center; border-radius: 8px; background: #15171a; color: #f3f5f0; font-size: 11px; font-weight: 600; overflow: hidden; box-shadow: 0 0 0 1px var(--d-hair-2); }
 .d-mono::after { content: ""; position: absolute; top: 0; inset-inline-end: 0; width: 9px; height: 9px; background: var(--volt); clip-path: polygon(0 0, 100% 0, 100% 100%); }
@@ -190,17 +190,24 @@ main {
 .d-cx .d-bar .d-btn svg { width: 14px; height: 14px; stroke-width: 2.6; }
 
 
-/* the weekly report, as one WhatsApp message */
-.d-report { max-width: 27rem; padding: 12px 14px 8px; background: var(--d-card); color: var(--d-ink); border-radius: 2px 14px 14px 14px; box-shadow: var(--d-lift), 0 24px 60px -32px rgb(21 23 26 / .4); }
-.d-report:dir(rtl), [dir="rtl"] .d-report { border-radius: 14px 2px 14px 14px; }
-/* the report is plain text, which WhatsApp sets in its own sans: the site sets it in the sans too */
-.d-report-text { display: grid; font-family: var(--sans); font-size: .875rem; line-height: 1.55; font-variant-numeric: tabular-nums; }
-[lang="ar"] .d-report-text { font-family: var(--arabic); font-size: .875rem; line-height: 1.75; }
-.d-rl { display: block; }
-.d-report-head, .d-report-title { font-weight: 600; }
-.d-report-sec { display: grid; margin-top: .75rem; }
-/* the time in the bubble's corner; a message the owner receives carries no ticks */
-.d-report .d-time { justify-self: end; margin-top: .375rem; font-family: var(--sans); font-size: .6875rem; color: var(--d-ink-2); }
+/* the Sunday report, as the WhatsApp message the owner gets (ReportPhone.tsx): the site's
+   WhatsApp chat (.wa, site.css) at its natural height, with one image message. WhatsApp
+   draws an image message almost the chat's width, the picture inset by 3 px, its text
+   under it and the time in the corner; a message the owner receives carries no ticks. */
+.wa.rp { width: 100%; max-width: 23rem; height: auto; box-shadow: 0 24px 60px -32px rgb(21 23 26 / .45); }
+.rp-thread { justify-content: flex-start; padding: .75rem .625rem 1rem; }
+.rp .rp-msg { max-width: 94%; }
+.rp-bubble { display: flow-root; padding: .1875rem .1875rem .375rem; }
+.rp-img { display: block; aspect-ratio: 1080 / 566; border-radius: .375rem; overflow: hidden; background: var(--wa-chip); }
+.rp-card img { display: block; width: 100%; height: auto; }
+/* the card follows the page: Carbon on dark, Paper on light; the hidden one is never fetched */
+.rp-carbon { display: var(--when-dark); }
+.rp-paper { display: var(--when-light); }
+.rp-text { display: grid; padding: .375rem .3125rem 0; font-size: .875rem; line-height: 1.36; overflow-wrap: anywhere; }
+.rp-line { display: block; }
+.rp-text b { font-weight: 700; }
+.rp-gap { display: block; height: 1.36em; }
+.rp .rp-meta { margin-inline-end: .3125rem; }
 
 
 /* ------------------------------------------------- a window of the workspace */

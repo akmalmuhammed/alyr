@@ -3,10 +3,11 @@ import { AgentFigure } from "./AgentFigure";
 import { Icon } from "./brand";
 import { ContactButton, ContactNote } from "./Contact";
 import { copy, type Locale } from "./copy";
-import { AgeBarCrop, FigCaption, OrderBarCrop, ReportBubble, SummaryCrop, TimesCrop, TrackScreen } from "./Drawings";
+import { AgeBarCrop, FigCaption, OrderBarCrop, reportWords, SummaryCrop, TimesCrop, TrackScreen } from "./Drawings";
+import { ReportPhone } from "./ReportPhone";
 import { Phone, TickPath } from "./Frames";
 import { HomeMotion } from "./HomeMotion";
-import { SAMPLE_ORDER, SAMPLES } from "./samples";
+import { REPORTS, SAMPLE_ORDER, SAMPLES } from "./samples";
 import { contactHref, Shell } from "./Shell";
 import { CONTACT_STATE, OFFER_LIVE, PATHS, PRODUCTS, productPath, TRUST_RECORDS, type TrustRecord } from "./site";
 import { lines, rich } from "./Text";
@@ -304,7 +305,7 @@ function How({ locale }: { locale: Locale }) {
               <ContactButton locale={locale} variant="line" />
             </div>
             <figure className="how-report" data-m>
-              <ReportBubble report={w.report} />
+              <ReportPhone sample={REPORTS[locale].bakery} words={reportWords(locale).bakery} />
               <FigCaption locale={locale} caption={w.report.caption} />
             </figure>
           </div>
