@@ -13,6 +13,7 @@ from html import escape
 
 import httpx
 
+from alyr import brand
 from alyr.config import get_settings
 
 log = logging.getLogger("alyr.mail")
@@ -64,14 +65,15 @@ def sign_in_message(code: str, minutes: int) -> tuple[str, str, str]:
         "إذا لم تطلبه، تجاهل هذه الرسالة."
     )
     c = escape(code)
-    html = f"""<!doctype html><html><body style="margin:0;background:#f6f7f3;font-family:Arial,sans-serif;color:#15171a">
+    e, f, fm = brand.EMAIL, brand.CSS_FONT["email"], brand.CSS_FONT["email-mono"]
+    html = f"""<!doctype html><html><body style="margin:0;background:{e["bg"]};font-family:{f};color:{e["text"]}">
 <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="padding:32px 16px"><tr><td align="center">
-<table role="presentation" width="100%" style="max-width:440px;background:#ffffff;border-radius:16px;padding:28px">
+<table role="presentation" width="100%" style="max-width:440px;background:{e["panel"]};border-radius:16px;padding:28px">
 <tr><td style="font-weight:700;font-size:15px;letter-spacing:.06em">ALYR</td></tr>
 <tr><td style="padding-top:18px;font-size:15px">Your sign-in code</td></tr>
-<tr><td style="padding:10px 0 6px;font-size:36px;font-weight:700;letter-spacing:.18em;font-family:'Courier New',monospace">{c}</td></tr>
-<tr><td style="font-size:13px;color:#5f666d">It works once and expires in {minutes} minutes. If you did not ask for it, ignore this email.</td></tr>
-<tr><td dir="rtl" style="padding-top:20px;border-top:1px solid #e3e6e1;margin-top:20px;font-size:13px;color:#5f666d;text-align:right">
-رمز الدخول إلى ALYR هو <b style="color:#15171a">{c}</b>. يعمل مرة واحدة وتنتهي صلاحيته خلال {minutes} دقائق.</td></tr>
+<tr><td style="padding:10px 0 6px;font-size:36px;font-weight:700;letter-spacing:.18em;font-family:{fm}">{c}</td></tr>
+<tr><td style="font-size:13px;color:{e["muted"]}">It works once and expires in {minutes} minutes. If you did not ask for it, ignore this email.</td></tr>
+<tr><td dir="rtl" style="padding-top:20px;border-top:1px solid {e["rule"]};margin-top:20px;font-size:13px;color:{e["muted"]};text-align:right">
+رمز الدخول إلى ALYR هو <b style="color:{e["text"]}">{c}</b>. يعمل مرة واحدة وتنتهي صلاحيته خلال {minutes} دقائق.</td></tr>
 </table></td></tr></table></body></html>"""
     return subject, text, html

@@ -26,6 +26,7 @@ from zoneinfo import ZoneInfo
 
 import asyncpg
 
+from alyr import brand
 from alyr.channels.base import InboundMessage, OutboundMessage
 from alyr.config import get_settings
 from alyr.core import consent, jobs, mail, templates
@@ -335,8 +336,9 @@ def email(report: dict, shop: dict) -> tuple[str, str, str]:
 
     def block(view: dict, rtl: bool) -> str:
         direction = ' dir="rtl" style="text-align:right"' if rtl else ""
+        muted = brand.EMAIL["muted"]
         parts = [f"<h2 style=\"font-size:17px;margin:0 0 4px\">{escape(view['title'])}</h2>"
-                 f"<p style=\"margin:0 0 16px;color:#5f666d\">{escape(view['label'])}</p>"]
+                 f"<p style=\"margin:0 0 16px;color:{muted}\">{escape(view['label'])}</p>"]
         for section in view["sections"]:
             items = "".join(f"<li>{escape(line)}</li>" for line in section["lines"])
             parts.append(
@@ -345,11 +347,12 @@ def email(report: dict, shop: dict) -> tuple[str, str, str]:
             )
         return f"<div{direction}>{''.join(parts)}</div>"
 
+    e, font = brand.EMAIL, brand.CSS_FONT["email"]
     html = (
-        "<!doctype html><html><body style=\"margin:0;background:#f6f7f3;font-family:Arial,"
-        "sans-serif;color:#15171a\"><div style=\"max-width:520px;margin:0 auto;padding:24px 16px\">"
-        "<div style=\"background:#fff;border-radius:16px;padding:24px\">"
-        f"{block(en, False)}<hr style=\"border:0;border-top:1px solid #e3e6e1;margin:24px 0\">"
+        f"<!doctype html><html><body style=\"margin:0;background:{e['bg']};font-family:{font};"
+        f"color:{e['text']}\"><div style=\"max-width:520px;margin:0 auto;padding:24px 16px\">"
+        f"<div style=\"background:{e['panel']};border-radius:16px;padding:24px\">"
+        f"{block(en, False)}<hr style=\"border:0;border-top:1px solid {e['rule']};margin:24px 0\">"
         f"{block(ar, True)}</div></div></body></html>"
     )
     return subject, text, html

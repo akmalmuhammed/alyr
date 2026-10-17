@@ -9,23 +9,25 @@
    Spacing is on 4 and 8, with 56 px between sections (P1-6). */
 
 .ag {
+  /* Hooks a host may map (the workspace shell does). Their defaults are ALYR's tokens
+     (design/tokens.json), which change with the theme on their own. */
   --ag-bg: transparent;
-  --ag-ink: #15171a;
-  --ag-ink-2: #5f666d;
-  --ag-ink-3: #8a918b;
+  --ag-ink: var(--text);
+  --ag-ink-2: var(--text-muted);
+  --ag-ink-3: var(--text-faint);
   --ag-rule: color-mix(in srgb, var(--ag-ink) 10%, transparent);
   --ag-rule-strong: var(--ag-ink);
   --ag-dash: color-mix(in srgb, var(--ag-ink) 30%, transparent);
-  --ag-bar: color-mix(in srgb, var(--ag-ink) 88%, transparent);
-  --ag-ghost: color-mix(in srgb, var(--ag-ink) 10%, transparent);
-  --ag-volt: #b7f34a;
-  --ag-on-volt: #151a0f;
-  --ag-volt-ink: #3f6a0b;
+  --ag-bar: color-mix(in srgb, var(--ag-ink) var(--agent-bar-mix), transparent);
+  --ag-ghost: color-mix(in srgb, var(--ag-ink) var(--agent-ghost-mix), transparent);
+  --ag-volt: var(--volt);
+  --ag-on-volt: var(--on-volt);
+  --ag-volt-ink: var(--volt-ink);
   --ag-pending: var(--ag-ink-2);
-  --ag-sans: var(--font-sans, var(--font-instrument, system-ui)), var(--font-arabic, var(--font-plex-arabic, sans-serif)), system-ui, sans-serif;
-  --ag-arabic: var(--font-arabic, var(--font-plex-arabic, "Segoe UI")), var(--font-sans, var(--font-instrument, system-ui)), sans-serif;
-  --ag-mono: var(--font-mono, var(--font-plex-mono, ui-monospace)), ui-monospace, monospace;
-  --ag-ease: cubic-bezier(0.16, 1, 0.3, 1);
+  --ag-sans: var(--font-ui);
+  --ag-arabic: var(--font-ui-arabic);
+  --ag-mono: var(--mono);
+  --ag-ease: var(--ease);
 
   container: ag / inline-size;
   color: var(--ag-ink);
@@ -36,27 +38,6 @@
   line-height: 1.45;
 }
 .ag[dir="rtl"] { font-family: var(--ag-arabic); }
-
-/* Dark: follows the system unless the host says light, or the host says dark. Wrapped in
-   :where() so a host that maps the tokens (the workspace shell) still wins. */
-@media (prefers-color-scheme: dark) {
-  :where(:root:not([data-theme="light"])) .ag {
-    --ag-ink: #f3f5f0;
-    --ag-ink-2: #a7adb5;
-    --ag-ink-3: #6f767e;
-    --ag-volt-ink: #b7f34a;
-    --ag-bar: color-mix(in srgb, var(--ag-ink) 78%, transparent);
-    --ag-ghost: color-mix(in srgb, var(--ag-ink) 14%, transparent);
-  }
-}
-:where(:root[data-theme="dark"]) .ag {
-  --ag-ink: #f3f5f0;
-  --ag-ink-2: #a7adb5;
-  --ag-ink-3: #6f767e;
-  --ag-volt-ink: #b7f34a;
-  --ag-bar: color-mix(in srgb, var(--ag-ink) 78%, transparent);
-  --ag-ghost: color-mix(in srgb, var(--ag-ink) 14%, transparent);
-}
 
 /* The reset carries one class of weight, so every rule below it wins by order and a host's
    bare element styles do not (P0-3). What the host puts in the setup slot keeps its own. */

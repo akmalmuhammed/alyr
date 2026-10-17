@@ -7,6 +7,7 @@ import { Screens, type WorkspaceTab } from "../../_workspace/Screens";
 import { TeamReport } from "../../_workspace/Team";
 import { AgentDashboard } from "../../../_agent/AgentDashboard";
 import type { AgentView } from "../../../_agent/types";
+import { color } from "../../../_tokens/tokens";
 import "../../_workspace/shell.css";
 
 type Text = { en: string; ar: string };
@@ -153,7 +154,7 @@ function Icon({ name, className = "sh-ico" }: { name: string; className?: string
   );
 }
 
-function Mark({ volt = "#B7F34A" }: { volt?: string }) {
+function Mark({ volt = color.brand.volt }: { volt?: string }) {
   return (
     <svg className="sh-mark" viewBox="0 0 190 160" aria-hidden="true">
       <polygon fill="currentColor" points="50,0 180,0 130,62 0,62" />
@@ -431,7 +432,7 @@ export default function WorkspaceShell() {
 
         <section id="ask" className="sh-tile sh-ask sh-home-ask">
           <div className="sh-ask-head">
-            <span className="sh-avatar"><Mark volt="#B7F34A" /></span>
+            <span className="sh-avatar"><Mark volt={color.brand.volt} /></span>
             <div><b>{t.helpTitle}</b><small>{t.helpOnline}</small></div>
           </div>
           {/* No chat bubbles and no read ticks: nobody has answered yet, and no reply time is

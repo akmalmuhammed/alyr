@@ -21,3 +21,24 @@ ALY-126, branch `aly-design-system`. One entry per stage, newest last. The audit
 - CSS names are the ones the site already used (`--canvas`, `--text`, `--d-bg`, `--wa-head`, `--dur-1`, …), so the site's stylesheets needed no renaming. The brand primitives the site names directly (`--carbon`, `--volt`, `--concrete`, `--graphite`) are exposed; the grey ramp is not.
 - Fonts: the first name of each stack is the face; on the web the generator writes the variable `next/font` sets for it (`--font-instrument`, `--font-plex-arabic`, `--font-plex-mono`).
 - `scripts/build-site.sh` runs the generator before `next build`.
+
+## Stage 3 · the consumers moved onto the tokens
+
+**Public site and the Agent component** (no visible change intended; proof in stage 5).
+- `_site/document.tsx` imports `_tokens/tokens.css` before `site.css`; `theme-color` comes from `tokens.ts`.
+- `site.css`, `drawings.css`, `kit.css` and `home.css` lost their token blocks (light and both dark copies): about 300 lines of hand-kept values. The drawn screens' `--d-*`, the grid and the type and rhythm tokens now sit on `:root` instead of `main`, with the same values; nothing outside `main` read them.
+- The untokenised greys on Carbon became named tokens: `--on-band` (#fff), `--on-band-soft` (#d5d9dd), `--on-band-quiet` (#c4c9cf), `--on-band-faint` (#8a9199), `--band-mark` (#6b7480), `--band-rule` (#555d65); also `--phone-frame`, `--phone-outline`, `--monogram-bg`, `--monogram-ink`, and `--font-chat` for the drawn WhatsApp chat's system face.
+- `_agent/agent.css`: the `--ag-*` hooks default to the semantic tokens (`--ag-ink: var(--text)`, `--ag-ink-3: var(--text-faint)`, …); its two dark blocks are gone, and the bar and ghost mixes read `--agent-bar-mix` and `--agent-ghost-mix`, which change with the theme.
+- `brand.tsx`, `socialCard.tsx`: Volt, Carbon, Concrete, the separator grey, the faces and the font files come from `tokens.ts`.
+
+**Report card and emails.**
+- `modules/agent/card.py`: `THEMES = brand.CARD`; the faces and font files from `brand.FONT` and `brand.FONT_FILE`.
+- `core/mail.py`, `modules/report.py`: colours from `brand.EMAIL`, the stacks from `brand.CSS_FONT` (still Arial and Courier New: email clients do not load web fonts reliably, and the email skill decides any change).
+
+**Workspace and product screens** (visible changes intended).
+- `(product)/layout.tsx` imports the tokens first, names its `next/font` variables as the site does (`--font-instrument`, `--font-plex-arabic`, `--font-plex-mono`), and puts the stored choice (`alyr-theme`) on `<html>` as `data-theme` before the first paint, following a change made in another tab. `theme-color` follows the tokens.
+- `globals.css`, `shell.css` (`.sh`), `customer.css` (`.cx`), `start.css` (`.ob`): their own light and dark blocks are gone. Each keeps its short names as aliases of tokens (`--ink: var(--text)`, `--sheet: var(--surface)`, `--raise: var(--surface-subtle)`, `--lift: var(--shadow-lift)`, …), so the rest of each file did not change.
+- **The divergences fixed by token:** the workspace and onboarding canvas is Paper (was #eceee9); customer pages' background is Paper (was #f2f3ef). Dark surfaces are the site's: canvas #0e1012, sheet #15171a, raised #1b1e22 (were #0a0b0d, #131518, #1a1d21; the old globals' #191c1f and #202428 also go). `--ink-3` is #8a918b (was #8a9096). Volt wash is .18 / .12 everywhere (was .18 to .20 / .10 to .12). The shadows are one pair (`--shadow-lift`, `--shadow-float`). Onboarding's `--danger` is `--bad`; its preview chat takes the site's WhatsApp colours (its light header was #f0f2f5); its Volt hover is `--volt-hover`, darker, not lighter. Text on Volt is `--on-volt` everywhere.
+- `--ease` and `--spring` no longer mean two curves: the product's are `--ease-product` and `--spring-product` until it moves to the site's (a feel check, not a token change).
+- **The type scale:** 255 fixed font sizes in the product stylesheets now read the token scale (`--ui-micro` 11 px to `--ui-display` 56 px); half pixels round up (12.5 to 13, 13.5 to 14), 17 to 18, 22 and 26 to 24, 30 to 28, 34 and 40 to 36. The five fluid `clamp()` headings are unchanged.
+- TSX: the logo's Volt plane in the workspace, the console and the customer pages comes from `tokens.ts`; `/agent-sample`'s caption reads `--text-muted`, `--line` and the mono and Arabic tokens.
