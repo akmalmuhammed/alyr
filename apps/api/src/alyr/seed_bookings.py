@@ -128,11 +128,11 @@ class Sample:
 
 
 SALON = Sample(
-    "salon", UUID("0a1f0000-0000-4000-8000-0000000501a0"), "sadaf", "Sadaf Salon",
-    "صالون صدف", "salon", "Al Waab",
-    (("lamees@sadaf.example", "Lamees Adel", "owner"),
-     ("sana@sadaf.example", "Sana Rao", "admin"),
-     ("hiba@sadaf.example", "Hiba Taher", "agent")),
+    "salon", UUID("0a1f0000-0000-4000-8000-0000000501a0"), "dafira", "Dafira Salon",
+    "صالون ضفيرة", "salon", "Al Waab",
+    (("lamees@dafira.example", "Lamees Adel", "owner"),
+     ("sana@dafira.example", "Sana Rao", "admin"),
+     ("hiba@dafira.example", "Hiba Taher", "agent")),
     "97455679001", "9745567", (5, 9), 31,
     people=WOMEN,
     services=(
@@ -145,12 +145,12 @@ SALON = Sample(
     min_gap_days=7,
 )
 HOME = Sample(
-    "homeservices", UUID("0a1f0000-0000-4000-8000-0000000ac0a1"), "nasma",
-    "Nasma Cooling", "نسمة للتكييف", "home", "Al Rayyan",
-    (("adel@nasma.example", "Adel Karim", "owner"),
-     ("ritu@nasma.example", "Ritu Menon", "admin"),
-     ("arun@nasma.example", "Arun Pillai", "agent"),
-     ("bilal@nasma.example", "Bilal Rafiq", "agent")),
+    "homeservices", UUID("0a1f0000-0000-4000-8000-0000000ac0a1"), "zilal",
+    "Zilal Cooling", "ظلال للتكييف", "home", "Al Rayyan",
+    (("adel@zilal.example", "Adel Karim", "owner"),
+     ("ritu@zilal.example", "Ritu Menon", "admin"),
+     ("arun@zilal.example", "Arun Pillai", "agent"),
+     ("bilal@zilal.example", "Bilal Rafiq", "agent")),
     "97455699001", "9745569", (3, 5), 53,
     services=(
         ("AC service, split unit", "صيانة مكيف سبليت", 90, 25_000),
@@ -509,16 +509,30 @@ async def ensure_sample_tenant(owner_dsn: str, sample: Sample, now: datetime, da
             "insert into tenants (id, name, name_ar, slug, business_type, area, onboarding_way, "
             "onboarding_step, onboarded_at, created_at) "
             "values ($1, $2, $3, $4, $5, $6, 'appointments', 'golive', $7, $7) "
-            "on conflict (id) do update set slug = $4, onboarded_at = $7, created_at = $7",
+            "on conflict (id) do update set name = $2, name_ar = $3, slug = $4, onboarded_at = $7, "
+            "created_at = $7",
             sample.tenant_id, sample.name, sample.name_ar, sample.slug, sample.business_type,
             sample.area, started,
         )
+        await conn.execute(
+            "delete from channel_numbers where tenant_id = $1 and channel = 'simulator' "
+            "and number_id <> $2",
+            sample.tenant_id, f"sim-{sample.slug}",
+        )  # a renamed sample keeps one test line, under its new slug
         await conn.execute(
             "insert into channel_numbers (number_id, tenant_id, channel) "
             "values ($1, $2, 'simulator') on conflict (number_id) do nothing",
             f"sim-{sample.slug}", sample.tenant_id,
         )
-        if not await conn.fetchval("select client_id from tenants where id = $1", sample.tenant_id):
+        client = await conn.fetchval(
+            "select client_id from tenants where id = $1", sample.tenant_id
+        )
+        if client:
+            await conn.execute(
+                "update clients set name = $2, contact_name = $3, contact_email = $4 where id = $1",
+                client, sample.name, sample.team[0][1], sample.team[0][0],
+            )
+        else:
             client_id = await conn.fetchval(
                 "insert into clients (name, contact_name, contact_email) values ($1, $2, $3) "
                 "returning id",

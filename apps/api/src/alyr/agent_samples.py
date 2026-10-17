@@ -1,6 +1,6 @@
 """The ALYR Agent's sample screens for the public site (ALY-99, `03-build-brief.md` §2).
 
-Seeds the three fictional businesses (Qirfa Bakery, Sadaf Salon, Nasma Cooling) as
+Seeds the three fictional businesses (Qirfa Bakery, Dafira Salon, Zilal Cooling) as
 they stood at one fixed moment, reads each one's real `AgentView` as its owner would, and
 writes it to `apps/web/app/_agent/samples/{bakery,salon,homeservices}.{en,ar}.json`. The site
 feeds those files to the same `AgentDashboard` the workspace uses, so the homepage shows
