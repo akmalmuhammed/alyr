@@ -105,7 +105,7 @@ ALY-99, branch `aly-agent-dashboard`. One entry per stage, newest last, so a sta
 
 ### Stage 5 · the salon, the clinic and the sample screens
 
-- **`alyr.seed_bookings`:** Sadaf Salon («صالون صدف») and Ruwaa Dental Clinic («عيادة رؤى للأسنان»). Both take bookings only, from the salon and clinic presets.
+- **`alyr.seed_bookings`:** Dafira Salon («صالون ضفيرة») and Ruwaa Dental Clinic («عيادة رؤى للأسنان»). Both take bookings only, from the salon and clinic presets.
   - **The diary:** eight weeks, filled one customer at a time, as the shop's single-booking rule requires. The days ahead fill as lead times allow.
   - **What happens in it:**
     - no-shows, two of them from regulars who missed twice and are booked again;
@@ -187,8 +187,8 @@ ALY-99, branch `aly-agent-dashboard`. One entry per stage, newest last, so a sta
 - The no-show rate is rounded once, so the card and the number agree.
 
 **Samples (P1-9 and the founder's decision):**
-- Sadaf is a women's salon with its own menu and women customers.
-- The third sample is now **Nasma Cooling** («نسمة للتكييف»), an AC repair and maintenance company. It replaces the dental clinic, because of PDPPL health data.
+- Dafira is a women's salon with its own menu and women customers.
+- The third sample is now **Zilal Cooling** («ظلال للتكييف»), an AC repair and maintenance company. It replaces the dental clinic, because of PDPPL health data.
   - Services: split-unit service, repair, gas top-up, villa duct cleaning, a yearly visit.
   - Jobs are assigned to two technicians, with notes such as "Majlis AC not cooling".
   - A household comes back at most twice, 21 days apart.

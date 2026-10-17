@@ -108,7 +108,7 @@
 - "Messages to many customers need marketing consent. Coming." is wrong for one customer and promises something. Write "Information only. Writing to them needs their marketing consent, which ALYR does not collect yet." / «للعلم فقط. مراسلتهم تحتاج موافقتهم التسويقية، وALYR لا تجمعها بعد.»
 - On the phone, folded cards need a chevron, and the team table clips "Waiting" (`bakery-en-390`). Use one line per person: "24 replies · first answer 8 min · 5 open · 2 waiting".
 
-**P1-9 · The samples are not credible in Doha.** The salon does beard trims for Rasha F. and Noor A. (make Sadaf a women's salon). A dental patient "usually comes every 10 days". The clinic says "customers", not "patients" / «مراجعون». The bakery's third suggestion is a 20% no-show rate on cake tastings.
+**P1-9 · The samples are not credible in Doha.** The salon does beard trims for Rasha F. and Noor A. (make Dafira a women's salon). A dental patient "usually comes every 10 days". The clinic says "customers", not "patients" / «مراجعون». The bakery's third suggestion is a 20% no-show rate on cake tastings.
 
 **P1-10 · States.**
 - *Empty:* "…shows here" appears twice. "Nothing is waiting" gets a Volt tick before WhatsApp is connected. Two boxes are not "the real structure": draw dashed outlines of the week, the hours and the list.
