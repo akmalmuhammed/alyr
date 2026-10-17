@@ -87,6 +87,7 @@ const ICONS = {
   mail: ["M3 5h18v14H3z", "m3 6 9 7 9-7"],
   plus: ["M12 5v14", "M5 12h14"],
   minus: ["M5 12h14"],
+  "chevron-down": ["m6 9 6 6 6-6"],
 } as const;
 
 export type IconName = keyof typeof ICONS;

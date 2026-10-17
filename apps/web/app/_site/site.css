@@ -29,6 +29,9 @@
   --pending: #8a918b;
   --on-volt: #151a0f;
   --menu-shadow: 0 24px 70px rgb(21 23 26 / .14);
+  /* a window of the workspace drawn on the page (the Agent figure, the product screens) */
+  --window: #ffffff;
+  --window-line: rgb(21 23 26 / .1);
 
   /* Inside a Carbon block: a well a step under it, a panel a step over it. */
   --dark-canvas: #0e1012;
@@ -118,6 +121,8 @@
     --focus: #b7f34a;
     --volt-wash: rgb(183 243 74 / .12);
     --menu-shadow: 0 24px 70px rgb(0 0 0 / .5);
+    --window: #202428;
+    --window-line: rgb(255 255 255 / .09);
     /* Carbon on a dark page is lifted a step (#15171a on #0e1012 is 1.05:1), and what sits
        inside it keeps its place: wells under it, panels over it */
     --band: #1d2024;
@@ -166,6 +171,8 @@
   --focus: #b7f34a;
   --volt-wash: rgb(183 243 74 / .12);
   --menu-shadow: 0 24px 70px rgb(0 0 0 / .5);
+  --window: #202428;
+  --window-line: rgb(255 255 255 / .09);
   --band: #1d2024;
   --band-edge: var(--dark-line);
   --dark-canvas: #15171a;
@@ -349,13 +356,68 @@ svg { display: block; }
 .top-menu summary { list-style: none; display: grid; place-items: center; width: 2.75rem; height: 2.75rem; border: 1px solid var(--line-strong); border-radius: .5rem; cursor: pointer; }
 .top-menu summary::-webkit-details-marker { display: none; }
 .top-menu .ico { width: 1.25rem; height: 1.25rem; }
-.top-menu-list { position: absolute; inset-inline-end: 0; top: calc(100% + .5rem); min-width: 13rem; background: var(--surface); border: 1px solid var(--line); border-radius: .75rem; padding: .5rem; box-shadow: var(--menu-shadow); display: grid; }
+.top-menu-list { position: absolute; inset-inline-end: 0; top: calc(100% + .5rem); min-width: 17.5rem; max-height: calc(100dvh - var(--header) - 1.5rem); overflow-y: auto; background: var(--surface); border: 1px solid var(--line); border-radius: .75rem; padding: .5rem; box-shadow: var(--menu-shadow); display: grid; }
 .top-menu-list a { padding: .75rem .875rem; border-radius: .5rem; font-weight: 500; }
 .top-menu-list a:hover { background: var(--surface-subtle); }
 
 .logo-mark { display: none; width: 2.125rem; height: auto; color: var(--text); }
 .top-menu-list a[lang="ar"] { font-family: var(--arabic); }
 .top-menu-list a[lang="en"] { font-family: var(--sans); }
+
+/* The Products menu (Shell.tsx): a native <details>, so it opens by keyboard and without
+   JavaScript; the script in <head> (document.tsx) closes it on Escape, a click outside or
+   focus leaving. On wide screens its panel spans the header, under it: the five products
+   in the suite's fixed order, each on a rule with its one line and its state. Payroll has
+   no page: a dashed rule, the pending dot, no link. On phones the same list is the first
+   group of the menu. */
+.pm { position: static; }
+.pm-btn {
+  list-style: none; display: inline-flex; align-items: center; gap: .25rem; cursor: pointer;
+  font-size: .9375rem; font-weight: 500; color: var(--text-muted); padding: .5rem .375rem; margin-inline: -.375rem;
+  border-radius: 2px; transition: color var(--fast) var(--ease); white-space: nowrap;
+}
+.pm-btn::-webkit-details-marker { display: none; }
+.pm-btn:hover, .pm[open] .pm-btn { color: var(--text); }
+.pm-chev { width: 1rem; height: 1rem; transition: rotate var(--dur-2) var(--ease); }
+.pm[open] .pm-chev { rotate: 180deg; }
+.pm-panel {
+  position: absolute; inset-inline: 0; top: 100%; z-index: 30;
+  background: var(--canvas); border-block: 1px solid var(--line); box-shadow: var(--menu-shadow);
+  padding-block: 1.5rem 2rem;
+}
+.pm-grid { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); column-gap: 1.5rem; }
+.pm-item { border-top: 2px solid var(--text); }
+.pm-item.pm-soon { border-top: 1px dashed var(--line-strong); }
+.pm-link { position: relative; display: grid; align-content: start; gap: .375rem; min-height: 9rem; padding: 1rem .25rem .5rem 0; color: var(--text); }
+[dir="rtl"] .pm-link { padding: 1rem 0 .5rem .25rem; }
+.pm-soon-in { display: contents; }
+.pm-name { font-size: 1.0625rem; font-weight: 600; letter-spacing: -.01em; }
+.pm-line { font-size: .875rem; line-height: 1.45; color: var(--text-muted); max-width: 15rem; text-wrap: pretty; }
+.pm-state { display: inline-flex; align-items: center; gap: .5rem; margin-top: .25rem; font-family: var(--mono); font-size: .6875rem; letter-spacing: .08em; text-transform: uppercase; color: var(--text-muted); }
+[lang="ar"] .pm-state { font-family: var(--arabic); letter-spacing: 0; text-transform: none; font-size: .8125rem; }
+.pm-soon .pm-name, .pm-soon .pm-line { color: var(--text-muted); }
+.pm-arrow { position: absolute; top: 1.125rem; inset-inline-end: .25rem; width: 1rem; height: 1rem; color: var(--text-muted); transition: translate var(--fast) var(--ease), color var(--fast) var(--ease); }
+a.pm-link:hover .pm-name { text-decoration: underline; text-decoration-thickness: 1px; text-underline-offset: .2em; }
+a.pm-link:hover .pm-arrow { color: var(--text); translate: calc(var(--dir) * 2px) 0; }
+a.pm-link[aria-current="page"] .pm-name::after { content: ""; display: inline-block; width: .375rem; height: .375rem; margin-inline-start: .5rem; border-radius: 50%; background: var(--volt); vertical-align: .2em; }
+.pm-link:focus-visible { outline-offset: 4px; }
+.top[data-on-dark] .pm-btn { color: var(--concrete); }
+.top[data-on-dark] .pm-btn:hover, .top[data-on-dark] .pm[open] .pm-btn { color: #fff; }
+@media (prefers-reduced-motion: no-preference) {
+  .pm[open] .pm-panel { animation: pm-open var(--dur-2) var(--ease) both; }
+}
+@keyframes pm-open { from { opacity: 0; translate: 0 -6px; } }
+
+/* the phone menu: the products first, then the page's sections */
+.tm-k { padding: .5rem .875rem .25rem; font-family: var(--mono); font-size: .6875rem; letter-spacing: .08em; text-transform: uppercase; color: var(--text-muted); }
+[lang="ar"] .tm-k { font-family: var(--arabic); letter-spacing: 0; text-transform: none; font-size: .8125rem; }
+.tm-products a, .tm-soon { display: flex; align-items: baseline; justify-content: space-between; gap: 1rem; min-height: 2.75rem; padding: .625rem .875rem; border-radius: .5rem; font-weight: 600; }
+.tm-products a:hover { background: var(--surface-subtle); }
+.tm-products small, .tm-soon small { font-size: .75rem; font-weight: 500; color: var(--text-muted); white-space: nowrap; }
+.tm-soon { color: var(--text-muted); }
+.tm-soon > span[aria-hidden] { display: flex; align-items: baseline; justify-content: space-between; gap: 1rem; width: 100%; }
+.tm-products a[aria-current="page"] { background: var(--surface-subtle); }
+.tm-rule { display: block; height: 1px; margin: .375rem .875rem; background: var(--line); }
 
 /* The theme switch (ThemeSwitch.tsx). It shows the moon while the page is light and the sun
    while it is dark: the glyph names what pressing it does, as its label does. Both come from
@@ -590,6 +652,56 @@ svg { display: block; }
 .doha { display: inline-flex; align-items: center; gap: .5rem; }
 .doha-dot { width: .375rem; height: .375rem; border-radius: 50%; background: currentColor; }
 .doha-time { display: inline-block; min-width: 5ch; font-family: var(--mono); font-variant-numeric: tabular-nums; }
+
+/* ----------------------------------------------- shared by every public page */
+/* The fold: three Carbon planes with the symbol's gaps (10 of its 160 units): a 6 px Paper
+   line across, and a 6 px Paper line down the 45° diagonal (4.25 px each side, measured
+   across). The page shows through, so the fold stays drawn once the planes have landed.
+   It opens the Carbon band on the homepage and the closing call on every page. The planes
+   start outside their strip, so the strip clips them: nothing may widen the page. */
+.band-fold { position: relative; overflow: clip; height: clamp(3rem, 6vw, 5.5rem); --fold: clamp(3rem, 6vw, 5.5rem); --x: 62%; }
+.band-fold i { position: absolute; inset: 0; background: var(--band); }
+.band-fold i:nth-child(1) { clip-path: polygon(0 0, 100% 0, 100% calc(46% - 3px), 0 calc(46% - 3px)); }
+.band-fold i:nth-child(2) { clip-path: polygon(0 calc(46% + 3px), calc(var(--x) - 7.25px) calc(46% + 3px), calc(var(--x) - var(--fold) * .54 - 4.25px) 100%, 0 100%); }
+.band-fold i:nth-child(3) { clip-path: polygon(calc(var(--x) + 1.25px) calc(46% + 3px), 100% calc(46% + 3px), 100% 100%, calc(var(--x) - var(--fold) * .54 + 4.25px) 100%); }
+[dir="rtl"] .band-fold i:nth-child(2) { clip-path: polygon(100% calc(46% + 3px), calc(100% - var(--x) + 7.25px) calc(46% + 3px), calc(100% - var(--x) + var(--fold) * .54 + 4.25px) 100%, 100% 100%); }
+[dir="rtl"] .band-fold i:nth-child(3) { clip-path: polygon(calc(100% - var(--x) - 1.25px) calc(46% + 3px), 0 calc(46% + 3px), 0 100%, calc(100% - var(--x) + var(--fold) * .54 - 4.25px) 100%); }
+.cta-fold + .cta { margin-top: -1px; }
+.cta-fold + .cta .cta-in { padding-top: clamp(3rem, 6vw, 5rem); }
+@media (prefers-reduced-motion: no-preference) {
+  .band-fold i { transition: translate 600ms var(--ease), opacity var(--dur-2) var(--ease); }
+  .band-fold i:nth-child(2) { transition-delay: 60ms; }
+  .band-fold i:nth-child(3) { transition-delay: 120ms; }
+  .motion .band-fold:not(.is-in) i { opacity: 0; }
+  .motion .band-fold:not(.is-in) i:nth-child(1) { translate: calc(var(--dir) * 48px) -48px; }
+  .motion .band-fold:not(.is-in) i:nth-child(2) { translate: calc(var(--dir) * -48px) 48px; }
+  .motion .band-fold:not(.is-in) i:nth-child(3) { translate: calc(var(--dir) * 64px) 64px; }
+}
+
+/* FIG captions: a mono line on a hairline that ends in a tick. */
+.cap {
+  position: relative; display: block;
+  margin-top: 1rem; padding-top: .625rem; border-top: 1px solid var(--line);
+  font-family: var(--mono); font-size: .6875rem; font-weight: 500; line-height: 1.55; letter-spacing: .08em; text-transform: uppercase; color: var(--text-muted);
+  text-wrap: balance;
+}
+.cap::before { content: ""; position: absolute; top: -5px; inset-inline-start: 0; width: 1px; height: 9px; background: var(--line-strong); }
+[lang="ar"] .cap { font-family: var(--arabic); letter-spacing: 0; text-transform: none; font-size: .8125rem; font-weight: 500; }
+.cap-n { color: var(--text); }
+.cap > span { display: inline; }
+.cap-sep { margin-inline: .5rem; color: var(--line-strong); }
+/* on a Carbon block */
+.on-dark .cap, .product .cap, .band .cap { border-top-color: var(--dark-line); color: #8a9199; }
+.on-dark .cap::before, .product .cap::before, .band .cap::before { background: #555d65; }
+.on-dark .cap-sep, .product .cap-sep, .band .cap-sep { color: #555d65; }
+.on-dark .cap-n, .product .cap-n, .band .cap-n { color: #fff; }
+
+/* footer: the products in their order, then the site */
+.foot-products { padding-top: 1rem; border-top: 1px solid var(--line); }
+.foot-products a { color: var(--text); font-weight: 600; }
+.foot-products a[aria-current="page"] { text-decoration: underline; text-decoration-thickness: 1px; text-underline-offset: .25em; }
+.foot-soon { display: inline-flex; align-items: center; min-height: 2.75rem; color: var(--text-muted); font-size: .9375rem; font-weight: 500; }
+.foot-site { padding-top: 0; border-top: 0; margin-top: -1rem; }
 
 /* The phone's contact bar: in once the hero's button has gone, out at the closing call. */
 .bar { display: none; }

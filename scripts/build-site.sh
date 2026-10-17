@@ -1,8 +1,10 @@
 #!/usr/bin/env bash
-# Build the public ALYR site (/ and /ar) as plain files that any static host can serve.
+# Build the public ALYR site as plain files that any static host can serve.
 #
-# Only the public pages (/, /ar, /chat, /ar/chat) are published. The workspace, sign-in, payment and order pages
-# need the API and are not part of this output, so nothing here can reach customer data.
+# Only the public pages are published: the homepage and the four product pages (/chat,
+# /bookings, /agent, /accounts), each in English and Arabic (/ar, /ar/chat, ...). The
+# workspace, sign-in, payment and order pages need the API and are not part of this
+# output, so nothing here can reach customer data.
 #
 #   scripts/build-site.sh            -> apps/web/out-site/
 #
@@ -18,11 +20,14 @@ NEXT_PUBLIC_ALYR_WORKSPACE_URL="" pnpm build >/dev/null
 
 app=".next/server/app"
 mkdir -p out-site/_next
+pages="chat bookings agent accounts"
 cp "$app/index.html" out-site/index.html
 cp "$app/ar.html" out-site/ar.html
-cp "$app/chat.html" out-site/chat.html
 mkdir -p out-site/ar
-cp "$app/ar/chat.html" out-site/ar/chat.html
+for page in $pages; do
+  cp "$app/$page.html" "out-site/$page.html"
+  cp "$app/ar/$page.html" "out-site/ar/$page.html"
+done
 cp "$app/_not-found.html" out-site/404.html
 cp "$app/robots.txt.body" out-site/robots.txt
 cp "$app/sitemap.xml.body" out-site/sitemap.xml
@@ -32,7 +37,8 @@ cp -r .next/static out-site/_next/static
 
 # The pages are drawn first and the framework's scripts start after the first paint
 # (scripts/site-defer-scripts.mjs says why). It fails the build if Next's markup changes.
-node "$root/scripts/site-defer-scripts.mjs" out-site/index.html out-site/ar.html out-site/chat.html out-site/ar/chat.html out-site/404.html
+node "$root/scripts/site-defer-scripts.mjs" out-site/index.html out-site/ar.html out-site/404.html \
+  $(for page in $pages; do echo "out-site/$page.html out-site/ar/$page.html"; done)
 
 # Cloudflare Pages reads these two files. The link-preview image has no file extension,
 # so its type is stated; hashed assets never change, so browsers may keep them.
