@@ -70,10 +70,10 @@ The founder approved the card with one fix: at WhatsApp's bubble size (about 330
   - the eyebrow is "Weekly report", without "Agent";
   - "Booked ahead / next 7 days";
   - "ordered again", "of 31 due", "first message";
-  - in Arabic, «من الأسبوع السابق» and «عميلان مدينان».
+  - in Arabic, the change line «▲ 33% عن الأسبوع السابق» (the mark says which way; it was cut short on the salon card) and «عميلان مدينان».
 - **Arabic day names** are their initials (ح ن ث ر خ ج س), as Arabic calendars head their weeks. The names did not fit seven columns at a readable size.
 - **Measuring Arabic:** joined letters turned out 0.66 to 0.84 as wide as the isolated forms `width()` measured, so lines were cut too early. They are now scaled by 0.86, checked against resvg's own renders.
-- **A new test** fails if any text on any sample card is under 31 px.
+- **New tests** fail if any text on any sample card is under 31 px, or if any line on any card, in either language and theme, is cut short with an ellipsis.
 - The samples and the phone-width shots in `shots-report/` were captured again.
 
 ## Checks

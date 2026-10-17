@@ -165,10 +165,10 @@ def hero(w: Week, lang: str) -> dict:
         pct = view._pct(cur, last)
         if pct > 0:
             change = {"dir": "up", "text": T(lang, f"up {pct}% on the week before",
-                                             f"أكثر بـ{pct}% من الأسبوع السابق")}
+                                             f"{pct}% عن الأسبوع السابق")}
         elif pct < 0:
             change = {"dir": "down", "text": T(lang, f"down {-pct}% on the week before",
-                                               f"أقل بـ{-pct}% من الأسبوع السابق")}
+                                               f"{-pct}% عن الأسبوع السابق")}
         else:
             change = {"dir": "level", "text": T(lang, "level with the week before",
                                                 "كما في الأسبوع السابق")}

@@ -58,6 +58,10 @@ def test_the_card_renders_for_every_sample_in_both_languages(samples, key, lang)
     # At WhatsApp's bubble width (about 330 px) no text is smaller than about 9.5 px.
     sizes = [float(v) for v in re.findall(r'font-size="([\d.]+)"', card.svg(data, sample=True))]
     assert min(sizes) >= card.SMALL and min(sizes) * 330 / card.W >= 9.4
+    # Every line fits whole: nothing on the card is cut short with an ellipsis.
+    for theme in ("carbon", "paper"):
+        drawn = card.svg(data, theme, sample=True)
+        assert "…" not in drawn, re.findall(r">([^<]*…)<", drawn)
     for theme in ("carbon", "paper"):
         png = card.render(data, theme, sample=True)
         # WhatsApp's 1.91:1 header, about 1080 px wide, well under Meta's 5 MB.
@@ -132,7 +136,7 @@ def test_a_percentage_only_when_both_weeks_count_twenty_or_more():
     assert big["value"] == "2,500" and big["unit"] == "QAR"
     arabic = week.hero(a_week(facts(orders=20, orders_last=25, sales=200000,
                                     sales_last=250000)), "ar")
-    assert arabic["change"]["text"] == "أقل بـ20% من الأسبوع السابق"
+    assert arabic["change"] == {"dir": "down", "text": "20% عن الأسبوع السابق"}
     first = week.hero(a_week(facts(started=datetime(2026, 10, 6, tzinfo=UTC), orders=30,
                                    orders_last=0)), "en")
     assert first["change"]["text"] == "First week on ALYR"
