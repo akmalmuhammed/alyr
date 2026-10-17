@@ -83,29 +83,45 @@ async def state(conn: asyncpg.Connection, staff: Staff) -> dict:
         "select name, name_ar, slug from tenants "
         "where id = nullif(current_setting('app.tenant_id', true), '')::uuid"
     )
-    open_requests = await conn.fetch(
-        "select product_key, step_key from setup_requests where status = 'open'"
-    )
-    asked = {(r["product_key"], r["step_key"]) for r in open_requests}
+    # Step keys are unique across modules, so an ask counts whichever product it was
+    # asked under (requests made before Bookings had its own product said "chat").
+    asked = {
+        r["step_key"]
+        for r in await conn.fetch("select step_key from setup_requests where status = 'open'")
+    }
 
+    using = set(catalog.products_for(modules))
+    listed: set[str] = set()
     products = []
     for product in catalog.PRODUCTS:
-        active = bool(set(product.modules) & modules)
+        active = product.key in using
         steps = []
         if active:
             for key in product.modules:
-                if key not in modules:
+                # A shared module's steps show once, under the first product using it.
+                if key not in modules or key in listed:
                     continue
+                listed.add(key)
                 for step in await _steps(conn, catalog.MODULE_BY_KEY[key], connected):
-                    step["asked"] = (product.key, step["key"]) in asked
+                    step["asked"] = step["key"] in asked
                     steps.append(step)
+        if product.status == "included":
+            status = "included"
+        else:
+            status = "active" if active else product.status
+        includes = (
+            [{"key": m, "label": _text(catalog.MODULE_BY_KEY[m].name)} for m in product.modules]
+            or [{"key": "", "label": _text(part)} for part in product.parts]
+        )
         products.append(
             {
                 "key": product.key,
                 "name": _text(product.name),
+                "descriptor": _text(product.descriptor),
                 "summary": _text(product.summary),
-                "status": "active" if active else product.status,
+                "status": status,
                 "modules": list(product.modules),
+                "includes": includes,
                 "steps": steps,
             }
         )
@@ -183,6 +199,8 @@ async def enable_product(conn: asyncpg.Connection, staff: Staff, key: str) -> li
     product = catalog.PRODUCT_BY_KEY.get(key)
     if product is None:
         raise LookupError("no such product")
+    if product.status == "included":
+        raise WorkspaceError(f"{product.name.en} is included for every business")
     if product.status != "available":
         raise WorkspaceError("this product is not available yet")
     for module in product.modules:
@@ -198,20 +216,23 @@ async def enable_product(conn: asyncpg.Connection, staff: Staff, key: str) -> li
 
 
 async def disable_product(conn: asyncpg.Connection, staff: Staff, key: str) -> list[str]:
-    """Switch a product's modules off, except any module another active product still
-    uses. Nothing is deleted."""
+    """Switch a product's modules off, except a shared module another product in use
+    still needs (the inbox stays on for Bookings when Chat goes off). Nothing is
+    deleted."""
     _can_manage(staff)
     product = catalog.PRODUCT_BY_KEY.get(key)
     if product is None:
         raise LookupError("no such product")
+    if product.status == "included":
+        raise WorkspaceError(f"{product.name.en} is included for every business")
     modules = await enabled_modules(conn)
     still_needed = {
         module
-        for other in catalog.PRODUCTS
-        if other.key != key and other.modules and set(other.modules) <= modules
-        for module in other.modules
+        for other in catalog.products_for(modules)
+        if other != key
+        for module in catalog.PRODUCT_BY_KEY[other].modules
     }
-    off = [m for m in product.modules if m not in still_needed]
+    off = [m for m in product.modules if m in modules and m not in still_needed]
     if off:
         await conn.execute(
             "update tenant_modules set enabled = false where module_key = any($1)", off

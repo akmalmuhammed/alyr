@@ -183,6 +183,8 @@ async def create_business(
     modules: list[str] = []
     for key in body.products:
         product = catalog.PRODUCT_BY_KEY.get(key)
+        if product is not None and product.status == "included":
+            continue  # every business has it already
         if product is None or product.status != "available":
             raise HTTPException(status_code=422, detail=f"{key} cannot be switched on")
         modules += [m for m in product.modules if m not in modules]
@@ -275,7 +277,9 @@ async def price_list(request: Request, _: Staff = Depends(platform_admin)) -> di
                 for p in presets.PRESETS
             ],
             "promise": await pricing.promise(conn),
-            "products": [{"key": p.key, "name": p.name.en} for p in catalog.PRODUCTS],
+            "products": [
+                {"key": p.key, "name": p.name.en, "status": p.status} for p in catalog.PRODUCTS
+            ],
             "modules": [{"key": m.key, "name": m.name.en} for m in catalog.MODULES],
         }
 

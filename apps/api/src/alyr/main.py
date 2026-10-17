@@ -12,6 +12,7 @@ from alyr.db import Database
 from alyr.modules import report
 from alyr.modules.bookings.service import REMINDER, Reminders
 from alyr.routes import admin as admin_routes
+from alyr.routes import agent as agent_routes
 from alyr.routes import auth as auth_routes
 from alyr.routes import bookings as bookings_routes
 from alyr.routes import inbox, ledger, orders, pay, simulator, store, whatsapp_webhook
@@ -74,6 +75,7 @@ def create_app() -> FastAPI:
         bookings_routes.router, dependencies=[Depends(require_module("bookings"))]
     )
     app.include_router(workspace_routes.router)
+    app.include_router(agent_routes.router)
     app.include_router(reports_routes.router)
     app.include_router(admin_routes.router)
     app.include_router(onboarding_routes.router)

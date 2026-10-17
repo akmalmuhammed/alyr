@@ -82,12 +82,69 @@ def test_a_new_business_gets_its_own_client_and_a_draft_from_the_price_list(clie
     assert detail["contact_name"] == "Hamad" and detail["contact_email"].endswith("@shop.example")
     quote = open_quote(detail)
     assert quote["status"] == "draft" and quote["number"] == 1
-    # A salon uses ALYR Chat and not credit accounts; the setup fee is per business.
+    # A salon uses ALYR Bookings, not ALYR Chat as well, and not ALYR Accounts. ALYR Agent
+    # is included, so it shows at QAR 0. The setup fee is per business.
     assert [(x["item_key"], x["kind"], x["unit_price"]) for x in quote["lines"]] == [
-        ("chat", "monthly", 44900), ("setup", "one_time", 250000),
+        ("bookings", "monthly", 44900), ("agent", "monthly", 0), ("setup", "one_time", 250000),
     ]
+    assert quote["lines"][0]["name"] == "ALYR Bookings"
     assert quote["totals"]["monthly_total_text"] == "QAR 449"
     assert quote["totals"]["one_time_total_text"] == "QAR 2,500"
+
+
+def test_a_trader_is_quoted_alyr_accounts_and_asks_alyr_under_it(client, office):
+    tenant, _, name = new_business(client, kind="wholesale")
+    lines = open_quote(client_of(office, name))["lines"]
+    # The inbox and payment links of a trader count for ALYR Chat, as before the split;
+    # ALYR Accounts is the product it adds, at the extra-product price.
+    assert [(x["item_key"], x["name"], x["unit_price"]) for x in lines] == [
+        ("chat", "ALYR Chat", 44900), ("credit", "ALYR Accounts, added product", 15000),
+        ("agent", "ALYR Agent, included", 0),
+        ("setup", "Setup: number connection, data and training", 250000),
+    ]
+    asked = owner_sql(
+        "select product_key, step_key from setup_requests where tenant_id = $1", tenant
+    )
+    assert [(r["product_key"], r["step_key"]) for r in asked] == [("accounts", "onboarding")]
+    business = client_of(office, name)["businesses"][0]
+    assert business["products"] == ["ALYR Chat", "ALYR Agent", "ALYR Accounts"]
+
+
+def test_each_product_a_business_adds_costs_the_extra_price(office):
+    """The founder's combination pricing (D-035): QAR 449 for the first product, QAR 150
+    for each one added, ALYR Agent included at QAR 0."""
+
+    def monthly(products, slug):
+        created = office.post(f"{ADMIN}/businesses", json={
+            "name": f"Combo {slug}", "slug": f"combo-{slug}",
+            "owner_email": f"{slug}@combo.example",
+            "owner_name": "Noor", "products": products,
+        })
+        assert created.status_code == 200, created.text
+        detail = client_of(office, f"Combo {slug}")
+        fresh = office.post(
+            f"{ADMIN}/clients/{detail['id']}/quotes", json={"start_from": "price_list"}
+        )
+        quote = open_quote(fresh.json())
+        return quote["totals"]["monthly_total"], [
+            (x["item_key"], x["unit_price"]) for x in quote["lines"] if x["kind"] == "monthly"
+        ]
+
+    assert monthly(["chat"], "one") == (44900, [("chat", 44900), ("agent", 0)])
+    assert monthly(["chat", "bookings"], "two") == (
+        59900, [("chat", 44900), ("bookings", 15000), ("agent", 0)],
+    )
+    assert monthly(["chat", "bookings", "accounts"], "three") == (
+        74900, [("chat", 44900), ("bookings", 15000), ("credit", 15000), ("agent", 0)],
+    )
+    # ALYR changes the extra price in the back office; new drafts follow it.
+    item = {k: v for k, v in next(
+        i for i in office.get(f"{ADMIN}/pricing").json()["items"] if i["key"] == "extra_product"
+    ).items() if k in ("name", "name_ar", "kind", "applies", "active", "sort")}
+    assert item["applies"] == "extra_product"
+    assert office.put(f"{ADMIN}/pricing/items/extra_product",
+                      json=item | {"price": 20000}).status_code == 200
+    assert monthly(["chat", "bookings"], "four")[0] == 64900
 
 
 def test_alyr_prices_the_client_and_the_owner_sees_each_change_live(client, office):
@@ -266,9 +323,9 @@ def test_a_type_without_screens_cannot_be_made_self_serve(office):
 def test_price_list_changes_reach_new_quotes_only(client, client_factory, office):
     _, _, before = new_business(client)
     items = {i["key"]: i for i in office.get(f"{ADMIN}/pricing").json()["items"]}
-    chat = items["chat"] | {"price": 59900}
-    chat.pop("key")
-    saved = office.put(f"{ADMIN}/pricing/items/chat", json=chat)
+    bookings = items["bookings"] | {"price": 59900}
+    bookings.pop("key")
+    saved = office.put(f"{ADMIN}/pricing/items/bookings", json=bookings)
     assert saved.status_code == 200 and saved.json()["price_text"] == "QAR 599"
     added = office.put(f"{ADMIN}/pricing/items/deposits", json={
         "name": "Deposits and pay links", "kind": "monthly", "price": 10000,
@@ -280,7 +337,7 @@ def test_price_list_changes_reach_new_quotes_only(client, client_factory, office
     _, _, after = new_business(client_factory())
     lines = open_quote(client_of(office, after))["lines"]
     assert [(x["item_key"], x["unit_price"]) for x in lines] == [
-        ("chat", 59900), ("deposits", 10000), ("setup", 250000),
+        ("bookings", 59900), ("deposits", 10000), ("agent", 0), ("setup", 250000),
     ]
 
     bad = office.put(f"{ADMIN}/pricing/items/x1", json={
@@ -307,7 +364,10 @@ def test_one_client_with_two_businesses_gets_one_quote_for_both(client, office):
     per_business = {}
     for x in fresh["lines"]:
         per_business.setdefault(x["business"], []).append(x["item_key"])
-    assert per_business == {name: ["chat", "setup"], "Second Branch": ["chat", "setup"]}
+    # The salon uses ALYR Bookings; the second branch was created with ALYR Chat.
+    assert per_business == {
+        name: ["bookings", "agent", "setup"], "Second Branch": ["chat", "agent", "setup"],
+    }
     assert fresh["totals"]["monthly_total"] == 2 * 44900
 
     # A line for a business of another client is refused.

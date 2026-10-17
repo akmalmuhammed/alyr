@@ -16,7 +16,7 @@ from uuid import UUID, uuid4
 
 import asyncpg
 
-from alyr import presets
+from alyr import catalog, presets
 from alyr.channels.base import InboundMessage
 from alyr.core import auth, pricing, team
 from alyr.core.auth import Staff
@@ -62,6 +62,16 @@ async def issue_signup_token(db: Database, email: str) -> str:
         )
         await conn.execute("delete from signup_tokens where expires_at < now() - interval '1 day'")
     return token
+
+
+def _main_product(modules: tuple[str, ...]) -> str:
+    """The product a setup request for a new business is filed under: credit accounts
+    for a trader, bookings for an appointment business set up with ALYR, else Chat."""
+    using = catalog.products_for(set(modules))
+    for key in ("accounts", "bookings", "chat"):
+        if key in using:
+            return key
+    return "chat"
 
 
 def slug_base(name: str) -> str:
@@ -138,7 +148,7 @@ async def create_business(
             await conn.execute(
                 "insert into setup_requests (product_key, step_key, note, requested_by) "
                 "values ($1, 'onboarding', $2, $3)",
-                "credit" if "ledger" in preset.modules else "chat",
+                _main_product(preset.modules),
                 f"New {preset.name.en} business: set up its "
                 f"{preset.hint.en.lower()} with the owner.",
                 owner_name,

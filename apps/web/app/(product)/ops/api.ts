@@ -46,7 +46,7 @@ export type TypeRow = {
 };
 export type Pricing = {
   items: Item[]; types: TypeRow[]; promise: Text;
-  products: { key: string; name: string }[]; modules: { key: string; name: string }[];
+  products: { key: string; name: string; status: string }[]; modules: { key: string; name: string }[];
 };
 
 export async function api<T>(url: string, method = "GET", body?: unknown): Promise<{ ok: boolean; status: number; data: T; error: string }> {
@@ -96,6 +96,7 @@ export function appliesLabel(applies: string, pricing?: Pick<Pricing, "products"
   if (applies === "each_business") return "Every business";
   if (applies === "each_client") return "Once per client";
   if (applies === "manual") return "Added by hand";
+  if (applies === "extra_product") return "Each product a business adds beyond its first";
   const [kind, key] = applies.split(":");
   const name = (kind === "product" ? pricing?.products : pricing?.modules)?.find((x) => x.key === key)?.name ?? key;
   return kind === "product" ? `Businesses using ${name}` : `Businesses with ${name} on`;

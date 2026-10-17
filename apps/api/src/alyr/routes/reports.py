@@ -44,7 +44,9 @@ async def send_now(request: Request, staff: Staff = Depends(current_staff)) -> d
     async with request.app.state.db.tenant(staff.tenant_id) as conn:
         built = await report.build(conn, await report.last_week(conn))
         if not built["sections"]:
-            raise HTTPException(status_code=422, detail="No products are switched on yet.")
+            raise HTTPException(
+                status_code=422, detail="Nothing the report covers is switched on yet."
+            )
         sent = await report.deliver(conn, request.app.state.outbound, built)
     return {"sent": sent}
 

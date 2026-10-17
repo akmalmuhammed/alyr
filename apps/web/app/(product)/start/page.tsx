@@ -349,7 +349,9 @@ export default function Start() {
   }, [step, loadWorkspace]);
   const wsStep = (key: string) => ws?.products.flatMap((p) => p.steps).find((s) => s.key === key);
   const ask = (stepKey: string) => guard(async () => {
-    await call("/api/workspace/setup-requests", "POST", { product: "chat", step: stepKey, note: "" });
+    // Filed under the product the step belongs to (a salon's steps are ALYR Bookings').
+    const product = ws?.products.find((p) => p.steps.some((s) => s.key === stepKey))?.key ?? "chat";
+    await call("/api/workspace/setup-requests", "POST", { product, step: stepKey, note: "" });
     await loadWorkspace();
   });
   const finish = () => guard(async () => {

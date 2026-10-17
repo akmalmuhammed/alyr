@@ -77,7 +77,7 @@ SAVED_REPLIES = [
     ("أوقات العمل", "نعمل من السبت إلى الخميس من ٨ صباحاً إلى ٩ مساءً، والجمعة من ٤ إلى ٩ مساءً."),
 ]
 
-# The demo shop has ALYR Chat and Credit accounts switched on.
+# The demo shop has ALYR Chat, ALYR Bookings and ALYR Accounts switched on.
 DEMO_MODULES = ["inbox", "bookings", "orders", "payments", "ledger"]
 
 # ALYR itself is a shop on its own platform: its staff sign in through it, and it
@@ -188,9 +188,10 @@ async def reset_demo_data(db: Database) -> None:
             )
         for email, name, role in TEAM:
             user_id = await conn.fetchval(
-                "insert into users (email, name) values ($1, $2) "
-                "on conflict (email) do update set name = excluded.name returning id",
-                email, name,
+                "insert into users (email, name, name_ar) values ($1, $2, $3) "
+                "on conflict (email) do update set name = excluded.name, "
+                "name_ar = excluded.name_ar returning id",
+                email, name, {"Fatima Al-Noor": "فاطمة", "Yusuf Rahman": "يوسف"}.get(name, ""),
             )
             await conn.execute(
                 "insert into memberships (user_id, role) values ($1, $2)", user_id, role

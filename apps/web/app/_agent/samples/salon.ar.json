@@ -1,0 +1,614 @@
+{
+ "version": 2,
+ "lang": "ar",
+ "dir": "rtl",
+ "now": "2026-10-15T13:20:00+00:00",
+ "state": "normal",
+ "money": true,
+ "lead": "bookings",
+ "header": {
+  "greeting": "مساء الخير يا لميس",
+  "date": "الخميس 15 أكتوبر",
+  "updated": "حُدّث 16:20",
+  "eyebrow": "مساء الخير يا لميس · الخميس 15 أكتوبر · حُدّث 16:20",
+  "when": "الخميس · 16:20",
+  "city": "الدوحة",
+  "summary": [
+   {
+    "muted": false,
+    "text": [
+     "الأسبوع حتى الآن: 19 زيارة، وغياب ",
+     {
+      "b": "2"
+     },
+     "."
+    ]
+   },
+   {
+    "muted": true,
+    "text": [
+     "حتى هذا الوقت من الأسبوع الماضي: 13 زيارة."
+    ]
+   },
+   {
+    "muted": false,
+    "text": [
+     "المحجوز للأيام السبعة القادمة: 18 زيارة."
+    ]
+   },
+   {
+    "muted": false,
+    "text": [
+     "عميلان بانتظار الرد."
+    ]
+   }
+  ]
+ },
+ "needs": {
+  "items": [
+   {
+    "key": "waiting",
+    "count": 2,
+    "words": [
+     "عملاء بانتظار الرد"
+    ],
+    "detail": [
+     "أطول انتظار ",
+     {
+      "b": "37 د"
+     }
+    ],
+    "href": "/app/inbox?show=waiting",
+    "rule": "القاعدة · آخر رسالة من العميل ولم يُرد عليها منذ 10 دقائق · عميلان"
+   },
+   {
+    "key": "unmarked",
+    "count": 1,
+    "words": [
+     "زيارة بلا تسجيل حضور"
+    ],
+    "detail": [
+     "أرقام الغياب ناقصة حتى تُسجَّل."
+    ],
+    "href": "/app/bookings?show=unmarked",
+    "rule": "القاعدة · محجوز وانتهى وقته · زيارة واحدة"
+   }
+  ],
+  "empty": "لا شيء ينتظرك."
+ },
+ "kpis": [
+  {
+   "key": "visits",
+   "label": "الزيارات هذا الأسبوع",
+   "value": "19",
+   "unit": null,
+   "unit_first": false,
+   "money": false,
+   "href": "/app/bookings",
+   "change": {
+    "dir": null,
+    "text": [
+     "الأسبوع الماضي ",
+     {
+      "b": "13"
+     }
+    ],
+    "said": null
+   }
+  },
+  {
+   "key": "booked_ahead",
+   "label": "محجوز للأيام السبعة القادمة",
+   "value": "18",
+   "unit": null,
+   "unit_first": false,
+   "money": false,
+   "href": "/app/bookings",
+   "change": null
+  },
+  {
+   "key": "no_show_rate",
+   "label": "الغياب خلال 30 يوماً",
+   "value": "13",
+   "unit": "%",
+   "unit_first": false,
+   "money": false,
+   "href": "/app/bookings?show=no_show",
+   "change": null
+  },
+  {
+   "key": "new_bookings",
+   "label": "حجوزات جديدة هذا الأسبوع",
+   "value": "32",
+   "unit": null,
+   "unit_first": false,
+   "money": false,
+   "href": "/app/bookings",
+   "change": {
+    "dir": null,
+    "text": [
+     "الأسبوع الماضي ",
+     {
+      "b": "18"
+     }
+    ],
+    "said": null
+   }
+  }
+ ],
+ "kpi_caption": "مقارنةً بالأحد حتى 16:20 من الأسبوع الماضي",
+ "placeholders": [],
+ "suggestions": [
+  {
+   "key": "repeat_no_show",
+   "kind": "knowledge",
+   "primary": false,
+   "title": [
+    "عميلان تغيّبا مرتين ولديهما حجز جديد"
+   ],
+   "line": [
+    "موعد ",
+    {
+     "b": "Mona E."
+    },
+    " يوم السبت الساعة 10:00."
+   ],
+   "rule": "القاعدة · غياب مرتين أو أكثر خلال 90 يوماً، وحجز خلال الأيام السبعة القادمة · عميلان",
+   "rows": [
+    {
+     "id": "fba59c96-df84-46c1-994f-475644877af1",
+     "label": "Mona E."
+    },
+    {
+     "id": "a63a7d9b-4e3a-46a7-a8fb-df2448e9a786",
+     "label": "Zainab H."
+    }
+   ],
+   "more": 0,
+   "action": {
+    "label": "اعرض الحجوزات",
+    "href": "/app/bookings?show=repeat_no_show"
+   },
+   "status": null,
+   "snooze": {
+    "key": "repeat_no_show",
+    "fingerprint": "8dfe7ccde96b2500"
+   }
+  },
+  {
+   "key": "no_show_rate",
+   "kind": "knowledge",
+   "primary": false,
+   "title": [
+    {
+     "b": "13%"
+    },
+    " من الزيارات انتهت بالغياب خلال 30 يوماً"
+   ],
+   "line": [
+    {
+     "b": "12"
+    },
+    " من ",
+    {
+     "b": "92"
+    },
+    ". التذكير يصل قبل كل موعد بساعتين."
+   ],
+   "rule": "القاعدة · الغياب ÷ (الحضور + الغياب) خلال 30 يوماً؛ 10% أو أكثر مع 3 حالات أو أكثر · 12 زيارة",
+   "rows": [],
+   "more": 0,
+   "action": null,
+   "status": "للعلم فقط.",
+   "snooze": {
+    "key": "no_show_rate",
+    "fingerprint": "7cfe9498d92016f1"
+   }
+  },
+  {
+   "key": "quiet_regulars",
+   "kind": "knowledge",
+   "primary": false,
+   "title": [
+    "زبون دائم واحد غاب أكثر من 30 يوماً"
+   ],
+   "line": [
+    {
+     "b": "Priya N."
+    },
+    ": 4 مرات من قبل، آخرها قبل 33 يوماً."
+   ],
+   "rule": "القاعدة · 3 طلبات أو زيارات أو أكثر قبل 31 إلى 120 يوماً، ولا شيء خلال آخر 30 يوماً · زبون دائم واحد",
+   "rows": [
+    {
+     "id": "4c795799-ddd3-4e35-921b-2577f2589748",
+     "label": "Priya N."
+    }
+   ],
+   "more": 0,
+   "action": null,
+   "status": "للعلم فقط. مراسلتهم تحتاج موافقتهم التسويقية، وALYR لا تجمعها بعد.",
+   "snooze": {
+    "key": "quiet_regulars",
+    "fingerprint": "4e7f4e5c466261cd"
+   }
+  }
+ ],
+ "done": {
+  "rows": [
+   {
+    "key": "sent",
+    "value": "88",
+    "label": "رسالة أرسلتها ALYR نيابة عنك",
+    "href": "/app/inbox"
+   },
+   {
+    "key": "booking_reminders",
+    "value": "24",
+    "label": "تذكيراً بالمواعيد",
+    "href": "/app/bookings"
+   }
+  ],
+  "empty": "لا شيء بعد هذا الأسبوع."
+ },
+ "week": {
+  "title": "حسب اليوم",
+  "format": "count",
+  "max": 6,
+  "days": [
+   {
+    "date": "2026-10-11",
+    "label": "أحد",
+    "state": "past",
+    "value": 2,
+    "value_text": "2",
+    "last": 1,
+    "last_text": "1",
+    "last_by_now": null,
+    "last_by_now_text": null,
+    "booked": null,
+    "booked_text": null
+   },
+   {
+    "date": "2026-10-12",
+    "label": "إثنين",
+    "state": "past",
+    "value": 4,
+    "value_text": "4",
+    "last": 2,
+    "last_text": "2",
+    "last_by_now": null,
+    "last_by_now_text": null,
+    "booked": null,
+    "booked_text": null
+   },
+   {
+    "date": "2026-10-13",
+    "label": "ثلاثاء",
+    "state": "past",
+    "value": 6,
+    "value_text": "6",
+    "last": 4,
+    "last_text": "4",
+    "last_by_now": null,
+    "last_by_now_text": null,
+    "booked": null,
+    "booked_text": null
+   },
+   {
+    "date": "2026-10-14",
+    "label": "أربعاء",
+    "state": "past",
+    "value": 6,
+    "value_text": "6",
+    "last": 4,
+    "last_text": "4",
+    "last_by_now": null,
+    "last_by_now_text": null,
+    "booked": null,
+    "booked_text": null
+   },
+   {
+    "date": "2026-10-15",
+    "label": "خميس",
+    "state": "today",
+    "value": 1,
+    "value_text": "1",
+    "last": 2,
+    "last_text": "2",
+    "last_by_now": 2,
+    "last_by_now_text": "2",
+    "booked": 1,
+    "booked_text": "1 محجوزة"
+   },
+   {
+    "date": "2026-10-16",
+    "label": "جمعة",
+    "state": "coming",
+    "value": null,
+    "value_text": null,
+    "last": 5,
+    "last_text": "5",
+    "last_by_now": null,
+    "last_by_now_text": null,
+    "booked": 2,
+    "booked_text": "2 محجوزة"
+   },
+   {
+    "date": "2026-10-17",
+    "label": "سبت",
+    "state": "coming",
+    "value": null,
+    "value_text": null,
+    "last": 3,
+    "last_text": "3",
+    "last_by_now": null,
+    "last_by_now_text": null,
+    "booked": 4,
+    "booked_text": "4 محجوزة"
+   }
+  ],
+  "legend": {
+   "last": "اليوم نفسه من الأسبوع الماضي",
+   "by_now": "الأسبوع الماضي حتى هذا الوقت",
+   "closed": "مغلق",
+   "booked": "محجوز"
+  }
+ },
+ "hours": {
+  "title": "أكثر الساعات ازدحاماً، 28 يوماً",
+  "hours": [
+   "10",
+   "11",
+   "12",
+   "13",
+   "14",
+   "15",
+   "16",
+   "17",
+   "18",
+   "19",
+   "20",
+   "21"
+  ],
+  "rows": [
+   {
+    "label": "أحد",
+    "cells": [
+     2,
+     2,
+     1,
+     1,
+     0,
+     0,
+     0,
+     0,
+     0,
+     0,
+     0,
+     0
+    ]
+   },
+   {
+    "label": "إثنين",
+    "cells": [
+     3,
+     2,
+     1,
+     3,
+     1,
+     0,
+     1,
+     0,
+     0,
+     0,
+     0,
+     0
+    ]
+   },
+   {
+    "label": "ثلاثاء",
+    "cells": [
+     3,
+     3,
+     0,
+     3,
+     1,
+     0,
+     3,
+     1,
+     1,
+     1,
+     2,
+     0
+    ]
+   },
+   {
+    "label": "أربعاء",
+    "cells": [
+     3,
+     2,
+     1,
+     4,
+     2,
+     1,
+     1,
+     2,
+     1,
+     0,
+     1,
+     0
+    ]
+   },
+   {
+    "label": "خميس",
+    "cells": [
+     3,
+     3,
+     1,
+     3,
+     0,
+     1,
+     1,
+     0,
+     0,
+     0,
+     0,
+     0
+    ]
+   },
+   {
+    "label": "جمعة",
+    "cells": [
+     -1,
+     -1,
+     -1,
+     -1,
+     4,
+     2,
+     1,
+     3,
+     1,
+     1,
+     0,
+     0
+    ]
+   },
+   {
+    "label": "سبت",
+    "cells": [
+     3,
+     0,
+     2,
+     2,
+     2,
+     0,
+     2,
+     0,
+     0,
+     0,
+     0,
+     0
+    ]
+   }
+  ],
+  "top": {
+   "day": "أيام الأربعاء",
+   "range": "13:00–14:00"
+  },
+  "top3": [
+   {
+    "day": "أيام الأربعاء",
+    "range": "13:00–14:00"
+   },
+   {
+    "day": "أيام الجمعة",
+    "range": "14:00–15:00"
+   },
+   {
+    "day": "أيام الاثنين",
+    "range": "10:00–11:00"
+   }
+  ]
+ },
+ "top": {
+  "title": "أكثر الخدمات حجزاً، 28 يوماً",
+  "change_label": "الترتيب مقابل الـ28 يوماً السابقة",
+  "rows": [
+   {
+    "name": "قص وتسشوار",
+    "value": 44,
+    "value_text": "44",
+    "share": 1.0,
+    "change": {
+     "dir": "level",
+     "text": "—",
+     "said": "كما هو"
+    }
+   },
+   {
+    "name": "تسشوار",
+    "value": 13,
+    "value_text": "13",
+    "share": 0.295,
+    "change": {
+     "dir": "level",
+     "text": "—",
+     "said": "كما هو"
+    }
+   },
+   {
+    "name": "صبغة شعر",
+    "value": 13,
+    "value_text": "13",
+    "share": 0.295,
+    "change": {
+     "dir": "level",
+     "text": "—",
+     "said": "كما هو"
+    }
+   },
+   {
+    "name": "مانيكير وباديكير",
+    "value": 6,
+    "value_text": "6",
+    "share": 0.136,
+    "change": {
+     "dir": "up",
+     "text": "▲ 1",
+     "said": "صعد 1"
+    }
+   },
+   {
+    "name": "علاج الشعر",
+    "value": 3,
+    "value_text": "3",
+    "share": 0.068,
+    "change": {
+     "dir": "down",
+     "text": "▼ 1",
+     "said": "نزل 1"
+    }
+   }
+  ]
+ },
+ "owed": null,
+ "team": {
+  "rows": [
+   {
+    "name": "Hiba Taher",
+    "replies": 3,
+    "first_answer": "7 د",
+    "open": 2,
+    "waiting": 1,
+    "line": "3 ردود · أول رد 7 د · 2 مفتوحة · 1 بانتظار الرد"
+   },
+   {
+    "name": "Lamees Adel",
+    "replies": 0,
+    "first_answer": "—",
+    "open": 0,
+    "waiting": 0,
+    "line": "0 ردود · أول رد — · 0 مفتوحة · 0 بانتظار الرد"
+   },
+   {
+    "name": "Sana Rao",
+    "replies": 1,
+    "first_answer": "9 د",
+    "open": 3,
+    "waiting": 1,
+    "line": "رد واحد · أول رد 9 د · 3 مفتوحة · 1 بانتظار الرد"
+   }
+  ],
+  "unassigned": null,
+  "everyone": true
+ },
+ "report": [
+  "يصل تقريرك إلى رقم واحد يوم الأحد الساعة ",
+  {
+   "b": "9:00"
+  },
+  "."
+ ],
+ "comparisons_from": null
+}

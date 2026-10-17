@@ -1,10 +1,12 @@
 """The weekly result report (ALY-75, decision D-030).
 
 Every Sunday at 9 in the morning, shop time, the owner hears in numbers what ALYR did
-for the shop in the seven days before. Each product the shop uses adds its own section,
-so a trader reads about money collected and still owed, a restaurant about orders, and
-a salon about visits and no-shows. An owner who sees the result every week renews
-without being asked.
+for the shop in the seven days before. The report is part of ALYR Agent, which every
+business has. Each module the shop has switched on adds its own section, so a trader
+reads about money collected and still owed (ALYR Accounts), a restaurant about orders
+(ALYR Chat), and a salon about visits and no-shows (ALYR Bookings). Sections are keyed
+by module, not product, so the product line-up can change without touching a stored
+report. An owner who sees the result every week renews without being asked.
 
 It goes on WhatsApp to the shop's own numbers marked to receive it, and by email to the
 shop's owners when email is set up. Outside WhatsApp's 24-hour window only an approved
@@ -398,8 +400,8 @@ async def on_staff_message(
     report = await build(conn, await last_week(conn))
     if not report["sections"]:
         body = (
-            "لا توجد منتجات مفعّلة بعد، فلا يوجد ما نرسله في التقرير." if arabic
-            else "No products are switched on yet, so there is nothing to report."
+            "لم يُفعَّل بعد أي منتج يغطيه التقرير، فلا يوجد ما نرسله." if arabic
+            else "Nothing the report covers is switched on yet, so there is nothing to report."
         )
         return [OutboundMessage(to=staff["id"], body=body)]
     view = render(report, await _shop(conn), lang)

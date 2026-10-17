@@ -1,0 +1,638 @@
+{
+ "version": 2,
+ "lang": "en",
+ "dir": "ltr",
+ "now": "2026-10-15T13:20:00+00:00",
+ "state": "normal",
+ "money": true,
+ "lead": "bookings",
+ "header": {
+  "greeting": "Good afternoon, Adel",
+  "date": "Thu 15 Oct",
+  "updated": "Updated 16:20",
+  "eyebrow": "Good afternoon, Adel · Thu 15 Oct · Updated 16:20",
+  "when": "Thursday · 16:20",
+  "city": "Doha",
+  "summary": [
+   {
+    "muted": false,
+    "text": [
+     "Week so far: 15 jobs, 1 no-show."
+    ]
+   },
+   {
+    "muted": true,
+    "text": [
+     "By this time last week: 19 jobs."
+    ]
+   },
+   {
+    "muted": false,
+    "text": [
+     "5 jobs booked for the next 7 days."
+    ]
+   },
+   {
+    "muted": false,
+    "text": [
+     "2 customers are waiting for an answer."
+    ]
+   }
+  ]
+ },
+ "needs": {
+  "items": [
+   {
+    "key": "waiting",
+    "count": 2,
+    "words": [
+     "customers waiting for an answer"
+    ],
+    "detail": [
+     "longest ",
+     {
+      "b": "37 min"
+     }
+    ],
+    "href": "/app/inbox?show=waiting",
+    "rule": "RULE · the customer wrote last and has had no answer for 10 minutes · 2 customers"
+   },
+   {
+    "key": "unmarked",
+    "count": 1,
+    "words": [
+     "job not marked"
+    ],
+    "detail": [
+     "Until it is marked, the no-show figures are short."
+    ],
+    "href": "/app/bookings?show=unmarked",
+    "rule": "RULE · booked and already over · 1 job"
+   }
+  ],
+  "empty": "Nothing is waiting."
+ },
+ "kpis": [
+  {
+   "key": "visits",
+   "label": "Jobs this week",
+   "value": "15",
+   "unit": null,
+   "unit_first": false,
+   "money": false,
+   "href": "/app/bookings",
+   "change": {
+    "dir": null,
+    "text": [
+     "Last week ",
+     {
+      "b": "19"
+     }
+    ],
+    "said": null
+   }
+  },
+  {
+   "key": "booked_ahead",
+   "label": "Booked, next 7 days",
+   "value": "5",
+   "unit": null,
+   "unit_first": false,
+   "money": false,
+   "href": "/app/bookings",
+   "change": null
+  },
+  {
+   "key": "owed",
+   "label": "Owed to you",
+   "value": "13,400",
+   "unit": "QAR",
+   "unit_first": true,
+   "money": true,
+   "href": "/app/ledger",
+   "change": {
+    "dir": null,
+    "text": [
+     "Last week ",
+     {
+      "b": "QAR 13,400"
+     }
+    ],
+    "said": null
+   }
+  },
+  {
+   "key": "no_show_rate",
+   "label": "No-shows, 30 days",
+   "value": "3",
+   "unit": "%",
+   "unit_first": false,
+   "money": false,
+   "href": "/app/bookings?show=no_show",
+   "change": null
+  }
+ ],
+ "kpi_caption": "Against Sunday to 16:20 last week",
+ "placeholders": [],
+ "suggestions": [
+  {
+   "key": "overdue",
+   "kind": "money",
+   "primary": true,
+   "title": [
+    {
+     "b": "QAR 7,400"
+    },
+    " owed 30+ days, not reminded in 7 days"
+   ],
+   "line": [
+    "Owed by 2 customers. The oldest is ",
+    {
+     "b": "Bayview School"
+    },
+    ", 75 days."
+   ],
+   "rule": "RULE · owed 30+ days, no promise, no reminder in 7 days · 2 customers",
+   "rows": [
+    {
+     "id": "9417336e-bd9b-43e5-ad01-b85fb2261701",
+     "label": "Bayview School"
+    },
+    {
+     "id": "5605c2c9-463c-4485-8f5f-2bf10ef71906",
+     "label": "Crescent Tower Offices"
+    }
+   ],
+   "more": 0,
+   "action": {
+    "label": "Send reminders",
+    "href": "/app/ledger?show=overdue"
+   },
+   "status": null,
+   "snooze": null
+  },
+  {
+   "key": "thin_days",
+   "kind": "knowledge",
+   "primary": false,
+   "title": [
+    "4 days in the next 7 are under 30% booked"
+   ],
+   "line": [
+    "The quietest is Monday, ",
+    {
+     "b": "0%"
+    },
+    " booked."
+   ],
+   "rule": "RULE · booked minutes ÷ opening minutes, each of the next 7 days, under 30%; 2 days or more · 4 days",
+   "rows": [],
+   "more": 0,
+   "action": null,
+   "status": "Information only.",
+   "snooze": {
+    "key": "thin_days",
+    "fingerprint": "8e9247918db3361c"
+   }
+  },
+  {
+   "key": "late_cancellations",
+   "kind": "knowledge",
+   "primary": false,
+   "title": [
+    "3 late cancellations in 30 days"
+   ],
+   "line": [
+    "Cancelled less than 24 hours before the start."
+   ],
+   "rule": "RULE · cancelled under 24 hours before the start, 3 or more in 30 days · 3 late cancellations",
+   "rows": [],
+   "more": 0,
+   "action": null,
+   "status": "Information only.",
+   "snooze": {
+    "key": "late_cancellations",
+    "fingerprint": "0e1a451985c8a3a8"
+   }
+  }
+ ],
+ "done": {
+  "rows": [
+   {
+    "key": "sent",
+    "value": "51",
+    "label": "messages ALYR sent for you",
+    "href": "/app/inbox"
+   },
+   {
+    "key": "booking_reminders",
+    "value": "17",
+    "label": "booking reminders",
+    "href": "/app/bookings"
+   }
+  ],
+  "empty": "Nothing yet this week."
+ },
+ "week": {
+  "title": "By day",
+  "format": "count",
+  "max": 4,
+  "days": [
+   {
+    "date": "2026-10-11",
+    "label": "Sun",
+    "state": "past",
+    "value": 4,
+    "value_text": "4",
+    "last": 4,
+    "last_text": "4",
+    "last_by_now": null,
+    "last_by_now_text": null,
+    "booked": null,
+    "booked_text": null
+   },
+   {
+    "date": "2026-10-12",
+    "label": "Mon",
+    "state": "past",
+    "value": 3,
+    "value_text": "3",
+    "last": 4,
+    "last_text": "4",
+    "last_by_now": null,
+    "last_by_now_text": null,
+    "booked": null,
+    "booked_text": null
+   },
+   {
+    "date": "2026-10-13",
+    "label": "Tue",
+    "state": "past",
+    "value": 2,
+    "value_text": "2",
+    "last": 4,
+    "last_text": "4",
+    "last_by_now": null,
+    "last_by_now_text": null,
+    "booked": null,
+    "booked_text": null
+   },
+   {
+    "date": "2026-10-14",
+    "label": "Wed",
+    "state": "past",
+    "value": 4,
+    "value_text": "4",
+    "last": 4,
+    "last_text": "4",
+    "last_by_now": null,
+    "last_by_now_text": null,
+    "booked": null,
+    "booked_text": null
+   },
+   {
+    "date": "2026-10-15",
+    "label": "Thu",
+    "state": "today",
+    "value": 2,
+    "value_text": "2",
+    "last": 3,
+    "last_text": "3",
+    "last_by_now": 3,
+    "last_by_now_text": "3",
+    "booked": null,
+    "booked_text": null
+   },
+   {
+    "date": "2026-10-16",
+    "label": "Fri",
+    "state": "closed",
+    "value": null,
+    "value_text": null,
+    "last": 0,
+    "last_text": "0",
+    "last_by_now": null,
+    "last_by_now_text": null,
+    "booked": null,
+    "booked_text": null
+   },
+   {
+    "date": "2026-10-17",
+    "label": "Sat",
+    "state": "coming",
+    "value": null,
+    "value_text": null,
+    "last": 2,
+    "last_text": "2",
+    "last_by_now": null,
+    "last_by_now_text": null,
+    "booked": 1,
+    "booked_text": "1 booked"
+   }
+  ],
+  "legend": {
+   "last": "Same day last week",
+   "by_now": "Last week by this time",
+   "closed": "Closed",
+   "booked": "Booked"
+  }
+ },
+ "hours": {
+  "title": "Busiest hours, 28 days",
+  "hours": [
+   "08",
+   "09",
+   "10",
+   "11",
+   "12",
+   "13",
+   "14",
+   "15",
+   "16",
+   "17"
+  ],
+  "rows": [
+   {
+    "label": "Sun",
+    "cells": [
+     4,
+     1,
+     2,
+     0,
+     1,
+     0,
+     1,
+     1,
+     1,
+     1
+    ]
+   },
+   {
+    "label": "Mon",
+    "cells": [
+     2,
+     1,
+     2,
+     1,
+     0,
+     1,
+     2,
+     1,
+     1,
+     1
+    ]
+   },
+   {
+    "label": "Tue",
+    "cells": [
+     3,
+     1,
+     3,
+     1,
+     0,
+     1,
+     1,
+     1,
+     0,
+     0
+    ]
+   },
+   {
+    "label": "Wed",
+    "cells": [
+     2,
+     1,
+     1,
+     2,
+     0,
+     2,
+     0,
+     1,
+     1,
+     1
+    ]
+   },
+   {
+    "label": "Thu",
+    "cells": [
+     2,
+     0,
+     1,
+     2,
+     0,
+     3,
+     0,
+     2,
+     0,
+     0
+    ]
+   },
+   {
+    "label": "Fri",
+    "cells": [
+     -1,
+     -1,
+     -1,
+     -1,
+     -1,
+     -1,
+     -1,
+     -1,
+     -1,
+     -1
+    ]
+   },
+   {
+    "label": "Sat",
+    "cells": [
+     1,
+     1,
+     2,
+     0,
+     1,
+     1,
+     3,
+     1,
+     0,
+     0
+    ]
+   }
+  ],
+  "top": {
+   "day": "Sundays",
+   "range": "08:00–09:00"
+  },
+  "top3": [
+   {
+    "day": "Sundays",
+    "range": "08:00–09:00"
+   },
+   {
+    "day": "Tuesdays",
+    "range": "08:00–09:00"
+   },
+   {
+    "day": "Tuesdays",
+    "range": "10:00–11:00"
+   }
+  ]
+ },
+ "top": {
+  "title": "Top services, 28 days",
+  "change_label": "Rank vs previous 28 days",
+  "rows": [
+   {
+    "name": "AC service, split unit",
+    "value": 26,
+    "value_text": "26",
+    "share": 1.0,
+    "change": {
+     "dir": "level",
+     "text": "—",
+     "said": "same"
+    }
+   },
+   {
+    "name": "AC repair visit",
+    "value": 16,
+    "value_text": "16",
+    "share": 0.615,
+    "change": {
+     "dir": "level",
+     "text": "—",
+     "said": "same"
+    }
+   },
+   {
+    "name": "Gas top-up",
+    "value": 12,
+    "value_text": "12",
+    "share": 0.462,
+    "change": {
+     "dir": "level",
+     "text": "—",
+     "said": "same"
+    }
+   },
+   {
+    "name": "Duct cleaning, villa",
+    "value": 7,
+    "value_text": "7",
+    "share": 0.269,
+    "change": {
+     "dir": null,
+     "text": "New",
+     "said": null
+    }
+   },
+   {
+    "name": "Yearly maintenance visit",
+    "value": 3,
+    "value_text": "3",
+    "share": 0.115,
+    "change": {
+     "dir": null,
+     "text": "New",
+     "said": null
+    }
+   }
+  ]
+ },
+ "owed": {
+  "title": "Owed to you",
+  "total": {
+   "value": "13,400",
+   "unit": "QAR",
+   "unit_first": true
+  },
+  "total_text": "QAR 13,400",
+  "customers": "2 customers",
+  "change": [
+   "The same as a week ago"
+  ],
+  "segments": [
+   {
+    "key": "d0_30",
+    "label": "0–30 days",
+    "amount_text": "QAR 6,000",
+    "share": 0.448
+   },
+   {
+    "key": "d31_60",
+    "label": "31–60",
+    "amount_text": "QAR 6,000",
+    "share": 0.448
+   },
+   {
+    "key": "d61_90",
+    "label": "61–90",
+    "amount_text": "QAR 1,400",
+    "share": 0.104
+   },
+   {
+    "key": "d90_plus",
+    "label": "Over 90 days",
+    "amount_text": "QAR 0",
+    "share": 0.0
+   }
+  ],
+  "oldest": [
+   "Oldest: ",
+   {
+    "b": "Bayview School"
+   },
+   ", 75 days, ",
+   {
+    "b": "QAR 7,000"
+   },
+   "."
+  ],
+  "empty": "Nobody owes you anything."
+ },
+ "team": {
+  "rows": [
+   {
+    "name": "Adel Karim",
+    "replies": 0,
+    "first_answer": "—",
+    "open": 0,
+    "waiting": 0,
+    "line": "0 replies · first answer — · 0 open · 0 waiting"
+   },
+   {
+    "name": "Arun Pillai",
+    "replies": 13,
+    "first_answer": "7 min",
+    "open": 1,
+    "waiting": 1,
+    "line": "13 replies · first answer 7 min · 1 open · 1 waiting"
+   },
+   {
+    "name": "Bilal Rafiq",
+    "replies": 0,
+    "first_answer": "—",
+    "open": 0,
+    "waiting": 0,
+    "line": "0 replies · first answer — · 0 open · 0 waiting"
+   },
+   {
+    "name": "Ritu Menon",
+    "replies": 4,
+    "first_answer": "11 min",
+    "open": 1,
+    "waiting": 1,
+    "line": "4 replies · first answer 11 min · 1 open · 1 waiting"
+   }
+  ],
+  "unassigned": null,
+  "everyone": true
+ },
+ "report": [
+  "Your report goes to 1 number on Sunday at ",
+  {
+   "b": "9:00"
+  },
+  "."
+ ],
+ "comparisons_from": null
+}

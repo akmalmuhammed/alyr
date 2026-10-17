@@ -52,7 +52,10 @@ async def recent_entries(conn: asyncpg.Connection, contact_id: UUID, limit: int 
     )
 
 
-async def summary(conn: asyncpg.Connection) -> dict:
+async def summary(conn: asyncpg.Connection, now: datetime | None = None) -> dict:
+    """Every customer's balance and age, and the totals. `now` reads them as they were at
+    another moment (the Agent's sample screens); by default it is the present."""
+    now = now or datetime.now(UTC)
     customers = await conn.fetch(
         "select c.id, c.name, c.phone, c.wa_user_id, c.username, c.lang, c.credit_limit, "
         "c.consent_service, "
@@ -61,7 +64,10 @@ async def summary(conn: asyncpg.Connection) -> dict:
         "left join users u on u.id = a.assigned_to "
         "where c.role = 'customer' order by c.name"
     )
-    rows = await conn.fetch("select contact_id, kind, amount, created_at from ledger_entries")
+    rows = await conn.fetch(
+        "select contact_id, kind, amount, created_at from ledger_entries where created_at <= $1",
+        now,
+    )
     by_contact: dict[UUID, list] = {}
     for r in rows:
         by_contact.setdefault(r["contact_id"], []).append((r["kind"], r["amount"], r["created_at"]))
@@ -69,7 +75,6 @@ async def summary(conn: asyncpg.Connection) -> dict:
         "select coalesce(sum(amount), 0)::bigint as total, count(*) as payments "
         "from payment_requests where status = 'paid' and order_id is null"
     )
-    now = datetime.now(UTC)
     out, totals = [], Aged()
     for c in customers:
         a = age(by_contact.get(c["id"], []), now)
@@ -84,6 +89,8 @@ async def summary(conn: asyncpg.Connection) -> dict:
                 "over_limit": c["credit_limit"] > 0 and a.balance > c["credit_limit"],
                 "promised_until": promised.isoformat()
                 if promised and promised >= now.date() else None,
+                # A promise whose date passed: a payment would have cleared it.
+                "promise_passed": bool(promised and promised < now.date()),
                 "last_reminded_at": c["last_reminded_at"].isoformat()
                 if c["last_reminded_at"] else None,
                 "assigned": {"id": str(c["assigned_to"]), "name": c["assignee"]}
