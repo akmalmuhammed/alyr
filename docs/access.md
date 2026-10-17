@@ -12,6 +12,7 @@ The founder confirms the "2FA" column; until confirmed it says "check".
 | Linear (team Alyrtech) | Plan and tasks | Founder | Founder's email | check | Plan history |
 | Cloudflare | DNS for alyr.qa and alyr.online, public site Worker, tunnel, email routing, R2 | Founder (akmalmuhammed93@gmail.com) | Google account | check | Site, email and webhook go down |
 | Cloudflare API token "DNS edit" | Edit alyr.qa DNS from scripts | Founder | In `apps/api/.env` | n/a | Recreate; rotate per runbook |
+| Cloudflare R2 API token (bucket `alyr-media`, object read and write) | Product photos from the API | Founder | In `apps/api/.env`; production in the key vault | n/a | Photos stop saving and the queue waits; rotate per runbook |
 | QHost | Registrar for alyr.qa | Founder | QHost account | check | Domain cannot be renewed: **renewal date to record** |
 | Domain registrar for alyr.online | Second domain | Founder | check | check | Renewal date to record |
 | Meta Business / WhatsApp app "alyr" | WhatsApp Cloud API, templates | Founder | Facebook account | check | All WhatsApp traffic stops |

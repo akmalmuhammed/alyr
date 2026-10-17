@@ -5,6 +5,11 @@ that changes behaviour; internal-only work can be grouped. Versions follow phase
 (`0.<phase>.<n>`), tagged on main when a phase demo works (docs/hygiene.md).
 
 ## Unreleased
+- Catalog package 2, API only: product photos are checked by content, cleaned of location and
+  camera data, saved in three WebP sizes on Cloudflare R2 (local disk when unset), with
+  per-shop limits that never delete, monthly usage meters, an 80% free-tier flag, and a
+  back-office route to take a reported photo down (ALY-103, D-039). Nothing is visible to
+  owners or customers until the catalog screens use it.
 - Security: the API now treats any environment that is not explicitly `local` as production;
   stand-in payments, the simulator and the API docs pages only exist on a developer machine (ALY-114).
 - Hygiene: PR and issue templates, CODEOWNERS, SECURITY.md, licence notice, Dependabot,

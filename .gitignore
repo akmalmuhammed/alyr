@@ -16,6 +16,8 @@ dist/
 python_modules/
 pylock.toml
 .demo/
+# Product photos kept on local disk in development (ALY-103)
+.media/
 
 # Keys and credentials never belong in git (ALY-114)
 *.pem
