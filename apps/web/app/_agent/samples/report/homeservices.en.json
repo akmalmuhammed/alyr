@@ -29,7 +29,7 @@
   "dir": "ltr",
   "shop": "Zilal Cooling",
   "week": "4–10 Oct",
-  "eyebrow": "Agent · Weekly report",
+  "eyebrow": "Weekly report",
   "hero": {
    "key": "visits",
    "label": "Jobs",
@@ -98,16 +98,12 @@
     "signal": false
    }
   ],
-  "legend": {
-   "this": "Last week",
-   "before": "The week before"
-  },
   "facts": [
    {
     "key": "no_shows",
     "label": "No-shows",
     "value": "1",
-    "note": "of 23 jobs due"
+    "note": "of 23 due"
    },
    {
     "key": "owed",
@@ -117,9 +113,9 @@
    },
    {
     "key": "booked_ahead",
-    "label": "Booked, this week",
+    "label": "Booked ahead",
     "value": "9",
-    "note": "jobs, next 7 days"
+    "note": "next 7 days"
    }
   ],
   "state": "normal"

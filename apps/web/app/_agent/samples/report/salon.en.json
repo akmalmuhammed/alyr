@@ -28,7 +28,7 @@
   "dir": "ltr",
   "shop": "Dafira Salon",
   "week": "4–10 Oct",
-  "eyebrow": "Agent · Weekly report",
+  "eyebrow": "Weekly report",
   "hero": {
    "key": "visits",
    "label": "Visits",
@@ -97,22 +97,18 @@
     "signal": true
    }
   ],
-  "legend": {
-   "this": "Last week",
-   "before": "The week before"
-  },
   "facts": [
    {
     "key": "no_shows",
     "label": "No-shows",
     "value": "3",
-    "note": "of 31 visits due"
+    "note": "of 31 due"
    },
    {
     "key": "booked_ahead",
-    "label": "Booked, this week",
+    "label": "Booked ahead",
     "value": "17",
-    "note": "visits, next 7 days"
+    "note": "next 7 days"
    },
    {
     "key": "wrote",

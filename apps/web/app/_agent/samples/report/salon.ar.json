@@ -28,7 +28,7 @@
   "dir": "rtl",
   "shop": "صالون ضفيرة",
   "week": "4–10 أكتوبر",
-  "eyebrow": "Agent · التقرير الأسبوعي",
+  "eyebrow": "التقرير الأسبوعي",
   "hero": {
    "key": "visits",
    "label": "الزيارات",
@@ -36,12 +36,12 @@
    "unit": null,
    "change": {
     "dir": "up",
-    "text": "أكثر بـ33% من الأسبوع الذي قبله"
+    "text": "أكثر بـ33% من الأسبوع السابق"
    }
   },
   "days": [
    {
-    "label": "أحد",
+    "label": "ح",
     "state": "past",
     "value": 3,
     "last": 3,
@@ -49,7 +49,7 @@
     "signal": false
    },
    {
-    "label": "إثنين",
+    "label": "ن",
     "state": "past",
     "value": 5,
     "last": 4,
@@ -57,7 +57,7 @@
     "signal": false
    },
    {
-    "label": "ثلاثاء",
+    "label": "ث",
     "state": "past",
     "value": 4,
     "last": 3,
@@ -65,7 +65,7 @@
     "signal": false
    },
    {
-    "label": "أربعاء",
+    "label": "ر",
     "state": "past",
     "value": 2,
     "last": 1,
@@ -73,7 +73,7 @@
     "signal": false
    },
    {
-    "label": "خميس",
+    "label": "خ",
     "state": "past",
     "value": 4,
     "last": 3,
@@ -81,7 +81,7 @@
     "signal": false
    },
    {
-    "label": "جمعة",
+    "label": "ج",
     "state": "past",
     "value": 3,
     "last": 3,
@@ -89,7 +89,7 @@
     "signal": false
    },
    {
-    "label": "سبت",
+    "label": "س",
     "state": "past",
     "value": 7,
     "last": 4,
@@ -97,10 +97,6 @@
     "signal": true
    }
   ],
-  "legend": {
-   "this": "الأسبوع الماضي",
-   "before": "الأسبوع الذي قبله"
-  },
   "facts": [
    {
     "key": "no_shows",
@@ -110,9 +106,9 @@
    },
    {
     "key": "booked_ahead",
-    "label": "المحجوز لهذا الأسبوع",
+    "label": "المحجوز القادم",
     "value": "17",
-    "note": "للأيام السبعة القادمة"
+    "note": "خلال 7 أيام"
    },
    {
     "key": "wrote",

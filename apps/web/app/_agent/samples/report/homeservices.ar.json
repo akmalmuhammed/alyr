@@ -29,7 +29,7 @@
   "dir": "rtl",
   "shop": "ظلال للتكييف",
   "week": "4–10 أكتوبر",
-  "eyebrow": "Agent · التقرير الأسبوعي",
+  "eyebrow": "التقرير الأسبوعي",
   "hero": {
    "key": "visits",
    "label": "المهام",
@@ -37,12 +37,12 @@
    "unit": null,
    "change": {
     "dir": null,
-    "text": "الأسبوع الذي قبله: 19"
+    "text": "الأسبوع السابق: 19"
    }
   },
   "days": [
    {
-    "label": "أحد",
+    "label": "ح",
     "state": "past",
     "value": 3,
     "last": 4,
@@ -50,7 +50,7 @@
     "signal": false
    },
    {
-    "label": "إثنين",
+    "label": "ن",
     "state": "past",
     "value": 5,
     "last": 2,
@@ -58,7 +58,7 @@
     "signal": true
    },
    {
-    "label": "ثلاثاء",
+    "label": "ث",
     "state": "past",
     "value": 3,
     "last": 2,
@@ -66,7 +66,7 @@
     "signal": false
    },
    {
-    "label": "أربعاء",
+    "label": "ر",
     "state": "past",
     "value": 4,
     "last": 4,
@@ -74,7 +74,7 @@
     "signal": false
    },
    {
-    "label": "خميس",
+    "label": "خ",
     "state": "past",
     "value": 3,
     "last": 3,
@@ -82,7 +82,7 @@
     "signal": false
    },
    {
-    "label": "جمعة",
+    "label": "ج",
     "state": "closed",
     "value": null,
     "last": 0,
@@ -90,7 +90,7 @@
     "signal": false
    },
    {
-    "label": "سبت",
+    "label": "س",
     "state": "past",
     "value": 4,
     "last": 4,
@@ -98,10 +98,6 @@
     "signal": false
    }
   ],
-  "legend": {
-   "this": "الأسبوع الماضي",
-   "before": "الأسبوع الذي قبله"
-  },
   "facts": [
    {
     "key": "no_shows",
@@ -113,13 +109,13 @@
     "key": "owed",
     "label": "المستحق لك",
     "value": "13,400 ر.ق",
-    "note": "عميلان لم يسددا بعد"
+    "note": "عميلان مدينان"
    },
    {
     "key": "booked_ahead",
-    "label": "المحجوز لهذا الأسبوع",
+    "label": "المحجوز القادم",
     "value": "9",
-    "note": "للأيام السبعة القادمة"
+    "note": "خلال 7 أيام"
    }
   ],
   "state": "normal"

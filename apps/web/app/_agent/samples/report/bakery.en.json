@@ -30,7 +30,7 @@
   "dir": "ltr",
   "shop": "Qirfa Bakery",
   "week": "4–10 Oct",
-  "eyebrow": "Agent · Weekly report",
+  "eyebrow": "Weekly report",
   "hero": {
    "key": "sales",
    "label": "Sales",
@@ -99,10 +99,6 @@
     "signal": false
    }
   ],
-  "legend": {
-   "this": "Last week",
-   "before": "The week before"
-  },
   "facts": [
    {
     "key": "top_item",

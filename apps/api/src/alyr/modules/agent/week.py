@@ -44,6 +44,7 @@ from alyr.modules.agent.words import (
 # an Arabic line that opens with "ALYR Chat" would run left to right without it.
 RLM = "\u200f"
 PRODUCT_OF = {"orders": "chat", "bookings": "bookings", "ledger": "accounts", "inbox": "chat"}
+DAY_INITIAL = ("ح", "ن", "ث", "ر", "خ", "ج", "س")  # Sunday to Saturday
 NO_SHOWS = (("no-show", "no-shows"), ("غياب واحد", "غيابان", "حالات غياب", "حالة غياب"))
 
 
@@ -164,16 +165,16 @@ def hero(w: Week, lang: str) -> dict:
         pct = view._pct(cur, last)
         if pct > 0:
             change = {"dir": "up", "text": T(lang, f"up {pct}% on the week before",
-                                             f"أكثر بـ{pct}% من الأسبوع الذي قبله")}
+                                             f"أكثر بـ{pct}% من الأسبوع السابق")}
         elif pct < 0:
             change = {"dir": "down", "text": T(lang, f"down {-pct}% on the week before",
-                                               f"أقل بـ{-pct}% من الأسبوع الذي قبله")}
+                                               f"أقل بـ{-pct}% من الأسبوع السابق")}
         else:
             change = {"dir": "level", "text": T(lang, "level with the week before",
-                                                "كما في الأسبوع الذي قبله")}
+                                                "كما في الأسبوع السابق")}
     else:
         change = {"dir": None, "text": T(lang, f"The week before: {before}",
-                                         f"الأسبوع الذي قبله: {before}")}
+                                         f"الأسبوع السابق: {before}")}
     return {
         "key": key, "label": label, "value": shown,
         "unit": T(lang, "QAR", "ر.ق") if is_money else None,
@@ -194,7 +195,9 @@ def days(w: Week, lang: str) -> list[dict]:
     for i, day in enumerate(chart["days"]):
         state = {"today": "past"}.get(day["state"], day["state"])
         out.append({
-            "label": DAY_SHORT[lang][i],
+            # In Arabic the day's initial, as Arabic calendars head their weeks: the
+            # names do not fit seven columns at a size a phone can read.
+            "label": DAY_INITIAL[i] if lang == "ar" else DAY_SHORT[lang][i],
             "state": state,
             "value": day["value"] if state == "past" else None,
             "last": day["last"],
@@ -224,10 +227,8 @@ def _facts_by_module(w: Week, lang: str) -> dict[str, list[dict]]:
                          "note": T(lang, f"{quantity:,} ordered", f"الكمية: {quantity:,}")})
         rows.append({"key": "came_back", "label": T(lang, "Came back", "عادوا للطلب"),
                      "value": f"{f.came_back:,}",
-                     "note": T(lang, f"{noun_after(f.came_back, who, lang)} who ordered again",
-                               f"{noun_after(f.came_back, who, lang)} " + agree(
-                                   f.came_back, "طلب مرة أخرى", "طلبا مرة أخرى",
-                                   "طلبوا مرة أخرى"))})
+                     "note": T(lang, "ordered again", agree(
+                         f.came_back, "طلب مرة أخرى", "طلبا مرة أخرى", "طلبوا مرة أخرى"))})
         if w.main != "orders":
             rows.insert(0, {"key": "orders", "label": T(lang, "Orders", "الطلبات"),
                             "value": f"{f.orders:,}", "note": money(f.sales, lang)})
@@ -238,12 +239,11 @@ def _facts_by_module(w: Week, lang: str) -> dict[str, list[dict]]:
         rows = [{
             "key": "no_shows", "label": T(lang, "No-shows", "الغياب"),
             "value": f"{f.no_shows_week:,}",
-            "note": T(lang, f"of {counted(booked, noun, lang)} due", f"من أصل {booked}"),
+            "note": T(lang, f"of {booked:,} due", f"من أصل {booked:,}"),
         }, {
-            "key": "booked_ahead", "label": T(lang, "Booked, this week", "المحجوز لهذا الأسبوع"),
+            "key": "booked_ahead", "label": T(lang, "Booked ahead", "المحجوز القادم"),
             "value": f"{f.booked_ahead:,}",
-            "note": T(lang, f"{noun_after(f.booked_ahead, noun, lang)}, next 7 days",
-                      "للأيام السبعة القادمة"),
+            "note": T(lang, "next 7 days", "خلال 7 أيام"),
         }]
         if w.main != "bookings":
             label = {"visits": T(lang, "Visits", "الزيارات"),
@@ -257,13 +257,15 @@ def _facts_by_module(w: Week, lang: str) -> dict[str, list[dict]]:
         rows = [{
             "key": "owed", "label": T(lang, "Owed to you", "المستحق لك"),
             "value": money(f.owed, lang),
-            "note": T(lang, f"by {counted(f.owing, who, lang)}", _unpaid(f.owing, who)),
+            "note": T(lang, f"by {counted(f.owing, who, lang)}",
+                      f"{counted(f.owing, who, lang)} " + agree(f.owing, "مدين", "مدينان",
+                                                                 "مدينون")),
         }]
         if w.main != "ledger":
             rows.append({"key": "collected", "label": T(lang, "Collected", "المحصَّل"),
                          "value": money(f.collected, lang),
-                         "note": T(lang, f"week before {money(f.collected_last, lang)}",
-                                   f"الأسبوع الذي قبله {money(f.collected_last, lang)}")})
+                         "note": T(lang, f"before: {money(f.collected_last, lang)}",
+                                   f"قبله: {money(f.collected_last, lang)}")})
         else:
             rows.append({"key": "over_60", "label": T(lang, "Over 60 days", "أكثر من 60 يوماً"),
                          "value": money(_over_60(f), lang),
@@ -272,7 +274,7 @@ def _facts_by_module(w: Week, lang: str) -> dict[str, list[dict]]:
     if "inbox" in f.modules:
         rows = [{"key": "new_customers", "label": T(lang, "New customers", "عملاء جدد"),
                  "value": f"{f.new_customers:,}",
-                 "note": T(lang, "wrote for the first time", "راسلوك لأول مرة")}]
+                 "note": T(lang, "first message", "أول رسالة")}]
         if w.main != "inbox":
             rows.insert(0, {"key": "wrote", "label": T(lang, "Wrote to you", "راسلوك"),
                             "value": f"{f.wrote:,}",
@@ -575,11 +577,9 @@ def card(w: Week, lang: str) -> dict:
         "dir": "rtl" if lang == "ar" else "ltr",
         "shop": w.shop[lang],
         "week": week_label(w.week_start, lang),
-        "eyebrow": T(lang, "Agent · Weekly report", "Agent · التقرير الأسبوعي"),
+        "eyebrow": T(lang, "Weekly report", "التقرير الأسبوعي"),
         "hero": hero(w, lang),
         "days": days(w, lang),
-        "legend": {"this": T(lang, "Last week", "الأسبوع الماضي"),
-                   "before": T(lang, "The week before", "الأسبوع الذي قبله")},
         "facts": key_facts(w, lang),
         "state": w.state,
     }

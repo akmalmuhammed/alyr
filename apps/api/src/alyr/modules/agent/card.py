@@ -27,6 +27,9 @@ from xml.sax.saxutils import escape
 FONTS = Path(__file__).parent / "fonts"
 W, H = 1080, 566
 M = 56  # the side margin
+# The smallest type on the card. WhatsApp shows the card about 330 px wide on a phone, so
+# 31 px here is about 9.5 px there (the founder, 17 Oct: nothing smaller is readable).
+SMALL = 31
 
 SANS = "Instrument Sans"
 ARABIC = "IBM Plex Sans Arabic"
@@ -52,6 +55,7 @@ THEMES = {
 
 RLE, LRE, PDF = "\u202b", "\u202a", "\u202c"
 _ARABIC = re.compile(r"[؀-ۿ]")
+ARABIC_JOINED = 0.86
 _RANGE = re.compile(r"\d+\s?[–-]\s?\d+")
 
 # The ALYR logo, point for point from `apps/web/app/_site/brand.tsx` (never redrawn).
@@ -85,8 +89,8 @@ def _font(family: str, weight: int):
 
 
 def width(text: str, family: str, size: float, weight: int = 400, spacing: float = 0) -> float:
-    """The advance width of a line, close enough to fit it: unshaped advances, so Arabic
-    is measured from its letters' base forms."""
+    """The advance width of a line, close enough to fit it: unshaped advances, with Arabic
+    letters scaled to their joined width."""
     metrics, cmap, upem = _font(family, 600 if weight >= 600 and (family, 600) in FILES
                                 else 400)
     total = 0
@@ -94,7 +98,11 @@ def width(text: str, family: str, size: float, weight: int = 400, spacing: float
         if ch in (RLE, LRE, PDF, "\u200f"):
             continue
         glyph = cmap.get(ord(ch))
-        total += metrics[glyph][0] if glyph in metrics else upem * 0.55
+        advance = metrics[glyph][0] if glyph in metrics else upem * 0.55
+        # Joined Arabic letters are narrower than their isolated forms: measured against
+        # resvg's own rendering, 0.66 to 0.84 of the isolated width. 0.86 keeps every
+        # estimate on the wide side, so a line never overflows.
+        total += advance * ARABIC_JOINED if _ARABIC.match(ch) else advance
     return total * size / upem + spacing * max(len(text) - 1, 0)
 
 
@@ -191,14 +199,14 @@ class Canvas:
 
 
 def _label(c: Canvas, x: float, y: float, s: str, room: float, anchor: str = "start",
-           size: float = 23) -> None:
+           size: float = SMALL + 1) -> None:
     """A small label: mono capitals, tracked, in English; Plex Sans Arabic, never tracked or
-    in capitals, in Arabic (brand.md)."""
+    in capitals, in Arabic (brand.md). Never smaller than `SMALL`: past that it is cut."""
     if c.rtl:
-        s, size = fit(s, ARABIC, size + 2, 18, room)
+        s, size = fit(s, ARABIC, size + 1, SMALL, room)
         c.text(x, y, s, size, c.t["ink2"], family=ARABIC, anchor=anchor)
     else:
-        s, size = fit(s.upper(), MONO, size, 16, room, spacing=1.6)
+        s, size = fit(s.upper(), MONO, size, SMALL, room, spacing=1.6)
         c.text(x, y, s, size, c.t["ink2"], family=MONO, anchor=anchor, spacing=1.6)
 
 
@@ -215,49 +223,40 @@ def svg(data: dict, theme: str = "carbon", sample: bool = False) -> str:
     week = data["week"] if rtl else data["week"].upper()
     if sample:
         week = f"{week} · عيّنة" if rtl else f"{week} · SAMPLE"
-    _label(c, W - M, 72, week, 330, anchor="end")
-    _label(c, M + logo_w + 18, 72, data["eyebrow"], W - 2 * M - logo_w - 360)
+    _label(c, W - M, 72, week, 420, anchor="end")
+    _label(c, M + logo_w + 18, 72, data["eyebrow"], W - 2 * M - logo_w - 440)
 
     # The shop's name.
-    name, size = fit(data["shop"], face, 50, 30, W - 2 * M, weight=600)
-    c.text(M, 140, name, size, t["ink"], weight=600, family=face)
-    c.line(M, 166, W - M, t["rule"])
+    name, size = fit(data["shop"], face, 48, 34, W - 2 * M, weight=600)
+    c.text(M, 134, name, size, t["ink"], weight=600, family=face)
+    c.line(M, 156, W - M, t["rule"])
 
     # The hero number, its unit and its change.
     hero = data["hero"]
-    left_room = 440
+    left_room = 430
     label = f"{hero['label']} · {hero['unit']}" if hero["unit"] else hero["label"]
-    _label(c, M, 212, label, left_room)
+    _label(c, M, 202, label, left_room)
     value, size = fit(hero["value"], SANS, 132, 72, left_room, weight=600)
-    c.text(M, 326, value, size, t["ink"], family=SANS, weight=600)
+    c.text(M, 318, value, size, t["ink"], family=SANS, weight=600)
     change = hero["change"]
     x = M
     if change["dir"] in ("up", "down"):
-        c.triangle(M, 366, 20, change["dir"] == "up", t["ink"])
-        x = M + 32
-    words, size = fit(change["text"], face, 28, 20, left_room - (x - M))
-    c.text(x, 368, words, size, t["ink"] if change["dir"] else t["ink2"], family=face)
+        c.triangle(M, 360, 22, change["dir"] == "up", t["ink"])
+        x = M + 34
+    # The change may run to the bars' edge.
+    words, size = fit(change["text"], face, SMALL + 1, SMALL, 506 - x)
+    c.text(x, 362, words, size, t["ink"] if change["dir"] else t["ink2"], family=face)
 
-    # Seven days, Sunday first, the week before as a ghost beside each bar.
+    # Seven days, Sunday first, the week before as a ghost beside each bar. No legend: at
+    # a phone's size it would be too small to read; the template's text says it.
     days = data["days"]
-    area_x, area_w = 548, W - M - 548
-    top, base = 254, 336
+    area_x = 512
+    area_w = W - M - area_x
+    top, base = 214, 314
     if days:
-        legend_y = 212
-        sw = 15
-        # Legend at the end of the line: this week's swatch, then the week before's.
-        before = data["legend"]["before"]
-        this = data["legend"]["this"]
-        lw_before = (width(before, ARABIC, 22) if rtl else
-                     width(before.upper(), MONO, 20, spacing=1.6))
-        end = W - M
-        _legend(c, end - lw_before, legend_y, before, t["ghost"], sw)
-        lw_this = (width(this, ARABIC, 22) if rtl else width(this.upper(), MONO, 20, spacing=1.6))
-        _legend(c, end - lw_before - sw - 26 - lw_this, legend_y, this, t["bar"], sw)
-
         peak = max([d["value"] or 0 for d in days] + [d["last"] or 0 for d in days] + [1])
         col = area_w / 7
-        pair = min(col - 18, 52)
+        pair = min(col - 20, 52)
         bar = (pair - 4) / 2
         for i, d in enumerate(days):
             cx = area_x + col * i + col / 2
@@ -276,34 +275,28 @@ def svg(data: dict, theme: str = "carbon", sample: bool = False) -> str:
                         and t["edge"] != "none" else "")
                 c.rect(x0 + bar + 4, base - h, bar, h, fill, edge)
                 if d["signal"] and d["text"]:
-                    c.text(x0 + pair / 2, base - max(h, ghost_h) - 9, d["text"], 20,
+                    c.text(x0 + pair / 2, base - max(h, ghost_h) - 10, d["text"], SMALL,
                            t["ink"], family=MONO, anchor="middle")
             c.line(x0 - 6, base + 1, x0 + pair + 6, t["rule"], 2)
-            day_size = 23 if rtl else 20
-            c.text(cx, 368, d["label"] if rtl else d["label"].upper(), day_size,
+            c.text(cx, 356, d["label"] if rtl else d["label"].upper(), SMALL,
                    t["ink"] if d["signal"] else t["ink2"],
                    family=ARABIC if rtl else MONO, anchor="middle",
                    spacing=0 if rtl else 1.2)
 
     # Two or three key facts on one rule.
     facts = data["facts"]
-    c.line(M, 400, W - M, t["rule"])
+    c.line(M, 388, W - M, t["rule"])
     if facts:
         col = (W - 2 * M) / len(facts)
         for i, fact in enumerate(facts):
             x = M + col * i
-            room = col - 28
-            _label(c, x, 436, fact["label"], room)
-            value, size = fit(fact["value"], face, 44, 26, room, weight=600)
-            c.text(x, 488, value, size, t["ink"], family=face, weight=600)
-            note, size = fit(fact["note"], face, 26, 18, room)
-            c.text(x, 528, note, size, t["ink2"], family=face)
+            room = col - 24
+            _label(c, x, 428, fact["label"], room)
+            value, size = fit(fact["value"], face, 44, 34, room, weight=600)
+            c.text(x, 476, value, size, t["ink"], family=face, weight=600)
+            note, size = fit(fact["note"], face, SMALL + 1, SMALL, room)
+            c.text(x, 518, note, size, t["ink2"], family=face)
     return c.svg()
-
-
-def _legend(c: Canvas, x: float, y: float, words: str, color: str, sw: float) -> None:
-    c.rect(x - sw - 10, y - sw + 1, sw, sw, color)
-    _label(c, x, y, words, 260, size=20)
 
 
 def render(data: dict, theme: str = "carbon", sample: bool = False) -> bytes:

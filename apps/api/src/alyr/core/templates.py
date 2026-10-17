@@ -157,10 +157,10 @@ CATALOGUE: dict[str, Template] = {
     "weekly_report_card": Template(
         "utility",
         "Your ALYR weekly report for {{1}}, {{2}}. {{3}} By product: {{4}}. "
-        "Next step: {{5}}. The card above shows the week day by day. "
+        "Next step: {{5}}. The card above shows each day beside the same day the week before. "
         "Send REPORT to get this report again.",
         "تقريرك الأسبوعي من ALYR لـ {{1}}، {{2}}. {{3}} حسب المنتج: {{4}}. "
-        "الخطوة التالية: {{5}}. البطاقة أعلاه تعرض الأسبوع يوماً بيوم. "
+        "الخطوة التالية: {{5}}. البطاقة أعلاه تعرض كل يوم بجانب اليوم نفسه من الأسبوع الذي قبله. "
         "أرسل «تقرير» لتصلك هذه الرسالة مرة أخرى.",
         # The fictional Qirfa Bakery's report for 4 to 10 October (`alyr.report_samples`).
         (

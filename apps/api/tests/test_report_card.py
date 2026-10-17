@@ -55,6 +55,9 @@ def samples():
 @pytest.mark.parametrize("lang", ["en", "ar"])
 def test_the_card_renders_for_every_sample_in_both_languages(samples, key, lang):
     data, text = samples[(key, lang)]
+    # At WhatsApp's bubble width (about 330 px) no text is smaller than about 9.5 px.
+    sizes = [float(v) for v in re.findall(r'font-size="([\d.]+)"', card.svg(data, sample=True))]
+    assert min(sizes) >= card.SMALL and min(sizes) * 330 / card.W >= 9.4
     for theme in ("carbon", "paper"):
         png = card.render(data, theme, sample=True)
         # WhatsApp's 1.91:1 header, about 1080 px wide, well under Meta's 5 MB.
@@ -129,7 +132,7 @@ def test_a_percentage_only_when_both_weeks_count_twenty_or_more():
     assert big["value"] == "2,500" and big["unit"] == "QAR"
     arabic = week.hero(a_week(facts(orders=20, orders_last=25, sales=200000,
                                     sales_last=250000)), "ar")
-    assert arabic["change"]["text"] == "أقل بـ20% من الأسبوع الذي قبله"
+    assert arabic["change"]["text"] == "أقل بـ20% من الأسبوع السابق"
     first = week.hero(a_week(facts(started=datetime(2026, 10, 6, tzinfo=UTC), orders=30,
                                    orders_last=0)), "en")
     assert first["change"]["text"] == "First week on ALYR"
@@ -162,9 +165,9 @@ def test_the_arabic_card_is_mirrored_and_its_lines_run_right_to_left(samples):
     # Each Arabic line is a right-to-left embedding; the week's range stays left to right.
     assert "\u202b" in svg and "\u202a4–10\u202c" in svg
     # Sunday's bar is on the right: time runs right to left.
-    labels = re.findall(r'<text x="([\d.]+)"[^>]*>\u202b(أحد|سبت)\u202c</text>', svg)
+    labels = re.findall(r'<text x="([\d.]+)"[^>]*>\u202b(ح|س)\u202c</text>', svg)
     x = {name: float(at) for at, name in labels}
-    assert x["أحد"] > x["سبت"]
+    assert x["ح"] > x["س"]
     english = card.svg(samples[("salon", "en")][0])
     assert "\u202b" not in english
 

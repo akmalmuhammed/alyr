@@ -14,7 +14,7 @@ ALY-99, branch `aly-99-report-card`. The founder approved the redesign on 17 Oct
   - the ALYR logo (its 45° fold planes with the Volt plane), "Agent · Weekly report", the week ("4–10 OCT"), and "SAMPLE" on the site's samples;
   - the shop's name;
   - one hero number with its unit and its change against the week before. The hero is the measure the bars draw, so they always agree: sales for a shop or restaurant, visits (jobs, appointments) for a booking business, money collected for a trader, customers who wrote for an inbox only. A percentage only when both weeks count 20 or more (A3, `view._comparable`); otherwise "The week before: 19". The first week says "First week on ALYR";
-  - seven day bars, Sunday first, the week before as a ghost bar beside each one. The busiest day is the one Volt signal, with its value. A closed day is a dashed slot;
+  - seven day bars, Sunday first, the week before as a ghost bar beside each one (no legend since stage 4). The busiest day is the one Volt signal, with its value. A closed day is a dashed slot;
   - two or three key facts, chosen by the products switched on and `business_type`: the main product's first fact, then what is owed if ALYR Accounts is on, then each other product's first. A bakery gets the most ordered item, what is owed and its tasting visits; a salon its no-shows, what is booked for the coming week and who wrote; an AC company its no-shows, what is owed and what is booked.
 - **Themes:** Carbon (the default: it stands out in a light and a dark chat alike) and Paper. Volt only for the busiest day and the logo's plane. No red or green; ▲▼ in ink.
 - **Type:** Instrument Sans for Latin and every figure, IBM Plex Sans Arabic for Arabic, IBM Plex Mono for labels in English (capitals, tracked); Arabic labels are never tracked or in capitals.
@@ -58,7 +58,23 @@ ALY-99, branch `aly-99-report-card`. The founder approved the redesign on 17 Oct
   - `apps/web/app/_agent/samples/report/{bakery,salon,homeservices}.{en,ar}.png` (Carbon) and `.paper.png` (Paper), each marked "SAMPLE";
   - `{key}.{lang}.json`: the caption, its lines, the template's values and the card's data, for the site to show the real output on a phone.
 - The samples are seeded at the Sunday moment rather than the dashboard samples' Thursday, so the coming week's bookings are still "booked". Their numbers therefore differ from the dashboard samples', which describe a different moment.
-- Renders at phone width (330 px) are in `docs/agent-dashboard/shots-report/` (not committed). At that size the hero, the shop's name and the facts' values read easily; the small labels are about 7 px, so the text under the card carries every number too, and a tap opens the card full size.
+- Renders at phone width (330 px) are in `docs/agent-dashboard/shots-report/` (not committed). Since stage 4, the smallest text there is about 9.5 px.
+
+## Stage 4 · readable at a phone's size (the founder's fix, 17 Oct)
+
+The founder approved the card with one fix: at WhatsApp's bubble size (about 330 px wide) the small labels were about 7 px and unreadable.
+- **Every small label and sub-line about 40% larger:** the smallest type is now 31 px on the card (`card.SMALL`), about 9.5 px at 330 px. Labels went from 23 to 32, sub-lines from 26 to 32, day names from 20 to 31, the busiest day's value from 20 to 31, the change line from 28 to 32. The hero number is unchanged (132).
+- **Re-flowed:** the header, the hero and the bars moved up; the fact values sit at 44.
+- **Dropped:** the legend (too small to be worth its room). The template's text now says the bars compare each day with the same day the week before.
+- **Shortened:**
+  - the eyebrow is "Weekly report", without "Agent";
+  - "Booked ahead / next 7 days";
+  - "ordered again", "of 31 due", "first message";
+  - in Arabic, «من الأسبوع السابق» and «عميلان مدينان».
+- **Arabic day names** are their initials (ح ن ث ر خ ج س), as Arabic calendars head their weeks. The names did not fit seven columns at a readable size.
+- **Measuring Arabic:** joined letters turned out 0.66 to 0.84 as wide as the isolated forms `width()` measured, so lines were cut too early. They are now scaled by 0.86, checked against resvg's own renders.
+- **A new test** fails if any text on any sample card is under 31 px.
+- The samples and the phone-width shots in `shots-report/` were captured again.
 
 ## Checks
 
