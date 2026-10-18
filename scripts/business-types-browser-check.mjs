@@ -164,12 +164,9 @@ const visible = "(e => e.getClientRects().length > 0)";
 const layer = () => `(document.querySelector('.ct-sheet') || document)`;
 const pressText = (text, tag = "button", wait = 250) =>
   click(`[...${layer()}.querySelectorAll(${JSON.stringify(tag)})].filter(${visible}).find(e => ${norm}(e).includes(${JSON.stringify(text)}))`, wait);
-async function setLanguage(to) {
-  if (to === "en") return;
-  const shell = { en: "Search or jump to", ar: "ابحث أو انتقل إلى" };
-  await click(`document.querySelector('.sh-mtop [aria-label=${JSON.stringify(shell.en)}], .sh-mtop [aria-label=${JSON.stringify(shell.ar)}]')`, 300);
-  await click(`[...document.querySelectorAll('.sh-palette button[role=option]')].find(b => /Switch to Arabic|التبديل إلى الإنجليزية/.test(b.textContent))`, 500);
-}
+// The workspace remembers its language on the device (ALY-109), and so does onboarding, so the
+// language is set once, before the first page, and every page after it reads it.
+async function setLanguage() { /* nothing to press: the stored language applies to every page */ }
 async function noSideScroll(name) {
   const wide = await js(`(() => { const out = []; const w = innerWidth; if (Math.max(document.documentElement.scrollWidth, document.body.scrollWidth) > w) out.push('page ' + document.documentElement.scrollWidth); for (const sel of ['.sh-scroll', '.ct-sheet-body', '.ct-sheet', '.ob-main']) { const el = document.querySelector(sel); if (el && el.scrollWidth > el.clientWidth + 1) out.push(sel + ' ' + el.scrollWidth + '>' + el.clientWidth); } return out.join(', '); })()`);
   check(wide === "", `no sideways scrolling on ${name}${wide ? " (" + wide + ")" : ""}`);
@@ -215,7 +212,7 @@ const paint = (text) => (LANG === "ar" ? text.ar : text.en);
 try {
   await setup("light");
   await go("/start", 500);
-  if (LANG === "ar") await js("localStorage.setItem('alyr-lang', 'ar')");
+  if (LANG === "ar") await js("localStorage.setItem('alyr-lang', 'ar'); localStorage.setItem('alyr-workspace-lang', 'ar')");
 
   for (const kind of Object.keys(TYPES).filter((k) => ONLY.includes(k))) {
     const expect = TYPES[kind];
