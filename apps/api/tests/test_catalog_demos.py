@@ -221,8 +221,10 @@ def test_each_shop_has_its_items_in_two_languages_with_a_tile_and_the_catalog_on
                       shop.tenant_id) >= 3
 
 
-def test_the_catalog_is_on_for_the_demo_shops_only_and_stays_off_for_everyone_else(shops):
-    assert get_settings().catalog_for_new_shops is False  # new shops still start without it
+def test_the_demo_shops_have_the_catalog_and_the_old_demo_shop_is_left_as_it_is(shops):
+    # New shops start with it (the setting is on since ALY-113); the seeding of the Al Noor demo
+    # shop itself writes no catalog row (the live databases got it from migration 0032).
+    assert get_settings().catalog_for_new_shops is True
     assert scalar("select count(*) as n from tenant_modules where tenant_id = $1 "
                   "and module_key = 'catalog'", DEMO_TENANT_ID) == 0
     assert not any("catalog" in presets.PRESET_BY_KEY[s.kind].modules for s in SHOPS)

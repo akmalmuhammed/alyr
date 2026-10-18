@@ -123,7 +123,7 @@
 .sh-pill.active { color: var(--volt-ink); background: var(--volt-wash); box-shadow: none; }
 .sh-pill.active::before { background: var(--volt); opacity: 1; }
 .sh-pill.wait { color: color-mix(in srgb, var(--warn) 72%, var(--ink)); background: var(--warn-soft); box-shadow: none; }
-.sh-pill.coming::before { background: transparent; box-shadow: 0 0 0 1px currentColor inset; }
+.sh-pill.idle::before { background: transparent; box-shadow: 0 0 0 1px currentColor inset; }
 
 /* ── home ────────────────────────────────────────────── */
 .sh-bento { display: grid; grid-template-columns: repeat(12, minmax(0, 1fr)); gap: 12px; }
@@ -221,13 +221,12 @@
 .sh-block { display: grid; gap: 12px; }
 .sh-glyph { width: 34px; height: 34px; flex: none; display: grid; place-items: center; border-radius: 9px; background: var(--monogram-bg); color: var(--volt); box-shadow: 0 0 0 1px var(--hair-2) inset; }
 .sh-glyph svg { width: 20px; height: 20px; }
-.sh-glyph.coming { background: var(--raise); color: var(--ink-3); box-shadow: 0 0 0 1px var(--hair-2) inset; }
+.sh-glyph.idle { background: var(--raise); color: var(--ink-3); box-shadow: 0 0 0 1px var(--hair-2) inset; }
 
 /* ── products ────────────────────────────────────────── */
 .sh-products { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 21rem), 1fr)); gap: 12px; }
 .sh-product { position: relative; display: flex; flex-direction: column; gap: 16px; padding: 22px; border-radius: 16px; background: var(--sheet); box-shadow: 0 0 0 1px var(--hair) inset; overflow: hidden; transition: box-shadow 0.3s var(--ease-product); }
 .sh-product.active { box-shadow: 0 0 0 1px var(--hair-2) inset, 0 1px 2px rgba(21, 23, 26, 0.04); }
-.sh-product.coming { background: repeating-linear-gradient(135deg, transparent 0 9px, var(--hair) 9px 10px), var(--raise); }
 .sh-product-top { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; }
 .sh-product .sh-glyph { width: 44px; height: 44px; border-radius: 12px; }
 .sh-product .sh-glyph svg { width: 24px; height: 24px; }
@@ -326,6 +325,7 @@
   .sh-gauge { width: 84px; height: 84px; }
   .sh-gauge b { font-size: var(--ui-heading); }
   .sh-conn { flex-wrap: wrap; }
+  .sh-conn-text { flex-basis: calc(100% - 60px); }
   .sh-conn > .btn, .sh-conn > .sh-pill { margin-inline-start: 60px; }
 }
 

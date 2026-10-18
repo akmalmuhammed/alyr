@@ -2,8 +2,9 @@
 starts with, and that nothing half-finished shows.
 
 Every type is created through the real onboarding path (email code, sign-up token, HTTP),
-once with the Catalog switched off for new shops (the setting that stays off until the
-go-live sweep, ALY-113: onboarding must behave exactly as it did before) and once with it on.
+once with the Catalog switched off for new shops (the setting is on since the go-live sweep,
+ALY-113, and can still be turned off: onboarding must then behave exactly as it did before) and
+once with it on.
 The expectations in EXPECT are written here, apart from the code, as the specification.
 """
 
@@ -59,8 +60,17 @@ def no_samples_left_behind():
 
 @pytest.fixture
 def on(client_factory, monkeypatch):
-    """A client for an API whose new businesses get their type's Catalog."""
+    """A client for an API whose new businesses get their type's Catalog (the default since
+    ALY-113; the setting is still named so a test says which way it runs)."""
     monkeypatch.setenv("ALYR_CATALOG_FOR_NEW_SHOPS", "true")
+    return client_factory()
+
+
+@pytest.fixture
+def off(client_factory, monkeypatch):
+    """A client for an API with the Catalog switched off for new businesses: every type is
+    created exactly as it was before the Catalog."""
+    monkeypatch.setenv("ALYR_CATALOG_FOR_NEW_SHOPS", "false")
     return client_factory()
 
 
@@ -93,13 +103,22 @@ def samples_of(client):
 # ── the setting is off: nothing is different ──────────────────────────────────────────
 
 
-def test_the_catalog_is_off_for_new_shops_unless_the_setting_says_so(client):
+def test_the_catalog_is_on_for_new_shops_unless_the_setting_says_otherwise(client):
+    from alyr.config import get_settings
+
+    assert get_settings().catalog_for_new_shops is True
+
+
+def test_the_setting_can_still_turn_the_catalog_off_for_new_shops(off):
     from alyr.config import get_settings
 
     assert get_settings().catalog_for_new_shops is False
+    tenant, _ = make(off, "restaurant")
+    assert "catalog" not in modules(tenant)
 
 
-def test_with_the_setting_off_every_old_type_is_created_exactly_as_before(client):
+def test_with_the_setting_off_every_old_type_is_created_exactly_as_before(off):
+    client = off
     for kind, expected in BEFORE.items():
         tenant, _ = make(client, kind)
         assert modules(tenant) == expected, kind
@@ -121,12 +140,14 @@ def test_with_the_setting_off_every_old_type_is_created_exactly_as_before(client
         assert client.get("/api/items").status_code == (200 if has_orders else 403), kind
 
 
-def test_with_the_setting_off_the_types_offered_are_the_ones_offered_today(client):
+def test_with_the_setting_off_the_types_offered_are_the_ones_offered_today(off):
+    client = off
     keys = [t["key"] for t in client.get(f"{BASE}/types").json()["types"]]
     assert keys == ["salon", "spa", "clinic", "home", "restaurant", "shop", "wholesale", "travel"]
 
 
-def test_with_the_setting_off_a_type_that_exists_for_the_catalog_cannot_be_created(client):
+def test_with_the_setting_off_a_type_that_exists_for_the_catalog_cannot_be_created(off):
+    client = off
     for kind in NEW_TYPES:
         body = {"signup_token": "x" * 40, "owner_name": "A", "name": "Nope", "type": kind}
         answer = client.post(f"{BASE}/business", json=body)
@@ -223,11 +244,14 @@ def test_travel_and_documents_have_no_catalog_at_all(on):
     assert "travel" not in presets_catalog.SETUPS
 
 
-def test_the_catalog_is_not_added_to_a_shop_that_already_exists(client_factory, monkeypatch):
+def test_changing_the_setting_does_not_touch_a_shop_that_exists(client_factory, monkeypatch):
+    monkeypatch.setenv("ALYR_CATALOG_FOR_NEW_SHOPS", "false")
     before = client_factory()
     tenant, _ = make(before, "shop")
     monkeypatch.setenv("ALYR_CATALOG_FOR_NEW_SHOPS", "true")
     after = client_factory()  # the setting was flipped; the existing shop is as it was
+    # (the shops that existed when the Catalog went live got it from migration 0032, which is
+    # tested in test_catalog_go_live.py; the setting itself never touches a shop)
     sign_in(after, owner_of(tenant))
     assert "catalog" not in modules(tenant)
     assert "catalog" not in after.get("/api/workspace").json()["modules"]
@@ -718,7 +742,7 @@ def test_the_review_says_only_what_the_settings_do():
                 setup.layout.style) == (rule, low, sold_out, alerts, layout), kind
         said = " ".join(g.en for g in setup.gets)
         # A bullet about alerts exists exactly when an alert is on.
-        assert ("messages your managers" in said) is bool(alerts), kind
+        assert ("under Staff on WhatsApp" in said) is bool(alerts), kind
         # A number in a low-stock bullet is the low-stock number, in both languages.
         for g in setup.gets:
             numbers = re.findall(r"(?:number of |down to |low \()(\d+)", g.en)

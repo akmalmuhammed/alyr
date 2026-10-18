@@ -43,8 +43,8 @@ def _text(value) -> dict:
 
 
 def catalog_on() -> bool:
-    """Do new businesses get their type's Catalog? One setting (`catalog_for_new_shops`),
-    which the go-live sweep switches on (ALY-113, D-039)."""
+    """Do new businesses get their type's Catalog? One setting (`catalog_for_new_shops`), on
+    since the go-live sweep (ALY-113, D-039) and still there to turn it off."""
     return get_settings().catalog_for_new_shops
 
 

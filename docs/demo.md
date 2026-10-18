@@ -40,7 +40,7 @@ The web app is at `http://localhost:3100` (`scripts/demo.sh up` starts it). Go t
 - `owner@demo-<key>.example`, for example `owner@demo-bakery.example`
 - `agent@demo-<key>.example` (an agent can look but not change prices or stock settings)
 
-The workspace opens at `/app/catalog`. The Catalog is switched on for these seven shops only. A new shop still gets it only once the go-live sweep (ALY-113) turns it on; this command does not change that.
+The workspace opens at `/app/catalog`. The Catalog is switched on for these seven shops by this command. Since the go-live sweep (ALY-113 part 1) a new shop gets it from onboarding and the shops that existed got it from migration 0032; this command changes neither.
 
 ## What a customer sees
 

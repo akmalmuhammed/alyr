@@ -692,14 +692,14 @@ def _week(f: Facts, main: str, lang: str) -> dict | None:
         elif day < started:
             state = "before"  # before the business was on ALYR: nothing to draw (P1-10)
         else:
-            state = "past" if day < f.today else "today" if day == f.today else "coming"
+            state = "past" if day < f.today else "today" if day == f.today else "ahead"
         value = data.get(day, 0) if state in ("past", "today") else None
         last = data.get(day - timedelta(days=7), 0)
         if day - timedelta(days=7) < started:
             last = None
         # last week to this time, only when the business was on ALYR on that day
         by_now = f.last_by_now.get(key) if state == "today" and last is not None else None
-        n_booked = booked.get(day) if state in ("today", "coming") else None
+        n_booked = booked.get(day) if state in ("today", "ahead") else None
         days.append({
             "date": day.isoformat(),
             "label": DAY_SHORT[lang][i],

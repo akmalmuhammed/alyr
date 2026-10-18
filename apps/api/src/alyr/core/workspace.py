@@ -261,8 +261,6 @@ async def enable_product(conn: asyncpg.Connection, staff: Staff, key: str) -> li
         raise LookupError("no such product")
     if product.status == "included":
         raise WorkspaceError(f"{product.name.en} is included for every business")
-    if product.status != "available":
-        raise WorkspaceError("this product is not available yet")
     for module in product.modules:
         await conn.execute(
             "insert into tenant_modules (module_key, enabled, enabled_at, enabled_by) "

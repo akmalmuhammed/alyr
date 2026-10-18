@@ -81,7 +81,7 @@ export default function TodayPage() {
           <ul className="ops-queue">
             {data.items.map((item) => (
               <li key={item.key} className={item.urgent ? "urgent" : ""}>
-                <span className={`sh-pill ${item.urgent ? "wait" : "coming"}`}>{KIND[item.kind] ?? item.kind}</span>
+                <span className={`sh-pill ${item.urgent ? "wait" : "idle"}`}>{KIND[item.kind] ?? item.kind}</span>
                 <div className="ops-queue-text">
                   <b>{item.title}</b>
                   <small dir="auto">{item.detail}</small>
@@ -108,7 +108,7 @@ export default function TodayPage() {
           <ul className="ops-queue quiet">
             {data.later.map((item) => (
               <li key={item.key}>
-                <span className="sh-pill coming">{KIND[item.kind] ?? item.kind}</span>
+                <span className="sh-pill idle">{KIND[item.kind] ?? item.kind}</span>
                 <div className="ops-queue-text"><b>{item.title}</b><small>Back on {new Date(item.until ?? "").toLocaleDateString("en-GB", { weekday: "short", day: "numeric", month: "short" })}</small></div>
                 <span />
                 <div className="ops-queue-actions"><button className="btn small ghost" type="button" onClick={() => back(item.key)}>Bring back</button></div>

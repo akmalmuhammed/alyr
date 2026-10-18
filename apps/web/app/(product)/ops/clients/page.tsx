@@ -81,8 +81,8 @@ export default function ClientsPage() {
           </label>
           <fieldset className="ops-field">
             <span>Switch on</span>
-            {/* Coming products cannot be switched on; ALYR Agent is included for every business. */}
-            {products.filter((p) => p.status !== "coming" && p.status !== "included").map((p) => (
+            {/* ALYR Agent is included for every business, so it has no box. */}
+            {products.filter((p) => p.status !== "included").map((p) => (
               <label key={p.key} className="ops-check">
                 <input type="checkbox" checked={form.products.includes(p.key)}
                   onChange={(e) => setForm({

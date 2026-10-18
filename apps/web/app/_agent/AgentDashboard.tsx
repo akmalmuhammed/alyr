@@ -525,7 +525,7 @@ function Week({ week, wide, id, level, t }: {
             {said(day) && <span className="ag-sr">{said(day)}</span>}
             <span className="ag-col" aria-hidden="true">
               {day.last != null && day.state !== "closed" && day.state !== "before" && (
-                <span className={`ag-ghost ${day.state === "coming" ? "is-dashed" : ""}`} style={{ height: pct(day.last) }} />
+                <span className={`ag-ghost ${day.state === "ahead" ? "is-dashed" : ""}`} style={{ height: pct(day.last) }} />
               )}
               {(day.state === "past" || day.state === "today") && (
                 <span className="ag-bar" style={{ "--i": i, height: pct(day.value) } as CSSProperties} />

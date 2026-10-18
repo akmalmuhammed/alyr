@@ -21,7 +21,7 @@ export type Kpi = {
 export type Day = {
   date: string;
   label: string;
-  state: "past" | "today" | "coming" | "closed" | "before";
+  state: "past" | "today" | "ahead" | "closed" | "before";
   value: number | null;
   value_text: string | null;
   last: number | null;

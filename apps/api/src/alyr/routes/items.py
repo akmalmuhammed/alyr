@@ -19,6 +19,7 @@ from alyr.core.auth import Staff
 from alyr.modules.items import (
     access,
     bulk,
+    changes,
     clock,
     drafts,
     groups,
@@ -274,6 +275,11 @@ def _fail(error: Exception) -> HTTPException:
     return HTTPException(status_code=422, detail={"code": code, "message": str(error)})
 
 
+def _category_names(rows: list[dict]) -> list[dict]:
+    """The shop's categories as the activity record keeps them: names and order."""
+    return [{"name": r["name"], "name_ar": r["name_ar"]} for r in rows]
+
+
 def _bulk_fail(error: bulk.BulkError) -> HTTPException:
     return HTTPException(
         status_code=error.status,
@@ -385,12 +391,30 @@ async def put_settings(
     access.require_manager(staff)
     try:
         async with request.app.state.db.tenant(staff.tenant_id) as conn:
-            return await items.save_settings(
+            before = await items.settings(conn)
+            after = await items.save_settings(
                 conn, body.hold_minutes, body.day_starts, body.agents_edit_items,
                 body.low_stock_at, body.wholesale_layout, body.whatsapp_number,
             )
+            fields = {k: after[k] for k in changes.SETTING_FIELDS}
+            await changes.settings_changed(
+                conn, team.actor_of(staff), {k: before[k] for k in fields}, fields
+            )
+            return after
     except items.ItemError as error:
         raise _fail(error) from error
+
+
+@router.get("/settings/activity")
+async def settings_activity(
+    request: Request, limit: int = Query(default=50, ge=1, le=200),
+    staff: Staff = Depends(current_staff),
+) -> dict:
+    """Who changed the Catalog's settings, staff numbers and price groups, and what they
+    changed: the record nobody can edit. Owners and admins only."""
+    access.require_manager(staff)
+    async with request.app.state.db.tenant(staff.tenant_id) as conn:
+        return {"activity": await changes.listing(conn, limit)}
 
 
 @router.get("/setup")
@@ -411,10 +435,15 @@ async def put_setup(
     access.require_manager(staff)
     try:
         async with request.app.state.db.tenant(staff.tenant_id) as conn:
-            return await template.save(
+            before = changes.flat_setup(await template.hints(conn))
+            after = await template.save(
                 conn, sold_out=body.sold_out, new_item_rule=body.new_item_rule,
                 alerts=body.alerts.model_dump(exclude_none=True) if body.alerts else None,
             )
+            await changes.settings_changed(
+                conn, team.actor_of(staff), before, changes.flat_setup(after)
+            )
+            return after
     except items.ItemError as error:
         raise _fail(error) from error
 
@@ -441,7 +470,12 @@ async def put_categories(
     access.require_manager(staff)
     try:
         async with request.app.state.db.tenant(staff.tenant_id) as conn:
+            before = await items.categories(conn)
             rows = await items.save_categories(conn, [c.model_dump() for c in body])
+            await changes.settings_changed(
+                conn, team.actor_of(staff), {"categories": _category_names(before)},
+                {"categories": _category_names(rows)},
+            )
     except items.ItemError as error:
         raise _fail(error) from error
     return {"categories": rows}

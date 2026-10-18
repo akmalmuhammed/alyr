@@ -12,11 +12,11 @@ Ways of working:
 
 The Catalog (ALY-107, D-039): `catalog` says what a type's catalog starts with
 (`presets_catalog.py`), or is None for a type that has none (travel and documents). It is
-declared here and kept apart from `modules`, because the Catalog module is off for every
-shop until the go-live sweep (ALY-113) flips `Settings.catalog_for_new_shops`. Use
-`modules_for` to get the modules a new business is created with, and `offered` to ask
-whether an owner may choose the type. Three types exist only for the Catalog
-(`requires_catalog`): until that setting is on they are not offered.
+declared here and kept apart from `modules`, because the Catalog module is added by the
+setting `Settings.catalog_for_new_shops` (on since the go-live sweep, ALY-113), not by the
+type. Use `modules_for` to get the modules a new business is created with, and `offered` to
+ask whether an owner may choose the type. Three types exist only for the Catalog
+(`requires_catalog`): with that setting off they are not offered.
 """
 
 from dataclasses import dataclass
