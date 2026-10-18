@@ -43,16 +43,18 @@ PHOTO_EXTENSIONS = (".jpg", ".jpeg", ".png", ".webp")
 
 # The longest each text may be (the API's own limits).
 LIMITS = {
-    "name": 120, "name_ar": 120, "category": 60, "variant": 80, "variant_ar": 80,
+    "name": 120, "name_ar": 120, "sku": 40, "variant_sku": 40, "category": 60, "variant": 80,
+    "variant_ar": 80,
     "description": 1000, "description_ar": 1000,
 }
 # Keys an item carries once, whichever of its rows holds them.
 ITEM_KEYS = (
-    "name", "name_ar", "category", "price", "sale_price", "sale_starts", "sale_ends", "unit",
+    "name", "name_ar", "sku", "category", "price", "sale_price", "sale_starts", "sale_ends", "unit",
     "pack_size", "min_order", "tags", "status", "rule", "available", "description",
     "description_ar",
 )
-FORMULA_TEXT = ("name", "name_ar", "category", "variant", "variant_ar", "description",
+FORMULA_TEXT = ("name", "name_ar", "sku", "variant_sku", "category", "variant", "variant_ar",
+                "description",
                 "description_ar", "tags", "photo")
 
 
@@ -95,6 +97,7 @@ class VariantOp:
     price_diff: int | None
     stock: int | None
     per_day: int | None
+    sku: str | None = None
 
 
 @dataclass
@@ -440,6 +443,7 @@ def build(
     by_name, by_id = _existing_by_names(snapshot)
     known_categories = {values.squash(c): c for c in snapshot.categories}
     claimed: dict[UUID, int] = {}
+    skus = Skus(_sku_owners(snapshot))
     file_names: dict[str, list[int]] = {}
     room = snapshot.room
     new_cats: dict[str, dict] = {}
@@ -448,7 +452,7 @@ def build(
     blocks = group_rows(rows)
     for block in blocks:
         item = _plan_item(
-            block, mode, snapshot, by_name, by_id, known_categories, claimed, zip_view,
+            block, mode, snapshot, by_name, by_id, known_categories, claimed, zip_view, skus,
         )
         # The same name twice in one file is warned about, never merged.
         if item.action in ("create", "update") and item.name:
@@ -515,6 +519,7 @@ def build(
 def _plan_item(
     block: list[RawRow], mode: str, snapshot: Snapshot, by_name: dict, by_id: dict,
     known_categories: dict[str, str], claimed: dict[UUID, int], zip_view: ZipView | None,
+    skus: "Skus",
 ) -> ItemPlan:
     parsed = [parse_row(r) for r in block]
     plan = ItemPlan(rows=[r.number for r in block])
@@ -600,6 +605,7 @@ def _plan_item(
         _create(plan, merged, variants, clear_sale, first, known_categories, snapshot)
     else:
         _update(plan, entry, merged, variants, clear_sale, first, known_categories, snapshot)
+    _check_skus(plan, parsed, skus)
     if plan.errors:
         plan.action = "error"
         return plan
@@ -635,7 +641,7 @@ def _variants(
             seen[key] = p.row
         ops.append(VariantOp(
             p.row, name or name_ar, name_ar, p.values.get("price_diff"), p.values.get("stock"),
-            p.values.get("per_day"),
+            p.values.get("per_day"), p.values.get("variant_sku"),
         ))
     if len(ops) > MAX_VARIANTS:
         plan.notes.append((block[0].number, issue("too_many_variants", max=MAX_VARIANTS)))
@@ -652,6 +658,64 @@ def _rule_of(merged: dict, variants: list[VariantOp]) -> str:
     if any(v.per_day is not None for v in variants):
         return "daily_limit"
     return "switch"
+
+
+@dataclass
+class Skus:
+    """Which codes are taken: by the shop's items and sizes (`owners`, lower case, each with
+    the item that has it and how to name it) and, so far, by this file (`claimed`)."""
+
+    owners: dict[str, tuple[UUID, str]]
+    claimed: dict[str, int] = field(default_factory=dict)
+
+
+def _sku_owners(snapshot: Snapshot) -> dict[str, tuple[UUID, str]]:
+    """Every code in use, archived items and switched-off sizes included (they keep theirs)."""
+    owners: dict[str, tuple[UUID, str]] = {}
+    for entry in snapshot.items:
+        item = entry.item
+        label = item["name"] or item["name_ar"]
+        if item.get("sku"):
+            owners[item["sku"].lower()] = (item["id"], label)
+        for v in entry.variants:
+            if v.get("sku"):
+                owners[v["sku"].lower()] = (
+                    item["id"], f"{label} ({v['name'] or v['name_ar']})" if v["name"] or
+                    v["name_ar"] else label,
+                )
+    return owners
+
+
+def _check_skus(plan: ItemPlan, parsed: list["Parsed"], skus: Skus) -> None:
+    """A code is used once in a shop, across items and sizes (case does not matter), and
+    once in a file. A row that would break that is an error, naming what has the code."""
+    if plan.errors:
+        return
+    codes: list[tuple[int, str, str]] = []
+    for p in parsed:
+        if p.values.get("sku"):
+            codes.append((p.row, "sku", str(p.values["sku"])))
+            break  # the item's own code is one code, however many rows repeat it
+    codes += [
+        (p.row, "variant_sku", str(p.values["variant_sku"]))
+        for p in parsed if p.values.get("variant_sku")
+    ]
+    seen: dict[str, int] = {}
+    claims: list[tuple[str, int]] = []
+    for row, _column, code in codes:
+        key = code.lower()
+        owner = skus.owners.get(key)
+        if key in seen:
+            plan.notes.append((row, issue("sku_repeated", value=code, rows=str(seen[key]))))
+        elif owner is not None and owner[0] != plan.target:
+            plan.notes.append((row, issue("sku_taken", value=code, other=owner[1])))
+        elif key in skus.claimed:
+            plan.notes.append((row, issue("sku_repeated", value=code, rows=str(skus.claimed[key]))))
+        seen.setdefault(key, row)
+        claims.append((key, row))
+    if not plan.errors:
+        for key, row in claims:
+            skus.claimed[key] = row
 
 
 def _snap_category(text: str | None, known: dict[str, str]) -> str:
@@ -714,7 +778,7 @@ def _create(
     plan.draft = status == "draft" and merged.get("status") != "draft"
 
     data = {
-        "name": name, "name_ar": name_ar,
+        "name": name, "name_ar": name_ar, "sku": str(merged.get("sku") or ""),
         "description": str(merged.get("description") or ""),
         "description_ar": str(merged.get("description_ar") or ""),
         "category": _snap_category(merged.get("category"), known),
@@ -795,6 +859,7 @@ def _update(
         plan.notes.append((row, issue("name_not_arabic", "name_ar")))
     plan.name = str(changes.get("name") or item["name"] or item["name_ar"])
     plan.name_ar = str(changes.get("name_ar") or item["name_ar"])
+    set_("sku", "sku", merged.get("sku"))
     set_("description", "description", merged.get("description"))
     set_("description_ar", "description_ar", merged.get("description_ar"))
     if merged.get("category") is not None:
@@ -874,7 +939,7 @@ def _update(
     moves = 0
     low = min(new_price, sale_after if sale_after is not None else new_price)
     for v in variants:
-        has_data = v.stock is not None or v.per_day is not None or v.price_diff is not None
+        has_data = any(x is not None for x in (v.stock, v.per_day, v.price_diff, v.sku))
         existing = None
         if v.name:
             existing = by_name.get(_squash(v.name))
@@ -909,9 +974,12 @@ def _update(
             touched = True
         if v.name_ar and v.name_ar != existing["name_ar"]:
             touched = True
+        if v.sku is not None and v.sku != existing["sku"]:
+            _diff(plan, "variant_sku", existing["sku"], v.sku, label)
+            touched = True
         if touched:
             ops.append(VariantOp(
-                v.row, existing["name"], v.name_ar, v.price_diff, None, v.per_day
+                v.row, existing["name"], v.name_ar, v.price_diff, None, v.per_day, v.sku
             ))
         if v.stock is not None and v.stock != existing["on_hand"]:
             _diff(plan, "stock", existing["on_hand"], v.stock, label)

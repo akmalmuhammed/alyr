@@ -1,6 +1,6 @@
 # Spec 004: Catalog import and export (Excel and CSV)
 
-Status: built in ALY-108 (package 7 of the Catalog, ALY-101). Decision: D-039 (its "As built (ALY-108)" lists where the code fixed a detail). The engine under it is `specs/001-catalog-engine/spec.md`, the screens are `specs/002-catalog-screens/spec.md`. Plan scenarios 20 and 21 are the done-criterion; the issue adds "a spreadsheet of 500 items imports from a laptop and a phone".
+Status: built in ALY-108 (package 7 of the Catalog, ALY-101). Decision: D-039 (its "As built (ALY-108)" lists where the code fixed a detail). The engine under it is `specs/001-catalog-engine/spec.md`, the screens are `specs/002-catalog-screens/spec.md`, SKU is `specs/003-price-groups-and-sku/spec.md`. Plan scenarios 20 and 21 are the done-criterion; the issue adds "a spreadsheet of 500 items imports from a laptop and a phone".
 
 Hidden until go-live like the rest of the Catalog: the routes answer where `orders` or `catalog` is switched on, the entry is inside the Catalog screen (module `catalog`, off for every shop), and nothing says "coming" or "beta" (a test reads every sentence the import can say).
 
@@ -24,6 +24,7 @@ The header row is found in the first ten rows (a title above it is fine) by its 
 |---|---|
 | Item ID | An item that exists in this shop. An ID that is not in this shop (another shop's export, a deleted item) is an error for that row. Leave it empty for a new item |
 | Name (English), Name (Arabic) | One may be empty: an Arabic name in the English column is also used as the Arabic one, and the reverse |
+| SKU, Size or colour SKU | The item's code and each size's code (ALY-127), up to 40 characters, never used twice in the shop across items and sizes (case does not matter; an archived item and a switched-off size keep theirs), nor twice in the file. A clash is an error for the row that causes it and names what has the code ("already used by Shirt (Small)"). An empty cell keeps the code; the code on an item's one unnamed size goes in the second column |
 | Category | Compared ignoring case and the Arabic spellings; a new one is created and listed in the preview, one that is a letter off another is pointed out |
 | Price, Sale price, Price difference | QAR, with Arabic or English digits, a comma or a space between thousands, `QAR` or `ر.ق` beside it. `1.250` is refused as ambiguous, not guessed. A sale price of `0` ends the sale |
 | Sale starts, Sale ends | A date (`2026-10-31` or `31/10/2026`) |
@@ -39,7 +40,7 @@ The header row is found in the first ten rows (a title above it is fine) by its 
 * **Duplicate names** are warned about (against the catalog and inside the file) and never merged; two rows are one item only when they repeat the name with a size or colour, or share an ID.
 * **Stock numbers are not edits.** A stock number for a new size is written to the stock log as an `opening` movement and for an existing size as a `counted` movement (the difference is recorded), both with the reason "Import" and the person's name. A number equal to the system's writes nothing. A stock number for an item that is not counted is left out with a warning.
 * **Formulas are never calculated.** An Excel cell that holds a formula gives the value the file saved, and the row says so (`formula_value`); a formula with no saved value is empty. A text cell that starts with `=`, `+`, `-` or `@` is kept as plain text and pointed out.
-* **Photos.** The zip is only listed in the preview (nothing is unpacked or stored as a photo). After the import is applied a background job adds each photo through the same checks as any upload (type by content, size, pixels, location data removed) and puts it on its item; one that cannot be used is named with the reason and the others carry on. An item gets up to eight. A row with no photo names takes a file called like the item. Web links are never downloaded.
+* **Photos.** The zip is only listed in the preview (nothing is unpacked or stored as a photo). After the import is applied a background job adds each photo through the same checks as any upload (type by content, size, pixels, location data removed) and puts it on its item; one that cannot be used is named with the reason and the others carry on. An item gets up to eight. With `ALYR_JOBS_INLINE=true` (the default, for a laptop) the job runs before the apply answers; on a server it runs in the worker and the result screen shows its progress. A row with no photo names takes a file called like the item. Web links are never downloaded.
 * **Not in the file:** options and extras, schedules and category order (edited on screen). An import never switches off a size, deletes an item, or touches what a column does not name.
 
 ## Files that are refused (nothing is stored)
@@ -48,7 +49,7 @@ The header row is found in the first ten rows (a title above it is fine) by its 
 
 ## Tables and API
 
-Migration 0028: `item_imports` (the uploaded sheet until it is applied, its options, the optional zip until its photos are in, the counts and problem rows, what was done to each item for the undo, the photo job's progress, who and when), tenant-owned with forced row-level security.
+Migration 0028 (0026 is price groups and SKU, 0027 is taken): `item_imports` (the uploaded sheet until it is applied, its options, the optional zip until its photos are in, the counts and problem rows, what was done to each item for the undo, the photo job's progress, who and when), tenant-owned with forced row-level security.
 
 All under `/api/items`, included before `routes/items.py` so `/export` is not read as an item's ID. Anyone signed in can download; uploading needs the right to edit items (owners and admins, and agents when the owner allows it).
 
@@ -80,4 +81,4 @@ Not checked: a real phone or its file picker, real Excel or LibreOffice opening 
 
 ## Left for other packages
 
-SKU and customer price groups (ALY-127, PR #72): SKU columns and clashes per row come once it is merged; group prices and a customer's group are not in the file. Category order and Arabic category names. Option groups and schedules in the file. Templates that name the section by business type (ALY-107). A back-office usage screen (ALY-109).
+Customer price groups (ALY-127): group prices and a customer's group are not in the file. Category order and Arabic category names. Option groups and schedules in the file. Templates that name the section by business type (ALY-107). A back-office usage screen (ALY-109).

@@ -478,7 +478,7 @@ export function Catalog({ lang }: { lang: Lang }) {
           onDone={() => { setSheet(null); stopSelecting(); void load(); }} />
       )}
       {sheet?.kind === "import" && (
-        <CatalogImport lang={lang} canEdit={access.can_edit} push={push}
+        <CatalogImport lang={lang} canEdit={access.can_edit}
           onClose={() => { setSheet(null); void load(); }} onChanged={() => void load()} />
       )}
       {sheet?.kind === "settings" && (

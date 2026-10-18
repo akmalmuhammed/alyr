@@ -54,6 +54,7 @@ def item_rows(
             cells: dict[str, object] = {
                 "id": str(i["id"]),
                 "name": safe_text(i["name"]), "name_ar": safe_text(i["name_ar"]),
+                "sku": safe_text(i["sku"]),
                 "category": safe_text(i["category"]),
                 "price": _money(i["price"]), "sale_price": _money(i["sale_price"]),
                 "sale_starts": _day(i["sale_starts_at"], clock) if i["sale_price"] else None,
@@ -66,6 +67,7 @@ def item_rows(
                 "available": yes if i["available"] else no,
                 "variant": safe_text(v["name"]) if v and named else "",
                 "variant_ar": safe_text(v["name_ar"]) if v and named else "",
+                "variant_sku": safe_text(v["sku"]) if v else "",
                 "price_diff": _money(v["price_delta"]) if v and named else None,
                 "stock": v["on_hand"] if v and i["stock_rule"] == "count" else None,
                 "per_day": v["daily_limit"] if v and i["stock_rule"] == "daily_limit" else None,

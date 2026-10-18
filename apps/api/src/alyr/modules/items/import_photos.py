@@ -132,11 +132,11 @@ class ImportPhotos:
         self.db = db
         self.media = media
 
-    async def _row(self, tenant_id: UUID, import_id: UUID):
+    async def _row(self, tenant_id: UUID, import_id: UUID, zip_too: bool = False):
+        columns = "status, photos, actor_id, actor_name" + (", zip" if zip_too else "")
         async with self.db.tenant(tenant_id) as conn:
             return await conn.fetchrow(
-                "select status, zip, photos, actor_id, actor_name from item_imports "
-                "where id = $1", import_id,
+                f"select {columns} from item_imports where id = $1", import_id
             )
 
     async def _save(self, tenant_id: UUID, import_id: UUID, progress: dict) -> None:
@@ -147,7 +147,7 @@ class ImportPhotos:
 
     async def run(self, tenant_id: UUID, payload: dict) -> None:
         import_id = UUID(payload["import_id"])
-        row = await self._row(tenant_id, import_id)
+        row = await self._row(tenant_id, import_id, zip_too=True)
         if row is None or row["status"] != "applied":
             return  # undone, or gone: nothing to add
         progress = dict(row["photos"])

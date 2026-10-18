@@ -179,9 +179,21 @@ async def start(
     return preview_view(row, plan)
 
 
-async def _row(conn: asyncpg.Connection, import_id: UUID, lock: bool = False) -> asyncpg.Record:
+# What a row says about itself, without the uploaded sheet and zip: those can be megabytes and
+# are read only by what works out a plan from them.
+_LIGHT = (
+    "id, status, filename, kind, options, zip_name, summary, changes, photos, actor_id, "
+    "actor_name, created_at, applied_at, undone_at, undone_by"
+)
+
+
+async def _row(
+    conn: asyncpg.Connection, import_id: UUID, lock: bool = False, blobs: bool = False
+) -> asyncpg.Record:
+    columns = _LIGHT + ", file, zip" if blobs else _LIGHT
     row = await conn.fetchrow(
-        "select * from item_imports where id = $1" + (" for update" if lock else ""), import_id
+        f"select {columns} from item_imports where id = $1" + (" for update" if lock else ""),
+        import_id,
     )
     if row is None:
         raise _gone()
@@ -211,6 +223,7 @@ async def preview(
     row = await _row(conn, import_id)
     if row["status"] != "preview":
         return await result_view(conn, row)
+    row = await _row(conn, import_id, blobs=True)
     return preview_view(row, await _row_plan(conn, media, clock, tenant_id, row))
 
 
@@ -218,7 +231,7 @@ async def set_options(
     conn: asyncpg.Connection, media: MediaService, clock: ShopClock, tenant_id: UUID,
     import_id: UUID, on_duplicate: str,
 ) -> dict:
-    row = await _row(conn, import_id, lock=True)
+    row = await _row(conn, import_id, lock=True, blobs=True)
     options = {**row["options"], "on_duplicate": _check_mode(on_duplicate)}
     row = await conn.fetchrow(
         "update item_imports set options = $2 where id = $1 and status = 'preview' returning *",
@@ -233,7 +246,7 @@ async def set_zip(
 ) -> dict:
     """Add (or, with no data, take away) the zip of photos for a preview. A zip that cannot
     be read is refused and the preview keeps whatever it had."""
-    row = await _row(conn, import_id, lock=True)
+    row = await _row(conn, import_id, lock=True, blobs=True)
     if data:
         import_photos.index(data, media.settings.media_max_upload_bytes)  # raises if unusable
     row = await conn.fetchrow(
@@ -254,11 +267,11 @@ async def discard(conn: asyncpg.Connection, import_id: UUID) -> None:
 # ── applying ──────────────────────────────────────────────
 
 _ITEM_FIELDS = (
-    "name", "name_ar", "description", "description_ar", "category", "price", "sale_price",
+    "name", "name_ar", "sku", "description", "description_ar", "category", "price", "sale_price",
     "sale_starts_at", "sale_ends_at", "unit", "pack_size", "min_order", "tags", "stock_rule",
     "available", "status",
 )
-_VARIANT_FIELDS = ("name", "name_ar", "price_delta", "daily_limit", "active")
+_VARIANT_FIELDS = ("name", "name_ar", "sku", "price_delta", "daily_limit", "active")
 
 
 def _ser(value: object) -> object:
@@ -300,10 +313,11 @@ async def _create(
     data = {k: v for k, v in item.data.items()}
     data["sort"] = order
     named = len(item.variants) > 1 or bool(item.variants and item.variants[0].name)
-    if named:
+    listed = named or any(v.sku for v in item.variants)  # a code on the one unnamed size, too
+    if listed:
         data["variants"] = [
             {"name": v.name, "name_ar": v.name_ar, "price_delta": v.price_diff or 0,
-             "daily_limit": v.per_day, "active": True}
+             "daily_limit": v.per_day, "active": True, "sku": v.sku or ""}
             for v in item.variants
         ]
     elif item.variants and item.variants[0].per_day is not None:
@@ -316,7 +330,7 @@ async def _create(
         if not op.stock:
             continue
         variant = next(
-            (v for v in made["variants"] if (v["name"] == op.name if named else True)), None
+            (v for v in made["variants"] if (v["name"] == op.name if listed else True)), None
         )
         if variant is not None:
             await _opening(conn, UUID(variant["id"]), op.stock, actor)
@@ -367,6 +381,8 @@ async def _update(
             change["daily_limit"] = op.per_day
         if op.name_ar and op.name_ar != existing["name_ar"]:
             change["name_ar"] = op.name_ar
+        if op.sku is not None and op.sku != existing["sku"]:
+            change["sku"] = op.sku
         if change:
             touched[existing["id"]] = {**touched.get(existing["id"], {}), **change}
         if op.stock is not None:
@@ -376,7 +392,7 @@ async def _update(
         default_only = len(entry.variants) == 1 and entry.variants[0]["is_default"]
         new_inputs = [
             {"name": op.name, "name_ar": op.name_ar, "price_delta": op.price_diff or 0,
-             "daily_limit": op.per_day, "active": True}
+             "daily_limit": op.per_day, "active": True, "sku": op.sku or ""}
             for op in fresh
         ]
         if default_only and fresh and not touched:
@@ -387,7 +403,7 @@ async def _update(
                  "name_ar": touched.get(v["id"], {}).get("name_ar", v["name_ar"]),
                  "price_delta": touched.get(v["id"], {}).get("price_delta", v["price_delta"]),
                  "daily_limit": touched.get(v["id"], {}).get("daily_limit", v["daily_limit"]),
-                 "active": v["active"]}
+                 "sku": touched.get(v["id"], {}).get("sku", v["sku"]), "active": v["active"]}
                 for v in entry.variants
             ] + new_inputs
     if changes:
@@ -448,7 +464,7 @@ async def apply(
 ) -> dict:
     """Do what the preview showed. Raises `Refused` if the plan is not the one the owner
     saw, or if anything cannot be done; in that case nothing at all has been changed."""
-    row = await _row(conn, import_id, lock=True)
+    row = await _row(conn, import_id, lock=True, blobs=True)
     plan = await _row_plan(conn, media, clock, tenant_id, row)
     if plan.hash != expected:
         raise Refused(
@@ -539,6 +555,7 @@ async def get(
 ) -> dict:
     row = await _row(conn, import_id)
     if row["status"] == "preview":
+        row = await _row(conn, import_id, blobs=True)
         return preview_view(row, await _row_plan(conn, media, clock, tenant_id, row))
     return await result_view(conn, row)
 
@@ -551,7 +568,7 @@ async def last(conn: asyncpg.Connection) -> dict | None:
 
 async def recent(conn: asyncpg.Connection, limit: int = 8) -> list[dict]:
     rows = await conn.fetch(
-        "select * from item_imports where status in ('applied', 'undone') "
+        f"select {_LIGHT} from item_imports where status in ('applied', 'undone') "
         "order by coalesce(undone_at, applied_at) desc, created_at desc limit $1", limit,
     )
     newest = await _undoable(conn)

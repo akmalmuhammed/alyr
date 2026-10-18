@@ -13,9 +13,8 @@ import {
   type ImportResult, type ImportUndone, type OnDuplicate,
 } from "./catalogApi";
 import { COPY, type Copy, type Lang } from "./catalogCopy";
-import { Field, Fold, Icon, Sheet, type Toast } from "./CatalogUi";
+import { Field, Fold, Icon, Sheet } from "./CatalogUi";
 
-type Push = (text: string, options?: { tone?: Toast["tone"]; undo?: () => void }) => number;
 type Step =
   | { kind: "home" }
   | { kind: "sending"; name: string; percent: number }
@@ -88,8 +87,8 @@ function Paged({ items, render, label, t }: { items: ImportItem[]; render: (item
   );
 }
 
-export function CatalogImport({ lang, canEdit, push, onClose, onChanged }: {
-  lang: Lang; canEdit: boolean; push: Push; onClose: () => void; onChanged: () => void;
+export function CatalogImport({ lang, canEdit, onClose, onChanged }: {
+  lang: Lang; canEdit: boolean; onClose: () => void; onChanged: () => void;
 }) {
   const t = COPY[lang];
   const i = t.imp;
@@ -219,7 +218,6 @@ export function CatalogImport({ lang, canEdit, push, onClose, onChanged }: {
     try {
       const result = await api<ImportUndone>("/api/items/import/undo", "POST");
       setUndone(result);
-      push(i.undoneToast(result.removed + result.archived, result.restored));
       onChanged();
       void loadHome();
       if (step.kind === "done") setStep({ kind: "done", data: await api<ImportResult>(`/api/items/import/${step.data.id}`) });

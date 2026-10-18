@@ -146,6 +146,16 @@ MESSAGES: dict[str, tuple[str, str, str]] = {
         "has been deleted.",
         "وصل متجرك إلى الحد الأقصى للأصناف ({limit})، لذلك لم يُضَف هذا الصنف. لم يُحذف شيء.",
     ),
+    "sku_taken": (
+        "error",
+        "The SKU “{value}” is already used by {other}.",
+        "الرمز «{value}» مستخدم بالفعل في {other}.",
+    ),
+    "sku_repeated": (
+        "error",
+        "The SKU “{value}” is also on row {rows} of this file. A code can be used once.",
+        "الرمز «{value}» موجود أيضاً في الصف {rows} من هذا الملف. يُستخدم الرمز مرة واحدة فقط.",
+    ),
     "price_diff_low": (
         "error",
         "A price difference cannot bring the price of “{value}” to zero or below.",
