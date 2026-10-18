@@ -163,7 +163,7 @@ async def create_business(
             await conn.execute(
                 "insert into setup_requests (product_key, step_key, note, requested_by) "
                 "values ($1, 'onboarding', $2, $3)",
-                _main_product(preset.modules),
+                _main_product(modules),
                 f"New {preset.name.en} business: set up its "
                 f"{preset.hint.en.lower()} with the owner.",
                 owner_name,

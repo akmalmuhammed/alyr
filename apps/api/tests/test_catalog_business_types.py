@@ -161,8 +161,10 @@ def test_each_type_starts_with_its_own_catalog(on, kind):
     tenant, _ = make(on, kind)
     preset = presets.PRESET_BY_KEY[kind]
 
-    # The modules are the type's own, plus the Catalog.
-    assert modules(tenant) == set(preset.modules) | {"catalog"}
+    # The modules are the type's own, plus the Catalog and what its catalog needs: a
+    # wholesaler's customers order from the price list, so wholesale also gets `orders`.
+    needs = {"wholesale": {"orders"}}.get(kind, set())
+    assert modules(tenant) == set(preset.modules) | needs | {"catalog"}
 
     # The navigation says what the type calls it, in both languages, and nothing else changed.
     workspace = on.get("/api/workspace").json()
@@ -261,7 +263,8 @@ def test_a_restaurant_is_still_set_up_with_alyr_and_a_wholesaler_keeps_its_credi
     assert owner_sql("select count(*) as n from setup_requests where tenant_id = $1",
                      UUID(tenant))[0]["n"] == 1
     tenant, _ = make(on, "wholesale")
-    assert modules(tenant) == {"inbox", "ledger", "payments", "catalog"}
+    # It keeps its credit accounts and, because customers order from its price list, gets orders.
+    assert modules(tenant) == {"inbox", "ledger", "payments", "orders", "catalog"}
     assert state(on)["way"] == "assisted"
 
 
@@ -335,9 +338,86 @@ def test_a_wholesaler_gets_a_price_list_with_pack_sizes_minimum_orders_and_price
     assert (by_key["oil-9"]["pack_size"], by_key["oil-9"]["min_order"]) == (9, 3)
     assert by_key["rice-20"]["min_order"] == 5
     assert all(i["sku"] == "" for i in samples_of(on))  # a sample takes no code from the shop
-    # Price groups are part of the same Catalog and answer without the orders module.
     groups = on.get("/api/price-groups")
     assert groups.status_code == 200 and groups.json()["groups"][0]["is_default"] is True
+
+
+def test_a_wholesale_shop_made_with_the_setting_on_orders_on_account_at_its_group_price(on):
+    """The wholesaler's customers order from the price list: the order page is there, a
+    customer with a credit limit puts the order on their account at their group's price, the
+    ledger takes the sale, and the credit limit still holds."""
+    tenant, slug = make(on, "wholesale")
+    assert {"orders", "ledger", "catalog"} <= modules(tenant)
+    # The owner's test customer is the shop's customer, given a credit limit of QAR 50.
+    on.post(f"{BASE}/test-chat", json={"text": "hello"})
+    contact = str(owner_sql("select id from contacts where tenant_id = $1 and role = 'customer'",
+                            UUID(tenant))[0]["id"])
+    owner_sql("update contacts set credit_limit = 5000 where id = $1", UUID(contact))
+    cable = on.post("/api/items", json={
+        "name": "Cable", "name_ar": "كابل", "price": 1000, "status": "live", "unit": "pack",
+        "pack_size": 10, "min_order": 2, "stock_rule": "count", "opening_stock": 50,
+    }).json()["item"]
+    group = on.post("/api/price-groups", json={"name": "Wholesale", "name_ar": "الجملة"}).json()
+    group_id = group["group"]["id"]
+    assert on.put(f"/api/items/{cable['id']}/group-prices", json={
+        "prices": [{"group_id": group_id, "price": 800}]}).status_code == 200
+    assert on.put(f"/api/price-groups/customers/{contact}",
+                  json={"group_id": group_id}).status_code == 200
+
+    # The order page is open, in the wholesale layout, with the customer's own price.
+    page = on.get(f"/api/store/{slug}", params={"c": contact}).json()
+    assert page["catalog"]["layout"]["style"] == "table"
+    assert page["catalog"]["section"]["name"] == "Price list"
+    assert page["customer"]["can_use_account"] is True
+    assert page["group"]["name"] == "Wholesale"
+    assert [(p["name"], p["price"], p["price_source"]) for p in page["products"]] == [
+        ("Cable", 800, "group")]
+
+    # On account at the group's price (the minimum order is two).
+    def place(quantity, price=800):
+        return on.post(f"/api/store/{slug}/orders", json={
+            "contact_id": contact, "payment": "account",
+            "items": [{"product_id": cable["id"], "quantity": quantity, "expected_price": price}]})
+
+    placed = place(4)
+    assert placed.status_code == 200, placed.text
+    assert placed.json()["total"] == 3200 and placed.json()["price_group"]["name"] == "Wholesale"
+    balance = next(c for c in on.get("/api/ledger/summary").json()["customers"]
+                   if c["id"] == contact)["balance"]
+    assert balance == 3200
+    # The credit limit holds: a second order of QAR 32 would take the account past QAR 50.
+    over = place(4)
+    assert over.status_code == 409 and over.json()["detail"]["code"] == "over_limit"
+    # A smaller order than the minimum is refused, and a customer with no credit is not offered
+    # the account.
+    assert place(1).status_code == 422
+    owner_sql("update contacts set credit_limit = 0 where id = $1", UUID(contact))
+    assert on.get(f"/api/store/{slug}", params={"c": contact}).json()[
+        "customer"]["can_use_account"] is False
+    refused = place(2)
+    assert refused.status_code == 403 and refused.json()["detail"]["code"] == "no_account"
+
+
+def test_giving_a_wholesaler_orders_does_not_change_the_price_drafted_for_it(
+    on, client_factory, monkeypatch
+):
+    """A quote is drafted from the business's modules (D-032, D-035). A wholesaler's inbox and
+    payment links already count as ALYR Chat beside ALYR Accounts, so adding the orders module
+    leaves its drafted price as it was. The founder sets the final price in the back office."""
+    from test_pricing import client_of, open_quote
+
+    def drafted(name):
+        lines = open_quote(client_of(client_factory(), name))["lines"]
+        return [(x["item_key"], x["unit_price"]) for x in lines]
+
+    with_catalog = f"Wholesale {uuid4().hex[:6]}"
+    new_business(on, kind="wholesale", name=with_catalog)
+    monkeypatch.setenv("ALYR_CATALOG_FOR_NEW_SHOPS", "false")
+    off = client_factory()
+    without = f"Wholesale {uuid4().hex[:6]}"
+    new_business(off, kind="wholesale", name=without)
+    assert drafted(with_catalog) == drafted(without)
+    assert {"chat", "credit"} <= {key for key, _ in drafted(without)}  # Accounts is "credit"
 
 
 def test_the_orders_step_points_to_the_catalog_under_the_types_name(on):
@@ -646,5 +726,12 @@ def test_a_new_type_is_in_the_registry_once_with_its_catalog():
         assert preset.offered(True) and not preset.offered(False)
     for kind in BEFORE:
         assert presets.PRESET_BY_KEY[kind].offered(False)
+        # With the setting off every type is exactly as it was: no catalog, nothing extra.
+        assert presets.PRESET_BY_KEY[kind].modules_for(False) == presets.PRESET_BY_KEY[
+            kind].modules
+    wholesale = presets.PRESET_BY_KEY["wholesale"]
+    assert "orders" not in wholesale.modules and "orders" not in wholesale.modules_for(False)
+    assert set(wholesale.modules_for(True)) == {"inbox", "ledger", "payments", "orders", "catalog"}
+    assert len(wholesale.modules_for(True)) == 5  # none twice
     assert presets.PRESET_BY_KEY["travel"].modules_for(True) == presets.PRESET_BY_KEY[
         "travel"].modules

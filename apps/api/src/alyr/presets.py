@@ -49,11 +49,18 @@ class Preset:
     hours: tuple[tuple[int, str, str], ...] = ()
     catalog: CatalogSetup | None = None
     requires_catalog: bool = False
+    # Modules the type also gets when it has the Catalog, because its catalog needs them: a
+    # wholesaler's customers order from the price list, so wholesale gets `orders` (and keeps
+    # its credit accounts, so an order can go on account). Off, the type is as it always was.
+    with_catalog: tuple[str, ...] = ()
 
     def modules_for(self, catalog_on: bool) -> tuple[str, ...]:
-        """The modules a business of this type is created with. The Catalog is added only
-        when it is switched on for new shops and this type has one."""
-        return (*self.modules, "catalog") if catalog_on and self.catalog else self.modules
+        """The modules a business of this type is created with. The Catalog (and what it
+        needs) is added only when it is switched on for new shops and this type has one."""
+        if not (catalog_on and self.catalog):
+            return self.modules
+        extra = tuple(m for m in self.with_catalog if m not in self.modules)
+        return (*self.modules, *extra, "catalog")
 
     def offered(self, catalog_on: bool) -> bool:
         """May an owner choose this type now?"""
@@ -154,6 +161,7 @@ PRESETS: tuple[Preset, ...] = (
         "wholesale", Text("Wholesale & trading", "جملة وتجارة"),
         Text("Credit, collections", "آجل وتحصيل"),
         "boxes", "assisted", ("inbox", "ledger", "payments"), catalog=SETUPS["wholesale"],
+        with_catalog=("orders",),
     ),
     Preset(
         "travel", Text("Travel & documents", "سفر ومعاملات"),
