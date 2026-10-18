@@ -90,6 +90,12 @@ class Settings(BaseSettings):
     catalog_max_items: int = 1000
     catalog_max_photos: int = 3000
 
+    # Importing a spreadsheet (ALY-108): the largest sheet, and the largest zip of photos
+    # that goes with it. Both are read into memory, so they are bounded; a sheet of 500
+    # items is about 100 KB.
+    catalog_import_max_bytes: int = 5 * 1024 * 1024
+    catalog_import_max_zip_bytes: int = 40 * 1024 * 1024
+
     # R2's free tier is 10 GB-month of storage (checked 17 Oct 2026). Gigabytes here are
     # decimal, which is the smaller reading, so the alert comes early rather than late.
     media_free_bytes: int = 10_000_000_000

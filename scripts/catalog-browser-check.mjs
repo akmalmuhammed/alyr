@@ -25,11 +25,19 @@
 // inbox, the customer's order page showing the group's price, and the order list showing the
 // group and the SKU, at phone width in both languages.
 //
+// With `--only import` it runs the import and export screens instead (ALY-108), on a shop with
+// the Catalog on and no items: the downloads, a file with bad rows (previewed, imported, undone),
+// a file of 500 items, the export uploaded again, an Excel template uploaded as it is, a zip of
+// photos matched by file name, the same screens in dark, as an agent and on a laptop.
+// `--photos` is still needed (the zip holds some of those pictures). Sample files are written
+// to --out.
+//
 // Short folders: Edge fails quietly with long paths, so keep --profile and --out short.
 
 import { spawn } from "node:child_process";
 import { existsSync, mkdirSync, readdirSync, readFileSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
+import { crc32 } from "node:zlib";
 import { COPY } from "../apps/web/app/(product)/_workspace/catalogCopy.ts";
 
 const args = Object.fromEntries(
@@ -45,6 +53,7 @@ const PROFILE = args.profile ?? `${tmpdir()}/catalog-profile-${LANG}`;
 const PORT = Number(args.port ?? (LANG === "ar" ? 9366 : 9355));
 const EDGE = process.env.EDGE_PATH ?? "C:/Program Files (x86)/Microsoft/Edge/Application/msedge.exe";
 const AXE = args.axe ?? "";
+const IMPORT_ONLY = args.only === "import";
 const t = COPY[LANG];
 mkdirSync(OUT, { recursive: true });
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
@@ -236,8 +245,270 @@ async function axe(name, exclude = [], within = "") {
   for (const v of found) for (const n of v.nodes.slice(0, 4)) log("   axe", v.impact, v.id, n.target, "|", n.why);
 }
 
+// ── the import and export screens (ALY-108) ─────────────────────────────────────────────
+
+/** A zip with the files stored as they are (no packing), enough for pictures to travel in. */
+function zipStored(entries) {
+  const parts = [], central = [];
+  let offset = 0;
+  for (const [name, data] of entries) {
+    const nameBuf = Buffer.from(name, "utf8");
+    const crc = crc32(data);
+    const local = Buffer.alloc(30);
+    local.writeUInt32LE(0x04034b50, 0); local.writeUInt16LE(20, 4); local.writeUInt16LE(0x0800, 6);
+    local.writeUInt16LE(0x21, 12); local.writeUInt32LE(crc, 14); local.writeUInt32LE(data.length, 18);
+    local.writeUInt32LE(data.length, 22); local.writeUInt16LE(nameBuf.length, 26);
+    parts.push(local, nameBuf, data);
+    const head = Buffer.alloc(46);
+    head.writeUInt32LE(0x02014b50, 0); head.writeUInt16LE(20, 4); head.writeUInt16LE(20, 6);
+    head.writeUInt16LE(0x0800, 8); head.writeUInt16LE(0x21, 14); head.writeUInt32LE(crc, 16);
+    head.writeUInt32LE(data.length, 20); head.writeUInt32LE(data.length, 24);
+    head.writeUInt16LE(nameBuf.length, 28); head.writeUInt32LE(offset, 42);
+    central.push(head, nameBuf);
+    offset += 30 + nameBuf.length + data.length;
+  }
+  const directory = Buffer.concat(central);
+  const end = Buffer.alloc(22);
+  end.writeUInt32LE(0x06054b50, 0); end.writeUInt16LE(entries.length, 8); end.writeUInt16LE(entries.length, 10);
+  end.writeUInt32LE(directory.length, 12); end.writeUInt32LE(offset, 16);
+  return Buffer.concat([...parts, directory, end]);
+}
+
+const COLUMNS_EN = ["Name (English)", "Name (Arabic)", "Category", "Price (QAR)", "In stock", "Photos"];
+const COLUMNS_AR = ["الاسم بالإنجليزية", "الاسم بالعربية", "الفئة", "السعر (ر.ق)", "المخزون", "الصور"];
+const csvLine = (cells) => cells.map((c) => (/[",\n]/.test(String(c)) ? `"${String(c).replace(/"/g, '""')}"` : String(c))).join(",");
+function writeCsv(name, rows) {
+  const header = LANG === "ar" ? COLUMNS_AR : COLUMNS_EN;
+  const path = `${OUT}/${name}`;
+  // The byte-order mark is what Excel writes in front of a UTF-8 CSV.
+  writeFileSync(path, String.fromCharCode(0xfeff) + [header, ...rows].map(csvLine).join("\r\n") + "\r\n", "utf8");
+  return path;
+}
+
+async function importChecks() {
+  const i = t.imp;
+  const sheetPath = writeCsv("messy.csv", [
+    ["Chicken shawarma", "شاورما دجاج", "Wraps", "12", ""],
+    ["Beef shawarma", "شاورما لحم", "Wraps", "14.50", "10"],
+    ["Hummus", "حمص", "Starters", "abc", ""],
+    ["", "", "Wraps", "5", ""],
+    ["Fattoush", "فتوش", "Starters", "١٢٫٥٠", "3"],
+    ["Juice", "عصير", "Drinks", "1.250", ""],
+    ["Soup", "", "Starters", "8", ""],
+  ]);
+  const big = [];
+  for (let n = 1; n <= 500; n++) big.push([`Item ${String(n).padStart(4, "0")}`, `صنف ${n}`, `Category ${n % 20}`, String(5 + (n % 90)), n % 3 === 0 ? String(n % 40) : "", ""]);
+  const bigPath = writeCsv("items-500.csv", big);
+  const zipSheet = writeCsv("with-photos.csv", [
+    ["Pita bread", "خبز", "Bakery", "2", "", "pita.jpg, pita-2.jpg"], ["Tea", "شاي", "Drinks", "3", "", ""],
+    ["Cake", "كيك", "Sweets", "20", "", "cake.jpg"], ["Pie", "فطيرة", "Sweets", "18", "", "pie.jpg"],
+  ]);
+  const pics = readdirSync(PHOTOS).filter((f) => /^dish-\d+\.jpg$/.test(f)).sort();
+  if (pics.length < 4) throw new Error(`need at least 4 dish-NN.jpg photos in ${PHOTOS}`);
+  const read = (f) => readFileSync(`${PHOTOS}/${f}`);
+  const zipPath = `${OUT}/photos.zip`;
+  writeFileSync(zipPath, zipStored([
+    ["pita.jpg", read(pics[0])], ["pita-2.jpg", read(pics[1])], ["Tea.jpg", read(pics[2])], ["cake.jpg", read(pics[3])],
+    ["unused.jpg", read(pics[0])], ["notes.txt", Buffer.from("not a photo")],
+  ]));
+  const previewCounts = () => js("[...document.querySelectorAll('.ct-sheet .ct-imp-counts li')].map(li => li.querySelector('b').textContent.trim()).join(',')");
+  const closeSheet = async () => {
+    await send("Input.dispatchKeyEvent", { type: "keyDown", key: "Escape", code: "Escape", windowsVirtualKeyCode: 27 });
+    await send("Input.dispatchKeyEvent", { type: "keyUp", key: "Escape", code: "Escape", windowsVirtualKeyCode: 27 });
+    await until("!document.querySelector('.ct-sheet')", "the sheet closing", 8000);
+  };
+  const openImport = async () => {
+    await click(`[...document.querySelectorAll('.ct-actions button')].find(b => b.textContent.includes(${JSON.stringify(i.open)}))`, 600);
+    await until("!!document.querySelector('.ct-sheet')", "the import sheet");
+    await sleep(500);
+  };
+  const choose = async (path) => {
+    await files(".ct-sheet input.ct-file", [path]);
+    await until("!!document.querySelector('.ct-sheet .ct-imp-counts')", "the preview", 60000);
+    await sleep(400);
+  };
+  const imported = async () => {
+    await until("!!document.querySelector('.ct-sheet .ct-finish')", "the import done", 120000);
+    await sleep(500);
+  };
+
+  await setup("light");
+  await go("/app/catalog", 1500);
+  await setLanguage(LANG);
+  await sleep(500);
+  check((await items()).length === 0, "the shop starts with no items");
+  check(await js(`[...document.querySelectorAll('.ct-actions button')].some(b => b.textContent.includes(${JSON.stringify(i.open)}))`), "Import / Export is offered even when the shop has no items");
+  await shot("60-catalog-empty");
+
+  // 1. the sheet, and the downloads (each link is fetched, as a tap would)
+  await openImport();
+  await shot("61-import-home");
+  await noSideScroll("the import sheet");
+  const links = await js(`[...document.querySelectorAll('.ct-sheet a[download]')].map(a => a.getAttribute('href'))`);
+  check(links.length === 4, "four download links: the export and the template, each as Excel and as CSV");
+  for (const href of links) {
+    const got = await js(`fetch(${JSON.stringify(href)}).then(async r => ({ status: r.status, type: r.headers.get('content-type'), disp: r.headers.get('content-disposition'), size: (await r.arrayBuffer()).byteLength }))`);
+    check(got.status === 200 && got.size > 200 && /attachment/.test(got.disp ?? ""), `${href.split("?")[0]} downloads (${got.type}, ${got.size} bytes)`);
+  }
+  check(await js("document.querySelector('.ct-sheet select')?.options.length === 8"), "the template chooser lists the eight kinds of business");
+  await closeSheet();
+
+  // 2. a file with bad rows: previewed row by row, then imported without them
+  await openImport();
+  await choose(sheetPath);
+  check((await previewCounts()) === "4,0,0,3", "the preview says 4 will be added and 3 are left out");
+  const text = await sheetText();
+  check([4, 5, 7].every((n) => text.includes(i.row(n))), "the rows left out are named by their row number in the file");
+  check((await items()).length === 0, "looking at the preview saved nothing");
+  await shot("62-import-preview");
+  await noSideScroll("the import preview");
+  await axe("import-preview");
+  await scrollSheet("end"); await sleep(200);
+  await shot("63-import-preview-bottom");
+  await scrollSheet(0);
+  await pressText(i.apply(4), "button", 400);
+  await imported();
+  const first = await items();
+  check(first.length === 4 && first.some((x) => x.name === "Fattoush" && x.price === 1250), "the four good rows were added, with the Arabic-digit price read correctly");
+  check(first.find((x) => x.name === "Soup")?.status === "draft", "the item without an Arabic name is a draft");
+  const movements = await api(`/api/items/${first.find((x) => x.name === "Beef shawarma").id}/stock-log`);
+  check(movements.log[0].kind === "opening" && movements.log[0].reason === "Import" && movements.log[0].balance_after === 10, "its stock is in the stock log as an opening count with the reason Import");
+  await shot("64-import-done");
+  await noSideScroll("the import result");
+  await axe("import-done");
+  await pressText(i.undo, "button", 1200);
+  await until("!!document.querySelector('.ct-sheet .ct-diff')", "the undo", 20000);
+  check((await items()).length === 0, "undo took the whole import back");
+  check((await api("/api/items/import/last")).last === null, "and there is nothing left to undo");
+  await shot("65-import-undone");
+  await closeSheet();
+
+  // 3. 500 items from a phone
+  await openImport();
+  const started = Date.now();
+  await choose(bigPath);
+  log("preview of 500 items ready in", Date.now() - started, "ms");
+  check((await previewCounts()).startsWith("500,0,0,0"), "the preview of 500 items says 500 will be added and none are left out");
+  await shot("66-import-500-preview");
+  await pressText(i.apply(500), "button", 400);
+  await imported();
+  log("500 items imported in", Date.now() - started, "ms");
+  check((await items()).length === 500, "500 items are in the catalog");
+  await shot("67-import-500-done");
+  await closeSheet();
+  await until("document.querySelectorAll('.ct-card').length > 0", "the grid");
+  await shot("68-grid-after-500");
+
+  // 4. the export of those 500, as an Excel file, uploads again as no change
+  const exported = await js(`fetch('/api/items/export?lang=${LANG}&format=xlsx').then(r => r.arrayBuffer()).then(b => Array.from(new Uint8Array(b)))`);
+  const exportPath = `${OUT}/export.xlsx`;
+  writeFileSync(exportPath, Buffer.from(exported));
+  await openImport();
+  await choose(exportPath);
+  check((await previewCounts()) === "0,0,500,0", "the export of 500 items uploads again as 500 with no change");
+  check(await js("document.querySelector('.ct-sheet-foot .btn.volt')?.disabled === true"), "so there is nothing to import and the button is off");
+  await shot("69-import-export-roundtrip");
+  await pressText(i.discard, "button", 500);
+  await closeSheet();
+  await js("fetch('/api/items/import/undo', {method:'POST'})");
+  check((await items()).length === 0, "undo removed the 500 items");
+
+  // 5. an Excel template, uploaded as it is, shows its examples as examples
+  const template = await js(`fetch('/api/items/import/template?kind=restaurant&lang=${LANG}&format=xlsx').then(r => r.arrayBuffer()).then(b => Array.from(new Uint8Array(b)))`);
+  const templatePath = `${OUT}/template.xlsx`;
+  writeFileSync(templatePath, Buffer.from(template));
+  await go("/app/catalog", 1200);
+  await setLanguage(LANG);
+  await openImport();
+  await choose(templatePath);
+  check((await previewCounts()) === "3,0,0,0", "the Excel template uploads as three items, none wrong");
+  check(await js(`[...document.querySelectorAll('.ct-sheet details')].some(d => d.textContent.includes(${JSON.stringify(i.lookTitle(3))}))`), "the three examples are pointed out as examples");
+  await shot("70-import-template-xlsx");
+  await pressText(i.discard, "button", 500);
+
+  // 6. a zip of photos matched by file name
+  await choose(zipSheet);
+  await files(".ct-sheet input.ct-file[accept*=zip]", [zipPath]);
+  await until(`document.querySelector('.ct-sheet')?.innerText.includes(${JSON.stringify(i.zipMatched(4, 6))})`, "the zip matched", 30000);
+  await shot("71-import-zip-matched");
+  const withZip = await sheetText();
+  check(withZip.includes(i.zipUnused(1)) && withZip.includes(i.zipUnusable(1)), "the zip's unused and unusable files are counted");
+  await scrollSheet("end"); await sleep(200);
+  await shot("72-import-zip-bottom");
+  await scrollSheet(0);
+  await pressText(i.apply(4), "button", 400);
+  await imported();
+  await until(`document.querySelector('.ct-sheet')?.innerText.includes(${JSON.stringify(i.photosDone(4))})`, "the photos added", 60000);
+  const withPhotos = await items();
+  check(withPhotos.find((x) => x.name === "Pita bread")?.photos.length === 2 && withPhotos.find((x) => x.name === "Tea")?.photos.length === 1, "photos were matched by file name (two on the first item, one on the item of the same name)");
+  check(withPhotos.find((x) => x.name === "Pie")?.photos.length === 0 && withPhotos.find((x) => x.name === "Cake")?.cover.state === "ready", "an item whose photo is not in the zip has none, and the others are ready");
+  await shot("73-import-photos-done");
+  await pressText(i.undo, "button", 1000);
+  await until("!!document.querySelector('.ct-sheet .ct-diff')", "the undo of the photo import", 20000);
+  check((await items()).length === 0, "undo took the items and their photos off");
+  await closeSheet();
+
+  // 7. dark
+  await setup("dark");
+  await go("/app/catalog", 1200);
+  await setLanguage(LANG);
+  await openImport();
+  await shot("80-dark-import-home");
+  await axe("import-home-dark");
+  await choose(sheetPath);
+  await shot("81-dark-import-preview");
+  await axe("import-preview-dark");
+  await pressText(i.discard, "button", 500);
+  await closeSheet();
+  await setup("light");
+
+  // 8. an agent downloads but does not upload
+  const agentEmail = "yusuf@alnoor.example";
+  const signedIn = await js(`fetch('/api/auth/code', {method:'POST', headers:{'content-type':'application/json'}, body: JSON.stringify({email: ${JSON.stringify(agentEmail)}})}).then(r => r.json()).then(d => fetch('/api/auth/verify', {method:'POST', headers:{'content-type':'application/json'}, body: JSON.stringify({email: ${JSON.stringify(agentEmail)}, code: d.dev_code})})).then(r => r.json()).then(m => m.role)`);
+  check(signedIn === "agent", "signed in as an agent");
+  await go("/app/catalog", 1500);
+  await setLanguage(LANG);
+  await openImport();
+  check(await js("document.querySelectorAll('.ct-sheet a[download]').length === 4"), "an agent can still download the export and the templates");
+  check(await js("document.querySelectorAll('.ct-sheet input.ct-file').length === 0") && (await sheetText()).includes(i.readOnly), "but is not offered an upload, and is told why");
+  await shot("82-agent-import");
+  const refused = await js(`fetch('/api/items/import', {method:'POST', headers:{'content-type':'application/octet-stream'}, body: 'Name'}).then(r => r.status)`);
+  check(refused === 403, "and the API refuses an upload from an agent anyway");
+  await closeSheet();
+  await js("fetch('/api/auth/logout', {method:'POST'})");
+
+  // 9. a laptop
+  await send("Emulation.setDeviceMetricsOverride", { width: 1280, height: 800, deviceScaleFactor: 1, mobile: false });
+  await send("Emulation.setTouchEmulationEnabled", { enabled: false });
+  await go("/app/catalog", 1500);
+  await setLanguage(LANG);
+  // The 500 items from a laptop, too: preview, import, then undo.
+  await openImport();
+  await choose(bigPath);
+  check((await previewCounts()).startsWith("500,0,0,0"), "on a laptop the preview of 500 items says 500 will be added");
+  await pressText(i.apply(500), "button", 400);
+  await imported();
+  check((await items()).length === 500, "on a laptop 500 items are in the catalog");
+  await shot("89-laptop-import-500-done");
+  await pressText(i.undo, "button", 1200);
+  await until("!!document.querySelector('.ct-sheet .ct-diff')", "the laptop undo", 30000);
+  check((await items()).length === 0, "on a laptop undo took them all back");
+  await closeSheet();
+  await openImport();
+  await choose(sheetPath);
+  await shot("90-laptop-import-preview");
+  await axe("import-laptop", [".sh-side", ".sh-top"]);
+  await pressText(i.discard, "button", 500);
+  check(browser.problems.length === 0, `no errors in the browser's console (${browser.problems.length})`);
+  for (const p of browser.problems.slice(0, 8)) log("   ", p);
+}
+
 // ── the run ──────────────────────────────────────────────────────────────────────────────
 try {
+  if (IMPORT_ONLY) {
+    await importChecks();
+    throw new Error("__done__");
+  }
   const photos = readdirSync(PHOTOS).filter((f) => /\.jpe?g$/i.test(f)).sort();
   const dishes = photos.filter((f) => f.startsWith("dish-")), phone = photos.filter((f) => f.startsWith("phone-"));
   const chosen = [...phone.slice(0, 3), ...dishes.slice(0, Math.max(0, ITEMS - 3))].slice(0, ITEMS).map((f) => `${PHOTOS}/${f}`);
@@ -440,7 +711,7 @@ try {
   check((await groups()).length === 2, "and no second group was made");
   await shot("15d-group-refused");
   await pressText(t.cancel);
-  check(await js(`[...document.querySelectorAll('.ct-sheet section:not(.ct-staff) li.ct-card-form button')].filter(b => ${norm}(b) === ${JSON.stringify(t.pgRemove)}).length === 1`), "only the added group can be removed, not the default");
+  check(await js(`[...document.querySelectorAll('.ct-sheet section[aria-labelledby="ct-pg-title"] li.ct-card-form button')].filter(b => ${norm}(b) === ${JSON.stringify(t.pgRemove)}).length === 1`), "only the added group can be removed, not the default");
   await pressText(t.pgRename);
   await fill(t.pgNameEn, "Walk-in"); await fill(t.pgNameAr, "الزبائن");
   await pressExact(t.pgSave, "button", 900);
@@ -681,9 +952,11 @@ try {
   check(browser.problems.length === 0, `no errors in the browser's console (${browser.problems.length})`);
   for (const p of browser.problems.slice(0, 8)) log("   ", p);
 } catch (error) {
-  failures.push(String(error.message ?? error));
-  log("STOPPED:", error.message ?? error);
-  try { await shot("99-where-it-stopped"); } catch { /* the page is gone */ }
+  if (error.message !== "__done__") {
+    failures.push(String(error.message ?? error));
+    log("STOPPED:", error.message ?? error);
+    try { await shot("99-where-it-stopped"); } catch { /* the page is gone */ }
+  }
 } finally {
   await browser.close();
 }

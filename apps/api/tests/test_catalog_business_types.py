@@ -551,6 +551,21 @@ def test_remove_all_samples_is_one_step_and_keeps_what_the_owner_made(on):
     assert n >= 5
 
 
+def test_an_import_never_matches_a_sample_and_the_sample_stays_as_it_was(on):
+    from test_catalog_import import BASIC, apply_import, preview_of, table, xlsx_of
+
+    make(on, "bakery")
+    before = {i["id"]: i["price"] for i in samples_of(on)}
+    # A row with a sample's name is a new item, even when the shop asks to update names that
+    # exist: the sample is an example, not something the owner has.
+    rows = table(BASIC, ["Chocolate cake", "كيكة الشوكولاتة", "Cakes", 90])
+    done = apply_import(on, preview_of(on, xlsx_of(rows), on_duplicate="update"))
+    assert done.status_code == 200, done.text
+    mine = [i for i in listed(on)["items"] if i["name"] == "Chocolate cake" and not i["sample"]]
+    assert len(mine) == 1 and mine[0]["price"] == 9000
+    assert {i["id"]: i["price"] for i in samples_of(on)} == before  # the samples are as they were
+
+
 def test_one_shops_samples_are_not_another_shops(on):
     first, _ = make(on, "bakery")
     second, _ = make(on, "bakery")

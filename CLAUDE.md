@@ -53,7 +53,8 @@ apps/api/                     FastAPI service (Python 3.13, managed with uv)
                               weekly view), report.py (weekly report card); router.py picks the module.
                               items/ is the Catalog's engine (what a shop sells: variants, availability,
                               stock log, holds; specs/001-catalog-engine), used by orders at checkout;
-                              groups.py holds customer price groups and group prices (specs/003);
+                              groups.py holds customer price groups and group prices (specs/003); the
+                              Excel and CSV import and export are in specs/006-catalog-import-export;
                               template.py and samples.py give each business type its catalog
                               (specs/008; the words are in src/alyr/presets_catalog.py, and
                               Settings.catalog_for_new_shops decides whether new shops get it)

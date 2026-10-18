@@ -37,6 +37,9 @@ const ICON: Record<string, string> = {
   star: "M12 4l2.4 5 5.6.7-4.1 3.8 1.1 5.5L12 16.3 7 19l1.1-5.5L4 9.7 9.6 9z",
   stock: "M4 8l8-4 8 4v8l-8 4-8-4z M4 8l8 4 8-4 M12 12v8",
   retry: "M20 12a8 8 0 1 1-2.3-5.7 M20 4v5h-5",
+  download: "M12 4v11 M7 11l5 5 5-5 M5 20h14",
+  upload: "M12 16V5 M7 9l5-5 5 5 M5 20h14",
+  sheet: "M6 3h9l4 4v14H6z M15 3v4h4 M9 12h6 M9 16h6",
 };
 
 export function Icon({ name, className = "sh-ico" }: { name: string; className?: string }) {
