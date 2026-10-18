@@ -32,7 +32,10 @@ const post = (body: unknown): RequestInit => ({
 export type Wanted = { q?: string; category?: string | null; offset?: number; limit?: number };
 
 // The customer's link goes in a header, not in the address, so no request log of ours holds it.
-const asCustomer = (token: string | null): RequestInit => (token ? { headers: { "x-order-link": token } } : {});
+// A token is plain ASCII; anything else cannot be a header (fetch would throw), and cannot be
+// ours, so it is sent as one the API will call invalid.
+const headerToken = (token: string) => (/^[\w.-]{1,200}$/.test(token) ? token : "invalid");
+const asCustomer = (token: string | null): RequestInit => (token ? { headers: { "x-order-link": headerToken(token) } } : {});
 
 export function loadStore(slug: string, token: string | null, table: string, wanted: Wanted = {}): Promise<Store> {
   const query = new URLSearchParams();

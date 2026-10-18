@@ -50,6 +50,37 @@ def test_a_table_label_is_signed_with_the_token():
     assert links.read(long, DEMO_TENANT_ID, now=NOW, settings=settings()).table == "9" * 20
 
 
+def test_a_table_label_keeps_no_control_characters():
+    assert links.clean_table("7\x00") == "7"
+    assert links.clean_table("A\x07\n 3") == "A 3"
+    assert links.clean_table("\x00\x01") == ""
+    token = links.mint(DEMO_TENANT_ID, CONTACT, table="\x00A7", now=NOW, settings=settings())
+    assert links.read(token, DEMO_TENANT_ID, now=NOW, settings=settings()).table == "A7"
+
+
+def test_the_last_character_of_the_signature_cannot_be_changed():
+    token = links.mint(DEMO_TENANT_ID, CONTACT, now=NOW, settings=settings())
+    for swap in ("A", "B", "Q", "g", "-", "_"):
+        if token[-1] == swap:
+            continue
+        with pytest.raises(links.LinkError):
+            links.read(token[:-1] + swap, DEMO_TENANT_ID, now=NOW, settings=settings())
+
+
+def test_the_dev_key_warns_when_the_page_is_not_on_this_machine(caplog):
+    with caplog.at_level("WARNING", logger="alyr.links"):
+        links.secret(settings(public_web_url="https://demo.example"))
+    assert "ALYR_LINK_SECRET is empty" not in caplog.text  # the test settings have a secret
+    quiet = Settings(_env_file=None, env="local", link_secret="", public_web_url="http://localhost:3000")
+    with caplog.at_level("WARNING", logger="alyr.links"):
+        links.secret(quiet)
+    assert "public built-in key" not in caplog.text
+    loud = Settings(_env_file=None, env="local", link_secret="", public_web_url="https://demo.example")
+    with caplog.at_level("WARNING", logger="alyr.links"):
+        links.secret(loud)
+    assert "public built-in key" in caplog.text
+
+
 def test_a_tampered_token_is_refused():
     token = links.mint(DEMO_TENANT_ID, CONTACT, table="7", now=NOW, settings=settings())
     body, mac = token.split(".")
@@ -193,6 +224,47 @@ def test_an_expired_token_says_how_to_get_a_new_link(client):
     })
     assert (refused.status_code, detail(refused)["code"]) == (403, "expired_link")
     assert detail(refused)["message_ar"]
+
+
+def test_a_bad_token_on_the_item_page_and_the_refresh_is_the_public_page(client):
+    contact, good = as_customer(client)
+    item = mk(client, name="Cable", name_ar="كابل", price=1000)
+    group = make_group(client)
+    set_price(client, item, group, 800)
+    put_in(client, contact, group)
+    for bad in (tamper(good), "invalid", "x" * 150):
+        one = client.get(f"{STORE}/items/{item['id']}", headers={"x-order-link": bad}).json()
+        assert one["item"]["price"] == 1000
+        live = client.post(f"{STORE}/live", json={"ids": [item["id"]]},
+                           headers={"x-order-link": bad}).json()
+        assert live["group"]["is_default"] is True
+
+
+def test_a_header_longer_than_a_token_is_refused_not_trusted(client):
+    long = client.get(STORE, headers={"x-order-link": "a" * 500})
+    assert long.status_code == 422
+
+
+def test_a_page_that_depends_on_the_link_is_never_kept_by_a_shared_cache(client):
+    answer = client.get(STORE)
+    assert answer.headers["cache-control"] == "private, no-store"
+    assert "x-order-link" in answer.headers["vary"].lower()
+    item = mk(client, name="Cable", name_ar="كابل", price=1000)
+    assert client.get(f"{STORE}/items/{item['id']}").headers["cache-control"] == "private, no-store"
+
+
+def test_a_token_whose_contact_is_no_longer_a_customer_opens_the_public_page(client):
+    contact, token = as_customer(client)
+    from test_consent import owner_sql
+    owner_sql("update contacts set role = 'staff' where id = $1", UUID(contact["id"]))
+    shown = client.get(STORE, params={"t": token}).json()
+    assert shown["customer"] is None and shown["link"]["state"] == "invalid"
+    # A contact that is gone altogether cannot order.
+    gone = mint(uuid4())
+    item = mk(client, name="Cable", name_ar="كابل", price=1000)
+    refused = client.post(f"{STORE}/orders", json={
+        "token": gone, "payment": "link", "items": [line(item)]})
+    assert refused.status_code >= 400 and detail(refused)["code"] == "unknown_customer"
 
 
 def test_a_bare_contact_id_grants_nothing(client):

@@ -421,7 +421,9 @@ export default function Order({ slug, token, table, initial, lang: first, focusI
   const flaggedCount = cart.filter((l) => flagged.has(l.key)).length;
   const lines = cart;
   const whatsapp = store.shop.whatsapp;
-  const prefill = table ? (lang === "ar" ? `طلب طاولة ${table}` : `Order table ${table}`) : t.prefillOrder;
+  // The label the server cleaned (`store.table`), not the raw address: a printed code is the
+  // shop's, but anyone can type an address.
+  const prefill = store.table ? (lang === "ar" ? `طلب طاولة ${store.table}` : `Order table ${store.table}`) : t.prefillOrder;
   const wa = whatsapp ? `https://wa.me/${whatsapp}?text=${encodeURIComponent(prefill)}` : "";
   const catList = store.categories;
   const grouped = !filtering && layout === "cards";

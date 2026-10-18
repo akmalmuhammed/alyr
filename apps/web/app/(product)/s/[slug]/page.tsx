@@ -50,11 +50,13 @@ export async function generateMetadata({ params, searchParams }: Props): Promise
   if (one(query.item)) asked.set("item", one(query.item));
   if (one(query.cat)) asked.set("category", one(query.cat));
   const { body } = await get<Share>(`/api/store/${encodeURIComponent(slug)}/share?${asked}`);
-  if (!body) return { title: "Order" };
+  if (!body) return { title: "Order", referrer: "no-referrer" };
   const image = body.image ? [{ url: body.image.url, width: body.image.width, height: body.image.height, alt: body.title }] : undefined;
   return {
     title: body.title,
     description: body.description,
+    // A customer's own link is in the address (`?t=`): no page it opens may be told it.
+    referrer: "no-referrer",
     alternates: { canonical: body.url },
     openGraph: { type: "website", title: body.title, description: body.description, url: body.url, siteName: body.site, images: image },
     twitter: {
@@ -69,7 +71,10 @@ export default async function Page({ params, searchParams }: Props) {
   const { slug } = await params;
   const query = await searchParams;
   // The link may carry a token; it is never logged here and goes only to the API.
-  const token = one(query.t) || null;
+  // (Anything that cannot be a token goes to the API as one it will call invalid, so the
+  // page says the link is not valid instead of failing.)
+  const rawToken = one(query.t);
+  const token = rawToken ? (/^[\w.-]{1,200}$/.test(rawToken) ? rawToken : "invalid") : null;
   const table = one(query.table).slice(0, 40);
   const asked = new URLSearchParams({ limit: "48" });
   if (table) asked.set("table", table);

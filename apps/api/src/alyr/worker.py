@@ -10,6 +10,8 @@ switched off, as it should be in production.
 import asyncio
 import logging
 
+from alyr.config import get_settings
+from alyr.core.links import check_secret as check_link_secret
 from alyr.main import create_app
 from alyr.modules import report
 from alyr.modules.orders import holds as order_holds
@@ -55,6 +57,9 @@ async def keep_meters_fresh(media) -> None:
 
 async def main() -> None:
     logging.basicConfig(level=logging.INFO, format="%(asctime)s %(name)s %(message)s")
+    # The worker answers customers too ("order" in the chat makes a signed link), so it
+    # refuses to start without the link secret just as the API does (ALY-112).
+    check_link_secret(get_settings())
     app = create_app()
     await app.state.db.connect()
     scheduler = asyncio.create_task(keep_reports_scheduled(app.state.db))

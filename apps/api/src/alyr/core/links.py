@@ -28,11 +28,15 @@ when the app starts) and refuses to make or read a link (`secret`).
 import base64
 import hashlib
 import hmac
+import logging
 import time
 from dataclasses import dataclass
+from urllib.parse import urlparse
 from uuid import UUID
 
 from alyr.config import Settings, get_settings
+
+log = logging.getLogger("alyr.links")
 
 VERSION = 1
 CONTEXT = b"alyr-order-link-v1\x00"
@@ -71,7 +75,12 @@ def _b64(data: bytes) -> str:
 def _unb64(text: str) -> bytes:
     if not text.isascii() or not all(c.isalnum() or c in "-_" for c in text):
         raise LinkError("malformed")
-    return base64.urlsafe_b64decode(text + "=" * (-len(text) % 4))
+    raw = base64.urlsafe_b64decode(text + "=" * (-len(text) % 4))
+    # One spelling per token: the last character of a text has bits that mean nothing, and a
+    # token with different ones must not pass for the same token.
+    if _b64(raw) != text:
+        raise LinkError("malformed")
+    return raw
 
 
 def secret(settings: Settings | None = None) -> bytes:
@@ -80,11 +89,23 @@ def secret(settings: Settings | None = None) -> bytes:
     value = settings.link_secret
     if not value and settings.env == "local":
         value = DEV_SECRET
+        if not _on_this_machine(settings.public_web_url):
+            # The built-in key is public (it is in the repository). Fine on one machine; not
+            # for a demo shown through a tunnel, where anyone could make a link.
+            log.warning(
+                "ALYR_LINK_SECRET is empty and the public web address is not this machine: "
+                "order links are signed with the public built-in key. Set ALYR_LINK_SECRET."
+            )
     if len(value) < MIN_SECRET:
         raise LinkSecretMissing(
             f"ALYR_LINK_SECRET must be set to at least {MIN_SECRET} random characters"
         )
     return value.encode("utf-8")
+
+
+def _on_this_machine(url: str) -> bool:
+    host = (urlparse(url).hostname or "").lower()
+    return host in ("localhost", "127.0.0.1", "::1", "") or host.endswith(".localhost")
 
 
 def check_secret(settings: Settings | None = None) -> None:
@@ -93,8 +114,10 @@ def check_secret(settings: Settings | None = None) -> None:
 
 
 def clean_table(label: str | None) -> str:
-    """A table label as a person writes it ("7", "A3"): trimmed, one line, short."""
-    return " ".join((label or "").split())[:MAX_TABLE]
+    """A table label as a person writes it ("7", "A3"): trimmed, one line, short, with no
+    control characters (a NUL would be refused by the database, and none belongs on a card)."""
+    printable = "".join(c for c in (label or "") if c.isprintable() or c.isspace())
+    return " ".join(printable.split())[:MAX_TABLE]
 
 
 def _mac(key: bytes, tenant_id: UUID, payload: bytes) -> bytes:

@@ -18,7 +18,7 @@ from datetime import date
 from urllib.parse import quote
 from uuid import UUID
 
-from fastapi import APIRouter, Header, HTTPException, Query, Request
+from fastapi import APIRouter, Header, HTTPException, Query, Request, Response
 from pydantic import BaseModel, Field
 
 from alyr.config import get_settings
@@ -150,6 +150,13 @@ def _customer_link(token: str | None, tenant_id: UUID, *, required: bool) -> lin
     return link
 
 
+def _personal(response: Response) -> None:
+    """What these answers say depends on the link (the customer's name and prices), which
+    is in a header, not in the address: no shared cache may keep one for someone else."""
+    response.headers["Cache-Control"] = "private, no-store"
+    response.headers["Vary"] = "X-Order-Link"
+
+
 def _link_view(state: str) -> dict:
     code = {"invalid": "bad_link", "expired": "expired_link"}.get(state)
     return {
@@ -182,7 +189,8 @@ async def _identify(conn, link: links.Link | None) -> dict | None:
 
 @router.get("/{slug}")
 async def storefront(
-    slug: str, request: Request, t: str | None = Query(default=None, max_length=200),
+    slug: str, request: Request, response: Response,
+    t: str | None = Query(default=None, max_length=200),
     x_order_link: str | None = Header(default=None, max_length=200),
     q: str = Query(default="", max_length=80),
     category: str | None = Query(default=None, max_length=80),
@@ -192,6 +200,7 @@ async def storefront(
 ) -> dict:
     """The order page: the shop, its choices for the page, its categories, the customer (if
     the link is theirs) and one page of items. With no `limit`, every item."""
+    _personal(response)
     shop = await _shop(request, slug)
     link, state = _link_state(x_order_link or t, shop["id"])
     async with request.app.state.db.tenant(shop["id"]) as conn:
@@ -228,10 +237,12 @@ async def storefront(
 
 @router.get("/{slug}/items/{item_id}")
 async def one_item(
-    slug: str, item_id: UUID, request: Request, t: str | None = Query(default=None, max_length=200),
+    slug: str, item_id: UUID, request: Request, response: Response,
+    t: str | None = Query(default=None, max_length=200),
     x_order_link: str | None = Header(default=None, max_length=200),
 ) -> dict:
     """One item with every photo, for its sheet."""
+    _personal(response)
     shop = await _shop(request, slug)
     link, _ = _link_state(x_order_link or t, shop["id"])
     async with request.app.state.db.tenant(shop["id"]) as conn:

@@ -12,7 +12,7 @@ Status: built in ALY-112 (package 4 of the Catalog, ALY-101). Decision: D-039 ("
 | Who can open it | Anyone | Anyone who holds it, until it runs out |
 | Prices | The normal prices (the default group's) | The customer's own (their price group) |
 | Can order | No. It offers "Order on WhatsApp" to the shop's number, with the word the chat answers (`Order`, or `Order table 7`) | Yes, by link or on account |
-| Carries a customer | Never | A signed token, never the contact's ID |
+| Carries a customer | Never | A signed token (the contact's ID is inside it, readable by whoever holds the link; alone it grants nothing on this page) |
 | Made by | The Share sheet in the workspace Catalog; the QR codes | The order chat (`modules/orders/chat.py`), the seed |
 
 A public link never carries a contact ID or a token. A bare `?c=<contact id>` (the old link) grants nothing: the API ignores it, shows the normal prices and refuses an order (there is no compatibility shim; there were no real customers).
