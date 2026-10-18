@@ -5,6 +5,7 @@ returns, and only if the customer agreed). English and Arabic. Nothing reaches M
 import re
 from uuid import uuid4
 
+from alyr.core import links
 from alyr.seed import AHMED_PHONE, DEMO_SLUG, DEMO_TENANT_ID, STAFF_PHONE
 from catalog_wa import (  # noqa: F401  (the autouse fixture is used by name)
     ARABIC,
@@ -20,6 +21,14 @@ from test_items import counted, fresh, line, mk, on_shop, order, people
 from test_media import upload
 
 BILAL_PHONE = "97455500002"
+
+
+def order_link_for(body: str) -> links.Link:
+    """Whom the order link in a message is for. It carries a signed token (ALY-112), never the
+    customer's ID, and the token reads back at this shop only."""
+    found = re.search(rf"/s/{DEMO_SLUG}\?t=(\S+)", body)
+    assert found, body
+    return links.read(found.group(1), DEMO_TENANT_ID)
 
 
 def with_photo(client, item: dict, seed: int = 1) -> dict:
@@ -61,7 +70,9 @@ def test_an_item_name_brings_its_photo_with_the_price_and_an_order_button(client
     assert kind == "image/jpeg" and size > 1000
     # Tapping Order gives the order link, as it always did.
     link = talk(client, AHMED_PHONE, reply_id="order")[-1]
-    assert f"/s/{DEMO_SLUG}?c=" in link["body"]
+    [(ahmed,)] = owner_sql("select id from contacts where phone = $1", AHMED_PHONE)
+    assert order_link_for(link["body"]).contact_id == ahmed
+    assert "?c=" not in link["body"]
     assert fresh(client, item)["status"] == "live"
 
 
@@ -141,7 +152,7 @@ def test_menu_lists_what_can_be_ordered_with_the_order_link(client):
     off = mk(client, name="Hummus", name_ar="حمص", price=600)
     client.post(f"/api/items/{off['id']}/switch", json={"available": False})
     menu = talk(client, AHMED_PHONE, "menu")[-1]
-    assert menu["kind"] == "list" and re.search(rf"/s/{DEMO_SLUG}\?c=\S+", menu["body"])
+    assert menu["kind"] == "list" and order_link_for(menu["body"])
     assert menu["body"].startswith("Here is our menu from Al Noor Electricals")
     titles = [r["title"] for r in choices(menu)]
     assert titles == ["Chicken Shawarma", "Falafel"]  # what can be ordered now, in menu order
@@ -250,7 +261,7 @@ def test_scenario_13_the_customer_agrees_once_and_is_told_once_when_it_is_back(c
     told = sent(client, AHMED_PHONE)[count:]
     assert len(told) == 1 and told[0]["kind"] == "text"
     assert told[0]["body"].startswith("Good news from Al Noor Electricals: Shawarma is back")
-    assert re.search(rf"/s/{DEMO_SLUG}\?c=\S+", told[0]["body"])
+    assert order_link_for(told[0]["body"])
     assert [w["status"] for w in watches()] == ["sent"]
 
     # It sells out and comes back again: the request is closed, so there is no second message.

@@ -14,6 +14,7 @@ customers use ALYR. From the 17 Oct 2026 audit (`docs/audit/2026-10-17.md`).
 - [ ] `ALYR_ENV=production` set explicitly; the stand-in payment route, simulator and API docs answer 404
 - [ ] Encrypted daily backups, and a restore rehearsed in the last 30 days, written up
 - [ ] Secrets in the key vault, not in a file on a laptop
+- [ ] `ALYR_LINK_SECRET` set (32 or more random characters; the API will not start without it outside `ALYR_ENV=local`). On the founder's laptop, set it in `apps/api/.env` before the tunnel serves customers: the built-in development value is public (ALY-112)
 - [ ] Postgres not reachable from the internet; only the web app and webhook are public
 - [ ] `docs/data-residency.md` reviewed against what really leaves Qatar
 

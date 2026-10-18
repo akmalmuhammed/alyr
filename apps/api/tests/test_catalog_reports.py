@@ -21,6 +21,7 @@ from alyr.modules.items import demand, spells
 from alyr.modules.items import report as catalog_report
 from alyr.seed import AHMED_PHONE, DEMO_TENANT_ID
 from catalog_wa import catalog_module_on, talk  # noqa: F401  (the autouse fixture is used by name)
+from order_links import token
 from test_consent import owner_sql
 from test_items import STORE, counted, line, mk, on_shop, order, pay, people
 from test_orders import customer
@@ -466,7 +467,7 @@ def test_a_cart_check_with_a_sold_out_item_is_noted_once_per_customer_item_and_d
     who = people(client, 2)[1]
     for _ in range(3):  # trying three times in one day is one ask
         checked = client.post(f"{STORE}/cart/check", json={
-            "items": [line(item, 1), line(other, 1)], "contact_id": who["id"]})
+            "items": [line(item, 1), line(other, 1)], "token": token(who["id"])})
         assert checked.status_code == 200 and not checked.json()["ok"]
     found = asks()
     assert [(str(r["contact_id"]), str(r["item_id"]), r["via"]) for r in found] == [
@@ -486,7 +487,7 @@ def test_a_switched_off_item_counts_but_a_price_change_or_a_schedule_does_not(cl
     priced = mk(client, name="Figs", name_ar="تين", price=500)
     who = people(client, 1)[0]
     checked = client.post(f"{STORE}/cart/check", json={
-        "items": [line(switch), line(priced, 1, expected_price=900)], "contact_id": who["id"]})
+        "items": [line(switch), line(priced, 1, expected_price=900)], "token": token(who["id"])})
     codes = {row["item_id"]: row["code"] for row in checked.json()["lines"] if not row["ok"]}
     assert codes == {switch["id"]: "unavailable", priced["id"]: "price_changed"}
     assert [str(r["item_id"]) for r in asks()] == [switch["id"]]
@@ -509,7 +510,7 @@ def test_same_as_last_time_notes_what_could_not_be_ordered_again(client):
     stays = mk(client, name="Figs", name_ar="تين")
     who = people(client, 2)[0]
     assert order(client, who, [line(gone, 1), line(stays, 1)]).status_code == 200
-    again = client.post(f"{STORE}/orders/repeat", json={"contact_id": who["id"],
+    again = client.post(f"{STORE}/orders/repeat", json={"token": token(who["id"]),
                                                          "payment": "link"})
     assert again.status_code == 200 and len(again.json()["left_out"]) == 1
     assert [str(r["item_id"]) for r in asks()] == [gone["id"]]

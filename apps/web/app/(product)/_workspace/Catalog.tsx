@@ -17,6 +17,7 @@ import { CatalogImport } from "./CatalogImport";
 import { AddSheet, WalkThrough } from "./CatalogAdd";
 import { CatalogBulk } from "./CatalogBulk";
 import { CatalogSettings } from "./CatalogSettings";
+import { CatalogShare, type Target } from "./CatalogShare";
 import { CatalogStock } from "./CatalogStock";
 
 type Sheet =
@@ -26,7 +27,8 @@ type Sheet =
   | { kind: "walk"; ids: string[] }
   | { kind: "bulk" }
   | { kind: "import" }
-  | { kind: "settings" };
+  | { kind: "settings" }
+  | { kind: "share"; target: Target };
 
 const PAGE = 60;
 const FILTERS = ["all", "draft", "sold_out", "low_stock", "archived", "sample"] as const;
@@ -260,6 +262,18 @@ export function Catalog({ lang, title, show = null }: { lang: Lang; title: strin
     );
   }
 
+  /** Share this item: its link and QR code. Only an item that is on sale has a page to open. */
+  function renderShare(item: Item) {
+    if (item.status !== "live") return null;
+    const name = nameOf(item, lang) || t.untitled;
+    return (
+      <button type="button" className="sh-iconbtn ct-share-btn" aria-label={t.shareOpen(name)} title={t.share}
+        onClick={() => setSheet({ kind: "share", target: { kind: "item", id: item.id, name } })}>
+        <Icon name="share" />
+      </button>
+    );
+  }
+
   function openOrPick(item: Item) {
     if (selecting) togglePick(item.id);
     else setSheet({ kind: "edit", id: item.id });
@@ -288,7 +302,7 @@ export function Catalog({ lang, title, show = null }: { lang: Lang; title: strin
             )}
           </span>
         </button>
-        {!selecting && item.status === "live" && <div className="ct-card-foot">{renderSwitch(item)}</div>}
+        {!selecting && item.status === "live" && <div className="ct-card-foot">{renderSwitch(item)}{renderShare(item)}</div>}
       </li>
     );
   }
@@ -334,7 +348,7 @@ export function Catalog({ lang, title, show = null }: { lang: Lang; title: strin
             )}
           </span>
         </button>
-        {!selecting && <div className="ct-row-end">{renderSwitch(item)}</div>}
+        {!selecting && <div className="ct-row-end">{renderSwitch(item)}{renderShare(item)}</div>}
       </li>
     );
   }
@@ -371,6 +385,11 @@ export function Catalog({ lang, title, show = null }: { lang: Lang; title: strin
           </button>
         )}
         <span className="ct-grow" />
+        {!empty && (
+          <button type="button" className="btn ghost ct-btn" onClick={() => setSheet({ kind: "share", target: { kind: "shop" } })}>
+            <Icon name="share" />{t.share}
+          </button>
+        )}
         <button type="button" className="btn ghost ct-btn" onClick={() => setSheet({ kind: "import" })}>
           <Icon name="sheet" />{t.imp.open}
         </button>
@@ -449,6 +468,12 @@ export function Catalog({ lang, title, show = null }: { lang: Lang; title: strin
                 {categories.map((c) => <option key={c.name} value={c.name}>{categoryName(c, lang)}</option>)}
                 <option value="">{t.noCategory}</option>
               </select>
+              {category !== null && category !== "" && (
+                <button type="button" className="sh-iconbtn ct-share-btn" aria-label={t.shareOpen(categoryLabel(category))} title={t.share}
+                  onClick={() => setSheet({ kind: "share", target: { kind: "category", name: category } })}>
+                  <Icon name="share" />
+                </button>
+              )}
               <span className="ct-grow" />
               <div className="ct-seg" role="group" aria-label={t.view}>
                 <button type="button" aria-pressed={view === "grid"} onClick={() => chooseView("grid")} aria-label={t.asPhotos} title={t.asPhotos}><Icon name="grid" /></button>
@@ -526,6 +551,10 @@ export function Catalog({ lang, title, show = null }: { lang: Lang; title: strin
         <CatalogBulk lang={lang} ids={pickedNow} canEdit={access.can_edit} categories={categories} push={push}
           onClose={() => setSheet(null)}
           onDone={() => { setSheet(null); stopSelecting(); void load(); }} />
+      )}
+      {sheet?.kind === "share" && (
+        <CatalogShare lang={lang} target={sheet.target} categories={categories} push={push}
+          onClose={() => setSheet(null)} onSettings={() => setSheet({ kind: "settings" })} />
       )}
       {sheet?.kind === "import" && (
         <CatalogImport lang={lang} canEdit={access.can_edit}

@@ -14,6 +14,7 @@ import pytest
 
 from alyr import presets, presets_catalog
 from alyr.seed import AGENT_EMAIL, DEMO_TENANT_ID
+from order_links import token
 from test_consent import owner_sql
 from test_onboarding import BASE, new_business
 from test_sign_in import sign_in
@@ -365,7 +366,8 @@ def test_a_wholesale_shop_made_with_the_setting_on_orders_on_account_at_its_grou
                   json={"group_id": group_id}).status_code == 200
 
     # The order page is open, in the wholesale layout, with the customer's own price.
-    page = on.get(f"/api/store/{slug}", params={"c": contact}).json()
+    mine = token(contact, tenant)  # the customer's own link (ALY-112): a signed token
+    page = on.get(f"/api/store/{slug}", params={"t": mine}).json()
     assert page["catalog"]["layout"]["style"] == "table"
     assert page["catalog"]["section"]["name"] == "Price list"
     assert page["customer"]["can_use_account"] is True
@@ -376,7 +378,7 @@ def test_a_wholesale_shop_made_with_the_setting_on_orders_on_account_at_its_grou
     # On account at the group's price (the minimum order is two).
     def place(quantity, price=800):
         return on.post(f"/api/store/{slug}/orders", json={
-            "contact_id": contact, "payment": "account",
+            "token": mine, "payment": "account",
             "items": [{"product_id": cable["id"], "quantity": quantity, "expected_price": price}]})
 
     placed = place(4)
@@ -392,7 +394,7 @@ def test_a_wholesale_shop_made_with_the_setting_on_orders_on_account_at_its_grou
     # the account.
     assert place(1).status_code == 422
     owner_sql("update contacts set credit_limit = 0 where id = $1", UUID(contact))
-    assert on.get(f"/api/store/{slug}", params={"c": contact}).json()[
+    assert on.get(f"/api/store/{slug}", params={"t": mine}).json()[
         "customer"]["can_use_account"] is False
     refused = place(2)
     assert refused.status_code == 403 and refused.json()["detail"]["code"] == "no_account"

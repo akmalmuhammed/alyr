@@ -18,6 +18,8 @@ echo "== api: known vulnerabilities"
 (cd "$root/apps/api" && uvx pip-audit --progress-spinner off)
 echo "== web: lint"
 (cd "$root/apps/web" && pnpm lint)
+echo "== web: tests (search folding, prices, cart, QR codes)"
+(cd "$root/apps/web" && pnpm test)
 echo "== web: types"
 (cd "$root/apps/web" && pnpm exec tsc --noEmit)
 echo "== web: known vulnerabilities"

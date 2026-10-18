@@ -28,7 +28,7 @@ from zoneinfo import ZoneInfo
 import asyncpg
 
 from alyr.config import get_settings
-from alyr.core import consent
+from alyr.core import consent, links
 from alyr.core.normalise import fmt_qar
 from alyr.db import Database
 from alyr.modules import report
@@ -442,7 +442,8 @@ class Bakery:
             [(order_id, pid, name, price, quantity) for pid, name, price, quantity in lines],
         )
         lang = person.lang
-        url = f"{self.web_url}/s/{self.slug}?c={person.id}"
+        # The customer's own link carries a signed token, like the one the chat sends.
+        url = links.order_url(self.web_url, self.slug, QIRFA_TENANT_ID, person.id)
         if kind != "account":
             asked = at - timedelta(minutes=rng.randint(3, 14))
             self.say(person, asked, rng.choice(WANT[lang]))

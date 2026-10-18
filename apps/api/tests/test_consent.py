@@ -8,6 +8,7 @@ import asyncpg
 from alyr.channels.base import OutboundMessage
 from alyr.seed import AHMED_PHONE, DEMO_SLUG, DEMO_TENANT_ID
 from conftest import OWNER_DSN
+from order_links import token
 
 
 def say(client, phone, text="", reply_id=""):
@@ -91,7 +92,7 @@ def test_the_outbound_layer_blocks_a_template_to_someone_who_said_stop(client):
     )
     order = client.post(
         f"/api/store/{DEMO_SLUG}/orders",
-        json={"contact_id": ahmed(client)["id"], "payment": "link",
+        json={"token": token(ahmed(client)["id"]), "payment": "link",
               "items": [{"product_id": switch["id"], "quantity": 1}]},
     )
     assert order.status_code == 200

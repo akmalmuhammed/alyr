@@ -17,7 +17,7 @@ from uuid import UUID
 import asyncpg
 
 from alyr.core import team
-from alyr.core.normalise import fmt_qar
+from alyr.core.normalise import fmt_qar, western_digits
 from alyr.core.team import Actor
 from alyr.modules.items import availability, events, stock
 from alyr.modules.items.clock import ShopClock
@@ -952,38 +952,70 @@ async def save_categories(conn: asyncpg.Connection, rows: list[dict]) -> list[di
 
 # ---------------------------------------------------------------------- settings
 
+
+
+def whatsapp_digits(value: str) -> str:
+    """The number customers message, as digits with the country code (what `wa.me` takes).
+    A Qatar number typed without its code gets 974. Empty clears it."""
+    digits = "".join(c for c in western_digits(value) if c.isdigit())
+    if digits.startswith("00"):
+        digits = digits[2:]
+    if len(digits) == 8:
+        digits = "974" + digits
+    if (digits or value.strip()) and not 10 <= len(digits) <= 15:
+        raise ItemError(
+            "bad_whatsapp",
+            "Type the number with its country code, for example +974 5555 0100.",
+        )
+    return digits
+
+
 async def settings(conn: asyncpg.Connection) -> dict:
     """What the shop chooses about its catalog: how long an unpaid pay-link order holds its
     stock, when its day begins (which is when daily limits start again), whether agents may
-    edit items, and the number at which counted stock is called low."""
+    edit items, the number at which counted stock is called low, and three choices for the
+    customers' order page: sold-out items greyed or left out, the compact wholesale table
+    for everyone, and the WhatsApp number a shared link sends customers to."""
     row = await conn.fetchrow(
-        "select hold_minutes, day_starts, agents_edit_items, low_stock_at from shop_settings"
+        "select hold_minutes, day_starts, agents_edit_items, low_stock_at, sold_out_display, "
+        "wholesale_layout, whatsapp_number from shop_settings"
     )
     return {
         "hold_minutes": row["hold_minutes"] if row else 30,
         "day_starts": (row["day_starts"] if row else time(0)).strftime("%H:%M"),
         "agents_edit_items": row["agents_edit_items"] if row else False,
         "low_stock_at": row["low_stock_at"] if row else 5,
+        "sold_out_display": row["sold_out_display"] if row else "grey",
+        "wholesale_layout": row["wholesale_layout"] if row else False,
+        "whatsapp_number": row["whatsapp_number"] if row else "",
     }
 
 
 async def save_settings(
     conn: asyncpg.Connection, hold_minutes: int | None, day_starts: time | None,
     agents_edit_items: bool | None = None, low_stock_at: int | None = None,
+    wholesale_layout: bool | None = None, whatsapp_number: str | None = None,
 ) -> dict:
+    """Save the shop's catalog settings. How a sold-out item looks on the order page is the
+    type's own setting (`template.save`, ALY-107); the page only reads it."""
     if hold_minutes is not None and not 5 <= hold_minutes <= 1440:
         raise ItemError("bad_hold", "A hold lasts between 5 minutes and 24 hours.")
     if low_stock_at is not None and not 0 <= low_stock_at <= 100_000:
         raise ItemError("bad_low_stock", "Choose a low-stock number between 0 and 100,000.")
+    number = whatsapp_digits(whatsapp_number) if whatsapp_number is not None else None
     await conn.execute(
-        "insert into shop_settings (hold_minutes, day_starts, agents_edit_items, low_stock_at) "
+        "insert into shop_settings (hold_minutes, day_starts, agents_edit_items, low_stock_at, "
+        "wholesale_layout, whatsapp_number) "
         "values (coalesce($1::int, 30), coalesce($2::time, '00:00'), "
-        "coalesce($3::boolean, false), coalesce($4::int, 5)) "
+        "coalesce($3::boolean, false), coalesce($4::int, 5), "
+        "coalesce($5::boolean, false), coalesce($6::text, '')) "
         "on conflict (tenant_id) do update set "
         "hold_minutes = coalesce($1::int, shop_settings.hold_minutes), "
         "day_starts = coalesce($2::time, shop_settings.day_starts), "
         "agents_edit_items = coalesce($3::boolean, shop_settings.agents_edit_items), "
-        "low_stock_at = coalesce($4::int, shop_settings.low_stock_at)",
-        hold_minutes, day_starts, agents_edit_items, low_stock_at,
+        "low_stock_at = coalesce($4::int, shop_settings.low_stock_at), "
+        "wholesale_layout = coalesce($5::boolean, shop_settings.wholesale_layout), "
+        "whatsapp_number = coalesce($6::text, shop_settings.whatsapp_number)",
+        hold_minutes, day_starts, agents_edit_items, low_stock_at, wholesale_layout, number,
     )
     return await settings(conn)

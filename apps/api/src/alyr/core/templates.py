@@ -249,7 +249,7 @@ CATALOGUE: dict[str, Template] = {
         "{{3}} . Send STOP to stop these updates.",
         "أخبار سارة من {{1}}: عاد «{{2}}» إلى المخزون كما طلبت. يمكنك الطلب من هنا: {{3}} . "
         "أرسل «إيقاف» لإيقاف هذه الرسائل.",
-        ("Al Noor Electricals", "Cable 2.5 mm", "https://app.alyr.online/s/al-noor?c=a"),
+        ("Al Noor Electricals", "Cable 2.5 mm", "https://app.alyr.online/s/al-noor?t=a"),
         consent="back_in_stock",
     ),
 }

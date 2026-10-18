@@ -39,6 +39,15 @@ class Settings(BaseSettings):
     # Where payment links point. The web app serves /pay/...
     public_web_url: str = "http://localhost:3100"
 
+    # Signs the order links sent to one customer (HMAC-SHA256, core/links.py, ALY-112). Only
+    # a local machine may leave it empty (a built-in development value is used); anywhere
+    # else the API refuses to start and refuses to make or read a link without it. At least
+    # 32 characters, random, never in git. Changing it ends every link already sent.
+    link_secret: str = ""
+    # How long an order link works. A customer who opens an older one is told how to get a
+    # new one (they ask for one in their chat, as they did for the first).
+    link_days: int = 60
+
     meta_app_secret: str = ""
     meta_verify_token: str = ""
     meta_access_token: str = ""

@@ -39,6 +39,8 @@ type OrderRow = {
   id: string; number: number; status: string; payment: string; total_text: string;
   customer: string; items: { name: string; quantity: number; line_text: string; sku?: string }[];
   assigned: Person | null;
+  // The table the order is for, from a QR code on a table ("" for none).
+  table?: string;
   // The price group the order was charged under, as named then (null for orders before groups).
   price_group?: { name: string; name_ar: string; is_default: boolean } | null;
 };
@@ -104,7 +106,7 @@ const T = {
     when: "When", service: "Service", came: "Came", noShow: "No-show", cancel: "Cancel",
     bk: { booked: "Booked", completed: "Came", cancelled: "Cancelled", no_show: "No-show" } as Record<string, string>,
     tabLedger: "Credit ledger", tabOrders: "Orders", ordersSub: "Placed through the order link",
-    noOrders: "No orders yet. In the chat, tap \"Place an order\" as a customer.",
+    noOrders: "No orders yet. In the chat, tap \"Place an order\" as a customer.", table: (label: string) => `Table ${label}`,
     orderNo: "Order", items: "Items", payment: "Payment", status: "Status",
     pay: { unpaid: "Not paid", paid: "Paid", on_account: "On account" } as Record<string, string>,
     st: { new: "New", confirmed: "Confirmed", ready: "Ready", done: "Done", cancelled: "Cancelled" } as Record<string, string>,
@@ -172,7 +174,7 @@ const T = {
     when: "الموعد", service: "الخدمة", came: "حضر", noShow: "لم يحضر", cancel: "إلغاء",
     bk: { booked: "محجوز", completed: "حضر", cancelled: "ملغي", no_show: "لم يحضر" } as Record<string, string>,
     tabLedger: "دفتر الديون", tabOrders: "الطلبات", ordersSub: "الطلبات الواردة من رابط الطلب",
-    noOrders: "لا توجد طلبات بعد. في المحادثة اضغط \"اطلب الآن\" كعميل.",
+    noOrders: "لا توجد طلبات بعد. في المحادثة اضغط \"اطلب الآن\" كعميل.", table: (label: string) => `طاولة ${label}`,
     orderNo: "الطلب", items: "الأصناف", payment: "الدفع", status: "الحالة",
     pay: { unpaid: "غير مدفوع", paid: "مدفوع", on_account: "على الحساب" } as Record<string, string>,
     st: { new: "جديد", confirmed: "مؤكد", ready: "جاهز", done: "منجز", cancelled: "ملغي" } as Record<string, string>,
@@ -1060,6 +1062,7 @@ export function Screens({ embedded = false, section, lang: langProp, intro, show
                           {o.price_group && !o.price_group.is_default && (
                             <><br /><span className="pill none">{lang === "ar" ? o.price_group.name_ar || o.price_group.name : o.price_group.name}</span></>
                           )}
+                          {o.table && <><br /><span className="pill p1">{t.table(o.table)}</span></>}
                         </td>
                         <td>{o.items.map((i, k) => (
                           <div key={k}>{i.quantity} × {i.name}{i.sku ? <> <small className="mono" dir="ltr">{i.sku}</small></> : null}</div>

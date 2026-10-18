@@ -13,6 +13,7 @@ from uuid import UUID
 from fastapi import APIRouter, Depends, HTTPException, Query, Request
 from pydantic import AwareDatetime, BaseModel, ConfigDict, Field
 
+from alyr.config import get_settings as app_settings
 from alyr.core import team
 from alyr.core.auth import Staff
 from alyr.modules.items import (
@@ -194,6 +195,13 @@ class StockSettings(BaseModel):
     low_stock_at: int | None = Field(
         default=None, ge=0, le=100_000, description="Counted stock at or below this is low"
     )
+    wholesale_layout: bool | None = Field(
+        default=None, description="Every customer gets the compact wholesale table"
+    )
+    whatsapp_number: str | None = Field(
+        default=None, max_length=40,
+        description="The number customers message to start an order; empty clears it",
+    )
 
 
 class AlertsIn(BaseModel):
@@ -348,6 +356,26 @@ async def get_settings(request: Request, staff: Staff = Depends(current_staff)) 
         return await items.settings(conn)
 
 
+@router.get("/share")
+async def share_base(request: Request, staff: Staff = Depends(current_staff)) -> dict:
+    """Where the shop's public order page is, for the Share action and the QR codes: the
+    page's address built from the configured public web address, the shop's names, and the
+    WhatsApp number a customer who opens a public link is sent to. Nothing here is about a
+    customer: a public link never carries one (core/links.py)."""
+    async with request.app.state.db.unscoped() as conn:
+        shop = await conn.fetchrow(
+            "select name, name_ar, slug from tenants where id = $1", staff.tenant_id
+        )
+    async with request.app.state.db.tenant(staff.tenant_id) as conn:
+        settings = await items.settings(conn)
+    base = app_settings().public_web_url.rstrip("/")
+    return {
+        "url": f"{base}/s/{shop['slug']}" if shop and shop["slug"] else "",
+        "name": shop["name"] if shop else "", "name_ar": shop["name_ar"] if shop else "",
+        "whatsapp": settings["whatsapp_number"],
+    }
+
+
 @router.put("/settings")
 async def put_settings(
     body: StockSettings, request: Request, staff: Staff = Depends(current_staff)
@@ -359,7 +387,7 @@ async def put_settings(
         async with request.app.state.db.tenant(staff.tenant_id) as conn:
             return await items.save_settings(
                 conn, body.hold_minutes, body.day_starts, body.agents_edit_items,
-                body.low_stock_at,
+                body.low_stock_at, body.wholesale_layout, body.whatsapp_number,
             )
     except items.ItemError as error:
         raise _fail(error) from error

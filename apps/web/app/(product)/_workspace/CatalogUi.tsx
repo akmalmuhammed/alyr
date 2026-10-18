@@ -37,7 +37,11 @@ const ICON: Record<string, string> = {
   star: "M12 4l2.4 5 5.6.7-4.1 3.8 1.1 5.5L12 16.3 7 19l1.1-5.5L4 9.7 9.6 9z",
   stock: "M4 8l8-4 8 4v8l-8 4-8-4z M4 8l8 4 8-4 M12 12v8",
   retry: "M20 12a8 8 0 1 1-2.3-5.7 M20 4v5h-5",
+  share: "M12 15V4 M7 9l5-5 5 5 M5 14v6h14v-6",
+  copy: "M9 9h11v11H9z M5 15V4h11",
   download: "M12 4v11 M7 11l5 5 5-5 M5 20h14",
+  printer: "M7 9V4h10v5 M7 17H4v-8h16v8h-3 M7 14h10v6H7z",
+  qr: "M4 4h6v6H4z M14 4h6v6h-6z M4 14h6v6H4z M14 14h3v3 M20 14v3 M14 20h6 M17 17v3",
   upload: "M12 16V5 M7 9l5-5 5 5 M5 20h14",
   sheet: "M6 3h9l4 4v14H6z M15 3v4h4 M9 12h6 M9 16h6",
 };

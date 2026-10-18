@@ -2,13 +2,17 @@
 
 import { useParams } from "next/navigation";
 import { useCallback, useEffect, useState } from "react";
-import { Empty, Frame, Glyph, initials, type Lang } from "../../../_customer/Frame";
+import { Empty, Frame, Glyph, initials } from "../../../_customer/Frame";
+import { formatPrice, type Lang } from "../../../_customer/price";
 
 type Step = { key: "placed" | "confirmed" | "ready" | "done"; at: string | null };
 type Order = {
   number: number; status: "new" | "confirmed" | "ready" | "done" | "cancelled";
-  payment: "unpaid" | "paid" | "on_account"; total_text: string; lang: string; handler: string | null;
-  items: { name: string; name_ar: string; quantity: number; line_text: string }[];
+  payment: "unpaid" | "paid" | "on_account"; total: number; lang: string; handler: string | null; table: string;
+  items: {
+    name: string; name_ar: string; quantity: number; line_total: number;
+    variant: string; variant_ar: string; options: string[]; options_ar: string[];
+  }[];
   steps: Step[]; cancelled_at: string | null; paid_at: string | null; payment_id: string | null;
 };
 type Tracking = { shop: { name: string; name_ar: string }; order: Order };
@@ -20,7 +24,7 @@ const T = {
     steps: { placed: "Order received", confirmed: "Confirmed by the shop", ready: "Ready for collection", done: "Complete" },
     waiting: "Waiting", handler: (name: string, shop: string) => <><b>{name}</b> at {shop} is looking after your order.</>,
     noHandler: (shop: string) => <>The team at <b>{shop}</b> will pick up your order shortly.</>,
-    items: "What you ordered", total: "Total",
+    items: "What you ordered", total: "Total", table: (label: string) => `Table ${label}`,
     payment: { unpaid: "Not paid yet", paid: "Paid", on_account: "On your account" },
     pay: "Pay now", updates: "This page updates by itself. We also message you on WhatsApp at every step.",
     cancelled: "This order was cancelled. Message the shop on WhatsApp if that is unexpected.",
@@ -32,7 +36,7 @@ const T = {
     steps: { placed: "تم استلام الطلب", confirmed: "أكّده المتجر", ready: "جاهز للاستلام", done: "مكتمل" },
     waiting: "قيد الانتظار", handler: (name: string, shop: string) => <><b>{name}</b> من {shop} يتابع طلبك.</>,
     noHandler: (shop: string) => <>سيتولى فريق <b>{shop}</b> طلبك قريباً.</>,
-    items: "ما طلبته", total: "الإجمالي",
+    items: "ما طلبته", total: "الإجمالي", table: (label: string) => `طاولة ${label}`,
     payment: { unpaid: "لم يُدفع بعد", paid: "مدفوع", on_account: "على حسابك" },
     pay: "ادفع الآن", updates: "تتحدّث هذه الصفحة تلقائياً، ونراسلك على واتساب عند كل خطوة.",
     cancelled: "تم إلغاء هذا الطلب. راسل المتجر على واتساب إن لم يكن ذلك متوقعاً.",
@@ -73,7 +77,7 @@ export default function TrackPage() {
   const toggle = () => setLang(lang === "en" ? "ar" : "en");
   const reachedIndex = o.steps.reduce((last, s, i) => (s.at ? i : last), 0);
   const time = (iso: string) =>
-    new Intl.DateTimeFormat(lang === "ar" ? "ar-QA" : "en-GB", {
+    new Intl.DateTimeFormat(lang === "ar" ? "ar-QA-u-nu-latn" : "en-GB", {
       weekday: "short", hour: "numeric", minute: "2-digit", hour12: true, timeZone: "Asia/Qatar",
     }).format(new Date(iso));
   const cancelled = o.status === "cancelled";
@@ -84,6 +88,7 @@ export default function TrackPage() {
         <span className="cx-eyebrow">{t.eyebrow}</span>
         <h1 className="num">{t.title(o.number)}</h1>
         <span className={`cx-status ${cancelled ? "off" : o.status === "done" ? "done" : ""}`}>{t.status[o.status]}</span>
+        {o.table && <span className="cx-pill">{t.table(o.table)}</span>}
       </section>
 
       {cancelled ? <p className="cx-warn">{t.cancelled}</p> : (
@@ -110,18 +115,23 @@ export default function TrackPage() {
       <section className="cx-section" style={{ "--i": 3 } as React.CSSProperties}>
         <h2>{t.items}</h2>
         <div className="cx-card">
-          {o.items.map((item, i) => (
-            <div key={i} className="cx-row">
-              <div className="cx-row-text">
-                <b>{lang === "ar" && item.name_ar ? item.name_ar : item.name}</b>
-                <span className="num">× {item.quantity}</span>
+          {o.items.map((item, i) => {
+            const ar = lang === "ar";
+            const parts = [ar ? item.variant_ar || item.variant : item.variant, ...(ar ? item.options_ar : item.options)].filter(Boolean);
+            return (
+              <div key={i} className="cx-row">
+                <div className="cx-row-text">
+                  <b dir="auto">{ar && item.name_ar ? item.name_ar : item.name}</b>
+                  {parts.length > 0 && <span dir="auto">{parts.join(ar ? "، " : ", ")}</span>}
+                  <span className="num">× {item.quantity}</span>
+                </div>
+                <bdi className="num">{formatPrice(item.line_total, lang)}</bdi>
               </div>
-              <span className="num" dir="ltr">{item.line_text}</span>
-            </div>
-          ))}
+            );
+          })}
           <div className="cx-row">
             <div className="cx-row-text"><b>{t.total}</b></div>
-            <b className="num" dir="ltr">{o.total_text}</b>
+            <b className="num"><bdi>{formatPrice(o.total, lang)}</bdi></b>
           </div>
           <div className="cx-row">
             <div className="cx-row-text">

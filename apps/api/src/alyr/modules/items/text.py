@@ -9,6 +9,8 @@ native speaker (ALY-66).
 import re
 from datetime import date, datetime, timedelta
 
+from alyr.core.normalise import fmt_qar, fmt_qar_ar
+
 WEEKDAYS = {
     "en": ("Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"),
     "ar": ("الأحد", "الاثنين", "الثلاثاء", "الأربعاء", "الخميس", "الجمعة", "السبت"),
@@ -108,11 +110,48 @@ MESSAGES: dict[str, tuple[str, str]] = {
         "The items were put back.",
         "تم إلغاء الطلب رقم {number} لأنه لم يُدفع خلال {minutes} دقيقة، وأُعيدت الأصناف.",
     ),
+    "not_pack_multiple": (
+        "{name} is sold in packs of {pack}. Choose {suggest}.",
+        "«{name}» يُباع في عبوات من {pack}. اختر {suggest}.",
+    ),
+    # What the order page tells a customer whose order cannot be placed for a reason that
+    # is not about one item.
+    "over_limit": (
+        "This order would take your account over its limit of {limit}. Pay by link instead.",
+        "سيتجاوز هذا الطلب الحد المسموح لحسابك وهو {limit}. ادفع عبر الرابط بدلاً من ذلك.",
+    ),
+    "no_account": (
+        "You do not have a credit account with this shop. Pay by link instead.",
+        "ليس لديك حساب آجل لدى هذا المتجر. ادفع عبر الرابط بدلاً من ذلك.",
+    ),
+    "unknown_customer": (
+        "We could not find you. Message the shop on WhatsApp for a new order link.",
+        "لم نتمكن من التعرف عليك. راسل المتجر على واتساب للحصول على رابط طلب جديد.",
+    ),
+    "empty": (
+        "Your order is empty. Add something first.",
+        "طلبك فارغ. أضف صنفاً أولاً.",
+    ),
+    "bad_payment": (
+        "Choose to pay by link or on your account.",
+        "اختر الدفع عبر الرابط أو على حسابك.",
+    ),
+    "bad_link": (
+        "This order link is not valid. Message the shop on WhatsApp to get a new one.",
+        "رابط الطلب هذا غير صالح. راسل المتجر على واتساب للحصول على رابط جديد.",
+    ),
+    "expired_link": (
+        "This order link has expired. Message the shop on WhatsApp to get a new one.",
+        "انتهت صلاحية رابط الطلب هذا. راسل المتجر على واتساب للحصول على رابط جديد.",
+    ),
 }
 
 # The details that carry an item's, group's or choice's own name; the Arabic is used in
 # an Arabic sentence when there is one.
 _NAMED = ("name", "group", "variant")
+# A detail on the left may come as dirhams under the key on the right; it is written the way
+# the sentence's language writes money (an Arabic sentence never says "QAR").
+_MONEY = {"old": "old_price", "new": "new_price", "limit": "limit_amount"}
 
 
 def when_text(moment: datetime | date, today: date, lang: str) -> str:
@@ -146,6 +185,9 @@ def say(code: str, lang: str, details: dict, today: date | None = None) -> str:
     for key in _NAMED:
         if lang == "ar" and details.get(f"{key}_ar"):
             words[key] = details[f"{key}_ar"]
+    for word, key in _MONEY.items():
+        if isinstance(details.get(key), int):
+            words[word] = fmt_qar_ar(details[key]) if lang == "ar" else fmt_qar(details[key])
     today = today or date.today()
     when = details.get("next_at") or details.get("next_date")
     if when:

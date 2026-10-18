@@ -48,7 +48,8 @@ apps/api/                     FastAPI service (Python 3.13, managed with uv)
   src/alyr/channels/          Message channels: Meta Cloud API and the local simulator, same interface
   src/alyr/core/              Inbound path, contact identity, outbound layer (consent, 24-hour window), jobs,
                               sign-in (auth), email (mail), sign-up (onboarding), pricing, back office,
-                              team accountability (team, D-028), workspace shell (workspace), templates
+                              team accountability (team, D-028), workspace shell (workspace), templates,
+                              signed order links (links: a customer's link carries a token, never a contact ID)
   src/alyr/modules/           What answers customers: ledger, orders, bookings, inbox, agent (the owner's
                               weekly view), report.py (weekly report card); router.py picks the module.
                               items/ is the Catalog's engine (what a shop sells: variants, availability,
@@ -57,7 +58,8 @@ apps/api/                     FastAPI service (Python 3.13, managed with uv)
                               Excel and CSV import and export are in specs/006-catalog-import-export;
                               template.py and samples.py give each business type its catalog
                               (specs/008; the words are in src/alyr/presets_catalog.py, and
-                              Settings.catalog_for_new_shops decides whether new shops get it)
+                              Settings.catalog_for_new_shops decides whether new shops get it);
+                              orders/page.py is what the customer's order page reads (specs/005)
   src/alyr/routes/            HTTP routes. deps.py: who is calling, which shop, which modules are on
   src/alyr/catalog.py         What ALYR sells: modules and products (D-027)
   src/alyr/db.py              `Database.tenant(id)`: one transaction scoped to one tenant
@@ -70,14 +72,16 @@ apps/web/                     Next.js. Three root layouts, one per route group:
   app/(product)/              Workspace (/app), back office (/ops), sign-in (/login), sign-up (/start),
                               sales demo (/whatsapp), owner view sample (/agent-sample), and the customer pages
                               opened from WhatsApp: order /s, booking /b, payment /pay, tracking /t
-  app/(product)/_customer/    Shared frame and styles of the customer pages
+  app/(product)/_customer/    Shared frame, styles, the price format and the Arabic search folding of the
+                              customer pages; order/ is the order page (specs/005-order-page-v2)
   app/(product)/_workspace/   Workspace screens and styles
   app/_agent/                 The owner's weekly view (ALYR Agent)
 docs/                         See docs/README.md for what lives where (docs/hygiene.md section 1)
 scripts/                      check.sh (everything CI runs), demo.sh (start and check the live demo),
                               api-in-docker.sh, build-site.sh, catalog-browser-check.mjs (the Catalog's
                               screens in a real browser at phone width), catalog-reports-browser-check.mjs
-                              (its home cards and the back office's Usage view), hooks/pre-commit
+                              (its home cards and the back office's Usage view), order-page-browser-check.mjs
+                              (the customer's order page, same way), hooks/pre-commit
 specs/                        One folder per spec; write or update the spec before building
 infra/                        Cloud infrastructure as code (proposed in PR #52, not merged)
 packages/compliance/          WPS SIF and e-invoice libraries (not created yet)

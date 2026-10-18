@@ -254,7 +254,7 @@ async def _menu(
         return None  # nothing to show: the order page's link answers, as before
     shop = await _shop_name(conn, tenant_id, lang)
     slug = await conn.fetchval("select slug from tenants where id = $1", tenant_id)
-    link = order_link(web_url, slug, contact["id"]) if orders_on and slug else ""
+    link = order_link(web_url, slug, contact["id"], tenant_id) if orders_on and slug else ""
     shown_here = entries[:10]
     rows = tuple(
         Choice(
@@ -310,7 +310,7 @@ async def _ask_to_notify(
     if entry.state(clock).orderable:
         # Nothing to wait for. Say so and give the way to order it.
         slug = await conn.fetchval("select slug from tenants where id = $1", tenant_id)
-        link = order_link(web_url, slug, contact["id"])
+        link = order_link(web_url, slug, contact["id"], tenant_id)
         return [OutboundMessage(
             to=contact["id"], body=say("notify_in_stock", lang, name=name, link=link), lang=lang
         )]
@@ -362,7 +362,7 @@ async def _agreed(
         return [OutboundMessage(
             to=contact["id"], lang=lang,
             body=say("notify_in_stock", lang, name=name,
-                     link=order_link(web_url, slug, contact["id"])),
+                     link=order_link(web_url, slug, contact["id"], tenant_id)),
         )]
     shop = await _shop_name(conn, tenant_id, lang)
     if await consent.current(conn, contact["id"], "service") == "revoked":

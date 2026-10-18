@@ -143,6 +143,11 @@ def _check_line(
 
     if line.quantity < item["min_order"]:
         return _problem(c, "below_minimum", entry, variant, minimum=item["min_order"])
+    pack = item["pack_size"]
+    if pack and pack > 1 and item["unit"] not in ("box", "pack") and line.quantity % pack:
+        # Sold by the pack (pieces, kilos or hours in lots): the next whole pack up.
+        suggest = -(-line.quantity // pack) * pack
+        return _problem(c, "not_pack_multiple", entry, variant, pack=pack, suggest=suggest)
 
     c.fulfil_on = state.for_date if state.dated else None
     day = state.day

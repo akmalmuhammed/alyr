@@ -6,12 +6,14 @@
     "dev": "next dev -p 3100",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "test": "node --test \"app/**/*.test.mjs\""
   },
   "dependencies": {
     "@gsap/react": "2.1.2",
     "gsap": "3.15.0",
     "next": "16.3.8",
+    "qrcode-generator": "2.0.4",
     "react": "19.2.8",
     "react-dom": "19.2.8"
   },
@@ -21,6 +23,7 @@
     "@types/react-dom": "^19",
     "eslint": "^9",
     "eslint-config-next": "16.3.8",
+    "jsqr": "1.4.0",
     "typescript": "^5"
   },
   "packageManager": "pnpm@11.25.0"

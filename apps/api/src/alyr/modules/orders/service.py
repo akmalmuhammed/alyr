@@ -56,6 +56,11 @@ class OrderError(Exception):
         self.lines = lines
 
 
+def _plain(code: str, **details) -> OrderError:
+    """A refusal that is not about one item, worded in both languages (`items/text.py`)."""
+    return OrderError(code, text.say(code, "en", details), text.say(code, "ar", details))
+
+
 def _row(
     entry, state: availability.State, shop_clock: ShopClock, group_id: UUID | None = None
 ) -> dict:
@@ -231,19 +236,21 @@ async def create_order(
     for_date: date | None = None,
     now: datetime | None = None,
     left_out: list[str] | None = None,
+    table: str = "",
 ) -> dict:
     """Place an order. Prices always come from the database, never from the caller; a
     line may say what price the customer was shown, and if that is no longer the price the
     order is refused and the new price shown. `for_date` is the day a made-to-order item
-    is wanted. `left_out` names items a repeat order had to leave behind."""
+    is wanted. `left_out` names items a repeat order had to leave behind. `table` is the
+    table the order is for, from the link on its QR code; staff see it on the order."""
     contact = await conn.fetchrow(
         "select id, lang, credit_limit, assigned_to, price_group_id from contacts "
         "where id = $1", contact_id
     )
     if contact is None:
-        raise OrderError("unknown_customer", "We could not find this customer.")
+        raise _plain("unknown_customer")
     if not lines:
-        raise OrderError("empty", "The cart is empty.")
+        raise _plain("empty")
     lines = [
         line if isinstance(line, CartLine) else CartLine(*line) for line in lines
     ]
@@ -263,16 +270,12 @@ async def create_order(
 
     if payment == "account":
         if not contact["credit_limit"] > 0:
-            raise OrderError("no_account", "This customer does not have a credit account.")
+            raise _plain("no_account")
         balance = (await ledger.aged(conn, contact_id)).balance
         if balance + total > contact["credit_limit"]:
-            raise OrderError(
-                "over_limit",
-                f"This order would take the account over its limit of "
-                f"{fmt_qar(contact['credit_limit'])}. Pay by link instead.",
-            )
+            raise _plain("over_limit", limit_amount=contact["credit_limit"])
     elif payment != "link":
-        raise OrderError("bad_payment", "Choose to pay by link or on account.")
+        raise _plain("bad_payment")
 
     # Take the stock before anything else is written, in one step per line. Another order
     # for the same last item may have got there first; then nothing is taken, and the
@@ -306,15 +309,16 @@ async def create_order(
     # Whoever is looking after this customer's chat looks after the order too.
     await conn.execute(
         "insert into orders (id, contact_id, number, total, payment, assigned_to, fulfil_on, "
-        "price_group_id, price_group_name, price_group_name_ar) "
-        "values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)",
+        "price_group_id, price_group_name, price_group_name_ar, table_label) "
+        "values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)",
         order_id, contact_id, number, total, "on_account" if payment == "account" else "unpaid",
         contact["assigned_to"], max(dates) if dates else None,
-        group["id"], group["name"], group["name_ar"],
+        group["id"], group["name"], group["name_ar"], table[:20],
     )
     await team.record(
         conn, "order", order_id, "placed", team.CUSTOMER, contact_id,
-        {"number": number, "total": fmt_qar(total), "payment": payment},
+        {"number": number, "total": fmt_qar(total), "payment": payment,
+         "table": table[:20] or None},
     )
     # A pay-link order holds its stock until it is paid or the hold runs out.
     minutes = await clock.hold_minutes(conn)
@@ -397,6 +401,7 @@ async def create_order(
         "hold_expires_at": held_until.isoformat() if held_until else None,
         # The group whose prices the order was charged.
         "price_group": price_groups.public(group),
+        "table": table[:20],
     }
 
 
@@ -617,6 +622,7 @@ async def set_status(
 async def list_orders(conn: asyncpg.Connection) -> list[dict]:
     orders = await conn.fetch(
         "select o.id, o.number, o.status, o.payment, o.total, o.created_at, o.fulfil_on, "
+        "       o.table_label, "
         "       c.name as customer, o.assigned_to, u.name as assignee, "
         "       o.price_group_name, o.price_group_name_ar, coalesce(g.is_default, false) "
         "         as price_group_default "
@@ -642,6 +648,8 @@ async def list_orders(conn: asyncpg.Connection) -> list[dict]:
             "payment": o["payment"], "total": o["total"], "total_text": fmt_qar(o["total"]),
             "customer": o["customer"], "created_at": o["created_at"].isoformat(),
             "fulfil_on": o["fulfil_on"].isoformat() if o["fulfil_on"] else None,
+            # The table it is for, from a QR code on a table ("" for none).
+            "table": o["table_label"],
             "items": by_order.get(o["id"], []),
             # The group whose prices the order was charged, as it was named then. Orders
             # from before price groups have none.
@@ -666,7 +674,7 @@ async def tracking(conn: asyncpg.Connection, order_id: UUID) -> dict | None:
     Nothing about other customers, and only the first name of the staff member."""
     order = await conn.fetchrow(
         "select o.id, o.number, o.status, o.payment, o.total, o.created_at, o.fulfil_on, "
-        "       c.lang, split_part(u.name, ' ', 1) as handler "
+        "       o.table_label, c.lang, split_part(u.name, ' ', 1) as handler "
         "from orders o join contacts c on c.id = o.contact_id "
         "left join users u on u.id = o.assigned_to where o.id = $1",
         order_id,
@@ -694,13 +702,15 @@ async def tracking(conn: asyncpg.Connection, order_id: UUID) -> dict | None:
     )
     return {
         "number": order["number"], "status": order["status"], "payment": order["payment"],
-        "total_text": fmt_qar(order["total"]), "lang": order["lang"],
-        "handler": order["handler"] or None,
+        "total": order["total"], "total_text": fmt_qar(order["total"]), "lang": order["lang"],
+        "handler": order["handler"] or None, "table": order["table_label"],
         "fulfil_on": order["fulfil_on"].isoformat() if order["fulfil_on"] else None,
         "items": [
             {"name": i["name"], "name_ar": i["name_ar"] or "", "quantity": i["quantity"],
              "variant": i["variant_name"], "variant_ar": i["variant_name_ar"],
              "options": [o["name"] for o in i["options"]],
+             "options_ar": [o.get("name_ar") or o["name"] for o in i["options"]],
+             "unit_price": i["price"], "line_total": i["price"] * i["quantity"],
              "line_text": fmt_qar(i["price"] * i["quantity"])}
             for i in items
         ],

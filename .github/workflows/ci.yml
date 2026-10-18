@@ -75,5 +75,7 @@ jobs:
       # Known vulnerabilities in what the site and workspace ship.
       - run: pnpm audit --prod --audit-level high
       - run: pnpm lint
+      # The customer pages' small pure helpers and the QR codes, read back with a decoder.
+      - run: pnpm test
       - run: pnpm exec tsc --noEmit
       - run: pnpm build

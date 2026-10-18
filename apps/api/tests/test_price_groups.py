@@ -18,6 +18,7 @@ import pytest
 from alyr.db import Database
 from alyr.seed import AGENT_EMAIL, DEMO_TENANT_ID
 from conftest import APP_DSN, OWNER_DSN
+from order_links import token
 from test_consent import owner_sql
 from test_items import STORE, detail, fresh, line, mk, order, pay, people, vid
 from test_orders import customer
@@ -61,14 +62,14 @@ def set_price(client, item: dict, group: dict, price: int | None, variant: str |
 def check(client, lines: list[dict], contact: dict | None = None) -> dict:
     body = {"items": lines}
     if contact:
-        body["contact_id"] = contact["id"]
+        body["token"] = token(contact["id"])
     answer = client.post(f"{STORE}/cart/check", json=body)
     assert answer.status_code == 200, answer.text
     return answer.json()
 
 
 def page(client, contact: dict | None = None) -> dict:
-    answer = client.get(STORE, params={"c": contact["id"]} if contact else None)
+    answer = client.get(STORE, params={"t": token(contact["id"])} if contact else None)
     assert answer.status_code == 200, answer.text
     return answer.json()
 
@@ -362,7 +363,7 @@ def test_same_as_last_time_charges_todays_price_for_the_customers_group(client):
     put_in(client, buyer, group)
     assert order(client, buyer, [line(cable, 2)]).status_code == 200
     set_price(client, cable, group, 700)
-    again = client.post(f"{STORE}/orders/repeat", json={"contact_id": buyer["id"],
+    again = client.post(f"{STORE}/orders/repeat", json={"token": token(buyer["id"]),
                                                           "payment": "link"})
     assert again.status_code == 200, again.text
     assert again.json()["total"] == 1400

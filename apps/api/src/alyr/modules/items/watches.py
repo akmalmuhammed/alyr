@@ -126,7 +126,7 @@ class BackInStock:
                 continue
             shop_name = shop["name_ar"] if lang == "ar" and shop["name_ar"] else shop["name"]
             name = shown(entry.item, lang)
-            link = order_link(self._web, shop["slug"], watch["contact_id"])
+            link = order_link(self._web, shop["slug"], watch["contact_id"], tenant_id)
             if watch["window_open"]:
                 message = OutboundMessage(
                     to=watch["contact_id"], lang=lang,

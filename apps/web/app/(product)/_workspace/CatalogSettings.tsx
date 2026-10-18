@@ -24,6 +24,8 @@ export function CatalogSettings({ lang, push, onClose }: { lang: Lang; push: Pus
   const [low, setLow] = useState("");
   const [day, setDay] = useState("00:00");
   const [hold, setHold] = useState("");
+  const [wholesale, setWholesale] = useState(false);
+  const [number, setNumber] = useState("");
   const [setup, setSetup] = useState<Setup | null>(null);
   const [soldOut, setSoldOut] = useState<"grey" | "hide">("grey");
   const [rule, setRule] = useState<Rule>("switch");
@@ -39,6 +41,8 @@ export function CatalogSettings({ lang, push, onClose }: { lang: Lang; push: Pus
       setLow(String(s.low_stock_at));
       setDay(s.day_starts);
       setHold(String(s.hold_minutes));
+      setWholesale(s.wholesale_layout);
+      setNumber(s.whatsapp_number ? `+${s.whatsapp_number}` : "");
     }).catch((error) => setFailure(sayError(error, lang, t)));
     api<Setup>("/api/items/setup").then((s) => {
       setSetup(s);
@@ -61,6 +65,7 @@ export function CatalogSettings({ lang, push, onClose }: { lang: Lang; push: Pus
     try {
       await api<Settings>("/api/items/settings", "PUT", {
         agents_edit_items: agents, low_stock_at: lowNumber, day_starts: day, hold_minutes: holdNumber,
+        wholesale_layout: wholesale, whatsapp_number: number.trim(),
       });
       await api<Setup>("/api/items/setup", "PUT", {
         sold_out: soldOut, new_item_rule: rule, alerts: { low_stock: alertLow, sold_out: alertSold },
@@ -95,6 +100,14 @@ export function CatalogSettings({ lang, push, onClose }: { lang: Lang; push: Pus
         </Field>
         <Field label={t.holdMinutes} hint={t.holdHint}>
           <input value={hold} inputMode="numeric" dir="ltr" onChange={(e) => setHold(e.target.value)} disabled={!saved} />
+        </Field>
+        <h3 className="ct-subhead">{t.pageTitle}</h3>
+        <div className="ct-toggle">
+          <span className="ct-toggle-text"><b>{t.wholesaleLayout}</b><small>{t.wholesaleLayoutHint}</small></span>
+          <Switch on={wholesale} label={t.wholesaleLayout} onChange={setWholesale} disabled={!saved} />
+        </div>
+        <Field label={t.whatsappNumber} hint={t.whatsappHint}>
+          <input value={number} inputMode="tel" dir="ltr" autoComplete="off" onChange={(e) => setNumber(e.target.value)} disabled={!saved} />
         </Field>
 
         <section className="ct-sec ct-type" aria-labelledby="ct-type-title">

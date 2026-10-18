@@ -170,3 +170,29 @@ def _for_a_date(windows: list[Window], now: datetime, for_date: date | None) -> 
     if not why:
         return Verdict(True, next_date=earliest, for_date=for_date, dated=True)
     return Verdict(False, why, next_date=earliest, dated=True)
+
+
+# ── for the words a customer reads (modules/items/notes.py) ─────────────────────────────
+
+def open_windows(windows: list[Window], day: date) -> list[Window]:
+    """The windows that are open on `day`, after dated overrides and closed weekdays."""
+    return _open_on(_rows_for(windows, day), day)
+
+
+def order_by(w: Window, day: date, tzinfo) -> datetime:
+    """The last moment an order for `day` can be placed under this window."""
+    return _order_by(w, day, tzinfo)
+
+
+def orderable_dates(
+    windows: list[Window], now: datetime, count: int = 14, horizon: int = 45
+) -> list[date]:
+    """The next dates an order placed now can be for (an item ordered for a date)."""
+    found: list[date] = []
+    for k in range(horizon):
+        day = now.date() + timedelta(days=k)
+        if not _can_order_for(windows, now, day):
+            found.append(day)
+            if len(found) == count:
+                break
+    return found

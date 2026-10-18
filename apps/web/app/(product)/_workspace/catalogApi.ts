@@ -56,7 +56,13 @@ export type Counts = {
 export type ListResult = {
   items: Item[]; total: number; counts: Counts; low_stock_at: number; categories: Category[]; access: Access;
 };
-export type Settings = { hold_minutes: number; day_starts: string; agents_edit_items: boolean; low_stock_at: number };
+export type Settings = {
+  hold_minutes: number; day_starts: string; agents_edit_items: boolean; low_stock_at: number;
+  // What customers see on the order page (ALY-112).
+  sold_out_display: "grey" | "hide"; wholesale_layout: boolean; whatsapp_number: string;
+};
+/** Where the shop's public order page is, and the number a shared link sends customers to. */
+export type ShareBase = { url: string; name: string; name_ar: string; whatsapp: string };
 export type Movement = {
   id: string; item_id: string; item: string; item_ar: string; variant_id: string; variant: string;
   variant_ar: string; kind: string; delta: number; balance_after: number; day: string | null;
