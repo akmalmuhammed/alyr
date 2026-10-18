@@ -17,6 +17,7 @@ const MAIN: NavItem[] = [
   { href: "/ops", label: "Today", icon: "today" },
   { href: "/ops/clients", label: "Clients", icon: "clients" },
   { href: "/ops/requests", label: "Requests", icon: "asks" },
+  { href: "/ops/usage", label: "Usage", icon: "usage" },
 ];
 const SETTINGS: NavItem[] = [
   { href: "/ops/prices", label: "Price list", icon: "price" },
@@ -29,6 +30,7 @@ const PATHS: Record<string, string> = {
   today: "M4 5h16v15H4z M4 10h16 M9 3v4 M15 3v4",
   clients: "M16 19v-1a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v1 M9 10a3 3 0 1 0 0-6 3 3 0 0 0 0 6 M22 19v-1a4 4 0 0 0-3-3.9 M16 4.1a3 3 0 0 1 0 5.8",
   asks: "M21 11.5a8.4 8.4 0 0 1-12.4 7.4L3 21l2.1-5.6A8.5 8.5 0 1 1 21 11.5Z",
+  usage: "M5 20v-8 M12 20V5 M19 20v-5 M3 20h18",
   price: "M20.6 13.4 13.4 20.6a2 2 0 0 1-2.8 0L3 13V3h10l7.6 7.6a2 2 0 0 1 0 2.8Z M7.5 7.5h.01",
   door: "M14 3h5v18h-5 M10 17l5-5-5-5 M15 12H3",
   staff: "M12 3 4 6v5c0 5.2 3.4 8.4 8 10 4.6-1.6 8-4.8 8-10V6z",

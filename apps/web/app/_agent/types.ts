@@ -55,6 +55,13 @@ export type AgentView = {
   };
   kpis: Kpi[];
   kpi_caption: string | null;
+  /** The Catalog's cards, for a shop that has the Catalog: how many items are sold out and how
+   * many are low, each the number of rows in the Catalog list its `href` opens (`href` is null
+   * when there is nothing to open). Absent on the public site's samples. */
+  catalog?: {
+    title: string;
+    cards: { key: string; label: string; value: number; text: string; href: string | null }[];
+  } | null;
   /** The empty state's outlines: what each will show once there are records. */
   placeholders: { kind: "week" | "hours" | "list"; text: string }[];
   suggestions: {

@@ -36,6 +36,7 @@ type Lang = "en" | "ar";
 type Command = { id: string; group: string; label: string; icon: string; run: () => void };
 
 const WORK_SCREENS: WorkspaceTab[] = ["inbox", "ledger", "orders", "bookings", "team"];
+const LANG_KEY = "alyr-workspace-lang";
 
 const T = {
   en: {
@@ -196,6 +197,26 @@ export default function WorkspaceShell() {
   const agentLoaded = useRef(false);
   const [offline, setOffline] = useState(false);
   const [lang, setLang] = useState<Lang>("en");
+  const [langReady, setLangReady] = useState(false);
+  // The language a person chose is kept on this device. Each screen of the workspace is a new
+  // page component, so without it a card on the home screen (or any link inside ALYR Agent)
+  // would send an Arabic reader back to English.
+  useEffect(() => {
+    const read = setTimeout(() => {
+      try {
+        const saved = localStorage.getItem(LANG_KEY);
+        if (saved === "ar" || saved === "en") setLang(saved);
+      } catch {
+        // A browser that refuses storage starts in English every time.
+      }
+      setLangReady(true);
+    }, 0);
+    return () => clearTimeout(read);
+  }, []);
+  const chooseLang = useCallback((next: Lang) => {
+    setLang(next);
+    try { localStorage.setItem(LANG_KEY, next); } catch { /* not remembered */ }
+  }, []);
   const [help, setHelp] = useState("");
   const [helpSent, setHelpSent] = useState("");
   const [confirming, setConfirming] = useState("");
@@ -254,11 +275,12 @@ export default function WorkspaceShell() {
   }, [lang]);
 
   useEffect(() => {
-    if (section !== "home") return;
+    // Not before the saved language is known, or an Arabic reader would first be sent English.
+    if (section !== "home" || !langReady) return;
     const first = setTimeout(loadAgent, 0);
     const timer = setInterval(loadAgent, 15_000);
     return () => { clearTimeout(first); clearInterval(timer); };
-  }, [loadAgent, section]);
+  }, [loadAgent, section, langReady]);
 
   useEffect(() => {
     const read = setTimeout(() => setShow(new URLSearchParams(window.location.search).get("show")), 0);
@@ -331,7 +353,7 @@ export default function WorkspaceShell() {
     }));
     list.push(
       { id: "ask", group: t.actions, label: t.ask, icon: "chat", run: () => router.push("/app#ask") },
-      { id: "lang", group: t.actions, label: t.langName, icon: "globe", run: () => setLang(lang === "en" ? "ar" : "en") },
+      { id: "lang", group: t.actions, label: t.langName, icon: "globe", run: () => chooseLang(lang === "en" ? "ar" : "en") },
     );
     if (state?.me.signed_in) list.push({ id: "out", group: t.actions, label: t.signOut, icon: "out", run: signOut });
     return list;
@@ -546,7 +568,7 @@ export default function WorkspaceShell() {
       </>
     );
   } else if (section === "catalog" && enabledScreens.has("catalog")) {
-    body = <Catalog lang={lang} />;
+    body = <Catalog lang={lang} show={show} />;
   } else if ((WORK_SCREENS as string[]).includes(section) && enabledScreens.has(section)) {
     body = (
       <Screens embedded section={section as WorkspaceTab} lang={lang} show={show}
@@ -590,7 +612,7 @@ export default function WorkspaceShell() {
         <div className="sh-foot">
           <span className="sh-avatar">{initials(state.me.signed_in ? state.me.name : shopName)}</span>
           <span className="sh-me"><b>{state.me.signed_in ? state.me.name : shopName}</b><small>{roleLabel}</small></span>
-          <button className="sh-lang" onClick={() => setLang(lang === "en" ? "ar" : "en")} aria-label={t.langName}>{t.lang}</button>
+          <button className="sh-lang" onClick={() => chooseLang(lang === "en" ? "ar" : "en")} aria-label={t.langName}>{t.lang}</button>
           {state.me.signed_in
             ? <button className="sh-iconbtn" onClick={signOut} aria-label={t.signOut} title={t.signOut}><Icon name="out" /></button>
             : <a className="sh-iconbtn" href="/login" aria-label={t.signIn} title={t.signIn}><Icon name="out" /></a>}
