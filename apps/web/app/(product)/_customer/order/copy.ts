@@ -31,6 +31,8 @@ const en = {
 
   // ── finding things ───────────────────────────────────
   search: "Search the menu",
+  /** The search box for a shop whose section is called `name` (Menu, Products, Price list). */
+  searchIn: (name: string) => `Search ${name.toLowerCase()}`,
   searchHint: "Search by name, in English or Arabic",
   clearSearch: "Clear search",
   categories: "Categories",
@@ -172,6 +174,7 @@ const ar: Copy = {
   language: "English",
 
   search: "ابحث في القائمة",
+  searchIn: (name) => `ابحث في ${name}`,
   searchHint: "ابحث بالاسم، بالعربية أو بالإنجليزية",
   clearSearch: "مسح البحث",
   categories: "التصنيفات",

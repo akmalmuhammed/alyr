@@ -541,6 +541,42 @@ try {
     await put(`/api/price-groups/customers/${third.id}`, { group_id: null });
   });
 
+  // The shop's type of business chooses how the page is laid out and what the section is
+  // called (ALY-107, specs/008): a photo grid, compact rows, the table, the menu.
+  await run("layouts", async () => {
+    const was = sql("select coalesce(business_type, '') from tenants where slug = 'al-noor'");
+    const kinds = [
+      ["fashion", "grid", ".ox-list.grid", AR ? "المنتجات" : "Products"],
+      ["grocery", "list", ".ox-list.list", AR ? "المنتجات" : "Products"],
+      ["wholesale", "table", ".ox-wrow", AR ? "قائمة الأسعار" : "Price list"],
+      ["restaurant", "menu", ".ox-list.menu", AR ? "القائمة" : "Menu"],
+    ];
+    try {
+      for (const [kind, style, selector, section] of kinds) {
+        sql(`update tenants set business_type = '${kind}' where slug = 'al-noor'`);
+        await fresh(await linkFor(second));
+        await until(`document.querySelectorAll(${JSON.stringify(selector)}).length > 0`, `the ${style} layout`, 15000);
+        check((await text(".cx-eyebrow")).toLowerCase().includes(section.toLowerCase()), `${kind}: the page calls its section “${section}”`);
+        await noSideScroll(`the ${style} layout at 375`);
+        if (style === "grid") {
+          const tops = await js("[...document.querySelectorAll('.ox-list.grid .ox-card')].slice(0, 2).map(c => Math.round(c.getBoundingClientRect().top))");
+          check(tops.length === 2 && tops[0] === tops[1], "a photo grid puts two items side by side");
+          check(await js("[...document.querySelectorAll('.ox-list.grid .ox-card .ox-ph')].slice(0, 4).every(p => { const r = p.getBoundingClientRect(); return Math.abs(r.width - r.height) < 2 && r.width > 120; })"), "and each photo box is a square, wider than a thumbnail");
+          check((await count(".ox-list.grid .ox-add, .ox-list.grid .ox-step")) > 4, "each has its own quick add");
+        }
+        if (style === "list") {
+          check((await count(".ox-list.list .ox-ph")) === 0 && (await count(".ox-list.list .ox-desc")) === 0, "compact rows have no photo and no description");
+          check((await count(".ox-list.list .ox-add, .ox-list.list .ox-step")) > 4, "each row has a quick add");
+        }
+        if (style === "table") check((await count(".ox-wrow .ox-add, .ox-wrow .ox-step")) > 4, "the table has a quantity control on each row");
+        await shot(`30-layout-${style}`);
+        await axe(`layout-${style}`);
+      }
+    } finally {
+      sql(`update tenants set business_type = '${was}' where slug = 'al-noor'`);
+    }
+  });
+
   // The page asks again while it is in front, and not while it is hidden.
   await run("live", async () => {
     await fresh(await linkFor(second));
@@ -682,6 +718,7 @@ try {
     const ct = COPY[LANG];
     await b.go(`${BASE}/app/catalog`, 1500);
     // The workspace remembers its language on the device (ALY-109), so ask which it is in now.
+    await until("!!document.querySelector('.sh-mtop')", "the workspace's top bar", 30000);
     const inArabic = await js("!!document.querySelector('.sh-mtop [aria-label=\"ابحث أو انتقل إلى\"]')");
     if (AR !== inArabic) {
       await click(`document.querySelector('.sh-mtop [aria-label="Search or jump to"], .sh-mtop [aria-label="ابحث أو انتقل إلى"]')`, 300);
@@ -753,10 +790,10 @@ try {
     await pause(300);
     // Settings.
     await pressText([ct.settings], "document.querySelector('.ct-actions')");
-    await until("!!document.querySelector('.ct-sheet input[name=ct-soldout]')", "the settings");
+    await until("!!document.querySelector('.ct-sheet input[name=sold-out-display]')", "the settings");
     await shot("26-settings");
     await axe("settings", ".ct-sheet");
-    await click("document.querySelectorAll('.ct-sheet input[name=ct-soldout]')[1]");
+    await click("document.querySelectorAll('.ct-sheet input[name=sold-out-display]')[1]");
     await click("document.querySelector('.ct-sheet input[inputmode=tel]')");
     await b.clearFocused();
     await b.type("call me");
@@ -770,7 +807,7 @@ try {
     await until("!document.querySelector('.ct-sheet')", "the settings saved");
     const saved2 = await api("/api/items/settings");
     check(saved2.sold_out_display === "hide" && saved2.whatsapp_number === "97455550100", "the settings were saved (a local number gets the country code)");
-    await put("/api/items/settings", { sold_out_display: "grey" });
+    await put("/api/items/setup", { sold_out: "grey" });
     // The order list shows the table.
     await b.go(`${BASE}/app/orders`, 1500);
     // The workspace has its own language setting, so either word counts.

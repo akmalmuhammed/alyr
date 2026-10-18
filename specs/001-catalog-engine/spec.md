@@ -100,7 +100,7 @@ Kept working on the same items: `GET/POST /api/products`, `POST /api/products/{i
 
 * Photos on the order page (they are in the item JSON now, ALY-104). The order page, search and share links (ALY-112): it must handle `expired` payments (the pay page knows only `pending` and `paid`), the `unavailable` list and `cart/check`.
 * WhatsApp (ALY-106, built: `specs/004-catalog-whatsapp/spec.md`): staff commands, "tell me when it is back", telling waiting customers when a hold is released, telling the owner by message that a refund is due. Still open: a customer's own cancel entry point (the service takes `team.CUSTOMER`).
-* Low-stock and sold-out alerts, meters and report lines (ALY-109). Import and export (ALY-108). Templates by business type (ALY-107).
+* Low-stock and sold-out alerts, meters and report lines (ALY-109). Import and export is built (ALY-108, `specs/006-catalog-import-export/spec.md`). Templates by business type (ALY-107).
 * **Customer price groups for wholesale** are in release 1 (D-039), and ALY-112 lists a wholesale layout "with customer price groups", but no package builds the data: a table of groups, a price per item and group, and a group on the customer. They need a package to own them. SKU and barcode numbers likewise (the wholesale template asks for a SKU).
 * The public order page's API returns how many are left (`left`) so a page can say "only 3 left"; ALY-112 decides how much of that to show, since it also tells a competitor the shop's stock.
 * `POST /api/products`, the first way to add an item, is open to every staff role, as it always was; `/api/items` limits editing to owners and admins. ALY-117 covers agents' rights.

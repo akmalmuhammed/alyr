@@ -28,7 +28,7 @@ from alyr.core import templates
 from alyr.core.outbound import Outbound
 from alyr.db import Database
 from alyr.modules.items import clock as shop_clock
-from alyr.modules.items import events, listing, service, staff
+from alyr.modules.items import events, listing, service, staff, template
 from alyr.modules.items.availability import STOCKED
 from alyr.modules.items.wa_text import say, shown
 
@@ -136,6 +136,27 @@ def _left_text(view: dict, low: list[dict], lang: str) -> str:
     )
 
 
+async def state(
+    conn: asyncpg.Connection, clock: shop_clock.ShopClock, item_id: UUID
+) -> tuple[str, dict, list[dict]] | None:
+    """Is this item low or sold out right now? ("low" or "sold_out", the item's view, and the
+    sizes that are low), or None when it is not on sale, not counted, or not short."""
+    entry = await service.get(conn, clock, item_id)
+    if entry is None or entry.item["status"] != "live":
+        return None
+    if entry.item["stock_rule"] not in STOCKED:
+        return None
+    view = service.view(entry, clock)
+    limit = view["low_stock_at"]
+    if limit is None:
+        limit = await listing.low_stock_at(conn)
+    if view["availability"]["reason"] == "sold_out":
+        return "sold_out", view, []
+    if low := _low_variants(view, limit):
+        return "low", view, low
+    return None
+
+
 class StockAlerts:
     """Job handler for `catalog.stock_alert`. `now` is for tests to hold the clock still."""
 
@@ -154,21 +175,12 @@ class StockAlerts:
         and they have not been told today. Returns what was sent ("low", "sold_out"), or
         None."""
         clock = await shop_clock.load(conn, self._now())
-        entry = await service.get(conn, clock, item_id)
-        if entry is None or entry.item["status"] != "live":
-            return None
-        if entry.item["stock_rule"] not in STOCKED:
-            return None
-        view = service.view(entry, clock)
-        limit = view["low_stock_at"]
-        if limit is None:
-            limit = await listing.low_stock_at(conn)
-        if view["availability"]["reason"] == "sold_out":
-            kind = "sold_out"
-        elif low := _low_variants(view, limit):
-            kind = "low"
-        else:
-            return None  # filled again since, or never was low
+        found = await state(conn, clock, item_id)
+        if found is None:
+            return None  # not on sale, not counted, filled again since, or never was low
+        kind, view, low = found
+        if not await template.alert_on(conn, "sold_out" if kind == "sold_out" else "low_stock"):
+            return None  # the owner switched this alert off (the type's starting values)
         if in_quiet_hours(clock.local):
             # Not at night. Look again in the morning; if it is still true, say so then.
             await events.queue(conn, events.STOCK_ALERT, item_id, morning_after(clock.local))

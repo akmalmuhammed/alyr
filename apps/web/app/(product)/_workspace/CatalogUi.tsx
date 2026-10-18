@@ -10,6 +10,7 @@ import { createPortal } from "react-dom";
 import type { Lang } from "./catalogCopy";
 import type { Photo } from "./catalogApi";
 import "./catalog.css";
+import { SampleArt } from "./CatalogSample";
 
 // ── icons (the shell's drawing: 24 grid, 1.7 line, round ends) ──
 
@@ -41,6 +42,8 @@ const ICON: Record<string, string> = {
   download: "M12 4v11 M7 11l5 5 5-5 M5 20h14",
   printer: "M7 9V4h10v5 M7 17H4v-8h16v8h-3 M7 14h10v6H7z",
   qr: "M4 4h6v6H4z M14 4h6v6h-6z M4 14h6v6H4z M14 14h3v3 M20 14v3 M14 20h6 M17 17v3",
+  upload: "M12 16V5 M7 9l5-5 5 5 M5 20h14",
+  sheet: "M6 3h9l4 4v14H6z M15 3v4h4 M9 12h6 M9 16h6",
 };
 
 export function Icon({ name, className = "sh-ico" }: { name: string; className?: string }) {
@@ -228,9 +231,11 @@ export function Switch({ on, onChange, label, disabled = false }: {
 }
 
 /** One cover. A photo that is not ready (still being saved, not saved, or not there) is a drawn tile, never a broken image. */
-export function Tile({ photo, sizes, labels, className = "" }: {
+export function Tile({ photo, sizes, labels, className = "", sample }: {
   photo: Photo | null | undefined; sizes: string;
-  labels: { pending: string; failed: string; missing: string }; className?: string;
+  labels: { pending: string; failed: string; missing: string; sample?: string }; className?: string;
+  // A sample item has no photo; its tile is drawn from this key (CatalogSample.tsx).
+  sample?: string;
 }) {
   if (photo && photo.state === "ready" && photo.urls) {
     return (
@@ -238,6 +243,14 @@ export function Tile({ photo, sizes, labels, className = "" }: {
         {/* eslint-disable-next-line @next/next/no-img-element -- the address is the shop's own stored photo; sizes come from srcset */}
         <img src={photo.urls.thumb} srcSet={photo.srcset || undefined} sizes={sizes} alt="" loading="lazy" decoding="async"
           width={photo.width ?? undefined} height={photo.height ?? undefined} />
+      </span>
+    );
+  }
+  if (sample) {
+    return (
+      <span className={`ct-tile ct-sample ${className}`}>
+        <SampleArt sampleKey={sample} />
+        <span className="ct-sr">{labels.sample ?? ""}</span>
       </span>
     );
   }

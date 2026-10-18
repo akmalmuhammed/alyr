@@ -489,7 +489,7 @@ export default function WorkspaceShell() {
       <>
         <header className="sh-head" style={stagger(0)}>
           <span className="sh-eyebrow">{t.productsEyebrow} · {activeProducts.length} {t.active.toLowerCase()}</span>
-          <h1>{t.productsTitle}</h1>
+          <h1>{current ? pick(current.label) : t.productsTitle}</h1>
           <p>{t.productsSub}</p>
         </header>
         {!state.can_manage && <p className="sh-note">{t.managersOnly}</p>}
@@ -568,7 +568,8 @@ export default function WorkspaceShell() {
       </>
     );
   } else if (section === "catalog" && enabledScreens.has("catalog")) {
-    body = <Catalog lang={lang} show={show} />;
+    // Named by the shop's type of business: Menu, Products, Price list (D-039, ALY-107).
+    body = <Catalog lang={lang} title={current ? pick(current.label) : t.productsTitle} show={show} />;
   } else if ((WORK_SCREENS as string[]).includes(section) && enabledScreens.has(section)) {
     body = (
       <Screens embedded section={section as WorkspaceTab} lang={lang} show={show}

@@ -375,7 +375,12 @@ export default function Order({ slug, token, table, initial, lang: first, focusI
   // ── what is on screen ──
   const toggle = () => setLang(lang === "en" ? "ar" : "en");
   const customer = store.customer;
-  const layout = store.settings.wholesale_layout || !store.group.is_default ? "table" : "cards";
+  // The shop's type chooses how the items are laid out (ALY-107); a price group, or the shop's
+  // own setting, always gets the compact table.
+  const style = store.catalog?.layout.style ?? "menu";
+  const layout = store.settings.wholesale_layout || !store.group.is_default || style === "table" ? "table" : "cards";
+  const look = style === "grid" || style === "list" ? style : "menu";
+  const section = store.catalog ? say(lang, store.catalog.section.name, store.catalog.section.name_ar) : "";
 
   if (placed) {
     const link = placed.payment === "link" && placed.pay_url ? new URL(placed.pay_url).pathname : null;
@@ -427,9 +432,9 @@ export default function Order({ slug, token, table, initial, lang: first, focusI
   };
 
   const renderCards = (items: Item[]) => (
-    <ul className="ox-list">
+    <ul className={`ox-list ${look}`}>
       {items.map((item) => (
-        <ItemCard key={item.id} item={item} lang={lang} canOrder={canOrder} inOrder={inOrder(item.id)}
+        <ItemCard key={item.id} item={item} lang={lang} look={look} canOrder={canOrder} inOrder={inOrder(item.id)}
           simpleQty={qtyOf(item.id, simpleVariant(item))} onOpen={setOpen} onSet={setSimple} onLimit={onLimit} />
       ))}
     </ul>
@@ -438,7 +443,7 @@ export default function Order({ slug, token, table, initial, lang: first, focusI
   return (
     <Frame lang={lang} onLang={toggle} shop={shopName} context={t.context}>
       <section className="cx-hero" style={{ "--i": 0 } as React.CSSProperties}>
-        <span className="cx-eyebrow">{canOrder ? t.eyebrow : t.eyebrowMenu}</span>
+        <span className="cx-eyebrow">{section || (canOrder ? t.eyebrow : t.eyebrowMenu)}</span>
         <h1>{t.title}</h1>
         <div className="ox-who">
           {customer && <Who label={t.hello(customer.first_name)} />}
@@ -475,8 +480,8 @@ export default function Order({ slug, token, table, initial, lang: first, focusI
       <div className="ox-tools" style={{ "--i": 2 } as React.CSSProperties}>
         <div className="ox-search">
           <Glyph name="search" className="ox-search-glyph" />
-          <input type="search" value={typed} onChange={(e) => setTyped(e.target.value)} aria-label={t.search}
-            placeholder={t.search} dir="auto" enterKeyHint="search" autoComplete="off" autoCapitalize="off" spellCheck={false}
+          <input type="search" value={typed} onChange={(e) => setTyped(e.target.value)} aria-label={section ? t.searchIn(section) : t.search}
+            placeholder={section ? t.searchIn(section) : t.search} dir="auto" enterKeyHint="search" autoComplete="off" autoCapitalize="off" spellCheck={false}
             className="cx-input" aria-describedby="ox-results" />
           {typed && (
             <button type="button" className="ox-clear" aria-label={t.clearSearch} onClick={() => { setTyped(""); setQ(""); }}>
@@ -508,7 +513,7 @@ export default function Order({ slug, token, table, initial, lang: first, focusI
       )}
 
       {layout === "table" && shown.length > 0 && (
-        <Wholesale rows={rowsOf(shown)} lang={lang} label={t.priceList} canOrder={canOrder} onOpen={setOpen} onSet={setVariantQty}
+        <Wholesale rows={rowsOf(shown)} lang={lang} label={section || t.priceList} canOrder={canOrder} onOpen={setOpen} onSet={setVariantQty}
           onLimit={onLimit} qtyOf={(item, variant) => qtyOf(item.id, variant ? variant.id : simpleVariant(item))} />
       )}
       {layout === "cards" && (grouped

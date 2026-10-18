@@ -56,7 +56,7 @@ All public, all under `/api/store/{slug}`, all answering only where the shop has
 
 ### New shop settings (`shop_settings`, migration 0029; Catalog settings sheet)
 
-`sold_out_display` (`grey` or `hide`), `wholesale_layout` (the compact table for every customer), `whatsapp_number` (digits with the country code; "5555 0100" becomes 97455550100). And on `orders`: `table_label`, set from the signed token or, for a public link's label, from the request; shown to staff on the orders list and on the customer's tracking page.
+`wholesale_layout` (the compact table for every customer) and `whatsapp_number` (digits with the country code; "5555 0100" becomes 97455550100). Whether a sold-out item is greyed or left out is `sold_out_display`, which ALY-107 added (migration 0031) and its setup route changes (`PUT /api/items/setup`); the page reads it. And on `orders`: `table_label`, set from the signed token or, for a public link's label, from the request; shown to staff on the orders list and on the customer's tracking page.
 
 ## What a customer sees
 
@@ -67,6 +67,15 @@ All public, all under `/api/store/{slug}`, all answering only where the shop has
 5. **Same as last time.** One tap orders the last order again. What can no longer be ordered is left out and named, and prices that moved are listed; the rest is ordered and can be paid for at once.
 6. **Paying.** The pay page knows `pending`, `paid` and `expired`. A released order says "This order was released", "Nothing was charged", and offers "Order again", which brings the customer back to the shop with their own link if the tab still has it. A Pay that is refused because the hold ran out turns the page into that state; it never stays a dead button.
 7. **Live.** Every 20 to 30 seconds while the tab is in front (never while hidden; at once when it comes back after a while), `POST /live` for the items on screen and in the order. A change is applied without moving the page, and announced politely: for what is in the order, by name; for the list, "Availability updated."
+
+## What the shop's type of business chooses
+
+`GET /api/store/{slug}` carries ALY-107's `catalog` object (`specs/008-catalog-business-types`): the section's name, the layout and the sold-out look; `null` for a shop without the Catalog. The page reads it so what a type's onboarding review promises is true of the page:
+
+* **The section's name** (Menu, Products, Price list; «القائمة», «المنتجات», «قائمة الأسعار») is the line above the title and the name in the search box ("Search products").
+* **`layout.style`:** `menu` is a photo beside the name, by category (restaurant, bakery); `grid` puts the photo above the name, two to a row (three from 34 rem), square boxes (fashion, shop, salons and clinics' products); `list` is compact rows with no photo, each with its own quick add (grocery); `table` is the table below (wholesale), for every customer.
+* **`pickup_date`, `quick_quantity`, `same_as_last`, `show_sku`** need no switch: the day of the order is asked for in the review whenever an item is ordered for a day, every row has its own add button or stepper, a customer with an earlier order is offered it again, and the table shows the SKU.
+* **`sold_out`** is the shop's setting, as above.
 
 ## Wholesale layout
 
@@ -86,7 +95,7 @@ One helper, `_customer/price.ts`, writes every amount on the customer pages; the
 * **Share** on every item that is on sale, beside its switch; on the category picker when a category is chosen; and in the Catalog's header for the whole menu. It opens a sheet: the link, "Copy link", "Send on WhatsApp" (`wa.me/?text=`), a note that says what the preview shows and where an ordering customer is sent (or that the number is missing, with a way to the settings), a QR code with "Download SVG", "Download PNG" and "Print", and **Tables**: "1-12, A1, A2" makes a code for each, with the table number in the link, each downloadable, and "Print all".
 * **Printing** uses a print-only layer (the page's own fonts and tokens, always dark ink on white, whatever the theme): shop name in both languages, the code, the table in both languages, a line in each language, the link in small type and "Set up by ALYR · alyr.qa" as the print skill asks. English left, Arabic right, each complete.
 * **QR codes** are drawn in the browser by `qrcode-generator` 2.0.4 (MIT, no dependencies, about 8 KB gzipped (22 KB raw, measured in the production build), loaded only when the Share sheet opens): error correction M, a quiet zone of four modules, dark on light, never inverted. `qr.test.mjs` reads back with an independent decoder (jsQR, a dev dependency) the link of the whole menu, of tables, of an item, of an Arabic category (percent-encoded ASCII) and of a very long one.
-* **Settings:** sold-out items greyed or left out; the compact price list for everyone; the shop's WhatsApp number.
+* **Settings:** the compact price list for everyone; the shop's WhatsApp number (greyed or left out is ALY-107's setting, in its own part of the same sheet).
 * **Orders** show the table.
 
 ## Words, and Arabic

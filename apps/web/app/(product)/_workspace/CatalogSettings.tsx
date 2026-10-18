@@ -2,13 +2,15 @@
 
 // The shop's catalog settings (owners and admins): may agents edit items, the low-stock
 // number, when the shop's day starts, and how long an unpaid payment-link order holds its
-// stock. Each is saved with the button, and each was already in the API. Below them, the
+// stock. Each is saved with the button, and each was already in the API. Then what the shop's
+// type of business started it with (ALY-107): how a sold-out item looks on the order page, how a
+// new item runs out, and which alerts are on. Below them, the
 // WhatsApp numbers the owner registers as staff, who may change the Catalog by message
 // (those save at once, one number at a time), and customer price groups (wholesale),
 // which save as they are changed.
 
 import { useEffect, useState } from "react";
-import { api, sayError, toInt, type Settings, type StaffNumber } from "./catalogApi";
+import { api, sayError, toInt, type Rule, type Settings, type Setup, type StaffNumber } from "./catalogApi";
 import { COPY, type Copy, type Lang } from "./catalogCopy";
 import { CatalogGroups } from "./CatalogGroups";
 import { Field, Icon, Sheet, Switch, type Toast } from "./CatalogUi";
@@ -22,9 +24,13 @@ export function CatalogSettings({ lang, push, onClose }: { lang: Lang; push: Pus
   const [low, setLow] = useState("");
   const [day, setDay] = useState("00:00");
   const [hold, setHold] = useState("");
-  const [soldOut, setSoldOut] = useState<"grey" | "hide">("grey");
   const [wholesale, setWholesale] = useState(false);
   const [number, setNumber] = useState("");
+  const [setup, setSetup] = useState<Setup | null>(null);
+  const [soldOut, setSoldOut] = useState<"grey" | "hide">("grey");
+  const [rule, setRule] = useState<Rule>("switch");
+  const [alertLow, setAlertLow] = useState(true);
+  const [alertSold, setAlertSold] = useState(true);
   const [failure, setFailure] = useState("");
   const [busy, setBusy] = useState(false);
 
@@ -35,9 +41,15 @@ export function CatalogSettings({ lang, push, onClose }: { lang: Lang; push: Pus
       setLow(String(s.low_stock_at));
       setDay(s.day_starts);
       setHold(String(s.hold_minutes));
-      setSoldOut(s.sold_out_display);
       setWholesale(s.wholesale_layout);
       setNumber(s.whatsapp_number ? `+${s.whatsapp_number}` : "");
+    }).catch((error) => setFailure(sayError(error, lang, t)));
+    api<Setup>("/api/items/setup").then((s) => {
+      setSetup(s);
+      setSoldOut(s.sold_out);
+      setRule(s.new_item.rule);
+      setAlertLow(s.alerts.low_stock);
+      setAlertSold(s.alerts.sold_out);
     }).catch((error) => setFailure(sayError(error, lang, t)));
   }, [lang, t]);
 
@@ -53,7 +65,10 @@ export function CatalogSettings({ lang, push, onClose }: { lang: Lang; push: Pus
     try {
       await api<Settings>("/api/items/settings", "PUT", {
         agents_edit_items: agents, low_stock_at: lowNumber, day_starts: day, hold_minutes: holdNumber,
-        sold_out_display: soldOut, wholesale_layout: wholesale, whatsapp_number: number.trim(),
+        wholesale_layout: wholesale, whatsapp_number: number.trim(),
+      });
+      await api<Setup>("/api/items/setup", "PUT", {
+        sold_out: soldOut, new_item_rule: rule, alerts: { low_stock: alertLow, sold_out: alertSold },
       });
       push(t.settingsSaved);
       onClose();
@@ -68,7 +83,7 @@ export function CatalogSettings({ lang, push, onClose }: { lang: Lang; push: Pus
       footer={(
         <>
           <button type="button" className="btn ct-btn" onClick={onClose}>{t.cancel}</button>
-          <button type="submit" form="ct-settings-form" className="btn primary ct-btn ct-grow" disabled={busy || !saved}>{busy ? t.saving : t.save}</button>
+          <button type="submit" form="ct-settings-form" className="btn primary ct-btn ct-grow" disabled={busy || !saved || !setup}>{busy ? t.saving : t.save}</button>
         </>
       )}>
       {failure && <p className="ct-alert" role="alert"><Icon name="warn" />{failure}</p>}
@@ -87,16 +102,6 @@ export function CatalogSettings({ lang, push, onClose }: { lang: Lang; push: Pus
           <input value={hold} inputMode="numeric" dir="ltr" onChange={(e) => setHold(e.target.value)} disabled={!saved} />
         </Field>
         <h3 className="ct-subhead">{t.pageTitle}</h3>
-        <fieldset className="ct-radios" disabled={!saved}>
-          <legend>{t.soldOutShown}</legend>
-          {(["grey", "hide"] as const).map((key) => (
-            <label key={key} className={`ct-radio ${soldOut === key ? "on" : ""}`}>
-              <input type="radio" name="ct-soldout" checked={soldOut === key} onChange={() => setSoldOut(key)} />
-              <span>{key === "grey" ? t.soldOutGrey : t.soldOutHide}</span>
-            </label>
-          ))}
-          <p className="ct-hint">{t.soldOutHint}</p>
-        </fieldset>
         <div className="ct-toggle">
           <span className="ct-toggle-text"><b>{t.wholesaleLayout}</b><small>{t.wholesaleLayoutHint}</small></span>
           <Switch on={wholesale} label={t.wholesaleLayout} onChange={setWholesale} disabled={!saved} />
@@ -104,6 +109,36 @@ export function CatalogSettings({ lang, push, onClose }: { lang: Lang; push: Pus
         <Field label={t.whatsappNumber} hint={t.whatsappHint}>
           <input value={number} inputMode="tel" dir="ltr" autoComplete="off" onChange={(e) => setNumber(e.target.value)} disabled={!saved} />
         </Field>
+
+        <section className="ct-sec ct-type" aria-labelledby="ct-type-title">
+          <h3 id="ct-type-title">{t.typeTitle}</h3>
+          <p className="ct-hint">{t.typeHint}</p>
+          <fieldset className="ct-choices small" disabled={!setup}>
+            <legend>{t.soldOutLabel}</legend>
+            {(["grey", "hide"] as const).map((value) => (
+              <label key={value} className={`ct-choice ${soldOut === value ? "on" : ""}`}>
+                <input type="radio" name="sold-out-display" checked={soldOut === value} onChange={() => setSoldOut(value)} />
+                <span className="ct-choice-mark" aria-hidden="true" />
+                <span className="ct-choice-text"><b>{value === "grey" ? t.soldOutGrey : t.soldOutHide}</b></span>
+              </label>
+            ))}
+          </fieldset>
+          <p className="ct-hint">{t.soldOutHint}</p>
+          <Field label={t.newRuleLabel} hint={t.newRuleHint}>
+            <select value={rule} disabled={!setup} onChange={(e) => setRule(e.target.value as Rule)}>
+              {(["always", "switch", "count", "daily_limit"] as const).map((r) => <option key={r} value={r}>{t.rules[r][0]}</option>)}
+            </select>
+          </Field>
+          <h4>{t.alertsTitle}</h4>
+          <div className="ct-toggle">
+            <span className="ct-toggle-text"><b>{t.alertLow}</b><small>{t.alertLowHint}</small></span>
+            <Switch on={alertLow} label={t.alertLow} onChange={setAlertLow} disabled={!setup} />
+          </div>
+          <div className="ct-toggle">
+            <span className="ct-toggle-text"><b>{t.alertSold}</b><small>{t.alertSoldHint}</small></span>
+            <Switch on={alertSold} label={t.alertSold} onChange={setAlertSold} disabled={!setup} />
+          </div>
+        </section>
       </form>
       <StaffNumbers lang={lang} t={t} push={push} />
       <CatalogGroups lang={lang} push={push} />

@@ -8,7 +8,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import {
   activityText, api, fromDirhams, nameOf, sayError, stamp, toDirhams, toInt, toSignedDirhams,
-  type ActivityRow, type Access, type Category, type GroupPriceRow, type Group, type Item, type Photo, type PriceGroup, type PriceRow, type Rule, type Status, type Window,
+  type ActivityRow, type Access, type Category, type GroupPriceRow, type Group, type Item, type Photo, type PriceGroup, type PriceRow, type Rule, type Setup, type Status, type Window,
 } from "./catalogApi";
 import { COPY, type Copy, type Lang } from "./catalogCopy";
 import { CatalogPhotos } from "./CatalogPhotos";
@@ -55,11 +55,19 @@ function windowForm(w: Window): WindowForm {
   };
 }
 
-export function blankForm(status: Status = "live"): Form {
+/** A new item starts the way the shop's type of business says (how it runs out, what it is sold by, and a bakery's notice and cutoff). */
+export function blankForm(status: Status = "live", setup?: Setup | null): Form {
+  const start = setup?.new_item;
+  const dated = start?.lead_days != null;
   return {
     name: "", name_ar: "", sku: "", description: "", description_ar: "", category: "", price: "", sale: "", saleEnds: "",
-    unit: "piece", packSize: "", minOrder: "1", status, rule: "switch", dailyLimit: "", lowStock: "", opening: "",
-    scheduled: false, variants: [], groups: [], windows: [], tags: [], groupPrices: {},
+    unit: start?.unit ?? "piece", packSize: "", minOrder: "1", status, rule: start?.rule ?? "switch", dailyLimit: "", lowStock: "", opening: "",
+    scheduled: dated,
+    variants: [], groups: [],
+    windows: dated
+      ? [{ weekdays: [0, 1, 2, 3, 4, 5, 6], kind: "dated", opens: "", closes: "", lead: String(start?.lead_days ?? 1), cutoff: start?.cutoff ?? "", ranged: false, from: "", to: "", closed: false }]
+      : [],
+    tags: [], groupPrices: {},
   };
 }
 
@@ -206,15 +214,15 @@ function build(form: Form, t: Copy, existing: Item | null): { body?: Record<stri
   return { body, problems };
 }
 
-export function CatalogEdit({ lang, itemId, initial, categories, access, push, onClose, onChanged }: {
-  lang: Lang; itemId: string | null; initial: Item | null; categories: Category[]; access: Access;
+export function CatalogEdit({ lang, itemId, initial, categories, access, setup, push, onClose, onChanged }: {
+  lang: Lang; itemId: string | null; initial: Item | null; categories: Category[]; access: Access; setup: Setup | null;
   push: Push; onClose: () => void; onChanged: () => void;
 }) {
   const t = COPY[lang];
   const readOnly = !access.can_edit;
   const [item, setItem] = useState<Item | null>(initial);
-  const [form, setForm] = useState<Form>(() => (initial ? formOf(initial) : blankForm("live")));
-  const [start, setStart] = useState(() => JSON.stringify(initial ? formOf(initial) : blankForm("live")));
+  const [form, setForm] = useState<Form>(() => (initial ? formOf(initial) : blankForm("live", setup)));
+  const [start, setStart] = useState(() => JSON.stringify(initial ? formOf(initial) : blankForm("live", setup)));
   const [photos, setPhotos] = useState<Photo[]>(initial?.photos ?? []);
   const [problems, setProblems] = useState<Problems>({});
   const [failure, setFailure] = useState("");
@@ -252,6 +260,10 @@ export function CatalogEdit({ lang, itemId, initial, categories, access, push, o
     api<{ groups: PriceGroup[] }>("/api/price-groups").then((r) => { if (live) setPriceGroups(r.groups); }).catch(() => undefined);
     return () => { live = false; };
   }, []);
+
+  // The parts of the form the shop's type cares about start open on a new item.
+  const focused = (part: string) => (!itemId && setup?.focus.includes(part) ? true : undefined);
+  const isSample = Boolean(item?.sample);
 
   const dirty = useMemo(() => JSON.stringify(form) !== start, [form, start]);
   const set = (patch: Partial<Form>) => setForm((f) => ({ ...f, ...patch }));
@@ -300,6 +312,22 @@ export function CatalogEdit({ lang, itemId, initial, categories, access, push, o
     } catch (error) {
       setFailure(sayError(error, lang, t));
       top.current?.scrollIntoView({ block: "start", behavior: "smooth" });
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  /** The owner keeps a sample as their own, without changing it. */
+  async function keep() {
+    if (!itemId) return;
+    setSaving(true);
+    try {
+      const mine = await api<Item>(`/api/items/${itemId}/adopt`, "POST");
+      setItem(mine);
+      push(t.sampleKept);
+      onChanged();
+    } catch (error) {
+      setFailure(sayError(error, lang, t));
     } finally {
       setSaving(false);
     }
@@ -518,11 +546,18 @@ export function CatalogEdit({ lang, itemId, initial, categories, access, push, o
       <div ref={top} />
       {failure && <p className="ct-alert" role="alert"><Icon name="warn" />{failure}</p>}
       {readOnly && <p className="ct-banner"><span>{t.mustBeOwner}</span></p>}
+      {isSample && (
+        <section className="ct-sample-note" aria-labelledby="ct-sample-title">
+          <h3 id="ct-sample-title"><span className="sh-pill ct-pill sample">{t.sampleTag}</span> {t.sampleSheetTitle}</h3>
+          <p>{t.sampleSheetText}</p>
+          {!readOnly && <button type="button" className="btn small" disabled={saving} onClick={() => void keep()}>{t.sampleKeep}</button>}
+        </section>
+      )}
       <fieldset className="ct-form" disabled={readOnly || saving}>
         <section className="ct-sec">
           <h3>{t.photosTitle}</h3>
           <CatalogPhotos lang={lang} t={t} itemId={itemId} photos={photos} readOnly={readOnly}
-            onPhotos={(next) => { setPhotos(next); if (itemId) onChanged(); }} push={push} />
+            onPhotos={(next) => { setPhotos(next); if (itemId) { onChanged(); void api<Item>(`/api/items/${itemId}`).then(setItem).catch(() => undefined); } }} push={push} />
         </section>
 
         <section className="ct-sec">
@@ -632,7 +667,7 @@ export function CatalogEdit({ lang, itemId, initial, categories, access, push, o
           <Field label={t.descAr}><textarea value={form.description_ar} dir="rtl" lang="ar" rows={3} maxLength={1000} onChange={(e) => set({ description_ar: e.target.value })} /></Field>
         </Fold>
 
-        <Fold title={t.variantsTitle} summary={form.variants.length ? String(form.variants.length) : undefined} open={form.variants.length > 0 ? true : undefined}>
+        <Fold title={t.variantsTitle} summary={form.variants.length ? String(form.variants.length) : undefined} open={form.variants.length > 0 ? true : focused("variants")}>
           <p className="ct-hint">{t.variantsHint}</p>
           {problems.variants && <p className="ct-error">{problems.variants}</p>}
           <ul className="ct-stack">{form.variants.map(variantRow)}</ul>
@@ -643,7 +678,7 @@ export function CatalogEdit({ lang, itemId, initial, categories, access, push, o
         </Fold>
 
         {priceGroups !== null && (
-          <Fold title={t.groupPricesTitle} summary={pricedCount ? t.groupPricesSummary(pricedCount) : undefined} open={pricedCount > 0 ? true : undefined}>
+          <Fold title={t.groupPricesTitle} summary={pricedCount ? t.groupPricesSummary(pricedCount) : undefined} open={pricedCount > 0 ? true : focused("groups")}>
             <p className="ct-hint">{t.groupPricesHint}</p>
             {problems.groupPrices && <p className="ct-error">{problems.groupPrices}</p>}
             {otherGroups.length === 0 ? <p className="ct-hint">{t.groupPricesNone}</p> : (
@@ -652,7 +687,7 @@ export function CatalogEdit({ lang, itemId, initial, categories, access, push, o
           </Fold>
         )}
 
-        <Fold title={t.optionsTitle} summary={form.groups.length ? String(form.groups.length) : undefined} open={form.groups.length > 0 ? true : undefined}>
+        <Fold title={t.optionsTitle} summary={form.groups.length ? String(form.groups.length) : undefined} open={form.groups.length > 0 ? true : focused("options")}>
           <p className="ct-hint">{t.optionsHint}</p>
           {problems.groups && <p className="ct-error">{problems.groups}</p>}
           <ul className="ct-stack">{form.groups.map(groupBox)}</ul>
@@ -661,7 +696,7 @@ export function CatalogEdit({ lang, itemId, initial, categories, access, push, o
           </button>
         </Fold>
 
-        <Fold title={t.scheduleTitle} summary={form.scheduled ? t.scheduleSet : t.scheduleAny} open={form.scheduled ? true : undefined}>
+        <Fold title={t.scheduleTitle} summary={form.scheduled ? t.scheduleSet : t.scheduleAny} open={form.scheduled ? true : focused("schedule")}>
           <fieldset className="ct-choices small">
             <legend className="ct-sr">{t.scheduleTitle}</legend>
             {[false, true].map((on) => (
@@ -760,8 +795,8 @@ export function CatalogEdit({ lang, itemId, initial, categories, access, push, o
               </div>
             ) : (
               <div className="ct-stack">
-                <div><button type="button" className="btn ct-btn" onClick={() => setRemoving("archive")}><Icon name="stock" />{t.archive}</button><p className="ct-hint">{t.archiveText}</p></div>
-                <div><button type="button" className="btn ct-btn danger-line" onClick={() => setRemoving("delete")}><Icon name="trash" />{t.deleteItem}</button><p className="ct-hint">{t.deleteText}</p></div>
+                {!isSample && <div><button type="button" className="btn ct-btn" onClick={() => setRemoving("archive")}><Icon name="stock" />{t.archive}</button><p className="ct-hint">{t.archiveText}</p></div>}
+                <div><button type="button" className="btn ct-btn danger-line" onClick={() => setRemoving("delete")}><Icon name="trash" />{isSample ? t.sampleRemoveOne : t.deleteItem}</button>{!isSample && <p className="ct-hint">{t.deleteText}</p>}</div>
               </div>
             )}
           </section>

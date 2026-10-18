@@ -54,6 +54,7 @@ PERCENT_FROM = 20
 HOURS_FROM = 50  # a busiest-hours grid needs this many events to mean anything
 TYPE_LEAD = {
     "restaurant": "orders", "shop": "orders", "travel": "orders",
+    "bakery": "orders", "grocery": "orders", "fashion": "orders",
     "salon": "bookings", "spa": "bookings", "clinic": "bookings", "home": "bookings",
     "wholesale": "ledger",
 }

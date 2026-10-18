@@ -16,6 +16,9 @@ import { Price, PriceRange, Stepper, Tile } from "./ui";
 export type CardProps = {
   item: Item;
   lang: Lang;
+  /** menu: a photo beside the name; grid: a photo above it, two to a row; list: compact rows
+   *  with no photo (the shop's type chooses, `layout.style`). */
+  look: "menu" | "grid" | "list";
   /** How many of this item are in the order, over every size and set of extras. */
   inOrder: number;
   /** The quantity of the one simple line, when the item has no choices to make. */
@@ -61,7 +64,7 @@ export function StatusLine({ item, lang }: { item: Item; lang: Lang }) {
   );
 }
 
-function Card({ item, lang, inOrder, simpleQty, canOrder, onOpen, onSet, onLimit }: CardProps) {
+function Card({ item, lang, look, inOrder, simpleQty, canOrder, onOpen, onSet, onLimit }: CardProps) {
   const t = T[lang];
   const name = say(lang, item.name, item.name_ar);
   const description = say(lang, item.description, item.description_ar);
@@ -71,10 +74,10 @@ function Card({ item, lang, inOrder, simpleQty, canOrder, onOpen, onSet, onLimit
     <li className={`ox-card ${item.orderable ? "" : "off"}`}>
       <button type="button" className="ox-open" onClick={() => onOpen(item)}
         aria-label={`${name}${item.sold_out ? `. ${t.soldOut}` : ""}`}>
-        <Tile photo={item.cover} sizes="88px" className="ox-thumb" />
+        {look !== "list" && <Tile photo={item.cover} sizes={look === "grid" ? "(min-width: 34rem) 260px, 46vw" : "88px"} className="ox-thumb" />}
         <span className="ox-text">
           <span className="ox-name" dir="auto">{name}</span>
-          {description && <span className="ox-desc" dir="auto">{description}</span>}
+          {description && look !== "list" && <span className="ox-desc" dir="auto">{description}</span>}
           <PriceLine item={item} lang={lang} />
           <StatusLine item={item} lang={lang} />
         </span>

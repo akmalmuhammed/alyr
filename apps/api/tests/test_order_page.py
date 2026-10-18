@@ -57,6 +57,12 @@ def row(client, item: dict, **query) -> dict:
 
 
 def settings(client, **values) -> dict:
+    """Change the shop's settings. How a sold-out item looks (`sold_out_display`) is the
+    business type's setting, saved with `PUT /api/items/setup` (ALY-107)."""
+    sold_out = values.pop("sold_out_display", None)
+    if sold_out is not None:
+        done = client.put("/api/items/setup", json={"sold_out": sold_out})
+        assert done.status_code == 200, done.text
     answer = client.put("/api/items/settings", json=values)
     assert answer.status_code == 200, answer.text
     return answer.json()
@@ -97,15 +103,16 @@ def test_the_whatsapp_number_is_kept_as_digits_with_the_country_code(client):
         refused = client.put("/api/items/settings", json={"whatsapp_number": bad})
         assert refused.status_code == 422 and detail(refused)["code"] == "bad_whatsapp", bad
     assert settings(client, whatsapp_number="")["whatsapp_number"] == ""
-    assert client.put("/api/items/settings", json={"sold_out_display": "blink"}).status_code == 422
+    assert client.put("/api/items/setup", json={"sold_out": "blink"}).status_code == 422
 
 
 def test_only_owners_and_admins_change_what_the_page_does(client):
     from alyr.seed import AGENT_EMAIL
     from test_sign_in import sign_in
     sign_in(client, AGENT_EMAIL)
-    refused = client.put("/api/items/settings", json={"sold_out_display": "hide"})
+    refused = client.put("/api/items/settings", json={"wholesale_layout": True})
     assert refused.status_code == 403
+    assert client.put("/api/items/setup", json={"sold_out": "hide"}).status_code == 403
 
 
 # ── categories, pages and search ─────────────────────────

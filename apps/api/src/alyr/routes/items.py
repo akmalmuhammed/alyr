@@ -11,12 +11,23 @@ from typing import Annotated, Literal
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Request
-from pydantic import AwareDatetime, BaseModel, Field
+from pydantic import AwareDatetime, BaseModel, ConfigDict, Field
 
 from alyr.config import get_settings as app_settings
 from alyr.core import team
 from alyr.core.auth import Staff
-from alyr.modules.items import access, bulk, clock, drafts, groups, listing, photos, stock
+from alyr.modules.items import (
+    access,
+    bulk,
+    clock,
+    drafts,
+    groups,
+    listing,
+    photos,
+    samples,
+    stock,
+    template,
+)
 from alyr.modules.items import service as items
 from alyr.routes.deps import current_staff
 
@@ -25,7 +36,7 @@ router = APIRouter(prefix="/api/items", tags=["items"])
 Rule = Literal["always", "switch", "count", "daily_limit"]
 Unit = Literal["piece", "kg", "box", "pack", "portion", "hour"]
 Status = Literal["draft", "live", "hidden", "archived"]
-Filter = Literal["draft", "sold_out", "low_stock", "stocked", "archived"]
+Filter = Literal["draft", "sold_out", "low_stock", "stocked", "archived", "sample"]
 Weekday = Annotated[int, Field(ge=0, le=6)]
 Money = Annotated[int, Field(ge=0, le=100_000_000, description="In dirhams: 100 is QAR 1")]
 # Fields that may be sent as null to clear them; every other field is left alone if null.
@@ -184,9 +195,6 @@ class StockSettings(BaseModel):
     low_stock_at: int | None = Field(
         default=None, ge=0, le=100_000, description="Counted stock at or below this is low"
     )
-    sold_out_display: Literal["grey", "hide"] | None = Field(
-        default=None, description="Customers see a sold-out item greyed, or not at all"
-    )
     wholesale_layout: bool | None = Field(
         default=None, description="Every customer gets the compact wholesale table"
     )
@@ -194,6 +202,26 @@ class StockSettings(BaseModel):
         default=None, max_length=40,
         description="The number customers message to start an order; empty clears it",
     )
+
+
+class AlertsIn(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    low_stock: bool | None = None
+    sold_out: bool | None = None
+
+
+class SetupChange(BaseModel):
+    """What a type of business started the shop with, which the owner may change. Only what
+    is sent is changed."""
+
+    sold_out: Literal["grey", "hide"] | None = Field(
+        default=None, description="How a sold-out item looks on the order page"
+    )
+    new_item_rule: Rule | None = Field(
+        default=None, description="How a new item runs out until its form says otherwise"
+    )
+    alerts: AlertsIn | None = Field(default=None, description="Which alerts are on")
 
 
 class CategoryIn(BaseModel):
@@ -359,11 +387,44 @@ async def put_settings(
         async with request.app.state.db.tenant(staff.tenant_id) as conn:
             return await items.save_settings(
                 conn, body.hold_minutes, body.day_starts, body.agents_edit_items,
-                body.low_stock_at, body.sold_out_display, body.wholesale_layout,
-                body.whatsapp_number,
+                body.low_stock_at, body.wholesale_layout, body.whatsapp_number,
             )
     except items.ItemError as error:
         raise _fail(error) from error
+
+
+@router.get("/setup")
+async def get_setup(request: Request, staff: Staff = Depends(current_staff)) -> dict:
+    """The shop's Catalog wording and layout (what the section is called, how the order page
+    is laid out) and what its type of business started it with. `specs/008-catalog-business-types`
+    lists every field."""
+    async with request.app.state.db.tenant(staff.tenant_id) as conn:
+        return await template.hints(conn)
+
+
+@router.put("/setup")
+async def put_setup(
+    body: SetupChange, request: Request, staff: Staff = Depends(current_staff)
+) -> dict:
+    """The owner changes what the type started them with: sold-out items greyed or left
+    out, how a new item runs out, which alerts are on."""
+    access.require_manager(staff)
+    try:
+        async with request.app.state.db.tenant(staff.tenant_id) as conn:
+            return await template.save(
+                conn, sold_out=body.sold_out, new_item_rule=body.new_item_rule,
+                alerts=body.alerts.model_dump(exclude_none=True) if body.alerts else None,
+            )
+    except items.ItemError as error:
+        raise _fail(error) from error
+
+
+@router.post("/samples/remove")
+async def remove_samples(request: Request, staff: Staff = Depends(current_staff)) -> dict:
+    """Remove every sample item in one step. Items the owner has made their own are kept."""
+    async with request.app.state.db.tenant(staff.tenant_id) as conn:
+        await access.require_edit(conn, staff)
+        return {"removed": await samples.remove_all(conn, team.actor_of(staff))}
 
 
 @router.get("/categories")
@@ -475,9 +536,10 @@ async def save_item(
     try:
         async with request.app.state.db.tenant(staff.tenant_id) as conn:
             await access.require_edit(conn, staff)
+            # The owner saving a sample makes it theirs (`samples.py`).
             result = await items.update_item(
                 conn, item_id, _changes(body), team.actor_of(staff), await clock.load(conn),
-                reason=body.reason,
+                reason=body.reason, adopt=True,
             )
             if result is not None:
                 await photos.add_to_views(conn, _media(request), [result["item"]])
@@ -499,6 +561,24 @@ async def delete_item(
     if result is None:
         raise HTTPException(status_code=404, detail="item not found")
     return {"result": result}
+
+
+@router.post("/{item_id}/adopt")
+async def adopt_sample(
+    item_id: UUID, request: Request, staff: Staff = Depends(current_staff)
+) -> dict:
+    """Take a sample as your own without changing it: it stops being a sample and stays a
+    draft."""
+    async with request.app.state.db.tenant(staff.tenant_id) as conn:
+        await access.require_edit(conn, staff)
+        shop_clock = await clock.load(conn)
+        await items.adopt_sample(conn, item_id, team.actor_of(staff))
+        entry = await items.get(conn, shop_clock, item_id)
+        if entry is None:
+            raise HTTPException(status_code=404, detail="item not found")
+        shown = items.view(entry, shop_clock)
+        await photos.add_to_views(conn, _media(request), [shown])
+        return shown
 
 
 @router.post("/{item_id}/status")
@@ -565,6 +645,7 @@ async def put_group_prices(
     try:
         async with request.app.state.db.tenant(staff.tenant_id) as conn:
             await access.require_edit(conn, staff)
+            await items.refuse_sample(conn, item_id)
             prices = await groups.save_prices(
                 conn, item_id, [p.model_dump() for p in body.prices], team.actor_of(staff),
                 body.reason,
@@ -627,10 +708,12 @@ async def add_photo(
     item_id: UUID, body: PhotoIn, request: Request, staff: Staff = Depends(current_staff)
 ) -> dict:
     """Put a photo from the shop's library on the item (last in its order; the first is the
-    cover), or on one of its sizes or colours. An item has up to eight."""
+    cover), or on one of its sizes or colours. An item has up to eight. The owner putting
+    their own photo on a sample makes it theirs."""
     try:
         async with request.app.state.db.tenant(staff.tenant_id) as conn:
             await access.require_edit(conn, staff)
+            await items.adopt_sample(conn, item_id, team.actor_of(staff))
             shown = await photos.attach(
                 conn, _media(request), item_id, body.asset_id, team.actor_of(staff),
                 body.variant_id,

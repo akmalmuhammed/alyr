@@ -86,10 +86,24 @@ class Settings(BaseSettings):
     media_max_upload_bytes: int = 15 * 1024 * 1024
     media_max_pixels: int = 40_000_000
 
+    # The Catalog is hidden for every shop until the go-live sweep (ALY-113, D-039). This is
+    # the one switch that sweep flips: with it off, onboarding gives every type of business
+    # exactly the setup it gave before the Catalog (no `catalog` module, no samples, and the
+    # three types that exist only for the Catalog are not offered); with it on, each type
+    # starts with its own catalog (ALY-107, `presets_catalog.py`). It decides for businesses
+    # created from now on. It never switches anything on for a shop that already exists.
+    catalog_for_new_shops: bool = False
+
     # Per shop, to start (D-039; our estimate). A cap stops new items or photos with a
     # clear message and never deletes anything.
     catalog_max_items: int = 1000
     catalog_max_photos: int = 3000
+
+    # Importing a spreadsheet (ALY-108): the largest sheet, and the largest zip of photos
+    # that goes with it. Both are read into memory, so they are bounded; a sheet of 500
+    # items is about 100 KB.
+    catalog_import_max_bytes: int = 5 * 1024 * 1024
+    catalog_import_max_zip_bytes: int = 40 * 1024 * 1024
 
     # R2's free tier is 10 GB-month of storage (checked 17 Oct 2026). Gigabytes here are
     # decimal, which is the smaller reading, so the alert comes early rather than late.

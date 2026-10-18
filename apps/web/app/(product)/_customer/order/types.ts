@@ -97,8 +97,18 @@ export type Group2 = { id: string; name: string; name_ar: string; is_default: bo
 
 export type Settings = { sold_out_display: "grey" | "hide"; wholesale_layout: boolean; whatsapp_number: string };
 
+/** What the shop's type of business says about its page (`GET /api/store/{slug}` → `catalog`,
+ *  specs/008): the section's name and how the items are laid out. `null` without the Catalog. */
+export type Hints = {
+  type: string;
+  section: { name: string; name_ar: string };
+  layout: { style: "menu" | "grid" | "list" | "table"; pickup_date: boolean; quick_quantity: boolean; same_as_last: boolean; show_sku: boolean };
+  sold_out: "grey" | "hide";
+};
+
 export type Store = {
   shop: { name: string; name_ar: string; slug: string; timezone: string; catalog: boolean; whatsapp: string };
+  catalog: Hints | null;
   settings: Settings;
   group: Group2;
   categories: Category[];

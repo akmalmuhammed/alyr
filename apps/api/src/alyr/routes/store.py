@@ -25,7 +25,7 @@ from alyr.config import get_settings
 from alyr.core import links
 from alyr.core.normalise import fmt_qar, fmt_qar_ar
 from alyr.core.workspace import module_enabled
-from alyr.modules.items import demand, text
+from alyr.modules.items import demand, template, text
 from alyr.modules.items.cart import CartLine
 from alyr.modules.items.service import MAX_QUANTITY
 from alyr.modules.orders import page, service
@@ -203,6 +203,9 @@ async def storefront(
             conn, request.app.state.media, contact_id, q=q, category=category,
             offset=offset, limit=limit,
         )
+        # What the shop's type says about its page (the section's name, the layout, how a
+        # sold-out item looks); null for a shop without the Catalog (ALY-107).
+        hints = await template.public(conn) if await template.enabled(conn) else None
     catalog_on = await module_enabled(request.app.state.db, shop["id"], "catalog")
     items = data["items"]
     return {
@@ -214,6 +217,7 @@ async def storefront(
         **data,
         "products": [i for i in items if i["orderable"]],
         "unavailable": [i for i in items if not i["orderable"]],
+        "catalog": hints,
         "customer": customer,
         "link": _link_view(state),
         # The label on a table's QR code. A person typed it into a link, so it is only a
