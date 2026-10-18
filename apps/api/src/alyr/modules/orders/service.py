@@ -345,7 +345,8 @@ async def create_order(
     pay_url = None
     if payment == "account":
         await ledger.add_entry(
-            conn, contact_id, "sale", total, note=f"Order #{number}", created_by="Order link"
+            conn, contact_id, "sale", total, note=f"Order #{number}", created_by="Order link",
+            order_id=order_id,
         )
         balance = (await ledger.aged(conn, contact_id)).balance
         closing = (
@@ -474,8 +475,14 @@ async def cancel_order(
     changed their mind, or nobody paid in time. For an order already ready or done the
     stock stays sold unless `restock` says otherwise. An order that was paid is cancelled
     all the same, and the answer says a refund is due: the shop refunds it in its own
-    payment account, because ALYR never holds money. `held_minutes` is set when the hold
-    ran out, which changes what the customer is told.
+    payment account, because ALYR never holds money. An order that was put on the customer's
+    credit account is taken off it again, in the same transaction: a reversal is written
+    next to the sale and the customer is told their balance changed. `held_minutes` is set
+    when the hold ran out, which changes what the customer is told.
+
+    Every way an order is cancelled comes through here (the customer, staff, the hold
+    sweep), and the order's row lock and the unique reversal in the ledger make sure the
+    sale is taken off once.
 
     Returns None if there is no such order."""
     # A payment link nobody can use any more. First, in the order a payment arriving takes
@@ -493,7 +500,8 @@ async def cancel_order(
         return None
     if row["status"] == "cancelled":
         return {"number": row["number"], "status": "cancelled", "already": True,
-                "stock_returned": 0, "refund_due": False}
+                "stock_returned": 0, "refund_due": False, "credit_reversed": 0,
+                "credit_reversed_text": None}
     if restock is None:
         restock = row["status"] in ("new", "confirmed")
     await conn.execute("update orders set status = 'cancelled' where id = $1", order_id)
@@ -503,11 +511,18 @@ async def cancel_order(
             conn, order_id, actor, reason or "Order cancelled"
         )
     refund_due = row["payment"] == "paid"
+    # An order on the customer's credit account was a debt; cancelled, it is not.
+    reversed_amount = 0
+    if row["payment"] == "on_account":
+        reversed_amount = await ledger.reverse_sale(
+            conn, order_id, row["contact_id"], row["total"], row["number"], actor.name
+        ) or 0
     await team.claim(conn, "order", order_id, actor)
     await team.record(
         conn, "order", order_id, "cancelled", actor, row["contact_id"],
         {"number": row["number"], "reason": reason, "stock_returned": returned or None,
-         "refund_due": fmt_qar(row["total"]) if refund_due else None},
+         "refund_due": fmt_qar(row["total"]) if refund_due else None,
+         "credit_reversed": fmt_qar(reversed_amount) if reversed_amount else None},
     )
     if refund_due:
         await team.record(
@@ -523,12 +538,26 @@ async def cancel_order(
     await outbound.send(conn, templates.notice(
         row["contact_id"], "order_cancelled", lang, body, row["number"],
     ))
+    if reversed_amount:
+        # The notice every ledger entry sends: plain inside the 24-hour window, the
+        # approved `entry_recorded` template outside it.
+        shop = await conn.fetchrow(
+            "select name, name_ar from tenants "
+            "where id = nullif(current_setting('app.tenant_id', true), '')::uuid"
+        )
+        balance = (await ledger.aged(conn, row["contact_id"])).balance
+        await outbound.send(conn, ledger.entry_message(
+            row["contact_id"], lang, shop["name"], shop["name_ar"], "reversal", reversed_amount,
+            balance, row["number"],
+        ))
     return {
         "number": row["number"], "status": "cancelled", "already": False,
         "stock_returned": returned,
         "refund_due": refund_due,
         "refund_amount": row["total"] if refund_due else 0,
         "refund_text": fmt_qar(row["total"]) if refund_due else None,
+        "credit_reversed": reversed_amount,
+        "credit_reversed_text": fmt_qar(reversed_amount) if reversed_amount else None,
     }
 
 
