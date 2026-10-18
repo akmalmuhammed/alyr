@@ -560,8 +560,11 @@ try {
     const before = asked;
     await pause(34000);
     check(asked === before, `while the tab is hidden the page does not ask (${asked - before} requests in 34 s)`);
-    await js("Object.defineProperty(document, 'visibilityState', { configurable: true, get: () => 'visible' }); document.dispatchEvent(new Event('visibilitychange'))");
+    // The shop puts the item back while the tab is hidden; coming to the front must ask at
+    // once (not after the next 20 to 30 seconds) and show it.
     await post(`/api/items/${items["Water"].id}/switch`, { available: true });
+    check(await js(`!!(${row("Water")})?.classList.contains('off')`), "while hidden the card has not changed by itself");
+    await js("Object.defineProperty(document, 'visibilityState', { configurable: true, get: () => 'visible' }); document.dispatchEvent(new Event('visibilitychange'))");
     await until(`!(${row("Water")})?.classList.contains('off')`, "it asks at once when it comes back to the front", 8000);
     check(true, "coming back to the front asks at once");
   });
