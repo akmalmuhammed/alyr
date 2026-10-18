@@ -79,7 +79,7 @@ Added to `core/templates.py` in English and Arabic. They are **not** submitted t
 | `draft_added` | utility | A staff member sent a photo for a new item |
 | `back_in_stock` | **marketing** | An item a customer asked about is back |
 
-## Tables and settings (migration 0026)
+## Tables and settings (migration 0027)
 
 `items.low_stock_at`; `contacts.catalog_manager`; `stock_movements.via` and `item_price_history.via`; `staff_changes` (what a staff member changed, for Undo); `staff_pending` (the open question, one per staff member); `stock_watches`; `stock_alerts`. Every new table has `tenant_id`, forced row-level security and the isolation tests.
 

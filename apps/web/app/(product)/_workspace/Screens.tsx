@@ -77,7 +77,7 @@ const T = {
     promised: (d: string) => `Promised by ${d}`, overLimit: "Over credit limit", optedOut: "Said stop", customer: "Customer", balance: "Balance", age: "Oldest debt",
     days: (n: number) => `${n} days`, settled: "Settled", entries: "Entries",
     buckets: ["0–30 days", "31–60 days", "61–90 days", "Over 90 days"],
-    kinds: { sale: "Credit sale", payment: "Payment", adjustment: "Adjustment" } as Record<string, string>,
+    kinds: { sale: "Credit sale", payment: "Payment", adjustment: "Adjustment", reversal: "Sale cancelled" } as Record<string, string>,
     lang: "العربية",
     tabTeam: "Team", teamSub: "Who can sign in to this workspace",
     roles: { owner: "Owner", admin: "Admin", agent: "Agent" } as Record<string, string>,
@@ -143,7 +143,7 @@ const T = {
     promised: (d: string) => `وعد بالدفع قبل ${d}`, overLimit: "تجاوز حد الائتمان", optedOut: "طلب الإيقاف", customer: "العميل", balance: "الرصيد", age: "أقدم دين",
     days: (n: number) => `${n} يوم`, settled: "مسدد", entries: "الحركات",
     buckets: ["٠–٣٠ يوم", "٣١–٦٠ يوم", "٦١–٩٠ يوم", "أكثر من ٩٠ يوم"],
-    kinds: { sale: "بيع آجل", payment: "دفعة", adjustment: "تعديل" } as Record<string, string>,
+    kinds: { sale: "بيع آجل", payment: "دفعة", adjustment: "تعديل", reversal: "إلغاء بيع آجل" } as Record<string, string>,
     lang: "English",
     tabTeam: "الفريق", teamSub: "من يستطيع الدخول إلى مساحة العمل",
     roles: { owner: "مالك", admin: "مدير", agent: "موظف" } as Record<string, string>,
@@ -1134,8 +1134,8 @@ export function Screens({ embedded = false, section, lang: langProp, intro, show
                           {new Date(e.created_at).toLocaleDateString("en-GB", { day: "2-digit", month: "short" })}
                         </span>
                         <span>{t.kinds[e.kind]}{e.note ? ` · ${e.note}` : ""}</span>
-                        <b className={`num ${e.kind === "payment" ? "minus" : "plus"}`} dir="ltr">
-                          {e.kind === "payment" ? "−" : "+"}{e.amount_text}
+                        <b className={`num ${e.kind === "payment" || e.kind === "reversal" ? "minus" : "plus"}`} dir="ltr">
+                          {e.kind === "payment" || e.kind === "reversal" ? "−" : "+"}{e.amount_text}
                         </b>
                       </li>
                     ))}

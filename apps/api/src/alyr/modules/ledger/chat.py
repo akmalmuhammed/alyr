@@ -10,7 +10,6 @@ from uuid import UUID
 import asyncpg
 
 from alyr.channels.base import Choice, InboundMessage, OutboundMessage
-from alyr.core import templates
 from alyr.core.normalise import fmt_qar, has_arabic, parse_amount, western_digits
 from alyr.modules.ledger import service
 
@@ -90,8 +89,10 @@ async def _balance(conn, contact, lang: str) -> OutboundMessage:
     aged = await service.aged(conn, contact["id"])
     recent = await service.recent_entries(conn, contact["id"], limit=3)
     labels = (
-        {"sale": "شراء", "payment": "دفعة", "adjustment": "تعديل"} if lang == "ar"
-        else {"sale": "Purchase", "payment": "Payment", "adjustment": "Adjustment"}
+        {"sale": "شراء", "payment": "دفعة", "adjustment": "تعديل", "reversal": "إلغاء شراء"}
+        if lang == "ar"
+        else {"sale": "Purchase", "payment": "Payment", "adjustment": "Adjustment",
+              "reversal": "Purchase cancelled"}
     )
     lines = [
         f"{r['created_at']:%d %b}  {labels[r['kind']]}  {fmt_qar(r['amount'])}" for r in recent
@@ -191,17 +192,7 @@ async def _staff(conn, tenant_id, staff, text: str) -> list[OutboundMessage]:
         reply += f"\nWarning: this is over their credit limit of {limit}."
 
     shop = await conn.fetchrow("select name, name_ar from tenants where id = $1", tenant_id)
-    arabic = customer["lang"] == "ar"
-    if arabic:
-        what = "دفعة" if kind == "payment" else "شراء آجل"
-    else:
-        what = "a payment" if kind == "payment" else "a credit purchase"
-    notice = templates.notice(
-        customer["id"], "entry_recorded", customer["lang"],
-        service.entry_notice(
-            customer["lang"], shop["name"], shop["name_ar"], kind, amount, balance
-        ),
-        shop["name_ar"] if arabic and shop["name_ar"] else shop["name"],
-        what, fmt_qar(amount), fmt_qar(balance),
+    notice = service.entry_message(
+        customer["id"], customer["lang"], shop["name"], shop["name_ar"], kind, amount, balance
     )
     return [*say(reply), notice]

@@ -80,10 +80,14 @@ async def change_status(
         raise HTTPException(status_code=404, detail="order not found")
     if result is None:
         return {"status": body.status}
-    return {
+    answer = {
         "status": body.status, "stock_returned": result["stock_returned"],
         "refund_due": result["refund_due"], "refund_text": result.get("refund_text"),
     }
+    if result.get("credit_reversed"):
+        # The order was on the customer's credit account; its sale is off the ledger again.
+        answer["credit_reversed_text"] = result["credit_reversed_text"]
+    return answer
 
 
 @router.post("/orders/{order_id}/assign")

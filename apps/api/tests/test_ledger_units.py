@@ -66,6 +66,36 @@ def test_overpayment_shows_as_credit():
     assert sum(aged.buckets.values()) == 0
 
 
+def test_a_reversed_sale_is_not_a_debt_and_leaves_the_old_debt_alone():
+    cancelled = uuid4()
+    old = [("sale", 100_000, days_ago(100)), ("sale", 20_000, days_ago(40))]
+    aged = age(
+        [*old, ("sale", 15_000, days_ago(2), cancelled),
+         ("reversal", 15_000, days_ago(1), cancelled)],
+        NOW,
+    )
+    assert aged == age(old, NOW)
+    assert aged.balance == 120_000
+    assert aged.buckets == {"d0_30": 0, "d31_60": 20_000, "d61_90": 0, "d90_plus": 100_000}
+
+
+def test_a_reversal_taken_as_a_payment_would_have_eaten_the_oldest_debt():
+    """What the reversal must not be: the same entries without the order's link."""
+    aged = age(
+        [("sale", 100_000, days_ago(100)), ("sale", 15_000, days_ago(2)),
+         ("reversal", 15_000, days_ago(1))],
+        NOW,
+    )
+    assert aged.balance == 100_000
+    assert aged.buckets["d90_plus"] == 85_000 and aged.buckets["d0_30"] == 15_000
+
+
+def test_a_reversal_that_arrives_before_its_time_leaves_the_sale_in_place():
+    order = uuid4()
+    aged = age([("sale", 15_000, days_ago(2), order)], NOW)
+    assert aged.balance == 15_000  # the reversal is not in the list yet: as of an earlier day
+
+
 def test_more_than_three_buttons_is_refused():
     choices = tuple(Choice(str(i), f"Option {i}") for i in range(4))
     with pytest.raises(ValueError):

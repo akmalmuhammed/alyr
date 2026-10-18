@@ -104,7 +104,7 @@ Kept working on the same items: `GET/POST /api/products`, `POST /api/products/{i
 * **Customer price groups for wholesale** are in release 1 (D-039), and ALY-112 lists a wholesale layout "with customer price groups", but no package builds the data: a table of groups, a price per item and group, and a group on the customer. They need a package to own them. SKU and barcode numbers likewise (the wholesale template asks for a SKU).
 * The public order page's API returns how many are left (`left`) so a page can say "only 3 left"; ALY-112 decides how much of that to show, since it also tells a competitor the shop's stock.
 * `POST /api/products`, the first way to add an item, is open to every staff role, as it always was; `/api/items` limits editing to owners and admins. ALY-117 covers agents' rights.
-* Cancelling an order that was put on a credit account does not reverse the ledger sale. That is how orders already worked; it is a separate issue.
+* Cancelling an order that was put on a credit account used to leave its sale on the ledger. ALY-128 fixed it for every cancel path: a `reversal` entry is written beside the sale, the customer gets the ledger's own notice, and the aged-debt buckets, the weekly report and the Agent leave the order out. Orders cancelled before the fix keep their sale (see docs/status.md).
 
 ## Acceptance
 

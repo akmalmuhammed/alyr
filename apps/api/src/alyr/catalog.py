@@ -248,7 +248,8 @@ MODULES: tuple[Module, ...] = (
             Card(
                 "outstanding",
                 Text("Owed to you", "مستحق لك"),
-                "(select coalesce(sum(case kind when 'payment' then -amount else amount end), 0)::bigint "
+                "(select coalesce(sum(case when kind in ('payment', 'reversal') then -amount "
+                "else amount end), 0)::bigint "
                 "from ledger_entries)",
                 kind="qar",
             ),

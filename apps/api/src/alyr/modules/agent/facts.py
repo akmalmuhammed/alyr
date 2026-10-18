@@ -635,7 +635,8 @@ async def _ledger(conn, f: Facts, span, last, chart) -> None:
         start = f.at(f.week_start - timedelta(days=7 * k))
         end = f.at(f.week_start - timedelta(days=7 * (k - 1)))
         row = await conn.fetchrow(
-            "select coalesce(sum(amount) filter (where kind = 'sale'), 0)::bigint as sales, "
+            f"select coalesce(sum(amount) filter (where {ledger.STANDING_SALE}), 0)::bigint "
+            "as sales, "
             "coalesce(sum(amount) filter (where kind = 'payment'), 0)::bigint as payments "
             "from ledger_entries where created_at >= $1 and created_at < $2",
             start, end,
