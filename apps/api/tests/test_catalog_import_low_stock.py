@@ -5,7 +5,6 @@ default and is not in the file), a number is 0 to 100,000, and it means somethin
 item counted in stock. The helpers are in test_catalog_import.py."""
 
 from alyr.modules.items import columns, xlsx
-from test_consent import owner_sql
 from test_catalog_import import (
     apply_import,
     by_name,
@@ -17,6 +16,7 @@ from test_catalog_import import (
     table,
     xlsx_of,
 )
+from test_consent import owner_sql
 
 KEYS = ["name", "name_ar", "price", "rule", "stock", "low_stock"]
 
