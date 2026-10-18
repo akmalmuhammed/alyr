@@ -8,7 +8,7 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import {
-  api, issueText, nameOf, sayError, sendFile, stamp,
+  api, issueText, nameOf, sayError, sendFile, stamp, whoIs,
   type ImportIssue, type ImportItem, type ImportKinds, type ImportPreview, type ImportRecent,
   type ImportResult, type ImportUndone, type OnDuplicate,
 } from "./catalogApi";
@@ -300,7 +300,7 @@ export function CatalogImport({ lang, canEdit, onClose, onChanged }: {
               {recent.map((r) => (
                 <li key={r.id}>
                   <span className="ct-imp-file" dir="auto">{r.filename}</span>
-                  <small>{stamp(r.at)} · {r.by.name}</small>
+                  <small>{stamp(r.at, lang)} · {whoIs(r.by.name, t)}</small>
                   <small>{r.status === "undone" ? i.undoneTag : i.recentLine(r.created, r.updated)}{r.skipped > 0 && r.status !== "undone" ? ` · ${i.doneLeft(r.skipped)}` : ""}</small>
                 </li>
               ))}

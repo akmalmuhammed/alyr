@@ -51,7 +51,7 @@ async def add_entry(
 
 async def reverse_sale(
     conn: asyncpg.Connection, order_id: UUID, contact_id: UUID, total: int, number: int,
-    created_by: str,
+    created_by: str, at: datetime | None = None,
 ) -> int | None:
     """Undo the credit sale an order put on its customer's account, in the caller's
     transaction. The sale stays in the ledger and a reversal is written beside it, with the
@@ -60,15 +60,17 @@ async def reverse_sale(
     Returns the amount reversed, or None when the order has already been reversed: the
     unique index on reversals decides, so cancelling twice, or two cancels at once, can
     never take the money off twice. `total` is only used when the sale was never tied to
-    its order (an entry written before ALY-128 that did not match)."""
+    its order (an entry written before ALY-128 that did not match). `at` is for the demo
+    shops (ALY-110), whose history is written for a moment in the past; every real
+    cancellation leaves it out and gets the present."""
     amount = await conn.fetchval(
         "select amount from ledger_entries where order_id = $1 and kind = 'sale'", order_id
     )
     written = await conn.fetchval(
-        "insert into ledger_entries (contact_id, kind, amount, note, created_by, order_id) "
-        "values ($1, 'reversal', $2, $3, $4, $5) "
+        "insert into ledger_entries (contact_id, kind, amount, note, created_by, order_id, "
+        "created_at) values ($1, 'reversal', $2, $3, $4, $5, coalesce($6, now())) "
         "on conflict (order_id) where kind = 'reversal' do nothing returning amount",
-        contact_id, amount or total, f"Order #{number} cancelled", created_by, order_id,
+        contact_id, amount or total, f"Order #{number} cancelled", created_by, order_id, at,
     )
     return written
 

@@ -17,6 +17,8 @@ import { say, T } from "./copy";
 import type { Check, Checked, Customer, Day, Item, Placed } from "./types";
 import { Dialog, DialogHead, Price, Stepper, Tile } from "./ui";
 
+const up = (s: string) => (s ? s.charAt(0).toUpperCase() + s.slice(1) : s);
+
 type Props = {
   slug: string;
   token: string;
@@ -222,7 +224,7 @@ export function ReviewSheet(props: Props) {
               {days.map((d) => (
                 <label key={d.date} className={`ox-day ${forDate === d.date ? "on" : ""}`}>
                   <input type="radio" name="ox-day" checked={forDate === d.date} onChange={() => onForDate(d.date)} />
-                  <span>{say(lang, d.label, d.label_ar)}</span>
+                  <span>{up(say(lang, d.label, d.label_ar))}</span>
                 </label>
               ))}
             </div>

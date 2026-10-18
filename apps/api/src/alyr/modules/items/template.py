@@ -161,10 +161,13 @@ async def alert_on(conn: asyncpg.Connection, kind: str) -> bool:
     return True if value is None else bool(value)
 
 
-async def apply(conn: asyncpg.Connection, setup: CatalogSetup, clock: ShopClock) -> int:
+async def apply(
+    conn: asyncpg.Connection, setup: CatalogSetup, clock: ShopClock, samples_too: bool = True
+) -> int:
     """Give a new shop its type's catalog: the starting values, the categories and the
     sample items. Returns how many samples. Called once, by onboarding, and only while the
-    Catalog is switched on for new shops."""
+    Catalog is switched on for new shops. The demo shops (ALY-110) start the same way but
+    sell real items, so they leave the samples out (`samples_too=False`)."""
     await conn.execute(
         "insert into shop_settings (low_stock_at, sold_out_display, new_item_rule, "
         "alert_low_stock, alert_sold_out) values ($1, $2, $3, $4, $5) "
@@ -176,4 +179,4 @@ async def apply(conn: asyncpg.Connection, setup: CatalogSetup, clock: ShopClock)
     await service.save_categories(
         conn, [{"name": name, "name_ar": ar} for name, ar in setup.categories]
     )
-    return await samples.add(conn, setup, clock)
+    return await samples.add(conn, setup, clock) if samples_too else 0

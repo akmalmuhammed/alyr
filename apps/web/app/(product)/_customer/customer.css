@@ -29,6 +29,9 @@
 .cx :focus-visible { outline: 2px solid var(--ink); outline-offset: 2px; border-radius: 8px; }
 .cx .num { font-variant-numeric: tabular-nums; }
 .cx button { font: inherit; color: inherit; cursor: pointer; }
+.cx .cx-btn { color: var(--on-volt); }
+.cx .cx-btn.ink { color: var(--card); }
+.cx .cx-btn.ghost { color: var(--ink); }
 
 /* ── frame ── */
 .cx-top { position: sticky; top: 0; z-index: 10; background: color-mix(in srgb, var(--bg) 82%, transparent); backdrop-filter: blur(16px) saturate(1.3); -webkit-backdrop-filter: blur(16px) saturate(1.3); border-bottom: 1px solid var(--hair); }
