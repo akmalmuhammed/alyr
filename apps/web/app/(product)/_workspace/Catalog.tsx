@@ -60,7 +60,7 @@ function priceLine(item: Item) {
     : <b className="num" dir="ltr">{item.price_text}</b>;
 }
 
-export function Catalog({ lang }: { lang: Lang }) {
+export function Catalog({ lang, show = null }: { lang: Lang; show?: string | null }) {
   const t = COPY[lang];
   const { toasts, push, dismiss, clear } = useToasts();
   const [tab, setTab] = useState<"items" | "stock">("items");
@@ -99,6 +99,14 @@ export function Catalog({ lang }: { lang: Lang }) {
     setView(next);
     try { localStorage.setItem(VIEW_KEY, next); } catch { /* not remembered */ }
   }
+
+  // A card on the home screen (Sold out now, Low stock) opens the list with its filter on:
+  // `/app/catalog?show=sold_out`. The chips keep working as ever.
+  useEffect(() => {
+    if (!show || !(FILTERS as readonly string[]).includes(show)) return;
+    const apply = setTimeout(() => { setFilter(show as (typeof FILTERS)[number]); setLimit(PAGE); }, 0);
+    return () => clearTimeout(apply);
+  }, [show]);
 
   // The search waits for a pause in typing.
   useEffect(() => {

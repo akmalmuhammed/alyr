@@ -10,6 +10,7 @@ from fastapi import APIRouter, HTTPException, Request
 from pydantic import BaseModel, Field
 
 from alyr.config import get_settings
+from alyr.modules.items import demand
 from alyr.modules.items.cart import CartLine
 from alyr.modules.items.service import MAX_QUANTITY
 from alyr.modules.orders import service
@@ -132,6 +133,7 @@ async def place_order(slug: str, body: NewOrder, request: Request) -> dict:
                 body.for_date,
             )
     except service.OrderError as error:
+        await demand.note_refusal(request.app.state.db, shop["id"], body.contact_id, error.lines)
         raise _refused(error) from error
 
 
@@ -147,4 +149,5 @@ async def repeat_order(slug: str, body: Repeat, request: Request) -> dict:
                 request.app.state.outbound,
             )
     except service.OrderError as error:
+        await demand.note_refusal(request.app.state.db, shop["id"], body.contact_id, error.lines)
         raise _refused(error) from error

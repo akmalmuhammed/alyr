@@ -65,12 +65,17 @@ class Step:
 @dataclass(frozen=True)
 class Card:
     """A number on the home dashboard. `value` is a SQL expression returning one number,
-    run in the shop's own scope."""
+    run in the shop's own scope. A number that one expression cannot give (the Catalog's
+    stock states depend on the shop's clock, its schedules and its rules) names its own count
+    in `count` instead, and the module's code works it out (`workspace.home`, ALYR Agent).
+    `href` is the screen that lists what was counted: tapping the card opens it."""
 
     key: str
     label: Text
-    value: str
+    value: str = ""
     kind: str = "count"  # count | qar
+    count: str = ""
+    href: str = ""
 
 
 @dataclass(frozen=True)
@@ -216,6 +221,18 @@ MODULES: tuple[Module, ...] = (
         "catalog",
         Text("Catalog", "الكتالوج"),
         screens=(Screen("catalog", Text("Catalog", "الكتالوج"), "catalog"),),
+        # Two numbers on the home screen, each the number of rows in the list it opens (the
+        # Catalog list's own filters, `modules/items/listing.py`).
+        cards=(
+            Card(
+                "sold_out", Text("Sold out now", "نفدت الآن"), count="sold_out",
+                href="/app/catalog?show=sold_out",
+            ),
+            Card(
+                "low_stock", Text("Low stock", "مخزون قليل"), count="low_stock",
+                href="/app/catalog?show=low_stock",
+            ),
+        ),
     ),
     Module(
         "payments",
@@ -374,6 +391,8 @@ def check() -> None:
     for module in MODULES:
         for step in module.steps:
             assert not step.connection or step.connection in CONNECTION_BY_KEY, step.key
+        for card in module.cards:
+            assert card.value or card.count, f"card {card.key} has no number"
 
 
 check()

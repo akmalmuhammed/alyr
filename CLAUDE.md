@@ -73,7 +73,8 @@ apps/web/                     Next.js. Three root layouts, one per route group:
 docs/                         See docs/README.md for what lives where (docs/hygiene.md section 1)
 scripts/                      check.sh (everything CI runs), demo.sh (start and check the live demo),
                               api-in-docker.sh, build-site.sh, catalog-browser-check.mjs (the Catalog's
-                              screens in a real browser at phone width), hooks/pre-commit
+                              screens in a real browser at phone width), catalog-reports-browser-check.mjs
+                              (its home cards and the back office's Usage view), hooks/pre-commit
 specs/                        One folder per spec; write or update the spec before building
 infra/                        Cloud infrastructure as code (proposed in PR #52, not merged)
 packages/compliance/          WPS SIF and e-invoice libraries (not created yet)

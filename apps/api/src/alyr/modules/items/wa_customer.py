@@ -24,7 +24,7 @@ from alyr.channels.base import Choice, InboundMessage, OutboundMessage
 from alyr.core import consent
 from alyr.core.media import MediaService
 from alyr.core.normalise import fmt_qar, has_arabic
-from alyr.modules.items import availability, match, photos, service, text, watches
+from alyr.modules.items import availability, demand, match, photos, service, text, watches
 from alyr.modules.items import clock as shop_clock
 from alyr.modules.items.wa_text import say, shown
 from alyr.modules.orders.chat import order_link
@@ -216,6 +216,8 @@ async def _card(
     elif state.reason in ("sold_out", "off"):
         lines.append(say("card_sold_out", lang))
         buttons.append(Choice(f"notify:{item_id}", say("button_notify", lang)))
+        # They asked for something the shop cannot give: the weekly report counts it.
+        await demand.record(conn, contact["id"], [item_id], "whatsapp", clock.now)
     else:
         when = state.next_at or state.next_date
         if when is not None:
@@ -312,6 +314,8 @@ async def _ask_to_notify(
         return [OutboundMessage(
             to=contact["id"], body=say("notify_in_stock", lang, name=name, link=link), lang=lang
         )]
+    if entry.state(clock).reason in ("sold_out", "off"):
+        await demand.record(conn, contact["id"], [item_id], "whatsapp", clock.now)
     if await watches.waiting_for(conn, contact["id"], item_id):
         return [OutboundMessage(
             to=contact["id"], body=say("notify_already", lang, name=name), lang=lang

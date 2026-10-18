@@ -5,6 +5,7 @@ left to set up, and the numbers on its home dashboard. Everything here is driven
 Every function takes a tenant-scoped connection unless it says otherwise.
 """
 
+from datetime import datetime
 from uuid import UUID
 
 import asyncpg
@@ -166,15 +167,35 @@ async def state(conn: asyncpg.Connection, staff: Staff) -> dict:
     }
 
 
+async def counts(
+    conn: asyncpg.Connection, modules: set[str] | frozenset[str], now: datetime | None = None
+) -> dict[str, int]:
+    """The numbers a module works out for itself (`Card.count`): today, the Catalog's. They
+    are the numbers on the filter chips of the list the card opens, so the two always agree."""
+    found: dict[str, int] = {}
+    if "catalog" in modules:
+        # (imported here: the Catalog's code builds on this package, not the other way round)
+        from alyr.modules.items import clock, listing
+
+        found |= await listing.counts(conn, await clock.load(conn, now))
+    return found
+
+
 async def home(conn: asyncpg.Connection) -> list[dict]:
     """The dashboard numbers, one card per number each switched-on module offers."""
     modules = await enabled_modules(conn)
     cards = []
+    worked_out = None
     for module in catalog.MODULES:
         if module.key not in modules:
             continue
         for card in module.cards:
-            value = int(await conn.fetchval(f"select {card.value}") or 0)
+            if card.count:
+                if worked_out is None:
+                    worked_out = await counts(conn, modules)
+                value = worked_out[card.count]
+            else:
+                value = int(await conn.fetchval(f"select {card.value}") or 0)
             cards.append(
                 {
                     "key": card.key,
@@ -183,6 +204,7 @@ async def home(conn: asyncpg.Connection) -> list[dict]:
                     "value": value,
                     "text": fmt_qar(value) if card.kind == "qar" else str(value),
                 }
+                | ({"href": card.href} if card.href else {})
             )
     return cards
 
