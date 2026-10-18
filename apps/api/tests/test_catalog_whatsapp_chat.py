@@ -5,7 +5,7 @@ returns, and only if the customer agreed). English and Arabic. Nothing reaches M
 import re
 from uuid import uuid4
 
-from alyr.seed import AHMED_PHONE, DEMO_SLUG, STAFF_PHONE
+from alyr.seed import AHMED_PHONE, DEMO_SLUG, DEMO_TENANT_ID, STAFF_PHONE
 from catalog_wa import (  # noqa: F401  (the autouse fixture is used by name)
     ARABIC,
     catalog_module_on,
@@ -15,8 +15,8 @@ from catalog_wa import (  # noqa: F401  (the autouse fixture is used by name)
     window_closed,
 )
 from photo_files import photo
-from test_consent import owner_sql
-from test_items import counted, fresh, line, mk, order, people
+from test_consent import owner_sql, say
+from test_items import counted, fresh, line, mk, on_shop, order, people
 from test_media import upload
 
 BILAL_PHONE = "97455500002"
@@ -217,7 +217,8 @@ def test_scenario_13_the_customer_agrees_once_and_is_told_once_when_it_is_back(c
     item = sold_out_shawarma(client)
     asked, done = agree(client, AHMED_PHONE, item)
     # The agreement is asked plainly, with who it is from and how to stop.
-    assert "agree to receive updates like this from Al Noor Electricals" in asked["body"]
+    assert "agree to get that one message from Al Noor Electricals" in asked["body"]
+    assert "not a subscription" in asked["body"]
     assert "STOP" in asked["body"] and [c["title"] for c in choices(asked)] == [
         "Yes, tell me", "No thanks"]
     assert "I will message you once when Shawarma is back" in done["body"]
@@ -227,8 +228,15 @@ def test_scenario_13_the_customer_agrees_once_and_is_told_once_when_it_is_back(c
         "join contacts c on c.id = s.contact_id where c.phone = $1 and s.source = $2",
         AHMED_PHONE, "back_in_stock_request",
     )
-    assert (row["purpose"], row["status"]) == ("marketing", "granted")
-    assert "agree to receive updates like this" in row["wording"]
+    # A purpose of its own: asking to be told about one item is not marketing consent.
+    assert (row["purpose"], row["status"]) == ("back_in_stock", "granted")
+    assert "agree to get that one message" in row["wording"]
+    states = owner_sql(
+        "select consent_marketing, consent_back_in_stock from contacts where phone = $1",
+        AHMED_PHONE,
+    )[0]
+    assert (states["consent_marketing"], states["consent_back_in_stock"]) == (
+        "unknown", "granted")
     assert [w["status"] for w in watches()] == ["waiting"]
 
     # Nothing is sent while it is still gone.
@@ -256,7 +264,8 @@ def test_scenario_13_in_arabic(client):
     item = mk(client, name="Shawarma", name_ar="شاورما", price=1200)
     talk(client, STAFF_PHONE, "نفذ شاورما")
     asked, done = agree(client, AHMED_PHONE, item, "بلغني لما يتوفر شاورما")
-    assert "أوافق" not in asked["body"] and "توافق على تلقي رسائل مثل هذه من النور" in asked["body"]
+    assert "أوافق" not in asked["body"]
+    assert "توافق على تلقي هذه الرسالة الواحدة من النور" in asked["body"]
     assert [c["title"] for c in choices(asked)] == ["نعم، أخبرني", "لا شكراً"]
     assert ARABIC.search(done["body"]) and "سأراسلك مرة واحدة عند توفر «شاورما»" in done["body"]
     count = len(sent(client, AHMED_PHONE))
@@ -310,12 +319,15 @@ def test_a_template_is_not_sent_to_a_customer_who_no_longer_agrees(client):
     item = sold_out_shawarma(client)
     agree(client, AHMED_PHONE, item)
     window_closed(AHMED_PHONE)
-    owner_sql("update contacts set consent_marketing = 'revoked' where phone = $1", AHMED_PHONE)
+    owner_sql(
+        "update contacts set consent_back_in_stock = 'revoked' where phone = $1", AHMED_PHONE
+    )
+    count = len(sent(client, AHMED_PHONE))
     talk(client, STAFF_PHONE, "back shawarma")
-    last = sent(client, AHMED_PHONE)[-1]
-    assert last["status"] == "blocked" and last["error"] == "no_marketing_consent"
+    # Nothing is sent, in the window or out of it, and the request says why it was closed.
+    assert len(sent(client, AHMED_PHONE)) == count
     [watch] = watches()
-    assert (watch["status"], watch["reason"]) == ("not_sent", "no_marketing_consent")
+    assert (watch["status"], watch["reason"]) == ("not_sent", "no_back_in_stock_consent")
 
 
 def test_saying_stop_closes_every_request(client):
@@ -323,6 +335,20 @@ def test_saying_stop_closes_every_request(client):
     agree(client, AHMED_PHONE, item)
     assert "will not receive reminders" in talk(client, AHMED_PHONE, "STOP")[-1]["body"]
     assert [w["status"] for w in watches()] == ["cancelled"]
+    # STOP takes back the narrow consent as well as the general ones, and logs each.
+    log = owner_sql(
+        "select s.purpose, s.status from consents s join contacts c on c.id = s.contact_id "
+        "where c.phone = $1 and s.source = 'customer_message' order by s.created_at",
+        AHMED_PHONE,
+    )
+    assert {(r["purpose"], r["status"]) for r in log} == {
+        ("service", "revoked"), ("marketing", "revoked"), ("back_in_stock", "revoked")}
+    states = owner_sql(
+        "select consent_marketing, consent_back_in_stock from contacts where phone = $1",
+        AHMED_PHONE,
+    )[0]
+    assert (states["consent_marketing"], states["consent_back_in_stock"]) == (
+        "revoked", "revoked")
     count = len(sent(client, AHMED_PHONE))
     talk(client, STAFF_PHONE, "back shawarma")
     assert len(sent(client, AHMED_PHONE)) == count
@@ -428,3 +454,91 @@ def test_a_request_in_one_shop_is_never_answered_by_another(client):
     assert len(sent(client, AHMED_PHONE)) == count and [w["status"] for w in watches()] == [
         "waiting"]
     assert owner_sql("select count(*) from stock_watches where tenant_id = $1", other)[0][0] == 0
+
+
+# ── the narrow consent: asking to be told is not marketing consent ───────────────────
+
+
+def consent_states(phone: str):
+    row = owner_sql(
+        "select consent_service, consent_marketing, consent_back_in_stock from contacts "
+        "where phone = $1", phone,
+    )[0]
+    return row["consent_service"], row["consent_marketing"], row["consent_back_in_stock"]
+
+
+def send_template(client, phone: str, name: str, category: str, *params: str):
+    """Hand one template to the outbound layer, as a module would, and say what it did."""
+    from uuid import UUID
+
+    from alyr.channels.base import OutboundMessage
+
+    async def go():
+        async with client.app.state.db.tenant(DEMO_TENANT_ID) as conn:
+            who = await conn.fetchval("select id from contacts where phone = $1", phone)
+            return await client.app.state.outbound.send(conn, OutboundMessage(
+                to=UUID(str(who)), kind="template", body="x", template_name=name,
+                template_category=category, template_params=params,
+            ))
+
+    return client.portal.call(go)
+
+
+def test_a_customer_who_only_asked_to_be_told_is_not_opted_in_to_marketing(client):
+    item = sold_out_shawarma(client)
+    agree(client, AHMED_PHONE, item)
+    assert consent_states(AHMED_PHONE) == ("granted", "unknown", "granted")
+    # No marketing consent was recorded, so any other marketing message is still refused.
+    assert not owner_sql(
+        "select 1 from consents s join contacts c on c.id = s.contact_id "
+        "where c.phone = $1 and s.purpose = 'marketing'", AHMED_PHONE,
+    )
+    window_closed(AHMED_PHONE)
+    refused = send_template(client, AHMED_PHONE, "new_stock", "marketing")
+    assert refused.blocked == "no_marketing_consent"
+    # The narrow template itself is allowed to them.
+    allowed = send_template(client, AHMED_PHONE, "back_in_stock", "marketing",
+                            "Al Noor Electricals", "Shawarma", "http://web.test/s/al-noor")
+    assert allowed.blocked is None
+
+
+def test_marketing_consent_alone_does_not_allow_the_back_in_stock_template(client):
+    owner_sql("update contacts set consent_marketing = 'granted' where phone = $1", AHMED_PHONE)
+    say(client, AHMED_PHONE, "hello")
+    window_closed(AHMED_PHONE)
+    blocked = send_template(client, AHMED_PHONE, "back_in_stock",
+                            "marketing", "Al Noor Electricals", "Shawarma", "http://x")
+    assert blocked.blocked == "no_back_in_stock_consent"
+    # And the general consent still allows the general marketing template, as before.
+    assert send_template(client, AHMED_PHONE, "new_stock", "marketing").blocked is None
+
+
+def test_start_does_not_give_back_the_consent_that_stop_took(client):
+    item = sold_out_shawarma(client)
+    agree(client, AHMED_PHONE, item)
+    talk(client, AHMED_PHONE, "STOP")
+    talk(client, AHMED_PHONE, "start")
+    # Service notices are back; the one-message agreement is not, and neither is marketing.
+    assert consent_states(AHMED_PHONE) == ("granted", "revoked", "revoked")
+    # Asking again means agreeing again: the question is asked, not skipped.
+    asked = talk(client, AHMED_PHONE, "tell me when shawarma is back")[-1]
+    assert [c["title"] for c in choices(asked)] == ["Yes, tell me", "No thanks"]
+    assert watches("waiting") == []
+    yes = next(c for c in choices(asked) if c["id"].startswith("notify_yes:"))
+    assert "I will message you once" in talk(client, AHMED_PHONE, reply_id=yes["id"])[-1]["body"]
+    assert consent_states(AHMED_PHONE) == ("granted", "revoked", "granted")
+    assert [w["status"] for w in watches("waiting")] == ["waiting"]
+
+
+def test_a_consent_purpose_the_shop_does_not_know_is_refused(client):
+    import pytest
+
+    from alyr.core import consent
+
+    async def go(conn):
+        who = await conn.fetchval("select id from contacts where phone = $1", AHMED_PHONE)
+        with pytest.raises(ValueError):
+            await consent.record(conn, who, "newsletter", "granted", "test")
+        return await consent.current(conn, who, "back_in_stock")
+
+    assert on_shop(client, go) == "unknown"

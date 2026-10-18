@@ -316,16 +316,14 @@ async def _ask_to_notify(
         return [OutboundMessage(
             to=contact["id"], body=say("notify_already", lang, name=name), lang=lang
         )]
-    state = await conn.fetchval(
-        "select consent_marketing from contacts where id = $1", contact["id"]
-    )
     shop = await _shop_name(conn, tenant_id, lang)
-    if state == "revoked":
+    if await consent.current(conn, contact["id"], "service") == "revoked":
+        # They said STOP and have not said START: nothing is sent until they do.
         return [OutboundMessage(
             to=contact["id"], body=say("notify_opted_out", lang, shop=shop), lang=lang
         )]
-    if state == "granted":
-        # They agreed to messages from the shop before: one request is enough.
+    if await consent.current(conn, contact["id"], "back_in_stock") == "granted":
+        # They already agreed to be told when an item is back: one request is enough.
         await watches.add(conn, contact["id"], item_id)
         return [OutboundMessage(
             to=contact["id"], body=say("notify_done", lang, name=name), lang=lang
@@ -363,12 +361,15 @@ async def _agreed(
                      link=order_link(web_url, slug, contact["id"])),
         )]
     shop = await _shop_name(conn, tenant_id, lang)
-    state = await conn.fetchval(
-        "select consent_marketing from contacts where id = $1", contact["id"]
-    )
-    if state != "granted":
+    if await consent.current(conn, contact["id"], "service") == "revoked":
+        return [OutboundMessage(
+            to=contact["id"], body=say("notify_opted_out", lang, shop=shop), lang=lang
+        )]
+    if await consent.current(conn, contact["id"], "back_in_stock") != "granted":
+        # What they agreed to is exactly this: one message about this item. It is recorded
+        # with the words they were shown, and it is not marketing consent.
         await consent.record(
-            conn, contact["id"], "marketing", "granted", "back_in_stock_request",
+            conn, contact["id"], "back_in_stock", "granted", "back_in_stock_request",
             say("notify_ask", lang, name=name, shop=shop),
         )
     added = await watches.add(conn, contact["id"], item_id)

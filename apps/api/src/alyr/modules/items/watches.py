@@ -11,9 +11,13 @@ Meta needs no template there. Outside it, only a template will do. Meta's templa
 guidelines (checked 18 Oct 2026) call a utility template one that is non-promotional and
 triggered by the user's action, but list a saved search that found a match among the
 retargeting examples that are "marketing even if requested by users". An item back in
-stock is the nearest thing, so `back_in_stock` is filed as **marketing**: the outbound
-layer sends it only to a customer who agreed to such messages, and a customer who has not
-is recorded as not sent. A request that nothing came of in 60 days expires.
+stock is the nearest thing, so `back_in_stock` is filed as **marketing**. What the
+customer agreed to is narrower than marketing, though: the consent purpose `back_in_stock`
+(one message, about the item they asked for), recorded when they said yes. It is not
+marketing consent and never sets `consent_marketing`, so broadcasts (ALY-44) still need an
+explicit opt-in. The outbound layer sends this template only to a customer who holds it;
+STOP takes it back and START does not give it back. A request that nothing came of in 60
+days expires.
 
 The send is in the same transaction as closing the request, so a request is closed if and
 only if its message was recorded, and a retried job cannot send twice.
@@ -92,7 +96,7 @@ class BackInStock:
             "select name, name_ar, slug from tenants where id = $1", tenant_id
         )
         waiting = await conn.fetch(
-            "select w.id, w.contact_id, c.lang, "
+            "select w.id, w.contact_id, c.lang, c.consent_back_in_stock, "
             "coalesce(c.last_inbound_at > now() - interval '24 hours', false) as window_open "
             "from stock_watches w join contacts c on c.id = w.contact_id "
             "where w.item_id = $1 and w.status = 'waiting' order by w.created_at "
@@ -102,6 +106,15 @@ class BackInStock:
         sent = 0
         for watch in waiting:
             lang = watch["lang"]
+            if watch["consent_back_in_stock"] != "granted":
+                # The agreement is gone (taken back some other way): nothing goes, in or out
+                # of the window, and the request says why it was closed.
+                await conn.execute(
+                    "update stock_watches set status = 'not_sent', closed_at = now(), "
+                    "reason = 'no_back_in_stock_consent' where id = $1 and status = 'waiting'",
+                    watch["id"],
+                )
+                continue
             # Close it first, in this transaction: the request and its message stand or
             # fall together, and a second run finds nothing waiting.
             claimed = await conn.fetchval(

@@ -33,6 +33,10 @@ class Template:
     header_sample: str = ""
     # Sample values in Arabic for the Arabic template, when they differ.
     samples_ar: tuple[str, ...] = ()
+    # A marketing template the customer asked for on narrower terms than marketing in general
+    # names its consent purpose here (`core/consent.py`). The outbound layer then sends it
+    # to customers who hold that consent, and not to those who only agreed to marketing.
+    consent: str = ""
 
 
 CATALOGUE: dict[str, Template] = {
@@ -235,9 +239,10 @@ CATALOGUE: dict[str, Template] = {
     # "Tell me when it is back". Meta's template guidelines (checked 18 Oct 2026) say utility
     # templates must be non-promotional, and list "a saved search found a match" among the
     # retargeting examples that are "marketing even if requested by users". An item back in
-    # stock is the nearest thing, so it is filed as marketing: it goes only to a customer who
-    # agreed to messages like it (core/consent.py), and only outside the 24-hour window.
-    # Inside the window it is an ordinary message and needs no template (watches.py).
+    # stock is the nearest thing, so it is filed as marketing, outside the 24-hour window only
+    # (inside it is an ordinary message and needs no template, watches.py). It goes only to a
+    # customer who asked to be told and agreed to that one message: the narrow consent
+    # `back_in_stock`, never general marketing consent (core/consent.py).
     "back_in_stock": Template(
         "marketing",
         "Good news from {{1}}: {{2}} is back in stock, as you asked. You can order here: "
@@ -245,6 +250,7 @@ CATALOGUE: dict[str, Template] = {
         "أخبار سارة من {{1}}: عاد «{{2}}» إلى المخزون كما طلبت. يمكنك الطلب من هنا: {{3}} . "
         "أرسل «إيقاف» لإيقاف هذه الرسائل.",
         ("Al Noor Electricals", "Cable 2.5 mm", "https://app.alyr.online/s/al-noor?c=a"),
+        consent="back_in_stock",
     ),
 }
 

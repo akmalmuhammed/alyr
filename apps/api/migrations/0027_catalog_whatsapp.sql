@@ -6,7 +6,9 @@
 -- 3. The stock log and the price history say when a change came by WhatsApp.
 -- 4. What a staff member changed by message, so it can be undone once, and the question
 --    (which of several items did they mean) waiting for their answer.
--- 5. "Tell me when it is back": a customer's request, closed after the one message.
+-- 5. "Tell me when it is back": a customer's request, closed after the one message, and the
+--    narrow consent it rests on: `back_in_stock` is a consent purpose of its own, so asking
+--    to be told about one item is never general marketing consent (`consent_marketing`).
 -- 6. Owner alerts already sent, so an item alerts once a day and not more.
 --
 -- Nothing here is visible to an owner or a customer by itself: the staff commands, item
@@ -54,6 +56,16 @@ create table staff_pending (
 );
 
 -- ----------------------------------------------------------------- back in stock
+
+-- The consent a customer gives by asking to be told when an item is back: one message, for
+-- that. A purpose of its own beside 'service' and 'marketing', with its own current state on
+-- the contact like the others, so broadcasts (ALY-44) still need an explicit marketing opt-in.
+alter table consents drop constraint consents_purpose_check;
+alter table consents add constraint consents_purpose_check
+    check (purpose in ('service', 'marketing', 'back_in_stock'));
+alter table contacts
+    add column consent_back_in_stock text not null default 'unknown'
+        check (consent_back_in_stock in ('unknown', 'granted', 'revoked'));
 
 -- A customer asked to be told once when an item is back. It waits, then it is `sent` (the
 -- one message went), or closed unsent: `cancelled` (the customer said stop), `expired`

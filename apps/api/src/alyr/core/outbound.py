@@ -46,7 +46,7 @@ class Outbound:
         """Queue a message to a contact, or record why it may not be sent.
         `conn` must be tenant-scoped."""
         contact = await conn.fetchrow(
-            "select consent_service, consent_marketing, "
+            "select consent_service, consent_marketing, consent_back_in_stock, "
             "coalesce(last_inbound_at > now() - interval '24 hours', false) as window_open "
             "from contacts where id = $1",
             message.to,

@@ -280,10 +280,12 @@ WORDS: dict[str, tuple[str, str]] = {
     ),
     # ── customers: tell me when it is back ──────────────────────────────────────────
     "notify_ask": (
-        "I can message you once when {name} is back. By saying yes you agree to receive "
-        "updates like this from {shop} on WhatsApp. Send STOP at any time to end them.",
-        "يمكنني مراسلتك مرة واحدة عند توفر «{name}». بالموافقة فإنك توافق على تلقي رسائل "
-        "مثل هذه من {shop} عبر واتساب. أرسل «إيقاف» في أي وقت لإنهائها.",
+        "I can message you once when {name} is back in stock. By saying yes you agree to "
+        "get that one message from {shop} on WhatsApp. It is not a subscription and "
+        "nothing else will be sent. Send STOP at any time to cancel it.",
+        "يمكنني مراسلتك مرة واحدة عند توفر «{name}». بالموافقة فإنك توافق على تلقي هذه "
+        "الرسالة الواحدة من {shop} عبر واتساب. وهي ليست اشتراكاً ولن يُرسل لك غيرها. "
+        "أرسل «إيقاف» في أي وقت لإلغائها.",
     ),
     "notify_done": (
         "Done. I will message you once when {name} is back.",
