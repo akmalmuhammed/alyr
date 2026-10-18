@@ -41,9 +41,14 @@ def parse_webhook(payload: dict) -> list[InboundMessage]:
                         profiles[key] = profile
             for msg in value.get("messages", []):
                 kind = msg.get("type", "")
-                text, reply_id = "", ""
+                text, reply_id, media_id, mime_type = "", "", "", ""
                 if kind == "text":
                     text = msg.get("text", {}).get("body", "")
+                elif kind == "image":
+                    # A photo: its caption is the text, and the file is fetched by its ID.
+                    image = msg.get("image", {})
+                    text, media_id = image.get("caption", ""), image.get("id", "")
+                    mime_type = image.get("mime_type", "")
                 elif kind == "interactive":
                     inter = msg.get("interactive", {})
                     reply = inter.get("button_reply") or inter.get("list_reply") or {}
@@ -64,6 +69,8 @@ def parse_webhook(payload: dict) -> list[InboundMessage]:
                         profile_name=profile.get("name", ""),
                         text=text,
                         reply_id=reply_id,
+                        media_id=media_id,
+                        mime_type=mime_type,
                         received_at=datetime.fromtimestamp(int(msg.get("timestamp", "0")), UTC),
                     )
                 )
@@ -145,18 +152,29 @@ def to_graph_payload(message: OutboundMessage, address: Address) -> dict:
         buttons = [
             {"type": "reply", "reply": {"id": c.id, "title": c.title}} for c in message.choices
         ]
-        interactive = {
+        interactive: dict = {
             "type": "button",
             "body": {"text": message.body},
             "action": {"buttons": buttons},
         }
+        if message.media_id:
+            # A picture above the text and buttons (an item with its Order button).
+            interactive["header"] = {"type": "image", "image": {"id": message.media_id}}
         return base | {"type": "interactive", "interactive": interactive}
     if message.kind == "list":
-        rows = [{"id": c.id, "title": c.title} for c in message.choices]
+        rows = [
+            {"id": c.id, "title": c.title}
+            | ({"description": c.description} if c.description else {})
+            for c in message.choices
+        ]
+        arabic = message.lang == "ar"
         interactive = {
             "type": "list",
             "body": {"text": message.body},
-            "action": {"button": "Choose", "sections": [{"title": "Options", "rows": rows}]},
+            "action": {
+                "button": "اختر" if arabic else "Choose",
+                "sections": [{"title": "القائمة" if arabic else "Options", "rows": rows}],
+            },
         }
         return base | {"type": "interactive", "interactive": interactive}
     if message.kind == "image":
@@ -201,6 +219,28 @@ class MetaChannel:
             response.raise_for_status()
             sent = response.json().get("messages") or [{}]
             return sent[0].get("id")
+
+    async def download_media(self, media_id: str, max_bytes: int) -> tuple[bytes, str]:
+        """Fetch a file that was sent to us. Two requests, checked against Meta's media
+        page on 18 Oct 2026: GET /{media-id} answers with a `url` (good for five minutes)
+        and the type; GET that url, with the access token, answers with the file. The
+        file is read in pieces and dropped as soon as it passes `max_bytes`. Meta's own
+        limit for an image is 5 MB."""
+        headers = {"Authorization": f"Bearer {self._token}"}
+        async with httpx.AsyncClient(timeout=30, headers=headers) as client:
+            found = await client.get(f"{self._base}/{media_id}")
+            found.raise_for_status()
+            info = found.json()
+            if int(info.get("file_size") or 0) > max_bytes:
+                raise ValueError("the file is larger than we accept")
+            body = bytearray()
+            async with client.stream("GET", info["url"]) as response:
+                response.raise_for_status()
+                async for chunk in response.aiter_bytes():
+                    body.extend(chunk)
+                    if len(body) > max_bytes:
+                        raise ValueError("the file is larger than we accept")
+            return bytes(body), info.get("mime_type", "")
 
     async def upload_media(self, from_number_id: str, data: bytes, content_type: str) -> str:
         """Upload a file with the Media API and return its media ID, which a message

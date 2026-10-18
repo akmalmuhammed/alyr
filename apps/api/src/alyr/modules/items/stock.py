@@ -23,6 +23,7 @@ from uuid import UUID
 import asyncpg
 
 from alyr.core.team import Actor
+from alyr.modules.items import events
 
 KINDS = ("opening", "received", "sold", "cancelled_restocked", "wasted", "counted", "adjusted")
 # What staff may record by hand. Sales and restocks come from orders.
@@ -35,8 +36,8 @@ with moved as (
     returning id, on_hand
 )
 insert into stock_movements
-    (variant_id, kind, delta, balance_after, reason, order_id, actor_id, actor_name)
-select id, $3, $2::int, on_hand, $4, $5::uuid, $6::uuid, $7 from moved
+    (variant_id, kind, delta, balance_after, reason, order_id, actor_id, actor_name, via)
+select id, $3, $2::int, on_hand, $4, $5::uuid, $6::uuid, $7, $8 from moved
 returning balance_after
 """
 
@@ -56,8 +57,8 @@ with moved as (
     returning delta
 )
 insert into stock_movements
-    (variant_id, kind, delta, balance_after, day, reason, order_id, actor_id, actor_name)
-select $1::uuid, $5, $3::int, $4::int + moved.delta, $2::date, $6, $7::uuid, $8::uuid, $9
+    (variant_id, kind, delta, balance_after, day, reason, order_id, actor_id, actor_name, via)
+select $1::uuid, $5, $3::int, $4::int + moved.delta, $2::date, $6, $7::uuid, $8::uuid, $9, $10
 from moved
 returning balance_after
 """
@@ -97,18 +98,25 @@ async def move(
     if kind not in KINDS:
         raise ValueError(f"unknown stock movement {kind!r}")
     if day is None:
-        return await conn.fetchval(
-            _COUNT_STEP, variant_id, delta, kind, reason, order_id, actor.id, actor.name
+        balance = await conn.fetchval(
+            _COUNT_STEP, variant_id, delta, kind, reason, order_id, actor.id, actor.name,
+            actor.via,
         )
-    if limit is None:
-        limit = await conn.fetchval(
-            "select daily_limit from item_variants where id = $1", variant_id
+    else:
+        if limit is None:
+            limit = await conn.fetchval(
+                "select daily_limit from item_variants where id = $1", variant_id
+            )
+        await conn.execute(_DAY_ROW, variant_id, day)
+        balance = await conn.fetchval(
+            _DAILY_STEP, variant_id, day, delta, limit or 0, kind, reason, order_id, actor.id,
+            actor.name, actor.via,
         )
-    await conn.execute(_DAY_ROW, variant_id, day)
-    return await conn.fetchval(
-        _DAILY_STEP, variant_id, day, delta, limit or 0, kind, reason, order_id, actor.id,
-        actor.name,
-    )
+    if balance is not None and delta:
+        # Tell the parts of the Catalog that react to stock (back-in-stock requests, owner
+        # alerts). They only queue a job; nothing is sent from here.
+        await events.stock_changed(conn, variant_id, delta, balance)
+    return balance
 
 
 async def reserve(
@@ -209,7 +217,7 @@ async def mismatches(conn: asyncpg.Connection) -> list[dict]:
 _LOG_COLUMNS = (
     "m.id, m.variant_id, v.name as variant, v.name_ar as variant_ar, v.item_id, "
     "i.name as item, i.name_ar as item_ar, m.kind, m.delta, m.balance_after, m.day, m.reason, "
-    "m.order_id, o.number as order_number, m.actor_id, m.actor_name, m.created_at"
+    "m.order_id, o.number as order_number, m.actor_id, m.actor_name, m.via, m.created_at"
 )
 _LOG_FROM = (
     "from stock_movements m join item_variants v on v.id = m.variant_id "
@@ -227,6 +235,7 @@ def _shown(r: asyncpg.Record) -> dict:
         "order_id": str(r["order_id"]) if r["order_id"] else None,
         "order_number": r["order_number"],
         "actor": {"id": str(r["actor_id"]) if r["actor_id"] else None, "name": r["actor_name"]},
+        "via": r["via"],
         "created_at": r["created_at"].isoformat(),
     }
 

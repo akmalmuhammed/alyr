@@ -35,7 +35,7 @@ export type Item = {
   id: string; name: string; name_ar: string; sku: string; group_prices: GroupPrice[];
   description: string; description_ar: string;
   category: string; status: Status; stock_rule: Rule; available: boolean; unit: string;
-  pack_size: number | null; min_order: number; tags: string[]; sort: number;
+  pack_size: number | null; min_order: number; tags: string[]; sort: number; low_stock_at: number | null;
   price: number; price_text: string; sale_price: number | null; sale_price_text: string | null;
   sale_starts_at: string | null; sale_ends_at: string | null; sale_active: boolean;
   current_price: number; current_price_text: string; has_orders: boolean; updated_at: string | null;
@@ -61,7 +61,12 @@ export type ShareBase = { url: string; name: string; name_ar: string; whatsapp: 
 export type Movement = {
   id: string; item_id: string; item: string; item_ar: string; variant_id: string; variant: string;
   variant_ar: string; kind: string; delta: number; balance_after: number; day: string | null;
-  reason: string; order_number: number | null; actor: { id: string | null; name: string }; created_at: string;
+  reason: string; order_number: number | null; actor: { id: string | null; name: string }; via: string;
+  created_at: string;
+};
+/** A WhatsApp number the owner registered as staff: it may change the Catalog by message. */
+export type StaffNumber = {
+  id: string; name: string; phone: string; lang: "en" | "ar"; manager: boolean; weekly_report: boolean;
 };
 export type Change = {
   id: string; name: string; name_ar: string; before: Record<string, unknown>; after: Record<string, unknown>;

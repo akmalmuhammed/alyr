@@ -139,6 +139,22 @@ a.ag-ledger-row:hover .ag-ledger-label { color: var(--ag-ink); }
 a.ag-kpi-link:hover .ag-figure { text-decoration: underline; text-decoration-thickness: 1px; text-underline-offset: 6px; }
 .ag-kpis-block .ag-caption { margin-top: 8px; }
 
+/* The Catalog's two cards (ALY-109): items sold out, items low on stock. Each is a link to the
+   Catalog list with that filter; with nothing to show it is a number and no link. */
+.ag-stock-cards { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); max-width: 40rem; margin-top: 8px; }
+.ag-stock-cards li { position: relative; min-width: 0; }
+.ag-stock-cards li + li::before {
+  content: ""; position: absolute; inset-block: 4px; inset-inline-start: 0;
+  border-inline-start: 1px solid var(--ag-rule);
+}
+.ag-stock-card { display: grid; align-content: start; row-gap: 8px; min-height: 56px; padding-block: 12px; padding-inline: 0 16px; }
+.ag-stock-cards li + li .ag-stock-card { padding-inline-start: 16px; }
+.ag-stock-value { display: flex; align-items: center; justify-content: space-between; gap: 8px; font-size: 28px; font-weight: 600; line-height: 1; letter-spacing: -0.02em; }
+.ag-stock-card.is-none .ag-stock-value { color: var(--ag-ink-2); font-weight: 500; }
+a.ag-stock-card:hover .ag-arrow { color: var(--ag-ink); translate: 2px 0; }
+.ag[dir="rtl"] a.ag-stock-card:hover .ag-arrow { translate: -2px 0; }
+a.ag-stock-card:hover .ag-stock-value bdi { text-decoration: underline; text-decoration-thickness: 1px; text-underline-offset: 6px; }
+
 /* The empty state keeps the real shape: dashed outlines of the week, the hours and a list. */
 .ag-skeleton { display: grid; grid-template-columns: repeat(auto-fit, minmax(14rem, 1fr)); gap: 24px; }
 .ag-skel { display: grid; grid-template-rows: 120px auto; gap: 12px; padding: 16px; border: 1px dashed var(--ag-dash); border-radius: 4px; }

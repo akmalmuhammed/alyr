@@ -25,7 +25,7 @@ from alyr.config import get_settings
 from alyr.core import links
 from alyr.core.normalise import fmt_qar, fmt_qar_ar
 from alyr.core.workspace import module_enabled
-from alyr.modules.items import text
+from alyr.modules.items import demand, text
 from alyr.modules.items.cart import CartLine
 from alyr.modules.items.service import MAX_QUANTITY
 from alyr.modules.orders import page, service
@@ -364,6 +364,7 @@ async def place_order(slug: str, body: NewOrder, request: Request) -> dict:
                 body.for_date, table=links.clean_table(link.table or body.table),
             )
     except service.OrderError as error:
+        await demand.note_refusal(request.app.state.db, shop["id"], link.contact_id, error.lines)
         raise _refused(error) from error
 
 
@@ -380,4 +381,5 @@ async def repeat_order(slug: str, body: Repeat, request: Request) -> dict:
                 request.app.state.outbound,
             )
     except service.OrderError as error:
+        await demand.note_refusal(request.app.state.db, shop["id"], link.contact_id, error.lines)
         raise _refused(error) from error

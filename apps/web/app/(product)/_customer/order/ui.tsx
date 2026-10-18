@@ -30,7 +30,7 @@ export function Tile({
 }) {
   const shown = photo && photo.state === "ready" && photo.src ? photo : null;
   return (
-    <span className={`ox-ph ${shown ? "" : "empty"} ${className}`} style={{ aspectRatio: ratio } as CSSProperties}>
+    <span className={`ox-ph ${shown ? "" : "blank"} ${className}`} style={{ aspectRatio: ratio } as CSSProperties}>
       {shown ? (
         // eslint-disable-next-line @next/next/no-img-element -- our own sizes, picked by srcset; no image service
         <img src={shown.src} srcSet={shown.srcset} sizes={sizes} alt={alt}

@@ -58,7 +58,10 @@ async def default_group(conn: asyncpg.Connection) -> dict:
     if row is None:
         row = await conn.fetchrow(
             "insert into price_groups (name, name_ar, is_default) values ($1, $2, true) "
-            "on conflict (tenant_id) where is_default do nothing returning *",
+            # No target: two requests that make it together also collide on the name's
+            # index, which a target of `is_default` alone turns into an error (seen once in
+            # `test_saving_an_item_while_a_customer_orders_it_does_not_deadlock`).
+            "on conflict do nothing returning *",
             *DEFAULT_NAME,
         )
     if row is None:  # another request made it between our two statements

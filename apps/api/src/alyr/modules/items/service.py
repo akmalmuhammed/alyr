@@ -19,7 +19,7 @@ import asyncpg
 from alyr.core import team
 from alyr.core.normalise import fmt_qar, western_digits
 from alyr.core.team import Actor
-from alyr.modules.items import availability, stock
+from alyr.modules.items import availability, events, stock
 from alyr.modules.items.clock import ShopClock
 
 UNITS = ("piece", "kg", "box", "pack", "portion", "hour")
@@ -28,7 +28,7 @@ STATUSES = ("draft", "live", "hidden", "archived")
 FIELDS = (
     "name", "name_ar", "description", "description_ar", "category", "price", "sale_price",
     "sale_starts_at", "sale_ends_at", "unit", "pack_size", "min_order", "tags", "stock_rule",
-    "available", "status", "sort", "sku",
+    "available", "status", "sort", "sku", "low_stock_at",
 )
 MAX_QUANTITY = 999
 MAX_SKU = 40
@@ -169,6 +169,7 @@ def view(entry: Loaded, clock: ShopClock) -> dict:
         "category": i["category"], "status": i["status"], "stock_rule": i["stock_rule"],
         "available": i["available"], "unit": i["unit"], "pack_size": i["pack_size"],
         "min_order": i["min_order"], "tags": list(i["tags"]), "sort": i["sort"],
+        "low_stock_at": i["low_stock_at"],
         "price": i["price"], "price_text": fmt_qar(i["price"]),
         "sale_price": i["sale_price"], "sale_price_text": _money(i["sale_price"]),
         "sale_starts_at": _iso(i["sale_starts_at"]), "sale_ends_at": _iso(i["sale_ends_at"]),
@@ -245,6 +246,9 @@ def _check_fields(values: dict, variants: list[dict]) -> None:
         raise ItemError("bad_status", "Choose draft, live, hidden or archived.")
     if values["min_order"] < 1 or values["min_order"] > MAX_QUANTITY:
         raise ItemError("bad_minimum", "The minimum order must be between 1 and 999.")
+    low = values["low_stock_at"]
+    if low is not None and not 0 <= low <= 100_000:
+        raise ItemError("bad_low_stock", "Choose a low-stock number between 0 and 100,000.")
     sale, starts, ends = values["sale_price"], values["sale_starts_at"], values["sale_ends_at"]
     if sale is not None and not 0 < sale < values["price"]:
         raise ItemError("bad_sale", "The sale price must be below the usual price.")
@@ -336,6 +340,7 @@ async def create_item(
         "price": 0, "sale_price": None, "sale_starts_at": None, "sale_ends_at": None,
         "unit": "piece", "pack_size": None, "min_order": 1, "tags": [],
         "stock_rule": "switch", "available": True, "status": "draft", "sort": 0, "sku": "",
+        "low_stock_at": None,
         **{k: data[k] for k in FIELDS if k in data},
     }
     values["name"] = values["name"].strip()
@@ -359,9 +364,9 @@ async def create_item(
         item_id = await conn.fetchval(
             "insert into items (name, name_ar, description, description_ar, category, price, "
             "sale_price, sale_starts_at, sale_ends_at, unit, pack_size, min_order, tags, "
-            "stock_rule, available, status, sort, sku) "
+            "stock_rule, available, status, sort, sku, low_stock_at) "
             "values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, "
-            "$17, $18) returning id",
+            "$17, $18, $19) returning id",
             *(values[k] for k in FIELDS),
         )
     except asyncpg.UniqueViolationError as error:  # the index under the check above
@@ -471,12 +476,20 @@ async def update_item(
         await groups.save_prices(conn, item_id, changes["group_prices"], actor, reason)
     if changed or structure:
         await conn.execute("update items set updated_at = now() where id = $1", item_id)
+        await events.item_changed(conn, item_id)
         detail = {"fields": changed + structure}
         if "status" in changed:
             detail |= {"from": before["status"], "to": values["status"]}
         if "price" in changed:
             detail |= {"price_from": fmt_qar(before["price"]), "price_to": fmt_qar(values["price"])}
         await team.record(conn, "item", item_id, "updated", actor, None, detail)
+        if "available" in changed:
+            # The switch has the same record whether it is flipped or saved with the item:
+            # the weekly report works out how long an item was sold out from these rows.
+            await team.record(
+                conn, "item", item_id,
+                "switched_on" if values["available"] else "switched_off", actor,
+            )
     entry = await get(conn, clock, item_id)
     return {"item": view(entry, clock), "warnings": warnings}
 
@@ -501,6 +514,8 @@ async def set_available(
         await team.record(
             conn, "item", item_id, "switched_on" if available else "switched_off", actor
         )
+        if available:
+            await events.item_changed(conn, item_id)
     return available
 
 
@@ -545,23 +560,23 @@ async def _price_row(
 ) -> None:
     await conn.execute(
         "insert into item_price_history (item_id, price, sale_price, sale_ends_at, changed_by, "
-        "changed_by_name, reason) values ($1, $2, $3, $4, $5, $6, $7)",
+        "changed_by_name, reason, via) values ($1, $2, $3, $4, $5, $6, $7, $8)",
         item_id, values["price"], values["sale_price"], values["sale_ends_at"],
-        actor.id, actor.name, reason,
+        actor.id, actor.name, reason, actor.via,
     )
 
 
 async def price_history(conn: asyncpg.Connection, item_id: UUID) -> list[dict]:
     rows = await conn.fetch(
-        "select price, sale_price, sale_ends_at, changed_by, changed_by_name, reason, created_at "
-        "from item_price_history where item_id = $1 order by created_at desc, id",
+        "select price, sale_price, sale_ends_at, changed_by, changed_by_name, reason, via, "
+        "created_at from item_price_history where item_id = $1 order by created_at desc, id",
         item_id,
     )
     return [
         {
             "price": r["price"], "price_text": fmt_qar(r["price"]),
             "sale_price": r["sale_price"], "sale_price_text": _money(r["sale_price"]),
-            "sale_ends_at": _iso(r["sale_ends_at"]), "reason": r["reason"],
+            "sale_ends_at": _iso(r["sale_ends_at"]), "reason": r["reason"], "via": r["via"],
             "changed_by": {"id": str(r["changed_by"]) if r["changed_by"] else None,
                            "name": r["changed_by_name"]},
             "at": r["created_at"].isoformat(),

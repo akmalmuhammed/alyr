@@ -681,9 +681,11 @@ try {
     const jsQR = createRequire(import.meta.url)("../apps/web/node_modules/jsqr");
     const ct = COPY[LANG];
     await b.go(`${BASE}/app/catalog`, 1500);
-    if (AR) {
+    // The workspace remembers its language on the device (ALY-109), so ask which it is in now.
+    const inArabic = await js("!!document.querySelector('.sh-mtop [aria-label=\"ابحث أو انتقل إلى\"]')");
+    if (AR !== inArabic) {
       await click(`document.querySelector('.sh-mtop [aria-label="Search or jump to"], .sh-mtop [aria-label="ابحث أو انتقل إلى"]')`, 300);
-      await click(`[...document.querySelectorAll('.sh-palette button[role=option]')].find(b => /Switch to Arabic|التبديل إلى العربية|Arabic/.test(b.textContent))`, 600);
+      await click(`[...document.querySelectorAll('.sh-palette button[role=option]')].find(b => /Switch to Arabic|التبديل إلى الإنجليزية/.test(b.textContent))`, 600);
     }
     await until("document.querySelectorAll('.ct-card').length > 10", "the Catalog's list", 30000);
     await js("window.__saved = []; const make = URL.createObjectURL.bind(URL); URL.createObjectURL = (b) => { window.__saved.push({ type: b.type, size: b.size }); return make(b); }; window.print = () => { window.__printed = document.querySelector('.ct-printsheet')?.innerText ?? ''; };");
@@ -794,9 +796,9 @@ try {
       if (cold) await b.send("Network.clearBrowserCache");
       const seen = new Map();
       let on = true;
-      b.on("Network.requestWillBeSent", (p) => { if (on) seen.set(p.requestId, { url: p.request.url, type: p.type, bytes: 0, fromCache: false }); });
+      b.on("Network.requestWillBeSent", (p) => { if (on) seen.set(p.requestId, { url: p.request.url, type: p.type, bytes: 0, fromCache: false, start: p.timestamp, end: p.timestamp }); });
       b.on("Network.responseReceived", (p) => { const r = seen.get(p.requestId); if (on && r) r.fromCache = Boolean(p.response.fromDiskCache || p.response.fromPrefetchCache); });
-      b.on("Network.loadingFinished", (p) => { const r = seen.get(p.requestId); if (on && r) r.bytes = p.encodedDataLength; });
+      b.on("Network.loadingFinished", (p) => { const r = seen.get(p.requestId); if (on && r) { r.bytes = p.encodedDataLength; r.end = p.timestamp; } });
       const raw = await (await fetch(url)).text();
       await b.go(url, 6000);
       const nav = await js("JSON.stringify({ ...window.__p, ttfb: performance.getEntriesByType('navigation')[0].responseStart, dcl: performance.getEntriesByType('navigation')[0].domContentLoadedEventEnd, load: performance.getEntriesByType('navigation')[0].loadEventEnd, shown: document.querySelectorAll('.ox-card').length })");
@@ -805,7 +807,10 @@ try {
       const sum = (f) => rows.filter(f).reduce((n, r) => n + r.bytes, 0);
       const kb = (n) => `${(n / 1024).toFixed(1)} KB`;
       const m = JSON.parse(nav);
-      report.push({ name, requests: rows.length, total: kb(sum(() => true)), html: kb(sum((r) => r.type === "Document")), js: kb(sum((r) => r.type === "Script")), css: kb(sum((r) => r.type === "Stylesheet")), images: `${rows.filter((r) => r.type === "Image").length} (${kb(sum((r) => r.type === "Image"))})`, api: kb(sum((r) => r.url.includes("/api/") && r.type !== "Image")), fromCache: rows.filter((r) => r.fromCache).length, ttfb_ms: Math.round(m.ttfb), fcp_ms: Math.round(m.fcp), lcp_ms: Math.round(m.lcp), dom_content_loaded_ms: Math.round(m.dcl), load_ms: Math.round(m.load), first_add_works_ms: m.tap ? Math.round(m.tap) : null, items_in_html: (raw.match(/class="ox-card/g) ?? []).length, items_on_screen: m.shown });
+      const t0 = Math.min(...rows.map((r) => r.start));
+      const doneBy = (type) => { const done = rows.filter((r) => r.type === type); return done.length ? +(Math.max(...done.map((r) => r.end)) - t0).toFixed(1) : null; };
+      report.push({ name, requests: rows.length, scripts_done_s: doneBy("Script"), images_done_s: doneBy("Image"), total: kb(sum(() => true)), html: kb(sum((r) => r.type === "Document")), js: kb(sum((r) => r.type === "Script")), css: kb(sum((r) => r.type === "Stylesheet")), fonts: `${rows.filter((r) => r.type === "Font").length} (${kb(sum((r) => r.type === "Font"))})`, other: kb(sum((r) => !["Document", "Script", "Stylesheet", "Image", "Font"].includes(r.type))),
+        biggest: [...rows].sort((x, y) => y.bytes - x.bytes).slice(0, 5).map((r) => `${r.type} ${kb(r.bytes)} ${r.url.replace(/^https?:\/\/[^/]+/, "").slice(0, 60)}`), images: `${rows.filter((r) => r.type === "Image").length} (${kb(sum((r) => r.type === "Image"))})`, api: kb(sum((r) => r.url.includes("/api/") && r.type !== "Image")), fromCache: rows.filter((r) => r.fromCache).length, ttfb_ms: Math.round(m.ttfb), fcp_ms: Math.round(m.fcp), lcp_ms: Math.round(m.lcp), dom_content_loaded_ms: Math.round(m.dcl), load_ms: Math.round(m.load), first_add_works_ms: m.tap ? Math.round(m.tap) : null, items_in_html: (raw.match(/class="ox-card/g) ?? []).length, items_on_screen: m.shown });
     }
     writeFileSync(`${OUT}/${LANG}-perf.json`, JSON.stringify(report, null, 2));
     for (const r of report) log("perf", JSON.stringify(r));

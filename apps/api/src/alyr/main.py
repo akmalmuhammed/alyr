@@ -15,6 +15,7 @@ from alyr.core.storage import make_store
 from alyr.db import Database
 from alyr.modules import report
 from alyr.modules.bookings.service import REMINDER, Reminders
+from alyr.modules.items import alerts, events, wa_photo, watches
 from alyr.modules.items.service import count_active
 from alyr.modules.orders import holds as order_holds
 from alyr.modules.orders.service import EXPIRE_JOB
@@ -29,6 +30,7 @@ from alyr.routes import media as media_routes
 from alyr.routes import onboarding as onboarding_routes
 from alyr.routes import price_groups as price_group_routes
 from alyr.routes import reports as reports_routes
+from alyr.routes import staff_numbers as staff_numbers_routes
 from alyr.routes import team as team_routes
 from alyr.routes import track as track_routes
 from alyr.routes import workspace as workspace_routes
@@ -62,7 +64,12 @@ def create_app() -> FastAPI:
         },
         app.state.db,
     )
-    app.state.inbound = InboundHandler(app.state.db, app.state.outbound, settings.public_web_url)
+    # Product photos (ALY-103): R2 when configured, otherwise local disk. The photo store
+    # is written by a job, so a store that is down never blocks a request.
+    app.state.media = MediaService(app.state.db, make_store(settings), settings)
+    app.state.inbound = InboundHandler(
+        app.state.db, app.state.outbound, settings.public_web_url, app.state.media
+    )
 
     app.state.jobs = JobRunner(app.state.db, settings.jobs_backoff_seconds)
     app.state.jobs.register(SEND, app.state.outbound.deliver, app.state.outbound.gave_up)
@@ -72,9 +79,19 @@ def create_app() -> FastAPI:
     app.state.jobs.register(
         EXPIRE_JOB, order_holds.HoldExpiry(app.state.db, app.state.outbound).run
     )
-    # Product photos (ALY-103): R2 when configured, otherwise local disk. The photo store
-    # is written by a job, so a store that is down never blocks a request.
-    app.state.media = MediaService(app.state.db, make_store(settings), settings)
+    # The Catalog on WhatsApp (ALY-106): back-in-stock messages, owner alerts, and photos sent
+    # by staff turned into drafts. Each is a job, so none holds a request open.
+    app.state.jobs.register(
+        events.BACK_IN_STOCK,
+        watches.BackInStock(app.state.db, app.state.outbound, settings.public_web_url).run,
+    )
+    app.state.jobs.register(
+        events.STOCK_ALERT, alerts.StockAlerts(app.state.db, app.state.outbound).run
+    )
+    photo_drafts = wa_photo.PhotoDrafts(
+        app.state.db, app.state.outbound, app.state.media, settings
+    )
+    app.state.jobs.register(events.PHOTO_DRAFT, photo_drafts.run, photo_drafts.gave_up)
     # The meters and the item cap count the shop's real items (not archived ones).
     app.state.media.item_counter = count_active
     app.state.media.register(app.state.jobs)
@@ -98,6 +115,8 @@ def create_app() -> FastAPI:
     app.include_router(
         items.router, dependencies=[Depends(require_any_module("orders", "catalog"))]
     )
+    # The numbers the owner registers as staff, who may change the Catalog by WhatsApp.
+    app.include_router(staff_numbers_routes.router)
     # Customer price groups (wholesale) belong to the same Catalog (ALY-127).
     app.include_router(
         price_group_routes.router, dependencies=[Depends(require_any_module("orders", "catalog"))]

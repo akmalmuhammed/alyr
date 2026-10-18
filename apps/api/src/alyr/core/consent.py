@@ -13,6 +13,7 @@ from uuid import UUID
 import asyncpg
 
 from alyr.channels.base import InboundMessage, OutboundMessage
+from alyr.core import templates
 
 # Matched against the whole message, not a word inside it, so "please stop by tomorrow"
 # does not unsubscribe anyone.
@@ -21,6 +22,15 @@ STOP_WORDS = {"stop", "unsubscribe", "opt out", "optout", "cancel messages",
 START_WORDS = {"start", "subscribe", "opt in", "اشترك", "ابدأ", "ابدا", "تفعيل"}
 
 _PUNCTUATION = re.compile(r"[\s.!?،؟]+")
+
+# Each purpose has its own current state on the contact. `back_in_stock` is the consent a
+# customer gives by asking to be told when one item is back: a single message, for that. It
+# is not marketing consent and never sets `consent_marketing`.
+COLUMNS = {
+    "service": "consent_service",
+    "marketing": "consent_marketing",
+    "back_in_stock": "consent_back_in_stock",
+}
 
 
 def _plain(text: str) -> str:
@@ -35,14 +45,23 @@ async def record(
     source: str,
     wording: str = "",
 ) -> None:
-    """Append a consent change and update the contact's current state."""
+    """Append a consent change and update the contact's current state for that purpose."""
+    column = COLUMNS.get(purpose)
+    if column is None:
+        raise ValueError(f"unknown consent purpose {purpose!r}")
     await conn.execute(
         "insert into consents (contact_id, purpose, status, source, wording) "
         "values ($1, $2, $3, $4, $5)",
         contact_id, purpose, status, source, wording[:500],
     )
-    column = "consent_service" if purpose == "service" else "consent_marketing"
     await conn.execute(f"update contacts set {column} = $2 where id = $1", contact_id, status)
+
+
+async def current(conn: asyncpg.Connection, contact_id: UUID, purpose: str) -> str:
+    """Where a contact stands on one purpose now: unknown, granted or revoked."""
+    return await conn.fetchval(
+        f"select {COLUMNS[purpose]} from contacts where id = $1", contact_id
+    )
 
 
 async def on_inbound(
@@ -67,6 +86,16 @@ async def on_inbound(
         for purpose in ("service", "marketing"):
             await record(conn, contact["id"], purpose, "revoked", "customer_message",
                          message.text)
+        if await current(conn, contact["id"], "back_in_stock") == "granted":
+            await record(conn, contact["id"], "back_in_stock", "revoked", "customer_message",
+                         message.text)
+        # Nothing more goes to this customer, so every "tell me when it is back" they
+        # asked for (modules/items/watches.py) is closed unsent.
+        await conn.execute(
+            "update stock_watches set status = 'cancelled', closed_at = now() "
+            "where contact_id = $1 and status = 'waiting'",
+            contact["id"],
+        )
         body = (
             f"لن تصلك تذكيرات أو إشعارات من {shop} بعد الآن. ما زال بإمكانك مراسلتنا هنا. "
             "أرسل «اشترك» لإعادة تفعيلها." if arabic
@@ -94,12 +123,20 @@ async def on_inbound(
 def refusal(contact: asyncpg.Record, message: OutboundMessage) -> str | None:
     """Why this message may not be sent to this contact, or None if it may.
 
-    `contact` needs consent_service, consent_marketing and window_open.
+    `contact` needs consent_service, consent_marketing, consent_back_in_stock and
+    window_open. A marketing template that names a narrower consent (`Template.consent`)
+    needs that consent and not the general one: a customer who only asked to be told when
+    an item is back has not agreed to marketing, and one who agreed to marketing has not
+    asked for that item.
     """
     if message.kind != "template":
         # Free-form text is only allowed as a reply, inside the 24-hour window.
         return None if contact["window_open"] else "window_closed"
     if message.template_category == "marketing":
+        known = templates.CATALOGUE.get(message.template_name)
+        if known is not None and known.consent:
+            held = contact[COLUMNS[known.consent]] == "granted"
+            return None if held else f"no_{known.consent}_consent"
         return None if contact["consent_marketing"] == "granted" else "no_marketing_consent"
     if contact["consent_service"] == "revoked":
         return "opted_out"

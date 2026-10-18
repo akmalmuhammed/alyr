@@ -181,21 +181,21 @@ export function ReviewSheet(props: Props) {
             )}
             {(gone || timing || code === "below_minimum") && <button type="button" className="ox-link" onClick={() => props.remove(line.key)}>{t.removeLine}</button>}
           </div>
-          {verdict?.alternatives && verdict.alternatives.length > 0 && (
-            <div className="ox-alts" role="group" aria-label={t.tryInstead}>
-              {verdict.alternatives.map((a) => (
-                <button key={`${a.item_id}-${a.variant_id}`} type="button" className="ox-alt" onClick={() => props.swap(line.key, a)}>
-                  <span dir="auto">{say(lang, a.name, a.name_ar)}</span> <Price value={a.price} lang={lang} />
-                </button>
-              ))}
-            </div>
-          )}
         </div>
         <div className="ox-lqty">
           <Stepper qty={line.qty} atMax={false} labels={labels(name)}
             onMinus={() => (item ? props.setQty(line.key, next(item, line.qty, -1, line.variantId)) : props.setQty(line.key, line.qty - 1))}
             onPlus={() => (item ? props.setQty(line.key, next(item, line.qty, 1, line.variantId)) : props.setQty(line.key, line.qty + 1))} />
         </div>
+        {verdict?.alternatives && verdict.alternatives.length > 0 && (
+          <div className="ox-alts" role="group" aria-label={t.tryInstead}>
+            {verdict.alternatives.map((a) => (
+              <button key={`${a.item_id}-${a.variant_id}`} type="button" className="ox-alt" onClick={() => props.swap(line.key, a)}>
+                <span dir="auto">{say(lang, a.name, a.name_ar)}</span> <Price value={a.price} lang={lang} />
+              </button>
+            ))}
+          </div>
+        )}
       </li>
     );
   }
