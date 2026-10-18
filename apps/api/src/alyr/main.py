@@ -8,6 +8,7 @@ from alyr.config import get_settings
 from alyr.core.images import PhotoRefused
 from alyr.core.inbound import INBOUND, InboundHandler
 from alyr.core.jobs import JobRunner
+from alyr.core.links import check_secret as check_link_secret
 from alyr.core.media import MediaService
 from alyr.core.outbound import SEND, Outbound
 from alyr.core.storage import make_store
@@ -39,6 +40,8 @@ def create_app() -> FastAPI:
 
     @asynccontextmanager
     async def lifespan(app: FastAPI):
+        # A server that cannot sign its order links does not start (ALY-112).
+        check_link_secret(settings)
         await app.state.db.connect()
         yield
         await app.state.db.close()

@@ -3,6 +3,7 @@
 import re
 
 from alyr.seed import AHMED_PHONE, DEMO_SLUG
+from order_links import token
 
 STORE = f"/api/store/{DEMO_SLUG}"
 
@@ -29,7 +30,7 @@ def place(client, contact_id, lines, payment):
     return client.post(
         f"{STORE}/orders",
         json={
-            "contact_id": contact_id,
+            "token": token(contact_id),
             "items": [{"product_id": p["id"], "quantity": q} for p, q in lines],
             "payment": payment,
         },
@@ -50,10 +51,13 @@ def test_unknown_shop_is_not_found(client):
 
 def test_customer_who_asks_to_order_gets_their_own_link(client):
     reply = say(client, AHMED_PHONE, "I want to order")[-1]
-    link = re.search(r"http://web\.test/s/al-noor\?c=(\S+)", reply["body"])
-    assert link.group(1) == customer(client)["id"]
-    page = client.get(STORE, params={"c": link.group(1)}).json()
-    assert page["customer"] == {"name": "Ahmed Al-Kuwari", "can_use_account": True}
+    link = re.search(r"http://web\.test/s/al-noor\?t=(\S+)", reply["body"])
+    # The link carries a signed token, never the contact's ID.
+    assert customer(client)["id"] not in reply["body"]
+    page = client.get(STORE, params={"t": link.group(1)}).json()
+    assert page["customer"]["name"] == "Ahmed Al-Kuwari"
+    assert page["customer"]["can_use_account"] is True
+    assert page["link"]["state"] == "ok"
 
 
 def test_arabic_request_gets_an_arabic_reply(client):
@@ -109,7 +113,7 @@ def test_order_on_account_is_refused_over_the_credit_limit(client):
 def test_customer_without_a_credit_account_cannot_order_on_account(client):
     say(client, "97455577777", "hello")
     stranger = customer(client, "97455577777")
-    page = client.get(STORE, params={"c": stranger["id"]}).json()
+    page = client.get(STORE, params={"t": token(stranger["id"])}).json()
     assert page["customer"]["can_use_account"] is False
     response = place(client, stranger["id"], [(product(client, "Switch"), 1)], "account")
     assert response.status_code == 403
@@ -123,7 +127,7 @@ def test_prices_come_from_the_shop_not_from_the_request(client):
     response = client.post(
         f"{STORE}/orders",
         json={
-            "contact_id": ahmed["id"], "payment": "link",
+            "token": token(ahmed["id"]), "payment": "link",
             "items": [{"product_id": switch["id"], "quantity": 3, "price": 1}],
         },
     )
@@ -134,7 +138,7 @@ def test_bad_orders_are_refused(client):
     ahmed = customer(client)
     switch = product(client, "Switch")
     empty = client.post(
-        f"{STORE}/orders", json={"contact_id": ahmed["id"], "items": [], "payment": "link"}
+        f"{STORE}/orders", json={"token": token(ahmed["id"]), "items": [], "payment": "link"}
     )
     assert empty.status_code == 422
     assert place(client, ahmed["id"], [(switch, 0)], "link").status_code == 422

@@ -26,6 +26,7 @@ from alyr.modules.orders import holds as order_holds
 from alyr.modules.orders import service as orders
 from alyr.seed import AGENT_EMAIL, AHMED_PHONE, DEMO_TENANT_ID
 from conftest import APP_DSN
+from order_links import token
 from test_bookings import book
 from test_consent import conversation, owner_sql, say
 from test_items import (
@@ -62,7 +63,7 @@ def another(client) -> dict:
 def repeat(client, contact: dict):
     """"Same as last time" from the order page."""
     return client.post(
-        f"{STORE}/orders/repeat", json={"contact_id": contact["id"], "payment": "link"}
+        f"{STORE}/orders/repeat", json={"token": token(contact["id"]), "payment": "link"}
     )
 
 
@@ -184,7 +185,9 @@ def test_scenario_03_a_price_change_between_add_and_pay_is_shown_before_payment(
     assert problem["code"] == "price_changed"
     assert (problem["lines"][0]["old_price"], problem["lines"][0]["new_price"]) == (500, 700)
     assert "changed from QAR 5 to QAR 7" in problem["message"]
-    assert "من QAR 5 إلى QAR 7" in problem["message_ar"]
+    # An Arabic sentence writes money the Arabic way, never "QAR" (ALY-112).
+    assert "من 5 ر.ق إلى 7 ر.ق" in problem["message_ar"]
+    assert "QAR" not in problem["message_ar"]
     assert client.get("/api/orders").json()["orders"] == []  # nothing was ordered or charged
 
     confirmed = order(client, ahmed, [line(karak, 2, expected_price=700)])
@@ -357,7 +360,10 @@ def test_scenario_08_a_pay_link_never_paid_releases_its_stock_after_30_minutes(c
 
 
 def test_the_shop_can_change_how_long_an_unpaid_order_holds_its_stock(client):
-    rest = {"day_starts": "00:00", "agents_edit_items": False, "low_stock_at": 5}
+    rest = {
+        "day_starts": "00:00", "agents_edit_items": False, "low_stock_at": 5,
+        "sold_out_display": "grey", "wholesale_layout": False, "whatsapp_number": "",
+    }
     assert client.get("/api/items/settings").json() == {"hold_minutes": 30, **rest}
     saved = client.put("/api/items/settings", json={"hold_minutes": 10})
     assert saved.json() == {"hold_minutes": 10, **rest}
@@ -840,7 +846,7 @@ def test_scenario_29_one_shop_cannot_read_or_change_anothers_items(client_factor
         "returning id", other_shop,
     )[0]["id"]
     refused = theirs.post(f"/api/store/{slug}/orders", json={
-        "contact_id": str(visitor), "payment": "link",
+        "token": token(visitor, other_shop), "payment": "link",
         "items": [{"product_id": abaya["id"], "quantity": 1, "variant_id": vid(abaya)}],
     })
     assert (refused.status_code, detail(refused)["code"]) == (422, "unavailable")

@@ -39,7 +39,7 @@
 .cx[dir="rtl"] .cx-mono::after { clip-path: polygon(0 0, 100% 0, 0 100%); }
 .cx-shop { flex: 1; min-width: 0; display: grid; line-height: 1.2; }
 .cx-shop b { font-size: var(--ui-body); font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.cx-shop small { font-size: var(--ui-caption); color: var(--ink-3); }
+.cx-shop small { font-size: var(--ui-caption); color: var(--ink-2); }
 .cx-lang { height: 32px; padding: 0 12px; border: 0; border-radius: 16px; background: var(--card); box-shadow: var(--lift); font-size: var(--ui-small); font-weight: 600; }
 .cx-main { max-width: 34rem; margin: 0 auto; padding: 22px max(16px, env(safe-area-inset-right, 0px)) calc(150px + env(safe-area-inset-bottom, 0px)) max(16px, env(safe-area-inset-left, 0px)); display: flex; flex-direction: column; gap: 22px; }
 .cx-main.short { padding-bottom: calc(48px + env(safe-area-inset-bottom, 0px)); }
@@ -47,7 +47,7 @@
 @keyframes cx-rise { from { opacity: 0; transform: translateY(8px); } }
 
 .cx-hero { display: grid; gap: 10px; }
-.cx-eyebrow { font-family: var(--font-ui-mono); font-size: var(--ui-micro); letter-spacing: 0.08em; text-transform: uppercase; color: var(--ink-3); }
+.cx-eyebrow { font-family: var(--font-ui-mono); font-size: var(--ui-micro); letter-spacing: 0.08em; text-transform: uppercase; color: var(--ink-2); }
 .cx[dir="rtl"] .cx-eyebrow { font-family: var(--face); letter-spacing: 0; font-size: var(--ui-small); }
 .cx-hero h1 { margin: 0; font-size: clamp(28px, 8vw, 36px); line-height: 1.06; font-weight: 600; letter-spacing: -0.035em; text-wrap: balance; }
 .cx[dir="rtl"] .cx-hero h1 { letter-spacing: 0; line-height: 1.3; }
@@ -56,9 +56,9 @@
 .cx-who b { color: var(--ink); font-weight: 600; }
 .cx-wa { width: 18px; height: 18px; flex: none; display: grid; place-items: center; border-radius: 50%; background: var(--wa-brand); color: var(--white); }
 .cx-wa svg { width: 11px; height: 11px; }
-.cx-warn { padding: 12px 14px; border-radius: 14px; background: var(--warn-soft); color: var(--warn); font-size: var(--ui-body-sm); line-height: 1.45; }
+.cx-warn { padding: 12px 14px; border-radius: 14px; background: var(--warn-soft); color: var(--ink); font-size: var(--ui-body-sm); line-height: 1.45; }
 .cx-error { padding: 12px 14px; border-radius: 12px; background: var(--bad-soft); color: var(--bad); font-size: var(--ui-body-sm); }
-.cx-foot { display: flex; align-items: center; justify-content: center; gap: 7px; padding-top: 8px; font-size: var(--ui-caption); color: var(--ink-3); }
+.cx-foot { display: flex; align-items: center; justify-content: center; gap: 7px; padding-top: 8px; font-size: var(--ui-caption); color: var(--ink-2); }
 .cx-foot svg { width: 18px; height: 15px; color: var(--ink-2); }
 .cx-foot b { font-weight: 600; color: var(--ink-2); letter-spacing: 0.04em; }
 .cx-empty { display: grid; place-items: center; min-height: 70vh; padding: 24px; text-align: center; color: var(--ink-2); }
@@ -136,9 +136,9 @@
 
 /* ── payment ── */
 .cx-amount { display: grid; gap: 4px; padding: 22px 18px 18px; }
-.cx-amount span { font-size: var(--ui-body-sm); color: var(--ink-2); }
+.cx-amount > span, .cx-amount > h1 { margin: 0; font-size: var(--ui-body-sm); font-weight: 400; letter-spacing: 0; color: var(--ink-2); }
 .cx-amount b { display: flex; align-items: baseline; gap: 8px; font-size: clamp(40px, 13vw, 52px); font-weight: 600; letter-spacing: -0.05em; line-height: 1; }
-.cx-amount b small { font-family: var(--font-ui-mono); font-size: var(--ui-body-sm); font-weight: 500; letter-spacing: 0.04em; color: var(--ink-3); }
+.cx-amount b small { font-family: var(--font-ui-mono); font-size: var(--ui-body-sm); font-weight: 500; letter-spacing: 0.04em; color: var(--ink-2); }
 .cx-kv { display: flex; justify-content: space-between; gap: 16px; padding: 13px 18px; border-top: 1px solid var(--hair); font-size: var(--ui-body-sm); color: var(--ink-2); }
 .cx-kv b { color: var(--ink); font-weight: 500; text-align: end; }
 .cx-card-brand { display: inline-flex; align-items: center; gap: 6px; }
@@ -170,7 +170,7 @@
 .cx-track li.now .cx-node { box-shadow: 0 0 0 6px var(--volt-wash); }
 .cx-track-text { display: grid; gap: 2px; padding-top: 2px; }
 .cx-track-text b { font-size: var(--ui-body); font-weight: 600; }
-.cx-track li:not(.reached) .cx-track-text b { color: var(--ink-3); font-weight: 500; }
+.cx-track li:not(.reached) .cx-track-text b { color: var(--ink-2); font-weight: 500; }
 .cx-track-text span { font-size: var(--ui-small); color: var(--ink-2); }
 .cx-person { display: flex; align-items: center; gap: 12px; padding: 14px 16px; }
 .cx-avatar { width: 40px; height: 40px; flex: none; display: grid; place-items: center; border-radius: 50%; background: var(--ink); color: var(--card); font-weight: 600; }
@@ -178,7 +178,7 @@
 .cx-person p b { color: var(--ink); font-weight: 600; }
 .cx-pill { display: inline-flex; align-items: center; height: 24px; padding: 0 10px; border-radius: 12px; font-size: var(--ui-caption); font-weight: 600; background: var(--raise); color: var(--ink-2); box-shadow: 0 0 0 1px var(--hair) inset; }
 .cx-pill.good { background: var(--volt-wash); color: var(--volt-ink); box-shadow: none; }
-.cx-pill.due { background: var(--warn-soft); color: var(--warn); box-shadow: none; }
+.cx-pill.due { background: var(--warn-soft); color: var(--ink); box-shadow: none; }
 
 @media (min-width: 40rem) {
   .cx-main { padding-top: 36px; }

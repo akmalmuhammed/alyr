@@ -341,3 +341,48 @@ li:has(> .ct-ptile.up.failed) { grid-column: 1 / -1; }
 .ct-pv-why { font-size: var(--ui-small); color: var(--ink-2); }
 .ct-preview.quiet { box-shadow: none; background: transparent; }
 .ct-preview.quiet li { padding-inline: 0; }
+
+/* ── share and QR codes (ALY-112) ── */
+.ct-share { display: grid; gap: 10px; padding: 14px; border-radius: 14px; background: var(--raise); box-shadow: 0 0 0 1px var(--hair) inset; min-width: 0; }
+.ct-share h3, .ct-subhead { margin: 0; font-size: var(--ui-body-sm); font-weight: 600; }
+.ct-subhead { margin-top: 8px; }
+.ct-linkrow { display: flex; flex-wrap: wrap; gap: 8px; }
+.ct-linkbox { flex: 1 1 12rem; min-width: 0; height: 44px; padding: 0 12px; border: 0; border-radius: 12px; background: var(--sheet); box-shadow: 0 0 0 1px var(--hair-2) inset; font: inherit; font-size: var(--ui-small); color: var(--ink); }
+.ct-btnrow { display: flex; flex-wrap: wrap; gap: 8px; }
+.sh .btn.disabled, .ct-sheet .btn.disabled { opacity: 0.5; pointer-events: none; }
+.ct-linkbtn { min-height: 44px; padding: 0; border: 0; background: transparent; color: var(--ink); font: inherit; font-weight: 600; text-decoration: underline; text-underline-offset: 3px; }
+.ct-qrbox { display: grid; place-items: center; padding: 4px 0; }
+.ct-qr { width: min(15rem, 100%); height: auto; aspect-ratio: 1; border-radius: 6px; box-shadow: 0 0 0 1px var(--hair-2); }
+.ct-qr.small { width: 100%; }
+.ct-qr.empty { background: var(--hair); }
+.ct-tablesform { display: grid; gap: 10px; justify-items: start; }
+.ct-tablesform .ct-field { width: 100%; }
+.ct-tablegrid { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(8.5rem, 1fr)); gap: 10px; }
+.ct-tablecard { display: grid; gap: 6px; justify-items: center; padding: 10px; border-radius: 12px; background: var(--sheet); box-shadow: 0 0 0 1px var(--hair) inset; }
+.ct-tablebtns { display: flex; gap: 4px; }
+.ct-share-btn { width: 44px; height: 44px; flex: none; }
+.ct-radios { margin: 0; padding: 0; border: 0; display: grid; gap: 8px; min-width: 0; }
+.ct-radios legend { padding: 0 0 6px; font-size: var(--ui-body-sm); font-weight: 600; }
+.ct-radio { display: flex; align-items: center; gap: 10px; min-height: 48px; padding: 0 14px; border-radius: 12px; background: var(--raise); box-shadow: 0 0 0 1px var(--hair) inset; font-size: var(--ui-body-sm); cursor: pointer; }
+.ct-radio.on { box-shadow: 0 0 0 2px var(--ink) inset; }
+.ct-radio input { width: 20px; height: 20px; margin: 0; accent-color: var(--ink); }
+
+/* The sheet that is printed: nothing of the workspace prints with it, and it is always ink on
+   white, whatever theme the screen is in. */
+.ct-printsheet { display: none; }
+@page { size: A4; margin: 12mm; }
+@media print {
+  html, body { background: var(--white) !important; }
+  body > *:not(.ct-printsheet) { display: none !important; }
+  .ct-printsheet { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8mm; color: var(--carbon); background: var(--white); font-family: var(--font-ui); }
+  .ct-pcard { break-inside: avoid; display: grid; justify-items: center; gap: 3mm; padding: 6mm; border: 0.3mm solid var(--carbon); text-align: center; }
+  .ct-pcard header { display: flex; justify-content: space-between; gap: 4mm; width: 100%; font-size: 13pt; }
+  .ct-pcard header b { font-weight: 600; }
+  .ct-pqr { width: 58mm; height: 58mm; }
+  .ct-ptable { display: flex; justify-content: space-between; gap: 6mm; width: 100%; margin: 0; font-size: 18pt; font-weight: 600; }
+  .ct-ptext { display: grid; gap: 2.5mm; width: 100%; }
+  .ct-ptext p { margin: 0; display: grid; gap: 0.5mm; font-size: 8.5pt; line-height: 1.35; text-align: start; }
+  .ct-ptext b { font-size: 11pt; }
+  .ct-plink { font-size: 7pt; overflow-wrap: anywhere; }
+  .ct-pcard footer { display: flex; justify-content: space-between; gap: 4mm; width: 100%; font-size: 7pt; }
+}

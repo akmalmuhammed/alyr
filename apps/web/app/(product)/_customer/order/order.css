@@ -1,0 +1,189 @@
+/* The order page, version 2 (ALY-112). It sits on customer.css (`.cx`) and uses its names for
+   ALYR's tokens. Built at 375 px first, with targets of 44 px, logical properties so Arabic
+   mirrors by itself, and no sideways scrolling in either language. Nothing here has a colour
+   of its own: grey for a sold-out item is the muted text token, not an opacity, so it keeps
+   its contrast. */
+
+.ox-sr { position: absolute; width: 1px; height: 1px; margin: -1px; padding: 0; overflow: hidden; clip-path: inset(50%); white-space: nowrap; border: 0; }
+.ox-nb { white-space: nowrap; }
+html.ox-locked { overflow: hidden; }
+.cx button:disabled, .cx button[aria-disabled="true"] { cursor: default; }
+
+/* ── who is ordering ── */
+.ox-who { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+.ox-who:empty { display: none; }
+.ox-table { display: inline-flex; align-items: center; gap: 6px; padding: 6px 12px; border-radius: 18px; background: var(--card); box-shadow: var(--lift); font-size: var(--ui-small); font-weight: 600; color: var(--ink); }
+.ox-table svg { width: 16px; height: 16px; }
+.ox-notice { padding: 16px; display: grid; gap: 6px; }
+.ox-notice h2 { margin: 0; font-size: var(--ui-body); font-weight: 600; }
+.ox-notice p { margin: 0; font-size: var(--ui-body-sm); line-height: 1.5; color: var(--ink-2); }
+.ox-notice ul { margin: 4px 0 0; padding: 0; list-style: none; display: grid; gap: 6px; font-size: var(--ui-body-sm); }
+.ox-notice li { display: grid; gap: 2px; }
+.ox-notice li span { color: var(--ink-2); }
+.ox-again { padding: 16px; display: grid; gap: 10px; }
+.ox-again h2 { margin: 0; font-size: var(--ui-body); font-weight: 600; }
+.ox-again p { margin: 0; font-size: var(--ui-body-sm); line-height: 1.5; color: var(--ink-2); }
+.ox-again-act { display: grid; gap: 8px; }
+
+/* ── search and categories ── */
+.ox-tools { display: grid; gap: 8px; }
+.ox-search { position: relative; display: flex; align-items: center; }
+.ox-search .cx-input { height: 48px; padding-inline: 44px; }
+.ox-search-glyph { position: absolute; inset-inline-start: 14px; width: 18px; height: 18px; color: var(--ink-2); pointer-events: none; }
+.ox-clear { position: absolute; inset-inline-end: 2px; width: 44px; height: 44px; display: grid; place-items: center; border: 0; border-radius: 50%; background: transparent; color: var(--ink-2); }
+.ox-clear svg { width: 16px; height: 16px; }
+.ox-chips { position: sticky; top: calc(58px + env(safe-area-inset-top, 0px)); z-index: 5; display: flex; gap: 6px; overflow-x: auto; scrollbar-width: none; margin-inline: -16px; padding: 8px 16px; scroll-padding-inline: 16px; background: color-mix(in srgb, var(--bg) 92%, transparent); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px); }
+.ox-chips::-webkit-scrollbar { display: none; }
+.ox-chips button { flex: none; min-height: 44px; padding: 0 16px; border: 0; border-radius: 22px; background: var(--card); box-shadow: var(--lift); color: var(--ink-2); font-size: var(--ui-small); font-weight: 500; white-space: nowrap; }
+.ox-chips button[aria-pressed="true"] { background: var(--ink); color: var(--card); box-shadow: none; font-weight: 600; }
+.ox-none { display: grid; gap: 12px; justify-items: center; padding: 24px 0; text-align: center; color: var(--ink-2); }
+.ox-none p { margin: 0; }
+.ox-more { width: 100%; }
+
+/* ── the list ── */
+.ox-group { display: grid; gap: 10px; scroll-margin-top: 130px; }
+.ox-group > h2 { margin: 0; font-size: var(--ui-body); font-weight: 600; letter-spacing: -0.01em; }
+.ox-list { list-style: none; margin: 0; padding: 0; border-radius: 18px; background: var(--card); box-shadow: var(--lift); overflow: hidden; }
+.ox-card { display: flex; align-items: center; gap: 8px; padding: 12px 16px; }
+.ox-card + .ox-card { border-top: 1px solid var(--hair); }
+.ox-open { flex: 1; min-width: 0; display: flex; align-items: flex-start; gap: 12px; padding: 0; border: 0; background: transparent; color: inherit; text-align: start; }
+.ox-text { flex: 1; min-width: 0; display: grid; gap: 4px; }
+.ox-name { font-size: var(--ui-body); font-weight: 600; line-height: 1.3; overflow-wrap: anywhere; }
+.ox-desc { font-size: var(--ui-body-sm); line-height: 1.4; color: var(--ink-2); display: -webkit-box; -webkit-line-clamp: 2; line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+.ox-price { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 8px; }
+.ox-now { font-size: var(--ui-body); font-weight: 600; }
+.ox-was { font-size: var(--ui-small); color: var(--ink-2); }
+.ox-tag { display: inline-flex; align-items: center; height: 20px; padding: 0 8px; border-radius: 10px; background: var(--volt-wash); color: var(--volt-ink); font-size: var(--ui-caption); font-weight: 600; }
+.ox-status { display: flex; flex-wrap: wrap; gap: 4px 6px; }
+.ox-pill { display: inline-flex; align-items: center; min-height: 22px; padding: 2px 8px; border-radius: 11px; background: var(--raise); color: var(--ink-2); box-shadow: 0 0 0 1px var(--hair) inset; font-size: var(--ui-caption); font-weight: 500; line-height: 1.3; }
+.ox-pill.few { background: var(--warn-soft); color: var(--ink); box-shadow: none; font-weight: 600; }
+.ox-pill.off { background: var(--bad-soft); color: var(--bad); box-shadow: none; font-weight: 600; }
+.ox-pill.when, .ox-pill.later { background: transparent; box-shadow: none; padding-inline: 0; }
+.ox-card.off .ox-name, .ox-card.off .ox-now { color: var(--ink-2); }
+.ox-card.off .ox-ph img { filter: grayscale(1); opacity: 0.6; }
+.ox-off-label { font-size: var(--ui-small); font-weight: 600; color: var(--ink-2); }
+.ox-act { flex: none; display: grid; place-items: center; min-width: 44px; }
+.ox-add { width: 44px; height: 44px; display: grid; place-items: center; border: 0; border-radius: 50%; background: var(--raise); box-shadow: 0 0 0 1px var(--hair-2) inset; transition: transform 0.2s var(--spring-product); }
+.ox-add svg { width: 18px; height: 18px; }
+.ox-add:active { transform: scale(0.92); }
+.ox-choose { min-height: 44px; display: inline-flex; align-items: center; gap: 6px; padding: 0 16px; border: 0; border-radius: 22px; background: var(--raise); box-shadow: 0 0 0 1px var(--hair-2) inset; font-size: var(--ui-small); font-weight: 600; }
+.ox-count { min-width: 20px; height: 20px; display: inline-grid; place-items: center; border-radius: 10px; background: var(--ink); color: var(--card); font-size: var(--ui-caption); }
+
+/* photos: the box has its shape before the file arrives, so nothing moves */
+.ox-ph { position: relative; display: block; overflow: hidden; border-radius: 12px; background: var(--raise); box-shadow: 0 0 0 1px var(--hair) inset; }
+.ox-ph img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
+.ox-ph.empty { display: grid; place-items: center; }
+.ox-ph-glyph { width: 28%; min-width: 16px; max-width: 40px; color: var(--ink-3); opacity: 0.8; }
+.ox-thumb { width: 72px; flex: none; }
+
+/* the stepper: 44 px targets */
+.ox-step { display: inline-flex; align-items: center; padding: 2px; border-radius: 24px; background: var(--ink); color: var(--card); }
+.ox-step button { width: 44px; height: 44px; display: grid; place-items: center; border: 0; border-radius: 50%; background: transparent; color: inherit; }
+.ox-step button:active { background: color-mix(in srgb, var(--card) 18%, transparent); }
+.ox-step button[aria-disabled="true"] { opacity: 0.45; }
+.ox-step svg { width: 16px; height: 16px; }
+.ox-step span { min-width: 24px; text-align: center; font-weight: 600; font-size: var(--ui-body-sm); }
+.ox-step :focus-visible { outline-color: var(--card); }
+
+/* ── dialogs: a bottom sheet on a phone ── */
+.ox-dialog { box-sizing: border-box; width: 100%; max-width: none; max-height: 92dvh; margin: auto 0 0; padding: 0; border: 0; border-radius: 22px 22px 0 0; background: var(--card); color: var(--ink); box-shadow: var(--float); flex-direction: column; overflow: hidden; }
+.ox-dialog[open] { display: flex; }
+.ox-dialog::backdrop { background: color-mix(in srgb, var(--carbon) 58%, transparent); }
+.ox-dhead { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 14px 8px 8px 20px; }
+.ox-dhead h2 { margin: 0; font-size: var(--ui-title-sm); font-weight: 600; line-height: 1.25; overflow-wrap: anywhere; }
+.ox-x { flex: none; width: 44px; height: 44px; display: grid; place-items: center; border: 0; border-radius: 50%; background: transparent; }
+.ox-x svg { width: 20px; height: 20px; }
+.ox-dbody { flex: 1; min-height: 0; overflow-y: auto; overscroll-behavior: contain; padding: 4px 20px 20px; display: grid; gap: 16px; align-content: start; }
+.ox-dfoot { display: flex; align-items: center; gap: 12px; padding: 12px 20px calc(12px + env(safe-area-inset-bottom, 0px)); border-top: 1px solid var(--hair); background: var(--card); }
+.ox-dfoot.col { flex-direction: column; align-items: stretch; gap: 8px; }
+.ox-addbtn { flex: 1; min-width: 0; padding-inline: 12px; }
+
+.ox-hero { display: grid; gap: 8px; }
+.ox-big { width: 100%; border-radius: 14px; }
+.ox-thumbs { display: flex; gap: 8px; overflow-x: auto; scrollbar-width: none; padding-block: 2px; }
+.ox-thumbs button { flex: none; width: 56px; padding: 0; border: 0; border-radius: 12px; background: transparent; }
+.ox-thumbs button[aria-pressed="true"] .ox-ph { box-shadow: 0 0 0 2px var(--ink); }
+.ox-facts { display: grid; gap: 8px; }
+.ox-long { margin: 0; font-size: var(--ui-body); line-height: 1.55; color: var(--ink); white-space: pre-line; }
+.ox-tags { list-style: none; margin: 0; padding: 0; display: flex; flex-wrap: wrap; gap: 6px; }
+.ox-tags li { padding: 3px 10px; border-radius: 12px; background: var(--raise); box-shadow: 0 0 0 1px var(--hair) inset; font-size: var(--ui-small); color: var(--ink-2); }
+.ox-meta { margin: 0; font-size: var(--ui-small); color: var(--ink-2); }
+.ox-meta:empty { display: none; }
+
+/* sizes and choices: the whole row is the target, and a missing one is marked and named */
+.ox-field { margin: 0; padding: 0; border: 0; min-width: 0; display: grid; gap: 6px; }
+.ox-field legend { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 10px; padding: 0 0 6px; font-size: var(--ui-body); font-weight: 600; }
+.ox-field legend small { font-size: var(--ui-small); font-weight: 400; color: var(--ink-2); }
+.ox-opt { position: relative; display: flex; align-items: center; gap: 10px; min-height: 48px; padding: 8px 14px; border-radius: 12px; background: var(--raise); box-shadow: 0 0 0 1px var(--hair-2) inset; cursor: pointer; }
+.ox-opt input { width: 20px; height: 20px; margin: 0; flex: none; accent-color: var(--ink); }
+.ox-opt.on { box-shadow: 0 0 0 2px var(--ink) inset; background: var(--card); }
+.ox-opt:has(input:focus-visible) { outline: 2px solid var(--ink); outline-offset: 2px; }
+.ox-opt.gone { color: var(--ink-2); cursor: default; }
+.ox-opt-name { flex: 1; min-width: 0; font-size: var(--ui-body); overflow-wrap: anywhere; }
+.ox-opt-price { font-size: var(--ui-body-sm); color: var(--ink-2); }
+.ox-field.bad .ox-opt { box-shadow: 0 0 0 2px var(--bad) inset; }
+.ox-field.bad legend { color: var(--bad); }
+.ox-err { margin: 0; font-size: var(--ui-body-sm); line-height: 1.45; color: var(--bad); }
+.ox-err.summary { padding: 12px 14px; border-radius: 12px; background: var(--bad-soft); }
+
+/* ── the review ── */
+.ox-state { display: grid; gap: 8px; }
+.ox-state p { margin: 0; }
+.ox-quiet { margin: 0; font-size: var(--ui-body-sm); color: var(--ink-2); }
+.ox-quiet.center { text-align: center; }
+.ox-good, .ox-warn { display: flex; gap: 10px; align-items: flex-start; padding: 12px 14px; border-radius: 12px; font-size: var(--ui-body-sm); line-height: 1.45; }
+.ox-good { background: var(--volt-wash); color: var(--volt-ink); }
+.ox-warn { background: var(--warn-soft); color: var(--warn); }
+.ox-good svg, .ox-warn svg { width: 18px; height: 18px; flex: none; margin-top: 1px; }
+.ox-lines { list-style: none; margin: 0; padding: 0; display: grid; }
+.ox-line { display: grid; grid-template-columns: 56px minmax(0, 1fr) auto; gap: 12px; padding: 14px 0; align-items: start; }
+.ox-line + .ox-line { border-top: 1px solid var(--hair); }
+.ox-lthumb { width: 56px; }
+.ox-ltext { display: grid; gap: 4px; min-width: 0; }
+.ox-ltext b { font-size: var(--ui-body); font-weight: 600; line-height: 1.3; overflow-wrap: anywhere; }
+.ox-lprice { display: flex; align-items: center; flex-wrap: wrap; gap: 4px; font-size: var(--ui-body-sm); color: var(--ink-2); }
+.ox-lflip { width: 14px; height: 14px; }
+[dir="rtl"] .ox-lflip { transform: scaleX(-1); }
+.ox-new { color: var(--ink); font-weight: 700; }
+.ox-lmsg { margin: 0; font-size: var(--ui-body-sm); line-height: 1.45; color: var(--ink); }
+.ox-line.bad .ox-lmsg { color: var(--bad); }
+.ox-line.moved .ox-lmsg { color: var(--warn); }
+.ox-lact { display: flex; flex-wrap: wrap; gap: 0 14px; }
+.ox-link { min-height: 44px; padding: 0; border: 0; background: transparent; color: var(--ink); font-size: var(--ui-body-sm); font-weight: 600; text-decoration: underline; text-underline-offset: 3px; }
+.ox-alts { display: grid; gap: 6px; }
+.ox-alt { min-height: 44px; width: 100%; padding: 6px 14px; display: flex; align-items: center; justify-content: space-between; gap: 12px; border: 0; border-radius: 12px; background: var(--raise); box-shadow: 0 0 0 1px var(--hair-2) inset; font-size: var(--ui-small); font-weight: 500; text-align: start; }
+.ox-lqty { align-self: center; }
+.ox-lqty .ox-step button { width: 40px; height: 44px; }
+.ox-sum { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; font-size: var(--ui-body-sm); color: var(--ink-2); }
+.ox-total { font-size: var(--ui-title); font-weight: 600; color: var(--ink); letter-spacing: -0.02em; }
+.ox-field.days { margin-top: 4px; }
+.ox-daylist { display: flex; gap: 8px; overflow-x: auto; scrollbar-width: none; padding: 2px 2px 6px; }
+.ox-day { flex: none; position: relative; min-height: 48px; display: inline-flex; align-items: center; padding: 0 16px; border-radius: 12px; background: var(--raise); box-shadow: 0 0 0 1px var(--hair-2) inset; font-size: var(--ui-body-sm); font-weight: 500; white-space: nowrap; cursor: pointer; }
+.ox-day input { position: absolute; opacity: 0; inset: 0; margin: 0; cursor: pointer; }
+.ox-day.on { background: var(--ink); color: var(--card); box-shadow: none; font-weight: 600; }
+.ox-day:has(input:focus-visible) { outline: 2px solid var(--ink); outline-offset: 2px; }
+
+/* ── the wholesale table: two short lines a row on a phone, a real table on a laptop ── */
+.ox-wtable { border-radius: 18px; background: var(--card); box-shadow: var(--lift); overflow: hidden; }
+.ox-whead { display: none; }
+.ox-wrow { display: grid; grid-template-columns: minmax(0, 1fr) auto; grid-template-areas: "sku price" "name qty"; gap: 4px 12px; align-items: center; padding: 12px 16px; border-top: 1px solid var(--hair); }
+.ox-wrow:first-child { border-top: 0; }
+[role="rowgroup"] + [role="rowgroup"] > .ox-wrow:first-child { border-top: 1px solid var(--hair); }
+.ox-wsku { grid-area: sku; font-family: var(--font-ui-mono); font-size: var(--ui-caption); color: var(--ink-2); overflow-wrap: anywhere; text-align: start; }
+.ox-wname { grid-area: name; display: grid; gap: 3px; min-width: 0; justify-items: start; }
+.ox-wopen { padding: 0; min-height: 24px; border: 0; background: transparent; color: var(--ink); font-size: var(--ui-body); font-weight: 600; text-align: start; line-height: 1.3; overflow-wrap: anywhere; }
+.ox-wpart { font-weight: 400; color: var(--ink-2); }
+.ox-wname small { font-size: var(--ui-small); color: var(--ink-2); }
+.ox-wprice { grid-area: price; display: flex; align-items: baseline; gap: 6px; font-size: var(--ui-body); font-weight: 600; justify-self: end; }
+.ox-wqty { grid-area: qty; justify-self: end; }
+.ox-wrow.off .ox-wopen, .ox-wrow.off .ox-wprice { color: var(--ink-2); }
+@media (min-width: 40rem) {
+  .ox-whead, .ox-wrow { display: grid; grid-template-columns: 7rem minmax(0, 1fr) 8rem 9.5rem; grid-template-areas: none; gap: 12px; }
+  .ox-whead { padding: 10px 16px; font-size: var(--ui-caption); font-weight: 600; color: var(--ink-2); text-transform: none; border-bottom: 1px solid var(--hair); }
+  .ox-wsku, .ox-wname, .ox-wprice, .ox-wqty { grid-area: auto; }
+  .ox-whead > :nth-child(3), .ox-whead > :nth-child(4) { justify-self: end; }
+  .ox-dialog { margin: auto; max-width: 34rem; max-height: 86dvh; border-radius: 22px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .ox-add, .ox-step button { transition: none; }
+}

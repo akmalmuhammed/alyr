@@ -34,3 +34,11 @@ def fmt_qar(dirhams: int) -> str:
     sign = "-" if dirhams < 0 else ""
     whole, part = divmod(abs(dirhams), 100)
     return f"{sign}QAR {whole:,}" + (f".{part:02d}" if part else "")
+
+
+def fmt_qar_ar(dirhams: int) -> str:
+    """The same amount as an Arabic page writes it: the number, then «ر.ق», Western digits
+    (ALY-112, D-039 "As built"). «24 ر.ق», «1,234.50 ر.ق». The English form is `fmt_qar`."""
+    sign = "-" if dirhams < 0 else ""
+    whole, part = divmod(abs(dirhams), 100)
+    return f"{sign}{whole:,}" + (f".{part:02d}" if part else "") + " ر.ق"

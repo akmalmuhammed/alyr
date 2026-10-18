@@ -1,0 +1,301 @@
+// Every word the order page says, in English and Arabic, in one place so a reviewer can read
+// them together (ALY-66: the Arabic is a draft until a native speaker has been through it).
+// The components hold no text. Both languages are written against the same shape, so a
+// missing Arabic line is a type error, not a hole on a phone.
+//
+// Amounts are never written here: `../price.ts` writes them («QAR 24», «24 ر.ق»). Sentences
+// about the shop's items and hours come from the API in both languages. Arabic counts agree
+// through `counted`: one, two, three to ten, and eleven or more each take their own form.
+
+import type { Lang } from "../price";
+
+export type { Lang };
+
+/** «صنف واحد», «صنفان», «3 أصناف», «11 صنفاً». */
+function counted(n: number, one: string, two: string, few: string, many: string): string {
+  if (n === 1) return one;
+  if (n === 2) return two;
+  const digits = n.toLocaleString("en");
+  return n >= 3 && n <= 10 ? `${digits} ${few}` : `${digits} ${many}`;
+}
+
+const en = {
+  context: "Order",
+  title: "What would you like?",
+  eyebrow: "Order from your chat",
+  eyebrowMenu: "The menu",
+  hello: (name: string) => `Ordering as ${name}`,
+  table: (label: string) => `Table ${label}`,
+  tableHint: "Your order goes to this table.",
+  language: "العربية",
+
+  // ── finding things ───────────────────────────────────
+  search: "Search the menu",
+  searchHint: "Search by name, in English or Arabic",
+  clearSearch: "Clear search",
+  categories: "Categories",
+  all: "All",
+  other: "Other",
+  items: (n: number) => `${n} ${n === 1 ? "item" : "items"}`,
+  resultsFor: (n: number, q: string) => `${n} ${n === 1 ? "item" : "items"} for “${q}”`,
+  noMatch: (q: string) => `Nothing matches “${q}”.`,
+  showAll: "Show everything",
+  more: (n: number) => `Show ${n} more`,
+  loadingMore: "Loading…",
+
+  // ── an item ──────────────────────────────────────────
+  add: "Add",
+  addNamed: (name: string) => `Add ${name}`,
+  choose: "Choose",
+  chooseNamed: (name: string) => `Choose options for ${name}`,
+  openNamed: (name: string) => `${name}: details`,
+  soldOut: "Sold out",
+  soldOutNamed: (name: string) => `${name} is sold out`,
+  onlyLeft: (n: number) => `Only ${n} left`,
+  onlyLeftToday: (n: number) => `Only ${n} left today`,
+  inOrder: (n: number) => `${n} in your order`,
+  minimum: (n: number) => `Minimum ${n}`,
+  pack: (n: number) => `Pack of ${n}`,
+  sale: "Sale",
+  yourPrice: "Your price",
+  units: { piece: "Piece", kg: "Kilo", box: "Box", pack: "Pack", portion: "Portion", hour: "Hour" } as Record<string, string>,
+  sku: "Code",
+  nameHead: "Item",
+  priceHead: "Price",
+  priceList: "Price list",
+  remove: "Remove one",
+  moreOne: "Add one",
+  quantity: "Quantity",
+  atMost: (n: number) => `Only ${n} left, so that is the most you can order.`,
+  close: "Close",
+  noPhoto: "No photo yet",
+  photoOf: (i: number, n: number) => `Photo ${i} of ${n}`,
+
+  // ── the item sheet ───────────────────────────────────
+  size: "Size or option",
+  required: "Required",
+  optional: "Optional",
+  upTo: (n: number) => `Choose up to ${n}`,
+  addToOrder: "Add to order",
+  addShort: "Add",
+  updateOrder: "Update order",
+  chooseSize: (name: string) => `Choose a size or option for ${name}.`,
+  chooseGroup: (group: string, name: string) => `Choose ${group} for ${name}.`,
+  chooseFewer: (n: number, group: string, name: string) => `Choose at most ${n} for ${group} on ${name}.`,
+  fixBelow: "Please fix the choices marked below.",
+  sizeSoldOut: "Sold out",
+  forDay: "For which day?",
+  forDayHint: "This is made to order. Pick the day you want it.",
+
+  // ── the bar and the review ───────────────────────────
+  bar: (n: number) => `${n} ${n === 1 ? "item" : "items"}`,
+  review: "Review order",
+  reviewChanged: "Review changes",
+  yourOrder: "Your order",
+  checking: "Checking your order…",
+  allGood: "Everything is available at the prices shown.",
+  changedTitle: "Some things changed",
+  changedHint: "Nothing has been charged. Please look at what changed, then continue.",
+  priceWas: (was: string, now: string) => `Was ${was}, now ${now}`,
+  accept: "Accept new prices",
+  total: "Total",
+  pay: (amount: string) => `Pay ${amount}`,
+  account: "Put it on my account",
+  accountHint: "Added to your account with the shop.",
+  fixFirst: "Fix the items marked above to continue.",
+  removeLine: "Remove",
+  changeTo: (n: number) => `Change to ${n}`,
+  pickDay: (day: string) => `Use ${day}`,
+  tryInstead: "Try instead",
+  tryName: (name: string) => `Add ${name} instead`,
+  chooseNow: "Choose now",
+  orderFor: "Ready on",
+  noLines: "Your order is empty.",
+  recheck: "Check again",
+  placing: "Placing your order…",
+  failed: "The order could not be placed. Please try again.",
+  offline: "No connection. What you see is from a moment ago; we will try again by ourselves.",
+  retry: "Try again",
+
+  // ── same as last time ────────────────────────────────
+  again: "Same as last time",
+  againHint: "Orders your last order again. Anything no longer available is left out, and we tell you which.",
+  againPay: "Order again and pay",
+  againAccount: "Order again on my account",
+  againDone: (n: number) => `Order #${n} received`,
+  leftOut: "Not included",
+  leftOutHint: "These could not be ordered now:",
+  priceChanges: "Prices that changed",
+  priceChange: (name: string, was: string, now: string) => `${name}: was ${was}, now ${now}`,
+  payNow: (amount: string) => `Pay ${amount}`,
+
+  // ── live ─────────────────────────────────────────────
+  updated: "Availability updated.",
+  nowSoldOut: (name: string) => `${name} is now sold out.`,
+  nowBack: (name: string) => `${name} is available again.`,
+  nowPrice: (name: string, price: string) => `${name} is now ${price}.`,
+  nowFewer: (name: string, n: number) => `Only ${n} of ${name} left.`,
+  cartChanged: "Something in your order changed. Please review it before you pay.",
+
+  // ── who is ordering ──────────────────────────────────
+  browseTitle: "You are looking at the menu",
+  browseWhatsApp: (shop: string) => `To order, start on WhatsApp with ${shop}. They will send you your own order link.`,
+  browseNoNumber: (shop: string) => `To order, open the order link in your WhatsApp chat with ${shop}.`,
+  startOrder: "Order on WhatsApp",
+  prefillOrder: "Order",
+  prefillTable: (label: string) => `Order table ${label}`,
+  linkOld: "Ask for a new link",
+
+  // ── after ordering ───────────────────────────────────
+  placed: (n: number) => `Order #${n} received`,
+  onAccount: "It has been added to your account.",
+  backToChat: "You can go back to WhatsApp. We will message you as your order moves along.",
+  payToConfirm: "Pay now to confirm it. We will message you on WhatsApp as it moves along.",
+  track: "Track this order",
+  notFound: "This shop's order page was not found.",
+  itemGone: "That item is not on the menu now.",
+  seeMenu: "See the menu",
+  oops: "Something went wrong loading the menu.",
+  by: "Powered by",
+};
+
+export type Copy = typeof en;
+
+const ar: Copy = {
+  context: "طلب",
+  title: "ماذا تود أن تطلب؟",
+  eyebrow: "طلب من المحادثة",
+  eyebrowMenu: "القائمة",
+  hello: (name) => `الطلب باسم ${name}`,
+  table: (label) => `طاولة ${label}`,
+  tableHint: "سيصل طلبك إلى هذه الطاولة.",
+  language: "English",
+
+  search: "ابحث في القائمة",
+  searchHint: "ابحث بالاسم، بالعربية أو بالإنجليزية",
+  clearSearch: "مسح البحث",
+  categories: "التصنيفات",
+  all: "الكل",
+  other: "أخرى",
+  items: (n) => counted(n, "صنف واحد", "صنفان", "أصناف", "صنفاً"),
+  resultsFor: (n, q) => `${counted(n, "صنف واحد", "صنفان", "أصناف", "صنفاً")} لـ «${q}»`,
+  noMatch: (q) => `لا شيء يطابق «${q}».`,
+  showAll: "عرض كل شيء",
+  more: (n) => `عرض ${n} أخرى`,
+  loadingMore: "جارٍ التحميل…",
+
+  add: "أضف",
+  addNamed: (name) => `أضف ${name}`,
+  choose: "اختر",
+  chooseNamed: (name) => `اختر خيارات ${name}`,
+  openNamed: (name) => `${name}: التفاصيل`,
+  soldOut: "نفد",
+  soldOutNamed: (name) => `نفد ${name}`,
+  onlyLeft: (n) => `المتبقي ${n} فقط`,
+  onlyLeftToday: (n) => `المتبقي اليوم ${n} فقط`,
+  inOrder: (n) => `${n} في طلبك`,
+  minimum: (n) => `الحد الأدنى ${n}`,
+  pack: (n) => `عبوة من ${n}`,
+  sale: "تخفيض",
+  yourPrice: "سعرك",
+  units: { piece: "قطعة", kg: "كيلو", box: "علبة", pack: "عبوة", portion: "حصة", hour: "ساعة" },
+  sku: "الرمز",
+  nameHead: "الصنف",
+  priceHead: "السعر",
+  priceList: "قائمة الأسعار",
+  remove: "إزالة واحد",
+  moreOne: "إضافة واحد",
+  quantity: "الكمية",
+  atMost: (n) => `المتبقي ${n} فقط، وهو أقصى ما يمكنك طلبه.`,
+  close: "إغلاق",
+  noPhoto: "لا توجد صورة بعد",
+  photoOf: (i, n) => `الصورة ${i} من ${n}`,
+
+  size: "المقاس أو النوع",
+  required: "مطلوب",
+  optional: "اختياري",
+  upTo: (n) => `اختر حتى ${n}`,
+  addToOrder: "أضف إلى الطلب",
+  addShort: "أضف",
+  updateOrder: "حدّث الطلب",
+  chooseSize: (name) => `اختر المقاس أو النوع لـ«${name}».`,
+  chooseGroup: (group, name) => `اختر ${group} لـ«${name}».`,
+  chooseFewer: (n, group, name) => `اختر ${n} على الأكثر من ${group} لـ«${name}».`,
+  fixBelow: "يرجى تصحيح الخيارات المعلّمة أدناه.",
+  sizeSoldOut: "نفد",
+  forDay: "لأي يوم؟",
+  forDayHint: "يُحضَّر هذا الصنف عند الطلب. اختر اليوم الذي تريده.",
+
+  bar: (n) => counted(n, "صنف واحد", "صنفان", "أصناف", "صنفاً"),
+  review: "راجع الطلب",
+  reviewChanged: "راجع التغييرات",
+  yourOrder: "طلبك",
+  checking: "جارٍ التحقق من طلبك…",
+  allGood: "كل شيء متاح بالأسعار الظاهرة.",
+  changedTitle: "تغيّرت بعض الأمور",
+  changedHint: "لم يُخصم أي مبلغ. يرجى مراجعة ما تغيّر ثم المتابعة.",
+  priceWas: (was, now) => `كان ${was}، وأصبح ${now}`,
+  accept: "قبول الأسعار الجديدة",
+  total: "الإجمالي",
+  pay: (amount) => `ادفع ${amount}`,
+  account: "سجّله على حسابي",
+  accountHint: "يُضاف إلى حسابك لدى المتجر.",
+  fixFirst: "صحّح الأصناف المعلّمة أعلاه للمتابعة.",
+  removeLine: "إزالة",
+  changeTo: (n) => `غيّر إلى ${n}`,
+  pickDay: (day) => `استخدم ${day}`,
+  tryInstead: "جرّب بدلاً منه",
+  tryName: (name) => `أضف ${name} بدلاً منه`,
+  chooseNow: "اختر الآن",
+  orderFor: "جاهز بتاريخ",
+  noLines: "طلبك فارغ.",
+  recheck: "تحقق مرة أخرى",
+  placing: "جارٍ إرسال طلبك…",
+  failed: "تعذّر إرسال الطلب. حاول مرة أخرى.",
+  offline: "لا يوجد اتصال. ما تراه من لحظات مضت؛ سنحاول مجدداً بأنفسنا.",
+  retry: "حاول مرة أخرى",
+
+  again: "مثل المرة السابقة",
+  againHint: "يطلب طلبك الأخير مرة أخرى. ما لم يعد متاحاً يُترك خارج الطلب، ونخبرك به.",
+  againPay: "اطلب مجدداً وادفع",
+  againAccount: "اطلب مجدداً على حسابي",
+  againDone: (n) => `تم استلام الطلب رقم ${n}`,
+  leftOut: "غير مشمول",
+  leftOutHint: "لم يمكن طلب هذه الأصناف الآن:",
+  priceChanges: "أسعار تغيّرت",
+  priceChange: (name, was, now) => `${name}: كان ${was}، وأصبح ${now}`,
+  payNow: (amount) => `ادفع ${amount}`,
+
+  updated: "تم تحديث التوفر.",
+  nowSoldOut: (name) => `نفد ${name} الآن.`,
+  nowBack: (name) => `عاد ${name} متاحاً.`,
+  nowPrice: (name, price) => `أصبح سعر ${name} ${price}.`,
+  nowFewer: (name, n) => `المتبقي من ${name} ${n} فقط.`,
+  cartChanged: "تغيّر شيء في طلبك. يرجى مراجعته قبل الدفع.",
+
+  browseTitle: "أنت تتصفح القائمة",
+  browseWhatsApp: (shop) => `للطلب، ابدأ على واتساب مع ${shop}، وسيرسلون لك رابط طلبك الخاص.`,
+  browseNoNumber: (shop) => `للطلب، افتح رابط الطلب من محادثتك مع ${shop} على واتساب.`,
+  startOrder: "اطلب عبر واتساب",
+  prefillOrder: "طلب",
+  prefillTable: (label) => `طلب طاولة ${label}`,
+  linkOld: "اطلب رابطاً جديداً",
+
+  placed: (n) => `تم استلام الطلب رقم ${n}`,
+  onAccount: "تمت إضافته إلى حسابك.",
+  backToChat: "يمكنك العودة إلى واتساب. سنراسلك عند كل تحديث لطلبك.",
+  payToConfirm: "ادفع الآن لتأكيده. سنراسلك على واتساب عند كل تحديث.",
+  track: "تتبّع هذا الطلب",
+  notFound: "لم يتم العثور على صفحة الطلب لهذا المتجر.",
+  itemGone: "هذا الصنف ليس في القائمة الآن.",
+  seeMenu: "عرض القائمة",
+  oops: "حدث خطأ أثناء تحميل القائمة.",
+  by: "مدعوم من",
+};
+
+export const T: Record<Lang, Copy> = { en, ar };
+
+/** A name or text in the page's language, falling back to the other one. */
+export function say(lang: Lang, english: string, arabic: string): string {
+  return lang === "ar" ? arabic || english : english || arabic;
+}

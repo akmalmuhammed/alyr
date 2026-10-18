@@ -16,8 +16,8 @@ router = APIRouter(prefix="/api/pay", tags=["payments"])
 async def details(tenant_id: UUID, payment_id: UUID, request: Request) -> dict:
     async with request.app.state.db.tenant(tenant_id) as conn:
         row = await conn.fetchrow(
-            "select p.amount, p.status, p.provider, c.name as customer, t.name as shop, "
-            "t.name_ar as shop_ar, "
+            "select p.amount, p.status, p.provider, c.name as customer, c.lang, t.name as shop, "
+            "t.name_ar as shop_ar, t.slug, "
             "o.number as order_number, p.order_id "
             "from payment_requests p join contacts c on c.id = p.contact_id "
             "join tenants t on t.id = p.tenant_id left join orders o on o.id = p.order_id "
