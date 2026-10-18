@@ -186,8 +186,6 @@
 .ob-rule b { font-size: var(--ui-body); font-weight: 500; }
 .ob-rule small { font-size: var(--ui-small); color: var(--ink-3); }
 .ob-rule em { font-style: normal; font-size: var(--ui-small); color: var(--volt-ink); white-space: nowrap; }
-.ob-rule.locked { color: var(--ink-3); }
-.ob-rule.locked b { color: var(--ink-2); }
 .ob-switch {
   appearance: none; flex: none; position: relative; width: 44px; height: 26px; margin: 0; border-radius: 999px;
   background: var(--hair-2); cursor: pointer; transition: background 0.2s var(--ease-product);

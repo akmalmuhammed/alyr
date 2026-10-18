@@ -17,7 +17,7 @@ type Step = { key: string; label: Text; done: boolean; screen: string; connectio
 type Product = {
   key: string; name: Text; descriptor: Text; summary: Text;
   // included: every business has it (ALYR Agent); it has no switch.
-  status: "active" | "available" | "coming" | "included";
+  status: "active" | "available" | "included";
   modules: string[]; includes: { key: string; label: Text }[]; steps: Step[];
 };
 type Connection = { key: string; name: Text; detail: Text; connected: boolean; available: boolean };
@@ -56,13 +56,13 @@ const T = {
     planReview: "Review and accept",
     productsTitle: "Products", productsEyebrow: "Your plan",
     productsSub: "Switch on what your business needs. Switching off hides the screens and keeps every record.",
-    active: "Active", available: "Available", coming: "Coming", on: "On", off: "Off",
+    active: "Active", available: "Available", on: "On", off: "Off",
     included: "Included", includedNote: "Included for every business.",
     confirmOff: "Hide its screens from your team? Nothing is deleted.", keep: "Keep on", turnOff: "Switch off",
     managersOnly: "Only an owner or admin can change products.", includes: "Includes",
     connectionsTitle: "Connections", connectionsEyebrow: "Accounts",
     connectionsSub: "The accounts ALYR works through on your behalf.",
-    connected: "Connected", notConnected: "Not connected", notYet: "Not available yet",
+    connected: "Connected", notConnected: "Not connected", setUpWithAlyr: "Set up with ALYR",
     askSetup: "Ask ALYR to set it up",
     notOn: "This isn't switched on for your shop.", seeProducts: "See products",
     helpTitle: "ALYR team", helpOnline: "A person from ALYR reads every message.",
@@ -70,7 +70,7 @@ const T = {
     helpPlaceholder: "Write to ALYR…", send: "Send to ALYR",
     sentReply: "Sent to the ALYR team. We answer on WhatsApp or by email.",
     suggestions: ["Connect our WhatsApp number", "Add our services and prices", "Add a team member"],
-    live: "WhatsApp live", sim: "Simulator", seeAll: "See all", soon: "Coming soon",
+    live: "WhatsApp live", sim: "Simulator", seeAll: "See all",
     go: "Go to", actions: "Actions", noMatch: "Nothing matches that.", navigate: "Move", choose: "Open", close: "Close",
     more: "More", doha: "Doha",
   },
@@ -91,13 +91,13 @@ const T = {
     planReview: "راجع واقبل",
     productsTitle: "المنتجات", productsEyebrow: "خطتك",
     productsSub: "فعّل ما يحتاجه عملك. الإيقاف يخفي الشاشات ويحفظ كل السجلات.",
-    active: "مفعّل", available: "متاح", coming: "قريباً", on: "مفعّل", off: "متوقف",
+    active: "مفعّل", available: "متاح", on: "مفعّل", off: "متوقف",
     included: "مشمول", includedNote: "مشمول لكل منشأة.",
     confirmOff: "إخفاء شاشاته عن فريقك؟ لن يُحذف شيء.", keep: "أبقِه", turnOff: "إيقاف",
     managersOnly: "تغيير المنتجات متاح للمالك أو المدير فقط.", includes: "يشمل",
     connectionsTitle: "الاتصالات", connectionsEyebrow: "الحسابات",
     connectionsSub: "الحسابات التي تعمل ALYR من خلالها نيابة عنك.",
-    connected: "متصل", notConnected: "غير متصل", notYet: "غير متاح بعد",
+    connected: "متصل", notConnected: "غير متصل", setUpWithAlyr: "تُعدّ مع ALYR",
     askSetup: "اطلب من ALYR إعداده",
     notOn: "هذا غير مفعّل لمتجرك.", seeProducts: "عرض المنتجات",
     helpTitle: "فريق ALYR", helpOnline: "يقرأ كل رسالة شخص من فريق ALYR.",
@@ -105,7 +105,7 @@ const T = {
     helpPlaceholder: "اكتب إلى ALYR…", send: "أرسل إلى ALYR",
     sentReply: "أُرسلت إلى فريق ALYR. نرد عبر واتساب أو البريد.",
     suggestions: ["اربطوا رقم واتساب", "أضيفوا خدماتنا وأسعارنا", "أضيفوا عضواً للفريق"],
-    live: "واتساب يعمل", sim: "المحاكي", seeAll: "عرض الكل", soon: "قريباً",
+    live: "واتساب يعمل", sim: "المحاكي", seeAll: "عرض الكل",
     go: "انتقل إلى", actions: "إجراءات", noMatch: "لا نتائج.", navigate: "تنقّل", choose: "افتح", close: "إغلاق",
     more: "المزيد", doha: "الدوحة",
   },
@@ -113,10 +113,10 @@ const T = {
 
 // Module and product names come from the catalogue (`catalog.py`) through the API.
 const MODULE_ICON: Record<string, string> = {
-  inbox: "inbox", bookings: "calendar", orders: "receipt", payments: "card", ledger: "book", payroll: "wallet",
+  inbox: "inbox", bookings: "calendar", orders: "receipt", payments: "card", ledger: "book",
 };
 const PRODUCT_ICON: Record<string, string> = {
-  chat: "chat", bookings: "calendar", agent: "chart", accounts: "book", payroll: "wallet",
+  chat: "chat", bookings: "calendar", agent: "chart", accounts: "book",
 };
 const CONNECTION_ICON: Record<string, string> = { whatsapp: "chat", payments: "card" };
 
@@ -499,7 +499,7 @@ export default function WorkspaceShell() {
             return (
               <li key={product.key} className={`sh-product ${pillClass(product)}`}>
                 <div className="sh-product-top">
-                  <span className={`sh-glyph ${inUse(product) ? "" : "coming"}`}><Icon name={PRODUCT_ICON[product.key] ?? "apps"} /></span>
+                  <span className={`sh-glyph ${inUse(product) ? "" : "idle"}`}><Icon name={PRODUCT_ICON[product.key] ?? "apps"} /></span>
                   <span className={`sh-pill ${pillClass(product)}`}>{t[product.status]}</span>
                 </div>
                 <div>
@@ -516,7 +516,6 @@ export default function WorkspaceShell() {
                 </div>
                 <div className="sh-product-foot">
                   {product.status === "included" ? <span className="sh-note">{t.includedNote}</span>
-                    : product.status === "coming" ? <span className="sh-note">{t.soon}</span>
                     : confirming === product.key ? (
                       <div className="sh-confirm" role="alertdialog" aria-label={t.confirmOff}>
                         <span>{t.confirmOff}</span>
@@ -554,8 +553,8 @@ export default function WorkspaceShell() {
               <li key={c.key} className={`sh-conn ${c.connected ? "on" : ""}`}>
                 <span className="sh-glyph"><Icon name={CONNECTION_ICON[c.key] ?? "plug"} /></span>
                 <div className="sh-conn-text">
-                  <h2>{pick(c.name)} <span className={`sh-pill ${c.connected ? "active" : "coming"}`}>
-                    {c.connected ? t.connected : c.available ? t.notConnected : t.notYet}</span></h2>
+                  <h2>{pick(c.name)} <span className={`sh-pill ${c.connected ? "active" : "idle"}`}>
+                    {c.connected ? t.connected : c.available ? t.notConnected : t.setUpWithAlyr}</span></h2>
                   <p>{pick(c.detail)}</p>
                 </div>
                 {!c.connected && needer && step && (step.asked

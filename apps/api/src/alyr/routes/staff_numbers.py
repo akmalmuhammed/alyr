@@ -11,8 +11,9 @@ from uuid import UUID
 from fastapi import APIRouter, Depends, HTTPException, Request
 from pydantic import BaseModel, Field
 
+from alyr.core import team
 from alyr.core.auth import Staff
-from alyr.modules.items import access, staff
+from alyr.modules.items import access, changes, staff
 from alyr.routes.deps import current_staff
 
 router = APIRouter(prefix="/api/staff-numbers", tags=["staff numbers"])
@@ -52,7 +53,13 @@ async def register(
     access.require_manager(member)
     try:
         async with request.app.state.db.tenant(member.tenant_id) as conn:
-            return await staff.register(conn, body.name, body.phone, body.lang, body.manager)
+            before = await staff.find(conn, body.phone)
+            person = await staff.register(conn, body.name, body.phone, body.lang, body.manager)
+            await changes.staff_changed(
+                conn, team.actor_of(member), "staff_added" if before is None else "staff_changed",
+                person, before,
+            )
+            return person
     except staff.StaffError as error:
         raise _fail(error) from error
 
@@ -65,7 +72,12 @@ async def change(
     access.require_manager(member)
     try:
         async with request.app.state.db.tenant(member.tenant_id) as conn:
+            before = await staff.get(conn, contact_id)
             found = await staff.update(conn, contact_id, body.name, body.lang, body.manager)
+            if found is not None and before is not None:
+                await changes.staff_changed(
+                    conn, team.actor_of(member), "staff_changed", found, before
+                )
     except staff.StaffError as error:
         raise _fail(error) from error
     if found is None:
@@ -80,6 +92,9 @@ async def remove(
     """Take a number off the list. It is an ordinary customer from then on."""
     access.require_manager(member)
     async with request.app.state.db.tenant(member.tenant_id) as conn:
+        before = await staff.get(conn, contact_id)
         if not await staff.remove(conn, contact_id):
             raise HTTPException(status_code=404, detail="staff number not found")
+        if before is not None:
+            await changes.staff_changed(conn, team.actor_of(member), "staff_removed", before)
     return {"removed": True}

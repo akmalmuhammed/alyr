@@ -16,14 +16,17 @@ STRANGER = "97455599123"  # a phone the shop has never heard of
 
 @pytest.fixture(autouse=True)
 def catalog_module_on(client):
-    """The Catalog is off for every shop until go-live; these tests switch it on for the
-    demo shop. The client fixture has just reset the shop, which clears the setting. The
-    tables the shop reset does not reach are emptied here, before and after."""
+    """These tests switch the Catalog on for the demo shop (the shop reset clears the row; a
+    shop made by onboarding has it from the start since ALY-113). The client fixture has just
+    reset the shop, which clears the setting. The tables the shop reset does not reach are
+    emptied here, before and after, and so are the sample items other tests' new shops were
+    given: a sample can only be a draft, and these tests change every item at once."""
 
     def clear():
         for table in ("media_ops", "media_links", "media_assets", "media_usage"):
             owner_sql(f"delete from {table}")
         owner_sql("delete from jobs where kind = 'media.sync'")
+        owner_sql("delete from items where is_sample")
 
     clear()
     owner_sql(

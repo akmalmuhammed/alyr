@@ -18,7 +18,7 @@ type Payment = {
 const T = {
   en: {
     context: "Payment", eyebrow: "Secure payment", pay: (shop: string) => `Pay ${shop}`,
-    standIn: "Test payment page. No money moves. A Qatar payment gateway replaces this before launch.",
+    standIn: "Test payment page. No money moves.",
     customer: "Customer", for: "For", order: (n: number) => `Order #${n}`, account: "Your account",
     method: "Method", card: "Debit card (NAPS) · test", button: (a: string) => `Pay ${a}`,
     paid: (a: string) => `Paid ${a}`, back: "Thank you. You can go back to WhatsApp; your receipt is there.",
@@ -30,7 +30,7 @@ const T = {
   },
   ar: {
     context: "دفع", eyebrow: "دفع آمن", pay: (shop: string) => `ادفع إلى ${shop}`,
-    standIn: "صفحة دفع تجريبية. لا تُنقل أي أموال. ستحل محلها بوابة دفع قطرية قبل الإطلاق.",
+    standIn: "صفحة دفع تجريبية. لا تُنقل أي أموال.",
     customer: "العميل", for: "مقابل", order: (n: number) => `الطلب رقم ${n}`, account: "حسابك",
     method: "طريقة الدفع", card: "بطاقة خصم (NAPS) · تجريبي", button: (a: string) => `ادفع ${a}`,
     paid: (a: string) => `تم دفع ${a}`, back: "شكراً لك. يمكنك العودة إلى واتساب؛ الإيصال هناك.",

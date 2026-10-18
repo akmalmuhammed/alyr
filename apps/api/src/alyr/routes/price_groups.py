@@ -51,7 +51,9 @@ async def add_group(
     access.require_manager(staff)
     try:
         async with request.app.state.db.tenant(staff.tenant_id) as conn:
-            return {"group": await groups.create_group(conn, body.name, body.name_ar)}
+            return {"group": await groups.create_group(
+                conn, body.name, body.name_ar, team.actor_of(staff)
+            )}
     except ItemError as error:
         raise _fail(error) from error
 
@@ -84,7 +86,9 @@ async def rename_group(
     access.require_manager(staff)
     try:
         async with request.app.state.db.tenant(staff.tenant_id) as conn:
-            group = await groups.rename_group(conn, group_id, body.name, body.name_ar)
+            group = await groups.rename_group(
+                conn, group_id, body.name, body.name_ar, team.actor_of(staff)
+            )
     except ItemError as error:
         raise _fail(error) from error
     if group is None:

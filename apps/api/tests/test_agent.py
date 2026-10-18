@@ -328,7 +328,7 @@ def test_the_week_compares_like_with_like():
     week = view.render(f, "en")["week"]
     assert week["title"] == "By day"
     assert [d["label"] for d in week["days"]] == ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"]
-    assert [d["state"] for d in week["days"]][3:7] == ["past", "today", "closed", "coming"]
+    assert [d["state"] for d in week["days"]][3:7] == ["past", "today", "closed", "ahead"]
     today = week["days"][4]
     # Today so far against last week up to the same time; the whole day stays as a ghost.
     assert (today["value"], today["last_by_now"], today["last"]) == (90_000, 50_000, 70_000)
@@ -339,7 +339,7 @@ def test_booked_days_ahead_are_counted_on_the_same_axis():
     salon = facts(modules=frozenset({"inbox", "bookings", "payments"}), business_type="salon",
                   visits=23, visits_last=19, booked_by_day={THU + timedelta(days=1): 3})
     friday = view.render(salon, "en")["week"]["days"][5]
-    assert (friday["state"], friday["booked"], friday["booked_text"]) == ("coming", 3, "3 booked")
+    assert (friday["state"], friday["booked"], friday["booked_text"]) == ("ahead", 3, "3 booked")
 
 
 def test_busiest_hours_wait_for_enough_and_leave_closed_hours_blank():

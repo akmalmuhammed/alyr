@@ -21,6 +21,7 @@ import asyncpg
 from alyr.core import team
 from alyr.core.normalise import fmt_qar
 from alyr.core.team import Actor
+from alyr.modules.items import changes
 from alyr.modules.items.service import ItemError
 
 # The group every shop starts with, and the only one that cannot be removed.
@@ -120,7 +121,10 @@ def _clean(name: str | None, name_ar: str | None) -> tuple[str, str]:
     return name or name_ar, name_ar or name
 
 
-async def create_group(conn: asyncpg.Connection, name: str, name_ar: str) -> dict:
+async def create_group(
+    conn: asyncpg.Connection, name: str, name_ar: str, actor: Actor | None = None
+) -> dict:
+    """Add a group. With an `actor`, the change is on the activity record."""
     name, name_ar = _clean(name, name_ar)
     await default_group(conn)
     if await conn.fetchval("select count(*) from price_groups where archived_at is null") >= (
@@ -135,14 +139,22 @@ async def create_group(conn: asyncpg.Connection, name: str, name_ar: str) -> dic
         )
     except asyncpg.UniqueViolationError as error:
         raise ItemError("price_group_name_taken", "Another group already has that name.") from error
+    if actor is not None:
+        await changes.group_changed(conn, actor, "group_added", public(row))
     return _view(row, 0)
 
 
 async def rename_group(
-    conn: asyncpg.Connection, group_id: UUID, name: str, name_ar: str
+    conn: asyncpg.Connection, group_id: UUID, name: str, name_ar: str,
+    actor: Actor | None = None,
 ) -> dict | None:
-    """Change a group's names (the default group too). None if there is no such group."""
+    """Change a group's names (the default group too). None if there is no such group. With
+    an `actor`, the change is on the activity record."""
     name, name_ar = _clean(name, name_ar)
+    was = await conn.fetchrow(
+        "select name, name_ar from price_groups where id = $1 and archived_at is null",
+        group_id,
+    )
     try:
         row = await conn.fetchrow(
             "update price_groups set name = $2, name_ar = $3 "
@@ -151,6 +163,10 @@ async def rename_group(
         )
     except asyncpg.UniqueViolationError as error:
         raise ItemError("price_group_name_taken", "Another group already has that name.") from error
+    if row and was and actor is not None and (
+        (was["name"], was["name_ar"]) != (row["name"], row["name_ar"])
+    ):
+        await changes.group_changed(conn, actor, "group_renamed", public(row), was=was["name"])
     return _view(row) if row else None
 
 
@@ -175,6 +191,7 @@ async def archive_group(conn: asyncpg.Connection, group_id: UUID, actor: Actor) 
     )
     for contact in moved:
         await _record(conn, contact["id"], actor, row, fallback)
+    await changes.group_changed(conn, actor, "group_removed", public(row))
     return {"moved": len(moved), "group": public(row)}
 
 

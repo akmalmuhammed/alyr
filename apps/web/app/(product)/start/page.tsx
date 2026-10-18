@@ -580,8 +580,7 @@ export default function Start() {
               <input type="checkbox" role="switch" className="ob-switch" checked={state?.business.reminders ?? true} onChange={(e) => setReminders(e.target.checked)} />
             </label>
             <div className="ob-rule"><span><b>{t.hours.cancel}</b><small>{t.hours.cancelSub}</small></span><em>{t.hours.always}</em></div>
-            <div className="ob-rule locked"><span><b>{t.hours.deposit}</b><small>{t.hours.depositSub}</small></span><Ico name="lock" size={18} /></div>
-            <div className="ob-rule locked"><span><b>{t.hours.capacity}</b><small>{t.hours.capacitySub}</small></span><Ico name="lock" size={18} /></div>
+            <div className="ob-rule"><span><b>{t.hours.capacity}</b><small>{t.hours.capacitySub}</small></span><em>{t.hours.always}</em></div>
           </section>
         </div>
       </>

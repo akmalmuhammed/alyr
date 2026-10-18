@@ -82,6 +82,8 @@ scripts/                      check.sh (everything CI runs), demo.sh (start and 
                               screens in a real browser at phone width), catalog-reports-browser-check.mjs
                               (its home cards and the back office's Usage view), order-page-browser-check.mjs
                               (the customer's order page, same way), booking-page-browser-check.mjs (the booking page and its links),
+                              golive-truth-check.mjs (every onboarding sentence of every business type proved on the
+                              finished order page and workspace, English and Arabic),
                               hooks/pre-commit
 specs/                        One folder per spec; write or update the spec before building
 infra/                        Cloud infrastructure as code (proposed in PR #52, not merged)

@@ -86,13 +86,15 @@ class Settings(BaseSettings):
     media_max_upload_bytes: int = 15 * 1024 * 1024
     media_max_pixels: int = 40_000_000
 
-    # The Catalog is hidden for every shop until the go-live sweep (ALY-113, D-039). This is
-    # the one switch that sweep flips: with it off, onboarding gives every type of business
-    # exactly the setup it gave before the Catalog (no `catalog` module, no samples, and the
-    # three types that exist only for the Catalog are not offered); with it on, each type
-    # starts with its own catalog (ALY-107, `presets_catalog.py`). It decides for businesses
-    # created from now on. It never switches anything on for a shop that already exists.
-    catalog_for_new_shops: bool = False
+    # The Catalog is on (ALY-113, D-039). With this on, a business created from now on starts
+    # with its type's own catalog (ALY-107, `presets_catalog.py`: the `catalog` module, the
+    # type's starting values and categories, and a few sample items), and the three types that
+    # exist only for the Catalog are offered; travel and documents have none. Set it to false
+    # (`ALYR_CATALOG_FOR_NEW_SHOPS=false`) and a new business is created exactly as it was
+    # before the Catalog. It decides for businesses created from now on; the shops that
+    # already existed got the module from migration 0032, and the back office can switch it
+    # off for any one shop.
+    catalog_for_new_shops: bool = True
 
     # Per shop, to start (D-039; our estimate). A cap stops new items or photos with a
     # clear message and never deletes anything.

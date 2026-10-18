@@ -95,6 +95,16 @@ class MoveBusiness(BaseModel):
     client_id: UUID
 
 
+class SwitchModule(BaseModel):
+    enabled: bool
+
+
+# The modules the back office switches for one business. The Catalog is on for every business
+# (ALY-113) and this is how one business has it turned off, or back on; the other modules are
+# a business's products and are switched in its own workspace.
+SWITCHABLE_MODULES = ("catalog",)
+
+
 class Snooze(BaseModel):
     key: str = Field(min_length=3, max_length=120)
     days: int = Field(default=1, ge=1, le=30)
@@ -188,6 +198,11 @@ async def create_business(
         if product is None or product.status != "available":
             raise HTTPException(status_code=422, detail=f"{key} cannot be switched on")
         modules += [m for m in product.modules if m not in modules]
+    if get_settings().catalog_for_new_shops and "catalog" not in modules:
+        # Every business has the Catalog, as the shops made by onboarding do (ALY-113). It has
+        # no type of its own here, so it gets the plain Catalog; the back office can switch it
+        # off for this business afterwards.
+        modules.append("catalog")
     try:
         async with _back_office(request) as conn:
             tenant_id = await conn.fetchval(
@@ -260,6 +275,27 @@ async def move_business(
             detail={"from_client": str(before) if before else None},
         )
     return {"moved": True}
+
+
+@router.post("/businesses/{business_id}/modules/{module}")
+async def switch_module(
+    business_id: UUID, module: str, body: SwitchModule, request: Request,
+    staff: Staff = Depends(platform_admin),
+) -> dict:
+    """Switch the Catalog on or off for one business. Nothing is deleted: its items, photos and
+    stock stay, and the screens and pages come back when it is switched on again."""
+    if module not in SWITCHABLE_MODULES:
+        raise HTTPException(status_code=404, detail=f"{module} cannot be switched here")
+    async with _back_office(request) as conn:
+        if not await conn.fetchval(
+            "select admin_set_module($1, $2, $3)", business_id, module, body.enabled
+        ):
+            raise HTTPException(status_code=404, detail="no such business")
+        await backoffice.audit(
+            conn, staff, "module.on" if body.enabled else "module.off", "business",
+            business_id, business_id=business_id, detail={"module": module},
+        )
+    return {"module": module, "enabled": body.enabled}
 
 
 # ── pricing and onboarding switches (D-032) ───────────────

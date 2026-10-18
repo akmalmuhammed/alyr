@@ -159,7 +159,7 @@ export function Clients({ pricing, onChange, initialClient }: { pricing: Pricing
                   {c.quote ? (
                     <>
                       <b className="num">{c.quote.totals.monthly_total_text}</b><small> /mo</small><br />
-                      <span className={`sh-pill ${c.quote.status === "accepted" ? "active" : c.quote.status === "published" ? "wait" : "coming"}`}>
+                      <span className={`sh-pill ${c.quote.status === "accepted" ? "active" : c.quote.status === "published" ? "wait" : "idle"}`}>
                         {c.quote.status === "draft" ? "Draft" : c.quote.status === "published" ? "Waiting for owner" : "Accepted"}
                       </span>
                     </>
@@ -181,7 +181,7 @@ export function Clients({ pricing, onChange, initialClient }: { pricing: Pricing
                 <h2 className="ops-title">{detail.name}</h2>
               </div>
               <span className="ops-head-actions">
-                <span className={`sh-pill ${detail.effective_price_mode === "automatic" ? "active" : "coming"}`}>
+                <span className={`sh-pill ${detail.effective_price_mode === "automatic" ? "active" : "idle"}`}>
                   Price {detail.effective_price_mode === "automatic" ? "shown automatically" : "prepared by ALYR"}
                 </span>
                 <a className="btn small ghost" href={`/ops/audit?client=${detail.id}`}>History</a>
@@ -200,7 +200,7 @@ export function Clients({ pricing, onChange, initialClient }: { pricing: Pricing
                     <td>{b.type_name || "—"}<br /><small>{b.area || "—"}{b.way === "assisted" ? " · with ALYR" : ""}</small></td>
                     <td>{b.products.join(", ") || "none"}</td>
                     <td>{progress(b)}</td>
-                    <td><span className={`sh-pill ${b.whatsapp_connected ? "active" : "coming"}`}>{b.whatsapp_connected ? "Connected" : "Not yet"}</span></td>
+                    <td><span className={`sh-pill ${b.whatsapp_connected ? "active" : "idle"}`}>{b.whatsapp_connected ? "Connected" : "Not connected"}</span></td>
                   </tr>
                 ))}
               </tbody>
@@ -210,7 +210,7 @@ export function Clients({ pricing, onChange, initialClient }: { pricing: Pricing
             {open && draft && sums ? (
               <div className="ops-quote">
                 <div className="ops-quote-top">
-                  <span className={`sh-pill ${open.status === "published" ? "wait" : "coming"}`}>Quote {open.number} · {STATUS_LABEL[open.status]}</span>
+                  <span className={`sh-pill ${open.status === "published" ? "wait" : "idle"}`}>Quote {open.number} · {STATUS_LABEL[open.status]}</span>
                   <small>Last change {new Date(open.updated_at).toLocaleString("en-GB")} by {open.updated_by || "—"}</small>
                 </div>
                 <div className="tablewrap"><table className="ops-lines">

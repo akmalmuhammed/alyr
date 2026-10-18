@@ -10,7 +10,8 @@ Two layers, on purpose:
   and packaging can change by editing this file, without touching the modules.
 
 The line-up (17 Oct 2026, `docs/agent-dashboard/00-founder-decisions.md`): ALYR Chat,
-ALYR Bookings, ALYR Agent, ALYR Accounts, and ALYR Payroll as coming. Two modules are
+ALYR Bookings, ALYR Agent and ALYR Accounts. A product appears in the workspace only when it
+is built (D-039): ALYR Payroll is added here, with its module, on the day it works. Two modules are
 shared: the team inbox and payment links belong to both Chat and Bookings, because a
 business whose number runs on ALYR answers its customers nowhere else, and a booking can
 be paid by link as an order can. ALYR Agent has no module of its own: it is the home
@@ -96,9 +97,8 @@ class Product:
     descriptor: Text
     summary: Text
     modules: tuple[str, ...] = ()
-    # available: a shop can switch it on. coming: shown so shops know it is planned,
-    # but cannot be switched on. included: every business has it; it cannot be switched
-    # on or off.
+    # available: a shop can switch it on. included: every business has it; it cannot be
+    # switched on or off. Nothing is listed that does not work, so there is no other state.
     status: str = "available"
     # What an included product brings, since it has no modules to list.
     parts: tuple[Text, ...] = ()
@@ -213,10 +213,10 @@ MODULES: tuple[Module, ...] = (
         ),
     ),
     # The Catalog: a shop's items, photos and stock (D-039, ALY-104). It belongs to no
-    # product and no starting setup, so it is off for every shop until the back office
-    # switches it on (`tenant_modules`); nothing an owner sees mentions it before then. The
-    # go-live sweep (ALY-113) decides which shops get it. Its API answers where this module
-    # or the orders module is on.
+    # product and no starting setup: onboarding adds it for a new shop of a type that has one
+    # (`Settings.catalog_for_new_shops`, on since ALY-113), migration 0032 gave it to the shops
+    # that existed, and the back office switches it off for one shop (`tenant_modules`). Its
+    # API answers where this module or the orders module is on.
     Module(
         "catalog",
         Text("Catalog", "الكتالوج"),
@@ -325,16 +325,6 @@ PRODUCTS: tuple[Product, ...] = (
         ),
         modules=("ledger",),
     ),
-    Product(
-        "payroll",
-        Text("ALYR Payroll", "ALYR Payroll"),
-        Text("Payroll and staff documents", "الرواتب ووثائق الموظفين"),
-        Text(
-            "Salary files for the bank, and reminders before visas and licences expire.",
-            "ملفات الرواتب للبنك، وتذكيرات قبل انتهاء التأشيرات والتراخيص.",
-        ),
-        status="coming",
-    ),
 )
 
 # Sections every workspace has, whatever the shop has bought.
@@ -383,7 +373,7 @@ def check() -> None:
     for product in PRODUCTS:
         for key in product.modules:
             assert key in MODULE_BY_KEY, f"product {product.key} names unknown module {key}"
-        assert product.status in ("available", "coming", "included"), product.key
+        assert product.status in ("available", "included"), product.key
         # A product made only of shared modules could never be told apart from the
         # products it shares them with.
         assert not product.modules or own_modules(product), f"{product.key} has no own module"

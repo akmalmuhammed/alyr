@@ -11,8 +11,9 @@ Everything an owner or a customer can read is here, English and Arabic side by s
 grouped by type, so a reviewer can read the Arabic of one type in one place (the Arabic is
 a draft until a native speaker has been through it, ALY-66).
 
-None of this applies until `Settings.catalog_for_new_shops` is on (the go-live sweep,
-ALY-113). A type with no setup here (travel and documents) has no catalog at all: no screen,
+None of this applies while `Settings.catalog_for_new_shops` is off (it is on since the go-live
+sweep, ALY-113). Every sentence of the review (`gets`) is checked against the finished order
+page and workspace in a real browser by `scripts/golive-truth-check.mjs`. A type with no setup here (travel and documents) has no catalog at all: no screen,
 no navigation entry, no mention.
 
 Sample items (`Sample`) are marked as samples in the database, are drafts that cannot be
@@ -114,6 +115,17 @@ def _qar(amount: int) -> int:
     return amount * 100
 
 
+def _alert(when_en: str, when_ar: str) -> Text:
+    """The review's line about WhatsApp alerts. They go to the staff numbers the owner adds in
+    the Catalog's settings (`modules/items/staff.py`), so the line says where, before it says
+    when: a new shop has no numbers yet, and an alert has nobody to reach until it does."""
+    return Text(
+        "Add your managers' numbers under Staff on WhatsApp in the settings, and ALYR messages "
+        f"them when {when_en}",
+        f"أضف أرقام مديريك في «الموظفون على واتساب» ضمن الإعدادات، وتراسلهم ALYR حين {when_ar}",
+    )
+
+
 # ── restaurant and café ───────────────────────────────────────────────────────────────
 
 RESTAURANT = CatalogSetup(
@@ -141,8 +153,7 @@ RESTAURANT = CatalogSetup(
              "يمكن ألا يُطلب الطبق إلا في ساعات معيّنة، مثل قائمة الإفطار."),
         Text("A dish that is off shows greyed out on your order page.",
              "الطبق الموقوف يظهر باهتاً في صفحة الطلب."),
-        Text("ALYR messages your managers on WhatsApp when a dish with a daily number sells out.",
-             "تراسل ALYR مديريك على واتساب حين ينفد طبق له عدد يومي."),
+        _alert("a dish with a daily number sells out.", "ينفد طبق له عدد يومي."),
     ),
     samples=(
         Sample(
@@ -197,8 +208,7 @@ BAKERY = CatalogSetup(
              "طلبات لليوم التالي: الصنف الجديد يحتاج إلى يوم مهلة وطلباً قبل السادسة مساءً، ويختار العميل يوم الاستلام."),
         Text("Made-to-order items, like a celebration cake, that never run out.",
              "أصناف حسب الطلب، مثل كيكة المناسبات، لا تنفد."),
-        Text("ALYR messages your managers on WhatsApp when something is nearly gone or sold out.",
-             "تراسل ALYR مديريك على واتساب حين يوشك صنف على النفاد أو ينفد."),
+        _alert("something is nearly gone or sold out.", "يوشك صنف على النفاد أو ينفد."),
     ),
     samples=(
         Sample(
@@ -242,13 +252,13 @@ GROCERY = CatalogSetup(
         Text("ALYR counts what is on your shelf. Each sale takes one off, and an item is "
              "sold out at zero.",
              "تعدّ ALYR ما على رفوفك. كل بيع ينقص العدد، وينفد الصنف عند الصفر."),
-        Text("A low-stock number of 10, so you hear before you run out. You can change it.",
-             "حدّ مخزون منخفض قدره 10، لتعرف قبل أن ينفد. يمكنك تغييره."),
-        Text("Items that are sold out are left off your order page, which is a compact list "
-             "with a plus and a minus on each row.",
-             "الأصناف المنتهية لا تظهر في صفحة الطلب، وهي قائمة مختصرة فيها زر زائد وناقص لكل صنف."),
-        Text("ALYR messages your managers on WhatsApp when an item is low or sold out.",
-             "تراسل ALYR مديريك على واتساب حين يقل صنف أو ينفد."),
+        Text("An item counts as low at 10 or fewer. You can change the number.",
+             "يُعدّ الصنف منخفضاً عند 10 أو أقل. يمكنك تغيير الرقم."),
+        Text("Items that are sold out are left off your order page, which is a compact list. "
+             "A customer taps plus to add an item and minus to take one off.",
+             "الأصناف المنتهية لا تظهر في صفحة الطلب، وهي قائمة مختصرة. يضغط العميل «+» لإضافة "
+             "صنف و«−» لإنقاصه."),
+        _alert("an item is low or sold out.", "يقل صنف أو ينفد."),
     ),
     samples=(
         Sample("basmati", "Basmati rice, 5 kg bag", "أرز بسمتي، كيس 5 كجم", "Pantry", _qar(38),
@@ -284,17 +294,18 @@ FASHION = CatalogSetup(
         Text("Photos first: take or choose pictures and ALYR makes a draft item for each one. "
              "You add the name and price.",
              "الصور أولاً: التقط صوراً أو اخترها وتصنع ALYR مسودة لكل صورة. وتضيف أنت الاسم والسعر."),
-        Text("Sizes and colours, each with its own stock and its own photo.",
-             "مقاسات وألوان، ولكل منها مخزونه وصورته."),
+        Text("Sizes and colours, each with its own stock.", "مقاسات وألوان، ولكل منها مخزونه."),
         Text("A sale price with an end date.", "سعر مخفّض بتاريخ انتهاء."),
-        Text("A link for every item, to send in a chat or share on Instagram.",
-             "رابط لكل صنف، لترسله في محادثة أو تشاركه على إنستغرام."),
+        Text("A link for every item, to send in a chat or share on Instagram. Add your WhatsApp "
+             "number in the settings, and a customer who opens it is sent there to order.",
+             "رابط لكل صنف، لترسله في محادثة أو تشاركه على إنستغرام. أضف رقم واتساب في الإعدادات "
+             "ليُحوَّل إليه العميل الذي يفتح الرابط ليطلب."),
         Text("Your order page is a photo grid with a size and colour picker. A sold-out piece "
              "stays visible, greyed out.",
              "صفحة الطلب شبكة صور مع اختيار المقاس واللون. القطعة المنتهية تبقى ظاهرة باهتة."),
-        Text("ALYR messages your managers on WhatsApp when a size is down to 2, and tells customers who "
-             "asked when it is back.",
-             "تراسل ALYR مديريك على واتساب حين يبقى من أحد المقاسات 2 فقط، وتخبر العملاء الذين طلبوا ذلك عند عودته."),
+        _alert("a size is down to 2 or fewer.", "يبقى من أحد المقاسات 2 أو أقل."),
+        Text("A customer who asks on WhatsApp is told when a sold-out piece is back.",
+             "يُخبَر العميل الذي طلب على واتساب أن يعرف حين تعود القطعة المنتهية."),
     ),
     samples=(
         Sample(
@@ -334,15 +345,15 @@ SHOP = CatalogSetup(
         ("Stationery", "القرطاسية"),
     ),
     gets=(
-        Text("A product list with photos, prices and a code (SKU) for each, in English and Arabic.",
-             "قائمة منتجات بالصور والأسعار ورمز (SKU) لكل منتج، بالعربية والإنجليزية."),
+        Text("A product list with photos and prices, in English and Arabic. Each product can "
+             "have a code (SKU).",
+             "قائمة منتجات بالصور والأسعار، بالعربية والإنجليزية. ويمكن أن يكون لكل منتج رمز (SKU)."),
         Text("Sizes and colours, each with its own stock.", "مقاسات وألوان، ولكل منها مخزونه."),
         Text("ALYR counts what you have. Each sale takes one off, and a product is sold out at zero.",
              "تعدّ ALYR ما لديك. كل بيع ينقص العدد، وينفد المنتج عند الصفر."),
         Text("Your order page is a photo grid. A sold-out product stays visible, greyed out.",
              "صفحة الطلب شبكة صور. المنتج المنتهي يبقى ظاهراً باهتاً."),
-        Text("ALYR messages your managers on WhatsApp when a product is low (5 or fewer) or sold out.",
-             "تراسل ALYR مديريك على واتساب حين يقل منتج (5 أو أقل) أو ينفد."),
+        _alert("a product is low (5 or fewer) or sold out.", "يقل منتج (5 أو أقل) أو ينفد."),
     ),
     samples=(
         Sample("earbuds", "Wireless earbuds", "سماعات لاسلكية", "Electronics", _qar(120),
@@ -373,18 +384,19 @@ WHOLESALE = CatalogSetup(
         ("Household", "المنزلية"),
     ),
     gets=(
-        Text("A price list, with a code (SKU), a pack size and a smallest order for each item.",
-             "قائمة أسعار فيها رمز (SKU) وحجم العبوة وأقل كمية للطلب لكل صنف."),
-        Text("A price for each kind of customer, such as retail and wholesale, set once. Each customer sees their own.",
-             "سعر لكل فئة من العملاء، مثل التجزئة والجملة، تحدّده مرة واحدة. ويرى كل عميل سعره."),
+        Text("A price list in which each item can have a code (SKU), a pack size and a smallest "
+             "order.",
+             "قائمة أسعار يمكن أن يكون لكل صنف فيها رمز (SKU) وحجم عبوة وأقل كمية للطلب."),
+        Text("Add price groups, such as retail and wholesale, and put each customer in one. "
+             "Each customer sees their own prices.",
+             "أضف مجموعات أسعار، مثل التجزئة والجملة، وضع كل عميل في مجموعة. ويرى كل عميل أسعاره."),
         Text("ALYR counts what is in your store. An item at zero shows greyed out as out of stock.",
              "تعدّ ALYR ما في مخزنك. الصنف عند الصفر يظهر باهتاً على أنه غير متوفر."),
         Text("Your order page is a table with quick quantities and a one-tap \"same as last order\".",
              "صفحة الطلب جدول بكميات سريعة وزر واحد لـ«مثل الطلب الأخير»."),
         Text("A customer you have given a credit limit can put an order on their account.",
              "العميل الذي منحته حداً ائتمانياً يستطيع تسجيل طلبه على حسابه."),
-        Text("ALYR messages your managers on WhatsApp when an item is low (20 or fewer) or sold out.",
-             "تراسل ALYR مديريك على واتساب حين يقل صنف (20 أو أقل) أو ينفد."),
+        _alert("an item is low (20 or fewer) or sold out.", "يقل صنف (20 أو أقل) أو ينفد."),
     ),
     samples=(
         Sample("rice-20", "Basmati rice, 20 kg sack", "أرز بسمتي، كيس 20 كجم", "Rice & sugar",
