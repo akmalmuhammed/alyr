@@ -15,7 +15,7 @@ from pydantic import AwareDatetime, BaseModel, Field
 
 from alyr.core import team
 from alyr.core.auth import Staff
-from alyr.modules.items import access, bulk, clock, drafts, listing, photos, stock
+from alyr.modules.items import access, bulk, clock, drafts, groups, listing, photos, stock
 from alyr.modules.items import service as items
 from alyr.routes.deps import current_staff
 
@@ -28,13 +28,35 @@ Filter = Literal["draft", "sold_out", "low_stock", "stocked", "archived"]
 Weekday = Annotated[int, Field(ge=0, le=6)]
 Money = Annotated[int, Field(ge=0, le=100_000_000, description="In dirhams: 100 is QAR 1")]
 # Fields that may be sent as null to clear them; every other field is left alone if null.
-NULLABLE = {"sale_price", "sale_starts_at", "sale_ends_at", "pack_size", "daily_limit"}
+NULLABLE = {"sale_price", "sale_starts_at", "sale_ends_at", "pack_size", "daily_limit", "sku"}
+
+
+class GroupPriceIn(BaseModel):
+    group_id: UUID
+    variant_id: UUID | None = Field(
+        default=None, description="A size or colour of the item; leave out for the item's own"
+    )
+    price: int | None = Field(
+        default=None, gt=0, le=100_000_000,
+        description="What the group pays, in dirhams; null puts the group back on the "
+                    "normal price",
+    )
+
+
+class GroupPrices(BaseModel):
+    prices: list[GroupPriceIn] = Field(min_length=1, max_length=400)
+    reason: str = Field(default="", max_length=200)
 
 
 class VariantIn(BaseModel):
     id: UUID | None = Field(default=None, description="Leave out to add a new one")
     name: str = Field(default="", max_length=80)
     name_ar: str = Field(default="", max_length=80)
+    sku: str | None = Field(
+        default=None, max_length=40,
+        description="This size's code; unique in the shop. Leave out to keep it, send "
+                    "an empty one to clear it",
+    )
     price_delta: int = Field(default=0, ge=-10_000_000, le=10_000_000)
     daily_limit: int | None = Field(default=None, ge=0, le=1_000_000)
     active: bool = True
@@ -75,6 +97,16 @@ class ItemChanges(BaseModel):
 
     name: str | None = Field(default=None, min_length=1, max_length=120)
     name_ar: str | None = Field(default=None, max_length=120)
+    sku: str | None = Field(
+        default=None, max_length=40,
+        description="The item's code (SKU). Unique in the shop across items and their "
+                    "sizes; empty or null for none",
+    )
+    group_prices: list[GroupPriceIn] | None = Field(
+        default=None, max_length=400,
+        description="Prices for customer price groups, saved with the item; "
+                    "the rows listed are set, the others are left alone",
+    )
     description: str | None = Field(default=None, max_length=1000)
     description_ar: str | None = Field(default=None, max_length=1000)
     category: str | None = Field(default=None, max_length=60)
@@ -207,8 +239,9 @@ def _changes(body: ItemChanges) -> dict:
     sent = body.model_dump(exclude_unset=True)
     sent.pop("reason", None)
     for key, value in list(sent.items()):
-        if value is None and key not in NULLABLE and key not in ("variants", "option_groups",
-                                                                  "schedule"):
+        if value is None and key not in NULLABLE and key not in (
+            "variants", "option_groups", "schedule", "group_prices"
+        ):
             raise HTTPException(status_code=422, detail=f"{key} cannot be empty")
     return sent
 
@@ -470,6 +503,46 @@ async def price_history(
         if not await conn.fetchval("select true from items where id = $1", item_id):
             raise HTTPException(status_code=404, detail="item not found")
         return {"history": await items.price_history(conn, item_id)}
+
+
+@router.get("/{item_id}/group-prices")
+async def get_group_prices(
+    item_id: UUID, request: Request, staff: Staff = Depends(current_staff)
+) -> dict:
+    """What each customer price group pays for this item (and for its sizes and colours)
+    instead of the normal price. A group that is not listed pays the normal price."""
+    async with request.app.state.db.tenant(staff.tenant_id) as conn:
+        if not await conn.fetchval("select true from items where id = $1", item_id):
+            raise HTTPException(status_code=404, detail="item not found")
+        return {"prices": await groups.prices_of(conn, item_id)}
+
+
+@router.put("/{item_id}/group-prices")
+async def put_group_prices(
+    item_id: UUID, body: GroupPrices, request: Request, staff: Staff = Depends(current_staff)
+) -> dict:
+    """Set, change or remove group prices (a price of null removes it). The rows listed are
+    set; the others are left alone. Every change is added to the group price history."""
+    try:
+        async with request.app.state.db.tenant(staff.tenant_id) as conn:
+            await access.require_edit(conn, staff)
+            prices = await groups.save_prices(
+                conn, item_id, [p.model_dump() for p in body.prices], team.actor_of(staff),
+                body.reason,
+            )
+    except (items.ItemError, LookupError) as error:
+        raise _fail(error) from error
+    return {"prices": prices}
+
+
+@router.get("/{item_id}/group-price-history")
+async def group_price_history(
+    item_id: UUID, request: Request, staff: Staff = Depends(current_staff)
+) -> dict:
+    async with request.app.state.db.tenant(staff.tenant_id) as conn:
+        if not await conn.fetchval("select true from items where id = $1", item_id):
+            raise HTTPException(status_code=404, detail="item not found")
+        return {"history": await groups.price_history(conn, item_id)}
 
 
 @router.get("/{item_id}/activity")

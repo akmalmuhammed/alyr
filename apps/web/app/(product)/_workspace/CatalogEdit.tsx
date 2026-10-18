@@ -8,7 +8,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import {
   activityText, api, fromDirhams, nameOf, sayError, stamp, toDirhams, toInt, toSignedDirhams,
-  type ActivityRow, type Access, type Category, type Group, type Item, type Photo, type PriceRow, type Rule, type Status, type Window,
+  type ActivityRow, type Access, type Category, type GroupPriceRow, type Group, type Item, type Photo, type PriceGroup, type PriceRow, type Rule, type Status, type Window,
 } from "./catalogApi";
 import { COPY, type Copy, type Lang } from "./catalogCopy";
 import { CatalogPhotos } from "./CatalogPhotos";
@@ -17,7 +17,7 @@ import { Field, Fold, Icon, Sheet, type Toast } from "./CatalogUi";
 type Push = (text: string, options?: { tone?: Toast["tone"]; undo?: () => void }) => number;
 
 type VariantForm = {
-  id?: string; name: string; name_ar: string; delta: string; limit: string; active: boolean;
+  id?: string; name: string; name_ar: string; sku: string; delta: string; limit: string; active: boolean;
   opening: string; onHand: number | null;
 };
 type OptionForm = { id?: string; name: string; name_ar: string; price: string; active: boolean };
@@ -27,11 +27,15 @@ type WindowForm = {
   ranged: boolean; from: string; to: string; closed: boolean;
 };
 export type Form = {
-  name: string; name_ar: string; description: string; description_ar: string; category: string;
+  name: string; name_ar: string; sku: string; description: string; description_ar: string; category: string;
   price: string; sale: string; saleEnds: string; unit: string; packSize: string; minOrder: string;
   status: Status; rule: Rule; dailyLimit: string; opening: string; scheduled: boolean;
   variants: VariantForm[]; groups: GroupForm[]; windows: WindowForm[]; tags: string[];
+  // What each price group pays, as typed: "group id|size id" (the size empty for the item's own) to a price.
+  groupPrices: Record<string, string>;
 };
+
+const priceKey = (groupId: string, variantId: string | null) => `${groupId}|${variantId ?? ""}`;
 
 const STATUSES: Status[] = ["draft", "live", "hidden", "archived"];
 const RULES: Rule[] = ["always", "switch", "count", "daily_limit"];
@@ -53,9 +57,9 @@ function windowForm(w: Window): WindowForm {
 
 export function blankForm(status: Status = "live"): Form {
   return {
-    name: "", name_ar: "", description: "", description_ar: "", category: "", price: "", sale: "", saleEnds: "",
+    name: "", name_ar: "", sku: "", description: "", description_ar: "", category: "", price: "", sale: "", saleEnds: "",
     unit: "piece", packSize: "", minOrder: "1", status, rule: "switch", dailyLimit: "", opening: "",
-    scheduled: false, variants: [], groups: [], windows: [], tags: [],
+    scheduled: false, variants: [], groups: [], windows: [], tags: [], groupPrices: {},
   };
 }
 
@@ -63,14 +67,14 @@ export function formOf(item: Item): Form {
   const named = item.variants.filter((v) => !v.is_default);
   const only = item.variants.find((v) => v.is_default) ?? item.variants[0];
   return {
-    name: item.name, name_ar: item.name_ar, description: item.description, description_ar: item.description_ar,
+    name: item.name, name_ar: item.name_ar, sku: item.sku ?? "", description: item.description, description_ar: item.description_ar,
     category: item.category, price: fromDirhams(item.price || null), sale: fromDirhams(item.sale_price),
     saleEnds: qatarDay(item.sale_ends_at), unit: item.unit, packSize: item.pack_size ? String(item.pack_size) : "",
     minOrder: String(item.min_order), status: item.status, rule: item.stock_rule,
     dailyLimit: only?.daily_limit !== null && only?.daily_limit !== undefined && named.length === 0 ? String(only.daily_limit) : "",
     opening: "", scheduled: item.schedule.length > 0,
     variants: named.map((v) => ({
-      id: v.id, name: v.name, name_ar: v.name_ar, delta: fromDirhams(v.price_delta) || "", limit: v.daily_limit === null ? "" : String(v.daily_limit),
+      id: v.id, name: v.name, name_ar: v.name_ar, sku: v.sku ?? "", delta: fromDirhams(v.price_delta) || "", limit: v.daily_limit === null ? "" : String(v.daily_limit),
       active: v.active, opening: "", onHand: v.on_hand,
     })),
     groups: item.option_groups.map((g: Group) => ({
@@ -78,10 +82,11 @@ export function formOf(item: Item): Form {
       options: g.options.map((o) => ({ id: o.id, name: o.name, name_ar: o.name_ar, price: fromDirhams(o.price_delta) || "", active: o.active })),
     })),
     windows: item.schedule.map(windowForm), tags: item.tags,
+    groupPrices: Object.fromEntries((item.group_prices ?? []).map((p) => [priceKey(p.group_id, p.variant_id), fromDirhams(p.price)])),
   };
 }
 
-type Problems = Partial<Record<"name" | "name_ar" | "price" | "sale" | "variants" | "limit" | "schedule" | "groups" | "min" | "opening", string>>;
+type Problems = Partial<Record<"name" | "name_ar" | "price" | "sale" | "variants" | "limit" | "schedule" | "groups" | "min" | "opening" | "sku" | "groupPrices", string>>;
 
 /** What the person typed, as the API wants it, or what is wrong with it. */
 function build(form: Form, t: Copy, existing: Item | null): { body?: Record<string, unknown>; problems: Problems } {
@@ -128,11 +133,28 @@ function build(form: Form, t: Copy, existing: Item | null): { body?: Record<stri
     }
   }
   if (!form.opening.trim() || toInt(form.opening) !== null) { /* ok */ } else problems.opening = t.errors.bad_quantity;
+  if (form.sku.trim().length > 40 || form.variants.some((v) => v.sku.trim().length > 40)) problems.sku = t.errors.bad_sku;
+  // What each group pays: a changed price is sent, an emptied one removes the group's price.
+  const groupRows: { group_id: string; variant_id: string | null; price: number | null }[] = [];
+  const known = new Map((existing?.group_prices ?? []).map((p) => [priceKey(p.group_id, p.variant_id), p.price]));
+  for (const key of new Set([...Object.keys(form.groupPrices), ...known.keys()])) {
+    const [groupId, variantId] = key.split("|");
+    const typed = (form.groupPrices[key] ?? "").trim();
+    const before = known.get(key) ?? null;
+    if (!typed) {
+      if (before !== null) groupRows.push({ group_id: groupId, variant_id: variantId || null, price: null });
+      continue;
+    }
+    const value = toDirhams(typed);
+    if (value === null || value <= 0) problems.groupPrices = t.errors.bad_group_price;
+    else if (value !== before) groupRows.push({ group_id: groupId, variant_id: variantId || null, price: value });
+  }
   if (Object.keys(problems).length) return { problems };
 
   const body: Record<string, unknown> = {
     name: name || undefined,
     name_ar: form.name_ar.trim(),
+    sku: form.sku.trim(),
     description: form.description.trim(),
     description_ar: form.description_ar.trim(),
     category: form.category.trim(),
@@ -164,9 +186,10 @@ function build(form: Form, t: Copy, existing: Item | null): { body?: Record<stri
       : [],
   };
   if (!body.name) delete body.name;
+  if (groupRows.length) body.group_prices = groupRows;
   if (named.length) {
     body.variants = named.map((v) => ({
-      ...(v.id ? { id: v.id } : {}), name: v.name.trim(), name_ar: v.name_ar.trim(),
+      ...(v.id ? { id: v.id } : {}), name: v.name.trim(), name_ar: v.name_ar.trim(), sku: v.sku.trim(),
       price_delta: toSignedDirhams(v.delta) ?? 0,
       daily_limit: form.rule === "daily_limit" ? toInt(v.limit) : null, active: v.active,
       ...(!v.id && form.rule === "count" && toInt(v.opening) ? { opening_stock: toInt(v.opening) } : {}),
@@ -194,7 +217,9 @@ export function CatalogEdit({ lang, itemId, initial, categories, access, push, o
   const [leaving, setLeaving] = useState(false);
   const [removing, setRemoving] = useState<"" | "archive" | "delete">("");
   const [tagDraft, setTagDraft] = useState("");
-  const [history, setHistory] = useState<{ did: ActivityRow[]; prices: PriceRow[] } | null>(null);
+  const [history, setHistory] = useState<{ did: ActivityRow[]; prices: PriceRow[]; groups: GroupPriceRow[] } | null>(null);
+  // The shop's price groups, once the API has answered (it does not for a shop without the Catalog).
+  const [priceGroups, setPriceGroups] = useState<PriceGroup[] | null>(null);
   const top = useRef<HTMLDivElement>(null);
   const now = useRef({ form, start });
   useEffect(() => { now.current = { form, start }; });
@@ -216,6 +241,12 @@ export function CatalogEdit({ lang, itemId, initial, categories, access, push, o
     }).catch(() => undefined);
     return () => { live = false; };
   }, [itemId]);
+
+  useEffect(() => {
+    let live = true;
+    api<{ groups: PriceGroup[] }>("/api/price-groups").then((r) => { if (live) setPriceGroups(r.groups); }).catch(() => undefined);
+    return () => { live = false; };
+  }, []);
 
   const dirty = useMemo(() => JSON.stringify(form) !== start, [form, start]);
   const set = (patch: Partial<Form>) => setForm((f) => ({ ...f, ...patch }));
@@ -289,13 +320,14 @@ export function CatalogEdit({ lang, itemId, initial, categories, access, push, o
   async function openHistory(open: boolean) {
     if (!open || history || !itemId) return;
     try {
-      const [did, prices] = await Promise.all([
+      const [did, prices, groups] = await Promise.all([
         api<{ activity: ActivityRow[] }>(`/api/items/${itemId}/activity`),
         api<{ history: PriceRow[] }>(`/api/items/${itemId}/price-history`),
+        api<{ history: GroupPriceRow[] }>(`/api/items/${itemId}/group-price-history`).catch(() => ({ history: [] as GroupPriceRow[] })),
       ]);
-      setHistory({ did: did.activity, prices: prices.history });
+      setHistory({ did: did.activity, prices: prices.history, groups: groups.history });
     } catch {
-      setHistory({ did: [], prices: [] });
+      setHistory({ did: [], prices: [], groups: [] });
     }
   }
 
@@ -308,6 +340,9 @@ export function CatalogEdit({ lang, itemId, initial, categories, access, push, o
         <div className="ct-grid2 names">
           <Field label={t.variantName}><input value={v.name} dir="auto" maxLength={80} onChange={(e) => patch({ name: e.target.value })} /></Field>
           <Field label={t.variantNameAr}><input value={v.name_ar} dir="rtl" lang="ar" maxLength={80} onChange={(e) => patch({ name_ar: e.target.value })} /></Field>
+        </div>
+        <div className="ct-grid2">
+          <Field label={t.variantSku}><input value={v.sku} dir="ltr" maxLength={40} autoComplete="off" onChange={(e) => patch({ sku: e.target.value })} /></Field>
         </div>
         <div className="ct-grid2">
           <Field label={t.variantExtra} hint={t.variantExtraHint}>
@@ -324,6 +359,43 @@ export function CatalogEdit({ lang, itemId, initial, categories, access, push, o
           <label className="ct-check"><input type="checkbox" checked={v.active} onChange={(e) => patch({ active: e.target.checked })} />{t.variantActive}</label>
           <button type="button" className="btn small ghost" onClick={() => set({ variants: form.variants.filter((_, k) => k !== i) })}><Icon name="trash" />{t.variantRemove}</button>
         </div>
+      </li>
+    );
+  }
+
+  const otherGroups = (priceGroups ?? []).filter((g) => !g.is_default);
+  const pricedCount = Object.values(form.groupPrices).filter((v) => v.trim() !== "").length;
+  const normalPrice = toDirhams(form.price);
+
+  function setGroupPrice(key: string, value: string) {
+    const next = { ...form.groupPrices };
+    if (value === "") delete next[key];
+    else next[key] = value;
+    set({ groupPrices: next });
+  }
+
+  function groupPriceBox(g: PriceGroup) {
+    const sizes = form.variants.filter((v) => v.id);
+    return (
+      <li key={g.id} className="ct-card-form">
+        <b dir="auto">{nameOf(g, lang)}</b>
+        <Field label={t.groupItemPrice} hint={normalPrice ? t.groupNormal(`QAR ${fromDirhams(normalPrice)}`) : undefined}>
+          <input value={form.groupPrices[priceKey(g.id, null)] ?? ""} inputMode="decimal" dir="ltr" autoComplete="off"
+            onChange={(e) => setGroupPrice(priceKey(g.id, null), e.target.value)} />
+        </Field>
+        {sizes.length > 0 && (
+          <>
+            <h4>{t.groupPricesSizes}</h4>
+            <p className="ct-hint">{t.groupPricesSizesHint}</p>
+            {sizes.map((v) => (
+              <Field key={v.id} label={t.groupSizePrice(nameOf(v, lang) || t.untitled)}>
+                <input value={form.groupPrices[priceKey(g.id, v.id ?? null)] ?? ""} inputMode="decimal" dir="ltr" autoComplete="off"
+                  onChange={(e) => setGroupPrice(priceKey(g.id, v.id ?? null), e.target.value)} />
+              </Field>
+            ))}
+          </>
+        )}
+        {form.variants.some((v) => !v.id) && <p className="ct-hint">{t.groupPricesSaveFirst}</p>}
       </li>
     );
   }
@@ -456,6 +528,9 @@ export function CatalogEdit({ lang, itemId, initial, categories, access, push, o
           <Field label={t.nameAr} hint={t.nameArHint} error={problems.name_ar}>
             <input value={form.name_ar} dir="rtl" lang="ar" maxLength={120} autoComplete="off" onChange={(e) => set({ name_ar: e.target.value })} />
           </Field>
+          <Field label={t.skuLabel} hint={t.skuHint} error={problems.sku}>
+            <input value={form.sku} dir="ltr" maxLength={40} autoComplete="off" onChange={(e) => set({ sku: e.target.value })} />
+          </Field>
         </section>
 
         <section className="ct-sec">
@@ -551,11 +626,21 @@ export function CatalogEdit({ lang, itemId, initial, categories, access, push, o
           <p className="ct-hint">{t.variantsHint}</p>
           {problems.variants && <p className="ct-error">{problems.variants}</p>}
           <ul className="ct-stack">{form.variants.map(variantRow)}</ul>
-          <button type="button" className="btn ct-btn" onClick={() => set({ variants: [...form.variants, { name: "", name_ar: "", delta: "", limit: form.dailyLimit, active: true, opening: "", onHand: null }] })}>
+          <button type="button" className="btn ct-btn" onClick={() => set({ variants: [...form.variants, { name: "", name_ar: "", sku: "", delta: "", limit: form.dailyLimit, active: true, opening: "", onHand: null }] })}>
             <Icon name="plus" />{t.addVariant}
           </button>
           {form.variants.length > 0 && itemId && <p className="ct-hint">{t.variantKept}</p>}
         </Fold>
+
+        {priceGroups !== null && (
+          <Fold title={t.groupPricesTitle} summary={pricedCount ? t.groupPricesSummary(pricedCount) : undefined} open={pricedCount > 0 ? true : undefined}>
+            <p className="ct-hint">{t.groupPricesHint}</p>
+            {problems.groupPrices && <p className="ct-error">{problems.groupPrices}</p>}
+            {otherGroups.length === 0 ? <p className="ct-hint">{t.groupPricesNone}</p> : (
+              <ul className="ct-stack">{otherGroups.map(groupPriceBox)}</ul>
+            )}
+          </Fold>
+        )}
 
         <Fold title={t.optionsTitle} summary={form.groups.length ? String(form.groups.length) : undefined} open={form.groups.length > 0 ? true : undefined}>
           <p className="ct-hint">{t.optionsHint}</p>
@@ -627,6 +712,18 @@ export function CatalogEdit({ lang, itemId, initial, categories, access, push, o
                         <time className="num" dateTime={p.at} dir="ltr">{stamp(p.at)}</time></li>
                     ))}
                   </ul>
+                )}
+                {history.groups.length > 0 && (
+                  <>
+                    <h4>{t.historyGroups}</h4>
+                    <ul className="ct-log">
+                      {history.groups.map((p, i) => (
+                        <li key={i}><b className="num" dir="ltr">{p.price_text ?? t.historyRemoved}</b>
+                          <span><span dir="auto">{nameOf(p.group, lang)}</span>{p.variant ? <> · <span dir="auto">{nameOf(p.variant, lang)}</span></> : null} · {p.changed_by.name}{p.reason ? ` · ${p.reason}` : ""}</span>
+                          <time className="num" dateTime={p.at} dir="ltr">{stamp(p.at)}</time></li>
+                      ))}
+                    </ul>
+                  </>
                 )}
                 <h4>{t.historyDid}</h4>
                 {history.did.length === 0 ? <p className="ct-hint">{t.historyNone}</p> : (

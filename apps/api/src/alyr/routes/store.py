@@ -59,6 +59,11 @@ class NewOrder(BaseModel):
 class CartCheck(BaseModel):
     items: list[Line] = Field(min_length=1, max_length=100)
     for_date: date | None = None
+    contact_id: UUID | None = Field(
+        default=None,
+        description="The customer. Their price group decides the prices; without one the "
+                    "default group's (the normal prices) apply",
+    )
 
 
 class Repeat(BaseModel):
@@ -87,7 +92,8 @@ def _refused(error: service.OrderError) -> HTTPException:
 async def storefront(slug: str, request: Request, c: UUID | None = None) -> dict:
     shop = await _shop(request, slug)
     async with request.app.state.db.tenant(shop["id"]) as conn:
-        page = await service.storefront(conn)
+        # The customer's own prices when the link says who is looking (their price group).
+        page = await service.storefront(conn, c)
         customer = None
         if c is not None:
             row = await conn.fetchrow("select name from contacts where id = $1", c)
@@ -110,7 +116,8 @@ async def check_cart(slug: str, body: CartCheck, request: Request) -> dict:
     shop = await _shop(request, slug)
     async with request.app.state.db.tenant(shop["id"]) as conn:
         return await service.check_cart(
-            conn, [line.cart_line() for line in body.items], body.for_date
+            conn, [line.cart_line() for line in body.items], body.for_date,
+            contact_id=body.contact_id,
         )
 
 

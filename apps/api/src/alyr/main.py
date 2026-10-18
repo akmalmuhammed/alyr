@@ -26,6 +26,7 @@ from alyr.routes import inbox, items, ledger, orders, pay, simulator, store, wha
 from alyr.routes import jobs as jobs_routes
 from alyr.routes import media as media_routes
 from alyr.routes import onboarding as onboarding_routes
+from alyr.routes import price_groups as price_group_routes
 from alyr.routes import reports as reports_routes
 from alyr.routes import team as team_routes
 from alyr.routes import track as track_routes
@@ -93,6 +94,10 @@ def create_app() -> FastAPI:
     # Catalog module is on (its workspace screens, hidden until go-live, ALY-104).
     app.include_router(
         items.router, dependencies=[Depends(require_any_module("orders", "catalog"))]
+    )
+    # Customer price groups (wholesale) belong to the same Catalog (ALY-127).
+    app.include_router(
+        price_group_routes.router, dependencies=[Depends(require_any_module("orders", "catalog"))]
     )
     app.include_router(store.router, dependencies=[Depends(require_module_for_slug("orders"))])
     app.include_router(jobs_routes.router)

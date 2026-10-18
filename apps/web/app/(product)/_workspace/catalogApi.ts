@@ -11,7 +11,7 @@ export type Photo = {
   urls: { thumb: string; medium: string; large: string } | null; srcset: string; position?: number;
 };
 export type Variant = {
-  id: string; name: string; name_ar: string; is_default: boolean; active: boolean;
+  id: string; name: string; name_ar: string; sku: string; is_default: boolean; active: boolean;
   price_delta: number; daily_limit: number | null; on_hand: number; left: number | null;
   photo_id: string | null; photo?: Photo;
 };
@@ -25,8 +25,15 @@ export type Window = {
 };
 export type Rule = "always" | "switch" | "count" | "daily_limit";
 export type Status = "draft" | "live" | "hidden" | "archived";
+/** A customer price group (wholesale). The default group pays the normal prices. */
+export type PriceGroup = {
+  id: string; name: string; name_ar: string; is_default: boolean; sort?: number; customers?: number;
+};
+/** What a group pays for an item, or for one of its sizes and colours (variant_id) instead of the normal price. */
+export type GroupPrice = { group_id: string; variant_id: string | null; price: number; price_text: string };
 export type Item = {
-  id: string; name: string; name_ar: string; description: string; description_ar: string;
+  id: string; name: string; name_ar: string; sku: string; group_prices: GroupPrice[];
+  description: string; description_ar: string;
   category: string; status: Status; stock_rule: Rule; available: boolean; unit: string;
   pack_size: number | null; min_order: number; tags: string[]; sort: number;
   price: number; price_text: string; sale_price: number | null; sale_price_text: string | null;
@@ -68,6 +75,12 @@ export type ActivityRow = {
 export type PriceRow = {
   price: number; price_text: string; sale_price_text: string | null; reason: string;
   changed_by: { name: string }; at: string;
+};
+/** One change to what a price group pays; a null price is the group going back to the normal price. */
+export type GroupPriceRow = {
+  group: { id: string; name: string; name_ar: string };
+  variant: { id: string; name: string; name_ar: string } | null;
+  price: number | null; price_text: string | null; reason: string; changed_by: { name: string }; at: string;
 };
 
 /** A refusal from the API, with the sentence to show in the person's language. */

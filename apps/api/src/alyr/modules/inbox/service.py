@@ -80,7 +80,7 @@ async def thread(conn: asyncpg.Connection, contact_id: UUID) -> dict | None:
         "select c.id, c.name, c.phone, c.username, c.inbox_status, c.assistant_paused, "
         f"      c.consent_service, {_WINDOW} as window_open, "
         "       c.last_inbound_at + interval '24 hours' as window_closes_at, "
-        "       c.assigned_to, u.name as assignee_name "
+        "       c.assigned_to, u.name as assignee_name, c.price_group_id "
         "from contacts c left join users u on u.id = c.assigned_to "
         "where c.id = $1 and c.role = 'customer'",
         contact_id,
@@ -108,6 +108,9 @@ async def thread(conn: asyncpg.Connection, contact_id: UUID) -> dict | None:
                 _iso(contact["window_closes_at"]) if contact["window_open"] else None
             ),
             "assigned": _assignee(contact),
+            # The customer's price group (wholesale), or null for the shop's default.
+            "price_group_id": str(contact["price_group_id"]) if contact["price_group_id"]
+            else None,
         },
         "notes": [
             {**dict(n), "id": str(n["id"]), "created_at": _iso(n["created_at"])} for n in notes

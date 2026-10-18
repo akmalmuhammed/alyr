@@ -225,6 +225,7 @@ export function Catalog({ lang }: { lang: Lang }) {
           <span className="ct-card-body">
             <span className="ct-name" dir="auto">{name || t.untitled}</span>
             <span className="ct-price">{priceLine(item) ?? (draftIncomplete ? <span className="ct-quiet">{t.needsDetails}</span> : null)}</span>
+            {item.sku && <span className="ct-quiet ct-sku" dir="ltr">{item.sku}</span>}
             {pills.length > 0 && (
               <span className="ct-pills">
                 {pills.map((p) => <span key={p.text} className={`sh-pill ct-pill ${p.tone}`}>{p.text}</span>)}
@@ -262,6 +263,12 @@ export function Catalog({ lang }: { lang: Lang }) {
                 <>
                   {item.price > 0 && <span className="ct-sep" aria-hidden="true">·</span>}
                   <span className="ct-quiet" dir="auto">{categoryLabel(item.category)}</span>
+                </>
+              )}
+              {item.sku && (
+                <>
+                  {(item.price > 0 || item.category) && <span className="ct-sep" aria-hidden="true">·</span>}
+                  <span className="ct-quiet ct-sku" dir="ltr">{item.sku}</span>
                 </>
               )}
             </span>
