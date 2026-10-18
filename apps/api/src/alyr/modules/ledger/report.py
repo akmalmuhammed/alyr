@@ -16,10 +16,12 @@ LATE_BUCKETS = ("d61_90", "d90_plus")
 
 async def numbers(conn: asyncpg.Connection, start: datetime, end: datetime, tz: str,
                   current: bool) -> dict:
+    # Credit given leaves out a sale that was reversed: a cancelled order is not credit.
     row = await conn.fetchrow(
         "select coalesce(sum(amount) filter (where kind = 'payment'), 0)::bigint as collected, "
         "count(distinct contact_id) filter (where kind = 'payment') as payers, "
-        "coalesce(sum(amount) filter (where kind = 'sale'), 0)::bigint as credit_given "
+        f"coalesce(sum(amount) filter (where {service.STANDING_SALE}), 0)::bigint "
+        "as credit_given "
         "from ledger_entries where created_at >= $1 and created_at < $2",
         start, end,
     )
