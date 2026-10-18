@@ -28,7 +28,7 @@ import asyncpg
 
 from alyr import presets
 from alyr.config import get_settings
-from alyr.core import consent
+from alyr.core import consent, links
 from alyr.db import Database
 from alyr.seed_qirfa import NAMES_AR, PEOPLE, THANKS, TZ, Bakery, Person, _when
 
@@ -477,8 +477,9 @@ class Diary(Bakery):
         lang = person.lang
         asked = made - timedelta(minutes=rng.randint(2, 9))
         self.say(person, asked, rng.choice(BOOK[lang]))
-        self.auto(person, asked + timedelta(seconds=4),
-                  BOOK_LINK[lang].format(url=f"{self.web_url}/b/{self.slug}?c={person.id}"))
+        # The customer's own booking link carries a signed token, like the one the chat sends.
+        url = links.booking_url(self.web_url, self.slug, self.sample.tenant_id, person.id)
+        self.auto(person, asked + timedelta(seconds=4), BOOK_LINK[lang].format(url=url))
         self.auto(person, made + timedelta(seconds=3), f"Booking #{self.booking_number} confirmed.",
                   {"template": "booking_confirmed", "category": "utility", "sent_as": "text"})
         self.log("booking", booking_id, person, "booked", made)

@@ -28,7 +28,7 @@ def order_link_for(body: str) -> links.Link:
     customer's ID, and the token reads back at this shop only."""
     found = re.search(rf"/s/{DEMO_SLUG}\?t=(\S+)", body)
     assert found, body
-    return links.read(found.group(1), DEMO_TENANT_ID)
+    return links.read(found.group(1), DEMO_TENANT_ID, purpose=links.ORDER)
 
 
 def with_photo(client, item: dict, seed: int = 1) -> dict:

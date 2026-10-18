@@ -575,7 +575,8 @@ class Bakery:
             status, reminded, made, self.users[ADMIN_EMAIL],
         )
         lang = person.lang
-        url = f"{self.web_url}/b/{self.slug}?c={person.id}"
+        # The customer's own booking link carries a signed token, like the one the chat sends.
+        url = links.booking_url(self.web_url, self.slug, QIRFA_TENANT_ID, person.id)
         asked = made - timedelta(minutes=rng.randint(2, 9))
         self.say(person, asked, BOOK[lang])
         self.auto(person, asked + timedelta(seconds=4), BOOK_LINK[lang].format(url=url))

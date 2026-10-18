@@ -106,10 +106,10 @@
 .cx-days { display: flex; gap: 8px; overflow-x: auto; margin: 0 -16px; padding: 2px 16px 6px; scrollbar-width: none; scroll-snap-type: x proximity; scroll-padding-inline: 16px; }
 .cx-days::-webkit-scrollbar { display: none; }
 .cx-day { flex: none; width: 62px; height: 74px; display: grid; place-content: center; gap: 2px; border: 0; border-radius: 16px; background: var(--card); box-shadow: var(--lift); scroll-snap-align: start; transition: transform 0.2s var(--spring-product); }
-.cx-day small { font-size: var(--ui-caption); color: var(--ink-3); text-transform: uppercase; letter-spacing: 0.04em; }
+.cx-day small { font-size: var(--ui-caption); color: var(--ink-2); text-transform: uppercase; letter-spacing: 0.04em; }
 .cx[dir="rtl"] .cx-day small { letter-spacing: 0; text-transform: none; }
 .cx-day b { font-size: var(--ui-heading); font-weight: 600; letter-spacing: -0.03em; line-height: 1; }
-.cx-day span { font-size: var(--ui-micro); color: var(--ink-3); }
+.cx-day span { font-size: var(--ui-micro); color: var(--ink-2); }
 .cx-day[aria-checked="true"] { background: var(--ink); color: var(--card); box-shadow: none; }
 .cx-day[aria-checked="true"] small, .cx-day[aria-checked="true"] span { color: color-mix(in srgb, var(--card) 70%, transparent); }
 .cx-day:active { transform: scale(0.95); }

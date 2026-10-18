@@ -55,7 +55,7 @@ Every new table has `tenant_id`, forced row-level security, a policy and the iso
 
 Only additions to what ALY-102 shipped; nothing was renamed or removed.
 
-`GET /api/store/{slug}?c={contact id}` (the customer's link; without `c` the page shows the default group's prices):
+`GET /api/store/{slug}?c={contact id}` (the customer's link; without `c` the page shows the default group's prices). *Since ALY-112 the customer is identified by the signed token (`?t=`, or the header `X-Order-Link`; `token` in a request body), never by a contact ID: read `c` and `contact_id` below as that token (`specs/005-order-page-v2/spec.md`).*
 
 | Field | Meaning |
 |---|---|

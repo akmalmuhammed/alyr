@@ -781,18 +781,24 @@ try {
   const priceOnPage = (name) => js(`(() => { const r = [...document.querySelectorAll('.cx-row')].find(x => x.querySelector('b')?.textContent === ${JSON.stringify(name)}); return r ? r.querySelector('.num').textContent : null; })()`);
   // The customer's page speaks the customer's language (English for both here), whatever the workspace does.
   const shownName = target[0];
-  await go(`/s/al-noor?c=${wholesale.id}`, 1500);
+  // A customer's own link carries a signed token, which the chat hands out (ALY-112); a bare contact ID in the address grants nothing.
+  const orderToken = async (who) => {
+    const sent = await (await fetch(`${API}/sim/messages`, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ from_number: who.phone, text: "order" }) })).json();
+    return sent.messages.map((m) => m.body).filter((b) => b.includes("?t=")).at(-1).split("?t=")[1].split(/\s/)[0];
+  };
+  const tokens = new Map([[wholesale.id, await orderToken(wholesale)], [retail.id, await orderToken(retail)]]);
+  await go(`/s/al-noor?t=${tokens.get(wholesale.id)}`, 1500);
   await until(`document.querySelectorAll('.cx-row').length > 0`, "the customer's order page");
   check(await priceOnPage(shownName) === "QAR 9", "the wholesale customer's order page shows the group's price (QAR 9)");
   await shot("15h-order-page-wholesale");
-  await go(`/s/al-noor?c=${retail.id}`, 1500);
+  await go(`/s/al-noor?t=${tokens.get(retail.id)}`, 1500);
   await until(`document.querySelectorAll('.cx-row').length > 0`, "the other customer's order page");
   check(await priceOnPage(shownName) === "QAR 10.50", "the other customer's order page shows the normal price (the sale, QAR 10.50)");
   await noSideScroll("the order page");
 
   // Each orders the Large size; the order list shows the group and the size's SKU.
   const large = priced.variants.find((v) => v.name === "Large").id;
-  const place = async (who) => (await fetch(`${API}/api/store/al-noor/orders`, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ contact_id: who.id, payment: "link", items: [{ product_id: priced.id, quantity: 1, variant_id: large }] }) })).json();
+  const place = async (who) => (await fetch(`${API}/api/store/al-noor/orders`, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ token: tokens.get(who.id), payment: "link", items: [{ product_id: priced.id, quantity: 1, variant_id: large }] }) })).json();
   const [theirs, ours] = [await place(wholesale), await place(retail)];
   check(theirs.total === 1300 && theirs.price_group.name === "Wholesale" && ours.total === 1450 && ours.price_group.is_default, "each customer was charged their own price for the Large size (QAR 13 and QAR 14.50)");
   await go("/app/orders", 1500);
