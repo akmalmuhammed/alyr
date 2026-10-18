@@ -45,6 +45,19 @@ async def usage(
         return await request.app.state.media.admin_usage(conn, chosen)
 
 
+@router.get("/usage/history")
+async def usage_history(
+    request: Request,
+    months: int = Query(default=6, ge=1, le=24),
+    _: Staff = Depends(platform_admin),
+) -> dict:
+    """The usage view's data: this month and the months before it, newest first, each with
+    every business's items, photos, gigabytes and uploads and the month's totals, and
+    `alert`, how close all shops together are to R2's free 10 GB. Read only."""
+    async with _back_office(request) as conn:
+        return await request.app.state.media.admin_usage_history(conn, months)
+
+
 @router.post("/remove")
 async def remove(
     body: Removal, request: Request, staff: Staff = Depends(platform_admin)

@@ -162,7 +162,9 @@ def test_the_setup_checklist_reflects_what_the_shop_has_done(client):
 def test_the_home_dashboard_has_one_card_per_number_each_module_offers(client):
     say(client, AHMED_PHONE, "hello")
     cards = {c["key"]: c for c in client.get("/api/workspace/home").json()["cards"]}
-    expected = {card.key for m in catalog.MODULES for card in m.cards}
+    # The Catalog is off for every shop until go-live, so its cards are not on the demo shop's
+    # home (tests/test_catalog_cards.py switches it on).
+    expected = {card.key for m in catalog.MODULES if m.key != "catalog" for card in m.cards}
     assert set(cards) == expected
     assert cards["unanswered"]["value"] == 1
     assert cards["outstanding"]["text"].startswith("QAR ")

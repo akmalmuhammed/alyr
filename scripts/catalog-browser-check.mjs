@@ -212,7 +212,10 @@ async function openFold(title) {
   check(await js(`${summary}.parentElement.open`), `the “${title}” part opens`);
 }
 async function setLanguage(to) {
-  if (to === LANG && LANG === "en") return;
+  // The workspace keeps the language a person chose on the device (ALY-109), so a profile that
+  // already reads in `to` is left alone: pressing the button would switch it back.
+  await sleep(400);
+  if (((await js("document.querySelector('.sh')?.getAttribute('dir')")) === "rtl" ? "ar" : "en") === to) return;
   // On a laptop the language button is in the sidebar; on a phone it is in the palette.
   if (await js("innerWidth >= 900")) { await click("document.querySelector('.sh-lang')", 500); return; }
   const shell = { en: "Search or jump to", ar: "ابحث أو انتقل إلى" };

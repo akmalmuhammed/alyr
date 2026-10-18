@@ -516,6 +516,13 @@ async def update_item(
         if "price" in changed:
             detail |= {"price_from": fmt_qar(before["price"]), "price_to": fmt_qar(values["price"])}
         await team.record(conn, "item", item_id, "updated", actor, None, detail)
+        if "available" in changed:
+            # The switch has the same record whether it is flipped or saved with the item:
+            # the weekly report works out how long an item was sold out from these rows.
+            await team.record(
+                conn, "item", item_id,
+                "switched_on" if values["available"] else "switched_off", actor,
+            )
     entry = await get(conn, clock, item_id)
     return {"item": view(entry, clock), "warnings": warnings}
 

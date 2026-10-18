@@ -321,6 +321,28 @@ export function AgentDashboard({
           </div>
         )}
 
+        {!showcase && view.catalog && (
+          <section className="ag-span-12 ag-stock" aria-labelledby={`${id}-stock`}>
+            <Heading level={level + 1} className="ag-label" id={`${id}-stock`}>{view.catalog.title}</Heading>
+            <ul className="ag-stock-cards">
+              {view.catalog.cards.map((c) => {
+                const Cell = c.href ? L : NoLink;
+                return (
+                  <li key={c.key}>
+                    <Cell href={c.href ?? ""} className={`ag-stock-card ${c.value ? "" : "is-none"}`}>
+                      <span className="ag-kpi-label">{c.label}</span>
+                      <span className="ag-stock-value">
+                        <bdi>{c.text}</bdi>
+                        {c.href && <Arrow />}
+                      </span>
+                    </Cell>
+                  </li>
+                );
+              })}
+            </ul>
+          </section>
+        )}
+
         {cards.length > 0 && (
           <section className={`${view.week ? "ag-span-8" : "ag-span-12"} ag-cards`} aria-labelledby={`${id}-cards`}>
             <Heading level={level + 1} className="ag-label" id={`${id}-cards`}>{t.suggestions}</Heading>

@@ -17,7 +17,7 @@ from alyr.core import jobs, team, templates
 from alyr.core.normalise import fmt_qar
 from alyr.core.outbound import Outbound
 from alyr.core.team import Actor
-from alyr.modules.items import alerts, availability, cart, clock, stock, text
+from alyr.modules.items import alerts, availability, cart, clock, demand, stock, text
 from alyr.modules.items import groups as price_groups
 from alyr.modules.items import holds as stock_holds
 from alyr.modules.items.cart import CartLine
@@ -209,6 +209,9 @@ async def check_cart(
     shop_clock = await clock.load(conn, now)
     group = await price_groups.group_of(conn, contact_id)
     checked = await cart.check(conn, shop_clock, lines, for_date, price_groups.pricing_id(group))
+    if contact_id is not None:
+        # A customer who tries a sold-out item is demand the report counts (spec 007).
+        await demand.record(conn, contact_id, demand.from_checked(checked), "order_page", now)
     total = sum(c.unit_price * c.line.quantity for c in checked if c.ok)
     return {
         "ok": all(c.ok for c in checked),
@@ -430,6 +433,9 @@ async def repeat_last_order(
     group = await price_groups.group_of(conn, contact_id)
     checked = await cart.check(conn, shop_clock, lines, None, price_groups.pricing_id(group))
     ordered = [c for c in checked if c.ok]
+    # What the customer wanted again and the shop could not give is demand the report counts.
+    # (When nothing is left the order is refused and this is rolled back; the route notes it.)
+    await demand.record(conn, contact_id, demand.from_checked(checked), "order_page", now)
     left_out = [
         {
             "name": r["name"], "name_ar": r["name_ar"], "code": c.code,

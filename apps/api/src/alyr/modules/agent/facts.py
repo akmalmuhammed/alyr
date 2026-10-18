@@ -147,6 +147,10 @@ class Facts:
     hours_total: int = 0
     # Setup still to do, for owners and admins: [(product name, [step])].
     setup: list = field(default_factory=list)
+    # The Catalog's stock states, as the numbers on its list's filter chips ("sold_out",
+    # "low_stock", ...). None when the shop does not have the Catalog module; read by
+    # `view.build` and not by `gather`, which the weekly report also uses for a past moment.
+    stock: dict | None = None
 
     @property
     def zone(self) -> ZoneInfo:
