@@ -91,6 +91,10 @@ See `docs/demo.md` and `docs/demo-walkthroughs.md`. In short:
 
 `scripts/demo-shops-browser-check.mjs` drives headless Edge at 375 px over every Catalog screen (home, list, scrolled and compact list, sold-out, low, drafts, search, edit with sizes, choices and times, draft sheet, stock, add, import, settings, share, selecting, bulk actions) and the customer's order page (top, scrolled, public link, item sheet, bar, review, search with no result, pay, track) for each of the seven shops, in English and Arabic, light and dark. On each screen it runs axe-core (wcag2a, wcag2aa, wcag21aa, best-practice, from `C:/t/tools`, not edited), measures every control (44 px floor, by probing the hit area), looks for text cut off by its box, controls that overlap or sit under something, and sideways scrolling, reads the browser's accessibility tree (every control and picture has a name and role, dialogs are named, headings and landmarks exist) and walks the keyboard (focus stays inside a dialog, follows reading order, shows a ring). Screenshots were looked at.
 
+Result: the full pass (every screen above, seven shops, English and Arabic, light and dark) ran with no failing check after the fixes below. Because the run is long, it was done in pieces; after merging main (ALY-133, signed links by purpose) the customer's order page was run again for the restaurant and the wholesaler in both languages and both schemes, with no failure, and the slow-phone pass was run on the final merged code.
+
+Slow phone (a production build, 375 px, 400 kbit/s, 400 ms latency, processor 4 times slower, cold cache): the items are readable after 3.1 to 3.6 s, and the first tap on "add" works after 10 to 13 s, for six shops, in both languages (the salon has no order page). This is a test on a laptop with throttling, not a real phone.
+
 A real screen reader (VoiceOver, TalkBack, NVDA) was **not** run: it cannot be run here. Names, roles and order come from the accessibility tree, which is what a screen reader reads, but not how it reads it. A real phone was not used either.
 
 ### What it found, and what was changed
@@ -103,6 +107,7 @@ Fixed in this package (CSS and copy only, no new feature):
 - Side-by-side fields (sizes row) did not line up when one had a hint; they now share rows.
 - Month and actor names (Customer, Assistant) showed in English inside the Arabic UI; they are now translated and the date uses Latin digits as elsewhere in the workspace.
 - Primary buttons on the customer's pages were light text on lime in dark mode (contrast 1.2:1): `.cx button { color: inherit }` was winning over `.cx-btn`. Fixed by specificity in `customer.css`.
+- The wholesale order table's item-name buttons were 24 px high; they are now 44 px (found on the first full pass; `.ox-wopen`).
 - The day chip in the review sheet read "tomorrow" in lower case beside "Tue 20 Oct"; it now starts with a capital.
 
 The home screen (ALY-129, shell and Agent) had findings that belong to that screen, not the Catalog (grey small-text contrast, the KPI row clipped by its scroller, 28 px text buttons); they are noted, not fixed here.

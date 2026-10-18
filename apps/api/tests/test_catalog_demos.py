@@ -348,7 +348,7 @@ def test_a_customer_of_each_language_reads_their_own_order_page(shops, client):
                 "select id from contacts where tenant_id = $1 and role = 'customer' and lang = $2 "
                 "order by created_at, id limit 1", shop.tenant_id, lang,
             )
-            link = links.mint(shop.tenant_id, who["id"])
+            link = links.mint(shop.tenant_id, who["id"], purpose=links.ORDER)
             page = client.get(f"/api/store/{shop.slug}", headers={"X-Order-Link": link})
             assert page.status_code == 200, (shop.key, page.text)
             body = page.json()
@@ -431,7 +431,7 @@ def test_a_customer_can_order_and_staff_can_cancel_in_every_demo_shop(shops, cli
     before = scalar(shelf, item["id"])
     numbers = scalar("select max(number) as n from orders where tenant_id = $1", shop.tenant_id)
     placed = client.post(f"/api/store/{shop.slug}/orders", json={
-        "token": links.mint(shop.tenant_id, who["id"]), "payment": "link",
+        "token": links.mint(shop.tenant_id, who["id"], purpose=links.ORDER), "payment": "link",
         "items": [{"product_id": str(item["id"]), "quantity": product.min_order}],
     })
     assert placed.status_code == 200, (key, placed.text)
@@ -474,7 +474,7 @@ def test_a_cancelled_order_on_account_has_its_sale_and_its_reversal_like_the_rea
                       "role = 'customer' order by created_at, id limit 1", shop.tenant_id)
     [item] = owner_sql("select id from items where tenant_id = $1 and sku = 'TIS-48'", shop.tenant_id)
     placed = client.post(f"/api/store/{shop.slug}/orders", json={
-        "token": links.mint(shop.tenant_id, who["id"]), "payment": "account",
+        "token": links.mint(shop.tenant_id, who["id"], purpose=links.ORDER), "payment": "account",
         "items": [{"product_id": str(item["id"]), "quantity": 5}],
     })
     assert placed.status_code == 200, placed.text

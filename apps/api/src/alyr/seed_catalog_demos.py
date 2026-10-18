@@ -223,8 +223,8 @@ async def main(argv: list[str]) -> int:
             print("\n".join(describe(shop, web_url, counts, link)))
         print(
             f"\nPhotos are drawn tiles kept on this machine under {settings.media_local_dir}. "
-            "Start the API with the R2 settings empty so it serves them "
-            "(scripts/demo.sh up --local-photos). Nothing was sent to anyone."
+            "The API serves them itself when the R2 settings are empty (they are, in "
+            "scripts/demo.sh up). Nothing was sent to anyone."
         )
     finally:
         await owner.close()

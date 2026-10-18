@@ -621,7 +621,7 @@ async function slowPhone(shop) {
     if (state && state.cards > 0 && readable === null) readable = Date.now() - started;
     if (state && state.add) {
       await b.js("document.querySelector('.ox-add').click()").catch(() => undefined);
-      await b.until("!!document.querySelector('.cx-bar')", "the order bar", 20000).catch(() => undefined);
+      await b.until("!!document.querySelector('.cx-bar')", "the order bar", 1200).catch(() => undefined);
       if (await b.js("!!document.querySelector('.cx-bar')")) usable = Date.now() - started;
     }
     await sleep(150);
