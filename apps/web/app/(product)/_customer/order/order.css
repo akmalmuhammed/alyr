@@ -187,7 +187,7 @@ html.ox-locked { overflow: hidden; }
 [role="rowgroup"] + [role="rowgroup"] > .ox-wrow:first-child { border-top: 1px solid var(--hair); }
 .ox-wsku { grid-area: sku; font-family: var(--font-ui-mono); font-size: var(--ui-caption); color: var(--ink-2); overflow-wrap: anywhere; text-align: start; }
 .ox-wname { grid-area: name; display: grid; gap: 3px; min-width: 0; justify-items: start; }
-.ox-wopen { padding: 0; min-height: 24px; border: 0; background: transparent; color: var(--ink); font-size: var(--ui-body); font-weight: 600; text-align: start; line-height: 1.3; overflow-wrap: anywhere; }
+.ox-wopen { padding: 11px 0; min-height: 44px; box-sizing: border-box; border: 0; background: transparent; color: var(--ink); font-size: var(--ui-body); font-weight: 600; text-align: start; line-height: 1.3; overflow-wrap: anywhere; }
 .ox-wpart { font-weight: 400; color: var(--ink-2); }
 .ox-wname small { font-size: var(--ui-small); color: var(--ink-2); }
 .ox-wprice { grid-area: price; display: flex; align-items: baseline; gap: 6px; font-size: var(--ui-body); font-weight: 600; justify-self: end; }

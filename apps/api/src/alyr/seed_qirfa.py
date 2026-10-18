@@ -35,6 +35,7 @@ from alyr.modules import report
 from alyr.modules.ledger import service as ledger
 
 QIRFA_TENANT_ID = UUID("0a1f0000-0000-4000-8000-00000000c1fa")
+CANCEL_ACCOUNT_EVERY = 0  # see where it is used; tests set it
 QIRFA_SLUG = "qirfa"
 NUMBER_ID = "sim-qirfa"
 TZ = ZoneInfo("Asia/Qatar")
@@ -416,6 +417,10 @@ class Bakery:
         # Collected within a few hours; only this morning's orders are still in the shop.
         if age > timedelta(hours=5):
             status = "cancelled" if rng.random() < 0.03 else "done"
+            # Off by default so the captured report and Agent samples stay as they are; a test
+            # turns it on to cancel a credit order every Nth order and check the reversal.
+            if kind == "account" and CANCEL_ACCOUNT_EVERY and number % CANCEL_ACCOUNT_EVERY == 0:
+                status = "cancelled"
         else:
             status = "new" if age < timedelta(minutes=40) else (
                 "confirmed" if age < timedelta(hours=2) else "ready")
@@ -471,12 +476,26 @@ class Bakery:
         if status == "done":
             done = last + timedelta(minutes=rng.randint(10, 90))
             self.log("order", order_id, person, "done", min(done, self.now), staff)
-        if status == "cancelled":
-            self.log("order", order_id, person, "cancelled", at + timedelta(hours=1), staff)
+        cancelled_at = at + timedelta(hours=1)
+        reversed_amount = None
         if payment == "on_account":
+            # The sale is tied to its order, so the ledger can tell which sale a cancellation
+            # takes back (ALY-128).
             await ledger.add_entry(conn, person.id, "sale", total, f"Order #{number}",
-                                   "Order link", at)
-        else:
+                                   "Order link", at, order_id=order_id)
+            if status == "cancelled":
+                # A cancelled order on account has its sale and the reversal beside it, written
+                # by the one function `orders.service.cancel_order` uses, so the demo does not
+                # show a debt that was cancelled (ALY-110).
+                reversed_amount = await ledger.reverse_sale(
+                    conn, order_id, person.id, total, number, self.names[staff], at=cancelled_at
+                )
+        if status == "cancelled":
+            self.log("order", order_id, person, "cancelled", cancelled_at, staff, {
+                "number": number,
+                "credit_reversed": fmt_qar(reversed_amount) if reversed_amount else None,
+            })
+        if payment != "on_account":
             paid = payment == "paid"
             await conn.execute(
                 "insert into payment_requests (contact_id, amount, status, created_at, "

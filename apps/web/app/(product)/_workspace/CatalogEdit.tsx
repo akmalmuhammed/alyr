@@ -7,7 +7,7 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import {
-  activityText, api, fromDirhams, nameOf, sayError, stamp, toDirhams, toInt, toSignedDirhams,
+  activityText, api, fromDirhams, nameOf, sayError, stamp, toDirhams, toInt, toSignedDirhams, whoIs,
   type ActivityRow, type Access, type Category, type GroupPriceRow, type Group, type Item, type Photo, type PriceGroup, type PriceRow, type Rule, type Setup, type Status, type Window,
 } from "./catalogApi";
 import { COPY, type Copy, type Lang } from "./catalogCopy";
@@ -753,8 +753,8 @@ export function CatalogEdit({ lang, itemId, initial, categories, access, setup, 
                   <ul className="ct-log">
                     {history.prices.map((p, i) => (
                       <li key={i}><b className="num" dir="ltr">{p.price_text}{p.sale_price_text ? ` · ${p.sale_price_text}` : ""}</b>
-                        <span>{p.changed_by.name}{p.reason ? ` · ${p.reason}` : ""}</span>
-                        <time className="num" dateTime={p.at} dir="ltr">{stamp(p.at)}</time></li>
+                        <span>{whoIs(p.changed_by.name, t)}{p.reason ? ` · ${p.reason}` : ""}</span>
+                        <time className="num" dateTime={p.at} dir="ltr">{stamp(p.at, lang)}</time></li>
                     ))}
                   </ul>
                 )}
@@ -764,8 +764,8 @@ export function CatalogEdit({ lang, itemId, initial, categories, access, setup, 
                     <ul className="ct-log">
                       {history.groups.map((p, i) => (
                         <li key={i}><b className="num" dir="ltr">{p.price_text ?? t.historyRemoved}</b>
-                          <span><span dir="auto">{nameOf(p.group, lang)}</span>{p.variant ? <> · <span dir="auto">{nameOf(p.variant, lang)}</span></> : null} · {p.changed_by.name}{p.reason ? ` · ${p.reason}` : ""}</span>
-                          <time className="num" dateTime={p.at} dir="ltr">{stamp(p.at)}</time></li>
+                          <span><span dir="auto">{nameOf(p.group, lang)}</span>{p.variant ? <> · <span dir="auto">{nameOf(p.variant, lang)}</span></> : null} · {whoIs(p.changed_by.name, t)}{p.reason ? ` · ${p.reason}` : ""}</span>
+                          <time className="num" dateTime={p.at} dir="ltr">{stamp(p.at, lang)}</time></li>
                       ))}
                     </ul>
                   </>
@@ -774,8 +774,8 @@ export function CatalogEdit({ lang, itemId, initial, categories, access, setup, 
                 {history.did.length === 0 ? <p className="ct-hint">{t.historyNone}</p> : (
                   <ul className="ct-log">
                     {history.did.map((a) => (
-                      <li key={a.id}><span><b>{a.actor.name}</b> {activityText(a, t)}</span>
-                        <time className="num" dateTime={a.at} dir="ltr">{stamp(a.at)}</time></li>
+                      <li key={a.id}><span><b>{whoIs(a.actor.name, t)}</b> {activityText(a, t)}</span>
+                        <time className="num" dateTime={a.at} dir="ltr">{stamp(a.at, lang)}</time></li>
                     ))}
                   </ul>
                 )}

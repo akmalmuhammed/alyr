@@ -219,11 +219,17 @@ export function nameOf(thing: { name: string; name_ar: string }, lang: Lang): st
   return (lang === "ar" ? thing.name_ar || thing.name : thing.name || thing.name_ar).trim();
 }
 
-/** "18 Oct, 14:05" on the shop's clock (Doha), whatever the device says. */
-export function stamp(iso: string): string {
-  return new Intl.DateTimeFormat("en-GB", {
+/** "18 Oct, 14:05" on the shop's clock (Doha), whatever the device says; the month is in the
+ *  screen's language (digits stay Western, as everywhere in the workspace). */
+export function stamp(iso: string, lang: Lang = "en"): string {
+  return new Intl.DateTimeFormat(lang === "ar" ? "ar-QA-u-nu-latn" : "en-GB", {
     timeZone: "Asia/Qatar", day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit", hourCycle: "h23",
   }).format(new Date(iso));
+}
+
+/** Who did it, as the record keeps it. The system's own names ("Customer", "Assistant") are said in the screen's language. */
+export function whoIs(name: string, t: Copy): string {
+  return t.actors[name] ?? name;
 }
 
 /** One line of an item's record, without the name of the person: "changed the price from QAR 12 to QAR 14". */

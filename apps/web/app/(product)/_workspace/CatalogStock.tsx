@@ -6,7 +6,7 @@
 // reason when they differ. Below, the log of every change, with who made it and why.
 
 import { useCallback, useEffect, useState } from "react";
-import { api, nameOf, sayError, stamp, toInt, type Item, type ListResult, type Movement, type Variant } from "./catalogApi";
+import { api, nameOf, sayError, stamp, toInt, whoIs, type Item, type ListResult, type Movement, type Variant } from "./catalogApi";
 import { COPY, type Lang } from "./catalogCopy";
 import { Field, Icon, Sheet, Tile, type Toast } from "./CatalogUi";
 
@@ -132,7 +132,7 @@ export function CatalogStock({ lang, onChanged, push, clear }: { lang: Lang; onC
                     {m.reason && m.kind !== "sold" && !GENERIC.includes(m.reason) ? ` · ${m.reason}` : ""}
                     {` · ${t.balance(m.balance_after)}`}
                   </small>
-                  <small>{t.by(m.actor.name)}{m.via === "whatsapp" ? ` · ${t.viaWhatsapp}` : ""} · <time className="num" dateTime={m.created_at} dir="ltr">{stamp(m.created_at)}</time></small>
+                  <small>{t.by(whoIs(m.actor.name, t))}{m.via === "whatsapp" ? ` · ${t.viaWhatsapp}` : ""} · <time className="num" dateTime={m.created_at} dir="ltr">{stamp(m.created_at, lang)}</time></small>
                 </span>
               </li>
             );

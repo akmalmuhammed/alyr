@@ -65,6 +65,8 @@
 .sh-me small { font-size: var(--ui-caption); color: var(--ink-3); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .sh-iconbtn { width: 30px; height: 30px; flex: none; display: grid; place-items: center; border: 0; border-radius: 8px; background: transparent; color: var(--ink-2); text-decoration: none; transition: background 0.18s var(--ease-product), color 0.18s var(--ease-product); }
 .sh-iconbtn:hover { background: var(--hair); color: var(--ink); }
+/* A thumb needs 44 px: the icon buttons grow on a phone and on any touch screen (ALY-110). */
+@media (max-width: 56rem), (pointer: coarse) { .sh-iconbtn { width: 44px; height: 44px; } }
 .sh-lang { height: 30px; padding: 0 9px; border: 0; border-radius: 8px; background: var(--hair); color: var(--ink); font-size: var(--ui-small); font-weight: 600; }
 .sh-lang:hover { background: var(--hair-2); }
 
@@ -109,6 +111,7 @@
 .sh .btn.ghost { background: transparent; box-shadow: none; color: var(--ink-2); }
 .sh .btn.ghost:hover { background: var(--hair); color: var(--ink); }
 .sh .btn.small { height: 28px; padding: 0 11px; font-size: var(--ui-small); margin: 0; border-radius: 8px; }
+@media (max-width: 56rem), (pointer: coarse) { .sh .btn.small { height: auto; min-height: 44px; padding-inline: 14px; } }
 .sh .btn .arrow { transition: transform 0.2s var(--ease-product); }
 .sh .btn:hover .arrow { transform: translateX(2px); }
 .sh[dir="rtl"] .btn .arrow { transform: scaleX(-1); }
@@ -119,7 +122,7 @@
 .sh-pill::before { content: ""; width: 6px; height: 6px; border-radius: 50%; background: currentColor; opacity: 0.8; }
 .sh-pill.active { color: var(--volt-ink); background: var(--volt-wash); box-shadow: none; }
 .sh-pill.active::before { background: var(--volt); opacity: 1; }
-.sh-pill.wait { color: var(--warn); background: var(--warn-soft); box-shadow: none; }
+.sh-pill.wait { color: color-mix(in srgb, var(--warn) 72%, var(--ink)); background: var(--warn-soft); box-shadow: none; }
 .sh-pill.coming::before { background: transparent; box-shadow: 0 0 0 1px currentColor inset; }
 
 /* ── home ────────────────────────────────────────────── */
@@ -305,6 +308,8 @@
   .sh-top { display: none; }
   .sh-mtop { display: flex; align-items: center; gap: 10px; min-height: 54px; padding: env(safe-area-inset-top, 0px) max(16px, env(safe-area-inset-right, 0px)) 0 max(16px, env(safe-area-inset-left, 0px)); border-bottom: 1px solid var(--hair); flex: none; }
   .sh-mtop .sh-brand-text { flex: 1; }
+  /* A shop's name may take two lines here: "Safwa Home & Gadgets" was cut beside the status pill and the 44 px search button (ALY-110). */
+  .sh-mtop .sh-brand-text b { white-space: normal; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; line-height: 1.2; overflow-wrap: anywhere; }
   .sh-main { padding-bottom: calc(96px + env(safe-area-inset-bottom, 0px)); }
   .sh-tabbar { position: fixed; z-index: 20; inset-inline: 12px; bottom: calc(10px + env(safe-area-inset-bottom, 0px)); display: grid; grid-auto-flow: column; grid-auto-columns: minmax(0, 1fr); padding: 6px; border-radius: 18px; background: color-mix(in srgb, var(--sheet) 82%, transparent); backdrop-filter: blur(18px) saturate(1.4); -webkit-backdrop-filter: blur(18px) saturate(1.4); box-shadow: var(--float); }
   .sh-tabbar a, .sh-tabbar button { display: grid; justify-items: center; gap: 3px; padding: 7px 2px 6px; border: 0; border-radius: 12px; background: transparent; color: var(--ink-2); font-size: var(--ui-micro); font-weight: 500; text-decoration: none; min-width: 0; }

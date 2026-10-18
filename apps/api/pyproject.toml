@@ -33,6 +33,9 @@ packages = ["src/alyr"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
+markers = [
+    "stress: repeats a race many times (ALYR_STRESS_ROUNDS, 50 by default); leave out with -m 'not stress'",
+]
 
 [tool.ruff]
 line-length = 100
@@ -52,5 +55,12 @@ default-groups = ["dev", "server"]
 "src/alyr/catalog.py" = ["E501"]
 # Each type's words, in both languages, are kept together for the Arabic review (ALY-66).
 "src/alyr/presets_catalog.py" = ["E501"]
+# Each demo shop's words, in both languages, are kept in one table per shop (ALY-110).
+"src/alyr/demo/shops/*.py" = ["E501"]
+"src/alyr/demo/*.py" = ["E501"]
+"tests/test_catalog_demos.py" = ["E501"]
+"tests/test_catalog_concurrency.py" = ["E501"]
+"tests/test_catalog_stress.py" = ["E501"]
+"tests/test_catalog_scenarios_audit.py" = ["E501"]
 # The email template is one HTML document; wrapping its lines would change nothing for readers.
 "src/alyr/core/mail.py" = ["E501"]

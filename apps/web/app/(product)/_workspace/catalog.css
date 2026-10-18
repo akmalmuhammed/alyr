@@ -56,7 +56,7 @@
 .ct-search input { flex: 1; min-width: 0; height: 46px; border: 0; background: transparent; outline: none; font-size: var(--ui-input); color: var(--ink); }
 .ct-search input::placeholder { color: var(--ink-2); }
 .ct-chips { display: flex; flex-wrap: wrap; gap: 8px; }
-.ct-chip { display: inline-flex; align-items: center; gap: 6px; min-height: 40px; padding: 0 14px; border: 0; border-radius: 20px; background: transparent; color: var(--ink-2); font-size: var(--ui-body-sm); font-weight: 500; box-shadow: 0 0 0 1px var(--hair-2) inset; transition: background 0.18s var(--ease-product), color 0.18s var(--ease-product); }
+.ct-chip { display: inline-flex; align-items: center; gap: 6px; min-height: 44px; padding: 0 14px; border: 0; border-radius: 22px; background: transparent; color: var(--ink-2); font-size: var(--ui-body-sm); font-weight: 500; box-shadow: 0 0 0 1px var(--hair-2) inset; transition: background 0.18s var(--ease-product), color 0.18s var(--ease-product); }
 .ct-chip:hover { background: var(--hair); color: var(--ink); }
 .ct-chip[aria-pressed="true"] { background: var(--ink); color: var(--sheet); box-shadow: none; }
 .ct-chip-tick { width: 14px; height: 14px; }
@@ -64,7 +64,7 @@
 .ct-tools-row { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
 .ct-select, .ct-field select { min-height: 44px; max-width: 100%; padding: 0 12px; border: 0; border-radius: 10px; background: var(--sheet); color: var(--ink); box-shadow: var(--lift); font-size: var(--ui-body); }
 .ct-seg { display: inline-flex; padding: 3px; border-radius: 11px; background: var(--raise); box-shadow: 0 0 0 1px var(--hair) inset; }
-.ct-seg button { width: 44px; height: 38px; display: grid; place-items: center; border: 0; border-radius: 8px; background: transparent; color: var(--ink-2); }
+.ct-seg button { width: 44px; height: 44px; display: grid; place-items: center; border: 0; border-radius: 8px; background: transparent; color: var(--ink-2); }
 .ct-seg button[aria-pressed="true"] { background: var(--sheet); color: var(--ink); box-shadow: var(--lift); }
 
 /* ── the items: photos or a compact list ── */
@@ -87,7 +87,8 @@
 .ct-ph.failed { color: var(--bad); }
 @keyframes ct-spin { to { transform: rotate(360deg); } }
 .ct-card-body { display: grid; gap: 4px; padding: 10px 12px 12px; min-width: 0; align-content: start; }
-.ct-name { font-size: var(--ui-body-sm); font-weight: 600; line-height: 1.3; overflow-wrap: anywhere; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+/* A name is never cut: a wholesaler's "Basmati rice 5 kg, carton of 4" takes the lines it needs (ALY-110). */
+.ct-name { font-size: var(--ui-body-sm); font-weight: 600; line-height: 1.3; overflow-wrap: anywhere; }
 .ct-price { font-size: var(--ui-small); color: var(--ink-2); min-height: 1.3em; overflow-wrap: anywhere; }
 .ct-price b { color: var(--ink); font-weight: 600; }
 .ct-price s { color: var(--ink-2); margin-inline-start: 4px; }
@@ -95,7 +96,8 @@
 .ct-pills { display: flex; flex-wrap: wrap; gap: 4px; }
 .ct-pill { height: 22px; }
 .ct-pill.bad { color: var(--bad); background: var(--bad-soft); box-shadow: none; }
-.ct-pill.wait { color: var(--warn); background: var(--warn-soft); box-shadow: none; }
+/* The warning colour on its own soft ground is 3.98:1 in light, under the 4.5:1 small text needs (ALY-110). */
+.ct-pill.wait { color: color-mix(in srgb, var(--warn) 72%, var(--ink)); background: var(--warn-soft); box-shadow: none; }
 .ct-pill.quiet { color: var(--ink-2); background: transparent; }
 .ct-card-foot { display: flex; align-items: center; min-height: 54px; padding: 4px 12px; border-top: 1px solid var(--hair); }
 .ct-switchrow { display: inline-flex; align-items: center; gap: 10px; }
@@ -112,7 +114,6 @@
 .sh[dir="rtl"] .ct-row .ct-open { padding: 8px 12px 8px 8px; }
 .ct-row .ct-photo { width: 56px; height: 56px; aspect-ratio: auto; border-radius: 10px; flex: none; }
 .ct-row .ct-card-body { padding: 0; flex: 1; gap: 3px; }
-.ct-row .ct-name { -webkit-line-clamp: 2; }
 .ct-row-end { flex: none; }
 @media (max-width: 30rem) { .ct-row .ct-state { display: none; } }
 
@@ -124,7 +125,7 @@
 .ct-more { align-self: center; min-width: 10rem; min-height: 44px; }
 
 .ct-bar { position: fixed; z-index: 30; inset-inline: 12px; bottom: calc(88px + env(safe-area-inset-bottom, 0px)); max-width: 40rem; margin-inline: auto; display: flex; flex-wrap: wrap; align-items: center; gap: 6px; padding: 10px; border-radius: 16px; background: var(--sheet); box-shadow: var(--float); animation: sh-pop 0.24s var(--spring-product); }
-.ct-bar .btn.small { min-height: 40px; }
+.ct-bar .btn.small { min-height: 44px; }
 .ct-bar > b { padding-inline: 6px; font-size: var(--ui-body); }
 .ct-bar .btn.primary { flex: 1 1 100%; }
 @media (min-width: 40rem) { .ct-bar .btn.primary { flex: 0 0 auto; } }
@@ -156,7 +157,7 @@
 .ct-sheet-title h2 { margin: 0; font-size: var(--ui-title-sm); font-weight: 600; letter-spacing: -0.02em; line-height: 1.3; }
 .sh[dir="rtl"] .ct-sheet-title h2 { letter-spacing: 0; }
 .ct-sheet-title p { margin: 2px 0 0; font-size: var(--ui-small); color: var(--ink-2); overflow-wrap: anywhere; }
-.ct-close { width: 44px; height: 44px; flex: none; }
+.sh-iconbtn.ct-close { width: 44px; height: 44px; flex: none; }
 .ct-sheet-body { flex: 1; min-height: 0; overflow-y: auto; overscroll-behavior: contain; padding: 16px 20px 24px; display: flex; flex-direction: column; gap: 18px; }
 .ct-sheet-foot { flex: none; display: flex; align-items: center; gap: 8px; padding: 12px 16px calc(12px + env(safe-area-inset-bottom, 0px)); border-top: 1px solid var(--hair); background: var(--sheet); }
 .ct-sheet-foot .btn { flex: none; }
@@ -193,6 +194,17 @@
 .ct-grid3 { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; align-items: start; }
 .ct-grid2:has(> :only-child) { grid-template-columns: minmax(0, 1fr); }
 @media (max-width: 34rem) { .ct-grid3, .ct-grid2.names { grid-template-columns: minmax(0, 1fr); } }
+/* Fields side by side keep their boxes on one line whatever their labels and hints take: a
+   label that wraps (a long word, or Arabic in a narrow window) used to push its box lower than
+   its neighbour's, which also read as a break in the order of the form (ALY-110). Each field
+   shares the grid's rows (label, box, hint, error) instead of making its own. */
+.ct-grid2, .ct-grid3 { row-gap: 0; }
+.ct-grid2 > .ct-field, .ct-grid3 > .ct-field { display: grid; grid-template-rows: subgrid; grid-row: span 4; row-gap: 0; align-content: start; }
+.ct-grid2 > .ct-field > * + *, .ct-grid3 > .ct-field > * + * { margin-top: 6px; }
+.ct-grid2 > :nth-child(n + 3), .ct-grid3 > :nth-child(n + 4) { margin-top: 12px; }
+@media (max-width: 34rem) {
+  .ct-grid2.names > :nth-child(n + 2), .ct-grid3 > :nth-child(n + 2) { margin-top: 12px; }
+}
 .ct-check { display: flex; align-items: center; gap: 10px; min-height: 44px; font-size: var(--ui-body-sm); cursor: pointer; }
 .ct-check input { width: 22px; height: 22px; flex: none; accent-color: var(--ink); }
 .ct-row-between { display: flex; align-items: center; justify-content: space-between; gap: 8px; flex-wrap: wrap; }
@@ -228,8 +240,8 @@
 .ct-fold-body { display: flex; flex-direction: column; gap: 12px; padding: 2px 14px 16px; }
 
 .ct-tags { list-style: none; margin: 0; padding: 0; display: flex; flex-wrap: wrap; gap: 6px; }
-.ct-tags li { display: inline-flex; align-items: center; height: 38px; padding-inline-start: 14px; border-radius: 19px; background: var(--sheet); box-shadow: 0 0 0 1px var(--hair-2) inset; font-size: var(--ui-body-sm); }
-.ct-tags .sh-iconbtn { width: 38px; height: 38px; }
+.ct-tags li { display: inline-flex; align-items: center; height: 44px; padding-inline-start: 14px; border-radius: 22px; background: var(--sheet); box-shadow: 0 0 0 1px var(--hair-2) inset; font-size: var(--ui-body-sm); }
+.ct-tags .sh-iconbtn { width: 44px; height: 44px; }
 .ct-tagadd { display: flex; align-items: flex-end; gap: 8px; }
 .ct-tagadd .ct-field { flex: 1; }
 .ct-tagadd .btn { min-height: 48px; }
@@ -361,7 +373,7 @@ li:has(> .ct-ptile.up.failed) { grid-column: 1 / -1; }
 .ct-tablegrid { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(8.5rem, 1fr)); gap: 10px; }
 .ct-tablecard { display: grid; gap: 6px; justify-items: center; padding: 10px; border-radius: 12px; background: var(--sheet); box-shadow: 0 0 0 1px var(--hair) inset; }
 .ct-tablebtns { display: flex; gap: 4px; }
-.ct-share-btn { width: 44px; height: 44px; flex: none; }
+.sh-iconbtn.ct-share-btn { width: 44px; height: 44px; flex: none; }
 .ct-radios { margin: 0; padding: 0; border: 0; display: grid; gap: 8px; min-width: 0; }
 .ct-radios legend { padding: 0 0 6px; font-size: var(--ui-body-sm); font-weight: 600; }
 .ct-radio { display: flex; align-items: center; gap: 10px; min-height: 48px; padding: 0 14px; border-radius: 12px; background: var(--raise); box-shadow: 0 0 0 1px var(--hair) inset; font-size: var(--ui-body-sm); cursor: pointer; }

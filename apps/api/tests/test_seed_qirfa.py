@@ -107,3 +107,61 @@ def test_the_sample_names_are_invented():
         first, initial = name.split(" ")
         assert len(initial) == 2 and initial.endswith("."), name
     assert not any(name.startswith("Al ") or "Al-" in name for name, *_ in ACCOUNTS)
+
+
+def test_a_cancelled_account_order_has_its_sale_and_its_reversal(monkeypatch):
+    monkeypatch.setattr("alyr.seed_qirfa.CANCEL_ACCOUNT_EVERY", 19)
+    # ALY-110: the sample bakery cancels credit orders the way `cancel_order` does, so the
+    # customer does not seem to owe what was cancelled.
+    make_bakery()
+    cancelled = owner_sql(
+        "select o.id, o.total from orders o where o.tenant_id = $1 and o.status = 'cancelled' "
+        "and o.payment = 'on_account'",
+        QIRFA_TENANT_ID,
+    )
+    assert len(cancelled) >= 2, "the sample should hold cancelled credit orders"
+    for o in cancelled:
+        kinds = {
+            r["kind"]: r["amount"]
+            for r in owner_sql(
+                "select kind, amount from ledger_entries where tenant_id = $1 and order_id = $2",
+                QIRFA_TENANT_ID, o["id"],
+            )
+        }
+        assert kinds == {"sale": o["total"], "reversal": o["total"]}
+    # Nobody owes for an order that was cancelled: no sale without a reversal.
+    assert one(
+        "select count(*) as n from ledger_entries s join orders o on o.id = s.order_id "
+        "where s.tenant_id = $1 and s.kind = 'sale' and o.status = 'cancelled' and not exists "
+        "(select 1 from ledger_entries r where r.order_id = s.order_id and r.kind = 'reversal')"
+    )["n"] == 0
+
+
+def test_the_demo_reset_repairs_a_sale_cancelled_before_the_fix_and_only_once(monkeypatch):
+    monkeypatch.setattr("alyr.seed_qirfa.CANCEL_ACCOUNT_EVERY", 19)
+    from alyr.seed_catalog_demos import repair_cancelled_account_orders
+
+    make_bakery()
+    owner_sql(
+        "delete from ledger_entries where tenant_id = $1 and kind = 'reversal' "
+        "and order_id in (select id from orders where tenant_id = $1 and status = 'cancelled' "
+        "and payment = 'on_account' limit 2) returning id",
+        QIRFA_TENANT_ID,
+    )
+    stale = one(
+        "select count(*) as n from orders o where o.tenant_id = $1 and o.status = 'cancelled' "
+        "and o.payment = 'on_account' and not exists (select 1 from ledger_entries r "
+        "where r.order_id = o.id and r.kind = 'reversal')"
+    )["n"]
+    assert stale == 2
+
+    async def repair() -> int:
+        db = Database(OWNER_DSN)
+        await db.connect()
+        try:
+            return await repair_cancelled_account_orders(db, tenant_ids=(QIRFA_TENANT_ID,))
+        finally:
+            await db.close()
+
+    assert asyncio.run(repair()) == 2
+    assert asyncio.run(repair()) == 0
