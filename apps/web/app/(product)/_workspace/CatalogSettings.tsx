@@ -3,12 +3,14 @@
 // The shop's catalog settings (owners and admins): may agents edit items, the low-stock
 // number, when the shop's day starts, and how long an unpaid payment-link order holds its
 // stock. Each is saved with the button, and each was already in the API. Below them, the
-// WhatsApp numbers the owner registers as staff, who may change the Catalog by message;
-// those save at once, one number at a time.
+// WhatsApp numbers the owner registers as staff, who may change the Catalog by message
+// (those save at once, one number at a time), and customer price groups (wholesale),
+// which save as they are changed.
 
 import { useEffect, useState } from "react";
 import { api, sayError, toInt, type Settings, type StaffNumber } from "./catalogApi";
 import { COPY, type Copy, type Lang } from "./catalogCopy";
+import { CatalogGroups } from "./CatalogGroups";
 import { Field, Icon, Sheet, Switch, type Toast } from "./CatalogUi";
 
 type Push = (text: string, options?: { tone?: Toast["tone"]; undo?: () => void }) => number;
@@ -79,6 +81,7 @@ export function CatalogSettings({ lang, push, onClose }: { lang: Lang; push: Pus
         </Field>
       </form>
       <StaffNumbers lang={lang} t={t} push={push} />
+      <CatalogGroups lang={lang} push={push} />
     </Sheet>
   );
 }

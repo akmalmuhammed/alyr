@@ -19,6 +19,11 @@
 // its preview and undoes it, checks the keyboard, looks at the same screens in dark, with a
 // small window (an on-screen keyboard), as an agent and on a laptop. It checks the API's own
 // numbers after each step and exits with an error if one is wrong.
+// It also covers customer price groups and SKU (ALY-127): a SKU on an item and on two sizes,
+// a group made, refused when repeated and renamed in the Catalog settings, a price for the
+// group on an item and on a size (saved and shown again), a customer put in the group from the
+// inbox, the customer's order page showing the group's price, and the order list showing the
+// group and the SKU, at phone width in both languages.
 //
 // Short folders: Edge fails quietly with long paths, so keep --profile and --out short.
 
@@ -219,10 +224,10 @@ async function noSideScroll(name) {
   const wide = await js(`(() => { const out = []; const w = innerWidth; if (Math.max(document.documentElement.scrollWidth, document.body.scrollWidth) > w) out.push('page ' + document.documentElement.scrollWidth); for (const sel of ['.sh-scroll', '.ct-sheet-body', '.ct-sheet']) { const el = document.querySelector(sel); if (el && el.scrollWidth > el.clientWidth + 1) out.push(sel + ' ' + el.scrollWidth + '>' + el.clientWidth); } return out.join(', '); })()`);
   check(wide === "", `no sideways scrolling on ${name}${wide ? " (" + wide + ")" : ""}`);
 }
-async function axe(name, exclude = []) {
+async function axe(name, exclude = [], within = "") {
   if (!AXE || !existsSync(AXE)) { log("axe skipped: give --axe <path to axe.min.js>"); return; }
   await js(readFileSync(AXE, "utf8"));
-  const found = await js(`axe.run(${exclude.length ? JSON.stringify({ exclude: exclude.map((x) => [x]) }) : 'document'}, { runOnly: ['wcag2a','wcag2aa','wcag21aa','best-practice'], resultTypes: ['violations'] }).then(r => r.violations.map(v => ({ id: v.id, impact: v.impact, n: v.nodes.length, nodes: v.nodes.slice(0, 8).map(n => ({ target: n.target.join(' '), html: n.html.slice(0, 140), why: (n.any[0] || n.all[0] || n.none[0] || {}).message })) })))`);
+  const found = await js(`axe.run(${within ? JSON.stringify(within) : exclude.length ? JSON.stringify({ exclude: exclude.map((x) => [x]) }) : 'document'}, { runOnly: ['wcag2a','wcag2aa','wcag21aa','best-practice'], resultTypes: ['violations'] }).then(r => r.violations.map(v => ({ id: v.id, impact: v.impact, n: v.nodes.length, nodes: v.nodes.slice(0, 8).map(n => ({ target: n.target.join(' '), html: n.html.slice(0, 140), why: (n.any[0] || n.all[0] || n.none[0] || {}).message })) })))`);
   writeFileSync(`${OUT}/${LANG}-axe-${name}.json`, JSON.stringify(found, null, 2));
   check(found.filter((v) => v.impact !== "minor").length === 0, `axe: no violations on ${name} (${found.length} found)`);
   for (const v of found) for (const n of v.nodes.slice(0, 4)) log("   axe", v.impact, v.id, n.target, "|", n.why);
@@ -366,11 +371,13 @@ try {
   await click(`[...document.querySelectorAll('.ct-card .ct-open')].find(b => b.textContent.includes(${JSON.stringify(LANG === "ar" ? target[1] : target[0])}))`, 600);
   await until("!!document.querySelector('.ct-sheet')", "the edit sheet again");
   await fill(t.salePrice, "10.5");
+  await fill(t.skuLabel, "KB-100");
   await openFold(t.variantsTitle);
   await pressText(t.addVariant);
-  await fill(t.variantName, "Small"); await fill(t.variantNameAr, "صغير");
+  await fill(t.variantName, "Small"); await fill(t.variantNameAr, "صغير"); await fill(t.variantSku, "KB-100-S");
   await pressText(t.addVariant);
   await fill(t.variantName, "Large", 1); await fill(t.variantNameAr, "كبير", 1); await fill(t.variantExtra, "4", 1);
+  await fill(t.variantSku, "KB-100-L", 1);
   await openFold(t.optionsTitle);
   await pressText(t.addGroup);
   await fill(t.groupName, "Extras"); await fill(t.groupNameAr, "إضافات");
@@ -389,8 +396,141 @@ try {
   await until("!document.querySelector('.ct-sheet')", "the sheet closing after a save", 15000);
   const edited = (await items()).find((i) => i.name === target[0]);
   check(edited.sale_price === 1050 && edited.variants.filter((v) => !v.is_default).length === 2 && edited.option_groups.length === 1 && edited.tags.length === 1 && edited.schedule.length === 1, "the edit saved the sale, two sizes, an extra, a tag and a time");
+  check(edited.sku === "KB-100" && edited.variants.map((v) => v.sku).sort().join() === "KB-100-L,KB-100-S", "the edit saved the item's SKU and its sizes' SKUs");
   await sleep(300);
   await shot("15-after-save");
+
+  // 5b. the SKU is on the card and finds the item, also by a size's code
+  check(await js(`[...document.querySelectorAll('.ct-card .ct-sku')].some(e => e.textContent.trim() === 'KB-100')`), "the SKU is shown on the item's card");
+  await click("document.querySelector('.ct-search input')");
+  await send("Input.insertText", { text: "kb-100-l" });
+  await until("document.querySelectorAll('.ct-card').length === 1", "one result for a size's SKU");
+  check((await items("&q=kb-100-l")).length === 1, "a size's SKU finds its item");
+  await js("document.querySelector('.ct-search input').focus()");
+  await clearFocused();
+  await until(`document.querySelectorAll('.ct-card').length >= ${Math.min(chosen.length, 30)}`, "everything again");
+
+  // 5c. customer price groups in the Catalog settings: add, refuse a repeat, rename the default
+  const groups = async () => (await api("/api/price-groups")).groups;
+  const groupName = (g) => (LANG === "ar" ? g.name_ar : g.name);
+  await pressText(t.settings);
+  await until("!!document.querySelector('.ct-sheet')", "the settings sheet");
+  await until(`document.querySelector('.ct-sheet').innerText.includes(${JSON.stringify(t.pgDefault)})`, "the default group in the settings");
+  await scrollSheet("end"); await sleep(250);
+  await shot("15b-settings-groups");
+  await noSideScroll("the settings sheet");
+  await axe("settings-groups");
+  check((await sheetText()).toLowerCase().includes(t.pgTitle.toLowerCase()) && (await groups()).length === 1, "the settings list the default group, and only it");
+  await pressText(t.pgAdd);
+  await fill(t.pgNameEn, "Wholesale"); await fill(t.pgNameAr, "الجملة");
+  await shot("15c-group-form");
+  await noSideScroll("the group form");
+  await pressExact(t.pgSave, "button", 900);
+  await until(`document.querySelector('.ct-sheet').innerText.includes(${JSON.stringify(LANG === "ar" ? "الجملة" : "Wholesale")})`, "the new group in the list");
+  await until("!document.querySelector('.ct-toast')", "the message to go", 15000);
+  const afterAdd = await groups();
+  check(afterAdd.map((g) => g.name).join() === "Retail,Wholesale" && afterAdd[1].name_ar === "الجملة", "the group was added with both names");
+  await pressText(t.pgAdd);
+  await fill(t.pgNameEn, "wholesale"); await fill(t.pgNameAr, "x");
+  await pressExact(t.pgSave, "button", 700);
+  check((await sheetText()).includes(t.errors.price_group_name_taken), "a repeated group name is refused in words");
+  check((await groups()).length === 2, "and no second group was made");
+  await shot("15d-group-refused");
+  await pressText(t.cancel);
+  check(await js(`[...document.querySelectorAll('.ct-sheet li.ct-card-form button')].filter(b => ${norm}(b) === ${JSON.stringify(t.pgRemove)}).length === 1`), "only the added group can be removed, not the default");
+  await pressText(t.pgRename);
+  await fill(t.pgNameEn, "Walk-in"); await fill(t.pgNameAr, "الزبائن");
+  await pressExact(t.pgSave, "button", 900);
+  await until(`document.querySelector('.ct-sheet').innerText.includes(${JSON.stringify(LANG === "ar" ? "الزبائن" : "Walk-in")})`, "the renamed default group");
+  await until("!document.querySelector('.ct-toast')", "the message to go", 15000);
+  const renamed = (await groups()).find((g) => g.is_default);
+  check(renamed.name === "Walk-in" && renamed.name_ar === "الزبائن", "the default group was renamed");
+  await send("Input.dispatchKeyEvent", { type: "keyDown", key: "Escape", code: "Escape", windowsVirtualKeyCode: 27 });
+  await send("Input.dispatchKeyEvent", { type: "keyUp", key: "Escape", code: "Escape", windowsVirtualKeyCode: 27 });
+  await until("!document.querySelector('.ct-sheet')", "Escape closing the settings");
+
+  // 5d. a price for the group on the item and on one size, saved and shown again
+  await click(`[...document.querySelectorAll('.ct-card .ct-open')].find(b => b.textContent.includes(${JSON.stringify(LANG === "ar" ? target[1] : target[0])}))`, 600);
+  await until("!!document.querySelector('.ct-sheet')", "the edit sheet for the group prices");
+  await sleep(400);
+  await openFold(t.groupPricesTitle);
+  await fill(t.groupItemPrice, "9");
+  await fill(t.groupSizePrice(LANG === "ar" ? "كبير" : "Large"), "13");
+  await scrollSheet(await js("document.querySelector('.ct-sheet details.ct-fold[open] summary')?.getBoundingClientRect().top + document.querySelector('.ct-sheet-body').scrollTop - 80 || 0")); await sleep(250);
+  await shot("15e-group-prices");
+  await noSideScroll("the prices by group");
+  await axe("group-prices");
+  await pressText(t.save, "button", 800);
+  await until("!document.querySelector('.ct-sheet')", "the group prices saved", 15000);
+  const priced = (await items()).find((i) => i.name === target[0]);
+  const groupId = (await groups()).find((g) => !g.is_default).id;
+  check(priced.group_prices.length === 2
+    && priced.group_prices.some((p) => p.group_id === groupId && p.variant_id === null && p.price === 900)
+    && priced.group_prices.some((p) => p.variant_id === priced.variants.find((v) => v.name === "Large").id && p.price === 1300),
+  "the group's price for the item (QAR 9) and for the Large size (QAR 13) were saved");
+  check(priced.price === 1200 && priced.sale_price === 1050, "the normal price and the sale were not touched");
+  await click(`[...document.querySelectorAll('.ct-card .ct-open')].find(b => b.textContent.includes(${JSON.stringify(LANG === "ar" ? target[1] : target[0])}))`, 600);
+  await until("!!document.querySelector('.ct-sheet')", "the edit sheet again");
+  await sleep(400);
+  const shown = await js(`(() => { const out = {}; for (const [k, label] of [['item', ${JSON.stringify(t.groupItemPrice)}], ['large', ${JSON.stringify(t.groupSizePrice(LANG === "ar" ? "كبير" : "Large"))}]]) { const l = [...document.querySelectorAll('.ct-sheet label')].find(x => ${norm}(x) === label); out[k] = l ? document.getElementById(l.htmlFor).value : null; } return out; })()`);
+  check(shown.item === "9" && shown.large === "13", "reopened, the sheet shows the group's prices");
+  await openFold(t.historyTitle);
+  await until(`document.querySelector('.ct-sheet').innerText.includes(${JSON.stringify(t.historyGroups)})`, "the group prices in the history", 10000);
+  await send("Input.dispatchKeyEvent", { type: "keyDown", key: "Escape", code: "Escape", windowsVirtualKeyCode: 27 });
+  await send("Input.dispatchKeyEvent", { type: "keyUp", key: "Escape", code: "Escape", windowsVirtualKeyCode: 27 });
+  await until("!document.querySelector('.ct-sheet')", "Escape closing the sheet");
+
+  // 5e. a customer in the group, from the inbox; the customer's own order page; the order list
+  const customers = (await api("/api/ledger/summary")).customers.filter((c) => c.phone);
+  const [wholesale, retail] = [customers.find((c) => c.phone === "97455500001"), customers.find((c) => c.phone === "97455500002")];
+  for (const who of [wholesale, retail]) {
+    await fetch(`${API}/sim/messages`, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ from_number: who.phone, text: "hello" }) });
+  }
+  await go("/app/inbox", 1500);
+  await setLanguage(LANG);
+  await sleep(500);
+  await click(`[...document.querySelectorAll('.inbox-list button, .conv')].find(b => b.textContent.includes(${JSON.stringify(wholesale.name)}))`, 800);
+  await until("!!document.querySelector('.thread-head')", "the open conversation");
+  const pickerLabel = LANG === "ar" ? "مجموعة الأسعار" : "Price group";
+  await until(`[...document.querySelectorAll('.thread-head label.assign')].some(l => l.textContent.includes(${JSON.stringify(pickerLabel)}))`, "the price group picker in the conversation", 15000);
+  await shot("15f-inbox-picker");
+  await noSideScroll("the conversation header");
+  await axe("inbox-picker", [], ".thread-head");
+  const picked = await js(`(() => { const sel = [...document.querySelectorAll('.thread-head label.assign')].find(l => l.textContent.includes(${JSON.stringify(pickerLabel)})).querySelector('select'); const opt = [...sel.options].find(o => o.value === ${JSON.stringify(groupId)}); Object.getOwnPropertyDescriptor(HTMLSelectElement.prototype, 'value').set.call(sel, opt.value); sel.dispatchEvent(new Event('change', { bubbles: true })); return opt.textContent; })()`);
+  check(picked === (LANG === "ar" ? "الجملة" : "Wholesale"), "the picker offers the group by its name in this language");
+  await sleep(1200);
+  check((await api(`/api/inbox/conversations/${wholesale.id}`)).customer.price_group_id === groupId, "choosing the group in the conversation put the customer in it");
+  check((await api(`/api/inbox/conversations/${retail.id}`)).customer.price_group_id === null, "and the other customer stayed in the default group");
+  await shot("15g-inbox-picked");
+
+  // The customer's own order page shows the group's price; another customer's shows the normal one.
+  const priceOnPage = (name) => js(`(() => { const r = [...document.querySelectorAll('.cx-row')].find(x => x.querySelector('b')?.textContent === ${JSON.stringify(name)}); return r ? r.querySelector('.num').textContent : null; })()`);
+  // The customer's page speaks the customer's language (English for both here), whatever the workspace does.
+  const shownName = target[0];
+  await go(`/s/al-noor?c=${wholesale.id}`, 1500);
+  await until(`document.querySelectorAll('.cx-row').length > 0`, "the customer's order page");
+  check(await priceOnPage(shownName) === "QAR 9", "the wholesale customer's order page shows the group's price (QAR 9)");
+  await shot("15h-order-page-wholesale");
+  await go(`/s/al-noor?c=${retail.id}`, 1500);
+  await until(`document.querySelectorAll('.cx-row').length > 0`, "the other customer's order page");
+  check(await priceOnPage(shownName) === "QAR 10.50", "the other customer's order page shows the normal price (the sale, QAR 10.50)");
+  await noSideScroll("the order page");
+
+  // Each orders the Large size; the order list shows the group and the size's SKU.
+  const large = priced.variants.find((v) => v.name === "Large").id;
+  const place = async (who) => (await fetch(`${API}/api/store/al-noor/orders`, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ contact_id: who.id, payment: "link", items: [{ product_id: priced.id, quantity: 1, variant_id: large }] }) })).json();
+  const [theirs, ours] = [await place(wholesale), await place(retail)];
+  check(theirs.total === 1300 && theirs.price_group.name === "Wholesale" && ours.total === 1450 && ours.price_group.is_default, "each customer was charged their own price for the Large size (QAR 13 and QAR 14.50)");
+  await go("/app/orders", 1500);
+  await setLanguage(LANG);
+  await sleep(500);
+  const ordersText = await js("document.body.innerText");
+  check(ordersText.includes("KB-100-L") && ordersText.includes(LANG === "ar" ? "الجملة" : "Wholesale"), "the order list shows the size's SKU and the wholesale order's group");
+  await shot("15i-orders");
+  await noSideScroll("the order list");
+  await go("/app/catalog", 1500);
+  await setLanguage(LANG);
+  await sleep(500);
 
   // 6. stock: count Falafel, with a difference and a reason
   const falafel = MENU.find((m) => m[0] === "Falafel plate");

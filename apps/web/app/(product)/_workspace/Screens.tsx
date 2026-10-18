@@ -37,9 +37,12 @@ type BookingRow = {
 };
 type OrderRow = {
   id: string; number: number; status: string; payment: string; total_text: string;
-  customer: string; items: { name: string; quantity: number; line_text: string }[];
+  customer: string; items: { name: string; quantity: number; line_text: string; sku?: string }[];
   assigned: Person | null;
+  // The price group the order was charged under, as named then (null for orders before groups).
+  price_group?: { name: string; name_ar: string; is_default: boolean } | null;
 };
+type PriceGroupOption = { id: string; name: string; name_ar: string; is_default: boolean };
 type InboxRow = {
   id: string; name: string; phone: string | null; username: string | null;
   status: "open" | "closed"; assistant_paused: boolean; opted_out: boolean;
@@ -50,7 +53,8 @@ type InboxRow = {
 type InboxMessage = Message & { id: string; sent_by: string };
 type StaffNote = { id: string; body: string; author_name: string; created_at: string };
 type Thread = {
-  customer: Omit<InboxRow, "unread" | "last">; messages: InboxMessage[]; notes: StaffNote[];
+  customer: Omit<InboxRow, "unread" | "last"> & { price_group_id?: string | null };
+  messages: InboxMessage[]; notes: StaffNote[];
   activity: Activity[];
 };
 type SavedReply = { id: string; title: string; body: string };
@@ -84,6 +88,7 @@ const T = {
     addMember: "Add", remove: "Remove", name: "Name", email: "Email", role: "Role",
     teamAgent: "Only an owner or admin can change the team.",
     everyone: "Everyone", mine: "Mine", unassigned: "Unassigned", assignedTo: "Handled by", nobody: "Nobody",
+    priceGroup: "Price group",
     noteMode: "Note", noteHere: "Write a note only your team can see", addNote: "Add note",
     noteLabel: "Staff note, not sent to the customer", saveReply: "Save as quick reply", quick: "Quick replies",
     tabInbox: "Inbox", inboxSub: "Every customer conversation, answered by the assistant or by you",
@@ -129,6 +134,7 @@ const T = {
         case "completed": return `${who} marked booking${n}: came`;
         case "no_show": return `${who} marked booking${n}: no-show`;
         case "moved": return `${who} moved booking${n}`;
+        case "price_group": return `${who} changed the price group from ${a.detail.from} to ${a.detail.to}`;
         default: return `${who}: ${thing} ${a.action}`;
       }
     },
@@ -150,6 +156,7 @@ const T = {
     addMember: "إضافة", remove: "إزالة", name: "الاسم", email: "البريد الإلكتروني", role: "الدور",
     teamAgent: "تعديل الفريق متاح للمالك أو المدير فقط.",
     everyone: "الكل", mine: "محادثاتي", unassigned: "غير مسندة", assignedTo: "المسؤول", nobody: "لا أحد",
+    priceGroup: "مجموعة الأسعار",
     noteMode: "ملاحظة", noteHere: "اكتب ملاحظة يراها فريقك فقط", addNote: "إضافة ملاحظة",
     noteLabel: "ملاحظة داخلية، لا تُرسل للعميل", saveReply: "حفظ كرد سريع", quick: "ردود سريعة",
     tabInbox: "المحادثات", inboxSub: "كل محادثات العملاء، يرد عليها المساعد أو أنت",
@@ -195,6 +202,7 @@ const T = {
         case "completed": return `${who}: العميل حضر${n ? ` (الحجز${n})` : ""}`;
         case "no_show": return `${who}: العميل لم يحضر${n ? ` (الحجز${n})` : ""}`;
         case "moved": return `${who} غيّر موعد الحجز${n}`;
+        case "price_group": return `${who} غيّر مجموعة الأسعار من ${a.detail.from} إلى ${a.detail.to}`;
         default: return `${who}: ${thing} ${a.action}`;
       }
     },
@@ -310,6 +318,8 @@ export function Screens({ embedded = false, section, lang: langProp, intro, show
   const tab = section ?? tabState;
   const [me, setMe] = useState<Me | null>(null);
   const [members, setMembers] = useState<Member[]>([]);
+  // The shop's customer price groups (wholesale); empty where the Catalog is not switched on.
+  const [priceGroups, setPriceGroups] = useState<{ groups: PriceGroupOption[]; can_manage: boolean }>({ groups: [], can_manage: false });
   const [canManage, setCanManage] = useState(false);
   const [newMember, setNewMember] = useState({ name: "", email: "", role: "agent" });
   const [teamError, setTeamError] = useState("");
@@ -393,6 +403,7 @@ export function Screens({ embedded = false, section, lang: langProp, intro, show
       if (tab === "inbox" && chatId) {
         const loaded = await getJson<Thread>(`/api/inbox/conversations/${chatId}`);
         setThread(loaded);
+        setPriceGroups(await maybe("/api/price-groups", { groups: [], can_manage: false }));
         const closes = loaded.customer.window_closes_at;
         setHoursLeft(closes ? Math.floor((new Date(closes).getTime() - Date.now()) / 3_600_000) : 0);
         // Reading a conversation on screen is what marks it read.
@@ -472,6 +483,16 @@ export function Screens({ embedded = false, section, lang: langProp, intro, show
       method: "POST",
       headers: { "content-type": "application/json" },
       body: body ? JSON.stringify(body) : undefined,
+    });
+    refresh();
+  }
+
+  async function setCustomerGroup(groupId: string) {
+    if (!chatId) return;
+    await getJson(`/api/price-groups/customers/${chatId}`, {
+      method: "PUT",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ group_id: groupId }),
     });
     refresh();
   }
@@ -804,6 +825,20 @@ export function Screens({ embedded = false, section, lang: langProp, intro, show
                           {members.map((m) => <option key={m.id} value={m.id}>{m.name}</option>)}
                         </select>
                       </label>
+                      {priceGroups.groups.length > 1 && (
+                        <label className="assign">
+                          {t.priceGroup}
+                          <select
+                            value={openThread.customer.price_group_id ?? priceGroups.groups.find((g) => g.is_default)?.id ?? ""}
+                            disabled={!priceGroups.can_manage}
+                            onChange={(e) => setCustomerGroup(e.target.value)}
+                          >
+                            {priceGroups.groups.map((g) => (
+                              <option key={g.id} value={g.id}>{lang === "ar" ? g.name_ar || g.name : g.name}</option>
+                            ))}
+                          </select>
+                        </label>
+                      )}
                       {openThread.customer.assistant_paused && (
                         <button className="btn small" onClick={() => inboxPost("assistant", { paused: false })}>{t.handBack}</button>
                       )}
@@ -1020,8 +1055,15 @@ export function Screens({ embedded = false, section, lang: langProp, intro, show
                   <tbody>
                     {shownOrders.map((o) => (
                       <tr key={o.id} className="norow">
-                        <td><b className="num">#{o.number}</b><br />{o.customer}</td>
-                        <td>{o.items.map((i, k) => <div key={k}>{i.quantity} × {i.name}</div>)}</td>
+                        <td>
+                          <b className="num">#{o.number}</b><br />{o.customer}
+                          {o.price_group && !o.price_group.is_default && (
+                            <><br /><span className="pill none">{lang === "ar" ? o.price_group.name_ar || o.price_group.name : o.price_group.name}</span></>
+                          )}
+                        </td>
+                        <td>{o.items.map((i, k) => (
+                          <div key={k}>{i.quantity} × {i.name}{i.sku ? <> <small className="mono" dir="ltr">{i.sku}</small></> : null}</div>
+                        ))}</td>
                         <td className="r num" dir="ltr">{o.total_text}</td>
                         <td><span className={`pill ${o.payment === "unpaid" ? "p1" : "p0"}`}>{t.pay[o.payment]}</span></td>
                         <td>

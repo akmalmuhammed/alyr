@@ -1,4 +1,4 @@
-# Spec 003: The Catalog on WhatsApp (staff commands, photo to draft, item messages, back in stock, alerts)
+# Spec 004: The Catalog on WhatsApp (staff commands, photo to draft, item messages, back in stock, alerts)
 
 Status: built in ALY-106 (package 5 of the Catalog, ALY-101). Decision: D-039 ("As built (ALY-106)"). The plan with the 30 scenarios is the Eraser file named there; scenarios 13, 15, 16 and 17 are this package's. The engine it stands on is `specs/001-catalog-engine/spec.md`; the screens are `specs/002-catalog-screens/spec.md`.
 
