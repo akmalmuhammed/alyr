@@ -13,6 +13,8 @@ from math import ceil
 
 import asyncpg
 
+from alyr import catalog as shop_catalog
+from alyr.core import workspace
 from alyr.core.auth import Staff
 from alyr.core.words import DAYS, MESSAGES, NUMBERS, ORDERS, REMINDERS, STEPS
 from alyr.modules.agent import facts as facts_
@@ -67,6 +69,8 @@ async def build(
 ) -> dict:
     lang = "ar" if lang == "ar" else "en"
     f = await facts_.gather(conn, staff, now)
+    if "catalog" in f.modules:
+        f.stock = await workspace.counts(conn, f.modules, f.now)
     snoozed = {
         r["insight_key"]: r["fingerprint"]
         for r in await conn.fetch(
@@ -93,6 +97,7 @@ def render(f: Facts, lang: str, snoozed: dict | None = None) -> dict:
         "needs": _needs(f, state, lang),
         "kpis": [] if empty else _kpis(f, main, state, lang),
         "kpi_caption": None if empty or state == "first_week" else _caption(f, lang),
+        "catalog": _catalog(f, lang),
         "placeholders": _placeholders(f, lang) if empty else [],
         "suggestions": [] if empty else _suggestions(f, main, state, lang, snoozed or {}),
         "done": _done(f, lang),
@@ -507,6 +512,24 @@ def _kpis(f: Facts, main: str, state: str, lang: str) -> list[dict]:
         out.append({"key": key, "label": label, **value, "money": key in MONEY_KPIS,
                     "href": href, "change": change})
     return out
+
+
+def _catalog(f: Facts, lang: str) -> dict | None:
+    """The Catalog's cards, for a shop that has the module: how many items are sold out and
+    how many are low, each the number of rows in the Catalog list it opens (`href`, the
+    list's own filter). They are declared with the module (`catalog.py`), not here. With none
+    to show, the card is a number and no link: there is no list to open."""
+    if f.stock is None:
+        return None
+    module = shop_catalog.MODULE_BY_KEY["catalog"]
+    cards = []
+    for card in module.cards:
+        value = f.stock[card.count]
+        cards.append({
+            "key": card.key, "label": card.label.get(lang), "value": value, "text": f"{value:,}",
+            "href": card.href if value else None,
+        })
+    return {"title": T(lang, "Catalog", "الكتالوج"), "cards": cards}
 
 
 def _placeholders(f: Facts, lang: str) -> list[dict]:
