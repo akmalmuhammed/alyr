@@ -56,6 +56,11 @@ class Checked:
     variant: dict | None = None
     options: list[dict] = field(default_factory=list)
     unit_price: int = 0
+    # Whether the price is the customer's price group's own, and what the normal price (the
+    # default group's) is for the same line, for a page that shows the difference.
+    from_group: bool = False
+    normal_price: int = 0
+    group_id: UUID | None = None
     day: date | None = None
     fulfil_on: date | None = None
     take: Take | None = None
@@ -85,9 +90,10 @@ def _problem(
 
 async def check(
     conn: asyncpg.Connection, clock: ShopClock, lines: list[CartLine],
-    for_date: date | None = None,
+    for_date: date | None = None, group_id: UUID | None = None,
 ) -> list[Checked]:
-    """Look at every line of a cart. Nothing is changed."""
+    """Look at every line of a cart. Nothing is changed. `group_id` is the customer's price
+    group (None: the default group, which pays the normal price)."""
     wanted = list({line.item_id for line in lines})
     found = {
         e.item["id"]: e
@@ -95,16 +101,16 @@ async def check(
     }
     asked: dict[tuple[UUID, date | None], int] = {}
     return [
-        _check_line(n, line, found.get(line.item_id), clock, for_date, asked)
+        _check_line(n, line, found.get(line.item_id), clock, for_date, asked, group_id)
         for n, line in enumerate(lines)
     ]
 
 
 def _check_line(
     n: int, line: CartLine, entry: items.Loaded | None, clock: ShopClock,
-    for_date: date | None, asked: dict,
+    for_date: date | None, asked: dict, group_id: UUID | None = None,
 ) -> Checked:
-    c = Checked(n, line, entry=entry)
+    c = Checked(n, line, entry=entry, group_id=group_id)
     if entry is None:
         return _problem(c, "unavailable", None)
     item = entry.item
@@ -166,9 +172,12 @@ def _check_line(
         )
         c.day = day
 
-    c.unit_price = availability.variant_price(item, variant, clock.now) + sum(
-        o["price_delta"] for o in chosen
+    extras = sum(o["price_delta"] for o in chosen)
+    price, c.from_group = availability.group_variant_price(
+        item, variant, clock.now, entry.group_prices, group_id
     )
+    c.unit_price = price + extras
+    c.normal_price = availability.variant_price(item, variant, clock.now) + extras
     if line.expected_price is not None and line.expected_price != c.unit_price:
         return _problem(
             c, "price_changed", entry, variant, old=fmt_qar(line.expected_price),
@@ -236,7 +245,10 @@ async def alternatives(
             out.append({
                 "item_id": str(item["id"]), "variant_id": str(v["id"]),
                 "name": f"{item['name']} ({v['name']})" if v["name"] else item["name"],
-                "name_ar": item["name_ar"], "price": availability.variant_price(item, v, clock.now),
+                "name_ar": item["name_ar"],
+                "price": availability.group_variant_price(
+                    item, v, clock.now, c.entry.group_prices, c.group_id
+                )[0],
             })
     if len(out) < MAX_ALTERNATIVES:
         categories = categories if categories is not None else {}
@@ -256,7 +268,9 @@ async def alternatives(
                 out.append({
                     "item_id": str(other.item["id"]), "variant_id": None,
                     "name": other.item["name"], "name_ar": other.item["name_ar"],
-                    "price": availability.item_price(other.item, clock.now),
+                    "price": availability.group_item_price(
+                        other.item, clock.now, other.group_prices, c.group_id
+                    )[0],
                 })
     for entry in out:
         entry["price_text"] = fmt_qar(entry["price"])
@@ -288,7 +302,13 @@ async def report(
                 "line_total": c.unit_price * c.line.quantity,
                 "line_total_text": fmt_qar(c.unit_price * c.line.quantity),
                 "fulfil_on": c.fulfil_on.isoformat() if c.fulfil_on else None,
+                "price_source": "group" if c.from_group else "normal",
             }
+            if c.from_group:
+                line |= {
+                    "normal_unit_price": c.normal_price,
+                    "normal_unit_price_text": fmt_qar(c.normal_price),
+                }
         else:
             line |= {
                 "code": c.code, "message": message(c, clock, "en"),

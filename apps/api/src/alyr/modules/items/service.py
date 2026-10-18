@@ -28,9 +28,10 @@ STATUSES = ("draft", "live", "hidden", "archived")
 FIELDS = (
     "name", "name_ar", "description", "description_ar", "category", "price", "sale_price",
     "sale_starts_at", "sale_ends_at", "unit", "pack_size", "min_order", "tags", "stock_rule",
-    "available", "status", "sort",
+    "available", "status", "sort", "sku",
 )
 MAX_QUANTITY = 999
+MAX_SKU = 40
 
 
 class ItemError(Exception):
@@ -51,6 +52,8 @@ class Loaded:
     groups: list[dict] = field(default_factory=list)
     schedule: list[dict] = field(default_factory=list)
     deltas: dict = field(default_factory=dict)
+    # What each price group pays: {(group_id, variant_id or None): price}.
+    group_prices: dict = field(default_factory=dict)
 
     @property
     def windows(self):
@@ -121,6 +124,13 @@ async def load(
     }
     for entry in loaded.values():
         entry.deltas = deltas
+    for p in await conn.fetch(
+        "select p.item_id, p.group_id, p.variant_id, p.price from item_group_prices p "
+        "join price_groups g on g.id = p.group_id and g.archived_at is null "
+        "where p.item_id = any($1)",
+        ids,
+    ):
+        loaded[p["item_id"]].group_prices[(p["group_id"], p["variant_id"])] = p["price"]
     return [loaded[r["id"]] for r in rows]
 
 
@@ -139,7 +149,7 @@ def _money(value: int | None) -> str | None:
 
 def _variant_view(item: dict, v: dict, state: availability.State, deltas: dict) -> dict:
     return {
-        "id": str(v["id"]), "name": v["name"], "name_ar": v["name_ar"],
+        "id": str(v["id"]), "name": v["name"], "name_ar": v["name_ar"], "sku": v["sku"],
         "is_default": v["is_default"], "active": v["active"],
         "price_delta": v["price_delta"], "daily_limit": v["daily_limit"],
         "on_hand": v["on_hand"],
@@ -154,7 +164,7 @@ def view(entry: Loaded, clock: ShopClock) -> dict:
     state = entry.state(clock)
     sale_on = availability.sale_active(i, clock.now)
     return {
-        "id": str(i["id"]), "name": i["name"], "name_ar": i["name_ar"],
+        "id": str(i["id"]), "name": i["name"], "name_ar": i["name_ar"], "sku": i["sku"],
         "description": i["description"], "description_ar": i["description_ar"],
         "category": i["category"], "status": i["status"], "stock_rule": i["stock_rule"],
         "available": i["available"], "unit": i["unit"], "pack_size": i["pack_size"],
@@ -168,6 +178,14 @@ def view(entry: Loaded, clock: ShopClock) -> dict:
         "photo_id": str(i["photo_id"]) if i["photo_id"] else None,
         "has_orders": i["has_orders"], "updated_at": _iso(i["updated_at"]),
         "variants": [_variant_view(i, v, state, entry.deltas) for v in entry.variants],
+        # What each group pays instead of the normal price: [{group_id, variant_id, price}].
+        "group_prices": [
+            {"group_id": str(g), "variant_id": str(v) if v else None, "price": price,
+             "price_text": fmt_qar(price)}
+            for (g, v), price in sorted(
+                entry.group_prices.items(), key=lambda kv: (str(kv[0][0]), str(kv[0][1] or ""))
+            )
+        ],
         "option_groups": [
             {
                 "id": str(g["id"]), "name": g["name"], "name_ar": g["name_ar"],
@@ -244,6 +262,49 @@ def _check_fields(values: dict, variants: list[dict]) -> None:
         raise ItemError("variant_needed", "An item needs at least one choice that can be sold.")
 
 
+def clean_sku(value) -> str:
+    """A SKU as it is stored: one line, no spaces at the ends, up to 40 characters. Blank
+    means the item has none."""
+    sku = " ".join(str(value or "").split())
+    if len(sku) > MAX_SKU:
+        raise ItemError("bad_sku", f"A SKU can be up to {MAX_SKU} characters.")
+    return sku
+
+
+async def _check_skus(
+    conn: asyncpg.Connection, item_id: UUID | None, item_sku: str,
+    variants: list[tuple[str, str]],
+) -> None:
+    """A SKU is used once in a shop, across items and their sizes and colours. The two
+    tables each have a unique index (case does not matter); this is the check across them,
+    and it names what already uses the code. `variants` is (sku, name) for every size or
+    colour the item will have, including those switched off, which keep their code. It
+    runs under a lock per shop, so two saves at once cannot both take a code."""
+    codes = [(item_sku, "")] + variants
+    wanted = [(sku, name) for sku, name in codes if sku]
+    if not wanted:
+        return
+    lowered = [sku.lower() for sku, _ in wanted]
+    if len(set(lowered)) != len(lowered):
+        raise ItemError("sku_repeated", "The same SKU is on two choices of this item.")
+    await conn.execute(
+        "select pg_advisory_xact_lock(hashtext('sku:' || current_setting('app.tenant_id', true)))"
+    )
+    rows = await conn.fetch(
+        "select i.name, '' as variant, lower(i.sku) as sku from items i "
+        "where lower(i.sku) = any($1) and ($2::uuid is null or i.id <> $2) "
+        "union all select i.name, v.name, lower(v.sku) from item_variants v "
+        "join items i on i.id = v.item_id "
+        "where lower(v.sku) = any($1) and ($2::uuid is null or v.item_id <> $2)",
+        lowered, item_id,
+    )
+    if rows:
+        used = rows[0]
+        who = f"{used['name']} ({used['variant']})" if used["variant"] else used["name"]
+        shown = next(sku for sku, _ in wanted if sku.lower() == used["sku"])
+        raise ItemError("sku_taken", f"The SKU “{shown}” is already used by {who}.")
+
+
 async def _duplicates(
     conn: asyncpg.Connection, name: str, name_ar: str, skip: UUID | None = None
 ) -> list[dict]:
@@ -274,12 +335,13 @@ async def create_item(
         "name": "", "name_ar": "", "description": "", "description_ar": "", "category": "",
         "price": 0, "sale_price": None, "sale_starts_at": None, "sale_ends_at": None,
         "unit": "piece", "pack_size": None, "min_order": 1, "tags": [],
-        "stock_rule": "switch", "available": True, "status": "draft", "sort": 0,
+        "stock_rule": "switch", "available": True, "status": "draft", "sort": 0, "sku": "",
         **{k: data[k] for k in FIELDS if k in data},
     }
     values["name"] = values["name"].strip()
     values["name_ar"] = values["name_ar"].strip()
     values["tags"] = _clean_tags(values["tags"])
+    values["sku"] = clean_sku(values["sku"])
     planned = _plan_variants(data.get("variants"), data)
     _check_fields(values, planned)
     if values["status"] == "live" and require_arabic and not values["name_ar"]:
@@ -289,15 +351,27 @@ async def create_item(
     if any(opening) and values["stock_rule"] != "count":
         raise ItemError("bad_kind", "An opening count is for items counted in stock.")
     warnings = await _duplicates(conn, values["name"], values["name_ar"])
-    item_id = await conn.fetchval(
-        "insert into items (name, name_ar, description, description_ar, category, price, "
-        "sale_price, sale_starts_at, sale_ends_at, unit, pack_size, min_order, tags, "
-        "stock_rule, available, status, sort) "
-        "values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17) "
-        "returning id",
-        *(values[k] for k in FIELDS),
+    await _check_skus(
+        conn, None, values["sku"],
+        [(clean_sku(v.get("sku")), v.get("name", "")) for v in data.get("variants") or []],
     )
+    try:
+        item_id = await conn.fetchval(
+            "insert into items (name, name_ar, description, description_ar, category, price, "
+            "sale_price, sale_starts_at, sale_ends_at, unit, pack_size, min_order, tags, "
+            "stock_rule, available, status, sort, sku) "
+            "values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, "
+            "$17, $18) returning id",
+            *(values[k] for k in FIELDS),
+        )
+    except asyncpg.UniqueViolationError as error:  # the index under the check above
+        raise ItemError("sku_taken", f"The SKU “{values['sku']}” is already in use.") from error
     await _sync_variants(conn, item_id, data.get("variants"), data, actor, clock, creating=True)
+    if data.get("group_prices"):
+        # (imported here: groups.py builds on this module)
+        from alyr.modules.items import groups
+
+        await groups.save_prices(conn, item_id, data["group_prices"], actor, "First price")
     if data.get("option_groups"):
         await _sync_groups(conn, item_id, data["option_groups"])
     if data.get("schedule"):
@@ -341,6 +415,8 @@ async def update_item(
         values["name_ar"] = values["name_ar"].strip()
     if "tags" in changes:
         values["tags"] = _clean_tags(values["tags"])
+    if "sku" in changes:
+        values["sku"] = clean_sku(values["sku"])
     current_variants = await conn.fetch("select * from item_variants where item_id = $1", item_id)
     planned = (
         _plan_variants(changes["variants"], changes)
@@ -358,13 +434,22 @@ async def update_item(
     warnings = []
     if "name" in changes or "name_ar" in changes:
         warnings = await _duplicates(conn, values["name"], values["name_ar"], item_id)
+    if "sku" in changes or changes.get("variants"):
+        await _check_skus(
+            conn, item_id, values["sku"], _variant_codes(current_variants, changes.get("variants"))
+        )
     changed = [k for k in FIELDS if k in touched and values[k] != before[k]]
     if changed:
         sets = ", ".join(f"{k} = ${n}" for n, k in enumerate(changed, start=2))
-        await conn.execute(
-            f"update items set {sets}, updated_at = now() where id = $1",
-            item_id, *(values[k] for k in changed),
-        )
+        try:
+            await conn.execute(
+                f"update items set {sets}, updated_at = now() where id = $1",
+                item_id, *(values[k] for k in changed),
+            )
+        except asyncpg.UniqueViolationError as error:  # the index under the check above
+            raise ItemError(
+                "sku_taken", f"The SKU “{values['sku']}” is already in use."
+            ) from error
     if any(k in changed for k in ("price", "sale_price", "sale_starts_at", "sale_ends_at")):
         await _price_row(
             conn, item_id, values, actor, "First price" if before["price"] == 0 else reason
@@ -379,6 +464,11 @@ async def update_item(
     if "schedule" in changes and changes["schedule"] is not None:
         await _sync_schedule(conn, item_id, changes["schedule"])
         structure.append("schedule")
+    if changes.get("group_prices"):
+        # (imported here: groups.py builds on this module)
+        from alyr.modules.items import groups
+
+        await groups.save_prices(conn, item_id, changes["group_prices"], actor, reason)
     if changed or structure:
         await conn.execute("update items set updated_at = now() where id = $1", item_id)
         detail = {"fields": changed + structure}
@@ -425,6 +515,7 @@ async def remove(conn: asyncpg.Connection, item_id: UUID, actor: Actor) -> str |
         # that has either (beyond the first price) is archived like one that was ordered.
         "(exists (select 1 from stock_movements m join item_variants v on v.id = m.variant_id "
         "         where v.item_id = items.id) "
+        " or exists (select 1 from item_group_price_history g where g.item_id = items.id)"
         " or (select count(*) from item_price_history h where h.item_id = items.id) > 1) "
         "as has_history from items where id = $1 for update",
         item_id,
@@ -499,6 +590,29 @@ def _plan_variants(inputs: list[dict] | None, data: dict) -> list[dict]:
     ]
 
 
+def _variant_codes(existing, inputs: list[dict] | None) -> list[tuple[str, str]]:
+    """(SKU, name) of every size or colour an item will have after a save of `inputs`. A
+    form that leaves the code out keeps the one it has, and a size left out of the form is
+    only switched off, so it keeps its code too."""
+    kept = {v["id"]: (v["sku"], v["name"]) for v in existing}
+    if not inputs:
+        return list(kept.values())
+    adopt = len(existing) == 1 and existing[0]["is_default"] and not any(
+        v.get("id") for v in inputs
+    )
+    out, listed = [], set()
+    for n, v in enumerate(inputs):
+        variant_id = UUID(str(v["id"])) if v.get("id") else (
+            existing[0]["id"] if adopt and n == 0 else None
+        )
+        old = kept.get(variant_id)
+        out.append((clean_sku(v["sku"]) if "sku" in v else (old[0] if old else ""),
+                    v.get("name", "")))
+        if variant_id is not None:
+            listed.add(variant_id)
+    return out + [code for variant_id, code in kept.items() if variant_id not in listed]
+
+
 async def _sync_variants(
     conn: asyncpg.Connection, item_id: UUID, inputs: list[dict] | None, data: dict,
     actor: Actor, clock: ShopClock, creating: bool = False,
@@ -527,9 +641,14 @@ async def _sync_variants(
     kept = set()
     for sort, v in enumerate(inputs):
         name = v.get("name", "").strip()
+        # A form that does not send the code leaves the one the size already has.
+        old = by_id.get(UUID(str(v["id"]))) if v.get("id") else (
+            existing[0] if adopt and sort == 0 else None
+        )
+        sku = clean_sku(v["sku"]) if "sku" in v else (old["sku"] if old else "")
         fields = (
             name, v.get("name_ar", "").strip(), v.get("price_delta", 0),
-            v.get("daily_limit"), v.get("active", True), sort,
+            v.get("daily_limit"), v.get("active", True), sort, sku,
         )
         try:
             if v.get("id"):
@@ -538,16 +657,16 @@ async def _sync_variants(
                 variant_id = UUID(str(v["id"]))
                 await conn.execute(
                     "update item_variants set name = $2, name_ar = $3, price_delta = $4, "
-                    "daily_limit = $5, active = $6, sort = $7, is_default = ($2 = '' "
-                    "and $8) where id = $1",
+                    "daily_limit = $5, active = $6, sort = $7, sku = $8, is_default = ($2 = '' "
+                    "and $9) where id = $1",
                     variant_id, *fields, len(inputs) == 1,
                 )
             elif adopt and sort == 0:
                 variant_id = existing[0]["id"]
                 await conn.execute(
                     "update item_variants set name = $2, name_ar = $3, price_delta = $4, "
-                    "daily_limit = $5, active = $6, sort = $7, is_default = ($2 = '' "
-                    "and $8) where id = $1",
+                    "daily_limit = $5, active = $6, sort = $7, sku = $8, is_default = ($2 = '' "
+                    "and $9) where id = $1",
                     variant_id, *fields, len(inputs) == 1,
                 )
                 if v.get("opening_stock"):
@@ -555,13 +674,15 @@ async def _sync_variants(
             else:
                 variant_id = await conn.fetchval(
                     "insert into item_variants (item_id, name, name_ar, price_delta, "
-                    "daily_limit, active, sort) values ($1, $2, $3, $4, $5, $6, $7) "
+                    "daily_limit, active, sort, sku) values ($1, $2, $3, $4, $5, $6, $7, $8) "
                     "returning id",
                     item_id, *fields,
                 )
                 if v.get("opening_stock"):
                     await _opening(conn, variant_id, v["opening_stock"], actor)
         except asyncpg.UniqueViolationError as error:
+            if "sku" in (error.constraint_name or ""):
+                raise ItemError("sku_taken", f"The SKU “{sku}” is already in use.") from error
             raise ItemError("duplicate_variant", "Two choices have the same name.") from error
         kept.add(variant_id)
     gone = [vid for vid in by_id if vid not in kept]

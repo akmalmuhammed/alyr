@@ -54,9 +54,9 @@ def kinds_of(view: dict, low_at: int) -> set[str]:
 
 
 def _haystack(view: dict) -> list[str]:
-    parts = [view["name"], view["name_ar"], view["category"], " ".join(view["tags"])]
+    parts = [view["name"], view["name_ar"], view["sku"], view["category"], " ".join(view["tags"])]
     for variant in view["variants"]:
-        parts += [variant["name"], variant["name_ar"]]
+        parts += [variant["name"], variant["name_ar"], variant["sku"]]
     return parts
 
 

@@ -18,6 +18,7 @@ from alyr.core.normalise import fmt_qar
 from alyr.core.outbound import Outbound
 from alyr.core.team import Actor
 from alyr.modules.items import availability, cart, clock, stock, text
+from alyr.modules.items import groups as price_groups
 from alyr.modules.items import holds as stock_holds
 from alyr.modules.items.cart import CartLine
 from alyr.modules.items.clock import ShopClock
@@ -55,33 +56,52 @@ class OrderError(Exception):
         self.lines = lines
 
 
-def _row(entry, state: availability.State, shop_clock: ShopClock) -> dict:
+def _row(
+    entry, state: availability.State, shop_clock: ShopClock, group_id: UUID | None = None
+) -> dict:
     """An item as the order page lists it. `id`, `name`, `name_ar`, `category`, `price` and
-    `price_text` are what the first order page read; the rest is for the page that follows."""
+    `price_text` are what the first order page read; the rest is for the page that follows.
+    `group_id` is the customer's price group (None: the default group, the normal price):
+    `price` is what that customer pays, `price_source` says whether the group set it, and
+    for a group price `normal_price` is what the default group pays."""
     i = entry.item
     now = shop_clock.now
-    price = availability.item_price(i, now)
+    price, from_group = availability.group_item_price(i, now, entry.group_prices, group_id)
+    normal = availability.item_price(i, now)
     row = {
-        "id": str(i["id"]), "name": i["name"], "name_ar": i["name_ar"],
+        "id": str(i["id"]), "name": i["name"], "name_ar": i["name_ar"], "sku": i["sku"],
         "category": i["category"], "price": price, "price_text": fmt_qar(price),
+        "price_source": "group" if from_group else "normal",
         "available": i["available"], "status": i["status"], "stock_rule": i["stock_rule"],
         "description": i["description"], "description_ar": i["description_ar"],
         "unit": i["unit"], "pack_size": i["pack_size"], "min_order": i["min_order"],
         "tags": list(i["tags"]),
-        "list_price": i["price"] if availability.sale_active(i, now) else None,
+        # The price to show crossed out: the usual price while a sale is on, or the normal
+        # price when the customer's group pays less.
+        "list_price": (normal if normal > price else None) if from_group else (
+            i["price"] if availability.sale_active(i, now) else None
+        ),
         "left": state.left, "orderable": state.orderable, "reason": state.reason,
     }
+    if from_group:
+        row["normal_price"], row["normal_price_text"] = normal, fmt_qar(normal)
     named = [v for v in entry.active_variants if not v["is_default"]]
     if named:
-        row["variants"] = [
-            {
-                "id": str(v["id"]), "name": v["name"], "name_ar": v["name_ar"],
-                "price": availability.variant_price(i, v, now),
-                "price_text": fmt_qar(availability.variant_price(i, v, now)),
+        row["variants"] = []
+        for v in named:
+            v_price, v_group = availability.group_variant_price(
+                i, v, now, entry.group_prices, group_id
+            )
+            shown = {
+                "id": str(v["id"]), "name": v["name"], "name_ar": v["name_ar"], "sku": v["sku"],
+                "price": v_price, "price_text": fmt_qar(v_price),
+                "price_source": "group" if v_group else "normal",
                 "left": availability.variant_left(i, v, entry.deltas, state.day),
             }
-            for v in named
-        ]
+            if v_group:
+                normal_v = availability.variant_price(i, v, now)
+                shown["normal_price"], shown["normal_price_text"] = normal_v, fmt_qar(normal_v)
+            row["variants"].append(shown)
     if entry.groups:
         row["option_groups"] = [
             {
@@ -122,20 +142,26 @@ async def list_products(conn: asyncpg.Connection, only_available: bool = False) 
     return rows
 
 
-async def storefront(conn: asyncpg.Connection) -> dict:
+async def storefront(conn: asyncpg.Connection, contact_id: UUID | None = None) -> dict:
     """What the order page shows: items that can be ordered now, and the live items that
     cannot, with why and when they can (sold out, outside their hours, cut-off passed), so
     the page can show them greyed or leave them out. An item staff switched off is not on
-    the menu at all."""
+    the menu at all. Prices are the customer's own: their price group's where it set one,
+    else the normal price; `group` says which group that is. Without a customer the page
+    shows the default group's prices."""
     shop_clock = await clock.load(conn)
+    group = await price_groups.group_of(conn, contact_id)
+    group_id = price_groups.pricing_id(group)
     entries = await load_items(conn, shop_clock, "i.status = 'live'")
     orderable, unavailable = [], []
     for entry in entries:
         state = entry.state(shop_clock)
         if state.reason == "off":
             continue
-        (orderable if state.orderable else unavailable).append(_row(entry, state, shop_clock))
-    return {"products": orderable, "unavailable": unavailable}
+        (orderable if state.orderable else unavailable).append(
+            _row(entry, state, shop_clock, group_id)
+        )
+    return {"products": orderable, "unavailable": unavailable, "group": price_groups.public(group)}
 
 
 async def can_use_account(conn: asyncpg.Connection, contact_id: UUID) -> bool:
@@ -173,17 +199,19 @@ async def _refusal(
 
 async def check_cart(
     conn: asyncpg.Connection, lines: list[CartLine], for_date: date | None = None,
-    now: datetime | None = None,
+    now: datetime | None = None, contact_id: UUID | None = None,
 ) -> dict:
     """Look at a cart without placing it: each line's verdict and the total of those that
-    can be ordered. The order page asks this before it asks for payment."""
+    can be ordered. The order page asks this before it asks for payment. With a customer,
+    the prices are their price group's; `group` in the answer says which group that is."""
     shop_clock = await clock.load(conn, now)
-    checked = await cart.check(conn, shop_clock, lines, for_date)
+    group = await price_groups.group_of(conn, contact_id)
+    checked = await cart.check(conn, shop_clock, lines, for_date, price_groups.pricing_id(group))
     total = sum(c.unit_price * c.line.quantity for c in checked if c.ok)
     return {
         "ok": all(c.ok for c in checked),
         "lines": await cart.report(conn, shop_clock, checked),
-        "total": total, "total_text": fmt_qar(total),
+        "total": total, "total_text": fmt_qar(total), "group": price_groups.public(group),
     }
 
 
@@ -204,7 +232,8 @@ async def create_order(
     order is refused and the new price shown. `for_date` is the day a made-to-order item
     is wanted. `left_out` names items a repeat order had to leave behind."""
     contact = await conn.fetchrow(
-        "select id, lang, credit_limit, assigned_to from contacts where id = $1", contact_id
+        "select id, lang, credit_limit, assigned_to, price_group_id from contacts "
+        "where id = $1", contact_id
     )
     if contact is None:
         raise OrderError("unknown_customer", "We could not find this customer.")
@@ -218,7 +247,11 @@ async def create_order(
             raise OrderError("bad_quantity", "Quantity must be between 1 and 999.")
 
     shop_clock = await clock.load(conn, now)
-    checked = await cart.check(conn, shop_clock, lines, for_date)
+    # The customer's price group decides every price on the order. The order keeps its
+    # name, below, so renaming or removing the group never rewrites it.
+    group = await price_groups.effective(conn, contact["price_group_id"])
+    group_id = price_groups.pricing_id(group)
+    checked = await cart.check(conn, shop_clock, lines, for_date, group_id)
     if not all(c.ok for c in checked):
         raise await _refusal(conn, shop_clock, checked)
     total = sum(c.unit_price * c.line.quantity for c in checked)
@@ -257,7 +290,9 @@ async def create_order(
                 text.say("too_many_holds", "ar", details),
             )
     if takes and await stock.reserve(conn, takes, order_id, team.CUSTOMER):
-        raise await _refusal(conn, shop_clock, await cart.check(conn, shop_clock, lines, for_date))
+        raise await _refusal(
+            conn, shop_clock, await cart.check(conn, shop_clock, lines, for_date, group_id)
+        )
 
     # One order number at a time per shop, so numbers never repeat.
     await conn.execute("select pg_advisory_xact_lock(hashtext($1))", f"orders:{tenant_id}")
@@ -265,10 +300,12 @@ async def create_order(
     dates = [c.fulfil_on for c in checked if c.fulfil_on]
     # Whoever is looking after this customer's chat looks after the order too.
     await conn.execute(
-        "insert into orders (id, contact_id, number, total, payment, assigned_to, fulfil_on) "
-        "values ($1, $2, $3, $4, $5, $6, $7)",
+        "insert into orders (id, contact_id, number, total, payment, assigned_to, fulfil_on, "
+        "price_group_id, price_group_name, price_group_name_ar) "
+        "values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)",
         order_id, contact_id, number, total, "on_account" if payment == "account" else "unpaid",
         contact["assigned_to"], max(dates) if dates else None,
+        group["id"], group["name"], group["name_ar"],
     )
     await team.record(
         conn, "order", order_id, "placed", team.CUSTOMER, contact_id,
@@ -283,10 +320,12 @@ async def create_order(
         item, variant = c.entry.item, c.variant
         order_item_id = await conn.fetchval(
             "insert into order_items (order_id, item_id, name, name_ar, price, quantity, "
-            "variant_id, variant_name, variant_name_ar, options, fulfil_on) "
-            "values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11) returning id",
+            "variant_id, variant_name, variant_name_ar, options, fulfil_on, sku) "
+            "values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12) returning id",
             order_id, item["id"], item["name"], item["name_ar"], c.unit_price, c.line.quantity,
             variant["id"], variant["name"], variant["name_ar"], c.options, c.fulfil_on,
+            # The size's own code, else the item's: what the shop reads on its order.
+            variant["sku"] or item["sku"],
         )
         if c.take is not None:
             await stock_holds.create(
@@ -351,6 +390,8 @@ async def create_order(
         "track_url": track_url(web_url, tenant_id, order_id),
         "fulfil_on": max(dates).isoformat() if dates else None,
         "hold_expires_at": held_until.isoformat() if held_until else None,
+        # The group whose prices the order was charged.
+        "price_group": price_groups.public(group),
     }
 
 
@@ -384,7 +425,8 @@ async def repeat_last_order(
         for r in rows
     ]
     shop_clock = await clock.load(conn, now)
-    checked = await cart.check(conn, shop_clock, lines)
+    group = await price_groups.group_of(conn, contact_id)
+    checked = await cart.check(conn, shop_clock, lines, None, price_groups.pricing_id(group))
     ordered = [c for c in checked if c.ok]
     left_out = [
         {
@@ -564,19 +606,23 @@ async def set_status(
 async def list_orders(conn: asyncpg.Connection) -> list[dict]:
     orders = await conn.fetch(
         "select o.id, o.number, o.status, o.payment, o.total, o.created_at, o.fulfil_on, "
-        "       c.name as customer, o.assigned_to, u.name as assignee "
+        "       c.name as customer, o.assigned_to, u.name as assignee, "
+        "       o.price_group_name, o.price_group_name_ar, coalesce(g.is_default, false) "
+        "         as price_group_default "
         "from orders o join contacts c on c.id = o.contact_id "
+        "left join price_groups g on g.id = o.price_group_id "
         "left join users u on u.id = o.assigned_to order by o.number desc"
     )
     items = await conn.fetch(
-        "select order_id, name, price, quantity, variant_name, options from order_items"
+        "select order_id, name, price, quantity, variant_name, options, sku from order_items"
     )
     by_order: dict[UUID, list[dict]] = {}
     for item in items:
         by_order.setdefault(item["order_id"], []).append(
             {"name": item["name"], "quantity": item["quantity"],
-             "variant": item["variant_name"],
+             "variant": item["variant_name"], "sku": item["sku"],
              "options": [o["name"] for o in item["options"]],
+             "price": item["price"], "price_text": fmt_qar(item["price"]),
              "line_text": fmt_qar(item["price"] * item["quantity"])}
         )
     return [
@@ -586,6 +632,12 @@ async def list_orders(conn: asyncpg.Connection) -> list[dict]:
             "customer": o["customer"], "created_at": o["created_at"].isoformat(),
             "fulfil_on": o["fulfil_on"].isoformat() if o["fulfil_on"] else None,
             "items": by_order.get(o["id"], []),
+            # The group whose prices the order was charged, as it was named then. Orders
+            # from before price groups have none.
+            "price_group": {
+                "name": o["price_group_name"], "name_ar": o["price_group_name_ar"],
+                "is_default": o["price_group_default"],
+            } if o["price_group_name"] else None,
             "assigned": {"id": str(o["assigned_to"]), "name": o["assignee"]}
             if o["assigned_to"] else None,
         }
