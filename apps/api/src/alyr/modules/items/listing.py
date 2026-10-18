@@ -26,12 +26,21 @@ def is_sold_out(view: dict) -> bool:
     return view["status"] == "live" and view["availability"]["reason"] in ("off", "sold_out")
 
 
+def low_at_for(view: dict, shop_low: int) -> int:
+    """The number at which this item counts as low: its own, if the owner set one, else the
+    shop's."""
+    own = view.get("low_stock_at")
+    return shop_low if own is None else own
+
+
 def is_low(view: dict, low_at: int) -> bool:
     """Counted in stock, and at least one size is at or below the low-stock number but not
-    gone (an item with nothing left is sold out, not low)."""
+    gone (an item with nothing left is sold out, not low). `low_at` is the shop's number;
+    an item's own number, when it has one, wins."""
     if view["status"] not in ("live", "hidden") or view["stock_rule"] != "count":
         return False
-    return any(0 < v["on_hand"] <= low_at for v in view["variants"] if v["active"])
+    limit = low_at_for(view, low_at)
+    return any(0 < v["on_hand"] <= limit for v in view["variants"] if v["active"])
 
 
 def is_stocked(view: dict) -> bool:

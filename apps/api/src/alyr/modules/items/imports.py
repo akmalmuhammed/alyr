@@ -269,7 +269,7 @@ async def discard(conn: asyncpg.Connection, import_id: UUID) -> None:
 _ITEM_FIELDS = (
     "name", "name_ar", "sku", "description", "description_ar", "category", "price", "sale_price",
     "sale_starts_at", "sale_ends_at", "unit", "pack_size", "min_order", "tags", "stock_rule",
-    "available", "status",
+    "available", "status", "low_stock_at",
 )
 _VARIANT_FIELDS = ("name", "name_ar", "sku", "price_delta", "daily_limit", "active")
 

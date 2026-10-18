@@ -50,8 +50,8 @@ LIMITS = {
 # Keys an item carries once, whichever of its rows holds them.
 ITEM_KEYS = (
     "name", "name_ar", "sku", "category", "price", "sale_price", "sale_starts", "sale_ends", "unit",
-    "pack_size", "min_order", "tags", "status", "rule", "available", "description",
-    "description_ar",
+    "pack_size", "min_order", "low_stock", "tags", "status", "rule", "available",
+    "description", "description_ar",
 )
 FORMULA_TEXT = ("name", "name_ar", "sku", "variant_sku", "category", "variant", "variant_ar",
                 "description",
@@ -323,7 +323,7 @@ def _parse_cell(column: columns.Column, cell: object) -> object:
     if kind == "whole":
         low, high = {
             "pack_size": (1, 100_000), "min_order": (1, 999), "stock": (0, 1_000_000),
-            "per_day": (0, 1_000_000),
+            "low_stock": (0, 100_000), "per_day": (0, 1_000_000),
         }[key]
         return values.parse_int(cell, low, high)
     if kind == "yesno":
@@ -763,6 +763,11 @@ def _create(
             plan.notes.append((v.row, issue("per_day_ignored")))
             v.per_day = None
 
+    low_stock = merged.get("low_stock")
+    if low_stock is not None and rule not in columns.COUNTED:
+        plan.notes.append((row, issue("low_stock_ignored")))
+        low_stock = None
+
     draft = False
     if status in ("live", "hidden") and not price:
         plan.notes.append((row, issue("price_missing")))
@@ -770,9 +775,8 @@ def _create(
     if status == "live" and not name_ar:
         plan.notes.append((row, issue("arabic_missing")))
         draft = True
-    if rule == "daily_limit" and any(v.per_day is None for v in variants) and status != "draft":
+    if rule == "daily_limit" and any(v.per_day is None for v in variants):
         plan.notes.append((row, issue("per_day_needed")))
-        draft = True
     if draft:
         status = "draft"
     plan.draft = status == "draft" and merged.get("status") != "draft"
@@ -788,6 +792,7 @@ def _create(
         "unit": merged.get("unit") or "piece", "pack_size": merged.get("pack_size"),
         "min_order": merged.get("min_order") or 1, "tags": merged.get("tags") or [],
         "stock_rule": rule, "available": merged.get("available", True), "status": status,
+        "low_stock_at": low_stock,
     }
     if data["sale_starts_at"] and data["sale_ends_at"] and data["sale_ends_at"] <= data[
         "sale_starts_at"
@@ -916,6 +921,11 @@ def _update(
     if rule != item["stock_rule"]:
         changes["stock_rule"] = rule
         _diff(plan, "rule", item["stock_rule"], rule)
+    if merged.get("low_stock") is not None:
+        if rule in columns.COUNTED:
+            set_("low_stock", "low_stock_at", merged["low_stock"])
+        else:
+            plan.notes.append((row, issue("low_stock_ignored")))
 
     # Status: going on sale needs a price and an Arabic name
     status = merged.get("status")
@@ -937,6 +947,8 @@ def _update(
     by_name = {_squash(v["name"] or v["name_ar"]): v for v in active if v["name"] or v["name_ar"]}
     ops: list[VariantOp] = []
     moves = 0
+    limits: dict[UUID, int | None] = {v["id"]: v["daily_limit"] for v in active}
+    unnumbered_new = False
     low = min(new_price, sale_after if sale_after is not None else new_price)
     for v in variants:
         has_data = any(x is not None for x in (v.stock, v.per_day, v.price_diff, v.sku))
@@ -960,12 +972,15 @@ def _update(
         label = v.name or (existing["name"] if existing else "")
         if existing is None:
             ops.append(v)
+            unnumbered_new = unnumbered_new or v.per_day is None
             _diff(plan, "variant", "", v.name, label)
             if v.stock:
                 moves += 1
                 _diff(plan, "stock", "", v.stock, v.name)
             continue
         touched = False
+        if v.per_day is not None:
+            limits[existing["id"]] = v.per_day
         if v.price_diff is not None and v.price_diff != existing["price_delta"]:
             _diff(plan, "price_diff", existing["price_delta"], v.price_diff, label)
             touched = True
@@ -985,6 +1000,9 @@ def _update(
             _diff(plan, "stock", existing["on_hand"], v.stock, label)
             moves += 1
             ops.append(VariantOp(v.row, existing["name"], "", None, v.stock, None))
+    # A number each day needs a number for every size (the engine refuses a size without).
+    if rule == "daily_limit" and (unnumbered_new or any(n is None for n in limits.values())):
+        plan.notes.append((row, issue("per_day_needed")))
     plan.variants = ops
     plan.stock_moves = moves
     plan.data = changes

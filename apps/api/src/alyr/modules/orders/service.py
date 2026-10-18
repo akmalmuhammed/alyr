@@ -17,7 +17,7 @@ from alyr.core import jobs, team, templates
 from alyr.core.normalise import fmt_qar
 from alyr.core.outbound import Outbound
 from alyr.core.team import Actor
-from alyr.modules.items import availability, cart, clock, stock, text
+from alyr.modules.items import alerts, availability, cart, clock, stock, text
 from alyr.modules.items import groups as price_groups
 from alyr.modules.items import holds as stock_holds
 from alyr.modules.items.cart import CartLine
@@ -529,6 +529,9 @@ async def cancel_order(
             conn, "order", order_id, "refund_due", actor, row["contact_id"],
             {"number": row["number"], "amount": fmt_qar(row["total"])},
         )
+        # Nobody else would know: the money is in the shop's own payment account, and
+        # only the shop can send it back. Tell the owner and managers (ALY-106).
+        await alerts.refund_due(conn, outbound, row["number"], fmt_qar(row["total"]))
     lang = await conn.fetchval("select lang from contacts where id = $1", row["contact_id"])
     if held_minutes is not None:
         body = text.say("hold_expired", lang, {"number": row["number"], "minutes": held_minutes})

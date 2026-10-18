@@ -46,7 +46,7 @@ class Outbound:
         """Queue a message to a contact, or record why it may not be sent.
         `conn` must be tenant-scoped."""
         contact = await conn.fetchrow(
-            "select consent_service, consent_marketing, "
+            "select consent_service, consent_marketing, consent_back_in_stock, "
             "coalesce(last_inbound_at > now() - interval '24 hours', false) as window_open "
             "from contacts where id = $1",
             message.to,
@@ -57,7 +57,13 @@ class Outbound:
         kind, body, image = message.kind, message.body, message.image
         payload: dict = {}
         if message.choices:
-            payload["choices"] = [{"id": c.id, "title": c.title} for c in message.choices]
+            payload["choices"] = [
+                {"id": c.id, "title": c.title} | ({"description": c.description}
+                                                  if c.description else {})
+                for c in message.choices
+            ]
+            if message.kind == "list" and message.lang == "ar":
+                payload["lang"] = "ar"  # the list's own button and heading are words too
         if message.kind == "template":
             payload["template"] = message.template_name
             payload["category"] = message.template_category
@@ -91,8 +97,8 @@ class Outbound:
             # Kept beside the message; the delivering job uploads it to the channel.
             await conn.execute(
                 "insert into message_media (message_id, content_type, data) "
-                "values ($1, 'image/png', $2)",
-                message_id, image,
+                "values ($1, $2, $3)",
+                message_id, message.image_type, image,
             )
         if not blocked:
             await jobs.enqueue(conn, SEND, {"message_id": str(message_id)})
@@ -134,7 +140,10 @@ class Outbound:
         stored = row["payload"]
         message = OutboundMessage(
             to=row["contact_id"], kind=row["kind"], body=row["body"],
-            choices=tuple(Choice(c["id"], c["title"]) for c in stored.get("choices", [])),
+            choices=tuple(
+                Choice(c["id"], c["title"], c.get("description", ""))
+                for c in stored.get("choices", [])
+            ),
             template_name=stored.get("template", ""),
             template_category=stored.get("category"),
             template_params=tuple(stored.get("params", [])),

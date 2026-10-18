@@ -176,6 +176,16 @@ COLUMNS: tuple[Column, ...] = (
              "كم لديك الآن. يُسجَّل في سجل المخزون بسبب «استيراد»."),
     ),
     Column(
+        "low_stock", "Low-stock number", "رقم المخزون القليل", "whole",
+        ("low stock", "low stock at", "low stock level", "reorder level", "reorder point",
+         "minimum stock", "min stock", "alert at", "المخزون القليل", "حد المخزون القليل",
+         "حد إعادة الطلب"), 13,
+        Text("For items counted in stock: the number at or below which ALYR tells you it is "
+             "running low (0 to 100,000). Empty keeps the shop's number from Catalog settings.",
+             "للأصناف المحسوبة في المخزون: الرقم الذي تنبهك ALYR عنده أو دونه بأن المخزون قليل "
+             "(من 0 إلى 100,000). الفارغ يبقي رقم المتجر من إعدادات الكتالوج."),
+    ),
+    Column(
         "per_day", "Per day", "العدد اليومي", "whole",
         ("daily limit", "per day", "daily", "daily quantity", "الحد اليومي", "كل يوم", "في اليوم"),
         11,
@@ -208,7 +218,9 @@ BY_KEY = {c.key: c for c in COLUMNS}
 ORDER = tuple(c.key for c in COLUMNS)
 # Which kinds of column are numbers in the file (a spreadsheet gets a number cell).
 MONEY = ("price", "sale_price", "price_diff")
-WHOLE = ("pack_size", "min_order", "stock", "per_day")
+WHOLE = ("pack_size", "min_order", "stock", "low_stock", "per_day")
+# The stock rules that count; the low-stock number means something only for these.
+COUNTED = ("count", "daily_limit")
 
 
 def header_index() -> dict[str, str]:
@@ -344,10 +356,11 @@ KINDS: tuple[Kind, ...] = (
     Kind(
         "grocery", Text("Grocery and baqala", "بقالة"),
         ("name", "name_ar", "sku", "category", "price", "unit", "pack_size", "min_order", "stock",
-         "tags", "photo"),
+         "low_stock", "tags", "photo"),
         (
             {"name": "Basmati rice 5 kg", "name_ar": "أرز بسمتي 5 كجم", "sku": "RICE-5KG",
-             "category": "Rice", "price": _d("38"), "unit": "pack", "stock": 24},
+             "category": "Rice", "price": _d("38"), "unit": "pack", "stock": 24,
+             "low_stock": 6},
             {"name": "Fresh tomatoes", "name_ar": "طماطم طازجة", "sku": "TOM-KG",
              "category": "Vegetables", "price": _d("4.50"), "unit": "kg", "min_order": 1,
              "stock": 60},
@@ -379,11 +392,12 @@ KINDS: tuple[Kind, ...] = (
     Kind(
         "shop", Text("Shop and retail", "متجر"),
         ("name", "name_ar", "sku", "category", "price", "sale_price", "variant", "variant_ar",
-         "variant_sku", "price_diff", "stock", "description", "description_ar", "tags", "photo"),
+         "variant_sku", "price_diff", "stock", "low_stock", "description", "description_ar",
+         "tags", "photo"),
         (
             {"name": "Phone case", "name_ar": "غطاء هاتف", "sku": "CASE",
              "category": "Accessories", "price": _d("30"), "variant": "Black",
-             "variant_ar": "أسود", "variant_sku": "CASE-BLK", "stock": 20},
+             "variant_ar": "أسود", "variant_sku": "CASE-BLK", "stock": 20, "low_stock": 4},
             {"name": "Phone case", "name_ar": "غطاء هاتف", "variant": "Clear",
              "variant_ar": "شفاف", "variant_sku": "CASE-CLR", "stock": 14},
             {"name": "Desk lamp", "name_ar": "مصباح مكتب", "sku": "LAMP-01", "category": "Home",
@@ -396,11 +410,11 @@ KINDS: tuple[Kind, ...] = (
     Kind(
         "wholesale", Text("Wholesale and trading", "جملة وتجارة"),
         ("name", "name_ar", "sku", "category", "price", "unit", "pack_size", "min_order", "stock",
-         "photo"),
+         "low_stock", "photo"),
         (
             {"name": "A4 paper, box of 5 reams", "name_ar": "ورق A4، كرتون 5 رزم",
              "sku": "PAP-A4-5", "category": "Stationery", "price": _d("96"), "unit": "box",
-             "pack_size": 5, "min_order": 10, "stock": 400},
+             "pack_size": 5, "min_order": 10, "stock": 400, "low_stock": 50},
             {"name": "Stainless steel pot 24 cm", "name_ar": "قدر ستانلس 24 سم",
              "sku": "POT-SS-24", "category": "Kitchenware", "price": _d("55"), "unit": "piece",
              "min_order": 6, "stock": 150},

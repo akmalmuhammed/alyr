@@ -29,7 +29,7 @@ type WindowForm = {
 export type Form = {
   name: string; name_ar: string; sku: string; description: string; description_ar: string; category: string;
   price: string; sale: string; saleEnds: string; unit: string; packSize: string; minOrder: string;
-  status: Status; rule: Rule; dailyLimit: string; opening: string; scheduled: boolean;
+  status: Status; rule: Rule; dailyLimit: string; lowStock: string; opening: string; scheduled: boolean;
   variants: VariantForm[]; groups: GroupForm[]; windows: WindowForm[]; tags: string[];
   // What each price group pays, as typed: "group id|size id" (the size empty for the item's own) to a price.
   groupPrices: Record<string, string>;
@@ -58,7 +58,7 @@ function windowForm(w: Window): WindowForm {
 export function blankForm(status: Status = "live"): Form {
   return {
     name: "", name_ar: "", sku: "", description: "", description_ar: "", category: "", price: "", sale: "", saleEnds: "",
-    unit: "piece", packSize: "", minOrder: "1", status, rule: "switch", dailyLimit: "", opening: "",
+    unit: "piece", packSize: "", minOrder: "1", status, rule: "switch", dailyLimit: "", lowStock: "", opening: "",
     scheduled: false, variants: [], groups: [], windows: [], tags: [], groupPrices: {},
   };
 }
@@ -72,6 +72,7 @@ export function formOf(item: Item): Form {
     saleEnds: qatarDay(item.sale_ends_at), unit: item.unit, packSize: item.pack_size ? String(item.pack_size) : "",
     minOrder: String(item.min_order), status: item.status, rule: item.stock_rule,
     dailyLimit: only?.daily_limit !== null && only?.daily_limit !== undefined && named.length === 0 ? String(only.daily_limit) : "",
+    lowStock: item.low_stock_at === null || item.low_stock_at === undefined ? "" : String(item.low_stock_at),
     opening: "", scheduled: item.schedule.length > 0,
     variants: named.map((v) => ({
       id: v.id, name: v.name, name_ar: v.name_ar, sku: v.sku ?? "", delta: fromDirhams(v.price_delta) || "", limit: v.daily_limit === null ? "" : String(v.daily_limit),
@@ -86,7 +87,7 @@ export function formOf(item: Item): Form {
   };
 }
 
-type Problems = Partial<Record<"name" | "name_ar" | "price" | "sale" | "variants" | "limit" | "schedule" | "groups" | "min" | "opening" | "sku" | "groupPrices", string>>;
+type Problems = Partial<Record<"name" | "name_ar" | "price" | "sale" | "variants" | "limit" | "low" | "schedule" | "groups" | "min" | "opening" | "sku" | "groupPrices", string>>;
 
 /** What the person typed, as the API wants it, or what is wrong with it. */
 function build(form: Form, t: Copy, existing: Item | null): { body?: Record<string, unknown>; problems: Problems } {
@@ -114,6 +115,8 @@ function build(form: Form, t: Copy, existing: Item | null): { body?: Record<stri
     seen.add(key);
     if (toSignedDirhams(v.delta) === null) problems.variants = t.errors.bad_price;
   }
+  const lowStock = form.lowStock.trim() ? toInt(form.lowStock) : null;
+  if (form.lowStock.trim() && (lowStock === null || lowStock < 0 || lowStock > 100000)) problems.low = t.errors.bad_low_stock;
   if (form.rule === "daily_limit") {
     const need = named.length ? named.filter((v) => v.active) : [{ limit: form.dailyLimit }];
     if (need.some((v) => toInt(v.limit) === null || (toInt(v.limit) ?? 0) < 0)) problems.limit = t.errors.limit_needed;
@@ -164,6 +167,8 @@ function build(form: Form, t: Copy, existing: Item | null): { body?: Record<stri
     unit: form.unit,
     pack_size: toInt(form.packSize),
     min_order: minOrder,
+    // Empty clears the item's own number, so the shop's applies again.
+    low_stock_at: lowStock,
     tags: form.tags,
     stock_rule: form.rule,
     status: form.status,
@@ -615,6 +620,11 @@ export function CatalogEdit({ lang, itemId, initial, categories, access, push, o
               : <p className="ct-hint">{t.inStock(item?.variants.reduce((n, v) => n + v.on_hand, 0) ?? 0)}. {t.changeInStock}</p>
           )}
           {form.rule === "count" && itemId && item && item.stock_rule !== "count" && form.variants.length > 0 && <p className="ct-hint">{t.stockLater}</p>}
+          {(form.rule === "count" || form.rule === "daily_limit") && (
+            <Field label={t.lowStockOwn} hint={t.lowStockOwnHint} error={problems.low}>
+              <input value={form.lowStock} inputMode="numeric" dir="ltr" onChange={(e) => set({ lowStock: e.target.value })} />
+            </Field>
+          )}
         </section>
 
         <Fold title={t.descTitle} summary={form.description || form.description_ar ? "✓" : undefined} open={form.description || form.description_ar ? true : undefined}>

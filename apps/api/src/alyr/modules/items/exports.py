@@ -70,6 +70,9 @@ def item_rows(
                 "variant_sku": safe_text(v["sku"]) if v else "",
                 "price_diff": _money(v["price_delta"]) if v and named else None,
                 "stock": v["on_hand"] if v and i["stock_rule"] == "count" else None,
+                "low_stock": (
+                    i["low_stock_at"] if i["stock_rule"] in columns.COUNTED else None
+                ),
                 "per_day": v["daily_limit"] if v and i["stock_rule"] == "daily_limit" else None,
                 "description": safe_text(i["description"]),
                 "description_ar": safe_text(i["description_ar"]),

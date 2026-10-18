@@ -232,16 +232,23 @@ MESSAGES: dict[str, tuple[str, str, str]] = {
         "لم يُستورد رقم المخزون: هذا الصنف غير محسوب في المخزون. اجعل «كيف ينفد» محسوباً في "
         "المخزون لاستيراده.",
     ),
+    "low_stock_ignored": (
+        "warning",
+        "The low-stock number was not used: this item is not counted in stock. Set “How it "
+        "runs out” to Counted in stock to use it.",
+        "لم يُستخدم رقم المخزون القليل: هذا الصنف غير محسوب في المخزون. اجعل «كيف ينفد» محسوباً "
+        "في المخزون لاستخدامه.",
+    ),
     "per_day_ignored": (
         "warning",
         "The number per day was not used: this item does not run out by a number each day.",
         "لم يُستخدم العدد اليومي: هذا الصنف لا ينفد بعدد في اليوم.",
     ),
     "per_day_needed": (
-        "warning",
-        "This item runs out by a number each day but has no number, so it cannot be sold "
-        "yet and is saved as a draft.",
-        "هذا الصنف ينفد بعدد في اليوم لكن بلا عدد، لذلك لا يمكن بيعه بعد ويُحفظ كمسودة.",
+        "error",
+        "This item runs out by a number each day but has no number. Fill in “Per day”, or "
+        "change “How it runs out”.",
+        "هذا الصنف ينفد بعدد في اليوم لكن بلا عدد. املأ «العدد اليومي» أو غيّر «كيف ينفد».",
     ),
     "differs": (
         "warning",
