@@ -30,10 +30,13 @@ class TeamError(Exception):
 
 @dataclass(frozen=True)
 class Actor:
-    """Who did something. `id` is None for the customer, the assistant and the open demo."""
+    """Who did something. `id` is None for the customer, the assistant and the open demo.
+    `via` says how, when it was not the workspace: "whatsapp" for a staff member's message
+    (the staff number has no sign-in, so `id` is None and `name` is the person's name)."""
 
     id: UUID | None
     name: str
+    via: str = ""
 
 
 CUSTOMER = Actor(None, "Customer")
@@ -69,7 +72,8 @@ async def record(
         subject_id,
         contact_id,
         action,
-        {k: v for k, v in (detail or {}).items() if v is not None},
+        {k: v for k, v in ((detail or {}) | ({"via": actor.via} if actor.via else {})).items()
+         if v is not None},
         actor.id,
         actor.name,
     )

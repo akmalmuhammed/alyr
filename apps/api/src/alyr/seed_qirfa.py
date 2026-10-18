@@ -354,8 +354,9 @@ class Bakery:
             self.products.append((product_id, name, price))
         # Huda's own WhatsApp receives the Sunday report; Yusuf's counter phone does not.
         owner = await conn.fetchval(
-            "insert into contacts (phone, name, role, number_id, weekly_report, lang) "
-            "values ($1, 'Huda (owner)', 'staff', $2, true, 'ar') returning id",
+            "insert into contacts (phone, name, role, number_id, weekly_report, lang, "
+            "catalog_manager) values ($1, 'Huda (owner)', 'staff', $2, true, 'ar', true) "
+            "returning id",
             OWNER_PHONE, NUMBER_ID,
         )
         await consent.record(conn, owner, "service", "granted", "weekly_report_setting")

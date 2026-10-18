@@ -72,6 +72,37 @@ async def send(body: SimulatedMessage, request: Request) -> dict:
     return await _conversation(request, body.from_user_id or body.from_number)
 
 
+@router.post("/photos")
+async def send_photo(
+    request: Request, from_number: str = "", from_user_id: str = "", caption: str = ""
+) -> dict:
+    """Act as a phone sending a photo with a caption: the request body is the picture.
+    The simulator keeps the file and the inbound message carries its ID, which the channel
+    hands back when the Catalog asks to download it, as Meta's Media API would."""
+    if not (from_number or from_user_id):
+        raise HTTPException(status_code=422, detail="give from_number or from_user_id")
+    data = await request.body()
+    if not data:
+        raise HTTPException(status_code=422, detail="send the picture as the request body")
+    media_id = f"sim-in-{uuid4()}"
+    content_type = request.headers.get("content-type", "image/jpeg")
+    request.app.state.outbound.channels["simulator"].keep(media_id, data, content_type)
+    await request.app.state.inbound.accept(
+        InboundMessage(
+            channel="simulator",
+            message_id=f"sim-{uuid4()}",
+            to_number_id=SIMULATOR_NUMBER_ID,
+            kind="image",
+            from_number=from_number,
+            from_user_id=from_user_id,
+            text=caption,
+            media_id=media_id,
+            mime_type=content_type,
+        )
+    )
+    return await _conversation(request, from_user_id or from_number)
+
+
 @router.get("/conversations/{key}")
 async def conversation(key: str, request: Request) -> dict:
     return await _conversation(request, key)
