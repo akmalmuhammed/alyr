@@ -8,7 +8,9 @@ The filters are the ones an owner reaches for:
 * `sold_out`: on sale, but switched off or with none left;
 * `low_stock`: counted in stock, with a size at or below the shop's low-stock number;
 * `stocked`: counted in stock or limited per day (what the Stock tab lists);
-* `archived`: no longer sold, kept for its history.
+* `archived`: no longer sold, kept for its history;
+* `sample`: an example the shop's type started it with (`samples.py`). A sample is in no
+  other filter, so the drafts waiting for a name and a price are the owner's own.
 
 Every function takes a tenant-scoped connection.
 """
@@ -18,7 +20,7 @@ import asyncpg
 from alyr.modules.items import service, text
 from alyr.modules.items.clock import ShopClock
 
-FILTERS = ("draft", "sold_out", "low_stock", "stocked", "archived")
+FILTERS = ("draft", "sold_out", "low_stock", "stocked", "archived", "sample")
 DEFAULT_LOW_STOCK = 5
 
 
@@ -48,6 +50,8 @@ def is_stocked(view: dict) -> bool:
 
 
 def kinds_of(view: dict, low_at: int) -> set[str]:
+    if view["sample"]:
+        return {"sample"}
     found = set()
     if view["status"] == "draft":
         found.add("draft")

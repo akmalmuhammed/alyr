@@ -50,5 +50,7 @@ default-groups = ["dev", "server"]
 [tool.ruff.lint.per-file-ignores]
 # The catalogue is mostly customer-facing sentences and SQL; breaking them hurts reading.
 "src/alyr/catalog.py" = ["E501"]
+# Each type's words, in both languages, are kept together for the Arabic review (ALY-66).
+"src/alyr/presets_catalog.py" = ["E501"]
 # The email template is one HTML document; wrapping its lines would change nothing for readers.
 "src/alyr/core/mail.py" = ["E501"]

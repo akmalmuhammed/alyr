@@ -28,7 +28,7 @@ from alyr.core import templates
 from alyr.core.outbound import Outbound
 from alyr.db import Database
 from alyr.modules.items import clock as shop_clock
-from alyr.modules.items import events, listing, service, staff
+from alyr.modules.items import events, listing, service, staff, template
 from alyr.modules.items.availability import STOCKED
 from alyr.modules.items.wa_text import say, shown
 
@@ -169,6 +169,8 @@ class StockAlerts:
             kind = "low"
         else:
             return None  # filled again since, or never was low
+        if not await template.alert_on(conn, "sold_out" if kind == "sold_out" else "low_stock"):
+            return None  # the owner switched this alert off (the type's starting values)
         if in_quiet_hours(clock.local):
             # Not at night. Look again in the morning; if it is still true, say so then.
             await events.queue(conn, events.STOCK_ALERT, item_id, morning_after(clock.local))

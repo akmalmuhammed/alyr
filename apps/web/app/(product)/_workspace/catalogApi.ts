@@ -33,6 +33,9 @@ export type PriceGroup = {
 export type GroupPrice = { group_id: string; variant_id: string | null; price: number; price_text: string };
 export type Item = {
   id: string; name: string; name_ar: string; sku: string; group_prices: GroupPrice[];
+  // An example the shop's type started it with: never for sale, its price is an example, and
+  // its tile is drawn from sample_key (nothing is stored). Saving it makes it the owner's.
+  sample: boolean; sample_key: string;
   description: string; description_ar: string;
   category: string; status: Status; stock_rule: Rule; available: boolean; unit: string;
   pack_size: number | null; min_order: number; tags: string[]; sort: number; low_stock_at: number | null;
@@ -47,7 +50,9 @@ export type Item = {
 };
 export type Access = { role: string; can_manage: boolean; can_edit: boolean; can_stock: boolean };
 export type Category = { name: string; name_ar: string; sort: number };
-export type Counts = { all: number; draft: number; sold_out: number; low_stock: number; stocked: number; archived: number };
+export type Counts = {
+  all: number; draft: number; sold_out: number; low_stock: number; stocked: number; archived: number; sample: number;
+};
 export type ListResult = {
   items: Item[]; total: number; counts: Counts; low_stock_at: number; categories: Category[]; access: Access;
 };
@@ -58,6 +63,26 @@ export type Movement = {
   reason: string; order_number: number | null; actor: { id: string | null; name: string }; via: string;
   created_at: string;
 };
+/**
+ * What the shop's type of business gave its Catalog (GET /api/items/setup; specs/008): what the
+ * section is called, how the order page lays out, what a sold-out item looks like, how a new item
+ * runs out, which alerts are on, and which parts of the item form start open. The owner changes
+ * sold_out, new_item.rule and alerts (PUT /api/items/setup).
+ */
+export type Setup = {
+  type: string;
+  section: { name: string; name_ar: string; sub: string; sub_ar: string };
+  optional: boolean;
+  layout: { style: "menu" | "grid" | "list" | "table"; pickup_date: boolean; quick_quantity: boolean; same_as_last: boolean; show_sku: boolean };
+  sold_out: "grey" | "hide";
+  new_item: { rule: Rule; unit: string; lead_days: number | null; cutoff: string | null };
+  low_stock_at: number;
+  alerts: { low_stock: boolean; sold_out: boolean };
+  focus: string[];
+  report_lines: string[];
+  samples: number;
+};
+
 /** A WhatsApp number the owner registered as staff: it may change the Catalog by message. */
 export type StaffNumber = {
   id: string; name: string; phone: string; lang: "en" | "ar"; manager: boolean; weekly_report: boolean;

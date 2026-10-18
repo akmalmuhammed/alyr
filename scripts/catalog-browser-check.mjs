@@ -437,7 +437,7 @@ try {
   check((await groups()).length === 2, "and no second group was made");
   await shot("15d-group-refused");
   await pressText(t.cancel);
-  check(await js(`[...document.querySelectorAll('.ct-sheet li.ct-card-form button')].filter(b => ${norm}(b) === ${JSON.stringify(t.pgRemove)}).length === 1`), "only the added group can be removed, not the default");
+  check(await js(`[...document.querySelectorAll('.ct-sheet section:not(.ct-staff) li.ct-card-form button')].filter(b => ${norm}(b) === ${JSON.stringify(t.pgRemove)}).length === 1`), "only the added group can be removed, not the default");
   await pressText(t.pgRename);
   await fill(t.pgNameEn, "Walk-in"); await fill(t.pgNameAr, "الزبائن");
   await pressExact(t.pgSave, "button", 900);

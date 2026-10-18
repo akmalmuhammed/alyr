@@ -18,10 +18,13 @@ import asyncpg
 
 from alyr import catalog, presets
 from alyr.channels.base import InboundMessage
+from alyr.config import get_settings
 from alyr.core import auth, pricing, team
 from alyr.core.auth import Staff
 from alyr.core.normalise import fmt_qar
 from alyr.db import Database
+from alyr.modules.items import clock as shop_clock
+from alyr.modules.items import template
 
 SIGNUP_MINUTES = 60
 TEST_PREFIX = "TEST."
@@ -39,15 +42,22 @@ def _text(value) -> dict:
     return {"en": value.en, "ar": value.ar}
 
 
+def catalog_on() -> bool:
+    """Do new businesses get their type's Catalog? One setting (`catalog_for_new_shops`),
+    which the go-live sweep switches on (ALY-113, D-039)."""
+    return get_settings().catalog_for_new_shops
+
+
 async def types(conn: asyncpg.Connection) -> list[dict]:
     """The types of business an owner may choose, as ALYR has switched them (D-032):
-    hidden types are left out, and `way` is the path a new business of that type takes."""
+    hidden types are left out, and `way` is the path a new business of that type takes.
+    The types that exist for the Catalog are left out until it is on for new shops."""
     settings = await pricing.type_settings(conn)
     return [
         {"key": p.key, "name": _text(p.name), "hint": _text(p.hint), "icon": p.icon,
          "way": pricing.way_for(p, settings[p.key]["availability"])}
         for p in presets.PRESETS
-        if settings[p.key]["availability"] != "hidden"
+        if settings[p.key]["availability"] != "hidden" and p.offered(catalog_on())
     ]
 
 
@@ -96,9 +106,10 @@ async def create_business(
     """Create the business, its owner and its starting setup. Returns the tenant and a
     session cookie value for the owner."""
     preset = presets.PRESET_BY_KEY.get(type_key)
-    if preset is None:
+    if preset is None or not preset.offered(catalog_on()):
         raise OnboardingError("choose the type of business")
     name, owner_name = name.strip(), owner_name.strip()
+    modules = preset.modules_for(catalog_on())
     if not name or not owner_name:
         raise OnboardingError("give the business name and your name")
     tenant_id = None
@@ -116,7 +127,7 @@ async def create_business(
                     tenant_id = await conn.fetchval(
                         "select signup_create_business($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)",
                         _hash(token), owner_name, name, name_ar.strip(), slug, preset.key,
-                        area.strip(), way, first_step, list(preset.modules),
+                        area.strip(), way, first_step, list(modules),
                     )
                 break
             except asyncpg.UniqueViolationError:
@@ -142,8 +153,12 @@ async def create_business(
                 weekday, opens, closes,
             )
         await pricing.create_first_quote(
-            conn, pricing.Business(tenant_id, name, frozenset(preset.modules)), price_list
+            conn, pricing.Business(tenant_id, name, frozenset(modules)), price_list
         )
+        if "catalog" in modules and preset.catalog is not None:
+            # Its words are by type; its starting values, categories and sample items are
+            # written now, and are the owner's to change (`modules/items/template.py`).
+            await template.apply(conn, preset.catalog, await shop_clock.load(conn))
         if way == "assisted":
             await conn.execute(
                 "insert into setup_requests (product_key, step_key, note, requested_by) "
@@ -197,6 +212,9 @@ async def state(conn: asyncpg.Connection, staff: Staff) -> dict:
         ],
         "quote": await pricing.own_quote(conn),
         "areas": list(presets.AREAS),
+        # What the shop's type gives its Catalog, in plain words, for the review; null where
+        # the shop has no Catalog (travel and documents, or while it is off for new shops).
+        "catalog": await template.review(conn) if await template.enabled(conn) else None,
     }
 
 

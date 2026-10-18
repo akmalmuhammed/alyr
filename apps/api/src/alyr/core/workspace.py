@@ -9,7 +9,7 @@ from uuid import UUID
 
 import asyncpg
 
-from alyr import catalog
+from alyr import catalog, presets_catalog
 from alyr.core import pricing
 from alyr.core.auth import Staff
 from alyr.core.normalise import fmt_qar
@@ -71,13 +71,46 @@ def _visible(screen: catalog.Screen, role: str) -> bool:
     return role in screen.roles
 
 
-def _screen(screen: catalog.Screen) -> dict:
-    return {"key": screen.key, "label": _text(screen.label), "icon": screen.icon}
+def _screen(screen: catalog.Screen, label: catalog.Text | None = None) -> dict:
+    return {"key": screen.key, "label": _text(label or screen.label), "icon": screen.icon}
+
+
+# The screen that lists ALYR's own suite is "Products". A shop whose items are "Products"
+# too (a shop, a grocery, a salon) would have two entries of that name side by side, so there
+# the suite's is "ALYR products" (D-039: the two are kept apart). Nothing else changes.
+SUITE_SCREEN = "products"
+SUITE_LABEL = catalog.Text("ALYR products", "منتجات ALYR")
+
+
+def _same_name(screen: catalog.Screen, section: catalog.Text | None) -> bool:
+    return (
+        section is not None and screen.key == SUITE_SCREEN
+        and section.en == screen.label.en
+    )
+
+
+async def _section(conn: asyncpg.Connection) -> catalog.Text:
+    """What this shop calls its Catalog ("Menu", "Products", "Price list"), by its type."""
+    kind = await conn.fetchval(
+        "select business_type from tenants "
+        "where id = nullif(current_setting('app.tenant_id', true), '')::uuid"
+    )
+    return presets_catalog.setup_for(kind or "").section
+
+
+def _catalog_step(step: dict, section: catalog.Text) -> dict:
+    """The orders module asks the shop to add its menu or price list. Where the Catalog is
+    on, that is done in the Catalog, under the name the shop's type gives it."""
+    return step | {
+        "label": {"en": f"Add your {section.en.lower()}", "ar": f"أضف {section.ar}"},
+        "screen": "catalog",
+    }
 
 
 async def state(conn: asyncpg.Connection, staff: Staff) -> dict:
     """Everything the workspace shell needs to draw itself for this person."""
     modules = await enabled_modules(conn)
+    section = await _section(conn) if "catalog" in modules else None
     connected = await _connections(conn)
     shop = await conn.fetchrow(
         "select name, name_ar, slug from tenants "
@@ -104,6 +137,8 @@ async def state(conn: asyncpg.Connection, staff: Staff) -> dict:
                 listed.add(key)
                 for step in await _steps(conn, catalog.MODULE_BY_KEY[key], connected):
                     step["asked"] = step["key"] in asked
+                    if section is not None and key == "orders" and step["key"] == "products":
+                        step = _catalog_step(step, section)
                     steps.append(step)
         if product.status == "included":
             status = "included"
@@ -127,7 +162,7 @@ async def state(conn: asyncpg.Connection, staff: Staff) -> dict:
         )
 
     nav_products = [
-        _screen(screen)
+        _screen(screen, section if screen.key == "catalog" else None)
         for module in catalog.MODULES
         if module.key in modules
         for screen in module.screens
@@ -150,7 +185,10 @@ async def state(conn: asyncpg.Connection, staff: Staff) -> dict:
         "nav": {
             "core": [_screen(s) for s in catalog.CORE_SCREENS if _visible(s, staff.role)],
             "products": nav_products,
-            "account": [_screen(s) for s in catalog.ACCOUNT_SCREENS if _visible(s, staff.role)],
+            "account": [
+                _screen(s, SUITE_LABEL if _same_name(s, section) else None)
+                for s in catalog.ACCOUNT_SCREENS if _visible(s, staff.role)
+            ],
         },
         "products": products,
         "connections": [
