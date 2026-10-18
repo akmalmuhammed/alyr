@@ -7,11 +7,13 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
-  api, nameOf, sayError, type Access, type BulkLast, type Category, type Item, type ListResult,
+  api, nameOf, sayError, type Access, type BulkLast, type Category, type ImportResult, type ImportUndone,
+  type Item, type ListResult,
 } from "./catalogApi";
 import { COPY, type Copy, type Lang } from "./catalogCopy";
 import { Announce, Icon, Layer, Switch, Tile, ToastLayer, useToasts } from "./CatalogUi";
 import { CatalogEdit } from "./CatalogEdit";
+import { CatalogImport } from "./CatalogImport";
 import { AddSheet, WalkThrough } from "./CatalogAdd";
 import { CatalogBulk } from "./CatalogBulk";
 import { CatalogSettings } from "./CatalogSettings";
@@ -23,6 +25,7 @@ type Sheet =
   | { kind: "add" }
   | { kind: "walk"; ids: string[] }
   | { kind: "bulk" }
+  | { kind: "import" }
   | { kind: "settings" };
 
 const PAGE = 60;
@@ -73,6 +76,7 @@ export function Catalog({ lang, show = null }: { lang: Lang; show?: string | nul
   const [selecting, setSelecting] = useState(false);
   const [picked, setPicked] = useState<Set<string>>(new Set());
   const [last, setLast] = useState<BulkLast | null>(null);
+  const [lastImport, setLastImport] = useState<ImportResult | null>(null);
   const [busy, setBusy] = useState<Set<string>>(new Set());
   const asked = useRef(0);
   const sheetOpen = sheet !== null;
@@ -122,13 +126,15 @@ export function Catalog({ lang, show = null }: { lang: Lang; show?: string | nul
   const load = useCallback(async () => {
     const mine = ++asked.current;
     try {
-      const [list, again] = await Promise.all([
+      const [list, again, imported] = await Promise.all([
         api<ListResult>(`/api/items?${params}`),
         api<{ last: BulkLast | null }>("/api/items/bulk/last"),
+        api<{ last: ImportResult | null }>("/api/items/import/last").catch(() => ({ last: null })),
       ]);
       if (mine !== asked.current) return; // a newer question is on its way
       setData(list);
       setLast(again.last);
+      setLastImport(imported.last);
       setOffline(false);
     } catch {
       if (mine === asked.current) setOffline(true);
@@ -184,6 +190,16 @@ export function Catalog({ lang, show = null }: { lang: Lang; show?: string | nul
     try {
       const done = await api<{ restored: number; left: unknown[] }>("/api/items/bulk/undo", "POST");
       push(done.left.length ? `${t.undone(done.restored)}. ${t.undoLeft(done.left.length)}` : t.undone(done.restored));
+    } catch (error) {
+      push(sayError(error, lang, t), { tone: "bad" });
+    }
+    await load();
+  }
+
+  async function undoImport() {
+    try {
+      const done = await api<ImportUndone>("/api/items/import/undo", "POST");
+      push(done.left.length ? `${t.imp.undoneToast(done.removed + done.archived, done.restored)}. ${t.imp.undoLeft(done.left.length)}` : t.imp.undoneToast(done.removed + done.archived, done.restored));
     } catch (error) {
       push(sayError(error, lang, t), { tone: "bad" });
     }
@@ -307,7 +323,7 @@ export function Catalog({ lang, show = null }: { lang: Lang; show?: string | nul
         </div>
       )}
 
-      {((access.can_edit && !empty) || (last && (access.can_edit || last.action === "sold_out" || last.action === "back")) || access.can_manage) && <div className="ct-actions">
+      <div className="ct-actions">
         {access.can_edit && !empty && (
           <button type="button" className="btn volt ct-btn" onClick={() => setSheet({ kind: "add" })}>
             <Icon name="plus" />{t.add}
@@ -318,13 +334,21 @@ export function Catalog({ lang, show = null }: { lang: Lang; show?: string | nul
             <Icon name="undo" />{t.undoNamed(last.action, last.changed)}
           </button>
         )}
+        {lastImport && access.can_edit && (
+          <button type="button" className="btn ct-btn" onClick={() => void undoImport()}>
+            <Icon name="undo" />{t.imp.undoButton((lastImport.summary.counts.create ?? 0) + (lastImport.summary.counts.update ?? 0))}
+          </button>
+        )}
         <span className="ct-grow" />
+        <button type="button" className="btn ghost ct-btn" onClick={() => setSheet({ kind: "import" })}>
+          <Icon name="sheet" />{t.imp.open}
+        </button>
         {access.can_manage && (
           <button type="button" className="btn ghost ct-btn" onClick={() => setSheet({ kind: "settings" })}>
             <Icon name="sliders" />{t.settings}
           </button>
         )}
-      </div>}
+      </div>
 
       <div className="ct-tabs" role="tablist" aria-label={t.title}>
         {(["items", "stock"] as const).map((key) => (
@@ -460,6 +484,10 @@ export function Catalog({ lang, show = null }: { lang: Lang; show?: string | nul
         <CatalogBulk lang={lang} ids={pickedNow} canEdit={access.can_edit} categories={categories} push={push}
           onClose={() => setSheet(null)}
           onDone={() => { setSheet(null); stopSelecting(); void load(); }} />
+      )}
+      {sheet?.kind === "import" && (
+        <CatalogImport lang={lang} canEdit={access.can_edit}
+          onClose={() => { setSheet(null); void load(); }} onChanged={() => void load()} />
       )}
       {sheet?.kind === "settings" && (
         <CatalogSettings lang={lang} push={push} onClose={() => { setSheet(null); void load(); }} />
