@@ -90,11 +90,13 @@ class Take:
 async def move(
     conn: asyncpg.Connection, variant_id: UUID, kind: str, delta: int, actor: Actor,
     reason: str = "", day: date | None = None, order_id: UUID | None = None,
-    limit: int | None = None,
+    limit: int | None = None, alerts: bool = True,
 ) -> int | None:
     """Change one variant's stock by `delta` and write the log row, in one statement.
     Returns the number after, or None when a take would overdraw it (nothing is written).
-    Give `day` for a daily-limit variant, and its `limit` if you have it."""
+    Give `day` for a daily-limit variant, and its `limit` if you have it. `alerts=False`
+    keeps this move from queuing the owner's low-stock and sold-out alerts (a bulk import
+    does; see `events.stock_changed`)."""
     if kind not in KINDS:
         raise ValueError(f"unknown stock movement {kind!r}")
     if day is None:
@@ -115,7 +117,7 @@ async def move(
     if balance is not None and delta:
         # Tell the parts of the Catalog that react to stock (back-in-stock requests, owner
         # alerts). They only queue a job; nothing is sent from here.
-        await events.stock_changed(conn, variant_id, delta, balance)
+        await events.stock_changed(conn, variant_id, delta, balance, alerts)
     return balance
 
 
@@ -163,7 +165,7 @@ async def left(conn: asyncpg.Connection, variant_id: UUID, day: date | None = No
 
 async def count(
     conn: asyncpg.Connection, variant_id: UUID, counted: int, actor: Actor, reason: str,
-    day: date | None = None,
+    day: date | None = None, alerts: bool = True,
 ) -> dict:
     """The shelf was counted. The log gets the difference between what the system said
     and what was counted, with the reason, and the number becomes what was counted. A count
@@ -182,6 +184,7 @@ async def count(
     await move(
         conn, variant_id, "counted", difference, actor,
         reason.strip() or "Counted, no difference", day, limit=locked["daily_limit"],
+        alerts=alerts,
     )
     return {"before": before, "counted": counted, "difference": difference}
 

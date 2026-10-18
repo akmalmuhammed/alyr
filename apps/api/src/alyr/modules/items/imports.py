@@ -29,6 +29,7 @@ from alyr.core.images import PhotoRefused
 from alyr.core.media import MediaService
 from alyr.core.team import Actor
 from alyr.modules.items import (
+    import_alert,
     import_photos,
     import_plan,
     service,
@@ -303,7 +304,8 @@ def _variant_state(entry: service.Loaded) -> list[dict]:
 
 async def _opening(conn, vid, n: int, actor: Actor) -> None:
     if n > 0:
-        await stock.move(conn, vid, "opening", n, actor, "Import")
+        # No owner alerts for a move made by an import: one summary follows it (import_alert).
+        await stock.move(conn, vid, "opening", n, actor, "Import", alerts=False)
 
 
 async def _create(
@@ -425,7 +427,7 @@ async def _update(
         was = await stock.left(conn, vid)
         if existed:
             if was != number:
-                await stock.count(conn, vid, number, actor, "Import")
+                await stock.count(conn, vid, number, actor, "Import", alerts=False)
                 moved.append({"variant_id": str(vid), "variant": name, "before": was,
                               "after": number, "kind": "counted"})
         elif number > 0:
@@ -517,6 +519,9 @@ async def apply(
     )
     if steps:
         await jobs.enqueue(conn, import_photos.JOB, {"import_id": str(import_id)})
+    if any(c.get("stock") for c in changes):
+        # The owner is told once, after this commits, how many items are low or sold out.
+        await jobs.enqueue(conn, import_alert.JOB, {"import_id": str(import_id)})
     return await result_view(conn, await _row(conn, import_id))
 
 
@@ -668,7 +673,7 @@ async def _undo_updated(
         if now is None or now["on_hand"] != move["after"]:
             left = True
             continue
-        await stock.count(conn, vid, move["before"], actor, "Undo of an import")
+        await stock.count(conn, vid, move["before"], actor, "Undo of an import", alerts=False)
     changes = {}
     if change["before"]:
         if _item_state(entry, change["after"].keys()) == change["after"]:

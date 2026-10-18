@@ -57,10 +57,15 @@ async def item_changed(conn: asyncpg.Connection, item_id: UUID) -> None:
 
 
 async def stock_changed(
-    conn: asyncpg.Connection, variant_id: UUID, delta: int, balance: int
+    conn: asyncpg.Connection, variant_id: UUID, delta: int, balance: int, alerts: bool = True
 ) -> None:
     """One variant's stock moved by `delta` and is now `balance` (the running stock, or
-    what is left of the day's allowance)."""
+    what is left of the day's allowance). `alerts=False` is for a bulk path (an import,
+    which says one thing for all its items when it is done): the owner's low-stock and
+    sold-out alerts are not queued for this move. Customers waiting for an item to come
+    back are still told."""
+    if not alerts and delta <= 0:
+        return
     row = await conn.fetchrow(
         "select i.id, i.stock_rule, i.status, i.low_stock_at, "
         "       (select low_stock_at from shop_settings) as shop_low "

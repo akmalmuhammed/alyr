@@ -15,6 +15,8 @@ from alyr.db import Database
 from alyr.modules import report
 from alyr.modules.bookings.service import REMINDER, Reminders
 from alyr.modules.items import alerts, events, wa_photo, watches
+from alyr.modules.items.import_alert import JOB as IMPORT_ALERT
+from alyr.modules.items.import_alert import ImportAlert
 from alyr.modules.items.import_photos import JOB as IMPORT_PHOTOS
 from alyr.modules.items.import_photos import ImportPhotos
 from alyr.modules.items.service import count_active
@@ -98,6 +100,10 @@ def create_app() -> FastAPI:
     # Photos that come with an imported spreadsheet are added after it is applied (ALY-108).
     photos_job = ImportPhotos(app.state.db, app.state.media)
     app.state.jobs.register(IMPORT_PHOTOS, photos_job.run, photos_job.gave_up)
+    # One message to the owner after an import that counted stock (ALY-108).
+    app.state.jobs.register(
+        IMPORT_ALERT, ImportAlert(app.state.db, app.state.outbound).run
+    )
     app.add_exception_handler(PhotoRefused, media_routes.refused)
     if settings.jobs_inline:
         app.state.db.after_commit = app.state.jobs.drain

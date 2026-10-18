@@ -4,6 +4,10 @@ running low. An empty cell keeps what is there (the shop's number from Catalog s
 default and is not in the file), a number is 0 to 100,000, and it means something only for an
 item counted in stock. The helpers are in test_catalog_import.py."""
 
+import uuid
+
+import pytest
+
 from alyr.modules.items import columns, xlsx
 from test_catalog_import import (
     apply_import,
@@ -195,6 +199,24 @@ def test_other_spellings_of_the_header_are_understood_in_either_language(client)
         assert by_name(client, f"Item {number}")["low_stock_at"] == number, header
 
 
+MADE: list = []   # the customers a test made, by ID
+
+
+@pytest.fixture(autouse=True)
+def tidy():
+    """The tests above make jobs, a customer and a waiting request; other tests read those
+    tables without a shop in the way, so none is left behind (by ID: a phone number may also
+    belong to a customer in the demo shop)."""
+    yield
+    for contact in MADE:
+        owner_sql("delete from stock_watches where contact_id = $1", contact)
+        owner_sql("delete from messages where contact_id = $1", contact)
+        owner_sql("delete from contacts where id = $1", contact)
+    MADE.clear()
+    owner_sql("delete from jobs where kind in "
+              "('catalog.stock_alert', 'catalog.back_in_stock', 'catalog.import_alert')")
+
+
 def alert_jobs(item: dict) -> int:
     return owner_sql(
         "select count(*) from jobs where kind = 'catalog.stock_alert' and payload->>'item_id' = $1",
@@ -202,22 +224,58 @@ def alert_jobs(item: dict) -> int:
     )[0][0]
 
 
-def test_counting_stock_down_to_the_number_queues_the_owner_alert_like_any_count(client):
-    """A stock number in a file is a count like any other (ALY-106): taking a live counted
-    item to its low-stock number queues the one owner alert; adding stock queues none."""
+def test_a_count_in_a_file_queues_no_owner_alert_and_any_other_count_still_does(client):
+    """A stock number in a file is a count, but a file must never send the owner an alert for
+    every item (it sends one summary, `test_catalog_import_alert.py`). The same count made on
+    the screen queues the item's own alert as before."""
     new_shop(client)
     seed(client)                                        # opening stock: nothing is low yet
-    assert [alert_jobs(by_name(client, n)) for n in ("Rice", "Tea", "Sugar", "Bread")] == [
-        0, 0, 0, 0]
     rows = exported(client)
     h = rows[0]
     stock, name = h.index("In stock"), h.index("Name (English)")
     for r in rows[1:]:
         if r[name] == "Rice":
             r[stock] = 4        # down to its own number (6)
+        if r[name] == "Bread":
+            r[stock] = 1        # down to the shop's number and below
         if r[name] == "Tea":
             r[stock] = 80       # up
     assert apply_import(client, preview_of(client, xlsx_of(rows))).status_code == 200
-    # (At night on the shop's clock the first job waits for the morning with a second.)
-    assert [alert_jobs(by_name(client, n)) > 0 for n in ("Rice", "Tea", "Sugar", "Bread")] == [
-        True, False, False, False]
+    assert by_name(client, "Rice")["variants"][0]["on_hand"] == 4      # the counts were made
+    assert [alert_jobs(by_name(client, n)) for n in ("Rice", "Tea", "Sugar", "Bread")] == [
+        0, 0, 0, 0]
+    # The same count on the screen queues the item's alert (at night on the shop's clock the
+    # first job waits for the morning with a second, so this says "some", not "one").
+    tea = by_name(client, "Tea")                         # no number of its own: the shop's 5
+    done = client.post(f"/api/items/{tea['id']}/count", json={"counted": 2, "reason": "shelf"})
+    assert done.status_code == 200, done.text
+    assert alert_jobs(by_name(client, "Tea")) > 0
+
+
+def test_an_import_that_adds_stock_still_queues_the_job_that_tells_waiting_customers(client):
+    """Holding back the owner's alerts must not hold back "tell me when it is back"."""
+    shop = new_shop(client)
+    do_import(client, table(["name", "name_ar", "price", "stock"], ["Figs", "تين", 20, 0]))
+    figs = by_name(client, "Figs")
+    contact = owner_sql(
+        "insert into contacts (tenant_id, phone, name, role) "
+        "values ($1, '97466600001', 'Waiting customer', 'customer') returning id",
+        shop["tenant"],
+    )[0]["id"]
+    MADE.append(contact)
+    owner_sql("insert into stock_watches (tenant_id, contact_id, item_id) values ($1, $2, $3)",
+              shop["tenant"], contact, uuid.UUID(figs["id"]))
+    rows = exported(client)
+    h = rows[0]
+    for r in rows[1:]:
+        r[h.index("In stock")] = 30
+    assert apply_import(client, preview_of(client, xlsx_of(rows))).status_code == 200
+    queued = owner_sql(
+        "select count(*) from jobs where kind = 'catalog.back_in_stock' "
+        "and payload->>'item_id' = $1", figs["id"],
+    )[0][0]
+    assert queued > 0
+    # Undoing it counts Figs back down to nothing; that is quiet too (no sold-out alert).
+    assert client.post("/api/items/import/undo").status_code == 200
+    assert by_name(client, "Figs")["variants"][0]["on_hand"] == 0
+    assert alert_jobs(by_name(client, "Figs")) == 0
