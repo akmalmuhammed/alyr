@@ -65,7 +65,7 @@ Anything else from a linked number goes on to the modules exactly as before. A s
 - **Phase 2:** edits that ask YES and offer UNDO (`CLOSED today`, `STOCK`, `PRICE`). Needs the pending-confirmation table, built then. Gate: a named pilot owner says which five edits they want (ALY-58).
 - **Phase 3:** operate (move or cancel a booking, mark an order, send a reminder through the consent layer).
 - **Phase 4:** nudges from the Agent's "needs you now" cards, and AI drafts. Needs the data-location answer (ALY-51) and Meta's pricing rule (ALY-64).
-- **The workspace screen** for linking a number (a "Link WhatsApp" entry in Team), with its English and Arabic words. Until it exists a number is linked through the API.
+- **Showing the shop's own WhatsApp number** on the link screen. The workspace screen exists (ALY-131: "Your WhatsApp" on Team) but the number is not stored, so it says "your shop's WhatsApp number".
 
 ## Tests
 
