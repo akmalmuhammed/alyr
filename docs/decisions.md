@@ -44,6 +44,7 @@ Status: **Accepted** (in force), **Proposed** (waiting for the founder), **Super
 | D-037 | The public site presents the suite: the homepage leads with ALYR Agent at work, and every live product has its own page | Accepted |
 | D-038 | The Sunday report is a report card: a branded image from ALYR Agent's engine with about eight lines under it | Accepted |
 | D-039 | The Catalog (items, stock, photos) is built complete before go-live; photos on Cloudflare R2; free now, charged by usage later | Accepted |
+| D-040 | Owners and staff manage the shop from WhatsApp as well as the portal, through one shared action layer; phases 0 and 1 (link a number, read-only commands) are built first | Accepted |
 
 ---
 
@@ -773,3 +774,28 @@ There is no separate Pay product: payment links stay a module of Chat and Bookin
 **Why.** The values had been copied by hand into eleven places, with one name meaning two colours (`--canvas`), two curves under one name (`--ease`), three focus styles and thirteen near-blacks where the brand names three (`docs/design-system/00-audit.md`). The design skills (ALY-126) need one file to read, and a check that keeps it true.
 
 **Still open, for the founder.** Whether product buttons take the 45° notch (the workspace's four button systems are the next step); the Arabic spelling of the name.
+
+---
+
+## D-040 · Owners and staff manage the shop from WhatsApp as well as the portal, through one shared action layer
+**Date** 18 Oct 2026 · **Status** Accepted (founder, 18 Oct, in chat: "implement this", after the plan was drawn in Figma https://www.figma.com/design/FymEODsZGzeQTXciYIvYWI) · Linear ALY-130 · Spec `specs/003-owner-actions/spec.md`
+
+**Where we were.** An owner can only change anything in ALYR by signing in to the workspace. The only thing a staff WhatsApp number can do is ask for REPORT. A "staff" number is a flag on a contact (`contacts.role = 'staff'`) that only the seed data sets: nothing proves who holds the number, nothing links it to a login or to the owner, admin or agent role, and nothing says which door an action came through.
+
+**The decision.**
+- **One set of actions, several front doors.** Every thing an owner can do or ask is an *action* in `core/actions.py` that takes who is asking (a person, their role, and the channel: portal or WhatsApp). The portal and the WhatsApp commands call the same action, so permissions, modules and the record are written once.
+- **A number is trusted only after the person proves it from the phone.** A signed-in person asks the workspace for a one-time code (eight digits, ten minutes, ten wrong guesses kill it) and sends `LINK <code>` from the phone to the shop's number. That links the number to their login. The role is read from their membership each time, so removing the person or changing their role takes effect at once.
+- **The activity record says how.** `activity` gains a `channel` (portal, whatsapp, system). Linking and unlinking a number are on the record.
+- **Phases.** 0: link a number, the permission table, the action layer. 1: read-only commands (TODAY, ORDERS, BOOKINGS, OWED, HELP; REPORT as before), in English and Arabic. 2 (edits that ask YES and offer UNDO), 3 (operate) and 4 (nudges, AI drafts) are separate issues.
+- **No AI.** Commands are rules (D-012). A model only comes in phase 4, after the data-location answer (ALY-51).
+- **Agents see no money** (D-035) in chat either: no totals, no amounts owed.
+
+**What it changes in earlier decisions.** The rule "no new modules until 10 paying customers" (`operating-model.md`) was waived only for the Catalog (D-039). This is a second, smaller exception: it adds no new product, only a second way into the ones that exist, and only its first two phases are built. **The gate before phase 2 stays:** a named pilot owner says which five edits they want (ALY-58). Phases 2 to 4 are not built on a guess.
+
+**Rejected.**
+- *A separate WhatsApp bot with its own logic.* It would drift from the portal and need its own permissions and record.
+- *Trusting any `staff` contact.* The flag proves nothing about who is typing; a recycled or shared number would hold the owner's keys.
+- *Linking by phone number typed into the portal.* Phone numbers are optional in WhatsApp's user-ID world (D-009), so a typed number cannot be matched to the sender. A code sent from the phone works with either.
+- *Letting AI interpret free text from day one.* Free tiers train on prompts (D-012); the data-location question is open.
+
+**Revisit when.** Owners ask for commands the rules cannot understand (then phase 4 with a model), or a shop needs more than one number per person, or Meta's pricing makes nudges outside the 24-hour window too costly (ALY-64).

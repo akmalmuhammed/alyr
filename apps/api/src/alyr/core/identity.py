@@ -10,7 +10,7 @@ import asyncpg
 
 log = logging.getLogger("alyr.identity")
 
-_FIELDS = "id, name, role, lang, phone, wa_user_id, username, credit_limit"
+_FIELDS = "id, name, role, lang, phone, wa_user_id, username, credit_limit, user_id"
 # Tables whose rows follow a contact when two records turn out to be the same person.
 _FOLLOWERS = ("messages", "ledger_entries", "payment_requests", "orders")
 

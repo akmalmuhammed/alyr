@@ -16,6 +16,7 @@ from alyr.modules import report
 from alyr.modules.bookings import chat as bookings_chat
 from alyr.modules.ledger import chat as ledger_chat
 from alyr.modules.orders import chat as orders_chat
+from alyr.modules.owner import chat as owner_chat
 
 
 async def handle(
@@ -26,6 +27,10 @@ async def handle(
     web_url: str,
     outbound: Outbound,
 ) -> list[OutboundMessage]:
+    # A staff number asking about the shop, or anyone proving a phone with LINK (D-040).
+    replies = await owner_chat.maybe_handle(conn, contact, message)
+    if replies is not None:
+        return replies
     if contact["role"] == "staff":
         replies = await report.on_staff_message(conn, contact, message)
         if replies is not None:

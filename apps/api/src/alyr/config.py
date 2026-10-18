@@ -38,6 +38,10 @@ class Settings(BaseSettings):
 
     # Where payment links point. The web app serves /pay/...
     public_web_url: str = "http://localhost:3100"
+    # Where the signed-in workspace is served, for the links at the end of an owner's
+    # answers in WhatsApp (D-040). Empty until it is hosted: today's public web address is
+    # the laptop tunnel, which serves customer pages only, so a workspace link would 404.
+    workspace_url: str = ""
 
     meta_app_secret: str = ""
     meta_verify_token: str = ""

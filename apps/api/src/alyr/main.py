@@ -26,6 +26,7 @@ from alyr.routes import inbox, items, ledger, orders, pay, simulator, store, wha
 from alyr.routes import jobs as jobs_routes
 from alyr.routes import media as media_routes
 from alyr.routes import onboarding as onboarding_routes
+from alyr.routes import owner as owner_routes
 from alyr.routes import reports as reports_routes
 from alyr.routes import team as team_routes
 from alyr.routes import track as track_routes
@@ -98,6 +99,7 @@ def create_app() -> FastAPI:
     app.include_router(jobs_routes.router)
     app.include_router(inbox.router, dependencies=[Depends(require_module("inbox"))])
     app.include_router(team_routes.router)
+    app.include_router(owner_routes.router)
     app.include_router(auth_routes.router)
     app.include_router(
         bookings_routes.public, dependencies=[Depends(require_module_for_slug("bookings"))]
