@@ -85,8 +85,11 @@ def _gone() -> Refused:
 async def snapshot(
     conn: asyncpg.Connection, media: MediaService, clock: ShopClock, tenant_id: UUID
 ) -> Snapshot:
-    entries = await service.load(conn, clock)
-    used = sum(1 for e in entries if e.item["status"] != "archived")
+    everything = await service.load(conn, clock)
+    # A sample (D-039, ALY-107) is the shop type's example, not the owner's item: a row never
+    # matches one (it makes a new item), though a sample still counts towards the limit.
+    entries = [e for e in everything if not e.item["is_sample"]]
+    used = sum(1 for e in everything if e.item["status"] != "archived")
     limit = media.settings.catalog_max_items
     assets = {
         r["source_sha256"]: r["id"]

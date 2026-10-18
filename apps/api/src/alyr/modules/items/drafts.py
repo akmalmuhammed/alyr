@@ -16,7 +16,7 @@ import asyncpg
 from alyr.core.images import PhotoRefused
 from alyr.core.media import MediaService
 from alyr.core.team import Actor
-from alyr.modules.items import photos, service
+from alyr.modules.items import photos, service, template
 from alyr.modules.items.clock import ShopClock
 
 MAX_PER_REQUEST = 50
@@ -33,6 +33,9 @@ async def create(
     skipped: list[dict] = []
     stopped: dict | None = None
     seen: set[UUID] = set()
+    # A draft runs out the way the shop's new items do (a grocery's are counted), so the owner
+    # does not change it on every one.
+    rule = await template.draft_rule(conn)
     for asset_id in photo_ids[:MAX_PER_REQUEST]:
         if asset_id in seen:
             continue
@@ -55,7 +58,8 @@ async def create(
         try:
             async with conn.transaction():  # a savepoint: a bad photo leaves no empty draft
                 made = await service.create_item(
-                    conn, {"status": "draft", "name": "", "price": 0}, actor, clock
+                    conn, {"status": "draft", "name": "", "price": 0, "stock_rule": rule},
+                    actor, clock,
                 )
                 item_id = UUID(made["item"]["id"])
                 await media.attach(conn, asset_id, photos.ITEM, item_id)

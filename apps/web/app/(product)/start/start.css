@@ -64,7 +64,7 @@
 .ob h1 { margin: 0; font-size: clamp(26px, 6vw, 34px); line-height: 1.12; letter-spacing: -0.02em; font-weight: 600; text-wrap: balance; }
 .ob[dir="rtl"] h1 { letter-spacing: 0; line-height: 1.3; }
 .ob h2 { margin: 0 0 6px; font-size: var(--ui-body); font-weight: 600; }
-.ob-kicker { margin: 0; font-family: var(--font-ui-mono); font-size: var(--ui-micro); letter-spacing: 0.08em; text-transform: uppercase; color: var(--ink-3); }
+.ob-kicker { margin: 0; font-family: var(--font-ui-mono); font-size: var(--ui-micro); letter-spacing: 0.08em; text-transform: uppercase; color: var(--ink-2); }
 .ob[dir="rtl"] .ob-kicker { font-family: var(--face); letter-spacing: 0; font-size: var(--ui-small); }
 .ob-kicker.volt { color: var(--volt-ink); }
 .ob-content > .ob-kicker + h1 { margin-top: -10px; }
@@ -239,6 +239,12 @@
 .ob-promise { display: grid; gap: 6px; padding: 18px; border-radius: 22px; background: var(--volt-wash); color: var(--ink); }
 .ob-promise svg { color: var(--volt-ink); }
 .ob-promise p { margin: 0; color: var(--ink-2); font-size: var(--ui-body); line-height: 1.5; }
+.ob-review { display: grid; gap: 12px; padding: 16px; border-radius: 16px; background: var(--raise); box-shadow: var(--lift); }
+.ob-review h2 { margin: 0; font-size: var(--ui-lead, 1.125rem); font-weight: 600; }
+.ob-gets { list-style: none; margin: 0; padding: 0; display: grid; gap: 10px; }
+.ob-gets li { display: flex; align-items: flex-start; gap: 10px; font-size: var(--ui-body); line-height: 1.5; color: var(--ink); }
+.ob-gets svg { flex: none; margin-top: 3px; color: var(--volt-ink); }
+.ob-review .ob-note-card { background: var(--volt-wash); box-shadow: none; }
 .ob-note-card { display: grid; gap: 4px; padding: 14px 16px; border-radius: 16px; background: var(--raise); box-shadow: var(--lift); }
 .ob-note-card b { font-size: var(--ui-body-sm); font-weight: 600; }
 .ob-note-card small { color: var(--ink-2); font-size: var(--ui-small); line-height: 1.5; }

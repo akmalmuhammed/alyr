@@ -127,11 +127,13 @@ def _row(
 
 
 async def list_products(conn: asyncpg.Connection, only_available: bool = False) -> list[dict]:
-    """The shop's items. For the workspace, every item that is not archived; for the order
+    """The shop's items. For the workspace, every item that is not archived (the Catalog's
+    sample items are left out: they belong to the Catalog's own screens); for the order
     page (`only_available`), the live ones that can be ordered now."""
     shop_clock = await clock.load(conn)
     entries = await load_items(
-        conn, shop_clock, "i.status = 'live'" if only_available else "i.status <> 'archived'"
+        conn, shop_clock,
+        "i.status = 'live'" if only_available else "i.status <> 'archived' and not i.is_sample",
     )
     rows = []
     for entry in entries:

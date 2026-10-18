@@ -43,6 +43,29 @@ class ItemError(Exception):
         self.code = code
 
 
+SAMPLE_REFUSED = (
+    "This is a sample. Open it and save it to make it yours, or remove all the samples."
+)
+
+
+async def refuse_sample(conn: asyncpg.Connection, item_id: UUID) -> None:
+    """Stop a change that is not the owner making a sample item theirs (`samples.py`)."""
+    if await conn.fetchval("select is_sample from items where id = $1", item_id):
+        raise ItemError("sample_item", SAMPLE_REFUSED)
+
+
+async def adopt_sample(conn: asyncpg.Connection, item_id: UUID, actor: Actor) -> bool:
+    """The owner takes a sample as their own: it stops being a sample and stays a draft.
+    Returns False if it was not a sample (or does not exist)."""
+    done = await conn.fetchval(
+        "update items set is_sample = false, sample_key = '', updated_at = now() "
+        "where id = $1 and is_sample returning true", item_id,
+    )
+    if done:
+        await team.record(conn, "item", item_id, "adopted", actor, None, {})
+    return bool(done)
+
+
 @dataclass
 class Loaded:
     """An item with everything that belongs to it, as read from the database."""
@@ -170,6 +193,9 @@ def view(entry: Loaded, clock: ShopClock) -> dict:
         "available": i["available"], "unit": i["unit"], "pack_size": i["pack_size"],
         "min_order": i["min_order"], "tags": list(i["tags"]), "sort": i["sort"],
         "low_stock_at": i["low_stock_at"],
+        # A sample is an example the shop's type started it with (`samples.py`): never for
+        # sale, its price is an example. `sample_key` is what its tile is drawn from.
+        "sample": i["is_sample"], "sample_key": i["sample_key"],
         "price": i["price"], "price_text": fmt_qar(i["price"]),
         "sale_price": i["sale_price"], "sale_price_text": _money(i["sale_price"]),
         "sale_starts_at": _iso(i["sale_starts_at"]), "sale_ends_at": _iso(i["sale_ends_at"]),
@@ -314,7 +340,7 @@ async def _duplicates(
 ) -> list[dict]:
     rows = await conn.fetch(
         "select id, name, name_ar, status from items "
-        "where status <> 'archived' and ($1::uuid is null or id <> $1) "
+        "where status <> 'archived' and not is_sample and ($1::uuid is null or id <> $1) "
         "and ((btrim($2) <> '' and lower(btrim(name)) = lower(btrim($2))) "
         "     or (btrim($3) <> '' and btrim(name_ar) = btrim($3)))",
         skip, name, name_ar,
@@ -393,16 +419,19 @@ async def create_item(
 
 async def update_item(
     conn: asyncpg.Connection, item_id: UUID, changes: dict, actor: Actor, clock: ShopClock,
-    require_arabic: bool = True, reason: str = "",
+    require_arabic: bool = True, reason: str = "", adopt: bool = False,
 ) -> dict | None:
     """Save changes to an item. Only the keys in `changes` are touched; a `variants`,
     `option_groups` or `schedule` list replaces the whole set. Returns None if there is no
-    such item."""
+    such item. A sample item (`samples.py`) is changed only by the owner saving it in the
+    edit sheet (`adopt`), which makes it theirs; any other change to a sample is refused."""
     # `no key update`: a checkout writing an order line for this item takes a lighter lock
     # on it, and saving the item must not make that checkout wait for a lock it needs.
     row = await conn.fetchrow("select * from items where id = $1 for no key update", item_id)
     if row is None:
         return None
+    if row["is_sample"] and not adopt:
+        raise ItemError("sample_item", SAMPLE_REFUSED)
     if changes.get("variants") == []:
         raise ItemError("variant_needed", "An item needs at least one choice that can be sold.")
     before = dict(row)
@@ -444,6 +473,10 @@ async def update_item(
             conn, item_id, values["sku"], _variant_codes(current_variants, changes.get("variants"))
         )
     changed = [k for k in FIELDS if k in touched and values[k] != before[k]]
+    if before["is_sample"]:
+        # Saved by the owner: it is theirs now (before anything else, since a sample cannot
+        # be for sale and this save may put it on sale).
+        await adopt_sample(conn, item_id, actor)
     if changed:
         sets = ", ".join(f"{k} = ${n}" for n, k in enumerate(changed, start=2))
         try:
@@ -499,9 +532,13 @@ async def set_available(
 ) -> bool | None:
     """Flip an item's switch. Returns None if there is no such item; refuses an item whose
     rule has no switch."""
-    row = await conn.fetchrow("select stock_rule, available from items where id = $1", item_id)
+    row = await conn.fetchrow(
+        "select stock_rule, available, is_sample from items where id = $1", item_id
+    )
     if row is None:
         return None
+    if row["is_sample"]:
+        raise ItemError("sample_item", SAMPLE_REFUSED)
     if row["stock_rule"] == "always":
         raise ItemError(
             "no_switch", "This item is always available. Change how it runs out to use a switch."
@@ -839,6 +876,7 @@ async def record_stock(
     (signed) and "counted" (what was counted). Raises LookupError for an unknown item."""
     if kind not in stock.BY_HAND:
         raise ItemError("bad_kind", "Choose opening, received, wasted, counted or adjusted.")
+    await refuse_sample(conn, item_id)
     item, variant = await _variant_for(conn, item_id, variant_id)
     rule = item["stock_rule"]
     if rule not in availability.STOCKED:

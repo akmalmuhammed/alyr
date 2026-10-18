@@ -128,7 +128,7 @@ async def _run(
     words = match.tokens(command.query)
     if not words:
         return [_plain(contact, say("no_name", lang, example=example), lang)]
-    entries = await service.load(conn, clock, "i.status <> 'archived'")
+    entries = await service.load(conn, clock, "i.status <> 'archived' and not i.is_sample")
     found = match.find(words, entries, with_variants=command.verb != "price")
     if found.one is None and not found.many:
         return [_plain(contact, say("none_found", lang, query=command.query), lang)]

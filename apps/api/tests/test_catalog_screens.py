@@ -340,7 +340,7 @@ def test_the_list_has_filters_with_counts_and_pages(client):
     shown = listed(client)
     assert shown["counts"] == {
         "all": base + 6, "draft": 1, "sold_out": 2, "low_stock": 1, "stocked": 3,
-        "archived": 1,
+        "archived": 1, "sample": 0,
     }
     assert shown["low_stock_at"] == 5 and shown["total"] == base + 6
     assert "Old" not in names(client)

@@ -100,6 +100,14 @@ const en = {
     title: "ALYR will set up the rest with you",
     sub: (what: string) => `Your business is created and ALYR has your request. The ${what} screens are still being built, so a person will message you to set things up together.`,
     note: "You can still look around your workspace in the meantime.",
+    // Where the business has its Catalog (ALY-107): what it is getting, instead of the line above.
+    catalogTitle: "Here is what you are getting",
+    catalogSub: "Your business is created and ALYR has your request. A person will message you to set up your WhatsApp number and payments with you.",
+  },
+  review: {
+    title: "What you are getting",
+    samplesTitle: (n: number) => `${n} sample ${n === 1 ? "item" : "items"} to start`,
+    samples: "They show how it looks. They are marked Sample, their prices are examples, and customers never see them until you make them yours. Remove them all in one tap.",
   },
   try: {
     title: "Try it as a customer",
@@ -161,6 +169,10 @@ const en = {
     connected: "Connected",
     invite: "Invite",
     open: "Open my workspace",
+    // For an appointment business whose Catalog is optional (ALY-107).
+    catalog: (name: string) => `Add your ${name.toLowerCase()} (optional)`,
+    catalogSub: "Photos and prices of what you sell beside your services.",
+    open_: "Open",
   },
   finished: {
     title: "Your business is set up",
@@ -266,6 +278,13 @@ const ar: typeof en = {
     title: "ستكمل ALYR الإعداد معك",
     sub: (what) => `تم إنشاء نشاطك ووصل طلبك إلى ALYR. شاشات «${what}» قيد البناء، لذلك سيراسلك شخص لإكمال الإعداد معاً.`,
     note: "يمكنك تصفّح مساحة عملك في هذه الأثناء.",
+    catalogTitle: "هذا ما ستحصل عليه",
+    catalogSub: "تم إنشاء نشاطك ووصل طلبك إلى ALYR. سيراسلك شخص لإعداد رقم واتساب والدفع معك.",
+  },
+  review: {
+    title: "ما ستحصل عليه",
+    samplesTitle: (n) => `${n === 1 ? "صنف تجريبي واحد" : n === 2 ? "صنفان تجريبيان" : n <= 10 ? `${n} أصناف تجريبية` : `${n} صنفاً تجريبياً`} للبداية`,
+    samples: "تُريك الشكل. عليها علامة «تجريبي» وأسعارها أمثلة، ولا يراها العملاء حتى تجعلها لك. احذفها كلها بلمسة واحدة.",
   },
   try: {
     title: "جرّبه كعميل",
@@ -327,6 +346,9 @@ const ar: typeof en = {
     connected: "مربوط",
     invite: "دعوة",
     open: "افتح مساحة عملي",
+    catalog: (name) => `أضف ${name} (اختياري)`,
+    catalogSub: "صور وأسعار ما تبيعه إلى جانب خدماتك.",
+    open_: "افتح",
   },
   finished: {
     title: "تم إعداد نشاطك",

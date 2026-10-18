@@ -10,7 +10,7 @@ from fastapi import APIRouter, HTTPException, Request
 from pydantic import BaseModel, Field
 
 from alyr.config import get_settings
-from alyr.modules.items import demand
+from alyr.modules.items import demand, template
 from alyr.modules.items.cart import CartLine
 from alyr.modules.items.service import MAX_QUANTITY
 from alyr.modules.orders import service
@@ -95,6 +95,9 @@ async def storefront(slug: str, request: Request, c: UUID | None = None) -> dict
     async with request.app.state.db.tenant(shop["id"]) as conn:
         # The customer's own prices when the link says who is looking (their price group).
         page = await service.storefront(conn, c)
+        # What the shop's type says about its page (the section's name, the layout, how a
+        # sold-out item looks); null for a shop without the Catalog.
+        catalog_hints = await template.public(conn) if await template.enabled(conn) else None
         customer = None
         if c is not None:
             row = await conn.fetchrow("select name from contacts where id = $1", c)
@@ -106,6 +109,7 @@ async def storefront(slug: str, request: Request, c: UUID | None = None) -> dict
     return {
         "shop": {"name": shop["name"], "name_ar": shop["name_ar"]},
         **page,
+        "catalog": catalog_hints,
         "customer": customer,
     }
 
