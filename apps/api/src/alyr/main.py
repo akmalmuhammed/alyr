@@ -14,6 +14,8 @@ from alyr.core.storage import make_store
 from alyr.db import Database
 from alyr.modules import report
 from alyr.modules.bookings.service import REMINDER, Reminders
+from alyr.modules.items.import_photos import JOB as IMPORT_PHOTOS
+from alyr.modules.items.import_photos import ImportPhotos
 from alyr.modules.items.service import count_active
 from alyr.modules.orders import holds as order_holds
 from alyr.modules.orders.service import EXPIRE_JOB
@@ -23,6 +25,7 @@ from alyr.routes import agent as agent_routes
 from alyr.routes import auth as auth_routes
 from alyr.routes import bookings as bookings_routes
 from alyr.routes import inbox, items, ledger, orders, pay, simulator, store, whatsapp_webhook
+from alyr.routes import items_import as items_import_routes
 from alyr.routes import jobs as jobs_routes
 from alyr.routes import media as media_routes
 from alyr.routes import onboarding as onboarding_routes
@@ -75,6 +78,9 @@ def create_app() -> FastAPI:
     # The meters and the item cap count the shop's real items (not archived ones).
     app.state.media.item_counter = count_active
     app.state.media.register(app.state.jobs)
+    # Photos that come with an imported spreadsheet are added after it is applied (ALY-108).
+    photos_job = ImportPhotos(app.state.db, app.state.media)
+    app.state.jobs.register(IMPORT_PHOTOS, photos_job.run, photos_job.gave_up)
     app.add_exception_handler(PhotoRefused, media_routes.refused)
     if settings.jobs_inline:
         app.state.db.after_commit = app.state.jobs.drain
@@ -92,6 +98,12 @@ def create_app() -> FastAPI:
     # The Catalog's own API (D-039). It adds nothing to the Products screen. It answers
     # where orders are switched on (the order page reads the same items) and where the
     # Catalog module is on (its workspace screens, hidden until go-live, ALY-104).
+    # The import and export routes come first: `/api/items/export` must not be taken for
+    # an item's ID.
+    app.include_router(
+        items_import_routes.router,
+        dependencies=[Depends(require_any_module("orders", "catalog"))],
+    )
     app.include_router(
         items.router, dependencies=[Depends(require_any_module("orders", "catalog"))]
     )

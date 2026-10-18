@@ -53,7 +53,8 @@ apps/api/                     FastAPI service (Python 3.13, managed with uv)
                               weekly view), report.py (weekly report card); router.py picks the module.
                               items/ is the Catalog's engine (what a shop sells: variants, availability,
                               stock log, holds; specs/001-catalog-engine), used by orders at checkout;
-                              groups.py holds customer price groups and group prices (specs/003)
+                              groups.py holds customer price groups and group prices (specs/003); the
+                              Excel and CSV import and export are in specs/004-catalog-import-export
   src/alyr/routes/            HTTP routes. deps.py: who is calling, which shop, which modules are on
   src/alyr/catalog.py         What ALYR sells: modules and products (D-027)
   src/alyr/db.py              `Database.tenant(id)`: one transaction scoped to one tenant

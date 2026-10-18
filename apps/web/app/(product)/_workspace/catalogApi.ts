@@ -327,3 +327,90 @@ export function sendPhoto(blob: Blob, onProgress: (percent: number) => void, sig
 export function byteSize(bytes: number): string {
   return bytes < 1024 * 1024 ? `${Math.round(bytes / 1024)} KB` : `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
 }
+
+// ── import and export (ALY-108) ────────────────────────
+
+export type ImportIssue = {
+  level: "error" | "warning" | "info"; code: string; column: string | null;
+  message: string; message_ar: string; row: number;
+};
+export type ImportDiff = { column: string; label: string; label_ar: string; variant: string; before: string; after: string };
+export type ImportAction = "create" | "update" | "unchanged" | "skip" | "error";
+export type ImportItem = {
+  row: number; rows: number[]; action: ImportAction; name: string; name_ar: string; id: string | null;
+  draft: boolean; variants: number; photos: number; stock_moves: number; price: number | null;
+  price_text: string | null; category: string | null; diff: ImportDiff[]; issues: ImportIssue[];
+};
+export type ImportSummary = {
+  rows: number; items: number; create: number; update: number; unchanged: number; skip: number; error: number;
+  warnings: number; drafts: number; stock_moves: number; photos: number;
+  new_categories: { name: string; items: number }[];
+  zip: { name?: string; bytes?: number; entries?: number; used?: number; unused?: string[]; unused_count?: number; unusable?: string[] };
+};
+export type ImportNote = Omit<ImportIssue, "row">;
+export type OnDuplicate = "create" | "update" | "skip";
+export type ImportPreview = {
+  id: string; status: "preview"; filename: string; kind: string; zip: { name: string } | null; at: string;
+  by: { id: string | null; name: string }; hash: string; options: { on_duplicate: OnDuplicate };
+  summary: ImportSummary; notes: ImportNote[]; items: ImportItem[];
+};
+export type ImportProblem = { row: number; rows: number[]; name: string; name_ar: string; action: ImportAction; issues: ImportIssue[] };
+export type ImportPhotos = {
+  state: "queued" | "running" | "done" | "failed" | null; total: number; done: number;
+  failed: { file: string; code: string; message: string; message_ar: string }[];
+};
+export type ImportResult = {
+  id: string; status: "applied" | "undone"; filename: string; kind: string; by: { id: string | null; name: string };
+  at: string; undone_at: string | null; undone_by: string | null;
+  summary: { counts: Omit<ImportSummary, "new_categories" | "zip">; problems: ImportProblem[] };
+  photos: ImportPhotos | null; can_undo: boolean;
+};
+export type ImportRecent = {
+  id: string; status: "applied" | "undone"; filename: string; by: { id: string | null; name: string }; at: string;
+  created: number; updated: number; skipped: number; undone_at: string | null; undone_by: string | null; can_undo: boolean;
+};
+export type ImportKinds = { kinds: { key: string; name: string; note: string }[]; suggested: string };
+export type ImportUndone = {
+  id: string; filename: string; removed: number; archived: number; restored: number;
+  left: { id: string; name: string; name_ar: string; code: string; message: string; message_ar: string }[];
+};
+
+/**
+ * Sends a file as the request body (a sheet, or a zip of photos) and reports how much has gone.
+ * Resolves with the API's answer; a refusal throws an `ApiError` like `api` does.
+ */
+export function sendFile<T>(method: "POST" | "PUT", path: string, file: Blob, onProgress: (percent: number) => void): Promise<T> {
+  return new Promise((resolve, reject) => {
+    const request = new XMLHttpRequest();
+    request.open(method, path);
+    request.setRequestHeader("content-type", "application/octet-stream");
+    request.timeout = 180_000;
+    request.upload.onprogress = (event) => {
+      if (event.lengthComputable) onProgress(Math.min(99, Math.round((event.loaded / event.total) * 100)));
+    };
+    request.onload = () => {
+      let data: Record<string, unknown> = {};
+      try {
+        data = JSON.parse(request.responseText || "{}");
+      } catch {
+        data = {};
+      }
+      if (request.status >= 200 && request.status < 300) {
+        onProgress(100);
+        resolve(data as T);
+        return;
+      }
+      const inner = data.detail && typeof data.detail === "object" ? (data.detail as Record<string, unknown>) : data;
+      const error = new ApiError(request.status, String(inner.code ?? ""), String(typeof data.detail === "string" ? data.detail : inner.message ?? ""), data);
+      (error as ApiError & { ar?: string }).ar = String(inner.message_ar ?? data.message_ar ?? "");
+      reject(error);
+    };
+    request.onerror = request.ontimeout = () => reject(new ApiError(0, "offline", "offline", null));
+    request.send(file);
+  });
+}
+
+/** An issue's sentence in the person's language. */
+export function issueText(issue: { message: string; message_ar: string }, lang: Lang): string {
+  return lang === "ar" ? issue.message_ar || issue.message : issue.message;
+}
