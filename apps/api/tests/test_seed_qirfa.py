@@ -2,8 +2,10 @@
 activity the ALYR Agent dashboard needs, and nothing in it can reach a phone."""
 
 import asyncio
+import re
 from datetime import UTC, datetime
 
+from alyr.core import links
 from alyr.db import Database
 from alyr.seed_qirfa import ACCOUNTS, PEOPLE, QIRFA_TENANT_ID, ensure_qirfa_tenant, reset_qirfa
 from conftest import APP_DSN, OWNER_DSN
@@ -107,3 +109,22 @@ def test_the_sample_names_are_invented():
         first, initial = name.split(" ")
         assert len(initial) == 2 and initial.endswith("."), name
     assert not any(name.startswith("Al ") or "Al-" in name for name, *_ in ACCOUNTS)
+
+
+def test_the_links_in_the_sample_chats_are_signed_never_a_bare_contact_id():
+    """ALY-133: the order and booking links the bakery's customers were sent carry a token made
+    for that page, as the chat's own links do."""
+    make_bakery()
+    rows = owner_sql(
+        "select body from messages where tenant_id = $1 "
+        "and (body like '%/b/%' or body like '%/s/%')",
+        QIRFA_TENANT_ID,
+    )
+    booking = [r["body"] for r in rows if "/b/" in r["body"]]
+    ordering = [r["body"] for r in rows if "/s/" in r["body"]]
+    assert len(booking) > 10 and len(ordering) > 10
+    for bodies, purpose in ((booking, links.BOOKING), (ordering, links.ORDER)):
+        for body in bodies:
+            assert "?c=" not in body and "?t=" in body
+            token = re.search(r"\?t=(\S+)", body).group(1)
+            assert links.read(token, QIRFA_TENANT_ID, purpose=purpose).contact_id
