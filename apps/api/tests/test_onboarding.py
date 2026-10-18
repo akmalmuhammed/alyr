@@ -43,8 +43,9 @@ def book_from_test_line(client, slug, days_ahead=2):
     """Ask for the booking link on the test line, then book through the public page."""
     answer = client.post(f"{BASE}/test-chat", json={"reply_id": "book"}).json()
     link = answer["messages"][-1]["body"]
-    contact_id = link.split("?c=")[1].strip()
-    page = client.get(f"/api/book/{slug}", params={"c": contact_id}).json()
+    token = link.split("?t=")[1].strip()
+    page = client.get(f"/api/book/{slug}", headers={"x-order-link": token}).json()
+    assert page["customer"] is not None and page["link"]["state"] == "ok"
     service_id = page["services"][0]["id"]
     day = date.today() + timedelta(days=days_ahead)
     if day.weekday() == 4:
@@ -54,7 +55,7 @@ def book_from_test_line(client, slug, days_ahead=2):
     ).json()["times"]
     return client.post(
         f"/api/book/{slug}",
-        json={"contact_id": contact_id, "service_id": service_id, "starts_at": times[0]},
+        json={"token": token, "service_id": service_id, "starts_at": times[0]},
     )
 
 
@@ -201,7 +202,7 @@ def test_the_test_line_answers_like_a_customer_would_see_it(client):
     prices = client.post(f"{BASE}/test-chat", json={"reply_id": "prices"}).json()["messages"][-1]
     assert "Haircut: QAR 60 (45 min)" in prices["body"]
     link = client.post(f"{BASE}/test-chat", json={"reply_id": "book"}).json()["messages"][-1]
-    assert f"/b/{slug}?c=" in link["body"]
+    assert f"/b/{slug}?t=" in link["body"] and "?c=" not in link["body"]
 
 
 def test_a_test_booking_goes_through_the_real_booking_page(client):

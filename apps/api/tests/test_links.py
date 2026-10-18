@@ -27,12 +27,21 @@ def settings(**more) -> Settings:
     return Settings(_env_file=None, env="local", link_secret=SECRET, **more)
 
 
+def make(contact=CONTACT, tenant=DEMO_TENANT_ID, purpose=links.ORDER, **more) -> str:
+    """A token for the order page unless a test says otherwise."""
+    return links.mint(tenant, contact, purpose=purpose, **more)
+
+
+def look(token, tenant=DEMO_TENANT_ID, purpose=links.ORDER, **more) -> links.Link:
+    return links.read(token, tenant, purpose=purpose, **more)
+
+
 # ── the token itself ─────────────────────────────────────
 
 
 def test_a_token_names_the_customer_and_the_shop_it_was_made_for():
-    token = links.mint(DEMO_TENANT_ID, CONTACT, now=NOW, settings=settings())
-    link = links.read(token, DEMO_TENANT_ID, now=NOW + 60, settings=settings())
+    token = make(now=NOW, settings=settings())
+    link = look(token, DEMO_TENANT_ID, now=NOW + 60, settings=settings())
     assert (link.contact_id, link.table) == (CONTACT, "")
     # Nothing in it is the contact's ID in the clear.
     assert str(CONTACT) not in token and CONTACT.hex not in token
@@ -41,30 +50,30 @@ def test_a_token_names_the_customer_and_the_shop_it_was_made_for():
 
 
 def test_a_table_label_is_signed_with_the_token():
-    token = links.mint(DEMO_TENANT_ID, CONTACT, table="  A 7 ", now=NOW, settings=settings())
-    assert links.read(token, DEMO_TENANT_ID, now=NOW, settings=settings()).table == "A 7"
+    token = make(table="  A 7 ", now=NOW, settings=settings())
+    assert look(token, DEMO_TENANT_ID, now=NOW, settings=settings()).table == "A 7"
     # Arabic labels survive, and a long one is cut at twenty characters.
-    arabic = links.mint(DEMO_TENANT_ID, CONTACT, table="الطاولة ٧", now=NOW, settings=settings())
-    assert links.read(arabic, DEMO_TENANT_ID, now=NOW, settings=settings()).table == "الطاولة ٧"
-    long = links.mint(DEMO_TENANT_ID, CONTACT, table="9" * 50, now=NOW, settings=settings())
-    assert links.read(long, DEMO_TENANT_ID, now=NOW, settings=settings()).table == "9" * 20
+    arabic = make(table="الطاولة ٧", now=NOW, settings=settings())
+    assert look(arabic, DEMO_TENANT_ID, now=NOW, settings=settings()).table == "الطاولة ٧"
+    long = make(table="9" * 50, now=NOW, settings=settings())
+    assert look(long, DEMO_TENANT_ID, now=NOW, settings=settings()).table == "9" * 20
 
 
 def test_a_table_label_keeps_no_control_characters():
     assert links.clean_table("7\x00") == "7"
     assert links.clean_table("A\x07\n 3") == "A 3"
     assert links.clean_table("\x00\x01") == ""
-    token = links.mint(DEMO_TENANT_ID, CONTACT, table="\x00A7", now=NOW, settings=settings())
-    assert links.read(token, DEMO_TENANT_ID, now=NOW, settings=settings()).table == "A7"
+    token = make(table="\x00A7", now=NOW, settings=settings())
+    assert look(token, DEMO_TENANT_ID, now=NOW, settings=settings()).table == "A7"
 
 
 def test_the_last_character_of_the_signature_cannot_be_changed():
-    token = links.mint(DEMO_TENANT_ID, CONTACT, now=NOW, settings=settings())
+    token = make(now=NOW, settings=settings())
     for swap in ("A", "B", "Q", "g", "-", "_"):
         if token[-1] == swap:
             continue
         with pytest.raises(links.LinkError):
-            links.read(token[:-1] + swap, DEMO_TENANT_ID, now=NOW, settings=settings())
+            look(token[:-1] + swap, DEMO_TENANT_ID, now=NOW, settings=settings())
 
 
 def test_the_dev_key_warns_when_the_page_is_not_on_this_machine(caplog):
@@ -82,7 +91,7 @@ def test_the_dev_key_warns_when_the_page_is_not_on_this_machine(caplog):
 
 
 def test_a_tampered_token_is_refused():
-    token = links.mint(DEMO_TENANT_ID, CONTACT, table="7", now=NOW, settings=settings())
+    token = make(table="7", now=NOW, settings=settings())
     body, mac = token.split(".")
     flipped = ("B" if body[10] == "A" else "A")
     forged = [
@@ -94,44 +103,134 @@ def test_a_tampered_token_is_refused():
     ]
     for bad in forged:
         with pytest.raises(links.LinkError) as refused:
-            links.read(bad, DEMO_TENANT_ID, now=NOW, settings=settings())
+            look(bad, DEMO_TENANT_ID, now=NOW, settings=settings())
         assert refused.value.code in ("malformed", "bad_signature"), bad
     # Editing the table in the payload is exactly what the signature stops.
-    other_table = links.mint(DEMO_TENANT_ID, CONTACT, table="3", now=NOW, settings=settings())
+    other_table = make(table="3", now=NOW, settings=settings())
     swapped = other_table.split(".")[0] + "." + mac
     with pytest.raises(links.LinkError):
-        links.read(swapped, DEMO_TENANT_ID, now=NOW, settings=settings())
+        look(swapped, DEMO_TENANT_ID, now=NOW, settings=settings())
 
 
 @pytest.mark.parametrize("junk", ["", ".", "abc", "a.b", "###.###", "💥", "x" * 400, str(CONTACT)])
 def test_nonsense_is_malformed_not_a_crash(junk):
     with pytest.raises(links.LinkError) as refused:
-        links.read(junk, DEMO_TENANT_ID, now=NOW, settings=settings())
+        look(junk, DEMO_TENANT_ID, now=NOW, settings=settings())
     assert refused.value.code in ("malformed", "bad_signature")
 
 
 def test_a_token_is_worthless_at_another_shop():
-    token = links.mint(DEMO_TENANT_ID, CONTACT, now=NOW, settings=settings())
+    token = make(now=NOW, settings=settings())
     with pytest.raises(links.LinkError) as refused:
-        links.read(token, OTHER_SHOP, now=NOW, settings=settings())
+        look(token, OTHER_SHOP, now=NOW, settings=settings())
     assert refused.value.code == "bad_signature"
 
 
 def test_a_token_expires_after_the_days_the_shop_platform_sets():
-    token = links.mint(DEMO_TENANT_ID, CONTACT, now=NOW, settings=settings(link_days=30))
+    token = make(now=NOW, settings=settings(link_days=30))
     day = 86400
-    assert links.read(token, DEMO_TENANT_ID, now=NOW + 29 * day, settings=settings()).contact_id
+    assert look(token, DEMO_TENANT_ID, now=NOW + 29 * day, settings=settings()).contact_id
     with pytest.raises(links.LinkError) as refused:
-        links.read(token, DEMO_TENANT_ID, now=NOW + 30 * day, settings=settings())
+        look(token, DEMO_TENANT_ID, now=NOW + 30 * day, settings=settings())
     assert refused.value.code == "expired"
 
 
 def test_a_token_made_with_another_secret_is_refused():
-    token = links.mint(DEMO_TENANT_ID, CONTACT, now=NOW, settings=settings())
+    token = make(now=NOW, settings=settings())
     other = Settings(_env_file=None, env="local", link_secret="y" * 40)
     with pytest.raises(links.LinkError) as refused:
-        links.read(token, DEMO_TENANT_ID, now=NOW, settings=other)
+        look(token, DEMO_TENANT_ID, now=NOW, settings=other)
     assert refused.value.code == "bad_signature"
+
+
+# ── what a token is for (ALY-133) ─────────────────────────
+
+
+def test_a_token_opens_the_page_it_was_made_for_and_no_other():
+    for made_for, other in ((links.ORDER, links.BOOKING), (links.BOOKING, links.ORDER)):
+        token = make(purpose=made_for, now=NOW, settings=settings())
+        link = look(token, purpose=made_for, now=NOW, settings=settings())
+        assert (link.contact_id, link.purpose) == (CONTACT, made_for)
+        with pytest.raises(links.LinkError) as refused:
+            look(token, purpose=other, now=NOW, settings=settings())
+        assert refused.value.code == "wrong_purpose"
+
+
+def test_the_purpose_is_signed_so_it_cannot_be_edited_into_the_other_one():
+    order = make(purpose=links.ORDER, now=NOW, settings=settings())
+    body, mac = order.split(".")
+    payload = bytearray(links._unb64(body))
+    assert payload[1] == 1
+    payload[1] = 2  # "booking", with the order token's signature kept
+    forged = f"{links._b64(bytes(payload))}.{mac}"
+    for purpose in (links.ORDER, links.BOOKING):
+        with pytest.raises(links.LinkError) as refused:
+            look(forged, purpose=purpose, now=NOW, settings=settings())
+        assert refused.value.code == "bad_signature"
+
+
+def test_a_signature_is_checked_before_a_token_is_allowed_to_say_what_it_is_for():
+    """A forged token must not learn, from the answer, whether its purpose was right."""
+    token = make(purpose=links.BOOKING, now=NOW, settings=settings())
+    with pytest.raises(links.LinkError) as refused:
+        look(tamper(token), purpose=links.ORDER, now=NOW, settings=settings())
+    assert refused.value.code == "bad_signature"
+
+
+def test_a_token_made_for_another_page_is_refused_even_after_it_has_expired():
+    token = make(purpose=links.BOOKING, now=NOW, settings=settings(link_days=1))
+    with pytest.raises(links.LinkError) as refused:
+        look(token, purpose=links.ORDER, now=NOW + 5 * 86400, settings=settings())
+    assert refused.value.code == "wrong_purpose"
+    with pytest.raises(links.LinkError) as refused:
+        look(token, purpose=links.BOOKING, now=NOW + 5 * 86400, settings=settings())
+    assert refused.value.code == "expired"
+
+
+def test_a_link_is_made_and_read_for_a_named_purpose_only():
+    with pytest.raises(TypeError):
+        links.mint(DEMO_TENANT_ID, CONTACT, settings=settings())  # no purpose named
+    with pytest.raises(TypeError):
+        links.read("x.y", DEMO_TENANT_ID, settings=settings())
+    for unknown in ("", "pay", "track", "ORDER", None):
+        with pytest.raises(ValueError):
+            make(purpose=unknown, settings=settings())
+        with pytest.raises(ValueError):
+            look("x.y", purpose=unknown, settings=settings())
+
+
+def test_only_an_order_link_can_name_a_table():
+    with pytest.raises(ValueError):
+        make(purpose=links.BOOKING, table="7", settings=settings())
+    assert look(make(purpose=links.BOOKING, now=NOW, settings=settings()),
+                purpose=links.BOOKING, now=NOW, settings=settings()).table == ""
+
+
+def test_a_token_from_before_purposes_is_refused_not_read_as_an_order_link():
+    """ALY-112's first tokens (version 1: no purpose) must not pass for either page."""
+    import hashlib
+    import hmac
+
+    key = links.secret(settings())
+    payload = bytes([1]) + CONTACT.bytes + int(NOW + 86400).to_bytes(4, "big")
+    mac = hmac.new(key, b"alyr-order-link-v1\x00" + DEMO_TENANT_ID.bytes + payload,
+                   hashlib.sha256).digest()[:links.MAC_BYTES]
+    old = f"{links._b64(payload)}.{links._b64(mac)}"
+    for purpose in (links.ORDER, links.BOOKING):
+        with pytest.raises(links.LinkError) as refused:
+            look(old, purpose=purpose, now=NOW, settings=settings())
+        assert refused.value.code == "malformed"
+
+
+def test_a_booking_link_is_the_booking_page_with_a_token_and_no_contact_id():
+    url = links.booking_url("http://web.test", "al-noor", DEMO_TENANT_ID, CONTACT)
+    assert url.startswith("http://web.test/b/al-noor?t=")
+    assert str(CONTACT) not in url and CONTACT.hex not in url
+    token = url.split("?t=")[1]
+    assert look(token, purpose=links.BOOKING).contact_id == CONTACT
+    order = links.order_url("http://web.test", "al-noor", DEMO_TENANT_ID, CONTACT, "7")
+    assert order.startswith("http://web.test/s/al-noor?t=")
+    assert look(order.split("?t=")[1], purpose=links.ORDER).table == "7"
 
 
 # ── the secret ───────────────────────────────────────────
@@ -144,7 +243,7 @@ def test_a_developer_machine_may_use_the_built_in_secret_and_nothing_else_may():
         with pytest.raises(links.LinkSecretMissing):
             links.secret(Settings(_env_file=None, env=env, link_secret=""))
         with pytest.raises(links.LinkSecretMissing):
-            links.mint(DEMO_TENANT_ID, CONTACT, settings=Settings(_env_file=None, env=env))
+            make(settings=Settings(_env_file=None, env=env))
     # A short secret is as good as none, even on a developer machine.
     with pytest.raises(links.LinkSecretMissing):
         links.secret(Settings(_env_file=None, env="local", link_secret="short"))
@@ -215,7 +314,7 @@ def test_a_tampered_or_foreign_token_opens_the_public_page_and_says_so(client):
 
 def test_an_expired_token_says_how_to_get_a_new_link(client):
     contact = people(client, 1)[0]
-    old = links.mint(DEMO_TENANT_ID, UUID(contact["id"]), now=1_000_000.0)
+    old = make(UUID(contact["id"]), now=1_000_000.0)
     shown = client.get(STORE, params={"t": old}).json()
     assert (shown["customer"], shown["link"]["state"]) == (None, "expired")
     assert "expired" in shown["link"]["message"] and "WhatsApp" in shown["link"]["message"]
@@ -321,7 +420,7 @@ def test_a_token_for_another_shop_orders_nothing_here(client):
 def test_the_chat_sends_a_token_and_the_link_it_sends_works(client):
     reply = say(client, AHMED_PHONE, "order")[-1]["body"]
     token = reply.split("?t=")[1].split()[0]
-    link = links.read(token, DEMO_TENANT_ID)
+    link = look(token)
     ahmed = customer(client)
     assert str(link.contact_id) == ahmed["id"] and link.table == ""
     assert ahmed["id"] not in reply and f"/s/{DEMO_SLUG}?t=" in reply

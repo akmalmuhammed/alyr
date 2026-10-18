@@ -9,6 +9,7 @@ from datetime import UTC, datetime
 import pytest
 
 from alyr.agent_samples import OUT, SAMPLE_NOW
+from alyr.core import links
 from alyr.core.auth import Staff
 from alyr.db import Database
 from alyr.modules.agent import view
@@ -58,6 +59,20 @@ def test_a_bookings_sample_is_the_same_every_time_and_never_reaches_a_phone(samp
     )
     expected = ["bookings", "inbox", "payments"] + (["ledger"] if sample.accounts else [])
     assert [r["module_key"] for r in modules] == sorted(expected)
+
+
+@pytest.mark.parametrize("sample", [SALON, HOME], ids=["salon", "homeservices"])
+def test_the_booking_links_in_a_sample_chat_are_signed_never_a_bare_contact_id(sample):
+    """ALY-133: the seeded chats say what the real one says, a token made for booking."""
+    make(sample)
+    bodies = [r["body"] for r in owner_sql(
+        "select body from messages where tenant_id = $1 and body like '%/b/%'", sample.tenant_id
+    )]
+    assert len(bodies) > 20
+    for body in bodies:
+        assert "?c=" not in body and "?t=" in body
+        token = re.search(r"\?t=(\S+)", body).group(1)
+        assert links.read(token, sample.tenant_id, purpose=links.BOOKING).contact_id
 
 
 def test_an_empty_sample_shows_the_empty_state():

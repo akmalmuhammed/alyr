@@ -49,7 +49,7 @@ apps/api/                     FastAPI service (Python 3.13, managed with uv)
   src/alyr/core/              Inbound path, contact identity, outbound layer (consent, 24-hour window), jobs,
                               sign-in (auth), email (mail), sign-up (onboarding), pricing, back office,
                               team accountability (team, D-028), workspace shell (workspace), templates,
-                              signed order links (links: a customer's link carries a token, never a contact ID)
+                              signed customer links (links: a customer's order or booking link carries a token made for that page, never a contact ID)
   src/alyr/modules/           What answers customers: ledger, orders, bookings, inbox, agent (the owner's
                               weekly view), report.py (weekly report card); router.py picks the module.
                               items/ is the Catalog's engine (what a shop sells: variants, availability,
@@ -81,7 +81,8 @@ scripts/                      check.sh (everything CI runs), demo.sh (start and 
                               api-in-docker.sh, build-site.sh, catalog-browser-check.mjs (the Catalog's
                               screens in a real browser at phone width), catalog-reports-browser-check.mjs
                               (its home cards and the back office's Usage view), order-page-browser-check.mjs
-                              (the customer's order page, same way), hooks/pre-commit
+                              (the customer's order page, same way), booking-page-browser-check.mjs (the booking page and its links),
+                              hooks/pre-commit
 specs/                        One folder per spec; write or update the spec before building
 infra/                        Cloud infrastructure as code (proposed in PR #52, not merged)
 packages/compliance/          WPS SIF and e-invoice libraries (not created yet)

@@ -29,6 +29,7 @@ from alyr.modules.items import demand, template, text
 from alyr.modules.items.cart import CartLine
 from alyr.modules.items.service import MAX_QUANTITY
 from alyr.modules.orders import page, service
+from alyr.routes import customer_link
 
 router = APIRouter(prefix="/api/store", tags=["order page"])
 
@@ -122,50 +123,6 @@ def _refused(error: service.OrderError) -> HTTPException:
     return HTTPException(status_code=_STATUS_FOR.get(error.code, 422), detail=detail)
 
 
-def _link_state(token: str | None, tenant_id: UUID) -> tuple[links.Link | None, str]:
-    """What a token says: (the link, "ok"), or (None, "none" | "invalid" | "expired")."""
-    if not token:
-        return None, "none"
-    try:
-        return links.read(token, tenant_id), "ok"
-    except links.LinkError as error:
-        return None, "expired" if error.code == "expired" else "invalid"
-    except links.LinkSecretMissing as error:
-        raise HTTPException(status_code=503, detail="orders are not available") from error
-
-
-def _link_refusal(state: str) -> HTTPException:
-    code = "expired_link" if state == "expired" else "bad_link"
-    if state == "none":
-        code = "bad_link"
-    return HTTPException(status_code=403, detail={
-        "code": code, "message": text.say(code, "en", {}), "message_ar": text.say(code, "ar", {}),
-    })
-
-
-def _customer_link(token: str | None, tenant_id: UUID, *, required: bool) -> links.Link | None:
-    link, state = _link_state(token, tenant_id)
-    if link is None and (required or state in ("invalid", "expired")):
-        raise _link_refusal(state)
-    return link
-
-
-def _personal(response: Response) -> None:
-    """What these answers say depends on the link (the customer's name and prices), which
-    is in a header, not in the address: no shared cache may keep one for someone else."""
-    response.headers["Cache-Control"] = "private, no-store"
-    response.headers["Vary"] = "X-Order-Link"
-
-
-def _link_view(state: str) -> dict:
-    code = {"invalid": "bad_link", "expired": "expired_link"}.get(state)
-    return {
-        "state": state,
-        "message": text.say(code, "en", {}) if code else "",
-        "message_ar": text.say(code, "ar", {}) if code else "",
-    }
-
-
 async def _identify(conn, link: links.Link | None) -> dict | None:
     """The customer behind a valid link, as the page greets them. None for a link whose
     customer is gone (a contact deleted after the link was sent)."""
@@ -200,9 +157,9 @@ async def storefront(
 ) -> dict:
     """The order page: the shop, its choices for the page, its categories, the customer (if
     the link is theirs) and one page of items. With no `limit`, every item."""
-    _personal(response)
+    customer_link.keep_private(response)
     shop = await _shop(request, slug)
-    link, state = _link_state(x_order_link or t, shop["id"])
+    link, state = customer_link.state(x_order_link or t, shop["id"], links.ORDER)
     async with request.app.state.db.tenant(shop["id"]) as conn:
         customer = await _identify(conn, link)
         if link is not None and customer is None:
@@ -228,7 +185,7 @@ async def storefront(
         "unavailable": [i for i in items if not i["orderable"]],
         "catalog": hints,
         "customer": customer,
-        "link": _link_view(state),
+        "link": customer_link.view(state, links.ORDER),
         # The label on a table's QR code. A person typed it into a link, so it is only a
         # label for staff; the one inside a signed link was signed.
         "table": links.clean_table(link.table if link is not None and link.table else table),
@@ -242,9 +199,9 @@ async def one_item(
     x_order_link: str | None = Header(default=None, max_length=200),
 ) -> dict:
     """One item with every photo, for its sheet."""
-    _personal(response)
+    customer_link.keep_private(response)
     shop = await _shop(request, slug)
-    link, _ = _link_state(x_order_link or t, shop["id"])
+    link, _ = customer_link.state(x_order_link or t, shop["id"], links.ORDER)
     async with request.app.state.db.tenant(shop["id"]) as conn:
         customer = await _identify(conn, link)
         row = await page.one(
@@ -260,7 +217,7 @@ async def live(slug: str, body: Live, request: Request) -> dict:
     """What changed on the items a customer is looking at: asked every 20 to 30 seconds
     while the page is open and in front. Small on purpose."""
     shop = await _shop(request, slug)
-    link, _ = _link_state(body.token, shop["id"])
+    link, _ = customer_link.state(body.token, shop["id"], links.ORDER)
     async with request.app.state.db.tenant(shop["id"]) as conn:
         customer = await _identify(conn, link)
         return await page.live(conn, body.ids, link.contact_id if customer else None)
@@ -358,7 +315,7 @@ async def check_cart(slug: str, body: CartCheck, request: Request) -> dict:
     """Is each line of this cart still good: for sale, in stock, at the price shown? Asked
     before payment. Changes nothing."""
     shop = await _shop(request, slug)
-    link = _customer_link(body.token, shop["id"], required=False)
+    link = customer_link.require(body.token, shop["id"], links.ORDER, required=False)
     async with request.app.state.db.tenant(shop["id"]) as conn:
         customer = await _identify(conn, link)
         return await service.check_cart(
@@ -370,7 +327,7 @@ async def check_cart(slug: str, body: CartCheck, request: Request) -> dict:
 @router.post("/{slug}/orders")
 async def place_order(slug: str, body: NewOrder, request: Request) -> dict:
     shop = await _shop(request, slug)
-    link = _customer_link(body.token, shop["id"], required=True)
+    link = customer_link.require(body.token, shop["id"], links.ORDER, required=True)
     try:
         async with request.app.state.db.tenant(shop["id"]) as conn:
             return await service.create_order(
@@ -388,7 +345,7 @@ async def repeat_order(slug: str, body: Repeat, request: Request) -> dict:
     """"Same as last time": order again what the customer's last order held. What can no
     longer be ordered is left out and named in the answer."""
     shop = await _shop(request, slug)
-    link = _customer_link(body.token, shop["id"], required=True)
+    link = customer_link.require(body.token, shop["id"], links.ORDER, required=True)
     try:
         async with request.app.state.db.tenant(shop["id"]) as conn:
             return await service.repeat_last_order(
