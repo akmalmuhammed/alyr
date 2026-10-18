@@ -209,8 +209,8 @@ async def reset_demo_data(db: Database) -> None:
             STAFF_PHONE, SIMULATOR_NUMBER_ID,
         )
         owner = await conn.fetchval(
-            "insert into contacts (phone, name, role, number_id, weekly_report) "
-            "values ($1, 'Fatima (owner)', 'staff', $2, true) returning id",
+            "insert into contacts (phone, name, role, number_id, weekly_report, catalog_manager) "
+            "values ($1, 'Fatima (owner)', 'staff', $2, true, true) returning id",
             OWNER_PHONE, SIMULATOR_NUMBER_ID,
         )
         await consent.record(conn, owner, "service", "granted", "weekly_report_setting")

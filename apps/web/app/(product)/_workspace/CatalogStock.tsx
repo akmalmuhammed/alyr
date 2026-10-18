@@ -132,7 +132,7 @@ export function CatalogStock({ lang, onChanged, push, clear }: { lang: Lang; onC
                     {m.reason && m.kind !== "sold" && !GENERIC.includes(m.reason) ? ` · ${m.reason}` : ""}
                     {` · ${t.balance(m.balance_after)}`}
                   </small>
-                  <small>{t.by(m.actor.name)} · <time className="num" dateTime={m.created_at} dir="ltr">{stamp(m.created_at)}</time></small>
+                  <small>{t.by(m.actor.name)}{m.via === "whatsapp" ? ` · ${t.viaWhatsapp}` : ""} · <time className="num" dateTime={m.created_at} dir="ltr">{stamp(m.created_at)}</time></small>
                 </span>
               </li>
             );

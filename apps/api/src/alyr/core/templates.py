@@ -190,6 +190,62 @@ CATALOGUE: dict[str, Template] = {
         "نرجو الحضور في الوقت المحدد، وبانتظارك.",
         ("101", "Al Noor Electricals", "Tue 13 Oct, 8:30 AM"),
     ),
+    # The Catalog on WhatsApp (ALY-106). Four tell the shop's own managers something about
+    # their stock or money (utility: an account alert for the account holder); one tells a
+    # customer an item they asked about is back. That one is MARKETING, see below.
+    "stock_low": Template(
+        "utility",
+        "Low stock at {{1}}: {{2}} has only {{3}} left. You can update the count in the "
+        "Catalog or by message.",
+        "تنبيه مخزون في {{1}}: الصنف {{2}} على وشك النفاد، والمتبقي {{3}} فقط. "
+        "يمكنك تحديث الكمية من الكتالوج أو برسالة.",
+        ("Al Noor Electricals", "Cable 2.5 mm", "3"),
+    ),
+    "stock_sold_out": Template(
+        "utility",
+        "Sold out at {{1}}: {{2}} has just run out, so customers cannot order it until "
+        "you add stock.",
+        "نفد من {{1}} الصنف {{2}} الآن، ولا يستطيع العملاء طلبه حتى تضيف كمية جديدة.",
+        ("Al Noor Electricals", "Cable 2.5 mm"),
+    ),
+    # The owner is told a refund is theirs to make: ALYR never holds the shop's money.
+    "refund_due": Template(
+        "utility",
+        "Refund due at {{1}}: order {{2}} for {{3}} was cancelled after the customer paid. "
+        "Please refund it from your own payment account, as ALYR never holds your money.",
+        "استرداد مستحق في {{1}}: تم إلغاء الطلب رقم {{2}} بمبلغ {{3}} بعد أن دفع العميل. "
+        "يرجى رد المبلغ من حسابك للدفع، فـ ALYR لا تحتفظ بأموالك.",
+        ("Al Noor Electricals", "1001", "QAR 179"),
+    ),
+    "refund_due_late": Template(
+        "utility",
+        "Refund due at {{1}}: a payment of {{2}} reached order {{3}} after its payment link "
+        "expired and the order was cancelled. Please refund it from your own payment account.",
+        "استرداد مستحق في {{1}}: وصلت دفعة بمبلغ {{2}} للطلب رقم {{3}} بعد انتهاء رابط الدفع "
+        "وإلغاء الطلب. يرجى ردها من حسابك للدفع.",
+        ("Al Noor Electricals", "QAR 179", "1001"),
+    ),
+    "draft_added": Template(
+        "utility",
+        "New item draft at {{1}}: {{2}} sent a photo for {{3}}. Open the Catalog to check "
+        "it and put it on sale.",
+        "مسودة صنف جديد في {{1}}: أرسل {{2}} صورة لـ{{3}}. افتح الكتالوج لمراجعتها وطرحها للبيع.",
+        ("Al Noor Electricals", "Yusuf", "Mixed grill"),
+    ),
+    # "Tell me when it is back". Meta's template guidelines (checked 18 Oct 2026) say utility
+    # templates must be non-promotional, and list "a saved search found a match" among the
+    # retargeting examples that are "marketing even if requested by users". An item back in
+    # stock is the nearest thing, so it is filed as marketing: it goes only to a customer who
+    # agreed to messages like it (core/consent.py), and only outside the 24-hour window.
+    # Inside the window it is an ordinary message and needs no template (watches.py).
+    "back_in_stock": Template(
+        "marketing",
+        "Good news from {{1}}: {{2}} is back in stock, as you asked. You can order here: "
+        "{{3}} . Send STOP to stop these updates.",
+        "أخبار سارة من {{1}}: عاد «{{2}}» إلى المخزون كما طلبت. يمكنك الطلب من هنا: {{3}} . "
+        "أرسل «إيقاف» لإيقاف هذه الرسائل.",
+        ("Al Noor Electricals", "Cable 2.5 mm", "https://app.alyr.online/s/al-noor?c=a"),
+    ),
 }
 
 

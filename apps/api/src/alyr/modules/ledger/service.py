@@ -8,6 +8,7 @@ from alyr.core import team, templates
 from alyr.core.normalise import fmt_qar
 from alyr.core.outbound import Outbound
 from alyr.core.team import Actor
+from alyr.modules.items import alerts
 from alyr.modules.items import holds as stock_holds
 from alyr.modules.ledger.ageing import Aged, age
 
@@ -248,6 +249,26 @@ def entry_notice(lang: str, shop: str, shop_ar: str, kind: str, amount: int, bal
     return f"{shop}: we recorded {what} {money}. Your balance is now {total}."
 
 
+async def _late_payment(
+    conn: asyncpg.Connection, outbound: Outbound, payment_id: UUID, late: asyncpg.Record
+) -> None:
+    """A payment reached an order whose payment link had expired: on the record once, and
+    the shop's managers are told a refund is theirs to make (ALY-106)."""
+    seen = await conn.fetchval(
+        "select true from activity where subject = 'order' and subject_id = $1 "
+        "and action = 'late_payment' and detail->>'payment' = $2",
+        late["order_id"], str(payment_id),
+    )
+    if seen:
+        return
+    number = await conn.fetchval("select number from orders where id = $1", late["order_id"])
+    await team.record(
+        conn, "order", late["order_id"], "late_payment", team.CUSTOMER, late["contact_id"],
+        {"number": number, "amount": fmt_qar(late["amount"]), "payment": str(payment_id)},
+    )
+    await alerts.refund_due(conn, outbound, number, fmt_qar(late["amount"]), late=True)
+
+
 async def complete_payment(
     conn: asyncpg.Connection, payment_id: UUID, outbound: Outbound
 ) -> str:
@@ -263,10 +284,17 @@ async def complete_payment(
         payment_id,
     )
     if row is None:
-        status = await conn.fetchval(
-            "select status from payment_requests where id = $1", payment_id
+        late = await conn.fetchrow(
+            "select status, order_id, contact_id, amount, provider from payment_requests "
+            "where id = $1", payment_id,
         )
-        return status or "not_found"
+        if late is None:
+            return "not_found"
+        if late["status"] == "expired" and late["order_id"] and late["provider"] != "standin":
+            # A real gateway took the money after the link had expired and the order was
+            # cancelled. The stand-in gateway moves no money, so it never lands here.
+            await _late_payment(conn, outbound, payment_id, late)
+        return late["status"]
     lang = await conn.fetchval("select lang from contacts where id = $1", row["contact_id"])
     if row["order_id"] is not None:
         # Paying for an order settles the order. It was never a debt, so the ledger

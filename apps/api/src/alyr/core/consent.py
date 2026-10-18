@@ -67,6 +67,13 @@ async def on_inbound(
         for purpose in ("service", "marketing"):
             await record(conn, contact["id"], purpose, "revoked", "customer_message",
                          message.text)
+        # Nothing more goes to this customer, so every "tell me when it is back" they
+        # asked for (modules/items/watches.py) is closed unsent.
+        await conn.execute(
+            "update stock_watches set status = 'cancelled', closed_at = now() "
+            "where contact_id = $1 and status = 'waiting'",
+            contact["id"],
+        )
         body = (
             f"لن تصلك تذكيرات أو إشعارات من {shop} بعد الآن. ما زال بإمكانك مراسلتنا هنا. "
             "أرسل «اشترك» لإعادة تفعيلها." if arabic

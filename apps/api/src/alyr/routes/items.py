@@ -28,7 +28,9 @@ Filter = Literal["draft", "sold_out", "low_stock", "stocked", "archived"]
 Weekday = Annotated[int, Field(ge=0, le=6)]
 Money = Annotated[int, Field(ge=0, le=100_000_000, description="In dirhams: 100 is QAR 1")]
 # Fields that may be sent as null to clear them; every other field is left alone if null.
-NULLABLE = {"sale_price", "sale_starts_at", "sale_ends_at", "pack_size", "daily_limit"}
+NULLABLE = {
+    "sale_price", "sale_starts_at", "sale_ends_at", "pack_size", "daily_limit", "low_stock_at",
+}
 
 
 class VariantIn(BaseModel):
@@ -88,6 +90,10 @@ class ItemChanges(BaseModel):
     unit: Unit | None = None
     pack_size: int | None = Field(default=None, gt=0, le=100_000)
     min_order: int | None = Field(default=None, ge=1, le=999)
+    low_stock_at: int | None = Field(
+        default=None, ge=0, le=100_000,
+        description="This item's own low-stock number; null uses the shop's",
+    )
     tags: list[Annotated[str, Field(max_length=30)]] | None = Field(default=None, max_length=20)
     stock_rule: Rule | None = None
     available: bool | None = None
