@@ -30,6 +30,9 @@ type Props = {
   table: string;
   forDate: string | null;
   onForDate: (date: string | null) => void;
+  /** The shop's "pickup or delivery day" feature. Off, nobody is asked and an order for an item
+   *  made to order is for the earliest day the shop can do it. */
+  askDay?: boolean;
   setQty: (key: string, qty: number) => void;
   remove: (key: string) => void;
   accept: (key: string, unit: number) => void;
@@ -56,7 +59,7 @@ function commonDays(lines: Line[], lookup: (id: string) => Item | undefined): Da
 }
 
 export function ReviewSheet(props: Props) {
-  const { slug, token, lang, lines, lookup, customer, table, forDate, onForDate } = props;
+  const { slug, token, lang, lines, lookup, customer, table, forDate, onForDate, askDay = true } = props;
   const t = T[lang];
   // What the shop said, for the order as it was when it was asked. Once the order changes the
   // answer is old and is not shown against the new lines.
@@ -70,17 +73,17 @@ export function ReviewSheet(props: Props) {
   const dayKey = days ? days.map((d) => d.date).join(",") : "";
   // The chosen day must be one every dated item allows; else the first that is.
   useEffect(() => {
-    if (!dated) { if (forDate) onForDate(null); return; }
+    if (!dated || !askDay) { if (forDate) onForDate(null); return; }
     const list = dayKey ? dayKey.split(",") : [];
     if (list.length && !list.includes(forDate ?? "")) onForDate(list[0]);
-  }, [dated, dayKey, forDate, onForDate]);
+  }, [dated, askDay, dayKey, forDate, onForDate]);
 
   const body = useMemo<CartBody>(() => ({
     items: lines.map((l) => ({
       product_id: l.itemId, quantity: l.qty, variant_id: l.variantId, option_ids: l.optionIds, expected_price: l.unit,
     })),
-    for_date: dated ? forDate : null,
-  }), [lines, forDate, dated]);
+    for_date: dated && askDay ? forDate : null,
+  }), [lines, forDate, dated, askDay]);
 
   const sig = JSON.stringify(body);
   const check = got && got.sig === sig ? got.check : null;
@@ -217,7 +220,10 @@ export function ReviewSheet(props: Props) {
 
         {lines.length === 0 ? <p className="ox-quiet">{t.noLines}</p> : <ul className="ox-lines">{lines.map(row)}</ul>}
 
-        {days && days.length > 0 && (
+        {askDay === false && days && days.length > 0 && (
+          <p className="ox-quiet">{t.readyOn(up(say(lang, days[0].label, days[0].label_ar)))}</p>
+        )}
+        {askDay && days && days.length > 0 && (
           <fieldset className="ox-field days" role="radiogroup" aria-labelledby="ox-days-l">
             <legend id="ox-days-l"><span>{t.forDay}</span><small>{t.forDayHint}</small></legend>
             <div className="ox-daylist">

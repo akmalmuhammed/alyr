@@ -141,7 +141,7 @@ export function CatalogSettings({ lang, push, onClose }: { lang: Lang; push: Pus
         </section>
       </form>
       <StaffNumbers lang={lang} t={t} push={push} />
-      <CatalogGroups lang={lang} push={push} />
+      <CatalogGroups lang={lang} push={push} featureOn={setup?.features.price_groups ?? true} />
     </Sheet>
   );
 }

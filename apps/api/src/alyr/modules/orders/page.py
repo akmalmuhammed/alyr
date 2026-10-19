@@ -24,7 +24,7 @@ import asyncpg
 
 from alyr.core.media import MediaService
 from alyr.core.normalise import fmt_qar, fmt_qar_ar
-from alyr.modules.items import availability, listing, notes, photos, schedule, text
+from alyr.modules.items import availability, features, listing, notes, photos, schedule, text
 from alyr.modules.items import clock as shop_clock
 from alyr.modules.items import groups as price_groups
 from alyr.modules.items import service as items
@@ -38,11 +38,13 @@ SOLD_OUT_REASONS = ("off", "sold_out")
 
 async def settings(conn: asyncpg.Connection) -> dict:
     row = await conn.fetchrow(
-        "select sold_out_display, wholesale_layout, whatsapp_number, low_stock_at "
-        "from shop_settings"
+        "select wholesale_layout, whatsapp_number, low_stock_at from shop_settings"
     )
+    feats = await features.load(conn)
     return {
-        "sold_out_display": row["sold_out_display"] if row else "grey",
+        # How a sold-out item looks is the shop's "Sold-out items" feature (ALY-148).
+        "sold_out_display": feats.sold_out_mode,
+        "tags": feats.on("tags"),
         "wholesale_layout": row["wholesale_layout"] if row else False,
         "whatsapp_number": row["whatsapp_number"] if row else "",
         "low_stock_at": row["low_stock_at"] if row else listing.DEFAULT_LOW_STOCK,
@@ -234,6 +236,9 @@ async def page(
     group_id = price_groups.pricing_id(context["group"])
     low_at = shop["low_stock_at"]
     rows = [public_row(entry, state, clock, group_id, low_at) for entry, state in kept]
+    if not shop["tags"]:  # the shop switched tags off: customers neither see nor search them
+        for row in rows:
+            row["tags"] = []
 
     names_ar = {c["name"]: c["name_ar"] for c in context["categories"]}
     counts: dict[str, int] = {}
@@ -283,6 +288,8 @@ async def one(
     entry, state = kept[0]
     row = public_row(entry, state, clock, price_groups.pricing_id(context["group"]),
                      shop["low_stock_at"])
+    if not shop["tags"]:
+        row["tags"] = []
     await _with_photos(conn, media, [row], full=True)
     return row
 

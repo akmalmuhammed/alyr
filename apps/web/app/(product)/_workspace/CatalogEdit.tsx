@@ -40,6 +40,9 @@ const priceKey = (groupId: string, variantId: string | null) => `${groupId}|${va
 const STATUSES: Status[] = ["draft", "live", "hidden", "archived"];
 const RULES: Rule[] = ["always", "switch", "count", "daily_limit"];
 const UNITS = ["piece", "kg", "box", "pack", "portion", "hour"];
+// The feature each way of running out belongs to ("always" needs none): a way whose feature is
+// off is not offered for a new choice, but an item that already runs that way keeps it.
+const RULE_FEATURE: Record<string, string> = { switch: "rule_switch", count: "rule_count", daily_limit: "rule_daily_limit" };
 
 function qatarDay(iso: string | null): string {
   if (!iso) return "";
@@ -264,6 +267,10 @@ export function CatalogEdit({ lang, itemId, initial, categories, access, setup, 
   // The parts of the form the shop's type cares about start open on a new item.
   const focused = (part: string) => (!itemId && setup?.focus.includes(part) ? true : undefined);
   const isSample = Boolean(item?.sample);
+  // A part of the form is there when its feature is on (ALY-148), or when this item already
+  // uses it: switching a feature off hides it for new things and never takes it from an item.
+  const feats = setup?.features;
+  const allowed = (key: string, used = false) => !feats || feats[key] === true || used;
 
   const dirty = useMemo(() => JSON.stringify(form) !== start, [form, start]);
   const set = (patch: Partial<Form>) => setForm((f) => ({ ...f, ...patch }));
@@ -489,7 +496,7 @@ export function CatalogEdit({ lang, itemId, initial, categories, access, setup, 
         {!w.closed && (
           <fieldset className="ct-choices small">
             <legend className="ct-sr">{t.windowKind}</legend>
-            {(["now", "dated"] as const).map((kind) => (
+            {(["now", "dated"] as const).filter((kind) => kind === "now" || allowed("pickup_date", w.kind === "dated")).map((kind) => (
               <label key={kind} className={`ct-choice ${w.kind === kind ? "on" : ""}`}>
                 <input type="radio" name={`kind-${wi}`} checked={w.kind === kind} onChange={() => patch({ kind })} />
                 <span className="ct-choice-mark" aria-hidden="true" />
@@ -592,11 +599,13 @@ export function CatalogEdit({ lang, itemId, initial, categories, access, setup, 
                 {UNITS.map((u) => <option key={u} value={u}>{t.units[u]}</option>)}
               </select>
             </Field>
-            <Field label={t.minOrder} error={problems.min}>
-              <input value={form.minOrder} inputMode="numeric" dir="ltr" onChange={(e) => set({ minOrder: e.target.value })} />
-            </Field>
+            {allowed("pack_rules", form.minOrder !== "1") && (
+              <Field label={t.minOrder} error={problems.min}>
+                <input value={form.minOrder} inputMode="numeric" dir="ltr" onChange={(e) => set({ minOrder: e.target.value })} />
+              </Field>
+            )}
           </div>
-          {form.unit === "pack" && (
+          {form.unit === "pack" && allowed("pack_rules", form.packSize !== "") && (
             <Field label={t.packSize}><input value={form.packSize} inputMode="numeric" dir="ltr" onChange={(e) => set({ packSize: e.target.value })} /></Field>
           )}
         </section>
@@ -636,7 +645,7 @@ export function CatalogEdit({ lang, itemId, initial, categories, access, setup, 
           <h3>{t.ruleTitle}</h3>
           <fieldset className="ct-choices">
             <legend className="ct-sr">{t.ruleTitle}</legend>
-            {RULES.map((r) => (
+            {RULES.filter((r) => r === "always" || allowed(RULE_FEATURE[r], form.rule === r)).map((r) => (
               <label key={r} className={`ct-choice ${form.rule === r ? "on" : ""}`}>
                 <input type="radio" name="rule" checked={form.rule === r} onChange={() => set({ rule: r })} />
                 <span className="ct-choice-mark" aria-hidden="true" />
@@ -667,7 +676,7 @@ export function CatalogEdit({ lang, itemId, initial, categories, access, setup, 
           <Field label={t.descAr}><textarea value={form.description_ar} dir="rtl" lang="ar" rows={3} maxLength={1000} onChange={(e) => set({ description_ar: e.target.value })} /></Field>
         </Fold>
 
-        <Fold title={t.variantsTitle} summary={form.variants.length ? String(form.variants.length) : undefined} open={form.variants.length > 0 ? true : focused("variants")}>
+        {allowed("variants", form.variants.length > 0) && <Fold title={t.variantsTitle} summary={form.variants.length ? String(form.variants.length) : undefined} open={form.variants.length > 0 ? true : focused("variants")}>
           <p className="ct-hint">{t.variantsHint}</p>
           {problems.variants && <p className="ct-error">{problems.variants}</p>}
           <ul className="ct-stack">{form.variants.map(variantRow)}</ul>
@@ -675,9 +684,9 @@ export function CatalogEdit({ lang, itemId, initial, categories, access, setup, 
             <Icon name="plus" />{t.addVariant}
           </button>
           {form.variants.length > 0 && itemId && <p className="ct-hint">{t.variantKept}</p>}
-        </Fold>
+        </Fold>}
 
-        {priceGroups !== null && (
+        {priceGroups !== null && allowed("price_groups", pricedCount > 0) && (
           <Fold title={t.groupPricesTitle} summary={pricedCount ? t.groupPricesSummary(pricedCount) : undefined} open={pricedCount > 0 ? true : focused("groups")}>
             <p className="ct-hint">{t.groupPricesHint}</p>
             {problems.groupPrices && <p className="ct-error">{problems.groupPrices}</p>}
@@ -687,16 +696,16 @@ export function CatalogEdit({ lang, itemId, initial, categories, access, setup, 
           </Fold>
         )}
 
-        <Fold title={t.optionsTitle} summary={form.groups.length ? String(form.groups.length) : undefined} open={form.groups.length > 0 ? true : focused("options")}>
+        {allowed("options", form.groups.length > 0) && <Fold title={t.optionsTitle} summary={form.groups.length ? String(form.groups.length) : undefined} open={form.groups.length > 0 ? true : focused("options")}>
           <p className="ct-hint">{t.optionsHint}</p>
           {problems.groups && <p className="ct-error">{problems.groups}</p>}
           <ul className="ct-stack">{form.groups.map(groupBox)}</ul>
           <button type="button" className="btn ct-btn" onClick={() => set({ groups: [...form.groups, { name: "", name_ar: "", required: false, max: "1", options: [{ name: "", name_ar: "", price: "", active: true }] }] })}>
             <Icon name="plus" />{t.addGroup}
           </button>
-        </Fold>
+        </Fold>}
 
-        <Fold title={t.scheduleTitle} summary={form.scheduled ? t.scheduleSet : t.scheduleAny} open={form.scheduled ? true : focused("schedule")}>
+        {allowed("schedule", form.scheduled) && <Fold title={t.scheduleTitle} summary={form.scheduled ? t.scheduleSet : t.scheduleAny} open={form.scheduled ? true : focused("schedule")}>
           <fieldset className="ct-choices small">
             <legend className="ct-sr">{t.scheduleTitle}</legend>
             {[false, true].map((on) => (
@@ -717,9 +726,9 @@ export function CatalogEdit({ lang, itemId, initial, categories, access, setup, 
               </button>
             </>
           )}
-        </Fold>
+        </Fold>}
 
-        <Fold title={t.tagsTitle} summary={form.tags.length ? String(form.tags.length) : undefined} open={form.tags.length > 0 ? true : undefined}>
+        {allowed("tags", form.tags.length > 0) && <Fold title={t.tagsTitle} summary={form.tags.length ? String(form.tags.length) : undefined} open={form.tags.length > 0 ? true : undefined}>
           <p className="ct-hint">{t.tagsHint}</p>
           {form.tags.length > 0 && (
             <ul className="ct-tags">
@@ -742,7 +751,7 @@ export function CatalogEdit({ lang, itemId, initial, categories, access, setup, 
               <button key={idea} type="button" className="ct-chip" onClick={() => addTag(idea)}><Icon name="plus" className="sh-ico ct-chip-tick" />{idea}</button>
             ))}
           </div>
-        </Fold>
+        </Fold>}
 
         {itemId && (
           <Fold title={t.historyTitle} onToggle={(o) => void openHistory(o)}>

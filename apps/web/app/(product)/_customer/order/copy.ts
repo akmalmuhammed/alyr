@@ -87,6 +87,7 @@ const en = {
   fixBelow: "Please fix the choices marked below.",
   sizeSoldOut: "Sold out",
   forDay: "For which day?",
+  readyOn: (day: string) => `Made to order. Earliest day: ${day}.`,
   forDayHint: "This is made to order. Pick the day you want it.",
 
   // ── the bar and the review ───────────────────────────
@@ -227,6 +228,7 @@ const ar: Copy = {
   fixBelow: "يرجى تصحيح الخيارات المعلّمة أدناه.",
   sizeSoldOut: "نفد",
   forDay: "لأي يوم؟",
+  readyOn: (day: string) => `يُحضَّر عند الطلب. أقرب يوم: ${day}.`,
   forDayHint: "يُحضَّر هذا الصنف عند الطلب. اختر اليوم الذي تريده.",
 
   bar: (n) => counted(n, "صنف واحد", "صنفان", "أصناف", "صنفاً"),

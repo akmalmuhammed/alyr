@@ -107,10 +107,10 @@ def _headers(keys: tuple[str, ...], lang: str) -> list[object]:
 
 def export_file(
     entries: list[service.Loaded], clock: ShopClock, covers: dict[str, list[str]], lang: str,
-    fmt: str,
+    fmt: str, keys: tuple[str, ...] = columns.ORDER,
 ) -> tuple[bytes, str, str]:
-    """(bytes, file name, content type) for every item of the shop."""
-    keys = columns.ORDER
+    """(bytes, file name, content type) for every item of the shop, with the columns its
+    features give it (`keys`)."""
     body = item_rows(entries, clock, covers, lang, keys)
     stamp = clock.today.isoformat()
     if fmt == "csv":
@@ -181,11 +181,14 @@ def _example_value(key: str, value: object, lang: str) -> object:
     return value
 
 
-def template_file(kind_key: str, lang: str, fmt: str) -> tuple[bytes, str, str]:
+def template_file(
+    kind_key: str, lang: str, fmt: str, allowed: tuple[str, ...] | None = None
+) -> tuple[bytes, str, str]:
     """An empty file for one type of business, with its columns in the owner's language and
-    three made-up example rows."""
+    three made-up example rows. `allowed` leaves out the columns of features the shop has
+    switched off."""
     kind = columns.KIND_BY_KEY.get(kind_key) or columns.KIND_BY_KEY["generic"]
-    keys = kind.columns
+    keys = tuple(k for k in kind.columns if allowed is None or k in allowed)
     examples = [
         [_example_value(k, row.get(k), lang) for k in keys] for row in kind.examples
     ]

@@ -31,12 +31,14 @@ type Props = {
   lang: Lang;
   qty: number;
   canOrder: boolean;
+  /** The shop's "show the item code" feature. */
+  showSku?: boolean;
   onOpen: (item: Item) => void;
   onSet: (item: Item, variantId: string | null, qty: number) => void;
   onLimit: (item: Item) => void;
 };
 
-function Line({ row, lang, qty, canOrder, onOpen, onSet, onLimit }: Props) {
+function Line({ row, lang, qty, canOrder, showSku = true, onOpen, onSet, onLimit }: Props) {
   const t = T[lang];
   const { item, variant } = row;
   const variantId = variant ? variant.id : item.variants.length === 1 ? item.variants[0].id : null;
@@ -57,7 +59,7 @@ function Line({ row, lang, qty, canOrder, onOpen, onSet, onLimit }: Props) {
   const atMax = qty >= most(item, variantId);
   return (
     <div role="row" className={`ox-wrow ${orderable ? "" : "off"}`}>
-      <span role="cell" className="ox-wsku" dir="ltr">{code}</span>
+      {showSku && <span role="cell" className="ox-wsku" dir="ltr">{code}</span>}
       <span role="cell" className="ox-wname">
         <button type="button" className="ox-wopen" onClick={() => onOpen(item)} dir="auto">
           {name}{part ? <> <span className="ox-wpart">{part}</span></> : null}
@@ -93,14 +95,14 @@ function Line({ row, lang, qty, canOrder, onOpen, onSet, onLimit }: Props) {
 const WholesaleLine = memo(Line);
 
 export function Wholesale({
-  rows, lang, label, qtyOf, ...rest
+  rows, lang, label, qtyOf, showSku = true, ...rest
 }: Omit<Props, "row" | "qty"> & { rows: Row[]; label: string; qtyOf: (item: Item, variant: Variant | null) => number }) {
   const t = T[lang];
   return (
-    <div role="table" className="ox-wtable" aria-label={label}>
+    <div role="table" className={`ox-wtable ${showSku ? "" : "nosku"}`} aria-label={label}>
       <div role="rowgroup">
         <div role="row" className="ox-whead">
-          <span role="columnheader">{t.sku}</span>
+          {showSku && <span role="columnheader">{t.sku}</span>}
           <span role="columnheader">{t.nameHead}</span>
           <span role="columnheader">{t.priceHead}</span>
           <span role="columnheader">{t.quantity}</span>
@@ -108,7 +110,7 @@ export function Wholesale({
       </div>
       <div role="rowgroup">
         {rows.map((row) => (
-          <WholesaleLine key={`${row.item.id}-${row.variant?.id ?? ""}`} row={row} lang={lang} qty={qtyOf(row.item, row.variant)} {...rest} />
+          <WholesaleLine key={`${row.item.id}-${row.variant?.id ?? ""}`} row={row} lang={lang} qty={qtyOf(row.item, row.variant)} showSku={showSku} {...rest} />
         ))}
       </div>
     </div>

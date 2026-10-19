@@ -28,6 +28,7 @@ from alyr.routes import admin_media as admin_media_routes
 from alyr.routes import agent as agent_routes
 from alyr.routes import auth as auth_routes
 from alyr.routes import bookings as bookings_routes
+from alyr.routes import features as feature_routes
 from alyr.routes import inbox, items, ledger, orders, pay, simulator, store, whatsapp_webhook
 from alyr.routes import items_import as items_import_routes
 from alyr.routes import jobs as jobs_routes
@@ -133,6 +134,8 @@ def create_app() -> FastAPI:
     app.include_router(
         items.router, dependencies=[Depends(require_any_module("orders", "catalog"))]
     )
+    # The features each shop has switched on (ALY-148).
+    app.include_router(feature_routes.router)
     # The numbers the owner registers as staff, who may change the Catalog by WhatsApp.
     app.include_router(staff_numbers_routes.router)
     # Customer price groups (wholesale) belong to the same Catalog (ALY-127).

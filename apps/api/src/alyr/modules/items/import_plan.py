@@ -27,6 +27,7 @@ from datetime import date, datetime, time
 from uuid import UUID
 from zoneinfo import ZoneInfo
 
+from alyr import capabilities
 from alyr.core.media import parse_photo_ref
 from alyr.core.normalise import fmt_qar, has_arabic
 from alyr.modules.items import columns, import_words, service, values
@@ -75,6 +76,9 @@ class Snapshot:
     assets: dict[str, UUID] = field(default_factory=dict)
     # Photos already on the items that exist, by item ID.
     attached: dict[UUID, set[UUID]] = field(default_factory=dict)
+    # The columns the shop's features allow (None: all of them). A column of a feature the shop
+    # has switched off is read, noted and left out (ALY-148).
+    allowed: frozenset[str] | None = None
 
 
 @dataclass
@@ -199,7 +203,9 @@ def _blank(raw: object) -> bool:
     return raw is None or (isinstance(raw, str) and not raw.strip())
 
 
-def find_header(sheet: Sheet) -> tuple[int, dict[int, str], list[Issue]]:
+def find_header(
+    sheet: Sheet, allowed: frozenset[str] | None = None
+) -> tuple[int, dict[int, str], list[Issue]]:
     """The row that holds the column names, which column is which, and notes about columns
     that are not understood. Looks in the first rows, so a file may have a title above."""
     best: tuple[int, dict[int, str]] | None = None
@@ -227,6 +233,13 @@ def find_header(sheet: Sheet) -> tuple[int, dict[int, str], list[Issue]]:
             notes.append(issue("duplicate_column", value=values.as_text(sheet.rows[index][col])))
             continue
         seen.add(key)
+        if allowed is not None and key not in allowed:
+            cap = capabilities.BY_KEY[columns.NEEDS[key].split("|")[0]]
+            notes.append(issue(
+                "column_off", key, feature=cap.name.en, feature_ar=cap.name.ar,
+                value=values.as_text(sheet.rows[index][col])[:60],
+            ))
+            continue
         mapping[col] = key
     unknown = [
         values.as_text(c) for col, c in enumerate(sheet.rows[index])
@@ -427,7 +440,7 @@ def build(
     an item list at all (`no_header`, `no_items`, `too_many_rows`)."""
     mode = options.get("on_duplicate", "create")
     plan = Plan(options={"on_duplicate": mode})
-    header, mapping, notes = find_header(sheet)
+    header, mapping, notes = find_header(sheet, snapshot.allowed)
     if header < 0:
         raise ValueError("no_header")
     plan.notes.extend(notes)

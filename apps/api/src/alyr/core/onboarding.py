@@ -16,7 +16,7 @@ from uuid import UUID, uuid4
 
 import asyncpg
 
-from alyr import catalog, presets
+from alyr import catalog, presets, shop_templates
 from alyr.channels.base import InboundMessage
 from alyr.config import get_settings
 from alyr.core import auth, pricing, team
@@ -158,7 +158,9 @@ async def create_business(
         if "catalog" in modules and preset.catalog is not None:
             # Its words are by type; its starting values, categories and sample items are
             # written now, and are the owner's to change (`modules/items/template.py`).
-            await template.apply(conn, preset.catalog, await shop_clock.load(conn))
+            await template.apply(
+                conn, shop_templates.builtin_for(preset.key), await shop_clock.load(conn)
+            )
         if way == "assisted":
             await conn.execute(
                 "insert into setup_requests (product_key, step_key, note, requested_by) "

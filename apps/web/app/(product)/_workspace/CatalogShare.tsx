@@ -97,10 +97,12 @@ function PrintSheet({ cards, base, lang, onDone }: { cards: Card[]; base: ShareB
 }
 
 export function CatalogShare({
-  lang, target, categories, push, onClose, onSettings,
+  lang, target, categories, push, onClose, onSettings, links = true, codes = true,
 }: {
   lang: Lang; target: Target; categories: { name: string; name_ar: string }[]; push: Push;
   onClose: () => void; onSettings: () => void;
+  /** The shop's features (ALY-148): item and category links, and QR codes for counter and tables. */
+  links?: boolean; codes?: boolean;
 }) {
   const t = COPY[lang];
   const [base, setBase] = useState<ShareBase | null>(null);
@@ -153,7 +155,7 @@ export function CatalogShare({
       <Sheet title={t.shareTitle} subtitle={what} onClose={onClose} closeLabel={t.close} wide>
         {failure && <p className="ct-alert" role="alert"><Icon name="warn" />{failure}</p>}
 
-        {(target.kind !== "shop") && (
+        {(target.kind !== "shop") && links && (
           <Field label={t.shareWhat}>
             <select className="ct-select" value={choice} onChange={(e) => setChoice(e.target.value)}>
               <option value="shop">{t.shareMenu}</option>
@@ -165,7 +167,7 @@ export function CatalogShare({
           </Field>
         )}
 
-        <section className="ct-share" aria-labelledby="ct-share-link">
+        {links && <section className="ct-share" aria-labelledby="ct-share-link">
           <h3 id="ct-share-link">{t.shareLink}</h3>
           <div className="ct-linkrow">
             <input className="ct-linkbox" readOnly value={link} dir="ltr" aria-label={t.shareLink}
@@ -184,9 +186,9 @@ export function CatalogShare({
                   <button type="button" className="ct-linkbtn" onClick={() => { onClose(); onSettings(); }}>{t.shareSettings}</button></span>
               </p>
             ))}
-        </section>
+        </section>}
 
-        <section className="ct-share" aria-labelledby="ct-share-qr">
+        {codes && <section className="ct-share" aria-labelledby="ct-share-qr">
           <h3 id="ct-share-qr">{t.qrTitle}</h3>
           <div className="ct-qrbox">
             {counter
@@ -202,9 +204,9 @@ export function CatalogShare({
               onClick={() => { void qr?.png(link, INK).then((b) => save(b, `${slug(what)}.png`)).catch(() => push(t.failed, { tone: "bad" })); }}><Icon name="download" />{t.downloadPng}</button>
             <button type="button" className="btn ct-btn" disabled={!counter} onClick={() => setPrinting([cardFor("", link)])}><Icon name="printer" />{t.print}</button>
           </div>
-        </section>
+        </section>}
 
-        <section className="ct-share" aria-labelledby="ct-share-tables">
+        {codes && <section className="ct-share" aria-labelledby="ct-share-tables">
           <h3 id="ct-share-tables">{t.tablesTitle}</h3>
           <p className="ct-hint">{t.tablesHint}</p>
           <form className="ct-tablesform" noValidate onSubmit={(e) => { e.preventDefault(); makeTables(); }}>
@@ -242,7 +244,7 @@ export function CatalogShare({
               </button>
             </>
           )}
-        </section>
+        </section>}
       </Sheet>
       {printing && base && <PrintSheet cards={printing} base={base} lang={lang} onDone={() => setPrinting(null)} />}
     </>

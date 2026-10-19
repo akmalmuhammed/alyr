@@ -58,9 +58,11 @@ function Choice({
 }
 
 export function ItemSheet({
-  item, lang, canOrder, fetchFull, onAdd, onClose, onLimit,
+  item, lang, canOrder, showSku = true, fetchFull, onAdd, onClose, onLimit,
 }: {
   item: Item; lang: Lang; canOrder: boolean; fetchFull: (id: string) => Promise<Item | null>;
+  /** The shop's "show the item code" feature. */
+  showSku?: boolean;
   onAdd: (item: Item, pick: Chosen) => void; onClose: () => void; onLimit: (item: Item) => void;
 }) {
   const t = T[lang];
@@ -145,7 +147,7 @@ export function ItemSheet({
               item.unit && item.unit !== "piece" ? t.units[item.unit] ?? item.unit : "",
               item.pack_size && item.pack_size > 1 ? t.pack(item.pack_size) : "",
               item.min_order > 1 ? t.minimum(item.min_order) : "",
-              item.sku ? `${t.sku} ${item.sku}` : "",
+              showSku && item.sku ? `${t.sku} ${item.sku}` : "",
             ].filter(Boolean).join(" · ")}
           </p>
         </div>

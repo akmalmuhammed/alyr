@@ -380,6 +380,9 @@ export default function Order({ slug, token, table, initial, lang: first, focusI
   const style = store.catalog?.layout.style ?? "menu";
   const layout = store.settings.wholesale_layout || !store.group.is_default || style === "table" ? "table" : "cards";
   const look = style === "grid" || style === "list" ? style : "menu";
+  // What the page offers is the shop's choice (features, ALY-148). A shop without the Catalog
+  // keeps the page it always had, which offers all four.
+  const offers = store.catalog?.layout ?? { pickup_date: true, quick_quantity: true, same_as_last: true, show_sku: true };
   const section = store.catalog ? say(lang, store.catalog.section.name, store.catalog.section.name_ar) : "";
 
   if (placed) {
@@ -436,7 +439,7 @@ export default function Order({ slug, token, table, initial, lang: first, focusI
   const renderCards = (items: Item[]) => (
     <ul className={`ox-list ${look}`}>
       {items.map((item) => (
-        <ItemCard key={item.id} item={item} lang={lang} look={look} canOrder={canOrder} inOrder={inOrder(item.id)}
+        <ItemCard key={item.id} item={item} lang={lang} look={look} canOrder={canOrder} quick={offers.quick_quantity} inOrder={inOrder(item.id)}
           simpleQty={qtyOf(item.id, simpleVariant(item))} onOpen={setOpen} onSet={setSimple} onLimit={onLimit} />
       ))}
     </ul>
@@ -465,7 +468,7 @@ export default function Order({ slug, token, table, initial, lang: first, focusI
       {gone && <p className="cx-warn" role="status">{t.itemGone}</p>}
       {offline && <p className="cx-warn" role="status"><Glyph name="refresh" /> {t.offline}</p>}
 
-      {canOrder && customer?.has_last_order && cart.length === 0 && !filtering && (
+      {canOrder && offers.same_as_last && customer?.has_last_order && cart.length === 0 && !filtering && (
         <section className="cx-card ox-again" aria-labelledby="ox-again-h" style={{ "--i": 1 } as React.CSSProperties}>
           <h2 id="ox-again-h">{t.again}</h2>
           <p>{t.againHint}</p>
@@ -515,7 +518,7 @@ export default function Order({ slug, token, table, initial, lang: first, focusI
       )}
 
       {layout === "table" && shown.length > 0 && (
-        <Wholesale rows={rowsOf(shown)} lang={lang} label={section || t.priceList} canOrder={canOrder} onOpen={setOpen} onSet={setVariantQty}
+        <Wholesale rows={rowsOf(shown)} lang={lang} label={section || t.priceList} canOrder={canOrder} showSku={offers.show_sku} onOpen={setOpen} onSet={setVariantQty}
           onLimit={onLimit} qtyOf={(item, variant) => qtyOf(item.id, variant ? variant.id : simpleVariant(item))} />
       )}
       {layout === "cards" && (grouped
@@ -557,11 +560,11 @@ export default function Order({ slug, token, table, initial, lang: first, focusI
       <p className="ox-sr" role="status" aria-live="polite" aria-atomic="true">{said}</p>
 
       {open && (
-        <ItemSheet key={open.id} item={open} lang={lang} canOrder={canOrder} fetchFull={fetchFull} onAdd={addChosen}
+        <ItemSheet key={open.id} item={open} lang={lang} canOrder={canOrder} showSku={offers.show_sku} fetchFull={fetchFull} onAdd={addChosen}
           onClose={() => setOpen(null)} onLimit={onLimit} />
       )}
       {review && token && customer && (
-        <ReviewSheet slug={slug} token={token} lang={lang} lines={lines} lookup={lookup} customer={customer} table={store.table}
+        <ReviewSheet slug={slug} token={token} lang={lang} lines={lines} lookup={lookup} customer={customer} table={store.table} askDay={offers.pickup_date}
           forDate={forDate} onForDate={setForDate} setQty={setQty} remove={remove} accept={accept} swap={swap}
           choose={(id) => { const it = seenRef.current.get(id); setReview(false); if (it) setOpen(it); }}
           onPlaced={(p) => {

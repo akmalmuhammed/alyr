@@ -29,6 +29,7 @@ from alyr.core.images import PhotoRefused
 from alyr.core.media import MediaService
 from alyr.core.team import Actor
 from alyr.modules.items import (
+    features,
     import_alert,
     import_photos,
     import_plan,
@@ -105,6 +106,7 @@ async def snapshot(
     return Snapshot(
         tenant_id, clock.tz, entries, [c["name"] for c in await service.categories(conn)],
         limit, max(limit - used, 0), assets, attached,
+        frozenset(await features.file_columns(conn)),
     )
 
 

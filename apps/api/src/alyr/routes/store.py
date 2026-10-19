@@ -25,7 +25,7 @@ from alyr.config import get_settings
 from alyr.core import links
 from alyr.core.normalise import fmt_qar, fmt_qar_ar
 from alyr.core.workspace import module_enabled
-from alyr.modules.items import demand, template, text
+from alyr.modules.items import demand, features, template, text
 from alyr.modules.items.cart import CartLine
 from alyr.modules.items.service import MAX_QUANTITY
 from alyr.modules.orders import page, service
@@ -348,6 +348,13 @@ async def repeat_order(slug: str, body: Repeat, request: Request) -> dict:
     link = customer_link.require(body.token, shop["id"], links.ORDER, required=True)
     try:
         async with request.app.state.db.tenant(shop["id"]) as conn:
+            if not (await features.load(conn)).on("same_as_last"):
+                # The shop switched "Same as last time" off (ALY-148).
+                raise HTTPException(status_code=403, detail={
+                    "code": "feature_off",
+                    "message": "This shop does not offer ordering the same again.",
+                    "message_ar": "هذا المتجر لا يتيح طلب الشيء نفسه مرة أخرى.",
+                })
             return await service.repeat_last_order(
                 conn, shop["id"], link.contact_id, body.payment, get_settings().public_web_url,
                 request.app.state.outbound,

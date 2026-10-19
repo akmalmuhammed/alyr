@@ -32,7 +32,7 @@ from alyr.channels.base import OutboundMessage
 from alyr.core import jobs
 from alyr.core.outbound import Outbound
 from alyr.db import Database
-from alyr.modules.items import alerts, events, staff
+from alyr.modules.items import alerts, events, staff, template
 from alyr.modules.items import clock as shop_clock
 
 JOB = "catalog.import_alert"
@@ -87,7 +87,10 @@ class ImportAlert:
         short: list[tuple[UUID, str]] = []
         for item_id in ids:
             found = await alerts.state(conn, clock, item_id)
-            if found is not None:
+            # An alert the shop switched off (a feature, ALY-148) is not counted here either.
+            if found is not None and await template.alert_on(
+                conn, "sold_out" if found[0] == "sold_out" else "low_stock"
+            ):
                 short.append((item_id, found[0]))
         if not short:
             return None

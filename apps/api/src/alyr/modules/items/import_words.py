@@ -340,6 +340,13 @@ MESSAGES: dict[str, tuple[str, str, str]] = {
         "The column “{value}” is not one ALYR uses, so it was left out.",
         "العمود «{value}» ليس من الأعمدة التي يستخدمها ALYR، لذلك تُرك.",
     ),
+    "column_off": (
+        "warning",
+        "The column “{value}” was left out: “{feature}” is switched off for your shop. Switch it "
+        "on in Features to use it.",
+        "تُرك العمود «{value}»: ميزة «{feature_ar}» متوقفة في متجرك. شغّلها من «الميزات» "
+        "لاستخدامه.",
+    ),
     "duplicate_column": (
         "warning",
         "The column “{value}” appears more than once. Only the first is used.",

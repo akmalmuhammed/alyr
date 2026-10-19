@@ -12,7 +12,7 @@ import { Field, Icon, type Toast } from "./CatalogUi";
 
 type Push = (text: string, options?: { tone?: Toast["tone"]; undo?: () => void }) => number;
 
-export function CatalogGroups({ lang, push }: { lang: Lang; push: Push }) {
+export function CatalogGroups({ lang, push, featureOn = true }: { lang: Lang; push: Push; featureOn?: boolean }) {
   const t = COPY[lang];
   const [groups, setGroups] = useState<PriceGroup[] | null>(null);
   const [failure, setFailure] = useState("");
@@ -117,6 +117,9 @@ export function CatalogGroups({ lang, push }: { lang: Lang; push: Push }) {
     </form>
   );
 
+  // A shop that switched price groups off, and has none besides the normal price, has nothing to
+  // manage here (ALY-148); one that has groups keeps seeing them, and can rename and remove them.
+  if (!featureOn && groups !== null && groups.length <= 1) return null;
   return (
     <section className="ct-sec" aria-labelledby="ct-pg-title" ref={root}>
       <h3 id="ct-pg-title">{t.pgTitle}</h3>
@@ -161,7 +164,7 @@ export function CatalogGroups({ lang, push }: { lang: Lang; push: Push }) {
         </ul>
       )}
       {adding ? form : (
-        groups !== null && (
+        groups !== null && featureOn && (
           <button type="button" className="btn ct-btn" data-pg="add" onClick={startAdd} disabled={busy}><Icon name="plus" />{t.pgAdd}</button>
         )
       )}

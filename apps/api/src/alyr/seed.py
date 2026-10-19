@@ -166,7 +166,7 @@ async def reset_demo_data(db: Database) -> None:
                       "payment_requests", "orders", "items", "item_categories",
                       "ledger_entries",
                       "ledger_accounts", "contacts", "price_groups", "tenant_modules",
-                      "shop_settings"):
+                      "shop_settings", "shop_features"):
             await conn.execute(f"delete from {table}")
         await conn.execute(
             "insert into tenant_modules (module_key, enabled_by) "

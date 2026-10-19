@@ -223,6 +223,26 @@ WHOLE = ("pack_size", "min_order", "stock", "low_stock", "per_day")
 COUNTED = ("count", "daily_limit")
 
 
+# The feature a column belongs to (ALY-148). A column of a feature that is off is left out of
+# the files, unless an item of the shop still uses the feature (its data is then still in the
+# file, so a round trip loses nothing). The rest are every shop's.
+NEEDS: dict[str, str] = {
+    "variant": "variants", "variant_ar": "variants", "variant_sku": "variants",
+    "price_diff": "variants", "pack_size": "pack_rules", "min_order": "pack_rules",
+    "tags": "tags", "available": "rule_switch", "stock": "rule_count",
+    "per_day": "rule_daily_limit", "low_stock": "rule_count|rule_daily_limit",
+}
+
+
+def allowed(keeps) -> tuple[str, ...]:
+    """The columns a shop's files have, in order. `keeps(feature)` says whether the feature
+    is on or still used."""
+    return tuple(
+        k for k in ORDER
+        if k not in NEEDS or any(keeps(feature) for feature in NEEDS[k].split("|"))
+    )
+
+
 def header_index() -> dict[str, str]:
     """Every spelling of every header, squashed, mapped to the column it names."""
     found: dict[str, str] = {}

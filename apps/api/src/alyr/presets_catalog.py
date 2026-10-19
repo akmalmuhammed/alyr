@@ -34,13 +34,13 @@ ALERTS = ("low_stock", "sold_out")
 
 @dataclass(frozen=True)
 class Layout:
-    """How the customer's order page (ALY-112) lays this type out. Hints, not rules."""
+    """How the customer's order page (ALY-112) lays this type out. Only the style is the
+    type's: the four things a page can offer (a pickup day, a quick quantity, "same as last
+    time", the item code) are features a shop turns on or off (`capabilities.py`, ALY-148). They
+    were declared here per type from ALY-107 but the page never read them; the page always
+    offered all four, so every type now starts with all four on and nothing changes."""
 
     style: str  # menu: photos by category | grid: photo grid | list: compact | table
-    pickup_date: bool = False  # ask which day the order is for
-    quick_quantity: bool = False  # a +/- on every row
-    same_as_last: bool = False  # "same as last order" is one tap away
-    show_sku: bool = False  # the code beside the name
 
 
 @dataclass(frozen=True)
@@ -90,8 +90,6 @@ class CatalogSetup:
     # are in front: options, schedule, variants, groups. (Price, unit, pack size, minimum order
     # and SKU are always on the form.)
     focus: tuple[str, ...]
-    # What the weekly report should say about this type (ALY-109 reads this; nothing here does).
-    report_lines: tuple[str, ...]
     categories: tuple[tuple[str, str], ...]  # (name, Arabic name), in order
     gets: tuple[Text, ...]  # the plain words of onboarding's review step
     samples: tuple[Sample, ...] = ()
@@ -137,7 +135,6 @@ RESTAURANT = CatalogSetup(
     rule="switch", unit="portion", low_stock_at=3, sold_out="grey", alerts=("sold_out",),
     layout=Layout("menu"),
     focus=("options", "schedule"),
-    report_lines=("sold_out_now", "top_items", "never_ordered"),
     categories=(
         ("Starters", "المقبلات"), ("Mains", "الأطباق الرئيسية"),
         ("Drinks", "المشروبات"), ("Desserts", "الحلويات"),
@@ -190,9 +187,8 @@ BAKERY = CatalogSetup(
     rule="daily_limit", unit="piece", low_stock_at=3, sold_out="grey",
     alerts=("low_stock", "sold_out"),
     lead=(1, "18:00"),
-    layout=Layout("menu", pickup_date=True),
+    layout=Layout("menu"),
     focus=("schedule",),
-    report_lines=("make_tomorrow", "sold_out_now", "top_items"),
     categories=(
         ("Cakes", "الكيك"), ("Pastries", "المعجنات"), ("Savouries", "المالحات"),
         ("Sweets", "الحلويات"), ("Bread", "الخبز"),
@@ -239,9 +235,8 @@ GROCERY = CatalogSetup(
     ),
     rule="count", unit="piece", low_stock_at=10, sold_out="hide",
     alerts=("low_stock", "sold_out"),
-    layout=Layout("list", quick_quantity=True),
+    layout=Layout("list"),
     focus=(),
-    report_lines=("reorder", "low_stock", "top_items"),
     categories=(
         ("Fruit & vegetables", "الفواكه والخضار"), ("Dairy & eggs", "الألبان والبيض"),
         ("Pantry", "المواد الغذائية"), ("Drinks", "المشروبات"), ("Household", "المنزلية"),
@@ -285,7 +280,6 @@ FASHION = CatalogSetup(
     alerts=("low_stock", "sold_out"),
     layout=Layout("grid"),
     focus=("variants",),
-    report_lines=("low_stock", "back_in_stock", "top_items"),
     categories=(
         ("Abayas", "العبايات"), ("Clothing", "الملابس"), ("Bags", "الحقائب"),
         ("Accessories", "الإكسسوارات"), ("Gifts", "الهدايا"),
@@ -339,7 +333,6 @@ SHOP = CatalogSetup(
     rule="count", unit="piece", low_stock_at=5, sold_out="grey", alerts=("low_stock", "sold_out"),
     layout=Layout("grid"),
     focus=("variants",),
-    report_lines=("low_stock", "top_items", "never_ordered"),
     categories=(
         ("Electronics", "الإلكترونيات"), ("Home", "المنزل"), ("Clothing", "الملابس"),
         ("Stationery", "القرطاسية"),
@@ -376,9 +369,8 @@ WHOLESALE = CatalogSetup(
         "قائمة أسعارك: الرموز وأحجام العبوات والحد الأدنى للطلب وسعر لكل فئة من العملاء.",
     ),
     rule="count", unit="pack", low_stock_at=20, sold_out="grey", alerts=("low_stock", "sold_out"),
-    layout=Layout("table", quick_quantity=True, same_as_last=True, show_sku=True),
+    layout=Layout("table"),
     focus=("groups",),
-    report_lines=("fast_movers", "dead_stock", "low_stock"),
     categories=(
         ("Rice & sugar", "الأرز والسكر"), ("Oils", "الزيوت"), ("Drinks", "المشروبات"),
         ("Household", "المنزلية"),
@@ -429,7 +421,7 @@ def _optional(
     return CatalogSetup(
         section=Text("Products", "المنتجات"), sub=_OPTIONAL_SUB, rule="switch", unit="piece",
         low_stock_at=3, sold_out="grey", alerts=(), layout=Layout("grid"), focus=(),
-        report_lines=("bookings_only",), categories=categories, samples=samples, optional=True,
+        categories=categories, samples=samples, optional=True,
         gets=gets + (
             Text("Your bookings work exactly as before. This is extra, and you can leave it empty.",
                  "حجوزاتك تعمل كما كانت تماماً. هذا إضافي ويمكنك تركه فارغاً."),
@@ -503,7 +495,7 @@ GENERIC = CatalogSetup(
     section=Text("Catalog", "الكتالوج"),
     sub=Text("What you sell: photos, prices and what is left.", "ما تبيعه: الصور والأسعار والمتبقي."),
     rule="switch", unit="piece", low_stock_at=5, sold_out="grey", alerts=("low_stock", "sold_out"),
-    layout=Layout("grid"), focus=(), report_lines=(), categories=(), gets=(),
+    layout=Layout("grid"), focus=(), categories=(), gets=(),
 )
 
 

@@ -24,7 +24,16 @@ from alyr.channels.base import Choice, InboundMessage, OutboundMessage
 from alyr.core import consent
 from alyr.core.media import MediaService
 from alyr.core.normalise import fmt_qar, has_arabic
-from alyr.modules.items import availability, demand, match, photos, service, text, watches
+from alyr.modules.items import (
+    availability,
+    demand,
+    features,
+    match,
+    photos,
+    service,
+    text,
+    watches,
+)
 from alyr.modules.items import clock as shop_clock
 from alyr.modules.items.wa_text import say, shown
 from alyr.modules.orders.chat import order_link
@@ -105,9 +114,14 @@ async def maybe_handle(
     questions about an item; otherwise None, and another module takes it."""
     lang = _arabic(contact, message)
     reply = message.reply_id
+    # "Tell me when it is back" is a feature (ALY-148): a shop that has it off offers no button
+    # and does not take the request.
+    back = (await features.load(conn)).on("back_in_stock")
     if reply:
         kind, _, rest = reply.partition(":")
         if kind not in ("item", "notify", "notify_yes", "notify_no") or not rest:
+            return None
+        if kind != "item" and not back:
             return None
         try:
             item_id = UUID(rest)
@@ -126,7 +140,7 @@ async def maybe_handle(
     bare = " ".join(w for w in words if w not in _SMALL_TALK)
     if " ".join(words) in MENU_WORDS or bare in MENU_WORDS:
         return await _menu(conn, tenant_id, contact, lang, web_url, orders_on)
-    phrase = _contains(words, _NOTIFY)
+    phrase = _contains(words, _NOTIFY) if back else None
     if phrase is not None and set(words) & _NOTIFY_CUES:
         asked = _without(words, phrase.split())
         return await _notify_by_name(
@@ -215,7 +229,8 @@ async def _card(
             buttons.append(Choice("order", say("button_order", lang)))
     elif state.reason in ("sold_out", "off"):
         lines.append(say("card_sold_out", lang))
-        buttons.append(Choice(f"notify:{item_id}", say("button_notify", lang)))
+        if (await features.load(conn)).on("back_in_stock"):
+            buttons.append(Choice(f"notify:{item_id}", say("button_notify", lang)))
         # They asked for something the shop cannot give: the weekly report counts it.
         await demand.record(conn, contact["id"], [item_id], "whatsapp", clock.now)
     else:

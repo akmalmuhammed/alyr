@@ -193,11 +193,16 @@ html.ox-locked { overflow: hidden; }
 .ox-wprice { grid-area: price; display: flex; align-items: baseline; gap: 6px; font-size: var(--ui-body); font-weight: 600; justify-self: end; }
 .ox-wqty { grid-area: qty; justify-self: end; }
 .ox-wrow.off .ox-wopen, .ox-wrow.off .ox-wprice { color: var(--ink-2); }
+@media (max-width: 39.99rem) {
+  .ox-wtable.nosku .ox-wrow { grid-template-areas: "name price" "name qty"; }
+}
 @media (min-width: 40rem) {
   .ox-whead, .ox-wrow { display: grid; grid-template-columns: 7rem minmax(0, 1fr) 8rem 9.5rem; grid-template-areas: none; gap: 12px; }
   .ox-whead { padding: 10px 16px; font-size: var(--ui-caption); font-weight: 600; color: var(--ink-2); text-transform: none; border-bottom: 1px solid var(--hair); }
   .ox-wsku, .ox-wname, .ox-wprice, .ox-wqty { grid-area: auto; }
   .ox-whead > :nth-child(3), .ox-whead > :nth-child(4) { justify-self: end; }
+  .ox-wtable.nosku .ox-whead, .ox-wtable.nosku .ox-wrow { grid-template-columns: minmax(0, 1fr) 8rem 9.5rem; }
+  .ox-wtable.nosku .ox-whead > :nth-child(2) { justify-self: end; }
   .ox-dialog { margin: auto; max-width: 34rem; max-height: 86dvh; border-radius: 22px; }
 }
 @media (prefers-reduced-motion: reduce) {
