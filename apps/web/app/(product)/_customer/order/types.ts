@@ -21,6 +21,9 @@ export type Photo = {
 /** A sentence in both languages, from the API. */
 export type Words = { en: string; ar: string };
 
+/** One of the shop's own fields a customer may see, with its words in both languages (ALY-148). */
+export type OwnField = { key: string; label: string; label_ar: string; kind: string; text: string; text_ar: string; searchable?: boolean };
+
 export type Variant = {
   id: string;
   name: string;
@@ -32,6 +35,7 @@ export type Variant = {
   left: number | null;
   sold_out: boolean;
   photo?: Photo | null;
+  fields?: OwnField[];
 };
 
 export type Option = { id: string; name: string; name_ar: string; price_delta: number };
@@ -81,6 +85,7 @@ export type Item = {
   cover: Photo;
   photo_count: number;
   photos?: Photo[];
+  fields?: OwnField[];
 };
 
 export type Category = { name: string; name_ar: string; count: number };
@@ -110,6 +115,7 @@ export type Hints = {
   section: { name: string; name_ar: string };
   layout: { style: "menu" | "grid" | "list" | "table"; pickup_date: boolean; quick_quantity: boolean; same_as_last: boolean; show_sku: boolean };
   sold_out: "grey" | "hide";
+  features?: Record<string, boolean>;
 };
 
 export type Store = {

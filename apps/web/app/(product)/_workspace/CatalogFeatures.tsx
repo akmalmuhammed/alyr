@@ -23,8 +23,10 @@ import "./features.css";
 type Push = (text: string, options?: { tone?: Toast["tone"]; undo?: () => void }) => number;
 type Changed = { key: string; from: unknown; to: unknown }[];
 
-export function CatalogFeatures({ lang, push, onClose, onChanged }: {
+export function CatalogFeatures({ lang, push, onClose, onChanged, onOpen }: {
   lang: Lang; push: Push; onClose: () => void; onChanged: () => void;
+  /** Open the shop's own fields, or the change of type, in place of this screen. */
+  onOpen?: (what: "fields" | "template") => void;
 }) {
   const f = FEAT[lang];
   const t = COPY[lang];
@@ -155,6 +157,9 @@ export function CatalogFeatures({ lang, push, onClose, onChanged }: {
           </fieldset>
         )}
         <p className="ct-feat-changes"><b>{f.changesLabel}</b> {pick(x.changes, x.changes_ar)}</p>
+        {x.key === "custom_fields" && x.enabled && onOpen && (
+          <div><button type="button" className="btn small" onClick={() => onOpen("fields")}><Icon name="sliders" />{f.manageFields}</button></div>
+        )}
         <ul className="ct-feat-places" aria-label={f.changesLabel}>
           {x.affects.map((p) => <li key={p} className="sh-pill ct-pill quiet">{f.places[p as keyof typeof f.places]}</li>)}
         </ul>
@@ -171,6 +176,9 @@ export function CatalogFeatures({ lang, push, onClose, onChanged }: {
       footer={<button type="button" className="btn primary ct-btn ct-grow" onClick={onClose}>{f.close}</button>}>
       {failure && <p className="ct-alert" role="alert"><Icon name="warn" />{failure}</p>}
       <p className="ct-hint ct-feat-intro">{f.intro}</p>
+      {view?.can_manage && onOpen && (
+        <div><button type="button" className="btn ct-btn" onClick={() => onOpen("template")}><Icon name="retry" />{f.tplOpen}</button></div>
+      )}
       {!view && !failure && <p className="ct-quiet" role="status">{f.loading}</p>}
 
       {view && setup && (

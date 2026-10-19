@@ -43,6 +43,15 @@ class ItemError(Exception):
         self.code = code
 
 
+class BilingualError(ItemError):
+    """An `ItemError` that also carries its sentence in Arabic (`message_ar`), for a refusal that
+    has no entry in the screens' own list of words (a feature that is off, a custom field)."""
+
+    def __init__(self, code: str, message: str, message_ar: str = "") -> None:
+        super().__init__(code, message)
+        self.message_ar = message_ar or message
+
+
 SAMPLE_REFUSED = (
     "This is a sample. Open it and save it to make it yours, or remove all the samples."
 )
@@ -178,6 +187,7 @@ def _variant_view(item: dict, v: dict, state: availability.State, deltas: dict) 
         "on_hand": v["on_hand"],
         "left": availability.variant_left(item, v, deltas, state.day),
         "photo_id": str(v["photo_id"]) if v["photo_id"] else None,
+        "custom": dict(v["custom"] or {}),
     }
 
 
@@ -199,6 +209,8 @@ def view(entry: Loaded, clock: ShopClock) -> dict:
         # A sample is an example the shop's type started it with (`samples.py`): never for
         # sale, its price is an example. `sample_key` is what its tile is drawn from.
         "sample": i["is_sample"], "sample_key": i["sample_key"],
+        # The owner's own fields (ALY-148): key to value.
+        "custom": dict(i["custom"] or {}),
         "price": i["price"], "price_text": fmt_qar(i["price"]),
         "sale_price": i["sale_price"], "sale_price_text": _money(i["sale_price"]),
         "sale_starts_at": _iso(i["sale_starts_at"]), "sale_ends_at": _iso(i["sale_ends_at"]),
@@ -383,6 +395,10 @@ async def create_item(
     _check_fields(values, planned)
     if values["status"] == "live" and require_arabic and not values["name_ar"]:
         raise ItemError("arabic_needed", "Add the Arabic name before the item goes live.")
+    custom = await _custom(
+        conn, item_now=None, sent=data.get("custom"), inputs=data.get("variants") or [],
+        now={}, status=values["status"], check_required=True,
+    )
     opening = [data.get("opening_stock")]
     opening += [v.get("opening_stock") for v in data.get("variants") or []]
     if any(opening) and values["stock_rule"] != "count":
@@ -403,7 +419,12 @@ async def create_item(
         )
     except asyncpg.UniqueViolationError as error:  # the index under the check above
         raise ItemError("sku_taken", f"The SKU “{values['sku']}” is already in use.") from error
-    await _sync_variants(conn, item_id, data.get("variants"), data, actor, clock, creating=True)
+    await _sync_variants(
+        conn, item_id, data.get("variants"), data, actor, clock, creating=True,
+        custom=custom.variants if custom else None,
+    )
+    if custom is not None and custom.item:
+        await _save_item_custom(conn, item_id, custom.item)
     if data.get("group_prices"):
         # (imported here: groups.py builds on this module)
         from alyr.modules.items import groups
@@ -471,6 +492,13 @@ async def update_item(
         and (before["status"] != "live" or before["name_ar"])
     ):
         raise ItemError("arabic_needed", "Add the Arabic name before the item goes live.")
+    # Required fields are checked when an item goes on sale or when the save touches fields.
+    custom = await _custom(
+        conn, item_now=dict(before["custom"] or {}), sent=changes.get("custom"),
+        inputs=changes.get("variants") or [],
+        now={str(v["id"]): dict(v["custom"] or {}) for v in current_variants},
+        status=values["status"], check_required=(before["status"] != "live" or "custom" in changes),
+    )
     warnings = []
     if "name" in changes or "name_ar" in changes:
         warnings = await _duplicates(conn, values["name"], values["name_ar"], item_id)
@@ -500,8 +528,14 @@ async def update_item(
         )
     structure = []
     if changes.get("variants") or "daily_limit" in changes:
-        await _sync_variants(conn, item_id, changes.get("variants"), changes, actor, clock)
+        await _sync_variants(
+            conn, item_id, changes.get("variants"), changes, actor, clock,
+            custom=custom.variants if custom else None,
+        )
         structure.append("variants")
+    if custom is not None and custom.item != dict(before["custom"] or {}):
+        await _save_item_custom(conn, item_id, custom.item)
+        structure.append("fields")
     if "option_groups" in changes and changes["option_groups"] is not None:
         await _sync_groups(conn, item_id, changes["option_groups"])
         structure.append("options")
@@ -596,6 +630,32 @@ async def remove(conn: asyncpg.Connection, item_id: UUID, actor: Actor) -> str |
     return "deleted"
 
 
+# ---------------------------------------------------------------- the owner's fields
+
+
+async def _custom(conn: asyncpg.Connection, **kwargs):
+    # (imported here: fields.py builds on this module)
+    from alyr.modules.items import fields
+
+    return await fields.plan_values(
+        conn, item_now=kwargs["item_now"], sent=kwargs["sent"], variant_inputs=kwargs["inputs"],
+        variants_now=kwargs["now"], status=kwargs["status"],
+        check_required=kwargs["check_required"],
+    )
+
+
+async def _save_item_custom(conn: asyncpg.Connection, item_id: UUID, values: dict) -> None:
+    from alyr.modules.items import fields
+
+    await fields.save_item_values(conn, item_id, values)
+
+
+async def _save_variant_custom(conn: asyncpg.Connection, variant_id: UUID, values: dict) -> None:
+    from alyr.modules.items import fields
+
+    await fields.save_variant_values(conn, variant_id, values)
+
+
 # ----------------------------------------------------------------- price history
 
 async def _price_row(
@@ -673,7 +733,7 @@ def _variant_codes(existing, inputs: list[dict] | None) -> list[tuple[str, str]]
 
 async def _sync_variants(
     conn: asyncpg.Connection, item_id: UUID, inputs: list[dict] | None, data: dict,
-    actor: Actor, clock: ShopClock, creating: bool = False,
+    actor: Actor, clock: ShopClock, creating: bool = False, custom: dict | None = None,
 ) -> None:
     """Make the item's variants match the form. Variants left out are switched off, never
     deleted, so orders and the stock log keep what they point at. An item that has only its
@@ -743,6 +803,8 @@ async def _sync_variants(
                 raise ItemError("sku_taken", f"The SKU “{sku}” is already in use.") from error
             raise ItemError("duplicate_variant", "Two choices have the same name.") from error
         kept.add(variant_id)
+        if custom and sort in custom and custom[sort]:
+            await _save_variant_custom(conn, variant_id, custom[sort])
     gone = [vid for vid in by_id if vid not in kept]
     if gone:
         await conn.execute("update item_variants set active = false where id = any($1)", gone)

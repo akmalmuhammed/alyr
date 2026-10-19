@@ -14,6 +14,8 @@ export type Variant = {
   id: string; name: string; name_ar: string; sku: string; is_default: boolean; active: boolean;
   price_delta: number; daily_limit: number | null; on_hand: number; left: number | null;
   photo_id: string | null; photo?: Photo;
+  /** The owner's own fields for this size (ALY-148): field key to value. */
+  custom?: Record<string, string | number | boolean>;
 };
 export type Option = { id: string; name: string; name_ar: string; price_delta: number; active: boolean };
 export type Group = {
@@ -50,7 +52,32 @@ export type Item = {
     orderable: boolean; reason: string; left: number | null; next_at: string | null; next_date: string | null;
   };
   photos: Photo[]; cover: Photo; photo_id: string | null;
+  /** The owner's own fields for this item (ALY-148): field key to value. */
+  custom?: Record<string, string | number | boolean>;
 };
+export type FieldChoice = { value: string; label: string; label_ar: string; active: boolean };
+/** One of the shop's own fields (GET /api/custom-fields; specs/012-feature-engine). */
+export type CustomField = {
+  id: string; key: string; label: string; label_ar: string;
+  kind: "text" | "number" | "choice" | "yes_no" | "date"; applies_to: "item" | "variant";
+  choices: FieldChoice[]; unit: string; shown_to_customers: boolean; searchable: boolean;
+  required: boolean; sort: number; archived: boolean; used_by?: number;
+};
+export type FieldsView = {
+  fields: CustomField[]; active: number; limits: { fields: number; choices: number }; can_manage?: boolean;
+};
+/** What switching to another template would add (GET /api/templates/preview). */
+export type TemplatePlan = {
+  from: { key: string; name: string; name_ar: string }; to: { key: string; name: string; name_ar: string; builtin: boolean };
+  turn_on: { key: string; name: string; name_ar: string }[]; stay_off: { key: string; name: string; name_ar: string }[];
+  stays_on: { key: string; name: string; name_ar: string }[];
+  categories: { name: string; name_ar: string }[];
+  fields: { key: string; label: string; label_ar: string; kind: string }[];
+  fields_skipped: { key: string; label: string; label_ar: string; kind: string }[];
+  wording: { section?: { from: { en: string; ar: string }; to: { en: string; ar: string } }; layout?: { from: string; to: string } };
+  nothing: boolean; hash: string;
+};
+export type TemplateChoice = { key: string; name: string; name_ar: string; builtin: boolean; note: string; note_ar: string };
 export type Access = { role: string; can_manage: boolean; can_edit: boolean; can_stock: boolean };
 export type Category = { name: string; name_ar: string; sort: number };
 export type Counts = {

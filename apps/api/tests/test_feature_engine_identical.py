@@ -17,7 +17,9 @@ else:
   registry starts every type with all four on, and the answer says so;
 * `report_lines` was declared per type and never read; the report's lines now follow the
   features, and all of them are on, so the report reads as it did;
-* the answers gained keys (`template`, `features`, `layout_custom`, `section.custom`...).
+* the answers gained keys (`template`, `features`, `layout_custom`, `section.custom`...);
+* a new shop of a type has the type's starter custom fields (ALY-148, second part): a column for
+  each in the files, no value on any item, nothing required.
 """
 
 import json
@@ -26,6 +28,7 @@ from uuid import uuid4
 
 import pytest
 
+from alyr.shop_templates import STARTER_FIELDS
 from test_onboarding import BASE, new_business
 
 GOLDEN = json.loads(
@@ -128,11 +131,13 @@ def test_a_shop_of_this_type_behaves_as_it_did_before(on, kind):
         answer = on.post("/api/items", json=full_item(rule, n))
         assert answer.status_code == old["full_item_status"][rule], (rule, answer.text)
 
-    # The files have the columns they had.
+    # The files have the columns they had, and one more for each starter field the type brings
+    # (the second pull request: a new shop's template gives it a few fields of its own).
+    starters = "".join(f",{f.label.en}" for f in STARTER_FIELDS.get(kind, ()))
     export = on.get("/api/items/export?format=csv").content.decode("utf-8-sig")
-    assert export.splitlines()[0] == old["export_header"]
+    assert export.splitlines()[0] == old["export_header"] + starters
     template = on.get("/api/items/import/template?kind=generic&format=csv")
-    assert template.content.decode("utf-8-sig").splitlines()[0] == old["template_header"]
+    assert template.content.decode("utf-8-sig").splitlines()[0] == old["template_header"] + starters
 
     review = on.get(f"{BASE}/state").json()["catalog"]
     assert now(review) == before(old["onboarding_catalog"])

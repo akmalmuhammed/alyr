@@ -113,8 +113,9 @@ async def export_items(
             for item_id, found in by_item.items()
         }
         keys = await features.file_columns(conn)
+        own = await features.own_fields(conn)
         data, name, content_type = exports.export_file(
-            entries, shop_clock, covers, lang, format, keys
+            entries, shop_clock, covers, lang, format, keys, own
         )
     return _download(data, name, content_type)
 
@@ -143,7 +144,8 @@ async def import_template(
         raise HTTPException(status_code=404, detail="no such template")
     async with request.app.state.db.tenant(staff.tenant_id) as conn:
         allowed = await features.file_columns(conn)
-    data, name, content_type = exports.template_file(kind, lang, format, allowed)
+        own = await features.own_fields(conn)
+    data, name, content_type = exports.template_file(kind, lang, format, allowed, own)
     return _download(data, name, content_type)
 
 

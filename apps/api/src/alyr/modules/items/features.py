@@ -31,19 +31,15 @@ from alyr.core import team
 from alyr.core.team import Actor
 from alyr.core.words import ITEMS, counted
 from alyr.modules.items import changes
-from alyr.modules.items.service import ItemError
+from alyr.modules.items.service import BilingualError
 
 SET_BY = ("template", "owner")
 
 
-class FeatureError(ItemError):
+class FeatureError(BilingualError):
     """A feature change that cannot be made, or a use of a feature that is off. `code` is
-    stable; the message is safe to show. It is an `ItemError`, so every route that answers one
-    already answers this."""
-
-    def __init__(self, code: str, message: str, message_ar: str = "") -> None:
-        super().__init__(code, message)
-        self.message_ar = message_ar or message
+    stable; the message is safe to show, in both languages. It is an `ItemError`, so every route
+    that answers one already answers this."""
 
 
 _TENANT = "nullif(current_setting('app.tenant_id', true), '')::uuid"
@@ -139,9 +135,15 @@ async def template_key(conn: asyncpg.Connection) -> str:
 
 
 async def template_of(conn: asyncpg.Connection) -> shop_templates.ShopTemplate:
-    """The shop's template: the built-in one for its business type (travel and the rest with
-    no catalog of their own get the plain Catalog)."""
-    return shop_templates.builtin_for(await template_key(conn))
+    """The shop's template: a built-in one (the type's, or the plain Catalog for travel and the
+    rest), or one made in the back office, which is read from its table."""
+    key = await template_key(conn)
+    if key in shop_templates.BUILTIN:
+        return shop_templates.BUILTIN[key]
+    # (imported here: the table's code builds on this one)
+    from alyr.modules.items import templates
+
+    return await templates.get(conn, key) or shop_templates.builtin_for(key)
 
 
 async def load(conn: asyncpg.Connection) -> Features:
@@ -169,6 +171,15 @@ async def file_columns(conn: asyncpg.Connection) -> tuple[str, ...]:
     feats = await load(conn)
     used = await in_use(conn)
     return columns.allowed(lambda key: feats.on(key) or used.get(key, 0) > 0)
+
+
+async def own_fields(conn: asyncpg.Connection) -> list[dict]:
+    """The shop's own fields that files carry: its active ones, while the feature is on."""
+    from alyr.modules.items import fields  # (fields builds on this module's neighbours)
+
+    if not (await load(conn)).on("custom_fields"):
+        return []
+    return await fields.rows(conn, archived=False)
 
 
 def hidden_cards(feats: Features) -> list[str]:
@@ -438,6 +449,11 @@ def _refuse(cap_key: str) -> FeatureError:
         f"“{cap.name.en}” is switched off for your shop. Switch it on in Features to use it.",
         f"«{cap.name.ar}» متوقفة في متجرك. شغّلها من «الميزات» لاستخدامها.",
     )
+
+
+def refuse(key: str) -> FeatureError:
+    """The refusal for new use of a feature that is off."""
+    return _refuse(key)
 
 
 async def require(conn: asyncpg.Connection, key: str) -> None:

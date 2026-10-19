@@ -26,9 +26,11 @@ from alyr.modules.orders import holds as order_holds
 from alyr.modules.orders.service import EXPIRE_JOB
 from alyr.routes import admin as admin_routes
 from alyr.routes import admin_media as admin_media_routes
+from alyr.routes import admin_templates as admin_template_routes
 from alyr.routes import agent as agent_routes
 from alyr.routes import auth as auth_routes
 from alyr.routes import bookings as bookings_routes
+from alyr.routes import custom_fields as custom_field_routes
 from alyr.routes import documents as documents_routes
 from alyr.routes import features as feature_routes
 from alyr.routes import inbox, items, ledger, orders, pay, simulator, store, whatsapp_webhook
@@ -40,6 +42,7 @@ from alyr.routes import price_groups as price_group_routes
 from alyr.routes import reports as reports_routes
 from alyr.routes import staff_numbers as staff_numbers_routes
 from alyr.routes import team as team_routes
+from alyr.routes import templates as template_routes
 from alyr.routes import track as track_routes
 from alyr.routes import workspace as workspace_routes
 from alyr.routes.deps import require_any_module, require_module, require_module_for_slug
@@ -139,6 +142,8 @@ def create_app() -> FastAPI:
     )
     # The features each shop has switched on (ALY-148).
     app.include_router(feature_routes.router)
+    app.include_router(custom_field_routes.router)
+    app.include_router(template_routes.router)
     # The numbers the owner registers as staff, who may change the Catalog by WhatsApp.
     app.include_router(staff_numbers_routes.router)
     # Customer price groups (wholesale) belong to the same Catalog (ALY-127).
@@ -165,6 +170,7 @@ def create_app() -> FastAPI:
     app.include_router(reports_routes.router)
     app.include_router(admin_routes.router)
     app.include_router(admin_media_routes.router)
+    app.include_router(admin_template_routes.router)
     app.include_router(media_routes.router)
     app.include_router(media_routes.public)
     app.include_router(onboarding_routes.router)
