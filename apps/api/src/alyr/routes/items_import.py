@@ -25,7 +25,16 @@ from pydantic import BaseModel, Field
 from alyr.core import team
 from alyr.core.auth import Staff
 from alyr.core.media import MediaService
-from alyr.modules.items import access, clock, columns, exports, imports, photos, service
+from alyr.modules.items import (
+    access,
+    clock,
+    columns,
+    exports,
+    features,
+    imports,
+    photos,
+    service,
+)
 from alyr.modules.items.xlsx import SheetError
 from alyr.routes.deps import current_staff
 
@@ -103,7 +112,10 @@ async def export_items(
             str(item_id): [p["urls"]["large"] for p in found if p.get("urls")]
             for item_id, found in by_item.items()
         }
-        data, name, content_type = exports.export_file(entries, shop_clock, covers, lang, format)
+        keys = await features.file_columns(conn)
+        data, name, content_type = exports.export_file(
+            entries, shop_clock, covers, lang, format, keys
+        )
     return _download(data, name, content_type)
 
 
@@ -122,14 +134,16 @@ async def import_kinds(
 
 @router.get("/import/template")
 async def import_template(
-    kind: str = "generic", lang: Lang = "en", format: Format = "xlsx",
+    request: Request, kind: str = "generic", lang: Lang = "en", format: Format = "xlsx",
     staff: Staff = Depends(current_staff),
 ) -> Response:
     """An empty file for one type of business, with its columns in the chosen language and
     three made-up example rows."""
     if kind not in columns.KIND_BY_KEY:
         raise HTTPException(status_code=404, detail="no such template")
-    data, name, content_type = exports.template_file(kind, lang, format)
+    async with request.app.state.db.tenant(staff.tenant_id) as conn:
+        allowed = await features.file_columns(conn)
+    data, name, content_type = exports.template_file(kind, lang, format, allowed)
     return _download(data, name, content_type)
 
 

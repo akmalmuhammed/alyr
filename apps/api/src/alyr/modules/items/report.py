@@ -22,11 +22,24 @@ import asyncpg
 from alyr.core.normalise import fmt_qar
 from alyr.core.words import DAYS, HOURS, ITEMS, counted
 from alyr.modules.items import clock as shop_clock
-from alyr.modules.items import listing, spells
+from alyr.modules.items import features, listing, spells
 
 TITLE = {"en": "Catalog", "ar": "الكتالوج"}
+LINES = ("sold_out", "asked", "low", "best", "idle")
 LIST_MAX = 3  # names in a line, before "and 4 more"
 ASKED_MAX = 2  # items named beside the number of customers who asked
+
+
+def shown_lines(feats: features.Features) -> list[str]:
+    """Which lines the section may have, by the shop's features (ALY-148): what sold out, and
+    who asked for it, only where items can run out; the low-stock line only where stock is
+    counted. What sold best and what did not sell are every shop's."""
+    out = ["best", "idle"]
+    if feats.can_run_out():
+        out += ["sold_out", "asked"]
+    if feats.counts_stock():
+        out.append("low")
+    return [k for k in LINES if k in out]
 
 
 async def numbers(conn: asyncpg.Connection, start: datetime, end: datetime, tz: str,
@@ -36,7 +49,7 @@ async def numbers(conn: asyncpg.Connection, start: datetime, end: datetime, tz: 
     if not current:
         return {}
     clock = await shop_clock.load(conn)
-    out: dict = {}
+    out: dict = {"show": shown_lines(await features.load(conn))}
 
     lasted = await spells.sold_out(conn, clock, start, end)
     out["sold_out"] = {
@@ -108,15 +121,21 @@ def active(n: dict) -> bool:
     return bool(lines(n, None, "en"))
 
 
+def _show(n: dict) -> list[str]:
+    """The lines this report may have; an older report, stored before features, has them all."""
+    return n.get("show", list(LINES))
+
+
 def headline(n: dict, lang: str) -> str:
     ar = lang == "ar"
-    if n["sold_out"]["count"]:
+    show = _show(n)
+    if "sold_out" in show and n["sold_out"]["count"]:
         things = counted(n["sold_out"]["count"], ITEMS, lang)
         return f"نفد {things}" if ar else f"{things} sold out"
-    if n["low"]["count"]:
+    if "low" in show and n["low"]["count"]:
         things = counted(n["low"]["count"], ITEMS, lang)
         return f"{things} بمخزون قليل" if ar else f"{things} low on stock"
-    if n["top_units"]:
+    if "best" in show and n["top_units"]:
         name = _name(n["top_units"][0], lang)
         return f"الأكثر مبيعاً: {name}" if ar else f"{name} sold most"
     return "لا أصناف نافدة" if ar else "no items sold out"
@@ -126,26 +145,28 @@ def lines(n: dict, before: dict | None, lang: str) -> list[str]:
     """The section's lines, each only when it has something to say."""
     ar = lang == "ar"
     out = []
+    show = _show(n)
     sold_out = n["sold_out"]
-    if sold_out["count"]:
+    if "sold_out" in show and sold_out["count"]:
         named = [_lasted(i, lang) for i in sold_out["items"]]
         head = "نفدت هذا الأسبوع" if ar else "Sold out this week"
         out.append(f"{head}: {_join(named, sold_out['count'], lang)}")
     asked = n["asked"]
-    if asked["customers"]:
+    if "asked" in show and asked["customers"]:
         head = "عملاء طلبوا صنفاً نافداً" if ar else "Customers who asked for something sold out"
         comma = "، " if ar else ", "
         named = comma.join(f"{_name(i, lang)} {i['customers']}" for i in asked["items"])
         out.append(f"{head}: {asked['customers']} ({named})")
     low = n["low"]
-    if low["count"]:
+    if "low" in show and low["count"]:
         left = "المتبقي {}" if ar else "{} left"
         named = [f"{_name(i, lang)} ({left.format(i['left'])})" for i in low["items"]]
         head = "مخزون قليل الآن" if ar else "Low on stock now"
         out.append(f"{head}: {_join(named, low['count'], lang)}")
-    out += _best(n, lang)
+    if "best" in show:
+        out += _best(n, lang)
     idle = n["idle"]
-    if idle["count"]:
+    if "idle" in show and idle["count"]:
         head = "لم تُبَع هذا الأسبوع" if ar else "Did not sell this week"
         out.append(f"{head}: {_join([_name(i, lang) for i in idle['items']], idle['count'], lang)}")
     return out

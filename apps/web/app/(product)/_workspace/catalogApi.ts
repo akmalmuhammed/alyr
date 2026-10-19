@@ -83,16 +83,40 @@ export type Movement = {
  */
 export type Setup = {
   type: string;
-  section: { name: string; name_ar: string; sub: string; sub_ar: string };
+  /** The template the shop uses, usually the one for its business type (ALY-148). */
+  template: { key: string; name: string; name_ar: string; builtin: boolean };
+  section: {
+    name: string; name_ar: string; sub: string; sub_ar: string;
+    /** The owner gave their own name; the template's is `template_name`. */
+    custom: boolean; template_name: string; template_name_ar: string;
+  };
   optional: boolean;
   layout: { style: "menu" | "grid" | "list" | "table"; pickup_date: boolean; quick_quantity: boolean; same_as_last: boolean; show_sku: boolean };
+  layout_custom: boolean;
   sold_out: "grey" | "hide";
   new_item: { rule: Rule; unit: string; lead_days: number | null; cutoff: string | null };
   low_stock_at: number;
   alerts: { low_stock: boolean; sold_out: boolean };
   focus: string[];
-  report_lines: string[];
+  /** Which features are on for this shop, by key (`GET /api/features` has the words). */
+  features: Record<string, boolean>;
   samples: number;
+};
+
+/** One feature on the Features screen (GET /api/features; specs/012-feature-engine). */
+export type FeatureRow = {
+  key: string; name: string; name_ar: string; hint: string; hint_ar: string; changes: string; changes_ar: string;
+  group: string; affects: string[]; enabled: boolean; own: boolean; depends_on: string[]; needed_by: string[];
+  set_by: "template" | "owner"; updated_by: string; updated_at: string; kind: "switch" | "choice";
+  config: Record<string, string>; choices: Record<string, string[]>;
+  in_use: { count: number; text: string; text_ar: string } | null;
+};
+export type FeatureGroup = { key: string; name: string; name_ar: string; hint: string; hint_ar: string; features: FeatureRow[] };
+export type FeaturesView = {
+  groups: FeatureGroup[];
+  core: { key: string; name: string; name_ar: string; hint: string; hint_ar: string }[];
+  template: { key: string; name: string; name_ar: string; builtin: boolean };
+  can_manage: boolean;
 };
 
 /** A WhatsApp number the owner registered as staff: it may change the Catalog by message. */

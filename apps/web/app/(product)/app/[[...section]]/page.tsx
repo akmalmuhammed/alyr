@@ -568,7 +568,7 @@ export default function WorkspaceShell() {
     );
   } else if (section === "catalog" && enabledScreens.has("catalog")) {
     // Named by the shop's type of business: Menu, Products, Price list (D-039, ALY-107).
-    body = <Catalog lang={lang} title={current ? pick(current.label) : t.productsTitle} show={show} />;
+    body = <Catalog lang={lang} title={current ? pick(current.label) : t.productsTitle} show={show} onRenamed={() => void load()} />;
   } else if ((WORK_SCREENS as string[]).includes(section) && enabledScreens.has(section)) {
     body = (
       <Screens embedded section={section as WorkspaceTab} lang={lang} show={show}

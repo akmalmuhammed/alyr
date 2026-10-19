@@ -11,8 +11,10 @@ import {
   type Item, type ListResult, type Setup,
 } from "./catalogApi";
 import { COPY, type Copy, type Lang } from "./catalogCopy";
+import { FEAT } from "./featuresCopy";
 import { Announce, Icon, Layer, Switch, Tile, ToastLayer, useToasts } from "./CatalogUi";
 import { CatalogEdit } from "./CatalogEdit";
+import { CatalogFeatures } from "./CatalogFeatures";
 import { CatalogImport } from "./CatalogImport";
 import { AddSheet, WalkThrough } from "./CatalogAdd";
 import { CatalogBulk } from "./CatalogBulk";
@@ -28,6 +30,7 @@ type Sheet =
   | { kind: "bulk" }
   | { kind: "import" }
   | { kind: "settings" }
+  | { kind: "features" }
   | { kind: "share"; target: Target };
 
 const PAGE = 60;
@@ -66,8 +69,9 @@ function priceLine(item: Item, t: Copy) {
     : <b className="num" dir="ltr">{item.price_text}</b>;
 }
 
-export function Catalog({ lang, title, show = null }: { lang: Lang; title: string; show?: string | null }) {
+export function Catalog({ lang, title, show = null, onRenamed }: { lang: Lang; title: string; show?: string | null; onRenamed?: () => void }) {
   const t = COPY[lang];
+  const feat = FEAT[lang];
   const { toasts, push, dismiss, clear } = useToasts();
   const [tab, setTab] = useState<"items" | "stock">("items");
   const [typed, setTyped] = useState("");
@@ -262,9 +266,12 @@ export function Catalog({ lang, title, show = null }: { lang: Lang; title: strin
     );
   }
 
+  // Sharing is two features (ALY-148): links, and QR codes for the counter and the tables.
+  const canShare = (setup?.features.share_links ?? true) || (setup?.features.table_qr ?? true);
+
   /** Share this item: its link and QR code. Only an item that is on sale has a page to open. */
   function renderShare(item: Item) {
-    if (item.status !== "live") return null;
+    if (item.status !== "live" || !canShare) return null;
     const name = nameOf(item, lang) || t.untitled;
     return (
       <button type="button" className="sh-iconbtn ct-share-btn" aria-label={t.shareOpen(name)} title={t.share}
@@ -393,7 +400,7 @@ export function Catalog({ lang, title, show = null }: { lang: Lang; title: strin
           </button>
         )}
         <span className="ct-grow" />
-        {!empty && (
+        {!empty && canShare && (
           <button type="button" className="btn ghost ct-btn" onClick={() => setSheet({ kind: "share", target: { kind: "shop" } })}>
             <Icon name="share" />{t.share}
           </button>
@@ -401,6 +408,11 @@ export function Catalog({ lang, title, show = null }: { lang: Lang; title: strin
         <button type="button" className="btn ghost ct-btn" onClick={() => setSheet({ kind: "import" })}>
           <Icon name="sheet" />{t.imp.open}
         </button>
+        {access.can_manage && (
+          <button type="button" className="btn ghost ct-btn" onClick={() => setSheet({ kind: "features" })}>
+            <Icon name="star" />{feat.open}
+          </button>
+        )}
         {access.can_manage && (
           <button type="button" className="btn ghost ct-btn" onClick={() => setSheet({ kind: "settings" })}>
             <Icon name="sliders" />{t.settings}
@@ -476,7 +488,7 @@ export function Catalog({ lang, title, show = null }: { lang: Lang; title: strin
                 {categories.map((c) => <option key={c.name} value={c.name}>{categoryName(c, lang)}</option>)}
                 <option value="">{t.noCategory}</option>
               </select>
-              {category !== null && category !== "" && (
+              {category !== null && category !== "" && canShare && (
                 <button type="button" className="sh-iconbtn ct-share-btn" aria-label={t.shareOpen(categoryLabel(category))} title={t.share}
                   onClick={() => setSheet({ kind: "share", target: { kind: "category", name: category } })}>
                   <Icon name="share" />
@@ -562,11 +574,16 @@ export function Catalog({ lang, title, show = null }: { lang: Lang; title: strin
       )}
       {sheet?.kind === "share" && (
         <CatalogShare lang={lang} target={sheet.target} categories={categories} push={push}
+          links={setup?.features.share_links ?? true} codes={setup?.features.table_qr ?? true}
           onClose={() => setSheet(null)} onSettings={() => setSheet({ kind: "settings" })} />
       )}
       {sheet?.kind === "import" && (
         <CatalogImport lang={lang} canEdit={access.can_edit}
           onClose={() => { setSheet(null); void load(); }} onChanged={() => void load()} />
+      )}
+      {sheet?.kind === "features" && (
+        <CatalogFeatures lang={lang} push={push} onClose={() => { setSheet(null); void load(); loadSetup(); }}
+          onChanged={() => { loadSetup(); onRenamed?.(); }} />
       )}
       {sheet?.kind === "settings" && (
         <CatalogSettings lang={lang} push={push} onClose={() => { setSheet(null); void load(); loadSetup(); }} />

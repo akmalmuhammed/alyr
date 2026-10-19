@@ -59,9 +59,11 @@ function Choice({
 }
 
 export function ItemSheet({
-  item, lang, canOrder, fetchFull, onAdd, onClose, onLimit, whatsapp,
+  item, lang, canOrder, showSku = true, fetchFull, onAdd, onClose, onLimit, whatsapp,
 }: {
   item: Item; lang: Lang; canOrder: boolean; fetchFull: (id: string) => Promise<Item | null>;
+  /** The shop's "show the item code" feature. */
+  showSku?: boolean;
   onAdd: (item: Item, pick: Chosen) => void; onClose: () => void; onLimit: (item: Item) => void;
   /** A visitor with no link of their own, to a shop with a WhatsApp number: the sheet offers to
    *  send this item (with the size and quantity chosen) as a message. `href` is the link. */
@@ -157,8 +159,8 @@ export function ItemSheet({
               item.unit && item.unit !== "piece" ? t.units[item.unit] ?? item.unit : "",
               item.pack_size && item.pack_size > 1 ? t.pack(item.pack_size) : "",
               item.min_order > 1 ? t.minimum(item.min_order) : "",
-              item.code !== null ? t.itemCode(item.code) : "",
-              item.sku ? `${t.sku} ${item.sku}` : "",
+              showSku && item.code !== null ? t.itemCode(item.code) : "",
+              showSku && item.sku ? `${t.sku} ${item.sku}` : "",
             ].filter(Boolean).join(" · ")}
           </p>
         </div>

@@ -25,6 +25,9 @@ export type CardProps = {
   simpleQty: number;
   /** Someone with their own link: they may order. Anyone else is only looking. */
   canOrder: boolean;
+  /** The shop's "quick quantity" feature: a plus and a stepper on the row. Off, the row's button
+   *  opens the item and the customer adds from there. */
+  quick?: boolean;
   onOpen: (item: Item) => void;
   onSet: (item: Item, qty: number) => void;
   onLimit: (item: Item) => void;
@@ -64,11 +67,11 @@ export function StatusLine({ item, lang }: { item: Item; lang: Lang }) {
   );
 }
 
-function Card({ item, lang, look, inOrder, simpleQty, canOrder, onOpen, onSet, onLimit }: CardProps) {
+function Card({ item, lang, look, inOrder, simpleQty, canOrder, quick = true, onOpen, onSet, onLimit }: CardProps) {
   const t = T[lang];
   const name = say(lang, item.name, item.name_ar);
   const description = say(lang, item.description, item.description_ar);
-  const choose = item.needs_choice;
+  const choose = item.needs_choice || !quick;
   const atMax = simpleQty >= most(item);
   return (
     <li className={`ox-card ${item.orderable ? "" : "off"}`}>

@@ -59,6 +59,9 @@ apps/api/                     FastAPI service (Python 3.13, managed with uv)
                               template.py and samples.py give each business type its catalog
                               (specs/008; the words are in src/alyr/presets_catalog.py, and
                               Settings.catalog_for_new_shops decides whether new shops get it);
+                              features.py reads what a shop has switched on (src/alyr/capabilities.py
+                              is the registry, src/alyr/shop_templates.py the templates; specs/012):
+                              ask it, never the business type;
                               orders/page.py is what the customer's order page reads (specs/005);
                               documents/ is the documents engine (receipts, invoices, credit notes:
                               gapless numbers, immutable once issued, a PDF drawn in Arabic and

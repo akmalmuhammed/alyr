@@ -10,7 +10,7 @@ from uuid import UUID
 
 import asyncpg
 
-from alyr import catalog, presets_catalog
+from alyr import catalog
 from alyr.core import pricing
 from alyr.core.auth import Staff
 from alyr.core.normalise import fmt_qar
@@ -92,11 +92,10 @@ def _same_name(screen: catalog.Screen, section: catalog.Text | None) -> bool:
 
 async def _section(conn: asyncpg.Connection) -> catalog.Text:
     """What this shop calls its Catalog ("Menu", "Products", "Price list"), by its type."""
-    kind = await conn.fetchval(
-        "select business_type from tenants "
-        "where id = nullif(current_setting('app.tenant_id', true), '')::uuid"
-    )
-    return presets_catalog.setup_for(kind or "").section
+    # (imported here: the Catalog's code builds on this package, not the other way round)
+    from alyr.modules.items import template
+
+    return await template.section(conn)
 
 
 def _catalog_step(step: dict, section: catalog.Text) -> dict:
@@ -205,6 +204,9 @@ async def state(conn: asyncpg.Connection, staff: Staff) -> dict:
     }
 
 
+HIDDEN = "hidden_cards"
+
+
 async def counts(
     conn: asyncpg.Connection, modules: set[str] | frozenset[str], now: datetime | None = None
 ) -> dict[str, int]:
@@ -213,9 +215,12 @@ async def counts(
     found: dict[str, int] = {}
     if "catalog" in modules:
         # (imported here: the Catalog's code builds on this package, not the other way round)
-        from alyr.modules.items import clock, listing
+        from alyr.modules.items import clock, features, listing
 
         found |= await listing.counts(conn, await clock.load(conn, now))
+        # A card about stock is left off a shop whose features say nothing runs out or is
+        # counted (ALY-148): the screens read this list and draw only the others.
+        found[HIDDEN] = features.hidden_cards(await features.load(conn))  # type: ignore[assignment]
     return found
 
 
@@ -231,6 +236,8 @@ async def home(conn: asyncpg.Connection) -> list[dict]:
             if card.count:
                 if worked_out is None:
                     worked_out = await counts(conn, modules)
+                if card.count in worked_out.get(HIDDEN, ()):
+                    continue
                 value = worked_out[card.count]
             else:
                 value = int(await conn.fetchval(f"select {card.value}") or 0)

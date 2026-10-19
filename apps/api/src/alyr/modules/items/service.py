@@ -980,10 +980,11 @@ async def settings(conn: asyncpg.Connection) -> dict:
     """What the shop chooses about its catalog: how long an unpaid pay-link order holds its
     stock, when its day begins (which is when daily limits start again), whether agents may
     edit items, the number at which counted stock is called low, and three choices for the
-    customers' order page: sold-out items greyed or left out, the compact wholesale table
-    for everyone, and the WhatsApp number a shared link sends customers to."""
+    customers' order page: the compact wholesale table for everyone and the WhatsApp number a
+    shared link sends customers to. (How a sold-out item looks is a feature, ALY-148: the
+    routes add it, `routes/items.py`.)"""
     row = await conn.fetchrow(
-        "select hold_minutes, day_starts, agents_edit_items, low_stock_at, sold_out_display, "
+        "select hold_minutes, day_starts, agents_edit_items, low_stock_at, "
         "wholesale_layout, whatsapp_number, whatsapp_mode from shop_settings"
     )
     return {
@@ -991,7 +992,6 @@ async def settings(conn: asyncpg.Connection) -> dict:
         "day_starts": (row["day_starts"] if row else time(0)).strftime("%H:%M"),
         "agents_edit_items": row["agents_edit_items"] if row else False,
         "low_stock_at": row["low_stock_at"] if row else 5,
-        "sold_out_display": row["sold_out_display"] if row else "grey",
         "wholesale_layout": row["wholesale_layout"] if row else False,
         "whatsapp_number": row["whatsapp_number"] if row else "",
         # How customers order on WhatsApp: "link" (the shop keeps its own number; ALYR prepares a
