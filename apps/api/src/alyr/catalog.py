@@ -234,6 +234,12 @@ MODULES: tuple[Module, ...] = (
             ),
         ),
     ),
+    # Documents: receipts, invoices, quotes, delivery notes, statements, credit notes, deposit
+    # receipts and proformas (ALY-138, D-042, spec 010). The engine only: it is in no product
+    # and no starting setup, has no screen, no setup step and no card, and is off for every
+    # shop. The back office can switch it on for one shop (`SWITCHABLE_MODULES`); packages 2
+    # and 3 (the sales hooks and the workspace screens) are what make it part of a product.
+    Module("documents", Text("Documents", "المستندات")),
     Module(
         "payments",
         Text("Payment links", "روابط الدفع"),

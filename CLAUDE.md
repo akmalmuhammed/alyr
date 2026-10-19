@@ -59,7 +59,11 @@ apps/api/                     FastAPI service (Python 3.13, managed with uv)
                               template.py and samples.py give each business type its catalog
                               (specs/008; the words are in src/alyr/presets_catalog.py, and
                               Settings.catalog_for_new_shops decides whether new shops get it);
-                              orders/page.py is what the customer's order page reads (specs/005)
+                              orders/page.py is what the customer's order page reads (specs/005);
+                              documents/ is the documents engine (receipts, invoices, credit notes:
+                              gapless numbers, immutable once issued, a PDF drawn in Arabic and
+                              English; specs/010, D-042), switched on per shop through the
+                              `documents` module, off for every shop until its screens exist
   src/alyr/routes/            HTTP routes. deps.py: who is calling, which shop, which modules are on
   src/alyr/catalog.py         What ALYR sells: modules and products (D-027)
   src/alyr/db.py              `Database.tenant(id)`: one transaction scoped to one tenant

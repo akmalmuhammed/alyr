@@ -44,6 +44,7 @@ Status: **Accepted** (in force), **Proposed** (waiting for the founder), **Super
 | D-037 | The public site presents the suite: the homepage leads with ALYR Agent at work, and every live product has its own page | Accepted |
 | D-038 | The Sunday report is a report card: a branded image from ALYR Agent's engine with about eight lines under it | Accepted |
 | D-039 | The Catalog (items, stock, photos) is built complete before go-live; photos on Cloudflare R2; free now, charged by usage later | Accepted |
+| D-042 | Documents (receipts, invoices and the rest) are one engine: gapless numbers, issued paper nobody can change, Arabic first, a PDF drawn by fpdf2 and kept in the database; free now, metered later | Accepted |
 
 ---
 
@@ -864,3 +865,34 @@ There is no separate Pay product: payment links stay a module of Chat and Bookin
 **Why.** The values had been copied by hand into eleven places, with one name meaning two colours (`--canvas`), two curves under one name (`--ease`), three focus styles and thirteen near-blacks where the brand names three (`docs/design-system/00-audit.md`). The design skills (ALY-126) need one file to read, and a check that keeps it true.
 
 **Still open, for the founder.** Whether product buttons take the 45° notch (the workspace's four button systems are the next step); the Arabic spelling of the name.
+
+---
+
+## D-042 · Documents: one engine for receipts, invoices, quotes and the rest
+**Date** 19 Oct 2026 · **Status** Accepted (founder, 19 Oct, in chat: build it; free now and metered later like the Catalog; bilingual by default with Arabic first for consumer sales; shops' documents first, ALYR's own client invoices later on the same engine) · Linear ALY-137, ALY-138 · Spec `specs/010-documents-engine/spec.md` · Does not change D-008 (e-invoicing stays parked). (The number: D-040 is the design system and another open pull request, ALY-130, also wrote D-040 before that merged; D-041 is left for whichever renumbers.)
+
+**Where we were.** A shop could not hand a customer anything with a number on it. ALYR's orders, bookings and credit ledger know what was sold and paid, and nothing turns that into a receipt or an invoice. The plan has an invoice for ALYR's own clients (`docs/internal-tool.md`) and a customer who asks a Qatari shop for an invoice expects Arabic on it.
+
+**The decision.**
+- **One engine, three ways in and two ways out.** Documents (receipt, invoice, quote, delivery note, statement, credit note, deposit receipt, proforma) come from ALYR's own orders and bookings, typed by hand, or sent by another system; they leave as a link, a PDF to send or print, or an export. Package 1 (this one) is the engine; the ways in and out are later packages.
+- **Gapless numbers per shop, kind and series**, taken under a row lock in the issuing transaction, so a failed issue gives its number back. With an optional prefix and a yearly restart.
+- **Issued paper cannot change.** The database refuses (a trigger the application role cannot disable), not the application. The only thing that happens to an issued document is that a credit note covering all of it voids it; nothing is deleted. The content is hashed (SHA-256 of canonical JSON) so any change is detectable and a later e-invoicing serializer has a clean, sequential, verifiable record (D-008).
+- **Seller and customer are copied onto the document at issue**, with every line. A later change to a price, a customer or the shop's registration number never rewrites a paper someone holds.
+- **Arabic is on every consumer document**, Arabic first by default; it cannot be switched off for a consumer (refused when settings are saved, when a draft is made and when it is issued). A business document may be English only. Formal Modern Standard Arabic; Western digits; «ر.ق» after the amount. The wording is a draft until a native review (ALY-66).
+- **A shop with no commercial registration number issues receipts, not invoices**, and each says it is not a tax invoice. "Tax invoice" is used only for an invoice that carries tax and a tax number; tax is in the model and off by default (Qatar has no VAT today).
+- **The PDF is drawn by fpdf2 with HarfBuzz and kept in the database**, not in R2. Chosen after trying WeasyPrint, reportlab with a shaping layer and (on paper) headless Chromium: the only one that is right on Arabic and installs from wheels, so CI and the image stay as they are. The brand's own fonts, embedded, nothing fetched while drawing, the same bytes for the same input.
+- **Free now, metered later, like the Catalog.** The module `documents` is in `catalog.py` and off for every shop; it is in no product and no starting setup, and has no screen, until packages 2 and 3 (the sales hooks and the workspace screens) are built. The back office can switch it on for one shop to try it. No "coming" wording anywhere. The table already has what a meter needs (shop, kind, date of issue); no charge and no meter is built, and none is charged without the founder's decision through the price list and per-client quote of D-032.
+- **Roles follow the Catalog's.** Owners and admins do everything. Agents make drafts and see their own; they may issue only when the shop has allowed it (off to start) and only their own drafts; they never see the shop's takings or change settings, numbering or credit notes.
+
+**What it changes in earlier decisions.** Nothing is overruled. `docs/data-residency.md` already said R2 is for public photos and never documents; this keeps to it, which is why the PDF is in the database. D-039's rule that nothing "coming" is shown to an owner or customer applies.
+
+**Rejected.**
+- *The PDF in R2.* It would put customers' names and phone numbers outside Qatar (hard rule 2), and the number, PDF and hash could not commit together.
+- *WeasyPrint.* Slightly better diacritics and CSS tables, but it needs Pango on the machine: an `apt-get` step in CI and in the image, for a difference nobody sees on paper.
+- *A Postgres SEQUENCE for the number.* It does not roll back, so a failed issue would leave a hole.
+- *Renumbering or editing an issued document to correct it.* A correction is a credit note and a new document.
+- *Calling every sale an invoice.* A shop with no registration number cannot issue one; it issues a receipt.
+
+**Not confirmed (flagged in the spec).** The exact wording of the ministry's Arabic-invoice circular (Arabic as the *main* language, or in addition); the record retention period (ten years is a secondary source, ALY-51); whether an unregistered seller may issue an invoice at all. Until the lawyer answers: Arabic cannot be switched off, a consumer document that leads in English is allowed and warned about, and nothing issued is ever deleted.
+
+**Revisit when.** The lawyer answers (ALY-51); the General Tax Authority publishes the e-invoicing specification (D-008); volume makes the documents too heavy for the database (then a Qatar object store behind `core/storage.py`); a connected POS issues in bursts (draw before the lock); a country pack needs tax-inclusive prices.
