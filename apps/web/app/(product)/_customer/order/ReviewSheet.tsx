@@ -15,6 +15,7 @@ import { ApiError, checkCart, placeOrder, type CartBody } from "./api";
 import { lineName, next, total as totalOf, type Line } from "./cart";
 import { say, T } from "./copy";
 import type { Check, Checked, Customer, Day, Item, Placed } from "./types";
+import type { WaPart } from "./wa";
 import { Dialog, DialogHead, Price, Stepper, Tile } from "./ui";
 
 const up = (s: string) => (s ? s.charAt(0).toUpperCase() + s.slice(1) : s);
@@ -40,6 +41,8 @@ type Props = {
   choose: (itemId: string) => void;
   onPlaced: (placed: Placed) => void;
   onClose: () => void;
+  /** The same order as WhatsApp messages (ALY-136), when the shop has given its number. */
+  whatsapp?: WaPart[];
 };
 
 const BLOCKING = ["price_changed"];
@@ -257,6 +260,16 @@ export function ReviewSheet(props: Props) {
         )}
         {!clear && !checking && changed.length === 0 && lines.length > 0 && state !== "offline" && <p className="ox-quiet center">{t.fixFirst}</p>}
         {state === "offline" && <button type="button" className="cx-btn ghost" onClick={() => void run()}>{t.retry}</button>}
+        {props.whatsapp && props.whatsapp.length > 0 && lines.length > 0 && (
+          <>
+            {props.whatsapp.length > 1 && <p className="ox-quiet center">{t.partsHint(props.whatsapp.length)}</p>}
+            {props.whatsapp.map((part, i) => (
+              <a key={part.href} className="cx-btn ghost" href={part.href} target="_blank" rel="noopener noreferrer">
+                <Glyph name="wa" />{props.whatsapp && props.whatsapp.length > 1 ? t.partOf(i + 1, props.whatsapp.length) : t.sendOnWhatsApp}
+              </a>
+            ))}
+          </>
+        )}
       </footer>
     </Dialog>
   );

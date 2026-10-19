@@ -19,7 +19,6 @@ blank form. They are safe by construction:
 Every function takes a tenant-scoped connection.
 """
 
-from uuid import UUID
 
 import asyncpg
 
@@ -66,10 +65,8 @@ def _data(setup: CatalogSetup, sample: Sample, sort: int) -> dict:
 async def add(conn: asyncpg.Connection, setup: CatalogSetup, clock: ShopClock) -> int:
     """Give the shop the type's sample items. Returns how many."""
     for sort, sample in enumerate(setup.samples):
-        made = await service.create_item(conn, _data(setup, sample, sort), SYSTEM, clock)
-        await conn.execute(
-            "update items set is_sample = true, sample_key = $2 where id = $1",
-            UUID(made["item"]["id"]), sample.key,
+        await service.create_item(
+            conn, _data(setup, sample, sort), SYSTEM, clock, sample_key=sample.key
         )
     return len(setup.samples)
 

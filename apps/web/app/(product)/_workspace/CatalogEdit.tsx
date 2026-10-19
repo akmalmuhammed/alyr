@@ -12,6 +12,7 @@ import {
 } from "./catalogApi";
 import { COPY, type Copy, type Lang } from "./catalogCopy";
 import { CatalogPhotos } from "./CatalogPhotos";
+import { CodeBox } from "./CatalogCode";
 import { Field, Fold, Icon, Sheet, type Toast } from "./CatalogUi";
 
 type Push = (text: string, options?: { tone?: Toast["tone"]; undo?: () => void }) => number;
@@ -557,9 +558,11 @@ export function CatalogEdit({ lang, itemId, initial, categories, access, setup, 
         <section className="ct-sample-note" aria-labelledby="ct-sample-title">
           <h3 id="ct-sample-title"><span className="sh-pill ct-pill sample">{t.sampleTag}</span> {t.sampleSheetTitle}</h3>
           <p>{t.sampleSheetText}</p>
+          <p>{t.codeSampleHint}</p>
           {!readOnly && <button type="button" className="btn small" disabled={saving} onClick={() => void keep()}>{t.sampleKeep}</button>}
         </section>
       )}
+      {item && item.code !== null && <CodeBox code={item.code} name={form.name || form.name_ar} t={t} push={push} />}
       <fieldset className="ct-form" disabled={readOnly || saving}>
         <section className="ct-sec">
           <h3>{t.photosTitle}</h3>

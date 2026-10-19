@@ -159,10 +159,23 @@ def of(migrated, key: str) -> dict[str, asyncpg.Record]:
     return {r["key"]: r for r in migrated["rows"] if r["tenant_id"] == tenant}
 
 
+# Features registered after migration 0034 have no row for a shop that existed then: it gets its
+# template's value, which for these is on, so nothing changes for it (no migration is needed to
+# add a feature; the order-by-code merge, ALY-136, added "Order on WhatsApp").
+ADDED_LATER = {"order_on_whatsapp"}
+
+
 def test_every_shop_gets_a_row_for_every_feature_it_can_have(migrated):
+    expected = set(capabilities.STORED) - ADDED_LATER
     for key in migrated["shops"]:
-        assert set(of(migrated, key)) == set(capabilities.STORED), key
-    assert len(migrated["rows"]) == len(migrated["shops"]) * len(capabilities.STORED)
+        assert set(of(migrated, key)) == expected, key
+    assert len(migrated["rows"]) == len(migrated["shops"]) * len(expected)
+
+
+def test_a_feature_added_after_the_migration_is_on_for_every_type_so_nothing_changes():
+    for kind in TYPES:
+        for key in ADDED_LATER:
+            assert shop_templates.builtin_for(kind).features[key][0] is True, (kind, key)
 
 
 @pytest.mark.parametrize("kind", TYPES)
@@ -172,6 +185,8 @@ def test_a_shop_of_each_type_gets_exactly_what_its_template_says(migrated, kind)
     template = shop_templates.builtin_for(kind)
     rows = of(migrated, kind)
     for key, (on, config) in template.features.items():
+        if key in ADDED_LATER:
+            continue
         assert rows[key]["enabled"] is on, (kind, key)
         assert {**capabilities.BY_KEY[key].config, **dict(
             json.loads(rows[key]["config"]) if rows[key]["config"] else {}

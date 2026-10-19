@@ -38,7 +38,7 @@ SOLD_OUT_REASONS = ("off", "sold_out")
 
 async def settings(conn: asyncpg.Connection) -> dict:
     row = await conn.fetchrow(
-        "select wholesale_layout, whatsapp_number, low_stock_at from shop_settings"
+        "select wholesale_layout, whatsapp_number, whatsapp_mode, low_stock_at from shop_settings"
     )
     feats = await features.load(conn)
     return {
@@ -46,7 +46,12 @@ async def settings(conn: asyncpg.Connection) -> dict:
         "sold_out_display": feats.sold_out_mode,
         "tags": feats.on("tags"),
         "wholesale_layout": row["wholesale_layout"] if row else False,
-        "whatsapp_number": row["whatsapp_number"] if row else "",
+        # The customer's "Order on WhatsApp" is a feature (ALY-148): with it off the page is
+        # told there is no number to send to.
+        "whatsapp_number": (
+            (row["whatsapp_number"] if row else "") if feats.on("order_on_whatsapp") else ""
+        ),
+        "whatsapp_mode": row["whatsapp_mode"] if row else "link",
         "low_stock_at": row["low_stock_at"] if row else listing.DEFAULT_LOW_STOCK,
     }
 
@@ -92,6 +97,8 @@ def public_row(
     named = [v for v in entry.active_variants if not v["is_default"]]
     row = {
         "id": base["id"], "name": i["name"], "name_ar": i["name_ar"], "sku": i["sku"],
+        # The item's short number (ALY-136): what a customer sends in the chat.
+        "code": i["code"],
         "category": i["category"], "description": i["description"],
         "description_ar": i["description_ar"], "unit": i["unit"], "pack_size": i["pack_size"],
         "min_order": i["min_order"], "tags": list(i["tags"]),
@@ -171,7 +178,7 @@ def _sort_key(order: dict[str, int]):
 def _haystack(row: dict, category_ar: str) -> list[str]:
     parts = [
         row["name"], row["name_ar"], row["description"], row["description_ar"], row["sku"],
-        row["category"], category_ar, " ".join(row["tags"]),
+        str(row["code"] or ""), row["category"], category_ar, " ".join(row["tags"]),
     ]
     for variant in row["variants"]:
         parts += [variant["name"], variant["name_ar"], variant["sku"]]
@@ -267,6 +274,7 @@ async def page(
             "sold_out_display": shop["sold_out_display"],
             "wholesale_layout": shop["wholesale_layout"],
             "whatsapp_number": shop["whatsapp_number"],
+            "whatsapp_mode": shop["whatsapp_mode"],
         },
         "categories": shown,
         "items": rows,

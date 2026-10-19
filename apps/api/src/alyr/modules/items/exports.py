@@ -52,7 +52,7 @@ def item_rows(
         rows = active if named else (active[:1] or [None])
         for n, v in enumerate(rows):
             cells: dict[str, object] = {
-                "id": str(i["id"]),
+                "id": str(i["id"]), "code": i["code"],
                 "name": safe_text(i["name"]), "name_ar": safe_text(i["name_ar"]),
                 "sku": safe_text(i["sku"]),
                 "category": safe_text(i["category"]),

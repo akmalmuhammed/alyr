@@ -225,10 +225,23 @@ BUILT: tuple[Capability, ...] = (
         "يعرض «اطلب مثل المرة السابقة» في أعلى صفحة الطلب."),
        "order_page", ("order_page",)),
     _c("show_sku", ("Show the item code", "إظهار رمز الصنف"),
-       ("Show your code beside the name on the order page. Useful for a price list.",
-        "أظهر رمزك بجانب الاسم في صفحة الطلب. مفيد لقوائم الأسعار."),
-       ("Shows the code on the item sheet and as a column in the table.",
-        "يعرض الرمز في ورقة الصنف وكعمود في الجدول."),
+       ("Show each item's code beside its name for customers: on the order page and on the "
+        "item's card in WhatsApp. Useful for a price list. Customers can still order by a "
+        "code they know.",
+        "أظهر رمز كل صنف بجانب اسمه للعملاء: في صفحة الطلب وعلى بطاقة الصنف في واتساب. مفيد "
+        "لقوائم الأسعار. يبقى بإمكان العميل الطلب برمز يعرفه."),
+       ("Shows the code (and your own SKU) on the item sheet and as a column in the table, and "
+        "a code line on the item's card in WhatsApp.",
+        "يعرض الرمز (ورمز SKU الخاص بك) في ورقة الصنف وكعمود في الجدول، وسطر الرمز في بطاقة "
+        "الصنف على واتساب."),
+       "order_page", ("order_page", "chat")),
+    _c("order_on_whatsapp", ("Order on WhatsApp", "اطلب عبر واتساب"),
+       ("A customer who is not signed in to the page picks items and sends the order to your "
+        "WhatsApp number as a message.",
+        "العميل غير المسجّل في الصفحة يختار الأصناف ويرسل الطلب إلى رقم واتساب الخاص بك كرسالة."),
+       ("Shows the “Order on WhatsApp” button and the list of what was picked, on the order "
+        "page.",
+        "يعرض زر «اطلب عبر واتساب» وقائمة ما اختاره العميل في صفحة الطلب."),
        "order_page", ("order_page",)),
     _c("sold_out_display", ("Sold-out items", "الأصناف النافدة"),
        ("Show a sold-out item greyed out, or leave it off the order page.",

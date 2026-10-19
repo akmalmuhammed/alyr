@@ -1,9 +1,11 @@
-"""The Catalog in a customer's chat (D-039, ALY-106).
+"""The Catalog in a customer's chat (D-039, ALY-106, ALY-136).
 
 * **An item.** A customer who types an item's name (or part of it, with a spelling mistake,
-  in English or Arabic) gets the item's photo with its price and an Order button. When the
-  photo is not stored yet (or the store cannot be read) the same message goes without it.
-  If several items fit, the customer picks from a list.
+  in English or Arabic) gets the item's photo with its price, its code and Confirm and Change
+  buttons (ALY-136: the same card and the same question as for a code or a link, `wa_order.py`).
+  When the photo is not stored yet (or the store cannot be read) the same message goes without
+  it. If several items fit, the customer picks from a list. Words that look like a code or a
+  SKU are never matched as a name: `wa_order.py` answers those first.
 * **The menu.** "menu" brings a list of what can be ordered now, with the link to the full
   order page.
 * **Tell me when it is back.** An item that is sold out offers a button. The customer
@@ -23,22 +25,22 @@ import asyncpg
 from alyr.channels.base import Choice, InboundMessage, OutboundMessage
 from alyr.core import consent
 from alyr.core.media import MediaService
-from alyr.core.normalise import fmt_qar, has_arabic
+from alyr.core.normalise import has_arabic
 from alyr.modules.items import (
     availability,
     demand,
     features,
     match,
-    photos,
     service,
-    text,
+    wa_card,
+    wa_order,
     watches,
 )
 from alyr.modules.items import clock as shop_clock
 from alyr.modules.items.wa_text import say, shown
 from alyr.modules.orders.chat import order_link
 
-MAX_BODY = 1000
+MAX_BODY = wa_card.MAX_BODY
 MENU_WORDS = {
     " ".join(match.tokens(w)) for w in (
         "menu", "catalog", "catalogue", "products", "price list", "pricelist",
@@ -84,8 +86,7 @@ def _arabic(contact: asyncpg.Record, message: InboundMessage) -> str:
     return "ar" if contact["lang"] == "ar" or has_arabic(message.text) else "en"
 
 
-def _clip(value: str, size: int) -> str:
-    return value if len(value) <= size else value[: size - 1] + "…"
+_clip = wa_card.clip
 
 
 def _contains(words: list[str], phrases: set[str]) -> str | None:
@@ -128,7 +129,9 @@ async def maybe_handle(
         except ValueError:
             return None
         if kind == "item":
-            return await _card_for(conn, contact, lang, item_id, media, orders_on)
+            return await _card_for(
+                conn, tenant_id, contact, lang, item_id, media, orders_on, web_url
+            )
         if kind == "notify":
             return await _ask_to_notify(conn, tenant_id, contact, lang, item_id, web_url)
         if kind == "notify_yes":
@@ -147,7 +150,7 @@ async def maybe_handle(
             conn, tenant_id, contact, lang,
             [w for w in asked if w not in _NOTIFY_FILLER and w not in _SMALL_TALK], web_url,
         )
-    return await _by_name(conn, contact, lang, words, media, orders_on)
+    return await _by_name(conn, tenant_id, contact, lang, words, media, orders_on, web_url)
 
 
 # ── what is for sale ─────────────────────────────────────────────────────────────────
@@ -163,20 +166,31 @@ async def _shop_name(conn: asyncpg.Connection, tenant_id: UUID, lang: str) -> st
 
 
 async def _by_name(
-    conn: asyncpg.Connection, contact: asyncpg.Record, lang: str, words: list[str],
-    media: MediaService, orders_on: bool,
+    conn: asyncpg.Connection, tenant_id: UUID, contact: asyncpg.Record, lang: str,
+    words: list[str], media: MediaService, orders_on: bool, web_url: str,
 ) -> list[OutboundMessage] | None:
-    words = [w for w in words if w not in _SMALL_TALK and not w.isdigit()]
-    if not words or len(words) > 6 or set(words) & _RESERVED or not any(len(w) >= 3 for w in words):
+    """An item named in words. Every word the customer typed must fit the item (a number too:
+    "iPhone 12" is not "iPhone 15"), and a name that fits several items is a list to choose from,
+    never a guess."""
+    words = [w for w in words if w not in _SMALL_TALK]
+    if not words or len(words) > 6 or set(words) & _RESERVED:
+        return None
+    if not any(len(w) >= 3 and not w.isdigit() for w in words):
         return None
     clock = await shop_clock.load(conn)
     found = match.find(words, await _live(conn, clock), with_variants=False)
     if found.one is not None:
-        return [await _card(conn, contact, lang, clock, found.one.item["id"], media, orders_on)]
+        return await wa_order.offer(
+            conn, tenant_id, contact, lang, [wa_order.Want(found.one.item["id"])], web_url,
+            media, orders_on,
+        )
     if not found.many:
         return None
     rows = tuple(
-        Choice(f"item:{t.item['id']}", _clip(shown(t.item, lang), 24), fmt_qar(t.item["price"]))
+        Choice(
+            f"{wa_order.PICK}{t.item['id']}", _clip(shown(t.item, lang), 24),
+            wa_card.money(lang, t.item["price"]),
+        )
         for t in found.many
     )
     return [OutboundMessage(
@@ -185,78 +199,15 @@ async def _by_name(
 
 
 async def _card_for(
-    conn: asyncpg.Connection, contact: asyncpg.Record, lang: str, item_id: UUID,
-    media: MediaService, orders_on: bool,
+    conn: asyncpg.Connection, tenant_id: UUID, contact: asyncpg.Record, lang: str,
+    item_id: UUID, media: MediaService, orders_on: bool, web_url: str,
 ) -> list[OutboundMessage] | None:
-    clock = await shop_clock.load(conn)
+    """A row picked from the menu: that item as a card with Confirm and Change."""
     if not await conn.fetchval("select true from items where id = $1 and status = 'live'", item_id):
         return None
-    return [await _card(conn, contact, lang, clock, item_id, media, orders_on)]
-
-
-async def _card(
-    conn: asyncpg.Connection, contact: asyncpg.Record, lang: str, clock: shop_clock.ShopClock,
-    item_id: UUID, media: MediaService, orders_on: bool,
-) -> OutboundMessage:
-    """One item as a message: photo, name, price, and what the customer can do."""
-    entry = await service.get(conn, clock, item_id)
-    view = service.view(entry, clock)
-    state = entry.state(clock)
-    await photos.add_to_views(conn, media, [view])
-    item = entry.item
-    name = shown(item, lang)
-    lines = [f"*{name}*"]
-    described = (item["description_ar"] if lang == "ar" else item["description"]) or (
-        item["description"] or item["description_ar"]
+    return await wa_order.offer(
+        conn, tenant_id, contact, lang, [wa_order.Want(item_id)], web_url, media, orders_on
     )
-    if described:
-        lines.append(_clip(described.strip(), 200))
-    now = availability.item_price(item, clock.now)
-    deltas = [v["price_delta"] for v in entry.active_variants]
-    price = fmt_qar(now + min(deltas)) if deltas else fmt_qar(now)
-    price = say("card_from", lang, price=price) if len(set(deltas)) > 1 else price
-    if availability.sale_active(item, clock.now):
-        price += " " + say("card_was", lang, was=fmt_qar(item["price"]))
-    lines.append(price)
-    named = [shown(v, lang) for v in entry.active_variants if v["name"] or v["name_ar"]]
-    if named:
-        lines.append(say("card_choices", lang, list=", ".join(named)))
-    buttons: list[Choice] = []
-    if state.orderable:
-        if state.left is not None and 0 < state.left <= 5:
-            lines.append(say("card_left", lang, n=state.left))
-        if orders_on:
-            buttons.append(Choice("order", say("button_order", lang)))
-    elif state.reason in ("sold_out", "off"):
-        lines.append(say("card_sold_out", lang))
-        if (await features.load(conn)).on("back_in_stock"):
-            buttons.append(Choice(f"notify:{item_id}", say("button_notify", lang)))
-        # They asked for something the shop cannot give: the weekly report counts it.
-        await demand.record(conn, contact["id"], [item_id], "whatsapp", clock.now)
-    else:
-        when = state.next_at or state.next_date
-        if when is not None:
-            lines.append(say("card_when", lang, when=text.when_text(when, clock.today, lang)))
-        else:
-            lines.append(say("card_closed", lang))
-        if orders_on:
-            buttons.append(Choice("order", say("button_order", lang)))
-    body = _clip("\n".join(lines), MAX_BODY)
-    cover = view["cover"]
-    jpeg = (
-        await media.jpeg_for(conn, UUID(cover["id"])) if cover["state"] == "ready" else None
-    )
-    if buttons:
-        return OutboundMessage(
-            to=contact["id"], kind="buttons", body=body, choices=tuple(buttons), lang=lang,
-            image=jpeg or b"", image_type="image/jpeg",
-        )
-    if jpeg:
-        return OutboundMessage(
-            to=contact["id"], kind="image", body=body, image=jpeg, image_type="image/jpeg",
-            lang=lang,
-        )
-    return OutboundMessage(to=contact["id"], body=body, lang=lang)
 
 
 async def _menu(
@@ -274,7 +225,7 @@ async def _menu(
     rows = tuple(
         Choice(
             f"item:{e.item['id']}", _clip(shown(e.item, lang), 24),
-            fmt_qar(availability.item_price(e.item, clock.now)),
+            wa_card.money(lang, availability.item_price(e.item, clock.now)),
         )
         for e in shown_here
     )
@@ -302,7 +253,8 @@ async def _notify_by_name(
             conn, tenant_id, contact, lang, found.one.item["id"], web_url
         )
     rows = tuple(
-        Choice(f"notify:{t.item['id']}", _clip(shown(t.item, lang), 24), fmt_qar(t.item["price"]))
+        Choice(f"notify:{t.item['id']}", _clip(shown(t.item, lang), 24),
+               wa_card.money(lang, t.item["price"]))
         for t in found.many
     )
     return [OutboundMessage(

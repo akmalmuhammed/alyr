@@ -120,9 +120,9 @@ async function run() {
   const groups = await text(".ct-feats h3");
   check(groups.length === 6, `six groups of features (${groups.length}: ${groups.join(" | ")})`);
   const switches = await count(".ct-feat [role=switch]");
-  check(switches === 19, `nineteen switches, one for each feature that has one (${switches})`);
+  check(switches === 20, `twenty switches, one for each feature that has one (${switches})`);
   check(await count(".ct-feat input[type=radio]") === 2, "the sold-out look is a choice of two");
-  check((await count(".ct-feat-changes")) === 20, "every feature says what it changes");
+  check((await count(".ct-feat-changes")) === 21, "every feature says what it changes");
   check((await count(".ct-feat-places li")) > 30, "and where");
   await noSideScroll("Features");
   await shot("features");
@@ -274,6 +274,23 @@ async function run() {
   await open();
   check((await text(".ox-again")).length === 0, "same as last time off: the card is gone");
   await call("/api/features/same_as_last", { method: "PUT", body: { enabled: true } });
+
+  // Order on WhatsApp (ALY-136): a visitor with no link of their own, at a shop that has typed
+  // its number, is offered the button; switching the feature off takes it away.
+  const current = (await call("/api/items/settings")).data;
+  await call("/api/items/settings", { method: "PUT", body: { ...current, whatsapp_number: "97455550100" } });
+  const waLinks = () => count("a[href^='https://wa.me/97455550100']");
+  const visitor = async () => { await b.go(`${BASE}/s/${shop.slug}`, 1800); await b.until("!!document.querySelector('.ox-list, [role=row].ox-wrow, .ox-none, .cx-warn, .cx-bar, .ox-notice')", "the page without a link", 25000); };
+  await visitor();
+  check((await waLinks()) > 0, "order on WhatsApp on: a visitor with no link is offered the button");
+  await shot("page-visitor-wa");
+  await call("/api/features/order_on_whatsapp", { method: "PUT", body: { enabled: false } });
+  await visitor();
+  check((await waLinks()) === 0, "order on WhatsApp off: no button, no number on the page");
+  await shot("page-visitor-no-wa");
+  await call("/api/features/order_on_whatsapp", { method: "PUT", body: { enabled: true } });
+  await visitor();
+  check((await waLinks()) > 0, "and back on, the button is back");
 
   check(b.problems.length === 0, `no errors in the browser console (${b.problems.slice(0, 3).join(" ; ")})`);
 }

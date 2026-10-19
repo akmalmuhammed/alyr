@@ -204,6 +204,11 @@ class StockSettings(BaseModel):
         default=None, max_length=40,
         description="The number customers message to start an order; empty clears it",
     )
+    whatsapp_mode: str | None = Field(
+        default=None, pattern="^(chat|link)$",
+        description="link (the default): the shop keeps its own number and answers itself. "
+                    "chat: the number runs on ALYR and the chat reads item codes",
+    )
 
 
 class AlertsIn(BaseModel):
@@ -422,6 +427,7 @@ async def put_settings(
             await items.save_settings(
                 conn, body.hold_minutes, body.day_starts, body.agents_edit_items,
                 body.low_stock_at, body.wholesale_layout, body.whatsapp_number,
+                body.whatsapp_mode,
             )
             after = await _settings(conn)
             fields = {k: after[k] for k in changes.SETTING_FIELDS}

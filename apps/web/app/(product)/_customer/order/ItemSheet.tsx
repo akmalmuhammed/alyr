@@ -11,6 +11,7 @@ import { missing, most, next, smallest, step, unitPrice } from "./cart";
 import { say, T } from "./copy";
 import { PriceLine, StatusLine } from "./ItemCard";
 import type { Group, Item } from "./types";
+import { Glyph } from "../Frame";
 import { Dialog, DialogHead, Price, Stepper, Tile } from "./ui";
 
 export type Chosen = { variantId: string | null; optionIds: string[]; qty: number };
@@ -58,12 +59,15 @@ function Choice({
 }
 
 export function ItemSheet({
-  item, lang, canOrder, showSku = true, fetchFull, onAdd, onClose, onLimit,
+  item, lang, canOrder, showSku = true, fetchFull, onAdd, onClose, onLimit, whatsapp,
 }: {
   item: Item; lang: Lang; canOrder: boolean; fetchFull: (id: string) => Promise<Item | null>;
   /** The shop's "show the item code" feature. */
   showSku?: boolean;
   onAdd: (item: Item, pick: Chosen) => void; onClose: () => void; onLimit: (item: Item) => void;
+  /** A visitor with no link of their own, to a shop with a WhatsApp number: the sheet offers to
+   *  send this item (with the size and quantity chosen) as a message. `href` is the link. */
+  whatsapp?: (item: Item, pick: Chosen) => string;
 }) {
   const t = T[lang];
   const name = say(lang, item.name, item.name_ar);
@@ -94,7 +98,8 @@ export function ItemSheet({
     minus: `${t.remove}: ${name}`, plus: `${t.moreOne}: ${name}`, quantity: `${t.quantity}: ${name}`,
   }), [t, name]);
 
-  function add() {
+  /** Is everything that must be chosen chosen? If not, name what is missing (and say false). */
+  function validate(): boolean {
     const found = missing(item, variantId, optionIds);
     if (found.variant || found.groups.length || found.tooMany.length) {
       setErrors(found);
@@ -107,11 +112,18 @@ export function ItemSheet({
       setSummary(lines.join(" "));
       // Take the customer to the first thing to fix.
       requestAnimationFrame(() => body.current?.querySelector<HTMLElement>(".ox-field.bad input, .ox-field.bad")?.focus());
-      return;
+      return false;
     }
     setErrors(NONE);
-    onAdd(item, { variantId, optionIds, qty: Math.min(qty, cap) });
+    return true;
   }
+
+  function add() {
+    if (validate()) onAdd(item, { variantId, optionIds, qty: Math.min(qty, cap) });
+  }
+
+  const chosenAll = (() => { const f = missing(item, variantId, optionIds); return !(f.variant || f.groups.length || f.tooMany.length); })();
+  const waLink = whatsapp && chosenAll ? whatsapp(item, { variantId, optionIds, qty: Math.min(qty, cap) }) : "";
 
   const groupError = (g: Group): string => {
     if (errors.groups.includes(g.id)) return t.chooseGroup(say(lang, g.name, g.name_ar), name);
@@ -147,6 +159,7 @@ export function ItemSheet({
               item.unit && item.unit !== "piece" ? t.units[item.unit] ?? item.unit : "",
               item.pack_size && item.pack_size > 1 ? t.pack(item.pack_size) : "",
               item.min_order > 1 ? t.minimum(item.min_order) : "",
+              showSku && item.code !== null ? t.itemCode(item.code) : "",
               showSku && item.sku ? `${t.sku} ${item.sku}` : "",
             ].filter(Boolean).join(" · ")}
           </p>
@@ -184,7 +197,25 @@ export function ItemSheet({
         ))}
       </div>
 
-      {canOrder && item.orderable && (
+      {canOrder && item.orderable && whatsapp && (
+        <footer className="ox-dfoot wa">
+          <Stepper qty={qty} atMax={qty >= cap} labels={labels}
+            onMinus={() => setQty((q) => Math.max(smallest(item), q - step(item)))}
+            onPlus={() => { const to = next(item, qty, 1, variantId); if (to === qty) onLimit(item); else setQty(to); }} />
+          {waLink ? (
+            <a className="cx-btn ox-addbtn" href={waLink} target="_blank" rel="noopener noreferrer">
+              <Glyph name="wa" /><span>{t.startOrder}</span>
+            </a>
+          ) : (
+            <button type="button" className="cx-btn ox-addbtn" onClick={() => void validate()}>
+              <Glyph name="wa" /><span>{t.startOrder}</span>
+            </button>
+          )}
+          <button type="button" className="ox-link ox-listbtn" onClick={add}>{t.addToList}</button>
+          <p className="ox-quiet center ox-hint">{t.waHint}</p>
+        </footer>
+      )}
+      {canOrder && item.orderable && !whatsapp && (
         <footer className="ox-dfoot">
           <Stepper qty={qty} atMax={qty >= cap} labels={labels}
             onMinus={() => setQty((q) => Math.max(smallest(item), q - step(item)))}

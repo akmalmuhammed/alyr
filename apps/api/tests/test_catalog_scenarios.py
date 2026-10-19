@@ -363,6 +363,7 @@ def test_the_shop_can_change_how_long_an_unpaid_order_holds_its_stock(client):
     rest = {
         "day_starts": "00:00", "agents_edit_items": False, "low_stock_at": 5,
         "sold_out_display": "grey", "wholesale_layout": False, "whatsapp_number": "",
+        "whatsapp_mode": "chat",
     }
     assert client.get("/api/items/settings").json() == {"hold_minutes": 30, **rest}
     saved = client.put("/api/items/settings", json={"hold_minutes": 10})

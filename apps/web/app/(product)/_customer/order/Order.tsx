@@ -25,11 +25,13 @@ import { ItemCard } from "./ItemCard";
 import type { Chosen } from "./ItemSheet";
 import type { Checked, Item, Live, LiveItem, Placed, Store } from "./types";
 import { Price } from "./ui";
+import { waParts, type WaLine, type WaPart } from "./wa";
 import { Wholesale, rowsOf } from "./Wholesale";
 import "./order.css";
 
 const ItemSheet = dynamic(() => import("./ItemSheet").then((m) => m.ItemSheet), { ssr: false });
 const ReviewSheet = dynamic(() => import("./ReviewSheet").then((m) => m.ReviewSheet), { ssr: false });
+const ListSheet = dynamic(() => import("./ListSheet").then((m) => m.ListSheet), { ssr: false });
 
 type Props = {
   slug: string;
@@ -89,7 +91,17 @@ function makeLine(item: Item, variantId: string | null, optionIds: string[], qty
     unit: unitPrice(item, variantId, optionIds),
     name: item.name, name_ar: item.name_ar, variant: variant?.name ?? "", variant_ar: variant?.name_ar ?? "",
     extras: extras.map((o) => ({ name: o.name, name_ar: o.name_ar })), src: photo.state === "ready" ? photo.src : "",
+    code: item.code,
   };
+}
+
+/** The cart's lines as the WhatsApp message needs them. A line saved before codes existed gets
+ *  its code from the item if the page has it. */
+function toWaLines(lines: Line[], lookup: (id: string) => Item | undefined): WaLine[] {
+  return lines.map((l) => ({
+    code: l.code ?? lookup(l.itemId)?.code ?? null, qty: l.qty, name: l.name, name_ar: l.name_ar,
+    variant: l.variant, variant_ar: l.variant_ar, extras: l.extras, unit: l.unit,
+  }));
 }
 
 // ── the page ──────────────────────────────────────────────
@@ -117,6 +129,7 @@ export default function Order({ slug, token, table, initial, lang: first, focusI
   const [said, setSaid] = useState("");
   const [offline, setOffline] = useState(false);
   const [gone, setGone] = useState(false);
+  const [listOpen, setListOpen] = useState(false);
   // Every item seen so far (newest version): the review needs the rules and the days of what
   // is in the order even when a search has moved it off the list.
   const seenRef = useRef(new Map<string, Item>());
@@ -125,6 +138,11 @@ export default function Order({ slug, token, table, initial, lang: first, focusI
 
   const canOrder = Boolean(token && store.customer);
   const shopName = say(lang, store.shop.name, store.shop.name_ar);
+  // Someone with no link of their own, at a shop that has given its WhatsApp number: they pick
+  // items and send them as a message (ALY-136). The shop, or the chat, answers.
+  const whatsapp = store.shop.whatsapp;
+  const waList = !canOrder && Boolean(whatsapp);
+  const canPick = canOrder || waList;
 
   const say_ = useCallback((text: string) => setSaid((old) => (old === text ? `${text} ` : text)), []);
 
@@ -136,6 +154,16 @@ export default function Order({ slug, token, table, initial, lang: first, focusI
     for (const item of [...base, ...(remote?.items ?? []), ...(open ? [open] : [])]) seenRef.current.set(item.id, item);
   }, [base, remote, open]);
   const lookup = useCallback((id: string) => seenRef.current.get(id), []);
+
+  /** An order as WhatsApp messages: one, or a few when it is too long for one. */
+  const known = useMemo(() => new Map([...base, ...(remote?.items ?? [])].map((i) => [i.id, i] as const)), [base, remote]);
+  const partsOf = useCallback((ls: Line[]): WaPart[] => {
+    if (!whatsapp || ls.length === 0) return [];
+    return waParts(whatsapp, {
+      shop: store.shop, lang, mode: store.settings.whatsapp_mode, lines: toWaLines(ls, (id) => known.get(id)),
+      money: (dirhams) => formatPrice(dirhams, lang), customer: store.customer?.name, table: store.table,
+    });
+  }, [whatsapp, store, lang, known]);
 
   // ── what is shown: all of it filtered here when it is all loaded, else asked of the API ──
   const words = useMemo(() => searchWords(q), [q]);
@@ -423,7 +451,8 @@ export default function Order({ slug, token, table, initial, lang: first, focusI
 
   const flaggedCount = cart.filter((l) => flagged.has(l.key)).length;
   const lines = cart;
-  const whatsapp = store.shop.whatsapp;
+  const sending = waList ? partsOf(lines) : [];
+  const itemMessage = (item: Item, pick: Chosen) => partsOf([makeLine(item, pick.variantId, pick.optionIds, pick.qty)])[0]?.href ?? "";
   // The label the server cleaned (`store.table`), not the raw address: a printed code is the
   // shop's, but anyone can type an address.
   const prefill = store.table ? (lang === "ar" ? `طلب طاولة ${store.table}` : `Order table ${store.table}`) : t.prefillOrder;
@@ -439,7 +468,7 @@ export default function Order({ slug, token, table, initial, lang: first, focusI
   const renderCards = (items: Item[]) => (
     <ul className={`ox-list ${look}`}>
       {items.map((item) => (
-        <ItemCard key={item.id} item={item} lang={lang} look={look} canOrder={canOrder} quick={offers.quick_quantity} inOrder={inOrder(item.id)}
+        <ItemCard key={item.id} item={item} lang={lang} look={look} canOrder={canPick} quick={offers.quick_quantity} inOrder={inOrder(item.id)}
           simpleQty={qtyOf(item.id, simpleVariant(item))} onOpen={setOpen} onSet={setSimple} onLimit={onLimit} />
       ))}
     </ul>
@@ -461,7 +490,7 @@ export default function Order({ slug, token, table, initial, lang: first, focusI
       ) : null}
       {!canOrder && (
         <section className="cx-card ox-notice" style={{ "--i": 1 } as React.CSSProperties}>
-          <h2>{t.browseTitle}</h2>
+          <h2>{wa ? t.waTitle : t.browseTitle}</h2>
           <p>{wa ? t.browseWhatsApp(shopName) : t.browseNoNumber(shopName)}</p>
         </section>
       )}
@@ -518,7 +547,7 @@ export default function Order({ slug, token, table, initial, lang: first, focusI
       )}
 
       {layout === "table" && shown.length > 0 && (
-        <Wholesale rows={rowsOf(shown)} lang={lang} label={section || t.priceList} canOrder={canOrder} showSku={offers.show_sku} onOpen={setOpen} onSet={setVariantQty}
+        <Wholesale rows={rowsOf(shown)} lang={lang} label={section || t.priceList} canOrder={canPick} showSku={offers.show_sku} onOpen={setOpen} onSet={setVariantQty}
           onLimit={onLimit} qtyOf={(item, variant) => qtyOf(item.id, variant ? variant.id : simpleVariant(item))} />
       )}
       {layout === "cards" && (grouped
@@ -549,6 +578,22 @@ export default function Order({ slug, token, table, initial, lang: first, focusI
             </button>
           </div>
         </div>
+      ) : waList && sending.length > 0 ? (
+        <div className="cx-bar">
+          <div className="cx-bar-in">
+            <div className="cx-sum">
+              <span>{t.bar(count(lines))}</span>
+              <b><Price value={totalOf(lines)} lang={lang} /></b>
+            </div>
+            {sending.length > 1 && <p className="ox-quiet center">{t.partsHint(sending.length)}</p>}
+            {sending.map((part, i) => (
+              <a key={part.href} className={`cx-btn ${i > 0 ? "ghost" : ""}`} href={part.href} target="_blank" rel="noopener noreferrer">
+                <Glyph name="wa" />{sending.length > 1 ? t.partOf(i + 1, sending.length) : t.startOrder}
+              </a>
+            ))}
+            <button type="button" className="ox-link ox-seelist" onClick={() => setListOpen(true)}>{t.seeList}</button>
+          </div>
+        </div>
       ) : !canOrder && wa ? (
         <div className="cx-bar">
           <div className="cx-bar-in">
@@ -560,12 +605,17 @@ export default function Order({ slug, token, table, initial, lang: first, focusI
       <p className="ox-sr" role="status" aria-live="polite" aria-atomic="true">{said}</p>
 
       {open && (
-        <ItemSheet key={open.id} item={open} lang={lang} canOrder={canOrder} showSku={offers.show_sku} fetchFull={fetchFull} onAdd={addChosen}
-          onClose={() => setOpen(null)} onLimit={onLimit} />
+        <ItemSheet key={open.id} item={open} lang={lang} canOrder={canPick} showSku={offers.show_sku} fetchFull={fetchFull} onAdd={addChosen}
+          onClose={() => setOpen(null)} onLimit={onLimit} whatsapp={waList ? itemMessage : undefined} />
+      )}
+      {listOpen && waList && (
+        <ListSheet lang={lang} lines={lines} lookup={lookup} parts={sending} setQty={setQty} remove={remove}
+          onClose={() => setListOpen(false)} />
       )}
       {review && token && customer && (
         <ReviewSheet slug={slug} token={token} lang={lang} lines={lines} lookup={lookup} customer={customer} table={store.table} askDay={offers.pickup_date}
           forDate={forDate} onForDate={setForDate} setQty={setQty} remove={remove} accept={accept} swap={swap}
+          whatsapp={partsOf(lines)}
           choose={(id) => { const it = seenRef.current.get(id); setReview(false); if (it) setOpen(it); }}
           onPlaced={(p) => {
             setReview(false); setCart([]); setFlagged(new Set());

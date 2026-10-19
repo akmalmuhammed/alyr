@@ -35,7 +35,7 @@ SUBJECT = "catalog"
 # The shop's settings, as `service.settings` and `template.hints` give them.
 SETTING_FIELDS = (
     "hold_minutes", "day_starts", "agents_edit_items", "low_stock_at",
-    "wholesale_layout", "whatsapp_number",
+    "wholesale_layout", "whatsapp_number", "whatsapp_mode",
 )
 
 

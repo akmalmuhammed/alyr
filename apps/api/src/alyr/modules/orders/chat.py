@@ -25,13 +25,14 @@ def table_in(text: str) -> str:
 
 
 def order_link(
-    web_url: str, slug: str, contact_id: UUID, tenant_id: UUID, table: str = ""
+    web_url: str, slug: str, contact_id: UUID, tenant_id: UUID, table: str = "",
+    item: UUID | str = "",
 ) -> str:
     """The order page link for ONE customer. It carries a signed token, not the bare contact ID
     (`core/links.py`; the ID is inside the token, readable by whoever holds the link, and
     alone it grants nothing here): whoever holds the link is that customer until the token
     runs out, and a link that is edited, or made for another shop, is refused."""
-    return links.order_url(web_url, slug, tenant_id, contact_id, table)
+    return links.order_url(web_url, slug, tenant_id, contact_id, table, item)
 
 
 async def maybe_handle(

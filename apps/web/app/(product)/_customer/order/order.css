@@ -208,3 +208,15 @@ html.ox-locked { overflow: hidden; }
 @media (prefers-reduced-motion: reduce) {
   .ox-add, .ox-step button { transition: none; }
 }
+
+/* ── item codes and Order on WhatsApp (ALY-136) ── */
+.ox-codeline { font-size: var(--ui-caption); font-weight: 500; color: var(--ink-2); }
+.ox-codeline .num { font-family: var(--font-ui-mono); letter-spacing: 0.02em; color: var(--ink); }
+.ox-dfoot.wa { flex-wrap: wrap; }
+.ox-dfoot.wa .ox-addbtn { flex: 1 1 11rem; }
+.ox-dfoot.wa .ox-listbtn { flex: 1 1 100%; justify-content: center; text-align: center; text-decoration: underline; }
+.ox-dfoot.wa .ox-hint { flex: 1 1 100%; margin: 0; }
+.ox-seelist { justify-self: center; }
+.ox-lqty.full .ox-step button { width: 44px; }
+.cx-bar-in .ox-quiet.center { margin: 0; }
+.ox-lact .ox-link { min-width: 44px; }

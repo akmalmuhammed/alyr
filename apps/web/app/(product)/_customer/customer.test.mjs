@@ -9,6 +9,7 @@ import { fileURLToPath } from "node:url";
 import * as cart from "./order/cart.ts";
 import { fold, matches, searchWords } from "./fold.ts";
 import { amount, formatPrice, formatRange } from "./price.ts";
+import { waHref, waParts } from "./order/wa.ts";
 
 const cases = JSON.parse(
   readFileSync(fileURLToPath(new URL("../../../../../specs/005-order-page-v2/fold-cases.json", import.meta.url)), "utf8"),
@@ -132,4 +133,74 @@ test("a required choice that is missing is named", () => {
   assert.deepEqual(cart.missing(pizza, "s", ["a", "c"]).tooMany, []);
   const two = { ...pizza, option_groups: [{ id: "size", required: true, max_choices: 1, options: [{ id: "a" }, { id: "b" }] }] };
   assert.deepEqual(cart.missing(two, "s", ["a", "b"]).tooMany, ["size"]);
+});
+
+// ── Order on WhatsApp (ALY-136) ───────────────────────────
+
+const spec = JSON.parse(
+  readFileSync(fileURLToPath(new URL("../../../../../specs/010-order-by-code/messages.json", import.meta.url)), "utf8"),
+);
+const wa = (order) => waParts(spec.phone, { money: (d) => formatPrice(d, order.lang), ...order });
+const waLine = (code, qty, more = {}) => ({
+  code, qty, name: `Item ${code}`, name_ar: `صنف ${code}`, variant: "", variant_ar: "", extras: [], unit: 1000, ...more,
+});
+
+test("every chat message is the one the server's reader is tested on, and under 140 characters", () => {
+  for (const c of spec.chat) {
+    const lines = c.lines.map((l) => waLine(l.code, l.qty, { variant: l.variant, variant_ar: l.variant }));
+    const parts = wa({ shop: c.shop, lang: c.lang, mode: "chat", lines });
+    assert.deepEqual(parts.map((p) => p.text), c.parts, c.label);
+    for (const part of parts) assert.ok(part.text.length <= 140, `${c.label}: ${part.text.length}`);
+    assert.equal(parts.reduce((n, p) => n + p.items, 0), c.lines.length, c.label);
+  }
+});
+
+test("the link opens WhatsApp on the shop's number with the message encoded as UTF-8", () => {
+  const [part] = wa({ shop: spec.chat[1].shop, lang: "ar", mode: "chat", lines: [waLine(214, 2)] });
+  assert.ok(part.href.startsWith(`https://wa.me/${spec.phone}?text=`));
+  assert.equal(decodeURIComponent(part.href.split("?text=")[1]), part.text);
+  assert.ok(!part.href.includes(" ") && !part.href.includes("#"));
+  assert.equal(waHref("+974 5545 5001", "x"), "https://wa.me/97455455001?text=x");
+});
+
+test("a chat message puts the codes in the middle and cues each one", () => {
+  const [part] = wa({ shop: { name: "Al Noor", name_ar: "" }, lang: "en", mode: "chat", lines: [waLine(214, 2), waLine(305, 1)] });
+  assert.match(part.text, /^Hello Al Noor, .*: #214 x2, #305\. Thank you!$/);
+  const [arabic] = wa({ shop: { name: "Al Noor", name_ar: "النور" }, lang: "ar", mode: "chat", lines: [waLine(214, 2)] });
+  assert.match(arabic.text, /^مرحباً النور، .*#214 x2\. شكراً$/);
+});
+
+test("a line with no code cannot be said to the chat; with no lines there is no message", () => {
+  assert.deepEqual(wa({ shop: spec.chat[0].shop, lang: "en", mode: "chat", lines: [] }), []);
+  assert.deepEqual(wa({ shop: spec.chat[0].shop, lang: "en", mode: "chat", lines: [waLine(null, 1)] }), []);
+  const [part] = wa({ shop: spec.chat[0].shop, lang: "en", mode: "chat", lines: [waLine(null, 1), waLine(305, 1)] });
+  assert.match(part.text, /#305/);
+});
+
+test("a message for a person is laid out line by line with codes, quantities, the total and the name", () => {
+  const lines = [
+    waLine(214, 2, { name: "Black abaya", variant: "M", unit: 26000 }),
+    waLine(305, 1, { name: "Oud 50 ml", unit: 12000, extras: [{ name: "Gift box", name_ar: "علبة" }] }),
+  ];
+  const [part] = wa({ shop: { name: "Al Noor", name_ar: "النور" }, lang: "en", mode: "link", lines, customer: "Huda" });
+  assert.equal(part.text, [
+    "Order from the Al Noor page",
+    "#214 Black abaya (M) x2 - QAR 520",
+    "#305 Oud 50 ml (Gift box) x1 - QAR 120",
+    "Total: QAR 640",
+    "Name: Huda",
+  ].join("\n"));
+  const [arabic] = wa({ shop: { name: "Al Noor", name_ar: "النور" }, lang: "ar", mode: "link", lines: [waLine(214, 2, { unit: 26000 })], table: "7" });
+  assert.match(arabic.text, /^طلب من صفحة النور\n#214 صنف 214 x2 - 520 ر\.ق\nالإجمالي: 520 ر\.ق\nطاولة 7$/);
+  assert.ok(!arabic.text.includes("QAR"));
+});
+
+test("a long order for a person goes in parts, and only the last carries the total", () => {
+  const lines = Array.from({ length: 40 }, (_, i) => waLine(101 + i, 2, { name: `A fairly long item name number ${i}`, unit: 1500 }));
+  const parts = wa({ shop: spec.chat[0].shop, lang: "en", mode: "link", lines });
+  assert.ok(parts.length >= 2);
+  for (const part of parts) assert.ok(part.text.length <= 900, String(part.text.length));
+  assert.ok(parts[0].text.includes("(1/") && !parts[0].text.includes("Total:"));
+  assert.ok(parts[parts.length - 1].text.includes("Total: QAR 1,200"));
+  assert.equal(parts.reduce((n, p) => n + p.items, 0), 40);
 });

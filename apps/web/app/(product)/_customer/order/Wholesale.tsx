@@ -48,8 +48,9 @@ function Line({ row, lang, qty, canOrder, showSku = true, onOpen, onSet, onLimit
   const listPrice = variant ? variant.list_price : item.list_price;
   const sold = item.sold_out || (variant?.sold_out ?? false);
   const orderable = item.orderable && !(variant?.sold_out ?? false);
-  const code = (variant?.sku || item.sku) ?? "";
+  const code = item.code === null ? "" : String(item.code);
   const meta = [
+    (variant?.sku || item.sku) ? `${t.sku} ${variant?.sku || item.sku}` : "",
     item.unit && item.unit !== "piece" ? t.units[item.unit] ?? item.unit : "",
     item.pack_size && item.pack_size > 1 ? t.pack(item.pack_size) : "",
     item.min_order > 1 ? t.minimum(item.min_order) : "",
@@ -102,7 +103,7 @@ export function Wholesale({
     <div role="table" className={`ox-wtable ${showSku ? "" : "nosku"}`} aria-label={label}>
       <div role="rowgroup">
         <div role="row" className="ox-whead">
-          {showSku && <span role="columnheader">{t.sku}</span>}
+          {showSku && <span role="columnheader">{t.code}</span>}
           <span role="columnheader">{t.nameHead}</span>
           <span role="columnheader">{t.priceHead}</span>
           <span role="columnheader">{t.quantity}</span>

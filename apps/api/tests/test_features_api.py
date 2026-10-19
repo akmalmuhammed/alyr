@@ -488,3 +488,46 @@ async def _alert_on(conn, kind):
     from alyr.modules.items import template
 
     return await template.alert_on(conn, kind)
+
+
+# ── the two things ALY-136 added: the item code and "Order on WhatsApp" ───────────────
+
+
+def _shop_number(number: str) -> None:
+    owner_sql(
+        "insert into shop_settings (tenant_id, whatsapp_number) values ($1, $2) "
+        "on conflict (tenant_id) do update set whatsapp_number = $2", DEMO_TENANT_ID, number)
+
+
+def test_order_on_whatsapp_is_a_feature_on_for_every_shop_and_the_page_follows_it(client):
+    assert flat(client)["order_on_whatsapp"]["enabled"] is True
+    owner_sql("insert into tenant_modules (tenant_id, module_key) values ($1, 'catalog') "
+              "on conflict (tenant_id, module_key) do update set enabled = true", DEMO_TENANT_ID)
+    _shop_number("97455550100")
+    assert client.get(STORE).json()["shop"]["whatsapp"] == "97455550100"
+    off(client, "order_on_whatsapp")
+    page = client.get(STORE).json()
+    assert page["shop"]["whatsapp"] == "" and page["settings"]["whatsapp_number"] == ""
+    # The shop's own setting is not touched: switching the feature back is all it takes.
+    assert client.get("/api/items/settings").json()["whatsapp_number"] == "97455550100"
+    switch(client, "order_on_whatsapp", True)
+    assert client.get(STORE).json()["shop"]["whatsapp"] == "97455550100"
+
+
+def test_the_whatsapp_mode_is_the_shops_own_choice_and_not_a_feature(client):
+    assert "whatsapp_mode" not in flat(client)
+    mode = client.get("/api/items/settings").json()["whatsapp_mode"]
+    assert mode in ("link", "chat")  # the demo shop answers itself in the chat
+    off(client, "order_on_whatsapp")
+    assert client.get("/api/items/settings").json()["whatsapp_mode"] == mode
+
+
+def test_the_item_code_on_the_whatsapp_card_follows_show_the_item_code(client):
+    mk(client, name="Shawarma", name_ar="شاورما", price=1200)
+    assert "Item code" in talk(client, AHMED_PHONE, "shawarma")[-1]["body"]
+    off(client, "show_sku")
+    card = talk(client, AHMED_PHONE, "shawarma")[-1]
+    assert "Item code" not in card["body"] and "Shawarma" in card["body"]
+    # A customer who knows the code can still order by it: the code is only no longer shown.
+    switch(client, "show_sku", True)
+    assert "Item code" in talk(client, AHMED_PHONE, "shawarma")[-1]["body"]

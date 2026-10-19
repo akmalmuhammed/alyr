@@ -29,7 +29,7 @@
     }
    ]
   },
-  "export_header": "Item ID,Name (English),Name (Arabic),SKU,Category,Price (QAR),Sale price (QAR),Sale starts,Sale ends,Sold by,Units in a pack,Smallest order,Tags,Status,How it runs out,Available,Size or colour,Size or colour (Arabic),Size or colour SKU,Price difference (QAR),In stock,Low-stock number,Per day,Description,Description (Arabic),Photos",
+  "export_header": "Item ID,Item code (ALYR),Name (English),Name (Arabic),SKU,Category,Price (QAR),Sale price (QAR),Sale starts,Sale ends,Sold by,Units in a pack,Smallest order,Tags,Status,How it runs out,Available,Size or colour,Size or colour (Arabic),Size or colour SKU,Price difference (QAR),In stock,Low-stock number,Per day,Description,Description (Arabic),Photos",
   "full_item_status": {
    "always": 200,
    "count": 200,
@@ -192,6 +192,7 @@
    "hold_minutes": 30,
    "low_stock_at": 3,
    "sold_out_display": "grey",
+   "whatsapp_mode": "link",
    "whatsapp_number": "",
    "wholesale_layout": false
   },
@@ -270,6 +271,7 @@
   },
   "store_settings": {
    "sold_out_display": "grey",
+   "whatsapp_mode": "link",
    "whatsapp_number": "",
    "wholesale_layout": false
   },
@@ -286,7 +288,7 @@
     }
    ]
   },
-  "export_header": "Item ID,Name (English),Name (Arabic),SKU,Category,Price (QAR),Sale price (QAR),Sale starts,Sale ends,Sold by,Units in a pack,Smallest order,Tags,Status,How it runs out,Available,Size or colour,Size or colour (Arabic),Size or colour SKU,Price difference (QAR),In stock,Low-stock number,Per day,Description,Description (Arabic),Photos",
+  "export_header": "Item ID,Item code (ALYR),Name (English),Name (Arabic),SKU,Category,Price (QAR),Sale price (QAR),Sale starts,Sale ends,Sold by,Units in a pack,Smallest order,Tags,Status,How it runs out,Available,Size or colour,Size or colour (Arabic),Size or colour SKU,Price difference (QAR),In stock,Low-stock number,Per day,Description,Description (Arabic),Photos",
   "full_item_status": {
    "always": 200,
    "count": 200,
@@ -417,6 +419,7 @@
    "hold_minutes": 30,
    "low_stock_at": 3,
    "sold_out_display": "grey",
+   "whatsapp_mode": "link",
    "whatsapp_number": "",
    "wholesale_layout": false
   },
@@ -511,7 +514,7 @@
     }
    ]
   },
-  "export_header": "Item ID,Name (English),Name (Arabic),SKU,Category,Price (QAR),Sale price (QAR),Sale starts,Sale ends,Sold by,Units in a pack,Smallest order,Tags,Status,How it runs out,Available,Size or colour,Size or colour (Arabic),Size or colour SKU,Price difference (QAR),In stock,Low-stock number,Per day,Description,Description (Arabic),Photos",
+  "export_header": "Item ID,Item code (ALYR),Name (English),Name (Arabic),SKU,Category,Price (QAR),Sale price (QAR),Sale starts,Sale ends,Sold by,Units in a pack,Smallest order,Tags,Status,How it runs out,Available,Size or colour,Size or colour (Arabic),Size or colour SKU,Price difference (QAR),In stock,Low-stock number,Per day,Description,Description (Arabic),Photos",
   "full_item_status": {
    "always": 200,
    "count": 200,
@@ -682,6 +685,7 @@
    "hold_minutes": 30,
    "low_stock_at": 2,
    "sold_out_display": "grey",
+   "whatsapp_mode": "link",
    "whatsapp_number": "",
    "wholesale_layout": false
   },
@@ -760,6 +764,7 @@
   },
   "store_settings": {
    "sold_out_display": "grey",
+   "whatsapp_mode": "link",
    "whatsapp_number": "",
    "wholesale_layout": false
   },
@@ -796,7 +801,7 @@
     }
    ]
   },
-  "export_header": "Item ID,Name (English),Name (Arabic),SKU,Category,Price (QAR),Sale price (QAR),Sale starts,Sale ends,Sold by,Units in a pack,Smallest order,Tags,Status,How it runs out,Available,Size or colour,Size or colour (Arabic),Size or colour SKU,Price difference (QAR),In stock,Low-stock number,Per day,Description,Description (Arabic),Photos",
+  "export_header": "Item ID,Item code (ALYR),Name (English),Name (Arabic),SKU,Category,Price (QAR),Sale price (QAR),Sale starts,Sale ends,Sold by,Units in a pack,Smallest order,Tags,Status,How it runs out,Available,Size or colour,Size or colour (Arabic),Size or colour SKU,Price difference (QAR),In stock,Low-stock number,Per day,Description,Description (Arabic),Photos",
   "full_item_status": {
    "always": 200,
    "count": 200,
@@ -957,6 +962,7 @@
    "hold_minutes": 30,
    "low_stock_at": 10,
    "sold_out_display": "hide",
+   "whatsapp_mode": "link",
    "whatsapp_number": "",
    "wholesale_layout": false
   },
@@ -1033,6 +1039,7 @@
   },
   "store_settings": {
    "sold_out_display": "hide",
+   "whatsapp_mode": "link",
    "whatsapp_number": "",
    "wholesale_layout": false
   },
@@ -1049,7 +1056,7 @@
     }
    ]
   },
-  "export_header": "Item ID,Name (English),Name (Arabic),SKU,Category,Price (QAR),Sale price (QAR),Sale starts,Sale ends,Sold by,Units in a pack,Smallest order,Tags,Status,How it runs out,Available,Size or colour,Size or colour (Arabic),Size or colour SKU,Price difference (QAR),In stock,Low-stock number,Per day,Description,Description (Arabic),Photos",
+  "export_header": "Item ID,Item code (ALYR),Name (English),Name (Arabic),SKU,Category,Price (QAR),Sale price (QAR),Sale starts,Sale ends,Sold by,Units in a pack,Smallest order,Tags,Status,How it runs out,Available,Size or colour,Size or colour (Arabic),Size or colour SKU,Price difference (QAR),In stock,Low-stock number,Per day,Description,Description (Arabic),Photos",
   "full_item_status": {
    "always": 200,
    "count": 200,
@@ -1180,6 +1187,7 @@
    "hold_minutes": 30,
    "low_stock_at": 3,
    "sold_out_display": "grey",
+   "whatsapp_mode": "link",
    "whatsapp_number": "",
    "wholesale_layout": false
   },
@@ -1269,7 +1277,7 @@
     }
    ]
   },
-  "export_header": "Item ID,Name (English),Name (Arabic),SKU,Category,Price (QAR),Sale price (QAR),Sale starts,Sale ends,Sold by,Units in a pack,Smallest order,Tags,Status,How it runs out,Available,Size or colour,Size or colour (Arabic),Size or colour SKU,Price difference (QAR),In stock,Low-stock number,Per day,Description,Description (Arabic),Photos",
+  "export_header": "Item ID,Item code (ALYR),Name (English),Name (Arabic),SKU,Category,Price (QAR),Sale price (QAR),Sale starts,Sale ends,Sold by,Units in a pack,Smallest order,Tags,Status,How it runs out,Available,Size or colour,Size or colour (Arabic),Size or colour SKU,Price difference (QAR),In stock,Low-stock number,Per day,Description,Description (Arabic),Photos",
   "full_item_status": {
    "always": 200,
    "count": 200,
@@ -1433,6 +1441,7 @@
    "hold_minutes": 30,
    "low_stock_at": 3,
    "sold_out_display": "grey",
+   "whatsapp_mode": "link",
    "whatsapp_number": "",
    "wholesale_layout": false
   },
@@ -1512,6 +1521,7 @@
   },
   "store_settings": {
    "sold_out_display": "grey",
+   "whatsapp_mode": "link",
    "whatsapp_number": "",
    "wholesale_layout": false
   },
@@ -1533,7 +1543,7 @@
     }
    ]
   },
-  "export_header": "Item ID,Name (English),Name (Arabic),SKU,Category,Price (QAR),Sale price (QAR),Sale starts,Sale ends,Sold by,Units in a pack,Smallest order,Tags,Status,How it runs out,Available,Size or colour,Size or colour (Arabic),Size or colour SKU,Price difference (QAR),In stock,Low-stock number,Per day,Description,Description (Arabic),Photos",
+  "export_header": "Item ID,Item code (ALYR),Name (English),Name (Arabic),SKU,Category,Price (QAR),Sale price (QAR),Sale starts,Sale ends,Sold by,Units in a pack,Smallest order,Tags,Status,How it runs out,Available,Size or colour,Size or colour (Arabic),Size or colour SKU,Price difference (QAR),In stock,Low-stock number,Per day,Description,Description (Arabic),Photos",
   "full_item_status": {
    "always": 200,
    "count": 200,
@@ -1668,6 +1678,7 @@
    "hold_minutes": 30,
    "low_stock_at": 3,
    "sold_out_display": "grey",
+   "whatsapp_mode": "link",
    "whatsapp_number": "",
    "wholesale_layout": false
   },
@@ -1757,7 +1768,7 @@
     }
    ]
   },
-  "export_header": "Item ID,Name (English),Name (Arabic),SKU,Category,Price (QAR),Sale price (QAR),Sale starts,Sale ends,Sold by,Units in a pack,Smallest order,Tags,Status,How it runs out,Available,Size or colour,Size or colour (Arabic),Size or colour SKU,Price difference (QAR),In stock,Low-stock number,Per day,Description,Description (Arabic),Photos",
+  "export_header": "Item ID,Item code (ALYR),Name (English),Name (Arabic),SKU,Category,Price (QAR),Sale price (QAR),Sale starts,Sale ends,Sold by,Units in a pack,Smallest order,Tags,Status,How it runs out,Available,Size or colour,Size or colour (Arabic),Size or colour SKU,Price difference (QAR),In stock,Low-stock number,Per day,Description,Description (Arabic),Photos",
   "full_item_status": {
    "always": 200,
    "count": 200,
@@ -1916,6 +1927,7 @@
    "hold_minutes": 30,
    "low_stock_at": 5,
    "sold_out_display": "grey",
+   "whatsapp_mode": "link",
    "whatsapp_number": "",
    "wholesale_layout": false
   },
@@ -1994,6 +2006,7 @@
   },
   "store_settings": {
    "sold_out_display": "grey",
+   "whatsapp_mode": "link",
    "whatsapp_number": "",
    "wholesale_layout": false
   },
@@ -2015,7 +2028,7 @@
     }
    ]
   },
-  "export_header": "Item ID,Name (English),Name (Arabic),SKU,Category,Price (QAR),Sale price (QAR),Sale starts,Sale ends,Sold by,Units in a pack,Smallest order,Tags,Status,How it runs out,Available,Size or colour,Size or colour (Arabic),Size or colour SKU,Price difference (QAR),In stock,Low-stock number,Per day,Description,Description (Arabic),Photos",
+  "export_header": "Item ID,Item code (ALYR),Name (English),Name (Arabic),SKU,Category,Price (QAR),Sale price (QAR),Sale starts,Sale ends,Sold by,Units in a pack,Smallest order,Tags,Status,How it runs out,Available,Size or colour,Size or colour (Arabic),Size or colour SKU,Price difference (QAR),In stock,Low-stock number,Per day,Description,Description (Arabic),Photos",
   "full_item_status": {
    "always": 200,
    "count": 200,
@@ -2150,6 +2163,7 @@
    "hold_minutes": 30,
    "low_stock_at": 3,
    "sold_out_display": "grey",
+   "whatsapp_mode": "link",
    "whatsapp_number": "",
    "wholesale_layout": false
   },
@@ -2297,7 +2311,7 @@
     }
    ]
   },
-  "export_header": "Item ID,Name (English),Name (Arabic),SKU,Category,Price (QAR),Sale price (QAR),Sale starts,Sale ends,Sold by,Units in a pack,Smallest order,Tags,Status,How it runs out,Available,Size or colour,Size or colour (Arabic),Size or colour SKU,Price difference (QAR),In stock,Low-stock number,Per day,Description,Description (Arabic),Photos",
+  "export_header": "Item ID,Item code (ALYR),Name (English),Name (Arabic),SKU,Category,Price (QAR),Sale price (QAR),Sale starts,Sale ends,Sold by,Units in a pack,Smallest order,Tags,Status,How it runs out,Available,Size or colour,Size or colour (Arabic),Size or colour SKU,Price difference (QAR),In stock,Low-stock number,Per day,Description,Description (Arabic),Photos",
   "full_item_status": {
    "always": 200,
    "count": 200,
@@ -2469,6 +2483,7 @@
    "hold_minutes": 30,
    "low_stock_at": 20,
    "sold_out_display": "grey",
+   "whatsapp_mode": "link",
    "whatsapp_number": "",
    "wholesale_layout": false
   },
@@ -2547,6 +2562,7 @@
   },
   "store_settings": {
    "sold_out_display": "grey",
+   "whatsapp_mode": "link",
    "whatsapp_number": "",
    "wholesale_layout": false
   },

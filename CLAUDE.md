@@ -62,7 +62,9 @@ apps/api/                     FastAPI service (Python 3.13, managed with uv)
                               features.py reads what a shop has switched on (src/alyr/capabilities.py
                               is the registry, src/alyr/shop_templates.py the templates; specs/011):
                               ask it, never the business type;
-                              orders/page.py is what the customer's order page reads (specs/005)
+                              orders/page.py is what the customer's order page reads (specs/005);
+                              items/codes.py reads a customer's message for item codes, links and
+                              SKUs and items/wa_order.py orders by them in the chat (specs/010)
   src/alyr/routes/            HTTP routes. deps.py: who is calling, which shop, which modules are on
   src/alyr/catalog.py         What ALYR sells: modules and products (D-027)
   src/alyr/db.py              `Database.tenant(id)`: one transaction scoped to one tenant

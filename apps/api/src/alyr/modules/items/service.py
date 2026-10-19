@@ -188,6 +188,9 @@ def view(entry: Loaded, clock: ShopClock) -> dict:
     sale_on = availability.sale_active(i, clock.now)
     return {
         "id": str(i["id"]), "name": i["name"], "name_ar": i["name_ar"], "sku": i["sku"],
+        # The shop's short number for the item (ALY-136): set by the database, never changed.
+        # None for a sample, which gets one when the owner keeps it.
+        "code": i["code"],
         "description": i["description"], "description_ar": i["description_ar"],
         "category": i["category"], "status": i["status"], "stock_rule": i["stock_rule"],
         "available": i["available"], "unit": i["unit"], "pack_size": i["pack_size"],
@@ -356,11 +359,14 @@ async def _duplicates(
 
 async def create_item(
     conn: asyncpg.Connection, data: dict, actor: Actor, clock: ShopClock,
-    require_arabic: bool = True,
+    require_arabic: bool = True, sample_key: str = "",
 ) -> dict:
     """Add an item. `data` holds the fields of FIELDS and, if wanted, `variants`,
     `option_groups`, `schedule`, and for an item without variants `opening_stock` and
-    `daily_limit`. Returns the item and any warnings (a name already in use)."""
+    `daily_limit`. Returns the item and any warnings (a name already in use). With
+    `sample_key` the item is one of the examples a type of business starts a shop with
+    (`samples.py`): made so from the first row, because the database gives an item its code
+    (ALY-136) when the row is made, and an example has none."""
     values = {
         "name": "", "name_ar": "", "description": "", "description_ar": "", "category": "",
         "price": 0, "sale_price": None, "sale_starts_at": None, "sale_ends_at": None,
@@ -390,10 +396,10 @@ async def create_item(
         item_id = await conn.fetchval(
             "insert into items (name, name_ar, description, description_ar, category, price, "
             "sale_price, sale_starts_at, sale_ends_at, unit, pack_size, min_order, tags, "
-            "stock_rule, available, status, sort, sku, low_stock_at) "
+            "stock_rule, available, status, sort, sku, low_stock_at, is_sample, sample_key) "
             "values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, "
-            "$17, $18, $19) returning id",
-            *(values[k] for k in FIELDS),
+            "$17, $18, $19, $20, $21) returning id",
+            *(values[k] for k in FIELDS), bool(sample_key), sample_key,
         )
     except asyncpg.UniqueViolationError as error:  # the index under the check above
         raise ItemError("sku_taken", f"The SKU “{values['sku']}” is already in use.") from error
@@ -979,7 +985,7 @@ async def settings(conn: asyncpg.Connection) -> dict:
     routes add it, `routes/items.py`.)"""
     row = await conn.fetchrow(
         "select hold_minutes, day_starts, agents_edit_items, low_stock_at, "
-        "wholesale_layout, whatsapp_number from shop_settings"
+        "wholesale_layout, whatsapp_number, whatsapp_mode from shop_settings"
     )
     return {
         "hold_minutes": row["hold_minutes"] if row else 30,
@@ -988,6 +994,9 @@ async def settings(conn: asyncpg.Connection) -> dict:
         "low_stock_at": row["low_stock_at"] if row else 5,
         "wholesale_layout": row["wholesale_layout"] if row else False,
         "whatsapp_number": row["whatsapp_number"] if row else "",
+        # How customers order on WhatsApp: "link" (the shop keeps its own number; ALYR prepares a
+        # readable order; the default) or "chat" (the number runs on ALYR, the chat reads a code).
+        "whatsapp_mode": row["whatsapp_mode"] if row else "link",
     }
 
 
@@ -995,6 +1004,7 @@ async def save_settings(
     conn: asyncpg.Connection, hold_minutes: int | None, day_starts: time | None,
     agents_edit_items: bool | None = None, low_stock_at: int | None = None,
     wholesale_layout: bool | None = None, whatsapp_number: str | None = None,
+    whatsapp_mode: str | None = None,
 ) -> dict:
     """Save the shop's catalog settings. How a sold-out item looks on the order page is the
     type's own setting (`template.save`, ALY-107); the page only reads it."""
@@ -1002,20 +1012,24 @@ async def save_settings(
         raise ItemError("bad_hold", "A hold lasts between 5 minutes and 24 hours.")
     if low_stock_at is not None and not 0 <= low_stock_at <= 100_000:
         raise ItemError("bad_low_stock", "Choose a low-stock number between 0 and 100,000.")
+    if whatsapp_mode is not None and whatsapp_mode not in ("chat", "link"):
+        raise ItemError("bad_mode", "Choose whether ALYR answers on your number or you do.")
     number = whatsapp_digits(whatsapp_number) if whatsapp_number is not None else None
     await conn.execute(
         "insert into shop_settings (hold_minutes, day_starts, agents_edit_items, low_stock_at, "
-        "wholesale_layout, whatsapp_number) "
+        "wholesale_layout, whatsapp_number, whatsapp_mode) "
         "values (coalesce($1::int, 30), coalesce($2::time, '00:00'), "
         "coalesce($3::boolean, false), coalesce($4::int, 5), "
-        "coalesce($5::boolean, false), coalesce($6::text, '')) "
+        "coalesce($5::boolean, false), coalesce($6::text, ''), coalesce($7::text, 'link')) "
         "on conflict (tenant_id) do update set "
         "hold_minutes = coalesce($1::int, shop_settings.hold_minutes), "
         "day_starts = coalesce($2::time, shop_settings.day_starts), "
         "agents_edit_items = coalesce($3::boolean, shop_settings.agents_edit_items), "
         "low_stock_at = coalesce($4::int, shop_settings.low_stock_at), "
         "wholesale_layout = coalesce($5::boolean, shop_settings.wholesale_layout), "
-        "whatsapp_number = coalesce($6::text, shop_settings.whatsapp_number)",
+        "whatsapp_number = coalesce($6::text, shop_settings.whatsapp_number), "
+        "whatsapp_mode = coalesce($7::text, shop_settings.whatsapp_mode)",
         hold_minutes, day_starts, agents_edit_items, low_stock_at, wholesale_layout, number,
+        whatsapp_mode,
     )
     return await settings(conn)

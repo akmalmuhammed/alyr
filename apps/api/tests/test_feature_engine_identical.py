@@ -1,7 +1,9 @@
 """A shop of every business type behaves as it did before the feature engine (ALY-148).
 
-`golden/types_before_features.json` was captured by running the code on `origin/main` (the
-commit before this work) for each of the eleven business types through the real onboarding
+`golden/types_before_features.json` was captured by running the code on `origin/main` (first at
+the commit before this work, then captured again at `ec1a92b` when ALY-136 merged, which added
+`whatsapp_mode` to the settings and the read-only "Item code (ALYR)" column to the export, and
+nothing else) for each of the eleven business types through the real onboarding
 path: the navigation, the home cards, the Catalog's setup (`/api/items/setup`), what the order
 page is told, the item form's reach (a full item for every way of running out), the columns of
 the import and export files, the review onboarding shows, the starting categories and samples.
