@@ -45,6 +45,7 @@ Status: **Accepted** (in force), **Proposed** (waiting for the founder), **Super
 | D-038 | The Sunday report is a report card: a branded image from ALYR Agent's engine with about eight lines under it | Accepted |
 | D-039 | The Catalog (items, stock, photos) is built complete before go-live; photos on Cloudflare R2; free now, charged by usage later | Accepted |
 | D-042 | Documents (receipts, invoices and the rest) are one engine: gapless numbers, issued paper nobody can change, Arabic first, a PDF drawn by fpdf2 and kept in the database; free now, metered later | Accepted |
+| D-043 | How ALYR introduces itself: every owner-run business, the brand speaks alone, Qatar first then the GCC | Accepted |
 
 ---
 
@@ -917,3 +918,18 @@ There is no separate Pay product: payment links stay a module of Chat and Bookin
 **Not confirmed (flagged in the spec).** The exact wording of the ministry's Arabic-invoice circular (Arabic as the *main* language, or in addition); the record retention period (ten years is a secondary source, ALY-51); whether an unregistered seller may issue an invoice at all. Until the lawyer answers: Arabic cannot be switched off, a consumer document that leads in English is allowed and warned about, and nothing issued is ever deleted.
 
 **Revisit when.** The lawyer answers (ALY-51); the General Tax Authority publishes the e-invoicing specification (D-008); volume makes the documents too heavy for the database (then a Qatar object store behind `core/storage.py`); a connected POS issues in bursts (draw before the lock); a country pack needs tax-inclusive prices.
+
+## D-043 · How ALYR introduces itself
+**Date** 19 Oct 2026 · **Status** Accepted (founder, 19 Oct, in conversation) · Source: `docs/company/introduction.md`
+
+**Decision.**
+- ALYR introduces itself to every owner-run business in Qatar, with no single target sector. Every lead records its sector, so the sales tool shows which sectors buy fastest.
+- The brand speaks alone: no founder name or photo on the site, deck or profiles, and people on visits are "the ALYR team".
+- The stated ambition is Qatar first, then the GCC.
+- The commercial registration is submitted and waiting; until it is issued, D-034's limits hold (no signing, no money, no public prices).
+
+**What the founder was told before choosing.**
+- A single first sector would teach faster; recording the sector on every lead gets most of that benefit while still going to everyone.
+- A visible founder builds trust faster in Qatar. With the brand alone, trust comes from checkable signals instead: ALYR's own WhatsApp number, the registration number and address, the visit kit, the money-back first month, then case studies.
+
+**What it changes.** `docs/company/introduction.md` is the one source for the company story, the lines in English and Arabic, the answers to an owner's questions, what we never say, and the plan to win clients. The site, the deck, the leave-behind and every profile take their words from it.
