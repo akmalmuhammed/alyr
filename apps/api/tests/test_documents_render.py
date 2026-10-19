@@ -482,7 +482,17 @@ def golden_cases():
         "thermal_ar_en_receipt": sample_doc("receipt", layout="thermal80", number="RC-0018"),
         "thermal_en_receipt": sample_doc("receipt", ("en",), "thermal80", number="RC-0019"),
         "a4_ar_en_preview": sample_doc("invoice", preview=True, number=None),
+        "a4_ar_en_branch_rounding_receipt": branch_rounding("a4"),
+        "thermal_ar_en_branch_rounding_receipt": branch_rounding("thermal80"),
     }
+
+
+def branch_rounding(layout):
+    """A receipt from a branch (named on the paper, with its own phone) whose total was
+    rounded two dirhams down: the rounding is a line of its own."""
+    doc = sample_doc("receipt", layout=layout, number="RCLUS-0004", rounding=-2)
+    seller = replace(doc.seller, phone="+974 5555 0300", branch=Bi(ar="لوسيل", en="Lusail"))
+    return replace(doc, seller=seller)
 
 
 @pytest.mark.parametrize("name", list(golden_cases()))

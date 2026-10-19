@@ -271,6 +271,12 @@ class Paged:
                              sx0, sx1, y)
         y += 0.9
         s = d.seller
+        if s.branch.ar or s.branch.en:
+            names = t.by_lane(d, s.branch)
+            label = self.ink(7.6, colour=colours.MUTED)
+            runs = [(t.label("branch", d.primary), d.primary, label)]
+            runs += [(text, lang, self.ink(8.4, True)) for lang, text in names[:1]]
+            y += self.row(runs, sx0, sx1, y, gap=1.6) + 0.4
         y += self.groups(
             [self.short_runs(k, v) for k, v in (("registration", s.registration),
                                                 ("tax_id", s.tax_id), ("licence", s.licence)) if v],
@@ -532,12 +538,14 @@ class Paged:
     def _totals(self) -> None:
         d, pen = self.doc, self.pen
         rows: list[tuple[str, int]] = []
-        if d.discount or d.tax:
+        if d.discount or d.tax or d.rounding:
             rows.append(("subtotal", d.gross))
         if d.discount:
             rows.append(("discount", -d.discount))
         if d.tax:
             rows.append(("tax", d.tax))
+        if d.rounding:
+            rows.append(("rounding", d.rounding))
         rows.append(("total", d.total))
         if d.paid:
             rows.append(("paid", d.paid))
@@ -577,7 +585,9 @@ class Paged:
                 left = x0 + 1.5 if self.rtl else label_box[0] + 1.5 + label_w
                 self._total_amount(left, ax1, top, self.ink(12.5, True), value)
             else:
-                shown = ("-" if key == "discount" else "") + t.amount(d, abs(value))
+                sign = "-" if key == "discount" or (key == "rounding" and value < 0) else (
+                    "+" if key == "rounding" else "")
+                shown = sign + t.amount(d, abs(value))
                 ink = pen.fit(shown, d.primary, self.ink(9.4, strong), ax1 - ax0)
                 h = pen.line_height(shown, d.primary, ink)
                 pen.put(shown, ax0, top, ax1 - ax0, h, d.primary, ink, "R")

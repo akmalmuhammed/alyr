@@ -144,6 +144,13 @@ class Thermal:
             h = pen.line_height(value, d.primary, self.ink(7.4))
             pen.run_row(runs, self.x0, self.x1, self.y, h, rtl=self.rtl, align="C", gap=1.2)
             self.y += h
+        if s.branch.ar or s.branch.en:
+            for lang, text in t.by_lane(d, s.branch)[:1]:
+                runs = [(t.label("branch", d.primary), d.primary, small),
+                        (text, lang, self.ink(8.0, True))]
+                h = pen.line_height(text, lang, self.ink(8.0, True))
+                pen.run_row(runs, self.x0, self.x1, self.y, h, rtl=self.rtl, align="C", gap=1.4)
+                self.y += h
         for lang, text in t.by_lane(d, s.address):
             self.y += pen.paragraph(text, self.x0, self.y, self.x1 - self.x0, lang, small,
                                     align="C")
@@ -257,12 +264,15 @@ class Thermal:
     def _totals(self) -> None:
         d, pen = self.doc, self.pen
         plain = self.ink(8.2)
-        if d.discount or d.tax:
+        if d.discount or d.tax or d.rounding:
             self.kv("subtotal", [(t.amount(d, d.gross), d.primary, plain)], 8.2)
         if d.discount:
             self.kv("discount", [("-" + t.amount(d, d.discount), d.primary, plain)], 8.2)
         if d.tax:
             self.kv("tax", [(t.amount(d, d.tax), d.primary, plain)], 8.2)
+        if d.rounding:
+            sign = "-" if d.rounding < 0 else "+"
+            self.kv("rounding", [(sign + t.amount(d, abs(d.rounding)), d.primary, plain)], 8.2)
         self.y += 0.8
         pen.rule(self.x0, self.x1, self.y, self.accent, 0.5)
         self.y += 1.0

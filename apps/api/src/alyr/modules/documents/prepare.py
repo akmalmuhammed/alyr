@@ -155,6 +155,11 @@ def prepare(body: Mapping, shop: Mapping) -> dict:
         for position, raw in enumerate(raw_lines, start=1)
     ]
     totals = totals_of(lines)
+    # Cash rounding, if the shop has it and this kind is paid in cash: its own line.
+    rounding = (money.round_to_step(totals["total_minor"], shop["cash_rounding_minor"])
+                if kinds.KINDS[kind].rounds else 0)
+    totals["rounding_minor"] = rounding
+    totals["total_minor"] += rounding
     if totals["total_minor"] > money.MAX_MINOR:
         raise DocumentError("amount_too_big")
     payments = clean_payments(body.get("payments"))
@@ -171,7 +176,8 @@ def prepare(body: Mapping, shop: Mapping) -> dict:
         "kind": kind, "audience": audience, "languages": languages, "layout": layout,
         "currency": currency, "currency_exponent": money.CURRENCIES[currency].exponent,
         "due_date": body.get("due_date"), "customer": clean_customer(body.get("customer")),
-        "contact_id": body.get("contact_id"), **totals, "paid_minor": paid,
+        "contact_id": body.get("contact_id"), "branch_key": body.get("branch") or "main",
+        **totals, "paid_minor": paid,
         "payments": payments, "notes": clean_pair(body.get("notes"), "notes"),
         "terms": clean_pair(body.get("terms"), "terms"), "reason": reason, "source": source,
         "source_ref": (body.get("source_ref") or "").strip()[:120],

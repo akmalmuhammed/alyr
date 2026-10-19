@@ -51,7 +51,8 @@ CHOICES = {
 KIND_TEXT_LIMIT = 600
 
 _COLUMNS = (
-    *TEXT_LIMITS, *FLAGS, *CHOICES, "currency", "tax_rate_bp", "brand_color", "terms", "notes",
+    *TEXT_LIMITS, *FLAGS, *CHOICES, "currency", "tax_rate_bp", "cash_rounding_minor",
+    "brand_color", "terms", "notes",
     "logo_sha256", "stamp_sha256", "updated_at", "updated_by",
 )
 _SELECT = (
@@ -72,10 +73,19 @@ async def shop_id(conn: asyncpg.Connection):
 async def ensure(conn: asyncpg.Connection) -> None:
     """The settings row and the default series, made the first time anything needs them."""
     await conn.execute("insert into document_settings default values on conflict do nothing")
+    # The shop itself is the main branch; its series come first, the series FK needs it.
+    await conn.execute("insert into document_branches (branch_key) values ('main') "
+                       "on conflict do nothing")
+    await _series_for(conn, "main", "")
+
+
+async def _series_for(conn: asyncpg.Connection, branch_key: str, code: str) -> None:
+    """The branch's counters, one per kind, each prefix the kind's with the branch's code."""
     await conn.execute(
-        "insert into document_series (kind, prefix) "
-        "select k, p from unnest($1::text[], $2::text[]) as t(k, p) on conflict do nothing",
-        list(kinds.KINDS), [k.prefix for k in kinds.KINDS.values()],
+        "insert into document_series (kind, series_key, prefix) "
+        "select k, $3, p || $4 from unnest($1::text[], $2::text[]) as t(k, p) "
+        "on conflict do nothing",
+        list(kinds.KINDS), [k.prefix for k in kinds.KINDS.values()], branch_key, code,
     )
 
 
@@ -142,6 +152,10 @@ def _clean(changes: dict) -> dict:
         elif name == "currency":
             if value not in money.CURRENCIES:
                 raise DocumentError("currency_unknown", field=name)
+            clean[name] = value
+        elif name == "cash_rounding_minor":
+            if isinstance(value, bool) or value not in kinds.CASH_ROUNDING_STEPS:
+                raise DocumentError("rounding_invalid", field=name)
             clean[name] = value
         elif name == "tax_rate_bp":
             if not isinstance(value, int) or isinstance(value, bool) or not 0 <= value <= 10000:
@@ -284,10 +298,14 @@ async def update_series(
 # ── What the documents read ───────────────────────────────────────────────────────────────
 
 
-def seller_snapshot(row: dict, tenant_name: str, tenant_name_ar: str) -> dict:
+def seller_snapshot(
+    row: dict, tenant_name: str, tenant_name_ar: str, branch: dict | None = None
+) -> dict:
     """The seller as it is written onto a document at issue: the shop's own details, with
-    the name the shop was created under when it has not written its own."""
-    return {
+    the name the shop was created under when it has not written its own. A branch that has
+    its own address or phone puts them in place of the shop's, and is named."""
+    branch = branch if branch and branch["branch_key"] != "main" else None
+    snapshot = {
         "name": row["business_name"] or tenant_name,
         "name_ar": row["business_name_ar"] or tenant_name_ar,
         "commercial_registration": row["commercial_registration"],
@@ -301,4 +319,84 @@ def seller_snapshot(row: dict, tenant_name: str, tenant_name_ar: str) -> dict:
         "stamp_sha256": row["stamp_sha256"],
         "registered": bool(row["commercial_registration"]),
     }
+    if branch:
+        for field in ("address", "address_ar", "phone"):
+            if branch[field]:
+                snapshot[field] = branch[field]
+        snapshot["branch"] = {"key": branch["branch_key"], "name": branch["name"],
+                              "name_ar": branch["name_ar"]}
+    return snapshot
+
+
+# ── Branches ──────────────────────────────────────────────────────────────────────────────
+
+_BRANCH = ("select branch_key, name, name_ar, code, address, address_ar, phone, active "
+           "from document_branches")
+
+
+async def branches(conn: asyncpg.Connection) -> list[dict]:
+    rows = await conn.fetch(_BRANCH + " order by (branch_key <> 'main'), created_at")
+    if not rows:
+        await ensure(conn)
+        return await branches(conn)
+    return [dict(r) for r in rows]
+
+
+async def branch_for(conn: asyncpg.Connection, key: str, *, must_be_active: bool) -> dict:
+    """One branch of this shop. A draft can only be made for a branch that is switched on."""
+    await get(conn)  # the main branch exists once the shop's settings do
+    row = await conn.fetchrow(_BRANCH + " where branch_key = $1", key)
+    if row is None or (must_be_active and not row["active"]):
+        raise DocumentError("branch_unknown", 422, field="branch")
+    return dict(row)
+
+
+async def save_branch(conn: asyncpg.Connection, actor: Actor, key: str, changes: dict) -> dict:
+    """Add a branch or change one. The code is chosen once, when the branch is made: it is in
+    the prefix of its numbers. A branch is switched off, never deleted."""
+    if not re.fullmatch(r"[a-z0-9]{1,12}", key):
+        raise DocumentError("branch_unknown", 422, field="branch")
+    await ensure(conn)
+    existing = await conn.fetchrow(
+        "select * from document_branches where branch_key = $1 for update", key)
+    fields: dict = {}
+    for name, limit in (("name", 80), ("name_ar", 80), ("address", 300), ("address_ar", 300),
+                        ("phone", 40)):
+        if changes.get(name) is not None:
+            text = str(changes[name]).strip()
+            if len(text) > limit:
+                raise DocumentError("text_too_long", field=name)
+            fields[name] = text
+    if changes.get("active") is not None:
+        fields["active"] = bool(changes["active"])
+    if existing is None:
+        code = (changes.get("code") or "").strip().upper()
+        if key == "main":
+            raise DocumentError("branch_main", 422, field="branch")
+        if not re.fullmatch(r"[A-Z0-9]{1,4}", code):
+            raise DocumentError("code_invalid", 422, field="code")
+        try:
+            await conn.execute(
+                "insert into document_branches (branch_key, code, name, name_ar, address, "
+                "address_ar, phone, active) values ($1, $2, $3, $4, $5, $6, $7, $8)",
+                key, code, fields.get("name", ""), fields.get("name_ar", ""),
+                fields.get("address", ""), fields.get("address_ar", ""), fields.get("phone", ""),
+                fields.get("active", True),
+            )
+            await _series_for(conn, key, code)
+        except asyncpg.UniqueViolationError as error:
+            raise DocumentError("code_taken", 409, field="code") from error
+        action, detail = "branch_added", {"branch": key, "code": code}
+    else:
+        if changes.get("code") and changes["code"].strip().upper() != existing["code"]:
+            raise DocumentError("code_invalid", 422, field="code")
+        if key == "main" and fields.get("active") is False:
+            raise DocumentError("branch_main", 422, field="active")
+        if fields:
+            assignments = ", ".join(f"{n} = ${i}" for i, n in enumerate(fields, start=2))
+            await conn.execute(f"update document_branches set {assignments} "
+                               "where branch_key = $1", key, *fields.values())
+        action, detail = "branch_changed", {"branch": key, "fields": sorted(fields)}
+    await team.record(conn, SUBJECT, await shop_id(conn), action, actor, None, detail)
+    return next(b for b in await branches(conn) if b["branch_key"] == key)
 

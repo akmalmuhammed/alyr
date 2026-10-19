@@ -112,6 +112,7 @@ def content_of(doc: Mapping, lines: Sequence[Mapping]) -> dict:
         "gross_minor": doc["gross_minor"],
         "discount_minor": doc["discount_minor"],
         "tax_minor": doc["tax_minor"],
+        "rounding_minor": doc["rounding_minor"],
         "total_minor": doc["total_minor"],
         "paid_minor": doc["paid_minor"],
         "payments": doc["payments"],

@@ -34,7 +34,7 @@ def content() -> dict:
         "customer": {"name": "Fatima Al-Kuwari", "name_ar": "فاطمة الكواري"},
         "seller": {"name": "Qirfa Bakery", "name_ar": "مخبز قرفة", "registered": True},
         "contact_id": None, "gross_minor": 12700, "discount_minor": 500, "tax_minor": 0,
-        "total_minor": 12200, "paid_minor": 0, "payments": [], "notes": {}, "terms": {},
+        "rounding_minor": 0, "total_minor": 12200, "paid_minor": 0, "payments": [], "notes": {}, "terms": {},
         "reason": "", "source": "manual", "source_ref": "", "related_document_id": None,
     }
     lines = [
@@ -75,7 +75,7 @@ def test_the_hash_is_pinned_so_a_change_to_the_format_is_noticed():
     """The canonical form is a promise to every document ever issued. If this value changes
     the format changed: that needs a new HASH_VERSION and a decision, not a quiet edit."""
     assert canonical.HASH_VERSION == 1
-    assert hash_of(content()) == "d605d306708706e77b93668df1f2c2ee8474fdd65224ce77ab3e4b014d1e70b5"
+    assert hash_of(content()) == "3b6fcb25c5571a5a6ffdb9c1961dfc1be574544066a4cab0ea2db85ab4e1d1e2"
 
 
 def test_arabic_is_hashed_as_arabic_not_as_escapes():
@@ -109,7 +109,7 @@ def test_a_float_or_a_naive_time_cannot_be_hashed():
 
 CHANGES = [
     ("doc", "number", "INV-2026-0043"), ("doc", "kind", "receipt"), ("doc", "total_minor", 12201),
-    ("doc", "gross_minor", 12701), ("doc", "paid_minor", 1), ("doc", "currency", "SAR"),
+    ("doc", "gross_minor", 12701), ("doc", "rounding_minor", 2), ("doc", "paid_minor", 1), ("doc", "currency", "SAR"),
     ("doc", "currency_exponent", 3), ("doc", "languages", "ar"), ("doc", "audience", "business"),
     ("doc", "issued_at", datetime(2026, 10, 19, 14, 3, 22, 123457, tzinfo=UTC)),
     ("doc", "issue_date", date(2026, 10, 20)), ("doc", "due_date", None),

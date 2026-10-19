@@ -93,6 +93,8 @@ class DraftIn(Strict):
     audience: Audience | None = Field(default=None, description="Default: the shop's setting")
     languages: Languages | None = None
     layout: Layout | None = None
+    branch: str = Field(default="main", pattern="^[a-z0-9]{1,12}$",
+                        description="Which of the shop's places it is issued from")
     currency: str | None = Field(default=None, pattern="^[A-Z]{3}$")
     due_date: date | None = Field(default=None, description="Due, or valid until, by kind")
     customer: CustomerIn = Field(default_factory=CustomerIn)
@@ -131,6 +133,8 @@ class SettingsIn(Strict):
     currency: str | None = None
     tax_enabled: bool | None = None
     tax_rate_bp: StrictInt | None = None
+    cash_rounding_minor: StrictInt | None = Field(
+        default=None, description="0 off, else 5, 10, 25, 50 or 100 minor units")
     languages: Languages | None = None
     default_audience: Audience | None = None
     layout: Layout | None = None
@@ -149,6 +153,16 @@ class SettingsIn(Strict):
     terms: dict[str, PairIn] | None = None
     notes: dict[str, PairIn] | None = None
     agents_may_issue: bool | None = None
+
+
+class BranchIn(Strict):
+    name: str | None = Field(default=None, max_length=80)
+    name_ar: str | None = Field(default=None, max_length=80)
+    code: str | None = Field(default=None, max_length=4, description="Chosen once, at creation")
+    address: str | None = Field(default=None, max_length=300)
+    address_ar: str | None = Field(default=None, max_length=300)
+    phone: str | None = Field(default=None, max_length=40)
+    active: bool | None = None
 
 
 class SeriesIn(Strict):
@@ -190,6 +204,7 @@ async def meta(request: Request, staff: Staff = Depends(current_staff)) -> dict:
             for k in kinds.KINDS.values()
         ],
         "layouts": list(kinds.LAYOUTS), "languages": list(kinds.LANGUAGES),
+        "cash_rounding_steps": list(kinds.CASH_ROUNDING_STEPS),
         "units": list(kinds.UNITS), "payment_methods": list(kinds.PAYMENT_METHODS),
         "currencies": {c.code: {"exponent": c.exponent, "symbol_ar": c.symbol_ar}
                        for c in money.CURRENCIES.values()},
@@ -252,6 +267,24 @@ async def delete_image(
     async with _db(request).tenant(staff.tenant_id) as conn:
         row = await doc_settings.set_image(conn, actor_of(staff), which, None, None)
     return {"settings": _settings_public(row)}
+
+
+@router.get("/branches")
+async def get_branches(request: Request, staff: Staff = Depends(current_staff)) -> dict:
+    async with _db(request).tenant(staff.tenant_id) as conn:
+        return {"branches": await doc_settings.branches(conn)}
+
+
+@router.put("/branches/{branch_key}")
+async def put_branch(
+    branch_key: str, body: BranchIn, request: Request, staff: Staff = Depends(current_staff)
+) -> dict:
+    """Add a branch (its own numbering) or change one. Owners and admins only."""
+    access.require_manager(staff)
+    async with _db(request).tenant(staff.tenant_id) as conn:
+        row = await doc_settings.save_branch(
+            conn, actor_of(staff), branch_key, body.model_dump(exclude_unset=True))
+    return {"branch": row}
 
 
 @router.get("/series")

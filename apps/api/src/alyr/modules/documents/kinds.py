@@ -31,14 +31,16 @@ class Kind:
     # The kinds a credit note can cancel.
     creditable: bool = False
     needs_reason: bool = False
+    # The shop's cash rounding applies: a document someone pays in cash.
+    rounds: bool = False
 
 
 KINDS: dict[str, Kind] = {
     k.key: k for k in (
         Kind("receipt", "RC", needs_customer=False, needs_registration=False, payments=FULL,
-             creditable=True),
+             creditable=True, rounds=True),
         Kind("invoice", "INV", needs_customer=True, needs_registration=True, payments=OPTIONAL,
-             second_date="due_date", creditable=True),
+             second_date="due_date", creditable=True, rounds=True),
         Kind("quote", "QT", needs_customer=True, needs_registration=False, payments=NONE,
              second_date="valid_until"),
         Kind("delivery_note", "DN", needs_customer=True, needs_registration=False,
@@ -50,7 +52,7 @@ KINDS: dict[str, Kind] = {
         Kind("credit_note", "CN", needs_customer=False, needs_registration=False, payments=NONE,
              needs_reason=True),
         Kind("deposit_receipt", "DR", needs_customer=True, needs_registration=False,
-             payments=DEPOSIT, creditable=True),
+             payments=DEPOSIT, creditable=True, rounds=True),
         Kind("proforma", "PF", needs_customer=True, needs_registration=True, payments=NONE,
              second_date="valid_until"),
     )
@@ -61,6 +63,7 @@ LAYOUTS = ("a4", "a5", "thermal80")
 LANGUAGES = ("ar_en", "en_ar", "ar", "en")
 AUDIENCES = ("consumer", "business")
 SOURCES = ("order", "booking", "ledger_payment", "manual", "external")
+CASH_ROUNDING_STEPS = (0, 5, 10, 25, 50, 100)
 PAYMENT_METHODS = ("cash", "card", "bank_transfer", "link", "credit", "cheque", "other")
 UNITS = ("piece", "kg", "g", "l", "m", "box", "pack", "portion", "hour", "day", "service")
 

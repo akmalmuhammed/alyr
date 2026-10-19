@@ -51,6 +51,8 @@ LABELS: dict[str, Text] = {
     "unit_price": Text("Unit price", "سعر الوحدة"),
     "discount": Text("Discount", "الخصم"),
     "tax": Text("Tax", "الضريبة"),
+    "rounding": Text("Rounding", "تقريب"),
+    "branch": Text("Branch", "الفرع"),
     "tax_rate": Text("Tax %", "نسبة الضريبة"),
     "line_total": Text("Total", "الإجمالي"),
     # The totals.
@@ -102,8 +104,9 @@ PAYMENT_METHODS: dict[str, Text] = {
 NOTES: dict[str, Text] = {
     "unregistered": Text(
         "The seller has no commercial registration number on file. This document is a "
-        "receipt and is not a tax invoice.",
-        "لا يوجد رقم سجل تجاري مسجّل للبائع. هذا المستند إيصال وليس فاتورة ضريبية.",
+        "receipt and is not a tax invoice. ALYR does not give tax advice.",
+        "لا يوجد رقم سجل تجاري مسجّل للبائع. هذا المستند إيصال وليس فاتورة ضريبية. "
+        "لا تقدّم ALYR استشارات ضريبية.",
     ),
     "preview": Text(
         "Preview. This is not an issued document and has no number.",
@@ -258,6 +261,24 @@ ERRORS: dict[str, Text] = {
     "series_year_behind": Text(
         "This numbering series has already moved on to a later year.",
         "انتقلت سلسلة الترقيم هذه إلى سنة لاحقة.",
+    ),
+    "branch_unknown": Text(
+        "There is no such branch, or it is switched off.", "لا يوجد فرع بهذا الاسم، أو أنه موقوف."
+    ),
+    "code_taken": Text(
+        "Another branch already uses that code.", "يستخدم فرع آخر هذا الرمز."
+    ),
+    "code_invalid": Text(
+        "A branch code is 1 to 4 capital letters or digits.",
+        "رمز الفرع من 1 إلى 4 أحرف لاتينية كبيرة أو أرقام.",
+    ),
+    "branch_main": Text(
+        "The main branch is the shop itself: it cannot be switched off or given a code.",
+        "الفرع الرئيسي هو المتجر نفسه: لا يمكن إيقافه ولا إعطاؤه رمزًا.",
+    ),
+    "rounding_invalid": Text(
+        "Cash rounding is off, or to the nearest 5, 10, 25, 50 or 100 minor units.",
+        "التقريب النقدي موقوف، أو إلى أقرب 5 أو 10 أو 25 أو 50 أو 100 من أصغر وحدة.",
     ),
     "series_unknown": Text("There is no such numbering series.", "لا توجد سلسلة ترقيم بهذا الاسم."),
     "image_invalid": Text(

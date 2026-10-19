@@ -42,6 +42,8 @@ def refused(shop, sql: str, *args) -> Exception:
 CONTENT_CHANGES = [
     ("total_minor", "total_minor + 100"),  # (also breaks gross - discount + tax = total)
     ("gross_minor", "gross_minor + 100"),
+    ("rounding_minor", "rounding_minor + 1"),
+    ("branch_key", "'lusail'"),
     ("number", "'INV-9999'"),
     ("seq", "seq + 1"),
     ("series_key", "'other'"),

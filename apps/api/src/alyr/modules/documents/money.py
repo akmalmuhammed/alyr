@@ -66,6 +66,14 @@ def line_amounts(
     return net, tax, net + tax
 
 
+def round_to_step(total: int, step: int) -> int:
+    """The difference cash rounding makes: the total taken to the nearest multiple of `step`
+    minor units, halves going up. 12703 with a step of 5 gives +2 (12705); 12702 gives -2."""
+    if step <= 0:
+        return 0
+    return (2 * total + step) // (2 * step) * step - total
+
+
 def gross_of(quantity: Decimal, unit_price_minor: int) -> int:
     return round_half_up(quantity * Decimal(unit_price_minor))
 

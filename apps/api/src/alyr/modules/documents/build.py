@@ -51,6 +51,8 @@ def seller_party(snapshot: Mapping) -> Party:
         address=bi(snapshot.get("address", ""), snapshot.get("address_ar", "")),
         registration=snapshot.get("commercial_registration", ""),
         tax_id=snapshot.get("tax_id", ""), licence=snapshot.get("licence_number", ""),
+        branch=bi((snapshot.get("branch") or {}).get("name", ""),
+                  (snapshot.get("branch") or {}).get("name_ar", "")),
     )
 
 
@@ -118,7 +120,7 @@ def make_doc(
         seller=seller_party(seller), customer=customer_party(row["customer"] or {}),
         lines=tuple(line_view(line) for line in sorted(lines, key=lambda x: x["position"])),
         gross=row["gross_minor"], discount=row["discount_minor"], tax=row["tax_minor"],
-        total=row["total_minor"], paid=row["paid_minor"],
+        rounding=row["rounding_minor"], total=row["total_minor"], paid=row["paid_minor"],
         balance=row["total_minor"] - row["paid_minor"],
         number=number, issue_date=row["issue_date"], second_date=row["due_date"],
         second_date_label=kind.second_date if row["due_date"] else None,

@@ -165,7 +165,8 @@ def test_tax_is_off_until_the_shop_turns_it_on(shop):
     doc = quote.json()["document"]
     assert doc["lines"][0]["tax_minor"] == 50 and doc["lines"][0]["line_total_minor"] == 1055
     assert doc["totals"] == {"gross_minor": 1005, "discount_minor": 0, "tax_minor": 50,
-                             "total_minor": 1055, "paid_minor": 0, "balance_minor": 1055}
+                             "rounding_minor": 0, "total_minor": 1055, "paid_minor": 0,
+                             "balance_minor": 1055}
     # A draft with tax in it cannot be issued after tax is switched off again.
     shop.owner.put("/api/documents/settings", json={"tax_enabled": False})
     answer = issue(shop.owner, doc["id"])

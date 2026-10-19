@@ -56,13 +56,15 @@ async def allocate(
     """Take the next number of a series, inside the caller's transaction."""
     row = await conn.fetchrow(LOCK_SERIES, kind, series_key)
     if row is None:
-        # A shop's first document of a kind: its series is made with the settings, but a
-        # series added by hand may be missing. The default one is made here.
-        if series_key != "main":
+        # A series is made with its branch; one that is missing is made here, from the kind's
+        # prefix and the branch's code. (A branch that does not exist has no series.)
+        code = await conn.fetchval(
+            "select code from document_branches where branch_key = $1", series_key)
+        if code is None:
             raise DocumentError("series_unknown", 404)
         await conn.execute(
-            "insert into document_series (kind, prefix) values ($1, $2) on conflict do nothing",
-            kind, kinds.KINDS[kind].prefix,
+            "insert into document_series (kind, series_key, prefix) values ($1, $2, $3) "
+            "on conflict do nothing", kind, series_key, kinds.KINDS[kind].prefix + code,
         )
         row = await conn.fetchrow(LOCK_SERIES, kind, series_key)
         if row is None:

@@ -31,6 +31,8 @@ class Party:
     registration: str = ""
     tax_id: str = ""
     licence: str = ""
+    # The branch the paper is issued from, named (never for the main branch).
+    branch: Bi = Bi()
 
 
 @dataclass(frozen=True)
@@ -90,6 +92,8 @@ class Doc:
     total: int
     paid: int
     balance: int
+    # Cash rounding: its own line, a few minor units up or down, already in the total.
+    rounding: int = 0
     # None for a preview: it has no number and says so.
     number: str | None = None
     issue_date: date | None = None

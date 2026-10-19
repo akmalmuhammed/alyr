@@ -508,6 +508,7 @@ def test_a_shop_without_a_registration_number_issues_receipts_not_invoices(clien
     assert receipt["seller"]["registered"] is False and receipt["kind"] == "receipt"
     text = page_text(shop.owner.get(f"/api/documents/{receipt['id']}/pdf").content)
     assert "Receipt" in text and "not a tax invoice" in text
+    assert "does not give tax advice" in text
     assert "Tax invoice" not in text
     # A delivery note and a quote are fine too; the page carries the same note.
     assert issued(shop.owner, "quote")["number"] == "QT-0001"

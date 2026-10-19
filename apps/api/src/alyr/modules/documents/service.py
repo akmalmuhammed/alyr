@@ -52,9 +52,9 @@ KEY_PATTERN = re.compile(r"[A-Za-z0-9_.:-]{8,80}")
 # The columns a draft keeps, in the order the SQL below lists them.
 DRAFT_COLUMNS = (
     "kind", "audience", "languages", "layout", "currency", "currency_exponent", "due_date",
-    "customer", "contact_id", "gross_minor", "discount_minor", "tax_minor", "total_minor",
-    "paid_minor", "payments", "notes", "terms", "reason", "source", "source_ref",
-    "related_document_id",
+    "customer", "contact_id", "gross_minor", "discount_minor", "tax_minor", "rounding_minor",
+    "total_minor", "paid_minor", "branch_key", "payments", "notes", "terms", "reason", "source",
+    "source_ref", "related_document_id",
 )
 LINE_COLUMNS = (
     "position", "description", "description_ar", "sku", "quantity", "unit", "unit_price_minor",
@@ -153,6 +153,7 @@ async def create_draft(conn: asyncpg.Connection, staff: Staff, body: Mapping) ->
     prepared = prepare.prepare(body, shop)
     columns = prepared["columns"]
     columns["related_document_id"] = None
+    await settings.branch_for(conn, columns["branch_key"], must_be_active=True)
     await _fill_from_contact(conn, columns)
     actor = team.actor_of(staff)
     row = await conn.fetchrow(
@@ -178,6 +179,7 @@ async def update_draft(conn: asyncpg.Connection, staff: Staff, doc_id: UUID, bod
     prepared = prepare.prepare(body, shop)
     columns = prepared["columns"]
     columns["related_document_id"] = row["related_document_id"]
+    await settings.branch_for(conn, columns["branch_key"], must_be_active=True)
     await _fill_from_contact(conn, columns)
     assignments = ", ".join(f"{c} = ${i}" for i, c in enumerate(DRAFT_COLUMNS, start=2))
     await conn.execute(
@@ -255,7 +257,9 @@ async def _do_issue(
     shop = await settings.get(conn)
     tenant = await _tenant(conn)
     lines = await _lines(conn, row["id"])
-    seller = settings.seller_snapshot(shop, tenant["name"], tenant["name_ar"])
+    branch = await settings.branch_for(conn, row["branch_key"],
+                                       must_be_active=row["kind"] != "credit_note")
+    seller = settings.seller_snapshot(shop, tenant["name"], tenant["name_ar"], branch)
     customer = dict(row["customer"] or {})
     if not (customer.get("name") or customer.get("name_ar")) and row["contact_id"]:
         await _fill_from_contact(conn, {"contact_id": row["contact_id"], "customer": customer})
@@ -266,7 +270,7 @@ async def _do_issue(
     # Lock the series and take the number. From here to the commit nobody else can issue
     # in this series, so this is also the part to keep short: the drawing is the slow bit.
     alloc = await numbering.allocate(
-        conn, row["kind"], "main", tenant["timezone"], clock=_clock
+        conn, row["kind"], row["branch_key"], tenant["timezone"], clock=_clock
     )
     full = {
         **columns, "series_key": alloc.series_key, "number": alloc.number,
@@ -337,9 +341,10 @@ async def credit_note(
     reason = (reason or "").strip()
     if len(reason) < 3:
         raise DocumentError("credit_needs_reason")
-    credited = await conn.fetchval(
-        "select coalesce(sum(total_minor), 0) from documents where related_document_id = $1 "
-        "and kind = 'credit_note' and status = 'issued'", doc_id,
+    credited, credited_exact = await conn.fetchrow(
+        "select coalesce(sum(total_minor), 0), coalesce(sum(total_minor - rounding_minor), 0) "
+        "from documents where related_document_id = $1 and kind = 'credit_note' "
+        "and status = 'issued'", doc_id,
     )
     if lines is None:
         if credited:
@@ -354,6 +359,14 @@ async def credit_note(
     if not credit_lines:
         raise DocumentError("no_lines")
     totals = prepare.totals_of(credit_lines)
+    # The original's cash rounding is credited with the last of it: a credit note that brings
+    # the credited amounts (before rounding) up to the original's takes the rounding too, so
+    # credit notes can add up to the whole of a document that was rounded.
+    rounding = 0
+    if credited_exact + totals["total_minor"] == target["total_minor"] - target["rounding_minor"]:
+        rounding = target["rounding_minor"]
+    totals["rounding_minor"] = rounding
+    totals["total_minor"] += rounding
     if credited + totals["total_minor"] > target["total_minor"]:
         raise DocumentError("credit_too_big", 409)
 
@@ -363,8 +376,9 @@ async def credit_note(
         "layout": target["layout"], "currency": target["currency"],
         "currency_exponent": target["currency_exponent"], "due_date": None,
         "customer": target["customer"], "contact_id": target["contact_id"], **totals,
-        "paid_minor": 0, "payments": [], "notes": {}, "terms": {}, "reason": reason,
-        "source": "manual", "source_ref": "", "related_document_id": doc_id,
+        "branch_key": target["branch_key"], "paid_minor": 0, "payments": [], "notes": {},
+        "terms": {}, "reason": reason, "source": "manual", "source_ref": "",
+        "related_document_id": doc_id,
     }
     created = await conn.fetchrow(
         f"insert into documents ({', '.join(DRAFT_COLUMNS)}, created_by, created_by_user) "
@@ -464,9 +478,11 @@ async def get(conn: asyncpg.Connection, staff: Staff, doc_id: UUID) -> dict:
         "issued_at": _iso(row["issued_at"]), "issue_date": _iso(row["issue_date"]),
         "due_date": _iso(row["due_date"]), "customer": row["customer"], "seller": row["seller"],
         "contact_id": _iso(row["contact_id"]),
+        "branch": row["branch_key"],
         "totals": {
             "gross_minor": row["gross_minor"], "discount_minor": row["discount_minor"],
-            "tax_minor": row["tax_minor"], "total_minor": row["total_minor"],
+            "tax_minor": row["tax_minor"], "rounding_minor": row["rounding_minor"],
+            "total_minor": row["total_minor"],
             "paid_minor": row["paid_minor"], "balance_minor": row["balance_minor"],
         },
         "payments": row["payments"], "notes": row["notes"], "terms": row["terms"],
@@ -607,7 +623,8 @@ async def preview_pdf(
     settings.check_audience_language(columns["audience"], columns["languages"])
     columns["notes"], columns["terms"] = prepare.default_texts(columns, shop)
     columns["issue_date"] = datetime.now(UTC).astimezone(ZoneInfo(tenant["timezone"])).date()
-    seller = settings.seller_snapshot(shop, tenant["name"], tenant["name_ar"])
+    branch = await settings.branch_for(conn, columns["branch_key"], must_be_active=False)
+    seller = settings.seller_snapshot(shop, tenant["name"], tenant["name_ar"], branch)
     logo, stamp = await settings.images_of(conn)
     doc = build.make_doc(columns, lines, seller, build.brand_of(shop, logo, stamp),
                          related=related, preview=True)

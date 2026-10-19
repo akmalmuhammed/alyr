@@ -67,6 +67,12 @@ create table document_settings (
     -- Who may issue. Owners and admins always may; an agent only when this is on.
     agents_may_issue boolean not null default false,
 
+    -- Cash rounding: 0 is off; otherwise the total is rounded (half up) to a multiple of this
+    -- many minor units (5 is 5 dirhams of QAR 0.05) and the difference is its own line on the
+    -- document, never hidden in a price.
+    cash_rounding_minor smallint not null default 0
+        check (cash_rounding_minor in (0, 5, 10, 25, 50, 100)),
+
     -- Pictures, already checked and re-encoded as PNG by core/images.py. They are kept in the
     -- row (small, and never fetched from a store at render time, so a document renders the
     -- same with the network off). `*_sha256` is what a document remembers of them.
@@ -77,6 +83,29 @@ create table document_settings (
 
     updated_at timestamptz not null default now(),
     updated_by text not null default ''
+);
+
+-- ── Branches: the shop's places, each with its own numbering ─────────────────────────────
+-- A shop with more than one place of business gives each its own series of numbers (its own
+-- prefix: INV for the main place, INVDOH for the branch whose code is DOH) and, if it wants,
+-- its own address and phone on the paper. `main` is the shop itself and always exists. A
+-- branch is never deleted, only switched off, because documents were issued from it.
+create table document_branches (
+    tenant_id uuid not null default nullif(current_setting('app.tenant_id', true), '')::uuid
+        references tenants(id),
+    branch_key text not null check (branch_key ~ '^[a-z0-9]{1,12}$'),
+    name text not null default '' check (length(name) <= 80),
+    name_ar text not null default '' check (length(name_ar) <= 80),
+    -- Added to the prefix of the branch's numbers. Letters and digits; empty only for main.
+    code text not null default '' check (code ~ '^[A-Z0-9]{0,4}$'),
+    address text not null default '' check (length(address) <= 300),
+    address_ar text not null default '' check (length(address_ar) <= 300),
+    phone text not null default '' check (length(phone) <= 40),
+    active boolean not null default true,
+    created_at timestamptz not null default now(),
+    primary key (tenant_id, branch_key),
+    unique (tenant_id, code),
+    check ((branch_key = 'main') = (code = ''))
 );
 
 -- ── Numbering: one counter per shop, document kind and series ─────────────────────────────
@@ -101,7 +130,9 @@ create table document_series (
     last_number bigint not null default 0 check (last_number >= 0),
     created_at timestamptz not null default now(),
     primary key (tenant_id, kind, series_key),
-    unique (tenant_id, prefix)
+    unique (tenant_id, prefix),
+    -- A series belongs to a branch: its key is the branch's.
+    foreign key (tenant_id, series_key) references document_branches (tenant_id, branch_key)
 );
 
 create function document_series_guard() returns trigger language plpgsql as $$
@@ -152,6 +183,8 @@ create table documents (
     -- whatever the currency table says later.
     currency_exponent smallint not null default 2 check (currency_exponent between 0 and 3),
 
+    -- Which of the shop's places it is issued from; the series of numbers is that branch's.
+    branch_key text not null default 'main',
     -- Numbering. Null until the document is issued.
     series_key text,
     number text,
@@ -169,10 +202,12 @@ create table documents (
     -- The customer's contact in the shop, when there is one. A plain reference, not a copy.
     contact_id uuid,
 
-    -- Money, in minor units. gross - discount + tax = total, always.
+    -- Money, in minor units. gross - discount + tax + rounding = total, always.
     gross_minor bigint not null default 0 check (gross_minor >= 0),
     discount_minor bigint not null default 0 check (discount_minor >= 0),
     tax_minor bigint not null default 0 check (tax_minor >= 0),
+    -- Cash rounding, its own line: a few minor units up or down (the shop's setting).
+    rounding_minor bigint not null default 0 check (rounding_minor between -1000 and 1000),
     total_minor bigint not null default 0 check (total_minor >= 0),
     paid_minor bigint not null default 0 check (paid_minor >= 0),
     balance_minor bigint generated always as (total_minor - paid_minor) stored,
@@ -213,7 +248,9 @@ create table documents (
     unique (tenant_id, id),
     foreign key (tenant_id, related_document_id) references documents (tenant_id, id),
     foreign key (tenant_id, voided_by_document_id) references documents (tenant_id, id),
-    check (gross_minor - discount_minor + tax_minor = total_minor),
+    foreign key (tenant_id, branch_key) references document_branches (tenant_id, branch_key),
+    check (gross_minor - discount_minor + tax_minor + rounding_minor = total_minor),
+    check (series_key is null or series_key = branch_key),
     check (paid_minor <= total_minor),
     -- A draft has no number, no hash and no seller copy; an issued or void document has all.
     check (status <> 'draft' or (
@@ -441,7 +478,8 @@ do $$
 declare t text;
 begin
     foreach t in array array[
-        'document_settings', 'document_series', 'documents', 'document_lines', 'document_files'
+        'document_settings', 'document_branches', 'document_series', 'documents',
+        'document_lines', 'document_files'
     ] loop
         execute format('alter table %I enable row level security', t);
         execute format('alter table %I force row level security', t);
@@ -453,7 +491,8 @@ begin
     end loop;
 end $$;
 
-grant select, insert, update on document_settings, document_series to alyr_app;
+grant select, insert, update on document_settings, document_branches, document_series
+    to alyr_app;
 -- Drafts are edited and discarded by the app; the triggers above stop it for anything issued.
 grant select, insert, update, delete on documents, document_lines to alyr_app;
 grant select, insert on document_files to alyr_app;

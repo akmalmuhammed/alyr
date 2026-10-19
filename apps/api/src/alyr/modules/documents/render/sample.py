@@ -60,10 +60,13 @@ def totals(lines: tuple[Line, ...]) -> dict:
 def sample_doc(
     kind: str = "invoice", languages: tuple[str, ...] = ("ar", "en"), layout: str = "a4",
     *, registered: bool = True, preview: bool = False, number: str | None = "INV-2026-0042",
-    lines: tuple[Line, ...] | None = None, brand: Brand | None = None, **changes,
+    lines: tuple[Line, ...] | None = None, brand: Brand | None = None, rounding: int = 0,
+    **changes,
 ) -> Doc:
     lines = lines or make_lines()
     sums = totals(lines)
+    sums["rounding"] = rounding
+    sums["total"] += rounding
     k = kinds.KINDS[kind]
     paid = 0
     payments: tuple[Payment, ...] = ()
