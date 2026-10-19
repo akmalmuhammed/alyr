@@ -3,6 +3,7 @@
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { formatPrice } from "../_customer/price";
+import { OrderMargin, useOrderMargins } from "./Margin";
 import { OrderSum } from "./OrderSum";
 import { FulfilDetails, FulfilFilters, FulfilPill, matchesFilter, type FulfilFilter } from "./OrderFulfil";
 import type { Fulfilment } from "../_customer/fulfil";
@@ -358,6 +359,8 @@ export function Screens({ embedded = false, section, lang: langProp, intro, show
   const threadEnd = useRef<HTMLDivElement>(null);
   const [orders, setOrders] = useState<OrderRow[]>([]);
   const [fulfilFilter, setFulfilFilter] = useState<FulfilFilter>("all");
+  // The estimated margin of each order (ALY-150): only for an owner or admin of a shop that keeps costs.
+  const orderMargins = useOrderMargins(canManage, orders);
   const [bookings, setBookings] = useState<BookingRow[]>([]);
   const [langState, setLang] = useState<"en" | "ar">("en");
   const lang = langProp ?? langState;
@@ -1091,7 +1094,8 @@ export function Screens({ embedded = false, section, lang: langProp, intro, show
                             {i.discount ? <small className="pr-lineoff">{PRICING[lang].order.lineOff(formatPrice(i.discount, lang))}</small> : null}</div>
                         ))}
                           {o.fulfilment && <FulfilDetails fulfilment={o.fulfilment} lang={lang} />}
-                          {o.discount_total || o.fulfilment?.mode === "delivery" ? <OrderSum order={o} lang={lang} /> : null}</td>
+                          {o.discount_total || o.fulfilment?.mode === "delivery" ? <OrderSum order={o} lang={lang} /> : null}
+                          {orderMargins && <OrderMargin lang={lang} margin={orderMargins[o.id]} />}</td>
                         <td className="r num" dir="ltr">{o.total_text}</td>
                         <td><span className={`pill ${o.payment === "unpaid" ? "p1" : "p0"}`}>{t.pay[o.payment]}</span></td>
                         <td>

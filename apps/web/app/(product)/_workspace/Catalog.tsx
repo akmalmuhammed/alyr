@@ -27,6 +27,7 @@ import { CatalogBulk } from "./CatalogBulk";
 import { CatalogSettings } from "./CatalogSettings";
 import { CatalogShare, type Target } from "./CatalogShare";
 import { CatalogStock } from "./CatalogStock";
+import { MarginPill, useItemMargins } from "./Margin";
 
 type Sheet =
   | null
@@ -205,6 +206,9 @@ export function Catalog({ lang, title, show = null, onRenamed }: { lang: Lang; t
   }, [load, sheetOpen]);
 
   const access: Access = data?.access ?? { role: "agent", can_manage: false, can_edit: false, can_stock: true };
+  // Cost and margin (ALY-150): owners and admins of a shop that keeps costs, and nobody else.
+  const costOn = access.can_manage && setup?.features.cost_margin === true;
+  const margins = useItemMargins(costOn, data);
   const items = useMemo(() => data?.items ?? [], [data]);
   const counts = data?.counts;
   const lowAt = data?.low_stock_at ?? 5;
@@ -323,6 +327,7 @@ export function Catalog({ lang, title, show = null, onRenamed }: { lang: Lang; t
                 {pills.map((p) => <span key={p.text} className={`sh-pill ct-pill ${p.tone}`}>{p.text}</span>)}
               </span>
             )}
+            {costOn && <MarginPill lang={lang} margin={margins?.[item.id]} />}
           </span>
         </button>
         {!selecting && item.status === "live" && <div className="ct-card-foot">{renderSwitch(item)}{renderShare(item)}</div>}
@@ -372,6 +377,7 @@ export function Catalog({ lang, title, show = null, onRenamed }: { lang: Lang; t
                 {pills.map((p) => <span key={p.text} className={`sh-pill ct-pill ${p.tone}`}>{p.text}</span>)}
               </span>
             )}
+            {costOn && <MarginPill lang={lang} margin={margins?.[item.id]} />}
           </span>
         </button>
         {!selecting && <div className="ct-row-end">{renderSwitch(item)}{renderShare(item)}</div>}
@@ -424,14 +430,14 @@ export function Catalog({ lang, title, show = null, onRenamed }: { lang: Lang; t
             <Icon name="tag" />{pricing.open}
           </button>
         )}
-        {access.can_manage && (
-          <button type="button" className="btn ghost ct-btn" onClick={() => setSheet({ kind: "features" })}>
-            <Icon name="star" />{feat.open}
-          </button>
-        )}
         {access.can_manage && setup?.features.delivery_fees && (
           <button type="button" className="btn ghost ct-btn" onClick={() => setSheet({ kind: "delivery" })}>
             <Icon name="stock" />{DELIVERY[lang].open}
+          </button>
+        )}
+        {access.can_manage && (
+          <button type="button" className="btn ghost ct-btn" onClick={() => setSheet({ kind: "features" })}>
+            <Icon name="star" />{feat.open}
           </button>
         )}
         {access.can_manage && (
@@ -560,7 +566,7 @@ export function Catalog({ lang, title, show = null, onRenamed }: { lang: Lang; t
 
       {tab === "stock" && (
         <div role="tabpanel" id="ct-panel-stock" aria-labelledby="ct-tab-stock" className="ct-panel">
-          <CatalogStock lang={lang} onChanged={() => void load()} push={push} clear={clear} />
+          <CatalogStock lang={lang} onChanged={() => void load()} push={push} clear={clear} costs={costOn} />
         </div>
       )}
 
@@ -599,7 +605,7 @@ export function Catalog({ lang, title, show = null, onRenamed }: { lang: Lang; t
           onClose={() => setSheet(null)} onSettings={() => setSheet({ kind: "settings" })} />
       )}
       {sheet?.kind === "import" && (
-        <CatalogImport lang={lang} canEdit={access.can_edit}
+        <CatalogImport lang={lang} canEdit={access.can_edit} costs={costOn}
           onClose={() => { setSheet(null); void load(); }} onChanged={() => void load()} />
       )}
       {sheet?.kind === "features" && (

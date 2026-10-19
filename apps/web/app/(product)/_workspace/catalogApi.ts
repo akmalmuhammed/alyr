@@ -564,3 +564,31 @@ export function sendFile<T>(method: "POST" | "PUT", path: string, file: Blob, on
 export function issueText(issue: { message: string; message_ar: string }, lang: Lang): string {
   return lang === "ar" ? issue.message_ar || issue.message : issue.message;
 }
+
+// ── cost price and margin (ALY-150 part 3) ─────────────
+// Only an owner or admin of a shop that keeps costs ever asks for these (every route answers 403
+// to an agent and 422 feature_off while the feature is off); no other endpoint carries a cost.
+// Amounts are dirhams; a `pct` is a string with one decimal ("37.5") so it stays exact.
+
+export type CostMargin = { price: number; cost: number; amount: number; pct: string | null };
+export type CostSize = {
+  id: string; name: string; name_ar: string; price: number; cost: number | null; effective: number | null; margin: CostMargin | null;
+};
+export type CostHistoryRow = { variant: string; cost: number | null; by: string; reason: string; at: string };
+/** Where a price is under the cost: the API's own sentence in both languages. A warning, never a block. */
+export type CostWarning = {
+  code: "below_cost" | "sale_below_cost"; variant_id: string | null; price: number; cost: number; message: string; message_ar: string;
+};
+/** `GET /api/items/{id}/cost`. */
+export type CostView = {
+  item_id: string; cost: number | null; price: number; margin: CostMargin | null; variants: CostSize[]; history: CostHistoryRow[];
+};
+/** `PUT /api/items/{id}/cost`: omit a key to leave it, null takes a cost away. */
+export type CostBody = { cost?: number | null; variants?: Record<string, number | null>; reason?: string };
+export type CostSaved = CostView & { warnings: CostWarning[] };
+/** `GET /api/items/margins`: the margin at today's price (the worst size), by item; items with no cost are absent. */
+export type ItemMargin = { price: number; cost: number; amount: number; pct: string | null; below_cost: boolean };
+/** `GET /api/items/valuation`: counted stock x cost; `missing` have stock and no cost (not in the value). */
+export type Valuation = { value: number; value_text: string; items: number; missing: number };
+/** `GET /api/orders/margins`: the estimated gross margin of an order that kept a cost, by order. */
+export type OrderMargin = { revenue: number; cost: number; amount: number; pct: string | null; complete: boolean };
