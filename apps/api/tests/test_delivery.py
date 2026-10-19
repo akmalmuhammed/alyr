@@ -380,7 +380,8 @@ def test_when_there_is_only_one_way_nobody_is_asked(shop):
     item = cake(client)
     placed = place(client, who, [line(item)], {"zone_id": wakra["id"], "address": "Villa 1"})
     assert placed.status_code == 200, placed.text
-    assert owner_sql("select fulfilment from orders")[0]["fulfilment"] == "delivery"
+    newest = owner_sql("select fulfilment from orders order by created_at desc limit 1")[0]
+    assert newest["fulfilment"] == "delivery"
     settings(client, delivery=False, pickup=True)
     again = place(client, who, [line(item)])
     assert again.status_code == 200
@@ -639,7 +640,8 @@ def test_a_discount_code_and_delivery_work_together_in_the_chat(shop):
     assert "Discount (TEN10): -QAR 10" in draft["body"]
     assert "Delivery to Al Wakra: QAR 15" in draft["body"] and "Total: QAR 105" in draft["body"]
     talk(client, STRANGER, reply_id="cart_place")
-    row = owner_sql("select subtotal, discount_total, delivery_fee, total from orders")[0]
+    row = owner_sql("select subtotal, discount_total, delivery_fee, total from orders "
+                    "order by created_at desc limit 1")[0]
     assert (row["subtotal"], row["discount_total"], row["delivery_fee"], row["total"]) == (
         10_000, 1_000, 1_500, 10_500)
 
