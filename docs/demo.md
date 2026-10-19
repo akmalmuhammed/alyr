@@ -50,7 +50,7 @@ Photos are drawn tiles made at run time (a plate, a loaf, a bottle and so on, in
 
 ## The WhatsApp simulator
 
-The simulator at `/whatsapp` and the demo chat are wired to the original sample shop (Al Noor) only. The seven demo shops cannot be talked to through it, so a live WhatsApp walk-through of the Catalog (add an item by message, "what is low?") is done in the Al Noor shop. The demo shops are for the workspace and the order page. This is a known gap, tracked in the ALY-110 report.
+The simulator page at `/whatsapp` is wired to the original sample shop (Al Noor). Since ALY-136 the simulator's API takes a shop's address, so any shop with a private test line (the seven demo shops, a shop made in onboarding) can be talked to: `POST /sim/messages` with `{"from_number": "97455500555", "text": "101 x2, 103", "shop": "demo-restaurant"}`, `GET /sim/conversations/<phone>?shop=demo-restaurant`, `GET /sim/personas?shop=...`, and `shop` on `POST /sim/photos`. A walk-through: send an item's code (shown on its card in the workspace and on the order page), tap Confirm, tap Place order. The page at `/whatsapp` itself still shows Al Noor only.
 
 ## Wholesale
 

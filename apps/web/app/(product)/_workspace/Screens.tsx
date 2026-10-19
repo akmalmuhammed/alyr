@@ -137,6 +137,7 @@ const T = {
         case "no_show": return `${who} marked booking${n}: no-show`;
         case "moved": return `${who} moved booking${n}`;
         case "price_group": return `${who} changed the price group from ${a.detail.from} to ${a.detail.to}`;
+        case "asked_person": return `${who} needs a person to reply (the chat could not read or help with the message)`;
         default: return `${who}: ${thing} ${a.action}`;
       }
     },
@@ -205,6 +206,7 @@ const T = {
         case "no_show": return `${who}: العميل لم يحضر${n ? ` (الحجز${n})` : ""}`;
         case "moved": return `${who} غيّر موعد الحجز${n}`;
         case "price_group": return `${who} غيّر مجموعة الأسعار من ${a.detail.from} إلى ${a.detail.to}`;
+        case "asked_person": return `${who} يحتاج رداً من موظف (لم تستطع المحادثة قراءة الرسالة أو مساعدته)`;
         default: return `${who}: ${thing} ${a.action}`;
       }
     },

@@ -746,7 +746,8 @@ def test_shop_settings_round_trip(client):
         "agents_edit_items": True, "low_stock_at": 12, "hold_minutes": 45, "day_starts": "04:30"})
     assert saved.json() == {
         "hold_minutes": 45, "day_starts": "04:30", "agents_edit_items": True, "low_stock_at": 12,
-        "sold_out_display": "grey", "wholesale_layout": False, "whatsapp_number": ""}
+        "sold_out_display": "grey", "wholesale_layout": False, "whatsapp_number": "",
+        "whatsapp_mode": "chat"}
     assert client.get("/api/items/settings").json() == saved.json()
     assert client.put("/api/items/settings", json={"low_stock_at": -1}).status_code == 422
     assert on_shop(client, listing.low_stock_at) == 12

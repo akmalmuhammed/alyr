@@ -80,6 +80,7 @@ function Card({ item, lang, look, inOrder, simpleQty, canOrder, onOpen, onSet, o
           {description && look !== "list" && <span className="ox-desc" dir="auto">{description}</span>}
           <PriceLine item={item} lang={lang} />
           <StatusLine item={item} lang={lang} />
+          {item.code !== null && <span className="ox-codeline">{t.code} <bdi className="num">{item.code}</bdi></span>}
         </span>
       </button>
       <div className="ox-act">

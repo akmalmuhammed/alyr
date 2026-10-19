@@ -26,6 +26,7 @@ export function CatalogSettings({ lang, push, onClose }: { lang: Lang; push: Pus
   const [hold, setHold] = useState("");
   const [wholesale, setWholesale] = useState(false);
   const [number, setNumber] = useState("");
+  const [mode, setMode] = useState<"chat" | "link">("chat");
   const [setup, setSetup] = useState<Setup | null>(null);
   const [soldOut, setSoldOut] = useState<"grey" | "hide">("grey");
   const [rule, setRule] = useState<Rule>("switch");
@@ -43,6 +44,7 @@ export function CatalogSettings({ lang, push, onClose }: { lang: Lang; push: Pus
       setHold(String(s.hold_minutes));
       setWholesale(s.wholesale_layout);
       setNumber(s.whatsapp_number ? `+${s.whatsapp_number}` : "");
+      setMode(s.whatsapp_mode);
     }).catch((error) => setFailure(sayError(error, lang, t)));
     api<Setup>("/api/items/setup").then((s) => {
       setSetup(s);
@@ -65,7 +67,7 @@ export function CatalogSettings({ lang, push, onClose }: { lang: Lang; push: Pus
     try {
       await api<Settings>("/api/items/settings", "PUT", {
         agents_edit_items: agents, low_stock_at: lowNumber, day_starts: day, hold_minutes: holdNumber,
-        wholesale_layout: wholesale, whatsapp_number: number.trim(),
+        wholesale_layout: wholesale, whatsapp_number: number.trim(), whatsapp_mode: mode,
       });
       await api<Setup>("/api/items/setup", "PUT", {
         sold_out: soldOut, new_item_rule: rule, alerts: { low_stock: alertLow, sold_out: alertSold },
@@ -109,6 +111,30 @@ export function CatalogSettings({ lang, push, onClose }: { lang: Lang; push: Pus
         <Field label={t.whatsappNumber} hint={t.whatsappHint}>
           <input value={number} inputMode="tel" dir="ltr" autoComplete="off" onChange={(e) => setNumber(e.target.value)} disabled={!saved} />
         </Field>
+
+        <section className="ct-sec ct-how" aria-labelledby="ct-how-title">
+          <h3 id="ct-how-title">{t.howTitle}</h3>
+          <p className="ct-hint">{t.howIntro}</p>
+          <dl className="ct-how-ways">
+            <dt>{t.howLinkTitle}</dt><dd>{t.howLink}</dd>
+            <dt>{t.howCodeTitle}</dt><dd>{t.howCode}</dd>
+            <dt>{t.howNameTitle}</dt><dd>{t.howName}</dd>
+          </dl>
+          <fieldset className="ct-choices small" disabled={!saved}>
+            <legend>{t.howModeLabel}</legend>
+            {(["chat", "link"] as const).map((value) => (
+              <label key={value} className={`ct-choice ${mode === value ? "on" : ""}`}>
+                <input type="radio" name="whatsapp-mode" checked={mode === value} onChange={() => setMode(value)} />
+                <span className="ct-choice-mark" aria-hidden="true" />
+                <span className="ct-choice-text">
+                  <b>{value === "chat" ? t.howModeChat : t.howModeLink}</b>
+                  <small>{value === "chat" ? t.howModeChatHint : t.howModeLinkHint}</small>
+                </span>
+              </label>
+            ))}
+          </fieldset>
+          {saved && !number.trim() && <p className="ct-alert" role="status"><Icon name="warn" />{t.howNoNumber}</p>}
+        </section>
 
         <section className="ct-sec ct-type" aria-labelledby="ct-type-title">
           <h3 id="ct-type-title">{t.typeTitle}</h3>
