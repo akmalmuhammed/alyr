@@ -530,3 +530,28 @@ def test_the_weekly_report_writes_weights_with_their_unit_and_leaves_pieces_alon
     assert "Most sold: Dates (12.5 kg, QAR 15.62), Cups (40, QAR 3.20)" in " ".join(english)
     arabic = catalog_report.lines(news, None, "ar")
     assert "المتبقي 1.5 كغ" in arabic[0] and "المتبقي 4)" in arabic[0]
+
+
+# ── the Documents engine reads the same quantity and rounds it the same way ──────────
+
+
+def test_a_receipt_from_an_order_by_weight_has_the_quantity_the_unit_and_the_same_total(
+    client_factory, monkeypatch
+):
+    from documents_sales_support import customer, documents, pay_by_link, placed, sales_shop
+
+    shop = sales_shop(client_factory, monkeypatch)
+    assert switch(shop.owner, "decimal_quantity", True).status_code == 200
+    made = shop.owner.post("/api/items", json={
+        "name": "Medjool dates", "name_ar": "تمر مجدول", "price": 1250, "status": "live",
+        "unit": "kg", "pack_size": "0.001", "min_order": "0.001"})
+    assert made.status_code == 200, made.text
+    dates_ = made.json()["item"]
+    order_ = placed(shop, customer(shop), [(dates_, "0.333")])
+    assert order_["total"] == 416                  # 416.25, rounded once
+    assert pay_by_link(shop, order_).json() == {"status": "paid"}
+    [receipt] = documents(shop)
+    assert receipt["total_minor"] == 416           # the receipt agrees with the order, to the dirham
+    shown = shop.owner.get(f"/api/documents/{receipt['id']}").json()["document"]
+    [row] = shown["lines"]
+    assert (row["quantity"], row["unit"], row["line_total_minor"]) == ("0.333", "kg", 416)

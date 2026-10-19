@@ -147,7 +147,8 @@ def _order_line(item: asyncpg.Record) -> dict:
         "description": item["name"] + (f" ({', '.join(extra)})" if extra else ""),
         "description_ar": (name_ar + (f" ({', '.join(extra_ar)})" if extra_ar else ""))
         if name_ar else "",
-        "sku": item["sku"] or "", "quantity": item["quantity"], "unit": "piece",
+        # (the unit the line was ordered in: a weight or a volume keeps it; ALY-149)
+        "sku": item["sku"] or "", "quantity": item["quantity"], "unit": item["unit"],
         "unit_price_minor": item["price"],
     }
 
@@ -164,7 +165,7 @@ async def order_parts(conn: asyncpg.Connection, order_id: UUID):
         return None
     items = await conn.fetch(
         "select o.name, coalesce(nullif(o.name_ar, ''), p.name_ar, '') as name_ar, o.price, "
-        "o.quantity, o.variant_name, o.variant_name_ar, o.options, o.sku "
+        "o.quantity, o.unit, o.variant_name, o.variant_name_ar, o.options, o.sku "
         "from order_items o left join items p on p.id = o.item_id "
         "where o.order_id = $1 order by o.name, o.id",
         order_id,
