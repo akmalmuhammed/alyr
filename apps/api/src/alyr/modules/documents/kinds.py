@@ -62,6 +62,9 @@ KIND_KEYS = tuple(KINDS)
 LAYOUTS = ("a4", "a5", "thermal80")
 LANGUAGES = ("ar_en", "en_ar", "ar", "en")
 AUDIENCES = ("consumer", "business")
+# Whether a new document goes to the customer at once (per the channels the shop has on), or
+# waits for staff to press send (ALY-139).
+SEND_MODES = ("automatic", "manual")
 SOURCES = ("order", "booking", "ledger_payment", "manual", "external")
 CASH_ROUNDING_STEPS = (0, 5, 10, 25, 50, 100)
 PAYMENT_METHODS = ("cash", "card", "bank_transfer", "link", "credit", "cheque", "other")

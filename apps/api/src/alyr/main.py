@@ -15,6 +15,8 @@ from alyr.core.storage import make_store
 from alyr.db import Database
 from alyr.modules import report
 from alyr.modules.bookings.service import REMINDER, Reminders
+from alyr.modules.documents.delivery import JOB as DELIVERY_JOB
+from alyr.modules.documents.delivery import DocumentSender
 from alyr.modules.documents.errors import DocumentError
 from alyr.modules.items import alerts, events, wa_photo, watches
 from alyr.modules.items.import_alert import JOB as IMPORT_ALERT
@@ -31,9 +33,19 @@ from alyr.routes import agent as agent_routes
 from alyr.routes import auth as auth_routes
 from alyr.routes import bookings as bookings_routes
 from alyr.routes import custom_fields as custom_field_routes
+from alyr.routes import (
+    document_page,
+    inbox,
+    items,
+    ledger,
+    orders,
+    pay,
+    simulator,
+    store,
+    whatsapp_webhook,
+)
 from alyr.routes import documents as documents_routes
 from alyr.routes import features as feature_routes
-from alyr.routes import inbox, items, ledger, orders, pay, simulator, store, whatsapp_webhook
 from alyr.routes import items_import as items_import_routes
 from alyr.routes import jobs as jobs_routes
 from alyr.routes import media as media_routes
@@ -90,6 +102,10 @@ def create_app() -> FastAPI:
     app.state.jobs.register(
         EXPIRE_JOB, order_holds.HoldExpiry(app.state.db, app.state.outbound).run
     )
+    # Documents sent to the customer (ALY-139): WhatsApp through the outbound layer, email with
+    # the PDF attached. A delivery that fails every try shows the owner "not delivered".
+    document_sender = DocumentSender(app.state.db, app.state.outbound)
+    app.state.jobs.register(DELIVERY_JOB, document_sender.run, document_sender.gave_up)
     # The Catalog on WhatsApp (ALY-106): back-in-stock messages, owner alerts, and photos sent
     # by staff turned into drafts. Each is a job, so none holds a request open.
     app.state.jobs.register(
@@ -153,6 +169,11 @@ def create_app() -> FastAPI:
     # Documents (ALY-138): the engine, off for every shop until the screens and hooks exist.
     app.include_router(
         documents_routes.router, dependencies=[Depends(require_module("documents"))]
+    )
+    # The page a customer opens from the link we send with a document (ALY-139). A shop
+    # without the module has no such page.
+    app.include_router(
+        document_page.router, dependencies=[Depends(require_module_for_slug("documents"))]
     )
     app.include_router(store.router, dependencies=[Depends(require_module_for_slug("orders"))])
     app.include_router(jobs_routes.router)

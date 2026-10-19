@@ -17,6 +17,7 @@ from alyr.core import jobs, team, templates
 from alyr.core.normalise import fmt_qar
 from alyr.core.outbound import Outbound
 from alyr.core.team import Actor
+from alyr.modules.documents import sales as documents_sales
 from alyr.modules.items import (
     alerts,
     availability,
@@ -377,6 +378,8 @@ async def create_order(
             conn, contact_id, "sale", total, note=f"Order #{number}", created_by="Order link",
             order_id=order_id,
         )
+        # An invoice for the credit sale, for a shop that has Documents on (ALY-139).
+        await documents_sales.credit_sale(conn, order_id)
         balance = (await ledger.aged(conn, contact_id)).balance
         closing = (
             f"تم تسجيله على حسابك. رصيدك الآن {fmt_qar(balance)}." if arabic
@@ -550,6 +553,9 @@ async def cancel_order(
         reversed_amount = await ledger.reverse_sale(
             conn, order_id, row["contact_id"], row["total"], row["number"], actor.name
         ) or 0
+    # A receipt or invoice already issued for it is cancelled by a credit note, once, in this
+    # same transaction, for a shop that has Documents on (ALY-139).
+    await documents_sales.order_cancelled(conn, order_id, row["number"], actor)
     await team.claim(conn, "order", order_id, actor)
     await team.record(
         conn, "order", order_id, "cancelled", actor, row["contact_id"],

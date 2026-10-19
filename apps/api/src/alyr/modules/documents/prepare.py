@@ -156,8 +156,10 @@ def prepare(body: Mapping, shop: Mapping) -> dict:
     ]
     totals = totals_of(lines)
     # Cash rounding, if the shop has it and this kind is paid in cash: its own line.
+    # A sale from ALYR's own orders paid by link, card or transfer says `round_cash: False`:
+    # the customer paid the exact amount, and rounding is for notes and coins (ALY-139).
     rounding = (money.round_to_step(totals["total_minor"], shop["cash_rounding_minor"])
-                if kinds.KINDS[kind].rounds else 0)
+                if kinds.KINDS[kind].rounds and body.get("round_cash", True) else 0)
     totals["rounding_minor"] = rounding
     totals["total_minor"] += rounding
     if totals["total_minor"] > money.MAX_MINOR:

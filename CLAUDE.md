@@ -68,7 +68,10 @@ apps/api/                     FastAPI service (Python 3.13, managed with uv)
                               documents/ is the documents engine (receipts, invoices, credit notes:
                               gapless numbers, immutable once issued, a PDF drawn in Arabic and
                               English; specs/011, D-042), switched on per shop through the
-                              `documents` module, off for every shop until its screens exist
+                              `documents` module, off for every shop until its screens exist;
+                              sales.py, payments.py and delivery.py make documents from orders,
+                              credit accounts and payments recorded by hand and send them by
+                              WhatsApp, email and a hosted link (specs/013, ALY-139)
                               items/codes.py reads a customer's message for item codes, links and
                               SKUs and items/wa_order.py orders by them in the chat (specs/010)
   src/alyr/routes/            HTTP routes. deps.py: who is calling, which shop, which modules are on
@@ -82,7 +85,8 @@ apps/web/                     Next.js. Three root layouts, one per route group:
   app/(site)/, (site-ar)/     Public site, English and Arabic (/, /ar, /chat, /ar/chat); words in app/_site/copy.ts
   app/(product)/              Workspace (/app), back office (/ops), sign-in (/login), sign-up (/start),
                               sales demo (/whatsapp), owner view sample (/agent-sample), and the customer pages
-                              opened from WhatsApp: order /s, booking /b, payment /pay, tracking /t
+                              opened from WhatsApp: order /s, booking /b, payment /pay, tracking /t,
+                              document /d (a receipt or invoice, by a signed link)
   app/(product)/_customer/    Shared frame, styles, the price format and the Arabic search folding of the
                               customer pages; order/ is the order page (specs/005-order-page-v2)
   app/(product)/_workspace/   Workspace screens and styles
@@ -93,6 +97,7 @@ scripts/                      check.sh (everything CI runs), demo.sh (start and 
                               screens in a real browser at phone width), catalog-reports-browser-check.mjs
                               (its home cards and the back office's Usage view), order-page-browser-check.mjs
                               (the customer's order page, same way), booking-page-browser-check.mjs (the booking page and its links),
+                              document-page-browser-check.mjs (the hosted document page and its links),
                               golive-truth-check.mjs (every onboarding sentence of every business type proved on the
                               finished order page and workspace, English and Arabic),
                               hooks/pre-commit
