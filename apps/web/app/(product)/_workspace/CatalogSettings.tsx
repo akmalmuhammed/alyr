@@ -26,7 +26,7 @@ export function CatalogSettings({ lang, push, onClose }: { lang: Lang; push: Pus
   const [hold, setHold] = useState("");
   const [wholesale, setWholesale] = useState(false);
   const [number, setNumber] = useState("");
-  const [mode, setMode] = useState<"chat" | "link">("chat");
+  const [mode, setMode] = useState<"chat" | "link">("link");
   const [setup, setSetup] = useState<Setup | null>(null);
   const [soldOut, setSoldOut] = useState<"grey" | "hide">("grey");
   const [rule, setRule] = useState<Rule>("switch");
@@ -122,7 +122,7 @@ export function CatalogSettings({ lang, push, onClose }: { lang: Lang; push: Pus
           </dl>
           <fieldset className="ct-choices small" disabled={!saved}>
             <legend>{t.howModeLabel}</legend>
-            {(["chat", "link"] as const).map((value) => (
+            {(["link", "chat"] as const).map((value) => (
               <label key={value} className={`ct-choice ${mode === value ? "on" : ""}`}>
                 <input type="radio" name="whatsapp-mode" checked={mode === value} onChange={() => setMode(value)} />
                 <span className="ct-choice-mark" aria-hidden="true" />

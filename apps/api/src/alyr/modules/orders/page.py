@@ -45,7 +45,7 @@ async def settings(conn: asyncpg.Connection) -> dict:
         "sold_out_display": row["sold_out_display"] if row else "grey",
         "wholesale_layout": row["wholesale_layout"] if row else False,
         "whatsapp_number": row["whatsapp_number"] if row else "",
-        "whatsapp_mode": row["whatsapp_mode"] if row else "chat",
+        "whatsapp_mode": row["whatsapp_mode"] if row else "link",
         "low_stock_at": row["low_stock_at"] if row else listing.DEFAULT_LOW_STOCK,
     }
 

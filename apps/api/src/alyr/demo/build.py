@@ -211,7 +211,7 @@ async def start(conn: asyncpg.Connection, shop: Shop, now: datetime, history_sta
     await template.apply(conn, setup, clock, samples_too=False)
     await conn.execute(
         "update shop_settings set whatsapp_number = $1, day_starts = $2::text::time, "
-        "weekly_report = true",
+        "weekly_report = true, whatsapp_mode = 'chat'",
         shop.whatsapp, shop.day_starts,
     )
     categories = [{"name": n, "name_ar": a} for n, a in (*setup.categories, *shop.extra_categories)]

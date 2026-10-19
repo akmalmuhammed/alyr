@@ -172,6 +172,8 @@ async def reset_demo_data(db: Database) -> None:
             "insert into tenant_modules (module_key, enabled_by) "
             "select unnest($1::text[]), 'demo setup'", DEMO_MODULES,
         )
+        # The demo shop's number runs on ALYR (the simulator is its line): the chat reads codes.
+        await conn.execute("insert into shop_settings (whatsapp_mode) values ('chat')")
         for sort, (name, name_ar, minutes, price) in enumerate(SERVICES):
             await conn.execute(
                 "insert into services (name, name_ar, duration_minutes, price, sort) "

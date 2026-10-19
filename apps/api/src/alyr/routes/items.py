@@ -205,8 +205,8 @@ class StockSettings(BaseModel):
     )
     whatsapp_mode: str | None = Field(
         default=None, pattern="^(chat|link)$",
-        description="chat: the number runs on ALYR and the chat reads item codes. link: the "
-                    "shop keeps its own number and answers itself",
+        description="link (the default): the shop keeps its own number and answers itself. "
+                    "chat: the number runs on ALYR and the chat reads item codes",
     )
 
 

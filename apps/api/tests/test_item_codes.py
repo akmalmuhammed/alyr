@@ -172,13 +172,27 @@ def test_the_xlsx_export_has_the_column_too(client):
     assert {int(r[column]) for r in rows[1:]} == {item["code"]}
 
 
-def test_how_customers_order_is_a_setting_with_two_values(client):
+def test_how_customers_order_has_two_values_and_a_shop_answers_itself_by_default(client):
+    # The demo shop's number is the simulator's line: it is on "chat" explicitly.
     assert client.get("/api/items/settings").json()["whatsapp_mode"] == "chat"
-    saved = client.put("/api/items/settings", json={"whatsapp_mode": "link"})
-    assert saved.status_code == 200 and saved.json()["whatsapp_mode"] == "link"
-    assert client.get(STORE).json()["settings"]["whatsapp_mode"] == "link"
+    assert client.get(STORE).json()["settings"]["whatsapp_mode"] == "chat"
+    # Any other shop, with or without a settings row yet, keeps its own number.
+    new_shop(client)
+    assert client.get("/api/items/settings").json()["whatsapp_mode"] == "link"
+    resaved = client.put("/api/items/settings", json={"low_stock_at": 4})
+    assert resaved.json()["whatsapp_mode"] == "link"
+    saved = client.put("/api/items/settings", json={"whatsapp_mode": "chat"})
+    assert saved.status_code == 200 and saved.json()["whatsapp_mode"] == "chat"
+    # Another save that does not mention it leaves a stored value alone.
+    kept = client.put("/api/items/settings", json={"low_stock_at": 6})
+    assert kept.json()["whatsapp_mode"] == "chat"
     assert client.put("/api/items/settings", json={"whatsapp_mode": "both"}).status_code == 422
-    assert client.put("/api/items/settings", json={"whatsapp_mode": "chat"}).status_code == 200
+    assert client.put("/api/items/settings", json={"whatsapp_mode": "link"}).status_code == 200
+
+
+def test_a_shop_made_in_onboarding_starts_on_link(client):
+    new_business(client, kind="shop")
+    assert client.get("/api/items/settings").json()["whatsapp_mode"] == "link"
 
 
 def test_the_new_tables_are_isolated_per_shop(client):

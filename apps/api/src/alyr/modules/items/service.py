@@ -994,9 +994,9 @@ async def settings(conn: asyncpg.Connection) -> dict:
         "sold_out_display": row["sold_out_display"] if row else "grey",
         "wholesale_layout": row["wholesale_layout"] if row else False,
         "whatsapp_number": row["whatsapp_number"] if row else "",
-        # How customers order on WhatsApp: "chat" (the number runs on ALYR, the chat reads a
-        # code) or "link" (the shop keeps its own number; ALYR prepares a readable order).
-        "whatsapp_mode": row["whatsapp_mode"] if row else "chat",
+        # How customers order on WhatsApp: "link" (the shop keeps its own number; ALYR prepares a
+        # readable order; the default) or "chat" (the number runs on ALYR, the chat reads a code).
+        "whatsapp_mode": row["whatsapp_mode"] if row else "link",
     }
 
 
@@ -1020,7 +1020,7 @@ async def save_settings(
         "wholesale_layout, whatsapp_number, whatsapp_mode) "
         "values (coalesce($1::int, 30), coalesce($2::time, '00:00'), "
         "coalesce($3::boolean, false), coalesce($4::int, 5), "
-        "coalesce($5::boolean, false), coalesce($6::text, ''), coalesce($7::text, 'chat')) "
+        "coalesce($5::boolean, false), coalesce($6::text, ''), coalesce($7::text, 'link')) "
         "on conflict (tenant_id) do update set "
         "hold_minutes = coalesce($1::int, shop_settings.hold_minutes), "
         "day_starts = coalesce($2::time, shop_settings.day_starts), "

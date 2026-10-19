@@ -11,9 +11,9 @@ customer to **Confirm**. Confirmed items form a **draft order** with a live tota
 then goes through the ordinary order path (`modules/orders/service.py`), so stock, holds, the credit
 account and the pay link are done by the code that already does them, once.
 
-It works in two modes, chosen by the shop (Catalog settings, "How customers order", `shop_settings.whatsapp_mode`):
+It works in two modes, chosen by the shop (Catalog settings, "How customers order", `shop_settings.whatsapp_mode`). **`link` is the default** and the one recommended (no real shop has a connected number yet, so the prefilled message is a readable order, not bare codes for a human-run number); the seven demo shops and the demo shop Al Noor (the simulator's line) are set to `chat` explicitly. The column is new in migration 0033, so no shop had a stored value: every shop starts on `link`, and a shop that picks `chat` keeps it.
 
-| | `chat` (default): the shop's number runs on ALYR | `link`: the shop keeps its own number |
+| | `chat`: the shop's number runs on ALYR | `link` (default, recommended): the shop keeps its own number |
 |---|---|---|
 | Who reads the customer's message | the chat (`modules/items/wa_order.py`) | a person, in the shop's own WhatsApp |
 | What "Order on WhatsApp" prefills | codes only, under 140 characters: `Hello Al Noor, I would like to order (item codes): #214 x2, #305. Thank you!` | an order to read at a glance: one line per item (code, name, size, quantity, price), the total, the customer's name when known |

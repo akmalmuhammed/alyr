@@ -50,7 +50,7 @@ Photos are drawn tiles made at run time (a plate, a loaf, a bottle and so on, in
 
 ## The WhatsApp simulator
 
-The simulator page at `/whatsapp` is wired to the original sample shop (Al Noor). Since ALY-136 the simulator's API takes a shop's address, so any shop with a private test line (the seven demo shops, a shop made in onboarding) can be talked to: `POST /sim/messages` with `{"from_number": "97455500555", "text": "101 x2, 103", "shop": "demo-restaurant"}`, `GET /sim/conversations/<phone>?shop=demo-restaurant`, `GET /sim/personas?shop=...`, and `shop` on `POST /sim/photos`. A walk-through: send an item's code (shown on its card in the workspace and on the order page), tap Confirm, tap Place order. The page at `/whatsapp` itself still shows Al Noor only.
+The simulator page at `/whatsapp` is wired to the original sample shop (Al Noor). Since ALY-136 the simulator's API takes a shop's address, so any shop with a private test line (the seven demo shops, a shop made in onboarding) can be talked to: `POST /sim/messages` with `{"from_number": "97455500555", "text": "101 x2, 103", "shop": "demo-restaurant"}`, `GET /sim/conversations/<phone>?shop=demo-restaurant`, `GET /sim/personas?shop=...`, and `shop` on `POST /sim/photos`. The seven demo shops and Al Noor are on `chat` mode explicitly (the setting "How customers order"); every other shop starts on `link`, where the order page's message is a readable order for a person. A walk-through: send an item's code (shown on its card in the workspace and on the order page), tap Confirm, tap Place order. The page at `/whatsapp` itself still shows Al Noor only.
 
 ## Wholesale
 

@@ -16,10 +16,11 @@
 --      refuses). It is shown to the owner and can be copied, not edited.
 --    * Existing items are numbered here, oldest first, from 101, per shop. Safe on a database
 --      with data; the data step alone can be run again (an item that has a code is left alone).
--- 2. The shop's choice of how customers order on WhatsApp: `chat` (the number runs on ALYR, the
---    chat answers a code) or `link` (the shop keeps its own number and answers itself; ALYR
---    gives the page and a ready, readable order message). It only changes the wording of the
---    message the order page prepares.
+-- 2. The shop's choice of how customers order on WhatsApp: `link` (the shop keeps its own number
+--    and answers itself; ALYR gives the page and a ready, readable order message; the default,
+--    because no shop has a connected number yet) or `chat` (the number runs on ALYR, the chat
+--    answers a code). It only changes the wording of the message the order page prepares. The
+--    column is new, so no shop has a stored value: every shop with settings starts on `link`.
 -- 3. What the chat remembers about a customer who is ordering by message: the draft order
 --    (items they confirmed), the one question waiting for an answer, and how many codes they
 --    sent that matched nothing lately. One row per customer and shop, with an expiry, cleared
@@ -103,7 +104,7 @@ end $$;
 -- ------------------------------------------------------------- how customers order
 
 alter table shop_settings
-    add column whatsapp_mode text not null default 'chat'
+    add column whatsapp_mode text not null default 'link'
         check (whatsapp_mode in ('chat', 'link'));
 
 -- --------------------------------------------------------- an order being put together
