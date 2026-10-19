@@ -65,9 +65,11 @@ default-groups = ["dev", "server"]
 "src/alyr/routes/admin_templates.py" = ["E501"]
 # A document's every word, in both languages, in one file for the same review (ALY-138).
 "src/alyr/modules/documents/words.py" = ["E501"]
+"src/alyr/modules/documents/delivery_words.py" = ["E501"]
 # The documents tests carry Arabic phrases and SQL that read worse when wrapped (ALY-138).
 "tests/test_documents_*.py" = ["E501"]
 "tests/documents_support.py" = ["E501"]
+"tests/documents_sales_support.py" = ["E501"]
 "tests/pdf_support.py" = ["E501"]
 # Each demo shop's words, in both languages, are kept in one table per shop (ALY-110).
 "src/alyr/demo/shops/*.py" = ["E501"]

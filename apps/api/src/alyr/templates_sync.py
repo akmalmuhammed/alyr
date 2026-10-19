@@ -18,6 +18,7 @@ from pathlib import Path
 
 import httpx
 
+from alyr import document_samples
 from alyr.config import get_settings
 from alyr.core.templates import CATALOGUE, Template
 
@@ -32,15 +33,27 @@ def _refusal(answer: dict) -> str | None:
     return error.get("error_user_msg") or error.get("message", "no reason given")
 
 
+def sample_file(template: Template, lang: str) -> tuple[str, bytes]:
+    """(file name, bytes) of a template's sample header in one language. A picture is a file
+    in the repository; a sample document is drawn by the documents engine (a made-up bakery's
+    receipt, invoice or credit note: `alyr.document_samples`), so no PDF is kept in the
+    repository."""
+    path = ROOT / template.header_sample.format(lang=lang)
+    if template.header == "document":
+        return path.name, document_samples.draw_all()[path.name]
+    return path.name, path.read_bytes()
+
+
 async def header_handle(http: httpx.AsyncClient, graph: str, app_id: str, token: str,
                         template: Template, lang: str) -> str:
     """Upload a template's sample header image in one language and return the handle Meta
     reviews it with: start an upload session on the app, then send the file's bytes."""
-    path = ROOT / template.header_sample.format(lang=lang)
-    data = path.read_bytes()
+    name, data = sample_file(template, lang)
+    path = Path(name)
     session = (await http.post(f"{graph}/{app_id}/uploads", params={
         "file_name": path.name, "file_length": len(data),
-        "file_type": "image/png", "access_token": token,
+        "file_type": "application/pdf" if path.suffix == ".pdf" else "image/png",
+        "access_token": token,
     })).json()
     if "id" not in session:
         raise RuntimeError(_refusal(session) or "no upload session")
@@ -58,8 +71,8 @@ def components(template: Template, text: str, handle: str | None,
     samples = template.samples_ar if lang == "ar" and template.samples_ar else template.samples
     if samples:
         body["example"] = {"body_text": [list(samples)]}
-    if template.header == "image":
-        return [{"type": "HEADER", "format": "IMAGE",
+    if template.header in ("image", "document"):
+        return [{"type": "HEADER", "format": template.header.upper(),
                  "example": {"header_handle": [handle]}}, body]
     return [body]
 
@@ -90,7 +103,7 @@ async def main(create: bool) -> int:
             for lang, text in (("en", template.en), ("ar", template.ar)):
                 on_meta = found.get((name, lang))
                 status = on_meta["status"] if on_meta else "not on Meta"
-                needs_upload = create and template.header == "image" and (
+                needs_upload = create and template.header in ("image", "document") and (
                     on_meta is None or status == "REJECTED")
                 if needs_upload:
                     if not settings.meta_app_id:

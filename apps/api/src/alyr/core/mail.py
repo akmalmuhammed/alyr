@@ -8,6 +8,7 @@ code is also useless after ten minutes, so there is nothing to retry later. The 
 a short timeout and the person can ask for a new code.
 """
 
+import base64
 import logging
 from html import escape
 
@@ -33,12 +34,53 @@ def configured() -> bool:
     return bool(get_settings().email_api_key)
 
 
-async def send(to: str, subject: str, text: str, html: str) -> None:
+# Domains reserved for examples and tests (RFC 2606). The demo shops' people use them, and
+# nothing should ever be emailed there.
+RESERVED_DOMAINS = (".example", ".test", ".invalid", ".localhost")
+
+
+def deliverable(address: str) -> bool:
+    """Whether an address could be a real person's: it has a name, an @ and a dotted domain,
+    and the domain is not one reserved for examples. Every email ALYR sends to a customer or
+    an owner (the weekly report, a document) is checked with this first."""
+    address = (address or "").strip()
+    local, at, domain = address.rpartition("@")
+    domain = domain.lower()
+    if not (local and at and "." in domain) or any(c.isspace() for c in address):
+        return False
+    return not domain.endswith(RESERVED_DOMAINS)
+
+
+def _display_name(name: str) -> str:
+    """A shop's name as the sender's display name: no quotes, brackets or control characters
+    that could end the header early or start a second one."""
+    clean = "".join(c for c in name if c.isprintable() and c not in '"<>\\,;@')
+    return " ".join(clean.split())[:60]
+
+
+async def send(
+    to: str, subject: str, text: str, html: str, *,
+    attachments: list[tuple[str, bytes]] | None = None, reply_to: str | None = None,
+    from_name: str | None = None,
+) -> None:
+    """Send one email. `attachments` are (file name, bytes) pairs, sent base64-encoded as
+    Resend's API takes them. `from_name` puts a shop's name in front of ALYR's address (the
+    address is always ALYR's); `reply_to` sends answers to the shop."""
     settings = get_settings()
-    body = {
-        "from": settings.email_from, "to": [to], "subject": subject, "text": text, "html": html,
-        "reply_to": settings.email_reply_to,
+    sender = settings.email_from
+    name = _display_name(from_name) if from_name else ""
+    if name:
+        address = sender.rpartition("<")[2].rstrip(">") if "<" in sender else sender
+        sender = f"{name} via ALYR <{address}>"
+    body: dict = {
+        "from": sender, "to": [to], "subject": subject, "text": text, "html": html,
+        "reply_to": reply_to or settings.email_reply_to,
     }
+    if attachments:
+        body["attachments"] = [
+            {"filename": file_name, "content": base64.b64encode(data).decode("ascii")}
+            for file_name, data in attachments
+        ]
     try:
         async with httpx.AsyncClient(timeout=TIMEOUT_SECONDS, transport=transport) as http:
             answer = await http.post(

@@ -43,9 +43,14 @@ TEXT_LIMITS = {
 FLAGS = (
     "tax_enabled", "show_sku", "show_discounts", "show_customer_tax_id", "show_bank",
     "show_signature", "show_alyr_mark", "agents_may_issue",
+    # What happens on its own (ALY-139): which sales make a document, which channels send it,
+    # and who may record a payment by hand.
+    "auto_receipt_on_payment", "auto_invoice_credit_sales", "auto_deposit_receipt",
+    "auto_send_whatsapp", "auto_send_email", "agents_may_record_payments",
 )
 CHOICES = {
     "languages": kinds.LANGUAGES, "default_audience": kinds.AUDIENCES, "layout": kinds.LAYOUTS,
+    "send_mode": kinds.SEND_MODES,
 }
 # Terms and notes per kind: at most this many characters in each language.
 KIND_TEXT_LIMIT = 600
@@ -146,8 +151,9 @@ def _clean(changes: dict) -> dict:
             clean[name] = bool(value)
         elif name in CHOICES:
             if value not in CHOICES[name]:
-                raise DocumentError("layout_unknown" if name == "layout" else "kind_unknown",
-                                    field=name)
+                raise DocumentError(
+                    {"layout": "layout_unknown", "send_mode": "send_mode_invalid"}.get(
+                        name, "kind_unknown"), field=name)
             clean[name] = value
         elif name == "currency":
             if value not in money.CURRENCIES:

@@ -20,6 +20,7 @@ const PATHS: Record<string, string> = {
   refresh: "M20 12a8 8 0 1 1-2.3-5.7 M20 4v5h-5",
   clock: "M12 21a9 9 0 1 0 0-18 9 9 0 0 0 0 18Z M12 7v5l3 2",
   table: "M4 9h16 M6 9v10 M18 9v10 M3 9l2-4h14l2 4",
+  download: "M12 4v11 M7 11l5 5 5-5 M5 20h14",
 };
 
 export function Glyph({ name, className }: { name: keyof typeof PATHS | string; className?: string }) {

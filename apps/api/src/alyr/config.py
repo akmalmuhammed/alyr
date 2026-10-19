@@ -47,6 +47,10 @@ class Settings(BaseSettings):
     # How long an order link works. A customer who opens an older one is told how to get a
     # new one (they ask for one in their chat, as they did for the first).
     link_days: int = 60
+    # How long the link to an issued document works (ALY-139). A receipt is something people
+    # look for months later, so its link lives longer than an order link; an older link is
+    # answered with a page that says so, and the shop sends the document again.
+    document_link_days: int = 90
 
     meta_app_secret: str = ""
     meta_verify_token: str = ""
