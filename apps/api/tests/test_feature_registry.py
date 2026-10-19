@@ -83,7 +83,7 @@ def test_the_switchable_features_the_brief_asks_for_are_there():
 def test_the_extension_points_are_named_and_hidden():
     later = {c.key for c in capabilities.EXTENSION_POINTS}
     assert later == {
-        "decimal_quantity", "cost_margin", "delivery_fees", "bundles", "suppliers",
+        "decimal_quantity", "cost_margin", "bundles", "suppliers",
         "barcode", "batch_expiry", "serial_imei",
     }
     for cap in capabilities.EXTENSION_POINTS:

@@ -29,7 +29,7 @@ from alyr import capabilities, shop_templates
 from alyr.catalog import Text
 from alyr.core import team
 from alyr.core.team import Actor
-from alyr.core.words import DISCOUNTS, ITEMS, counted
+from alyr.core.words import DISCOUNTS, ITEMS, ZONES, counted
 from alyr.modules.items import changes
 from alyr.modules.items.service import BilingualError
 
@@ -223,7 +223,8 @@ async def in_use(conn: asyncpg.Connection) -> dict[str, int]:
         "  and (pack_size is not null or min_order > 1)) as pack_rules, "
         "(select count(*) from items where status <> 'archived' and cardinality(tags) > 0) "
         "  as tags, "
-        "(select count(*) from discount_rules where status <> 'ended') as discounts"
+        "(select count(*) from discount_rules where status <> 'ended') as discounts, "
+        "(select count(*) from delivery_zones where archived_at is null) as delivery_fees"
     )
     return {k: int(v) for k, v in dict(row).items() if v}
 
@@ -231,6 +232,10 @@ async def in_use(conn: asyncpg.Connection) -> dict[str, int]:
 def _use_text(key: str, n: int) -> Text:
     if key == "discounts":
         things = Text(counted(n, DISCOUNTS, "en"), counted(n, DISCOUNTS, "ar"))
+        return Text(f"{things.en} saved. They are kept if you switch this off.",
+                    f"{things.ar} محفوظة. وتبقى إن أوقفت هذه الميزة.")
+    if key == "delivery_fees":
+        things = Text(counted(n, ZONES, "en"), counted(n, ZONES, "ar"))
         return Text(f"{things.en} saved. They are kept if you switch this off.",
                     f"{things.ar} محفوظة. وتبقى إن أوقفت هذه الميزة.")
     things = Text(counted(n, ITEMS, "en"), counted(n, ITEMS, "ar"))

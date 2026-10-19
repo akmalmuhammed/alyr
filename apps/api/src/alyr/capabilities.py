@@ -309,6 +309,18 @@ BUILT: tuple[Capability, ...] = (
         "يضيف «الخصومات» إلى الكتالوج، وخانة رمز القسيمة في صفحة الطلب وفي الطلب عبر واتساب، "
         "والخصم سطراً بسطر في كل طلب، وسطراً في التقرير الأسبوعي."),
        "pricing", ("settings", "order_page", "chat", "reports"), default=False),
+    _c("delivery_fees", ("Delivery and pickup", "التوصيل والاستلام"),
+       ("Let customers choose pickup or delivery, with a fee for each area you deliver to. "
+        "Customers pick an area from your list and write their address.",
+        "دع العملاء يختارون الاستلام أو التوصيل، برسوم لكل منطقة توصّل إليها. يختار العميل "
+        "منطقة من قائمتك ويكتب عنوانه."),
+       ("Adds Delivery to the Catalog, the choice of pickup or delivery and the delivery fee on "
+        "the order page and in the WhatsApp order, the way each order reaches the customer on "
+        "the order, and a line in the weekly report.",
+        "يضيف «التوصيل» إلى الكتالوج، واختيار الاستلام أو التوصيل ورسوم التوصيل في صفحة الطلب "
+        "وفي الطلب عبر واتساب، وكيف يصل كل طلب إلى العميل في الطلب نفسه، وسطراً في التقرير "
+        "الأسبوعي."),
+       "pricing", ("settings", "order_page", "chat", "reports"), default=False),
 )
 
 # ── extension points: named, not built, hidden everywhere ─────────────────────────────
@@ -323,7 +335,7 @@ def _later(key: str) -> Capability:
 
 
 EXTENSION_POINTS: tuple[Capability, ...] = tuple(_later(k) for k in (
-    "decimal_quantity", "cost_margin", "delivery_fees", "bundles", "suppliers",
+    "decimal_quantity", "cost_margin", "bundles", "suppliers",
     "barcode", "batch_expiry", "serial_imei",
 ))
 
