@@ -148,7 +148,7 @@ def test_a_template_that_does_not_make_sense_is_refused_in_both_languages(office
     refused(office.post(TEMPLATES, json={"name": "A kind", "section": "X",
                                          "based_on": "dentist"}), "bad_type")
     refused(office.post(TEMPLATES, json={
-        "name": "A kind", "section": "X", "features": {"discounts": {"enabled": True}}}),
+        "name": "A kind", "section": "X", "features": {"bundles": {"enabled": True}}}),
         "unknown_feature")
     refused(office.post(TEMPLATES, json={
         "name": "A kind", "section": "X", "features": {"names": {"enabled": False}}}),

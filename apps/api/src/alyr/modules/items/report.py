@@ -19,13 +19,13 @@ from datetime import datetime
 
 import asyncpg
 
-from alyr.core.normalise import fmt_qar
-from alyr.core.words import DAYS, HOURS, ITEMS, counted
+from alyr.core.normalise import fmt_qar, fmt_qar_ar
+from alyr.core.words import DAYS, HOURS, ITEMS, ORDERS, counted
 from alyr.modules.items import clock as shop_clock
 from alyr.modules.items import features, listing, spells
 
 TITLE = {"en": "Catalog", "ar": "الكتالوج"}
-LINES = ("sold_out", "asked", "low", "best", "idle")
+LINES = ("sold_out", "asked", "low", "best", "idle", "discounts")
 LIST_MAX = 3  # names in a line, before "and 4 more"
 ASKED_MAX = 2  # items named beside the number of customers who asked
 
@@ -39,6 +39,8 @@ def shown_lines(feats: features.Features) -> list[str]:
         out += ["sold_out", "asked"]
     if feats.counts_stock():
         out.append("low")
+    if feats.on("discounts"):
+        out.append("discounts")  # (ALY-150) a line only for a shop that gives discounts
     return [k for k in LINES if k in out]
 
 
@@ -114,7 +116,32 @@ async def numbers(conn: asyncpg.Connection, start: datetime, end: datetime, tz: 
         "count": len(idle),
         "items": [{"name": r["name"], "name_ar": r["name_ar"]} for r in idle[:LIST_MAX]],
     }
+    if "discounts" in out["show"]:
+        out["discounts"] = await _discounts(conn, start, end)
     return out
+
+
+async def _discounts(conn: asyncpg.Connection, start: datetime, end: datetime) -> dict:
+    """What the shop gave away this week: the orders that had a discount, the money, and the
+    discounts that gave most. A cancelled order gave nothing (its use went back)."""
+    row = await conn.fetchrow(
+        "select count(distinct d.order_id)::int as orders, "
+        "coalesce(sum(d.amount_off), 0)::bigint as given "
+        "from order_discounts d join orders o on o.id = d.order_id "
+        "where o.created_at >= $1 and o.created_at < $2 and o.status <> 'cancelled' "
+        "and d.returned_at is null",
+        start, end,
+    )
+    top = await conn.fetch(
+        "select coalesce(nullif(d.code, ''), nullif(d.name, ''), d.rule_text) as label, "
+        "coalesce(nullif(d.code, ''), nullif(d.name_ar, ''), d.rule_text_ar) as label_ar, "
+        "count(*)::int as orders, sum(d.amount_off)::bigint as given "
+        "from order_discounts d join orders o on o.id = d.order_id "
+        "where o.created_at >= $1 and o.created_at < $2 and o.status <> 'cancelled' "
+        "and d.returned_at is null group by 1, 2 order by given desc, label limit $3",
+        start, end, LIST_MAX,
+    )
+    return {"orders": row["orders"], "given": row["given"], "top": [dict(r) for r in top]}
 
 
 def active(n: dict) -> bool:
@@ -165,6 +192,22 @@ def lines(n: dict, before: dict | None, lang: str) -> list[str]:
         out.append(f"{head}: {_join(named, low['count'], lang)}")
     if "best" in show:
         out += _best(n, lang)
+    given = n.get("discounts")
+    if "discounts" in show and given and given["given"]:
+        comma = "، " if ar else ", "
+        named = comma.join(
+            f"{i['label_ar'] if ar else i['label']} {i['orders']}" for i in given["top"]
+        )
+        if ar:
+            out.append(
+                f"خصومات منحتها هذا الأسبوع: {fmt_qar_ar(given['given'])} "
+                f"على {counted(given['orders'], ORDERS, lang)} ({named})"
+            )
+        else:
+            out.append(
+                f"Discounts given this week: {fmt_qar(given['given'])} on "
+                f"{counted(given['orders'], ORDERS, lang)} ({named})"
+            )
     idle = n["idle"]
     if "idle" in show and idle["count"]:
         head = "لم تُبَع هذا الأسبوع" if ar else "Did not sell this week"

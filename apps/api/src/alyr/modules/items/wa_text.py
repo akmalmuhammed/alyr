@@ -344,6 +344,25 @@ WORDS: dict[str, tuple[str, str]] = {
     "total": ("Total: {total}", "الإجمالي: {total}"),
     "draft_head": ("Your order from {shop}:", "طلبك من {shop}:"),
     "draft_added": ("Added to your order.", "تمت الإضافة إلى طلبك."),
+    # Discount codes in the draft (ALY-150).
+    "draft_items": ("Items: {total}", "الأصناف: {total}"),
+    "draft_discount": ("Discount{label}: -{amount}", "خصم{label}: -{amount}"),
+    "coupon_note": ("Code {coupon}: {reason}", "الرمز {coupon}: {reason}"),
+    "coupon_added": (
+        "Code {coupon} added: {text}.", "تمت إضافة الرمز {coupon}: {text}."
+    ),
+    "coupon_saved": (
+        "Code {coupon} saved: {text}. Add items and I will take it off your total.",
+        "تم حفظ الرمز {coupon}: {text}. أضف أصنافاً وسأخصمه من إجمالي طلبك.",
+    ),
+    "coupon_how": (
+        "Send the code like this: coupon RAMADAN10",
+        "أرسل الرمز هكذا: كوبون RAMADAN10",
+    ),
+    "coupon_total_changed": (
+        "Your total is now {total}. Check it, then tap Place order.",
+        "أصبح إجمالي طلبك {total}. راجعه ثم اضغط إتمام الطلب.",
+    ),
     "draft_more": (
         "Send another code, link or name to add more, or tap Place order and I will send you "
         "the payment link.",
