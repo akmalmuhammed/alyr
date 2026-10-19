@@ -149,6 +149,9 @@ def _order_line(item: asyncpg.Record) -> dict:
         if name_ar else "",
         "sku": item["sku"] or "", "quantity": item["quantity"], "unit": "piece",
         "unit_price_minor": item["price"],
+        # What a discount took off this line (ALY-150): the paper shows it and still adds up to
+        # what the customer was charged.
+        **({"discount_minor": item["discount"]} if item["discount"] else {}),
     }
 
 
@@ -164,7 +167,7 @@ async def order_parts(conn: asyncpg.Connection, order_id: UUID):
         return None
     items = await conn.fetch(
         "select o.name, coalesce(nullif(o.name_ar, ''), p.name_ar, '') as name_ar, o.price, "
-        "o.quantity, o.variant_name, o.variant_name_ar, o.options, o.sku "
+        "o.quantity, o.variant_name, o.variant_name_ar, o.options, o.sku, o.discount "
         "from order_items o left join items p on p.id = o.item_id "
         "where o.order_id = $1 order by o.name, o.id",
         order_id,

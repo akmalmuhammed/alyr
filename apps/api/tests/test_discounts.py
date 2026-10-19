@@ -984,7 +984,7 @@ def test_with_the_feature_off_the_chat_does_not_treat_a_code_word_specially(clie
 
 
 def test_a_template_made_in_the_back_office_can_switch_discounts_on_for_every_shop_made_from_it(
-    office, owner
+    office, owner  # noqa: F811
 ):
     from test_templates import made, new_with
 

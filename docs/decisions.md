@@ -879,6 +879,11 @@ There is no separate Pay product: payment links stay a module of Chat and Bookin
 - **Deviations from the brief, deliberately:** a name that fits several items is one list to choose from (not several cards), and a single item is one card; an item with required extras sends the customer its page (the chat does not ask extras one by one); the "shop prefix" for a shared number is not built (a number is one shop's here); the copy of link-only orders in the team inbox is not built (the visitor has no contact).
 - **Left open:** Instagram's in-app browser and a real phone were not tried; the Arabic is a draft until ALY-66; the mode is the shop's own choice; a shop that gets its number connected (Embedded Signup, ALY-39) should switch to `chat`.
 
+**As built (ALY-150, part 1 of 3, 20 Oct 2026; discounts and coupon codes, `specs/014-pricing-pack/spec.md`).** Where the code fixed a detail the entry left open. None of it changes the decision.
+- **Money.** Whole minor units (dirhams) in `bigint`, as everywhere in ALYR, and a percentage as `numeric(6,3)` and `Decimal`; a float is refused. One rounding rule, in one pure function (`modules/orders/totals.py`).
+- **Off means invisible and inert.** The feature is off for every shop and template until switched on (422 `feature_off`, no screen, no report line) and acts only where the `catalog` module is on, so the older order page never shows a different total from the one charged.
+- **What this part does:** a coupon code a customer types (a percentage or an amount, or buy N get M free; the whole order or chosen items and categories; a minimum order; total and per-customer limits; dates; a price group; stackable or not) and automatic discounts; the discount shown line by line and in the total before payment and kept as a snapshot on the order; a limited code cannot be over-used and cancelling an order gives its use back; a Discounts screen for owners; a coupon box on the order page and "coupon CODE" in the WhatsApp order, in English and Arabic; a line in the weekly report.
+
 ## D-040 · ALYR's look is Carbon and Volt, and its values live in one token file
 **Date** 17 Oct 2026 · **Status** Accepted (founder, 17 Oct: Carbon and Volt is the brand, ALY-61) · Linear ALY-61, ALY-126 · Replaces the open question in D-025
 
