@@ -14,6 +14,7 @@ import pytest
 
 from alyr.modules.documents import canonical
 from documents_support import configured_shop, issue, issued, make_draft
+from pdf_support import page_text
 from test_consent import owner_sql
 
 
@@ -170,11 +171,13 @@ def test_an_issued_documents_hash_is_the_hash_of_what_is_stored(shop):
     pdf = shop.owner.get(f"/api/documents/{doc['id']}/pdf").content
     assert hashlib.sha256(pdf).hexdigest() == doc["pdf"]["sha256"]
     assert len(pdf) == doc["pdf"]["bytes"]
-    # The first sixteen digits are printed at the foot of the paper.
-    from pdf_support import page_text
-
-    printed = "".join(page_text(pdf).split())  # the reader may break the line anywhere
-    assert doc["content_hash"][:16].upper() in printed
+    # The first sixteen digits are printed at the foot of the paper. Read back from a page with
+    # no Arabic on it: next to Arabic a reader reorders the groups of digits (it was seen to,
+    # and the page itself is right: the ink shows them left to right).
+    plain = issued(shop.owner, "invoice", audience="business", languages="en")
+    text = page_text(shop.owner.get(f"/api/documents/{plain['id']}/pdf").content)
+    grouped = " ".join(plain["content_hash"][i:i + 4] for i in range(0, 16, 4)).upper()
+    assert grouped in text
 
 
 def test_two_documents_with_the_same_words_have_different_hashes(shop):
