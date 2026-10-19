@@ -110,6 +110,7 @@ async def snapshot(
         limit, max(limit - used, 0), assets, attached,
         frozenset(await features.file_columns(conn)),
         [f for f in await fields.rows(conn, False)] if feats.on("custom_fields") else [],
+        feats.on("decimal_quantity"),
     )
 
 

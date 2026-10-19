@@ -23,8 +23,11 @@ from test_sign_in import other_shop_with_owner, sign_in
 
 FEATURES = "/api/features"
 RECORD = "/api/items/settings/activity"
-LATER = ("decimal_quantity", "cost_margin", "discounts", "delivery_fees", "bundles", "suppliers",
+LATER = ("cost_margin", "discounts", "delivery_fees", "bundles", "suppliers",
          "barcode", "batch_expiry", "serial_imei")
+# Features that start OFF for a plain shop (the rest start on): "Sold by weight or volume" is on
+# only for the trades that weigh or pour (ALY-149).
+STARTS_OFF = ("decimal_quantity",)
 
 
 def view(client) -> dict:
@@ -69,7 +72,8 @@ def test_the_screen_lists_every_shipped_feature_in_groups_with_words_in_both_lan
         assert g["name"] and g["name_ar"]
         for f in g["features"]:
             assert f["hint"] and f["hint_ar"] and f["changes"] and f["changes_ar"], f["key"]
-            assert f["affects"] and f["enabled"] is True and f["set_by"] == "template"
+            assert f["affects"] and f["set_by"] == "template"
+            assert f["enabled"] is (f["key"] not in STARTS_OFF)
     assert answer["can_manage"] is True
     assert {c["key"] for c in answer["core"]} == {
         "names", "photos", "price", "stock_log", "categories", "sku", "import_export"}
@@ -90,7 +94,8 @@ def test_a_feature_that_is_not_built_is_in_no_answer_and_cannot_be_switched(clie
 
 def test_a_shop_that_has_every_feature_on_has_the_defaults_every_shop_had(client):
     answer = flat(client)
-    assert all(f["enabled"] for f in answer.values())
+    assert all(f["enabled"] for k, f in answer.items() if k not in STARTS_OFF)
+    assert not any(answer[k]["enabled"] for k in STARTS_OFF)
     assert answer["sold_out_display"]["config"] == {"mode": "grey"}
     assert answer["sold_out_display"]["kind"] == "choice"
 

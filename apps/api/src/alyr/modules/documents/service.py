@@ -423,7 +423,7 @@ def _iso(value):
 def _line_public(line: Mapping) -> dict:
     out = {c: line[c] for c in LINE_COLUMNS}
     # A quantity is exact, so it travels as text, never as a float.
-    out["quantity"] = format(line["quantity"].quantize(Decimal("0.001")), "f")
+    out["quantity"] = format(Decimal(line["quantity"]).quantize(Decimal("0.001")), "f")
     return out
 
 

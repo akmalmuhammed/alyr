@@ -79,7 +79,7 @@ def test_the_switchable_features_the_brief_asks_for_are_there():
 def test_the_extension_points_are_named_and_hidden():
     later = {c.key for c in capabilities.EXTENSION_POINTS}
     assert later == {
-        "decimal_quantity", "cost_margin", "discounts", "delivery_fees", "bundles", "suppliers",
+        "cost_margin", "discounts", "delivery_fees", "bundles", "suppliers",
         "barcode", "batch_expiry", "serial_imei",
     }
     for cap in capabilities.EXTENSION_POINTS:
@@ -109,8 +109,9 @@ def test_there_is_a_built_in_template_for_every_business_type_that_has_a_catalog
 def test_the_built_in_templates_turn_on_everything_a_shop_always_had():
     """Every part of the form and the order page's four extras were always there, so every
     built-in type starts with them on (spec 012, "identical behaviour")."""
+    # (Sold by weight or volume, ALY-149, is new and starts on only for the trades that weigh.)
     always = [c.key for c in capabilities.SWITCHABLE
-              if c.key not in ("low_stock_alerts", "sold_out_alerts")]
+              if c.key not in ("low_stock_alerts", "sold_out_alerts", "decimal_quantity")]
     for template in shop_templates.BUILTIN.values():
         for key in always:
             assert template.on(key), (template.key, key)

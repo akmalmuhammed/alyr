@@ -162,7 +162,7 @@ def of(migrated, key: str) -> dict[str, asyncpg.Record]:
 # Features registered after migration 0035 have no row for a shop that existed then: it gets its
 # template's value, which for these is on, so nothing changes for it (no migration is needed to
 # add a feature; the order-by-code merge, ALY-136, added "Order on WhatsApp").
-ADDED_LATER = {"order_on_whatsapp"}
+ADDED_LATER = {"order_on_whatsapp", "decimal_quantity"}
 
 
 def test_every_shop_gets_a_row_for_every_feature_it_can_have(migrated):
@@ -172,10 +172,14 @@ def test_every_shop_gets_a_row_for_every_feature_it_can_have(migrated):
     assert len(migrated["rows"]) == len(migrated["shops"]) * len(expected)
 
 
-def test_a_feature_added_after_the_migration_is_on_for_every_type_so_nothing_changes():
+def test_a_feature_added_after_the_migration_changes_nothing_for_a_shop_that_exists():
+    # "Order on WhatsApp" is on for every type, as the page always offered it. "Sold by weight or
+    # volume" (ALY-149) is on only for the trades that weigh or pour, and the migration that adds
+    # it writes OFF for every shop that exists (test_decimal_migration.py), so those do not change.
     for kind in TYPES:
-        for key in ADDED_LATER:
-            assert shop_templates.builtin_for(kind).features[key][0] is True, (kind, key)
+        assert shop_templates.builtin_for(kind).features["order_on_whatsapp"][0] is True, kind
+        assert shop_templates.builtin_for(kind).features["decimal_quantity"][0] is (
+            kind in shop_templates.SOLD_BY_MEASURE), kind
 
 
 @pytest.mark.parametrize("kind", TYPES)

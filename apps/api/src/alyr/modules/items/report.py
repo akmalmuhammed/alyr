@@ -22,7 +22,7 @@ import asyncpg
 from alyr.core.normalise import fmt_qar
 from alyr.core.words import DAYS, HOURS, ITEMS, counted
 from alyr.modules.items import clock as shop_clock
-from alyr.modules.items import features, listing, spells
+from alyr.modules.items import features, listing, qty, spells
 
 TITLE = {"en": "Catalog", "ar": "الكتالوج"}
 LINES = ("sold_out", "asked", "low", "best", "idle")
@@ -82,13 +82,17 @@ async def numbers(conn: asyncpg.Connection, start: datetime, end: datetime, tz: 
     sold = [dict(r) for r in await conn.fetch(
         "select max(coalesce(i.name, l.name)) as name, "
         "max(coalesce(nullif(i.name_ar, ''), nullif(l.name_ar, ''), i.name, l.name)) as name_ar, "
-        "sum(l.quantity)::int as units, sum(l.price * l.quantity)::bigint as value "
+        "sum(l.quantity) as units, sum(round(l.price * l.quantity))::bigint as value, "
+        "max(l.unit) as unit, bool_or(l.unit_shown) as shown "
         "from order_items l join orders o on o.id = l.order_id "
         "left join items i on i.id = l.item_id "
         "where o.created_at >= $1 and o.created_at < $2 and o.status <> 'cancelled' "
         "group by coalesce(l.item_id::text, l.name)",
         start, end,
     )]
+    for row in sold:  # the unit is kept only where it is written: a stored report keeps its shape
+        if not row.pop("shown"):
+            row.pop("unit")
     by_units = sorted(sold, key=lambda r: (-r["units"], -r["value"], r["name"]))[:LIST_MAX]
     by_value = sorted(sold, key=lambda r: (-r["value"], -r["units"], r["name"]))[:LIST_MAX]
     out["top_units"], out["top_value"] = by_units, by_value
@@ -160,7 +164,11 @@ def lines(n: dict, before: dict | None, lang: str) -> list[str]:
     low = n["low"]
     if "low" in show and low["count"]:
         left = "المتبقي {}" if ar else "{} left"
-        named = [f"{_name(i, lang)} ({left.format(i['left'])})" for i in low["items"]]
+        def have(i: dict) -> str:
+            shown = i.get("show_unit")
+            return left.format(qty.label(i["left"], i.get("unit", "piece"), shown, lang))
+
+        named = [f"{_name(i, lang)} ({have(i)})" for i in low["items"]]
         head = "مخزون قليل الآن" if ar else "Low on stock now"
         out.append(f"{head}: {_join(named, low['count'], lang)}")
     if "best" in show:
@@ -182,15 +190,20 @@ def _best(n: dict, lang: str) -> list[str]:
     comma = "، " if ar else ", "
     if [i["name"] for i in units] == [i["name"] for i in value]:
         both = comma.join(
-            f"{_name(i, lang)} ({i['units']}{comma}{fmt_qar(i['value'])})" for i in units
+            f"{_name(i, lang)} ({_units(i, lang)}{comma}{fmt_qar(i['value'])})" for i in units
         )
         return [f"{'الأكثر مبيعاً' if ar else 'Most sold'}: {both}"]
-    by_units = comma.join(f"{_name(i, lang)} ({i['units']})" for i in units)
+    by_units = comma.join(f"{_name(i, lang)} ({_units(i, lang)})" for i in units)
     by_value = comma.join(f"{_name(i, lang)} {fmt_qar(i['value'])}" for i in value)
     return [
         f"{'الأكثر مبيعاً' if ar else 'Most sold'}: {by_units}",
         f"{'الأكثر إيراداً' if ar else 'Biggest earners'}: {by_value}",
     ]
+
+
+def _units(row: dict, lang: str) -> str:
+    """How many were sold: "12", or "12.5 kg" for something sold in fractions."""
+    return qty.label(row["units"], row.get("unit") or "piece", "unit" in row, lang)
 
 
 def _name(row: dict, lang: str) -> str:

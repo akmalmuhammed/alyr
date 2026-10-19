@@ -27,6 +27,7 @@ from alyr.core.normalise import fmt_qar, fmt_qar_ar
 from alyr.core.workspace import module_enabled
 from alyr.modules.items import demand, features, template, text
 from alyr.modules.items.cart import CartLine
+from alyr.modules.items.qty import quantity_field
 from alyr.modules.items.service import MAX_QUANTITY
 from alyr.modules.orders import page, service
 from alyr.routes import customer_link
@@ -53,7 +54,7 @@ TOKEN = Field(
 
 class Line(BaseModel):
     product_id: UUID
-    quantity: int = Field(ge=1, le=MAX_QUANTITY)
+    quantity: quantity_field(gt=0, le=MAX_QUANTITY)
     variant_id: UUID | None = Field(default=None, description="The size or colour chosen")
     option_ids: list[UUID] = Field(default_factory=list, max_length=20)
     expected_price: int | None = Field(

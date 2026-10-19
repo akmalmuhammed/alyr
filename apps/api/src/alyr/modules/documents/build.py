@@ -14,6 +14,7 @@ promises:
 
 from collections.abc import Mapping, Sequence
 from datetime import UTC, datetime
+from decimal import Decimal
 
 from alyr.modules.documents import kinds, words
 from alyr.modules.documents.render.context import (
@@ -69,7 +70,7 @@ def customer_party(snapshot: Mapping) -> Party:
 def line_view(line: Mapping) -> Line:
     return Line(
         description=bi(line["description"], line["description_ar"]), sku=line["sku"],
-        quantity=line["quantity"], unit=line["unit"], unit_price=line["unit_price_minor"],
+        quantity=Decimal(line["quantity"]), unit=line["unit"], unit_price=line["unit_price_minor"],
         discount=line["discount_minor"], tax_rate_bp=line["tax_rate_bp"],
         net=line["line_net_minor"], tax=line["tax_minor"], total=line["line_total_minor"],
     )

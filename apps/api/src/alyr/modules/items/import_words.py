@@ -62,6 +62,19 @@ MESSAGES: dict[str, tuple[str, str, str]] = {
         "{column}: “{value}” is not a number.",
         "{column}: «{value}» ليس رقماً.",
     ),
+    "qty_decimals": (
+        "error",
+        "{column}: “{value}” has more than three decimals. Use at most three, like 0.25 or 12.5.",
+        "{column}: «{value}» فيه أكثر من ثلاث خانات عشرية. استخدم ثلاثاً على الأكثر، مثل 0.25 أو "
+        "12.5.",
+    ),
+    "decimal_off": (
+        "error",
+        "“Sold by weight or volume” is switched off for your shop, so this unit or fraction "
+        "cannot be added. Switch it on in Features.",
+        "ميزة «يُباع بالوزن أو الحجم» متوقفة في متجرك، لذلك لا يمكن إضافة هذه الوحدة أو هذا "
+        "الكسر. شغّلها من «الميزات».",
+    ),
     "not_whole": (
         "error",
         "{column}: “{value}” must be a whole number.",

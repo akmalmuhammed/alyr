@@ -106,7 +106,8 @@ def item_rows(
 
 def _styles(keys: tuple[str, ...]) -> list[int]:
     return [
-        xlsx.MONEY if k in columns.MONEY else xlsx.WHOLE if k in columns.WHOLE else xlsx.DEFAULT
+        xlsx.MONEY if k in columns.MONEY
+        else xlsx.WHOLE if k in columns.WHOLE or k in columns.QUANTITY else xlsx.DEFAULT
         for k in keys
     ]
 

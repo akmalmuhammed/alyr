@@ -26,6 +26,12 @@ from alyr.presets_catalog import GENERIC, SETUPS, CatalogSetup
 
 GENERIC_KEY = "generic"
 
+# The built-in types whose trade sells by weight or volume, which start with "Sold by weight or
+# volume" on: dates and spices at the baqala, a cake by the kilo. A perfume or oud shop is "Shop &
+# retail" here and starts with it off (the owner turns it on in Features, one switch); a
+# template made in the back office can start with it on.
+SOLD_BY_MEASURE = ("grocery", "bakery")
+
 # What a starter custom field can be: a short text, a number, one of a list, yes or no, a date.
 FIELD_KINDS = ("text", "number", "choice", "yes_no", "date")
 APPLIES_TO = ("item", "variant")
@@ -99,6 +105,9 @@ def _from_setup(key: str, name: Text, based_on: str, setup: CatalogSetup) -> Sho
             "low_stock_alerts": "low_stock" in setup.alerts,
             "sold_out_alerts": "sold_out" in setup.alerts,
             "sold_out_display": (True, {"mode": setup.sold_out}),
+            # Sold by weight or volume (ALY-149): the trades that weigh or pour. Every other type
+            # starts with it off, so a shop of any other type is exactly what it was.
+            "decimal_quantity": key in SOLD_BY_MEASURE,
         }),
         fields=STARTER_FIELDS.get(key, ()),
         optional=setup.optional,

@@ -30,7 +30,7 @@ from alyr.catalog import Text
 from alyr.core import team
 from alyr.core.team import Actor
 from alyr.core.words import ITEMS, counted
-from alyr.modules.items import changes
+from alyr.modules.items import changes, qty
 from alyr.modules.items.service import BilingualError
 
 SET_BY = ("template", "owner")
@@ -221,6 +221,9 @@ async def in_use(conn: asyncpg.Connection) -> dict[str, int]:
         "  on g.id = p.group_id and g.archived_at is null) as price_groups, "
         "(select count(*) from items where status <> 'archived' "
         "  and (pack_size is not null or min_order > 1)) as pack_rules, "
+        "(select count(*) from items where status <> 'archived' "
+        "  and (unit in ('g', 'l', 'ml', 'm', 'tola') or pack_size <> trunc(pack_size) "
+        "       or min_order <> trunc(min_order))) as decimal_quantity, "
         "(select count(*) from items where status <> 'archived' and cardinality(tags) > 0) "
         "  as tags"
     )
@@ -413,7 +416,7 @@ async def seed(
 async def item_parts(conn: asyncpg.Connection, item_id) -> dict:
     """What an item holds now of each part a feature governs, for `guard_item_change`."""
     row = await conn.fetchrow(
-        "select i.stock_rule, i.tags, i.pack_size, i.min_order, i.low_stock_at, "
+        "select i.stock_rule, i.tags, i.pack_size, i.min_order, i.low_stock_at, i.unit, "
         "(select count(*) from item_variants v where v.item_id = i.id and v.active "
         "  and not v.is_default) as variants, "
         "(select count(*) from item_option_groups g where g.item_id = i.id) as groups, "
@@ -428,7 +431,7 @@ async def item_parts(conn: asyncpg.Connection, item_id) -> dict:
     )
     return {
         "stock_rule": row["stock_rule"], "tags": list(row["tags"]), "pack_size": row["pack_size"],
-        "min_order": row["min_order"], "low_stock_at": row["low_stock_at"],
+        "min_order": row["min_order"], "low_stock_at": row["low_stock_at"], "unit": row["unit"],
         "variants": row["variants"] > 0, "option_groups": row["groups"] > 0,
         "group_prices": row["prices"] > 0, "schedule": [dict(r) for r in schedule],
     }
@@ -463,6 +466,22 @@ async def require(conn: asyncpg.Connection, key: str) -> None:
         raise _refuse(key)
 
 
+def _uses_decimal(data: dict) -> bool:
+    """The item uses "Sold by weight or volume": a measure other than the kilo, or a step or a
+    smallest order that is a fraction."""
+    if data.get("unit") and data["unit"] not in qty.LEGACY_UNITS:
+        return True
+    return any(
+        data.get(k) and data[k] != int(data[k]) for k in ("pack_size", "min_order")
+    )
+
+
+def _measure_step(feats: Features, data: dict) -> bool:
+    """A step or smallest order on an item sold by a measure belongs to "Sold by weight or
+    volume", not to "Pack sizes and smallest orders"."""
+    return feats.on("decimal_quantity") and qty.is_measure(data.get("unit") or "")
+
+
 def guard_new_item(feats: Features, data: dict) -> None:
     """A new item may not use a part whose feature is off. Raises `FeatureError`."""
     for part, key in _NEEDS.items():
@@ -473,9 +492,11 @@ def guard_new_item(feats: Features, data: dict) -> None:
         raise _refuse(capabilities.RULE_FEATURE[rule])
     if (data.get("tags") and not feats.on("tags")):
         raise _refuse("tags")
+    if not feats.on("decimal_quantity") and _uses_decimal(data):
+        raise _refuse("decimal_quantity")
     if not feats.on("pack_rules") and (
         data.get("pack_size") or (data.get("min_order") or 1) > 1
-    ):
+    ) and not _measure_step(feats, data):
         raise _refuse("pack_rules")
     if not feats.on("pickup_date") and any(
         (w.get("lead_days") or 0) > 0 or w.get("cutoff") for w in data.get("schedule") or []
@@ -497,11 +518,24 @@ def guard_item_change(feats: Features, current: dict, changes_: dict) -> None:
         raise _refuse(capabilities.RULE_FEATURE[rule])
     if changes_.get("tags") and not feats.on("tags") and not current.get("tags"):
         raise _refuse("tags")
+    if not feats.on("decimal_quantity"):
+        # Off stops new use: another measure than kg, or a step or smallest order that is a
+        # fraction, is refused unless the item already had it. What the item holds stays.
+        unit = changes_.get("unit")
+        if unit and unit != current.get("unit") and unit not in qty.LEGACY_UNITS:
+            raise _refuse("decimal_quantity")
+        for key in ("pack_size", "min_order"):
+            value = changes_.get(key)
+            if value and value != int(value) and value != current.get(key):
+                raise _refuse("decimal_quantity")
     if not feats.on("pack_rules"):
         pack = changes_.get("pack_size")
         floor = changes_.get("min_order")
-        if (pack and pack != current.get("pack_size")) or (
-            floor and floor > 1 and floor != current.get("min_order")
+        unit = changes_.get("unit") or current.get("unit")
+        by_step = feats.on("decimal_quantity") and qty.is_measure(unit or "")
+        if not by_step and (
+            (pack and pack != current.get("pack_size"))
+            or (floor and floor > 1 and floor != current.get("min_order"))
         ):
             raise _refuse("pack_rules")
     if not feats.on("pickup_date"):

@@ -117,7 +117,9 @@ async def low_items(conn: asyncpg.Connection, clock: ShopClock) -> list[dict]:
     """The items the Low stock filter holds, the lowest first, each with `left`."""
     views, low_at = await read(conn, clock)
     low = [
-        {"name": v["name"], "name_ar": v["name_ar"], "left": lowest_left(v, low_at)}
+        {"name": v["name"], "name_ar": v["name_ar"], "left": lowest_left(v, low_at),
+         # (only for something sold in fractions: a stored report keeps its old shape)
+         **({"unit": v["unit"], "show_unit": True} if v["quantity"]["show_unit"] else {})}
         for v in views if is_low(v, low_at)
     ]
     return sorted(low, key=lambda row: (row["left"], row["name"]))
