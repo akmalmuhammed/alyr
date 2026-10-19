@@ -1,5 +1,5 @@
 -- Documents: receipts, invoices, quotes and the rest, issued at the moment of sale (ALY-138,
--- decision D-042, spec 010).
+-- decision D-042, spec 011).
 --
 -- The rule this file exists to keep: once a document is issued, nobody can change it. Not the
 -- app, not a bug, not a later migration's careless UPDATE. The database refuses, by trigger

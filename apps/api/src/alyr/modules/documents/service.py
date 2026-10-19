@@ -1,4 +1,4 @@
-"""Making, issuing, crediting and reading documents (ALY-138, spec 010).
+"""Making, issuing, crediting and reading documents (ALY-138, spec 011).
 
 Every function takes a tenant-scoped connection (`async with db.tenant(id) as conn`); the
 caller's transaction is the issuing transaction. That is what makes issuing atomic: the
@@ -12,7 +12,7 @@ The life of a document:
 * **Issuing** allocates the next number under a row lock (`numbering.py`), copies the seller
   and the customer onto the document, hashes what it says, draws the PDF, and stores the PDF and
   flips the status, in the one transaction. From that moment the database refuses any change
-  (migration 0033).
+  (migration 0034).
 * A **credit note** is a new numbered document that points at the invoice (or receipt) it
   cancels, in whole or in part. When credit notes add up to the whole of it, the invoice
   becomes **void**. Nothing is ever deleted.

@@ -319,6 +319,144 @@ WORDS: dict[str, tuple[str, str]] = {
         "{link}",
         "أخبار سارة من {shop}: عاد «{name}» إلى المخزون كما طلبت. يمكنك الطلب من هنا: {link}",
     ),
+    # ── customers: ordering by code, link or name (ALY-136) ─────────────────────────
+    # A line that starts with a Latin letter or a digit in an Arabic sentence opens with
+    # U+200F so it reads right to left.
+    "card_code": ("Item code {number}", "‏كود الصنف {number}"),
+    "button_confirm": ("Confirm", "تأكيد"),
+    "button_change": ("Change", "تغيير"),
+    "button_place": ("Place order", "إتمام الطلب"),
+    "button_account": ("On my account", "على حسابي"),
+    "button_clear": ("Empty order", "تفريغ الطلب"),
+    "button_name": ("Search by name", "البحث بالاسم"),
+    "button_person": ("Talk to a person", "التحدث مع موظف"),
+    "check_head": (
+        "Please check your order from {shop}:", "راجع طلبك من {shop}:"
+    ),
+    "check_ask": (
+        "Tap Confirm to add this to your order.", "اضغط تأكيد لإضافته إلى طلبك."
+    ),
+    "check_ask_many": (
+        "Tap Confirm to add these to your order.", "اضغط تأكيد لإضافتها إلى طلبك."
+    ),
+    "line_qty": ("{qty} x {name} - {price}", "‏{qty} x {name} - {price}"),
+    "line_one": ("{qty} x {price} = {total}", "‏{qty} x {price} = {total}"),
+    "total": ("Total: {total}", "الإجمالي: {total}"),
+    "draft_head": ("Your order from {shop}:", "طلبك من {shop}:"),
+    "draft_added": ("Added to your order.", "تمت الإضافة إلى طلبك."),
+    "draft_more": (
+        "Send another code, link or name to add more, or tap Place order and I will send you "
+        "the payment link.",
+        "أرسل رمزاً أو رابطاً أو اسماً آخر للإضافة، أو اضغط إتمام الطلب لأرسل لك رابط الدفع.",
+    ),
+    "draft_more_account": (
+        "Send another code, link or name to add more, or place the order: pay by link or put "
+        "it on your account.",
+        "أرسل رمزاً أو رابطاً أو اسماً آخر للإضافة، أو أتمّ الطلب: الدفع برابط أو على حسابك.",
+    ),
+    "draft_empty": (
+        "Your order is empty. Send an item code, a link from our page, or a name to start.",
+        "طلبك فارغ. أرسل رمز صنف أو رابطاً من صفحتنا أو اسماً لتبدأ.",
+    ),
+    "draft_cleared": (
+        "Done. Your order is empty again.", "تم. أصبح طلبك فارغاً من جديد."
+    ),
+    "draft_full": (
+        "Your order already has {n} items, the most I can hold here. Place it first, or "
+        "order the rest on our page: {link}",
+        "طلبك يحتوي على {n} صنفاً، وهذا أقصى ما أستطيع حفظه هنا. أتمّه أولاً، أو اطلب الباقي "
+        "من صفحتنا: {link}",
+    ),
+    "change_ok": (
+        "No problem. Send the code, link or name of the item you want instead.",
+        "لا مشكلة. أرسل رمز الصنف الذي تريده أو رابطه أو اسمه.",
+    ),
+    "change_ok_again": (
+        "No problem. Send the code, link or name of the item you want instead, or say "
+        "\"same as last time\".",
+        "لا مشكلة. أرسل رمز الصنف الذي تريده أو رابطه أو اسمه، أو قل «نفس الطلب السابق».",
+    ),
+    "question_expired": (
+        "That question has run out. Send the code again and I will show it to you.",
+        "انتهت صلاحية هذا السؤال. أرسل الرمز مرة أخرى وسأعرضه عليك.",
+    ),
+    "variant_ask": (
+        "Which one of {name} would you like?", "أي خيار من «{name}» تريد؟"
+    ),
+    "needs_choices": (
+        "{name} has choices to make (a size or extras). Open it here and pick: {link}",
+        "«{name}» له خيارات يجب اختيارها (مقاس أو إضافات). افتحه من هنا واختر: {link}",
+    ),
+    "not_found": (
+        "I could not find {what} in {shop}. Check the number on the shop's page, or search "
+        "by name.",
+        "لم أجد {what} في {shop}. تأكد من الرقم في صفحة المتجر، أو ابحث بالاسم.",
+    ),
+    "not_found_what_code": ("code {number}", "‏الكود {number}"),
+    "not_found_what_sku": ("{sku}", "‏{sku}"),
+    "not_found_what_link": ("that item", "هذا الصنف"),
+    "not_found_what_category": ("that category", "هذا القسم"),
+    "not_found_other_shop": (
+        "That link is for another shop, so I cannot use it here. Send a code or a link from "
+        "{shop}'s page.",
+        "هذا الرابط لمتجر آخر فلا أستطيع استخدامه هنا. أرسل رمزاً أو رابطاً من صفحة {shop}.",
+    ),
+    "search_by_name": (
+        "Send the name of the item, for example: {example}",
+        "أرسل اسم الصنف، مثلاً: {example}",
+    ),
+    "too_many_misses": (
+        "That is a lot of codes I could not find. A person from {shop} will look at this and "
+        "reply here.",
+        "هذه رموز كثيرة لم أجدها. سيراجع أحد موظفي {shop} الأمر ويرد عليك هنا.",
+    ),
+    "cut_short": (
+        "I read the first {n} items of your message. Send the rest in another message.",
+        "قرأت أول {n} من الأصناف في رسالتك. أرسل الباقي في رسالة أخرى.",
+    ),
+    "person": (
+        "Thank you. A person from {shop} will read this and reply here.",
+        "شكراً لك. سيقرأ أحد موظفي {shop} رسالتك ويرد عليك هنا.",
+    ),
+    "person_unreadable": (
+        "Thank you, we received it. I cannot read pictures or voice messages, so a person "
+        "from {shop} will look at it and reply here.",
+        "شكراً لك، استلمنا رسالتك. لا أستطيع قراءة الصور أو الرسائل الصوتية، لذلك سيطلع عليها "
+        "أحد موظفي {shop} ويرد عليك هنا.",
+    ),
+    "category_head": (
+        "These are some of the items in {category} at {shop}. Pick one to see its photo and "
+        "price, or see them all here: {link}",
+        "هذه بعض أصناف قسم {category} في {shop}. اختر صنفاً لترى صورته وسعره، أو شاهدها كلها "
+        "من هنا: {link}",
+    ),
+    "category_empty": (
+        "There is nothing to order in {category} right now. Here is our page: {link}",
+        "لا يوجد ما يمكن طلبه في قسم {category} حالياً. هذه صفحتنا: {link}",
+    ),
+    "same_none": (
+        "You have not ordered from {shop} before, so there is nothing to repeat. Send a code, "
+        "a link or a name.",
+        "لم تطلب من {shop} من قبل، فلا يوجد ما يُكرَّر. أرسل رمزاً أو رابطاً أو اسماً.",
+    ),
+    "same_left_out": (
+        "Not included, because it is not available now: {names}",
+        "لم نضفه لعدم توفره الآن: {names}",
+    ),
+    "orders_off": (
+        "This shop does not take orders in the chat yet. Here is how to see the item: ask the "
+        "shop, or open its page.",
+        "هذا المتجر لا يستقبل الطلبات في المحادثة. اسأل المتجر أو افتح صفحته.",
+    ),
+    "order_refused": ("{reason}", "{reason}"),
+    "price_changed_note": (
+        "The price of {name} changed from {old} to {new}.",
+        "تغيّر سعر «{name}» من {old} إلى {new}.",
+    ),
+    "gone_note": ("{reason} I took it off your order.", "{reason} أزلته من طلبك."),
+    "check_changed": (
+        "Please check again before you confirm.", "راجع الطلب مرة أخرى قبل التأكيد."
+    ),
     # ── managers: alerts ────────────────────────────────────────────────────────────
     "alert_low": (
         "Low stock: {name} has only {left} left.",

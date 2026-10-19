@@ -21,6 +21,8 @@ export type Line = {
   extras: { name: string; name_ar: string }[];
   /** The 320 px photo, if there is one, for the review. */
   src: string;
+  /** The item's code, for the WhatsApp message (a line saved before codes existed has none). */
+  code?: number | null;
 };
 
 export const MAX_QUANTITY = 999;

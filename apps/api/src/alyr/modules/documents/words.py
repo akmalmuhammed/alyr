@@ -190,11 +190,15 @@ ERRORS: dict[str, Text] = {
         "Add the shop's name in the document settings before issuing.",
         "أضف اسم المتجر في إعدادات المستندات قبل الإصدار.",
     ),
+    # Friendly on purpose: the shop did nothing wrong. Whether an unregistered seller may issue
+    # an invoice at all is a question for the lawyer (ALY-51, spec 011); until it is answered
+    # the safe choice is a receipt, and the words must not read as a verdict on the shop.
     "registration_needed": Text(
-        "A shop without a commercial registration number can issue receipts, not invoices. "
-        "Add the number in the document settings, or issue a receipt.",
-        "يمكن للمتجر الذي ليس لديه رقم سجل تجاري إصدار إيصالات لا فواتير. أضف الرقم في "
-        "إعدادات المستندات، أو أصدر إيصالًا.",
+        "To issue an invoice, we need your shop's commercial registration (CR) number. "
+        "You can add it in your document settings. In the meantime you can issue a receipt, "
+        "which does not need one.",
+        "لإصدار فاتورة نحتاج إلى رقم السجل التجاري لمتجرك. يمكنك إضافته من إعدادات المستندات. "
+        "وفي الأثناء يمكنك إصدار إيصال، فهو لا يحتاج إلى هذا الرقم.",
     ),
     "payment_needed": Text(
         "A receipt is issued for money that has been paid in full. Add the payment, or "

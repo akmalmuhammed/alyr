@@ -1,5 +1,5 @@
 """Documents: receipts, invoices, quotes, delivery notes, statements, credit notes, deposit
-receipts and proformas for every shop (ALY-138, decision D-042, spec 010).
+receipts and proformas for every shop (ALY-138, decision D-042, spec 011).
 
 One engine, three ways in (later packages: from ALYR's own orders and bookings, typed by
 hand, sent by another system's API) and two ways out (send, export). This package is the

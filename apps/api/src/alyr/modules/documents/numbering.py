@@ -17,7 +17,7 @@ A number is a prefix, the year when the series restarts each year, and the count
 zeros: `INV-0042`, or `INV-2026-0042` in a series that begins again every January. A
 sequence (a Postgres SEQUENCE) is not used on purpose: it would not roll back.
 
-Three more guards sit in the database (migration 0033): the counter can only go up by one, a
+Three more guards sit in the database (migration 0034): the counter can only go up by one, a
 number is unique per shop, and each issued document's position is unique per series.
 """
 

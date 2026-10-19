@@ -33,6 +33,9 @@ export type PriceGroup = {
 export type GroupPrice = { group_id: string; variant_id: string | null; price: number; price_text: string };
 export type Item = {
   id: string; name: string; name_ar: string; sku: string; group_prices: GroupPrice[];
+  // The shop's short number for the item (ALY-136): set by the database, never changed. Null
+  // only for an example, which gets one when the owner keeps it.
+  code: number | null;
   // An example the shop's type started it with: never for sale, its price is an example, and
   // its tile is drawn from sample_key (nothing is stored). Saving it makes it the owner's.
   sample: boolean; sample_key: string;
@@ -60,6 +63,9 @@ export type Settings = {
   hold_minutes: number; day_starts: string; agents_edit_items: boolean; low_stock_at: number;
   // What customers see on the order page (ALY-112).
   sold_out_display: "grey" | "hide"; wholesale_layout: boolean; whatsapp_number: string;
+  // How customers order on WhatsApp (ALY-136): "chat" when the number runs on ALYR, "link" when
+  // the shop keeps its own and answers itself.
+  whatsapp_mode: "chat" | "link";
 };
 /** Where the shop's public order page is, and the number a shared link sends customers to. */
 export type ShareBase = { url: string; name: string; name_ar: string; whatsapp: string };

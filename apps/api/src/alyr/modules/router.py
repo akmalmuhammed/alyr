@@ -4,8 +4,9 @@ Each module is offered the message in turn and may decline. The ledger is last b
 it also owns the greeting menu. Only the modules the shop has switched on
 (`tenant_modules`) are offered the message (decision D-027).
 
-The Catalog (D-039) is two more things in that line: for a registered staff number, its
-commands and photos (`wa_staff`); for a customer, item names and the menu (`wa_customer`).
+The Catalog (D-039) is three more things in that line: for a registered staff number, its
+commands and photos (`wa_staff`); for a customer, an item named by its code, link or SKU and the
+order that follows (`wa_order`, ALY-136), then item names and the menu (`wa_customer`).
 Both only in a shop whose `catalog` module is on. A number that is not registered staff
 never reaches the commands, whatever it writes.
 """
@@ -20,7 +21,7 @@ from alyr.core.normalise import has_arabic
 from alyr.core.outbound import Outbound
 from alyr.modules import report
 from alyr.modules.bookings import chat as bookings_chat
-from alyr.modules.items import wa_customer, wa_staff
+from alyr.modules.items import wa_customer, wa_order, wa_staff
 from alyr.modules.ledger import chat as ledger_chat
 from alyr.modules.orders import chat as orders_chat
 
@@ -44,6 +45,15 @@ async def handle(
             replies = await wa_staff.maybe_handle(conn, contact, message)
             if replies is not None:
                 return replies
+    if "catalog" in modules and contact["role"] != "staff" and media is not None:
+        # An item named by its code, its link or its SKU, and the answers to the questions that
+        # follow (Confirm, Change, Place order). Before the other modules, so that a code is
+        # never taken for something else; a message with no code in it passes through.
+        replies = await wa_order.maybe_handle(
+            conn, tenant_id, contact, message, web_url, media, outbound, "orders" in modules
+        )
+        if replies is not None:
+            return replies
     if "bookings" in modules:
         replies = await bookings_chat.maybe_handle(
             conn, tenant_id, contact, message, web_url, outbound

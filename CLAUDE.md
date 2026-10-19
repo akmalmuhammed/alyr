@@ -62,8 +62,10 @@ apps/api/                     FastAPI service (Python 3.13, managed with uv)
                               orders/page.py is what the customer's order page reads (specs/005);
                               documents/ is the documents engine (receipts, invoices, credit notes:
                               gapless numbers, immutable once issued, a PDF drawn in Arabic and
-                              English; specs/010, D-042), switched on per shop through the
+                              English; specs/011, D-042), switched on per shop through the
                               `documents` module, off for every shop until its screens exist
+                              items/codes.py reads a customer's message for item codes, links and
+                              SKUs and items/wa_order.py orders by them in the chat (specs/010)
   src/alyr/routes/            HTTP routes. deps.py: who is calling, which shop, which modules are on
   src/alyr/catalog.py         What ALYR sells: modules and products (D-027)
   src/alyr/db.py              `Database.tenant(id)`: one transaction scoped to one tenant

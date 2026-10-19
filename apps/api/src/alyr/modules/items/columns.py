@@ -22,7 +22,7 @@ class Column:
     key: str
     en: str
     ar: str
-    kind: str  # id text money signed_money whole yesno word date list photos
+    kind: str  # id readonly text money signed_money whole yesno word date list photos
     aliases: tuple[str, ...]
     width: int
     hint: Text
@@ -39,6 +39,16 @@ COLUMNS: tuple[Column, ...] = (
             "Filled in by ALYR when you export. Keep it to update that item; leave it empty "
             "for a new item.",
             "تملؤه ALYR عند التصدير. أبقِه لتحديث الصنف نفسه، واتركه فارغاً لصنف جديد.",
+        ),
+    ),
+    Column(
+        "code", "Item code (ALYR)", "كود الصنف (ALYR)", "readonly",
+        ("alyr code", "alyr item code", "كود ALYR"), 12,
+        Text(
+            "The short number ALYR gave the item: customers send it in the chat to order. Only "
+            "for reading: it is never changed by a file.",
+            "الرقم القصير الذي أعطته ALYR للصنف: يرسله العملاء في المحادثة للطلب. للقراءة فقط: "
+            "لا يتغير بأي ملف.",
         ),
     ),
     Column(
@@ -218,7 +228,7 @@ BY_KEY = {c.key: c for c in COLUMNS}
 ORDER = tuple(c.key for c in COLUMNS)
 # Which kinds of column are numbers in the file (a spreadsheet gets a number cell).
 MONEY = ("price", "sale_price", "price_diff")
-WHOLE = ("pack_size", "min_order", "stock", "low_stock", "per_day")
+WHOLE = ("pack_size", "min_order", "stock", "low_stock", "per_day", "code")
 # The stock rules that count; the low-stock number means something only for these.
 COUNTED = ("count", "daily_limit")
 

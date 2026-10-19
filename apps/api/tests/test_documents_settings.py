@@ -1,4 +1,4 @@
-"""A shop's document settings (ALY-138, spec 010): who is selling, how its documents look, the
+"""A shop's document settings (ALY-138, spec 011): who is selling, how its documents look, the
 logo and the stamp, the colour, the numbering, and the checks on all of it."""
 
 import io
@@ -164,3 +164,46 @@ def test_the_optional_blocks_show_when_asked(shop):
     assert "QA58 QNBA" in text and "Fresh every morning" in text and "Open daily" in text
     assert "BR-001" in text
     assert "Issued with ALYR" not in text and "صدر عبر" not in text
+
+
+def test_issued_with_alyr_is_on_by_default_and_the_owner_or_an_admin_can_remove_it(shop):
+    """The line at the foot is ALYR's, on by default. It is the shop's paper, so the shop can
+    take it off: owners and admins only, on the activity record, on every layout. (English
+    business paper, so the read-back of the text is plain.)"""
+    shop.owner.put("/api/documents/settings", json={"default_audience": "business",
+                                                    "languages": "en"})
+
+    def mark_on(document_id: str) -> bool:
+        return "Issued with ALYR" in page_text(
+            shop.owner.get(f"/api/documents/{document_id}/pdf").content)
+
+    assert settings_of(shop.owner)["show_alyr_mark"] is True
+    first = issued(shop.owner)
+    assert mark_on(first["id"])
+    shop.owner.put("/api/documents/settings", json={"layout": "thermal80"})
+    assert mark_on(issued(shop.owner)["id"])
+    shop.owner.put("/api/documents/settings", json={"layout": "a4"})
+
+    # An agent cannot change it.
+    assert shop.agent.put("/api/documents/settings", json={"show_alyr_mark": False}
+                          ).status_code == 403
+    assert settings_of(shop.owner)["show_alyr_mark"] is True
+
+    # An admin can, and it is written down with who and from-to.
+    assert shop.admin.put("/api/documents/settings", json={"show_alyr_mark": False}
+                          ).status_code == 200
+    rows = owner_sql("select detail, actor_name from activity where tenant_id = $1 and "
+                     "subject = 'document' and action = 'settings_changed'", shop.tenant_id)
+    changes = {c["field"]: c for c in json.loads(rows[-1]["detail"])["changes"]}
+    assert rows[-1]["actor_name"] == "Admin"
+    assert changes["show_alyr_mark"]["from"] is True and changes["show_alyr_mark"]["to"] is False
+
+    # Gone from new paper on both layouts; paper issued before keeps what it had.
+    assert not mark_on(issued(shop.owner)["id"])
+    shop.owner.put("/api/documents/settings", json={"layout": "thermal80"})
+    assert not mark_on(issued(shop.owner)["id"])
+    assert mark_on(first["id"])
+
+    # And the owner can put it back.
+    shop.owner.put("/api/documents/settings", json={"show_alyr_mark": True})
+    assert mark_on(issued(shop.owner)["id"])

@@ -1,4 +1,4 @@
-"""Money on documents (ALY-138, spec 010): whole numbers of the smallest unit, one rounding
+"""Money on documents (ALY-138, spec 011): whole numbers of the smallest unit, one rounding
 rule that the code and the database both keep, and no float anywhere near an amount.
 
 Amounts are dirhams, as everywhere in ALYR (1 QAR = 100): `12700` is QAR 127.00."""

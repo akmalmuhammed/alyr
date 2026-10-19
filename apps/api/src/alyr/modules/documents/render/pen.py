@@ -9,7 +9,7 @@ Latin text, IBM Plex Mono for the verification code. Both text faces are embedde
 subsets, so a document opens the same on a phone, a laptop and a printer with no fonts of its
 own, and nothing is fetched while it is drawn.
 
-Rules that came out of the PDF spike (`specs/010-documents-engine/spec.md`):
+Rules that came out of the PDF spike (`specs/011-documents-engine/spec.md`):
 
 * A string with any Arabic in it is set wholly in Plex Sans Arabic, which carries the Latin
   glyphs too. Splitting a string between two faces drops the diacritics' positioning.

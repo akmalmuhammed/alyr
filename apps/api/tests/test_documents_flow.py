@@ -1,5 +1,5 @@
 """The life of a document through the API: a draft, its issue, its PDF, a credit note
-(ALY-138, spec 010). Who may do what, the retried request, the module that is off, the
+(ALY-138, spec 011). Who may do what, the retried request, the module that is off, the
 language rule, the rule for a shop with no registration number, and one shop never seeing
 another's.
 
@@ -484,7 +484,7 @@ def test_missing_arabic_is_a_warning_not_a_refusal(shop):
 
 
 def test_a_consumer_document_that_leads_in_english_is_warned_about(shop):
-    """The ministry's circular is reported to want Arabic as the main language (spec 010,
+    """The ministry's circular is reported to want Arabic as the main language (spec 011,
     open question for the lawyer). Allowed, and said."""
     english_first = make_draft(shop.owner, languages="en_ar")
     assert "arabic_not_main" in [w["code"] for w in english_first["warnings"]]
@@ -504,6 +504,11 @@ def test_a_shop_without_a_registration_number_issues_receipts_not_invoices(clien
         answer = issue(shop.owner, draft["id"])
         assert (answer.status_code, answer.json()["code"]) == (422, "registration_needed")
         assert "receipt" in answer.json()["detail"] and answer.json()["message_ar"]
+        # Friendly: it says what the shop needs and what it can do now, in both languages,
+        # and does not read as a verdict.
+        assert "commercial registration" in answer.json()["detail"]
+        assert "السجل التجاري" in answer.json()["message_ar"] and "إيصال" in answer.json()["message_ar"]
+        assert "cannot" not in answer.json()["detail"].lower()
     receipt = issued(shop.owner, "receipt")
     assert receipt["seller"]["registered"] is False and receipt["kind"] == "receipt"
     text = page_text(shop.owner.get(f"/api/documents/{receipt['id']}/pdf").content)

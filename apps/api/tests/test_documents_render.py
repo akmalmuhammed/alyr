@@ -1,4 +1,4 @@
-"""The PDF engine (ALY-138, spec 010): Arabic shaping, joining, diacritics and mixed text in
+"""The PDF engine (ALY-138, spec 011): Arabic shaping, joining, diacritics and mixed text in
 the same line, A4, A5 and the 80 mm roll, both directions, one page and many, and a layout
 that cannot change by accident.
 

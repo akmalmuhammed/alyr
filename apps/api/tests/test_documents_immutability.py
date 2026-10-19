@@ -1,4 +1,4 @@
-"""An issued document cannot be changed (ALY-138, spec 010).
+"""An issued document cannot be changed (ALY-138, spec 011).
 
 Every refusal here is the *database's*, proved as the application's own role (`alyr_app`, the
 one the API connects as) and again as the table owner. The API's own checks come first in real

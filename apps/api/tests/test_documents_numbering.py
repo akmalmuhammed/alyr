@@ -1,4 +1,4 @@
-"""Gapless numbering (ALY-138, spec 010): one counter per shop, kind and series, taken under a
+"""Gapless numbering (ALY-138, spec 011): one counter per shop, kind and series, taken under a
 row lock inside the issuing transaction.
 
 The promise, in the order the tests keep it:

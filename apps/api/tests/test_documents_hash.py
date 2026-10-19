@@ -1,4 +1,4 @@
-"""The hash of an issued document (ALY-138, spec 010): SHA-256 of its content in canonical
+"""The hash of an issued document (ALY-138, spec 011): SHA-256 of its content in canonical
 JSON. The same content always gives the same hash; any change to what the paper says gives a
 different one; and a document altered behind the database's back is caught by `verify`.
 """

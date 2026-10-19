@@ -1,8 +1,8 @@
-"""The PDF engine (ALY-138, spec 010): a finished `Doc` in, the bytes of a PDF out.
+"""The PDF engine (ALY-138, spec 011): a finished `Doc` in, the bytes of a PDF out.
 
 fpdf2 draws it and HarfBuzz (uharfbuzz) shapes the Arabic. No network, no system library, no
 clock, no randomness: the same `Doc` always gives the same bytes. See `pen.py` for how text is
-set and `specs/010-documents-engine/spec.md` for why this and not WeasyPrint, a headless
+set and `specs/011-documents-engine/spec.md` for why this and not WeasyPrint, a headless
 browser or reportlab.
 """
 

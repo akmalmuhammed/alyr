@@ -227,7 +227,7 @@ def warnings_for(columns: Mapping, lines: Sequence[Mapping], seller: Mapping) ->
         return []
     found = []
     # The ministry's circular is reported as asking for Arabic as the main language of a
-    # consumer invoice (spec 010, open question); Arabic first is the safe choice.
+    # consumer invoice (spec 011, open question); Arabic first is the safe choice.
     if columns["audience"] == "consumer" and columns["languages"] == "en_ar":
         found.append("arabic_not_main")
     if any(not (line["description_ar"] or has_arabic(line["description"])) for line in lines):

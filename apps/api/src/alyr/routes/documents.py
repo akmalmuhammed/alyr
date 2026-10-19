@@ -1,4 +1,4 @@
-"""Documents in the workspace: receipts, invoices, quotes and the rest (ALY-138, spec 010).
+"""Documents in the workspace: receipts, invoices, quotes and the rest (ALY-138, spec 011).
 
 Answers only for shops with the `documents` module on (it is off for every shop until the
 screens and the sales hooks of packages 2 and 3 exist). Who may do what is in

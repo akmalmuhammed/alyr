@@ -75,6 +75,7 @@ def _row(
     normal = availability.item_price(i, now)
     row = {
         "id": str(i["id"]), "name": i["name"], "name_ar": i["name_ar"], "sku": i["sku"],
+        "code": i["code"],
         "category": i["category"], "price": price, "price_text": fmt_qar(price),
         "price_source": "group" if from_group else "normal",
         "available": i["available"], "status": i["status"], "stock_rule": i["stock_rule"],
