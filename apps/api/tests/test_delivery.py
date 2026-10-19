@@ -331,6 +331,7 @@ def test_a_zones_minimum_order_is_judged_after_discounts_and_refused_in_both_lan
     settings(client, delivery=True)
     [who] = people(client, 1)
     item = cake(client)
+    before = owner_sql("select count(*) as n from orders")[0]["n"]
     short = check(client, who, [line(item)], fulfilment=go(zone_id=wakra["id"])).json()
     assert short["ok"] is False
     problem = short["pricing"]["delivery"]["problem"]
@@ -339,7 +340,7 @@ def test_a_zones_minimum_order_is_judged_after_discounts_and_refused_in_both_lan
     assert problem["message_ar"] == "التوصيل إلى الوكرة يتطلب طلباً لا يقل عن 150 ر.ق."
     refused = place(client, who, [line(item)], go(zone_id=wakra["id"]))
     assert refused.status_code == 422 and detail(refused)["code"] == "delivery_minimum"
-    assert owner_sql("select count(*) as n from orders")[0]["n"] == 0
+    assert owner_sql("select count(*) as n from orders")[0]["n"] == before
     assert place(client, who, [line(item, 2)], go(zone_id=wakra["id"])).status_code == 200
 
 
@@ -350,6 +351,7 @@ def test_the_choices_that_cannot_be_served_are_refused_with_plain_reasons(shop):
     [who] = people(client, 1)
     item = cake(client)
     cart = [line(item)]
+    before = owner_sql("select count(*) as n from orders")[0]["n"]
     cases = [
         (None, "fulfilment_required"),
         (go(zone_id=None), "zone_required"),
@@ -367,7 +369,7 @@ def test_the_choices_that_cannot_be_served_are_refused_with_plain_reasons(shop):
     assert detail(place(client, who, cart, go("pickup")))["code"] == "pickup_off"
     settings(client, pickup=True, delivery=False)
     assert detail(place(client, who, cart, go(zone_id=wakra["id"])))["code"] == "delivery_off"
-    assert owner_sql("select count(*) as n from orders")[0]["n"] == 0
+    assert owner_sql("select count(*) as n from orders")[0]["n"] == before
 
 
 def test_when_there_is_only_one_way_nobody_is_asked(shop):
