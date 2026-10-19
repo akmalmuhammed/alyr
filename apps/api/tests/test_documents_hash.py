@@ -173,7 +173,8 @@ def test_an_issued_documents_hash_is_the_hash_of_what_is_stored(shop):
     # The first sixteen digits are printed at the foot of the paper.
     from pdf_support import page_text
 
-    assert doc["content_hash"][:4].upper() in page_text(pdf)
+    printed = "".join(page_text(pdf).split())  # the reader may break the line anywhere
+    assert doc["content_hash"][:16].upper() in printed
 
 
 def test_two_documents_with_the_same_words_have_different_hashes(shop):

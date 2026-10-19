@@ -24,7 +24,7 @@ All secondary sources, read on 19 Oct 2026. None is legal advice; the lawyer's a
 1. **One table for eight kinds.** `documents`, `document_lines`, `document_files`, `document_settings`, `document_series` (migration 0033). What differs between kinds is a small table in `kinds.py` (needs a customer, needs a CR number, how it records money, what its second date is called), not an `if` ladder.
 2. **Money is whole minor units** (dirhams: 1 QAR = 100), `bigint`, as in orders and the ledger. Currencies carry their exponent (QAR 2, KWD 3), copied onto the document. A quantity is `numeric(12,3)`. Rounding is one rule, half up per line (price times quantity, less the discount; tax on that), and it is a `CHECK` on the line, so the code and the database cannot drift (a test runs 400 random lines through both). No float exists in the code that handles money (a test reads the source), the schema has no float column (a test reads the catalogue), and the API refuses `10.5` and `10.0` for an amount (`StrictInt`).
 3. **Tax is in the model, off by default.** A line has a rate in basis points and a tax amount; a shop turns tax on in its settings; with it off a line with tax is refused. An invoice is called "Tax invoice" only when it carries tax *and* the seller has a tax number; otherwise it is "Invoice". Tax is exclusive of price; inclusive pricing is for the country pack that needs it.
-4. **The PDF is stored in the database**, in `document_files` (insert-only), not in R2. Hard rule 2 and `data-residency.md` say R2 holds product photos and "never customer data, documents or ID photos"; an invoice carries a customer's name and phone number. It also makes the number, the PDF and the hash commit together or not at all. A document is 25 to 60 KB. A Qatar object store behind the existing `Store` interface (`core/storage.py`) is the move when volume asks for one (about 20,000 documents is 1 GB); the interface was not used now because its only production backend is R2 and its keys are photo keys.
+4. **The PDF is stored in the database**, in `document_files` (insert-only), not in R2. Hard rule 2 and `data-residency.md` say R2 holds product photos and "never customer data, documents or ID photos"; an invoice carries a customer's name and phone number. It also makes the number, the PDF and the hash commit together or not at all. A document is 25 to 60 KB. A Qatar object store behind the existing `Store` interface (`core/storage.py`) is the move when volume asks for one (25,000 to 40,000 documents is 1 GB); the interface was not used now because its only production backend is R2 and its keys are photo keys.
 5. **The logo and the stamp are kept in the settings row** (small PNGs, checked by `core/images.py` like a product photo: by content, no SVG, no metadata, no animation), not fetched from a store at draw time. A document remembers their SHA-256, not their bytes; its PDF has them drawn in.
 
 ## Numbering
@@ -39,7 +39,7 @@ A failure at any step rolls back the transaction and the counter with it: no num
 
 Guards in the database, so the application can be wrong without a duplicate or a hole being stored: a trigger lets a counter move up by exactly one, or restart at 1 when the year has gone forward; a unique index on `(shop, number)`; a unique index on `(shop, kind, series, year, seq)`; and the issue trigger demands that the document's `seq` is the counter's current value.
 
-Cost of the lock: the PDF is drawn while it is held, so a series issues about 4 to 8 documents a second (a draw is 120 to 180 ms). A shop issuing one every few seconds is fine; a connected POS issuing in bursts would want the draw moved before the lock with the number written afterwards, which means drawing the number as a later stamp. Not needed now.
+Cost of the lock: the PDF is drawn while it is held, so a series issues about 3 to 7 documents a second (a draw is 140 ms for an A4 page and up to 280 ms for A5 and the roll, which are drawn twice to measure them; best of 20, warm, in the API's image on a laptop). A shop issuing one every few seconds is fine; a connected POS issuing in bursts would want the draw moved before the lock with the number written afterwards, which means drawing the number as a later stamp. Not needed now.
 
 ## Immutability
 
@@ -92,7 +92,7 @@ One sample page (Arabic with diacritics, an Arabic line with an invoice number, 
 | RTL table | By hand: the columns are placed from the page's start edge | Native CSS | By hand | Native CSS |
 | Text read back | Glyph order; letters right, order guessed by the reader | Same | **Presentation forms** (searching the PDF for a word fails) | Same family |
 | System libraries | **None.** Pure Python plus a 2 MB HarfBuzz wheel | Pango, pangoft2, harfbuzz-subset: an `apt-get` step in CI and in the image | None | A browser, about 250 MB, and a process per draw |
-| Draw time of the sample | 75 ms (the real documents: 120 to 180 ms, two passes included) | 124 ms, but 1.2 s to import | 9 ms | not measured |
+| Draw time of the sample | 75 ms (the real documents: 140 to 280 ms, two passes included) | 124 ms, but 1.2 s to import | 9 ms | not measured |
 | File | 25 KB | 17 KB | 32 KB | not measured |
 | Deterministic | Yes: same bytes for the same input (fixed creation date, no random ids) | Not tested | Not tested | Not tested |
 | Licences | fpdf2 LGPL-3.0, uharfbuzz Apache-2.0 | BSD-3 | BSD | BSD |
@@ -128,7 +128,20 @@ The golden files (`tests/golden/documents/`) hold every drawing call with its pl
 
 ### Mutation checks
 
-See the pull request for what was broken and which tests failed (the table is repeated there as it was run).
+Each thing below was broken on purpose, the tests named run, and the break undone (19 Oct 2026, on a scratch database, in Docker):
+
+| What was broken | What failed |
+|---|---|
+| `for update` taken out of the statement that reads the counter (`numbering.LOCK_SERIES`) | 3 of 14 numbering tests: twenty issues at once (duplicates and failed requests), some failing while others issue, and the test that shows the scenario breaks without the lock (it also asserts the statement still has the lock). The database's unique index kept a duplicate number from being stored |
+| The trigger `documents_guard` not created | 39 of 135: every column of an issued document, a change that changes nothing, delete, the owner's attempts, the attempts to switch the guard off, a void with no credit note, a draft made to look issued, and two hash tests (the stored hash and tampering) |
+| `seller` left out of the canonical content | 3 hash tests: the pinned hash, the seller field's sensitivity, and the stored hash of an issued document (the last once; it was also a flaw in the test, which read the printed code too loosely, and is fixed) |
+| Rounding half to even instead of half up | 5 money tests: four cases of the rule and the 400-line comparison with Postgres |
+| The consumer Arabic rule removed | 2 flow tests (settings, a single document) |
+| Text shaping switched off | 18 render tests: the four joined words, the width, mixed text, the currency, the preview and all ten golden layouts |
+| The advisory lock on the idempotency key removed | 1: six identical requests at once |
+| Invoices allowed without a CR number | 1: the registration rule |
+
+In the numbering break, the duplicate was never stored: the second request's INSERT met the unique index and failed. That is the design: the lock gives every request a number; the index is what makes a bug in the lock cost a failed request, not a duplicate on paper.
 
 ## Not built, on purpose
 
