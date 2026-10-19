@@ -311,6 +311,8 @@ def _parse_cell(column: columns.Column, cell: object) -> object:
             return UUID(text)
         except ValueError as error:
             raise CellError("bad_id", value=text[:60]) from error
+    if kind == "readonly":
+        return None  # the item's code (ALY-136): in the file to be read, never to be written
     if kind == "text":
         text = values.clean(cell, multiline=key.startswith("description"))
         if len(text) > LIMITS[key]:

@@ -58,29 +58,31 @@ def stock_of(client, item):
 # ── an item in the chat ──────────────────────────────────────────────────────────────
 
 
-def test_an_item_name_brings_its_photo_with_the_price_and_an_order_button(client):
+def test_an_item_name_brings_its_photo_with_the_price_and_confirm_and_change(client):
     item = with_photo(client, mk(client, name="Chicken Shawarma", name_ar="شاورما دجاج",
                                  price=1200, description="Wrapped in warm bread"))
     card = talk(client, AHMED_PHONE, "shawarma")[-1]
     assert card["kind"] == "buttons"
     assert card["body"].startswith("*Chicken Shawarma*\nWrapped in warm bread\nQAR 12")
-    assert choices(card) == [{"id": "order", "title": "Order"}]
+    assert [c["title"] for c in choices(card)] == ["Confirm", "Change"]
     # The picture travels with it, as a JPEG (WhatsApp takes no WebP).
     [(kind, size)] = picture_sent_with(AHMED_PHONE)
     assert kind == "image/jpeg" and size > 1000
-    # Tapping Order gives the order link, as it always did.
-    link = talk(client, AHMED_PHONE, reply_id="order")[-1]
-    [(ahmed,)] = owner_sql("select id from contacts where phone = $1", AHMED_PHONE)
-    assert order_link_for(link["body"]).contact_id == ahmed
-    assert "?c=" not in link["body"]
+    # Confirm puts exactly that item in the order (ALY-136); nothing is placed yet.
+    shown = talk(client, AHMED_PHONE, reply_id=choices(card)[0]["id"])[-1]
+    assert "1 x Chicken Shawarma - QAR 12" in shown["body"]
+    ids = [c["id"] for c in choices(shown)]
+    assert ids[0] == "cart_place" and ids[-1] == "cart_clear"  # Ahmed also has an account
+    assert owner_sql("select count(*) as n from orders where tenant_id = $1",
+                     DEMO_TENANT_ID)[0]["n"] == 0
     assert fresh(client, item)["status"] == "live"
 
 
 def test_the_same_in_arabic_with_arabic_spellings_and_small_talk(client):
     with_photo(client, mk(client, name="Rice", name_ar="أرز", price=800))
     card = talk(client, AHMED_PHONE, "عندكم ارز؟")[-1]  # no hamza, and "do you have"
-    assert card["body"].startswith("*أرز*\nQAR 8") and choices(card) == [
-        {"id": "order", "title": "اطلب"}]
+    assert card["body"].startswith("*أرز*\n8 ر.ق")
+    assert [c["title"] for c in choices(card)] == ["تأكيد", "تغيير"]
     assert picture_sent_with(AHMED_PHONE)
 
 
@@ -114,9 +116,11 @@ def test_the_card_shows_a_sale_a_choice_of_sizes_and_a_nearly_gone_item(client):
        stock_rule="count", variants=[
            {"name": "S", "name_ar": "S", "opening_stock": 2, "price_delta": 0},
            {"name": "L", "name_ar": "L", "opening_stock": 1, "price_delta": 1000}])
-    card = talk(client, AHMED_PHONE, "abaya")[-1]
+    # The item is shown first, then the customer chooses the size.
+    card, question = talk(client, AHMED_PHONE, "abaya")[-2:]
     assert "from QAR 120 (was QAR 150)" in card["body"]
     assert "Choices: S, L" in card["body"] and "Only 3 left" in card["body"]
+    assert question["kind"] == "list" and [r["title"] for r in choices(question)] == ["S", "L"]
 
 
 def test_an_item_that_is_not_for_sale_is_never_shown(client):

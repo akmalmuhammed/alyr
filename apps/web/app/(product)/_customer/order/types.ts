@@ -52,6 +52,8 @@ export type Item = {
   name: string;
   name_ar: string;
   sku: string;
+  /** The shop's short number for the item (ALY-136): what a customer sends in the chat. */
+  code: number | null;
   category: string;
   description: string;
   description_ar: string;
@@ -95,7 +97,11 @@ export type LinkState = { state: "none" | "ok" | "invalid" | "expired"; message:
 
 export type Group2 = { id: string; name: string; name_ar: string; is_default: boolean };
 
-export type Settings = { sold_out_display: "grey" | "hide"; wholesale_layout: boolean; whatsapp_number: string };
+export type Settings = {
+  sold_out_display: "grey" | "hide"; wholesale_layout: boolean; whatsapp_number: string;
+  /** chat: the number runs on ALYR and the chat reads codes. link: the shop answers itself. */
+  whatsapp_mode: "chat" | "link";
+};
 
 /** What the shop's type of business says about its page (`GET /api/store/{slug}` → `catalog`,
  *  specs/008): the section's name and how the items are laid out. `null` without the Catalog. */

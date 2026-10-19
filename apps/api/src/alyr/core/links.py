@@ -194,9 +194,14 @@ def read(
     return Link(UUID(bytes=payload[2:18]), table, expires, made_for)
 
 
-def order_url(web_url: str, slug: str, tenant_id: UUID, contact_id: UUID, table: str = "") -> str:
-    """The order page link sent to one customer."""
-    return f"{web_url}/s/{slug}?t={mint(tenant_id, contact_id, purpose=ORDER, table=table)}"
+def order_url(
+    web_url: str, slug: str, tenant_id: UUID, contact_id: UUID, table: str = "",
+    item: UUID | str = "",
+) -> str:
+    """The order page link sent to one customer. With `item`, the page opens on that item
+    (the item is only a place to open: the link's token is what makes it theirs)."""
+    link = f"{web_url}/s/{slug}?t={mint(tenant_id, contact_id, purpose=ORDER, table=table)}"
+    return f"{link}&item={item}" if item else link
 
 
 def booking_url(web_url: str, slug: str, tenant_id: UUID, contact_id: UUID) -> str:

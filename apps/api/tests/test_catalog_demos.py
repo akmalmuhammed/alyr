@@ -193,6 +193,14 @@ def test_the_tiles_are_drawn_the_same_every_time_small_and_accepted_by_the_photo
 # ── what each shop has ────────────────────────────────────────────────────────────────────
 
 
+def test_the_demo_shops_are_on_chat_explicitly_so_their_test_lines_read_codes(shops):
+    """A shop starts on `link` (it keeps its own number); the demo shops' numbers are
+    simulator lines, which ALYR answers, so they say `chat` (ALY-136)."""
+    for shop in SHOPS:
+        assert scalar("select count(*) as n from shop_settings where tenant_id = $1 "
+                      "and whatsapp_mode = 'chat'", shop.tenant_id) == 1, shop.key
+
+
 def test_each_shop_has_its_items_in_two_languages_with_a_tile_and_the_catalog_on(shops):
     for shop in SHOPS:
         made = shops[shop.key][0]
