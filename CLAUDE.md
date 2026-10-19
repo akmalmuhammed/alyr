@@ -59,6 +59,11 @@ apps/api/                     FastAPI service (Python 3.13, managed with uv)
                               template.py and samples.py give each business type its catalog
                               (specs/008; the words are in src/alyr/presets_catalog.py, and
                               Settings.catalog_for_new_shops decides whether new shops get it);
+                              features.py reads what a shop has switched on (src/alyr/capabilities.py
+                              is the registry, src/alyr/shop_templates.py the templates; specs/012):
+                              ask it, never the business type; fields.py is a shop's own fields on
+                              items and sizes, templates.py the templates made in the back office,
+                              template_change.py a shop's change of type (all specs/012);
                               orders/page.py is what the customer's order page reads (specs/005);
                               documents/ is the documents engine (receipts, invoices, credit notes:
                               gapless numbers, immutable once issued, a PDF drawn in Arabic and
@@ -66,7 +71,7 @@ apps/api/                     FastAPI service (Python 3.13, managed with uv)
                               `documents` module, off for every shop until its screens exist;
                               sales.py, payments.py and delivery.py make documents from orders,
                               credit accounts and payments recorded by hand and send them by
-                              WhatsApp, email and a hosted link (specs/012, ALY-139)
+                              WhatsApp, email and a hosted link (specs/013, ALY-139)
                               items/codes.py reads a customer's message for item codes, links and
                               SKUs and items/wa_order.py orders by them in the chat (specs/010)
   src/alyr/routes/            HTTP routes. deps.py: who is calling, which shop, which modules are on

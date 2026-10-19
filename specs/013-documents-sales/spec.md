@@ -59,13 +59,13 @@ Who: owners and admins; an agent only when `agents_may_record_payments` is on (`
 
 **Settings** (added to `document_settings`, on the activity record with from and to): `auto_receipt_on_payment`, `auto_invoice_credit_sales`, `auto_deposit_receipt` (all on), `auto_send_whatsapp`, `auto_send_email` (on; email only when there is an address), `send_mode` (`automatic` or `manual`: documents go out at once, or only when staff press send), `agents_may_record_payments` (off). The three "auto" document switches apply to hand-recorded payments too (a person can still ask for the receipt later, or say `receipt: true`).
 
-## Tables (migration 0035)
+## Tables (migration 0038)
 
 `manual_payments`, `document_deliveries` (RLS forced; the app role can read, insert and update, and a trigger makes a recorded payment append-only; a unique index allows one automatic delivery per document and channel), seven columns on `document_settings`, `contacts.email`, and `message_media` may now hold `application/pdf`.
 
 ## Tests
 
-About 170 new, all through the real path (real PostgreSQL, the HTTP API, the job queue and a recording stand-in for the WhatsApp channel; the email provider is a mock transport):
+144 new tests (the whole suite: 2,046 passed, 2 skipped, on my own scratch database after merging main), all through the real path (real PostgreSQL, the HTTP API, the job queue and a recording stand-in for the WhatsApp channel; the email provider is a mock transport):
 
 | What it proves | Where |
 |---|---|

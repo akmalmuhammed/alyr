@@ -18,6 +18,7 @@ from zoneinfo import ZoneInfo
 
 import asyncpg
 
+from alyr import shop_templates
 from alyr.core import consent
 from alyr.core.media import MediaService
 from alyr.core.team import Actor
@@ -201,6 +202,7 @@ async def start(conn: asyncpg.Connection, shop: Shop, now: datetime, history_sta
     """Modules, settings, categories, groups, the team and their phones."""
     preset = PRESET_BY_KEY[shop.kind]
     setup = setup_for(shop.kind)
+    tpl = shop_templates.builtin_for(shop.kind)
     await conn.execute(
         "insert into tenant_modules (module_key, enabled_at, enabled_by) "
         "select unnest($1::text[]), $2::timestamptz, 'demo setup'",
@@ -208,7 +210,7 @@ async def start(conn: asyncpg.Connection, shop: Shop, now: datetime, history_sta
     )
     clock = ShopClock(now, TZ)
     # The type's starting values, its categories, and no sample items: these are real items.
-    await template.apply(conn, setup, clock, samples_too=False)
+    await template.apply(conn, tpl, clock, samples_too=False)
     await conn.execute(
         "update shop_settings set whatsapp_number = $1, day_starts = $2::text::time, "
         "weekly_report = true, whatsapp_mode = 'chat'",

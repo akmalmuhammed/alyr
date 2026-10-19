@@ -1,4 +1,4 @@
-"""Getting an issued document to the customer (ALY-139, spec 012).
+"""Getting an issued document to the customer (ALY-139, spec 013).
 
 Three ways out, one record of each attempt (`document_deliveries`):
 

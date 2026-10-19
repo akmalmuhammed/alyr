@@ -57,7 +57,8 @@ export async function api<T>(url: string, method = "GET", body?: unknown): Promi
   });
   const data = await response.json().catch(() => ({}));
   const detail = (data as { detail?: unknown }).detail;
-  const error = response.ok ? "" : typeof detail === "string" ? detail : "That did not work. Check the fields.";
+  const said = detail && typeof detail === "object" ? (detail as { message?: unknown }).message : undefined;
+  const error = response.ok ? "" : typeof detail === "string" ? detail : typeof said === "string" ? said : "That did not work. Check the fields.";
   return { ok: response.ok, status: response.status, data: data as T, error };
 }
 

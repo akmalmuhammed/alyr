@@ -1,4 +1,4 @@
-"""Documents from ALYR's own sales (ALY-139, spec 012).
+"""Documents from ALYR's own sales (ALY-139, spec 013).
 
 The engine (`service.py`) can issue any document; this module is where ALYR's orders, bookings
 and credit accounts ask it to. Every hook here follows the same four rules.

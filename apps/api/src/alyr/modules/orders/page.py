@@ -24,7 +24,16 @@ import asyncpg
 
 from alyr.core.media import MediaService
 from alyr.core.normalise import fmt_qar, fmt_qar_ar
-from alyr.modules.items import availability, listing, notes, photos, schedule, text
+from alyr.modules.items import (
+    availability,
+    features,
+    fields,
+    listing,
+    notes,
+    photos,
+    schedule,
+    text,
+)
 from alyr.modules.items import clock as shop_clock
 from alyr.modules.items import groups as price_groups
 from alyr.modules.items import service as items
@@ -38,13 +47,22 @@ SOLD_OUT_REASONS = ("off", "sold_out")
 
 async def settings(conn: asyncpg.Connection) -> dict:
     row = await conn.fetchrow(
-        "select sold_out_display, wholesale_layout, whatsapp_number, whatsapp_mode, "
-        "low_stock_at from shop_settings"
+        "select wholesale_layout, whatsapp_number, whatsapp_mode, low_stock_at from shop_settings"
     )
+    feats = await features.load(conn)
     return {
-        "sold_out_display": row["sold_out_display"] if row else "grey",
+        # How a sold-out item looks is the shop's "Sold-out items" feature (ALY-148).
+        "sold_out_display": feats.sold_out_mode,
+        "tags": feats.on("tags"),
+        # The owner's own fields customers may see (a feature, ALY-148).
+        "fields": [f for f in await fields.rows(conn, False) if f["shown_to_customers"]]
+        if feats.on("custom_fields") else [],
         "wholesale_layout": row["wholesale_layout"] if row else False,
-        "whatsapp_number": row["whatsapp_number"] if row else "",
+        # The customer's "Order on WhatsApp" is a feature (ALY-148): with it off the page is
+        # told there is no number to send to.
+        "whatsapp_number": (
+            (row["whatsapp_number"] if row else "") if feats.on("order_on_whatsapp") else ""
+        ),
         "whatsapp_mode": row["whatsapp_mode"] if row else "link",
         "low_stock_at": row["low_stock_at"] if row else listing.DEFAULT_LOW_STOCK,
     }
@@ -82,7 +100,7 @@ def _photo(shown: dict) -> dict:
 
 def public_row(
     entry: items.Loaded, state: availability.State, clock: ShopClock, group_id: UUID | None,
-    low_at: int,
+    low_at: int, shown_fields: list[dict] | None = None,
 ) -> dict:
     """One item as the order page lists it."""
     i = entry.item
@@ -123,6 +141,9 @@ def public_row(
             for g in base.get("option_groups", [])
         ],
         "variants": [],
+        # The owner's own fields customers may see, for the item (ALY-148).
+        "fields": fields.shown_to_customers(
+            [f for f in shown_fields or [] if f["applies_to"] == "item"], i["custom"]),
     }
     if "normal_price" in base:
         row["normal_price"], row["normal_price_text"] = (
@@ -151,6 +172,9 @@ def public_row(
                 "list_price": _list_price(i, v, clock.now, from_group, normal, price),
                 "left": _small(left, low_at) if left else (0 if left == 0 else None),
                 "sold_out": left is not None and left <= 0,
+                "fields": fields.shown_to_customers(
+                    [f for f in shown_fields or [] if f["applies_to"] == "variant"], None,
+                    v["custom"]),
             }
             if from_group:
                 shown["normal_price"], shown["normal_price_text"] = normal, fmt_qar(normal)
@@ -176,7 +200,13 @@ def _haystack(row: dict, category_ar: str) -> list[str]:
     ]
     for variant in row["variants"]:
         parts += [variant["name"], variant["name_ar"], variant["sku"]]
-    return parts
+        parts += _field_words(variant.get("fields", []))
+    return parts + _field_words(row.get("fields", []))
+
+
+def _field_words(shown: list[dict]) -> list[str]:
+    """What the owner's searchable fields say, in both languages, for the customer's search."""
+    return [x[k] for x in shown if x["searchable"] for k in ("text", "text_ar")]
 
 
 async def _with_photos(
@@ -236,7 +266,11 @@ async def page(
     kept, context, shop = await _visible(conn, clock, contact_id)
     group_id = price_groups.pricing_id(context["group"])
     low_at = shop["low_stock_at"]
-    rows = [public_row(entry, state, clock, group_id, low_at) for entry, state in kept]
+    rows = [public_row(entry, state, clock, group_id, low_at, shop["fields"])
+            for entry, state in kept]
+    if not shop["tags"]:  # the shop switched tags off: customers neither see nor search them
+        for row in rows:
+            row["tags"] = []
 
     names_ar = {c["name"]: c["name_ar"] for c in context["categories"]}
     counts: dict[str, int] = {}
@@ -286,7 +320,9 @@ async def one(
         return None
     entry, state = kept[0]
     row = public_row(entry, state, clock, price_groups.pricing_id(context["group"]),
-                     shop["low_stock_at"])
+                     shop["low_stock_at"], shop["fields"])
+    if not shop["tags"]:
+        row["tags"] = []
     await _with_photos(conn, media, [row], full=True)
     return row
 
@@ -315,7 +351,7 @@ async def live(
         if state.reason in SOLD_OUT_REASONS and shop["sold_out_display"] == "hide":
             gone.append(str(item_id))
             continue
-        full = public_row(entry, state, clock, group_id, shop["low_stock_at"])
+        full = public_row(entry, state, clock, group_id, shop["low_stock_at"], shop["fields"])
         rows.append({
             key: full[key] for key in (
                 "id", "orderable", "sold_out", "reason", "note", "left", "price", "price_min",

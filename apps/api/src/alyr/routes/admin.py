@@ -22,6 +22,8 @@ from alyr import catalog, presets
 from alyr.config import get_settings
 from alyr.core import auth, backoffice, pricing
 from alyr.core.auth import Staff
+from alyr.modules.items import clock as shop_clock
+from alyr.modules.items import template, template_change
 from alyr.routes.deps import current_staff
 
 router = APIRouter(prefix="/api/admin", tags=["back office"])
@@ -38,6 +40,9 @@ class NewBusiness(BaseModel):
     products: list[str] = Field(default_factory=list, max_length=10)
     # Add the business to an existing client; empty makes a new client for it.
     client_id: UUID | None = None
+    # A template (ALYR's own type, or one made in the back office) for the business: its type,
+    # features, wording, layout, starter categories and fields (ALY-148). Empty is the plain one.
+    template: str = Field(default="", max_length=40)
 
 
 class ItemChange(BaseModel):
@@ -200,6 +205,12 @@ async def create_business(
         if product is None or product.status != "available":
             raise HTTPException(status_code=422, detail=f"{key} cannot be switched on")
         modules += [m for m in product.modules if m not in modules]
+    target = None
+    if body.template:
+        async with _back_office(request) as conn:
+            target = await template_change.find(conn, body.template, usable=True)
+        if target is None:
+            raise HTTPException(status_code=404, detail="no such template")
     if get_settings().catalog_for_new_shops and "catalog" not in modules:
         # Every business has the Catalog, as the shops made by onboarding do (ALY-113). It has
         # no type of its own here, so it gets the plain Catalog; the back office can switch it
@@ -225,7 +236,24 @@ async def create_business(
         raise HTTPException(status_code=409, detail="that short name is taken") from error
     except asyncpg.ForeignKeyViolationError as error:
         raise HTTPException(status_code=404, detail="no such client") from error
-    return {"id": str(tenant_id), "slug": slug, "modules": modules}
+    if target is not None and "catalog" in modules:
+        # Its type first (an owner cannot change it), then what the template brings. No samples:
+        # a business made here has its own items.
+        async with _back_office(request) as conn:
+            await conn.fetchval(
+                "select admin_set_business_type($1, $2)", tenant_id,
+                template_change.business_type_of(target),
+            )
+            await backoffice.audit(
+                conn, staff, "business.template", "business", tenant_id, business_id=tenant_id,
+                detail={"to": target.key, "created": True},
+            )
+        async with request.app.state.db.tenant(tenant_id) as conn:
+            await template.apply(
+                conn, target, await shop_clock.load(conn), samples_too=False, by=_by(staff)
+            )
+    return {"id": str(tenant_id), "slug": slug, "modules": modules,
+            "template": target.key if target else None}
 
 
 @router.get("/setup-requests")

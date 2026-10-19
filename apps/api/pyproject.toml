@@ -58,6 +58,11 @@ default-groups = ["dev", "server"]
 "src/alyr/catalog.py" = ["E501"]
 # Each type's words, in both languages, are kept together for the Arabic review (ALY-66).
 "src/alyr/presets_catalog.py" = ["E501"]
+# The features' and templates' words, in both languages, are kept together for the same review.
+"src/alyr/capabilities.py" = ["E501"]
+"src/alyr/shop_templates.py" = ["E501"]
+"src/alyr/modules/items/templates.py" = ["E501"]
+"src/alyr/routes/admin_templates.py" = ["E501"]
 # A document's every word, in both languages, in one file for the same review (ALY-138).
 "src/alyr/modules/documents/words.py" = ["E501"]
 "src/alyr/modules/documents/delivery_words.py" = ["E501"]

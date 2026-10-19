@@ -22,6 +22,8 @@ from alyr.modules.items import (
     changes,
     clock,
     drafts,
+    features,
+    fields,
     groups,
     listing,
     photos,
@@ -45,6 +47,10 @@ NULLABLE = {
     "sale_price", "sale_starts_at", "sale_ends_at", "pack_size", "daily_limit", "sku",
     "low_stock_at",
 }
+
+
+# Values of the owner's own fields, by the field's key (ALY-148).
+FieldValues = dict[str, str | int | float | bool | None]
 
 
 class GroupPriceIn(BaseModel):
@@ -77,6 +83,9 @@ class VariantIn(BaseModel):
     daily_limit: int | None = Field(default=None, ge=0, le=1_000_000)
     active: bool = True
     opening_stock: int | None = Field(default=None, ge=0, le=1_000_000)
+    custom: FieldValues | None = Field(
+        default=None, description="The owner's own fields for this size (key to value; null "
+                                  "removes one)")
 
 
 class OptionIn(BaseModel):
@@ -149,6 +158,10 @@ class ItemChanges(BaseModel):
     variants: list[VariantIn] | None = Field(default=None, max_length=100)
     option_groups: list[GroupIn] | None = Field(default=None, max_length=20)
     schedule: list[WindowIn] | None = Field(default=None, max_length=30)
+    custom: FieldValues | None = Field(
+        default=None, max_length=fields.MAX_FIELDS,
+        description="The owner's own fields for this item (key to value; null removes one)",
+    )
     reason: str = Field(default="", max_length=200, description="Why the price changed")
 
 
@@ -228,6 +241,17 @@ class SetupChange(BaseModel):
         default=None, description="How a new item runs out until its form says otherwise"
     )
     alerts: AlertsIn | None = Field(default=None, description="Which alerts are on")
+    section_name: str | None = Field(
+        default=None, max_length=40,
+        description="What the shop calls its Catalog, in English; empty goes back to the "
+                    "template's name",
+    )
+    section_name_ar: str | None = Field(
+        default=None, max_length=40, description="The same in Arabic"
+    )
+    layout_style: Literal["", "menu", "grid", "list", "table"] | None = Field(
+        default=None, description="How the order page lays items out; empty is the template's"
+    )
 
 
 class CategoryIn(BaseModel):
@@ -277,7 +301,16 @@ def _fail(error: Exception) -> HTTPException:
     if isinstance(error, LookupError):
         return HTTPException(status_code=404, detail="item not found")
     code = getattr(error, "code", "bad_request")
-    return HTTPException(status_code=422, detail={"code": code, "message": str(error)})
+    detail = {"code": code, "message": str(error)}
+    if getattr(error, "message_ar", None):  # a feature that is off says so in both languages
+        detail["message_ar"] = error.message_ar
+    return HTTPException(status_code=422, detail=detail)
+
+
+async def _settings(conn) -> dict:
+    """The shop's Catalog settings, with how a sold-out item looks, which is a feature."""
+    feats = await features.load(conn)
+    return {**await items.settings(conn), "sold_out_display": feats.sold_out_mode}
 
 
 def _category_names(rows: list[dict]) -> list[dict]:
@@ -338,8 +371,14 @@ async def add_item(
             await access.require_edit(conn, staff)
             # A shop at its item limit is told so plainly and loses nothing (ALY-103).
             await _media(request).assert_can_add_item(conn)
+            data = _changes(body)
+            # A feature that is switched off does not apply to a new item (ALY-148).
+            feats = await features.load(conn)
+            features.guard_new_item(feats, data)
+            if "stock_rule" not in data and not feats.allows_rule("switch"):
+                data["stock_rule"] = "always"  # the usual start is off in this shop
             result = await items.create_item(
-                conn, _changes(body), team.actor_of(staff), await clock.load(conn)
+                conn, data, team.actor_of(staff), await clock.load(conn)
             )
             await photos.add_to_views(conn, _media(request), [result["item"]])
     except (items.ItemError, stock.StockError) as error:
@@ -364,7 +403,7 @@ async def make_drafts(
 @router.get("/settings")
 async def get_settings(request: Request, staff: Staff = Depends(current_staff)) -> dict:
     async with request.app.state.db.tenant(staff.tenant_id) as conn:
-        return await items.settings(conn)
+        return await _settings(conn)
 
 
 @router.get("/share")
@@ -397,11 +436,12 @@ async def put_settings(
     try:
         async with request.app.state.db.tenant(staff.tenant_id) as conn:
             before = await items.settings(conn)
-            after = await items.save_settings(
+            await items.save_settings(
                 conn, body.hold_minutes, body.day_starts, body.agents_edit_items,
                 body.low_stock_at, body.wholesale_layout, body.whatsapp_number,
                 body.whatsapp_mode,
             )
+            after = await _settings(conn)
             fields = {k: after[k] for k in changes.SETTING_FIELDS}
             await changes.settings_changed(
                 conn, team.actor_of(staff), {k: before[k] for k in fields}, fields
@@ -443,8 +483,11 @@ async def put_setup(
         async with request.app.state.db.tenant(staff.tenant_id) as conn:
             before = changes.flat_setup(await template.hints(conn))
             after = await template.save(
-                conn, sold_out=body.sold_out, new_item_rule=body.new_item_rule,
+                conn, team.actor_of(staff), sold_out=body.sold_out,
+                new_item_rule=body.new_item_rule,
                 alerts=body.alerts.model_dump(exclude_none=True) if body.alerts else None,
+                section_name=body.section_name, section_name_ar=body.section_name_ar,
+                layout_style=body.layout_style,
             )
             await changes.settings_changed(
                 conn, team.actor_of(staff), before, changes.flat_setup(after)
@@ -576,9 +619,14 @@ async def save_item(
     try:
         async with request.app.state.db.tenant(staff.tenant_id) as conn:
             await access.require_edit(conn, staff)
+            data = _changes(body)
+            # An edit may keep what the item has but not add a part whose feature is off.
+            features.guard_item_change(
+                await features.load(conn), await features.item_parts(conn, item_id), data
+            )
             # The owner saving a sample makes it theirs (`samples.py`).
             result = await items.update_item(
-                conn, item_id, _changes(body), team.actor_of(staff), await clock.load(conn),
+                conn, item_id, data, team.actor_of(staff), await clock.load(conn),
                 reason=body.reason, adopt=True,
             )
             if result is not None:

@@ -14,6 +14,8 @@ export type Variant = {
   id: string; name: string; name_ar: string; sku: string; is_default: boolean; active: boolean;
   price_delta: number; daily_limit: number | null; on_hand: number; left: number | null;
   photo_id: string | null; photo?: Photo;
+  /** The owner's own fields for this size (ALY-148): field key to value. */
+  custom?: Record<string, string | number | boolean>;
 };
 export type Option = { id: string; name: string; name_ar: string; price_delta: number; active: boolean };
 export type Group = {
@@ -50,7 +52,32 @@ export type Item = {
     orderable: boolean; reason: string; left: number | null; next_at: string | null; next_date: string | null;
   };
   photos: Photo[]; cover: Photo; photo_id: string | null;
+  /** The owner's own fields for this item (ALY-148): field key to value. */
+  custom?: Record<string, string | number | boolean>;
 };
+export type FieldChoice = { value: string; label: string; label_ar: string; active: boolean };
+/** One of the shop's own fields (GET /api/custom-fields; specs/012-feature-engine). */
+export type CustomField = {
+  id: string; key: string; label: string; label_ar: string;
+  kind: "text" | "number" | "choice" | "yes_no" | "date"; applies_to: "item" | "variant";
+  choices: FieldChoice[]; unit: string; shown_to_customers: boolean; searchable: boolean;
+  required: boolean; sort: number; archived: boolean; used_by?: number;
+};
+export type FieldsView = {
+  fields: CustomField[]; active: number; limits: { fields: number; choices: number }; can_manage?: boolean;
+};
+/** What switching to another template would add (GET /api/templates/preview). */
+export type TemplatePlan = {
+  from: { key: string; name: string; name_ar: string }; to: { key: string; name: string; name_ar: string; builtin: boolean };
+  turn_on: { key: string; name: string; name_ar: string }[]; stay_off: { key: string; name: string; name_ar: string }[];
+  stays_on: { key: string; name: string; name_ar: string }[];
+  categories: { name: string; name_ar: string }[];
+  fields: { key: string; label: string; label_ar: string; kind: string }[];
+  fields_skipped: { key: string; label: string; label_ar: string; kind: string }[];
+  wording: { section?: { from: { en: string; ar: string }; to: { en: string; ar: string } }; layout?: { from: string; to: string } };
+  nothing: boolean; hash: string;
+};
+export type TemplateChoice = { key: string; name: string; name_ar: string; builtin: boolean; note: string; note_ar: string };
 export type Access = { role: string; can_manage: boolean; can_edit: boolean; can_stock: boolean };
 export type Category = { name: string; name_ar: string; sort: number };
 export type Counts = {
@@ -83,16 +110,40 @@ export type Movement = {
  */
 export type Setup = {
   type: string;
-  section: { name: string; name_ar: string; sub: string; sub_ar: string };
+  /** The template the shop uses, usually the one for its business type (ALY-148). */
+  template: { key: string; name: string; name_ar: string; builtin: boolean };
+  section: {
+    name: string; name_ar: string; sub: string; sub_ar: string;
+    /** The owner gave their own name; the template's is `template_name`. */
+    custom: boolean; template_name: string; template_name_ar: string;
+  };
   optional: boolean;
   layout: { style: "menu" | "grid" | "list" | "table"; pickup_date: boolean; quick_quantity: boolean; same_as_last: boolean; show_sku: boolean };
+  layout_custom: boolean;
   sold_out: "grey" | "hide";
   new_item: { rule: Rule; unit: string; lead_days: number | null; cutoff: string | null };
   low_stock_at: number;
   alerts: { low_stock: boolean; sold_out: boolean };
   focus: string[];
-  report_lines: string[];
+  /** Which features are on for this shop, by key (`GET /api/features` has the words). */
+  features: Record<string, boolean>;
   samples: number;
+};
+
+/** One feature on the Features screen (GET /api/features; specs/012-feature-engine). */
+export type FeatureRow = {
+  key: string; name: string; name_ar: string; hint: string; hint_ar: string; changes: string; changes_ar: string;
+  group: string; affects: string[]; enabled: boolean; own: boolean; depends_on: string[]; needed_by: string[];
+  set_by: "template" | "owner"; updated_by: string; updated_at: string; kind: "switch" | "choice";
+  config: Record<string, string>; choices: Record<string, string[]>;
+  in_use: { count: number; text: string; text_ar: string } | null;
+};
+export type FeatureGroup = { key: string; name: string; name_ar: string; hint: string; hint_ar: string; features: FeatureRow[] };
+export type FeaturesView = {
+  groups: FeatureGroup[];
+  core: { key: string; name: string; name_ar: string; hint: string; hint_ar: string }[];
+  template: { key: string; name: string; name_ar: string; builtin: boolean };
+  can_manage: boolean;
 };
 
 /** A WhatsApp number the owner registered as staff: it may change the Catalog by message. */

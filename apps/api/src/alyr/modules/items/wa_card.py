@@ -14,7 +14,7 @@ import asyncpg
 from alyr.channels.base import Choice, OutboundMessage
 from alyr.core.media import MediaService
 from alyr.core.normalise import fmt_qar, fmt_qar_ar
-from alyr.modules.items import availability, demand, photos, service, text
+from alyr.modules.items import availability, demand, features, photos, service, text
 from alyr.modules.items import clock as shop_clock
 from alyr.modules.items.wa_text import say, shown
 
@@ -61,7 +61,7 @@ async def build(
         if availability.sale_active(item, clock.now):
             price += " " + say("card_was", lang, was=money(lang, item["price"]))
     lines.append(price)
-    if item["code"] is not None:
+    if item["code"] is not None and (await features.load(conn)).on("show_sku"):
         lines.append(say("card_code", lang, number=item["code"]))
     named = [shown(v, lang) for v in entry.active_variants if v["name"] or v["name_ar"]]
     if named and not variant_label:
@@ -74,7 +74,8 @@ async def build(
         chosen.extend(buttons)
     elif state.reason in ("sold_out", "off"):
         lines.append(say("card_sold_out", lang))
-        chosen.append(Choice(f"notify:{item_id}", say("button_notify", lang)))
+        if (await features.load(conn)).on("back_in_stock"):
+            chosen.append(Choice(f"notify:{item_id}", say("button_notify", lang)))
         # They asked for something the shop cannot give: the weekly report counts it.
         await demand.record(conn, contact["id"], [item_id], "whatsapp", clock.now)
     else:

@@ -10,8 +10,11 @@ they are written the same way: nobody can edit the record, and each line names t
   member's contact for a staff number, the group for a price group.
 * Actions: `settings` (hold time, day start, agents may edit items, low-stock number, the
   wholesale table, the WhatsApp number, sold-out look, how a new item runs out, the two
-  alerts, the categories), `staff_added`, `staff_changed`, `staff_removed`, `group_added`,
-  `group_renamed`, `group_removed`.
+  alerts, the section's name, the order page's layout, the categories), `features` (a
+  feature switched on or off or given a value, with the ones that moved because of it),
+  `custom_field_added`, `custom_field_changed`, `custom_field_archived`, `template_applied`
+  (the shop's type changed, with what it turned on), `staff_added`, `staff_changed`,
+  `staff_removed`, `group_added`, `group_renamed`, `group_removed`.
 * `detail` says what changed: `{"changes": [{"field": "agents_edit_items", "from": false,
   "to": true}]}`; a staff line has the person's name and whether they are a manager, never
   the phone number.
@@ -43,6 +46,9 @@ def flat_setup(hints: dict) -> dict:
         "new_item_rule": hints["new_item"]["rule"],
         "alert_low_stock": hints["alerts"]["low_stock"],
         "alert_sold_out": hints["alerts"]["sold_out"],
+        "section_name": hints["section"]["name"],
+        "section_name_ar": hints["section"]["name_ar"],
+        "layout_style": hints["layout"]["style"],
     }
 
 

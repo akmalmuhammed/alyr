@@ -318,8 +318,10 @@ def test_a_grocery_counts_stock_in_kilos_pieces_and_packs_and_hides_what_is_gone
     hints = on.get("/api/items/setup").json()
     assert (hints["new_item"]["rule"], hints["low_stock_at"], hints["sold_out"]) == (
         "count", 10, "hide")
-    assert hints["layout"] == {"style": "list", "pickup_date": False, "quick_quantity": True,
-                               "same_as_last": False, "show_sku": False}
+    # The four things a page can offer were declared per type and never read; the page always
+    # offered all four, so every type starts with all four on (ALY-148, spec 012).
+    assert hints["layout"] == {"style": "list", "pickup_date": True, "quick_quantity": True,
+                               "same_as_last": True, "show_sku": True}
     items = samples_of(on)
     assert {i["unit"] for i in items} == {"kg", "piece", "pack"}
     assert all(i["stock_rule"] == "count" for i in items)
@@ -356,7 +358,7 @@ def test_a_wholesaler_gets_a_price_list_with_pack_sizes_minimum_orders_and_price
     make(on, "wholesale")
     hints = on.get("/api/items/setup").json()
     assert hints["section"]["name"] == "Price list"
-    assert hints["layout"] == {"style": "table", "pickup_date": False, "quick_quantity": True,
+    assert hints["layout"] == {"style": "table", "pickup_date": True, "quick_quantity": True,
                                "same_as_last": True, "show_sku": True}
     assert hints["focus"] == ["groups"] and hints["new_item"]["unit"] == "pack"
     by_key = {i["sample_key"]: i for i in samples_of(on)}
@@ -687,9 +689,11 @@ def test_the_order_page_is_told_the_types_wording_and_layout_and_nothing_private
     assert page["catalog"] == {
         "type": "grocery",
         "section": {"name": "Products", "name_ar": "المنتجات"},
-        "layout": {"style": "list", "pickup_date": False, "quick_quantity": True,
-                   "same_as_last": False, "show_sku": False},
+        "layout": {"style": "list", "pickup_date": True, "quick_quantity": True,
+                   "same_as_last": True, "show_sku": True},
         "sold_out": "hide",
+        "features": {"tags": True, "variants": True, "options": True, "pack_rules": True,
+                     "price_groups": True, "table_qr": True, "custom_fields": True},
     }
     # A shop without the Catalog gets an order page as it always had.
     from alyr.seed import DEMO_SLUG

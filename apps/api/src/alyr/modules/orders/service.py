@@ -18,7 +18,17 @@ from alyr.core.normalise import fmt_qar
 from alyr.core.outbound import Outbound
 from alyr.core.team import Actor
 from alyr.modules.documents import sales as documents_sales
-from alyr.modules.items import alerts, availability, cart, clock, demand, stock, text
+from alyr.modules.items import (
+    alerts,
+    availability,
+    cart,
+    clock,
+    demand,
+    features,
+    fields,
+    stock,
+    text,
+)
 from alyr.modules.items import groups as price_groups
 from alyr.modules.items import holds as stock_holds
 from alyr.modules.items.cart import CartLine
@@ -327,16 +337,25 @@ async def create_order(
     held_until = (
         shop_clock.now + timedelta(minutes=minutes) if payment == "link" and takes else None
     )
+    # The owner's own fields the customer could see are copied onto each line as they were, so
+    # the order never changes when a field is renamed or archived (ALY-148).
+    shown = [
+        f for f in await fields.rows(conn, False) if f["shown_to_customers"]
+    ] if (await features.load(conn)).on("custom_fields") else []
     for c in checked:
         item, variant = c.entry.item, c.variant
+        snapshot = [
+            {k: v for k, v in x.items() if k != "searchable"}
+            for x in fields.shown_to_customers(shown, item["custom"], variant["custom"])
+        ]
         order_item_id = await conn.fetchval(
             "insert into order_items (order_id, item_id, name, name_ar, price, quantity, "
-            "variant_id, variant_name, variant_name_ar, options, fulfil_on, sku) "
-            "values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12) returning id",
+            "variant_id, variant_name, variant_name_ar, options, fulfil_on, sku, custom) "
+            "values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13) returning id",
             order_id, item["id"], item["name"], item["name_ar"], c.unit_price, c.line.quantity,
             variant["id"], variant["name"], variant["name_ar"], c.options, c.fulfil_on,
             # The size's own code, else the item's: what the shop reads on its order.
-            variant["sku"] or item["sku"],
+            variant["sku"] or item["sku"], snapshot,
         )
         if c.take is not None:
             await stock_holds.create(
@@ -638,13 +657,15 @@ async def list_orders(conn: asyncpg.Connection) -> list[dict]:
         "left join users u on u.id = o.assigned_to order by o.number desc"
     )
     items = await conn.fetch(
-        "select order_id, name, price, quantity, variant_name, options, sku from order_items"
+        "select order_id, name, price, quantity, variant_name, options, sku, custom "
+        "from order_items"
     )
     by_order: dict[UUID, list[dict]] = {}
     for item in items:
         by_order.setdefault(item["order_id"], []).append(
             {"name": item["name"], "quantity": item["quantity"],
              "variant": item["variant_name"], "sku": item["sku"],
+             "fields": item["custom"],
              "options": [o["name"] for o in item["options"]],
              "price": item["price"], "price_text": fmt_qar(item["price"]),
              "line_text": fmt_qar(item["price"] * item["quantity"])}
@@ -690,7 +711,7 @@ async def tracking(conn: asyncpg.Connection, order_id: UUID) -> dict | None:
         return None
     items = await conn.fetch(
         "select o.name, coalesce(nullif(o.name_ar, ''), p.name_ar, '') as name_ar, o.price, "
-        "       o.quantity, o.variant_name, o.variant_name_ar, o.options "
+        "       o.quantity, o.variant_name, o.variant_name_ar, o.options, o.custom "
         "from order_items o left join items p on p.id = o.item_id "
         "where o.order_id = $1 order by o.name",
         order_id,
@@ -717,6 +738,7 @@ async def tracking(conn: asyncpg.Connection, order_id: UUID) -> dict | None:
              "variant": i["variant_name"], "variant_ar": i["variant_name_ar"],
              "options": [o["name"] for o in i["options"]],
              "options_ar": [o.get("name_ar") or o["name"] for o in i["options"]],
+             "fields": i["custom"],
              "unit_price": i["price"], "line_total": i["price"] * i["quantity"],
              "line_text": fmt_qar(i["price"] * i["quantity"])}
             for i in items

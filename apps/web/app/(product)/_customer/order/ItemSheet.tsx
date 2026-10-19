@@ -59,9 +59,11 @@ function Choice({
 }
 
 export function ItemSheet({
-  item, lang, canOrder, fetchFull, onAdd, onClose, onLimit, whatsapp,
+  item, lang, canOrder, showSku = true, fetchFull, onAdd, onClose, onLimit, whatsapp,
 }: {
   item: Item; lang: Lang; canOrder: boolean; fetchFull: (id: string) => Promise<Item | null>;
+  /** The shop's "show the item code" feature. */
+  showSku?: boolean;
   onAdd: (item: Item, pick: Chosen) => void; onClose: () => void; onLimit: (item: Item) => void;
   /** A visitor with no link of their own, to a shop with a WhatsApp number: the sheet offers to
    *  send this item (with the size and quantity chosen) as a message. `href` is the link. */
@@ -152,13 +154,20 @@ export function ItemSheet({
           <StatusLine item={item} lang={lang} />
           {description && <p className="ox-long" dir="auto">{description}</p>}
           {item.tags.length > 0 && <ul className="ox-tags">{item.tags.map((tag) => <li key={tag} dir="auto">{tag}</li>)}</ul>}
+          {item.fields && item.fields.length > 0 && (
+            <dl className="ox-fieldlist">
+              {item.fields.map((x) => (
+                <div key={x.key}><dt dir="auto">{say(lang, x.label, x.label_ar)}</dt><dd><bdi>{say(lang, x.text, x.text_ar)}</bdi></dd></div>
+              ))}
+            </dl>
+          )}
           <p className="ox-meta">
             {[
               item.unit && item.unit !== "piece" ? t.units[item.unit] ?? item.unit : "",
               item.pack_size && item.pack_size > 1 ? t.pack(item.pack_size) : "",
               item.min_order > 1 ? t.minimum(item.min_order) : "",
-              item.code !== null ? t.itemCode(item.code) : "",
-              item.sku ? `${t.sku} ${item.sku}` : "",
+              showSku && item.code !== null ? t.itemCode(item.code) : "",
+              showSku && item.sku ? `${t.sku} ${item.sku}` : "",
             ].filter(Boolean).join(" · ")}
           </p>
         </div>
@@ -175,7 +184,9 @@ export function ItemSheet({
                   ? <input type="radio" name={`${sizeId}-v`} checked={variantId === v.id} disabled={v.sold_out}
                       onChange={() => { setVariantId(v.id); setQty((q) => Math.max(smallest(item), Math.min(q, most(item, v.id)))); }} />
                   : null}
-                <span className="ox-opt-name" dir="auto">{say(lang, v.name, v.name_ar)}</span>
+                <span className="ox-opt-name" dir="auto">{say(lang, v.name, v.name_ar)}
+                  {v.fields && v.fields.length > 0 && <small className="ox-opt-fields" dir="auto">{v.fields.map((x, k) => <span key={x.key}>{k > 0 && " · "}{say(lang, x.label, x.label_ar)}: <bdi>{say(lang, x.text, x.text_ar)}</bdi></span>)}</small>}
+                </span>
                 {v.sold_out
                   ? <span className="ox-pill off">{t.sizeSoldOut}</span>
                   : v.left !== null && v.left > 0 ? <span className="ox-pill few">{item.daily ? t.onlyLeftToday(v.left) : t.onlyLeft(v.left)}</span> : null}

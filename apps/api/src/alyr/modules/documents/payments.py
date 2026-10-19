@@ -1,4 +1,4 @@
-"""Payments staff record by hand (ALY-139, spec 012).
+"""Payments staff record by hand (ALY-139, spec 013).
 
 A customer pays the shop in cash, by bank transfer, by cheque or on a card terminal, outside any
 payment link. Staff write that down here: which order, booking, invoice or customer balance it

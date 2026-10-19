@@ -1,5 +1,5 @@
 -- Documents, package 2: receipts and invoices from ALYR's own sales, manual payments, and
--- delivery to the customer (ALY-139, epic ALY-137, decision D-042, spec 012).
+-- delivery to the customer (ALY-139, epic ALY-137, decision D-042, spec 013).
 --
 -- Issued paper cannot change (0034), so everything that happens to a document AFTER it is
 -- issued lives in tables of its own: who was sent it and whether it arrived

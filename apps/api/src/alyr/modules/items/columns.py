@@ -233,6 +233,65 @@ WHOLE = ("pack_size", "min_order", "stock", "low_stock", "per_day", "code")
 COUNTED = ("count", "daily_limit")
 
 
+# The feature a column belongs to (ALY-148). A column of a feature that is off is left out of
+# the files, unless an item of the shop still uses the feature (its data is then still in the
+# file, so a round trip loses nothing). The rest are every shop's.
+NEEDS: dict[str, str] = {
+    "variant": "variants", "variant_ar": "variants", "variant_sku": "variants",
+    "price_diff": "variants", "pack_size": "pack_rules", "min_order": "pack_rules",
+    "tags": "tags", "available": "rule_switch", "stock": "rule_count",
+    "per_day": "rule_daily_limit", "low_stock": "rule_count|rule_daily_limit",
+}
+
+
+def allowed(keeps) -> tuple[str, ...]:
+    """The columns a shop's files have, in order. `keeps(feature)` says whether the feature
+    is on or still used."""
+    return tuple(
+        k for k in ORDER
+        if k not in NEEDS or any(keeps(feature) for feature in NEEDS[k].split("|"))
+    )
+
+
+def custom_column(field: dict) -> Column:
+    """The column of one of the shop's own fields (ALY-148). Its key is `custom:<key>`; its
+    headers are the field's names, and the field's key is another spelling the importer knows."""
+    en = field["label"] or field["label_ar"]
+    ar = field["label_ar"] or field["label"]
+    where = ("on each size or colour", "على كل مقاس أو لون") if field["applies_to"] == "variant" \
+        else ("on the item", "على الصنف")
+    kinds = {
+        "text": ("Text, up to 200 letters", "نص حتى 200 حرف"),
+        "number": ("A number" + (f" ({field['unit']})" if field["unit"] else ""),
+                   "رقم" + (f" ({field['unit']})" if field["unit"] else "")),
+        "choice": ("One of: " + ", ".join(c["label"] or c["label_ar"] for c in field["choices"]
+                                          if c["active"]),
+                   "واحد من: " + "، ".join(c["label_ar"] or c["label"] for c in field["choices"]
+                                           if c["active"])),
+        "yes_no": ("Yes or No", "نعم أو لا"),
+        "date": ("A date, such as 2026-10-31", "تاريخ، مثل 2026-10-31"),
+    }[field["kind"]]
+    return Column(
+        f"custom:{field['key']}", en, ar, "custom", (field["key"],), 18,
+        Text(f"Your own field, {where[0]}. {kinds[0]}.", f"حقلك الخاص، {where[1]}. {kinds[1]}."),
+    )
+
+
+def custom_columns(fields: list[dict]) -> dict[str, Column]:
+    """The columns of a shop's active fields, by their `custom:` key, in the owner's order."""
+    return {col.key: col for col in (custom_column(f) for f in fields if not f["archived"])}
+
+
+def custom_index(columns_: dict[str, Column]) -> dict[str, str]:
+    """Every spelling of every custom header, squashed, mapped to its column's key. A header the
+    fixed columns already know is theirs: a field cannot be named like one."""
+    found: dict[str, str] = {}
+    for col in columns_.values():
+        for spelling in (col.en, col.ar, *col.aliases):
+            found.setdefault(values.squash(spelling), col.key)
+    return found
+
+
 def header_index() -> dict[str, str]:
     """Every spelling of every header, squashed, mapped to the column it names."""
     found: dict[str, str] = {}

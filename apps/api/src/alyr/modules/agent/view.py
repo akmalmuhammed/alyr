@@ -525,6 +525,8 @@ def _catalog(f: Facts, lang: str) -> dict | None:
     module = shop_catalog.MODULE_BY_KEY["catalog"]
     cards = []
     for card in module.cards:
+        if card.count in f.stock.get(workspace.HIDDEN, ()):
+            continue  # the shop's features say this card has nothing to count
         value = f.stock[card.count]
         cards.append({
             "key": card.key, "label": card.label.get(lang), "value": value, "text": f"{value:,}",

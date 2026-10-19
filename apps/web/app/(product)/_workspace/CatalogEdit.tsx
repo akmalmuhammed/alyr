@@ -8,11 +8,12 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import {
   activityText, api, fromDirhams, nameOf, sayError, stamp, toDirhams, toInt, toSignedDirhams, whoIs,
-  type ActivityRow, type Access, type Category, type GroupPriceRow, type Group, type Item, type Photo, type PriceGroup, type PriceRow, type Rule, type Setup, type Status, type Window,
+  type ActivityRow, type Access, type Category, type CustomField, type FieldsView, type GroupPriceRow, type Group, type Item, type Photo, type PriceGroup, type PriceRow, type Rule, type Setup, type Status, type Window,
 } from "./catalogApi";
 import { COPY, type Copy, type Lang } from "./catalogCopy";
 import { CatalogPhotos } from "./CatalogPhotos";
 import { CodeBox } from "./CatalogCode";
+import { FEAT } from "./featuresCopy";
 import { Field, Fold, Icon, Sheet, type Toast } from "./CatalogUi";
 
 type Push = (text: string, options?: { tone?: Toast["tone"]; undo?: () => void }) => number;
@@ -20,6 +21,8 @@ type Push = (text: string, options?: { tone?: Toast["tone"]; undo?: () => void }
 type VariantForm = {
   id?: string; name: string; name_ar: string; sku: string; delta: string; limit: string; active: boolean;
   opening: string; onHand: number | null;
+  // The owner's own fields for this size, as typed (ALY-148): field key to text.
+  custom: Record<string, string>;
 };
 type OptionForm = { id?: string; name: string; name_ar: string; price: string; active: boolean };
 type GroupForm = { id?: string; name: string; name_ar: string; required: boolean; max: string; options: OptionForm[] };
@@ -34,13 +37,22 @@ export type Form = {
   variants: VariantForm[]; groups: GroupForm[]; windows: WindowForm[]; tags: string[];
   // What each price group pays, as typed: "group id|size id" (the size empty for the item's own) to a price.
   groupPrices: Record<string, string>;
+  // The owner's own fields for this item, as typed (ALY-148): field key to text.
+  custom: Record<string, string>;
 };
+
+/** Values as an input holds them: a number as its digits, yes or no as a word. */
+const strings = (custom?: Record<string, string | number | boolean>): Record<string, string> =>
+  Object.fromEntries(Object.entries(custom ?? {}).map(([k, v]) => [k, typeof v === "boolean" ? (v ? "yes" : "no") : String(v)]));
 
 const priceKey = (groupId: string, variantId: string | null) => `${groupId}|${variantId ?? ""}`;
 
 const STATUSES: Status[] = ["draft", "live", "hidden", "archived"];
 const RULES: Rule[] = ["always", "switch", "count", "daily_limit"];
 const UNITS = ["piece", "kg", "box", "pack", "portion", "hour"];
+// The feature each way of running out belongs to ("always" needs none): a way whose feature is
+// off is not offered for a new choice, but an item that already runs that way keeps it.
+const RULE_FEATURE: Record<string, string> = { switch: "rule_switch", count: "rule_count", daily_limit: "rule_daily_limit" };
 
 function qatarDay(iso: string | null): string {
   if (!iso) return "";
@@ -68,7 +80,7 @@ export function blankForm(status: Status = "live", setup?: Setup | null): Form {
     windows: dated
       ? [{ weekdays: [0, 1, 2, 3, 4, 5, 6], kind: "dated", opens: "", closes: "", lead: String(start?.lead_days ?? 1), cutoff: start?.cutoff ?? "", ranged: false, from: "", to: "", closed: false }]
       : [],
-    tags: [], groupPrices: {},
+    tags: [], groupPrices: {}, custom: {},
   };
 }
 
@@ -85,7 +97,7 @@ export function formOf(item: Item): Form {
     opening: "", scheduled: item.schedule.length > 0,
     variants: named.map((v) => ({
       id: v.id, name: v.name, name_ar: v.name_ar, sku: v.sku ?? "", delta: fromDirhams(v.price_delta) || "", limit: v.daily_limit === null ? "" : String(v.daily_limit),
-      active: v.active, opening: "", onHand: v.on_hand,
+      active: v.active, opening: "", onHand: v.on_hand, custom: strings(v.custom),
     })),
     groups: item.option_groups.map((g: Group) => ({
       id: g.id, name: g.name, name_ar: g.name_ar, required: g.required, max: String(g.max_choices),
@@ -93,13 +105,14 @@ export function formOf(item: Item): Form {
     })),
     windows: item.schedule.map(windowForm), tags: item.tags,
     groupPrices: Object.fromEntries((item.group_prices ?? []).map((p) => [priceKey(p.group_id, p.variant_id), fromDirhams(p.price)])),
+    custom: strings(item.custom),
   };
 }
 
 type Problems = Partial<Record<"name" | "name_ar" | "price" | "sale" | "variants" | "limit" | "low" | "schedule" | "groups" | "min" | "opening" | "sku" | "groupPrices", string>>;
 
 /** What the person typed, as the API wants it, or what is wrong with it. */
-function build(form: Form, t: Copy, existing: Item | null): { body?: Record<string, unknown>; problems: Problems } {
+function build(form: Form, t: Copy, existing: Item | null, defs: CustomField[] = []): { body?: Record<string, unknown>; problems: Problems } {
   const problems: Problems = {};
   const unfinished = form.status === "draft" || form.status === "archived";
   const price = toDirhams(form.price);
@@ -201,12 +214,27 @@ function build(form: Form, t: Copy, existing: Item | null): { body?: Record<stri
   };
   if (!body.name) delete body.name;
   if (groupRows.length) body.group_prices = groupRows;
+  // The owner's own fields: what is typed is sent for the API to read; one emptied that had a
+  // value is sent as null, which removes it.
+  const mine = (values: Record<string, string>, had: Record<string, unknown> | undefined, place: string) => {
+    const out: Record<string, unknown> = {};
+    for (const d of defs) {
+      if (d.applies_to !== place || d.archived) continue;
+      const raw = (values[d.key] ?? "").trim();
+      if (raw !== "") out[d.key] = raw;
+      else if (had && d.key in had) out[d.key] = null;
+    }
+    return out;
+  };
+  const ownItem = mine(form.custom, existing?.custom, "item");
+  if (Object.keys(ownItem).length) body.custom = ownItem;
   if (named.length) {
     body.variants = named.map((v) => ({
       ...(v.id ? { id: v.id } : {}), name: v.name.trim(), name_ar: v.name_ar.trim(), sku: v.sku.trim(),
       price_delta: toSignedDirhams(v.delta) ?? 0,
       daily_limit: form.rule === "daily_limit" ? toInt(v.limit) : null, active: v.active,
       ...(!v.id && form.rule === "count" && toInt(v.opening) ? { opening_stock: toInt(v.opening) } : {}),
+      ...((c) => (Object.keys(c).length ? { custom: c } : {}))(mine(v.custom, existing?.variants.find((x) => x.id === v.id)?.custom, "variant")),
     }));
   } else {
     if (form.rule === "daily_limit") body.daily_limit = toInt(form.dailyLimit);
@@ -234,6 +262,8 @@ export function CatalogEdit({ lang, itemId, initial, categories, access, setup, 
   const [history, setHistory] = useState<{ did: ActivityRow[]; prices: PriceRow[]; groups: GroupPriceRow[] } | null>(null);
   // The shop's price groups, once the API has answered (it does not for a shop without the Catalog).
   const [priceGroups, setPriceGroups] = useState<PriceGroup[] | null>(null);
+  // The shop's own fields (ALY-148), once the API has answered; none while the feature is off.
+  const [defs, setDefs] = useState<CustomField[]>([]);
   const top = useRef<HTMLDivElement>(null);
   const now = useRef({ form, start });
   useEffect(() => { now.current = { form, start }; });
@@ -262,9 +292,20 @@ export function CatalogEdit({ lang, itemId, initial, categories, access, setup, 
     return () => { live = false; };
   }, []);
 
+  useEffect(() => {
+    let live = true;
+    if (setup && setup.features.custom_fields === false) return;
+    api<FieldsView>("/api/custom-fields").then((r) => { if (live) setDefs(r.fields.filter((x) => !x.archived)); }).catch(() => undefined);
+    return () => { live = false; };
+  }, [setup]);
+
   // The parts of the form the shop's type cares about start open on a new item.
   const focused = (part: string) => (!itemId && setup?.focus.includes(part) ? true : undefined);
   const isSample = Boolean(item?.sample);
+  // A part of the form is there when its feature is on (ALY-148), or when this item already
+  // uses it: switching a feature off hides it for new things and never takes it from an item.
+  const feats = setup?.features;
+  const allowed = (key: string, used = false) => !feats || feats[key] === true || used;
 
   const dirty = useMemo(() => JSON.stringify(form) !== start, [form, start]);
   const set = (patch: Partial<Form>) => setForm((f) => ({ ...f, ...patch }));
@@ -281,7 +322,7 @@ export function CatalogEdit({ lang, itemId, initial, categories, access, setup, 
     const filled = typed && !form.tags.some((x) => x.toLowerCase() === typed.toLowerCase()) && form.tags.length < 20
       ? { ...form, tags: [...form.tags, typed] }
       : form;
-    const { body, problems: found } = build(filled, t, item);
+    const { body, problems: found } = build(filled, t, item, defs);
     setProblems(found);
     if (!body) {
       setFailure(Object.values(found)[0] ?? "");
@@ -378,6 +419,9 @@ export function CatalogEdit({ lang, itemId, initial, categories, access, setup, 
         <div className="ct-grid2">
           <Field label={t.variantSku}><input value={v.sku} dir="ltr" maxLength={40} autoComplete="off" onChange={(e) => patch({ sku: e.target.value })} /></Field>
         </div>
+        {sizeFields.length > 0 && (
+          <div className="ct-grid2">{sizeFields.map((d) => ownField(d, v.custom, (next) => patch({ custom: next }), `v${i}`))}</div>
+        )}
         <div className="ct-grid2">
           <Field label={t.variantExtra} hint={t.variantExtraHint}>
             <input value={v.delta} inputMode="decimal" dir="ltr" onChange={(e) => patch({ delta: e.target.value })} />
@@ -396,6 +440,31 @@ export function CatalogEdit({ lang, itemId, initial, categories, access, setup, 
       </li>
     );
   }
+
+  const fe = FEAT[lang];
+  /** One of the shop's own fields, drawn for its kind: a text, a number, a date, a choice from its list or yes and no. */
+  function ownField(d: CustomField, values: Record<string, string>, change: (next: Record<string, string>) => void, scope: string) {
+    const label = (lang === "ar" && d.label_ar ? d.label_ar : d.label || d.label_ar) + (d.required ? " *" : "");
+    const value = values[d.key] ?? "";
+    const put = (v: string) => change({ ...values, [d.key]: v });
+    return (
+      <Field key={`${scope}-${d.key}`} label={label} hint={d.required ? fe.neededBeforeSale : d.unit || undefined}>
+        {d.kind === "choice" || d.kind === "yes_no" ? (
+          <select value={value} onChange={(ev) => put(ev.target.value)}>
+            <option value="">{fe.notSet}</option>
+            {d.kind === "yes_no"
+              ? [<option key="y" value="yes">{fe.yes}</option>, <option key="n" value="no">{fe.no}</option>]
+              : d.choices.filter((c) => c.active || c.value === value).map((c) => <option key={c.value} value={c.value}>{lang === "ar" && c.label_ar ? c.label_ar : c.label || c.label_ar}</option>)}
+          </select>
+        ) : (
+          <input value={value} type={d.kind === "date" ? "date" : "text"} inputMode={d.kind === "number" ? "decimal" : undefined}
+            dir={d.kind === "text" ? "auto" : "ltr"} maxLength={200} autoComplete="off" onChange={(ev) => put(ev.target.value)} />
+        )}
+      </Field>
+    );
+  }
+  const itemFields = defs.filter((d) => d.applies_to === "item");
+  const sizeFields = defs.filter((d) => d.applies_to === "variant");
 
   const otherGroups = (priceGroups ?? []).filter((g) => !g.is_default);
   const pricedCount = Object.values(form.groupPrices).filter((v) => v.trim() !== "").length;
@@ -490,7 +559,7 @@ export function CatalogEdit({ lang, itemId, initial, categories, access, setup, 
         {!w.closed && (
           <fieldset className="ct-choices small">
             <legend className="ct-sr">{t.windowKind}</legend>
-            {(["now", "dated"] as const).map((kind) => (
+            {(["now", "dated"] as const).filter((kind) => kind === "now" || allowed("pickup_date", w.kind === "dated")).map((kind) => (
               <label key={kind} className={`ct-choice ${w.kind === kind ? "on" : ""}`}>
                 <input type="radio" name={`kind-${wi}`} checked={w.kind === kind} onChange={() => patch({ kind })} />
                 <span className="ct-choice-mark" aria-hidden="true" />
@@ -595,11 +664,13 @@ export function CatalogEdit({ lang, itemId, initial, categories, access, setup, 
                 {UNITS.map((u) => <option key={u} value={u}>{t.units[u]}</option>)}
               </select>
             </Field>
-            <Field label={t.minOrder} error={problems.min}>
-              <input value={form.minOrder} inputMode="numeric" dir="ltr" onChange={(e) => set({ minOrder: e.target.value })} />
-            </Field>
+            {allowed("pack_rules", form.minOrder !== "1") && (
+              <Field label={t.minOrder} error={problems.min}>
+                <input value={form.minOrder} inputMode="numeric" dir="ltr" onChange={(e) => set({ minOrder: e.target.value })} />
+              </Field>
+            )}
           </div>
-          {form.unit === "pack" && (
+          {form.unit === "pack" && allowed("pack_rules", form.packSize !== "") && (
             <Field label={t.packSize}><input value={form.packSize} inputMode="numeric" dir="ltr" onChange={(e) => set({ packSize: e.target.value })} /></Field>
           )}
         </section>
@@ -639,7 +710,7 @@ export function CatalogEdit({ lang, itemId, initial, categories, access, setup, 
           <h3>{t.ruleTitle}</h3>
           <fieldset className="ct-choices">
             <legend className="ct-sr">{t.ruleTitle}</legend>
-            {RULES.map((r) => (
+            {RULES.filter((r) => r === "always" || allowed(RULE_FEATURE[r], form.rule === r)).map((r) => (
               <label key={r} className={`ct-choice ${form.rule === r ? "on" : ""}`}>
                 <input type="radio" name="rule" checked={form.rule === r} onChange={() => set({ rule: r })} />
                 <span className="ct-choice-mark" aria-hidden="true" />
@@ -670,17 +741,17 @@ export function CatalogEdit({ lang, itemId, initial, categories, access, setup, 
           <Field label={t.descAr}><textarea value={form.description_ar} dir="rtl" lang="ar" rows={3} maxLength={1000} onChange={(e) => set({ description_ar: e.target.value })} /></Field>
         </Fold>
 
-        <Fold title={t.variantsTitle} summary={form.variants.length ? String(form.variants.length) : undefined} open={form.variants.length > 0 ? true : focused("variants")}>
+        {allowed("variants", form.variants.length > 0) && <Fold title={t.variantsTitle} summary={form.variants.length ? String(form.variants.length) : undefined} open={form.variants.length > 0 ? true : focused("variants")}>
           <p className="ct-hint">{t.variantsHint}</p>
           {problems.variants && <p className="ct-error">{problems.variants}</p>}
           <ul className="ct-stack">{form.variants.map(variantRow)}</ul>
-          <button type="button" className="btn ct-btn" onClick={() => set({ variants: [...form.variants, { name: "", name_ar: "", sku: "", delta: "", limit: form.dailyLimit, active: true, opening: "", onHand: null }] })}>
+          <button type="button" className="btn ct-btn" onClick={() => set({ variants: [...form.variants, { name: "", name_ar: "", sku: "", delta: "", limit: form.dailyLimit, active: true, opening: "", onHand: null, custom: {} }] })}>
             <Icon name="plus" />{t.addVariant}
           </button>
           {form.variants.length > 0 && itemId && <p className="ct-hint">{t.variantKept}</p>}
-        </Fold>
+        </Fold>}
 
-        {priceGroups !== null && (
+        {priceGroups !== null && allowed("price_groups", pricedCount > 0) && (
           <Fold title={t.groupPricesTitle} summary={pricedCount ? t.groupPricesSummary(pricedCount) : undefined} open={pricedCount > 0 ? true : focused("groups")}>
             <p className="ct-hint">{t.groupPricesHint}</p>
             {problems.groupPrices && <p className="ct-error">{problems.groupPrices}</p>}
@@ -690,16 +761,16 @@ export function CatalogEdit({ lang, itemId, initial, categories, access, setup, 
           </Fold>
         )}
 
-        <Fold title={t.optionsTitle} summary={form.groups.length ? String(form.groups.length) : undefined} open={form.groups.length > 0 ? true : focused("options")}>
+        {allowed("options", form.groups.length > 0) && <Fold title={t.optionsTitle} summary={form.groups.length ? String(form.groups.length) : undefined} open={form.groups.length > 0 ? true : focused("options")}>
           <p className="ct-hint">{t.optionsHint}</p>
           {problems.groups && <p className="ct-error">{problems.groups}</p>}
           <ul className="ct-stack">{form.groups.map(groupBox)}</ul>
           <button type="button" className="btn ct-btn" onClick={() => set({ groups: [...form.groups, { name: "", name_ar: "", required: false, max: "1", options: [{ name: "", name_ar: "", price: "", active: true }] }] })}>
             <Icon name="plus" />{t.addGroup}
           </button>
-        </Fold>
+        </Fold>}
 
-        <Fold title={t.scheduleTitle} summary={form.scheduled ? t.scheduleSet : t.scheduleAny} open={form.scheduled ? true : focused("schedule")}>
+        {allowed("schedule", form.scheduled) && <Fold title={t.scheduleTitle} summary={form.scheduled ? t.scheduleSet : t.scheduleAny} open={form.scheduled ? true : focused("schedule")}>
           <fieldset className="ct-choices small">
             <legend className="ct-sr">{t.scheduleTitle}</legend>
             {[false, true].map((on) => (
@@ -720,9 +791,16 @@ export function CatalogEdit({ lang, itemId, initial, categories, access, setup, 
               </button>
             </>
           )}
-        </Fold>
+        </Fold>}
 
-        <Fold title={t.tagsTitle} summary={form.tags.length ? String(form.tags.length) : undefined} open={form.tags.length > 0 ? true : undefined}>
+        {itemFields.length > 0 && allowed("custom_fields", Object.keys(form.custom).length > 0) && (
+          <Fold title={fe.moreDetails} summary={fe.moreDetailsSummary(Object.values(form.custom).filter((x) => x !== "").length)}
+            open={Object.values(form.custom).some((x) => x !== "") || itemFields.some((d) => d.required) ? true : undefined}>
+            {itemFields.map((d) => ownField(d, form.custom, (next) => set({ custom: next }), "item"))}
+          </Fold>
+        )}
+
+        {allowed("tags", form.tags.length > 0) && <Fold title={t.tagsTitle} summary={form.tags.length ? String(form.tags.length) : undefined} open={form.tags.length > 0 ? true : undefined}>
           <p className="ct-hint">{t.tagsHint}</p>
           {form.tags.length > 0 && (
             <ul className="ct-tags">
@@ -745,7 +823,7 @@ export function CatalogEdit({ lang, itemId, initial, categories, access, setup, 
               <button key={idea} type="button" className="ct-chip" onClick={() => addTag(idea)}><Icon name="plus" className="sh-ico ct-chip-tick" />{idea}</button>
             ))}
           </div>
-        </Fold>
+        </Fold>}
 
         {itemId && (
           <Fold title={t.historyTitle} onToggle={(o) => void openHistory(o)}>
