@@ -23,6 +23,7 @@ from alyr.modules.items import (
     clock,
     drafts,
     features,
+    fields,
     groups,
     listing,
     photos,
@@ -46,6 +47,10 @@ NULLABLE = {
     "sale_price", "sale_starts_at", "sale_ends_at", "pack_size", "daily_limit", "sku",
     "low_stock_at",
 }
+
+
+# Values of the owner's own fields, by the field's key (ALY-148).
+FieldValues = dict[str, str | int | float | bool | None]
 
 
 class GroupPriceIn(BaseModel):
@@ -78,6 +83,9 @@ class VariantIn(BaseModel):
     daily_limit: int | None = Field(default=None, ge=0, le=1_000_000)
     active: bool = True
     opening_stock: int | None = Field(default=None, ge=0, le=1_000_000)
+    custom: FieldValues | None = Field(
+        default=None, description="The owner's own fields for this size (key to value; null "
+                                  "removes one)")
 
 
 class OptionIn(BaseModel):
@@ -150,6 +158,10 @@ class ItemChanges(BaseModel):
     variants: list[VariantIn] | None = Field(default=None, max_length=100)
     option_groups: list[GroupIn] | None = Field(default=None, max_length=20)
     schedule: list[WindowIn] | None = Field(default=None, max_length=30)
+    custom: FieldValues | None = Field(
+        default=None, max_length=fields.MAX_FIELDS,
+        description="The owner's own fields for this item (key to value; null removes one)",
+    )
     reason: str = Field(default="", max_length=200, description="Why the price changed")
 
 

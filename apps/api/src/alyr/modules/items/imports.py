@@ -30,6 +30,7 @@ from alyr.core.media import MediaService
 from alyr.core.team import Actor
 from alyr.modules.items import (
     features,
+    fields,
     import_alert,
     import_photos,
     import_plan,
@@ -103,10 +104,12 @@ async def snapshot(
         "select owner_id, asset_id from media_links where owner_kind = 'item'"
     ):
         attached.setdefault(r["owner_id"], set()).add(r["asset_id"])
+    feats = await features.load(conn)
     return Snapshot(
         tenant_id, clock.tz, entries, [c["name"] for c in await service.categories(conn)],
         limit, max(limit - used, 0), assets, attached,
         frozenset(await features.file_columns(conn)),
+        [f for f in await fields.rows(conn, False)] if feats.on("custom_fields") else [],
     )
 
 
@@ -275,9 +278,16 @@ async def discard(conn: asyncpg.Connection, import_id: UUID) -> None:
 _ITEM_FIELDS = (
     "name", "name_ar", "sku", "description", "description_ar", "category", "price", "sale_price",
     "sale_starts_at", "sale_ends_at", "unit", "pack_size", "min_order", "tags", "stock_rule",
-    "available", "status", "low_stock_at",
+    "available", "status", "low_stock_at", "custom",
 )
-_VARIANT_FIELDS = ("name", "name_ar", "sku", "price_delta", "daily_limit", "active")
+_VARIANT_FIELDS = ("name", "name_ar", "sku", "price_delta", "daily_limit", "active", "custom")
+
+
+def _erase(after: dict | None, before: dict | None) -> dict:
+    """What puts the owner's field values back to `before`: the values then, and a null for each
+    key the import added (a save merges, so a key left out would stay)."""
+    before, after = dict(before or {}), dict(after or {})
+    return {**{k: None for k in after if k not in before}, **before}
 
 
 def _ser(value: object) -> object:
@@ -320,11 +330,13 @@ async def _create(
     data = {k: v for k, v in item.data.items()}
     data["sort"] = order
     named = len(item.variants) > 1 or bool(item.variants and item.variants[0].name)
-    listed = named or any(v.sku for v in item.variants)  # a code on the one unnamed size, too
+    # a code (or a field of its own) on the one unnamed size, too
+    listed = named or any(v.sku or v.custom for v in item.variants)
     if listed:
         data["variants"] = [
             {"name": v.name, "name_ar": v.name_ar, "price_delta": v.price_diff or 0,
-             "daily_limit": v.per_day, "active": True, "sku": v.sku or ""}
+             "daily_limit": v.per_day, "active": True, "sku": v.sku or "",
+             **({"custom": v.custom} if v.custom else {})}
             for v in item.variants
         ]
     elif item.variants and item.variants[0].per_day is not None:
@@ -390,6 +402,8 @@ async def _update(
             change["name_ar"] = op.name_ar
         if op.sku is not None and op.sku != existing["sku"]:
             change["sku"] = op.sku
+        if op.custom:
+            change["custom"] = op.custom
         if change:
             touched[existing["id"]] = {**touched.get(existing["id"], {}), **change}
         if op.stock is not None:
@@ -399,7 +413,8 @@ async def _update(
         default_only = len(entry.variants) == 1 and entry.variants[0]["is_default"]
         new_inputs = [
             {"name": op.name, "name_ar": op.name_ar, "price_delta": op.price_diff or 0,
-             "daily_limit": op.per_day, "active": True, "sku": op.sku or ""}
+             "daily_limit": op.per_day, "active": True, "sku": op.sku or "",
+             **({"custom": op.custom} if op.custom else {})}
             for op in fresh
         ]
         if default_only and fresh and not touched:
@@ -410,7 +425,9 @@ async def _update(
                  "name_ar": touched.get(v["id"], {}).get("name_ar", v["name_ar"]),
                  "price_delta": touched.get(v["id"], {}).get("price_delta", v["price_delta"]),
                  "daily_limit": touched.get(v["id"], {}).get("daily_limit", v["daily_limit"]),
-                 "sku": touched.get(v["id"], {}).get("sku", v["sku"]), "active": v["active"]}
+                 "sku": touched.get(v["id"], {}).get("sku", v["sku"]), "active": v["active"],
+                 **({"custom": touched[v["id"]]["custom"]}
+                    if touched.get(v["id"], {}).get("custom") else {})}
                 for v in entry.variants
             ] + new_inputs
     if changes:
@@ -683,11 +700,17 @@ async def _undo_updated(
     if change["before"]:
         if _item_state(entry, change["after"].keys()) == change["after"]:
             changes = {k: _deser(k, v) for k, v in change["before"].items()}
+            if "custom" in changes:
+                changes["custom"] = _erase(change["after"].get("custom"), changes["custom"])
         else:
             left = True
     if "variants_before" in change:
         if _variant_state(entry) == change["variants_after"]:
-            changes["variants"] = change["variants_before"]
+            after_by_id = {v["id"]: v for v in change["variants_after"]}
+            changes["variants"] = [
+                {**v, "custom": _erase(after_by_id.get(v["id"], {}).get("custom"), v.get("custom"))}
+                for v in change["variants_before"]
+            ]
         else:
             left = True
     if changes:

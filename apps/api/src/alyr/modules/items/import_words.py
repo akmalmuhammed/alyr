@@ -340,6 +340,21 @@ MESSAGES: dict[str, tuple[str, str, str]] = {
         "The column “{value}” is not one ALYR uses, so it was left out.",
         "العمود «{value}» ليس من الأعمدة التي يستخدمها ALYR، لذلك تُرك.",
     ),
+    "custom_bad": (
+        "error",
+        "{detail}",
+        "{detail_ar}",
+    ),
+    "custom_missing": (
+        "warning",
+        "{detail} The item is saved as a draft until it has one.",
+        "{detail_ar} يُحفظ الصنف مسودة إلى أن تكتبه.",
+    ),
+    "custom_required": (
+        "error",
+        "{detail}",
+        "{detail_ar}",
+    ),
     "column_off": (
         "warning",
         "The column “{value}” was left out: “{feature}” is switched off for your shop. Switch it "

@@ -15,6 +15,8 @@ import { FEAT } from "./featuresCopy";
 import { Announce, Icon, Layer, Switch, Tile, ToastLayer, useToasts } from "./CatalogUi";
 import { CatalogEdit } from "./CatalogEdit";
 import { CatalogFeatures } from "./CatalogFeatures";
+import { CatalogFields } from "./CatalogFields";
+import { CatalogTemplate } from "./CatalogTemplate";
 import { CatalogImport } from "./CatalogImport";
 import { AddSheet, WalkThrough } from "./CatalogAdd";
 import { CatalogBulk } from "./CatalogBulk";
@@ -31,6 +33,8 @@ type Sheet =
   | { kind: "import" }
   | { kind: "settings" }
   | { kind: "features" }
+  | { kind: "fields" }
+  | { kind: "template" }
   | { kind: "share"; target: Target };
 
 const PAGE = 60;
@@ -583,7 +587,15 @@ export function Catalog({ lang, title, show = null, onRenamed }: { lang: Lang; t
       )}
       {sheet?.kind === "features" && (
         <CatalogFeatures lang={lang} push={push} onClose={() => { setSheet(null); void load(); loadSetup(); }}
-          onChanged={() => { loadSetup(); onRenamed?.(); }} />
+          onChanged={() => { loadSetup(); onRenamed?.(); }} onOpen={(what) => setSheet({ kind: what })} />
+      )}
+      {sheet?.kind === "fields" && (
+        <CatalogFields lang={lang} push={push} onClose={() => { setSheet({ kind: "features" }); void load(); loadSetup(); }}
+          onChanged={() => { loadSetup(); void load(); }} />
+      )}
+      {sheet?.kind === "template" && (
+        <CatalogTemplate lang={lang} push={push} onClose={() => setSheet({ kind: "features" })}
+          onChanged={() => { loadSetup(); void load(); onRenamed?.(); }} />
       )}
       {sheet?.kind === "settings" && (
         <CatalogSettings lang={lang} push={push} onClose={() => { setSheet(null); void load(); loadSetup(); }} />

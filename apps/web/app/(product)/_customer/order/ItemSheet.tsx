@@ -154,6 +154,13 @@ export function ItemSheet({
           <StatusLine item={item} lang={lang} />
           {description && <p className="ox-long" dir="auto">{description}</p>}
           {item.tags.length > 0 && <ul className="ox-tags">{item.tags.map((tag) => <li key={tag} dir="auto">{tag}</li>)}</ul>}
+          {item.fields && item.fields.length > 0 && (
+            <dl className="ox-fieldlist">
+              {item.fields.map((x) => (
+                <div key={x.key}><dt dir="auto">{say(lang, x.label, x.label_ar)}</dt><dd><bdi>{say(lang, x.text, x.text_ar)}</bdi></dd></div>
+              ))}
+            </dl>
+          )}
           <p className="ox-meta">
             {[
               item.unit && item.unit !== "piece" ? t.units[item.unit] ?? item.unit : "",
@@ -177,7 +184,9 @@ export function ItemSheet({
                   ? <input type="radio" name={`${sizeId}-v`} checked={variantId === v.id} disabled={v.sold_out}
                       onChange={() => { setVariantId(v.id); setQty((q) => Math.max(smallest(item), Math.min(q, most(item, v.id)))); }} />
                   : null}
-                <span className="ox-opt-name" dir="auto">{say(lang, v.name, v.name_ar)}</span>
+                <span className="ox-opt-name" dir="auto">{say(lang, v.name, v.name_ar)}
+                  {v.fields && v.fields.length > 0 && <small className="ox-opt-fields" dir="auto">{v.fields.map((x, k) => <span key={x.key}>{k > 0 && " · "}{say(lang, x.label, x.label_ar)}: <bdi>{say(lang, x.text, x.text_ar)}</bdi></span>)}</small>}
+                </span>
                 {v.sold_out
                   ? <span className="ox-pill off">{t.sizeSoldOut}</span>
                   : v.left !== null && v.left > 0 ? <span className="ox-pill few">{item.daily ? t.onlyLeftToday(v.left) : t.onlyLeft(v.left)}</span> : null}

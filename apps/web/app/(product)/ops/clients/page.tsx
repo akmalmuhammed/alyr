@@ -8,23 +8,32 @@ import { api, type ClientSummary, type Pricing } from "../api";
 import { Clients } from "../Clients";
 
 type Product = { key: string; name: { en: string }; status: string };
-const EMPTY = { name: "", name_ar: "", slug: "", owner_name: "", owner_email: "", products: ["chat"] as string[], client_id: "" };
+const EMPTY = { name: "", name_ar: "", slug: "", owner_name: "", owner_email: "", products: ["chat"] as string[], client_id: "", template: "" };
+type Choice = { key: string; name: string; builtin: boolean; note: string };
 
 export default function ClientsPage() {
   const [pricing, setPricing] = useState<Pricing | null>(null);
   const [clients, setClients] = useState<ClientSummary[]>([]);
   const [products, setProducts] = useState<Product[]>([]);
+  const [templates, setTemplates] = useState<Choice[]>([]);
   const [initial, setInitial] = useState<string | null>(null);
   const [form, setForm] = useState(EMPTY);
   const [message, setMessage] = useState("");
   const [round, setRound] = useState(0);
 
   const load = useCallback(async () => {
-    const [p, c, w] = await Promise.all([
+    const [p, c, w, t] = await Promise.all([
       api<Pricing>("/api/admin/pricing"),
       api<{ clients: ClientSummary[] }>("/api/admin/clients"),
       api<{ products: Product[] }>("/api/workspace"),
+      api<{ builtin: { key: string; name: string; note: string }[]; made: { key: string; name: string; note: string; archived: boolean }[] }>("/api/admin/templates"),
     ]);
+    if (t.ok) {
+      setTemplates([
+        ...t.data.builtin.map((x) => ({ key: x.key, name: x.name, builtin: true, note: x.note })),
+        ...t.data.made.filter((x) => !x.archived).map((x) => ({ key: x.key, name: x.name, builtin: false, note: x.note })),
+      ]);
+    }
     if (p.ok) setPricing(p.data);
     if (c.ok) setClients(c.data.clients);
     if (w.ok) setProducts(w.data.products);
@@ -41,7 +50,7 @@ export default function ClientsPage() {
   async function create(event: React.FormEvent) {
     event.preventDefault();
     setMessage("");
-    const answer = await api("/api/admin/businesses", "POST", { ...form, client_id: form.client_id || null });
+    const answer = await api("/api/admin/businesses", "POST", { ...form, client_id: form.client_id || null, template: form.template });
     if (!answer.ok) return setMessage(answer.error);
     setMessage(`Created ${form.name}. ${form.owner_email} can now sign in.`);
     setForm(EMPTY);
@@ -77,6 +86,13 @@ export default function ClientsPage() {
             <select value={form.client_id} onChange={(e) => setForm({ ...form, client_id: e.target.value })}>
               <option value="">A new client</option>
               {clients.map((c) => <option key={c.id} value={c.id}>Add to {c.name}</option>)}
+            </select>
+          </label>
+          <label className="ops-field">
+            <span>Template (what the Catalog starts as)</span>
+            <select value={form.template} onChange={(e) => setForm({ ...form, template: e.target.value })}>
+              <option value="">None, set up by the owner</option>
+              {templates.map((t) => <option key={t.key} value={t.key}>{t.name}{t.builtin ? "" : " (made here)"}</option>)}
             </select>
           </label>
           <fieldset className="ops-field">
