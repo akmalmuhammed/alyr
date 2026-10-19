@@ -146,6 +146,35 @@ export type FeaturesView = {
   can_manage: boolean;
 };
 
+/** Where a discount stands: waiting for its start, working, paused by hand, all used, or over. */
+export type DiscountState = "scheduled" | "active" | "paused" | "used_up" | "ended";
+/**
+ * A coupon code or an automatic discount (`GET /api/discounts`; ALY-150, specs/014-pricing-pack).
+ * Amounts are dirhams. `text` and `text_ar` are the rule in words, from the API. A `percent` is
+ * a string ("12.5") so it stays exact.
+ */
+export type DiscountRule = {
+  id: string; kind: "coupon" | "auto"; code: string; name: string; name_ar: string;
+  text: string; text_ar: string; value_type: "percent" | "amount" | "free_units";
+  percent: string | null; amount: number | null; buy_qty: number | null; get_qty: number | null;
+  scope: "order" | "selected"; items: { id: string; name: string; name_ar: string }[]; categories: string[];
+  min_order: number; usage_limit: number | null; per_customer_limit: number | null;
+  starts_at: string | null; ends_at: string | null; stackable: boolean; group_id: string | null;
+  group: { name: string; name_ar: string } | null; status: string; state: DiscountState;
+  uses: number; given: number; given_text: string; created_by: string; created_at: string;
+};
+export type DiscountsView = {
+  rules: DiscountRule[]; given_total: number; given_total_text: string; limits: { rules: number };
+};
+/** What a discount form sends (`POST /api/discounts`, `PUT /api/discounts/{id}`). */
+export type DiscountBody = {
+  kind: "coupon" | "auto"; code: string; name: string; name_ar: string;
+  value_type: "percent" | "amount" | "free_units"; percent?: number; amount?: number;
+  buy_qty?: number; get_qty?: number; scope: "order" | "selected"; item_ids: string[]; categories: string[];
+  min_order: number; usage_limit: number | null; per_customer_limit: number | null;
+  starts_at: string | null; ends_at: string | null; stackable: boolean; group_id: string | null;
+};
+
 /** A WhatsApp number the owner registered as staff: it may change the Catalog by message. */
 export type StaffNumber = {
   id: string; name: string; phone: string; lang: "en" | "ar"; manager: boolean; weekly_report: boolean;

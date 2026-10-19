@@ -412,6 +412,8 @@ export default function Order({ slug, token, table, initial, lang: first, focusI
   // keeps the page it always had, which offers all four.
   const offers = store.catalog?.layout ?? { pickup_date: true, quick_quantity: true, same_as_last: true, show_sku: true };
   const section = store.catalog ? say(lang, store.catalog.section.name, store.catalog.section.name_ar) : "";
+  // The shop's automatic discounts in words, only while its discounts are on (ALY-150).
+  const offerList = store.pricing?.discounts?.offers ?? [];
 
   if (placed) {
     const link = placed.payment === "link" && placed.pay_url ? new URL(placed.pay_url).pathname : null;
@@ -420,6 +422,9 @@ export default function Order({ slug, token, table, initial, lang: first, focusI
         <Done title={t.placed(placed.number)}>
           {placed.payment === "account" && <p><b className="num"><Price value={placed.total} lang={lang} /></b> · {t.onAccount}</p>}
           {placed.payment === "link" && <p><b className="num"><Price value={placed.total} lang={lang} /></b></p>}
+          {placed.pricing && placed.pricing.discount_total > 0 && (
+            <p className="ox-discount-line">{t.discountOnOrder(`−${formatPrice(placed.pricing.discount_total, lang)}`)}</p>
+          )}
           <p>{placed.payment === "link" ? t.payToConfirm : t.backToChat}</p>
         </Done>
         {placed.left_out && placed.left_out.length > 0 && (
@@ -484,6 +489,12 @@ export default function Order({ slug, token, table, initial, lang: first, focusI
           {store.table && <span className="ox-table"><Glyph name="table" />{t.table(store.table)}</span>}
         </div>
       </section>
+
+      {offerList.length > 0 && (
+        <ul className="ox-offers" aria-label={t.offers}>
+          {offerList.map((o) => <li key={o.text}>{say(lang, o.text, o.text_ar)}</li>)}
+        </ul>
+      )}
 
       {store.link.state === "invalid" || store.link.state === "expired" ? (
         <p className="cx-warn" role="alert">{say(lang, store.link.message, store.link.message_ar)}</p>
@@ -615,7 +626,7 @@ export default function Order({ slug, token, table, initial, lang: first, focusI
       {review && token && customer && (
         <ReviewSheet slug={slug} token={token} lang={lang} lines={lines} lookup={lookup} customer={customer} table={store.table} askDay={offers.pickup_date}
           forDate={forDate} onForDate={setForDate} setQty={setQty} remove={remove} accept={accept} swap={swap}
-          whatsapp={partsOf(lines)}
+          whatsapp={partsOf(lines)} discounts={!!store.pricing?.discounts}
           choose={(id) => { const it = seenRef.current.get(id); setReview(false); if (it) setOpen(it); }}
           onPlaced={(p) => {
             setReview(false); setCart([]); setFlagged(new Set());
