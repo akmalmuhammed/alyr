@@ -23,6 +23,7 @@ from alyr.modules.items import (
     availability,
     cart,
     clock,
+    costs,
     delivery,
     delivery_text,
     demand,
@@ -547,6 +548,10 @@ async def create_order(
             # The size's own code, else the item's: what the shop reads on its order.
             variant["sku"] or item["sku"], snapshot, quote.line_discounts.get(c.index, 0),
         )
+        if feats.on("cost_margin"):
+            # What one unit costs now, kept beside the line: the order's margin stays right
+            # whatever the cost or the price does later. Nothing of it is sent to anyone.
+            await costs.snapshot(conn, order_item_id, item["id"], variant["id"])
         if c.take is not None:
             await stock_holds.create(
                 conn, order_id, order_item_id, c.take.variant_id, c.take.quantity, c.take.day,

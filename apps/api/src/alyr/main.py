@@ -32,6 +32,7 @@ from alyr.routes import admin_templates as admin_template_routes
 from alyr.routes import agent as agent_routes
 from alyr.routes import auth as auth_routes
 from alyr.routes import bookings as bookings_routes
+from alyr.routes import costs as cost_routes
 from alyr.routes import custom_fields as custom_field_routes
 from alyr.routes import delivery as delivery_routes
 from alyr.routes import discounts as discount_routes
@@ -155,6 +156,9 @@ def create_app() -> FastAPI:
         items_import_routes.router,
         dependencies=[Depends(require_any_module("orders", "catalog"))],
     )
+    # Cost and margin (ALY-150): owners and admins only. Before the items' own routes, so that
+    # `/api/items/margins` is not taken for an item's ID.
+    app.include_router(cost_routes.router)
     app.include_router(
         items.router, dependencies=[Depends(require_any_module("orders", "catalog"))]
     )

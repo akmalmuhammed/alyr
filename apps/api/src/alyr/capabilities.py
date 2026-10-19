@@ -321,6 +321,19 @@ BUILT: tuple[Capability, ...] = (
         "وفي الطلب عبر واتساب، وكيف يصل كل طلب إلى العميل في الطلب نفسه، وسطراً في التقرير "
         "الأسبوعي."),
        "pricing", ("settings", "order_page", "chat", "reports"), default=False),
+    _c("cost_margin", ("Cost price and margin", "سعر التكلفة والهامش"),
+       ("Write what each item costs you and see what you earn on it. Only you and your admins "
+        "see costs and margins: your team and your customers never do.",
+        "اكتب تكلفة كل صنف عليك وشاهد ما تربحه منه. أنت ومديروك فقط ترون التكاليف والهوامش، "
+        "ولا يراها فريقك ولا عملاؤك أبداً."),
+       ("Adds cost fields to the item form, the margin to the items list and to each order, the "
+        "value of your stock to the Stock tab, cost columns to the Excel and CSV files, and "
+        "lines to the weekly report. It warns you when a price is below the cost, and never "
+        "stops you saving it.",
+        "يضيف حقول التكلفة إلى نموذج الصنف، والهامش إلى قائمة الأصناف وإلى كل طلب، وقيمة "
+        "مخزونك إلى تبويب المخزون، وأعمدة التكلفة إلى ملفات Excel وCSV، وأسطراً إلى التقرير "
+        "الأسبوعي. ينبهك حين يكون السعر أقل من التكلفة، ولا يمنعك من حفظه."),
+       "pricing", ("form", "list", "import_export", "reports"), default=False),
 )
 
 # ── extension points: named, not built, hidden everywhere ─────────────────────────────
@@ -335,7 +348,7 @@ def _later(key: str) -> Capability:
 
 
 EXTENSION_POINTS: tuple[Capability, ...] = tuple(_later(k) for k in (
-    "decimal_quantity", "cost_margin", "bundles", "suppliers",
+    "decimal_quantity", "bundles", "suppliers",
     "barcode", "batch_expiry", "serial_imei",
 ))
 

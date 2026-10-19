@@ -403,7 +403,8 @@ def test_an_uploaded_column_of_a_feature_that_is_off_is_noted_and_left_out(clien
 
 
 def test_the_columns_are_data_the_files_and_the_features_agree_on():
-    assert set(columns.NEEDS) <= set(columns.ORDER)
+    # (the cost column is added only for an owner or admin of a shop that keeps costs)
+    assert set(columns.NEEDS) <= set(columns.ORDER) | {"cost"}
     stored = set(capabilities.STORED)
     for need in columns.NEEDS.values():
         assert set(need.split("|")) <= stored
