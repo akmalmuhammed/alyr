@@ -319,7 +319,7 @@ def test_a_grocery_counts_stock_in_kilos_pieces_and_packs_and_hides_what_is_gone
     assert (hints["new_item"]["rule"], hints["low_stock_at"], hints["sold_out"]) == (
         "count", 10, "hide")
     # The four things a page can offer were declared per type and never read; the page always
-    # offered all four, so every type starts with all four on (ALY-148, spec 011).
+    # offered all four, so every type starts with all four on (ALY-148, spec 012).
     assert hints["layout"] == {"style": "list", "pickup_date": True, "quick_quantity": True,
                                "same_as_last": True, "show_sku": True}
     items = samples_of(on)

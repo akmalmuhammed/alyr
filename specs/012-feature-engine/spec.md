@@ -1,4 +1,4 @@
-# Spec 011: The feature engine (one Catalog, configured for each kind of business)
+# Spec 012: The feature engine (one Catalog, configured for each kind of business)
 
 Status: built in ALY-148 (a child of ALY-101). Decision: D-039, "As built (feature engine)". The Catalog it configures is `specs/001-catalog-engine/spec.md` (engine), `002` (screens), `003` (price groups, SKU), `004` (WhatsApp), `005` (order page), `006` (import and export), `007` (reports), `008` (business types, now one kind of template) and `009` (scenarios).
 
@@ -27,7 +27,7 @@ Three kinds:
 * **Switchable** (built): `rule_switch`, `rule_count`, `rule_daily_limit`, `schedule`, `pickup_date`, `variants`, `options`, `price_groups`, `pack_rules`, `quick_quantity`, `same_as_last`, `show_sku`, `order_on_whatsapp`, `sold_out_display` (a choice, always on), `low_stock_alerts`, `sold_out_alerts`, `back_in_stock`, `share_links`, `table_qr`, `tags`, `custom_fields`. (`custom_fields` is registered and on; what it does arrives with the second pull request, and it affects nothing yet.)
 * **Extension points** (named, not built): `decimal_quantity`, `cost_margin`, `discounts`, `delivery_fees`, `bundles`, `suppliers`, `barcode`, `batch_expiry`, `serial_imei`. They are **hidden everywhere**: they have no words, no API returns them, no template can carry one, nothing can switch one on (`unknown_feature`), and `tests/test_feature_registry.py` fails if one acquires text. To build one: write what it does and its consumers (form part, order page, file columns, report, chat), set `built=True` and give it words. Nothing else changes, and **no migration is needed**: a shop with no row for a feature gets its template's value.
 
-## Per-shop features (migration 0034)
+## Per-shop features (migration 0035)
 
 `shop_features (tenant_id, key, enabled, config jsonb, set_by 'template' | 'owner', updated_by, created_at, updated_at)`, primary key `(tenant_id, key)`, row-level security forced, the `tenant_isolation` policy, grants `select, insert, update, delete` (delete only so a demo shop can be reset).
 
@@ -36,7 +36,7 @@ Three kinds:
 * **`set_by`** is `'owner'` for anything an owner or ALYR's staff chose. A later re-apply of a template never touches an owner's value.
 * **Changing one** (`PUT /api/features/{key}`, owners and admins): switching a feature on switches on what it needs; switching one off switches off what needs it; the answer says what moved. Each change is on the activity record (`subject = 'catalog'`, action `features`, who, from-to, and the ones that moved with it). A change that changes nothing writes nothing.
 
-### The migration (0034): nothing changes for any existing shop
+### The migration (0035): nothing changes for any existing shop
 
 For every row of `tenants` it writes a row for every feature stored at the time (`order_on_whatsapp` was registered later, with the merge of ALY-136: a shop with no row for it gets its template's value, on, which is the whole point of resolving through the template; `tests/test_feature_engine_migration.py` says so). Every part of the form and the order page's four extras were always there, so they are on. The two alerts and the sold-out look are copied from the shop's `shop_settings` (alerts on and greyed when the shop has no settings), and a value that is not the one the shop's type starts with is marked `owner`. The legacy columns `shop_settings.alert_low_stock`, `alert_sold_out` and `sold_out_display` stay in the table and are **no longer read**. Four columns are added to `shop_settings` (`section_name`, `section_name_ar`, `layout_style`, `template_key`; empty means the template's). It is safe to run again, and was tested on a database built to the previous migration with data in it, as a superuser owner and as an owner that does not bypass row-level security (`tests/test_feature_engine_migration.py`).
 
@@ -94,7 +94,7 @@ Create the shop (back office or onboarding) as the closest type, open Catalog â†
 
 * `tests/test_feature_registry.py`: the registry's invariants (words in both languages, no jargon or promise, dependencies first, extension points hidden and mute, every template covers exactly the stored features).
 * `tests/test_feature_engine_identical.py`: **for each of the eleven business types, a shop made through the real onboarding path is compared with `tests/golden/types_before_features.json`, captured by running `origin/main` before this work**: navigation, home cards, `/api/items/setup`, settings, categories, what the order page is told, whether a full item (sizes, choices, a daily limit, tags, pack size, a lead time) is accepted for every way of running out, the columns of the export and the template file, onboarding's review, samples. The differences are the deliberate ones only (the four extras, `report_lines`, the new keys), written in the test.
-* `tests/test_feature_engine_migration.py`: 0034 on a database with data, twice, for every type and for what an owner had changed.
+* `tests/test_feature_engine_migration.py`: 0035 on a database with data, twice, for every type and for what an owner had changed.
 * `tests/test_features_api.py` and `test_features_wording.py`: the screen's answer, the cascade, the record, who may change what, isolation between shops, off and on for each feature (the form's guards, the order page, the files, the report, the cards, the chat, the alerts), the section's name and layout.
 * The browser: `scripts/feature-engine-browser-check.mjs`.
 

@@ -1,4 +1,4 @@
-"""Migration 0034 brings every existing shop across without changing how it behaves (ALY-148).
+"""Migration 0035 brings every existing shop across without changing how it behaves (ALY-148).
 
 It runs here on a throwaway database that is built up to 0033 and filled the way a live database
 is: a shop of each business type with the settings its type gave it, shops whose owner changed a
@@ -21,7 +21,7 @@ from alyr.presets import PRESETS
 from conftest import APP_DSN, OWNER_DSN
 from test_catalog_migration import dsn_for
 
-THIS_ONE = "0034_feature_engine.sql"
+THIS_ONE = "0035_feature_engine.sql"
 LIMITED_ROLE = "alyr_features_check"
 TYPES = [p.key for p in PRESETS]
 
@@ -159,7 +159,7 @@ def of(migrated, key: str) -> dict[str, asyncpg.Record]:
     return {r["key"]: r for r in migrated["rows"] if r["tenant_id"] == tenant}
 
 
-# Features registered after migration 0034 have no row for a shop that existed then: it gets its
+# Features registered after migration 0035 have no row for a shop that existed then: it gets its
 # template's value, which for these is on, so nothing changes for it (no migration is needed to
 # add a feature; the order-by-code merge, ALY-136, added "Order on WhatsApp").
 ADDED_LATER = {"order_on_whatsapp"}

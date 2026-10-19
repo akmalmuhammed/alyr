@@ -103,7 +103,7 @@ export type Setup = {
   samples: number;
 };
 
-/** One feature on the Features screen (GET /api/features; specs/011-feature-engine). */
+/** One feature on the Features screen (GET /api/features; specs/012-feature-engine). */
 export type FeatureRow = {
   key: string; name: string; name_ar: string; hint: string; hint_ar: string; changes: string; changes_ar: string;
   group: string; affects: string[]; enabled: boolean; own: boolean; depends_on: string[]; needed_by: string[];

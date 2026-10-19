@@ -7,7 +7,7 @@ answers the question every other part of the Catalog asks: *is this on for this 
 * **One answer.** `load(conn)` gives a `Features` with `on(key)`, `mode(key)` and helpers for
   the questions that recur (which rules may a new item use, which columns does a file have).
   Every consumer asks it; none looks at the business type.
-* **A shop with no row for a feature gets its template's value.** The migration (0034) gave
+* **A shop with no row for a feature gets its template's value.** The migration (0035) gave
   every shop a row for every feature, and onboarding seeds a new shop, so this is only for a
   feature a later version adds.
 * **A feature that needs another is off when the other is off**, whatever its own row says.

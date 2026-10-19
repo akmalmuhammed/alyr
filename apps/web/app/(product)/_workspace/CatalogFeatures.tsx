@@ -1,6 +1,6 @@
 "use client";
 
-// The Features screen (ALY-148, D-039; specs/011-feature-engine): what the Catalog does for this
+// The Features screen (ALY-148, D-039; specs/012-feature-engine): what the Catalog does for this
 // shop, grouped in plain words. Each feature has a switch, what it is for, what it changes and
 // where, how many items use it, and who set it. Turning one off hides it and stops it applying to
 // new items; nothing already made is changed or deleted, and the screen says so. Above the

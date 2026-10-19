@@ -108,7 +108,7 @@ def test_there_is_a_built_in_template_for_every_business_type_that_has_a_catalog
 
 def test_the_built_in_templates_turn_on_everything_a_shop_always_had():
     """Every part of the form and the order page's four extras were always there, so every
-    built-in type starts with them on (spec 011, "identical behaviour")."""
+    built-in type starts with them on (spec 012, "identical behaviour")."""
     always = [c.key for c in capabilities.SWITCHABLE
               if c.key not in ("low_stock_alerts", "sold_out_alerts")]
     for template in shop_templates.BUILTIN.values():

@@ -11,7 +11,7 @@ shop's own rows first and from the template only where the shop has chosen nothi
 onboarding review and, trimmed to what a customer's page needs, on the order page's own
 endpoint (`public`). The import and export (ALY-108) and the order page (ALY-112) read the
 section's name, the layout and the features from it; their shape is in
-`specs/008-catalog-business-types` and `specs/011-feature-engine`.
+`specs/008-catalog-business-types` and `specs/012-feature-engine`.
 
 A shop with no type of its own (the back office made it, say) gets the plain Catalog.
 

@@ -1,5 +1,5 @@
 """The owner's Features screen: what the Catalog does for this shop, and the switches for it
-(D-039 "As built (feature engine)", ALY-148; `specs/011-feature-engine/spec.md`).
+(D-039 "As built (feature engine)", ALY-148; `specs/012-feature-engine/spec.md`).
 
 Everyone on the team may read the features (the screens need them to draw the item form and the
 list). Owners and admins switch them: a feature decides what customers see and what staff can
