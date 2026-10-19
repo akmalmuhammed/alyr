@@ -884,6 +884,11 @@ There is no separate Pay product: payment links stay a module of Chat and Bookin
 - **Off means invisible and inert.** The feature is off for every shop and template until switched on (422 `feature_off`, no screen, no report line) and acts only where the `catalog` module is on, so the older order page never shows a different total from the one charged.
 - **What this part does:** a coupon code a customer types (a percentage or an amount, or buy N get M free; the whole order or chosen items and categories; a minimum order; total and per-customer limits; dates; a price group; stackable or not) and automatic discounts; the discount shown line by line and in the total before payment and kept as a snapshot on the order; a limited code cannot be over-used and cancelling an order gives its use back; a Discounts screen for owners; a coupon box on the order page and "coupon CODE" in the WhatsApp order, in English and Arabic; a line in the weekly report.
 
+**As built (ALY-150, part 2 of 3, 20 Oct 2026; delivery and pickup, `specs/014-pricing-pack/spec.md`).** Where the code fixed a detail the entry left open. None of it changes the decision.
+- **Money.** Whole minor units (dirhams) in `bigint`, as everywhere in ALYR, and a percentage as `numeric(6,3)` and `Decimal`; a float is refused. One rounding rule, in one pure function (`modules/orders/totals.py`).
+- **Off means invisible and inert.** The feature is off for every shop and template until switched on (422 `feature_off`, no screen, no report line) and acts only where the `catalog` module is on, so the older order page never shows a different total from the one charged.
+- **What this part does:** pickup or delivery per shop, areas with a fee, a free-over amount, a minimum order, days and a cut-off, or one flat fee; the customer chooses on the order page or in the chat ("Pickup or delivery?"); the fee is a line of its own, kept on the order with the area's name; staff see how each order reaches the customer; a report line; no maps and no driver dispatch.
+
 ## D-040 · ALYR's look is Carbon and Volt, and its values live in one token file
 **Date** 17 Oct 2026 · **Status** Accepted (founder, 17 Oct: Carbon and Volt is the brand, ALY-61) · Linear ALY-61, ALY-126 · Replaces the open question in D-025
 
