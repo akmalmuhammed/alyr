@@ -108,11 +108,12 @@ def test_it_is_off_by_default_and_the_api_refuses_with_feature_off(client):
         assert body["code"] == "feature_off" and body["message"] and body["message_ar"]
     [who] = people(client, 1)
     item = cake(client)
+    before = owner_sql("select count(*) as n from orders where total = 10000")[0]["n"]
     refused = check(client, who, [line(item)], ["RAMADAN10"])
     assert refused.status_code == 422 and detail(refused)["code"] == "feature_off"
     placed = order(client, who, [line(item)], coupons=["RAMADAN10"])
     assert placed.status_code == 422 and detail(placed)["code"] == "feature_off"
-    assert owner_sql("select count(*) as n from orders where total = 10000")[0]["n"] == 0
+    assert owner_sql("select count(*) as n from orders where total = 10000")[0]["n"] == before
 
 
 def test_with_the_feature_off_the_cart_check_and_the_page_read_as_they_always_did(client):
@@ -247,13 +248,14 @@ def test_the_total_shown_must_be_the_total_charged(shop):
     rule(client)
     [who] = people(client, 1)
     item = cake(client)
+    before = owner_sql("select count(*) as n from orders")[0]["n"]
     wrong = order(client, who, [line(item)], coupons=["RAMADAN10"], expected_total=10_000)
     assert wrong.status_code == 409
     body = detail(wrong)
     assert body["code"] == "total_changed" and body["total"] == 9_000
     assert "QAR 90" in body["message"] and body["message_ar"]
     assert body["pricing"]["discount_total"] == 1_000
-    assert owner_sql("select count(*) as n from orders")[0]["n"] == 0
+    assert owner_sql("select count(*) as n from orders")[0]["n"] == before
 
 
 def test_a_discount_never_takes_the_goods_below_qar_1(shop):
@@ -351,6 +353,7 @@ def test_a_refused_code_refuses_the_order_and_changes_nothing(shop):
     [who] = people(client, 1)
     item = counted(client, 5, name="Last cake", name_ar="كيكة", price=10_000)
     rule(client, code="OLD10", ends_at=past(), starts_at=past(10))
+    before = owner_sql("select count(*) as n from orders")[0]["n"]
     refused = order(client, who, [line(item)], coupons=["OLD10"])
     assert refused.status_code == 409
     body = detail(refused)
@@ -359,7 +362,7 @@ def test_a_refused_code_refuses_the_order_and_changes_nothing(shop):
     assert on_hand(client, item) == 5
     unknown = order(client, who, [line(item)], coupons=["NOPE123"])
     assert unknown.status_code == 422 and detail(unknown)["code"] == "coupon_unknown"
-    assert owner_sql("select count(*) as n from orders")[0]["n"] == 0
+    assert owner_sql("select count(*) as n from orders")[0]["n"] == before
 
 
 # ── automatic discounts and several rules ──────────────────────────────────────────────────
