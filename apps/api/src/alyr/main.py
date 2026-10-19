@@ -15,6 +15,7 @@ from alyr.core.storage import make_store
 from alyr.db import Database
 from alyr.modules import report
 from alyr.modules.bookings.service import REMINDER, Reminders
+from alyr.modules.documents.errors import DocumentError
 from alyr.modules.items import alerts, events, wa_photo, watches
 from alyr.modules.items.import_alert import JOB as IMPORT_ALERT
 from alyr.modules.items.import_alert import ImportAlert
@@ -28,6 +29,7 @@ from alyr.routes import admin_media as admin_media_routes
 from alyr.routes import agent as agent_routes
 from alyr.routes import auth as auth_routes
 from alyr.routes import bookings as bookings_routes
+from alyr.routes import documents as documents_routes
 from alyr.routes import inbox, items, ledger, orders, pay, simulator, store, whatsapp_webhook
 from alyr.routes import items_import as items_import_routes
 from alyr.routes import jobs as jobs_routes
@@ -108,6 +110,7 @@ def create_app() -> FastAPI:
         IMPORT_ALERT, ImportAlert(app.state.db, app.state.outbound).run
     )
     app.add_exception_handler(PhotoRefused, media_routes.refused)
+    app.add_exception_handler(DocumentError, documents_routes.refused)
     if settings.jobs_inline:
         app.state.db.after_commit = app.state.jobs.drain
 
@@ -138,6 +141,10 @@ def create_app() -> FastAPI:
     # Customer price groups (wholesale) belong to the same Catalog (ALY-127).
     app.include_router(
         price_group_routes.router, dependencies=[Depends(require_any_module("orders", "catalog"))]
+    )
+    # Documents (ALY-138): the engine, off for every shop until the screens and hooks exist.
+    app.include_router(
+        documents_routes.router, dependencies=[Depends(require_module("documents"))]
     )
     app.include_router(store.router, dependencies=[Depends(require_module_for_slug("orders"))])
     app.include_router(jobs_routes.router)

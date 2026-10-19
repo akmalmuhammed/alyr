@@ -101,8 +101,10 @@ class SwitchModule(BaseModel):
 
 # The modules the back office switches for one business. The Catalog is on for every business
 # (ALY-113) and this is how one business has it turned off, or back on; the other modules are
-# a business's products and are switched in its own workspace.
-SWITCHABLE_MODULES = ("catalog",)
+# a business's products and are switched in its own workspace. Documents (ALY-138) is off for
+# every business and has no screen yet: this is how ALYR switches it on for one business to
+# try it, until the workspace screens (package 3) make it part of a product.
+SWITCHABLE_MODULES = ("catalog", "documents")
 
 
 class Snooze(BaseModel):
@@ -282,8 +284,9 @@ async def switch_module(
     business_id: UUID, module: str, body: SwitchModule, request: Request,
     staff: Staff = Depends(platform_admin),
 ) -> dict:
-    """Switch the Catalog on or off for one business. Nothing is deleted: its items, photos and
-    stock stay, and the screens and pages come back when it is switched on again."""
+    """Switch the Catalog (or Documents) on or off for one business. Nothing is deleted: its
+    items, photos and stock (or its documents, which cannot be deleted at all) stay, and the
+    screens and pages come back when it is switched on again."""
     if module not in SWITCHABLE_MODULES:
         raise HTTPException(status_code=404, detail=f"{module} cannot be switched here")
     async with _back_office(request) as conn:
