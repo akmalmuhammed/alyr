@@ -114,6 +114,11 @@ async def _lock_key(conn: asyncpg.Connection, key: str) -> None:
     )
 
 
+# Shared with the sales package (payments recorded by hand use the same key rule and lock).
+check_key = _check_key
+lock_key = _lock_key
+
+
 async def _by_key(conn: asyncpg.Connection, key: str) -> dict | None:
     row = await conn.fetchrow("select * from documents where issue_key = $1", key)
     return dict(row) if row else None
@@ -152,7 +157,9 @@ async def create_draft(conn: asyncpg.Connection, staff: Staff, body: Mapping) ->
     shop = await settings.get(conn)
     prepared = prepare.prepare(body, shop)
     columns = prepared["columns"]
-    columns["related_document_id"] = None
+    # Only code inside ALYR sets this (the API's draft body has no such field): a receipt for
+    # a payment against an invoice points at the invoice (sales.py, payments.py).
+    columns["related_document_id"] = body.get("related_document_id")
     await settings.branch_for(conn, columns["branch_key"], must_be_active=True)
     await _fill_from_contact(conn, columns)
     actor = team.actor_of(staff)

@@ -27,8 +27,11 @@ class Template:
     # What each blank holds, in order. Used as the sample values Meta asks for at review.
     samples: tuple[str, ...]
     # "image" when the template opens with an image header, filled at send time with an
-    # image uploaded through the Media API. Meta asks for a sample image at review:
-    # `header_sample` names it, relative to this repository's root, `{lang}` for en or ar.
+    # image uploaded through the Media API; "document" when it opens with a PDF (a receipt),
+    # uploaded the same way. Meta asks for a sample image or document at review:
+    # `header_sample` names it, relative to this repository's root, `{lang}` for en or ar. For a
+    # document header only its file name matters: the sample is drawn by the documents engine
+    # (`alyr.document_samples`), not kept in the repository.
     header: str = ""
     header_sample: str = ""
     # Sample values in Arabic for the Arabic template, when they differ.
@@ -252,6 +255,49 @@ CATALOGUE: dict[str, Template] = {
         ("Al Noor Electricals", "Cable 2.5 mm", "https://app.alyr.online/s/al-noor?t=a"),
         consent="back_in_stock",
     ),
+    # Documents (ALY-139, D-042). The receipt, invoice or credit note itself is the header, as
+    # a PDF; the words only say what it is and who it is from, so they read complete without
+    # the file and stay non-promotional (a document about something the customer bought or
+    # owes is utility). Inside the 24-hour window the same PDF goes as an ordinary document
+    # message with a caption (`modules/documents/delivery.py`), which needs no template.
+    # Written, NOT submitted to Meta: that is the founder's go, and `templates_sync --create`
+    # is not to be run for these until he says so. `document_receipt` also carries a deposit
+    # receipt. The Arabic is a draft until ALY-66.
+    "document_receipt": Template(
+        "utility",
+        "Your receipt {{1}} from {{2}} for {{3}} is attached as a PDF. "
+        "You can also open it online: {{4}} . Thank you.",
+        "إيصالك رقم {{1}} من {{2}} بمبلغ {{3}} مرفق بصيغة PDF. "
+        "يمكنك أيضاً فتحه عبر الإنترنت: {{4}} . شكراً لك.",
+        ("RC-0042", "Qirfa Bakery", "QAR 127.00", "https://app.alyr.online/d/qirfa?t=a"),
+        header="document",
+        header_sample="documents/receipt.{lang}.pdf",
+        samples_ar=("RC-0042", "مخبز قرفة", "127.00 ر.ق", "https://app.alyr.online/d/qirfa?t=a"),
+    ),
+    "document_invoice": Template(
+        "utility",
+        "Your invoice {{1}} from {{2}} for {{3}} is attached as a PDF. "
+        "You can also open it online: {{4}} . Thank you.",
+        "فاتورتك رقم {{1}} من {{2}} بمبلغ {{3}} مرفقة بصيغة PDF. "
+        "يمكنك أيضاً فتحها عبر الإنترنت: {{4}} . شكراً لك.",
+        ("INV-0017", "Qirfa Bakery", "QAR 540.00", "https://app.alyr.online/d/qirfa?t=a"),
+        header="document",
+        header_sample="documents/invoice.{lang}.pdf",
+        samples_ar=("INV-0017", "مخبز قرفة", "540.00 ر.ق", "https://app.alyr.online/d/qirfa?t=a"),
+    ),
+    # Not in the brief's two: a refund or a cancelled sale sends a credit note, and "your
+    # receipt" would be the wrong word for it outside the window.
+    "document_credit_note": Template(
+        "utility",
+        "Credit note {{1}} from {{2}} for {{3}} is attached as a PDF. It cancels a document "
+        "we issued before. You can also open it online: {{4}} . Thank you.",
+        "إشعار دائن رقم {{1}} من {{2}} بمبلغ {{3}} مرفق بصيغة PDF، وهو يلغي مستنداً أصدرناه "
+        "سابقاً. يمكنك أيضاً فتحه عبر الإنترنت: {{4}} . شكراً لك.",
+        ("CN-0003", "Qirfa Bakery", "QAR 127.00", "https://app.alyr.online/d/qirfa?t=a"),
+        header="document",
+        header_sample="documents/credit_note.{lang}.pdf",
+        samples_ar=("CN-0003", "مخبز قرفة", "127.00 ر.ق", "https://app.alyr.online/d/qirfa?t=a"),
+    ),
 }
 
 
@@ -273,14 +319,17 @@ def render(name: str, lang: str, params: list[str] | tuple[str, ...]) -> str | N
 
 
 def notice(
-    to: UUID, name: str, lang: str, body: str, *params: object, image: bytes = b""
+    to: UUID, name: str, lang: str, body: str, *params: object, image: bytes = b"",
+    document: bytes = b"", filename: str = "",
 ) -> OutboundMessage:
     """A notice to a customer who may have last written more than 24 hours ago.
 
     `body` is the module's own wording, used while the window is open. `params` fill
     the template's blanks, used when it is closed. With an `image`, the notice inside the
     window is that image with `body` under it; outside it, the image fills the
-    template's image header, and is left out if the template has none."""
+    template's image header, and is left out if the template has none. A `document` (a PDF
+    with its `filename`) goes the same way: a document message with `body` as its caption
+    inside the window, the template's document header outside it."""
     template = CATALOGUE[name]
     if len(params) != len(template.samples):
         raise ValueError(f"{name} takes {len(template.samples)} values, got {len(params)}")
@@ -288,5 +337,5 @@ def notice(
         to=to, kind="template", body=body, template_name=name,
         template_category=template.category,  # type: ignore[arg-type]
         template_params=tuple(clean(value) for value in params),
-        lang="ar" if lang == "ar" else "en", image=image,
+        lang="ar" if lang == "ar" else "en", image=image, document=document, filename=filename,
     )
