@@ -14,6 +14,8 @@ import { COPY, type Copy, type Lang } from "./catalogCopy";
 import { FEAT } from "./featuresCopy";
 import { PRICING } from "./pricingCopy";
 import { CatalogDiscounts } from "./CatalogDiscounts";
+import { CatalogDelivery } from "./CatalogDelivery";
+import { DELIVERY } from "./deliveryCopy";
 import { Announce, Icon, Layer, Switch, Tile, ToastLayer, useToasts } from "./CatalogUi";
 import { CatalogEdit } from "./CatalogEdit";
 import { CatalogFeatures } from "./CatalogFeatures";
@@ -36,6 +38,7 @@ type Sheet =
   | { kind: "settings" }
   | { kind: "features" }
   | { kind: "discounts" }
+  | { kind: "delivery" }
   | { kind: "fields" }
   | { kind: "template" }
   | { kind: "share"; target: Target };
@@ -426,6 +429,11 @@ export function Catalog({ lang, title, show = null, onRenamed }: { lang: Lang; t
             <Icon name="star" />{feat.open}
           </button>
         )}
+        {access.can_manage && setup?.features.delivery_fees && (
+          <button type="button" className="btn ghost ct-btn" onClick={() => setSheet({ kind: "delivery" })}>
+            <Icon name="stock" />{DELIVERY[lang].open}
+          </button>
+        )}
         {access.can_manage && (
           <button type="button" className="btn ghost ct-btn" onClick={() => setSheet({ kind: "settings" })}>
             <Icon name="sliders" />{t.settings}
@@ -601,6 +609,9 @@ export function Catalog({ lang, title, show = null, onRenamed }: { lang: Lang; t
       {sheet?.kind === "discounts" && setup?.features.discounts && access.can_manage && (
         <CatalogDiscounts lang={lang} push={push} groupsOn={setup.features.price_groups ?? false} categories={categories}
           onClose={() => setSheet(null)} />
+      )}
+      {sheet?.kind === "delivery" && setup?.features.delivery_fees && access.can_manage && (
+        <CatalogDelivery lang={lang} push={push} onClose={() => setSheet(null)} />
       )}
       {sheet?.kind === "fields" && (
         <CatalogFields lang={lang} push={push} onClose={() => { setSheet({ kind: "features" }); void load(); loadSetup(); }}

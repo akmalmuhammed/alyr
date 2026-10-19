@@ -1,0 +1,43 @@
+/* Pickup or delivery in the review (ALY-150 part 2). Drawn only while the shop has "Delivery and
+   pickup" on. It builds on the review's own rows (order.css: .ox-opt, .ox-sum, .ox-brk) and takes
+   every colour, size and radius from the customer pages' tokens, so light, dark and right-to-left
+   come for free. Nothing here is a colour or a size of its own. */
+
+.ox-ful { display: grid; gap: 12px; min-width: 0; }
+.ox-ful-set { margin: 0; padding: 0; border: 0; min-width: 0; display: grid; gap: 8px; }
+.ox-ful-set legend { padding: 0 0 6px; font-size: var(--ui-body); font-weight: 600; }
+.ox-ful-modes, .ox-ful-zones { display: grid; gap: 8px; }
+
+/* a way or an area: the whole row is the target, and the chosen one has a ring */
+.ox-ro { position: relative; display: flex; align-items: flex-start; gap: 12px; min-height: 56px; padding: 12px 14px; border-radius: 12px; background: var(--raise); box-shadow: 0 0 0 1px var(--hair-2) inset; cursor: pointer; min-width: 0; }
+.ox-ro input { width: 20px; height: 20px; margin: 2px 0 0; flex: none; accent-color: var(--ink); }
+.ox-ro.on { box-shadow: 0 0 0 2px var(--ink) inset; background: var(--card); }
+.ox-ro:has(input:focus-visible) { outline: 2px solid var(--ink); outline-offset: 2px; }
+.ox-ro-body { display: grid; gap: 2px; flex: 1; min-width: 0; font-size: var(--ui-body); }
+.ox-ro-body b { font-weight: 600; overflow-wrap: anywhere; }
+.ox-ro-body small, .ox-ful-stmt small { font-size: var(--ui-small); line-height: 1.45; color: var(--ink-2); overflow-wrap: anywhere; }
+.ox-ro-top { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; min-width: 0; }
+.ox-ro-top b { min-width: 0; }
+.ox-ro-top .num { flex: none; font-size: var(--ui-body-sm); font-weight: 600; white-space: nowrap; }
+
+/* one way or one area: nothing to choose between, so it is said, not asked */
+.ox-ful-stmt { display: grid; gap: 2px; padding: 12px 14px; border-radius: 12px; background: var(--raise); box-shadow: 0 0 0 1px var(--hair) inset; font-size: var(--ui-body); min-width: 0; }
+.ox-ful-stmt > b { font-weight: 600; }
+.ox-ful-stmt > span:not(.ox-ro-top) { font-size: var(--ui-small); color: var(--ink-2); }
+.ox-ful-stmt.one { margin-top: -4px; }
+
+/* the address and the note */
+.ox-ful-text { display: grid; gap: 14px; }
+.ox-ful-field { display: grid; gap: 6px; min-width: 0; }
+.ox-ful-field label { font-size: var(--ui-body); font-weight: 600; }
+.ox-ful-field small { font-size: var(--ui-small); color: var(--ink-2); }
+.ox-area { width: 100%; min-height: 64px; padding: 12px 14px; border: 0; border-radius: 12px; background: var(--raise); box-shadow: 0 0 0 1px var(--hair) inset; font: inherit; font-size: var(--ui-input); line-height: 1.4; color: var(--ink); resize: none; outline: none; }
+.ox-area:focus { box-shadow: 0 0 0 1px var(--ink), 0 0 0 4px var(--volt-wash); }
+.ox-ful-field.ask .ox-area { box-shadow: 0 0 0 1.5px var(--ink-2) inset; }
+.ox-ful-hint { margin: 0; font-size: var(--ui-body-sm); line-height: 1.45; color: var(--ink-2); }
+.ox-ful-hint:empty { display: none; }
+
+/* the fee as a line of its own after the discounts */
+/* After the discounts block, the fee is one more line of the same sum, not a new one. */
+.ox-brk + .ox-brk.fee { margin-top: -10px; padding-top: 0; border-top: 0; }
+.ox-nudge { margin: 0; padding: 10px 14px; border-radius: 12px; background: var(--raise); box-shadow: 0 0 0 1px var(--hair) inset; color: var(--ink); font-size: var(--ui-body-sm); font-weight: 500; line-height: 1.4; }

@@ -25,7 +25,7 @@ import { ItemCard } from "./ItemCard";
 import type { Chosen } from "./ItemSheet";
 import type { Checked, Item, Live, LiveItem, Placed, Store } from "./types";
 import { Price } from "./ui";
-import { waParts, type WaLine, type WaPart } from "./wa";
+import { waParts, type WaFulfilment, type WaLine, type WaPart } from "./wa";
 import { Wholesale, rowsOf } from "./Wholesale";
 import "./order.css";
 
@@ -157,11 +157,11 @@ export default function Order({ slug, token, table, initial, lang: first, focusI
 
   /** An order as WhatsApp messages: one, or a few when it is too long for one. */
   const known = useMemo(() => new Map([...base, ...(remote?.items ?? [])].map((i) => [i.id, i] as const)), [base, remote]);
-  const partsOf = useCallback((ls: Line[]): WaPart[] => {
+  const partsOf = useCallback((ls: Line[], fulfilment: WaFulfilment | null = null): WaPart[] => {
     if (!whatsapp || ls.length === 0) return [];
     return waParts(whatsapp, {
       shop: store.shop, lang, mode: store.settings.whatsapp_mode, lines: toWaLines(ls, (id) => known.get(id)),
-      money: (dirhams) => formatPrice(dirhams, lang), customer: store.customer?.name, table: store.table,
+      money: (dirhams) => formatPrice(dirhams, lang), customer: store.customer?.name, table: store.table, fulfilment,
     });
   }, [whatsapp, store, lang, known]);
 
@@ -627,6 +627,7 @@ export default function Order({ slug, token, table, initial, lang: first, focusI
         <ReviewSheet slug={slug} token={token} lang={lang} lines={lines} lookup={lookup} customer={customer} table={store.table} askDay={offers.pickup_date}
           forDate={forDate} onForDate={setForDate} setQty={setQty} remove={remove} accept={accept} swap={swap}
           whatsapp={partsOf(lines)} discounts={!!store.pricing?.discounts}
+          delivery={store.pricing?.delivery} whatsappFor={(choice) => partsOf(lines, choice)}
           choose={(id) => { const it = seenRef.current.get(id); setReview(false); if (it) setOpen(it); }}
           onPlaced={(p) => {
             setReview(false); setCart([]); setFlagged(new Set());

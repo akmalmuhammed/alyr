@@ -3,15 +3,21 @@
 // figures are whole dirhams from the API and are written by the customer pages' own helper, so
 // Arabic reads «20 ر.ق». A discount whose order was cancelled is shown struck through as returned.
 
+import { goodsBeforeDiscount, zoneName, type Fulfilment } from "../_customer/fulfil";
 import { formatPrice } from "../_customer/price";
 import type { Lang } from "./catalogCopy";
+import { DELIVERY } from "./deliveryCopy";
 import { PRICING } from "./pricingCopy";
 
 type Discount = {
   kind: "coupon" | "auto"; code: string; name: string; name_ar: string; text: string; text_ar: string;
   amount: number; returned: boolean;
 };
-type Order = { total: number; subtotal?: number; discount_total?: number; discounts?: Discount[] };
+type Order = {
+  total: number; subtotal?: number; discount_total?: number; discounts?: Discount[];
+  // Delivery and pickup (ALY-150 part 2): the fee is a line of its own, after the discounts.
+  fulfilment?: Fulfilment;
+};
 
 export function OrderSum({ order, lang }: { order: Order; lang: Lang }) {
   const p = PRICING[lang].order;
@@ -21,7 +27,7 @@ export function OrderSum({ order, lang }: { order: Order; lang: Lang }) {
     <div className="pr-sum" role="group" aria-label={p.summary}>
       <div className="pr-sumrow">
         <span>{p.items}</span>
-        <span className="num"><bdi>{formatPrice(order.subtotal ?? order.total + (order.discount_total ?? 0), lang)}</bdi></span>
+        <span className="num"><bdi>{formatPrice(goodsBeforeDiscount(order), lang)}</bdi></span>
       </div>
       {rows.map((d, i) => {
         const label = d.kind === "coupon" ? d.code : (ar ? d.name_ar || d.name : d.name || d.name_ar) || p.discount;
@@ -36,6 +42,12 @@ export function OrderSum({ order, lang }: { order: Order; lang: Lang }) {
           </div>
         );
       })}
+      {order.fulfilment?.mode === "delivery" && (
+        <div className="pr-sumrow">
+          <span dir="auto">{DELIVERY[lang].order.fee(zoneName(order.fulfilment, lang))}</span>
+          <span className="num"><bdi>{order.fulfilment.fee === 0 ? DELIVERY[lang].order.free : formatPrice(order.fulfilment.fee, lang)}</bdi></span>
+        </div>
+      )}
       <div className="pr-sumrow total">
         <span>{p.total}</span>
         <span className="num"><bdi>{formatPrice(order.total, lang)}</bdi></span>

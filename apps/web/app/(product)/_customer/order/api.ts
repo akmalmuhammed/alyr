@@ -2,7 +2,7 @@
 // `Refusal` (a code and a sentence in both languages), so the page can show the API's own
 // words in the customer's language.
 
-import type { Check, Item, Live, Placed, Refusal, Store } from "./types";
+import type { Check, FulfilmentBody, Item, Live, Placed, Refusal, Store } from "./types";
 
 export class ApiError extends Error {
   constructor(readonly status: number, readonly refusal: Refusal | null) {
@@ -58,6 +58,9 @@ export type CartBody = {
   for_date?: string | null;
   /** The codes the customer typed (only while the shop's discounts are on; at most 3). */
   coupons?: string[];
+  /** How the order reaches the customer (only while the shop's Delivery and pickup is on). The
+   *  check needs the mode and the area only; the order also takes the address and the note. */
+  fulfilment?: Partial<FulfilmentBody>;
 };
 
 export const checkCart = (slug: string, body: CartBody, token: string | null) =>
