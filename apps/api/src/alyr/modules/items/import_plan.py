@@ -25,13 +25,14 @@ import re
 from contextvars import ContextVar
 from dataclasses import dataclass, field
 from datetime import date, datetime, time
+from decimal import Decimal
 from uuid import UUID
 from zoneinfo import ZoneInfo
 
 from alyr import capabilities
 from alyr.core.media import parse_photo_ref
 from alyr.core.normalise import fmt_qar, has_arabic
-from alyr.modules.items import columns, import_words, service, values
+from alyr.modules.items import columns, import_words, qty, service, values
 from alyr.modules.items import costs as costs_module
 from alyr.modules.items import fields as owner_fields
 from alyr.modules.items.import_words import Issue, issue
@@ -89,6 +90,8 @@ class Snapshot:
     allowed: frozenset[str] | None = None
     # The shop's own fields that are active (ALY-148): their columns are read too.
     fields: list[dict] = field(default_factory=list)
+    # "Sold by weight or volume" is on: a unit other than the kilo, or a fraction, may be added.
+    decimal_ok: bool = True
     # The costs kept, when the file may carry them (ALY-150: an owner or admin, a shop that keeps
     # costs); None otherwise, and the cost column is then left out. `cost_note` says why when the
     # shop does keep costs and this person may not import them.
@@ -388,11 +391,15 @@ def _parse_cell(column: columns.Column, cell: object) -> object:
     if kind == "signed_money":
         return values.parse_money(cell, signed=True)
     if kind == "whole":
+        return values.parse_int(cell, 0, 99_999)  # the item code column is read only
+    if kind == "quantity":
+        # A whole number, or up to three decimals for something sold by weight or volume; the
+        # item's unit decides whether a fraction is allowed (`_check_quantities`).
         low, high = {
-            "pack_size": (1, 100_000), "min_order": (1, 999), "stock": (0, 1_000_000),
-            "low_stock": (0, 100_000), "per_day": (0, 1_000_000),
+            "pack_size": (Decimal("0.001"), 100_000), "min_order": (Decimal("0.001"), 999),
+            "stock": (0, 1_000_000), "low_stock": (0, 100_000), "per_day": (0, 1_000_000),
         }[key]
-        return values.parse_int(cell, low, high)
+        return values.parse_qty(cell, low, high)
     if kind == "yesno":
         return values.parse_bool(cell)
     if kind == "date":
@@ -833,6 +840,44 @@ def _custom_required(
     return short
 
 
+def _fraction(value: object) -> bool:
+    return value is not None and value != int(value)  # type: ignore[call-overload]
+
+
+def _check_quantities(
+    plan: ItemPlan, row: int, unit: str, wanted: dict, variants: list[VariantOp],
+    snapshot: Snapshot, current: dict,
+) -> None:
+    """A fraction needs a unit that is measured (kg, g, litre, ml, metre, tola), and a unit or
+    fraction the shop has not switched on ("Sold by weight or volume") cannot be added. Both are
+    errors on the item, said in the preview, so the apply never meets them (ALY-149)."""
+    keys = ("pack_size", "min_order", "low_stock")
+    fractional = [k for k in keys if _fraction(wanted.get(k))]
+    fractional += ["stock" for v in variants if _fraction(v.stock) or _fraction(v.per_day)]
+    if fractional and not qty.is_measure(unit):
+        # A counted unit (a piece, a box...) takes whole numbers: say which cell, as a whole-number
+        # column always has.
+        for k in keys:
+            if _fraction(wanted.get(k)):
+                plan.notes.append((row, issue("not_whole", k, value=qty.fmt(wanted[k]))))
+        for v in variants:
+            if _fraction(v.stock):
+                plan.notes.append((v.row, issue("not_whole", "stock", value=qty.fmt(v.stock))))
+            if _fraction(v.per_day):
+                plan.notes.append((v.row, issue("not_whole", "per_day", value=qty.fmt(v.per_day))))
+        return
+    if snapshot.decimal_ok:
+        return
+    new_unit = unit != current.get("unit", "piece") and unit not in qty.LEGACY_UNITS
+    new_fraction = any(
+        _fraction(wanted.get(k)) and wanted.get(k) != current.get(k if k != "low_stock" else
+                                                                   "low_stock_at")
+        for k in keys
+    ) or any(_fraction(v.stock) or _fraction(v.per_day) for v in variants)
+    if new_unit or new_fraction:
+        plan.notes.append((row, issue("decimal_off")))
+
+
 def _create(
     plan: ItemPlan, merged: dict, variants: list[VariantOp], clear_sale: bool, first: Parsed,
     known: dict[str, str], snapshot: Snapshot, item_custom: dict | None = None,
@@ -851,6 +896,9 @@ def _create(
     plan.name, plan.name_ar = name, name_ar
 
     rule = _rule_of(merged, variants)
+    _check_quantities(
+        plan, row, str(merged.get("unit") or "piece"), merged, variants, snapshot, {}
+    )
     price = merged.get("price")
     status = str(merged.get("status") or "live")
     sale = merged.get("sale_price")
@@ -998,6 +1046,13 @@ def _update(
     set_("unit", "unit", merged.get("unit"))
     set_("pack_size", "pack_size", merged.get("pack_size"))
     set_("min_order", "min_order", merged.get("min_order"))
+    _check_quantities(
+        plan, row, str(changes.get("unit") or item["unit"]),
+        {"pack_size": changes.get("pack_size", item["pack_size"]),
+         "min_order": changes.get("min_order", item["min_order"]),
+         "low_stock": merged.get("low_stock")},
+        variants, snapshot, item,
+    )
     if merged.get("tags") is not None and merged["tags"] != list(item["tags"]):
         changes["tags"] = merged["tags"]
         _diff(plan, "tags", list(item["tags"]), merged["tags"])

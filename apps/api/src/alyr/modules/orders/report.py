@@ -37,7 +37,7 @@ async def numbers(conn: asyncpg.Connection, start: datetime, end: datetime, tz: 
     )
     top = await conn.fetchrow(
         "select i.name, coalesce(nullif(p.name_ar, ''), i.name) as name_ar, "
-        "sum(i.quantity)::int as quantity "
+        "sum(i.quantity) as quantity "
         "from order_items i join orders o on o.id = i.order_id "
         "left join items p on p.id = i.item_id "
         "where o.created_at >= $1 and o.created_at < $2 and o.status <> 'cancelled' "

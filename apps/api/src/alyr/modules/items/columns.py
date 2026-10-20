@@ -117,20 +117,27 @@ COLUMNS: tuple[Column, ...] = (
     Column(
         "unit", "Sold by", "يُباع بالـ", "word",
         ("unit", "uom", "unit of measure", "الوحدة", "وحدة البيع", "يباع بال"), 11,
-        Text("piece, kg, box, pack, portion or hour.",
-             "قطعة أو كيلو أو علبة أو عبوة أو حصة أو ساعة."),
+        Text("piece, kg, g, litre, ml, metre, tola, box, pack, portion or hour. Weights and "
+             "volumes may be sold in fractions.",
+             "قطعة أو كيلو أو غرام أو لتر أو مل أو متر أو تولة أو علبة أو عبوة أو حصة أو ساعة. "
+             "الأوزان والأحجام يمكن بيعها بالكسور."),
     ),
     Column(
-        "pack_size", "Units in a pack", "عدد الوحدات في العبوة", "whole",
+        "pack_size", "Units in a pack", "عدد الوحدات في العبوة", "quantity",
         ("pack size", "units per pack", "pack", "pack qty", "حجم العبوة", "عدد في العبوة"), 12,
-        Text("How many units one pack holds.", "كم وحدة في العبوة الواحدة."),
+        Text("How many units one pack holds. For something sold by weight or volume, the step "
+             "it is ordered in, such as 0.25 (a quarter kilo).",
+             "كم وحدة في العبوة الواحدة. وللمباع بالوزن أو الحجم: الخطوة التي يُطلب بها، "
+             "مثل 0.25 (ربع كيلو)."),
     ),
     Column(
-        "min_order", "Smallest order", "أقل كمية للطلب", "whole",
+        "min_order", "Smallest order", "أقل كمية للطلب", "quantity",
         ("minimum order", "min order", "moq", "minimum", "min qty", "الحد الأدنى للطلب",
          "أقل طلب"), 12,
-        Text("The least a customer can order, from 1 to 999.",
-             "أقل كمية يمكن للعميل طلبها، من 1 إلى 999."),
+        Text("The least a customer can order, from 1 to 999 (for something sold by weight or "
+             "volume it can be a fraction, such as 0.25).",
+             "أقل كمية يمكن للعميل طلبها، من 1 إلى 999 (وللمباع بالوزن أو الحجم يمكن أن تكون "
+             "كسراً، مثل 0.25)."),
     ),
     Column(
         "tags", "Tags", "الوسوم", "list",
@@ -188,14 +195,15 @@ COLUMNS: tuple[Column, ...] = (
              "ما يزيد (أو ينقص، بعلامة ناقص) سعر هذا المقاس أو اللون عن السعر."),
     ),
     Column(
-        "stock", "In stock", "المخزون", "whole",
+        "stock", "In stock", "المخزون", "quantity",
         ("stock", "quantity", "qty", "on hand", "opening stock", "stock qty", "inventory",
          "الكمية", "العدد", "الرصيد", "الكمية المتوفرة"), 11,
-        Text("How many you have now. It is recorded in the stock log as “Import”.",
-             "كم لديك الآن. يُسجَّل في سجل المخزون بسبب «استيراد»."),
+        Text("How many you have now (12.5 for 12.5 kg). It is recorded in the stock log as "
+             "“Import”.",
+             "كم لديك الآن (12.5 لـ 12.5 كغ). يُسجَّل في سجل المخزون بسبب «استيراد»."),
     ),
     Column(
-        "low_stock", "Low-stock number", "رقم المخزون القليل", "whole",
+        "low_stock", "Low-stock number", "رقم المخزون القليل", "quantity",
         ("low stock", "low stock at", "low stock level", "reorder level", "reorder point",
          "minimum stock", "min stock", "alert at", "المخزون القليل", "حد المخزون القليل",
          "حد إعادة الطلب"), 13,
@@ -205,7 +213,7 @@ COLUMNS: tuple[Column, ...] = (
              "(من 0 إلى 100,000). الفارغ يبقي رقم المتجر من إعدادات الكتالوج."),
     ),
     Column(
-        "per_day", "Per day", "العدد اليومي", "whole",
+        "per_day", "Per day", "العدد اليومي", "quantity",
         ("daily limit", "per day", "daily", "daily quantity", "الحد اليومي", "كل يوم", "في اليوم"),
         11,
         Text("For items with a number each day: how many can be sold in a day.",
@@ -239,7 +247,10 @@ BY_KEY = {c.key: c for c in COLUMNS}
 ORDER = tuple(c.key for c in COLUMNS if c.key != "cost")
 # Which kinds of column are numbers in the file (a spreadsheet gets a number cell).
 MONEY = ("price", "sale_price", "price_diff", "cost")
-WHOLE = ("pack_size", "min_order", "stock", "low_stock", "per_day", "code")
+WHOLE = ("code",)
+# Numbers of units: a whole number, or up to three decimals for something sold by weight or
+# volume (ALY-149).
+QUANTITY = ("pack_size", "min_order", "stock", "low_stock", "per_day")
 # The stock rules that count; the low-stock number means something only for these.
 COUNTED = ("count", "daily_limit")
 
@@ -249,7 +260,8 @@ COUNTED = ("count", "daily_limit")
 # file, so a round trip loses nothing). The rest are every shop's.
 NEEDS: dict[str, str] = {
     "variant": "variants", "variant_ar": "variants", "variant_sku": "variants",
-    "price_diff": "variants", "pack_size": "pack_rules", "min_order": "pack_rules",
+    "price_diff": "variants", "pack_size": "pack_rules|decimal_quantity",
+    "min_order": "pack_rules|decimal_quantity",
     "tags": "tags", "available": "rule_switch", "stock": "rule_count",
     "per_day": "rule_daily_limit", "low_stock": "rule_count|rule_daily_limit",
     # Cost is the owner's and the admins' alone: `features.file_columns` also asks who is asking.
@@ -332,6 +344,11 @@ WORDS: dict[str, dict[str, tuple[str, ...]]] = {
         "pack": ("Pack", "عبوة", "packet", "packs", "باكيت", "رزمة"),
         "portion": ("Portion", "حصة", "serving", "servings", "meal", "وجبة", "طبق"),
         "hour": ("Hour", "ساعة", "hr", "hrs", "hours"),
+        "g": ("Gram", "غرام", "g", "gm", "gms", "grams", "gram", "غ", "جرام", "غم"),
+        "l": ("Litre", "لتر", "l", "ltr", "liter", "litres", "liters", "ليتر"),
+        "ml": ("Millilitre", "مليلتر", "ml", "mls", "millilitre", "milliliter", "مل", "ملل"),
+        "m": ("Metre", "متر", "m", "mtr", "meter", "metres", "meters", "م"),
+        "tola": ("Tola", "تولة", "tola", "tolas", "تولا", "توله"),
     },
     "status": {
         "draft": ("Draft", "مسودة", "مسوده"),

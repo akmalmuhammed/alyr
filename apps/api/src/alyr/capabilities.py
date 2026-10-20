@@ -19,7 +19,7 @@ Three kinds of entry:
   never deletes or changes anything already made, and an item that already uses it keeps
   working.
 * **Extension points** (`built=False`): a name in the registry for a feature another builder
-  will add later (decimal quantities, cost and margin, discounts, delivery fees, bundles,
+  will add later (cost and margin, discounts, delivery fees, bundles,
   suppliers, barcodes, batches and expiry, serial numbers). They are **hidden everywhere**: no
   screen lists them, no API returns them, nothing can switch them on, and no wording about
   them exists. To build one: write what it does, add its consumers (the form part, the order
@@ -215,6 +215,19 @@ BUILT: tuple[Capability, ...] = (
         "pack columns of the files.",
         "يضيف حجم العبوة وأقل كمية للطلب إلى نموذج الصنف، وأزرار الكمية في صفحة الطلب، وأعمدة العبوة في الملفات."),
        "selling", ("form", "order_page", "import_export")),
+    _c("decimal_quantity", ("Sold by weight or volume", "يُباع بالوزن أو الحجم"),
+       ("Let customers order 0.5 kg or 250 ml: dates, coffee, oud, a cake by the kilo, flowers "
+        "or fabric by the metre.",
+        "اسمح لعملائك بطلب نصف كيلو أو 250 مل: تمر وقهوة ودهن عود وكعكة بالكيلو وزهور أو "
+        "أقمشة بالمتر."),
+       ("Adds the units kg, g, litre, ml, metre and tola, and a step and a smallest order such as "
+        "0.25 kg, to the item form; quick quantities and a typed amount to the order page; "
+        "fractions to stock, the files and the WhatsApp commands. Items sold by the piece "
+        "stay whole.",
+        "يضيف الوحدات كغ وغ ولتر ومل ومتر وتولة، وخطوة وأقل كمية مثل 0.25 كغ، إلى نموذج الصنف؛ "
+        "وكميات سريعة وإدخالاً بالكتابة إلى صفحة الطلب؛ وكسوراً إلى المخزون والملفات وأوامر "
+        "واتساب. الأصناف التي تُباع بالقطعة تبقى أعداداً صحيحة."),
+       "selling", ("form", "order_page", "import_export", "reports", "chat"), default=False),
     _c("quick_quantity", ("Quick quantity", "كمية سريعة"),
        ("Plus and minus buttons on every row, so a customer can add without opening the item.",
         "زرّا زائد وناقص على كل صف ليضيف العميل دون فتح الصنف."),
@@ -348,7 +361,7 @@ def _later(key: str) -> Capability:
 
 
 EXTENSION_POINTS: tuple[Capability, ...] = tuple(_later(k) for k in (
-    "decimal_quantity", "bundles", "suppliers",
+    "bundles", "suppliers",
     "barcode", "batch_expiry", "serial_imei",
 ))
 

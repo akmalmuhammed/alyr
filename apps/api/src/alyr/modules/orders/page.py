@@ -31,6 +31,7 @@ from alyr.modules.items import (
     listing,
     notes,
     photos,
+    qty,
     schedule,
     text,
 )
@@ -68,7 +69,7 @@ async def settings(conn: asyncpg.Connection) -> dict:
     }
 
 
-def _small(count: int | None, low_at: int) -> int | None:
+def _small(count: "qty.Qty | None", low_at: "qty.Qty") -> "qty.Qty | None":
     """A count worth telling the customer: more than none, no more than the low-stock number."""
     return count if count is not None and 0 < count <= low_at else None
 
@@ -114,6 +115,9 @@ def public_row(
         "category": i["category"], "description": i["description"],
         "description_ar": i["description_ar"], "unit": i["unit"], "pack_size": i["pack_size"],
         "min_order": i["min_order"], "tags": list(i["tags"]),
+        # How much can be ordered at a time (ALY-149): sold by weight or volume, the step, the
+        # smallest order and the quick quantities of a fractional item.
+        "quantity": qty.rules(i["unit"], i["pack_size"], i["min_order"]),
         # `price` is what this customer pays for the item (spec 003); an item with sizes shows
         # the dearest and the cheapest of them, both written out (`price_min`, `price_max`).
         "price": base["price"], "price_text": base["price_text"],

@@ -28,7 +28,7 @@ from alyr.core import templates
 from alyr.core.outbound import Outbound
 from alyr.db import Database
 from alyr.modules.items import clock as shop_clock
-from alyr.modules.items import events, listing, service, staff, template
+from alyr.modules.items import events, listing, qty, service, staff, template
 from alyr.modules.items.availability import STOCKED
 from alyr.modules.items.wa_text import say, shown
 
@@ -130,9 +130,13 @@ def _low_variants(view: dict, limit: int) -> list[dict]:
 def _left_text(view: dict, low: list[dict], lang: str) -> str:
     """"3", or "Black M: 2, Black L: 1" for an item with sizes."""
     if len(view["variants"]) == 1 or all(not v["name"] and not v["name_ar"] for v in low):
-        return str(min(v["left"] for v in low))
+        return qty.label(
+            min(v["left"] for v in low), view["unit"], view["quantity"]["show_unit"], lang
+        )
     return ", ".join(
-        say("alert_left_each", lang, variant=shown(v, lang), n=v["left"]) for v in low
+        say("alert_left_each", lang, variant=shown(v, lang),
+            n=qty.label(v["left"], view["unit"], view["quantity"]["show_unit"], lang))
+        for v in low
     )
 
 
