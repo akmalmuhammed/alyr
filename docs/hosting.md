@@ -22,9 +22,9 @@ The public site at alyr.qa is not part of this: it is static files on Cloudflare
 | Stage | Where | State |
 |---|---|---|
 | Rehearsal | The laptop, `docker-compose.prod.yml` | Works (17 Oct 2026) |
-| Main home | Azure Qatar Central: Container Apps, PostgreSQL Flexible Server, Key Vault | Planned; infrastructure code is ALY-10 |
-| Off-site backups | Google Cloud Storage, Doha (in Qatar, another company); a second copy in Cloudflare R2 | Planned; the backup job is built and rehearsed |
-| Emergency host | Google Cloud Run and Cloud SQL, Doha, from the latest backup | Planned; scripts only, nothing running |
+| Main home | Azure Qatar Central: Container Apps, PostgreSQL Flexible Server, Key Vault | Code ready, not yet deployed: `infra/azure/` (steps in its README) |
+| Off-site backups | Google Cloud Storage, Doha (in Qatar, another company); a second copy in Cloudflare R2 | The backup job is built and rehearsed; bucket steps in `infra/gcp/README.md` |
+| Emergency host | Google Cloud Run and Cloud SQL, Doha, from the latest backup | Steps only, nothing running: `infra/gcp/README.md` |
 | Web app standby | Vercel Pro, only if needed | Not set up |
 
 ## Production settings
@@ -151,9 +151,18 @@ Then point `ALYR_DATABASE_URL` and `ALYR_MIGRATION_URL` at the new server and ru
 
 Restore once before the first paying customer, and after any change to the backup job.
 
+## Deploying
+
+Manual only: GitHub Actions > `deploy-azure` > Run workflow, from `main`. It signs in to
+Azure with a short-lived GitHub token (no stored password), builds and pushes the three
+images tagged with the commit, runs migrations as a job, rolls out the API, worker and
+web app only if migrations succeeded, and checks `/health/ready`, `/health/worker` and
+`/login`. To roll back, run `az containerapp update ... --image <registry>/alyr-api:<older commit>`
+(and the same for the worker and web app).
+
 ## Not done yet
 
-- Azure infrastructure code, the deploy workflow and the Google emergency scripts (ALY-10).
+- Nothing has been deployed: `infra/azure` is compiled and linted, not run (no subscription yet).
 - Uptime monitoring on `/health/worker` and the webhook address.
 - A test that a hung worker turns `/health/worker` red in a real deployment (covered by a
   unit test only).
