@@ -57,18 +57,18 @@ export function Icon({ name, className = "sh-ico" }: { name: string; className?:
 
 // ── toasts ──────────────────────────────────────────────
 
-export type Toast = { id: number; text: string; tone: "ok" | "bad"; undo?: () => void; undoLabel?: string };
+export type Toast = { id: number; text: string; tone: "ok" | "bad" | "warn"; undo?: () => void; undoLabel?: string };
 
 export function useToasts() {
   const [toasts, setToasts] = useState<Toast[]>([]);
   const next = useRef(1);
   const dismiss = useCallback((id: number) => setToasts((all) => all.filter((x) => x.id !== id)), []);
   const push = useCallback(
-    (text: string, options: { tone?: "ok" | "bad"; undo?: () => void; undoLabel?: string } = {}) => {
+    (text: string, options: { tone?: "ok" | "bad" | "warn"; undo?: () => void; undoLabel?: string } = {}) => {
       const id = next.current++;
       setToasts((all) => [...all.slice(-2), { id, text, tone: options.tone ?? "ok", undo: options.undo, undoLabel: options.undoLabel }]);
       // A toast with Undo stays long enough to be read and used; one that only tells stays short.
-      setTimeout(() => dismiss(id), options.undo ? 9000 : options.tone === "bad" ? 8000 : 4500);
+      setTimeout(() => dismiss(id), options.undo ? 9000 : options.tone === "bad" || options.tone === "warn" ? 8000 : 4500);
       return id;
     },
     [dismiss],
@@ -97,7 +97,7 @@ export function ToastLayer({ toasts, dismiss, lang, undoWord, dismissWord }: {
     <div className="ct-toasts" aria-live="polite" aria-atomic="false" lang={lang}>
       {toasts.map((toast) => (
         <div key={toast.id} className={`ct-toast ${toast.tone}`} role={toast.tone === "bad" ? "alert" : "status"}>
-          <span className="ct-toast-mark" aria-hidden="true"><Icon name={toast.tone === "bad" ? "warn" : "check"} /></span>
+          <span className="ct-toast-mark" aria-hidden="true"><Icon name={toast.tone === "ok" ? "check" : "warn"} /></span>
           <span className="ct-toast-text">{toast.text}</span>
           {toast.undo && (
             <button type="button" className="btn small ct-toast-undo"

@@ -1,12 +1,10 @@
 # Spec 014: The pricing pack (discounts and coupon codes, delivery and pickup, cost price and margin)
 
-Status: built in ALY-150 (a child of ALY-101), in three pull requests that stand on each other: **1. discounts**, **2. delivery** (this one carries parts 1 and 2), **3. cost and margin** (to follow). Decision: D-039, "As built (pricing pack)". It adds three switchable features to the feature engine (`specs/012-feature-engine/spec.md`); the Catalog it prices is `specs/001-catalog-engine/spec.md` (engine), `003` (price groups), `004` (WhatsApp), `005` (order page), `006` (import and export), `007` (reports) and `010` (ordering by code).
+Status: built in ALY-150 (a child of ALY-101), in three pull requests that stand on each other: **1. discounts**, **2. delivery**, **3. cost and margin**. Decision: D-039, "As built (pricing pack)". It adds three switchable features to the feature engine (`specs/012-feature-engine/spec.md`); the Catalog it prices is `specs/001-catalog-engine/spec.md` (engine), `003` (price groups), `004` (WhatsApp), `005` (order page), `006` (import and export), `007` (reports) and `010` (ordering by code).
 
 The audit of 18 Oct 2026 found the gaps this fills: only a dated sale price and customer-group prices existed; there were no coupon codes or cart discounts; an order carried `fulfil_on` and `table_label` and no delivery, no fee; an item had no cost, so there was no margin anywhere. For a bakery, a home kitchen, a shop and a fashion seller these are among the first things they ask for.
 
 The founder's rule (18 Oct) holds: **one core system; everything specific to a kind of business is a switchable feature the founder can turn on later for a client; owners never see the word "capability".** The three are the registry's old extension points `discounts`, `delivery_fees` and `cost_margin`, now built, with plain words in both languages, **off by default for every shop and every template**, so no existing shop behaves differently (`tests/test_feature_engine_identical.py` is unchanged and green; the only test edits are the ones the new features force and are listed in the PR).
-
-**This page is written pull request by pull request.** The sections of a pull request that is not yet built say so at their head.
 
 ## Money: one set of rules (all three parts)
 
@@ -84,8 +82,46 @@ At review the customer chooses (when both are offered; with one way only nobody 
 * **The "Order on WhatsApp" link** (readable mode) carries the choice in the message; the codes-only mode, which the chat reads, is unchanged.
 * **Report**: *Deliveries this week: 2 orders, QAR 30 in delivery fees (1 pickup).* A cancelled order is not counted.
 
-## Not built in parts 1 and 2
+## 3. Cost price and margin (pull request 3, migration 0042)
 
-"Buy N get M" across different items (a mixed basket); a coupon sent to a customer by name; a coupon's own page on the order page (a link that fills the code); a customer-facing "you could save" nudge; stacking a code with a price-group-only rule is allowed only when both are stackable.
+Feature `cost_margin` ("Cost price and margin", «سعر التكلفة والهامش»). Off: no cost route answers (`422 feature_off`), no field, no column, no report line, and an order keeps no cost.
 
-No maps, no geocoding, no driver dispatch, no distance-based fees, no delivery slots by the hour; a coupon cannot discount the delivery fee.
+### Who sees it: owners and admins only
+
+**Agents never see a cost or a margin, and neither do customers.** It is kept in two ways. *Where it lives:* costs are in `item_costs`, `item_cost_history` and `order_item_costs`, not in the tables of items, sizes and order lines, whose rows are listed, copied and sent to staff and customers in many places; only `modules/items/costs.py` and the owner-only routes read them (a test fails if another file starts to). *Where it is shown:* every route in `routes/costs.py` answers 403 to anyone who is not an owner or admin whether or not the feature is on; the item save answers `cost_warnings` to managers only; the export, the template and the import's plan carry the column only for a manager of a shop that keeps costs, and a manager's import preview opened by an agent is recomputed without it; the weekly report goes to the owner and the admins, not to staff numbers (the WhatsApp card is made from other figures). `tests/test_cost_leaks.py` puts a recognisable cost in a shop and walks 35 places an agent can read, the export and template as an agent, an agent's upload with a cost column, a manager's preview opened by an agent, the customer's pages and API, the chat's cards and every message the shop ever sent, looking for the number and for the words that carry it.
+
+### The cost
+
+* A cost is per unit, in dirhams, for the item and, where a size or colour costs something else, for it; a size with no cost of its own costs what the item costs. History is kept like the price's (who, when, why).
+* **Margin** of a unit = the price now (the sale price while a sale is on, the size's difference included) minus the cost; as a share of the price, rounded half up to one decimal. Priced extras ("cheese") are not counted: their cost is not kept, so a line's margin treats them as nothing, and the screens say extras are not included.
+* **A price under the cost is a warning, never a block**: the item save and the cost save answer with the message in both languages ("The price QAR 50 is below what it costs you (QAR 60). You can still save it.").
+* **Stock valuation** on the Stock tab: counted stock x cost, one number, and how many items have stock and no cost kept (not in the number).
+* **Files**: a last column "Cost price (QAR)" in the export and the template; an import can set an item's cost or a size's (an empty cell keeps what there is; a value equal to what the size already costs does nothing, so a round trip changes nothing and sizes keep following the item); the preview shows "Cost price: QAR 40 → QAR 45.50"; the undo puts costs back unless they were changed since.
+
+### On an order, and in the report
+
+An order keeps what each unit cost when it was placed (`order_item_costs`), so its margin stays right when the cost or the price changes later. An order placed while the feature was off has none and is left out of every margin, and said to be. **An order's margin** = what the goods brought in after discounts less what they cost then (delivery fees are not margin); owners see it on each order in the workspace (`GET /api/orders/margins`), flagged "some items have no cost kept" when it is incomplete. **The weekly report** (owners and admins) gains: *Estimated gross margin: QAR 1,240 (31.0%) on 18 orders*; *N orders had items with no cost kept, so those items are not in the margin*; *Sold for less than they cost: ...*; *Low margin (under 10%): ... (5.0%)*. A cancelled order is not a sale.
+
+## Where the three meet the Catalog's other rules
+
+* **A shop needs the Catalog's order page.** These features act only where the `catalog` module is on (every shop but travel and documents since ALY-113). A shop that still has the older order page (orders without the Catalog) is never given a discount, a fee or a cost it could not show: for it all three are off, whatever was switched (`features.PRICING_PACK`).
+* **Price groups, sale prices, extras** are the Catalog's (spec 003): decided first. **Stock and holds** are untouched: a discount does not change the stock taken.
+* **Cancelling** an order gives back a coupon use once, keeps its delivery and discount snapshot, and (as before) takes its sale off a credit account at the order's total.
+* **The ledger and the payment** always use the stored total. **Documents** made from an order (ALY-139) carry each line's discount and a delivery line, so the paper adds up to the order.
+* **Templates made in the back office** can switch any of the three on for every shop made from them (the registry lists them).
+
+## How it is checked
+
+* `tests/test_pricing_totals.py`: the rounding rule, sharing a discount among lines, the floor, scope, minimum, buy-N-get-one (also with decimal quantities), every reason, stacking and its tie-breaks, delivery free-over, and a property test of 4,000 random carts with random rules.
+* `tests/test_pricing_property.py`: 60 random carts with random codes and delivery through HTTP and PostgreSQL: what was shown = what was stored = what the payment asks for, and `total = sum(line prices x quantities) - sum(line discounts) + fee`.
+* `tests/test_discounts.py`: off and inert; a coupon end to end with its snapshot; every refusal in both languages; the order refused and nothing changed; the races (the two orders for the last use; eight for three; one customer's two orders; the conditional update alone, with the lock watcher proving the two met); cancelling (the customer, staff, the hold running out); the owner's rules; the activity record; the report line; the chat in English and Arabic; the back-office template.
+* `tests/test_delivery.py`, `test_delivery_migration.py`: the fee rules, the cut-off and days, discounts together, the snapshot, the chat, the report, the migration with data.
+* `tests/test_cost.py`, `test_cost_files.py`, `test_cost_leaks.py`, `test_cost_migration.py`: the cost, margin and history; warnings; order snapshots; valuation; the report; files and their undo; who sees what.
+* `tests/test_discounts_migration.py`, `test_delivery_migration.py`, `test_cost_migration.py` build a database up to the previous migration, fill it with shops, items and orders, apply the migration (as a superuser and as an owner that does not bypass row-level security) and check that nothing existing changed.
+* `tests/test_documents_pricing.py`: a receipt for a discounted, delivered order adds up.
+* **Nothing existing behaves differently.** `tests/test_feature_engine_identical.py` and its golden file are unchanged and green. The tests that had to change are listed in the pull request and each is one of: a test that used "discounts" as its example of a feature that is not built (it uses `bundles`), a test that said every feature is on by default (the pricing pack is off), the migration test's list of features added after it, and the export tests' column list (the cost column is added to a file after the usual ones, only for managers).
+* Browsers: `scripts/pricing-browser-check.mjs`, `scripts/delivery-browser-check.mjs`, `scripts/cost-browser-check.mjs` (headless Edge, 375 px, English and Arabic, light and dark, axe-core).
+
+## Not built, not checked
+
+Buy N get M across different items; a coupon sent to a customer by name or in a link; a "you could save" nudge; a delivery fee by distance, a map or live driver tracking; a time slot for delivery; the cost of priced extras; a supplier or batch cost; cost in the WhatsApp staff commands; the margin on the home screen. Not checked: a real phone and on-screen keyboard; the Arabic by a native speaker (ALY-66); Meta (nothing was sent or submitted: no new template); a real gateway; the decimal quantities of spec 013 (the arithmetic is written for them and tested with decimals, but the integer columns are the ones on main).

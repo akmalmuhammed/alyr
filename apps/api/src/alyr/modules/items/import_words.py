@@ -362,6 +362,11 @@ MESSAGES: dict[str, tuple[str, str, str]] = {
         "تُرك العمود «{value}»: ميزة «{feature_ar}» متوقفة في متجرك. شغّلها من «الميزات» "
         "لاستخدامه.",
     ),
+    "column_owner_only": (
+        "warning",
+        "The column “{value}” was left out: only owners and admins can import costs.",
+        "تُرك العمود «{value}»: يستورد التكاليف المالك والمديرون فقط.",
+    ),
     "duplicate_column": (
         "warning",
         "The column “{value}” appears more than once. Only the first is used.",

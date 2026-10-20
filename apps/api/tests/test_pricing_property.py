@@ -13,6 +13,7 @@ import random
 from uuid import UUID
 
 from alyr.seed import DEMO_SLUG
+from catalog_wa import catalog_module_on  # noqa: F401  (the autouse fixture is used by name)
 from order_links import token
 from test_consent import owner_sql
 from test_delivery import deliver_on, go, settings, zone

@@ -22,6 +22,7 @@ How a file is read
 import hashlib
 import json
 import re
+from contextvars import ContextVar
 from dataclasses import dataclass, field
 from datetime import date, datetime, time
 from uuid import UUID
@@ -31,10 +32,16 @@ from alyr import capabilities
 from alyr.core.media import parse_photo_ref
 from alyr.core.normalise import fmt_qar, has_arabic
 from alyr.modules.items import columns, import_words, service, values
+from alyr.modules.items import costs as costs_module
 from alyr.modules.items import fields as owner_fields
 from alyr.modules.items.import_words import Issue, issue
 from alyr.modules.items.values import CellError
 from alyr.modules.items.xlsx import Sheet
+
+# May the person asking see and import costs (an owner or admin of a shop that keeps costs)? The
+# import routes set it for each request (`routes/items_import.py`); the plan reads it, so a
+# cost never reaches a preview that someone else may open (ALY-150).
+COSTS: ContextVar[bool] = ContextVar("import_costs", default=False)
 
 MAX_DATA_ROWS = 3000
 MAX_VARIANTS = 100
@@ -82,6 +89,11 @@ class Snapshot:
     allowed: frozenset[str] | None = None
     # The shop's own fields that are active (ALY-148): their columns are read too.
     fields: list[dict] = field(default_factory=list)
+    # The costs kept, when the file may carry them (ALY-150: an owner or admin, a shop that keeps
+    # costs); None otherwise, and the cost column is then left out. `cost_note` says why when the
+    # shop does keep costs and this person may not import them.
+    costs: dict | None = None
+    cost_note: str = ""
 
 
 @dataclass
@@ -120,6 +132,9 @@ class ItemPlan:
     variants: list[VariantOp] = field(default_factory=list)
     photos: list[dict] = field(default_factory=list)  # {"zip": entry} or {"asset": id}
     diff: list[dict] = field(default_factory=list)    # what an update changes, for the preview
+    # What the cost column sets: [{row, variant, variant_id, cost}] (dirhams). Only ever filled
+    # for a person who may see costs.
+    costs: list[dict] = field(default_factory=list)
     draft: bool = False
     stock_moves: int = 0
 
@@ -137,7 +152,8 @@ class ItemPlan:
             "photos": len(self.photos), "stock_moves": self.stock_moves,
             "price": price, "price_text": fmt_qar(price) if price else None,
             "category": (self.data.get("category") or None) if creating else None,
-            "diff": self.diff,
+            "diff": [d for d in self.diff if COSTS.get() or d["column"] != "cost"],
+            **({"costs": self.costs} if self.costs and COSTS.get() else {}),
             "issues": [{**import_words.view(n), "row": row} for row, n in self.notes],
         }
 
@@ -146,7 +162,7 @@ class ItemPlan:
         return {
             "rows": self.rows, "action": self.action, "target": str(self.target),
             "data": self.data, "variants": [vars(v) for v in self.variants],
-            "photos": self.photos, "diff": self.diff,
+            "photos": self.photos, "diff": self.diff, "costs": self.costs,
             "notes": [(row, n.code, n.args) for row, n in self.notes],
         }
 
@@ -208,7 +224,8 @@ def _blank(raw: object) -> bool:
 
 
 def find_header(
-    sheet: Sheet, allowed: frozenset[str] | None = None, own: dict[str, str] | None = None
+    sheet: Sheet, allowed: frozenset[str] | None = None, own: dict[str, str] | None = None,
+    cost_note: str = "",
 ) -> tuple[int, dict[int, str], list[Issue]]:
     """The row that holds the column names, which column is which, and notes about columns
     that are not understood. Looks in the first rows, so a file may have a title above."""
@@ -240,6 +257,10 @@ def find_header(
             continue
         seen.add(key)
         if allowed is not None and not key.startswith("custom:") and key not in allowed:
+            if key == "cost" and cost_note == "owner_only":
+                notes.append(issue("column_owner_only", key,
+                                   value=values.as_text(sheet.rows[index][col])[:60]))
+                continue
             cap = capabilities.BY_KEY[columns.NEEDS[key].split("|")[0]]
             notes.append(issue(
                 "column_off", key, feature=cap.name.en, feature_ar=cap.name.ar,
@@ -474,7 +495,9 @@ def build(
     mode = options.get("on_duplicate", "create")
     plan = Plan(options={"on_duplicate": mode})
     own = columns.custom_columns(snapshot.fields)
-    header, mapping, notes = find_header(sheet, snapshot.allowed, columns.custom_index(own))
+    header, mapping, notes = find_header(
+        sheet, snapshot.allowed, columns.custom_index(own), snapshot.cost_note
+    )
     if header < 0:
         raise ValueError("no_header")
     plan.notes.extend(notes)
@@ -667,8 +690,10 @@ def _plan_item(
     if plan.errors:
         plan.action = "error"
         return plan
+    _costs(plan, parsed, entry, snapshot)
     _photos(plan, parsed, snapshot, zip_view)
-    if plan.action == "update" and not plan.diff and not plan.photos and not plan.stock_moves:
+    if plan.action == "update" and not plan.diff and not plan.photos and not plan.stock_moves \
+            and not plan.costs:
         plan.action = "unchanged"
         plan.notes.append((first.row, issue("nothing_to_change")))
     return plan
@@ -910,7 +935,7 @@ def _diff(plan: ItemPlan, key: str, before: object, after: object, variant: str 
 def _show(key: str, value: object) -> str:
     if value is None or value == "":
         return ""
-    if key in ("price", "sale_price", "price_diff"):
+    if key in ("price", "sale_price", "price_diff", "cost"):
         return fmt_qar(int(value))  # type: ignore[arg-type]
     if key in ("unit", "status", "rule"):
         return columns.word_for(key, str(value), "en")
@@ -1133,6 +1158,52 @@ def _update(
     plan.variants = ops
     plan.stock_moves = moves
     plan.data = changes
+
+
+# ── cost ──────────────────────────────────────────────────
+
+def _costs(plan: ItemPlan, parsed: list[Parsed], entry: service.Loaded | None,
+           snapshot: Snapshot) -> None:
+    """The cost column (ALY-150): what each row says one unit costs. A row of a named size sets
+    that size's own cost (not when it is what the size already costs, by itself or from the
+    item); any other row sets the item's. Only for a person who may see costs: for anyone else
+    the column was left out of the file's mapping and there is nothing here."""
+    if snapshot.costs is None:
+        return
+    kept = snapshot.costs
+    item_id = entry.item["id"] if entry is not None else None
+    sizes = {
+        _squash(v["name"] or v["name_ar"]): v
+        for v in (entry.variants if entry is not None else []) if v["active"]
+        and (v["name"] or v["name_ar"])
+    }
+    named = len(parsed) > 1 or any(
+        p.values.get("variant") or p.values.get("variant_ar") for p in parsed
+    )
+    for p in parsed:
+        cost = p.values.get("cost")
+        if cost is None:
+            continue
+        name = str(p.values.get("variant") or p.values.get("variant_ar") or "")
+        if named and name:
+            existing = sizes.get(_squash(name))
+            now = costs_module.effective(kept, item_id, existing["id"]) if existing else None
+            if existing is not None and now == cost:
+                continue
+            label = existing["name"] if existing else name
+            plan.costs.append({
+                "row": p.row, "variant": label,
+                "variant_id": str(existing["id"]) if existing else None, "cost": cost,
+            })
+            if entry is not None:
+                _diff(plan, "cost", now, cost, label)
+        else:
+            now = kept.get((item_id, None)) if entry is not None else None
+            if entry is not None and now == cost:
+                continue
+            plan.costs.append({"row": p.row, "variant": "", "variant_id": None, "cost": cost})
+            if entry is not None:
+                _diff(plan, "cost", now, cost)
 
 
 # ── photos ────────────────────────────────────────────────
