@@ -40,6 +40,7 @@ from alyr.channels.base import Choice, InboundMessage, OutboundMessage
 from alyr.core import mail, team
 from alyr.core.normalise import has_arabic, western_digits
 from alyr.modules.documents import (
+    authority,
     customers,
     delivery,
     delivery_words,
@@ -352,6 +353,13 @@ def _clip(value: str, size: int) -> str:
 
 
 async def _confirm(conn, contact, lang, data: dict, cmd_id: UUID | None) -> list[OutboundMessage]:
+    # A kind the shop's other system numbers is not ALYR's to issue (ALY-142): say so now, not
+    # after a Yes. A payment against an invoice makes no document of this kind, so it goes on.
+    if (data["kind"] == "invoice" or not data["against"]) and await authority.is_external(
+            conn, data["kind"]):
+        if cmd_id is not None:
+            await _store(conn, contact, "cancelled", data, cmd_id)
+        return [_plain(contact, words.ERRORS["external_authority"].get(lang), lang)]
     cfg = await doc_settings.get(conn)
     cur = cfg["currency"]
     exp = money.CURRENCIES[cur].exponent

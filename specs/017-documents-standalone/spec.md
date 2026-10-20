@@ -87,6 +87,15 @@ All behind `require_module("documents")` and the existing roles: owners and admi
 
 `python -m alyr.seed_catalog_demos --only salem` makes **Salem Maintenance** («سالم للصيانة»), an AC repair business in Doha, with four saved lines, three customers, a staff number for the message demo and a small book of papers (an unpaid invoice with its payment link, a paid one with its receipt, an unpaid one for a company, a walk-in receipt). An issued document cannot be deleted, so the shop is made once; a second run leaves it as it is. See `docs/demo.md`.
 
+## With connected mode (ALY-142)
+
+An invoices-only shop may also hand the numbering of a kind to its till (`specs/016-documents-connected/spec.md`). The two together (`test_documents_standalone_connected.py`):
+
+* What ALYR still numbers is made as before, by the form or by a staff message, and carries the payment link and the QR code. What the other system numbers is refused at ALYR's own doors, the form (409 `external_authority`, both languages) and the staff command (said at once, before any Yes; a payment against an open invoice goes on, since it makes no document of that kind).
+* A document the other system numbered gets **no payment link and no QR code** (`paylink.wanted` refuses `number_authority = external`, and the hosted page shows `external` and no Pay button): it is that system's paper and ALYR only delivers it.
+* A payment made by the link is recorded like any payment against an invoice and is told to the shop's webhooks as `payment.recorded`; cancelling an invoice with a credit note emits `document.cancelled` and closes the link.
+* Customers a till's sale made are ordinary `contacts`, so they appear in the Customers screen.
+
 ## Deviations from the brief
 
 * **A customer needs a phone to be saved** from the form's "Save for next time" and to receive anything; a customer typed with a name alone is written on the paper but is not a contact of the shop, so a payment link needs a saved customer. The brief said "inline create"; the phone rule is the engine's (a contact is keyed by phone).
