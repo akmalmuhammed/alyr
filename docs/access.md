@@ -24,6 +24,8 @@ The founder confirms the "2FA" column; until confirmed it says "check".
 | Neon | Hosted demo database (Frankfurt) | Founder | check | check | Demo data only |
 | Microsoft for Startups / Azure | Planned production hosting (ALY-55, ALY-10) | Founder | Not yet created | | |
 | Google Cloud | Planned staging and backups | Founder | Not yet created | | |
+| ALYR API keys (a shop's machine access, `alyr_k1_...`; ALY-142) | Let a shop's other system send sales to ALYR and read its documents; never a person, never the workspace | The shop's owner or an admin makes and revokes them in the workspace (Connections, Connect another system); ALYR staff do not hold or see them | The key itself, shown once; ALYR stores only a hash and the public prefix | n/a | The shop revokes it and makes a new one; revoking is immediate. A leaked key is revoked from the same screen (no ALYR secret is involved); the activity record shows its last use |
+| Webhook signing secrets (a shop's outgoing events; ALY-142) | Let the shop's system check a message is from ALYR | The shop; shown once at creation and replaceable | In ALYR's database (it must sign) | n/a | Replace the secret in the workspace; the old one stops at once |
 | Anthropic (Claude) | AI-built development sessions | Founder | Founder's account | check | Development pauses |
 | Ministry of Commerce Single Window | Company registration SR3035824 | Owner (Beevi Jinan) | National authentication | | Registration cannot progress |
 

@@ -113,6 +113,9 @@ def make_doc(
     )
     number = row["number"]
     issued_at = row["issued_at"]
+    # A document the shop's other system numbered is that system's paper, delivered by ALYR: the
+    # page says so, and the registration note (which is about ALYR's own invoices) is not drawn.
+    external = row.get("number_authority") == "external"
     return Doc(
         kind=row["kind"], title=title_for(row["kind"], taxed=taxed),
         languages=kinds.languages_of(row["languages"]), layout=row["layout"],
@@ -126,7 +129,8 @@ def make_doc(
         second_date_label=kind.second_date if row["due_date"] else None,
         payments=payments, notes=pair(row["notes"]), terms=pair(row["terms"]),
         reason=row["reason"], related_title=related_title, related_number=related_number,
-        unregistered=not seller.get("registered", False), preview=preview,
+        unregistered=not seller.get("registered", False) and not external, external=external,
+        preview=preview,
         code=(row["content_hash"] or "")[:16], brand=brand,
         created=issued_at if isinstance(issued_at, datetime) else datetime(2026, 1, 1, tzinfo=UTC),
     )

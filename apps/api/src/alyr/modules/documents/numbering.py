@@ -41,7 +41,9 @@ LOCK_SERIES = (
 class Allocation:
     series_key: str
     number: str
-    seq: int
+    # None for a document another system numbered (series "EXT"): it has no place in ALYR's
+    # counter (`service.issue_external`, ALY-142).
+    seq: int | None
     number_year: int | None
     # The instant the document is issued, taken after the lock so that numbers and times
     # run in the same order.

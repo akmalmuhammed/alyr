@@ -33,8 +33,10 @@ import asyncpg
 
 from alyr.core import team
 from alyr.core.auth import Staff
+from alyr.modules.connect import webhooks
 from alyr.modules.documents import (
     access,
+    authority,
     build,
     canonical,
     kinds,
@@ -105,6 +107,17 @@ def _check_key(key: str | None) -> None:
         raise DocumentError("key_invalid", 400)
 
 
+async def _require_authority(conn: asyncpg.Connection, kind: str, external: bool) -> None:
+    """ALYR numbers a kind only when the shop has not handed it to its other system, and a
+    number from the other system is only taken for a kind that is theirs (ALY-142). The
+    database holds both to the same rule when the document is issued."""
+    if external:
+        if not await authority.is_external(conn, kind):
+            raise DocumentError("kind_unknown", field="kind")
+    else:
+        await authority.require_alyr(conn, kind)
+
+
 async def _lock_key(conn: asyncpg.Connection, key: str) -> None:
     """Two requests with one key take turns, so the second finds what the first made."""
     await conn.execute(
@@ -157,6 +170,7 @@ async def create_draft(conn: asyncpg.Connection, staff: Staff, body: Mapping) ->
     shop = await settings.get(conn)
     prepared = prepare.prepare(body, shop)
     columns = prepared["columns"]
+    await _require_authority(conn, columns["kind"], body.get("number_authority") == "external")
     # Only code inside ALYR sets this (the API's draft body has no such field): a receipt for
     # a payment against an invoice points at the invoice (sales.py, payments.py).
     columns["related_document_id"] = body.get("related_document_id")
@@ -256,11 +270,38 @@ async def create_and_issue(
     return await get(conn, staff, row["id"]), False
 
 
+async def create_and_issue_external(
+    conn: asyncpg.Connection, staff: Staff, body: Mapping, *, number: str, key: str,
+    sold_on: date | None = None,
+) -> tuple[dict, bool]:
+    """Make a document from another system's sale and issue it with that system's own number,
+    in one request (ALY-142). The shop must have given this kind of document to its other
+    system (`authority`); ALYR takes no number and the counter is not touched. The key is
+    required and works as for any issue: a retry finds the document, never makes a second."""
+    _check_key(key)
+    await access.require_issue(conn, staff)
+    await _lock_key(conn, key)
+    earlier = await _by_key(conn, key)
+    if earlier is not None:
+        return await get(conn, staff, earlier["id"]), True
+    draft = await create_draft(conn, staff, {**body, "number_authority": "external"})
+    row = await _row(conn, UUID(draft["id"]), lock=True)
+    await _do_issue(conn, staff, row, key, external_number=number, sold_on=sold_on)
+    return await get(conn, staff, row["id"]), False
+
+
 async def _do_issue(
-    conn: asyncpg.Connection, staff: Staff, row: dict, key: str | None
+    conn: asyncpg.Connection, staff: Staff, row: dict, key: str | None, *,
+    external_number: str | None = None, sold_on: date | None = None,
 ) -> None:
     """The heart of it. `row` is the draft, locked. Raises (and so rolls everything back,
-    the number with it) if the document cannot be issued or any step fails."""
+    the number with it) if the document cannot be issued or any step fails.
+
+    With `external_number` the document is one the shop's other system numbered (ALY-142):
+    ALYR takes no number and touches no counter; the paper carries the given number, series
+    "EXT", and `sold_on` as its date (the day the other system made the sale)."""
+    external = external_number is not None
+    await _require_authority(conn, row["kind"], external)
     shop = await settings.get(conn)
     tenant = await _tenant(conn)
     lines = await _lines(conn, row["id"])
@@ -272,17 +313,26 @@ async def _do_issue(
         await _fill_from_contact(conn, {"contact_id": row["contact_id"], "customer": customer})
     notes, terms = prepare.default_texts(row, shop)
     columns = {**row, "customer": customer, "notes": notes, "terms": terms}
-    prepare.check_issuable(columns, lines, seller, shop)
+    prepare.check_issuable(columns, lines, seller, shop, external=external)
 
-    # Lock the series and take the number. From here to the commit nobody else can issue
-    # in this series, so this is also the part to keep short: the drawing is the slow bit.
-    alloc = await numbering.allocate(
-        conn, row["kind"], row["branch_key"], tenant["timezone"], clock=_clock
-    )
+    if external:
+        issued_at = _clock()
+        alloc = numbering.Allocation(
+            "EXT", external_number, None, None, issued_at,
+            sold_on or issued_at.astimezone(ZoneInfo(tenant["timezone"])).date(),
+        )
+    else:
+        # Lock the series and take the number. From here to the commit nobody else can issue
+        # in this series, so this is also the part to keep short: the drawing is the slow bit.
+        alloc = await numbering.allocate(
+            conn, row["kind"], row["branch_key"], tenant["timezone"], clock=_clock
+        )
+    authority_of_number = "external" if external else "alyr"
     full = {
         **columns, "series_key": alloc.series_key, "number": alloc.number,
         "number_year": alloc.number_year, "seq": alloc.seq, "issued_at": alloc.issued_at,
         "issue_date": alloc.issue_date, "seller": seller,
+        "number_authority": authority_of_number,
     }
     content_hash = canonical.hash_content(canonical.content_of(full, lines))
     full["content_hash"] = content_hash
@@ -306,16 +356,27 @@ async def _do_issue(
         "number_year = $4, seq = $5, issued_at = $6, issue_date = $7, customer = $8, "
         "seller = $9, notes = $10, terms = $11, hash_version = $12, content_hash = $13, "
         "pdf_sha256 = $14, pdf_bytes = $15, issue_key = $16, issued_by = $17, "
-        "issued_by_user = $18 where id = $1",
+        "issued_by_user = $18, number_authority = $19 where id = $1",
         row["id"], alloc.series_key, alloc.number, alloc.number_year, alloc.seq,
         alloc.issued_at, alloc.issue_date, customer, seller, notes, terms,
         canonical.HASH_VERSION, content_hash, pdf_sha, len(pdf), key, actor.name, staff.user_id,
+        authority_of_number,
     )
     await team.record(
         conn, SUBJECT, row["id"], "issued", actor, row["contact_id"],
         {"kind": row["kind"], "number": alloc.number, "total_minor": row["total_minor"],
-         "currency": row["currency"]},
+         "currency": row["currency"], **({"number_by": "other system"} if external else {})},
     )
+    await webhooks.emit(conn, "document.issued", {
+        "document_id": str(row["id"]), "kind": row["kind"], "number": alloc.number,
+        "number_authority": authority_of_number, "currency": row["currency"],
+        "total_minor": row["total_minor"], "paid_minor": row["paid_minor"],
+        "balance_minor": row["total_minor"] - row["paid_minor"],
+        "issue_date": alloc.issue_date.isoformat(), "source": row["source"],
+        "source_ref": row["source_ref"],
+        "related_document_id": str(row["related_document_id"])
+        if row["related_document_id"] else None,
+    })
 
 
 # ── credit notes ──────────────────────────────────────────────────────────────────────────
@@ -333,6 +394,7 @@ async def credit_note(
     replayed)."""
     _check_key(key)
     access.require_manager(staff)
+    await authority.require_alyr(conn, "credit_note")
     if key:
         await _lock_key(conn, key)
         earlier = await _by_key(conn, key)
@@ -351,7 +413,7 @@ async def credit_note(
     credited, credited_exact = await conn.fetchrow(
         "select coalesce(sum(total_minor), 0), coalesce(sum(total_minor - rounding_minor), 0) "
         "from documents where related_document_id = $1 and kind = 'credit_note' "
-        "and status = 'issued'", doc_id,
+        "and status = 'issued' and withdrawn_at is null", doc_id,
     )
     if lines is None:
         if credited:
@@ -377,6 +439,21 @@ async def credit_note(
     if credited + totals["total_minor"] > target["total_minor"]:
         raise DocumentError("credit_too_big", 409)
 
+    note_id = await _issue_credit_note(
+        conn, staff, target, credited, reason, credit_lines, totals, key=key)
+    return await get(conn, staff, note_id), False
+
+
+async def _issue_credit_note(
+    conn: asyncpg.Connection, staff: Staff, target: Mapping, credited: int, reason: str,
+    credit_lines: list[dict], totals: dict, *, key: str | None,
+    external_number: str | None = None, sold_on: date | None = None, source: str = "manual",
+    source_ref: str = "",
+) -> UUID:
+    """Make the credit note's draft, issue it (with ALYR's number, or with the number the
+    shop's other system gave it) and void the original when credit notes now cover all of it.
+    Shared by ALYR's own credit notes and the ones another system sends (ALY-142)."""
+    doc_id = target["id"]
     actor = team.actor_of(staff)
     columns = {
         "kind": "credit_note", "audience": target["audience"], "languages": target["languages"],
@@ -384,7 +461,7 @@ async def credit_note(
         "currency_exponent": target["currency_exponent"], "due_date": None,
         "customer": target["customer"], "contact_id": target["contact_id"], **totals,
         "branch_key": target["branch_key"], "paid_minor": 0, "payments": [], "notes": {},
-        "terms": {}, "reason": reason, "source": "manual", "source_ref": "",
+        "terms": {}, "reason": reason, "source": source, "source_ref": source_ref,
         "related_document_id": doc_id,
     }
     created = await conn.fetchrow(
@@ -394,7 +471,7 @@ async def credit_note(
     )
     note = dict(created)
     await _write_lines(conn, note["id"], credit_lines)
-    await _do_issue(conn, staff, note, key)
+    await _do_issue(conn, staff, note, key, external_number=external_number, sold_on=sold_on)
     done = await _row(conn, note["id"])
     # Void the original when credit notes now cover all of it.
     if credited + totals["total_minor"] == target["total_minor"]:
@@ -406,12 +483,63 @@ async def credit_note(
             conn, SUBJECT, doc_id, "voided", actor, target["contact_id"],
             {"number": target["number"], "credit_note": done["number"]},
         )
+        await webhooks.emit(conn, "document.cancelled", {
+            "document_id": str(doc_id), "number": target["number"],
+            "credit_note_id": str(note["id"]), "credit_note_number": done["number"],
+        })
     await team.record(
         conn, SUBJECT, note["id"], "credit_note_issued", actor, target["contact_id"],
         {"against": target["number"], "number": done["number"],
          "total_minor": totals["total_minor"]},
     )
-    return await get(conn, staff, note["id"]), False
+    return note["id"]
+
+
+async def credit_note_external(
+    conn: asyncpg.Connection, staff: Staff, doc_id: UUID, *, reason: str, lines: list[Mapping],
+    rounding_minor: int, number: str, key: str, sold_on: date | None = None,
+    source_ref: str = "",
+) -> tuple[dict, bool]:
+    """A credit note the shop's other system issued, with its own number (ALY-142). Everything
+    the engine asks of a credit note still holds: it points at an issued invoice, receipt or
+    deposit receipt in the same currency, the credit notes cannot add up to more than that
+    document, and when they add up to all of it the document becomes void."""
+    _check_key(key)
+    await _lock_key(conn, key)
+    earlier = await _by_key(conn, key)
+    if earlier is not None:
+        if earlier["related_document_id"] != doc_id:
+            raise DocumentError("key_reused", 409)
+        return await get(conn, staff, earlier["id"]), True
+    target = await _row(conn, doc_id, lock=True)
+    if target["status"] == "void":
+        raise DocumentError("already_void", 409)
+    if (target["status"] != "issued" or not kinds.KINDS[target["kind"]].creditable
+            or target["withdrawn_at"] is not None):
+        raise DocumentError("cannot_credit", 409)
+    reason = (reason or "").strip()
+    if len(reason) < 3:
+        raise DocumentError("credit_needs_reason")
+    credited = await conn.fetchval(
+        "select coalesce(sum(total_minor), 0) from documents where related_document_id = $1 "
+        "and kind = 'credit_note' and status = 'issued' and withdrawn_at is null", doc_id)
+    credit_lines = [
+        prepare.clean_line(raw, position, tax_enabled=True)
+        for position, raw in enumerate(lines, start=1)
+    ]
+    if not credit_lines:
+        raise DocumentError("no_lines")
+    totals = prepare.totals_of(credit_lines)
+    totals["rounding_minor"] = rounding_minor
+    totals["total_minor"] += rounding_minor
+    if totals["total_minor"] <= 0:
+        raise DocumentError("total_zero")
+    if credited + totals["total_minor"] > target["total_minor"]:
+        raise DocumentError("credit_too_big", 409)
+    note_id = await _issue_credit_note(
+        conn, staff, target, credited, reason, credit_lines, totals, key=key,
+        external_number=number, sold_on=sold_on, source="external", source_ref=source_ref)
+    return await get(conn, staff, note_id), False
 
 
 # ── reading ───────────────────────────────────────────────────────────────────────────────
@@ -461,7 +589,7 @@ async def get(conn: asyncpg.Connection, staff: Staff, doc_id: UUID) -> dict:
         for c in await conn.fetch(
             "select id, number, total_minor, issue_date from documents "
             "where related_document_id = $1 and kind = 'credit_note' and status = 'issued' "
-            "order by seq", doc_id)
+            "and withdrawn_at is null order by issued_at, id", doc_id)
     ]
     voided_by = None
     if row["voided_by_document_id"]:
@@ -482,6 +610,9 @@ async def get(conn: asyncpg.Connection, staff: Staff, doc_id: UUID) -> dict:
         "audience": row["audience"], "languages": row["languages"], "layout": row["layout"],
         "currency": row["currency"], "currency_exponent": row["currency_exponent"],
         "number": row["number"], "series_key": row["series_key"],
+        "number_authority": row["number_authority"],
+        "withdrawn": ({"at": _iso(row["withdrawn_at"]), "by": row["withdrawn_by"],
+                       "reason": row["withdrawn_reason"]} if row["withdrawn_at"] else None),
         "issued_at": _iso(row["issued_at"]), "issue_date": _iso(row["issue_date"]),
         "due_date": _iso(row["due_date"]), "customer": row["customer"], "seller": row["seller"],
         "contact_id": _iso(row["contact_id"]),
@@ -507,9 +638,12 @@ async def get(conn: asyncpg.Connection, staff: Staff, doc_id: UUID) -> dict:
 
 async def list_documents(
     conn: asyncpg.Connection, staff: Staff, *, kind: str | None = None, status: str | None = None,
-    q: str | None = None, limit: int = 50, offset: int = 0,
+    q: str | None = None, limit: int = 50, offset: int = 0, include_withdrawn: bool = False,
 ) -> dict:
     where, args = [], []
+    if not include_withdrawn:
+        # Imported by mistake and taken back (ALY-142): kept on record, out of the way.
+        where.append("withdrawn_at is null")
 
     def add(sql: str, value) -> None:
         args.append(value)

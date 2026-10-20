@@ -45,9 +45,15 @@ IMAGE_LIMIT = doc_settings.IMAGE_MAX_BYTES
 async def refused(request: Request, error: DocumentError) -> JSONResponse:
     """How every refusal reaches a client: `detail` in English like any other route, a `code`
     to act on, the same words in Arabic, and whatever says where (a field, a line)."""
+    headers = {}
+    if "retry_after" in error.extra:  # a key over its rate limit (ALY-142)
+        headers["Retry-After"] = str(error.extra["retry_after"])
+    if error.status == 401:
+        headers["WWW-Authenticate"] = "Bearer"
     return JSONResponse(
         status_code=error.status,
         content={"detail": error.en, "code": error.code, "message_ar": error.ar, **error.extra},
+        headers=headers,
     )
 
 
