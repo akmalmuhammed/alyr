@@ -198,7 +198,7 @@ def test_with_the_feature_on_an_item_is_sold_by_a_measure_in_steps(by_weight):
     assert switch(by_weight, "pack_rules", False).status_code == 200
     again = mk(by_weight, name="Saffron", name_ar="زعفران", price=9000, unit="g", pack_size=5,
                min_order=5)
-    assert again["quantity"]["chips"] == [] and again["quantity"]["step"] == 5
+    assert again["quantity"]["chips"] == [100, 250, 500] and again["quantity"]["step"] == 5
 
 
 def test_a_counted_unit_never_takes_a_fraction_in_the_item_or_its_stock(by_weight):
@@ -551,7 +551,7 @@ def test_a_receipt_from_an_order_by_weight_has_the_quantity_the_unit_and_the_sam
     assert order_["total"] == 416                  # 416.25, rounded once
     assert pay_by_link(shop, order_).json() == {"status": "paid"}
     [receipt] = documents(shop)
-    assert receipt["total_minor"] == 416           # the receipt agrees with the order, to the dirham
+    assert receipt["total_minor"] == 416   # the receipt agrees with the order, to the dirham
     shown = shop.owner.get(f"/api/documents/{receipt['id']}").json()["document"]
     [row] = shown["lines"]
     assert (row["quantity"], row["unit"], row["line_total_minor"]) == ("0.333", "kg", 416)

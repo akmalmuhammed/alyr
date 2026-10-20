@@ -284,24 +284,31 @@ def check_lots(
 def rules(unit: str, step: Any = None, minimum: Any = 1) -> dict:
     """How an item may be ordered, for a screen: `measure` (sold by weight or volume), `step`
     (the least change: 1 unless the item has a pack size or step), `min` (the smallest order),
-    `fractions` (whether anything but a whole number can be asked) and `chips`, the quick
-    quantities the order page offers for a fractional item (the unit's usual ones that the
-    item's step and minimum allow)."""
+    `fractions` (whether anything but a whole number can be asked), `show_unit` (whether the unit
+    is written beside a quantity) and `chips`, the quick quantities the order page offers for
+    an item sold by a measure with its unit shown (the unit's usual ones that the item's step and
+    minimum allow)."""
     # A box or a pack is already the pack: its pack size says what is in it, not how it is ordered.
     pack = Decimal(step) if step and unit not in ("box", "pack") else Decimal(1)
     low = Decimal(minimum or 1)
     measure = is_measure(unit)
-    fractions = measure and pack != pack.to_integral_value()
+    fractions = measure and (
+        pack != pack.to_integral_value() or low != low.to_integral_value()
+    )
+    # The unit is written beside a quantity of an item sold in fractions, and of one sold in a unit
+    # that is new with this feature (ml, g, litre, metre, tola); a kilo item sold in whole numbers
+    # reads "3" as it always did.
+    show = measure and (fractions or unit not in LEGACY_UNITS)
     chips: list = []
-    if fractions:
+    if show:
         for c in UNITS_BY_KEY[unit].chips:
             if check_lots(Decimal(c), unit, pack, low) is None:
                 chips.append(norm(Decimal(c)))
     return {
         "measure": measure, "step": norm(pack), "min": norm(low), "fractions": fractions,
-        # Write the unit beside a quantity of this item ("0.5 kg"): only for something sold in
-        # fractions. A kilo item sold in whole numbers reads "3", as it always did.
-        "show_unit": fractions, "chips": chips,
+        # Write the unit beside a quantity of this item ("0.5 kg", "250 ml"). A kilo item sold in
+        # whole numbers reads "3", as it always did.
+        "show_unit": show, "chips": chips,
     }
 
 

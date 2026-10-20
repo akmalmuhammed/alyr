@@ -4,8 +4,8 @@ the shelf, whole stays whole, row-level security is as it was, and from then on 
 a fraction and a counted unit may not.
 
 Built like the other migration tests (test_item_codes_migration.py): a throwaway database brought
-up to the migration before it, filled the way a live one is, then 0039 applied, twice over: as a superuser, as the
-local database is, and as an owner that does not bypass row-level security.
+up to the migration before it, filled the way a live one is, then 0039 applied, twice over: as a
+superuser, as the local database is, and as an owner that does not bypass row-level security.
 """
 
 import asyncio

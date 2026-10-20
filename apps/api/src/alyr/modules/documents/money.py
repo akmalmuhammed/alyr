@@ -101,9 +101,10 @@ def written(minor: int, currency: str, exponent: int, lang: str) -> str:
     return f"{currency} {number}"
 
 
-def quantity_text(quantity: Decimal) -> str:
-    """2.000 -> '2', 0.500 -> '0.5', 12.250 -> '12.25'."""
-    text = format(quantity.normalize(), "f")
+def quantity_text(quantity: Decimal | int) -> str:
+    """2.000 -> '2', 0.500 -> '0.5', 12.250 -> '12.25'. (The connection hands a whole
+    number back as an int, a fraction as a Decimal: both are written the same.)"""
+    text = format(Decimal(quantity).normalize(), "f")
     if "." in text:
         text = text.rstrip("0").rstrip(".")
     return text or "0"
