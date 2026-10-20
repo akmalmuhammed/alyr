@@ -37,10 +37,13 @@ export function ProductBar({ bar }: { bar: Bar }) {
 
 /** The opening: on the Carbon block, the name and state, a headline that names the result,
  * the lead, the demo, and three facts on one rule. */
-export function ProductHero({ hero, children, id = "product" }: {
+export function ProductHero({ hero, children, id = "product", wide = false }: {
   hero: { eyebrow: string; title: [string, string]; lead: string; facts: string[]; factsOffer?: string[] };
   children: ReactNode;
   id?: string;
+  /** A wider measure for the headline, so each of its two lines stands on one line (ALYR
+   * Shelf, ALYR Docs) and the demo stays in the first screen. */
+  wide?: boolean;
 }) {
   const facts = OFFER_LIVE && hero.factsOffer ? [...hero.facts, ...hero.factsOffer] : hero.facts;
   return (
@@ -52,7 +55,7 @@ export function ProductHero({ hero, children, id = "product" }: {
               <span className="signal" aria-hidden="true" />
               {rich(hero.eyebrow)}
             </p>
-            <h1 className="display display-sm pk-title" id={`${id}-title`}>
+            <h1 className={`display display-sm pk-title${wide ? " is-wide" : ""}`} id={`${id}-title`}>
               <span>{rich(hero.title[0])}</span> <span>{rich(hero.title[1])}</span>
             </h1>
             <p className="lead">{rich(hero.lead)}</p>
@@ -127,8 +130,9 @@ export function ScreenBlock({ locale, screen, fictional, children, id = "screen"
   );
 }
 
-/** Everything it does today, by audience; then, below a dashed rule, what is not built. */
-export function InsideBlock({ inside }: { inside: InsideSection }) {
+/** Everything it does today, by audience; anything the page shows beside it (`children`);
+ * then, below a dashed rule, what is not built, only where the page needs to say so. */
+export function InsideBlock({ inside, children }: { inside: InsideSection; children?: ReactNode }) {
   return (
     <section className="sec inside" id="inside">
       <div className="wrap">
@@ -151,18 +155,21 @@ export function InsideBlock({ inside }: { inside: InsideSection }) {
             </div>
           ))}
         </div>
-        <div className="notyet" data-reveal>
-          <span className="notyet-rule" aria-hidden="true" />
-          <h3 className="inside-name notyet-k">
-            <span className="dot-pending" aria-hidden="true" />
-            {inside.notYet.title}
-          </h3>
-          <ul className="notyet-list">
-            {inside.notYet.items.map((item) => (
-              <li key={item}>{rich(item)}</li>
-            ))}
-          </ul>
-        </div>
+        {children}
+        {inside.notYet && inside.notYet.items.length > 0 && (
+          <div className="notyet" data-reveal>
+            <span className="notyet-rule" aria-hidden="true" />
+            <h3 className="inside-name notyet-k">
+              <span className="dot-pending" aria-hidden="true" />
+              {inside.notYet.title}
+            </h3>
+            <ul className="notyet-list">
+              {inside.notYet.items.map((item) => (
+                <li key={item}>{rich(item)}</li>
+              ))}
+            </ul>
+          </div>
+        )}
         {inside.note && <p className="inside-note" data-reveal>{rich(inside.note)}</p>}
       </div>
     </section>

@@ -2,7 +2,7 @@ import type { ReactNode } from "react";
 import { Icon } from "./brand";
 import type { BookingPage } from "./copy";
 import type { DocLinkPage } from "./copyDocs";
-import type { OrderItem, OrderPage } from "./copyShelf";
+import type { OrderItem } from "./copyShelf";
 import { CxTop, Phone, TickPath } from "./Frames";
 import { rich } from "./Text";
 import "./drawings.css";
@@ -108,42 +108,6 @@ export function OrderRow({ item, soldOut, qty, end, className }: {
         <span className="d-add"><Icon name="plus" className="ico" /></span>
       ))}
     </div>
-  );
-}
-
-/** The order page on a customer's phone, opened on one category, with an item sold out
- * greyed (it stays in the list) or left out (it is not there at all). */
-export function OrderPageScreen({ page }: { page: OrderPage }) {
-  return (
-    <div className="d-cx">
-      <CxTop shop={page.shop} monogram={page.monogram} context={page.context} />
-      <div className="d-main">
-        <div className="d-hero">
-          <span className="d-eyebrow">{page.eyebrow}</span>
-          <b className="d-h1">{page.title}</b>
-        </div>
-        <div className="d-cats">
-          {page.chips.map((chip) => (
-            <span key={chip} className={chip === page.category ? "on" : undefined}>{chip}</span>
-          ))}
-        </div>
-        <div className="d-section">
-          <b className="d-h2">{page.category}</b>
-          <div className="d-card">
-            {page.items.map((item) => <OrderRow key={item.name} item={item} soldOut={page.soldOut} />)}
-          </div>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-/** The order page on the customer's phone. */
-export function OrderPhone({ page, className }: { page: OrderPage; className?: string }) {
-  return (
-    <Phone className={`d-order-phone${className ? ` ${className}` : ""}`}>
-      <OrderPageScreen page={page} />
-    </Phone>
   );
 }
 

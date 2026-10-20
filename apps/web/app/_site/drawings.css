@@ -315,7 +315,6 @@
 .d-stepper .d-step-b .ico { width: 13px; height: 13px; }
 .d-cats span.on { background: var(--d-ink); color: var(--d-card); box-shadow: none; }
 .d-btn.is-line { background: transparent; color: var(--d-ink); box-shadow: inset 0 0 0 1.5px var(--d-ink); }
-.d-order-phone { width: min(17.5rem, 100%); height: 30rem; }
 
 /* --------------------------------------------- the Stock tab of the Menu (ALYR Shelf) */
 .ws-cat-top { position: relative; display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: .75rem 1.5rem; margin-bottom: 1rem; }
@@ -332,6 +331,8 @@
 .ws-stock-now { display: inline-flex; align-items: baseline; gap: .375rem; }
 .ws-stock-now small { font-size: .75rem; color: var(--text-muted); }
 .ws-stock .ws-acts { justify-content: flex-end; }
+/* mark 3 sits in the row's end gutter, so the first row's buttons line up with the rest */
+.ws-stock .ws-acts > .ws-mark { position: absolute; inset-inline-end: -1.75rem; top: 50%; translate: 0 -50%; margin: 0; }
 .ws-pill.is-out { background: var(--text); color: var(--window); }
 .ws-pill.is-low { background: transparent; box-shadow: inset 0 0 0 1px var(--text); }
 .ws-log { margin-top: 0; border: 0; padding: 0; }

@@ -1,4 +1,4 @@
-import type { CSSProperties, ReactNode } from "react";
+import type { CSSProperties } from "react";
 import { PAPER_LABELS as L, type Pair, type PaperDoc } from "./paperData";
 import "./paper.css";
 
@@ -48,8 +48,8 @@ function Head({ doc }: { doc: PaperDoc }) {
   );
 }
 
-/** The receipt on A4 (210 × 297). `crop` keeps only its top (head, number, customer, two
- * lines), as a phone shows it. */
+/** The receipt on A4 (210 × 297). `crop` ends it below its totals and notes, with a dashed
+ * cut edge, so the signature figure fits one screen (08-rulings.md). */
 export function PaperA4({ doc, crop = false, className }: { doc: PaperDoc; crop?: boolean; className?: string }) {
   return (
     <div className={`pp pp-a4${crop ? " is-crop" : ""}${className ? ` ${className}` : ""}`} dir="rtl" lang="ar">
@@ -78,6 +78,7 @@ export function PaperA4({ doc, crop = false, className }: { doc: PaperDoc; crop?
             <b>{doc.payment.ar} <span className="pp-dot">·</span> <span lang="en">{doc.payment.en}</span></b>
           </div>
           <div className="pp-f pp-f-end pp-in" style={k(6)}>
+            <Label pair={L.paid} />
             <Money value={doc.paid} />
           </div>
         </div>
@@ -162,7 +163,7 @@ export function PaperRoll({ doc, className }: { doc: PaperDoc; className?: strin
         <div className="pp-r-pair pp-in" style={k(10)}><Label pair={L.subtotal} /><Money value={doc.subtotal} /></div>
         <span className="pp-rule2" />
         <div className="pp-r-total pp-in" style={k(10)}>
-          <span className="pp-l"><b>{L.grand.ar}</b> <span lang="en">{L.grand.en}</span></span>
+          <span className="pp-l"><b>{L.grand.ar}</b> <span className="pp-dot">·</span> <span lang="en">{L.grand.en}</span></span>
           <Money value={doc.total} strong currency />
         </div>
         <div className="pp-r-pair pp-in" style={k(11)}><span className="pp-l">{doc.payment.ar} <span className="pp-dot">·</span> <span lang="en">{doc.payment.en}</span></span><Money value={doc.paid} /></div>
@@ -212,17 +213,6 @@ export function PaperTop({ doc }: { doc: PaperDoc }) {
           <div className="pp-f"><Label pair={L.date} /><b>{doc.date.ar}</b></div>
         </div>
       </div>
-    </div>
-  );
-}
-
-/** The working drawing around a paper: a plate cut at 45 degrees, crosses at its corners and
- * a mono dimension line over each sheet ("210 mm", "80 mm"). */
-export function Dimension({ label, children, className }: { label: string; children: ReactNode; className?: string }) {
-  return (
-    <div className={`pp-dimmed${className ? ` ${className}` : ""}`}>
-      <span className="pp-dim" aria-hidden="true"><span>{label}</span></span>
-      {children}
     </div>
   );
 }
