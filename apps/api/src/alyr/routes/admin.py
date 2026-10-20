@@ -211,7 +211,11 @@ async def create_business(
             target = await template_change.find(conn, body.template, usable=True)
         if target is None:
             raise HTTPException(status_code=404, detail="no such template")
-    if get_settings().catalog_for_new_shops and "catalog" not in modules:
+    # A business that has only ALYR Invoices (ALY-141) has nothing else: no Catalog either.
+    # Whatever `invoices_for_new_shops` says, the back office can create one.
+    invoices_only = bool(modules) and set(modules) <= set(
+        catalog.PRODUCT_BY_KEY["invoices"].modules)
+    if get_settings().catalog_for_new_shops and "catalog" not in modules and not invoices_only:
         # Every business has the Catalog, as the shops made by onboarding do (ALY-113). It has
         # no type of its own here, so it gets the plain Catalog; the back office can switch it
         # off for this business afterwards.

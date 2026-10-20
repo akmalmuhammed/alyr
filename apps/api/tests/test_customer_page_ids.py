@@ -19,6 +19,9 @@ from test_track import an_order, track
 PAY_KEYS = {
     "amount", "status", "provider", "customer", "lang", "shop", "shop_ar", "slug",
     "order_number", "order_id", "amount_text",
+    # What an invoice's payment link is for (ALY-141): the number and kind of the invoice, which
+    # the person paying holds on the paper already. Null for an order's or an account's link.
+    "document_number", "document_kind",
 }
 
 

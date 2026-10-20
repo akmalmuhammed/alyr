@@ -375,7 +375,7 @@ async def complete_payment(
     row = await conn.fetchrow(
         "update payment_requests set status = 'paid', paid_at = now() "
         "where id = $1 and status = 'pending' "
-        "returning contact_id, amount, provider, order_id",
+        "returning contact_id, amount, provider, order_id, document_id",
         payment_id,
     )
     if row is None:
@@ -390,6 +390,15 @@ async def complete_payment(
             # cancelled. The stand-in gateway moves no money, so it never lands here.
             await _late_payment(conn, outbound, payment_id, late)
         return late["status"]
+    if row["document_id"] is not None:
+        # The customer paid an invoice's payment link (ALY-141): the payment is written against
+        # the invoice and its receipt follows by the shop's settings. The ledger is not touched:
+        # an invoice made by hand was never a debt on a credit account.
+        # (imported here: the document package builds on the ledger)
+        from alyr.modules.documents import paylink
+
+        await paylink.on_paid(conn, payment_id, row)
+        return "paid"
     lang = await conn.fetchval("select lang from contacts where id = $1", row["contact_id"])
     if row["order_id"] is not None:
         # Paying for an order settles the order. It was never a debt, so the ledger

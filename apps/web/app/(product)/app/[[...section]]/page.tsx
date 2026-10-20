@@ -118,7 +118,7 @@ const MODULE_ICON: Record<string, string> = {
   inbox: "inbox", bookings: "calendar", orders: "receipt", payments: "card", ledger: "book",
 };
 const PRODUCT_ICON: Record<string, string> = {
-  chat: "chat", bookings: "calendar", agent: "chart", accounts: "book",
+  chat: "chat", bookings: "calendar", agent: "chart", accounts: "book", invoices: "doc",
 };
 const CONNECTION_ICON: Record<string, string> = { whatsapp: "chat", payments: "card" };
 

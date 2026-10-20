@@ -183,6 +183,27 @@ async def finish(request: Request, staff: Staff = Depends(current_staff)) -> dic
     return {"finished": True, "test_bookings_cancelled": cleared}
 
 
+class TestDocument(BaseModel):
+    document_id: UUID
+    lang: str = Field(default="en", pattern="^(en|ar)$")
+
+
+@router.post("/test-send")
+async def test_send_document(
+    body: TestDocument, request: Request, staff: Staff = Depends(current_staff)
+) -> dict:
+    """Send the first invoice to the owner's private test customer ("Invoices only", ALY-141),
+    and answer with the test chat as it is now (the message arrives a moment later)."""
+    _owner(staff)
+    try:
+        async with request.app.state.db.tenant(staff.tenant_id) as conn:
+            sent = await onboarding.test_send_document(conn, staff, body.document_id, body.lang)
+            return {"delivery": sent,
+                    "messages": await onboarding.test_conversation(conn, staff)}
+    except onboarding.OnboardingError as error:
+        raise HTTPException(status_code=409, detail=str(error)) from error
+
+
 @router.get("/test-chat")
 async def test_chat(request: Request, staff: Staff = Depends(current_staff)) -> dict:
     async with request.app.state.db.tenant(staff.tenant_id) as conn:

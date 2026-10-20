@@ -47,7 +47,7 @@ class Business:
 
 
 def _default_availability(preset: presets.Preset) -> str:
-    return "self_serve" if preset.way == "appointments" else "with_alyr"
+    return "self_serve" if preset.way in presets.SELF_SERVE_WAYS else "with_alyr"
 
 
 async def type_settings(conn: asyncpg.Connection) -> dict[str, dict]:
@@ -63,20 +63,20 @@ async def type_settings(conn: asyncpg.Connection) -> dict[str, dict]:
     for preset in presets.PRESETS:
         row = stored.get(preset.key)
         availability = row["availability"] if row else _default_availability(preset)
-        if preset.way != "appointments" and availability == "self_serve":
+        if preset.way not in presets.SELF_SERVE_WAYS and availability == "self_serve":
             availability = "with_alyr"
         out[preset.key] = {
             "availability": availability,
             "price_mode": row["price_mode"] if row else "prepared",
-            "can_self_serve": preset.way == "appointments",
+            "can_self_serve": preset.way in presets.SELF_SERVE_WAYS,
         }
     return out
 
 
 def way_for(preset: presets.Preset, availability: str) -> str:
     """The onboarding path a new business of this type follows."""
-    if preset.way == "appointments" and availability == "self_serve":
-        return "appointments"
+    if preset.way in presets.SELF_SERVE_WAYS and availability == "self_serve":
+        return preset.way
     return "assisted"
 
 
@@ -88,7 +88,7 @@ async def save_type(
         raise PricingError("unknown type of business")
     if availability not in AVAILABILITY or price_mode not in PRICE_MODES:
         raise PricingError("unknown setting")
-    if availability == "self_serve" and preset.way != "appointments":
+    if availability == "self_serve" and preset.way not in presets.SELF_SERVE_WAYS:
         raise PricingError(
             f"{preset.name.en} has no self-serve screens yet; it can only be set up with ALYR"
         )

@@ -13,6 +13,7 @@ import { amount as amountOf, currency, formatPrice, type Lang } from "../../../_
 type Payment = {
   shop: string; shop_ar: string | null; slug: string | null; customer: string; amount: number;
   status: "pending" | "paid" | "expired"; order_number: number | null; order_id: string | null; lang: Lang;
+  document_number?: string | null;
 };
 
 const T = {
@@ -27,6 +28,10 @@ const T = {
     expiredText: "It was not paid in time, so the items were put back for other customers. Nothing was charged.",
     again: "Order again", paying: "Paying…",
     failed: "The payment did not go through. Please try again.",
+    invoice: (n: string) => `Invoice ${n}`,
+    docBack: (shop: string) => `Thank you. Your receipt will reach you from ${shop}.`,
+    docClosedTitle: "This payment link is closed",
+    docClosedText: "The invoice was paid, changed or cancelled. Nothing was charged. Ask the shop if you are not sure.",
   },
   ar: {
     context: "دفع", eyebrow: "دفع آمن", pay: (shop: string) => `ادفع إلى ${shop}`,
@@ -39,6 +44,10 @@ const T = {
     expiredText: "لم يُدفع في الوقت المحدد، فأُعيدت الأصناف إلى القائمة. لم يُخصم أي مبلغ.",
     again: "اطلب مرة أخرى", paying: "جارٍ الدفع…",
     failed: "لم تتم عملية الدفع. حاول مرة أخرى.",
+    invoice: (n: string) => `فاتورة ${n}`,
+    docBack: (shop: string) => `شكراً لك. سيصلك إيصالك من ${shop}.`,
+    docClosedTitle: "رابط الدفع هذا مغلق",
+    docClosedText: "الفاتورة دُفعت أو عُدّلت أو أُلغيت. لم يُخصم أي مبلغ. اسأل المتجر إن لم تكن متأكداً.",
   },
 };
 
@@ -90,7 +99,8 @@ export default function PayPage() {
       <Frame lang={lang} onLang={toggle} shop={shop} context={t.context} short>
         <Done title={t.paid(money)}>
           {data.order_number && <p>{t.order(data.order_number)}</p>}
-          <p>{t.back}</p>
+          {data.document_number && <p>{t.invoice(data.document_number)}</p>}
+          <p>{data.document_number ? t.docBack(shop) : t.back}</p>
         </Done>
         {trackLink && <a className="cx-btn ink" href={trackLink}>{t.track}<Glyph name="arrow" className="flip" /></a>}
       </Frame>
@@ -102,11 +112,12 @@ export default function PayPage() {
     return (
       <Frame lang={lang} onLang={toggle} shop={shop} context={t.context} short>
         <section className="cx-done" role="status">
-          <h1>{t.expiredTitle}</h1>
+          <h1>{data.document_number ? t.docClosedTitle : t.expiredTitle}</h1>
           {data.order_number && <p>{t.order(data.order_number)}</p>}
-          <p>{t.expiredText}</p>
+          {data.document_number && <p>{t.invoice(data.document_number)}</p>}
+          <p>{data.document_number ? t.docClosedText : t.expiredText}</p>
         </section>
-        {again && <a className="cx-btn" href={again}>{t.again}<Glyph name="arrow" className="flip" /></a>}
+        {again && !data.document_number && <a className="cx-btn" href={again}>{t.again}<Glyph name="arrow" className="flip" /></a>}
       </Frame>
     );
   }
@@ -120,7 +131,7 @@ export default function PayPage() {
           <b className="num" dir={lang === "ar" ? undefined : "ltr"}>{amountOf(data.amount)}<small>{currency(lang)}</small></b>
         </div>
         <div className="cx-kv"><span>{t.customer}</span><b>{data.customer}</b></div>
-        <div className="cx-kv"><span>{t.for}</span><b>{data.order_number ? t.order(data.order_number) : t.account}</b></div>
+        <div className="cx-kv"><span>{t.for}</span><b>{data.order_number ? t.order(data.order_number) : data.document_number ? t.invoice(data.document_number) : t.account}</b></div>
         <div className="cx-kv"><span>{t.method}</span><b className="cx-card-brand"><i aria-hidden="true" />{t.card}</b></div>
       </section>
       {error && <p className="cx-error" role="alert" style={{ "--i": 2 } as React.CSSProperties}>{t.failed}</p>}

@@ -51,6 +51,7 @@ from alyr.routes import (
     whatsapp_webhook,
 )
 from alyr.routes import documents as documents_routes
+from alyr.routes import documents_standalone as documents_standalone_routes
 from alyr.routes import features as feature_routes
 from alyr.routes import items_import as items_import_routes
 from alyr.routes import jobs as jobs_routes
@@ -186,6 +187,11 @@ def create_app() -> FastAPI:
         price_group_routes.router, dependencies=[Depends(require_any_module("orders", "catalog"))]
     )
     # Documents (ALY-138): the engine, off for every shop until the screens and hooks exist.
+    # Saved lines, the customers' book and the one-line box (ALY-141) come first: their
+    # addresses must not be taken for a document's ID.
+    app.include_router(
+        documents_standalone_routes.router, dependencies=[Depends(require_module("documents"))]
+    )
     app.include_router(
         documents_routes.router, dependencies=[Depends(require_module("documents"))]
     )

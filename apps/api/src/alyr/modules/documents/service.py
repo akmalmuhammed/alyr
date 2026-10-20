@@ -41,6 +41,7 @@ from alyr.modules.documents import (
     canonical,
     kinds,
     numbering,
+    paylink,
     prepare,
     settings,
     words,
@@ -341,8 +342,12 @@ async def _do_issue(
     if row["related_document_id"]:
         related_row = await _row(conn, row["related_document_id"])
     logo, stamp = await settings.images_of(conn)
+    # An invoice made by hand, for a customer of the shop, where a payment link can work, gets
+    # one (ALY-141): made here, in the issuing transaction, so the QR on the paper and the
+    # link on the hosted page are the same request, and a failed issue leaves none behind.
+    pay_url = await paylink.ensure(conn, row)
     doc = build.make_doc(full, lines, seller, build.brand_of(shop, logo, stamp),
-                         related=related_row)
+                         related=related_row, pay_url=pay_url)
     pdf = await render_pdf(doc)
     pdf_sha = hashlib.sha256(pdf).hexdigest()
 
@@ -483,6 +488,8 @@ async def _issue_credit_note(
             conn, SUBJECT, doc_id, "voided", actor, target["contact_id"],
             {"number": target["number"], "credit_note": done["number"]},
         )
+        # A cancelled invoice must not take money through its payment link (ALY-141).
+        await paylink.expire(conn, doc_id)
         await webhooks.emit(conn, "document.cancelled", {
             "document_id": str(doc_id), "number": target["number"],
             "credit_note_id": str(note["id"]), "credit_note_number": done["number"],
@@ -679,6 +686,8 @@ async def get(conn: asyncpg.Connection, staff: Staff, doc_id: UUID) -> dict:
         "reason": row["reason"], "source": row["source"], "source_ref": row["source_ref"],
         "related": related, "credit_notes": credits, "voided_by": voided_by,
         "children": children, "source_info": source_info,
+        # The invoice's payment link, if it has one (ALY-141): {url, amount_minor, status}.
+        "payment_link": await paylink.of_document(conn, doc_id),
         "voided_at": _iso(row["voided_at"]),
         "lines": [_line_public(line) for line in lines],
         "content_hash": row["content_hash"], "hash_version": row["hash_version"],
@@ -717,8 +726,10 @@ async def pdf_of(
         logo = None
     if seller.get("stamp_sha256") != shop["stamp_sha256"]:
         stamp = None
+    link = await paylink.of_document(conn, doc_id)
     doc = build.make_doc({**row, "layout": layout}, lines, seller,
-                         build.brand_of(shop, logo, stamp), related=related)
+                         build.brand_of(shop, logo, stamp), related=related,
+                         pay_url=link["url"] if link and link["status"] == "pending" else "")
     return await render_pdf(doc), row
 
 

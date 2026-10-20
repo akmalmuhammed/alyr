@@ -15,14 +15,21 @@ import { COPY, kindLabel, type Lang } from "./documentsCopy";
 import { activityLine, dateText, deliveryPill, moneyState, plain, whenText, written } from "./documentsLogic";
 import { DeliveryLine, CancelSheet, IssueSheet, PaySheet, PrintSheet, ShareSheet, type Push } from "./DocumentSheets";
 import { Announce, Icon } from "./CatalogUi";
+import { STANDALONE } from "./standaloneCopy";
+import "./standalone.css";
 
 type Sheet = null | "share" | "send" | "pay" | "cancel" | "print" | "issue";
 
-export function DocumentView({ lang, meta, id, push, onBack, onOpen, onEdit, onSettings, onChanged }: {
+/** The kinds the form writes: "make another like this" is offered for these. */
+const WRITABLE = ["invoice", "quote", "receipt", "delivery_note", "proforma"];
+
+export function DocumentView({ lang, meta, id, push, onBack, onOpen, onEdit, onSettings, onChanged, onDuplicate }: {
   lang: Lang; meta: Meta; id: string; push: Push; onBack: () => void; onOpen: (id: string) => void;
   onEdit: (id: string) => void; onSettings: (field: string) => void; onChanged: () => void;
+  onDuplicate: (copyId: string) => void;
 }) {
   const t = COPY[lang];
+  const s = STANDALONE[lang];
   const [doc, setDoc] = useState<Detail | null>(null);
   const [deliveries, setDeliveries] = useState<Delivery[]>([]);
   const [activity, setActivity] = useState<ActivityRow[]>([]);
@@ -194,6 +201,9 @@ export function DocumentView({ lang, meta, id, push, onBack, onOpen, onEdit, onS
             {access.can_issue && doc.status === "issued" && <button type="button" className="btn ct-btn" onClick={() => setSheet("send")}><Icon name="send" />{t.resend}</button>}
             <a className="btn ct-btn" href={pdfUrl(id, { download: true })} download={`${doc.number}.pdf`}><Icon name="download" />{t.download}</a>
             <button type="button" className="btn ct-btn" onClick={() => setSheet("print")}><Icon name="printer" />{t.print}</button>
+            {access.can_draft && WRITABLE.includes(doc.kind) && (
+              <button type="button" className="btn ct-btn" onClick={() => onDuplicate(doc.id)}><Icon name="copy" />{s.duplicate}</button>
+            )}
             {canCancel && <button type="button" className="btn danger-line ct-btn" onClick={() => setSheet("cancel")}><Icon name="ban" />{t.cancelDocument}</button>}
           </>
         )}
@@ -254,6 +264,20 @@ export function DocumentView({ lang, meta, id, push, onBack, onOpen, onEdit, onS
               )}
             </dl>
           </section>
+
+          {doc.payment_link && (
+            <section className="ct-sec dc-sec" aria-labelledby="dc-h-paylink">
+              <h2 id="dc-h-paylink">{s.payLinkTitle}</h2>
+              <div className="sa-paylink">
+                <p>{doc.payment_link.status === "pending" ? s.payLinkWaiting(m(doc.payment_link.amount_minor)) : doc.payment_link.status === "paid" ? s.payLinkPaid : s.payLinkClosed}</p>
+                {doc.payment_link.status === "pending" && (
+                  <button type="button" className="btn ct-btn" onClick={() => {
+                    void navigator.clipboard?.writeText(doc.payment_link!.url).then(() => push(s.payLinkCopied)).catch(() => undefined);
+                  }}><Icon name="copy" />{s.payLinkCopy}</button>
+                )}
+              </div>
+            </section>
+          )}
 
           {(doc.payments.length > 0 || doc.recorded_payments.length > 0 || owing) && (
             <section className="ct-sec dc-sec" aria-labelledby="dc-h-pay">

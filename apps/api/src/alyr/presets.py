@@ -9,6 +9,9 @@ Ways of working:
 * `appointments`: services, hours, booking rules, then try it. Built end to end.
 * `assisted`: orders, credit and requests. Their onboarding screens are not built yet,
   so after the basics ALYR sets the rest up with the owner (a setup request).
+* `invoices`: invoices and receipts only (ALY-141): the business's details, a first invoice
+  made, sent as a test and ready to go. Built end to end; offered only while the product lead
+  has it switched on (`Settings.invoices_for_new_shops`).
 
 The Catalog (ALY-107, D-039): `catalog` says what a type's catalog starts with
 (`presets_catalog.py`), or is None for a type that has none (travel and documents). It is
@@ -49,6 +52,9 @@ class Preset:
     hours: tuple[tuple[int, str, str], ...] = ()
     catalog: CatalogSetup | None = None
     requires_catalog: bool = False
+    # Exists only for ALYR Invoices (ALY-141): not offered while that is switched off for new
+    # shops (`Settings.invoices_for_new_shops`).
+    requires_invoices: bool = False
     # Modules the type also gets when it has the Catalog, because its catalog needs them: a
     # wholesaler's customers order from the price list, so wholesale gets `orders` (and keeps
     # its credit accounts, so an order can go on account). Off, the type is as it always was.
@@ -62,8 +68,10 @@ class Preset:
         extra = tuple(m for m in self.with_catalog if m not in self.modules)
         return (*self.modules, *extra, "catalog")
 
-    def offered(self, catalog_on: bool) -> bool:
+    def offered(self, catalog_on: bool, invoices_on: bool = False) -> bool:
         """May an owner choose this type now?"""
+        if self.requires_invoices:
+            return invoices_on
         return catalog_on or not self.requires_catalog
 
 
@@ -168,14 +176,27 @@ PRESETS: tuple[Preset, ...] = (
         Text("Requests, tracking", "طلبات ومتابعة"),
         "plane", "assisted", ("inbox", "payments"),
     ),
+    # Invoices and receipts and nothing else (ALY-141, spec 016): no inbox, orders, Catalog or
+    # bookings. It has no catalog of its own (like travel) and is offered only while
+    # `Settings.invoices_for_new_shops` is on.
+    Preset(
+        "invoices", Text("Invoices only", "فواتير فقط"),
+        Text("Invoices and receipts, nothing else", "فواتير وإيصالات فقط"),
+        "doc", "invoices", ("documents", "payments"), requires_invoices=True,
+    ),
 )
 
 PRESET_BY_KEY = {p.key: p for p in PRESETS}
+
+# The ways of working an owner can set up alone, without ALYR (the others are set up with ALYR).
+SELF_SERVE_WAYS = ("appointments", "invoices")
 
 # The onboarding steps after the business exists, per way of working.
 STEPS = {
     "appointments": ("services", "hours", "try", "plan", "golive"),
     "assisted": ("assisted", "plan", "golive"),
+    # Business details, the first invoice (made, then sent as a test), the price, go live.
+    "invoices": ("details", "first", "plan", "golive"),
 }
 
 # Districts offered as quick choices; anything else can be typed.

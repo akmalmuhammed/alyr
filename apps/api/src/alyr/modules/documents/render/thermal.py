@@ -8,10 +8,12 @@ height (and a few millimetres of margin).
 
 Everything is placed from the page's start edge, so an Arabic-first receipt is mirrored
 (labels at the right, amounts at the left) like the A4 layout. The square at the end is
-left empty for a payment or verification QR code in a later package.
+kept for a payment QR code, which is drawn only on an invoice that carries a payment link
+(ALY-141) and is empty otherwise.
 """
 
 from alyr.modules.documents import colours
+from alyr.modules.documents.render import paycode
 from alyr.modules.documents.render import text as t
 from alyr.modules.documents.render.context import Bi, Doc, Line
 from alyr.modules.documents.render.pen import Ink, Pen
@@ -362,7 +364,12 @@ class Thermal:
     def _tail(self) -> None:
         d, pen = self.doc, self.pen
         self.y += 2.0
-        # The square left empty for a later QR code.
+        # The square kept for the payment QR code: empty unless the invoice has a payment link.
+        if d.pay_url:
+            qx = self.x1 - QR_SIDE if self.rtl else self.x0
+            paycode.modules(pen, d.pay_url, qx, self.y, QR_SIDE)
+            cx0, cx1 = ((self.x0, qx - 2.5) if self.rtl else (qx + QR_SIDE + 2.5, self.x1))
+            paycode.caption(d, pen, cx0, cx1, self.y + 2.0, 1.0, self.rtl)
         self.y += QR_SIDE + 1.0
         for lang, text in t.by_lane(d, d.brand.footer):
             self.y += pen.paragraph(text, self.x0, self.y, self.x1 - self.x0, lang,

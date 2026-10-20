@@ -72,6 +72,8 @@ LABELS: dict[str, Text] = {
     "page": Text("Page", "صفحة"),
     "code": Text("Document code", "رمز المستند"),
     "issued_with": Text("Issued with ALYR", "صدر عبر ALYR"),
+    # Beside the payment QR code of an invoice that has a payment link (ALY-141).
+    "pay_scan": Text("Scan to pay online", "امسح الرمز للدفع إلكترونياً"),
     "preview": Text("Preview", "معاينة"),
     "of": Text("of", "من"),
 }
@@ -424,6 +426,43 @@ ERRORS: dict[str, Text] = {
     "settings_override_invalid": Text(
         "The preview can only try out the look of the document, not the shop's other settings.",
         "تقتصر المعاينة على تجربة شكل المستند، لا إعدادات المتجر الأخرى.",
+    ),
+    # ── Standalone mode: customers and saved lines (ALY-141) ─────────────────────────────
+    "customer_needs_name": Text(
+        "Give the customer a name, in English or Arabic, or a company.",
+        "اكتب اسم العميل بالعربية أو الإنجليزية، أو اسم الشركة.",
+    ),
+    "customer_needs_phone": Text(
+        "A saved customer needs a phone number: it is how they are found again and how a "
+        "document reaches them. For a one-off customer, type the name on the document and do "
+        "not save them.",
+        "يحتاج العميل المحفوظ إلى رقم هاتف: به يُعثر عليه مرة أخرى وبه يصله المستند. للعميل "
+        "العابر اكتب اسمه على المستند دون حفظه.",
+    ),
+    "customer_not_found": Text(
+        "There is no such customer in this shop.", "لا يوجد عميل بهذا الاسم في هذا المتجر."
+    ),
+    "phone_taken": Text(
+        "Another customer already has that phone number.",
+        "يوجد عميل آخر بهذا الرقم.",
+    ),
+    "phone_is_staff": Text(
+        "That number belongs to someone on the team, not to a customer.",
+        "هذا الرقم لأحد أعضاء الفريق وليس لعميل.",
+    ),
+    "saved_line_needs_text": Text(
+        "Give the line a name, in English or Arabic.", "اكتب اسمًا للبند بالعربية أو الإنجليزية."
+    ),
+    "saved_line_not_found": Text(
+        "There is no such saved line.", "لا يوجد بند محفوظ بهذا الاسم."
+    ),
+    "saved_lines_full": Text(
+        "The list of saved lines is full (500). Remove some you no longer use.",
+        "قائمة البنود المحفوظة ممتلئة (500). احذف بعض ما لم تعد تستخدمه.",
+    ),
+    "quick_empty": Text(
+        "Write what you are invoicing, for example: AC repair 500 for Ahmed 5551 2345.",
+        "اكتب ما تحاسب عليه، مثلًا: صيانة مكيف 500 لأحمد 55512345.",
     ),
 }
 

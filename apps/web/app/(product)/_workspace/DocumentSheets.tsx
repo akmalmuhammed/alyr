@@ -11,8 +11,9 @@ import {
   api, newKey, pdfUrl, refusalOf, sayRefusal, type Delivery, type Detail, type Meta, type Series,
 } from "./documentsApi";
 import { COPY, kindLabel, type Copy, type Lang } from "./documentsCopy";
-import { inputMoney, parseMoney, written } from "./documentsLogic";
+import { inputMoney, parseMoney, waLink, written } from "./documentsLogic";
 import { Field, Icon, Sheet, Switch, type Toast } from "./CatalogUi";
+import { STANDALONE } from "./standaloneCopy";
 
 export type Push = (text: string, options?: { tone?: Toast["tone"]; undo?: () => void }) => number;
 
@@ -177,13 +178,31 @@ export function ShareSheet({ lang, meta, push, onClose, doc, intent, onChanged }
     </section>
   );
 
+  // Send it from the person's own WhatsApp (ALY-141): a wa.me link with the message written,
+  // addressed to the customer's number. It works whether or not the shop's number is connected to
+  // ALYR, and for a customer who has never written to the shop (which ALYR may not start a chat
+  // with), so the shop is never blocked.
+  const s = STANDALONE[lang];
+  const waBox = link && doc.status === "issued" && (
+    <section className="ct-sec" aria-labelledby="dc-wa-title">
+      <h3 id="dc-wa-title">{s.waTitle}</h3>
+      <p className="ct-hint">{s.waHint}</p>
+      <div className="sa-share">
+        <a className="btn ct-btn" target="_blank" rel="noopener noreferrer" href={waHref(doc, link.url, lang, meta)}>
+          <Icon name="send" />{s.waOpen}
+        </a>
+        {!hasPhone && <p className="ct-hint">{s.waNoPhone}</p>}
+      </div>
+    </section>
+  );
+
   const shown = sent ?? history;
   return (
     <Sheet title={intent === "send" ? t.resend : t.shareTitle} subtitle={`${kindLabel(lang, doc.kind)} ${doc.number ?? ""}`}
       onClose={onClose} closeLabel={t.close}
       footer={<button type="button" className="btn ct-btn ct-grow" onClick={onClose}>{t.close}</button>}>
       {failure && <p className="ct-alert" role="alert"><Icon name="warn" />{failure}</p>}
-      {intent === "send" ? <>{canSend && sendRow}{other}{linkBox}</> : <>{linkBox}{canSend && sendRow}{other}</>}
+      {intent === "send" ? <>{canSend && sendRow}{waBox}{other}{linkBox}</> : <>{linkBox}{waBox}{canSend && sendRow}{other}</>}
       {shown.length > 0 && (
         <section className="ct-sec" aria-labelledby="dc-hist-title">
           <h3 id="dc-hist-title">{t.deliveriesTitle}</h3>
@@ -194,6 +213,17 @@ export function ShareSheet({ lang, meta, push, onClose, doc, intent, onChanged }
       )}
     </Sheet>
   );
+}
+
+/** The `wa.me` address that opens the person's own WhatsApp with the message to the customer
+ *  written: the document, its amount and its link, in the language the document leads in. A
+ *  Qatar number typed without its code (eight digits) gets 974, as everywhere in ALYR. */
+export function waHref(doc: Detail, url: string, lang: Lang, meta: Meta): string {
+  const shop = (lang === "ar" ? doc.seller?.name_ar || doc.seller?.name : doc.seller?.name || doc.seller?.name_ar) ?? "";
+  const info = meta.currencies[doc.currency];
+  const amount = written(doc.totals.total_minor, doc.currency, doc.currency_exponent, info?.symbol_ar ?? doc.currency, lang);
+  const text = STANDALONE[lang].waMessage(kindLabel(lang, doc.kind), doc.number ?? "", shop, amount, url);
+  return waLink(doc.customer.phone ?? "", text);
 }
 
 export function DeliveryLine({ d, lang }: { d: Delivery; lang: Lang }) {

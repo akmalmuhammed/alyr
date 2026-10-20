@@ -7,7 +7,7 @@ import { useCallback, useEffect, useState } from "react";
 import { api, type ClientSummary, type Pricing } from "../api";
 import { Clients } from "../Clients";
 
-type Product = { key: string; name: { en: string }; status: string };
+type Product = { key: string; name: string; status: string };
 const EMPTY = { name: "", name_ar: "", slug: "", owner_name: "", owner_email: "", products: ["chat"] as string[], client_id: "", template: "" };
 type Choice = { key: string; name: string; builtin: boolean; note: string };
 
@@ -22,10 +22,9 @@ export default function ClientsPage() {
   const [round, setRound] = useState(0);
 
   const load = useCallback(async () => {
-    const [p, c, w, t] = await Promise.all([
+    const [p, c, t] = await Promise.all([
       api<Pricing>("/api/admin/pricing"),
       api<{ clients: ClientSummary[] }>("/api/admin/clients"),
-      api<{ products: Product[] }>("/api/workspace"),
       api<{ builtin: { key: string; name: string; note: string }[]; made: { key: string; name: string; note: string; archived: boolean }[] }>("/api/admin/templates"),
     ]);
     if (t.ok) {
@@ -36,7 +35,9 @@ export default function ClientsPage() {
     }
     if (p.ok) setPricing(p.data);
     if (c.ok) setClients(c.data.clients);
-    if (w.ok) setProducts(w.data.products);
+    // Every product ALYR sells, whatever the product lead has switched on for shops: the back
+    // office can create a business with any of them (ALYR Invoices, ALY-141, included).
+    if (p.ok) setProducts(p.data.products);
   }, []);
 
   useEffect(() => {
@@ -105,7 +106,7 @@ export default function ClientsPage() {
                     ...form,
                     products: e.target.checked ? [...form.products, p.key] : form.products.filter((k) => k !== p.key),
                   })} />
-                {p.name.en}
+                {p.name}
               </label>
             ))}
           </fieldset>

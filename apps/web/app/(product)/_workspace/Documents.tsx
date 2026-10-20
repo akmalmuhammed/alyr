@@ -19,24 +19,37 @@ import {
   presetFilters, written, type Filters,
 } from "./documentsLogic";
 import { Announce, Fold, Icon, ToastLayer, useToasts } from "./CatalogUi";
+import { Customers } from "./DocumentCustomers";
 import { DocumentEdit } from "./DocumentEdit";
+import { SavedLines } from "./DocumentLines";
 import { DocumentSettings } from "./DocumentSettings";
 import { DocumentView } from "./DocumentView";
+import { STANDALONE } from "./standaloneCopy";
 import "./documents.css";
+import "./standalone.css";
 
 type Route =
   | { view: "list" }
   | { view: "doc"; id: string }
-  | { view: "edit"; id: string | null; kind: string }
-  | { view: "settings"; focus: string };
+  | { view: "edit"; id: string | null; kind: string; copy?: string; contact?: string }
+  | { view: "settings"; focus: string }
+  | { view: "customers"; id: string | null }
+  | { view: "lines" };
 
 function readRoute(search: string): Route {
   const p = new URLSearchParams(search);
   const d = p.get("d");
   if (d) return { view: "doc", id: d };
   const edit = p.get("edit");
-  if (edit) return { view: "edit", id: edit === "new" ? null : edit, kind: p.get("kind") ?? "invoice" };
+  if (edit) {
+    return {
+      view: "edit", id: edit === "new" ? null : edit, kind: p.get("kind") ?? "",
+      copy: p.get("copy") ?? undefined, contact: p.get("contact") ?? undefined,
+    };
+  }
   if (p.get("view") === "settings") return { view: "settings", focus: p.get("focus") ?? "" };
+  if (p.get("view") === "customers") return { view: "customers", id: p.get("customer") };
+  if (p.get("view") === "lines") return { view: "lines" };
   return { view: "list" };
 }
 
@@ -45,8 +58,15 @@ function routeQuery(route: Route, keep: URLSearchParams): string {
   const show = keep.get("show");
   if (route.view === "list" && show) p.set("show", show);
   if (route.view === "doc") p.set("d", route.id);
-  if (route.view === "edit") { p.set("edit", route.id ?? "new"); if (route.kind) p.set("kind", route.kind); }
+  if (route.view === "edit") {
+    p.set("edit", route.id ?? "new");
+    if (route.kind) p.set("kind", route.kind);
+    if (route.copy) p.set("copy", route.copy);
+    if (route.contact) p.set("contact", route.contact);
+  }
   if (route.view === "settings") { p.set("view", "settings"); if (route.focus) p.set("focus", route.focus); }
+  if (route.view === "customers") { p.set("view", "customers"); if (route.id) p.set("customer", route.id); }
+  if (route.view === "lines") p.set("view", "lines");
   const text = p.toString();
   return text ? `?${text}` : "";
 }
@@ -107,10 +127,19 @@ export function Documents({ lang, title, show = null }: { lang: Lang; title: str
 
   const openDoc = (id: string) => go({ view: "doc", id });
   const toList = () => go({ view: "list" });
+  const nav = <PartsNav lang={lang} current={route.view === "customers" ? "customers" : route.view === "lines" ? "lines" : "documents"}
+    onPick={(part) => go(part === "customers" ? { view: "customers", id: null } : part === "lines" ? { view: "lines" } : { view: "list" })} />;
   let body: React.ReactNode;
-  if (route.view === "doc") {
+  if (route.view === "customers") {
+    body = <Customers lang={lang} meta={meta} push={push} nav={nav} openId={route.id}
+      onOpen={(id) => go({ view: "customers", id })} onClose={() => go({ view: "customers", id: null })}
+      onNewInvoice={(contact) => go({ view: "edit", id: null, kind: "", contact })} onOpenDocument={openDoc} />;
+  } else if (route.view === "lines") {
+    body = <SavedLines lang={lang} meta={meta} push={push} nav={nav} />;
+  } else if (route.view === "doc") {
     body = <DocumentView key={route.id} lang={lang} meta={meta} id={route.id} push={push} onBack={() => (window.history.length > 1 ? window.history.back() : toList())}
-      onOpen={openDoc} onEdit={(id) => go({ view: "edit", id, kind: "" })} onSettings={(field) => go({ view: "settings", focus: field })} onChanged={changed} />;
+      onOpen={openDoc} onEdit={(id) => go({ view: "edit", id, kind: "" })} onSettings={(field) => go({ view: "settings", focus: field })} onChanged={changed}
+      onDuplicate={(copy) => go({ view: "edit", id: null, kind: "", copy })} />;
   } else if (route.view === "edit") {
     body = <DocumentEdit key={route.id ?? "new"} lang={lang} meta={meta} branches={branches} id={route.id} startKind={route.kind} push={push}
       onBack={() => (window.history.length > 1 ? window.history.back() : toList())}
@@ -119,8 +148,8 @@ export function Documents({ lang, title, show = null }: { lang: Lang; title: str
     body = <DocumentSettings lang={lang} meta={meta} branches={branches} push={push} focus={route.focus}
       onBack={() => (window.history.length > 1 ? window.history.back() : toList())} onBranches={() => void loadMeta()} />;
   } else {
-    body = <List lang={lang} meta={meta} branches={branches} title={title} show={show} refresh={refresh} push={push}
-      onOpen={openDoc} onNew={() => go({ view: "edit", id: null, kind: "invoice" })} onSettings={() => go({ view: "settings", focus: "" })} />;
+    body = <List lang={lang} meta={meta} branches={branches} title={title} show={show} refresh={refresh} push={push} nav={nav}
+      onOpen={openDoc} onNew={() => go({ view: "edit", id: null, kind: "" })} onSettings={() => go({ view: "settings", focus: "" })} />;
   }
   return (
     <>
@@ -130,10 +159,31 @@ export function Documents({ lang, title, show = null }: { lang: Lang; title: str
   );
 }
 
+// ── the parts: documents, customers, saved lines (ALY-141) ──
+
+function PartsNav({ lang, current, onPick }: {
+  lang: Lang; current: "documents" | "customers" | "lines"; onPick: (part: "documents" | "customers" | "lines") => void;
+}) {
+  const s = STANDALONE[lang];
+  return (
+    <nav aria-label={s.parts.label}>
+      <ul className="sa-parts">
+        {(["documents", "customers", "lines"] as const).map((part) => (
+          <li key={part}>
+            <button type="button" className="sa-part" aria-current={current === part ? "page" : undefined} onClick={() => current !== part && onPick(part)}>
+              {s.parts[part]}
+            </button>
+          </li>
+        ))}
+      </ul>
+    </nav>
+  );
+}
+
 // ── the list ────────────────────────────────────────────
 
-function List({ lang, meta, branches, title, show, refresh, push, onOpen, onNew, onSettings }: {
-  lang: Lang; meta: Meta; branches: Branch[]; title: string; show: string | null; refresh: number;
+function List({ lang, meta, branches, title, show, refresh, push, nav, onOpen, onNew, onSettings }: {
+  lang: Lang; meta: Meta; branches: Branch[]; title: string; show: string | null; refresh: number; nav: React.ReactNode;
   push: (text: string, options?: { tone?: "ok" | "bad" }) => number; onOpen: (id: string) => void; onNew: () => void; onSettings: () => void;
 }) {
   const t = COPY[lang];
@@ -228,6 +278,7 @@ function List({ lang, meta, branches, title, show, refresh, push, onOpen, onNew,
 
   return (
     <div className="ct dc" lang={lang}>
+      {nav}
       <header className="sh-head">
         <span className="sh-eyebrow">{totals ? t.count(totals.count) : " "}</span>
         <h1>{title}</h1>

@@ -268,3 +268,13 @@ export function dateText(iso: string | null | undefined, lang: Lang): string {
     day: "numeric", month: "short", year: "numeric", timeZone: "UTC",
   }).format(when);
 }
+
+/** The wa.me link that opens the person's own WhatsApp on a customer's chat with the message
+ *  written, for an owner who sends from their own phone (ALY-141). A Qatar number typed without
+ *  its code (eight digits) gets 974, as everywhere in ALYR; with no phone, wa.me asks who to
+ *  send it to. */
+export function waLink(phone: string, text: string): string {
+  let digits = westernDigits(phone).replace(/\D/g, "").replace(/^00/, "");
+  if (digits.length === 8) digits = `974${digits}`;
+  return `https://wa.me/${digits}?text=${encodeURIComponent(text)}`;
+}

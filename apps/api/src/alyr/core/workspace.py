@@ -128,6 +128,10 @@ async def state(conn: asyncpg.Connection, staff: Staff) -> dict:
     products = []
     for product in catalog.PRODUCTS:
         active = product.key in using
+        # A product the product lead has not switched on for shops (ALYR Invoices, ALY-141) is
+        # not listed, unless this shop already uses it (the back office gave it to them).
+        if not catalog.offered(product, active):
+            continue
         steps = []
         if active:
             for key in product.modules:
@@ -281,6 +285,9 @@ async def enable_product(conn: asyncpg.Connection, staff: Staff, key: str) -> li
         raise LookupError("no such product")
     if product.status == "included":
         raise WorkspaceError(f"{product.name.en} is included for every business")
+    in_use = product.key in catalog.products_for(await enabled_modules(conn))
+    if not catalog.offered(product, in_use):
+        raise LookupError("no such product")  # not switched on for shops: it is not there
     for module in product.modules:
         await conn.execute(
             "insert into tenant_modules (module_key, enabled, enabled_at, enabled_by) "

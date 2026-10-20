@@ -502,7 +502,10 @@ def test_meta_tells_the_form_what_to_start_from_and_each_person_what_they_may_do
     assert owner["defaults"] == {
         "currency": "QAR", "tax_enabled": False, "tax_rate_bp": 0, "cash_rounding_minor": 0,
         "languages": "ar_en", "default_audience": "consumer", "layout": "a4", "show_sku": False,
-        "has_registration": True, "show_alyr_mark": True}
+        "has_registration": True, "show_alyr_mark": True,
+        # (ALY-141) the shop's usual note and terms, which the form says it will add, and whether
+        # it has the Catalog, which the form offers beside the saved lines
+        "notes": {}, "terms": {}, "has_catalog": False}
     assert owner["access"] == {"role": "owner", "can_manage": True, "can_issue": True,
                                "can_draft": True, "can_credit": True, "can_record_payments": True}
     agent = shop.agent.get("/api/documents/meta").json()["access"]

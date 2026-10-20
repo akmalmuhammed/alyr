@@ -56,6 +56,8 @@ const ICON: Record<string, string> = {
   send: "M4 12 20 4l-6 16-3-7z",
   chat: "M4 5h16v11H10l-6 4z M8 10h8",
   external: "M14 4h6v6 M20 4l-9 9 M18 14v6H4V6h6",
+  // Standalone invoicing (ALY-141)
+  users: "M9 11a3 3 0 1 0 0-6 3 3 0 0 0 0 6Z M3 19c0-3 2.7-5 6-5s6 2 6 5 M16 6a3 3 0 0 1 0 6 M18 14c2 .6 3 2.2 3 5",
 };
 
 export function Icon({ name, className = "sh-ico" }: { name: string; className?: string }) {

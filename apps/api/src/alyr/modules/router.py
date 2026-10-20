@@ -21,6 +21,7 @@ from alyr.core.normalise import has_arabic
 from alyr.core.outbound import Outbound
 from alyr.modules import report
 from alyr.modules.bookings import chat as bookings_chat
+from alyr.modules.documents import wa_command
 from alyr.modules.items import wa_customer, wa_order, wa_staff
 from alyr.modules.ledger import chat as ledger_chat
 from alyr.modules.orders import chat as orders_chat
@@ -41,6 +42,14 @@ async def handle(
         replies = await report.on_staff_message(conn, contact, message)
         if replies is not None:
             return replies
+        if "documents" in modules:
+            # "invoice Ahmed 500 for AC repair", a receipt, the answer to a question and Undo
+            # (ALY-141). Before the Catalog's commands: its words are different, except the
+            # plain word "undo", which this takes only when it has an invoice of the sender's
+            # to undo and nothing newer of the Catalog's.
+            replies = await wa_command.maybe_handle(conn, tenant_id, contact, message, modules)
+            if replies is not None:
+                return replies
         if "catalog" in modules:
             replies = await wa_staff.maybe_handle(conn, contact, message)
             if replies is not None:

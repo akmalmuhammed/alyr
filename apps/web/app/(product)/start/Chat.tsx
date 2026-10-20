@@ -9,7 +9,9 @@ export type Choice = { id: string; title: string };
 export type ChatMessage = {
   direction: "in" | "out";
   body: string;
-  payload?: { choices?: Choice[] };
+  payload?: { choices?: Choice[]; filename?: string };
+  // A document sent as a file (an invoice, ALY-141) is drawn with its name above its caption.
+  kind?: string;
   created_at?: string;
 };
 
@@ -63,6 +65,7 @@ export function Chat({
           <div key={i} className={`ob-row ${m.direction === "in" ? "me" : ""}`}>
             <div className="ob-group">
               <div className="ob-bubble" dir="auto">
+                {m.kind === "document" && m.payload?.filename && <span className="ob-file-chip" dir="ltr">{m.payload.filename}</span>}
                 <Linked text={m.body} />
                 <time>{time(m.created_at)}</time>
               </div>

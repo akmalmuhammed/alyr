@@ -114,6 +114,14 @@ class Settings(BaseSettings):
     # off for any one shop.
     catalog_for_new_shops: bool = True
 
+    # ALYR Invoices (ALY-141, spec 016): invoices and receipts for a shop that uses nothing
+    # else of ALYR. Off, as the Catalog's switch was before ALY-113: the "Invoices only" way of
+    # signing up is not offered at /start and the product is not listed (or switchable) on a
+    # shop's Products screen. The product lead switches it on (`ALYR_INVOICES_FOR_NEW_SHOPS=true`)
+    # when the module is ready for real shops; the back office can create an invoices-only
+    # business, or give the product to one shop, whatever this says.
+    invoices_for_new_shops: bool = False
+
     # Per shop, to start (D-039; our estimate). A cap stops new items or photos with a
     # clear message and never deletes anything.
     catalog_max_items: int = 1000

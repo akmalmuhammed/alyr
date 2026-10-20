@@ -31,7 +31,7 @@ from alyr.core import team
 from alyr.core.auth import Staff
 from alyr.core.normalise import fmt_qar
 from alyr.modules.connect import webhooks
-from alyr.modules.documents import access, money, sales, service
+from alyr.modules.documents import access, money, paylink, sales, service
 from alyr.modules.documents import settings as doc_settings
 from alyr.modules.documents.errors import DocumentError
 from alyr.modules.items import holds as stock_holds
@@ -239,6 +239,9 @@ async def record(
         subject, subject_id, contact_id, amount, method, reference, key, staff.name,
         staff.user_id,
     )
+    if subject == "invoice":
+        # The invoice's payment link (ALY-141) now asks for what is still owed.
+        await paylink.retarget(conn, subject_id)
     await webhooks.emit(conn, "payment.recorded", {
         "payment_id": str(row["id"]), "subject": subject, "subject_id": str(subject_id),
         "amount_minor": amount, "method": method, "reference": reference,

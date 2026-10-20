@@ -11,10 +11,11 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Logo } from "../../_site/brand";
 import { Chat, initialsOf, type ChatMessage, type Choice } from "./Chat";
 import { COPY, type Lang } from "./copy";
+import { DetailsStep, FirstStep, PaperPicture } from "./InvoiceSteps";
 import "./start.css";
 
 type Text = { en: string; ar: string };
-type BusinessType = { key: string; name: Text; hint: Text; icon: string; way: "appointments" | "assisted" };
+type BusinessType = { key: string; name: Text; hint: Text; icon: string; way: "appointments" | "assisted" | "invoices" };
 type Service = { id: string; name: string; name_ar: string; duration_minutes: number; price: number; price_text: string; active?: boolean };
 type Period = { weekday: number; opens: string; closes: string };
 // What the shop's type of business gives its Catalog, in plain words (null where it has none).
@@ -25,7 +26,7 @@ type CatalogReview = {
 type State = {
   business: { name: string; name_ar: string; slug: string; type: string; area: string; reminders: boolean };
   owner: { name: string; email: string };
-  way: "appointments" | "assisted";
+  way: "appointments" | "assisted" | "invoices";
   steps: string[];
   step: string;
   finished: boolean;
@@ -34,6 +35,8 @@ type State = {
   quote: Quote;
   areas: string[];
   catalog: CatalogReview | null;
+  // "Invoices only" (ALY-141): the first document made, and what the test can be sent by.
+  documents: null | { first: null | { id: string; kind: "invoice" | "receipt"; number: string }; has_registration: boolean; email_ready: boolean; whatsapp_connected: boolean };
 };
 type QuoteLine = { id: string; business: string; business_ar: string; name: string; name_ar: string; kind: "monthly" | "one_time"; quantity: number; amount_text: string };
 type Quote = {
@@ -46,11 +49,11 @@ type Quote = {
 type WsStep = { key: string; done: boolean; asked: boolean; connection: string };
 type Workspace = { products: { key: string; steps: WsStep[] }[]; connections: { key: string; connected: boolean }[] };
 type Booking = { customer: string; service: string; when_text: string; status: string };
-type Step = "loading" | "account" | "code" | "type" | "basics" | "services" | "hours" | "assisted" | "try" | "plan" | "golive" | "finished";
+type Step = "loading" | "account" | "code" | "type" | "basics" | "services" | "hours" | "assisted" | "try" | "details" | "first" | "plan" | "golive" | "finished";
 
 const ORDER = [6, 0, 1, 2, 3, 4, 5]; // Saturday first, as the week runs in Qatar
 const MINUTES = [15, 20, 30, 45, 60, 75, 90, 120, 150, 180];
-const NOUN: Record<string, string> = { salon: "salon", spa: "spa", clinic: "clinic", home: "business", restaurant: "restaurant", bakery: "bakery", grocery: "shop", shop: "shop", fashion: "shop", wholesale: "business", travel: "office" };
+const NOUN: Record<string, string> = { invoices: "business", salon: "salon", spa: "spa", clinic: "clinic", home: "business", restaurant: "restaurant", bakery: "bakery", grocery: "shop", shop: "shop", fashion: "shop", wholesale: "business", travel: "office" };
 const ICON: Record<string, string[]> = {
   scissors: ["M6 3a3 3 0 1 0 0 6 3 3 0 0 0 0-6Z", "M6 15a3 3 0 1 0 0 6 3 3 0 0 0 0-6Z", "M20 4 8.1 15.9", "M14.5 14.5 20 20", "M8.1 8.1 12 12"],
   leaf: ["M11 20A7 7 0 0 1 9.8 6.1C15.5 5 17 4.5 19 2c1 2 2 4.2 2 8 0 5.5-4.8 10-10 10Z", "M2 21c0-3 1.9-5.4 5.2-6"],
@@ -63,6 +66,7 @@ const ICON: Record<string, string[]> = {
   basket: ["M4 10h16l-1.5 9a2 2 0 0 1-2 1.7H7.5a2 2 0 0 1-2-1.7L4 10Z", "M8 10l3-6", "M16 10l-3-6", "M9 14v3", "M12 14v3", "M15 14v3"],
   shirt: ["M9 4 4 6.5l2 4 2-1V20h8V9.5l2 1 2-4L15 4a3 3 0 0 1-6 0Z"],
   plane: ["M17.8 19.2 16 11l3.5-3.5C21 6 21.5 4 21 3c-1-.5-3 0-4.5 1.5L13 8 4.8 6.2c-.5-.1-.9.1-1.1.5l-.3.5c-.2.5-.1 1 .3 1.3L9 12l-2 3H4l-1 1 3 2 2 3 1-1v-3l3-2 3.5 5.3c.3.4.8.5 1.3.3l.5-.2c.4-.3.6-.7.5-1.2z"],
+  doc: ["M7 3h8l4 4v14H7z", "M15 3v4h4", "M10 12h6", "M10 16h6"],
   check: ["m5 12 4 4L19 6"],
   lock: ["M6 11h12v10H6z", "M8 11V7a4 4 0 0 1 8 0v4"],
   chat: ["M21 11.5a8.4 8.4 0 0 1-12.4 7.4L3 21l2.1-5.6A8.5 8.5 0 1 1 21 11.5Z"],
@@ -142,14 +146,19 @@ export default function Start() {
   const quoteSeen = useRef("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
+  // "Invoices only": the sample drawn from the details being typed (a picture of the real paper).
+  const [paper, setPaper] = useState<string | null>(null);
 
   const chosen = types.find((x) => x.key === (state?.business.type || kind));
   const way = state?.way ?? chosen?.way ?? "appointments";
   const rail = way === "assisted"
     ? (["account", "business", "assisted", "plan", "golive"] as const)
-    : (["account", "business", "services", "hours", "try", "plan", "golive"] as const);
+    : way === "invoices"
+      ? (["account", "business", "details", "first", "plan", "golive"] as const)
+      : (["account", "business", "services", "hours", "try", "plan", "golive"] as const);
   const railKey = step === "code" ? "account" : step === "type" || step === "basics" ? "business" : step;
   const current = step === "finished" ? rail.length : Math.max(0, rail.indexOf(railKey as never));
+  const hasCr = Boolean(state?.documents?.has_registration);
   const shopName = state?.business.name || form.name;
   const shopShown = lang === "ar" && (state?.business.name_ar || form.nameAr) ? (state?.business.name_ar || form.nameAr) : shopName;
 
@@ -212,7 +221,7 @@ export default function Start() {
 
   async function go(next: Step) {
     setError("");
-    if (state && ["services", "hours", "assisted", "try", "plan", "golive"].includes(next)) {
+    if (state && ["services", "hours", "assisted", "try", "details", "first", "plan", "golive"].includes(next)) {
       await call("/api/onboarding/state", "PATCH", { step: next });
     }
     setStep(next);
@@ -374,7 +383,7 @@ export default function Start() {
   const wsStep = (key: string) => ws?.products.flatMap((p) => p.steps).find((s) => s.key === key);
   const ask = (stepKey: string) => guard(async () => {
     // Filed under the product the step belongs to (a salon's steps are ALYR Bookings').
-    const product = ws?.products.find((p) => p.steps.some((s) => s.key === stepKey))?.key ?? "chat";
+    const product = ws?.products.find((p) => p.steps.some((s) => s.key === stepKey))?.key ?? (way === "invoices" ? "invoices" : "chat");
     await call("/api/workspace/setup-requests", "POST", { product, step: stepKey, note: "" });
     await loadWorkspace();
   });
@@ -482,7 +491,7 @@ export default function Start() {
             <button key={x.key} type="button" role="radio" aria-checked={kind === x.key} className={`ob-tile ${kind === x.key ? "on" : ""}`} onClick={() => setKind(x.key)}>
               <span className="ob-glyph"><Ico name={x.icon} /></span>
               <b>{x.name[lang]}</b>
-              <small>{x.way === "assisted" ? t.type.assistedNote : x.hint[lang]}</small>
+              <small>{x.way === "assisted" ? t.type.assistedNote : x.way === "invoices" ? t.type.invoicesNote : x.hint[lang]}</small>
               {kind === x.key && <span className="ob-tick"><Ico name="check" size={14} /></span>}
             </button>
           ))}
@@ -509,7 +518,7 @@ export default function Start() {
             </div>
           </fieldset>
         </form>
-        <div className="ob-inline-preview"><p className="ob-kicker">{t.previewLabel}</p><Chat name={shopShown} initials={initialsOf(shopName)} messages={preview} /></div>
+        {kind !== "invoices" && <div className="ob-inline-preview"><p className="ob-kicker">{t.previewLabel}</p><Chat name={shopShown} initials={initialsOf(shopName)} messages={preview} /></div>}
       </>
     );
     actions = (
@@ -607,6 +616,32 @@ export default function Start() {
       </>
     );
     actions = <button className="ob-btn primary" type="button" onClick={() => go("plan")}>{t.continue}<Ico name="arrow" /></button>;
+  } else if (step === "details") {
+    main = (
+      <DetailsStep lang={lang} t={t} shopName={state?.business.name ?? ""} shopNameAr={state?.business.name_ar ?? ""}
+        paper={paper} onPaper={setPaper} onError={setError} onSaved={() => { void loadState().then(() => go("first")); }} />
+    );
+    actions = (
+      <button className="ob-btn primary" form="ob-form" type="submit">{t.details.save}<Ico name="arrow" /></button>
+    );
+  } else if (step === "first") {
+    const made = state?.documents?.first ?? null;
+    main = (
+      <FirstStep lang={lang} t={t} shopName={shopShown} hasCr={hasCr} made={made}
+        email={{ ready: Boolean(state?.documents?.email_ready), address: state?.owner.email ?? "" }}
+        onError={setError} onMade={() => { void loadState(); }} />
+    );
+    actions = made ? (
+      <>
+        <button className="ob-btn ghost" type="button" onClick={() => go("details")}>{t.back}</button>
+        <button className="ob-btn primary" type="button" onClick={() => go("plan")}>{t.continue}<Ico name="arrow" /></button>
+      </>
+    ) : (
+      <>
+        <button className="ob-btn ghost" type="button" onClick={() => go("details")}>{t.back}</button>
+        <button className="ob-btn primary" form="ob-form" type="submit">{hasCr ? t.first.makeInvoice : t.first.makeReceipt}<Ico name="arrow" /></button>
+      </>
+    );
   } else if (step === "try") {
     main = (
       <>
@@ -670,7 +705,7 @@ export default function Start() {
           <section className="ob-price preparing">
             <p className="ob-preparing"><span className="ob-pulse" /><b>{t.plan.preparing}</b></p>
             <small>{t.plan.preparingNote}</small>
-            <ul>{t.plan.includes.map((x) => <li key={x}><Ico name="check" size={16} />{x}</li>)}</ul>
+            <ul>{(way === "invoices" ? t.plan.includesInvoices : t.plan.includes).map((x) => <li key={x}><Ico name="check" size={16} />{x}</li>)}</ul>
           </section>
         )}
         <section className="ob-note-card"><b>{t.plan.meta}</b><small>{t.plan.metaSub}</small></section>
@@ -687,7 +722,7 @@ export default function Start() {
     } else {
       actions = (
         <>
-          <button className="ob-btn ghost" type="button" onClick={() => go(way === "assisted" ? "assisted" : "try")}>{t.back}</button>
+          <button className="ob-btn ghost" type="button" onClick={() => go(way === "assisted" ? "assisted" : way === "invoices" ? "first" : "try")}>{t.back}</button>
           {waiting && <button className="ob-link" type="button" onClick={() => go("golive")}>{t.plan.later}</button>}
           {waiting
             ? <button className="ob-btn primary" type="button" disabled={busy} onClick={() => acceptQuote(() => go("golive"))}>{t.plan.accept}<Ico name="arrow" /></button>
@@ -711,9 +746,12 @@ export default function Start() {
         <ul className="ob-checks">
           {way === "appointments" && item(true, t.golive.setup, t.golive.setupSub(rows.length))}
           {way === "appointments" && item(Boolean(tested), tested ? t.golive.tried : t.golive.notTried, tested ? t.golive.triedSub : t.try.waiting)}
-          {item(whatsapp?.done, t.golive.whatsapp, t.golive.whatsappSub,
+          {way === "invoices" && item(true, t.golive.detailsDone, t.golive.detailsDoneSub)}
+          {way === "invoices" && item(Boolean(state?.documents?.first), state?.documents?.first ? t.golive.firstDone : t.golive.firstNot, state?.documents?.first ? t.golive.firstDoneSub(state.documents.first.number) : t.golive.firstNotSub)}
+          {way === "invoices" && item(true, t.golive.sendTitle, t.golive.sendSub)}
+          {item(whatsapp?.done, t.golive.whatsapp, way === "invoices" ? t.golive.whatsappSubInvoices : t.golive.whatsappSub,
             whatsapp?.done ? <em>{t.golive.connected}</em> : whatsapp?.asked ? <em>{t.golive.asked}</em> : <button type="button" className="ob-btn small" onClick={() => ask("whatsapp")} disabled={busy}>{t.golive.ask}</button>, true)}
-          {item(provider?.done, t.golive.payments, t.golive.paymentsSub,
+          {item(provider?.done, t.golive.payments, way === "invoices" ? t.golive.paymentsSubInvoices : t.golive.paymentsSub,
             provider?.done ? <em>{t.golive.connected}</em> : provider?.asked ? <em>{t.golive.asked}</em> : <button type="button" className="ob-btn small ghost" onClick={() => ask("provider")} disabled={busy}>{t.golive.ask}</button>)}
           {item(false, t.golive.team, t.golive.teamSub, <Link className="ob-btn small ghost" href="/app/team">{t.golive.invite}</Link>)}
           {way === "appointments" && state?.catalog && item(false, t.golive.catalog(state.catalog.section[lang === "ar" ? "name_ar" : "name"]), t.golive.catalogSub,
@@ -732,18 +770,23 @@ export default function Start() {
     actions = <button className="ob-btn primary" type="button" onClick={() => router.push("/app")}>{t.finished.open}<Ico name="arrow" /></button>;
   }
 
-  const showPreview = step !== "loading" && step !== "finished";
-  const previewBody = step === "try"
+  const businessExists = Boolean(state);
+  const showPreview = step !== "loading" && step !== "finished" && !(way === "invoices" && !businessExists);
+  const summary = (
+    <div className="ob-summary">
+      <span className="ob-avatar big">{initialsOf(shopName)}</span>
+      <b>{shopShown}</b>
+      <small>{[chosen?.name[lang], state?.business.area].filter(Boolean).join(" · ")}</small>
+      {way === "appointments" && <small>{t.summary(rows.length, state?.business.reminders ?? true)}</small>}
+    </div>
+  );
+  // A business that only invoices has no WhatsApp conversation to show: its picture is the paper.
+  const previewBody = way === "invoices"
+    ? (step === "details" || (step === "first" && paper) ? <PaperPicture url={paper} alt={t.details.previewAlt} /> : summary)
+    : step === "try"
     ? testChat
     : step === "plan" || step === "golive"
-      ? (
-        <div className="ob-summary">
-          <span className="ob-avatar big">{initialsOf(shopName)}</span>
-          <b>{shopShown}</b>
-          <small>{[chosen?.name[lang], state?.business.area].filter(Boolean).join(" · ")}</small>
-          {way === "appointments" && <small>{t.summary(rows.length, state?.business.reminders ?? true)}</small>}
-        </div>
-      )
+      ? summary
       : <Chat name={shopShown} initials={initialsOf(shopName)} messages={preview} />;
 
   return (

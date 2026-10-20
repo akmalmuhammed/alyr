@@ -12,11 +12,16 @@ from uuid import UUID
 import asyncpg
 
 from alyr.modules.documents import kinds
+from alyr.modules.documents.customers import NOT_THE_TEST_LINE
 from alyr.modules.items import clock as shop_clock
 from alyr.modules.items import groups, listing
 
 CUSTOMER_LIMIT = 12
 LINE_LIMIT = 12
+# Arabic is searched with its common spellings folded (alef forms, ya, ta marbuta), and digits
+# typed in Arabic count as digits.
+_FOLD = "translate(lower({}), 'أإآىة', 'اااية')"
+_WESTERN = str.maketrans("٠١٢٣٤٥٦٧٨٩", "0123456789")
 
 
 async def customers(
@@ -25,25 +30,33 @@ async def customers(
     """The shop's customers, found by name or by the digits of a phone number; with nothing
     typed, the ones who wrote most recently."""
     q = (q or "").strip()
-    digits = re.sub(r"\D", "", q)
-    where, args = "c.role = 'customer'", []
+    digits = re.sub(r"\D", "", q.translate(_WESTERN))
+    where, args = f"c.role = 'customer' and {NOT_THE_TEST_LINE}", []
     if q:
         args.append(q)
-        clause = "position(lower($1) in lower(c.name)) > 0"
+        # Name in either language, company and email; Arabic spellings folded (ALY-141).
+        haystack = _FOLD.format("c.name || ' ' || c.name_ar || ' ' || c.company || ' ' || "
+                                "coalesce(c.email, '')")
+        clause = f"position({_FOLD.format('$1')} in {haystack}) > 0"
         if len(digits) >= 3:
             args.append(digits)
-            clause += " or position($2 in regexp_replace(c.phone, '\\D', '', 'g')) > 0"
+            clause += (" or position($2 in regexp_replace(coalesce(c.phone, ''), "
+                       "'\\D', '', 'g')) > 0")
         where += f" and ({clause})"
     rows = await conn.fetch(
-        "select c.id, c.name, c.phone, c.email, c.lang, g.name as group_name, "
+        "select c.id, c.name, c.name_ar, c.company, c.phone, c.email, c.lang, "
+        "c.registration_number, c.tax_id, c.address, c.address_ar, g.name as group_name, "
         "g.name_ar as group_name_ar, coalesce(g.is_default, true) as group_default "
         "from contacts c left join price_groups g on g.id = c.price_group_id "
-        f"where {where} order by c.last_inbound_at desc nulls last, c.name "
+        f"where {where} order by greatest(c.last_inbound_at, (select max(coalesce(d.issued_at, "
+        "d.created_at)) from documents d where d.contact_id = c.id)) desc nulls last, c.name "
         f"limit ${len(args) + 1}",
         *args, max(1, min(limit, 30)))
     return [
-        {"id": str(r["id"]), "name": r["name"], "phone": r["phone"], "email": r["email"] or "",
-         "lang": r["lang"],
+        {"id": str(r["id"]), "name": r["name"], "name_ar": r["name_ar"], "company": r["company"],
+         "phone": r["phone"], "email": r["email"] or "", "lang": r["lang"],
+         "registration_number": r["registration_number"], "tax_id": r["tax_id"],
+         "address": r["address"], "address_ar": r["address_ar"],
          "price_group": (None if r["group_default"] else
                          {"name": r["group_name"], "name_ar": r["group_name_ar"]})}
         for r in rows

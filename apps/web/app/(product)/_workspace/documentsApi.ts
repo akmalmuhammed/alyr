@@ -34,6 +34,9 @@ export type Meta = {
     currency: string; tax_enabled: boolean; tax_rate_bp: number; cash_rounding_minor: number;
     languages: string; default_audience: string; layout: string; show_sku: boolean;
     has_registration: boolean; show_alyr_mark: boolean;
+    /** The shop's usual note and terms for each kind, added to a paper that has none of its own. */
+    notes: Record<string, Partial<Pair>>; terms: Record<string, Partial<Pair>>;
+    has_catalog: boolean;
   };
 };
 
@@ -99,6 +102,8 @@ export type Detail = {
   warnings: { code: string; en: string; ar: string }[];
   delivery: DeliveryInfo;
   retention: null | { years: number; confirmed: boolean; keep_until: string };
+  /** The invoice's payment link, when it has one (ALY-141). */
+  payment_link: null | { url: string; amount_minor: number; status: "pending" | "paid" | "expired" };
 };
 export type Delivery = {
   id: string; channel: "whatsapp" | "email"; trigger: "auto" | "staff"; to: string; language: string;
@@ -127,8 +132,28 @@ export type Series = {
 export type SettingsChange = { action: string; detail: { changes?: { field: string; from?: unknown; to?: unknown }[]; [k: string]: unknown }; actor: string; at: string };
 
 export type CustomerHit = {
-  id: string; name: string; phone: string | null; email: string; lang: string;
+  id: string; name: string; name_ar?: string; company?: string; phone: string | null; email: string;
+  lang: string; registration_number?: string; tax_id?: string; address?: string; address_ar?: string;
   price_group: null | { name: string; name_ar: string };
+};
+/** A customer in the book of the shop's customers (`/api/documents/customers/all`). The money
+ *  and the documents are for owners and admins only. */
+export type CustomerRow = {
+  id: string; name: string; name_ar: string; company: string; phone: string; email: string;
+  lang: string; registration_number: string; tax_id: string; address: string; address_ar: string;
+  documents?: number; owing_minor?: number; last_at?: string | null;
+  recent?: { id: string; kind: string; number: string | null; status: string; total_minor: number;
+    currency: string; currency_exponent: number; issue_date: string | null; owing_minor: number }[];
+};
+export type SavedLine = {
+  id: string; name: string; name_ar: string; unit: string; price_minor: number; uses: number;
+  last_used_at: string | null;
+};
+/** What "AC repair 500 for Ahmed 5551 2345" was read as (`POST /api/documents/quick`). */
+export type QuickRead = {
+  recognised: boolean; kind?: "invoice" | "receipt"; amount_minor?: number | null;
+  description?: string; name?: string; phone?: string; method?: string; problems?: string[];
+  numbers?: string[]; customer?: CustomerHit | null; candidates?: CustomerHit[];
 };
 export type CatalogLine = {
   item_id: string; variant_id: string | null; code: number | null; sku: string; description: string;
