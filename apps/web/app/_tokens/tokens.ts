@@ -590,11 +590,11 @@ export const dark = {
       "grid": "rgb(167 173 181 / .07)"
     },
     "document": {
-      "paper": "#e3e6e1",
+      "paper": "#d8dcd7",
       "ink": "#15171a",
-      "ink-2": "#555d65",
+      "ink-2": "#3a3f45",
       "rule": "#c4c9cf",
-      "band": "#d8dcd7"
+      "band": "#c9ccc6"
     },
     "agent": {
       "bar-mix": "78%",

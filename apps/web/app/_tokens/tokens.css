@@ -286,10 +286,10 @@
     --d-lift: 0 1px 0 rgb(255 255 255 / .04) inset, 0 0 0 1px var(--hair);
     --d-float: 0 24px 60px -18px rgb(0 0 0 / .8), 0 0 0 1px var(--hair-strong);
     --grid: rgb(167 173 181 / .07);
-    --doc-paper: #e3e6e1;
-    --doc-ink-2: #555d65;
+    --doc-paper: #d8dcd7;
+    --doc-ink-2: #3a3f45;
     --doc-rule: #c4c9cf;
-    --doc-band: #d8dcd7;
+    --doc-band: #c9ccc6;
     --agent-bar-mix: 78%;
     --agent-ghost-mix: 14%;
     --menu-shadow: 0 24px 70px rgb(0 0 0 / .5);
@@ -368,10 +368,10 @@
   --d-lift: 0 1px 0 rgb(255 255 255 / .04) inset, 0 0 0 1px var(--hair);
   --d-float: 0 24px 60px -18px rgb(0 0 0 / .8), 0 0 0 1px var(--hair-strong);
   --grid: rgb(167 173 181 / .07);
-  --doc-paper: #e3e6e1;
-  --doc-ink-2: #555d65;
+  --doc-paper: #d8dcd7;
+  --doc-ink-2: #3a3f45;
   --doc-rule: #c4c9cf;
-  --doc-band: #d8dcd7;
+  --doc-band: #c9ccc6;
   --agent-bar-mix: 78%;
   --agent-ghost-mix: 14%;
   --menu-shadow: 0 24px 70px rgb(0 0 0 / .5);
