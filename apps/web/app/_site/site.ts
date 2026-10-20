@@ -42,10 +42,24 @@ export const TRUST_RECORDS = {
 } as const;
 export type TrustRecord = keyof typeof TRUST_RECORDS;
 
-/** Every public page, and its address in each language. */
+/** Every public page, and its address in each language. The product pages are in the
+ * suite's fixed order: Chat, Bookings, Agent, Accounts (Payroll has no page until it is
+ * built). */
 export const PATHS = {
   home: { en: "/", ar: "/ar" },
   chat: { en: "/chat", ar: "/ar/chat" },
+  bookings: { en: "/bookings", ar: "/ar/bookings" },
+  agent: { en: "/agent", ar: "/ar/agent" },
+  accounts: { en: "/accounts", ar: "/ar/accounts" },
 } as const;
 
 export type PageKey = keyof typeof PATHS;
+
+/** The suite, in its fixed order. Payroll is listed as coming, with no page. */
+export const PRODUCTS = ["chat", "bookings", "agent", "accounts", "payroll"] as const;
+export type ProductKey = (typeof PRODUCTS)[number];
+
+/** A product's page, if it has one. */
+export function productPath(key: ProductKey, locale: "en" | "ar"): string | null {
+  return key === "payroll" ? null : PATHS[key][locale];
+}

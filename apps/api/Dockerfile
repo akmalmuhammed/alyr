@@ -20,7 +20,8 @@ RUN --mount=type=cache,target=/root/.cache/uv \
     uv sync --frozen --no-default-groups --group server
 
 FROM python:3.13-slim-bookworm
-RUN useradd --system --uid 10001 --home-dir /app alyr
+RUN useradd --system --uid 10001 --home-dir /app alyr \
+ && mkdir -p /data/media && chown alyr /data/media
 COPY --from=build --chown=alyr:alyr /app /app
 WORKDIR /app
 # Production unless told otherwise: no simulator, no open demo, no stand-in payments.

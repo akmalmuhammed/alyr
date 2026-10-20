@@ -158,7 +158,9 @@ The tracker is the clearest example. Bid security, visa renewals, insurance and 
 
 ### 6.2 What is deliberately not in it
 
-Flow builder, product options and stock, delivery zones, sync with WhatsApp's own catalog, bookings, payroll, AI auto-replies beyond the ledger's commands, SMS, public API, native mobile app.
+*Updated 17 Oct 2026: product options and stock moved into scope; see D-039 and the Catalog plan.*
+
+Flow builder, delivery zones, sync with WhatsApp's own catalog, bookings, payroll, AI auto-replies beyond the ledger's commands, SMS, public API, native mobile app.
 
 ### 6.3 A day with it
 

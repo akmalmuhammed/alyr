@@ -1,0 +1,585 @@
+{
+ "phone": "97455500100",
+ "chat": [
+  {
+   "label": "two codes, one with a size",
+   "lang": "en",
+   "shop": {
+    "name": "Al Noor Electricals",
+    "name_ar": "النور للكهربائيات"
+   },
+   "lines": [
+    {
+     "code": 214,
+     "qty": 2,
+     "variant": "M"
+    },
+    {
+     "code": 305,
+     "qty": 1,
+     "variant": ""
+    }
+   ],
+   "parts": [
+    "Hello Al Noor Electricals, I would like to order (item codes): #214 (M) x2, #305. Thank you!"
+   ],
+   "reads": [
+    [
+     [
+      214,
+      2
+     ],
+     [
+      305,
+      1
+     ]
+    ]
+   ]
+  },
+  {
+   "label": "two codes in Arabic",
+   "lang": "ar",
+   "shop": {
+    "name": "Al Noor Electricals",
+    "name_ar": "النور للكهربائيات"
+   },
+   "lines": [
+    {
+     "code": 214,
+     "qty": 2,
+     "variant": "M"
+    },
+    {
+     "code": 305,
+     "qty": 1,
+     "variant": ""
+    }
+   ],
+   "parts": [
+    "مرحباً النور للكهربائيات، أرغب بطلب (أكواد الأصناف): #214 (M) x2، #305. شكراً"
+   ],
+   "reads": [
+    [
+     [
+      214,
+      2
+     ],
+     [
+      305,
+      1
+     ]
+    ]
+   ]
+  },
+  {
+   "label": "one code",
+   "lang": "en",
+   "shop": {
+    "name": "Al Noor Electricals",
+    "name_ar": "النور للكهربائيات"
+   },
+   "lines": [
+    {
+     "code": 214,
+     "qty": 1,
+     "variant": ""
+    }
+   ],
+   "parts": [
+    "Hello Al Noor Electricals, I would like to order (item codes): #214. Thank you!"
+   ],
+   "reads": [
+    [
+     [
+      214,
+      1
+     ]
+    ]
+   ]
+  },
+  {
+   "label": "fourteen codes need the short form",
+   "lang": "en",
+   "shop": {
+    "name": "Al Noor Electricals",
+    "name_ar": "النور للكهربائيات"
+   },
+   "lines": [
+    {
+     "code": 101,
+     "qty": 1,
+     "variant": ""
+    },
+    {
+     "code": 102,
+     "qty": 2,
+     "variant": ""
+    },
+    {
+     "code": 103,
+     "qty": 3,
+     "variant": ""
+    },
+    {
+     "code": 104,
+     "qty": 1,
+     "variant": ""
+    },
+    {
+     "code": 105,
+     "qty": 2,
+     "variant": ""
+    },
+    {
+     "code": 106,
+     "qty": 3,
+     "variant": ""
+    },
+    {
+     "code": 107,
+     "qty": 1,
+     "variant": ""
+    },
+    {
+     "code": 108,
+     "qty": 2,
+     "variant": ""
+    },
+    {
+     "code": 109,
+     "qty": 3,
+     "variant": ""
+    },
+    {
+     "code": 110,
+     "qty": 1,
+     "variant": ""
+    },
+    {
+     "code": 111,
+     "qty": 2,
+     "variant": ""
+    },
+    {
+     "code": 112,
+     "qty": 3,
+     "variant": ""
+    },
+    {
+     "code": 113,
+     "qty": 1,
+     "variant": ""
+    },
+    {
+     "code": 114,
+     "qty": 2,
+     "variant": ""
+    }
+   ],
+   "parts": [
+    "Order (item codes): #101, #102 x2, #103 x3, #104, #105 x2, #106 x3, #107, #108 x2, #109 x3, #110, #111 x2, #112 x3, #113, #114 x2"
+   ],
+   "reads": [
+    [
+     [
+      101,
+      1
+     ],
+     [
+      102,
+      2
+     ],
+     [
+      103,
+      3
+     ],
+     [
+      104,
+      1
+     ],
+     [
+      105,
+      2
+     ],
+     [
+      106,
+      3
+     ],
+     [
+      107,
+      1
+     ],
+     [
+      108,
+      2
+     ],
+     [
+      109,
+      3
+     ],
+     [
+      110,
+      1
+     ],
+     [
+      111,
+      2
+     ],
+     [
+      112,
+      3
+     ],
+     [
+      113,
+      1
+     ],
+     [
+      114,
+      2
+     ]
+    ]
+   ]
+  },
+  {
+   "label": "twenty-five codes need two messages",
+   "lang": "en",
+   "shop": {
+    "name": "Al Noor Electricals",
+    "name_ar": "النور للكهربائيات"
+   },
+   "lines": [
+    {
+     "code": 101,
+     "qty": 1,
+     "variant": ""
+    },
+    {
+     "code": 102,
+     "qty": 2,
+     "variant": ""
+    },
+    {
+     "code": 103,
+     "qty": 3,
+     "variant": ""
+    },
+    {
+     "code": 104,
+     "qty": 1,
+     "variant": ""
+    },
+    {
+     "code": 105,
+     "qty": 2,
+     "variant": ""
+    },
+    {
+     "code": 106,
+     "qty": 3,
+     "variant": ""
+    },
+    {
+     "code": 107,
+     "qty": 1,
+     "variant": ""
+    },
+    {
+     "code": 108,
+     "qty": 2,
+     "variant": ""
+    },
+    {
+     "code": 109,
+     "qty": 3,
+     "variant": ""
+    },
+    {
+     "code": 110,
+     "qty": 1,
+     "variant": ""
+    },
+    {
+     "code": 111,
+     "qty": 2,
+     "variant": ""
+    },
+    {
+     "code": 112,
+     "qty": 3,
+     "variant": ""
+    },
+    {
+     "code": 113,
+     "qty": 1,
+     "variant": ""
+    },
+    {
+     "code": 114,
+     "qty": 2,
+     "variant": ""
+    },
+    {
+     "code": 115,
+     "qty": 3,
+     "variant": ""
+    },
+    {
+     "code": 116,
+     "qty": 1,
+     "variant": ""
+    },
+    {
+     "code": 117,
+     "qty": 2,
+     "variant": ""
+    },
+    {
+     "code": 118,
+     "qty": 3,
+     "variant": ""
+    },
+    {
+     "code": 119,
+     "qty": 1,
+     "variant": ""
+    },
+    {
+     "code": 120,
+     "qty": 2,
+     "variant": ""
+    },
+    {
+     "code": 121,
+     "qty": 3,
+     "variant": ""
+    },
+    {
+     "code": 122,
+     "qty": 1,
+     "variant": ""
+    },
+    {
+     "code": 123,
+     "qty": 2,
+     "variant": ""
+    },
+    {
+     "code": 124,
+     "qty": 3,
+     "variant": ""
+    },
+    {
+     "code": 125,
+     "qty": 1,
+     "variant": ""
+    }
+   ],
+   "parts": [
+    "Order (1/2): #101, #102 x2, #103 x3, #104, #105 x2, #106 x3, #107, #108 x2, #109 x3, #110, #111 x2, #112 x3, #113, #114 x2, #115 x3, #116",
+    "Order (2/2): #117 x2, #118 x3, #119, #120 x2, #121 x3, #122, #123 x2, #124 x3, #125"
+   ],
+   "reads": [
+    [
+     [
+      101,
+      1
+     ],
+     [
+      102,
+      2
+     ],
+     [
+      103,
+      3
+     ],
+     [
+      104,
+      1
+     ],
+     [
+      105,
+      2
+     ],
+     [
+      106,
+      3
+     ],
+     [
+      107,
+      1
+     ],
+     [
+      108,
+      2
+     ],
+     [
+      109,
+      3
+     ],
+     [
+      110,
+      1
+     ],
+     [
+      111,
+      2
+     ],
+     [
+      112,
+      3
+     ],
+     [
+      113,
+      1
+     ],
+     [
+      114,
+      2
+     ],
+     [
+      115,
+      3
+     ],
+     [
+      116,
+      1
+     ]
+    ],
+    [
+     [
+      117,
+      2
+     ],
+     [
+      118,
+      3
+     ],
+     [
+      119,
+      1
+     ],
+     [
+      120,
+      2
+     ],
+     [
+      121,
+      3
+     ],
+     [
+      122,
+      1
+     ],
+     [
+      123,
+      2
+     ],
+     [
+      124,
+      3
+     ],
+     [
+      125,
+      1
+     ]
+    ]
+   ]
+  },
+  {
+   "label": "a shop name with digits is left out",
+   "lang": "en",
+   "shop": {
+    "name": "Store 214",
+    "name_ar": ""
+   },
+   "lines": [
+    {
+     "code": 305,
+     "qty": 2,
+     "variant": ""
+    }
+   ],
+   "parts": [
+    "I would like to order (item codes): #305 x2. Thank you!"
+   ],
+   "reads": [
+    [
+     [
+      305,
+      2
+     ]
+    ]
+   ]
+  },
+  {
+   "label": "a long shop name",
+   "lang": "en",
+   "shop": {
+    "name": "The International Electrical and Lighting Wholesale Company",
+    "name_ar": ""
+   },
+   "lines": [
+    {
+     "code": 214,
+     "qty": 2,
+     "variant": ""
+    },
+    {
+     "code": 305,
+     "qty": 1,
+     "variant": ""
+    },
+    {
+     "code": 410,
+     "qty": 3,
+     "variant": ""
+    }
+   ],
+   "parts": [
+    "Hello The International Electrical …, I would like to order (item codes): #214 x2, #305, #410 x3. Thank you!"
+   ],
+   "reads": [
+    [
+     [
+      214,
+      2
+     ],
+     [
+      305,
+      1
+     ],
+     [
+      410,
+      3
+     ]
+    ]
+   ]
+  },
+  {
+   "label": "a code with a quantity of a hundred",
+   "lang": "ar",
+   "shop": {
+    "name": "Al Noor Electricals",
+    "name_ar": "النور للكهربائيات"
+   },
+   "lines": [
+    {
+     "code": 1015,
+     "qty": 100,
+     "variant": ""
+    }
+   ],
+   "parts": [
+    "مرحباً النور للكهربائيات، أرغب بطلب (أكواد الأصناف): #1015 x100. شكراً"
+   ],
+   "reads": [
+    [
+     [
+      1015,
+      100
+     ]
+    ]
+   ]
+  }
+ ]
+}

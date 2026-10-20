@@ -5,7 +5,9 @@ from datetime import UTC, date, datetime, timedelta
 import asyncpg
 import pytest
 
+from alyr.core import links
 from alyr.seed import AHMED_PHONE, DEMO_SLUG, DEMO_TENANT_ID
+from order_links import booking_token
 from test_consent import ahmed, conversation, owner_sql, say
 from test_sign_in import other_shop_with_owner
 
@@ -31,21 +33,23 @@ def times(client, sid, day=None):
 
 
 def book(client, sid=None, starts_at=None, contact_id=None):
+    """Book as a customer, the way their booking link lets them (a signed token; the page
+    takes no bare contact ID, test_booking_links.py)."""
     sid = sid or service_id(client)
     return client.post(PAGE, json={
-        "contact_id": contact_id or ahmed(client)["id"], "service_id": sid,
+        "token": booking_token(contact_id or ahmed(client)["id"]), "service_id": sid,
         "starts_at": starts_at or times(client, sid)[0],
     })
 
 
 def test_the_booking_page_lists_services_and_greets_the_customer(client):
-    page = client.get(PAGE, params={"c": ahmed(client)["id"]}).json()
+    page = client.get(PAGE, headers={"x-order-link": booking_token(ahmed(client)["id"])}).json()
     assert [s["name"] for s in page["services"]] == [
         "Electrician site visit", "Lighting consultation", "Generator service"
     ]
     assert page["services"][0]["price_text"] == "QAR 150"
     assert page["services"][1]["price_text"] == ""
-    assert page["customer"] == {"name": "Ahmed Al-Kuwari"}
+    assert page["customer"] == {"name": "Ahmed Al-Kuwari", "lang": "en"}
     assert page["shop"]["timezone"] == "Asia/Qatar"
 
 
@@ -176,7 +180,11 @@ def test_a_customer_cannot_cancel_someone_elses_booking(client):
 
 def test_asking_to_book_in_the_chat_returns_the_booking_link(client):
     reply = say(client, AHMED_PHONE, "can I book an appointment?")[-1]
-    assert f"/b/{DEMO_SLUG}?c={ahmed(client)['id']}" in reply["body"]
+    # The link carries a signed token made for booking, never the contact's ID.
+    assert f"/b/{DEMO_SLUG}?t=" in reply["body"] and ahmed(client)["id"] not in reply["body"]
+    token = reply["body"].split("?t=")[1].split()[0]
+    link = links.read(token, DEMO_TENANT_ID, purpose=links.BOOKING)
+    assert str(link.contact_id) == ahmed(client)["id"]
     arabic = say(client, AHMED_PHONE, "أريد حجز موعد")[-1]
     assert "اختر الخدمة" in arabic["body"]
 

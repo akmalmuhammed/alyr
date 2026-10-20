@@ -22,5 +22,6 @@ ALYR_APP_DB_PASSWORD=$(rand)
 ALYR_BACKUP_DB_PASSWORD=$(rand)
 ALYR_META_APP_SECRET=$(rand)
 ALYR_META_VERIFY_TOKEN=$(rand)
+ALYR_LINK_SECRET=$(rand)$(rand)
 ENV
 echo "rehearsal-env: wrote $file"

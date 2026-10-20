@@ -11,6 +11,7 @@ from uuid import UUID
 
 import asyncpg
 
+from alyr import catalog
 from alyr.core.auth import Staff
 
 STAFF_SESSION_HOURS = 12
@@ -101,6 +102,11 @@ def _item(
     }
 
 
+def _product_name(key: str) -> str:
+    product = catalog.PRODUCT_BY_KEY.get(key)
+    return product.name.en if product else key
+
+
 def _days(since: datetime | None, now: datetime) -> float:
     return (now - since).total_seconds() / 86400 if since else 0.0
 
@@ -139,7 +145,7 @@ async def today(conn: asyncpg.Connection) -> dict:
         business = names.get(r["tenant_id"])
         items.append(_item(
             "request", r["id"], f"{r['business']} asked for help",
-            f"{r['product_key']} · {r['step_key'] or 'general'}"
+            f"{_product_name(r['product_key'])} · {r['step_key'] or 'general'}"
             + (f": {r['note']}" if r["note"] else ""),
             r["created_at"], client_id=business["client_id"] if business else None,
             business_id=r["tenant_id"], urgent=_days(r["created_at"], now) >= 2,

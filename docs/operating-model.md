@@ -27,7 +27,7 @@ The risk is no longer "can it be built". It is building more before anyone has s
 | D. Pilot | One business uses it daily for two weeks on its own number (ALY-31) | All |
 | E. Paid | That business pays (ALY-37) | Customers |
 
-**Rule for the Product lane until gate B:** build only what a named pilot business needs. No new modules on a guess.
+**Rule for the Product lane until gate B:** build only what a named pilot business needs. No new modules on a guess. **One exception (D-039, 17 Oct):** the Catalog (ALY-101: items, stock, photos) is built complete before go-live, at the founder's instruction, because an owner who cannot manage their own menu has no sellable product.
 
 ## The six lanes
 

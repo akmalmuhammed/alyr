@@ -9,8 +9,8 @@ gsap.registerPlugin(useGSAP, ScrollTrigger, SplitText);
 
 // The homepage's scroll choreography. Loaded on its own, after the page has loaded, only
 // when the visitor has not asked for reduced motion (HomeMotion). The moves themselves are
-// mostly CSS in home.css, keyed on `.is-in`; this file says when, scrubs the two progress
-// rules (ScrollTrigger), splits each section heading into lines as it arrives (SplitText)
+// mostly CSS in home.css, keyed on `.is-in`; this file says when, scrubs the progress
+// rule (ScrollTrigger), splits each section heading into lines as it arrives (SplitText)
 // and leans the main buttons toward the pointer.
 // Tokens: durations 120 / 240 / 480 / 720 ms, `expo.out` for arrivals (the CSS `--ease`),
 // 60 ms stagger, one travel vector at 45°.
@@ -81,17 +81,6 @@ export default function Choreography() {
     );
     document.querySelectorAll("[data-split]").forEach((node) => headings.observe(node));
     undo.push(() => headings.disconnect());
-
-    // The Carbon band: the rule beside the modules fills Volt as they are read.
-    const story = document.querySelector<HTMLElement>("[data-story]");
-    const storyFill = story?.querySelector<HTMLElement>("[data-fill]");
-    if (story && storyFill) {
-      gsap.fromTo(
-        storyFill,
-        { scaleY: 0 },
-        { scaleY: 1, ease: "none", scrollTrigger: { trigger: story, start: "top 50%", end: "bottom 50%", scrub: 0.4 } },
-      );
-    }
 
     // How it works: the rail fills Volt with the scroll, and each step's node turns as
     // the fill reaches it. Across on wide screens, down the start edge on phones.

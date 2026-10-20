@@ -8,6 +8,7 @@ Every function takes a tenant-scoped connection.
 """
 
 from dataclasses import dataclass
+from datetime import UTC, datetime
 from uuid import UUID
 
 import asyncpg
@@ -29,10 +30,13 @@ class TeamError(Exception):
 
 @dataclass(frozen=True)
 class Actor:
-    """Who did something. `id` is None for the customer, the assistant and the open demo."""
+    """Who did something. `id` is None for the customer, the assistant and the open demo.
+    `via` says how, when it was not the workspace: "whatsapp" for a staff member's message
+    (the staff number has no sign-in, so `id` is None and `name` is the person's name)."""
 
     id: UUID | None
     name: str
+    via: str = ""
 
 
 CUSTOMER = Actor(None, "Customer")
@@ -68,7 +72,8 @@ async def record(
         subject_id,
         contact_id,
         action,
-        {k: v for k, v in (detail or {}).items() if v is not None},
+        {k: v for k, v in ((detail or {}) | ({"via": actor.via} if actor.via else {})).items()
+         if v is not None},
         actor.id,
         actor.name,
     )
@@ -188,16 +193,21 @@ def signed(text: str, name: str) -> str:
     return f"{text}\n\n— {first}" if first else text
 
 
-async def performance(conn: asyncpg.Connection, staff: Staff, days: int) -> dict:
+async def performance(
+    conn: asyncpg.Connection, staff: Staff, days: int, now: datetime | None = None
+) -> dict:
     """How each person on the team is doing over the last `days` shop-calendar days,
-    today included. Owners and admins see everyone; an agent sees only themselves."""
+    today included. Owners and admins see everyone; an agent sees only themselves.
+    `now` is for reading the numbers as they were at another moment (the Agent's
+    sample screens); by default it is the present."""
     if days not in PERIODS:
         raise TeamError("period must be 1, 7 or 30 days")
+    now = now or datetime.now(UTC)
     since = await conn.fetchval(
-        "select (date_trunc('day', now() at time zone t.timezone) - ($1 - 1) * interval '1 day')"
-        " at time zone t.timezone from tenants t "
+        "select (date_trunc('day', $2::timestamptz at time zone t.timezone) "
+        "- ($1 - 1) * interval '1 day') at time zone t.timezone from tenants t "
         "where t.id = nullif(current_setting('app.tenant_id', true), '')::uuid",
-        days,
+        days, now,
     )
     members = await conn.fetch(
         "select u.id, u.name, m.role from memberships m join users u on u.id = m.user_id "
@@ -215,14 +225,16 @@ async def performance(conn: asyncpg.Connection, staff: Staff, days: int) -> dict
     for r in await conn.fetch(
         "select c.assigned_to, count(*)::int as open, "
         "  count(*) filter (where l.direction = 'in' "
-        f"    and l.created_at < now() - interval '{WAITING_MINUTES} minutes')::int as waiting, "
+        f"    and l.created_at < $1::timestamptz - interval '{WAITING_MINUTES} minutes')::int "
+        "    as waiting, "
         "  min(l.created_at) filter (where l.direction = 'in') as oldest "
         "from contacts c join lateral (select direction, created_at from messages m "
         "  where m.contact_id = c.id and coalesce(m.status, '') <> 'blocked' "
         "  order by created_at desc limit 1) l on true "
         "where c.role = 'customer' and c.inbox_status = 'open' "
         "  and c.last_inbound_at is not null "
-        "group by c.assigned_to"
+        "group by c.assigned_to",
+        now,
     ):
         b = bucket(r["assigned_to"])
         b["open"] += r["open"]
@@ -246,7 +258,7 @@ async def performance(conn: asyncpg.Connection, staff: Staff, days: int) -> dict
                            '-infinity')) as waited_from
             from messages r
             where r.direction = 'out' and r.sent_by_user is not null and r.created_at >= $1
-              and coalesce(r.status, '') <> 'blocked'
+              and r.created_at <= $2 and coalesce(r.status, '') <> 'blocked'
         )
         select sent_by_user, count(*)::int as replies,
                percentile_cont(0.5) within group (
@@ -254,7 +266,7 @@ async def performance(conn: asyncpg.Connection, staff: Staff, days: int) -> dict
                    filter (where waited_from is not null) as median_seconds
         from replies group by sent_by_user
         """,
-        since,
+        since, now,
     ):
         b = bucket(r["sent_by_user"])
         b["replies"] = r["replies"]
@@ -266,8 +278,8 @@ async def performance(conn: asyncpg.Connection, staff: Staff, days: int) -> dict
     for r in await conn.fetch(
         "select actor_id, detail->>'outcome' as outcome, count(*)::int as n from activity "
         "where subject = 'conversation' and action = 'closed' and created_at >= $1 "
-        "group by actor_id, detail->>'outcome'",
-        since,
+        "and created_at <= $2 group by actor_id, detail->>'outcome'",
+        since, now,
     ):
         b = bucket(r["actor_id"])
         key = r["outcome"] if r["outcome"] in OUTCOMES else "unsaid"
@@ -279,8 +291,9 @@ async def performance(conn: asyncpg.Connection, staff: Staff, days: int) -> dict
         "select assigned_to, count(*)::int as orders, coalesce(sum(total), 0)::bigint as sales, "
         "  coalesce(sum(total) filter (where payment in ('paid', 'on_account')), 0)::bigint "
         "    as settled "
-        "from orders where created_at >= $1 and status <> 'cancelled' group by assigned_to",
-        since,
+        "from orders where created_at >= $1 and created_at <= $2 and status <> 'cancelled' "
+        "group by assigned_to",
+        since, now,
     ):
         b = bucket(r["assigned_to"])
         b["orders"], b["sales"], b["settled"] = r["orders"], r["sales"], r["settled"]
@@ -290,13 +303,12 @@ async def performance(conn: asyncpg.Connection, staff: Staff, days: int) -> dict
         "select assigned_to, "
         "  count(*) filter (where status = 'completed')::int as completed, "
         "  count(*) filter (where status = 'no_show')::int as no_shows "
-        "from bookings where starts_at >= $1 and starts_at <= now() group by assigned_to",
-        since,
+        "from bookings where starts_at >= $1 and starts_at <= $2 group by assigned_to",
+        since, now,
     ):
         b = bucket(r["assigned_to"])
         b["bookings_completed"], b["no_shows"] = r["completed"], r["no_shows"]
 
-    now = await conn.fetchval("select now()")
     for b in [*people.values(), unassigned]:
         oldest = b.pop("_oldest", None)
         b["oldest_wait_minutes"] = int((now - oldest).total_seconds() // 60) if oldest else None

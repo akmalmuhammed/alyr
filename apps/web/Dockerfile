@@ -37,7 +37,12 @@ ENV ALYR_STANDALONE=1 \
 RUN pnpm build
 
 FROM node:22-bookworm-slim
-ENV NODE_ENV=production NEXT_TELEMETRY_DISABLED=1 PORT=3000 HOSTNAME=0.0.0.0
+# The order page (`/s/<shop>`) asks the API from the server while it runs, for its first
+# page of items and its link preview, so the running server needs the address too. The
+# cloud may override it as a normal setting.
+ARG ALYR_API_URL=http://api:8000
+ENV NODE_ENV=production NEXT_TELEMETRY_DISABLED=1 PORT=3000 HOSTNAME=0.0.0.0 \
+    ALYR_API_URL=$ALYR_API_URL
 WORKDIR /web
 # The standalone build carries only the files the server needs; static assets are
 # copied beside it so server.js serves them.

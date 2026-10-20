@@ -1,0 +1,66 @@
+/* Discounts and coupon codes in the workspace (ALY-150): the Discounts sheet, its form, and the
+   discount lines on an order in the Orders list. It builds on the Catalog's own patterns
+   (catalog.css) and takes every colour, size and radius from the workspace tokens, so light,
+   dark and right-to-left come for free. Nothing here is a colour or a size of its own. */
+
+/* ── the list ── */
+.pr-body { display: flex; flex-direction: column; gap: 16px; min-width: 0; }
+.pr-intro { max-width: 60ch; }
+.pr-add { align-self: start; }
+.pr-slot { display: grid; gap: 6px; padding: 18px; border-radius: 12px; border: 1px dashed var(--hair-2); }
+.pr-slot b { font-size: var(--ui-body-sm); font-weight: 600; }
+.pr-slot span { font-size: var(--ui-small); line-height: 1.5; color: var(--ink-2); max-width: 46ch; }
+
+.pr-rule { min-width: 0; }
+.pr-rule.over { background: transparent; box-shadow: 0 0 0 1px var(--hair-2) inset; }
+.pr-rule.over .pr-words { color: var(--ink-2); }
+.pr-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; min-width: 0; }
+.pr-head .ct-toggle-text b { font-size: var(--ui-body); font-weight: 600; overflow-wrap: anywhere; }
+.pr-head .sh-pill { flex: none; }
+.pr-code { font-family: var(--font-ui-mono); letter-spacing: 0.04em; }
+.pr-words { margin: 0; font-size: var(--ui-body-sm); line-height: 1.45; }
+.pr-meta { list-style: none; margin: 0; padding: 0; display: grid; gap: 2px; font-size: var(--ui-caption); line-height: 1.5; color: var(--ink-2); }
+.pr-meta li { overflow-wrap: anywhere; }
+.pr-acts { padding-top: 2px; }
+
+/* ── the form ── */
+.pr-codefield { font-family: var(--font-ui-mono); letter-spacing: 0.06em; }
+.pr-tight { margin-top: -12px; }
+/* A date and a time do not fit two to a row on a phone, in either language: they stack. */
+.pr-dates { display: grid; grid-template-columns: minmax(0, 1fr); gap: 20px; }
+.pr-dates input { min-width: 0; }
+@media (min-width: 40rem) { .pr-dates { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; } }
+.pr-pick { display: grid; gap: 14px; padding: 12px; border-radius: 12px; background: var(--raise); box-shadow: 0 0 0 1px var(--hair) inset; min-width: 0; }
+.pr-pick.bad { box-shadow: 0 0 0 1.5px var(--bad) inset; }
+.pr-picklist { display: grid; gap: 8px; min-width: 0; margin: 0; padding: 0; border: 0; }
+.pr-picklist legend { padding: 0; margin-bottom: 4px; font-size: var(--ui-small); font-weight: 500; color: var(--ink-2); }
+.pr-count { margin-inline-start: 6px; font-weight: 600; color: var(--ink); }
+.pr-cats { display: flex; flex-wrap: wrap; gap: 8px; }
+.pr-cat { position: relative; display: inline-flex; align-items: center; min-height: 44px; padding: 0 14px; border-radius: 22px; background: var(--sheet); color: var(--ink-2); box-shadow: 0 0 0 1px var(--hair-2) inset; font-size: var(--ui-body-sm); font-weight: 500; cursor: pointer; }
+.pr-cat input { position: absolute; inset: 0; width: 100%; height: 100%; margin: 0; opacity: 0; cursor: pointer; }
+.pr-cat:has(input:checked) { background: var(--ink); color: var(--sheet); box-shadow: none; }
+.pr-cat:has(input:focus-visible) { outline: 2px solid var(--ink); outline-offset: 2px; }
+.pr-itemsearch { width: 100%; min-height: 48px; padding: 0 14px; border: 0; border-radius: 12px; background: var(--sheet); color: var(--ink); box-shadow: var(--lift); font-size: var(--ui-input); outline: none; }
+.pr-itemsearch:focus { box-shadow: 0 0 0 1px var(--ink), 0 0 0 4px var(--volt-wash); }
+.pr-items { list-style: none; margin: 0; padding: 0; max-height: 16rem; overflow-y: auto; overscroll-behavior: contain; border-radius: 12px; background: var(--sheet); box-shadow: 0 0 0 1px var(--hair) inset; }
+.pr-items li { padding-inline: 12px; }
+.pr-items li + li { border-top: 1px solid var(--hair); }
+.pr-items .ct-check span { overflow-wrap: anywhere; }
+
+/* ── the footer: the API's sentence sits right above the buttons it is about ── */
+.pr-foot { display: flex; flex-direction: column; gap: 8px; flex: 1; min-width: 0; }
+.pr-foot-btns { display: flex; align-items: center; gap: 8px; }
+.pr-foot-alert { padding: 8px 12px; }
+
+/* ── the discount lines on an order (Orders list) ── */
+/* The Orders table scrolls inside its frame on a phone, as it did; this block keeps a width a line of words can use. */
+.pr-sum { display: grid; gap: 2px; min-width: 11.5rem; margin-top: 8px; padding-top: 8px; border-top: 1px solid var(--hair); font-size: var(--ui-small); line-height: 1.45; }
+@media (min-width: 48rem) { .pr-sum { min-width: 16rem; } }
+.pr-sumrow { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; }
+.pr-sumrow > span:first-child { min-width: 0; overflow-wrap: break-word; }
+.pr-sumrow small { display: block; font-size: var(--ui-caption); color: var(--ink-2); }
+.pr-sumrow .num { white-space: nowrap; }
+.pr-sumrow.off .num { color: var(--ink); }
+.pr-sumrow.back > span:first-child, .pr-sumrow.back .num { color: var(--ink-2); text-decoration: line-through; }
+.pr-sumrow.total { padding-top: 4px; font-weight: 600; }
+.pr-lineoff { display: block; font-size: var(--ui-caption); color: var(--ink-2); }

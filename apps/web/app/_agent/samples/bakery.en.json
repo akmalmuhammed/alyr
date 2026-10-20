@@ -1,0 +1,751 @@
+{
+ "version": 2,
+ "lang": "en",
+ "dir": "ltr",
+ "now": "2026-10-15T13:20:00+00:00",
+ "state": "normal",
+ "money": true,
+ "lead": "orders",
+ "header": {
+  "greeting": "Good afternoon, Huda",
+  "date": "Thu 15 Oct",
+  "updated": "Updated 16:20",
+  "eyebrow": "Good afternoon, Huda · Thu 15 Oct · Updated 16:20",
+  "when": "Thursday · 16:20",
+  "city": "Doha",
+  "summary": [
+   {
+    "muted": false,
+    "text": [
+     "Week so far: 50 orders, ",
+     {
+      "b": "QAR 8,520"
+     },
+     "."
+    ]
+   },
+   {
+    "muted": true,
+    "text": [
+     "Orders up 11%, sales up 20% on the same days last week."
+    ]
+   },
+   {
+    "muted": false,
+    "text": [
+     "2 orders need confirming."
+    ]
+   }
+  ]
+ },
+ "needs": {
+  "items": [
+   {
+    "key": "waiting",
+    "count": 2,
+    "words": [
+     "customers waiting for an answer"
+    ],
+    "detail": [
+     "longest ",
+     {
+      "b": "48 min"
+     }
+    ],
+    "href": "/app/inbox?show=waiting",
+    "rule": "RULE · the customer wrote last and has had no answer for 10 minutes · 2 customers"
+   },
+   {
+    "key": "unconfirmed",
+    "count": 2,
+    "words": [
+     "orders need confirming"
+    ],
+    "detail": [
+     "the oldest for ",
+     {
+      "b": "33 min"
+     }
+    ],
+    "href": "/app/orders?show=unconfirmed",
+    "rule": "RULE · new for over 15 minutes · 2 orders"
+   }
+  ],
+  "empty": "Nothing is waiting."
+ },
+ "kpis": [
+  {
+   "key": "sales",
+   "label": "Sales this week",
+   "value": "8,520",
+   "unit": "QAR",
+   "unit_first": true,
+   "money": true,
+   "href": "/app/orders",
+   "change": {
+    "dir": "up",
+    "text": [
+     "▲ ",
+     {
+      "b": "20%"
+     }
+    ],
+    "said": "up 20%"
+   }
+  },
+  {
+   "key": "orders",
+   "label": "Orders this week",
+   "value": "50",
+   "unit": null,
+   "unit_first": false,
+   "money": false,
+   "href": "/app/orders",
+   "change": {
+    "dir": "up",
+    "text": [
+     "▲ ",
+     {
+      "b": "11%"
+     }
+    ],
+    "said": "up 11%"
+   }
+  },
+  {
+   "key": "owed",
+   "label": "Owed to you",
+   "value": "12,975",
+   "unit": "QAR",
+   "unit_first": true,
+   "money": true,
+   "href": "/app/ledger",
+   "change": {
+    "dir": null,
+    "text": [
+     "Last week ",
+     {
+      "b": "QAR 11,029"
+     }
+    ],
+    "said": null
+   }
+  },
+  {
+   "key": "came_back",
+   "label": "Came back this week",
+   "value": "28",
+   "unit": null,
+   "unit_first": false,
+   "money": false,
+   "href": "/app/orders",
+   "change": {
+    "dir": null,
+    "text": [
+     "Last week ",
+     {
+      "b": "17"
+     }
+    ],
+    "said": null
+   }
+  }
+ ],
+ "kpi_caption": "Against Sunday to 16:20 last week",
+ "placeholders": [],
+ "suggestions": [
+  {
+   "key": "overdue",
+   "kind": "money",
+   "primary": true,
+   "title": [
+    {
+     "b": "QAR 3,400"
+    },
+    " owed 30+ days, not reminded in 7 days"
+   ],
+   "line": [
+    "Owed by 3 customers. The oldest is ",
+    {
+     "b": "Ward Events"
+    },
+    ", 104 days."
+   ],
+   "rule": "RULE · owed 30+ days, no promise, no reminder in 7 days · 3 customers",
+   "rows": [
+    {
+     "id": "0b12868a-60fb-47cf-b3ef-f555f5600fa7",
+     "label": "Ward Events"
+    },
+    {
+     "id": "c7acd4f5-8a1b-40a5-98ee-c9dcbd97ed0f",
+     "label": "Bluefin Events"
+    },
+    {
+     "id": "f54be122-2775-40b8-8e2e-da47f7777ecd",
+     "label": "Marina Desk Co-working"
+    }
+   ],
+   "more": 0,
+   "action": {
+    "label": "Send reminders",
+    "href": "/app/ledger?show=overdue"
+   },
+   "status": null,
+   "snooze": null
+  },
+  {
+   "key": "ready",
+   "kind": "knowledge",
+   "primary": false,
+   "title": [
+    "2 orders ready for over 2 hours"
+   ],
+   "line": [
+    {
+     "b": "#1436"
+    },
+    " for ",
+    {
+     "b": "Aisha I."
+    },
+    " has waited longest, ",
+    {
+     "b": "3 h"
+    },
+    "."
+   ],
+   "rule": "RULE · ready, not collected 2 hours later · 2 orders",
+   "rows": [
+    {
+     "id": "4420615b-3ca4-4bba-b7cf-2c0add7bf7b6",
+     "label": "Aisha I."
+    },
+    {
+     "id": "b0dfd0a1-3533-40e3-88a3-594fd4284396",
+     "label": "Meera V."
+    }
+   ],
+   "more": 0,
+   "action": {
+    "label": "Show the orders",
+    "href": "/app/orders?show=ready"
+   },
+   "status": null,
+   "snooze": {
+    "key": "ready",
+    "fingerprint": "7f4528d596e0f2c8"
+   }
+  },
+  {
+   "key": "quiet_regulars",
+   "kind": "knowledge",
+   "primary": false,
+   "title": [
+    "6 regulars quiet for over 30 days"
+   ],
+   "line": [
+    {
+     "b": "Mona E."
+    },
+    ": 8 times before, the last 35 days ago."
+   ],
+   "rule": "RULE · 3+ orders or visits 31 to 120 days ago, none in the last 30 · 6 regulars",
+   "rows": [
+    {
+     "id": "d9814559-3a9a-4a39-a261-e34a7b6bc3c6",
+     "label": "Mona E."
+    },
+    {
+     "id": "a7d83351-265c-48ea-8879-d955025ff87c",
+     "label": "Tariq Z."
+    },
+    {
+     "id": "8c53765f-4ec0-4954-bf8b-2a6aab74fe57",
+     "label": "Grace L."
+    },
+    {
+     "id": "05e1ddfb-3c37-4b01-98b0-f10e0eabf949",
+     "label": "Lama D."
+    },
+    {
+     "id": "fcbad167-f5a9-4a5f-adf1-65dab6eafff5",
+     "label": "Ahmad J."
+    },
+    {
+     "id": "6edd77d8-66e6-4127-a26b-524ace0d8d87",
+     "label": "Reem W."
+    }
+   ],
+   "more": 0,
+   "action": null,
+   "status": "Information only. Writing to them needs their marketing consent, which ALYR does not collect yet.",
+   "snooze": {
+    "key": "quiet_regulars",
+    "fingerprint": "d2274770efac8222"
+   }
+  }
+ ],
+ "done": {
+  "rows": [
+   {
+    "key": "sent",
+    "value": "183",
+    "label": "messages ALYR sent for you",
+    "href": "/app/inbox"
+   },
+   {
+    "key": "booking_reminders",
+    "value": "7",
+    "label": "booking reminders",
+    "href": "/app/bookings"
+   }
+  ],
+  "empty": "Nothing yet this week."
+ },
+ "week": {
+  "title": "By day",
+  "format": "money",
+  "max": 293300,
+  "days": [
+   {
+    "date": "2026-10-11",
+    "label": "Sun",
+    "state": "past",
+    "value": 171000,
+    "value_text": "QAR 1,710",
+    "last": 180300,
+    "last_text": "QAR 1,803",
+    "last_by_now": null,
+    "last_by_now_text": null,
+    "booked": null,
+    "booked_text": null
+   },
+   {
+    "date": "2026-10-12",
+    "label": "Mon",
+    "state": "past",
+    "value": 240000,
+    "value_text": "QAR 2,400",
+    "last": 192200,
+    "last_text": "QAR 1,922",
+    "last_by_now": null,
+    "last_by_now_text": null,
+    "booked": null,
+    "booked_text": null
+   },
+   {
+    "date": "2026-10-13",
+    "label": "Tue",
+    "state": "past",
+    "value": 201700,
+    "value_text": "QAR 2,017",
+    "last": 91700,
+    "last_text": "QAR 917",
+    "last_by_now": null,
+    "last_by_now_text": null,
+    "booked": null,
+    "booked_text": null
+   },
+   {
+    "date": "2026-10-14",
+    "label": "Wed",
+    "state": "past",
+    "value": 129100,
+    "value_text": "QAR 1,291",
+    "last": 118800,
+    "last_text": "QAR 1,188",
+    "last_by_now": null,
+    "last_by_now_text": null,
+    "booked": null,
+    "booked_text": null
+   },
+   {
+    "date": "2026-10-15",
+    "label": "Thu",
+    "state": "today",
+    "value": 110200,
+    "value_text": "QAR 1,102",
+    "last": 293300,
+    "last_text": "QAR 2,933",
+    "last_by_now": 129900,
+    "last_by_now_text": "QAR 1,299",
+    "booked": null,
+    "booked_text": null
+   },
+   {
+    "date": "2026-10-16",
+    "label": "Fri",
+    "state": "ahead",
+    "value": null,
+    "value_text": null,
+    "last": 43400,
+    "last_text": "QAR 434",
+    "last_by_now": null,
+    "last_by_now_text": null,
+    "booked": null,
+    "booked_text": null
+   },
+   {
+    "date": "2026-10-17",
+    "label": "Sat",
+    "state": "ahead",
+    "value": null,
+    "value_text": null,
+    "last": 135800,
+    "last_text": "QAR 1,358",
+    "last_by_now": null,
+    "last_by_now_text": null,
+    "booked": null,
+    "booked_text": null
+   }
+  ],
+  "legend": {
+   "last": "Same day last week",
+   "by_now": "Last week by this time",
+   "closed": "Closed",
+   "booked": "Booked"
+  }
+ },
+ "hours": {
+  "title": "Busiest hours, 28 days",
+  "hours": [
+   "06",
+   "07",
+   "08",
+   "09",
+   "10",
+   "11",
+   "12",
+   "13",
+   "14",
+   "15",
+   "16",
+   "17",
+   "18",
+   "19",
+   "20",
+   "21"
+  ],
+  "rows": [
+   {
+    "label": "Sun",
+    "cells": [
+     -1,
+     0,
+     3,
+     1,
+     1,
+     1,
+     0,
+     1,
+     0,
+     1,
+     1,
+     1,
+     2,
+     1,
+     0,
+     2
+    ]
+   },
+   {
+    "label": "Mon",
+    "cells": [
+     -1,
+     1,
+     4,
+     1,
+     1,
+     2,
+     1,
+     1,
+     0,
+     1,
+     1,
+     1,
+     1,
+     1,
+     1,
+     1
+    ]
+   },
+   {
+    "label": "Tue",
+    "cells": [
+     -1,
+     1,
+     1,
+     2,
+     1,
+     1,
+     0,
+     1,
+     0,
+     1,
+     1,
+     1,
+     1,
+     1,
+     1,
+     1
+    ]
+   },
+   {
+    "label": "Wed",
+    "cells": [
+     -1,
+     0,
+     1,
+     1,
+     1,
+     1,
+     2,
+     1,
+     0,
+     1,
+     1,
+     2,
+     2,
+     0,
+     1,
+     1
+    ]
+   },
+   {
+    "label": "Thu",
+    "cells": [
+     -1,
+     1,
+     2,
+     2,
+     1,
+     1,
+     1,
+     1,
+     0,
+     1,
+     1,
+     1,
+     2,
+     2,
+     1,
+     0
+    ]
+   },
+   {
+    "label": "Fri",
+    "cells": [
+     -1,
+     -1,
+     -1,
+     -1,
+     -1,
+     -1,
+     -1,
+     -1,
+     0,
+     0,
+     1,
+     1,
+     1,
+     1,
+     2,
+     1
+    ]
+   },
+   {
+    "label": "Sat",
+    "cells": [
+     -1,
+     1,
+     1,
+     2,
+     1,
+     1,
+     1,
+     1,
+     0,
+     1,
+     1,
+     1,
+     2,
+     0,
+     1,
+     1
+    ]
+   }
+  ],
+  "top": {
+   "day": "Mondays",
+   "range": "08:00–09:00"
+  },
+  "top3": [
+   {
+    "day": "Mondays",
+    "range": "08:00–09:00"
+   },
+   {
+    "day": "Sundays",
+    "range": "08:00–09:00"
+   },
+   {
+    "day": "Sundays",
+    "range": "21:00–22:00"
+   }
+  ]
+ },
+ "top": {
+  "title": "Top items, 28 days",
+  "change_label": "Rank vs previous 28 days",
+  "rows": [
+   {
+    "name": "Za'atar croissant",
+    "value": 168,
+    "value_text": "168",
+    "share": 1.0,
+    "change": {
+     "dir": "up",
+     "text": "▲ 5",
+     "said": "up 5"
+    }
+   },
+   {
+    "name": "Butter croissant",
+    "value": 167,
+    "value_text": "167",
+    "share": 0.994,
+    "change": {
+     "dir": "down",
+     "text": "▼ 1",
+     "said": "down 1"
+    }
+   },
+   {
+    "name": "Cardamom bun",
+    "value": 167,
+    "value_text": "167",
+    "share": 0.994,
+    "change": {
+     "dir": "up",
+     "text": "▲ 2",
+     "said": "up 2"
+    }
+   },
+   {
+    "name": "Cinnamon roll",
+    "value": 141,
+    "value_text": "141",
+    "share": 0.839,
+    "change": {
+     "dir": "level",
+     "text": "—",
+     "said": "same"
+    }
+   },
+   {
+    "name": "Date and tahini loaf",
+    "value": 128,
+    "value_text": "128",
+    "share": 0.762,
+    "change": {
+     "dir": "down",
+     "text": "▼ 2",
+     "said": "down 2"
+    }
+   }
+  ]
+ },
+ "owed": {
+  "title": "Owed to you",
+  "total": {
+   "value": "12,975",
+   "unit": "QAR",
+   "unit_first": true
+  },
+  "total_text": "QAR 12,975",
+  "customers": "5 customers",
+  "change": [
+   {
+    "b": "QAR 1,946"
+   },
+   " more than a week ago"
+  ],
+  "segments": [
+   {
+    "key": "d0_30",
+    "label": "0–30 days",
+    "amount_text": "QAR 6,678",
+    "share": 0.515
+   },
+   {
+    "key": "d31_60",
+    "label": "31–60",
+    "amount_text": "QAR 3,407",
+    "share": 0.263
+   },
+   {
+    "key": "d61_90",
+    "label": "61–90",
+    "amount_text": "QAR 1,640",
+    "share": 0.126
+   },
+   {
+    "key": "d90_plus",
+    "label": "Over 90 days",
+    "amount_text": "QAR 1,250",
+    "share": 0.096
+   }
+  ],
+  "oldest": [
+   "Oldest: ",
+   {
+    "b": "Ward Events"
+   },
+   ", 104 days, ",
+   {
+    "b": "QAR 1,250"
+   },
+   "."
+  ],
+  "empty": "Nobody owes you anything."
+ },
+ "team": {
+  "rows": [
+   {
+    "name": "Huda Rahim",
+    "replies": 2,
+    "first_answer": "12 min",
+    "open": 1,
+    "waiting": 1,
+    "line": "2 replies · first answer 12 min · 1 open · 1 waiting"
+   },
+   {
+    "name": "Karim Nasr",
+    "replies": 8,
+    "first_answer": "10 min",
+    "open": 2,
+    "waiting": 1,
+    "line": "8 replies · first answer 10 min · 2 open · 1 waiting"
+   },
+   {
+    "name": "Yusuf Amin",
+    "replies": 14,
+    "first_answer": "7 min",
+    "open": 2,
+    "waiting": 0,
+    "line": "14 replies · first answer 7 min · 2 open · 0 waiting"
+   }
+  ],
+  "unassigned": null,
+  "everyone": true
+ },
+ "report": [
+  "Your report goes to 1 number on Sunday at ",
+  {
+   "b": "9:00"
+  },
+  "."
+ ],
+ "comparisons_from": null
+}

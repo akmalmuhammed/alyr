@@ -1,0 +1,12 @@
+# Every change is reviewed by the founder. Paths that can hurt customers or the company
+# are listed so they stand out in a pull request (ALY-114).
+*                                   @akmalmuhammed
+/apps/api/migrations/               @akmalmuhammed
+/apps/api/src/alyr/core/auth.py     @akmalmuhammed
+/apps/api/src/alyr/core/outbound.py @akmalmuhammed
+/apps/api/src/alyr/routes/admin.py  @akmalmuhammed
+/apps/api/src/alyr/routes/pay.py    @akmalmuhammed
+/.github/                           @akmalmuhammed
+/docs/decisions.md                  @akmalmuhammed
+/docs/data-residency.md             @akmalmuhammed
+/CLAUDE.md                          @akmalmuhammed

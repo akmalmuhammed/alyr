@@ -2,6 +2,15 @@
 
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useRef, useState } from "react";
+import { fmtQtyUnit, lineUnit } from "../_customer/qty";
+import { formatPrice } from "../_customer/price";
+import { OrderMargin, useOrderMargins } from "./Margin";
+import { OrderSum } from "./OrderSum";
+import { FulfilDetails, FulfilFilters, FulfilPill, matchesFilter, type FulfilFilter } from "./OrderFulfil";
+import type { Fulfilment } from "../_customer/fulfil";
+import { DELIVERY } from "./deliveryCopy";
+import { PRICING } from "./pricingCopy";
+import "./pricing.css";
 
 type Choice = { id: string; title: string };
 type Message = {
@@ -18,6 +27,7 @@ type Customer = {
   id: string; name: string; phone: string | null; balance: number; balance_text: string;
   oldest_days: number; buckets: Buckets; over_limit: boolean; promised_until: string | null;
   opted_out: boolean; assigned: Person | null;
+  last_reminded_at?: string | null; promise_passed?: boolean;
 };
 type Person = { id: string; name: string };
 type Activity = {
@@ -34,11 +44,28 @@ type BookingRow = {
   id: string; number: number; service: string; when_text: string; status: string;
   customer: string; note: string; starts_at: string; assigned: Person | null;
 };
-type OrderRow = {
-  id: string; number: number; status: string; payment: string; total_text: string;
-  customer: string; items: { name: string; quantity: number; line_text: string }[];
-  assigned: Person | null;
+// What an order was given off (ALY-150): only on an order that had a discount, so an order
+// without one has none of these keys and is drawn exactly as before.
+type OrderDiscount = {
+  kind: "coupon" | "auto"; code: string; name: string; name_ar: string; text: string; text_ar: string;
+  amount: number; amount_text: string; returned: boolean;
 };
+type OrderRow = {
+  id: string; number: number; status: string; payment: string; total: number; total_text: string;
+  subtotal?: number; discount_total?: number; discounts?: OrderDiscount[];
+  // How it reaches the customer (ALY-150 part 2): only on an order made while Delivery and pickup was on.
+  fulfilment?: Fulfilment;
+  customer: string; items: { name: string; quantity: number; unit?: string; unit_shown?: boolean; line_text: string; sku?: string; discount?: number }[];
+  assigned: Person | null;
+  // The table the order is for, from a QR code on a table ("" for none).
+  table?: string;
+  // The price group the order was charged under, as named then (null for orders before groups).
+  price_group?: { name: string; name_ar: string; is_default: boolean } | null;
+  // The receipt or invoice the order made, for a shop with Documents on (ALY-146).
+  document?: DocumentRef;
+};
+type DocumentRef = { id: string; kind: string; number: string; status: string };
+type PriceGroupOption = { id: string; name: string; name_ar: string; is_default: boolean };
 type InboxRow = {
   id: string; name: string; phone: string | null; username: string | null;
   status: "open" | "closed"; assistant_paused: boolean; opted_out: boolean;
@@ -49,13 +76,14 @@ type InboxRow = {
 type InboxMessage = Message & { id: string; sent_by: string };
 type StaffNote = { id: string; body: string; author_name: string; created_at: string };
 type Thread = {
-  customer: Omit<InboxRow, "unread" | "last">; messages: InboxMessage[]; notes: StaffNote[];
+  customer: Omit<InboxRow, "unread" | "last"> & { price_group_id?: string | null };
+  messages: InboxMessage[]; notes: StaffNote[];
   activity: Activity[];
 };
 type SavedReply = { id: string; title: string; body: string };
 type Me = { signed_in: boolean; id: string | null; name: string; email: string; role: string };
 type Member = { id: string; name: string; email: string; role: string };
-type Entry = { kind: string; amount_text: string; note: string; created_at: string };
+type Entry = { kind: string; amount_text: string; note: string; created_at: string; document?: DocumentRef };
 // `key` is what the simulator addresses the phone by: its number, or its WhatsApp user ID
 // when the customer uses a username and shows no number.
 type Persona = {
@@ -76,13 +104,14 @@ const T = {
     promised: (d: string) => `Promised by ${d}`, overLimit: "Over credit limit", optedOut: "Said stop", customer: "Customer", balance: "Balance", age: "Oldest debt",
     days: (n: number) => `${n} days`, settled: "Settled", entries: "Entries",
     buckets: ["0–30 days", "31–60 days", "61–90 days", "Over 90 days"],
-    kinds: { sale: "Credit sale", payment: "Payment", adjustment: "Adjustment" } as Record<string, string>,
+    kinds: { sale: "Credit sale", payment: "Payment", adjustment: "Adjustment", reversal: "Sale cancelled" } as Record<string, string>,
     lang: "العربية",
     tabTeam: "Team", teamSub: "Who can sign in to this workspace",
     roles: { owner: "Owner", admin: "Admin", agent: "Agent" } as Record<string, string>,
     addMember: "Add", remove: "Remove", name: "Name", email: "Email", role: "Role",
     teamAgent: "Only an owner or admin can change the team.",
     everyone: "Everyone", mine: "Mine", unassigned: "Unassigned", assignedTo: "Handled by", nobody: "Nobody",
+    priceGroup: "Price group",
     noteMode: "Note", noteHere: "Write a note only your team can see", addNote: "Add note",
     noteLabel: "Staff note, not sent to the customer", saveReply: "Save as quick reply", quick: "Quick replies",
     tabInbox: "Inbox", inboxSub: "Every customer conversation, answered by the assistant or by you",
@@ -98,7 +127,8 @@ const T = {
     when: "When", service: "Service", came: "Came", noShow: "No-show", cancel: "Cancel",
     bk: { booked: "Booked", completed: "Came", cancelled: "Cancelled", no_show: "No-show" } as Record<string, string>,
     tabLedger: "Credit ledger", tabOrders: "Orders", ordersSub: "Placed through the order link",
-    noOrders: "No orders yet. In the chat, tap \"Place an order\" as a customer.",
+    noOrders: "No orders yet. In the chat, tap \"Place an order\" as a customer.", table: (label: string) => `Table ${label}`,
+    docLink: (kind: string, number: string, status: string) => `${({ receipt: "Receipt", invoice: "Invoice", deposit_receipt: "Deposit receipt" } as Record<string, string>)[kind] ?? "Document"} ${number}${status === "void" ? " (cancelled)" : ""}`,
     orderNo: "Order", items: "Items", payment: "Payment", status: "Status",
     pay: { unpaid: "Not paid", paid: "Paid", on_account: "On account" } as Record<string, string>,
     st: { new: "New", confirmed: "Confirmed", ready: "Ready", done: "Done", cancelled: "Cancelled" } as Record<string, string>,
@@ -128,6 +158,8 @@ const T = {
         case "completed": return `${who} marked booking${n}: came`;
         case "no_show": return `${who} marked booking${n}: no-show`;
         case "moved": return `${who} moved booking${n}`;
+        case "price_group": return `${who} changed the price group from ${a.detail.from} to ${a.detail.to}`;
+        case "asked_person": return `${who} needs a person to reply (the chat could not read or help with the message)`;
         default: return `${who}: ${thing} ${a.action}`;
       }
     },
@@ -142,13 +174,14 @@ const T = {
     promised: (d: string) => `وعد بالدفع قبل ${d}`, overLimit: "تجاوز حد الائتمان", optedOut: "طلب الإيقاف", customer: "العميل", balance: "الرصيد", age: "أقدم دين",
     days: (n: number) => `${n} يوم`, settled: "مسدد", entries: "الحركات",
     buckets: ["٠–٣٠ يوم", "٣١–٦٠ يوم", "٦١–٩٠ يوم", "أكثر من ٩٠ يوم"],
-    kinds: { sale: "بيع آجل", payment: "دفعة", adjustment: "تعديل" } as Record<string, string>,
+    kinds: { sale: "بيع آجل", payment: "دفعة", adjustment: "تعديل", reversal: "إلغاء بيع آجل" } as Record<string, string>,
     lang: "English",
     tabTeam: "الفريق", teamSub: "من يستطيع الدخول إلى مساحة العمل",
     roles: { owner: "مالك", admin: "مدير", agent: "موظف" } as Record<string, string>,
     addMember: "إضافة", remove: "إزالة", name: "الاسم", email: "البريد الإلكتروني", role: "الدور",
     teamAgent: "تعديل الفريق متاح للمالك أو المدير فقط.",
     everyone: "الكل", mine: "محادثاتي", unassigned: "غير مسندة", assignedTo: "المسؤول", nobody: "لا أحد",
+    priceGroup: "مجموعة الأسعار",
     noteMode: "ملاحظة", noteHere: "اكتب ملاحظة يراها فريقك فقط", addNote: "إضافة ملاحظة",
     noteLabel: "ملاحظة داخلية، لا تُرسل للعميل", saveReply: "حفظ كرد سريع", quick: "ردود سريعة",
     tabInbox: "المحادثات", inboxSub: "كل محادثات العملاء، يرد عليها المساعد أو أنت",
@@ -164,7 +197,8 @@ const T = {
     when: "الموعد", service: "الخدمة", came: "حضر", noShow: "لم يحضر", cancel: "إلغاء",
     bk: { booked: "محجوز", completed: "حضر", cancelled: "ملغي", no_show: "لم يحضر" } as Record<string, string>,
     tabLedger: "دفتر الديون", tabOrders: "الطلبات", ordersSub: "الطلبات الواردة من رابط الطلب",
-    noOrders: "لا توجد طلبات بعد. في المحادثة اضغط \"اطلب الآن\" كعميل.",
+    noOrders: "لا توجد طلبات بعد. في المحادثة اضغط \"اطلب الآن\" كعميل.", table: (label: string) => `طاولة ${label}`,
+    docLink: (kind: string, number: string, status: string) => `${({ receipt: "إيصال", invoice: "فاتورة", deposit_receipt: "إيصال عربون" } as Record<string, string>)[kind] ?? "مستند"} ${number}${status === "void" ? " (ملغى)" : ""}`,
     orderNo: "الطلب", items: "الأصناف", payment: "الدفع", status: "الحالة",
     pay: { unpaid: "غير مدفوع", paid: "مدفوع", on_account: "على الحساب" } as Record<string, string>,
     st: { new: "جديد", confirmed: "مؤكد", ready: "جاهز", done: "منجز", cancelled: "ملغي" } as Record<string, string>,
@@ -194,6 +228,8 @@ const T = {
         case "completed": return `${who}: العميل حضر${n ? ` (الحجز${n})` : ""}`;
         case "no_show": return `${who}: العميل لم يحضر${n ? ` (الحجز${n})` : ""}`;
         case "moved": return `${who} غيّر موعد الحجز${n}`;
+        case "price_group": return `${who} غيّر مجموعة الأسعار من ${a.detail.from} إلى ${a.detail.to}`;
+        case "asked_person": return `${who} يحتاج رداً من موظف (لم تستطع المحادثة قراءة الرسالة أو مساعدته)`;
         default: return `${who}: ${thing} ${a.action}`;
       }
     },
@@ -260,6 +296,24 @@ function AssignSelect({ value, members, label, nobody, onChange }: {
 
 export type WorkspaceTab = "inbox" | "ledger" | "orders" | "bookings" | "team";
 
+/** The lists ALYR Agent links to (`/app/orders?show=unconfirmed`): exactly the rows its rule
+ * counted, so "Show me" lands on them. */
+export const SHOWS: Record<string, { tab: WorkspaceTab; en: string; ar: string }> = {
+  waiting: { tab: "inbox", en: "Customers waiting for an answer", ar: "عملاء بانتظار الرد" },
+  unconfirmed: { tab: "orders", en: "Orders not confirmed", ar: "طلبات لم تُؤكَّد بعد" },
+  ready: { tab: "orders", en: "Orders ready, not collected", ar: "طلبات جاهزة لم تُستلم" },
+  unpaid: { tab: "orders", en: "Orders with a payment link still open", ar: "طلبات برابط دفع مفتوح" },
+  paid: { tab: "orders", en: "Orders paid by link", ar: "طلبات مدفوعة عبر الرابط" },
+  unmarked: { tab: "bookings", en: "Visits not marked yet", ar: "زيارات لم تُسجَّل بعد" },
+  no_show: { tab: "bookings", en: "No-shows", ar: "حالات الغياب" },
+  repeat_no_show: { tab: "bookings", en: "Booked again after missing twice", ar: "محجوزون بعد غياب مرتين" },
+  overdue: { tab: "ledger", en: "Owed 30+ days, no promise, no reminder in 7 days", ar: "مستحق منذ 30 يوماً أو أكثر دون وعد ودون تذكير خلال 7 أيام" },
+  promised: { tab: "ledger", en: "Promised to pay", ar: "وعدوا بالسداد" },
+  promise_passed: { tab: "ledger", en: "Promised date passed, nothing paid", ar: "مضى موعد الوعد ولم يُدفع شيء" },
+  over_limit: { tab: "ledger", en: "Over their credit limit", ar: "تجاوزوا حد الائتمان" },
+};
+const DAY_MS = 86_400_000;
+
 type ScreensProps = {
   /** Inside the workspace shell: no demo header, no chat simulator, no tab bar. */
   embedded?: boolean;
@@ -268,6 +322,9 @@ type ScreensProps = {
   lang?: "en" | "ar";
   /** Shown under the screen's title, before its own content (the shell's team report). */
   intro?: React.ReactNode;
+  /** A filter from ALYR Agent (`?show=`), and how to clear it. */
+  show?: string | null;
+  onClearShow?: () => void;
 };
 
 /**
@@ -275,7 +332,7 @@ type ScreensProps = {
  * The sales demo at /whatsapp shows them beside the chat simulator; the workspace shell
  * at /app shows one at a time under its own navigation.
  */
-export function Screens({ embedded = false, section, lang: langProp, intro }: ScreensProps = {}) {
+export function Screens({ embedded = false, section, lang: langProp, intro, show = null, onClearShow }: ScreensProps = {}) {
   const router = useRouter();
   const [personas, setPersonas] = useState<Persona[]>([]);
   const [phone, setPhone] = useState("");
@@ -288,6 +345,8 @@ export function Screens({ embedded = false, section, lang: langProp, intro }: Sc
   const tab = section ?? tabState;
   const [me, setMe] = useState<Me | null>(null);
   const [members, setMembers] = useState<Member[]>([]);
+  // The shop's customer price groups (wholesale); empty where the Catalog is not switched on.
+  const [priceGroups, setPriceGroups] = useState<{ groups: PriceGroupOption[]; can_manage: boolean }>({ groups: [], can_manage: false });
   const [canManage, setCanManage] = useState(false);
   const [newMember, setNewMember] = useState({ name: "", email: "", role: "agent" });
   const [teamError, setTeamError] = useState("");
@@ -305,6 +364,9 @@ export function Screens({ embedded = false, section, lang: langProp, intro }: Sc
   const [now, setNow] = useState(0);
   const threadEnd = useRef<HTMLDivElement>(null);
   const [orders, setOrders] = useState<OrderRow[]>([]);
+  const [fulfilFilter, setFulfilFilter] = useState<FulfilFilter>("all");
+  // The estimated margin of each order (ALY-150): only for an owner or admin of a shop that keeps costs.
+  const orderMargins = useOrderMargins(canManage, orders);
   const [bookings, setBookings] = useState<BookingRow[]>([]);
   const [langState, setLang] = useState<"en" | "ar">("en");
   const lang = langProp ?? langState;
@@ -313,6 +375,13 @@ export function Screens({ embedded = false, section, lang: langProp, intro }: Sc
   const [busy, setBusy] = useState(false);
   const bottom = useRef<HTMLDivElement>(null);
   const t = T[lang];
+  const filter = show && SHOWS[show] && SHOWS[show].tab === (section ?? tabState) ? show : null;
+  const filterLine = filter ? (
+    <p className="show-filter" role="status">
+      <span>{SHOWS[filter][lang]}</span>
+      {onClearShow && <button type="button" className="btn small" onClick={onClearShow}>{lang === "ar" ? "اعرض الكل" : "Show all"}</button>}
+    </p>
+  ) : null;
   const persona = personas.find((p) => p.key === phone);
 
   const loadPersonas = useCallback(async () => {
@@ -339,7 +408,11 @@ export function Screens({ embedded = false, section, lang: langProp, intro }: Sc
       setSummary(s);
       setMessages(c.messages);
       setOrders((await maybe<{ orders: OrderRow[] }>("/api/orders", { orders: [] })).orders);
-      setBookings((await maybe<{ bookings: BookingRow[] }>("/api/bookings", { bookings: [] })).bookings);
+      const lookBack = show && SHOWS[show]?.tab === "bookings";
+      const range = lookBack
+        ? `?first=${new Date(Date.now() - 90 * DAY_MS).toISOString().slice(0, 10)}&last=${new Date(Date.now() + 8 * DAY_MS).toISOString().slice(0, 10)}`
+        : "";
+      setBookings((await maybe<{ bookings: BookingRow[] }>(`/api/bookings${range}`, { bookings: [] })).bookings);
       setMe(await getJson<Me>("/api/auth/me"));
       setNow(Date.now());
       {
@@ -360,6 +433,7 @@ export function Screens({ embedded = false, section, lang: langProp, intro }: Sc
       if (tab === "inbox" && chatId) {
         const loaded = await getJson<Thread>(`/api/inbox/conversations/${chatId}`);
         setThread(loaded);
+        setPriceGroups(await maybe("/api/price-groups", { groups: [], can_manage: false }));
         const closes = loaded.customer.window_closes_at;
         setHoursLeft(closes ? Math.floor((new Date(closes).getTime() - Date.now()) / 3_600_000) : 0);
         // Reading a conversation on screen is what marks it read.
@@ -375,7 +449,7 @@ export function Screens({ embedded = false, section, lang: langProp, intro }: Sc
     } catch {
       setError("Cannot reach the Alyr API. Start it on port 8000, then this page recovers by itself.");
     }
-  }, [phone, selected, inboxFilter, assignedFilter, tab, chatId]);
+  }, [phone, selected, inboxFilter, assignedFilter, tab, chatId, show]);
 
   useEffect(() => {
     // The simulator only exists in the demo.
@@ -439,6 +513,16 @@ export function Screens({ embedded = false, section, lang: langProp, intro }: Sc
       method: "POST",
       headers: { "content-type": "application/json" },
       body: body ? JSON.stringify(body) : undefined,
+    });
+    refresh();
+  }
+
+  async function setCustomerGroup(groupId: string) {
+    if (!chatId) return;
+    await getJson(`/api/price-groups/customers/${chatId}`, {
+      method: "PUT",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ group_id: groupId }),
     });
     refresh();
   }
@@ -538,6 +622,42 @@ export function Screens({ embedded = false, section, lang: langProp, intro }: Sc
       : ["كم حسابي؟", "hello", "I want to order", "book a visit", "my booking"];
   const total = summary ? Math.max(summary.outstanding, 1) : 1;
   const upcoming = bookings.filter((b) => b.status === "booked").length;
+  // The rows each ALYR Agent filter counts, with the same rules as the engine's.
+  const missedTwice = new Set(
+    Object.entries(
+      bookings.filter((b) => b.status === "no_show").reduce<Record<string, number>>(
+        (n, b) => ({ ...n, [b.customer]: (n[b.customer] ?? 0) + 1 }), {}),
+    ).filter(([, n]) => n >= 2).map(([name]) => name),
+  );
+  const shownChats = filter === "waiting"
+    ? inboxRows.filter((r) => r.status === "open" && r.last.direction === "in"
+        && now - new Date(r.last.created_at).getTime() > 10 * 60_000)
+    : inboxRows;
+  const shownOrders = orders.filter((o) => {
+    if (!matchesFilter(o, fulfilFilter)) return false;
+    if (filter === "unconfirmed") return o.status === "new";
+    if (filter === "ready") return o.status === "ready";
+    if (filter === "unpaid") return o.payment === "unpaid" && !["cancelled", "done"].includes(o.status);
+    if (filter === "paid") return o.payment === "paid";
+    return true;
+  });
+  const shownBookings = bookings.filter((b) => {
+    const started = new Date(b.starts_at).getTime() < now;
+    if (filter === "unmarked") return b.status === "booked" && started;
+    if (filter === "no_show") return b.status === "no_show";
+    if (filter === "repeat_no_show") return b.status === "booked" && !started && missedTwice.has(b.customer);
+    return true;
+  });
+  const shownCustomers = (summary?.customers ?? []).filter((c) => {
+    if (filter === "overdue") {
+      const reminded = c.last_reminded_at ? new Date(c.last_reminded_at).getTime() : 0;
+      return c.balance > 0 && c.oldest_days >= 30 && !c.promised_until && now - reminded > 7 * DAY_MS;
+    }
+    if (filter === "promised") return Boolean(c.promised_until);
+    if (filter === "promise_passed") return Boolean(c.promise_passed) && c.balance > 0;
+    if (filter === "over_limit") return c.over_limit;
+    return true;
+  });
   const selectedCustomer = summary?.customers.find((c) => c.id === selected);
   const unreadChats = inboxRows.filter((r) => r.unread > 0).length;
   const openThread = thread && thread.customer.id === chatId ? thread : null;
@@ -688,8 +808,9 @@ export function Screens({ embedded = false, section, lang: langProp, intro }: Sc
                     >{label}</button>
                   ))}
                 </div>
-                {inboxRows.length === 0 && <p className="empty-note">{t.noChats}</p>}
-                {inboxRows.map((r) => (
+                {filterLine}
+                {shownChats.length === 0 && <p className="empty-note">{t.noChats}</p>}
+                {shownChats.map((r) => (
                   <button
                     key={r.id}
                     className={`conv ${r.id === chatId ? "sel" : ""}`}
@@ -735,6 +856,20 @@ export function Screens({ embedded = false, section, lang: langProp, intro }: Sc
                           {members.map((m) => <option key={m.id} value={m.id}>{m.name}</option>)}
                         </select>
                       </label>
+                      {priceGroups.groups.length > 1 && (
+                        <label className="assign">
+                          {t.priceGroup}
+                          <select
+                            value={openThread.customer.price_group_id ?? priceGroups.groups.find((g) => g.is_default)?.id ?? ""}
+                            disabled={!priceGroups.can_manage}
+                            onChange={(e) => setCustomerGroup(e.target.value)}
+                          >
+                            {priceGroups.groups.map((g) => (
+                              <option key={g.id} value={g.id}>{lang === "ar" ? g.name_ar || g.name : g.name}</option>
+                            ))}
+                          </select>
+                        </label>
+                      )}
                       {openThread.customer.assistant_paused && (
                         <button className="btn small" onClick={() => inboxPost("assistant", { paused: false })}>{t.handBack}</button>
                       )}
@@ -883,8 +1018,9 @@ export function Screens({ embedded = false, section, lang: langProp, intro }: Sc
             </>
           )}
 
+          {tab === "bookings" && filterLine}
           {tab === "bookings" && (
-            bookings.length === 0 ? (
+            shownBookings.length === 0 ? (
               <p className="empty-note">{t.noBookings}</p>
             ) : (
               <div className="tablewrap">
@@ -899,7 +1035,7 @@ export function Screens({ embedded = false, section, lang: langProp, intro }: Sc
                     </tr>
                   </thead>
                   <tbody>
-                    {bookings.map((b) => (
+                    {shownBookings.map((b) => (
                       <tr key={b.id} className="norow">
                         <td><b className="num" dir="ltr">{b.when_text}</b><br /><span className="mono">#{b.number}</span></td>
                         <td>{b.service}{b.note && <div className="booking-said" dir="auto">{b.note}</div>}</td>
@@ -930,9 +1066,11 @@ export function Screens({ embedded = false, section, lang: langProp, intro }: Sc
             )
           )}
 
+          {tab === "orders" && filterLine}
+          {tab === "orders" && <FulfilFilters value={fulfilFilter} onChange={setFulfilFilter} lang={lang} show={orders.some((o) => o.fulfilment)} />}
           {tab === "orders" && (
-            orders.length === 0 ? (
-              <p className="empty-note">{t.noOrders}</p>
+            shownOrders.length === 0 ? (
+              <p className="empty-note">{orders.length > 0 && fulfilFilter !== "all" ? DELIVERY[lang].order.none : t.noOrders}</p>
             ) : (
               <div className="tablewrap">
                 <table>
@@ -947,10 +1085,26 @@ export function Screens({ embedded = false, section, lang: langProp, intro }: Sc
                     </tr>
                   </thead>
                   <tbody>
-                    {orders.map((o) => (
+                    {shownOrders.map((o) => (
                       <tr key={o.id} className="norow">
-                        <td><b className="num">#{o.number}</b><br />{o.customer}</td>
-                        <td>{o.items.map((i, k) => <div key={k}>{i.quantity} × {i.name}</div>)}</td>
+                        <td>
+                          <b className="num">#{o.number}</b><br />{o.customer}
+                          {o.price_group && !o.price_group.is_default && (
+                            <><br /><span className="pill none">{lang === "ar" ? o.price_group.name_ar || o.price_group.name : o.price_group.name}</span></>
+                          )}
+                          {o.table && <><br /><span className="pill p1">{t.table(o.table)}</span></>}
+                          {o.document && embedded && canManage && (
+                            <><br /><a className="doc-link" href={`/app/documents?d=${o.document.id}`}>{t.docLink(o.document.kind, o.document.number, o.document.status)}</a></>
+                          )}
+                          {o.fulfilment && <><br /><FulfilPill fulfilment={o.fulfilment} lang={lang} /></>}
+                        </td>
+                        <td>{o.items.map((i, k) => (
+                          <div key={k}><bdi>{fmtQtyUnit(i.quantity, lineUnit(i.quantity, i.unit ?? "piece", Boolean(i.unit_shown)), lang)}</bdi> × {i.name}{i.sku ? <> <small className="mono" dir="ltr">{i.sku}</small></> : null}
+                            {i.discount ? <small className="pr-lineoff">{PRICING[lang].order.lineOff(formatPrice(i.discount, lang))}</small> : null}</div>
+                        ))}
+                          {o.fulfilment && <FulfilDetails fulfilment={o.fulfilment} lang={lang} />}
+                          {o.discount_total || o.fulfilment?.mode === "delivery" ? <OrderSum order={o} lang={lang} /> : null}
+                          {orderMargins && <OrderMargin lang={lang} margin={orderMargins[o.id]} />}</td>
                         <td className="r num" dir="ltr">{o.total_text}</td>
                         <td><span className={`pill ${o.payment === "unpaid" ? "p1" : "p0"}`}>{t.pay[o.payment]}</span></td>
                         <td>
@@ -1006,6 +1160,7 @@ export function Screens({ embedded = false, section, lang: langProp, intro }: Sc
                 {note && <span className="note">{note}</span>}
               </div>
 
+              {filterLine}
               <div className="tablewrap">
                 <table>
                   <thead>
@@ -1016,7 +1171,7 @@ export function Screens({ embedded = false, section, lang: langProp, intro }: Sc
                     </tr>
                   </thead>
                   <tbody>
-                    {summary.customers.map((c) => (
+                    {shownCustomers.map((c) => (
                       <tr key={c.id} className={c.id === selected ? "sel" : ""} onClick={() => setSelected(c.id)}>
                         <td>
                           {c.name}
@@ -1061,9 +1216,14 @@ export function Screens({ embedded = false, section, lang: langProp, intro }: Sc
                         <span className="mono" dir="ltr">
                           {new Date(e.created_at).toLocaleDateString("en-GB", { day: "2-digit", month: "short" })}
                         </span>
-                        <span>{t.kinds[e.kind]}{e.note ? ` · ${e.note}` : ""}</span>
-                        <b className={`num ${e.kind === "payment" ? "minus" : "plus"}`} dir="ltr">
-                          {e.kind === "payment" ? "−" : "+"}{e.amount_text}
+                        <span>
+                          {t.kinds[e.kind]}{e.note ? ` · ${e.note}` : ""}
+                          {e.document && embedded && canManage && (
+                            <> · <a className="doc-link" href={`/app/documents?d=${e.document.id}`}>{t.docLink(e.document.kind, e.document.number, e.document.status)}</a></>
+                          )}
+                        </span>
+                        <b className={`num ${e.kind === "payment" || e.kind === "reversal" ? "minus" : "plus"}`} dir="ltr">
+                          {e.kind === "payment" || e.kind === "reversal" ? "−" : "+"}{e.amount_text}
                         </b>
                       </li>
                     ))}

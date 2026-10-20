@@ -14,6 +14,9 @@ on:
       - "apps/api/src/alyr/worker.py"
       - "apps/api/src/alyr/migrate.py"
       - "apps/api/src/alyr/config.py"
+      - "apps/api/src/alyr/core/storage.py"
+      - "apps/api/src/alyr/modules/documents/render/**"
+      - "apps/web/app/(product)/s/**"
       - "apps/web/Dockerfile"
       - "apps/web/package.json"
       - "apps/web/pnpm-lock.yaml"
@@ -45,6 +48,7 @@ jobs:
           mkdir -p "$RUNNER_TEMP"
           $COMPOSE up -d
           $COMPOSE run --rm migrate python -m alyr.seed
+          $COMPOSE run --rm -T migrate python -m alyr.seed_catalog_demos --allow-non-local
           for _ in $(seq 1 60); do curl -fs http://localhost:18000/health/ready && break; sleep 2; done
           curl -fs http://localhost:18000/health/ready
           for _ in $(seq 1 30); do curl -fs http://localhost:18000/health/worker && break; sleep 2; done
@@ -53,6 +57,28 @@ jobs:
           curl -fs -o "$RUNNER_TEMP/book.json" http://localhost:13000/api/book/al-noor
           grep -q '"shop"' "$RUNNER_TEMP/book.json"
           test "$(curl -s -o "$RUNNER_TEMP/sim.txt" -w '%{http_code}' -X POST http://localhost:18000/sim/reset)" = 404
+
+      - name: The new products in production shape
+        run: |
+          # The order page asks the API from the server while it runs: its link preview
+          # and first page of items must be in the HTML (needs ALYR_API_URL at run time).
+          curl -fs -o "$RUNNER_TEMP/order.html" http://localhost:13000/s/demo-grocery
+          grep -q 'og:image' "$RUNNER_TEMP/order.html"
+          grep -q 'Tomatoes' "$RUNNER_TEMP/order.html"
+          # A product photo, stored by the API and served through the web app.
+          photo="$(grep -oE '/api/media/file/shops/[^"&?]+[.]webp' "$RUNNER_TEMP/order.html" | head -1)"
+          test -n "$photo"
+          curl -fs -o "$RUNNER_TEMP/photo.webp" "http://localhost:13000$photo"
+          # Receipts, invoices and credit notes drawn in both languages inside the image.
+          docker run --rm -e ALYR_ENV=local alyr-api sh -c \
+            'python -m alyr.document_samples /tmp/docs >/dev/null && test "$(ls /tmp/docs/*.pdf | wc -l)" -eq 6'
+          # A cloud deploy with no photo storage must refuse to start, not lose photos.
+          set -a; . ./.env.prod; set +a
+          if docker run --rm --network alyr-prod_default -e ALYR_LINK_SECRET="$ALYR_LINK_SECRET" \
+               -e ALYR_DATABASE_URL="postgresql://alyr_app:${ALYR_APP_DB_PASSWORD}@postgres:5432/alyr" \
+               alyr-api timeout 20 python -m alyr.worker; then
+            echo "the worker started with photos on a wiped disk" >&2; exit 1
+          fi
 
       - name: Back up and restore into an empty database
         run: |

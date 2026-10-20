@@ -1,63 +1,43 @@
-# Alyr
+# ALYR
 
-WhatsApp-native operating tools for small businesses in Qatar.
+WhatsApp-native operating software for small businesses in Qatar and the GCC: bookings, orders,
+payment links, tracking and a team inbox on the shop's own WhatsApp number. One multi-tenant
+core with modules switched on per shop. Company: Alyr Technology (ألير للتكنولوجيا). Proprietary;
+see [LICENSE](LICENSE).
 
-- Master plan: [docs/master-plan.md](docs/master-plan.md)
-- Tasks: Linear project "Alyr Launch" (team Alyrtech)
-- Rules the code must follow: [CLAUDE.md](CLAUDE.md)
-- Core platform spec: [specs/000-core-platform/spec.md](specs/000-core-platform/spec.md)
+**Start here:** [CLAUDE.md](CLAUDE.md) (rules), [docs/README.md](docs/README.md) (every document),
+[docs/status.md](docs/status.md) (where things stand), [docs/hygiene.md](docs/hygiene.md) (how we work).
 
-## Run Demo 1 (the credit ledger in a chat)
+## Run it on your machine
 
-Needs Docker Desktop, Python 3.13 with [uv](https://docs.astral.sh/uv/), and Node 22 with pnpm.
+Needs Docker, [uv](https://docs.astral.sh/uv/) and pnpm.
 
-1. Start PostgreSQL and Redis, from the repo root:
-
-   ```
-   docker compose up -d
-   ```
-
-2. Create the tables and load the demo shop, then start the API:
-
-   ```
-   cd apps/api
-   uv sync
-   uv run python -m alyr.migrate
-   uv run python -m alyr.seed
-   uv run uvicorn alyr.main:app --port 8000
-   ```
-
-3. In a second terminal, start the web app:
-
-   ```
-   cd apps/web
-   pnpm install
-   pnpm dev
-   ```
-
-4. Open http://localhost:3100. The chat simulator is on the left, the shop's workspace on the right.
-
-### The script
-
-1. As **Staff · Yusuf**, send `Ahmed 450 credit`. The sale appears in the ledger.
-2. Switch the phone to **Customer · Ahmed Al-Kuwari** and send `كم حسابي؟`. The balance comes back in Arabic.
-3. Look at the ageing bar and table: who owes what, and for how long.
-4. Press **Send reminders**. Ahmed's chat receives a reminder with a payment link.
-5. Open the link and press **Pay**. The chat confirms and the balance drops to zero.
-6. Press **العربية** to switch the workspace to Arabic.
-7. As Ahmed, tap **Place an order**. Open the link, add items, and choose **Put on my account** or **Pay now**.
-8. In the workspace open the **Orders** tab and move the order along. Ahmed is told at each step.
-
-**Reset demo** (top right) puts everything back.
-
-The shop, its customers and the payment page are stand-ins. No WhatsApp message is sent and no money moves.
-
-## Tests
-
-```
-cd apps/api
-uv run pytest
-uv run ruff check .
+```bash
+docker compose up -d                     # PostgreSQL 16 and Redis 7, on this machine only
+cp apps/api/.env.example apps/api/.env   # ALYR_ENV=local; fill in other values only if you need them
+cd apps/api && uv sync && ALYR_ENV=local uv run python -m alyr.migrate && ALYR_ENV=local uv run python -m alyr.seed
+ALYR_ENV=local uv run uvicorn alyr.main:app --port 8000
+cd ../web && pnpm install && pnpm dev    # http://localhost:3100
 ```
 
-Tests need the Docker PostgreSQL running. They create and use their own `alyr_test` database.
+| Address | What it is |
+|---|---|
+| localhost:3100 | Public site (company homepage) |
+| localhost:3100/whatsapp | Sales demo: chat simulator beside the workspace screens |
+| localhost:3100/app | Workspace (open as the demo shop's owner on a local machine) |
+| localhost:3100/ops | ALYR back office |
+| localhost:8000/docs | API docs (local only) |
+
+On Windows machines where Smart App Control blocks the database driver, run the API and tests
+through `scripts/api-in-docker.sh`. For a live WhatsApp demo on the founder's laptop:
+`scripts/demo.sh up`.
+
+## Before a pull request
+
+```bash
+scripts/check.sh
+```
+
+It runs everything CI runs (lint, tests, types, dependency audits, build) and turns on the
+pre-commit hook that blocks secrets and personal documents. Fill in the PR template honestly.
+Security problems: [SECURITY.md](SECURITY.md).
