@@ -3,6 +3,7 @@
 // (shrinking a photo before it is sent, and sending it with progress).
 
 import { semantic } from "../../_tokens/tokens";
+import { isMeasure, milli, readQty } from "../_customer/qty";
 import type { Copy, Lang } from "./catalogCopy";
 
 export type PhotoState = "ready" | "pending" | "failed" | "missing";
@@ -44,6 +45,8 @@ export type Item = {
   description: string; description_ar: string;
   category: string; status: Status; stock_rule: Rule; available: boolean; unit: string;
   pack_size: number | null; min_order: number; tags: string[]; sort: number; low_stock_at: number | null;
+  /** How it may be ordered (ALY-149): sold by a measure, the step, the smallest order. */
+  quantity?: { measure: boolean; step: number; min: number; fractions: boolean; show_unit: boolean; chips: number[] };
   price: number; price_text: string; sale_price: number | null; sale_price_text: string | null;
   sale_starts_at: string | null; sale_ends_at: string | null; sale_active: boolean;
   current_price: number; current_price_text: string; has_orders: boolean; updated_at: string | null;
@@ -99,6 +102,8 @@ export type ShareBase = { url: string; name: string; name_ar: string; whatsapp: 
 export type Movement = {
   id: string; item_id: string; item: string; item_ar: string; variant_id: string; variant: string;
   variant_ar: string; kind: string; delta: number; balance_after: number; day: string | null;
+  /** The item's unit, so a change of 0.5 can say "kg" (ALY-149). */
+  unit?: string;
   reason: string; order_number: number | null; actor: { id: string | null; name: string }; via: string;
   created_at: string;
 };
@@ -262,6 +267,15 @@ export function toSignedDirhams(text: string): number | null {
   const negative = clean.startsWith("-");
   const value = toDirhams(negative ? clean.slice(1) : clean);
   return value === null ? null : negative ? -value : value;
+}
+
+/** A quantity typed in a field: a whole number or up to three decimals, in either language's
+ *  digits ("12.5", "٠٫٥"), never below zero. Null when it is not one. A counted unit (a piece,
+ *  a box) takes whole numbers only: pass its `unit`. */
+export function toQty(text: string, unit = "kg"): number | null {
+  const q = readQty(text);
+  if (q === null) return null;
+  return !isMeasure(unit) && milli(q) % 1000 !== 0 ? null : q;
 }
 
 export function toInt(text: string): number | null {

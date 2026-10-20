@@ -18,6 +18,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Done, Frame, Glyph, Who } from "../Frame";
 import { formatPrice, type Lang } from "../price";
 import { matches, searchWords } from "../fold";
+import { addQty, fmtQtyUnit, minQty, unitFor } from "../qty";
 import { ApiError, loadItem, loadLive, loadStore, orderAgain } from "./api";
 import { count, keyOf, most, total as totalOf, unitPrice, type Line } from "./cart";
 import { say, T } from "./copy";
@@ -91,7 +92,7 @@ function makeLine(item: Item, variantId: string | null, optionIds: string[], qty
     unit: unitPrice(item, variantId, optionIds),
     name: item.name, name_ar: item.name_ar, variant: variant?.name ?? "", variant_ar: variant?.name_ar ?? "",
     extras: extras.map((o) => ({ name: o.name, name_ar: o.name_ar })), src: photo.state === "ready" ? photo.src : "",
-    code: item.code,
+    code: item.code, unitKey: unitFor(item),
   };
 }
 
@@ -100,7 +101,7 @@ function makeLine(item: Item, variantId: string | null, optionIds: string[], qty
 function toWaLines(lines: Line[], lookup: (id: string) => Item | undefined): WaLine[] {
   return lines.map((l) => ({
     code: l.code ?? lookup(l.itemId)?.code ?? null, qty: l.qty, name: l.name, name_ar: l.name_ar,
-    variant: l.variant, variant_ar: l.variant_ar, extras: l.extras, unit: l.unit,
+    variant: l.variant, variant_ar: l.variant_ar, extras: l.extras, unit: l.unit, unitKey: l.unitKey,
   }));
 }
 
@@ -270,11 +271,11 @@ export default function Order({ slug, token, table, initial, lang: first, focusI
     setCart((old) => {
       const have = old.find((l) => l.key === key);
       const cap = most(item, pick.variantId);
-      if (have) return old.map((l) => (l.key === key ? { ...l, qty: Math.min(cap, l.qty + pick.qty), unit: unitPrice(item, pick.variantId, pick.optionIds) } : l));
+      if (have) return old.map((l) => (l.key === key ? { ...l, qty: minQty(cap, addQty(l.qty, pick.qty)), unit: unitPrice(item, pick.variantId, pick.optionIds) } : l));
       return [...old, makeLine(item, pick.variantId, pick.optionIds, pick.qty)];
     });
     setOpen(null);
-    say_(`${t.inOrder(pick.qty)}: ${say(lang, item.name, item.name_ar)}`);
+    say_(`${t.inOrder(fmtQtyUnit(pick.qty, unitFor(item), lang))}: ${say(lang, item.name, item.name_ar)}`);
   }, [lang, say_, t]);
   const swap = useCallback((key: string, alt: NonNullable<Checked["alternatives"]>[number]) => {
     setCart((old) => {
@@ -290,10 +291,10 @@ export default function Order({ slug, token, table, initial, lang: first, focusI
   }, []);
   const onLimit = useCallback((item: Item) => {
     const cap = most(item);
-    say_(t.atMost(cap));
-  }, [say_, t]);
+    say_(t.atMost(fmtQtyUnit(cap, unitFor(item), lang)));
+  }, [say_, t, lang]);
 
-  const inOrder = useCallback((id: string) => cart.reduce((n, l) => (l.itemId === id ? n + l.qty : n), 0), [cart]);
+  const inOrder = useCallback((id: string) => cart.reduce((n, l) => (l.itemId === id ? addQty(n, l.qty) : n), 0), [cart]);
   const qtyOf = useCallback((id: string, variantId: string | null) => cart.find((l) => l.key === keyOf(id, variantId, []))?.qty ?? 0, [cart]);
 
   // ── the refresh ──

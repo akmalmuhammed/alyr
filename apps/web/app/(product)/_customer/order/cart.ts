@@ -4,6 +4,10 @@
 // the customer was last shown for one; the checkout compares it with the shop's price and a
 // change is shown before payment (`ReviewSheet`).
 
+import {
+  addQty, ceilToStep, cmpQty, isMeasure, isMultiple, lineTotal, MAX_QUANTITY as QTY_MAX, maxQty,
+  milli, minQty, subQty,
+} from "../qty.ts";
 import type { Item } from "./types";
 
 export type Line = {
@@ -23,31 +27,36 @@ export type Line = {
   src: string;
   /** The item's code, for the WhatsApp message (a line saved before codes existed has none). */
   code?: number | null;
+  /** The item's unit, so a measure's quantity says it ("0.5 kg"); a line saved before has none. */
+  unitKey?: string;
 };
 
-export const MAX_QUANTITY = 999;
+export const MAX_QUANTITY = QTY_MAX;
 
 // The pieces the rules read; an `Item` has them all, and the tests pass a few.
 type Rules = Pick<Item, "min_order" | "pack_size" | "unit" | "left"> & Partial<Item>;
 
-/** How far one tap on + moves: a whole pack when the item is sold by the pack (pieces,
- *  kilos or hours in lots). A box or a pack is already the pack, so those count by one. */
-export function step(item: Pick<Item, "pack_size" | "unit">): number {
+/** How far one tap on + moves: the item's step. For a counted unit that is a whole pack when the
+ *  item is sold by the pack (pieces or hours in lots); a box or a pack is already the pack, so
+ *  those count by one. For something sold by weight or volume it is the step the owner chose
+ *  (0.25 kg). The API sends it as `quantity.step`; a page without it reads the older fields. */
+export function step(item: Pick<Item, "pack_size" | "unit"> & Partial<Item>): number {
+  if (item.quantity) return item.quantity.step;
   const pack = item.pack_size ?? 0;
   return pack > 1 && item.unit !== "box" && item.unit !== "pack" ? pack : 1;
 }
 
-/** The least that can be ordered: the smallest order, rounded up to a whole pack. */
-export function smallest(item: Pick<Item, "min_order" | "pack_size" | "unit">): number {
+/** The least that can be ordered: the smallest order, rounded up to a whole step. */
+export function smallest(item: Pick<Item, "min_order" | "pack_size" | "unit"> & Partial<Item>): number {
   const by = step(item);
-  return Math.ceil(Math.max(item.min_order, by) / by) * by;
+  return ceilToStep(maxQty(item.min_order, by), by);
 }
 
 /** The most that can be asked for: what is left when that is small enough to be told. */
 export function most(item: Pick<Item, "left" | "variants">, variantId?: string | null): number {
   const variant = variantId ? item.variants?.find((v) => v.id === variantId) : undefined;
   const left = variant?.left ?? item.left;
-  return left === null || left === undefined ? MAX_QUANTITY : Math.min(left, MAX_QUANTITY);
+  return left === null || left === undefined ? MAX_QUANTITY : minQty(left, MAX_QUANTITY);
 }
 
 /** The quantity after pressing + (dir 1) or - (dir -1). Below the smallest it is removed (0);
@@ -55,11 +64,34 @@ export function most(item: Pick<Item, "left" | "variants">, variantId?: string |
 export function next(item: Rules, qty: number, dir: 1 | -1, variantId?: string | null): number {
   const cap = most({ left: item.left, variants: item.variants ?? [] }, variantId);
   if (dir === 1) {
-    const to = qty === 0 ? smallest(item) : qty + step(item);
-    return to <= cap ? to : qty;
+    const to = qty === 0 ? smallest(item) : addQty(qty, step(item));
+    return cmpQty(to, cap) <= 0 ? to : qty;
   }
-  const to = qty - step(item);
-  return to < smallest(item) ? 0 : to;
+  const to = subQty(qty, step(item));
+  return cmpQty(to, smallest(item)) < 0 ? 0 : to;
+}
+
+export type Problem = {
+  code: "bad" | "not_whole" | "below_minimum" | "off_step" | "not_enough";
+  minimum?: number;
+  step?: number;
+  suggest?: number;
+  left?: number;
+};
+
+/** Why a typed amount cannot be ordered, or `null` when it can. The same rules the API applies
+ *  (`qty.check`), so a customer is told before the checkout is. */
+export function problem(item: Rules, q: number, variantId?: string | null): Problem | null {
+  if (!(q > 0) || cmpQty(q, MAX_QUANTITY) > 0) return { code: "bad" };
+  const by = step(item);
+  if (!isMeasure(item.unit) && milli(q) % 1000 !== 0) return { code: "not_whole" };
+  if (cmpQty(q, item.min_order) < 0) return { code: "below_minimum", minimum: item.min_order };
+  if (item.unit !== "box" && item.unit !== "pack" && !isMultiple(q, by)) {
+    return { code: "off_step", step: by, suggest: ceilToStep(q, by) };
+  }
+  const cap = most({ left: item.left, variants: item.variants ?? [] }, variantId);
+  if (cmpQty(q, cap) > 0) return { code: "not_enough", left: cap };
+  return null;
 }
 
 /** The same item, size and extras are one line, whatever order the extras were picked in. */
@@ -67,12 +99,15 @@ export function keyOf(itemId: string, variantId: string | null, optionIds: strin
   return `${itemId}|${variantId ?? ""}|${[...optionIds].sort().join(",")}`;
 }
 
+/** The order's total in dirhams: each line is its price times its quantity, rounded once. */
 export function total(lines: Pick<Line, "qty" | "unit">[]): number {
-  return lines.reduce((sum, l) => sum + l.qty * l.unit, 0);
+  return lines.reduce((sum, l) => sum + lineTotal(l.unit, l.qty), 0);
 }
 
+/** How many things the bar says are in the order: whole quantities add up as they always did; a
+ *  quantity of 0.5 kg is one thing, not half. */
 export function count(lines: Pick<Line, "qty">[]): number {
-  return lines.reduce((sum, l) => sum + l.qty, 0);
+  return lines.reduce((sum, l) => sum + (milli(l.qty) % 1000 === 0 ? l.qty : 1), 0);
 }
 
 /** The price of one: the size's price (the item's, if it has no sizes) plus each extra. */

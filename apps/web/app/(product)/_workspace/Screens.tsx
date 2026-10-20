@@ -2,6 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useRef, useState } from "react";
+import { fmtQtyUnit, lineUnit } from "../_customer/qty";
 
 type Choice = { id: string; title: string };
 type Message = {
@@ -37,7 +38,7 @@ type BookingRow = {
 };
 type OrderRow = {
   id: string; number: number; status: string; payment: string; total_text: string;
-  customer: string; items: { name: string; quantity: number; line_text: string; sku?: string }[];
+  customer: string; items: { name: string; quantity: number; unit?: string; unit_shown?: boolean; line_text: string; sku?: string }[];
   assigned: Person | null;
   // The table the order is for, from a QR code on a table ("" for none).
   table?: string;
@@ -1067,7 +1068,7 @@ export function Screens({ embedded = false, section, lang: langProp, intro, show
                           {o.table && <><br /><span className="pill p1">{t.table(o.table)}</span></>}
                         </td>
                         <td>{o.items.map((i, k) => (
-                          <div key={k}>{i.quantity} × {i.name}{i.sku ? <> <small className="mono" dir="ltr">{i.sku}</small></> : null}</div>
+                          <div key={k}><bdi>{fmtQtyUnit(i.quantity, lineUnit(i.quantity, i.unit ?? "piece", Boolean(i.unit_shown)), lang)}</bdi> × {i.name}{i.sku ? <> <small className="mono" dir="ltr">{i.sku}</small></> : null}</div>
                         ))}</td>
                         <td className="r num" dir="ltr">{o.total_text}</td>
                         <td><span className={`pill ${o.payment === "unpaid" ? "p1" : "p0"}`}>{t.pay[o.payment]}</span></td>

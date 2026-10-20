@@ -12,8 +12,11 @@ What it understands, in English and Arabic, with Western, Arabic-Indic or Persia
   category. A link to anything else is not read.
 * **A code**: three to five digits, written `214`, `#214`, `code 214`, `item no. 214`,
   «رقم ٢١٤», «كود 214», «منتج رقم 214». Several in one message, each with its quantity:
-  `214 x2, 305`, `#214 ×2 و #305`, `2x 214`, `214 qty 3`, «٢١٤ عدد ٢». A size or colour may
-  follow in brackets: `214 (black M) x2`.
+  `214 x2, 305`, `#214 ×2 و #305`, `2x 214`, `214 qty 3`, «٢١٤ عدد ٢». A quantity may be a
+  decimal for something sold by weight or volume: `214 x0.5`, `214 ×٠٫٥`, `214 x 0,5`, `0.5 x 214`,
+  `214 qty 1.25` (at most three places; a comma is a decimal mark only after `x` or a quantity
+  word and with one or two places after it, so `214 x2,305` is still the list `x2` and `305`).
+  A size or colour may follow in brackets: `214 (black M) x2`.
 * **A SKU**: a token with letters and digits (`OUD-12`, `AB123`), looked up as a SKU only.
 * **A name**: anything else. The caller matches it by name and always asks which one.
 
@@ -31,7 +34,7 @@ from dataclasses import dataclass, field
 from urllib.parse import parse_qs, unquote, urlparse
 
 from alyr.core.normalise import western_digits
-from alyr.modules.items import text
+from alyr.modules.items import qty, text
 
 MAX_REFS = 20
 MAX_NUMBER = 99999
@@ -47,6 +50,15 @@ _AND = re.compile(r"\s+(?:and|plus|مع)\s+|(?:(?<=\s)|^)و(?=\s*#?\d)|\s+و\s+"
 _X_AFTER_NUMBER = re.compile(r"(\d)\s*[x*](?![a-z])")
 _X_BEFORE_NUMBER = re.compile(r"(?<![a-z\d])x\s*(\d)")
 _NUMBER = re.compile(r"^\d{1,5}$")
+# A quantity: whole, or with up to three decimals (a point; the Arabic mark became one in `clean`).
+_QTY = re.compile(r"^\d{1,5}(?:\.\d{1,3})?$")
+_DECIMAL = re.compile(r"^\d{1,3}\.\d{1,3}$")
+# A comma between two numbers is a decimal mark after "x" or a quantity word (with one or two places
+# after it), or before "x" and a code ("0,5 x 214"). Elsewhere it separates items.
+_COMMA_AFTER = re.compile(
+    r"((?:^|[^a-z\d])x|\*|\bqty|\bquantity|عدد|كمية)\s*(\d{1,3}),(\d{1,2})(?!\d)"
+)
+_COMMA_BEFORE = re.compile(r"(?<![\d.,])(\d{1,3}),(\d{1,2})(?=\s*[x*]\s*#?\d)")
 _SKU_SHAPE = re.compile(r"^[^\W_]+(?:[-_/.][^\W_]+)*$")
 
 # Said before a number to say "this is a code" (folded the way `text.fold` writes them).
@@ -82,7 +94,7 @@ class Ref:
 
     kind: str
     value: str
-    quantity: int = 1
+    quantity: "qty.Qty" = 1
     # A size or colour typed in brackets after a code.
     hint: str = ""
     # Written as a code: `#214`, «رقم 214». Not a bare number.
@@ -174,6 +186,8 @@ def parse(message: str) -> Parsed:
         return f"{found.group('code')} \x00{len(hints) - 1}\x00 "
 
     rest = _HINT.sub(keep_hint, rest)
+    rest = _COMMA_AFTER.sub(r"\1 \2.\3", rest)
+    rest = _COMMA_BEFORE.sub(r"\1.\2", rest)
     rest = _AND.sub(" , ", rest)
     rest = _SEPARATORS.sub(" , ", rest)
     rest = _X_AFTER_NUMBER.sub(r"\1 x ", rest)
@@ -181,7 +195,7 @@ def parse(message: str) -> Parsed:
     tokens = [t for t in rest.split() if t]
 
     last: int | None = None  # index in result.refs of the reference just read
-    before: int | None = None  # a quantity written before its code: "2 x 214"
+    before: qty.Qty | None = None  # a quantity written before its code: "2 x 214"
     cue = False
 
     def add(ref: Ref) -> None:
@@ -194,7 +208,7 @@ def parse(message: str) -> Parsed:
         before = None
         cue = False
 
-    def set_quantity(value: int) -> None:
+    def set_quantity(value: "qty.Qty") -> None:
         nonlocal before
         value = min(value, MAX_NUMBER)
         if last is not None and result.refs[last].quantity == 1 and before is None:
@@ -220,18 +234,28 @@ def parse(message: str) -> Parsed:
         elif raw.startswith("\x00"):
             if last is not None:
                 result.refs[last] = result.refs[last].but(hint=hints[int(raw.strip("\x00"))])
-        elif token in ("x", "*") and _NUMBER.match(following):
-            set_quantity(int(following))
+        elif token in ("x", "*") and _QTY.match(following):
+            set_quantity(qty.parse(following, allow_zero=True))
             i += 1
-        elif folded in _QUANTITY_WORDS and _NUMBER.match(following):
-            set_quantity(int(following))
+        elif folded in _QUANTITY_WORDS and _QTY.match(following):
+            set_quantity(qty.parse(following, allow_zero=True))
             i += 1
+        elif _DECIMAL.match(token):
+            # A decimal on its own is a quantity or nothing: "0.5 x 214", "0.5 pcs".
+            if text.fold(following) in _QUANTITY_WORDS:
+                set_quantity(qty.parse(token, allow_zero=True))
+                i += 1
+            elif following == "x" and i + 2 < len(tokens) and _NUMBER.match(
+                tokens[i + 2].lstrip("#")
+            ):
+                before = min(qty.parse(token, allow_zero=True), MAX_NUMBER)
+                i += 1
         elif _NUMBER.match(digits):
             hashed = token.startswith("#")
             if hashed or cue or len(digits) >= 3:
                 add(Ref("code", str(int(digits)), cued=hashed or cue))
             elif text.fold(following) in _QUANTITY_WORDS:
-                set_quantity(int(digits))  # "2 pcs"
+                set_quantity(qty.parse(digits, allow_zero=True))  # "2 pcs"
                 i += 1
             elif following == "x" and i + 2 < len(tokens) and _NUMBER.match(
                 tokens[i + 2].lstrip("#")

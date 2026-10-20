@@ -36,7 +36,7 @@ from alyr.core import team
 from alyr.core.media import MediaService
 from alyr.core.normalise import has_arabic
 from alyr.core.outbound import Outbound
-from alyr.modules.items import availability, cart, chat_cart, codes, match, service, wa_card
+from alyr.modules.items import availability, cart, chat_cart, codes, match, qty, service, wa_card
 from alyr.modules.items import clock as shop_clock
 from alyr.modules.items import groups as price_groups
 from alyr.modules.items.cart import CartLine
@@ -92,7 +92,7 @@ class Want:
     """An item the customer asked for, before it is checked."""
 
     item_id: UUID
-    quantity: int = 1
+    quantity: "qty.Qty" = 1
     variant_id: UUID | None = None
     hint: str = ""
 
@@ -103,7 +103,7 @@ class Row:
 
     item_id: UUID
     variant_id: UUID | None
-    quantity: int
+    quantity: "qty.Qty"
     unit_price: int
     entry: service.Loaded
     variant: dict | None
@@ -116,7 +116,13 @@ class Row:
 
     @property
     def total(self) -> int:
-        return self.unit_price * self.quantity
+        return qty.line_total(self.unit_price, self.quantity)
+
+    def amount(self, lang: str) -> str:
+        """How many, as a message writes it: "2", or "0.5 kg" for something sold in fractions."""
+        item = self.entry.item
+        show = qty.shown(item["unit"], item["pack_size"], item["min_order"])
+        return qty.label(self.quantity, item["unit"], show, lang)
 
 
 @dataclass
@@ -624,9 +630,9 @@ async def _question(ctx: Context, qid: str, rows: list[Row]) -> OutboundMessage:
     if len(rows) == 1:
         row = rows[0]
         extra = []
-        if row.quantity > 1:
+        if row.quantity != 1:
             extra.append(ctx.say(
-                "line_one", qty=row.quantity, price=money(ctx.lang, row.unit_price),
+                "line_one", qty=row.amount(ctx.lang), price=money(ctx.lang, row.unit_price),
                 total=money(ctx.lang, row.total),
             ))
         extra.append(ctx.say("check_ask"))
@@ -638,7 +644,8 @@ async def _question(ctx: Context, qid: str, rows: list[Row]) -> OutboundMessage:
         )
     lines = [ctx.say("check_head")]
     lines += [
-        ctx.say("line_qty", qty=r.quantity, name=r.name(ctx.lang), price=money(ctx.lang, r.total))
+        ctx.say("line_qty", qty=r.amount(ctx.lang), name=r.name(ctx.lang),
+                price=money(ctx.lang, r.total))
         for r in rows
     ]
     lines.append(ctx.say("total", total=money(ctx.lang, sum(r.total for r in rows))))
@@ -743,7 +750,8 @@ async def _draft(
         lines.append(ctx.say("draft_added"))
     lines.append(ctx.say("draft_head"))
     lines += [
-        ctx.say("line_qty", qty=r.quantity, name=r.name(ctx.lang), price=money(ctx.lang, r.total))
+        ctx.say("line_qty", qty=r.amount(ctx.lang), name=r.name(ctx.lang),
+                price=money(ctx.lang, r.total))
         for r in rows
     ]
     lines += problems

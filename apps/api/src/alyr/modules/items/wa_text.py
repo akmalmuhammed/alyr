@@ -89,8 +89,13 @@ WORDS: dict[str, tuple[str, str]] = {
         "ما السعر الجديد؟ مثلاً: سعر {name} 12",
     ),
     "bad_stock_number": (
-        "Send the stock as a whole number, for example: stock {name} 20",
-        "أرسل المخزون كرقم صحيح، مثلاً: مخزون {name} 20",
+        "Send the stock as a number, for example: stock {name} 20 (or 12.5 for an item sold by "
+        "weight or volume)",
+        "أرسل المخزون كرقم، مثلاً: مخزون {name} 20 (أو 12.5 للأصناف التي تُباع بالوزن أو الحجم)",
+    ),
+    "stock_whole_only": (
+        "{name} is counted in whole numbers. Send a whole number, for example: stock {name} 20",
+        "«{name}» يُعدّ بأعداد صحيحة. أرسل عدداً صحيحاً، مثلاً: مخزون {name} 20",
     ),
     "bad_price_number": (
         "I could not read that price. Send it in riyals, for example: price {name} 12.5",

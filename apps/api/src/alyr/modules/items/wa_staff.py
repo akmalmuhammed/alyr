@@ -29,7 +29,7 @@ from alyr.channels.base import Choice, InboundMessage, OutboundMessage
 from alyr.core import jobs
 from alyr.core.normalise import fmt_qar, has_arabic, western_digits
 from alyr.core.team import Actor
-from alyr.modules.items import availability, commands, events, match, service, stock
+from alyr.modules.items import availability, commands, events, match, qty, service, stock
 from alyr.modules.items import clock as shop_clock
 from alyr.modules.items.wa_text import say, shown
 
@@ -215,6 +215,13 @@ async def _pick(
 # ── doing it ─────────────────────────────────────────────────────────────────────────
 
 
+def _unit_label(item: dict, lang: str = "en"):
+    """How a quantity of this item is written in a reply: "12.5 kg" for something sold in
+    fractions, the bare number otherwise."""
+    show = qty.shown(item["unit"], item["pack_size"], item["min_order"])
+    return lambda value: qty.label(value, item["unit"], show, lang)
+
+
 def _refused(contact: asyncpg.Record, lang: str, name: str, error: Exception) -> list:
     """The service said no. Its message is English; Arabic readers get a general line."""
     why = str(error) if lang == "en" else "هذا التغيير غير مسموح. راجع الكتالوج."
@@ -301,9 +308,12 @@ async def _stock(conn, contact, lang, clock, entry, variant, number) -> list[Out
         return [_plain(contact, say("not_counted", lang, name=name), lang)]
     if number is None:
         return [_plain(contact, say("no_number_stock", lang, name=name), lang)]
-    count = commands.whole_number(number)
+    count = commands.quantity(number)
     if count is None:
         return [_plain(contact, say("bad_stock_number", lang, name=name), lang)]
+    if count != int(count) and not qty.is_measure(item["unit"]):
+        return [_plain(contact, say("stock_whole_only", lang, name=name), lang)]
+    unit = _unit_label(item, lang)
     if variant is None:
         active = [v for v in entry.variants if v["active"]]
         if len(active) > 1:
@@ -323,13 +333,13 @@ async def _stock(conn, contact, lang, clock, entry, variant, number) -> list[Out
         conn, clock, item["id"], "counted", count, "Set on WhatsApp", actor, variant["id"]
     )
     if not result["difference"]:
-        return [_plain(contact, say("stock_same", lang, name=label, n=count), lang)]
+        return [_plain(contact, say("stock_same", lang, name=label, n=unit(count)), lang)]
     day = clock.shop_day.isoformat() if item["stock_rule"] == "daily_limit" else None
     change = await _log(conn, contact, "stock", item["id"], {}, {
         "variant_id": str(variant["id"]), "delta": result["difference"], "day": day,
         "before": result["before"], "counted": count,
     })
-    body = say("stock_done", lang, name=label, n=count, before=result["before"])
+    body = say("stock_done", lang, name=label, n=unit(count), before=unit(result["before"]))
     return [_undoable(contact, body, lang, change)]
 
 
@@ -417,8 +427,9 @@ async def _put_back(conn, contact, lang, clock, entry, row, name):
         )
         if balance is None:
             have = await stock.left(conn, variant_id, day)
-            return [_plain(contact, say("undo_short", lang, name=name, n=have), lang)]
-        return say("undone_stock", lang, name=name, n=balance)
+            left = _unit_label(item, lang)(have)
+            return [_plain(contact, say("undo_short", lang, name=name, n=left), lang)]
+        return say("undone_stock", lang, name=name, n=_unit_label(item, lang)(balance))
     if action == "price":
         if item["price"] != after["price"]:
             return None

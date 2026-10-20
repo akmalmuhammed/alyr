@@ -7,9 +7,10 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import {
-  activityText, api, fromDirhams, nameOf, sayError, stamp, toDirhams, toInt, toSignedDirhams, whoIs,
+  activityText, api, fromDirhams, nameOf, sayError, stamp, toDirhams, toInt, toQty, toSignedDirhams, whoIs,
   type ActivityRow, type Access, type Category, type CustomField, type FieldsView, type GroupPriceRow, type Group, type Item, type Photo, type PriceGroup, type PriceRow, type Rule, type Setup, type Status, type Window,
 } from "./catalogApi";
+import { fmtQty, fmtQtyUnit, isMeasure, qtyForApi, sumQty, UNITS as ALL_UNITS, unitOf, unitShort } from "../_customer/qty";
 import { COPY, type Copy, type Lang } from "./catalogCopy";
 import { CatalogPhotos } from "./CatalogPhotos";
 import { CodeBox } from "./CatalogCode";
@@ -49,7 +50,9 @@ const priceKey = (groupId: string, variantId: string | null) => `${groupId}|${va
 
 const STATUSES: Status[] = ["draft", "live", "hidden", "archived"];
 const RULES: Rule[] = ["always", "switch", "count", "daily_limit"];
-const UNITS = ["piece", "kg", "box", "pack", "portion", "hour"];
+const UNITS = ALL_UNITS.map((u) => u.key);
+// The units a shop had before "Sold by weight or volume": always offered. The others need the feature.
+const LEGACY_UNITS = ["piece", "kg", "box", "pack", "portion", "hour"];
 // The feature each way of running out belongs to ("always" needs none): a way whose feature is
 // off is not offered for a new choice, but an item that already runs that way keeps it.
 const RULE_FEATURE: Record<string, string> = { switch: "rule_switch", count: "rule_count", daily_limit: "rule_daily_limit" };
@@ -90,13 +93,13 @@ export function formOf(item: Item): Form {
   return {
     name: item.name, name_ar: item.name_ar, sku: item.sku ?? "", description: item.description, description_ar: item.description_ar,
     category: item.category, price: fromDirhams(item.price || null), sale: fromDirhams(item.sale_price),
-    saleEnds: qatarDay(item.sale_ends_at), unit: item.unit, packSize: item.pack_size ? String(item.pack_size) : "",
-    minOrder: String(item.min_order), status: item.status, rule: item.stock_rule,
-    dailyLimit: only?.daily_limit !== null && only?.daily_limit !== undefined && named.length === 0 ? String(only.daily_limit) : "",
-    lowStock: item.low_stock_at === null || item.low_stock_at === undefined ? "" : String(item.low_stock_at),
+    saleEnds: qatarDay(item.sale_ends_at), unit: item.unit, packSize: item.pack_size ? fmtQty(item.pack_size) : "",
+    minOrder: fmtQty(item.min_order), status: item.status, rule: item.stock_rule,
+    dailyLimit: only?.daily_limit !== null && only?.daily_limit !== undefined && named.length === 0 ? fmtQty(only.daily_limit) : "",
+    lowStock: item.low_stock_at === null || item.low_stock_at === undefined ? "" : fmtQty(item.low_stock_at),
     opening: "", scheduled: item.schedule.length > 0,
     variants: named.map((v) => ({
-      id: v.id, name: v.name, name_ar: v.name_ar, sku: v.sku ?? "", delta: fromDirhams(v.price_delta) || "", limit: v.daily_limit === null ? "" : String(v.daily_limit),
+      id: v.id, name: v.name, name_ar: v.name_ar, sku: v.sku ?? "", delta: fromDirhams(v.price_delta) || "", limit: v.daily_limit === null ? "" : fmtQty(v.daily_limit),
       active: v.active, opening: "", onHand: v.on_hand, custom: strings(v.custom),
     })),
     groups: item.option_groups.map((g: Group) => ({
@@ -109,7 +112,7 @@ export function formOf(item: Item): Form {
   };
 }
 
-type Problems = Partial<Record<"name" | "name_ar" | "price" | "sale" | "variants" | "limit" | "low" | "schedule" | "groups" | "min" | "opening" | "sku" | "groupPrices", string>>;
+type Problems = Partial<Record<"name" | "name_ar" | "price" | "sale" | "variants" | "limit" | "low" | "schedule" | "groups" | "min" | "step" | "opening" | "sku" | "groupPrices", string>>;
 
 /** What the person typed, as the API wants it, or what is wrong with it. */
 function build(form: Form, t: Copy, existing: Item | null, defs: CustomField[] = []): { body?: Record<string, unknown>; problems: Problems } {
@@ -125,8 +128,17 @@ function build(form: Form, t: Copy, existing: Item | null, defs: CustomField[] =
   else if (!unfinished && (price === null || price <= 0)) problems.price = t.errors.bad_price;
   const sale = form.sale.trim() ? toDirhams(form.sale) : null;
   if (form.sale.trim() && (sale === null || sale <= 0 || (price !== null && sale >= price))) problems.sale = t.errors.bad_sale;
-  const minOrder = toInt(form.minOrder);
-  if (minOrder === null || minOrder < 1 || minOrder > 999) problems.min = t.errors.bad_minimum;
+  // A quantity is a whole number, or up to three decimals for something sold by weight or volume.
+  const measure = isMeasure(form.unit);
+  const q = (x: number | null) => (x === null ? null : qtyForApi(x));
+  const minOrder = toQty(form.minOrder, form.unit);
+  if (minOrder === null || minOrder > 999 || (measure ? minOrder <= 0 : minOrder < 1)) {
+    problems.min = measure ? t.errors.bad_amount : t.errors.bad_minimum;
+  }
+  const packSize = form.packSize.trim() ? toQty(form.packSize, form.unit) : null;
+  if (form.packSize.trim() && (packSize === null || packSize <= 0 || packSize > 100000)) {
+    problems.step = measure ? t.errors.bad_amount : t.errors.bad_pack;
+  }
 
   const named = form.variants;
   if (named.length > 1 && named.some((v) => !v.name.trim())) problems.variants = t.errors.variant_name_needed;
@@ -137,11 +149,11 @@ function build(form: Form, t: Copy, existing: Item | null, defs: CustomField[] =
     seen.add(key);
     if (toSignedDirhams(v.delta) === null) problems.variants = t.errors.bad_price;
   }
-  const lowStock = form.lowStock.trim() ? toInt(form.lowStock) : null;
+  const lowStock = form.lowStock.trim() ? toQty(form.lowStock, form.unit) : null;
   if (form.lowStock.trim() && (lowStock === null || lowStock < 0 || lowStock > 100000)) problems.low = t.errors.bad_low_stock;
   if (form.rule === "daily_limit") {
     const need = named.length ? named.filter((v) => v.active) : [{ limit: form.dailyLimit }];
-    if (need.some((v) => toInt(v.limit) === null || (toInt(v.limit) ?? 0) < 0)) problems.limit = t.errors.limit_needed;
+    if (need.some((v) => toQty(v.limit, form.unit) === null)) problems.limit = t.errors.limit_needed;
   }
   for (const g of form.groups) {
     if (!g.name.trim()) problems.groups = t.errors.group_name_needed;
@@ -157,7 +169,7 @@ function build(form: Form, t: Copy, existing: Item | null, defs: CustomField[] =
       }
     }
   }
-  if (!form.opening.trim() || toInt(form.opening) !== null) { /* ok */ } else problems.opening = t.errors.bad_quantity;
+  if (!form.opening.trim() || toQty(form.opening, form.unit) !== null) { /* ok */ } else problems.opening = t.errors.bad_quantity;
   if (form.sku.trim().length > 40 || form.variants.some((v) => v.sku.trim().length > 40)) problems.sku = t.errors.bad_sku;
   // What each group pays: a changed price is sent, an emptied one removes the group's price.
   const groupRows: { group_id: string; variant_id: string | null; price: number | null }[] = [];
@@ -187,10 +199,10 @@ function build(form: Form, t: Copy, existing: Item | null, defs: CustomField[] =
     sale_price: sale,
     sale_ends_at: sale !== null && form.saleEnds ? `${form.saleEnds}T23:59:59+03:00` : null,
     unit: form.unit,
-    pack_size: toInt(form.packSize),
-    min_order: minOrder,
+    pack_size: q(packSize),
+    min_order: q(minOrder),
     // Empty clears the item's own number, so the shop's applies again.
-    low_stock_at: lowStock,
+    low_stock_at: q(lowStock),
     tags: form.tags,
     stock_rule: form.rule,
     status: form.status,
@@ -232,13 +244,13 @@ function build(form: Form, t: Copy, existing: Item | null, defs: CustomField[] =
     body.variants = named.map((v) => ({
       ...(v.id ? { id: v.id } : {}), name: v.name.trim(), name_ar: v.name_ar.trim(), sku: v.sku.trim(),
       price_delta: toSignedDirhams(v.delta) ?? 0,
-      daily_limit: form.rule === "daily_limit" ? toInt(v.limit) : null, active: v.active,
-      ...(!v.id && form.rule === "count" && toInt(v.opening) ? { opening_stock: toInt(v.opening) } : {}),
+      daily_limit: form.rule === "daily_limit" ? q(toQty(v.limit, form.unit)) : null, active: v.active,
+      ...(!v.id && form.rule === "count" && toQty(v.opening, form.unit) ? { opening_stock: q(toQty(v.opening, form.unit)) } : {}),
       ...((c) => (Object.keys(c).length ? { custom: c } : {}))(mine(v.custom, existing?.variants.find((x) => x.id === v.id)?.custom, "variant")),
     }));
   } else {
-    if (form.rule === "daily_limit") body.daily_limit = toInt(form.dailyLimit);
-    if (!existing && form.rule === "count" && toInt(form.opening)) body.opening_stock = toInt(form.opening);
+    if (form.rule === "daily_limit") body.daily_limit = q(toQty(form.dailyLimit, form.unit));
+    if (!existing && form.rule === "count" && toQty(form.opening, form.unit)) body.opening_stock = q(toQty(form.opening, form.unit));
   }
   return { body, problems };
 }
@@ -307,6 +319,21 @@ export function CatalogEdit({ lang, itemId, initial, categories, access, setup, 
   const feats = setup?.features;
   const allowed = (key: string, used = false) => !feats || feats[key] === true || used;
 
+  // Choosing a measure when "Sold by weight or volume" is on starts the item at the unit's usual step
+  // (a quarter kilo) if the owner has not set one; counted units go back to whole numbers.
+  const changeUnit = (unit: string) => {
+    const next: Partial<Form> = { unit };
+    if (isMeasure(unit) && allowed("decimal_quantity") && form.packSize.trim() === "" && form.minOrder === "1") {
+      next.packSize = fmtQty(unitOf(unit)?.step ?? 1);
+      next.minOrder = fmtQty(unitOf(unit)?.step ?? 1);
+    }
+    if (!isMeasure(unit) && isMeasure(form.unit)) {
+      if (form.packSize.trim() !== "" && Number(form.packSize) < 1) next.packSize = "";
+      if (Number(form.minOrder) < 1) next.minOrder = "1";
+    }
+    set(next);
+  };
+
   const dirty = useMemo(() => JSON.stringify(form) !== start, [form, start]);
   const set = (patch: Partial<Form>) => setForm((f) => ({ ...f, ...patch }));
   const photoLabel = nameOf(form, lang) || t.untitled;
@@ -343,8 +370,8 @@ export function CatalogEdit({ lang, itemId, initial, categories, access, setup, 
         }
         // An item counted in stock starts from the number typed.
       }
-      if (itemId && form.rule === "count" && toInt(form.opening) && form.variants.length === 0) {
-        await api(`/api/items/${itemId}/stock`, "POST", { kind: "opening", quantity: toInt(form.opening), reason: "Opening count" }).catch(() => undefined);
+      if (itemId && form.rule === "count" && toQty(form.opening, form.unit) && form.variants.length === 0) {
+        await api(`/api/items/${itemId}/stock`, "POST", { kind: "opening", quantity: qtyForApi(toQty(form.opening, form.unit) as number), reason: "Opening count" }).catch(() => undefined);
       }
       push(itemId ? t.toastSaved : t.toastAdded);
       const dup = saved.warnings?.[0];
@@ -427,10 +454,10 @@ export function CatalogEdit({ lang, itemId, initial, categories, access, setup, 
             <input value={v.delta} inputMode="decimal" dir="ltr" onChange={(e) => patch({ delta: e.target.value })} />
           </Field>
           {form.rule === "count" && (v.id
-            ? <div className="ct-field"><span className="ct-label">{t.stockNow}</span><p className="ct-static num" dir="ltr">{v.onHand ?? 0}</p></div>
-            : <Field label={t.openingStock}><input value={v.opening} inputMode="numeric" dir="ltr" onChange={(e) => patch({ opening: e.target.value })} /></Field>)}
+            ? <div className="ct-field"><span className="ct-label">{t.stockNow}</span><p className="ct-static num" dir="auto">{fmtQtyUnit(v.onHand ?? 0, form.unit, lang)}</p></div>
+            : <Field label={t.openingStock}><input value={v.opening} inputMode={isMeasure(form.unit) ? "decimal" : "numeric"} dir="ltr" onChange={(e) => patch({ opening: e.target.value })} /></Field>)}
           {form.rule === "daily_limit" && (
-            <Field label={t.dailyLimit}><input value={v.limit} inputMode="numeric" dir="ltr" onChange={(e) => patch({ limit: e.target.value })} /></Field>
+            <Field label={t.dailyLimit}><input value={v.limit} inputMode={isMeasure(form.unit) ? "decimal" : "numeric"} dir="ltr" onChange={(e) => patch({ limit: e.target.value })} /></Field>
           )}
         </div>
         <div className="ct-row-between">
@@ -660,18 +687,27 @@ export function CatalogEdit({ lang, itemId, initial, categories, access, setup, 
           )}
           <div className="ct-grid2">
             <Field label={t.unit}>
-              <select value={form.unit} onChange={(e) => set({ unit: e.target.value })}>
-                {UNITS.map((u) => <option key={u} value={u}>{t.units[u]}</option>)}
+              <select value={form.unit} onChange={(e) => changeUnit(e.target.value)}>
+                {UNITS.filter((u) => LEGACY_UNITS.includes(u) || allowed("decimal_quantity", form.unit === u)).map((u) => (
+                  <option key={u} value={u}>{t.units[u]}</option>
+                ))}
               </select>
             </Field>
-            {allowed("pack_rules", form.minOrder !== "1") && (
-              <Field label={t.minOrder} error={problems.min}>
-                <input value={form.minOrder} inputMode="numeric" dir="ltr" onChange={(e) => set({ minOrder: e.target.value })} />
+            {(isMeasure(form.unit)
+              ? allowed("decimal_quantity", form.minOrder !== "1") || allowed("pack_rules", form.minOrder !== "1")
+              : allowed("pack_rules", form.minOrder !== "1")) && (
+              <Field label={t.minOrder} hint={isMeasure(form.unit) ? t.minOrderMeasureHint : undefined} error={problems.min}>
+                <input value={form.minOrder} inputMode={isMeasure(form.unit) ? "decimal" : "numeric"} dir="ltr" onChange={(e) => set({ minOrder: e.target.value })} />
               </Field>
             )}
           </div>
-          {form.unit === "pack" && allowed("pack_rules", form.packSize !== "") && (
-            <Field label={t.packSize}><input value={form.packSize} inputMode="numeric" dir="ltr" onChange={(e) => set({ packSize: e.target.value })} /></Field>
+          {isMeasure(form.unit) && (allowed("decimal_quantity", form.packSize !== "") || allowed("pack_rules", form.packSize !== "")) && (
+            <Field label={t.stepLabel} hint={t.stepHint(unitShort(form.unit, lang))} error={problems.step}>
+              <input value={form.packSize} inputMode="decimal" dir="ltr" onChange={(e) => set({ packSize: e.target.value })} />
+            </Field>
+          )}
+          {!isMeasure(form.unit) && form.unit === "pack" && allowed("pack_rules", form.packSize !== "") && (
+            <Field label={t.packSize} error={problems.step}><input value={form.packSize} inputMode="numeric" dir="ltr" onChange={(e) => set({ packSize: e.target.value })} /></Field>
           )}
         </section>
 
@@ -720,18 +756,18 @@ export function CatalogEdit({ lang, itemId, initial, categories, access, setup, 
           </fieldset>
           {form.rule === "daily_limit" && form.variants.length === 0 && (
             <Field label={t.dailyLimit} error={problems.limit}>
-              <input value={form.dailyLimit} inputMode="numeric" dir="ltr" onChange={(e) => set({ dailyLimit: e.target.value })} />
+              <input value={form.dailyLimit} inputMode={isMeasure(form.unit) ? "decimal" : "numeric"} dir="ltr" onChange={(e) => set({ dailyLimit: e.target.value })} />
             </Field>
           )}
           {form.rule === "count" && form.variants.length === 0 && (
             !itemId || (item && item.variants.every((v) => v.on_hand === 0))
-              ? <Field label={t.openingStock} error={problems.opening}><input value={form.opening} inputMode="numeric" dir="ltr" onChange={(e) => set({ opening: e.target.value })} /></Field>
-              : <p className="ct-hint">{t.inStock(item?.variants.reduce((n, v) => n + v.on_hand, 0) ?? 0)}. {t.changeInStock}</p>
+              ? <Field label={t.openingStock} error={problems.opening}><input value={form.opening} inputMode={isMeasure(form.unit) ? "decimal" : "numeric"} dir="ltr" onChange={(e) => set({ opening: e.target.value })} /></Field>
+              : <p className="ct-hint">{t.inStock(fmtQtyUnit(sumQty(item?.variants.map((v) => v.on_hand) ?? []), form.unit, lang))}. {t.changeInStock}</p>
           )}
           {form.rule === "count" && itemId && item && item.stock_rule !== "count" && form.variants.length > 0 && <p className="ct-hint">{t.stockLater}</p>}
           {(form.rule === "count" || form.rule === "daily_limit") && (
             <Field label={t.lowStockOwn} hint={t.lowStockOwnHint} error={problems.low}>
-              <input value={form.lowStock} inputMode="numeric" dir="ltr" onChange={(e) => set({ lowStock: e.target.value })} />
+              <input value={form.lowStock} inputMode={isMeasure(form.unit) ? "decimal" : "numeric"} dir="ltr" onChange={(e) => set({ lowStock: e.target.value })} />
             </Field>
           )}
         </section>
