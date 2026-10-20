@@ -252,6 +252,8 @@ async function main() {
   await b.click(`[...document.querySelectorAll('.ox-card')].find(c => c.innerText.includes(${JSON.stringify(pick("Rice by the kilo", "أرز بالكيلو"))})).querySelector('.ox-add')`, 300);
   await b.click(`[...document.querySelectorAll('.ox-card')].find(c => c.innerText.includes(${JSON.stringify(pick("Rice by the kilo", "أرز بالكيلو"))})).querySelector('.ox-step button:last-child')`, 300);
   check((await b.js(`[...document.querySelectorAll('.ox-card')].find(c => c.innerText.includes(${JSON.stringify(pick("Rice by the kilo", "أرز بالكيلو"))})).querySelector('.ox-stepnum').textContent.trim()`)) === "2", "a kilo sold whole counts 1, 2 and reads \"2\", as before");
+  const bar = await b.js("document.querySelector('.cx-bar-in')?.innerText.replace(/\\s+/g, ' ') ?? ''");
+  check(bar.includes(pick("4 items", "4 أصناف")), `the bar counts things, not millilitres: 1 kg + 250 ml + 2 rice = 4 (${bar})`);
   await shot("08-order-page-with-items");
   await noSideScroll("the order page with items");
   // review

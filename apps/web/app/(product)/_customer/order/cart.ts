@@ -105,9 +105,9 @@ export function total(lines: Pick<Line, "qty" | "unit">[]): number {
 }
 
 /** How many things the bar says are in the order: whole quantities add up as they always did; a
- *  quantity of 0.5 kg is one thing, not half. */
-export function count(lines: Pick<Line, "qty">[]): number {
-  return lines.reduce((sum, l) => sum + (milli(l.qty) % 1000 === 0 ? l.qty : 1), 0);
+ *  quantity of 0.5 kg, or of 250 ml, is one thing, not half and not two hundred and fifty. */
+export function count(lines: Pick<Line, "qty" | "unitKey">[]): number {
+  return lines.reduce((sum, l) => sum + (isMeasure(l.unitKey ?? "piece") || milli(l.qty) % 1000 !== 0 ? 1 : l.qty), 0);
 }
 
 /** The price of one: the size's price (the item's, if it has no sizes) plus each extra. */

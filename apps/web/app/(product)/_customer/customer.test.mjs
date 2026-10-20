@@ -304,6 +304,8 @@ test("a cart of fractions totals line by line, and a half kilo counts as one thi
   assert.equal(cart.total(lines), 416 + 167);
   assert.equal(cart.count(lines), 2);
   assert.equal(cart.count([{ key: "c", qty: 3, unit: 1 }, { key: "d", qty: 0.5, unit: 1 }]), 4);
+  // 250 ml is one thing, and so is a whole kilo whose unit is written beside it
+  assert.equal(cart.count([{ key: "e", qty: 250, unit: 1, unitKey: "ml" }, { key: "f", qty: 2, unit: 1, unitKey: "piece" }]), 3);
 });
 
 test("WhatsApp messages carry a fraction as x0.5, and a person's message says the unit and rounds each line", () => {
