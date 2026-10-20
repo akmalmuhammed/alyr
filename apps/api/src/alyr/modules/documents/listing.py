@@ -1,5 +1,5 @@
 """The Documents list: search, filters, totals, a cursor, and the numbers on the home screen
-(ALY-146, spec 014).
+(ALY-146, spec 015).
 
 One function builds the `where` of every question the screens ask, so a number on the home
 screen ("Unpaid invoices: 7") and the list it opens (`?show=unpaid_invoices`) are the same
@@ -45,7 +45,7 @@ PRESETS: dict[str, dict] = {
 # What an invoice has been paid, now: what its paper says (it never changes) plus the payments
 # staff recorded against it by hand afterwards (`manual_payments`, append-only). For every
 # other kind it is the paper's. A payment into a customer's credit account by link or chat is
-# not allocated to an invoice (the ledger keeps one balance per customer): spec 014.
+# not allocated to an invoice (the ledger keeps one balance per customer): spec 015.
 PAID = (
     "(d.paid_minor + case when d.kind = 'invoice' then coalesce((select sum(m.amount_minor) "
     "from manual_payments m where m.subject = 'invoice' and m.subject_id = d.id), 0)::bigint "

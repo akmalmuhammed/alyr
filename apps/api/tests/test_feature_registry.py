@@ -58,6 +58,10 @@ def test_an_owner_never_reads_jargon_or_a_promise():
             assert not any(b in text.lower() for b in BANNED), group.key
 
 
+# The three features of the pricing pack, as they are built (ALY-150).
+PRICING_PACK = ("discounts", "delivery_fees", "cost_margin")
+
+
 def test_dependencies_come_before_the_feature_that_needs_them():
     seen: set[str] = set()
     for cap in capabilities.SWITCHABLE:
@@ -79,7 +83,7 @@ def test_the_switchable_features_the_brief_asks_for_are_there():
 def test_the_extension_points_are_named_and_hidden():
     later = {c.key for c in capabilities.EXTENSION_POINTS}
     assert later == {
-        "decimal_quantity", "cost_margin", "discounts", "delivery_fees", "bundles", "suppliers",
+        "decimal_quantity", "bundles", "suppliers",
         "barcode", "batch_expiry", "serial_imei",
     }
     for cap in capabilities.EXTENSION_POINTS:
@@ -110,10 +114,19 @@ def test_the_built_in_templates_turn_on_everything_a_shop_always_had():
     """Every part of the form and the order page's four extras were always there, so every
     built-in type starts with them on (spec 012, "identical behaviour")."""
     always = [c.key for c in capabilities.SWITCHABLE
-              if c.key not in ("low_stock_alerts", "sold_out_alerts")]
+              if c.key not in ("low_stock_alerts", "sold_out_alerts", *PRICING_PACK)]
     for template in shop_templates.BUILTIN.values():
         for key in always:
             assert template.on(key), (template.key, key)
+
+
+def test_the_pricing_pack_is_off_in_every_built_in_template():
+    """The pricing pack (ALY-150) is something the founder switches on for a client: no built-in
+    type starts with any of it, so no existing shop behaves differently."""
+    for template in shop_templates.BUILTIN.values():
+        for key in PRICING_PACK:
+            if key in capabilities.BY_KEY and capabilities.BY_KEY[key].built:
+                assert not template.on(key), (template.key, key)
 
 
 @pytest.mark.parametrize("kind", [p.key for p in PRESETS if p.catalog is not None])

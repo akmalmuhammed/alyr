@@ -1,4 +1,4 @@
-"""What the draft form looks things up in (ALY-146, spec 014): the shop's customers, and lines
+"""What the draft form looks things up in (ALY-146, spec 015): the shop's customers, and lines
 from the Catalog.
 
 Both are read only. A line from the Catalog is a *seed*: the form copies its description, code

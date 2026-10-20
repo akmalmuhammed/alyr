@@ -32,7 +32,10 @@ from alyr.routes import admin_templates as admin_template_routes
 from alyr.routes import agent as agent_routes
 from alyr.routes import auth as auth_routes
 from alyr.routes import bookings as bookings_routes
+from alyr.routes import costs as cost_routes
 from alyr.routes import custom_fields as custom_field_routes
+from alyr.routes import delivery as delivery_routes
+from alyr.routes import discounts as discount_routes
 from alyr.routes import (
     document_page,
     inbox,
@@ -153,12 +156,19 @@ def create_app() -> FastAPI:
         items_import_routes.router,
         dependencies=[Depends(require_any_module("orders", "catalog"))],
     )
+    # Cost and margin (ALY-150): owners and admins only. Before the items' own routes, so that
+    # `/api/items/margins` is not taken for an item's ID.
+    app.include_router(cost_routes.router)
     app.include_router(
         items.router, dependencies=[Depends(require_any_module("orders", "catalog"))]
     )
     # The features each shop has switched on (ALY-148).
     app.include_router(feature_routes.router)
     app.include_router(custom_field_routes.router)
+    # Discounts and coupon codes (ALY-150): off for every shop until the feature is switched on.
+    app.include_router(discount_routes.router)
+    # Delivery and pickup (ALY-150): the same.
+    app.include_router(delivery_routes.router)
     app.include_router(template_routes.router)
     # The numbers the owner registers as staff, who may change the Catalog by WhatsApp.
     app.include_router(staff_numbers_routes.router)

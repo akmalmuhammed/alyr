@@ -1,6 +1,6 @@
 "use client";
 
-// Writing a document by hand (ALY-146, spec 014): the form for a draft. The customer is found
+// Writing a document by hand (ALY-146, spec 015): the form for a draft. The customer is found
 // among the shop's own or typed; the lines come from the Catalog (priced for the customer's
 // group) or are written free; the totals are worked out as the engine works them, live; saving
 // keeps a draft with no number; issuing gives it its number and locks it. The engine checks

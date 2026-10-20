@@ -1,0 +1,39 @@
+/* Cost price and margin in the workspace (ALY-150 part 3): the cost boxes and the margin line on
+   the item sheet, the quiet pill on the items list, the stock value, and the margin under an
+   order. It builds on the Catalog's own patterns (catalog.css) and takes every colour, size and
+   radius from the workspace tokens, so light, dark and right-to-left come for free. Nothing here
+   is a colour or a size of its own. The warning tone is the one the Catalog's "few left" pill
+   uses: the warning colour on its soft ground is under 4.5:1 as text, so the text is mixed with
+   the ink (ALY-110). */
+
+/* ── on the item sheet ── */
+.cs-box { display: grid; gap: 10px; min-width: 0; }
+.cs-margin { display: flex; flex-wrap: wrap; align-items: baseline; gap: 2px 10px; margin: 0; font-size: var(--ui-body-sm); color: var(--ink); }
+.cs-margin b { font-weight: 600; }
+.cs-margin small { font-size: var(--ui-caption); font-weight: 500; color: var(--ink-2); }
+.cs-margin.below b, .cs-margin.below small { color: color-mix(in srgb, var(--warn) 72%, var(--ink)); }
+.cs-warn { display: flex; align-items: flex-start; gap: 10px; margin: 0; padding: 12px 14px; border-radius: 12px; background: var(--warn-soft); color: color-mix(in srgb, var(--warn) 72%, var(--ink)); font-size: var(--ui-body-sm); font-weight: 500; line-height: 1.45; }
+.cs-warn .sh-ico { flex: none; margin-top: 2px; }
+.cs-warn > div { display: grid; gap: 6px; min-width: 0; }
+.cs-warn p { margin: 0; overflow-wrap: anywhere; }
+
+/* ── on the items list: a pill like the others, quiet unless the margin is negative ── */
+.cs-pill { max-width: 100%; }
+
+/* ── on the Stock tab ── */
+.cs-value { display: grid; gap: 2px; margin: 0; padding: 12px 14px; border-radius: 12px; background: var(--raise); box-shadow: 0 0 0 1px var(--hair) inset; font-size: var(--ui-body-sm); }
+.cs-value b { font-weight: 600; overflow-wrap: anywhere; }
+.cs-value small { font-size: var(--ui-caption); color: var(--ink-2); }
+
+/* ── under an order in the Orders list ── */
+.cs-order { display: grid; gap: 2px; min-width: 11.5rem; margin-top: 8px; padding-top: 8px; border-top: 1px solid var(--hair); font-size: var(--ui-small); line-height: 1.45; }
+@media (min-width: 48rem) { .cs-order { min-width: 16rem; } }
+.cs-order small { font-size: var(--ui-caption); color: var(--ink-2); }
+.cs-order.below > span { color: color-mix(in srgb, var(--warn) 72%, var(--ink)); font-weight: 600; }
+
+/* ── in the import sheet ── */
+.cs-import { max-width: 60ch; }
+
+/* ── a message that says a price is under the cost: calm, not an alarm ── */
+.ct-toast.warn { background: var(--warn-soft); color: color-mix(in srgb, var(--warn) 72%, var(--ink)); box-shadow: 0 0 0 1px var(--warn) inset, var(--float); }
+.ct-toast.warn .ct-toast-mark { color: inherit; }

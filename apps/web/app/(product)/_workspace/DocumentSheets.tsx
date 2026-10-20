@@ -1,7 +1,7 @@
 "use client";
 
 // The small forms that sit over a document: share it, record a payment taken by hand, cancel it,
-// print it on another paper, issue it (ALY-146, spec 014). Each is a sheet (a bottom sheet on a
+// print it on another paper, issue it (ALY-146, spec 015). Each is a sheet (a bottom sheet on a
 // phone, a side panel on a laptop) from the Catalog's parts, so the workspace has one way to
 // ask a question. Every word is in `documentsCopy.ts`; every refusal arrives from the API
 // already written in both languages.

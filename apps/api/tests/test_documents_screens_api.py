@@ -1,4 +1,4 @@
-"""What the Documents screens read from the API (ALY-146, spec 014): the list with search,
+"""What the Documents screens read from the API (ALY-146, spec 015): the list with search,
 filters, totals and a cursor; the home-screen numbers that equal the lists they open; the
 detail's additions; a copy of the PDF on another page size; the preview with settings that are
 not saved yet; the settings' recent changes and the next number of each series; a link to

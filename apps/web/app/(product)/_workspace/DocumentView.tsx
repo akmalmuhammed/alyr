@@ -1,6 +1,6 @@
 "use client";
 
-// One document in the workspace (ALY-146, spec 014): what it looks like on paper (the pages of
+// One document in the workspace (ALY-146, spec 015): what it looks like on paper (the pages of
 // the real PDF, drawn as pictures because a phone cannot be trusted to show a PDF inside a page
 // and a screen reader gets nothing from one), then the same facts as text, and what can be done
 // with it: share it, send it again, record a payment taken by hand, cancel it with a reason,

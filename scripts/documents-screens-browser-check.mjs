@@ -1,4 +1,4 @@
-// Runs the Documents screens of the workspace (ALY-146, spec 014) in a real browser, in English
+// Runs the Documents screens of the workspace (ALY-146, spec 015) in a real browser, in English
 // or Arabic, light or dark, at phone or laptop width, and checks what an owner, an agent and a
 // new shop experience: the list (search, filters, paging, the totals line), a document with the
 // real PDF's pages as pictures, writing a draft by hand, issuing it, sharing it, recording a

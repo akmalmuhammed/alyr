@@ -1,6 +1,6 @@
 "use client";
 
-// The shop's document settings (owners and admins; ALY-146, spec 014): who is selling, how the
+// The shop's document settings (owners and admins; ALY-146, spec 015): who is selling, how the
 // paper looks, the language, the notes and terms of each kind, the numbering, the money and what
 // happens by itself. Beside the form, a preview drawn by the engine itself from the settings as
 // they are typed, before they are saved, taking no number. Phone-first: the preview is a small

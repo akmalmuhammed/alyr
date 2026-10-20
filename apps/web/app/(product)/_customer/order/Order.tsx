@@ -25,7 +25,7 @@ import { ItemCard } from "./ItemCard";
 import type { Chosen } from "./ItemSheet";
 import type { Checked, Item, Live, LiveItem, Placed, Store } from "./types";
 import { Price } from "./ui";
-import { waParts, type WaLine, type WaPart } from "./wa";
+import { waParts, type WaFulfilment, type WaLine, type WaPart } from "./wa";
 import { Wholesale, rowsOf } from "./Wholesale";
 import "./order.css";
 
@@ -157,11 +157,11 @@ export default function Order({ slug, token, table, initial, lang: first, focusI
 
   /** An order as WhatsApp messages: one, or a few when it is too long for one. */
   const known = useMemo(() => new Map([...base, ...(remote?.items ?? [])].map((i) => [i.id, i] as const)), [base, remote]);
-  const partsOf = useCallback((ls: Line[]): WaPart[] => {
+  const partsOf = useCallback((ls: Line[], fulfilment: WaFulfilment | null = null): WaPart[] => {
     if (!whatsapp || ls.length === 0) return [];
     return waParts(whatsapp, {
       shop: store.shop, lang, mode: store.settings.whatsapp_mode, lines: toWaLines(ls, (id) => known.get(id)),
-      money: (dirhams) => formatPrice(dirhams, lang), customer: store.customer?.name, table: store.table,
+      money: (dirhams) => formatPrice(dirhams, lang), customer: store.customer?.name, table: store.table, fulfilment,
     });
   }, [whatsapp, store, lang, known]);
 
@@ -412,6 +412,8 @@ export default function Order({ slug, token, table, initial, lang: first, focusI
   // keeps the page it always had, which offers all four.
   const offers = store.catalog?.layout ?? { pickup_date: true, quick_quantity: true, same_as_last: true, show_sku: true };
   const section = store.catalog ? say(lang, store.catalog.section.name, store.catalog.section.name_ar) : "";
+  // The shop's automatic discounts in words, only while its discounts are on (ALY-150).
+  const offerList = store.pricing?.discounts?.offers ?? [];
 
   if (placed) {
     const link = placed.payment === "link" && placed.pay_url ? new URL(placed.pay_url).pathname : null;
@@ -420,6 +422,9 @@ export default function Order({ slug, token, table, initial, lang: first, focusI
         <Done title={t.placed(placed.number)}>
           {placed.payment === "account" && <p><b className="num"><Price value={placed.total} lang={lang} /></b> · {t.onAccount}</p>}
           {placed.payment === "link" && <p><b className="num"><Price value={placed.total} lang={lang} /></b></p>}
+          {placed.pricing && placed.pricing.discount_total > 0 && (
+            <p className="ox-discount-line">{t.discountOnOrder(`−${formatPrice(placed.pricing.discount_total, lang)}`)}</p>
+          )}
           <p>{placed.payment === "link" ? t.payToConfirm : t.backToChat}</p>
         </Done>
         {placed.left_out && placed.left_out.length > 0 && (
@@ -484,6 +489,12 @@ export default function Order({ slug, token, table, initial, lang: first, focusI
           {store.table && <span className="ox-table"><Glyph name="table" />{t.table(store.table)}</span>}
         </div>
       </section>
+
+      {offerList.length > 0 && (
+        <ul className="ox-offers" aria-label={t.offers}>
+          {offerList.map((o) => <li key={o.text}>{say(lang, o.text, o.text_ar)}</li>)}
+        </ul>
+      )}
 
       {store.link.state === "invalid" || store.link.state === "expired" ? (
         <p className="cx-warn" role="alert">{say(lang, store.link.message, store.link.message_ar)}</p>
@@ -615,7 +626,8 @@ export default function Order({ slug, token, table, initial, lang: first, focusI
       {review && token && customer && (
         <ReviewSheet slug={slug} token={token} lang={lang} lines={lines} lookup={lookup} customer={customer} table={store.table} askDay={offers.pickup_date}
           forDate={forDate} onForDate={setForDate} setQty={setQty} remove={remove} accept={accept} swap={swap}
-          whatsapp={partsOf(lines)}
+          whatsapp={partsOf(lines)} discounts={!!store.pricing?.discounts}
+          delivery={store.pricing?.delivery} whatsappFor={(choice) => partsOf(lines, choice)}
           choose={(id) => { const it = seenRef.current.get(id); setReview(false); if (it) setOpen(it); }}
           onPlaced={(p) => {
             setReview(false); setCart([]); setFlagged(new Set());

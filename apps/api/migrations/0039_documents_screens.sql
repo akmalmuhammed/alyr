@@ -1,4 +1,4 @@
--- Documents, package 3: the workspace screens (ALY-146, spec 014).
+-- Documents, package 3: the workspace screens (ALY-146, spec 015).
 --
 -- The Documents list shows the newest first and pages by a cursor (the sort key and the id of
 -- the last row seen), so a shop with tens of thousands of documents opens the first page as

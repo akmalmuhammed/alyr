@@ -238,7 +238,7 @@ MODULES: tuple[Module, ...] = (
     # receipts and proformas (ALY-138, D-042, spec 011). It is in no product and no starting
     # setup, and it is off for every shop until the product lead switches it on (the back
     # office can for one shop, `SWITCHABLE_MODULES`). With it on, the workspace shows a
-    # Documents section (ALY-146, spec 014) and two numbers on the home screen, each the size of
+    # Documents section (ALY-146, spec 015) and two numbers on the home screen, each the size of
     # the list it opens (`modules/documents/listing.py` works them out; the list and the card
     # share one query). It has no setup step: nothing has to be done before it is useful.
     Module(

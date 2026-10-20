@@ -1,4 +1,4 @@
-"""A page of a PDF as a PNG, for the screens (ALY-146, spec 014).
+"""A page of a PDF as a PNG, for the screens (ALY-146, spec 015).
 
 A phone cannot be trusted to show a PDF inside a page (Android's Chrome offers a download, iOS
 Safari shows one page in a frame that scrolls inside the page), and a screen reader gets

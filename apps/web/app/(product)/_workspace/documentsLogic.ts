@@ -1,4 +1,4 @@
-// The Documents screens' pure parts (ALY-146, spec 014): money, the totals a draft shows while
+// The Documents screens' pure parts (ALY-146, spec 015): money, the totals a draft shows while
 // it is typed, the filters of the list and the link they travel in, and what is still missing
 // before a draft can be issued. No React, no fetch: `documents.test.mjs` runs these under
 // `node --test`, and the totals are checked against the same vectors the engine's own tests use

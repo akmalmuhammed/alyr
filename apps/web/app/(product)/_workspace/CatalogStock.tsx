@@ -9,6 +9,7 @@ import { useCallback, useEffect, useState } from "react";
 import { api, nameOf, sayError, stamp, toInt, whoIs, type Item, type ListResult, type Movement, type Variant } from "./catalogApi";
 import { COPY, type Lang } from "./catalogCopy";
 import { Field, Icon, Sheet, Tile, type Toast } from "./CatalogUi";
+import { StockValue } from "./Margin";
 
 type Push = (text: string, options?: { tone?: Toast["tone"]; undo?: () => void }) => number;
 type Mode = "received" | "wasted" | "count";
@@ -25,7 +26,7 @@ function systemOf(item: Item, v: Variant) {
   return item.stock_rule === "daily_limit" ? v.left ?? 0 : v.on_hand;
 }
 
-export function CatalogStock({ lang, onChanged, push, clear }: { lang: Lang; onChanged: () => void; push: Push; clear: () => void }) {
+export function CatalogStock({ lang, onChanged, push, clear, costs = false }: { lang: Lang; onChanged: () => void; push: Push; clear: () => void; costs?: boolean }) {
   const t = COPY[lang];
   const [items, setItems] = useState<Item[] | null>(null);
   const [log, setLog] = useState<Movement[]>([]);
@@ -63,6 +64,8 @@ export function CatalogStock({ lang, onChanged, push, clear }: { lang: Lang; onC
         <h2 id="ct-stock-h">{t.stockTitle}</h2>
         <p>{t.stockSub}</p>
       </header>
+
+      {costs && <StockValue lang={lang} on={costs} version={items} />}
 
       {failed && (
         <div className="ct-banner bad" role="status">

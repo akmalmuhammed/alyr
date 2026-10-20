@@ -1,6 +1,6 @@
 "use client";
 
-// Documents in the workspace (ALY-146, spec 014): receipts, invoices and the rest. The list is
+// Documents in the workspace (ALY-146, spec 015): receipts, invoices and the rest. The list is
 // newest first with search, filters, a total line and a cursor, so a shop with thousands of
 // documents opens it as fast as a shop with ten. One document opens beside it, a draft is
 // written by hand, and the settings (owners and admins) sit one tap away. Phone first: built
