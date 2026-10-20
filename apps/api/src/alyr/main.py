@@ -12,7 +12,7 @@ from alyr.core.jobs import JobRunner
 from alyr.core.links import check_secret as check_link_secret
 from alyr.core.media import MediaService
 from alyr.core.outbound import SEND, Outbound
-from alyr.core.storage import make_store
+from alyr.core.storage import check_store, make_store
 from alyr.db import Database
 from alyr.modules import report
 from alyr.modules.bookings.service import REMINDER, Reminders
@@ -74,6 +74,8 @@ def create_app() -> FastAPI:
     async def lifespan(app: FastAPI):
         # A server that cannot sign its order links does not start (ALY-112).
         check_link_secret(settings)
+        # Nor one that would keep photos on a disk the cloud wipes (ALY-63).
+        check_store(settings, app.state.media.store)
         await app.state.db.connect()
         yield
         await app.state.db.close()

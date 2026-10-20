@@ -104,6 +104,11 @@ class Settings(BaseSettings):
     r2_bucket: str = "alyr-media"
     media_base_url: str = "https://media.alyr.qa"
     media_local_dir: str = ".media"
+    # Outside a developer machine, photos on local disk are refused at start-up
+    # (`storage.check_store`): a cloud container's disk is wiped on every restart and is not
+    # shared between copies. Only a single server whose `media_local_dir` is a kept volume
+    # may switch this on (the rehearsal in docker-compose.prod.yml does).
+    media_allow_local: bool = False
 
     # What one upload may be. The web page shrinks a photo before sending it, so these
     # only stop a damaged or hostile file. A 12-megapixel phone photo is about 4 MB.

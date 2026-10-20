@@ -41,11 +41,23 @@ only in the worker.
 | `ALYR_PUBLIC_WEB_URL` | Where links in chats point, for example `https://app.alyr.qa` | No |
 | `ALYR_META_*` | The five Meta values (see `apps/api/.env.example`) | Yes |
 | `ALYR_EMAIL_API_KEY` | Resend, for sign-in codes | Yes |
+| `ALYR_LINK_SECRET` | Signs every customer's order and document link (ALY-112). The API and worker refuse to start without it. Generated once and kept: changing it ends every link already sent | Yes |
+| `ALYR_R2_ACCOUNT_ID`, `ALYR_R2_ACCESS_KEY_ID`, `ALYR_R2_SECRET_ACCESS_KEY` | Product photos on Cloudflare R2 (D-039), served from `ALYR_MEDIA_BASE_URL` (`https://media.alyr.qa`). Without all three the API and worker refuse to start outside a developer machine, because a container's disk is wiped on restart and not shared between copies | Yes |
+| `ALYR_MEDIA_ALLOW_LOCAL`, `ALYR_MEDIA_LOCAL_DIR` | Only for a single server whose photo folder is a kept volume (the rehearsal) | No |
 | `ALYR_ENV` | `production`, or `staging` for a demo copy that keeps the simulator | No |
 
 The web image takes its settings while it is built, because Next.js bakes them in:
 `ALYR_API_URL` (the API's address inside the hosting network) and the `NEXT_PUBLIC_ALYR_*`
-values. Build one web image per environment.
+values. Build one web image per environment. `ALYR_API_URL` is also needed while the server
+runs: the order page (`/s/<shop>`) asks the API for its link preview and first page of items
+before any script runs on the customer's phone. The image keeps the build value; the cloud
+sets it again as a normal setting.
+
+**What a database backup does not hold.** Product photos live on R2, not in the database.
+They are public by design, R2 keeps them independently of Azure, and the emergency host on
+Google uses the same bucket, so they survive an Azure outage without being copied.
+Documents (receipts, invoices) are PDFs kept in the database (D-042), so they are in every
+backup.
 
 Secrets are typed by the founder into Key Vault (or `.env.prod` on a single server). No
 agent reads or prints them.
@@ -73,6 +85,17 @@ docker compose --env-file .env.prod -f docker-compose.prod.yml run --rm migrate 
 curl http://localhost:18000/health/worker
 docker compose --env-file .env.prod -f docker-compose.prod.yml down -v
 ```
+
+**20 Oct 2026, after the Catalog, stock, Documents, delivery and pricing work (124 commits):**
+the images build; all four services healthy with no errors in their logs; nine demo shops
+with 178 items, 720 orders, 1,745 stock movements and 165 bookings; the order page renders
+its link preview, photo and first items on the server; product photos are stored and served
+through the web app; receipts, invoices and credit notes draw in English and Arabic inside the
+image, with their fonts, and read back as pictures; a backup of 91 tables restores with the
+same counts and all 90 security policies. Two bugs were found and fixed: the web server lost
+the API's address once running (the order page would have fallen back to 127.0.0.1 in the
+cloud), and a cloud deploy without R2 would have kept photos on a disk that is wiped on
+restart (now the API and worker refuse to start).
 
 What the rehearsal on 17 Oct 2026 showed: all four services healthy; the simulator answers
 404; the web app forwards `/api/*` to the API inside the network; a signed WhatsApp webhook

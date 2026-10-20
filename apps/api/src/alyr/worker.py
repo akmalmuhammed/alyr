@@ -14,6 +14,7 @@ import socket
 
 from alyr.config import get_settings
 from alyr.core.links import check_secret as check_link_secret
+from alyr.core.storage import check_store
 from alyr.main import create_app
 from alyr.modules import report
 from alyr.modules.orders import holds as order_holds
@@ -87,6 +88,8 @@ async def main() -> None:
     # refuses to start without the link secret just as the API does (ALY-112).
     check_link_secret(get_settings())
     app = create_app()
+    # The worker imports photos from spreadsheets, so the same rule as the API (ALY-63).
+    check_store(get_settings(), app.state.media.store)
     await app.state.db.connect()
     scheduler = asyncio.create_task(keep_reports_scheduled(app.state.db))
     sweeper = asyncio.create_task(keep_holds_swept(app.state.db, app.state.outbound))

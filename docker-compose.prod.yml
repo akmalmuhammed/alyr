@@ -31,6 +31,16 @@ x-api-settings: &api-settings
   ALYR_META_PHONE_NUMBER_ID: ${ALYR_META_PHONE_NUMBER_ID:-}
   ALYR_META_WABA_ID: ${ALYR_META_WABA_ID:-}
   ALYR_EMAIL_API_KEY: ${ALYR_EMAIL_API_KEY:-}
+  # Signs every customer's order and document link (ALY-112). The API refuses to start
+  # without it. Changing it ends every link already sent.
+  ALYR_LINK_SECRET: ${ALYR_LINK_SECRET:?see scripts/rehearsal-env.sh}
+  # Photos: on R2 when its three values are set (as in the cloud), otherwise on the kept
+  # volume below, shared by the API and the worker.
+  ALYR_R2_ACCOUNT_ID: ${ALYR_R2_ACCOUNT_ID:-}
+  ALYR_R2_ACCESS_KEY_ID: ${ALYR_R2_ACCESS_KEY_ID:-}
+  ALYR_R2_SECRET_ACCESS_KEY: ${ALYR_R2_SECRET_ACCESS_KEY:-}
+  ALYR_MEDIA_LOCAL_DIR: /data/media
+  ALYR_MEDIA_ALLOW_LOCAL: "true"
 
 services:
   postgres:
@@ -55,6 +65,9 @@ services:
     image: alyr-api
     command: ["python", "-m", "alyr.migrate"]
     environment: *api-settings
+    # Seeds run through this service in the rehearsal and draw demo photos.
+    volumes:
+      - media:/data/media
     depends_on:
       postgres: { condition: service_healthy }
     restart: "no"
@@ -64,6 +77,8 @@ services:
     environment: *api-settings
     ports:
       - "${ALYR_API_PORT:-18000}:8000"
+    volumes:
+      - media:/data/media
     depends_on:
       migrate: { condition: service_completed_successfully }
     restart: unless-stopped
@@ -76,6 +91,8 @@ services:
     # /health/worker.
     healthcheck:
       disable: true
+    volumes:
+      - media:/data/media
     depends_on:
       migrate: { condition: service_completed_successfully }
     restart: unless-stopped
@@ -87,6 +104,8 @@ services:
         ALYR_API_URL: http://api:8000
         NEXT_PUBLIC_ALYR_WORKSPACE_URL: ${ALYR_PUBLIC_WEB_URL:-http://localhost:13000}
     image: alyr-web
+    environment:
+      ALYR_API_URL: http://api:8000
     ports:
       - "${ALYR_WEB_PORT:-13000}:3000"
     depends_on:
@@ -114,3 +133,4 @@ services:
 volumes:
   pgdata:
   backups:
+  media:
