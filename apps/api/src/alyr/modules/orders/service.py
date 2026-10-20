@@ -31,6 +31,7 @@ from alyr.modules.items import (
     discounts,
     features,
     fields,
+    qty,
     stock,
     text,
 )
@@ -197,6 +198,11 @@ async def can_use_account(conn: asyncpg.Connection, contact_id: UUID) -> bool:
     """Only customers the shop has given a credit limit may put an order on account."""
     limit = await conn.fetchval("select credit_limit from contacts where id = $1", contact_id)
     return bool(limit and limit > 0)
+
+
+def _shown(c: cart.Checked) -> bool:
+    item = c.entry.item
+    return qty.shown(item["unit"], item["pack_size"], item["min_order"])
 
 
 def _name(c: cart.Checked, arabic: bool) -> str:
@@ -415,7 +421,8 @@ async def create_order(
         line if isinstance(line, CartLine) else CartLine(*line) for line in lines
     ]
     for line in lines:
-        if not 1 <= line.quantity <= MAX_QUANTITY:
+        # (a fraction is judged against the item's unit and step by the cart check below)
+        if not 0 < line.quantity <= MAX_QUANTITY:
             raise OrderError("bad_quantity", "Quantity must be between 1 and 999.")
 
     shop_clock = await clock.load(conn, now)
@@ -426,6 +433,8 @@ async def create_order(
     checked = await cart.check(conn, shop_clock, lines, for_date, group_id)
     if not all(c.ok for c in checked):
         raise await _refusal(conn, shop_clock, checked)
+    # A line is its price times its quantity, rounded half up to a dirham, once per line; the
+    # order is the sum of its lines (qty.line_total, which the pricing engine uses too).
     feats = await features.load(conn)
     quote = await price_cart(conn, checked, shop_clock, feats, coupons, contact_id, group_id)
     for entered in quote.coupons:
@@ -541,12 +550,16 @@ async def create_order(
         order_item_id = await conn.fetchval(
             "insert into order_items (order_id, item_id, name, name_ar, price, quantity, "
             "variant_id, variant_name, variant_name_ar, options, fulfil_on, sku, custom, "
-            "discount) "
-            "values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14) returning id",
+            "discount, unit, unit_shown) "
+            "values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16) "
+            "returning id",
             order_id, item["id"], item["name"], item["name_ar"], c.unit_price, c.line.quantity,
             variant["id"], variant["name"], variant["name_ar"], c.options, c.fulfil_on,
             # The size's own code, else the item's: what the shop reads on its order.
             variant["sku"] or item["sku"], snapshot, quote.line_discounts.get(c.index, 0),
+            # The unit it was ordered in, kept with the line, and whether it is written beside the
+            # quantity (only for an item sold in fractions).
+            item["unit"], _shown(c),
         )
         if feats.on("cost_margin"):
             # What one unit costs now, kept beside the line: the order's margin stays right
@@ -572,8 +585,13 @@ async def create_order(
             ) from error
 
     arabic = contact["lang"] == "ar"
+    def _amount(c: cart.Checked) -> str:
+        # "3", or "0.5 kg" for something sold in fractions.
+        return qty.label(c.line.quantity, c.entry.item["unit"], _shown(c), "ar" if arabic else "en")
+
     summary = "\n".join(
-        f"{c.line.quantity} x {_name(c, arabic)}  {fmt_qar(c.unit_price * c.line.quantity)}"
+        f"{_amount(c)} x {_name(c, arabic)}  "
+        f"{fmt_qar(qty.line_total(c.unit_price, c.line.quantity))}"
         for c in checked
     )
     for a in quote.applied:
@@ -583,7 +601,7 @@ async def create_order(
     if choice is not None:
         summary += "\n" + _delivery_line(choice, arabic, shop_clock)
     # A template blank cannot hold a line break, so the items go on one line there.
-    items = ", ".join(f"{c.line.quantity} x {_name(c, arabic)}" for c in checked)
+    items = ", ".join(f"{_amount(c)} x {_name(c, arabic)}" for c in checked)
     pay_url = None
     if payment == "account":
         await ledger.add_entry(
@@ -875,7 +893,8 @@ async def list_orders(conn: asyncpg.Connection) -> list[dict]:
         "left join users u on u.id = o.assigned_to order by o.number desc"
     )
     items = await conn.fetch(
-        "select order_id, name, price, quantity, variant_name, options, sku, custom, discount "
+        "select order_id, name, price, quantity, variant_name, options, sku, custom, discount, "
+        "       unit, unit_shown "
         "from order_items"
     )
     given: dict[UUID, list[dict]] = {}
@@ -885,12 +904,13 @@ async def list_orders(conn: asyncpg.Connection) -> list[dict]:
     by_order: dict[UUID, list[dict]] = {}
     for item in items:
         by_order.setdefault(item["order_id"], []).append(
-            {"name": item["name"], "quantity": item["quantity"],
+            {"name": item["name"], "quantity": item["quantity"], "unit": item["unit"],
+             "unit_shown": item["unit_shown"],
              "variant": item["variant_name"], "sku": item["sku"],
              "fields": item["custom"],
              "options": [o["name"] for o in item["options"]],
              "price": item["price"], "price_text": fmt_qar(item["price"]),
-             "line_text": fmt_qar(item["price"] * item["quantity"]),
+             "line_text": fmt_qar(qty.line_total(item["price"], item["quantity"])),
              **({"discount": item["discount"],
                  "discount_text": fmt_qar(item["discount"])} if item["discount"] else {})}
         )
@@ -946,7 +966,8 @@ async def tracking(conn: asyncpg.Connection, order_id: UUID) -> dict | None:
         return None
     items = await conn.fetch(
         "select o.name, coalesce(nullif(o.name_ar, ''), p.name_ar, '') as name_ar, o.price, "
-        "       o.quantity, o.variant_name, o.variant_name_ar, o.options, o.custom, o.discount "
+        "       o.quantity, o.unit, o.unit_shown, o.variant_name, o.variant_name_ar, o.options, "
+        "       o.custom, o.discount "
         "from order_items o left join items p on p.id = o.item_id "
         "where o.order_id = $1 order by o.name",
         order_id,
@@ -970,12 +991,14 @@ async def tracking(conn: asyncpg.Connection, order_id: UUID) -> dict | None:
         "fulfil_on": order["fulfil_on"].isoformat() if order["fulfil_on"] else None,
         "items": [
             {"name": i["name"], "name_ar": i["name_ar"] or "", "quantity": i["quantity"],
+             "unit": i["unit"], "unit_shown": i["unit_shown"],
              "variant": i["variant_name"], "variant_ar": i["variant_name_ar"],
              "options": [o["name"] for o in i["options"]],
              "options_ar": [o.get("name_ar") or o["name"] for o in i["options"]],
              "fields": i["custom"],
-             "unit_price": i["price"], "line_total": i["price"] * i["quantity"],
-             "line_text": fmt_qar(i["price"] * i["quantity"]),
+             "unit_price": i["price"],
+             "line_total": qty.line_total(i["price"], i["quantity"]),
+             "line_text": fmt_qar(qty.line_total(i["price"], i["quantity"])),
              **({"discount": i["discount"]} if i["discount"] else {})}
             for i in items
         ],

@@ -19,6 +19,8 @@
 //
 // The same pure functions are used by the item sheet, the bar under the list and the review.
 
+import { fmtQty, fmtQtyUnit, lineTotal, milli } from "../qty.ts";
+
 export type Lang = "en" | "ar";
 export type Mode = "chat" | "link";
 
@@ -38,6 +40,8 @@ export type WaLine = {
   extras: { name: string; name_ar: string }[];
   /** The price of one, size and extras included, in dirhams. */
   unit: number;
+  /** The item's unit (kg, ml...), so a measure's quantity can say it. */
+  unitKey?: string;
 };
 
 export type WaOrder = {
@@ -80,7 +84,8 @@ const clip = (text: string, size: number) => (text.length <= size ? text : `${te
 
 function chatToken(line: WaLine, lang: Lang, withHint: boolean): string {
   const hint = withHint ? pick(lang, line.variant, line.variant_ar).replace(/[()]/g, "").trim() : "";
-  return `#${line.code}${hint ? ` (${clip(hint, 14)})` : ""}${line.qty > 1 ? ` x${line.qty}` : ""}`;
+  // A quantity other than one is written after the code, `x2` or `x0.5` (Western digits, a point).
+  return `#${line.code}${hint ? ` (${clip(hint, 14)})` : ""}${milli(line.qty) !== 1000 ? ` x${fmtQty(line.qty)}` : ""}`;
 }
 
 /** The templates, richest first. `{shop}` and `{codes}` are filled in; the first that fits wins. */
@@ -141,7 +146,9 @@ function linkLine(line: WaLine, order: WaOrder): string {
   const extras = line.extras.map((e) => pick(order.lang, e.name, e.name_ar));
   const detail = [pick(order.lang, line.variant, line.variant_ar), ...extras].filter(Boolean).join(order.lang === "ar" ? "، " : ", ");
   const code = line.code !== null ? `#${line.code} ` : "";
-  return `${code}${name}${detail ? ` (${detail})` : ""} x${line.qty} - ${order.money(line.unit * line.qty)}`;
+  // The quantity carries its unit when it is a measure: `x0.5 kg`.
+  const amount = line.unitKey ? fmtQtyUnit(line.qty, line.unitKey, order.lang) : fmtQty(line.qty);
+  return `${code}${name}${detail ? ` (${detail})` : ""} x${amount} - ${order.money(lineTotal(line.unit, line.qty))}`;
 }
 
 /** "Pickup", or "Delivery to Al Wakra: Street 5" and "Note: call at the gate". Nothing for no choice. */
@@ -163,7 +170,7 @@ function linkParts(order: WaOrder): Piece[] {
   if (lines.length === 0) return [];
   const ar = order.lang === "ar";
   const shop = pick(order.lang, order.shop.name, order.shop.name_ar);
-  const total = lines.reduce((sum, l) => sum + l.unit * l.qty, 0);
+  const total = lines.reduce((sum, l) => sum + lineTotal(l.unit, l.qty), 0);
   const head = (n: number, of: number) => {
     const part = of > 1 ? ` (${n}/${of})` : "";
     return ar ? `طلب من صفحة ${shop}${part}` : `Order from the ${shop} page${part}`;

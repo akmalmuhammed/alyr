@@ -14,7 +14,7 @@ import asyncpg
 from alyr.channels.base import Choice, OutboundMessage
 from alyr.core.media import MediaService
 from alyr.core.normalise import fmt_qar, fmt_qar_ar
-from alyr.modules.items import availability, demand, features, photos, service, text
+from alyr.modules.items import availability, demand, features, photos, qty, service, text
 from alyr.modules.items import clock as shop_clock
 from alyr.modules.items.wa_text import say, shown
 
@@ -70,7 +70,8 @@ async def build(
     chosen: list[Choice] = []
     if state.orderable:
         if state.left is not None and 0 < state.left <= 5:
-            lines.append(say("card_left", lang, n=state.left))
+            show = qty.shown(item["unit"], item["pack_size"], item["min_order"])
+            lines.append(say("card_left", lang, n=qty.label(state.left, item["unit"], show, lang)))
         chosen.extend(buttons)
     elif state.reason in ("sold_out", "off"):
         lines.append(say("card_sold_out", lang))

@@ -22,6 +22,8 @@ from uuid import UUID
 
 import asyncpg
 
+from alyr.modules.items import qty
+
 CART_LIFE = timedelta(hours=6)
 PENDING_LIFE = timedelta(minutes=30)
 MISS_WINDOW = timedelta(minutes=10)
@@ -46,7 +48,7 @@ class Cart:
 
     @property
     def total(self) -> int:
-        return sum(line["price"] * line["quantity"] for line in self.lines)
+        return sum(qty.line_total(line["price"], line["quantity"]) for line in self.lines)
 
 
 def new_question_id() -> str:
@@ -54,10 +56,28 @@ def new_question_id() -> str:
     return secrets.token_hex(4)
 
 
+def _lines(stored: list[dict]) -> list[dict]:
+    """The draft's lines as exact quantities: a fraction stored as JSON comes back as the decimal
+    it was written as (0.1 is 0.1), never as a float's approximation."""
+    return [{**line, "quantity": qty.parse(line["quantity"], allow_zero=True)} for line in stored]
+
+
+def _pending(stored: dict | None) -> dict | None:
+    """The pending question with exact quantities in the lines it holds and the sizes it still
+    has to ask about."""
+    if stored is None:
+        return None
+    return {
+        **stored,
+        "lines": _lines(stored.get("lines", [])),
+        "ask": _lines(stored.get("ask", [])),
+    }
+
+
 def _cart(row: asyncpg.Record) -> Cart:
     return Cart(
-        row["id"], row["contact_id"], list(row["lines"]), row["pending"], row["misses"],
-        row["misses_since"], row["expires_at"], dict(row["extras"] or {}),
+        row["id"], row["contact_id"], _lines(row["lines"]), _pending(row["pending"]),
+        row["misses"], row["misses_since"], row["expires_at"], dict(row["extras"] or {}),
     )
 
 
@@ -162,7 +182,7 @@ def drop_coupons(cart: Cart, codes: list[str]) -> None:
 
 
 def add_line(
-    cart: Cart, item_id: UUID, variant_id: UUID | None, quantity: int, price: int
+    cart: Cart, item_id: UUID, variant_id: UUID | None, quantity: "qty.Qty", price: int
 ) -> bool:
     """Put a line in the draft, adding to the line for the same item and size. False when
     the draft is full."""
@@ -170,13 +190,13 @@ def add_line(
         if line["item_id"] == str(item_id) and line["variant_id"] == (
             str(variant_id) if variant_id else None
         ):
-            line["quantity"] = min(line["quantity"] + quantity, MAX_QUANTITY)
+            line["quantity"] = qty.norm(min(line["quantity"] + quantity, MAX_QUANTITY))
             line["price"] = price
             return True
     if len(cart.lines) >= MAX_LINES:
         return False
     cart.lines.append({
         "item_id": str(item_id), "variant_id": str(variant_id) if variant_id else None,
-        "quantity": min(quantity, MAX_QUANTITY), "price": price,
+        "quantity": qty.norm(min(quantity, MAX_QUANTITY)), "price": price,
     })
     return True

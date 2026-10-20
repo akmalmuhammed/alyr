@@ -68,7 +68,9 @@ SEND_MODES = ("automatic", "manual")
 SOURCES = ("order", "booking", "ledger_payment", "manual", "external")
 CASH_ROUNDING_STEPS = (0, 5, 10, 25, 50, 100)
 PAYMENT_METHODS = ("cash", "card", "bank_transfer", "link", "credit", "cheque", "other")
-UNITS = ("piece", "kg", "g", "l", "m", "box", "pack", "portion", "hour", "day", "service")
+UNITS = (
+    "piece", "kg", "g", "l", "m", "box", "pack", "portion", "hour", "day", "service", "ml", "tola",
+)
 
 # How long a shop must keep its documents. NOT CONFIRMED: a third-party source says ten years;
 # the lawyer's answer is ALY-51. Whatever the answer, ALYR never deletes an issued document

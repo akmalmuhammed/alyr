@@ -18,7 +18,7 @@ from alyr.modules.bookings.service import REMINDER, Reminders
 from alyr.modules.documents.delivery import JOB as DELIVERY_JOB
 from alyr.modules.documents.delivery import DocumentSender
 from alyr.modules.documents.errors import DocumentError
-from alyr.modules.items import alerts, events, wa_photo, watches
+from alyr.modules.items import alerts, events, qty, wa_photo, watches
 from alyr.modules.items.import_alert import JOB as IMPORT_ALERT
 from alyr.modules.items.import_alert import ImportAlert
 from alyr.modules.items.import_photos import JOB as IMPORT_PHOTOS
@@ -135,6 +135,8 @@ def create_app() -> FastAPI:
     )
     app.add_exception_handler(PhotoRefused, media_routes.refused)
     app.add_exception_handler(DocumentError, documents_routes.refused)
+    # A quantity is a JSON number everywhere (spec 013); FastAPI would write a Decimal as text.
+    qty.install_json(app)
     if settings.jobs_inline:
         app.state.db.after_commit = app.state.jobs.drain
 

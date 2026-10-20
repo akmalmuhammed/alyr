@@ -2,6 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useRef, useState } from "react";
+import { fmtQtyUnit, lineUnit } from "../_customer/qty";
 import { formatPrice } from "../_customer/price";
 import { OrderMargin, useOrderMargins } from "./Margin";
 import { OrderSum } from "./OrderSum";
@@ -54,7 +55,7 @@ type OrderRow = {
   subtotal?: number; discount_total?: number; discounts?: OrderDiscount[];
   // How it reaches the customer (ALY-150 part 2): only on an order made while Delivery and pickup was on.
   fulfilment?: Fulfilment;
-  customer: string; items: { name: string; quantity: number; line_text: string; sku?: string; discount?: number }[];
+  customer: string; items: { name: string; quantity: number; unit?: string; unit_shown?: boolean; line_text: string; sku?: string; discount?: number }[];
   assigned: Person | null;
   // The table the order is for, from a QR code on a table ("" for none).
   table?: string;
@@ -1098,7 +1099,7 @@ export function Screens({ embedded = false, section, lang: langProp, intro, show
                           {o.fulfilment && <><br /><FulfilPill fulfilment={o.fulfilment} lang={lang} /></>}
                         </td>
                         <td>{o.items.map((i, k) => (
-                          <div key={k}>{i.quantity} × {i.name}{i.sku ? <> <small className="mono" dir="ltr">{i.sku}</small></> : null}
+                          <div key={k}><bdi>{fmtQtyUnit(i.quantity, lineUnit(i.quantity, i.unit ?? "piece", Boolean(i.unit_shown)), lang)}</bdi> × {i.name}{i.sku ? <> <small className="mono" dir="ltr">{i.sku}</small></> : null}
                             {i.discount ? <small className="pr-lineoff">{PRICING[lang].order.lineOff(formatPrice(i.discount, lang))}</small> : null}</div>
                         ))}
                           {o.fulfilment && <FulfilDetails fulfilment={o.fulfilment} lang={lang} />}

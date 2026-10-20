@@ -5,6 +5,7 @@ import { useCallback, useEffect, useState } from "react";
 import { Empty, Frame, Glyph, initials } from "../../../_customer/Frame";
 import { dayShort, goodsBeforeDiscount, zoneName, type Fulfilment } from "../../../_customer/fulfil";
 import { formatPrice, type Lang } from "../../../_customer/price";
+import { fmtQtyUnit, lineUnit } from "../../../_customer/qty";
 import "../../../_customer/fulfil.css";
 
 type Step = { key: "placed" | "confirmed" | "ready" | "done"; at: string | null };
@@ -12,7 +13,7 @@ type Order = {
   number: number; status: "new" | "confirmed" | "ready" | "done" | "cancelled";
   payment: "unpaid" | "paid" | "on_account"; total: number; lang: string; handler: string | null; table: string;
   items: {
-    name: string; name_ar: string; quantity: number; line_total: number;
+    name: string; name_ar: string; quantity: number; unit?: string; unit_shown?: boolean; line_total: number;
     variant: string; variant_ar: string; options: string[]; options_ar: string[];
     /** What came off this line (ALY-150); absent when nothing did. */
     discount?: number;
@@ -171,7 +172,7 @@ export default function TrackPage() {
                 <div className="cx-row-text">
                   <b dir="auto">{ar && item.name_ar ? item.name_ar : item.name}</b>
                   {parts.length > 0 && <span dir="auto">{parts.join(ar ? "، " : ", ")}</span>}
-                  <span className="num">× {item.quantity}</span>
+                  <span className="num">× <bdi>{fmtQtyUnit(item.quantity, lineUnit(item.quantity, item.unit ?? "piece", Boolean(item.unit_shown)), lang)}</bdi></span>
                   {item.discount ? <span className="num"><bdi>{t.lineOff(`−${formatPrice(item.discount, lang)}`)}</bdi></span> : null}
                 </div>
                 <bdi className="num">{formatPrice(item.line_total, lang)}</bdi>
