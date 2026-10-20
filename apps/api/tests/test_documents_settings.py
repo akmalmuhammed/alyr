@@ -83,7 +83,7 @@ def test_what_is_not_sent_is_not_changed(shop):
 def test_settings_changes_are_on_the_activity_record_with_who(shop):
     shop.admin.put("/api/documents/settings", json={"layout": "thermal80", "bank_details": "QA58 ..."})
     rows = owner_sql("select action, detail, actor_name from activity where tenant_id = $1 "
-                     "and subject = 'document' and action = 'settings_changed'", shop.tenant_id)
+                     "and subject = 'document' and action = 'settings_changed' order by created_at, id", shop.tenant_id)
     last = rows[-1]
     assert last["actor_name"] == "Admin"
     detail = json.loads(last["detail"])
@@ -193,7 +193,7 @@ def test_issued_with_alyr_is_on_by_default_and_the_owner_or_an_admin_can_remove_
     assert shop.admin.put("/api/documents/settings", json={"show_alyr_mark": False}
                           ).status_code == 200
     rows = owner_sql("select detail, actor_name from activity where tenant_id = $1 and "
-                     "subject = 'document' and action = 'settings_changed'", shop.tenant_id)
+                     "subject = 'document' and action = 'settings_changed' order by created_at, id", shop.tenant_id)
     changes = {c["field"]: c for c in json.loads(rows[-1]["detail"])["changes"]}
     assert rows[-1]["actor_name"] == "Admin"
     assert changes["show_alyr_mark"]["from"] is True and changes["show_alyr_mark"]["to"] is False

@@ -165,6 +165,8 @@ def _search(query: _Query, q: str) -> None:
 
 def _where(filters: Filters, staff: Staff | None, tz: str) -> _Query:
     query = _Query()
+    # Imported by mistake and taken back (ALY-142): kept on record, out of every list.
+    query.parts.append("d.withdrawn_at is null")
     if filters.kind:
         query.add("d.kind = {1}", filters.kind)
     if filters.status:

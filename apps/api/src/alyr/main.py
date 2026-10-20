@@ -15,6 +15,7 @@ from alyr.core.storage import make_store
 from alyr.db import Database
 from alyr.modules import report
 from alyr.modules.bookings.service import REMINDER, Reminders
+from alyr.modules.connect import webhooks as connect_webhooks
 from alyr.modules.documents.delivery import JOB as DELIVERY_JOB
 from alyr.modules.documents.delivery import DocumentSender
 from alyr.modules.documents.errors import DocumentError
@@ -32,6 +33,8 @@ from alyr.routes import admin_templates as admin_template_routes
 from alyr.routes import agent as agent_routes
 from alyr.routes import auth as auth_routes
 from alyr.routes import bookings as bookings_routes
+from alyr.routes import connect as connect_routes
+from alyr.routes import connect_setup as connect_setup_routes
 from alyr.routes import costs as cost_routes
 from alyr.routes import custom_fields as custom_field_routes
 from alyr.routes import delivery as delivery_routes
@@ -109,6 +112,9 @@ def create_app() -> FastAPI:
     # the PDF attached. A delivery that fails every try shows the owner "not delivered".
     document_sender = DocumentSender(app.state.db, app.state.outbound)
     app.state.jobs.register(DELIVERY_JOB, document_sender.run, document_sender.gave_up)
+    # Events out to the shop's other system (ALY-142): signed, retried, guarded.
+    app.state.webhooks = connect_webhooks.WebhookSender(app.state.db)
+    app.state.jobs.register(connect_webhooks.JOB, app.state.webhooks.run)
     # The Catalog on WhatsApp (ALY-106): back-in-stock messages, owner alerts, and photos sent
     # by staff turned into drafts. Each is a job, so none holds a request open.
     app.state.jobs.register(
@@ -134,6 +140,7 @@ def create_app() -> FastAPI:
     )
     app.add_exception_handler(PhotoRefused, media_routes.refused)
     app.add_exception_handler(DocumentError, documents_routes.refused)
+    app.add_exception_handler(connect_routes.Invalid, connect_routes.invalid)
     # A quantity is a JSON number everywhere (spec 013); FastAPI would write a Decimal as text.
     qty.install_json(app)
     if settings.jobs_inline:
@@ -181,6 +188,12 @@ def create_app() -> FastAPI:
     # Documents (ALY-138): the engine, off for every shop until the screens and hooks exist.
     app.include_router(
         documents_routes.router, dependencies=[Depends(require_module("documents"))]
+    )
+    # Connected mode (ALY-142): the machine's door (it answers to an API key, never a session,
+    # and checks the shop has Documents on itself) and the person's setup of it.
+    app.include_router(connect_routes.router)
+    app.include_router(
+        connect_setup_routes.router, dependencies=[Depends(require_module("documents"))]
     )
     # The page a customer opens from the link we send with a document (ALY-139). A shop
     # without the module has no such page.

@@ -80,6 +80,9 @@ apps/api/                     FastAPI service (Python 3.13, managed with uv)
                               WhatsApp, email and a hosted link (specs/013, ALY-139);
                               listing.py, lookup.py and refs.py are what the workspace's Documents
                               screens read (specs/014, ALY-146)
+                              connect/ is connected mode: another system sends its sales (open API
+                              with API keys, CSV import), authority says who numbers each kind of
+                              document, webhooks send events out (specs/016, ALY-142, docs/connect-api.md)
                               items/codes.py reads a customer's message for item codes, links and
                               SKUs and items/wa_order.py orders by them in the chat (specs/010)
   src/alyr/routes/            HTTP routes. deps.py: who is calling, which shop, which modules are on
@@ -107,6 +110,7 @@ scripts/                      check.sh (everything CI runs), demo.sh (start and 
                               (the customer's order page, same way), booking-page-browser-check.mjs (the booking page and its links),
                               document-page-browser-check.mjs (the hosted document page and its links),
                               documents-screens-browser-check.mjs (the workspace's Documents screens),
+                              connect-browser-check.mjs (the connection screen, phone width, both languages),
                               golive-truth-check.mjs (every onboarding sentence of every business type proved on the
                               finished order page and workspace, English and Arabic),
                               hooks/pre-commit
