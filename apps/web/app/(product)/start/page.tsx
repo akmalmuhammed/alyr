@@ -772,19 +772,21 @@ export default function Start() {
 
   const businessExists = Boolean(state);
   const showPreview = step !== "loading" && step !== "finished" && !(way === "invoices" && !businessExists);
-  const previewBody = way === "invoices" && step === "details"
-    ? <PaperPicture url={paper} alt={t.details.previewAlt} />
+  const summary = (
+    <div className="ob-summary">
+      <span className="ob-avatar big">{initialsOf(shopName)}</span>
+      <b>{shopShown}</b>
+      <small>{[chosen?.name[lang], state?.business.area].filter(Boolean).join(" · ")}</small>
+      {way === "appointments" && <small>{t.summary(rows.length, state?.business.reminders ?? true)}</small>}
+    </div>
+  );
+  // A business that only invoices has no WhatsApp conversation to show: its picture is the paper.
+  const previewBody = way === "invoices"
+    ? (step === "details" || (step === "first" && paper) ? <PaperPicture url={paper} alt={t.details.previewAlt} /> : summary)
     : step === "try"
     ? testChat
     : step === "plan" || step === "golive"
-      ? (
-        <div className="ob-summary">
-          <span className="ob-avatar big">{initialsOf(shopName)}</span>
-          <b>{shopShown}</b>
-          <small>{[chosen?.name[lang], state?.business.area].filter(Boolean).join(" · ")}</small>
-          {way === "appointments" && <small>{t.summary(rows.length, state?.business.reminders ?? true)}</small>}
-        </div>
-      )
+      ? summary
       : <Chat name={shopShown} initials={initialsOf(shopName)} messages={preview} />;
 
   return (

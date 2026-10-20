@@ -172,7 +172,6 @@ def test_a_year_or_a_quantity_is_not_a_phone_number():
     [
         "invoice AC repair 500 for Ahmed 5551 2345",
         "invoice Ahmed 5551 2345 500 for AC repair",
-        "invoice AC repair 500 Ahmed 55512345",
     ],
 )
 def test_a_phone_number_beside_a_name_says_who_the_person_is(message):
@@ -201,6 +200,9 @@ def test_a_new_customer_is_saved_without_the_preposition_stuck_to_the_name(typed
     assert customers.bare_name(typed) == saved
 
 
-def test_an_arabic_name_with_its_phone_number_is_the_person():
-    q = read("فاتورة صيانة مكيف 500 لأحمد 55512345")
-    assert (q.name, q.description, q.ambiguous, q.phone) == ("لأحمد", "صيانة مكيف", "", "55512345")
+def test_in_the_plain_order_a_phone_after_the_words_does_not_change_who_is_the_person():
+    # name first, then the amount, then what it is for, then the number
+    q = read("فاتورة محمد 250 صيانة 55566123")
+    assert (q.name, q.description, q.phone) == ("محمد", "صيانة", "55566123")
+    q = read("invoice Ahmed 500 AC repair 5551 2345")
+    assert (q.name, q.description, q.phone) == ("Ahmed", "AC repair", "55512345")

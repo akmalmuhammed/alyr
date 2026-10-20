@@ -190,7 +190,7 @@ try {
     await shot("07-first");
     await axe("first");
     await targets("the first invoice step");
-    await fill("document.querySelector('.ob-quick input')", AR ? "صيانة مكيف 500 لأحمد 55512345" : "AC repair 500 for Ahmed 5551 2345");
+    await fill("document.querySelector('.ob-quick input')", AR ? "أحمد 500 صيانة مكيف 55512345" : "AC repair 500 for Ahmed 5551 2345");
     await click(obBtn(S.first.quickFill));
     await until("document.querySelector('#ob-form input[inputmode=decimal]')?.value === '500'", "the boxes to fill");
     const boxes = await js("[...document.querySelectorAll('#ob-form input')].map(i => i.value)");
@@ -203,6 +203,7 @@ try {
     check(firstInvoice?.number === "INV-0001" && firstInvoice.kind === "invoice", `the first invoice is INV-0001 (${firstInvoice?.number})`);
     await until("document.querySelector('img.ob-paper')?.complete && document.querySelector('img.ob-paper')?.naturalWidth > 100", "the paper");
     await shot("09-first-made");
+    check(await js("!document.querySelector('.ob-preview .ob-bubble')"), "the side picture never shows a WhatsApp booking chat for a business that only invoices");
     await axe("first-made");
     await targets("the made invoice");
     await noSideScroll("the made invoice");

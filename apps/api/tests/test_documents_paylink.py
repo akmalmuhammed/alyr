@@ -92,11 +92,14 @@ def test_the_qr_on_the_paper_is_exactly_the_link_and_the_page_says_what_it_is(sh
     render(drawn, trace)
     rows = qr.encode(url)
     n = len(rows)
-    squares = [c for c in trace if c[0] == "fill" and c[5] == "#15171a" and c[3] < 5 and c[4] < 1]
     side = 22.0
+    step = side / n
+    # A run of dark modules is one square, one module high and a hair (the trace rounds to 0.1).
+    # A long run can be wider than any fixed width, so the height is what tells it from a rule.
+    squares = [c for c in trace if c[0] == "fill" and c[5] == "#15171a"
+               and abs(c[4] - round(step + 0.02, 1)) < 1e-6 and c[3] <= side]
     x0 = min(c[1] for c in squares)
     y0 = min(c[2] for c in squares)
-    step = side / n
     read = [[False] * n for _ in range(n)]
     for _, x, y, w, _h, _colour in squares:
         r, c0, length = round((y - y0) / step), round((x - x0) / step), round(w / step)

@@ -319,8 +319,8 @@ def parse(message: str, *, allow_paid: bool = True) -> Quick | None:
         quick.ambiguous = "lone"
         if kind == "receipt":           # a receipt is about a person: "receipt Ahmed 500 cash"
             quick.name, quick.lone, quick.ambiguous = quick.lone, "", ""
-    if span is not None and quick.ambiguous == "swap":
-        _by_the_phone(quick, toks, span)
+    if span is not None and quick.ambiguous == "swap" and (why_before or why_after):
+        _by_the_phone(quick, toks, span)     # only where "for" left it open, not the plain order
     quick.name = quick.name.strip(" ,.;:-")
     quick.description = quick.description.strip(" ,.;:-")
     quick.lone = quick.lone.strip(" ,.;:-")
@@ -329,9 +329,10 @@ def parse(message: str, *, allow_paid: bool = True) -> Quick | None:
 
 def _by_the_phone(quick: Quick, toks: list[_Tok], span: tuple[int, int]) -> None:
     """People write a name and then the number: the words just before a phone number are the
-    person, and the other words are what it is for. "AC repair 500 for Ahmed 5551 2345" and
-    «صيانة مكيف 500 لأحمد 55512345» are settled without a look at the customers. A number that
-    follows the amount ("Ahmed 500 5551 2345 AC repair") says nothing about the order."""
+    person, and the other words are what it is for: "AC repair 500 for Ahmed 5551 2345" is
+    settled without a look at the customers. Only where "for" left it open: in the plain order
+    ("Ahmed 500 AC repair 5551 2345", «محمد 250 صيانة 55566123») the person is who comes first,
+    and a number after the amount says nothing about the order."""
     k = span[0] - 1
     if not 0 <= k < len(toks) or toks[k].kind != "word":
         return

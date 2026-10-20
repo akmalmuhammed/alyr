@@ -81,9 +81,10 @@ def test_with_the_switch_off_the_products_screen_is_as_it_was(client):
     assert keys == ["chat", "bookings", "agent", "accounts"]
     refused = client.post("/api/workspace/products/invoices/enable")
     assert refused.status_code == 404  # not there, as far as the shop can tell
-    assert "documents" not in {
-        m["module_key"] for m in owner_sql("select module_key from tenant_modules where enabled")
-        if m["module_key"] == "documents"}
+    # and nothing was switched on by the refused request, in this shop's own list
+    after = client.get("/api/workspace").json()
+    assert [p["key"] for p in after["products"]] == keys
+    assert not any(p["key"] == "invoices" and p.get("on") for p in after["products"])
 
 
 # ── the switch: on ────────────────────────────────────────────────────────────────────────

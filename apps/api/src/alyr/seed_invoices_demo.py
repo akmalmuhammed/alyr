@@ -83,7 +83,7 @@ async def make(owner: Database, app: Database, now: datetime) -> dict:
             "business_name": NAME, "business_name_ar": NAME_AR,
             "commercial_registration": "100245", "tax_id": "", "address": "Salwa Road, Doha",
             "address_ar": "طريق سلوى، الدوحة", "phone": "+974 5550 0141", "languages": "ar_en",
-            "default_audience": "consumer", "layout": "a4", "brand_color": "#1a6b5a",
+            "default_audience": "consumer", "layout": "a4",
             "notes": {"invoice": {"en": "Payment is due within 14 days.",
                                   "ar": "الدفع خلال 14 يوماً من تاريخ الفاتورة."}},
         })

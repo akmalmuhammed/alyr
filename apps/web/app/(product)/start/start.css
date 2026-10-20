@@ -275,11 +275,11 @@
   font-family: var(--font-ui);
 }
 .ob-chat-head { display: flex; align-items: center; gap: 10px; padding: 10px 14px; background: var(--wa-head); border-bottom: 1px solid var(--hair); }
-.ob-avatar { display: grid; place-items: center; flex: none; width: 34px; height: 34px; border-radius: 50%; background: var(--ink); color: var(--volt); font-size: var(--ui-small); font-weight: 600; letter-spacing: 0.02em; }
+.ob-avatar { display: grid; place-items: center; flex: none; width: 34px; height: 34px; border-radius: 50%; background: var(--ink); color: var(--canvas); font-size: var(--ui-small); font-weight: 600; letter-spacing: 0.02em; }
 .ob-avatar.big { width: 64px; height: 64px; font-size: var(--ui-heading); }
 .ob-chat-name { display: grid; flex: 1; min-width: 0; line-height: 1.2; }
 .ob-chat-name b { font-size: var(--ui-body-sm); font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.ob-chat-name small { font-size: var(--ui-caption); color: var(--ink-3); }
+.ob-chat-name small { font-size: var(--ui-caption); color: var(--ink-2); }
 .ob-live { width: 8px; height: 8px; border-radius: 50%; background: var(--volt); animation: ob-pulse 1.6s infinite; }
 .ob-chat-body { flex: 1; display: flex; flex-direction: column; gap: 6px; min-height: 0; padding: 14px 12px; overflow-y: auto; overscroll-behavior: contain; scrollbar-width: thin; }
 .ob-row { display: flex; justify-content: flex-start; animation: ob-in 0.3s var(--ease-product); }
@@ -291,7 +291,7 @@
   white-space: pre-wrap; overflow-wrap: anywhere; box-shadow: 0 1px 0.5px rgba(11, 20, 26, 0.13);
 }
 .ob-row.me .ob-bubble { background: var(--wa-out); border-radius: 12px 12px 4px 12px; }
-.ob-bubble time { position: absolute; bottom: 3px; inset-inline-end: 8px; font-size: var(--ui-micro); color: var(--ink-3); font-variant-numeric: tabular-nums; }
+.ob-bubble time { position: absolute; bottom: 3px; inset-inline-end: 8px; font-size: var(--ui-micro); color: var(--ink-2); font-variant-numeric: tabular-nums; }
 .ob-bubble a { color: var(--wa-link); text-decoration: underline; word-break: break-all; }
 .ob-reply {
   border: 0; padding: 8px 10px; border-radius: 10px; background: var(--wa-in); color: var(--wa-link);
@@ -307,7 +307,7 @@
 
 .ob-summary { display: grid; justify-items: center; gap: 6px; padding: 32px 20px; border-radius: 22px; background: var(--sheet); box-shadow: var(--float); text-align: center; }
 .ob-summary b { margin-top: 8px; font-size: var(--ui-title-sm); }
-.ob-summary small { color: var(--ink-3); font-size: var(--ui-small); }
+.ob-summary small { color: var(--ink-2); font-size: var(--ui-small); }
 
 /* ── a bigger phone and a tablet ─────────────────────── */
 @media (min-width: 640px) {
@@ -330,13 +330,13 @@
   .ob[dir="rtl"] .ob-rail { padding: 22px 20px 16px 16px; }
   .ob-rail .ob-logo { height: 20px; align-self: flex-start; margin: 2px 4px 6px; }
   .ob-steps { list-style: none; margin: 0; padding: 0; display: grid; gap: 2px; }
-  .ob-steps li { display: flex; align-items: center; gap: 12px; padding: 9px 10px; border-radius: 12px; font-size: var(--ui-body-sm); color: var(--ink-3); }
+  .ob-steps li { display: flex; align-items: center; gap: 12px; padding: 9px 10px; border-radius: 12px; font-size: var(--ui-body-sm); color: var(--ink-2); }
   .ob-steps li.done { color: var(--ink-2); }
   .ob-steps li.current { color: var(--ink); font-weight: 600; background: var(--sheet); box-shadow: var(--lift); }
   .ob-steps li.current .ob-dot { box-shadow: 0 0 0 2px var(--ink) inset; background: radial-gradient(circle, var(--volt) 0 4px, transparent 4.5px); }
   .ob-help { margin-top: auto; display: grid; gap: 4px; padding: 14px; border-radius: 14px; background: var(--raise); box-shadow: var(--lift); }
   .ob-help b { display: flex; align-items: center; gap: 8px; font-size: var(--ui-body-sm); }
-  .ob-help small { color: var(--ink-3); font-size: var(--ui-small); }
+  .ob-help small { color: var(--ink-2); font-size: var(--ui-small); }
   .ob-rail .ob-lang { align-self: flex-start; }
 
   .ob-main { min-height: 0; overflow-y: auto; padding: 56px clamp(32px, 5vw, 72px) 0; background: var(--sheet); }
