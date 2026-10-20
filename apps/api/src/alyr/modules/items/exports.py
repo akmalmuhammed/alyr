@@ -13,7 +13,7 @@ the import takes the apostrophe off again. Numbers are written as numbers, so a 
 
 from decimal import Decimal
 
-from alyr.modules.items import columns, fields, service, xlsx
+from alyr.modules.items import columns, costs, fields, service, xlsx
 from alyr.modules.items.clock import ShopClock
 from alyr.modules.items.sheets import write_csv
 
@@ -54,6 +54,7 @@ def _custom_cell(field_: dict, raw: object, lang: str) -> object:
 def item_rows(
     entries: list[service.Loaded], clock: ShopClock, covers: dict[str, list[str]], lang: str,
     keys: tuple[str, ...] = columns.ORDER, own: list[dict] | None = None,
+    kept: dict | None = None,
 ) -> list[list[object]]:
     """Rows of values, one per size or colour, in the order of `keys`. `covers` maps an
     item's ID to the web addresses of its photos, cover first. `own` are the shop's own fields
@@ -94,6 +95,10 @@ def item_rows(
                 "description_ar": safe_text(i["description_ar"]),
                 "photo": safe_text(", ".join(covers.get(str(i["id"]), []))) if n == 0 else "",
             }
+            if "cost" in keys and kept is not None:
+                # What one unit of this size costs: its own cost, else the item's.
+                own_id = v["id"] if v and named else None
+                cells["cost"] = _money(costs.effective(kept, i["id"], own_id))
             for k in keys:
                 if k.startswith("custom:") and k[7:] in defs:
                     mine = defs[k[7:]]
@@ -139,11 +144,12 @@ def _headers(keys: tuple[str, ...], lang: str, own: list[dict] | None = None) ->
 def export_file(
     entries: list[service.Loaded], clock: ShopClock, covers: dict[str, list[str]], lang: str,
     fmt: str, keys: tuple[str, ...] = columns.ORDER, own: list[dict] | None = None,
+    kept: dict | None = None,
 ) -> tuple[bytes, str, str]:
     """(bytes, file name, content type) for every item of the shop, with the columns its
     features give it (`keys`) and one for each of its own fields (`own`)."""
     keys = (*keys, *columns.custom_columns(own or []))
-    body = item_rows(entries, clock, covers, lang, keys, own)
+    body = item_rows(entries, clock, covers, lang, keys, own, kept)
     stamp = clock.today.isoformat()
     if fmt == "csv":
         data = write_csv([_headers(keys, lang, own), *body])
@@ -223,10 +229,10 @@ def template_file(
     three made-up example rows. `allowed` leaves out the columns of features the shop has
     switched off."""
     kind = columns.KIND_BY_KEY.get(kind_key) or columns.KIND_BY_KEY["generic"]
-    keys = (
-        *(k for k in kind.columns if allowed is None or k in allowed),
-        *columns.custom_columns(own or []),
-    )
+    keys = [k for k in kind.columns if allowed is None or k in allowed]
+    if allowed is not None and "cost" in allowed:
+        keys.append("cost")  # (the person may see costs and the shop keeps them)
+    keys = (*keys, *columns.custom_columns(own or []))
     examples = [
         [_example_value(k, row.get(k), lang) for k in keys] for row in kind.examples
     ]

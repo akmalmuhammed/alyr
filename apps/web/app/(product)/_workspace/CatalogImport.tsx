@@ -14,6 +14,7 @@ import {
 } from "./catalogApi";
 import { COPY, type Copy, type Lang } from "./catalogCopy";
 import { Field, Fold, Icon, Sheet } from "./CatalogUi";
+import { CostImportNote } from "./Margin";
 
 type Step =
   | { kind: "home" }
@@ -87,8 +88,8 @@ function Paged({ items, render, label, t }: { items: ImportItem[]; render: (item
   );
 }
 
-export function CatalogImport({ lang, canEdit, onClose, onChanged }: {
-  lang: Lang; canEdit: boolean; onClose: () => void; onChanged: () => void;
+export function CatalogImport({ lang, canEdit, costs = false, onClose, onChanged }: {
+  lang: Lang; canEdit: boolean; costs?: boolean; onClose: () => void; onChanged: () => void;
 }) {
   const t = COPY[lang];
   const i = t.imp;
@@ -270,6 +271,7 @@ export function CatalogImport({ lang, canEdit, onClose, onChanged }: {
         <section className="ct-sec" aria-labelledby="ct-imp-template">
           <h3 id="ct-imp-template">{i.templateTitle}</h3>
           <p className="ct-hint">{i.templateText}</p>
+          {costs && <CostImportNote lang={lang} />}
           {kinds && (
             <Field label={i.kind} hint={kinds.kinds.find((k) => k.key === kind)?.note}>
               <select value={kind} onChange={(e) => setKind(e.target.value)}>

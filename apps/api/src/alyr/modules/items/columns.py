@@ -106,6 +106,15 @@ COLUMNS: tuple[Column, ...] = (
              "آخر يوم في العرض. الفارغ يعني بلا تاريخ انتهاء."),
     ),
     Column(
+        "cost", "Cost price (QAR)", "سعر التكلفة (ر.ق)", "money",
+        ("cost", "cost price", "cost qar", "unit cost", "buying price", "purchase price",
+         "التكلفة", "تكلفة", "سعر الشراء"), 13,
+        Text("What one unit costs you, in riyals, such as 7.25. Only owners and admins see this "
+             "column. Leave empty to keep what ALYR has.",
+             "ما تكلفه الوحدة الواحدة عليك بالريال، مثل 7.25. يرى هذا العمود المالك والمديرون "
+             "فقط. اتركه فارغاً للإبقاء على ما في ALYR."),
+    ),
+    Column(
         "unit", "Sold by", "يُباع بالـ", "word",
         ("unit", "uom", "unit of measure", "الوحدة", "وحدة البيع", "يباع بال"), 11,
         Text("piece, kg, g, litre, ml, metre, tola, box, pack, portion or hour. Weights and "
@@ -233,9 +242,11 @@ COLUMNS: tuple[Column, ...] = (
 )
 
 BY_KEY = {c.key: c for c in COLUMNS}
-ORDER = tuple(c.key for c in COLUMNS)
+# The cost column (ALY-150) is not one of the shop's usual columns: it is added at the end of a
+# file only for an owner or admin of a shop that keeps costs (`features.file_columns`).
+ORDER = tuple(c.key for c in COLUMNS if c.key != "cost")
 # Which kinds of column are numbers in the file (a spreadsheet gets a number cell).
-MONEY = ("price", "sale_price", "price_diff")
+MONEY = ("price", "sale_price", "price_diff", "cost")
 WHOLE = ("code",)
 # Numbers of units: a whole number, or up to three decimals for something sold by weight or
 # volume (ALY-149).
@@ -253,6 +264,8 @@ NEEDS: dict[str, str] = {
     "min_order": "pack_rules|decimal_quantity",
     "tags": "tags", "available": "rule_switch", "stock": "rule_count",
     "per_day": "rule_daily_limit", "low_stock": "rule_count|rule_daily_limit",
+    # Cost is the owner's and the admins' alone: `features.file_columns` also asks who is asking.
+    "cost": "cost_margin",
 }
 
 

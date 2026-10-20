@@ -21,6 +21,7 @@ from alyr.modules.items import (
     bulk,
     changes,
     clock,
+    costs,
     drafts,
     features,
     fields,
@@ -292,6 +293,15 @@ class BulkApply(BulkIn):
     preview: str = Field(min_length=1, max_length=64, description="The preview's hash")
 
 
+async def _with_warnings(conn, staff: Staff, feats, result: dict) -> dict:
+    """For an owner or admin of a shop that keeps costs: a price under the cost is a warning,
+    never a block (ALY-150). Nobody else is told anything about costs."""
+    if not (feats.on("cost_margin") and access.is_manager(staff)):
+        return result
+    found = await costs.warnings(conn, await clock.load(conn), UUID(str(result["item"]["id"])))
+    return {**result, "cost_warnings": found} if found else result
+
+
 def _media(request: Request):
     return request.app.state.media
 
@@ -380,6 +390,7 @@ async def add_item(
                 conn, data, team.actor_of(staff), await clock.load(conn)
             )
             await photos.add_to_views(conn, _media(request), [result["item"]])
+            result = await _with_warnings(conn, staff, feats, result)
     except (items.ItemError, stock.StockError) as error:
         raise _fail(error) from error
     return {"id": result["item"]["id"], **result}
@@ -630,6 +641,7 @@ async def save_item(
             )
             if result is not None:
                 await photos.add_to_views(conn, _media(request), [result["item"]])
+                result = await _with_warnings(conn, staff, await features.load(conn), result)
     except (items.ItemError, stock.StockError) as error:
         raise _fail(error) from error
     if result is None:

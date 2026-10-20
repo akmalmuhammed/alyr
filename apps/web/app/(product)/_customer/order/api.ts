@@ -2,7 +2,7 @@
 // `Refusal` (a code and a sentence in both languages), so the page can show the API's own
 // words in the customer's language.
 
-import type { Check, Item, Live, Placed, Refusal, Store } from "./types";
+import type { Check, FulfilmentBody, Item, Live, Placed, Refusal, Store } from "./types";
 
 export class ApiError extends Error {
   constructor(readonly status: number, readonly refusal: Refusal | null) {
@@ -56,12 +56,20 @@ export const loadLive = (slug: string, ids: string[], token: string | null) =>
 export type CartBody = {
   items: { product_id: string; quantity: number; variant_id?: string | null; option_ids?: string[]; expected_price?: number }[];
   for_date?: string | null;
+  /** The codes the customer typed (only while the shop's discounts are on; at most 3). */
+  coupons?: string[];
+  /** How the order reaches the customer (only while the shop's Delivery and pickup is on). The
+   *  check needs the mode and the area only; the order also takes the address and the note. */
+  fulfilment?: Partial<FulfilmentBody>;
 };
 
 export const checkCart = (slug: string, body: CartBody, token: string | null) =>
   call<Check>(`/api/store/${slug}/cart/check`, post({ ...body, token }));
 
-export const placeOrder = (slug: string, body: CartBody & { payment: "link" | "account"; table?: string }, token: string) =>
+/** `expected_total` is the total the customer was shown: if the order now comes to something else it is refused with the new figures. */
+export const placeOrder = (
+  slug: string, body: CartBody & { payment: "link" | "account"; table?: string; expected_total?: number }, token: string,
+) =>
   call<Placed>(`/api/store/${slug}/orders`, post({ ...body, token }));
 
 export const orderAgain = (slug: string, payment: "link" | "account", token: string) =>
