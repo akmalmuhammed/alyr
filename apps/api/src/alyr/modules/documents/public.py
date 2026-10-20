@@ -14,7 +14,7 @@ from uuid import UUID
 
 import asyncpg
 
-from alyr.modules.documents import kinds, money, words
+from alyr.modules.documents import kinds, money, paylink, words
 from alyr.modules.documents.service import LINE_COLUMNS
 
 
@@ -43,6 +43,11 @@ async def page(conn: asyncpg.Connection, doc_id: UUID) -> dict | None:
         related = await conn.fetchval(
             "select number from documents where id = $1", row["related_document_id"])
     seller = row["seller"] or {}
+    # The invoice's payment link, when it has one and it can still be paid (ALY-141). The page
+    # says nothing of a link that was closed (the invoice was cancelled or has been paid).
+    link = await paylink.of_document(conn, doc_id)
+    pay = ({"url": link["url"], "amount_minor": link["amount_minor"]}
+           if link and link["status"] == "pending" and row["status"] == "issued" else None)
     return {
         "kind": row["kind"], "title": _pair(words.KIND_TITLES[row["kind"]]),
         "number": row["number"], "status": row["status"],
@@ -72,7 +77,7 @@ async def page(conn: asyncpg.Connection, doc_id: UUID) -> dict | None:
              "amount_minor": p["amount_minor"]}
             for p in (row["payments"] or [])
         ],
-        "voided_by": voided_by, "against": related,
+        "voided_by": voided_by, "against": related, "pay": pay,
     }
 
 

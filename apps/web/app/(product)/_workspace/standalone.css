@@ -1,0 +1,67 @@
+/* The standalone parts of the Documents screens (ALY-141, spec 016): the one-line box, the
+   shop's customers, the saved lines, the payment link. It adds only what these need on top of
+   documents.css and the Catalog's patterns (catalog.css), and takes every colour, size and shadow
+   from the shell's tokens, so light, dark and right-to-left come for free. Built at 375 px first:
+   targets are 44 px or more, the price is a big number, and nothing scrolls sideways. */
+
+/* ── the parts of Documents: Documents, Customers, Saved lines ── */
+.sa-parts { display: flex; flex-wrap: wrap; gap: 8px; margin: 0 0 4px; padding: 0; list-style: none; }
+.sa-part { display: inline-flex; align-items: center; gap: 6px; min-height: 44px; padding: 0 16px; border: 0; border-radius: 12px; background: transparent; color: var(--ink-2); font-size: var(--ui-body-sm); font-weight: 500; box-shadow: 0 0 0 1px var(--hair-2) inset; cursor: pointer; }
+.sa-part[aria-current="page"] { background: var(--ink); color: var(--sheet); box-shadow: none; }
+.sa-part:hover:not([aria-current="page"]) { background: var(--raise); }
+.sa-part:focus-visible { outline: 2px solid var(--ink); outline-offset: 2px; }
+
+/* ── the one-line box ── */
+.sa-quick { display: grid; gap: 10px; padding: 14px; margin-block: 4px 14px; border-radius: 16px; background: var(--sheet); box-shadow: 0 0 0 1px var(--hair) inset; min-width: 0; }
+.sa-quick-head { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px; }
+.sa-quick-head h2 { margin: 0; font-family: var(--font-ui-mono); font-size: var(--ui-micro); font-weight: 500; letter-spacing: 0.08em; text-transform: uppercase; color: var(--ink-2); }
+.sh[dir="rtl"] .sa-quick-head h2 { font-family: var(--face); letter-spacing: 0; font-size: var(--ui-caption); }
+.sa-quick-form { display: grid; gap: 10px; min-width: 0; }
+.sa-quick-note { margin: 0; font-size: var(--ui-body-sm); color: var(--ink); line-height: 1.5; }
+.sa-choices { display: grid; gap: 8px; }
+.sa-choices > b { font-size: var(--ui-body-sm); }
+.sa-sub { margin: 0; font-size: var(--ui-caption); color: var(--ink-2); }
+.sa-sub-row { padding: 8px 14px 4px; background: var(--raise); }
+
+/* ── a line: the price is the big number ── */
+.sa-numbers { align-items: end; }
+.sa-num { font-variant-numeric: tabular-nums; font-weight: 600; }
+.sa-hits { display: grid; gap: 6px; }
+.sa-save-line { align-self: flex-start; }
+.sa-saved { display: flex; align-items: center; gap: 6px; margin: 0; font-size: var(--ui-small); color: var(--ink-2); }
+.sa-save-customer { margin-top: 2px; }
+
+/* The total, above the form's buttons, so the number is in sight while the keypad is up. */
+.sa-bar-total { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; flex: 1 1 100%; margin: 0; font-size: var(--ui-body); }
+.sa-bar-total span { color: var(--ink-2); font-size: var(--ui-small); }
+.sa-bar-total b { font-size: var(--ui-heading-lg); font-weight: 600; letter-spacing: -0.02em; }
+
+/* ── the shop's customers and saved lines ── */
+.sa-list { list-style: none; margin: 0; padding: 0; border-radius: 16px; background: var(--sheet); box-shadow: 0 0 0 1px var(--hair) inset; overflow: hidden; }
+.sa-list > li + li { border-top: 1px solid var(--hair); }
+.sa-row { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; gap: 4px 14px; width: 100%; min-height: 64px; padding: 12px 16px; border: 0; background: transparent; color: inherit; text-align: start; cursor: pointer; }
+.sa-row:hover { background: var(--raise); }
+.sa-row:focus-visible { outline-offset: -3px; }
+.sa-row-main { display: grid; gap: 2px; min-width: 0; }
+.sa-row-main b { font-size: var(--ui-body); font-weight: 600; overflow-wrap: anywhere; }
+.sa-row-main small { font-size: var(--ui-caption); color: var(--ink-2); overflow-wrap: anywhere; }
+.sa-row-end { display: grid; justify-items: end; gap: 4px; text-align: end; font-size: var(--ui-body-sm); font-weight: 600; }
+.sa-row-end small { font-weight: 400; color: var(--ink-2); font-size: var(--ui-caption); }
+.sh[dir="rtl"] :is(.sa-row-main b, .sa-row-main small) { text-align: right; }
+.sh[dir="ltr"] :is(.sa-row-main b, .sa-row-main small) { text-align: left; }
+.sa-tools { display: grid; gap: 10px; }
+.sa-owes { color: var(--ink); }
+.sa-detail-head { display: grid; gap: 4px; }
+.sa-detail-head h1 { overflow-wrap: anywhere; }
+.sa-facts { display: grid; gap: 10px; margin: 0; }
+.sa-facts div { display: grid; grid-template-columns: minmax(6.5rem, 9rem) minmax(0, 1fr); gap: 10px; align-items: baseline; }
+.sa-facts dt { font-size: var(--ui-small); color: var(--ink-2); }
+.sa-facts dd { margin: 0; font-size: var(--ui-body-sm); overflow-wrap: anywhere; }
+@media (max-width: 20rem) { .sa-facts div { grid-template-columns: minmax(0, 1fr); gap: 2px; } }
+.sa-balance { margin: 0; font-size: var(--ui-heading-lg); font-weight: 600; letter-spacing: -0.02em; }
+
+/* ── the payment link and the share ── */
+.sa-paylink { display: grid; gap: 8px; padding: 12px 14px; border-radius: 12px; background: var(--raise); box-shadow: 0 0 0 1px var(--hair) inset; }
+.sa-paylink p { margin: 0; font-size: var(--ui-body-sm); }
+.sa-share { display: grid; gap: 8px; }
+.sa-share .btn { text-decoration: none; }

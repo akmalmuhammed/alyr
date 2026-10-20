@@ -113,6 +113,9 @@ class Doc:
     # The first 16 hex digits of the content hash, printed so the paper can be checked.
     code: str = ""
     brand: Brand = field(default_factory=Brand)
+    # The invoice's payment link, when it has one (ALY-141): drawn as a QR code in the corner
+    # the layouts keep free, with "Scan to pay online" and the amount due beside it.
+    pay_url: str = ""
     # Written into the PDF's own properties; the same input gives the same file.
     created: datetime | None = None
 

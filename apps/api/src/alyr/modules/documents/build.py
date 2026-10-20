@@ -96,7 +96,7 @@ def brand_of(settings: Mapping, logo: bytes | None, stamp: bytes | None) -> Bran
 
 def make_doc(
     row: Mapping, lines: Sequence[Mapping], seller: Mapping, brand: Brand, *,
-    related: Mapping | None = None, preview: bool = False,
+    related: Mapping | None = None, preview: bool = False, pay_url: str = "",
 ) -> Doc:
     """The page for a document row (an issued one, or a draft being previewed) and its lines.
     `seller` is the document's own copy of the seller, or the shop's settings for a preview."""
@@ -127,6 +127,6 @@ def make_doc(
         payments=payments, notes=pair(row["notes"]), terms=pair(row["terms"]),
         reason=row["reason"], related_title=related_title, related_number=related_number,
         unregistered=not seller.get("registered", False), preview=preview,
-        code=(row["content_hash"] or "")[:16], brand=brand,
+        code=(row["content_hash"] or "")[:16], brand=brand, pay_url=pay_url,
         created=issued_at if isinstance(issued_at, datetime) else datetime(2026, 1, 1, tzinfo=UTC),
     )

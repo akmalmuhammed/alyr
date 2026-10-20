@@ -56,6 +56,17 @@ The simulator page at `/whatsapp` is wired to the original sample shop (Al Noor)
 
 Rawda Trading has three groups of customers: cafes (Karak Corner, Dune Roasters, Marsa Bites, and two Arabic names), hotels and caterers (Pearl Bay Catering, Oasis Events Catering, and a hotel), and retail shops. Open the order page as a cafe customer and as a retail customer: the same item shows a different price and minimum. Some customers buy on account up to a limit.
 
+## Salem Maintenance (invoices only)
+
+`scripts/demo.sh shops` also makes **Salem Maintenance** («سالم للصيانة», ALY-141), an AC repair business in Doha that uses ALYR for invoices and receipts and nothing else (`--only salem` makes just it). It has four saved lines (AC repair, AC deep clean, Filter change, Inspection visit), three customers (Ahmed Al Thani, who has written to the test line; Sara Al Mulla; Doha Villas Co., a company with a registration number), and five papers: an unpaid invoice for the company with its payment link, a paid invoice for Ahmed with its receipt, a small unpaid one for Sara, and a walk-in receipt.
+
+- **Sign in:** `owner@demo-salem.example` (owner) or `agent@demo-salem.example`; the code shows on the sign-in page. Open `/app/documents`: the navigation is Home, Documents, Products, Connections, Team; there is no Orders, Catalog or Bookings.
+- **Make an invoice in a few seconds:** New, then write `Filter change 120 for Ahmed` (or «فلتر 120 لأحمد») and Fill in the form; or open Customers, Ahmed, Start an invoice.
+- **By message:** in the simulator, send as `97455500141` to the shop `salem-maintenance`: `invoice Ahmed 500 for AC repair`, tap Yes, then Undo. A message from any other number gets the ordinary customer reply.
+- **The payment link:** open the unpaid invoice, copy the link, open it on this machine (the stand-in payment page, no money moves), and pay: the invoice reads paid and its receipt appears.
+- **From the start:** sign up a new shop at `/start` and choose "Invoices only" (the product lead's switch `ALYR_INVOICES_FOR_NEW_SHOPS=true` must be on, or make the business in the back office).
+- An issued document can never be deleted, so this shop is made once: running the command again leaves it as it is and says so.
+
 ## Safe to repeat
 
 - Everything it writes carries a fixed demo id and a `demo-` slug, and the wipe only touches those shops (and the older Qirfa and sample-bookings shops for the credit repair).
@@ -64,7 +75,7 @@ Rawda Trading has three groups of customers: cafes (Karak Corner, Dune Roasters,
 
 ## Reset and clean up
 
-`scripts/demo.sh shops` is the reset. To remove the demo shops altogether, delete the rows with their `tenant_id` for the seven ids `0a1f0000-0000-4000-8000-00000000d101` to `...d107`, or drop the local database volume.
+`scripts/demo.sh shops` is the reset. To remove the demo shops altogether, delete the rows with their `tenant_id` for the seven ids `0a1f0000-0000-4000-8000-00000000d101` to `...d107` (and `...d201` for Salem Maintenance, whose issued papers the database will not delete, so for that one drop the local database volume).
 
 ## Walk-throughs
 

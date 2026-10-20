@@ -267,6 +267,36 @@ async def send(
     return made
 
 
+async def send_to_contact(
+    conn: asyncpg.Connection, staff, doc_id: UUID, contact_id: UUID, *,
+    language: str | None = None,
+) -> dict:
+    """Send an issued document by WhatsApp to one of the shop's contacts, who need not be the
+    document's customer: the owner's private test customer on the onboarding test line
+    (ALY-141) is the one use. The same checks and the same outbound layer as `send`: a
+    contact who has not agreed, or whose window is closed, is recorded as blocked."""
+    row = await conn.fetchrow(
+        "select id, status, number, contact_id, created_by_user from documents where id = $1",
+        doc_id)
+    if row is None:
+        raise DocumentError("not_found", 404)
+    access.require_own_or_manager(staff, row["created_by_user"])
+    await access.require_issue(conn, staff)
+    if row["status"] == "draft":
+        raise DocumentError("not_issued", 409)
+    if row["status"] == "void":
+        raise DocumentError("document_voided", 409)
+    contact = await conn.fetchrow("select id, lang from contacts where id = $1", contact_id)
+    if contact is None:
+        raise DocumentError("customer_not_found", 404)
+    actor = team.actor_of(staff)
+    new = await _insert(conn, doc_id, "whatsapp", "staff", contact_id, "",
+                        language or contact["lang"], actor)
+    await team.record(conn, "document", doc_id, "sent", actor, row["contact_id"],
+                      {"number": row["number"], "channels": ["whatsapp"], "to": "test customer"})
+    return present(await conn.fetchrow(_VIEW + " where d.id = $1", new))
+
+
 async def share_link(conn: asyncpg.Connection, staff, doc_id: UUID) -> dict:
     """A link to the hosted page of an issued (or cancelled) document, for the person to copy
     and send by hand. The same signed token a send carries (a third purpose of `core/links`,

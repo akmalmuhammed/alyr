@@ -49,7 +49,7 @@
 .ob-progress span.done { background: var(--ink); }
 .ob-progress span.current { background: var(--volt); }
 .ob-lang {
-  border: 0; background: transparent; padding: 6px 10px; border-radius: 999px;
+  border: 0; background: transparent; padding: 6px 12px; border-radius: 999px; min-height: 44px;
   font-size: var(--ui-small); font-weight: 500; color: var(--ink-2);
 }
 .ob-lang:hover { background: var(--hair); color: var(--ink); }
@@ -70,7 +70,7 @@
 .ob-content > .ob-kicker + h1 { margin-top: -10px; }
 .ob-sub { margin: -6px 0 0; font-size: var(--ui-input); line-height: 1.55; color: var(--ink-2); max-width: 38rem; text-wrap: pretty; }
 .ob-note { display: flex; align-items: center; gap: 10px; margin: 0; padding: 14px 16px; border-radius: 14px; background: var(--raise); color: var(--ink-2); font-size: var(--ui-body); box-shadow: var(--lift); }
-.ob-muted { color: var(--ink-3); font-size: var(--ui-body-sm); }
+.ob-muted { color: var(--ink-2); font-size: var(--ui-body-sm); }
 .ob-error { margin: 12px 0 0; padding: 10px 14px; border-radius: 12px; background: color-mix(in srgb, var(--bad) 10%, transparent); color: var(--bad); font-size: var(--ui-body-sm); max-width: 46rem; }
 
 .ob-actions {
@@ -109,7 +109,7 @@
 .ob-field { display: grid; gap: 6px; margin: 0; padding: 0; border: 0; min-width: 0; }
 .ob-field > span, .ob-field > legend { font-size: var(--ui-body-sm); font-weight: 600; padding: 0; }
 .ob-field > legend { margin-bottom: 6px; }
-.ob-field small { color: var(--ink-3); font-size: var(--ui-small); }
+.ob-field small { color: var(--ink-2); font-size: var(--ui-small); }
 .ob-field input {
   height: 50px; padding: 0 14px; border-radius: 14px; border: 0;
   background: var(--sheet); box-shadow: var(--lift); font-size: var(--ui-input); outline: none;
@@ -143,7 +143,7 @@
 .ob-tile:hover { transform: translateY(-1px); }
 .ob-tile.on { box-shadow: 0 0 0 2px var(--ink); }
 .ob-tile b { font-size: var(--ui-body); font-weight: 600; line-height: 1.25; }
-.ob-tile small { font-size: var(--ui-small); line-height: 1.4; color: var(--ink-3); }
+.ob-tile small { font-size: var(--ui-small); line-height: 1.4; color: var(--ink-2); }
 .ob-glyph { display: grid; place-items: center; width: 38px; height: 38px; margin-bottom: 8px; border-radius: 12px; background: var(--raise); color: var(--ink); }
 .ob-tile.on .ob-glyph { background: var(--volt); color: var(--on-volt); }
 .ob-tick { position: absolute; top: 12px; inset-inline-end: 12px; display: grid; place-items: center; width: 22px; height: 22px; border-radius: 50%; background: var(--ink); color: var(--sheet); }
@@ -206,7 +206,7 @@
 @keyframes ob-pulse { 70% { box-shadow: 0 0 0 10px rgba(183, 243, 74, 0); } 100% { box-shadow: 0 0 0 0 rgba(183, 243, 74, 0); } }
 .ob-success { display: flex; align-items: center; gap: 14px; padding: 14px 16px; border-radius: 18px; background: var(--volt-wash); box-shadow: 0 0 0 1px color-mix(in srgb, var(--volt) 50%, transparent); animation: ob-in 0.4s var(--ease-product); }
 .ob-success > div { display: grid; gap: 2px; }
-.ob-success b { font-size: var(--ui-body); }
+.ob-success b, .ob-success .ob-made { font-size: var(--ui-body); font-weight: 700; margin: 0; letter-spacing: 0; line-height: 1.3; }
 .ob-success small { color: var(--ink-2); font-size: var(--ui-small); }
 .ob-signal { display: grid; place-items: center; flex: none; width: 40px; height: 40px; border-radius: 50%; background: var(--volt); color: var(--on-volt); }
 
@@ -252,8 +252,12 @@
 .ob-check { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; align-items: center; gap: 12px; padding: 14px 16px; border-top: 1px solid var(--hair); }
 .ob-check:first-child { border-top: 0; }
 .ob-check-text { display: grid; gap: 2px; }
+@media (max-width: 560px) {
+  /* a row with a button: the button goes under the words, not beside them */
+  .ob-check > :nth-child(3):is(button, a) { grid-column: 2; justify-self: start; }
+}
 .ob-check-text b { font-size: var(--ui-body); font-weight: 600; }
-.ob-check-text small { color: var(--ink-3); font-size: var(--ui-small); line-height: 1.45; }
+.ob-check-text small { color: var(--ink-2); font-size: var(--ui-small); line-height: 1.45; }
 .ob-check em { font-style: normal; font-size: var(--ui-small); color: var(--volt-ink); white-space: nowrap; }
 .ob-check.done .ob-check-text b { color: var(--ink-2); }
 .ob-dot { display: grid; place-items: center; flex: none; width: 22px; height: 22px; border-radius: 50%; box-shadow: 0 0 0 1.5px var(--hair-2) inset; }
@@ -363,3 +367,26 @@
 @media (prefers-reduced-motion: reduce) {
   .ob *, .ob *::after { animation: none !important; transition: none !important; }
 }
+
+/* ── "Invoices only" (ALY-141): the details step and the first invoice ───────── */
+.ob-fold { border-radius: 14px; background: var(--raise); box-shadow: var(--lift); min-width: 0; }
+.ob-fold > summary { display: flex; align-items: center; min-height: 48px; padding: 0 16px; cursor: pointer; font-size: var(--ui-body); font-weight: 600; list-style: none; }
+.ob-fold > summary::-webkit-details-marker { display: none; }
+.ob-fold > summary:focus-visible { outline: 2px solid var(--ink); outline-offset: 2px; border-radius: 14px; }
+.ob-fold[open] > summary { border-bottom: 1px solid var(--hair); }
+.ob-fold > .ob-fields { padding: 16px; }
+.ob-fold > .ob-paper, .ob-fold > .ob-muted { margin: 16px; }
+.ob-logo-row { display: flex; flex-wrap: wrap; align-items: center; gap: 12px; }
+.ob-logo-img { display: block; max-width: 8rem; max-height: 4rem; object-fit: contain; border-radius: 8px; background: var(--white); box-shadow: 0 0 0 1px var(--hair-2); }
+.ob-file { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+/* The sample and the real document: a picture of paper, white whatever the theme. */
+.ob-paper { display: block; width: 100%; max-width: 30rem; height: auto; margin-inline: auto; background: var(--white); border-radius: 4px; box-shadow: 0 0 0 1px var(--hair-2), var(--lift); }
+.ob-paper-wait { aspect-ratio: 1 / 1.414; background: repeating-linear-gradient(135deg, transparent 0 9px, var(--hair) 9px 10px), var(--raise); }
+.ob-quick { display: grid; gap: 10px; grid-template-columns: minmax(0, 1fr); align-items: end; }
+.ob-bignum { min-height: 64px; font-size: var(--ui-heading-lg); font-weight: 600; letter-spacing: -0.02em; font-variant-numeric: tabular-nums; }
+.ob-row-btns { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; }
+.ob-row-btns .ob-btn { text-decoration: none; }
+.ob-test-chat .ob-chat { height: min(22rem, 52dvh); }
+.ob-file-chip { display: inline-block; margin-bottom: 4px; padding: 2px 8px; border-radius: 6px; background: var(--hair); font-family: var(--font-ui-mono); font-size: var(--ui-micro); }
+@media (min-width: 40rem) { .ob-quick { grid-template-columns: minmax(0, 1fr) auto; } }
+@media (min-width: 1280px) { .ob-paper-fold { display: none; } }

@@ -32,9 +32,11 @@ async def details(
             "select p.amount, p.status, p.provider, split_part(c.name, ' ', 1) as customer, "
             "c.lang, t.name as shop, "
             "t.name_ar as shop_ar, t.slug, "
-            "o.number as order_number, p.order_id "
+            "o.number as order_number, p.order_id, d.number as document_number, "
+            "d.kind as document_kind "
             "from payment_requests p join contacts c on c.id = p.contact_id "
             "join tenants t on t.id = p.tenant_id left join orders o on o.id = p.order_id "
+            "left join documents d on d.id = p.document_id "
             "where p.id = $1",
             payment_id,
         )

@@ -262,6 +262,8 @@ async def meta(request: Request, staff: Staff = Depends(current_staff)) -> dict:
     async with _db(request).tenant(staff.tenant_id) as conn:
         allowed = await access.view(conn, staff)
         shop = await doc_settings.get(conn)
+        has_catalog = bool(await conn.fetchval(
+            "select enabled from tenant_modules where module_key = 'catalog'"))
     return {
         # What the draft form starts from. Nothing here is secret or the owner's alone: the bank
         # details, the registration number's text and the rest of the settings are not.
@@ -272,6 +274,11 @@ async def meta(request: Request, staff: Staff = Depends(current_staff)) -> dict:
             "layout": shop["layout"], "show_sku": shop["show_sku"],
             "has_registration": bool(shop["commercial_registration"]),
             "show_alyr_mark": shop["show_alyr_mark"],
+            # The shop's usual note and terms for each kind, which a document without its own
+            # carries (the form says so; ALY-141). They are printed on every paper.
+            "notes": shop["notes"], "terms": shop["terms"],
+            # Whether the shop has the Catalog: the form offers its items beside the saved lines.
+            "has_catalog": has_catalog,
         },
         "kinds": [
             {"key": k.key, "prefix": k.prefix, "needs_customer": k.needs_customer,

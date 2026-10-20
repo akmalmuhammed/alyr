@@ -10,7 +10,8 @@ Two layers, on purpose:
   and packaging can change by editing this file, without touching the modules.
 
 The line-up (17 Oct 2026, `docs/agent-dashboard/00-founder-decisions.md`): ALYR Chat,
-ALYR Bookings, ALYR Agent and ALYR Accounts. A product appears in the workspace only when it
+ALYR Bookings, ALYR Agent and ALYR Accounts, and (20 Oct, ALY-141) ALYR Invoices, which is
+offered only when the product lead switches it on. A product appears in the workspace only when it
 is built (D-039): ALYR Payroll is added here, with its module, on the day it works. Two modules are
 shared: the team inbox and payment links belong to both Chat and Bookings, because a
 business whose number runs on ALYR answers its customers nowhere else, and a booking can
@@ -103,6 +104,11 @@ class Product:
     # What an included product brings, since it has no modules to list.
     parts: tuple[Text, ...] = ()
     tags: tuple[str, ...] = field(default_factory=tuple)
+    # The name of the `Settings` flag that decides whether a shop may be offered this product
+    # (empty: always offered). A product whose flag is off is not listed on the Products
+    # screen and cannot be switched on by the shop itself, unless the shop already uses it
+    # (the back office can still give it to one shop). See `offered`.
+    offer: str = ""
 
 
 @dataclass(frozen=True)
@@ -235,9 +241,11 @@ MODULES: tuple[Module, ...] = (
         ),
     ),
     # Documents: receipts, invoices, quotes, delivery notes, statements, credit notes, deposit
-    # receipts and proformas (ALY-138, D-042, spec 011). It is in no product and no starting
-    # setup, and it is off for every shop until the product lead switches it on (the back
-    # office can for one shop, `SWITCHABLE_MODULES`). With it on, the workspace shows a
+    # receipts and proformas (ALY-138, D-042, spec 011). It is the own module of ALYR Invoices
+    # (ALY-141) and in no other product and no other starting setup, and it is off for every shop
+    # until the product lead switches it on (the back office can for one shop,
+    # `SWITCHABLE_MODULES`; a shop can add the product itself once `ALYR_INVOICES_FOR_NEW_SHOPS`
+    # is on). With it on, the workspace shows a
     # Documents section (ALY-146, spec 015) and two numbers on the home screen, each the size of
     # the list it opens (`modules/documents/listing.py` works them out; the list and the card
     # share one query). It has no setup step: nothing has to be done before it is useful.
@@ -347,6 +355,27 @@ PRODUCTS: tuple[Product, ...] = (
         ),
         modules=("ledger",),
     ),
+    # ALYR Invoices (ALY-141, D-042 "As built (ALY-141)", spec 016): invoices and receipts for a
+    # shop that uses nothing else of ALYR. It is Documents plus payment links (the only other
+    # module a paper needs: a payment link on an invoice), and nothing more: no inbox, orders,
+    # Catalog or bookings have to be on, and turning any of them on later only adds to it.
+    # Customers and the team are not modules (every workspace has them), so they are not listed.
+    # It is offered only when the product lead switches it on (`ALYR_INVOICES_FOR_NEW_SHOPS`);
+    # the back office can give it to one shop whatever the switch says. Free for now: it has no
+    # price item, and the back office adds one per client when the founder decides (D-032).
+    Product(
+        "invoices",
+        Text("ALYR Invoices", "ALYR Invoices"),
+        Text("Invoices and receipts", "فواتير وإيصالات"),
+        Text(
+            "Invoices and receipts in Arabic and English, numbered one after the other and sent "
+            "to your customer by link, email or WhatsApp.",
+            "فواتير وإيصالات بالعربية والإنجليزية، مرقّمة بالتسلسل، تصل عميلك برابط أو بريد "
+            "إلكتروني أو واتساب.",
+        ),
+        modules=("documents", "payments"),
+        offer="invoices_for_new_shops",
+    ),
 )
 
 # Sections every workspace has, whatever the shop has bought.
@@ -390,12 +419,25 @@ def products_for(modules: set[str] | frozenset[str]) -> list[str]:
     return [p.key for p in PRODUCTS if p in using]
 
 
+def offered(product: Product, using: bool = False) -> bool:
+    """May this shop be shown the product and switch it on itself? A product with no `offer`
+    flag always; otherwise when the product lead has switched the flag on, or the shop already
+    uses the product (it keeps its screen and its switch)."""
+    if not product.offer or using:
+        return True
+    # (imported here: the settings module has no reason to know the catalogue)
+    from alyr.config import get_settings
+
+    return bool(getattr(get_settings(), product.offer))
+
+
 def check() -> None:
     """Fail fast if the catalogue refers to something that does not exist."""
     for product in PRODUCTS:
         for key in product.modules:
             assert key in MODULE_BY_KEY, f"product {product.key} names unknown module {key}"
         assert product.status in ("available", "included"), product.key
+        assert not product.offer or product.status == "available", product.key
         # A product made only of shared modules could never be told apart from the
         # products it shares them with.
         assert not product.modules or own_modules(product), f"{product.key} has no own module"

@@ -202,13 +202,17 @@ def test_a_shop_without_documents_gets_nothing(client_factory, monkeypatch):
                      off.tenant_id)[0]["n"] == 0
 
 
-def test_documents_is_in_no_product_and_no_starting_setup():
+def test_documents_is_in_one_product_and_one_starting_setup_and_both_are_off_by_default():
+    """ALYR Invoices (ALY-141) is the one product with the module, and "Invoices only" the one
+    starting setup; the switch for new shops is off, so no shop is offered either."""
     from alyr import catalog, presets
+    from alyr.config import Settings
 
     assert "documents" in catalog.MODULE_BY_KEY
-    assert all("documents" not in p.modules for p in catalog.PRODUCTS)
-    for preset in presets.PRESETS:
-        assert "documents" not in (*preset.modules, *preset.with_catalog), preset.key
+    assert [p.key for p in catalog.PRODUCTS if "documents" in p.modules] == ["invoices"]
+    assert [p.key for p in presets.PRESETS
+            if "documents" in (*p.modules, *p.with_catalog)] == ["invoices"]
+    assert Settings.model_fields["invoices_for_new_shops"].default is False
     # The screens exist (ALY-146): a section and two numbers on the home screen, and nothing to
     # set up first. The module is still on for no shop until the product lead switches it on.
     module = catalog.MODULE_BY_KEY["documents"]
@@ -224,7 +228,9 @@ def test_no_new_shop_gets_documents_whatever_its_type(client_factory):
     from alyr import presets
     from test_onboarding import new_business
 
-    for kind in [p.key for p in presets.PRESETS]:
+    # ("Invoices only" is the one type that has the module, and it is not offered while its
+    # switch is off: `test_documents_standalone.py` makes one.)
+    for kind in [p.key for p in presets.PRESETS if p.key != "invoices"]:
         client = client_factory()
         _, slug, _ = new_business(client, kind=kind)
         tenant = owner_sql("select id from tenants where slug = $1", slug)[0]["id"]

@@ -32,6 +32,7 @@ from datetime import UTC, datetime, timedelta
 from pathlib import Path
 from urllib.parse import urlparse
 
+from alyr import seed_invoices_demo
 from alyr.config import Settings, get_settings
 from alyr.core import links
 from alyr.core.media import MediaService
@@ -45,6 +46,7 @@ from alyr.modules.items.service import count_active
 from alyr.modules.ledger import service as ledger
 from alyr.seed import DEMO_TENANT_ID
 from alyr.seed_bookings import SAMPLES
+from alyr.seed_invoices_demo import KEY as INVOICES_KEY
 from alyr.seed_qirfa import QIRFA_TENANT_ID
 
 LOCAL_HOSTS = {"localhost", "127.0.0.1", "::1", "postgres", "host.docker.internal"}
@@ -52,7 +54,7 @@ SEED = 2026
 # Every demo shop on the platform, old and new: the only shops a repair may touch.
 DEMO_TENANTS = (
     DEMO_TENANT_ID, QIRFA_TENANT_ID, *(s.tenant_id for s in SAMPLES.values()),
-    *(s.tenant_id for s in SHOPS),
+    *(s.tenant_id for s in SHOPS), seed_invoices_demo.SALEM_TENANT_ID,
 )
 
 
@@ -176,7 +178,8 @@ def describe(shop: Shop, web_url: str, counts: dict | None = None, link: str = "
 async def main(argv: list[str]) -> int:
     parser = argparse.ArgumentParser(prog="python -m alyr.seed_catalog_demos", description=(
         "Make or reset the Catalog's demo shops, one for every type of business."))
-    parser.add_argument("--only", help="comma-separated keys: " + ", ".join(BY_KEY))
+    parser.add_argument("--only", help="comma-separated keys: " + ", ".join(BY_KEY)
+                        + f", {INVOICES_KEY} (the invoices-only shop, ALY-141)")
     parser.add_argument("--list", action="store_true", help="say what would be made, write nothing")
     parser.add_argument("--repair-only", action="store_true",
                         help="only give cancelled credit orders in the demo shops their reversal")
@@ -184,16 +187,20 @@ async def main(argv: list[str]) -> int:
                         help="run against a database that is not clearly a local one")
     args = parser.parse_args(argv)
     settings = get_settings()
-    keys = args.only.split(",") if args.only else list(BY_KEY)
-    unknown = [k for k in keys if k not in BY_KEY]
+    keys = args.only.split(",") if args.only else [*BY_KEY, INVOICES_KEY]
+    unknown = [k for k in keys if k not in BY_KEY and k != INVOICES_KEY]
     if unknown:
-        print(f"Unknown shop: {', '.join(unknown)}. Choose from {', '.join(BY_KEY)}.")
+        choices = ", ".join([*BY_KEY, INVOICES_KEY])
+        print(f"Unknown shop: {', '.join(unknown)}. Choose from {choices}.")
         return 2
-    shops = [BY_KEY[k] for k in keys]
+    shops = [BY_KEY[k] for k in keys if k in BY_KEY]
+    with_invoices = INVOICES_KEY in keys
     web_url = settings.public_web_url.rstrip("/")
     if args.list:
         for shop in shops:
             print("\n".join(describe(shop, web_url)))
+        if with_invoices:
+            print("\n".join(seed_invoices_demo.describe(web_url)))
         return 0
     try:
         check_target(settings, args.allow_non_local)
@@ -221,6 +228,16 @@ async def main(argv: list[str]) -> int:
                 print(f"{shop.name}: {refusal}")
                 return 1
             print("\n".join(describe(shop, web_url, counts, link)))
+        if with_invoices:
+            try:
+                counts = await seed_invoices_demo.make(owner, app, now)
+            except Refused as refusal:
+                print(f"{seed_invoices_demo.NAME}: {refusal}")
+                return 1
+            print("\n".join(seed_invoices_demo.describe(web_url, counts)))
+            if not counts:
+                print("    left as it is: its documents are already there, and an issued document "
+                      "is never deleted.")
         print(
             f"\nPhotos are drawn tiles kept on this machine under {settings.media_local_dir}. "
             "The API serves them itself when the R2 settings are empty (they are, in "

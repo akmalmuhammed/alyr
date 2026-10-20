@@ -19,10 +19,13 @@ import asyncpg
 from alyr import catalog, presets, shop_templates
 from alyr.channels.base import InboundMessage
 from alyr.config import get_settings
-from alyr.core import auth, pricing, team
+from alyr.core import auth, mail, pricing, team
 from alyr.core.auth import Staff
 from alyr.core.normalise import fmt_qar
 from alyr.db import Database
+from alyr.modules.documents import delivery as documents_delivery
+from alyr.modules.documents import settings as doc_settings
+from alyr.modules.documents import standalone
 from alyr.modules.items import clock as shop_clock
 from alyr.modules.items import template
 
@@ -48,6 +51,12 @@ def catalog_on() -> bool:
     return get_settings().catalog_for_new_shops
 
 
+def invoices_on() -> bool:
+    """Is "Invoices only" offered to new businesses? One setting (`invoices_for_new_shops`),
+    off until the product lead switches it on (ALY-141)."""
+    return get_settings().invoices_for_new_shops
+
+
 async def types(conn: asyncpg.Connection) -> list[dict]:
     """The types of business an owner may choose, as ALYR has switched them (D-032):
     hidden types are left out, and `way` is the path a new business of that type takes.
@@ -57,7 +66,7 @@ async def types(conn: asyncpg.Connection) -> list[dict]:
         {"key": p.key, "name": _text(p.name), "hint": _text(p.hint), "icon": p.icon,
          "way": pricing.way_for(p, settings[p.key]["availability"])}
         for p in presets.PRESETS
-        if settings[p.key]["availability"] != "hidden" and p.offered(catalog_on())
+        if settings[p.key]["availability"] != "hidden" and p.offered(catalog_on(), invoices_on())
     ]
 
 
@@ -78,7 +87,7 @@ def _main_product(modules: tuple[str, ...]) -> str:
     """The product a setup request for a new business is filed under: credit accounts
     for a trader, bookings for an appointment business set up with ALYR, else Chat."""
     using = catalog.products_for(set(modules))
-    for key in ("accounts", "bookings", "chat"):
+    for key in ("accounts", "bookings", "chat", "invoices"):
         if key in using:
             return key
     return "chat"
@@ -106,7 +115,7 @@ async def create_business(
     """Create the business, its owner and its starting setup. Returns the tenant and a
     session cookie value for the owner."""
     preset = presets.PRESET_BY_KEY.get(type_key)
-    if preset is None or not preset.offered(catalog_on()):
+    if preset is None or not preset.offered(catalog_on(), invoices_on()):
         raise OnboardingError("choose the type of business")
     name, owner_name = name.strip(), owner_name.strip()
     modules = preset.modules_for(catalog_on())
@@ -161,6 +170,10 @@ async def create_business(
             await template.apply(
                 conn, shop_templates.builtin_for(preset.key), await shop_clock.load(conn)
             )
+        if way == "invoices":
+            # The settings row and the shop's numbering, so the details step has something to
+            # read and the first invoice has a number to take (ALY-141).
+            await doc_settings.ensure(conn)
         if way == "assisted":
             await conn.execute(
                 "insert into setup_requests (product_key, step_key, note, requested_by) "
@@ -217,8 +230,34 @@ async def state(conn: asyncpg.Connection, staff: Staff) -> dict:
         # What the shop's type gives its Catalog, in plain words, for the review; null where
         # the shop has no Catalog (travel and documents, or while it is off for new shops).
         "catalog": await template.review(conn) if await template.enabled(conn) else None,
+        # For "Invoices only" (ALY-141): the first invoice or receipt the business issued (the
+        # step is done when there is one), and what it can be sent by today. Null elsewhere.
+        "documents": await _documents_state(conn, staff) if way == "invoices" else None,
     }
 
+
+async def _documents_state(conn: asyncpg.Connection, staff: Staff) -> dict:
+    connected = catalog.CONNECTION_BY_KEY["whatsapp"].connected
+    return {
+        "first": await standalone.first_document(conn),
+        # Whether it can make invoices: without a commercial registration number it makes receipts.
+        "has_registration": bool(await conn.fetchval(
+            "select commercial_registration <> '' from document_settings")),
+        # The owner's own email address: the test can be sent to it when email is set up.
+        "email_ready": mail.configured() and mail.deliverable(staff.email),
+        "whatsapp_connected": bool(await conn.fetchval(f"select {connected}")),
+    }
+
+
+async def test_send_document(conn: asyncpg.Connection, staff: Staff, doc_id: UUID,
+                             lang: str) -> dict:
+    """Send the owner's first invoice to their private test customer, to see what a customer
+    receives. The test line is inside ALYR; nothing leaves it (D-031)."""
+    try:
+        contact_id = await standalone.test_customer(conn, staff, lang)
+    except LookupError as error:
+        raise OnboardingError(str(error)) from error
+    return await documents_delivery.send_to_contact(conn, staff, doc_id, contact_id)
 
 async def update(
     conn: asyncpg.Connection, *, name: str | None = None, name_ar: str | None = None,

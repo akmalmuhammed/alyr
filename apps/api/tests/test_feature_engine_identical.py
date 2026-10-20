@@ -147,4 +147,5 @@ def test_a_shop_of_this_type_behaves_as_it_did_before(on, kind):
 def test_every_type_the_golden_file_holds_is_a_business_type_alyr_sells():
     from alyr.presets import PRESETS
 
-    assert TYPES == sorted(p.key for p in PRESETS) and len(TYPES) == 11
+    # ("Invoices only", ALY-141, has no catalog and so no row in the golden file.)
+    assert TYPES == sorted(p.key for p in PRESETS if not p.requires_invoices) and len(TYPES) == 11

@@ -10,20 +10,21 @@ second design.
 Nothing is cut and nothing ends in an ellipsis: long text wraps, an amount larger than the
 column shrinks to fit (`Pen.fit`).
 
-The square at the foot opposite the signature is left empty on purpose: it is reserved for a
-payment or verification QR code (a later package). Nothing is drawn there now, not even a
-frame, because the page does not say what it does not yet do.
+The square at the foot opposite the signature is kept for a payment QR code. It holds one only
+for an invoice that carries a payment link (ALY-141, `paycode.py`); everywhere else it stays
+empty, not even a frame, because the page does not say what it does not do.
 """
 
 from dataclasses import dataclass
 
 from alyr.modules.documents import colours
+from alyr.modules.documents.render import paycode
 from alyr.modules.documents.render import text as t
 from alyr.modules.documents.render.context import Bi, Doc, Line
 from alyr.modules.documents.render.pen import Ink, Pen
 
 SIZES = {"a4": (210.0, 297.0), "a5": (148.0, 210.0)}
-QR_SIDE = 22.0  # millimetres; reserved, left empty
+QR_SIDE = 22.0  # millimetres; the payment QR code, only where the invoice has a link
 SHORT_LABELS = {
     "registration": ("السجل التجاري", "CR"),
     "tax_id": ("الرقم الضريبي", "Tax ID"),
@@ -710,6 +711,21 @@ class Paged:
             x0, x1 = self.span(self.content_w - 62.0 * self.k, 62.0 * self.k)
             self._signature(x0, x1, self.y + 2.0, height)
             self.y += height + 2.0
+        self._pay_code()
+
+    def _pay_code(self) -> None:
+        """The payment QR code, in the corner kept free for it (an invoice with a payment link,
+        ALY-141): on the last page, against the start edge, just above the foot, with what it
+        is and the amount due beside it. Nothing at all for a document without a link."""
+        d = self.doc
+        if not d.pay_url:
+            return
+        side = QR_SIDE * self.k
+        x0, _ = self.span(0, side)
+        y = self.bottom - side
+        paycode.modules(self.pen, d.pay_url, x0, y, side)
+        cx0, cx1 = self.span(side + 3.0, min(70.0 * self.k, self.content_w - side - 3.0))
+        paycode.caption(d, self.pen, cx0, cx1, y + 1.0, self.k, self.rtl)
 
     # ── the foot, on every page ───────────────────────────────
 

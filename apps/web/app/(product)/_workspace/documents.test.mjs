@@ -169,3 +169,17 @@ test("dates are written out with Western digits in both languages", () => {
   assert.equal(dateText(null, "en"), "");
   assert.equal(dateText("nonsense", "en"), "");
 });
+
+test("the wa.me link has the number the way WhatsApp wants it and the message written in it", async () => {
+  const { waLink } = await import("./documentsLogic.ts");
+  const text = "Invoice INV-0002 from Salem: QAR 120.00. https://x.test/d/s?t=ab";
+  // Qatar numbers as people write them all give 974 and eight digits
+  for (const typed of ["5551 2345", "55512345", "+974 5551 2345", "00974 5551 2345", "٥٥٥١٢٣٤٥"]) {
+    assert.equal(waLink(typed, text), `https://wa.me/97455512345?text=${encodeURIComponent(text)}`, typed);
+  }
+  // no phone: wa.me asks who to send it to
+  assert.equal(waLink("", "hi"), "https://wa.me/?text=hi");
+  // the message is one safe piece of a URL, Arabic included
+  const arabic = waLink("55512345", "فاتورة INV-0001 & نص");
+  assert.ok(!arabic.includes(" ") && !arabic.includes("&") && decodeURIComponent(arabic.split("text=")[1]) === "فاتورة INV-0001 & نص");
+});

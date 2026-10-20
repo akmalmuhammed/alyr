@@ -29,6 +29,8 @@ type Doc = {
   };
   payments: { method: Pair; amount_minor: number }[];
   voided_by: string | null; against: string | null;
+  // The invoice's payment link while it can still be paid (ALY-141).
+  pay: null | { url: string; amount_minor: number };
 };
 type LinkState = { state: "none" | "ok" | "invalid" | "expired"; message: string; message_ar: string };
 type Page = { shop: { name: string; name_ar: string }; document: Doc | null; link: LinkState };
@@ -36,6 +38,7 @@ type Page = { shop: { name: string; name_ar: string }; document: Doc | null; lin
 const T = {
   en: {
     context: "Document", download: "Download PDF", preparing: "Preparing the file…",
+    pay: (amount: string) => `Pay ${amount}`, payNote: "You pay on the shop's payment page. ALYR does not hold your money.",
     downloadFailed: "The file could not be downloaded. Please try again.",
     issued: (date: string) => `Issued ${date}`,
     paid: "Paid", due: (amount: string) => `Balance due ${amount}`, creditNote: "Credit note",
@@ -50,6 +53,7 @@ const T = {
   },
   ar: {
     context: "مستند", download: "تنزيل ملف PDF", preparing: "جارٍ تحضير الملف…",
+    pay: (amount: string) => `ادفع ${amount}`, payNote: "تدفع في صفحة الدفع الخاصة بالمتجر. لا تحتفظ ALYR بأموالك.",
     downloadFailed: "تعذّر تنزيل الملف. حاول مرة أخرى.",
     issued: (date: string) => `صدر في ${date}`,
     paid: "مدفوع", due: (amount: string) => `المتبقي ${amount}`, creditNote: "إشعار دائن",
@@ -243,7 +247,13 @@ function DocumentPage() {
       )}
 
       {failed && <p className="cx-error" role="alert">{t.downloadFailed}</p>}
-      <button className="cx-btn" style={{ "--i": 3 } as React.CSSProperties} onClick={download} disabled={busy || !token}>
+      {doc.pay && !void_ && (
+        <>
+          <a className="cx-btn" style={{ "--i": 3 } as React.CSSProperties} href={doc.pay.url}>{t.pay(written(doc.pay.amount_minor, doc, lang))}</a>
+          <p className="cx-note" style={{ "--i": 3 } as React.CSSProperties}>{t.payNote}</p>
+        </>
+      )}
+      <button className={doc.pay && !void_ ? "cx-btn ghost" : "cx-btn"} style={{ "--i": 4 } as React.CSSProperties} onClick={download} disabled={busy || !token}>
         <Glyph name="download" />{busy ? t.preparing : t.download}
       </button>
     </Frame>
