@@ -2,10 +2,8 @@
 
 import { useEffect, useRef, useState } from "react";
 import type { DemoSet, Locale } from "./copy";
-import { RC0042 } from "./paperData";
 import { WaDoc } from "./Frames";
 import { BookingPhone, DocLinkPhone } from "./PageDrawings";
-import { PaperA4 } from "./Paper";
 
 type Props = { product: DemoSet; locale: Locale };
 
@@ -172,7 +170,7 @@ export function ProductDemo({ product, locale }: Props) {
                       {line.doc && <WaDoc name={line.doc.name} meta={line.doc.meta} />}
                       <span className="wa-text" dir="auto">{line.text}</span>
                       <span className="wa-meta">
-                        <span dir="ltr">{clock(locale, demo.start + index * 2)}</span>
+                        <span dir="ltr">{clock(locale, line.at ?? demo.start + index * 2)}</span>
                         {mine && (
                           <svg className="wa-ticks" viewBox="0 0 18 12" aria-hidden="true">
                             <path d="M1 6.5 4.2 9.7 10.6 2.3" />
@@ -221,11 +219,6 @@ export function ProductDemo({ product, locale }: Props) {
           {demo.panel.doc && (
             <div className="panel-page">
               <DocLinkPhone page={demo.panel.doc} className="panel-phone" />
-            </div>
-          )}
-          {demo.panel.paper && (
-            <div className="panel-page panel-paper">
-              <PaperA4 doc={RC0042} crop />
             </div>
           )}
           {demo.panel.rows.length > 0 && (

@@ -30,6 +30,8 @@ export type ChatLine = {
   name?: string;
   // A file sent as a document message (a receipt's PDF), drawn above its caption.
   doc?: { name: string; meta: string };
+  // Its clock time, in minutes after midnight, when it is not two minutes after the last.
+  at?: number;
 };
 
 export type PanelRow = {
@@ -70,9 +72,9 @@ export type Demo = {
   start: number;
   chat: ChatLine[];
   /** What the team sees; `kicker` names the screen when it is not the workspace, `page`
-   * draws the customer's booking page instead of rows, `paper` the receipt RC-0042 on A4 and
-   * `doc` a document's own page (`/d/`) on the customer's phone. */
-  panel: { title: string; badge: string; kicker?: string; rows: PanelRow[]; total?: [string, string]; page?: BookingPage; paper?: boolean; doc?: DocLinkPage };
+   * draws the customer's booking page instead of rows, and `doc` a document's own page
+   * (`/d/`) on the customer's phone. */
+  panel: { title: string; badge: string; kicker?: string; rows: PanelRow[]; total?: [string, string]; page?: BookingPage; doc?: DocLinkPage };
   caption: string;
 };
 
@@ -331,7 +333,8 @@ export type InsideSection = {
   eyebrow: string;
   title: string;
   groups: { name: string; items: string[] }[];
-  notYet: { title: string; items: string[] };
+  /** What is not built, below a dashed rule. Leave it out where nothing needs saying (D-039). */
+  notYet?: { title: string; items: string[] };
   note?: string;
 };
 
@@ -1362,7 +1365,7 @@ const en: Copy = {
         agent: "Comes with ALYR Chat: sales against the same days last week, orders waiting.",
         accounts: "Let regulars put an order on their account.",
         shelf: "Your order page shows your shelf: photos, sizes, and what has sold out.",
-        docs: "A numbered receipt for each paid order, in the chat.",
+        docs: "A numbered receipt when an order is paid, in the chat while the customer’s conversation is open.",
       },
     },
     cta: {
@@ -2375,9 +2378,9 @@ const ar: Copy = {
         "سجّل البيع بالآجل بسطر واحد من هاتف الموظف، واعرف من عليه مستحقات لك ومنذ متى، وأرسل تذكيرات تتدرّج نبرتها مع عمر الدين. ونجهّزه لك في قطر.",
     },
     shelf: {
-      title: "ALYR Shelf · الأصناف والصور والمخزون، مع كل منتجات ALYR",
+      title: "ALYR Shelf · الأصناف والصور والمخزون، مع كل منتج من ALYR",
       description:
-        "كل ما تبيعه في مكان واحد: الصور والأسعار والمقاسات والخيارات بالعربية والإنجليزية. كل بيع ينقص المخزون، والقطعة الأخيرة تُباع مرة واحدة، وصفحة الطلب تكتب «نفد». مع كل منتجات ALYR.",
+        "كل ما تبيعه في مكان واحد: الصور والأسعار والمقاسات والخيارات بالعربية والإنجليزية. كل بيع ينقص المخزون، والقطعة الأخيرة تُباع مرة واحدة، وصفحة الطلب تُظهر «نفد». مع كل منتج من ALYR.",
     },
     docs: {
       title: "ALYR Docs · الإيصالات والفواتير والإشعارات الدائنة، بالعربية والإنجليزية",
@@ -3167,7 +3170,7 @@ const ar: Copy = {
     inside: {
       eyebrow: "ماذا يتضمن",
       title: "كل ما يفعله اليوم.",
-      note: "نجهّز ALYR Chat معك في محلك. كل ما في هذه القائمة جاهز، ونتفق معك على الرقم عند تجهيزه لك.",
+      note: "نجهّز ALYR Chat معك في محلك. كل ما في هذه القائمة مبنيّ في المنتج، ونتفق معك على الرقم عند تجهيزه لك.",
       groups: [
         {
           name: "لعملائك",
@@ -3261,7 +3264,7 @@ const ar: Copy = {
         agent: "يأتي مع ALYR Chat: المبيعات مقارنةً بالأيام نفسها من الأسبوع الماضي، والطلبات المنتظرة.",
         accounts: "دع زبائنك الدائمين يسجّلون الطلب على حسابهم.",
         shelf: "تعرض صفحة طلبك أصنافك: الصور والمقاسات وما نفد منها.",
-        docs: "إيصال مرقّم لكل طلب مدفوع، في المحادثة.",
+        docs: "إيصال مرقّم حين يُدفع الطلب، في المحادثة إذا راسلك العميل خلال آخر 24 ساعة.",
       },
     },
     cta: {
@@ -3618,7 +3621,7 @@ const ar: Copy = {
             "رسائل لاستعادة العملاء الذين حان موعد عودتهم. تحتاج أولاً إلى موافقة تسويقية.",
           ],
         },
-        note: "نجهّز ALYR Bookings معك في محلك. كل ما فوق الخط جاهز.",
+        note: "نجهّز ALYR Bookings معك في محلك. كل ما فوق الخط مبنيّ في المنتج.",
       },
       who: {
         eyebrow: "لمن صُمّم",
@@ -3778,7 +3781,7 @@ const ar: Copy = {
             "النقد عند الكاونتر. المبيعات تُحسب من الطلبات، لا من النقد المحصَّل.",
           ],
         },
-        note: "يأتي ALYR Agent مع كل منتجات ALYR. كل ما فوق الخط جاهز.",
+        note: "يأتي ALYR Agent مع كل منتجات ALYR. كل ما فوق الخط مبنيّ في المنتج.",
       },
       who: {
         eyebrow: "لمن صُمّم",
@@ -4181,7 +4184,7 @@ const ar: Copy = {
             "الفواتير، والإيصالات التي تذكر طريقة الدفع، من ALYR Docs، ونجهّزه معك.",
           ],
         },
-        note: "نجهّز ALYR Accounts معك في محلك. كل ما فوق الخط جاهز.",
+        note: "نجهّز ALYR Accounts معك في محلك. كل ما فوق الخط مبنيّ في المنتج.",
       },
       who: {
         eyebrow: "لمن صُمّم",

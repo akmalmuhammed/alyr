@@ -63,7 +63,7 @@ export const RC0042: PaperDoc = {
   date: { ar: "19 أكتوبر 2026", en: "19 Oct 2026" },
   shop: {
     name: { ar: "مخبز قرفة", en: "Qirfa Bakery" },
-    address: { ar: "بن محمود، الدوحة، قطر", en: "Bin Mahmoud, Doha, Qatar" },
+    address: { ar: "السد، الدوحة، قطر", en: "Al Sadd, Doha, Qatar" },
   },
   customer: { ar: "عائشة حمد", en: "Aisha Hamad" },
   payment: { ar: "نقدًا", en: "Cash" },
@@ -83,3 +83,6 @@ export const RC0042: PaperDoc = {
   series: { before: ["RC-0040", "RC-0041"], next: "RC-0043" },
 };
 
+/** The foot of another receipt, from a shop with no CR number on file (Docs FIG 03): its own
+ * document code, so it is never read as RC-0042, whose shop has its CR on file. */
+export const NOCR: PaperDoc = { ...RC0042, code: "4B17 E2A9 6C05 D3F8" };
