@@ -195,6 +195,9 @@ svg { display: block; }
 /* The menu's links sit inside .top-nav, whose `a` rules (inline-flex, nowrap, muted colour,
    negative margins) would otherwise win on specificity and squeeze each card into a row. */
 .pm a.pm-link { display: grid; min-height: 9rem; margin-inline: 0; padding: 1rem .25rem .5rem 0; color: var(--text); white-space: normal; }
+/* the states stand on one line across the row, however long each product's line runs */
+.pm a.pm-link { grid-template-rows: auto 1fr auto; }
+.pm a.pm-link .pm-state { align-self: end; }
 [dir="rtl"] .pm a.pm-link { padding: 1rem 0 .5rem .25rem; }
 .pm-name { font-size: 1.0625rem; font-weight: 600; letter-spacing: -.01em; }
 .pm-line { font-size: .875rem; line-height: 1.45; color: var(--text-muted); max-width: 15rem; text-wrap: pretty; }
