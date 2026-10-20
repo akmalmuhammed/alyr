@@ -1,4 +1,4 @@
-"""The shape of a connected sale: what another system sends (ALY-142, spec 015).
+"""The shape of a connected sale: what another system sends (ALY-142, spec 016).
 
 One model for the open API and for a CSV import, so a sale from a file is checked by exactly the
 rules a sale from a till is. Strict on purpose: an unknown field is refused (a misspelt

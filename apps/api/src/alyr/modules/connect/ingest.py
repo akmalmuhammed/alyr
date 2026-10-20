@@ -1,4 +1,4 @@
-"""One sale in, one document out, once (ALY-142, spec 015).
+"""One sale in, one document out, once (ALY-142, spec 016).
 
 `accept` is the single door for a sale that another system reports: the open API calls it for a
 till's sale and the CSV import calls it for each sale in a file, so a row from a file is held to

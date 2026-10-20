@@ -1,4 +1,4 @@
--- Documents, package 5: connected mode (ALY-142, epic ALY-137, decision D-042, spec 015).
+-- Documents, package 5: connected mode (ALY-142, epic ALY-137, decision D-042, spec 016).
 --
 -- A shop that keeps another POS, accounting or invoicing tool sends its sales to ALYR so ALYR can
 -- hand the customer a digital receipt or invoice. Two systems must never both number the same

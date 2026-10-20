@@ -1,4 +1,4 @@
-"""Importing a POS's sales export (ALY-142, spec 015).
+"""Importing a POS's sales export (ALY-142, spec 016).
 
 Upload, a preview of every row with its number in English and Arabic, apply as one transaction
 through the same door as the open API, and an undo of the newest import. The Catalog's import is

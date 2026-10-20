@@ -1,4 +1,4 @@
-"""Events out: a shop's other system hears about its documents (ALY-142, spec 015).
+"""Events out: a shop's other system hears about its documents (ALY-142, spec 016).
 
 Signed, retried with growing waits, logged with the last answer, switched off after sustained
 failure with an alert to the owner, and never sent to an address ALYR must not reach (that is

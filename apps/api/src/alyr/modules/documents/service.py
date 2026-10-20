@@ -574,6 +574,24 @@ def retention_of(row: Mapping) -> dict | None:
     return {"years": years, "confirmed": kinds.RETENTION_CONFIRMED, "keep_until": until.isoformat()}
 
 
+async def _source_info(conn: asyncpg.Connection, source: str, ref: str) -> dict | None:
+    """What a document came from, as a person names it: "Order 1001", "Booking 12". A source
+    that is no longer in the shop (or was typed by hand) gives None."""
+    try:
+        ident = UUID(ref)
+    except ValueError:
+        return None
+    if source == "order":
+        number = await conn.fetchval("select number from orders where id = $1", ident)
+    elif source == "booking":
+        number = await conn.fetchval("select number from bookings where id = $1", ident)
+    elif source == "ledger_payment":
+        return {"kind": "ledger_payment", "id": ref, "number": None}
+    else:
+        return None
+    return None if number is None else {"kind": source, "id": ref, "number": number}
+
+
 async def get(conn: asyncpg.Connection, staff: Staff, doc_id: UUID) -> dict:
     row = await _row(conn, doc_id)
     access.require_own_or_manager(staff, row["created_by_user"])
@@ -595,6 +613,32 @@ async def get(conn: asyncpg.Connection, staff: Staff, doc_id: UUID) -> dict:
     if row["voided_by_document_id"]:
         v = await _row(conn, row["voided_by_document_id"])
         voided_by = {"id": str(v["id"]), "number": v["number"]}
+    # Papers made for this one that are not credit notes: the receipts of payments against an
+    # invoice. They are shown beside it so the owner can follow the money (ALY-146).
+    children = [
+        {"id": str(c["id"]), "kind": c["kind"], "number": c["number"], "status": c["status"],
+         "total_minor": c["total_minor"], "issue_date": _iso(c["issue_date"])}
+        for c in await conn.fetch(
+            "select id, kind, number, status, total_minor, issue_date from documents "
+            "where related_document_id = $1 and kind <> 'credit_note' and status <> 'draft' "
+            "order by seq", doc_id)
+    ]
+    source_info = await _source_info(conn, row["source"], row["source_ref"])
+    # Payments staff recorded by hand against an invoice, after it was issued: the paper never
+    # changes, so what the invoice has been paid NOW is its paper plus these.
+    recorded = []
+    if row["kind"] == "invoice" and row["status"] != "draft":
+        recorded = [
+            {"id": str(p["id"]), "amount_minor": p["amount_minor"], "method": p["method"],
+             "reference": p["reference"], "recorded_by": p["recorded_by"],
+             "recorded_at": _iso(p["recorded_at"]),
+             "receipt_document_id": _iso(p["receipt_document_id"])}
+            for p in await conn.fetch(
+                "select id, amount_minor, method, reference, recorded_by, recorded_at, "
+                "receipt_document_id from manual_payments where subject = 'invoice' "
+                "and subject_id = $1 order by recorded_at, id", doc_id)
+        ]
+    paid_now = row["paid_minor"] + sum(p["amount_minor"] for p in recorded)
     warnings = []
     if row["status"] == "draft":
         # A draft has no copy of the seller yet: judge it by the shop's settings as they are.
@@ -623,9 +667,18 @@ async def get(conn: asyncpg.Connection, staff: Staff, doc_id: UUID) -> dict:
             "total_minor": row["total_minor"],
             "paid_minor": row["paid_minor"], "balance_minor": row["balance_minor"],
         },
+        # What the paper says (`totals`) never changes. This is as of now: the paper's payments
+        # plus those recorded by hand since (a cancelled or draft document owes nothing).
+        "now": {
+            "paid_minor": paid_now,
+            "balance_minor": (max(row["total_minor"] - paid_now, 0)
+                              if row["status"] == "issued" else 0),
+        },
+        "recorded_payments": recorded,
         "payments": row["payments"], "notes": row["notes"], "terms": row["terms"],
         "reason": row["reason"], "source": row["source"], "source_ref": row["source_ref"],
         "related": related, "credit_notes": credits, "voided_by": voided_by,
+        "children": children, "source_info": source_info,
         "voided_at": _iso(row["voided_at"]),
         "lines": [_line_public(line) for line in lines],
         "content_hash": row["content_hash"], "hash_version": row["hash_version"],
@@ -636,59 +689,37 @@ async def get(conn: asyncpg.Connection, staff: Staff, doc_id: UUID) -> dict:
     }
 
 
-async def list_documents(
-    conn: asyncpg.Connection, staff: Staff, *, kind: str | None = None, status: str | None = None,
-    q: str | None = None, limit: int = 50, offset: int = 0, include_withdrawn: bool = False,
-) -> dict:
-    where, args = [], []
-    if not include_withdrawn:
-        # Imported by mistake and taken back (ALY-142): kept on record, out of the way.
-        where.append("withdrawn_at is null")
-
-    def add(sql: str, value) -> None:
-        args.append(value)
-        where.append(sql.replace("?", f"${len(args)}"))
-
-    if kind:
-        add("kind = ?", kind)
-    if status:
-        add("status = ?", status)
-    if q:
-        add("(position(lower(?) in lower(coalesce(number, ''))) > 0 "
-            "or position(lower(?) in lower(coalesce(customer ->> 'name', ''))) > 0 "
-            "or position(lower(?) in lower(coalesce(customer ->> 'name_ar', ''))) > 0)", q)
-    if not access.is_manager(staff):
-        add("created_by_user = ?", staff.user_id)
-    clause = (" where " + " and ".join(where)) if where else ""
-    rows = await conn.fetch(
-        "select id, kind, status, number, issue_date, currency, currency_exponent, total_minor, "
-        "balance_minor, customer, created_at, created_by from documents" + clause
-        + f" order by coalesce(issued_at, created_at) desc, id limit ${len(args) + 1} "
-        f"offset ${len(args) + 2}", *args, limit, offset,
-    )
-    total = await conn.fetchval("select count(*) from documents" + clause, *args)
-    return {
-        "total": total,
-        "documents": [
-            {"id": str(r["id"]), "kind": r["kind"], "status": r["status"], "number": r["number"],
-             "issue_date": _iso(r["issue_date"]), "currency": r["currency"],
-             "currency_exponent": r["currency_exponent"], "total_minor": r["total_minor"],
-             "balance_minor": r["balance_minor"],
-             "customer_name": (r["customer"] or {}).get("name")
-             or (r["customer"] or {}).get("name_ar", ""),
-             "created_at": _iso(r["created_at"]), "created_by": r["created_by"]}
-            for r in rows
-        ],
-    }
-
-
-async def pdf_of(conn: asyncpg.Connection, staff: Staff, doc_id: UUID) -> tuple[bytes, dict]:
+async def pdf_of(
+    conn: asyncpg.Connection, staff: Staff, doc_id: UUID, *, layout: str | None = None
+) -> tuple[bytes, dict]:
+    """The PDF of an issued document: the stored one, byte for byte. With a `layout` other than
+    the one it was issued in, a copy drawn from the same stored content on another page size
+    (to print on A5 or on a roll what was issued on A4). A copy is never stored and changes
+    nothing: the number, the hash and the issued PDF stay as they were."""
     row = await _row(conn, doc_id)
     access.require_own_or_manager(staff, row["created_by_user"])
     if row["status"] == "draft":
         raise DocumentError("not_issued", 409)
-    data = await conn.fetchval("select content from document_files where document_id = $1", doc_id)
-    return bytes(data), row
+    if layout is not None and layout not in kinds.LAYOUTS:
+        raise DocumentError("layout_unknown", field="layout")
+    if layout is None or layout == row["layout"]:
+        data = await conn.fetchval(
+            "select content from document_files where document_id = $1", doc_id)
+        return bytes(data), row
+    lines = await _lines(conn, doc_id)
+    related = await _row(conn, row["related_document_id"]) if row["related_document_id"] else None
+    seller = row["seller"]
+    shop = await settings.get(conn)
+    logo, stamp = await settings.images_of(conn)
+    # The look is the shop's today, but a picture that is not the one the paper was issued
+    # with is left off rather than shown in its place.
+    if seller.get("logo_sha256") != shop["logo_sha256"]:
+        logo = None
+    if seller.get("stamp_sha256") != shop["stamp_sha256"]:
+        stamp = None
+    doc = build.make_doc({**row, "layout": layout}, lines, seller,
+                         build.brand_of(shop, logo, stamp), related=related)
+    return await render_pdf(doc), row
 
 
 async def verify(conn: asyncpg.Connection, doc_id: UUID) -> dict:
@@ -725,13 +756,19 @@ async def activity_of(conn: asyncpg.Connection, doc_id: UUID) -> list[dict]:
 async def preview_pdf(
     conn: asyncpg.Connection, staff: Staff, *, body: Mapping | None = None,
     draft_id: UUID | None = None, kind: str | None = None, layout: str | None = None,
-    languages: str | None = None,
+    languages: str | None = None, override: Mapping | None = None,
 ) -> bytes:
     """Draw a document that does not exist: from a draft, from a body, or (with neither)
     from a made-up sale of the given kind. Writes nothing and takes no number, so a preview
     can be asked for as often as a person likes. `layout` and `languages` override the
-    document's own so the owner can see how it looks in each."""
+    document's own so the owner can see how it looks in each. `override` is settings the owner
+    has typed and not saved yet (the look, the seller, the texts): the settings screen draws
+    its live preview with them, through the same checks as saving, and nothing is stored."""
     shop = await settings.get(conn)
+    if override:
+        trial = settings.clean(dict(override))
+        shop = {**shop, **trial}
+        settings.check_audience_language(shop["default_audience"], shop["languages"])
     tenant = await _tenant(conn)
     related = None
     if draft_id is not None:
@@ -744,6 +781,8 @@ async def preview_pdf(
             if kind not in kinds.KINDS:
                 raise DocumentError("kind_unknown", field="kind")
             body = sample.sample_body(kind)
+            if (shop["notes"] or {}).get(kind):
+                body["notes"] = {}  # the shop's own note for this kind is what the sample shows
             if kind == "credit_note":
                 related = {"kind": "invoice", "number": sample.SAMPLE_INVOICE_NUMBER}
         prepared = prepare.prepare(body if kind != "credit_note" else {**body, "kind": "receipt"},

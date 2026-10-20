@@ -1,5 +1,5 @@
 """Connected mode: another system sends its sales to ALYR, ALYR hands the customer the paper
-(ALY-142, decision D-042, spec 015).
+(ALY-142, decision D-042, spec 016).
 
 A shop keeps its own POS, accounting or invoicing tool and still wants ALYR's WhatsApp receipt or
 invoice for its customers, or wants ALYR to carry only part of the paper trail. This package is

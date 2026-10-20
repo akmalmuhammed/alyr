@@ -401,6 +401,28 @@ ERRORS: dict[str, Text] = {
         "This document was withdrawn: it was imported by mistake and never sent.",
         "سُحب هذا المستند: استُورد عن طريق الخطأ ولم يُرسل.",
     ),
+    # ── The workspace screens (ALY-146) ──────────────────────────────────────────────────
+    "filter_invalid": Text(
+        "That filter is not one the list knows.", "هذا المرشّح غير معروف في القائمة."
+    ),
+    "date_range_invalid": Text(
+        "The end date is before the start date.", "تاريخ النهاية قبل تاريخ البداية."
+    ),
+    "cursor_invalid": Text(
+        "That page marker is not valid. Reload the list.",
+        "علامة الصفحة هذه غير صالحة. أعد تحميل القائمة.",
+    ),
+    "no_public_link": Text(
+        "This shop has no public address yet, so a link to the document cannot be made.",
+        "ليس لهذا المتجر عنوان عام بعد، لذلك لا يمكن إنشاء رابط للمستند.",
+    ),
+    "page_unknown": Text(
+        "The document does not have that page.", "ليس للمستند هذه الصفحة."
+    ),
+    "settings_override_invalid": Text(
+        "The preview can only try out the look of the document, not the shop's other settings.",
+        "تقتصر المعاينة على تجربة شكل المستند، لا إعدادات المتجر الأخرى.",
+    ),
 }
 
 

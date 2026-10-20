@@ -1,4 +1,4 @@
-"""What a shop confirms before it connects another system (ALY-142, spec 015).
+"""What a shop confirms before it connects another system (ALY-142, spec 016).
 
 WhatsApp asks every business to have a person's opt-in before it starts a conversation with them.
 A customer who bought at the counter of a shop that keeps its sales in another POS has, as far as

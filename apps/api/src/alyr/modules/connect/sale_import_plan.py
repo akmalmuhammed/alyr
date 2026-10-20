@@ -1,4 +1,4 @@
-"""Reading a POS's sales export into connected sales (ALY-142, spec 015).
+"""Reading a POS's sales export into connected sales (ALY-142, spec 016).
 
 A shop whose till can export a CSV (or Excel) uploads it instead of connecting an API. This
 module is the pure half of that: it takes the rows of a sheet and a mapping of columns, groups

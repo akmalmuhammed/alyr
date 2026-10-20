@@ -23,9 +23,20 @@ from pydantic import BaseModel, ConfigDict, Field, StrictInt
 from alyr.core import mail, team
 from alyr.core.auth import Staff
 from alyr.core.team import actor_of
-from alyr.modules.documents import access, delivery, kinds, money, payments, sales, service
+from alyr.modules.documents import (
+    access,
+    delivery,
+    kinds,
+    listing,
+    lookup,
+    money,
+    payments,
+    sales,
+    service,
+)
 from alyr.modules.documents import settings as doc_settings
 from alyr.modules.documents.errors import DocumentError
+from alyr.modules.documents.render import raster
 from alyr.routes.deps import current_staff
 
 router = APIRouter(prefix="/api/documents", tags=["documents"])
@@ -40,6 +51,7 @@ Audience = Literal["consumer", "business"]
 Unit = Literal["piece", "kg", "g", "l", "m", "box", "pack", "portion", "hour", "day", "service"]
 Method = Literal["cash", "card", "bank_transfer", "link", "credit", "cheque", "other"]
 IMAGE_LIMIT = doc_settings.IMAGE_MAX_BYTES
+Shape = Literal["pdf", "png"]
 
 
 async def refused(request: Request, error: DocumentError) -> JSONResponse:
@@ -235,6 +247,9 @@ class PreviewIn(Strict):
     )
     layout: Layout | None = None
     languages: Languages | None = None
+    settings: SettingsIn | None = Field(
+        default=None, description="Settings typed and not saved yet, tried out on the page "
+        "(owners and admins). Nothing is stored.")
 
 
 def _db(request: Request):
@@ -252,7 +267,18 @@ def _settings_public(row: dict) -> dict:
 async def meta(request: Request, staff: Staff = Depends(current_staff)) -> dict:
     async with _db(request).tenant(staff.tenant_id) as conn:
         allowed = await access.view(conn, staff)
+        shop = await doc_settings.get(conn)
     return {
+        # What the draft form starts from. Nothing here is secret or the owner's alone: the bank
+        # details, the registration number's text and the rest of the settings are not.
+        "defaults": {
+            "currency": shop["currency"], "tax_enabled": shop["tax_enabled"],
+            "tax_rate_bp": shop["tax_rate_bp"], "cash_rounding_minor": shop["cash_rounding_minor"],
+            "languages": shop["languages"], "default_audience": shop["default_audience"],
+            "layout": shop["layout"], "show_sku": shop["show_sku"],
+            "has_registration": bool(shop["commercial_registration"]),
+            "show_alyr_mark": shop["show_alyr_mark"],
+        },
         "kinds": [
             {"key": k.key, "prefix": k.prefix, "needs_customer": k.needs_customer,
              "needs_registration": k.needs_registration, "payments": k.payments,
@@ -292,6 +318,31 @@ async def put_settings(
     async with _db(request).tenant(staff.tenant_id) as conn:
         row = await doc_settings.update(conn, actor_of(staff), changes)
     return {"settings": _settings_public(row)}
+
+
+@router.get("/settings/activity")
+async def settings_activity(request: Request, staff: Staff = Depends(current_staff)) -> dict:
+    """The last changes to the document settings: who, when, which settings. (Declared before
+    `/settings/{which}`, which would otherwise take "activity" for a picture.)"""
+    access.require_manager(staff)
+    async with _db(request).tenant(staff.tenant_id) as conn:
+        return {"changes": await doc_settings.recent_changes(conn)}
+
+
+@router.get("/settings/{which}")
+async def get_image(
+    which: Literal["logo", "stamp"], request: Request, staff: Staff = Depends(current_staff)
+) -> Response:
+    """The shop's logo or its signature or stamp picture, as saved, for the settings screen to
+    show. Owners and admins."""
+    access.require_manager(staff)
+    async with _db(request).tenant(staff.tenant_id) as conn:
+        logo, stamp = await doc_settings.images_of(conn)
+    data = logo if which == "logo" else stamp
+    if data is None:
+        raise DocumentError("not_found", 404)
+    return Response(bytes(data), media_type="image/png", headers={
+        "Cache-Control": "private, no-store", "X-Content-Type-Options": "nosniff"})
 
 
 @router.put("/settings/{which}")
@@ -369,20 +420,31 @@ async def put_series(
 
 @router.post("/preview")
 async def preview(
-    body: PreviewIn, request: Request, staff: Staff = Depends(current_staff)
+    body: PreviewIn, request: Request, staff: Staff = Depends(current_staff),
+    shape: Annotated[Shape, Query(alias="format")] = "pdf",
+    page: int = Query(default=1, ge=1, le=50),
+    width: int = Query(default=raster.DEFAULT_WIDTH, ge=raster.MIN_WIDTH, le=raster.MAX_WIDTH),
 ) -> Response:
     """The PDF of a draft, of a document in the request, or of a made-up sale, with PREVIEW
     across it and no number. Nothing is written."""
     given = [body.draft_id is not None, body.document is not None, body.kind is not None]
     if sum(given) != 1:
         raise DocumentError("preview_needs_input", 422)
+    override = None
+    if body.settings is not None:
+        access.require_manager(staff)  # the settings are the owner's and an admin's
+        override = body.settings.model_dump(exclude_unset=True)
+        for name in ("terms", "notes"):
+            if override.get(name) is not None:
+                override[name] = {k: dict(v) for k, v in override[name].items()}
+        override = {k: v for k, v in override.items() if v is not None or k == "brand_color"}
     async with _db(request).tenant(staff.tenant_id) as conn:
         data = await service.preview_pdf(
             conn, staff, draft_id=body.draft_id,
             body=body.document.model_dump(mode="python") if body.document else None,
-            kind=body.kind, layout=body.layout, languages=body.languages,
+            kind=body.kind, layout=body.layout, languages=body.languages, override=override,
         )
-    return Response(data, media_type="application/pdf", headers=_pdf_headers("preview.pdf"))
+    return await _as_asked(data, _pdf_headers("preview.pdf"), shape, page, width)
 
 
 def _pdf_headers(filename: str) -> dict:
@@ -392,26 +454,84 @@ def _pdf_headers(filename: str) -> dict:
     }
 
 
+
+
+async def _as_asked(
+    data: bytes, headers: dict, shape: Shape, page: int, width: int
+) -> Response:
+    """The PDF as it is, or one page of it as a picture (`shape=png`, the screens' way to show
+    a document inside a page on a phone). The page count travels in `X-Page-Count`."""
+    if shape == "pdf":
+        return Response(data, media_type="application/pdf", headers=headers)
+    png, count = await asyncio.to_thread(raster.png_of, data, page, width)
+    picture = {k: v for k, v in headers.items() if k != "Content-Disposition"}
+    return Response(png, media_type="image/png", headers={**picture, "X-Page-Count": str(count)})
+
+
 # ── the documents ─────────────────────────────────────────────────────────────────────────
 
 
 @router.get("")
 async def list_documents(
     request: Request, kind: Kind | Literal["credit_note"] | None = None,
-    status: Literal["draft", "issued", "void"] | None = None,
+    status: Literal["draft", "issued", "void", "cancelled"] | None = None,
+    payment: str | None = Query(
+        default=None, max_length=40,
+        description="Comma-separated: paid, part, unpaid (issued papers that take payment)"),
+    delivery_state: Literal["none", "queued", "sent", "delivered", "not_delivered"] | None = Query(
+        default=None, alias="delivery"),
+    branch: str | None = Query(default=None, pattern="^[a-z0-9]{1,12}$"),
+    date_from: date | None = None, date_to: date | None = None,
     q: str | None = Query(default=None, max_length=80),
-    limit: int = Query(default=50, ge=1, le=200), offset: int = Query(default=0, ge=0),
+    show: Literal["unpaid_invoices", "not_delivered"] | None = Query(
+        default=None, description="The filter a home-screen card opens"),
+    limit: int = Query(default=listing.PAGE, ge=1, le=listing.MAX_PAGE),
+    cursor: str | None = Query(default=None, max_length=120),
+    offset: int = Query(default=0, ge=0),
+    totals: bool = True,
     staff: Staff = Depends(current_staff),
 ) -> dict:
+    """Newest first, by cursor (`next_cursor` from the page before). `totals` (the count and the
+    money in the whole filtered list) is worked out once, with the first page."""
+    filters = (listing.Filters.preset(show) if show else listing.Filters(
+        kind=kind, status=status, delivery=delivery_state, branch=branch,
+        payment=[p for p in (payment or "").split(",") if p],
+        date_from=date_from, date_to=date_to))
+    filters.q = q or ""
     async with _db(request).tenant(staff.tenant_id) as conn:
-        found = await service.list_documents(
-            conn, staff, kind=kind, status=status, q=q, limit=limit, offset=offset
-        )
-        # Beside each, whether it reached the customer (the owner sees "not delivered").
-        sent = await delivery.summaries(conn, [UUID(d["id"]) for d in found["documents"]])
-    for row in found["documents"]:
-        row["delivery"] = delivery.summary_of(sent.get(row["id"]))
-    return found
+        return await listing.page(
+            conn, staff, filters, limit=limit, cursor=cursor, offset=offset,
+            with_totals=totals and not cursor)
+
+
+@router.get("/counts")
+async def counts(request: Request, staff: Staff = Depends(current_staff)) -> dict:
+    """The numbers on the home screen, each the size of the list its card opens."""
+    async with _db(request).tenant(staff.tenant_id) as conn:
+        return {"counts": await listing.counts(conn, staff)}
+
+
+@router.get("/customers")
+async def find_customers(
+    request: Request, q: str = Query(default="", max_length=60),
+    staff: Staff = Depends(current_staff),
+) -> dict:
+    """The shop's customers, for the draft's customer picker."""
+    async with _db(request).tenant(staff.tenant_id) as conn:
+        return {"customers": await lookup.customers(conn, q)}
+
+
+@router.get("/catalog-lines")
+async def find_catalog_lines(
+    request: Request, q: str = Query(default="", max_length=60), contact_id: UUID | None = None,
+    staff: Staff = Depends(current_staff),
+) -> dict:
+    """Lines to add from the Catalog (by name, item code or SKU), priced for the customer's
+    price group when `contact_id` is given."""
+    async with _db(request).tenant(staff.tenant_id) as conn:
+        return {"lines": await lookup.catalog_lines(conn, q, contact_id)}
+
+
 
 
 @router.post("", status_code=201)
@@ -495,12 +615,35 @@ async def credit_note(
 
 
 @router.get("/{doc_id}/pdf")
-async def pdf(doc_id: UUID, request: Request, staff: Staff = Depends(current_staff)) -> Response:
+async def pdf(
+    doc_id: UUID, request: Request, layout: Layout | None = None,
+    download: bool = False, staff: Staff = Depends(current_staff),
+    shape: Annotated[Shape, Query(alias="format")] = "pdf",
+    page: int = Query(default=1, ge=1, le=50),
+    width: int = Query(default=raster.DEFAULT_WIDTH, ge=raster.MIN_WIDTH, le=raster.MAX_WIDTH),
+) -> Response:
+    """The stored PDF. With `layout` other than the one it was issued in, a copy of the same
+    content on that page size, to print (never stored; the issued PDF stays as it was). With
+    `format=png`, one page of it as a picture (`page`, `width`; the count is in
+    `X-Page-Count`), which is how the screens show it on a phone."""
     async with _db(request).tenant(staff.tenant_id) as conn:
-        data, row = await service.pdf_of(conn, staff, doc_id)
-    return Response(data, media_type="application/pdf",
-                    headers={**_pdf_headers(f"{row['number']}.pdf"),
-                             "X-Document-Status": row["status"]})
+        data, row = await service.pdf_of(conn, staff, doc_id, layout=layout)
+    headers = {**_pdf_headers(f"{row['number']}.pdf"), "X-Document-Status": row["status"]}
+    if layout and layout != row["layout"]:
+        headers["X-Document-Layout"] = layout
+    if download:
+        headers["Content-Disposition"] = f'attachment; filename="{row["number"]}.pdf"'
+    return await _as_asked(data, headers, shape, page, width)
+
+
+@router.post("/{doc_id}/link")
+async def share_link(
+    doc_id: UUID, request: Request, staff: Staff = Depends(current_staff)
+) -> dict:
+    """A link to the hosted page of an issued document, to copy and send by hand. The same
+    kind of signed link a send carries; each one made is on the record."""
+    async with _db(request).tenant(staff.tenant_id) as conn:
+        return await delivery.share_link(conn, staff, doc_id)
 
 
 @router.get("/{doc_id}/verify")

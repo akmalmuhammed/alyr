@@ -1,4 +1,4 @@
-"""API keys: a machine proves it speaks for one shop, and for nothing else (ALY-142, spec 015).
+"""API keys: a machine proves it speaks for one shop, and for nothing else (ALY-142, spec 016).
 
 A key is shown once and stored as a hash; it is found by a visible prefix; it carries scopes; it
 can be revoked and then it is dead at once; it has a rate limit of its own; it never opens the

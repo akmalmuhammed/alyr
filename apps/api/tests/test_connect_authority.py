@@ -1,4 +1,4 @@
-"""Who owns the numbers (ALY-142, spec 015).
+"""Who owns the numbers (ALY-142, spec 016).
 
 A shop that keeps another POS gives the numbering of a kind of document to it. From then on ALYR
 never allocates a number for that kind: the paper carries the other system's number, ALYR's

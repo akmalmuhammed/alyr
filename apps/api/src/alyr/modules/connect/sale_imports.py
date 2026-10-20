@@ -1,4 +1,4 @@
-"""Importing a POS's sales export: upload, preview, apply, undo (ALY-142, spec 015).
+"""Importing a POS's sales export: upload, preview, apply, undo (ALY-142, spec 016).
 
 The Catalog's import (`modules/items/imports.py`) is the model, and its file reading, its limits
 and its habits are reused: the file is read by `items.sheets` (CSV in UTF-8, UTF-16 or the Arabic

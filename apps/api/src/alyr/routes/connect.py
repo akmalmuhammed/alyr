@@ -1,5 +1,5 @@
 """The open API another system uses to send sales to ALYR and read what became of them
-(ALY-142, spec 015, docs/connect-api.md).
+(ALY-142, spec 016, docs/connect-api.md).
 
 Everything here is for a machine and answers to an API key (`Authorization: Bearer <key>`), never
 to a browser's session: the workspace's own routes read a cookie and ignore this header, and these

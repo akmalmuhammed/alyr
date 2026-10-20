@@ -1,4 +1,4 @@
-// Every word of the connection screen (ALY-142, specs/015-documents-connected), in English and
+// Every word of the connection screen (ALY-142, specs/016-documents-connected), in English and
 // Arabic. The Arabic is formal Modern Standard Arabic and a draft until the native review
 // (ALY-66). The screen holds no text of its own. Product and file names stay Latin.
 

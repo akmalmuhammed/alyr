@@ -1,4 +1,4 @@
-"""A sale from another system becomes one document, once (ALY-142, spec 015).
+"""A sale from another system becomes one document, once (ALY-142, spec 016).
 
 Idempotency is the heart of it: a till that did not hear the answer sends the sale again, and the
 customer must not be invoiced twice. These tests send the same sale twice, six times at once,

@@ -1,6 +1,6 @@
 "use client";
 
-// The connection screen (ALY-142, specs/015-documents-connected): how a shop connects another
+// The connection screen (ALY-142, specs/016-documents-connected): how a shop connects another
 // POS or accounting tool to ALYR. In the order a person needs it: confirm the terms (the shop
 // has its customers' permission to be messaged), say who numbers each kind of document, make an
 // API key for the machine, add webhook addresses, or import a file of sales.

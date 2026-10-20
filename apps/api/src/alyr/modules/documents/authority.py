@@ -1,4 +1,4 @@
-"""Who owns the numbers: ALYR or the shop's other system (ALY-142, spec 015).
+"""Who owns the numbers: ALYR or the shop's other system (ALY-142, spec 016).
 
 Two systems must never both number the same kind of paper, or one sale is invoiced twice. So a
 shop says, per kind of document, who numbers it:

@@ -1,4 +1,4 @@
-"""API keys: how another system proves it speaks for a shop (ALY-142, spec 015).
+"""API keys: how another system proves it speaks for a shop (ALY-142, spec 016).
 
 A key authenticates a **machine**, never a person. It can send sales, read documents and manage
 webhooks for its own shop, depending on its scopes, and nothing else: it cannot open the

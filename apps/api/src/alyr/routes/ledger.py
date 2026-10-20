@@ -7,6 +7,7 @@ from alyr.config import get_settings
 from alyr.core import consent, team
 from alyr.core.auth import Staff
 from alyr.core.normalise import fmt_qar
+from alyr.modules.documents import refs as doc_refs
 from alyr.modules.ledger import service
 from alyr.routes.deps import current_staff, current_tenant
 
@@ -39,17 +40,32 @@ async def entries(
         if contact is None:
             raise HTTPException(status_code=404, detail="customer not found")
         rows = await service.recent_entries(conn, contact_id)
+        # A shop with Documents on sees a pointer to the invoice a sale on account made and
+        # to the receipt a payment made; without the module the answer is exactly as before.
+        sales = await doc_refs.by_source(
+            conn, "order", [str(r["order_id"]) for r in rows if r["order_id"]])
+        payments = await doc_refs.by_source(
+            conn, "ledger_payment", [str(r["id"]) for r in rows if r["kind"] == "payment"])
+        by_hand = await doc_refs.hand_payments(conn, contact_id)
+        entries = []
+        for r in rows:
+            entry = {
+                "kind": r["kind"], "amount": r["amount"],
+                "amount_text": fmt_qar(r["amount"]), "note": r["note"],
+                "created_by": r["created_by"], "created_at": r["created_at"].isoformat(),
+            }
+            made = None
+            if r["kind"] == "sale" and r["order_id"]:
+                made = sales.get(str(r["order_id"]))
+            elif r["kind"] == "payment":
+                made = payments.get(str(r["id"])) or by_hand.get((r["amount"], r["created_at"]))
+            if made:
+                entry["document"] = made
+            entries.append(entry)
         return {
             "customer": dict(contact),
             "consent": await consent.history(conn, contact_id),
-            "entries": [
-                {
-                    "kind": r["kind"], "amount": r["amount"],
-                    "amount_text": fmt_qar(r["amount"]), "note": r["note"],
-                    "created_by": r["created_by"], "created_at": r["created_at"].isoformat(),
-                }
-                for r in rows
-            ],
+            "entries": entries,
         }
 
 

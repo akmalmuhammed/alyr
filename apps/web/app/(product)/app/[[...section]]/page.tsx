@@ -6,6 +6,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Screens, type WorkspaceTab } from "../../_workspace/Screens";
 import { TeamReport } from "../../_workspace/Team";
 import { Catalog } from "../../_workspace/Catalog";
+import { Documents } from "../../_workspace/Documents";
 import { ConnectLink, ConnectSettings } from "../../_workspace/ConnectSettings";
 import { AgentDashboard } from "../../../_agent/AgentDashboard";
 import type { AgentView } from "../../../_agent/types";
@@ -133,6 +134,7 @@ const ICON: Record<string, string> = {
   book: "M5 4h10a3 3 0 0 1 3 3v13H8a3 3 0 0 1-3-3z M5 17a3 3 0 0 1 3-3h10",
   apps: "M4 4h6v6H4z M14 4h6v6h-6z M4 14h6v6H4z M14 14h6v6h-6z",
   catalog: "M4 4h7v8H4z M13 4h7v5h-7z M13 11h7v9h-7z M4 14h7v6H4z",
+  doc: "M7 3h8l4 4v14H7z M15 3v4h4 M10 12h6 M10 16h6",
   plug: "M9 3v5 M15 3v5 M6 8h12v3a6 6 0 0 1-12 0z M12 17v4",
   users: "M9 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8Z M3 21v-2a6 6 0 0 1 12 0v2 M16 4.5a3.5 3.5 0 0 1 0 6.5 M17 15a5 5 0 0 1 4 4.9V21",
   plus: "M12 5v14 M5 12h14",
@@ -578,6 +580,8 @@ export default function WorkspaceShell() {
   } else if (section === "catalog" && enabledScreens.has("catalog")) {
     // Named by the shop's type of business: Menu, Products, Price list (D-039, ALY-107).
     body = <Catalog lang={lang} title={current ? pick(current.label) : t.productsTitle} show={show} onRenamed={() => void load()} />;
+  } else if (section === "documents" && enabledScreens.has("documents")) {
+    body = <Documents lang={lang} title={current ? pick(current.label) : t.productsTitle} show={show} />;
   } else if ((WORK_SCREENS as string[]).includes(section) && enabledScreens.has(section)) {
     body = (
       <Screens embedded section={section as WorkspaceTab} lang={lang} show={show}

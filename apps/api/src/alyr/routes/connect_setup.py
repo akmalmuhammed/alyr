@@ -1,5 +1,5 @@
 """Setting up connected mode from the workspace: API keys, who owns the numbers, webhook
-addresses and the CSV import of sales (ALY-142, spec 015).
+addresses and the CSV import of sales (ALY-142, spec 016).
 
 This is what a person does, signed in: only owners and admins (an agent never sees a key), only
 for a shop with Documents on. The machine's side is `routes/connect.py`. Every change here is on

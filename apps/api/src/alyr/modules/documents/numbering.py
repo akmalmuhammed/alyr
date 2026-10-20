@@ -51,6 +51,20 @@ class Allocation:
     issue_date: date  # in the shop's time zone
 
 
+def next_number(row, year: int) -> str:
+    """The number the next document of a series will get, as the owner sees it on the settings
+    screen. Only a reading: the number is really taken, under the row lock, by `allocate`
+    (which writes the same shape), and another document may be issued first, so the screen says
+    "next" and not "reserved"."""
+    if row["yearly_reset"]:
+        seq = row["last_number"] + 1 if row["number_year"] == year else 1
+        stem = f"{row['prefix']}-{year}-"
+    else:
+        seq = row["last_number"] + 1
+        stem = f"{row['prefix']}-"
+    return f"{stem}{seq:0{row['pad']}d}"
+
+
 async def allocate(
     conn: asyncpg.Connection, kind: str, series_key: str, tz: str,
     *, clock=lambda: datetime.now(UTC),

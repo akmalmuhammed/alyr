@@ -208,11 +208,14 @@ HIDDEN = "hidden_cards"
 
 
 async def counts(
-    conn: asyncpg.Connection, modules: set[str] | frozenset[str], now: datetime | None = None
+    conn: asyncpg.Connection, modules: set[str] | frozenset[str], now: datetime | None = None,
+    staff: Staff | None = None,
 ) -> dict[str, int]:
-    """The numbers a module works out for itself (`Card.count`): today, the Catalog's. They
-    are the numbers on the filter chips of the list the card opens, so the two always agree."""
+    """The numbers a module works out for itself (`Card.count`): today, the Catalog's and the
+    Documents'. They are the numbers on the filter chips of the list the card opens, so the two
+    always agree. `staff` is who is looking (None: the shop's own view, as an owner's)."""
     found: dict[str, int] = {}
+    hidden: list[str] = []
     if "catalog" in modules:
         # (imported here: the Catalog's code builds on this package, not the other way round)
         from alyr.modules.items import clock, features, listing
@@ -220,11 +223,21 @@ async def counts(
         found |= await listing.counts(conn, await clock.load(conn, now))
         # A card about stock is left off a shop whose features say nothing runs out or is
         # counted (ALY-148): the screens read this list and draw only the others.
-        found[HIDDEN] = features.hidden_cards(await features.load(conn))  # type: ignore[assignment]
+        hidden += list(features.hidden_cards(await features.load(conn)))
+    if "documents" in modules:
+        from alyr.modules.documents import listing as documents_listing
+
+        found |= await documents_listing.counts(conn, staff)
+        # What is owed and what did not arrive are the owner's to see; an agent's list holds
+        # only the papers they made, and the cards would be a number that is not the shop's.
+        if staff is not None and staff.role not in catalog.MANAGERS:
+            hidden += list(documents_listing.PRESETS)
+    if hidden:
+        found[HIDDEN] = hidden  # type: ignore[assignment]
     return found
 
 
-async def home(conn: asyncpg.Connection) -> list[dict]:
+async def home(conn: asyncpg.Connection, staff: Staff | None = None) -> list[dict]:
     """The dashboard numbers, one card per number each switched-on module offers."""
     modules = await enabled_modules(conn)
     cards = []
@@ -235,7 +248,7 @@ async def home(conn: asyncpg.Connection) -> list[dict]:
         for card in module.cards:
             if card.count:
                 if worked_out is None:
-                    worked_out = await counts(conn, modules)
+                    worked_out = await counts(conn, modules, staff=staff)
                 if card.count in worked_out.get(HIDDEN, ()):
                     continue
                 value = worked_out[card.count]

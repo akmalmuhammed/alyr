@@ -1,4 +1,4 @@
-"""Events out: a shop's other system hears about its documents (ALY-142, spec 015).
+"""Events out: a shop's other system hears about its documents (ALY-142, spec 016).
 
 A shop registers addresses and the events it wants (`document.issued`, `document.delivered`,
 `document.failed`, `document.cancelled`, `payment.recorded`). When one happens, ALYR writes a

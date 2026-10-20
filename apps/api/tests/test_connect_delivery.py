@@ -1,4 +1,4 @@
-"""Consent and delivery for a sale another system reports (ALY-142, spec 015).
+"""Consent and delivery for a sale another system reports (ALY-142, spec 016).
 
 The customer may never have written to this shop on WhatsApp, and WhatsApp wants an opt-in before
 a business starts a conversation. The shop asserts it has the customer's permission (it accepted
