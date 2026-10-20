@@ -235,11 +235,27 @@ MODULES: tuple[Module, ...] = (
         ),
     ),
     # Documents: receipts, invoices, quotes, delivery notes, statements, credit notes, deposit
-    # receipts and proformas (ALY-138, D-042, spec 011). The engine only: it is in no product
-    # and no starting setup, has no screen, no setup step and no card, and is off for every
-    # shop. The back office can switch it on for one shop (`SWITCHABLE_MODULES`); packages 2
-    # and 3 (the sales hooks and the workspace screens) are what make it part of a product.
-    Module("documents", Text("Documents", "المستندات")),
+    # receipts and proformas (ALY-138, D-042, spec 011). It is in no product and no starting
+    # setup, and it is off for every shop until the product lead switches it on (the back
+    # office can for one shop, `SWITCHABLE_MODULES`). With it on, the workspace shows a
+    # Documents section (ALY-146, spec 014) and two numbers on the home screen, each the size of
+    # the list it opens (`modules/documents/listing.py` works them out; the list and the card
+    # share one query). It has no setup step: nothing has to be done before it is useful.
+    Module(
+        "documents",
+        Text("Documents", "المستندات"),
+        screens=(Screen("documents", Text("Documents", "المستندات"), "doc"),),
+        cards=(
+            Card(
+                "unpaid_invoices", Text("Unpaid invoices", "فواتير غير مدفوعة"),
+                count="unpaid_invoices", href="/app/documents?show=unpaid_invoices",
+            ),
+            Card(
+                "documents_not_delivered", Text("Documents not delivered", "مستندات لم تصل"),
+                count="not_delivered", href="/app/documents?show=not_delivered",
+            ),
+        ),
+    ),
     Module(
         "payments",
         Text("Payment links", "روابط الدفع"),

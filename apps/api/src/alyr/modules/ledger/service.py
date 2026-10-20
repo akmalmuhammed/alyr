@@ -104,7 +104,7 @@ async def aged(conn: asyncpg.Connection, contact_id: UUID) -> Aged:
 
 async def recent_entries(conn: asyncpg.Connection, contact_id: UUID, limit: int = 50) -> list:
     return await conn.fetch(
-        "select kind, amount, note, created_by, created_at from ledger_entries "
+        "select id, order_id, kind, amount, note, created_by, created_at from ledger_entries "
         "where contact_id = $1 order by created_at desc limit $2",
         contact_id, limit,
     )

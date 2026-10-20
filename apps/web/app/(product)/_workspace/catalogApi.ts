@@ -192,12 +192,12 @@ export class ApiError extends Error {
 type Body = Record<string, unknown> | unknown[];
 
 /** Calls the API. A refusal throws an `ApiError` carrying its `code` and the API's words. */
-export async function api<T>(path: string, method = "GET", body?: Body): Promise<T> {
+export async function api<T>(path: string, method = "GET", body?: Body, extra?: Record<string, string>): Promise<T> {
   let response: Response;
   try {
     response = await fetch(path, {
       method, cache: "no-store",
-      headers: body === undefined ? undefined : { "content-type": "application/json" },
+      headers: body === undefined && !extra ? undefined : { ...(body === undefined ? {} : { "content-type": "application/json" }), ...extra },
       body: body === undefined ? undefined : JSON.stringify(body),
     });
   } catch {

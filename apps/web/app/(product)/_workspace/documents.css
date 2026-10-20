@@ -1,0 +1,206 @@
+/* Documents in the workspace (ALY-146, spec 014). It takes the shell's tokens (shell.css) and
+   the Catalog's patterns (catalog.css: the sheet, the fields, the chips, the folds), and adds
+   only what a document needs: the list of papers, the page picture, a document's facts, the
+   draft form's lines and the settings with their live preview. Nothing here sets a colour of
+   its own, so light, dark and right-to-left come for free. The page itself is always ink on
+   white, whatever theme the screen is in: it is a picture of paper.
+   Built at 375 px first: targets are 44 px or more and nothing scrolls sideways. */
+
+.dc { padding-bottom: 8px; }
+.dc-edit, .dc-settings { padding-bottom: 150px; }
+.dc .ct-linkbtn { text-align: start; }
+.dc-back { align-self: flex-start; margin-inline-start: -8px; }
+.dc-auto { min-height: 48px; color: var(--ink-2); font-weight: 500; }
+
+/* A sheet's buttons wrap on a phone rather than push the sheet wider than the screen. */
+.dc-foot { display: flex; flex-wrap: wrap; gap: 8px; width: 100%; }
+.dc-foot .btn { flex: 1 1 9rem; white-space: normal; }
+.ct-sheet { min-width: 0; }
+.ct-sheet-foot { flex-wrap: wrap; }
+
+/* ── pills: the shell's, with the product's states ── */
+.dc-pill { height: 24px; }
+.dc-pill.bad { color: var(--bad); background: var(--bad-soft); box-shadow: none; }
+.dc-pill.quiet { color: var(--ink-2); }
+.dc-pills { display: flex; flex-wrap: wrap; gap: 6px; }
+
+/* ── the list ── */
+.dc-list { list-style: none; margin: 0; padding: 0; border-radius: 16px; background: var(--sheet); box-shadow: 0 0 0 1px var(--hair) inset; overflow: hidden; }
+.dc-item + .dc-item { border-top: 1px solid var(--hair); }
+.dc-row { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: start; gap: 8px 14px; width: 100%; min-height: 72px; padding: 14px 16px; border: 0; background: transparent; color: inherit; text-align: start; transition: background 0.15s var(--ease-product); }
+.dc-row:hover { background: var(--raise); }
+.dc-row:focus-visible { outline-offset: -3px; }
+.dc-row-main { display: grid; gap: 3px; min-width: 0; }
+.dc-row-top { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 10px; }
+.dc-row-number { font-family: var(--font-ui-mono); font-size: var(--ui-body-sm); font-weight: 600; letter-spacing: 0.02em; }
+.dc-row-who { font-size: var(--ui-body-sm); overflow-wrap: anywhere; }
+.dc-row-date { font-size: var(--ui-small); }
+.dc-row-end { display: grid; justify-items: end; gap: 4px; text-align: end; }
+.dc-row-amount { font-size: var(--ui-body); font-weight: 600; }
+.dc-row-owed { font-size: var(--ui-caption); color: var(--ink-2); }
+.dc-row-end .dc-pills { justify-content: flex-end; }
+.dc-row-kind { font-size: var(--ui-body-sm); font-weight: 600; }
+@media (max-width: 21rem) {
+  .dc-row { grid-template-columns: minmax(0, 1fr); }
+  .dc-row-end { justify-items: start; text-align: start; }
+  .dc-row-end .dc-pills { justify-content: flex-start; }
+}
+.dc-totalsline { margin: 0; font-size: var(--ui-body-sm); color: var(--ink-2); }
+.dc-totalsline b { color: var(--ink); font-weight: 600; }
+.dc-filters { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 11rem), 1fr)); gap: 12px; padding-bottom: 12px; }
+.dc-filters .ct-field { gap: 6px; min-width: 0; }
+.dc-filters .ct-select { width: 100%; min-height: 44px; }
+.dc-chipset { border: 0; padding: 0; margin: 0; min-width: 0; }
+.dc-chipset legend { padding: 0 0 6px; }
+
+/* ── one document ── */
+.dc-head { gap: 4px; }
+.dc-number { font-family: var(--font-ui-mono); letter-spacing: 0 !important; overflow-wrap: anywhere; }
+.dc-who { color: var(--ink) !important; font-weight: 500; }
+/* A name typed in the other script is read in its own direction (dir="auto") but sits on the
+   side of the page the person reads from: an English name in an Arabic screen is not pushed to
+   the far side. */
+.sh[dir="rtl"] :is(.dc-facts dd, .dc-row-who, .dc-who, .dc-line-text b, .dc-hit b) { text-align: right; }
+.sh[dir="ltr"] :is(.dc-facts dd, .dc-row-who, .dc-who, .dc-line-text b, .dc-hit b) { text-align: left; }
+.dc-head p.dc-amount { color: var(--ink); }
+.dc-amount { margin: 0; font-size: var(--ui-heading-lg); letter-spacing: -0.03em; }
+.dc-amount b { font-weight: 600; }
+.dc-owed { font-size: var(--ui-body-sm); font-weight: 500; color: var(--ink-2); letter-spacing: 0; }
+.dc-sub { margin: 0; font-size: var(--ui-body-sm); }
+.dc-actions .btn { text-decoration: none; }
+.dc-actions .dc-hint { flex-basis: 100%; margin: 0; }
+/* On a phone the buttons sit in two even columns, the main one across both. */
+@media (max-width: 40rem) {
+  .dc-actions { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .dc-actions > .btn { width: 100%; white-space: normal; text-align: center; }
+  .dc-actions > .btn.volt { grid-column: 1 / -1; }
+  .dc-actions > .dc-ask, .dc-actions > .dc-hint { grid-column: 1 / -1; }
+}
+.dc-ask { display: inline-flex; flex-wrap: wrap; align-items: center; gap: 8px; font-size: var(--ui-small); }
+.dc-body { display: grid; gap: 22px; min-width: 0; }
+/* On a phone the facts come first and the page picture after them (the page is mostly white
+   space and would push everything down); the order in the markup is the reading order. */
+.dc-side { order: 1; }
+.dc-paper { order: 2; }
+.dc-paper-title { justify-self: start; margin: 0; font-family: var(--font-ui-mono); font-size: var(--ui-micro); font-weight: 500; letter-spacing: 0.08em; text-transform: uppercase; color: var(--ink-2); }
+.sh[dir="rtl"] .dc-paper-title { font-family: var(--face); letter-spacing: 0; font-size: var(--ui-caption); }
+.dc-side { display: grid; gap: 20px; min-width: 0; align-content: start; }
+.dc-sec { border-bottom: 0; padding-bottom: 0; }
+.dc-sec h2 { margin: 0; font-family: var(--font-ui-mono); font-size: var(--ui-micro); font-weight: 500; letter-spacing: 0.08em; text-transform: uppercase; color: var(--ink-2); }
+.sh[dir="rtl"] .dc-sec h2 { font-family: var(--face); letter-spacing: 0; font-size: var(--ui-caption); }
+.dc-facts { display: grid; gap: 10px; margin: 0; }
+.dc-facts div { display: grid; grid-template-columns: minmax(6.5rem, 9rem) minmax(0, 1fr); gap: 10px; align-items: baseline; }
+.dc-facts dt { font-size: var(--ui-small); color: var(--ink-2); }
+.dc-facts dd { margin: 0; font-size: var(--ui-body-sm); overflow-wrap: anywhere; }
+@media (max-width: 20rem) { .dc-facts div { grid-template-columns: minmax(0, 1fr); gap: 2px; } }
+.dc-source { margin: 0; font-size: var(--ui-small); }
+
+.dc-lines, .dc-related, .dc-deliveries { list-style: none; margin: 0; padding: 0; display: grid; border-radius: 12px; box-shadow: 0 0 0 1px var(--hair) inset; background: var(--sheet); overflow: hidden; }
+.dc-lines li, .dc-related li, .dc-deliveries li { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; padding: 12px 14px; min-width: 0; }
+.dc-lines li + li, .dc-related li + li, .dc-deliveries li + li { border-top: 1px solid var(--hair); }
+.dc-line-text { display: grid; gap: 2px; min-width: 0; font-size: var(--ui-body-sm); }
+.dc-line-text b { font-weight: 600; overflow-wrap: anywhere; }
+.dc-line-text small { font-size: var(--ui-caption); color: var(--ink-2); overflow-wrap: anywhere; }
+.dc-line-total { font-size: var(--ui-body-sm); font-weight: 600; white-space: nowrap; }
+.dc-related li { flex-wrap: wrap; align-items: center; justify-content: flex-start; gap: 4px 12px; font-size: var(--ui-body-sm); }
+.dc-related .ct-linkbtn { min-height: 44px; display: inline-flex; align-items: center; }
+.dc-deliveries li { display: grid; gap: 4px; justify-content: stretch; }
+.dc-del-main { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 6px 12px; font-size: var(--ui-body-sm); }
+.dc-deliveries small { font-size: var(--ui-caption); }
+.dc-reason { color: var(--ink-2); }
+.dc-totals { display: grid; gap: 0; margin: 12px 0 0; }
+.dc-totals div { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; padding: 8px 2px; font-size: var(--ui-body-sm); }
+.dc-totals dt { color: var(--ink-2); }
+.dc-totals dd { margin: 0; font-weight: 500; }
+.dc-totals .dc-grand { border-top: 1px solid var(--hair-2); padding-top: 12px; margin-top: 4px; }
+.dc-totals .dc-grand dt { color: var(--ink); font-weight: 600; }
+.dc-totals .dc-grand dd { font-size: var(--ui-body); font-weight: 600; }
+.dc-log li { grid-template-columns: minmax(0, 1fr); }
+.dc-what { color: var(--ink); line-height: 1.55; }
+.dc-fill { align-self: flex-start; }
+.dc-refusal { align-items: flex-start; }
+.dc-fixrow { display: block; margin-top: 4px; }
+.dc-fixlink { display: inline-flex; align-items: center; min-height: 44px; color: inherit; font-weight: 600; text-decoration: underline; text-underline-offset: 3px; }
+
+/* The pages: pictures of the real PDF, white whatever the theme (it is paper). */
+.dc-paper { display: grid; gap: 14px; min-width: 0; align-content: start; justify-items: center; }
+.dc-page { margin: 0; width: 100%; display: grid; gap: 6px; justify-items: center; }
+.dc-page figcaption { font-size: var(--ui-caption); }
+.dc-sheet { display: block; width: 100%; height: auto; background: var(--white); border-radius: 4px; box-shadow: 0 0 0 1px var(--hair-2), var(--lift); }
+.dc-paper.thermal80 .dc-sheet { max-width: 22rem; }
+.dc-paper.a5 .dc-sheet { max-width: 30rem; }
+.dc-sheet-wait { aspect-ratio: 1 / 1.414; max-width: 100%; background: repeating-linear-gradient(135deg, transparent 0 9px, var(--hair) 9px 10px), var(--raise); }
+@media (min-width: 56rem) {
+  .dc-body { grid-template-columns: minmax(0, 32rem) minmax(0, 1fr); align-items: start; gap: 28px; }
+  .dc-paper { order: 0; position: sticky; top: 0; }
+  .dc-side { order: 0; }
+}
+
+/* ── the draft form ── */
+/* The form's sections are second-level headings (the screen's title is the first), drawn as the Catalog's small mono labels. */
+.dc-edit .ct-sec > h2 { margin: 0; font-family: var(--font-ui-mono); font-size: var(--ui-micro); font-weight: 500; letter-spacing: 0.08em; text-transform: uppercase; color: var(--ink-2); }
+.sh[dir="rtl"] .dc-edit .ct-sec > h2 { font-family: var(--face); letter-spacing: 0; font-size: var(--ui-caption); }
+.dc-kinds { display: grid; gap: 8px; margin: 0; padding: 0; border: 0; min-width: 0; }
+.dc-kinds legend { padding: 0 0 8px; }
+.dc-kindchip { position: relative; cursor: pointer; }
+.dc-kindchip[data-on="true"] { background: var(--ink); color: var(--sheet); box-shadow: none; }
+.dc-kindchip:has(input:focus-visible) { outline: 2px solid var(--ink); outline-offset: 2px; }
+.dc-picked { align-items: center; }
+.dc-hits { list-style: none; margin: 0; padding: 0; display: grid; border-radius: 12px; background: var(--sheet); box-shadow: 0 0 0 1px var(--hair) inset; overflow: hidden; max-height: 18rem; overflow-y: auto; }
+.dc-hits li + li { border-top: 1px solid var(--hair); }
+.dc-hit { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 2px 12px; align-items: center; width: 100%; min-height: 56px; padding: 8px 14px; border: 0; background: transparent; color: inherit; text-align: start; }
+.dc-hit:hover { background: var(--raise); }
+.dc-hit b { font-size: var(--ui-body-sm); font-weight: 600; overflow-wrap: anywhere; }
+.dc-hit small { grid-column: 1; font-size: var(--ui-caption); color: var(--ink-2); }
+.dc-hit .sh-pill, .dc-hit-price { grid-column: 2; grid-row: 1 / span 2; justify-self: end; text-align: end; font-size: var(--ui-body-sm); font-weight: 600; }
+.dc-hit-price small { display: block; font-weight: 500; }
+.dc-catalog { display: grid; gap: 10px; padding: 12px; border-radius: 12px; background: var(--raise); box-shadow: 0 0 0 1px var(--hair) inset; }
+.dc-linelist { list-style: none; margin: 0; padding: 0; display: grid; gap: 12px; }
+.dc-lineform.bad { box-shadow: 0 0 0 1.5px var(--bad) inset; }
+.dc-linetotal { margin: 0; text-align: end; font-size: var(--ui-body-sm); font-weight: 600; }
+.dc-totals-live { padding: 12px 14px; border-radius: 12px; background: var(--raise); box-shadow: 0 0 0 1px var(--hair) inset; }
+.dc-needs { margin: 6px 0 0; padding-inline-start: 18px; font-weight: 400; }
+.ct-banner .dc-needs li { margin: 2px 0; }
+
+/* The bar of the form and of the settings: above the phone's tab bar, at the foot of the sheet on a laptop. */
+.dc-bar { position: fixed; z-index: 30; inset-inline: 12px; bottom: calc(88px + env(safe-area-inset-bottom, 0px)); max-width: 40rem; margin-inline: auto; display: flex; flex-wrap: wrap; align-items: center; gap: 8px; padding: 10px; border-radius: 16px; background: var(--sheet); box-shadow: var(--float); animation: sh-pop 0.24s var(--spring-product); }
+.dc-bar .ct-grow { flex: 1; }
+.dc-dirty { font-size: var(--ui-body-sm); font-weight: 600; padding-inline: 6px; }
+/* A message never covers the bar's buttons: where the screen has a bar, messages sit above it. */
+.sh:has(.dc-bar) .ct-toasts { bottom: calc(168px + env(safe-area-inset-bottom, 0px)); }
+@media (min-width: 56rem) { .sh:has(.dc-bar) .ct-toasts { bottom: 96px; } }
+@media (min-width: 56rem) { .dc-bar { bottom: 24px; inset-inline-start: calc(16rem + 24px); inset-inline-end: 24px; max-width: none; margin-inline: 0; } }
+
+/* ── the settings and their preview ── */
+.dc-set { display: grid; gap: 18px; min-width: 0; }
+.dc-set-form { display: flex; flex-direction: column; gap: 14px; min-width: 0; }
+.dc-set-form > .ct-fold { background: var(--sheet); }
+.dc-subhead { margin: 8px 0 0; font-size: var(--ui-small); font-weight: 600; color: var(--ink-2); }
+.dc-set-side { display: none; min-width: 0; }
+.dc-preview { display: grid; gap: 10px; }
+.dc-preview-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.dc-preview-head h2 { margin: 0; font-size: var(--ui-body); font-weight: 600; }
+.dc-preview-sheet { position: relative; display: grid; justify-items: center; min-height: 12rem; }
+.dc-preview-sheet img { display: block; width: 100%; height: auto; background: var(--white); border-radius: 4px; box-shadow: 0 0 0 1px var(--hair-2), var(--lift); transition: opacity 0.2s var(--ease-product); }
+.dc-preview-sheet.thermal80 img { max-width: 22rem; }
+.dc-preview-sheet.a5 img { max-width: 30rem; }
+.dc-preview-sheet.busy img { opacity: 0.55; }
+@media (min-width: 56rem) {
+  .dc-set { grid-template-columns: minmax(0, 1fr) minmax(0, 26rem); align-items: start; gap: 28px; }
+  .dc-set-side { display: block; position: sticky; top: 0; }
+  .dc-peek { display: none !important; }
+}
+/* On a phone the preview is a small live picture at the corner; tapping it opens it full size. */
+.dc-peek { position: fixed; z-index: 29; inset-inline-end: 16px; bottom: calc(160px + env(safe-area-inset-bottom, 0px)); display: grid; grid-template-rows: 78px auto; justify-items: center; width: 64px; padding: 4px; border: 0; border-radius: 12px; background: var(--sheet); box-shadow: var(--float); color: var(--ink); font-size: var(--ui-micro); font-weight: 600; }
+.dc-peek img { width: 100%; height: 78px; object-fit: cover; object-position: top; border-radius: 6px; background: var(--white); box-shadow: 0 0 0 1px var(--hair-2); }
+.dc-peek span { padding-block: 4px 2px; }
+.dc-colour { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+.dc-swatch-pick { display: inline-flex; align-items: center; gap: 12px; }
+.dc-swatch-pick input[type="color"] { width: 56px; height: 44px; padding: 2px; border: 0; border-radius: 10px; background: var(--sheet); box-shadow: var(--lift); }
+.dc-picture { display: grid; gap: 8px; }
+.dc-picture-row { display: flex; flex-wrap: wrap; align-items: center; gap: 12px; }
+.dc-picture-box { display: grid; place-items: center; width: 96px; height: 72px; border-radius: 10px; background: var(--white); box-shadow: 0 0 0 1px var(--hair-2); overflow: hidden; color: var(--ink-2); font-size: var(--ui-caption); text-align: center; padding: 4px; }
+.dc-picture-box img { max-width: 100%; max-height: 100%; object-fit: contain; }
+.dc-picture-btns { display: flex; flex-wrap: wrap; gap: 8px; }
+.dc-series .dc-subhead, .dc-branches .dc-subhead { margin: 8px 0 8px; }
+.dc-next { font-size: var(--ui-small); }

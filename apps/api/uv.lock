@@ -18,13 +18,13 @@ dependencies = [
     { name = "httpx" },
     { name = "pillow" },
     { name = "pydantic-settings" },
+    { name = "pypdfium2" },
     { name = "resvg-py" },
     { name = "uharfbuzz" },
 ]
 
 [package.dev-dependencies]
 dev = [
-    { name = "pypdfium2" },
     { name = "pytest" },
     { name = "ruff" },
 ]
@@ -41,13 +41,13 @@ requires-dist = [
     { name = "httpx", specifier = ">=0.27" },
     { name = "pillow", specifier = ">=12.3,<13" },
     { name = "pydantic-settings", specifier = ">=2.6" },
+    { name = "pypdfium2", specifier = ">=4.30" },
     { name = "resvg-py", specifier = "==0.5.0" },
     { name = "uharfbuzz", specifier = ">=0.53" },
 ]
 
 [package.metadata.requires-dev]
 dev = [
-    { name = "pypdfium2", specifier = ">=4.30" },
     { name = "pytest", specifier = ">=8.3" },
     { name = "ruff", specifier = ">=0.8" },
 ]
