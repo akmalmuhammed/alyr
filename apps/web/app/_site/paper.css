@@ -136,4 +136,12 @@
 @media (max-width: 47.99rem) {
   .pp-plate { --cut: var(--cut-plate-sm); padding: var(--space-5) var(--space-3) var(--space-4); gap: var(--space-5); }
   .pp-plate .pp-dimmed:first-child, .pp-plate .pp-dimmed + .pp-dimmed { flex-basis: 100%; }
+  /* the A4 is a picture of the page at this width; its top is enough, and the roll under
+     it is read at true size */
+  .pp-plate .pp-a4 .pp-sheet { aspect-ratio: 210 / 140; }
+  .pp-plate .pp-a4 .pp-sheet::after { content: ""; position: absolute; inset: auto 0 0; border-bottom: 1px dashed var(--doc-rule); }
 }
+
+/* the receipt in the product pages' demo, on its dark panel */
+.panel-paper { place-items: start center; padding-block-end: 0; overflow: hidden; }
+.panel-paper .pp { width: min(32rem, 100%); }

@@ -31,6 +31,10 @@ export function SiteMotion() {
       { rootMargin: "0px 0px -12% 0px", threshold: 0.08 },
     );
     document.querySelectorAll("[data-reveal], [data-m]").forEach((node) => seen.observe(node));
+    // A product page's signature figure (LastOne, PaymentPaper) plays when it is read, which
+    // can be long after the first 4 s. The page has hydrated and this observer will mark it,
+    // so the failsafe that drops `motion` is no longer needed here.
+    if (!still && document.querySelector("[data-sig]")) window.clearTimeout(window.__alyrMotion);
 
     // The language link keeps the section being read.
     const sections = Array.from(document.querySelectorAll<HTMLElement>("main section[id]"));

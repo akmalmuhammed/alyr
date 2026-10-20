@@ -223,3 +223,8 @@
   .pf-sheet { --wipe-to: 420cqi; }
   .pf-wa .wa-thread { min-height: 0; }
 }
+@media (max-width: 30rem) {
+  .sig-stage { padding-inline-start: var(--space-4); }
+  .lo-win-body, .pf-body { padding: var(--space-3); }
+  .lo-log li { column-gap: var(--space-1); }
+}

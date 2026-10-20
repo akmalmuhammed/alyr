@@ -136,7 +136,7 @@ export function InsideBlock({ inside }: { inside: InsideSection }) {
           <p className="eyebrow">{inside.eyebrow}</p>
           <h2 className="h1">{rich(inside.title)}</h2>
         </div>
-        <div className="inside-grid">
+        <div className={`inside-grid${inside.groups.length > 3 ? " is-four" : ""}`}>
           {inside.groups.map((group, index) => (
             <div key={group.name} data-reveal style={n(index)}>
               <h3 className="inside-name">

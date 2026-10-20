@@ -50,6 +50,7 @@ Every product page uses `_site/ProductKit.tsx` and `kit.css`, in this order:
 |---|---|---|
 | Product bar | `ProductBar` | Name with the signal and its sections; sticky; no call to action |
 | Opening on Carbon | `ProductHero` | Eyebrow with the state, a two-line H1 that names the result (second line Concrete), the lead, a tabbed demo (`ProductDemo`), three facts on one rule. Cut corner, not rounded |
+| Signature figure (optional, after the opening) | `LastOne.tsx`, `PaymentPaper.tsx`, `moment.css` | One real object changing state (03-visuals of `docs/site-products-2`): three parts on one rule, CSS keyframes on `.motion .sig.is-in`, every delay a number of `--stagger` steps, one Volt mark, done before 3 s; the HTML is the end state; `data-sig` tells SiteMotion to keep `motion` past the 4 s failsafe |
 | How it works, from both sides | `FlowSection` (`FlowDiagram`) | The customer's steps and the business's, in the product's real words |
 | The screen used every day | `ScreenBlock` | The real workspace screen at true scale in the workspace window, numbered Carbon callouts beside it; on phones the workspace's phone layout (cards), never a sideways table with no cue |
 | What's in it | `InsideBlock` | Everything it does today by audience, then **Not yet** below a dashed rule with the pending dot |

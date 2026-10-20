@@ -21,7 +21,9 @@ Anything else belongs to another lane. If a task needs it, keep the change small
 
 ## Now (update this section in the same pull request as the work)
 
-Last updated 18 Oct 2026, after the design tokens (ALY-126) and the design skills.
+Last updated 21 Oct 2026, with the ALYR Shelf and ALYR Docs pages (ALY-205).
+
+- **ALYR Shelf and ALYR Docs pages, built, not merged or published (ALY-205, D-046, branch `aly-shelf-documents-pages`):** `/shelf` (the Catalog's public name) and `/docs` (Documents), English and Arabic, light and dark, on `ProductKit`. Each has a signature figure in CSS only that plays once and is finished without scripts: "The last one" (two customers, one stock card, one sale) and "A payment becomes paper" (Record a payment, RC-0042 drawn along the fold's diagonal, the PDF in the chat). The paper is live HTML on new `--doc-*` tokens (`Paper.tsx`, `paper.css`), the engine's layout. New drawings: the Stock screen and its log, the order page, the Documents screen, a document's own page, the WhatsApp document bubble. Site-wide: Payroll is off the site, "Set up for you" replaces "Early access", the suite is six products, works-with rows both ways, the stale /accounts, /agent, /bookings and /chat lines, the offer-on price lines. Docs never says it is available. Spec and log in `docs/site-products-2/`. Needs the founder: publishing, the Arabic review (ALY-66), the [F] lines.
 
 - **Design skills (PR #66):** nine Claude Code skills in `.claude/skills/` hold the brand's rules for every medium (`alyr-design` and its reference files; `alyr-site-page`, `alyr-product-screen`, `alyr-whatsapp-message`, `alyr-email`, `alyr-generated-image`, `alyr-print`, `alyr-deck-and-social`; `alyr-design-review` with prompt templates). Token names come from `design/tokens.json` (ALY-126, branch `aly-design-system`). This lane's agent and the Product agent load them. `docs/brand.md` points to them. Print, email and deck rules are derived, not yet used on a real piece.
 

@@ -45,6 +45,7 @@ Status: **Accepted** (in force), **Proposed** (waiting for the founder), **Super
 | D-038 | The Sunday report is a report card: a branded image from ALYR Agent's engine with about eight lines under it | Accepted |
 | D-039 | The Catalog (items, stock, photos) is built complete before go-live; photos on Cloudflare R2; free now, charged by usage later | Accepted |
 | D-042 | Documents (receipts, invoices and the rest) are one engine: gapless numbers, issued paper nobody can change, Arabic first, a PDF drawn by fpdf2 and kept in the database; free now, metered later | Accepted |
+| D-046 | The public site adds ALYR Shelf (the Catalog) and ALYR Docs (Documents), each with its own page; Payroll leaves the site until it is built; every product's state is "Set up for you" | Accepted |
 
 ---
 
@@ -974,3 +975,21 @@ There is no separate Pay product: payment links stay a module of Chat and Bookin
 - **Webhooks are written in the transaction of the event, signed, retried through the job queue, logged and guarded against SSRF.** HMAC-SHA256 over `<timestamp>.<body>`, eight attempts over about ten hours, a switch-off after ten failures and a day without success with an email to the owners, no customer data in the payload, and a guard that refuses anything but a public https name, re-resolves at send time, connects to the IP it checked, follows no redirect and reads 2 KB. *Rejected:* delivering webhooks synchronously inside the request (a slow receiver would hold a sale open).
 - **Undoing a CSV import withdraws; it never deletes.** Issued paper is never deleted (D-042). A document another system numbered, never sent, with no credit note against it, can be marked withdrawn (the one change the immutability guard allows besides voiding): it stays on record with its number and PDF, leaves the lists and the hosted page, and gives its number and sale back so a corrected file can be imported. A document ALYR numbered is never taken back (a gapless counter), and an import that sent anything or voided something cannot be undone.
 - **Left open:** the templates are to be submitted by the founder; a real WhatsApp send, a real email and a real POS have not been tried; the lawyer's answers (opt-in by settings screen; an invoice rendered for a shop with no CR number from another system's data); the Arabic is a draft (ALY-66); the hosted page does not yet say a document is the other system's.
+
+---
+
+## D-046 · The public site adds ALYR Shelf and ALYR Docs; Payroll leaves it; "Set up for you"
+**Date** 21 Oct 2026 · **Status** Accepted (founder, 20 Oct, in chat; recorded in `docs/site-products-2/00-founder-decisions.md`) · Linear ALY-205 · Updates D-037. Numbered D-046 because open pull requests take D-043, D-044 and D-045 (and D-041 is left for a renumber).
+
+**The decision.**
+- **Two new product pages, in both languages:** `/shelf` for the Catalog under its public name **ALYR Shelf** ("Everything you sell, on one shelf."), and `/docs` for Documents under its public name **ALYR Docs** (receipts, invoices, credit notes and the rest). Code, decisions and the workspace keep "Catalog" (Menu, Products, Price list) and "Documents" / «المستندات».
+- **Both go live together, once approved,** although the Documents module is still off for every shop. So the Docs page never says or implies it is available: no "today", "now", "live", "turn it on", and never "coming". It is set up with the shop, like every ALYR product.
+- **The suite's order is Chat, Bookings, Agent, Accounts, Shelf, Docs** (the fixed order, then `catalog.py`'s module order), in the Products menu, the footer, the suite section and every "works with" row.
+- **Payroll leaves the site** (menu, footer, suite, works-with rows) until it is built (D-039).
+- **States:** "Early access" becomes **"Set up for you" / «نجهّزه لك»** on every product; ALYR Agent and ALYR Shelf say **"With every product" / «مع كل منتج»**. ALYR Shelf is included with ALYR, not priced on its own (D-039); with the offer switch on, the "QAR 150 for each product you add" lines name ALYR Chat, ALYR Bookings and ALYR Accounts only.
+- **The "agentic" feel comes from what the products do on their own:** stock counted on every sale, the last item sold once, a sold-out item leaving the order page, a receipt issued when a payment is recorded, gapless numbers, paper that cannot change. No AI words.
+
+**Why.** Shelf and Docs are built (D-039, D-042) and are what an owner asks about at the visit: what I sell and what I hand over. A product that is not built is not shown at all (D-039), so Payroll goes rather than staying as "coming".
+
+**Open for the founder.** Publishing (the go-ahead each time), the Arabic review (ALY-66), the manual name check of Qirfa Bakery, and the [F] lines in `docs/site-products-2/02-messaging.md` (routes, the Docs "Not yet" line on tax and e-invoicing, whether ALYR Docs can be a shop's first product when prices are on).
+
