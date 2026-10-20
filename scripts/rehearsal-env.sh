@@ -19,6 +19,7 @@ umask 077
 cat > "$file" <<ENV
 # Made by scripts/rehearsal-env.sh for the production rehearsal. Random, local only.
 ALYR_OWNER_DB_PASSWORD=$owner
+POSTGRES_PASSWORD=$owner
 ALYR_APP_DB_PASSWORD=$app
 ALYR_BACKUP_DB_PASSWORD=$backup
 ALYR_MIGRATION_URL=postgresql://alyr:$owner@postgres:5432/alyr
