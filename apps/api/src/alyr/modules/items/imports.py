@@ -112,6 +112,7 @@ async def snapshot(
         tenant_id, clock.tz, entries, [c["name"] for c in await service.categories(conn)],
         limit, max(limit - used, 0), assets, attached, allowed,
         [f for f in await fields.rows(conn, False)] if feats.on("custom_fields") else [],
+        decimal_ok=feats.on("decimal_quantity"),
         costs=await costs.kept(conn) if "cost" in allowed else None,
         cost_note="owner_only" if feats.on("cost_margin") and not may else "",
     )

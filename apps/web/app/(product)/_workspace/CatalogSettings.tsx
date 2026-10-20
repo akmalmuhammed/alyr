@@ -10,7 +10,8 @@
 // which save as they are changed.
 
 import { useEffect, useState } from "react";
-import { api, sayError, toInt, type Rule, type Settings, type Setup, type StaffNumber } from "./catalogApi";
+import { fmtQty, qtyForApi } from "../_customer/qty";
+import { api, sayError, toInt, toQty, type Rule, type Settings, type Setup, type StaffNumber } from "./catalogApi";
 import { COPY, type Copy, type Lang } from "./catalogCopy";
 import { CatalogGroups } from "./CatalogGroups";
 import { Field, Icon, Sheet, Switch, type Toast } from "./CatalogUi";
@@ -39,7 +40,7 @@ export function CatalogSettings({ lang, push, onClose }: { lang: Lang; push: Pus
     api<Settings>("/api/items/settings").then((s) => {
       setSaved(s);
       setAgents(s.agents_edit_items);
-      setLow(String(s.low_stock_at));
+      setLow(fmtQty(s.low_stock_at));
       setDay(s.day_starts);
       setHold(String(s.hold_minutes));
       setWholesale(s.wholesale_layout);
@@ -56,7 +57,7 @@ export function CatalogSettings({ lang, push, onClose }: { lang: Lang; push: Pus
   }, [lang, t]);
 
   async function save() {
-    const lowNumber = toInt(low);
+    const lowNumber = toQty(low);
     const holdNumber = toInt(hold);
     if (lowNumber === null || lowNumber < 0 || holdNumber === null || holdNumber < 5 || holdNumber > 1440) {
       setFailure(t.failed);
@@ -66,7 +67,7 @@ export function CatalogSettings({ lang, push, onClose }: { lang: Lang; push: Pus
     setFailure("");
     try {
       await api<Settings>("/api/items/settings", "PUT", {
-        agents_edit_items: agents, low_stock_at: lowNumber, day_starts: day, hold_minutes: holdNumber,
+        agents_edit_items: agents, low_stock_at: lowNumber === null ? null : qtyForApi(lowNumber), day_starts: day, hold_minutes: holdNumber,
         wholesale_layout: wholesale, whatsapp_number: number.trim(), whatsapp_mode: mode,
       });
       await api<Setup>("/api/items/setup", "PUT", {
@@ -95,7 +96,7 @@ export function CatalogSettings({ lang, push, onClose }: { lang: Lang; push: Pus
           <Switch on={agents} label={t.agentsEdit} onChange={setAgents} disabled={!saved} />
         </div>
         <Field label={t.lowStockAt} hint={t.lowStockHint}>
-          <input value={low} inputMode="numeric" dir="ltr" onChange={(e) => setLow(e.target.value)} disabled={!saved} />
+          <input value={low} inputMode="decimal" dir="ltr" onChange={(e) => setLow(e.target.value)} disabled={!saved} />
         </Field>
         <Field label={t.dayStarts} hint={t.dayStartsHint}>
           <input type="time" value={day} dir="ltr" onChange={(e) => setDay(e.target.value)} disabled={!saved} />

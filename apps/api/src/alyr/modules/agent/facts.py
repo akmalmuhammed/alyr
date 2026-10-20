@@ -432,9 +432,9 @@ async def _orders(conn, f: Facts, span, last, chart) -> None:
     f.top_items = [
         (r["name"], r["cur"], r["prev"])
         for r in await conn.fetch(
-            "select i.name, coalesce(sum(i.quantity) filter (where o.created_at >= $2), 0)::int "
+            "select i.name, coalesce(sum(i.quantity) filter (where o.created_at >= $2), 0) "
             "as cur, "
-            "coalesce(sum(i.quantity) filter (where o.created_at < $2), 0)::int as prev "
+            "coalesce(sum(i.quantity) filter (where o.created_at < $2), 0) as prev "
             "from order_items i join orders o on o.id = i.order_id "
             "where o.status <> 'cancelled' and o.created_at >= $1 and o.created_at < $3 "
             "group by i.name order by cur desc, i.name",
@@ -445,8 +445,8 @@ async def _orders(conn, f: Facts, span, last, chart) -> None:
         (r["name"], r["cur"], r["prev"])
         for r in await conn.fetch(
             "select i.name, "
-            "coalesce(sum(i.quantity) filter (where o.created_at >= $3), 0)::int as cur, "
-            "coalesce(sum(i.quantity) filter (where o.created_at < $2), 0)::int as prev "
+            "coalesce(sum(i.quantity) filter (where o.created_at >= $3), 0) as cur, "
+            "coalesce(sum(i.quantity) filter (where o.created_at < $2), 0) as prev "
             "from order_items i join orders o on o.id = i.order_id "
             "where o.status <> 'cancelled' and o.created_at >= $1 and o.created_at < $4 "
             "and (o.created_at < $2 or o.created_at >= $3) group by i.name",

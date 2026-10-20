@@ -409,7 +409,8 @@ def view_rule(
     return {
         "id": str(r["id"]), "kind": r["kind"], "code": r["code"], "name": r["name"],
         "name_ar": r["name_ar"], "text": en, "text_ar": ar, "value_type": r["value_type"],
-        "percent": str(r["percent"].normalize()) if r["percent"] is not None else None,
+        # (the connection hands a whole number back as an int, a fraction as a Decimal)
+        "percent": str(Decimal(r["percent"]).normalize()) if r["percent"] is not None else None,
         "amount": r["amount"], "buy_qty": r["buy_qty"], "get_qty": r["get_qty"],
         "scope": r["scope"],
         "items": [

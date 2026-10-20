@@ -54,7 +54,9 @@ export const loadLive = (slug: string, ids: string[], token: string | null) =>
   call<Live>(`/api/store/${slug}/live`, post({ ids, token }));
 
 export type CartBody = {
-  items: { product_id: string; quantity: number; variant_id?: string | null; option_ids?: string[]; expected_price?: number }[];
+  /** `quantity` is a number when whole and its decimal text otherwise ("0.25"): a fraction never
+   *  travels as a float (`qtyForApi`). */
+  items: { product_id: string; quantity: number | string; variant_id?: string | null; option_ids?: string[]; expected_price?: number }[];
   for_date?: string | null;
   /** The codes the customer typed (only while the shop's discounts are on; at most 3). */
   coupons?: string[];

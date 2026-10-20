@@ -112,7 +112,8 @@ def test_the_back_office_lists_ours_and_theirs_with_the_registry_and_a_quick_sta
     assert answer["made"] == [] or all(not t["builtin"] for t in answer["made"])
     assert "closest template" in answer["quick_start"]["en"] and answer["quick_start"]["ar"]
     keys = {f["key"] for g in answer["registry"]["groups"] for f in g["features"]}
-    assert "variants" in keys and "decimal_quantity" not in keys  # not built: not offered
+    assert "variants" in keys and "decimal_quantity" in keys
+    assert "cost_margin" in keys and "barcode" not in keys  # built: offered; not built: not
     assert {t["key"] for t in answer["types"]} >= {"bakery", "shop", "travel"}
 
 
@@ -329,7 +330,8 @@ def test_the_preview_says_what_would_be_added_and_changes_nothing(client):
     before = (client.get("/api/items/setup").json(), client.get("/api/items/categories").json())
     shown = preview(client, "grocery")
     assert shown["from"]["key"] == "restaurant" and shown["to"]["key"] == "grocery"
-    assert names(shown["turn_on"]) == ["low_stock_alerts"]  # the restaurant has no such alert
+    # the restaurant has no such alert, and does not weigh or pour
+    assert set(names(shown["turn_on"])) == {"low_stock_alerts", "decimal_quantity"}
     # (the restaurant already has Drinks: a category the shop has is not added again)
     assert [c["name"] for c in shown["categories"]] == [
         "Fruit & vegetables", "Dairy & eggs", "Pantry", "Household"]
@@ -362,7 +364,7 @@ def test_applying_adds_and_removes_nothing_and_changes_none_of_the_shops_things(
         "allergens", "spice_level", "serves", "origin", "shelf_life_days"}
     line = client.get("/api/items/settings/activity").json()["activity"][0]
     assert line["action"] == "template_applied" and line["detail"]["to"] == "grocery"
-    assert line["detail"]["turned_on"] == ["low_stock_alerts"]
+    assert sorted(line["detail"]["turned_on"]) == ["decimal_quantity", "low_stock_alerts"]
 
 
 def test_what_the_owner_set_themselves_stays_as_they_set_it(client):
@@ -400,8 +402,10 @@ def test_a_feature_that_needs_one_the_owner_turned_off_is_not_forced_on(client):
 def test_nothing_is_switched_off_by_a_change_of_type(client):
     new_business(client, kind="bakery")
     shown = preview(client, "restaurant")
-    # The bakery has the low-stock alert on, the restaurant does not: it stays on, and is said.
-    assert names(shown["stays_on"]) == ["low_stock_alerts"] and shown["turn_on"] == []
+    # The bakery has the low-stock alert on and sells by weight, the restaurant does neither: they
+    # stay on, and are said.
+    assert set(names(shown["stays_on"])) == {"low_stock_alerts", "decimal_quantity"}
+    assert shown["turn_on"] == []
     assert apply(client, "restaurant", shown).status_code == 200
     assert client.get("/api/items/setup").json()["alerts"]["low_stock"] is True
 

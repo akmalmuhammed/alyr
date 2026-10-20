@@ -11,6 +11,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Glyph } from "../Frame";
 import type { Lang } from "../price";
 import { formatPrice } from "../price";
+import { addQty, fmtQtyUnit, isMeasure, lineTotal, qtyForApi, subQty, unitShort } from "../qty";
 import { ApiError, checkCart, placeOrder, type CartBody } from "./api";
 import { lineName, next, total as totalOf, type Line } from "./cart";
 import { say, T } from "./copy";
@@ -132,7 +133,7 @@ export function ReviewSheet(props: Props) {
 
   const body = useMemo<CartBody>(() => ({
     items: lines.map((l) => ({
-      product_id: l.itemId, quantity: l.qty, variant_id: l.variantId, option_ids: l.optionIds, expected_price: l.unit,
+      product_id: l.itemId, quantity: qtyForApi(l.qty), variant_id: l.variantId, option_ids: l.optionIds, expected_price: l.unit,
     })),
     for_date: dated && askDay ? forDate : null,
     ...(couponsOn ? { coupons: codes } : {}),
@@ -282,7 +283,9 @@ export function ReviewSheet(props: Props) {
     const change =
       code === "not_enough" ? (verdict?.max_quantity ?? 0) :
       code === "below_minimum" ? (verdict?.minimum ?? 0) :
-      code === "not_pack_multiple" ? (verdict?.suggest ?? 0) : 0;
+      code === "not_pack_multiple" || code === "off_step" ? (verdict?.suggest ?? 0) : 0;
+    const unitKey = line.unitKey ?? item?.unit ?? "piece";
+    const measure = isMeasure(unitKey);
     const gone = ["sold_out", "unavailable", "variant_unavailable", "option_invalid"].includes(code ?? "") || (code === "not_enough" && change === 0);
     const needsChoice = ["variant_required", "option_required", "option_too_many"].includes(code ?? "");
     const timing = ["not_now", "closed", "after_cutoff", "not_that_day", "past"].includes(code ?? "");
@@ -293,6 +296,7 @@ export function ReviewSheet(props: Props) {
           <b dir="auto">{name}</b>
           <span className="ox-lprice">
             <Price value={line.unit} lang={lang} />
+            {measure && <small className="ox-per"> {t.perUnit(unitShort(unitKey, lang))}</small>}
             {code === "price_changed" && verdict?.new_price !== undefined && (
               <> <Glyph name="arrow" className="flip ox-lflip" /> <Price value={verdict.new_price} lang={lang} className="ox-new" /></>
             )}
@@ -311,7 +315,7 @@ export function ReviewSheet(props: Props) {
             {code === "price_changed" && verdict?.new_price !== undefined && (
               <button type="button" className="ox-link" onClick={() => props.accept(line.key, verdict.new_price as number)}>{t.accept}</button>
             )}
-            {change > 0 && <button type="button" className="ox-link" onClick={() => props.setQty(line.key, change)}>{t.changeTo(change)}</button>}
+            {change > 0 && <button type="button" className="ox-link" onClick={() => props.setQty(line.key, change)}>{t.changeTo(fmtQtyUnit(change, unitKey, lang))}</button>}
             {needsChoice && <button type="button" className="ox-link" onClick={() => props.choose(line.itemId)}>{t.chooseNow}</button>}
             {timing && verdict?.next_date && (
               <button type="button" className="ox-link" onClick={() => props.onForDate(verdict.next_date as string)}>{t.pickDay(shortDay(verdict.next_date, lang))}</button>
@@ -320,9 +324,10 @@ export function ReviewSheet(props: Props) {
           </div>
         </div>
         <div className="ox-lqty">
-          <Stepper qty={line.qty} atMax={false} labels={labels(name)}
-            onMinus={() => (item ? props.setQty(line.key, next(item, line.qty, -1, line.variantId)) : props.setQty(line.key, line.qty - 1))}
-            onPlus={() => (item ? props.setQty(line.key, next(item, line.qty, 1, line.variantId)) : props.setQty(line.key, line.qty + 1))} />
+          <Stepper qty={line.qty} text={fmtQtyUnit(line.qty, unitKey, lang)} atMax={false} labels={labels(name)}
+            onMinus={() => (item ? props.setQty(line.key, next(item, line.qty, -1, line.variantId)) : props.setQty(line.key, subQty(line.qty, 1)))}
+            onPlus={() => (item ? props.setQty(line.key, next(item, line.qty, 1, line.variantId)) : props.setQty(line.key, addQty(line.qty, 1)))} />
+          {measure && <Price value={lineTotal(line.unit, line.qty)} lang={lang} className="ox-ltotal" />}
         </div>
         {verdict?.alternatives && verdict.alternatives.length > 0 && (
           <div className="ox-alts" role="group" aria-label={t.tryInstead}>

@@ -10,6 +10,7 @@ import {
   api, nameOf, sayError, type Access, type BulkLast, type Category, type ImportResult, type ImportUndone,
   type Item, type ListResult, type Setup,
 } from "./catalogApi";
+import { fmtQtyUnit, unitFor } from "../_customer/qty";
 import { COPY, type Copy, type Lang } from "./catalogCopy";
 import { FEAT } from "./featuresCopy";
 import { PRICING } from "./pricingCopy";
@@ -54,7 +55,7 @@ function categoryName(category: Category, lang: Lang) {
 }
 
 /** What to say about an item beside its name: why it cannot be ordered, or how many are left. */
-function statusLine(item: Item, t: Copy, lowAt: number) {
+function statusLine(item: Item, t: Copy, lowAt: number, lang: Lang) {
   const pills: { text: string; tone: "" | "bad" | "wait" | "quiet" | "sample" }[] = [];
   // A sample is an example, never for sale: it says so and nothing else.
   if (item.sample) return [{ text: t.sampleTag, tone: "sample" as const }];
@@ -65,7 +66,8 @@ function statusLine(item: Item, t: Copy, lowAt: number) {
   const left = item.availability.left;
   if (item.status === "live" && left !== null && left > 0 && item.availability.reason === "") {
     const low = item.stock_rule === "count" && item.variants.some((v) => v.active && v.on_hand > 0 && v.on_hand <= lowAt);
-    const text = item.stock_rule === "daily_limit" ? t.leftToday(left) : t.left(left);
+    const shown = fmtQtyUnit(left, unitFor(item), lang);
+    const text = item.stock_rule === "daily_limit" ? t.leftToday(shown) : t.left(shown);
     pills.push({ text, tone: low ? "wait" : "quiet" });
   }
   return pills;
@@ -303,7 +305,7 @@ export function Catalog({ lang, title, show = null, onRenamed }: { lang: Lang; t
 
   function card(item: Item) {
     const name = nameOf(item, lang);
-    const pills = statusLine(item, t, lowAt);
+    const pills = statusLine(item, t, lowAt, lang);
     const draftIncomplete = item.status === "draft" && (!item.name && !item.name_ar || item.price <= 0);
     const isPicked = picked.has(item.id);
     return (
@@ -342,7 +344,7 @@ export function Catalog({ lang, title, show = null, onRenamed }: { lang: Lang; t
 
   function row(item: Item) {
     const name = nameOf(item, lang);
-    const pills = statusLine(item, t, lowAt);
+    const pills = statusLine(item, t, lowAt, lang);
     const draftIncomplete = item.status === "draft" && (!item.name && !item.name_ar || item.price <= 0);
     const isPicked = picked.has(item.id);
     return (

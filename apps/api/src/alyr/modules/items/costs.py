@@ -315,8 +315,9 @@ async def order_margins(conn: asyncpg.Connection) -> dict:
     is false when some line had no cost kept (the margin is then of the lines that had)."""
     rows = await conn.fetch(
         "select o.id, "
-        "coalesce(sum(l.price * l.quantity - l.discount) filter (where c.unit_cost is not null), 0)"
-        "::bigint as revenue, "
+        # A line is its price times its quantity, rounded once (the order's own rule, ALY-149).
+        "coalesce(sum(round(l.price * l.quantity) - l.discount) "
+        "filter (where c.unit_cost is not null), 0)::bigint as revenue, "
         "coalesce(sum(round(c.unit_cost * l.quantity)), 0)::bigint as cost, "
         "count(*) filter (where c.unit_cost is null)::int as missing, "
         "count(*) filter (where c.unit_cost is not null)::int as known "

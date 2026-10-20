@@ -51,6 +51,9 @@ export type Group = {
 
 export type Day = { date: string; label: string; label_ar: string };
 
+/** `quantity` on an item: the API's `qty.rules`. Quantities are exact decimals (`../qty.ts`). */
+export type ItemQuantity = { measure: boolean; step: number; min: number; fractions: boolean; show_unit: boolean; chips: number[] };
+
 export type Item = {
   id: string;
   name: string;
@@ -64,6 +67,9 @@ export type Item = {
   unit: string;
   pack_size: number | null;
   min_order: number;
+  /** How much may be ordered at a time (ALY-149): sold by weight or volume, the step, the
+   *  smallest order, whether a fraction is allowed and the quick quantities to offer. */
+  quantity?: ItemQuantity;
   tags: string[];
   /** What this customer pays for the item (its own price, or the cheapest size's with `price_min`). */
   price: number;
@@ -194,6 +200,8 @@ export type Checked = {
   ok: boolean;
   unit_price?: number;
   line_total?: number;
+  /** The item's unit, for a measure (so a number in the sentence can carry it). */
+  unit?: string;
   /** With discounts on (ALY-150): what came off this line, and what it comes to after. */
   discount?: number;
   line_total_after?: number;

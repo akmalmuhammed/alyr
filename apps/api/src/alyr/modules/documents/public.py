@@ -56,7 +56,7 @@ async def page(conn: asyncpg.Connection, doc_id: UUID) -> dict | None:
         "seller": {"name": seller.get("name", ""), "name_ar": seller.get("name_ar", "")},
         "lines": [
             {"description": line["description"], "description_ar": line["description_ar"],
-             "quantity": format(line["quantity"].normalize(), "f"),
+             "quantity": money.quantity_text(line["quantity"]),
              "unit": _pair(words.UNITS[line["unit"]]),
              "unit_price_minor": line["unit_price_minor"],
              "line_total_minor": line["line_total_minor"]}

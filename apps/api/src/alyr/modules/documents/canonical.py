@@ -76,7 +76,7 @@ def line_content(line: Mapping) -> dict:
         "description": line["description"],
         "description_ar": line["description_ar"],
         "sku": line["sku"],
-        "quantity": line["quantity"],
+        "quantity": Decimal(line["quantity"]),
         "unit": line["unit"],
         "unit_price_minor": line["unit_price_minor"],
         "discount_minor": line["discount_minor"],

@@ -82,6 +82,8 @@ UNITS: dict[str, Text] = {
     "g": Text("g", "غ"),
     "l": Text("l", "لتر"),
     "m": Text("m", "متر"),
+    "ml": Text("ml", "مل"),
+    "tola": Text("tola", "تولة"),
     "box": Text("box", "علبة"),
     "pack": Text("pack", "عبوة"),
     "portion": Text("portion", "حصة"),

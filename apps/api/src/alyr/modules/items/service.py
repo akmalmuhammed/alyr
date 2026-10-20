@@ -19,10 +19,10 @@ import asyncpg
 from alyr.core import team
 from alyr.core.normalise import fmt_qar, western_digits
 from alyr.core.team import Actor
-from alyr.modules.items import availability, events, stock
+from alyr.modules.items import availability, events, qty, stock
 from alyr.modules.items.clock import ShopClock
 
-UNITS = ("piece", "kg", "box", "pack", "portion", "hour")
+UNITS = qty.UNITS
 STATUSES = ("draft", "live", "hidden", "archived")
 # What the item form may set directly. The rest is derived or has its own call.
 FIELDS = (
@@ -30,7 +30,7 @@ FIELDS = (
     "sale_starts_at", "sale_ends_at", "unit", "pack_size", "min_order", "tags", "stock_rule",
     "available", "status", "sort", "sku", "low_stock_at",
 )
-MAX_QUANTITY = 999
+MAX_QUANTITY = qty.MAX_QUANTITY
 MAX_SKU = 40
 
 
@@ -205,6 +205,9 @@ def view(entry: Loaded, clock: ShopClock) -> dict:
         "category": i["category"], "status": i["status"], "stock_rule": i["stock_rule"],
         "available": i["available"], "unit": i["unit"], "pack_size": i["pack_size"],
         "min_order": i["min_order"], "tags": list(i["tags"]), "sort": i["sort"],
+        # How it may be ordered (ALY-149): a measure, its step, its smallest order, its quick
+        # quantities.
+        "quantity": qty.rules(i["unit"], i["pack_size"], i["min_order"]),
         "low_stock_at": i["low_stock_at"],
         # A sample is an example the shop's type started it with (`samples.py`): never for
         # sale, its price is an example. `sample_key` is what its tile is drawn from.
@@ -270,6 +273,37 @@ def _clean_tags(tags) -> list[str]:
     return out
 
 
+_WHOLE_ONLY = (
+    "This item is counted in whole numbers. Sell it by weight or volume to use a fraction."
+)
+
+
+def _check_lots(values: dict, measure: bool) -> None:
+    """The smallest order and the step (pack size) of an item. A counted unit takes whole
+    numbers (1 to 999); a measure takes up to three decimals above zero (0.25 kg)."""
+    for key, name, most in (
+        ("min_order", "bad_minimum", MAX_QUANTITY), ("pack_size", "bad_pack", 100_000)
+    ):
+        value = values[key]
+        if value is None:
+            continue
+        label = "minimum order" if key == "min_order" else "pack size or step"
+        try:
+            value = values[key] = qty.parse(value)
+        except qty.QtyError as error:
+            raise ItemError(name, f"The {label} is not a quantity: {error}") from error
+        if not 0 < value <= most:
+            raise ItemError(
+                name,
+                f"The {label} must be between 1 and {most:,}." if not measure
+                else f"The {label} must be above zero, up to {most:,}.",
+            )
+        if not measure and value != int(value):
+            raise ItemError(name, _WHOLE_ONLY)
+        if key == "min_order" and not measure and value < 1:
+            raise ItemError(name, "The minimum order must be between 1 and 999.")
+
+
 def _check_fields(values: dict, variants: list[dict]) -> None:
     """The rules every item obeys, on the values it would have after the change. A draft (a
     photo waiting to be described) and an archived item may still lack a name or a price;
@@ -285,11 +319,18 @@ def _check_fields(values: dict, variants: list[dict]) -> None:
         raise ItemError("bad_unit", "Choose a unit from the list.")
     if values["status"] not in STATUSES:
         raise ItemError("bad_status", "Choose draft, live, hidden or archived.")
-    if values["min_order"] < 1 or values["min_order"] > MAX_QUANTITY:
-        raise ItemError("bad_minimum", "The minimum order must be between 1 and 999.")
+    measure = qty.is_measure(values["unit"])
+    _check_lots(values, measure)
     low = values["low_stock_at"]
-    if low is not None and not 0 <= low <= 100_000:
-        raise ItemError("bad_low_stock", "Choose a low-stock number between 0 and 100,000.")
+    if low is not None:
+        try:
+            low = values["low_stock_at"] = qty.parse(low, allow_zero=True)
+        except qty.QtyError as error:
+            raise ItemError("bad_low_stock", str(error)) from error
+        if not 0 <= low <= 100_000:
+            raise ItemError("bad_low_stock", "Choose a low-stock number between 0 and 100,000.")
+        if not measure and low != int(low):
+            raise ItemError("bad_low_stock", _WHOLE_ONLY)
     sale, starts, ends = values["sale_price"], values["sale_starts_at"], values["sale_ends_at"]
     if sale is not None and not 0 < sale < values["price"]:
         raise ItemError("bad_sale", "The sale price must be below the usual price.")
@@ -303,6 +344,14 @@ def _check_fields(values: dict, variants: list[dict]) -> None:
             raise ItemError("bad_price", "A price difference cannot bring a price to zero.")
         if v["active"] and values["stock_rule"] == "daily_limit" and v["daily_limit"] is None:
             raise ItemError("limit_needed", "Set how many can be sold each day.")
+        limit = v.get("daily_limit")
+        if limit is not None:
+            try:
+                limit = qty.parse(limit, allow_zero=True)
+            except qty.QtyError as error:
+                raise ItemError("bad_limit", str(error)) from error
+            if not measure and limit != int(limit):
+                raise ItemError("bad_limit", _WHOLE_ONLY)
     if values["status"] == "live" and not any(v["active"] for v in variants):
         raise ItemError("variant_needed", "An item needs at least one choice that can be sold.")
 
@@ -747,7 +796,7 @@ async def _sync_variants(
             if "daily_limit" in data:
                 await conn.execute(
                     "update item_variants set daily_limit = $2 where id = $1",
-                    default["id"], data["daily_limit"],
+                    default["id"], _q(data["daily_limit"]),
                 )
             if creating and data.get("opening_stock"):
                 await _opening(conn, default["id"], data["opening_stock"], actor)
@@ -766,7 +815,7 @@ async def _sync_variants(
         sku = clean_sku(v["sku"]) if "sku" in v else (old["sku"] if old else "")
         fields = (
             name, v.get("name_ar", "").strip(), v.get("price_delta", 0),
-            v.get("daily_limit"), v.get("active", True), sort, sku,
+            _q(v.get("daily_limit")), v.get("active", True), sort, sku,
         )
         try:
             if v.get("id"):
@@ -810,11 +859,26 @@ async def _sync_variants(
         await conn.execute("update item_variants set active = false where id = any($1)", gone)
 
 
-async def _opening(conn: asyncpg.Connection, variant_id: UUID, quantity: int, actor: Actor):
+def _q(value):
+    """A quantity from a form or a file, exact (a float read from JSON becomes its decimal text);
+    None stays None."""
+    if value is None:
+        return None
+    try:
+        return qty.parse(value, allow_zero=True)
+    except qty.QtyError as error:
+        raise ItemError("bad_quantity", str(error)) from error
+
+
+async def _opening(conn: asyncpg.Connection, variant_id: UUID, quantity, actor: Actor):
+    quantity = _q(quantity)
     if quantity < 0:
         raise ItemError("bad_quantity", "A stock count cannot be below zero.")
     if quantity:
-        await stock.move(conn, variant_id, "opening", quantity, actor, "Opening count")
+        try:
+            await stock.move(conn, variant_id, "opening", quantity, actor, "Opening count")
+        except stock.StockError as error:
+            raise ItemError(error.code, str(error)) from error
 
 
 def _time(value) -> time | None:
@@ -918,7 +982,9 @@ async def _sync_schedule(conn: asyncpg.Connection, item_id: UUID, windows: list[
 async def _variant_for(
     conn: asyncpg.Connection, item_id: UUID, variant_id: UUID | None
 ) -> tuple[asyncpg.Record, asyncpg.Record]:
-    item = await conn.fetchrow("select id, stock_rule from items where id = $1", item_id)
+    item = await conn.fetchrow(
+        "select id, stock_rule, unit, pack_size, min_order from items where id = $1", item_id
+    )
     if item is None:
         raise LookupError("no such item")
     variants = await conn.fetch(
@@ -935,8 +1001,20 @@ async def _variant_for(
     return item, chosen
 
 
+def _stock_number(value, unit: str, signed: bool = False):
+    """A stock figure from staff: an exact number with at most three decimals, whole for an item
+    that is counted in whole numbers (ALY-149)."""
+    try:
+        number = qty.parse(value, allow_zero=True, allow_negative=signed)
+    except qty.QtyError as error:
+        raise ItemError("bad_quantity", str(error)) from error
+    if not qty.is_measure(unit) and number != int(number):
+        raise ItemError("not_whole", _WHOLE_ONLY)
+    return number
+
+
 async def record_stock(
-    conn: asyncpg.Connection, clock: ShopClock, item_id: UUID, kind: str, quantity: int,
+    conn: asyncpg.Connection, clock: ShopClock, item_id: UUID, kind: str, quantity: "qty.Qty",
     reason: str, actor: Actor, variant_id: UUID | None = None, day: date | None = None,
 ) -> dict:
     """Staff record a stock change by hand: an opening count, stock received, waste, a count
@@ -954,6 +1032,7 @@ async def record_stock(
         )
     if kind == "opening" and rule != "count":
         raise ItemError("bad_kind", "An opening count is for items counted in stock.")
+    quantity = _stock_number(quantity, item["unit"], signed=kind == "adjusted")
     stock_day = (day or clock.shop_day) if rule == "daily_limit" else None
     reason = reason.strip()
     if kind in ("wasted", "adjusted") and not reason:
@@ -972,14 +1051,22 @@ async def record_stock(
         if quantity <= 0:
             raise ItemError("bad_quantity", "Enter a number above zero.")
         delta = -quantity if kind == "wasted" else quantity
-    balance = await stock.move(
-        conn, variant["id"], kind, delta, actor,
-        reason or ("Opening count" if kind == "opening" else "Stock received"),
-        stock_day, limit=variant["daily_limit"],
-    )
+    try:
+        balance = await stock.move(
+            conn, variant["id"], kind, delta, actor,
+            reason or ("Opening count" if kind == "opening" else "Stock received"),
+            stock_day, limit=variant["daily_limit"],
+        )
+    except stock.StockError as error:
+        raise ItemError(error.code, str(error)) from error
     if balance is None:
         have = await stock.left(conn, variant["id"], stock_day)
-        raise ItemError("below_zero", f"There are only {have} in stock, so that cannot come out.")
+        shown = qty.shown(item["unit"], item["pack_size"], item["min_order"])
+        raise ItemError(
+            "below_zero",
+            f"There are only {qty.label(have, item['unit'], shown)} in stock, so that cannot "
+            "come out.",
+        )
     return {"kind": kind, "balance": balance, "delta": delta}
 
 
@@ -1064,7 +1151,7 @@ async def settings(conn: asyncpg.Connection) -> dict:
 
 async def save_settings(
     conn: asyncpg.Connection, hold_minutes: int | None, day_starts: time | None,
-    agents_edit_items: bool | None = None, low_stock_at: int | None = None,
+    agents_edit_items: bool | None = None, low_stock_at: "qty.Qty | None" = None,
     wholesale_layout: bool | None = None, whatsapp_number: str | None = None,
     whatsapp_mode: str | None = None,
 ) -> dict:
@@ -1081,13 +1168,13 @@ async def save_settings(
         "insert into shop_settings (hold_minutes, day_starts, agents_edit_items, low_stock_at, "
         "wholesale_layout, whatsapp_number, whatsapp_mode) "
         "values (coalesce($1::int, 30), coalesce($2::time, '00:00'), "
-        "coalesce($3::boolean, false), coalesce($4::int, 5), "
+        "coalesce($3::boolean, false), coalesce($4::numeric, 5), "
         "coalesce($5::boolean, false), coalesce($6::text, ''), coalesce($7::text, 'link')) "
         "on conflict (tenant_id) do update set "
         "hold_minutes = coalesce($1::int, shop_settings.hold_minutes), "
         "day_starts = coalesce($2::time, shop_settings.day_starts), "
         "agents_edit_items = coalesce($3::boolean, shop_settings.agents_edit_items), "
-        "low_stock_at = coalesce($4::int, shop_settings.low_stock_at), "
+        "low_stock_at = coalesce($4::numeric, shop_settings.low_stock_at), "
         "wholesale_layout = coalesce($5::boolean, shop_settings.wholesale_layout), "
         "whatsapp_number = coalesce($6::text, shop_settings.whatsapp_number), "
         "whatsapp_mode = coalesce($7::text, shop_settings.whatsapp_mode)",
