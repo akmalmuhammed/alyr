@@ -215,7 +215,7 @@ export const shelfEn: ShelfPage = {
             { main: "0.5 kg", sub: "In the order", trail: "QAR 30", tone: "signal" },
           ],
         },
-        caption: "Sold by the kilo: quick amounts on the page, and “131 x0.5” in the chat.",
+        caption: "Sold by the kilo: quick amounts on the page, and “131\u00a0x0.5” in the chat.",
       },
       {
         id: "unpaid",
@@ -482,7 +482,7 @@ export const shelfEn: ShelfPage = {
           "Each item in Arabic and English. An item needs its Arabic name before it goes on sale.",
           "Plain words on when to order: “Ready from 5 pm”, “Order before 6 pm for tomorrow”.",
           "“Only 3 left” when stock is low, and “Sold out” when it is gone.",
-          "Order by item code in the chat (“108 x2”), by name or by link.",
+          "Order by item code in the chat (“108\u00a0x2”), by name or by link.",
           "Sold by weight or volume, with quick amounts: 0.25, 0.5 and 1 kg.",
         ],
       },
@@ -587,7 +587,7 @@ export const shelfEn: ShelfPage = {
       {
         id: "weight",
         q: "I sell by the kilo.",
-        a: "Set the item by weight, in kilograms or grams. The order page offers quick amounts, and the chat takes “131 x0.5”.",
+        a: "Set the item by weight, in kilograms or grams. The order page offers quick amounts, and the chat takes “131\u00a0x0.5”.",
       },
     ],
   },
@@ -608,7 +608,7 @@ export const shelfAr: ShelfPage = {
   },
   hero: {
     eyebrow: "ALYR Shelf · الأصناف والمخزون · مع كل منتج",
-    title: ["كل ما تبيعه، في مكان واحد.", "ومع كل بيع، ينقص المخزون تلقائياً."],
+    title: ["كل ما تبيعه، في مكان واحد.", "ومع كل\u00a0بيع، ينقص المخزون تلقائياً."],
     lead:
       "أصنافك بصورها وأسعارها ومقاساتها وخياراتها، بالعربية والإنجليزية. كل بيع يأخذ كميته من المخزون في خطوة واحدة، فلا تُباع القطعة الأخيرة إلا مرة واحدة. وحين ينفد صنف تكتب صفحة الطلب «نفد»، ويعيده هاتف الموظف للبيع برسالة واحدة.",
     facts: ["مع كل منتجات ALYR", "القطعة الأخيرة تُباع مرة واحدة", "بالعدد أو باليوم أو بالوزن"],

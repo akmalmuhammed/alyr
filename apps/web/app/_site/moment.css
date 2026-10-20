@@ -21,7 +21,7 @@
 .sig-rule i::before, .sig-rule i::after { content: ""; position: absolute; background: var(--line-strong); }
 .sig-rule i::before { inset: 4px 0 auto; height: 1px; }
 .sig-rule i::after { inset: 0 auto 0 4px; width: 1px; }
-.sig-part { position: relative; z-index: 1; display: grid; gap: var(--space-2); min-width: 0; }
+.sig-part { position: relative; z-index: 1; display: grid; grid-template-columns: minmax(0, 1fr); gap: var(--space-2); min-width: 0; }
 .sig-k {
   font-family: var(--mono); font-size: var(--fs-micro); font-weight: 500; letter-spacing: var(--tracking-label);
   text-transform: uppercase; color: var(--text-muted);
@@ -33,7 +33,7 @@
 .lo-card { grid-column: 5 / span 4; }
 .lo-b { grid-column: 10 / span 3; }
 .lo-phone { height: 17.5rem; }
-.lo-body { display: grid; gap: 10px; padding: 12px 10px 0; }
+.lo-body { display: grid; grid-template-columns: minmax(0, 1fr); gap: 10px; padding: 12px 10px 0; }
 .lo-row { min-height: 64px; border-radius: 14px; background: var(--d-card); box-shadow: var(--d-lift); }
 .lo-end { display: grid; justify-items: end; }
 .lo-end > * { grid-area: 1 / 1; }
@@ -227,4 +227,7 @@
   .sig-stage { padding-inline-start: var(--space-4); }
   .lo-win-body, .pf-body { padding: var(--space-3); }
   .lo-log li { column-gap: var(--space-1); }
+  .lo-phone { height: 18.5rem; }
+  /* the count can take two lines rather than run under the stepper */
+  .lo-row .d-pill.few { white-space: normal; }
 }
