@@ -1,0 +1,139 @@
+/* The paper of ALYR Docs (Paper.tsx), drawn after the engine's own layout
+   (apps/api/src/alyr/modules/documents/render): the A4 page, the 80 mm roll, and the plate
+   they sit on. Colours are the --doc-* tokens only: the paper is turned down a step in dark
+   mode, never inverted. Square corners, as printed. Type on the A4 scales with the sheet
+   (container units), so the page keeps its proportions at every width. */
+
+.pp { container-type: inline-size; min-width: 0; color: var(--doc-ink); font-family: var(--arabic); text-align: start; }
+.pp [lang="en"] { font-family: var(--sans); direction: ltr; unicode-bidi: isolate; }
+/* an English twin under its Arabic line keeps to the same edge, as the engine sets it */
+.pp-shop > [lang="en"], .pp-f > [lang="en"], .pp-tr [lang="en"], .pp-r-head > [lang="en"], .pp-r-cust > [lang="en"], .pp-r-line > [lang="en"], .pp-r-notes > [lang="en"], .pp-noncr > [lang="en"] { text-align: right; }
+.pp-r-head > [lang="en"] { text-align: center; }
+.pp-sheet { position: relative; background: var(--doc-paper); box-shadow: 0 0 0 1px var(--doc-rule), var(--shadow-lift); }
+.pp b { font-weight: 600; }
+.pp-en, .pp small, .pp-l, .pp-addr { color: var(--doc-ink-2); }
+.pp-dot { color: var(--doc-ink-2); }
+.pp-amt, .pp-num, .pp-code, .pp-i, .pp-q bdi { font-family: var(--sans); font-variant-numeric: tabular-nums; }
+.pp-code { font-family: var(--mono); letter-spacing: .04em; }
+.pp-amt.is-strong { font-weight: 600; }
+
+/* ------------------------------------------------------------------------- A4 */
+.pp-a4 .pp-sheet {
+  aspect-ratio: 210 / 297; overflow: hidden; display: flex; flex-direction: column; gap: 2.2cqi;
+  padding: 6.5cqi 6.5cqi 4.5cqi; font-size: 1.9cqi; line-height: 1.45;
+}
+.pp-head { display: flex; justify-content: space-between; align-items: flex-start; gap: 4cqi; }
+.pp-shop { display: grid; gap: .5cqi; }
+.pp-shop > b { font-size: 3.6cqi; line-height: 1.2; }
+.pp-shop .pp-en { font-size: 2.2cqi; }
+.pp-addr { font-size: 1.75cqi; }
+.pp-kind { display: grid; justify-items: start; gap: .25cqi; text-align: end; }
+.pp-kind b { font-size: 5cqi; line-height: 1.1; }
+.pp-kind .pp-en { font-size: 2.2cqi; }
+.pp-rule2 { display: block; height: 2px; background: var(--doc-ink); }
+.pp-meta, .pp-party { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 2cqi; padding-bottom: 2.2cqi; border-bottom: 1px solid var(--doc-rule); }
+.pp-meta { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); }
+.pp-f { display: grid; align-content: start; gap: .4cqi; }
+.pp-f .pp-l { font-size: 1.6cqi; }
+.pp-f > b { font-size: 2.4cqi; line-height: 1.3; }
+.pp-f-end { justify-items: end; align-content: center; }
+.pp-f-end .pp-amt { font-size: 2.2cqi; }
+.pp-table { display: grid; }
+.pp-tr { display: grid; grid-template-columns: 4cqi minmax(0, 1fr) 11cqi 14cqi 14cqi; column-gap: 2cqi; align-items: start; padding: 1.6cqi 1.2cqi; border-bottom: 1px solid var(--doc-rule); }
+.pp-tr > span { display: grid; gap: .2cqi; min-width: 0; }
+.pp-tr > span:nth-child(n + 3) { justify-items: end; text-align: end; }
+.pp-th { padding-block: 1.1cqi; background: var(--doc-band); border-bottom: 0; }
+.pp-th b { font-size: 1.7cqi; }
+.pp-th small { font-size: 1.35cqi; }
+.pp-tr b { font-size: 2.1cqi; }
+.pp-tr small { font-size: 1.6cqi; }
+.pp-i { color: var(--doc-ink-2); }
+.pp-tr > .pp-q { display: flex; justify-content: flex-end; gap: .6cqi; align-items: baseline; }
+.pp-totals { display: grid; gap: .6cqi; width: 46%; margin-inline-start: auto; }
+.pp-tl { display: flex; justify-content: space-between; align-items: baseline; gap: 2cqi; padding-inline: 1.2cqi; }
+.pp-tl .pp-amt { font-size: 2.1cqi; }
+.pp-band { padding-block: .9cqi; border-top: 2px solid var(--doc-ink); background: var(--doc-band); }
+.pp-band .pp-l { color: var(--doc-ink); }
+.pp-band .pp-amt { font-size: 3.2cqi; }
+.pp-notes { display: grid; grid-template-columns: 1fr 1fr; gap: 3cqi; font-size: 1.75cqi; }
+.pp-notes > span { display: grid; gap: .5cqi; }
+.pp-notes .pp-l { font-size: 1.55cqi; }
+.pp-foot { display: flex; justify-content: space-between; gap: 2cqi; margin-top: auto; padding-top: 1.6cqi; border-top: 1px solid var(--doc-rule); font-size: 1.45cqi; color: var(--doc-ink-2); }
+/* on a phone, the top of the page only */
+.pp-a4.is-crop .pp-sheet { aspect-ratio: 210 / 134; }
+.pp-a4.is-crop .pp-sheet::after { content: ""; position: absolute; inset: auto 0 0; height: 1px; border-bottom: 1px dashed var(--doc-rule); }
+
+/* the crops: the top for the homepage, the foot of a no-CR receipt for its figure */
+.pp-top .pp-sheet { aspect-ratio: auto; padding: 5cqi 5.5cqi 4cqi; font-size: 2.6cqi; gap: 3cqi; }
+.pp-top .pp-shop > b { font-size: 5.2cqi; }
+.pp-top .pp-kind b { font-size: 7cqi; }
+.pp-top .pp-shop .pp-en, .pp-top .pp-kind .pp-en { font-size: 3.2cqi; }
+.pp-top .pp-addr { font-size: 2.6cqi; }
+.pp-top .pp-meta { padding-bottom: 0; border-bottom: 0; }
+.pp-top .pp-f .pp-l { font-size: 2.4cqi; }
+.pp-top .pp-f > b { font-size: 3.4cqi; }
+.pp-note .pp-sheet { aspect-ratio: auto; padding: 4.5cqi 5cqi; gap: 3.5cqi; font-size: 2.7cqi; }
+.pp-note .pp-totals { width: 58%; }
+.pp-note .pp-tl .pp-amt { font-size: 2.8cqi; }
+.pp-note .pp-band .pp-amt { font-size: 4cqi; }
+.pp-noncr { display: grid; gap: 1.4cqi; padding: 2.6cqi 3cqi; border: 1px solid var(--doc-ink); font-size: 2.7cqi; line-height: 1.6; }
+.pp-noncr [lang="en"] { color: var(--doc-ink-2); line-height: 1.5; }
+.pp-note .pp-foot { margin-top: 0; font-size: 2.2cqi; }
+
+/* ----------------------------------------------------------------- 80 mm roll */
+.pp-roll { width: 100%; max-width: 19rem; }
+.pp-roll .pp-sheet { display: grid; gap: 7px; padding: 22px 18px 18px; font-size: 11.5px; line-height: 1.45; }
+.pp-r-head, .pp-r-kind { display: grid; justify-items: center; text-align: center; gap: 1px; }
+.pp-r-head b { font-size: 17px; }
+.pp-r-head .pp-en { font-size: 12.5px; }
+.pp-r-head .pp-addr { font-size: 10.5px; }
+.pp-r-kind b { font-size: 19px; line-height: 1.2; }
+.pp-dash { display: block; border-top: 1px dashed var(--doc-rule); margin-block: 4px; }
+.pp-r-rule { display: block; border-top: 1px solid var(--doc-rule); margin-block: 2px; }
+.pp-r-pair { display: flex; justify-content: space-between; align-items: baseline; gap: 10px; }
+.pp-r-pair .pp-l { font-size: 10.5px; }
+.pp-r-cust { display: grid; gap: 1px; }
+.pp-r-cust .pp-l { font-size: 10.5px; }
+.pp-r-line { display: grid; gap: 1px; }
+.pp-r-line .pp-en { font-size: 10.5px; }
+.pp-r-qty { display: flex; justify-content: space-between; align-items: baseline; gap: 10px; }
+.pp-r-total { display: flex; justify-content: space-between; align-items: baseline; padding-top: 2px; }
+.pp-r-total .pp-l b { color: var(--doc-ink); font-size: 14px; }
+.pp-r-total .pp-amt { font-size: 21px; }
+.pp-r-notes { display: grid; gap: 1px; font-size: 10.5px; }
+.pp-r-space { display: block; height: 44px; }
+.pp-r-foot { display: grid; justify-items: center; gap: 2px; font-size: 9.5px; color: var(--doc-ink-2); }
+
+/* ---------------------------------------------- the plate: a working drawing */
+.pp-plate {
+  --cut: var(--cut-plate); position: relative; display: flex; flex-wrap: wrap; align-items: flex-start; justify-content: center;
+  gap: var(--space-5) var(--space-6); padding: var(--space-6) var(--space-5) var(--space-5);
+  background: var(--surface-subtle); box-shadow: inset 0 0 0 1px var(--line);
+  clip-path: polygon(0 0, calc(100% - var(--cut)) 0, 100% var(--cut), 100% 100%, 0 100%);
+}
+[dir="rtl"] .pp-plate { clip-path: polygon(var(--cut) 0, 100% 0, 100% 100%, 0 100%, 0 var(--cut)); }
+.pp-plate::before, .pp-plate::after { content: ""; position: absolute; width: 9px; height: 9px; background: linear-gradient(var(--line-strong), var(--line-strong)) center / 100% 1px no-repeat, linear-gradient(var(--line-strong), var(--line-strong)) center / 1px 100% no-repeat; }
+.pp-plate::before { inset-inline-start: var(--space-3); top: var(--space-3); }
+.pp-plate::after { inset-inline-start: var(--space-3); bottom: var(--space-3); }
+.pp-dimmed { display: grid; gap: var(--space-2); min-width: 0; }
+.pp-plate .pp-dimmed:first-child { flex: 0 1 30rem; }
+.pp-plate .pp-dimmed + .pp-dimmed { flex: 0 1 18rem; }
+.pp-dim { position: relative; display: flex; justify-content: center; height: 1.25rem; border-bottom: 1px solid var(--line-strong); }
+.pp-dim::before, .pp-dim::after { content: ""; position: absolute; bottom: -5px; width: 1px; height: 9px; background: var(--line-strong); }
+.pp-dim::before { inset-inline-start: 0; }
+.pp-dim::after { inset-inline-end: 0; }
+.pp-dim span { font-family: var(--mono); font-size: var(--fs-micro); letter-spacing: var(--tracking-label); color: var(--text-muted); text-transform: uppercase; }
+[lang="ar"] .pp-dim span { font-family: var(--arabic); letter-spacing: 0; font-size: var(--fs-caption); }
+/* the series under the A4: solid for numbers issued, a dashed slot for the next */
+.pp-series { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-2) var(--space-3); margin-top: var(--space-3); font-family: var(--mono); font-size: var(--fs-micro); color: var(--text-muted); font-variant-numeric: tabular-nums; }
+[lang="ar"] .pp-series { font-family: var(--arabic); font-size: var(--fs-caption); }
+.pp-series bdi { font-family: var(--mono); font-size: var(--fs-micro); }
+.pp-series-k { letter-spacing: var(--tracking-label); text-transform: uppercase; }
+[lang="ar"] .pp-series-k { letter-spacing: 0; text-transform: none; }
+.pp-series .is-now { color: var(--text); font-weight: 600; padding-bottom: 2px; border-bottom: 2px solid var(--text); }
+.pp-series .is-next { display: inline-flex; align-items: center; gap: var(--space-2); padding: 2px var(--space-2); border: 1px dashed var(--line-strong); border-radius: var(--radius-sm); }
+.pp-series .is-next .dot-pending { width: .5rem; height: .5rem; translate: 0 0; }
+@media (max-width: 47.99rem) {
+  .pp-plate { --cut: var(--cut-plate-sm); padding: var(--space-5) var(--space-3) var(--space-4); gap: var(--space-5); }
+  .pp-plate .pp-dimmed:first-child, .pp-plate .pp-dimmed + .pp-dimmed { flex-basis: 100%; }
+}
