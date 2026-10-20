@@ -75,7 +75,7 @@ Tests: 1,136 API tests pass and 2 are skipped (the opt-in live R2 check) on the 
 5. **Messaging limits (ALY-41), Redis sessions (ALY-14).**
 6. **Products screen and remaining order-link items (ALY-24); remaining ledger items (ALY-22).**
 7. **Broadcasts with marketing opt-in (ALY-44), Embedded Signup (ALY-39).**
-8. **Always-on hosting (ALY-10), a real payment gateway (ALY-17).**
+8. **Always-on hosting (D-036): Azure Qatar Central, with backups and an emergency host on Google Cloud in Doha.** Images, production compose file, worker heartbeat and encrypted backup and restore are built and rehearsed on the laptop (ALY-63, `docs/hosting.md`). Next: Azure infrastructure code and the deploy workflow (ALY-10). Then a real payment gateway (ALY-17).
 
 ## Waiting on the founder
 

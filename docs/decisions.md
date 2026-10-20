@@ -41,6 +41,7 @@ Status: **Accepted** (in force), **Proposed** (waiting for the founder), **Super
 | D-033 | The internal tool: one console for every client, built in three levels; staff never see customer conversations | Accepted |
 | D-034 | Product first and paid from the first customer; the homepage leads with what ALYR sells today | Accepted |
 | D-035 | ALYR is a suite of products led by ALYR Agent: Chat, Bookings, Agent, Accounts, Payroll coming; the workspace home becomes the Agent dashboard | Accepted |
+| D-036 | ALYR runs on Azure Qatar Central; backups and the emergency host are on Google Cloud in Doha | Accepted in direction |
 | D-037 | The public site presents the suite: the homepage leads with ALYR Agent at work, and every live product has its own page | Accepted |
 | D-038 | The Sunday report is a report card: a branded image from ALYR Agent's engine with about eight lines under it | Accepted |
 | D-039 | The Catalog (items, stock, photos) is built complete before go-live; photos on Cloudflare R2; free now, charged by usage later | Accepted |
@@ -652,6 +653,42 @@ There is no separate Pay product: payment links stay a module of Chat and Bookin
 - **Why.** The owner sees in one sentence how the week is going, what needs them, and what ALYR did. That is the weekly proof of the subscription on a month-to-month term, and the same screen is what the homepage shows.
 
 **Not built yet.** The suggestions beyond the 20 rules (for example answered after hours), tapping a number to open its week on a phone, the product pages `/bookings`, `/agent` and `/accounts`, and the homepage figure itself (the site builder takes the component in showcase mode and the samples).
+
+## D-036 · ALYR runs on Azure Qatar Central; backups and the emergency host are on Google Cloud in Doha
+**Date** 17 Oct 2026 · **Status** Accepted in direction (founder, 17 Oct: skip Oracle and focus on Azure, with backups on other clouds; "start building phase 1"). Still the founder's to answer: when to open the Azure account, the Google Cloud account, the encrypted copy in Cloudflare R2, and the move of the product to alyr.qa addresses · Linear ALY-63, ALY-10 · Updates D-013 and D-019
+
+**Why now.** Everything ran on the founder's laptop. A real booking reminder was missed on 13 Oct because the laptop was asleep, and demos stop when it does.
+
+**The decision.**
+
+| Role | Where | Why |
+|---|---|---|
+| Main home | Azure Qatar Central: Container Apps (web, API, worker, each always on, each able to add copies), PostgreSQL Flexible Server 16, Key Vault, Container Registry | In Qatar (hard rule 2). About USD 62 a month at Qatar list prices: Container Apps about 36, the database 21.31, the registry 5.07. Own domain and HTTPS included. Startup credits do not need venture funding |
+| Database protection | Azure's own backups (7 to 35 days, point-in-time, across the region's three zones), plus a nightly encrypted dump to Google Cloud Storage in Doha and a second copy in Cloudflare R2 | Qatar Central has no paired region, so Azure offers no copy elsewhere. Doha keeps a copy in Qatar with a second company; R2 survives a Qatar-wide event. Under USD 1 a month |
+| Emergency host | Google Cloud Run and Cloud SQL in Doha, started from the latest backup | USD 0 while unused; about 110 to 150 a month if ever run. Restore and switch in about one to two hours |
+| Web app standby | Vercel Pro, only if needed | It has no Gulf region and cannot run the worker, so it can hold the web app only |
+
+**Considered and rejected.**
+- **Oracle's free server:** the founder chose to skip it.
+- **Neon's free database:** an always-on worker uses about 182 compute-hours a month against 100 free, so it would stop mid-month.
+- **Cloudflare alone:** cannot run the Python API (D-019); Containers would still need an always-awake database.
+- **Vercel for the API or worker:** no long-running worker, no Gulf region, data processed anywhere.
+- **Google Cloud as the main home:** about USD 85 to 107 a month; its Doha region needs an extra USD 18 load balancer for a custom domain, and that terminates outside Qatar.
+- **AWS:** its Bahrain and UAE regions are reported damaged since March 2026; Frankfurt is a last resort only.
+- **Alibaba Cloud:** no managed containers in Dubai.
+- **Qatar's local providers (Meeza, Ooredoo, Vodafone):** sales-led only; revisit for government-linked customers.
+
+**How it stays movable (D-011).** Three images (API and worker, web, backup) and standard PostgreSQL. `docker-compose.prod.yml` runs the same images on any single server and is the rehearsal on the laptop. Moving clouds is a restore and a DNS change. Details and commands are in `docs/hosting.md`.
+
+**Rules that come with it.**
+- Production images start in production mode: no simulator, no open demo, jobs only in the worker.
+- Migrations take a lock, so two deploys cannot apply the same file twice.
+- The backup role is the only role that reads past row-level security; it is read-only and used only by the backup job. The application role still cannot bypass it (hard rule 1).
+- Dumps are encrypted to a key only the founder holds.
+- The worker checks in every 30 seconds, and `/health/worker` turns red after two minutes of silence. Uptime monitoring watches it.
+- The backup tools match the database's major version (the rehearsal found why).
+
+**Before the commercial registration.** Opening the Azure account (Microsoft for Startups, about USD 200 of credit) is the founder's personal account and card, not ALYR trading; he decides when. The USD 5,000 tier needs the company. Do not open a plain Azure free account first: Microsoft for Startups requires an account with no prior Azure use.
 
 ## D-037 · The public site presents the suite: the homepage leads with ALYR Agent at work, and every live product has its own page
 **Date** 17 Oct 2026 · **Status** Accepted (founder, 17 Oct, in conversation; recorded in `docs/agent-dashboard/07-site-brief.md` §1) · Linear ALY-99 · Updates D-026 and D-034. Numbered D-037 because the open PRs #51 and #52 both take D-036; renumber at merge if needed.

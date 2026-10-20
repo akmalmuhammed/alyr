@@ -1,6 +1,7 @@
 from contextlib import asynccontextmanager
 
 from fastapi import Depends, FastAPI
+from fastapi.responses import JSONResponse
 
 from alyr.channels.meta import MetaChannel
 from alyr.channels.simulator import SimulatorChannel
@@ -11,7 +12,7 @@ from alyr.core.jobs import JobRunner
 from alyr.core.links import check_secret as check_link_secret
 from alyr.core.media import MediaService
 from alyr.core.outbound import SEND, Outbound
-from alyr.core.storage import make_store
+from alyr.core.storage import check_store, make_store
 from alyr.db import Database
 from alyr.modules import report
 from alyr.modules.bookings.service import REMINDER, Reminders
@@ -73,6 +74,8 @@ def create_app() -> FastAPI:
     async def lifespan(app: FastAPI):
         # A server that cannot sign its order links does not start (ALY-112).
         check_link_secret(settings)
+        # Nor one that would keep photos on a disk the cloud wipes (ALY-63).
+        check_store(settings, app.state.media.store)
         await app.state.db.connect()
         yield
         await app.state.db.close()
@@ -148,7 +151,41 @@ def create_app() -> FastAPI:
 
     @app.get("/health")
     async def health() -> dict:
+        """Liveness: the process answers. Deliberately does not touch the database, so a
+        database outage does not make the host restart every API container in a loop."""
         return {"status": "ok", "env": settings.env}
+
+    @app.get("/health/ready")
+    async def ready() -> JSONResponse:
+        """Readiness: the API can reach its database. Hosts send traffic only when it can."""
+        try:
+            async with app.state.db.unscoped() as conn:
+                await conn.fetchval("select 1")
+        except Exception:  # noqa: BLE001 - any failure means not ready
+            return JSONResponse({"status": "unavailable", "database": "unreachable"}, 503)
+        return JSONResponse({"status": "ok", "database": "ok"})
+
+    @app.get("/health/worker")
+    async def worker_health() -> JSONResponse:
+        """Whether the background worker is alive. Uptime monitoring calls this: when it
+        is red, reminders and confirmations are not going out."""
+        if settings.jobs_inline:
+            return JSONResponse({"status": "ok", "mode": "inline"})
+        try:
+            async with app.state.db.unscoped() as conn:
+                age = await conn.fetchval(
+                    "select extract(epoch from now() - max(beat_at))::int "
+                    "from worker_heartbeats"
+                )
+        except Exception:  # noqa: BLE001
+            return JSONResponse({"status": "unknown", "database": "unreachable"}, 503)
+        if age is None:
+            return JSONResponse({"status": "down", "reason": "no worker has checked in"}, 503)
+        if age > settings.worker_stale_seconds:
+            return JSONResponse(
+                {"status": "down", "seconds_since_last_check_in": age}, 503
+            )
+        return JSONResponse({"status": "ok", "seconds_since_last_check_in": age})
 
     app.include_router(whatsapp_webhook.router)
     # Each module's routes answer only for shops that have switched that module on.

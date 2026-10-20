@@ -1,0 +1,138 @@
+# ALYR in production shape, on one machine (ALY-63).
+#
+# Two uses:
+#   1. Rehearsal on the laptop: the exact images the cloud runs, with production
+#      settings, before anything is deployed. See docs/hosting.md.
+#   2. A reference for any single server: the same file runs on a virtual machine.
+#
+# In Azure the same images run as Container Apps (infra/azure), with the database on
+# PostgreSQL Flexible Server and secrets in Key Vault; this file is not used there.
+#
+#   scripts/rehearsal-env.sh        (once: writes .env.prod with random passwords)
+#   docker compose --env-file .env.prod -f docker-compose.prod.yml up -d --build
+#   docker compose --env-file .env.prod -f docker-compose.prod.yml run --rm backup
+#   docker compose --env-file .env.prod -f docker-compose.prod.yml down   (add -v to delete its data)
+#
+# Passwords and Meta values come only from .env.prod (git ignores it). On a real server,
+# write it by hand with the real values; never put them in this file.
+
+name: alyr-prod
+
+x-api-settings: &api-settings
+  ALYR_ENV: ${ALYR_ENV:-production}
+  ALYR_JOBS_INLINE: "false"
+  # Whole database addresses come from .env.prod, so no address with a password in it is
+  # ever written in this file.
+  ALYR_DATABASE_URL: ${ALYR_DATABASE_URL:?see scripts/rehearsal-env.sh}
+  ALYR_MIGRATION_URL: ${ALYR_MIGRATION_URL:?see scripts/rehearsal-env.sh}
+  ALYR_BACKUP_URL: ${ALYR_BACKUP_URL:?see scripts/rehearsal-env.sh}
+  ALYR_PUBLIC_WEB_URL: ${ALYR_PUBLIC_WEB_URL:-http://localhost:13000}
+  ALYR_META_APP_SECRET: ${ALYR_META_APP_SECRET:?see scripts/rehearsal-env.sh}
+  ALYR_META_VERIFY_TOKEN: ${ALYR_META_VERIFY_TOKEN:?see scripts/rehearsal-env.sh}
+  ALYR_META_ACCESS_TOKEN: ${ALYR_META_ACCESS_TOKEN:-}
+  ALYR_META_PHONE_NUMBER_ID: ${ALYR_META_PHONE_NUMBER_ID:-}
+  ALYR_META_WABA_ID: ${ALYR_META_WABA_ID:-}
+  ALYR_EMAIL_API_KEY: ${ALYR_EMAIL_API_KEY:-}
+  # Signs every customer's order and document link (ALY-112). The API refuses to start
+  # without it. Changing it ends every link already sent.
+  ALYR_LINK_SECRET: ${ALYR_LINK_SECRET:?see scripts/rehearsal-env.sh}
+  # Photos: on R2 when its three values are set (as in the cloud), otherwise on the kept
+  # volume below, shared by the API and the worker.
+  ALYR_R2_ACCOUNT_ID: ${ALYR_R2_ACCOUNT_ID:-}
+  ALYR_R2_ACCESS_KEY_ID: ${ALYR_R2_ACCESS_KEY_ID:-}
+  ALYR_R2_SECRET_ACCESS_KEY: ${ALYR_R2_SECRET_ACCESS_KEY:-}
+  ALYR_MEDIA_LOCAL_DIR: /data/media
+  ALYR_MEDIA_ALLOW_LOCAL: "true"
+
+services:
+  postgres:
+    image: postgres:16
+    environment:
+      POSTGRES_USER: alyr
+      POSTGRES_PASSWORD: ${ALYR_OWNER_DB_PASSWORD:?see scripts/rehearsal-env.sh}
+      POSTGRES_DB: alyr
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U alyr -d alyr"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+    restart: unless-stopped
+
+  # Runs once per start, before the API and the worker: applies new migrations and makes
+  # sure the app and backup roles exist. Two at once take turns (advisory lock).
+  migrate:
+    build: apps/api
+    image: alyr-api
+    command: ["python", "-m", "alyr.migrate"]
+    environment: *api-settings
+    # Seeds run through this service in the rehearsal and draw demo photos.
+    volumes:
+      - media:/data/media
+    depends_on:
+      postgres: { condition: service_healthy }
+    restart: "no"
+
+  api:
+    image: alyr-api
+    environment: *api-settings
+    ports:
+      - "${ALYR_API_PORT:-18000}:8000"
+    volumes:
+      - media:/data/media
+    depends_on:
+      migrate: { condition: service_completed_successfully }
+    restart: unless-stopped
+
+  worker:
+    image: alyr-api
+    command: ["python", "-m", "alyr.worker"]
+    environment: *api-settings
+    # The worker serves no HTTP; its health is the heartbeat, read at the API's
+    # /health/worker.
+    healthcheck:
+      disable: true
+    volumes:
+      - media:/data/media
+    depends_on:
+      migrate: { condition: service_completed_successfully }
+    restart: unless-stopped
+
+  web:
+    build:
+      context: apps/web
+      args:
+        ALYR_API_URL: http://api:8000
+        NEXT_PUBLIC_ALYR_WORKSPACE_URL: ${ALYR_PUBLIC_WEB_URL:-http://localhost:13000}
+    image: alyr-web
+    environment:
+      ALYR_API_URL: http://api:8000
+    ports:
+      - "${ALYR_WEB_PORT:-13000}:3000"
+    depends_on:
+      - api
+    restart: unless-stopped
+
+  # Not started by `up`. Run on a schedule: docker compose run --rm backup
+  backup:
+    build: infra/backup
+    image: alyr-backup
+    profiles: ["backup"]
+    environment:
+      BACKUP_DATABASE_URL: ${ALYR_BACKUP_URL:?see scripts/rehearsal-env.sh}
+      BACKUP_AGE_RECIPIENT: ${BACKUP_AGE_RECIPIENT:-}
+      BACKUP_DESTINATIONS: ${BACKUP_DESTINATIONS:-local:/backups}
+      BACKUP_KEEP_DAYS: ${BACKUP_KEEP_DAYS:-35}
+      # The rehearsal writes to a folder; real servers configure cloud remotes the same way
+      # (RCLONE_CONFIG_GCS_*, RCLONE_CONFIG_R2_*), see docs/hosting.md.
+      RCLONE_CONFIG_LOCAL_TYPE: local
+    volumes:
+      - backups:/backups
+    depends_on:
+      postgres: { condition: service_healthy }
+
+volumes:
+  pgdata:
+  backups:
+  media:

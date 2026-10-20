@@ -23,19 +23,20 @@ Anything else belongs to another lane. If a task needs it, keep the change small
 
 ## Now (update this section in the same pull request as the work)
 
-Last updated 12 Oct 2026.
+Last updated 17 Oct 2026.
 
-- Nothing has been tested against Meta. The Meta app exists; its five values are not in `apps/api/.env` yet.
-- The webhook address `api.alyr.online` is a tunnel to the laptop and is down whenever the laptop is.
-- The public site is served from Cloudflare. `alyr.qa` is attached; its redirect switch is off until the .qa registry is consistent.
+- Live on Meta's test number since 12 Oct, through the laptop tunnel (`api.alyr.online`). Down whenever the laptop is.
+- Hosting decided (D-036): Azure Qatar Central, backups and the emergency host on Google Cloud in Doha. The images, the production compose file, the worker heartbeat and the encrypted backup and restore are built and rehearsed (ALY-63, `docs/hosting.md`).
+- The public site is served from Cloudflare at alyr.qa.
 
 ## Next, in order
 
-1. ALY-12 first live round trip on Meta's test number
-2. ALY-63 always-on home for the API
-3. ALY-64 confirm Meta's pricing rule
-4. ALY-20 templates
-5. ALY-103 photos: R2 is ready (17 Oct): bucket `alyr-media`, `media.alyr.qa`, and the bucket-limited app token in `apps/api/.env`, all checked. Next is the photo pipeline (D-039).
+1. ALY-10 Azure infrastructure code, the deploy workflow and the Google emergency scripts (PR 52)
+2. Founder: open the Azure account (Microsoft for Startups) and a Google Cloud account, make the backup key
+3. Deploy to Azure, move the webhook and the chat links to alyr.qa addresses, retire the tunnel
+4. Uptime monitoring on `/health/worker` and the webhook; one restore drill on Google
+5. ALY-64 confirm Meta's pricing rule; ALY-20 templates
+6. ALY-103 photos: R2 is ready (17 Oct): bucket `alyr-media`, `media.alyr.qa`, and the bucket-limited app token in `apps/api/.env`, all checked. Azure reads the same three R2 values from Key Vault.
 
 ## Never
 
