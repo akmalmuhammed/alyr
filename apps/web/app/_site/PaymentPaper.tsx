@@ -29,7 +29,7 @@ export function PaymentPaperFigure({ locale }: { locale: Locale }) {
           <h2 className="h1" id="moment-title">{lines(m.title)}</h2>
           <p className="lead">{rich(m.body)}</p>
         </div>
-        <figure className="sig pf" data-m data-sig>
+        <figure className="sig pf" data-sig>
           <p className="sr-only">{m.label}</p>
           <div className="sig-stage" inert aria-hidden="true">
             <span className="sig-rule"><i /><i /></span>
@@ -66,7 +66,7 @@ export function PaymentPaperFigure({ locale }: { locale: Locale }) {
             <div className="sig-part pf-paper" style={at(2)}>
               <span className="sig-k">{m.parts.paper}</span>
               <div className="pf-sheet">
-                <PaperA4 doc={RC0042} className="pf-a4" />
+                <PaperA4 doc={RC0042} crop className="pf-a4" />
                 <PaperRoll doc={RC0042} className="pf-roll" />
               </div>
             </div>

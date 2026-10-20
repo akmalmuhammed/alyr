@@ -31,10 +31,41 @@ export function SiteMotion() {
       { rootMargin: "0px 0px -12% 0px", threshold: 0.08 },
     );
     document.querySelectorAll("[data-reveal], [data-m]").forEach((node) => seen.observe(node));
-    // A product page's signature figure (LastOne, PaymentPaper) plays when it is read, which
-    // can be long after the first 4 s. The page has hydrated and this observer will mark it,
-    // so the failsafe that drops `motion` is no longer needed here.
-    if (!still && document.querySelector("[data-sig]")) window.clearTimeout(window.__alyrMotion);
+
+    // A product page's signature figure (LastOne, PaymentPaper) plays only once it is
+    // substantially in view, so its ending is seen (08-rulings.md): 60% of it on screen, or
+    // its top past the middle of the screen. On a wide screen the whole figure starts at
+    // once; on a phone, where its three parts stack, each part starts as it arrives
+    // (moment.css counts each part's delays from its own first beat).
+    const figures = Array.from(document.querySelectorAll<HTMLElement>("[data-sig]"));
+    const wide = window.matchMedia("(min-width: 62rem)").matches;
+    const started = new Set<Element>();
+    const start = (target: Element) => {
+      if (started.has(target)) return;
+      started.add(target);
+      enough.unobserve(target);
+      past.unobserve(target);
+      const parts = target.hasAttribute("data-sig") ? Array.from(target.querySelectorAll(".sig-part")) : [];
+      for (const node of [target, ...parts]) node.classList.add("is-in");
+    };
+    const enough = new IntersectionObserver(
+      (entries) => { for (const entry of entries) if (entry.intersectionRatio >= 0.6) start(entry.target); },
+      { threshold: 0.6 },
+    );
+    const past = new IntersectionObserver(
+      (entries) => { for (const entry of entries) if (entry.isIntersecting) start(entry.target); },
+      { rootMargin: "0px 0px -50% 0px" },
+    );
+    for (const figure of figures) {
+      const targets = wide ? [figure] : Array.from(figure.querySelectorAll(".sig-part"));
+      for (const target of targets) {
+        enough.observe(target);
+        past.observe(target);
+      }
+    }
+    // It can be read long after the first 4 s. The page has hydrated and these observers
+    // will start it, so the failsafe that drops `motion` is no longer needed here.
+    if (!still && figures.length) window.clearTimeout(window.__alyrMotion);
 
     // The language link keeps the section being read.
     const sections = Array.from(document.querySelectorAll<HTMLElement>("main section[id]"));
@@ -107,6 +138,8 @@ export function SiteMotion() {
       document.removeEventListener("click", onLanguage, true);
       window.removeEventListener("hashchange", openQuestion);
       seen.disconnect();
+      enough.disconnect();
+      past.disconnect();
       dark?.disconnect();
       window.removeEventListener("scroll", onScroll);
       window.removeEventListener("resize", onScroll);

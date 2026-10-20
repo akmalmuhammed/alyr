@@ -61,7 +61,7 @@ export function LastOneFigure({ locale }: { locale: Locale }) {
           <h2 className="h1" id="moment-title">{lines(m.title)}</h2>
           <p className="lead">{rich(m.body)}</p>
         </div>
-        <figure className="sig lo" data-m data-sig>
+        <figure className="sig lo" data-sig>
           <p className="sr-only">{m.label}</p>
           <div className="sig-stage" inert aria-hidden="true">
             <span className="sig-rule"><i /><i /></span>
