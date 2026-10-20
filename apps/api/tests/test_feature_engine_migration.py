@@ -162,7 +162,11 @@ def of(migrated, key: str) -> dict[str, asyncpg.Record]:
 # Features registered after migration 0035 have no row for a shop that existed then: it gets its
 # template's value, which for these is on, so nothing changes for it (no migration is needed to
 # add a feature; the order-by-code merge, ALY-136, added "Order on WhatsApp").
-ADDED_LATER = {"order_on_whatsapp"}
+# The pricing pack (ALY-150) is added after the migration too, and switched OFF: a shop with no row
+# gets its template's value, which says off, so nothing changes for any existing shop.
+PRICING_PACK = tuple(k for k in ("discounts", "delivery_fees", "cost_margin")
+                     if capabilities.BY_KEY[k].built)
+ADDED_LATER = {"order_on_whatsapp", *PRICING_PACK}
 
 
 def test_every_shop_gets_a_row_for_every_feature_it_can_have(migrated):
@@ -172,10 +176,12 @@ def test_every_shop_gets_a_row_for_every_feature_it_can_have(migrated):
     assert len(migrated["rows"]) == len(migrated["shops"]) * len(expected)
 
 
-def test_a_feature_added_after_the_migration_is_on_for_every_type_so_nothing_changes():
+def test_a_feature_added_after_the_migration_does_not_change_what_a_shop_does():
+    """Order on WhatsApp is on for every type (the page always had it); the pricing pack is off."""
     for kind in TYPES:
         for key in ADDED_LATER:
-            assert shop_templates.builtin_for(kind).features[key][0] is True, (kind, key)
+            assert shop_templates.builtin_for(kind).features[key][0] is (
+                key not in PRICING_PACK), (kind, key)
 
 
 @pytest.mark.parametrize("kind", TYPES)

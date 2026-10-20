@@ -2,6 +2,10 @@
 
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useRef, useState } from "react";
+import { formatPrice } from "../_customer/price";
+import { OrderSum } from "./OrderSum";
+import { PRICING } from "./pricingCopy";
+import "./pricing.css";
 
 type Choice = { id: string; title: string };
 type Message = {
@@ -35,9 +39,16 @@ type BookingRow = {
   id: string; number: number; service: string; when_text: string; status: string;
   customer: string; note: string; starts_at: string; assigned: Person | null;
 };
+// What an order was given off (ALY-150): only on an order that had a discount, so an order
+// without one has none of these keys and is drawn exactly as before.
+type OrderDiscount = {
+  kind: "coupon" | "auto"; code: string; name: string; name_ar: string; text: string; text_ar: string;
+  amount: number; amount_text: string; returned: boolean;
+};
 type OrderRow = {
-  id: string; number: number; status: string; payment: string; total_text: string;
-  customer: string; items: { name: string; quantity: number; line_text: string; sku?: string }[];
+  id: string; number: number; status: string; payment: string; total: number; total_text: string;
+  subtotal?: number; discount_total?: number; discounts?: OrderDiscount[];
+  customer: string; items: { name: string; quantity: number; line_text: string; sku?: string; discount?: number }[];
   assigned: Person | null;
   // The table the order is for, from a QR code on a table ("" for none).
   table?: string;
@@ -1067,8 +1078,10 @@ export function Screens({ embedded = false, section, lang: langProp, intro, show
                           {o.table && <><br /><span className="pill p1">{t.table(o.table)}</span></>}
                         </td>
                         <td>{o.items.map((i, k) => (
-                          <div key={k}>{i.quantity} × {i.name}{i.sku ? <> <small className="mono" dir="ltr">{i.sku}</small></> : null}</div>
-                        ))}</td>
+                          <div key={k}>{i.quantity} × {i.name}{i.sku ? <> <small className="mono" dir="ltr">{i.sku}</small></> : null}
+                            {i.discount ? <small className="pr-lineoff">{PRICING[lang].order.lineOff(formatPrice(i.discount, lang))}</small> : null}</div>
+                        ))}
+                          {o.discount_total ? <OrderSum order={o} lang={lang} /> : null}</td>
                         <td className="r num" dir="ltr">{o.total_text}</td>
                         <td><span className={`pill ${o.payment === "unpaid" ? "p1" : "p0"}`}>{t.pay[o.payment]}</span></td>
                         <td>

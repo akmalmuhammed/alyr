@@ -36,12 +36,25 @@ from alyr.core import team
 from alyr.core.media import MediaService
 from alyr.core.normalise import has_arabic
 from alyr.core.outbound import Outbound
-from alyr.modules.items import availability, cart, chat_cart, codes, match, service, wa_card
+from alyr.modules.items import (
+    availability,
+    cart,
+    chat_cart,
+    codes,
+    discount_text,
+    discounts,
+    features,
+    match,
+    service,
+    wa_card,
+    wa_coupon,
+)
 from alyr.modules.items import clock as shop_clock
 from alyr.modules.items import groups as price_groups
 from alyr.modules.items.cart import CartLine
 from alyr.modules.items.wa_text import say, shown
 from alyr.modules.orders import service as orders
+from alyr.modules.orders import totals
 from alyr.modules.orders.chat import order_link
 
 OK, CHANGE, VARIANT, PICK = "ok:", "chg:", "var:", "pick:"
@@ -187,6 +200,13 @@ async def maybe_handle(
             return None
         ctx = await _context(conn, tenant_id, contact, lang, web_url, media, orders_on, outbound)
         return await _answer(ctx, reply)
+    if orders_on and message.kind == "text" and message.text.strip():
+        ask = wa_coupon.parse(message.text)
+        if ask is not None and (await features.load(conn)).on("discounts"):
+            ctx = await _context(
+                conn, tenant_id, contact, lang, web_url, media, orders_on, outbound
+            )
+            return await _coupon(ctx, ask)
     parsed = codes.parse(message.text) if message.text.strip() else codes.Parsed()
     if parsed.is_order:
         ctx = await _context(conn, tenant_id, contact, lang, web_url, media, orders_on, outbound)
@@ -728,6 +748,89 @@ async def _confirm(ctx: Context, cart_: chat_cart.Cart, qid: str) -> list[Outbou
 # ── the draft order ──────────────────────────────────────────────────────────────────
 
 
+# A code that cannot become good by adding to the order: it is forgotten once the customer has
+# been told. One that only needs more in the order (the minimum, the right items) is kept.
+_FINAL = {
+    "coupon_unknown", "coupon_ended", "coupon_paused", "coupon_used_up", "coupon_used_by_you",
+    "coupon_group", "coupon_not_started",
+}
+
+
+async def _quote(
+    ctx: Context, cart_: chat_cart.Cart, rows: list[Row]
+) -> discounts.Quote | None:
+    """The draft priced against the shop's discounts; None while the feature is off."""
+    if not rows or not (await features.load(ctx.conn)).on("discounts"):
+        return None
+    lines = [
+        totals.Line(i, r.item_id, r.entry.item["category"] or "", r.unit_price, r.quantity)
+        for i, r in enumerate(rows)
+    ]
+    return await discounts.quote(
+        ctx.conn, lines, chat_cart.coupons(cart_), contact_id=ctx.me, group_id=ctx.group_id,
+        now=ctx.clock.now,
+    )
+
+
+def _label(rule: totals.Rule, lang: str) -> str:
+    name = rule.code or (rule.name_ar if lang == "ar" and rule.name_ar else rule.name)
+    return f" ({name})" if name else ""
+
+
+async def _coupon_notes(
+    ctx: Context, cart_: chat_cart.Cart, quote: discounts.Quote
+) -> list[str]:
+    """What to tell the customer about the codes that did not apply, forgetting the ones that
+    never will."""
+    notes, forget = [], []
+    for c in quote.coupons:
+        if c.ok:
+            continue
+        reason = discount_text.say(
+            c.problem.code, ctx.lang, {**c.problem.details, "code": c.code}, ctx.clock.tz.key
+        )
+        notes.append(ctx.say("coupon_note", coupon=c.code, reason=reason))
+        if c.problem.code in _FINAL:
+            forget.append(c.code)
+    if forget:
+        chat_cart.drop_coupons(cart_, forget)
+        await chat_cart.save(ctx.conn, cart_)
+    return notes
+
+
+async def _coupon(ctx: Context, ask: wa_coupon.Ask) -> list[OutboundMessage]:
+    """The customer sent a discount code. If the shop has it, it goes into the draft and the
+    draft is shown with the discount; if not, they are told so."""
+    rule = None
+    for word in ask.candidates[:4]:
+        shown_code, key = discounts.code_forms(word)
+        row = await ctx.conn.fetchrow(
+            "select * from discount_rules where kind = 'coupon' and code_key = $1", key
+        )
+        if row is not None:
+            rule = (shown_code, row)
+            break
+    if rule is None:
+        if not ask.candidates:
+            return [ctx.reply(ctx.say("coupon_how"))]
+        code = discounts.code_forms(ask.candidates[-1])[0]
+        return [ctx.reply(discount_text.say("coupon_unknown", ctx.lang, {"code": code}))]
+    cart_ = await chat_cart.open_for(ctx.conn, ctx.me)
+    if cart_ is None:
+        return await _hand_to_person(ctx, "busy", ctx.say("person"))
+    code, row = rule
+    if not chat_cart.add_coupon(cart_, code, discounts.MAX_CODES):
+        return [ctx.reply(discount_text.say(
+            "coupon_too_many", ctx.lang, {"max": discounts.MAX_CODES}
+        ))]
+    await chat_cart.save(ctx.conn, cart_)
+    if cart_.lines:
+        return [await _draft(ctx, cart_)]
+    return [ctx.reply(ctx.say(
+        "coupon_saved", coupon=code, text=discounts.rule_words(row, ctx.lang)
+    ))]
+
+
 async def _draft(
     ctx: Context, cart_: chat_cart.Cart, added: bool = False, notes: list[str] | None = None
 ) -> OutboundMessage:
@@ -738,6 +841,7 @@ async def _draft(
              UUID(line["variant_id"]) if line["variant_id"] else None)
         for line in cart_.lines
     ])
+    quote = await _quote(ctx, cart_, rows)
     lines = [*(notes or [])]
     if added:
         lines.append(ctx.say("draft_added"))
@@ -747,7 +851,18 @@ async def _draft(
         for r in rows
     ]
     lines += problems
-    lines.append(ctx.say("total", total=money(ctx.lang, sum(r.total for r in rows))))
+    total = sum(r.total for r in rows)
+    if quote is not None:
+        total = quote.goods
+        if quote.applied:
+            lines.append(ctx.say("draft_items", total=money(ctx.lang, quote.subtotal)))
+            lines += [
+                ctx.say("draft_discount", label=_label(a.rule, ctx.lang),
+                        amount=money(ctx.lang, a.amount))
+                for a in quote.applied
+            ]
+        lines += await _coupon_notes(ctx, cart_, quote)
+    lines.append(ctx.say("total", total=money(ctx.lang, total)))
     can_account = await orders.can_use_account(ctx.conn, ctx.me)
     lines.append(ctx.say("draft_more_account" if can_account else "draft_more"))
     buttons = [Choice(PLACE, say("button_place", ctx.lang))]
@@ -787,6 +902,10 @@ async def _place(
             return [ctx.reply("\n".join(notes)), ctx.reply(ctx.say("draft_empty"))]
         notes.append(ctx.say("check_changed"))
         return [await _draft(ctx, cart_, notes=notes)]
+    quote = await _quote(ctx, cart_, rows)
+    if quote is not None and any(not c.ok for c in quote.coupons):
+        # A code the customer typed does not fit any more: say so and show what they would pay.
+        return [await _draft(ctx, cart_, notes=[ctx.say("check_changed")])]
     try:
         async with ctx.conn.transaction():
             # The ordinary path: stock taken in one step, holds, the credit account, the pay
@@ -795,9 +914,19 @@ async def _place(
                 ctx.conn, ctx.tenant_id, ctx.me,
                 [CartLine(r.item_id, r.quantity, r.variant_id, (), r.unit_price) for r in rows],
                 payment, ctx.web_url, ctx.outbound,
+                coupons=chat_cart.coupons(cart_) if quote is not None else None,
+                expected_total=quote.goods if quote is not None else None,
             )
     except orders.OrderError as error:
         reason = error.message_ar if ctx.lang == "ar" else str(error)
+        if error.code == "total_changed" or error.code.startswith("coupon_"):
+            # The code or the total moved while the customer decided (the last use went to
+            # someone else): forget a code that is gone, show the draft with the new total.
+            gone = (error.extra or {}).get("coupon")
+            if gone:
+                chat_cart.drop_coupons(cart_, [gone])
+                await chat_cart.save(ctx.conn, cart_)
+            return [ctx.reply(reason), await _draft(ctx, cart_)]
         return [ctx.reply(reason)]
     await chat_cart.clear(ctx.conn, ctx.me)
     return []

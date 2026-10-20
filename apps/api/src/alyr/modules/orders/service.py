@@ -24,6 +24,8 @@ from alyr.modules.items import (
     cart,
     clock,
     demand,
+    discount_text,
+    discounts,
     features,
     fields,
     stock,
@@ -36,6 +38,7 @@ from alyr.modules.items.clock import ShopClock
 from alyr.modules.items.service import MAX_QUANTITY
 from alyr.modules.items.service import load as load_items
 from alyr.modules.ledger import service as ledger
+from alyr.modules.orders import totals
 
 STATUSES = ("new", "confirmed", "ready", "done", "cancelled")
 # The job that gives back the stock of an order nobody paid for.
@@ -59,12 +62,16 @@ class OrderError(Exception):
     is wrong with each line of the cart when the cart is the problem."""
 
     def __init__(
-        self, code: str, message: str, message_ar: str = "", lines: list[dict] | None = None
+        self, code: str, message: str, message_ar: str = "", lines: list[dict] | None = None,
+        extra: dict | None = None,
     ) -> None:
         super().__init__(message)
         self.code = code
         self.message_ar = message_ar or message
         self.lines = lines
+        # More for the screen to act on: the priced cart when the total moved, the code that
+        # failed (ALY-150). Sent beside `lines`.
+        self.extra = extra
 
 
 def _plain(code: str, **details) -> OrderError:
@@ -216,25 +223,80 @@ async def _refusal(
     )
 
 
+def _price_lines(checked: list[cart.Checked]) -> list[totals.Line]:
+    """The lines that can be ordered, as the pricing sees them."""
+    return [
+        totals.Line(
+            c.index, c.entry.item["id"], c.entry.item["category"] or "", c.unit_price,
+            c.line.quantity,
+        )
+        for c in checked if c.ok
+    ]
+
+
+def _feature_off(key: str) -> OrderError:
+    error = features.refuse(key)
+    return OrderError("feature_off", str(error), error.message_ar)
+
+
+async def price_cart(
+    conn: asyncpg.Connection, checked: list[cart.Checked], shop_clock: ShopClock,
+    feats: features.Features, codes: list[str] | None, contact_id: UUID | None,
+    group_id: UUID | None,
+) -> discounts.Quote:
+    """The cart's goods priced against the shop's discounts: what comes off, line by line.
+    With the feature off, the goods as they are; a code is then refused (it cannot be used)."""
+    lines = _price_lines(checked)
+    if not feats.on("discounts"):
+        if discounts.typed(codes):
+            raise _feature_off("discounts")
+        return discounts.plain_quote(lines)
+    if len(discounts.typed(codes)) > discounts.MAX_CODES:
+        many = {"max": discounts.MAX_CODES}
+        raise OrderError(
+            "coupon_too_many", discount_text.say("coupon_too_many", "en", many),
+            discount_text.say("coupon_too_many", "ar", many),
+        )
+    return await discounts.quote(
+        conn, lines, codes, contact_id=contact_id, group_id=group_id, now=shop_clock.now
+    )
+
+
 async def check_cart(
     conn: asyncpg.Connection, lines: list[CartLine], for_date: date | None = None,
     now: datetime | None = None, contact_id: UUID | None = None,
+    coupons: list[str] | None = None,
 ) -> dict:
     """Look at a cart without placing it: each line's verdict and the total of those that
     can be ordered. The order page asks this before it asks for payment. With a customer,
-    the prices are their price group's; `group` in the answer says which group that is."""
+    the prices are their price group's; `group` in the answer says which group that is. With
+    the shop's discounts on, `pricing` says what comes off and why, and how each code the
+    customer typed fared (`coupons`); `total` is then what they would pay."""
     shop_clock = await clock.load(conn, now)
+    feats = await features.load(conn)
     group = await price_groups.group_of(conn, contact_id)
     checked = await cart.check(conn, shop_clock, lines, for_date, price_groups.pricing_id(group))
     if contact_id is not None:
         # A customer who tries a sold-out item is demand the report counts (spec 007).
         await demand.record(conn, contact_id, demand.from_checked(checked), "order_page", now)
-    total = sum(c.unit_price * c.line.quantity for c in checked if c.ok)
-    return {
+    quote = await price_cart(
+        conn, checked, shop_clock, feats, coupons, contact_id, price_groups.pricing_id(group)
+    )
+    report = await cart.report(conn, shop_clock, checked)
+    out = {
         "ok": all(c.ok for c in checked),
-        "lines": await cart.report(conn, shop_clock, checked),
-        "total": total, "total_text": fmt_qar(total), "group": price_groups.public(group),
+        "lines": report,
+        "total": quote.goods, "total_text": fmt_qar(quote.goods),
+        "group": price_groups.public(group),
     }
+    if feats.on("discounts"):
+        for line in report:
+            if line["ok"]:
+                off = quote.line_discounts.get(line["index"], 0)
+                line["discount"] = off
+                line["line_total_after"] = line["line_total"] - off
+        out["pricing"] = discounts.view(quote, shop_clock.tz.key)
+    return out
 
 
 async def create_order(
@@ -249,12 +311,18 @@ async def create_order(
     now: datetime | None = None,
     left_out: list[str] | None = None,
     table: str = "",
+    coupons: list[str] | None = None,
+    expected_total: int | None = None,
 ) -> dict:
     """Place an order. Prices always come from the database, never from the caller; a
     line may say what price the customer was shown, and if that is no longer the price the
     order is refused and the new price shown. `for_date` is the day a made-to-order item
     is wanted. `left_out` names items a repeat order had to leave behind. `table` is the
-    table the order is for, from the link on its QR code; staff see it on the order."""
+    table the order is for, from the link on its QR code; staff see it on the order.
+    `coupons` are the codes the customer typed; automatic discounts need no code. The total is
+    worked out here, from the database, by the same function that priced the cart for the
+    page (`totals`); `expected_total` is what the customer was shown, and if it is not what the
+    order now comes to, the order is refused with the new figures (`total_changed`)."""
     contact = await conn.fetchrow(
         "select id, lang, credit_limit, assigned_to, price_group_id from contacts "
         "where id = $1", contact_id
@@ -278,7 +346,23 @@ async def create_order(
     checked = await cart.check(conn, shop_clock, lines, for_date, group_id)
     if not all(c.ok for c in checked):
         raise await _refusal(conn, shop_clock, checked)
-    total = sum(c.unit_price * c.line.quantity for c in checked)
+    feats = await features.load(conn)
+    quote = await price_cart(conn, checked, shop_clock, feats, coupons, contact_id, group_id)
+    for entered in quote.coupons:
+        if not entered.ok:
+            en, ar = discounts.problem_words(entered.problem, entered.code, shop_clock.tz.key)
+            raise OrderError(
+                entered.problem.code, en, ar,
+                extra={"coupon": entered.code, "pricing": discounts.view(quote, shop_clock.tz.key)},
+            )
+    total = quote.goods
+    if expected_total is not None and expected_total != total:
+        raise OrderError(
+            "total_changed",
+            discount_text.say("total_changed", "en", {"total": total}),
+            discount_text.say("total_changed", "ar", {"total": total}),
+            extra={"pricing": discounts.view(quote, shop_clock.tz.key), "total": total},
+        )
 
     if payment == "account":
         if not contact["credit_limit"] > 0:
@@ -321,11 +405,13 @@ async def create_order(
     # Whoever is looking after this customer's chat looks after the order too.
     await conn.execute(
         "insert into orders (id, contact_id, number, total, payment, assigned_to, fulfil_on, "
-        "price_group_id, price_group_name, price_group_name_ar, table_label) "
-        "values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)",
+        "price_group_id, price_group_name, price_group_name_ar, table_label, subtotal, "
+        "discount_total) "
+        "values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)",
         order_id, contact_id, number, total, "on_account" if payment == "account" else "unpaid",
         contact["assigned_to"], max(dates) if dates else None,
         group["id"], group["name"], group["name_ar"], table[:20],
+        quote.subtotal, quote.discount_total,
     )
     await team.record(
         conn, "order", order_id, "placed", team.CUSTOMER, contact_id,
@@ -341,7 +427,7 @@ async def create_order(
     # the order never changes when a field is renamed or archived (ALY-148).
     shown = [
         f for f in await fields.rows(conn, False) if f["shown_to_customers"]
-    ] if (await features.load(conn)).on("custom_fields") else []
+    ] if feats.on("custom_fields") else []
     for c in checked:
         item, variant = c.entry.item, c.variant
         snapshot = [
@@ -350,12 +436,13 @@ async def create_order(
         ]
         order_item_id = await conn.fetchval(
             "insert into order_items (order_id, item_id, name, name_ar, price, quantity, "
-            "variant_id, variant_name, variant_name_ar, options, fulfil_on, sku, custom) "
-            "values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13) returning id",
+            "variant_id, variant_name, variant_name_ar, options, fulfil_on, sku, custom, "
+            "discount) "
+            "values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14) returning id",
             order_id, item["id"], item["name"], item["name_ar"], c.unit_price, c.line.quantity,
             variant["id"], variant["name"], variant["name_ar"], c.options, c.fulfil_on,
             # The size's own code, else the item's: what the shop reads on its order.
-            variant["sku"] or item["sku"], snapshot,
+            variant["sku"] or item["sku"], snapshot, quote.line_discounts.get(c.index, 0),
         )
         if c.take is not None:
             await stock_holds.create(
@@ -364,12 +451,27 @@ async def create_order(
             )
     if held_until is not None:
         await jobs.enqueue(conn, EXPIRE_JOB, {"order_id": str(order_id)}, held_until)
+    # Use the discounts last, in this same transaction: a limited code is a conditional update,
+    # so two orders for its last use cannot both take it, and a refusal here rolls the whole
+    # order back (stock included).
+    if quote.applied:
+        try:
+            await discounts.claim(conn, order_id, contact_id, quote.applied, shop_clock.now)
+        except discounts.DiscountError as error:
+            raise OrderError(
+                error.code, str(error), error.message_ar,
+                extra={"coupon": getattr(error, "coupon", None)},
+            ) from error
 
     arabic = contact["lang"] == "ar"
     summary = "\n".join(
         f"{c.line.quantity} x {_name(c, arabic)}  {fmt_qar(c.unit_price * c.line.quantity)}"
         for c in checked
     )
+    for a in quote.applied:
+        label = a.rule.code or (a.rule.name_ar if arabic and a.rule.name_ar else a.rule.name)
+        word = "خصم" if arabic else "Discount"
+        summary += f"\n{word}{f' ({label})' if label else ''}: -{fmt_qar(a.amount)}"
     # A template blank cannot hold a line break, so the items go on one line there.
     items = ", ".join(f"{c.line.quantity} x {_name(c, arabic)}" for c in checked)
     pay_url = None
@@ -425,6 +527,7 @@ async def create_order(
         # The group whose prices the order was charged.
         "price_group": price_groups.public(group),
         "table": table[:20],
+        **({"pricing": discounts.view(quote, shop_clock.tz.key)} if feats.on("discounts") else {}),
     }
 
 
@@ -541,6 +644,8 @@ async def cancel_order(
     if restock is None:
         restock = row["status"] in ("new", "confirmed")
     await conn.execute("update orders set status = 'cancelled' where id = $1", order_id)
+    # A discount code this order used goes back to its rule, once (ALY-150).
+    coupon_uses = await discounts.give_back(conn, order_id)
     returned = 0
     if restock:
         returned = await stock_holds.release(
@@ -561,7 +666,8 @@ async def cancel_order(
         conn, "order", order_id, "cancelled", actor, row["contact_id"],
         {"number": row["number"], "reason": reason, "stock_returned": returned or None,
          "refund_due": fmt_qar(row["total"]) if refund_due else None,
-         "credit_reversed": fmt_qar(reversed_amount) if reversed_amount else None},
+         "credit_reversed": fmt_qar(reversed_amount) if reversed_amount else None,
+         "coupon_uses_returned": coupon_uses or None},
     )
     if refund_due:
         await team.record(
@@ -648,7 +754,7 @@ async def set_status(
 async def list_orders(conn: asyncpg.Connection) -> list[dict]:
     orders = await conn.fetch(
         "select o.id, o.number, o.status, o.payment, o.total, o.created_at, o.fulfil_on, "
-        "       o.table_label, "
+        "       o.table_label, o.subtotal, o.discount_total, "
         "       c.name as customer, o.assigned_to, u.name as assignee, "
         "       o.price_group_name, o.price_group_name_ar, coalesce(g.is_default, false) "
         "         as price_group_default "
@@ -657,9 +763,13 @@ async def list_orders(conn: asyncpg.Connection) -> list[dict]:
         "left join users u on u.id = o.assigned_to order by o.number desc"
     )
     items = await conn.fetch(
-        "select order_id, name, price, quantity, variant_name, options, sku, custom "
+        "select order_id, name, price, quantity, variant_name, options, sku, custom, discount "
         "from order_items"
     )
+    given: dict[UUID, list[dict]] = {}
+    if any(o["discount_total"] for o in orders):
+        for d in await conn.fetch("select * from order_discounts order by sort"):
+            given.setdefault(d["order_id"], []).append(discounts.snapshot(d))
     by_order: dict[UUID, list[dict]] = {}
     for item in items:
         by_order.setdefault(item["order_id"], []).append(
@@ -668,13 +778,21 @@ async def list_orders(conn: asyncpg.Connection) -> list[dict]:
              "fields": item["custom"],
              "options": [o["name"] for o in item["options"]],
              "price": item["price"], "price_text": fmt_qar(item["price"]),
-             "line_text": fmt_qar(item["price"] * item["quantity"])}
+             "line_text": fmt_qar(item["price"] * item["quantity"]),
+             **({"discount": item["discount"],
+                 "discount_text": fmt_qar(item["discount"])} if item["discount"] else {})}
         )
     return [
         {
             "id": str(o["id"]), "number": o["number"], "status": o["status"],
             "payment": o["payment"], "total": o["total"], "total_text": fmt_qar(o["total"]),
             "customer": o["customer"], "created_at": o["created_at"].isoformat(),
+            # What the goods came to and what came off, only on an order that was given a
+            # discount (ALY-150); an order without one reads exactly as it always did.
+            **({"subtotal": o["subtotal"], "subtotal_text": fmt_qar(o["subtotal"]),
+                "discount_total": o["discount_total"],
+                "discount_total_text": fmt_qar(o["discount_total"]),
+                "discounts": given.get(o["id"], [])} if o["discount_total"] else {}),
             "fulfil_on": o["fulfil_on"].isoformat() if o["fulfil_on"] else None,
             # The table it is for, from a QR code on a table ("" for none).
             "table": o["table_label"],
@@ -702,7 +820,8 @@ async def tracking(conn: asyncpg.Connection, order_id: UUID) -> dict | None:
     Nothing about other customers, and only the first name of the staff member."""
     order = await conn.fetchrow(
         "select o.id, o.number, o.status, o.payment, o.total, o.created_at, o.fulfil_on, "
-        "       o.table_label, c.lang, split_part(u.name, ' ', 1) as handler "
+        "       o.table_label, o.subtotal, o.discount_total, c.lang, "
+        "       split_part(u.name, ' ', 1) as handler "
         "from orders o join contacts c on c.id = o.contact_id "
         "left join users u on u.id = o.assigned_to where o.id = $1",
         order_id,
@@ -711,7 +830,7 @@ async def tracking(conn: asyncpg.Connection, order_id: UUID) -> dict | None:
         return None
     items = await conn.fetch(
         "select o.name, coalesce(nullif(o.name_ar, ''), p.name_ar, '') as name_ar, o.price, "
-        "       o.quantity, o.variant_name, o.variant_name_ar, o.options, o.custom "
+        "       o.quantity, o.variant_name, o.variant_name_ar, o.options, o.custom, o.discount "
         "from order_items o left join items p on p.id = o.item_id "
         "where o.order_id = $1 order by o.name",
         order_id,
@@ -740,9 +859,14 @@ async def tracking(conn: asyncpg.Connection, order_id: UUID) -> dict | None:
              "options_ar": [o.get("name_ar") or o["name"] for o in i["options"]],
              "fields": i["custom"],
              "unit_price": i["price"], "line_total": i["price"] * i["quantity"],
-             "line_text": fmt_qar(i["price"] * i["quantity"])}
+             "line_text": fmt_qar(i["price"] * i["quantity"]),
+             **({"discount": i["discount"]} if i["discount"] else {})}
             for i in items
         ],
+        **({
+            "subtotal": order["subtotal"], "discount_total": order["discount_total"],
+            "discounts": await discounts.for_order(conn, order_id),
+        } if order["discount_total"] else {}),
         "steps": [
             {"key": key, "at": when[key].isoformat() if key in when else None}
             for key in TRACK_STEPS

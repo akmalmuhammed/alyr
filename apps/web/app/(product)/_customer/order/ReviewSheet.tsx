@@ -43,9 +43,17 @@ type Props = {
   onClose: () => void;
   /** The same order as WhatsApp messages (ALY-136), when the shop has given its number. */
   whatsapp?: WaPart[];
+  /** The shop's discounts are on (ALY-150): the review has a code box and shows what came off.
+   *  Off, the review asks and shows exactly what it always did. */
+  discounts?: boolean;
 };
 
 const BLOCKING = ["price_changed"];
+const MAX_CODES = 3;
+
+/** A code as the shop's API compares it: capitals, Western digits, no spaces, dashes or underscores. */
+const codeText = (text: string) => text.replace(/[٠-٩]/g, (d) => String("٠١٢٣٤٥٦٧٨٩".indexOf(d))).replace(/\s+/g, "").toUpperCase();
+const sameCode = (a: string, b: string) => codeText(a).replace(/[-_]/g, "") === codeText(b).replace(/[-_]/g, "");
 
 function shortDay(iso: string, lang: Lang): string {
   const day = new Date(`${iso}T12:00:00Z`);
@@ -70,6 +78,16 @@ export function ReviewSheet(props: Props) {
   const [state, setState] = useState<"checking" | "ready" | "placing" | "offline">("checking");
   const [message, setMessage] = useState("");
   const asked = useRef(0);
+  // Discount codes (ALY-150): what the customer typed lives here and nowhere else, so closing
+  // the review forgets it. A code the shop says does not work is dropped from the order and its
+  // sentence is kept under the box until the customer types again.
+  const [off, setOff] = useState(false);
+  const couponsOn = !!props.discounts && !off;
+  const [codes, setCodes] = useState<string[]>([]);
+  const [typed, setTyped] = useState("");
+  const [note, setNote] = useState("");
+  const [rejected, setRejected] = useState<{ code: string; text: string } | null>(null);
+  const messageEl = useRef<HTMLParagraphElement>(null);
 
   const days = commonDays(lines, lookup);
   const dated = days !== null;
@@ -86,7 +104,8 @@ export function ReviewSheet(props: Props) {
       product_id: l.itemId, quantity: l.qty, variant_id: l.variantId, option_ids: l.optionIds, expected_price: l.unit,
     })),
     for_date: dated && askDay ? forDate : null,
-  }), [lines, forDate, dated, askDay]);
+    ...(couponsOn ? { coupons: codes } : {}),
+  }), [lines, forDate, dated, askDay, couponsOn, codes]);
 
   const sig = JSON.stringify(body);
   const check = got && got.sig === sig ? got.check : null;
@@ -100,10 +119,22 @@ export function ReviewSheet(props: Props) {
       if (mine !== asked.current) return;
       setGot({ sig: JSON.stringify(body), check: result });
       setState("ready");
+      // A code that does not work for this order is taken out of it, and the shop's sentence
+      // stays under the box. (It is asked again by itself, without the code.)
+      const failed = (result.pricing?.coupons ?? []).filter((c) => !c.ok);
+      if (failed.length > 0) {
+        setCodes((all) => all.filter((c) => !failed.some((f) => sameCode(f.code, c))));
+        const last = failed[failed.length - 1];
+        setRejected({ code: last.code, text: say(lang, last.message ?? "", last.message_ar ?? "") });
+      }
     } catch (error) {
       if (mine !== asked.current) return;
       if (error instanceof ApiError && error.status === 0) setState("offline");
-      else { setMessage(error instanceof ApiError && error.refusal ? say(lang, error.refusal.message, error.refusal.message_ar) : t.failed); setState("ready"); }
+      else if (error instanceof ApiError && error.refusal?.code === "feature_off") {
+        // The shop switched its discounts off while this was open: the review goes back to the plain one.
+        setOff(true);
+        setCodes([]);
+      } else { setMessage(error instanceof ApiError && error.refusal ? say(lang, error.refusal.message, error.refusal.message_ar) : t.failed); setState("ready"); }
     }
   }, [slug, token, body, lang, t]);
 
@@ -131,12 +162,22 @@ export function ReviewSheet(props: Props) {
     setState("placing");
     setMessage("");
     try {
-      const placed = await placeOrder(slug, { ...body, payment, table }, token);
+      // With discounts on, the order says what total the customer was shown; if it now comes to
+      // something else it is refused with the new figures, never charged differently.
+      const placed = await placeOrder(slug, { ...body, payment, table, ...(couponsOn && check ? { expected_total: check.total } : {}) }, token);
       props.onPlaced(placed);
     } catch (error) {
       if (error instanceof ApiError && error.refusal) {
         // Changed between the check and the tap: the same screen, with what changed.
         const refusal = error.refusal;
+        if (couponsOn && refusal.code.startsWith("coupon_") && refusal.coupon) {
+          // The code stopped working (ended, used up, minimum...) or never did: out of the order, with its reason under the box.
+          const bad = refusal.coupon;
+          setCodes((all) => all.filter((c) => !sameCode(bad, c)));
+          setRejected({ code: bad, text: say(lang, refusal.message, refusal.message_ar) });
+          setState("ready");
+          return;
+        }
         setMessage(say(lang, refusal.message, refusal.message_ar));
         if (refusal.lines) setGot({ sig, check: { ok: false, lines: refusal.lines, total: totalOf(lines) } });
         setState("ready");
@@ -147,6 +188,34 @@ export function ReviewSheet(props: Props) {
       }
     }
   }
+
+  // ── discount codes (ALY-150) ──
+  // What the shop last said about the codes, even while the next answer is on its way, so a chip
+  // does not blink out and back as the order is asked again.
+  const pricing = couponsOn ? (check ?? got?.check ?? null)?.pricing : undefined;
+  const verdictOf = (code: string) => pricing?.coupons.find((c) => sameCode(c.code, code));
+
+  function apply() {
+    const code = codeText(typed);
+    if (!code) return;
+    if (codes.some((c) => sameCode(c, code))) { setNote(t.codeDuplicate); return; }
+    if (codes.length >= MAX_CODES) { setNote(t.codeMax); return; }
+    setCodes([...codes, code]);
+    setTyped("");
+    setNote("");
+    setRejected(null);
+  }
+
+  function drop(code: string) {
+    setCodes(codes.filter((c) => c !== code));
+    setRejected(null);
+    setNote("");
+  }
+
+  // A sentence about the whole order (the total changed) is brought into view: it is at the end of a scrolling sheet.
+  useEffect(() => {
+    if (message) messageEl.current?.scrollIntoView({ block: "nearest" });
+  }, [message]);
 
   const labels = (name: string) => ({ minus: `${t.remove}: ${name}`, plus: `${t.moreOne}: ${name}`, quantity: `${t.quantity}: ${name}` });
 
@@ -174,6 +243,12 @@ export function ReviewSheet(props: Props) {
               <> <Glyph name="arrow" className="flip ox-lflip" /> <Price value={verdict.new_price} lang={lang} className="ox-new" /></>
             )}
           </span>
+          {couponsOn && verdict?.ok && (verdict.discount ?? 0) > 0 && verdict.line_total !== undefined && verdict.line_total_after !== undefined && (
+            <span className="ox-lafter">
+              <span className="ox-sr">{t.was} </span><s><Price value={verdict.line_total} lang={lang} /></s>
+              <span className="ox-sr"> {t.now} </span><Price value={verdict.line_total_after} lang={lang} className="ox-new" />
+            </span>
+          )}
           {code === "price_changed" && verdict?.old_price !== undefined && verdict.new_price !== undefined && (
             <p className="ox-lmsg" role="status">{t.priceWas(formatPrice(verdict.old_price, lang), formatPrice(verdict.new_price, lang))}</p>
           )}
@@ -240,7 +315,49 @@ export function ReviewSheet(props: Props) {
           </fieldset>
         )}
         {days && days.length === 0 && <p className="ox-lmsg" role="alert">{t.cartChanged}</p>}
-        {message && <p className="ox-err summary" role="alert">{message}</p>}
+        {couponsOn && lines.length > 0 && (
+          <section className={`ox-coupon ${rejected ? "bad" : ""}`} aria-labelledby="ox-coupon-l">
+            <label id="ox-coupon-l" htmlFor="ox-coupon-in">{t.codeLabel}</label>
+            <div className="ox-coupon-row">
+              <input id="ox-coupon-in" className="cx-input" value={typed} dir="ltr" lang="en" autoComplete="off" autoCapitalize="characters"
+                spellCheck={false} enterKeyHint="done" maxLength={40}
+                aria-invalid={rejected || note ? true : undefined} aria-describedby={rejected || note ? "ox-coupon-err" : undefined}
+                onChange={(e) => { setTyped(e.target.value); if (rejected) setRejected(null); if (note) setNote(""); }}
+                onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); apply(); } }} />
+              <button type="button" className="cx-btn ghost ox-apply" disabled={!typed.trim()} onClick={apply}>{t.codeApply}</button>
+            </div>
+            {(rejected || note) && <p className="ox-err" id="ox-coupon-err" role="alert" dir="auto">{rejected?.text || note}</p>}
+            {codes.length > 0 && (
+              <ul className="ox-codes" aria-label={t.codeAppliedLabel} aria-live="polite">
+                {codes.map((code) => {
+                  const verdict = verdictOf(code);
+                  return (
+                    <li key={code} className="ox-codechip">
+                      <b className="num" dir="ltr">{code}</b>
+                      {verdict?.ok ? <span className="ox-chipoff">{`−${formatPrice(verdict.amount, lang)}`}</span> : <span className="ox-chipoff">{t.codeChecking}</span>}
+                      <button type="button" aria-label={t.codeRemove(code)} onClick={() => drop(code)}><Glyph name="close" /></button>
+                    </li>
+                  );
+                })}
+              </ul>
+            )}
+          </section>
+        )}
+        {couponsOn && clear && check?.pricing && check.pricing.discounts.length > 0 && (
+          <div className="ox-brk" role="group" aria-label={t.discountOf}>
+            <div className="ox-sum"><span>{t.subtotal}</span><Price value={check.pricing.subtotal} lang={lang} /></div>
+            {check.pricing.discounts.map((d) => (
+              <div key={d.id} className="ox-sum off">
+                <span>
+                  <bdi dir="auto">{d.kind === "coupon" ? d.code : say(lang, d.name, d.name_ar) || t.discountOf}</bdi>
+                  <small dir="auto">{say(lang, d.text, d.text_ar)}</small>
+                </span>
+                <bdi className="num ox-nb">{`−${formatPrice(d.amount, lang)}`}</bdi>
+              </div>
+            ))}
+          </div>
+        )}
+        {message && <p className="ox-err summary" role="alert" ref={messageEl}>{message}</p>}
       </div>
 
       <footer className="ox-dfoot col">

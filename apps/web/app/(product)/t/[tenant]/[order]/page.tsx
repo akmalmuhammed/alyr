@@ -12,7 +12,13 @@ type Order = {
   items: {
     name: string; name_ar: string; quantity: number; line_total: number;
     variant: string; variant_ar: string; options: string[]; options_ar: string[];
+    /** What came off this line (ALY-150); absent when nothing did. */
+    discount?: number;
   }[];
+  // Only on an order that was given a discount (ALY-150): the goods, and each discount as it was
+  // then. An order without one has none of these and reads exactly as before.
+  subtotal?: number; discount_total?: number;
+  discounts?: { kind: "coupon" | "auto"; code: string; name: string; name_ar: string; text: string; text_ar: string; amount: number; returned: boolean }[];
   steps: Step[]; cancelled_at: string | null; paid_at: string | null; payment_id: string | null;
 };
 type Tracking = { shop: { name: string; name_ar: string }; order: Order };
@@ -25,6 +31,7 @@ const T = {
     waiting: "Waiting", handler: (name: string, shop: string) => <><b>{name}</b> at {shop} is looking after your order.</>,
     noHandler: (shop: string) => <>The team at <b>{shop}</b> will pick up your order shortly.</>,
     items: "What you ordered", total: "Total", table: (label: string) => `Table ${label}`,
+    subtotal: "Items", discount: "Discount", lineOff: (amount: string) => `Discount ${amount}`,
     payment: { unpaid: "Not paid yet", paid: "Paid", on_account: "On your account" },
     pay: "Pay now", updates: "This page updates by itself. We also message you on WhatsApp at every step.",
     cancelled: "This order was cancelled. Message the shop on WhatsApp if that is unexpected.",
@@ -37,6 +44,7 @@ const T = {
     waiting: "قيد الانتظار", handler: (name: string, shop: string) => <><b>{name}</b> من {shop} يتابع طلبك.</>,
     noHandler: (shop: string) => <>سيتولى فريق <b>{shop}</b> طلبك قريباً.</>,
     items: "ما طلبته", total: "الإجمالي", table: (label: string) => `طاولة ${label}`,
+    subtotal: "الأصناف", discount: "الخصم", lineOff: (amount: string) => `خصم ${amount}`,
     payment: { unpaid: "لم يُدفع بعد", paid: "مدفوع", on_account: "على حسابك" },
     pay: "ادفع الآن", updates: "تتحدّث هذه الصفحة تلقائياً، ونراسلك على واتساب عند كل خطوة.",
     cancelled: "تم إلغاء هذا الطلب. راسل المتجر على واتساب إن لم يكن ذلك متوقعاً.",
@@ -124,11 +132,29 @@ export default function TrackPage() {
                   <b dir="auto">{ar && item.name_ar ? item.name_ar : item.name}</b>
                   {parts.length > 0 && <span dir="auto">{parts.join(ar ? "، " : ", ")}</span>}
                   <span className="num">× {item.quantity}</span>
+                  {item.discount ? <span className="num"><bdi>{t.lineOff(`−${formatPrice(item.discount, lang)}`)}</bdi></span> : null}
                 </div>
                 <bdi className="num">{formatPrice(item.line_total, lang)}</bdi>
               </div>
             );
           })}
+          {o.discount_total ? (
+            <>
+              <div className="cx-row">
+                <div className="cx-row-text"><b>{t.subtotal}</b></div>
+                <bdi className="num">{formatPrice(o.subtotal ?? o.total + o.discount_total, lang)}</bdi>
+              </div>
+              {(o.discounts ?? []).map((d, i) => (
+                <div key={i} className="cx-row">
+                  <div className="cx-row-text">
+                    <b dir="auto">{d.kind === "coupon" ? d.code : (lang === "ar" && d.name_ar ? d.name_ar : d.name) || t.discount}</b>
+                    <span dir="auto">{lang === "ar" && d.text_ar ? d.text_ar : d.text}</span>
+                  </div>
+                  <bdi className="num">{`−${formatPrice(d.amount, lang)}`}</bdi>
+                </div>
+              ))}
+            </>
+          ) : null}
           <div className="cx-row">
             <div className="cx-row-text"><b>{t.total}</b></div>
             <b className="num"><bdi>{formatPrice(o.total, lang)}</bdi></b>

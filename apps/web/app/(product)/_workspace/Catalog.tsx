@@ -12,6 +12,8 @@ import {
 } from "./catalogApi";
 import { COPY, type Copy, type Lang } from "./catalogCopy";
 import { FEAT } from "./featuresCopy";
+import { PRICING } from "./pricingCopy";
+import { CatalogDiscounts } from "./CatalogDiscounts";
 import { Announce, Icon, Layer, Switch, Tile, ToastLayer, useToasts } from "./CatalogUi";
 import { CatalogEdit } from "./CatalogEdit";
 import { CatalogFeatures } from "./CatalogFeatures";
@@ -33,6 +35,7 @@ type Sheet =
   | { kind: "import" }
   | { kind: "settings" }
   | { kind: "features" }
+  | { kind: "discounts" }
   | { kind: "fields" }
   | { kind: "template" }
   | { kind: "share"; target: Target };
@@ -76,6 +79,7 @@ function priceLine(item: Item, t: Copy) {
 export function Catalog({ lang, title, show = null, onRenamed }: { lang: Lang; title: string; show?: string | null; onRenamed?: () => void }) {
   const t = COPY[lang];
   const feat = FEAT[lang];
+  const pricing = PRICING[lang];
   const { toasts, push, dismiss, clear } = useToasts();
   const [tab, setTab] = useState<"items" | "stock">("items");
   const [typed, setTyped] = useState("");
@@ -412,6 +416,11 @@ export function Catalog({ lang, title, show = null, onRenamed }: { lang: Lang; t
         <button type="button" className="btn ghost ct-btn" onClick={() => setSheet({ kind: "import" })}>
           <Icon name="sheet" />{t.imp.open}
         </button>
+        {access.can_manage && setup?.features.discounts && (
+          <button type="button" className="btn ghost ct-btn" onClick={() => setSheet({ kind: "discounts" })}>
+            <Icon name="tag" />{pricing.open}
+          </button>
+        )}
         {access.can_manage && (
           <button type="button" className="btn ghost ct-btn" onClick={() => setSheet({ kind: "features" })}>
             <Icon name="star" />{feat.open}
@@ -588,6 +597,10 @@ export function Catalog({ lang, title, show = null, onRenamed }: { lang: Lang; t
       {sheet?.kind === "features" && (
         <CatalogFeatures lang={lang} push={push} onClose={() => { setSheet(null); void load(); loadSetup(); }}
           onChanged={() => { loadSetup(); onRenamed?.(); }} onOpen={(what) => setSheet({ kind: what })} />
+      )}
+      {sheet?.kind === "discounts" && setup?.features.discounts && access.can_manage && (
+        <CatalogDiscounts lang={lang} push={push} groupsOn={setup.features.price_groups ?? false} categories={categories}
+          onClose={() => setSheet(null)} />
       )}
       {sheet?.kind === "fields" && (
         <CatalogFields lang={lang} push={push} onClose={() => { setSheet({ kind: "features" }); void load(); loadSetup(); }}

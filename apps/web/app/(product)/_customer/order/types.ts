@@ -118,9 +118,21 @@ export type Hints = {
   features?: Record<string, boolean>;
 };
 
+/** An automatic discount in words, for a quiet line on the page ("10% off orders over QAR 200"). */
+export type Offer = { text: string; text_ar: string };
+
+/**
+ * What the shop's pricing features say to the page (`GET /api/store/{slug}` → `pricing`). The
+ * key is absent while the shop uses none of them, and then the page shows nothing about
+ * prices beyond the items'. `discounts` exists only while "Discounts and coupon codes" is on:
+ * it is what lets the review show a code box (ALY-150, specs/014-pricing-pack).
+ */
+export type PricingHints = { discounts?: { offers: Offer[] } };
+
 export type Store = {
   shop: { name: string; name_ar: string; slug: string; timezone: string; catalog: boolean; whatsapp: string };
   catalog: Hints | null;
+  pricing?: PricingHints;
   settings: Settings;
   group: Group2;
   categories: Category[];
@@ -152,6 +164,9 @@ export type Checked = {
   ok: boolean;
   unit_price?: number;
   line_total?: number;
+  /** With discounts on (ALY-150): what came off this line, and what it comes to after. */
+  discount?: number;
+  line_total_after?: number;
   code?: string;
   message?: string;
   message_ar?: string;
@@ -167,10 +182,31 @@ export type Checked = {
   alternatives?: { item_id: string; variant_id: string | null; name: string; name_ar: string; price: number }[];
 };
 
-export type Check = { ok: boolean; lines: Checked[]; total: number };
+/** A discount that was applied to the order: a code the customer typed, or an automatic one. */
+export type AppliedDiscount = {
+  id: string; kind: "coupon" | "auto"; code: string; name: string; name_ar: string;
+  text: string; text_ar: string; amount: number; lines: number[];
+};
+/** How a code the customer typed fared: it took `amount` off, or `reason` and a sentence say why not. */
+export type CouponVerdict = {
+  code: string; ok: boolean; amount: number; reason?: string; message?: string; message_ar?: string;
+};
+/** What the order comes to, and why (`pricing` in the cart check, a refusal and a placed order). */
+export type Pricing = {
+  subtotal: number; discounts: AppliedDiscount[]; discount_total: number; goods: number; coupons: CouponVerdict[];
+};
 
-/** A refusal from the API: a code, a sentence in both languages, and sometimes the lines. */
-export type Refusal = { code: string; message: string; message_ar: string; lines?: Checked[] };
+/** `total` is what the customer pays: after any discounts. `pricing` exists only while the shop's discounts are on. */
+export type Check = { ok: boolean; lines: Checked[]; total: number; pricing?: Pricing };
+
+/**
+ * A refusal from the API: a code, a sentence in both languages, and sometimes the lines. A
+ * code that does not work (`coupon_*`) names it in `coupon`; both it and `total_changed` carry
+ * the figures as they now are in `pricing` (and `total`).
+ */
+export type Refusal = {
+  code: string; message: string; message_ar: string; lines?: Checked[]; coupon?: string; pricing?: Pricing; total?: number;
+};
 
 export type Placed = {
   order_id: string;
@@ -181,4 +217,6 @@ export type Placed = {
   track_url?: string;
   left_out?: { name: string; name_ar: string; code: string; message: string; message_ar: string }[];
   price_changes?: { name: string; was: number; now: number }[];
+  /** What came off, only while the shop's discounts are on. */
+  pricing?: Pricing;
 };
