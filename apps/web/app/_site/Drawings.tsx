@@ -2,6 +2,9 @@ import { Rich } from "../_agent/AgentDashboard";
 import type { AgentView } from "../_agent/types";
 import { copy, type Caption, type Locale, type SampleKey } from "./copy";
 import { CxTop, TickPath } from "./Frames";
+import { OrderRow } from "./PageDrawings";
+import { PaperTop } from "./Paper";
+import { RC0042 } from "./paperData";
 import type { ReportWords } from "./ReportPhone";
 import { OFFER_LIVE } from "./site";
 import { rich } from "./Text";
@@ -136,6 +139,28 @@ export function AgeBarCrop({ view, label }: { view: AgentView; label: string }) 
           <span key={s.key}><i className={`a${i}`} /><span>{ranges(s.label)}</span></span>
         ))}
       </span>
+    </div>
+  );
+}
+
+/** ALYR Shelf: two item cards on the order page, at true size: one nearly gone, one sold out. */
+export function ShelfCrop({ crops, soldOut }: { crops: Crops; soldOut: string }) {
+  return (
+    <div className="d-crop d-crop-shelf" aria-hidden="true">
+      <div className="d-card">
+        {crops.shelf.map((item) => (
+          <OrderRow key={item.name} item={{ ...item, tone: item.out ? "out" : "few" }} soldOut={soldOut} qty={item.out ? undefined : "1"} />
+        ))}
+      </div>
+    </div>
+  );
+}
+
+/** ALYR Docs: the top of receipt RC-0042, Arabic first, as the paper prints it. */
+export function ReceiptCrop({ crops }: { crops: Crops }) {
+  return (
+    <div className="d-crop d-crop-receipt" role="img" aria-label={crops.receipt}>
+      <PaperTop doc={RC0042} />
     </div>
   );
 }

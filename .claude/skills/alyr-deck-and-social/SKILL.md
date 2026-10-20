@@ -77,7 +77,7 @@ Everything in `alyr-design/honesty.md`, plus:
 - Deck slides from the playbook that are retired: "Set up in 48 hours", three plans, "local
   team", "licensed payment partner", "your data stays in Qatar", a pilot merchant's
   before/after table, founder photo. Replace with what is true: set up by ALYR in your shop,
-  the product on the owner's own phone, early access, the go-live date agreed at the visit.
+  the product on the owner's own phone, "Set up for you", the go-live date agreed at the visit.
 - Never imply WhatsApp or Meta affiliation; no WhatsApp logo as ALYR's; a deck that shows
   WhatsApp screens draws them as the site does.
 
@@ -91,7 +91,7 @@ Everything in `alyr-design/honesty.md`, plus:
 6. Live demo: switch to the owner's own phone.
 7. How we set it up: the visit, the setup, the training, go-live agreed together.
 8. Price (only once the CR is issued and the founder agrees).
-9. What is true today: early access, built on WhatsApp's official Business Platform,
+9. What is true today: set up for you, built on WhatsApp's official Business Platform,
    records kept apart, non-custodial.
 10. Next step: one action.
 

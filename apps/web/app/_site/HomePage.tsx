@@ -3,13 +3,13 @@ import { AgentFigure } from "./AgentFigure";
 import { Icon } from "./brand";
 import { ContactButton, ContactNote } from "./Contact";
 import { copy, type Locale } from "./copy";
-import { AgeBarCrop, FigCaption, OrderBarCrop, reportWords, SummaryCrop, TimesCrop, TrackScreen } from "./Drawings";
+import { AgeBarCrop, FigCaption, OrderBarCrop, ReceiptCrop, reportWords, ShelfCrop, SummaryCrop, TimesCrop, TrackScreen } from "./Drawings";
 import { ReportPhone } from "./ReportPhone";
 import { Phone, TickPath } from "./Frames";
 import { HomeMotion } from "./HomeMotion";
 import { REPORTS, SAMPLE_ORDER, SAMPLES } from "./samples";
 import { contactHref, Shell } from "./Shell";
-import { CONTACT_STATE, OFFER_LIVE, PATHS, PRODUCTS, productPath, TRUST_RECORDS, type TrustRecord } from "./site";
+import { CONTACT_STATE, INCLUDED, OFFER_LIVE, PATHS, PRODUCTS, productPath, TRUST_RECORDS, type TrustRecord } from "./site";
 import { lines, rich } from "./Text";
 import "./kit.css";
 import "./home.css";
@@ -169,7 +169,8 @@ function Suite({ locale }: { locale: Locale }) {
     bookings: <TimesCrop crops={s.crops} />,
     agent: <SummaryCrop view={bakery} />,
     accounts: <AgeBarCrop view={bakery} label={s.crops.owed} />,
-    payroll: null,
+    shelf: <ShelfCrop crops={s.crops} soldOut={s.crops.shelf.find((i) => i.out)?.note ?? ""} />,
+    docs: <ReceiptCrop crops={s.crops} />,
   };
   return (
     <section className="band suite" id="products" aria-labelledby="products-title">
@@ -187,26 +188,20 @@ function Suite({ locale }: { locale: Locale }) {
             {PRODUCTS.map((key, index) => {
               const p = t.products.items[key];
               const href = productPath(key, locale);
-              const row = key === "payroll" ? null : s.rows[key];
+              const row = s.rows[key];
               return (
-                <li key={key} className={`suite-row${href ? "" : " is-soon"}`} data-m style={n(index)}>
+                <li key={key} className="suite-row" data-m style={n(index)}>
                   <div className="suite-name">
                     <h3><bdi>{p.name}</bdi></h3>
                     <span className="suite-desc">{p.descriptor}</span>
-                    <span className="suite-state">
-                      {!href && <span className="dot-pending" aria-hidden="true" />}
-                      {p.state}
-                    </span>
+                    <span className="suite-state">{p.state}</span>
                   </div>
                   <div className="suite-say">
-                    {row && <p>{rich(row.body)}</p>}
-                    {row && href && (
-                      <a className="link link-dark" href={href}>
-                        <span>{rich(row.link)}</span>
-                        <Icon name="arrow-right" className="ico ico-flip" />
-                      </a>
-                    )}
-                    {!href && <span className="sr-only">{t.products.payrollSr}</span>}
+                    <p>{rich(row.body)}</p>
+                    <a className="link link-dark" href={href}>
+                      <span>{rich(row.link)}</span>
+                      <Icon name="arrow-right" className="ico ico-flip" />
+                    </a>
                   </div>
                   <div className="suite-crop">{crop[key]}</div>
                 </li>
@@ -242,21 +237,18 @@ function Business({ locale }: { locale: Locale }) {
               <p className="biz-uses">
                 <span className="biz-k">{b.uses}</span>
                 <span className="biz-tags">
-                {/* in the suite's order; ALYR Agent comes with each, so it closes the row, lighter */}
+                {/* in the suite's order; ALYR Agent and ALYR Shelf come with each, so they close the row, lighter */}
                 {[...row.products]
-                  .sort((a, b) => (a === "agent" ? 1 : b === "agent" ? -1 : PRODUCTS.indexOf(a) - PRODUCTS.indexOf(b)))
+                  .sort((a, b) => Number(INCLUDED.includes(a)) - Number(INCLUDED.includes(b)) || PRODUCTS.indexOf(a) - PRODUCTS.indexOf(b))
                   .map((key) => {
-                  const href = productPath(key, locale);
                   const name = t.products.items[key].name;
                   // the tag shows the product's own word ("Chat"); its name is the whole one
                   const short = name.replace(/^ALYR\s+/, "");
-                  const agent = key === "agent";
-                  return href ? (
-                    <a key={key} className={`tag tag-link${agent ? " tag-plus" : ""}`} href={href} aria-label={name}>
-                      {agent && <span aria-hidden="true">{"+ "}</span>}<bdi>{short}</bdi>
+                  const plus = INCLUDED.includes(key);
+                  return (
+                    <a key={key} className={`tag tag-link${plus ? " tag-plus" : ""}`} href={productPath(key, locale)} aria-label={name}>
+                      {plus && <span aria-hidden="true">{"+ "}</span>}<bdi>{short}</bdi>
                     </a>
-                  ) : (
-                    <span key={key} className="tag"><bdi>{short}</bdi></span>
                   );
                 })}
                 </span>

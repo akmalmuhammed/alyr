@@ -1,6 +1,6 @@
 ---
 name: alyr-site-page
-description: Build or change a public ALYR web page or anything on it. Use for the homepage (/ and /ar), the product pages (/chat, /bookings, /agent, /accounts and their /ar pages), adding a new product page, the header, Products menu, theme switch, product bar, footer, closing call, contact states, the offer switch, FIG-captioned drawings of product screens, the "works with" rows, the sitemap, metadata and social cards, and anything under apps/web/app/_site, apps/web/app/(site) or apps/web/app/(site-ar), or scripts/build-site.sh. Load alyr-design first.
+description: Build or change a public ALYR web page or anything on it. Use for the homepage (/ and /ar), the product pages (/chat, /bookings, /agent, /accounts, /shelf, /docs and their /ar pages), adding a new product page, the header, Products menu, theme switch, product bar, footer, closing call, contact states, the offer switch, FIG-captioned drawings of product screens, the "works with" rows, the sitemap, metadata and social cards, and anything under apps/web/app/_site, apps/web/app/(site) or apps/web/app/(site-ar), or scripts/build-site.sh. Load alyr-design first.
 ---
 
 # A public ALYR page
@@ -65,10 +65,12 @@ drawn with resvg (`alyr-generated-image`).
 ## Adding a product page
 
 **First, may it exist?** A product gets a page only when it is built and the founder has
-said so (D-037: "ALYR Payroll is listed as coming, with no page until it is built"; D-039:
-nothing "coming" is shown to an owner or customer at go-live). **"A coming-soon page for
-ALYR Payroll" is therefore not something to build.** Stop, label the issue "Needs Akmal",
-and ask: is Payroll built and in the catalogue as live, and does he want its page now?
+said so (D-039: nothing "coming" is shown to an owner or customer at go-live; on 20 Oct
+2026 the founder took Payroll off the site until it is built). **"A coming-soon page for
+ALYR Payroll" is therefore not something to build**, and nothing names it. Stop, label the
+issue "Needs Akmal", and ask: is it built and in the catalogue as live, and does he want its
+page now? A product that is built but still off for shops can have a page only on his word,
+and then its page never says it is available (ALYR Docs, 20 Oct 2026).
 You may draft its words and claims in the work folder (`docs/work/ALY-NN-.../`) for his
 review; nothing goes into `copy.ts` or a route.
 
@@ -76,15 +78,15 @@ Once a product is built and approved, the page needs every one of these, or it i
 silently not published, or published and not linked:
 
 1. **`_site/site.ts`:** its key and both addresses in `PATHS` (feeds the canonical link,
-   hreflang, the language link and the sitemap); keep `PRODUCTS` in suite order; change
-   `productPath()` so the key returns its path (it hard-codes Payroll as `null`).
+   hreflang, the language link and the sitemap); keep `PRODUCTS` in suite order
+   (`productPath()` returns `PATHS[key]`; every product listed has a page). If it comes with
+   every product, add it to `INCLUDED`.
 2. **`_site/copy.ts`, both languages, typed:** `meta.<key>` (title, description,
    `descriptionNoOffer`) and the `meta` key union; a `pages.<key>` type and both objects;
-   `products.items.<key>` (name, descriptor, line, state) for the menu; remove the
-   coming-only strings (`payrollSr`, each page's `works.payroll` and the `suite.payroll`
-   line) if the product was the coming one; `works.rows.<key>` on every other product page
-   and widen its type (it is `Exclude<ProductKey, "payroll">` today); the homepage suite row,
-   its business tags and the Products menu line.
+   `products.items.<key>` (name, descriptor, line, state) for the menu; `works.rows.<key>`
+   on every other product page; the homepage suite row (`home.suite.rows` is typed by every
+   `ProductKey`), its business tags and the Products menu line. A page with a lot of words
+   can keep them in its own copy file (`copyShelf.ts`, `copyDocs.ts`) that `copy.ts` imports.
 3. **The page component** `_site/<Name>Page.tsx` from `ProductKit` blocks.
 4. **Routes in both groups:** `app/(site)/<key>/page.tsx` and
    `app/(site-ar)/ar/<key>/page.tsx`, each with `siteMetadata(locale, "<key>")`.

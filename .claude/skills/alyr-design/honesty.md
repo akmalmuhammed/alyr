@@ -8,8 +8,10 @@ D-025 to D-039. **It goes stale.** Before you rely on a row, read `docs/status.m
 decision it cites; if a row is no longer true, fix this file in your PR.
 
 "Built" means it works on the simulator or Meta's test number. **No business uses ALYR
-yet.** Describe what the product does as early access that ALYR sets up with each
-business, never as something businesses run now.
+yet.** Describe what the product does as something ALYR sets up with each business
+("Set up for you", founder, 20 Oct 2026), never as something businesses run now. ALYR Docs
+is built and off for every shop: its page never says "today", "now", "live", "turn it on"
+or "coming".
 
 ## 1. No AI words
 
@@ -37,7 +39,7 @@ Until a model is in the product (D-012, D-035), nothing says or implies AI, not 
 
 | Do not say or show | Why | Say instead |
 |---|---|---|
-| Customer logos, "trusted by", testimonials, counts of businesses, messages or money handled, ratings, case studies | No customers | Nothing. "ALYR Chat is in early access. We set it up with each business ourselves." |
+| Customer logos, "trusted by", testimonials, counts of businesses, messages or money handled, ratings, case studies | No customers | Nothing. "We set ALYR Chat up with you at your shop." |
 | "Live on WhatsApp", "used by shops in Doha", "running today" | One test-number round trip from the laptop | "Built on WhatsApp's official Business Platform." |
 | "Keep your number", "the app stays on your phone", "the number you already use", "in the chat you already use", "as she always has" | A shop cannot connect its own number (ALY-39) | "Which number your customers message is agreed with you at setup." |
 | Card payments live; "paid straight to your account"; provider names or logos (SADAD, SkipCash, Dibsy, NAPS, Apple Pay); "licensed payment partner"; "paid through ALYR links" in a sample | No provider integrated (ALY-17); the pay page is a stand-in | "Payment links are built and tested on a test page; card payments start once a payment provider is connected. ALYR is built never to hold your money." |
@@ -58,7 +60,11 @@ Until a model is in the product (D-012, D-035), nothing says or implies AI, not 
 | One message becoming a booking, an order and a payment; free questions answered | Keyword and button matching | "It answers the everyday requests: order, book, balance, pay. Everything else goes to your team." |
 | Delivery tracking, drivers, maps | Tracking ends at ready for collection and complete | "Confirmed, ready for collection, complete." |
 | Staff see no money, beyond the Agent screen | Orders, Credit accounts and the API still show amounts | Only on `/agent`, about that screen |
-| Statements for ALYR Accounts, invoices, stock, product options (until the Catalog ships) | Not built | List under "Not yet", or leave out |
+| Statements of account; ALYR Docs as available to a shop | Statements have no flow; Docs is built and off for every shop | Statements under "Not yet"; Docs as "set up with you" |
+| "Tax invoice" as something ALYR Docs issues, VAT, e-invoicing or the tax authority's system as connected, a retention period, compliance with Qatar's Arabic invoice rule, invoices without a CR, a named POS | Tax is off; ALY-51 open; no POS tried | Quote the no-CR note exactly; "ALYR never deletes an issued document"; "Arabic first, and Arabic always on documents for consumers" |
+| A document sent on WhatsApp at any time | Outside the 24-hour window it needs three templates not yet submitted | "In the chat as a PDF, when the customer has written in the last 24 hours" |
+| ALYR Shelf: Meta catalog sync, barcodes, batches, expiry, a photo per size, maps or drivers, where photos are stored | Not built, or not tested (R2) | Leave out, or "Not yet" |
+| ALYR Shelf "free" or "at no cost" | D-039 allows a usage charge later | "With every product" / «مع كل منتج» |
 | Projected revenue, forecasts | Never | Show what is booked, at today's prices, and say so |
 | "Coming soon", "under development", "beta" to an owner or a customer at go-live | D-039 | Hide what is not ready |
 

@@ -255,7 +255,7 @@ type Home = {
     eyebrow: string;
     title: string;
     steps: Titled[];
-    /** The early-access line: under the steps, and again under the price. */
+    /** The set-up line: under the steps, and again under the price. */
     note: string;
     report: Report;
     start: { title: string; items: string[] };
@@ -451,9 +451,9 @@ const en: Copy = {
     home: {
       title: "ALYR · Orders, bookings and credit accounts, set up for you",
       description:
-        "ALYR sets up and looks after the technology for owner-run businesses in Qatar. ALYR Chat, ALYR Bookings and ALYR Accounts share one workspace, and ALYR Agent comes with each: what needs you today, and your week in numbers. From QAR 449 a month for the first product, plus setup.",
+        "ALYR sets up and looks after the technology for owner-run businesses in Qatar: orders, bookings, credit accounts, what you sell and your receipts, in one workspace. ALYR Agent comes with each product: what needs you today, and your week in numbers. From QAR 449 a month for the first product, plus setup.",
       descriptionNoOffer:
-        "ALYR sets up and looks after the technology for owner-run businesses in Qatar. ALYR Chat, ALYR Bookings and ALYR Accounts share one workspace, and ALYR Agent comes with each: what needs you today, and your week in numbers.",
+        "ALYR sets up and looks after the technology for owner-run businesses in Qatar: orders, bookings, credit accounts, what you sell and your receipts, in one workspace. ALYR Agent comes with each product: what needs you today, and your week in numbers.",
     },
     chat: {
       title: "ALYR Chat · WhatsApp orders and team inbox",
@@ -725,7 +725,7 @@ const en: Copy = {
         {
           name: "Restaurants and cafes",
           body: "Your menu in the chat, orders on your screen, and each customer told when it is ready. Office regulars can order on account.",
-          products: ["chat", "accounts", "agent"],
+          products: ["chat", "accounts", "agent", "shelf"],
           note: "Table bookings are not in ALYR yet.",
         },
         {
@@ -736,14 +736,14 @@ const en: Copy = {
         },
         {
           name: "Home services",
-          body: "Visits booked from the chat, parts ordered from a page, and contract customers on account.",
-          products: ["bookings", "chat", "accounts", "agent"],
+          body: "Visits booked from the chat, parts ordered from a page, contract customers on account, and a receipt for each payment.",
+          products: ["bookings", "chat", "accounts", "agent", "docs"],
           note: "One visit at a time per business today.",
         },
         {
           name: "Shops and wholesale",
-          body: "Orders from your price list in the chat, and trade customers on credit, with reminders that stay polite.",
-          products: ["chat", "accounts", "agent"],
+          body: "Orders from your price list in the chat, stock counted on every sale, and trade customers on credit, with reminders that stay polite.",
+          products: ["chat", "accounts", "agent", "shelf", "docs"],
         },
       ],
       other: "Run something else? Write to us about how you work today.",
@@ -758,7 +758,7 @@ const en: Copy = {
         },
         {
           title: "We set it up.",
-          body: "We load your menu or services and prices in Arabic and English, set your hours, switch on the products you need, and give each person on your team a sign-in.",
+          body: "We load your items with their photos, or your services, and your prices, in Arabic and English. We set your hours, switch on the products you need, and give each person on your team a sign-in.",
         },
         {
           title: "You go live.",
@@ -799,16 +799,16 @@ const en: Copy = {
       currency: "QAR",
       currencyFirst: true,
       period: "a month",
-      first: "for your first product. Each product you add: QAR 150 a month. ALYR Agent is included with every one.",
+      first: "for your first product. Add ALYR Chat, ALYR Bookings or ALYR Accounts for QAR 150 a month each. ALYR Agent and ALYR Shelf come with every one.",
       setup: "Setup from QAR 1,500, quoted at your visit.",
       includes:
-        "Every month includes your products, ALYR Agent and the Sunday report, sign-ins for your team, a person from ALYR when you message, and menu, price and hours changes when you ask. Your monthly price is confirmed in writing at the visit.",
+        "Every month includes your products, ALYR Agent, ALYR Shelf and the Sunday report, sign-ins for your team, a person from ALYR when you message, and menu, price and hours changes when you ask. Your monthly price is confirmed in writing at the visit.",
       combosLabel: "For example",
       combos: [
         { label: "One product, for example ALYR Bookings", value: "from QAR 449" },
         { label: "ALYR Chat and ALYR Bookings", value: "from QAR 599" },
         { label: "Chat, Bookings and Accounts", value: "from QAR 749" },
-        { label: "ALYR Agent", value: "included" },
+        { label: "ALYR Agent and ALYR Shelf", value: "included" },
       ],
       ledgerLabel: "Fees, said plainly",
       ledger: [
@@ -888,7 +888,7 @@ const en: Copy = {
         {
           id: "which-product",
           q: "Which product do I need?",
-          a: "Tell us how customers reach you. Orders in the chat: ALYR Chat. Appointments: ALYR Bookings. Customers who pay later: ALYR Accounts. A bakery that sells cakes and books tastings uses Chat and Bookings. ALYR Agent comes with each.",
+          a: "Tell us how customers reach you. Orders in the chat: ALYR Chat. Appointments: ALYR Bookings. Customers who pay later: ALYR Accounts. Receipts and invoices: ALYR Docs. A bakery that sells cakes and books tastings uses Chat and Bookings. ALYR Agent and ALYR Shelf come with each.",
         },
         {
           id: "all-of-them",
@@ -931,7 +931,7 @@ const en: Copy = {
           id: "more-products",
           offer: true,
           q: "What if I need more than one product?",
-          a: "The first is from QAR 449 a month, and each one you add is QAR 150. ALYR Agent comes with all of them.",
+          a: "The first is from QAR 449 a month. ALYR Chat, ALYR Bookings and ALYR Accounts are QAR 150 a month each after that. ALYR Agent and ALYR Shelf come with all of them.",
         },
         {
           id: "staff",
@@ -1274,7 +1274,7 @@ const en: Copy = {
           name: "For your customers",
           items: [
             { title: "An order page for their phone", body: "Your products and prices on a page that opens from the chat. No app, no account." },
-            { title: "Pay from a link", body: "A payment link in the chat, and a receipt the moment it is paid. Built and tested on a test page; card payments are not live yet." },
+            { title: "Pay from a link", body: "A payment link in the chat, and a message confirming payment the moment it is paid. Built and tested on a test page; card payments are not live yet." },
             { title: "Order tracking", body: "Each order has its own page showing every step and who is looking after it." },
             { title: "Updates without asking", body: "Confirmed, ready, done: each change of status reaches them as a message." },
             { title: "Arabic or English", body: "ALYR answers in the language the customer writes in." },
@@ -1361,6 +1361,8 @@ const en: Copy = {
         bookings: "Appointments from the same chat, with reminders.",
         agent: "Comes with ALYR Chat: sales against the same days last week, orders waiting.",
         accounts: "Let regulars put an order on their account.",
+        shelf: "Your order page shows your shelf: photos, sizes, and what has sold out.",
+        docs: "A numbered receipt for each paid order, in the chat.",
       },
     },
     cta: {
@@ -1385,7 +1387,7 @@ const en: Copy = {
         lead:
           "Your customers pick a service and a free time from a page that opens in the chat, with no app. The confirmation goes at once, a reminder two hours before, and your team marks who came.",
         facts: ["Free times from your opening hours", "A reminder 2 hours before", "One booking at a time, for one chair or one\u00a0room"],
-        factsOffer: ["From QAR 449 a month, or QAR 150 added to another ALYR product"],
+        factsOffer: ["From QAR 449 a month, or QAR 150 beside ALYR Chat or ALYR Accounts"],
       },
       demo: {
         business: "Dafira Salon",
@@ -1711,7 +1713,7 @@ const en: Copy = {
             "Several bookings at the same time, by staff, chair or room. Next for ALYR Bookings.",
             "Moving a booking, or adding a walk-in, from the screen.",
             "Changing services and opening hours yourself. ALYR changes them when you ask.",
-            "Deposits, or paying when booking.",
+            "Taking a deposit or a payment when the customer books.",
             "Choosing when the reminder goes.",
             "Messages to bring back customers who are due. They need marketing consent first.",
           ],
@@ -1736,6 +1738,8 @@ const en: Copy = {
           chat: "Take orders too: a bakery books cake tastings and sells the cake.",
           agent: "Comes with ALYR Bookings: visits not marked, no-shows over 30 days, customers due back.",
           accounts: "Let regular clients pay later, and remind them politely.",
+          shelf: "Sell products beside your services. Customers order them through ALYR Chat.",
+          docs: "A receipt for a visit paid at the counter, or a deposit receipt for part.",
         },
       },
       faq: {
@@ -1895,6 +1899,8 @@ const en: Copy = {
           chat: "Sales against the same days last week, orders waiting, top items.",
           bookings: "Visits, no-shows over 30 days, customers due back.",
           accounts: "Money owed by age, overdue and not reminded, promises passed.",
+          shelf: "Sold out now and low stock.",
+          docs: "Unpaid invoices and documents not delivered.",
         },
       },
       faq: {
@@ -1911,7 +1917,7 @@ const en: Copy = {
           {
             id: "trust",
             q: "Can I trust the numbers?",
-            a: "Every number is counted from your own records, and every suggestion opens the rows behind it. Two things to know: a visit nobody marked stays out of the no-show rate until someone does, and cash taken at the counter is not recorded in ALYR yet.",
+            a: "Every number is counted from your own records, and every suggestion opens the rows behind it. Two things to know: a visit nobody marked stays out of the no-show rate until someone does, and the sales figures count orders, not cash taken at the counter.",
           },
           {
             id: "messages",
@@ -1947,7 +1953,7 @@ const en: Copy = {
         lead:
           "Record a credit sale with one line from your staff phone, and the customer is told the new balance. One press sends reminders in a tone that follows the age of the debt, and a promise to pay pauses them.",
         facts: ["The oldest debt is settled first", "Never reminded twice within 3 days", "Stop means stop"],
-        factsOffer: ["From QAR 449 a month, or QAR 150 added to another ALYR product"],
+        factsOffer: ["From QAR 449 a month, or QAR 150 beside ALYR Chat or ALYR Bookings"],
       },
       demo: {
         business: "Qirfa Bakery",
@@ -2269,9 +2275,9 @@ const en: Copy = {
             "Live payments through your own payment provider. Links run on a test page today.",
             "Recording a sale or payment from the screen.",
             "Setting a credit limit yourself. ALYR sets it when you ask.",
-            "Statements and invoices.",
+            "Statements of account.",
             "“Pay now” and “I'll pay within a week”, on a reminder sent over 24 hours after the customer last wrote. That one carries the pay link only.",
-            "Recording how a customer paid: cash, card or transfer.",
+            "Invoices, and receipts that say how a customer paid, belong to ALYR Docs, which we set up with you.",
           ],
         },
         note: "We set ALYR Accounts up with you at your shop. Everything listed above the line is built.",
@@ -2295,6 +2301,8 @@ const en: Copy = {
           chat: "Orders put on account land here, and the order page refuses one over the limit.",
           bookings: "Clients who pay for visits later: record it with the same one line.",
           agent: "Comes with ALYR Accounts: overdue and not reminded, promises passed, over the limit.",
+          shelf: "An order on account takes its stock straight away.",
+          docs: "An invoice for each sale on account, and a receipt for each payment that says what is left.",
         },
       },
       faq: {
@@ -2342,9 +2350,9 @@ const ar: Copy = {
     home: {
       title: "ALYR · الطلبات والحجوزات والحسابات الآجلة، نجهّزها لك",
       description:
-        "تجهّز ALYR التقنية للمنشآت التي يديرها أصحابها في قطر وتتولى متابعتها. ALYR Chat وALYR Bookings وALYR Accounts تتشارك مساحة عمل واحدة، ومع كل منها يأتي ALYR Agent: ما يحتاجك اليوم، وأسبوعك بالأرقام. من 449 ر.ق شهرياً لأول منتج، إضافة إلى رسوم التجهيز.",
+        "تجهّز ALYR التقنية للمنشآت التي يديرها أصحابها في قطر وتتولى متابعتها: الطلبات والحجوزات والحسابات الآجلة وما تبيعه وإيصالاتك، في مساحة عمل واحدة. ومع كل منتج يأتي ALYR Agent: ما يحتاجك اليوم، وأسبوعك بالأرقام. من 449 ر.ق شهرياً لأول منتج، إضافة إلى رسوم التجهيز.",
       descriptionNoOffer:
-        "تجهّز ALYR التقنية للمنشآت التي يديرها أصحابها في قطر وتتولى متابعتها. ALYR Chat وALYR Bookings وALYR Accounts تتشارك مساحة عمل واحدة، ومع كل منها يأتي ALYR Agent: ما يحتاجك اليوم، وأسبوعك بالأرقام.",
+        "تجهّز ALYR التقنية للمنشآت التي يديرها أصحابها في قطر وتتولى متابعتها: الطلبات والحجوزات والحسابات الآجلة وما تبيعه وإيصالاتك، في مساحة عمل واحدة. ومع كل منتج يأتي ALYR Agent: ما يحتاجك اليوم، وأسبوعك بالأرقام.",
     },
     chat: {
       title: "ALYR Chat · طلبات واتساب وصندوق الفريق",
@@ -2616,7 +2624,7 @@ const ar: Copy = {
         {
           name: "المطاعم والمقاهي",
           body: "قائمتك داخل المحادثة، والطلبات على شاشتك، ويُبلَّغ العميل حين يجهز طلبه. وعملاء المكاتب الدائمون يطلبون على حسابهم.",
-          products: ["chat", "accounts", "agent"],
+          products: ["chat", "accounts", "agent", "shelf"],
           note: "حجز الطاولات غير متوفر في ALYR بعد.",
         },
         {
@@ -2627,14 +2635,14 @@ const ar: Copy = {
         },
         {
           name: "الخدمات المنزلية",
-          body: "زيارات تُحجز من المحادثة، وقطع تُطلب من صفحة، وعملاء العقود على الحساب.",
-          products: ["bookings", "chat", "accounts", "agent"],
+          body: "زيارات تُحجز من المحادثة، وقطع غيار تُطلب من صفحة، وعملاء عقود بالآجل، وإيصال لكل دفعة.",
+          products: ["bookings", "chat", "accounts", "agent", "docs"],
           note: "زيارة واحدة في الوقت نفسه لكل منشأة اليوم.",
         },
         {
           name: "المحلات وتجارة الجملة",
-          body: "طلبات من قائمة أسعارك داخل المحادثة، وعملاء تجاريون بالآجل مع تذكيرات لبقة.",
-          products: ["chat", "accounts", "agent"],
+          body: "طلبات من قائمة أسعارك في المحادثة، ومخزون يُعدّ مع كل بيع، وعملاء تجاريون بالآجل، بتذكيرات تبقى لبقة.",
+          products: ["chat", "accounts", "agent", "shelf", "docs"],
         },
       ],
       other: "نشاطك مختلف؟ راسلنا وأخبرنا كيف تعمل اليوم.",
@@ -2649,7 +2657,7 @@ const ar: Copy = {
         },
         {
           title: "نجهّز كل شيء.",
-          body: "نضيف قائمتك أو خدماتك وأسعارك بالعربية والإنجليزية، ونضبط ساعات العمل، ونفعّل المنتجات التي تحتاجها، ونعطي كل موظف في فريقك حساب دخول خاصاً به.",
+          body: "نضيف أصنافك بصورها، أو خدماتك، وأسعارك، بالعربية والإنجليزية. ونضبط ساعات العمل، ونفعّل المنتجات التي تحتاجها، ونعطي كل موظف في فريقك حساب دخول خاصاً به.",
         },
         {
           title: "يبدأ التشغيل.",
@@ -2690,16 +2698,16 @@ const ar: Copy = {
       currency: "ر.ق",
       currencyFirst: false,
       period: "شهرياً",
-      first: "لأول منتج. وكل منتج تضيفه: 150 ر.ق شهرياً. وALYR Agent مشمول مع كل منتج.",
+      first: "لأول منتج. وأضف ALYR Chat أو ALYR Bookings أو ALYR Accounts بـ\u00a0150 ر.ق شهرياً لكل منها. ويأتي ALYR Agent وALYR Shelf مع كل منتج.",
       setup: "ورسوم تجهيز تبدأ من 1,500 ر.ق، ونحدد مبلغها خلال زيارتنا لك.",
       includes:
-        "يشمل اشتراكك الشهري منتجاتك، وALYR Agent وتقرير الأحد، وحسابات دخول لفريقك، وشخصاً من ALYR يردّ على رسائلك، وتعديل القائمة والأسعار والساعات عند الطلب. ونؤكد لك سعرك الشهري كتابةً خلال الزيارة.",
+        "يشمل اشتراكك الشهري منتجاتك، وALYR Agent، وALYR Shelf، وتقرير الأحد، وحسابات دخول لفريقك، وشخصاً من ALYR يردّ على رسائلك، وتعديل القائمة والأسعار والساعات عند الطلب. ونؤكد لك سعرك الشهري كتابةً خلال الزيارة.",
       combosLabel: "مثلاً",
       combos: [
         { label: "منتج واحد، مثل ALYR Bookings", value: "من 449 ر.ق" },
         { label: "ALYR Chat مع ALYR Bookings", value: "من 599 ر.ق" },
         { label: "Chat وBookings وAccounts", value: "من 749 ر.ق" },
-        { label: "ALYR Agent", value: "مشمول" },
+        { label: "ALYR Agent وALYR Shelf", value: "مشمولان" },
       ],
       ledgerLabel: "الرسوم بوضوح",
       ledger: [
@@ -2779,7 +2787,7 @@ const ar: Copy = {
         {
           id: "which-product",
           q: "أي منتج أحتاج؟",
-          a: "أخبرنا كيف يصل إليك عملاؤك. الطلبات في المحادثة: ALYR Chat. المواعيد: ALYR Bookings. عملاء يدفعون لاحقاً: ALYR Accounts. والمخبز الذي يبيع الكيك ويحجز مواعيد التذوّق يستخدم Chat وBookings معاً. ومع كل منتج يأتي ALYR Agent.",
+          a: "أخبرنا كيف يصل إليك عملاؤك. الطلبات في المحادثة: ALYR Chat. المواعيد: ALYR Bookings. عملاء يدفعون لاحقاً: ALYR Accounts. الإيصالات والفواتير: ALYR Docs. والمخبز الذي يبيع الكيك ويحجز مواعيد التذوّق يستخدم Chat وBookings معاً. ومع كل منتج يأتي ALYR Agent وALYR Shelf.",
         },
         {
           id: "all-of-them",
@@ -2822,7 +2830,7 @@ const ar: Copy = {
           id: "more-products",
           offer: true,
           q: "وإن احتجت أكثر من منتج؟",
-          a: "الأول من 449 ر.ق شهرياً، وكل منتج تضيفه بـ150 ر.ق، وALYR Agent مشمول معها كلها.",
+          a: "الأول من 449 ر.ق شهرياً، ثم ALYR Chat وALYR Bookings وALYR Accounts بـ\u00a0150 ر.ق شهرياً لكل منها. ويأتي ALYR Agent وALYR Shelf معها كلها.",
         },
         {
           id: "staff",
@@ -2978,7 +2986,7 @@ const ar: Copy = {
         start: 17 * 60 + 20,
         chat: [
           { from: "customer", text: "هل الثرموستات عليه ضمان؟" },
-          { from: "staff", text: "نعم، ضمان 12 شهراً. سأحضر الفاتورة معي غداً." },
+          { from: "staff", text: "نعم، ضمان 12 شهراً. سأحضر الإيصال معي غداً." },
         ],
         panel: {
           title: "المحادثات",
@@ -3142,7 +3150,7 @@ const ar: Copy = {
               move: "out",
               title: "الرد يخرج من رقمك",
               body: "مريم ترى شركة واحدة ورقماً واحداً، ولا يهمها من أي شاشة جاء الرد.",
-              chat: { from: "business", text: "نعم، ضمان 12 شهراً. سأحضر الفاتورة معي غداً." },
+              chat: { from: "business", text: "نعم، ضمان 12 شهراً. سأحضر الإيصال معي غداً." },
               work: ["أُرسل الرد من رقمك"],
             },
             {
@@ -3165,7 +3173,7 @@ const ar: Copy = {
           name: "لعملائك",
           items: [
             { title: "صفحة طلب تناسب الهاتف", body: "منتجاتك وأسعارك في صفحة تُفتح من المحادثة، بلا تطبيق ولا حساب." },
-            { title: "الدفع برابط", body: "رابط دفع في المحادثة، وإيصال لحظة السداد. جاهز ومجرّب على صفحة تجريبية، والدفع بالبطاقات لم يبدأ بعد." },
+            { title: "الدفع برابط", body: "رابط دفع في المحادثة، ورسالة تؤكد السداد لحظة الدفع. جاهز ومجرّب على صفحة تجريبية، والدفع بالبطاقات لم يبدأ بعد." },
             { title: "تتبّع الطلب", body: "لكل طلب صفحة خاصة به، تُظهر كل خطوة ومن يتولاه." },
             { title: "تحديثات بلا سؤال", body: "تم التأكيد، جاهز، مكتمل: كل تغيير في الحالة يصلهم برسالة." },
             { title: "بالعربية أو الإنجليزية", body: "تردّ ALYR باللغة التي يكتب بها العميل." },
@@ -3252,6 +3260,8 @@ const ar: Copy = {
         bookings: "المواعيد من المحادثة نفسها، مع التذكيرات.",
         agent: "يأتي مع ALYR Chat: المبيعات مقارنةً بالأيام نفسها من الأسبوع الماضي، والطلبات المنتظرة.",
         accounts: "دع زبائنك الدائمين يسجّلون الطلب على حسابهم.",
+        shelf: "تعرض صفحة طلبك أصنافك: الصور والمقاسات وما نفد منها.",
+        docs: "إيصال مرقّم لكل طلب مدفوع، في المحادثة.",
       },
     },
     cta: {
@@ -3276,7 +3286,7 @@ const ar: Copy = {
         lead:
           "يختار عملاؤك الخدمة والوقت المتاح من صفحة تُفتح من المحادثة، بلا تطبيق. يصلهم التأكيد فوراً، والتذكير قبل الموعد بساعتين، ويسجّل فريقك من حضر.",
         facts: ["الأوقات المتاحة من ساعات عملك", "تذكير قبل الموعد بساعتين", "حجز واحد في الوقت نفسه، لكرسي واحد أو غرفة واحدة"],
-        factsOffer: ["من 449 ر.ق شهرياً، أو 150 ر.ق إضافة إلى منتج آخر من ALYR"],
+        factsOffer: ["من 449 ر.ق شهرياً، أو 150 ر.ق مع ALYR Chat أو ALYR Accounts"],
       },
       demo: {
         business: "صالون ضفيرة",
@@ -3603,7 +3613,7 @@ const ar: Copy = {
             "حجوزات متزامنة حسب الموظف أو الكرسي أو الغرفة. وهي الخطوة التالية في ALYR Bookings.",
             "نقل حجز أو إضافة عميل بلا موعد من الشاشة.",
             "تعديل الخدمات وساعات العمل بنفسك. تعدّلها ALYR عند طلبك.",
-            "العربون أو الدفع عند الحجز.",
+            "أخذ عربون أو دفعة عند الحجز.",
             "اختيار موعد إرسال التذكير.",
             "رسائل لاستعادة العملاء الذين حان موعد عودتهم. تحتاج أولاً إلى موافقة تسويقية.",
           ],
@@ -3628,6 +3638,8 @@ const ar: Copy = {
           chat: "خذ الطلبات أيضاً: المخبز يحجز مواعيد التذوّق ويبيع الكيك.",
           agent: "يأتي مع ALYR Bookings: زيارات لم تُسجَّل، والغياب خلال 30 يوماً، والعملاء الذين حان موعد عودتهم.",
           accounts: "دع عملاءك الدائمين يدفعون لاحقاً، وذكّرهم بلباقة.",
+          shelf: "بِع منتجات إلى جانب خدماتك، ويطلبها عملاؤك عبر ALYR Chat.",
+          docs: "إيصال للزيارة المدفوعة في المحل، أو إيصال عربون لجزء منها.",
         },
       },
       faq: {
@@ -3787,6 +3799,8 @@ const ar: Copy = {
           chat: "المبيعات مقارنةً بالأيام نفسها من الأسبوع الماضي، والطلبات المنتظرة، والأكثر طلباً.",
           bookings: "الزيارات، والغياب خلال 30 يوماً، والعملاء الذين حان موعد عودتهم.",
           accounts: "المستحقات حسب عمرها، والمتأخر بلا تذكير، والوعود التي مضى موعدها.",
+          shelf: "ما نفد الآن وما قلّ مخزونه.",
+          docs: "الفواتير غير المدفوعة والمستندات التي لم تصل.",
         },
       },
       faq: {
@@ -3803,7 +3817,7 @@ const ar: Copy = {
           {
             id: "trust",
             q: "هل يمكنني الوثوق بالأرقام؟",
-            a: "كل رقم يُحسب من سجلاتك أنت، وكل اقتراح يفتح السجلات التي وراءه. ومما ينبغي أن تعرفه: الزيارة التي لم يسجّلها أحد لا تدخل نسبة الغياب حتى تُسجَّل، والنقد المستلم عند الكاونتر لا يُسجَّل في ALYR بعد.",
+            a: "كل رقم يُحسب من سجلاتك أنت، وكل اقتراح يفتح السجلات التي وراءه. ومما ينبغي أن تعرفه: الزيارة التي لم يسجّلها أحد لا تدخل نسبة الغياب حتى تُسجَّل، وأرقام المبيعات تعدّ الطلبات لا النقد المستلم عند الكاونتر.",
           },
           {
             id: "messages",
@@ -3839,7 +3853,7 @@ const ar: Copy = {
         lead:
           "سجّل البيع بالآجل بسطر واحد من هاتف الموظف، فيُبلَّغ العميل برصيده الجديد. وبضغطة واحدة تُرسل التذكيرات بنبرة تتدرّج مع عمر الدين، والوعد بالسداد يوقفها.",
         facts: ["يُسدَّد الأقدم أولاً", "لا تذكير مرتين خلال 3 أيام", "الإيقاف يعني الإيقاف"],
-        factsOffer: ["من 449 ر.ق شهرياً، أو 150 ر.ق إضافة إلى منتج آخر من ALYR"],
+        factsOffer: ["من 449 ر.ق شهرياً، أو 150 ر.ق مع ALYR Chat أو ALYR Bookings"],
       },
       demo: {
         business: "مخبز قرفة",
@@ -4162,9 +4176,9 @@ const ar: Copy = {
             "الدفع الفعلي عبر مزوّد الدفع الخاص بك. الروابط تعمل اليوم على صفحة تجريبية.",
             "تسجيل بيع أو دفعة من الشاشة.",
             "تحديد حد الائتمان بنفسك. تحدده ALYR عند طلبك.",
-            "كشوف الحساب والفواتير.",
+            "كشوف الحساب.",
             "زرّا «ادفع الآن» و«سأدفع خلال أسبوع» في التذكير الذي يُرسل بعد 24 ساعة من آخر رسالة للعميل؛ يصله رابط الدفع فقط.",
-            "تسجيل طريقة الدفع: نقداً أو بالبطاقة أو بالتحويل.",
+            "الفواتير، والإيصالات التي تذكر طريقة الدفع، من ALYR Docs، ونجهّزه معك.",
           ],
         },
         note: "نجهّز ALYR Accounts معك في محلك. كل ما فوق الخط جاهز.",
@@ -4188,6 +4202,8 @@ const ar: Copy = {
           chat: "الطلبات المسجّلة على الحساب تصل هنا، وصفحة الطلب ترفض ما يتجاوز الحد.",
           bookings: "العملاء الذين يدفعون ثمن زياراتهم لاحقاً: سجّلها بالسطر نفسه.",
           agent: "يأتي مع ALYR Accounts: المتأخر بلا تذكير، والوعود التي مضى موعدها، وتجاوز الحد.",
+          shelf: "الطلب على الحساب يأخذ كميته فوراً.",
+          docs: "فاتورة لكل بيع بالآجل، وإيصال لكل دفعة يقول كم تبقّى.",
         },
       },
       faq: {

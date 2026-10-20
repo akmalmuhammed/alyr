@@ -96,7 +96,7 @@ export const docsEn: DocsPage = {
   demo: {
     business: "Qirfa Bakery",
     businessMeta: "Business account",
-    today: "Today",
+    today: "Monday",
     typeHere: "Message",
     workspace: "Workspace",
     note: "Sample conversation with a fictional bakery. A document is sent on WhatsApp when the customer has written in the last 24 hours.",
@@ -239,7 +239,7 @@ export const docsEn: DocsPage = {
       business: "Qirfa Bakery",
       avatar: "Q",
       meta: "Business account",
-      today: "Today",
+      today: "Monday",
       earlier: { text: "Is my order ready? I’m on my way.", at: "10:31" },
       file: "RC-0042.pdf",
       fileMeta: "1 page · PDF",
@@ -280,7 +280,7 @@ export const docsEn: DocsPage = {
           },
           {
             title: "Written, then sealed",
-            body: "The paper is drawn in Arabic and English, with the shop and the customer copied onto it. From now on, nothing on it can change.",
+            body: "The paper is drawn in Arabic and English, with the shop and the customer copied onto it. After that, nothing on it can change.",
             work: ["Arabic first", "PDF drawn · 1 page", "Receipt RC-0042 issued"],
           },
           {
@@ -617,7 +617,7 @@ export const docsAr: DocsPage = {
     business: "مخبز قرفة",
     avatar: "ق",
     businessMeta: "حساب أعمال",
-    today: "اليوم",
+    today: "الاثنين",
     typeHere: "مراسلة",
     workspace: "مساحة العمل",
     note: "محادثة توضيحية مع مخبز غير حقيقي. يُرسل المستند على واتساب إذا راسلك العميل خلال آخر 24 ساعة.",
@@ -760,7 +760,7 @@ export const docsAr: DocsPage = {
       business: "مخبز قرفة",
       avatar: "ق",
       meta: "حساب أعمال",
-      today: "اليوم",
+      today: "الاثنين",
       earlier: { text: "طلبي جاهز؟ أنا في الطريق.", at: "10:31" },
       file: "RC-0042.pdf",
       fileMeta: "صفحة واحدة · PDF",
@@ -801,7 +801,7 @@ export const docsAr: DocsPage = {
           },
           {
             title: "يُكتب ثم يُثبَّت",
-            body: "يُكتب المستند بالعربية والإنجليزية، ويُنسخ عليه المحل والعميل. ومن الآن لا يتغيّر فيه شيء.",
+            body: "يُكتب المستند بالعربية والإنجليزية، ويُنسخ عليه المحل والعميل. وبعدها لا يتغيّر فيه شيء.",
             work: ["العربية أولاً", "رُسم ملف PDF · صفحة واحدة", "صدر الإيصال RC-0042"],
           },
           {
