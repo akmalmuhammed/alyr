@@ -77,7 +77,7 @@ SAVED_REPLIES = [
     ("أوقات العمل", "نعمل من السبت إلى الخميس من ٨ صباحاً إلى ٩ مساءً، والجمعة من ٤ إلى ٩ مساءً."),
 ]
 
-# The demo shop has ALYR Chat and Credit accounts switched on.
+# The demo shop has ALYR Chat, ALYR Bookings and ALYR Accounts switched on.
 DEMO_MODULES = ["inbox", "bookings", "orders", "payments", "ledger"]
 
 # ALYR itself is a shop on its own platform: its staff sign in through it, and it
@@ -163,13 +163,18 @@ async def reset_demo_data(db: Database) -> None:
         for table in ("weekly_reports", "bookings", "services", "business_hours",
                       "saved_replies", "memberships",
                       "jobs", "messages", "processed_messages", "order_items",
-                      "payment_requests", "orders", "products", "ledger_entries",
-                      "ledger_accounts", "contacts", "tenant_modules", "shop_settings"):
+                      "payment_requests", "orders", "chat_carts", "items",
+                      "item_code_counters", "item_categories", "ledger_entries",
+                      "ledger_accounts", "contacts", "discount_rules", "delivery_zones",
+                      "delivery_settings", "price_groups", "tenant_modules",
+                      "shop_settings", "shop_features", "custom_fields"):
             await conn.execute(f"delete from {table}")
         await conn.execute(
             "insert into tenant_modules (module_key, enabled_by) "
             "select unnest($1::text[]), 'demo setup'", DEMO_MODULES,
         )
+        # The demo shop's number runs on ALYR (the simulator is its line): the chat reads codes.
+        await conn.execute("insert into shop_settings (whatsapp_mode) values ('chat')")
         for sort, (name, name_ar, minutes, price) in enumerate(SERVICES):
             await conn.execute(
                 "insert into services (name, name_ar, duration_minutes, price, sort) "
@@ -188,16 +193,17 @@ async def reset_demo_data(db: Database) -> None:
             )
         for email, name, role in TEAM:
             user_id = await conn.fetchval(
-                "insert into users (email, name) values ($1, $2) "
-                "on conflict (email) do update set name = excluded.name returning id",
-                email, name,
+                "insert into users (email, name, name_ar) values ($1, $2, $3) "
+                "on conflict (email) do update set name = excluded.name, "
+                "name_ar = excluded.name_ar returning id",
+                email, name, {"Fatima Al-Noor": "فاطمة", "Yusuf Rahman": "يوسف"}.get(name, ""),
             )
             await conn.execute(
                 "insert into memberships (user_id, role) values ($1, $2)", user_id, role
             )
         for sort, (name, name_ar, category, price) in enumerate(PRODUCTS):
             await conn.execute(
-                "insert into products (name, name_ar, category, price, sort) "
+                "insert into items (name, name_ar, category, price, sort) "
                 "values ($1, $2, $3, $4, $5)",
                 name, name_ar, category, price, sort,
             )
@@ -207,8 +213,8 @@ async def reset_demo_data(db: Database) -> None:
             STAFF_PHONE, SIMULATOR_NUMBER_ID,
         )
         owner = await conn.fetchval(
-            "insert into contacts (phone, name, role, number_id, weekly_report) "
-            "values ($1, 'Fatima (owner)', 'staff', $2, true) returning id",
+            "insert into contacts (phone, name, role, number_id, weekly_report, catalog_manager) "
+            "values ($1, 'Fatima (owner)', 'staff', $2, true, true) returning id",
             OWNER_PHONE, SIMULATOR_NUMBER_ID,
         )
         await consent.record(conn, owner, "service", "granted", "weekly_report_setting")

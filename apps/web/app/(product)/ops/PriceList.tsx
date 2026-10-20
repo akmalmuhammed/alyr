@@ -21,6 +21,7 @@ function AppliesSelect({ value, pricing, onChange }: { value: string; pricing: P
       <option value="each_client">Once per client</option>
       {pricing.products.map((p) => <option key={p.key} value={`product:${p.key}`}>Businesses using {p.name}</option>)}
       {pricing.modules.map((m) => <option key={m.key} value={`module:${m.key}`}>Businesses with {m.name} on</option>)}
+      <option value="extra_product">Each product a business adds beyond its first</option>
       <option value="manual">Added by hand</option>
     </select>
   );

@@ -6,6 +6,7 @@
 
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
+import { color } from "../../_tokens/tokens";
 import { useEffect, useState } from "react";
 import "../_workspace/shell.css";
 import "./ops.css";
@@ -16,9 +17,11 @@ const MAIN: NavItem[] = [
   { href: "/ops", label: "Today", icon: "today" },
   { href: "/ops/clients", label: "Clients", icon: "clients" },
   { href: "/ops/requests", label: "Requests", icon: "asks" },
+  { href: "/ops/usage", label: "Usage", icon: "usage" },
 ];
 const SETTINGS: NavItem[] = [
   { href: "/ops/prices", label: "Price list", icon: "price" },
+  { href: "/ops/templates", label: "Templates", icon: "templates" },
   { href: "/ops/signup", label: "Sign-up", icon: "door" },
   { href: "/ops/staff", label: "Staff", icon: "staff" },
   { href: "/ops/audit", label: "Audit log", icon: "audit" },
@@ -28,7 +31,9 @@ const PATHS: Record<string, string> = {
   today: "M4 5h16v15H4z M4 10h16 M9 3v4 M15 3v4",
   clients: "M16 19v-1a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v1 M9 10a3 3 0 1 0 0-6 3 3 0 0 0 0 6 M22 19v-1a4 4 0 0 0-3-3.9 M16 4.1a3 3 0 0 1 0 5.8",
   asks: "M21 11.5a8.4 8.4 0 0 1-12.4 7.4L3 21l2.1-5.6A8.5 8.5 0 1 1 21 11.5Z",
+  usage: "M5 20v-8 M12 20V5 M19 20v-5 M3 20h18",
   price: "M20.6 13.4 13.4 20.6a2 2 0 0 1-2.8 0L3 13V3h10l7.6 7.6a2 2 0 0 1 0 2.8Z M7.5 7.5h.01",
+  templates: "M4 4h7v7H4z M13 4h7v7h-7z M4 13h7v7H4z M16.5 13v7 M13 16.5h7",
   door: "M14 3h5v18h-5 M10 17l5-5-5-5 M15 12H3",
   staff: "M12 3 4 6v5c0 5.2 3.4 8.4 8 10 4.6-1.6 8-4.8 8-10V6z",
   audit: "M9 4h10v16H5V8z M9 4v4H5 M9 13h6 M9 17h4",
@@ -49,7 +54,7 @@ function Mark() {
     <svg className="sh-mark" viewBox="0 0 190 160" aria-hidden="true">
       <polygon fill="currentColor" points="50,0 180,0 130,62 0,62" />
       <polygon fill="currentColor" points="0,72 126,72 39,160" />
-      <polygon fill="#B7F34A" points="134,72 190,72 142,160 46,160" />
+      <polygon fill={color.brand.volt} points="134,72 190,72 142,160 46,160" />
     </svg>
   );
 }

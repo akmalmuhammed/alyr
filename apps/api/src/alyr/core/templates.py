@@ -26,6 +26,20 @@ class Template:
     ar: str
     # What each blank holds, in order. Used as the sample values Meta asks for at review.
     samples: tuple[str, ...]
+    # "image" when the template opens with an image header, filled at send time with an
+    # image uploaded through the Media API; "document" when it opens with a PDF (a receipt),
+    # uploaded the same way. Meta asks for a sample image or document at review:
+    # `header_sample` names it, relative to this repository's root, `{lang}` for en or ar. For a
+    # document header only its file name matters: the sample is drawn by the documents engine
+    # (`alyr.document_samples`), not kept in the repository.
+    header: str = ""
+    header_sample: str = ""
+    # Sample values in Arabic for the Arabic template, when they differ.
+    samples_ar: tuple[str, ...] = ()
+    # A marketing template the customer asked for on narrower terms than marketing in general
+    # names its consent purpose here (`core/consent.py`). The outbound layer then sends it
+    # to customers who hold that consent, and not to those who only agreed to marketing.
+    consent: str = ""
 
 
 CATALOGUE: dict[str, Template] = {
@@ -143,12 +157,146 @@ CATALOGUE: dict[str, Template] = {
             "QAR 4,300 collected; 38 orders worth QAR 5,640; 41 visits, 3 no-shows",
         ),
     ),
+    # The report card (ALY-99): the same report as a branded image with a short text.
+    # Sent outside the window once Meta has approved it and ALYR_REPORT_CARD_TEMPLATE is
+    # on; until then "weekly_report" above is the fallback. Inside the window the card goes
+    # as an ordinary image with the text under it, so no approval is needed there.
+    "weekly_report_card": Template(
+        "utility",
+        "Your ALYR weekly report for {{1}}, {{2}}. {{3}} By product: {{4}}. "
+        "Next step: {{5}}. The card above shows each day beside the same day the week before. "
+        "Send REPORT to get this report again.",
+        "تقريرك الأسبوعي من ALYR لـ {{1}}، {{2}}. {{3}} حسب المنتج: {{4}}. "
+        "الخطوة التالية: {{5}}. البطاقة أعلاه تعرض كل يوم بجانب اليوم نفسه من الأسبوع الذي قبله. "
+        "أرسل «تقرير» لتصلك هذه الرسالة مرة أخرى.",
+        # The fictional Qirfa Bakery's report for 4 to 10 October (`alyr.report_samples`).
+        (
+            "Qirfa Bakery", "4–10 Oct",
+            "Last week: 68 orders, QAR 12,005. Orders up 1%, sales up 1% on the week before.",
+            "ALYR Chat: 68 orders, QAR 12,005 · ALYR Bookings: 3 visits, 0 no-shows · "
+            "ALYR Accounts: QAR 13,894 owed by 6 customers",
+            "Send reminders: QAR 3,501 owed 30+ days, not reminded in 7 days (rule · owed "
+            "30+ days, no promise, no reminder in 7 days · 2 customers)",
+        ),
+        header="image",
+        header_sample="apps/web/app/_agent/samples/report/bakery.{lang}.png",
+        samples_ar=(
+            "مخبز قرفة", "4–10 أكتوبر",
+            "الأسبوع الماضي: 68 طلباً، 12,005 ر.ق. الطلبات أكثر بـ1%، والمبيعات أكثر بـ1% "
+            "عن الأسبوع الذي قبله.",
+            "ALYR Chat: 68 طلباً، 12,005 ر.ق · ALYR Bookings: 3 زيارات، والغياب 0 · "
+            "ALYR Accounts: 13,894 ر.ق مستحقة، و6 عملاء لم يسددوا بعد",
+            "أرسل التذكيرات: 3,501 ر.ق مستحقة منذ 30 يوماً أو أكثر، دون تذكير منذ 7 أيام "
+            "(القاعدة · مستحق منذ 30 يوماً أو أكثر، دون وعد ودون تذكير خلال 7 أيام · عميلان)",
+        ),
+    ),
     "booking_reminder": Template(
         "utility",
         "Reminder: booking {{1}} at {{2}} is at {{3}}. See you soon.",
         "تذكير بموعدك: الحجز رقم {{1}} لدى {{2}} موعده {{3}}. "
         "نرجو الحضور في الوقت المحدد، وبانتظارك.",
         ("101", "Al Noor Electricals", "Tue 13 Oct, 8:30 AM"),
+    ),
+    # The Catalog on WhatsApp (ALY-106). Four tell the shop's own managers something about
+    # their stock or money (utility: an account alert for the account holder); one tells a
+    # customer an item they asked about is back. That one is MARKETING, see below.
+    "stock_low": Template(
+        "utility",
+        "Low stock at {{1}}: {{2}} has only {{3}} left. You can update the count in the "
+        "Catalog or by message.",
+        "تنبيه مخزون في {{1}}: الصنف {{2}} على وشك النفاد، والمتبقي {{3}} فقط. "
+        "يمكنك تحديث الكمية من الكتالوج أو برسالة.",
+        ("Al Noor Electricals", "Cable 2.5 mm", "3"),
+    ),
+    "stock_sold_out": Template(
+        "utility",
+        "Sold out at {{1}}: {{2}} has just run out, so customers cannot order it until "
+        "you add stock.",
+        "نفد من {{1}} الصنف {{2}} الآن، ولا يستطيع العملاء طلبه حتى تضيف كمية جديدة.",
+        ("Al Noor Electricals", "Cable 2.5 mm"),
+    ),
+    # The owner is told a refund is theirs to make: ALYR never holds the shop's money.
+    "refund_due": Template(
+        "utility",
+        "Refund due at {{1}}: order {{2}} for {{3}} was cancelled after the customer paid. "
+        "Please refund it from your own payment account, as ALYR never holds your money.",
+        "استرداد مستحق في {{1}}: تم إلغاء الطلب رقم {{2}} بمبلغ {{3}} بعد أن دفع العميل. "
+        "يرجى رد المبلغ من حسابك للدفع، فـ ALYR لا تحتفظ بأموالك.",
+        ("Al Noor Electricals", "1001", "QAR 179"),
+    ),
+    "refund_due_late": Template(
+        "utility",
+        "Refund due at {{1}}: a payment of {{2}} reached order {{3}} after its payment link "
+        "expired and the order was cancelled. Please refund it from your own payment account.",
+        "استرداد مستحق في {{1}}: وصلت دفعة بمبلغ {{2}} للطلب رقم {{3}} بعد انتهاء رابط الدفع "
+        "وإلغاء الطلب. يرجى ردها من حسابك للدفع.",
+        ("Al Noor Electricals", "QAR 179", "1001"),
+    ),
+    "draft_added": Template(
+        "utility",
+        "New item draft at {{1}}: {{2}} sent a photo for {{3}}. Open the Catalog to check "
+        "it and put it on sale.",
+        "مسودة صنف جديد في {{1}}: أرسل {{2}} صورة لـ{{3}}. افتح الكتالوج لمراجعتها وطرحها للبيع.",
+        ("Al Noor Electricals", "Yusuf", "Mixed grill"),
+    ),
+    # "Tell me when it is back". Meta's template guidelines (checked 18 Oct 2026) say utility
+    # templates must be non-promotional, and list "a saved search found a match" among the
+    # retargeting examples that are "marketing even if requested by users". An item back in
+    # stock is the nearest thing, so it is filed as marketing, outside the 24-hour window only
+    # (inside it is an ordinary message and needs no template, watches.py). It goes only to a
+    # customer who asked to be told and agreed to that one message: the narrow consent
+    # `back_in_stock`, never general marketing consent (core/consent.py).
+    "back_in_stock": Template(
+        "marketing",
+        "Good news from {{1}}: {{2}} is back in stock, as you asked. You can order here: "
+        "{{3}} . Send STOP to stop these updates.",
+        "أخبار سارة من {{1}}: عاد «{{2}}» إلى المخزون كما طلبت. يمكنك الطلب من هنا: {{3}} . "
+        "أرسل «إيقاف» لإيقاف هذه الرسائل.",
+        ("Al Noor Electricals", "Cable 2.5 mm", "https://app.alyr.online/s/al-noor?t=a"),
+        consent="back_in_stock",
+    ),
+    # Documents (ALY-139, D-042). The receipt, invoice or credit note itself is the header, as
+    # a PDF; the words only say what it is and who it is from, so they read complete without
+    # the file and stay non-promotional (a document about something the customer bought or
+    # owes is utility). Inside the 24-hour window the same PDF goes as an ordinary document
+    # message with a caption (`modules/documents/delivery.py`), which needs no template.
+    # Written, NOT submitted to Meta: that is the founder's go, and `templates_sync --create`
+    # is not to be run for these until he says so. `document_receipt` also carries a deposit
+    # receipt. The Arabic is a draft until ALY-66.
+    "document_receipt": Template(
+        "utility",
+        "Your receipt {{1}} from {{2}} for {{3}} is attached as a PDF. "
+        "You can also open it online: {{4}} . Thank you.",
+        "إيصالك رقم {{1}} من {{2}} بمبلغ {{3}} مرفق بصيغة PDF. "
+        "يمكنك أيضاً فتحه عبر الإنترنت: {{4}} . شكراً لك.",
+        ("RC-0042", "Qirfa Bakery", "QAR 127.00", "https://app.alyr.online/d/qirfa?t=a"),
+        header="document",
+        header_sample="documents/receipt.{lang}.pdf",
+        samples_ar=("RC-0042", "مخبز قرفة", "127.00 ر.ق", "https://app.alyr.online/d/qirfa?t=a"),
+    ),
+    "document_invoice": Template(
+        "utility",
+        "Your invoice {{1}} from {{2}} for {{3}} is attached as a PDF. "
+        "You can also open it online: {{4}} . Thank you.",
+        "فاتورتك رقم {{1}} من {{2}} بمبلغ {{3}} مرفقة بصيغة PDF. "
+        "يمكنك أيضاً فتحها عبر الإنترنت: {{4}} . شكراً لك.",
+        ("INV-0017", "Qirfa Bakery", "QAR 540.00", "https://app.alyr.online/d/qirfa?t=a"),
+        header="document",
+        header_sample="documents/invoice.{lang}.pdf",
+        samples_ar=("INV-0017", "مخبز قرفة", "540.00 ر.ق", "https://app.alyr.online/d/qirfa?t=a"),
+    ),
+    # Not in the brief's two: a refund or a cancelled sale sends a credit note, and "your
+    # receipt" would be the wrong word for it outside the window.
+    "document_credit_note": Template(
+        "utility",
+        "Credit note {{1}} from {{2}} for {{3}} is attached as a PDF. It cancels a document "
+        "we issued before. You can also open it online: {{4}} . Thank you.",
+        "إشعار دائن رقم {{1}} من {{2}} بمبلغ {{3}} مرفق بصيغة PDF، وهو يلغي مستنداً أصدرناه "
+        "سابقاً. يمكنك أيضاً فتحه عبر الإنترنت: {{4}} . شكراً لك.",
+        ("CN-0003", "Qirfa Bakery", "QAR 127.00", "https://app.alyr.online/d/qirfa?t=a"),
+        header="document",
+        header_sample="documents/credit_note.{lang}.pdf",
+        samples_ar=("CN-0003", "مخبز قرفة", "127.00 ر.ق", "https://app.alyr.online/d/qirfa?t=a"),
     ),
 }
 
@@ -170,11 +318,18 @@ def render(name: str, lang: str, params: list[str] | tuple[str, ...]) -> str | N
     return text
 
 
-def notice(to: UUID, name: str, lang: str, body: str, *params: object) -> OutboundMessage:
+def notice(
+    to: UUID, name: str, lang: str, body: str, *params: object, image: bytes = b"",
+    document: bytes = b"", filename: str = "",
+) -> OutboundMessage:
     """A notice to a customer who may have last written more than 24 hours ago.
 
     `body` is the module's own wording, used while the window is open. `params` fill
-    the template's blanks, used when it is closed."""
+    the template's blanks, used when it is closed. With an `image`, the notice inside the
+    window is that image with `body` under it; outside it, the image fills the
+    template's image header, and is left out if the template has none. A `document` (a PDF
+    with its `filename`) goes the same way: a document message with `body` as its caption
+    inside the window, the template's document header outside it."""
     template = CATALOGUE[name]
     if len(params) != len(template.samples):
         raise ValueError(f"{name} takes {len(template.samples)} values, got {len(params)}")
@@ -182,5 +337,5 @@ def notice(to: UUID, name: str, lang: str, body: str, *params: object) -> Outbou
         to=to, kind="template", body=body, template_name=name,
         template_category=template.category,  # type: ignore[arg-type]
         template_params=tuple(clean(value) for value in params),
-        lang="ar" if lang == "ar" else "en",
+        lang="ar" if lang == "ar" else "en", image=image, document=document, filename=filename,
     )

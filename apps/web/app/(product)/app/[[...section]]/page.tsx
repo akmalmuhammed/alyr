@@ -5,12 +5,23 @@ import { useParams, useRouter } from "next/navigation";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Screens, type WorkspaceTab } from "../../_workspace/Screens";
 import { TeamReport } from "../../_workspace/Team";
+import { Catalog } from "../../_workspace/Catalog";
+import { Documents } from "../../_workspace/Documents";
+import { ConnectLink, ConnectSettings } from "../../_workspace/ConnectSettings";
+import { AgentDashboard } from "../../../_agent/AgentDashboard";
+import type { AgentView } from "../../../_agent/types";
+import { color } from "../../../_tokens/tokens";
 import "../../_workspace/shell.css";
 
 type Text = { en: string; ar: string };
 type NavItem = { key: string; label: Text; icon: string };
 type Step = { key: string; label: Text; done: boolean; screen: string; connection: string; asked: boolean };
-type Product = { key: string; name: Text; summary: Text; status: "active" | "available" | "coming"; modules: string[]; steps: Step[] };
+type Product = {
+  key: string; name: Text; descriptor: Text; summary: Text;
+  // included: every business has it (ALYR Agent); it has no switch.
+  status: "active" | "available" | "included";
+  modules: string[]; includes: { key: string; label: Text }[]; steps: Step[];
+};
 type Connection = { key: string; name: Text; detail: Text; connected: boolean; available: boolean };
 type State = {
   business: { name: string; name_ar: string; slug: string };
@@ -27,6 +38,7 @@ type Lang = "en" | "ar";
 type Command = { id: string; group: string; label: string; icon: string; run: () => void };
 
 const WORK_SCREENS: WorkspaceTab[] = ["inbox", "ledger", "orders", "bookings", "team"];
+const LANG_KEY = "alyr-workspace-lang";
 
 const T = {
   en: {
@@ -46,20 +58,21 @@ const T = {
     planReview: "Review and accept",
     productsTitle: "Products", productsEyebrow: "Your plan",
     productsSub: "Switch on what your business needs. Switching off hides the screens and keeps every record.",
-    active: "Active", available: "Available", coming: "Coming", on: "On", off: "Off",
+    active: "Active", available: "Available", on: "On", off: "Off",
+    included: "Included", includedNote: "Included for every business.",
     confirmOff: "Hide its screens from your team? Nothing is deleted.", keep: "Keep on", turnOff: "Switch off",
     managersOnly: "Only an owner or admin can change products.", includes: "Includes",
     connectionsTitle: "Connections", connectionsEyebrow: "Accounts",
     connectionsSub: "The accounts ALYR works through on your behalf.",
-    connected: "Connected", notConnected: "Not connected", notYet: "Not available yet",
+    connected: "Connected", notConnected: "Not connected", setUpWithAlyr: "Set up with ALYR",
     askSetup: "Ask ALYR to set it up",
     notOn: "This isn't switched on for your shop.", seeProducts: "See products",
-    helpTitle: "ALYR team", helpOnline: "A person replies, usually within the hour",
+    helpTitle: "ALYR team", helpOnline: "A person from ALYR reads every message.",
     helpHello: "What should we set up or change for you?",
     helpPlaceholder: "Write to ALYR…", send: "Send to ALYR",
-    sentReply: "Got it. Someone from ALYR will pick this up and reply on WhatsApp or by email.",
+    sentReply: "Sent to the ALYR team. We answer on WhatsApp or by email.",
     suggestions: ["Connect our WhatsApp number", "Add our services and prices", "Add a team member"],
-    live: "WhatsApp live", sim: "Simulator", seeAll: "See all", soon: "Coming soon",
+    live: "WhatsApp live", sim: "Simulator", seeAll: "See all",
     go: "Go to", actions: "Actions", noMatch: "Nothing matches that.", navigate: "Move", choose: "Open", close: "Close",
     more: "More", doha: "Doha",
   },
@@ -80,38 +93,38 @@ const T = {
     planReview: "راجع واقبل",
     productsTitle: "المنتجات", productsEyebrow: "خطتك",
     productsSub: "فعّل ما يحتاجه عملك. الإيقاف يخفي الشاشات ويحفظ كل السجلات.",
-    active: "مفعّل", available: "متاح", coming: "قريباً", on: "مفعّل", off: "متوقف",
+    active: "مفعّل", available: "متاح", on: "مفعّل", off: "متوقف",
+    included: "مشمول", includedNote: "مشمول لكل منشأة.",
     confirmOff: "إخفاء شاشاته عن فريقك؟ لن يُحذف شيء.", keep: "أبقِه", turnOff: "إيقاف",
     managersOnly: "تغيير المنتجات متاح للمالك أو المدير فقط.", includes: "يشمل",
     connectionsTitle: "الاتصالات", connectionsEyebrow: "الحسابات",
     connectionsSub: "الحسابات التي تعمل ALYR من خلالها نيابة عنك.",
-    connected: "متصل", notConnected: "غير متصل", notYet: "غير متاح بعد",
+    connected: "متصل", notConnected: "غير متصل", setUpWithAlyr: "تُعدّ مع ALYR",
     askSetup: "اطلب من ALYR إعداده",
     notOn: "هذا غير مفعّل لمتجرك.", seeProducts: "عرض المنتجات",
-    helpTitle: "فريق ALYR", helpOnline: "يرد عليك شخص، عادةً خلال ساعة",
+    helpTitle: "فريق ALYR", helpOnline: "يقرأ كل رسالة شخص من فريق ALYR.",
     helpHello: "ماذا نُعدّ أو نغيّر لك؟",
     helpPlaceholder: "اكتب إلى ALYR…", send: "أرسل إلى ALYR",
-    sentReply: "وصلتنا. سيتابعها شخص من ALYR ويرد عبر واتساب أو البريد.",
+    sentReply: "أُرسلت إلى فريق ALYR. نرد عبر واتساب أو البريد.",
     suggestions: ["اربطوا رقم واتساب", "أضيفوا خدماتنا وأسعارنا", "أضيفوا عضواً للفريق"],
-    live: "واتساب يعمل", sim: "المحاكي", seeAll: "عرض الكل", soon: "قريباً",
+    live: "واتساب يعمل", sim: "المحاكي", seeAll: "عرض الكل",
     go: "انتقل إلى", actions: "إجراءات", noMatch: "لا نتائج.", navigate: "تنقّل", choose: "افتح", close: "إغلاق",
     more: "المزيد", doha: "الدوحة",
   },
 };
 
-const MODULE_LABEL: Record<string, Text> = {
-  inbox: { en: "Team inbox", ar: "صندوق الفريق" },
-  bookings: { en: "Bookings", ar: "الحجوزات" },
-  orders: { en: "Orders", ar: "الطلبات" },
-  payments: { en: "Payment links", ar: "روابط الدفع" },
-  ledger: { en: "Credit accounts", ar: "الحسابات الآجلة" },
-  payroll: { en: "Payroll", ar: "الرواتب" },
-};
+// Module and product names come from the catalogue (`catalog.py`) through the API.
 const MODULE_ICON: Record<string, string> = {
-  inbox: "inbox", bookings: "calendar", orders: "receipt", payments: "card", ledger: "book", payroll: "wallet",
+  inbox: "inbox", bookings: "calendar", orders: "receipt", payments: "card", ledger: "book",
 };
-const PRODUCT_ICON: Record<string, string> = { chat: "chat", credit: "book", payroll: "wallet" };
+const PRODUCT_ICON: Record<string, string> = {
+  chat: "chat", bookings: "calendar", agent: "chart", accounts: "book",
+};
 const CONNECTION_ICON: Record<string, string> = { whatsapp: "chat", payments: "card" };
+
+// An included product (ALYR Agent) is in use and looks it, though it has no switch.
+const inUse = (p: Product) => p.status === "active" || p.status === "included";
+const pillClass = (p: Product) => (p.status === "included" ? "active" : p.status);
 
 const ICON: Record<string, string> = {
   home: "M4 11 12 4l8 7v9H4z M10 20v-5h4v5",
@@ -120,12 +133,15 @@ const ICON: Record<string, string> = {
   receipt: "M6 3h12v18l-3-2-3 2-3-2-3 2z M9 8h6 M9 12h6",
   book: "M5 4h10a3 3 0 0 1 3 3v13H8a3 3 0 0 1-3-3z M5 17a3 3 0 0 1 3-3h10",
   apps: "M4 4h6v6H4z M14 4h6v6h-6z M4 14h6v6H4z M14 14h6v6h-6z",
+  catalog: "M4 4h7v8H4z M13 4h7v5h-7z M13 11h7v9h-7z M4 14h7v6H4z",
+  doc: "M7 3h8l4 4v14H7z M15 3v4h4 M10 12h6 M10 16h6",
   plug: "M9 3v5 M15 3v5 M6 8h12v3a6 6 0 0 1-12 0z M12 17v4",
   users: "M9 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8Z M3 21v-2a6 6 0 0 1 12 0v2 M16 4.5a3.5 3.5 0 0 1 0 6.5 M17 15a5 5 0 0 1 4 4.9V21",
   plus: "M12 5v14 M5 12h14",
   search: "M11 18a7 7 0 1 0 0-14 7 7 0 0 0 0 14Z M20 20l-4-4",
   chat: "M4 5h16v11H10l-6 4z M8 10h8",
   card: "M3 6h18v12H3z M3 10h18 M7 14h4",
+  chart: "M3 20h18 M6 20v-6 M11 20V8 M16 20v-9 M21 4l-5 4-5-3-5 5",
   wallet: "M4 7h15v12H4z M4 7l11-3v3 M15 13h2",
   arrow: "M5 12h14 M13 6l6 6-6 6",
   out: "M14 4h6v16h-6 M10 8l-4 4 4 4 M6 12h10",
@@ -144,7 +160,7 @@ function Icon({ name, className = "sh-ico" }: { name: string; className?: string
   );
 }
 
-function Mark({ volt = "#B7F34A" }: { volt?: string }) {
+function Mark({ volt = color.brand.volt }: { volt?: string }) {
   return (
     <svg className="sh-mark" viewBox="0 0 190 160" aria-hidden="true">
       <polygon fill="currentColor" points="50,0 180,0 130,62 0,62" />
@@ -156,45 +172,6 @@ function Mark({ volt = "#B7F34A" }: { volt?: string }) {
 
 function Tick() {
   return <svg viewBox="0 0 12 12" aria-hidden="true"><path d="M2.5 6.5 5 9l4.5-6" /></svg>;
-}
-
-function DoubleTick() {
-  return (
-    <svg className="ticks" width="16" height="11" viewBox="0 0 16 11" aria-hidden="true" fill="none" stroke="currentColor" strokeWidth="1.6">
-      <path d="M1 6l3 3 6-7.5" /><path d="M6.5 9l.5.5L13 2" />
-    </svg>
-  );
-}
-
-/** A number that counts up once when it first appears, then follows the live value. */
-function CountUp({ value, text }: { value: number; text: string }) {
-  const unit = text.startsWith("QAR ") ? "QAR" : "";
-  const target = unit ? value / 100 : value;
-  const [shown, setShown] = useState<number | null>(null);
-  const started = useRef(false);
-  useEffect(() => {
-    if (started.current || window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
-    started.current = true;
-    const t0 = performance.now();
-    let frame = 0;
-    const tick = (now: number) => {
-      const k = Math.min(1, (now - t0) / 900);
-      const eased = 1 - Math.pow(1 - k, 4);
-      setShown(k < 1 ? target * eased : null);
-      if (k < 1) frame = requestAnimationFrame(tick);
-    };
-    frame = requestAnimationFrame(tick);
-    return () => cancelAnimationFrame(frame);
-  }, [target]);
-  const body = shown === null ? (unit ? text.slice(4) : text) : Math.round(shown).toLocaleString("en-US");
-  return <span className="sh-stat-value num" dir="ltr">{body}{unit && <small>{unit}</small>}</span>;
-}
-
-/** Lets a tile's light follow the pointer. */
-function glow(event: React.PointerEvent<HTMLElement>) {
-  const box = event.currentTarget.getBoundingClientRect();
-  event.currentTarget.style.setProperty("--mx", `${event.clientX - box.left}px`);
-  event.currentTarget.style.setProperty("--my", `${event.clientY - box.top}px`);
 }
 
 async function send(url: string, body?: object) {
@@ -216,8 +193,33 @@ export default function WorkspaceShell() {
   const section = params.section?.[0] ?? "home";
   const [state, setState] = useState<State | null>(null);
   const [cards, setCards] = useState<Card[]>([]);
+  const [agent, setAgent] = useState<AgentView | null>(null);
+  const [agentRise, setAgentRise] = useState(false);
+  // ALYR Agent's links open a screen filtered to the rows a rule counted (`?show=`).
+  const [show, setShow] = useState<string | null>(null);
+  const agentLoaded = useRef(false);
   const [offline, setOffline] = useState(false);
   const [lang, setLang] = useState<Lang>("en");
+  const [langReady, setLangReady] = useState(false);
+  // The language a person chose is kept on this device. Each screen of the workspace is a new
+  // page component, so without it a card on the home screen (or any link inside ALYR Agent)
+  // would send an Arabic reader back to English.
+  useEffect(() => {
+    const read = setTimeout(() => {
+      try {
+        const saved = localStorage.getItem(LANG_KEY);
+        if (saved === "ar" || saved === "en") setLang(saved);
+      } catch {
+        // A browser that refuses storage starts in English every time.
+      }
+      setLangReady(true);
+    }, 0);
+    return () => clearTimeout(read);
+  }, []);
+  const chooseLang = useCallback((next: Lang) => {
+    setLang(next);
+    try { localStorage.setItem(LANG_KEY, next); } catch { /* not remembered */ }
+  }, []);
   const [help, setHelp] = useState("");
   const [helpSent, setHelpSent] = useState("");
   const [confirming, setConfirming] = useState("");
@@ -248,6 +250,50 @@ export default function WorkspaceShell() {
     const timer = setInterval(load, 15_000);
     return () => { clearTimeout(first); clearInterval(timer); };
   }, [load]);
+
+  // ALYR Agent on the home screen. A poll replaces the numbers and never re-animates them;
+  // they rise once a session, on the first load.
+  const loadAgent = useCallback(async () => {
+    try {
+      const response = await fetch(`/api/agent?lang=${lang}`, { cache: "no-store" });
+      if (!response.ok) throw new Error(String(response.status));
+      const view: AgentView = await response.json();
+      if (!agentLoaded.current) {
+        agentLoaded.current = true;
+        let first = false;
+        try {
+          first = !sessionStorage.getItem("alyr-agent-rose");
+          sessionStorage.setItem("alyr-agent-rose", "1");
+        } catch {
+          first = false;
+        }
+        setAgentRise(first);
+        // Once a session: a later remount (a language switch) does not rise again.
+        if (first) setTimeout(() => setAgentRise(false), 1500);
+      }
+      setAgent(view);
+    } catch {
+      // The last numbers stay on screen; the shell's offline line says why.
+    }
+  }, [lang]);
+
+  useEffect(() => {
+    // Not before the saved language is known, or an Arabic reader would first be sent English.
+    if (section !== "home" || !langReady) return;
+    const first = setTimeout(loadAgent, 0);
+    const timer = setInterval(loadAgent, 15_000);
+    return () => { clearTimeout(first); clearInterval(timer); };
+  }, [loadAgent, section, langReady]);
+
+  useEffect(() => {
+    const read = setTimeout(() => setShow(new URLSearchParams(window.location.search).get("show")), 0);
+    return () => clearTimeout(read);
+  }, [section]);
+
+  async function notNow(key: string, fingerprint: string) {
+    await send("/api/agent/not-now", { key, fingerprint });
+    await loadAgent();
+  }
 
   // Shop time is Doha time, whatever the laptop says.
   useEffect(() => {
@@ -310,7 +356,7 @@ export default function WorkspaceShell() {
     }));
     list.push(
       { id: "ask", group: t.actions, label: t.ask, icon: "chat", run: () => router.push("/app#ask") },
-      { id: "lang", group: t.actions, label: t.langName, icon: "globe", run: () => setLang(lang === "en" ? "ar" : "en") },
+      { id: "lang", group: t.actions, label: t.langName, icon: "globe", run: () => chooseLang(lang === "en" ? "ar" : "en") },
     );
     if (state?.me.signed_in) list.push({ id: "out", group: t.actions, label: t.signOut, icon: "out", run: signOut });
     return list;
@@ -334,8 +380,10 @@ export default function WorkspaceShell() {
   const shopName = lang === "ar" && state.business.name_ar ? state.business.name_ar : state.business.name;
   const pending = state.products.filter((p) => p.status === "active" && p.steps.some((s) => !s.done));
   const whatsapp = state.connections.find((c) => c.key === "whatsapp");
-  const current = allNav.find((n) => n.key === section);
-  const firstName = state.me.signed_in ? state.me.name.split(/\s+/)[0] : "";
+  // The connection screen (ALY-142) lives under Connections in the breadcrumb.
+  const current = allNav.find((n) => n.key === section)
+    ?? (section === "connect" ? allNav.find((n) => n.key === "connections") : undefined);
+  const documentsOn = state.modules.includes("documents");
   const activeProducts = state.products.filter((p) => p.status === "active");
   const roleLabel = state.me.signed_in ? state.me.role.charAt(0).toUpperCase() + state.me.role.slice(1) : t.demo;
 
@@ -361,125 +409,84 @@ export default function WorkspaceShell() {
 
   const stagger = (i: number) => ({ "--i": i }) as React.CSSProperties;
 
+  // The full setup checklist leads only while nothing has happened yet, and only for people
+  // who can act on it; after that it is one row in "Needs you now" (05-critique P1-2).
+  const setupTiles = state.can_manage && (!agent || agent.state === "empty")
+    ? pending.map((product) => {
+      const done = product.steps.filter((s) => s.done).length;
+      const total = product.steps.length;
+      return (
+        <section key={product.key} className="sh-tile raised folded sh-setup sh-home-row" aria-label={t.setup(pick(product.name))} style={stagger(0)}>
+          <div className="sh-gauge" style={{ "--p": (done / total) * 100 } as React.CSSProperties}>
+            <b className="num" dir="ltr">{done}<small>/{total}</small></b>
+          </div>
+          <div className="sh-setup-head">
+            <span className="sh-eyebrow">{pick(product.name)}</span>
+            <h2>{t.setup(pick(product.name))}</h2>
+            <p>{t.setupSub(done, total)}</p>
+          </div>
+          <ul className="sh-steps">
+            {product.steps.map((step) => (
+              <li key={step.key} className={step.done ? "done" : ""}>
+                <span className="sh-check"><Tick /></span>
+                <span className="sh-step">{pick(step.label)}</span>
+                {stepAction(product, step)}
+              </li>
+            ))}
+          </ul>
+        </section>
+      );
+      })
+    : null;
+
   let body: React.ReactNode;
   if (section === "home") {
     body = (
       <>
-        <header className="sh-head" style={stagger(0)}>
-          <span className="sh-eyebrow">{t.today}{clock && ` · ${clock.text}`}</span>
-          <h1>
-            {clock ? t.greet(clock.hour) : t.today}{firstName && `, ${firstName}`}.<br />
-            <em>{t.shopToday(shopName)}</em>
-          </h1>
-        </header>
-
-        <section className="sh-stats" style={stagger(1)}>
-          {cards.map((card) => {
-            const screen = card.module === "payments" ? "orders" : card.module;
-            const inner = (
-              <>
-                <span className="sh-stat-top"><Icon name={MODULE_ICON[card.module] ?? "apps"} />
-                  <Icon name="arrow" className="sh-ico go" /></span>
-                <span className="sh-stat-body">
-                  <span className="sh-stat-label">{pick(card.label)}</span>
-                  <CountUp value={card.value} text={card.text} />
-                </span>
-              </>
-            );
-            const hot = card.key === "unanswered" && card.value > 0;
-            return enabledScreens.has(screen)
-              ? <Link key={card.key} href={`/app/${screen}`} className={`sh-tile glow sh-stat ${hot ? "hot" : ""}`} onPointerMove={glow}>{inner}</Link>
-              : <div key={card.key} className="sh-tile glow sh-stat" onPointerMove={glow}>{inner}</div>;
-          })}
-        </section>
-
-        <div className="sh-bento" style={stagger(2)}>
-          {state.plan?.status === "published" && (
-            <section className="sh-tile raised sh-span-12 sh-allset sh-plan-ready">
-              <span className="sh-check"><Tick /></span>
-              <div><h2>{t.planReady}</h2><p className="sh-note">{t.planReadySub(state.plan.monthly_total_text ?? "")}</p></div>
-              <Link className="btn small" href="/start">{t.planReview}<Icon name="arrow" className="sh-ico arrow" /></Link>
-            </section>
-          )}
-          {pending.length === 0 && (
-            <section className="sh-tile raised sh-span-7 sh-allset">
-              <span className="sh-check"><Tick /></span>
-              <div><h2>{t.allSet}</h2><p className="sh-note">{t.allSetSub}</p></div>
-            </section>
-          )}
-          {pending.map((product) => {
-            const done = product.steps.filter((s) => s.done).length;
-            const total = product.steps.length;
-            return (
-              <section key={product.key} className="sh-tile raised folded sh-span-7 sh-setup" aria-label={t.setup(pick(product.name))}>
-                <div className="sh-gauge" style={{ "--p": (done / total) * 100 } as React.CSSProperties}>
-                  <b className="num" dir="ltr">{done}<small>/{total}</small></b>
-                </div>
-                <div className="sh-setup-head">
-                  <span className="sh-eyebrow">{pick(product.name)}</span>
-                  <h2>{t.setup(pick(product.name))}</h2>
-                  <p>{t.setupSub(done, total)}</p>
-                </div>
-                <ul className="sh-steps">
-                  {product.steps.map((step) => (
-                    <li key={step.key} className={step.done ? "done" : ""}>
-                      <span className="sh-check"><Tick /></span>
-                      <span className="sh-step">{pick(step.label)}</span>
-                      {stepAction(product, step)}
-                    </li>
-                  ))}
-                </ul>
-              </section>
-            );
-          })}
-
-          <section id="ask" className="sh-tile sh-span-5 sh-ask">
-            <div className="sh-ask-head">
-              <span className="sh-avatar"><Mark volt="#B7F34A" /></span>
-              <div><b>{t.helpTitle}</b><small>{t.helpOnline}</small></div>
-            </div>
-            <p className="sh-bubble">{t.helpHello}</p>
-            {helpSent ? (
-              <>
-                <p className="sh-bubble mine" dir="auto">{helpSent}<DoubleTick /></p>
-                <p className="sh-bubble">{t.sentReply}</p>
-              </>
-            ) : (
-              <div className="sh-suggest">
-                {t.suggestions.map((s) => <button key={s} type="button" onClick={() => setHelp(s)}>{s}</button>)}
-              </div>
-            )}
-            <form className="sh-composer" onSubmit={async (e) => {
-              e.preventDefault();
-              const note = help.trim();
-              if (!note) return;
-              await ask("chat", "help", note);
-              setHelp("");
-              setHelpSent(note);
-            }}>
-              <input value={help} onChange={(e) => setHelp(e.target.value)} placeholder={t.helpPlaceholder}
-                aria-label={t.helpPlaceholder} dir="auto" maxLength={500} />
-              <button className="sh-send" type="submit" disabled={!help.trim()} aria-label={t.send}><Icon name="send" /></button>
-            </form>
+        {state.plan?.status === "published" && (
+          <section className="sh-tile raised sh-allset sh-plan-ready sh-home-row" style={stagger(0)}>
+            <span className="sh-check"><Tick /></span>
+            <div><h2>{t.planReady}</h2><p className="sh-note">{t.planReadySub(state.plan.monthly_total_text ?? "")}</p></div>
+            <Link className="btn small" href="/start">{t.planReview}<Icon name="arrow" className="sh-ico arrow" /></Link>
           </section>
-        </div>
+        )}
+        {agent ? (
+          <AgentDashboard view={agent} link={Link} animate={agentRise} onNotNow={state.can_manage ? notNow : undefined}
+            stale={offline ? `${t.offline} ${agent.header.updated}` : null} setup={setupTiles} />
+        ) : (
+          <>
+            {setupTiles}
+            <p className="sh-note">{offline ? t.offline : t.loading}</p>
+          </>
+        )}
 
-        <section className="sh-block" style={stagger(3)}>
-          <div className="sh-section-head">
-            <h2>{t.yourProducts}</h2>
-            <Link href="/app/products">{t.seeAll}</Link>
+        <section id="ask" className="sh-tile sh-ask sh-home-ask">
+          <div className="sh-ask-head">
+            <span className="sh-avatar"><Mark volt={color.brand.volt} /></span>
+            <div><b>{t.helpTitle}</b><small>{t.helpOnline}</small></div>
           </div>
-          <ul className="sh-mini">
-            {state.products.map((p) => (
-              <li key={p.key}>
-                <Link href="/app/products">
-                  <span className={`sh-glyph ${p.status === "active" ? "" : "coming"}`}><Icon name={PRODUCT_ICON[p.key] ?? "apps"} /></span>
-                  <b>{pick(p.name)}<small>{p.modules.map((m) => pick(MODULE_LABEL[m] ?? { en: m, ar: m })).join(" · ")}</small></b>
-                  <span className={`sh-pill ${p.status}`}>{t[p.status]}</span>
-                </Link>
-              </li>
-            ))}
-          </ul>
+          {/* No chat bubbles and no read ticks: nobody has answered yet, and no reply time is
+              promised (05-critique P0-4). */}
+          <p className="sh-ask-prompt">{t.helpHello}</p>
+          {helpSent ? (
+            <p className="sh-ask-sent" role="status">{t.sentReply}</p>
+          ) : (
+            <div className="sh-suggest">
+              {t.suggestions.map((s) => <button key={s} type="button" onClick={() => setHelp(s)}>{s}</button>)}
+            </div>
+          )}
+          <form className="sh-composer" onSubmit={async (e) => {
+            e.preventDefault();
+            const note = help.trim();
+            if (!note) return;
+            await ask("chat", "help", note);
+            setHelp("");
+            setHelpSent(note);
+          }}>
+            <input value={help} onChange={(e) => setHelp(e.target.value)} placeholder={t.helpPlaceholder}
+              aria-label={t.helpPlaceholder} dir="auto" maxLength={500} />
+            <button className="sh-send" type="submit" disabled={!help.trim()} aria-label={t.send}><Icon name="send" /></button>
+          </form>
         </section>
       </>
     );
@@ -488,7 +495,7 @@ export default function WorkspaceShell() {
       <>
         <header className="sh-head" style={stagger(0)}>
           <span className="sh-eyebrow">{t.productsEyebrow} · {activeProducts.length} {t.active.toLowerCase()}</span>
-          <h1>{t.productsTitle}</h1>
+          <h1>{current ? pick(current.label) : t.productsTitle}</h1>
           <p>{t.productsSub}</p>
         </header>
         {!state.can_manage && <p className="sh-note">{t.managersOnly}</p>}
@@ -496,22 +503,25 @@ export default function WorkspaceShell() {
           {state.products.map((product) => {
             const on = product.status === "active";
             return (
-              <li key={product.key} className={`sh-product ${product.status}`}>
+              <li key={product.key} className={`sh-product ${pillClass(product)}`}>
                 <div className="sh-product-top">
-                  <span className={`sh-glyph ${on ? "" : "coming"}`}><Icon name={PRODUCT_ICON[product.key] ?? "apps"} /></span>
-                  <span className={`sh-pill ${product.status}`}>{t[product.status]}</span>
+                  <span className={`sh-glyph ${inUse(product) ? "" : "idle"}`}><Icon name={PRODUCT_ICON[product.key] ?? "apps"} /></span>
+                  <span className={`sh-pill ${pillClass(product)}`}>{t[product.status]}</span>
                 </div>
                 <div>
+                  <span className="sh-eyebrow">{pick(product.descriptor)}</span>
                   <h2>{pick(product.name)}</h2>
                   <p>{pick(product.summary)}</p>
                 </div>
                 <div className="sh-modules" aria-label={t.includes}>
-                  {product.modules.map((m) => (
-                    <span key={m}><Icon name={MODULE_ICON[m] ?? "apps"} />{pick(MODULE_LABEL[m] ?? { en: m, ar: m })}</span>
+                  {product.includes.map((part) => (
+                    <span key={part.key || part.label.en}>
+                      <Icon name={MODULE_ICON[part.key] ?? PRODUCT_ICON[product.key] ?? "apps"} />{pick(part.label)}
+                    </span>
                   ))}
                 </div>
                 <div className="sh-product-foot">
-                  {product.status === "coming" ? <span className="sh-note">{t.soon}</span>
+                  {product.status === "included" ? <span className="sh-note">{t.includedNote}</span>
                     : confirming === product.key ? (
                       <div className="sh-confirm" role="alertdialog" aria-label={t.confirmOff}>
                         <span>{t.confirmOff}</span>
@@ -549,8 +559,8 @@ export default function WorkspaceShell() {
               <li key={c.key} className={`sh-conn ${c.connected ? "on" : ""}`}>
                 <span className="sh-glyph"><Icon name={CONNECTION_ICON[c.key] ?? "plug"} /></span>
                 <div className="sh-conn-text">
-                  <h2>{pick(c.name)} <span className={`sh-pill ${c.connected ? "active" : "coming"}`}>
-                    {c.connected ? t.connected : c.available ? t.notConnected : t.notYet}</span></h2>
+                  <h2>{pick(c.name)} <span className={`sh-pill ${c.connected ? "active" : "idle"}`}>
+                    {c.connected ? t.connected : c.available ? t.notConnected : t.setUpWithAlyr}</span></h2>
                   <p>{pick(c.detail)}</p>
                 </div>
                 {!c.connected && needer && step && (step.asked
@@ -560,11 +570,22 @@ export default function WorkspaceShell() {
             );
           })}
         </ul>
+        {documentsOn && state.can_manage && (
+          <ConnectLink lang={lang} href="/app/connect" icon={<Icon name="plug" />} arrow={<Icon name="arrow" className="sh-ico" />} />
+        )}
       </>
     );
+  } else if (section === "connect" && documentsOn) {
+    body = <ConnectSettings lang={lang} canManage={state.can_manage} />;
+  } else if (section === "catalog" && enabledScreens.has("catalog")) {
+    // Named by the shop's type of business: Menu, Products, Price list (D-039, ALY-107).
+    body = <Catalog lang={lang} title={current ? pick(current.label) : t.productsTitle} show={show} onRenamed={() => void load()} />;
+  } else if (section === "documents" && enabledScreens.has("documents")) {
+    body = <Documents lang={lang} title={current ? pick(current.label) : t.productsTitle} show={show} />;
   } else if ((WORK_SCREENS as string[]).includes(section) && enabledScreens.has(section)) {
     body = (
-      <Screens embedded section={section as WorkspaceTab} lang={lang}
+      <Screens embedded section={section as WorkspaceTab} lang={lang} show={show}
+        onClearShow={() => { setShow(null); router.replace(`/app/${section}`); }}
         intro={section === "team"
           ? <TeamReport lang={lang} canManage={state.can_manage} signer={state.me.signed_in ? state.me.name : "Ali"} />
           : undefined} />
@@ -604,7 +625,7 @@ export default function WorkspaceShell() {
         <div className="sh-foot">
           <span className="sh-avatar">{initials(state.me.signed_in ? state.me.name : shopName)}</span>
           <span className="sh-me"><b>{state.me.signed_in ? state.me.name : shopName}</b><small>{roleLabel}</small></span>
-          <button className="sh-lang" onClick={() => setLang(lang === "en" ? "ar" : "en")} aria-label={t.langName}>{t.lang}</button>
+          <button className="sh-lang" onClick={() => chooseLang(lang === "en" ? "ar" : "en")} aria-label={t.langName}>{t.lang}</button>
           {state.me.signed_in
             ? <button className="sh-iconbtn" onClick={signOut} aria-label={t.signOut} title={t.signOut}><Icon name="out" /></button>
             : <a className="sh-iconbtn" href="/login" aria-label={t.signIn} title={t.signIn}><Icon name="out" /></a>}

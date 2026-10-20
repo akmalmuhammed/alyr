@@ -31,10 +31,12 @@ Last updated 17 Oct 2026.
 
 ## Next, in order
 
-1. ALY-10 Azure infrastructure code, the deploy workflow and the Google emergency scripts
+1. ALY-10 Azure infrastructure code, the deploy workflow and the Google emergency scripts (PR 52)
 2. Founder: open the Azure account (Microsoft for Startups) and a Google Cloud account, make the backup key
 3. Deploy to Azure, move the webhook and the chat links to alyr.qa addresses, retire the tunnel
 4. Uptime monitoring on `/health/worker` and the webhook; one restore drill on Google
+5. ALY-64 confirm Meta's pricing rule; ALY-20 templates
+6. ALY-103 photos: R2 is ready (17 Oct): bucket `alyr-media`, `media.alyr.qa`, and the bucket-limited app token in `apps/api/.env`, all checked. Azure reads the same three R2 values from Key Vault.
 
 ## Never
 

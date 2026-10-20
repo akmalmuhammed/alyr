@@ -17,6 +17,11 @@ type Text = { en: string; ar: string };
 type BusinessType = { key: string; name: Text; hint: Text; icon: string; way: "appointments" | "assisted" };
 type Service = { id: string; name: string; name_ar: string; duration_minutes: number; price: number; price_text: string; active?: boolean };
 type Period = { weekday: number; opens: string; closes: string };
+// What the shop's type of business gives its Catalog, in plain words (null where it has none).
+type CatalogReview = {
+  section: { name: string; name_ar: string }; optional: boolean; samples: number;
+  gets: Text[]; starting_categories: { name: string; name_ar: string }[];
+};
 type State = {
   business: { name: string; name_ar: string; slug: string; type: string; area: string; reminders: boolean };
   owner: { name: string; email: string };
@@ -28,6 +33,7 @@ type State = {
   hours: Period[];
   quote: Quote;
   areas: string[];
+  catalog: CatalogReview | null;
 };
 type QuoteLine = { id: string; business: string; business_ar: string; name: string; name_ar: string; kind: "monthly" | "one_time"; quantity: number; amount_text: string };
 type Quote = {
@@ -44,7 +50,7 @@ type Step = "loading" | "account" | "code" | "type" | "basics" | "services" | "h
 
 const ORDER = [6, 0, 1, 2, 3, 4, 5]; // Saturday first, as the week runs in Qatar
 const MINUTES = [15, 20, 30, 45, 60, 75, 90, 120, 150, 180];
-const NOUN: Record<string, string> = { salon: "salon", spa: "spa", clinic: "clinic", home: "business", restaurant: "restaurant", shop: "shop", wholesale: "business", travel: "office" };
+const NOUN: Record<string, string> = { salon: "salon", spa: "spa", clinic: "clinic", home: "business", restaurant: "restaurant", bakery: "bakery", grocery: "shop", shop: "shop", fashion: "shop", wholesale: "business", travel: "office" };
 const ICON: Record<string, string[]> = {
   scissors: ["M6 3a3 3 0 1 0 0 6 3 3 0 0 0 0-6Z", "M6 15a3 3 0 1 0 0 6 3 3 0 0 0 0-6Z", "M20 4 8.1 15.9", "M14.5 14.5 20 20", "M8.1 8.1 12 12"],
   leaf: ["M11 20A7 7 0 0 1 9.8 6.1C15.5 5 17 4.5 19 2c1 2 2 4.2 2 8 0 5.5-4.8 10-10 10Z", "M2 21c0-3 1.9-5.4 5.2-6"],
@@ -53,6 +59,9 @@ const ICON: Record<string, string[]> = {
   cup: ["M17 8h1a4 4 0 1 1 0 8h-1", "M3 8h14v9a4 4 0 0 1-4 4H7a4 4 0 0 1-4-4Z", "M6 2v2", "M10 2v2", "M14 2v2"],
   bag: ["M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4Z", "M3 6h18", "M16 10a4 4 0 0 1-8 0"],
   boxes: ["M21 8 12 3 3 8v8l9 5 9-5Z", "M3 8l9 5 9-5", "M12 13v8"],
+  cake: ["M4 20h16", "M5 20v-8h14v8", "M5 15.5c1.5 1.5 2.5 1.5 3.5 0s2-1.5 3.5 0 2.5 1.5 3.5 0 2-1.5 3.5 0", "M12 11V8", "M12 6.5c.8-.9.8-1.6 0-2.5-.8.9-.8 1.6 0 2.5Z"],
+  basket: ["M4 10h16l-1.5 9a2 2 0 0 1-2 1.7H7.5a2 2 0 0 1-2-1.7L4 10Z", "M8 10l3-6", "M16 10l-3-6", "M9 14v3", "M12 14v3", "M15 14v3"],
+  shirt: ["M9 4 4 6.5l2 4 2-1V20h8V9.5l2 1 2-4L15 4a3 3 0 0 1-6 0Z"],
   plane: ["M17.8 19.2 16 11l3.5-3.5C21 6 21.5 4 21 3c-1-.5-3 0-4.5 1.5L13 8 4.8 6.2c-.5-.1-.9.1-1.1.5l-.3.5c-.2.5-.1 1 .3 1.3L9 12l-2 3H4l-1 1 3 2 2 3 1-1v-3l3-2 3.5 5.3c.3.4.8.5 1.3.3l.5-.2c.4-.3.6-.7.5-1.2z"],
   check: ["m5 12 4 4L19 6"],
   lock: ["M6 11h12v10H6z", "M8 11V7a4 4 0 0 1 8 0v4"],
@@ -90,6 +99,21 @@ function readDraft(): Draft | null {
 }
 function writeDraft(draft: Draft | null) {
   try { if (draft) sessionStorage.setItem(DRAFT, JSON.stringify(draft)); else sessionStorage.removeItem(DRAFT); } catch { /* storage may be blocked */ }
+}
+
+/** What the owner is getting for the type of business they chose, in plain words (ALY-107). */
+function ReviewCard({ review, lang, t }: { review: CatalogReview; lang: Lang; t: (typeof COPY)[Lang] }) {
+  const name = lang === "ar" ? review.section.name_ar : review.section.name;
+  return (
+    <section className="ob-review" aria-labelledby="ob-review-title">
+      <p className="ob-kicker">{name}</p>
+      <h2 id="ob-review-title">{t.review.title}</h2>
+      <ul className="ob-gets">
+        {review.gets.map((line) => <li key={line.en}><Ico name="check" size={16} />{line[lang]}</li>)}
+      </ul>
+      {review.samples > 0 && <p className="ob-note-card"><b>{t.review.samplesTitle(review.samples)}</b><small>{t.review.samples}</small></p>}
+    </section>
+  );
 }
 
 export default function Start() {
@@ -349,7 +373,9 @@ export default function Start() {
   }, [step, loadWorkspace]);
   const wsStep = (key: string) => ws?.products.flatMap((p) => p.steps).find((s) => s.key === key);
   const ask = (stepKey: string) => guard(async () => {
-    await call("/api/workspace/setup-requests", "POST", { product: "chat", step: stepKey, note: "" });
+    // Filed under the product the step belongs to (a salon's steps are ALYR Bookings').
+    const product = ws?.products.find((p) => p.steps.some((s) => s.key === stepKey))?.key ?? "chat";
+    await call("/api/workspace/setup-requests", "POST", { product, step: stepKey, note: "" });
     await loadWorkspace();
   });
   const finish = () => guard(async () => {
@@ -554,8 +580,7 @@ export default function Start() {
               <input type="checkbox" role="switch" className="ob-switch" checked={state?.business.reminders ?? true} onChange={(e) => setReminders(e.target.checked)} />
             </label>
             <div className="ob-rule"><span><b>{t.hours.cancel}</b><small>{t.hours.cancelSub}</small></span><em>{t.hours.always}</em></div>
-            <div className="ob-rule locked"><span><b>{t.hours.deposit}</b><small>{t.hours.depositSub}</small></span><Ico name="lock" size={18} /></div>
-            <div className="ob-rule locked"><span><b>{t.hours.capacity}</b><small>{t.hours.capacitySub}</small></span><Ico name="lock" size={18} /></div>
+            <div className="ob-rule"><span><b>{t.hours.capacity}</b><small>{t.hours.capacitySub}</small></span><em>{t.hours.always}</em></div>
           </section>
         </div>
       </>
@@ -568,7 +593,14 @@ export default function Start() {
     );
   } else if (step === "assisted") {
     const what = lang === "ar" ? (chosen?.name.ar ?? "") : (chosen?.name.en.toLowerCase() ?? "");
-    main = (
+    const review = state?.catalog ?? null;
+    main = review ? (
+      <>
+        {head(t.assisted.catalogTitle, t.assisted.catalogSub)}
+        <ReviewCard review={review} lang={lang} t={t} />
+        <p className="ob-note"><Ico name="chat" size={18} />{t.assisted.note}</p>
+      </>
+    ) : (
       <>
         {head(t.assisted.title, t.assisted.sub(what))}
         <p className="ob-note"><Ico name="chat" size={18} />{t.assisted.note}</p>
@@ -684,6 +716,8 @@ export default function Start() {
           {item(provider?.done, t.golive.payments, t.golive.paymentsSub,
             provider?.done ? <em>{t.golive.connected}</em> : provider?.asked ? <em>{t.golive.asked}</em> : <button type="button" className="ob-btn small ghost" onClick={() => ask("provider")} disabled={busy}>{t.golive.ask}</button>)}
           {item(false, t.golive.team, t.golive.teamSub, <Link className="ob-btn small ghost" href="/app/team">{t.golive.invite}</Link>)}
+          {way === "appointments" && state?.catalog && item(false, t.golive.catalog(state.catalog.section[lang === "ar" ? "name_ar" : "name"]), t.golive.catalogSub,
+            <Link className="ob-btn small ghost" href="/app/catalog">{t.golive.open_}</Link>)}
         </ul>
       </>
     );

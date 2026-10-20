@@ -5,6 +5,8 @@
 #   scripts/demo.sh check    is everything ready? (database, Meta, templates, tunnel, pages)
 #   scripts/demo.sh reset    put the demo shop back to its starting state (asks first)
 #   scripts/demo.sh down     stop the tunnel, the API and the worker
+#   scripts/demo.sh shops    make (or reset) the Catalog demo shops, one for every business type
+#                            (add --list to see them, --only bakery,salon to pick; docs/demo.md)
 #
 # Pieces: PostgreSQL (docker compose), the API and the worker (containers alyr-api-dev
 # and alyr-worker-dev), the web app on port 3100 (pnpm dev), and the Cloudflare tunnel
@@ -32,7 +34,7 @@ up() {
   (cd "$root" && docker compose up -d postgres redis >/dev/null)
   say "  ok  database"
   bash "$root/scripts/api-in-docker.sh" uv run python -m alyr.migrate | sed 's/^/      /'
-  CMD=(uv run uvicorn alyr.main:app --host 0.0.0.0 --port 8000) container alyr-api-dev "-p 8000:8000"
+  CMD=(uv run uvicorn alyr.main:app --host 0.0.0.0 --port 8000) container alyr-api-dev "-p 127.0.0.1:8000:8000"
   CMD=(uv run python -m alyr.worker) container alyr-worker-dev
   if listening 3100; then
     say "  ok  web app on port 3100"
@@ -79,6 +81,7 @@ case "${1:-}" in
   up) up ;;
   check) check ;;
   reset) shift; reset "${1:-}" ;;
+  shops) shift; bash "$root/scripts/api-in-docker.sh" uv run python -m alyr.seed_catalog_demos "$@" ;;
   down) down ;;
-  *) sed -n '2,12p' "$0" | sed 's/^# \{0,1\}//'; exit 1 ;;
+  *) sed -n '2,14p' "$0" | sed 's/^# \{0,1\}//'; exit 1 ;;
 esac

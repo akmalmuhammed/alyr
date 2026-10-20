@@ -6,6 +6,7 @@ from zoneinfo import ZoneInfo
 
 from alyr.core.words import CUSTOMERS, counted
 from alyr.modules import report
+from alyr.modules.agent.week import RLM
 from alyr.seed import AGENT_EMAIL, AHMED_PHONE, DEMO_TENANT_ID, OWNER_PHONE, STAFF_PHONE
 from test_bookings import book
 from test_consent import ahmed, conversation, owner_sql, say
@@ -186,18 +187,38 @@ def test_the_owner_gets_the_report_once_and_the_next_week_is_queued(client):
     assert all(m["payload"].get("template") != "weekly_report" for m in staff_thread)
 
 
-def test_inside_the_window_the_whole_report_arrives_at_once(client):
+def card_of(phone):
+    """The image kept with the latest message ALYR sent to this number, if any."""
+    rows = owner_sql(
+        "select x.content_type, x.data from messages m join contacts c on c.id = m.contact_id "
+        "left join message_media x on x.message_id = m.id "
+        "where c.phone = $1 and m.direction = 'out' order by m.created_at desc limit 1",
+        phone,
+    )
+    return rows[0] if rows and rows[0]["data"] is not None else None
+
+
+def test_inside_the_window_the_report_card_arrives_with_its_text(client):
     say(client, OWNER_PHONE, "hello")
     send_week(client, future_week())
     last = conversation(client, OWNER_PHONE)[-1]
-    assert last["kind"] == "text"
-    assert last["body"].startswith("ALYR weekly report: Al Noor Electricals")
-    assert "Credit accounts" in last["body"] and "Bookings" in last["body"]
+    # The card, with the short text under it: one line a product, the next step and its rule.
+    assert last["kind"] == "image"
+    assert last["body"].startswith("*ALYR weekly report* · Al Noor Electricals")
+    assert "*ALYR Accounts* ·" in last["body"] and "*ALYR Bookings* ·" in last["body"]
+    assert "_Rule · " in last["body"] and len(last["body"]) <= 1024
+    card = card_of(OWNER_PHONE)
+    assert card["content_type"] == "image/png" and bytes(card["data"])[1:4] == b"PNG"
 
 
-def test_report_in_the_chat_brings_the_whole_report(client):
-    assert say(client, OWNER_PHONE, "report")[-1]["body"].startswith("ALYR weekly report:")
-    assert say(client, OWNER_PHONE, "تقرير")[-1]["body"].startswith("تقرير ALYR الأسبوعي:")
+def test_report_in_the_chat_brings_the_card(client):
+    english = say(client, OWNER_PHONE, "report")[-1]
+    assert english["kind"] == "image" and english["body"].startswith("*ALYR weekly report* ·")
+    assert card_of(OWNER_PHONE) is not None
+    arabic = say(client, OWNER_PHONE, "تقرير")[-1]
+    assert arabic["body"].lstrip(RLM).startswith("*تقرير ALYR الأسبوعي* ·")
+    # The line opens with a right-to-left mark, so it runs right to left in WhatsApp.
+    assert arabic["body"].startswith(RLM)
     # Someone the owner has not chosen is told who decides.
     assert "numbers the owner chooses" in say(client, STAFF_PHONE, "report")[-1]["body"]
 

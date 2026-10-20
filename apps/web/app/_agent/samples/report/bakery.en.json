@@ -1,0 +1,124 @@
+{
+ "sample": true,
+ "sent_at": "2026-10-11T06:00:00+00:00",
+ "week": "4–10 Oct",
+ "caption": "*ALYR weekly report* · Qirfa Bakery · 4–10 Oct\nLast week: 68 orders, QAR 12,005. Orders up 1%, sales up 1% on the week before.\n\n*ALYR Chat* · 68 orders, QAR 12,005 · 26 came back · most ordered: Butter croissant (54)\n*ALYR Bookings* · 3 visits, 0 no-shows · 7 booked for this week · 1 not marked yet\n*ALYR Accounts* · QAR 13,894 owed by 6 customers · nothing collected · QAR 2,890 over 60 days\n*Done for you* · ALYR sent 245 messages, 4 booking reminders and 1 payment reminder for you.\n\n*Next step* · Send reminders: QAR 3,501 owed 30+ days, not reminded in 7 days.\n_Rule · owed 30+ days, no promise, no reminder in 7 days · 2 customers_",
+ "lines": [
+  "*ALYR weekly report* · Qirfa Bakery · 4–10 Oct",
+  "Last week: 68 orders, QAR 12,005. Orders up 1%, sales up 1% on the week before.",
+  "",
+  "*ALYR Chat* · 68 orders, QAR 12,005 · 26 came back · most ordered: Butter croissant (54)",
+  "*ALYR Bookings* · 3 visits, 0 no-shows · 7 booked for this week · 1 not marked yet",
+  "*ALYR Accounts* · QAR 13,894 owed by 6 customers · nothing collected · QAR 2,890 over 60 days",
+  "*Done for you* · ALYR sent 245 messages, 4 booking reminders and 1 payment reminder for you.",
+  "",
+  "*Next step* · Send reminders: QAR 3,501 owed 30+ days, not reminded in 7 days.",
+  "_Rule · owed 30+ days, no promise, no reminder in 7 days · 2 customers_"
+ ],
+ "template": {
+  "name": "weekly_report_card",
+  "values": [
+   "Qirfa Bakery",
+   "4–10 Oct",
+   "Last week: 68 orders, QAR 12,005. Orders up 1%, sales up 1% on the week before.",
+   "ALYR Chat: 68 orders, QAR 12,005 · ALYR Bookings: 3 visits, 0 no-shows · ALYR Accounts: QAR 13,894 owed by 6 customers",
+   "Send reminders: QAR 3,501 owed 30+ days, not reminded in 7 days (rule · owed 30+ days, no promise, no reminder in 7 days · 2 customers)"
+  ]
+ },
+ "card": {
+  "lang": "en",
+  "dir": "ltr",
+  "shop": "Qirfa Bakery",
+  "week": "4–10 Oct",
+  "eyebrow": "Weekly report",
+  "hero": {
+   "key": "sales",
+   "label": "Sales",
+   "value": "12,005",
+   "unit": "QAR",
+   "change": {
+    "dir": "up",
+    "text": "up 1% on the week before"
+   }
+  },
+  "days": [
+   {
+    "label": "Sun",
+    "state": "past",
+    "value": 89800,
+    "last": 124100,
+    "text": "898",
+    "signal": false
+   },
+   {
+    "label": "Mon",
+    "state": "past",
+    "value": 169300,
+    "last": 131300,
+    "text": "1,693",
+    "signal": false
+   },
+   {
+    "label": "Tue",
+    "state": "past",
+    "value": 294700,
+    "last": 346100,
+    "text": "2,947",
+    "signal": true
+   },
+   {
+    "label": "Wed",
+    "state": "past",
+    "value": 158700,
+    "last": 161400,
+    "text": "1,587",
+    "signal": false
+   },
+   {
+    "label": "Thu",
+    "state": "past",
+    "value": 242100,
+    "last": 167300,
+    "text": "2,421",
+    "signal": false
+   },
+   {
+    "label": "Fri",
+    "state": "past",
+    "value": 95900,
+    "last": 42400,
+    "text": "959",
+    "signal": false
+   },
+   {
+    "label": "Sat",
+    "state": "past",
+    "value": 150000,
+    "last": 213500,
+    "text": "1,500",
+    "signal": false
+   }
+  ],
+  "facts": [
+   {
+    "key": "top_item",
+    "label": "Most ordered",
+    "value": "Butter croissant",
+    "note": "54 ordered"
+   },
+   {
+    "key": "owed",
+    "label": "Owed to you",
+    "value": "QAR 13,894",
+    "note": "by 6 customers"
+   },
+   {
+    "key": "visits",
+    "label": "Visits",
+    "value": "3",
+    "note": "0 no-shows"
+   }
+  ],
+  "state": "normal"
+ }
+}

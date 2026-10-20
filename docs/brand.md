@@ -1,6 +1,30 @@
 # ALYR brand in this repository
 
-ALYR is the company. The WhatsApp product is its first product (decision D-023). This page says where the brand lives, which rules the public site follows, and what is still open. It is a pointer, not a copy of the design system.
+ALYR is the company. The WhatsApp product is its first product (decision D-023). **The brand is Carbon and Volt** (D-040, the founder, 17 Oct): the playbook's cobalt, lowercase "alyr", "a" mark and its typefaces are retired. This page says where the brand lives, which rules the public site follows, and what is still open. It is a pointer, not a copy of the design system.
+
+**Every value lives in `design/tokens.json`**: colour in light and dark, faces, type scales, spacing, radii, rules, the cut, shadows, motion, breakpoints, z-index and focus. `scripts/tokens-build.mjs` generates the CSS, TypeScript and Python every page, screen, card and email reads, and `scripts/design-check.mjs` fails CI on a hard-coded colour or font. How to use it: `design/README.md`.
+
+## Design system: the rules live in skills
+
+This page tells the story of the brand and why each rule exists. The rules an agent follows
+when it makes anything with the ALYR brand on it live in Claude Code skills, in
+`.claude/skills/`, and the values live in `design/tokens.json` (ALY-126):
+
+| Skill | For |
+|---|---|
+| `alyr-design` | The core: principles, tokens, type and grid, components, motion, light and dark, RTL, Arabic, accessibility, honesty, verification, the recurring failures |
+| `alyr-site-page` | Public pages, the product page template, adding a product page |
+| `alyr-product-screen` | Workspace, back office, onboarding and customer pages; ALYR Agent's dashboard |
+| `alyr-whatsapp-message` | Replies, notices, templates and the report card's message |
+| `alyr-email` | Emails ALYR sends |
+| `alyr-generated-image` | The report card, social cards and other images drawn by code |
+| `alyr-print` | QR cards, leave-behinds, invoices |
+| `alyr-deck-and-social` | Slides and social posts |
+| `alyr-design-review` | The design cycle: research, brief, build, two critics, rulings, fix, verify, publish |
+
+The look is Carbon and Volt (the founder, 17 Oct 2026, ALY-61; D-040 with the tokens); the
+playbook's cobalt is retired and its voice kept. When this page and a skill disagree, fix
+whichever is out of date in the same pull request.
 
 ## Where the source is
 
@@ -9,13 +33,13 @@ The approved design system (v1.0) and strategy are on the branch `codex/alyr-nat
 | In this repo | Copied from the design system |
 |---|---|
 | `apps/web/app/_site/brand.tsx` (logo, symbol, icons) | `02_Logo_System/01_Master_SVG`, `03_Icon_System/UI_Icons_SVG` |
-| `apps/web/app/_site/site.css` (colors, type, motion) | `06_UI_UX_System/Design_Tokens/tokens.css` |
+| `design/tokens.json` (every colour, type, space and motion value; first copied from there by hand into `site.css`, now the source) | `06_UI_UX_System/Design_Tokens/tokens.css` |
 | `apps/web/app/icon.svg` | `04_App_and_Favicon/02_Favicon/favicon.svg` |
 | `apps/web/app/_site/fonts/InstrumentSans-SemiBold.ttf`, `IBMPlexMono-Regular.ttf` (the social card only, read at build time; SIL Open Font Licence) | `asset-continuity-web/public/alyr/fonts/` on the same branch |
 
-## Two brand sources, not yet reconciled
+## One brand (D-040)
 
-The founder's **Brand & Growth Playbook** (a Claude Docs document in the founder's account, 11 Oct 2026) sets the positioning, voice, content and sales plan, and describes a different visual identity from the design system. The public site currently uses the playbook's words on the design system's look. See decision D-025 for exactly what was taken and what was held back.
+The founder's **Brand & Growth Playbook** (a Claude Docs document in the founder's account, 11 Oct 2026) sets the positioning, voice, content and sales plan; those still apply. Its visual identity (cobalt blue, a colour per product, lowercase "alyr", the rounded "a" mark, Bricolage Grotesque and Geist) was not chosen: Carbon and Volt is ALYR's look (D-040, which settles D-025's open question).
 
 ## Rules the public site follows
 
@@ -28,7 +52,7 @@ The founder's **Brand & Growth Playbook** (a Claude Docs document in the founder
 - **Honesty.** No invented metrics, logos or testimonials. Sample screens are labelled as samples and use a fictional business.
 - **Words.** Every word is in `apps/web/app/_site/copy.ts`, in English and Arabic. Components hold no text.
 
-One deliberate addition: `--line-strong` in `site.css` is darker than the design system's strong border, which is only 2.1:1 on Paper and too faint for controls.
+One deliberate addition: `--line-strong` (`semantic.line-strong` in the tokens) is darker than the design system's strong border, which is only 2.1:1 on Paper and too faint for controls.
 
 ## Extensions adopted with the 2026 homepage (ALY-56)
 
@@ -74,20 +98,42 @@ Every public page, in both languages, has a light and a dark theme. Light is sti
 **The moment.** Pressing it, the new theme sweeps in along 45° from the switch's own corner (top inline-end, so top left in Arabic), with its edge on the button notch's angle: the page navigation's wipe, mirrored. A same-document View Transition, `--dur-3` on `--ease`. The header is part of the page for it, and nothing else transitions while the colours change; the switch's glyph turns 45° as the other comes in. Without View Transitions, or with reduced motion, the theme simply changes.
 
 **Rules for dark.**
-- **Tokens only.** Dark values live in two blocks that must stay identical: under `@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) }` and under `:root[data-theme="dark"]` (`site.css`; the homepage's drawings have their own pair in `home.css`). `[data-theme="light"]` keeps a page light on a dark device. `color-scheme` is set in all three. A component never has a dark rule of its own: if it needs a colour that changes, add a token to both blocks. The switch itself follows this (`--night`, `--when-light`, `--when-dark`).
+- **Tokens only.** A token's dark value sits beside its light one in `design/tokens.json`; the generator writes the two identical dark blocks (`@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) }` and `:root[data-theme="dark"]`) into `apps/web/app/_tokens/tokens.css`. `[data-theme="light"]` keeps a page light on a dark device. A component never has a dark rule of its own: if it needs a colour that changes, add a token. The switch itself follows this (`--night`, `--when-light`, `--when-dark`). **The product screens follow the same switch** (D-040): `(product)/layout.tsx` applies the stored choice before the first paint.
 - **Surfaces.** Canvas `#0e1012`, surface `#15171a`, lines `#2a2e33`, strong lines `#5f666d` (3.3:1). Text `#f3f5f0`, muted text `#a7adb5`. Carbon blocks lift to `--band` `#1d2024`, with a hairline closing a full-bleed one; inside a block, wells sit a step under it (`#15171a`) and panels a step over it (`#23272b`), as they do in light.
 - **Volt** stays a signal: the main action, the current state, confirmed progress. The focus ring is Volt in dark (green `#6a9320` in light).
 - **The drawn WhatsApp chat** on the ALYR Chat page takes WhatsApp's own dark chat screen (`#0b141a` behind, `#202c33` received, `#005c4b` sent, `#e9edef` text), still with no WhatsApp logo. The time in a sent bubble is a shade lighter than WhatsApp's (`#b3cdc9`) to keep 4.5:1, and a shade darker in light (`#5f6f79`) for the same reason.
 - **Contrast.** AA in both themes, checked with axe-core and, for text under a filter (the chat bubbles), by a direct scan.
+
+## The suite on the site (added 17 Oct 2026, ALY-99, D-037)
+
+The site presents ALYR as a suite, led by ALYR Agent: the homepage and a page per live product (`/chat`, `/bookings`, `/agent`, `/accounts`), in both languages. Build notes in `docs/agent-dashboard/08-site-log.md`.
+
+**The Products menu** (`Shell.tsx`, `site.css` `.pm`). On wide screens a panel under the header spans the page: the five products in the suite's fixed order (Chat, Bookings, Agent, Accounts, Payroll), each on a solid Carbon rule with its one line and its state in mono; Payroll on a dashed rule with the hollow pending dot, not a link, named for screen readers "ALYR Payroll, coming. No page yet." It is a native `<details>`, so it opens by keyboard and without JavaScript; the script in `<head>` closes it on Escape (focus back on its button), a click outside, a link chosen inside or focus leaving, and keeps one menu open at a time. On phones the same list is the first group of the menu. The footer lists the products in the same order.
+
+**ALYR Agent's figure** (`AgentFigure.tsx`, `agentfig.css`). The real `AgentDashboard` in showcase mode, from the samples captured from the engine, set in a **workspace window**: a bar with the shop's monogram (Volt corner), its name and the screen, on `--window` (white in light, `#262a2f` in dark, a step above the plate) with a `--window-line` hairline. Three settings:
+- *Homepage hero:* on the Carbon plate (top start corner cut at 45°, mirrored in Arabic), cropped to its first screen with a fade, out of the tab order (the next section shows it whole). Beside it on wide screens, under it from 82 rem down, and first on phones (chip and the newest three events, then the window, which ends after "Done for you"): **the live feed**.
+- *Homepage spotlight:* the whole screen on the page, with the sample switch (Bakery, Salon, Home services; shown only when scripts run) opening on the salon so the second look is a different business, and numbered marks on its parts that match the callouts beside it. Numbered marks are Carbon discs with white mono numbers (a Volt ring in dark): a number is not an action.
+- *`/agent`:* on its Carbon block, with the switch and the feed, which follows the sample.
+- On phones the four numbers sit two by two (in showcase they are not links, so a sideways scroller would hold nothing to focus).
+
+**The live feed.** What ALYR did that afternoon, one event at a time: a mono time, a filled Volt tick (a flag by rule gets a drawn tick, since it needs the owner), the event in the product's own words, and for a flag its rule line on a Volt hairline. The "Done for you" count beside it steps up with each event it counts; a flag counts nothing. Newest event on top, so the latest flag and its rule line are in the first screen. A status chip "ALYR · Running" whose dot lights once, with one ring. The hero builds in one order: the plate, the window, the chip, its dot, then the events from 1.2 s. The static HTML carries the count before the feed, so it only ever counts up. It plays once, in under 5 s, when the feed is on screen, and again whenever the visitor picks another sample. Without JavaScript or with reduced motion it is composed. Only events the product performs and logs: the menu and the links it sends back, an order confirmation, a booking reminder, an item flagged by a rule.
+
+**The product page template** (`ProductKit.tsx`, `kit.css`; 01-research D). A bar under the header (the product's name with the signal, its sections; solid, sticky, fades at the far edge on phones; no call to action, since the header's Volt button is just above). The opening on the Carbon block: eyebrow with the state, a two-line headline (second line Concrete), the lead, the tabbed demo, three facts on one rule. How it works from both sides (`FlowDiagram`). The screen used every day, drawn at true scale in the workspace window (`Sheets.tsx`), with numbered marks and callouts beside; on phones it scrolls sideways as the workspace does. Everything it does today by audience, then **Not yet** below a dashed rule, each item with the hollow pending dot. Who it's for, as rows with what each uses. **Works with the rest of ALYR**, ruled rows in the suite's order without the page's own product, Payroll dashed. Questions. The closing call, which now opens with the fold on every page.
+
+**Smaller rules.**
+- A heading can name where its lines break (a line feed in `copy.ts`, `lines()` in `Text.tsx`).
+- In an Arabic sentence, a run of Latin words (a sample customer's name) and a number range ("0–30") sit in `<bdi>`, so a trailing full stop or a range never lands on the wrong side.
+- Product names keep their case in Arabic eyebrows (no capitals in Arabic, and "ALYR Agent" stays as written), and a product's name never breaks across two lines (`.pname`).
+- The dashboard on the site is the product's, untouched: the `ag-` class prefix belongs to it, so no site drawing uses `ag-`, and a page's heading rules stop at `.ag` (`:not(.ag h3)`). Checked element by element against `/agent-sample` in both themes and languages.
 
 ## Open before the site goes public
 
 | Item | Owner |
 |---|---|
 | ALYR's own WhatsApp number (`NEXT_PUBLIC_ALYR_WHATSAPP`) so the call to action is "Message us on WhatsApp". Until it is set the pages offer hello@alyr.qa (the default of `NEXT_PUBLIC_ALYR_CONTACT_EMAIL`); set that to an empty value and they say the line opens soon. The founder confirms the address forwards | Founder |
-| Which look is ALYR's (ALY-61). The price is decided (D-034); "live in 48 hours" and a free pilot stay off the site (D-025) | Founder |
+| The price is decided (D-034); "live in 48 hours" and a free pilot stay off the site (D-025). The look is decided (D-040) | Founder |
 | Native review of all Arabic copy | A native reviewer |
 | Check every product claim on the page against what is live (see `docs/status.md`): keeping your number, payment links through your own gateway, and the product on Meta's platform are designed and built on the simulator, not yet running live | Founder |
 | Hosting for the site. Vercel's free plan forbids commercial use; Cloudflare, where the domain already is, allows it | Founder |
 | Legal company name and its Arabic form, trademark clearance, privacy notice and terms pages | Founder |
-| Leftovers of the earlier styling in the product: `/login` shows "Alyr" in the old plain style, and the `/whatsapp` demo header says "Alyr · Demo 1". The rest of the product screens are on ALYR tokens | Product lane |
+| Leftovers of the earlier styling in the product: `/login` shows "Alyr" in the old plain style, and the `/whatsapp` demo header says "Alyr · Demo 1". The product screens' colours, faces and type sizes come from the tokens (D-040); their four button systems and five icon sets do not yet follow one design (`docs/design-system/01-tokens-log.md`, next step) | Product lane |

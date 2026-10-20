@@ -23,7 +23,12 @@ AVAILABILITY = ("self_serve", "with_alyr", "hidden")
 PRICE_MODES = ("automatic", "prepared")
 PERIODS = (1, 3, 6, 12)
 KINDS = ("monthly", "one_time")
-APPLIES = re.compile(r"^(each_business|each_client|manual|product:[a-z_]+|module:[a-z_]+)$")
+APPLIES = re.compile(
+    r"^(each_business|each_client|manual|extra_product|product:[a-z_]+|module:[a-z_]+)$"
+)
+# The price of each product a business uses beyond its first (D-035): the founder's
+# combination pricing, QAR 449 for the first product and QAR 150 for each one added.
+EXTRA_PRODUCT = "extra_product"
 ITEM_KEY = re.compile(r"^[a-z0-9_]{2,40}$")
 
 
@@ -178,16 +183,35 @@ def _applies_to(applies: str, modules: frozenset[str]) -> bool:
     if kind == "module":
         return key in modules
     if kind == "product":
-        product = catalog.PRODUCT_BY_KEY.get(key)
-        # A product counts as on when any of its modules is on (as in the workspace).
-        return bool(product and set(product.modules) & modules)
+        # The products the business is using, as the workspace counts them: ALYR Agent
+        # always, and a salon with the inbox, bookings and payment links on uses ALYR
+        # Bookings, not ALYR Chat as well.
+        return key in catalog.products_for(modules)
     return False
+
+
+def _paid_product(item: dict) -> bool:
+    """An item priced per product a business can switch on (not one that is included)."""
+    kind, _, key = item["applies"].partition(":")
+    product = catalog.PRODUCT_BY_KEY.get(key) if kind == "product" else None
+    return product is not None and product.status == "available"
 
 
 def draft_lines(price_list: list[dict], businesses: list[Business]) -> list[dict]:
     """The lines a quote starts from: every active item whose rule matches, for each
-    business in turn, then the items charged once per client."""
-    active = [i for i in price_list if i["active"] and i["applies"] != "manual"]
+    business in turn, then the items charged once per client.
+
+    Combination pricing (D-035): a business pays its first product at that product's own
+    price and each further product at the "each extra product" price. The first is the
+    dearest, so adding a product never costs more than the extra price. Without an
+    active extra-product item every product is charged at its own price."""
+    active = [
+        i for i in price_list
+        if i["active"] and i["applies"] not in ("manual", EXTRA_PRODUCT)
+    ]
+    extra = next(
+        (i for i in price_list if i["active"] and i["applies"] == EXTRA_PRODUCT), None
+    )
     lines: list[dict] = []
 
     def line(item: dict, business_id: UUID | None) -> dict:
@@ -198,9 +222,21 @@ def draft_lines(price_list: list[dict], businesses: list[Business]) -> list[dict
         }
 
     for business in businesses:
-        for item in active:
-            if item["applies"] != "each_client" and _applies_to(item["applies"], business.modules):
-                lines.append(line(item, business.id))
+        matched = [
+            i for i in active
+            if i["applies"] != "each_client" and _applies_to(i["applies"], business.modules)
+        ]
+        products = [i for i in matched if _paid_product(i) and i["kind"] == "monthly"]
+        first = max(products, key=lambda i: (i["price"], -i["sort"]), default=None)
+        for item in matched:
+            entry = line(item, business.id)
+            if extra is not None and item in products and item is not first:
+                entry |= {
+                    "name": f"{item['name']}, added product",
+                    "name_ar": f"{item['name_ar']}، منتج إضافي",
+                    "unit_price": extra["price"],
+                }
+            lines.append(entry)
     for item in active:
         if item["applies"] == "each_client":
             lines.append(line(item, None))
@@ -329,8 +365,10 @@ def _business(row, types: dict[str, dict]) -> dict:
         "type": row["business_type"],
         "type_name": preset.name.en if preset else "",
         "area": row["area"], "way": way, "modules": list(row["modules"]),
-        # A product counts as in use when any of its modules is on (as in the workspace).
-        "products": [p.name.en for p in catalog.PRODUCTS if set(p.modules) & set(row["modules"])],
+        # The products in use, counted as the workspace counts them.
+        "products": [
+            catalog.PRODUCT_BY_KEY[k].name.en for k in catalog.products_for(set(row["modules"]))
+        ],
         "onboarding_step": row["onboarding_step"],
         "onboarded": row["onboarded_at"] is not None,
         "steps": list(presets.STEPS.get(way, ())),

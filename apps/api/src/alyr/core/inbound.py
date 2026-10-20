@@ -6,6 +6,7 @@ from uuid import UUID
 from alyr.channels.base import InboundMessage
 from alyr.channels.meta import DeliveryStatus, UserIdUpdate
 from alyr.core import consent, identity, jobs, team
+from alyr.core.media import MediaService
 from alyr.core.outbound import Outbound
 from alyr.db import Database
 from alyr.modules import router
@@ -23,10 +24,14 @@ class InboundHandler:
     answer, and queue the answers.
     """
 
-    def __init__(self, db: Database, outbound: Outbound, public_web_url: str) -> None:
+    def __init__(
+        self, db: Database, outbound: Outbound, public_web_url: str,
+        media: MediaService | None = None,
+    ) -> None:
         self._db = db
         self._outbound = outbound
         self._web = public_web_url
+        self._media = media
 
     async def _tenant_for(self, number_id: str):
         async with self._db.unscoped() as conn:
@@ -75,7 +80,8 @@ class InboundHandler:
                 "                      wa_message_id) "
                 "values ($1, 'in', $2, $3, $4, 'received', $5)",
                 contact["id"], message.kind, message.text,
-                {"reply_id": message.reply_id} if message.reply_id else {},
+                ({"reply_id": message.reply_id} if message.reply_id else {})
+                | ({"media_id": message.media_id} if message.media_id else {}),
                 message.message_id,
             )
             shop = await conn.fetchrow(
@@ -106,7 +112,7 @@ class InboundHandler:
                 replies = []
             else:
                 replies = await router.handle(
-                    conn, tenant_id, contact, message, self._web, self._outbound
+                    conn, tenant_id, contact, message, self._web, self._outbound, self._media
                 )
             for reply in replies:
                 await self._outbound.send(conn, reply)
@@ -117,9 +123,16 @@ class InboundHandler:
         if tenant_id is None:
             return False
         async with self._db.tenant(tenant_id) as conn:
-            return await self._outbound.record_status(
+            moved = await self._outbound.record_status(
                 conn, status.message_id, status.status, status.error
             )
+            if moved:
+                # A document the shop's other system is waiting to hear about (ALY-142).
+                from alyr.modules.documents import delivery
+
+                await delivery.on_message_status(
+                    conn, status.message_id, status.status, status.error)
+            return moved
 
     async def handle_user_id_update(self, update: UserIdUpdate) -> bool:
         """A customer's WhatsApp user ID changed. Return True if a contact was moved."""

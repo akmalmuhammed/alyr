@@ -22,6 +22,8 @@ from alyr import catalog, presets
 from alyr.config import get_settings
 from alyr.core import auth, backoffice, pricing
 from alyr.core.auth import Staff
+from alyr.modules.items import clock as shop_clock
+from alyr.modules.items import template, template_change
 from alyr.routes.deps import current_staff
 
 router = APIRouter(prefix="/api/admin", tags=["back office"])
@@ -38,6 +40,9 @@ class NewBusiness(BaseModel):
     products: list[str] = Field(default_factory=list, max_length=10)
     # Add the business to an existing client; empty makes a new client for it.
     client_id: UUID | None = None
+    # A template (ALYR's own type, or one made in the back office) for the business: its type,
+    # features, wording, layout, starter categories and fields (ALY-148). Empty is the plain one.
+    template: str = Field(default="", max_length=40)
 
 
 class ItemChange(BaseModel):
@@ -93,6 +98,18 @@ class QuoteChange(BaseModel):
 
 class MoveBusiness(BaseModel):
     client_id: UUID
+
+
+class SwitchModule(BaseModel):
+    enabled: bool
+
+
+# The modules the back office switches for one business. The Catalog is on for every business
+# (ALY-113) and this is how one business has it turned off, or back on; the other modules are
+# a business's products and are switched in its own workspace. Documents (ALY-138) is off for
+# every business and has no screen yet: this is how ALYR switches it on for one business to
+# try it, until the workspace screens (package 3) make it part of a product.
+SWITCHABLE_MODULES = ("catalog", "documents")
 
 
 class Snooze(BaseModel):
@@ -183,9 +200,22 @@ async def create_business(
     modules: list[str] = []
     for key in body.products:
         product = catalog.PRODUCT_BY_KEY.get(key)
+        if product is not None and product.status == "included":
+            continue  # every business has it already
         if product is None or product.status != "available":
             raise HTTPException(status_code=422, detail=f"{key} cannot be switched on")
         modules += [m for m in product.modules if m not in modules]
+    target = None
+    if body.template:
+        async with _back_office(request) as conn:
+            target = await template_change.find(conn, body.template, usable=True)
+        if target is None:
+            raise HTTPException(status_code=404, detail="no such template")
+    if get_settings().catalog_for_new_shops and "catalog" not in modules:
+        # Every business has the Catalog, as the shops made by onboarding do (ALY-113). It has
+        # no type of its own here, so it gets the plain Catalog; the back office can switch it
+        # off for this business afterwards.
+        modules.append("catalog")
     try:
         async with _back_office(request) as conn:
             tenant_id = await conn.fetchval(
@@ -206,7 +236,24 @@ async def create_business(
         raise HTTPException(status_code=409, detail="that short name is taken") from error
     except asyncpg.ForeignKeyViolationError as error:
         raise HTTPException(status_code=404, detail="no such client") from error
-    return {"id": str(tenant_id), "slug": slug, "modules": modules}
+    if target is not None and "catalog" in modules:
+        # Its type first (an owner cannot change it), then what the template brings. No samples:
+        # a business made here has its own items.
+        async with _back_office(request) as conn:
+            await conn.fetchval(
+                "select admin_set_business_type($1, $2)", tenant_id,
+                template_change.business_type_of(target),
+            )
+            await backoffice.audit(
+                conn, staff, "business.template", "business", tenant_id, business_id=tenant_id,
+                detail={"to": target.key, "created": True},
+            )
+        async with request.app.state.db.tenant(tenant_id) as conn:
+            await template.apply(
+                conn, target, await shop_clock.load(conn), samples_too=False, by=_by(staff)
+            )
+    return {"id": str(tenant_id), "slug": slug, "modules": modules,
+            "template": target.key if target else None}
 
 
 @router.get("/setup-requests")
@@ -260,6 +307,28 @@ async def move_business(
     return {"moved": True}
 
 
+@router.post("/businesses/{business_id}/modules/{module}")
+async def switch_module(
+    business_id: UUID, module: str, body: SwitchModule, request: Request,
+    staff: Staff = Depends(platform_admin),
+) -> dict:
+    """Switch the Catalog (or Documents) on or off for one business. Nothing is deleted: its
+    items, photos and stock (or its documents, which cannot be deleted at all) stay, and the
+    screens and pages come back when it is switched on again."""
+    if module not in SWITCHABLE_MODULES:
+        raise HTTPException(status_code=404, detail=f"{module} cannot be switched here")
+    async with _back_office(request) as conn:
+        if not await conn.fetchval(
+            "select admin_set_module($1, $2, $3)", business_id, module, body.enabled
+        ):
+            raise HTTPException(status_code=404, detail="no such business")
+        await backoffice.audit(
+            conn, staff, "module.on" if body.enabled else "module.off", "business",
+            business_id, business_id=business_id, detail={"module": module},
+        )
+    return {"module": module, "enabled": body.enabled}
+
+
 # ── pricing and onboarding switches (D-032) ───────────────
 
 
@@ -275,7 +344,9 @@ async def price_list(request: Request, _: Staff = Depends(platform_admin)) -> di
                 for p in presets.PRESETS
             ],
             "promise": await pricing.promise(conn),
-            "products": [{"key": p.key, "name": p.name.en} for p in catalog.PRODUCTS],
+            "products": [
+                {"key": p.key, "name": p.name.en, "status": p.status} for p in catalog.PRODUCTS
+            ],
             "modules": [{"key": m.key, "name": m.name.en} for m in catalog.MODULES],
         }
 

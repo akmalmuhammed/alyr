@@ -2,6 +2,8 @@ import type { Metadata, Viewport } from "next";
 import { IBM_Plex_Mono, IBM_Plex_Sans_Arabic, Instrument_Sans } from "next/font/google";
 import { copy, type Locale } from "./copy";
 import { OFFER_LIVE, PATHS, SITE_URL, type PageKey } from "./site";
+import { dark, semantic } from "../_tokens/tokens";
+import "../_tokens/tokens.css";
 import "./site.css";
 
 // The design system's type: Instrument Sans for Latin, IBM Plex Sans Arabic for Arabic,
@@ -29,7 +31,7 @@ const plexMono = IBM_Plex_Mono({
 /** Where the visitor's choice of theme is kept (localStorage), and the colour the browser
  * puts around the page in each theme: the page's own canvas. */
 const THEME_KEY = "alyr-theme";
-const THEME_COLOR = { light: "#f6f7f3", dark: "#0e1012" } as const;
+const THEME_COLOR = { light: semantic.canvas, dark: dark.semantic.canvas } as const;
 
 /** Every public page follows the device into dark mode until the visitor chooses; the
  * script below keeps theme-color with the theme they choose. */
@@ -54,7 +56,10 @@ export function siteMetadata(locale: Locale, page: PageKey = "home"): Metadata {
     openGraph: {
       type: "website", siteName: "ALYR", title: t.title, description,
       url: PATHS[page][locale], locale: locale === "ar" ? "ar_QA" : "en_US",
-      images: [{ url: "/opengraph-image", width: 1200, height: 630, alt: "ALYR" }],
+      // Each English product page has its own card (app/(site)/<page>/opengraph-image.tsx),
+      // which Next names with a hash and fills in itself when no image is given here. The
+      // homepage and the Arabic pages share the homepage's English card (socialCard.tsx).
+      ...(locale === "en" && page !== "home" ? {} : { images: [{ url: "/opengraph-image", width: 1200, height: 630, alt: "ALYR" }] }),
     },
     twitter: { card: "summary_large_image", title: t.title, description },
   };
@@ -155,6 +160,48 @@ function theme(key: string, colors: { light: string; dark: string }) {
 
 const THEME = `(${theme.toString()})(${JSON.stringify(THEME_KEY)},${JSON.stringify(THEME_COLOR)})`;
 
+/**
+ * The header's menus (the Products panel, the phone menu): native `<details>`, so they open
+ * and close by keyboard and without JavaScript. This adds what `<details>` lacks, before the
+ * page's other scripts arrive, as the theme switch does: Escape closes the open menu and
+ * puts focus back on its button; a click outside, a link chosen inside, or focus moving
+ * out of it closes it; and only one is open at a time. Like `theme`, its source goes into
+ * the page as it is.
+ */
+function menus() {
+  const all = () => Array.from(document.querySelectorAll<HTMLDetailsElement>("details[data-menu]"));
+  const close = (menu: HTMLDetailsElement, focus: boolean) => {
+    menu.open = false;
+    if (focus) menu.querySelector("summary")?.focus();
+  };
+  document.addEventListener("keydown", (event) => {
+    if (event.key !== "Escape") return;
+    const open = all().find((menu) => menu.open);
+    if (open) close(open, open.contains(document.activeElement));
+  });
+  document.addEventListener("click", (event) => {
+    const target = event.target instanceof Element ? event.target : null;
+    for (const menu of all()) {
+      if (!menu.open) continue;
+      if (!target || !menu.contains(target)) close(menu, false);
+      else if (target.closest("a")) close(menu, false);
+    }
+  });
+  document.addEventListener("toggle", (event) => {
+    const opened = event.target;
+    if (!(opened instanceof HTMLDetailsElement) || !opened.open || !opened.hasAttribute("data-menu")) return;
+    for (const menu of all()) if (menu !== opened && menu.open) menu.open = false;
+  }, true);
+  document.addEventListener("focusout", (event) => {
+    const menu = event.target instanceof Element ? event.target.closest<HTMLDetailsElement>("details[data-menu]") : null;
+    const next = event.relatedTarget;
+    if (!menu || !menu.open || !(next instanceof Node) || menu.contains(next)) return;
+    close(menu, false);
+  });
+}
+
+const MENUS = `(${menus.toString()})()`;
+
 /** The whole document for a public page. Each language has its own root layout so the
  * `lang` and `dir` on `<html>` are right from the first byte. */
 export function SiteDocument({ locale, children }: { locale: Locale; children: React.ReactNode }) {
@@ -166,7 +213,7 @@ export function SiteDocument({ locale, children }: { locale: Locale; children: R
       suppressHydrationWarning
     >
       <head>
-        <script dangerouslySetInnerHTML={{ __html: `${THEME};${BEFORE_PAINT}` }} />
+        <script dangerouslySetInnerHTML={{ __html: `${THEME};${MENUS};${BEFORE_PAINT}` }} />
       </head>
       <body>{children}</body>
     </html>

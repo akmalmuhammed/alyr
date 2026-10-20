@@ -1,0 +1,642 @@
+{
+ "version": 2,
+ "lang": "ar",
+ "dir": "rtl",
+ "now": "2026-10-15T13:20:00+00:00",
+ "state": "normal",
+ "money": true,
+ "lead": "bookings",
+ "header": {
+  "greeting": "مساء الخير يا عادل",
+  "date": "الخميس 15 أكتوبر",
+  "updated": "حُدّث 16:20",
+  "eyebrow": "مساء الخير يا عادل · الخميس 15 أكتوبر · حُدّث 16:20",
+  "when": "الخميس · 16:20",
+  "city": "الدوحة",
+  "summary": [
+   {
+    "muted": false,
+    "text": [
+     "الأسبوع حتى الآن: 15 مهمة، وغياب ",
+     {
+      "b": "1"
+     },
+     "."
+    ]
+   },
+   {
+    "muted": true,
+    "text": [
+     "حتى هذا الوقت من الأسبوع الماضي: 19 مهمة."
+    ]
+   },
+   {
+    "muted": false,
+    "text": [
+     "المحجوز للأيام السبعة القادمة: 5 مهام."
+    ]
+   },
+   {
+    "muted": false,
+    "text": [
+     "عميلان بانتظار الرد."
+    ]
+   }
+  ]
+ },
+ "needs": {
+  "items": [
+   {
+    "key": "waiting",
+    "count": 2,
+    "words": [
+     "عملاء بانتظار الرد"
+    ],
+    "detail": [
+     "أطول انتظار ",
+     {
+      "b": "37 د"
+     }
+    ],
+    "href": "/app/inbox?show=waiting",
+    "rule": "القاعدة · آخر رسالة من العميل ولم يُرد عليها منذ 10 دقائق · عميلان"
+   },
+   {
+    "key": "unmarked",
+    "count": 1,
+    "words": [
+     "مهمة بلا تسجيل حضور"
+    ],
+    "detail": [
+     "أرقام الغياب ناقصة حتى تُسجَّل."
+    ],
+    "href": "/app/bookings?show=unmarked",
+    "rule": "القاعدة · محجوز وانتهى وقته · مهمة واحدة"
+   }
+  ],
+  "empty": "لا شيء ينتظرك."
+ },
+ "kpis": [
+  {
+   "key": "visits",
+   "label": "المهام هذا الأسبوع",
+   "value": "15",
+   "unit": null,
+   "unit_first": false,
+   "money": false,
+   "href": "/app/bookings",
+   "change": {
+    "dir": null,
+    "text": [
+     "الأسبوع الماضي ",
+     {
+      "b": "19"
+     }
+    ],
+    "said": null
+   }
+  },
+  {
+   "key": "booked_ahead",
+   "label": "محجوز للأيام السبعة القادمة",
+   "value": "5",
+   "unit": null,
+   "unit_first": false,
+   "money": false,
+   "href": "/app/bookings",
+   "change": null
+  },
+  {
+   "key": "owed",
+   "label": "مستحق لك",
+   "value": "13,400",
+   "unit": "ر.ق",
+   "unit_first": false,
+   "money": true,
+   "href": "/app/ledger",
+   "change": {
+    "dir": null,
+    "text": [
+     "الأسبوع الماضي ",
+     {
+      "b": "13,400 ر.ق"
+     }
+    ],
+    "said": null
+   }
+  },
+  {
+   "key": "no_show_rate",
+   "label": "الغياب خلال 30 يوماً",
+   "value": "3",
+   "unit": "%",
+   "unit_first": false,
+   "money": false,
+   "href": "/app/bookings?show=no_show",
+   "change": null
+  }
+ ],
+ "kpi_caption": "مقارنةً بالأحد حتى 16:20 من الأسبوع الماضي",
+ "placeholders": [],
+ "suggestions": [
+  {
+   "key": "overdue",
+   "kind": "money",
+   "primary": true,
+   "title": [
+    {
+     "b": "7,400 ر.ق"
+    },
+    " مستحقة منذ 30 يوماً أو أكثر، دون تذكير منذ 7 أيام"
+   ],
+   "line": [
+    "يدين بها عميلان. أقدمهم ",
+    {
+     "b": "Bayview School"
+    },
+    "، منذ 75 يوماً."
+   ],
+   "rule": "القاعدة · مستحق منذ 30 يوماً أو أكثر، دون وعد ودون تذكير خلال 7 أيام · عميلان",
+   "rows": [
+    {
+     "id": "9417336e-bd9b-43e5-ad01-b85fb2261701",
+     "label": "Bayview School"
+    },
+    {
+     "id": "5605c2c9-463c-4485-8f5f-2bf10ef71906",
+     "label": "Crescent Tower Offices"
+    }
+   ],
+   "more": 0,
+   "action": {
+    "label": "أرسل التذكيرات",
+    "href": "/app/ledger?show=overdue"
+   },
+   "status": null,
+   "snooze": null
+  },
+  {
+   "key": "thin_days",
+   "kind": "knowledge",
+   "primary": false,
+   "title": [
+    "4 أيام من الأيام السبعة القادمة محجوزة بأقل من 30%"
+   ],
+   "line": [
+    "أهدأها الاثنين، محجوز ",
+    {
+     "b": "0%"
+    },
+    "."
+   ],
+   "rule": "القاعدة · الدقائق المحجوزة ÷ دقائق العمل لكل يوم من الأيام السبعة القادمة، أقل من 30%؛ يومان أو أكثر · 4 أيام",
+   "rows": [],
+   "more": 0,
+   "action": null,
+   "status": "للعلم فقط.",
+   "snooze": {
+    "key": "thin_days",
+    "fingerprint": "8e9247918db3361c"
+   }
+  },
+  {
+   "key": "late_cancellations",
+   "kind": "knowledge",
+   "primary": false,
+   "title": [
+    "3 إلغاءات متأخرة خلال 30 يوماً"
+   ],
+   "line": [
+    "أُلغيت قبل موعدها بأقل من 24 ساعة."
+   ],
+   "rule": "القاعدة · إلغاء قبل الموعد بأقل من 24 ساعة، 3 مرات أو أكثر خلال 30 يوماً · 3 إلغاءات متأخرة",
+   "rows": [],
+   "more": 0,
+   "action": null,
+   "status": "للعلم فقط.",
+   "snooze": {
+    "key": "late_cancellations",
+    "fingerprint": "0e1a451985c8a3a8"
+   }
+  }
+ ],
+ "done": {
+  "rows": [
+   {
+    "key": "sent",
+    "value": "51",
+    "label": "رسالة أرسلتها ALYR نيابة عنك",
+    "href": "/app/inbox"
+   },
+   {
+    "key": "booking_reminders",
+    "value": "17",
+    "label": "تذكيراً بالمواعيد",
+    "href": "/app/bookings"
+   }
+  ],
+  "empty": "لا شيء بعد هذا الأسبوع."
+ },
+ "week": {
+  "title": "حسب اليوم",
+  "format": "count",
+  "max": 4,
+  "days": [
+   {
+    "date": "2026-10-11",
+    "label": "أحد",
+    "state": "past",
+    "value": 4,
+    "value_text": "4",
+    "last": 4,
+    "last_text": "4",
+    "last_by_now": null,
+    "last_by_now_text": null,
+    "booked": null,
+    "booked_text": null
+   },
+   {
+    "date": "2026-10-12",
+    "label": "إثنين",
+    "state": "past",
+    "value": 3,
+    "value_text": "3",
+    "last": 4,
+    "last_text": "4",
+    "last_by_now": null,
+    "last_by_now_text": null,
+    "booked": null,
+    "booked_text": null
+   },
+   {
+    "date": "2026-10-13",
+    "label": "ثلاثاء",
+    "state": "past",
+    "value": 2,
+    "value_text": "2",
+    "last": 4,
+    "last_text": "4",
+    "last_by_now": null,
+    "last_by_now_text": null,
+    "booked": null,
+    "booked_text": null
+   },
+   {
+    "date": "2026-10-14",
+    "label": "أربعاء",
+    "state": "past",
+    "value": 4,
+    "value_text": "4",
+    "last": 4,
+    "last_text": "4",
+    "last_by_now": null,
+    "last_by_now_text": null,
+    "booked": null,
+    "booked_text": null
+   },
+   {
+    "date": "2026-10-15",
+    "label": "خميس",
+    "state": "today",
+    "value": 2,
+    "value_text": "2",
+    "last": 3,
+    "last_text": "3",
+    "last_by_now": 3,
+    "last_by_now_text": "3",
+    "booked": null,
+    "booked_text": null
+   },
+   {
+    "date": "2026-10-16",
+    "label": "جمعة",
+    "state": "closed",
+    "value": null,
+    "value_text": null,
+    "last": 0,
+    "last_text": "0",
+    "last_by_now": null,
+    "last_by_now_text": null,
+    "booked": null,
+    "booked_text": null
+   },
+   {
+    "date": "2026-10-17",
+    "label": "سبت",
+    "state": "ahead",
+    "value": null,
+    "value_text": null,
+    "last": 2,
+    "last_text": "2",
+    "last_by_now": null,
+    "last_by_now_text": null,
+    "booked": 1,
+    "booked_text": "1 محجوزة"
+   }
+  ],
+  "legend": {
+   "last": "اليوم نفسه من الأسبوع الماضي",
+   "by_now": "الأسبوع الماضي حتى هذا الوقت",
+   "closed": "مغلق",
+   "booked": "محجوز"
+  }
+ },
+ "hours": {
+  "title": "أكثر الساعات ازدحاماً، 28 يوماً",
+  "hours": [
+   "08",
+   "09",
+   "10",
+   "11",
+   "12",
+   "13",
+   "14",
+   "15",
+   "16",
+   "17"
+  ],
+  "rows": [
+   {
+    "label": "أحد",
+    "cells": [
+     4,
+     1,
+     2,
+     0,
+     1,
+     0,
+     1,
+     1,
+     1,
+     1
+    ]
+   },
+   {
+    "label": "إثنين",
+    "cells": [
+     2,
+     1,
+     2,
+     1,
+     0,
+     1,
+     2,
+     1,
+     1,
+     1
+    ]
+   },
+   {
+    "label": "ثلاثاء",
+    "cells": [
+     3,
+     1,
+     3,
+     1,
+     0,
+     1,
+     1,
+     1,
+     0,
+     0
+    ]
+   },
+   {
+    "label": "أربعاء",
+    "cells": [
+     2,
+     1,
+     1,
+     2,
+     0,
+     2,
+     0,
+     1,
+     1,
+     1
+    ]
+   },
+   {
+    "label": "خميس",
+    "cells": [
+     2,
+     0,
+     1,
+     2,
+     0,
+     3,
+     0,
+     2,
+     0,
+     0
+    ]
+   },
+   {
+    "label": "جمعة",
+    "cells": [
+     -1,
+     -1,
+     -1,
+     -1,
+     -1,
+     -1,
+     -1,
+     -1,
+     -1,
+     -1
+    ]
+   },
+   {
+    "label": "سبت",
+    "cells": [
+     1,
+     1,
+     2,
+     0,
+     1,
+     1,
+     3,
+     1,
+     0,
+     0
+    ]
+   }
+  ],
+  "top": {
+   "day": "أيام الأحد",
+   "range": "08:00–09:00"
+  },
+  "top3": [
+   {
+    "day": "أيام الأحد",
+    "range": "08:00–09:00"
+   },
+   {
+    "day": "أيام الثلاثاء",
+    "range": "08:00–09:00"
+   },
+   {
+    "day": "أيام الثلاثاء",
+    "range": "10:00–11:00"
+   }
+  ]
+ },
+ "top": {
+  "title": "أكثر الخدمات حجزاً، 28 يوماً",
+  "change_label": "الترتيب مقابل الـ28 يوماً السابقة",
+  "rows": [
+   {
+    "name": "صيانة مكيف سبليت",
+    "value": 26,
+    "value_text": "26",
+    "share": 1.0,
+    "change": {
+     "dir": "level",
+     "text": "—",
+     "said": "كما هو"
+    }
+   },
+   {
+    "name": "زيارة إصلاح مكيف",
+    "value": 16,
+    "value_text": "16",
+    "share": 0.615,
+    "change": {
+     "dir": "level",
+     "text": "—",
+     "said": "كما هو"
+    }
+   },
+   {
+    "name": "تعبئة غاز المكيف",
+    "value": 12,
+    "value_text": "12",
+    "share": 0.462,
+    "change": {
+     "dir": "level",
+     "text": "—",
+     "said": "كما هو"
+    }
+   },
+   {
+    "name": "تنظيف مجاري الهواء، فيلا",
+    "value": 7,
+    "value_text": "7",
+    "share": 0.269,
+    "change": {
+     "dir": null,
+     "text": "جديد",
+     "said": null
+    }
+   },
+   {
+    "name": "زيارة الصيانة السنوية",
+    "value": 3,
+    "value_text": "3",
+    "share": 0.115,
+    "change": {
+     "dir": null,
+     "text": "جديد",
+     "said": null
+    }
+   }
+  ]
+ },
+ "owed": {
+  "title": "المستحق لك",
+  "total": {
+   "value": "13,400",
+   "unit": "ر.ق",
+   "unit_first": false
+  },
+  "total_text": "13,400 ر.ق",
+  "customers": "عميلان",
+  "change": [
+   "كما كان قبل أسبوع"
+  ],
+  "segments": [
+   {
+    "key": "d0_30",
+    "label": "0–30 يوماً",
+    "amount_text": "6,000 ر.ق",
+    "share": 0.448
+   },
+   {
+    "key": "d31_60",
+    "label": "31–60",
+    "amount_text": "6,000 ر.ق",
+    "share": 0.448
+   },
+   {
+    "key": "d61_90",
+    "label": "61–90",
+    "amount_text": "1,400 ر.ق",
+    "share": 0.104
+   },
+   {
+    "key": "d90_plus",
+    "label": "أكثر من 90 يوماً",
+    "amount_text": "0 ر.ق",
+    "share": 0.0
+   }
+  ],
+  "oldest": [
+   "الأقدم: ",
+   {
+    "b": "Bayview School"
+   },
+   "، منذ 75 يوماً، ",
+   {
+    "b": "7,000 ر.ق"
+   },
+   "."
+  ],
+  "empty": "لا أحد عليه مستحقات لك."
+ },
+ "team": {
+  "rows": [
+   {
+    "name": "Adel Karim",
+    "replies": 0,
+    "first_answer": "—",
+    "open": 0,
+    "waiting": 0,
+    "line": "0 ردود · أول رد — · 0 مفتوحة · 0 بانتظار الرد"
+   },
+   {
+    "name": "Arun Pillai",
+    "replies": 13,
+    "first_answer": "7 د",
+    "open": 1,
+    "waiting": 1,
+    "line": "13 رداً · أول رد 7 د · 1 مفتوحة · 1 بانتظار الرد"
+   },
+   {
+    "name": "Bilal Rafiq",
+    "replies": 0,
+    "first_answer": "—",
+    "open": 0,
+    "waiting": 0,
+    "line": "0 ردود · أول رد — · 0 مفتوحة · 0 بانتظار الرد"
+   },
+   {
+    "name": "Ritu Menon",
+    "replies": 4,
+    "first_answer": "11 د",
+    "open": 1,
+    "waiting": 1,
+    "line": "4 ردود · أول رد 11 د · 1 مفتوحة · 1 بانتظار الرد"
+   }
+  ],
+  "unassigned": null,
+  "everyone": true
+ },
+ "report": [
+  "يصل تقريرك إلى رقم واحد يوم الأحد الساعة ",
+  {
+   "b": "9:00"
+  },
+  "."
+ ],
+ "comparisons_from": null
+}

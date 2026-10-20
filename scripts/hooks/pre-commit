@@ -6,13 +6,19 @@ set -euo pipefail
 staged=$(git diff --cached --name-only --diff-filter=ACM)
 [ -z "$staged" ] && exit 0
 
-if echo "$staged" | grep -E '(^|/)\.env(\.[a-z]+)?$' | grep -v '\.env\.example$' >/dev/null; then
+if echo "$staged" | grep -E '(^|/)\.env(\..+)?$' | grep -v '\.env\.example$' >/dev/null; then
   echo "Blocked: a .env file is staged. Secrets stay out of git." >&2
   exit 1
 fi
 
-# Token shapes: Meta access tokens, generic live keys, private keys, long bearer strings.
-patterns='EAA[A-Za-z0-9]{40,}|sk_live_[A-Za-z0-9]{16,}|-----BEGIN [A-Z ]*PRIVATE KEY-----|AKIA[0-9A-Z]{16}|ghp_[A-Za-z0-9]{30,}|xox[baprs]-[A-Za-z0-9-]{20,}'
+# Personal paperwork (registration forms, IDs) never goes in the repo.
+if echo "$staged" | grep -Ei '\.pdf$' >/dev/null; then
+  echo "Blocked: a PDF is staged. Company and personal documents stay out of git." >&2
+  exit 1
+fi
+
+# Token shapes: Meta, Resend, Anthropic and GitHub tokens, live keys, private keys, AWS, Slack.
+patterns='EAA[A-Za-z0-9]{40,}|sk_live_[A-Za-z0-9]{16,}|-----BEGIN [A-Z ]*PRIVATE KEY-----|AKIA[0-9A-Z]{16}|ghp_[A-Za-z0-9]{30,}|github_pat_[A-Za-z0-9_]{40,}|re_[A-Za-z0-9]{8,}_[A-Za-z0-9]{16,}|sk-ant-[A-Za-z0-9_-]{20,}|xox[baprs]-[A-Za-z0-9-]{20,}'
 if git diff --cached -U0 -- . ':!apps/web/pnpm-lock.yaml' ':!apps/api/uv.lock' | grep -E '^\+' | grep -E "$patterns" >/dev/null; then
   echo "Blocked: the staged changes contain something that looks like a secret." >&2
   echo "If it is a false alarm, change the test value so it does not match a real token shape." >&2

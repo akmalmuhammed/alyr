@@ -5,6 +5,7 @@ left to set up, and the numbers on its home dashboard. Everything here is driven
 Every function takes a tenant-scoped connection unless it says otherwise.
 """
 
+from datetime import datetime
 from uuid import UUID
 
 import asyncpg
@@ -71,47 +72,97 @@ def _visible(screen: catalog.Screen, role: str) -> bool:
     return role in screen.roles
 
 
-def _screen(screen: catalog.Screen) -> dict:
-    return {"key": screen.key, "label": _text(screen.label), "icon": screen.icon}
+def _screen(screen: catalog.Screen, label: catalog.Text | None = None) -> dict:
+    return {"key": screen.key, "label": _text(label or screen.label), "icon": screen.icon}
+
+
+# The screen that lists ALYR's own suite is "Products". A shop whose items are "Products"
+# too (a shop, a grocery, a salon) would have two entries of that name side by side, so there
+# the suite's is "ALYR products" (D-039: the two are kept apart). Nothing else changes.
+SUITE_SCREEN = "products"
+SUITE_LABEL = catalog.Text("ALYR products", "منتجات ALYR")
+
+
+def _same_name(screen: catalog.Screen, section: catalog.Text | None) -> bool:
+    return (
+        section is not None and screen.key == SUITE_SCREEN
+        and section.en == screen.label.en
+    )
+
+
+async def _section(conn: asyncpg.Connection) -> catalog.Text:
+    """What this shop calls its Catalog ("Menu", "Products", "Price list"), by its type."""
+    # (imported here: the Catalog's code builds on this package, not the other way round)
+    from alyr.modules.items import template
+
+    return await template.section(conn)
+
+
+def _catalog_step(step: dict, section: catalog.Text) -> dict:
+    """The orders module asks the shop to add its menu or price list. Where the Catalog is
+    on, that is done in the Catalog, under the name the shop's type gives it."""
+    return step | {
+        "label": {"en": f"Add your {section.en.lower()}", "ar": f"أضف {section.ar}"},
+        "screen": "catalog",
+    }
 
 
 async def state(conn: asyncpg.Connection, staff: Staff) -> dict:
     """Everything the workspace shell needs to draw itself for this person."""
     modules = await enabled_modules(conn)
+    section = await _section(conn) if "catalog" in modules else None
     connected = await _connections(conn)
     shop = await conn.fetchrow(
         "select name, name_ar, slug from tenants "
         "where id = nullif(current_setting('app.tenant_id', true), '')::uuid"
     )
-    open_requests = await conn.fetch(
-        "select product_key, step_key from setup_requests where status = 'open'"
-    )
-    asked = {(r["product_key"], r["step_key"]) for r in open_requests}
+    # Step keys are unique across modules, so an ask counts whichever product it was
+    # asked under (requests made before Bookings had its own product said "chat").
+    asked = {
+        r["step_key"]
+        for r in await conn.fetch("select step_key from setup_requests where status = 'open'")
+    }
 
+    using = set(catalog.products_for(modules))
+    listed: set[str] = set()
     products = []
     for product in catalog.PRODUCTS:
-        active = bool(set(product.modules) & modules)
+        active = product.key in using
         steps = []
         if active:
             for key in product.modules:
-                if key not in modules:
+                # A shared module's steps show once, under the first product using it.
+                if key not in modules or key in listed:
                     continue
+                listed.add(key)
                 for step in await _steps(conn, catalog.MODULE_BY_KEY[key], connected):
-                    step["asked"] = (product.key, step["key"]) in asked
+                    step["asked"] = step["key"] in asked
+                    if section is not None and key == "orders" and step["key"] == "products":
+                        step = _catalog_step(step, section)
                     steps.append(step)
+        if product.status == "included":
+            status = "included"
+        else:
+            status = "active" if active else product.status
+        includes = (
+            [{"key": m, "label": _text(catalog.MODULE_BY_KEY[m].name)} for m in product.modules]
+            or [{"key": "", "label": _text(part)} for part in product.parts]
+        )
         products.append(
             {
                 "key": product.key,
                 "name": _text(product.name),
+                "descriptor": _text(product.descriptor),
                 "summary": _text(product.summary),
-                "status": "active" if active else product.status,
+                "status": status,
                 "modules": list(product.modules),
+                "includes": includes,
                 "steps": steps,
             }
         )
 
     nav_products = [
-        _screen(screen)
+        _screen(screen, section if screen.key == "catalog" else None)
         for module in catalog.MODULES
         if module.key in modules
         for screen in module.screens
@@ -134,7 +185,10 @@ async def state(conn: asyncpg.Connection, staff: Staff) -> dict:
         "nav": {
             "core": [_screen(s) for s in catalog.CORE_SCREENS if _visible(s, staff.role)],
             "products": nav_products,
-            "account": [_screen(s) for s in catalog.ACCOUNT_SCREENS if _visible(s, staff.role)],
+            "account": [
+                _screen(s, SUITE_LABEL if _same_name(s, section) else None)
+                for s in catalog.ACCOUNT_SCREENS if _visible(s, staff.role)
+            ],
         },
         "products": products,
         "connections": [
@@ -150,15 +204,56 @@ async def state(conn: asyncpg.Connection, staff: Staff) -> dict:
     }
 
 
-async def home(conn: asyncpg.Connection) -> list[dict]:
+HIDDEN = "hidden_cards"
+
+
+async def counts(
+    conn: asyncpg.Connection, modules: set[str] | frozenset[str], now: datetime | None = None,
+    staff: Staff | None = None,
+) -> dict[str, int]:
+    """The numbers a module works out for itself (`Card.count`): today, the Catalog's and the
+    Documents'. They are the numbers on the filter chips of the list the card opens, so the two
+    always agree. `staff` is who is looking (None: the shop's own view, as an owner's)."""
+    found: dict[str, int] = {}
+    hidden: list[str] = []
+    if "catalog" in modules:
+        # (imported here: the Catalog's code builds on this package, not the other way round)
+        from alyr.modules.items import clock, features, listing
+
+        found |= await listing.counts(conn, await clock.load(conn, now))
+        # A card about stock is left off a shop whose features say nothing runs out or is
+        # counted (ALY-148): the screens read this list and draw only the others.
+        hidden += list(features.hidden_cards(await features.load(conn)))
+    if "documents" in modules:
+        from alyr.modules.documents import listing as documents_listing
+
+        found |= await documents_listing.counts(conn, staff)
+        # What is owed and what did not arrive are the owner's to see; an agent's list holds
+        # only the papers they made, and the cards would be a number that is not the shop's.
+        if staff is not None and staff.role not in catalog.MANAGERS:
+            hidden += list(documents_listing.PRESETS)
+    if hidden:
+        found[HIDDEN] = hidden  # type: ignore[assignment]
+    return found
+
+
+async def home(conn: asyncpg.Connection, staff: Staff | None = None) -> list[dict]:
     """The dashboard numbers, one card per number each switched-on module offers."""
     modules = await enabled_modules(conn)
     cards = []
+    worked_out = None
     for module in catalog.MODULES:
         if module.key not in modules:
             continue
         for card in module.cards:
-            value = int(await conn.fetchval(f"select {card.value}") or 0)
+            if card.count:
+                if worked_out is None:
+                    worked_out = await counts(conn, modules, staff=staff)
+                if card.count in worked_out.get(HIDDEN, ()):
+                    continue
+                value = worked_out[card.count]
+            else:
+                value = int(await conn.fetchval(f"select {card.value}") or 0)
             cards.append(
                 {
                     "key": card.key,
@@ -167,6 +262,7 @@ async def home(conn: asyncpg.Connection) -> list[dict]:
                     "value": value,
                     "text": fmt_qar(value) if card.kind == "qar" else str(value),
                 }
+                | ({"href": card.href} if card.href else {})
             )
     return cards
 
@@ -183,8 +279,8 @@ async def enable_product(conn: asyncpg.Connection, staff: Staff, key: str) -> li
     product = catalog.PRODUCT_BY_KEY.get(key)
     if product is None:
         raise LookupError("no such product")
-    if product.status != "available":
-        raise WorkspaceError("this product is not available yet")
+    if product.status == "included":
+        raise WorkspaceError(f"{product.name.en} is included for every business")
     for module in product.modules:
         await conn.execute(
             "insert into tenant_modules (module_key, enabled, enabled_at, enabled_by) "
@@ -198,20 +294,23 @@ async def enable_product(conn: asyncpg.Connection, staff: Staff, key: str) -> li
 
 
 async def disable_product(conn: asyncpg.Connection, staff: Staff, key: str) -> list[str]:
-    """Switch a product's modules off, except any module another active product still
-    uses. Nothing is deleted."""
+    """Switch a product's modules off, except a shared module another product in use
+    still needs (the inbox stays on for Bookings when Chat goes off). Nothing is
+    deleted."""
     _can_manage(staff)
     product = catalog.PRODUCT_BY_KEY.get(key)
     if product is None:
         raise LookupError("no such product")
+    if product.status == "included":
+        raise WorkspaceError(f"{product.name.en} is included for every business")
     modules = await enabled_modules(conn)
     still_needed = {
         module
-        for other in catalog.PRODUCTS
-        if other.key != key and other.modules and set(other.modules) <= modules
-        for module in other.modules
+        for other in catalog.products_for(modules)
+        if other != key
+        for module in catalog.PRODUCT_BY_KEY[other].modules
     }
-    off = [m for m in product.modules if m not in still_needed]
+    off = [m for m in product.modules if m in modules and m not in still_needed]
     if off:
         await conn.execute(
             "update tenant_modules set enabled = false where module_key = any($1)", off

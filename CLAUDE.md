@@ -10,6 +10,8 @@ Read these before working, in this order:
 - [docs/master-plan.md](docs/master-plan.md): what we are building, in what order, and what we decided not to build.
 - [docs/decisions.md](docs/decisions.md): every decision with its reason. Add an entry in the same pull request as any new decision.
 - [docs/stack.md](docs/stack.md): every tool, its free limit and when we swap it. Free tiers first; nothing paid without the founder agreeing.
+- [docs/hygiene.md](docs/hygiene.md): where every kind of file lives, what each change must include, and how docs stay true. The PR template repeats its checklist. Read it before your first change.
+- [docs/access.md](docs/access.md) and [docs/runbooks/](docs/runbooks/): who holds which account, and what to do when something breaks or a secret leaks.
 - [docs/working-with-claude.md](docs/working-with-claude.md): the ways AI-built projects fail and the guard against each. Follow it, and say so when a guard is missing.
 
 Plan and tasks live in Linear, team `Alyrtech`, project `Alyr Launch`. Work one issue per branch; name the branch after the issue (`aly-12-...`). Phases, not dates: a phase is finished when its demo works.
@@ -41,28 +43,80 @@ These are not style preferences. Do not write code that breaks them, and stop an
 ## Layout
 
 ```
-apps/api/                   FastAPI service (Python 3.13, managed with uv)
-  migrations/               Plain SQL, applied in order by `python -m alyr.migrate`
-  src/alyr/channels/        Message channels: Meta Cloud API and the local simulator, same interface
-  src/alyr/core/            Inbound path, contact identity (BSUID), outbound layer, sign-in, Arabic normaliser
-  src/alyr/modules/ledger/  Module B: credit ledger and reminders
-  src/alyr/modules/orders/  Order link: products, orders, pay or put on account
-  src/alyr/modules/inbox/   Shared inbox: staff read and answer conversations by hand
-  src/alyr/catalog.py       What ALYR sells: modules and products. Every new product is declared here (D-027)
-  src/alyr/core/team.py     Who is responsible for what, the activity record, and the team report (D-028)
-  src/alyr/modules/router.py  Which module answers a message
-  src/alyr/routes/          HTTP routes
-  src/alyr/db.py            `Database.tenant(id)`: one transaction scoped to one tenant
-  src/alyr/seed.py          The demo shop (fictional)
-  tests/
-apps/web/                   Next.js. Three root layouts, one per route group:
-  app/(site)/, (site-ar)/   The public site in English and Arabic: company homepage (/, /ar) and the ALYR Chat product page (/chat, /ar/chat)
-  app/_site/                Its components, styles and every word (copy.ts)
-  app/(product)/            The workspace shell (/app), the back office (/ops), the sales demo (/whatsapp),
-                            sign-in, and the customer pages (/pay, /s, /b)
-packages/compliance/        WPS SIF and e-invoice libraries (not created yet)
-specs/                      One folder per spec; write or update the spec before building
-infra/                      Bicep for Azure Qatar Central (not created yet)
+apps/api/                     FastAPI service (Python 3.13, managed with uv)
+  migrations/                 Plain SQL, applied in order by `python -m alyr.migrate`. Never edit an applied one
+  src/alyr/channels/          Message channels: Meta Cloud API and the local simulator, same interface
+  src/alyr/core/              Inbound path, contact identity, outbound layer (consent, 24-hour window), jobs,
+                              sign-in (auth), email (mail), sign-up (onboarding), pricing, back office,
+                              team accountability (team, D-028), workspace shell (workspace), templates,
+                              signed customer links (links: a customer's order or booking link carries a token made for that page, never a contact ID)
+  src/alyr/modules/           What answers customers: ledger, orders, bookings, inbox, agent (the owner's
+                              weekly view), report.py (weekly report card); router.py picks the module.
+                              items/ is the Catalog's engine (what a shop sells: variants, availability,
+                              stock log, holds; specs/001-catalog-engine), used by orders at checkout;
+                              groups.py holds customer price groups and group prices (specs/003); the
+                              Excel and CSV import and export are in specs/006-catalog-import-export;
+                              template.py and samples.py give each business type its catalog
+                              (specs/008; the words are in src/alyr/presets_catalog.py, and
+                              Settings.catalog_for_new_shops decides whether new shops get it);
+                              features.py reads what a shop has switched on (src/alyr/capabilities.py
+                              is the registry, src/alyr/shop_templates.py the templates; specs/012):
+                              ask it, never the business type; fields.py is a shop's own fields on
+                              items and sizes, templates.py the templates made in the back office,
+                              template_change.py a shop's change of type (all specs/012);
+                              orders/totals.py is the ONE pricing function (discounts, delivery fee,
+                              total: the page's review, the chat's draft and the order all call it;
+                              no float) and items/discounts.py, delivery.py and costs.py are the
+                              pricing pack's three features, off for every shop until switched on
+                              (specs/014; cost lives in tables of its own and only owners and admins
+                              ever see it: read costs.py before touching an item's or an order's reader);
+                              orders/page.py is what the customer's order page reads (specs/005);
+                              documents/ is the documents engine (receipts, invoices, credit notes:
+                              gapless numbers, immutable once issued, a PDF drawn in Arabic and
+                              English; specs/011, D-042), switched on per shop through the
+                              `documents` module, off for every shop until its screens exist;
+                              sales.py, payments.py and delivery.py make documents from orders,
+                              credit accounts and payments recorded by hand and send them by
+                              WhatsApp, email and a hosted link (specs/013, ALY-139);
+                              listing.py, lookup.py and refs.py are what the workspace's Documents
+                              screens read (specs/014, ALY-146)
+                              connect/ is connected mode: another system sends its sales (open API
+                              with API keys, CSV import), authority says who numbers each kind of
+                              document, webhooks send events out (specs/016, ALY-142, docs/connect-api.md)
+                              items/codes.py reads a customer's message for item codes, links and
+                              SKUs and items/wa_order.py orders by them in the chat (specs/010)
+  src/alyr/routes/            HTTP routes. deps.py: who is calling, which shop, which modules are on
+  src/alyr/catalog.py         What ALYR sells: modules and products (D-027)
+  src/alyr/db.py              `Database.tenant(id)`: one transaction scoped to one tenant
+  src/alyr/seed*.py           The fictional demo shops
+  src/alyr/doctor.py          Read-only health check behind `scripts/demo.sh check`
+  src/alyr/worker.py          Background job runner
+  tests/                      Real PostgreSQL, the simulator, HTTP in and out
+apps/web/                     Next.js. Three root layouts, one per route group:
+  app/(site)/, (site-ar)/     Public site, English and Arabic (/, /ar, /chat, /ar/chat); words in app/_site/copy.ts
+  app/(product)/              Workspace (/app), back office (/ops), sign-in (/login), sign-up (/start),
+                              sales demo (/whatsapp), owner view sample (/agent-sample), and the customer pages
+                              opened from WhatsApp: order /s, booking /b, payment /pay, tracking /t,
+                              document /d (a receipt or invoice, by a signed link)
+  app/(product)/_customer/    Shared frame, styles, the price format and the Arabic search folding of the
+                              customer pages; order/ is the order page (specs/005-order-page-v2)
+  app/(product)/_workspace/   Workspace screens and styles
+  app/_agent/                 The owner's weekly view (ALYR Agent)
+docs/                         See docs/README.md for what lives where (docs/hygiene.md section 1)
+scripts/                      check.sh (everything CI runs), demo.sh (start and check the live demo),
+                              api-in-docker.sh, build-site.sh, catalog-browser-check.mjs (the Catalog's
+                              screens in a real browser at phone width), catalog-reports-browser-check.mjs
+                              (its home cards and the back office's Usage view), order-page-browser-check.mjs
+                              (the customer's order page, same way), booking-page-browser-check.mjs (the booking page and its links),
+                              document-page-browser-check.mjs (the hosted document page and its links),
+                              documents-screens-browser-check.mjs (the workspace's Documents screens),
+                              connect-browser-check.mjs (the connection screen, phone width, both languages),
+                              golive-truth-check.mjs (every onboarding sentence of every business type proved on the
+                              finished order page and workspace, English and Arabic),
+                              hooks/pre-commit
+specs/                        One folder per spec; write or update the spec before building
+infra/                        Cloud infrastructure as code (proposed in PR #52, not merged)
+packages/compliance/          WPS SIF and e-invoice libraries (not created yet)
 ```
 
 ## Running things
@@ -74,7 +128,7 @@ cd apps/api
 uv sync
 uv run python -m alyr.migrate             # create tables
 uv run python -m alyr.seed                # load or reset the demo shop
-uv run pytest                             # uses its own alyr_test database
+ALYR_ENV=local uv run pytest              # uses its own alyr_test database; the app defaults to production
 uv run ruff check .
 uv run uvicorn alyr.main:app --port 8000
 uv run python -m alyr.worker              # only when ALYR_JOBS_INLINE=false
@@ -93,6 +147,6 @@ scripts/api-in-docker.sh uv run pytest -q # where Windows blocks the compiled da
 
 - Modules receive `InboundMessage` and return `OutboundMessage` objects. They do not know which channel is in use, so everything works against the simulator first.
 - Every outgoing message goes through `core/outbound.py`, which records it and queues a job; `core/jobs.py` delivers it with retries. Never call a channel or a slow outside service directly from a request: enqueue a job.
-- Compliance outputs (SIF files, UBL invoices) are tested against golden files in `fixtures/`, byte for byte.
+- Compliance outputs (SIF files, UBL invoices), when they exist, are tested against golden files in `fixtures/` (to be created with them), byte for byte.
 - User-facing text exists in Arabic and English. No hard-coded strings in UI code.
 - Amounts are integers in dirhams (1 QAR = 100 dirhams). Never floats.

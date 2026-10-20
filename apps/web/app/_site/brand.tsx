@@ -1,3 +1,5 @@
+import { color } from "../_tokens/tokens";
+
 // The R in the wordmark was redrawn on 12 Oct 2026 at the founder's request (full stem,
 // chamfered bowl with a tighter counter). It differs from the design system's master
 // files until those are regenerated; see docs/brand.md.
@@ -6,7 +8,7 @@
 // point for point. Never redraw, retype, stretch or recolor it: the only variants are
 // Carbon on light and white on Carbon, each with the Volt plane.
 
-const VOLT = "#B7F34A";
+const VOLT = color.brand.volt;
 
 function FoldPlanes() {
   return (
@@ -87,6 +89,7 @@ const ICONS = {
   mail: ["M3 5h18v14H3z", "m3 6 9 7 9-7"],
   plus: ["M12 5v14", "M5 12h14"],
   minus: ["M5 12h14"],
+  "chevron-down": ["m6 9 6 6 6-6"],
 } as const;
 
 export type IconName = keyof typeof ICONS;

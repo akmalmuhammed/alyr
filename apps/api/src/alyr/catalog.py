@@ -9,6 +9,14 @@ Two layers, on purpose:
 * **Products** are what a shop buys. A product is a named bundle of modules. Pricing
   and packaging can change by editing this file, without touching the modules.
 
+The line-up (17 Oct 2026, `docs/agent-dashboard/00-founder-decisions.md`): ALYR Chat,
+ALYR Bookings, ALYR Agent and ALYR Accounts. A product appears in the workspace only when it
+is built (D-039): ALYR Payroll is added here, with its module, on the day it works. Two modules are
+shared: the team inbox and payment links belong to both Chat and Bookings, because a
+business whose number runs on ALYR answers its customers nowhere else, and a booking can
+be paid by link as an order can. ALYR Agent has no module of its own: it is the home
+dashboard and the Sunday report, and every business has it.
+
 To add a product later: write its modules, declare them here, and add the product. The
 shell, the setup checklist, the home dashboard and the back office pick it up.
 """
@@ -58,12 +66,17 @@ class Step:
 @dataclass(frozen=True)
 class Card:
     """A number on the home dashboard. `value` is a SQL expression returning one number,
-    run in the shop's own scope."""
+    run in the shop's own scope. A number that one expression cannot give (the Catalog's
+    stock states depend on the shop's clock, its schedules and its rules) names its own count
+    in `count` instead, and the module's code works it out (`workspace.home`, ALYR Agent).
+    `href` is the screen that lists what was counted: tapping the card opens it."""
 
     key: str
     label: Text
-    value: str
+    value: str = ""
     kind: str = "count"  # count | qar
+    count: str = ""
+    href: str = ""
 
 
 @dataclass(frozen=True)
@@ -78,12 +91,17 @@ class Module:
 @dataclass(frozen=True)
 class Product:
     key: str
+    # The name stays in Latin in both languages ("ALYR Bookings", D-025); the descriptor
+    # says in plain words what it is.
     name: Text
+    descriptor: Text
     summary: Text
     modules: tuple[str, ...] = ()
-    # available: a shop can switch it on. coming: shown so shops know it is planned,
-    # but cannot be switched on.
+    # available: a shop can switch it on. included: every business has it; it cannot be
+    # switched on or off. Nothing is listed that does not work, so there is no other state.
     status: str = "available"
+    # What an included product brings, since it has no modules to list.
+    parts: tuple[Text, ...] = ()
     tags: tuple[str, ...] = field(default_factory=tuple)
 
 
@@ -179,7 +197,7 @@ MODULES: tuple[Module, ...] = (
             Step(
                 "products",
                 Text("Add your menu or price list", "أضف قائمتك أو أسعارك"),
-                done="exists (select 1 from products where available)",
+                done="exists (select 1 from items where available and status = 'live')",
                 screen="orders",
             ),
         ),
@@ -191,6 +209,50 @@ MODULES: tuple[Module, ...] = (
                 "where id = nullif(current_setting('app.tenant_id', true), '')::uuid))::date = "
                 + _TODAY
                 + ")",
+            ),
+        ),
+    ),
+    # The Catalog: a shop's items, photos and stock (D-039, ALY-104). It belongs to no
+    # product and no starting setup: onboarding adds it for a new shop of a type that has one
+    # (`Settings.catalog_for_new_shops`, on since ALY-113), migration 0032 gave it to the shops
+    # that existed, and the back office switches it off for one shop (`tenant_modules`). Its
+    # API answers where this module or the orders module is on.
+    Module(
+        "catalog",
+        Text("Catalog", "الكتالوج"),
+        screens=(Screen("catalog", Text("Catalog", "الكتالوج"), "catalog"),),
+        # Two numbers on the home screen, each the number of rows in the list it opens (the
+        # Catalog list's own filters, `modules/items/listing.py`).
+        cards=(
+            Card(
+                "sold_out", Text("Sold out now", "نفدت الآن"), count="sold_out",
+                href="/app/catalog?show=sold_out",
+            ),
+            Card(
+                "low_stock", Text("Low stock", "مخزون قليل"), count="low_stock",
+                href="/app/catalog?show=low_stock",
+            ),
+        ),
+    ),
+    # Documents: receipts, invoices, quotes, delivery notes, statements, credit notes, deposit
+    # receipts and proformas (ALY-138, D-042, spec 011). It is in no product and no starting
+    # setup, and it is off for every shop until the product lead switches it on (the back
+    # office can for one shop, `SWITCHABLE_MODULES`). With it on, the workspace shows a
+    # Documents section (ALY-146, spec 015) and two numbers on the home screen, each the size of
+    # the list it opens (`modules/documents/listing.py` works them out; the list and the card
+    # share one query). It has no setup step: nothing has to be done before it is useful.
+    Module(
+        "documents",
+        Text("Documents", "المستندات"),
+        screens=(Screen("documents", Text("Documents", "المستندات"), "doc"),),
+        cards=(
+            Card(
+                "unpaid_invoices", Text("Unpaid invoices", "فواتير غير مدفوعة"),
+                count="unpaid_invoices", href="/app/documents?show=unpaid_invoices",
+            ),
+            Card(
+                "documents_not_delivered", Text("Documents not delivered", "مستندات لم تصل"),
+                count="not_delivered", href="/app/documents?show=not_delivered",
             ),
         ),
     ),
@@ -225,7 +287,8 @@ MODULES: tuple[Module, ...] = (
             Card(
                 "outstanding",
                 Text("Owed to you", "مستحق لك"),
-                "(select coalesce(sum(case kind when 'payment' then -amount else amount end), 0)::bigint "
+                "(select coalesce(sum(case when kind in ('payment', 'reversal') then -amount "
+                "else amount end), 0)::bigint "
                 "from ledger_entries)",
                 kind="qar",
             ),
@@ -237,29 +300,52 @@ PRODUCTS: tuple[Product, ...] = (
     Product(
         "chat",
         Text("ALYR Chat", "ALYR Chat"),
+        Text("WhatsApp orders and team inbox", "طلبات واتساب وصندوق الفريق"),
         Text(
-            "Your WhatsApp number as your front desk: team inbox, bookings, orders and payment links.",
-            "رقم واتساب الخاص بك كمكتب استقبال: صندوق للفريق وحجوزات وطلبات وروابط دفع.",
+            "Your WhatsApp number as your front desk: one team inbox, an order page, order "
+            "tracking and payment links.",
+            "رقم واتساب الخاص بك كمكتب استقبال: صندوق واحد للفريق وصفحة للطلب وتتبّع الطلب "
+            "وروابط دفع.",
         ),
-        modules=("inbox", "bookings", "orders", "payments"),
+        modules=("inbox", "orders", "payments"),
     ),
     Product(
-        "credit",
+        "bookings",
+        Text("ALYR Bookings", "ALYR Bookings"),
+        Text("Appointments and reminders", "المواعيد والتذكيرات"),
+        Text(
+            "Customers book from the chat: your services and opening hours, a reminder before "
+            "each visit, and a record of who came and who did not.",
+            "يحجز عملاؤك من المحادثة: خدماتك وساعات عملك، وتذكير قبل كل موعد، وسجلّ بمن حضر "
+            "ومن لم يحضر.",
+        ),
+        modules=("inbox", "bookings", "payments"),
+    ),
+    Product(
+        "agent",
+        Text("ALYR Agent", "ALYR Agent"),
+        Text("Your business in numbers", "نشاطك بالأرقام"),
+        Text(
+            "Your numbers on the home screen, and a report every Sunday morning that compares "
+            "the week with the one before.",
+            "أرقام نشاطك في الشاشة الرئيسية، وتقرير صباح كل أحد يقارن أسبوعك بالأسبوع الذي "
+            "قبله.",
+        ),
+        status="included",
+        parts=(
+            Text("Home dashboard", "لوحة الرئيسية"),
+            Text("Sunday report", "تقرير الأحد"),
+        ),
+    ),
+    Product(
+        "accounts",
+        Text("ALYR Accounts", "ALYR Accounts"),
         Text("Credit accounts", "الحسابات الآجلة"),
         Text(
             "Customer accounts, statements and polite reminders with a payment link.",
             "حسابات العملاء وكشوفاتهم وتذكيرات لبقة برابط دفع.",
         ),
         modules=("ledger",),
-    ),
-    Product(
-        "payroll",
-        Text("Payroll and staff documents", "الرواتب ووثائق الموظفين"),
-        Text(
-            "Salary files for the bank, and reminders before visas and licences expire.",
-            "ملفات الرواتب للبنك، وتذكيرات قبل انتهاء التأشيرات والتراخيص.",
-        ),
-        status="coming",
     ),
 )
 
@@ -275,10 +361,33 @@ MODULE_BY_KEY = {m.key: m for m in MODULES}
 PRODUCT_BY_KEY = {p.key: p for p in PRODUCTS}
 CONNECTION_BY_KEY = {c.key: c for c in CONNECTIONS}
 
+# Modules that more than one product switches on (the team inbox and payment links).
+SHARED_MODULES = frozenset(
+    m for m in MODULE_BY_KEY if sum(m in p.modules for p in PRODUCTS) > 1
+)
 
-def products_for(modules: set[str]) -> list[str]:
-    """The products whose every module is switched on."""
-    return [p.key for p in PRODUCTS if p.modules and set(p.modules) <= modules]
+
+def own_modules(product: Product) -> tuple[str, ...]:
+    """The modules only this product switches on: they say the shop is using it."""
+    return tuple(m for m in product.modules if m not in SHARED_MODULES)
+
+
+def products_for(modules: set[str] | frozenset[str]) -> list[str]:
+    """The products a shop with these modules on is using, in catalogue order.
+
+    An included product is always in use. Otherwise a product is in use when one of its
+    own modules is on. A shared module on its own (the inbox and payment links of a
+    travel office, say) counts for the first product that has it, ALYR Chat, unless a
+    product already in use covers it. So a salon with the inbox, bookings and payment
+    links on is using ALYR Bookings, not ALYR Chat as well."""
+    modules = set(modules)
+    using = [p for p in PRODUCTS if p.status == "included" or set(own_modules(p)) & modules]
+    covered = {m for p in using for m in p.modules}
+    for product in PRODUCTS:
+        if product not in using and set(product.modules) & (modules - covered):
+            using.append(product)
+            covered |= set(product.modules)
+    return [p.key for p in PRODUCTS if p in using]
 
 
 def check() -> None:
@@ -286,9 +395,16 @@ def check() -> None:
     for product in PRODUCTS:
         for key in product.modules:
             assert key in MODULE_BY_KEY, f"product {product.key} names unknown module {key}"
+        assert product.status in ("available", "included"), product.key
+        # A product made only of shared modules could never be told apart from the
+        # products it shares them with.
+        assert not product.modules or own_modules(product), f"{product.key} has no own module"
+        assert product.status != "included" or not product.modules, product.key
     for module in MODULES:
         for step in module.steps:
             assert not step.connection or step.connection in CONNECTION_BY_KEY, step.key
+        for card in module.cards:
+            assert card.value or card.count, f"card {card.key} has no number"
 
 
 check()
