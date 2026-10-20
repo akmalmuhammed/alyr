@@ -33,7 +33,7 @@ async def shell(request: Request, staff: Staff = Depends(current_staff)) -> dict
 @router.get("/home")
 async def home(request: Request, staff: Staff = Depends(current_staff)) -> dict:
     async with request.app.state.db.tenant(staff.tenant_id) as conn:
-        return {"cards": await workspace.home(conn)}
+        return {"cards": await workspace.home(conn, staff)}
 
 
 @router.post("/products/{key}/enable")

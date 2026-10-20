@@ -267,6 +267,32 @@ async def send(
     return made
 
 
+async def share_link(conn: asyncpg.Connection, staff, doc_id: UUID) -> dict:
+    """A link to the hosted page of an issued (or cancelled) document, for the person to copy
+    and send by hand. The same signed token a send carries (a third purpose of `core/links`,
+    90 days); making one is on the activity record, so "who shared it" has an answer."""
+    row = await conn.fetchrow(
+        "select id, status, number, contact_id, created_by_user from documents where id = $1",
+        doc_id)
+    if row is None:
+        raise DocumentError("not_found", 404)
+    access.require_own_or_manager(staff, row["created_by_user"])
+    if row["status"] == "draft":
+        raise DocumentError("not_issued", 409)
+    shop = await conn.fetchrow(
+        "select id, slug from tenants "
+        "where id = nullif(current_setting('app.tenant_id', true), '')::uuid")
+    if not shop["slug"]:
+        raise DocumentError("no_public_link", 409)
+    settings = get_settings()
+    expires = datetime.now(UTC) + timedelta(days=settings.document_link_days)
+    url = links.document_url(settings.public_web_url, shop["slug"], shop["id"], doc_id)
+    await team.record(conn, "document", doc_id, "link_created", team.actor_of(staff),
+                      row["contact_id"], {"number": row["number"]})
+    return {"url": url, "expires_at": expires.isoformat(timespec="seconds").replace("+00:00", "Z"),
+            "days": settings.document_link_days}
+
+
 # ── the job: hand the document to the channel ────────────────────────────────────────────
 
 

@@ -1,10 +1,10 @@
-"""Migration 0039 on a database that already has shops, items, orders, holds and a stock log
+"""Migration 0043 on a database that already has shops, items, orders, holds and a stock log
 (ALY-149): every quantity keeps the value it had, the stock log still adds up to every number on
 the shelf, whole stays whole, row-level security is as it was, and from then on a measure may hold
 a fraction and a counted unit may not.
 
 Built like the other migration tests (test_item_codes_migration.py): a throwaway database brought
-up to the migration before it, filled the way a live one is, then 0039 applied, twice over: as a
+up to the migration before it, filled the way a live one is, then 0043 applied, twice over: as a
 superuser, as the local database is, and as an owner that does not bypass row-level security.
 """
 
@@ -20,7 +20,7 @@ from alyr.migrate import MIGRATIONS, ensure_app_role
 from conftest import APP_DSN, OWNER_DSN
 from test_catalog_migration import dsn_for
 
-THIS_ONE = "0039_decimal_quantities.sql"
+THIS_ONE = "0043_decimal_quantities.sql"
 LIMITED_ROLE = "alyr_decimals_check"
 
 # Every column whose type changes, and how a row of data is read back for the comparison.
