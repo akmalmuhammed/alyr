@@ -2,7 +2,10 @@
 
 import { useEffect, useRef, useState } from "react";
 import type { DemoSet, Locale } from "./copy";
-import { BookingPhone } from "./PageDrawings";
+import { RC0042 } from "./paperData";
+import { WaDoc } from "./Frames";
+import { BookingPhone, DocLinkPhone } from "./PageDrawings";
+import { PaperA4 } from "./Paper";
 
 type Props = { product: DemoSet; locale: Locale };
 
@@ -149,6 +152,14 @@ export function ProductDemo({ product, locale }: Props) {
             <ol className="wa-thread">
               <li className="wa-day"><span>{product.today}</span></li>
               {demo.chat.map((line, index) => {
+                // something the customer did on a page, not a message: a chip, as WhatsApp marks a day
+                if (line.from === "event") {
+                  return (
+                    <li key={index} className="wa-day fx-event" style={{ "--i": index } as React.CSSProperties}>
+                      <span dir="auto">{line.text}</span>
+                    </li>
+                  );
+                }
                 const mine = line.from === "customer";
                 const tail = index === 0 || (demo.chat[index - 1].from === "customer") !== mine;
                 return (
@@ -157,7 +168,8 @@ export function ProductDemo({ product, locale }: Props) {
                     className={`wa-msg ${mine ? "wa-out" : "wa-in"} ${tail ? "wa-tail" : ""}`}
                     style={{ "--i": index } as React.CSSProperties}
                   >
-                    <div className="wa-bubble">
+                    <div className={`wa-bubble${line.doc ? " has-doc" : ""}`}>
+                      {line.doc && <WaDoc name={line.doc.name} meta={line.doc.meta} />}
                       <span className="wa-text" dir="auto">{line.text}</span>
                       <span className="wa-meta">
                         <span dir="ltr">{clock(locale, demo.start + index * 2)}</span>
@@ -206,6 +218,16 @@ export function ProductDemo({ product, locale }: Props) {
               <BookingPhone page={demo.panel.page} className="panel-phone" />
             </div>
           )}
+          {demo.panel.doc && (
+            <div className="panel-page">
+              <DocLinkPhone page={demo.panel.doc} className="panel-phone" />
+            </div>
+          )}
+          {demo.panel.paper && (
+            <div className="panel-page panel-paper">
+              <PaperA4 doc={RC0042} crop />
+            </div>
+          )}
           {demo.panel.rows.length > 0 && (
           <ul className="panel-rows">
             {demo.panel.rows.map((row, index) => (
@@ -217,7 +239,7 @@ export function ProductDemo({ product, locale }: Props) {
                 {row.lead !== undefined && <span className="row-lead">{row.lead}</span>}
                 <span className="row-main">
                   <b>{row.main}</b>
-                  {row.sub && <small dir="auto">{row.sub}</small>}
+                  {row.sub && <small dir="auto" className={row.wrap ? "is-wrap" : undefined}>{row.sub}</small>}
                 </span>
                 {row.trail && <span className="row-trail">{row.trail}</span>}
                 {row.acts && (
@@ -245,3 +267,4 @@ export function ProductDemo({ product, locale }: Props) {
     </div>
   );
 }
+

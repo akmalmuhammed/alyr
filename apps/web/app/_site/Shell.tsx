@@ -18,8 +18,7 @@ export function contactHref(): string {
 }
 
 /** The suite, as the Products menu lists it: every product in its fixed order, with its
- * one line and its state. Payroll has no page yet, so its row is not a link: it is drawn
- * on a dashed rule with the pending dot, and named for screen readers as coming. */
+ * one line and its state ("Set up for you", or "With every product"). */
 function ProductsMenu({ locale, page }: { locale: Locale; page: PageKey }) {
   const t = copy[locale];
   return (
@@ -33,30 +32,14 @@ function ProductsMenu({ locale, page }: { locale: Locale; page: PageKey }) {
           <ul className="pm-grid" aria-label={t.nav.productsMenu}>
             {PRODUCTS.map((key) => {
               const p = t.products.items[key];
-              const href = productPath(key, locale);
-              const inner = (
-                <>
-                  <span className="pm-name"><bdi>{p.name}</bdi></span>
-                  <span className="pm-line">{p.line}</span>
-                  <span className="pm-state">
-                    {!href && <span className="dot-pending" aria-hidden="true" />}
-                    {p.state}
-                  </span>
-                </>
-              );
               return (
-                <li key={key} className={`pm-item${href ? "" : " pm-soon"}`}>
-                  {href ? (
-                    <a className="pm-link" href={href} aria-current={page === key ? "page" : undefined}>
-                      {inner}
-                      <Icon name="arrow-right" className="ico ico-flip pm-arrow" />
-                    </a>
-                  ) : (
-                    <div className="pm-link">
-                      <span className="pm-soon-in" aria-hidden="true">{inner}</span>
-                      <span className="sr-only">{t.products.payrollSr}</span>
-                    </div>
-                  )}
+                <li key={key} className="pm-item">
+                  <a className="pm-link" href={productPath(key, locale)} aria-current={page === key ? "page" : undefined}>
+                    <span className="pm-name"><bdi>{p.name}</bdi></span>
+                    <span className="pm-line">{p.line}</span>
+                    <span className="pm-state">{p.state}</span>
+                    <Icon name="arrow-right" className="ico ico-flip pm-arrow" />
+                  </a>
                 </li>
               );
             })}
@@ -121,21 +104,13 @@ export function Shell({
                 <p className="tm-k" aria-hidden="true">{t.nav.products}</p>
                 <ul className="tm-products" aria-label={t.nav.productsMenu}>
                   {PRODUCTS.map((key) => {
-                    const href = productPath(key, locale);
                     const p = t.products.items[key];
                     return (
                       <li key={key}>
-                        {href ? (
-                          <a href={href} aria-current={page === key ? "page" : undefined}>
-                            <bdi>{p.name}</bdi>
-                            <small>{p.state}</small>
-                          </a>
-                        ) : (
-                          <span className="tm-soon">
-                            <span aria-hidden="true"><bdi>{p.name}</bdi><small>{p.state}</small></span>
-                            <span className="sr-only">{t.products.payrollSr}</span>
-                          </span>
-                        )}
+                        <a href={productPath(key, locale)} aria-current={page === key ? "page" : undefined}>
+                          <bdi>{p.name}</bdi>
+                          <small>{p.state}</small>
+                        </a>
                       </li>
                     );
                   })}
@@ -198,17 +173,9 @@ export function Shell({
             <p className="foot-line">{t.footer.line}</p>
           </div>
           <nav className="foot-nav foot-products" aria-label={t.footer.products}>
-            {PRODUCTS.map((key) => {
-              const href = productPath(key, locale);
-              return href ? (
-                <a key={key} href={href} aria-current={page === key ? "page" : undefined}><bdi>{name(key)}</bdi></a>
-              ) : (
-                <span key={key} className="foot-soon">
-                  <span aria-hidden="true"><bdi>{name(key)}</bdi> ({t.footer.coming})</span>
-                  <span className="sr-only">{t.products.payrollSr}</span>
-                </span>
-              );
-            })}
+            {PRODUCTS.map((key) => (
+              <a key={key} href={productPath(key, locale)} aria-current={page === key ? "page" : undefined}><bdi>{name(key)}</bdi></a>
+            ))}
           </nav>
           <nav className="foot-nav foot-site" aria-label={t.footer.links}>
             <a href={at("#questions")}>{t.nav.questions}</a>

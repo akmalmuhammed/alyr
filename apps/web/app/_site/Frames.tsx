@@ -1,5 +1,5 @@
 import type { ReactNode } from "react";
-import { Symbol } from "./brand";
+import { Icon, Symbol } from "./brand";
 
 // The frames the homepage draws product screens in. No words of their own and no import
 // of `copy.ts`, so the hero's client component can use them without shipping the copy.
@@ -45,5 +45,16 @@ export function TickPath() {
     <svg viewBox="0 0 24 24" aria-hidden="true">
       <path d="M5 12.5l4.5 4.5L19 7.5" />
     </svg>
+  );
+}
+
+/** A file in a WhatsApp chat, as a document message: a page glyph from ALYR's icon grid,
+ * the file's name and "1 page · PDF", above its caption. No WhatsApp logo. */
+export function WaDoc({ name, meta }: { name: string; meta: string }) {
+  return (
+    <span className="wa-doc">
+      <span className="wa-doc-ico"><Icon name="document" /></span>
+      <span className="wa-doc-t"><b dir="ltr">{name}</b><small dir="auto">{meta}</small></span>
+    </span>
   );
 }

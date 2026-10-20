@@ -200,7 +200,7 @@ export function WhoBlock({ who }: { who: WhoSection }) {
 }
 
 /** Works with the rest of ALYR: ruled rows in the suite's order, without the page's own
- * product, each saying what joining adds. Payroll is a dashed row with no link. */
+ * product, each saying what joining adds. */
 export function WorksBlock({ locale, works, self }: { locale: Locale; works: WorksSection; self: ProductKey }) {
   const items = copy[locale].products.items;
   return (
@@ -212,28 +212,18 @@ export function WorksBlock({ locale, works, self }: { locale: Locale; works: Wor
         </div>
         <ul className="works-rows">
           {PRODUCTS.filter((key) => key !== self && works.rows[key]).map((key, index) => {
-            const href = productPath(key, locale);
             const p = items[key];
             return (
-              <li key={key} className={href ? undefined : "is-soon"} data-reveal style={n(index)}>
+              <li key={key} data-reveal style={n(index)}>
                 <span className="works-name">
                   <b><bdi>{p.name}</bdi></b>
                   <small>{p.descriptor}</small>
                 </span>
-                {href ? (
-                  <>
-                    <p className="works-say">{rich(works.rows[key]!)}</p>
-                    <a className="link works-link" href={href}>
-                      <span>{rich(fill(works.link, { name: p.name }))}</span>
-                      <Icon name="arrow-right" className="ico ico-flip" />
-                    </a>
-                  </>
-                ) : (
-                  <p className="status-line works-say">
-                    <span className="dot-pending" aria-hidden="true" />
-                    <span>{rich(works.rows[key]!)}</span>
-                  </p>
-                )}
+                <p className="works-say">{rich(works.rows[key]!)}</p>
+                <a className="link works-link" href={productPath(key, locale)}>
+                  <span>{rich(fill(works.link, { name: p.name }))}</span>
+                  <Icon name="arrow-right" className="ico ico-flip" />
+                </a>
               </li>
             );
           })}

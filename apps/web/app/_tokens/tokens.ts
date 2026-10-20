@@ -230,6 +230,13 @@ export const component = {
     "float": "0 18px 50px -14px rgb(21 23 26 / .32), 0 0 0 1px var(--hair-strong)",
     "grid": "rgb(167 173 181 / .2)"
   },
+  "document": {
+    "paper": "#ffffff",
+    "ink": "#15171a",
+    "ink-2": "#5f666d",
+    "rule": "#d8dcd7",
+    "band": "#eef0ec"
+  },
   "agent": {
     "bar-mix": "88%",
     "ghost-mix": "10%"
@@ -581,6 +588,13 @@ export const dark = {
       "lift": "0 1px 0 rgb(255 255 255 / .04) inset, 0 0 0 1px var(--hair)",
       "float": "0 24px 60px -18px rgb(0 0 0 / .8), 0 0 0 1px var(--hair-strong)",
       "grid": "rgb(167 173 181 / .07)"
+    },
+    "document": {
+      "paper": "#e3e6e1",
+      "ink": "#15171a",
+      "ink-2": "#555d65",
+      "rule": "#c4c9cf",
+      "band": "#d8dcd7"
     },
     "agent": {
       "bar-mix": "78%",

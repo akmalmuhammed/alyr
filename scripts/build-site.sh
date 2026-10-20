@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
 # Build the public ALYR site as plain files that any static host can serve.
 #
-# Only the public pages are published: the homepage and the four product pages (/chat,
-# /bookings, /agent, /accounts), each in English and Arabic (/ar, /ar/chat, ...). The
+# Only the public pages are published: the homepage and the six product pages (/chat,
+# /bookings, /agent, /accounts, /shelf, /docs), each in English and Arabic (/ar, /ar/chat, ...). The
 # workspace, sign-in, payment and order pages need the API and are not part of this
 # output, so nothing here can reach customer data.
 #
@@ -22,7 +22,7 @@ NEXT_PUBLIC_ALYR_WORKSPACE_URL="" pnpm build >/dev/null
 
 app=".next/server/app"
 mkdir -p out-site/_next
-pages="chat bookings agent accounts"
+pages="chat bookings agent accounts shelf docs"
 cp "$app/index.html" out-site/index.html
 cp "$app/ar.html" out-site/ar.html
 mkdir -p out-site/ar

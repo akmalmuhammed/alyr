@@ -220,7 +220,7 @@ export function FlowDiagram({ flow }: Props) {
                 {row.lead !== undefined && <span className="row-lead">{row.lead}</span>}
                 <span className="row-main">
                   <b>{row.main}</b>
-                  {row.sub && <small dir="auto">{row.sub}</small>}
+                  {row.sub && <small dir="auto" className={row.wrap ? "is-wrap" : undefined}>{row.sub}</small>}
                 </span>
                 {row.trail && <span className="row-trail">{row.trail}</span>}
               </li>

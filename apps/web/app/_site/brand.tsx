@@ -87,6 +87,9 @@ const ICONS = {
   // A drawn speech bubble for "message us": deliberately not WhatsApp's mark.
   chat: ["M4 5h16v11H9l-5 4z"],
   mail: ["M3 5h18v14H3z", "m3 6 9 7 9-7"],
+  // a photo slot with no photo yet, as the order page draws it
+  image: ["M4 5h16v14H4z", "m4 16 5-5 4 4 2-2 5 5", "M15 9h1"],
+  download: ["M12 4v11", "m7 10 5 5 5-5", "M5 20h14"],
   plus: ["M12 5v14", "M5 12h14"],
   minus: ["M5 12h14"],
   "chevron-down": ["m6 9 6 6 6-6"],
