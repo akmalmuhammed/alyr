@@ -123,9 +123,16 @@ class InboundHandler:
         if tenant_id is None:
             return False
         async with self._db.tenant(tenant_id) as conn:
-            return await self._outbound.record_status(
+            moved = await self._outbound.record_status(
                 conn, status.message_id, status.status, status.error
             )
+            if moved:
+                # A document the shop's other system is waiting to hear about (ALY-142).
+                from alyr.modules.documents import delivery
+
+                await delivery.on_message_status(
+                    conn, status.message_id, status.status, status.error)
+            return moved
 
     async def handle_user_id_update(self, update: UserIdUpdate) -> bool:
         """A customer's WhatsApp user ID changed. Return True if a contact was moved."""

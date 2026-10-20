@@ -109,6 +109,8 @@ class Doc:
     related_number: str = ""
     # The seller has no commercial registration number: the page says so.
     unregistered: bool = False
+    # The shop's own system numbered this document; ALYR only delivers it, and says so (ALY-142).
+    external: bool = False
     preview: bool = False
     # The first 16 hex digits of the content hash, printed so the paper can be checked.
     code: str = ""

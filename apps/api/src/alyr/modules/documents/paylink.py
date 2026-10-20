@@ -33,6 +33,7 @@ from alyr import catalog
 from alyr.config import get_settings
 from alyr.core import team
 from alyr.core.normalise import fmt_qar
+from alyr.modules.connect import webhooks
 
 log = logging.getLogger("alyr.documents.paylink")
 
@@ -59,9 +60,11 @@ def url(tenant_id: UUID, payment_id: UUID) -> str:
 
 def wanted(row: dict) -> bool:
     """Does this invoice (the draft row about to be issued) call for a link, given the shop can
-    make one?"""
+    make one? Never a document another system numbered (ALY-142): it is that system's invoice,
+    ALYR only delivers it, and its payment is that system's business."""
     return (
         row["kind"] == "invoice" and row["source"] == "manual" and row["contact_id"] is not None
+        and row.get("number_authority") != "external"
         and row["total_minor"] - row["paid_minor"] > 0
     )
 
@@ -139,6 +142,11 @@ async def on_paid(conn: asyncpg.Connection, payment_id: UUID, request: asyncpg.R
     if row is None:
         return  # the same report again: written already
     number = await conn.fetchval("select number from documents where id = $1", doc_id)
+    # Like any payment recorded against an invoice, it is told to the shop's own system.
+    await webhooks.emit(conn, "payment.recorded", {
+        "payment_id": str(row["id"]), "subject": "invoice", "subject_id": str(doc_id),
+        "amount_minor": request["amount"], "method": LINK_METHOD, "reference": str(payment_id)[:8],
+    })
     await team.record(
         conn, "document", doc_id, "paid_by_link", actor, request["contact_id"],
         {"number": number, "amount": fmt_qar(request["amount"])},

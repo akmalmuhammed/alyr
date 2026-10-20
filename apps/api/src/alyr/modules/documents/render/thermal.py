@@ -352,10 +352,12 @@ class Thermal:
                 ink = self.ink(size, colour=colours.INK if position == 0 else colours.MUTED)
                 self.y += pen.paragraph(text, self.x0, self.y, self.x1 - self.x0, lang, ink,
                                         align=("R" if lang == "ar" else "L"))
-        if d.unregistered:
+        for shown, key in ((d.unregistered, "unregistered"), (d.external, "external")):
+            if not shown:
+                continue
             self.y += 1.4
-            for lang, text in t.by_lane(d, Bi(ar=t.words.NOTES["unregistered"].ar,
-                                              en=t.words.NOTES["unregistered"].en)):
+            for lang, text in t.by_lane(d, Bi(ar=t.words.NOTES[key].ar,
+                                              en=t.words.NOTES[key].en)):
                 self.y += pen.paragraph(text, self.x0, self.y, self.x1 - self.x0, lang,
                                         self.ink(6.6, colour=colours.MUTED), align="C")
 

@@ -172,11 +172,17 @@ class Outbound:
     async def gave_up(self, tenant_id: UUID, payload: dict) -> None:
         """Job dead-letter handler: the message could not be sent after every retry."""
         async with self._db.tenant(tenant_id) as conn:
-            await conn.execute(
+            changed = await conn.execute(
                 "update messages set status = 'failed', error = 'could not be delivered' "
                 "where id = $1 and status = 'queued'",
                 UUID(payload["message_id"]),
             )
+            if changed == "UPDATE 1":
+                # A document that never arrived is news to the shop's other system (ALY-142).
+                from alyr.modules.documents import delivery
+
+                await delivery.on_message_failed(
+                    conn, UUID(payload["message_id"]), "could not be delivered")
 
     async def record_status(
         self, conn: asyncpg.Connection, provider_id: str, status: str, error: str = ""

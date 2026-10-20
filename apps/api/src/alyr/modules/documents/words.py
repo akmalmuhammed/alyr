@@ -116,6 +116,11 @@ NOTES: dict[str, Text] = {
         "Preview. This is not an issued document and has no number.",
         "معاينة. هذا المستند غير صادر وليس له رقم.",
     ),
+    # A document the shop's own system numbered and ALYR only delivers (ALY-142).
+    "external": Text(
+        "Issued by the seller's own system, which gave it the number above. Delivered by ALYR.",
+        "صدر عن نظام البائع نفسه الذي منحه الرقم أعلاه، وتتولى ALYR إيصاله فقط.",
+    ),
 }
 
 # ── What the API says when it refuses ────────────────────────────────────────────────────
@@ -381,6 +386,24 @@ ERRORS: dict[str, Text] = {
     "document_voided": Text(
         "This document has been cancelled by a credit note. Send the credit note instead.",
         "أُلغي هذا المستند بإشعار دائن. أرسل الإشعار الدائن بدلًا منه.",
+    ),
+    # ── Connected mode: who numbers what (ALY-142) ───────────────────────────────────────
+    "external_authority": Text(
+        "This kind of document is numbered by the shop's other system, so ALYR does not issue "
+        "it. Change who numbers it in the connection settings, or issue it in the other system "
+        "and send it to ALYR.",
+        "يتولى نظام المتجر الآخر ترقيم هذا النوع من المستندات، لذلك لا تُصدره ALYR. غيّر من "
+        "يتولى الترقيم من إعدادات الربط، أو أصدره في النظام الآخر وأرسله إلى ALYR.",
+    ),
+    "authority_number_clash": Text(
+        "ALYR cannot take over numbering yet: a document from your other system already has a "
+        "number that ALYR's own counter would reach. Change the prefix of the ALYR series first.",
+        "لا يمكن لـ ALYR تولّي الترقيم الآن: لدى مستند من نظامك الآخر رقم قد يصل إليه عدّاد "
+        "ALYR. غيّر بادئة سلسلة ALYR أولاً.",
+    ),
+    "document_withdrawn": Text(
+        "This document was withdrawn: it was imported by mistake and never sent.",
+        "سُحب هذا المستند: استُورد عن طريق الخطأ ولم يُرسل.",
     ),
     # ── The workspace screens (ALY-146) ──────────────────────────────────────────────────
     "filter_invalid": Text(

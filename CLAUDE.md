@@ -83,7 +83,10 @@ apps/api/                     FastAPI service (Python 3.13, managed with uv)
                               customers.py, saved_lines.py, quick.py, standalone.py, paylink.py,
                               wa_command.py and wa_words.py are ALYR Invoices, the product for a
                               shop that only invoices (specs/017, ALY-141); core/qr.py is the
-                              QR encoder; seed_invoices_demo.py makes the Salem Maintenance demo
+                              QR encoder; seed_invoices_demo.py makes the Salem Maintenance demo;
+                              connect/ is connected mode: another system sends its sales (open API
+                              with API keys, CSV import), authority says who numbers each kind of
+                              document, webhooks send events out (specs/016, ALY-142, docs/connect-api.md)
                               items/codes.py reads a customer's message for item codes, links and
                               SKUs and items/wa_order.py orders by them in the chat (specs/010)
   src/alyr/routes/            HTTP routes. deps.py: who is calling, which shop, which modules are on
@@ -112,6 +115,7 @@ scripts/                      check.sh (everything CI runs), demo.sh (start and 
                               document-page-browser-check.mjs (the hosted document page and its links),
                               documents-screens-browser-check.mjs (the workspace's Documents screens),
                               documents-standalone-browser-check.mjs (the invoices-only way, start to finish),
+                              connect-browser-check.mjs (the connection screen, phone width, both languages),
                               golive-truth-check.mjs (every onboarding sentence of every business type proved on the
                               finished order page and workspace, English and Arabic),
                               hooks/pre-commit

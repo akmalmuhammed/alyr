@@ -28,8 +28,9 @@ async def page(conn: asyncpg.Connection, doc_id: UUID) -> dict | None:
     row = await conn.fetchrow(
         "select id, kind, status, number, issue_date, currency, currency_exponent, languages, "
         "gross_minor, discount_minor, tax_minor, rounding_minor, total_minor, paid_minor, "
-        "balance_minor, payments, seller, voided_by_document_id, related_document_id "
-        "from documents where id = $1 and status in ('issued', 'void')", doc_id)
+        "balance_minor, payments, seller, voided_by_document_id, related_document_id, "
+        "number_authority from documents where id = $1 and status in ('issued', 'void') "
+        "and withdrawn_at is null", doc_id)
     if row is None:
         return None
     lines = await conn.fetch(
@@ -78,6 +79,8 @@ async def page(conn: asyncpg.Connection, doc_id: UUID) -> dict | None:
             for p in (row["payments"] or [])
         ],
         "voided_by": voided_by, "against": related, "pay": pay,
+        # Numbered by the shop's other system and only delivered by ALYR (ALY-142).
+        "external": row["number_authority"] == "external",
     }
 
 
@@ -85,7 +88,8 @@ async def pdf(conn: asyncpg.Connection, doc_id: UUID) -> tuple[bytes, str] | Non
     """The PDF and the number it is named for, for an issued document of this shop."""
     row = await conn.fetchrow(
         "select d.number, f.content from documents d join document_files f "
-        "on f.document_id = d.id where d.id = $1 and d.status in ('issued', 'void')", doc_id)
+        "on f.document_id = d.id where d.id = $1 and d.status in ('issued', 'void') "
+        "and d.withdrawn_at is null", doc_id)
     if row is None:
         return None
     return bytes(row["content"]), row["number"]

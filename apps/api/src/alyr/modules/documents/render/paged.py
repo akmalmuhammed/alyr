@@ -654,8 +654,10 @@ class Paged:
                            8.4)
         if d.terms.ar or d.terms.en:
             self._labelled("terms", d.terms, 7.4)
-        if d.unregistered:
-            note = t.words.NOTES["unregistered"]
+        for shown, key in ((d.unregistered, "unregistered"), (d.external, "external")):
+            if not shown:
+                continue
+            note = t.words.NOTES[key]
             lanes = t.by_lane(d, Bi(ar=note.ar, en=note.en))
             left, right = self.span(0, self.content_w)
             inset = 3.0

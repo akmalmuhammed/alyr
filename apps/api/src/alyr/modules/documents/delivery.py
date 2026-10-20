@@ -36,6 +36,7 @@ from alyr.config import get_settings
 from alyr.core import jobs, links, mail, team, templates
 from alyr.core.team import Actor
 from alyr.db import Database
+from alyr.modules.connect import webhooks
 from alyr.modules.documents import access, delivery_words, kinds, money
 from alyr.modules.documents import settings as doc_settings
 from alyr.modules.documents.errors import DocumentError
@@ -168,6 +169,42 @@ async def queue_auto(
     return [m for m in made if m is not None]
 
 
+def wants_whatsapp(cfg: dict, send: bool | None) -> bool:
+    """Whether a connected sale asks for a WhatsApp message: `send: true` always does; leaving
+    it out follows the shop's settings (sent at once, and WhatsApp on); `send: false` never."""
+    if send is not None:
+        return send
+    return cfg["send_mode"] == "automatic" and bool(cfg["auto_send_whatsapp"])
+
+
+async def queue_connected(
+    conn: asyncpg.Connection, document: dict, contact_id: UUID, *, send: bool | None,
+    language: str | None, actor: Actor,
+) -> list[UUID]:
+    """What a sale from another system asks to be sent (ALY-142). `send: true` sends on WhatsApp
+    whatever the shop's automatic settings say (it is the other system asking, for this sale)
+    and by email when the customer has an address; `false` sends nothing; leaving it out follows
+    the shop's settings. The customer's own language decides the words unless the sale gives a
+    hint. A customer who said stop is not messaged: the outbound layer refuses it and the
+    delivery shows it as not delivered."""
+    cfg = await doc_settings.get(conn)
+    if send is False or (send is None and cfg["send_mode"] != "automatic"):
+        return []
+    contact = await conn.fetchrow("select id, lang, email from contacts where id = $1", contact_id)
+    if contact is None:
+        return []
+    doc_id = UUID(document["id"])
+    lang = language or contact["lang"]
+    made = []
+    if wants_whatsapp(cfg, send):
+        made.append(await _insert(conn, doc_id, "whatsapp", "auto", contact_id, "", lang, actor))
+    if (contact["email"] and mail.deliverable(contact["email"])
+            and (send is True or cfg["auto_send_email"])):
+        made.append(await _insert(conn, doc_id, "email", "auto", contact_id, contact["email"],
+                                  lang, actor))
+    return [m for m in made if m is not None]
+
+
 def clean_phone(text: str) -> str:
     digits = re.sub(r"[\s\-().]", "", text or "").lstrip("+")
     if digits.startswith("00"):
@@ -185,14 +222,16 @@ async def send(
     an address typed here. Again and again if wanted; every press is on the activity record.
     A delivery already waiting to go to the same place is returned, not doubled."""
     row = await conn.fetchrow(
-        "select id, kind, status, number, languages, customer, contact_id, created_by_user "
-        "from documents where id = $1", doc_id)
+        "select id, kind, status, number, languages, customer, contact_id, created_by_user, "
+        "withdrawn_at from documents where id = $1", doc_id)
     if row is None:
         raise DocumentError("not_found", 404)
     access.require_own_or_manager(staff, row["created_by_user"])
     await access.require_issue(conn, staff)
     if row["status"] == "draft":
         raise DocumentError("not_issued", 409)
+    if row["withdrawn_at"] is not None:
+        raise DocumentError("document_withdrawn", 409)
     if row["status"] == "void":
         raise DocumentError("document_voided", 409)
     if (phone or email) and not access.is_manager(staff):
@@ -381,6 +420,18 @@ class DocumentSender:
             doc["kind"], doc["number"], ctx["shop"], ctx["amount"], ctx["url"], lang)
         file_name = delivery_words.file_name(doc["number"])
         template = delivery_words.TEMPLATE_FOR.get(doc["kind"])
+        if template and not get_settings().document_templates_approved:
+            standing = await conn.fetchrow(
+                "select consent_service, coalesce(last_inbound_at > now() - interval '24 hours', "
+                "false) as window_open from contacts where id = $1", d["contact_id"])
+            # Outside the 24-hour window only an approved template will do, and these three are
+            # written and not yet approved by Meta (ALY-139). Say so at once, honestly, and
+            # fall back to email when the customer has an address, rather than failing at Meta
+            # six times (ALY-142). A customer who said stop is told "stopped", not this: the
+            # outbound layer refuses that one first. The hosted link is in the failure event.
+            if not standing["window_open"] and standing["consent_service"] != "revoked":
+                await self._not_delivered(conn, d, ctx, "template_not_approved")
+                return
         if template:
             message = templates.notice(
                 d["contact_id"], template, lang, caption, doc["number"], ctx["shop"],
@@ -395,6 +446,42 @@ class DocumentSender:
         await conn.execute(
             "update document_deliveries set message_id = $2, link_expires_at = $3, "
             "updated_at = now() where id = $1", d["id"], sent.message_id, ctx["expires"])
+        if sent.blocked:
+            # Refused by the outbound layer (no consent, a customer who said stop, the window):
+            # recorded as blocked, and the shop's other system is told.
+            await webhooks.emit(conn, "document.failed", _failure(
+                doc, d, ctx, sent.blocked))
+
+    async def _not_delivered(self, conn: asyncpg.Connection, d: asyncpg.Record, ctx: dict,
+                             reason: str) -> None:
+        """The WhatsApp message cannot be sent: write that down, tell the shop's other system
+        (with the hosted link, so it can pass the document on some other way), and fall back to
+        email when the customer has an address and no email was queued for this document."""
+        doc = ctx["doc"]
+        await conn.execute(
+            "update document_deliveries set status = 'blocked', error = $2, "
+            "link_expires_at = $3, updated_at = now() where id = $1 and status = 'queued'",
+            d["id"], reason, ctx["expires"])
+        await webhooks.emit(conn, "document.failed", _failure(doc, d, ctx, reason))
+        email = await conn.fetchval("select email from contacts where id = $1", d["contact_id"])
+        if email and mail.deliverable(email):
+            await _insert(conn, doc["id"], "email", "auto", d["contact_id"], email, d["language"],
+                          Actor(None, "ALYR"))
+
+    async def on_failed(self, tenant_id: UUID, delivery_id: UUID, reason: str) -> None:
+        """A delivery ended badly outside the job's own path (an email that cannot be sent):
+        tell the shop's other system."""
+        async with self._db.tenant(tenant_id) as conn:
+            row = await conn.fetchrow(
+                "select d.id, d.document_id, d.channel, doc.number, doc.kind "
+                "from document_deliveries d join documents doc on doc.id = d.document_id "
+                "where d.id = $1", delivery_id)
+            if row is None:
+                return
+            await webhooks.emit(conn, "document.failed", {
+                "document_id": str(row["document_id"]), "number": row["number"],
+                "delivery_id": str(row["id"]), "channel": row["channel"], "reason": reason,
+            })
 
     async def _email(self, tenant_id: UUID, d: asyncpg.Record, ctx: dict) -> None:
         doc, lang = ctx["doc"], ctx["lang"]
@@ -423,12 +510,58 @@ class DocumentSender:
                 "update document_deliveries set status = $2, error = $3, link_expires_at = $4, "
                 "updated_at = now() where id = $1 and status = 'queued'",
                 delivery_id, status, error, ctx["expires"])
+        if status == "failed":
+            await self.on_failed(tenant_id, delivery_id, error)
 
     async def gave_up(self, tenant_id: UUID, payload: dict) -> None:
         """Every try failed: the owner sees the document as not delivered."""
         async with self._db.tenant(tenant_id) as conn:
-            await conn.execute(
+            changed = await conn.execute(
                 "update document_deliveries set status = 'failed', "
                 "error = 'could not be delivered', updated_at = now() "
                 "where id = $1 and status = 'queued' and message_id is null",
                 UUID(payload["delivery_id"]))
+        if changed == "UPDATE 1":
+            await self.on_failed(tenant_id, UUID(payload["delivery_id"]),
+                                 "could not be delivered")
+
+
+def _failure(doc: asyncpg.Record, d: asyncpg.Record, ctx: dict, reason: str) -> dict:
+    """The `document.failed` event: which document, which way, why, and the hosted link."""
+    return {
+        "document_id": str(doc["id"]), "number": doc["number"], "delivery_id": str(d["id"]),
+        "channel": d["channel"], "reason": reason, "hosted_url": ctx["url"],
+    }
+
+
+async def on_message_failed(conn: asyncpg.Connection, message_id: UUID, reason: str) -> None:
+    """Every try to send a WhatsApp message failed (`Outbound.gave_up`): if it carried a
+    document, tell the shop's other system."""
+    row = await conn.fetchrow(
+        "select d.id, d.document_id, d.channel, doc.number from document_deliveries d "
+        "join documents doc on doc.id = d.document_id where d.message_id = $1", message_id)
+    if row is not None:
+        await webhooks.emit(conn, "document.failed", {
+            "document_id": str(row["document_id"]), "number": row["number"],
+            "delivery_id": str(row["id"]), "channel": row["channel"], "reason": reason},
+            once=("delivery_id", str(row["id"])))
+
+
+async def on_message_status(conn: asyncpg.Connection, provider_id: str, status: str,
+                            error: str = "") -> None:
+    """A delivery report from WhatsApp for a message that carried a document: tell the shop's
+    other system once that it arrived, or that it did not. Called by the inbound path after
+    `Outbound.record_status` has moved the message on; costs one query for any other message."""
+    row = await conn.fetchrow(
+        "select d.id, d.document_id, d.channel, doc.number from document_deliveries d "
+        "join messages m on m.id = d.message_id join documents doc on doc.id = d.document_id "
+        "where m.wa_message_id = $1", provider_id)
+    if row is None:
+        return
+    data = {"document_id": str(row["document_id"]), "number": row["number"],
+            "delivery_id": str(row["id"]), "channel": row["channel"]}
+    if status in ("delivered", "read"):
+        await webhooks.emit(conn, "document.delivered", data, once=("delivery_id", str(row["id"])))
+    elif status == "failed":
+        await webhooks.emit(conn, "document.failed", {**data, "reason": error or "failed"},
+                            once=("delivery_id", str(row["id"])))
