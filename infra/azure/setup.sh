@@ -74,6 +74,9 @@ case "${1:-}" in
     for role in app backup; do
       if ! secret_exists "${role}-db-password"; then put_secret "${role}-db-password" "$(new_password)"; fi
     done
+    # Signs customers' order and document links. Made once and never replaced: a new one
+    # ends every link already sent.
+    if ! secret_exists link-secret; then put_secret link-secret "$(openssl rand -hex 32)"; fi
     app_pw="$(az keyvault secret show --vault-name "$(vault)" -n app-db-password --query value -o tsv)"
     backup_pw="$(az keyvault secret show --vault-name "$(vault)" -n backup-db-password --query value -o tsv)"
     put_secret migration-url "postgresql://alyradmin:${admin_pw}@${host}:5432/alyr?sslmode=require"
@@ -87,6 +90,10 @@ case "${1:-}" in
     ask_secret meta-phone-number-id "Meta phone number ID"
     ask_secret meta-waba-id "Meta WhatsApp Business Account ID"
     ask_secret email-api-key "Resend API key"
+    echo "Product photos on Cloudflare R2 (the same three values as in apps/api/.env; required):"
+    ask_secret r2-account-id "Cloudflare account ID"
+    ask_secret r2-access-key-id "R2 access key ID (the alyr-media app token)"
+    ask_secret r2-secret-access-key "R2 secret access key"
     echo "Backup settings (skip until the Google and Cloudflare buckets exist, infra/gcp/README.md):"
     ask_secret backup-age-recipient "Backup public key (age1...)"
     ask_secret backup-gcs-access-key-id "Google Cloud Storage HMAC access key ID"
@@ -104,6 +111,10 @@ case "${1:-}" in
 
   apps)
     tag="${2:?usage: setup.sh apps <image tag>}"
+    # Without photo storage the API and worker refuse to start; say so before deploying.
+    for s in r2-account-id r2-access-key-id r2-secret-access-key; do
+      secret_exists "$s" || { echo "setup: $s is missing; run 'setup.sh secrets' and give the R2 values" >&2; exit 1; }
+    done
     # The nightly backup goes only where its keys were given; no key, no destination.
     is_set() { [ "$(az keyvault secret show --vault-name "$(vault)" -n "$1" --query value -o tsv 2>/dev/null)" != "unset" ] && secret_exists "$1"; }
     destinations=""

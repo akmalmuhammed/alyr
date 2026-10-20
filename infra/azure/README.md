@@ -45,9 +45,10 @@ subscription may create the database in Qatar Central, and stops with what to do
 ALYR_ALERT_EMAIL=you@example.com infra/azure/setup.sh infra
 ```
 
-**3. Store the secrets.** Database passwords are generated and stored without being
-shown. You are then asked, one at a time and hidden, for the Meta values, the Resend key
-and the backup settings; press Enter to skip any you do not have yet.
+**3. Store the secrets.** Database passwords and the link-signing secret are generated and
+stored without being shown. You are then asked, one at a time and hidden, for the Meta
+values, the Resend key, the three R2 values for product photos (required: the same ones as
+in `apps/api/.env`), and the backup settings; press Enter to skip any optional one.
 
 ```bash
 infra/azure/setup.sh secrets

@@ -690,6 +690,8 @@ There is no separate Pay product: payment links stay a module of Chat and Bookin
 
 **Before the commercial registration.** Opening the Azure account (Microsoft for Startups, about USD 200 of credit) is the founder's personal account and card, not ALYR trading; he decides when. The USD 5,000 tier needs the company. Do not open a plain Azure free account first: Microsoft for Startups requires an account with no prior Azure use.
 
+**Update 20 Oct (audit after the Catalog, stock and Documents work).** Two settings became required in the cloud and are now in the Azure template and Key Vault: the link-signing secret (generated once by `setup.sh`) and the three R2 values for product photos. Photos stay on Cloudflare R2 (D-039), outside Azure and outside the database backups, which also lets the Google emergency host use them unchanged; documents' PDFs are in the database (D-042) and so in every backup. Outside a developer machine the API and worker refuse to start without R2, because a container's disk is wiped on restart.
+
 ## D-037 · The public site presents the suite: the homepage leads with ALYR Agent at work, and every live product has its own page
 **Date** 17 Oct 2026 · **Status** Accepted (founder, 17 Oct, in conversation; recorded in `docs/agent-dashboard/07-site-brief.md` §1) · Linear ALY-99 · Updates D-026 and D-034. Numbered D-037 because the open PRs #51 and #52 both take D-036; renumber at merge if needed.
 

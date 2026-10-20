@@ -60,6 +60,12 @@ param alyrEnv string = 'production'
 @description('Address the web app is reached at, for links in chats. Empty: the web app\'s Azure address.')
 param publicWebUrl string = ''
 
+@description('Where product photos are served from (Cloudflare R2 behind this address, D-039).')
+param mediaBaseUrl string = 'https://media.alyr.qa'
+
+@description('The R2 bucket that holds product photos.')
+param mediaBucket string = 'alyr-media'
+
 @description('Create the nightly backup job. Needs the backup secrets and BACKUP_DESTINATIONS first.')
 param deployBackupJob bool = false
 
@@ -340,6 +346,14 @@ var apiSecretNames = [
   'meta-phone-number-id'
   'meta-waba-id'
   'email-api-key'
+  // Signs every customer's order and document link; the API and worker refuse to start
+  // without it (ALY-112).
+  'link-secret'
+  // Product photos on R2 (D-039). A container's disk is wiped on restart, so without these
+  // the API and worker refuse to start (ALY-63).
+  'r2-account-id'
+  'r2-access-key-id'
+  'r2-secret-access-key'
 ]
 var apiSecrets = [for s in apiSecretNames: {
   name: s
@@ -359,6 +373,12 @@ var apiEnv = [
   { name: 'ALYR_META_PHONE_NUMBER_ID', secretRef: 'meta-phone-number-id' }
   { name: 'ALYR_META_WABA_ID', secretRef: 'meta-waba-id' }
   { name: 'ALYR_EMAIL_API_KEY', secretRef: 'email-api-key' }
+  { name: 'ALYR_LINK_SECRET', secretRef: 'link-secret' }
+  { name: 'ALYR_R2_ACCOUNT_ID', secretRef: 'r2-account-id' }
+  { name: 'ALYR_R2_ACCESS_KEY_ID', secretRef: 'r2-access-key-id' }
+  { name: 'ALYR_R2_SECRET_ACCESS_KEY', secretRef: 'r2-secret-access-key' }
+  { name: 'ALYR_R2_BUCKET', value: mediaBucket }
+  { name: 'ALYR_MEDIA_BASE_URL', value: mediaBaseUrl }
 ]
 var registries = [ { server: registry.properties.loginServer, identity: appsIdentity.id } ]
 var identity = {
@@ -463,6 +483,9 @@ resource web 'Microsoft.App/containerApps@2025-01-01' = if (deployApps) {
           name: 'web'
           image: image.web
           resources: { cpu: json('0.25'), memory: '0.5Gi' }
+          // The order page asks the API from the server while it runs (its link preview and
+          // first items), so the running server needs the API's address, not only the build.
+          env: [ { name: 'ALYR_API_URL', value: 'https://${names.api}.${appsEnv.properties.defaultDomain}' } ]
           probes: [
             { type: 'Liveness', httpGet: { path: '/login', port: 3000 }, periodSeconds: 30 }
           ]
