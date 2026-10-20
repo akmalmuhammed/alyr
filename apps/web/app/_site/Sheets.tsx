@@ -1,4 +1,6 @@
 import type { BookingsSheet, CreditSheet } from "./copy";
+import type { DocsSheet } from "./copyDocs";
+import type { StockSheet } from "./copyShelf";
 import { rich } from "./Text";
 import "./drawings.css";
 
@@ -165,6 +167,137 @@ export function CreditScreen({ sheet, shop, monogram, path, label }: {
           ))}
         </ul>
       </div>
+    </Frame>
+  );
+}
+
+/** ALYR Shelf: the Stock tab of the shop's Menu (`/app/catalog`, `catalogCopy.ts`): the
+ * toolbar, the tabs, what is in the system for every item counted, the two filters and the
+ * three ways to change a count. */
+export function CatalogScreen({ sheet, shop, monogram, label }: {
+  sheet: StockSheet; shop: string; monogram: string; label: string;
+}) {
+  return (
+    <Frame shop={shop} monogram={monogram} path={sheet.path} label={label}>
+      <div className="ws-cat-top">
+        <span className="ws-tabs">
+          {sheet.tabs.map((tab, index) => <span key={tab} className={index === 1 ? "on" : undefined}>{tab}</span>)}
+        </span>
+        <span className="ws-tools">
+          {sheet.toolbar.map((tool) => <span key={tool} className="ws-tool">{tool}</span>)}
+        </span>
+      </div>
+      <p className="ws-sub">{sheet.sub}</p>
+      <p className="ws-chips">
+        {sheet.filters.map((filter) => <span key={filter} className="ws-chip">{filter}</span>)}
+        <Mark n={2} />
+      </p>
+      <div className="ws-table ws-stock">
+        <div className="ws-tr ws-th">
+          <span>{sheet.heads.item}</span>
+          <span>{sheet.heads.now}<Mark n={1} /></span>
+          <span />
+        </div>
+        {sheet.rows.map((row, index) => (
+          <div key={row.name} className={`ws-tr${row.on ? " is-on" : ""}`}>
+            <span className="ws-stock-name">
+              <b>{row.name}</b>
+              {row.state && <span className={`ws-pill ${row.tone === "out" ? "is-out" : "is-low"}`}>{row.state}</span>}
+            </span>
+            <span className="ws-stock-now">
+              <b className="ws-num">{row.now}</b>
+              {row.of && <small>{row.of}</small>}
+            </span>
+            <span className="ws-acts">
+              <span className="ws-btn">{sheet.acts.received}</span>
+              <span className="ws-btn">{sheet.acts.wasted}</span>
+              <span className="ws-btn">{sheet.acts.count}</span>
+              {index === 0 && <Mark n={3} />}
+            </span>
+          </div>
+        ))}
+      </div>
+    </Frame>
+  );
+}
+
+/** ALYR Shelf: one item's recent changes on the Stock tab, newest first. The log only ever
+ * adds rows; the actor of an order's row is left out (the product can print "Assistant"). */
+export function StockLog({ sheet, shop, monogram, label }: {
+  sheet: StockSheet; shop: string; monogram: string; label: string;
+}) {
+  const log = sheet.log;
+  return (
+    <Frame shop={shop} monogram={monogram} path={sheet.path} label={label}>
+      <div className="ws-entries ws-log">
+        <p className="ws-entries-head">
+          <b>{log.title} · <bdi>{log.who}</bdi></b>
+          <Mark n={4} />
+        </p>
+        <ul>
+          {log.rows.map((row) => (
+            <li key={row.kind + row.what}>
+              <b className="ws-kind">{row.kind}</b>
+              <span>{rich(row.what)}</span>
+              <b className="ws-delta"><bdi>{row.amount}</bdi></b>
+            </li>
+          ))}
+        </ul>
+      </div>
+    </Frame>
+  );
+}
+
+/** ALYR Docs: the Documents section (`/app/documents`, `documentsCopy.ts`): the search, the
+ * filters, every document newest first by its number with its payment and delivery, a
+ * branch's own series, and the actions of the one that is open. */
+export function DocumentsScreen({ sheet, shop, monogram, label }: {
+  sheet: DocsSheet; shop: string; monogram: string; label: string;
+}) {
+  const h = sheet.heads;
+  return (
+    <Frame shop={shop} monogram={monogram} path={sheet.path} label={label}>
+      <p className="ws-sub">{sheet.sub}</p>
+      <div className="ws-doc-tools">
+        <span className="ws-search">{sheet.search}</span>
+        <span className="ws-chips">
+          {sheet.filters.map((filter) => <span key={filter} className="ws-chip">{filter}<i /></span>)}
+        </span>
+        <span className="ws-sorted">{sheet.sorted}</span>
+      </div>
+      <div className="ws-table ws-docs">
+        <div className="ws-tr ws-th">
+          <span>{h.number}<Mark n={1} /></span>
+          <span>{h.kind}</span>
+          <span>{h.customer}</span>
+          <span className="ws-r">{h.amount}</span>
+          <span>{h.payment}<Mark n={2} /></span>
+          <span>{h.delivery}<Mark n={3} /></span>
+        </div>
+        {sheet.rows.map((row) => (
+          <div key={row.number} className={`ws-tr${row.on ? " is-on" : ""}${row.cancelled ? " is-void" : ""}`}>
+            <span className="ws-docno">
+              <b><bdi dir="ltr">{row.number}</bdi></b>
+              {row.branch && <span className="ws-pill is-none">{row.branch}{row.number.startsWith("INVLUS") && <Mark n={4} />}</span>}
+            </span>
+            <span>{row.kind}</span>
+            <span><bdi>{row.customer}</bdi></span>
+            <span className="ws-r ws-num">{rich(row.amount)}</span>
+            <span>
+              {row.payment && <span className={`ws-pill${row.payment === sheet.rows[0].payment ? "" : " is-none"}`}>{row.payment}</span>}
+              {row.note && <span className="ws-note">{rich(row.note)}</span>}
+            </span>
+            <span className="ws-deliv">{row.delivery}</span>
+          </div>
+        ))}
+      </div>
+      <p className="ws-actions ws-doc-acts">
+        <b className="ws-open"><bdi dir="ltr">{sheet.rows[0].number}</bdi></b>
+        {sheet.actions.map((action, index) => (
+          <span key={action} className={`ws-btn${index === 0 ? " is-primary" : ""}`}>{action}</span>
+        ))}
+        <Mark n={5} />
+      </p>
     </Frame>
   );
 }

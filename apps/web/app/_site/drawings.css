@@ -10,12 +10,12 @@
   position: relative; padding: var(--bezel); background: var(--d-bezel); border-radius: 34px;
   clip-path: polygon(0 0, calc(100% - var(--cut)) 0, 100% var(--cut), 100% 100%, 0 100%);
 }
-.d-phone:dir(rtl) { clip-path: polygon(var(--cut) 0, 100% 0, 100% 100%, 0 100%, 0 var(--cut)); }
+[dir="rtl"] .d-phone { clip-path: polygon(var(--cut) 0, 100% 0, 100% 100%, 0 100%, 0 var(--cut)); }
 .d-screen {
   position: relative; height: 100%; overflow: hidden; border-radius: 27px; background: var(--d-bg);
   clip-path: polygon(0 0, calc(100% - var(--cut) + 4px) 0, 100% calc(var(--cut) - 4px), 100% 100%, 0 100%);
 }
-.d-screen:dir(rtl) { clip-path: polygon(calc(var(--cut) - 4px) 0, 100% 0, 100% 100%, 0 100%, 0 calc(var(--cut) - 4px)); }
+[dir="rtl"] .d-screen { clip-path: polygon(calc(var(--cut) - 4px) 0, 100% 0, 100% 100%, 0 100%, 0 calc(var(--cut) - 4px)); }
 .d-phone svg, .d-sheet svg, .checks svg, .ag-tick svg { fill: none; stroke: currentColor; stroke-width: 2.4; stroke-linecap: round; stroke-linejoin: round; }
 
 /* a customer page (`/s/`, `/b/`, `/t/`) */
@@ -24,7 +24,7 @@
 .d-top { display: flex; align-items: center; gap: 8px; min-height: 48px; padding: 0 12px; padding-inline-end: 22px; border-bottom: 1px solid var(--d-hair); flex: none; }
 .d-mono { position: relative; width: 28px; height: 28px; flex: none; display: grid; place-items: center; border-radius: 8px; background: var(--monogram-bg); color: var(--monogram-ink); font-size: 11px; font-weight: 600; overflow: hidden; box-shadow: 0 0 0 1px var(--d-hair-2); }
 .d-mono::after { content: ""; position: absolute; top: 0; inset-inline-end: 0; width: 9px; height: 9px; background: var(--volt); clip-path: polygon(0 0, 100% 0, 100% 100%); }
-.d-mono:dir(rtl)::after { clip-path: polygon(0 0, 100% 0, 0 100%); }
+[dir="rtl"] .d-mono::after { clip-path: polygon(0 0, 100% 0, 0 100%); }
 .d-shop { flex: 1; min-width: 0; display: grid; line-height: 1.2; }
 .d-shop b { font-size: 12.5px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .d-shop small { font-size: 10px; color: var(--d-ink-3); }
@@ -47,7 +47,7 @@
 .d-h2 { display: flex; align-items: center; gap: 8px; font-size: 12.5px; font-weight: 600; }
 .d-card { border-radius: 14px; background: var(--d-card); box-shadow: var(--d-lift); overflow: hidden; }
 .d-row { display: flex; align-items: center; gap: 10px; min-height: 52px; padding: 8px 10px 8px 12px; }
-.d-row:dir(rtl) { padding: 8px 12px 8px 10px; }
+[dir="rtl"] .d-row { padding: 8px 12px 8px 10px; }
 .d-row + .d-row { border-top: 1px solid var(--d-hair); }
 .d-row-text { flex: 1; min-width: 0; display: grid; gap: 1px; }
 .d-row-text b { font-size: 12.5px; font-weight: 500; line-height: 1.3; }
@@ -158,7 +158,7 @@
 .aw-bar b { font-weight: 600; white-space: nowrap; }
 .aw-mono { position: relative; width: 1.5rem; height: 1.5rem; flex: none; display: grid; place-items: center; border-radius: .375rem; background: var(--monogram-bg); color: var(--monogram-ink); font-size: .625rem; font-weight: 600; overflow: hidden; box-shadow: 0 0 0 1px var(--window-line); }
 .aw-mono::after { content: ""; position: absolute; top: 0; inset-inline-end: 0; width: 7px; height: 7px; background: var(--volt); clip-path: polygon(0 0, 100% 0, 100% 100%); }
-.aw-mono:dir(rtl)::after { clip-path: polygon(0 0, 100% 0, 0 100%); }
+[dir="rtl"] .aw-mono::after { clip-path: polygon(0 0, 100% 0, 0 100%); }
 .aw-path { font-family: var(--mono); font-size: .6875rem; letter-spacing: .08em; text-transform: uppercase; color: var(--text-muted); white-space: nowrap; }
 .aw-path::before { content: "/"; margin-inline-end: .625rem; color: var(--line-strong); }
 :lang(ar) .aw-path { font-family: var(--arabic); letter-spacing: 0; text-transform: none; font-size: .8125rem; }
@@ -168,7 +168,7 @@
 /* narrower than the screen: it scrolls sideways, as the workspace does, and fades at the far edge */
 @media (max-width: 53rem) {
   .ws-scroll { mask-image: linear-gradient(to right, #000 calc(100% - 2.5rem), transparent); -webkit-mask-image: linear-gradient(to right, #000 calc(100% - 2.5rem), transparent); }
-  .ws-scroll:dir(rtl) { mask-image: linear-gradient(to left, #000 calc(100% - 2.5rem), transparent); -webkit-mask-image: linear-gradient(to left, #000 calc(100% - 2.5rem), transparent); }
+  [dir="rtl"] .ws-scroll { mask-image: linear-gradient(to left, #000 calc(100% - 2.5rem), transparent); -webkit-mask-image: linear-gradient(to left, #000 calc(100% - 2.5rem), transparent); }
 }
 .ws-scroll:focus-visible { outline: 2px solid var(--focus); outline-offset: -2px; }
 .ws-body { position: relative; min-width: 50rem; padding: 1.25rem 1.5rem 1.5rem; font-size: .875rem; line-height: 1.4; color: var(--text); }
@@ -199,7 +199,7 @@
 .ws-btn.is-primary { background: var(--text); color: var(--window); box-shadow: none; height: 2.25rem; padding: 0 1rem; }
 .ws-tr.is-ended { background: color-mix(in srgb, var(--volt) 9%, transparent); }
 .ws-tr.is-on { background: color-mix(in srgb, var(--text) 4%, transparent); box-shadow: inset 2px 0 0 var(--text); }
-.ws-tr.is-on:dir(rtl) { box-shadow: inset -2px 0 0 var(--text); }
+[dir="rtl"] .ws-tr.is-on { box-shadow: inset -2px 0 0 var(--text); }
 .ws-filter { position: relative; display: flex; align-items: center; gap: .75rem; margin-bottom: .875rem; padding: .5rem .75rem; border-radius: .5rem; background: var(--volt-wash); font-size: .8125rem; font-weight: 600; }
 .ws-filter .ws-btn { margin-inline-start: auto; background: var(--window); }
 .ws-r { text-align: end; }
@@ -270,7 +270,7 @@
    after a visit, its buttons and every balance are on screen without scrolling sideways. */
 @media (max-width: 47.99rem) {
   .ws-scroll { overflow-x: visible; mask-image: none; -webkit-mask-image: none; }
-  .ws-scroll:dir(rtl) { mask-image: none; -webkit-mask-image: none; }
+  [dir="rtl"] .ws-scroll { mask-image: none; -webkit-mask-image: none; }
   .ws-body { min-width: 0; padding: 1rem .875rem 1.125rem; }
   .ws-table { gap: .5rem; border: 0; border-radius: 0; overflow: visible; }
   .ws-tr, .ws-tr + .ws-tr { border: 1px solid var(--window-line); border-radius: 10px; padding: .75rem .875rem; }
@@ -295,3 +295,102 @@
   .ws-credit .ws-tr > :nth-child(3) { grid-area: ages; }
   .ws-legend { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 }
+
+/* ---------------------------------------- the order page's item cards (ALYR Shelf) */
+/* As `ItemCard.tsx` draws them: a photo slot (the product's own blank tile, with no photo
+   until the shop adds one), the name, the price, one line of what is true, one control. A
+   sold-out card is greyed and says so; on the site that is never red (the status colours
+   are the product's). A drawn button that cannot be pressed is an outline, never Volt. */
+.d-tile { position: relative; width: 44px; height: 44px; flex: none; display: grid; place-items: center; border-radius: 10px; background: var(--d-raise); box-shadow: inset 0 0 0 1px var(--d-hair); color: var(--d-ink-3); }
+.d-tile-glyph { width: 18px; height: 18px; }
+.d-phone .d-tile svg { stroke-width: 1.7; stroke-linecap: square; stroke-linejoin: miter; }
+.d-item .d-row-text { gap: 2px; }
+.d-price { font-size: 11px; color: var(--d-ink-2); font-variant-numeric: tabular-nums; }
+.d-pill { justify-self: start; display: inline-flex; align-items: center; min-height: 18px; margin-top: 2px; padding: 1px 7px; border-radius: 9px; font-size: 10px; font-weight: 600; line-height: 1.3; }
+.d-pill.few { background: var(--d-ink); color: var(--d-card); }
+.d-pill.when { padding-inline: 0; font-weight: 500; color: var(--d-ink-2); }
+.d-off { flex: none; font-size: 11px; font-weight: 600; color: var(--d-ink-2); }
+.d-item.is-out .d-tile, .d-item.is-out .d-row-text { opacity: .48; }
+.d-step-b { position: relative; width: 26px; height: 28px; display: grid; place-items: center; }
+.d-stepper .d-step-b .ico { width: 13px; height: 13px; }
+.d-cats span.on { background: var(--d-ink); color: var(--d-card); box-shadow: none; }
+.d-btn.is-line { background: transparent; color: var(--d-ink); box-shadow: inset 0 0 0 1.5px var(--d-ink); }
+.d-order-phone { width: min(17.5rem, 100%); height: 30rem; }
+
+/* --------------------------------------------- the Stock tab of the Menu (ALYR Shelf) */
+.ws-cat-top { position: relative; display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: .75rem 1.5rem; margin-bottom: 1rem; }
+.ws-tabs { display: inline-flex; gap: .25rem; padding: .1875rem; border-radius: .5rem; box-shadow: inset 0 0 0 1px var(--window-line); }
+.ws-tabs span { display: inline-flex; align-items: center; height: 1.875rem; padding: 0 .875rem; border-radius: .375rem; font-size: .8125rem; font-weight: 600; color: var(--text-muted); }
+.ws-tabs span.on { background: var(--text); color: var(--window); }
+.ws-tools { display: inline-flex; flex-wrap: wrap; gap: .375rem; }
+.ws-tool { display: inline-flex; align-items: center; height: 1.875rem; padding: 0 .625rem; border-radius: .375rem; font-size: .75rem; font-weight: 500; color: var(--text-muted); box-shadow: inset 0 0 0 1px var(--window-line); white-space: nowrap; }
+.ws-chips { position: relative; display: flex; align-items: center; gap: .375rem; margin-bottom: .875rem; }
+.ws-chip { display: inline-flex; align-items: center; height: 1.75rem; padding: 0 .75rem; border-radius: .875rem; box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--text) 22%, transparent); font-size: .75rem; font-weight: 600; }
+.ws-stock .ws-tr { grid-template-columns: minmax(0, 1.6fr) 9rem minmax(0, 1.4fr); }
+.ws-stock-name { display: flex; flex-wrap: wrap; align-items: center; gap: .375rem .625rem; }
+.ws-stock-name b { font-weight: 600; }
+.ws-stock-now { display: inline-flex; align-items: baseline; gap: .375rem; }
+.ws-stock-now small { font-size: .75rem; color: var(--text-muted); }
+.ws-stock .ws-acts { justify-content: flex-end; }
+.ws-pill.is-out { background: var(--text); color: var(--window); }
+.ws-pill.is-low { background: transparent; box-shadow: inset 0 0 0 1px var(--text); }
+.ws-log { margin-top: 0; border: 0; padding: 0; }
+.ws-log li { grid-template-columns: 6.5rem minmax(0, 1fr) auto; }
+.ws-kind { font-weight: 600; }
+.ws-delta { font-variant-numeric: tabular-nums; white-space: nowrap; }
+@media (max-width: 47.99rem) {
+  .ws-stock .ws-th > span:not(:nth-child(2)) { display: none; }
+  .ws-stock .ws-tr:not(.ws-th) { grid-template-columns: minmax(0, 1fr) auto; grid-template-areas: "name now" "acts acts"; gap: .5rem .75rem; }
+  .ws-stock .ws-tr > :nth-child(1) { grid-area: name; }
+  .ws-stock .ws-tr > :nth-child(2) { grid-area: now; }
+  .ws-stock .ws-tr > :nth-child(3) { grid-area: acts; justify-content: flex-start; }
+  .ws-tools { display: none; }
+  .ws-log li { grid-template-columns: 5rem minmax(0, 1fr) auto; }
+}
+
+/* -------------------------------------------- a document's own page (ALYR Docs, `/d/`) */
+.d-docno { font-family: var(--sans); font-variant-numeric: tabular-nums; }
+.d-issued { font-size: 11px; color: var(--d-ink-2); font-variant-numeric: tabular-nums; }
+.d-doc-status { justify-self: start; display: inline-flex; align-items: center; min-height: 24px; padding: 2px 10px; border-radius: 12px; font-size: 11px; font-weight: 600; line-height: 1.3; box-shadow: inset 0 0 0 1px var(--d-ink); }
+.d-doc-status.is-off { background: var(--d-ink); color: var(--d-card); box-shadow: none; }
+.d-doc-status.is-plain { box-shadow: inset 0 0 0 1px var(--d-hair-2); color: var(--d-ink-2); }
+.d-doc-line { min-height: 48px; }
+.d-amt { flex: none; font-size: 12px; font-weight: 500; font-variant-numeric: tabular-nums; }
+.d-doc-line.is-total .d-amt { font-size: 13.5px; font-weight: 600; }
+.d-doc-phone { width: min(17.5rem, 100%); height: 29rem; }
+.d-cx .d-bar .d-btn .ico { width: 15px; height: 15px; }
+.d-phone .d-btn svg.ico, .d-phone .d-tile svg { fill: none; stroke: currentColor; }
+
+/* ------------------------------------------------- the Documents section (ALYR Docs) */
+.ws-doc-tools { display: flex; flex-wrap: wrap; align-items: center; gap: .5rem .75rem; margin-bottom: .875rem; }
+.ws-search { display: inline-flex; align-items: center; min-width: 15rem; height: 2rem; padding: 0 .75rem; border-radius: .375rem; box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--text) 22%, transparent); font-size: .8125rem; color: var(--text-muted); }
+.ws-doc-tools .ws-chips { margin: 0; flex-wrap: wrap; }
+.ws-chip i { width: .3125rem; height: .3125rem; margin-inline-start: .375rem; border-right: 1.5px solid var(--text-muted); border-bottom: 1.5px solid var(--text-muted); rotate: 45deg; translate: 0 -1px; }
+.ws-sorted { margin-inline-start: auto; font-size: .75rem; color: var(--text-muted); }
+.ws-docs .ws-tr { grid-template-columns: 8.5rem 6.5rem minmax(0, 1fr) 6.5rem minmax(0, 1fr) 7rem; }
+.ws-docno { display: flex; flex-wrap: wrap; align-items: center; gap: .25rem .5rem; }
+.ws-docno b { font-family: var(--mono); font-size: .8125rem; font-weight: 600; }
+.ws-note { display: inline-block; font-size: .75rem; color: var(--text-muted); }
+.ws-pill + .ws-note { margin-inline-start: .5rem; }
+.ws-deliv { font-size: .8125rem; }
+.ws-tr.is-void .ws-num, .ws-tr.is-void .ws-docno b { text-decoration: line-through; text-decoration-thickness: 1px; color: var(--text-muted); }
+.ws-doc-acts { margin: 1rem 0 0; }
+.ws-open { font-family: var(--mono); font-size: .8125rem; margin-inline-end: .25rem; }
+@media (max-width: 47.99rem) {
+  .ws-docs .ws-th { display: none; }
+  .ws-docs .ws-tr:not(.ws-th) { grid-template-columns: minmax(0, 1fr) auto; grid-template-areas: "no amount" "kind customer" "pay deliv"; gap: .375rem .75rem; }
+  .ws-docs .ws-tr > :nth-child(1) { grid-area: no; }
+  .ws-docs .ws-tr > :nth-child(2) { grid-area: kind; color: var(--text-muted); }
+  .ws-docs .ws-tr > :nth-child(3) { grid-area: customer; justify-self: end; }
+  .ws-docs .ws-tr > :nth-child(4) { grid-area: amount; }
+  .ws-docs .ws-tr > :nth-child(5) { grid-area: pay; }
+  .ws-docs .ws-tr > :nth-child(6) { grid-area: deliv; justify-self: end; color: var(--text-muted); }
+  .ws-search { min-width: 0; flex: 1 1 100%; }
+  .ws-sorted { margin-inline-start: 0; }
+}
+
+/* the homepage's corners of ALYR Shelf and ALYR Docs */
+.d-crop-shelf { padding: .5rem; background: var(--d-bg); }
+.d-crop-shelf .d-row { padding-inline: 10px; }
+.d-crop-receipt { padding: 0; background: none; box-shadow: none; overflow: hidden; }
+.d-crop-receipt .pp-sheet { box-shadow: 0 0 0 1px var(--window-line); }
