@@ -74,7 +74,7 @@ Tests: 1,136 API tests pass and 2 are skipped (the opt-in live R2 check) on the 
 5. **Messaging limits (ALY-41), Redis sessions (ALY-14).**
 6. **Products screen and remaining order-link items (ALY-24); remaining ledger items (ALY-22).**
 7. **Broadcasts with marketing opt-in (ALY-44), Embedded Signup (ALY-39).**
-8. **Always-on hosting (ALY-10), a real payment gateway (ALY-17).**
+8. **Always-on hosting (ALY-10), a real payment gateway (ALY-17).** Payments are planned as ALY-155 (D-044): the onboarding step "Get paid online" opens the shop's own account at the partner provider (ALY-156) or connects one it already has (ALY-157).
 
 ## Waiting on the founder
 
@@ -91,6 +91,7 @@ Tests: 1,136 API tests pass and 2 are skipped (the opt-in live R2 check) on the 
 | Company registration | D-018 is proposed, not accepted. |
 | Documents (ALY-138, D-042) | The questions for the lawyer (ALY-51) in `specs/011-documents-engine/spec.md` "Open questions" (including whether a seller with no CR number may issue an invoice at all: today it can issue receipts only, with a friendly message). Decided 19 Oct: "Issued with ALYR" is on by default and the owner or an admin can remove it. Nothing is switched on for any shop until you say so |
 | Documents delivery (ALY-139, D-042) | Three decisions: (1) say go to submit the three document templates to Meta (`document_receipt`, `document_invoice`, `document_credit_note`; `templates_sync --create` is not to be run before); (2) the hosted link lives 90 days (`ALYR_DOCUMENT_LINK_DAYS`; an order link is 60); (3) emailing a customer their receipt goes through Resend in the EU: `data-residency.md` now says so, to review with the lawyer (ALY-51); nothing is emailed until a Resend key is set and a customer has an address on file (no screen collects one yet) |
+| Payments (D-044) | Talk to Tap first and SADAD second about a platform partner deal, with the 12 questions in ALY-5; the lawyer's three payment questions are on ALY-32. |
 | Others | Payment provider applications (ALY-5), startup credits (ALY-55), lawyer on data location (ALY-51), an Arabic reviewer, two alpha businesses. |
 
 ## Known gaps and risks

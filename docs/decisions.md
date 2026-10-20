@@ -964,3 +964,28 @@ There is no separate Pay product: payment links stay a module of Chat and Bookin
 - **A copy of an issued document on another paper** is drawn from the stored content (the seller copy in the row, the lines) and never stored; the issued PDF, number and hash do not change. A logo that is not the one the paper was issued with is left off a copy.
 - **The address carries the screen** (`?d=`, `?edit=`, `?view=settings`, `?show=`), so Back works and a refusal can send the person to the registration field.
 - **Left open:** matching credit-account payments to invoices; a screen for a booking's deposit; the Arabic by a native reader (ALY-66); a real phone, printer and roll; the product lead switching the module on.
+
+---
+
+## D-044 · Shops get paid online through their own account, opened from inside ALYR (model B), or one they already have (model A)
+**Date** 20 Oct 2026 · **Status** Accepted (founder, 20 Oct, in the project thread: "plan model B ... as another option for model A", and that it happens at onboarding) · Linear ALY-155 (ALY-156, ALY-157, ALY-158, ALY-159, ALY-160; ALY-17 and ALY-5 updated) · Research: the Claude Doc "Alyr payment layer: analysis and strategy" (https://claude.ai/code/artifact/d555d6fb-7540-4188-9015-cbadd227cdcd) · Keeps hard rule 3 (non-custodial); changes only how a shop gets its account. (The number: D-043 is taken by the open pull request #87.)
+
+**Where we were.** ALY-17 assumed each shop applies to SADAD, SkipCash or Dibsy by itself and pastes its keys into ALYR. That works for a bakery chain that already has a provider, and fails for a home baker who has never opened one: every shop would need coaching, and onboarding would not run without ALYR staff.
+
+**The decision.**
+- **Model B is the default.** The onboarding step "Get paid online" offers "Open my ALYR Payments account": one form inside ALYR (QID, home business licence or CR, IBAN), sent through the partner provider's API. The provider runs KYC and opens the account **in the shop's name**; its webhook moves the account to Live and payment links switch on by themselves. Staff see only rejected or stuck accounts, in /ops (ALY-158).
+- **Model A stays as the other door.** "I already have SADAD, SkipCash, Dibsy or MyFatoorah" connects the shop's existing account (ALY-157).
+- **One adapter for both** (ALY-17): open or connect an account, create a payment, read its status, refund, receive signed webhooks; authorize and capture later (ALY-160). The pay page, receipts and reports never know which door a shop used.
+- **The shop is always the merchant of record.** Its name is on the customer's statement, the provider pays its own bank, and refunds and disputes are on its account. ALYR stores references and statuses, never card data or balances.
+- **The step never blocks going live.** Until the account is approved the shop takes cash and transfers, recorded by hand (already built).
+- **Partner order, to confirm in ALY-5:** Tap Payments first (QCB-licensed, licensed in all six GCC countries, the only Qatar-licensed provider found with public documentation for opening merchant accounts through a platform's API), SADAD second (published prices, direct NAPS), MyFatoorah reserve (supplier API with document upload and an approval webhook).
+- **ALYR's income from payments:** a revenue share from the partner first; a platform fee inside the payment only where the provider supports it and the shop pays no more than it would directly; monthly billing for model A.
+
+**Rejected.**
+- *Model C, ALYR as the merchant of record that collects and splits (a marketplace).* ALYR would hold customers' money for days and carry chargebacks (Tap's marketplace documents say so), which looks like a payment service under QCB's Payment Services Regulation. Not planned; the lawyer is asked on ALY-32 whether it could serve marketplace orders later.
+- *Model A only.* Every shop without a provider would need ALYR staff to get paid, which breaks self-service onboarding.
+- *Stripe or another global provider.* Stripe does not accept Qatar businesses; the others serve large merchants and lack NAPS debit.
+
+**Not confirmed.** Whether Tap's platform API opens Qatar accounts, its Qatar prices and NAPS routing, payout times, whether providers accept a home business licence instead of a CR, and whether a platform fee is possible: the 12 questions in ALY-5. Whether model B needs any licence for ALYR: ALY-32.
+
+**Revisit when.** ALY-5's answers come back (SADAD or MyFatoorah may lead instead of Tap); the lawyer answers on ALY-32; ALYR enters another GCC country.
