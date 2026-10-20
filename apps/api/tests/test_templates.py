@@ -113,7 +113,7 @@ def test_the_back_office_lists_ours_and_theirs_with_the_registry_and_a_quick_sta
     assert "closest template" in answer["quick_start"]["en"] and answer["quick_start"]["ar"]
     keys = {f["key"] for g in answer["registry"]["groups"] for f in g["features"]}
     assert "variants" in keys and "decimal_quantity" in keys
-    assert "cost_margin" not in keys  # not built: not offered
+    assert "cost_margin" in keys and "barcode" not in keys  # built: offered; not built: not
     assert {t["key"] for t in answer["types"]} >= {"bakery", "shop", "travel"}
 
 
@@ -149,7 +149,7 @@ def test_a_template_that_does_not_make_sense_is_refused_in_both_languages(office
     refused(office.post(TEMPLATES, json={"name": "A kind", "section": "X",
                                          "based_on": "dentist"}), "bad_type")
     refused(office.post(TEMPLATES, json={
-        "name": "A kind", "section": "X", "features": {"discounts": {"enabled": True}}}),
+        "name": "A kind", "section": "X", "features": {"bundles": {"enabled": True}}}),
         "unknown_feature")
     refused(office.post(TEMPLATES, json={
         "name": "A kind", "section": "X", "features": {"names": {"enabled": False}}}),

@@ -124,9 +124,51 @@ export type Hints = {
   features?: Record<string, boolean>;
 };
 
+/** An automatic discount in words, for a quiet line on the page ("10% off orders over QAR 200"). */
+export type Offer = { text: string; text_ar: string };
+
+/**
+ * What the shop's pricing features say to the page (`GET /api/store/{slug}` → `pricing`). The
+ * key is absent while the shop uses none of them, and then the page shows nothing about
+ * prices beyond the items'. `discounts` exists only while "Discounts and coupon codes" is on:
+ * it is what lets the review show a code box (ALY-150, specs/014-pricing-pack).
+ */
+export type PricingHints = { discounts?: { offers: Offer[] }; delivery?: DeliveryOptions };
+
+/**
+ * One place the shop delivers to, as the order page is offered it (`pricing.delivery.zones`, only
+ * while "Delivery and pickup" is on; ALY-150 part 2). `id: null` is the shop's one flat fee
+ * (named "Delivery", or "Other areas" beside real zones). Amounts are dirhams, `days` run 0
+ * (Sunday) to 6 and empty means every day, `cutoff` is "HH:MM". The `*_text` fields are the API's
+ * sentences in both languages ("Order before 2:00 PM", "Wed 21 Oct").
+ */
+export type Zone = {
+  id: string | null; name: string; name_ar: string; fee: number; free_over: number | null; min_order: number;
+  days: number[]; days_text: string; days_text_ar: string;
+  cutoff: string | null; cutoff_text: string; cutoff_text_ar: string;
+  next_day: string | null; next_day_text: string | null; next_day_text_ar: string | null;
+};
+/** What the shop offers: collecting, delivery, and the areas. At least one of the first two is true. */
+export type DeliveryOptions = { pickup: boolean; delivery: boolean; zones: Zone[] };
+
+/** The customer's choice as the API takes it (`fulfilment` on the cart check and the order). */
+export type FulfilmentBody = { mode: "pickup" | "delivery"; zone_id: string | null; address: string; note: string };
+/**
+ * What the shop made of the choice (`pricing.delivery` in the cart check): pickup (no fee), a
+ * delivery with its fee, `free` when a fee was waived and the day, or only a `problem`
+ * (code, message, message_ar) when the choice cannot be served.
+ */
+export type DeliveryQuote = {
+  mode?: "pickup" | "delivery"; fee?: number; free?: boolean;
+  zone?: { id: string | null; name: string; name_ar: string };
+  address?: string; note?: string; deliver_on?: string | null; deliver_on_text?: string; deliver_on_text_ar?: string;
+  problem?: { code: string; message: string; message_ar: string } | null;
+};
+
 export type Store = {
   shop: { name: string; name_ar: string; slug: string; timezone: string; catalog: boolean; whatsapp: string };
   catalog: Hints | null;
+  pricing?: PricingHints;
   settings: Settings;
   group: Group2;
   categories: Category[];
@@ -160,6 +202,9 @@ export type Checked = {
   line_total?: number;
   /** The item's unit, for a measure (so a number in the sentence can carry it). */
   unit?: string;
+  /** With discounts on (ALY-150): what came off this line, and what it comes to after. */
+  discount?: number;
+  line_total_after?: number;
   code?: string;
   message?: string;
   message_ar?: string;
@@ -175,10 +220,35 @@ export type Checked = {
   alternatives?: { item_id: string; variant_id: string | null; name: string; name_ar: string; price: number }[];
 };
 
-export type Check = { ok: boolean; lines: Checked[]; total: number };
+/** A discount that was applied to the order: a code the customer typed, or an automatic one. */
+export type AppliedDiscount = {
+  id: string; kind: "coupon" | "auto"; code: string; name: string; name_ar: string;
+  text: string; text_ar: string; amount: number; lines: number[];
+};
+/** How a code the customer typed fared: it took `amount` off, or `reason` and a sentence say why not. */
+export type CouponVerdict = {
+  code: string; ok: boolean; amount: number; reason?: string; message?: string; message_ar?: string;
+};
+/** What the order comes to, and why (`pricing` in the cart check, a refusal and a placed order). */
+export type Pricing = {
+  subtotal: number; discounts: AppliedDiscount[]; discount_total: number; goods: number; coupons: CouponVerdict[];
+  /** What is paid: the goods after discounts and the delivery fee. */
+  total?: number;
+  /** Only while the shop's Delivery and pickup is on. */
+  delivery?: DeliveryQuote;
+};
 
-/** A refusal from the API: a code, a sentence in both languages, and sometimes the lines. */
-export type Refusal = { code: string; message: string; message_ar: string; lines?: Checked[] };
+/** `total` is what the customer pays: after any discounts. `pricing` exists only while the shop's discounts are on. */
+export type Check = { ok: boolean; lines: Checked[]; total: number; pricing?: Pricing };
+
+/**
+ * A refusal from the API: a code, a sentence in both languages, and sometimes the lines. A
+ * code that does not work (`coupon_*`) names it in `coupon`; both it and `total_changed` carry
+ * the figures as they now are in `pricing` (and `total`).
+ */
+export type Refusal = {
+  code: string; message: string; message_ar: string; lines?: Checked[]; coupon?: string; pricing?: Pricing; total?: number;
+};
 
 export type Placed = {
   order_id: string;
@@ -189,4 +259,6 @@ export type Placed = {
   track_url?: string;
   left_out?: { name: string; name_ar: string; code: string; message: string; message_ar: string }[];
   price_changes?: { name: string; was: number; now: number }[];
+  /** What came off, only while the shop's discounts are on. */
+  pricing?: Pricing;
 };

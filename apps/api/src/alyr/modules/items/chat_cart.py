@@ -42,6 +42,9 @@ class Cart:
     misses: int = 0
     misses_since: datetime | None = None
     expires_at: datetime | None = None
+    # What else the draft remembers: the discount codes the customer typed (`coupons`) and, with
+    # the delivery feature, how it is to reach them (ALY-150).
+    extras: dict = field(default_factory=dict)
 
     @property
     def total(self) -> int:
@@ -74,7 +77,7 @@ def _pending(stored: dict | None) -> dict | None:
 def _cart(row: asyncpg.Record) -> Cart:
     return Cart(
         row["id"], row["contact_id"], _lines(row["lines"]), _pending(row["pending"]),
-        row["misses"], row["misses_since"], row["expires_at"],
+        row["misses"], row["misses_since"], row["expires_at"], dict(row["extras"] or {}),
     )
 
 
@@ -124,10 +127,10 @@ async def save(conn: asyncpg.Connection, cart: Cart, now: datetime | None = None
     cart.expires_at = now + CART_LIFE
     await conn.execute(
         "update chat_carts set lines = $2, pending = $3, pending_expires_at = $4, misses = $5, "
-        "misses_since = $6, expires_at = $7, updated_at = now() where id = $1",
+        "misses_since = $6, expires_at = $7, extras = $8, updated_at = now() where id = $1",
         cart.id, cart.lines, cart.pending,
         now + PENDING_LIFE if cart.pending is not None else None,
-        cart.misses, cart.misses_since, cart.expires_at,
+        cart.misses, cart.misses_since, cart.expires_at, cart.extras,
     )
 
 
@@ -152,6 +155,30 @@ def note_misses(cart: Cart, count: int, now: datetime | None = None) -> None:
     if cart.misses_since is None or now - cart.misses_since >= MISS_WINDOW:
         cart.misses, cart.misses_since = 0, now
     cart.misses += count
+
+
+def coupons(cart: Cart) -> list[str]:
+    """The discount codes the customer has typed into this draft, in order."""
+    return list(cart.extras.get("coupons", []))
+
+
+def add_coupon(cart: Cart, code: str, limit: int) -> bool:
+    """Remember a code (once). False when the draft already carries `limit` codes."""
+    have = coupons(cart)
+    if code in have:
+        return True
+    if len(have) >= limit:
+        return False
+    cart.extras["coupons"] = [*have, code]
+    return True
+
+
+def drop_coupons(cart: Cart, codes: list[str]) -> None:
+    kept = [c for c in coupons(cart) if c not in codes]
+    if kept:
+        cart.extras["coupons"] = kept
+    else:
+        cart.extras.pop("coupons", None)
 
 
 def add_line(

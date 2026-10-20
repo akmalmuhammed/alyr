@@ -9,7 +9,7 @@ same item at once both count: each statement adds to whatever the number is by t
 Numbers are exact decimals with three places (ALY-149, `qty.py`): 12.5 kg is a stock. A
 whole number is still the Python `int` it always was (the database connection reads it so), and
 a stock in a counted unit (a piece, a box) can only be whole: the database refuses a fraction
-there (migration 0039) and `move` says so in plain words before it gets that far.
+there (migration 0043) and `move` says so in plain words before it gets that far.
 
 Two kinds of number:
 
@@ -132,7 +132,7 @@ async def move(
 
 async def _require_measure(conn: asyncpg.Connection, variant_id: UUID) -> None:
     """A fraction can only be moved for an item sold by a measure (kg, g, litre, ml, metre,
-    tola). The database refuses it too (migration 0039); this says so in plain words."""
+    tola). The database refuses it too (migration 0043); this says so in plain words."""
     unit = await conn.fetchval(
         "select i.unit from item_variants v join items i on i.id = v.item_id where v.id = $1",
         variant_id,

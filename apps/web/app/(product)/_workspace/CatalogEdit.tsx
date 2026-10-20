@@ -8,7 +8,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import {
   activityText, api, fromDirhams, nameOf, sayError, stamp, toDirhams, toInt, toQty, toSignedDirhams, whoIs,
-  type ActivityRow, type Access, type Category, type CustomField, type FieldsView, type GroupPriceRow, type Group, type Item, type Photo, type PriceGroup, type PriceRow, type Rule, type Setup, type Status, type Window,
+  type ActivityRow, type Access, type Category, type CostWarning, type CustomField, type FieldsView, type GroupPriceRow, type Group, type Item, type Photo, type PriceGroup, type PriceRow, type Rule, type Setup, type Status, type Window,
 } from "./catalogApi";
 import { fmtQty, fmtQtyUnit, isMeasure, qtyForApi, sumQty, UNITS as ALL_UNITS, unitOf, unitShort } from "../_customer/qty";
 import { COPY, type Copy, type Lang } from "./catalogCopy";
@@ -16,6 +16,8 @@ import { CatalogPhotos } from "./CatalogPhotos";
 import { CodeBox } from "./CatalogCode";
 import { FEAT } from "./featuresCopy";
 import { Field, Fold, Icon, Sheet, type Toast } from "./CatalogUi";
+import { COST } from "./costCopy";
+import { CostHistory, CostPrice, CostSize, useItemCost } from "./CostFields";
 
 type Push = (text: string, options?: { tone?: Toast["tone"]; undo?: () => void }) => number;
 
@@ -276,6 +278,9 @@ export function CatalogEdit({ lang, itemId, initial, categories, access, setup, 
   const [priceGroups, setPriceGroups] = useState<PriceGroup[] | null>(null);
   // The shop's own fields (ALY-148), once the API has answered; none while the feature is off.
   const [defs, setDefs] = useState<CustomField[]>([]);
+  // The cost price (ALY-150): for an owner or admin of a shop that keeps costs, and nobody else.
+  // For anyone else it asks for nothing and the sheet draws nothing of it.
+  const cost = useItemCost({ itemId, enabled: access.can_manage && setup?.features.cost_margin === true });
   const top = useRef<HTMLDivElement>(null);
   const now = useRef({ form, start });
   useEffect(() => { now.current = { form, start }; });
@@ -334,7 +339,7 @@ export function CatalogEdit({ lang, itemId, initial, categories, access, setup, 
     set(next);
   };
 
-  const dirty = useMemo(() => JSON.stringify(form) !== start, [form, start]);
+  const dirty = useMemo(() => JSON.stringify(form) !== start, [form, start]) || cost.dirty;
   const set = (patch: Partial<Form>) => setForm((f) => ({ ...f, ...patch }));
   const photoLabel = nameOf(form, lang) || t.untitled;
 
@@ -356,10 +361,16 @@ export function CatalogEdit({ lang, itemId, initial, categories, access, setup, 
       top.current?.scrollIntoView({ block: "start", behavior: "smooth" });
       return;
     }
+    // A cost box that cannot be read stops the save before anything is sent (ALY-150).
+    if (!cost.check()) {
+      setFailure(COST[lang].badCost);
+      top.current?.scrollIntoView({ block: "start", behavior: "smooth" });
+      return;
+    }
     setFailure("");
     setSaving(true);
     try {
-      let saved: { item: Item; warnings?: { name: string }[] };
+      let saved: { item: Item; warnings?: { name: string }[]; cost_warnings?: CostWarning[] };
       if (itemId) {
         saved = await api(`/api/items/${itemId}`, "PUT", body);
       } else {
@@ -373,9 +384,25 @@ export function CatalogEdit({ lang, itemId, initial, categories, access, setup, 
       if (itemId && form.rule === "count" && toQty(form.opening, form.unit) && form.variants.length === 0) {
         await api(`/api/items/${itemId}/stock`, "POST", { kind: "opening", quantity: qtyForApi(toQty(form.opening, form.unit) as number), reason: "Opening count" }).catch(() => undefined);
       }
+      // The cost goes to its own route, after the item, and only if a cost box changed. If it is
+      // refused the item is already saved, so say so and close rather than save the item twice.
+      let underCost: CostWarning[] = saved.cost_warnings ?? [];
+      if (cost.enabled) {
+        try {
+          const done = await cost.save(saved.item.id);
+          if (done) underCost = done.warnings;
+        } catch (error) {
+          push(COST[lang].costNotSaved(sayError(error, lang, t)), { tone: "bad" });
+          onChanged();
+          onClose();
+          return;
+        }
+      }
       push(itemId ? t.toastSaved : t.toastAdded);
       const dup = saved.warnings?.[0];
       if (dup) push(t.duplicate(dup.name));
+      // A price under the cost is said calmly, in the API's own words; it never blocked the save.
+      for (const w of underCost.slice(0, 2)) push(lang === "ar" ? w.message_ar || w.message : w.message, { tone: "warn" });
       onChanged();
       onClose();
     } catch (error) {
@@ -460,6 +487,7 @@ export function CatalogEdit({ lang, itemId, initial, categories, access, setup, 
             <Field label={t.dailyLimit}><input value={v.limit} inputMode={isMeasure(form.unit) ? "decimal" : "numeric"} dir="ltr" onChange={(e) => patch({ limit: e.target.value })} /></Field>
           )}
         </div>
+        {cost.enabled && <CostSize lang={lang} form={form} cost={cost} index={i} />}
         <div className="ct-row-between">
           <label className="ct-check"><input type="checkbox" checked={v.active} onChange={(e) => patch({ active: e.target.checked })} />{t.variantActive}</label>
           <button type="button" className="btn small ghost" onClick={() => set({ variants: form.variants.filter((_, k) => k !== i) })}><Icon name="trash" />{t.variantRemove}</button>
@@ -685,6 +713,7 @@ export function CatalogEdit({ lang, itemId, initial, categories, access, setup, 
           {form.sale.trim() !== "" && (
             <Field label={t.saleEnds}><input type="date" value={form.saleEnds} dir="ltr" onChange={(e) => set({ saleEnds: e.target.value })} /></Field>
           )}
+          {cost.enabled && <CostPrice lang={lang} form={form} cost={cost} />}
           <div className="ct-grid2">
             <Field label={t.unit}>
               <select value={form.unit} onChange={(e) => changeUnit(e.target.value)}>
@@ -900,6 +929,8 @@ export function CatalogEdit({ lang, itemId, initial, categories, access, setup, 
             )}
           </Fold>
         )}
+
+        {itemId && cost.enabled && <CostHistory lang={lang} cost={cost} />}
 
         {itemId && !readOnly && item && item.status !== "archived" && (
           <section className="ct-sec danger">

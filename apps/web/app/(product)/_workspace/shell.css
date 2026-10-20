@@ -423,6 +423,9 @@
   --ag-pending: var(--ink-3);
 }
 
+/* A pointer from an order or a credit-account row to the receipt or invoice it made (ALY-146). */
+.sh-main a.doc-link { display: inline-flex; align-items: center; min-height: 44px; color: var(--ink); font-size: var(--ui-small); font-weight: 600; text-decoration: underline; text-underline-offset: 3px; }
+
 /* A list opened from ALYR Agent shows which rule filtered it, and how to see everything. */
 .sh-main .show-filter {
   display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px 16px;

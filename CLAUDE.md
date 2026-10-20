@@ -64,6 +64,12 @@ apps/api/                     FastAPI service (Python 3.13, managed with uv)
                               ask it, never the business type; fields.py is a shop's own fields on
                               items and sizes, templates.py the templates made in the back office,
                               template_change.py a shop's change of type (all specs/012);
+                              orders/totals.py is the ONE pricing function (discounts, delivery fee,
+                              total: the page's review, the chat's draft and the order all call it;
+                              no float) and items/discounts.py, delivery.py and costs.py are the
+                              pricing pack's three features, off for every shop until switched on
+                              (specs/014; cost lives in tables of its own and only owners and admins
+                              ever see it: read costs.py before touching an item's or an order's reader);
                               orders/page.py is what the customer's order page reads (specs/005);
                               documents/ is the documents engine (receipts, invoices, credit notes:
                               gapless numbers, immutable once issued, a PDF drawn in Arabic and
@@ -71,7 +77,9 @@ apps/api/                     FastAPI service (Python 3.13, managed with uv)
                               `documents` module, off for every shop until its screens exist;
                               sales.py, payments.py and delivery.py make documents from orders,
                               credit accounts and payments recorded by hand and send them by
-                              WhatsApp, email and a hosted link (specs/013, ALY-139)
+                              WhatsApp, email and a hosted link (specs/013, ALY-139);
+                              listing.py, lookup.py and refs.py are what the workspace's Documents
+                              screens read (specs/014, ALY-146)
                               items/codes.py reads a customer's message for item codes, links and
                               SKUs and items/wa_order.py orders by them in the chat (specs/010)
   src/alyr/routes/            HTTP routes. deps.py: who is calling, which shop, which modules are on
@@ -98,6 +106,7 @@ scripts/                      check.sh (everything CI runs), demo.sh (start and 
                               (its home cards and the back office's Usage view), order-page-browser-check.mjs
                               (the customer's order page, same way), booking-page-browser-check.mjs (the booking page and its links),
                               document-page-browser-check.mjs (the hosted document page and its links),
+                              documents-screens-browser-check.mjs (the workspace's Documents screens),
                               golive-truth-check.mjs (every onboarding sentence of every business type proved on the
                               finished order page and workspace, English and Arabic),
                               hooks/pre-commit

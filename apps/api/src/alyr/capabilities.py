@@ -66,6 +66,9 @@ GROUPS: tuple[Group, ...] = (
     Group("selling", Text("Sizes, choices and prices", "المقاسات والخيارات والأسعار"),
           Text("What a customer picks, and what they pay.",
                "ما يختاره العميل وما يدفعه.")),
+    Group("pricing", Text("Discounts, delivery and cost", "الخصومات والتوصيل والتكلفة"),
+          Text("What a customer pays beyond the item's price, and what you earn.",
+               "ما يدفعه العميل فوق سعر الصنف، وما تربحه أنت.")),
     Group("order_page", Text("Your order page", "صفحة الطلب"),
           Text("What your customers see and can do when they order.",
                "ما يراه عملاؤك وما يستطيعون فعله عند الطلب.")),
@@ -309,6 +312,41 @@ BUILT: tuple[Capability, ...] = (
         "to the order page.",
         "يضيف حقولك إلى نموذج الصنف والملفات والبحث، وإلى صفحة الطلب إن اخترت ذلك."),
        "details", ("form", "list", "order_page", "import_export", "settings")),
+    # The pricing pack (ALY-150). Off for every shop until the owner or ALYR switches it on.
+    _c("discounts", ("Discounts and coupon codes", "الخصومات ورموز القسائم"),
+       ("Give customers money off: a code they type, or a discount that applies by itself, like "
+        "10% off orders over QAR 200.",
+        "امنح العملاء خصماً: رمزاً يكتبونه أو خصماً تلقائياً مثل 10% على الطلبات فوق 200 ر.ق."),
+       ("Adds Discounts to the Catalog, a coupon box on the order page and in the WhatsApp order, "
+        "the discount line by line on each order, and a line in the weekly report.",
+        "يضيف «الخصومات» إلى الكتالوج، وخانة رمز القسيمة في صفحة الطلب وفي الطلب عبر واتساب، "
+        "والخصم سطراً بسطر في كل طلب، وسطراً في التقرير الأسبوعي."),
+       "pricing", ("settings", "order_page", "chat", "reports"), default=False),
+    _c("delivery_fees", ("Delivery and pickup", "التوصيل والاستلام"),
+       ("Let customers choose pickup or delivery, with a fee for each area you deliver to. "
+        "Customers pick an area from your list and write their address.",
+        "دع العملاء يختارون الاستلام أو التوصيل، برسوم لكل منطقة توصّل إليها. يختار العميل "
+        "منطقة من قائمتك ويكتب عنوانه."),
+       ("Adds Delivery to the Catalog, the choice of pickup or delivery and the delivery fee on "
+        "the order page and in the WhatsApp order, the way each order reaches the customer on "
+        "the order, and a line in the weekly report.",
+        "يضيف «التوصيل» إلى الكتالوج، واختيار الاستلام أو التوصيل ورسوم التوصيل في صفحة الطلب "
+        "وفي الطلب عبر واتساب، وكيف يصل كل طلب إلى العميل في الطلب نفسه، وسطراً في التقرير "
+        "الأسبوعي."),
+       "pricing", ("settings", "order_page", "chat", "reports"), default=False),
+    _c("cost_margin", ("Cost price and margin", "سعر التكلفة والهامش"),
+       ("Write what each item costs you and see what you earn on it. Only you and your admins "
+        "see costs and margins: your team and your customers never do.",
+        "اكتب تكلفة كل صنف عليك وشاهد ما تربحه منه. أنت ومديروك فقط ترون التكاليف والهوامش، "
+        "ولا يراها فريقك ولا عملاؤك أبداً."),
+       ("Adds cost fields to the item form, the margin to the items list and to each order, the "
+        "value of your stock to the Stock tab, cost columns to the Excel and CSV files, and "
+        "lines to the weekly report. It warns you when a price is below the cost, and never "
+        "stops you saving it.",
+        "يضيف حقول التكلفة إلى نموذج الصنف، والهامش إلى قائمة الأصناف وإلى كل طلب، وقيمة "
+        "مخزونك إلى تبويب المخزون، وأعمدة التكلفة إلى ملفات Excel وCSV، وأسطراً إلى التقرير "
+        "الأسبوعي. ينبهك حين يكون السعر أقل من التكلفة، ولا يمنعك من حفظه."),
+       "pricing", ("form", "list", "import_export", "reports"), default=False),
 )
 
 # ── extension points: named, not built, hidden everywhere ─────────────────────────────
@@ -323,7 +361,7 @@ def _later(key: str) -> Capability:
 
 
 EXTENSION_POINTS: tuple[Capability, ...] = tuple(_later(k) for k in (
-    "cost_margin", "discounts", "delivery_fees", "bundles", "suppliers",
+    "bundles", "suppliers",
     "barcode", "batch_expiry", "serial_imei",
 ))
 

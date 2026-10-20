@@ -171,7 +171,8 @@ def test_settings_numbering_credit_notes_and_checks_are_for_owners_and_admins(sh
                            json={"reason": "Order cancelled"}).status_code == 201
     meta = shop.agent.get("/api/documents/meta").json()
     assert meta["access"] == {"role": "agent", "can_manage": False, "can_issue": False,
-                              "can_draft": True, "can_credit": False}
+                              "can_draft": True, "can_credit": False,
+                              "can_record_payments": False}
 
 
 def test_the_agents_own_issued_document_and_pdf_are_theirs_to_read(shop):
@@ -208,8 +209,12 @@ def test_documents_is_in_no_product_and_no_starting_setup():
     assert all("documents" not in p.modules for p in catalog.PRODUCTS)
     for preset in presets.PRESETS:
         assert "documents" not in (*preset.modules, *preset.with_catalog), preset.key
+    # The screens exist (ALY-146): a section and two numbers on the home screen, and nothing to
+    # set up first. The module is still on for no shop until the product lead switches it on.
     module = catalog.MODULE_BY_KEY["documents"]
-    assert (module.screens, module.steps, module.cards) == ((), (), ())
+    assert [s.key for s in module.screens] == ["documents"]
+    assert module.steps == ()
+    assert [c.key for c in module.cards] == ["unpaid_invoices", "documents_not_delivered"]
 
 
 def test_no_new_shop_gets_documents_whatever_its_type(client_factory):

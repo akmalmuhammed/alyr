@@ -321,11 +321,13 @@ export function AgentDashboard({
           </div>
         )}
 
-        {!showcase && view.catalog && (
-          <section className="ag-span-12 ag-stock" aria-labelledby={`${id}-stock`}>
-            <Heading level={level + 1} className="ag-label" id={`${id}-stock`}>{view.catalog.title}</Heading>
+        {/* The Catalog's two numbers and, for a shop with Documents, its two (ALY-109, ALY-146):
+            each card is the size of the list its link opens. */}
+        {!showcase && ([["stock", view.catalog], ["docs", view.documents]] as const).map(([part, block]) => block && (
+          <section key={part} className="ag-span-12 ag-stock" aria-labelledby={`${id}-${part}`}>
+            <Heading level={level + 1} className="ag-label" id={`${id}-${part}`}>{block.title}</Heading>
             <ul className="ag-stock-cards">
-              {view.catalog.cards.map((c) => {
+              {block.cards.map((c) => {
                 const Cell = c.href ? L : NoLink;
                 return (
                   <li key={c.key}>
@@ -341,7 +343,7 @@ export function AgentDashboard({
               })}
             </ul>
           </section>
-        )}
+        ))}
 
         {cards.length > 0 && (
           <section className={`${view.week ? "ag-span-8" : "ag-span-12"} ag-cards`} aria-labelledby={`${id}-cards`}>

@@ -6,7 +6,7 @@ Until now every quantity was a whole number and the unit `kg` was a label. A cus
 
 ## What a customer and an owner get
 
-* A feature **Sold by weight or volume** (`decimal_quantity`, group "Sizes, choices and prices"): *let customers order 0.5 kg or 250 ml.* **A new shop** of the **grocery** or **bakery** built-in type starts with it on; a new shop of any other type starts with it off, including "Shop & retail" (a perfume or oud shop switches it on in Features, one switch, or a template made in the back office starts with it on). **Every shop that exists keeps its form**: migration 0039 writes `decimal_quantity` OFF for each of them, so nothing about an existing shop changes until its owner switches the feature on.
+* A feature **Sold by weight or volume** (`decimal_quantity`, group "Sizes, choices and prices"): *let customers order 0.5 kg or 250 ml.* **A new shop** of the **grocery** or **bakery** built-in type starts with it on; a new shop of any other type starts with it off, including "Shop & retail" (a perfume or oud shop switches it on in Features, one switch, or a template made in the back office starts with it on). **Every shop that exists keeps its form**: migration 0043 writes `decimal_quantity` OFF for each of them, so nothing about an existing shop changes until its owner switches the feature on.
 * A **unit** on each item: piece, pack, box, portion, hour (counted, whole numbers, as before) and the **measures** kg, g, litre (`l`), ml, metre (`m`) and tola. The first six keys are the ones stored since migration 0022; `g`, `l`, `ml`, `m` and `tola` are new (`l` and `m` are the keys the Documents engine uses).
 * A **step** and a **smallest order** on each item sold by a measure: *sold in steps of 0.25 kg, at least 0.25 kg.* Nothing new is stored: they are the item's `pack_size` and `min_order` columns, which are now decimals. A measure with no step is sold in whole units, exactly as a kg item was.
 * On the **order page**: a stepper that moves by the step, **quick quantities** (0.25 / 0.5 / 1 for kg and litre; 100 / 250 / 500 for g; 50 / 100 / 250 for ml; 0.5 / 1 / 2 for metre and tola, those that the item's step and minimum allow) and a typed amount. The item says "per kg". The cart, the review, the tracking page and the WhatsApp messages say "0.5 kg".
@@ -60,7 +60,7 @@ For each cart line, in this order, with the item's unit, step (`pack_size`) and 
 
 A measure with no step is sold in whole units (`off_step`, "steps of 1 kg"): an owner opts an item into fractions by giving it a step. The item's `quantity` object (`rules`) tells the page: `{measure, step, min, fractions, chips}`.
 
-## Storage (migration 0039)
+## Storage (migration 0043)
 
 Order lines, stock holds, the stock log (`delta`, `balance_after`), a day's allowance, a size's `on_hand` and `daily_limit`, an item's `pack_size`, `min_order` and `low_stock_at`, and the shop's and the templates' `low_stock_at` become `numeric(14,3)` with the value they had. `min_order >= 1` becomes `> 0` (0.25 kg is a smallest order). `order_items.unit` keeps the unit a line was ordered in and `unit_shown` whether it is written beside the quantity (false for every older line, which reads as it always did). The unit lists widen (`g`, `l`, `ml`, `m`, `tola`), and the documents' list gains `ml` and `tola`. Constraints: the database refuses a fraction on a counted unit in an item's step and smallest order and in an order line (check constraints), and in a size's stock and daily limit and a day's allowance (a trigger that looks the item up only when a fraction is written). Stock is still never below zero; the stock engine is unchanged in shape: one conditional `UPDATE` moves the number and writes the log row in the same statement. Row-level security is untouched; no table is made or dropped. Safe on a populated database: tested on a database built to 0037 with orders, holds and a stock log (`tests/test_decimal_migration.py`).
 
@@ -68,7 +68,7 @@ Order lines, stock holds, the stock log (`delta`, `balance_after`), a day's allo
 
 * `decimal_quantity` has no dependency. Off hides and stops, never deletes: with it off the form does not offer the new units or a fractional step, and a new item (or an edit that adds one) that uses them is refused with `feature_off`; an item that has them keeps working, and a shop that switches it off can still sell what it set up.
 * "Pack sizes and smallest orders" (`pack_rules`) governs counted units; for an item sold by a measure its step and minimum belong to this feature. The files' pack and minimum columns exist when either feature is on.
-* A shop with no row for the feature gets its template's value (spec 012). Migration 0039 writes an OFF row for every shop that exists, so only a shop made after it can start with the feature on.
+* A shop with no row for the feature gets its template's value (spec 012). Migration 0043 writes an OFF row for every shop that exists, so only a shop made after it can start with the feature on.
 
 ## The API
 

@@ -61,4 +61,7 @@ async def view(conn: asyncpg.Connection, staff: Staff) -> dict:
         "can_issue": manager or await agents_may_issue(conn),
         "can_draft": True,
         "can_credit": manager,
+        # Recording a payment taken by hand (ALY-139): an agent only when the shop allows it.
+        "can_record_payments": manager or bool(await conn.fetchval(
+            "select agents_may_record_payments from document_settings")),
     }
