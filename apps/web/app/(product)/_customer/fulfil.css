@@ -1,0 +1,9 @@
+/* How an order reaches the customer, on the tracking page (ALY-150 part 2). Drawn only for an
+   order made while the shop's Delivery and pickup was on. Built on the customer pages' own rows
+   (customer.css) and their tokens; nothing here is a colour or a size of its own. */
+
+.cx-row.how { min-height: 48px; }
+.cx-facts { margin: 0; display: grid; }
+.cx-facts > div { display: grid; grid-template-columns: minmax(5.5rem, 7rem) minmax(0, 1fr); gap: 4px 12px; align-items: baseline; padding: 10px 16px; border-top: 1px solid var(--hair); }
+.cx-facts dt { font-size: var(--ui-body-sm); color: var(--ink-2); }
+.cx-facts dd { margin: 0; font-size: var(--ui-body); font-weight: 500; line-height: 1.4; overflow-wrap: anywhere; }

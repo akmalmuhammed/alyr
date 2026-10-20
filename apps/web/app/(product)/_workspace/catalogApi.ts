@@ -175,6 +175,28 @@ export type DiscountBody = {
   starts_at: string | null; ends_at: string | null; stackable: boolean; group_id: string | null;
 };
 
+/**
+ * One place the shop delivers to (`GET /api/delivery`; ALY-150 part 2, specs/014-pricing-pack).
+ * Amounts are dirhams, `cutoff` is "HH:MM" on the shop's clock, `days` run 0 (Sunday) to 6.
+ * An empty `days` is every day. `*_text` is the API's English; the screen words it itself.
+ */
+export type DeliveryZone = {
+  id: string; name: string; name_ar: string; fee: number; fee_text: string; free_over: number | null; min_order: number;
+  cutoff: string | null; days: number[]; days_text: string; days_text_ar: string; active: boolean; sort: number;
+};
+export type DeliveryView = {
+  pickup: boolean; delivery: boolean; flat_fee: number | null; flat_free_over: number | null; flat_min_order: number;
+  zones: DeliveryZone[]; archived: DeliveryZone[]; limits: { zones: number }; can_manage: boolean;
+};
+/** What a zone form sends (`POST /api/delivery/zones`, `PUT /api/delivery/zones/{id}`). */
+export type DeliveryZoneBody = {
+  name: string; name_ar: string; fee: number; free_over: number | null; min_order: number; cutoff: string | null; days: number[];
+};
+/** What the switches and the flat fee send (`PUT /api/delivery`): any of them. */
+export type DeliverySettingsBody = Partial<{
+  pickup: boolean; delivery: boolean; flat_fee: number | null; flat_free_over: number | null; flat_min_order: number;
+}>;
+
 /** A WhatsApp number the owner registered as staff: it may change the Catalog by message. */
 export type StaffNumber = {
   id: string; name: string; phone: string; lang: "en" | "ar"; manager: boolean; weekly_report: boolean;

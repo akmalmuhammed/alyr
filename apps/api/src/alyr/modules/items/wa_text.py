@@ -359,6 +359,26 @@ WORDS: dict[str, tuple[str, str]] = {
         "Send the code like this: coupon RAMADAN10",
         "أرسل الرمز هكذا: كوبون RAMADAN10",
     ),
+    # Pickup or delivery in the draft (ALY-150).
+    "fulfil_ask": ("Pickup or delivery?", "استلام أو توصيل؟"),
+    "button_pickup": ("Pickup", "استلام"),
+    "button_delivery": ("Delivery", "توصيل"),
+    "zone_ask": (
+        "Where should we deliver? Choose your area.", "إلى أين نوصّل؟ اختر منطقتك."
+    ),
+    "address_ask": (
+        "Send the delivery address as a message: area, street, house or building.",
+        "أرسل عنوان التوصيل كرسالة: المنطقة والشارع والمنزل أو المبنى.",
+    ),
+    "draft_pickup": ("Pickup from the shop", "استلام من المتجر"),
+    "draft_delivery": ("Delivery to {zone}: {fee}", "التوصيل إلى {zone}: {fee}"),
+    "draft_delivery_flat": ("Delivery: {fee}", "التوصيل: {fee}"),
+    "draft_address": ("Address: {address}", "العنوان: {address}"),
+    "draft_when": ("Delivery day: {when}", "موعد التوصيل: {when}"),
+    "draft_how": (
+        "To change, reply pickup or delivery.", "للتغيير أرسل: استلام أو توصيل."
+    ),
+    "free_word": ("free", "مجاني"),
     "coupon_total_changed": (
         "Your total is now {total}. Check it, then tap Place order.",
         "أصبح إجمالي طلبك {total}. راجعه ثم اضغط إتمام الطلب.",

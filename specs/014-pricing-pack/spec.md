@@ -1,6 +1,6 @@
 # Spec 014: The pricing pack (discounts and coupon codes, delivery and pickup, cost price and margin)
 
-Status: built in ALY-150 (a child of ALY-101), in three pull requests that stand on each other: **1. discounts**, **2. delivery**, **3. cost and margin**. Decision: D-039, "As built (pricing pack)". It adds three switchable features to the feature engine (`specs/012-feature-engine/spec.md`); the Catalog it prices is `specs/001-catalog-engine/spec.md` (engine), `003` (price groups), `004` (WhatsApp), `005` (order page), `006` (import and export), `007` (reports) and `010` (ordering by code).
+Status: built in ALY-150 (a child of ALY-101), in three pull requests that stand on each other: **1. discounts**, **2. delivery** (this one carries parts 1 and 2), **3. cost and margin** (to follow). Decision: D-039, "As built (pricing pack)". It adds three switchable features to the feature engine (`specs/012-feature-engine/spec.md`); the Catalog it prices is `specs/001-catalog-engine/spec.md` (engine), `003` (price groups), `004` (WhatsApp), `005` (order page), `006` (import and export), `007` (reports) and `010` (ordering by code).
 
 The audit of 18 Oct 2026 found the gaps this fills: only a dated sale price and customer-group prices existed; there were no coupon codes or cart discounts; an order carried `fulfil_on` and `table_label` and no delivery, no fee; an item had no cost, so there was no margin anywhere. For a bakery, a home kitchen, a shop and a fashion seller these are among the first things they ask for.
 
@@ -63,6 +63,29 @@ Placing an order claims each applied rule inside the order's own transaction (`d
 
 One line in the Catalog section, only while the feature is on and something was given: *Discounts given this week: QAR 120 on 6 orders (RAMADAN10 4, EID25 2).*
 
-## Not built in part 1
+## 2. Delivery and pickup (pull request 2, migration 0041)
+
+Feature `delivery_fees` ("Delivery and pickup", «التوصيل والاستلام»). Off: invisible and inert everywhere; every `/api/delivery` route answers `422 feature_off`; the order page, the chat and the orders list know nothing of it; no report line; an order made with it off has `fulfilment` null and no fee. **No maps, no geocoding, no driver dispatch:** a customer chooses pickup or delivery, picks an area from the shop's list and writes the address in words.
+
+### The shop's settings
+
+* **Pickup** on or off and **delivery** on or off (`delivery_settings`). At least one stays on (`need_one`); delivery on needs a zone or a flat fee to charge by (`need_fee`).
+* **Zones** (`delivery_zones`): a name in English and Arabic, a **fee**, a **free-over** amount (delivery is free once the goods *after discounts* reach it), a **minimum order** (also judged on the goods after discounts), optionally **the days it delivers on** (Sunday is 0; empty is every day) and a **daily cut-off**. At most 30. A zone taken away is archived, never deleted (orders keep its name as it was), and the last place a shop delivers to cannot be archived while delivery is on and there is no flat fee (`last_zone`).
+* **The flat fee** is one fee for the whole shop. With no zones it *is* the delivery ("Delivery"); with zones it is the last choice, "Other areas". The owner screen: Catalog, Delivery. Everyone on the team may read it; owners and admins change it; every change is on the activity record.
+
+### What the customer is offered and charged
+
+At review the customer chooses (when both are offered; with one way only nobody is asked), then an area (the list shows each fee, "free over QAR 200", the days and the cut-off), writes the address (needed for the order, not for the review) and, if they like, a note. **The fee is its own line** after the discounts, with the zone's name, and is never discounted; `total = subtotal - discounts + fee`. The goods keep their QAR 1 floor; the fee is on top.
+
+* **The delivery day** is the first allowed day that is not before the day the goods are ready (a made-to-order item's date), honouring the cut-off: an order placed after the cut-off is delivered from the next delivery day. It is shown to the customer and kept on the order (`delivery_on`). A zone with no delivery day in the next fortnight is refused (`delivery_no_day`).
+* **Refusals**, in both languages: `fulfilment_required`, `pickup_off`, `delivery_off`, `zone_required`, `zone_unknown`, `address_required`, `delivery_minimum` ("Delivery to Al Wakra needs an order of at least QAR 150."), `delivery_no_day`. The review shows them beside the choice and keeps Pay off; the order refuses with 422.
+* **On the order** (a snapshot): `fulfilment` (`pickup`/`delivery`), the zone's id and its name in both languages as they were, the address, the note, the day, the fee. The database keeps `total = subtotal - discount_total + delivery_fee` and refuses a pickup with a fee or an address. The workspace orders list, the tracking page, the customer's confirmation message (inside the 24-hour window; the approved template carries the total, which includes the fee) and **documents made from the order** (a delivery line, and each line's discount) show it.
+* **Chat**: placing asks "Pickup or delivery?" with two buttons, then the area as a list message (each with its fee), then asks for the address as an ordinary message, then shows the draft with the fee, the address, the day and the total, and Place order places it at that total. A one-area shop skips the list; a one-way shop skips the first question. Saying "pickup" or "delivery" again changes the choice. Everything in English and Arabic.
+* **The "Order on WhatsApp" link** (readable mode) carries the choice in the message; the codes-only mode, which the chat reads, is unchanged.
+* **Report**: *Deliveries this week: 2 orders, QAR 30 in delivery fees (1 pickup).* A cancelled order is not counted.
+
+## Not built in parts 1 and 2
 
 "Buy N get M" across different items (a mixed basket); a coupon sent to a customer by name; a coupon's own page on the order page (a link that fills the code); a customer-facing "you could save" nudge; stacking a code with a price-group-only rule is allowed only when both are stackable.
+
+No maps, no geocoding, no driver dispatch, no distance-based fees, no delivery slots by the hour; a coupon cannot discount the delivery fee.

@@ -25,7 +25,7 @@ from alyr.config import get_settings
 from alyr.core import links
 from alyr.core.normalise import fmt_qar, fmt_qar_ar
 from alyr.core.workspace import module_enabled
-from alyr.modules.items import demand, discounts, features, template, text
+from alyr.modules.items import clock, delivery, demand, discounts, features, template, text
 from alyr.modules.items import groups as price_groups
 from alyr.modules.items.cart import CartLine
 from alyr.modules.items.service import MAX_QUANTITY
@@ -44,6 +44,11 @@ _CHANGED = (
     "coupon_paused", "coupon_not_started", "coupon_ended", "coupon_used_up",
     "coupon_used_by_you", "coupon_group", "coupon_no_match", "coupon_minimum",
     "coupon_not_combined", "coupon_no_effect",
+)
+# A choice of pickup or delivery the shop cannot serve as asked (the minimum, the area, the day).
+_PLAIN_DELIVERY = (
+    "fulfilment_required", "pickup_off", "delivery_off", "zone_required", "zone_unknown",
+    "address_required", "delivery_minimum", "delivery_no_day",
 )
 _STATUS_FOR = {
     "unknown_customer": 404, "no_account": 403, "no_previous_order": 404,
@@ -74,6 +79,15 @@ class Line(BaseModel):
         )
 
 
+class Fulfilment(BaseModel):
+    """How the order reaches the customer (the shop's Delivery and pickup feature)."""
+
+    mode: str | None = Field(default=None, pattern="^(pickup|delivery)$")
+    zone_id: UUID | None = Field(default=None, description="The area, from the page's list")
+    address: str = Field(default="", max_length=400, description="Where to deliver, in words")
+    note: str = Field(default="", max_length=300, description="Anything the driver should know")
+
+
 class NewOrder(BaseModel):
     token: str = TOKEN
     items: list[Line] = Field(min_length=1, max_length=100)
@@ -89,6 +103,7 @@ class NewOrder(BaseModel):
         default_factory=list, max_length=6,
         description="Discount codes the customer typed (needs the shop's Discounts feature)",
     )
+    fulfilment: Fulfilment | None = None
     expected_total: int | None = Field(
         default=None, ge=0,
         description="The total the customer was shown, in dirhams. If the order now comes "
@@ -104,6 +119,7 @@ class CartCheck(BaseModel):
         description="Discount codes the customer typed; each comes back with whether it "
                     "applies and, if not, why",
     )
+    fulfilment: Fulfilment | None = None
     token: str | None = Field(
         default=None, max_length=200,
         description="The customer's link token. Their price group decides the prices; "
@@ -155,6 +171,8 @@ async def _pricing(request: Request, shop_id: UUID, contact_id: UUID | None) -> 
             out["discounts"] = {
                 "offers": await discounts.offers(conn, group, datetime.now(UTC)),
             }
+        if feats.on("delivery_fees"):
+            out["delivery"] = await delivery.public(conn, await clock.load(conn))
     return out
 
 
@@ -360,6 +378,7 @@ async def check_cart(slug: str, body: CartCheck, request: Request) -> dict:
             return await service.check_cart(
                 conn, [line.cart_line() for line in body.items], body.for_date,
                 contact_id=link.contact_id if customer else None, coupons=body.coupons,
+                fulfilment=body.fulfilment.model_dump() if body.fulfilment else None,
             )
     except service.OrderError as error:
         raise _refused(error) from error
@@ -376,6 +395,7 @@ async def place_order(slug: str, body: NewOrder, request: Request) -> dict:
                 body.payment, get_settings().public_web_url, request.app.state.outbound,
                 body.for_date, table=links.clean_table(link.table or body.table),
                 coupons=body.coupons, expected_total=body.expected_total,
+                fulfilment=body.fulfilment.model_dump() if body.fulfilment else None,
             )
     except service.OrderError as error:
         await demand.note_refusal(request.app.state.db, shop["id"], link.contact_id, error.lines)

@@ -33,6 +33,7 @@ from alyr.routes import agent as agent_routes
 from alyr.routes import auth as auth_routes
 from alyr.routes import bookings as bookings_routes
 from alyr.routes import custom_fields as custom_field_routes
+from alyr.routes import delivery as delivery_routes
 from alyr.routes import discounts as discount_routes
 from alyr.routes import (
     document_page,
@@ -162,6 +163,8 @@ def create_app() -> FastAPI:
     app.include_router(custom_field_routes.router)
     # Discounts and coupon codes (ALY-150): off for every shop until the feature is switched on.
     app.include_router(discount_routes.router)
+    # Delivery and pickup (ALY-150): the same.
+    app.include_router(delivery_routes.router)
     app.include_router(template_routes.router)
     # The numbers the owner registers as staff, who may change the Catalog by WhatsApp.
     app.include_router(staff_numbers_routes.router)

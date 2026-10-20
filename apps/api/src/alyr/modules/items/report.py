@@ -20,12 +20,12 @@ from datetime import datetime
 import asyncpg
 
 from alyr.core.normalise import fmt_qar, fmt_qar_ar
-from alyr.core.words import DAYS, HOURS, ITEMS, ORDERS, counted
+from alyr.core.words import DAYS, HOURS, ITEMS, ORDERS, PICKUPS, counted
 from alyr.modules.items import clock as shop_clock
 from alyr.modules.items import features, listing, spells
 
 TITLE = {"en": "Catalog", "ar": "الكتالوج"}
-LINES = ("sold_out", "asked", "low", "best", "idle", "discounts")
+LINES = ("sold_out", "asked", "low", "best", "idle", "discounts", "delivery")
 LIST_MAX = 3  # names in a line, before "and 4 more"
 ASKED_MAX = 2  # items named beside the number of customers who asked
 
@@ -41,6 +41,8 @@ def shown_lines(feats: features.Features) -> list[str]:
         out.append("low")
     if feats.on("discounts"):
         out.append("discounts")  # (ALY-150) a line only for a shop that gives discounts
+    if feats.on("delivery_fees"):
+        out.append("delivery")
     return [k for k in LINES if k in out]
 
 
@@ -118,7 +120,22 @@ async def numbers(conn: asyncpg.Connection, start: datetime, end: datetime, tz: 
     }
     if "discounts" in out["show"]:
         out["discounts"] = await _discounts(conn, start, end)
+    if "delivery" in out["show"]:
+        out["delivery"] = await _delivery(conn, start, end)
     return out
+
+
+async def _delivery(conn: asyncpg.Connection, start: datetime, end: datetime) -> dict:
+    """How the week's orders reached their customers: deliveries and the fees on them, and the
+    pickups. A cancelled order is not counted."""
+    row = await conn.fetchrow(
+        "select count(*) filter (where fulfilment = 'delivery')::int as deliveries, "
+        "coalesce(sum(delivery_fee) filter (where fulfilment = 'delivery'), 0)::bigint as fees, "
+        "count(*) filter (where fulfilment = 'pickup')::int as pickups "
+        "from orders where created_at >= $1 and created_at < $2 and status <> 'cancelled'",
+        start, end,
+    )
+    return dict(row)
 
 
 async def _discounts(conn: asyncpg.Connection, start: datetime, end: datetime) -> dict:
@@ -207,6 +224,18 @@ def lines(n: dict, before: dict | None, lang: str) -> list[str]:
             out.append(
                 f"Discounts given this week: {fmt_qar(given['given'])} on "
                 f"{counted(given['orders'], ORDERS, lang)} ({named})"
+            )
+    sent = n.get("delivery")
+    if "delivery" in show and sent and sent["deliveries"]:
+        pickups = f" ({counted(sent['pickups'], PICKUPS, lang)})" if sent["pickups"] else ""
+        orders = counted(sent["deliveries"], ORDERS, lang)
+        if ar:
+            out.append(
+                f"التوصيل هذا الأسبوع: {orders}، {fmt_qar_ar(sent['fees'])} رسوم توصيل{pickups}"
+            )
+        else:
+            out.append(
+                f"Deliveries this week: {orders}, {fmt_qar(sent['fees'])} in delivery fees{pickups}"
             )
     idle = n["idle"]
     if "idle" in show and idle["count"]:

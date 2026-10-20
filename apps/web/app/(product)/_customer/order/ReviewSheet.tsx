@@ -14,9 +14,14 @@ import { formatPrice } from "../price";
 import { ApiError, checkCart, placeOrder, type CartBody } from "./api";
 import { lineName, next, total as totalOf, type Line } from "./cart";
 import { say, T } from "./copy";
-import type { Check, Checked, Customer, Day, Item, Placed } from "./types";
-import type { WaPart } from "./wa";
+import type { Check, Checked, Customer, Day, DeliveryOptions, Item, Placed } from "./types";
+import type { WaFulfilment, WaPart } from "./wa";
 import { Dialog, DialogHead, Price, Stepper, Tile } from "./ui";
+import { zoneName } from "../fulfil";
+import { Delivery, FeeRows } from "./Delivery";
+import {
+  checkBody, EMPTY, moreForFree, needOf, orderBody, readSaved, settle, storageKey, zoneOf, type Choice,
+} from "./deliveryLogic";
 
 const up = (s: string) => (s ? s.charAt(0).toUpperCase() + s.slice(1) : s);
 
@@ -46,6 +51,11 @@ type Props = {
   /** The shop's discounts are on (ALY-150): the review has a code box and shows what came off.
    *  Off, the review asks and shows exactly what it always did. */
   discounts?: boolean;
+  /** What the shop offers while its "Delivery and pickup" is on (ALY-150 part 2): the review asks
+   *  how the order reaches the customer. Off (undefined), it asks nothing and shows nothing. */
+  delivery?: DeliveryOptions;
+  /** The readable WhatsApp order with the customer's choice in it. */
+  whatsappFor?: (choice: WaFulfilment | null) => WaPart[];
 };
 
 const BLOCKING = ["price_changed"];
@@ -89,6 +99,27 @@ export function ReviewSheet(props: Props) {
   const [rejected, setRejected] = useState<{ code: string; text: string } | null>(null);
   const messageEl = useRef<HTMLParagraphElement>(null);
 
+  // Pickup or delivery (ALY-150 part 2): the choice lives here and in sessionStorage for this
+  // shop, so a refresh keeps it. A shop that has switched the feature off while this is open
+  // (the shop's `feature_off`) takes the review back to the plain one.
+  const [delOff, setDelOff] = useState(false);
+  const delOpts = props.delivery && !delOff ? props.delivery : undefined;
+  const [picked, setPicked] = useState<Choice>(() => {
+    if (!props.delivery) return EMPTY;
+    try { return readSaved(sessionStorage.getItem(storageKey(slug))); } catch { return EMPTY; }
+  });
+  const choice = useMemo(() => (delOpts ? settle(picked, delOpts) : EMPTY), [picked, delOpts]);
+  useEffect(() => {
+    if (!delOpts) return;
+    try { sessionStorage.setItem(storageKey(slug), JSON.stringify(choice)); } catch { /* not kept */ }
+  }, [slug, delOpts, choice]);
+  const need = delOpts ? needOf(choice) : null;
+  const addressRef = useRef<HTMLTextAreaElement | null>(null);
+  // The check is asked the way and the area only (typing an address asks nothing again).
+  const { mode: fMode, zone: fZone } = choice;
+  const fulfil = useMemo(() => (delOpts ? checkBody({ ...EMPTY, mode: fMode, zone: fZone }) : undefined), [delOpts, fMode, fZone]);
+  const focusAddress = () => requestAnimationFrame(() => addressRef.current?.focus());
+
   const days = commonDays(lines, lookup);
   const dated = days !== null;
   const dayKey = days ? days.map((d) => d.date).join(",") : "";
@@ -105,7 +136,8 @@ export function ReviewSheet(props: Props) {
     })),
     for_date: dated && askDay ? forDate : null,
     ...(couponsOn ? { coupons: codes } : {}),
-  }), [lines, forDate, dated, askDay, couponsOn, codes]);
+    ...(fulfil ? { fulfilment: fulfil } : {}),
+  }), [lines, forDate, dated, askDay, couponsOn, codes, fulfil]);
 
   const sig = JSON.stringify(body);
   const check = got && got.sig === sig ? got.check : null;
@@ -131,12 +163,15 @@ export function ReviewSheet(props: Props) {
       if (mine !== asked.current) return;
       if (error instanceof ApiError && error.status === 0) setState("offline");
       else if (error instanceof ApiError && error.refusal?.code === "feature_off") {
-        // The shop switched its discounts off while this was open: the review goes back to the plain one.
-        setOff(true);
-        setCodes([]);
+        // The shop switched discounts or delivery off while this was open: the review goes back to
+        // the plain one. (Which one it was is not said; whichever this review asked about is dropped.)
+        const asked = couponsOn && codes.length > 0;
+        const choose = !!fulfil;
+        if (asked || !choose) { setOff(true); setCodes([]); }
+        if (choose) setDelOff(true);
       } else { setMessage(error instanceof ApiError && error.refusal ? say(lang, error.refusal.message, error.refusal.message_ar) : t.failed); setState("ready"); }
     }
-  }, [slug, token, body, lang, t]);
+  }, [slug, token, body, lang, t, couponsOn, codes, fulfil]);
 
   // Checked when it opens and again whenever the order or the day changes; a little wait
   // so a customer tapping + a few times asks once.
@@ -155,8 +190,24 @@ export function ReviewSheet(props: Props) {
   const broken = lines.filter((_, i) => { const v = verdicts.get(i); return v && !v.ok && !BLOCKING.includes(v.code ?? ""); });
   const placing = state === "placing";
   const checking = state === "checking" || (check === null && state !== "offline");
-  const clear = check?.ok === true && state === "ready" && changed.length === 0;
-  const shown = clear && check ? check.total : totalOf(lines);
+  // `fine`: the items and the choice are good as far as the shop can say; `clear` also needs the
+  // customer's own part (pickup or delivery, the area, the address) before they can pay.
+  const fine = check?.ok === true && state === "ready" && changed.length === 0;
+  const clear = fine && need === null;
+  const itemsFine = check !== null && check.lines.every((l) => l.ok) && state === "ready" && changed.length === 0;
+  const shown = fine && check ? check.total : totalOf(lines);
+  // What the shop made of the choice, for this exact order; and its words when it cannot serve it.
+  const quote = delOpts && check?.pricing?.delivery ? check.pricing.delivery : null;
+  const problem = quote?.problem ? say(lang, quote.problem.message, quote.problem.message_ar) : "";
+  const zone = delOpts ? zoneOf(delOpts, choice) : undefined;
+  const more = quote && !quote.problem ? moreForFree(check?.pricing?.goods, zone) : null;
+  // The readable WhatsApp order says the choice too (the codes-only one for the chat never does).
+  const said: WaFulfilment | null =
+    choice.mode === "pickup" ? { mode: "pickup" }
+    : choice.mode === "delivery" && zone
+      ? { mode: "delivery", zone: zoneName({ zone: zone.name, zone_ar: zone.name_ar }, "en"), zone_ar: zoneName({ zone: zone.name, zone_ar: zone.name_ar }, "ar"), address: choice.address.replace(/\s+/g, " ").trim(), note: choice.note.replace(/\s+/g, " ").trim() }
+      : null;
+  const wa = delOpts && props.whatsappFor ? props.whatsappFor(said) : props.whatsapp;
 
   async function place(payment: "link" | "account") {
     setState("placing");
@@ -164,7 +215,10 @@ export function ReviewSheet(props: Props) {
     try {
       // With discounts on, the order says what total the customer was shown; if it now comes to
       // something else it is refused with the new figures, never charged differently.
-      const placed = await placeOrder(slug, { ...body, payment, table, ...(couponsOn && check ? { expected_total: check.total } : {}) }, token);
+      const placed = await placeOrder(slug, {
+        ...body, payment, table, ...((couponsOn || delOpts) && check ? { expected_total: check.total } : {}),
+        ...(delOpts && orderBody(choice) ? { fulfilment: orderBody(choice) } : {}),
+      }, token);
       props.onPlaced(placed);
     } catch (error) {
       if (error instanceof ApiError && error.refusal) {
@@ -290,7 +344,7 @@ export function ReviewSheet(props: Props) {
         <div className="ox-state" role="status" aria-live="polite">
           {checking && <p className="ox-quiet">{t.checking}</p>}
           {state === "offline" && <p className="ox-warn"><Glyph name="alert" />{t.offline}</p>}
-          {!checking && clear && lines.length > 0 && <p className="ox-good"><Glyph name="check" />{t.allGood}</p>}
+          {!checking && itemsFine && lines.length > 0 && <p className="ox-good"><Glyph name="check" />{t.allGood}</p>}
           {!checking && (changed.length > 0 || broken.length > 0) && (
             <p className="ox-warn"><Glyph name="alert" /><span><b>{t.changedTitle}.</b> {t.changedHint}</span></p>
           )}
@@ -315,6 +369,17 @@ export function ReviewSheet(props: Props) {
           </fieldset>
         )}
         {days && days.length === 0 && <p className="ox-lmsg" role="alert">{t.cartChanged}</p>}
+        {delOpts && lines.length > 0 && (
+          <Delivery lang={lang} options={delOpts} choice={choice} need={need} problem={problem} addressRef={addressRef}
+            onMode={(mode) => {
+              setPicked({ ...choice, mode });
+              // With one place to deliver to there is nothing more to choose: the address is next.
+              if (mode === "delivery" && delOpts.zones.length === 1 && !choice.address.trim()) focusAddress();
+            }}
+            onZone={(key) => { setPicked({ ...choice, zone: key }); if (!choice.address.trim()) focusAddress(); }}
+            onAddress={(address) => setPicked({ ...choice, address })}
+            onNote={(note) => setPicked({ ...choice, note })} />
+        )}
         {couponsOn && lines.length > 0 && (
           <section className={`ox-coupon ${rejected ? "bad" : ""}`} aria-labelledby="ox-coupon-l">
             <label id="ox-coupon-l" htmlFor="ox-coupon-in">{t.codeLabel}</label>
@@ -343,7 +408,7 @@ export function ReviewSheet(props: Props) {
             )}
           </section>
         )}
-        {couponsOn && clear && check?.pricing && check.pricing.discounts.length > 0 && (
+        {couponsOn && fine && check?.pricing && check.pricing.discounts.length > 0 && (
           <div className="ox-brk" role="group" aria-label={t.discountOf}>
             <div className="ox-sum"><span>{t.subtotal}</span><Price value={check.pricing.subtotal} lang={lang} /></div>
             {check.pricing.discounts.map((d) => (
@@ -356,6 +421,10 @@ export function ReviewSheet(props: Props) {
               </div>
             ))}
           </div>
+        )}
+        {delOpts && choice.mode === "delivery" && choice.zone && lines.length > 0 && !problem && (
+          <FeeRows lang={lang} quote={quote} zone={zone} goods={check?.pricing?.goods} more={more}
+            items={couponsOn && fine && check?.pricing && check.pricing.discounts.length > 0 ? null : (check?.pricing?.goods ?? null)} />
         )}
         {message && <p className="ox-err summary" role="alert" ref={messageEl}>{message}</p>}
       </div>
@@ -375,14 +444,14 @@ export function ReviewSheet(props: Props) {
         {customer.can_use_account && changed.length === 0 && (
           <button type="button" className="cx-btn ghost" disabled={!clear || placing} onClick={() => void place("account")}>{t.account}</button>
         )}
-        {!clear && !checking && changed.length === 0 && lines.length > 0 && state !== "offline" && <p className="ox-quiet center">{t.fixFirst}</p>}
+        {!clear && !itemsFine && !checking && changed.length === 0 && lines.length > 0 && state !== "offline" && <p className="ox-quiet center">{t.fixFirst}</p>}
         {state === "offline" && <button type="button" className="cx-btn ghost" onClick={() => void run()}>{t.retry}</button>}
-        {props.whatsapp && props.whatsapp.length > 0 && lines.length > 0 && (
+        {wa && wa.length > 0 && lines.length > 0 && (
           <>
-            {props.whatsapp.length > 1 && <p className="ox-quiet center">{t.partsHint(props.whatsapp.length)}</p>}
-            {props.whatsapp.map((part, i) => (
+            {wa.length > 1 && <p className="ox-quiet center">{t.partsHint(wa.length)}</p>}
+            {wa.map((part, i) => (
               <a key={part.href} className="cx-btn ghost" href={part.href} target="_blank" rel="noopener noreferrer">
-                <Glyph name="wa" />{props.whatsapp && props.whatsapp.length > 1 ? t.partOf(i + 1, props.whatsapp.length) : t.sendOnWhatsApp}
+                <Glyph name="wa" />{wa.length > 1 ? t.partOf(i + 1, wa.length) : t.sendOnWhatsApp}
               </a>
             ))}
           </>
