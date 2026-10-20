@@ -149,6 +149,21 @@ def _order_line(item: asyncpg.Record) -> dict:
         if name_ar else "",
         "sku": item["sku"] or "", "quantity": item["quantity"], "unit": "piece",
         "unit_price_minor": item["price"],
+        # What a discount took off this line (ALY-150): the paper shows it and still adds up to
+        # what the customer was charged.
+        **({"discount_minor": item["discount"]} if item["discount"] else {}),
+    }
+
+
+def _delivery_line(order: asyncpg.Record) -> dict:
+    """The delivery fee of an order (ALY-150), as a line of its own, so the paper's total is
+    the order's."""
+    zone, zone_ar = order["delivery_zone_name"], order["delivery_zone_name_ar"] or order[
+        "delivery_zone_name"]
+    return {
+        "description": f"Delivery ({zone})" if zone else "Delivery",
+        "description_ar": f"التوصيل ({zone_ar})" if zone_ar else "التوصيل",
+        "quantity": 1, "unit": "service", "unit_price_minor": order["delivery_fee"],
     }
 
 
@@ -157,19 +172,23 @@ async def order_parts(conn: asyncpg.Connection, order_id: UUID):
     order in this shop."""
     order = await conn.fetchrow(
         "select o.id, o.number, o.status, o.payment, o.total, o.contact_id, c.name, c.phone, "
-        "c.lang, c.email from orders o join contacts c on c.id = o.contact_id where o.id = $1",
+        "c.lang, c.email, o.delivery_fee, o.delivery_zone_name, o.delivery_zone_name_ar "
+        "from orders o join contacts c on c.id = o.contact_id where o.id = $1",
         order_id,
     )
     if order is None:
         return None
     items = await conn.fetch(
         "select o.name, coalesce(nullif(o.name_ar, ''), p.name_ar, '') as name_ar, o.price, "
-        "o.quantity, o.variant_name, o.variant_name_ar, o.options, o.sku "
+        "o.quantity, o.variant_name, o.variant_name_ar, o.options, o.sku, o.discount "
         "from order_items o left join items p on p.id = o.item_id "
         "where o.order_id = $1 order by o.name, o.id",
         order_id,
     )
-    return order, [_order_line(i) for i in items]
+    lines = [_order_line(i) for i in items]
+    if order["delivery_fee"]:
+        lines.append(_delivery_line(order))
+    return order, lines
 
 
 async def order_payment(conn: asyncpg.Connection, order_id: UUID, total: int) -> list[dict]:

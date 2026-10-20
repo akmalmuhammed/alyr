@@ -64,6 +64,12 @@ apps/api/                     FastAPI service (Python 3.13, managed with uv)
                               ask it, never the business type; fields.py is a shop's own fields on
                               items and sizes, templates.py the templates made in the back office,
                               template_change.py a shop's change of type (all specs/012);
+                              orders/totals.py is the ONE pricing function (discounts, delivery fee,
+                              total: the page's review, the chat's draft and the order all call it;
+                              no float) and items/discounts.py, delivery.py and costs.py are the
+                              pricing pack's three features, off for every shop until switched on
+                              (specs/014; cost lives in tables of its own and only owners and admins
+                              ever see it: read costs.py before touching an item's or an order's reader);
                               orders/page.py is what the customer's order page reads (specs/005);
                               documents/ is the documents engine (receipts, invoices, credit notes:
                               gapless numbers, immutable once issued, a PDF drawn in Arabic and

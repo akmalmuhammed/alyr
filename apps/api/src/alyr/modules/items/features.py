@@ -29,11 +29,17 @@ from alyr import capabilities, shop_templates
 from alyr.catalog import Text
 from alyr.core import team
 from alyr.core.team import Actor
-from alyr.core.words import ITEMS, counted
+from alyr.core.words import DISCOUNTS, ITEMS, ZONES, counted
 from alyr.modules.items import changes
 from alyr.modules.items.service import BilingualError
 
 SET_BY = ("template", "owner")
+
+# The pricing pack (ALY-150) changes what a customer is charged, so it acts only on the Catalog's
+# order page, which shows the customer the same figures that are charged. A shop that has the
+# older order page (orders without the Catalog) is never given a discount, a delivery fee or a
+# cost it could not show: for it these are off, whatever is switched.
+PRICING_PACK = ("discounts", "delivery_fees", "cost_margin")
 
 
 class FeatureError(BilingualError):
@@ -57,9 +63,12 @@ class Row:
 class Features:
     """A shop's features as they are now. Immutable; load again after a change."""
 
-    def __init__(self, rows: dict[str, Row], template: shop_templates.ShopTemplate) -> None:
+    def __init__(
+        self, rows: dict[str, Row], template: shop_templates.ShopTemplate, catalog: bool = True
+    ) -> None:
         self.rows = rows
         self.template = template
+        self.catalog = catalog  # the Catalog module is on for this shop
 
     # ── asking ──
 
@@ -73,6 +82,8 @@ class Features:
         cap = capabilities.BY_KEY.get(key)
         if cap is None or not cap.built:
             return False  # a feature that is not built is never on
+        if key in PRICING_PACK and not self.catalog:
+            return False
         if cap.core or cap.always_on:
             return True
         return self._own(key) and all(self.on(dep) for dep in cap.depends_on)
@@ -154,23 +165,29 @@ async def load(conn: asyncpg.Connection) -> Features:
             "select key, enabled, config, set_by, updated_by, updated_at from shop_features"
         )
     }
-    return Features(rows, await template_of(conn))
+    catalog = bool(await conn.fetchval(
+        "select enabled from tenant_modules where module_key = 'catalog'"
+    ))
+    return Features(rows, await template_of(conn), catalog)
 
 
 async def enabled(conn: asyncpg.Connection, key: str) -> bool:
     return (await load(conn)).on(key)
 
 
-async def file_columns(conn: asyncpg.Connection) -> tuple[str, ...]:
+async def file_columns(conn: asyncpg.Connection, costs: bool = False) -> tuple[str, ...]:
     """The columns of this shop's import and export files: those of its features that are on,
-    and those of a feature that is off but that an item still uses."""
+    and those of a feature that is off but that an item still uses. The cost column (ALY-150)
+    is the owner's and the admins' alone, and only while the shop keeps costs: it is in the
+    answer only when `costs` says the person asking may see costs."""
     from alyr.modules.items import (
         columns,  # (columns is plain data; imported here to keep cycles out)
     )
 
     feats = await load(conn)
     used = await in_use(conn)
-    return columns.allowed(lambda key: feats.on(key) or used.get(key, 0) > 0)
+    wanted = columns.allowed(lambda key: feats.on(key) or used.get(key, 0) > 0)
+    return (*wanted, "cost") if costs and feats.on("cost_margin") else wanted
 
 
 async def own_fields(conn: asyncpg.Connection) -> list[dict]:
@@ -222,13 +239,27 @@ async def in_use(conn: asyncpg.Connection) -> dict[str, int]:
         "(select count(*) from items where status <> 'archived' "
         "  and (pack_size is not null or min_order > 1)) as pack_rules, "
         "(select count(*) from items where status <> 'archived' and cardinality(tags) > 0) "
-        "  as tags"
+        "  as tags, "
+        "(select count(*) from discount_rules where status <> 'ended') as discounts, "
+        "(select count(*) from delivery_zones where archived_at is null) as delivery_fees, "
+        "(select count(distinct item_id) from item_costs) as cost_margin"
     )
     return {k: int(v) for k, v in dict(row).items() if v}
 
 
 def _use_text(key: str, n: int) -> Text:
+    if key == "discounts":
+        things = Text(counted(n, DISCOUNTS, "en"), counted(n, DISCOUNTS, "ar"))
+        return Text(f"{things.en} saved. They are kept if you switch this off.",
+                    f"{things.ar} محفوظة. وتبقى إن أوقفت هذه الميزة.")
+    if key == "delivery_fees":
+        things = Text(counted(n, ZONES, "en"), counted(n, ZONES, "ar"))
+        return Text(f"{things.en} saved. They are kept if you switch this off.",
+                    f"{things.ar} محفوظة. وتبقى إن أوقفت هذه الميزة.")
     things = Text(counted(n, ITEMS, "en"), counted(n, ITEMS, "ar"))
+    if key == "cost_margin":
+        return Text(f"{things.en} have a cost. They keep it, and nobody else sees it.",
+                    f"لدى {things.ar} تكلفة. وتبقى محفوظة، ولا يراها غيرك.")
     if key == "price_groups":
         return Text(f"{things.en} have a group price. They keep it.",
                     f"لدى {things.ar} سعر خاص بمجموعة. وتحتفظ به.")

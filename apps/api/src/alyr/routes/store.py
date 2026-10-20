@@ -14,7 +14,7 @@ Two kinds of link open the page:
   A bare contact ID in the address or in a request grants nothing.
 """
 
-from datetime import date
+from datetime import UTC, date, datetime
 from urllib.parse import quote
 from uuid import UUID
 
@@ -25,7 +25,8 @@ from alyr.config import get_settings
 from alyr.core import links
 from alyr.core.normalise import fmt_qar, fmt_qar_ar
 from alyr.core.workspace import module_enabled
-from alyr.modules.items import demand, features, template, text
+from alyr.modules.items import clock, delivery, demand, discounts, features, template, text
+from alyr.modules.items import groups as price_groups
 from alyr.modules.items.cart import CartLine
 from alyr.modules.items.service import MAX_QUANTITY
 from alyr.modules.orders import page, service
@@ -38,7 +39,16 @@ router = APIRouter(prefix="/api/store", tags=["order page"])
 _CHANGED = (
     "over_limit", "sold_out", "not_enough", "price_changed", "not_now", "closed",
     "after_cutoff", "not_that_day", "past", "cart_changed", "nothing_available",
-    "too_many_holds",
+    "too_many_holds", "total_changed",
+    # A code that was good a moment ago and is not now, or that does not fit this cart.
+    "coupon_paused", "coupon_not_started", "coupon_ended", "coupon_used_up",
+    "coupon_used_by_you", "coupon_group", "coupon_no_match", "coupon_minimum",
+    "coupon_not_combined", "coupon_no_effect",
+)
+# A choice of pickup or delivery the shop cannot serve as asked (the minimum, the area, the day).
+_PLAIN_DELIVERY = (
+    "fulfilment_required", "pickup_off", "delivery_off", "zone_required", "zone_unknown",
+    "address_required", "delivery_minimum", "delivery_no_day",
 )
 _STATUS_FOR = {
     "unknown_customer": 404, "no_account": 403, "no_previous_order": 404,
@@ -69,6 +79,15 @@ class Line(BaseModel):
         )
 
 
+class Fulfilment(BaseModel):
+    """How the order reaches the customer (the shop's Delivery and pickup feature)."""
+
+    mode: str | None = Field(default=None, pattern="^(pickup|delivery)$")
+    zone_id: UUID | None = Field(default=None, description="The area, from the page's list")
+    address: str = Field(default="", max_length=400, description="Where to deliver, in words")
+    note: str = Field(default="", max_length=300, description="Anything the driver should know")
+
+
 class NewOrder(BaseModel):
     token: str = TOKEN
     items: list[Line] = Field(min_length=1, max_length=100)
@@ -80,11 +99,27 @@ class NewOrder(BaseModel):
         default=None, max_length=40,
         description="The table this order is for, from the link on its QR code",
     )
+    coupons: list[str] = Field(
+        default_factory=list, max_length=6,
+        description="Discount codes the customer typed (needs the shop's Discounts feature)",
+    )
+    fulfilment: Fulfilment | None = None
+    expected_total: int | None = Field(
+        default=None, ge=0,
+        description="The total the customer was shown, in dirhams. If the order now comes "
+                    "to something else it is refused with the new figures (`total_changed`)",
+    )
 
 
 class CartCheck(BaseModel):
     items: list[Line] = Field(min_length=1, max_length=100)
     for_date: date | None = None
+    coupons: list[str] = Field(
+        default_factory=list, max_length=6,
+        description="Discount codes the customer typed; each comes back with whether it "
+                    "applies and, if not, why",
+    )
+    fulfilment: Fulfilment | None = None
     token: str | None = Field(
         default=None, max_length=200,
         description="The customer's link token. Their price group decides the prices; "
@@ -120,7 +155,25 @@ def _refused(error: service.OrderError) -> HTTPException:
     detail = {"code": error.code, "message": str(error), "message_ar": error.message_ar}
     if error.lines is not None:
         detail["lines"] = error.lines
+    if error.extra:
+        detail |= error.extra
     return HTTPException(status_code=_STATUS_FOR.get(error.code, 422), detail=detail)
+
+
+async def _pricing(request: Request, shop_id: UUID, contact_id: UUID | None) -> dict:
+    """What the order page needs to know of the shop's pricing features (ALY-150): empty when
+    they are all off, so a shop that uses none is told nothing new."""
+    out: dict = {}
+    async with request.app.state.db.tenant(shop_id) as conn:
+        feats = await features.load(conn)
+        if feats.on("discounts"):
+            group = price_groups.pricing_id(await price_groups.group_of(conn, contact_id))
+            out["discounts"] = {
+                "offers": await discounts.offers(conn, group, datetime.now(UTC)),
+            }
+        if feats.on("delivery_fees"):
+            out["delivery"] = await delivery.public(conn, await clock.load(conn))
+    return out
 
 
 async def _identify(conn, link: links.Link | None) -> dict | None:
@@ -174,6 +227,7 @@ async def storefront(
         hints = await template.public(conn) if await template.enabled(conn) else None
     catalog_on = await module_enabled(request.app.state.db, shop["id"], "catalog")
     items = data["items"]
+    pricing = await _pricing(request, shop["id"], contact_id)
     return {
         "shop": {
             "name": shop["name"], "name_ar": shop["name_ar"], "slug": shop["slug"],
@@ -184,6 +238,8 @@ async def storefront(
         "products": [i for i in items if i["orderable"]],
         "unavailable": [i for i in items if not i["orderable"]],
         "catalog": hints,
+        # What the shop's discounts and delivery offer; absent when the shop uses none.
+        **({"pricing": pricing} if pricing else {}),
         "customer": customer,
         "link": customer_link.view(state, links.ORDER),
         # The label on a table's QR code. A person typed it into a link, so it is only a
@@ -316,12 +372,16 @@ async def check_cart(slug: str, body: CartCheck, request: Request) -> dict:
     before payment. Changes nothing."""
     shop = await _shop(request, slug)
     link = customer_link.require(body.token, shop["id"], links.ORDER, required=False)
-    async with request.app.state.db.tenant(shop["id"]) as conn:
-        customer = await _identify(conn, link)
-        return await service.check_cart(
-            conn, [line.cart_line() for line in body.items], body.for_date,
-            contact_id=link.contact_id if customer else None,
-        )
+    try:
+        async with request.app.state.db.tenant(shop["id"]) as conn:
+            customer = await _identify(conn, link)
+            return await service.check_cart(
+                conn, [line.cart_line() for line in body.items], body.for_date,
+                contact_id=link.contact_id if customer else None, coupons=body.coupons,
+                fulfilment=body.fulfilment.model_dump() if body.fulfilment else None,
+            )
+    except service.OrderError as error:
+        raise _refused(error) from error
 
 
 @router.post("/{slug}/orders")
@@ -334,6 +394,8 @@ async def place_order(slug: str, body: NewOrder, request: Request) -> dict:
                 conn, shop["id"], link.contact_id, [line.cart_line() for line in body.items],
                 body.payment, get_settings().public_web_url, request.app.state.outbound,
                 body.for_date, table=links.clean_table(link.table or body.table),
+                coupons=body.coupons, expected_total=body.expected_total,
+                fulfilment=body.fulfilment.model_dump() if body.fulfilment else None,
             )
     except service.OrderError as error:
         await demand.note_refusal(request.app.state.db, shop["id"], link.contact_id, error.lines)

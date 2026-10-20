@@ -49,7 +49,15 @@ export type WaOrder = {
   money: (dirhams: number) => string;
   customer?: string;
   table?: string;
+  /** How the customer wants it (ALY-150, while the shop's Delivery and pickup is on): said in the
+   *  readable message only; the codes-only message for the chat is never changed by it. */
+  fulfilment?: WaFulfilment | null;
 };
+
+/** The zone's name in both languages, the address and the note, as the customer wrote them. */
+export type WaFulfilment =
+  | { mode: "pickup" }
+  | { mode: "delivery"; zone: string; zone_ar: string; address: string; note: string };
 
 export type WaPart = { text: string; href: string; items: number };
 type Piece = { text: string; items: number };
@@ -136,6 +144,20 @@ function linkLine(line: WaLine, order: WaOrder): string {
   return `${code}${name}${detail ? ` (${detail})` : ""} x${line.qty} - ${order.money(line.unit * line.qty)}`;
 }
 
+/** "Pickup", or "Delivery to Al Wakra: Street 5" and "Note: call at the gate". Nothing for no choice. */
+function fulfilmentLines(order: WaOrder): string[] {
+  const f = order.fulfilment;
+  if (!f) return [];
+  const ar = order.lang === "ar";
+  if (f.mode === "pickup") return [ar ? "الاستلام من المتجر" : "Pickup"];
+  const zone = pick(order.lang, f.zone, f.zone_ar);
+  // The shop's one flat fee has no area to name: just "Delivery".
+  const where = ar ? (zone ? `التوصيل إلى ${zone}` : "التوصيل") : (zone ? `Delivery to ${zone}` : "Delivery");
+  const lines = [f.address ? `${where}: ${f.address}` : where];
+  if (f.note) lines.push(ar ? `ملاحظة: ${f.note}` : `Note: ${f.note}`);
+  return lines;
+}
+
 function linkParts(order: WaOrder): Piece[] {
   const lines = order.lines.filter((l) => l.qty > 0);
   if (lines.length === 0) return [];
@@ -146,7 +168,7 @@ function linkParts(order: WaOrder): Piece[] {
     const part = of > 1 ? ` (${n}/${of})` : "";
     return ar ? `طلب من صفحة ${shop}${part}` : `Order from the ${shop} page${part}`;
   };
-  const foot: string[] = [];
+  const foot: string[] = [...fulfilmentLines(order)];
   if (order.table) foot.push(ar ? `طاولة ${order.table}` : `Table ${order.table}`);
   if (order.customer) foot.push(ar ? `الاسم: ${order.customer}` : `Name: ${order.customer}`);
   const totalLine = ar ? `الإجمالي: ${order.money(total)}` : `Total: ${order.money(total)}`;

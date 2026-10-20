@@ -27,6 +27,7 @@ Rules this module keeps:
 """
 
 from dataclasses import dataclass, field
+from datetime import date
 from uuid import UUID
 
 import asyncpg
@@ -36,18 +37,34 @@ from alyr.core import team
 from alyr.core.media import MediaService
 from alyr.core.normalise import has_arabic
 from alyr.core.outbound import Outbound
-from alyr.modules.items import availability, cart, chat_cart, codes, match, service, wa_card
+from alyr.modules.items import (
+    availability,
+    cart,
+    chat_cart,
+    codes,
+    delivery,
+    delivery_text,
+    discount_text,
+    discounts,
+    features,
+    match,
+    service,
+    wa_card,
+    wa_coupon,
+)
 from alyr.modules.items import clock as shop_clock
 from alyr.modules.items import groups as price_groups
 from alyr.modules.items.cart import CartLine
 from alyr.modules.items.wa_text import say, shown
 from alyr.modules.orders import service as orders
+from alyr.modules.orders import totals
 from alyr.modules.orders.chat import order_link
 
 OK, CHANGE, VARIANT, PICK = "ok:", "chg:", "var:", "pick:"
+FULFIL, ZONE = "fulfil:", "zone:"  # pickup or delivery; which area (a zone's ID, or "other")
 PLACE, ACCOUNT, CLEAR, FIND, PERSON = "cart_place", "cart_acct", "cart_clear", "find_name", "person"
 OWN_IDS = {PLACE, ACCOUNT, CLEAR, FIND, PERSON}
-OWN_PREFIXES = (OK, CHANGE, VARIANT, PICK)
+OWN_PREFIXES = (OK, CHANGE, VARIANT, PICK, FULFIL, ZONE)
 MAX_CARDS = 3
 MAX_PROBLEMS = 5
 
@@ -72,6 +89,10 @@ _SAME = {" ".join(match.tokens(p)) for p in (
     "repeat my order", "reorder", "order again", "the usual",
     "نفس الطلب", "نفس الطلب السابق", "كالمعتاد", "اعادة الطلب", "إعادة الطلب", "كالمرة السابقة",
 )}
+_PICKUP = {
+    w for p in ("pickup", "collect", "collection", "استلام", "استلم") for w in match.tokens(p)
+}
+_DELIVERY = {w for p in ("delivery", "deliver", "توصيل", "وصل") for w in match.tokens(p)}
 _PERSON = {w for p in (
     "human", "person", "agent", "staff", "representative", "operator",
     "موظف", "شخص", "إنسان", "مندوب", "بشري",
@@ -107,6 +128,8 @@ class Row:
     unit_price: int
     entry: service.Loaded
     variant: dict | None
+    # The day a made-to-order item is for (None for the rest).
+    fulfil_on: date | None = None
 
     def name(self, lang: str) -> str:
         label = shown(self.entry.item, lang)
@@ -187,6 +210,21 @@ async def maybe_handle(
             return None
         ctx = await _context(conn, tenant_id, contact, lang, web_url, media, orders_on, outbound)
         return await _answer(ctx, reply)
+    if orders_on and message.kind == "text" and message.text.strip():
+        waiting = await chat_cart.get(conn, contact["id"])
+        if waiting is not None and waiting.extras.get("asking") == "address":
+            ctx = await _context(
+                conn, tenant_id, contact, lang, web_url, media, orders_on, outbound
+            )
+            taken = await _got_address(ctx, waiting, message.text)
+            if taken is not None:
+                return taken
+        ask = wa_coupon.parse(message.text)
+        if ask is not None and (await features.load(conn)).on("discounts"):
+            ctx = await _context(
+                conn, tenant_id, contact, lang, web_url, media, orders_on, outbound
+            )
+            return await _coupon(ctx, ask)
     parsed = codes.parse(message.text) if message.text.strip() else codes.Parsed()
     if parsed.is_order:
         ctx = await _context(conn, tenant_id, contact, lang, web_url, media, orders_on, outbound)
@@ -217,6 +255,14 @@ async def _typed(
         return await _place(ctx, cart_, "link")
     if said in _CART and cart_ is not None and cart_.lines:
         return [await _draft(ctx, cart_)]
+    if cart_ is not None and cart_.lines and 0 < len(words) <= 2 and (
+        set(words) <= (_PICKUP | _DELIVERY) and set(words)
+    ) and await _delivery_on(ctx):
+        # "pickup" or "delivery" again: change how the order is to reach them.
+        cart_.extras["delivery"] = {"mode": "pickup" if set(words) <= _PICKUP else "delivery"}
+        cart_.extras.pop("asking", None)
+        await chat_cart.save(ctx.conn, cart_)
+        return await _ask_fulfilment(ctx, cart_) or [await _draft(ctx, cart_)]
     runs = {" ".join(words[i:i + n]) for n in (2, 3, 4) for i in range(len(words))}
     if len(words) <= 6 and (said in _SAME or runs & _SAME):
         return await _same_as_last_time(ctx)
@@ -251,6 +297,10 @@ async def _answer(ctx: Context, reply: str) -> list[OutboundMessage] | None:
         except ValueError:
             return None
         return await _offer(ctx, [Want(item_id)], [])
+    if reply.startswith(FULFIL) or reply.startswith(ZONE):
+        if cart_ is None or not cart_.lines:
+            return [ctx.reply(ctx.say("draft_empty"))]
+        return await _chose_how(ctx, cart_, reply)
     kind = OK if reply.startswith(OK) else CHANGE if reply.startswith(CHANGE) else VARIANT
     rest = reply.removeprefix(kind)
     if cart_ is None or cart_.pending is None or not rest.startswith(cart_.pending["id"]):
@@ -548,7 +598,7 @@ async def _check(ctx: Context, wants: list[Want]) -> tuple[list[Row], list[str]]
         if c.ok:
             rows.append(Row(
                 c.line.item_id, c.variant["id"] if c.variant else None, c.line.quantity,
-                c.unit_price, c.entry, c.variant,
+                c.unit_price, c.entry, c.variant, c.fulfil_on,
             ))
         else:
             problems.append(cart.message(c, ctx.clock, ctx.lang))
@@ -728,6 +778,89 @@ async def _confirm(ctx: Context, cart_: chat_cart.Cart, qid: str) -> list[Outbou
 # ── the draft order ──────────────────────────────────────────────────────────────────
 
 
+# A code that cannot become good by adding to the order: it is forgotten once the customer has
+# been told. One that only needs more in the order (the minimum, the right items) is kept.
+_FINAL = {
+    "coupon_unknown", "coupon_ended", "coupon_paused", "coupon_used_up", "coupon_used_by_you",
+    "coupon_group", "coupon_not_started",
+}
+
+
+async def _quote(
+    ctx: Context, cart_: chat_cart.Cart, rows: list[Row]
+) -> discounts.Quote | None:
+    """The draft priced against the shop's discounts; None while the feature is off."""
+    if not rows or not (await features.load(ctx.conn)).on("discounts"):
+        return None
+    lines = [
+        totals.Line(i, r.item_id, r.entry.item["category"] or "", r.unit_price, r.quantity)
+        for i, r in enumerate(rows)
+    ]
+    return await discounts.quote(
+        ctx.conn, lines, chat_cart.coupons(cart_), contact_id=ctx.me, group_id=ctx.group_id,
+        now=ctx.clock.now,
+    )
+
+
+def _label(rule: totals.Rule, lang: str) -> str:
+    name = rule.code or (rule.name_ar if lang == "ar" and rule.name_ar else rule.name)
+    return f" ({name})" if name else ""
+
+
+async def _coupon_notes(
+    ctx: Context, cart_: chat_cart.Cart, quote: discounts.Quote
+) -> list[str]:
+    """What to tell the customer about the codes that did not apply, forgetting the ones that
+    never will."""
+    notes, forget = [], []
+    for c in quote.coupons:
+        if c.ok:
+            continue
+        reason = discount_text.say(
+            c.problem.code, ctx.lang, {**c.problem.details, "code": c.code}, ctx.clock.tz.key
+        )
+        notes.append(ctx.say("coupon_note", coupon=c.code, reason=reason))
+        if c.problem.code in _FINAL:
+            forget.append(c.code)
+    if forget:
+        chat_cart.drop_coupons(cart_, forget)
+        await chat_cart.save(ctx.conn, cart_)
+    return notes
+
+
+async def _coupon(ctx: Context, ask: wa_coupon.Ask) -> list[OutboundMessage]:
+    """The customer sent a discount code. If the shop has it, it goes into the draft and the
+    draft is shown with the discount; if not, they are told so."""
+    rule = None
+    for word in ask.candidates[:4]:
+        shown_code, key = discounts.code_forms(word)
+        row = await ctx.conn.fetchrow(
+            "select * from discount_rules where kind = 'coupon' and code_key = $1", key
+        )
+        if row is not None:
+            rule = (shown_code, row)
+            break
+    if rule is None:
+        if not ask.candidates:
+            return [ctx.reply(ctx.say("coupon_how"))]
+        code = discounts.code_forms(ask.candidates[-1])[0]
+        return [ctx.reply(discount_text.say("coupon_unknown", ctx.lang, {"code": code}))]
+    cart_ = await chat_cart.open_for(ctx.conn, ctx.me)
+    if cart_ is None:
+        return await _hand_to_person(ctx, "busy", ctx.say("person"))
+    code, row = rule
+    if not chat_cart.add_coupon(cart_, code, discounts.MAX_CODES):
+        return [ctx.reply(discount_text.say(
+            "coupon_too_many", ctx.lang, {"max": discounts.MAX_CODES}
+        ))]
+    await chat_cart.save(ctx.conn, cart_)
+    if cart_.lines:
+        return [await _draft(ctx, cart_)]
+    return [ctx.reply(ctx.say(
+        "coupon_saved", coupon=code, text=discounts.rule_words(row, ctx.lang)
+    ))]
+
+
 async def _draft(
     ctx: Context, cart_: chat_cart.Cart, added: bool = False, notes: list[str] | None = None
 ) -> OutboundMessage:
@@ -738,6 +871,9 @@ async def _draft(
              UUID(line["variant_id"]) if line["variant_id"] else None)
         for line in cart_.lines
     ])
+    quote = await _quote(ctx, cart_, rows)
+    goods = quote.goods if quote is not None else sum(r.total for r in rows)
+    how = await _how(ctx, cart_, rows, goods)
     lines = [*(notes or [])]
     if added:
         lines.append(ctx.say("draft_added"))
@@ -747,7 +883,21 @@ async def _draft(
         for r in rows
     ]
     lines += problems
-    lines.append(ctx.say("total", total=money(ctx.lang, sum(r.total for r in rows))))
+    total = sum(r.total for r in rows)
+    if quote is not None:
+        total = quote.goods
+        if quote.applied:
+            lines.append(ctx.say("draft_items", total=money(ctx.lang, quote.subtotal)))
+            lines += [
+                ctx.say("draft_discount", label=_label(a.rule, ctx.lang),
+                        amount=money(ctx.lang, a.amount))
+                for a in quote.applied
+            ]
+        lines += await _coupon_notes(ctx, cart_, quote)
+    if how.lines:
+        lines += how.lines
+    total += how.fee
+    lines.append(ctx.say("total", total=money(ctx.lang, total)))
     can_account = await orders.can_use_account(ctx.conn, ctx.me)
     lines.append(ctx.say("draft_more_account" if can_account else "draft_more"))
     buttons = [Choice(PLACE, say("button_place", ctx.lang))]
@@ -787,6 +937,23 @@ async def _place(
             return [ctx.reply("\n".join(notes)), ctx.reply(ctx.say("draft_empty"))]
         notes.append(ctx.say("check_changed"))
         return [await _draft(ctx, cart_, notes=notes)]
+    quote = await _quote(ctx, cart_, rows)
+    if quote is not None and any(not c.ok for c in quote.coupons):
+        # A code the customer typed does not fit any more: say so and show what they would pay.
+        return [await _draft(ctx, cart_, notes=[ctx.say("check_changed")])]
+    goods = quote.goods if quote is not None else sum(r.total for r in rows)
+    fulfilment, fee = None, 0
+    if await _delivery_on(ctx):
+        asking = await _ask_fulfilment(ctx, cart_)
+        if asking is not None:
+            return asking
+        how = await _how(ctx, cart_, rows, goods)
+        if how.problem:
+            # The choice no longer fits (the minimum, the area): say why and ask again.
+            cart_.extras.pop("delivery", None)
+            await chat_cart.save(ctx.conn, cart_)
+            return [ctx.reply(how.problem), *(await _ask_fulfilment(ctx, cart_) or [])]
+        fulfilment, fee = _request(cart_), how.fee
     try:
         async with ctx.conn.transaction():
             # The ordinary path: stock taken in one step, holds, the credit account, the pay
@@ -795,12 +962,179 @@ async def _place(
                 ctx.conn, ctx.tenant_id, ctx.me,
                 [CartLine(r.item_id, r.quantity, r.variant_id, (), r.unit_price) for r in rows],
                 payment, ctx.web_url, ctx.outbound,
+                coupons=chat_cart.coupons(cart_) if quote is not None else None,
+                expected_total=(goods + fee) if (quote is not None or fulfilment) else None,
+                fulfilment=fulfilment,
             )
     except orders.OrderError as error:
         reason = error.message_ar if ctx.lang == "ar" else str(error)
+        if error.code in delivery_text.MESSAGES:
+            cart_.extras.pop("delivery", None)
+            await chat_cart.save(ctx.conn, cart_)
+            return [ctx.reply(reason), *(await _ask_fulfilment(ctx, cart_) or [])]
+        if error.code == "total_changed" or error.code.startswith("coupon_"):
+            # The code or the total moved while the customer decided (the last use went to
+            # someone else): forget a code that is gone, show the draft with the new total.
+            gone = (error.extra or {}).get("coupon")
+            if gone:
+                chat_cart.drop_coupons(cart_, [gone])
+                await chat_cart.save(ctx.conn, cart_)
+            return [ctx.reply(reason), await _draft(ctx, cart_)]
         return [ctx.reply(reason)]
     await chat_cart.clear(ctx.conn, ctx.me)
     return []
+
+
+# ── pickup or delivery ───────────────────────────────────────────────────────────────
+
+
+async def _delivery_on(ctx: Context) -> bool:
+    return (await features.load(ctx.conn)).on("delivery_fees")
+
+
+def _request(cart_: chat_cart.Cart) -> dict:
+    """The customer's choice as the order path takes it."""
+    chosen = cart_.extras.get("delivery") or {}
+    zone = chosen.get("zone")
+    return {
+        "mode": chosen.get("mode"), "zone_id": zone if zone not in (None, "other") else None,
+        "address": chosen.get("address", ""),
+    }
+
+
+@dataclass
+class How:
+    """How the draft reaches the customer, for the draft's lines and its total."""
+
+    lines: list[str] = field(default_factory=list)
+    fee: int = 0
+    problem: str = ""
+
+
+async def _how(ctx: Context, cart_: chat_cart.Cart, rows: list[Row], goods: int) -> How:
+    """The draft's pickup or delivery priced: its lines, the fee, or why it does not fit.
+    Nothing while the shop does not use delivery or the customer has not chosen yet."""
+    out = How()
+    if not rows or not await _delivery_on(ctx) or not cart_.extras.get("delivery", {}).get("mode"):
+        return out
+    request = _request(cart_)
+    days = [r.fulfil_on for r in rows if r.fulfil_on]
+    try:
+        choice = await delivery.price(
+            ctx.conn, ctx.clock, request, goods, max(days) if days else None, strict=False
+        )
+    except delivery.DeliveryError as error:
+        details = getattr(error, "details", {})
+        out.problem = delivery_text.say(error.code, ctx.lang, details)
+        return out
+    if choice.mode == delivery.PICKUP:
+        out.lines.append(ctx.say("draft_pickup"))
+        out.lines.append(ctx.say("draft_how"))
+        return out
+    fee = ctx.say("free_word") if choice.fee == 0 else money(ctx.lang, choice.fee)
+    zone = choice.zone
+    if zone.id is None:
+        out.lines.append(ctx.say("draft_delivery_flat", fee=fee))
+    else:
+        name = zone.name_ar if ctx.lang == "ar" and zone.name_ar else zone.name
+        out.lines.append(ctx.say("draft_delivery", zone=name, fee=fee))
+    if choice.address:
+        out.lines.append(ctx.say("draft_address", address=choice.address))
+    if choice.deliver_on:
+        out.lines.append(ctx.say(
+            "draft_when", when=delivery_text.day_text(choice.deliver_on, ctx.clock.today, ctx.lang)
+        ))
+    out.lines.append(ctx.say("draft_how"))
+    out.fee = choice.fee
+    return out
+
+
+async def _ask_fulfilment(
+    ctx: Context, cart_: chat_cart.Cart
+) -> list[OutboundMessage] | None:
+    """The next thing to ask about how the order reaches the customer: pickup or delivery, the
+    area, the address. None when everything is known."""
+    settings = await delivery.load_settings(ctx.conn)
+    chosen = cart_.extras.setdefault("delivery", {})
+    if not chosen.get("mode"):
+        if settings.pickup and not settings.delivery:
+            chosen["mode"] = delivery.PICKUP
+        elif settings.delivery and not settings.pickup:
+            chosen["mode"] = delivery.DELIVERY
+        else:
+            await chat_cart.save(ctx.conn, cart_)
+            return [ctx.reply(
+                ctx.say("fulfil_ask"),
+                Choice(f"{FULFIL}pickup", say("button_pickup", ctx.lang)),
+                Choice(f"{FULFIL}delivery", say("button_delivery", ctx.lang)),
+            )]
+    if chosen["mode"] == delivery.PICKUP:
+        await chat_cart.save(ctx.conn, cart_)
+        return None
+    zones = await delivery.choices(ctx.conn)
+    if not chosen.get("zone"):
+        if len(zones) == 1:
+            chosen["zone"] = str(zones[0].id) if zones[0].id else "other"
+        elif zones:
+            await chat_cart.save(ctx.conn, cart_)
+            rows = tuple(
+                Choice(
+                    f"{ZONE}{z.id or 'other'}",
+                    wa_card.clip(z.name_ar if ctx.lang == "ar" and z.name_ar else z.name, 24),
+                    money(ctx.lang, z.fee),
+                )
+                for z in zones[:MAX_LIST_ROWS]
+            )
+            return [OutboundMessage(
+                to=ctx.me, kind="list", body=ctx.say("zone_ask"), choices=rows, lang=ctx.lang
+            )]
+    if not chosen.get("address"):
+        cart_.extras["asking"] = "address"
+        await chat_cart.save(ctx.conn, cart_)
+        return [ctx.reply(ctx.say("address_ask"))]
+    cart_.extras.pop("asking", None)
+    await chat_cart.save(ctx.conn, cart_)
+    return None
+
+
+async def _chose_how(ctx: Context, cart_: chat_cart.Cart, reply: str) -> list[OutboundMessage]:
+    """A tap on Pickup, Delivery or an area."""
+    chosen = cart_.extras.setdefault("delivery", {})
+    if reply.startswith(FULFIL):
+        mode = reply.removeprefix(FULFIL)
+        if mode not in delivery.MODES:
+            return [ctx.reply(ctx.say("question_expired"))]
+        chosen.clear()
+        chosen["mode"] = mode
+    else:
+        chosen["mode"] = delivery.DELIVERY
+        chosen["zone"] = reply.removeprefix(ZONE)
+        chosen.pop("address", None)
+    cart_.extras.pop("asking", None)
+    more = await _ask_fulfilment(ctx, cart_)
+    if more is not None:
+        return more
+    return [await _draft(ctx, cart_)]
+
+
+async def _got_address(
+    ctx: Context, cart_: chat_cart.Cart, text: str
+) -> list[OutboundMessage] | None:
+    """The customer's next message is the address. A word that cancels, or another command,
+    is not an address and is handled as usual (None)."""
+    words = match.tokens(text)
+    said = " ".join(words)
+    if (words and words[0] in _CHANGE) or said in _PLACE or said in _CART:
+        cart_.extras.pop("asking", None)
+        await chat_cart.save(ctx.conn, cart_)
+        return None
+    address = " ".join(text.split())
+    if len(address) < 3:
+        return [ctx.reply(ctx.say("address_ask"))]
+    cart_.extras.setdefault("delivery", {})["address"] = address[:delivery.MAX_ADDRESS]
+    cart_.extras.pop("asking", None)
+    await chat_cart.save(ctx.conn, cart_)
+    return [await _draft(ctx, cart_)]
 
 
 async def _same_as_last_time(ctx: Context) -> list[OutboundMessage]:
