@@ -174,7 +174,7 @@ html.ox-locked { overflow: hidden; }
 .ox-alts { grid-column: 1 / -1; display: grid; gap: 6px; }
 .ox-alt { min-height: 44px; width: 100%; padding: 6px 14px; display: flex; align-items: center; justify-content: space-between; gap: 12px; border: 0; border-radius: 12px; background: var(--raise); box-shadow: 0 0 0 1px var(--hair-2) inset; font-size: var(--ui-small); font-weight: 500; text-align: start; }
 .ox-lqty { align-self: center; }
-.ox-lqty .ox-step button { width: 40px; height: 44px; }
+.ox-lqty .ox-step button { width: 44px; height: 44px; }
 .ox-sum { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; font-size: var(--ui-body-sm); color: var(--ink-2); }
 .ox-total { font-size: var(--ui-title); font-weight: 600; color: var(--ink); letter-spacing: -0.02em; }
 .ox-field.days { margin-top: 4px; }
@@ -247,3 +247,16 @@ html.ox-locked { overflow: hidden; }
 .ox-lqty.full .ox-step button { width: 44px; }
 .cx-bar-in .ox-quiet.center { margin: 0; }
 .ox-lact .ox-link { min-width: 44px; }
+
+/* Sold by weight or volume (ALY-149): "per kg" beside a price, a quantity that carries its unit, quick amounts
+   and a typed amount in the item sheet, and the line's own total in the review. */
+.ox-per { font-size: var(--ui-small); font-weight: 400; color: var(--ink-2); }
+.ox-step .ox-stepnum { min-width: 3.4ch; padding-inline: 4px; white-space: nowrap; }
+.ox-quick { display: flex; flex-wrap: wrap; gap: 8px; }
+.ox-chip { min-height: 44px; min-width: 44px; padding-inline: 14px; border: 0; border-radius: 12px; background: var(--raise); color: var(--ink); box-shadow: 0 0 0 1px var(--hair-2) inset; font-weight: 600; font-size: var(--ui-body-sm); cursor: pointer; }
+.ox-chip.on { box-shadow: 0 0 0 2px var(--ink) inset; background: var(--card); }
+.ox-chip:focus-visible { outline: 2px solid var(--ink); outline-offset: 2px; }
+.ox-amount { display: grid; gap: 4px; font-size: var(--ui-small); color: var(--ink-2); }
+.ox-amount .cx-input { height: 48px; }
+.ox-field.bad .ox-amount .cx-input { box-shadow: 0 0 0 2px var(--bad) inset; }
+.ox-ltotal { display: block; margin-top: 4px; text-align: end; font-size: var(--ui-body-sm); font-weight: 600; }

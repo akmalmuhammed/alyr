@@ -21,7 +21,7 @@ from dataclasses import dataclass
 from decimal import Decimal, InvalidOperation
 
 from alyr.core.normalise import western_digits
-from alyr.modules.items import text
+from alyr.modules.items import qty, text
 
 # verb: phrases, folded. Longer phrases are tried first.
 _VERBS: dict[str, tuple[str, ...]] = {
@@ -109,6 +109,17 @@ def _build(verb: str, rest: list[str], original: str) -> Command:
         if rest and _NUMBER.fullmatch(rest[-1]):
             number, rest = rest[-1], rest[:-1]
     return Command(verb, " ".join(rest), number)
+
+
+def quantity(raw: str | None) -> "qty.Qty | None":
+    """A stock figure that may be a decimal ("12.5", "12,5") for something sold by weight or
+    volume: from zero up, at most three places; None if it is not one (ALY-149)."""
+    if raw is None:
+        return None
+    try:
+        return qty.parse(raw, allow_zero=True)
+    except qty.QtyError:
+        return None
 
 
 def whole_number(raw: str | None) -> int | None:

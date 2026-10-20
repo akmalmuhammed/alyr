@@ -1,0 +1,165 @@
+{
+  "note": "The messages the order page writes for a fraction (apps/web .../order/wa.ts) and the messages the chat's reader (modules/items/codes.py) must read the same way. Both sides test against this file.",
+  "phone": "97455455001",
+  "chat": [
+    {
+      "label": "a fraction and a whole",
+      "lang": "en",
+      "shop": {
+        "name": "Al Noor Electricals",
+        "name_ar": "النور للكهربائيات"
+      },
+      "lines": [
+        {
+          "code": 214,
+          "qty": 0.5,
+          "variant": ""
+        },
+        {
+          "code": 305,
+          "qty": 1,
+          "variant": ""
+        }
+      ],
+      "parts": [
+        "Hello Al Noor Electricals, I would like to order (item codes): #214 x0.5, #305. Thank you!"
+      ]
+    },
+    {
+      "label": "a fraction and a whole in Arabic",
+      "lang": "ar",
+      "shop": {
+        "name": "Al Noor Electricals",
+        "name_ar": "النور للكهربائيات"
+      },
+      "lines": [
+        {
+          "code": 214,
+          "qty": 0.5,
+          "variant": ""
+        },
+        {
+          "code": 305,
+          "qty": 1,
+          "variant": ""
+        }
+      ],
+      "parts": [
+        "مرحباً النور للكهربائيات، أرغب بطلب (أكواد الأصناف): #214 x0.5، #305. شكراً"
+      ]
+    },
+    {
+      "label": "three places, a size and a quarter",
+      "lang": "en",
+      "shop": {
+        "name": "Al Noor Electricals",
+        "name_ar": "النور للكهربائيات"
+      },
+      "lines": [
+        {
+          "code": 214,
+          "qty": 0.125,
+          "variant": "M"
+        },
+        {
+          "code": 305,
+          "qty": 1.25,
+          "variant": ""
+        },
+        {
+          "code": 410,
+          "qty": 12.5,
+          "variant": ""
+        }
+      ],
+      "parts": [
+        "Hello Al Noor Electricals, I would like to order (item codes): #214 (M) x0.125, #305 x1.25, #410 x12.5. Thank you!"
+      ]
+    },
+    {
+      "label": "a fraction below one is still written",
+      "lang": "ar",
+      "shop": {
+        "name": "Al Noor Electricals",
+        "name_ar": "النور للكهربائيات"
+      },
+      "lines": [
+        {
+          "code": 214,
+          "qty": 0.25,
+          "variant": ""
+        }
+      ],
+      "parts": [
+        "مرحباً النور للكهربائيات، أرغب بطلب (أكواد الأصناف): #214 x0.25. شكراً"
+      ]
+    }
+  ],
+  "reads": [
+    {
+      "message": "214 x0.5",
+      "refs": [
+        [
+          "code",
+          "214",
+          "0.5"
+        ]
+      ]
+    },
+    {
+      "message": "214 ×٠٫٥",
+      "refs": [
+        [
+          "code",
+          "214",
+          "0.5"
+        ]
+      ]
+    },
+    {
+      "message": "214 x 0,5",
+      "refs": [
+        [
+          "code",
+          "214",
+          "0.5"
+        ]
+      ]
+    },
+    {
+      "message": "0.5 x 214",
+      "refs": [
+        [
+          "code",
+          "214",
+          "0.5"
+        ]
+      ]
+    },
+    {
+      "message": "٢١٤ عدد ٢٫٢٥",
+      "refs": [
+        [
+          "code",
+          "214",
+          "2.25"
+        ]
+      ]
+    },
+    {
+      "message": "#214 x0.125, #305 x1",
+      "refs": [
+        [
+          "code",
+          "214",
+          "0.125"
+        ],
+        [
+          "code",
+          "305",
+          "1"
+        ]
+      ]
+    }
+  ]
+}

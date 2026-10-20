@@ -340,7 +340,8 @@ li:has(> .ct-ptile.up.failed) { grid-column: 1 / -1; }
 .ct-diff { display: flex; align-items: flex-start; gap: 10px; margin: 0; padding: 12px 14px; border-radius: 12px; font-size: var(--ui-body-sm); background: var(--volt-wash); color: var(--ink); }
 .ct-diff .sh-ico { margin-top: 2px; flex: none; }
 .ct-diff.up { background: var(--ok-soft); color: var(--ok); }
-.ct-diff.down { background: var(--warn-soft); color: var(--warn); }
+.ct-diff.down { background: var(--warn-soft); color: var(--ink); }
+.ct-diff.down .sh-ico { color: var(--warn); }
 
 /* ── bulk preview ── */
 .ct-preview { list-style: none; margin: 0; padding: 0; border-radius: 14px; box-shadow: 0 0 0 1px var(--hair) inset; overflow: hidden; background: var(--sheet); }

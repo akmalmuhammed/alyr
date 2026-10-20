@@ -45,15 +45,17 @@ export function Tile({
 
 /** − 2 +, with targets of 44 px. At `max` the + stays but does nothing and says why. */
 export function Stepper({
-  qty, onMinus, onPlus, atMax, labels,
+  qty, text, onMinus, onPlus, atMax, labels,
 }: {
   qty: number; onMinus: () => void; onPlus: () => void; atMax: boolean;
+  /** What to show for the quantity when it is more than the bare number ("0.5 kg"). */
+  text?: string;
   labels: { minus: string; plus: string; quantity: string };
 }) {
   return (
     <div className="ox-step" role="group" aria-label={labels.quantity}>
       <button type="button" aria-label={labels.minus} onClick={onMinus}><Glyph name="minus" /></button>
-      <span className="num" aria-live="polite">{qty}</span>
+      <span className="num ox-stepnum" aria-live="polite"><bdi>{text ?? qty}</bdi></span>
       <button type="button" aria-label={labels.plus} aria-disabled={atMax || undefined} onClick={onPlus}><Glyph name="plus" /></button>
     </div>
   );
