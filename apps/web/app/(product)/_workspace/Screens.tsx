@@ -60,7 +60,10 @@ type OrderRow = {
   table?: string;
   // The price group the order was charged under, as named then (null for orders before groups).
   price_group?: { name: string; name_ar: string; is_default: boolean } | null;
+  // The receipt or invoice the order made, for a shop with Documents on (ALY-146).
+  document?: DocumentRef;
 };
+type DocumentRef = { id: string; kind: string; number: string; status: string };
 type PriceGroupOption = { id: string; name: string; name_ar: string; is_default: boolean };
 type InboxRow = {
   id: string; name: string; phone: string | null; username: string | null;
@@ -79,7 +82,7 @@ type Thread = {
 type SavedReply = { id: string; title: string; body: string };
 type Me = { signed_in: boolean; id: string | null; name: string; email: string; role: string };
 type Member = { id: string; name: string; email: string; role: string };
-type Entry = { kind: string; amount_text: string; note: string; created_at: string };
+type Entry = { kind: string; amount_text: string; note: string; created_at: string; document?: DocumentRef };
 // `key` is what the simulator addresses the phone by: its number, or its WhatsApp user ID
 // when the customer uses a username and shows no number.
 type Persona = {
@@ -124,6 +127,7 @@ const T = {
     bk: { booked: "Booked", completed: "Came", cancelled: "Cancelled", no_show: "No-show" } as Record<string, string>,
     tabLedger: "Credit ledger", tabOrders: "Orders", ordersSub: "Placed through the order link",
     noOrders: "No orders yet. In the chat, tap \"Place an order\" as a customer.", table: (label: string) => `Table ${label}`,
+    docLink: (kind: string, number: string, status: string) => `${({ receipt: "Receipt", invoice: "Invoice", deposit_receipt: "Deposit receipt" } as Record<string, string>)[kind] ?? "Document"} ${number}${status === "void" ? " (cancelled)" : ""}`,
     orderNo: "Order", items: "Items", payment: "Payment", status: "Status",
     pay: { unpaid: "Not paid", paid: "Paid", on_account: "On account" } as Record<string, string>,
     st: { new: "New", confirmed: "Confirmed", ready: "Ready", done: "Done", cancelled: "Cancelled" } as Record<string, string>,
@@ -193,6 +197,7 @@ const T = {
     bk: { booked: "محجوز", completed: "حضر", cancelled: "ملغي", no_show: "لم يحضر" } as Record<string, string>,
     tabLedger: "دفتر الديون", tabOrders: "الطلبات", ordersSub: "الطلبات الواردة من رابط الطلب",
     noOrders: "لا توجد طلبات بعد. في المحادثة اضغط \"اطلب الآن\" كعميل.", table: (label: string) => `طاولة ${label}`,
+    docLink: (kind: string, number: string, status: string) => `${({ receipt: "إيصال", invoice: "فاتورة", deposit_receipt: "إيصال عربون" } as Record<string, string>)[kind] ?? "مستند"} ${number}${status === "void" ? " (ملغى)" : ""}`,
     orderNo: "الطلب", items: "الأصناف", payment: "الدفع", status: "الحالة",
     pay: { unpaid: "غير مدفوع", paid: "مدفوع", on_account: "على الحساب" } as Record<string, string>,
     st: { new: "جديد", confirmed: "مؤكد", ready: "جاهز", done: "منجز", cancelled: "ملغي" } as Record<string, string>,
@@ -1087,6 +1092,9 @@ export function Screens({ embedded = false, section, lang: langProp, intro, show
                             <><br /><span className="pill none">{lang === "ar" ? o.price_group.name_ar || o.price_group.name : o.price_group.name}</span></>
                           )}
                           {o.table && <><br /><span className="pill p1">{t.table(o.table)}</span></>}
+                          {o.document && embedded && canManage && (
+                            <><br /><a className="doc-link" href={`/app/documents?d=${o.document.id}`}>{t.docLink(o.document.kind, o.document.number, o.document.status)}</a></>
+                          )}
                           {o.fulfilment && <><br /><FulfilPill fulfilment={o.fulfilment} lang={lang} /></>}
                         </td>
                         <td>{o.items.map((i, k) => (
@@ -1207,7 +1215,12 @@ export function Screens({ embedded = false, section, lang: langProp, intro, show
                         <span className="mono" dir="ltr">
                           {new Date(e.created_at).toLocaleDateString("en-GB", { day: "2-digit", month: "short" })}
                         </span>
-                        <span>{t.kinds[e.kind]}{e.note ? ` · ${e.note}` : ""}</span>
+                        <span>
+                          {t.kinds[e.kind]}{e.note ? ` · ${e.note}` : ""}
+                          {e.document && embedded && canManage && (
+                            <> · <a className="doc-link" href={`/app/documents?d=${e.document.id}`}>{t.docLink(e.document.kind, e.document.number, e.document.status)}</a></>
+                          )}
+                        </span>
                         <b className={`num ${e.kind === "payment" || e.kind === "reversal" ? "minus" : "plus"}`} dir="ltr">
                           {e.kind === "payment" || e.kind === "reversal" ? "−" : "+"}{e.amount_text}
                         </b>

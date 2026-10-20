@@ -13,6 +13,9 @@ dependencies = [
     "pillow>=12.3,<13",
     "fpdf2>=2.8.9,<2.9",
     "uharfbuzz>=0.53",
+    # A page of a PDF as a picture, for the workspace screens (ALY-146, render/raster.py). Was a
+    # development dependency (the tests read PDFs with it); the API needs it now.
+    "pypdfium2>=4.30",
 ]
 
 [dependency-groups]
@@ -22,7 +25,6 @@ server = [
     "uvicorn[standard]>=0.32",
 ]
 dev = [
-    "pypdfium2>=4.30",
     "pytest>=8.3",
     "ruff>=0.8",
 ]

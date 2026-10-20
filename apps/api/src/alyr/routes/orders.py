@@ -13,6 +13,7 @@ from alyr.config import get_settings
 from alyr.core import team
 from alyr.core.auth import Staff
 from alyr.core.normalise import fmt_qar
+from alyr.modules.documents import refs as doc_refs
 from alyr.modules.items import clock
 from alyr.modules.items import service as items
 from alyr.modules.orders import service
@@ -49,7 +50,14 @@ class Availability(BaseModel):
 async def orders(request: Request, tenant_id: UUID = Depends(current_tenant)) -> dict:
     async with request.app.state.db.tenant(tenant_id) as conn:
         slug = await conn.fetchval("select slug from tenants where id = $1", tenant_id)
-        return {"slug": slug, "orders": await service.list_orders(conn)}
+        rows = await service.list_orders(conn)
+        # A shop with Documents on sees a pointer to the receipt or invoice an order made.
+        # A shop without it is answered exactly as before (no `document` key at all).
+        made = await doc_refs.by_source(conn, "order", [o["id"] for o in rows])
+        for order in rows:
+            if order["id"] in made:
+                order["document"] = made[order["id"]]
+        return {"slug": slug, "orders": rows}
 
 
 @router.post("/orders/{order_id}/status")
