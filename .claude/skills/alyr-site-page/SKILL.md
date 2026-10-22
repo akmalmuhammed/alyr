@@ -26,21 +26,37 @@ brand lane owns these files (`docs/lanes/site-and-brand.md`).
 
 ## The homepage
 
-In order (`_site/HomePage.tsx`, `home.css`, words under `home` in `copy.ts`):
+The homepage leads with the owner's problem (D-047, ALY-154). In order (`_site/HomePage.tsx`,
+`home.css`, words under `home` in `copy.ts`):
 
 1. **Header** with the Products menu, By business, How it works, Questions, the language
    link, the theme switch and the contact button (Price only with the offer).
-2. **Hero:** eyebrow "ALYR · At work for you", H1 "Your business just got an agent.", a body
-   that names who does what and says "by rules you can check", the contact button, the note
-   ("A person from ALYR replies." and the address), the facts row; beside it, on the Carbon
-   plate, the real ALYR Agent dashboard in showcase mode and the live feed (newest on top,
-   a rule line in the first screen). Phones: the feed first, then the window.
-3. **Agent spotlight:** the whole dashboard with numbered callouts and the sample switch
-   (Bakery, Salon, Home services), opening on the salon.
-4. **The suite** on the Carbon band, entered through the fold: each product in order with a
-   crop of its real screen.
-5. **By business**, **How it works** (step 4 is the report card as a WhatsApp message),
-   **Trust** (as ALYR, no founder), **Questions**, the **closing call**, the **footer**.
+2. **Hero:** eyebrow "For owner-run businesses in Qatar", H1 "Stop losing orders in the chat.",
+   the lead "ALYR works as your agent in WhatsApp, by rules you can check. You run the
+   business.", the body, the contact button and "See one order, start to finish" (to `#see`),
+   the note; a row of business chips ("What do you run?"), each opening its tab below; the
+   facts row; the real ALYR Agent dashboard in showcase mode and the live feed on the Carbon
+   plate. Phones: the chips scroll sideways, the feed comes first.
+3. **Everyday problems** (`#problems`): nine, each with its fix and a link to its product.
+4. **Your business** (`#business`, `BusinessTabs.tsx`): one tab per business type plus
+   "Something else"; each panel has an anchor (`#bakery`, `#wholesale`, `#fashion`,
+   `#restaurant`, `#salon`, `#home-services`, `#other`), "Your day today", "With ALYR" on a
+   sheet, the products it would use, and a line contact button whose message names that
+   business (`ContactButton message`). Panels are server HTML: stacked without scripts, one
+   cell with scripts so the page below never moves.
+5. **One order, start to finish** (`#see`): the `/chat` flow figure (`FlowDiagram`) told for
+   Sara at Qirfa Bakery, on a cut-corner Carbon plate, and the tally of who did what. Every
+   step shown is built; keep the tally's counts true to the steps.
+6. **ALYR Agent spotlight** with numbered callouts and the sample switch, opening on the bakery.
+7. **How we set it up and stay:** four steps, step 4 the report card as a WhatsApp message,
+   then three lists: what we need from you, when you start, every month.
+8. **The products** on the Carbon band, then **Price** (offer on: the price, examples by
+   trade, setup, the first month, what every month includes, the agreement), **Trust**,
+   **Questions** (the first `faq.shown` open to read, the rest under "More questions"; a
+   `#q-...` link opens the fold), the **closing call**, the **footer**.
+
+"Agent" on the homepage always sits beside its rules; no AI words, no «وكيل» (the Arabic says
+ALYR «تتولى عنك العمل المعتاد»), no "Is it AI?" question.
 
 ## The product page template
 

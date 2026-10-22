@@ -209,16 +209,51 @@ export type AgentFigure = {
 
 // ----------------------------------------------------------------- the homepage
 
+/** One business on the homepage: its tab, the owner's day before ALYR and with it, the
+ * products it would use, and a message filled in for that business. */
+export type BusinessRow = {
+  /** The tab's anchor (#bakery), so an advert or a message can open the right tab. */
+  id: string;
+  tab: string;
+  name: string;
+  day: string[];
+  with: string[];
+  products: ProductKey[];
+  /** A limit of today's product, said only where leaving it out would make a line untrue. */
+  note?: string;
+  ask: string;
+  /** The WhatsApp message, in the owner's own words, and the email's subject. */
+  prefill: string;
+  subject: string;
+};
+
 type Home = {
   hero: {
     eyebrow: string;
     title: [string, string];
+    /** The one line beside the headline: who works for you, and on what terms. */
+    lead: string;
     body: string;
     more: string;
+    /** The business chips under the headline; the names are the tabs of `business`. */
+    pick: string;
     facts: string[];
     /** The facts while prices are off the page (`OFFER_LIVE`). */
     factsNoOffer: string[];
     figure: { label: string; caption: Caption };
+  };
+  /** The owner's everyday problems, each with what ALYR does about it and the product. */
+  problems: {
+    eyebrow: string;
+    title: string;
+    lead: string;
+    items: { problem: string; fix: string; product: ProductKey }[];
+  };
+  /** One order followed from the first message to collection (FlowDiagram), and a count of
+   * who did what in it. */
+  see: FlowSet & {
+    tally: { label: string; items: { n: string; text: string }[] };
+    link: string;
   };
   spotlight: {
     eyebrow: string;
@@ -249,17 +284,23 @@ type Home = {
   business: {
     eyebrow: string;
     title: string;
+    tabsLabel: string;
+    day: string;
+    with: string;
     uses: string;
-    rows: { name: string; body: string; products: ProductKey[]; note?: string }[];
-    other: string;
+    rows: BusinessRow[];
+    other: { id: string; tab: string; title: string; body: string; link: string };
   };
   how: {
     eyebrow: string;
     title: string;
+    lead: string;
     steps: Titled[];
     /** The set-up line: under the steps, and again under the price. */
     note: string;
     report: Report;
+    /** How little the owner has to bring: the list before "When you start". */
+    need: { title: string; items: string[] };
     start: { title: string; items: string[] };
     month: { title: string; items: string[] };
   };
@@ -274,7 +315,12 @@ type Home = {
     period: string;
     first: string;
     setup: string;
-    includes: string;
+    /** What the first month costs and what every month after it costs, in one line. */
+    firstMonth: string;
+    includesLabel: string;
+    includes: string[];
+    /** Under the list: the price is confirmed in writing at the visit. */
+    confirm: string;
     combosLabel: string;
     combos: { label: string; value: string }[];
     ledgerLabel: string;
@@ -299,7 +345,8 @@ type Home = {
     records: { label: string; items: Record<TrustRecord, string> };
     figure: { caption: Caption; label: string };
   };
-  faq: Questions;
+  /** The first `shown` questions are open to read; the rest sit under `more`. */
+  faq: Questions & { shown: number; more: string };
   final: Titled;
   /** The sample business on the trust figure: the order tracking page. */
   sample: {
@@ -454,9 +501,9 @@ const en: Copy = {
     home: {
       title: "ALYR · Orders, bookings and credit accounts, set up for you",
       description:
-        "ALYR sets up and looks after the technology for owner-run businesses in Qatar: orders, bookings, credit accounts, what you sell and your receipts, in one workspace. ALYR Agent comes with each product: what needs you today, and your week in numbers. From QAR 449 a month for the first product, plus setup.",
+        "Stop losing orders in the chat. ALYR takes orders and bookings in WhatsApp and keeps track of who owes you. Set up for you in Qatar, from QAR 449 a month.",
       descriptionNoOffer:
-        "ALYR sets up and looks after the technology for owner-run businesses in Qatar: orders, bookings, credit accounts, what you sell and your receipts, in one workspace. ALYR Agent comes with each product: what needs you today, and your week in numbers.",
+        "Stop losing orders in the chat. ALYR takes orders and bookings in WhatsApp and keeps track of who owes you. Set up for you, in your shop in Qatar.",
     },
     chat: {
       title: "ALYR Chat · WhatsApp orders and team inbox",
@@ -634,31 +681,237 @@ const en: Copy = {
   },
   home: {
     hero: {
-      eyebrow: "ALYR · At work for you",
-      title: ["Your business", "just got an agent."],
+      eyebrow: "For owner-run businesses in Qatar",
+      title: ["Stop losing orders", "in the chat."],
+      lead: "ALYR works as your agent in WhatsApp, by rules you can check. You run the business.",
       body:
-        "In the WhatsApp chat, ALYR replies to routine messages, sends booking reminders and helps you follow up what’s owed. ALYR Agent puts what needs you on one screen, by rules you can check. We set it up in your shop. You run the business.",
-      more: "See the products",
-      facts: ["Set up for you, in your shop", "From QAR 449 a month, Agent included", "Arabic and English"],
-      factsNoOffer: ["Set up for you, in your shop", "Every suggestion shows its rule", "Arabic and English"],
+        "A customer writes “order” and gets your order page straight away. Every order lands on your team’s screen, and the customer hears from you at each step. We set it all up in your shop.",
+      more: "See one order, start to finish",
+      pick: "What do you run?",
+      facts: ["Set up for you, in your shop", "From QAR 449 a month, no commission", "Arabic and English"],
+      factsNoOffer: ["Set up for you, in your shop", "Orders, bookings and credit in one place", "Arabic and English"],
       figure: {
         label: "The ALYR Agent home screen of a fictional bakery, and what ALYR did for it this afternoon",
-        caption: { n: "01", text: "ALYR Agent on a Thursday afternoon" },
+        caption: { n: "01", text: "ALYR at work for a bakery, one Thursday afternoon" },
       },
     },
-    spotlight: {
-      eyebrow: "ALYR Agent · Your business in numbers",
-      title: "Every suggestion shows the rule behind it.",
+    problems: {
+      eyebrow: "Sound familiar?",
+      title: "Everyday problems,\nand what ALYR does about them.",
+      lead: "Find the ones you have. Each fix is built, and we set it up with you.",
+      items: [
+        {
+          problem: "Orders get lost in long chats.",
+          fix: "Customers order from your page in the chat, and every order lands on one screen.",
+          product: "chat",
+        },
+        {
+          problem: "The same questions, all day.",
+          fix: "When a customer writes “order”, “book” or “my balance”, ALYR answers straight away. Anything else goes to your team.",
+          product: "chat",
+        },
+        {
+          problem: "“Is my order ready?”",
+          fix: "Each order has its own tracking page, and the customer gets a message at every step.",
+          product: "chat",
+        },
+        {
+          problem: "Customers forget, and the chair sits empty.",
+          fix: "Customers book a free time in the chat, get the confirmation at once and a reminder two hours before.",
+          product: "bookings",
+        },
+        {
+          problem: "Regulars owe you, and asking feels awkward.",
+          fix: "Record credit in one line, see who owes what and for how long, and send polite reminders with one press.",
+          product: "accounts",
+        },
+        {
+          problem: "Staff answer from their own phones.",
+          fix: "One inbox for the whole team on one number, and every chat and order shows who has it.",
+          product: "chat",
+        },
+        {
+          problem: "No idea how this week compares.",
+          fix: "ALYR Agent shows your week against the same days last week, and what needs you now.",
+          product: "agent",
+        },
+        {
+          problem: "Prices in a notebook or a spreadsheet.",
+          fix: "Your items, sizes and prices in one place, brought in from your Excel sheet, with each customer group’s own prices.",
+          product: "shelf",
+        },
+        {
+          problem: "Customers write in Arabic and in English.",
+          fix: "Each customer gets replies in the language they write in, and your team can work in either.",
+          product: "chat",
+        },
+      ],
+    },
+    see: {
+      eyebrow: "See it work",
+      title: "One order, start to finish.\nALYR does the routine.",
       body:
-        "ALYR Agent counts the orders, bookings, chats and credit accounts already in your workspace. It compares your week with the same days last week, puts the work that is waiting at the top, and suggests up to three things. Each names its rule and opens the screen where you act.",
+        "Follow Sara’s order at Qirfa Bakery: her ordinary WhatsApp chat, what ALYR does by itself, and your team’s screen, side by side.",
+      tabsLabel: "Examples",
+      stepsLabel: "Steps",
+      pause: "Pause",
+      play: "Play",
+      note: "Sample conversation with a fictional bakery.",
+      customer: { name: "Your customer", sub: "On WhatsApp" },
+      whatsapp: { name: "WhatsApp", sub: "Business Platform" },
+      alyr: { name: "ALYR", sub: "Working in the background", idle: "Waiting for the next message" },
+      team: { name: "Your team", sub: "The workspace", idle: "Nothing new yet" },
+      stories: [
+        {
+          id: "order",
+          tab: "A customer orders",
+          steps: [
+            {
+              move: "in",
+              title: "Sara writes to your number",
+              body: "She messages Qirfa Bakery on WhatsApp. The message reaches ALYR through WhatsApp’s official Business Platform.",
+              chat: { from: "customer", text: "Hi, I’d like to order for pickup" },
+              work: ["Message received", "Customer found: Sara M."],
+            },
+            {
+              title: "An order word, so ALYR answers",
+              body: "“Order” is one of the words ALYR answers by itself, in Arabic and English. Anything else goes to your team.",
+              work: ["Request: order"],
+            },
+            {
+              move: "out",
+              title: "The order page comes back straight away",
+              body: "In her language, with the link to your menu.",
+              chat: { from: "business", text: "Here is our order page. Pick what you need.", action: "Open the order page" },
+              work: ["Reply sent"],
+            },
+            {
+              move: "in",
+              title: "She orders on the page",
+              body: "Your items and prices, on a page that opens from the chat. No app, no account.",
+              chat: { from: "event", text: "Ordered 7 items, QAR 98" },
+              work: ["Order #1442 saved"],
+            },
+            {
+              move: "team",
+              title: "Your team sees the order",
+              body: "It is on your Orders screen the moment it lands. Nobody copies anything out of a chat.",
+              record: { id: "order", lead: "#1442", main: "Sara M. · 7 items", sub: "QAR 98", trail: "New", tone: "signal" },
+              work: ["Order #1442: new"],
+            },
+            {
+              move: "out",
+              title: "She gets the confirmation",
+              body: "With the total and her own tracking page.",
+              chat: { from: "business", text: "Order #1442 received: 7 items, QAR 98." },
+              work: ["Confirmation sent", "Tracking page made"],
+            },
+          ],
+        },
+        {
+          id: "moves",
+          tab: "The order moves",
+          steps: [
+            {
+              move: "back",
+              title: "Yusuf presses Confirm",
+              body: "One press on the Orders screen. The order becomes his, so the team can see who has it.",
+              record: { id: "order", lead: "#1442", main: "Sara M. · 7 items", sub: "Yusuf", trail: "Confirmed", tone: "signal" },
+              work: ["Order #1442: confirmed by Yusuf"],
+            },
+            {
+              move: "out",
+              title: "Sara hears at once",
+              body: "Each change of status goes to her as a message, in her language.",
+              chat: { from: "business", text: "Order #1442 is confirmed." },
+              work: ["Message sent"],
+            },
+            {
+              move: "back",
+              title: "Ready, with one more press",
+              body: "Yusuf marks it ready when the box is packed.",
+              record: { id: "order", lead: "#1442", main: "Sara M. · 7 items", sub: "Yusuf", trail: "Ready", tone: "signal" },
+              work: ["Order #1442: ready"],
+            },
+            {
+              move: "out",
+              title: "Her tracking page updates by itself",
+              body: "Received, confirmed, ready for collection: each step with its time, and who is looking after it.",
+              chat: { from: "business", text: "Order #1442 is ready for collection." },
+              work: ["Tracking page: ready for collection"],
+            },
+            {
+              move: "back",
+              title: "Done when she collects it",
+              body: "Marked done, the order closes, and Sara gets one last message.",
+              record: { id: "order", lead: "#1442", main: "Sara M. · 7 items", sub: "Yusuf", trail: "Done", tone: "done" },
+              work: ["Order #1442: done"],
+            },
+          ],
+        },
+        {
+          id: "person",
+          tab: "A person steps in",
+          steps: [
+            {
+              move: "in",
+              title: "A question for a person",
+              body: "Not everything should be automatic. Sara asks something only your team can answer.",
+              chat: { from: "customer", text: "Can you write a name on the cake?" },
+              work: ["Message received"],
+            },
+            {
+              move: "team",
+              title: "It lands in the shared inbox",
+              body: "Every chat on your number is in one inbox the whole team can see, whoever is on shift.",
+              record: { id: "chat", main: "Sara M.", sub: "Can you write a name on the cake?", trail: "Unassigned", tone: "quiet" },
+              work: ["Saved to the shared inbox"],
+            },
+            {
+              move: "back",
+              title: "Yusuf answers from his screen",
+              body: "He types the reply in the workspace. The chat becomes his, so the team can see who is handling it.",
+              record: { id: "chat", main: "Sara M.", sub: "Can you write a name on the cake?", trail: "Yusuf", tone: "signal" },
+              work: ["Chat taken by Yusuf"],
+            },
+            {
+              title: "The automatic replies step back",
+              body: "Once a person replies, ALYR stops answering Sara’s typed messages by itself. It takes over again when the chat is closed.",
+              work: ["Automatic replies paused for this chat"],
+            },
+            {
+              move: "out",
+              title: "The reply goes out from your number",
+              body: "Sara sees one bakery and one number. She never needs to know which screen the answer came from.",
+              chat: { from: "business", text: "Yes, of course. Which name, and in which colour?" },
+              work: ["Reply sent from your number"],
+            },
+          ],
+        },
+      ],
+      tally: {
+        label: "Who did what in Sara’s order",
+        items: [
+          { n: "5", text: "messages ALYR sent her by itself" },
+          { n: "3", text: "presses by Yusuf: Confirm, Ready, Done" },
+          { n: "0", text: "orders copied out of a chat by hand" },
+        ],
+      },
+      link: "See everything in ALYR Chat",
+    },
+    spotlight: {
+      eyebrow: "ALYR Agent · With every product",
+      title: "ALYR Agent shows what needs you,\nand why.",
+      body:
+        "It counts the orders, bookings, chats and credit already in your workspace, puts the work that is waiting at the top, and suggests up to three things. Each suggestion names its rule. You decide.",
       caption: { n: "02", text: "The whole home screen" },
       label: "The ALYR Agent home screen of the sample business you choose",
-      calloutsLabel: "What each part shows",
+      calloutsLabel: "How to read it",
       callouts: [
-        "One sentence on your week, against the same days last week.",
+        "Like with like: your week against the same days last week, never a busy Tuesday against a quiet Friday.",
         "Needs you now: work that is waiting, and for how long. It clears when the work is done.",
-        "Four numbers, chosen by what you sell. A percentage only when both weeks have 20 or more.",
-        "Up to three suggestions. Each ends with its rule, and opens the rows it counted.",
+        "No numbers too small to mean anything: a percentage only when both weeks have 20 or more.",
+        "Shows its working: each suggestion ends with its rule, and opens the rows it counted.",
         "Done for you: what ALYR sent this week.",
       ],
       under: "The real screen, with fictional businesses. ALYR computed every number from each sample’s records.",
@@ -666,9 +919,9 @@ const en: Copy = {
     },
     suite: {
       eyebrow: "The products",
-      title: "One workspace.\nA product for each job.",
+      title: "One workspace for orders,\nbookings and credit.",
       body:
-        "We set ALYR up in your shop. Our products take the orders and bookings and send the reminders in WhatsApp, and they share one workspace, one customer list and one team. ALYR Agent and ALYR Shelf come with every one. Choose the rest.",
+        "Start with one product and add another when you need it: the same customers, the same team, the same screen. ALYR Agent and ALYR Shelf come with every one.",
       rows: {
         chat: {
           body: "Customers order from a page made for their phone, with no app and no account. Each order has its own tracking page, and your whole team answers from one inbox.",
@@ -683,7 +936,7 @@ const en: Copy = {
           link: "See ALYR Agent",
         },
         accounts: {
-          body: "Record credit sales in the chat, send polite reminders with a payment link, and see who promised to pay and when.",
+          body: "Record credit sales in the chat, see who owes what and for how long, and send polite reminders with one press.",
           link: "See ALYR Accounts",
         },
         shelf: {
@@ -697,15 +950,15 @@ const en: Copy = {
       },
       notes: [
         {
-          title: "In every product: a name on everything.",
-          body: "Every chat, order, booking and credit account has one person responsible. You see who answered, how fast, and what was sold or lost.",
+          title: "Every order has an owner.",
+          body: "In every product, each chat, order, booking and credit account has one person responsible. You see who answered, how fast, and what was sold or lost.",
         },
         {
           title: "Payment links",
           body: "come with ALYR Chat and ALYR Bookings. Today they open a test page; card payments start once a payment provider is connected.",
         },
       ],
-      caption: { n: "03", text: "A corner of each product’s screen, at true size" },
+      caption: { n: "04", text: "A corner of each product’s screen, at true size" },
       crops: {
         items: "3 items",
         total: "QAR 38",
@@ -722,38 +975,142 @@ const en: Copy = {
     },
     business: {
       eyebrow: "By business",
-      title: "Start from how your customers reach you.",
-      uses: "Uses",
+      title: "Find your business.\nSee your day with ALYR.",
+      tabsLabel: "Businesses",
+      day: "Your day today",
+      with: "With ALYR",
+      uses: "What you would use",
       rows: [
         {
-          name: "Restaurants and cafes",
-          body: "Your menu in the chat, orders on your screen, and each customer told when it is ready. Office regulars can order on account.",
+          id: "bakery",
+          tab: "Bakeries",
+          name: "Bakeries and home kitchens",
+          day: [
+            "Orders arrive as voice notes and photos, and some get missed.",
+            "Customers ask “is it ready?” all afternoon.",
+            "Office regulars pay at the end of the month, and it lives in a notebook.",
+          ],
+          with: [
+            "Customers order from your menu page in the chat, by the piece or by weight, and every order lands on one screen.",
+            "ALYR tells each customer when the order is confirmed and when it is ready.",
+            "Office regulars order on account, and polite reminders go with one press.",
+          ],
+          products: ["chat", "accounts", "agent", "shelf"],
+          ask: "Show me for my bakery",
+          prefill: "Hello ALYR, I run a bakery and I’d like to see how ALYR takes our orders.",
+          subject: "How ALYR works for my bakery",
+        },
+        {
+          id: "wholesale",
+          tab: "Wholesale",
+          name: "Wholesale and trading",
+          day: [
+            "Orders come in long messages, and each customer has their own prices.",
+            "Shops buy on credit, and who owes what lives in the books.",
+            "Chasing payment feels awkward, so it waits.",
+          ],
+          with: [
+            "Each customer group gets its own prices, brought in from your Excel price list.",
+            "Customers order from the page, or by sending an item’s code in the chat.",
+            "See who owes how much and for how long, and send reminders whose tone fits how late it is.",
+          ],
+          products: ["chat", "accounts", "agent", "shelf", "docs"],
+          ask: "Show me for my trading business",
+          prefill: "Hello ALYR, we sell wholesale and I’d like to see the price lists and credit accounts.",
+          subject: "How ALYR works for my trading business",
+        },
+        {
+          id: "fashion",
+          tab: "Fashion and gifts",
+          name: "Fashion, abayas and gifts",
+          day: [
+            "Customers see a piece on Instagram, then ask the price and size in WhatsApp.",
+            "You send photos one by one and lose track of who asked what.",
+            "Orders end up as screenshots.",
+          ],
+          with: [
+            "Your chat link in your Instagram bio: one tap opens WhatsApp, and ALYR answers with your menu of what you sell.",
+            "Every piece with its sizes and options, and stock counted on every sale.",
+            "A customer can send a piece’s code or link and order it in the chat.",
+          ],
+          products: ["chat", "agent", "shelf"],
+          ask: "Show me for my shop",
+          prefill: "Hello ALYR, I sell fashion and gifts and I’d like to see how ALYR takes our orders.",
+          subject: "How ALYR works for my shop",
+        },
+        {
+          id: "restaurant",
+          tab: "Restaurants",
+          name: "Restaurants and cafés",
+          day: [
+            "Pickup orders come by phone and chat, and get written on paper.",
+            "Customers call to ask if it is ready.",
+            "Office lunches are paid at the end of the month.",
+          ],
+          with: [
+            "Your menu in the chat, and every order on your screen.",
+            "Each customer is told when the order is ready.",
+            "Office regulars order on account.",
+          ],
           products: ["chat", "accounts", "agent", "shelf"],
           note: "Table bookings are not in ALYR yet.",
+          ask: "Show me for my restaurant",
+          prefill: "Hello ALYR, I run a restaurant and I’d like to see how ALYR takes our orders.",
+          subject: "How ALYR works for my restaurant",
         },
         {
+          id: "salon",
+          tab: "Salons",
           name: "Salons and barbers",
-          body: "Customers book a service from the chat, get a reminder two hours before, and your team marks who came.",
+          day: [
+            "Bookings arrive by message at all hours.",
+            "A no-show leaves a chair empty.",
+            "Appointments live in a notebook.",
+          ],
+          with: [
+            "Customers pick a free time in the chat, and the confirmation goes at once.",
+            "A reminder goes two hours before the visit.",
+            "Your team marks who came, and ALYR Agent counts the no-shows.",
+          ],
           products: ["bookings", "agent"],
           note: "One booking at a time today: right for one chair. Several chairs at once is next.",
+          ask: "Show me for my salon",
+          prefill: "Hello ALYR, I run a salon and I’d like to see how ALYR takes our bookings.",
+          subject: "How ALYR works for my salon",
         },
         {
+          id: "home-services",
+          tab: "Home services",
           name: "Home services",
-          body: "Visits booked from the chat, parts ordered from a page, contract customers on account, and a receipt for each payment.",
+          day: [
+            "Customers call to book a visit, then call again to ask when you are coming.",
+            "Contract customers pay late.",
+            "Parts and visits are kept in different places.",
+          ],
+          with: [
+            "Visits booked from the chat, with a reminder before each.",
+            "Parts ordered from a page.",
+            "Contract customers on account, with polite reminders and a receipt for each payment.",
+          ],
           products: ["bookings", "chat", "accounts", "agent", "docs"],
           note: "One visit at a time per business today.",
-        },
-        {
-          name: "Shops and wholesale",
-          body: "Orders from your price list in the chat, stock counted on every sale, and trade customers on credit, with reminders that stay polite.",
-          products: ["chat", "accounts", "agent", "shelf", "docs"],
+          ask: "Show me for my company",
+          prefill: "Hello ALYR, we do home services and I’d like to see how ALYR takes our bookings.",
+          subject: "How ALYR works for my company",
         },
       ],
-      other: "Run something else? Write to us about how you work today.",
+      other: {
+        id: "other",
+        tab: "Something else",
+        title: "Run something else?",
+        body: "Tell us how customers reach you today. If ALYR fits, we’ll show you how. If it doesn’t yet, we’ll say so.",
+        link: "Write to us about how you work today",
+      },
     },
     how: {
-      eyebrow: "How it works",
-      title: "From the first visit to your first week in numbers.",
+      eyebrow: "We guide you",
+      title: "We set it up, train your team\nand stay with you.",
+      lead: "You don’t need to know anything technical. We do the setup, and you keep running your shop.",
       steps: [
         {
           title: "We visit you.",
@@ -761,7 +1118,7 @@ const en: Copy = {
         },
         {
           title: "We set it up.",
-          body: "We load your items with their photos, or your services, and your prices, in Arabic and English. We set your hours, switch on the products you need, and give each person on your team a sign-in.",
+          body: "We load your items with their photos, or your services, and your prices, in Arabic and English. Prices in an Excel sheet? We bring them in. We set your hours, switch on the products you need, and give each person on your team a sign-in.",
         },
         {
           title: "You go live.",
@@ -773,7 +1130,15 @@ const en: Copy = {
         },
       ],
       note: "We set ALYR up with each business ourselves, and agree your go-live date at the visit.",
-      report: { caption: { n: "04", text: "The Sunday report on WhatsApp, for 4⁠–⁠10 Oct" } },
+      report: { caption: { n: "03", text: "The Sunday report on WhatsApp, for 4⁠–⁠10 Oct" } },
+      need: {
+        title: "What we need from you",
+        items: [
+          "Your menu or price list: a photo, a PDF or an Excel sheet is fine",
+          "A phone or a computer at the counter for your team",
+          "Time for the visit, and for training your team",
+        ],
+      },
       start: {
         title: "When you start",
         items: [
@@ -796,7 +1161,7 @@ const en: Copy = {
     },
     price: {
       eyebrow: "Price",
-      title: "What it costs, in QAR.",
+      title: "One clear price.\nNo commission on your orders.",
       from: "From",
       amount: "449",
       currency: "QAR",
@@ -804,13 +1169,22 @@ const en: Copy = {
       period: "a month",
       first: "for your first product. Add ALYR Chat, ALYR Bookings or ALYR Accounts for QAR 150 a month each. ALYR Agent and ALYR Shelf come with every one.",
       setup: "Setup from QAR 1,500, quoted at your visit.",
-      includes:
-        "Every month includes your products, ALYR Agent, ALYR Shelf and the Sunday report, sign-ins for your team, a person from ALYR when you message, and menu, price and hours changes when you ask. Your monthly price is confirmed in writing at the visit.",
+      firstMonth: "Your first month is the subscription and the setup fee. After that, only the subscription.",
+      includesLabel: "Every month includes",
+      includes: [
+        "Your products, with ALYR Agent and ALYR Shelf",
+        "Sign-ins for your whole team",
+        "A person from ALYR when you message",
+        "Menu, price and hours changes when you ask",
+        "Every product update, with nothing to install",
+        "The Sunday report, once WhatsApp approves its wording",
+      ],
+      confirm: "Your monthly price is confirmed in writing at the visit.",
       combosLabel: "For example",
       combos: [
-        { label: "One product, for example ALYR Bookings", value: "from QAR 449" },
-        { label: "ALYR Chat and ALYR Bookings", value: "from QAR 599" },
-        { label: "Chat, Bookings and Accounts", value: "from QAR 749" },
+        { label: "A salon: ALYR Bookings", value: "from QAR 449" },
+        { label: "A bakery: ALYR Chat and ALYR Accounts", value: "from QAR 599" },
+        { label: "Home services: Bookings, Chat and Accounts", value: "from QAR 749" },
         { label: "ALYR Agent and ALYR Shelf", value: "included" },
       ],
       ledgerLabel: "Fees, said plainly",
@@ -851,7 +1225,7 @@ const en: Copy = {
         {
           label: "The platform",
           title: "WhatsApp’s official platform.",
-          body: "ALYR runs on WhatsApp’s official Business Platform, not on unofficial tools that put a number at risk. We are not WhatsApp or Meta.",
+          body: "ALYR is built on WhatsApp’s official Business Platform, not on unofficial tools that put a number at risk. We are not WhatsApp or Meta.",
         },
         {
           label: "Your records",
@@ -860,13 +1234,13 @@ const en: Copy = {
         },
         {
           label: "Consent",
-          title: "Stop means stop.",
-          body: "A customer who asks to stop is not messaged again, and every consent is on record.",
+          title: "Consent, on record.",
+          body: "ALYR checks a customer’s consent before any message it starts, and keeps every consent on record.",
         },
         {
-          label: "Languages",
-          title: "Arabic and English, both first.",
-          body: "Customers get replies in the language they write in. Your team can switch the workspace to either language.",
+          label: "Your money",
+          title: "Built never to hold your money.",
+          body: "Card payments, once your payment provider is connected, go to your own account. ALYR keeps a payment’s reference and status, never card numbers.",
         },
         {
           label: "Control",
@@ -887,36 +1261,23 @@ const en: Copy = {
     faq: {
       eyebrow: "Questions",
       title: "Fair questions.",
+      shown: 6,
+      more: "More questions",
       items: [
         {
           id: "which-product",
           q: "Which product do I need?",
-          a: "Tell us how customers reach you. Orders in the chat: ALYR Chat. Appointments: ALYR Bookings. Customers who pay later: ALYR Accounts. Receipts and invoices: ALYR Docs. A bakery that sells cakes and books tastings uses Chat and Bookings. ALYR Agent and ALYR Shelf come with each.",
-        },
-        {
-          id: "all-of-them",
-          q: "Do I have to take all of them?",
-          a: "No. Start with one, and add another when you need it, in the same workspace, with the same customers and team.",
-        },
-        {
-          id: "suggestions",
-          q: "Where do ALYR Agent’s suggestions come from?",
-          a: "From fixed rules, written under each suggestion. It counts your own records, compares the week with the same days last week, and shows a percentage only when both weeks have 20 or more. It suggests; you decide.",
+          a: "Tell us how customers reach you. Orders in the chat: ALYR Chat. Appointments: ALYR Bookings. Customers who pay later: ALYR Accounts. Receipts and invoices: ALYR Docs. A trading business that sells on credit uses Chat and Accounts. A bakery that sells cakes and books tastings uses Chat and Bookings. ALYR Agent and ALYR Shelf come with each.",
         },
         {
           id: "whatsapp-business",
           q: "I already use WhatsApp Business. It’s free.",
-          a: "Your customers keep using WhatsApp. ALYR adds what the app doesn’t have: an order page, bookings, payment links and one inbox for your whole team, so orders stop ending up on paper. Which number they message, and what that means for the app on your phone, we go through with you at the visit.",
+          a: "Your customers keep writing to you on WhatsApp. ALYR adds what the app doesn’t have: an order page, bookings, tracking and one inbox for your whole team, so orders stop ending up on paper. Which number they message, and what that means for the app on your phone, we go through with you at the visit.",
         },
         {
-          id: "delivery-apps",
-          q: "Delivery apps bring me customers.",
-          a: "Keep them for new customers. ALYR is for the regulars who already message you. Their orders come to you direct, and ALYR takes no commission on them.",
-        },
-        {
-          id: "chairs",
-          q: "I have more than one chair or room.",
-          a: "Today ALYR Bookings takes one booking at a time for the whole business. That suits one chair, one room or one practitioner. Several at once is the next step for Bookings. Tell us how many you run, and we’ll tell you honestly whether it fits yet.",
+          id: "no-app",
+          q: "Do my customers need an app?",
+          a: "No. They order and book on a page that opens from the chat, with no app, no account and no password.",
         },
         {
           id: "cost",
@@ -931,15 +1292,40 @@ const en: Copy = {
           a: "It is a real cost, which is why your first month comes with a result we agree in advance. If we miss it, you get that month’s subscription back.",
         },
         {
+          id: "staff",
+          q: "My staff won’t use it.",
+          a: "We train them at your counter. Each person gets their own sign-in, and the steps are ones they already know: an order goes new, confirmed, ready, done; a visit is marked came or no-show.",
+        },
+        {
+          id: "delivery-apps",
+          q: "Delivery apps bring me customers.",
+          a: "Keep them for new customers. ALYR is for the regulars who already message you. Their orders come to you direct, and ALYR takes no commission on them.",
+        },
+        {
+          id: "all-of-them",
+          q: "Do I have to take all of them?",
+          a: "No. Start with one, and add another when you need it, in the same workspace, with the same customers and team.",
+        },
+        {
+          id: "suggestions",
+          q: "Where do ALYR Agent’s suggestions come from?",
+          a: "From fixed rules, written under each suggestion. It counts your own records, compares the week with the same days last week, and shows a percentage only when both weeks have 20 or more. It suggests; you decide.",
+        },
+        {
+          id: "setup-time",
+          q: "How long does setup take?",
+          a: "We agree your go-live date with you at the visit. Most of the work is ours: loading your items and prices, and training your team.",
+        },
+        {
+          id: "chairs",
+          q: "I have more than one chair or room.",
+          a: "Today ALYR Bookings takes one booking at a time for the whole business. That suits one chair, one room or one practitioner. Several at once is the next step for Bookings. Tell us how many you run, and we’ll tell you honestly whether it fits yet.",
+        },
+        {
           id: "more-products",
           offer: true,
           q: "What if I need more than one product?",
           a: "The first is from QAR 449 a month. ALYR Chat, ALYR Bookings and ALYR Accounts are QAR 150 a month each after that. ALYR Agent and ALYR Shelf come with all of them.",
-        },
-        {
-          id: "staff",
-          q: "My staff won’t use it.",
-          a: "We train them at your counter. Each person gets their own sign-in, and the steps are ones they already know: an order goes new, confirmed, ready, done; a visit is marked came or no-show.",
         },
         {
           id: "busy-night",
@@ -957,9 +1343,14 @@ const en: Copy = {
           a: "You don’t need to be. We set it up, train your team and change things when you ask.",
         },
         {
+          id: "other-systems",
+          q: "Does it work with the system I already use?",
+          a: "Another system can send its sales into ALYR with an API key or a CSV file. Tell us what you use, and we’ll check it with you at the visit.",
+        },
+        {
           id: "data",
           q: "Is my data safe?",
-          a: "Each business’s records are kept apart inside the database itself, and ALYR uses WhatsApp’s official Business Platform. ALYR is built never to hold your money.",
+          a: "Each business’s records are kept apart inside the database itself, and ALYR is built on WhatsApp’s official Business Platform. ALYR is built never to hold your money.",
         },
         {
           id: "message-fees",
@@ -970,6 +1361,11 @@ const en: Copy = {
           id: "contract",
           q: "Am I tied in?",
           a: "No. There is a written agreement, but it runs month to month. You can stop at the end of any month, with 7 days’ notice.",
+        },
+        {
+          id: "qatar",
+          q: "Is ALYR only for Qatar?",
+          a: "Today we set up businesses in Qatar, at their own shop.",
         },
         {
           id: "whatsapp-line",
@@ -2353,9 +2749,9 @@ const ar: Copy = {
     home: {
       title: "ALYR · الطلبات والحجوزات والحسابات الآجلة، نجهّزها لك",
       description:
-        "تجهّز ALYR التقنية للمنشآت التي يديرها أصحابها في قطر وتتولى متابعتها: الطلبات والحجوزات والحسابات الآجلة وما تبيعه وإيصالاتك، في مساحة عمل واحدة. ومع كل منتج يأتي ALYR Agent: ما يحتاجك اليوم، وأسبوعك بالأرقام. من 449 ر.ق شهرياً لأول منتج، إضافة إلى رسوم التجهيز.",
+        "لا تدع الطلبات تضيع في المحادثة. تستقبل ALYR الطلبات والحجوزات في واتساب، وتتابع من عليه مبالغ لك. نجهّزها لك في قطر، من 449 ر.ق شهرياً.",
       descriptionNoOffer:
-        "تجهّز ALYR التقنية للمنشآت التي يديرها أصحابها في قطر وتتولى متابعتها: الطلبات والحجوزات والحسابات الآجلة وما تبيعه وإيصالاتك، في مساحة عمل واحدة. ومع كل منتج يأتي ALYR Agent: ما يحتاجك اليوم، وأسبوعك بالأرقام.",
+        "لا تدع الطلبات تضيع في المحادثة. تستقبل ALYR الطلبات والحجوزات في واتساب، وتتابع من عليه مبالغ لك. نجهّزها لك في محلك، في قطر.",
     },
     chat: {
       title: "ALYR Chat · طلبات واتساب وصندوق الفريق",
@@ -2533,31 +2929,237 @@ const ar: Copy = {
   },
   home: {
     hero: {
-      eyebrow: "ALYR · تعمل من أجلك",
-      title: ["صار لنشاطك", "من يتابعه عنك."],
+      eyebrow: "للأنشطة التي يديرها أصحابها في قطر",
+      title: ["لا تدع الطلبات", "تضيع في المحادثة."],
+      lead: "تتولى ALYR عنك العمل المعتاد في واتساب، بقواعد تستطيع مراجعتها. وأنت تدير عملك.",
       body:
-        "داخل محادثة واتساب، تردّ ALYR على الرسائل المعتادة، وترسل تذكيرات المواعيد، وتساعدك في متابعة المستحقات. ويضع ALYR Agent ما يحتاجك على شاشة واحدة، بقواعد تستطيع مراجعتها. نجهّز كل شيء في محلك، وأنت تدير عملك.",
-      more: "تعرّف على المنتجات",
-      facts: ["نجهّزها لك في محلك", "من 449 ر.ق شهرياً، وALYR Agent مشمول", "بالعربية والإنجليزية"],
-      factsNoOffer: ["نجهّزها لك في محلك", "كل اقتراح يُظهر قاعدته", "بالعربية والإنجليزية"],
+        "يكتب العميل «أطلب» فتصله صفحة الطلب فوراً. كل طلب يصل إلى شاشة فريقك، ويسمع العميل منك عند كل خطوة. ونجهّز كل شيء في محلك.",
+      more: "تابع طلباً واحداً من أوله إلى آخره",
+      pick: "ما نشاطك؟",
+      facts: ["نجهّزها لك في محلك", "من 449 ر.ق شهرياً، بلا عمولة", "بالعربية والإنجليزية"],
+      factsNoOffer: ["نجهّزها لك في محلك", "الطلبات والحجوزات والآجل في مكان واحد", "بالعربية والإنجليزية"],
       figure: {
-        label: "الشاشة الرئيسية لـ ALYR Agent في مخبز غير حقيقي، وما أنجزته ALYR له عصر اليوم",
-        caption: { n: "01", text: "ALYR Agent عصر يوم خميس" },
+        label: "الشاشة الرئيسية لـ ALYR Agent في مخبز غير حقيقي، وما أنجزته ALYR له عصر اليوم",
+        caption: { n: "01", text: "ALYR تعمل لمخبز، عصر يوم خميس" },
       },
     },
-    spotlight: {
-      eyebrow: "ALYR Agent · نشاطك بالأرقام",
-      title: "كل اقتراح يُظهر القاعدة التي وراءه.",
+    problems: {
+      eyebrow: "هل يحدث هذا عندك؟",
+      title: "مشكلات كل يوم،\nوما تفعله ALYR حيالها.",
+      lead: "اختر ما يشبه يومك. كل حلّ هنا مبنيّ فعلاً، ونجهّزه معك.",
+      items: [
+        {
+          problem: "تضيع الطلبات في المحادثات الطويلة.",
+          fix: "يطلب العملاء من صفحتك داخل المحادثة، وكل طلب يصل إلى شاشة واحدة.",
+          product: "chat",
+        },
+        {
+          problem: "الأسئلة نفسها طوال اليوم.",
+          fix: "حين يكتب العميل «أطلب» أو «أحجز» أو «رصيدي» تردّ ALYR فوراً، وما عدا ذلك يذهب إلى فريقك.",
+          product: "chat",
+        },
+        {
+          problem: "«طلبي جاهز؟»",
+          fix: "لكل طلب صفحة تتبّع خاصة به، ويصل العميلَ خبرٌ عند كل خطوة.",
+          product: "chat",
+        },
+        {
+          problem: "ينسى العميل موعده، فيبقى الكرسي فارغاً.",
+          fix: "يحجز العميل وقتاً متاحاً من المحادثة، ويصله التأكيد فوراً وتذكير قبل الموعد بساعتين.",
+          product: "bookings",
+        },
+        {
+          problem: "عملاء دائمون عليهم مبالغ، والسؤال عنها محرج.",
+          fix: "سجّل الآجل في سطر واحد، واعرف من عليه كم ومنذ متى، وأرسل تذكيراً لبقاً بضغطة واحدة.",
+          product: "accounts",
+        },
+        {
+          problem: "الموظفون يردّون من هواتفهم الخاصة.",
+          fix: "صندوق واحد للفريق كله على رقم واحد، وكل محادثة وطلب يُظهر من يتولاه.",
+          product: "chat",
+        },
+        {
+          problem: "لا تعرف كيف يقارن هذا الأسبوع بما قبله.",
+          fix: "يعرض ALYR Agent أسبوعك مقارنةً بالأيام نفسها من الأسبوع الماضي، وما يحتاجك الآن.",
+          product: "agent",
+        },
+        {
+          problem: "الأسعار في دفتر أو في جدول.",
+          fix: "أصنافك ومقاساتها وأسعارها في مكان واحد، تُنقل من ملف Excel، ولكل فئة من العملاء أسعارها.",
+          product: "shelf",
+        },
+        {
+          problem: "عملاء يكتبون بالعربية وآخرون بالإنجليزية.",
+          fix: "يصل الرد إلى كل عميل باللغة التي يكتب بها، ويعمل فريقك بأيٍّ منهما.",
+          product: "chat",
+        },
+      ],
+    },
+    see: {
+      eyebrow: "شاهدها تعمل",
+      title: "طلب واحد من أوله إلى آخره.\nوALYR تتولى المعتاد.",
       body:
-        "يعدّ ALYR Agent الطلبات والحجوزات والمحادثات والحسابات الآجلة الموجودة أصلاً في مساحة عملك. يقارن أسبوعك بالأيام نفسها من الأسبوع الماضي، ويضع العمل المنتظر في الأعلى، ويقترح حتى ثلاثة أمور، لكل منها قاعدتها وزرّ يفتح الشاشة التي تتصرف منها.",
+        "تابع طلب سارة من مخبز قرفة: محادثتها العادية على واتساب، وما تفعله ALYR من تلقاء نفسها، وشاشة فريقك، جنباً إلى جنب.",
+      tabsLabel: "الأمثلة",
+      stepsLabel: "الخطوات",
+      pause: "إيقاف",
+      play: "تشغيل",
+      note: "محادثة توضيحية مع مخبز غير حقيقي.",
+      customer: { name: "عميلك", sub: "على واتساب" },
+      whatsapp: { name: "واتساب", sub: "منصة الأعمال" },
+      alyr: { name: "ALYR", sub: "تعمل في الخلفية", idle: "بانتظار الرسالة التالية" },
+      team: { name: "فريقك", sub: "مساحة العمل", idle: "لا جديد بعد" },
+      stories: [
+        {
+          id: "order",
+          tab: "عميلة تطلب",
+          steps: [
+            {
+              move: "in",
+              title: "سارة تراسل رقمك",
+              body: "تراسل مخبز قرفة على واتساب، وتصل الرسالة إلى ALYR عبر منصة واتساب للأعمال الرسمية.",
+              chat: { from: "customer", text: "السلام عليكم، أبي أطلب للاستلام" },
+              work: ["تم استلام الرسالة", "العميلة: سارة م."],
+            },
+            {
+              title: "كلمة طلب، فتردّ ALYR",
+              body: "كلمة «أطلب» من الكلمات التي تردّ عليها ALYR تلقائياً بالعربية والإنجليزية، وما عداها يذهب إلى فريقك.",
+              work: ["نوع الرسالة: طلب"],
+            },
+            {
+              move: "out",
+              title: "تصلها صفحة الطلب فوراً",
+              body: "بلغتها، ومعها رابط قائمتك.",
+              chat: { from: "business", text: "حيّاك، اختاري طلبك من هنا.", action: "افتح صفحة الطلب" },
+              work: ["تم إرسال الرد"],
+            },
+            {
+              move: "in",
+              title: "تطلب من الصفحة",
+              body: "أصنافك وأسعارك في صفحة تُفتح من المحادثة، بلا تطبيق ولا حساب.",
+              chat: { from: "event", text: "طلبت 7 أصناف، 98 ر.ق" },
+              work: ["تم حفظ الطلب رقم 1442"],
+            },
+            {
+              move: "team",
+              title: "فريقك يرى الطلب",
+              body: "يظهر على شاشة الطلبات لحظة وصوله، ولا ينسخ أحد شيئاً من المحادثة.",
+              record: { id: "order", lead: "#1442", main: "سارة م. · 7 أصناف", sub: "98 ر.ق", trail: "جديد", tone: "signal" },
+              work: ["الطلب رقم 1442: جديد"],
+            },
+            {
+              move: "out",
+              title: "يصلها التأكيد",
+              body: "مع الإجمالي وصفحة تتبّع خاصة بطلبها.",
+              chat: { from: "business", text: "تم استلام الطلب رقم 1442: 7 أصناف، 98 ر.ق." },
+              work: ["تم إرسال التأكيد", "أُنشئت صفحة التتبّع"],
+            },
+          ],
+        },
+        {
+          id: "moves",
+          tab: "الطلب يتقدّم",
+          steps: [
+            {
+              move: "back",
+              title: "يضغط يوسف «تأكيد»",
+              body: "ضغطة واحدة على شاشة الطلبات، ويصير الطلب باسمه، فيعرف الفريق من يتولاه.",
+              record: { id: "order", lead: "#1442", main: "سارة م. · 7 أصناف", sub: "يوسف", trail: "مؤكد", tone: "signal" },
+              work: ["الطلب رقم 1442: أكّده يوسف"],
+            },
+            {
+              move: "out",
+              title: "يصل الخبر إليها فوراً",
+              body: "كل تغيير في الحالة يصلها برسالة، وبلغتها.",
+              chat: { from: "business", text: "تم تأكيد الطلب رقم 1442." },
+              work: ["تم إرسال الرسالة"],
+            },
+            {
+              move: "back",
+              title: "جاهز، بضغطة أخرى",
+              body: "يضع يوسف عليه «جاهز» حين تُغلَّف العلبة.",
+              record: { id: "order", lead: "#1442", main: "سارة م. · 7 أصناف", sub: "يوسف", trail: "جاهز", tone: "signal" },
+              work: ["الطلب رقم 1442: جاهز"],
+            },
+            {
+              move: "out",
+              title: "صفحة التتبّع تتحدّث تلقائياً",
+              body: "تم استلام الطلب، أكّده المتجر، جاهز للاستلام: كل خطوة بوقتها، ومن يتولى الطلب.",
+              chat: { from: "business", text: "الطلب رقم 1442 جاهز للاستلام." },
+              work: ["صفحة التتبّع: جاهز للاستلام"],
+            },
+            {
+              move: "back",
+              title: "مكتمل حين تستلمه",
+              body: "حين يُحدَّد مكتملاً يُغلق الطلب، وتصل سارة رسالة أخيرة.",
+              record: { id: "order", lead: "#1442", main: "سارة م. · 7 أصناف", sub: "يوسف", trail: "مكتمل", tone: "done" },
+              work: ["الطلب رقم 1442: مكتمل"],
+            },
+          ],
+        },
+        {
+          id: "person",
+          tab: "موظف يتدخل",
+          steps: [
+            {
+              move: "in",
+              title: "سؤال يحتاج إلى موظف",
+              body: "ليس كل شيء يصلح أن يكون آلياً. سارة تسأل عن أمر لا يجيب عنه إلا فريقك.",
+              chat: { from: "customer", text: "ممكن تكتبون اسم على الكيكة؟" },
+              work: ["تم استلام الرسالة"],
+            },
+            {
+              move: "team",
+              title: "تصل إلى صندوق الفريق",
+              body: "كل محادثة على رقمك في صندوق واحد يراه الفريق كله، أياً كان المناوب.",
+              record: { id: "chat", main: "سارة م.", sub: "ممكن تكتبون اسم على الكيكة؟", trail: "غير مسندة", tone: "quiet" },
+              work: ["حُفظت في صندوق الفريق"],
+            },
+            {
+              move: "back",
+              title: "يوسف يردّ من شاشته",
+              body: "يكتب الرد في مساحة العمل، وتصير المحادثة باسمه، فيعرف الفريق من يتولاها.",
+              record: { id: "chat", main: "سارة م.", sub: "ممكن تكتبون اسم على الكيكة؟", trail: "يوسف", tone: "signal" },
+              work: ["المحادثة مع يوسف"],
+            },
+            {
+              title: "الردود الآلية تتنحّى",
+              body: "حين يردّ موظف تتوقف ALYR عن الرد التلقائي على ما تكتبه سارة، وتعود حين تُغلق المحادثة.",
+              work: ["أُوقفت الردود التلقائية لهذه المحادثة"],
+            },
+            {
+              move: "out",
+              title: "الرد يخرج من رقمك",
+              body: "سارة ترى مخبزاً واحداً ورقماً واحداً، ولا يهمها من أي شاشة جاء الرد.",
+              chat: { from: "business", text: "أكيد، أي اسم وبأي لون؟" },
+              work: ["أُرسل الرد من رقمك"],
+            },
+          ],
+        },
+      ],
+      tally: {
+        label: "من فعل ماذا في طلب سارة",
+        items: [
+          { n: "5", text: "رسائل أرسلتها ALYR إليها من تلقاء نفسها" },
+          { n: "3", text: "ضغطات من يوسف: تأكيد، جاهز، مكتمل" },
+          { n: "0", text: "طلبات نُسخت من محادثة باليد" },
+        ],
+      },
+      link: "تعرّف على كل ما في ALYR Chat",
+    },
+    spotlight: {
+      eyebrow: "ALYR Agent · مع كل منتج",
+      title: "يعرض ALYR Agent ما يحتاجك،\nولماذا.",
+      body:
+        "يعدّ الطلبات والحجوزات والمحادثات والحسابات الآجلة الموجودة أصلاً في مساحة عملك، ويضع العمل المنتظر في الأعلى، ويقترح حتى ثلاثة أمور. كل اقتراح يذكر قاعدته، والقرار لك.",
       caption: { n: "02", text: "الشاشة الرئيسية كاملة" },
-      label: "الشاشة الرئيسية لـ ALYR Agent للنشاط التوضيحي الذي تختاره",
-      calloutsLabel: "ما يعرضه كل جزء",
+      label: "الشاشة الرئيسية لـ ALYR Agent للنشاط التوضيحي الذي تختاره",
+      calloutsLabel: "كيف تقرؤها",
       callouts: [
-        "جملة واحدة عن أسبوعك، مقارنةً بالأيام نفسها من الأسبوع الماضي.",
+        "المثل بالمثل: أسبوعك مقارنةً بالأيام نفسها من الأسبوع الماضي، لا ثلاثاء مزدحماً مقابل جمعة هادئة.",
         "يحتاجك الآن: العمل المنتظر، ومنذ متى. ويختفي حين يُنجز.",
-        "أربعة أرقام بحسب ما تبيعه. ولا تظهر النسبة المئوية إلا حين يبلغ الأسبوعان 20 أو أكثر.",
-        "حتى ثلاثة اقتراحات. ينتهي كل منها بقاعدته، ويفتح السجلات التي عدّها.",
+        "لا أرقام أصغر من أن تعني شيئاً: لا تظهر النسبة المئوية إلا حين يبلغ الأسبوعان 20 أو أكثر.",
+        "يُظهر حسابه: ينتهي كل اقتراح بقاعدته، ويفتح السجلات التي عدّها.",
         "أنجزته ALYR لك: ما أرسلته هذا الأسبوع.",
       ],
       under: "الشاشة الحقيقية، بأنشطة غير حقيقية. كل رقم فيها حسبته ALYR من سجلات المثال نفسه.",
@@ -2565,9 +3167,9 @@ const ar: Copy = {
     },
     suite: {
       eyebrow: "المنتجات",
-      title: "مساحة عمل واحدة.\nولكل مهمة منتج.",
+      title: "مساحة عمل واحدة للطلبات\nوالحجوزات والآجل.",
       body:
-        "نجهّز ALYR في محلك. منتجاتنا تستقبل الطلبات والحجوزات وترسل التذكيرات داخل واتساب، وتتشارك مساحة عمل واحدة وقائمة عملاء واحدة وفريقاً واحداً. ويأتي ALYR Agent وALYR Shelf مع كل منها، واختر الباقي.",
+        "ابدأ بمنتج واحد وأضف غيره حين تحتاجه: العملاء أنفسهم، والفريق نفسه، والشاشة نفسها. ويأتي ALYR Agent وALYR Shelf مع كل منها.",
       rows: {
         chat: {
           body: "يطلب العميل من صفحة مصمّمة لهاتفه، بلا تطبيق ولا حساب. ولكل طلب صفحة تتبّع، وفريقك كله يردّ من صندوق واحد.",
@@ -2582,7 +3184,7 @@ const ar: Copy = {
           link: "تعرّف على ALYR Agent",
         },
         accounts: {
-          body: "سجّل البيع بالآجل في المحادثة، وأرسل تذكيرات لبقة برابط دفع، واعرف من وعد بالسداد ومتى.",
+          body: "سجّل البيع بالآجل في المحادثة، واعرف من عليه كم ومنذ متى، وأرسل تذكيرات لبقة بضغطة واحدة.",
           link: "تعرّف على ALYR Accounts",
         },
         shelf: {
@@ -2596,15 +3198,15 @@ const ar: Copy = {
       },
       notes: [
         {
-          title: "في كل منتج: لكل شيء مسؤول.",
-          body: "لكل محادثة وطلب وحجز وحساب آجل موظف مسؤول. ترى من ردّ، وبأي سرعة، وما الذي بيع أو ضاع.",
+          title: "لكل طلب مسؤول.",
+          body: "في كل منتج، لكل محادثة وطلب وحجز وحساب آجل شخص واحد مسؤول. ترى من ردّ، وبأي سرعة، وما الذي بيع أو ضاع.",
         },
         {
           title: "روابط الدفع",
           body: "تأتي مع ALYR Chat وALYR Bookings. وهي اليوم تفتح صفحة تجريبية، ويبدأ الدفع بالبطاقات بعد ربط مزوّد دفع.",
         },
       ],
-      caption: { n: "03", text: "ركن من شاشة كل منتج، بحجمه الحقيقي" },
+      caption: { n: "04", text: "ركن من شاشة كل منتج، بحجمه الحقيقي" },
       crops: {
         items: "الأصناف: 3",
         total: "38 ر.ق",
@@ -2621,38 +3223,142 @@ const ar: Copy = {
     },
     business: {
       eyebrow: "حسب نشاطك",
-      title: "ابدأ من الطريقة التي يصل بها إليك عملاؤك.",
-      uses: "يستخدم",
+      title: "اختر نشاطك.\nوشاهد يومك مع ALYR.",
+      tabsLabel: "الأنشطة",
+      day: "يومك اليوم",
+      with: "مع ALYR",
+      uses: "ما ستستخدمه",
       rows: [
         {
+          id: "bakery",
+          tab: "المخابز",
+          name: "المخابز والمطابخ المنزلية",
+          day: [
+            "تصل الطلبات رسائل صوتية وصوراً، ويفوتك بعضها.",
+            "يسأل العملاء «جاهز؟» طوال العصر.",
+            "عملاء المكاتب يدفعون آخر الشهر، والحساب في دفتر.",
+          ],
+          with: [
+            "يطلب العملاء من صفحة قائمتك في المحادثة، بالقطعة أو بالوزن، وكل طلب يصل إلى شاشة واحدة.",
+            "تبلّغ ALYR كل عميل حين يتأكد طلبه وحين يجهز.",
+            "عملاء المكاتب يطلبون على حسابهم، والتذكير اللبق بضغطة واحدة.",
+          ],
+          products: ["chat", "accounts", "agent", "shelf"],
+          ask: "أرني كيف تعمل لمخبزي",
+          prefill: "مرحبا ALYR، عندي مخبز وأبي أشوف كيف تستقبلون طلباتنا.",
+          subject: "كيف تعمل ALYR لمخبزي",
+        },
+        {
+          id: "wholesale",
+          tab: "الجملة",
+          name: "الجملة والتجارة",
+          day: [
+            "تصل الطلبات في رسائل طويلة، ولكل عميل أسعاره.",
+            "المحلات تشتري بالآجل، ومن عليه كم مكتوب في الدفاتر.",
+            "المطالبة بالسداد محرجة، فتتأجل.",
+          ],
+          with: [
+            "لكل فئة من العملاء أسعارها، تُنقل من قائمة أسعارك في Excel.",
+            "يطلب العملاء من الصفحة، أو بإرسال رمز الصنف في المحادثة.",
+            "اعرف من عليه كم ومنذ متى، وأرسل تذكيرات تتدرّج نبرتها بحسب التأخير.",
+          ],
+          products: ["chat", "accounts", "agent", "shelf", "docs"],
+          ask: "أرني كيف تعمل لتجارتي",
+          prefill: "مرحبا ALYR، نبيع بالجملة ونبي نشوف قوائم الأسعار والحسابات الآجلة.",
+          subject: "كيف تعمل ALYR لتجارتي",
+        },
+        {
+          id: "fashion",
+          tab: "الأزياء والهدايا",
+          name: "الأزياء والعبايات والهدايا",
+          day: [
+            "يرى العميل القطعة على إنستغرام، ثم يسأل عن السعر والمقاس في واتساب.",
+            "ترسل الصور واحدة تلو الأخرى، وتنسى من سأل عن ماذا.",
+            "تنتهي الطلبات لقطاتِ شاشة.",
+          ],
+          with: [
+            "رابط المحادثة في نبذة إنستغرام: لمسة واحدة تفتح واتساب، وتردّ ALYR بقائمة ما تبيعه.",
+            "كل قطعة بمقاساتها وخياراتها، والمخزون يُعدّ مع كل بيع.",
+            "يستطيع العميل إرسال رمز القطعة أو رابطها وطلبها في المحادثة.",
+          ],
+          products: ["chat", "agent", "shelf"],
+          ask: "أرني كيف تعمل لمحلي",
+          prefill: "مرحبا ALYR، أبيع أزياء وهدايا وأبي أشوف كيف تستقبلون طلباتنا.",
+          subject: "كيف تعمل ALYR لمحلي",
+        },
+        {
+          id: "restaurant",
+          tab: "المطاعم",
           name: "المطاعم والمقاهي",
-          body: "قائمتك داخل المحادثة، والطلبات على شاشتك، ويُبلَّغ العميل حين يجهز طلبه. وعملاء المكاتب الدائمون يطلبون على حسابهم.",
+          day: [
+            "طلبات الاستلام تأتي بالهاتف والمحادثة، وتُكتب على ورق.",
+            "يتصل العملاء ليسألوا إن كان الطلب جاهزاً.",
+            "غداء المكاتب يُدفع آخر الشهر.",
+          ],
+          with: [
+            "قائمتك داخل المحادثة، وكل طلب على شاشتك.",
+            "يُبلَّغ كل عميل حين يجهز طلبه.",
+            "عملاء المكاتب الدائمون يطلبون على حسابهم.",
+          ],
           products: ["chat", "accounts", "agent", "shelf"],
           note: "حجز الطاولات غير متوفر في ALYR بعد.",
+          ask: "أرني كيف تعمل لمطعمي",
+          prefill: "مرحبا ALYR، عندي مطعم وأبي أشوف كيف تستقبلون طلباتنا.",
+          subject: "كيف تعمل ALYR لمطعمي",
         },
         {
+          id: "salon",
+          tab: "الصالونات",
           name: "الصالونات ومحلات الحلاقة",
-          body: "يحجز العميل الخدمة من المحادثة، ويصله تذكير قبل موعده بساعتين، ويسجّل فريقك من حضر.",
+          day: [
+            "تصل الحجوزات برسائل في كل ساعة.",
+            "عميل لا يحضر يعني كرسياً فارغاً.",
+            "المواعيد مكتوبة في دفتر.",
+          ],
+          with: [
+            "يختار العميل وقتاً متاحاً من المحادثة، ويصله التأكيد فوراً.",
+            "يصله تذكير قبل الموعد بساعتين.",
+            "يسجّل فريقك من حضر، ويعدّ ALYR Agent من لم يحضروا.",
+          ],
           products: ["bookings", "agent"],
           note: "حجز واحد في الوقت نفسه اليوم: يناسب كرسياً واحداً. وأكثر من كرسي في الوقت نفسه هو الخطوة التالية.",
+          ask: "أرني كيف تعمل لصالوني",
+          prefill: "مرحبا ALYR، عندي صالون وأبي أشوف كيف تستقبلون حجوزاتنا.",
+          subject: "كيف تعمل ALYR لصالوني",
         },
         {
+          id: "home-services",
+          tab: "الخدمات المنزلية",
           name: "الخدمات المنزلية",
-          body: "زيارات تُحجز من المحادثة، وقطع غيار تُطلب من صفحة، وعملاء عقود بالآجل، وإيصال لكل دفعة.",
+          day: [
+            "يتصل العميل ليحجز زيارة، ثم يتصل مجدداً ليسأل متى تصل.",
+            "عملاء العقود يتأخرون في الدفع.",
+            "القطع والزيارات مسجّلة في أماكن مختلفة.",
+          ],
+          with: [
+            "زيارات تُحجز من المحادثة، مع تذكير قبل كل زيارة.",
+            "قطع تُطلب من صفحة.",
+            "عملاء العقود بالآجل، بتذكيرات لبقة وإيصال لكل دفعة.",
+          ],
           products: ["bookings", "chat", "accounts", "agent", "docs"],
           note: "زيارة واحدة في الوقت نفسه لكل منشأة اليوم.",
-        },
-        {
-          name: "المحلات وتجارة الجملة",
-          body: "طلبات من قائمة أسعارك في المحادثة، ومخزون يُعدّ مع كل بيع، وعملاء تجاريون بالآجل، بتذكيرات تبقى لبقة.",
-          products: ["chat", "accounts", "agent", "shelf", "docs"],
+          ask: "أرني كيف تعمل لشركتي",
+          prefill: "مرحبا ALYR، نقدّم خدمات منزلية ونبي نشوف كيف تستقبلون حجوزاتنا.",
+          subject: "كيف تعمل ALYR لشركتي",
         },
       ],
-      other: "نشاطك مختلف؟ راسلنا وأخبرنا كيف تعمل اليوم.",
+      other: {
+        id: "other",
+        tab: "نشاط آخر",
+        title: "نشاطك مختلف؟",
+        body: "أخبرنا كيف يصل إليك عملاؤك اليوم. إن كانت ALYR تناسبك أريناك كيف، وإن لم تناسبك بعد قلنا لك ذلك.",
+        link: "راسلنا عن طريقة عملك اليوم",
+      },
     },
     how: {
-      eyebrow: "كيف نعمل",
-      title: "من أول زيارة إلى أول أسبوع بالأرقام.",
+      eyebrow: "نرافقك",
+      title: "نجهّزها، وندرّب فريقك،\nونبقى معك.",
+      lead: "لا تحتاج إلى أي خبرة تقنية. نحن نتولى التجهيز، وأنت تواصل إدارة محلك.",
       steps: [
         {
           title: "نزورك.",
@@ -2660,7 +3366,7 @@ const ar: Copy = {
         },
         {
           title: "نجهّز كل شيء.",
-          body: "نضيف أصنافك بصورها، أو خدماتك، وأسعارك، بالعربية والإنجليزية. ونضبط ساعات العمل، ونفعّل المنتجات التي تحتاجها، ونعطي كل موظف في فريقك حساب دخول خاصاً به.",
+          body: "نضيف أصنافك بصورها، أو خدماتك، وأسعارك، بالعربية والإنجليزية. أسعارك في ملف Excel؟ ننقلها نحن. ونضبط ساعات العمل، ونفعّل المنتجات التي تحتاجها، ونعطي كل موظف في فريقك حساب دخول خاصاً به.",
         },
         {
           title: "يبدأ التشغيل.",
@@ -2672,7 +3378,15 @@ const ar: Copy = {
         },
       ],
       note: "نجهّز ALYR مع كل منشأة بأنفسنا، ونتفق معك على موعد بدء التشغيل خلال الزيارة.",
-      report: { caption: { n: "04", text: "تقرير الأحد على واتساب، عن 4⁠–⁠10 أكتوبر" } },
+      report: { caption: { n: "03", text: "تقرير الأحد على واتساب، عن 4⁠–⁠10 أكتوبر" } },
+      need: {
+        title: "ما نحتاجه منك",
+        items: [
+          "قائمتك أو قائمة أسعارك: صورة أو ملف PDF أو Excel تكفي",
+          "هاتف أو حاسوب عند الكاونتر لفريقك",
+          "وقت للزيارة ولتدريب فريقك",
+        ],
+      },
       start: {
         title: "عند البداية",
         items: [
@@ -2695,7 +3409,7 @@ const ar: Copy = {
     },
     price: {
       eyebrow: "السعر",
-      title: "كم يكلّف، بالريال القطري.",
+      title: "سعر واحد واضح.\nبلا عمولة على طلباتك.",
       from: "ابتداءً من",
       amount: "449",
       currency: "ر.ق",
@@ -2703,13 +3417,22 @@ const ar: Copy = {
       period: "شهرياً",
       first: "لأول منتج. وأضف ALYR Chat أو ALYR Bookings أو ALYR Accounts بـ\u00a0150 ر.ق شهرياً لكل منها. ويأتي ALYR Agent وALYR Shelf مع كل منتج.",
       setup: "ورسوم تجهيز تبدأ من 1,500 ر.ق، ونحدد مبلغها خلال زيارتنا لك.",
-      includes:
-        "يشمل اشتراكك الشهري منتجاتك، وALYR Agent، وALYR Shelf، وتقرير الأحد، وحسابات دخول لفريقك، وشخصاً من ALYR يردّ على رسائلك، وتعديل القائمة والأسعار والساعات عند الطلب. ونؤكد لك سعرك الشهري كتابةً خلال الزيارة.",
+      firstMonth: "يشمل شهرك الأول الاشتراك ورسوم التجهيز، وبعده الاشتراك وحده.",
+      includesLabel: "يشمل كل شهر",
+      includes: [
+        "منتجاتك، مع ALYR Agent وALYR Shelf",
+        "حسابات دخول لفريقك كله",
+        "شخص من ALYR يردّ حين تراسلنا",
+        "تعديل القائمة والأسعار والساعات متى طلبت",
+        "كل تحديثات المنتج، بلا تثبيت",
+        "تقرير الأحد، بعد موافقة واتساب على صياغته",
+      ],
+      confirm: "ونؤكد لك سعرك الشهري كتابةً خلال الزيارة.",
       combosLabel: "مثلاً",
       combos: [
-        { label: "منتج واحد، مثل ALYR Bookings", value: "من 449 ر.ق" },
-        { label: "ALYR Chat مع ALYR Bookings", value: "من 599 ر.ق" },
-        { label: "Chat وBookings وAccounts", value: "من 749 ر.ق" },
+        { label: "صالون: ALYR Bookings", value: "من 449 ر.ق" },
+        { label: "مخبز: ALYR Chat وALYR Accounts", value: "من 599 ر.ق" },
+        { label: "خدمات منزلية: Bookings وChat وAccounts", value: "من 749 ر.ق" },
         { label: "ALYR Agent وALYR Shelf", value: "مشمولان" },
       ],
       ledgerLabel: "الرسوم بوضوح",
@@ -2750,7 +3473,7 @@ const ar: Copy = {
         {
           label: "المنصة",
           title: "منصة واتساب الرسمية.",
-          body: "تعمل ALYR على منصة واتساب للأعمال الرسمية، لا على أدوات غير رسمية تعرّض الرقم للحظر. ولسنا واتساب ولا Meta.",
+          body: "ALYR مبنية على منصة واتساب للأعمال الرسمية، لا على أدوات غير رسمية تعرّض الرقم للحظر. ولسنا واتساب ولا Meta.",
         },
         {
           label: "سجلاتك",
@@ -2759,13 +3482,13 @@ const ar: Copy = {
         },
         {
           label: "الموافقة",
-          title: "الإيقاف يعني الإيقاف.",
-          body: "من يطلب إيقاف الرسائل لا تصله بعدها، وكل موافقة مسجّلة.",
+          title: "الموافقة مسجّلة.",
+          body: "تتحقق ALYR من موافقة العميل قبل أي رسالة تبدأها، وتحفظ كل موافقة في السجل.",
         },
         {
-          label: "اللغة",
-          title: "العربية والإنجليزية على حدّ سواء.",
-          body: "يصل الرد إلى العميل باللغة التي يكتب بها، ويستطيع فريقك تحويل مساحة العمل إلى أيٍّ منهما.",
+          label: "أموالك",
+          title: "صُمّمت كي لا تحتفظ بأموالك أبداً.",
+          body: "مدفوعات البطاقات، بعد ربط مزوّد الدفع الخاص بك، تذهب إلى حسابك أنت. وتحفظ ALYR مرجع الدفعة وحالتها، لا أرقام البطاقات أبداً.",
         },
         {
           label: "القرار",
@@ -2786,36 +3509,23 @@ const ar: Copy = {
     faq: {
       eyebrow: "أسئلة",
       title: "أسئلة في محلها.",
+      shown: 6,
+      more: "أسئلة أخرى",
       items: [
         {
           id: "which-product",
           q: "أي منتج أحتاج؟",
-          a: "أخبرنا كيف يصل إليك عملاؤك. الطلبات في المحادثة: ALYR Chat. المواعيد: ALYR Bookings. عملاء يدفعون لاحقاً: ALYR Accounts. الإيصالات والفواتير: ALYR Docs. والمخبز الذي يبيع الكيك ويحجز مواعيد التذوّق يستخدم Chat وBookings معاً. ومع كل منتج يأتي ALYR Agent وALYR Shelf.",
-        },
-        {
-          id: "all-of-them",
-          q: "هل عليّ أن آخذها كلها؟",
-          a: "لا. ابدأ بمنتج واحد، وأضف غيره حين تحتاجه، في مساحة العمل نفسها، مع العملاء أنفسهم والفريق نفسه.",
-        },
-        {
-          id: "suggestions",
-          q: "من أين تأتي اقتراحات ALYR Agent؟",
-          a: "من قواعد ثابتة مكتوبة تحت كل اقتراح. يعدّ سجلاتك أنت، ويقارن الأسبوع بالأيام نفسها من الأسبوع الماضي، ولا يعرض نسبة مئوية إلا حين يبلغ الأسبوعان 20 أو أكثر. هو يقترح، والقرار لك.",
+          a: "أخبرنا كيف يصل إليك عملاؤك. الطلبات في المحادثة: ALYR Chat. المواعيد: ALYR Bookings. عملاء يدفعون لاحقاً: ALYR Accounts. الإيصالات والفواتير: ALYR Docs. والنشاط التجاري الذي يبيع بالآجل يستخدم Chat وAccounts معاً، والمخبز الذي يبيع الكيك ويحجز مواعيد التذوّق يستخدم Chat وBookings. ومع كل منتج يأتي ALYR Agent وALYR Shelf.",
         },
         {
           id: "whatsapp-business",
           q: "أستخدم واتساب للأعمال، وهو مجاني.",
-          a: "عملاؤك يواصلون استخدام واتساب. وتضيف ALYR ما لا يوفّره التطبيق: صفحة طلب، وحجوزات، وروابط دفع، وصندوقاً واحداً لفريقك كله، فلا تنتهي الطلبات على الورق. أما الرقم الذي يراسلك عليه عملاؤك، وما يعنيه ذلك للتطبيق على هاتفك، فنراجعه معك خلال الزيارة.",
+          a: "عملاؤك يواصلون مراسلتك على واتساب. وتضيف ALYR ما لا يوفّره التطبيق: صفحة طلب، وحجوزات، وتتبّعاً للطلب، وصندوقاً واحداً لفريقك كله، فلا تنتهي الطلبات على الورق. أما الرقم الذي يراسلك عليه عملاؤك، وما يعنيه ذلك للتطبيق على هاتفك، فنراجعه معك خلال الزيارة.",
         },
         {
-          id: "delivery-apps",
-          q: "تطبيقات التوصيل تجلب لي العملاء.",
-          a: "أبقِ عليها للعملاء الجدد. ALYR لعملائك الدائمين الذين يراسلونك أصلاً؛ طلباتهم تصلك مباشرة، ولا تأخذ ALYR عليها عمولة.",
-        },
-        {
-          id: "chairs",
-          q: "لديّ أكثر من كرسي أو غرفة.",
-          a: "يقبل ALYR Bookings اليوم حجزاً واحداً في الوقت نفسه للمنشأة كلها، وهذا يناسب كرسياً واحداً أو غرفة واحدة أو مختصاً واحداً. أما الحجوزات المتزامنة فهي الخطوة التالية في Bookings. أخبرنا كم لديك، ونقول لك بصراحة إن كان يناسبك الآن.",
+          id: "no-app",
+          q: "هل يحتاج عملائي إلى تطبيق؟",
+          a: "لا. يطلبون ويحجزون من صفحة تُفتح من المحادثة، بلا تطبيق ولا حساب ولا كلمة مرور.",
         },
         {
           id: "cost",
@@ -2830,15 +3540,40 @@ const ar: Copy = {
           a: "صحيح أنه مبلغ له وزنه، ولهذا نتفق معك مسبقاً على نتيجة لشهرك الأول. وإن لم نحققها نعيد لك اشتراك ذلك الشهر.",
         },
         {
-          id: "more-products",
-          offer: true,
-          q: "وإن احتجت أكثر من منتج؟",
-          a: "الأول من 449 ر.ق شهرياً، ثم ALYR Chat وALYR Bookings وALYR Accounts بـ\u00a0150 ر.ق شهرياً لكل منها. ويأتي ALYR Agent وALYR Shelf معها كلها.",
-        },
-        {
           id: "staff",
           q: "موظفيّ لن يستخدموه.",
           a: "ندرّبهم عند الكاونتر. لكل موظف حساب دخول خاص، والخطوات مما يعرفونه: الطلب جديد، مؤكد، جاهز، مكتمل؛ والموعد حضر أو لم يحضر.",
+        },
+        {
+          id: "delivery-apps",
+          q: "تطبيقات التوصيل تجلب لي العملاء.",
+          a: "أبقِ عليها للعملاء الجدد. ALYR لعملائك الدائمين الذين يراسلونك أصلاً؛ طلباتهم تصلك مباشرة، ولا تأخذ ALYR عليها عمولة.",
+        },
+        {
+          id: "all-of-them",
+          q: "هل عليّ أن آخذها كلها؟",
+          a: "لا. ابدأ بمنتج واحد، وأضف غيره حين تحتاجه، في مساحة العمل نفسها، مع العملاء أنفسهم والفريق نفسه.",
+        },
+        {
+          id: "suggestions",
+          q: "من أين تأتي اقتراحات ALYR Agent؟",
+          a: "من قواعد ثابتة مكتوبة تحت كل اقتراح. يعدّ سجلاتك أنت، ويقارن الأسبوع بالأيام نفسها من الأسبوع الماضي، ولا يعرض نسبة مئوية إلا حين يبلغ الأسبوعان 20 أو أكثر. هو يقترح، والقرار لك.",
+        },
+        {
+          id: "setup-time",
+          q: "كم يستغرق التجهيز؟",
+          a: "نتفق معك على موعد بدء التشغيل خلال الزيارة. ومعظم العمل علينا: إدخال أصنافك وأسعارك، وتدريب فريقك.",
+        },
+        {
+          id: "chairs",
+          q: "لديّ أكثر من كرسي أو غرفة.",
+          a: "يقبل ALYR Bookings اليوم حجزاً واحداً في الوقت نفسه للمنشأة كلها، وهذا يناسب كرسياً واحداً أو غرفة واحدة أو مختصاً واحداً. أما الحجوزات المتزامنة فهي الخطوة التالية في Bookings. أخبرنا كم لديك، ونقول لك بصراحة إن كان يناسبك الآن.",
+        },
+        {
+          id: "more-products",
+          offer: true,
+          q: "وإن احتجت أكثر من منتج؟",
+          a: "الأول من 449 ر.ق شهرياً، ثم ALYR Chat وALYR Bookings وALYR Accounts بـ 150 ر.ق شهرياً لكل منها. ويأتي ALYR Agent وALYR Shelf معها كلها.",
         },
         {
           id: "busy-night",
@@ -2856,9 +3591,14 @@ const ar: Copy = {
           a: "ولا تحتاج إلى ذلك. نحن نجهّز كل شيء، وندرّب فريقك، ونعدّل متى طلبت.",
         },
         {
+          id: "other-systems",
+          q: "هل تعمل مع النظام الذي أستخدمه؟",
+          a: "يستطيع نظام آخر إرسال مبيعاته إلى ALYR بمفتاح API أو بملف CSV. أخبرنا ماذا تستخدم، ونتحقق من ذلك معك خلال الزيارة.",
+        },
+        {
           id: "data",
           q: "هل بياناتي آمنة؟",
-          a: "سجلات كل منشأة مفصولة داخل قاعدة البيانات نفسها، وتستخدم ALYR منصة واتساب للأعمال الرسمية. وصُمّمت ALYR بحيث لا تحتفظ بأموالك أبداً.",
+          a: "سجلات كل منشأة مفصولة داخل قاعدة البيانات نفسها، وALYR مبنية على منصة واتساب للأعمال الرسمية. وصُمّمت ALYR بحيث لا تحتفظ بأموالك أبداً.",
         },
         {
           id: "message-fees",
@@ -2869,6 +3609,11 @@ const ar: Copy = {
           id: "contract",
           q: "هل أنا ملزم بمدة طويلة؟",
           a: "لا. بيننا اتفاق مكتوب، لكن الاشتراك شهري، ويمكنك إيقافه في نهاية أي شهر، على أن تُبلغنا قبل 7 أيام.",
+        },
+        {
+          id: "qatar",
+          q: "هل ALYR لقطر فقط؟",
+          a: "نجهّز اليوم الأنشطة في قطر، كلاً في محله.",
         },
         {
           id: "whatsapp-line",

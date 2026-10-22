@@ -81,10 +81,16 @@ export function SiteMotion() {
     };
     document.addEventListener("click", onLanguage, true);
 
-    // A question's address opens the question.
+    // A question's address opens the question, and the homepage's "More questions" around it.
     const openQuestion = () => {
       const target = window.location.hash ? document.getElementById(window.location.hash.slice(1)) : null;
-      if (target instanceof HTMLDetailsElement) target.open = true;
+      if (!(target instanceof HTMLDetailsElement)) return;
+      const fold = target.parentElement?.closest("details");
+      if (fold instanceof HTMLDetailsElement) fold.open = true;
+      target.open = true;
+      // Once the fold is open (by this or by the browser), land on the question itself; two
+      // frames, so the sections above that are laid out late have their real height.
+      if (fold) requestAnimationFrame(() => requestAnimationFrame(() => target.scrollIntoView({ block: "start", behavior: "instant" })));
     };
     openQuestion();
     window.addEventListener("hashchange", openQuestion);

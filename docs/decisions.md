@@ -993,3 +993,16 @@ There is no separate Pay product: payment links stay a module of Chat and Bookin
 
 **Open for the founder.** Publishing (the go-ahead each time), the Arabic review (ALY-66), the manual name check of Qirfa Bakery, and the [F] lines in `docs/site-products-2/02-messaging.md` (routes, the Docs "Not yet" line on tax and e-invoicing, whether ALYR Docs can be a shop's first product when prices are on).
 
+## D-047 · The homepage leads with the owner's problem, and shows the agent honestly
+**Date** 22 Oct 2026 · **Status** Accepted (founder, 22 Oct, in chat: "Agentic, shown honestly", then "implement this") · Linear ALY-154 · Updates D-037 and D-046. Source: the homepage improvement table (Claude Doc, 22 Oct).
+
+**The decision.**
+- **The homepage opens on the problem, not on ALYR.** H1 "Stop losing orders in the chat." / «لا تدع الطلبات تضيع في المحادثة.», with one plain line under it: "ALYR works as your agent in WhatsApp, by rules you can check. You run the business." The real ALYR Agent dashboard and the feed of what ALYR did stay beside it.
+- **The order of the page:** hero (with a row of business chips) · everyday problems, each with its fix and its product · your business, as tabs (your day today, the same day with ALYR, what you would use, a contact button with a message for that business) · one order start to finish (the `/chat` flow figure, told for Sara at Qirfa Bakery, and who did what: 5 messages by ALYR, 3 presses by Yusuf, 0 orders copied by hand) · ALYR Agent explained · how we set it up and stay (what we need from you, when you start, every month) · the products · price (offer on) · trust · questions (six shown, the rest under "More questions").
+- **"Agent" is shown, never claimed.** The word appears only beside its rules ("by rules you can check", a rule line, a count). No AI words on the page, no «وكيل» in Arabic (the Arabic says ALYR «تتولى عنك العمل المعتاد»), no "agentic", and no "Is it AI?" question. The flow shows only steps that are built, so it needs no "next" markers.
+- **What the table proposed and the page leaves out, because it is not true yet:** a reply-time promise, a named person, "hosted in Qatar", the commercial registration, card payments as live, the Sunday report as running, a founding offer or a 14-day refund, a "Coming next" row. The existing honest notes (one booking at a time, no table bookings) stay.
+- **Trust:** "Consent, on record." (ALYR checks consent before any message it starts) and "Built never to hold your money" replace "Stop means stop" and the languages fact; the platform line says "is built on" WhatsApp's official Business Platform.
+
+**Why.** An owner recognises their own problem faster than a product name, and the founder's brief was that every business should find its problem and see its day with ALYR. Showing the agent through what it does, with its rules and counts beside it, is the only version that stays true (D-039, the honesty rules in `.claude/skills/alyr-design/honesty.md`).
+
+**Open for the founder.** Publishing (the go-ahead each time), the Arabic review (ALY-66, the new sections roughly double the homepage's Arabic), and the table's open questions (the WhatsApp number and reply promise, a named person, the setup fee). The product-page template from the table is ALY-208.
