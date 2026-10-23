@@ -197,6 +197,8 @@ export default function Start() {
         if (!loaded) return setStep("account");
         // A finished owner comes back here only to answer a price ALYR published since.
         if (loaded.finished && loaded.quote.status === "published") return setStep("plan");
+        // The workspace sends a finished owner back to the go-live list (ALY-165).
+        if (loaded.finished && new URLSearchParams(window.location.search).has("golive")) return setStep("golive");
         if (loaded.finished) router.replace("/app");
         setStep(loaded.finished ? "finished" : ((loaded.step || loaded.steps[0]) as Step));
       } catch {
