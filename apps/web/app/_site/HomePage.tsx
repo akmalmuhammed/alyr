@@ -1,13 +1,15 @@
 import type { CSSProperties, ReactNode } from "react";
 import { AgentFigure } from "./AgentFigure";
-import { Icon } from "./brand";
+import { Icon, type IconName } from "./brand";
 import { BusinessTabs } from "./BusinessTabs";
 import { ContactButton, ContactNote } from "./Contact";
-import { copy, type Locale, type Questions as QuestionSet } from "./copy";
+import { copy, type BusinessRow, type Locale, type Questions as QuestionSet } from "./copy";
 import { AgeBarCrop, FigCaption, OrderBarCrop, ReceiptCrop, reportWords, ShelfCrop, SummaryCrop, TimesCrop, TrackScreen } from "./Drawings";
+import { ProductRoom } from "./ProductRoom";
 import { ReportPhone } from "./ReportPhone";
 import { Phone, TickPath } from "./Frames";
 import { FlowDiagram } from "./FlowDiagram";
+import { FoldSplit } from "./FoldSplit";
 import { HomeMotion } from "./HomeMotion";
 import { REPORTS, SAMPLE_ORDER, SAMPLES } from "./samples";
 import { contactHref, Shell } from "./Shell";
@@ -15,6 +17,7 @@ import { CONTACT_STATE, INCLUDED, OFFER_LIVE, PATHS, PRODUCTS, productPath, TRUS
 import { lines, rich } from "./Text";
 import "./kit.css";
 import "./home.css";
+import "./room.css";
 
 /**
  * The ALYR homepage, led by the owner's problem (ALY-154, D-047): the hero names the problem
@@ -47,6 +50,7 @@ export function HomePage({ locale }: { locale: Locale }) {
 }
 
 const n = (index: number) => ({ "--i": index }) as CSSProperties;
+const num = (index: number) => String(index + 1).padStart(2, "0");
 
 /** A section rule with a cross at each end, where it meets the grid's edges. */
 function Rule({ dashed = false }: { dashed?: boolean }) {
@@ -199,35 +203,73 @@ function Suite({ locale }: { locale: Locale }) {
           <Head eyebrow={s.eyebrow} title={s.title} id="products-title" dark>
             <p className="band-body">{rich(s.body)}</p>
           </Head>
-          <ul className="suite-rows">
-            {PRODUCTS.map((key, index) => {
-              const p = t.products.items[key];
-              const href = productPath(key, locale);
-              const row = s.rows[key];
-              return (
-                <li key={key} className="suite-row" data-m style={n(index)}>
-                  <div className="suite-name">
-                    <h3><bdi>{p.name}</bdi></h3>
-                    <span className="suite-desc">{p.descriptor}</span>
-                    <span className="suite-state">{p.state}</span>
-                  </div>
-                  <div className="suite-say">
-                    <p>{rich(row.body)}</p>
-                    <a className="link link-dark" href={href}>
-                      <span>{rich(row.link)}</span>
-                      <Icon name="arrow-right" className="ico ico-flip" />
+          <ProductRoom>
+            <nav className="room-index" aria-label={s.room.index}>
+              <ol>
+                {PRODUCTS.map((key, index) => (
+                  <li key={key}>
+                    <a href={`#p-${key}`} data-k={key}>
+                      <span className="room-n" aria-hidden="true"><bdi>{num(index)}</bdi></span>
+                      <bdi>{t.products.items[key].name.replace(/^ALYR\s+/, "")}</bdi>
                     </a>
+                  </li>
+                ))}
+              </ol>
+            </nav>
+            <ol className="room-steps">
+              {PRODUCTS.map((key, index) => {
+                const p = t.products.items[key];
+                const row = s.rows[key];
+                return (
+                  <li key={key} id={`p-${key}`} className="room-step" data-k={key}>
+                    <span className="room-n" aria-hidden="true"><bdi>{num(index)}</bdi></span>
+                    <div className="suite-name">
+                      <h3><bdi>{p.name}</bdi></h3>
+                      <span className="suite-desc">{p.descriptor}</span>
+                      <span className="suite-state">{p.state}</span>
+                    </div>
+                    <div className="suite-say">
+                      <p>{rich(row.body)}</p>
+                      <a className="link link-dark" href={productPath(key, locale)}>
+                        <span>{rich(row.link)}</span>
+                        <Icon name="arrow-right" className="ico ico-flip" />
+                      </a>
+                    </div>
+                    <div className="room-crop">{crop[key]}</div>
+                  </li>
+                );
+              })}
+              {/* the camera pulls back: all six, and what holds for every one of them */}
+              <li className="room-step room-whole" data-k="all">
+                <h3>{rich(s.room.whole)}</h3>
+                <div className="suite-notes">
+                  {s.notes.map((note) => (
+                    <p key={note.title}><b>{rich(note.title)}</b> {rich(note.body)}</p>
+                  ))}
+                </div>
+              </li>
+            </ol>
+            {/* the workspace the corners are cut from, at true size; a picture, so out of the reading order */}
+            <div className="room-stage" aria-hidden="true">
+              <div className="room-cam">
+                <div className="room-desk">
+                  <div className="room-top">
+                    <span className="room-mono">{t.agent.samples.bakery.monogram}</span>
+                    <b>{t.agent.samples.bakery.shop}</b>
+                    <span className="room-ws">{s.room.workspace}</span>
                   </div>
-                  <div className="suite-crop">{crop[key]}</div>
-                </li>
-              );
-            })}
-          </ul>
-          <div className="suite-notes">
-            {s.notes.map((note) => (
-              <p key={note.title}><b>{rich(note.title)}</b> {rich(note.body)}</p>
-            ))}
-          </div>
+                  <div className="room-tiles">
+                    {PRODUCTS.map((key, index) => (
+                      <div key={key} className="room-tile" data-k={key}>
+                        <span className="room-tile-k"><bdi>{num(index)}</bdi> · <bdi>{t.products.items[key].name}</bdi></span>
+                        {crop[key]}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            </div>
+          </ProductRoom>
           <FigCaption locale={locale} caption={s.caption} />
         </div>
       </div>
@@ -293,10 +335,22 @@ function Business({ locale }: { locale: Locale }) {
       <div className="wrap">
         <Rule />
         <Head eyebrow={b.eyebrow} title={b.title} id="business-title" />
-        <BusinessTabs label={b.tabsLabel} tabs={[...b.rows, b.other].map((row) => ({ id: row.id, name: row.tab }))}>
+        <BusinessTabs
+          label={b.tabsLabel}
+          tabs={[...b.rows, b.other].map((row) => ({ id: row.id, name: row.tab, icon: <Icon name={BUSINESS_ICON[row.id] ?? "plus"} /> }))}
+        >
           {b.rows.map((row, index) => (
             <div key={row.id} id={row.id} className={`biz-panel${index === 0 ? " is-on" : ""}`} role="tabpanel" aria-labelledby={`biz-tab-${row.id}`}>
               <h3 className="biz-name">{rich(row.name)}</h3>
+              <FoldSplit
+                label={b.split.label}
+                today={b.split.today}
+                with={b.split.with}
+                slider={b.split.slider}
+                value={b.split.value}
+                before={<DayChats row={row} words={b.split} />}
+                after={<DayOrders row={row} words={b.split} />}
+              />
               <div className="biz-cols">
                 <div className="biz-col biz-day">
                   <p className="mono-k">{b.day}</p>
@@ -347,6 +401,70 @@ function Business({ locale }: { locale: Locale }) {
         </BusinessTabs>
       </div>
     </section>
+  );
+}
+
+const BUSINESS_ICON: Record<string, IconName> = {
+  bakery: "bakery", wholesale: "crate", fashion: "hanger", restaurant: "cup", salon: "scissors", "home-services": "wrench",
+};
+
+type SplitWords = (typeof copy)["en"]["home"]["business"]["split"];
+
+/** The owner's chats this afternoon, as WhatsApp lists them: voice notes, photos, "is it
+ * ready??", each unread. The header counts them all; FoldSplit climbs to it once. */
+function DayChats({ row, words }: { row: BusinessRow; words: SplitWords }) {
+  const unread = row.chats.reduce((sum, chat) => sum + chat.n, 0);
+  return (
+    <div className="dc">
+      <div className="dc-top">
+        <b>{words.chats}</b>
+        <span className="dc-unread"><bdi data-unread={unread}>{unread}</bdi> {words.unread}</span>
+      </div>
+      <ul>
+        {row.chats.map((chat) => (
+          <li key={chat.who} className="dc-row">
+            <span className="dc-av">{chat.who.slice(0, 1)}</span>
+            <span className="dc-main">
+              <b>{chat.who}</b>
+              <span className="dc-prev">
+                {chat.kind !== "text" && <Icon name={chat.kind === "voice" ? "mic" : "camera"} />}
+                <span dir="auto">{chat.text}</span>
+              </span>
+            </span>
+            <span className="dc-side">
+              <span className="dc-at">{chat.at}</span>
+              <span className="dc-n">{chat.n}</span>
+            </span>
+          </li>
+        ))}
+      </ul>
+    </div>
+  );
+}
+
+/** The same customers, row for row, as ALYR keeps them: a reference, what it is, who on the
+ * team has it, and where it stands. */
+function DayOrders({ row, words }: { row: BusinessRow; words: SplitWords }) {
+  return (
+    <div className="do">
+      <div className="do-top">
+        <b>{words.orders}</b>
+        <span className="do-count"><bdi>{row.orders.length}</bdi></span>
+      </div>
+      <ul>
+        {row.orders.map((order) => (
+          <li key={order.who + order.ref} className="do-row">
+            <span className="do-ref"><bdi>{order.ref}</bdi></span>
+            <span className="do-main">
+              <b>{order.who}</b>
+              <span>{order.what}</span>
+            </span>
+            <span className="do-by"><i>{order.by.slice(0, 1)}</i><span>{order.by}</span></span>
+            <span className={`do-st is-${order.tone}`}>{order.status}</span>
+          </li>
+        ))}
+      </ul>
+    </div>
   );
 }
 

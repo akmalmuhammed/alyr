@@ -225,6 +225,20 @@ export type BusinessRow = {
   /** The WhatsApp message, in the owner's own words, and the email's subject. */
   prefill: string;
   subject: string;
+  /** The owner's chats today, drawn on the faded side of the fold: who, what kind of message,
+   * its preview, when, and how many are unread. The unread counts add up to the header's. */
+  chats: { who: string; kind: "voice" | "photo" | "text"; text: string; at: string; n: number }[];
+  /** The same customers as ALYR keeps them, on the Carbon side, row for row: the reference
+   * (an order number, or a booking's time), what it is, who on the team has it, its state. */
+  orders: { ref: string; who: string; what: string; by: string; status: string; tone: "ok" | "now" | "wait" }[];
+};
+
+/** One feature of ALYR Chat, shown on the drawn phone: the chat as the customer sees it, and
+ * what the team's screen or ALYR itself records beside it. `test` marks a payment link that
+ * opens the test page; `state` is a message's ticks (waiting, sent, read). */
+export type ChatScene = {
+  chat: { from: "customer" | "business" | "staff" | "event"; text: string; at?: string; action?: string; test?: boolean; state?: "wait" | "sent" | "read" }[];
+  side?: { main: string; sub?: string; trail?: string; tone?: "ok" | "off" | "wait" }[];
 };
 
 type Home = {
@@ -280,6 +294,9 @@ type Home = {
       /** ALYR Docs: the top of a receipt, said for screen readers (the paper is drawn from `PAPER`). */
       receipt: string;
     };
+    /** The control room (ALY-209): the numbered index, the drawn workspace the corners sit
+     * in, and the last step, where the camera pulls back to all six at once. */
+    room: { index: string; workspace: string; whole: string };
   };
   business: {
     eyebrow: string;
@@ -288,6 +305,9 @@ type Home = {
     day: string;
     with: string;
     uses: string;
+    /** The day split by the fold (ALY-209): the two sides, the slider's name and value, and
+     * the headers of the chat list and of the orders. `{n}` is a share in percent. */
+    split: { label: string; today: string; with: string; slider: string; value: string; chats: string; unread: string; orders: string };
     rows: BusinessRow[];
     other: { id: string; tab: string; title: string; body: string; link: string };
   };
@@ -487,7 +507,12 @@ export type Copy = {
     body: string;
     facts: Titled[];
     flow: FlowSet;
-    inside: { eyebrow: string; title: string; note: string; groups: { name: string; items: Titled[] }[] };
+    inside: {
+      eyebrow: string; title: string; note: string;
+      groups: { name: string; items: (Titled & { scene: ChatScene })[] }[];
+      /** The phone with X-ray (ALY-209): the words around the scenes. */
+      xray: { label: string; test: string; inbox: string; checks: string; path: [string, string, string]; caption: string };
+    };
     why: { eyebrow: string; statement: string; pillars: Titled[] };
     who: { eyebrow: string; title: string; rows: { name: string; body: string; tags: string[]; link?: { key: ProductKey; label: string } }[]; other: string };
     works: WorksSection;
@@ -972,6 +997,7 @@ const en: Copy = {
         ],
         receipt: "The top of receipt RC-0042, Arabic first",
       },
+      room: { index: "The six products", workspace: "Workspace", whole: "All six, on one screen." },
     },
     business: {
       eyebrow: "By business",
@@ -980,6 +1006,16 @@ const en: Copy = {
       day: "Your day today",
       with: "With ALYR",
       uses: "What you would use",
+      split: {
+        label: "The same afternoon, today and with ALYR",
+        today: "Today",
+        with: "With ALYR",
+        slider: "Move the fold between today and with ALYR",
+        value: "{n}% with ALYR",
+        chats: "Chats",
+        unread: "unread",
+        orders: "On one screen",
+      },
       rows: [
         {
           id: "bakery",
@@ -996,6 +1032,20 @@ const en: Copy = {
             "Office regulars order on account, and polite reminders go with one press.",
           ],
           products: ["chat", "accounts", "agent", "shelf"],
+          chats: [
+            { who: "Noora", kind: "voice", text: "0:42", at: "4:12 pm", n: 14 },
+            { who: "Office, West Bay", kind: "text", text: "Same as every Sunday, on our account", at: "3:58 pm", n: 9 },
+            { who: "Hessa", kind: "photo", text: "This one, but for 12 people", at: "3:40 pm", n: 8 },
+            { who: "Khalid", kind: "text", text: "is it ready??", at: "3:31 pm", n: 7 },
+            { who: "Maryam", kind: "text", text: "Do you have sugar-free?", at: "2:55 pm", n: 5 },
+          ],
+          orders: [
+            { ref: "#1047", who: "Noora", what: "2 kg kunafa, 18 maamoul", by: "Aisha", status: "Confirmed", tone: "ok" },
+            { ref: "#1046", who: "Office, West Bay", what: "40 croissants", by: "Yusuf", status: "On account", tone: "ok" },
+            { ref: "#1045", who: "Hessa", what: "Pistachio cake, 12 people", by: "Aisha", status: "Confirmed", tone: "ok" },
+            { ref: "#1044", who: "Khalid", what: "Saffron milk cake", by: "Yusuf", status: "Ready, customer told", tone: "now" },
+            { ref: "Chat", who: "Maryam", what: "Asked about sugar-free", by: "Aisha", status: "Aisha is answering", tone: "wait" },
+          ],
           ask: "Show me for my bakery",
           prefill: "Hello ALYR, I run a bakery and I’d like to see how ALYR takes our orders.",
           subject: "How ALYR works for my bakery",
@@ -1015,6 +1065,20 @@ const en: Copy = {
             "See who owes how much and for how long, and send reminders whose tone fits how late it is.",
           ],
           products: ["chat", "accounts", "agent", "shelf", "docs"],
+          chats: [
+            { who: "Al Sadd Grocery", kind: "text", text: "Rice 20 × 5 kg, oil 12 × 1.8 L, sugar 10…", at: "9:14 am", n: 13 },
+            { who: "Corner Mart", kind: "voice", text: "1:05", at: "9:02 am", n: 11 },
+            { who: "Wakra Supermarket", kind: "photo", text: "Price list?", at: "8:47 am", n: 8 },
+            { who: "Al Khor Store", kind: "text", text: "Send the invoice please", at: "8:30 am", n: 6 },
+            { who: "Rayyan Mini Market", kind: "text", text: "Will pay next week", at: "Yesterday", n: 5 },
+          ],
+          orders: [
+            { ref: "#2210", who: "Al Sadd Grocery", what: "47 cases, shop prices", by: "Faisal", status: "Confirmed", tone: "ok" },
+            { ref: "#2209", who: "Corner Mart", what: "Ordered by item code", by: "Faisal", status: "Confirmed", tone: "ok" },
+            { ref: "Chat", who: "Wakra Supermarket", what: "Their group’s price list", by: "Salma", status: "Answered", tone: "ok" },
+            { ref: "INV-0318", who: "Al Khor Store", what: "Invoice for #2204", by: "Salma", status: "Sent", tone: "ok" },
+            { ref: "Credit", who: "Rayyan Mini Market", what: "QAR 4,200, 38 days", by: "Faisal", status: "Reminder ready", tone: "now" },
+          ],
           ask: "Show me for my trading business",
           prefill: "Hello ALYR, we sell wholesale and I’d like to see the price lists and credit accounts.",
           subject: "How ALYR works for my trading business",
@@ -1034,6 +1098,20 @@ const en: Copy = {
             "A customer can send a piece’s code or link and order it in the chat.",
           ],
           products: ["chat", "agent", "shelf"],
+          chats: [
+            { who: "Latifa", kind: "photo", text: "Price? Size 54?", at: "10:20 pm", n: 12 },
+            { who: "Reem", kind: "text", text: "Still have the black one?", at: "10:02 pm", n: 10 },
+            { who: "Dana", kind: "photo", text: "Screenshot", at: "9:47 pm", n: 9 },
+            { who: "Sara", kind: "voice", text: "0:28", at: "9:15 pm", n: 7 },
+            { who: "Amal", kind: "text", text: "Can you gift wrap it?", at: "8:50 pm", n: 5 },
+          ],
+          orders: [
+            { ref: "#0581", who: "Latifa", what: "Abaya AB-12, size 54", by: "Huda", status: "Confirmed", tone: "ok" },
+            { ref: "Chat", who: "Reem", what: "Black, size 52: 2 left", by: "Huda", status: "Answered", tone: "ok" },
+            { ref: "#0580", who: "Dana", what: "Ordered by its code", by: "Huda", status: "Confirmed", tone: "ok" },
+            { ref: "Chat", who: "Sara", what: "Voice message", by: "Mona", status: "Mona is answering", tone: "wait" },
+            { ref: "#0579", who: "Amal", what: "Scarf set, gift wrapped", by: "Mona", status: "Ready, customer told", tone: "now" },
+          ],
           ask: "Show me for my shop",
           prefill: "Hello ALYR, I sell fashion and gifts and I’d like to see how ALYR takes our orders.",
           subject: "How ALYR works for my shop",
@@ -1054,6 +1132,20 @@ const en: Copy = {
           ],
           products: ["chat", "accounts", "agent", "shelf"],
           note: "Table bookings are not in ALYR yet.",
+          chats: [
+            { who: "Office, Lusail", kind: "text", text: "Lunch for 14, on our account", at: "11:48 am", n: 15 },
+            { who: "Jassim", kind: "voice", text: "0:36", at: "11:40 am", n: 9 },
+            { who: "Fatma", kind: "text", text: "Is it ready? I’m outside", at: "11:32 am", n: 8 },
+            { who: "Omar", kind: "photo", text: "This one from your menu", at: "11:20 am", n: 6 },
+            { who: "Badr", kind: "text", text: "Table for 4 tonight?", at: "11:05 am", n: 5 },
+          ],
+          orders: [
+            { ref: "#3318", who: "Office, Lusail", what: "14 lunches", by: "Rashid", status: "On account", tone: "ok" },
+            { ref: "#3317", who: "Jassim", what: "2 machboos, 1 harees", by: "Rashid", status: "Confirmed", tone: "ok" },
+            { ref: "#3316", who: "Fatma", what: "Pickup", by: "Nadia", status: "Ready, customer told", tone: "now" },
+            { ref: "#3315", who: "Omar", what: "Mixed grill", by: "Nadia", status: "Confirmed", tone: "ok" },
+            { ref: "Chat", who: "Badr", what: "Asked for a table", by: "Nadia", status: "Nadia is answering", tone: "wait" },
+          ],
           ask: "Show me for my restaurant",
           prefill: "Hello ALYR, I run a restaurant and I’d like to see how ALYR takes our orders.",
           subject: "How ALYR works for my restaurant",
@@ -1074,6 +1166,20 @@ const en: Copy = {
           ],
           products: ["bookings", "agent"],
           note: "One booking at a time today: right for one chair. Several chairs at once is next.",
+          chats: [
+            { who: "Abdulla", kind: "text", text: "Any time after 4 today?", at: "1:12 pm", n: 12 },
+            { who: "Hamad", kind: "voice", text: "0:19", at: "12:50 pm", n: 10 },
+            { who: "Saad", kind: "text", text: "Sorry, I can’t come today", at: "12:31 pm", n: 9 },
+            { who: "Nasser", kind: "text", text: "Same time next week?", at: "11:58 am", n: 7 },
+            { who: "Ali", kind: "photo", text: "This cut", at: "11:20 am", n: 5 },
+          ],
+          orders: [
+            { ref: "4:30 pm", who: "Abdulla", what: "Haircut", by: "Karim", status: "Confirmed", tone: "ok" },
+            { ref: "5:30 pm", who: "Hamad", what: "Haircut and beard", by: "Karim", status: "Reminder at 3:30", tone: "ok" },
+            { ref: "6:00 pm", who: "Saad", what: "Cancelled by Saad", by: "Karim", status: "Free again", tone: "now" },
+            { ref: "Next Tue", who: "Nasser", what: "Haircut", by: "Karim", status: "Confirmed", tone: "ok" },
+            { ref: "Chat", who: "Ali", what: "Sent a photo", by: "Karim", status: "Karim is answering", tone: "wait" },
+          ],
           ask: "Show me for my salon",
           prefill: "Hello ALYR, I run a salon and I’d like to see how ALYR takes our bookings.",
           subject: "How ALYR works for my salon",
@@ -1094,6 +1200,20 @@ const en: Copy = {
           ],
           products: ["bookings", "chat", "accounts", "agent", "docs"],
           note: "One visit at a time per business today.",
+          chats: [
+            { who: "Mariam", kind: "text", text: "AC not cooling, can someone come?", at: "8:40 am", n: 13 },
+            { who: "Khalid", kind: "text", text: "When are you coming??", at: "8:25 am", n: 11 },
+            { who: "Villa 22, contract", kind: "text", text: "Receipt for October?", at: "8:10 am", n: 8 },
+            { who: "Noor", kind: "photo", text: "This part", at: "7:55 am", n: 6 },
+            { who: "Hassan", kind: "voice", text: "0:51", at: "Yesterday", n: 5 },
+          ],
+          orders: [
+            { ref: "10:00 am", who: "Mariam", what: "AC visit", by: "Yusuf", status: "Confirmed", tone: "ok" },
+            { ref: "11:30 am", who: "Khalid", what: "Generator visit", by: "Yusuf", status: "Reminder sent", tone: "ok" },
+            { ref: "RC-0207", who: "Villa 22", what: "October payment", by: "Aisha", status: "Receipt sent", tone: "ok" },
+            { ref: "#1042", who: "Noor", what: "2 AC filters, 1 thermostat", by: "Aisha", status: "Confirmed", tone: "ok" },
+            { ref: "Chat", who: "Hassan", what: "Voice message", by: "Aisha", status: "Aisha is answering", tone: "wait" },
+          ],
           ask: "Show me for my company",
           prefill: "Hello ALYR, we do home services and I’d like to see how ALYR takes our bookings.",
           subject: "How ALYR works for my company",
@@ -1668,34 +1788,128 @@ const en: Copy = {
       eyebrow: "What’s in it",
       title: "Everything it does today.",
       note: "We set ALYR Chat up with you at your shop. Everything listed here is built. We agree your number with you when we set you up.",
+      xray: {
+        label: "Each feature, shown on the customer’s phone",
+        test: "Test page",
+        inbox: "Team inbox",
+        checks: "What ALYR checks",
+        path: ["ALYR", "WhatsApp", "The customer’s phone"],
+        caption: "Sample conversation with a fictional business. The phone shows the feature you are reading.",
+      },
       groups: [
         {
           name: "For your customers",
           items: [
-            { title: "An order page for their phone", body: "Your products and prices on a page that opens from the chat. No app, no account." },
-            { title: "Pay from a link", body: "A payment link in the chat, and a message confirming payment the moment it is paid. Built and tested on a test page; card payments are not live yet." },
-            { title: "Order tracking", body: "Each order has its own page showing every step and who is looking after it." },
-            { title: "Updates without asking", body: "Confirmed, ready, done: each change of status reaches them as a message." },
-            { title: "Arabic or English", body: "ALYR answers in the language the customer writes in." },
+            { title: "An order page for their phone", body: "Your products and prices on a page that opens from the chat. No app, no account.", scene: { chat: [
+              { from: "customer", text: "Do you have AC filters?", at: "10:01" },
+              { from: "business", text: "Here is our order page. Pick what you need.", action: "Open the order page", at: "10:01" },
+              { from: "business", text: "Order #1042 received: 3 items, QAR 385.", at: "10:03" },
+            ] } },
+            { title: "Pay from a link", body: "A payment link in the chat, and a message confirming payment the moment it is paid. Built and tested on a test page; card payments are not live yet.", scene: { chat: [
+              { from: "business", text: "Order #1042 is confirmed. You can pay here.", action: "Pay QAR 385", test: true, at: "10:06" },
+              { from: "event", text: "The link opens the test page. No card is charged." },
+            ] } },
+            { title: "Order tracking", body: "Each order has its own page showing every step and who is looking after it.", scene: { chat: [
+              { from: "business", text: "Order #1042 is confirmed. Follow it here.", action: "Track order #1042", at: "10:05" },
+              { from: "event", text: "Tracking page: Yusuf is looking after it" },
+            ] } },
+            { title: "Updates without asking", body: "Confirmed, ready, done: each change of status reaches them as a message.", scene: { chat: [
+              { from: "business", text: "Order #1042 is confirmed.", at: "10:05" },
+              { from: "business", text: "Order #1042 is ready for collection.", at: "11:40" },
+              { from: "customer", text: "On my way.", at: "11:42" },
+            ] } },
+            { title: "Arabic or English", body: "ALYR answers in the language the customer writes in.", scene: { chat: [
+              { from: "customer", text: "عندكم فلتر مكيف؟", at: "10:01" },
+              { from: "business", text: "نعم، تفضل صفحة الطلب واختر ما تحتاجه.", action: "افتح صفحة الطلب", at: "10:01" },
+            ] } },
           ],
         },
         {
           name: "For your team",
           items: [
-            { title: "One shared inbox", body: "Every chat on your number in one place. Anyone can take a chat, and the team sees who has it." },
-            { title: "Step in at any moment", body: "When a person replies, the automatic replies go quiet for that customer until the chat is closed." },
-            { title: "Notes and saved replies", body: "Notes only the team can see, and ready answers for the questions you get every day." },
-            { title: "A name on every order", body: "Every chat and order has one person responsible, and the record of who did what cannot be edited." },
+            { title: "One shared inbox", body: "Every chat on your number in one place. Anyone can take a chat, and the team sees who has it.", scene: {
+              chat: [{ from: "customer", text: "Is the generator part in?", at: "16:10" }],
+              side: [
+                { main: "Mariam Saleh", sub: "Is the thermostat covered by a warranty?", trail: "Yusuf", tone: "ok" },
+                { main: "Khalid Nasser", sub: "Is the generator part in?", trail: "Unassigned", tone: "wait" },
+                { main: "Noora Al-Kuwari", sub: "Thank you!", trail: "Aisha", tone: "ok" },
+              ],
+            } },
+            { title: "Step in at any moment", body: "When a person replies, the automatic replies go quiet for that customer until the chat is closed.", scene: {
+              chat: [
+                { from: "customer", text: "Is the thermostat covered by a warranty?", at: "17:20" },
+                { from: "staff", text: "Yes, 12 months. I will bring the receipt with me tomorrow.", at: "17:21" },
+              ],
+              side: [
+                { main: "Yusuf replied", trail: "17:21", tone: "ok" },
+                { main: "Automatic replies", sub: "Quiet for Mariam until the chat is closed", trail: "Off", tone: "off" },
+              ],
+            } },
+            { title: "Notes and saved replies", body: "Notes only the team can see, and ready answers for the questions you get every day.", scene: {
+              chat: [
+                { from: "customer", text: "What time do you open on Friday?", at: "12:30" },
+                { from: "staff", text: "On Fridays we are open from 2 pm to 10 pm.", at: "12:31" },
+              ],
+              side: [
+                { main: "Saved reply", sub: "Friday hours", trail: "Used", tone: "ok" },
+                { main: "Staff note", sub: "Mariam prefers calls after 5 PM.", trail: "Team only", tone: "wait" },
+              ],
+            } },
+            { title: "A name on every order", body: "Every chat and order has one person responsible, and the record of who did what cannot be edited.", scene: {
+              chat: [{ from: "business", text: "Order #1042 is ready for collection.", at: "11:40" }],
+              side: [
+                { main: "Order #1042", sub: "Mariam Saleh", trail: "Yusuf", tone: "ok" },
+                { main: "Confirmed", sub: "Yusuf, 10:05", trail: "Recorded", tone: "ok" },
+                { main: "Ready for collection", sub: "Aisha, 11:40", trail: "Recorded", tone: "ok" },
+              ],
+            } },
           ],
         },
         {
           name: "Behind the scenes",
           items: [
-            { title: "WhatsApp's rules, handled", body: "Ordinary replies for 24 hours after a customer writes, approved wording after that. ALYR picks the right one each time." },
-            { title: "Stop means stop", body: "A customer who says stop is not messaged again, and every consent is on record." },
-            { title: "Nothing lost", body: "Each message is saved before it is sent, and tried again if WhatsApp is slow. A failure is shown, never hidden." },
-            { title: "Your records, kept apart", body: "Each business is separated inside the database itself, not by a setting someone can forget." },
-            { title: "Delivered and read", body: "ALYR records when each message is delivered and when it is read." },
+            { title: "WhatsApp's rules, handled", body: "Ordinary replies for 24 hours after a customer writes, approved wording after that. ALYR picks the right one each time.", scene: {
+              chat: [
+                { from: "event", text: "26 hours since Mariam last wrote" },
+                { from: "business", text: "Your order #1042 is ready for collection.", at: "12:10", state: "sent" },
+              ],
+              side: [
+                { main: "Last message from Mariam", trail: "26 hours ago", tone: "wait" },
+                { main: "Outside the 24 hours", sub: "Approved wording used", trail: "Template", tone: "ok" },
+              ],
+            } },
+            { title: "Stop means stop", body: "A customer who says stop is not messaged again, and every consent is on record.", scene: {
+              chat: [
+                { from: "customer", text: "STOP", at: "18:02" },
+                { from: "business", text: "You will not receive reminders or notices from Dana Home Services any more. You can still message us here. Send START to turn them back on.", at: "18:02" },
+              ],
+              side: [
+                { main: "Consent", sub: "Withdrawn in the customer’s own words", trail: "Recorded", tone: "ok" },
+                { main: "Reminders and notices", sub: "Nothing more is sent", trail: "Stopped", tone: "off" },
+              ],
+            } },
+            { title: "Nothing lost", body: "Each message is saved before it is sent, and tried again if WhatsApp is slow. A failure is shown, never hidden.", scene: {
+              chat: [{ from: "business", text: "Order #1042 is ready for collection.", at: "11:40", state: "wait" }],
+              side: [
+                { main: "Saved before sending", trail: "Saved", tone: "ok" },
+                { main: "First try", sub: "WhatsApp was slow", trail: "Again", tone: "wait" },
+                { main: "Second try", trail: "Sent", tone: "ok" },
+              ],
+            } },
+            { title: "Your records, kept apart", body: "Each business is separated inside the database itself, not by a setting someone can forget.", scene: {
+              chat: [{ from: "customer", text: "Is the generator part in?", at: "16:10" }],
+              side: [
+                { main: "Dana Home Services", sub: "Reads only its own records", trail: "Its own", tone: "ok" },
+                { main: "Every other business", sub: "Separated inside the database", trail: "Closed", tone: "off" },
+              ],
+            } },
+            { title: "Delivered and read", body: "ALYR records when each message is delivered and when it is read.", scene: {
+              chat: [{ from: "business", text: "Order #1042 is ready for collection.", at: "11:40", state: "read" }],
+              side: [
+                { main: "Delivered", trail: "11:40", tone: "ok" },
+                { main: "Read", trail: "11:43", tone: "ok" },
+              ],
+            } },
           ],
         },
       ],
@@ -3220,6 +3434,7 @@ const ar: Copy = {
         ],
         receipt: "أعلى الإيصال RC-0042، والعربية أولاً",
       },
+      room: { index: "المنتجات الستة", workspace: "مساحة العمل", whole: "الستة كلها، على شاشة واحدة." },
     },
     business: {
       eyebrow: "حسب نشاطك",
@@ -3228,6 +3443,16 @@ const ar: Copy = {
       day: "يومك اليوم",
       with: "مع ALYR",
       uses: "ما ستستخدمه",
+      split: {
+        label: "العصر نفسه، اليوم ومع ALYR",
+        today: "اليوم",
+        with: "مع ALYR",
+        slider: "حرّك الطيّة بين اليوم ومع ALYR",
+        value: "{n}% مع ALYR",
+        chats: "المحادثات",
+        unread: "غير مقروءة",
+        orders: "على شاشة واحدة",
+      },
       rows: [
         {
           id: "bakery",
@@ -3244,6 +3469,20 @@ const ar: Copy = {
             "عملاء المكاتب يطلبون على حسابهم، والتذكير اللبق بضغطة واحدة.",
           ],
           products: ["chat", "accounts", "agent", "shelf"],
+          chats: [
+            { who: "نورة", kind: "voice", text: "0:42", at: "4:12 م", n: 14 },
+            { who: "مكتب الخليج الغربي", kind: "text", text: "نفس كل أحد، على حسابنا", at: "3:58 م", n: 9 },
+            { who: "حصة", kind: "photo", text: "أبي مثل هذي بس لـ 12 شخص", at: "3:40 م", n: 8 },
+            { who: "خالد", kind: "text", text: "جاهز؟؟", at: "3:31 م", n: 7 },
+            { who: "مريم", kind: "text", text: "عندكم شي بدون سكر؟", at: "2:55 م", n: 5 },
+          ],
+          orders: [
+            { ref: "#1047", who: "نورة", what: "2 كغ كنافة، 18 معمول", by: "عائشة", status: "تم التأكيد", tone: "ok" },
+            { ref: "#1046", who: "مكتب الخليج الغربي", what: "40 كرواسون", by: "يوسف", status: "على الحساب", tone: "ok" },
+            { ref: "#1045", who: "حصة", what: "كيكة فستق لـ 12 شخصاً", by: "عائشة", status: "تم التأكيد", tone: "ok" },
+            { ref: "#1044", who: "خالد", what: "كيك الحليب بالزعفران", by: "يوسف", status: "جاهز، وأُبلغ العميل", tone: "now" },
+            { ref: "محادثة", who: "مريم", what: "سألت عن الخالي من السكر", by: "عائشة", status: "عائشة تردّ", tone: "wait" },
+          ],
           ask: "أرني كيف تعمل لمخبزي",
           prefill: "مرحبا ALYR، عندي مخبز وأبي أشوف كيف تستقبلون طلباتنا.",
           subject: "كيف تعمل ALYR لمخبزي",
@@ -3263,6 +3502,20 @@ const ar: Copy = {
             "اعرف من عليه كم ومنذ متى، وأرسل تذكيرات تتدرّج نبرتها بحسب التأخير.",
           ],
           products: ["chat", "accounts", "agent", "shelf", "docs"],
+          chats: [
+            { who: "بقالة السد", kind: "text", text: "رز 20 × 5 كيلو، زيت 12 × 1.8 لتر، سكر 10…", at: "9:14 ص", n: 13 },
+            { who: "كورنر مارت", kind: "voice", text: "1:05", at: "9:02 ص", n: 11 },
+            { who: "سوبرماركت الوكرة", kind: "photo", text: "قائمة الأسعار؟", at: "8:47 ص", n: 8 },
+            { who: "محل الخور", kind: "text", text: "أرسل لي الفاتورة لو سمحت", at: "8:30 ص", n: 6 },
+            { who: "ميني ماركت الريان", kind: "text", text: "بدفع الأسبوع الجاي", at: "أمس", n: 5 },
+          ],
+          orders: [
+            { ref: "#2210", who: "بقالة السد", what: "47 كرتوناً بأسعار المحلات", by: "فيصل", status: "تم التأكيد", tone: "ok" },
+            { ref: "#2209", who: "كورنر مارت", what: "طلب برموز الأصناف", by: "فيصل", status: "تم التأكيد", tone: "ok" },
+            { ref: "محادثة", who: "سوبرماركت الوكرة", what: "قائمة أسعار فئته", by: "سلمى", status: "تم الرد", tone: "ok" },
+            { ref: "INV-0318", who: "محل الخور", what: "فاتورة الطلب 2204", by: "سلمى", status: "أُرسلت", tone: "ok" },
+            { ref: "آجل", who: "ميني ماركت الريان", what: "4,200 ر.ق، منذ 38 يوماً", by: "فيصل", status: "التذكير جاهز", tone: "now" },
+          ],
           ask: "أرني كيف تعمل لتجارتي",
           prefill: "مرحبا ALYR، نبيع بالجملة ونبي نشوف قوائم الأسعار والحسابات الآجلة.",
           subject: "كيف تعمل ALYR لتجارتي",
@@ -3282,6 +3535,20 @@ const ar: Copy = {
             "يستطيع العميل إرسال رمز القطعة أو رابطها وطلبها في المحادثة.",
           ],
           products: ["chat", "agent", "shelf"],
+          chats: [
+            { who: "لطيفة", kind: "photo", text: "بكم؟ مقاس 54؟", at: "10:20 م", n: 12 },
+            { who: "ريم", kind: "text", text: "الأسود للحين موجود؟", at: "10:02 م", n: 10 },
+            { who: "دانة", kind: "photo", text: "لقطة شاشة", at: "9:47 م", n: 9 },
+            { who: "سارة", kind: "voice", text: "0:28", at: "9:15 م", n: 7 },
+            { who: "أمل", kind: "text", text: "تقدرون تغلفونه هدية؟", at: "8:50 م", n: 5 },
+          ],
+          orders: [
+            { ref: "#0581", who: "لطيفة", what: "عباية AB-12، مقاس 54", by: "هدى", status: "تم التأكيد", tone: "ok" },
+            { ref: "محادثة", who: "ريم", what: "الأسود مقاس 52: بقيت 2", by: "هدى", status: "تم الرد", tone: "ok" },
+            { ref: "#0580", who: "دانة", what: "طلبت برمز القطعة", by: "هدى", status: "تم التأكيد", tone: "ok" },
+            { ref: "محادثة", who: "سارة", what: "رسالة صوتية", by: "منى", status: "منى تردّ", tone: "wait" },
+            { ref: "#0579", who: "أمل", what: "طقم شيلة، مغلّف هدية", by: "منى", status: "جاهز، وأُبلغت العميلة", tone: "now" },
+          ],
           ask: "أرني كيف تعمل لمحلي",
           prefill: "مرحبا ALYR، أبيع أزياء وهدايا وأبي أشوف كيف تستقبلون طلباتنا.",
           subject: "كيف تعمل ALYR لمحلي",
@@ -3302,6 +3569,20 @@ const ar: Copy = {
           ],
           products: ["chat", "accounts", "agent", "shelf"],
           note: "حجز الطاولات غير متوفر في ALYR بعد.",
+          chats: [
+            { who: "مكتب لوسيل", kind: "text", text: "غدا لـ 14 شخص، على حسابنا", at: "11:48 ص", n: 15 },
+            { who: "جاسم", kind: "voice", text: "0:36", at: "11:40 ص", n: 9 },
+            { who: "فاطمة", kind: "text", text: "جاهز؟ أنا برا", at: "11:32 ص", n: 8 },
+            { who: "عمر", kind: "photo", text: "أبي هذا من المنيو", at: "11:20 ص", n: 6 },
+            { who: "بدر", kind: "text", text: "فيه طاولة لـ 4 الليلة؟", at: "11:05 ص", n: 5 },
+          ],
+          orders: [
+            { ref: "#3318", who: "مكتب لوسيل", what: "14 وجبة غداء", by: "راشد", status: "على الحساب", tone: "ok" },
+            { ref: "#3317", who: "جاسم", what: "2 مجبوس، 1 هريس", by: "راشد", status: "تم التأكيد", tone: "ok" },
+            { ref: "#3316", who: "فاطمة", what: "استلام", by: "نادية", status: "جاهز، وأُبلغت العميلة", tone: "now" },
+            { ref: "#3315", who: "عمر", what: "مشاوي مشكلة", by: "نادية", status: "تم التأكيد", tone: "ok" },
+            { ref: "محادثة", who: "بدر", what: "سأل عن طاولة", by: "نادية", status: "نادية تردّ", tone: "wait" },
+          ],
           ask: "أرني كيف تعمل لمطعمي",
           prefill: "مرحبا ALYR، عندي مطعم وأبي أشوف كيف تستقبلون طلباتنا.",
           subject: "كيف تعمل ALYR لمطعمي",
@@ -3322,6 +3603,20 @@ const ar: Copy = {
           ],
           products: ["bookings", "agent"],
           note: "حجز واحد في الوقت نفسه اليوم: يناسب كرسياً واحداً. وأكثر من كرسي في الوقت نفسه هو الخطوة التالية.",
+          chats: [
+            { who: "عبدالله", kind: "text", text: "فيه وقت بعد الأربع اليوم؟", at: "1:12 م", n: 12 },
+            { who: "حمد", kind: "voice", text: "0:19", at: "12:50 م", n: 10 },
+            { who: "سعد", kind: "text", text: "آسف ما بقدر أجي اليوم", at: "12:31 م", n: 9 },
+            { who: "ناصر", kind: "text", text: "نفس الموعد الأسبوع الجاي؟", at: "11:58 ص", n: 7 },
+            { who: "علي", kind: "photo", text: "أبي هالقصة", at: "11:20 ص", n: 5 },
+          ],
+          orders: [
+            { ref: "4:30 م", who: "عبدالله", what: "قص شعر", by: "كريم", status: "تم التأكيد", tone: "ok" },
+            { ref: "5:30 م", who: "حمد", what: "قص شعر ولحية", by: "كريم", status: "التذكير 3:30", tone: "ok" },
+            { ref: "6:00 م", who: "سعد", what: "ألغاه سعد", by: "كريم", status: "صار متاحاً", tone: "now" },
+            { ref: "الثلاثاء القادم", who: "ناصر", what: "قص شعر", by: "كريم", status: "تم التأكيد", tone: "ok" },
+            { ref: "محادثة", who: "علي", what: "أرسل صورة", by: "كريم", status: "كريم يردّ", tone: "wait" },
+          ],
           ask: "أرني كيف تعمل لصالوني",
           prefill: "مرحبا ALYR، عندي صالون وأبي أشوف كيف تستقبلون حجوزاتنا.",
           subject: "كيف تعمل ALYR لصالوني",
@@ -3342,6 +3637,20 @@ const ar: Copy = {
           ],
           products: ["bookings", "chat", "accounts", "agent", "docs"],
           note: "زيارة واحدة في الوقت نفسه لكل منشأة اليوم.",
+          chats: [
+            { who: "مريم", kind: "text", text: "المكيف ما يبرد، أحد يقدر يجي؟", at: "8:40 ص", n: 13 },
+            { who: "خالد", kind: "text", text: "متى بتوصلون؟؟", at: "8:25 ص", n: 11 },
+            { who: "فيلا 22، عقد", kind: "text", text: "إيصال أكتوبر؟", at: "8:10 ص", n: 8 },
+            { who: "نور", kind: "photo", text: "هذي القطعة", at: "7:55 ص", n: 6 },
+            { who: "حسن", kind: "voice", text: "0:51", at: "أمس", n: 5 },
+          ],
+          orders: [
+            { ref: "10:00 ص", who: "مريم", what: "زيارة مكيف", by: "يوسف", status: "تم التأكيد", tone: "ok" },
+            { ref: "11:30 ص", who: "خالد", what: "زيارة مولّد", by: "يوسف", status: "أُرسل التذكير", tone: "ok" },
+            { ref: "RC-0207", who: "فيلا 22", what: "دفعة أكتوبر", by: "عائشة", status: "أُرسل الإيصال", tone: "ok" },
+            { ref: "#1042", who: "نور", what: "فلتران وثرموستات", by: "عائشة", status: "تم التأكيد", tone: "ok" },
+            { ref: "محادثة", who: "حسن", what: "رسالة صوتية", by: "عائشة", status: "عائشة تردّ", tone: "wait" },
+          ],
           ask: "أرني كيف تعمل لشركتي",
           prefill: "مرحبا ALYR، نقدّم خدمات منزلية ونبي نشوف كيف تستقبلون حجوزاتنا.",
           subject: "كيف تعمل ALYR لشركتي",
@@ -3916,34 +4225,128 @@ const ar: Copy = {
       eyebrow: "ماذا يتضمن",
       title: "كل ما يفعله اليوم.",
       note: "نجهّز ALYR Chat معك في محلك. كل ما في هذه القائمة مبنيّ في المنتج، ونتفق معك على الرقم عند تجهيزه لك.",
+      xray: {
+        label: "كل ميزة، على هاتف العميل",
+        test: "صفحة تجريبية",
+        inbox: "صندوق الفريق",
+        checks: "ما تتحقق منه ALYR",
+        path: ["ALYR", "واتساب", "هاتف العميل"],
+        caption: "محادثة توضيحية مع شركة غير حقيقية. يعرض الهاتف الميزة التي تقرؤها.",
+      },
       groups: [
         {
           name: "لعملائك",
           items: [
-            { title: "صفحة طلب تناسب الهاتف", body: "منتجاتك وأسعارك في صفحة تُفتح من المحادثة، بلا تطبيق ولا حساب." },
-            { title: "الدفع برابط", body: "رابط دفع في المحادثة، ورسالة تؤكد السداد لحظة الدفع. جاهز ومجرّب على صفحة تجريبية، والدفع بالبطاقات لم يبدأ بعد." },
-            { title: "تتبّع الطلب", body: "لكل طلب صفحة خاصة به، تُظهر كل خطوة ومن يتولاه." },
-            { title: "تحديثات بلا سؤال", body: "تم التأكيد، جاهز، مكتمل: كل تغيير في الحالة يصلهم برسالة." },
-            { title: "بالعربية أو الإنجليزية", body: "تردّ ALYR باللغة التي يكتب بها العميل." },
+            { title: "صفحة طلب تناسب الهاتف", body: "منتجاتك وأسعارك في صفحة تُفتح من المحادثة، بلا تطبيق ولا حساب.", scene: { chat: [
+              { from: "customer", text: "عندكم فلاتر مكيف؟", at: "10:01" },
+              { from: "business", text: "تفضل صفحة الطلب، اختر ما تحتاجه.", action: "افتح صفحة الطلب", at: "10:01" },
+              { from: "business", text: "تم استلام الطلب رقم 1042: 3 أصناف، 385 ر.ق.", at: "10:03" },
+            ] } },
+            { title: "الدفع برابط", body: "رابط دفع في المحادثة، ورسالة تؤكد السداد لحظة الدفع. جاهز ومجرّب على صفحة تجريبية، والدفع بالبطاقات لم يبدأ بعد.", scene: { chat: [
+              { from: "business", text: "تم تأكيد الطلب رقم 1042. يمكنك الدفع من هنا.", action: "ادفع 385 ر.ق", test: true, at: "10:06" },
+              { from: "event", text: "يفتح الرابط الصفحة التجريبية، ولا تُخصم أي بطاقة." },
+            ] } },
+            { title: "تتبّع الطلب", body: "لكل طلب صفحة خاصة به، تُظهر كل خطوة ومن يتولاه.", scene: { chat: [
+              { from: "business", text: "تم تأكيد الطلب رقم 1042. تابعه من هنا.", action: "تتبّع الطلب رقم 1042", at: "10:05" },
+              { from: "event", text: "صفحة التتبّع: يوسف يتولى الطلب" },
+            ] } },
+            { title: "تحديثات بلا سؤال", body: "تم التأكيد، جاهز، مكتمل: كل تغيير في الحالة يصلهم برسالة.", scene: { chat: [
+              { from: "business", text: "تم تأكيد الطلب رقم 1042.", at: "10:05" },
+              { from: "business", text: "الطلب رقم 1042 جاهز للاستلام.", at: "11:40" },
+              { from: "customer", text: "أنا في الطريق.", at: "11:42" },
+            ] } },
+            { title: "بالعربية أو الإنجليزية", body: "تردّ ALYR باللغة التي يكتب بها العميل.", scene: { chat: [
+              { from: "customer", text: "Do you have AC filters?", at: "10:01" },
+              { from: "business", text: "Yes, here is our order page. Pick what you need.", action: "Open the order page", at: "10:01" },
+            ] } },
           ],
         },
         {
           name: "لفريقك",
           items: [
-            { title: "صندوق واحد للفريق", body: "كل المحادثات على رقمك في مكان واحد. يتولى أي موظف المحادثة، ويرى الفريق من يتولاها." },
-            { title: "تدخّل في أي لحظة", body: "حين يردّ موظف تتوقف الردود الآلية مع ذلك العميل إلى أن تُغلق المحادثة." },
-            { title: "ملاحظات وردود جاهزة", body: "ملاحظات لا يراها إلا الفريق، وإجابات جاهزة للأسئلة التي تتكرر كل يوم." },
-            { title: "لكل طلب مسؤول", body: "لكل محادثة وطلب موظف مسؤول، وسجلّ من فعل ماذا لا يمكن تعديله." },
+            { title: "صندوق واحد للفريق", body: "كل المحادثات على رقمك في مكان واحد. يتولى أي موظف المحادثة، ويرى الفريق من يتولاها.", scene: {
+              chat: [{ from: "customer", text: "وصلت قطعة المولّد؟", at: "16:10" }],
+              side: [
+                { main: "مريم صالح", sub: "هل الثرموستات عليه ضمان؟", trail: "يوسف", tone: "ok" },
+                { main: "خالد ناصر", sub: "وصلت قطعة المولّد؟", trail: "غير مسندة", tone: "wait" },
+                { main: "نورة الكواري", sub: "شكراً!", trail: "عائشة", tone: "ok" },
+              ],
+            } },
+            { title: "تدخّل في أي لحظة", body: "حين يردّ موظف تتوقف الردود الآلية مع ذلك العميل إلى أن تُغلق المحادثة.", scene: {
+              chat: [
+                { from: "customer", text: "هل الثرموستات عليه ضمان؟", at: "17:20" },
+                { from: "staff", text: "نعم، ضمان 12 شهراً. سأحضر الإيصال معي غداً.", at: "17:21" },
+              ],
+              side: [
+                { main: "ردّ يوسف", trail: "17:21", tone: "ok" },
+                { main: "الردود الآلية", sub: "متوقفة مع مريم إلى أن تُغلق المحادثة", trail: "متوقفة", tone: "off" },
+              ],
+            } },
+            { title: "ملاحظات وردود جاهزة", body: "ملاحظات لا يراها إلا الفريق، وإجابات جاهزة للأسئلة التي تتكرر كل يوم.", scene: {
+              chat: [
+                { from: "customer", text: "متى تفتحون يوم الجمعة؟", at: "12:30" },
+                { from: "staff", text: "نفتح يوم الجمعة من 2 ظهراً إلى 10 مساءً.", at: "12:31" },
+              ],
+              side: [
+                { main: "ردّ جاهز", sub: "مواعيد الجمعة", trail: "استُخدم", tone: "ok" },
+                { main: "ملاحظة داخلية", sub: "مريم تفضّل الاتصال بعد 5 مساءً.", trail: "للفريق فقط", tone: "wait" },
+              ],
+            } },
+            { title: "لكل طلب مسؤول", body: "لكل محادثة وطلب موظف مسؤول، وسجلّ من فعل ماذا لا يمكن تعديله.", scene: {
+              chat: [{ from: "business", text: "الطلب رقم 1042 جاهز للاستلام.", at: "11:40" }],
+              side: [
+                { main: "الطلب رقم 1042", sub: "مريم صالح", trail: "يوسف", tone: "ok" },
+                { main: "تم التأكيد", sub: "يوسف، 10:05", trail: "مسجّل", tone: "ok" },
+                { main: "جاهز للاستلام", sub: "عائشة، 11:40", trail: "مسجّل", tone: "ok" },
+              ],
+            } },
           ],
         },
         {
           name: "في الخلفية",
           items: [
-            { title: "قواعد واتساب علينا", body: "ردود عادية خلال 24 ساعة من رسالة العميل، وبعدها صياغة معتمدة. وتختار ALYR المناسب في كل مرة." },
-            { title: "الإيقاف يعني الإيقاف", body: "من يطلب الإيقاف لا تصله رسائل بعدها، وكل موافقة مسجّلة." },
-            { title: "لا شيء يضيع", body: "تُحفظ كل رسالة قبل إرسالها، ويُعاد إرسالها إن تأخر واتساب. والتعذّر يظهر ولا يُخفى." },
-            { title: "سجلاتك منفصلة", body: "بيانات كل منشأة مفصولة داخل قاعدة البيانات نفسها، لا بإعداد قد يُنسى." },
-            { title: "سُلّمت وقُرئت", body: "تسجّل ALYR متى سُلّمت كل رسالة ومتى قُرئت." },
+            { title: "قواعد واتساب علينا", body: "ردود عادية خلال 24 ساعة من رسالة العميل، وبعدها صياغة معتمدة. وتختار ALYR المناسب في كل مرة.", scene: {
+              chat: [
+                { from: "event", text: "مرّت 26 ساعة على آخر رسالة من مريم" },
+                { from: "business", text: "طلبك رقم 1042 جاهز للاستلام.", at: "12:10", state: "sent" },
+              ],
+              side: [
+                { main: "آخر رسالة من مريم", trail: "قبل 26 ساعة", tone: "wait" },
+                { main: "بعد 24 ساعة", sub: "استُخدمت صياغة معتمدة", trail: "قالب", tone: "ok" },
+              ],
+            } },
+            { title: "الإيقاف يعني الإيقاف", body: "من يطلب الإيقاف لا تصله رسائل بعدها، وكل موافقة مسجّلة.", scene: {
+              chat: [
+                { from: "customer", text: "إيقاف", at: "18:02" },
+                { from: "business", text: "لن تصلك تذكيرات أو إشعارات من دانة للخدمات المنزلية بعد الآن. ما زال بإمكانك مراسلتنا هنا. أرسل «اشترك» لإعادة تفعيلها.", at: "18:02" },
+              ],
+              side: [
+                { main: "الموافقة", sub: "سُحبت بكلمات العميل نفسه", trail: "مسجّلة", tone: "ok" },
+                { main: "التذكيرات والإشعارات", sub: "لا يُرسل شيء بعدها", trail: "متوقفة", tone: "off" },
+              ],
+            } },
+            { title: "لا شيء يضيع", body: "تُحفظ كل رسالة قبل إرسالها، ويُعاد إرسالها إن تأخر واتساب. والتعذّر يظهر ولا يُخفى.", scene: {
+              chat: [{ from: "business", text: "الطلب رقم 1042 جاهز للاستلام.", at: "11:40", state: "wait" }],
+              side: [
+                { main: "حُفظت قبل الإرسال", trail: "محفوظة", tone: "ok" },
+                { main: "المحاولة الأولى", sub: "تأخر واتساب", trail: "مجدداً", tone: "wait" },
+                { main: "المحاولة الثانية", trail: "أُرسلت", tone: "ok" },
+              ],
+            } },
+            { title: "سجلاتك منفصلة", body: "بيانات كل منشأة مفصولة داخل قاعدة البيانات نفسها، لا بإعداد قد يُنسى.", scene: {
+              chat: [{ from: "customer", text: "وصلت قطعة المولّد؟", at: "16:10" }],
+              side: [
+                { main: "دانة للخدمات المنزلية", sub: "لا تقرأ إلا سجلاتها", trail: "سجلاتها", tone: "ok" },
+                { main: "كل منشأة أخرى", sub: "مفصولة داخل قاعدة البيانات", trail: "مغلقة", tone: "off" },
+              ],
+            } },
+            { title: "سُلّمت وقُرئت", body: "تسجّل ALYR متى سُلّمت كل رسالة ومتى قُرئت.", scene: {
+              chat: [{ from: "business", text: "الطلب رقم 1042 جاهز للاستلام.", at: "11:40", state: "read" }],
+              side: [
+                { main: "سُلّمت", trail: "11:40", tone: "ok" },
+                { main: "قُرئت", trail: "11:43", tone: "ok" },
+              ],
+            } },
           ],
         },
       ],

@@ -4,8 +4,9 @@ import { useEffect, useRef, useState, type ReactNode } from "react";
 
 type Props = {
   label: string;
-  /** One tab per panel, in order; each id is its panel's anchor (#bakery). */
-  tabs: { id: string; name: string }[];
+  /** One tab per panel, in order; each id is its panel's anchor (#bakery). The icon is a
+   * line drawing of the business, beside its name. */
+  tabs: { id: string; name: string; icon?: ReactNode }[];
   /** The panels, drawn on the server, the first one with `is-on`. */
   children: ReactNode;
 };
@@ -83,7 +84,8 @@ export function BusinessTabs({ label, tabs, children }: Props) {
             className="biz-tab"
             onClick={() => choose(index)}
           >
-            {tab.name}
+            {tab.icon && <span className="biz-ico" aria-hidden="true">{tab.icon}</span>}
+            <span>{tab.name}</span>
           </button>
         ))}
       </div>

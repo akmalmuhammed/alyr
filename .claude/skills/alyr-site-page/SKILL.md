@@ -43,20 +43,40 @@ The homepage leads with the owner's problem (D-047, ALY-154). In order (`_site/H
    `#restaurant`, `#salon`, `#home-services`, `#other`), "Your day today", "With ALYR" on a
    sheet, the products it would use, and a line contact button whose message names that
    business (`ContactButton message`). Panels are server HTML: stacked without scripts, one
-   cell with scripts so the page below never moves.
+   cell with scripts so the page below never moves. The tabs are cards with a line icon
+   (`brand.tsx`). Each panel opens on **the day split by the fold** (`FoldSplit.tsx`,
+   `room.css`, ALY-209): the owner's WhatsApp chats on faded paper and the same customers as
+   ALYR keeps them on Carbon, row for row (`chats` and `orders` on each `BusinessRow`; keep
+   the unread counts adding up to the header's, and every status one ALYR really shows). A
+   45° fold between them is dragged, moved with the keys (a `role="slider"` handle) or sent
+   across by "Today" and "With ALYR"; it sweeps once when first read. Phones rest on "With
+   ALYR" and swipe.
 5. **One order, start to finish** (`#see`): the `/chat` flow figure (`FlowDiagram`) told for
    Sara at Qirfa Bakery, on a cut-corner Carbon plate, and the tally of who did what. Every
    step shown is built; keep the tally's counts true to the steps.
 6. **ALYR Agent spotlight** with numbered callouts and the sample switch, opening on the bakery.
 7. **How we set it up and stay:** four steps, step 4 the report card as a WhatsApp message,
    then three lists: what we need from you, when you start, every month.
-8. **The products** on the Carbon band, then **Price** (offer on: the price, examples by
+8. **The products** on the Carbon band as a control room (`ProductRoom.tsx`, `room.css`,
+   ALY-209): a numbered index, one step per product, and the workspace drawn at true size
+   from the six crops, pinned and tilted; the step crossing the middle of the screen brings
+   its corner forward and plays its job once (Pay pressed, 4:30 chosen, the figures count,
+   the age bar fills, Sold out stamped, RC-0042 out of the fold); the last step pulls back
+   to all six. Phones and no scripts: rows with each corner under its words (phones add a
+   pinned row of names). Then **Price** (offer on: the price, examples by
    trade, setup, the first month, what every month includes, the agreement), **Trust**,
    **Questions** (the first `faq.shown` open to read, the rest under "More questions"; a
    `#q-...` link opens the fold), the **closing call**, the **footer**.
 
 "Agent" on the homepage always sits beside its rules; no AI words, no «وكيل» (the Arabic says
 ALYR «تتولى عنك العمل المعتاد»), no "Is it AI?" question.
+
+`/chat`'s "Everything it does today" is the phone with X-ray (`ChatXray.tsx`, `xray.css`,
+ALY-209): the list beside a pinned phone that shows the feature being read; "For your team"
+brings the team's workspace in behind it, "Behind the scenes" turns the phone to X-ray with
+the message's path through ALYR. Each item's `scene` in `copy.ts` must show only what is
+built (a payment link opens the test page; STOP's reply is `core/consent.py`'s own words).
+Without scripts it is the three columns.
 
 ## The product page template
 

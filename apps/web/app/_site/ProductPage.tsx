@@ -1,4 +1,5 @@
 import { Icon } from "./brand";
+import { ChatXray } from "./ChatXray";
 import { copy, type Locale } from "./copy";
 import { FlowDiagram } from "./FlowDiagram";
 import { ProductDemo } from "./ProductDemo";
@@ -8,7 +9,8 @@ import { productPath } from "./site";
 import { lines, rich } from "./Text";
 
 /** The page for ALYR Chat: WhatsApp orders, order tracking and the team inbox. What it does,
- * shown as it is used, how it works behind the chat, everything in it today, why owners
+ * shown as it is used, how it works behind the chat, everything in it today (each shown on
+ * a drawn phone as it is read: ChatXray), why owners
  * choose it, who it suits, and how it works with the rest of ALYR. Bookings have their
  * own page now (/bookings), and credit accounts theirs (/accounts). */
 export function ProductPage({ locale }: { locale: Locale }) {
@@ -62,24 +64,11 @@ export function ProductPage({ locale }: { locale: Locale }) {
             <p className="eyebrow">{p.inside.eyebrow}</p>
             <h2 className="h1">{p.inside.title}</h2>
           </div>
-          <div className="inside-grid">
-            {p.inside.groups.map((group, index) => (
-              <div key={group.name} data-reveal style={{ "--n": index } as React.CSSProperties}>
-                <h3 className="inside-name">
-                  <span className="signal" aria-hidden="true" />
-                  {group.name}
-                </h3>
-                <ul className="inside-list">
-                  {group.items.map((item) => (
-                    <li key={item.title}>
-                      <h4>{item.title}</h4>
-                      <p>{item.body}</p>
-                    </li>
-                  ))}
-                </ul>
-              </div>
-            ))}
-          </div>
+          {/* the list, and beside it the phone with X-ray showing the feature being read */}
+          <ChatXray
+            inside={p.inside}
+            phone={{ business: p.business, businessMeta: p.businessMeta, avatar: p.avatar, today: p.today, typeHere: p.typeHere }}
+          />
           <p className="inside-note" data-reveal>{p.inside.note}</p>
         </div>
       </section>

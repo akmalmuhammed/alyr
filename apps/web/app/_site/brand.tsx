@@ -93,6 +93,15 @@ const ICONS = {
   plus: ["M12 5v14", "M5 12h14"],
   minus: ["M5 12h14"],
   "chevron-down": ["m6 9 6 6 6-6"],
+  // the businesses on the homepage's tabs, and what a chat's preview carries
+  bakery: ["M4 20v-8a8 6 0 0 1 16 0v8z", "m9 9 1.5 2.5", "m13 8.5 1.5 2.5"],
+  crate: ["M3 9h18v11H3z", "M5 9l2-5h10l2 5", "M10 13h4"],
+  hanger: ["M10 6.5a2 2 0 1 1 2 2V10", "M12 10 3 17v2h18v-2z"],
+  cup: ["M5 8h11v6a5 5 0 0 1-5 5h-1a5 5 0 0 1-5-5z", "M16 10h1.5a2.5 2.5 0 0 1 0 5H16", "M9 3v2", "M12 3v2"],
+  scissors: ["M8.5 6.5a2.5 2.5 0 1 1-5 0 2.5 2.5 0 0 1 5 0z", "M8.5 17.5a2.5 2.5 0 1 1-5 0 2.5 2.5 0 0 1 5 0z", "M8 8l12 10", "M8 16 20 6"],
+  wrench: ["M15.5 3.5a5 5 0 0 0-5.4 6.6L3.5 16.7l3.8 3.8 6.6-6.6a5 5 0 0 0 6.6-5.4l-3 3-3.4-.6-.6-3.4z"],
+  mic: ["M12 15a3 3 0 0 0 3-3V6a3 3 0 0 0-6 0v6a3 3 0 0 0 3 3z", "M6 11.5a6 6 0 0 0 12 0", "M12 17.5V21"],
+  camera: ["M4 8h3l1.5-2h7L17 8h3v11H4z", "M15.2 13a3.2 3.2 0 1 1-6.4 0 3.2 3.2 0 0 1 6.4 0z"],
 } as const;
 
 export type IconName = keyof typeof ICONS;

@@ -1,0 +1,172 @@
+/* ALYR Chat's "Everything it does today" as the phone with X-ray (ALY-209, ChatXray.tsx).
+   Without scripts: the three columns it always was, and no drawing. With scripts: the list
+   beside a pinned drawing (on a phone, the drawing pinned above the list), showing the
+   feature being read. The drawing's state is `data-layer` on `.xr`: the customer's phone,
+   the team's workspace behind it, or the phone in X-ray with the message's path. Moves
+   exist only inside `prefers-reduced-motion: no-preference`. */
+
+/* the drawing is pinned under the header and the product's bar, which tightens with the header */
+.xr { --xr-top: calc(var(--header) + 3rem + 1px); }
+:root:has(.top[data-scrolled]) .xr { --xr-top: calc(3.75rem + 3rem + 1px); }
+
+/* ------------------------------------------------------------- no scripts */
+.xr-list { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 2.5rem clamp(1.5rem, 3.5vw, 3.5rem); align-items: start; }
+.xr-pin { display: none; }
+.xr-show { padding: 0; border: 0; background: none; color: inherit; font: inherit; letter-spacing: inherit; line-height: inherit; text-align: start; }
+@media (max-width: 61.99rem) { .xr-list { grid-template-columns: minmax(0, 1fr); } }
+
+/* --------------------------------------------------------------- scripts */
+.al-js .xr-list { grid-template-columns: minmax(0, 1fr); gap: 2.75rem; }
+.al-js .xr-pin { display: block; }
+.al-js .xr-item { position: relative; padding-inline-start: 1.125rem; }
+/* the whole row is the button's target, however short its title */
+.al-js .xr-show { display: block; width: 100%; min-height: 1.5rem; cursor: pointer; }
+.al-js .xr-show::after { content: ""; position: absolute; inset: 0; }
+.al-js .xr-show:focus-visible { outline: none; }
+.al-js .xr-item:has(.xr-show:focus-visible) { outline: 2px solid var(--focus); outline-offset: 2px; }
+.al-js .xr-item::before { content: ""; position: absolute; inset-block: 1.125rem 1.25rem; inset-inline-start: 0; width: 2px; background: var(--volt); scale: 1 0; transform-origin: top; }
+.al-js .xr-item.is-on::before { scale: 1 1; }
+/* the feature being read is in ink; the others keep their muted body and a muted name */
+.al-js .xr-item:not(.is-on) h4 { color: var(--text-muted); }
+
+/* the drawing: the phone at the end; the team's screen or the message's path at the start,
+   behind it */
+.xr-stage { position: relative; height: 35rem; }
+.xr-phone { position: absolute; top: 0; inset-inline-end: var(--px, 5.75rem); z-index: 2; width: 19.5rem; transform-origin: top right; scale: var(--ps, 1); }
+[dir="rtl"] .xr-phone { transform-origin: top left; }
+.xr-phone .wa { max-width: none; height: 34rem; }
+.xr[data-layer="team"], .xr[data-layer="xray"] { --px: 0rem; --ps: .84; }
+.xr-cap { margin-top: .75rem; color: var(--text-muted); font-size: .8125rem; line-height: 1.45; max-width: 31rem; }
+
+.xr-desk, .xr-path { position: absolute; top: 3rem; inset-inline-start: 0; z-index: 1; width: 17.5rem; opacity: 0; visibility: hidden; }
+.xr[data-layer="team"] .xr-desk, .xr[data-layer="xray"] .xr-path { opacity: 1; visibility: visible; }
+
+/* the team's workspace */
+.xr-desk { padding-bottom: .5rem; background: var(--window); color: var(--text); box-shadow: 0 0 0 1px var(--window-line), 0 24px 48px -24px rgb(0 0 0 / .35); clip-path: polygon(0 0, calc(100% - 1rem) 0, 100% 1rem, 100% 100%, 0 100%); }
+[dir="rtl"] .xr-desk { clip-path: polygon(1rem 0, 100% 0, 100% 100%, 0 100%, 0 1rem); }
+.xr-desk-top { display: flex; align-items: center; height: 2.75rem; padding-inline: 1rem; border-bottom: 1px solid var(--line); font-size: .875rem; }
+.xr-side { display: grid; }
+/* the rows end before the phone that covers the desk's end */
+.xr-row { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; gap: .5rem; padding: .625rem 3.75rem .625rem 1rem; border-bottom: 1px solid var(--line); font-size: .8125rem; line-height: 1.35; }
+[dir="rtl"] .xr-row { padding: .625rem 1rem .625rem 3.75rem; }
+.xr-row:last-child { border-bottom: 0; }
+.xr-row-t { display: grid; min-width: 0; }
+.xr-row-t b { font-weight: 600; }
+.xr-row-t small { color: var(--text-muted); font-size: .75rem; }
+.xr-row-s { display: inline-flex; align-items: center; gap: .3125rem; padding: .125rem .4375rem; border-radius: 2px; font-size: .6875rem; font-weight: 600; white-space: nowrap; box-shadow: inset 0 0 0 1px var(--line); }
+.xr-row.is-ok .xr-row-s::before { content: ""; width: .375rem; height: .375rem; border-radius: 50%; background: var(--ok); }
+.xr-row.is-off .xr-row-s { background: var(--text); color: var(--window); box-shadow: none; }
+.xr-row.is-wait .xr-row-s { color: var(--text-muted); }
+.xr-row.is-wait .xr-row-s::before { content: ""; width: .375rem; height: .375rem; border-radius: 50%; border: 1.5px solid var(--pending); }
+
+/* the message's path through ALYR, in X-ray */
+.xr-path { padding: 1.25rem 3.75rem 1.25rem 1.25rem; background: var(--band); color: var(--on-band); box-shadow: 0 0 0 1px var(--dark-line); clip-path: polygon(0 0, calc(100% - 1rem) 0, 100% 1rem, 100% 100%, 0 100%); }
+[dir="rtl"] .xr-path { padding: 1.25rem 1.25rem 1.25rem 3.75rem; clip-path: polygon(1rem 0, 100% 0, 100% 100%, 0 100%, 0 1rem); }
+.xr-nodes { position: relative; display: grid; gap: 1.25rem; }
+.xr-nodes::before { content: ""; position: absolute; top: .5rem; bottom: .5rem; inset-inline-start: .3125rem; width: 1px; background: var(--band-rule); }
+.xr-node { position: relative; display: grid; gap: .625rem; padding-inline-start: 1.5rem; font-size: .875rem; }
+.xr-dot { position: absolute; top: .3125rem; inset-inline-start: 0; width: .6875rem; height: .6875rem; background: var(--band); box-shadow: inset 0 0 0 1.5px var(--on-band-soft); }
+.xr-node-0 .xr-dot { background: var(--volt); box-shadow: none; }
+.xr-checks { display: grid; gap: .375rem; }
+.xr-checks-k { font-family: var(--mono); font-size: .625rem; letter-spacing: .08em; text-transform: uppercase; color: var(--band-mark); }
+[lang="ar"] .xr-checks-k { font-family: var(--arabic); letter-spacing: 0; text-transform: none; font-size: .75rem; }
+.xr-path .xr-row { padding: .5rem 0; border-color: var(--dark-line); }
+.xr-path .xr-row-t small { color: var(--concrete); }
+.xr-path .xr-row-s { color: var(--on-band-soft); box-shadow: inset 0 0 0 1px var(--dark-line); }
+.xr-path .xr-row.is-off .xr-row-s { background: var(--on-band); color: var(--band); }
+.xr-path .xr-row.is-wait .xr-row-s { color: var(--concrete); }
+.xr-pulse { position: absolute; top: 1.5rem; inset-inline-start: 1.25rem; width: .6875rem; height: .6875rem; background: var(--volt); opacity: 0; }
+
+/* the customer's phone, and the same phone in X-ray: the chat's frame drawn as wire */
+.xr-event span { max-width: 92%; text-align: center; }
+.xr-test { align-self: flex-start; margin-top: .3125rem; padding: .125rem .5rem; border: 1px dashed var(--wa-soft); border-radius: 2px; color: var(--wa-soft); font-size: .6875rem; font-weight: 600; letter-spacing: .02em; }
+.xr-state { display: none; align-items: center; gap: .125rem; }
+.xr-state svg { width: 1rem; height: .6875rem; fill: none; stroke: currentColor; stroke-width: 1.5; }
+.xr-state.is-read .wa-ticks { stroke: var(--wa-tick); }
+.xr-clock { display: none; }
+.xr-sweep { position: absolute; inset: 0; z-index: 3; pointer-events: none; opacity: 0; border-radius: 1.75rem; }
+.xr[data-layer="xray"] .xr-state { display: inline-flex; }
+.xr[data-layer="xray"] .wa { background: var(--band); color: var(--on-band-soft); border-color: var(--dark-canvas); outline-color: var(--band-rule); }
+.xr[data-layer="xray"] .wa-top, .xr[data-layer="xray"] .wa-bar { background: transparent; border-color: var(--dark-line); }
+.xr[data-layer="xray"] .wa-top { border-bottom: 1px dashed var(--band-rule); }
+.xr[data-layer="xray"] .wa-thread {
+  background-color: transparent;
+  background-image: linear-gradient(to right, rgb(167 173 181 / .08) 1px, transparent 1px), linear-gradient(to bottom, rgb(167 173 181 / .08) 1px, transparent 1px);
+  background-size: 1.375rem 1.375rem; background-position: 0 0;
+}
+/* the field's hint, a shade darker than WhatsApp's own so it reads at AA on the small phone */
+.xr-phone .wa-input span { color: color-mix(in srgb, var(--wa-hint), var(--wa-field-ink) 60%); }
+.xr[data-layer="xray"] .wa-msg { filter: none; }
+.xr[data-layer="xray"] .wa-bubble, .xr[data-layer="xray"] .wa-cta, .xr[data-layer="xray"] .wa-day span, .xr[data-layer="xray"] .wa-input { background: transparent; color: var(--on-band-soft); box-shadow: none; outline: 1px dashed var(--band-rule); outline-offset: -1px; }
+.xr[data-layer="xray"] .wa-tail .wa-bubble::before { display: none; }
+.xr[data-layer="xray"] .wa-meta, .xr[data-layer="xray"] .wa-who small, .xr[data-layer="xray"] .wa-input span { color: var(--concrete); }
+.xr[data-layer="xray"] .wa-avatar { background: transparent; color: var(--on-band); box-shadow: inset 0 0 0 1px var(--band-rule); }
+.xr[data-layer="xray"] .wa-top .wa-back { fill: var(--on-band-soft); }
+.xr[data-layer="xray"] .wa-mic { background: transparent; color: var(--volt); box-shadow: inset 0 0 0 1px var(--band-rule); }
+.xr[data-layer="xray"] .xr-test { color: var(--concrete); border-color: var(--band-rule); }
+
+/* ------------------------------------------------------------- wide screens */
+@media (min-width: 62rem) {
+  .al-js .xr { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 31rem); column-gap: clamp(2.5rem, 5vw, 5rem); align-items: start; }
+  .al-js .xr-pin { position: sticky; top: calc(var(--xr-top) + 1.5rem); }
+  /* the last feature can still reach the reading line */
+  .al-js .xr-list { padding-bottom: 18vh; }
+}
+
+/* -------------------------------------------------- phones: the drawing pinned above */
+@media (max-width: 61.99rem) {
+  /* the drawing comes first, so it can stay pinned while the whole list passes under it */
+  .al-js .xr { display: flex; flex-direction: column; }
+  .al-js .xr-pin { order: -1; }
+  .al-js .xr-pin { position: sticky; top: var(--xr-top); z-index: 2; margin-inline: calc(var(--gutter) * -1); margin-bottom: 1.5rem; padding: .75rem var(--gutter) .5rem; background: var(--canvas); box-shadow: 0 1px 0 var(--line); }
+  .xr-stage { height: 17.75rem; }
+  .xr { --ps: .52; --px: calc(50% - 5.07rem); }
+  .xr[data-layer="team"], .xr[data-layer="xray"] { --ps: .52; --px: 0rem; }
+  /* beside the small phone, never under it: one line per row, its state under its name */
+  .xr-desk, .xr-path { top: .5rem; width: calc(100% - 10.875rem); max-height: calc(100% - .5rem); overflow: hidden; font-size: .875em; }
+  .xr-row, [dir="rtl"] .xr-row { grid-template-columns: minmax(0, 1fr); gap: .25rem; padding: .5rem .75rem; }
+  .xr-row-s { justify-self: start; }
+  .xr-row-t small { display: none; }
+  .xr-path, [dir="rtl"] .xr-path { padding: .75rem; }
+  .xr-path .xr-row, [dir="rtl"] .xr-path .xr-row { padding-inline: 0; }
+  .xr-nodes { gap: .75rem; }
+  .xr-cap { margin-top: .25rem; font-size: .75rem; }
+  .al-js .xr-list { padding-bottom: 40vh; }
+}
+@media (max-width: 23.99rem) {
+  .xr[data-layer="team"], .xr[data-layer="xray"] { --ps: .46; }
+  .xr-desk, .xr-path { width: calc(100% - 9.625rem); }
+  .xr-checks-k { display: none; }
+}
+
+/* ----------------------------------------------------------------- motion */
+@keyframes xr-in { from { opacity: 0; translate: 0 10px; } }
+@keyframes xr-row { from { opacity: 0; translate: calc(var(--dir) * -8px) 0; } }
+@keyframes xr-sweep {
+  0% { opacity: 1; background-position: 120% 120%; }
+  100% { opacity: 1; background-position: -20% -20%; }
+}
+@keyframes xr-travel { 0% { opacity: 1; top: 1.5rem; } 85% { opacity: 1; } 100% { opacity: 0; top: calc(100% - 2rem); } }
+@keyframes xr-clock { 0%, 55% { opacity: 1; } 60%, 100% { opacity: 0; width: 0; } }
+@keyframes xr-sent { 0%, 58% { opacity: 0; width: 0; } 64%, 100% { opacity: 1; } }
+@keyframes xr-blue { 0%, 50% { stroke: var(--concrete); } 100% { stroke: var(--wa-tick); } }
+
+@media (prefers-reduced-motion: no-preference) {
+  .al-js .xr-item::before { transition: scale var(--dur-3) var(--ease); }
+  .al-js .xr-item h4 { transition: color var(--dur-2) var(--ease); }
+  .xr-phone { transition: inset-inline-end 700ms var(--ease), scale 700ms var(--ease); }
+  .xr-desk, .xr-path { translate: calc(var(--dir) * 1.5rem) 0; transition: opacity var(--dur-3) var(--ease), translate 700ms var(--ease), visibility 0s linear var(--dur-3); }
+  .xr[data-layer="team"] .xr-desk, .xr[data-layer="xray"] .xr-path { translate: 0 0; transition: opacity var(--dur-3) var(--ease) 120ms, translate 700ms var(--ease) 120ms, visibility 0s; }
+  .xr .wa-thread > li { animation: xr-in 380ms var(--ease) both; animation-delay: calc(var(--i, 0) * 160ms + 80ms); }
+  .xr-side > li { animation: xr-row 380ms var(--ease) both; animation-delay: calc(var(--i, 0) * 120ms + 240ms); }
+  /* X-ray: the fold sweeps across the phone once per feature, and a pulse runs down the path */
+  .xr[data-layer="xray"] .xr-sweep {
+    background-image: linear-gradient(135deg, transparent 44%, color-mix(in srgb, var(--volt) 14%, transparent) 49.6%, var(--volt) 49.7%, var(--volt) 50.3%, transparent 50.4%);
+    background-size: 260% 260%; animation: xr-sweep 1100ms var(--ease) both;
+  }
+  .xr[data-layer="xray"] .xr-pulse { animation: xr-travel 1400ms var(--ease) both 200ms; }
+  /* nothing lost: the clock waits, then the message goes */
+  .xr[data-layer="xray"] .xr-state.is-wait .xr-clock { display: block; animation: xr-clock 2200ms steps(1, end) both; }
+  .xr[data-layer="xray"] .xr-state.is-wait .wa-ticks { animation: xr-sent 2200ms steps(1, end) both; }
+  .xr[data-layer="xray"] .xr-state.is-read .wa-ticks { animation: xr-blue 1600ms var(--ease) both; }
+}
