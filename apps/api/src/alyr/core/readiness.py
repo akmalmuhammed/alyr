@@ -24,7 +24,7 @@ import asyncpg
 
 from alyr import catalog
 from alyr.catalog import Text
-from alyr.core import whatsapp_setup
+from alyr.core import access, whatsapp_setup
 
 OWNERS = ("client", "alyr")
 
@@ -84,6 +84,16 @@ CHECKS: tuple[Check, ...] = (
         "price",
         Text("Your ALYR plan is accepted", "خطتك مع ALYR مقبولة"),
         Text("Read your price and accept it.", "اطّلع على سعرك واقبله."),
+    ),
+    Check(
+        "paid",
+        Text("Your products are paid for", "منتجاتك مدفوعة"),
+        Text(
+            "Pay the setup fee and your first month. ALYR opens your products the same working "
+            "day it sees the payment.",
+            "ادفع رسوم الإعداد وشهرك الأول. تفتح ALYR منتجاتك في يوم العمل نفسه "
+            "الذي يصلها فيه الدفع.",
+        ),
     ),
     Check(
         "payments",
@@ -163,6 +173,7 @@ _PASSES: dict[str, Evaluate] = {
     "hours": lambda conn, modules: _exists(conn, "select 1 from business_hours"),
     "test": _test,
     "price": _price,
+    "paid": lambda conn, modules: access.is_open(conn),
 }
 
 

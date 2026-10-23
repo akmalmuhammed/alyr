@@ -394,3 +394,16 @@
 .ob-wa-fields .ob-field { width: 100%; }
 .ob-wa-fields .ob-field small { color: var(--ink-3); font-size: var(--ui-small); line-height: 1.45; }
 .ob-wa-fields .ob-error { margin: 0; }
+
+/* Pay to open the products (ALY-212, D-051). */
+.ob-pay { display: grid; gap: 8px; margin-top: 16px; padding: 18px; border-radius: 18px; background: var(--raise); box-shadow: 0 0 0 2px var(--ink) inset; }
+.ob-pay h2 { margin: 0; font-size: var(--ui-body); font-weight: 600; }
+.ob-pay small { color: var(--ink-3); font-size: var(--ui-small); line-height: 1.5; }
+.ob-pay-total { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; margin: 0; }
+.ob-pay-total span { color: var(--ink-2); font-size: var(--ui-body-sm); }
+.ob-pay-total b { font-size: var(--ui-display-sm); letter-spacing: -0.02em; font-weight: 600; }
+.ob-pay-how { display: grid; gap: 4px; padding: 12px 14px; border-radius: 12px; background: var(--volt-wash); }
+.ob-pay-how b { font-size: var(--ui-body-sm); font-weight: 600; }
+.ob-pay-how pre { margin: 0; white-space: pre-wrap; font: inherit; font-size: var(--ui-body-sm); }
+.ob-pay-how code { justify-self: start; padding: 4px 8px; border-radius: 8px; background: var(--raise); font-size: var(--ui-body-sm); letter-spacing: 0.04em; }
+.ob-pay-note { display: flex; gap: 8px; align-items: baseline; margin: 0; color: var(--ink-2); font-size: var(--ui-small); line-height: 1.5; }

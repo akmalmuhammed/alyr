@@ -1013,3 +1013,23 @@ There is no separate Pay product: payment links stay a module of Chat and Bookin
 **Chosen over** one generic "connect WhatsApp" button with a call booked by hand (it hides the four very different paths and what each needs), and over storing a "connected" flag (it lies when a number is detached).
 
 **Revisit when** ALYR is a Tech Provider (ALY-52) and Embedded Signup (ALY-39) exists: Embedded Signup will fill in the number and the state itself, and the attach action (ALY-166) writes the Meta number row.
+
+
+## D-051 · A client pays before their products open
+**Date** 23 Oct 2026 · **Status** Accepted (the founder, 23 Oct, answering the onboarding plan's third question: "dashboard will unlock after payment, that means they browse, get to the portal, pay and get access to products") · Linear ALY-212 · Spec `specs/020-pay-before-access/spec.md` · Updates D-049 (the onboarding engine)
+
+**The decision.** The account is still made before any payment (the founder's first answer). The owner signs in, sees the price for their business first, accepts it and pays the setup fee and the first period of that price. Until ALYR has that payment, every product screen and its API answer "your workspace opens once ALYR has your payment" (`402`); the guided setup, the price, the payment page and the go-live list stay open. Recording enough to cover what is due opens every business of that client, once. ALYR's staff can also open it without a payment, saying why (a pilot, a demo); both are on the audit log.
+
+**How a client pays today.** There is no online payment for clients yet (ALY-5, ALY-188). The owner sees what is due, the bank details (the setting `ALYR_BANK_TRANSFER_DETAILS`) and a reference to write on the transfer (`ALYR-` and the first eight characters of the client's ID). ALYR's staff record what arrived in the back office: the amount, how (bank transfer, cash, cheque, a payment link), what the statement shows, and the day. The owner is told it opens the same working day (the founder's fourth answer).
+
+**What stays as it was.**
+- The money-back result (D-034) is still counted over the first 30 days after going live, from `tenants.live_at`. Paying first does not start that clock: an owner who takes two weeks to set up loses none of their 30 days. This is how ALYR read the founder's answer; he can say otherwise.
+- The refund is still the first month's subscription, never the setup fee (D-034).
+- ALYR never holds a shop's money (hard rule 3). This is the client paying ALYR for ALYR's own service, and only references are kept: never a card number.
+- Clients that existed before this decision, and the demo shops, stay open (`access_note` says why).
+
+**What it changes.** The appointments setup now starts with the price (`plan` first), and the test line moves after payment: the owner tries their own chat once it is theirs. "Try before you pay" was never a free trial (D-034 has none), so nothing promised is lost.
+
+**Chosen over** unlocking at go-live and billing then (the founder said no: the products open after payment), and over a soft lock that only hides the menu (a locked workspace must be locked in the API too, or it is not locked).
+
+**Revisit when** online payment for clients exists (ALY-5, ALY-188): the payment page pays and opens in one step, and staff stop recording transfers. When the subscription's later periods are billed (ALY-85, ALY-218), which also decides whether the paid period counts from the day products open or from go-live.

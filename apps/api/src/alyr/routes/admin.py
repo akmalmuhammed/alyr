@@ -10,7 +10,7 @@ caller. Every change is written to the audit log in the same transaction (D-033)
 
 import re
 from contextlib import asynccontextmanager
-from datetime import UTC, datetime, timedelta
+from datetime import UTC, date, datetime, timedelta
 from typing import Literal
 from uuid import UUID
 
@@ -20,7 +20,7 @@ from pydantic import BaseModel, Field
 
 from alyr import catalog, presets
 from alyr.config import get_settings
-from alyr.core import auth, backoffice, pricing, readiness, whatsapp_setup
+from alyr.core import access, auth, backoffice, pricing, readiness, whatsapp_setup
 from alyr.core.auth import Staff
 from alyr.modules.items import clock as shop_clock
 from alyr.modules.items import template, template_change
@@ -122,6 +122,19 @@ class StepChange(BaseModel):
     # What is holding the step up, in ALYR's words; empty clears it.
     blocker: str | None = Field(default=None, max_length=500)
     choice: str | None = Field(default=None, max_length=40)
+
+
+class Payment(BaseModel):
+    # In dirhams (100 is QAR 1), what the bank statement or link shows.
+    amount: int = Field(gt=0, le=100_000_000)
+    method: Literal["bank_transfer", "cash", "cheque", "link"]
+    reference: str = Field(default="", max_length=120)
+    received_on: date
+    note: str = Field(default="", max_length=500)
+
+
+class OpenWithout(BaseModel):
+    reason: str = Field(min_length=1, max_length=500)
 
 
 class WhatsappChange(BaseModel):
@@ -433,7 +446,9 @@ async def clients(request: Request, _: Staff = Depends(platform_admin)) -> dict:
 async def client(client_id: UUID, request: Request, _: Staff = Depends(platform_admin)) -> dict:
     try:
         async with _back_office(request) as conn:
-            return await pricing.client(conn, client_id)
+            return await pricing.client(conn, client_id) | {
+                "access": await access.summary(conn, client_id)
+            }
     except pricing.PricingError as error:
         raise HTTPException(status_code=404, detail=str(error)) from error
 
@@ -698,4 +713,51 @@ async def change_whatsapp(
                 )
             return await readiness.run(conn, _by(staff), by_alyr=True)
     except whatsapp_setup.SetupError as error:
+        raise HTTPException(status_code=422, detail=str(error)) from error
+
+
+# ── pay before access (ALY-212, D-051) ────────────────────
+
+
+@router.post("/clients/{client_id}/payments")
+async def record_payment(
+    client_id: UUID, body: Payment, request: Request, staff: Staff = Depends(platform_admin)
+) -> dict:
+    """Record a payment the client made to ALYR. Once what is due is covered, the client's
+    products open."""
+    try:
+        async with _back_office(request) as conn:
+            opened = await access.record(
+                conn, client_id, amount=body.amount, method=body.method,
+                reference=body.reference, received_on=body.received_on, note=body.note,
+                by=_by(staff),
+            )
+            await backoffice.audit(
+                conn, staff, "client.payment", "client", client_id, client_id=client_id,
+                detail={"amount": body.amount, "method": body.method,
+                        "received_on": body.received_on.isoformat(), "opened": opened},
+            )
+            return await access.summary(conn, client_id)
+    except LookupError as error:
+        raise HTTPException(status_code=404, detail=str(error)) from error
+    except access.AccessError as error:
+        raise HTTPException(status_code=422, detail=str(error)) from error
+
+
+@router.post("/clients/{client_id}/open")
+async def open_without_payment(
+    client_id: UUID, body: OpenWithout, request: Request, staff: Staff = Depends(platform_admin)
+) -> dict:
+    """Open a client's products without a payment (a pilot, a demo), saying why."""
+    try:
+        async with _back_office(request) as conn:
+            if await access.open_without_payment(conn, client_id, body.reason):
+                await backoffice.audit(
+                    conn, staff, "client.opened", "client", client_id, client_id=client_id,
+                    detail={"reason": body.reason.strip()},
+                )
+            return await access.summary(conn, client_id)
+    except LookupError as error:
+        raise HTTPException(status_code=404, detail=str(error)) from error
+    except access.AccessError as error:
         raise HTTPException(status_code=422, detail=str(error)) from error

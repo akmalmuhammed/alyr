@@ -271,7 +271,7 @@ def test_a_salon_with_the_catalog_keeps_its_bookings_flow_unchanged(on):
     tenant, _ = make(on, "salon")
     preset = presets.PRESET_BY_KEY["salon"]
     s = state(on)
-    assert (s["way"], s["step"]) == ("appointments", "services")
+    assert (s["way"], s["step"]) == ("appointments", "plan")
     assert [x["name"] for x in s["services"]] == [x.name for x in preset.services]
     assert s["services"][0]["price_text"] == "QAR 60"
     assert len(s["hours"]) == len(preset.hours)
