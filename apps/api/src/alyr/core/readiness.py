@@ -24,6 +24,7 @@ import asyncpg
 
 from alyr import catalog
 from alyr.catalog import Text
+from alyr.core import whatsapp_setup
 
 OWNERS = ("client", "alyr")
 
@@ -168,9 +169,14 @@ _PASSES: dict[str, Evaluate] = {
 async def _status(conn: asyncpg.Connection, check: Check, modules: set[str], choice: str) -> str:
     """done, todo, or waiting: the owner did their part and it waits on someone else."""
     if check.key == "whatsapp":
-        if await _connected(conn, "whatsapp"):
+        # Waiting once the owner has everything ready for their way (`whatsapp_setup.py`);
+        # while something is missing, or ALYR says it failed, it is theirs to do.
+        setup = whatsapp_setup.status(
+            choice, await whatsapp_setup.row(conn), await _connected(conn, "whatsapp")
+        )
+        if setup == "connected":
             return "done"
-        return "waiting" if choice else "todo"
+        return "waiting" if setup in ("waiting_on_meta", "queued", "connecting") else "todo"
     if check.key == "payments":
         if choice == "cash_transfer" or await _connected(conn, "payments"):
             return "done"
@@ -260,6 +266,8 @@ async def run(conn: asyncpg.Connection, actor: str = "", by_alyr: bool = False) 
             "choices": list(check.choices),
             "done_at": _iso(done_at),
         })
+        if check.key == "whatsapp":
+            lines[-1]["setup"] = await whatsapp_setup.current(conn)
     await conn.execute(
         "update onboarding_steps set checked_at = now() where step_key = any($1)",
         [c.key for c in checks],
@@ -400,4 +408,24 @@ def board_row(row: asyncpg.Record, now: datetime) -> dict:
         "choices": {s["key"]: s["choice"] for s in steps if s["choice"]},
         "stuck": stage != "live" and hours_still >= STUCK_HOURS,
         "helped": row["helped"],
+        "whatsapp": _board_whatsapp(row["whatsapp"], steps),
+    }
+
+
+def _board_whatsapp(setup: dict | None, steps: list[dict]) -> dict:
+    """The WhatsApp setup on the board, from the same snapshot."""
+    step = next((s for s in steps if s["key"] == "whatsapp"), None)
+    way = step["choice"] if step else ""
+    needs = whatsapp_setup.NEEDS.get(way, ())
+    return {
+        "way": way,
+        "status": whatsapp_setup.status(way, setup, bool(step and step["done_at"])),
+        "phone": setup["phone"] if setup else "",
+        "display_name": setup["display_name"] if setup else "",
+        "needs": [
+            {"key": n.key, "label": {"en": n.label.en, "ar": n.label.ar},
+             "done": whatsapp_setup.done(n, setup)}
+            for n in needs
+        ],
+        "note": setup["note"] if setup else "",
     }
