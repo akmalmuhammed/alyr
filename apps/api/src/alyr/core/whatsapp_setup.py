@@ -135,9 +135,10 @@ NEEDS: dict[str, tuple[Need, ...]] = {
         Need(
             "provider",
             Text(
-                "You can sign in to your current provider, so the switch to ALYR is planned "
-                "with you and no message is missed",
-                "يمكنك الدخول إلى مزوّدك الحالي، لنخطط معك للانتقال إلى ALYR دون أن تفوتك رسالة",
+                "You can sign in to your current provider, so ALYR and you pick the day of the "
+                "switch and no message is missed",
+                "يمكنك الدخول إلى مزوّدك الحالي، لنختار معك يوم الانتقال إلى ALYR "
+                "دون أن تفوتك رسالة",
             ),
         ),
         Need(
