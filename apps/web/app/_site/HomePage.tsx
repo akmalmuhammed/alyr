@@ -4,14 +4,13 @@ import { Icon, type IconName } from "./brand";
 import { BusinessTabs } from "./BusinessTabs";
 import { ContactButton, ContactNote } from "./Contact";
 import { copy, type BusinessRow, type Locale, type Questions as QuestionSet } from "./copy";
-import { AgeBarCrop, FigCaption, OrderBarCrop, ReceiptCrop, reportWords, ShelfCrop, SummaryCrop, TimesCrop, TrackScreen } from "./Drawings";
+import { AgeBarCrop, FigCaption, OrderBarCrop, ReceiptCrop, ShelfCrop, SummaryCrop, TimesCrop, TrackScreen } from "./Drawings";
 import { ProductRoom } from "./ProductRoom";
-import { ReportPhone } from "./ReportPhone";
 import { Phone, TickPath } from "./Frames";
 import { FlowDiagram } from "./FlowDiagram";
 import { FoldSplit } from "./FoldSplit";
 import { HomeMotion } from "./HomeMotion";
-import { REPORTS, SAMPLE_ORDER, SAMPLES } from "./samples";
+import { SAMPLE_ORDER, SAMPLES } from "./samples";
 import { contactHref, Shell } from "./Shell";
 import { CONTACT_STATE, INCLUDED, OFFER_LIVE, PATHS, PRODUCTS, productPath, TRUST_RECORDS, type TrustRecord } from "./site";
 import { lines, rich } from "./Text";
@@ -19,13 +18,17 @@ import "./kit.css";
 import "./home.css";
 import "./room.css";
 
+type ProblemItem = (typeof copy)["en"]["home"]["problems"]["items"][number];
+
 /**
- * The ALYR homepage, led by the owner's problem (ALY-154, D-047): the hero names the problem
- * beside the real dashboard and the live feed of what ALYR did; the everyday problems, each
- * with its fix; the visitor's own business, as tabs; one order followed from the first
- * message to collection; ALYR Agent, explained; how we set it up and stay; the products;
- * the price (offer on); trust; questions; the closing call. Every word from `copy.ts`;
- * every screen is the product's own, with fictional businesses, and captioned as a sample.
+ * The ALYR homepage: ALYR as the technology team an owner-run business never had (ALY-210,
+ * D-048, after D-047). The hero says so beside the real dashboard and the feed of what ALYR
+ * did; why ALYR, set against a big company and the shop today; how we work, a loop of
+ * check, set up, see and improve; what a check-up finds, each with its fix; the visitor's
+ * own business, as tabs; one order followed from the first message to collection, as
+ * proof; the insights ALYR Agent gives; the products; the price (offer on); trust;
+ * questions; the closing call. Every word from `copy.ts`; every screen is the product's
+ * own, with fictional businesses, and captioned as a sample.
  */
 export function HomePage({ locale }: { locale: Locale }) {
   const t = copy[locale];
@@ -35,11 +38,12 @@ export function HomePage({ locale }: { locale: Locale }) {
   return (
     <Shell locale={locale} page="home" cta={h.final} bar>
       <Hero locale={locale} />
+      <Why locale={locale} />
+      <How locale={locale} />
       <Problems locale={locale} />
       <Business locale={locale} />
       <See locale={locale} />
       <Spotlight locale={locale} />
-      <How locale={locale} />
       <Suite locale={locale} />
       {OFFER_LIVE && <Price locale={locale} />}
       <Trust locale={locale} other={other} />
@@ -92,10 +96,9 @@ function Hero({ locale }: { locale: Locale }) {
           </h1>
           <div className="hero-side">
             <p className="hero-lead">{rich(hero.lead)}</p>
-            <p className="hero-body">{rich(hero.body)}</p>
             <div className="hero-actions" data-hero-cta>
-              <ContactButton locale={locale} lean />
-              <a className="link hero-more" href="#see">
+              <ContactButton locale={locale} lean label={hero.action} />
+              <a className="link hero-more" href="#how">
                 {hero.more}
                 <Icon name="arrow-right" className="ico ico-flip" />
               </a>
@@ -103,15 +106,6 @@ function Hero({ locale }: { locale: Locale }) {
             <ContactNote locale={locale} className="hero-note" />
           </div>
         </div>
-        {/* the visitor's own business, one tap from the first screen: each chip opens its tab */}
-        <nav className="hero-pick" aria-label={hero.pick}>
-          <span className="hero-pick-k" aria-hidden="true">{hero.pick}</span>
-          <ul>
-            {[...t.home.business.rows, t.home.business.other].map((row) => (
-              <li key={row.id}><a className="chip" href={`#${row.id}`}>{row.tab}</a></li>
-            ))}
-          </ul>
-        </nav>
         <ul className="hero-facts">
           {(OFFER_LIVE ? hero.facts : hero.factsNoOffer).map((fact, index) => <li key={fact} style={n(index)}>{rich(fact)}</li>)}
         </ul>
@@ -127,6 +121,51 @@ function Hero({ locale }: { locale: Locale }) {
           crop
           headingLevel={2}
         />
+      </div>
+    </section>
+  );
+}
+
+// ---------------------------------------------------------------------- why ALYR
+/**
+ * What a big company has for the technology side, what an owner-run shop has today, and what
+ * it has with ALYR. A list of rows, each with its three answers named, so a screen reader
+ * reads it as pairs; on wide screens the names become one header row above the columns.
+ */
+function Why({ locale }: { locale: Locale }) {
+  const y = copy[locale].home.why;
+  const answers = (row: (typeof y.rows)[number]) => [row.big, row.today, row.alyr] as const;
+  return (
+    <section className="hs why" id="why" aria-labelledby="why-title">
+      <div className="wrap">
+        <Rule />
+        <Head eyebrow={y.eyebrow} title={y.title} id="why-title">
+          <p className="lead">{rich(y.lead)}</p>
+        </Head>
+        <div className="why-table">
+          <div className="why-cols" aria-hidden="true">
+            <span />
+            {y.cols.map((col, index) => <span key={col} className={index === 2 ? "why-us" : undefined}>{col}</span>)}
+          </div>
+          <ul className="why-rows">
+            {y.rows.map((row, index) => (
+              <li key={row.topic} className="why-row" data-m style={n(index)}>
+                <h3 className="why-topic">{rich(row.topic)}</h3>
+                <dl className="why-dl">
+                  {answers(row).map((answer, col) => (
+                    <div key={y.cols[col]} className={col === 2 ? "why-a why-us" : "why-a"}>
+                      <dt>{y.cols[col]}</dt>
+                      <dd>
+                        {col === 2 && <span className="why-tick" aria-hidden="true"><TickPath /></span>}
+                        <span>{rich(answer)}</span>
+                      </dd>
+                    </div>
+                  ))}
+                </dl>
+              </li>
+            ))}
+          </ul>
+        </div>
       </div>
     </section>
   );
@@ -289,25 +328,40 @@ function Problems({ locale }: { locale: Locale }) {
           <p className="lead">{rich(pr.lead)}</p>
         </Head>
         <ul className="prob-grid">
-          {pr.items.map((item, index) => {
-            const name = t.products.items[item.product].name;
-            return (
-              <li key={item.problem} className="prob" data-m style={n(index % 3)}>
-                <h3 className="prob-q">{rich(item.problem)}</h3>
-                <p className="prob-fix">
-                  <span className="prob-tick" aria-hidden="true"><TickPath /></span>
-                  <span>{rich(item.fix)}</span>
-                </p>
-                <a className="prob-link" href={productPath(item.product, locale)}>
-                  <bdi>{name}</bdi>
-                  <Icon name="arrow-right" className="ico ico-flip" />
-                </a>
-              </li>
-            );
-          })}
+          {pr.items.slice(0, pr.shown).map((item, index) => <Problem key={item.problem} item={item} index={index} locale={locale} />)}
         </ul>
+        {pr.items.length > pr.shown && (
+          <details className="faq-more prob-more">
+            <summary>
+              <span>{pr.more}</span>
+              <span className="faq-more-n" aria-hidden="true"><bdi>{pr.items.length - pr.shown}</bdi></span>
+              <span className="qa-mark" aria-hidden="true" />
+            </summary>
+            <ul className="prob-grid">
+              {pr.items.slice(pr.shown).map((item, index) => <Problem key={item.problem} item={item} index={index} locale={locale} />)}
+            </ul>
+          </details>
+        )}
       </div>
     </section>
+  );
+}
+
+/** One thing a check-up often finds, what we set up for it, and the product that does it. */
+function Problem({ item, index, locale }: { item: ProblemItem; index: number; locale: Locale }) {
+  const name = copy[locale].products.items[item.product].name;
+  return (
+    <li className="prob" data-m style={n(index % 3)}>
+      <h3 className="prob-q">{rich(item.problem)}</h3>
+      <p className="prob-fix">
+        <span className="prob-tick" aria-hidden="true"><TickPath /></span>
+        <span>{rich(item.fix)}</span>
+      </p>
+      <a className="prob-link" href={productPath(item.product, locale)}>
+        <bdi>{name}</bdi>
+        <Icon name="arrow-right" className="ico ico-flip" />
+      </a>
+    </li>
   );
 }
 
@@ -503,7 +557,12 @@ function See({ locale }: { locale: Locale }) {
   );
 }
 
-// ---------------------------------------------------------------- how it works
+// ---------------------------------------------------------------- how we work
+/**
+ * Check, set up, see, improve: four steps on a rail that fills as the visitor scrolls, and
+ * a dashed arc from the last step back to the first once it is full, because the work
+ * starts again. Without motion the arc is simply drawn.
+ */
 function How({ locale }: { locale: Locale }) {
   const w = copy[locale].home.how;
   return (
@@ -524,32 +583,36 @@ function How({ locale }: { locale: Locale }) {
               </li>
             ))}
           </ol>
-          {/* step 4 opens into its report; beside it, the early-access note and a second way in */}
-          <div className="how-foot">
-            <div className="how-next">
-              <p className="how-note">{rich(w.note)}</p>
-              <ContactButton locale={locale} variant="line" />
-            </div>
-            <figure className="how-report" data-m>
-              <ReportPhone sample={REPORTS[locale].bakery} words={reportWords(locale).bakery} />
-              <FigCaption locale={locale} caption={w.report.caption} />
-            </figure>
-          </div>
+          {/* the way back to step 1: an arc over the steps on wide screens, a row under them on phones */}
+          <p className="how-loop">
+            <span className="how-loop-k"><bdi>{w.again}</bdi></span>
+            <span className="how-loop-head" aria-hidden="true" />
+          </p>
+          <p className="how-again">
+            <Icon name="arrow-right" className="ico" />
+            <span>{w.again}</span>
+          </p>
         </div>
-        <div className="how-lists">
-          {[w.need, w.start, w.month].map((list) => (
-            <div key={list.title} className="inc-list">
-              <h3 className="mono-k">{list.title}</h3>
-              <ul className="checks">
-                {list.items.map((item, index) => (
-                  <li key={item} data-m style={n(index)}>
-                    <TickPath />
-                    <span>{rich(item)}</span>
-                  </li>
-                ))}
-              </ul>
-            </div>
-          ))}
+        <div className="how-foot">
+          <div className="how-next">
+            <p className="how-note">{rich(w.note)}</p>
+            <ContactButton locale={locale} variant="line" label={copy[locale].home.final.action} />
+          </div>
+          <div className="how-lists">
+            {[w.need, w.month].map((list) => (
+              <div key={list.title} className="inc-list">
+                <h3 className="mono-k">{list.title}</h3>
+                <ul className="checks">
+                  {list.items.map((item, index) => (
+                    <li key={item} data-m style={n(index)}>
+                      <TickPath />
+                      <span>{rich(item)}</span>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            ))}
+          </div>
         </div>
       </div>
     </section>

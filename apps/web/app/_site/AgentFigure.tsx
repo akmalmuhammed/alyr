@@ -83,6 +83,9 @@ function before(view: AgentView, events: FeedEvent[], shown: number): AgentView 
   };
 }
 
+/** The dashboard's "RULE · …" line, said the way the homepage says it: "Why · …". */
+const reason = (rule: string, word: string) => rule.replace(/^(RULE|Rule|القاعدة) · /, `${word} · `);
+
 /** A flag's words, taken from the dashboard itself so the two always agree. */
 function flagged(view: AgentView, flag: NonNullable<FeedEvent["flag"]>): { line: RichParts; rule: string } | null {
   if (flag.from === "suggestion") {
@@ -288,7 +291,7 @@ export function AgentFigure({
                       ) : (
                         event.line && <span className="af-line">{rich(event.line)}</span>
                       )}
-                      {flag && <span className="af-rule">{flag.rule}</span>}
+                      {flag && <span className="af-rule">{reason(flag.rule, text.reason)}</span>}
                     </span>
                   </li>
                 );

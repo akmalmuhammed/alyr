@@ -104,6 +104,10 @@ Every public page, in both languages, has a light and a dark theme. Light is sti
 - **The drawn WhatsApp chat** on the ALYR Chat page takes WhatsApp's own dark chat screen (`#0b141a` behind, `#202c33` received, `#005c4b` sent, `#e9edef` text), still with no WhatsApp logo. The time in a sent bubble is a shade lighter than WhatsApp's (`#b3cdc9`) to keep 4.5:1, and a shade darker in light (`#5f6f79`) for the same reason.
 - **Contrast.** AA in both themes, checked with axe-core and, for text under a filter (the chat bubbles), by a direct scan.
 
+## Positioning: the small business's tech team (added 23 Oct 2026, ALY-210, D-048)
+
+ALYR is the technology team an owner-run business never had: what consultants and an IT team do for a big company, done for a small one, with products to back it. WhatsApp is one product and the way in, never the whole story. The homepage says it in its H1, "The tech team your business never had." / «فريق التقنية الذي لم يكن لدى مشروعك.», in a Why ALYR table (a big company, you today, with ALYR), and in how we work, a loop: check, set up, see, improve, then check again. Its one action is "Book a check-up". In the site's own words, say "reason" or "why", not "rule", and keep everything technical inside the product.
+
 ## The suite on the site (added 17 Oct 2026, ALY-99, D-037)
 
 The site presents ALYR as a suite, led by ALYR Agent: the homepage and a page per product (`/chat`, `/bookings`, `/agent`, `/accounts`, and from 21 Oct `/shelf` and `/docs`, ALY-205), in both languages. ALYR Shelf is the Catalog's public name, ALYR Docs the Documents module's (founder, 20 Oct 2026). Payroll is not on the site until it is built. Each product's state is "Set up for you" / «نجهّزه لك»; ALYR Agent and ALYR Shelf say "With every product" / «مع كل منتج». Build notes in `docs/agent-dashboard/08-site-log.md`.

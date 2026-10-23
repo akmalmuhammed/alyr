@@ -26,19 +26,32 @@ brand lane owns these files (`docs/lanes/site-and-brand.md`).
 
 ## The homepage
 
-The homepage leads with the owner's problem (D-047, ALY-154). In order (`_site/HomePage.tsx`,
-`home.css`, words under `home` in `copy.ts`):
+The homepage presents ALYR as the small business's tech team (D-048, ALY-210, after D-047).
+In order (`_site/HomePage.tsx`, `home.css`, words under `home` in `copy.ts`):
 
-1. **Header** with the Products menu, By business, How it works, Questions, the language
-   link, the theme switch and the contact button (Price only with the offer).
-2. **Hero:** eyebrow "For owner-run businesses in Qatar", H1 "Stop losing orders in the chat.",
-   the lead "ALYR works as your agent in WhatsApp, by rules you can check. You run the
-   business.", the body, the contact button and "See one order, start to finish" (to `#see`),
-   the note; a row of business chips ("What do you run?"), each opening its tab below; the
-   facts row; the real ALYR Agent dashboard in showcase mode and the live feed on the Carbon
-   plate. Phones: the chips scroll sideways, the feed comes first.
-3. **Everyday problems** (`#problems`): nine, each with its fix and a link to its product.
-4. **Your business** (`#business`, `BusinessTabs.tsx`): one tab per business type plus
+1. **Header** with the Products menu, By business, How we work, Questions, the language
+   link, the theme switch and the button named by the closing call's `action` ("Book a
+   check-up"; its `short`, "Check-up", below 62rem so the line never overflows). Price only
+   with the offer.
+2. **Hero:** eyebrow "Technology for owner-run businesses in Qatar", H1 "The tech team your
+   business never had.", then one row under it: the lead on the start side, "Book a
+   check-up" and "See how we work" (to `#how`) with the note on the end side; the facts row;
+   the real ALYR Agent dashboard and the live feed on the Carbon plate. The feed's flags say
+   "Needs a look" and their rule line starts "Why ·" (`AgentFigure.tsx` `reason`); the
+   product's own screens keep "Rule".
+3. **Why ALYR** (`#why`): four rows, each read across "A big company", "You, today" and
+   "With ALYR". A list of `<dl>`s, so a screen reader hears each answer with its name; on wide
+   screens one subgrid with the names as a header row and ALYR's column on a cut Carbon
+   plate (the cells carry the plate's colour too, for contrast checks); on phones one card
+   per row.
+4. **How we work** (`#how`): check, set up, see, improve, on the rail that fills with the
+   scroll; once full, a dashed arc draws from step 4 back to step 1 with "Then we check
+   again" (`.how-loop`, Choreography sets `is-looped`; drawn statically without motion). On
+   phones a dashed line from step 4 to an up-arrow row. Then the note with a line button, and
+   two lists: what we need from you, every month.
+5. **What a check-up finds** (`#problems`): the first `problems.shown` with their fix and
+   product, the rest under "More we find".
+6. **Your business** (`#business`, `BusinessTabs.tsx`): one tab per business type plus
    "Something else"; each panel has an anchor (`#bakery`, `#wholesale`, `#fashion`,
    `#restaurant`, `#salon`, `#home-services`, `#other`), "Your day today", "With ALYR" on a
    sheet, the products it would use, and a line contact button whose message names that
@@ -51,13 +64,11 @@ The homepage leads with the owner's problem (D-047, ALY-154). In order (`_site/H
    45° fold between them is dragged, moved with the keys (a `role="slider"` handle) or sent
    across by "Today" and "With ALYR"; it sweeps once when first read. Phones rest on "With
    ALYR" and swipe.
-5. **One order, start to finish** (`#see`): the `/chat` flow figure (`FlowDiagram`) told for
+7. **One order, start to finish** (`#see`): the `/chat` flow figure (`FlowDiagram`) told for
    Sara at Qirfa Bakery, on a cut-corner Carbon plate, and the tally of who did what. Every
    step shown is built; keep the tally's counts true to the steps.
-6. **ALYR Agent spotlight** with numbered callouts and the sample switch, opening on the bakery.
-7. **How we set it up and stay:** four steps, step 4 the report card as a WhatsApp message,
-   then three lists: what we need from you, when you start, every month.
-8. **The products** on the Carbon band as a control room (`ProductRoom.tsx`, `room.css`,
+8. **Insights: the ALYR Agent spotlight** with numbered callouts and the sample switch, opening on the bakery. Not pinned; on phones the screen stops after its five numbered parts.
+9. **The products** on the Carbon band as a control room (`ProductRoom.tsx`, `room.css`,
    ALY-209): a numbered index, one step per product, and the workspace drawn at true size
    from the six crops, pinned and tilted; the step crossing the middle of the screen brings
    its corner forward and plays its job once (Pay pressed, 4:30 chosen, the figures count,
@@ -68,8 +79,9 @@ The homepage leads with the owner's problem (D-047, ALY-154). In order (`_site/H
    **Questions** (the first `faq.shown` open to read, the rest under "More questions"; a
    `#q-...` link opens the fold), the **closing call**, the **footer**.
 
-"Agent" on the homepage always sits beside its rules; no AI words, no «وكيل» (the Arabic says
-ALYR «تتولى عنك العمل المعتاد»), no "Is it AI?" question.
+"Agent" on the homepage always sits beside what it counted; no AI words, no «وكيل» (the Arabic
+says ALYR «تتولى عنك العمل المعتاد»), no "Is it AI?" question. Say "reason" or "why", not
+"rule", in the homepage's own words. Pins on the homepage: the products' room only.
 
 `/chat`'s "Everything it does today" is the phone with X-ray (`ChatXray.tsx`, `xray.css`,
 ALY-209): the list beside a pinned phone that shows the feature being read; "For your team"

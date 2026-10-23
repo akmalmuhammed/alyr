@@ -139,7 +139,7 @@ main .ag { font-weight: 400; }
 .afig-spot { margin-top: clamp(2rem, 4vw, 3rem); }
 .afig-spot .af-stage { display: grid; grid-template-columns: minmax(0, 9fr) minmax(0, 3fr); column-gap: var(--col-gap); row-gap: 2rem; align-items: start; }
 .afig-spot .aw { grid-column: 1; }
-.afig-spot .af-aside { position: sticky; top: calc(var(--header) + 1.5rem); }
+.afig-spot .af-aside { align-self: start; }
 /* numbered marks on the dashboard's parts, matching the callouts (alt text "": the
    number is for the eye; the list beside says what each part is) */
 .afig-spot .ag :is(.ag-head, .ag-needs, .ag-kpis-block, .ag-cards, .ag-done) { position: relative; }
@@ -194,4 +194,10 @@ main .ag { font-weight: 400; }
   .afig .ag .ag-kpi:nth-child(odd)::before { display: none; }
   .afig .ag .ag-kpi:nth-child(odd) .ag-kpi-link { padding-inline-start: 0; }
   .afig .ag .ag-kpi:nth-child(n + 3) { border-top: 1px solid var(--ag-rule); }
+}
+
+/* on phones the whole screen stops after its five numbered parts: the week, the hours, the
+   best sellers, money owed and the team are the same dashboard, already shown above */
+@media (max-width: 47.99rem) {
+  .afig-spot .ag-grid > :is(.ag-stock, .ag-hours, .ag-top, .ag-owed, .ag-team, .ag-week) { display: none; }
 }

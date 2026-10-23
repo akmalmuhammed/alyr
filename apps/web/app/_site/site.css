@@ -620,6 +620,12 @@ a.pm-link[aria-current="page"] .pm-name::after { content: ""; display: inline-bl
   .top-end { gap: .75rem; }
 }
 .top-nav a { white-space: nowrap; }
+.top-cta-short { display: none; }
+/* below a laptop the header's button says the short words, so the line never overflows */
+@media (max-width: 61.99rem) {
+  .top-cta-full { display: none; }
+  .top-cta-short { display: inline; }
+}
 @media (max-width: 53rem) {
   .top-nav, .top-lang, .al-js .ts-bar { display: none; }
   .top-menu { display: block; }

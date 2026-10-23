@@ -57,7 +57,9 @@ export function Shell({
 }: {
   locale: Locale;
   page: PageKey;
-  cta: { title: string; body: string };
+  /** The closing call; `action` names its button, the header's and the phone bar's too, and
+   * `short` the header's on a phone. */
+  cta: { title: string; body: string; action?: string; short?: string };
   bar?: boolean;
   children: React.ReactNode;
 }) {
@@ -97,7 +99,14 @@ export function Shell({
               {t.nav.other}
             </a>
             <ThemeSwitch locale={locale} place="bar" />
-            <a className="btn btn-volt btn-sm btn-notch" href={contact}>{t.nav.cta[CONTACT_STATE]}</a>
+            <a className="btn btn-volt btn-sm btn-notch" href={contact}>
+              {cta.action && cta.short ? (
+                <>
+                  <span className="top-cta-full">{cta.action}</span>
+                  <span className="top-cta-short">{cta.short}</span>
+                </>
+              ) : (cta.action ?? t.nav.cta[CONTACT_STATE])}
+            </a>
             <details className="top-menu" data-menu>
               <summary aria-label={t.nav.menu}><Icon name="menu" className="ico" /></summary>
               <div className="top-menu-list">
@@ -147,7 +156,7 @@ export function Shell({
                 <ContactPending locale={locale} className="cta-pending" />
               ) : (
                 <div className="cta-actions" data-final-cta>
-                  <ContactButton locale={locale} lean />
+                  <ContactButton locale={locale} lean label={cta.action} />
                   {CONTACT_STATE === "whatsapp" ? (
                     <p className="cta-draft">
                       <span className="sr-only">{t.contact.draft}: </span>
@@ -194,7 +203,7 @@ export function Shell({
 
       {bar && CONTACT_STATE !== "pending" && (
         <div className="bar" data-bar role="region" aria-label={t.contact.bar}>
-          <ContactButton locale={locale} className="bar-btn" />
+          <ContactButton locale={locale} className="bar-btn" label={cta.action} />
         </div>
       )}
       <SiteMotion />
