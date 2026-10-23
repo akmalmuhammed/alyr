@@ -173,3 +173,8 @@
 .ops-tpl { display: grid; gap: 8px; max-width: 40rem; padding: 10px; border-radius: 12px; background: var(--sheet); box-shadow: 0 0 0 1px var(--hair) inset; }
 .ops-tpl-plan ul { margin: 0; padding-inline-start: 1.2em; display: grid; gap: 3px; font-size: var(--ui-small); }
 .ops-tpl-plan p { margin: 4px 0 0; font-size: var(--ui-small); }
+
+/* The onboarding board (ALY-165): one line per step left, with its controls. */
+.ops-step { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; padding: 6px 0; }
+.ops-step b { min-width: 160px; }
+.ops-step input { flex: 1 1 220px; min-height: 32px; padding: 0 10px; border-radius: 8px; border: 0; box-shadow: 0 0 0 1px var(--hair-2) inset; background: transparent; color: inherit; font: inherit; }

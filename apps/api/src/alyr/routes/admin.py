@@ -20,7 +20,7 @@ from pydantic import BaseModel, Field
 
 from alyr import catalog, presets
 from alyr.config import get_settings
-from alyr.core import auth, backoffice, pricing
+from alyr.core import auth, backoffice, pricing, readiness
 from alyr.core.auth import Staff
 from alyr.modules.items import clock as shop_clock
 from alyr.modules.items import template, template_change
@@ -115,6 +115,13 @@ SWITCHABLE_MODULES = ("catalog", "documents")
 class Snooze(BaseModel):
     key: str = Field(min_length=3, max_length=120)
     days: int = Field(default=1, ge=1, le=30)
+
+
+class StepChange(BaseModel):
+    owner: Literal["client", "alyr"] | None = None
+    # What is holding the step up, in ALYR's words; empty clears it.
+    blocker: str | None = Field(default=None, max_length=500)
+    choice: str | None = Field(default=None, max_length=40)
 
 
 class NewStaff(BaseModel):
@@ -581,3 +588,73 @@ async def audit_log(
 ) -> dict:
     async with _back_office(request) as conn:
         return {"entries": await backoffice.audit_log(conn, client_id, limit)}
+
+
+# ── onboarding board and readiness (ALY-165, D-049) ──────
+
+
+@asynccontextmanager
+async def _in_business(request: Request, business_id: UUID):
+    """The back-office connection, also scoped to one business: the business's own rows
+    and the audit log are written in the same transaction, so they stand or fall together."""
+    async with _back_office(request) as conn:
+        if not await conn.fetchval("select true from tenants where id = $1", business_id):
+            raise HTTPException(status_code=404, detail="no such business")
+        await conn.execute("select set_config('app.tenant_id', $1, true)", str(business_id))
+        yield conn
+
+
+@router.get("/onboarding")
+async def onboarding_board(request: Request, _: Staff = Depends(platform_admin)) -> dict:
+    """Every business by stage, as the readiness check last saw it: what is left, what
+    ALYR owes, what is blocked, and who has not moved in two days."""
+    now = datetime.now(UTC)
+    rows = await _admin_call(request, "select * from admin_onboarding()")
+    board = [readiness.board_row(r, now) for r in rows]
+    counts = {stage: 0 for stage in ("setting_up", "ready", "live")}
+    for b in board:
+        counts[b["stage"]] += 1
+    return {"businesses": board, "counts": counts}
+
+
+@router.get("/businesses/{business_id}/readiness")
+async def business_readiness(
+    business_id: UUID, request: Request, staff: Staff = Depends(platform_admin)
+) -> dict:
+    """Check one business now, as its owner would see it."""
+    async with _in_business(request, business_id) as conn:
+        return await readiness.run(conn, _by(staff), by_alyr=True)
+
+
+@router.patch("/businesses/{business_id}/steps/{key}")
+async def change_step(
+    business_id: UUID, key: str, body: StepChange, request: Request,
+    staff: Staff = Depends(platform_admin),
+) -> dict:
+    """Take a step on for the client (assisted onboarding), hand it back, or write what is
+    holding it up. The client sees the owner and the blocker on their own go-live list."""
+    try:
+        async with _in_business(request, business_id) as conn:
+            changed = {}
+            if body.owner is not None and await readiness.set_owner(
+                conn, key, body.owner, _by(staff), True
+            ):
+                changed["owner"] = body.owner
+            if body.blocker is not None and await readiness.set_blocker(
+                conn, key, body.blocker, _by(staff)
+            ):
+                changed["blocker"] = body.blocker.strip()
+            if body.choice is not None and await readiness.set_choice(
+                conn, key, body.choice, _by(staff), True
+            ):
+                changed["choice"] = body.choice
+            if changed:
+                await backoffice.audit(
+                    conn, staff, "onboarding.step", "business", business_id,
+                    business_id=business_id, detail={"step": key, **changed},
+                )
+            return await readiness.run(conn, _by(staff), by_alyr=True)
+    except LookupError as error:
+        raise HTTPException(status_code=404, detail=str(error)) from error
+    except readiness.ReadinessError as error:
+        raise HTTPException(status_code=422, detail=str(error)) from error

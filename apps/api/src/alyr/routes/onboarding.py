@@ -7,7 +7,7 @@ from fastapi import APIRouter, Depends, HTTPException, Request, Response
 from pydantic import BaseModel, Field
 
 from alyr.config import get_settings
-from alyr.core import auth, mail, onboarding, pricing
+from alyr.core import auth, mail, onboarding, pricing, readiness
 from alyr.core.auth import Staff
 from alyr.routes.deps import current_staff
 
@@ -42,6 +42,13 @@ class Change(BaseModel):
 
 class Acceptance(BaseModel):
     quote_id: UUID
+
+
+class StepChange(BaseModel):
+    # Hand the step to ALYR, or take it back.
+    owner: str | None = Field(default=None, max_length=10)
+    # How the business wants to do a step that has choices (WhatsApp, payments).
+    choice: str | None = Field(default=None, max_length=40)
 
 
 class TestMessage(BaseModel):
@@ -178,9 +185,38 @@ async def accept_quote(
 async def finish(request: Request, staff: Staff = Depends(current_staff)) -> dict:
     _owner(staff)
     async with request.app.state.db.tenant(staff.tenant_id) as conn:
+        # Checked first: the test booking it cancels still proves the owner tried it.
+        await readiness.run(conn, staff.name)
         cleared = await onboarding.end_test(conn, staff)
         await onboarding.update(conn, step="", finished=True)
     return {"finished": True, "test_bookings_cancelled": cleared}
+
+
+@router.get("/readiness")
+async def get_readiness(request: Request, staff: Staff = Depends(current_staff)) -> dict:
+    """Is the business ready to go live, and what is left (ALY-165). The same answer the
+    go-live step, the workspace and the back office show."""
+    async with request.app.state.db.tenant(staff.tenant_id) as conn:
+        return await readiness.run(conn, staff.name)
+
+
+@router.patch("/steps/{key}")
+async def change_step(
+    key: str, body: StepChange, request: Request, staff: Staff = Depends(current_staff)
+) -> dict:
+    """The owner hands a step to ALYR (or takes it back), or chooses how to do it."""
+    _owner(staff)
+    try:
+        async with request.app.state.db.tenant(staff.tenant_id) as conn:
+            if body.owner is not None:
+                await readiness.set_owner(conn, key, body.owner, staff.name, False)
+            if body.choice is not None:
+                await readiness.set_choice(conn, key, body.choice, staff.name, False)
+            return await readiness.run(conn, staff.name)
+    except LookupError as error:
+        raise HTTPException(status_code=404, detail=str(error)) from error
+    except readiness.ReadinessError as error:
+        raise HTTPException(status_code=422, detail=str(error)) from error
 
 
 @router.get("/test-chat")
