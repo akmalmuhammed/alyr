@@ -740,14 +740,16 @@ export default function Start() {
     );
     const row = (c: Check) => {
       const done = c.status === "done";
+      // A step with choices shows them below, with its own "ask ALYR" link.
+      const choosing = !done && c.owner === "client" && (c.key === "whatsapp" || c.key === "payments");
       const action = done
         ? <em>{g.done}</em>
         : c.owner === "alyr"
           ? <span className="ob-owner"><em>{g.alyrOwns}</em><button type="button" className="ob-link" onClick={() => changeStep(c.key, { owner: "client" })} disabled={busy}>{g.takeBack}</button></span>
           : c.status === "waiting"
             ? <em>{g.waiting}</em>
-            : fixButton(c.key) ?? <button type="button" className="ob-btn small" onClick={() => changeStep(c.key, { owner: "alyr" })} disabled={busy}>{g.ask}</button>;
-      const choosing = !done && c.owner === "client" && (c.key === "whatsapp" || c.key === "payments");
+            : choosing ? null
+              : fixButton(c.key) ?? <button type="button" className="ob-btn small" onClick={() => changeStep(c.key, { owner: "alyr" })} disabled={busy}>{g.ask}</button>;
       return (
         <li key={c.key} className={`ob-check ${done ? "done" : c.status === "waiting" ? "waiting" : ""}`}>
           <span className="ob-dot">{done && <Ico name="check" size={14} />}</span>
@@ -762,13 +764,14 @@ export default function Start() {
               <p className="ob-kicker">{g.chooseWhatsapp}</p>
               {choicesOf(c, g.whatsappWays, WHATSAPP_OFFERED)}
               <small className="ob-fine">{g.whatsappNote}</small>
-              {c.status !== "done" && <button type="button" className="ob-link" onClick={() => changeStep(c.key, { owner: "alyr" })} disabled={busy}>{g.ask}</button>}
+              <button type="button" className="ob-link" onClick={() => changeStep(c.key, { owner: "alyr" })} disabled={busy}>{g.ask}</button>
             </div>
           )}
           {choosing && c.key === "payments" && (
             <div className="ob-check-more">
               <p className="ob-kicker">{g.choosePayments}</p>
               {choicesOf(c, g.paymentWays, ["cash_transfer", "online"])}
+              <button type="button" className="ob-link" onClick={() => changeStep(c.key, { owner: "alyr" })} disabled={busy}>{g.ask}</button>
             </div>
           )}
         </li>
