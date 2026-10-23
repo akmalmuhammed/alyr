@@ -185,7 +185,7 @@ const en = {
     chooseWhatsapp: "How should customers reach you on WhatsApp?",
     whatsappWays: {
       alyr_number: { title: "Start on ALYR's number", sub: "Customers message ALYR's number and reach your business." },
-      new_number: { title: "A new number for the business", sub: "Best if your current number is your personal one. Customers save the new number." },
+      new_number: { title: "A new number for the business", sub: "Recommended to start: ALYR connects it fastest. Best if your current number is your personal one. Customers save the new number." },
       move_number: { title: "Move my number, keep my app", sub: "Customers keep the number they know. The WhatsApp Business app keeps working on your phone." },
       own_account: { title: "I already use WhatsApp's business platform", sub: "Through another provider. ALYR connects your account to your workspace." },
     } as Record<string, { title: string; sub: string }>,
@@ -399,7 +399,7 @@ const ar: typeof en = {
     chooseWhatsapp: "كيف يصل إليك عملاؤك على واتساب؟",
     whatsappWays: {
       alyr_number: { title: "ابدأ على رقم ALYR", sub: "يراسل عملاؤك رقم ALYR فيصلون إلى نشاطك." },
-      new_number: { title: "رقم جديد للنشاط", sub: "الأنسب إذا كان رقمك الحالي شخصياً. يحفظ عملاؤك الرقم الجديد." },
+      new_number: { title: "رقم جديد للنشاط", sub: "ننصح به للبداية: نربطه لك بأسرع وقت. الأنسب إذا كان رقمك الحالي شخصياً. يحفظ عملاؤك الرقم الجديد." },
       move_number: { title: "انقل رقمي واحتفظ بالتطبيق", sub: "يبقى عملاؤك على الرقم الذي يعرفونه، ويبقى تطبيق واتساب للأعمال يعمل على هاتفك." },
       own_account: { title: "أستخدم منصة واتساب للأعمال من قبل", sub: "عن طريق مزوّد آخر. تربط ALYR حسابك بمساحة عملك." },
     },
