@@ -7,7 +7,9 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
-    "test": "node --test \"app/**/*.test.mjs\""
+    "test": "node --test \"app/**/*.test.mjs\"",
+    "site:build": "bash ../../scripts/build-site.sh",
+    "site:deploy": "node ../../scripts/site/deploy.mjs"
   },
   "dependencies": {
     "@gsap/react": "2.1.2",
@@ -21,10 +23,13 @@
     "@types/node": "^20",
     "@types/react": "^19",
     "@types/react-dom": "^19",
+    "axe-core": "4.14.0",
     "eslint": "^9",
     "eslint-config-next": "16.3.8",
     "jsqr": "1.4.0",
-    "typescript": "^5"
+    "lighthouse": "13.5.0",
+    "typescript": "^5",
+    "wrangler": "4.150.0"
   },
   "packageManager": "pnpm@11.25.0"
 }
