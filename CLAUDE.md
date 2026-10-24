@@ -115,7 +115,8 @@ scripts/                      check.sh (everything CI runs), demo.sh (start and 
                               finished order page and workspace, English and Arabic),
                               hooks/pre-commit
 specs/                        One folder per spec; write or update the spec before building
-infra/                        Cloud infrastructure as code (proposed in PR #52, not merged)
+infra/cloudflare/api/          The API Worker and container settings for interim hosting (D-052, specs/021);
+                              Azure infrastructure as code was proposed in PR #52, not merged
 packages/compliance/          WPS SIF and e-invoice libraries (not created yet)
 ```
 

@@ -49,3 +49,4 @@ next-env.d.ts
 
 # screenshots from pnpm site:shots (never commit screenshots)
 /.shots/
+/.open-next/

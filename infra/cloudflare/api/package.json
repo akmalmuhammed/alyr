@@ -1,0 +1,20 @@
+{
+  "name": "alyr-api-worker",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "typecheck": "tsc --noEmit",
+    "deploy": "wrangler deploy",
+    "tail": "wrangler tail"
+  },
+  "dependencies": {
+    "@cloudflare/containers": "0.3.7"
+  },
+  "devDependencies": {
+    "@cloudflare/workers-types": "5.20261009.1",
+    "typescript": "5.9.3",
+    "wrangler": "4.150.0"
+  },
+  "packageManager": "pnpm@11.25.0"
+}
