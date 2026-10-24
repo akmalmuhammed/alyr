@@ -56,6 +56,8 @@ node "$root/scripts/site-defer-scripts.mjs" out-site/index.html out-site/ar.html
 cat > out-site/_headers <<'EOF'
 /opengraph-image
   Content-Type: image/png
+/version.txt
+  Cache-Control: no-cache
 /_next/static/*
   Cache-Control: public, max-age=31536000, immutable
 /*
@@ -64,6 +66,15 @@ cat > out-site/_headers <<'EOF'
   Referrer-Policy: strict-origin-when-cross-origin
   X-Frame-Options: DENY
 EOF
+
+# The site for machines: llms.txt, llms-full.txt and a markdown copy of each page (index.md,
+# chat.md, ar/chat.md, ...), made from copy.ts, with no prices and the samples labelled. It adds their
+# types to _headers, so it runs after _headers is written.
+node "$root/scripts/site/llms.mjs" out-site
+
+# Every build names the commit it came from: out-site/version.txt and a <meta name="alyr-build">
+# in each page, so what is live can be traced to git (docs/runbooks/site-deploy.md).
+node "$root/scripts/site/stamp.mjs" out-site
 
 # Fail loudly if a product page or an API address slipped into the output.
 if grep -rlE "127\.0\.0\.1|/sim/|/api/ledger" out-site/*.html out-site/ar/*.html >/dev/null 2>&1; then

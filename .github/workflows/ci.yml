@@ -79,3 +79,34 @@ jobs:
       - run: pnpm test
       - run: pnpm exec tsc --noEmit
       - run: pnpm build
+
+  # The public site as it is published: the real scripts/build-site.sh (not only `next
+  # build`), then the checks that need no database: EN/AR copy parity, banned words and
+  # prices with the offer off, and internal links (scripts/site/check.mjs).
+  site:
+    runs-on: ubuntu-latest
+    env:
+      # Stamp the pull request's own commit, not GitHub's temporary merge commit.
+      ALYR_BUILD_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+      ALYR_BUILD_BRANCH: ${{ github.head_ref || github.ref_name }}
+    defaults:
+      run:
+        working-directory: apps/web
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          package_json_file: apps/web/package.json
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+          cache-dependency-path: apps/web/pnpm-lock.yaml
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm site:check
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: out-site
+          path: apps/web/out-site
+          retention-days: 14
