@@ -667,7 +667,7 @@ a.pm-link[aria-current="page"] .pm-name::after { content: ""; display: inline-bl
   .cta-actions { justify-items: stretch; }
   .btn-sm { min-height: 2.75rem; }
   .statement, .company-say { font-size: 1.5rem; }
-  .steps li { grid-template-columns: 2.25rem 1fr; padding-block: 1.375rem; }
+  .steps li { padding-block: 1.375rem; }
   .product { padding-inline: 0; }
   .product-in { --cut: 3rem; }
   .product-in { padding-block: 3.5rem 2.5rem; }

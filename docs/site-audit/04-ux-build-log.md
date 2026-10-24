@@ -198,3 +198,85 @@ breadcrumbs are in order. The properties were checked against schema.org's own t
 validator.schema.org, which need a public address; no rich results are expected anyway (FAQ
 results are for government and health sites, software results need a price and a rating).
 `alyr-site-page` says how a new page gets its structured data.
+
+### Stage 7 · Verification (`alyr-design/verify.md`), on the built `out-site` served compressed
+
+Two defects found and fixed in this pass: `/chat`'s pillars kept a 2.25rem number column on
+phones after their numbers went (the section grew from 984 to 2,160 px at 390; now one column),
+and the X-ray's "What ALYR checks" label was 3.5:1 on Carbon (axe; now `--on-band-faint`).
+
+**Page heights, px** (light, after a full scroll; before → after):
+
+| Page | en 1440 | en 390 | ar 1440 | ar 390 |
+|---|---|---|---|---|
+| `/` | 17,716 → 12,154 | 21,380 → 16,638 | 17,467 → 12,046 | 20,429 → 15,917 |
+| `/chat` | 8,729 → 8,175 | 10,999 → 10,491 | 8,819 → 8,304 | 10,933 → 10,444 |
+| `/bookings` | 8,738 → 7,755 | 11,718 → 10,490 | 9,036 → 8,056 | 11,648 → 10,489 |
+| `/agent` | 10,308 → 9,373 | 13,940 → 11,453 | 10,454 → 9,504 | 14,148 → 11,606 |
+| `/accounts` | 8,840 → 8,022 | 11,351 → 10,421 | 8,962 → 8,208 | 11,352 → 10,462 |
+| `/shelf` | 10,462 → 9,578 | 14,004 → 13,449 | 10,546 → 9,649 | 13,766 → 13,129 |
+| `/docs` | 10,709 → 9,826 | 15,024 → 14,366 | 10,688 → 9,792 | 14,552 → 13,908 |
+
+**Small text.** The audit's probe, measured, en 1440, each page with its header, menus and
+footer: 881 → 670 (`/` 191 → 142, `/chat` 129 → 102, `/bookings` 112 → 78, `/agent` 90 → 66,
+`/accounts` 118 → 85, `/shelf` 127 → 105, `/docs` 114 → 92); the same at 390: 787 → 550. By the
+audit's own hand inventory (shared items once), 553 → about 361: its 364 with every verdict
+applied, less the fold (−11: the problems' lead, product links and "More we find", the Why
+table's column heads), plus the six "Sample" marks on the products' corners and the fold
+split's (+7) and `/agent`'s "See the whole screen" on phones (+1). The hand figure is an
+estimate from the tables, not a recount of every page.
+
+**Checks.**
+- axe-core 4.x (`C:\t\tools`), all 14 pages, light at 1440 and dark at 390, after a full
+  scroll with motion finished: 0 serious or critical, nothing else reported.
+- 320 px, both languages, all 14 pages: `scrollWidth` 320 everywhere; the only boxes past the
+  edge are the homepage's business tabs inside their own sideways row. Targets under 44 px:
+  `/chat`'s X-ray feature buttons (262 × 24), unchanged from ALY-209 and not touched here.
+- No scripts (390, all 14): every page complete, nothing hidden by a reveal, the demos'
+  first messages in the HTML (Chat 3, Bookings 2, Accounts 1, Shelf 2, Docs 2), JSON-LD present.
+- Reduced motion (1440, all 14): nothing in the first screen at opacity 0.
+- Menus: the Products menu open at 1440 and the phone menu open at 390, light and dark, on
+  `/`, `/ar`, `/bookings`, `/ar/agent`: six products each, a state only on Agent and Shelf.
+- `/agent` at 390: closed, the grid shows Needs you now, Done for you and the four numbers;
+  open, all eight parts.
+- Sample marking in the served HTML (`C:\t\uxfix\figs.mjs`): every figure and every demo and
+  flow on the 14 pages says "fictional" before its first number, and no figure holds a heading.
+- JSON-LD (`C:\t\uxfix\ld.mjs`): see stage 6.
+- Lighthouse 12 mobile, simulated throttling, two runs each: `/` 98 / 100 / 100 / 100, LCP
+  2.4 s, CLS 0; `/agent` 98 / 100 / 100 / 100, LCP 2.4 s, CLS 0; `/docs` 98 / 100 / 100 / 100,
+  LCP 2.4 s, CLS 0 (Performance / Accessibility / Best practices / SEO).
+- `pnpm lint` clean; `pnpm exec tsc --noEmit` clean, also without `next-env.d.ts`; `pnpm test`
+  80 pass; `bash scripts/build-site.sh` passes (156 files); `node scripts/design-check.mjs`:
+  418 files clean, 5 allowed exceptions.
+- Words: the built pages grepped for the AI list (English and Arabic), "coming", "next step for",
+  "Payroll", "Early access", FIG numbers and "Sample conversation": none (the Arabic hits were
+  «تذكير», and "one next step with its rule" describes the report's content). "QAR" appears only
+  inside drawn samples.
+
+Screenshots (not committed) in `docs/site-audit/shots/`: `f/` first screens of all 14 pages at
+1440 and 390, light and dark, and full pages light at 1440 and 390; `v/` the 320 first screens,
+no-script and reduced-motion views, the menus open, `/agent`'s disclosure closed and open; `s1-`
+to `s5-` the stage checks.
+
+## For the founder
+
+- Screenshots above; nothing is published.
+- Whether "Book a check-up" should also get a hero button and a sticky bar on the product
+  pages (stage 2: not added).
+- The Arabic of every new line (ALY-66), listed in stages 3 to 5.
+- The hand inventory's estimate (about 361) against the probe's measured 670 of 881: if a
+  stricter count is wanted, it needs a page-by-page recount.
+
+## Not checked
+
+- A real iPhone or Android; Safari and Firefox (`:has()` drives `/agent`'s disclosure; without
+  it the whole screen shows).
+- The WhatsApp contact state and the offer-on state (the price section's caption and button
+  were changed but not looked at with the offer on).
+- Keyboard paths beyond the menus opening (Tab order through the demos and the disclosure was
+  not walked).
+- The Agent component against `/agent-sample` element by element: the only shared change is
+  `headings={false}`, which the workspace does not pass.
+- Google's Rich Results Test and validator.schema.org (need a public address).
+- 1024 and 1280 spot checks.
+- Motion timing in a run without screenshots.

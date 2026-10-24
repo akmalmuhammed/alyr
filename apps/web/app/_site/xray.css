@@ -68,7 +68,7 @@
 .xr-dot { position: absolute; top: .3125rem; inset-inline-start: 0; width: .6875rem; height: .6875rem; background: var(--band); box-shadow: inset 0 0 0 1.5px var(--on-band-soft); }
 .xr-node-0 .xr-dot { background: var(--volt); box-shadow: none; }
 .xr-checks { display: grid; gap: .375rem; }
-.xr-checks-k { font-family: var(--mono); font-size: .625rem; letter-spacing: .08em; text-transform: uppercase; color: var(--band-mark); }
+.xr-checks-k { font-family: var(--mono); font-size: .625rem; letter-spacing: .08em; text-transform: uppercase; color: var(--on-band-faint); }
 [lang="ar"] .xr-checks-k { font-family: var(--arabic); letter-spacing: 0; text-transform: none; font-size: .75rem; }
 .xr-path .xr-row { padding: .5rem 0; border-color: var(--dark-line); }
 .xr-path .xr-row-t small { color: var(--concrete); }

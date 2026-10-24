@@ -68,7 +68,7 @@ The homepage is "a working drawing of an owner's business" (`docs/site-redesign/
 | The fold | The page's signature: three Carbon planes with the symbol's gaps (a 6 px Paper line across and a 6 px line down the 45° diagonal), at the entry to the Carbon band and again at the top of the closing call. The page shows through the gaps, so the fold stays drawn |
 | The hero plate | The hero figure sits on a Carbon plate with its top start corner cut at 45° (6 rem) and a 0.5 rem Paper slit along the same angle above the order record |
 | `--band` | The Carbon blocks: the band, the plate, the closing call and the ALYR Chat page's two panels. Carbon in light mode, `#1d2024` in dark mode so it still stands apart from the dark page; the header turns `--band` while it sits over a full-bleed one |
-| FIG captions | Every product drawing has a mono caption on a hairline ending in a tick: "FIG 01 · what it shows · SAMPLE, FICTIONAL BAKERY" (Arabic: its own words, no capitals) |
+| The "Sample" mark | Every product drawing is marked as a sample once, in its own chrome: a small mono "SAMPLE" tag beside the shop's name in the window's bar or at the end of its tab row, "Sample business" in a drawn phone's header (Arabic «مثال», «نشاط توضيحي», no capitals). A caption ("what it shows · Sample", no number) only where the drawing needs words. Founder, 24 Oct 2026; it replaced the FIG captions |
 | One sample business | Qirfa Bakery / مخبز قرفة on every homepage figure, with sample prices said so |
 | Money | Tabular figures; amounts and "ALYR" sit in `<bdi>` and never break (`Text.tsx`) |
 | Drawn chats | A neutral chat with no messaging app's logo or colours |
