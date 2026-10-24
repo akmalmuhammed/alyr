@@ -260,7 +260,7 @@ before the stamp. It writes into `out-site`:
     - Bookings: one booking at a time.
     - Agent: fixed rules; the report waits for WhatsApp's approval.
   - The Arabic pages are under "Optional".
-- **`llms-full.txt`:** `llms.txt`, then every copy, English first. About 240 KB in all.
+- **`llms-full.txt`:** `llms.txt`, then every copy, English first: about 120 KB.
 - **`stamp.mjs`** puts `<link rel="alternate" type="text/markdown" href="/<page>.md">` in
   each page's `<head>`. It is added after the build, so no `_site` component changed.
 - **`_headers`** gives each copy `Content-Type: text/markdown; charset=utf-8` and
@@ -310,3 +310,19 @@ before the stamp. It writes into `out-site`:
   - a copy shorter than 600 characters, or one without its title, fails the build;
   - after both branches merge, rerun `pnpm site:check` and read `/index.md` again.
 - Whether any assistant reads `llms.txt`. `03-ax.md` notes that none says it does.
+
+## Handover
+
+- **Docs:** `docs/status.md` (how to publish), the Go-live lane's "Now" and `docs/README.md`
+  (the runbook) are updated.
+- **Not committed on purpose:** the audit files `00` to `03` in this folder. They are the
+  founder's and the lead's input, and are untracked here.
+- **Needs Akmal,** before the GitHub deploy can run: `docs/runbooks/site-deploy.md`,
+  "One-time setup".
+  1. Create the Cloudflare API token from the "Edit Cloudflare Workers" template, limited
+     to ALYR's account and the zones alyr.qa and alyr.online.
+  2. Add it and the account ID as the repository secrets `CLOUDFLARE_API_TOKEN` and
+     `CLOUDFLARE_ACCOUNT_ID`.
+  3. Create the GitHub environment `production` with himself as required reviewer.
+  4. Turn on version URLs for `alyr-site`, or let the first approved deploy do it.
+  5. Unblock GitHub Actions billing.
