@@ -974,3 +974,23 @@ There is no separate Pay product: payment links stay a module of Chat and Bookin
 - **Webhooks are written in the transaction of the event, signed, retried through the job queue, logged and guarded against SSRF.** HMAC-SHA256 over `<timestamp>.<body>`, eight attempts over about ten hours, a switch-off after ten failures and a day without success with an email to the owners, no customer data in the payload, and a guard that refuses anything but a public https name, re-resolves at send time, connects to the IP it checked, follows no redirect and reads 2 KB. *Rejected:* delivering webhooks synchronously inside the request (a slow receiver would hold a sale open).
 - **Undoing a CSV import withdraws; it never deletes.** Issued paper is never deleted (D-042). A document another system numbered, never sent, with no credit note against it, can be marked withdrawn (the one change the immutability guard allows besides voiding): it stays on record with its number and PDF, leaves the lists and the hosted page, and gives its number and sale back so a corrected file can be imported. A document ALYR numbered is never taken back (a gapless counter), and an import that sent anything or voided something cannot be undone.
 - **Left open:** the templates are to be submitted by the founder; a real WhatsApp send, a real email and a real POS have not been tried; the lawyer's answers (opt-in by settings screen; an invoice rendered for a shop with no CR number from another system's data); the Arabic is a draft (ALY-66); the hosted page does not yet say a document is the other system's.
+
+## D-049 · Onboarding is one engine with three doors; a readiness check decides ready and live
+**Date** 23 Oct 2026 · **Status** Accepted (the founder, 23 Oct: "start building this", on the client onboarding plan) · Linear ALY-165, ALY-163 · Spec `specs/018-onboarding-engine/spec.md`
+
+**The decision.** Every client goes through one onboarding flow. A client can come in on their own from the site, with ALYR setting them up, or from a link the founder sends after a visit; the steps are the same, and what differs is who owns each step (the client or ALYR). One readiness check, worked out from the business's own data, says what is left and is the same in `/start`, the workspace and the back office. A business is *ready* when everything but its WhatsApp number is done, and *live* when the number is connected too. Live is recorded once and kept.
+
+**Why.**
+- Two separate flows for self-serve and assisted clients would drift. One flow with owners per step lets the founder hand-hold the first clients and learn exactly which steps to automate.
+- Meta's approval is the slowest dependency. "Ready, waiting for WhatsApp" lets a client finish everything else and lets ALYR see who is waiting, instead of a client stuck at an unexplained last step.
+- The money-back promise (D-034) and the first month need a start date nobody can argue with. Live is that date.
+
+**How.**
+- Done is never stored by hand: each check reads the data (`core/readiness.py`). What data cannot say is stored: the step's owner, a blocker ALYR writes, the owner's choice of WhatsApp way and payment way.
+- Every change goes into an append-only record for the funnel, with whether ALYR made it. No customer data.
+- The four WhatsApp ways are recorded now (ALYR's number, a new number, moving the shop's number with Meta's coexistence so the WhatsApp Business app keeps working, the shop's own account). Owners are offered the last three; ALYR's shared number needs routing that does not exist and the founder's decision (ALY-217).
+
+**Chosen over** a status field staff set by hand (it lies as soon as someone deletes a service), and over working out the board from every business on every page load (it would not scale; the board reads the last state the check saw).
+
+**Revisit when** terms acceptance (ALY-167) and per-shop templates (ALY-172) exist: they become checks. When billing starts at Live (ALY-218).
+

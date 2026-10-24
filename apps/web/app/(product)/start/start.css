@@ -363,3 +363,21 @@
 @media (prefers-reduced-motion: reduce) {
   .ob *, .ob *::after { animation: none !important; transition: none !important; }
 }
+
+/* The readiness check (ALY-165): who owns a step, what holds it up, and the choices. */
+.ob-check { grid-template-areas: "dot text action" "more more more"; }
+.ob-check > .ob-dot { grid-area: dot; }
+.ob-check > .ob-check-text { grid-area: text; }
+.ob-check-more { grid-area: more; display: grid; gap: 10px; padding-top: 4px; }
+.ob-check.waiting .ob-dot { box-shadow: 0 0 0 2px var(--volt-ink) inset; }
+.ob-check-text .ob-blocker { color: var(--ink-2); }
+.ob-owner { display: grid; justify-items: end; gap: 2px; }
+.ob-choices { display: grid; gap: 8px; }
+.ob-choice { display: grid; gap: 2px; text-align: start; padding: 12px 14px; border-radius: 14px; border: 0; background: var(--raise); box-shadow: 0 0 0 1px var(--hair-2) inset; color: var(--ink); font: inherit; cursor: pointer; }
+.ob-choice b { font-size: var(--ui-body-sm); font-weight: 600; }
+.ob-choice small { color: var(--ink-3); font-size: var(--ui-small); line-height: 1.45; }
+.ob-choice.on { box-shadow: 0 0 0 2px var(--ink) inset; background: var(--volt-wash); }
+.ob-choice:focus-visible { outline: 2px solid var(--ink); outline-offset: 2px; }
+.ob-fine { color: var(--ink-3); font-size: var(--ui-small); line-height: 1.5; }
+.ob-also { margin-top: 18px; }
+@media (min-width: 720px) { .ob-choices { grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); } }

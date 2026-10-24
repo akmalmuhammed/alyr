@@ -43,8 +43,15 @@ type Quote = {
   totals?: { monthly_subtotal_text: string; monthly_total_text: string; period_total_text: string; one_time_total: number; one_time_total_text: string };
   promise?: Text | null; accepted_at?: string | null;
 };
-type WsStep = { key: string; done: boolean; asked: boolean; connection: string };
-type Workspace = { products: { key: string; steps: WsStep[] }[]; connections: { key: string; connected: boolean }[] };
+// The readiness check (ALY-165): what is left before the business goes live, and who owns it.
+type Check = {
+  key: string; label: Record<Lang, string>; todo: Record<Lang, string>;
+  status: "done" | "todo" | "waiting"; owner: "client" | "alyr"; asked: boolean; blocker: string;
+  choice: string; choices: string[];
+};
+type Readiness = { stage: "setting_up" | "ready" | "live"; checks: Check[]; left: string[] };
+// "Start on ALYR's number" waits on the founder's decision (ALY-217); the others are offered.
+const WHATSAPP_OFFERED = ["new_number", "move_number", "own_account"];
 type Booking = { customer: string; service: string; when_text: string; status: string };
 type Step = "loading" | "account" | "code" | "type" | "basics" | "services" | "hours" | "assisted" | "try" | "plan" | "golive" | "finished";
 
@@ -136,7 +143,7 @@ export default function Start() {
   const [chat, setChat] = useState<ChatMessage[]>([]);
   const [draft, setDraft] = useState("");
   const [tested, setTested] = useState<Booking | null>(null);
-  const [ws, setWs] = useState<Workspace | null>(null);
+  const [ready, setReady] = useState<Readiness | null>(null);
   const [quote, setQuote] = useState<Quote | null>(null);
   const [quoteFlash, setQuoteFlash] = useState(false);
   const quoteSeen = useRef("");
@@ -190,6 +197,8 @@ export default function Start() {
         if (!loaded) return setStep("account");
         // A finished owner comes back here only to answer a price ALYR published since.
         if (loaded.finished && loaded.quote.status === "published") return setStep("plan");
+        // The workspace sends a finished owner back to the go-live list (ALY-165).
+        if (loaded.finished && new URLSearchParams(window.location.search).has("golive")) return setStep("golive");
         if (loaded.finished) router.replace("/app");
         setStep(loaded.finished ? "finished" : ((loaded.step || loaded.steps[0]) as Step));
       } catch {
@@ -362,21 +371,22 @@ export default function Start() {
   });
 
   // ── go live ──────────────────────────────────────────
-  const loadWorkspace = useCallback(async () => {
-    const answer = await call<Workspace>("/api/workspace");
-    if (answer.ok) setWs(answer.data);
+  const loadReadiness = useCallback(async () => {
+    const answer = await call<Readiness>("/api/onboarding/readiness");
+    if (answer.ok) setReady(answer.data);
   }, []);
   useEffect(() => {
     if (step !== "golive") return;
-    const first = setTimeout(() => { loadWorkspace().catch(() => undefined); }, 0);
+    const first = setTimeout(() => {
+      loadReadiness().catch(() => undefined);
+    }, 0);
     return () => clearTimeout(first);
-  }, [step, loadWorkspace]);
-  const wsStep = (key: string) => ws?.products.flatMap((p) => p.steps).find((s) => s.key === key);
-  const ask = (stepKey: string) => guard(async () => {
-    // Filed under the product the step belongs to (a salon's steps are ALYR Bookings').
-    const product = ws?.products.find((p) => p.steps.some((s) => s.key === stepKey))?.key ?? "chat";
-    await call("/api/workspace/setup-requests", "POST", { product, step: stepKey, note: "" });
-    await loadWorkspace();
+  }, [step, loadReadiness]);
+  // Hand a step to ALYR or take it back, or choose how to do it. The answer is the new list.
+  const changeStep = (key: string, change: { owner?: "client" | "alyr"; choice?: string }) => guard(async () => {
+    const answer = await call<Readiness>(`/api/onboarding/steps/${key}`, "PATCH", change);
+    if (answer.ok) setReady(answer.data);
+    else setError(t.offline);
   });
   const finish = () => guard(async () => {
     await call("/api/onboarding/finish", "POST");
@@ -696,35 +706,95 @@ export default function Start() {
       );
     }
   } else if (step === "golive") {
-    const whatsapp = wsStep("whatsapp");
-    const provider = wsStep("provider");
-    const item = (done: boolean | undefined, title: string, sub: string, action?: React.ReactNode, next?: boolean) => (
-      <li className={`ob-check ${done ? "done" : next ? "next" : ""}`}>
+    const g = t.golive;
+    const item = (done: boolean, title: string, sub: string, action?: React.ReactNode) => (
+      <li className={`ob-check ${done ? "done" : ""}`}>
         <span className="ob-dot">{done && <Ico name="check" size={14} />}</span>
         <span className="ob-check-text"><b>{title}</b><small>{sub}</small></span>
         {action}
       </li>
     );
+    const stage = g.stage[ready?.stage ?? "setting_up"];
+    // Where the owner does each step: back in this flow, or in the workspace.
+    const fixes: Record<string, (() => void) | string> = {
+      content: way === "appointments" ? () => go("services") : "/app/catalog",
+      hours: () => go("hours"),
+      test: () => go("try"),
+      price: () => go("plan"),
+    };
+    const fixButton = (key: string) => {
+      const fix = fixes[key];
+      if (!fix) return null;
+      return typeof fix === "string"
+        ? <Link className="ob-btn small ghost" href={fix}>{g.fix}</Link>
+        : <button type="button" className="ob-btn small ghost" onClick={fix}>{g.fix}</button>;
+    };
+    const choicesOf = (c: Check, ways: Record<string, { title: string; sub: string }>, offered: string[]) => (
+      <div className="ob-choices" role="radiogroup" aria-label={c.label[lang]}>
+        {offered.filter((w) => c.choices.includes(w)).map((w) => (
+          <button key={w} type="button" role="radio" aria-checked={c.choice === w}
+            className={`ob-choice ${c.choice === w ? "on" : ""}`} disabled={busy}
+            onClick={() => changeStep(c.key, { choice: w })}>
+            <b>{ways[w].title}</b><small>{ways[w].sub}</small>
+          </button>
+        ))}
+      </div>
+    );
+    const row = (c: Check) => {
+      const done = c.status === "done";
+      // A step with choices shows them below, with its own "ask ALYR" link.
+      const choosing = !done && c.owner === "client" && (c.key === "whatsapp" || c.key === "payments");
+      const action = done
+        ? <em>{g.done}</em>
+        : c.owner === "alyr"
+          ? <span className="ob-owner"><em>{g.alyrOwns}</em><button type="button" className="ob-link" onClick={() => changeStep(c.key, { owner: "client" })} disabled={busy}>{g.takeBack}</button></span>
+          : c.status === "waiting"
+            ? <em>{g.waiting}</em>
+            : choosing ? null
+              : fixButton(c.key) ?? <button type="button" className="ob-btn small" onClick={() => changeStep(c.key, { owner: "alyr" })} disabled={busy}>{g.ask}</button>;
+      return (
+        <li key={c.key} className={`ob-check ${done ? "done" : c.status === "waiting" ? "waiting" : ""}`}>
+          <span className="ob-dot">{done && <Ico name="check" size={14} />}</span>
+          <span className="ob-check-text">
+            <b>{c.label[lang]}</b>
+            {!done && <small>{c.todo[lang]}</small>}
+            {c.blocker && <small className="ob-blocker">{g.heldUp(c.blocker)}</small>}
+          </span>
+          {action}
+          {choosing && c.key === "whatsapp" && (
+            <div className="ob-check-more">
+              <p className="ob-kicker">{g.chooseWhatsapp}</p>
+              {choicesOf(c, g.whatsappWays, WHATSAPP_OFFERED)}
+              <small className="ob-fine">{g.whatsappNote}</small>
+              <button type="button" className="ob-link" onClick={() => changeStep(c.key, { owner: "alyr" })} disabled={busy}>{g.ask}</button>
+            </div>
+          )}
+          {choosing && c.key === "payments" && (
+            <div className="ob-check-more">
+              <p className="ob-kicker">{g.choosePayments}</p>
+              {choicesOf(c, g.paymentWays, ["cash_transfer", "online"])}
+              <button type="button" className="ob-link" onClick={() => changeStep(c.key, { owner: "alyr" })} disabled={busy}>{g.ask}</button>
+            </div>
+          )}
+        </li>
+      );
+    };
     main = (
       <>
-        {head(t.golive.title, t.golive.sub)}
+        {head(stage.title, stage.sub)}
+        <ul className="ob-checks">{(ready?.checks ?? []).map(row)}</ul>
+        <p className="ob-kicker ob-also">{g.also}</p>
         <ul className="ob-checks">
-          {way === "appointments" && item(true, t.golive.setup, t.golive.setupSub(rows.length))}
-          {way === "appointments" && item(Boolean(tested), tested ? t.golive.tried : t.golive.notTried, tested ? t.golive.triedSub : t.try.waiting)}
-          {item(whatsapp?.done, t.golive.whatsapp, t.golive.whatsappSub,
-            whatsapp?.done ? <em>{t.golive.connected}</em> : whatsapp?.asked ? <em>{t.golive.asked}</em> : <button type="button" className="ob-btn small" onClick={() => ask("whatsapp")} disabled={busy}>{t.golive.ask}</button>, true)}
-          {item(provider?.done, t.golive.payments, t.golive.paymentsSub,
-            provider?.done ? <em>{t.golive.connected}</em> : provider?.asked ? <em>{t.golive.asked}</em> : <button type="button" className="ob-btn small ghost" onClick={() => ask("provider")} disabled={busy}>{t.golive.ask}</button>)}
-          {item(false, t.golive.team, t.golive.teamSub, <Link className="ob-btn small ghost" href="/app/team">{t.golive.invite}</Link>)}
-          {way === "appointments" && state?.catalog && item(false, t.golive.catalog(state.catalog.section[lang === "ar" ? "name_ar" : "name"]), t.golive.catalogSub,
-            <Link className="ob-btn small ghost" href="/app/catalog">{t.golive.open_}</Link>)}
+          {item(false, g.team, g.teamSub, <Link className="ob-btn small ghost" href="/app/team">{g.invite}</Link>)}
+          {way === "appointments" && state?.catalog && item(false, g.catalog(state.catalog.section[lang === "ar" ? "name_ar" : "name"]), g.catalogSub,
+            <Link className="ob-btn small ghost" href="/app/catalog">{g.open_}</Link>)}
         </ul>
       </>
     );
     actions = (
       <>
         <button className="ob-btn ghost" type="button" onClick={() => go("plan")}>{t.back}</button>
-        <button className="ob-btn primary" type="button" disabled={busy} onClick={finish}>{t.golive.open}<Ico name="arrow" /></button>
+        <button className="ob-btn primary" type="button" disabled={busy} onClick={finish}>{g.open}<Ico name="arrow" /></button>
       </>
     );
   } else if (step === "finished") {

@@ -34,6 +34,8 @@ type State = {
   plan: { status: "preparing" | "published" | "accepted"; monthly_total_text?: string } | null;
 };
 type Card = { key: string; module: string; label: Text; value: number; text: string };
+// The go-live readiness check (ALY-165, D-049): the same answer as /start and the back office.
+type Readiness = { stage: "setting_up" | "ready" | "live"; checks: { key: string; label: Text; status: string }[]; left: string[] };
 type Lang = "en" | "ar";
 type Command = { id: string; group: string; label: string; icon: string; run: () => void };
 
@@ -56,6 +58,9 @@ const T = {
     planReady: "Your ALYR price is ready",
     planReadySub: (amount: string) => `${amount} a month. Review it and accept it to go ahead.`,
     planReview: "Review and accept",
+    goLive: { setting_up: "A few steps left to go live", ready: "Ready, waiting for your WhatsApp number" } as Record<string, string>,
+    goLiveSub: (left: string) => `Still to do: ${left}.`,
+    goLiveOpen: "See what is left",
     productsTitle: "Products", productsEyebrow: "Your plan",
     productsSub: "Switch on what your business needs. Switching off hides the screens and keeps every record.",
     active: "Active", available: "Available", on: "On", off: "Off",
@@ -91,6 +96,9 @@ const T = {
     planReady: "سعرك من ALYR جاهز",
     planReadySub: (amount: string) => `${amount} شهرياً. راجعه واقبله للمتابعة.`,
     planReview: "راجع واقبل",
+    goLive: { setting_up: "خطوات قليلة للإطلاق", ready: "جاهز، بانتظار رقم واتساب" },
+    goLiveSub: (left: string) => `المتبقي: ${left}.`,
+    goLiveOpen: "اعرض المتبقي",
     productsTitle: "المنتجات", productsEyebrow: "خطتك",
     productsSub: "فعّل ما يحتاجه عملك. الإيقاف يخفي الشاشات ويحفظ كل السجلات.",
     active: "مفعّل", available: "متاح", on: "مفعّل", off: "متوقف",
@@ -193,6 +201,7 @@ export default function WorkspaceShell() {
   const section = params.section?.[0] ?? "home";
   const [state, setState] = useState<State | null>(null);
   const [cards, setCards] = useState<Card[]>([]);
+  const [readiness, setReadiness] = useState<Readiness | null>(null);
   const [agent, setAgent] = useState<AgentView | null>(null);
   const [agentRise, setAgentRise] = useState(false);
   // ALYR Agent's links open a screen filtered to the rows a rule counted (`?show=`).
@@ -240,6 +249,11 @@ export default function WorkspaceShell() {
       setState(s);
       setCards(h.cards);
       setOffline(false);
+      // Only those who can act on it see what is left to go live.
+      if (s.can_manage) {
+        const r = await fetch("/api/onboarding/readiness", { cache: "no-store" });
+        if (r.ok) setReadiness(await r.json());
+      }
     } catch {
       setOffline(true);
     }
@@ -448,6 +462,16 @@ export default function WorkspaceShell() {
             <span className="sh-check"><Tick /></span>
             <div><h2>{t.planReady}</h2><p className="sh-note">{t.planReadySub(state.plan.monthly_total_text ?? "")}</p></div>
             <Link className="btn small" href="/start">{t.planReview}<Icon name="arrow" className="sh-ico arrow" /></Link>
+          </section>
+        )}
+        {readiness && readiness.stage !== "live" && state.can_manage && (
+          <section className="sh-tile raised sh-allset sh-plan-ready sh-home-row" style={stagger(0)}>
+            <span className="sh-check" />
+            <div>
+              <h2>{t.goLive[readiness.stage]}</h2>
+              <p className="sh-note">{t.goLiveSub(readiness.checks.filter((c) => c.status !== "done").map((c) => pick(c.label)).join(lang === "ar" ? "، " : ", "))}</p>
+            </div>
+            <Link className="btn small" href="/start?golive">{t.goLiveOpen}<Icon name="arrow" className="sh-ico arrow" /></Link>
           </section>
         )}
         {agent ? (
