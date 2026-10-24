@@ -66,3 +66,18 @@ Done:
 Decisions while building: one mark per crop was rejected for the homepage products until stage 5
 decides the rows (see there). The Docs signature figure's phone keeps "Business account": the
 figure is marked once, in its window bar.
+
+### Stage 2 · "Book a check-up" on every page (founder decision 2; `01-ux.md` A1)
+
+Done: `Shell` takes the action from `home.final` (`action` "Book a check-up" / «احجز فحصاً
+لنشاطك» as the homepage already had it, `short` "Check-up" below 62rem) unless a page names its
+own, so the header button, the closing call's button and the phone's sticky bar say it on the
+homepage and all six product pages, in both languages. It is the same `contactLink` (the mail
+link in the email state). The price section's button (offer on) says it too. `nav.cta` (the
+old "Email us" / "Message us" / "Talk to us" header names) is gone; `contact.email` still names
+a contact button that is given no label (none on these pages now).
+
+Not added: a hero button or a sticky bar on the product pages. Their openings have no button
+today and the founder's list names the places the homepage has; adding them would push the demo
+out of the phone's first screen (`01-ux.md` F1) and add a sticky layer (P1-a). For the founder,
+if he meant a new button there too.

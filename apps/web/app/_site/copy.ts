@@ -479,7 +479,6 @@ export type Copy = {
   nav: {
     products: string; business: string; how: string; questions: string; price: string;
     other: string; home: string; menu: string; sections: string; productsMenu: string;
-    cta: { whatsapp: string; email: string; pending: string };
   };
   /** The suite, in its fixed order: the Products menu, the footer, the rows on each page. */
   products: {
@@ -584,7 +583,6 @@ const en: Copy = {
     menu: "Menu",
     sections: "Sections",
     productsMenu: "ALYR products",
-    cta: { whatsapp: "Message us", email: "Email us", pending: "Talk to us" },
   },
   products: {
     items: {
@@ -3026,7 +3024,6 @@ const ar: Copy = {
     menu: "القائمة",
     sections: "الأقسام",
     productsMenu: "منتجات ALYR",
-    cta: { whatsapp: "راسلنا", email: "راسلنا بالبريد", pending: "تواصل معنا" },
   },
   products: {
     items: {

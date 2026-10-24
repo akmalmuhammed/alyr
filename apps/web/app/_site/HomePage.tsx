@@ -713,7 +713,7 @@ function Price({ locale }: { locale: Locale }) {
           </figure>
         </div>
         <div className="price-cta">
-          <ContactButton locale={locale} lean />
+          <ContactButton locale={locale} lean label={copy[locale].home.final.action} />
           <ContactNote locale={locale} />
         </div>
       </div>

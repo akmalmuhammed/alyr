@@ -57,8 +57,9 @@ export function Shell({
 }: {
   locale: Locale;
   page: PageKey;
-  /** The closing call; `action` names its button, the header's and the phone bar's too, and
-   * `short` the header's on a phone. */
+  /** The closing call. Its button, the header's and the phone bar's all say the one action,
+   * "Book a check-up" (founder, 24 Oct 2026: one name on every page), from `home.final`
+   * unless a page names its own; `short` is the header's on a phone. */
   cta: { title: string; body: string; action?: string; short?: string };
   bar?: boolean;
   children: React.ReactNode;
@@ -77,6 +78,8 @@ export function Shell({
   const contact = contactLink(locale);
   const other = PATHS[page][otherLocale];
   const name = (key: ProductKey) => t.products.items[key].name;
+  const action = cta.action ?? t.home.final.action;
+  const short = cta.short ?? t.home.final.short;
 
   return (
     <>
@@ -100,12 +103,8 @@ export function Shell({
             </a>
             <ThemeSwitch locale={locale} place="bar" />
             <a className="btn btn-volt btn-sm btn-notch" href={contact}>
-              {cta.action && cta.short ? (
-                <>
-                  <span className="top-cta-full">{cta.action}</span>
-                  <span className="top-cta-short">{cta.short}</span>
-                </>
-              ) : (cta.action ?? t.nav.cta[CONTACT_STATE])}
+              <span className="top-cta-full">{action}</span>
+              <span className="top-cta-short">{short}</span>
             </a>
             <details className="top-menu" data-menu>
               <summary aria-label={t.nav.menu}><Icon name="menu" className="ico" /></summary>
@@ -156,7 +155,7 @@ export function Shell({
                 <ContactPending locale={locale} className="cta-pending" />
               ) : (
                 <div className="cta-actions" data-final-cta>
-                  <ContactButton locale={locale} lean label={cta.action} />
+                  <ContactButton locale={locale} lean label={action} />
                   {CONTACT_STATE === "whatsapp" ? (
                     <p className="cta-draft">
                       <span className="sr-only">{t.contact.draft}: </span>
@@ -203,7 +202,7 @@ export function Shell({
 
       {bar && CONTACT_STATE !== "pending" && (
         <div className="bar" data-bar role="region" aria-label={t.contact.bar}>
-          <ContactButton locale={locale} className="bar-btn" label={cta.action} />
+          <ContactButton locale={locale} className="bar-btn" label={action} />
         </div>
       )}
       <SiteMotion />
