@@ -4,6 +4,12 @@
 # ALYR_JOBS_INLINE is "false" in production: the API only queues jobs and the runner runs them.
 set -euo pipefail
 
+# With arguments, run that command instead (for example `python -m alyr.migrate`), so one image
+# serves the API and one-off jobs such as migrations.
+if [ "$#" -gt 0 ]; then
+  exec "$@"
+fi
+
 python -m alyr.worker &
 worker=$!
 uvicorn alyr.main:app --host 0.0.0.0 --port "${PORT:-8080}" \
