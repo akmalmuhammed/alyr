@@ -7,7 +7,7 @@ from fastapi import APIRouter, Depends, HTTPException, Request, Response
 from pydantic import BaseModel, Field
 
 from alyr.config import get_settings
-from alyr.core import auth, mail, onboarding, pricing, readiness, whatsapp_setup
+from alyr.core import access, auth, mail, onboarding, pricing, readiness, whatsapp_setup
 from alyr.core.auth import Staff
 from alyr.routes.deps import current_staff
 
@@ -225,6 +225,14 @@ async def change_step(
         raise HTTPException(status_code=404, detail=str(error)) from error
     except readiness.ReadinessError as error:
         raise HTTPException(status_code=422, detail=str(error)) from error
+
+
+@router.get("/payment")
+async def payment(request: Request, staff: Staff = Depends(current_staff)) -> dict:
+    """What opens the workspace (ALY-212, D-051): the amount due, what was paid, how to pay,
+    and whether the products are open."""
+    async with request.app.state.db.tenant(staff.tenant_id) as conn:
+        return await access.summary(conn)
 
 
 @router.patch("/whatsapp")
