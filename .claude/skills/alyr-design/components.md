@@ -31,7 +31,7 @@ and the Agent follow these; the product screens have their own older versions (m
 |---|---|---|---|
 | Pending dot and status line | `.dot-pending`, `.status-line` (`site.css`), `ContactPending` | Something not available yet, said plainly | An error box, a disabled button, a "coming soon" badge on a feature an owner or customer would look for (D-039) |
 | Solid rule; dashed rule; section rule with crosses | `.rule`, `.rule-dashed` (`_site/kit.css`) | Above every section; dashed for a slot waiting to become true | Dashed as decoration |
-| "Sample" mark | `SampleMark` (`_site/Frames.tsx`), `.mark-sample` (`site.css`) | Every drawn product screen, once, in its own chrome: after the shop's name in a window's `.aw-bar`, at the end of a flow's tab row, in a panel's top when a demo tab has no phone; a drawn phone says `fig.business` ("Sample business") under the name instead. `aria-hidden`: the figure's first line (an `sr-only` `figcaption`, the sample's `fictional` or `fig.note`) says it for machines, and the drawing sits in a `data-nosnippet` box | A second mark on the same drawing; a page-level "everything here is fictional" line instead; a mark on a figure that has the sample switch |
+| "Sample" mark | `SampleMark` (`_site/Frames.tsx`), `.mark-sample` (`site.css`) | Every drawn product screen, once, in its own chrome: after the shop's name in a window's `.aw-bar`, at the end of a flow's tab row, in a panel's top when a demo tab has no phone; a drawn phone says `fig.business` ("Sample business") under the name instead. `aria-hidden`: the figure's first line (an `sr-only` `figcaption`, the sample's `fictional` or `fig.note`) says it for machines, and the drawing sits in a `data-nosnippet` box | A second mark on the same drawing; a page-level "everything here is fictional" line instead; a mark on a figure that has the sample switch. A frame of several drawings of one sample business (the homepage's products plate) is one figure set: one mark, in the frame's own chrome, and none on its tiles |
 | Caption | `FigCaption` (`_site/Drawings.tsx`), `.cap` (`site.css`) | Only a drawing that needs words: "what it shows · Sample", no FIG number. First child of its figure, shown below with `fig-cap-end` | A caption beside a chrome mark; a caption that wraps to an orphan (it balances) |
 | Contact states | `Contact.tsx`, `site.ts` (`CONTACT_STATE`) | WhatsApp when `NEXT_PUBLIC_ALYR_WHATSAPP` is set, else email, else pending; decided at build time | A hand-written mailto or wa.me link; "opens soon" more than once on a page |
 | Offer switch | `site.ts` `OFFER_LIVE` | Prices, the hero price, money-back lines, the price question and the Price link | A price anywhere outside it, including meta and social cards (`factsNoOffer`, `descriptionNoOffer`) |
@@ -49,7 +49,7 @@ and the Agent follow these; the product screens have their own older versions (m
 | Tabbed demo | `ProductDemo.tsx` | Product heroes; plays only on screen, can be paused |
 | How it works | `FlowDiagram.tsx` | Product pages and the homepage's One order; may keep moving while on screen. Opens on a finished frame (the first story's last step) and plays from step 1 once 60% of it is in view; the signal on the wire is one 45° tick per step, never a looping glow |
 | The fold | `.band-fold` (`site.css`) | Into a Carbon band and at the top of the closing call |
-| Carbon plate | `.af-plate` (`agentfig.css`), `.product-in` (`site.css`) | Behind the hero figure; product page openings. Top start corner cut at 45°, mirrored |
+| Carbon plate | `.af-plate` (`agentfig.css`), `.product-in` (`site.css`), `.sf` (`suite.css`) | Behind the hero figure; product page openings; the homepage's products. Top start corner cut at 45°, mirrored |
 | Closing call | `.cta`, `.cta-mark` | Every page, full-bleed Carbon (`--band`), the fold at its top |
 | Sticky contact bar | `.bar` (`site.css`) | Phones under 53 rem once the hero's button has gone; hides the header's Volt button and hides again at the closing call |
 | Questions | `.qa` (`kit.css`), native `<details>`, an `id` per question | Every page |
@@ -66,6 +66,7 @@ and the Agent follow these; the product screens have their own older versions (m
 | Drawn workspace screens | `Sheets.tsx`, `Drawings.tsx`, `PageDrawings.tsx` | Product pages, in the product's exact words | Hand copies of `(product)/_workspace/Screens.tsx`: they drift. Prefer a captured sample, as the Agent does |
 | Numbered marks and callouts | `.co-n` (`kit.css`), `drawings.css` | Carbon discs with white mono numbers (a Volt ring in dark) | Volt discs: a number is not an action |
 | Agent feed and sample switch | `AgentFigure.tsx`, `agentfig.css`, `ReportSwitch.tsx` | Homepage hero, spotlight, `/agent` | Only events the product performs and logs |
+| Products frame | `SuiteFrame.tsx`, `suite.css` | The homepage's "One shop, six products": one plate, a tile per product, each one link with a fragment of its real screen and one moment that plays once on hover, focus or in view | A second Sample mark; a fade instead of the hard crop; a moment that loops or plays again |
 
 ## Shared with the product
 

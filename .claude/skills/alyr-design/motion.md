@@ -20,7 +20,9 @@ curves, which the workspace's `.sh` still calls `--ease` and `--spring`).
    rings, no marquee. A status dot lights once, with one ring. Allowed to keep moving:
    explanatory figures that play only while on screen, can be paused and stay still with
    reduced motion (the `/chat` demo and how-it-works flow), and what follows the scroll
-   (the two progress rules).
+   (the two progress rules). A moment may wait for the visitor where there is a fine pointer
+   (the homepage's product tiles play on hover or focus, and in view on a phone): it still
+   plays once, and while it waits it shows a true, earlier state of the same screen.
 2. **Reduced motion shows end states.** Under `prefers-reduced-motion: reduce` nothing
    travels and nothing plays by itself; every figure is composed, every count at its final
    value. Check with the capture script's `--reduced-motion`.

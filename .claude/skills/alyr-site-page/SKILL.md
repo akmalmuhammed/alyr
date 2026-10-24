@@ -79,13 +79,23 @@ words under `home` in `copy.ts`):
 **Section openings vary** (framer-review P3, 24 Oct 2026): a split opening (heading at the
 start, lead and link on the end column at its last baseline: How we work, ALYR Agent), a full
 one (one heading line across the grid: By business), and the heading inside the figure's
-plate (One order). Do not give two neighbouring sections the same opening, and land each
-section's content within about 300 px of its top at 1440 (`.open-split`, `.open-full`,
-`.open-plate` in `home.css`).
-7. **The products** on the Carbon band as six plain rows (`room.css` `.suite-row`): name,
-   descriptor, the state only on Agent and Shelf, one sentence and its link, and the corner of
-   the product's real screen at true size with its "Sample" mark; then the two notes. Nothing
-   is pinned and nothing plays. Then **Price** (offer on: the price, examples by trade, setup,
+plate (One order). Do not give two neighbouring sections the same opening (one exception:
+the products open split after ALYR Agent's split, as the founder approved the frame in Framer;
+the plate under them differs), and land each section's content within about 300 px of its
+top at 1440 (`.open-split`, `.open-full`, `.open-plate` in `home.css`).
+7. **The products: "One shop, six products"** (framer-review P1, the founder's yes on the
+   Framer prototype; `SuiteFrame.tsx`, `suite.css`, words in `home.suite.frame`). A split
+   opening, then one Carbon plate cut at 45° (mirrored): a bar with Qirfa Bakery, the frame's
+   one "Sample" mark and "Thursday · 16:20", then six tiles in the suite's order: Chat (8
+   columns) and Bookings; Agent, Accounts, and Shelf over Docs. Two columns on a tablet, one on
+   a phone. Each tile is one link named "{name}, {descriptor}" (and its state), holding a
+   fragment of the product's real screen (`inert`, cropped hard at the tile's edge, no fade)
+   and its name, descriptor and arrow. Numbers come from the engine's sample (`_agent/samples`),
+   Shelf's page copy and `paperData.ts`, never retyped. Each tile plays one moment once (CSS
+   keyed on `is-in`, which SiteMotion adds on hover or focus with a fine pointer, and at 60% in
+   view elsewhere), done by 1.7 s; the HTML is the end state, so without scripts or with
+   reduced motion every tile is finished. The one Volt fill is the chosen slot. Then the two
+   notes. Nothing is pinned. The six plain rows of 24 Oct and their crops are gone. Then **Price** (offer on: the price, examples by trade, setup,
    the first month, what every month includes, the agreement), **Trust**, **Questions** (the
    first `faq.shown` open to read, the rest under "More questions"; a `#q-...` link opens the
    fold), the **closing call**, the **footer** (no clock).
@@ -160,8 +170,8 @@ silently not published, or published and not linked:
 6. **`scripts/build-site.sh`:** add the key to `pages=`; that one list copies the HTML in
    both languages, the social card and the deferred-scripts step. It fails if the card is
    missing.
-7. **Homepage:** the suite crop in `HomePage.tsx` (`crop` record) drawn from the product's
-   real screen, and the suite row's link.
+7. **Homepage:** its tile in `SuiteFrame.tsx` (`FRAGMENT`), drawn from the product's real
+   screen, with its moment in `suite.css` and its place in the plate's grid at each width.
 8. **Menu, footer and "works with" rows** read `PRODUCTS` and `productPath`, so they turn into
    links once step 1 is done; check each, in both languages, with the menu open.
 9. **Check:** `pnpm site:check` passes (from `apps/web`: `build-site.sh`, EN/AR parity,

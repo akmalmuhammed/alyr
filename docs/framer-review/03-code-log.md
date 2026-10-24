@@ -116,3 +116,125 @@ The same component is every product page's "How it works" (`FlowSection`), so al
   62rem; the bar hides there already) and with scripts off (both stay Volt then).
 - The Arabic of the changed lines (callouts, «يحسب», «اعرض الشاشة كاملة») is a draft for ALY-66.
 - 1280 width (1024 looked at: the openings hold); a keyboard pass through "See the whole screen".
+
+# P1 in code: "One shop, six products"
+
+25 Oct 2026. Same branch and worktree (`aly-homepage-rhythm`, PR #119), on top of the
+commits above. The founder approved the frame after clicking through the Framer prototype
+(`02-prototype-log.md`; project LyKozm5SR5CGo5YpDJXA was read only, its tile code
+`AlyrTile.tsx` and layout for contents and timings; nothing there changed). Preview:
+`pnpm site:serve --port=3167`; Edge profile `C:\t\frameprof`. Screenshots in `shots-frame/`
+(not committed). Builder role of `alyr-design-review`; the two critics were not run.
+
+## What changed
+
+- **`SuiteFrame.tsx`, `suite.css` (new).** The products section is a split opening (the
+  heading, the lead on the end column), one Carbon plate and the two notes. The plate: a 45°
+  cut at the top inline-start corner (`--cut-plate`, `--cut-plate-sm` on phones, mirrored), a
+  `--band-edge` hairline in dark, a bar with the shop's monogram, "Qirfa Bakery", the frame's
+  one "Sample" mark and "Thursday · 16:20" (the sample's own `when`), then six tiles split by
+  `--dark-line` seams. The figure's first line is the sample's `fictional` sentence for
+  machines; each fragment is `inert`, `aria-hidden` and `data-nosnippet`.
+- **Grid.** At 62rem and up: Chat (8 columns, 440 px) and Bookings (4); then Agent, Accounts,
+  and Shelf over Docs (4 each; Shelf and Docs 260 px each). Two columns from 48 to 62rem; one
+  below, in the suite's order, each tile its own height (304 to 416 px; Shelf and Docs 240).
+  The DOM order is the suite's order at every width.
+- **Tiles.** One link each to the product page, named from `home.suite.frame.tile` ("ALYR
+  Agent, Your business in numbers, With every product"), with the name, the descriptor (and the
+  state on Agent and Shelf, as in the menu) and the arrow (flipped in Arabic). The fragment runs
+  past the tile's inline-end edge and is cut there, with no fade. Hover with a fine pointer:
+  the fragment moves 2 px along 45°, the arrow 1 px, the edge turns `--line-strong`. Focus: a
+  Volt ring (`--focus-on-band`) inside the tile.
+- **Fragments, from the existing drawings and data.** Chat: the team inbox and Sara's chat (the
+  flow's own lines). Bookings: the slot grid and the booking and reminder rows (the product's
+  "Booked"). Agent: Needs you now and the "ready" suggestion with its rule and outlined button,
+  straight from the engine's bakery sample and `AGENT_LABELS`, through the Agent's `Rich`.
+  Accounts: the owed total, age bar and legend from the same sample, then Marina Desk
+  Co-working, "Promised by 22 Oct" (the product's `Promised by {date}`). Shelf: the Stock card
+  of `pages.shelf.moment` (code 109, Left today, of 6, Sold out). Docs: `PaperTop` of RC-0042
+  (`Paper.tsx`, `paperData.ts`), Arabic first. The window uses the window, `--d-*` and `--ui-*`
+  tokens; the age colours are the product's `a0` to `a3`.
+- **Moments (CSS, keyed on `is-in`).** SiteMotion adds `is-in` to a tile on `pointerenter` or
+  `focus` where there is a fine pointer, and at 60% in view elsewhere (one observer), once; with
+  reduced motion it watches nothing. Start states exist only under `.motion`; the HTML is the end
+  state. Every delay is a number of `--stagger`, every duration a `--dur-*`, with `--ease` and
+  travel along 45° (`--travel`, `--dir`). End times read from `getAnimations()`, no
+  screenshots: Chat 1.14 s, Bookings 1.32, Agent 0.96, Accounts 1.44, Shelf 0.96, Docs 1.62.
+  - Chat: "Ordered 7 items, QAR 98" lands, then the confirmation (360 ms), then Sara's inbox row
+    takes `--volt-wash`, "#1442 · New" and 16:19 (600 ms).
+  - Bookings: 6:00 pm fills with Volt (the frame's only Volt fill: the current state), the
+    booking arrives (300 ms), then "Reminder sent · Two hours before · 4:00 pm" (840 ms).
+  - Agent: the suggestion arrives, its rule line draws (360 ms), then its outlined button (720 ms).
+  - Accounts: the age bar fills, oldest last, then the promise (960 ms).
+  - Shelf: the count steps from 1 to 0 along 45°, then "Only 1 left today" becomes "Sold out"
+    (480 ms).
+  - Docs: the paper settles along 45°, then draws its Arabic (480 ms), its English (780 ms),
+    then its number and date (1,020 and 1,140 ms).
+- **Words.** `home.suite.frame` in English and Arabic (`SuiteFrame` type in `copy.ts`); no ALYR
+  price; sample amounts as on the product pages. The Arabic is a draft for ALY-66.
+- **Removed, now dead:** `home.suite.rows` and `home.suite.crops` (both languages); the six
+  crops in `Drawings.tsx` (`OrderBarCrop`, `TimesCrop`, `SummaryCrop`, `AgeBarCrop`, `ShelfCrop`,
+  `ReceiptCrop`); `.d-crop*`, `.d-agebar`, `.d-agelegend` (`drawings.css`); the `.suite-row`
+  rules (`room.css`); the products' band (`.band`, `.band-in`, `.band-body` in `home.css`) and
+  its selectors in `site.css`; `.band-in` in SiteMotion's dark-header watch. The llms twin now
+  lists each product with its menu line (its existing fallback).
+- **Skills fixed in this PR:** `alyr-site-page` (the homepage's item 7, the opening exception,
+  a new product's tile); `alyr-design/components.md` (one Sample mark for a frame of one sample
+  business; the products frame; the plate); `alyr-design/motion.md` (a moment that waits for a
+  hover shows a true earlier state and plays once).
+
+## Decisions taken while building
+
+- **Row 2 is Agent, Accounts, then Shelf over Docs.** The prototype had Shelf over Docs first;
+  the brief's order and the reading order put them last, so DOM and eye agree at every width.
+- **The products open split, after ALYR Agent's split,** as in the approved prototype, against
+  the skill's "no two neighbouring openings alike". Recorded as an exception in the skill and
+  put to the founder below.
+- **A desktop tile rests on its earlier state until hovered or focused,** as in the prototype:
+  Bookings with no time taken, Agent without its suggestion, Docs a blank sheet. Without
+  scripts or with reduced motion every tile is finished. Put to the founder below.
+- **A tap goes to the product page.** The prototype's first tap played the moment instead; on a
+  phone the moment has already played in view.
+- **"Promised by 22 Oct"**, the product's words, not the prototype's "Thu 22 Oct".
+- Not built: the spec's frame-wide timeline (the plate arriving, the seams drawing), seams
+  breaking at the diagonal with `--cut-fold-gap`, and P9's view transition into the product
+  page.
+
+## Verification (25 Oct 2026, the built site served compressed)
+
+- `pnpm site:check`: build, EN/AR parity (6,132 strings), banned words and prices, 1,132
+  internal links: pass. `pnpm exec tsc --noEmit`, `pnpm lint`, `node scripts/design-check.mjs`:
+  clean.
+- `pnpm site:a11y --runs=3`: axe on all 14 pages, 1440 and 390, light and dark, 56 runs, no
+  issues. Lighthouse mobile, lowest of 3: `/` Performance 98, Accessibility 100, LCP 2.41 s,
+  CLS 0; `/ar` 98, 100, 2.41 s, 0.
+- `suite.css` is 5.2 KB gzipped; no new library and no image; the script is a few lines in
+  SiteMotion.
+- Page height, before (after P2 to P5) → after: `/` 1440 10,958 → 10,567 px; 390 15,732 →
+  15,295; 320 17,116 → 16,544. `/ar` 1440 10,807 → 10,424; 390 15,006 → 14,536. The plate is
+  1,018 px tall at 1440 and 2,040 at 390.
+- No sideways scroll at 1440, 1024, 390 or 320 in either language (`scrollWidth` = width); no
+  control in the section under 44 × 44 at those widths.
+- Real input in headless Edge, both languages: a mouse over Chat plays Chat only; Tab reaches
+  the tiles in order, each with its Volt ring, and each plays on focus; at 390 each tile plays
+  as it scrolls into view. Nothing plays again.
+- Screenshots (`shots-frame/`): `frame-{en,ar}-{1440,1024,390,320}-{light,dark}` (finished),
+  `rest-*` (a desktop before hover), `mid300-*`, `mid700-*`, `mid500-*` (the moments running),
+  `reduced-*`, `noscript-*` (scripts off: finished).
+
+## Open for the founder
+
+- The screenshots, and a publish when he wants one.
+- Whether a desktop tile may rest on its earlier state until hovered
+  (`rest-en-1440-light.png`), or should rest finished.
+- The products' split opening beside ALYR Agent's split, or the heading inside the plate.
+- The Arabic of the new lines (ALY-66): «المحادثات», «محجوز», «أُرسل التذكير»,
+  «وعد بالسداد قبل 22 أكتوبر».
+
+## Not checked
+
+- A real iPhone, Safari or touch (headless Edge with emulated touch only); a screen reader
+  beyond axe; 1280 width; the moments judged by the founder in motion.
+- The hover lean with a real mouse on screen (the trigger was driven by CDP input only);
+  Windows high contrast.
+- The two critics of the full design cycle.
