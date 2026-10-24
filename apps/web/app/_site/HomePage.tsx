@@ -135,14 +135,15 @@ function Spotlight({ locale }: { locale: Locale }) {
     <section className="hs spot" id="agent" aria-labelledby="spot-title">
       <div className="wrap">
         <Rule />
-        <div className="spot-head">
-          <Head eyebrow={s.eyebrow} title={s.title} id="spot-title">
+        <div className="open-split">
+          <Head eyebrow={s.eyebrow} title={s.title} id="spot-title" />
+          <div className="open-end">
             <p className="lead">{rich(s.body)}</p>
-          </Head>
-          <a className="link spot-link" href={PATHS.agent[locale]}>
-            <span>{rich(s.link)}</span>
-            <Icon name="arrow-right" className="ico ico-flip" />
-          </a>
+            <a className="link" href={PATHS.agent[locale]}>
+              <span>{rich(s.link)}</span>
+              <Icon name="arrow-right" className="ico ico-flip" />
+            </a>
+          </div>
         </div>
         <AgentFigure
           variant="spot"
@@ -250,7 +251,9 @@ function Business({ locale }: { locale: Locale }) {
     <section className="hs bizs" id="business" aria-labelledby="business-title">
       <div className="wrap">
         <Rule />
-        <Head eyebrow={b.eyebrow} title={b.title} id="business-title" />
+        <div className="open-full">
+          <Head eyebrow={b.eyebrow} title={b.title} id="business-title" />
+        </div>
         <BusinessTabs
           label={b.tabsLabel}
           tabs={[...b.rows, b.other].map((row) => ({ id: row.id, name: row.tab, icon: <Icon name={BUSINESS_ICON[row.id] ?? "plus"} /> }))}
@@ -391,17 +394,17 @@ function See({ locale }: { locale: Locale }) {
   return (
     <section className="hs see" id="see" aria-labelledby="see-title">
       <div className="wrap">
-        <Rule />
-        <div className="see-head">
-          <Head eyebrow={see.eyebrow} title={see.title} id="see-title">
-            <p className="lead">{rich(see.body)}</p>
-          </Head>
-          <a className="link see-link" href={PATHS.chat[locale]}>
-            <span>{rich(see.link)}</span>
-            <Icon name="arrow-right" className="ico ico-flip" />
-          </a>
-        </div>
         <div className="how-panel see-panel">
+          <div className="open-split open-plate">
+            <Head eyebrow={see.eyebrow} title={see.title} id="see-title" dark />
+            <div className="open-end">
+              <p className="lead">{rich(see.body)}</p>
+              <a className="link link-dark" href={PATHS.chat[locale]}>
+                <span>{rich(see.link)}</span>
+                <Icon name="arrow-right" className="ico ico-flip" />
+              </a>
+            </div>
+          </div>
           <FlowDiagram flow={see} sample={copy[locale].fig.sample} note={copy[locale].agent.samples.bakery.fictional} />
         </div>
         <div className="tally">
@@ -432,9 +435,12 @@ function How({ locale }: { locale: Locale }) {
     <section className="hs how" id="how" aria-labelledby="how-title">
       <div className="wrap">
         <Rule />
-        <Head eyebrow={w.eyebrow} title={w.title} id="how-title">
-          <p className="lead">{rich(w.lead)}</p>
-        </Head>
+        <div className="open-split">
+          <Head eyebrow={w.eyebrow} title={w.title} id="how-title" />
+          <div className="open-end">
+            <p className="lead">{rich(w.lead)}</p>
+          </div>
+        </div>
         <div className="how-rail" data-rail>
           <span className="how-line" aria-hidden="true"><span data-rail-fill /></span>
           <ol className="how-steps">

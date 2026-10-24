@@ -136,7 +136,7 @@ main .ag { font-weight: 400; }
 }
 
 /* ---------------------------------------------- spot: the whole screen, explained */
-.afig-spot { margin-top: clamp(2rem, 4vw, 3rem); }
+.afig-spot { margin-top: var(--space-4); }
 .afig-spot .af-stage { display: grid; grid-template-columns: minmax(0, 9fr) minmax(0, 3fr); column-gap: var(--col-gap); row-gap: 2rem; align-items: start; }
 .afig-spot .aw { grid-column: 1; }
 .afig-spot .af-aside { grid-column: 2; grid-row: 1 / span 2; align-self: start; }

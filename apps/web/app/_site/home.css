@@ -57,11 +57,34 @@ main[data-page="home"] { font-size: 1.0625rem; line-height: 1.55; }
 .chip { display: inline-flex; align-items: center; min-height: 2.75rem; padding: .375rem .9375rem; border: 1px solid var(--line-strong); border-radius: 2px; background: var(--canvas); color: var(--text); font-size: .9375rem; font-weight: 500; line-height: 1.3; white-space: nowrap; text-decoration: none; transition: border-color var(--fast) var(--ease), background var(--fast) var(--ease); }
 .chip:hover { border-color: var(--text); background: var(--surface); }
 
-/* ------------------------------------------------- the whole screen, explained */
-.spot-head { display: grid; grid-template-columns: repeat(12, minmax(0, 1fr)); column-gap: var(--col-gap); row-gap: 1.5rem; align-items: end; }
-.spot-head .head { grid-column: 1 / span 7; }
-.spot-link { grid-column: 10 / -1; justify-self: end; }
-.spot .lead { max-width: 40rem; }
+/* ------------------------------------------------------- how sections open */
+/* Three openings, not one (framer-review P3), so the sections do not all start with a cross
+   rule, a two-line heading, a grey lead and an empty half:
+   - split: the heading on the start side, its lead and link on the end column, standing on
+     the heading's last baseline (How we work, ALYR Agent);
+   - full: the heading alone, on one line across the grid (By business);
+   - in the plate: the heading inside the figure's Carbon plate (One order).
+   Each lands its content in the section's first screen: about 280 px from the section's top
+   to its content at 1440, where it was about 450. */
+main[data-page="home"] .hs > .wrap > .rule { margin-bottom: var(--space-5); }
+.open-split { display: grid; grid-template-columns: repeat(12, minmax(0, 1fr)); column-gap: var(--col-gap); row-gap: var(--space-4); align-items: last baseline; }
+.open-split > .head { grid-column: 1 / span 7; }
+.open-split > .open-end { grid-column: 8 / -1; display: grid; gap: var(--space-3); justify-items: start; }
+.open-end .lead { max-width: none; }
+.open-full .h2 { max-width: none; }
+.open-plate { position: relative; padding: var(--space-4) var(--space-3); }
+.open-plate .h2 { color: var(--on-band); }
+.open-plate .lead { color: var(--concrete); }
+.open-plate .link { color: var(--on-band); }
+@media (min-width: 62rem) {
+  /* the full opening's heading reads as one line where it fits, and balances where it does not */
+  .open-full .h2 .line { display: inline; }
+}
+@media (max-width: 61.99rem) {
+  .open-split { align-items: start; }
+  .open-split > .head, .open-split > .open-end { grid-column: 1 / -1; }
+  .open-plate { padding: var(--space-3) var(--space-2) var(--space-4); }
+}
 
 /* ------------------------------------------------- the products (Carbon band) */
 .band { position: relative; color: var(--dark-text); }
@@ -91,7 +114,7 @@ main[data-page="home"] { font-size: 1.0625rem; line-height: 1.55; }
    one under the other; with scripts the panels share one cell, so the page below never moves
    when another tab is chosen (the tallest panel sets the height), and the hidden ones are
    out of the reading order (visibility). */
-.biz { margin-top: clamp(2rem, 4vw, 3rem); }
+.biz { margin-top: var(--space-5); }
 .biz-tabs { display: none; }
 .al-js .biz { display: grid; grid-template-columns: minmax(0, 1fr); }
 .al-js .biz-tabs { display: flex; gap: .5rem; grid-area: 1 / 1; overflow-x: auto; scrollbar-width: none; margin-inline: calc(var(--gutter) * -1); padding: 2px var(--gutter); scroll-padding-inline: var(--gutter); }
@@ -129,12 +152,9 @@ main[data-page="home"] { font-size: 1.0625rem; line-height: 1.55; }
 .biz-else-body { margin-block: 1rem 1.25rem; max-width: 36rem; color: var(--text-muted); text-wrap: pretty; }
 
 /* ------------------------------------------------------------ one order, start to finish */
-.see-head { display: grid; grid-template-columns: repeat(12, minmax(0, 1fr)); column-gap: var(--col-gap); row-gap: 1.5rem; align-items: end; }
-.see-head .head { grid-column: 1 / span 8; }
-.see .lead { max-width: 40rem; }
-.see-link { grid-column: 10 / -1; justify-self: end; }
-/* the Carbon plate with its top corner cut, like every drawing on the page: not rounded */
-.see-panel { --fold: 28px; margin-top: clamp(2rem, 4vw, 3rem); border-radius: 0; clip-path: polygon(0 0, calc(100% - var(--fold)) 0, 100% var(--fold), 100% 100%, 0 100%); }
+/* the Carbon plate with its top corner cut, like every drawing on the page: not rounded; the
+   section's heading opens inside it */
+.see-panel { --fold: 28px; border-radius: 0; clip-path: polygon(0 0, calc(100% - var(--fold)) 0, 100% var(--fold), 100% 100%, 0 100%); }
 [dir="rtl"] .see-panel { clip-path: polygon(var(--fold) 0, 100% 0, 100% 100%, 0 100%, 0 var(--fold)); }
 /* under it, who did what: ALYR's messages, the team's presses, and nothing copied by hand */
 .tally { display: grid; grid-template-columns: repeat(12, minmax(0, 1fr)); column-gap: var(--col-gap); row-gap: 1rem; margin-top: clamp(1.75rem, 3.5vw, 2.5rem); align-items: start; }
@@ -147,7 +167,7 @@ main[data-page="home"] { font-size: 1.0625rem; line-height: 1.55; }
 
 /* ----------------------------------------------------------- how we work */
 .how .head { max-width: 44rem; }
-.how-rail { position: relative; margin-top: clamp(2.5rem, 5vw, 4rem); container-type: inline-size; }
+.how-rail { position: relative; margin-top: var(--space-4); container-type: inline-size; }
 .how-line { position: absolute; top: 1.25rem; inset-inline-start: 1.25rem; width: calc((100% + var(--col-gap)) * .75); height: 1px; background: var(--line); }
 .how-line > span { position: absolute; inset: 0; background: var(--volt); transform-origin: left center; }
 [dir="rtl"] .how-line > span { transform-origin: right center; }
@@ -290,8 +310,6 @@ main[data-page="home"] { font-size: 1.0625rem; line-height: 1.55; }
   .hero-side > :is(.hero-lead, .hero-actions, .hero-note) { grid-column: 1; grid-row: auto; }
   .hero-side > .hero-actions { margin-top: 1.5rem; }
   .hero-side > .hero-note { margin-top: .875rem; }
-  .spot-head .head, .spot-link { grid-column: 1 / -1; justify-self: start; }
-  .see-head .head, .see-link { grid-column: 1 / -1; justify-self: start; }
   .tally .mono-k, .tally ul { grid-column: 1 / -1; }
   .tally .mono-k { padding-top: 0; }
   .how-line { display: none; }

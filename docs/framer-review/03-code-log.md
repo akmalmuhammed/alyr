@@ -27,3 +27,26 @@ only when both weeks have 20 or more"), and the last two wait with the parts the
   disclosure at every width.
 - On phones the hero's crop also shows Needs you now (it stops after Done for you), so the
   phone still sees that part twice; the suggestions are new to the reader there.
+
+## P3. Vary how sections open
+
+Done. Three openings instead of one (`home.css`, "how sections open"; markup in
+`HomePage.tsx`):
+
+| Section | Opening |
+|---|---|
+| How we work | **Split**: the heading on the start side, the lead on the end column (columns 8 to 12), standing on the heading's last baseline |
+| By business | **Full**: the heading alone, on one line across the grid at 62rem and up (it balances onto two where it does not fit) |
+| One order, start to finish | **In the plate**: no cross rule; the heading, lead and link open inside the Carbon plate, above the tabs |
+| ALYR Agent | **Split**: eyebrow and heading at the start, the lead and "See ALYR Agent" on the end column at the heading's baseline |
+| The products | Unchanged (P1 is in Framer) |
+| Trust, Questions | Unchanged: they already open differently (a figure beside; a sticky side heading) |
+
+The gap under a section rule is `--space-5` on the homepage (was `--rule-gap`, 56 px at
+1440), and the space between an opening and its content `--space-4` or `--space-5`. Section
+top to its content at 1440 (EN): How 269 px, By business 231, One order 340 (the tabs inside
+the plate), ALYR Agent 384 (its lead is four lines on the end column; the switch is the
+first content). It was about 450 for each.
+
+All values are tokens; one new pattern (`.open-split`, `.open-full`, `.open-plate`) and no
+new breakpoint. Below 62rem every opening stacks.
