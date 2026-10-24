@@ -50,6 +50,28 @@ jobs:
       # --locked: fail if uv.lock does not match pyproject.toml, so CI tests what we ship.
       - run: uv sync --locked
       - run: uv run ruff check .
+      # The API image as Cloudflare runs it (D-052): build apps/api/Dockerfile, migrate the
+      # database above, start the entrypoint (API + job runner) and ask /health. Fails if the
+      # image cannot start with production settings, which pytest alone would not notice.
+      - run: docker build -t alyr-api .
+      - name: Start the image
+        run: |
+          docker run --rm --network host alyr-api python -m alyr.migrate
+          docker run -d --name api --network host \
+            -e ALYR_ENV=production -e ALYR_JOBS_INLINE=false \
+            -e ALYR_LINK_SECRET=ci-only-secret-not-used-anywhere-else-0123456789 \
+            -e PORT=8080 alyr-api
+      - name: Image answers /health and runs the job runner
+        run: |
+          for i in $(seq 1 30); do
+            if curl -fsS http://127.0.0.1:8080/health; then echo; break; fi
+            if [ "$i" = 30 ]; then docker logs api; exit 1; fi
+            sleep 2
+          done
+          docker exec api sh -c "grep -qa 'alyr[.]worker' /proc/[0-9]*/cmdline"
+          # The API docs are off in production.
+          test "$(curl -s -o /dev/null -w '%{http_code}' http://127.0.0.1:8080/docs)" = "404"
+          docker rm -f api
       - run: uv run pytest
       # Known vulnerabilities in Python dependencies.
       - run: uvx pip-audit --progress-spinner off
@@ -79,6 +101,29 @@ jobs:
       - run: pnpm test
       - run: pnpm exec tsc --noEmit
       - run: pnpm build
+      # The client portal as Cloudflare runs it (OpenNext), so a change that builds with
+      # `next build` but not for Workers is caught here (D-052).
+      - run: pnpm portal:build
+
+  # The Cloudflare Worker that fronts the API container (infra/cloudflare/api).
+  api-worker:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: infra/cloudflare/api
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          package_json_file: infra/cloudflare/api/package.json
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+          cache-dependency-path: infra/cloudflare/api/pnpm-lock.yaml
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm audit --prod --audit-level high
+      - run: pnpm typecheck
 
   # The public site as it is published: the real scripts/build-site.sh (not only `next
   # build`), then the checks that need no database: EN/AR copy parity, banned words and
