@@ -276,15 +276,9 @@ type Home = {
     eyebrow?: string;
     title: string;
     body: string;
-    rows: Record<ProductKey, { body: string; link: string }>;
     notes: Titled[];
-    crops: {
-      items: string; total: string; pay: string; times: string[]; time: string; owed: string;
-      /** ALYR Shelf: two item cards on the order page, one nearly gone, one sold out. */
-      shelf: { name: string; price: string; note: string; out?: boolean }[];
-      /** ALYR Docs: the top of a receipt, said for screen readers (the paper is drawn from `PAPER`). */
-      receipt: string;
-    };
+    /** "One shop, six products" (framer-review P1): the six tiles on one Carbon plate. */
+    frame: SuiteFrame;
   };
   business: {
     eyebrow?: string;
@@ -399,6 +393,35 @@ export type InsideSection = {
 };
 
 export type WhoSection = { eyebrow?: string; title: string; rows: { name: string; tags?: string[] }[]; other: string };
+
+/** The homepage's "One shop, six products" (framer-review P1, 25 Oct 2026): one fictional
+ * bakery's workspace at 16:20 on Thursday 15 Oct, a fragment of each product's own screen in
+ * its own words. ALYR Agent's and ALYR Accounts' figures come from the engine's sample
+ * (`_agent/samples`), ALYR Shelf's from its page (`pages.shelf.moment`) and ALYR Docs' paper
+ * from `paperData.ts`; the rest is here. */
+export type SuiteFrame = {
+  /** A tile's link: "{name}, {descriptor}", and with the state where a product has one. */
+  tile: string;
+  tileState: string;
+  chat: {
+    inbox: string;
+    /** The inbox's newest rows, newest first; the first is the customer whose order arrives. */
+    rows: { who: string; text: string; at: string }[];
+    /** Her row once the order is in: its tag, its line and its time. */
+    tag: string; newText: string; newAt: string;
+    /** Her chat: what she wrote, the order page sent back with its button, the order as the
+     * team's screen logs it, and the confirmation. */
+    inMsg: string; outMsg: string; action: string; event: string; confirm: string;
+  };
+  bookings: {
+    title: string; day: string; times: string[];
+    /** The time taken: drawn in Volt, the screen's current state. */
+    time: string;
+    service: string; who: string; booked: string;
+    reminder: string; before: string; sentAt: string;
+  };
+  accounts: { title: string; who: string; sub: string; balance: string; promise: string };
+};
 
 /** "Works with the rest of ALYR": what each other product adds, in the suite's order. */
 export type WorksSection = { eyebrow?: string; title: string; rows: Partial<Record<ProductKey, string>>; link: string };
@@ -886,32 +909,6 @@ const en: Copy = {
       title: "Six products. One workspace.\nAdd them as you grow.",
       body:
         "Start with what hurts most today and add the next when you need it: the same customers, the same team, the same screen. ALYR Agent and ALYR Shelf come with every one.",
-      rows: {
-        chat: {
-          body: "Customers order from a page in the chat, with no app, and your whole team answers from one inbox.",
-          link: "See ALYR Chat",
-        },
-        bookings: {
-          body: "Customers pick a time you are actually free, and get a reminder two hours before.",
-          link: "See ALYR Bookings",
-        },
-        agent: {
-          body: "What needs you now, your week against last week, and up to three suggestions, each with its reason.",
-          link: "See ALYR Agent",
-        },
-        accounts: {
-          body: "See who owes what and for how long, and send a polite reminder with one press.",
-          link: "See ALYR Accounts",
-        },
-        shelf: {
-          body: "Everything you sell, with photos and stock that counts down with each sale.",
-          link: "See ALYR Shelf",
-        },
-        docs: {
-          body: "Receipts and invoices from your sales, numbered without a gap, Arabic first.",
-          link: "See ALYR Docs",
-        },
-      },
       notes: [
         {
           title: "Every order has an owner.",
@@ -922,18 +919,44 @@ const en: Copy = {
           body: "come with ALYR Chat and ALYR Bookings. Today they open a test page; card payments start once a payment provider is connected.",
         },
       ],
-      crops: {
-        items: "3 items",
-        total: "QAR 38",
-        pay: "Pay QAR 38",
-        times: ["4:00 pm", "4:30 pm", "5:00 pm", "5:30 pm", "6:00 pm", "6:30 pm"],
-        time: "4:30 pm",
-        owed: "Owed to you",
-        shelf: [
-          { name: "Pistachio kunafa cheesecake", price: "QAR 185", note: "Only 1 left today" },
-          { name: "Saffron milk cake, slice", price: "QAR 26", note: "Sold out", out: true },
-        ],
-        receipt: "The top of receipt RC-0042, Arabic first",
+      frame: {
+        tile: "{name}, {descriptor}",
+        tileState: "{name}, {descriptor}, {state}",
+        chat: {
+          inbox: "Inbox",
+          rows: [
+            { who: "Sara M.", text: "Here is our order page. Pick what you need.", at: "16:13" },
+            { who: "Lina F.", text: "Order #1441 received", at: "16:09" },
+            { who: "Noor A.", text: "Cake tasting, today at 18:00", at: "16:00" },
+          ],
+          tag: "#1442 · New",
+          newText: "Ordered 7 items, QAR 98",
+          newAt: "16:19",
+          inMsg: "Hi, I’d like to order for pickup",
+          outMsg: "Here is our order page. Pick what you need.",
+          action: "Open the order page",
+          event: "Ordered 7 items, QAR 98",
+          confirm: "Order #1442 received: 7 items, QAR 98.",
+        },
+        bookings: {
+          title: "Bookings",
+          day: "Thu 15 Oct",
+          times: ["4:00 pm", "4:30 pm", "5:00 pm", "5:30 pm", "6:00 pm", "6:30 pm"],
+          time: "6:00 pm",
+          service: "Cake tasting",
+          who: "Noor A.",
+          booked: "Booked",
+          reminder: "Reminder sent",
+          before: "Two hours before",
+          sentAt: "4:00 pm",
+        },
+        accounts: {
+          title: "Credit accounts",
+          who: "Marina Desk Co-working",
+          sub: "Oldest unpaid: 35 days",
+          balance: "QAR 2,700",
+          promise: "Promised by 22 Oct",
+        },
       },
     },
     business: {
@@ -3182,32 +3205,6 @@ const ar: Copy = {
       title: "ستة منتجات. مساحة عمل واحدة.\nأضفها كلما كبرت.",
       body:
         "ابدأ بما يؤلمك أكثر اليوم، وأضف التالي حين تحتاجه: العملاء أنفسهم، والفريق نفسه، والشاشة نفسها. ويأتي ALYR Agent وALYR Shelf مع كل منها.",
-      rows: {
-        chat: {
-          body: "يطلب العميل من صفحة في المحادثة بلا تطبيق، وفريقك كله يردّ من صندوق واحد.",
-          link: "تعرّف على ALYR Chat",
-        },
-        bookings: {
-          body: "يختار العميل وقتاً متاحاً فعلاً لديك، ويصله تذكير قبل الموعد بساعتين.",
-          link: "تعرّف على ALYR Bookings",
-        },
-        agent: {
-          body: "ما يحتاجك الآن، وأسبوعك مقارنة بالأسبوع الماضي، وحتى ثلاثة اقتراحات، لكل منها سببه.",
-          link: "تعرّف على ALYR Agent",
-        },
-        accounts: {
-          body: "اعرف من عليه كم ومنذ متى، وأرسل تذكيراً لبقاً بضغطة واحدة.",
-          link: "تعرّف على ALYR Accounts",
-        },
-        shelf: {
-          body: "كل ما تبيعه، بصوره ومخزونه الذي ينقص مع كل بيع.",
-          link: "تعرّف على ALYR Shelf",
-        },
-        docs: {
-          body: "إيصالات وفواتير من مبيعاتك، بأرقام متتالية بلا فجوات، والعربية أولاً.",
-          link: "تعرّف على ALYR Docs",
-        },
-      },
       notes: [
         {
           title: "لكل طلب مسؤول.",
@@ -3218,18 +3215,44 @@ const ar: Copy = {
           body: "تأتي مع ALYR Chat وALYR Bookings. وهي اليوم تفتح صفحة تجريبية، ويبدأ الدفع بالبطاقات بعد ربط مزوّد دفع.",
         },
       ],
-      crops: {
-        items: "الأصناف: 3",
-        total: "38 ر.ق",
-        pay: "ادفع 38 ر.ق",
-        times: ["4:00 م", "4:30 م", "5:00 م", "5:30 م", "6:00 م", "6:30 م"],
-        time: "4:30 م",
-        owed: "مستحق لك",
-        shelf: [
-          { name: "تشيز كيك الكنافة بالفستق", price: "185 ر.ق", note: "المتبقي اليوم 1 فقط" },
-          { name: "كيك الحليب بالزعفران، قطعة", price: "26 ر.ق", note: "نفد", out: true },
-        ],
-        receipt: "أعلى الإيصال RC-0042، والعربية أولاً",
+      frame: {
+        tile: "{name}، {descriptor}",
+        tileState: "{name}، {descriptor}، {state}",
+        chat: {
+          inbox: "المحادثات",
+          rows: [
+            { who: "سارة م.", text: "حيّاك، اختاري طلبك من هنا.", at: "16:13" },
+            { who: "لينا ف.", text: "تم استلام الطلب رقم 1441", at: "16:09" },
+            { who: "نور أ.", text: "تذوّق الكيك، اليوم الساعة 18:00", at: "16:00" },
+          ],
+          tag: "#1442 · جديد",
+          newText: "طلبت 7 أصناف، 98 ر.ق",
+          newAt: "16:19",
+          inMsg: "السلام عليكم، أبي أطلب للاستلام",
+          outMsg: "حيّاك، اختاري طلبك من هنا.",
+          action: "افتح صفحة الطلب",
+          event: "طلبت 7 أصناف، 98 ر.ق",
+          confirm: "تم استلام الطلب رقم 1442: 7 أصناف، 98 ر.ق.",
+        },
+        bookings: {
+          title: "الحجوزات",
+          day: "الخميس 15 أكتوبر",
+          times: ["4:00 م", "4:30 م", "5:00 م", "5:30 م", "6:00 م", "6:30 م"],
+          time: "6:00 م",
+          service: "تذوّق الكيك",
+          who: "نور أ.",
+          booked: "محجوز",
+          reminder: "أُرسل التذكير",
+          before: "قبل الموعد بساعتين",
+          sentAt: "4:00 م",
+        },
+        accounts: {
+          title: "الحسابات الآجلة",
+          who: "Marina Desk Co-working",
+          sub: "أقدم دين: 35 يوماً",
+          balance: "2,700 ر.ق",
+          promise: "وعد بالسداد قبل 22 أكتوبر",
+        },
       },
     },
     business: {

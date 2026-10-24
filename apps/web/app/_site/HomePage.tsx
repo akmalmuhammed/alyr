@@ -4,12 +4,13 @@ import { Icon, type IconName } from "./brand";
 import { BusinessTabs } from "./BusinessTabs";
 import { ContactButton, ContactNote } from "./Contact";
 import { copy, type BusinessRow, type Locale, type Questions as QuestionSet } from "./copy";
-import { AgeBarCrop, FigCaption, OrderBarCrop, ReceiptCrop, ShelfCrop, SummaryCrop, TimesCrop, TrackScreen } from "./Drawings";
+import { FigCaption, TrackScreen } from "./Drawings";
 import { Phone, SampleMark, TickPath } from "./Frames";
 import { FlowDiagram } from "./FlowDiagram";
 import { FoldSplit } from "./FoldSplit";
 import { HomeMotion } from "./HomeMotion";
 import { SAMPLE_ORDER, SAMPLES } from "./samples";
+import { SuiteFrame } from "./SuiteFrame";
 import { contactHref, Shell } from "./Shell";
 import { CONTACT_STATE, INCLUDED, OFFER_LIVE, PATHS, PRODUCTS, productPath, TRUST_RECORDS, type TrustRecord } from "./site";
 import { lines, rich } from "./Text";
@@ -163,65 +164,26 @@ function Spotlight({ locale }: { locale: Locale }) {
 }
 
 // --------------------------------------------------------------- the products
+/* One shop, six products (framer-review P1): the suite as one fictional bakery's workspace on
+   a Carbon plate, a tile per product, each one link to its page (SuiteFrame.tsx); then what
+   holds for every product. */
 function Suite({ locale }: { locale: Locale }) {
-  const t = copy[locale];
-  const s = t.home.suite;
-  const bakery = SAMPLES[locale].bakery;
-  const crop: Record<(typeof PRODUCTS)[number], ReactNode> = {
-    chat: <OrderBarCrop crops={s.crops} />,
-    bookings: <TimesCrop crops={s.crops} />,
-    agent: <SummaryCrop view={bakery} />,
-    accounts: <AgeBarCrop view={bakery} label={s.crops.owed} />,
-    shelf: <ShelfCrop crops={s.crops} soldOut={s.crops.shelf.find((i) => i.out)?.note ?? ""} />,
-    docs: <ReceiptCrop crops={s.crops} />,
-  };
+  const s = copy[locale].home.suite;
   return (
-    <section className="band suite" id="products" aria-labelledby="products-title">
-      <div className="band-fold" aria-hidden="true" data-m>
-        <i />
-        <i />
-        <i />
-      </div>
-      <div className="band-in">
-        <div className="wrap">
-          <Head eyebrow={s.eyebrow} title={s.title} id="products-title" dark>
-            <p className="band-body">{rich(s.body)}</p>
-          </Head>
-          {/* Six plain rows (site audit L1): the name, what it is, one sentence and its link,
-              and a corner of its real screen at true size, marked as a sample. The corners'
-              numbers are the bakery's samples, so a machine reads that first. */}
-          <p className="sr-only">{t.agent.samples.bakery.fictional}</p>
-          <ul className="suite-rows">
-            {PRODUCTS.map((key) => {
-              const p = t.products.items[key];
-              const row = s.rows[key];
-              return (
-                <li key={key} id={`p-${key}`} className="suite-row">
-                  <div className="suite-name">
-                    <h3><bdi>{p.name}</bdi></h3>
-                    <span className="suite-desc">{p.descriptor}</span>
-                    {INCLUDED.includes(key) && <span className="suite-state">{p.state}</span>}
-                  </div>
-                  <div className="suite-say">
-                    <p>{rich(row.body)}</p>
-                    <a className="link link-dark" href={productPath(key, locale)}>
-                      <span>{rich(row.link)}</span>
-                      <Icon name="arrow-right" className="ico ico-flip" />
-                    </a>
-                  </div>
-                  <div className="suite-crop" data-nosnippet>
-                    <SampleMark label={t.fig.sample} />
-                    {crop[key]}
-                  </div>
-                </li>
-              );
-            })}
-          </ul>
-          <div className="suite-notes">
-            {s.notes.map((note) => (
-              <p key={note.title}><b>{rich(note.title)}</b> {rich(note.body)}</p>
-            ))}
+    <section className="hs suite" id="products" aria-labelledby="products-title">
+      <div className="wrap">
+        <Rule />
+        <div className="open-split">
+          <Head eyebrow={s.eyebrow} title={s.title} id="products-title" />
+          <div className="open-end">
+            <p className="lead">{rich(s.body)}</p>
           </div>
+        </div>
+        <SuiteFrame locale={locale} />
+        <div className="suite-notes">
+          {s.notes.map((note) => (
+            <p key={note.title}><b>{rich(note.title)}</b> {rich(note.body)}</p>
+          ))}
         </div>
       </div>
     </section>

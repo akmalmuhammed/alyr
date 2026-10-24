@@ -67,6 +67,29 @@ export function SiteMotion() {
     // will start it, so the failsafe that drops `motion` is no longer needed here.
     if (!still && figures.length) window.clearTimeout(window.__alyrMotion);
 
+    // The homepage's six product tiles (SuiteFrame.tsx, suite.css): each plays its moment once.
+    // Where there is a fine pointer, when it is hovered or reached with the keyboard; elsewhere
+    // (a phone, a tablet), when 60% of it has scrolled into view, or when it takes focus. With
+    // reduced motion nothing is watched, and every tile is already finished.
+    const tiles = still ? [] : Array.from(document.querySelectorAll<HTMLElement>("[data-tile]"));
+    const fine = window.matchMedia("(hover: hover) and (pointer: fine)").matches;
+    const tileView = new IntersectionObserver(
+      (entries) => { for (const entry of entries) if (entry.intersectionRatio >= 0.6) playTile(entry.target); },
+      { threshold: 0.6 },
+    );
+    function playTile(tile: Element) {
+      tile.classList.add("is-in");
+      tileView.unobserve(tile);
+    }
+    const onTile = (event: Event) => playTile(event.currentTarget as Element);
+    for (const tile of tiles) {
+      tile.addEventListener("focus", onTile, { once: true });
+      if (fine) tile.addEventListener("pointerenter", onTile, { once: true });
+      else tileView.observe(tile);
+    }
+    // a tile can wait long after the first 4 s for its hover: keep `motion` for it
+    if (tiles.length) window.clearTimeout(window.__alyrMotion);
+
     // The language link keeps the section being read.
     const sections = Array.from(document.querySelectorAll<HTMLElement>("main section[id]"));
     const onLanguage = (event: MouseEvent) => {
@@ -110,7 +133,7 @@ export function SiteMotion() {
         },
         { rootMargin: `-30px 0px -${Math.max(0, window.innerHeight - 31)}px 0px` },
       );
-      document.querySelectorAll(".band-in, .cta").forEach((node) => dark?.observe(node));
+      document.querySelectorAll(".cta").forEach((node) => dark?.observe(node));
     };
     watchDark();
 
@@ -179,6 +202,11 @@ export function SiteMotion() {
       seen.disconnect();
       enough.disconnect();
       past.disconnect();
+      tileView.disconnect();
+      for (const tile of tiles) {
+        tile.removeEventListener("focus", onTile);
+        tile.removeEventListener("pointerenter", onTile);
+      }
       dark?.disconnect();
       watchBar?.disconnect();
       atClosing?.disconnect();

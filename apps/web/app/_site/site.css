@@ -516,7 +516,7 @@ a.pm-link[aria-current="page"] .pm-name::after { content: ""; display: inline-bl
 }
 .mark-sample:lang(ar) { font-family: var(--arabic); font-size: var(--fs-label); letter-spacing: 0; text-transform: none; }
 /* on Carbon: the demos, the flow, the plates */
-.product .mark-sample, .band .mark-sample, .see-panel .mark-sample, .demo-bar .mark-sample { border-color: var(--band-rule); color: var(--on-band-quiet); }
+.product .mark-sample, .see-panel .mark-sample, .demo-bar .mark-sample { border-color: var(--band-rule); color: var(--on-band-quiet); }
 
 /* Captions: a mono line on a hairline that ends in a tick. Only where a drawing needs words
    (the trust pair, the no-CR foot, the agreement); every other drawing carries its mark. */
@@ -535,9 +535,9 @@ a.pm-link[aria-current="page"] .pm-name::after { content: ""; display: inline-bl
 .cap > span { display: inline; }
 .cap-sep { margin-inline: .5rem; color: var(--line-strong); }
 /* on a Carbon block */
-.on-dark .cap, .product .cap, .band .cap { border-top-color: var(--dark-line); color: var(--on-band-faint); }
-.on-dark .cap::before, .product .cap::before, .band .cap::before { background: var(--band-rule); }
-.on-dark .cap-sep, .product .cap-sep, .band .cap-sep { color: var(--band-rule); }
+.on-dark .cap, .product .cap { border-top-color: var(--dark-line); color: var(--on-band-faint); }
+.on-dark .cap::before, .product .cap::before { background: var(--band-rule); }
+.on-dark .cap-sep, .product .cap-sep { color: var(--band-rule); }
 .on-dark .cap-n, .product .cap-n, .band .cap-n { color: var(--on-band); }
 
 /* footer: the products in their order, then the site */
