@@ -148,7 +148,8 @@ silently not published, or published and not linked:
    real screen, and the suite row's link.
 8. **Menu, footer and "works with" rows** read `PRODUCTS` and `productPath`, so they turn into
    links once step 1 is done; check each, in both languages, with the menu open.
-9. **Check:** `bash scripts/build-site.sh` passes; `out-site/<key>.html`,
+9. **Check:** `pnpm site:check` passes (from `apps/web`: `build-site.sh`, EN/AR parity,
+   banned words and prices, internal links); `out-site/<key>.html`,
    `out-site/ar/<key>.html` and the card exist; `sitemap.xml` lists both addresses; the
    language link lands on the same section.
 10. **Docs in the same PR:** `docs/brand.md` (the suite on the site), `docs/status.md`, the
@@ -178,7 +179,9 @@ silently not published, or published and not linked:
 - Add a second Volt button, a carousel, a pop-up, a cookie banner, a logo wall, a counter,
   a third-party script or analytics (also a data-residency question).
 - Add a dependency without a one-line reason in the PR.
-- Deploy. `npx wrangler deploy` is the founder's laptop and the founder's yes, each time.
+- Deploy. Publishing is the founder's yes each time: his approval of the `production`
+  environment in GitHub (`site deploy` workflow), or `pnpm site:deploy` on his laptop
+  (`docs/runbooks/site-deploy.md`). A pull request gets a preview address on its own.
 
 ## Done when
 
@@ -188,9 +191,9 @@ silently not published, or published and not linked:
 - [ ] Looked at: both languages, 1440, 390 and 320, light and dark, reduced motion, no
       scripts, the Products menu and the phone menu open, every contact state touched.
 - [ ] No horizontal scroll at 320; targets 44 px; focus visible; headings in order.
-- [ ] `pnpm lint`, `pnpm exec tsc --noEmit`, `bash scripts/build-site.sh` pass.
-- [ ] axe zero serious or critical; Lighthouse mobile on changed pages ≥ 90, LCP < 2.5 s,
-      CLS < 0.05.
+- [ ] `pnpm lint`, `pnpm exec tsc --noEmit`, `pnpm site:check` pass.
+- [ ] `pnpm site:a11y`: axe zero serious or critical; Lighthouse mobile on changed pages
+      ≥ 90, LCP < 2.5 s, CLS < 0.05 (`--pages=` for the changed ones).
 - [ ] `/chat` and every page sharing a changed component still look as before.
 - [ ] Docs updated; screenshots listed in the PR; "Not checked" written; founder asked
       before any publish.

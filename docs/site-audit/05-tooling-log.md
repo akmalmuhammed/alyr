@@ -190,3 +190,46 @@ Wrangler was pinned at exactly 4.150.0 in stage 1.
   at the next start was checked instead.
 - `site:shots` at full page across all 14 pages.
 - `site:dev` on macOS or Linux.
+
+## Stage 4: the tools in the repo
+
+**Built:**
+- **`axe-core` 4.14.0 and `lighthouse` 13.5.0**, exact devDependencies of `apps/web`.
+  `site:a11y` (`scripts/site/a11y.mjs`) uses them. It:
+  - serves `out-site` compressed;
+  - runs axe on every page at 1440 and 390, light and dark: scrolled to the end and back,
+    `content-visibility` forced visible, `wcag2a`/`wcag2aa`/`wcag21aa` and best practice;
+    it fails on serious or critical;
+  - runs Lighthouse mobile on `/` and `/ar` (`--pages=`, `--runs=`, `--no-axe`,
+    `--no-lighthouse`); it fails below Performance 90, Accessibility 100, LCP 2.5 s or
+    CLS 0.05.
+- **`C:\t\tools` is no longer needed.**
+- **`scripts/browser-kit.mjs`:** Edge's launcher process now hands over to the browser and
+  exits at once, and browser-kit took that exit for a failed start. It now counts the start
+  as good when our debugging port answers with a page. This affects the product lane's
+  browser checks too, which use the same kit; for them it only removes a false failure.
+- For the same reason, Lighthouse's `chrome-launcher` is given a fixed free port. Each run
+  stops only the Edge processes that use its own profile folder, then deletes the folder.
+- `shoot.mjs` moved in stage 3.
+- **Skills:**
+  - `alyr-design/verify.md` names the commands: `site:check`, `site:a11y`, `site:shots`,
+    `site:serve`, `site:dev`. It also gives:
+    - the new `shoot.mjs` path;
+    - that `--eval` exists (verify.md said it did not);
+    - the pinned axe and Lighthouse;
+    - what `site:check` covers in words and claims.
+  - `alyr-site-page` names `pnpm site:check` and `pnpm site:a11y` in its checklist, and the
+    approval-based deploy in place of `npx wrangler deploy`.
+  - The other docs that cite the old `shoot.mjs` path keep working through the stub, and
+    were left alone.
+
+**Checked:** a full `pnpm site:a11y` on the built site:
+- **axe:** no serious or critical issue on all 14 pages, 56 runs;
+- **Lighthouse mobile, one run each:** `/` Performance 96, Accessibility 100, LCP 2.41 s,
+  CLS 0; `/ar` 95, 100, 2.41 s, 0.
+
+**Not checked:**
+- Lighthouse in CI. There is no Edge there, and Lighthouse timing on shared runners is
+  noisy, so `site:a11y` is not in the CI job.
+- `site:a11y` on Linux or macOS.
+- Whether the old `C:\t\tools` copies give the same axe results.

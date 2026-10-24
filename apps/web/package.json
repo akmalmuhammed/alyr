@@ -13,6 +13,7 @@
     "site:serve": "node ../../scripts/site/serve.mjs",
     "site:check": "node ../../scripts/site/check.mjs",
     "site:shots": "node ../../scripts/site/shots.mjs",
+    "site:a11y": "node ../../scripts/site/a11y.mjs",
     "site:deploy": "node ../../scripts/site/deploy.mjs"
   },
   "dependencies": {
