@@ -167,6 +167,11 @@ silently not published, or published and not linked:
   saying, for machines, that the business is fictional (`alyr-design/honesty.md` §4). A
   caption only where the drawing needs words.
 - The contact block from `Contact.tsx`; prices only through `OFFER_LIVE`.
+- Structured data from `_site/structuredData.ts` (rendered by `Shell`): Organization,
+  WebSite on the homepage, SoftwareApplication and BreadcrumbList on each product page,
+  FAQPage from the questions the page shows. Built from the page's own words; never
+  `offers`, a price, a rating, a review, a legal name, an address or `sameAs` before they are
+  true. A new product page gets it by having its `meta`, `products.items` and `faq` entries.
 - Logical CSS; `[dir="rtl"]` only for what cannot mirror; every cut mirrored.
 - Name heading line breaks in copy; check 320 px.
 - Static HTML first: anything live (clock, steppers, observers) runs after hydration and the

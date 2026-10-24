@@ -6,6 +6,7 @@ import {
   type PageKey, type ProductKey,
 } from "./site";
 import { SiteMotion } from "./SiteMotion";
+import { structuredDataJson } from "./structuredData";
 import { rich } from "./Text";
 import { ThemeSwitch } from "./ThemeSwitch";
 
@@ -82,6 +83,8 @@ export function Shell({
 
   return (
     <>
+      {/* what the page is, for search and assistants, from the page's own words (structuredData.ts) */}
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: structuredDataJson(locale, page) }} />
       <a className="skip" href="#main">{t.skip}</a>
 
       <header className="top" data-header>

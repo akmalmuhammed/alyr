@@ -175,3 +175,26 @@ Done:
 - `/agent` on a phone stops after Needs you now, Done for you and the four numbers; a native
   `<details>` "See the whole screen" / «اعرض الشاشة كاملة» opens the rest (`.af-more`,
   `:has()`; a browser without `:has()` shows the whole screen, as before).
+
+### Stage 6 · JSON-LD from the copy (`03-ax.md` A4)
+
+Done: `_site/structuredData.ts`, rendered once per page by `Shell` as
+`<script type="application/ld+json">` ("<" escaped). Organization (name, url, logo, the
+homepage's meta description in the page's language, email, `areaServed` Qatar,
+`knowsLanguage` ar and en) on every page; WebSite on `/` and `/ar`; on each product page a
+SoftwareApplication (name, descriptor as `alternateName`, the page's own meta description,
+url, `BusinessApplication`, `Web`, `inLanguage`, `countriesSupported` QA, `provider` ALYR) and a
+BreadcrumbList (ALYR › the product); FAQPage from the questions the page shows, filtered by
+the contact and offer states as the page filters them (none on `/chat`, which has no
+questions). Never `offers`, `price`, `aggregateRating`, `review`, `legalName`, `taxID`,
+`address` or `sameAs`; ALYR Docs is described by its meta description, which never says
+available.
+
+Checked (`C:\t\uxfix\ld.mjs` on the built `out-site`, all 14 pages): one block each, parses,
+only the properties listed above, no forbidden property, every FAQ question and answer is
+visible text on its page, each product's description equals its meta description, the
+breadcrumbs are in order. The properties were checked against schema.org's own type pages
+(SoftwareApplication, Organization) on 24 Oct. Not run: Google's Rich Results Test and
+validator.schema.org, which need a public address; no rich results are expected anyway (FAQ
+results are for government and health sites, software results need a price and a rating).
+`alyr-site-page` says how a new page gets its structured data.
