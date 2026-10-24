@@ -3,13 +3,8 @@
   "words": [
     {
       "term": "coming",
-      "context": "When are you coming??",
-      "reason": "A fictional customer's own message in Zilal Cooling's sample chat (home.business, home services). It is the customer asking the technician, not ALYR announcing a product."
-    },
-    {
-      "term": "coming",
-      "context": "ask when you are coming",
-      "reason": "The home-services owner's day today (home.business): customers ask when the technician is coming. Not a product claim."
+      "context": "When are you coming?",
+      "reason": "The home-services owner's day today (home.business, Zilal Cooling's sample): a customer asking the technician when he is coming. Not ALYR announcing a product."
     },
     {
       "term": "soon",
@@ -83,9 +78,17 @@
     }
   ],
   "offerOnly": [
-    { "path": "home.price.**", "reason": "The price section renders only with the offer on (HomePage.tsx: {OFFER_LIVE && <Price/>})." },
-    { "path": "home.trust.closing", "reason": "Rendered only with the offer on (HomePage.tsx Trust: {OFFER_LIVE && <p className=\"trust-closing\">})." },
-    { "path": "**.factsOffer[*]", "reason": "Added to a product page's facts only with the offer on (ProductKit.tsx ProductHero)." },
-    { "path": "**.nOffer", "reason": "A caption number used only with the offer on (Drawings.tsx)." }
+    {
+      "path": "home.price.**",
+      "reason": "The price section renders only with the offer on (HomePage.tsx: {OFFER_LIVE && <Price/>})."
+    },
+    {
+      "path": "home.trust.closing",
+      "reason": "Rendered only with the offer on (HomePage.tsx Trust: {OFFER_LIVE && <p className=\"trust-closing\">})."
+    },
+    {
+      "path": "**.factsOffer[*]",
+      "reason": "Added to a product page's facts only with the offer on (ProductKit.tsx ProductHero)."
+    }
   ]
 }

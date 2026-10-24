@@ -204,7 +204,13 @@ if (!onlyCopy) {
     if (offer === "off") checkPrices(`out-site/${name}`, text, window);
   }
   if (offer === "off") {
-    for (const file of files(join(out, "_next/static"), (p) => p.endsWith(".js"))) {
+    // Only the scripts a public page loads: `.next/static` also holds the product's own chunks
+    // (workspace, back office), which never reach a visitor of the site.
+    const loaded = new Set();
+    for (const page of files(out, (p) => p.endsWith(".html") && !relative(out, p).startsWith("_next"))) {
+      for (const m of readFileSync(page, "utf8").matchAll(/\/_next\/static\/[^"'\s)\\]+\.js/g)) loaded.add(m[0].slice(1));
+    }
+    for (const file of files(join(out, "_next/static"), (p) => p.endsWith(".js") && loaded.has(relative(out, p).replaceAll("\\", "/")))) {
       builtFiles += 1;
       checkPrices(`out-site/${relative(out, file).replaceAll("\\", "/")}`, normalize(pageText(readFileSync(file, "utf8"))), window);
     }
