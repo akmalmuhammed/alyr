@@ -26,6 +26,16 @@ from test_sign_in import other_shop_with_owner
 
 QATAR = ZoneInfo("Asia/Qatar")
 
+# The night and the morning after it that tests hold the clock at. They are days ahead of
+# the real date, never fixed ones: a job queued "for the morning" must not be due already, or
+# the job runner runs it at once, asks the held clock, and queues it again, for ever (ALY-221).
+TONIGHT = (datetime.now(QATAR) + timedelta(days=3)).date()
+TOMORROW = TONIGHT + timedelta(days=1)
+
+
+def at(day, hour: int, minute: int = 0) -> datetime:
+    return datetime(day.year, day.month, day.day, hour, minute, tzinfo=QATAR)
+
 
 @pytest.fixture(autouse=True)
 def midday(monkeypatch):
@@ -159,22 +169,22 @@ def test_no_alert_is_sent_at_night_and_the_morning_looks_again(client):
     open_window()
     item = counted(client, 4, name="Dates", name_ar="تمر")
     item_id = _uuid(item)
-    night = datetime(2026, 10, 20, 23, 30, tzinfo=QATAR)
+    night = at(TONIGHT, 23, 30)
     assert on_shop(client, StockAlertsAt(client, night).check, item_id) is None
     assert told(client) == []
     # It waits for the morning: a job for 07:00 on the shop's clock, queued once.
     [job] = owner_sql("select run_at from jobs where kind = $1 and status = 'queued'",
                       events.STOCK_ALERT)
-    assert job["run_at"].astimezone(QATAR) == datetime(2026, 10, 21, 7, 0, tzinfo=QATAR)
+    assert job["run_at"].astimezone(QATAR) == at(TOMORROW, 7, 0)
     assert on_shop(client, StockAlertsAt(client, night + timedelta(minutes=10)).check,
                    item_id) is None
     assert owner_sql("select count(*) from jobs where kind = $1 and status = 'queued'",
                      events.STOCK_ALERT)[0][0] == 1
     # Before the morning, in the small hours, it still waits.
-    assert on_shop(client, StockAlertsAt(client, datetime(2026, 10, 21, 3, 0, tzinfo=QATAR)).check,
+    assert on_shop(client, StockAlertsAt(client, at(TOMORROW, 3, 0)).check,
                    item_id) is None
     # In the morning it is still low, so it says so; and only once that day.
-    morning = datetime(2026, 10, 21, 7, 30, tzinfo=QATAR)
+    morning = at(TOMORROW, 7, 30)
     assert on_shop(client, StockAlertsAt(client, morning).check, item_id) == "low"
     assert on_shop(client, StockAlertsAt(client, morning.replace(hour=9)).check, item_id) is None
     assert [m["body"] for m in told(client)] == ["Low stock: Dates has only 4 left."]
@@ -187,11 +197,11 @@ def test_no_alert_is_sent_at_night_and_the_morning_looks_again(client):
 def test_an_item_filled_again_overnight_says_nothing_in_the_morning(client):
     open_window()
     item = counted(client, 4, name="Dates", name_ar="تمر")
-    night = datetime(2026, 10, 20, 22, 30, tzinfo=QATAR)
+    night = at(TONIGHT, 22, 30)
     on_shop(client, StockAlertsAt(client, night).check, _uuid(item))
     client.post(f"/api/items/{item['id']}/stock", json={"kind": "received", "quantity": 40,
                                                         "reason": "delivery"})
-    morning = datetime(2026, 10, 21, 7, 0, tzinfo=QATAR)
+    morning = at(TOMORROW, 7, 0)
     assert on_shop(client, StockAlertsAt(client, morning).check, _uuid(item)) is None
     assert told(client) == []
 
