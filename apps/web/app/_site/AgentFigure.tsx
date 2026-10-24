@@ -47,8 +47,9 @@ type Props = {
   headingLevel?: 2 | 3;
   /** Drawn beside the window: the callouts (the homepage's spotlight). */
   aside?: ReactNode;
-  /** On a phone the screen stops after its four numbers, and this opens the rest (a native
-   * `<details>`; site audit P1-c). */
+  /** Opens the rest of the screen (a native `<details>`): on /agent's phone layout after its
+   * four numbers (site audit P1-c); in the homepage's spotlight at every width, after Needs
+   * you now and the suggestions (framer-review P2). */
   more?: string;
   id?: string;
   /** Tells other figures on the page which sample was picked (`alyr:sample` with this id):

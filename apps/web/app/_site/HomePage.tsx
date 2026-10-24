@@ -154,6 +154,7 @@ function Spotlight({ locale }: { locale: Locale }) {
           switcher
           headingLevel={3}
           aside={callouts}
+          more={s.more}
         />
       </div>
     </section>

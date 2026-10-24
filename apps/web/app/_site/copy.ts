@@ -268,6 +268,9 @@ type Home = {
     callouts: string[];
     calloutsLabel: string;
     link: string;
+    /** The rest of the screen, under a native `<details>`: the section opens on Needs you now
+     * and the suggestions, which the hero's crop does not reach (framer-review P2). */
+    more: string;
   };
   suite: {
     eyebrow?: string;
@@ -871,13 +874,13 @@ const en: Copy = {
       label: "The ALYR Agent home screen of the sample business you choose",
       calloutsLabel: "How to read it",
       callouts: [
-        "Like with like: your week against the same days last week, never a busy Tuesday against a quiet Friday.",
         "Needs you now: work that is waiting, and for how long. It clears when the work is done.",
-        "No percentages from tiny numbers: only when both weeks have 20 or more.",
         "Shows why: each suggestion says what it counted, and opens those rows.",
+        "Like with like: your week against the same days last week, with percentages only when both weeks have 20 or more.",
         "Done for you: what ALYR sent this week.",
       ],
       link: "See ALYR Agent",
+      more: "See the whole screen",
     },
     suite: {
       title: "Six products. One workspace.\nAdd them as you grow.",
@@ -3167,13 +3170,13 @@ const ar: Copy = {
       label: "الشاشة الرئيسية لـ ALYR Agent للنشاط التوضيحي الذي تختاره",
       calloutsLabel: "كيف تقرؤها",
       callouts: [
-        "المثل بالمثل: أسبوعك مقارنةً بالأيام نفسها من الأسبوع الماضي، لا ثلاثاء مزدحماً مقابل جمعة هادئة.",
         "يحتاجك الآن: العمل المنتظر، ومنذ متى. ويختفي حين يُنجز.",
-        "لا نسب من أرقام صغيرة: فقط حين يكون في كل أسبوع 20 أو أكثر.",
         "يبيّن السبب: كل اقتراح يذكر ما عدّه، ويفتح تلك السجلات.",
+        "المثل بالمثل: أسبوعك مقارنةً بالأيام نفسها من الأسبوع الماضي، ولا نسب إلا حين يكون في كل أسبوع 20 أو أكثر.",
         "أنجزته ALYR لك: ما أرسلته هذا الأسبوع.",
       ],
       link: "تعرّف على ALYR Agent",
+      more: "اعرض الشاشة كاملة",
     },
     suite: {
       title: "ستة منتجات. مساحة عمل واحدة.\nأضفها كلما كبرت.",
