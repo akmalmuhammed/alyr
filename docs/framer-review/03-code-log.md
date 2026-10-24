@@ -68,3 +68,20 @@ status dot still lights once with one ring whose keyframe carries a literal colo
 (`agentfig.css` `af-light`; it plays once, which the rules allow); `/bookings` says "ALYR
 reads your hours", which is reading data, not understanding, and the proposal did not list
 it; the plates' dotted grids carry literal greys (decoration the proposal did not list).
+
+## P5. One order opens on a finished frame
+
+Done (`FlowDiagram.tsx`). The figure is drawn, in the HTML and until it is read, on the
+first story's **last** step: Sara's chat with the order page, the order and the
+confirmation; ALYR's six lines of work; order #1442 on the team's screen; "06 / 06 She gets
+the confirmation". It was step 1: one message, two lines and "Nothing new yet". Once 60% of
+it is on screen (or its top is past the middle, for a phone where it is taller than the
+screen) and motion is wanted, it goes back to step 1 and plays forward, as before, with the
+pause control. With reduced motion it never plays: it stays finished, a story picked from
+the tabs opens finished too, and the steps are read one tap at a time. Without scripts it is
+the finished frame.
+
+The same component is every product page's "How it works" (`FlowSection`), so all six pages
+(both languages) open their flow finished too. The other demos already opened finished
+(`ProductDemo`, site audit F2); `ChatXray` draws each scene finished; `LastOne` and
+`PaymentPaper` have the end state in their HTML. None other opened empty.
