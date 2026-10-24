@@ -219,7 +219,8 @@ function checkPrices(name, text, window) {
     }
   }
   for (const line of offerStrings) {
-    if (line.length >= 16 && text.includes(line)) problems.push(`${name}: a line that should only show with the offer on is in a build made with the offer off: "${line.slice(0, 140)}"`);
+    // Short offer-only labels ("ALYR Agent and ALYR Shelf") also occur inside ordinary lines; whole sentences do not.
+    if (line.length >= 40 && text.includes(line)) problems.push(`${name}: a line that should only show with the offer on is in a build made with the offer off: "${line.slice(0, 140)}"`);
   }
 }
 

@@ -51,10 +51,6 @@ cp -r .next/static out-site/_next/static
 node "$root/scripts/site-defer-scripts.mjs" out-site/index.html out-site/ar.html out-site/404.html \
   $(for page in $pages; do echo "out-site/$page.html out-site/ar/$page.html"; done)
 
-# Every build names the commit it came from: out-site/version.txt and a <meta name="alyr-build">
-# in each page, so what is live can be traced to git (docs/runbooks/site-deploy.md).
-node "$root/scripts/site/stamp.mjs" out-site
-
 # Cloudflare Pages reads these two files. The link-preview image has no file extension,
 # so its type is stated; hashed assets never change, so browsers may keep them.
 cat > out-site/_headers <<'EOF'
@@ -70,6 +66,15 @@ cat > out-site/_headers <<'EOF'
   Referrer-Policy: strict-origin-when-cross-origin
   X-Frame-Options: DENY
 EOF
+
+# The site for machines: llms.txt, llms-full.txt and a markdown copy of each page (index.md,
+# chat.md, ar/chat.md, ...), made from copy.ts, with no prices and the samples labelled. It adds their
+# types to _headers, so it runs after _headers is written.
+node "$root/scripts/site/llms.mjs" out-site
+
+# Every build names the commit it came from: out-site/version.txt and a <meta name="alyr-build">
+# in each page, so what is live can be traced to git (docs/runbooks/site-deploy.md).
+node "$root/scripts/site/stamp.mjs" out-site
 
 # Fail loudly if a product page or an API address slipped into the output.
 if grep -rlE "127\.0\.0\.1|/sim/|/api/ledger" out-site/*.html out-site/ar/*.html >/dev/null 2>&1; then

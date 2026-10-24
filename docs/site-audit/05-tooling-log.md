@@ -233,3 +233,80 @@ Wrangler was pinned at exactly 4.150.0 in stage 1.
   noisy, so `site:a11y` is not in the CI job.
 - `site:a11y` on Linux or macOS.
 - Whether the old `C:\t\tools` copies give the same axe results.
+
+## Stage 5: llms.txt, llms-full.txt and a markdown copy of each page
+
+**Built:** `scripts/site/llms.mjs`, run by `build-site.sh` after `_headers` is written and
+before the stamp. It writes into `out-site`:
+- **14 markdown copies:** `/index.md`, `/ar.md`, and `/<page>.md` and `/ar/<page>.md` for
+  the six products.
+  - Each copy is built from `copy.ts`, section by section in the page's order: the
+    headings, the lead, the facts, how it works, what's in it, who it's for, works with,
+    the questions as the page filters them, and the closing call with the contact in its
+    state.
+  - Each drawing, demo, flow story, screen and report becomes one line: "[Sample screen of
+    a fictional business. The names and numbers in it are made up; they are not ALYR's
+    results or a customer's.]" No sample figure is copied.
+  - Each copy ends with the address of its page, both languages' copies, the WhatsApp
+    disclaimer and "ALYR. Built in Qatar."
+- **`llms.txt`:** the shape of `03-ax.md`'s draft, in the llmstxt.org format.
+  - The summary is `meta.home.descriptionNoOffer`.
+  - The facts come from the copy where the copy says them: the business types, the four
+    steps, the WhatsApp disclaimer, the contact state, the sample shop names. The few the
+    copy does not say are in `scripts/site/machine-words.json`: no business uses ALYR yet,
+    payments, prices not on the site, the samples are fictional.
+  - Each product links to its markdown copy, with its meta description and, where the
+    truth needs one, a caveat:
+    - Bookings: one booking at a time.
+    - Agent: fixed rules; the report waits for WhatsApp's approval.
+  - The Arabic pages are under "Optional".
+- **`llms-full.txt`:** `llms.txt`, then every copy, English first. About 240 KB in all.
+- **`stamp.mjs`** puts `<link rel="alternate" type="text/markdown" href="/<page>.md">` in
+  each page's `<head>`. It is added after the build, so no `_site` component changed.
+- **`_headers`** gives each copy `Content-Type: text/markdown; charset=utf-8` and
+  `Link: <page>; rel="canonical"`, and gives `llms.txt` and `llms-full.txt`
+  `text/plain; charset=utf-8`. The rules are written one per file, because Cloudflare does
+  not document a `*.md` pattern. `site-worker.js` passes the asset responses through
+  unchanged, so these headers apply. Previews add only `X-Robots-Tag`.
+
+**Honesty:**
+- **No prices, even with the offer on.** The copies always use the offer-off words and drop
+  every `offer: true` question.
+- **llms.txt says where prices are, never what they are.** With the offer on it points to
+  the Price section.
+- **No AI words.** The draft's "not from an AI model" was dropped: honesty.md bans AI words
+  even in a denial. The Agent line says "fixed, written rules … the owner decides".
+- **Docs:** only its own meta description ("Set up for you"); nothing says it is available.
+- `banned-words.mjs` and `link-check.mjs` read these files too:
+  - every word and price check;
+  - every link: 1,164 internal links in 43 files resolve.
+- **Offer test:** an offer-on build checked as if the offer were off still flags its HTML
+  (122 problems), and nothing in the machine files.
+- `banned-words`: an offer-only line now counts only at 40 characters or more. "ALYR Agent
+  and ALYR Shelf", a price-section label, also occurs in ordinary lines.
+
+**Checked:**
+- `wrangler dev` 4.150.0, locally over HTTPS, with an empty env file, so no `.env` was
+  read:
+  - `/index.md` and `/ar/chat.md`: 200, `text/markdown; charset=utf-8`, with the canonical
+    `Link`;
+  - `/llms.txt`, `/llms-full.txt`, `/version.txt`: 200, `text/plain; charset=utf-8`;
+    `version.txt` has `no-cache`;
+  - `/opengraph-image`: `image/png`;
+  - with `PREVIEW` on, every response, 404 included, carries `X-Robots-Tag: noindex,
+    nofollow`.
+- Read through `/index.md`, `/agent.md`, `/ar/docs.md` and `llms.txt`.
+
+**Not checked:**
+- **The same on Cloudflare.**
+- **Locally, the canonical `Link` of `/ar/chat.md`** came back rewritten to the local host
+  (`/index.md` kept alyr.qa). It looks like the dev server's own rewriting; confirm on a
+  preview.
+- **The Arabic sample line** («شاشة نموذجية …») is mine. The native review (ALY-66) has
+  not seen it.
+- **The copies follow today's `copy.ts` shape.** The site agent's fold of "What a check-up
+  finds" into "By business" (in `D:\alyr-ux`) changes it:
+  - sections whose keys are gone are skipped;
+  - a copy shorter than 600 characters, or one without its title, fails the build;
+  - after both branches merge, rerun `pnpm site:check` and read `/index.md` again.
+- Whether any assistant reads `llms.txt`. `03-ax.md` notes that none says it does.

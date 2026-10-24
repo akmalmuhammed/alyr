@@ -4,14 +4,15 @@
 //   node scripts/site/stamp.mjs apps/web/out-site
 //
 // Writes out-site/version.txt and puts <meta name="alyr-build" content="<sha>"> in the
-// <head> of every page. The commit comes from ALYR_BUILD_SHA when set (CI passes the pull
+// <head> of every page, with a <link rel="alternate" type="text/markdown"> to the page's
+// markdown copy when there is one (scripts/site/llms.mjs). The commit comes from ALYR_BUILD_SHA when set (CI passes the pull
 // request's head commit, not GitHub's merge commit), else from `git rev-parse HEAD`. A
 // build from a working tree with uncommitted changes is marked "-dirty": such a build must
 // never be published (scripts/site/deploy.mjs refuses it).
 
 import { execFileSync } from "node:child_process";
-import { readdirSync, readFileSync, statSync, writeFileSync } from "node:fs";
-import { join, resolve } from "node:path";
+import { existsSync, readdirSync, readFileSync, statSync, writeFileSync } from "node:fs";
+import { join, relative, resolve } from "node:path";
 
 const out = resolve(process.argv[2] ?? "apps/web/out-site");
 const repo = resolve(import.meta.dirname, "../..");
@@ -56,7 +57,11 @@ for (const page of pages(out)) {
     console.error(`stamp: ${page} has no <head>; Next's markup changed, so the stamp cannot be placed.`);
     process.exit(1);
   }
-  writeFileSync(page, html.replace("<head>", `<head>${tag}`));
+  // The page's markdown copy, when scripts/site/llms.mjs wrote one (index.md for index.html).
+  const twin = page.replace(/\.html$/, ".md");
+  const rel = relative(out, twin).replaceAll("\\", "/");
+  const alternate = existsSync(twin) ? `<link rel="alternate" type="text/markdown" href="/${rel}"/>` : "";
+  writeFileSync(page, html.replace("<head>", `<head>${tag}${alternate}`));
   count += 1;
 }
 console.log(`stamp: ${count} pages and version.txt carry commit ${commit}`);
