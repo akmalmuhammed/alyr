@@ -15,7 +15,7 @@ export function BookingsPage({ locale }: { locale: Locale }) {
   return (
     <Shell locale={locale} page="bookings" cta={p.cta}>
       <ProductBar bar={p.bar} />
-      <ProductHero hero={p.hero}>
+      <ProductHero locale={locale} hero={p.hero}>
         <ProductDemo product={p.demo} locale={locale} sample={t.fig.sample} note={salon.fictional} />
       </ProductHero>
       <FlowSection flow={p.flow} locale={locale} />

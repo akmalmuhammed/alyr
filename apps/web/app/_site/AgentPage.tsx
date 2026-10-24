@@ -57,7 +57,7 @@ export function AgentPage({ locale }: { locale: Locale }) {
   return (
     <Shell locale={locale} page="agent" cta={p.cta}>
       <ProductBar bar={p.bar} />
-      <ProductHero hero={p.hero}>
+      <ProductHero locale={locale} hero={p.hero}>
         <AgentFigure
           variant="agent"
           views={SAMPLES[locale]}

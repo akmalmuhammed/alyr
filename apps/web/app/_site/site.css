@@ -546,7 +546,8 @@ a.pm-link[aria-current="page"] .pm-name::after { content: ""; display: inline-bl
 .foot-products a[aria-current="page"] { text-decoration: underline; text-decoration-thickness: 1px; text-underline-offset: .25em; }
 .foot-site { padding-top: 0; border-top: 0; margin-top: -1rem; }
 
-/* The phone's contact bar: in once the hero's button has gone, out at the closing call. */
+/* The phone's contact bar, on every page with an opening button: in once that button has
+   gone, out at the closing call. */
 .bar { display: none; }
 @media (max-width: 53rem) {
   .bar {
@@ -562,6 +563,10 @@ a.pm-link[aria-current="page"] .pm-name::after { content: ""; display: inline-bl
   .bar .btn { width: 100%; }
   /* one Volt button on screen at a time: the header's steps aside while the bar is up */
   :root:has(.bar[data-show]) .top .btn-volt { visibility: hidden; }
+}
+/* with reduced motion the bar is simply there or not; it never slides */
+@media (max-width: 53rem) and (prefers-reduced-motion: reduce) {
+  .bar, .bar[data-show] { transition: none; }
 }
 
 /* Moving between pages and languages: the header stays where it is and the new page
@@ -843,8 +848,9 @@ h4 { margin: 0; }
   .fx-now { min-height: 13.5rem; }
 }
 
-/* The homepage's hero has its own Volt button. Until it scrolls away (HomeMotion sets
-   data-hero-gone), the header's button is its outlined twin, so one Volt button is on screen. */
+/* The homepage's hero and every product page's opening have their own Volt button. Until it
+   scrolls away (SiteMotion sets data-hero-gone), the header's button is its outlined twin, so
+   one Volt button is on screen. */
 :root:has([data-hero-cta]):not([data-hero-gone]) .top .btn-volt { color: var(--text); }
 :root:has([data-hero-cta]):not([data-hero-gone]) .top .btn-volt::before { background: var(--text); }
 :root:has([data-hero-cta]):not([data-hero-gone]) .top .btn-volt::after {

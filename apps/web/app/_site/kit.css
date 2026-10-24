@@ -93,6 +93,8 @@ main:has(.pbar) section[id] { scroll-margin-top: calc(var(--header) + 4rem); }
 .product-page .product-head:has(> .pk-title.is-wide) { max-width: none; }
 .product-head:has(> .pk-title.is-wide) > .lead { max-width: 40rem; }
 .pk-title.is-wide, [lang="ar"] .pk-title.is-wide { max-width: none; }
+/* the opening's one Volt button, "Book a check-up", under the lead as on the homepage */
+.pk-actions { display: flex; flex-wrap: wrap; align-items: center; gap: .75rem; }
 .pk-title > span { display: block; }
 .pk-title > span + span { color: var(--concrete); }
 .pk-facts li p { font-size: 1.0625rem; font-weight: 600; line-height: 1.35; color: var(--on-band); }
@@ -239,6 +241,13 @@ main:has(.pbar) section[id] { scroll-margin-top: calc(var(--header) + 4rem); }
   :root:has(.top[data-scrolled]) .pbar { top: 3.5rem; }
   .pbar-name { font-size: .875rem; }
   .pbar-nav .pbar-extra { display: none; }
+  /* a phone's opening: the button the width of the column, as the homepage's hero */
+  .pk-actions { display: grid; }
+  .pk-actions .btn { width: 100%; }
+  /* and the opening a little tighter round it, so the demo's first message is still in the
+     first screen (site audit F1) */
+  .product-head:has(> .pk-actions) { gap: 1.25rem; }
+  .product-head:has(> .pk-actions) + .demo { margin-top: 1.75rem; }
   .pk-steps { grid-template-columns: minmax(0, 1fr); }
   .pk-steps li, [dir="rtl"] .pk-steps li { border-inline-start: 0; padding-inline: 0; }
   .pk-steps li + li { border-top: 1px solid var(--line); }

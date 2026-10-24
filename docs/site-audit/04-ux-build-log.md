@@ -262,7 +262,7 @@ to `s5-` the stage checks.
 
 - Screenshots above; nothing is published.
 - Whether "Book a check-up" should also get a hero button and a sticky bar on the product
-  pages (stage 2: not added).
+  pages (stage 2: not added). Answered 24 Oct: yes, built in the follow-up at the end.
 - The Arabic of every new line (ALY-66), listed in stages 3 to 5.
 - The hand inventory's estimate (about 361) against the probe's measured 670 of 881: if a
   stricter count is wanted, it needs a page-by-page recount.
@@ -280,3 +280,71 @@ to `s5-` the stage checks.
 - Google's Rich Results Test and validator.schema.org (need a public address).
 - 1024 and 1280 spot checks.
 - Motion timing in a run without screenshots.
+
+## Follow-up · "Book a check-up" in every product page's opening, and the phone's bar (24 Oct)
+
+The founder approved what stage 2 left open: every product page (`/chat`, `/bookings`,
+`/agent`, `/accounts`, `/shelf`, `/docs` and their `/ar` pages) gets the homepage's
+treatment, the Volt button in the opening and the phone's sticky bar, exactly as the homepage
+has them. Lean path of `alyr-design-review` (one component and its behaviour, no new words):
+no critics. The ALY-223 work below this was already on alyr.qa when this started (its JSON-LD
+answers on `https://alyr.qa/bookings`); this follow-up is not published. Static server 3121,
+Edge profile `C:\t\btnprof`; probes in `C:\t\btn` (outside the repo).
+
+Done:
+- `ProductKit.tsx` `HeroAction`: under the lead in `ProductHero` (Bookings, Agent, Accounts,
+  Shelf, Docs) and in `/chat`'s own opening; `ContactButton` with the homepage's words
+  (`home.hero.action`: "Book a check-up" / «احجز فحصاً لمشروعك») and the same mail link,
+  wrapped in `data-hero-cta`. None while the contact state is pending. No new keys in `copy.ts`.
+- `Shell` renders the phone's bar on every page (the `bar` prop is gone); its behaviour moved
+  from `HomeMotion` to `SiteMotion`, unchanged: up once the opening's button has scrolled
+  away, down while the closing call (or the footer below it) is on screen, and
+  `data-hero-gone` on `<html>`. The existing `site.css` rules then hold on every page: while
+  the opening's button is on screen the header's is its outlined twin; while the bar is up the
+  header's is hidden. One Volt button on screen at a time.
+- On phones (≤ 30rem) the button is the column's width, as the homepage's; the opening's gaps
+  around it are a little tighter (head gap 1.25rem, demo 1.75rem above) so the demo's first
+  message still starts in the first screen.
+- New, on every page including the homepage: with reduced motion the bar appears and goes
+  without sliding (`transition: none`).
+- `alyr-site-page` now names the button in the opening's row and has a row for the phone's
+  bar, so a new product page gets both.
+
+Checked (built `out-site`, served compressed; `C:\t\btn\probe.log`, `axe.log`):
+- Behaviour, all 14 pages, at 390 and 320 (light), 390 dark with reduced motion, and 1440: at
+  the top the bar is down and the header's button is the twin; past the opening's button the
+  bar is up and the header's hidden; with the closing call 8 px into the screen, at the
+  closing call and at the end the bar is down; back at the top, down again with the twin. At
+  1440 the bar is not displayed and the header's button turns Volt once the opening's has
+  gone. With reduced motion the bar's transition is 0 s.
+- Size: the bar is 69 px tall with its padding (plus the safe-area inset on a phone that has
+  one), its button 350 × 48 at 390 and 280 × 48 at 320, inside the screen, words not cut, in
+  both languages; the opening's button 48 px tall on phones, 52 at 1440.
+- 320 px, both languages, all 14 pages: `scrollWidth` 320; nothing past the edge except the
+  homepage's business tabs inside their own sideways row (as before).
+- The demo's first message at 390 × 844, reduced motion (before → after, by the button's
+  height and gap): English 696 → 744 px from the top (`/chat` 708, `/docs` 781), Arabic about
+  740 → 788. It still starts in the first screen; in Arabic about 56 px of it shows. `/agent`'s
+  dashboard was already below the first screen on phones.
+- No scripts (390, all 14): the opening's button is there with its words; the bar stays
+  hidden; the header's button is the twin (as on the homepage without scripts).
+- axe-core: all 14 pages, light at 1440 and dark at 390, after a full scroll: 0 violations of
+  any impact. The opening's button, the bar (up) and the header, in light and dark at 390 on
+  all 14 pages: 0 violations.
+- Lighthouse 12 mobile, simulated throttling, `/bookings`, three runs: 98 / 100 / 100 / 100,
+  98 / 100 / 100 / 100, 97 / 100 / 100 / 100 (Performance / Accessibility / Best practices /
+  SEO), LCP 2.3 s, CLS 0, TBT 70 to 130 ms.
+- `pnpm lint` clean; `pnpm exec tsc --noEmit` clean; `pnpm build` passes; `bash
+  scripts/build-site.sh` passes (156 files); `node scripts/design-check.mjs`: 418 files clean,
+  5 allowed exceptions.
+
+Screenshots (not committed) in `docs/site-audit/shots/buttons/`: for each product page and
+language, the first screen at 1440 and 390 in light and dark, the bar up at 390 in light and
+dark (and with reduced motion), the closing call at 390 with the bar gone, the first screen
+and the bar at 320; the homepage's bar at 390 for comparison.
+
+Not checked: a real iPhone (the safe-area inset is read from the CSS, not seen on a notch) or
+Android; Safari and Firefox; the WhatsApp and pending contact states (the button and bar
+follow `ContactButton`, which hides in pending); the offer-on state; the keyboard path
+through the opening, not walked; 1024 and 1280 spot
+checks; `pnpm test`; motion timing of the bar's slide in a run without screenshots.

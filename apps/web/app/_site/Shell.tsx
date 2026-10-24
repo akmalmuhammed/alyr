@@ -50,10 +50,12 @@ function ProductsMenu({ locale, page }: { locale: Locale; page: PageKey }) {
   );
 }
 
-/** The header, the closing call to action and the footer that every public page shares.
- * `bar` adds the phone's sticky contact bar (the homepage). */
+/** The header, the closing call to action, the footer and the phone's sticky contact bar
+ * that every public page shares. The bar comes up once the opening's own "Book a check-up"
+ * has scrolled away and goes at the closing call (SiteMotion); the homepage and every
+ * product page have that button (founder, 24 Oct 2026). */
 export function Shell({
-  locale, page, cta, bar = false, children,
+  locale, page, cta, children,
 }: {
   locale: Locale;
   page: PageKey;
@@ -61,7 +63,6 @@ export function Shell({
    * "Book a check-up" (founder, 24 Oct 2026: one name on every page), from `home.final`
    * unless a page names its own; `short` is the header's on a phone. */
   cta: { title: string; body: string; action?: string; short?: string };
-  bar?: boolean;
   children: React.ReactNode;
 }) {
   const t = copy[locale];
@@ -201,7 +202,7 @@ export function Shell({
         </div>
       </footer>
 
-      {bar && CONTACT_STATE !== "pending" && (
+      {CONTACT_STATE !== "pending" && (
         <div className="bar" data-bar role="region" aria-label={t.contact.bar}>
           <ContactButton locale={locale} className="bar-btn" label={action} />
         </div>

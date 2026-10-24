@@ -33,7 +33,7 @@ export function HomePage({ locale }: { locale: Locale }) {
   const other: Locale = locale === "en" ? "ar" : "en";
 
   return (
-    <Shell locale={locale} page="home" cta={h.final} bar>
+    <Shell locale={locale} page="home" cta={h.final}>
       <Hero locale={locale} />
       <How locale={locale} />
       <Business locale={locale} />

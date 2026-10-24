@@ -1,6 +1,7 @@
 import type { CSSProperties, ReactNode } from "react";
 import { Icon } from "./brand";
 import { copy, fill, type FlowSet, type InsideSection, type Locale, type ProductBar as Bar, type Questions, type ScreenSection, type WhoSection, type WorksSection } from "./copy";
+import { ContactButton } from "./Contact";
 import { FlowDiagram } from "./FlowDiagram";
 import { contactHref } from "./Shell";
 import { CONTACT_STATE, OFFER_LIVE, PATHS, PRODUCTS, productPath, type ProductKey } from "./site";
@@ -37,9 +38,24 @@ export function ProductBar({ bar }: { bar: Bar }) {
   );
 }
 
+/** The opening's one Volt button, "Book a check-up", as on the homepage (founder, 24 Oct
+ * 2026): the homepage's words (`home.hero.action`) and the same contact link. While it is on
+ * screen the header's button is its outlined twin; once it has scrolled away the phone's
+ * contact bar comes up (`data-hero-cta`, SiteMotion, site.css). None while there is no way
+ * to reach ALYR. */
+export function HeroAction({ locale }: { locale: Locale }) {
+  if (CONTACT_STATE === "pending") return null;
+  return (
+    <div className="pk-actions" data-hero-cta>
+      <ContactButton locale={locale} lean label={copy[locale].home.hero.action} />
+    </div>
+  );
+}
+
 /** The opening: on the Carbon block, the name and state, a headline that names the result,
- * the lead, the demo, and three facts on one rule. */
-export function ProductHero({ hero, children, id = "product", wide = false }: {
+ * the lead and the check-up button, the demo, and three facts on one rule. */
+export function ProductHero({ locale, hero, children, id = "product", wide = false }: {
+  locale: Locale;
   hero: { eyebrow: string; title: [string, string]; lead: string; facts: string[]; factsOffer?: string[] };
   children: ReactNode;
   id?: string;
@@ -61,6 +77,7 @@ export function ProductHero({ hero, children, id = "product", wide = false }: {
               <span>{rich(hero.title[0])}</span> <span>{rich(hero.title[1])}</span>
             </h1>
             <p className="lead">{rich(hero.lead)}</p>
+            <HeroAction locale={locale} />
           </div>
           {children}
           <ul className={`product-facts pk-facts${facts.length > 3 ? " is-four" : ""}`}>

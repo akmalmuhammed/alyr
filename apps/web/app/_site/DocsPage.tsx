@@ -24,7 +24,7 @@ export function DocsPage({ locale }: { locale: Locale }) {
   return (
     <Shell locale={locale} page="docs" cta={p.cta}>
       <ProductBar bar={p.bar} />
-      <ProductHero hero={p.hero} wide>
+      <ProductHero locale={locale} hero={p.hero} wide>
         <ProductDemo product={p.demo} locale={locale} sample={t.fig.sample} note={bakery.fictional} />
       </ProductHero>
       <PaymentPaperFigure locale={locale} />

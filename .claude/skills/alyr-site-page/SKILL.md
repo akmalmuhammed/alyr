@@ -100,7 +100,7 @@ Every product page uses `_site/ProductKit.tsx` and `kit.css`, in this order:
 | Block | Component | Rule |
 |---|---|---|
 | Product bar | `ProductBar` | Name with the signal and its sections; sticky; no call to action |
-| Opening on Carbon | `ProductHero` | Eyebrow with the state, a two-line H1 that names the result (second line Concrete), the lead, a tabbed demo (`ProductDemo`), three facts on one rule. Cut corner, not rounded |
+| Opening on Carbon | `ProductHero` | Eyebrow with the state, a two-line H1 that names the result (second line Concrete), the lead, the page's one Volt button "Book a check-up" (`HeroAction`: `home.hero.action`, the homepage's contact link, `data-hero-cta`; the column's width on a phone), a tabbed demo (`ProductDemo`), three facts on one rule. Cut corner, not rounded |
 | Signature figure (optional, after the opening) | `LastOne.tsx`, `PaymentPaper.tsx`, `moment.css` | One real object changing state (03-visuals of `docs/site-products-2`): three parts hanging from one label line over a rule, CSS keyframes keyed on `.is-in` on each part, every delay a number of `--stagger` steps, one Volt mark, done before 3 s; the HTML is the end state. `data-sig` (not `data-m`) gives it SiteMotion's own trigger: on a wide screen the whole figure starts once 60% of it is on screen or its top is past the middle; on a phone each part starts as it arrives, its delays counted from its own first beat (`--t0`). It keeps `motion` past the 4 s failsafe. Measure that it starts and ends in view (`--eval`, no screenshots). It must fit one screen at 1440 × 900 |
 | How it works, from both sides | `FlowSection` (`FlowDiagram`) | The customer's steps and the business's, in the product's real words |
 | The screen used every day | `ScreenBlock` | The real workspace screen at true scale in the workspace window, numbered Carbon callouts beside it; on phones the workspace's phone layout (cards), never a sideways table with no cue |
@@ -110,6 +110,7 @@ Every product page uses `_site/ProductKit.tsx` and `kit.css`, in this order:
 | Works with the rest of ALYR | `WorksBlock` | Ruled rows in the suite's order without the page's own product |
 | Questions | `QuestionsBlock` | Native `<details>`, an `id` per question; "Can I use it on its own?", "How long does setup take?" |
 | Closing call | `Shell` | The fold at its top, the contact block in its state |
+| Phone's contact bar | `Shell`, `SiteMotion` | As on the homepage (founder, 24 Oct 2026), below 53rem: up once the opening's `data-hero-cta` button has scrolled away, down while the closing call or the footer is on screen; 44 px button, `env(safe-area-inset-bottom)`, no slide with reduced motion, down without scripts. One Volt button on screen: the header's is the outlined twin while the opening's is in view and hides while the bar is up (`site.css`). A page whose opening has no `data-hero-cta` never shows the bar |
 
 Each page has its own English social card (`(site)/<page>/opengraph-image.tsx` through
 `_site/socialCard.tsx`). Arabic pages share the English homepage card until Arabic cards are

@@ -3,7 +3,7 @@ import { ChatXray } from "./ChatXray";
 import { copy, type Locale } from "./copy";
 import { FlowDiagram } from "./FlowDiagram";
 import { ProductDemo } from "./ProductDemo";
-import { ProductBar, WorksBlock } from "./ProductKit";
+import { HeroAction, ProductBar, WorksBlock } from "./ProductKit";
 import { contactHref, Shell } from "./Shell";
 import { productPath } from "./site";
 import { lines, rich } from "./Text";
@@ -30,6 +30,7 @@ export function ProductPage({ locale }: { locale: Locale }) {
               </p>
               <h1 className="display display-sm pk-title">{lines(p.title)}</h1>
               <p className="lead">{p.body}</p>
+              <HeroAction locale={locale} />
             </div>
             <ProductDemo product={p} locale={locale} sample={t.fig.sample} note={t.fig.note} />
             <ul className="product-facts">

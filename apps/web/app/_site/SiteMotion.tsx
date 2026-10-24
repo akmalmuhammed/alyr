@@ -6,8 +6,8 @@ import { useEffect } from "react";
  * The page's scroll behaviour, in one place: the header tightening, the header turning
  * Carbon while it sits over a full-bleed Carbon section, sections arriving, and the
  * approach statement lighting up word by word as it is read. Also, on every page: the
- * language link lands on the section being read (`/ar/bookings#how`), and a question
- * linked by its address opens.
+ * language link lands on the section being read (`/ar/bookings#how`), a question linked
+ * by its address opens, and the phone's contact bar comes and goes.
  *
  * Everything here is an enhancement. Without JavaScript, or with reduced motion on, the
  * page is complete and still (see the `.al-js` and `prefers-reduced-motion` rules).
@@ -114,6 +114,32 @@ export function SiteMotion() {
     };
     watchDark();
 
+    // The phone's contact bar, on the homepage and every product page: up once the opening's
+    // own "Book a check-up" has scrolled away, down while the closing call (and the footer
+    // below it) is on screen. While the bar is up the header's button steps aside, and while
+    // the opening's button is on screen the header's is its outlined twin (site.css), so one
+    // Volt button is on screen. Without scripts the bar stays down.
+    const root = document.documentElement;
+    const bar = document.querySelector<HTMLElement>("[data-bar]");
+    const heroButton = document.querySelector<HTMLElement>("[data-hero-cta]");
+    const closing = document.getElementById("contact");
+    let watchBar: IntersectionObserver | null = null;
+    if (bar && heroButton && closing) {
+      let heroGone = false;
+      let closingSeen = false;
+      watchBar = new IntersectionObserver((entries) => {
+        for (const entry of entries) {
+          if (entry.target === heroButton) heroGone = !entry.isIntersecting && entry.boundingClientRect.top < 0;
+          // Reached or passed: the footer below it stays clear too.
+          if (entry.target === closing) closingSeen = entry.isIntersecting || entry.boundingClientRect.top < 0;
+        }
+        bar.toggleAttribute("data-show", heroGone && !closingSeen);
+        root.toggleAttribute("data-hero-gone", heroGone);
+      });
+      watchBar.observe(heroButton);
+      watchBar.observe(closing);
+    }
+
     let lit = -1;
     let queued = false;
     const update = () => {
@@ -147,6 +173,7 @@ export function SiteMotion() {
       enough.disconnect();
       past.disconnect();
       dark?.disconnect();
+      watchBar?.disconnect();
       window.removeEventListener("scroll", onScroll);
       window.removeEventListener("resize", onScroll);
       window.removeEventListener("resize", watchDark);

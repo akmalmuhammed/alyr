@@ -17,7 +17,7 @@ export function ShelfPage({ locale }: { locale: Locale }) {
   return (
     <Shell locale={locale} page="shelf" cta={p.cta}>
       <ProductBar bar={p.bar} />
-      <ProductHero hero={p.hero} wide>
+      <ProductHero locale={locale} hero={p.hero} wide>
         <ProductDemo product={p.demo} locale={locale} sample={t.fig.sample} note={bakery.fictional} />
       </ProductHero>
       <LastOneFigure locale={locale} />
