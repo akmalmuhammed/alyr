@@ -123,3 +123,50 @@ parity (6,084 strings).
 - **The site's data:** `_site/samples.ts` drops the `rule` key from each need and suggestion
   (the page's own data held "RULE · …" for crawlers), and the section rule's CSS class
   (`"className":"rule"` in Next's page data) is allowed in `allow/banned.json`.
+
+## Verification (25 Oct 2026, the built site served compressed on port 3171)
+
+- `pnpm site:check`: build, EN/AR parity (6,084 strings), banned words and prices (47 words,
+  15 style patterns over 2,308 labels and lines, 45 built files, offer off), 1,130 internal
+  links: pass. It regenerates `llms.txt`, `llms-full.txt` and the 14 markdown copies.
+  `pnpm exec tsc --noEmit`, `pnpm lint`, `node scripts/design-check.mjs`: clean.
+- `pnpm site:a11y --no-lighthouse`: axe on all 14 pages, 1440 and 390, light and dark, 56 runs,
+  no serious or critical issues.
+- **"Rule" in the built site:** a grep of every page's visible text and attributes, the
+  markdown copies and `llms*.txt` for rule, rules, RULE, «قاعدة», «القاعدة», «قاعدته»,
+  «قاعدتها», «قواعد»: 0 hits outside «قاعدة البيانات» (the database, 27 times). No "RULE ·",
+  "Rule ·" or «القاعدة ·» anywhere in the HTML, page data included. The product's JavaScript
+  chunk still holds `AGENT_LABELS` ("Suggestions, by rule"), which the site never draws.
+- **Headings at 390 and 320**, both languages, every page: no heading overflows its box, none
+  ends in "…", no page scrolls sideways. Changed Arabic headings: the product H1s are 3 to 4
+  lines at 390 and 3 to 5 at 320 (/shelf's is 5 at 320); every other changed Arabic H2 is 1
+  or 2 lines (3 for One order and /docs' "who" at 320).
+- **The frame,** real mouse input in headless Edge at 1440 with motion on: at rest no tile
+  has `is-in` and each shows its end state (opacity read: Sara's new row 1, the reminder 1,
+  the suggestion 1, Sold out 1); a hover on Bookings shows its start (no booking, the slot
+  filling) at 120 ms and the finished tile by 2.4 s; Agent and Docs the same; each plays once.
+  The products heading is one line at 1440 in both languages, its lead 24 px under it, the
+  plate 347 px (EN) and 337 px (AR) from the section's top; ALYR Agent before it still opens
+  split.
+- **Screenshots** (`docs/content-audit/shots/`, not committed): `{page}-{en,ar}-{1440,390}-full.png`
+  for all seven pages (28), and `frame-{en,ar}-1440-rest.png`,
+  `frame-{en,ar}-1440-hover-{bookings,agent,docs}-{start,mid,end}.png`.
+
+## Open for the founder
+
+- The screenshots, and a publish when he wants one (nothing deployed or merged).
+- The Arabic of every changed line (ALY-66).
+- The products heading ("Six products. One workspace. Add them as you grow.") and the price
+  heading ("One clear price. No commission on your orders.") were outside the audit and break
+  its rule 3; they are allow-listed until he gives their words.
+- Whether the sales deck (`alyr-deck-and-social`, slide 5) drops the Agent's rule lines too.
+- Row 26 (the homepage callouts) was not applied, as this pass's brief said; the callouts
+  "Shows why: …" and "Like with like: …" stay.
+
+## Not checked
+
+- Dark mode and 1024 by eye (axe covered dark); reduced motion and no scripts by screenshot
+  (the CSS for them did not change); a real phone, Safari or a screen reader.
+- Lighthouse (no change expected to speed); the moments judged in motion by a person.
+- The offer-on build (the price lines did not change; the style check reads them in the copy).
+- No Linear issue was given for this pass, so none was updated.
