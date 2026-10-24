@@ -258,7 +258,7 @@ a.pm-link[aria-current="page"] .pm-name::after { content: ""; display: inline-bl
 .wa-mini .wa-msg.wa-tail { margin-top: .25rem; }
 
 /* --------------------------------------------------------------- sections */
-.sec { padding-block: clamp(4.5rem, 10vw, 8rem); }
+.sec { padding-block: var(--sec); }
 .sec + .sec { border-top: 1px solid var(--line); }
 .sec h3 { font-size: 1.3125rem; font-weight: 600; line-height: 1.25; letter-spacing: -.012em; }
 [lang="ar"] .sec h3:not(.ag h3), [lang="ar"] .product h3:not(.ag h3), [lang="ar"] .product-facts h2 { letter-spacing: 0; line-height: 1.5; }
@@ -621,8 +621,9 @@ a.pm-link[aria-current="page"] .pm-name::after { content: ""; display: inline-bl
   .al-js .company-in.is-in .company-path path { animation: draw 1600ms var(--ease) both 200ms; }
   .al-js .company-in.is-in .company-path .company-path-volt { animation: draw 700ms var(--ease) both 1500ms; }
 
-  /* the demo plays message by message */
-  .demo .wa-msg, .row, .panel-total { animation: rise 520ms var(--ease) both; animation-delay: calc(160ms + var(--i) * 620ms); }
+  /* the demo plays message by message, once it has moved past its first tab (that one is
+     drawn finished, so the first view is never an empty phone) */
+  .demo[data-moved] .wa-msg, .demo[data-moved] .row, .demo[data-moved] .panel-total { animation: rise 520ms var(--ease) both; animation-delay: calc(160ms + var(--i) * 620ms); }
 }
 
 /* ------------------------------------------------------------- responsive */
@@ -665,7 +666,6 @@ a.pm-link[aria-current="page"] .pm-name::after { content: ""; display: inline-bl
   .btn { min-height: 3rem; }
   .cta-actions { justify-items: stretch; }
   .btn-sm { min-height: 2.75rem; }
-  .sec { padding-block: 3.5rem; }
   .statement, .company-say { font-size: 1.5rem; }
   .steps li { grid-template-columns: 2.25rem 1fr; padding-block: 1.375rem; }
   .product { padding-inline: 0; }
@@ -679,6 +679,9 @@ a.pm-link[aria-current="page"] .pm-name::after { content: ""; display: inline-bl
   .demo-stage { border-radius: .5rem; min-height: 0; }
   .phone { padding: 1rem .5rem; }
   .wa { height: 31rem; border-radius: 1.5rem; }
+  /* on a phone the demo's chat starts under its day chip, so its first message is in the
+     first screen (site audit F1, F2) */
+  .demo .wa-thread { justify-content: flex-start; }
   .wa-top .wa-video { display: none; }
   .panel-caption { font-size: .8125rem; }
   .who-rows > li { padding-block: 1.25rem; }
@@ -800,7 +803,7 @@ h4 { margin: 0; }
   .fx[data-playing] .fx-link[data-dir] .fx-pulse:nth-child(3) { animation-delay: .4s; }
   .fx[data-playing] .fx-link[data-dir] .fx-pulse:nth-child(4) { animation-delay: .8s; }
   /* whatever this step added arrives */
-  .fx .wa-msg, .fx-event, .fx-work li, .fx-records .row, .fx-say { animation: rise 420ms var(--ease) both; animation-delay: 0s; }
+  .fx[data-moved] :is(.wa-msg, .fx-event, .fx-work li, .fx-records .row, .fx-say) { animation: rise 420ms var(--ease) both; animation-delay: 0s; }
 }
 
 @media (max-width: 68rem) {

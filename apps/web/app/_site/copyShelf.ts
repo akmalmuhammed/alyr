@@ -76,7 +76,7 @@ export const shelfEn: ShelfPage = {
     eyebrow: "With every product",
     title: ["Everything you sell, on one shelf.", "Every sale counts the stock down."],
     lead:
-      "Your items with photos, prices, sizes and choices, in Arabic and English. Each sale takes its stock in one step, so the last one sells only once. When something runs out, the order page says Sold out, and a staff phone brings it back with one message.",
+      "Photos, prices and sizes in Arabic and English. Every sale counts the stock, so the last one sells once.",
     facts: ["With every ALYR product", "The last one sells only once", "Counted, by the day or by weight"],
   },
   demo: {
@@ -496,7 +496,7 @@ export const shelfAr: ShelfPage = {
     eyebrow: "مع كل منتج",
     title: ["كل ما تبيعه، في مكان واحد.", "ومع كل\u00a0بيع، ينقص المخزون تلقائياً."],
     lead:
-      "أصنافك بصورها وأسعارها ومقاساتها وخياراتها، بالعربية والإنجليزية. كل بيع يأخذ كميته من المخزون في خطوة واحدة، فلا تُباع القطعة الأخيرة إلا مرة واحدة. وحين ينفد صنف تُظهر صفحة الطلب «نفد»، ويعيده هاتف الموظف للبيع برسالة واحدة.",
+      "الصور والأسعار والمقاسات بالعربية والإنجليزية. كل بيع يُنقص المخزون، فلا تُباع القطعة الأخيرة إلا مرة.",
     facts: ["مع كل منتج من ALYR", "القطعة الأخيرة تُباع مرة واحدة", "بالعدد أو باليوم أو بالوزن"],
   },
   demo: {

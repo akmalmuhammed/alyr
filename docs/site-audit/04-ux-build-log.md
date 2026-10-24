@@ -146,3 +146,32 @@ Done:
   name, nothing pinned). `alyr-site-page`'s homepage section is rewritten to match.
 
 Measured at once (en): `/` 12,191 px at 1440 (was 17,716).
+
+### Stage 5 · The product template and phones (`01-ux.md` top five #4 and #5: L3, F1, F2, P1-b, P1-c)
+
+Done:
+- `.sec` pads with `--sec` (was a literal `clamp(4.5rem, 10vw, 8rem)`, 256 px at 1440); the
+  phone override that only restated 3.5rem is gone.
+- Duplicate captions: the second windows' captions on Bookings and Shelf went in stage 1
+  (they stay as the windows' `aria-label`s).
+- Leads: every product lead is three lines or fewer at 390 in both languages (measured: en 3,
+  ar 2; at 320 the Docs lead is 4 in English, the rest 3 or fewer). New leads: Chat "ALYR
+  Chat adds an order page and updates to your chat, and one inbox for your whole team.";
+  Bookings "Customers pick a free time in the chat. ALYR confirms at once and reminds them two
+  hours before."; Agent "What needs you now, how your week is going, and up to three
+  suggestions, each with its rule."; Accounts "Record credit in one line. One press sends
+  reminders whose tone follows how late the payment is."; Shelf "Photos, prices and sizes in
+  Arabic and English. Every sale counts the stock, so the last one sells once."; Docs (the
+  audit's line) "When a payment is recorded, ALYR Docs issues the next numbered receipt, Arabic
+  first, final once issued." The conditions they dropped are still on the page: Docs' 24 hours
+  in its Receipt tab caption and the CR rule in "No CR yet?"; Accounts' pause on a promise in
+  its demo and flow; Bookings' "your team marks who came" in its Came tab and facts.
+- Demos and flows open on their first step finished: the HTML's first tab (and the flow's
+  first step) is no longer hidden behind its arrival animation; messages arrive one by one only
+  once the figure has moved on (`data-moved`). On a phone the demo's chat starts under its day
+  chip, so the first message is in the first screen (it sat at the bottom of a 31rem phone).
+- The product bar on phones (≤ 30rem) keeps "How it works" and "What's in it" only
+  (`.pbar-extra`); wider it keeps every link.
+- `/agent` on a phone stops after Needs you now, Done for you and the four numbers; a native
+  `<details>` "See the whole screen" / «اعرض الشاشة كاملة» opens the rest (`.af-more`,
+  `:has()`; a browser without `:has()` shows the whole screen, as before).

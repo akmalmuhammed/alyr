@@ -15,6 +15,9 @@ import "./kit.css";
 
 const n = (index: number) => ({ "--n": index }) as CSSProperties;
 
+/** The sections a phone's product bar keeps, so it fits (site audit P1-b). */
+const PHONE_LINKS = ["how", "inside"];
+
 /** The product's name and its sections, held under the header while the page is read. */
 export function ProductBar({ bar }: { bar: Bar }) {
   return (
@@ -26,7 +29,7 @@ export function ProductBar({ bar }: { bar: Bar }) {
         </a>
         <nav className="pbar-nav" aria-label={bar.label}>
           {bar.links.map((link) => (
-            <a key={link.id} href={`#${link.id}`}>{link.label}</a>
+            <a key={link.id} href={`#${link.id}`} className={PHONE_LINKS.includes(link.id) ? undefined : "pbar-extra"}>{link.label}</a>
           ))}
         </nav>
       </div>

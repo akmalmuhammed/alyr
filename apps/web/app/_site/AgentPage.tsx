@@ -64,6 +64,7 @@ export function AgentPage({ locale }: { locale: Locale }) {
           order={SAMPLE_ORDER}
           text={t.agent}
           label={p.figure.label}
+          more={p.figure.more}
           switcher
           feed
           headingLevel={2}

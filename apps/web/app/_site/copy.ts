@@ -448,7 +448,8 @@ type AccountsPage = PageCommon & {
 };
 
 type AgentPage = PageCommon & {
-  figure: { label: string };
+  /** `more` opens the rest of the screen on a phone, which stops after its four numbers. */
+  figure: { label: string; more: string };
   how: { eyebrow?: string; title: string; steps: Titled[]; card: string; under: string };
   report: { eyebrow?: string; title: string; body: string };
   rules: { eyebrow?: string; title: string; body: string; heads: [string, string]; rows: { name: string; rule: string; note?: string }[]; notes: string[] };
@@ -1447,7 +1448,7 @@ const en: Copy = {
     eyebrow: "Set up for you",
     title: "Orders in the chat.\nOne inbox for the team.",
     body:
-      "Your customers keep messaging you the way they already do. ALYR Chat adds the order page, the payment link and the updates, and your team sees it all in one place.",
+      "ALYR Chat adds an order page and updates to your chat, and one inbox for your whole team.",
     business: "Dana Home Services",
     businessMeta: "Sample business",
     today: "Today",
@@ -1904,7 +1905,7 @@ const en: Copy = {
         eyebrow: "Set up for you",
         title: ["Customers book in the chat.", "ALYR reminds them before they come."],
         lead:
-          "Your customers pick a service and a free time from a page that opens in the chat, with no app. The confirmation goes at once, a reminder two hours before, and your team marks who came.",
+          "Customers pick a free time in the chat. ALYR confirms at once and reminds them two hours before.",
         facts: ["Free times from your opening hours", "A reminder 2 hours before", "One booking at a time, for one chair or one\u00a0room"],
         factsOffer: ["From QAR 449 a month, or QAR 150 beside ALYR Chat or ALYR Accounts"],
       },
@@ -2292,11 +2293,12 @@ const en: Copy = {
         eyebrow: "With every product",
         title: ["Your business in numbers.", "What needs you, first."],
         lead:
-          "ALYR Agent is the home screen of your workspace. It says in one sentence how the week is going, lists what needs you now, and suggests up to three things, each with the rule behind it.",
+          "What needs you now, how your week is going, and up to three suggestions, each with its rule.",
         facts: ["With every ALYR product", "Every suggestion shows its rule", "Counted from your own records"],
       },
       figure: {
         label: "The ALYR Agent home screen of the sample business you choose, and what ALYR did for it this afternoon",
+        more: "See the whole screen",
       },
       how: {
         title: "Your records, a rule, a card, the screen.",
@@ -2426,7 +2428,7 @@ const en: Copy = {
         eyebrow: "Set up for you",
         title: ["Know who owes you.", "Remind them without the awkward call."],
         lead:
-          "Record a credit sale with one line from your staff phone, and the customer is told the new balance. One press sends reminders in a tone that follows the age of the debt, and a promise to pay pauses them.",
+          "Record credit in one line. One press sends reminders whose tone follows how late the payment is.",
         facts: ["The oldest debt is settled first", "Never reminded twice within 3 days", "Stop means stop"],
         factsOffer: ["From QAR 449 a month, or QAR 150 beside ALYR Chat or ALYR Bookings"],
       },
@@ -3742,7 +3744,7 @@ const ar: Copy = {
     eyebrow: "نجهّزه لك",
     title: "الطلبات داخل المحادثة.\nوصندوق واحد للفريق.",
     body:
-      "يواصل عملاؤك مراسلتك كما اعتادوا. ويضيف ALYR Chat صفحة الطلب ورابط الدفع والتحديثات، وفريقك يرى كل شيء في مكان واحد.",
+      "يضيف ALYR Chat صفحة الطلب والتحديثات إلى محادثتك، وصندوقاً واحداً لفريقك كله.",
     business: "دانة للخدمات المنزلية",
     businessMeta: "نشاط توضيحي",
     today: "اليوم",
@@ -4199,7 +4201,7 @@ const ar: Copy = {
         eyebrow: "نجهّزه لك",
         title: ["عملاؤك يحجزون من المحادثة.", "وتذكّرهم ALYR قبل موعدهم."],
         lead:
-          "يختار عملاؤك الخدمة والوقت المتاح من صفحة تُفتح من المحادثة، بلا تطبيق. يصلهم التأكيد فوراً، والتذكير قبل الموعد بساعتين، ويسجّل فريقك من حضر.",
+          "يختار عملاؤك وقتاً متاحاً من المحادثة. وتؤكد ALYR الحجز فوراً، وتذكّرهم قبل الموعد بساعتين.",
         facts: ["الأوقات المتاحة من ساعات عملك", "تذكير قبل الموعد بساعتين", "حجز واحد في الوقت نفسه، لكرسي واحد أو غرفة واحدة"],
         factsOffer: ["من 449 ر.ق شهرياً، أو 150 ر.ق مع ALYR Chat أو ALYR Accounts"],
       },
@@ -4588,11 +4590,12 @@ const ar: Copy = {
         eyebrow: "مع كل منتج",
         title: ["نشاطك بالأرقام.", "وما يحتاجك أولاً."],
         lead:
-          "ALYR Agent هو الشاشة الرئيسية في مساحة عملك. يقول لك في جملة واحدة كيف يسير أسبوعك، ويعرض ما يحتاجك الآن، ويقترح حتى ثلاثة أمور، لكل منها القاعدة التي وراءه.",
+          "ما يحتاجك الآن، وكيف يسير أسبوعك، وحتى ثلاثة اقتراحات، لكل منها قاعدتها.",
         facts: ["مع كل منتجات ALYR", "كل اقتراح يُظهر قاعدته", "يُحسب من سجلاتك أنت"],
       },
       figure: {
         label: "الشاشة الرئيسية لـ ALYR Agent للنشاط التوضيحي الذي تختاره، وما أنجزته ALYR له عصر اليوم",
+        more: "اعرض الشاشة كاملة",
       },
       how: {
         title: "سجلاتك، ثم القاعدة، ثم البطاقة، ثم الشاشة.",
@@ -4722,7 +4725,7 @@ const ar: Copy = {
         eyebrow: "نجهّزه لك",
         title: ["اعرف من عليه مستحقات لك.", "وذكّره دون اتصال محرج."],
         lead:
-          "سجّل البيع بالآجل بسطر واحد من هاتف الموظف، فيُبلَّغ العميل برصيده الجديد. وبضغطة واحدة تُرسل التذكيرات بنبرة تتدرّج مع عمر الدين، والوعد بالسداد يوقفها.",
+          "سجّل البيع بالآجل بسطر واحد. وبضغطة واحدة تُرسل التذكيرات بنبرة تتدرّج مع تأخر السداد.",
         facts: ["يُسدَّد الأقدم أولاً", "لا تذكير مرتين خلال 3 أيام", "الإيقاف يعني الإيقاف"],
         factsOffer: ["من 449 ر.ق شهرياً، أو 150 ر.ق مع ALYR Chat أو ALYR Bookings"],
       },

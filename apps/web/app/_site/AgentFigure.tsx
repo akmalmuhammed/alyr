@@ -47,6 +47,9 @@ type Props = {
   headingLevel?: 2 | 3;
   /** Drawn beside the window: the callouts (the homepage's spotlight). */
   aside?: ReactNode;
+  /** On a phone the screen stops after its four numbers, and this opens the rest (a native
+   * `<details>`; site audit P1-c). */
+  more?: string;
   id?: string;
   /** Tells other figures on the page which sample was picked (`alyr:sample` with this id):
    * /agent's Sunday report follows the switch (ReportSwitch.tsx). */
@@ -107,7 +110,7 @@ function Tick() {
 
 export function AgentFigure({
   variant, views, order, start, text, sample: mark, label, switcher = false, feed = false, crop = false, sync,
-  headingLevel = 2, aside, id,
+  headingLevel = 2, aside, more, id,
 }: Props) {
   const [sample, setSample] = useState<SampleKey>(start ?? order[0]);
   const [phase, setPhase] = useState<"composed" | "waiting" | "playing">("composed");
@@ -265,6 +268,14 @@ export function AgentFigure({
       <div className="af-stage" data-nosnippet>
         {variant === "hero" && <span className="af-plate" aria-hidden="true" />}
         {window_}
+        {more && (
+          <details className="af-more">
+            <summary>
+              <span>{more}</span>
+              <span className="qa-mark" aria-hidden="true" />
+            </summary>
+          </details>
+        )}
         {feed && (
           <div
             className="af-feed"

@@ -88,7 +88,7 @@ export const docsEn: DocsPage = {
     eyebrow: "Set up for you",
     title: ["Payment in, receipt out.", "Every number in order. Every paper final."],
     lead:
-      "When a payment is recorded, ALYR Docs issues the receipt with the next number. If the customer has written to you in the last 24 hours, the PDF goes to their chat. Arabic comes first, and nothing on it can change once it is issued. No commercial registration yet? You issue receipts, and invoices once you register.",
+      "When a payment is recorded, ALYR Docs issues the next numbered receipt, Arabic first, final once issued.",
     facts: ["Numbers that never skip", "No CR yet? Receipts that say so", "Arabic first, English beside it"],
   },
   demo: {
@@ -497,7 +497,7 @@ export const docsAr: DocsPage = {
     eyebrow: "نجهّزه لك",
     title: ["تُسجَّل الدفعة، فيصدر الإيصال.", "أرقام متتالية، ومستند لا يتغيّر."],
     lead:
-      "حين تُسجَّل دفعة، يُصدر ALYR Docs الإيصال بالرقم التالي. وإذا راسلك العميل خلال آخر 24 ساعة، يصل الملف إلى محادثته. العربية أولاً، ولا يتغيّر فيه شيء بعد إصداره. ليس لديك سجل تجاري بعد؟ تُصدر إيصالات، ثم فواتير حين يصبح لديك سجل.",
+      "حين تُسجَّل دفعة، يُصدر ALYR Docs الإيصال التالي برقمه، بالعربية أولاً، ولا يتغيّر بعد إصداره.",
     facts: ["أرقام متسلسلة لا تنقطع", "بلا سجل تجاري؟ إيصالات تقول ذلك", "العربية أولاً والإنجليزية بجانبها"],
   },
   demo: {

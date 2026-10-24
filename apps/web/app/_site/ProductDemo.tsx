@@ -40,6 +40,9 @@ function clock(locale: Locale, minutes: number): string {
 export function ProductDemo({ product, locale, sample, note }: Props) {
   const demos = product.demos;
   const [active, setActive] = useState(0);
+  // The first tab opens finished, as the HTML draws it; messages arrive one by one only once
+  // the demo has moved on (site audit F2: nothing hidden in the first view).
+  const [moved, setMoved] = useState(false);
   const [auto, setAuto] = useState(true);
   const [onScreen, setOnScreen] = useState(false);
   const [still, setStill] = useState(false);
@@ -78,6 +81,7 @@ export function ProductDemo({ product, locale, sample, note }: Props) {
 
   function choose(index: number, focus = false) {
     setAuto(false);
+    setMoved(true);
     setActive(index);
     if (focus) tabs.current[index]?.focus();
   }
@@ -95,7 +99,7 @@ export function ProductDemo({ product, locale, sample, note }: Props) {
   }
 
   return (
-    <div className="demo" ref={root} data-playing={playing || undefined}>
+    <div className="demo" ref={root} data-playing={playing || undefined} data-moved={moved || undefined}>
       <p className="sr-only">{note}</p>
       <div className="demo-bar">
         <div className="demo-tabs" role="tablist" aria-label={product.tabsLabel} onKeyDown={onKey}>
@@ -117,7 +121,10 @@ export function ProductDemo({ product, locale, sample, note }: Props) {
                 <span
                   className="demo-tab-bar"
                   aria-hidden="true"
-                  onAnimationEnd={() => setActive((active + 1) % demos.length)}
+                  onAnimationEnd={() => {
+                    setMoved(true);
+                    setActive((active + 1) % demos.length);
+                  }}
                 />
               )}
             </button>

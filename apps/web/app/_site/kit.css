@@ -238,6 +238,7 @@ main:has(.pbar) section[id] { scroll-margin-top: calc(var(--header) + 4rem); }
 @media (max-width: 30rem) {
   :root:has(.top[data-scrolled]) .pbar { top: 3.5rem; }
   .pbar-name { font-size: .875rem; }
+  .pbar-nav .pbar-extra { display: none; }
   .pk-steps { grid-template-columns: minmax(0, 1fr); }
   .pk-steps li, [dir="rtl"] .pk-steps li { border-inline-start: 0; padding-inline: 0; }
   .pk-steps li + li { border-top: 1px solid var(--line); }

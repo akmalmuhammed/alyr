@@ -28,6 +28,9 @@ const two = (value: number) => String(value).padStart(2, "0");
 export function FlowDiagram({ flow, sample, note }: Props) {
   const stories = flow.stories;
   const [at, setAt] = useState({ story: 0, step: 0 });
+  // The first step opens finished, as the HTML draws it; what each later step adds arrives
+  // (site audit F2: nothing hidden in the first view).
+  const [moved, setMoved] = useState(false);
   const [auto, setAuto] = useState(true);
   const [pinned, setPinned] = useState(false);
   const [onScreen, setOnScreen] = useState(false);
@@ -80,6 +83,7 @@ export function FlowDiagram({ flow, sample, note }: Props) {
   const teamWire = now.move === "team" ? "go" : now.move === "back" ? "back" : undefined;
 
   function next() {
+    setMoved(true);
     setAt((current) => {
       if (current.step + 1 < stories[current.story].steps.length) {
         return { story: current.story, step: current.step + 1 };
@@ -90,12 +94,14 @@ export function FlowDiagram({ flow, sample, note }: Props) {
 
   function chooseStory(index: number, focus = false) {
     setPinned(true);
+    setMoved(true);
     setAt({ story: index, step: 0 });
     if (focus) tabs.current[index]?.focus();
   }
 
   function chooseStep(index: number) {
     setAuto(false);
+    setMoved(true);
     setAt({ story: at.story, step: index });
   }
 
@@ -112,7 +118,7 @@ export function FlowDiagram({ flow, sample, note }: Props) {
   }
 
   return (
-    <div className="fx" ref={root} data-playing={playing || undefined}>
+    <div className="fx" ref={root} data-playing={playing || undefined} data-moved={moved || undefined}>
       <p className="sr-only">{note}</p>
       <div className="demo-bar" data-nosnippet>
         <div className="demo-tabs" role="tablist" aria-label={flow.tabsLabel} onKeyDown={onKey}>
