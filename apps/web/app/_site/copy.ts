@@ -907,7 +907,7 @@ const en: Copy = {
       more: "See the whole screen",
     },
     suite: {
-      title: "Six products. One workspace.\nAdd them as you grow.",
+      title: "Six products in one workspace",
       body:
         "Start with what hurts most today and add the next when you need it: the same customers, the same team, the same screen. ALYR Agent and ALYR Shelf come with every one.",
       notes: [
@@ -1221,7 +1221,7 @@ const en: Copy = {
     },
     price: {
       eyebrow: "Price",
-      title: "One clear price.\nNo commission on your orders.",
+      title: "Prices",
       from: "From",
       amount: "449",
       currency: "QAR",
@@ -3180,7 +3180,7 @@ const ar: Copy = {
       more: "اعرض الشاشة كاملة",
     },
     suite: {
-      title: "ستة منتجات. مساحة عمل واحدة.\nأضفها كلما كبرت.",
+      title: "ستة منتجات في مساحة عمل واحدة",
       body:
         "ابدأ بما يؤلمك أكثر اليوم، وأضف التالي حين تحتاجه: العملاء أنفسهم، والفريق نفسه، والشاشة نفسها. ويأتي ALYR Agent وALYR Shelf مع كل منها.",
       notes: [
@@ -3494,7 +3494,7 @@ const ar: Copy = {
     },
     price: {
       eyebrow: "السعر",
-      title: "سعر واحد واضح.\nبلا عمولة على طلباتك.",
+      title: "الأسعار",
       from: "ابتداءً من",
       amount: "449",
       currency: "ر.ق",

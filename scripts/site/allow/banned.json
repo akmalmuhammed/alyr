@@ -84,16 +84,6 @@
   ],
   "style": [
     {
-      "path": "*.home.suite.title",
-      "pattern": "stacked",
-      "reason": "The products heading (\"Six products. One workspace. Add them as you grow.\") was outside the content audit (01-audit.md, Out of scope: home.suite). Its wording waits for the founder; reword it then and remove this entry."
-    },
-    {
-      "path": "*.home.price.title",
-      "pattern": "stacked",
-      "reason": "The price section shows only with the offer on (D-034) and was not in the content audit. Its heading waits for the founder with the prices; reword it then and remove this entry."
-    },
-    {
       "path": "*.home.price.combos[*].label",
       "pattern": "colon",
       "reason": "Price examples by trade (offer on only): the colon names the products a trade would use (\"A salon: ALYR Bookings\"), an example, which pattern 6 allows."
