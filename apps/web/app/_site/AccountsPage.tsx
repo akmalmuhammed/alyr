@@ -23,7 +23,7 @@ export function AccountsPage({ locale }: { locale: Locale }) {
       <ScreenBlock locale={locale} screen={p.screen} fictional={bakery.fictional}>
         <CreditScreen sheet={sheet} shop={bakery.shop} monogram={bakery.monogram} path={sheet.path} label={p.screen.label} sample={t.fig.sample} />
       </ScreenBlock>
-      <InsideBlock inside={p.inside} />
+      <InsideBlock inside={p.inside} locale={locale} />
       <WhoBlock who={p.who} />
       <WorksBlock locale={locale} works={p.works} self="accounts" />
       <QuestionsBlock faq={p.faq} />

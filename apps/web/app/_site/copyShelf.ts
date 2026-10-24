@@ -20,7 +20,7 @@ export type OrderItem = {
 
 /** The signature figure: two customers, one stock, one sale (03 §2.1). */
 export type LastOne = {
-  eyebrow: string;
+  eyebrow?: string;
   title: string;
   body: string;
   /** What the figure shows, said once for screen readers. */
@@ -73,7 +73,7 @@ export const shelfEn: ShelfPage = {
     ],
   },
   hero: {
-    eyebrow: "ALYR Shelf · With every product",
+    eyebrow: "With every product",
     title: ["Everything you sell, on one shelf.", "Every sale counts the stock down."],
     lead:
       "Your items with photos, prices, sizes and choices, in Arabic and English. Each sale takes its stock in one step, so the last one sells only once. When something runs out, the order page says Sold out, and a staff phone brings it back with one message.",
@@ -169,7 +169,6 @@ export const shelfEn: ShelfPage = {
     ],
   },
   moment: {
-    eyebrow: "The last one",
     title: "One left, two customers, one sale.",
     body:
       "Aisha and Mariam put the last kunafa cheesecake on their accounts in the same second. ALYR Shelf takes stock in one step, and only if the count stays at zero or above, so one order gets it. Mariam’s page says Sold out, and nothing sells twice.",
@@ -196,7 +195,6 @@ export const shelfEn: ShelfPage = {
     },
   },
   flow: {
-    eyebrow: "How it works",
     title: "What happens when something sells.",
     body:
       "Your customer sees an ordinary order page. Behind it, ALYR Shelf takes the stock, writes the log and changes what the page shows. Follow one item through.",
@@ -204,10 +202,10 @@ export const shelfEn: ShelfPage = {
     stepsLabel: "Steps",
     pause: "Pause",
     play: "Play",
-    customer: { name: "Your customer", sub: "On WhatsApp, as always" },
+    customer: { name: "Your customer" },
     whatsapp: { name: "WhatsApp", sub: "Business Platform" },
-    alyr: { name: "ALYR Shelf", sub: "Working in the background", idle: "Waiting for the next sale" },
-    team: { name: "Your team", sub: "The workspace", idle: "Nothing new yet" },
+    alyr: { name: "ALYR Shelf", idle: "Waiting for the next sale" },
+    team: { name: "Your team", idle: "Nothing new yet" },
     stories: [
       {
         id: "last",
@@ -337,7 +335,6 @@ export const shelfEn: ShelfPage = {
     ],
   },
   screen: {
-    eyebrow: "The screen",
     title: "What is on the shelf, and every change to it.",
     label: "The Stock screen of a fictional bakery’s workspace",
     callouts: [
@@ -374,7 +371,6 @@ export const shelfEn: ShelfPage = {
     logCaption: "The same screen with one item open: its recent changes, newest first.",
   },
   inside: {
-    eyebrow: "What’s in it",
     title: "Everything it does today.",
     groups: [
       {
@@ -425,10 +421,9 @@ export const shelfEn: ShelfPage = {
         ],
       },
     ],
-    note: "ALYR Shelf comes with every ALYR product. Everything listed here is built.",
+    note: "With every ALYR product. Everything listed here is built.",
   },
   who: {
-    eyebrow: "Who it’s for",
     title: "Every business that sells things.\nEach starts the way it already works.",
     rows: [
       { name: "Bakeries and home kitchens", tags: ["A number each day", "Order before 6 pm", "Photos"] },
@@ -440,7 +435,6 @@ export const shelfEn: ShelfPage = {
     other: "Run something else? Write to us about how you work today.",
   },
   works: {
-    eyebrow: "The products",
     title: "Works with the rest of ALYR.",
     link: "See {name}",
     rows: {
@@ -452,7 +446,6 @@ export const shelfEn: ShelfPage = {
     },
   },
   faq: {
-    eyebrow: "Questions",
     title: "Before you ask.",
     items: [
       { id: "pay", q: "Do I pay for ALYR Shelf?", a: "It comes with ALYR, with every product.", offer: false },
@@ -500,7 +493,7 @@ export const shelfAr: ShelfPage = {
     ],
   },
   hero: {
-    eyebrow: "ALYR Shelf · الأصناف والمخزون · مع كل منتج",
+    eyebrow: "مع كل منتج",
     title: ["كل ما تبيعه، في مكان واحد.", "ومع كل\u00a0بيع، ينقص المخزون تلقائياً."],
     lead:
       "أصنافك بصورها وأسعارها ومقاساتها وخياراتها، بالعربية والإنجليزية. كل بيع يأخذ كميته من المخزون في خطوة واحدة، فلا تُباع القطعة الأخيرة إلا مرة واحدة. وحين ينفد صنف تُظهر صفحة الطلب «نفد»، ويعيده هاتف الموظف للبيع برسالة واحدة.",
@@ -597,7 +590,6 @@ export const shelfAr: ShelfPage = {
     ],
   },
   moment: {
-    eyebrow: "القطعة الأخيرة",
     title: "بقيت واحدة، وطلبتها عميلتان، فبيعت مرة واحدة.",
     body:
       "وضعت عائشة ومريم آخر تشيز كيك كنافة على حسابيهما في الثانية نفسها. يأخذ ALYR Shelf الكمية في خطوة واحدة، ولا يأخذها إلا إذا بقي الرقم صفراً أو أكثر، فيحصل عليها طلب واحد. وتُظهر صفحة مريم «نفد»، ولا يُباع شيء مرتين.",
@@ -624,7 +616,6 @@ export const shelfAr: ShelfPage = {
     },
   },
   flow: {
-    eyebrow: "كيف يعمل",
     title: "ماذا يحدث حين يُباع صنف.",
     body:
       "يرى عميلك صفحة طلب عادية. وفي الخلفية يأخذ ALYR Shelf الكمية من المخزون، ويكتب السجل، ويغيّر ما تعرضه الصفحة. تابع صنفاً واحداً من البداية.",
@@ -632,10 +623,10 @@ export const shelfAr: ShelfPage = {
     stepsLabel: "الخطوات",
     pause: "إيقاف",
     play: "تشغيل",
-    customer: { name: "عميلك", sub: "على واتساب كعادته" },
+    customer: { name: "عميلك" },
     whatsapp: { name: "واتساب", sub: "منصة الأعمال" },
-    alyr: { name: "ALYR Shelf", sub: "يعمل في الخلفية", idle: "بانتظار البيع التالي" },
-    team: { name: "فريقك", sub: "مساحة العمل", idle: "لا جديد بعد" },
+    alyr: { name: "ALYR Shelf", idle: "بانتظار البيع التالي" },
+    team: { name: "فريقك", idle: "لا جديد بعد" },
     stories: [
       {
         id: "last",
@@ -765,7 +756,6 @@ export const shelfAr: ShelfPage = {
     ],
   },
   screen: {
-    eyebrow: "الشاشة",
     title: "ما على الرف، وكل تغيير عليه.",
     label: "شاشة المخزون في مساحة عمل مخبز غير حقيقي",
     callouts: [
@@ -802,7 +792,6 @@ export const shelfAr: ShelfPage = {
     logCaption: "الشاشة نفسها وقد فُتح فيها صنف واحد: آخر تغييراته، الأحدث أولاً.",
   },
   inside: {
-    eyebrow: "ماذا يتضمن",
     title: "كل ما يفعله اليوم.",
     groups: [
       {
@@ -853,10 +842,9 @@ export const shelfAr: ShelfPage = {
         ],
       },
     ],
-    note: "يأتي ALYR Shelf مع كل منتج من ALYR. كل ما في هذه القائمة مبنيّ في المنتج.",
+    note: "مع كل منتج من ALYR. كل ما في هذه القائمة مبنيّ في المنتج.",
   },
   who: {
-    eyebrow: "لمن صُمّم",
     title: "لكل نشاط يبيع شيئاً.\nوكلٌّ يبدأ كما يعمل اليوم.",
     rows: [
       { name: "المخابز والمطابخ المنزلية", tags: ["عدد في اليوم", "اطلب قبل 6 م", "الصور"] },
@@ -868,7 +856,6 @@ export const shelfAr: ShelfPage = {
     other: "نشاطك مختلف؟ راسلنا وأخبرنا كيف تعمل اليوم.",
   },
   works: {
-    eyebrow: "المنتجات",
     title: "يعمل مع بقية منتجات ALYR.",
     link: "تعرّف على {name}",
     rows: {
@@ -880,7 +867,6 @@ export const shelfAr: ShelfPage = {
     },
   },
   faq: {
-    eyebrow: "أسئلة",
     title: "قبل أن تسأل.",
     items: [
       { id: "pay", q: "هل أدفع مقابل ALYR Shelf؟", a: "يأتي مع ALYR، مع كل منتج.", offer: false },

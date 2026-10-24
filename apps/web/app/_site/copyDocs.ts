@@ -30,7 +30,7 @@ export type DocLinkPage = {
 
 /** The signature figure: a cash payment becomes receipt RC-0042 (03 §3.1). */
 export type PaymentMoment = {
-  eyebrow: string;
+  eyebrow?: string;
   title: string;
   body: string;
   label: string;
@@ -85,7 +85,7 @@ export const docsEn: DocsPage = {
     ],
   },
   hero: {
-    eyebrow: "ALYR Docs · Set up for you",
+    eyebrow: "Set up for you",
     title: ["Payment in, receipt out.", "Every number in order. Every paper final."],
     lead:
       "When a payment is recorded, ALYR Docs issues the receipt with the next number. If the customer has written to you in the last 24 hours, the PDF goes to their chat. Arabic comes first, and nothing on it can change once it is issued. No commercial registration yet? You issue receipts, and invoices once you register.",
@@ -176,7 +176,6 @@ export const docsEn: DocsPage = {
     ],
   },
   moment: {
-    eyebrow: "A payment becomes paper",
     title: "One payment, one receipt, one number.",
     body:
       "Yusuf records Aisha’s cash at the counter. ALYR Docs takes the next receipt number and draws the paper in Arabic and English. Aisha wrote to the shop a few minutes before, so the PDF goes to her chat.",
@@ -212,7 +211,6 @@ export const docsEn: DocsPage = {
     },
   },
   flow: {
-    eyebrow: "How it works",
     title: "What happens when a payment comes in.",
     body:
       "When your customer has written in the last 24 hours, the receipt arrives in the chat. Behind it, ALYR Docs takes the next number, writes the paper in both languages and seals it. Follow one receipt through.",
@@ -220,10 +218,10 @@ export const docsEn: DocsPage = {
     stepsLabel: "Steps",
     pause: "Pause",
     play: "Play",
-    customer: { name: "Your customer", sub: "On WhatsApp, as always" },
+    customer: { name: "Your customer" },
     whatsapp: { name: "WhatsApp", sub: "Business Platform" },
-    alyr: { name: "ALYR Docs", sub: "Working in the background", idle: "Waiting for the next payment" },
-    team: { name: "Your team", sub: "The workspace", idle: "Nothing new yet" },
+    alyr: { name: "ALYR Docs", idle: "Waiting for the next payment" },
+    team: { name: "Your team", idle: "Nothing new yet" },
     stories: [
       {
         id: "receipt",
@@ -336,7 +334,6 @@ export const docsEn: DocsPage = {
     ],
   },
   screen: {
-    eyebrow: "The screen",
     title: "Every paper you issued, and whether it arrived.",
     label: "The Documents screen of a fictional bakery’s workspace",
     callouts: [
@@ -372,7 +369,6 @@ export const docsEn: DocsPage = {
     label: "The foot of a receipt from a shop with no CR number on file, with its note in Arabic and English: the seller has no commercial registration number on file; this document is a receipt and is not a tax invoice; ALYR does not give tax advice.",
   },
   inside: {
-    eyebrow: "What’s in it",
     title: "Everything it is built to do.",
     groups: [
       {
@@ -412,10 +408,9 @@ export const docsEn: DocsPage = {
         ],
       },
     ],
-    note: "We set ALYR Docs up with you at your shop. Everything listed here is built.",
+    note: "Everything listed here is built.",
   },
   who: {
-    eyebrow: "Who it’s for",
     title: "For businesses that hand over paper.",
     rows: [
       { name: "Bakeries, cafes and shops paid at the counter", tags: ["Receipt", "Credit note"] },
@@ -427,7 +422,6 @@ export const docsEn: DocsPage = {
     other: "Run something else? Write to us about how you work.",
   },
   works: {
-    eyebrow: "The products",
     title: "Works with the rest of ALYR.",
     link: "See {name}",
     rows: {
@@ -439,7 +433,6 @@ export const docsEn: DocsPage = {
     },
   },
   faq: {
-    eyebrow: "Questions",
     title: "Before you ask.",
     items: [
       {
@@ -501,7 +494,7 @@ export const docsAr: DocsPage = {
     ],
   },
   hero: {
-    eyebrow: "ALYR Docs · الإيصالات والفواتير · نجهّزه لك",
+    eyebrow: "نجهّزه لك",
     title: ["تُسجَّل الدفعة، فيصدر الإيصال.", "أرقام متتالية، ومستند لا يتغيّر."],
     lead:
       "حين تُسجَّل دفعة، يُصدر ALYR Docs الإيصال بالرقم التالي. وإذا راسلك العميل خلال آخر 24 ساعة، يصل الملف إلى محادثته. العربية أولاً، ولا يتغيّر فيه شيء بعد إصداره. ليس لديك سجل تجاري بعد؟ تُصدر إيصالات، ثم فواتير حين يصبح لديك سجل.",
@@ -593,7 +586,6 @@ export const docsAr: DocsPage = {
     ],
   },
   moment: {
-    eyebrow: "دفعة تصبح مستنداً",
     title: "دفعة واحدة، وإيصال واحد، ورقم واحد.",
     body:
       "يسجّل يوسف المبلغ الذي دفعته عائشة نقداً في المحل. فيأخذ ALYR Docs رقم الإيصال التالي، ويكتب المستند بالعربية والإنجليزية. وقد راسلت عائشة المحل قبل دقائق، فيصل الملف إلى محادثتها.",
@@ -629,7 +621,6 @@ export const docsAr: DocsPage = {
     },
   },
   flow: {
-    eyebrow: "كيف يعمل",
     title: "ماذا يحدث حين تصل دفعة.",
     body:
       "إذا راسلك العميل خلال آخر 24 ساعة، يصله الإيصال في المحادثة. وفي الخلفية يأخذ ALYR Docs الرقم التالي، ويكتب المستند باللغتين، ويثبّته. تابع إيصالاً واحداً من البداية.",
@@ -637,10 +628,10 @@ export const docsAr: DocsPage = {
     stepsLabel: "الخطوات",
     pause: "إيقاف",
     play: "تشغيل",
-    customer: { name: "عميلك", sub: "على واتساب كعادته" },
+    customer: { name: "عميلك" },
     whatsapp: { name: "واتساب", sub: "منصة الأعمال" },
-    alyr: { name: "ALYR Docs", sub: "يعمل في الخلفية", idle: "بانتظار الدفعة التالية" },
-    team: { name: "فريقك", sub: "مساحة العمل", idle: "لا جديد بعد" },
+    alyr: { name: "ALYR Docs", idle: "بانتظار الدفعة التالية" },
+    team: { name: "فريقك", idle: "لا جديد بعد" },
     stories: [
       {
         id: "receipt",
@@ -753,7 +744,6 @@ export const docsAr: DocsPage = {
     ],
   },
   screen: {
-    eyebrow: "الشاشة",
     title: "كل مستند أصدرته، وهل وصل.",
     label: "شاشة المستندات في مساحة عمل مخبز غير حقيقي",
     callouts: [
@@ -789,7 +779,6 @@ export const docsAr: DocsPage = {
     label: "أسفل إيصال من محل ليس له رقم سجل تجاري، وعليه ملاحظته بالعربية والإنجليزية: لا يوجد رقم سجل تجاري مسجّل للبائع، وهذا المستند إيصال وليس فاتورة ضريبية، ولا تقدّم ALYR استشارات ضريبية.",
   },
   inside: {
-    eyebrow: "ماذا يتضمن",
     title: "كل ما بُني ليفعله.",
     groups: [
       {
@@ -829,10 +818,9 @@ export const docsAr: DocsPage = {
         ],
       },
     ],
-    note: "نجهّز ALYR Docs معك في محلك. كل ما في هذه القائمة مبنيّ في المنتج.",
+    note: "كل ما في هذه القائمة مبنيّ في المنتج.",
   },
   who: {
-    eyebrow: "لمن صُمّم",
     title: "للأنشطة التي تسلّم عملاءها مستندات.",
     rows: [
       { name: "المخابز والمقاهي والمحلات التي يُدفع لها في المحل", tags: ["إيصال", "إشعار دائن"] },
@@ -844,7 +832,6 @@ export const docsAr: DocsPage = {
     other: "نشاطك مختلف؟ راسلنا وأخبرنا كيف تعمل.",
   },
   works: {
-    eyebrow: "المنتجات",
     title: "يعمل مع بقية منتجات ALYR.",
     link: "تعرّف على {name}",
     rows: {
@@ -856,7 +843,6 @@ export const docsAr: DocsPage = {
     },
   },
   faq: {
-    eyebrow: "أسئلة",
     title: "قبل أن تسأل.",
     items: [
       {

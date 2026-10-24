@@ -148,7 +148,7 @@ export function FlowDiagram({ flow, sample, note }: Props) {
             <Icon name="users" className="fx-ico" />
             <span>
               <b>{flow.customer.name}</b>
-              <small>{flow.customer.sub}</small>
+              {flow.customer.sub && <small>{flow.customer.sub}</small>}
             </span>
           </header>
           <div className="wa wa-mini fx-phone">
@@ -183,7 +183,7 @@ export function FlowDiagram({ flow, sample, note }: Props) {
           <span className="fx-station" />
           <span className="fx-via">
             <b>{flow.whatsapp.name}</b>
-            <small>{flow.whatsapp.sub}</small>
+            {flow.whatsapp.sub && <small>{flow.whatsapp.sub}</small>}
           </span>
         </div>
 
@@ -192,7 +192,7 @@ export function FlowDiagram({ flow, sample, note }: Props) {
             <span className="fx-mark" aria-hidden="true"><Symbol className="fx-symbol" /></span>
             <span>
               <b>{flow.alyr.name}</b>
-              <small>{flow.alyr.sub}</small>
+              {flow.alyr.sub && <small>{flow.alyr.sub}</small>}
             </span>
           </header>
           <ul className="fx-work">
@@ -218,7 +218,7 @@ export function FlowDiagram({ flow, sample, note }: Props) {
             <Icon name="dashboard" className="fx-ico" />
             <span>
               <b>{flow.team.name}</b>
-              <small>{flow.team.sub}</small>
+              {flow.team.sub && <small>{flow.team.sub}</small>}
             </span>
           </header>
           <ul className="fx-records">

@@ -66,12 +66,14 @@ function Rule({ dashed = false }: { dashed?: boolean }) {
   );
 }
 
+/** A section's heading. The eyebrow is kept only where it says something the heading does
+ * not (the trust question, the Agent spotlight's product, the price); site audit R1. */
 function Head({ eyebrow, title, id, dark = false, children }: {
-  eyebrow: string; title: string; id: string; dark?: boolean; children?: ReactNode;
+  eyebrow?: string; title: string; id: string; dark?: boolean; children?: ReactNode;
 }) {
   return (
     <div className="head">
-      <p className={`eyebrow${dark ? " eyebrow-dark" : ""}`}>{rich(eyebrow)}</p>
+      {eyebrow && <p className={`eyebrow${dark ? " eyebrow-dark" : ""}`}>{rich(eyebrow)}</p>}
       <h2 className="h2" id={id} data-split>{lines(title)}</h2>
       {children}
     </div>
@@ -86,10 +88,6 @@ function Hero({ locale }: { locale: Locale }) {
     <section className="hero" aria-labelledby="hero-title">
       <div className="wrap">
         <div className="hero-grid">
-          <p className="eyebrow hero-eyebrow">
-            <span className="signal" aria-hidden="true" />
-            <span>{rich(hero.eyebrow)}</span>
-          </p>
           <h1 className="display hero-title" id="hero-title">
             <span className="hl"><span>{hero.title[0]}</span></span>{" "}
             <span className="hl"><span>{hero.title[1]}</span></span>
@@ -591,11 +589,10 @@ function How({ locale }: { locale: Locale }) {
         </div>
         <div className="how-foot">
           <div className="how-next">
-            <p className="how-note">{rich(w.note)}</p>
             <ContactButton locale={locale} variant="line" label={copy[locale].home.final.action} />
           </div>
           <div className="how-lists">
-            {[w.need, w.month].map((list) => (
+            {[w.need].map((list) => (
               <div key={list.title} className="inc-list">
                 <h3 className="mono-k">{list.title}</h3>
                 <ul className="checks">
@@ -737,7 +734,6 @@ function Trust({ locale, other }: { locale: Locale; other: Locale }) {
             <ul className="facts6">
               {tr.facts.map((fact, index) => (
                 <li key={fact.title} data-m style={n(index % 3)}>
-                  <span className="mono-k">{fact.label}</span>
                   <h3>{rich(fact.title)}</h3>
                   <p>{rich(fact.body)}</p>
                 </li>

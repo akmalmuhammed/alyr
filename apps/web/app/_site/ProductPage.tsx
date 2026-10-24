@@ -16,7 +16,6 @@ import { lines, rich } from "./Text";
 export function ProductPage({ locale }: { locale: Locale }) {
   const t = copy[locale];
   const p = t.product;
-  const numbered = (index: number) => String(index + 1).padStart(2, "0");
 
   return (
     <Shell locale={locale} page="chat" cta={p.cta}>
@@ -48,7 +47,7 @@ export function ProductPage({ locale }: { locale: Locale }) {
       <section className="sec how" id="how">
         <div className="wrap">
           <div className="how-head" data-reveal>
-            <p className="eyebrow">{p.flow.eyebrow}</p>
+            {p.flow.eyebrow && <p className="eyebrow">{p.flow.eyebrow}</p>}
             <h2 className="h1">{p.flow.title}</h2>
             <p className="lead">{p.flow.body}</p>
           </div>
@@ -61,7 +60,7 @@ export function ProductPage({ locale }: { locale: Locale }) {
       <section className="sec inside" id="inside">
         <div className="wrap">
           <div className="built-head" data-reveal>
-            <p className="eyebrow">{p.inside.eyebrow}</p>
+            {p.inside.eyebrow && <p className="eyebrow">{p.inside.eyebrow}</p>}
             <h2 className="h1">{p.inside.title}</h2>
           </div>
           {/* the list, and beside it the phone with X-ray showing the feature being read */}
@@ -76,7 +75,7 @@ export function ProductPage({ locale }: { locale: Locale }) {
       <section className="sec approach" id="why">
         <div className="wrap approach-in">
           <div className="approach-say">
-            <p className="eyebrow">{p.why.eyebrow}</p>
+            {p.why.eyebrow && <p className="eyebrow">{p.why.eyebrow}</p>}
             <p className="statement" data-statement>
               {p.why.statement.split(" ").map((word, index) => (
                 <span key={index} data-w>{word} </span>
@@ -86,7 +85,6 @@ export function ProductPage({ locale }: { locale: Locale }) {
           <ol className="steps">
             {p.why.pillars.map((pillar, index) => (
               <li key={pillar.title} data-reveal style={{ "--n": index } as React.CSSProperties}>
-                <span className="steps-n">{numbered(index)}</span>
                 <div>
                   <h3>{pillar.title}</h3>
                   <p>{pillar.body}</p>
@@ -100,7 +98,7 @@ export function ProductPage({ locale }: { locale: Locale }) {
       <section className="sec who" id="who">
         <div className="wrap who-in">
           <div className="who-head" data-reveal>
-            <p className="eyebrow">{p.who.eyebrow}</p>
+            {p.who.eyebrow && <p className="eyebrow">{p.who.eyebrow}</p>}
             <h2 className="h1">{p.who.title}</h2>
           </div>
           <ul className="who-rows">
@@ -119,9 +117,11 @@ export function ProductPage({ locale }: { locale: Locale }) {
                     </>
                   )}
                 </p>
-                <span className="tags">
-                  {row.tags.map((tag) => <span key={tag}>{tag}</span>)}
-                </span>
+                {row.tags && row.tags.length > 0 && (
+                  <span className="tags">
+                    {row.tags.map((tag) => <span key={tag}>{tag}</span>)}
+                  </span>
+                )}
               </li>
             ))}
             <li className="who-other" data-reveal>

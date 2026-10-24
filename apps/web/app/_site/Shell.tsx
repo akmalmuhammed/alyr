@@ -1,9 +1,8 @@
 import { Icon, Logo, Symbol } from "./brand";
 import { ContactAddress, ContactButton, contactLink, ContactPending } from "./Contact";
 import { copy, fill, type Locale } from "./copy";
-import { DohaTime } from "./DohaTime";
 import {
-  CONTACT_EMAIL, CONTACT_STATE, OFFER_LIVE, PATHS, PRODUCTS, productPath, WHATSAPP_NUMBER, WORKSPACE_URL,
+  CONTACT_EMAIL, CONTACT_STATE, INCLUDED, OFFER_LIVE, PATHS, PRODUCTS, productPath, WHATSAPP_NUMBER, WORKSPACE_URL,
   type PageKey, type ProductKey,
 } from "./site";
 import { SiteMotion } from "./SiteMotion";
@@ -18,7 +17,7 @@ export function contactHref(): string {
 }
 
 /** The suite, as the Products menu lists it: every product in its fixed order, with its
- * one line and its state ("Set up for you", or "With every product"). */
+ * one line; the two that come with every product say so ("With every product"). */
 function ProductsMenu({ locale, page }: { locale: Locale; page: PageKey }) {
   const t = copy[locale];
   return (
@@ -37,7 +36,7 @@ function ProductsMenu({ locale, page }: { locale: Locale; page: PageKey }) {
                   <a className="pm-link" href={productPath(key, locale)} aria-current={page === key ? "page" : undefined}>
                     <span className="pm-name"><bdi>{p.name}</bdi></span>
                     <span className="pm-line">{p.line}</span>
-                    <span className="pm-state">{p.state}</span>
+                    {INCLUDED.includes(key) && <span className="pm-state">{p.state}</span>}
                     <Icon name="arrow-right" className="ico ico-flip pm-arrow" />
                   </a>
                 </li>
@@ -117,7 +116,7 @@ export function Shell({
                       <li key={key}>
                         <a href={productPath(key, locale)} aria-current={page === key ? "page" : undefined}>
                           <bdi>{p.name}</bdi>
-                          <small>{p.state}</small>
+                          {INCLUDED.includes(key) && <small>{p.state}</small>}
                         </a>
                       </li>
                     );
@@ -193,7 +192,6 @@ export function Shell({
           <div className="foot-legal">
             <p>
               <span><span dir="ltr">© 2026</span> {rich(t.footer.rights)}</span>
-              <DohaTime label={t.footer.doha} />
             </p>
             <p>{rich(t.footer.disclaimer)}</p>
           </div>

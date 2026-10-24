@@ -268,9 +268,8 @@ a.pm-link[aria-current="page"] .pm-name::after { content: ""; display: inline-bl
 .approach-say { display: grid; gap: 1.75rem; position: sticky; top: calc(var(--header) + 2rem); }
 .statement { font-size: clamp(1.625rem, 1.1rem + 2.1vw, 2.75rem); font-weight: 560; line-height: 1.16; letter-spacing: -.026em; text-wrap: pretty; }
 [lang="ar"] .statement { line-height: 1.5; letter-spacing: 0; font-weight: 500; }
-.steps li { display: grid; grid-template-columns: 2.75rem 1fr; gap: 1rem; padding-block: 1.75rem; border-top: 1px solid var(--line); }
+.steps li { display: grid; grid-template-columns: minmax(0, 1fr); gap: 1rem; padding-block: 1.75rem; border-top: 1px solid var(--line); }
 .steps li:last-child { border-bottom: 1px solid var(--line); }
-.steps-n { font-family: var(--mono); font-size: .8125rem; color: var(--text-muted); padding-top: .3125rem; letter-spacing: .04em; }
 .steps p { margin-top: .5rem; color: var(--text-muted); max-width: 28rem; }
 
 /* product: the Carbon command moment */
@@ -426,8 +425,9 @@ a.pm-link[aria-current="page"] .pm-name::after { content: ""; display: inline-bl
 .tags { display: flex; gap: .375rem; }
 /* the tags sit in a fixed track at the end, so every row's text starts on the same line */
 .who-rows .tags { justify-content: flex-end; }
-.tags span { font-family: var(--mono); font-size: .6875rem; letter-spacing: .07em; text-transform: uppercase; color: var(--text-muted); border: 1px solid var(--line-strong); border-radius: .25rem; padding: .1875rem .4375rem; white-space: nowrap; }
-[lang="ar"] .tags span { font-family: var(--arabic); letter-spacing: 0; font-size: .75rem; }
+/* who-tags carry content (ALYR Agent's numbers, ALYR Shelf's ways of counting), so they are
+   body type, not mono capitals (site audit R2) */
+.tags span { font-family: inherit; font-size: var(--fs-note); line-height: 1.35; letter-spacing: 0; text-transform: none; color: var(--text-muted); border: 1px solid var(--line-strong); border-radius: var(--radius-sm); padding: var(--space-1) var(--space-2); white-space: nowrap; }
 .who-rows > li.who-other { display: block; padding-block: 1rem; }
 
 /* built */
@@ -476,9 +476,6 @@ a.pm-link[aria-current="page"] .pm-name::after { content: ""; display: inline-bl
 .foot-legal { display: grid; gap: .375rem; font-family: var(--mono); font-size: .75rem; line-height: 1.6; color: var(--text-muted); }
 [lang="ar"] .foot-legal { font-family: var(--arabic); font-size: .8125rem; }
 .foot-legal p:first-child { display: flex; flex-wrap: wrap; justify-content: flex-start; gap: .25rem 1.5rem; }
-.doha { display: inline-flex; align-items: center; gap: .5rem; }
-.doha-dot { width: .375rem; height: .375rem; border-radius: 50%; background: currentColor; }
-.doha-time { display: inline-block; min-width: 5ch; font-family: var(--mono); font-variant-numeric: tabular-nums; }
 
 /* ----------------------------------------------- shared by every public page */
 /* The fold: three Carbon planes with the symbol's gaps (10 of its 160 units): a 6 px Paper

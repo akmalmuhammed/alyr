@@ -3,7 +3,7 @@ import { Icon } from "./brand";
 import { copy, fill, type FlowSet, type InsideSection, type Locale, type ProductBar as Bar, type Questions, type ScreenSection, type WhoSection, type WorksSection } from "./copy";
 import { FlowDiagram } from "./FlowDiagram";
 import { contactHref } from "./Shell";
-import { CONTACT_STATE, OFFER_LIVE, PRODUCTS, productPath, type ProductKey } from "./site";
+import { CONTACT_STATE, OFFER_LIVE, PATHS, PRODUCTS, productPath, type ProductKey } from "./site";
 import { lines, rich } from "./Text";
 import "./kit.css";
 
@@ -81,7 +81,7 @@ export function FlowSection({ flow, locale }: { flow: FlowSet; locale: Locale })
     <section className="sec how" id="how">
       <div className="wrap">
         <div className="how-head" data-reveal>
-          <p className="eyebrow">{flow.eyebrow}</p>
+          {flow.eyebrow && <p className="eyebrow">{flow.eyebrow}</p>}
           <h2 className="h1">{lines(flow.title)}</h2>
           <p className="lead">{rich(flow.body)}</p>
         </div>
@@ -108,7 +108,7 @@ export function ScreenBlock({ locale, screen, fictional, children, id = "screen"
     <section className="sec pk-screen" id={id} aria-labelledby={`${id}-title`}>
       <div className="wrap">
         <div className="built-head" data-reveal>
-          <p className="eyebrow">{screen.eyebrow}</p>
+          {screen.eyebrow && <p className="eyebrow">{screen.eyebrow}</p>}
           <h2 className="h1" id={`${id}-title`}>{rich(screen.title)}</h2>
           {screen.body && <p className="lead">{rich(screen.body)}</p>}
         </div>
@@ -135,13 +135,15 @@ export function ScreenBlock({ locale, screen, fictional, children, id = "screen"
 }
 
 /** Everything it does today, by audience; anything the page shows beside it (`children`);
- * then, below a dashed rule, what is not built, only where the page needs to say so. */
-export function InsideBlock({ inside, children }: { inside: InsideSection; children?: ReactNode }) {
+ * then, below a dashed rule, what is not built, only where the page needs to say so. The
+ * last group may close with a link to the homepage's trust section (`rules`), so WhatsApp's
+ * rules and consent are told once for the suite, not on every page. */
+export function InsideBlock({ inside, locale, children }: { inside: InsideSection; locale: Locale; children?: ReactNode }) {
   return (
     <section className="sec inside" id="inside">
       <div className="wrap">
         <div className="built-head" data-reveal>
-          <p className="eyebrow">{inside.eyebrow}</p>
+          {inside.eyebrow && <p className="eyebrow">{inside.eyebrow}</p>}
           <h2 className="h1">{rich(inside.title)}</h2>
         </div>
         <div className={`inside-grid${inside.groups.length > 3 ? " is-four" : ""}`}>
@@ -156,6 +158,12 @@ export function InsideBlock({ inside, children }: { inside: InsideSection; child
                   <li key={item}><p>{rich(item)}</p></li>
                 ))}
               </ul>
+              {inside.rules && index === inside.groups.length - 1 && (
+                <a className="link inside-rules" href={`${PATHS.home[locale]}#trust`}>
+                  <span>{rich(inside.rules)}</span>
+                  <Icon name="arrow-right" className="ico ico-flip" />
+                </a>
+              )}
             </div>
           ))}
         </div>
@@ -186,16 +194,18 @@ export function WhoBlock({ who }: { who: WhoSection }) {
     <section className="sec who" id="who">
       <div className="wrap who-in">
         <div className="who-head" data-reveal>
-          <p className="eyebrow">{who.eyebrow}</p>
+          {who.eyebrow && <p className="eyebrow">{who.eyebrow}</p>}
           <h2 className="h1">{lines(who.title)}</h2>
         </div>
         <ul className="who-rows pk-who">
           {who.rows.map((row, index) => (
             <li key={row.name} data-reveal style={n(index)}>
               <h3>{rich(row.name)}</h3>
-              <span className="tags">
-                {row.tags.map((tag) => <span key={tag}>{tag}</span>)}
-              </span>
+              {row.tags && row.tags.length > 0 && (
+                <span className="tags">
+                  {row.tags.map((tag) => <span key={tag}>{tag}</span>)}
+                </span>
+              )}
             </li>
           ))}
           <li className="who-other" data-reveal>
@@ -218,7 +228,7 @@ export function WorksBlock({ locale, works, self }: { locale: Locale; works: Wor
     <section className="sec works" id="works" aria-labelledby="works-title">
       <div className="wrap">
         <div className="built-head" data-reveal>
-          <p className="eyebrow">{works.eyebrow}</p>
+          {works.eyebrow && <p className="eyebrow">{works.eyebrow}</p>}
           <h2 className="h1" id="works-title">{rich(works.title)}</h2>
         </div>
         <ul className="works-rows">
@@ -254,7 +264,7 @@ export function QuestionsBlock({ faq, id = "questions" }: { faq: Questions; id?:
       <div className="wrap faq-grid">
         <div className="faq-head">
           <div className="head">
-            <p className="eyebrow">{faq.eyebrow}</p>
+            {faq.eyebrow && <p className="eyebrow">{faq.eyebrow}</p>}
             <h2 className="h1" id={`${id}-title`}>{rich(faq.title)}</h2>
           </div>
         </div>

@@ -74,7 +74,7 @@ export function AgentPage({ locale }: { locale: Locale }) {
       <section className="sec pk-how" id="how" aria-labelledby="how-title">
         <div className="wrap">
           <div className="built-head" data-reveal>
-            <p className="eyebrow">{p.how.eyebrow}</p>
+            {p.how.eyebrow && <p className="eyebrow">{p.how.eyebrow}</p>}
             <h2 className="h1" id="how-title">{rich(p.how.title)}</h2>
           </div>
           <ol className="pk-steps">
@@ -106,7 +106,7 @@ export function AgentPage({ locale }: { locale: Locale }) {
       <section className="sec pk-report" id="report" aria-labelledby="report-title">
         <div className="wrap pk-report-grid">
           <div className="built-head" data-reveal>
-            <p className="eyebrow">{p.report.eyebrow}</p>
+            {p.report.eyebrow && <p className="eyebrow">{p.report.eyebrow}</p>}
             <h2 className="h1" id="report-title">{rich(p.report.title)}</h2>
             <p className="lead">{rich(p.report.body)}</p>
           </div>
@@ -129,7 +129,7 @@ export function AgentPage({ locale }: { locale: Locale }) {
       <section className="sec pk-rules" id="rules" aria-labelledby="rules-title">
         <div className="wrap">
           <div className="built-head" data-reveal>
-            <p className="eyebrow">{p.rules.eyebrow}</p>
+            {p.rules.eyebrow && <p className="eyebrow">{p.rules.eyebrow}</p>}
             <h2 className="h1" id="rules-title">{rich(p.rules.title)}</h2>
             <p className="lead">{rich(p.rules.body)}</p>
           </div>
@@ -163,7 +163,7 @@ export function AgentPage({ locale }: { locale: Locale }) {
         </div>
       </section>
 
-      <InsideBlock inside={p.inside} />
+      <InsideBlock inside={p.inside} locale={locale} />
       <WhoBlock who={p.who} />
       <WorksBlock locale={locale} works={p.works} self="agent" />
       <QuestionsBlock faq={p.faq} />

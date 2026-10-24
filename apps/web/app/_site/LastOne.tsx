@@ -56,7 +56,7 @@ export function LastOneFigure({ locale }: { locale: Locale }) {
     <section className="sec sig-sec" id="moment" aria-labelledby="moment-title">
       <div className="wrap">
         <div className="built-head" data-reveal>
-          <p className="eyebrow">{m.eyebrow}</p>
+          {m.eyebrow && <p className="eyebrow">{m.eyebrow}</p>}
           <h2 className="h1" id="moment-title">{lines(m.title)}</h2>
           <p className="lead">{rich(m.body)}</p>
         </div>

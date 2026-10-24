@@ -69,8 +69,8 @@ figure is marked once, in its window bar.
 
 ### Stage 2 · "Book a check-up" on every page (founder decision 2; `01-ux.md` A1)
 
-Done: `Shell` takes the action from `home.final` (`action` "Book a check-up" / «احجز فحصاً
-لنشاطك» as the homepage already had it, `short` "Check-up" below 62rem) unless a page names its
+Done: `Shell` takes the action from `home.final` (`action` "Book a check-up" / «احجز فحصاً لمشروعك» (header on phones «احجز فحصاً»)
+as the homepage already had it, `short` "Check-up" below 62rem) unless a page names its
 own, so the header button, the closing call's button and the phone's sticky bar say it on the
 homepage and all six product pages, in both languages. It is the same `contactLink` (the mail
 link in the email state). The price section's button (offer on) says it too. `nav.cta` (the
@@ -81,3 +81,40 @@ Not added: a hero button or a sticky bar on the product pages. Their openings ha
 today and the founder's list names the places the homepage has; adding them would push the demo
 out of the phone's first screen (`01-ux.md` F1) and add a sticky layer (P1-a). For the founder,
 if he meant a new button there too.
+
+### Stage 3 · The inventory (`01-ux.md` §1, R1, R2, R3, C1, C2), both languages
+
+Done, by `01-ux.md`'s verdicts:
+- Shared: the Products menu (and the phone menu) shows a state only on ALYR Agent and ALYR
+  Shelf ("With every product"); the Doha clock is gone (`DohaTime.tsx` deleted, `footer.doha`).
+- Eyebrows that repeat a heading or the bar: 46 removed per language (every product page's
+  How it works, The screen, What's in it, Who it's for, The products, Questions; `/agent`'s How
+  it works, The Sunday report, The rules; `/chat`'s Why it helps; the Shelf and Docs signature
+  eyebrows; the homepage's hero, Why, How, What a check-up finds, By business, One order, The
+  products, Questions). Kept: the Trust question, the spotlight (now "ALYR Agent · With every
+  product", C2), the Price eyebrow (offer on) and each product opening's state, now the state
+  alone ("Set up for you", "With every product"; the bar above names the product). Section
+  eyebrows are optional in the types. The homepage hero's eyebrow stays in `copy.ts` for the
+  social card only; the product cards build "ALYR Bookings · Set up for you" from the name and
+  the state, so every card reads as before.
+- Homepage: fact 1 "We come to your shop, in Qatar"; How loses its note (it stays as the Price
+  status line) and the "Every month" list (`how.month` deleted); By business's list head is
+  "Today"; the salon note ends at "right for one chair"; the tally reads "In Sara's order";
+  the trust facts lose their mono labels; the flow lanes keep only "Business Platform".
+- Product pages: the flow lanes likewise; the Chat pillars lose 01 to 04; who-tags gone on
+  Chat, Bookings and Accounts and set in 14 px body type on Agent, Shelf and Docs (`.tags span`,
+  `--fs-note`); `/agent`'s one-line "For your team" group joins the first; "Not yet" gone from
+  Bookings and Agent, Accounts keeps live payments and statements; inside notes shortened to
+  "Everything listed here is built." (Agent, Shelf: "With every ALYR product. …"; Accounts
+  keeps "above the line"); `/chat`'s X-ray caption keeps only "The phone shows the feature you
+  are reading."
+- R3: Bookings' "Behind the scenes" keeps its own two lines and closes with "How ALYR handles
+  WhatsApp's rules, consent and your records" → `/#trust` (`InsideSection.rules`). Consent
+  stays where it is the product's own (`/chat`, `/accounts`, Docs' document messages).
+- C1 (D-039): "Several at once is the next step for Bookings" and "whether it fits yet" are out
+  of the chairs question on `/` and `/bookings` and of Bookings' who line.
+
+New Arabic lines (ALY-66 review): «نأتي إلى محلك في قطر»، «اليوم»، «في طلب سارة»،
+«ALYR Agent · مع كل منتج»، «نجهّزه لك»، «مع كل منتج»، «كل ما في هذه القائمة مبنيّ في المنتج.»،
+«مع كل منتج من ALYR. كل ما في هذه القائمة مبنيّ في المنتج.»، «يعرض الهاتف الميزة التي تقرؤها.»،
+«كيف تتعامل ALYR مع قواعد واتساب والموافقة وسجلاتك»، and the shortened chairs answer.

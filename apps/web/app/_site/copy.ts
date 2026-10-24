@@ -111,12 +111,12 @@ export type FlowStep = {
 
 export type FlowStory = { id: string; tab: string; steps: FlowStep[] };
 
-type Named = { name: string; sub: string };
+type Named = { name: string; sub?: string };
 
 /** The "how it works" figure: a message followed through the customer's phone, WhatsApp,
  * ALYR and the team's screen. */
 export type FlowSet = {
-  eyebrow: string;
+  eyebrow?: string;
   title: string;
   body: string;
   tabsLabel: string;
@@ -151,7 +151,7 @@ export type Bubble = {
 /** A question and its answer. A question with a `state` shows only in that contact state,
  * one with `offer` only while prices are on (or off) the page (site.ts). */
 export type Question = { id: string; q: string; a: string; state?: ContactState; offer?: boolean };
-export type Questions = { eyebrow: string; title: string; items: Question[] };
+export type Questions = { eyebrow?: string; title: string; items: Question[] };
 
 /** The words around the report's sample message, and each sample card in words. */
 export type ReportCopy = {
@@ -241,6 +241,7 @@ export type ChatScene = {
 
 type Home = {
   hero: {
+    /** The social card's eyebrow only: the page shows none, its headline says who it is for (site audit R1). */
     eyebrow: string;
     title: [string, string];
     /** The one paragraph beside the headline: the gap ALYR fills, and how (ALY-210). */
@@ -255,7 +256,7 @@ type Home = {
   };
   /** The owner's everyday problems, each with what ALYR does about it and the product. */
   problems: {
-    eyebrow: string;
+    eyebrow?: string;
     title: string;
     lead: string;
     items: { problem: string; fix: string; product: ProductKey }[];
@@ -266,7 +267,7 @@ type Home = {
   /** Why ALYR (ALY-210): what a big company has for each part of the work, what an
    * owner-run shop has today, and what ALYR does instead. `cols` name the three columns. */
   why: {
-    eyebrow: string;
+    eyebrow?: string;
     title: string;
     lead: string;
     cols: [string, string, string];
@@ -288,7 +289,7 @@ type Home = {
     link: string;
   };
   suite: {
-    eyebrow: string;
+    eyebrow?: string;
     title: string;
     body: string;
     rows: Record<ProductKey, { body: string; link: string }>;
@@ -305,7 +306,7 @@ type Home = {
     room: { index: string; workspace: string; whole: string };
   };
   business: {
-    eyebrow: string;
+    eyebrow?: string;
     title: string;
     tabsLabel: string;
     day: string;
@@ -320,16 +321,15 @@ type Home = {
   /** How we work (ALY-210): the loop of check, set up, see and improve, which starts again
    * after the fourth step (`again`), and what the owner brings and gets every month. */
   how: {
-    eyebrow: string;
+    eyebrow?: string;
     title: string;
     lead: string;
     steps: Titled[];
     again: string;
-    /** The set-up line: under the steps, and again under the price. */
+    /** The set-up line, under the price (offer on). */
     note: string;
-    /** How little the owner has to bring, and what comes every month. */
+    /** How little the owner has to bring. */
     need: { title: string; items: string[] };
-    month: { title: string; items: string[] };
   };
   price: {
     eyebrow: string;
@@ -367,7 +367,7 @@ type Home = {
     eyebrow: string;
     title: string;
     body: string;
-    facts: { label: string; title: string; body: string }[];
+    facts: { title: string; body: string }[];
     closing: string;
     records: { label: string; items: Record<TrustRecord, string> };
     figure: { caption: Caption; label: string };
@@ -402,22 +402,25 @@ export type ProductBar = { label: string; links: { id: string; label: string }[]
 export type ProductHero = { eyebrow: string; title: [string, string]; lead: string; facts: string[]; factsOffer?: string[] };
 
 /** A real workspace screen at true scale, with numbered callouts. */
-export type ScreenSection = { eyebrow: string; title: string; body?: string; label: string; callouts: string[] };
+export type ScreenSection = { eyebrow?: string; title: string; body?: string; label: string; callouts: string[] };
 
 /** Everything the product does today, by audience, then what is not built yet. */
 export type InsideSection = {
-  eyebrow: string;
+  eyebrow?: string;
   title: string;
   groups: { name: string; items: string[] }[];
   /** What is not built, below a dashed rule. Leave it out where nothing needs saying (D-039). */
   notYet?: { title: string; items: string[] };
   note?: string;
+  /** A link to the homepage's trust section, closing the last group, in place of the
+   * consent and WhatsApp-rules lines every page used to repeat (site audit R3). */
+  rules?: string;
 };
 
-export type WhoSection = { eyebrow: string; title: string; rows: { name: string; tags: string[] }[]; other: string };
+export type WhoSection = { eyebrow?: string; title: string; rows: { name: string; tags?: string[] }[]; other: string };
 
 /** "Works with the rest of ALYR": what each other product adds, in the suite's order. */
-export type WorksSection = { eyebrow: string; title: string; rows: Partial<Record<ProductKey, string>>; link: string };
+export type WorksSection = { eyebrow?: string; title: string; rows: Partial<Record<ProductKey, string>>; link: string };
 
 /** The Bookings screen of the workspace, drawn. */
 export type BookingsSheet = {
@@ -468,9 +471,9 @@ type AccountsPage = PageCommon & {
 
 type AgentPage = PageCommon & {
   figure: { label: string };
-  how: { eyebrow: string; title: string; steps: Titled[]; card: string; under: string };
-  report: { eyebrow: string; title: string; body: string };
-  rules: { eyebrow: string; title: string; body: string; heads: [string, string]; rows: { name: string; rule: string; note?: string }[]; notes: string[] };
+  how: { eyebrow?: string; title: string; steps: Titled[]; card: string; under: string };
+  report: { eyebrow?: string; title: string; body: string };
+  rules: { eyebrow?: string; title: string; body: string; heads: [string, string]; rows: { name: string; rule: string; note?: string }[]; notes: string[] };
 };
 
 export type Copy = {
@@ -503,7 +506,7 @@ export type Copy = {
     draft: string;
     bar: string;
   };
-  footer: { line: string; rights: string; workspace: string; disclaimer: string; doha: string; links: string; products: string };
+  footer: { line: string; rights: string; workspace: string; disclaimer: string; links: string; products: string };
   /** The "Sample" mark in a drawing's chrome; the phone header's "Sample business"; and the
    * line said first in a figure of a fictional business that is not one of the three. */
   fig: { sample: string; business: string; note: string };
@@ -518,13 +521,13 @@ export type Copy = {
     facts: Titled[];
     flow: FlowSet;
     inside: {
-      eyebrow: string; title: string; note: string;
+      eyebrow?: string; title: string; note: string;
       groups: { name: string; items: (Titled & { scene: ChatScene })[] }[];
       /** The phone with X-ray (ALY-209): the words around the scenes. */
       xray: { label: string; test: string; inbox: string; checks: string; path: [string, string, string]; caption: string };
     };
-    why: { eyebrow: string; statement: string; pillars: Titled[] };
-    who: { eyebrow: string; title: string; rows: { name: string; body: string; tags: string[]; link?: { key: ProductKey; label: string } }[]; other: string };
+    why: { eyebrow?: string; statement: string; pillars: Titled[] };
+    who: { eyebrow?: string; title: string; rows: { name: string; body: string; tags?: string[]; link?: { key: ProductKey; label: string } }[]; other: string };
     works: WorksSection;
     cta: { title: string; body: string };
   };
@@ -644,7 +647,6 @@ const en: Copy = {
     rights: "ALYR. Built in Qatar.",
     workspace: "Staff sign-in",
     disclaimer: "ALYR uses the WhatsApp Business Platform. ALYR is not affiliated with, or endorsed by, WhatsApp or Meta.",
-    doha: "Doha",
     links: "Site",
     products: "Products",
   },
@@ -726,14 +728,13 @@ const en: Copy = {
         "Big companies pay consultants to study how they work and fix it. ALYR does that for small businesses: we check how yours runs, set up what it needs, and keep improving it with you.",
       action: "Book a check-up",
       more: "See how we work",
-      facts: ["We come to your shop", "From QAR 449 a month, no commission", "Arabic and English"],
-      factsNoOffer: ["We come to your shop", "Six products, one workspace", "Arabic and English"],
+      facts: ["We come to your shop, in Qatar", "From QAR 449 a month, no commission", "Arabic and English"],
+      factsNoOffer: ["We come to your shop, in Qatar", "Six products, one workspace", "Arabic and English"],
       figure: {
         label: "The ALYR Agent home screen of a fictional bakery, and what ALYR did for it this afternoon",
       },
     },
     problems: {
-      eyebrow: "What a check-up finds",
       title: "What we often find in a shop,\nand what we set up for it.",
       lead: "Find the ones you have. Each fix is built, and we set it up with you.",
       shown: 6,
@@ -787,7 +788,6 @@ const en: Copy = {
       ],
     },
     why: {
-      eyebrow: "Why ALYR",
       title: "Big businesses have a team for this.\nYou have us.",
       lead:
         "You started a business to bake, cut hair or trade, not to run software. We do the technology part, the way a big company’s IT team and consultants would, at a price an owner-run shop can pay.",
@@ -800,7 +800,6 @@ const en: Copy = {
       ],
     },
     see: {
-      eyebrow: "Proof, one order",
       title: "One order, start to finish.\nThe routine is done for you.",
       body:
         "Follow Sara’s order at Qirfa Bakery: her ordinary WhatsApp chat, what ALYR does by itself, and your team’s screen, side by side.",
@@ -808,10 +807,10 @@ const en: Copy = {
       stepsLabel: "Steps",
       pause: "Pause",
       play: "Play",
-      customer: { name: "Your customer", sub: "On WhatsApp" },
+      customer: { name: "Your customer" },
       whatsapp: { name: "WhatsApp", sub: "Business Platform" },
-      alyr: { name: "ALYR", sub: "Working in the background", idle: "Waiting for the next message" },
-      team: { name: "Your team", sub: "The workspace", idle: "Nothing new yet" },
+      alyr: { name: "ALYR", idle: "Waiting for the next message" },
+      team: { name: "Your team", idle: "Nothing new yet" },
       stories: [
         {
           id: "order",
@@ -941,7 +940,7 @@ const en: Copy = {
         },
       ],
       tally: {
-        label: "Who did what in Sara’s order",
+        label: "In Sara’s order",
         items: [
           { n: "5", text: "messages ALYR sent her by itself" },
           { n: "3", text: "presses by Yusuf: Confirm, Ready, Done" },
@@ -951,7 +950,7 @@ const en: Copy = {
       link: "See everything in ALYR Chat",
     },
     spotlight: {
-      eyebrow: "Insights · With every product",
+      eyebrow: "ALYR Agent · With every product",
       title: "Every day, see what changed\nand what to do next.",
       body:
         "ALYR Agent reads the orders, bookings, chats and credit already in your workspace. It puts waiting work first, compares your week with the same days last week, and suggests up to three things, each with its reason. You decide.",
@@ -967,7 +966,6 @@ const en: Copy = {
       link: "See ALYR Agent",
     },
     suite: {
-      eyebrow: "The products",
       title: "Six products. One workspace.\nAdd them as you grow.",
       body:
         "Start with what hurts most today and add the next when you need it: the same customers, the same team, the same screen. ALYR Agent and ALYR Shelf come with every one.",
@@ -1023,10 +1021,9 @@ const en: Copy = {
       room: { index: "The six products", workspace: "Workspace", whole: "All six, on one screen." },
     },
     business: {
-      eyebrow: "By business",
       title: "Every business runs differently.\nHere is yours.",
       tabsLabel: "Businesses",
-      day: "Your day today",
+      day: "Today",
       with: "With ALYR",
       uses: "What we would set up",
       split: {
@@ -1188,7 +1185,7 @@ const en: Copy = {
             "Your team marks who came, and ALYR Agent counts the no-shows.",
           ],
           products: ["bookings", "agent"],
-          note: "One booking at a time today: right for one chair. Several chairs at once is next.",
+          note: "One booking at a time today: right for one chair.",
           chats: [
             { who: "Abdulla", kind: "text", text: "Any time after 4 today?", at: "1:12 pm", n: 12 },
             { who: "Hamad", kind: "voice", text: "0:19", at: "12:50 pm", n: 10 },
@@ -1251,7 +1248,6 @@ const en: Copy = {
       },
     },
     how: {
-      eyebrow: "How we work",
       title: "Check. Set up. See. Improve.\nThen again.",
       lead: "You don’t need to know anything technical. We do each step with you, and the loop doesn’t stop when you go live.",
       steps: [
@@ -1280,15 +1276,6 @@ const en: Copy = {
           "Your menu or price list: a photo, a PDF or an Excel sheet is fine",
           "A phone or a computer at the counter for your team",
           "An hour for the check-up, and time to train your team",
-        ],
-      },
-      month: {
-        title: "Every month",
-        items: [
-          "A look at your numbers, with us",
-          "Menu, price and hours changes whenever you ask",
-          "A person from ALYR answers your messages",
-          "Every product update, with nothing to install",
         ],
       },
     },
@@ -1351,32 +1338,26 @@ const en: Copy = {
         "We are choosing our first businesses in Doha now, so you won’t see logos or numbers here yet. Here is what we can show you instead.",
       facts: [
         {
-          label: "The person",
           title: "You know who you are dealing with.",
           body: "The person who visits you sets you up and answers when you message.",
         },
         {
-          label: "Your records",
           title: "Your records, kept apart.",
           body: "Each business’s records are separated inside the database itself, not by a setting someone can forget.",
         },
         {
-          label: "Consent",
           title: "Consent, on record.",
           body: "ALYR checks a customer’s consent before any message it starts, and keeps every consent on record.",
         },
         {
-          label: "The platform",
           title: "WhatsApp’s official platform.",
           body: "ALYR is built on WhatsApp’s official Business Platform, not on unofficial tools that put a number at risk. We are not WhatsApp or Meta.",
         },
         {
-          label: "Your money",
           title: "Built never to hold your money.",
           body: "Card payments, once your payment provider is connected, go to your own account. ALYR keeps a payment’s reference and status, never card numbers.",
         },
         {
-          label: "Control",
           title: "People stay in charge.",
           body: "Automatic replies handle the routine, ALYR Agent only suggests and shows why, and anyone on your team can step into any chat.",
         },
@@ -1392,7 +1373,6 @@ const en: Copy = {
       },
     },
     faq: {
-      eyebrow: "Questions",
       title: "Fair questions.",
       shown: 6,
       more: "More questions",
@@ -1462,7 +1442,7 @@ const en: Copy = {
         {
           id: "chairs",
           q: "I have more than one chair or room.",
-          a: "Today ALYR Bookings takes one booking at a time for the whole business. That suits one chair, one room or one practitioner. Several at once is the next step for Bookings. Tell us how many you run, and we’ll tell you honestly whether it fits yet.",
+          a: "Today ALYR Bookings takes one booking at a time for the whole business. That suits one chair, one room or one practitioner. Tell us how many you run, and we’ll tell you honestly whether it fits.",
         },
         {
           id: "more-products",
@@ -1552,7 +1532,7 @@ const en: Copy = {
         { id: "works", label: "Works with" },
       ],
     },
-    eyebrow: "ALYR Chat · Set up for you",
+    eyebrow: "Set up for you",
     title: "Orders in the chat.\nOne inbox for the team.",
     body:
       "Your customers keep messaging you the way they already do. ALYR Chat adds the order page, the payment link and the updates, and your team sees it all in one place.",
@@ -1659,7 +1639,6 @@ const en: Copy = {
       },
     ],
     flow: {
-      eyebrow: "How it works",
       title: "What happens when a customer orders.",
       body:
         "Your customer sees an ordinary chat. Behind it, ALYR sends the order page, keeps the record and tells the customer at every step. Follow one order through.",
@@ -1667,10 +1646,10 @@ const en: Copy = {
       stepsLabel: "Steps",
       pause: "Pause",
       play: "Play",
-      customer: { name: "Your customer", sub: "On WhatsApp, as always" },
+      customer: { name: "Your customer" },
       whatsapp: { name: "WhatsApp", sub: "Business Platform" },
-      alyr: { name: "ALYR Chat", sub: "Working in the background", idle: "Waiting for the next message" },
-      team: { name: "Your team", sub: "The workspace", idle: "Nothing new yet" },
+      alyr: { name: "ALYR Chat", idle: "Waiting for the next message" },
+      team: { name: "Your team", idle: "Nothing new yet" },
       stories: [
         {
           id: "order",
@@ -1808,16 +1787,15 @@ const en: Copy = {
       ],
     },
     inside: {
-      eyebrow: "What’s in it",
       title: "Everything it does today.",
-      note: "We set ALYR Chat up with you at your shop. Everything listed here is built. We agree your number with you when we set you up.",
+      note: "Everything listed here is built.",
       xray: {
         label: "Each feature, shown on the customer’s phone",
         test: "Test page",
         inbox: "Team inbox",
         checks: "What ALYR checks",
         path: ["ALYR", "WhatsApp", "The customer’s phone"],
-        caption: "Sample conversation with a fictional business. The phone shows the feature you are reading.",
+        caption: "The phone shows the feature you are reading.",
       },
       groups: [
         {
@@ -1938,7 +1916,6 @@ const en: Copy = {
       ],
     },
     why: {
-      eyebrow: "Why it helps",
       statement:
         "Your customers already message you before they visit or order. Those chats get lost, orders end up on paper, and payment means a transfer screenshot. The businesses that win treat the chat as their shop counter.",
       pillars: [
@@ -1961,36 +1938,30 @@ const en: Copy = {
       ],
     },
     who: {
-      eyebrow: "Who it's for",
       title: "For businesses that already run on WhatsApp.",
       rows: [
         {
           name: "Restaurants and cafes",
           body: "Your menu in your customers' chat. Orders come to you direct, and your regulars stay yours.",
-          tags: ["Order", "Pay"],
         },
         {
           name: "Salons and barbers",
           body: "Bookings and reminders have their own product now.",
-          tags: [],
           link: { key: "bookings", label: "See ALYR Bookings" },
         },
         {
           name: "Home and field services",
           body: "Parts and supplies ordered from a page, and an update at every step.",
-          tags: ["Order", "Track"],
         },
         {
           name: "Shops and trading",
           body: "Orders and payment links. Add ALYR Accounts for customers on credit.",
-          tags: ["Order", "Pay"],
           link: { key: "accounts", label: "See ALYR Accounts" },
         },
       ],
       other: "Run something else? Write to us about how you work today.",
     },
     works: {
-      eyebrow: "The products",
       title: "Works with the rest of ALYR.",
       link: "See {name}",
       rows: {
@@ -2018,7 +1989,7 @@ const en: Copy = {
         ],
       },
       hero: {
-        eyebrow: "ALYR Bookings · Set up for you",
+        eyebrow: "Set up for you",
         title: ["Customers book in the chat.", "ALYR reminds them before they come."],
         lead:
           "Your customers pick a service and a free time from a page that opens in the chat, with no app. The confirmation goes at once, a reminder two hours before, and your team marks who came.",
@@ -2150,7 +2121,6 @@ const en: Copy = {
         ],
       },
       flow: {
-        eyebrow: "How it works",
         title: "What happens when a customer books.",
         body:
           "Your customer sees an ordinary chat. Behind it, ALYR reads your hours, locks the time and sets the reminder. Follow one booking through.",
@@ -2158,10 +2128,10 @@ const en: Copy = {
         stepsLabel: "Steps",
         pause: "Pause",
         play: "Play",
-        customer: { name: "Your customer", sub: "On WhatsApp, as always" },
+        customer: { name: "Your customer" },
         whatsapp: { name: "WhatsApp", sub: "Business Platform" },
-        alyr: { name: "ALYR Bookings", sub: "Working in the background", idle: "Waiting for the next message" },
-        team: { name: "Your team", sub: "The workspace", idle: "Nothing new yet" },
+        alyr: { name: "ALYR Bookings", idle: "Waiting for the next message" },
+        team: { name: "Your team", idle: "Nothing new yet" },
         stories: [
           {
             id: "book",
@@ -2277,7 +2247,6 @@ const en: Copy = {
         ],
       },
       screen: {
-        eyebrow: "The screen",
         title: "Today and the next seven days, on one screen.",
         label: "The Bookings screen of a fictional salon’s workspace",
         callouts: [
@@ -2307,7 +2276,6 @@ const en: Copy = {
         },
       },
       inside: {
-        eyebrow: "What’s in it",
         title: "Everything it does today.",
         groups: [
           {
@@ -2335,36 +2303,22 @@ const en: Copy = {
             items: [
               "Two customers can never take the same slot: the time is checked again and locked.",
               "A cancelled booking is never reminded.",
-              "WhatsApp's rules, handled: ordinary messages for 24 hours after a customer writes, approved wording after that.",
-              "Stop means stop.",
             ],
           },
         ],
-        notYet: {
-          title: "Not yet",
-          items: [
-            "Several bookings at the same time, by staff, chair or room. Next for ALYR Bookings.",
-            "Moving a booking, or adding a walk-in, from the screen.",
-            "Changing services and opening hours yourself. ALYR changes them when you ask.",
-            "Taking a deposit or a payment when the customer books.",
-            "Choosing when the reminder goes.",
-            "Messages to bring back customers who are due. They need marketing consent first.",
-          ],
-        },
-        note: "We set ALYR Bookings up with you at your shop. Everything listed above the line is built.",
+        rules: "How ALYR handles WhatsApp’s rules, consent and your records",
+        note: "Everything listed here is built.",
       },
       who: {
-        eyebrow: "Who it’s for",
         title: "For businesses that serve one customer at a time.",
         rows: [
-          { name: "Barbers and salons with one chair", tags: ["Book", "Remind", "Came"] },
-          { name: "Home services with one team", tags: ["Visits", "Remind"] },
-          { name: "Tutors, trainers and consultants", tags: ["Book", "Remind"] },
+          { name: "Barbers and salons with one chair" },
+          { name: "Home services with one team" },
+          { name: "Tutors, trainers and consultants" },
         ],
-        other: "Several chairs or rooms? Tell us how many, and we’ll say honestly whether it fits yet.",
+        other: "Several chairs or rooms? Tell us how many, and we’ll say honestly whether it fits.",
       },
       works: {
-        eyebrow: "The products",
         title: "Works with the rest of ALYR.",
         link: "See {name}",
         rows: {
@@ -2376,7 +2330,6 @@ const en: Copy = {
         },
       },
       faq: {
-        eyebrow: "Questions",
         title: "Before you ask.",
         items: [
           {
@@ -2397,7 +2350,7 @@ const en: Copy = {
           {
             id: "chairs",
             q: "I have more than one chair or room.",
-            a: "Today ALYR Bookings takes one booking at a time for the whole business. That suits one chair, one room or one practitioner. Several at once is the next step for Bookings. Tell us how many you run, and we’ll tell you honestly whether it fits yet.",
+            a: "Today ALYR Bookings takes one booking at a time for the whole business. That suits one chair, one room or one practitioner. Tell us how many you run, and we’ll tell you honestly whether it fits.",
           },
           {
             id: "no-show",
@@ -2424,7 +2377,7 @@ const en: Copy = {
         ],
       },
       hero: {
-        eyebrow: "ALYR Agent · With every product",
+        eyebrow: "With every product",
         title: ["Your business in numbers.", "What needs you, first."],
         lead:
           "ALYR Agent is the home screen of your workspace. It says in one sentence how the week is going, lists what needs you now, and suggests up to three things, each with the rule behind it.",
@@ -2434,7 +2387,6 @@ const en: Copy = {
         label: "The ALYR Agent home screen of the sample business you choose, and what ALYR did for it this afternoon",
       },
       how: {
-        eyebrow: "How it works",
         title: "Your records, a rule, a card, the screen.",
         steps: [
           { title: "Your records", body: "The orders, bookings, chats and credit accounts your team already keeps in ALYR." },
@@ -2446,13 +2398,11 @@ const en: Copy = {
         under: "The button opens your credit accounts with those three customers. Nothing is sent until you press Send reminders there.",
       },
       report: {
-        eyebrow: "The Sunday report",
         title: "The same week, on your WhatsApp, every Sunday.",
         body:
           "At 9:00 on Sunday, a card with last week’s main number against the week before, each day beside the same day the week before, and two or three facts for your kind of business. Under it, a line for each product, what ALYR did for you, and one next step with its rule. The first reports go out once WhatsApp approves the report’s wording.",
       },
       rules: {
-        eyebrow: "The rules",
         title: "It counts. It compares. It shows the rule.",
         body: "No guesses and no scores. Six of the rules, as they appear on your screen.",
         heads: ["What it looks for", "The rule, as the screen shows it"],
@@ -2474,7 +2424,6 @@ const en: Copy = {
         ],
       },
       inside: {
-        eyebrow: "What’s in it",
         title: "Everything it does today.",
         groups: [
           {
@@ -2487,31 +2436,17 @@ const en: Copy = {
               "“Not now” sets a suggestion aside until its numbers change, or until Sunday.",
               "Done for you this week: messages ALYR sent and booking reminders.",
               "The week day by day with last week behind it, busiest hours over 28 days, top items or services, money owed by age, and the team by name.",
+              "On this screen, staff see the work in front of them and their own numbers, not the shop’s money.",
             ],
-          },
-          {
-            name: "For your team",
-            items: ["On this screen, staff see the work in front of them and their own numbers, not the shop’s money."],
           },
           {
             name: "Every week, everywhere",
             items: ["The Sunday report for WhatsApp. The first go out once WhatsApp approves its wording.", "Arabic and English, light and dark, phone and laptop."],
           },
         ],
-        notYet: {
-          title: "Not yet",
-          items: [
-            "A screen for the Sunday report, and choosing its day and time.",
-            "Messages to quiet regulars from a suggestion. They need marketing consent first.",
-            "Tapping a number to open its week on a phone.",
-            "A count of chats answered after hours.",
-            "Cash at the counter. Sales count orders, not cash collected.",
-          ],
-        },
-        note: "ALYR Agent comes with every ALYR product. Everything listed above the line is built.",
+        note: "With every ALYR product. Everything listed here is built.",
       },
       who: {
-        eyebrow: "Who it’s for",
         title: "Every ALYR business has it.\nWhat leads depends on yours.",
         rows: [
           { name: "Restaurants, cafes and bakeries", tags: ["Sales this week", "Orders this week", "Owed to you", "Came back this week"] },
@@ -2522,7 +2457,6 @@ const en: Copy = {
         other: "Run something else? Write to us about how you work today.",
       },
       works: {
-        eyebrow: "The products",
         title: "Works with the rest of ALYR.",
         link: "See {name}",
         rows: {
@@ -2534,7 +2468,6 @@ const en: Copy = {
         },
       },
       faq: {
-        eyebrow: "Questions",
         title: "Before you ask.",
         items: [
           { id: "pay", offer: false, q: "Do I pay for ALYR Agent?", a: "It comes with every ALYR product." },
@@ -2578,7 +2511,7 @@ const en: Copy = {
         ],
       },
       hero: {
-        eyebrow: "ALYR Accounts · Set up for you",
+        eyebrow: "Set up for you",
         title: ["Know who owes you.", "Remind them without the awkward call."],
         lead:
           "Record a credit sale with one line from your staff phone, and the customer is told the new balance. One press sends reminders in a tone that follows the age of the debt, and a promise to pay pauses them.",
@@ -2694,7 +2627,6 @@ const en: Copy = {
         ],
       },
       flow: {
-        eyebrow: "How it works",
         title: "What happens between a sale on credit and the payment.",
         body:
           "Your customer sees an ordinary chat. Behind it, ALYR keeps the book, checks before it reminds, and pauses when someone promises. Follow one account through.",
@@ -2702,10 +2634,10 @@ const en: Copy = {
         stepsLabel: "Steps",
         pause: "Pause",
         play: "Play",
-        customer: { name: "Your customer", sub: "On WhatsApp, as always" },
+        customer: { name: "Your customer" },
         whatsapp: { name: "WhatsApp", sub: "Business Platform" },
-        alyr: { name: "ALYR Accounts", sub: "Working in the background", idle: "Waiting for the next entry" },
-        team: { name: "Your team", sub: "The workspace", idle: "Nothing new yet" },
+        alyr: { name: "ALYR Accounts", idle: "Waiting for the next entry" },
+        team: { name: "Your team", idle: "Nothing new yet" },
         stories: [
           {
             id: "sale",
@@ -2816,7 +2748,6 @@ const en: Copy = {
         ],
       },
       screen: {
-        eyebrow: "The screen",
         title: "Who owes you, and how long.",
         label: "The Credit accounts screen of a fictional bakery’s workspace",
         callouts: [
@@ -2863,7 +2794,6 @@ const en: Copy = {
         },
       },
       inside: {
-        eyebrow: "What’s in it",
         title: "Everything it does today.",
         groups: [
           {
@@ -2900,28 +2830,22 @@ const en: Copy = {
           title: "Not yet",
           items: [
             "Live payments through your own payment provider. Links run on a test page today.",
-            "Recording a sale or payment from the screen.",
-            "Setting a credit limit yourself. ALYR sets it when you ask.",
             "Statements of account.",
-            "“Pay now” and “I'll pay within a week”, on a reminder sent over 24 hours after the customer last wrote. That one carries the pay link only.",
-            "Invoices, and receipts that say how a customer paid, belong to ALYR Docs, which we set up with you.",
           ],
         },
-        note: "We set ALYR Accounts up with you at your shop. Everything listed above the line is built.",
+        note: "Everything listed above the line is built.",
       },
       who: {
-        eyebrow: "Who it’s for",
         title: "For businesses that let regulars pay later.",
         rows: [
-          { name: "Wholesale and trading, with trade customers on terms", tags: ["Record", "Remind", "Collect"] },
-          { name: "Shops with regulars on the book", tags: ["Record", "Remind"] },
-          { name: "Restaurants and bakeries with office or event accounts", tags: ["Order on account", "Remind"] },
-          { name: "Home services with contract customers", tags: ["Record", "Remind"] },
+          { name: "Wholesale and trading, with trade customers on terms" },
+          { name: "Shops with regulars on the book" },
+          { name: "Restaurants and bakeries with office or event accounts" },
+          { name: "Home services with contract customers" },
         ],
         other: "Run something else? Write to us about how you work today.",
       },
       works: {
-        eyebrow: "The products",
         title: "Works with the rest of ALYR.",
         link: "See {name}",
         rows: {
@@ -2933,7 +2857,6 @@ const en: Copy = {
         },
       },
       faq: {
-        eyebrow: "Questions",
         title: "Before you ask.",
         items: [
           {
@@ -3085,7 +3008,6 @@ const ar: Copy = {
     rights: "ALYR. صُنع في قطر.",
     workspace: "دخول الموظفين",
     disclaimer: "تستخدم ALYR منصة واتساب للأعمال، وليست تابعة لواتساب أو Meta، ولا معتمدة منهما.",
-    doha: "الدوحة",
     links: "الموقع",
     products: "المنتجات",
   },
@@ -3167,14 +3089,13 @@ const ar: Copy = {
         "الشركات الكبيرة تدفع لمستشارين ليدرسوا طريقة عملها ويحسّنوها. وALYR تفعل ذلك للمشاريع الصغيرة: نفحص كيف يسير عملك، ونجهّز ما يحتاجه، ونواصل تحسينه معك.",
       action: "احجز فحصاً لمشروعك",
       more: "شاهد طريقة عملنا",
-      facts: ["نأتي إلى محلك", "من 449 ر.ق شهرياً، بلا عمولة", "بالعربية والإنجليزية"],
-      factsNoOffer: ["نأتي إلى محلك", "ستة منتجات في مساحة عمل واحدة", "بالعربية والإنجليزية"],
+      facts: ["نأتي إلى محلك في قطر", "من 449 ر.ق شهرياً، بلا عمولة", "بالعربية والإنجليزية"],
+      factsNoOffer: ["نأتي إلى محلك في قطر", "ستة منتجات في مساحة عمل واحدة", "بالعربية والإنجليزية"],
       figure: {
         label: "الشاشة الرئيسية لـ ALYR Agent في مخبز غير حقيقي، وما أنجزته ALYR له عصر اليوم",
       },
     },
     problems: {
-      eyebrow: "ما يكشفه الفحص",
       title: "ما نجده كثيراً في المحلات،\nوما نجهّزه له.",
       lead: "اختر ما يشبه يومك. كل حلّ هنا مبنيّ فعلاً، ونجهّزه معك.",
       shown: 6,
@@ -3228,7 +3149,6 @@ const ar: Copy = {
       ],
     },
     why: {
-      eyebrow: "لماذا ALYR",
       title: "الشركات الكبيرة لديها فريق لهذا.\nوأنت لديك نحن.",
       lead:
         "بدأت مشروعك لتخبز أو تقص الشعر أو تتاجر، لا لتدير البرامج. نحن نتولى جانب التقنية كما يفعل فريق التقنية والمستشارون في الشركات الكبيرة، بسعر يناسب محلاً يديره صاحبه.",
@@ -3241,7 +3161,6 @@ const ar: Copy = {
       ],
     },
     see: {
-      eyebrow: "دليل: طلب واحد",
       title: "طلب واحد من أوله إلى آخره.\nوالمعتاد علينا.",
       body:
         "تابع طلب سارة من مخبز قرفة: محادثتها العادية على واتساب، وما تفعله ALYR من تلقاء نفسها، وشاشة فريقك، جنباً إلى جنب.",
@@ -3249,10 +3168,10 @@ const ar: Copy = {
       stepsLabel: "الخطوات",
       pause: "إيقاف",
       play: "تشغيل",
-      customer: { name: "عميلك", sub: "على واتساب" },
+      customer: { name: "عميلك" },
       whatsapp: { name: "واتساب", sub: "منصة الأعمال" },
-      alyr: { name: "ALYR", sub: "تعمل في الخلفية", idle: "بانتظار الرسالة التالية" },
-      team: { name: "فريقك", sub: "مساحة العمل", idle: "لا جديد بعد" },
+      alyr: { name: "ALYR", idle: "بانتظار الرسالة التالية" },
+      team: { name: "فريقك", idle: "لا جديد بعد" },
       stories: [
         {
           id: "order",
@@ -3382,7 +3301,7 @@ const ar: Copy = {
         },
       ],
       tally: {
-        label: "من فعل ماذا في طلب سارة",
+        label: "في طلب سارة",
         items: [
           { n: "5", text: "رسائل أرسلتها ALYR إليها من تلقاء نفسها" },
           { n: "3", text: "ضغطات من يوسف: تأكيد، جاهز، مكتمل" },
@@ -3392,7 +3311,7 @@ const ar: Copy = {
       link: "تعرّف على كل ما في ALYR Chat",
     },
     spotlight: {
-      eyebrow: "رؤى · مع كل منتج",
+      eyebrow: "ALYR Agent · مع كل منتج",
       title: "كل يوم، اعرف ما تغيّر\nوما الخطوة التالية.",
       body:
         "يقرأ ALYR Agent الطلبات والحجوزات والمحادثات والآجل الموجودة في مساحة عملك. يضع العمل المنتظر أولاً، ويقارن أسبوعك بالأيام نفسها من الأسبوع الماضي، ويقترح حتى ثلاثة أشياء، لكل منها سببه. والقرار لك.",
@@ -3408,7 +3327,6 @@ const ar: Copy = {
       link: "تعرّف على ALYR Agent",
     },
     suite: {
-      eyebrow: "المنتجات",
       title: "ستة منتجات. مساحة عمل واحدة.\nأضفها كلما كبرت.",
       body:
         "ابدأ بما يؤلمك أكثر اليوم، وأضف التالي حين تحتاجه: العملاء أنفسهم، والفريق نفسه، والشاشة نفسها. ويأتي ALYR Agent وALYR Shelf مع كل منها.",
@@ -3464,10 +3382,9 @@ const ar: Copy = {
       room: { index: "المنتجات الستة", workspace: "مساحة العمل", whole: "الستة كلها، على شاشة واحدة." },
     },
     business: {
-      eyebrow: "حسب نشاطك",
       title: "لكل نشاط طريقته.\nوهذا نشاطك.",
       tabsLabel: "الأنشطة",
-      day: "يومك اليوم",
+      day: "اليوم",
       with: "مع ALYR",
       uses: "ما سنجهّزه لك",
       split: {
@@ -3629,7 +3546,7 @@ const ar: Copy = {
             "يسجّل فريقك من حضر، ويعدّ ALYR Agent من لم يحضروا.",
           ],
           products: ["bookings", "agent"],
-          note: "حجز واحد في الوقت نفسه اليوم: يناسب كرسياً واحداً. وأكثر من كرسي في الوقت نفسه هو الخطوة التالية.",
+          note: "حجز واحد في الوقت نفسه اليوم: يناسب كرسياً واحداً.",
           chats: [
             { who: "عبدالله", kind: "text", text: "فيه وقت بعد الأربع اليوم؟", at: "1:12 م", n: 12 },
             { who: "حمد", kind: "voice", text: "0:19", at: "12:50 م", n: 10 },
@@ -3692,7 +3609,6 @@ const ar: Copy = {
       },
     },
     how: {
-      eyebrow: "طريقة عملنا",
       title: "نفحص. نجهّز. ترى. نحسّن.\nثم من جديد.",
       lead: "لا تحتاج إلى أي خبرة تقنية. ننجز كل خطوة معك، ولا تتوقف الدائرة عند بدء التشغيل.",
       steps: [
@@ -3721,15 +3637,6 @@ const ar: Copy = {
           "قائمتك أو قائمة أسعارك: صورة أو ملف PDF أو Excel تكفي",
           "هاتف أو حاسوب عند الكاونتر لفريقك",
           "ساعة للفحص، ووقت لتدريب فريقك",
-        ],
-      },
-      month: {
-        title: "كل شهر",
-        items: [
-          "مراجعة لأرقامك، معنا",
-          "تعديل القائمة والأسعار والساعات متى طلبت",
-          "شخص من ALYR يردّ على رسائلك",
-          "كل تحديثات المنتج، بلا تثبيت",
         ],
       },
     },
@@ -3792,32 +3699,26 @@ const ar: Copy = {
         "نختار الآن أوائل عملائنا في الدوحة، لذلك لن ترى هنا بعدُ شعارات عملاء أو أرقاماً. وإليك ما نستطيع أن نريك إياه بدلاً من ذلك.",
       facts: [
         {
-          label: "الشخص",
           title: "تعرف من تتعامل معه.",
           body: "الشخص الذي يزورك هو من يجهّز لك، وهو من يردّ حين تراسلنا.",
         },
         {
-          label: "سجلاتك",
           title: "سجلاتك منفصلة.",
           body: "بيانات كل منشأة مفصولة داخل قاعدة البيانات نفسها، لا بإعداد قد يُنسى.",
         },
         {
-          label: "الموافقة",
           title: "الموافقة مسجّلة.",
           body: "تتحقق ALYR من موافقة العميل قبل أي رسالة تبدأها، وتحفظ كل موافقة في السجل.",
         },
         {
-          label: "المنصة",
           title: "منصة واتساب الرسمية.",
           body: "ALYR مبنية على منصة واتساب للأعمال الرسمية، لا على أدوات غير رسمية تعرّض الرقم للحظر. ولسنا واتساب ولا Meta.",
         },
         {
-          label: "أموالك",
           title: "صُمّمت كي لا تحتفظ بأموالك أبداً.",
           body: "مدفوعات البطاقات، بعد ربط مزوّد الدفع الخاص بك، تذهب إلى حسابك أنت. وتحفظ ALYR مرجع الدفعة وحالتها، لا أرقام البطاقات أبداً.",
         },
         {
-          label: "القرار",
           title: "القرار لفريقك.",
           body: "الردود الآلية تتولى المتكرر، وALYR Agent يقترح فقط ويبيّن السبب، وأي موظف يستطيع الدخول إلى أي محادثة.",
         },
@@ -3833,7 +3734,6 @@ const ar: Copy = {
       },
     },
     faq: {
-      eyebrow: "أسئلة",
       title: "أسئلة في محلها.",
       shown: 6,
       more: "أسئلة أخرى",
@@ -3903,7 +3803,7 @@ const ar: Copy = {
         {
           id: "chairs",
           q: "لديّ أكثر من كرسي أو غرفة.",
-          a: "يقبل ALYR Bookings اليوم حجزاً واحداً في الوقت نفسه للمنشأة كلها، وهذا يناسب كرسياً واحداً أو غرفة واحدة أو مختصاً واحداً. أما الحجوزات المتزامنة فهي الخطوة التالية في Bookings. أخبرنا كم لديك، ونقول لك بصراحة إن كان يناسبك الآن.",
+          a: "يقبل ALYR Bookings اليوم حجزاً واحداً في الوقت نفسه للمنشأة كلها، وهذا يناسب كرسياً واحداً أو غرفة واحدة أو مختصاً واحداً. أخبرنا كم لديك، ونقول لك بصراحة إن كان يناسبك.",
         },
         {
           id: "more-products",
@@ -3993,7 +3893,7 @@ const ar: Copy = {
         { id: "works", label: "يعمل مع" },
       ],
     },
-    eyebrow: "ALYR Chat · طلبات واتساب وصندوق الفريق · نجهّزه لك",
+    eyebrow: "نجهّزه لك",
     title: "الطلبات داخل المحادثة.\nوصندوق واحد للفريق.",
     body:
       "يواصل عملاؤك مراسلتك كما اعتادوا. ويضيف ALYR Chat صفحة الطلب ورابط الدفع والتحديثات، وفريقك يرى كل شيء في مكان واحد.",
@@ -4100,7 +4000,6 @@ const ar: Copy = {
       },
     ],
     flow: {
-      eyebrow: "كيف يعمل",
       title: "ماذا يحدث حين يطلب عميل.",
       body:
         "عميلك يرى محادثة عادية. وخلفها ترسل ALYR صفحة الطلب، وتحفظ السجل، وتبلّغ العميل عند كل خطوة. تابع طلباً واحداً من أوله إلى آخره.",
@@ -4108,10 +4007,10 @@ const ar: Copy = {
       stepsLabel: "الخطوات",
       pause: "إيقاف",
       play: "تشغيل",
-      customer: { name: "عميلك", sub: "على واتساب كعادته" },
+      customer: { name: "عميلك" },
       whatsapp: { name: "واتساب", sub: "منصة الأعمال" },
-      alyr: { name: "ALYR Chat", sub: "يعمل في الخلفية", idle: "بانتظار الرسالة التالية" },
-      team: { name: "فريقك", sub: "مساحة العمل", idle: "لا جديد بعد" },
+      alyr: { name: "ALYR Chat", idle: "بانتظار الرسالة التالية" },
+      team: { name: "فريقك", idle: "لا جديد بعد" },
       stories: [
         {
           id: "order",
@@ -4249,16 +4148,15 @@ const ar: Copy = {
       ],
     },
     inside: {
-      eyebrow: "ماذا يتضمن",
       title: "كل ما يفعله اليوم.",
-      note: "نجهّز ALYR Chat معك في محلك. كل ما في هذه القائمة مبنيّ في المنتج، ونتفق معك على الرقم عند تجهيزه لك.",
+      note: "كل ما في هذه القائمة مبنيّ في المنتج.",
       xray: {
         label: "كل ميزة، على هاتف العميل",
         test: "صفحة تجريبية",
         inbox: "صندوق الفريق",
         checks: "ما تتحقق منه ALYR",
         path: ["ALYR", "واتساب", "هاتف العميل"],
-        caption: "محادثة توضيحية مع شركة غير حقيقية. يعرض الهاتف الميزة التي تقرؤها.",
+        caption: "يعرض الهاتف الميزة التي تقرؤها.",
       },
       groups: [
         {
@@ -4379,7 +4277,6 @@ const ar: Copy = {
       ],
     },
     why: {
-      eyebrow: "كيف يفيدك",
       statement:
         "عملاؤك يراسلونك قبل أن يزوروك أو يطلبوا. تضيع المحادثات، وتُكتب الطلبات على الورق، ويصير الدفع صورة تحويل. والأعمال الرابحة تجعل المحادثة واجهة محلها.",
       pillars: [
@@ -4402,36 +4299,30 @@ const ar: Copy = {
       ],
     },
     who: {
-      eyebrow: "لمن صُمّم",
       title: "للأنشطة التي تعمل على واتساب أصلاً.",
       rows: [
         {
           name: "المطاعم والمقاهي",
           body: "قائمتك داخل محادثة عملائك. الطلبات تصلك مباشرة، وزبائنك الدائمون يبقون لك.",
-          tags: ["طلب", "دفع"],
         },
         {
           name: "الصالونات ومحلات الحلاقة",
           body: "للحجوزات والتذكيرات منتجها الخاص الآن.",
-          tags: [],
           link: { key: "bookings", label: "تعرّف على ALYR Bookings" },
         },
         {
           name: "الخدمات المنزلية والميدانية",
           body: "قطع ومستلزمات تُطلب من صفحة، وتحديث عند كل خطوة.",
-          tags: ["طلب", "تتبّع"],
         },
         {
           name: "المحلات والتجارة",
           body: "طلبات وروابط دفع. وأضف ALYR Accounts لعملاء الآجل.",
-          tags: ["طلب", "دفع"],
           link: { key: "accounts", label: "تعرّف على ALYR Accounts" },
         },
       ],
       other: "نشاطك مختلف؟ راسلنا وأخبرنا كيف تعمل اليوم.",
     },
     works: {
-      eyebrow: "المنتجات",
       title: "يعمل مع بقية منتجات ALYR.",
       link: "تعرّف على {name}",
       rows: {
@@ -4459,7 +4350,7 @@ const ar: Copy = {
         ],
       },
       hero: {
-        eyebrow: "ALYR Bookings · المواعيد والتذكيرات · نجهّزه لك",
+        eyebrow: "نجهّزه لك",
         title: ["عملاؤك يحجزون من المحادثة.", "وتذكّرهم ALYR قبل موعدهم."],
         lead:
           "يختار عملاؤك الخدمة والوقت المتاح من صفحة تُفتح من المحادثة، بلا تطبيق. يصلهم التأكيد فوراً، والتذكير قبل الموعد بساعتين، ويسجّل فريقك من حضر.",
@@ -4592,7 +4483,6 @@ const ar: Copy = {
         ],
       },
       flow: {
-        eyebrow: "كيف يعمل",
         title: "ماذا يحدث حين يحجز عميل.",
         body:
           "عميلك يرى محادثة عادية. وخلفها تقرأ ALYR ساعات عملك، وتحجز الوقت، وتضبط التذكير. تابع حجزاً واحداً من أوله إلى آخره.",
@@ -4600,10 +4490,10 @@ const ar: Copy = {
         stepsLabel: "الخطوات",
         pause: "إيقاف",
         play: "تشغيل",
-        customer: { name: "عميلك", sub: "على واتساب كعادته" },
+        customer: { name: "عميلك" },
         whatsapp: { name: "واتساب", sub: "منصة الأعمال" },
-        alyr: { name: "ALYR Bookings", sub: "يعمل في الخلفية", idle: "بانتظار الرسالة التالية" },
-        team: { name: "فريقك", sub: "مساحة العمل", idle: "لا جديد بعد" },
+        alyr: { name: "ALYR Bookings", idle: "بانتظار الرسالة التالية" },
+        team: { name: "فريقك", idle: "لا جديد بعد" },
         stories: [
           {
             id: "book",
@@ -4719,7 +4609,6 @@ const ar: Copy = {
         ],
       },
       screen: {
-        eyebrow: "الشاشة",
         title: "اليوم والأيام السبعة القادمة، على شاشة واحدة.",
         label: "شاشة الحجوزات في مساحة عمل صالون غير حقيقي",
         callouts: [
@@ -4749,7 +4638,6 @@ const ar: Copy = {
         },
       },
       inside: {
-        eyebrow: "ماذا يتضمن",
         title: "كل ما يفعله اليوم.",
         groups: [
           {
@@ -4777,36 +4665,22 @@ const ar: Copy = {
             items: [
               "لا يأخذ عميلان الوقت نفسه أبداً: يُتحقق من الموعد مرة أخرى ويُحجز.",
               "الحجز الملغى لا يُذكَّر به.",
-              "قواعد واتساب علينا: رسائل عادية خلال 24 ساعة من رسالة العميل، وصياغة معتمدة بعدها.",
-              "الإيقاف يعني الإيقاف.",
             ],
           },
         ],
-        notYet: {
-          title: "لم يتوفر بعد",
-          items: [
-            "حجوزات متزامنة حسب الموظف أو الكرسي أو الغرفة. وهي الخطوة التالية في ALYR Bookings.",
-            "نقل حجز أو إضافة عميل بلا موعد من الشاشة.",
-            "تعديل الخدمات وساعات العمل بنفسك. تعدّلها ALYR عند طلبك.",
-            "أخذ عربون أو دفعة عند الحجز.",
-            "اختيار موعد إرسال التذكير.",
-            "رسائل لاستعادة العملاء الذين حان موعد عودتهم. تحتاج أولاً إلى موافقة تسويقية.",
-          ],
-        },
-        note: "نجهّز ALYR Bookings معك في محلك. كل ما فوق الخط مبنيّ في المنتج.",
+        rules: "كيف تتعامل ALYR مع قواعد واتساب والموافقة وسجلاتك",
+        note: "كل ما في هذه القائمة مبنيّ في المنتج.",
       },
       who: {
-        eyebrow: "لمن صُمّم",
         title: "للأنشطة التي تخدم عميلاً واحداً في كل مرة.",
         rows: [
-          { name: "محلات الحلاقة والصالونات بكرسي واحد", tags: ["حجز", "تذكير", "حضور"] },
-          { name: "الخدمات المنزلية بفريق واحد", tags: ["زيارات", "تذكير"] },
-          { name: "المدرّسون والمدرّبون والمستشارون", tags: ["حجز", "تذكير"] },
+          { name: "محلات الحلاقة والصالونات بكرسي واحد" },
+          { name: "الخدمات المنزلية بفريق واحد" },
+          { name: "المدرّسون والمدرّبون والمستشارون" },
         ],
-        other: "أكثر من كرسي أو غرفة؟ أخبرنا كم لديك، ونقول لك بصراحة إن كان يناسبك الآن.",
+        other: "أكثر من كرسي أو غرفة؟ أخبرنا كم لديك، ونقول لك بصراحة إن كان يناسبك.",
       },
       works: {
-        eyebrow: "المنتجات",
         title: "يعمل مع بقية منتجات ALYR.",
         link: "تعرّف على {name}",
         rows: {
@@ -4818,7 +4692,6 @@ const ar: Copy = {
         },
       },
       faq: {
-        eyebrow: "أسئلة",
         title: "قبل أن تسأل.",
         items: [
           {
@@ -4839,7 +4712,7 @@ const ar: Copy = {
           {
             id: "chairs",
             q: "لديّ أكثر من كرسي أو غرفة.",
-            a: "يقبل ALYR Bookings اليوم حجزاً واحداً في الوقت نفسه للمنشأة كلها، وهذا يناسب كرسياً واحداً أو غرفة واحدة أو مختصاً واحداً. أما الحجوزات المتزامنة فهي الخطوة التالية في Bookings. أخبرنا كم لديك، ونقول لك بصراحة إن كان يناسبك الآن.",
+            a: "يقبل ALYR Bookings اليوم حجزاً واحداً في الوقت نفسه للمنشأة كلها، وهذا يناسب كرسياً واحداً أو غرفة واحدة أو مختصاً واحداً. أخبرنا كم لديك، ونقول لك بصراحة إن كان يناسبك.",
           },
           {
             id: "no-show",
@@ -4866,7 +4739,7 @@ const ar: Copy = {
         ],
       },
       hero: {
-        eyebrow: "ALYR Agent · مع كل منتج",
+        eyebrow: "مع كل منتج",
         title: ["نشاطك بالأرقام.", "وما يحتاجك أولاً."],
         lead:
           "ALYR Agent هو الشاشة الرئيسية في مساحة عملك. يقول لك في جملة واحدة كيف يسير أسبوعك، ويعرض ما يحتاجك الآن، ويقترح حتى ثلاثة أمور، لكل منها القاعدة التي وراءه.",
@@ -4876,7 +4749,6 @@ const ar: Copy = {
         label: "الشاشة الرئيسية لـ ALYR Agent للنشاط التوضيحي الذي تختاره، وما أنجزته ALYR له عصر اليوم",
       },
       how: {
-        eyebrow: "كيف يعمل",
         title: "سجلاتك، ثم القاعدة، ثم البطاقة، ثم الشاشة.",
         steps: [
           { title: "سجلاتك", body: "الطلبات والحجوزات والمحادثات والحسابات الآجلة التي يسجّلها فريقك أصلاً في ALYR." },
@@ -4888,13 +4760,11 @@ const ar: Copy = {
         under: "يفتح الزر حساباتك الآجلة على هؤلاء العملاء الثلاثة. ولا يُرسل شيء حتى تضغط «أرسل التذكيرات» هناك.",
       },
       report: {
-        eyebrow: "تقرير الأحد",
         title: "الأسبوع نفسه على واتساب، صباح كل يوم أحد.",
         body:
           "الساعة 9:00 صباح الأحد تصلك بطاقة فيها أهم رقم في أسبوعك الماضي مقارنة بالأسبوع الذي قبله، وكل يوم بجانب اليوم نفسه من الأسبوع الذي قبله، واثنان أو ثلاثة من أهم ما يخص نوع نشاطك. وتحتها سطر لكل منتج، وما أنجزته ALYR عنك، وخطوة تالية واحدة مع قاعدتها. وتبدأ أولى التقارير بعد موافقة واتساب على صياغة التقرير.",
       },
       rules: {
-        eyebrow: "القواعد",
         title: "يعدّ، ويقارن، ويُظهر القاعدة.",
         body: "لا تخمين ولا تقييم بالنقاط. هذه ست من القواعد، كما تظهر على شاشتك.",
         heads: ["ما يبحث عنه", "القاعدة كما تظهر على الشاشة"],
@@ -4916,7 +4786,6 @@ const ar: Copy = {
         ],
       },
       inside: {
-        eyebrow: "ماذا يتضمن",
         title: "كل ما يفعله اليوم.",
         groups: [
           {
@@ -4929,31 +4798,17 @@ const ar: Copy = {
               "«ليس الآن» يؤجل الاقتراح حتى تتغير أرقامه أو حتى يوم الأحد.",
               "أنجزته ALYR لك هذا الأسبوع: الرسائل التي أرسلتها، وتذكيرات المواعيد.",
               "الأسبوع يوماً بيوم وخلفه الأسبوع الماضي، وأكثر الساعات ازدحاماً خلال 28 يوماً، والأكثر طلباً أو حجزاً، والمستحقات حسب عمرها، والفريق بالأسماء.",
+              "على هذه الشاشة يرى الموظف العمل الذي أمامه وأرقامه هو، لا أموال المحل.",
             ],
-          },
-          {
-            name: "لفريقك",
-            items: ["على هذه الشاشة يرى الموظف العمل الذي أمامه وأرقامه هو، لا أموال المحل."],
           },
           {
             name: "كل أسبوع، وفي كل مكان",
             items: ["تقرير الأحد لواتساب. وتبدأ أولى التقارير بعد موافقة واتساب على صياغته.", "بالعربية والإنجليزية، فاتح وداكن، على الهاتف والحاسوب."],
           },
         ],
-        notYet: {
-          title: "لم يتوفر بعد",
-          items: [
-            "شاشة لتقرير الأحد، واختيار يومه وساعته.",
-            "رسائل للزبائن الدائمين الذين انقطعوا، من الاقتراح نفسه. تحتاج أولاً إلى موافقة تسويقية.",
-            "نقرة على الرقم تفتح أسبوعه على الهاتف.",
-            "عدد المحادثات التي رُدّ عليها بعد الدوام.",
-            "النقد عند الكاونتر. المبيعات تُحسب من الطلبات، لا من النقد المحصَّل.",
-          ],
-        },
-        note: "يأتي ALYR Agent مع كل منتجات ALYR. كل ما فوق الخط مبنيّ في المنتج.",
+        note: "مع كل منتج من ALYR. كل ما في هذه القائمة مبنيّ في المنتج.",
       },
       who: {
-        eyebrow: "لمن صُمّم",
         title: "يأتي مع كل نشاط يعمل بـ\u00a0ALYR.\nوما يتصدّر الشاشة يتبع نشاطك.",
         rows: [
           { name: "المطاعم والمقاهي والمخابز", tags: ["المبيعات هذا الأسبوع", "الطلبات هذا الأسبوع", "مستحق لك", "عادوا للطلب هذا الأسبوع"] },
@@ -4964,7 +4819,6 @@ const ar: Copy = {
         other: "نشاطك مختلف؟ راسلنا وأخبرنا كيف تعمل اليوم.",
       },
       works: {
-        eyebrow: "المنتجات",
         title: "يعمل مع بقية منتجات ALYR.",
         link: "تعرّف على {name}",
         rows: {
@@ -4976,7 +4830,6 @@ const ar: Copy = {
         },
       },
       faq: {
-        eyebrow: "أسئلة",
         title: "قبل أن تسأل.",
         items: [
           { id: "pay", offer: false, q: "هل أدفع مقابل ALYR Agent؟", a: "يأتي مع كل منتجات ALYR." },
@@ -5020,7 +4873,7 @@ const ar: Copy = {
         ],
       },
       hero: {
-        eyebrow: "ALYR Accounts · الحسابات الآجلة · نجهّزه لك",
+        eyebrow: "نجهّزه لك",
         title: ["اعرف من عليه مستحقات لك.", "وذكّره دون اتصال محرج."],
         lead:
           "سجّل البيع بالآجل بسطر واحد من هاتف الموظف، فيُبلَّغ العميل برصيده الجديد. وبضغطة واحدة تُرسل التذكيرات بنبرة تتدرّج مع عمر الدين، والوعد بالسداد يوقفها.",
@@ -5137,7 +4990,6 @@ const ar: Copy = {
         ],
       },
       flow: {
-        eyebrow: "كيف يعمل",
         title: "ماذا يحدث بين البيع بالآجل والسداد.",
         body:
           "عميلك يرى محادثة عادية. وخلفها تحفظ ALYR الدفتر، وتتحقق قبل أن تذكّر، وتتوقف حين يعد أحد بالسداد. تابع حساباً واحداً من أوله إلى آخره.",
@@ -5145,10 +4997,10 @@ const ar: Copy = {
         stepsLabel: "الخطوات",
         pause: "إيقاف",
         play: "تشغيل",
-        customer: { name: "عميلك", sub: "على واتساب كعادته" },
+        customer: { name: "عميلك" },
         whatsapp: { name: "واتساب", sub: "منصة الأعمال" },
-        alyr: { name: "ALYR Accounts", sub: "يعمل في الخلفية", idle: "بانتظار الحركة التالية" },
-        team: { name: "فريقك", sub: "مساحة العمل", idle: "لا جديد بعد" },
+        alyr: { name: "ALYR Accounts", idle: "بانتظار الحركة التالية" },
+        team: { name: "فريقك", idle: "لا جديد بعد" },
         stories: [
           {
             id: "sale",
@@ -5259,7 +5111,6 @@ const ar: Copy = {
         ],
       },
       screen: {
-        eyebrow: "الشاشة",
         title: "من عليه مستحقات لك، ومنذ متى.",
         label: "شاشة الحسابات الآجلة في مساحة عمل مخبز غير حقيقي",
         callouts: [
@@ -5306,7 +5157,6 @@ const ar: Copy = {
         },
       },
       inside: {
-        eyebrow: "ماذا يتضمن",
         title: "كل ما يفعله اليوم.",
         groups: [
           {
@@ -5343,28 +5193,22 @@ const ar: Copy = {
           title: "لم يتوفر بعد",
           items: [
             "الدفع الفعلي عبر مزوّد الدفع الخاص بك. الروابط تعمل اليوم على صفحة تجريبية.",
-            "تسجيل بيع أو دفعة من الشاشة.",
-            "تحديد حد الائتمان بنفسك. تحدده ALYR عند طلبك.",
             "كشوف الحساب.",
-            "زرّا «ادفع الآن» و«سأدفع خلال أسبوع» في التذكير الذي يُرسل بعد 24 ساعة من آخر رسالة للعميل؛ يصله رابط الدفع فقط.",
-            "الفواتير، والإيصالات التي تذكر طريقة الدفع، من ALYR Docs، ونجهّزه معك.",
           ],
         },
-        note: "نجهّز ALYR Accounts معك في محلك. كل ما فوق الخط مبنيّ في المنتج.",
+        note: "كل ما فوق الخط مبنيّ في المنتج.",
       },
       who: {
-        eyebrow: "لمن صُمّم",
         title: "للأنشطة التي تبيع لعملائها الدائمين بالآجل.",
         rows: [
-          { name: "تجارة الجملة، مع عملاء تجاريين بالآجل", tags: ["تسجيل", "تذكير", "تحصيل"] },
-          { name: "محلات لها زبائن دائمون في الدفتر", tags: ["تسجيل", "تذكير"] },
-          { name: "مطاعم ومخابز لها حسابات مكاتب أو مناسبات", tags: ["طلب على الحساب", "تذكير"] },
-          { name: "خدمات منزلية مع عملاء عقود", tags: ["تسجيل", "تذكير"] },
+          { name: "تجارة الجملة، مع عملاء تجاريين بالآجل" },
+          { name: "محلات لها زبائن دائمون في الدفتر" },
+          { name: "مطاعم ومخابز لها حسابات مكاتب أو مناسبات" },
+          { name: "خدمات منزلية مع عملاء عقود" },
         ],
         other: "نشاطك مختلف؟ راسلنا وأخبرنا كيف تعمل اليوم.",
       },
       works: {
-        eyebrow: "المنتجات",
         title: "يعمل مع بقية منتجات ALYR.",
         link: "تعرّف على {name}",
         rows: {
@@ -5376,7 +5220,6 @@ const ar: Copy = {
         },
       },
       faq: {
-        eyebrow: "أسئلة",
         title: "قبل أن تسأل.",
         items: [
           {
