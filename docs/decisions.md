@@ -1107,3 +1107,20 @@ There is no separate Pay product: payment links stay a module of Chat and Bookin
 **Chosen over** Fly or Railway for the API (another vendor, no gain), the laptop and tunnel (down when the laptop is off), and waiting for Azure credits (no portal for the first clients).
 
 **Revisit when** Azure credits arrive (ALY-55, ALY-63), or the first paying client who has not agreed to data outside Qatar.
+
+
+## D-053 · Monitoring is built into ALYR and free first; outside tools see only counts
+**Date** 24 Oct 2026 · **Status** Accepted (the founder, 24 Oct: "i wanna start free then pay once we scale") · Linear ALY-121 · Spec `specs/022-monitoring/spec.md` · Runbook `docs/runbooks/monitoring.md`
+
+**The decision.** Health checks, a worker heartbeat and the alert rules are part of the API and its job runner, stored in two platform tables (`heartbeats`, `alert_state`). Alerts go to a free ntfy topic and to an email through Resend. The Cloudflare Worker that already pings the container every 3 minutes also watches it from outside. A free UptimeRobot account is a second, independent watcher.
+
+**Why.**
+- The failures that matter here are ours (a late queue, a parked job, a quiet webhook); a generic uptime tool cannot see them, our own checks can.
+- Hard rule 2: an outside error tracker would receive messages and names. Our alerts carry counts and ages only, so the outside services (ntfy, Resend) receive no personal data.
+- Free hobby terms of outside tools are a stopgap, not a plan; the in-house part has no such limit.
+
+**Costs and risks, said plainly.** ntfy's free service has no delivery guarantee, so email is the second route. UptimeRobot's free plan is for personal and non-profit use; pay (USD 12 a month) at the first paying client. Not deployed, so none of it has run against a phone yet.
+
+**Chosen over** Sentry at once (customer data abroad, one seat, 5,000 errors) and Better Stack (free plan is for personal projects) and Cloudflare Health Checks (Pro plan).
+
+**Revisit when** the first paying client signs (move uptime to a paid plan), a second developer joins, or more than 5,000 errors a month (Sentry with scrubbing).

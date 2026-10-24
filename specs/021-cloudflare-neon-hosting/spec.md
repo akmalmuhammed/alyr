@@ -24,7 +24,7 @@ spec says what runs where and what is proven before any real client uses it.
 
 Browser → portal Worker → (for `/api/*` and `/sim/*`) the rewrite in `next.config.ts` →
 API Worker → container (FastAPI) → Neon. The rewrite's target is `ALYR_API_URL`, fixed when
-the portal is built. The API Worker lets through only `/health` and `/api/*`; the simulator,
+the portal is built. The API Worker lets through only `/health`, `/health/ready`, `/health/worker` (spec 022) and `/api/*`; the simulator,
 the API docs and everything else answer 404 from outside.
 
 ## The container

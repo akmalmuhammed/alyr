@@ -11,6 +11,7 @@ import asyncio
 import logging
 
 from alyr.config import get_settings
+from alyr.core import alerts, health
 from alyr.core.links import check_secret as check_link_secret
 from alyr.main import create_app
 from alyr.modules import report
@@ -65,12 +66,16 @@ async def main() -> None:
     scheduler = asyncio.create_task(keep_reports_scheduled(app.state.db))
     sweeper = asyncio.create_task(keep_holds_swept(app.state.db, app.state.outbound))
     meters = asyncio.create_task(keep_meters_fresh(app.state.media))
+    beating = asyncio.create_task(health.keep_beating(app.state.db))
+    watching = asyncio.create_task(alerts.keep_watching(app.state.db))
     try:
         await app.state.jobs.run_forever()
     finally:
         scheduler.cancel()
         sweeper.cancel()
         meters.cancel()
+        beating.cancel()
+        watching.cancel()
         await app.state.db.close()
 
 
