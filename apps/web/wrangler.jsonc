@@ -1,12 +1,20 @@
 // The public ALYR site on Cloudflare: plain files, no server code.
-// Build the files with scripts/build-site.sh, then `npx wrangler deploy` from apps/web.
+// Build the files with scripts/build-site.sh, then deploy: from GitHub Actions after the
+// founder approves (.github/workflows/site-deploy.yml), or by hand from apps/web with
+// `pnpm site:deploy` (or `pnpm exec wrangler deploy`). Rollback: docs/runbooks/site-deploy.md.
 // The workspace and the API are not hosted here.
 {
   "name": "alyr-site",
   "compatibility_date": "2026-10-06",
   // A few lines that redirect every other address to alyr.qa, then serve the files.
   "main": "./site-worker.js",
-  "vars": { "REDIRECT": "on" },
+  // PREVIEW is "on" only for the versions a pull request uploads (they also set REDIRECT
+  // "off", so the preview address is not sent to alyr.qa); see site-worker.js.
+  "vars": { "REDIRECT": "on", "PREVIEW": "off" },
+  // The Worker answers only on the addresses below, not on workers.dev. Each uploaded
+  // version still gets its own preview address on workers.dev (a pull request's preview).
+  "workers_dev": false,
+  "preview_urls": true,
   "assets": {
     "directory": "./out-site",
     "binding": "ASSETS",

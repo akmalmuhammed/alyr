@@ -2,32 +2,34 @@ import { Rich } from "../_agent/AgentDashboard";
 import type { AgentView } from "../_agent/types";
 import { copy, type Caption, type Locale, type SampleKey } from "./copy";
 import { CxTop, TickPath } from "./Frames";
+import { OrderRow } from "./PageDrawings";
+import { PaperTop } from "./Paper";
+import { RC0042 } from "./paperData";
 import type { ReportWords } from "./ReportPhone";
-import { OFFER_LIVE } from "./site";
 import { rich } from "./Text";
 import "./drawings.css";
 
 // Drawings of real ALYR screens for the public pages, at true proportions and in the
 // product's own wording, for fictional businesses. Each is a picture, not a working
-// screen: nothing in here is focusable, and each figure says what it shows in its caption.
+// screen: nothing in here is focusable, and each figure is marked as a sample once.
 // Styles are in drawings.css under `.d-*`.
 
 type Track = (typeof copy)["en"]["home"]["sample"];
 
-/** "FIG 01 · what it shows · SAMPLE, FICTIONAL BAKERY", on a hairline ending in a tick.
- * `fictional` names a sample other than the bakery. */
-export function FigCaption({ locale, caption, fictional, className }: {
-  locale: Locale; caption: Caption; fictional?: string; className?: string;
+/** "What it shows · SAMPLE", on a hairline ending in a tick: only for a drawing that means
+ * nothing without its words (the trust pair, the no-CR foot, the agreement). Every other
+ * drawing carries the "Sample" mark in its own chrome instead (SampleMark). Put it first in
+ * the figure, so screen readers and crawlers meet the sample word before the drawing; the
+ * figure's `fig-cap-end` class shows it underneath. */
+export function FigCaption({ locale, caption, className }: {
+  locale: Locale; caption: Caption; className?: string;
 }) {
   const f = copy[locale].fig;
-  const n = OFFER_LIVE && caption.nOffer ? caption.nOffer : caption.n;
   return (
     <figcaption className={`cap${className ? ` ${className}` : ""}`}>
-      <span className="cap-n">{f.label} <bdi>{n}</bdi></span>
-      <span className="cap-sep" aria-hidden="true">·</span>
       <span>{rich(caption.text)}</span>
       <span className="cap-sep" aria-hidden="true">·</span>
-      <span>{fictional ?? f.fictional}</span>
+      <span>{f.sample}</span>
     </figcaption>
   );
 }
@@ -136,6 +138,28 @@ export function AgeBarCrop({ view, label }: { view: AgentView; label: string }) 
           <span key={s.key}><i className={`a${i}`} /><span>{ranges(s.label)}</span></span>
         ))}
       </span>
+    </div>
+  );
+}
+
+/** ALYR Shelf: two item cards on the order page, at true size: one nearly gone, one sold out. */
+export function ShelfCrop({ crops, soldOut }: { crops: Crops; soldOut: string }) {
+  return (
+    <div className="d-crop d-crop-shelf" aria-hidden="true">
+      <div className="d-card">
+        {crops.shelf.map((item) => (
+          <OrderRow key={item.name} item={{ ...item, tone: item.out ? "out" : "few" }} soldOut={soldOut} qty={item.out ? undefined : "1"} />
+        ))}
+      </div>
+    </div>
+  );
+}
+
+/** ALYR Docs: the top of receipt RC-0042, Arabic first, as the paper prints it. */
+export function ReceiptCrop({ crops }: { crops: Crops }) {
+  return (
+    <div className="d-crop d-crop-receipt" role="img" aria-label={crops.receipt}>
+      <PaperTop doc={RC0042} />
     </div>
   );
 }

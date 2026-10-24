@@ -48,7 +48,11 @@ calm, with a number or an example. It names the owner's result.
   per screen.
 - **Dates:** "Thu 15 Oct", "4–10 Oct" (en dash in ranges only, inside `<bdi>` in Arabic).
 - **Product names** exactly: ALYR Chat, ALYR Bookings, ALYR Agent, ALYR Accounts,
-  ALYR Payroll. "ALYR" in capitals always; never "Alyr" or "alyr" on anything public.
-- **The suite's order** is always Chat, Bookings, Agent, Accounts, Payroll: menus, rows,
-  tags, footers, decks.
+  ALYR Shelf, ALYR Docs. "ALYR" in capitals always; never "Alyr" or "alyr" on anything public.
+  ALYR Shelf is the Catalog's public name and ALYR Docs the Documents module's (founder,
+  20 Oct 2026); code, decisions and the workspace keep "Catalog" (Menu, Products, Price list)
+  and "Documents". A product that is not built is not named in public (Payroll, D-039).
+- **The suite's order** is always Chat, Bookings, Agent, Accounts, Shelf, Docs: menus, rows,
+  tags, footers, decks. In a business's tags the two that come with every product (Agent,
+  Shelf) close the row, lighter, with a "+".
 - Order numbers as "Order #1043" in English and «الطلب رقم 1043» in Arabic.

@@ -3,8 +3,15 @@
 import { useEffect, useRef, useState } from "react";
 import { Icon, Symbol } from "./brand";
 import type { FlowSet, PanelRow } from "./copy";
+import { SampleMark } from "./Frames";
 
-type Props = { flow: FlowSet };
+type Props = {
+  flow: FlowSet;
+  /** The "Sample" mark at the end of the tab row, and the line said first to screen readers
+   * and crawlers (site audit 03, A1). */
+  sample: string;
+  note: string;
+};
 
 const two = (value: number) => String(value).padStart(2, "0");
 
@@ -18,9 +25,12 @@ const two = (value: number) => String(value).padStart(2, "0");
  * Picking a story keeps it playing but stays on that story; picking a step pauses. With
  * reduced motion nothing plays and nothing travels: the steps are read one tap at a time.
  */
-export function FlowDiagram({ flow }: Props) {
+export function FlowDiagram({ flow, sample, note }: Props) {
   const stories = flow.stories;
   const [at, setAt] = useState({ story: 0, step: 0 });
+  // The first step opens finished, as the HTML draws it; what each later step adds arrives
+  // (site audit F2: nothing hidden in the first view).
+  const [moved, setMoved] = useState(false);
   const [auto, setAuto] = useState(true);
   const [pinned, setPinned] = useState(false);
   const [onScreen, setOnScreen] = useState(false);
@@ -73,6 +83,7 @@ export function FlowDiagram({ flow }: Props) {
   const teamWire = now.move === "team" ? "go" : now.move === "back" ? "back" : undefined;
 
   function next() {
+    setMoved(true);
     setAt((current) => {
       if (current.step + 1 < stories[current.story].steps.length) {
         return { story: current.story, step: current.step + 1 };
@@ -83,12 +94,14 @@ export function FlowDiagram({ flow }: Props) {
 
   function chooseStory(index: number, focus = false) {
     setPinned(true);
+    setMoved(true);
     setAt({ story: index, step: 0 });
     if (focus) tabs.current[index]?.focus();
   }
 
   function chooseStep(index: number) {
     setAuto(false);
+    setMoved(true);
     setAt({ story: at.story, step: index });
   }
 
@@ -105,8 +118,9 @@ export function FlowDiagram({ flow }: Props) {
   }
 
   return (
-    <div className="fx" ref={root} data-playing={playing || undefined}>
-      <div className="demo-bar">
+    <div className="fx" ref={root} data-playing={playing || undefined} data-moved={moved || undefined}>
+      <p className="sr-only">{note}</p>
+      <div className="demo-bar" data-nosnippet>
         <div className="demo-tabs" role="tablist" aria-label={flow.tabsLabel} onKeyDown={onKey}>
           {stories.map((item, index) => (
             <button
@@ -121,7 +135,6 @@ export function FlowDiagram({ flow }: Props) {
               className="demo-tab"
               onClick={() => chooseStory(index)}
             >
-              <span className="demo-tab-n" aria-hidden="true">{two(index + 1)}</span>
               {item.tab}
             </button>
           ))}
@@ -132,15 +145,16 @@ export function FlowDiagram({ flow }: Props) {
             {auto ? flow.pause : flow.play}
           </button>
         )}
+        <SampleMark label={sample} className="fx-sample" />
       </div>
 
-      <div className="fx-stage" id="fx-stage" role="tabpanel" aria-labelledby={`fx-tab-${story.id}`} key={story.id}>
+      <div className="fx-stage" id="fx-stage" role="tabpanel" aria-labelledby={`fx-tab-${story.id}`} key={story.id} data-nosnippet>
         <section className="fx-node fx-customer" data-lit={lit === "customer" || undefined} aria-label={flow.customer.name}>
           <header className="fx-head">
             <Icon name="users" className="fx-ico" />
             <span>
               <b>{flow.customer.name}</b>
-              <small>{flow.customer.sub}</small>
+              {flow.customer.sub && <small>{flow.customer.sub}</small>}
             </span>
           </header>
           <div className="wa wa-mini fx-phone">
@@ -175,7 +189,7 @@ export function FlowDiagram({ flow }: Props) {
           <span className="fx-station" />
           <span className="fx-via">
             <b>{flow.whatsapp.name}</b>
-            <small>{flow.whatsapp.sub}</small>
+            {flow.whatsapp.sub && <small>{flow.whatsapp.sub}</small>}
           </span>
         </div>
 
@@ -184,7 +198,7 @@ export function FlowDiagram({ flow }: Props) {
             <span className="fx-mark" aria-hidden="true"><Symbol className="fx-symbol" /></span>
             <span>
               <b>{flow.alyr.name}</b>
-              <small>{flow.alyr.sub}</small>
+              {flow.alyr.sub && <small>{flow.alyr.sub}</small>}
             </span>
           </header>
           <ul className="fx-work">
@@ -210,7 +224,7 @@ export function FlowDiagram({ flow }: Props) {
             <Icon name="dashboard" className="fx-ico" />
             <span>
               <b>{flow.team.name}</b>
-              <small>{flow.team.sub}</small>
+              {flow.team.sub && <small>{flow.team.sub}</small>}
             </span>
           </header>
           <ul className="fx-records">
@@ -220,7 +234,7 @@ export function FlowDiagram({ flow }: Props) {
                 {row.lead !== undefined && <span className="row-lead">{row.lead}</span>}
                 <span className="row-main">
                   <b>{row.main}</b>
-                  {row.sub && <small dir="auto">{row.sub}</small>}
+                  {row.sub && <small dir="auto" className={row.wrap ? "is-wrap" : undefined}>{row.sub}</small>}
                 </span>
                 {row.trail && <span className="row-trail">{row.trail}</span>}
               </li>
@@ -229,7 +243,7 @@ export function FlowDiagram({ flow }: Props) {
         </section>
       </div>
 
-      <div className="fx-now" aria-live={playing ? "off" : "polite"}>
+      <div className="fx-now" aria-live={playing ? "off" : "polite"} data-nosnippet>
         <span className="fx-count" dir="ltr" aria-hidden="true">{two(at.step + 1)} / {two(steps.length)}</span>
         <div className="fx-say" key={`${story.id}-${at.step}`}>
           <h3>{now.title}</h3>
@@ -237,7 +251,7 @@ export function FlowDiagram({ flow }: Props) {
         </div>
       </div>
 
-      <ol className="fx-steps" aria-label={flow.stepsLabel} key={`steps-${story.id}`}>
+      <ol className="fx-steps" aria-label={flow.stepsLabel} key={`steps-${story.id}`} data-nosnippet>
         {steps.map((step, index) => (
           <li key={index}>
             <button
@@ -256,7 +270,6 @@ export function FlowDiagram({ flow }: Props) {
           </li>
         ))}
       </ol>
-      <p className="demo-note">{flow.note}</p>
     </div>
   );
 }

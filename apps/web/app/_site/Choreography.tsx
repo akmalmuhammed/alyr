@@ -82,8 +82,9 @@ export default function Choreography() {
     document.querySelectorAll("[data-split]").forEach((node) => headings.observe(node));
     undo.push(() => headings.disconnect());
 
-    // How it works: the rail fills Volt with the scroll, and each step's node turns as
-    // the fill reaches it. Across on wide screens, down the start edge on phones.
+    // How we work: the rail fills Volt with the scroll, and each step's node turns as the
+    // fill reaches it; once it is full the loop back to the first step draws (home.css).
+    // Across on wide screens, down the start edge on phones.
     const rail = document.querySelector<HTMLElement>("[data-rail]");
     const railFill = rail?.querySelector<HTMLElement>("[data-rail-fill]");
     const railSteps = rail ? gsap.utils.toArray<HTMLElement>(rail.querySelectorAll("[data-rail-step]")) : [];
@@ -106,6 +107,7 @@ export default function Choreography() {
               scrub: 0.4,
               onUpdate: (self) => {
                 railSteps.forEach((step, index) => step.classList.toggle("is-on", self.progress >= index / last - 0.001));
+                rail.classList.toggle("is-looped", self.progress > 0.98);
               },
             },
           },

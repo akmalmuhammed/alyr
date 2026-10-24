@@ -1,25 +1,31 @@
 import type { CSSProperties, ReactNode } from "react";
 import { AgentFigure } from "./AgentFigure";
-import { Icon } from "./brand";
+import { Icon, type IconName } from "./brand";
+import { BusinessTabs } from "./BusinessTabs";
 import { ContactButton, ContactNote } from "./Contact";
-import { copy, type Locale } from "./copy";
-import { AgeBarCrop, FigCaption, OrderBarCrop, reportWords, SummaryCrop, TimesCrop, TrackScreen } from "./Drawings";
-import { ReportPhone } from "./ReportPhone";
-import { Phone, TickPath } from "./Frames";
+import { copy, type BusinessRow, type Locale, type Questions as QuestionSet } from "./copy";
+import { AgeBarCrop, FigCaption, OrderBarCrop, ReceiptCrop, ShelfCrop, SummaryCrop, TimesCrop, TrackScreen } from "./Drawings";
+import { Phone, SampleMark, TickPath } from "./Frames";
+import { FlowDiagram } from "./FlowDiagram";
+import { FoldSplit } from "./FoldSplit";
 import { HomeMotion } from "./HomeMotion";
-import { REPORTS, SAMPLE_ORDER, SAMPLES } from "./samples";
+import { SAMPLE_ORDER, SAMPLES } from "./samples";
 import { contactHref, Shell } from "./Shell";
-import { CONTACT_STATE, OFFER_LIVE, PATHS, PRODUCTS, productPath, TRUST_RECORDS, type TrustRecord } from "./site";
+import { CONTACT_STATE, INCLUDED, OFFER_LIVE, PATHS, PRODUCTS, productPath, TRUST_RECORDS, type TrustRecord } from "./site";
 import { lines, rich } from "./Text";
 import "./kit.css";
 import "./home.css";
+import "./room.css";
 
 /**
- * The ALYR homepage: the suite, led by ALYR Agent (docs/agent-dashboard/07-site-brief.md).
- * In the order of 06-messaging.md §2: the hero with the real dashboard and the agent's live
- * feed on the Carbon plate; the whole screen, explained; the products; by business; how it
- * works; trust; questions; the closing call. Every word from `copy.ts`; every screen is the
- * product's own, with fictional businesses, and captioned as a sample.
+ * The ALYR homepage: ALYR as the technology team an owner-run business never had (ALY-210,
+ * D-048, after D-047, folded on 24 Oct 2026). The hero says so, with why in one line (a big
+ * company has consultants and an IT team; you have us), beside the real dashboard and the
+ * feed of what ALYR did; how we work, a loop of check, set up, see and improve; the
+ * visitor's own business, as tabs, whose "Today" list is what a check-up finds; one order
+ * followed from the first message to collection, as proof; ALYR Agent; the products; the
+ * price (offer on); trust; questions; the closing call. Every word from `copy.ts`; every
+ * screen is the product's own, with fictional businesses, each marked as a sample once.
  */
 export function HomePage({ locale }: { locale: Locale }) {
   const t = copy[locale];
@@ -27,12 +33,13 @@ export function HomePage({ locale }: { locale: Locale }) {
   const other: Locale = locale === "en" ? "ar" : "en";
 
   return (
-    <Shell locale={locale} page="home" cta={h.final} bar>
+    <Shell locale={locale} page="home" cta={h.final}>
       <Hero locale={locale} />
+      <How locale={locale} />
+      <Business locale={locale} />
+      <See locale={locale} />
       <Spotlight locale={locale} />
       <Suite locale={locale} />
-      <Business locale={locale} />
-      <How locale={locale} />
       {OFFER_LIVE && <Price locale={locale} />}
       <Trust locale={locale} other={other} />
       <Questions locale={locale} />
@@ -53,12 +60,14 @@ function Rule({ dashed = false }: { dashed?: boolean }) {
   );
 }
 
+/** A section's heading. The eyebrow is kept only where it says something the heading does
+ * not (the trust question, the Agent spotlight's product, the price); site audit R1. */
 function Head({ eyebrow, title, id, dark = false, children }: {
-  eyebrow: string; title: string; id: string; dark?: boolean; children?: ReactNode;
+  eyebrow?: string; title: string; id: string; dark?: boolean; children?: ReactNode;
 }) {
   return (
     <div className="head">
-      <p className={`eyebrow${dark ? " eyebrow-dark" : ""}`}>{rich(eyebrow)}</p>
+      {eyebrow && <p className={`eyebrow${dark ? " eyebrow-dark" : ""}`}>{rich(eyebrow)}</p>}
       <h2 className="h2" id={id} data-split>{lines(title)}</h2>
       {children}
     </div>
@@ -73,19 +82,15 @@ function Hero({ locale }: { locale: Locale }) {
     <section className="hero" aria-labelledby="hero-title">
       <div className="wrap">
         <div className="hero-grid">
-          <p className="eyebrow hero-eyebrow">
-            <span className="signal" aria-hidden="true" />
-            <span>{rich(hero.eyebrow)}</span>
-          </p>
           <h1 className="display hero-title" id="hero-title">
             <span className="hl"><span>{hero.title[0]}</span></span>{" "}
             <span className="hl"><span>{hero.title[1]}</span></span>
           </h1>
           <div className="hero-side">
-            <p className="hero-body">{rich(hero.body)}</p>
+            <p className="hero-lead">{rich(hero.lead)}</p>
             <div className="hero-actions" data-hero-cta>
-              <ContactButton locale={locale} lean />
-              <a className="link hero-more" href="#products">
+              <ContactButton locale={locale} lean label={hero.action} />
+              <a className="link hero-more" href="#how">
                 {hero.more}
                 <Icon name="arrow-right" className="ico ico-flip" />
               </a>
@@ -101,8 +106,7 @@ function Hero({ locale }: { locale: Locale }) {
           views={{ bakery: SAMPLES[locale].bakery }}
           order={["bakery"]}
           text={t.agent}
-          figLabel={t.fig.label}
-          caption={hero.figure.caption}
+          sample={t.fig.sample}
           label={hero.figure.label}
           feed
           crop
@@ -144,15 +148,12 @@ function Spotlight({ locale }: { locale: Locale }) {
           variant="spot"
           views={SAMPLES[locale]}
           order={SAMPLE_ORDER}
-          start="salon"
+          start="bakery"
           text={t.agent}
-          figLabel={t.fig.label}
-          caption={s.caption}
           label={s.label}
           switcher
           headingLevel={3}
           aside={callouts}
-          under={s.under}
         />
       </div>
     </section>
@@ -169,7 +170,8 @@ function Suite({ locale }: { locale: Locale }) {
     bookings: <TimesCrop crops={s.crops} />,
     agent: <SummaryCrop view={bakery} />,
     accounts: <AgeBarCrop view={bakery} label={s.crops.owed} />,
-    payroll: null,
+    shelf: <ShelfCrop crops={s.crops} soldOut={s.crops.shelf.find((i) => i.out)?.note ?? ""} />,
+    docs: <ReceiptCrop crops={s.crops} />,
   };
   return (
     <section className="band suite" id="products" aria-labelledby="products-title">
@@ -183,32 +185,32 @@ function Suite({ locale }: { locale: Locale }) {
           <Head eyebrow={s.eyebrow} title={s.title} id="products-title" dark>
             <p className="band-body">{rich(s.body)}</p>
           </Head>
+          {/* Six plain rows (site audit L1): the name, what it is, one sentence and its link,
+              and a corner of its real screen at true size, marked as a sample. The corners'
+              numbers are the bakery's samples, so a machine reads that first. */}
+          <p className="sr-only">{t.agent.samples.bakery.fictional}</p>
           <ul className="suite-rows">
-            {PRODUCTS.map((key, index) => {
+            {PRODUCTS.map((key) => {
               const p = t.products.items[key];
-              const href = productPath(key, locale);
-              const row = key === "payroll" ? null : s.rows[key];
+              const row = s.rows[key];
               return (
-                <li key={key} className={`suite-row${href ? "" : " is-soon"}`} data-m style={n(index)}>
+                <li key={key} id={`p-${key}`} className="suite-row">
                   <div className="suite-name">
                     <h3><bdi>{p.name}</bdi></h3>
                     <span className="suite-desc">{p.descriptor}</span>
-                    <span className="suite-state">
-                      {!href && <span className="dot-pending" aria-hidden="true" />}
-                      {p.state}
-                    </span>
+                    {INCLUDED.includes(key) && <span className="suite-state">{p.state}</span>}
                   </div>
                   <div className="suite-say">
-                    {row && <p>{rich(row.body)}</p>}
-                    {row && href && (
-                      <a className="link link-dark" href={href}>
-                        <span>{rich(row.link)}</span>
-                        <Icon name="arrow-right" className="ico ico-flip" />
-                      </a>
-                    )}
-                    {!href && <span className="sr-only">{t.products.payrollSr}</span>}
+                    <p>{rich(row.body)}</p>
+                    <a className="link link-dark" href={productPath(key, locale)}>
+                      <span>{rich(row.link)}</span>
+                      <Icon name="arrow-right" className="ico ico-flip" />
+                    </a>
                   </div>
-                  <div className="suite-crop">{crop[key]}</div>
+                  <div className="suite-crop" data-nosnippet>
+                    <SampleMark label={t.fig.sample} />
+                    {crop[key]}
+                  </div>
                 </li>
               );
             })}
@@ -218,7 +220,6 @@ function Suite({ locale }: { locale: Locale }) {
               <p key={note.title}><b>{rich(note.title)}</b> {rich(note.body)}</p>
             ))}
           </div>
-          <FigCaption locale={locale} caption={s.caption} />
         </div>
       </div>
     </section>
@@ -229,64 +230,210 @@ function Suite({ locale }: { locale: Locale }) {
 function Business({ locale }: { locale: Locale }) {
   const t = copy[locale];
   const b = t.home.business;
+  const tags = (products: (typeof PRODUCTS)[number][]) =>
+    // in the suite's order; ALYR Agent and ALYR Shelf come with each, so they close the row, lighter
+    [...products]
+      .sort((a, c) => Number(INCLUDED.includes(a)) - Number(INCLUDED.includes(c)) || PRODUCTS.indexOf(a) - PRODUCTS.indexOf(c))
+      .map((key) => {
+        const name = t.products.items[key].name;
+        // the tag shows the product's own word ("Chat"); its name is the whole one
+        const short = name.replace(/^ALYR\s+/, "");
+        const plus = INCLUDED.includes(key);
+        return (
+          <a key={key} className={`tag tag-link${plus ? " tag-plus" : ""}`} href={productPath(key, locale)} aria-label={name}>
+            {plus && <span aria-hidden="true">{"+ "}</span>}<bdi>{short}</bdi>
+          </a>
+        );
+      });
   return (
-    <section className="hs biz" id="business" aria-labelledby="business-title">
+    <section className="hs bizs" id="business" aria-labelledby="business-title">
       <div className="wrap">
         <Rule />
         <Head eyebrow={b.eyebrow} title={b.title} id="business-title" />
-        <ul className="biz-rows">
+        <BusinessTabs
+          label={b.tabsLabel}
+          tabs={[...b.rows, b.other].map((row) => ({ id: row.id, name: row.tab, icon: <Icon name={BUSINESS_ICON[row.id] ?? "plus"} /> }))}
+        >
           {b.rows.map((row, index) => (
-            <li key={row.name} className="biz-row" data-m style={n(index)}>
-              <h3>{rich(row.name)}</h3>
-              <p className="biz-body">{rich(row.body)}</p>
-              <p className="biz-uses">
-                <span className="biz-k">{b.uses}</span>
-                <span className="biz-tags">
-                {/* in the suite's order; ALYR Agent comes with each, so it closes the row, lighter */}
-                {[...row.products]
-                  .sort((a, b) => (a === "agent" ? 1 : b === "agent" ? -1 : PRODUCTS.indexOf(a) - PRODUCTS.indexOf(b)))
-                  .map((key) => {
-                  const href = productPath(key, locale);
-                  const name = t.products.items[key].name;
-                  // the tag shows the product's own word ("Chat"); its name is the whole one
-                  const short = name.replace(/^ALYR\s+/, "");
-                  const agent = key === "agent";
-                  return href ? (
-                    <a key={key} className={`tag tag-link${agent ? " tag-plus" : ""}`} href={href} aria-label={name}>
-                      {agent && <span aria-hidden="true">{"+ "}</span>}<bdi>{short}</bdi>
-                    </a>
-                  ) : (
-                    <span key={key} className="tag"><bdi>{short}</bdi></span>
-                  );
-                })}
-                </span>
-              </p>
+            <div key={row.id} id={row.id} className={`biz-panel${index === 0 ? " is-on" : ""}`} role="tabpanel" aria-labelledby={`biz-tab-${row.id}`}>
+              <h3 className="biz-name">{rich(row.name)}</h3>
+              <FoldSplit
+                label={b.split.label}
+                today={b.split.today}
+                with={b.split.with}
+                slider={b.split.slider}
+                value={b.split.value}
+                before={<DayChats row={row} words={b.split} />}
+                after={<DayOrders row={row} words={b.split} sample={t.fig.sample} />}
+              />
+              <div className="biz-cols">
+                <div className="biz-col biz-day">
+                  <p className="mono-k">{b.day}</p>
+                  <ul>
+                    {row.day.map((line) => (
+                      <li key={line}>
+                        <span className="biz-mark" aria-hidden="true" />
+                        <span>{rich(line)}</span>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+                <div className="biz-col biz-with">
+                  <p className="mono-k">{b.with}</p>
+                  <ul>
+                    {row.with.map((line) => (
+                      <li key={line}>
+                        <span className="biz-tick" aria-hidden="true"><TickPath /></span>
+                        <span>{rich(line)}</span>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              </div>
               {row.note && (
                 <p className="biz-note status-line">
                   <span className="dot-pending" aria-hidden="true" />
                   <span>{rich(row.note)}</span>
                 </p>
               )}
-            </li>
+              <div className="biz-foot">
+                <p className="biz-uses">
+                  <span className="biz-k">{b.uses}</span>
+                  <span className="biz-tags">{tags(row.products)}</span>
+                </p>
+                <ContactButton locale={locale} variant="line" className="biz-ask" message={row} label={row.ask} />
+              </div>
+            </div>
           ))}
-        </ul>
-        <a className="link biz-other" href={contactHref()}>
-          {b.other}
-          <Icon name="arrow-right" className="ico ico-flip" />
-        </a>
+          <div id={b.other.id} className="biz-panel biz-else" role="tabpanel" aria-labelledby={`biz-tab-${b.other.id}`}>
+            <h3 className="biz-name">{rich(b.other.title)}</h3>
+            <p className="biz-else-body">{rich(b.other.body)}</p>
+            <a className="link" href={contactHref()}>
+              {b.other.link}
+              <Icon name="arrow-right" className="ico ico-flip" />
+            </a>
+          </div>
+        </BusinessTabs>
       </div>
     </section>
   );
 }
 
-// ---------------------------------------------------------------- how it works
+const BUSINESS_ICON: Record<string, IconName> = {
+  bakery: "bakery", wholesale: "crate", fashion: "hanger", restaurant: "cup", salon: "scissors", "home-services": "wrench",
+};
+
+type SplitWords = (typeof copy)["en"]["home"]["business"]["split"];
+
+/** The owner's chats this afternoon, as WhatsApp lists them: voice notes, photos, "is it
+ * ready??", each unread. The header counts them all; FoldSplit climbs to it once. */
+function DayChats({ row, words }: { row: BusinessRow; words: SplitWords }) {
+  const unread = row.chats.reduce((sum, chat) => sum + chat.n, 0);
+  return (
+    <div className="dc">
+      <div className="dc-top">
+        <b>{words.chats}</b>
+        <span className="dc-unread"><bdi data-unread={unread}>{unread}</bdi> {words.unread}</span>
+      </div>
+      <ul>
+        {row.chats.map((chat) => (
+          <li key={chat.who} className="dc-row">
+            <span className="dc-av">{chat.who.slice(0, 1)}</span>
+            <span className="dc-main">
+              <b>{chat.who}</b>
+              <span className="dc-prev">
+                {chat.kind !== "text" && <Icon name={chat.kind === "voice" ? "mic" : "camera"} />}
+                <span dir="auto">{chat.text}</span>
+              </span>
+            </span>
+            <span className="dc-side">
+              <span className="dc-at">{chat.at}</span>
+              <span className="dc-n">{chat.n}</span>
+            </span>
+          </li>
+        ))}
+      </ul>
+    </div>
+  );
+}
+
+/** The same customers, row for row, as ALYR keeps them: a reference, what it is, who on the
+ * team has it, and where it stands. */
+function DayOrders({ row, words, sample }: { row: BusinessRow; words: SplitWords; sample: string }) {
+  return (
+    <div className="do">
+      <div className="do-top">
+        <b>{words.orders}</b>
+        <SampleMark label={sample} />
+        <span className="do-count"><bdi>{row.orders.length}</bdi></span>
+      </div>
+      <ul>
+        {row.orders.map((order) => (
+          <li key={order.who + order.ref} className="do-row">
+            <span className="do-ref"><bdi>{order.ref}</bdi></span>
+            <span className="do-main">
+              <b>{order.who}</b>
+              <span>{order.what}</span>
+            </span>
+            <span className="do-by"><i>{order.by.slice(0, 1)}</i><span>{order.by}</span></span>
+            <span className={`do-st is-${order.tone}`}>{order.status}</span>
+          </li>
+        ))}
+      </ul>
+    </div>
+  );
+}
+
+// ------------------------------------------------------------ one order, start to finish
+function See({ locale }: { locale: Locale }) {
+  const see = copy[locale].home.see;
+  return (
+    <section className="hs see" id="see" aria-labelledby="see-title">
+      <div className="wrap">
+        <Rule />
+        <div className="see-head">
+          <Head eyebrow={see.eyebrow} title={see.title} id="see-title">
+            <p className="lead">{rich(see.body)}</p>
+          </Head>
+          <a className="link see-link" href={PATHS.chat[locale]}>
+            <span>{rich(see.link)}</span>
+            <Icon name="arrow-right" className="ico ico-flip" />
+          </a>
+        </div>
+        <div className="how-panel see-panel">
+          <FlowDiagram flow={see} sample={copy[locale].fig.sample} note={copy[locale].agent.samples.bakery.fictional} />
+        </div>
+        <div className="tally">
+          <h3 className="mono-k" id="tally-title">{see.tally.label}</h3>
+          <ul aria-labelledby="tally-title">
+            {see.tally.items.map((item, index) => (
+              <li key={item.text} data-m style={n(index)}>
+                <b className="tally-n"><bdi>{item.n}</bdi></b>
+                <span>{rich(item.text)}</span>
+              </li>
+            ))}
+          </ul>
+        </div>
+      </div>
+    </section>
+  );
+}
+
+// ---------------------------------------------------------------- how we work
+/**
+ * Check, set up, see, improve: four steps on a rail that fills as the visitor scrolls, and
+ * a dashed arc from the last step back to the first once it is full, because the work
+ * starts again. Without motion the arc is simply drawn.
+ */
 function How({ locale }: { locale: Locale }) {
   const w = copy[locale].home.how;
   return (
     <section className="hs how" id="how" aria-labelledby="how-title">
       <div className="wrap">
         <Rule />
-        <Head eyebrow={w.eyebrow} title={w.title} id="how-title" />
+        <Head eyebrow={w.eyebrow} title={w.title} id="how-title">
+          <p className="lead">{rich(w.lead)}</p>
+        </Head>
         <div className="how-rail" data-rail>
           <span className="how-line" aria-hidden="true"><span data-rail-fill /></span>
           <ol className="how-steps">
@@ -298,32 +445,35 @@ function How({ locale }: { locale: Locale }) {
               </li>
             ))}
           </ol>
-          {/* step 4 opens into its report; beside it, the early-access note and a second way in */}
-          <div className="how-foot">
-            <div className="how-next">
-              <p className="how-note">{rich(w.note)}</p>
-              <ContactButton locale={locale} variant="line" />
-            </div>
-            <figure className="how-report" data-m>
-              <ReportPhone sample={REPORTS[locale].bakery} words={reportWords(locale).bakery} />
-              <FigCaption locale={locale} caption={w.report.caption} />
-            </figure>
-          </div>
+          {/* the way back to step 1: an arc over the steps on wide screens, a row under them on phones */}
+          <p className="how-loop">
+            <span className="how-loop-k"><bdi>{w.again}</bdi></span>
+            <span className="how-loop-head" aria-hidden="true" />
+          </p>
+          <p className="how-again">
+            <Icon name="arrow-right" className="ico" />
+            <span>{w.again}</span>
+          </p>
         </div>
-        <div className="how-lists">
-          {[w.start, w.month].map((list) => (
-            <div key={list.title} className="inc-list">
-              <h3 className="mono-k">{list.title}</h3>
-              <ul className="checks">
-                {list.items.map((item, index) => (
-                  <li key={item} data-m style={n(index)}>
-                    <TickPath />
-                    <span>{rich(item)}</span>
-                  </li>
-                ))}
-              </ul>
-            </div>
-          ))}
+        <div className="how-foot">
+          <div className="how-next">
+            <ContactButton locale={locale} variant="line" label={copy[locale].home.final.action} />
+          </div>
+          <div className="how-lists">
+            {[w.need].map((list) => (
+              <div key={list.title} className="inc-list">
+                <h3 className="mono-k">{list.title}</h3>
+                <ul className="checks">
+                  {list.items.map((item, index) => (
+                    <li key={item} data-m style={n(index)}>
+                      <TickPath />
+                      <span>{rich(item)}</span>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            ))}
+          </div>
         </div>
       </div>
     </section>
@@ -368,7 +518,17 @@ function Price({ locale }: { locale: Locale }) {
               ))}
             </dl>
             <p className="sheet-setup">{rich(p.setup)}</p>
-            <p className="sheet-incl">{rich(p.includes)}</p>
+            <p className="sheet-first-month">{rich(p.firstMonth)}</p>
+            <h3 className="mono-k">{p.includesLabel}</h3>
+            <ul className="checks sheet-incl">
+              {p.includes.map((item, index) => (
+                <li key={item} data-m style={n(index)}>
+                  <TickPath />
+                  <span>{rich(item)}</span>
+                </li>
+              ))}
+            </ul>
+            <p className="sheet-confirm">{rich(p.confirm)}</p>
             <p className="status-line sheet-early">
               <span className="dot-pending" aria-hidden="true" />
               <span>{rich(early)}</span>
@@ -384,8 +544,9 @@ function Price({ locale }: { locale: Locale }) {
             </dl>
           </div>
 
-          <figure className="agreement-fig">
-            <div className="agreement" data-m>
+          <figure className="agreement-fig fig-cap-end">
+            <FigCaption locale={locale} caption={a.caption} />
+            <div className="agreement" data-m data-nosnippet>
               <span className="agr-top">
                 <span className="agr-kicker">{a.kicker}</span>
                 <span className="agr-parties">{rich(a.parties)}</span>
@@ -414,11 +575,10 @@ function Price({ locale }: { locale: Locale }) {
               </dl>
               <p className="agr-print">{a.print}</p>
             </div>
-            <FigCaption locale={locale} caption={a.caption} />
           </figure>
         </div>
         <div className="price-cta">
-          <ContactButton locale={locale} lean />
+          <ContactButton locale={locale} lean label={copy[locale].home.final.action} />
           <ContactNote locale={locale} />
         </div>
       </div>
@@ -442,7 +602,6 @@ function Trust({ locale, other }: { locale: Locale; other: Locale }) {
             <ul className="facts6">
               {tr.facts.map((fact, index) => (
                 <li key={fact.title} data-m style={n(index % 3)}>
-                  <span className="mono-k">{fact.label}</span>
                   <h3>{rich(fact.title)}</h3>
                   <p>{rich(fact.body)}</p>
                 </li>
@@ -460,16 +619,16 @@ function Trust({ locale, other }: { locale: Locale; other: Locale }) {
             )}
             {OFFER_LIVE && <p className="trust-closing">{rich(tr.closing)}</p>}
           </div>
-          <figure className="trust-fig" data-m>
+          <figure className="trust-fig fig-cap-end" data-m>
+            <FigCaption locale={locale} caption={tr.figure.caption} />
             {/* On phones the pair scrolls sideways, so it takes keyboard focus. */}
-            <div className="pair" tabIndex={0} role="group" aria-label={tr.figure.label}>
+            <div className="pair" tabIndex={0} role="group" aria-label={tr.figure.label} data-nosnippet>
               {[locale, other].map((lang) => (
                 <div key={lang} className={`pair-item pair-${lang}`} dir={lang === "ar" ? "rtl" : "ltr"} lang={lang}>
                   <Phone className="pair-phone"><TrackScreen sample={copy[lang].home.sample} lang={lang} /></Phone>
                 </div>
               ))}
             </div>
-            <FigCaption locale={locale} caption={tr.figure.caption} />
           </figure>
         </div>
       </div>
@@ -492,20 +651,38 @@ function Questions({ locale }: { locale: Locale }) {
             <Head eyebrow={q.eyebrow} title={q.title} id="questions-title" />
           </div>
           <div className="faq-list">
-            {items.map((item, index) => (
-              <details key={item.id} id={`q-${item.id}`} className="qa" open={index === 0}>
+            {items.slice(0, q.shown).map((item, index) => (
+              <Answer key={item.id} item={item} open={index === 0} />
+            ))}
+            {items.length > q.shown && (
+              <details className="faq-more">
                 <summary>
-                  <span>{rich(item.q)}</span>
+                  <span>{q.more}</span>
+                  <span className="faq-more-n" aria-hidden="true"><bdi>{items.length - q.shown}</bdi></span>
                   <span className="qa-mark" aria-hidden="true" />
                 </summary>
-                <div className="qa-a">
-                  <p>{rich(item.a)}</p>
-                </div>
+                {items.slice(q.shown).map((item) => (
+                  <Answer key={item.id} item={item} />
+                ))}
               </details>
-            ))}
+            )}
           </div>
         </div>
       </div>
     </section>
+  );
+}
+
+function Answer({ item, open = false }: { item: QuestionSet["items"][number]; open?: boolean }) {
+  return (
+    <details id={`q-${item.id}`} className="qa" open={open}>
+      <summary>
+        <span>{rich(item.q)}</span>
+        <span className="qa-mark" aria-hidden="true" />
+      </summary>
+      <div className="qa-a">
+        <p>{rich(item.a)}</p>
+      </div>
+    </details>
   );
 }

@@ -46,6 +46,10 @@ export type AgentDashboardProps = {
   /** The summary's heading level (default 1 in the workspace, 2 in showcase); section
    * titles sit one below it and suggestion titles two below. */
   headingLevel?: 1 | 2 | 3 | 4;
+  /** False draws the titles as plain text, not headings: the public site's drawings of a
+   * fictional business, so a sample's numbers never read as the page's own outline to a
+   * screen reader or a crawler (site audit 03, A1). The workspace keeps its headings. */
+  headings?: boolean;
   /** The host's link component. In showcase mode links are plain text unless one is given. */
   link?: AgentLink;
   /** The first load of a session: the numbers rise once along the 45° diagonal. In showcase
@@ -139,7 +143,8 @@ function Figure({ value, unit, unitFirst }: { value: string; unit: string | null
 }
 
 function Heading({ level, className, id, children }: { level: number; className?: string; id?: string; children: ReactNode }) {
-  return createElement(`h${Math.min(Math.max(level, 1), 6)}`, { className, id }, children);
+  // level 0: a title that is not a heading (`headings={false}`)
+  return createElement(level <= 0 ? "p" : `h${Math.min(level, 6)}`, { className, id }, children);
 }
 
 function reducedMotion() {
@@ -207,12 +212,13 @@ function useRiseInView(enabled: boolean, ref: RefObject<HTMLDivElement | null>):
 }
 
 export function AgentDashboard({
-  view, labels, mode = "workspace", headingLevel, link, animate = false, stale, onNotNow, setup, className = "",
+  view, labels, mode = "workspace", headingLevel, headings = true, link, animate = false, stale, onNotNow, setup, className = "",
 }: AgentDashboardProps) {
   const t: AgentLabels = { ...AGENT_LABELS[view.lang], ...labels };
   const showcase = mode === "showcase";
   const L: AgentLink = link ?? (showcase ? NoLink : PlainLink);
-  const level = headingLevel ?? (showcase ? 2 : 1);
+  // without headings every title is drawn at "level 0", which Heading renders as plain text
+  const level = headings ? headingLevel ?? (showcase ? 2 : 1) : -9;
   const id = useId();
   const root = useRef<HTMLDivElement>(null);
   const phase = useRiseInView(showcase, root);

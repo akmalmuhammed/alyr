@@ -169,10 +169,9 @@ svg { display: block; }
 
 /* The Products menu (Shell.tsx): a native <details>, so it opens by keyboard and without
    JavaScript; the script in <head> (document.tsx) closes it on Escape, a click outside or
-   focus leaving. On wide screens its panel spans the header, under it: the five products
-   in the suite's fixed order, each on a rule with its one line and its state. Payroll has
-   no page: a dashed rule, the pending dot, no link. On phones the same list is the first
-   group of the menu. */
+   focus leaving. On wide screens its panel spans the header, under it: the six products
+   in the suite's fixed order, each on a rule with its one line and its state; three to a
+   row on a narrow laptop. On phones the same list is the first group of the menu. */
 .pm { position: static; }
 .pm-btn {
   list-style: none; display: inline-flex; align-items: center; gap: .25rem; min-height: 2.75rem; cursor: pointer;
@@ -188,21 +187,22 @@ svg { display: block; }
   background: var(--canvas); border-block: 1px solid var(--line); box-shadow: var(--menu-shadow);
   padding-block: 1.5rem 2rem;
 }
-.pm-grid { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); column-gap: 1.5rem; }
+.pm-grid { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); column-gap: 1.5rem; row-gap: 1rem; }
+@media (max-width: 75rem) { .pm-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); } .pm a.pm-link, .pm-link { min-height: 7.5rem; } }
 .pm-item { border-top: 2px solid var(--text); }
-.pm-item.pm-soon { border-top: 1px dashed var(--line-strong); }
 .pm-link { position: relative; display: grid; align-content: start; gap: .375rem; min-height: 9rem; padding: 1rem .25rem .5rem 0; color: var(--text); }
 [dir="rtl"] .pm-link { padding: 1rem 0 .5rem .25rem; }
 /* The menu's links sit inside .top-nav, whose `a` rules (inline-flex, nowrap, muted colour,
    negative margins) would otherwise win on specificity and squeeze each card into a row. */
 .pm a.pm-link { display: grid; min-height: 9rem; margin-inline: 0; padding: 1rem .25rem .5rem 0; color: var(--text); white-space: normal; }
+/* the states stand on one line across the row, however long each product's line runs */
+.pm a.pm-link { grid-template-rows: auto 1fr auto; }
+.pm a.pm-link .pm-state { align-self: end; }
 [dir="rtl"] .pm a.pm-link { padding: 1rem 0 .5rem .25rem; }
-.pm-soon-in { display: contents; }
 .pm-name { font-size: 1.0625rem; font-weight: 600; letter-spacing: -.01em; }
 .pm-line { font-size: .875rem; line-height: 1.45; color: var(--text-muted); max-width: 15rem; text-wrap: pretty; }
 .pm-state { display: inline-flex; align-items: center; gap: .5rem; margin-top: .25rem; font-family: var(--mono); font-size: .6875rem; letter-spacing: .08em; text-transform: uppercase; color: var(--text-muted); }
 [lang="ar"] .pm-state { font-family: var(--arabic); letter-spacing: 0; text-transform: none; font-size: .8125rem; }
-.pm-soon .pm-name, .pm-soon .pm-line { color: var(--text-muted); }
 .pm-arrow { position: absolute; top: 1.125rem; inset-inline-end: .25rem; width: 1rem; height: 1rem; color: var(--text-muted); transition: translate var(--fast) var(--ease), color var(--fast) var(--ease); }
 a.pm-link:hover .pm-name { text-decoration: underline; text-decoration-thickness: 1px; text-underline-offset: .2em; }
 a.pm-link:hover .pm-arrow { color: var(--text); translate: calc(var(--dir) * 2px) 0; }
@@ -218,11 +218,9 @@ a.pm-link[aria-current="page"] .pm-name::after { content: ""; display: inline-bl
 /* the phone menu: the products first, then the page's sections */
 .tm-k { padding: .5rem .875rem .25rem; font-family: var(--mono); font-size: .6875rem; letter-spacing: .08em; text-transform: uppercase; color: var(--text-muted); }
 [lang="ar"] .tm-k { font-family: var(--arabic); letter-spacing: 0; text-transform: none; font-size: .8125rem; }
-.tm-products a, .tm-soon { display: flex; align-items: baseline; justify-content: space-between; gap: 1rem; min-height: 2.75rem; padding: .625rem .875rem; border-radius: .5rem; font-weight: 600; }
+.tm-products a { display: flex; align-items: baseline; justify-content: space-between; gap: 1rem; min-height: 2.75rem; padding: .625rem .875rem; border-radius: .5rem; font-weight: 600; }
 .tm-products a:hover { background: var(--surface-subtle); }
-.tm-products small, .tm-soon small { font-size: .75rem; font-weight: 500; color: var(--text-muted); white-space: nowrap; }
-.tm-soon { color: var(--text-muted); }
-.tm-soon > span[aria-hidden] { display: flex; align-items: baseline; justify-content: space-between; gap: 1rem; width: 100%; }
+.tm-products small { font-size: .75rem; font-weight: 500; color: var(--text-muted); white-space: nowrap; }
 .tm-products a[aria-current="page"] { background: var(--surface-subtle); }
 .tm-rule { display: block; height: 1px; margin: .375rem .875rem; background: var(--line); }
 
@@ -260,7 +258,7 @@ a.pm-link[aria-current="page"] .pm-name::after { content: ""; display: inline-bl
 .wa-mini .wa-msg.wa-tail { margin-top: .25rem; }
 
 /* --------------------------------------------------------------- sections */
-.sec { padding-block: clamp(4.5rem, 10vw, 8rem); }
+.sec { padding-block: var(--sec); }
 .sec + .sec { border-top: 1px solid var(--line); }
 .sec h3 { font-size: 1.3125rem; font-weight: 600; line-height: 1.25; letter-spacing: -.012em; }
 [lang="ar"] .sec h3:not(.ag h3), [lang="ar"] .product h3:not(.ag h3), [lang="ar"] .product-facts h2 { letter-spacing: 0; line-height: 1.5; }
@@ -270,9 +268,8 @@ a.pm-link[aria-current="page"] .pm-name::after { content: ""; display: inline-bl
 .approach-say { display: grid; gap: 1.75rem; position: sticky; top: calc(var(--header) + 2rem); }
 .statement { font-size: clamp(1.625rem, 1.1rem + 2.1vw, 2.75rem); font-weight: 560; line-height: 1.16; letter-spacing: -.026em; text-wrap: pretty; }
 [lang="ar"] .statement { line-height: 1.5; letter-spacing: 0; font-weight: 500; }
-.steps li { display: grid; grid-template-columns: 2.75rem 1fr; gap: 1rem; padding-block: 1.75rem; border-top: 1px solid var(--line); }
+.steps li { display: grid; grid-template-columns: minmax(0, 1fr); gap: 1rem; padding-block: 1.75rem; border-top: 1px solid var(--line); }
 .steps li:last-child { border-bottom: 1px solid var(--line); }
-.steps-n { font-family: var(--mono); font-size: .8125rem; color: var(--text-muted); padding-top: .3125rem; letter-spacing: .04em; }
 .steps p { margin-top: .5rem; color: var(--text-muted); max-width: 28rem; }
 
 /* product: the Carbon command moment */
@@ -304,13 +301,16 @@ a.pm-link[aria-current="page"] .pm-name::after { content: ""; display: inline-bl
 
 .demo { margin-top: clamp(2.5rem, 5vw, 3.75rem); }
 .demo-bar { display: flex; align-items: center; justify-content: space-between; gap: 1rem; flex-wrap: wrap; }
+/* the flow's tab row ends with Pause and the figure's "Sample" mark, together at the end */
+.fx > .demo-bar { justify-content: flex-start; }
+.fx > .demo-bar .demo-toggle, .fx > .demo-bar .fx-sample { margin-inline-start: auto; }
+.fx > .demo-bar .demo-toggle + .fx-sample { margin-inline-start: 0; }
 .demo-tabs { display: flex; gap: .25rem; padding: .25rem; border: 1px solid var(--dark-line); border-radius: .75rem; background: var(--dark-canvas); overflow-x: auto; scrollbar-width: none; max-width: 100%; }
 .demo-tabs::-webkit-scrollbar { display: none; }
 .demo-tab { flex: none; position: relative; display: inline-flex; align-items: center; gap: .5rem; min-height: 2.75rem; padding: 0 1rem; border: 0; border-radius: .5rem; background: transparent; color: var(--concrete); font: inherit; font-weight: 600; font-size: .9375rem; white-space: nowrap; cursor: pointer; overflow: hidden; transition: color var(--fast) var(--ease), background var(--fast) var(--ease); }
 .demo-tab:hover { color: var(--dark-text); }
 .demo-tab[aria-selected="true"] { background: var(--graphite); color: var(--on-band); }
 .demo-tab:focus-visible { outline-color: var(--volt); outline-offset: -2px; }
-.demo-tab-n { font-family: var(--mono); font-size: .6875rem; font-weight: 500; color: var(--concrete); letter-spacing: .04em; }
 .demo-tab-bar { position: absolute; inset: auto 0 0; height: 2px; background: var(--volt); transform-origin: left; animation: demo-fill 6.5s linear forwards; }
 [dir="rtl"] .demo-tab-bar { transform-origin: right; }
 .demo:hover .demo-tab-bar, .demo:focus-within .demo-tab-bar { animation-play-state: paused; }
@@ -369,7 +369,7 @@ a.pm-link[aria-current="page"] .pm-name::after { content: ""; display: inline-bl
 .wa-out.wa-tail .wa-bubble::before { inset-inline-end: -.5rem; background: var(--wa-out); clip-path: polygon(0 0, 100% 0, 0 100%); }
 [dir="rtl"] .wa-in.wa-tail .wa-bubble::before { clip-path: polygon(0 0, 100% 0, 0 100%); }
 [dir="rtl"] .wa-out.wa-tail .wa-bubble::before { clip-path: polygon(100% 0, 0 0, 100% 100%); }
-.wa-text { overflow-wrap: anywhere; }
+.wa-text { overflow-wrap: anywhere; white-space: pre-line; }
 .wa-meta { float: inline-end; display: inline-flex; align-items: center; gap: .1875rem; margin: .4375rem 0 -.1875rem .625rem; font-size: .6875rem; color: var(--wa-soft); white-space: nowrap; }
 .wa-out .wa-meta { color: var(--wa-soft-out); }
 [dir="rtl"] .wa-meta { margin: .4375rem .625rem -.1875rem 0; }
@@ -377,6 +377,16 @@ a.pm-link[aria-current="page"] .pm-name::after { content: ""; display: inline-bl
 .wa-in:has(.wa-cta) .wa-bubble { border-end-start-radius: 0; border-end-end-radius: 0; }
 .wa-cta { display: flex; align-items: center; justify-content: center; gap: .375rem; padding: .5625rem .75rem; background: var(--wa-in); border-top: 1px solid var(--wa-rule); border-radius: 0 0 .5rem .5rem; color: var(--wa-link); font-size: .890625rem; font-weight: 500; }
 .wa .wa-cta svg { width: 1rem; height: 1rem; }
+/* A document message (a receipt's PDF): a page glyph, the file's name and "1 page · PDF"
+   on WhatsApp's own inset panel, then the caption under it. Drawn chats only (--wa-*). */
+.wa-bubble.has-doc { padding-top: .25rem; min-width: min(15rem, 100%); }
+.wa-doc { display: flex; align-items: center; gap: .625rem; margin: 0 -.3125rem .375rem; padding: .625rem .625rem; border-radius: .375rem; background: var(--wa-chip); }
+.wa-in .wa-doc { background: color-mix(in srgb, var(--wa-ink) 6%, var(--wa-in)); }
+.wa-doc-ico { display: grid; place-items: center; width: 2rem; height: 2.375rem; flex: none; border-radius: .25rem; background: var(--wa-in); box-shadow: inset 0 0 0 1px var(--wa-rule); color: var(--wa-soft); }
+.wa .wa-doc-ico svg { width: 1.25rem; height: 1.25rem; stroke-width: 1.7; stroke-linecap: square; stroke-linejoin: miter; }
+.wa-doc-t { display: grid; min-width: 0; line-height: 1.3; }
+.wa-doc-t b { font-weight: 500; font-size: .875rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.wa-doc-t small { font-size: .75rem; color: var(--wa-soft); }
 .wa-bar { display: flex; align-items: center; gap: .375rem; padding: .375rem .375rem .5rem; background: var(--wa-paper); }
 .wa-input { flex: 1; display: flex; align-items: center; gap: .625rem; min-height: 2.625rem; padding: 0 .75rem; background: var(--wa-field); border-radius: 1.5rem; color: var(--wa-field-ink); font-size: .9375rem; }
 .wa-input span { flex: 1; color: var(--wa-hint); }
@@ -395,6 +405,8 @@ a.pm-link[aria-current="page"] .pm-name::after { content: ""; display: inline-bl
 .row-main { display: grid; gap: .125rem; min-width: 0; flex: 1; }
 .row-main b { font-weight: 600; font-size: .9375rem; }
 .row-main small { font-size: .8125rem; color: var(--concrete); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+/* a quoted refusal or note is read whole, never cut */
+.row-main small.is-wrap { overflow: visible; text-overflow: clip; white-space: normal; line-height: 1.45; }
 .row-trail { font-size: .75rem; font-weight: 600; white-space: nowrap; padding: .25rem .5rem; border-radius: .25rem; border: 1px solid var(--dark-line); color: var(--concrete); }
 .row-signal { border-inline-start-color: var(--volt); background: rgb(183 243 74 / .05); }
 .row-signal .row-trail { background: var(--volt); border-color: var(--volt); color: var(--on-volt); }
@@ -403,7 +415,6 @@ a.pm-link[aria-current="page"] .pm-name::after { content: ""; display: inline-bl
 .panel-total { display: flex; justify-content: space-between; padding: .875rem 1.125rem; border-top: 1px solid var(--dark-line); font-size: .9375rem; color: var(--concrete); }
 .panel-total b { color: var(--on-band); font-variant-numeric: tabular-nums; }
 .panel-caption { padding: .875rem 1.125rem 1rem; border-top: 1px solid var(--dark-line); font-size: .875rem; color: var(--concrete); background: var(--dark-canvas); }
-.demo-note { margin-top: .75rem; font-size: .75rem; color: var(--on-band-faint); }
 
 /* who */
 .who-in { display: grid; grid-template-columns: minmax(0, 4fr) minmax(0, 8fr); gap: clamp(2rem, 5vw, 5rem); align-items: start; }
@@ -414,8 +425,9 @@ a.pm-link[aria-current="page"] .pm-name::after { content: ""; display: inline-bl
 .tags { display: flex; gap: .375rem; }
 /* the tags sit in a fixed track at the end, so every row's text starts on the same line */
 .who-rows .tags { justify-content: flex-end; }
-.tags span { font-family: var(--mono); font-size: .6875rem; letter-spacing: .07em; text-transform: uppercase; color: var(--text-muted); border: 1px solid var(--line-strong); border-radius: .25rem; padding: .1875rem .4375rem; white-space: nowrap; }
-[lang="ar"] .tags span { font-family: var(--arabic); letter-spacing: 0; font-size: .75rem; }
+/* who-tags carry content (ALYR Agent's numbers, ALYR Shelf's ways of counting), so they are
+   body type, not mono capitals (site audit R2) */
+.tags span { font-family: inherit; font-size: var(--fs-note); line-height: 1.35; letter-spacing: 0; text-transform: none; color: var(--text-muted); border: 1px solid var(--line-strong); border-radius: var(--radius-sm); padding: var(--space-1) var(--space-2); white-space: nowrap; }
 .who-rows > li.who-other { display: block; padding-block: 1rem; }
 
 /* built */
@@ -464,9 +476,6 @@ a.pm-link[aria-current="page"] .pm-name::after { content: ""; display: inline-bl
 .foot-legal { display: grid; gap: .375rem; font-family: var(--mono); font-size: .75rem; line-height: 1.6; color: var(--text-muted); }
 [lang="ar"] .foot-legal { font-family: var(--arabic); font-size: .8125rem; }
 .foot-legal p:first-child { display: flex; flex-wrap: wrap; justify-content: flex-start; gap: .25rem 1.5rem; }
-.doha { display: inline-flex; align-items: center; gap: .5rem; }
-.doha-dot { width: .375rem; height: .375rem; border-radius: 50%; background: currentColor; }
-.doha-time { display: inline-block; min-width: 5ch; font-family: var(--mono); font-variant-numeric: tabular-nums; }
 
 /* ----------------------------------------------- shared by every public page */
 /* The fold: three Carbon planes with the symbol's gaps (10 of its 160 units): a 6 px Paper
@@ -494,7 +503,23 @@ a.pm-link[aria-current="page"] .pm-name::after { content: ""; display: inline-bl
   .motion .band-fold:not(.is-in) i:nth-child(3) { translate: calc(var(--dir) * 64px) 64px; }
 }
 
-/* FIG captions: a mono line on a hairline that ends in a tick. */
+/* The "Sample" mark (SampleMark in Frames.tsx): once per drawing, in its own chrome, beside
+   the shop's name or at the end of its tab row. A label, so mono capitals in English; the
+   Arabic is never set in capitals or tracked. */
+.mark-sample {
+  display: inline-flex; align-items: center; flex: none;
+  min-height: 1.25rem; padding: 0 var(--space-1); margin-inline-start: var(--space-2);
+  border: 1px solid var(--line-strong); border-radius: var(--radius-sm);
+  font-family: var(--mono); font-size: var(--fs-micro); font-weight: var(--weight-medium); line-height: 1;
+  letter-spacing: var(--tracking-label); text-transform: uppercase; color: var(--text-muted);
+  white-space: nowrap; vertical-align: middle;
+}
+.mark-sample:lang(ar) { font-family: var(--arabic); font-size: var(--fs-label); letter-spacing: 0; text-transform: none; }
+/* on Carbon: the demos, the flow, the plates */
+.product .mark-sample, .band .mark-sample, .see-panel .mark-sample, .demo-bar .mark-sample { border-color: var(--band-rule); color: var(--on-band-quiet); }
+
+/* Captions: a mono line on a hairline that ends in a tick. Only where a drawing needs words
+   (the trust pair, the no-CR foot, the agreement); every other drawing carries its mark. */
 .cap {
   position: relative; display: block;
   margin-top: 1rem; padding-top: .625rem; border-top: 1px solid var(--line);
@@ -504,6 +529,9 @@ a.pm-link[aria-current="page"] .pm-name::after { content: ""; display: inline-bl
 .cap::before { content: ""; position: absolute; top: -5px; inset-inline-start: 0; width: 1px; height: 9px; background: var(--line-strong); }
 [lang="ar"] .cap { font-family: var(--arabic); letter-spacing: 0; text-transform: none; font-size: .8125rem; font-weight: 500; }
 .cap-n { color: var(--text); }
+/* the caption comes first in the HTML (machines read the sample word first) and shows below */
+.fig-cap-end { display: flex; flex-direction: column; }
+.fig-cap-end > .cap { order: 1; }
 .cap > span { display: inline; }
 .cap-sep { margin-inline: .5rem; color: var(--line-strong); }
 /* on a Carbon block */
@@ -516,10 +544,10 @@ a.pm-link[aria-current="page"] .pm-name::after { content: ""; display: inline-bl
 .foot-products { padding-top: 1rem; border-top: 1px solid var(--line); }
 .foot-products a { color: var(--text); font-weight: 600; }
 .foot-products a[aria-current="page"] { text-decoration: underline; text-decoration-thickness: 1px; text-underline-offset: .25em; }
-.foot-soon { display: inline-flex; align-items: center; min-height: 2.75rem; color: var(--text-muted); font-size: .9375rem; font-weight: 500; }
 .foot-site { padding-top: 0; border-top: 0; margin-top: -1rem; }
 
-/* The phone's contact bar: in once the hero's button has gone, out at the closing call. */
+/* The phone's contact bar, on every page with an opening button: in once that button has
+   gone, out at the closing call. */
 .bar { display: none; }
 @media (max-width: 53rem) {
   .bar {
@@ -535,6 +563,10 @@ a.pm-link[aria-current="page"] .pm-name::after { content: ""; display: inline-bl
   .bar .btn { width: 100%; }
   /* one Volt button on screen at a time: the header's steps aside while the bar is up */
   :root:has(.bar[data-show]) .top .btn-volt { visibility: hidden; }
+}
+/* with reduced motion the bar is simply there or not; it never slides */
+@media (max-width: 53rem) and (prefers-reduced-motion: reduce) {
+  .bar, .bar[data-show] { transition: none; }
 }
 
 /* Moving between pages and languages: the header stays where it is and the new page
@@ -594,8 +626,9 @@ a.pm-link[aria-current="page"] .pm-name::after { content: ""; display: inline-bl
   .al-js .company-in.is-in .company-path path { animation: draw 1600ms var(--ease) both 200ms; }
   .al-js .company-in.is-in .company-path .company-path-volt { animation: draw 700ms var(--ease) both 1500ms; }
 
-  /* the demo plays message by message */
-  .demo .wa-msg, .row, .panel-total { animation: rise 520ms var(--ease) both; animation-delay: calc(160ms + var(--i) * 620ms); }
+  /* the demo plays message by message, once it has moved past its first tab (that one is
+     drawn finished, so the first view is never an empty phone) */
+  .demo[data-moved] .wa-msg, .demo[data-moved] .row, .demo[data-moved] .panel-total { animation: rise 520ms var(--ease) both; animation-delay: calc(160ms + var(--i) * 620ms); }
 }
 
 /* ------------------------------------------------------------- responsive */
@@ -611,6 +644,12 @@ a.pm-link[aria-current="page"] .pm-name::after { content: ""; display: inline-bl
   .top-end { gap: .75rem; }
 }
 .top-nav a { white-space: nowrap; }
+.top-cta-short { display: none; }
+/* below a laptop the header's button says the short words, so the line never overflows */
+@media (max-width: 61.99rem) {
+  .top-cta-full { display: none; }
+  .top-cta-short { display: inline; }
+}
 @media (max-width: 53rem) {
   .top-nav, .top-lang, .al-js .ts-bar { display: none; }
   .top-menu { display: block; }
@@ -632,9 +671,8 @@ a.pm-link[aria-current="page"] .pm-name::after { content: ""; display: inline-bl
   .btn { min-height: 3rem; }
   .cta-actions { justify-items: stretch; }
   .btn-sm { min-height: 2.75rem; }
-  .sec { padding-block: 3.5rem; }
   .statement, .company-say { font-size: 1.5rem; }
-  .steps li { grid-template-columns: 2.25rem 1fr; padding-block: 1.375rem; }
+  .steps li { padding-block: 1.375rem; }
   .product { padding-inline: 0; }
   .product-in { --cut: 3rem; }
   .product-in { padding-block: 3.5rem 2.5rem; }
@@ -643,10 +681,12 @@ a.pm-link[aria-current="page"] .pm-name::after { content: ""; display: inline-bl
   .demo-tabs { width: 100%; scroll-snap-type: x proximity; mask-image: linear-gradient(to right, #000 calc(100% - 2rem), transparent); -webkit-mask-image: linear-gradient(to right, #000 calc(100% - 2rem), transparent); }
   [dir="rtl"] .demo-tabs { mask-image: linear-gradient(to left, #000 calc(100% - 2rem), transparent); -webkit-mask-image: linear-gradient(to left, #000 calc(100% - 2rem), transparent); }
   .demo-tab { scroll-snap-align: start; padding: 0 .8125rem; }
-  .demo-tab-n { display: none; }
   .demo-stage { border-radius: .5rem; min-height: 0; }
   .phone { padding: 1rem .5rem; }
   .wa { height: 31rem; border-radius: 1.5rem; }
+  /* on a phone the demo's chat starts under its day chip, so its first message is in the
+     first screen (site audit F1, F2) */
+  .demo .wa-thread { justify-content: flex-start; }
   .wa-top .wa-video { display: none; }
   .panel-caption { font-size: .8125rem; }
   .who-rows > li { padding-block: 1.25rem; }
@@ -768,7 +808,7 @@ h4 { margin: 0; }
   .fx[data-playing] .fx-link[data-dir] .fx-pulse:nth-child(3) { animation-delay: .4s; }
   .fx[data-playing] .fx-link[data-dir] .fx-pulse:nth-child(4) { animation-delay: .8s; }
   /* whatever this step added arrives */
-  .fx .wa-msg, .fx-event, .fx-work li, .fx-records .row, .fx-say { animation: rise 420ms var(--ease) both; animation-delay: 0s; }
+  .fx[data-moved] :is(.wa-msg, .fx-event, .fx-work li, .fx-records .row, .fx-say) { animation: rise 420ms var(--ease) both; animation-delay: 0s; }
 }
 
 @media (max-width: 68rem) {
@@ -777,7 +817,6 @@ h4 { margin: 0; }
   .fx-now { order: 1; margin-top: 1.25rem; padding-top: 0; border-top: 0; align-content: start; }
   .fx-steps { order: 2; }
   .fx-stage { order: 3; grid-template-columns: minmax(0, 1fr); margin-top: 1.25rem; }
-  .fx .demo-note { order: 4; }
   .fx-node { height: auto; }
   .fx-head { min-height: 3.5rem; padding-block: .5rem; }
   .fx .wa.wa-mini.fx-phone { flex: none; height: 11.5rem; }
@@ -809,8 +848,9 @@ h4 { margin: 0; }
   .fx-now { min-height: 13.5rem; }
 }
 
-/* The homepage's hero has its own Volt button. Until it scrolls away (HomeMotion sets
-   data-hero-gone), the header's button is its outlined twin, so one Volt button is on screen. */
+/* The homepage's hero and every product page's opening have their own Volt button. Until it
+   scrolls away (SiteMotion sets data-hero-gone), the header's button is its outlined twin, so
+   one Volt button is on screen. */
 :root:has([data-hero-cta]):not([data-hero-gone]) .top .btn-volt { color: var(--text); }
 :root:has([data-hero-cta]):not([data-hero-gone]) .top .btn-volt::before { background: var(--text); }
 :root:has([data-hero-cta]):not([data-hero-gone]) .top .btn-volt::after {

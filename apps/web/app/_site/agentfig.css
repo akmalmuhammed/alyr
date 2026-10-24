@@ -139,7 +139,7 @@ main .ag { font-weight: 400; }
 .afig-spot { margin-top: clamp(2rem, 4vw, 3rem); }
 .afig-spot .af-stage { display: grid; grid-template-columns: minmax(0, 9fr) minmax(0, 3fr); column-gap: var(--col-gap); row-gap: 2rem; align-items: start; }
 .afig-spot .aw { grid-column: 1; }
-.afig-spot .af-aside { position: sticky; top: calc(var(--header) + 1.5rem); }
+.afig-spot .af-aside { align-self: start; }
 /* numbered marks on the dashboard's parts, matching the callouts (alt text "": the
    number is for the eye; the list beside says what each part is) */
 .afig-spot .ag :is(.ag-head, .ag-needs, .ag-kpis-block, .ag-cards, .ag-done) { position: relative; }
@@ -194,4 +194,27 @@ main .ag { font-weight: 400; }
   .afig .ag .ag-kpi:nth-child(odd)::before { display: none; }
   .afig .ag .ag-kpi:nth-child(odd) .ag-kpi-link { padding-inline-start: 0; }
   .afig .ag .ag-kpi:nth-child(n + 3) { border-top: 1px solid var(--ag-rule); }
+}
+
+/* on phones the whole screen stops after its five numbered parts: the week, the hours, the
+   best sellers, money owed and the team are the same dashboard, already shown above */
+@media (max-width: 47.99rem) {
+  .afig-spot .ag-grid > :is(.ag-stock, .ag-hours, .ag-top, .ag-owed, .ag-team, .ag-week) { display: none; }
+}
+
+/* /agent on a phone: the screen stops after Needs you now, Done for you and the four numbers;
+   "See the whole screen" (a native <details>) opens the rest (site audit P1-c). Wider, the
+   whole screen shows and the disclosure is not drawn. */
+.af-more { display: none; }
+@media (max-width: 47.99rem) {
+  .afig-agent .af-more { display: block; grid-column: 1; grid-row: 3; }
+  .afig-agent .af-more > summary {
+    display: flex; align-items: center; justify-content: space-between; gap: var(--space-3);
+    min-height: 2.75rem; padding: 0 var(--space-3); border: 1px solid var(--dark-line);
+    color: var(--on-band); font-weight: var(--weight-medium); cursor: pointer; list-style: none;
+  }
+  .afig-agent .af-more > summary::-webkit-details-marker { display: none; }
+  .afig-agent .af-more > summary:focus-visible { outline: var(--focus-width) solid var(--focus-on-band); outline-offset: var(--focus-offset); }
+  .afig-agent .af-more[open] .qa-mark::after { rotate: 0deg; }
+  .afig-agent:has(.af-more:not([open])) .ag-grid > .ag-kpis-block ~ * { display: none; }
 }

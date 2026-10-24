@@ -1,12 +1,12 @@
 import { Icon, Logo, Symbol } from "./brand";
 import { ContactAddress, ContactButton, contactLink, ContactPending } from "./Contact";
 import { copy, fill, type Locale } from "./copy";
-import { DohaTime } from "./DohaTime";
 import {
-  CONTACT_EMAIL, CONTACT_STATE, OFFER_LIVE, PATHS, PRODUCTS, productPath, WHATSAPP_NUMBER, WORKSPACE_URL,
+  CONTACT_EMAIL, CONTACT_STATE, INCLUDED, OFFER_LIVE, PATHS, PRODUCTS, productPath, WHATSAPP_NUMBER, WORKSPACE_URL,
   type PageKey, type ProductKey,
 } from "./site";
 import { SiteMotion } from "./SiteMotion";
+import { structuredDataJson } from "./structuredData";
 import { rich } from "./Text";
 import { ThemeSwitch } from "./ThemeSwitch";
 
@@ -18,8 +18,7 @@ export function contactHref(): string {
 }
 
 /** The suite, as the Products menu lists it: every product in its fixed order, with its
- * one line and its state. Payroll has no page yet, so its row is not a link: it is drawn
- * on a dashed rule with the pending dot, and named for screen readers as coming. */
+ * one line; the two that come with every product say so ("With every product"). */
 function ProductsMenu({ locale, page }: { locale: Locale; page: PageKey }) {
   const t = copy[locale];
   return (
@@ -33,30 +32,14 @@ function ProductsMenu({ locale, page }: { locale: Locale; page: PageKey }) {
           <ul className="pm-grid" aria-label={t.nav.productsMenu}>
             {PRODUCTS.map((key) => {
               const p = t.products.items[key];
-              const href = productPath(key, locale);
-              const inner = (
-                <>
-                  <span className="pm-name"><bdi>{p.name}</bdi></span>
-                  <span className="pm-line">{p.line}</span>
-                  <span className="pm-state">
-                    {!href && <span className="dot-pending" aria-hidden="true" />}
-                    {p.state}
-                  </span>
-                </>
-              );
               return (
-                <li key={key} className={`pm-item${href ? "" : " pm-soon"}`}>
-                  {href ? (
-                    <a className="pm-link" href={href} aria-current={page === key ? "page" : undefined}>
-                      {inner}
-                      <Icon name="arrow-right" className="ico ico-flip pm-arrow" />
-                    </a>
-                  ) : (
-                    <div className="pm-link">
-                      <span className="pm-soon-in" aria-hidden="true">{inner}</span>
-                      <span className="sr-only">{t.products.payrollSr}</span>
-                    </div>
-                  )}
+                <li key={key} className="pm-item">
+                  <a className="pm-link" href={productPath(key, locale)} aria-current={page === key ? "page" : undefined}>
+                    <span className="pm-name"><bdi>{p.name}</bdi></span>
+                    <span className="pm-line">{p.line}</span>
+                    {INCLUDED.includes(key) && <span className="pm-state">{p.state}</span>}
+                    <Icon name="arrow-right" className="ico ico-flip pm-arrow" />
+                  </a>
                 </li>
               );
             })}
@@ -67,15 +50,19 @@ function ProductsMenu({ locale, page }: { locale: Locale; page: PageKey }) {
   );
 }
 
-/** The header, the closing call to action and the footer that every public page shares.
- * `bar` adds the phone's sticky contact bar (the homepage). */
+/** The header, the closing call to action, the footer and the phone's sticky contact bar
+ * that every public page shares. The bar comes up once the opening's own "Book a check-up"
+ * has scrolled away and goes at the closing call (SiteMotion); the homepage and every
+ * product page have that button (founder, 24 Oct 2026). */
 export function Shell({
-  locale, page, cta, bar = false, children,
+  locale, page, cta, children,
 }: {
   locale: Locale;
   page: PageKey;
-  cta: { title: string; body: string };
-  bar?: boolean;
+  /** The closing call. Its button, the header's and the phone bar's all say the one action,
+   * "Book a check-up" (founder, 24 Oct 2026: one name on every page), from `home.final`
+   * unless a page names its own; `short` is the header's on a phone. */
+  cta: { title: string; body: string; action?: string; short?: string };
   children: React.ReactNode;
 }) {
   const t = copy[locale];
@@ -92,9 +79,13 @@ export function Shell({
   const contact = contactLink(locale);
   const other = PATHS[page][otherLocale];
   const name = (key: ProductKey) => t.products.items[key].name;
+  const action = cta.action ?? t.home.final.action;
+  const short = cta.short ?? t.home.final.short;
 
   return (
     <>
+      {/* what the page is, for search and assistants, from the page's own words (structuredData.ts) */}
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: structuredDataJson(locale, page) }} />
       <a className="skip" href="#main">{t.skip}</a>
 
       <header className="top" data-header>
@@ -114,28 +105,23 @@ export function Shell({
               {t.nav.other}
             </a>
             <ThemeSwitch locale={locale} place="bar" />
-            <a className="btn btn-volt btn-sm btn-notch" href={contact}>{t.nav.cta[CONTACT_STATE]}</a>
+            <a className="btn btn-volt btn-sm btn-notch" href={contact}>
+              <span className="top-cta-full">{action}</span>
+              <span className="top-cta-short">{short}</span>
+            </a>
             <details className="top-menu" data-menu>
               <summary aria-label={t.nav.menu}><Icon name="menu" className="ico" /></summary>
               <div className="top-menu-list">
                 <p className="tm-k" aria-hidden="true">{t.nav.products}</p>
                 <ul className="tm-products" aria-label={t.nav.productsMenu}>
                   {PRODUCTS.map((key) => {
-                    const href = productPath(key, locale);
                     const p = t.products.items[key];
                     return (
                       <li key={key}>
-                        {href ? (
-                          <a href={href} aria-current={page === key ? "page" : undefined}>
-                            <bdi>{p.name}</bdi>
-                            <small>{p.state}</small>
-                          </a>
-                        ) : (
-                          <span className="tm-soon">
-                            <span aria-hidden="true"><bdi>{p.name}</bdi><small>{p.state}</small></span>
-                            <span className="sr-only">{t.products.payrollSr}</span>
-                          </span>
-                        )}
+                        <a href={productPath(key, locale)} aria-current={page === key ? "page" : undefined}>
+                          <bdi>{p.name}</bdi>
+                          {INCLUDED.includes(key) && <small>{p.state}</small>}
+                        </a>
                       </li>
                     );
                   })}
@@ -172,7 +158,7 @@ export function Shell({
                 <ContactPending locale={locale} className="cta-pending" />
               ) : (
                 <div className="cta-actions" data-final-cta>
-                  <ContactButton locale={locale} lean />
+                  <ContactButton locale={locale} lean label={action} />
                   {CONTACT_STATE === "whatsapp" ? (
                     <p className="cta-draft">
                       <span className="sr-only">{t.contact.draft}: </span>
@@ -198,17 +184,9 @@ export function Shell({
             <p className="foot-line">{t.footer.line}</p>
           </div>
           <nav className="foot-nav foot-products" aria-label={t.footer.products}>
-            {PRODUCTS.map((key) => {
-              const href = productPath(key, locale);
-              return href ? (
-                <a key={key} href={href} aria-current={page === key ? "page" : undefined}><bdi>{name(key)}</bdi></a>
-              ) : (
-                <span key={key} className="foot-soon">
-                  <span aria-hidden="true"><bdi>{name(key)}</bdi> ({t.footer.coming})</span>
-                  <span className="sr-only">{t.products.payrollSr}</span>
-                </span>
-              );
-            })}
+            {PRODUCTS.map((key) => (
+              <a key={key} href={productPath(key, locale)} aria-current={page === key ? "page" : undefined}><bdi>{name(key)}</bdi></a>
+            ))}
           </nav>
           <nav className="foot-nav foot-site" aria-label={t.footer.links}>
             <a href={at("#questions")}>{t.nav.questions}</a>
@@ -218,16 +196,15 @@ export function Shell({
           <div className="foot-legal">
             <p>
               <span><span dir="ltr">© 2026</span> {rich(t.footer.rights)}</span>
-              <DohaTime label={t.footer.doha} />
             </p>
             <p>{rich(t.footer.disclaimer)}</p>
           </div>
         </div>
       </footer>
 
-      {bar && CONTACT_STATE !== "pending" && (
+      {CONTACT_STATE !== "pending" && (
         <div className="bar" data-bar role="region" aria-label={t.contact.bar}>
-          <ContactButton locale={locale} className="bar-btn" />
+          <ContactButton locale={locale} className="bar-btn" label={action} />
         </div>
       )}
       <SiteMotion />

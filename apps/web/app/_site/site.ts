@@ -43,23 +43,30 @@ export const TRUST_RECORDS = {
 export type TrustRecord = keyof typeof TRUST_RECORDS;
 
 /** Every public page, and its address in each language. The product pages are in the
- * suite's fixed order: Chat, Bookings, Agent, Accounts (Payroll has no page until it is
- * built). */
+ * suite's fixed order: Chat, Bookings, Agent, Accounts, Shelf, Docs. A product that is not
+ * built has no page and is not listed (D-039; Payroll left the site on 20 Oct 2026). */
 export const PATHS = {
   home: { en: "/", ar: "/ar" },
   chat: { en: "/chat", ar: "/ar/chat" },
   bookings: { en: "/bookings", ar: "/ar/bookings" },
   agent: { en: "/agent", ar: "/ar/agent" },
   accounts: { en: "/accounts", ar: "/ar/accounts" },
+  shelf: { en: "/shelf", ar: "/ar/shelf" },
+  docs: { en: "/docs", ar: "/ar/docs" },
 } as const;
 
 export type PageKey = keyof typeof PATHS;
 
-/** The suite, in its fixed order. Payroll is listed as coming, with no page. */
-export const PRODUCTS = ["chat", "bookings", "agent", "accounts", "payroll"] as const;
+/** The suite, in its fixed order: the four products, then ALYR Shelf and ALYR Docs in
+ * `catalog.py`'s module order (catalog before documents). Every product listed has a page. */
+export const PRODUCTS = ["chat", "bookings", "agent", "accounts", "shelf", "docs"] as const;
 export type ProductKey = (typeof PRODUCTS)[number];
 
-/** A product's page, if it has one. */
-export function productPath(key: ProductKey, locale: "en" | "ar"): string | null {
-  return key === "payroll" ? null : PATHS[key][locale];
+/** The products that come with every other one, not chosen on their own (D-039: ALYR Shelf
+ * is included with ALYR; ALYR Agent comes with each product). */
+export const INCLUDED: readonly ProductKey[] = ["agent", "shelf"];
+
+/** A product's page. */
+export function productPath(key: ProductKey, locale: "en" | "ar"): string {
+  return PATHS[key][locale];
 }

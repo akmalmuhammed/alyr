@@ -1,6 +1,6 @@
 ---
 name: alyr-site-page
-description: Build or change a public ALYR web page or anything on it. Use for the homepage (/ and /ar), the product pages (/chat, /bookings, /agent, /accounts and their /ar pages), adding a new product page, the header, Products menu, theme switch, product bar, footer, closing call, contact states, the offer switch, FIG-captioned drawings of product screens, the "works with" rows, the sitemap, metadata and social cards, and anything under apps/web/app/_site, apps/web/app/(site) or apps/web/app/(site-ar), or scripts/build-site.sh. Load alyr-design first.
+description: Build or change a public ALYR web page or anything on it. Use for the homepage (/ and /ar), the product pages (/chat, /bookings, /agent, /accounts, /shelf, /docs and their /ar pages), adding a new product page, the header, Products menu, theme switch, product bar, footer, closing call, contact states, the offer switch, the "Sample" marks on drawings of product screens, the "works with" rows, the sitemap, metadata and social cards, and anything under apps/web/app/_site, apps/web/app/(site) or apps/web/app/(site-ar), or scripts/build-site.sh. Load alyr-design first.
 ---
 
 # A public ALYR page
@@ -26,21 +26,72 @@ brand lane owns these files (`docs/lanes/site-and-brand.md`).
 
 ## The homepage
 
-In order (`_site/HomePage.tsx`, `home.css`, words under `home` in `copy.ts`):
+The homepage presents ALYR as the small business's tech team (D-048, ALY-210, after D-047;
+folded on 24 Oct 2026, D-048's update, ALY-223). In order (`_site/HomePage.tsx`, `home.css`,
+words under `home` in `copy.ts`):
 
-1. **Header** with the Products menu, By business, How it works, Questions, the language
-   link, the theme switch and the contact button (Price only with the offer).
-2. **Hero:** eyebrow "ALYR · At work for you", H1 "Your business just got an agent.", a body
-   that names who does what and says "by rules you can check", the contact button, the note
-   ("A person from ALYR replies." and the address), the facts row; beside it, on the Carbon
-   plate, the real ALYR Agent dashboard in showcase mode and the live feed (newest on top,
-   a rule line in the first screen). Phones: the feed first, then the window.
-3. **Agent spotlight:** the whole dashboard with numbered callouts and the sample switch
-   (Bakery, Salon, Home services), opening on the salon.
-4. **The suite** on the Carbon band, entered through the fold: each product in order with a
-   crop of its real screen.
-5. **By business**, **How it works** (step 4 is the report card as a WhatsApp message),
-   **Trust** (as ALYR, no founder), **Questions**, the **closing call**, the **footer**.
+1. **Header** with the Products menu (a state only on ALYR Agent and ALYR Shelf, "With every
+   product"), By business, How we work, Questions, the language link, the theme switch and
+   the button "Book a check-up" (`home.final.action`; its `short`, "Check-up", below 62rem so
+   the line never overflows). Every page's header, closing call and sticky bar say the same
+   (`Shell` takes them from `home.final`). Price only with the offer.
+2. **Hero:** no eyebrow on the page (`hero.eyebrow` is the social card's only), H1 "The tech
+   team your business never had.", then one row under it: the lead on the start side, which
+   carries the one line of why ("Big businesses have consultants and an IT team for this.
+   You have us: …"), "Book a check-up" and "See how we work" (to `#how`) with the note on the
+   end side; the facts row ("We come to your shop, in Qatar"); the real ALYR Agent dashboard,
+   marked "Sample" in its window bar, and the live feed on the Carbon plate. The feed's flags
+   say "Needs a look" and their rule line starts "Why ·" (`AgentFigure.tsx` `reason`); the
+   product's own screens keep "Rule".
+3. **How we work** (`#how`): check, set up, see, improve, on the rail that fills with the
+   scroll; once full, a dashed arc draws from step 4 back to step 1 with "Then we check
+   again" (`.how-loop`, Choreography sets `is-looped`; drawn statically without motion). On
+   phones a dashed line from step 4 to an up-arrow row. Then a line button and "What we need
+   from you".
+4. **Your business** (`#business`, `BusinessTabs.tsx`): one tab per business type plus
+   "Something else"; each panel has an anchor (`#bakery`, `#wholesale`, `#fashion`,
+   `#restaurant`, `#salon`, `#home-services`, `#other`), the "Today" list (what a check-up
+   finds, in the problems' own words: lost orders, the same questions, "Is my order ready?",
+   the empty chair, regulars who owe, not knowing how the week compares), "With ALYR" row for
+   row, the products it would use, and a line contact button whose message names that
+   business (`ContactButton message`). Panels are server HTML: stacked without scripts, one
+   cell with scripts so the page below never moves. The tabs are cards with a line icon
+   (`brand.tsx`). Each panel opens on **the day split by the fold** (`FoldSplit.tsx`,
+   `room.css`, ALY-209): the owner's WhatsApp chats on faded paper and the same customers as
+   ALYR keeps them on Carbon (marked "Sample"), row for row (`chats` and `orders` on each
+   `BusinessRow`; keep the unread counts adding up to the header's, and every status one ALYR
+   really shows). A 45° fold between them is dragged, moved with the keys (a `role="slider"`
+   handle) or sent across by "Today" and "With ALYR"; it sweeps once when first read. Phones
+   rest on "With ALYR" and swipe.
+5. **One order, start to finish** (`#see`): the `/chat` flow figure (`FlowDiagram`) told for
+   Sara at Qirfa Bakery, on a cut-corner Carbon plate, marked "Sample" at the end of its tab
+   row, and the tally of who did what. Every step shown is built; keep the tally's counts true
+   to the steps.
+6. **ALYR Agent** (eyebrow "ALYR Agent · With every product") with numbered callouts and the
+   sample switch (its "Sample business" label is the mark), opening on the bakery. Not
+   pinned; on phones the screen stops after its five numbered parts.
+7. **The products** on the Carbon band as six plain rows (`room.css` `.suite-row`): name,
+   descriptor, the state only on Agent and Shelf, one sentence and its link, and the corner of
+   the product's real screen at true size with its "Sample" mark; then the two notes. Nothing
+   is pinned and nothing plays. Then **Price** (offer on: the price, examples by trade, setup,
+   the first month, what every month includes, the agreement), **Trust**, **Questions** (the
+   first `faq.shown` open to read, the rest under "More questions"; a `#q-...` link opens the
+   fold), the **closing call**, the **footer** (no clock).
+
+Gone on 24 Oct and not to come back without the founder: the Why ALYR table, "What a check-up
+finds" as its own section, the pinned products room, eyebrows that repeat a heading or a
+header link, numbers on tabs and indexes, FIG captions.
+
+"Agent" on the homepage always sits beside what it counted; no AI words, no «وكيل» (the Arabic
+says ALYR «تتولى عنك العمل المعتاد»), no "Is it AI?" question. Say "reason" or "why", not
+"rule", in the homepage's own words. Nothing on the homepage is pinned.
+
+`/chat`'s "Everything it does today" is the phone with X-ray (`ChatXray.tsx`, `xray.css`,
+ALY-209): the list beside a pinned phone that shows the feature being read; "For your team"
+brings the team's workspace in behind it, "Behind the scenes" turns the phone to X-ray with
+the message's path through ALYR. Each item's `scene` in `copy.ts` must show only what is
+built (a payment link opens the test page; STOP's reply is `core/consent.py`'s own words).
+Without scripts it is the three columns.
 
 ## The product page template
 
@@ -49,14 +100,17 @@ Every product page uses `_site/ProductKit.tsx` and `kit.css`, in this order:
 | Block | Component | Rule |
 |---|---|---|
 | Product bar | `ProductBar` | Name with the signal and its sections; sticky; no call to action |
-| Opening on Carbon | `ProductHero` | Eyebrow with the state, a two-line H1 that names the result (second line Concrete), the lead, a tabbed demo (`ProductDemo`), three facts on one rule. Cut corner, not rounded |
+| Opening on Carbon | `ProductHero` | Eyebrow with the state, a two-line H1 that names the result (second line Concrete), the lead, the page's one Volt button "Book a check-up" (`HeroAction`: `home.hero.action`, the homepage's contact link, `data-hero-cta`; the column's width on a phone), a tabbed demo (`ProductDemo`), three facts on one rule. Cut corner, not rounded |
+| Signature figure (optional, after the opening) | `LastOne.tsx`, `PaymentPaper.tsx`, `moment.css` | One real object changing state (03-visuals of `docs/site-products-2`): three parts hanging from one label line over a rule, CSS keyframes keyed on `.is-in` on each part, every delay a number of `--stagger` steps, one Volt mark, done before 3 s; the HTML is the end state. `data-sig` (not `data-m`) gives it SiteMotion's own trigger: on a wide screen the whole figure starts once 60% of it is on screen or its top is past the middle; on a phone each part starts as it arrives, its delays counted from its own first beat (`--t0`). It keeps `motion` past the 4 s failsafe. Measure that it starts and ends in view (`--eval`, no screenshots). It must fit one screen at 1440 × 900 |
 | How it works, from both sides | `FlowSection` (`FlowDiagram`) | The customer's steps and the business's, in the product's real words |
 | The screen used every day | `ScreenBlock` | The real workspace screen at true scale in the workspace window, numbered Carbon callouts beside it; on phones the workspace's phone layout (cards), never a sideways table with no cue |
-| What's in it | `InsideBlock` | Everything it does today by audience, then **Not yet** below a dashed rule with the pending dot |
+| What's in it | `InsideBlock` | Everything it does today by audience; a figure beside it if the page needs one (`children`); then **Not yet** below a dashed rule with the pending dot, only for an item whose absence would make another line untrue (D-039: nothing coming is shown). Leave `notYet` out otherwise |
+| (each part tells one thing) | | The demo, the signature, the flow and "What's in it" each tell a different part; a story drawn three times is cut, not squeezed. A product page stays near the family's height (about 8,800 px at 1440, plus a signature figure) |
 | Who it's for | `WhoBlock` | Rows by business type with what each uses; tags in suite order |
 | Works with the rest of ALYR | `WorksBlock` | Ruled rows in the suite's order without the page's own product |
 | Questions | `QuestionsBlock` | Native `<details>`, an `id` per question; "Can I use it on its own?", "How long does setup take?" |
 | Closing call | `Shell` | The fold at its top, the contact block in its state |
+| Phone's contact bar | `Shell`, `SiteMotion` | As on the homepage (founder, 24 Oct 2026), below 53rem: up once the opening's `data-hero-cta` button has scrolled away, down while the closing call or the footer is on screen; 44 px button, `env(safe-area-inset-bottom)`, no slide with reduced motion, down without scripts. One Volt button on screen: the header's is the outlined twin while the opening's is in view and hides while the bar is up (`site.css`). A page whose opening has no `data-hero-cta` never shows the bar |
 
 Each page has its own English social card (`(site)/<page>/opengraph-image.tsx` through
 `_site/socialCard.tsx`). Arabic pages share the English homepage card until Arabic cards are
@@ -65,10 +119,12 @@ drawn with resvg (`alyr-generated-image`).
 ## Adding a product page
 
 **First, may it exist?** A product gets a page only when it is built and the founder has
-said so (D-037: "ALYR Payroll is listed as coming, with no page until it is built"; D-039:
-nothing "coming" is shown to an owner or customer at go-live). **"A coming-soon page for
-ALYR Payroll" is therefore not something to build.** Stop, label the issue "Needs Akmal",
-and ask: is Payroll built and in the catalogue as live, and does he want its page now?
+said so (D-039: nothing "coming" is shown to an owner or customer at go-live; on 20 Oct
+2026 the founder took Payroll off the site until it is built). **"A coming-soon page for
+ALYR Payroll" is therefore not something to build**, and nothing names it. Stop, label the
+issue "Needs Akmal", and ask: is it built and in the catalogue as live, and does he want its
+page now? A product that is built but still off for shops can have a page only on his word,
+and then its page never says it is available (ALYR Docs, 20 Oct 2026).
 You may draft its words and claims in the work folder (`docs/work/ALY-NN-.../`) for his
 review; nothing goes into `copy.ts` or a route.
 
@@ -76,15 +132,15 @@ Once a product is built and approved, the page needs every one of these, or it i
 silently not published, or published and not linked:
 
 1. **`_site/site.ts`:** its key and both addresses in `PATHS` (feeds the canonical link,
-   hreflang, the language link and the sitemap); keep `PRODUCTS` in suite order; change
-   `productPath()` so the key returns its path (it hard-codes Payroll as `null`).
+   hreflang, the language link and the sitemap); keep `PRODUCTS` in suite order
+   (`productPath()` returns `PATHS[key]`; every product listed has a page). If it comes with
+   every product, add it to `INCLUDED`.
 2. **`_site/copy.ts`, both languages, typed:** `meta.<key>` (title, description,
    `descriptionNoOffer`) and the `meta` key union; a `pages.<key>` type and both objects;
-   `products.items.<key>` (name, descriptor, line, state) for the menu; remove the
-   coming-only strings (`payrollSr`, each page's `works.payroll` and the `suite.payroll`
-   line) if the product was the coming one; `works.rows.<key>` on every other product page
-   and widen its type (it is `Exclude<ProductKey, "payroll">` today); the homepage suite row,
-   its business tags and the Products menu line.
+   `products.items.<key>` (name, descriptor, line, state) for the menu; `works.rows.<key>`
+   on every other product page; the homepage suite row (`home.suite.rows` is typed by every
+   `ProductKey`), its business tags and the Products menu line. A page with a lot of words
+   can keep them in its own copy file (`copyShelf.ts`, `copyDocs.ts`) that `copy.ts` imports.
 3. **The page component** `_site/<Name>Page.tsx` from `ProductKit` blocks.
 4. **Routes in both groups:** `app/(site)/<key>/page.tsx` and
    `app/(site-ar)/ar/<key>/page.tsx`, each with `siteMetadata(locale, "<key>")`.
@@ -96,7 +152,8 @@ silently not published, or published and not linked:
    real screen, and the suite row's link.
 8. **Menu, footer and "works with" rows** read `PRODUCTS` and `productPath`, so they turn into
    links once step 1 is done; check each, in both languages, with the menu open.
-9. **Check:** `bash scripts/build-site.sh` passes; `out-site/<key>.html`,
+9. **Check:** `pnpm site:check` passes (from `apps/web`: `build-site.sh`, EN/AR parity,
+   banned words and prices, internal links); `out-site/<key>.html`,
    `out-site/ar/<key>.html` and the card exist; `sitemap.xml` lists both addresses; the
    language link lands on the same section.
 10. **Docs in the same PR:** `docs/brand.md` (the suite on the site), `docs/status.md`, the
@@ -107,8 +164,16 @@ silently not published, or published and not linked:
 
 - Draw the product's real screens in its exact words (status names, buttons, times as it
   prints them); prefer samples captured from the engine to hand drawings.
-- One sample business per figure set; FIG caption on every drawing.
+- One sample business per figure set; every drawing marked "Sample" once in its own chrome
+  (`SampleMark`; a drawn phone's header says "Sample business"), and its figure's first line
+  saying, for machines, that the business is fictional (`alyr-design/honesty.md` §4). A
+  caption only where the drawing needs words.
 - The contact block from `Contact.tsx`; prices only through `OFFER_LIVE`.
+- Structured data from `_site/structuredData.ts` (rendered by `Shell`): Organization,
+  WebSite on the homepage, SoftwareApplication and BreadcrumbList on each product page,
+  FAQPage from the questions the page shows. Built from the page's own words; never
+  `offers`, a price, a rating, a review, a legal name, an address or `sameAs` before they are
+  true. A new product page gets it by having its `meta`, `products.items` and `faq` entries.
 - Logical CSS; `[dir="rtl"]` only for what cannot mirror; every cut mirrored.
 - Name heading line breaks in copy; check 320 px.
 - Static HTML first: anything live (clock, steppers, observers) runs after hydration and the
@@ -126,19 +191,21 @@ silently not published, or published and not linked:
 - Add a second Volt button, a carousel, a pop-up, a cookie banner, a logo wall, a counter,
   a third-party script or analytics (also a data-residency question).
 - Add a dependency without a one-line reason in the PR.
-- Deploy. `npx wrangler deploy` is the founder's laptop and the founder's yes, each time.
+- Deploy. Publishing is the founder's yes each time: his approval of the `production`
+  environment in GitHub (`site deploy` workflow), or `pnpm site:deploy` on his laptop
+  (`docs/runbooks/site-deploy.md`). A pull request gets a preview address on its own.
 
 ## Done when
 
 - [ ] Every word in `copy.ts`, both languages; `/ar` has no stray English.
 - [ ] Claims checked against `docs/status.md` and `alyr-design/honesty.md`, including meta,
-      social card and alt text; no AI words; samples captioned once.
+      social card and alt text; no AI words; samples marked once, in their chrome, with the machine line first.
 - [ ] Looked at: both languages, 1440, 390 and 320, light and dark, reduced motion, no
       scripts, the Products menu and the phone menu open, every contact state touched.
 - [ ] No horizontal scroll at 320; targets 44 px; focus visible; headings in order.
-- [ ] `pnpm lint`, `pnpm exec tsc --noEmit`, `bash scripts/build-site.sh` pass.
-- [ ] axe zero serious or critical; Lighthouse mobile on changed pages ≥ 90, LCP < 2.5 s,
-      CLS < 0.05.
+- [ ] `pnpm lint`, `pnpm exec tsc --noEmit`, `pnpm site:check` pass.
+- [ ] `pnpm site:a11y`: axe zero serious or critical; Lighthouse mobile on changed pages
+      ≥ 90, LCP < 2.5 s, CLS < 0.05 (`--pages=` for the changed ones).
 - [ ] `/chat` and every page sharing a changed component still look as before.
 - [ ] Docs updated; screenshots listed in the PR; "Not checked" written; founder asked
       before any publish.

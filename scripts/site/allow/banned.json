@@ -1,0 +1,94 @@
+{
+  "$comment": "Reviewed uses of a banned word that are true, for scripts/site/banned-words.mjs. A hit is allowed when its word matches `term` and the copy string (or the 120 characters around it on a built page) contains `context`. `where` is copy, html or both (the default). Every entry needs a reason; an entry that matches nothing fails the check. Reviewed 24 Oct 2026 by the Go-live lane against honesty.md; the site lane may reword any of these lines instead, and then the entry is removed.",
+  "words": [
+    {
+      "term": "coming",
+      "context": "When are you coming?",
+      "reason": "The home-services owner's day today (home.business, Zilal Cooling's sample): a customer asking the technician when he is coming. Not ALYR announcing a product."
+    },
+    {
+      "term": "soon",
+      "context": "Our WhatsApp line opens soon",
+      "reason": "The pending-contact line that honesty.md section 7 allows ('Our WhatsApp line opens soon' at most once a page, in the questions; contact.pending and the WhatsApp question)."
+    },
+    {
+      "term": "قريباً",
+      "context": "سيتوفر رقم واتساب الخاص بنا قريبا",
+      "reason": "The Arabic of the pending-contact line honesty.md section 7 allows."
+    },
+    {
+      "term": "soon",
+      "context": "Our prices go on this page soon",
+      "reason": "The offer-off answer to 'What does it cost?' (home.faq id cost, offer: false): it says prices are not on the site yet, as D-034 requires, and is replaced by the priced answer when the offer switch is on."
+    },
+    {
+      "term": "قريباً",
+      "context": "سننشر أسعارنا على هذه الصفحة قريبا",
+      "reason": "The Arabic of the offer-off answer to 'What does it cost?'."
+    },
+    {
+      "term": "soon",
+      "context": "Pressed too soon?",
+      "reason": "/shelf's stock undo step: 'pressed too soon' is about the person, not a product that is coming."
+    },
+    {
+      "term": "reads",
+      "context": "reads the orders, bookings, chats and credit already in your workspace",
+      "reason": "Reads records, in the sense of taking data from the workspace, not understanding (honesty.md bans 'reads' meaning understands). The next sentences say what it does with them: puts work first, compares the week. Borderline: the site lane may prefer 'counts' or 'takes'."
+    },
+    {
+      "term": "reads",
+      "context": "reads your hours, locks the time",
+      "reason": "/bookings: it reads the business's opening hours (data), then locks the slot. Not understanding."
+    },
+    {
+      "term": "reads",
+      "context": "Reads only its own records",
+      "reason": "/chat's X-ray: each business's data is read only by itself (tenant isolation). Data access, not understanding."
+    },
+    {
+      "term": "notices",
+      "context": "reminders or notices",
+      "reason": "A noun (notifications), in the STOP reply that core/consent.py sends word for word and in /accounts' answer about it. honesty.md bans 'notices' as a verb of the product."
+    },
+    {
+      "term": "notices",
+      "context": "Reminders and notices",
+      "reason": "A noun (notifications), the label of what stops after STOP in /chat's X-ray."
+    },
+    {
+      "term": "knows",
+      "context": "Your team knows it was read",
+      "reason": "/bookings: the team (people) knows the reminder was read. honesty.md: 'The owner is the one who knows'; the ban is on the product knowing."
+    },
+    {
+      "term": "يعرف",
+      "context": "فيعرف الفريق من يتولا",
+      "reason": "The team (people) knows who has the order or chat (home and /chat flows). The ban is يعرف of the product."
+    },
+    {
+      "term": "يعرف",
+      "context": "فريقك يعرف أنها قرأته",
+      "reason": "/bookings: your team knows the reminder was read (people, not the product)."
+    },
+    {
+      "term": "يعرف",
+      "context": "يعرف العميل",
+      "reason": "The customer (a person) knows: their promise was recorded (/accounts), the reason for a cancelled order (/shelf), that the last item sold out (/shelf question). Not the product."
+    }
+  ],
+  "offerOnly": [
+    {
+      "path": "home.price.**",
+      "reason": "The price section renders only with the offer on (HomePage.tsx: {OFFER_LIVE && <Price/>})."
+    },
+    {
+      "path": "home.trust.closing",
+      "reason": "Rendered only with the offer on (HomePage.tsx Trust: {OFFER_LIVE && <p className=\"trust-closing\">})."
+    },
+    {
+      "path": "**.factsOffer[*]",
+      "reason": "Added to a product page's facts only with the offer on (ProductKit.tsx ProductHero)."
+    }
+  ]
+}
