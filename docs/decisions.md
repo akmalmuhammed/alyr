@@ -994,3 +994,22 @@ There is no separate Pay product: payment links stay a module of Chat and Bookin
 
 **Revisit when** terms acceptance (ALY-167) and per-shop templates (ALY-172) exist: they become checks. When billing starts at Live (ALY-218).
 
+
+## D-050 · Each WhatsApp way has its own list of what to have ready, and its state is honest about Meta
+**Date** 23 Oct 2026 · **Status** Accepted (the founder, 23 Oct: "think every onboarding, whatsapp integration, our whatsapp, clients own whatsapp options") · Linear ALY-217 · Spec `specs/019-whatsapp-setup/spec.md`
+
+**The decision.** A business chooses how its customers reach it on WhatsApp: a new number, moving the number it already uses in the WhatsApp Business app (Meta's coexistence), or a WhatsApp Business Platform account it already has with another provider. Each way lists what the owner must have ready, in plain words in English and Arabic; the owner gives the number and ticks the rest. The step waits only once everything is ready, and then says on whom: Meta (while ALYR cannot connect that way yet) or ALYR. ALYR marks it connecting, or failed with a reason the owner reads. Connected is never typed in: it is the business's Meta number row.
+
+**Why.**
+- The slow part of connecting a number is the business not having what Meta asks for on the day (a number already on WhatsApp, no business portfolio, no card in Meta, an app too old to move). Asking for it up front turns a failed call into a checklist.
+- Each business pays Meta for its own messages: a Tech Provider has no credit line. The card in Meta is a step, said plainly before the owner meets it.
+- Moving a number changes the owner's app (groups stay in the app, broadcast lists become read-only, disappearing and view once messages switch off, linked computers are signed out, the phone must open the app every 14 days). The owner accepts that before ALYR moves it, not after.
+- Until Meta approves ALYR, "waiting for Meta" is the true state. A setting (`ALYR_WHATSAPP_WAYS_OPEN`) opens each way the day it can be connected, with no code change.
+
+**Checked against Meta's own pages on 23 Oct 2026.** Coexistence: app 2.24.17 or newer, six months of one-to-one chats sync within 24 hours, 20 messages a second, the limits above. An account with another provider is shared with ALYR in Meta Business Suite: Meta's new account model does not move numbers between accounts.
+
+**Not offered: ALYR's own shared number.** Customers of many businesses writing to one number needs a step that asks which business they mean, and every message on it is charged to ALYR. It stays in the list of ways, hidden from owners, until the founder decides.
+
+**Chosen over** one generic "connect WhatsApp" button with a call booked by hand (it hides the four very different paths and what each needs), and over storing a "connected" flag (it lies when a number is detached).
+
+**Revisit when** ALYR is a Tech Provider (ALY-52) and Embedded Signup (ALY-39) exists: Embedded Signup will fill in the number and the state itself, and the attach action (ALY-166) writes the Meta number row.

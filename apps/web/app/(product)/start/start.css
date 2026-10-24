@@ -381,3 +381,16 @@
 .ob-fine { color: var(--ink-3); font-size: var(--ui-small); line-height: 1.5; }
 .ob-also { margin-top: 18px; }
 @media (min-width: 720px) { .ob-choices { grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); } }
+
+/* What the chosen WhatsApp way needs, and where ALYR is with it (ALY-217). */
+.ob-wa { display: grid; gap: 10px; padding: 12px 14px; border-radius: 14px; background: var(--raise); box-shadow: 0 0 0 1px var(--hair-2) inset; }
+.ob-wa-status { margin: 0; font-size: var(--ui-body-sm); line-height: 1.5; color: var(--ink-2); }
+.ob-wa-status.failed { color: var(--bad); }
+.ob-wa-status.waiting_on_meta, .ob-wa-status.queued, .ob-wa-status.connecting { color: var(--ink); }
+.ob-wa-needs { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; }
+.ob-wa-needs label { display: grid; grid-template-columns: auto 1fr; gap: 10px; align-items: start; font-size: var(--ui-small); line-height: 1.5; color: var(--ink-2); cursor: pointer; }
+.ob-wa-needs input { width: 18px; height: 18px; margin: 1px 0 0; accent-color: var(--ink); }
+.ob-wa-fields { display: grid; gap: 12px; justify-items: start; }
+.ob-wa-fields .ob-field { width: 100%; }
+.ob-wa-fields .ob-field small { color: var(--ink-3); font-size: var(--ui-small); line-height: 1.45; }
+.ob-wa-fields .ob-error { margin: 0; }

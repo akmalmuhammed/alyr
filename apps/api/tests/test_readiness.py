@@ -101,8 +101,13 @@ def test_ready_when_only_whatsapp_is_left_then_live_once_it_is_connected(client,
     accept_price(client, office, name)
     assert step(client, "payments", choice="cash_transfer").status_code == 200
 
-    # The owner chose a new number; it waits on ALYR and Meta, and the business is ready.
+    # The owner chose a new number and has what it needs (ALY-217): it waits on ALYR and
+    # Meta, and the business is ready.
     state = step(client, "whatsapp", choice="new_number").json()
+    assert line(state, "whatsapp")["status"] == "todo"
+    state = client.patch(f"{BASE}/whatsapp", json={
+        "phone": "+97433330001", "display_name": name, "ready": ["portfolio", "meta_card"],
+    }).json()
     assert line(state, "whatsapp")["status"] == "waiting"
     assert (state["stage"], state["left"]) == ("ready", ["whatsapp"])
     assert state["ready_at"] and not state["live_at"]

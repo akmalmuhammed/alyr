@@ -47,7 +47,12 @@ type Quote = {
 type Check = {
   key: string; label: Record<Lang, string>; todo: Record<Lang, string>;
   status: "done" | "todo" | "waiting"; owner: "client" | "alyr"; asked: boolean; blocker: string;
-  choice: string; choices: string[];
+  choice: string; choices: string[]; setup?: WaSetup;
+};
+// How the business gets onto WhatsApp (ALY-217): what its way needs, and where ALYR is.
+type WaNeed = { key: string; label: Record<Lang, string>; field: "" | "phone" | "display_name"; done: boolean };
+type WaSetup = {
+  way: string; status: string; phone: string; display_name: string; needs: WaNeed[]; note: string; open: boolean;
 };
 type Readiness = { stage: "setting_up" | "ready" | "live"; checks: Check[]; left: string[] };
 // "Start on ALYR's number" waits on the founder's decision (ALY-217); the others are offered.
@@ -144,6 +149,9 @@ export default function Start() {
   const [draft, setDraft] = useState("");
   const [tested, setTested] = useState<Booking | null>(null);
   const [ready, setReady] = useState<Readiness | null>(null);
+  // The WhatsApp number and name as the owner types them, until saved.
+  const [waDraft, setWaDraft] = useState<{ phone?: string; display_name?: string }>({});
+  const [waError, setWaError] = useState("");
   const [quote, setQuote] = useState<Quote | null>(null);
   const [quoteFlash, setQuoteFlash] = useState(false);
   const quoteSeen = useRef("");
@@ -387,6 +395,15 @@ export default function Start() {
     const answer = await call<Readiness>(`/api/onboarding/steps/${key}`, "PATCH", change);
     if (answer.ok) setReady(answer.data);
     else setError(t.offline);
+  });
+  // Give the number, the name, or tick what is ready for the chosen way (ALY-217).
+  const changeWhatsapp = (change: { phone?: string; display_name?: string; ready?: string[] }) => guard(async () => {
+    const answer = await call<Readiness>("/api/onboarding/whatsapp", "PATCH", change);
+    if (answer.status === 422) return setWaError(t.golive.waInvalid);
+    if (!answer.ok) return setError(t.offline);
+    setWaError("");
+    setWaDraft({});
+    setReady(answer.data);
   });
   const finish = () => guard(async () => {
     await call("/api/onboarding/finish", "POST");
@@ -740,6 +757,54 @@ export default function Start() {
         ))}
       </div>
     );
+    // What the chosen way needs: the number (and a new number's name) typed in, the rest ticked.
+    const waNeeds = (setup: WaSetup) => {
+      const ticked = setup.needs.filter((n) => !n.field && n.done).map((n) => n.key);
+      const fields = setup.needs.filter((n) => n.field);
+      const value = (f: "phone" | "display_name") => waDraft[f] ?? setup[f];
+      const dirty = fields.some((n) => value(n.field as "phone" | "display_name") !== setup[n.field as "phone" | "display_name"]);
+      const status = g.waStatus[setup.status];
+      return (
+        <div className="ob-wa">
+          {status && <p className={`ob-wa-status ${setup.status}`}>{status}{setup.status === "failed" && setup.note && <> {setup.note}</>}</p>}
+          {setup.needs.length > 0 && setup.status !== "connected" && <>
+            <p className="ob-kicker">{g.getReady}</p>
+            <ul className="ob-wa-needs">
+              {setup.needs.filter((n) => !n.field).map((n) => (
+                <li key={n.key}>
+                  <label>
+                    <input type="checkbox" checked={n.done} disabled={busy}
+                      onChange={(e) => changeWhatsapp({ ready: e.target.checked ? [...ticked, n.key] : ticked.filter((k) => k !== n.key) })} />
+                    <span>{n.label[lang]}</span>
+                  </label>
+                </li>
+              ))}
+            </ul>
+            {fields.length > 0 && (
+              <form className="ob-wa-fields" onSubmit={(e) => {
+                e.preventDefault();
+                changeWhatsapp(Object.fromEntries(fields.map((n) => [n.field, value(n.field as "phone" | "display_name")])));
+              }}>
+                {fields.map((n) => (
+                  <label key={n.key} className="ob-field">
+                    <span>{n.field === "phone" ? g.phone : g.displayName}</span>
+                    <small>{n.label[lang]}</small>
+                    <input
+                      type={n.field === "phone" ? "tel" : "text"} dir={n.field === "phone" ? "ltr" : undefined}
+                      inputMode={n.field === "phone" ? "tel" : undefined} autoComplete={n.field === "phone" ? "tel" : "organization"}
+                      placeholder={n.field === "phone" ? g.phoneHint : ""} maxLength={n.field === "phone" ? 30 : 80}
+                      value={value(n.field as "phone" | "display_name")}
+                      onChange={(e) => setWaDraft((d) => ({ ...d, [n.field]: e.target.value }))} />
+                  </label>
+                ))}
+                {waError && <p className="ob-error" role="alert">{waError}</p>}
+                <button type="submit" className="ob-btn small" disabled={busy || !dirty}>{dirty ? g.save : g.saved}</button>
+              </form>
+            )}
+          </>}
+        </div>
+      );
+    };
     const row = (c: Check) => {
       const done = c.status === "done";
       // A step with choices shows them below, with its own "ask ALYR" link.
@@ -765,6 +830,7 @@ export default function Start() {
             <div className="ob-check-more">
               <p className="ob-kicker">{g.chooseWhatsapp}</p>
               {choicesOf(c, g.whatsappWays, WHATSAPP_OFFERED)}
+              {c.choice && c.setup && waNeeds(c.setup)}
               <small className="ob-fine">{g.whatsappNote}</small>
               <button type="button" className="ob-link" onClick={() => changeStep(c.key, { owner: "alyr" })} disabled={busy}>{g.ask}</button>
             </div>

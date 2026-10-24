@@ -20,7 +20,7 @@ from pydantic import BaseModel, Field
 
 from alyr import catalog, presets
 from alyr.config import get_settings
-from alyr.core import auth, backoffice, pricing, readiness
+from alyr.core import auth, backoffice, pricing, readiness, whatsapp_setup
 from alyr.core.auth import Staff
 from alyr.modules.items import clock as shop_clock
 from alyr.modules.items import template, template_change
@@ -122,6 +122,16 @@ class StepChange(BaseModel):
     # What is holding the step up, in ALYR's words; empty clears it.
     blocker: str | None = Field(default=None, max_length=500)
     choice: str | None = Field(default=None, max_length=40)
+
+
+class WhatsappChange(BaseModel):
+    # What ALYR fills in for the client (assisted onboarding)...
+    phone: str | None = Field(default=None, max_length=30)
+    display_name: str | None = Field(default=None, max_length=80)
+    ready: list[str] | None = Field(default=None, max_length=10)
+    # ...and where ALYR is with the connection; a failure says why, for the owner to read.
+    state: Literal["", "connecting", "failed"] | None = None
+    note: str = Field(default="", max_length=500)
 
 
 class NewStaff(BaseModel):
@@ -657,4 +667,35 @@ async def change_step(
     except LookupError as error:
         raise HTTPException(status_code=404, detail=str(error)) from error
     except readiness.ReadinessError as error:
+        raise HTTPException(status_code=422, detail=str(error)) from error
+
+
+@router.patch("/businesses/{business_id}/whatsapp")
+async def change_whatsapp(
+    business_id: UUID, body: WhatsappChange, request: Request,
+    staff: Staff = Depends(platform_admin),
+) -> dict:
+    """Fill in a business's WhatsApp setup for them, or say where ALYR is with connecting
+    it (ALY-217). The owner sees the state, and a failure's reason, on their go-live list."""
+    try:
+        async with _in_business(request, business_id) as conn:
+            # The audit names what was filled in, and keeps ALYR's state and note.
+            detail: dict = {}
+            if (body.phone, body.display_name, body.ready) != (None, None, None):
+                given = await whatsapp_setup.prepare(
+                    conn, _by(staff), True, phone=body.phone, display_name=body.display_name,
+                    ready=body.ready,
+                )
+                detail |= {key: True for key in given}
+            if body.state is not None and await whatsapp_setup.set_state(
+                conn, body.state, body.note, _by(staff)
+            ):
+                detail |= {"state": body.state, "note": body.note.strip()}
+            if detail:
+                await backoffice.audit(
+                    conn, staff, "onboarding.whatsapp", "business", business_id,
+                    business_id=business_id, detail=detail,
+                )
+            return await readiness.run(conn, _by(staff), by_alyr=True)
+    except whatsapp_setup.SetupError as error:
         raise HTTPException(status_code=422, detail=str(error)) from error

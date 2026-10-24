@@ -7,7 +7,7 @@ from fastapi import APIRouter, Depends, HTTPException, Request, Response
 from pydantic import BaseModel, Field
 
 from alyr.config import get_settings
-from alyr.core import auth, mail, onboarding, pricing, readiness
+from alyr.core import auth, mail, onboarding, pricing, readiness, whatsapp_setup
 from alyr.core.auth import Staff
 from alyr.routes.deps import current_staff
 
@@ -49,6 +49,14 @@ class StepChange(BaseModel):
     owner: str | None = Field(default=None, max_length=10)
     # How the business wants to do a step that has choices (WhatsApp, payments).
     choice: str | None = Field(default=None, max_length=40)
+
+
+class WhatsappSetup(BaseModel):
+    # The way, as on the go-live list; then the number and what is ready (ALY-217).
+    way: str | None = Field(default=None, max_length=40)
+    phone: str | None = Field(default=None, max_length=30)
+    display_name: str | None = Field(default=None, max_length=80)
+    ready: list[str] | None = Field(default=None, max_length=10)
 
 
 class TestMessage(BaseModel):
@@ -216,6 +224,27 @@ async def change_step(
     except LookupError as error:
         raise HTTPException(status_code=404, detail=str(error)) from error
     except readiness.ReadinessError as error:
+        raise HTTPException(status_code=422, detail=str(error)) from error
+
+
+@router.patch("/whatsapp")
+async def change_whatsapp(
+    body: WhatsappSetup, request: Request, staff: Staff = Depends(current_staff)
+) -> dict:
+    """The owner chooses how customers reach them on WhatsApp, gives the number and ticks
+    what they have ready. Answers the whole go-live list."""
+    _owner(staff)
+    try:
+        async with request.app.state.db.tenant(staff.tenant_id) as conn:
+            if body.way is not None:
+                await readiness.set_choice(conn, "whatsapp", body.way, staff.name, False)
+            if (body.phone, body.display_name, body.ready) != (None, None, None):
+                await whatsapp_setup.prepare(
+                    conn, staff.name, False, phone=body.phone, display_name=body.display_name,
+                    ready=body.ready,
+                )
+            return await readiness.run(conn, staff.name)
+    except (readiness.ReadinessError, whatsapp_setup.SetupError) as error:
         raise HTTPException(status_code=422, detail=str(error)) from error
 
 
