@@ -84,7 +84,7 @@ export function OrderBarCrop({ crops }: { crops: Crops }) {
     <div className="d-crop d-crop-bar" aria-hidden="true">
       <div className="d-bar">
         <div className="d-sum"><span>{crops.items}</span><b>{rich(crops.total)}</b></div>
-        <span className="d-btn"><span>{rich(crops.pay)}</span></span>
+        <span className="d-btn is-line"><span>{rich(crops.pay)}</span></span>
       </div>
     </div>
   );

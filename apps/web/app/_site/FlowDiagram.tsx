@@ -183,9 +183,7 @@ export function FlowDiagram({ flow, sample, note }: Props) {
         {/* The wire to the customer runs through WhatsApp; the signal travels along it. */}
         <div className="fx-link" data-dir={phoneWire} aria-hidden="true">
           <span className="fx-wire" />
-          <span className="fx-pulse" />
-          <span className="fx-pulse" />
-          <span className="fx-pulse" />
+          {phoneWire && <span className="fx-signal" key={`${story.id}-${at.step}`} />}
           <span className="fx-station" />
           <span className="fx-via">
             <b>{flow.whatsapp.name}</b>
@@ -214,9 +212,7 @@ export function FlowDiagram({ flow, sample, note }: Props) {
 
         <div className="fx-link fx-link-short" data-dir={teamWire} aria-hidden="true">
           <span className="fx-wire" />
-          <span className="fx-pulse" />
-          <span className="fx-pulse" />
-          <span className="fx-pulse" />
+          {teamWire && <span className="fx-signal" key={`${story.id}-${at.step}`} />}
         </div>
 
         <section className="fx-node fx-team" data-lit={lit === "team" || undefined} aria-label={flow.team.name}>

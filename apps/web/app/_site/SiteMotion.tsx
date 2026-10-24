@@ -140,6 +140,13 @@ export function SiteMotion() {
       watchBar.observe(closing);
     }
 
+    // While the closing call is on screen, its Volt button is the page's one: the header's
+    // becomes the outlined twin (site.css). Without scripts both stay Volt.
+    const atClosing = closing
+      ? new IntersectionObserver(([entry]) => root.toggleAttribute("data-at-closing", entry.isIntersecting))
+      : null;
+    if (closing) atClosing?.observe(closing);
+
     let lit = -1;
     let queued = false;
     const update = () => {
@@ -174,6 +181,8 @@ export function SiteMotion() {
       past.disconnect();
       dark?.disconnect();
       watchBar?.disconnect();
+      atClosing?.disconnect();
+      root.removeAttribute("data-at-closing");
       window.removeEventListener("scroll", onScroll);
       window.removeEventListener("resize", onScroll);
       window.removeEventListener("resize", watchDark);

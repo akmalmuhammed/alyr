@@ -381,7 +381,7 @@ export function AgentDashboard({
                     )}
                     <div className="ag-card-foot">
                       {card.action ? (
-                        <L href={card.action.href} className={`ag-btn ${card.primary ? "is-volt" : ""}`}>
+                        <L href={card.action.href} className={`ag-btn ${card.primary && !showcase ? "is-volt" : ""}`}>
                           {card.action.label}{!showcase && <Arrow />}
                         </L>
                       ) : (

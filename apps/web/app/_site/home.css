@@ -173,7 +173,7 @@ main[data-page="home"] .hs > .wrap > .rule { margin-bottom: var(--space-5); }
 [dir="rtl"] .how-line > span { transform-origin: right center; }
 .how-steps { position: relative; display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); column-gap: var(--col-gap); }
 .how-step { display: grid; gap: .75rem; align-content: start; padding-inline-end: 1rem; }
-.how-node { position: relative; z-index: 1; width: 2.5rem; height: 2.5rem; display: grid; place-items: center; border-radius: 50%; margin-bottom: .5rem; background: var(--volt); color: var(--on-volt); font-family: var(--mono); font-size: .8125rem; font-weight: 500; transition: background var(--dur-3) var(--ease), color var(--dur-3) var(--ease), box-shadow var(--dur-3) var(--ease); }
+.how-node { position: relative; z-index: 1; width: 2.5rem; height: 2.5rem; display: grid; place-items: center; border-radius: 50%; margin-bottom: .5rem; background: var(--carbon); color: var(--on-band); box-shadow: inset 0 0 0 1.5px var(--mark-ring); font-family: var(--mono); font-size: .8125rem; font-weight: 500; transition: background var(--dur-3) var(--ease), color var(--dur-3) var(--ease), box-shadow var(--dur-3) var(--ease); }
 .how-step h3 { font-size: var(--h3); font-weight: 600; line-height: 1.25; letter-spacing: -.012em; }
 [lang="ar"] .how-step h3 { letter-spacing: 0; line-height: 1.5; }
 .how-step p { color: var(--text-muted); }

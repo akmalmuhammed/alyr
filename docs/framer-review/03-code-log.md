@@ -50,3 +50,21 @@ first content). It was about 450 for each.
 
 All values are tokens; one new pattern (`.open-split`, `.open-full`, `.open-plate`) and no
 new breakpoint. Below 62rem every opening stacks.
+
+## P4. The rule breaks
+
+Done, on the homepage and wherever the same component is used:
+
+| Break | Fix | Where it also applies |
+|---|---|---|
+| `.fx-pulse`: three radial-gradient glows with a literal `rgb(183 243 74 / .45)`, looping every 1.2 s | One solid Volt tick cut at 45° (`.fx-signal`) that travels the wire in use **once per step** (`--dur-4` + `--dur-3`, `--ease`), remounted per step; moved by `translate`, not `inset`; mirrored in Arabic; vertical on phones. The lit node's glow (`box-shadow` with a literal) is gone; the wire in use is solid `--volt` instead of a literal at 55% | `FlowDiagram` on every product page's "How it works" (`/chat`, `/bookings`, `/agent`, `/accounts`, `/shelf`, `/docs`, both languages) |
+| The drawn "Pay QAR 38" in the Chat crop is Volt and cannot be pressed | `d-btn is-line`, the outline | The drawn order page's "Confirm" button (`PageDrawings.tsx`) on the product pages, same rule. The Agent dashboard in showcase mode (site only: the homepage, `/agent`, `/agent-sample`) drew its first suggestion's button in Volt; in showcase it is now the outline (`AgentDashboard.tsx`, one condition; the workspace is unchanged) |
+| How we work's number discs are Volt | Carbon discs with white mono numbers (`--carbon`, `--on-band`, the `--mark-ring` ring, Volt only in dark, as `.co-n`); the rail's fill keeps the Volt progress | `/agent`'s step 3 disc (`.pk-step-n`) was Volt too: now Carbon |
+| Two Volt buttons at the closing call (header and call) | `SiteMotion` sets `data-at-closing` on `<html>` while `#contact` is on screen; the header's button is then the outlined twin, drawn in the band's colours when the header is Carbon over the call | Every page (the closing call is in `Shell`) |
+| "ALYR Agent reads the orders…" (banned verb) | "counts" / «يحسب» | |
+
+The Arabic line is a draft for the native review (ALY-66). Not changed, and why: the feed's
+status dot still lights once with one ring whose keyframe carries a literal colour
+(`agentfig.css` `af-light`; it plays once, which the rules allow); `/bookings` says "ALYR
+reads your hours", which is reading data, not understanding, and the proposal did not list
+it; the plates' dotted grids carry literal greys (decoration the proposal did not list).

@@ -55,7 +55,7 @@ export function BookingScreen({ page }: { page: BookingPage }) {
       </div>
       <div className="d-bar">
         <div className="d-sum"><span>{page.summary[0]}</span><b dir="auto">{page.summary[1]}</b></div>
-        <span className="d-btn"><TickPath />{page.confirm}</span>
+        <span className="d-btn is-line"><TickPath />{page.confirm}</span>
       </div>
     </div>
   );

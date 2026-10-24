@@ -870,7 +870,7 @@ const en: Copy = {
       eyebrow: "ALYR Agent · With every product",
       title: "Every day, see what changed\nand what to do next.",
       body:
-        "ALYR Agent reads the orders, bookings, chats and credit already in your workspace. It puts waiting work first, compares your week with the same days last week, and suggests up to three things, each with its reason. You decide.",
+        "ALYR Agent counts the orders, bookings, chats and credit already in your workspace. It puts waiting work first, compares your week with the same days last week, and suggests up to three things, each with its reason. You decide.",
       label: "The ALYR Agent home screen of the sample business you choose",
       calloutsLabel: "How to read it",
       callouts: [
@@ -3166,7 +3166,7 @@ const ar: Copy = {
       eyebrow: "ALYR Agent · مع كل منتج",
       title: "كل يوم، اعرف ما تغيّر\nوما الخطوة التالية.",
       body:
-        "يقرأ ALYR Agent الطلبات والحجوزات والمحادثات والآجل الموجودة في مساحة عملك. يضع العمل المنتظر أولاً، ويقارن أسبوعك بالأيام نفسها من الأسبوع الماضي، ويقترح حتى ثلاثة أشياء، لكل منها سببه. والقرار لك.",
+        "يحسب ALYR Agent الطلبات والحجوزات والمحادثات والآجل الموجودة في مساحة عملك. يضع العمل المنتظر أولاً، ويقارن أسبوعك بالأيام نفسها من الأسبوع الماضي، ويقترح حتى ثلاثة أشياء، لكل منها سببه. والقرار لك.",
       label: "الشاشة الرئيسية لـ ALYR Agent للنشاط التوضيحي الذي تختاره",
       calloutsLabel: "كيف تقرؤها",
       callouts: [
