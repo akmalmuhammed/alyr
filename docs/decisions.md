@@ -1087,3 +1087,23 @@ There is no separate Pay product: payment links stay a module of Chat and Bookin
 **Chosen over** unlocking at go-live and billing then (the founder said no: the products open after payment), and over a soft lock that only hides the menu (a locked workspace must be locked in the API too, or it is not locked).
 
 **Revisit when** online payment for clients exists (ALY-5, ALY-188): the payment page pays and opens in one step, and staff stop recording transfers. When the subscription's later periods are billed (ALY-85, ALY-218), which also decides whether the paid period counts from the day products open or from go-live.
+
+
+## D-052 · Until Azure, the portal and API run on Cloudflare and the database on Neon
+**Date** 24 Oct 2026 · **Status** Accepted for the fictional demo shop (the founder, 24 Oct: "use neon and cloudflare", then "if not [Fly or Railway] let's go with that"). **Real clients' data on it: proposed, waiting for the founder's answer** · Linear ALY-224, ALY-10 · Spec `specs/021-cloudflare-neon-hosting/spec.md` · Builds on D-013
+
+**The decision.** The client portal runs as a Cloudflare Worker (OpenNext), the API and the job runner as one container behind a Worker, and PostgreSQL on Neon. No Fly.io, Railway or Vercel. Azure Qatar Central (ALY-63) is still where production ends up; nothing built here is Cloudflare-only except the two small Worker files, so moving is a change of host, not of code.
+
+**Why.**
+- The founder already has Cloudflare (DNS, the site, R2, email) and an account is the only thing missing; one fewer vendor to hold.
+- Vercel's free plan forbids commercial use; Fly and Railway add a vendor and a bill for what Cloudflare Containers now do.
+- The API keeps a plain Dockerfile, so the same image runs on Azure Container Apps later.
+
+**Costs and risks, said plainly.**
+- Cloudflare Containers need the Workers Paid plan (USD 5 a month) and are billed by use; our estimate for one always-on small instance is about USD 12 a month in all. Nothing is paid until the founder agrees.
+- Neon has no Middle East region (Frankfurt is nearest); Cloudflare places containers where it chooses. This conflicts with hard rule 2 for real merchant and customer data. D-013 already allows Neon in Frankfurt only for the demo shop and consenting alpha merchants, leaving at the first paying customer. The founder is asked whether the first clients may be on it with written consent; **until he answers, only the fictional demo shop is hosted there**, and the register says so.
+- Five things are untested until the first deploy (spec 021, "Not proven"), including outbound access from the container to Neon.
+
+**Chosen over** Fly or Railway for the API (another vendor, no gain), the laptop and tunnel (down when the laptop is off), and waiting for Azure credits (no portal for the first clients).
+
+**Revisit when** Azure credits arrive (ALY-55, ALY-63), or the first paying client who has not agreed to data outside Qatar.
