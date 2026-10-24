@@ -118,3 +118,31 @@ New Arabic lines (ALY-66 review): «نأتي إلى محلك في قطر»، «�
 «ALYR Agent · مع كل منتج»، «نجهّزه لك»، «مع كل منتج»، «كل ما في هذه القائمة مبنيّ في المنتج.»،
 «مع كل منتج من ALYR. كل ما في هذه القائمة مبنيّ في المنتج.»، «يعرض الهاتف الميزة التي تقرؤها.»،
 «كيف تتعامل ALYR مع قواعد واتساب والموافقة وسجلاتك»، and the shortened chairs answer.
+
+### Stage 4 · The homepage fold and the products as rows (founder decision 4; `01-ux.md` L1, L2)
+
+Done:
+- **What a check-up finds** is gone as a section (`home.problems`, `Problems`, its CSS). Each
+  By business tab's "Today" list is now written from the six problems, row for row with its
+  "With ALYR" list: bakery (lost orders, "Is my order ready?", regulars who owe), wholesale
+  (prices in a spreadsheet, lost orders, shops who owe), fashion (the same questions, lost
+  orders), restaurants (lost pickup orders, "Is my order ready?", office lunches owed), salons
+  (the same questions, the empty chair, no idea how the week compares), home services (the
+  calls, parts, contract customers who owe). The product tags under each tab are still the
+  links into each product.
+- **Why ALYR** is gone as a table (`home.why`, `Why`, its CSS); its strongest line is the hero
+  lead: "Big businesses have consultants and an IT team for this. You have us: we check how
+  your business runs, set up what it needs, and keep improving it with you." / «للشركات الكبيرة
+  مستشارون وفريق تقنية لهذا العمل، ولمشروعك ALYR: نفحص كيف يسير عملك، ونجهّز ما يحتاجه،
+  ونواصل تحسينه معك.»
+- **The products** are six plain rows (`.suite-row` in `room.css`; `ProductRoom.tsx` deleted
+  with the pinned index, the tilted desk, its camera and the corners' one-shot plays): name,
+  descriptor, the state only on Agent and Shelf, the sentence and its link, the corner at true
+  size with its own "Sample" mark (one per corner, since each is its own drawing once the desk
+  is gone), then the two notes. The corners sit in `data-nosnippet` boxes after an `sr-only`
+  line saying they are the fictional bakery's. "All six, on one screen." and the 01–06
+  numbers are gone.
+- `docs/decisions.md`: D-048 gains its 24 Oct update (the fold, the new order, one action
+  name, nothing pinned). `alyr-site-page`'s homepage section is rewritten to match.
+
+Measured at once (en): `/` 12,191 px at 1440 (was 17,716).

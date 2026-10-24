@@ -254,25 +254,6 @@ type Home = {
     factsNoOffer: string[];
     figure: { label: string };
   };
-  /** The owner's everyday problems, each with what ALYR does about it and the product. */
-  problems: {
-    eyebrow?: string;
-    title: string;
-    lead: string;
-    items: { problem: string; fix: string; product: ProductKey }[];
-    /** The first `shown` problems are on the page; the rest sit under `more`. */
-    shown: number;
-    more: string;
-  };
-  /** Why ALYR (ALY-210): what a big company has for each part of the work, what an
-   * owner-run shop has today, and what ALYR does instead. `cols` name the three columns. */
-  why: {
-    eyebrow?: string;
-    title: string;
-    lead: string;
-    cols: [string, string, string];
-    rows: { topic: string; big: string; today: string; alyr: string }[];
-  };
   /** One order followed from the first message to collection (FlowDiagram), and a count of
    * who did what in it. */
   see: FlowSet & {
@@ -301,9 +282,6 @@ type Home = {
       /** ALYR Docs: the top of a receipt, said for screen readers (the paper is drawn from `PAPER`). */
       receipt: string;
     };
-    /** The control room (ALY-209): the numbered index, the drawn workspace the corners sit
-     * in, and the last step, where the camera pulls back to all six at once. */
-    room: { index: string; workspace: string; whole: string };
   };
   business: {
     eyebrow?: string;
@@ -725,7 +703,7 @@ const en: Copy = {
       eyebrow: "Technology for owner-run businesses in Qatar",
       title: ["The tech team your", "business never had."],
       lead:
-        "Big companies pay consultants to study how they work and fix it. ALYR does that for small businesses: we check how yours runs, set up what it needs, and keep improving it with you.",
+        "Big businesses have consultants and an IT team for this. You have us: we check how your business runs, set up what it needs, and keep improving it with you.",
       action: "Book a check-up",
       more: "See how we work",
       facts: ["We come to your shop, in Qatar", "From QAR 449 a month, no commission", "Arabic and English"],
@@ -733,71 +711,6 @@ const en: Copy = {
       figure: {
         label: "The ALYR Agent home screen of a fictional bakery, and what ALYR did for it this afternoon",
       },
-    },
-    problems: {
-      title: "What we often find in a shop,\nand what we set up for it.",
-      lead: "Find the ones you have. Each fix is built, and we set it up with you.",
-      shown: 6,
-      more: "More we find",
-      items: [
-        {
-          problem: "Orders get lost in long chats.",
-          fix: "Customers order from your page in the chat, and every order lands on one screen.",
-          product: "chat",
-        },
-        {
-          problem: "The same questions, all day.",
-          fix: "When a customer writes “order”, “book” or “my balance”, ALYR answers straight away. Anything else goes to your team.",
-          product: "chat",
-        },
-        {
-          problem: "“Is my order ready?”",
-          fix: "Each order has its own tracking page, and the customer gets a message at every step.",
-          product: "chat",
-        },
-        {
-          problem: "Customers forget, and the chair sits empty.",
-          fix: "Customers book a free time in the chat, get the confirmation at once and a reminder two hours before.",
-          product: "bookings",
-        },
-        {
-          problem: "Regulars owe you, and asking feels awkward.",
-          fix: "Record credit in one line, see who owes what and for how long, and send polite reminders with one press.",
-          product: "accounts",
-        },
-        {
-          problem: "No idea how this week compares.",
-          fix: "ALYR Agent shows your week against the same days last week, and what needs you now.",
-          product: "agent",
-        },
-        {
-          problem: "Staff answer from their own phones.",
-          fix: "One inbox for the whole team on one number, and every chat and order shows who has it.",
-          product: "chat",
-        },
-        {
-          problem: "Prices in a notebook or a spreadsheet.",
-          fix: "Your items, sizes and prices in one place, brought in from your Excel sheet, with each customer group’s own prices.",
-          product: "shelf",
-        },
-        {
-          problem: "Customers write in Arabic and in English.",
-          fix: "Each customer gets replies in the language they write in, and your team can work in either.",
-          product: "chat",
-        },
-      ],
-    },
-    why: {
-      title: "Big businesses have a team for this.\nYou have us.",
-      lead:
-        "You started a business to bake, cut hair or trade, not to run software. We do the technology part, the way a big company’s IT team and consultants would, at a price an owner-run shop can pay.",
-      cols: ["A big company", "You, today", "With ALYR"],
-      rows: [
-        { topic: "Someone studies how the business runs", big: "Consultants", today: "You, late at night", alyr: "We visit your shop and check" },
-        { topic: "The systems", big: "An IT team and its software", today: "WhatsApp, a notebook and an Excel sheet", alyr: "Six products on one screen" },
-        { topic: "The numbers", big: "An analyst, every week", today: "A guess", alyr: "Your week against last week, every day" },
-        { topic: "Getting better", big: "A project with a budget", today: "No time", alyr: "Suggestions with their reason, and changes whenever you ask" },
-      ],
     },
     see: {
       title: "One order, start to finish.\nThe routine is done for you.",
@@ -1018,7 +931,6 @@ const en: Copy = {
         ],
         receipt: "The top of receipt RC-0042, Arabic first",
       },
-      room: { index: "The six products", workspace: "Workspace", whole: "All six, on one screen." },
     },
     business: {
       title: "Every business runs differently.\nHere is yours.",
@@ -1042,9 +954,9 @@ const en: Copy = {
           tab: "Bakeries",
           name: "Bakeries and home kitchens",
           day: [
-            "Orders arrive as voice notes and photos, and some get missed.",
-            "Customers ask “is it ready?” all afternoon.",
-            "Office regulars pay at the end of the month, and it lives in a notebook.",
+            "Orders get lost in long chats: voice notes, photos, “this one, for 12”.",
+            "“Is my order ready?”, all afternoon.",
+            "Office regulars owe you, and asking feels awkward.",
           ],
           with: [
             "Customers order from your menu page in the chat, by the piece or by weight, and every order lands on one screen.",
@@ -1075,9 +987,9 @@ const en: Copy = {
           tab: "Wholesale",
           name: "Wholesale and trading",
           day: [
-            "Orders come in long messages, and each customer has their own prices.",
-            "Shops buy on credit, and who owes what lives in the books.",
-            "Chasing payment feels awkward, so it waits.",
+            "Prices in a spreadsheet, and each customer has their own.",
+            "Orders get lost in long messages.",
+            "Shops owe you, and asking feels awkward, so it waits.",
           ],
           with: [
             "Each customer group gets its own prices, brought in from your Excel price list.",
@@ -1108,9 +1020,9 @@ const en: Copy = {
           tab: "Fashion and gifts",
           name: "Fashion, abayas and gifts",
           day: [
-            "Customers see a piece on Instagram, then ask the price and size in WhatsApp.",
-            "You send photos one by one and lose track of who asked what.",
-            "Orders end up as screenshots.",
+            "The same questions, all day: the price, the size, “still have it?”",
+            "You send photos one by one, and lose track of what is left.",
+            "Orders get lost in the chat as screenshots.",
           ],
           with: [
             "Your chat link in your Instagram bio: one tap opens WhatsApp, and ALYR answers with your menu of what you sell.",
@@ -1141,9 +1053,9 @@ const en: Copy = {
           tab: "Restaurants",
           name: "Restaurants and cafés",
           day: [
-            "Pickup orders come by phone and chat, and get written on paper.",
-            "Customers call to ask if it is ready.",
-            "Office lunches are paid at the end of the month.",
+            "Pickup orders get lost between calls and chats, and end up on paper.",
+            "“Is my order ready?” Customers call to ask.",
+            "Office lunches are owed until the end of the month, and asking feels awkward.",
           ],
           with: [
             "Your menu in the chat, and every order on your screen.",
@@ -1175,9 +1087,9 @@ const en: Copy = {
           tab: "Salons",
           name: "Salons and barbers",
           day: [
-            "Bookings arrive by message at all hours.",
-            "A no-show leaves a chair empty.",
-            "Appointments live in a notebook.",
+            "The same questions, all day: “any time after 4?”, at all hours.",
+            "Customers forget, and the chair sits empty.",
+            "No idea how this week compares: appointments live in a notebook.",
           ],
           with: [
             "Customers pick a free time in the chat, and the confirmation goes at once.",
@@ -1209,9 +1121,9 @@ const en: Copy = {
           tab: "Home services",
           name: "Home services",
           day: [
-            "Customers call to book a visit, then call again to ask when you are coming.",
-            "Contract customers pay late.",
-            "Parts and visits are kept in different places.",
+            "Customers call to book a visit, then call again: “When are you coming?”",
+            "Parts are asked for by photo and voice note, and kept apart from the visits.",
+            "Contract customers owe you, and asking feels awkward.",
           ],
           with: [
             "Visits booked from the chat, with a reminder before each.",
@@ -3086,7 +2998,7 @@ const ar: Copy = {
       eyebrow: "التقنية للأنشطة التي يديرها أصحابها في قطر",
       title: ["فريق التقنية الذي", "لم يكن لدى مشروعك."],
       lead:
-        "الشركات الكبيرة تدفع لمستشارين ليدرسوا طريقة عملها ويحسّنوها. وALYR تفعل ذلك للمشاريع الصغيرة: نفحص كيف يسير عملك، ونجهّز ما يحتاجه، ونواصل تحسينه معك.",
+        "للشركات الكبيرة مستشارون وفريق تقنية لهذا العمل، ولمشروعك ALYR: نفحص كيف يسير عملك، ونجهّز ما يحتاجه، ونواصل تحسينه معك.",
       action: "احجز فحصاً لمشروعك",
       more: "شاهد طريقة عملنا",
       facts: ["نأتي إلى محلك في قطر", "من 449 ر.ق شهرياً، بلا عمولة", "بالعربية والإنجليزية"],
@@ -3094,71 +3006,6 @@ const ar: Copy = {
       figure: {
         label: "الشاشة الرئيسية لـ ALYR Agent في مخبز غير حقيقي، وما أنجزته ALYR له عصر اليوم",
       },
-    },
-    problems: {
-      title: "ما نجده كثيراً في المحلات،\nوما نجهّزه له.",
-      lead: "اختر ما يشبه يومك. كل حلّ هنا مبنيّ فعلاً، ونجهّزه معك.",
-      shown: 6,
-      more: "المزيد مما نجده",
-      items: [
-        {
-          problem: "تضيع الطلبات في المحادثات الطويلة.",
-          fix: "يطلب العملاء من صفحتك داخل المحادثة، وكل طلب يصل إلى شاشة واحدة.",
-          product: "chat",
-        },
-        {
-          problem: "الأسئلة نفسها طوال اليوم.",
-          fix: "حين يكتب العميل «أطلب» أو «أحجز» أو «رصيدي» تردّ ALYR فوراً، وما عدا ذلك يذهب إلى فريقك.",
-          product: "chat",
-        },
-        {
-          problem: "«طلبي جاهز؟»",
-          fix: "لكل طلب صفحة تتبّع خاصة به، ويصل العميلَ خبرٌ عند كل خطوة.",
-          product: "chat",
-        },
-        {
-          problem: "ينسى العميل موعده، فيبقى الكرسي فارغاً.",
-          fix: "يحجز العميل وقتاً متاحاً من المحادثة، ويصله التأكيد فوراً وتذكير قبل الموعد بساعتين.",
-          product: "bookings",
-        },
-        {
-          problem: "عملاء دائمون عليهم مبالغ، والسؤال عنها محرج.",
-          fix: "سجّل الآجل في سطر واحد، واعرف من عليه كم ومنذ متى، وأرسل تذكيراً لبقاً بضغطة واحدة.",
-          product: "accounts",
-        },
-        {
-          problem: "لا تعرف كيف يقارن هذا الأسبوع بما قبله.",
-          fix: "يعرض ALYR Agent أسبوعك مقارنةً بالأيام نفسها من الأسبوع الماضي، وما يحتاجك الآن.",
-          product: "agent",
-        },
-        {
-          problem: "الموظفون يردّون من هواتفهم الخاصة.",
-          fix: "صندوق واحد للفريق كله على رقم واحد، وكل محادثة وطلب يُظهر من يتولاه.",
-          product: "chat",
-        },
-        {
-          problem: "الأسعار في دفتر أو في جدول.",
-          fix: "أصنافك ومقاساتها وأسعارها في مكان واحد، تُنقل من ملف Excel، ولكل فئة من العملاء أسعارها.",
-          product: "shelf",
-        },
-        {
-          problem: "عملاء يكتبون بالعربية وآخرون بالإنجليزية.",
-          fix: "يصل الرد إلى كل عميل باللغة التي يكتب بها، ويعمل فريقك بأيٍّ منهما.",
-          product: "chat",
-        },
-      ],
-    },
-    why: {
-      title: "الشركات الكبيرة لديها فريق لهذا.\nوأنت لديك نحن.",
-      lead:
-        "بدأت مشروعك لتخبز أو تقص الشعر أو تتاجر، لا لتدير البرامج. نحن نتولى جانب التقنية كما يفعل فريق التقنية والمستشارون في الشركات الكبيرة، بسعر يناسب محلاً يديره صاحبه.",
-      cols: ["شركة كبيرة", "أنت اليوم", "مع ALYR"],
-      rows: [
-        { topic: "من يدرس كيف يسير العمل", big: "مستشارون", today: "أنت، في آخر الليل", alyr: "نزور محلك ونفحص" },
-        { topic: "الأنظمة", big: "فريق تقنية وبرامجه", today: "واتساب ودفتر وملف Excel", alyr: "ستة منتجات في شاشة واحدة" },
-        { topic: "الأرقام", big: "محلل، كل أسبوع", today: "تخمين", alyr: "أسبوعك مقارنة بالأسبوع الماضي، كل يوم" },
-        { topic: "التحسين", big: "مشروع بميزانية", today: "لا وقت", alyr: "اقتراحات مع سببها، وتعديلات متى طلبت" },
-      ],
     },
     see: {
       title: "طلب واحد من أوله إلى آخره.\nوالمعتاد علينا.",
@@ -3379,7 +3226,6 @@ const ar: Copy = {
         ],
         receipt: "أعلى الإيصال RC-0042، والعربية أولاً",
       },
-      room: { index: "المنتجات الستة", workspace: "مساحة العمل", whole: "الستة كلها، على شاشة واحدة." },
     },
     business: {
       title: "لكل نشاط طريقته.\nوهذا نشاطك.",
@@ -3403,9 +3249,9 @@ const ar: Copy = {
           tab: "المخابز",
           name: "المخابز والمطابخ المنزلية",
           day: [
-            "تصل الطلبات رسائل صوتية وصوراً، ويفوتك بعضها.",
-            "يسأل العملاء «جاهز؟» طوال العصر.",
-            "عملاء المكاتب يدفعون آخر الشهر، والحساب في دفتر.",
+            "تضيع الطلبات في المحادثات الطويلة، بين الرسائل الصوتية والصور.",
+            "«طلبي جاهز؟» طوال العصر.",
+            "عملاء المكاتب عليهم مبالغ، والسؤال عنها محرج.",
           ],
           with: [
             "يطلب العملاء من صفحة قائمتك في المحادثة، بالقطعة أو بالوزن، وكل طلب يصل إلى شاشة واحدة.",
@@ -3436,9 +3282,9 @@ const ar: Copy = {
           tab: "الجملة",
           name: "الجملة والتجارة",
           day: [
-            "تصل الطلبات في رسائل طويلة، ولكل عميل أسعاره.",
-            "المحلات تشتري بالآجل، ومن عليه كم مكتوب في الدفاتر.",
-            "المطالبة بالسداد محرجة، فتتأجل.",
+            "الأسعار في جدول، ولكل عميل أسعاره.",
+            "تضيع الطلبات في الرسائل الطويلة.",
+            "محلات عليها مبالغ، والسؤال عنها محرج، فيتأجل.",
           ],
           with: [
             "لكل فئة من العملاء أسعارها، تُنقل من قائمة أسعارك في Excel.",
@@ -3469,9 +3315,9 @@ const ar: Copy = {
           tab: "الأزياء والهدايا",
           name: "الأزياء والعبايات والهدايا",
           day: [
-            "يرى العميل القطعة على إنستغرام، ثم يسأل عن السعر والمقاس في واتساب.",
-            "ترسل الصور واحدة تلو الأخرى، وتنسى من سأل عن ماذا.",
-            "تنتهي الطلبات لقطاتِ شاشة.",
+            "الأسئلة نفسها طوال اليوم: السعر، والمقاس، و«ما زالت عندكم؟»",
+            "ترسل الصور واحدة تلو الأخرى، ولا تعرف ما بقي.",
+            "تضيع الطلبات في المحادثة لقطاتِ شاشة.",
           ],
           with: [
             "رابط المحادثة في نبذة إنستغرام: لمسة واحدة تفتح واتساب، وتردّ ALYR بقائمة ما تبيعه.",
@@ -3502,9 +3348,9 @@ const ar: Copy = {
           tab: "المطاعم",
           name: "المطاعم والمقاهي",
           day: [
-            "طلبات الاستلام تأتي بالهاتف والمحادثة، وتُكتب على ورق.",
-            "يتصل العملاء ليسألوا إن كان الطلب جاهزاً.",
-            "غداء المكاتب يُدفع آخر الشهر.",
+            "تضيع طلبات الاستلام بين المكالمات والمحادثات، وتنتهي على ورق.",
+            "«طلبي جاهز؟» يتصل العملاء ليسألوا.",
+            "غداء المكاتب مستحق حتى آخر الشهر، والسؤال عنه محرج.",
           ],
           with: [
             "قائمتك داخل المحادثة، وكل طلب على شاشتك.",
@@ -3536,9 +3382,9 @@ const ar: Copy = {
           tab: "الصالونات",
           name: "الصالونات ومحلات الحلاقة",
           day: [
-            "تصل الحجوزات برسائل في كل ساعة.",
-            "عميل لا يحضر يعني كرسياً فارغاً.",
-            "المواعيد مكتوبة في دفتر.",
+            "الأسئلة نفسها طوال اليوم، وفي كل ساعة: «فيه وقت بعد 4؟»",
+            "ينسى العميل موعده، فيبقى الكرسي فارغاً.",
+            "لا تعرف كيف يقارن هذا الأسبوع بما قبله: المواعيد في دفتر.",
           ],
           with: [
             "يختار العميل وقتاً متاحاً من المحادثة، ويصله التأكيد فوراً.",
@@ -3570,9 +3416,9 @@ const ar: Copy = {
           tab: "الخدمات المنزلية",
           name: "الخدمات المنزلية",
           day: [
-            "يتصل العميل ليحجز زيارة، ثم يتصل مجدداً ليسأل متى تصل.",
-            "عملاء العقود يتأخرون في الدفع.",
-            "القطع والزيارات مسجّلة في أماكن مختلفة.",
+            "يتصل العميل ليحجز زيارة، ثم يتصل مجدداً: «متى توصلون؟»",
+            "تُطلب القطع بصورة أو رسالة صوتية، وتُسجَّل بعيداً عن الزيارات.",
+            "عملاء العقود عليهم مبالغ، والسؤال عنها محرج.",
           ],
           with: [
             "زيارات تُحجز من المحادثة، مع تذكير قبل كل زيارة.",

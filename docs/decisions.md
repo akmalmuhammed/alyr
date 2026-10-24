@@ -1021,3 +1021,10 @@ There is no separate Pay product: payment links stay a module of Chat and Bookin
 **Why.** The founder's brief: small businesses need what big ones buy from consultants and IT teams, and ALYR is that, with products to back it. Leading with WhatsApp made ALYR look like one tool. The loop is how the work already runs (set up for you, changes whenever asked, the weekly view), so it can be said without a new promise.
 
 **Open for the founder.** Publishing (the founder's go-ahead each time); the headline pick; whether the check-up is free; whether to keep the monthly look at the numbers; the Arabic review (ALY-66).
+
+**Update, 24 Oct 2026 (founder, in chat, on the site audit; `docs/site-audit/00-decisions.md`, ALY-223).** The homepage is folded, against the order above:
+- **What a check-up finds** leaves as a section: its six problems become each business tab's "Today" list in By business (each tab's list in the problems' own words, row for row with its "With ALYR" list), so the visitor meets the problems in their own trade.
+- **Why ALYR** leaves as a table: its strongest line goes into the hero lead, "Big businesses have consultants and an IT team for this. You have us: we check how your business runs, set up what it needs, and keep improving it with you." / «للشركات الكبيرة مستشارون وفريق تقنية لهذا العمل، ولمشروعك ALYR: نفحص كيف يسير عملك، ونجهّز ما يحتاجه، ونواصل تحسينه معك.»
+- **The products** are six plain rows, no longer pinned (the audit's L1), so the homepage has no pinned panel on desktop.
+- **"Book a check-up"** is the one action name on every page, product pages included.
+- The new order: hero · how we work · your business · one order, as proof · ALYR Agent · the products · price (offer on) · trust · questions.

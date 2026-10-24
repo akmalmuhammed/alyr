@@ -26,62 +26,65 @@ brand lane owns these files (`docs/lanes/site-and-brand.md`).
 
 ## The homepage
 
-The homepage presents ALYR as the small business's tech team (D-048, ALY-210, after D-047).
-In order (`_site/HomePage.tsx`, `home.css`, words under `home` in `copy.ts`):
+The homepage presents ALYR as the small business's tech team (D-048, ALY-210, after D-047;
+folded on 24 Oct 2026, D-048's update, ALY-223). In order (`_site/HomePage.tsx`, `home.css`,
+words under `home` in `copy.ts`):
 
-1. **Header** with the Products menu, By business, How we work, Questions, the language
-   link, the theme switch and the button named by the closing call's `action` ("Book a
-   check-up"; its `short`, "Check-up", below 62rem so the line never overflows). Price only
-   with the offer.
-2. **Hero:** eyebrow "Technology for owner-run businesses in Qatar", H1 "The tech team your
-   business never had.", then one row under it: the lead on the start side, "Book a
-   check-up" and "See how we work" (to `#how`) with the note on the end side; the facts row;
-   the real ALYR Agent dashboard and the live feed on the Carbon plate. The feed's flags say
-   "Needs a look" and their rule line starts "Why ·" (`AgentFigure.tsx` `reason`); the
+1. **Header** with the Products menu (a state only on ALYR Agent and ALYR Shelf, "With every
+   product"), By business, How we work, Questions, the language link, the theme switch and
+   the button "Book a check-up" (`home.final.action`; its `short`, "Check-up", below 62rem so
+   the line never overflows). Every page's header, closing call and sticky bar say the same
+   (`Shell` takes them from `home.final`). Price only with the offer.
+2. **Hero:** no eyebrow on the page (`hero.eyebrow` is the social card's only), H1 "The tech
+   team your business never had.", then one row under it: the lead on the start side, which
+   carries the one line of why ("Big businesses have consultants and an IT team for this.
+   You have us: …"), "Book a check-up" and "See how we work" (to `#how`) with the note on the
+   end side; the facts row ("We come to your shop, in Qatar"); the real ALYR Agent dashboard,
+   marked "Sample" in its window bar, and the live feed on the Carbon plate. The feed's flags
+   say "Needs a look" and their rule line starts "Why ·" (`AgentFigure.tsx` `reason`); the
    product's own screens keep "Rule".
-3. **Why ALYR** (`#why`): four rows, each read across "A big company", "You, today" and
-   "With ALYR". A list of `<dl>`s, so a screen reader hears each answer with its name; on wide
-   screens one subgrid with the names as a header row and ALYR's column on a cut Carbon
-   plate (the cells carry the plate's colour too, for contrast checks); on phones one card
-   per row.
-4. **How we work** (`#how`): check, set up, see, improve, on the rail that fills with the
+3. **How we work** (`#how`): check, set up, see, improve, on the rail that fills with the
    scroll; once full, a dashed arc draws from step 4 back to step 1 with "Then we check
    again" (`.how-loop`, Choreography sets `is-looped`; drawn statically without motion). On
-   phones a dashed line from step 4 to an up-arrow row. Then the note with a line button, and
-   two lists: what we need from you, every month.
-5. **What a check-up finds** (`#problems`): the first `problems.shown` with their fix and
-   product, the rest under "More we find".
-6. **Your business** (`#business`, `BusinessTabs.tsx`): one tab per business type plus
+   phones a dashed line from step 4 to an up-arrow row. Then a line button and "What we need
+   from you".
+4. **Your business** (`#business`, `BusinessTabs.tsx`): one tab per business type plus
    "Something else"; each panel has an anchor (`#bakery`, `#wholesale`, `#fashion`,
-   `#restaurant`, `#salon`, `#home-services`, `#other`), "Your day today", "With ALYR" on a
-   sheet, the products it would use, and a line contact button whose message names that
+   `#restaurant`, `#salon`, `#home-services`, `#other`), the "Today" list (what a check-up
+   finds, in the problems' own words: lost orders, the same questions, "Is my order ready?",
+   the empty chair, regulars who owe, not knowing how the week compares), "With ALYR" row for
+   row, the products it would use, and a line contact button whose message names that
    business (`ContactButton message`). Panels are server HTML: stacked without scripts, one
    cell with scripts so the page below never moves. The tabs are cards with a line icon
    (`brand.tsx`). Each panel opens on **the day split by the fold** (`FoldSplit.tsx`,
    `room.css`, ALY-209): the owner's WhatsApp chats on faded paper and the same customers as
-   ALYR keeps them on Carbon, row for row (`chats` and `orders` on each `BusinessRow`; keep
-   the unread counts adding up to the header's, and every status one ALYR really shows). A
-   45° fold between them is dragged, moved with the keys (a `role="slider"` handle) or sent
-   across by "Today" and "With ALYR"; it sweeps once when first read. Phones rest on "With
-   ALYR" and swipe.
-7. **One order, start to finish** (`#see`): the `/chat` flow figure (`FlowDiagram`) told for
-   Sara at Qirfa Bakery, on a cut-corner Carbon plate, and the tally of who did what. Every
-   step shown is built; keep the tally's counts true to the steps.
-8. **Insights: the ALYR Agent spotlight** with numbered callouts and the sample switch, opening on the bakery. Not pinned; on phones the screen stops after its five numbered parts.
-9. **The products** on the Carbon band as a control room (`ProductRoom.tsx`, `room.css`,
-   ALY-209): a numbered index, one step per product, and the workspace drawn at true size
-   from the six crops, pinned and tilted; the step crossing the middle of the screen brings
-   its corner forward and plays its job once (Pay pressed, 4:30 chosen, the figures count,
-   the age bar fills, Sold out stamped, RC-0042 out of the fold); the last step pulls back
-   to all six. Phones and no scripts: rows with each corner under its words (phones add a
-   pinned row of names). Then **Price** (offer on: the price, examples by
-   trade, setup, the first month, what every month includes, the agreement), **Trust**,
-   **Questions** (the first `faq.shown` open to read, the rest under "More questions"; a
-   `#q-...` link opens the fold), the **closing call**, the **footer**.
+   ALYR keeps them on Carbon (marked "Sample"), row for row (`chats` and `orders` on each
+   `BusinessRow`; keep the unread counts adding up to the header's, and every status one ALYR
+   really shows). A 45° fold between them is dragged, moved with the keys (a `role="slider"`
+   handle) or sent across by "Today" and "With ALYR"; it sweeps once when first read. Phones
+   rest on "With ALYR" and swipe.
+5. **One order, start to finish** (`#see`): the `/chat` flow figure (`FlowDiagram`) told for
+   Sara at Qirfa Bakery, on a cut-corner Carbon plate, marked "Sample" at the end of its tab
+   row, and the tally of who did what. Every step shown is built; keep the tally's counts true
+   to the steps.
+6. **ALYR Agent** (eyebrow "ALYR Agent · With every product") with numbered callouts and the
+   sample switch (its "Sample business" label is the mark), opening on the bakery. Not
+   pinned; on phones the screen stops after its five numbered parts.
+7. **The products** on the Carbon band as six plain rows (`room.css` `.suite-row`): name,
+   descriptor, the state only on Agent and Shelf, one sentence and its link, and the corner of
+   the product's real screen at true size with its "Sample" mark; then the two notes. Nothing
+   is pinned and nothing plays. Then **Price** (offer on: the price, examples by trade, setup,
+   the first month, what every month includes, the agreement), **Trust**, **Questions** (the
+   first `faq.shown` open to read, the rest under "More questions"; a `#q-...` link opens the
+   fold), the **closing call**, the **footer** (no clock).
+
+Gone on 24 Oct and not to come back without the founder: the Why ALYR table, "What a check-up
+finds" as its own section, the pinned products room, eyebrows that repeat a heading or a
+header link, numbers on tabs and indexes, FIG captions.
 
 "Agent" on the homepage always sits beside what it counted; no AI words, no «وكيل» (the Arabic
 says ALYR «تتولى عنك العمل المعتاد»), no "Is it AI?" question. Say "reason" or "why", not
-"rule", in the homepage's own words. Pins on the homepage: the products' room only.
+"rule", in the homepage's own words. Nothing on the homepage is pinned.
 
 `/chat`'s "Everything it does today" is the phone with X-ray (`ChatXray.tsx`, `xray.css`,
 ALY-209): the list beside a pinned phone that shows the feature being read; "For your team"

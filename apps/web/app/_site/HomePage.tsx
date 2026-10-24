@@ -5,7 +5,6 @@ import { BusinessTabs } from "./BusinessTabs";
 import { ContactButton, ContactNote } from "./Contact";
 import { copy, type BusinessRow, type Locale, type Questions as QuestionSet } from "./copy";
 import { AgeBarCrop, FigCaption, OrderBarCrop, ReceiptCrop, ShelfCrop, SummaryCrop, TimesCrop, TrackScreen } from "./Drawings";
-import { ProductRoom } from "./ProductRoom";
 import { Phone, SampleMark, TickPath } from "./Frames";
 import { FlowDiagram } from "./FlowDiagram";
 import { FoldSplit } from "./FoldSplit";
@@ -18,17 +17,15 @@ import "./kit.css";
 import "./home.css";
 import "./room.css";
 
-type ProblemItem = (typeof copy)["en"]["home"]["problems"]["items"][number];
-
 /**
  * The ALYR homepage: ALYR as the technology team an owner-run business never had (ALY-210,
- * D-048, after D-047). The hero says so beside the real dashboard and the feed of what ALYR
- * did; why ALYR, set against a big company and the shop today; how we work, a loop of
- * check, set up, see and improve; what a check-up finds, each with its fix; the visitor's
- * own business, as tabs; one order followed from the first message to collection, as
- * proof; the insights ALYR Agent gives; the products; the price (offer on); trust;
- * questions; the closing call. Every word from `copy.ts`; every screen is the product's
- * own, with fictional businesses, and captioned as a sample.
+ * D-048, after D-047, folded on 24 Oct 2026). The hero says so, with why in one line (a big
+ * company has consultants and an IT team; you have us), beside the real dashboard and the
+ * feed of what ALYR did; how we work, a loop of check, set up, see and improve; the
+ * visitor's own business, as tabs, whose "Today" list is what a check-up finds; one order
+ * followed from the first message to collection, as proof; ALYR Agent; the products; the
+ * price (offer on); trust; questions; the closing call. Every word from `copy.ts`; every
+ * screen is the product's own, with fictional businesses, each marked as a sample once.
  */
 export function HomePage({ locale }: { locale: Locale }) {
   const t = copy[locale];
@@ -38,9 +35,7 @@ export function HomePage({ locale }: { locale: Locale }) {
   return (
     <Shell locale={locale} page="home" cta={h.final} bar>
       <Hero locale={locale} />
-      <Why locale={locale} />
       <How locale={locale} />
-      <Problems locale={locale} />
       <Business locale={locale} />
       <See locale={locale} />
       <Spotlight locale={locale} />
@@ -54,7 +49,6 @@ export function HomePage({ locale }: { locale: Locale }) {
 }
 
 const n = (index: number) => ({ "--i": index }) as CSSProperties;
-const num = (index: number) => String(index + 1).padStart(2, "0");
 
 /** A section rule with a cross at each end, where it meets the grid's edges. */
 function Rule({ dashed = false }: { dashed?: boolean }) {
@@ -118,51 +112,6 @@ function Hero({ locale }: { locale: Locale }) {
           crop
           headingLevel={2}
         />
-      </div>
-    </section>
-  );
-}
-
-// ---------------------------------------------------------------------- why ALYR
-/**
- * What a big company has for the technology side, what an owner-run shop has today, and what
- * it has with ALYR. A list of rows, each with its three answers named, so a screen reader
- * reads it as pairs; on wide screens the names become one header row above the columns.
- */
-function Why({ locale }: { locale: Locale }) {
-  const y = copy[locale].home.why;
-  const answers = (row: (typeof y.rows)[number]) => [row.big, row.today, row.alyr] as const;
-  return (
-    <section className="hs why" id="why" aria-labelledby="why-title">
-      <div className="wrap">
-        <Rule />
-        <Head eyebrow={y.eyebrow} title={y.title} id="why-title">
-          <p className="lead">{rich(y.lead)}</p>
-        </Head>
-        <div className="why-table">
-          <div className="why-cols" aria-hidden="true">
-            <span />
-            {y.cols.map((col, index) => <span key={col} className={index === 2 ? "why-us" : undefined}>{col}</span>)}
-          </div>
-          <ul className="why-rows">
-            {y.rows.map((row, index) => (
-              <li key={row.topic} className="why-row" data-m style={n(index)}>
-                <h3 className="why-topic">{rich(row.topic)}</h3>
-                <dl className="why-dl">
-                  {answers(row).map((answer, col) => (
-                    <div key={y.cols[col]} className={col === 2 ? "why-a why-us" : "why-a"}>
-                      <dt>{y.cols[col]}</dt>
-                      <dd>
-                        {col === 2 && <span className="why-tick" aria-hidden="true"><TickPath /></span>}
-                        <span>{rich(answer)}</span>
-                      </dd>
-                    </div>
-                  ))}
-                </dl>
-              </li>
-            ))}
-          </ul>
-        </div>
       </div>
     </section>
   );
@@ -236,125 +185,44 @@ function Suite({ locale }: { locale: Locale }) {
           <Head eyebrow={s.eyebrow} title={s.title} id="products-title" dark>
             <p className="band-body">{rich(s.body)}</p>
           </Head>
-          <ProductRoom>
-            <nav className="room-index" aria-label={s.room.index}>
-              <ol>
-                {PRODUCTS.map((key, index) => (
-                  <li key={key}>
-                    <a href={`#p-${key}`} data-k={key}>
-                      <span className="room-n" aria-hidden="true"><bdi>{num(index)}</bdi></span>
-                      <bdi>{t.products.items[key].name.replace(/^ALYR\s+/, "")}</bdi>
+          {/* Six plain rows (site audit L1): the name, what it is, one sentence and its link,
+              and a corner of its real screen at true size, marked as a sample. The corners'
+              numbers are the bakery's samples, so a machine reads that first. */}
+          <p className="sr-only">{t.agent.samples.bakery.fictional}</p>
+          <ul className="suite-rows">
+            {PRODUCTS.map((key) => {
+              const p = t.products.items[key];
+              const row = s.rows[key];
+              return (
+                <li key={key} id={`p-${key}`} className="suite-row">
+                  <div className="suite-name">
+                    <h3><bdi>{p.name}</bdi></h3>
+                    <span className="suite-desc">{p.descriptor}</span>
+                    {INCLUDED.includes(key) && <span className="suite-state">{p.state}</span>}
+                  </div>
+                  <div className="suite-say">
+                    <p>{rich(row.body)}</p>
+                    <a className="link link-dark" href={productPath(key, locale)}>
+                      <span>{rich(row.link)}</span>
+                      <Icon name="arrow-right" className="ico ico-flip" />
                     </a>
-                  </li>
-                ))}
-              </ol>
-            </nav>
-            <ol className="room-steps">
-              {PRODUCTS.map((key, index) => {
-                const p = t.products.items[key];
-                const row = s.rows[key];
-                return (
-                  <li key={key} id={`p-${key}`} className="room-step" data-k={key}>
-                    <span className="room-n" aria-hidden="true"><bdi>{num(index)}</bdi></span>
-                    <div className="suite-name">
-                      <h3><bdi>{p.name}</bdi></h3>
-                      <span className="suite-desc">{p.descriptor}</span>
-                      <span className="suite-state">{p.state}</span>
-                    </div>
-                    <div className="suite-say">
-                      <p>{rich(row.body)}</p>
-                      <a className="link link-dark" href={productPath(key, locale)}>
-                        <span>{rich(row.link)}</span>
-                        <Icon name="arrow-right" className="ico ico-flip" />
-                      </a>
-                    </div>
-                    <div className="room-crop">{crop[key]}</div>
-                  </li>
-                );
-              })}
-              {/* the camera pulls back: all six, and what holds for every one of them */}
-              <li className="room-step room-whole" data-k="all">
-                <h3>{rich(s.room.whole)}</h3>
-                <div className="suite-notes">
-                  {s.notes.map((note) => (
-                    <p key={note.title}><b>{rich(note.title)}</b> {rich(note.body)}</p>
-                  ))}
-                </div>
-              </li>
-            </ol>
-            {/* the workspace the corners are cut from, at true size; a picture, so out of the reading order */}
-            <div className="room-stage" aria-hidden="true">
-              <div className="room-cam">
-                <div className="room-desk">
-                  <div className="room-top">
-                    <span className="room-mono">{t.agent.samples.bakery.monogram}</span>
-                    <b>{t.agent.samples.bakery.shop}</b>
+                  </div>
+                  <div className="suite-crop" data-nosnippet>
                     <SampleMark label={t.fig.sample} />
+                    {crop[key]}
                   </div>
-                  <div className="room-tiles">
-                    {PRODUCTS.map((key, index) => (
-                      <div key={key} className="room-tile" data-k={key}>
-                        <span className="room-tile-k"><bdi>{num(index)}</bdi> · <bdi>{t.products.items[key].name}</bdi></span>
-                        {crop[key]}
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              </div>
-            </div>
-          </ProductRoom>
+                </li>
+              );
+            })}
+          </ul>
+          <div className="suite-notes">
+            {s.notes.map((note) => (
+              <p key={note.title}><b>{rich(note.title)}</b> {rich(note.body)}</p>
+            ))}
+          </div>
         </div>
       </div>
     </section>
-  );
-}
-
-// -------------------------------------------------------------- everyday problems
-function Problems({ locale }: { locale: Locale }) {
-  const t = copy[locale];
-  const pr = t.home.problems;
-  return (
-    <section className="hs probs" id="problems" aria-labelledby="problems-title">
-      <div className="wrap">
-        <Rule />
-        <Head eyebrow={pr.eyebrow} title={pr.title} id="problems-title">
-          <p className="lead">{rich(pr.lead)}</p>
-        </Head>
-        <ul className="prob-grid">
-          {pr.items.slice(0, pr.shown).map((item, index) => <Problem key={item.problem} item={item} index={index} locale={locale} />)}
-        </ul>
-        {pr.items.length > pr.shown && (
-          <details className="faq-more prob-more">
-            <summary>
-              <span>{pr.more}</span>
-              <span className="faq-more-n" aria-hidden="true"><bdi>{pr.items.length - pr.shown}</bdi></span>
-              <span className="qa-mark" aria-hidden="true" />
-            </summary>
-            <ul className="prob-grid">
-              {pr.items.slice(pr.shown).map((item, index) => <Problem key={item.problem} item={item} index={index} locale={locale} />)}
-            </ul>
-          </details>
-        )}
-      </div>
-    </section>
-  );
-}
-
-/** One thing a check-up often finds, what we set up for it, and the product that does it. */
-function Problem({ item, index, locale }: { item: ProblemItem; index: number; locale: Locale }) {
-  const name = copy[locale].products.items[item.product].name;
-  return (
-    <li className="prob" data-m style={n(index % 3)}>
-      <h3 className="prob-q">{rich(item.problem)}</h3>
-      <p className="prob-fix">
-        <span className="prob-tick" aria-hidden="true"><TickPath /></span>
-        <span>{rich(item.fix)}</span>
-      </p>
-      <a className="prob-link" href={productPath(item.product, locale)}>
-        <bdi>{name}</bdi>
-        <Icon name="arrow-right" className="ico ico-flip" />
-      </a>
-    </li>
   );
 }
 

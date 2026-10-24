@@ -128,19 +128,6 @@ main[data-page="home"] { font-size: 1.0625rem; line-height: 1.55; }
 .biz-tags { display: flex; flex-wrap: wrap; gap: .5rem; }
 .biz-else-body { margin-block: 1rem 1.25rem; max-width: 36rem; color: var(--text-muted); text-wrap: pretty; }
 
-/* -------------------------------------------------------------- everyday problems */
-.prob-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); column-gap: var(--col-gap); margin-top: clamp(2.5rem, 5vw, 3.5rem); border-bottom: 1px solid var(--line); }
-.prob { display: flex; flex-direction: column; gap: .875rem; padding-block: 1.375rem 1.5rem; padding-inline-end: 1rem; border-top: 1px solid var(--line); }
-.prob:nth-child(-n + 3) { border-top: 2px solid var(--text); }
-.prob-q { font-size: 1.1875rem; font-weight: 600; line-height: 1.3; letter-spacing: -.01em; text-wrap: balance; }
-[lang="ar"] .prob-q { letter-spacing: 0; line-height: 1.55; }
-.prob-fix { display: grid; grid-template-columns: 1.125rem minmax(0, 1fr); gap: .75rem; align-items: start; color: var(--text-muted); font-size: .9375rem; line-height: 1.5; text-wrap: pretty; }
-.prob-tick svg { display: block; width: 1.125rem; height: 1.125rem; margin-top: .125rem; color: var(--text); fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
-.prob-link { display: inline-flex; align-items: center; gap: .5rem; align-self: flex-start; min-height: 2.75rem; margin-top: auto; margin-bottom: -.625rem; color: var(--text); font-size: .875rem; font-weight: 560; text-decoration: none; }
-.prob-link:hover > bdi { text-decoration: underline; text-decoration-thickness: 1px; text-underline-offset: .2em; }
-.prob-link .ico { width: 1rem; height: 1rem; transition: translate var(--fast) var(--ease); }
-.prob-link:hover .ico { translate: calc(var(--dir) * 3px) 0; }
-
 /* ------------------------------------------------------------ one order, start to finish */
 .see-head { display: grid; grid-template-columns: repeat(12, minmax(0, 1fr)); column-gap: var(--col-gap); row-gap: 1.5rem; align-items: end; }
 .see-head .head { grid-column: 1 / span 8; }
@@ -157,62 +144,6 @@ main[data-page="home"] { font-size: 1.0625rem; line-height: 1.55; }
 .tally-n { font-size: clamp(2.5rem, 1.9rem + 2vw, 3.5rem); font-weight: 620; line-height: 1; letter-spacing: -.04em; font-variant-numeric: tabular-nums; }
 .tally li span { color: var(--text-muted); font-size: .9375rem; line-height: 1.45; max-width: 16rem; }
 
-/* ------------------------------------------------------------- why ALYR */
-/* four rows read across three answers: a big company's, the shop's today, and with ALYR.
-   On wide screens one subgrid, the answers' names above the columns, and ALYR's column a
-   Carbon plate cut at 45 degrees like every drawing on the page; on phones, one card per
-   row, its ALYR line on the plate. */
-.why .head { max-width: 46rem; }
-.why-table { --why-fold: 1.5rem; margin-top: clamp(2.5rem, 5vw, 3.5rem); }
-.why-cols { display: none; }
-.why-rows { display: grid; gap: 1.25rem; }
-.why-row { display: grid; gap: .875rem; padding-top: 1rem; border-top: 2px solid var(--text); }
-.why-topic { font-size: var(--h3); font-weight: 600; line-height: 1.3; letter-spacing: -.012em; text-wrap: balance; }
-[lang="ar"] .why-topic { letter-spacing: 0; line-height: 1.55; }
-.why-dl { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); column-gap: 1rem; row-gap: 0; }
-.why-a.why-us { grid-column: 1 / -1; margin-top: .25rem; }
-.why-a { display: grid; gap: .25rem; padding-block: .75rem; border-top: 1px solid var(--line); }
-.why-a dt { font-family: var(--mono); font-size: .75rem; font-weight: 500; letter-spacing: .09em; text-transform: uppercase; color: var(--text-muted); }
-[lang="ar"] .why-a dt { font-family: var(--arabic); font-size: .875rem; letter-spacing: 0; text-transform: none; }
-.why-a dd { margin: 0; display: flex; gap: .625rem; align-items: start; line-height: 1.45; }
-.why-a:first-child dd { color: var(--text-muted); }
-.why-a.why-us { padding: 1rem 1.125rem 1.125rem; border-top: 0; background: var(--band); color: var(--on-band); clip-path: polygon(0 0, calc(100% - var(--why-fold)) 0, 100% var(--why-fold), 100% 100%, 0 100%); }
-[dir="rtl"] .why-a.why-us { clip-path: polygon(var(--why-fold) 0, 100% 0, 100% 100%, 0 100%, 0 var(--why-fold)); }
-.why-a.why-us dt { color: var(--volt); }
-.why-a.why-us dd { font-weight: 560; }
-.why-tick { flex: none; display: grid; width: 1.125rem; height: 1.125rem; margin-top: .125rem; color: var(--volt); }
-.why-tick svg { width: 100%; height: 100%; fill: none; stroke: currentColor; stroke-width: 2.25; stroke-linecap: round; stroke-linejoin: round; }
-@media (min-width: 62rem) {
-  @supports (grid-template-columns: subgrid) {
-    .why-table { position: relative; display: grid; grid-template-columns: minmax(0, 1.15fr) repeat(3, minmax(0, 1fr)); column-gap: var(--col-gap); }
-    /* the plate behind ALYR's column, from its name to the last row */
-    .why-table::before { content: ""; grid-column: 4; grid-row: 1 / span 2; margin-inline-start: calc(var(--col-gap) * -.5); background: var(--band); clip-path: polygon(0 0, calc(100% - var(--why-fold)) 0, 100% var(--why-fold), 100% 100%, 0 100%); }
-    [dir="rtl"] .why-table::before { clip-path: polygon(var(--why-fold) 0, 100% 0, 100% 100%, 0 100%, 0 var(--why-fold)); }
-    .why-cols, .why-rows, .why-row { grid-column: 1 / -1; display: grid; grid-template-columns: subgrid; }
-    .why-cols, .why-rows { grid-row: auto; position: relative; }
-    .why-cols { grid-row: 1; padding-block: 1.5rem 1rem; font-family: var(--mono); font-size: .75rem; font-weight: 500; letter-spacing: .09em; text-transform: uppercase; color: var(--text-muted); }
-    [lang="ar"] .why-cols { font-family: var(--arabic); font-size: .875rem; letter-spacing: 0; text-transform: none; }
-    .why-cols .why-us { color: var(--volt); }
-    .why-rows { grid-row: 2; padding-bottom: 1.5rem; }
-    /* a subgrid with a gap of its own drops the columns' gap: say it again */
-    .why-rows, .why-row, .why-dl { row-gap: 0; column-gap: var(--col-gap); }
-    .why-row { padding: 0; border: 0; }
-    .why-topic { padding-block: 1.25rem; border-top: 1px solid var(--line); font-size: 1.0625rem; }
-    .why-dl { grid-column: 2 / -1; display: grid; grid-template-columns: subgrid; }
-    .why-a.why-us { grid-column: auto; margin-top: 0; }
-    .why-a, .why-a.why-us { padding: 1.25rem 0; gap: 0; border-top: 1px solid var(--line); background: none; clip-path: none; }
-    /* the cells carry the plate's colour too, so their text never depends on a pseudo-element */
-    .why-a.why-us { border-top-color: var(--band-rule); padding-inline-end: 1.5rem; background: var(--band); }
-    .why-cols .why-us { padding-inline-end: 1.5rem; background: var(--band); }
-    /* each row's line runs on through the gaps, up to the plate */
-    .why-topic, .why-a:first-child { margin-inline-end: calc(var(--col-gap) * -1); padding-inline-end: var(--col-gap); }
-    .why-a:nth-child(2) { margin-inline-end: calc(var(--col-gap) * -.5); padding-inline-end: calc(var(--col-gap) * .5); }
-    .why-cols > span:first-child { border-bottom: 0; }
-    .why-a dt { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
-    .why-row:first-child :is(.why-topic, .why-a) { border-top-color: var(--line-strong); }
-    .why-row:first-child .why-a.why-us { border-top-color: var(--band-rule); }
-  }
-}
 
 /* ----------------------------------------------------------- how we work */
 .how .head { max-width: 44rem; }
@@ -340,10 +271,6 @@ main[data-page="home"] { font-size: 1.0625rem; line-height: 1.55; }
 .sheet .mono-k:first-of-type { margin-top: 2rem; }
 
 /* the first six things a check-up finds; the rest under one counted line, like the questions */
-.prob-more { margin-top: 0; border-top: 0; }
-.prob-more > summary { border-bottom: 1px solid var(--line); }
-.prob-more[open] > summary { border-bottom: 0; }
-.prob-more .prob-grid { margin-top: 0; }
 
 /* --------------------------------------------------------- the questions' fold */
 /* the first six are open to read; the rest wait under one more line, counted */
@@ -364,9 +291,6 @@ main[data-page="home"] { font-size: 1.0625rem; line-height: 1.55; }
   .hero-side > .hero-actions { margin-top: 1.5rem; }
   .hero-side > .hero-note { margin-top: .875rem; }
   .spot-head .head, .spot-link { grid-column: 1 / -1; justify-self: start; }
-  .prob-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-  .prob:nth-child(-n + 3) { border-top-width: 1px; border-top-color: var(--line); }
-  .prob:nth-child(-n + 2) { border-top: 2px solid var(--text); }
   .see-head .head, .see-link { grid-column: 1 / -1; justify-self: start; }
   .tally .mono-k, .tally ul { grid-column: 1 / -1; }
   .tally .mono-k { padding-top: 0; }
@@ -423,10 +347,6 @@ main[data-page="home"] { font-size: 1.0625rem; line-height: 1.55; }
   .ledger > div { grid-template-columns: minmax(0, 1fr); gap: .25rem; }
   .price-cta .btn { width: 100%; }
   .qa summary { min-height: 3.5rem; }
-  .prob-grid { grid-template-columns: minmax(0, 1fr); }
-  .prob:nth-child(-n + 2) { border-top-width: 1px; border-top-color: var(--line); }
-  .prob:first-child { border-top: 2px solid var(--text); }
-  .prob { padding-inline-end: 0; }
   .tally ul { grid-template-columns: minmax(0, 1fr); }
   .tally li { grid-template-columns: 4.5rem minmax(0, 1fr); align-items: baseline; column-gap: 1rem; padding-block: .75rem; border-top-width: 1px; }
   .tally li:first-child { border-top-width: 2px; }
@@ -471,8 +391,7 @@ main[data-page="home"] { font-size: 1.0625rem; line-height: 1.55; }
   .motion [data-split]:not(.is-split) { clip-path: inset(0 0 100% 0); }
 
   /* rows arrive once, when read */
-  .prob, .tally li, .checks li, .facts6 li { transition: opacity var(--dur-3) var(--ease), translate var(--dur-3) var(--ease); transition-delay: calc(var(--i, 0) * var(--stagger)); }
-  .motion .prob:not(.is-in), .motion .tally li:not(.is-in), .motion .checks li:not(.is-in), .motion .facts6 li:not(.is-in) { opacity: 0; translate: 0 10px; }
+  .motion .tally li:not(.is-in), .motion .checks li:not(.is-in), .motion .facts6 li:not(.is-in) { opacity: 0; translate: 0 10px; }
   /* a new tab's lines arrive in order, the sheet's after the day's */
   .al-js .biz-panel.is-on li { animation: hp-rise var(--dur-3) var(--ease) both; }
   .al-js .biz-panel.is-on .biz-with li { animation-delay: 120ms; }
@@ -488,8 +407,6 @@ main[data-page="home"] { font-size: 1.0625rem; line-height: 1.55; }
   [dir="rtl"] .motion .how-rail:not(.is-looped) .how-loop { clip-path: inset(-1rem 100% -1rem 0); }
   .motion .how-rail:not(.is-looped) :is(.how-loop-k, .how-loop-head) { opacity: 0; }
   .motion .how-loop { clip-path: inset(-1rem -1rem -1rem -1rem); }
-  .why-row { transition: opacity var(--dur-3) var(--ease), translate var(--dur-3) var(--ease); transition-delay: calc(var(--i, 0) * var(--stagger)); }
-  .motion .why-row:not(.is-in) { opacity: 0; translate: 0 10px; }
 
   /* price: the digits of 449 slot in from below, once; the agreement's blank draws, then the tick */
   .digit > span { transition: translate var(--dur-4) var(--spring); transition-delay: calc(var(--i, 0) * var(--stagger)); }
