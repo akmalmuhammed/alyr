@@ -166,18 +166,18 @@ function Spotlight({ locale }: { locale: Locale }) {
 // --------------------------------------------------------------- the products
 /* One shop, six products (framer-review P1): the suite as one fictional bakery's workspace on
    a Carbon plate, a tile per product, each one link to its page (SuiteFrame.tsx); then what
-   holds for every product. */
+   holds for every product. It opens full (the heading across the grid, the lead under it), so
+   it never repeats the split opening of ALYR Agent just before it. */
 function Suite({ locale }: { locale: Locale }) {
   const s = copy[locale].home.suite;
   return (
     <section className="hs suite" id="products" aria-labelledby="products-title">
       <div className="wrap">
         <Rule />
-        <div className="open-split">
-          <Head eyebrow={s.eyebrow} title={s.title} id="products-title" />
-          <div className="open-end">
+        <div className="open-full">
+          <Head eyebrow={s.eyebrow} title={s.title} id="products-title">
             <p className="lead">{rich(s.body)}</p>
-          </div>
+          </Head>
         </div>
         <SuiteFrame locale={locale} />
         <div className="suite-notes">

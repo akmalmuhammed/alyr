@@ -188,11 +188,14 @@ commits above. The founder approved the frame after clicking through the Framer 
 - **Row 2 is Agent, Accounts, then Shelf over Docs.** The prototype had Shelf over Docs first;
   the brief's order and the reading order put them last, so DOM and eye agree at every width.
 - **The products open split, after ALYR Agent's split,** as in the approved prototype, against
-  the skill's "no two neighbouring openings alike". Recorded as an exception in the skill and
-  put to the founder below.
+  the skill's "no two neighbouring openings alike". *Superseded 25 Oct: the founder asked for
+  another opening; the products now open full and the exception is gone from the skill
+  (`docs/content-audit/03-apply-log.md`, stage 3).*
 - **A desktop tile rests on its earlier state until hovered or focused,** as in the prototype:
   Bookings with no time taken, Agent without its suggestion, Docs a blank sheet. Without
-  scripts or with reduced motion every tile is finished. Put to the founder below.
+  scripts or with reduced motion every tile is finished. *Superseded 25 Oct: the founder asked
+  that tiles rest finished, as every demo opens; a hover, focus or scroll into view replays the
+  moment from its start, once (`docs/content-audit/03-apply-log.md`, stage 3).*
 - **A tap goes to the product page.** The prototype's first tap played the moment instead; on a
   phone the moment has already played in view.
 - **"Promised by 22 Oct"**, the product's words, not the prototype's "Thu 22 Oct".
@@ -225,9 +228,10 @@ commits above. The founder approved the frame after clicking through the Framer 
 ## Open for the founder
 
 - The screenshots, and a publish when he wants one.
-- Whether a desktop tile may rest on its earlier state until hovered
-  (`rest-en-1440-light.png`), or should rest finished.
-- The products' split opening beside ALYR Agent's split, or the heading inside the plate.
+- ~~Whether a desktop tile may rest on its earlier state until hovered, or should rest
+  finished.~~ Answered 25 Oct: finished.
+- ~~The products' split opening beside ALYR Agent's split.~~ Answered 25 Oct: another opening
+  (now full).
 - The Arabic of the new lines (ALY-66): «المحادثات», «محجوز», «أُرسل التذكير»,
   «وعد بالسداد قبل 22 أكتوبر».
 

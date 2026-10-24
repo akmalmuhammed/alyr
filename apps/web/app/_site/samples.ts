@@ -24,10 +24,15 @@ export const SAMPLE_ORDER: SampleKey[] = ["bakery", "salon", "homeservices"];
 /** The public site shows no rule lines (founder, 25 Oct 2026: "a new user will not understand
  * what's rule"), so the site's copy of each screen leaves them out, from the page's data too:
  * a crawler reads what the page carries, not only what it draws. The workspace keeps them. */
+const noRule = <T extends { rule: string }>(part: T): T => {
+  const copy: Partial<T> = { ...part };
+  delete copy.rule;
+  return copy as T;
+};
 const site = (view: AgentView): AgentView => ({
   ...view,
-  needs: { ...view.needs, items: view.needs.items.map((item) => ({ ...item, rule: "" })) },
-  suggestions: view.suggestions.map((card) => ({ ...card, rule: "" })),
+  needs: { ...view.needs, items: view.needs.items.map(noRule) },
+  suggestions: view.suggestions.map(noRule),
 });
 
 export const SAMPLES: Record<Locale, Record<SampleKey, AgentView>> = {

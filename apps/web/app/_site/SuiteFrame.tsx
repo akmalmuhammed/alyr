@@ -14,9 +14,10 @@ import "./suite.css";
 // "One shop, six products" (framer-review P1, approved by the founder on the Framer prototype,
 // 25 Oct 2026): the suite as one Carbon plate, the workspace of one fictional bakery at 16:20
 // on a Thursday, with one fragment of each product's real screen in its own words. Each tile is
-// one link to its product's page, and plays its own moment once (suite.css): on hover or focus
-// with a fine pointer, as it scrolls into view on a phone (SiteMotion adds `is-in`). The HTML
-// is every moment's end state, so without scripts or with reduced motion every tile is finished.
+// one link to its product's page, and rests finished, as every demo on the site opens; its
+// moment replays from the start once (suite.css): on hover or focus with a fine pointer, as it
+// scrolls into view on a phone (SiteMotion adds `is-in`). The HTML is every moment's end
+// state, so without scripts or with reduced motion every tile is finished too.
 // The frame is one figure set, so it carries one "Sample" mark, in the plate's bar.
 
 const at = (index: number) => ({ "--i": index }) as CSSProperties;
@@ -115,6 +116,8 @@ function Agent({ locale }: { locale: Locale }) {
   const view = SAMPLES[locale].bakery;
   const labels = AGENT_LABELS[view.lang];
   const card = view.suggestions.find((s) => s.key === "ready") ?? view.suggestions[0];
+  // the site's own title for the suggestions, and no rule line (founder, 25 Oct 2026)
+  const suggestions = copy[locale].agent.suggestions;
   return (
     <Win title={labels.needs} aside={view.header.when}>
       <ul className="sf-needs">
@@ -126,11 +129,10 @@ function Agent({ locale }: { locale: Locale }) {
         ))}
       </ul>
       <div className="sf-sugg">
-        <span className="sf-k">{labels.suggestions}</span>
+        <span className="sf-k">{suggestions}</span>
         <div className="sf-card">
           <b><Rich parts={card.title} /></b>
           <span><Rich parts={card.line} /></span>
-          <span className="sf-rule">{card.rule}</span>
           {card.action && <span className="sf-act"><span>{card.action.label}</span></span>}
         </div>
       </div>

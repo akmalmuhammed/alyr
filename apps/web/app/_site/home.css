@@ -62,7 +62,8 @@ main[data-page="home"] { font-size: 1.0625rem; line-height: 1.55; }
    rule, a two-line heading, a grey lead and an empty half:
    - split: the heading on the start side, its lead and link on the end column, standing on
      the heading's last baseline (How we work, ALYR Agent);
-   - full: the heading alone, on one line across the grid (By business);
+   - full: the heading on one line across the grid, its lead (if any) under it (By business,
+     the products);
    - in the plate: the heading inside the figure's Carbon plate (One order).
    Each lands its content in the section's first screen: about 280 px from the section's top
    to its content at 1440, where it was about 450. */
@@ -72,6 +73,8 @@ main[data-page="home"] .hs > .wrap > .rule { margin-bottom: var(--space-5); }
 .open-split > .open-end { grid-column: 8 / -1; display: grid; gap: var(--space-3); justify-items: start; }
 .open-end .lead { max-width: none; }
 .open-full .h2 { max-width: none; }
+/* a full opening's lead runs under its one-line heading, wide enough to stay at two lines */
+.open-full .lead { max-width: 44rem; }
 .open-plate { position: relative; padding: var(--space-4) var(--space-3); }
 .open-plate .h2 { color: var(--on-band); }
 .open-plate .lead { color: var(--concrete); }

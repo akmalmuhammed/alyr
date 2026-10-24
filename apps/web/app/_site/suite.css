@@ -4,7 +4,8 @@
    the suite's order, split by hairline seams. Each tile is one link: a fragment of the
    product's real screen, cropped hard at the tile's edge (no fade), and its name, descriptor
    and arrow. Each fragment plays one moment once (the end of this file): the HTML is the end
-   state, and the start states exist only under `.motion` until SiteMotion adds `is-in`.
+   state, every tile rests finished, and the moment replays from its start when SiteMotion adds
+   `is-in` (the start states are each animation's first frame, under `.motion`).
    Grid at 62rem and up: Chat (8 columns) and Bookings (4); Agent, Accounts, and Shelf over
    Docs (4 each). Two columns on a tablet; one, in the suite's order, on a phone. */
 
@@ -134,7 +135,7 @@
 .sf-tick { display: grid; width: 1.125rem; height: 1.125rem; color: var(--volt-ink); }
 .sf-tick svg { width: 100%; height: 100%; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: square; }
 
-/* ALYR Agent: what needs the owner now, then one suggestion with its rule */
+/* ALYR Agent: what needs the owner now, then one suggestion (no rule line on the site) */
 .sf-needs li { display: flex; align-items: baseline; gap: var(--space-3); padding: .625rem var(--space-3); border-bottom: 1px solid var(--hair); }
 .sf-needs li > b { font-size: var(--ui-heading); font-weight: var(--weight-semibold); line-height: 1; font-variant-numeric: tabular-nums; }
 .sf-needs li > span { display: grid; gap: 2px; font-weight: var(--weight-medium); }
@@ -143,8 +144,6 @@
 .sf-card { display: grid; justify-items: start; gap: .375rem; padding: .875rem; background: var(--d-card); box-shadow: 0 0 0 1px var(--d-hair-2); }
 .sf-card > b { font-size: var(--ui-body); font-weight: var(--weight-semibold); }
 .sf-card > span:nth-child(2) { font-size: var(--ui-small); }
-.sf-rule { justify-self: stretch; margin-top: 2px; padding-top: .375rem; border-top: 1px solid var(--hair); color: var(--text-muted); font-family: var(--mono); font-size: var(--ui-micro); }
-[lang="ar"] .sf-rule { font-family: var(--arabic); font-size: var(--ui-caption); }
 /* a drawn button that cannot be pressed: the outline with its notch */
 .sf-act { --n: var(--cut-notch-sm); margin-top: var(--space-1); padding: 1px; background: var(--text); clip-path: polygon(0 0, calc(100% - var(--n)) 0, 100% var(--n), 100% 100%, 0 100%); }
 .sf-act > span { display: block; padding: .3125rem .75rem; background: var(--d-card); font-size: var(--ui-small); font-weight: var(--weight-semibold); clip-path: polygon(0 0, calc(100% - var(--n) + .5px) 0, 100% calc(var(--n) - .5px), 100% 100%, 0 100%); }
@@ -232,23 +231,11 @@
 @keyframes sf-enter { from { opacity: 0; translate: calc(var(--dir) * -.55em) .55em; } to { opacity: 1; translate: 0 0; } }
 
 @media (prefers-reduced-motion: no-preference) {
-  /* before a tile is read: each fragment a moment earlier */
-  .motion .sf-chat > :not(.is-in) :is(.sf-event, .sf-confirm, .sf-wash, .sf-new) { opacity: 0; }
-  .motion .sf-chat > :not(.is-in) .sf-old { opacity: 1; }
-  .motion .sf-bookings > :not(.is-in) .sf-slot-fill { clip-path: inset(0 100% 0 0); }
-  .motion[dir="rtl"] .sf-bookings > :not(.is-in) .sf-slot-fill { clip-path: inset(0 0 0 100%); }
-  .motion .sf-bookings > :not(.is-in) :is(.sf-b1, .sf-b2) { opacity: 0; }
-  .motion .sf-agent > :not(.is-in) :is(.sf-card, .sf-act) { opacity: 0; }
-  .motion .sf-agent > :not(.is-in) .sf-rule { clip-path: inset(0 100% 0 0); }
-  .motion[dir="rtl"] .sf-agent > :not(.is-in) .sf-rule { clip-path: inset(0 0 0 100%); }
-  .motion .sf-accounts > :not(.is-in) .sf-age i { scale: 0 1; }
-  .motion .sf-accounts > :not(.is-in) .sf-promise { opacity: 0; }
-  .motion .sf-shelf > :not(.is-in) :is(.sf-d1, .sf-old) { opacity: 1; }
-  .motion .sf-shelf > :not(.is-in) :is(.sf-d0, .sf-new) { opacity: 0; }
-  .motion .sf-docs > :not(.is-in) .sf-paper { translate: calc(var(--dir) * var(--travel) * .7071) calc(var(--travel) * -.7071); }
-  .motion .sf-docs > :not(.is-in) :is(.pp-shop > b, .pp-kind > b, .pp-addr, .pp-f) { clip-path: inset(0 0 0 100%); }
-  .motion .sf-docs > :not(.is-in) :is(.pp-shop > .pp-en, .pp-kind > .pp-en) { clip-path: inset(0 100% 0 0); }
-
+  /* At rest every tile is finished, as every demo on the site opens (founder, 25 Oct 2026):
+     the HTML is the end state and nothing waits on it. Hover or focus with a fine pointer, or
+     60% in view elsewhere, adds `is-in` once (SiteMotion), and the moment plays from its start:
+     each animation fills backwards, so its first frame shows the earlier state at once, through
+     its delay, and it ends on the finished one. */
   /* ALYR Chat: the order lands in Sara's chat, then its confirmation, then her row in the inbox */
   .motion .sf-chat > .is-in .sf-event { animation: sf-arrive var(--dur-3) var(--ease) both; }
   .motion .sf-chat > .is-in .sf-confirm { animation: sf-arrive var(--dur-3) var(--ease) both; animation-delay: calc(6 * var(--stagger)); }
@@ -260,11 +247,9 @@
   .motion[dir="rtl"] .sf-bookings > .is-in .sf-slot-fill { animation-name: sf-wipe-rtl; }
   .motion .sf-bookings > .is-in .sf-b1 { animation: sf-arrive var(--dur-3) var(--ease) both; animation-delay: calc(5 * var(--stagger)); }
   .motion .sf-bookings > .is-in .sf-b2 { animation: sf-arrive var(--dur-3) var(--ease) both; animation-delay: calc(14 * var(--stagger)); }
-  /* ALYR Agent: the suggestion arrives, its rule draws, then its outlined button */
+  /* ALYR Agent: the suggestion arrives, then its outlined button */
   .motion .sf-agent > .is-in .sf-card { animation: sf-arrive var(--dur-4) var(--ease) both; }
-  .motion .sf-agent > .is-in .sf-rule { animation: sf-wipe var(--dur-3) var(--ease) both; animation-delay: calc(6 * var(--stagger)); }
-  .motion[dir="rtl"] .sf-agent > .is-in .sf-rule { animation-name: sf-wipe-rtl; }
-  .motion .sf-agent > .is-in .sf-act { animation: sf-arrive var(--dur-2) var(--ease) both; animation-delay: calc(12 * var(--stagger)); }
+  .motion .sf-agent > .is-in .sf-act { animation: sf-arrive var(--dur-2) var(--ease) both; animation-delay: calc(8 * var(--stagger)); }
   /* ALYR Accounts: the age bar fills, oldest last, then the promise */
   .motion .sf-accounts > .is-in .sf-age i { animation: sf-grow var(--dur-3) var(--ease) both; animation-delay: calc(var(--i, 0) * 2 * var(--stagger)); }
   .motion .sf-accounts > .is-in .sf-promise { animation: sf-arrive var(--dur-3) var(--ease) both; animation-delay: calc(16 * var(--stagger)); }

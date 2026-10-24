@@ -101,3 +101,25 @@ parity (6,084 strings).
 - **Not changed:** `alyr-deck-and-social` still asks for the Agent's rule lines on the deck's
   slide 5 ("by rules you can check"). The founder's decision is for the public site; whether a
   deck shown to an owner drops them too is his call.
+
+## Stage 3: the products frame ("One shop, six products")
+
+- **Every tile rests finished** (`suite.css`): the start states under `.motion
+  :not(.is-in)` are gone, so a desktop tile at rest shows its moment's end (6:00 pm taken,
+  the booking and the reminder, Sara's row new, the suggestion and its button, the age bar
+  and the promise, 0 of 6 and Sold out, the receipt drawn). Hover or focus with a fine
+  pointer, or 60% in view elsewhere, adds `is-in` once (SiteMotion, unchanged) and the moment
+  replays from its start: each animation fills backwards, so its first frame is the earlier
+  state, and it ends finished. Reduced motion and no scripts: nothing plays, every tile is
+  finished, as before.
+- **The Agent tile** titles its card "Suggestions" / «اقتراحات» (`agent.suggestions`, not
+  the workspace's "Suggestions, by rule") and draws no rule line; its button now follows the
+  card after 8 staggers (the rule line's 6 are gone).
+- **The products open full** (`HomePage.tsx`, `home.css`): the heading on one line across
+  the grid, the lead under it (`.open-full .lead`, 44rem, two lines at 1440), then the plate.
+  ALYR Agent before it opens split; Trust after it has a figure beside. The exception is gone
+  from `alyr-site-page`, and `docs/framer-review/03-code-log.md` marks the builder's two
+  choices (the split opening, the tile resting on an earlier state) as superseded.
+- **The site's data:** `_site/samples.ts` drops the `rule` key from each need and suggestion
+  (the page's own data held "RULE · …" for crawlers), and the section rule's CSS class
+  (`"className":"rule"` in Next's page data) is allowed in `allow/banned.json`.

@@ -60,6 +60,12 @@
       "term": "قاعدة",
       "context": "قاعدة البيانات",
       "reason": "«قاعدة البيانات» is \"the database\" (records kept apart inside the database; an issued document the database refuses to change), not a rule. The founder took \"rule\" off the site (25 Oct 2026); this sentence needs the word."
+    },
+    {
+      "term": "rule",
+      "context": "\"className\":\"rule",
+      "where": "html",
+      "reason": "The section rule's CSS class (the hairline with crosses above a section) in Next's page data, a class name, not a word on the page."
     }
   ],
   "offerOnly": [
