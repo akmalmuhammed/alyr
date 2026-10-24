@@ -2,8 +2,7 @@ import type { CSSProperties } from "react";
 import { Icon } from "./brand";
 import { copy, type Locale } from "./copy";
 import type { LastOne as Moment } from "./copyShelf";
-import { FigCaption } from "./Drawings";
-import { CxTop, Phone, TickPath } from "./Frames";
+import { CxTop, Phone, SampleMark, TickPath } from "./Frames";
 import { PhotoTile } from "./PageDrawings";
 import { lines, rich } from "./Text";
 import "./drawings.css";
@@ -62,8 +61,8 @@ export function LastOneFigure({ locale }: { locale: Locale }) {
           <p className="lead">{rich(m.body)}</p>
         </div>
         <figure className="sig lo" data-sig>
-          <p className="sr-only">{m.label}</p>
-          <div className="sig-stage" inert aria-hidden="true">
+          <p className="sr-only">{copy[locale].agent.samples.bakery.fictional} {m.label}</p>
+          <div className="sig-stage" inert aria-hidden="true" data-nosnippet>
             <span className="sig-rule"><i /><i /></span>
 
             <div className="sig-part lo-a" style={at(0)}>
@@ -92,6 +91,7 @@ export function LastOneFigure({ locale }: { locale: Locale }) {
                 <div className="aw-bar">
                   <span className="aw-mono">{m.page.monogram}</span>
                   <b>{m.page.shop}</b>
+                  <SampleMark label={copy[locale].fig.sample} />
                   <span className="aw-path">{s.path}</span>
                 </div>
                 <div className="lo-win-body">
@@ -147,7 +147,6 @@ export function LastOneFigure({ locale }: { locale: Locale }) {
               </Phone>
             </div>
           </div>
-          <FigCaption locale={locale} caption={m.caption} />
         </figure>
       </div>
     </section>

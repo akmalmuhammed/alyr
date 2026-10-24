@@ -121,5 +121,6 @@ Reduced motion shows end states.
 `mode="showcase"` with `headingLevel` from the host: links render as text, no "Not now",
 "Updated", stale line, team, report or setup; the moment ("Thursday · 16:20") instead of a
 date; "Who (3)" still opens; no region landmarks. On the site it sits in the workspace window
-on the Carbon plate, `inert` in the hero crop, with a FIG caption naming the fictional
-business. No "paid through ALYR links" row on a public sample (ALY-17).
+on the Carbon plate, `inert` in the hero crop, with `headings={false}` (its titles are text,
+not headings), the "Sample" mark in the window's bar or the sample switch, and a first line
+for screen readers and crawlers naming the fictional business. No "paid through ALYR links" row on a public sample (ALY-17).

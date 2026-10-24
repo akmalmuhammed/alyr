@@ -80,17 +80,30 @@ the same product. Check every verb against the code (the router, the module's `c
 WhatsApp, it replies, sends the reminders and tells you what needs you" became two
 sentences, because "what needs you" is on the workspace screen.
 
-## 4. Samples and captions
+## 4. Samples and their marks
 
 - Every drawing, screen capture, image or post that shows product data uses a fictional
-  business and is captioned once: "FIG 03 · The Bookings screen · Fictional salon" /
-  «… · صالون غير حقيقي». Never "sample" twice in a caption.
+  business and is marked as a sample once (founder, 24 Oct 2026). On the site the mark sits
+  in the drawing's own chrome: "Sample" / «مثال» beside the shop's name in the window's
+  title bar or at the end of its tab row, "Sample business" / «نشاط توضيحي» in a drawn
+  phone's header, the switch's "Sample business" on a figure with the sample switch. A
+  caption ("The same tracking page, in English and Arabic · Sample") only where the drawing
+  needs words. Never "sample" twice for one drawing. In a deck or a post, the image carries
+  the same mark, or one caption line where the drawing has no chrome.
+- **Machines read it first.** A sample's numbers must never read as ALYR's results to a
+  person or to a crawler or assistant (site audit 03, A1). Each figure's first child, before
+  any number, is a line for screen readers and crawlers: "Sample screen of a fictional
+  bakery. The names and numbers are made up; they are not ALYR's results." (the sample's
+  `fictional`, or `fig.note`). The drawing itself sits in a `data-nosnippet` box, stays
+  `inert` where it repeats a real screen, and the Agent dashboard on the site draws its
+  titles as text, not headings (`headings={false}`), so no sample number is in the page's
+  outline.
 - One fictional business per figure set (the homepage uses Qirfa Bakery throughout).
 - Prices on sample items are samples; the caption or the figure says so once.
 - Sample numbers come from the engine's captured samples (`apps/web/app/_agent/samples/`),
   never typed by hand, so the dashboard, the feed and the report agree. If two figures show
-  different moments, the captions name them (the report's week 4 to 10 Oct; the dashboard's
-  Thursday 15 Oct, 16:20).
+  different moments, the drawings name them (the report card prints its week, 4 to 10 Oct;
+  the dashboard prints "Thursday · 16:20").
 - Order numbers start at 1001 and booking numbers at 101 per shop; keep a shop's numbers
   plausible across figures.
 - Dates fall on their real weekdays (14 Oct 2026 is a Wednesday). Check with a calendar.

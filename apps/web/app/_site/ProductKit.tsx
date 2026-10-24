@@ -1,7 +1,6 @@
 import type { CSSProperties, ReactNode } from "react";
 import { Icon } from "./brand";
 import { copy, fill, type FlowSet, type InsideSection, type Locale, type ProductBar as Bar, type Questions, type ScreenSection, type WhoSection, type WorksSection } from "./copy";
-import { FigCaption } from "./Drawings";
 import { FlowDiagram } from "./FlowDiagram";
 import { contactHref } from "./Shell";
 import { CONTACT_STATE, OFFER_LIVE, PRODUCTS, productPath, type ProductKey } from "./site";
@@ -76,7 +75,8 @@ export function ProductHero({ hero, children, id = "product", wide = false }: {
 
 /** How it works, from both sides: one message followed through the customer's phone,
  * WhatsApp, ALYR and the team's screen. */
-export function FlowSection({ flow }: { flow: FlowSet }) {
+export function FlowSection({ flow, locale }: { flow: FlowSet; locale: Locale }) {
+  const f = copy[locale].fig;
   return (
     <section className="sec how" id="how">
       <div className="wrap">
@@ -86,14 +86,16 @@ export function FlowSection({ flow }: { flow: FlowSet }) {
           <p className="lead">{rich(flow.body)}</p>
         </div>
         <div className="how-panel" data-reveal>
-          <FlowDiagram flow={flow} />
+          <FlowDiagram flow={flow} sample={f.sample} note={f.note} />
         </div>
       </div>
     </section>
   );
 }
 
-/** The screen used every day, at true scale, with numbered callouts. */
+/** The screen used every day, at true scale, with numbered callouts. Each window carries its
+ * own "Sample" mark; the figure says first, to screen readers and crawlers, whose fictional
+ * screen this is (`fictional`, the bakery's by default). */
 export function ScreenBlock({ locale, screen, fictional, children, id = "screen", extra }: {
   locale: Locale;
   screen: ScreenSection;
@@ -112,9 +114,11 @@ export function ScreenBlock({ locale, screen, fictional, children, id = "screen"
         </div>
         <div className="pk-screen-grid">
           <figure className="pk-screen-fig" data-reveal>
-            {children}
-            <FigCaption locale={locale} caption={screen.caption} fictional={fictional} />
-            {extra}
+            <figcaption className="sr-only">{fictional ?? copy[locale].agent.samples.bakery.fictional}</figcaption>
+            <div data-nosnippet>
+              {children}
+              {extra}
+            </div>
           </figure>
           <ol className="callouts" aria-label={screen.label} data-reveal>
             {screen.callouts.map((callout, index) => (

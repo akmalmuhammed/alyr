@@ -156,6 +156,7 @@
 }
 .aw-bar { display: flex; align-items: center; gap: .625rem; min-height: 2.75rem; padding: 0 1rem; border-bottom: 1px solid var(--window-line); flex: none; font-size: .8125rem; line-height: 1.2; }
 .aw-bar b { font-weight: 600; white-space: nowrap; }
+.aw-bar .mark-sample { margin-inline-start: 0; }
 .aw-mono { position: relative; width: 1.5rem; height: 1.5rem; flex: none; display: grid; place-items: center; border-radius: .375rem; background: var(--monogram-bg); color: var(--monogram-ink); font-size: .625rem; font-weight: 600; overflow: hidden; box-shadow: 0 0 0 1px var(--window-line); }
 .aw-mono::after { content: ""; position: absolute; top: 0; inset-inline-end: 0; width: 7px; height: 7px; background: var(--volt); clip-path: polygon(0 0, 100% 0, 100% 100%); }
 [dir="rtl"] .aw-mono::after { clip-path: polygon(0 0, 100% 0, 0 100%); }

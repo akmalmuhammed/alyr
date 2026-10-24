@@ -3,8 +3,15 @@
 import { useEffect, useRef, useState } from "react";
 import { Icon, Symbol } from "./brand";
 import type { FlowSet, PanelRow } from "./copy";
+import { SampleMark } from "./Frames";
 
-type Props = { flow: FlowSet };
+type Props = {
+  flow: FlowSet;
+  /** The "Sample" mark at the end of the tab row, and the line said first to screen readers
+   * and crawlers (site audit 03, A1). */
+  sample: string;
+  note: string;
+};
 
 const two = (value: number) => String(value).padStart(2, "0");
 
@@ -18,7 +25,7 @@ const two = (value: number) => String(value).padStart(2, "0");
  * Picking a story keeps it playing but stays on that story; picking a step pauses. With
  * reduced motion nothing plays and nothing travels: the steps are read one tap at a time.
  */
-export function FlowDiagram({ flow }: Props) {
+export function FlowDiagram({ flow, sample, note }: Props) {
   const stories = flow.stories;
   const [at, setAt] = useState({ story: 0, step: 0 });
   const [auto, setAuto] = useState(true);
@@ -106,7 +113,8 @@ export function FlowDiagram({ flow }: Props) {
 
   return (
     <div className="fx" ref={root} data-playing={playing || undefined}>
-      <div className="demo-bar">
+      <p className="sr-only">{note}</p>
+      <div className="demo-bar" data-nosnippet>
         <div className="demo-tabs" role="tablist" aria-label={flow.tabsLabel} onKeyDown={onKey}>
           {stories.map((item, index) => (
             <button
@@ -121,7 +129,6 @@ export function FlowDiagram({ flow }: Props) {
               className="demo-tab"
               onClick={() => chooseStory(index)}
             >
-              <span className="demo-tab-n" aria-hidden="true">{two(index + 1)}</span>
               {item.tab}
             </button>
           ))}
@@ -132,9 +139,10 @@ export function FlowDiagram({ flow }: Props) {
             {auto ? flow.pause : flow.play}
           </button>
         )}
+        <SampleMark label={sample} className="fx-sample" />
       </div>
 
-      <div className="fx-stage" id="fx-stage" role="tabpanel" aria-labelledby={`fx-tab-${story.id}`} key={story.id}>
+      <div className="fx-stage" id="fx-stage" role="tabpanel" aria-labelledby={`fx-tab-${story.id}`} key={story.id} data-nosnippet>
         <section className="fx-node fx-customer" data-lit={lit === "customer" || undefined} aria-label={flow.customer.name}>
           <header className="fx-head">
             <Icon name="users" className="fx-ico" />
@@ -229,7 +237,7 @@ export function FlowDiagram({ flow }: Props) {
         </section>
       </div>
 
-      <div className="fx-now" aria-live={playing ? "off" : "polite"}>
+      <div className="fx-now" aria-live={playing ? "off" : "polite"} data-nosnippet>
         <span className="fx-count" dir="ltr" aria-hidden="true">{two(at.step + 1)} / {two(steps.length)}</span>
         <div className="fx-say" key={`${story.id}-${at.step}`}>
           <h3>{now.title}</h3>
@@ -237,7 +245,7 @@ export function FlowDiagram({ flow }: Props) {
         </div>
       </div>
 
-      <ol className="fx-steps" aria-label={flow.stepsLabel} key={`steps-${story.id}`}>
+      <ol className="fx-steps" aria-label={flow.stepsLabel} key={`steps-${story.id}`} data-nosnippet>
         {steps.map((step, index) => (
           <li key={index}>
             <button
@@ -256,7 +264,6 @@ export function FlowDiagram({ flow }: Props) {
           </li>
         ))}
       </ol>
-      <p className="demo-note">{flow.note}</p>
     </div>
   );
 }

@@ -17,11 +17,11 @@ export function AccountsPage({ locale }: { locale: Locale }) {
     <Shell locale={locale} page="accounts" cta={p.cta}>
       <ProductBar bar={p.bar} />
       <ProductHero hero={p.hero}>
-        <ProductDemo product={p.demo} locale={locale} />
+        <ProductDemo product={p.demo} locale={locale} sample={t.fig.sample} note={bakery.fictional} />
       </ProductHero>
-      <FlowSection flow={p.flow} />
+      <FlowSection flow={p.flow} locale={locale} />
       <ScreenBlock locale={locale} screen={p.screen} fictional={bakery.fictional}>
-        <CreditScreen sheet={sheet} shop={bakery.shop} monogram={bakery.monogram} path={sheet.path} label={p.screen.label} />
+        <CreditScreen sheet={sheet} shop={bakery.shop} monogram={bakery.monogram} path={sheet.path} label={p.screen.label} sample={t.fig.sample} />
       </ScreenBlock>
       <InsideBlock inside={p.inside} />
       <WhoBlock who={p.who} />

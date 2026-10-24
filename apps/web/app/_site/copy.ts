@@ -87,7 +87,6 @@ export type DemoSet = {
   today: string;
   typeHere: string;
   workspace: string;
-  note: string;
   tabsLabel: string;
   pause: string;
   play: string;
@@ -124,7 +123,6 @@ export type FlowSet = {
   stepsLabel: string;
   pause: string;
   play: string;
-  note: string;
   customer: Named;
   whatsapp: Named;
   alyr: Named & { idle: string };
@@ -136,9 +134,10 @@ export type FlowSet = {
 type Meta = { title: string; description: string; descriptionNoOffer?: string };
 export type Titled = { title: string; body: string };
 
-/** A figure's caption: its number and what it shows. The component adds "Fig" and, unless
- * the figure names its own, "Sample, fictional bakery" from `fig`. */
-export type Caption = { n: string; text: string; nOffer?: string };
+/** A caption, only for a drawing that needs words (the trust pair, the no-CR foot, the
+ * agreement): what it shows. The component adds "Sample" from `fig`. Every other drawing
+ * carries the "Sample" mark in its own chrome instead (site audit, 24 Oct 2026). */
+export type Caption = { text: string };
 
 /** One line of a drawn chat message; a link shows in link colour after its text. */
 export type BubbleLine = string | { text: string; link: string };
@@ -153,10 +152,6 @@ export type Bubble = {
  * one with `offer` only while prices are on (or off) the page (site.ts). */
 export type Question = { id: string; q: string; a: string; state?: ContactState; offer?: boolean };
 export type Questions = { eyebrow: string; title: string; items: Question[] };
-
-/** A figure of the Sunday report: the card and its text are the engine's own sample output
- * (`_agent/samples/report/`), drawn as the WhatsApp message the owner gets (ReportPhone). */
-export type Report = { caption: Caption };
 
 /** The words around the report's sample message, and each sample card in words. */
 export type ReportCopy = {
@@ -203,7 +198,8 @@ export type AgentFigure = {
     shop: string;
     monogram: string;
     announce: string;
-    /** The end of every caption on this sample's figure. */
+    /** What this sample is, said first in its figure to screen readers and crawlers, before
+     * any of its numbers (site audit 03, A1): a fictional business, numbers not ALYR's. */
     fictional: string;
     feed: FeedEvent[];
   }>;
@@ -255,7 +251,7 @@ type Home = {
     facts: string[];
     /** The facts while prices are off the page (`OFFER_LIVE`). */
     factsNoOffer: string[];
-    figure: { label: string; caption: Caption };
+    figure: { label: string };
   };
   /** The owner's everyday problems, each with what ALYR does about it and the product. */
   problems: {
@@ -286,11 +282,9 @@ type Home = {
     eyebrow: string;
     title: string;
     body: string;
-    caption: Caption;
     label: string;
     callouts: string[];
     calloutsLabel: string;
-    under: string;
     link: string;
   };
   suite: {
@@ -299,7 +293,6 @@ type Home = {
     body: string;
     rows: Record<ProductKey, { body: string; link: string }>;
     notes: Titled[];
-    caption: Caption;
     crops: {
       items: string; total: string; pay: string; times: string[]; time: string; owed: string;
       /** ALYR Shelf: two item cards on the order page, one nearly gone, one sold out. */
@@ -409,7 +402,7 @@ export type ProductBar = { label: string; links: { id: string; label: string }[]
 export type ProductHero = { eyebrow: string; title: [string, string]; lead: string; facts: string[]; factsOffer?: string[] };
 
 /** A real workspace screen at true scale, with numbered callouts. */
-export type ScreenSection = { eyebrow: string; title: string; body?: string; caption: Caption; label: string; callouts: string[] };
+export type ScreenSection = { eyebrow: string; title: string; body?: string; label: string; callouts: string[] };
 
 /** Everything the product does today, by audience, then what is not built yet. */
 export type InsideSection = {
@@ -474,9 +467,9 @@ type AccountsPage = PageCommon & {
 };
 
 type AgentPage = PageCommon & {
-  figure: { label: string; caption: Caption };
-  how: { eyebrow: string; title: string; steps: Titled[]; card: string; under: string; caption: Caption };
-  report: { eyebrow: string; title: string; body: string; report: Report };
+  figure: { label: string };
+  how: { eyebrow: string; title: string; steps: Titled[]; card: string; under: string };
+  report: { eyebrow: string; title: string; body: string };
   rules: { eyebrow: string; title: string; body: string; heads: [string, string]; rows: { name: string; rule: string; note?: string }[]; notes: string[] };
 };
 
@@ -512,7 +505,9 @@ export type Copy = {
     bar: string;
   };
   footer: { line: string; rights: string; workspace: string; disclaimer: string; doha: string; links: string; products: string };
-  fig: { label: string; fictional: string };
+  /** The "Sample" mark in a drawing's chrome; the phone header's "Sample business"; and the
+   * line said first in a figure of a fictional business that is not one of the three. */
+  fig: { sample: string; business: string; note: string };
   report: ReportCopy;
   agent: AgentFigure;
   home: Home;
@@ -655,9 +650,13 @@ const en: Copy = {
     links: "Site",
     products: "Products",
   },
-  fig: { label: "Fig", fictional: "Sample, fictional bakery" },
+  fig: {
+    sample: "Sample",
+    business: "Sample business",
+    note: "Sample screen of a fictional business. The names and numbers are made up; they are not ALYR’s results.",
+  },
   report: {
-    meta: "Business account",
+    meta: "Sample business",
     day: "Sunday",
     time: "09:00",
     alt: {
@@ -682,7 +681,7 @@ const en: Copy = {
         shop: "Qirfa Bakery",
         monogram: "QB",
         announce: "Showing Qirfa Bakery, a fictional bakery.",
-        fictional: "Sample data, fictional bakery",
+        fictional: "Sample screen of a fictional bakery. The names and numbers are made up; they are not ALYR’s results.",
         feed: [
           { at: "16:00", title: "Booking reminder sent", line: "Cake tasting, today at 18:00\u00a0·\u00a0Noor A.", adds: ["sent", "booking_reminders"] },
           { at: "16:04", title: "Welcome menu sent", line: "To a new customer: “Welcome to Qirfa Bakery. How can we help?”", adds: ["sent"] },
@@ -696,7 +695,7 @@ const en: Copy = {
         shop: "Dafira Salon",
         monogram: "DS",
         announce: "Showing Dafira Salon, a fictional salon.",
-        fictional: "Sample data, fictional salon",
+        fictional: "Sample screen of a fictional salon. The names and numbers are made up; they are not ALYR’s results.",
         feed: [
           { at: "15:58", title: "Welcome menu sent", line: "To a new customer: “Welcome to Dafira Salon. How can we help?”", adds: ["sent"] },
           { at: "16:00", title: "Booking reminder sent", line: "Blow-dry, today at 18:00\u00a0·\u00a0Dana R.", adds: ["sent", "booking_reminders"] },
@@ -710,7 +709,7 @@ const en: Copy = {
         shop: "Zilal Cooling",
         monogram: "ZC",
         announce: "Showing Zilal Cooling, a fictional AC company.",
-        fictional: "Sample data, fictional AC company",
+        fictional: "Sample screen of a fictional AC company. The names and numbers are made up; they are not ALYR’s results.",
         feed: [
           { at: "15:56", title: "Welcome menu sent", line: "To a new customer: “Welcome to Zilal Cooling. How can we help?”", adds: ["sent"] },
           { at: "16:00", title: "Booking reminder sent", line: "AC service, split unit, today at 18:00\u00a0·\u00a0Hassan D.", adds: ["sent", "booking_reminders"] },
@@ -733,7 +732,6 @@ const en: Copy = {
       factsNoOffer: ["We come to your shop", "Six products, one workspace", "Arabic and English"],
       figure: {
         label: "The ALYR Agent home screen of a fictional bakery, and what ALYR did for it this afternoon",
-        caption: { n: "01", text: "One afternoon at a bakery: what ALYR did, and what needs a look" },
       },
     },
     problems: {
@@ -812,7 +810,6 @@ const en: Copy = {
       stepsLabel: "Steps",
       pause: "Pause",
       play: "Play",
-      note: "Sample conversation with a fictional bakery.",
       customer: { name: "Your customer", sub: "On WhatsApp" },
       whatsapp: { name: "WhatsApp", sub: "Business Platform" },
       alyr: { name: "ALYR", sub: "Working in the background", idle: "Waiting for the next message" },
@@ -960,7 +957,6 @@ const en: Copy = {
       title: "Every day, see what changed\nand what to do next.",
       body:
         "ALYR Agent reads the orders, bookings, chats and credit already in your workspace. It puts waiting work first, compares your week with the same days last week, and suggests up to three things, each with its reason. You decide.",
-      caption: { n: "02", text: "The whole home screen" },
       label: "The ALYR Agent home screen of the sample business you choose",
       calloutsLabel: "How to read it",
       callouts: [
@@ -970,7 +966,6 @@ const en: Copy = {
         "Shows why: each suggestion says what it counted, and opens those rows.",
         "Done for you: what ALYR sent this week.",
       ],
-      under: "The real screen, with fictional businesses. ALYR computed every number from each sample’s records.",
       link: "See ALYR Agent",
     },
     suite: {
@@ -1014,7 +1009,6 @@ const en: Copy = {
           body: "come with ALYR Chat and ALYR Bookings. Today they open a test page; card payments start once a payment provider is connected.",
         },
       ],
-      caption: { n: "04", text: "A corner of each product’s screen, at true size" },
       crops: {
         items: "3 items",
         total: "QAR 38",
@@ -1335,7 +1329,7 @@ const en: Copy = {
         { label: "Term", value: "Month to month. Stop at the end of any month, with 7 days’ notice." },
       ],
       agreement: {
-        caption: { n: "05", text: "The first month, as it goes into your agreement" },
+        caption: { text: "The first month, as it goes into your agreement" },
         kicker: "Agreement · first month",
         parties: "ALYR and Qirfa Bakery",
         titleLead: "Your first month,",
@@ -1395,7 +1389,7 @@ const en: Copy = {
         items: { cr: "Commercial registration", provider: "Payment provider", meta: "Meta Tech Provider" },
       },
       figure: {
-        caption: { n: "05", nOffer: "06", text: "The same tracking page in English and Arabic" },
+        caption: { text: "The same tracking page, in English and Arabic" },
         label: "The same customer page in English and in Arabic, side by side",
       },
     },
@@ -1565,11 +1559,10 @@ const en: Copy = {
     body:
       "Your customers keep messaging you the way they already do. ALYR Chat adds the order page, the payment link and the updates, and your team sees it all in one place.",
     business: "Dana Home Services",
-    businessMeta: "Business account",
+    businessMeta: "Sample business",
     today: "Today",
     typeHere: "Message",
     workspace: "Workspace",
-    note: "Sample conversation with a fictional business.",
     tabsLabel: "What the product does",
     pause: "Pause the demo",
     play: "Play the demo",
@@ -1676,7 +1669,6 @@ const en: Copy = {
       stepsLabel: "Steps",
       pause: "Pause",
       play: "Play",
-      note: "Sample conversation with a fictional business.",
       customer: { name: "Your customer", sub: "On WhatsApp, as always" },
       whatsapp: { name: "WhatsApp", sub: "Business Platform" },
       alyr: { name: "ALYR Chat", sub: "Working in the background", idle: "Waiting for the next message" },
@@ -2037,11 +2029,10 @@ const en: Copy = {
       },
       demo: {
         business: "Dafira Salon",
-        businessMeta: "Business account",
+        businessMeta: "Sample business",
         today: "Today",
         typeHere: "Message",
         workspace: "Workspace",
-        note: "Sample conversation with a fictional salon.",
         tabsLabel: "What ALYR Bookings does",
         pause: "Pause the demo",
         play: "Play the demo",
@@ -2169,7 +2160,6 @@ const en: Copy = {
         stepsLabel: "Steps",
         pause: "Pause",
         play: "Play",
-        note: "Sample conversation with a fictional salon.",
         customer: { name: "Your customer", sub: "On WhatsApp, as always" },
         whatsapp: { name: "WhatsApp", sub: "Business Platform" },
         alyr: { name: "ALYR Bookings", sub: "Working in the background", idle: "Waiting for the next message" },
@@ -2291,7 +2281,6 @@ const en: Copy = {
       screen: {
         eyebrow: "The screen",
         title: "Today and the next seven days, on one screen.",
-        caption: { n: "02", text: "The Bookings screen" },
         label: "The Bookings screen of a fictional salon’s workspace",
         callouts: [
           "Every visit booked from the chat, in time order.",
@@ -2445,7 +2434,6 @@ const en: Copy = {
       },
       figure: {
         label: "The ALYR Agent home screen of the sample business you choose, and what ALYR did for it this afternoon",
-        caption: { n: "01", text: "ALYR Agent on a Thursday afternoon" },
       },
       how: {
         eyebrow: "How it works",
@@ -2458,14 +2446,12 @@ const en: Copy = {
         ],
         card: "One suggestion, as the screen shows it",
         under: "The button opens your credit accounts with those three customers. Nothing is sent until you press Send reminders there.",
-        caption: { n: "02", text: "One suggestion, opened" },
       },
       report: {
         eyebrow: "The Sunday report",
         title: "The same week, on your WhatsApp, every Sunday.",
         body:
           "At 9:00 on Sunday, a card with last week’s main number against the week before, each day beside the same day the week before, and two or three facts for your kind of business. Under it, a line for each product, what ALYR did for you, and one next step with its rule. The first reports go out once WhatsApp approves the report’s wording.",
-        report: { caption: { n: "03", text: "The Sunday report on WhatsApp, for 4⁠–⁠10 Oct" } },
       },
       rules: {
         eyebrow: "The rules",
@@ -2603,11 +2589,10 @@ const en: Copy = {
       },
       demo: {
         business: "Qirfa Bakery",
-        businessMeta: "Business account",
+        businessMeta: "Sample business",
         today: "Today",
         typeHere: "Message",
         workspace: "Workspace",
-        note: "Sample conversation with a fictional bakery and its office account.",
         tabsLabel: "What ALYR Accounts does",
         pause: "Pause the demo",
         play: "Play the demo",
@@ -2719,7 +2704,6 @@ const en: Copy = {
         stepsLabel: "Steps",
         pause: "Pause",
         play: "Play",
-        note: "Sample conversation with a fictional bakery.",
         customer: { name: "Your customer", sub: "On WhatsApp, as always" },
         whatsapp: { name: "WhatsApp", sub: "Business Platform" },
         alyr: { name: "ALYR Accounts", sub: "Working in the background", idle: "Waiting for the next entry" },
@@ -2836,7 +2820,6 @@ const en: Copy = {
       screen: {
         eyebrow: "The screen",
         title: "Who owes you, and how long.",
-        caption: { n: "02", text: "Credit accounts" },
         label: "The Credit accounts screen of a fictional bakery’s workspace",
         callouts: [
           "Total owed to you.",
@@ -3109,9 +3092,13 @@ const ar: Copy = {
     links: "الموقع",
     products: "المنتجات",
   },
-  fig: { label: "الشكل", fictional: "مثال: مخبز غير حقيقي" },
+  fig: {
+    sample: "مثال",
+    business: "نشاط توضيحي",
+    note: "مثال لشاشة نشاط غير حقيقي. الأسماء والأرقام للتوضيح، وليست نتائج حققتها ALYR.",
+  },
   report: {
-    meta: "حساب أعمال",
+    meta: "نشاط توضيحي",
     day: "الأحد",
     time: "09:00",
     alt: {
@@ -3136,7 +3123,7 @@ const ar: Copy = {
         shop: "مخبز قرفة",
         monogram: "ق",
         announce: "يُعرض الآن مخبز قرفة، وهو مخبز غير حقيقي.",
-        fictional: "مثال: مخبز غير حقيقي",
+        fictional: "مثال لشاشة مخبز غير حقيقي. الأسماء والأرقام للتوضيح، وليست نتائج حققتها ALYR.",
         feed: [
           { at: "16:00", title: "أُرسل تذكير بموعد", line: "تذوّق الكيك، اليوم الساعة 18:00\u00a0·\u00a0نور أ.", adds: ["sent", "booking_reminders"] },
           { at: "16:04", title: "أُرسلت قائمة الترحيب", line: "لعميل جديد: «أهلاً بك في مخبز قرفة. كيف نقدر نساعدك؟»", adds: ["sent"] },
@@ -3150,7 +3137,7 @@ const ar: Copy = {
         shop: "صالون ضفيرة",
         monogram: "ض",
         announce: "يُعرض الآن صالون ضفيرة، وهو صالون غير حقيقي.",
-        fictional: "مثال: صالون غير حقيقي",
+        fictional: "مثال لشاشة صالون غير حقيقي. الأسماء والأرقام للتوضيح، وليست نتائج حققتها ALYR.",
         feed: [
           { at: "15:58", title: "أُرسلت قائمة الترحيب", line: "لعميلة جديدة: «أهلاً بك في صالون ضفيرة. كيف نقدر نخدمك؟»", adds: ["sent"] },
           { at: "16:00", title: "أُرسل تذكير بموعد", line: "تسشوار، اليوم الساعة 18:00\u00a0·\u00a0دانة ر.", adds: ["sent", "booking_reminders"] },
@@ -3164,7 +3151,7 @@ const ar: Copy = {
         shop: "ظلال للتكييف",
         monogram: "ظ",
         announce: "تُعرض الآن ظلال للتكييف، وهي شركة تكييف غير حقيقية.",
-        fictional: "مثال: شركة تكييف غير حقيقية",
+        fictional: "مثال لشاشة شركة تكييف غير حقيقية. الأسماء والأرقام للتوضيح، وليست نتائج حققتها ALYR.",
         feed: [
           { at: "15:56", title: "أُرسلت قائمة الترحيب", line: "لعميل جديد: «أهلاً بك في ظلال للتكييف. كيف نقدر نساعدك؟»", adds: ["sent"] },
           { at: "16:00", title: "أُرسل تذكير بموعد", line: "صيانة مكيف سبليت، اليوم الساعة 18:00\u00a0·\u00a0حسن د.", adds: ["sent", "booking_reminders"] },
@@ -3187,7 +3174,6 @@ const ar: Copy = {
       factsNoOffer: ["نأتي إلى محلك", "ستة منتجات في مساحة عمل واحدة", "بالعربية والإنجليزية"],
       figure: {
         label: "الشاشة الرئيسية لـ ALYR Agent في مخبز غير حقيقي، وما أنجزته ALYR له عصر اليوم",
-        caption: { n: "01", text: "عصر يوم في مخبز: ما أنجزته ALYR، وما يحتاج نظرة" },
       },
     },
     problems: {
@@ -3266,7 +3252,6 @@ const ar: Copy = {
       stepsLabel: "الخطوات",
       pause: "إيقاف",
       play: "تشغيل",
-      note: "محادثة توضيحية مع مخبز غير حقيقي.",
       customer: { name: "عميلك", sub: "على واتساب" },
       whatsapp: { name: "واتساب", sub: "منصة الأعمال" },
       alyr: { name: "ALYR", sub: "تعمل في الخلفية", idle: "بانتظار الرسالة التالية" },
@@ -3414,7 +3399,6 @@ const ar: Copy = {
       title: "كل يوم، اعرف ما تغيّر\nوما الخطوة التالية.",
       body:
         "يقرأ ALYR Agent الطلبات والحجوزات والمحادثات والآجل الموجودة في مساحة عملك. يضع العمل المنتظر أولاً، ويقارن أسبوعك بالأيام نفسها من الأسبوع الماضي، ويقترح حتى ثلاثة أشياء، لكل منها سببه. والقرار لك.",
-      caption: { n: "02", text: "الشاشة الرئيسية كاملة" },
       label: "الشاشة الرئيسية لـ ALYR Agent للنشاط التوضيحي الذي تختاره",
       calloutsLabel: "كيف تقرؤها",
       callouts: [
@@ -3424,7 +3408,6 @@ const ar: Copy = {
         "يبيّن السبب: كل اقتراح يذكر ما عدّه، ويفتح تلك السجلات.",
         "أنجزته ALYR لك: ما أرسلته هذا الأسبوع.",
       ],
-      under: "الشاشة الحقيقية، بأنشطة غير حقيقية. كل رقم فيها حسبته ALYR من سجلات المثال نفسه.",
       link: "تعرّف على ALYR Agent",
     },
     suite: {
@@ -3468,7 +3451,6 @@ const ar: Copy = {
           body: "تأتي مع ALYR Chat وALYR Bookings. وهي اليوم تفتح صفحة تجريبية، ويبدأ الدفع بالبطاقات بعد ربط مزوّد دفع.",
         },
       ],
-      caption: { n: "04", text: "ركن من شاشة كل منتج، بحجمه الحقيقي" },
       crops: {
         items: "الأصناف: 3",
         total: "38 ر.ق",
@@ -3789,7 +3771,7 @@ const ar: Copy = {
         { label: "مدة الاشتراك", value: "اشتراك شهري. يمكنك إيقافه في نهاية أي شهر، على أن تُبلغنا قبل 7 أيام." },
       ],
       agreement: {
-        caption: { n: "05", text: "الشهر الأول كما يُكتب في اتفاقك" },
+        caption: { text: "الشهر الأول كما يُكتب في اتفاقك" },
         kicker: "الاتفاق · الشهر الأول",
         parties: "بين ALYR ومخبز قرفة",
         titleLead: "شهرك الأول،",
@@ -3849,7 +3831,7 @@ const ar: Copy = {
         items: { cr: "السجل التجاري", provider: "مزوّد الدفع", meta: "مزوّد تقنية معتمد لدى Meta" },
       },
       figure: {
-        caption: { n: "05", nOffer: "06", text: "صفحة تتبّع الطلب نفسها بالعربية والإنجليزية" },
+        caption: { text: "صفحة تتبّع الطلب نفسها، بالعربية والإنجليزية" },
         label: "صفحة العميل نفسها بالعربية والإنجليزية، جنباً إلى جنب",
       },
     },
@@ -4019,11 +4001,10 @@ const ar: Copy = {
     body:
       "يواصل عملاؤك مراسلتك كما اعتادوا. ويضيف ALYR Chat صفحة الطلب ورابط الدفع والتحديثات، وفريقك يرى كل شيء في مكان واحد.",
     business: "دانة للخدمات المنزلية",
-    businessMeta: "حساب أعمال",
+    businessMeta: "نشاط توضيحي",
     today: "اليوم",
     typeHere: "مراسلة",
     workspace: "مساحة العمل",
-    note: "محادثة توضيحية مع شركة غير حقيقية.",
     tabsLabel: "ماذا يفعل المنتج",
     pause: "إيقاف العرض",
     play: "تشغيل العرض",
@@ -4130,7 +4111,6 @@ const ar: Copy = {
       stepsLabel: "الخطوات",
       pause: "إيقاف",
       play: "تشغيل",
-      note: "محادثة توضيحية مع شركة غير حقيقية.",
       customer: { name: "عميلك", sub: "على واتساب كعادته" },
       whatsapp: { name: "واتساب", sub: "منصة الأعمال" },
       alyr: { name: "ALYR Chat", sub: "يعمل في الخلفية", idle: "بانتظار الرسالة التالية" },
@@ -4492,11 +4472,10 @@ const ar: Copy = {
       demo: {
         business: "صالون ضفيرة",
         avatar: "ض",
-        businessMeta: "حساب أعمال",
+        businessMeta: "نشاط توضيحي",
         today: "اليوم",
         typeHere: "مراسلة",
         workspace: "مساحة العمل",
-        note: "محادثة توضيحية مع صالون غير حقيقي.",
         tabsLabel: "ماذا يفعل ALYR Bookings",
         pause: "إيقاف العرض",
         play: "تشغيل العرض",
@@ -4624,7 +4603,6 @@ const ar: Copy = {
         stepsLabel: "الخطوات",
         pause: "إيقاف",
         play: "تشغيل",
-        note: "محادثة توضيحية مع صالون غير حقيقي.",
         customer: { name: "عميلك", sub: "على واتساب كعادته" },
         whatsapp: { name: "واتساب", sub: "منصة الأعمال" },
         alyr: { name: "ALYR Bookings", sub: "يعمل في الخلفية", idle: "بانتظار الرسالة التالية" },
@@ -4746,7 +4724,6 @@ const ar: Copy = {
       screen: {
         eyebrow: "الشاشة",
         title: "اليوم والأيام السبعة القادمة، على شاشة واحدة.",
-        caption: { n: "02", text: "شاشة الحجوزات" },
         label: "شاشة الحجوزات في مساحة عمل صالون غير حقيقي",
         callouts: [
           "كل زيارة حُجزت من المحادثة، بترتيب الوقت.",
@@ -4900,7 +4877,6 @@ const ar: Copy = {
       },
       figure: {
         label: "الشاشة الرئيسية لـ ALYR Agent للنشاط التوضيحي الذي تختاره، وما أنجزته ALYR له عصر اليوم",
-        caption: { n: "01", text: "ALYR Agent عصر يوم خميس" },
       },
       how: {
         eyebrow: "كيف يعمل",
@@ -4913,14 +4889,12 @@ const ar: Copy = {
         ],
         card: "اقتراح واحد كما يظهر على الشاشة",
         under: "يفتح الزر حساباتك الآجلة على هؤلاء العملاء الثلاثة. ولا يُرسل شيء حتى تضغط «أرسل التذكيرات» هناك.",
-        caption: { n: "02", text: "اقتراح واحد، مفتوحاً" },
       },
       report: {
         eyebrow: "تقرير الأحد",
         title: "الأسبوع نفسه على واتساب، صباح كل يوم أحد.",
         body:
           "الساعة 9:00 صباح الأحد تصلك بطاقة فيها أهم رقم في أسبوعك الماضي مقارنة بالأسبوع الذي قبله، وكل يوم بجانب اليوم نفسه من الأسبوع الذي قبله، واثنان أو ثلاثة من أهم ما يخص نوع نشاطك. وتحتها سطر لكل منتج، وما أنجزته ALYR عنك، وخطوة تالية واحدة مع قاعدتها. وتبدأ أولى التقارير بعد موافقة واتساب على صياغة التقرير.",
-        report: { caption: { n: "03", text: "تقرير الأحد على واتساب، عن 4⁠–⁠10 أكتوبر" } },
       },
       rules: {
         eyebrow: "القواعد",
@@ -5059,11 +5033,10 @@ const ar: Copy = {
       demo: {
         business: "مخبز قرفة",
         avatar: "ق",
-        businessMeta: "حساب أعمال",
+        businessMeta: "نشاط توضيحي",
         today: "اليوم",
         typeHere: "مراسلة",
         workspace: "مساحة العمل",
-        note: "محادثة توضيحية مع مخبز غير حقيقي وحساب أحد المكاتب.",
         tabsLabel: "ماذا يفعل ALYR Accounts",
         pause: "إيقاف العرض",
         play: "تشغيل العرض",
@@ -5175,7 +5148,6 @@ const ar: Copy = {
         stepsLabel: "الخطوات",
         pause: "إيقاف",
         play: "تشغيل",
-        note: "محادثة توضيحية مع مخبز غير حقيقي.",
         customer: { name: "عميلك", sub: "على واتساب كعادته" },
         whatsapp: { name: "واتساب", sub: "منصة الأعمال" },
         alyr: { name: "ALYR Accounts", sub: "يعمل في الخلفية", idle: "بانتظار الحركة التالية" },
@@ -5292,7 +5264,6 @@ const ar: Copy = {
       screen: {
         eyebrow: "الشاشة",
         title: "من عليه مستحقات لك، ومنذ متى.",
-        caption: { n: "02", text: "الحسابات الآجلة" },
         label: "شاشة الحسابات الآجلة في مساحة عمل مخبز غير حقيقي",
         callouts: [
           "إجمالي المستحق لك.",

@@ -5,7 +5,9 @@ import type { ChatScene, Copy } from "./copy";
 import "./xray.css";
 
 type Inside = Copy["product"]["inside"];
-type Phone = { business: string; businessMeta: string; avatar?: string; today: string; typeHere: string };
+/** The drawn phone's words; `note` says first, to screen readers and crawlers, that the
+ * business is fictional (its header says "Sample business" for the eye). */
+type Phone = { business: string; businessMeta: string; avatar?: string; today: string; typeHere: string; note: string };
 
 // The three groups, in order, and what the drawing shows for each: the customer's phone;
 // the team's workspace behind it; the phone in X-ray, with the message's path through ALYR.
@@ -92,7 +94,8 @@ export function ChatXray({ inside, phone }: { inside: Inside; phone: Phone }) {
       </div>
 
       <div className="xr-pin">
-        <div className="xr-stage" aria-hidden="true">
+        <p className="sr-only">{phone.note}</p>
+        <div className="xr-stage" aria-hidden="true" data-nosnippet>
           {/* the team's screen, behind the phone */}
           <div className="xr-desk">
             <div className="xr-desk-top"><b>{inside.xray.inbox}</b></div>

@@ -14,6 +14,14 @@ export function Phone({ children, className, live = false }: { children: ReactNo
   );
 }
 
+/** The small "Sample" mark a drawing carries in its own chrome (its window's title bar, its
+ * phone's header, its tab row), once per drawing, in place of a FIG caption (site audit,
+ * 24 Oct 2026). It travels with the drawing when someone screenshots it. Screen readers and
+ * crawlers hear the figure's own first line instead, so the mark itself is hidden from them. */
+export function SampleMark({ label, className }: { label: string; className?: string }) {
+  return <span className={`mark-sample${className ? ` ${className}` : ""}`} aria-hidden="true">{label}</span>;
+}
+
 /** The top of a customer page: the shop's monogram with its Volt corner, its name, which
  * page this is, and the language switch. */
 export function CxTop({ shop, monogram, context, other, lang }: {

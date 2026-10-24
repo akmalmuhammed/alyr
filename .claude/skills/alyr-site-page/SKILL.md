@@ -1,6 +1,6 @@
 ---
 name: alyr-site-page
-description: Build or change a public ALYR web page or anything on it. Use for the homepage (/ and /ar), the product pages (/chat, /bookings, /agent, /accounts, /shelf, /docs and their /ar pages), adding a new product page, the header, Products menu, theme switch, product bar, footer, closing call, contact states, the offer switch, FIG-captioned drawings of product screens, the "works with" rows, the sitemap, metadata and social cards, and anything under apps/web/app/_site, apps/web/app/(site) or apps/web/app/(site-ar), or scripts/build-site.sh. Load alyr-design first.
+description: Build or change a public ALYR web page or anything on it. Use for the homepage (/ and /ar), the product pages (/chat, /bookings, /agent, /accounts, /shelf, /docs and their /ar pages), adding a new product page, the header, Products menu, theme switch, product bar, footer, closing call, contact states, the offer switch, the "Sample" marks on drawings of product screens, the "works with" rows, the sitemap, metadata and social cards, and anything under apps/web/app/_site, apps/web/app/(site) or apps/web/app/(site-ar), or scripts/build-site.sh. Load alyr-design first.
 ---
 
 # A public ALYR page
@@ -159,7 +159,10 @@ silently not published, or published and not linked:
 
 - Draw the product's real screens in its exact words (status names, buttons, times as it
   prints them); prefer samples captured from the engine to hand drawings.
-- One sample business per figure set; FIG caption on every drawing.
+- One sample business per figure set; every drawing marked "Sample" once in its own chrome
+  (`SampleMark`; a drawn phone's header says "Sample business"), and its figure's first line
+  saying, for machines, that the business is fictional (`alyr-design/honesty.md` §4). A
+  caption only where the drawing needs words.
 - The contact block from `Contact.tsx`; prices only through `OFFER_LIVE`.
 - Logical CSS; `[dir="rtl"]` only for what cannot mirror; every cut mirrored.
 - Name heading line breaks in copy; check 320 px.
@@ -184,7 +187,7 @@ silently not published, or published and not linked:
 
 - [ ] Every word in `copy.ts`, both languages; `/ar` has no stray English.
 - [ ] Claims checked against `docs/status.md` and `alyr-design/honesty.md`, including meta,
-      social card and alt text; no AI words; samples captioned once.
+      social card and alt text; no AI words; samples marked once, in their chrome, with the machine line first.
 - [ ] Looked at: both languages, 1440, 390 and 320, light and dark, reduced motion, no
       scripts, the Products menu and the phone menu open, every contact state touched.
 - [ ] No horizontal scroll at 320; targets 44 px; focus visible; headings in order.

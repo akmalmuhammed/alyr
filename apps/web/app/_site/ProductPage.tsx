@@ -32,7 +32,7 @@ export function ProductPage({ locale }: { locale: Locale }) {
               <h1 className="display display-sm pk-title">{lines(p.title)}</h1>
               <p className="lead">{p.body}</p>
             </div>
-            <ProductDemo product={p} locale={locale} />
+            <ProductDemo product={p} locale={locale} sample={t.fig.sample} note={t.fig.note} />
             <ul className="product-facts">
               {p.facts.map((fact, index) => (
                 <li key={fact.title} data-reveal style={{ "--n": index } as React.CSSProperties}>
@@ -53,7 +53,7 @@ export function ProductPage({ locale }: { locale: Locale }) {
             <p className="lead">{p.flow.body}</p>
           </div>
           <div className="how-panel" data-reveal>
-            <FlowDiagram flow={p.flow} />
+            <FlowDiagram flow={p.flow} sample={t.fig.sample} note={t.fig.note} />
           </div>
         </div>
       </section>
@@ -67,7 +67,7 @@ export function ProductPage({ locale }: { locale: Locale }) {
           {/* the list, and beside it the phone with X-ray showing the feature being read */}
           <ChatXray
             inside={p.inside}
-            phone={{ business: p.business, businessMeta: p.businessMeta, avatar: p.avatar, today: p.today, typeHere: p.typeHere }}
+            phone={{ business: p.business, businessMeta: p.businessMeta, avatar: p.avatar, today: p.today, typeHere: p.typeHere, note: t.fig.note }}
           />
           <p className="inside-note" data-reveal>{p.inside.note}</p>
         </div>

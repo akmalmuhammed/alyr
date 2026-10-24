@@ -13,9 +13,10 @@ import { rich } from "./Text";
  * Built, and off for every shop until it is set up with you (00-founder-decisions.md): the
  * page describes what it does, never that it is available. Qirfa Bakery on Monday 19 Oct
  * 2026: receipt RC-0042, invoice INV-0017 and its credit note CN-0003. Each part tells one
- * thing (08-rulings.md): the demo what the customer gets, FIG 01 how a payment becomes
- * paper, the flow what happens behind it, FIG 02 the team's screen, and "What's in it"
- * everything, with the CR rule beside the paper that carries it (FIG 03). */
+ * thing (08-rulings.md): the demo what the customer gets, the signature figure how a
+ * payment becomes paper, the flow what happens behind it, the screen the team's, and "What's
+ * in it" everything, with the CR rule beside the paper that carries it (its caption is the
+ * one this page keeps: the foot means nothing without its words). */
 export function DocsPage({ locale }: { locale: Locale }) {
   const t = copy[locale];
   const p = t.pages.docs;
@@ -24,12 +25,12 @@ export function DocsPage({ locale }: { locale: Locale }) {
     <Shell locale={locale} page="docs" cta={p.cta}>
       <ProductBar bar={p.bar} />
       <ProductHero hero={p.hero} wide>
-        <ProductDemo product={p.demo} locale={locale} />
+        <ProductDemo product={p.demo} locale={locale} sample={t.fig.sample} note={bakery.fictional} />
       </ProductHero>
       <PaymentPaperFigure locale={locale} />
-      <FlowSection flow={p.flow} />
+      <FlowSection flow={p.flow} locale={locale} />
       <ScreenBlock locale={locale} screen={p.screen}>
-        <DocumentsScreen sheet={p.screen.sheet} shop={bakery.shop} monogram={bakery.monogram} label={p.screen.label} />
+        <DocumentsScreen sheet={p.screen.sheet} shop={bakery.shop} monogram={bakery.monogram} label={p.screen.label} sample={t.fig.sample} />
       </ScreenBlock>
       <InsideBlock inside={p.inside}>
         <div className="pk-cr" id="cr">
@@ -37,12 +38,12 @@ export function DocsPage({ locale }: { locale: Locale }) {
             <h3 className="pk-cr-title">{rich(p.cr.title)}</h3>
             <p className="pk-cr-body">{rich(p.cr.body)}</p>
           </div>
-          <figure className="pk-cr-fig" data-reveal>
+          <figure className="pk-cr-fig fig-cap-end" data-reveal>
+            <FigCaption locale={locale} caption={p.cr.caption} />
             <p className="sr-only">{p.cr.label}</p>
-            <div className="pk-plate pk-cr-plate" inert aria-hidden="true">
+            <div className="pk-plate pk-cr-plate" inert aria-hidden="true" data-nosnippet>
               <PaperNote doc={NOCR} />
             </div>
-            <FigCaption locale={locale} caption={p.cr.caption} />
           </figure>
         </div>
       </InsideBlock>

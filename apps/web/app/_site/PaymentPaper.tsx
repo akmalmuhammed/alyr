@@ -1,8 +1,7 @@
 import type { CSSProperties } from "react";
 import { copy, type Locale } from "./copy";
 import { RC0042 } from "./paperData";
-import { FigCaption } from "./Drawings";
-import { TickPath, WaDoc } from "./Frames";
+import { SampleMark, TickPath, WaDoc } from "./Frames";
 import { PaperA4, PaperRoll } from "./Paper";
 import { lines, rich } from "./Text";
 import "./drawings.css";
@@ -30,8 +29,8 @@ export function PaymentPaperFigure({ locale }: { locale: Locale }) {
           <p className="lead">{rich(m.body)}</p>
         </div>
         <figure className="sig pf" data-sig>
-          <p className="sr-only">{m.label}</p>
-          <div className="sig-stage" inert aria-hidden="true">
+          <p className="sr-only">{copy[locale].agent.samples.bakery.fictional} {m.label}</p>
+          <div className="sig-stage" inert aria-hidden="true" data-nosnippet>
             <span className="sig-rule"><i /><i /></span>
 
             <div className="sig-part pf-a" style={at(0)}>
@@ -40,6 +39,7 @@ export function PaymentPaperFigure({ locale }: { locale: Locale }) {
                 <div className="aw-bar">
                   <span className="aw-mono">{f.monogram}</span>
                   <b>{f.shop}</b>
+                  <SampleMark label={copy[locale].fig.sample} />
                   <span className="aw-path">{f.path}</span>
                 </div>
                 <div className="pf-body">
@@ -102,7 +102,6 @@ export function PaymentPaperFigure({ locale }: { locale: Locale }) {
               <p className="pf-sent"><span className="pf-sent-tick"><TickPath /></span><span>{c.sent}</span></p>
             </div>
           </div>
-          <FigCaption locale={locale} caption={m.caption} />
         </figure>
       </div>
     </section>

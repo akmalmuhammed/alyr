@@ -28,12 +28,11 @@ export type DocLinkPage = {
   download: string;
 };
 
-/** FIG 01: a cash payment becomes receipt RC-0042 (03 §3.1). */
+/** The signature figure: a cash payment becomes receipt RC-0042 (03 §3.1). */
 export type PaymentMoment = {
   eyebrow: string;
   title: string;
   body: string;
-  caption: Caption;
   label: string;
   parts: { sheet: string; paper: string; chat: string };
   form: {
@@ -94,11 +93,10 @@ export const docsEn: DocsPage = {
   },
   demo: {
     business: "Qirfa Bakery",
-    businessMeta: "Business account",
+    businessMeta: "Sample business",
     today: "Monday",
     typeHere: "Message",
     workspace: "Workspace",
-    note: "Sample conversation with a fictional bakery. A document is sent on WhatsApp when the customer has written in the last 24 hours.",
     tabsLabel: "What ALYR Docs does",
     pause: "Pause the demo",
     play: "Play the demo",
@@ -182,9 +180,8 @@ export const docsEn: DocsPage = {
     title: "One payment, one receipt, one number.",
     body:
       "Yusuf records Aisha’s cash at the counter. ALYR Docs takes the next receipt number and draws the paper in Arabic and English. Aisha wrote to the shop a few minutes before, so the PDF goes to her chat.",
-    caption: { n: "01", text: "A cash payment becomes receipt RC-0042" },
     label:
-      "A cash payment of QAR 64.00 is recorded in a fictional bakery’s workspace. Receipt RC-0042 is made, its paper is drawn Arabic first with English beside it, and the PDF arrives in the customer’s WhatsApp chat, below the message she sent minutes earlier, with its caption. The delivery shows Sent.",
+      "A cash payment of QAR 64.00 is recorded in the bakery’s workspace. Receipt RC-0042 is made, its paper is drawn Arabic first with English beside it, and the PDF arrives in the customer’s WhatsApp chat, below the message she sent minutes earlier, with its caption. The delivery shows Sent.",
     parts: { sheet: "The workspace", paper: "The paper", chat: "Aisha’s phone" },
     form: {
       shop: "Qirfa Bakery",
@@ -223,7 +220,6 @@ export const docsEn: DocsPage = {
     stepsLabel: "Steps",
     pause: "Pause",
     play: "Play",
-    note: "Sample conversation with a fictional bakery.",
     customer: { name: "Your customer", sub: "On WhatsApp, as always" },
     whatsapp: { name: "WhatsApp", sub: "Business Platform" },
     alyr: { name: "ALYR Docs", sub: "Working in the background", idle: "Waiting for the next payment" },
@@ -342,7 +338,6 @@ export const docsEn: DocsPage = {
   screen: {
     eyebrow: "The screen",
     title: "Every paper you issued, and whether it arrived.",
-    caption: { n: "02", text: "The Documents screen" },
     label: "The Documents screen of a fictional bakery’s workspace",
     callouts: [
       "Every document, newest first, by its number.",
@@ -373,7 +368,7 @@ export const docsEn: DocsPage = {
     title: "No CR yet? Receipts, and they say so.",
     body:
       "Until your CR number is in your document settings, ALYR Docs issues receipts, never invoices, and each receipt says so in plain words. Add your CR number, and you can issue invoices too.",
-    caption: { n: "03", text: "The foot of a receipt when the shop has no CR on file" },
+    caption: { text: "The foot of a receipt with no CR on file" },
     label: "The foot of a receipt from a shop with no CR number on file, with its note in Arabic and English: the seller has no commercial registration number on file; this document is a receipt and is not a tax invoice; ALYR does not give tax advice.",
   },
   inside: {
@@ -515,11 +510,10 @@ export const docsAr: DocsPage = {
   demo: {
     business: "مخبز قرفة",
     avatar: "ق",
-    businessMeta: "حساب أعمال",
+    businessMeta: "نشاط توضيحي",
     today: "الاثنين",
     typeHere: "مراسلة",
     workspace: "مساحة العمل",
-    note: "محادثة توضيحية مع مخبز غير حقيقي. يُرسل المستند على واتساب إذا راسلك العميل خلال آخر 24 ساعة.",
     tabsLabel: "ما يفعله ALYR Docs",
     pause: "إيقاف العرض",
     play: "تشغيل العرض",
@@ -603,9 +597,8 @@ export const docsAr: DocsPage = {
     title: "دفعة واحدة، وإيصال واحد، ورقم واحد.",
     body:
       "يسجّل يوسف المبلغ الذي دفعته عائشة نقداً في المحل. فيأخذ ALYR Docs رقم الإيصال التالي، ويكتب المستند بالعربية والإنجليزية. وقد راسلت عائشة المحل قبل دقائق، فيصل الملف إلى محادثتها.",
-    caption: { n: "01", text: "دفعة نقدية تصبح الإيصال RC-0042" },
     label:
-      "تُسجَّل دفعة نقدية بمبلغ 64.00 ر.ق في مساحة عمل مخبز غير حقيقي. فيصدر الإيصال RC-0042، ويُكتب مستنده بالعربية أولاً والإنجليزية بجانبها، ويصل ملف PDF إلى محادثة العميلة على واتساب، تحت رسالتها قبل دقائق، مع تعليقه. وتظهر حالة الإرسال «أُرسل».",
+      "تُسجَّل دفعة نقدية بمبلغ 64.00 ر.ق في مساحة عمل المخبز. فيصدر الإيصال RC-0042، ويُكتب مستنده بالعربية أولاً والإنجليزية بجانبها، ويصل ملف PDF إلى محادثة العميلة على واتساب، تحت رسالتها قبل دقائق، مع تعليقه. وتظهر حالة الإرسال «أُرسل».",
     parts: { sheet: "مساحة العمل", paper: "المستند", chat: "هاتف عائشة" },
     form: {
       shop: "مخبز قرفة",
@@ -644,7 +637,6 @@ export const docsAr: DocsPage = {
     stepsLabel: "الخطوات",
     pause: "إيقاف",
     play: "تشغيل",
-    note: "محادثة توضيحية مع مخبز غير حقيقي.",
     customer: { name: "عميلك", sub: "على واتساب كعادته" },
     whatsapp: { name: "واتساب", sub: "منصة الأعمال" },
     alyr: { name: "ALYR Docs", sub: "يعمل في الخلفية", idle: "بانتظار الدفعة التالية" },
@@ -763,7 +755,6 @@ export const docsAr: DocsPage = {
   screen: {
     eyebrow: "الشاشة",
     title: "كل مستند أصدرته، وهل وصل.",
-    caption: { n: "02", text: "شاشة المستندات" },
     label: "شاشة المستندات في مساحة عمل مخبز غير حقيقي",
     callouts: [
       "كل مستند، الأحدث أولاً، برقمه.",
@@ -794,7 +785,7 @@ export const docsAr: DocsPage = {
     title: "ليس لديك سجل تجاري بعد؟ تُصدر إيصالات، وكل إيصال يقول ذلك.",
     body:
       "إلى أن تضيف رقم سجلك التجاري في إعدادات المستندات، يُصدر ALYR Docs إيصالات لا فواتير، ويقول كل إيصال ذلك بكلمات واضحة. أضف رقم سجلك، فتستطيع إصدار الفواتير أيضاً.",
-    caption: { n: "03", text: "أسفل إيصال حين لا يكون للمحل رقم سجل تجاري" },
+    caption: { text: "أسفل إيصال حين لا يكون للمحل رقم سجل تجاري" },
     label: "أسفل إيصال من محل ليس له رقم سجل تجاري، وعليه ملاحظته بالعربية والإنجليزية: لا يوجد رقم سجل تجاري مسجّل للبائع، وهذا المستند إيصال وليس فاتورة ضريبية، ولا تقدّم ALYR استشارات ضريبية.",
   },
   inside: {

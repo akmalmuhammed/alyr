@@ -18,21 +18,20 @@ export function ShelfPage({ locale }: { locale: Locale }) {
     <Shell locale={locale} page="shelf" cta={p.cta}>
       <ProductBar bar={p.bar} />
       <ProductHero hero={p.hero} wide>
-        <ProductDemo product={p.demo} locale={locale} />
+        <ProductDemo product={p.demo} locale={locale} sample={t.fig.sample} note={bakery.fictional} />
       </ProductHero>
       <LastOneFigure locale={locale} />
-      <FlowSection flow={p.flow} />
+      <FlowSection flow={p.flow} locale={locale} />
       <ScreenBlock
         locale={locale}
         screen={p.screen}
         extra={
           <div className="pk-also">
-            <StockLog sheet={sheet} shop={bakery.shop} monogram={bakery.monogram} label={p.screen.logCaption} />
-            <p className="pk-also-cap">{p.screen.logCaption}</p>
+            <StockLog sheet={sheet} shop={bakery.shop} monogram={bakery.monogram} label={p.screen.logCaption} sample={t.fig.sample} />
           </div>
         }
       >
-        <CatalogScreen sheet={sheet} shop={bakery.shop} monogram={bakery.monogram} label={p.screen.label} />
+        <CatalogScreen sheet={sheet} shop={bakery.shop} monogram={bakery.monogram} label={p.screen.label} sample={t.fig.sample} />
       </ScreenBlock>
       <InsideBlock inside={p.inside} />
       <WhoBlock who={p.who} />

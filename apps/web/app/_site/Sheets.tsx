@@ -1,6 +1,7 @@
 import type { BookingsSheet, CreditSheet } from "./copy";
 import type { DocsSheet } from "./copyDocs";
 import type { StockSheet } from "./copyShelf";
+import { SampleMark } from "./Frames";
 import { rich } from "./Text";
 import "./drawings.css";
 
@@ -14,14 +15,15 @@ function Mark({ n }: { n: number }) {
   return <span className="ws-mark" aria-hidden="true"><bdi>{n}</bdi></span>;
 }
 
-function Frame({ shop, monogram, path, label, children }: {
-  shop: string; monogram: string; path: string; label: string; children: React.ReactNode;
+function Frame({ shop, monogram, path, label, sample, children }: {
+  shop: string; monogram: string; path: string; label: string; sample: string; children: React.ReactNode;
 }) {
   return (
     <div className="aw ws">
       <div className="aw-bar" aria-hidden="true">
         <span className="aw-mono">{monogram}</span>
         <b>{shop}</b>
+        <SampleMark label={sample} />
         <span className="aw-path">{path}</span>
       </div>
       <div className="ws-scroll" tabIndex={0} role="group" aria-label={label}>
@@ -33,12 +35,12 @@ function Frame({ shop, monogram, path, label, children }: {
 
 /** Bookings: today and the next seven days, with who looks after each visit and the
  * buttons a visit gets once it is over. */
-export function BookingsScreen({ sheet, shop, monogram, path, label }: {
-  sheet: BookingsSheet; shop: string; monogram: string; path: string; label: string;
+export function BookingsScreen({ sheet, shop, monogram, path, label, sample }: {
+  sheet: BookingsSheet; shop: string; monogram: string; path: string; label: string; sample: string;
 }) {
   const h = sheet.heads;
   return (
-    <Frame shop={shop} monogram={monogram} path={path} label={label}>
+    <Frame shop={shop} monogram={monogram} path={path} label={label} sample={sample}>
       <p className="ws-sub">{sheet.sub}<Mark n={1} /></p>
       <div className="ws-table ws-bookings">
         <div className="ws-tr ws-th">
@@ -71,12 +73,12 @@ export function BookingsScreen({ sheet, shop, monogram, path, label }: {
 }
 
 /** The same screen, opened from ALYR Agent's card: only the visit the rule counted. */
-export function BookingsFiltered({ sheet, shop, monogram, path, label }: {
-  sheet: BookingsSheet; shop: string; monogram: string; path: string; label: string;
+export function BookingsFiltered({ sheet, shop, monogram, path, label, sample }: {
+  sheet: BookingsSheet; shop: string; monogram: string; path: string; label: string; sample: string;
 }) {
   const row = sheet.rows.find((r) => r.ended) ?? sheet.rows[0];
   return (
-    <Frame shop={shop} monogram={monogram} path={path} label={label}>
+    <Frame shop={shop} monogram={monogram} path={path} label={label} sample={sample}>
       <p className="ws-filter">
         <span>{sheet.filtered.label}</span>
         <span className="ws-btn">{sheet.filtered.show}</span>
@@ -104,12 +106,12 @@ export function BookingsFiltered({ sheet, shop, monogram, path, label }: {
 
 /** Credit accounts: what is owed by age, the one button that reminds, every customer's
  * balance and oldest debt, and one customer's entries. */
-export function CreditScreen({ sheet, shop, monogram, path, label }: {
-  sheet: CreditSheet; shop: string; monogram: string; path: string; label: string;
+export function CreditScreen({ sheet, shop, monogram, path, label, sample }: {
+  sheet: CreditSheet; shop: string; monogram: string; path: string; label: string; sample: string;
 }) {
   const h = sheet.heads;
   return (
-    <Frame shop={shop} monogram={monogram} path={path} label={label}>
+    <Frame shop={shop} monogram={monogram} path={path} label={label} sample={sample}>
       <p className="ws-sub">{sheet.sub}</p>
       <div className="ws-totals">
         <span className="ws-label">{sheet.outstanding}<Mark n={1} /></span>
@@ -174,11 +176,11 @@ export function CreditScreen({ sheet, shop, monogram, path, label }: {
 /** ALYR Shelf: the Stock tab of the shop's Menu (`/app/catalog`, `catalogCopy.ts`): the
  * toolbar, the tabs, what is in the system for every item counted, the two filters and the
  * three ways to change a count. */
-export function CatalogScreen({ sheet, shop, monogram, label }: {
-  sheet: StockSheet; shop: string; monogram: string; label: string;
+export function CatalogScreen({ sheet, shop, monogram, label, sample }: {
+  sheet: StockSheet; shop: string; monogram: string; label: string; sample: string;
 }) {
   return (
-    <Frame shop={shop} monogram={monogram} path={sheet.path} label={label}>
+    <Frame shop={shop} monogram={monogram} path={sheet.path} label={label} sample={sample}>
       <div className="ws-cat-top">
         <span className="ws-tabs">
           {sheet.tabs.map((tab, index) => <span key={tab} className={index === 1 ? "on" : undefined}>{tab}</span>)}
@@ -223,12 +225,12 @@ export function CatalogScreen({ sheet, shop, monogram, label }: {
 
 /** ALYR Shelf: one item's recent changes on the Stock tab, newest first. The log only ever
  * adds rows; the actor of an order's row is left out (the product can print "Assistant"). */
-export function StockLog({ sheet, shop, monogram, label }: {
-  sheet: StockSheet; shop: string; monogram: string; label: string;
+export function StockLog({ sheet, shop, monogram, label, sample }: {
+  sheet: StockSheet; shop: string; monogram: string; label: string; sample: string;
 }) {
   const log = sheet.log;
   return (
-    <Frame shop={shop} monogram={monogram} path={sheet.path} label={label}>
+    <Frame shop={shop} monogram={monogram} path={sheet.path} label={label} sample={sample}>
       <div className="ws-entries ws-log">
         <p className="ws-entries-head">
           <b>{log.title} · <bdi>{log.who}</bdi></b>
@@ -251,12 +253,12 @@ export function StockLog({ sheet, shop, monogram, label }: {
 /** ALYR Docs: the Documents section (`/app/documents`, `documentsCopy.ts`): the search, the
  * filters, every document newest first by its number with its payment and delivery, a
  * branch's own series, and the actions of the one that is open. */
-export function DocumentsScreen({ sheet, shop, monogram, label }: {
-  sheet: DocsSheet; shop: string; monogram: string; label: string;
+export function DocumentsScreen({ sheet, shop, monogram, label, sample }: {
+  sheet: DocsSheet; shop: string; monogram: string; label: string; sample: string;
 }) {
   const h = sheet.heads;
   return (
-    <Frame shop={shop} monogram={monogram} path={sheet.path} label={label}>
+    <Frame shop={shop} monogram={monogram} path={sheet.path} label={label} sample={sample}>
       <p className="ws-sub">{sheet.sub}</p>
       <div className="ws-doc-tools">
         <span className="ws-search">{sheet.search}</span>

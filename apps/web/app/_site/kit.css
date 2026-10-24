@@ -109,7 +109,6 @@ main:has(.pbar) section[id] { scroll-margin-top: calc(var(--header) + 4rem); }
 .pk-screen-fig { min-width: 0; }
 .pk-screen-grid .callouts { position: sticky; top: calc(var(--header) + 5rem); }
 .pk-also { display: grid; gap: .625rem; margin-top: 2rem; }
-.pk-also-cap { font-size: .875rem; color: var(--text-muted); }
 
 /* the plate a figure stands on: a working drawing, square, cut at 45 degrees at the top
    inline-end corner (mirrored in Arabic) with a cross at two corners */
@@ -187,7 +186,7 @@ main:has(.pbar) section[id] { scroll-margin-top: calc(var(--header) + 4rem); }
 .pk-step-n { display: inline-grid; place-items: center; width: 2rem; height: 2rem; border-radius: 50%; margin-bottom: .5rem; box-shadow: inset 0 0 0 1.5px var(--line-strong); font-family: var(--mono); font-size: .8125rem; }
 .pk-steps li:nth-child(3) .pk-step-n { background: var(--volt); color: var(--on-volt); box-shadow: none; }
 .pk-card-fig { margin-top: clamp(2rem, 4vw, 3rem); max-width: 44rem; margin-inline-start: calc((100% + var(--col-gap)) * .5); }
-.pk-card { padding: 0 1.5rem; }
+.pk-card .ag { padding: 0 1.5rem; }
 .pk-card .ag-card { border-bottom: 0; }
 .pk-card .ag-btn { cursor: default; }
 .pk-card .ag-btn.is-volt { background: transparent; color: var(--ag-ink); border-color: var(--ag-ink); }
@@ -245,5 +244,5 @@ main:has(.pbar) section[id] { scroll-margin-top: calc(var(--header) + 4rem); }
   .rules-table thead { display: none; }
   .rules-table tbody th { width: auto; padding-bottom: .25rem; }
   .rules-table td { border-top: 0; padding-top: 0; }
-  .pk-card { padding: 0 1rem; }
+  .pk-card .ag { padding: 0 1rem; }
 }

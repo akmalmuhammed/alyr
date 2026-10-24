@@ -6,7 +6,7 @@ import { ContactButton, ContactNote } from "./Contact";
 import { copy, type BusinessRow, type Locale, type Questions as QuestionSet } from "./copy";
 import { AgeBarCrop, FigCaption, OrderBarCrop, ReceiptCrop, ShelfCrop, SummaryCrop, TimesCrop, TrackScreen } from "./Drawings";
 import { ProductRoom } from "./ProductRoom";
-import { Phone, TickPath } from "./Frames";
+import { Phone, SampleMark, TickPath } from "./Frames";
 import { FlowDiagram } from "./FlowDiagram";
 import { FoldSplit } from "./FoldSplit";
 import { HomeMotion } from "./HomeMotion";
@@ -114,8 +114,7 @@ function Hero({ locale }: { locale: Locale }) {
           views={{ bakery: SAMPLES[locale].bakery }}
           order={["bakery"]}
           text={t.agent}
-          figLabel={t.fig.label}
-          caption={hero.figure.caption}
+          sample={t.fig.sample}
           label={hero.figure.label}
           feed
           crop
@@ -204,13 +203,10 @@ function Spotlight({ locale }: { locale: Locale }) {
           order={SAMPLE_ORDER}
           start="bakery"
           text={t.agent}
-          figLabel={t.fig.label}
-          caption={s.caption}
           label={s.label}
           switcher
           headingLevel={3}
           aside={callouts}
-          under={s.under}
         />
       </div>
     </section>
@@ -295,7 +291,7 @@ function Suite({ locale }: { locale: Locale }) {
                   <div className="room-top">
                     <span className="room-mono">{t.agent.samples.bakery.monogram}</span>
                     <b>{t.agent.samples.bakery.shop}</b>
-                    <span className="room-ws">{s.room.workspace}</span>
+                    <SampleMark label={t.fig.sample} />
                   </div>
                   <div className="room-tiles">
                     {PRODUCTS.map((key, index) => (
@@ -309,7 +305,6 @@ function Suite({ locale }: { locale: Locale }) {
               </div>
             </div>
           </ProductRoom>
-          <FigCaption locale={locale} caption={s.caption} />
         </div>
       </div>
     </section>
@@ -403,7 +398,7 @@ function Business({ locale }: { locale: Locale }) {
                 slider={b.split.slider}
                 value={b.split.value}
                 before={<DayChats row={row} words={b.split} />}
-                after={<DayOrders row={row} words={b.split} />}
+                after={<DayOrders row={row} words={b.split} sample={t.fig.sample} />}
               />
               <div className="biz-cols">
                 <div className="biz-col biz-day">
@@ -498,11 +493,12 @@ function DayChats({ row, words }: { row: BusinessRow; words: SplitWords }) {
 
 /** The same customers, row for row, as ALYR keeps them: a reference, what it is, who on the
  * team has it, and where it stands. */
-function DayOrders({ row, words }: { row: BusinessRow; words: SplitWords }) {
+function DayOrders({ row, words, sample }: { row: BusinessRow; words: SplitWords; sample: string }) {
   return (
     <div className="do">
       <div className="do-top">
         <b>{words.orders}</b>
+        <SampleMark label={sample} />
         <span className="do-count"><bdi>{row.orders.length}</bdi></span>
       </div>
       <ul>
@@ -539,7 +535,7 @@ function See({ locale }: { locale: Locale }) {
           </a>
         </div>
         <div className="how-panel see-panel">
-          <FlowDiagram flow={see} />
+          <FlowDiagram flow={see} sample={copy[locale].fig.sample} note={copy[locale].agent.samples.bakery.fictional} />
         </div>
         <div className="tally">
           <h3 className="mono-k" id="tally-title">{see.tally.label}</h3>
@@ -683,8 +679,9 @@ function Price({ locale }: { locale: Locale }) {
             </dl>
           </div>
 
-          <figure className="agreement-fig">
-            <div className="agreement" data-m>
+          <figure className="agreement-fig fig-cap-end">
+            <FigCaption locale={locale} caption={a.caption} />
+            <div className="agreement" data-m data-nosnippet>
               <span className="agr-top">
                 <span className="agr-kicker">{a.kicker}</span>
                 <span className="agr-parties">{rich(a.parties)}</span>
@@ -713,7 +710,6 @@ function Price({ locale }: { locale: Locale }) {
               </dl>
               <p className="agr-print">{a.print}</p>
             </div>
-            <FigCaption locale={locale} caption={a.caption} />
           </figure>
         </div>
         <div className="price-cta">
@@ -759,16 +755,16 @@ function Trust({ locale, other }: { locale: Locale; other: Locale }) {
             )}
             {OFFER_LIVE && <p className="trust-closing">{rich(tr.closing)}</p>}
           </div>
-          <figure className="trust-fig" data-m>
+          <figure className="trust-fig fig-cap-end" data-m>
+            <FigCaption locale={locale} caption={tr.figure.caption} />
             {/* On phones the pair scrolls sideways, so it takes keyboard focus. */}
-            <div className="pair" tabIndex={0} role="group" aria-label={tr.figure.label}>
+            <div className="pair" tabIndex={0} role="group" aria-label={tr.figure.label} data-nosnippet>
               {[locale, other].map((lang) => (
                 <div key={lang} className={`pair-item pair-${lang}`} dir={lang === "ar" ? "rtl" : "ltr"} lang={lang}>
                   <Phone className="pair-phone"><TrackScreen sample={copy[lang].home.sample} lang={lang} /></Phone>
                 </div>
               ))}
             </div>
-            <FigCaption locale={locale} caption={tr.figure.caption} />
           </figure>
         </div>
       </div>

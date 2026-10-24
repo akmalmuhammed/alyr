@@ -255,6 +255,7 @@
 
 /* the same customers, as ALYR keeps them */
 .do-top { border-bottom: 1px solid var(--dark-line); justify-content: flex-end; }
+.do-top .mark-sample { margin-inline-start: 0; border-color: var(--band-rule); color: var(--on-band-quiet); }
 .do-count { display: grid; place-items: center; min-width: 1.5rem; height: 1.5rem; border: 1px solid var(--dark-line); font-family: var(--mono); font-size: .75rem; color: var(--concrete); }
 .do-row { grid-template-columns: 4.75rem minmax(0, 1fr) 6.5rem 9.5rem; border-bottom: 1px solid var(--dark-line); }
 .do-ref { font-family: var(--mono); font-size: .75rem; color: var(--concrete); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }

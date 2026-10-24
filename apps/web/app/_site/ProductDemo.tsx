@@ -2,10 +2,18 @@
 
 import { useEffect, useRef, useState } from "react";
 import type { DemoSet, Locale } from "./copy";
-import { WaDoc } from "./Frames";
+import { SampleMark, WaDoc } from "./Frames";
 import { BookingPhone, DocLinkPhone } from "./PageDrawings";
 
-type Props = { product: DemoSet; locale: Locale };
+type Props = {
+  product: DemoSet;
+  locale: Locale;
+  /** The "Sample" mark, for a tab that shows the team's screen alone (the phone's header
+   * says "Sample business" on the others). */
+  sample: string;
+  /** What the demo is, said first to screen readers and crawlers (site audit 03, A1). */
+  note: string;
+};
 
 const ARABIC_DIGITS = "٠١٢٣٤٥٦٧٨٩";
 
@@ -29,7 +37,7 @@ function clock(locale: Locale, minutes: number): string {
  * conversation shows the team's screen alone; a panel with a `page` shows the page the
  * customer opened (the booking page) instead of the team's rows.
  */
-export function ProductDemo({ product, locale }: Props) {
+export function ProductDemo({ product, locale, sample, note }: Props) {
   const demos = product.demos;
   const [active, setActive] = useState(0);
   const [auto, setAuto] = useState(true);
@@ -88,6 +96,7 @@ export function ProductDemo({ product, locale }: Props) {
 
   return (
     <div className="demo" ref={root} data-playing={playing || undefined}>
+      <p className="sr-only">{note}</p>
       <div className="demo-bar">
         <div className="demo-tabs" role="tablist" aria-label={product.tabsLabel} onKeyDown={onKey}>
           {demos.map((item, index) => (
@@ -103,7 +112,6 @@ export function ProductDemo({ product, locale }: Props) {
               className="demo-tab"
               onClick={() => choose(index)}
             >
-              <span className="demo-tab-n" aria-hidden="true">{String(index + 1).padStart(2, "0")}</span>
               {item.tab}
               {index === active && playing && (
                 <span
@@ -129,6 +137,7 @@ export function ProductDemo({ product, locale }: Props) {
         role="tabpanel"
         aria-labelledby={`demo-tab-${demo.id}`}
         key={demo.id}
+        data-nosnippet
       >
         {/* The customer's own phone, drawn to look like the WhatsApp chat they already use:
             their messages on the sending side, the business's replies on the other. */}
@@ -140,7 +149,7 @@ export function ProductDemo({ product, locale }: Props) {
               <span className="wa-avatar" aria-hidden="true">{product.avatar ?? product.business.slice(0, 1)}</span>
               <span className="wa-who">
                 <b>{product.business}</b>
-                <small>{product.businessMeta}</small>
+                <small aria-hidden="true">{product.businessMeta}</small>
               </span>
               <svg className="wa-act wa-video" viewBox="0 0 24 24" aria-hidden="true"><path d="M17 10.5V7a1 1 0 0 0-1-1H4a1 1 0 0 0-1 1v10a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-3.5l4 4v-11z" /></svg>
               <svg className="wa-act" viewBox="0 0 24 24" aria-hidden="true"><path d="M6.6 10.8a15.1 15.1 0 0 0 6.6 6.6l2.2-2.2a1 1 0 0 1 1-.25 11.4 11.4 0 0 0 3.6.57 1 1 0 0 1 1 1V20a1 1 0 0 1-1 1A17 17 0 0 1 3 4a1 1 0 0 1 1-1h3.5a1 1 0 0 1 1 1c0 1.25.2 2.45.57 3.57a1 1 0 0 1-.25 1z" /></svg>
@@ -210,6 +219,7 @@ export function ProductDemo({ product, locale }: Props) {
             <span className="panel-kicker">{demo.panel.kicker ?? product.workspace}</span>
             <b>{demo.panel.title}</b>
             <span className="panel-badge">{demo.panel.badge}</span>
+            {demo.chat.length === 0 && <SampleMark label={sample} />}
           </header>
           {demo.panel.page && (
             <div className="panel-page">
@@ -256,7 +266,6 @@ export function ProductDemo({ product, locale }: Props) {
           <p className="panel-caption">{demo.caption}</p>
         </section>
       </div>
-      <p className="demo-note">{product.note}</p>
     </div>
   );
 }

@@ -7,7 +7,7 @@
 // stock log's actor is never drawn: the product can print "Assistant", which is on the
 // no-AI list (02 §3.1d). The Arabic is a draft until the native review (ALY-66).
 
-import type { Caption, DemoSet, FlowSet, PageCommon, ScreenSection } from "./copy";
+import type { DemoSet, FlowSet, PageCommon, ScreenSection } from "./copy";
 
 /** One item card on the drawn order page (`/s/`), as `ItemCard.tsx` lays it out. */
 export type OrderItem = {
@@ -18,12 +18,11 @@ export type OrderItem = {
   tone?: "few" | "when" | "out";
 };
 
-/** FIG 01: two customers, one stock, one sale (03 §2.1). */
+/** The signature figure: two customers, one stock, one sale (03 §2.1). */
 export type LastOne = {
   eyebrow: string;
   title: string;
   body: string;
-  caption: Caption;
   /** What the figure shows, said once for screen readers. */
   label: string;
   /** The small label over each part of the drawing. */
@@ -82,11 +81,10 @@ export const shelfEn: ShelfPage = {
   },
   demo: {
     business: "Qirfa Bakery",
-    businessMeta: "Business account",
+    businessMeta: "Sample business",
     today: "Today",
     typeHere: "Message",
     workspace: "Workspace",
-    note: "Sample conversation with a fictional bakery.",
     tabsLabel: "What ALYR Shelf does",
     pause: "Pause the demo",
     play: "Play the demo",
@@ -175,7 +173,6 @@ export const shelfEn: ShelfPage = {
     title: "One left, two customers, one sale.",
     body:
       "Aisha and Mariam put the last kunafa cheesecake on their accounts in the same second. ALYR Shelf takes stock in one step, and only if the count stays at zero or above, so one order gets it. Mariam’s page says Sold out, and nothing sells twice.",
-    caption: { n: "01", text: "The last kunafa cheesecake sells once" },
     label:
       "Two customers put the last pistachio kunafa cheesecake on their accounts in the same second. Aisha’s order #1452 takes it: the count goes from 1 to 0, and the stock log gains a Sold row. Mariam’s order page marks the cake Sold out and asks her to fix her order.",
     parts: { a: "Aisha’s phone", card: "The Stock screen", b: "Mariam’s phone" },
@@ -207,7 +204,6 @@ export const shelfEn: ShelfPage = {
     stepsLabel: "Steps",
     pause: "Pause",
     play: "Play",
-    note: "Sample conversation with a fictional bakery.",
     customer: { name: "Your customer", sub: "On WhatsApp, as always" },
     whatsapp: { name: "WhatsApp", sub: "Business Platform" },
     alyr: { name: "ALYR Shelf", sub: "Working in the background", idle: "Waiting for the next sale" },
@@ -343,7 +339,6 @@ export const shelfEn: ShelfPage = {
   screen: {
     eyebrow: "The screen",
     title: "What is on the shelf, and every change to it.",
-    caption: { n: "02", text: "The Stock screen" },
     label: "The Stock screen of a fictional bakery’s workspace",
     callouts: [
       "What is left now, for every item you count.",
@@ -514,11 +509,10 @@ export const shelfAr: ShelfPage = {
   demo: {
     business: "مخبز قرفة",
     avatar: "ق",
-    businessMeta: "حساب أعمال",
+    businessMeta: "نشاط توضيحي",
     today: "اليوم",
     typeHere: "مراسلة",
     workspace: "مساحة العمل",
-    note: "محادثة توضيحية مع مخبز غير حقيقي.",
     tabsLabel: "ما يفعله ALYR Shelf",
     pause: "إيقاف العرض",
     play: "تشغيل العرض",
@@ -607,7 +601,6 @@ export const shelfAr: ShelfPage = {
     title: "بقيت واحدة، وطلبتها عميلتان، فبيعت مرة واحدة.",
     body:
       "وضعت عائشة ومريم آخر تشيز كيك كنافة على حسابيهما في الثانية نفسها. يأخذ ALYR Shelf الكمية في خطوة واحدة، ولا يأخذها إلا إذا بقي الرقم صفراً أو أكثر، فيحصل عليها طلب واحد. وتُظهر صفحة مريم «نفد»، ولا يُباع شيء مرتين.",
-    caption: { n: "01", text: "آخر تشيز كيك كنافة يُباع مرة واحدة" },
     label:
       "عميلتان تضعان آخر تشيز كيك كنافة بالفستق على حسابيهما في الثانية نفسها. يأخذه طلب عائشة رقم 1452: ينزل العدد من 1 إلى 0، ويُضاف إلى سجل المخزون سطر «مبيع». وتُظهر صفحة الطلب لدى مريم «نفد» وتطلب منها تصحيح طلبها.",
     parts: { a: "هاتف عائشة", card: "شاشة المخزون", b: "هاتف مريم" },
@@ -639,7 +632,6 @@ export const shelfAr: ShelfPage = {
     stepsLabel: "الخطوات",
     pause: "إيقاف",
     play: "تشغيل",
-    note: "محادثة توضيحية مع مخبز غير حقيقي.",
     customer: { name: "عميلك", sub: "على واتساب كعادته" },
     whatsapp: { name: "واتساب", sub: "منصة الأعمال" },
     alyr: { name: "ALYR Shelf", sub: "يعمل في الخلفية", idle: "بانتظار البيع التالي" },
@@ -775,7 +767,6 @@ export const shelfAr: ShelfPage = {
   screen: {
     eyebrow: "الشاشة",
     title: "ما على الرف، وكل تغيير عليه.",
-    caption: { n: "02", text: "شاشة المخزون" },
     label: "شاشة المخزون في مساحة عمل مخبز غير حقيقي",
     callouts: [
       "ما تبقّى الآن من كل صنف تعدّه.",
