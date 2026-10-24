@@ -64,8 +64,6 @@ main .ag { font-weight: 400; }
 .af-line { font-size: .8125rem; line-height: 1.45; color: var(--on-band-quiet); text-wrap: pretty; }
 [lang="ar"] .af-line { line-height: 1.7; }
 .af-line bdi { white-space: nowrap; }
-.af-rule { margin-top: .25rem; padding-inline-start: .625rem; border-inline-start: 1px solid var(--volt); font-family: var(--mono); font-size: .6875rem; line-height: 1.5; letter-spacing: .02em; color: var(--concrete); }
-[lang="ar"] .af-rule { font-family: var(--arabic); letter-spacing: 0; font-size: .75rem; line-height: 1.7; }
 
 /* motion: before the page's scripts run, the feed is hidden only when motion is wanted
    (`.motion`, set before paint); after, the figure's own state says what shows. */

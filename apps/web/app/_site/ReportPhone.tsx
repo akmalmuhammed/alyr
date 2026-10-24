@@ -38,6 +38,11 @@ function marks(line: string): ReactNode[] {
   });
 }
 
+/** The report's last line, "_Rule · …_" / «_القاعدة · …_». The owner's WhatsApp message keeps
+ * it; the public site's drawing of the message leaves it out, because the founder took the
+ * word "rule" off the site (25 Oct 2026). */
+const RULE_LINE = new RegExp(`^${RLM}?_(?:Rule|RULE|القاعدة) · `);
+
 function Card({ image, alt, theme }: { image: CardImage; alt: string; theme: "carbon" | "paper" }) {
   return (
     <picture className={`rp-card rp-${theme}`}>
@@ -70,7 +75,7 @@ export function ReportPhone({ sample, words }: { sample: ReportSample; words: Re
               <Card image={sample.paper} alt={words.alt} theme="paper" />
             </span>
             <p className="rp-text">
-              {sample.lines.map((line, index) =>
+              {sample.lines.filter((line) => !RULE_LINE.test(line)).map((line, index) =>
                 line ? (
                   <span key={index} className="rp-line" dir="auto">{marks(line)}</span>
                 ) : (

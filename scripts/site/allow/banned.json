@@ -18,23 +18,8 @@
     },
     {
       "term": "soon",
-      "context": "Our prices go on this page soon",
-      "reason": "The offer-off answer to 'What does it cost?' (home.faq id cost, offer: false): it says prices are not on the site yet, as D-034 requires, and is replaced by the priced answer when the offer switch is on."
-    },
-    {
-      "term": "قريباً",
-      "context": "سننشر أسعارنا على هذه الصفحة قريبا",
-      "reason": "The Arabic of the offer-off answer to 'What does it cost?'."
-    },
-    {
-      "term": "soon",
       "context": "Pressed too soon?",
       "reason": "/shelf's stock undo step: 'pressed too soon' is about the person, not a product that is coming."
-    },
-    {
-      "term": "reads",
-      "context": "reads your hours, locks the time",
-      "reason": "/bookings: it reads the business's opening hours (data), then locks the slot. Not understanding."
     },
     {
       "term": "reads",

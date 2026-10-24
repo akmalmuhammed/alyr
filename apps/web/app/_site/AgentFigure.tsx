@@ -88,17 +88,16 @@ function before(view: AgentView, events: FeedEvent[], shown: number): AgentView 
   };
 }
 
-/** The dashboard's "RULE · …" line, said the way the homepage says it: "Why · …". */
-const reason = (rule: string, word: string) => rule.replace(/^(RULE|Rule|القاعدة) · /, `${word} · `);
-
-/** A flag's words, taken from the dashboard itself so the two always agree. */
-function flagged(view: AgentView, flag: NonNullable<FeedEvent["flag"]>): { line: RichParts; rule: string } | null {
+/** A flag's words, taken from the dashboard itself so the two always agree. The site shows
+ * no rule line under it (founder, 25 Oct 2026): the flag says what was counted, in the
+ * dashboard's own words. */
+function flagged(view: AgentView, flag: NonNullable<FeedEvent["flag"]>): { line: RichParts } | null {
   if (flag.from === "suggestion") {
     const card = view.suggestions.find((s) => s.key === flag.key);
-    return card ? { line: card.title, rule: card.rule } : null;
+    return card ? { line: card.title } : null;
   }
   const need = view.needs.items.find((n) => n.key === flag.key);
-  return need ? { line: [{ b: String(need.count) }, " ", ...need.words], rule: need.rule } : null;
+  return need ? { line: [{ b: String(need.count) }, " ", ...need.words] } : null;
 }
 
 function Tick() {
@@ -243,7 +242,8 @@ export function AgentFigure({
         <span className="aw-path">{text.path}</span>
       </div>
       <div className="aw-body">
-        <AgentDashboard key={`${sample}-${run}`} view={shownView} mode="showcase" headingLevel={headingLevel} headings={false} />
+        <AgentDashboard key={`${sample}-${run}`} view={shownView} mode="showcase" headingLevel={headingLevel} headings={false}
+          ruleLines={false} labels={{ suggestions: text.suggestions }} />
       </div>
     </div>
   );
@@ -308,7 +308,6 @@ export function AgentFigure({
                       ) : (
                         event.line && <span className="af-line">{rich(event.line)}</span>
                       )}
-                      {flag && <span className="af-rule">{reason(flag.rule, text.reason)}</span>}
                     </span>
                   </li>
                 );
