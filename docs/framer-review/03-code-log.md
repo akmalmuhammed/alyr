@@ -85,3 +85,34 @@ The same component is every product page's "How it works" (`FlowSection`), so al
 (both languages) open their flow finished too. The other demos already opened finished
 (`ProductDemo`, site audit F2); `ChatXray` draws each scene finished; `LastOne` and
 `PaymentPaper` have the end state in their HTML. None other opened empty.
+
+## Verification (24 Oct 2026, on 6e7308a; the later commit only touches docs, skills and the allowlist)
+
+- `pnpm site:check`: build, EN/AR parity (6,112 strings), internal links (1,134) pass;
+  banned words passes after removing the allowlist entry for the old "reads" line.
+- `pnpm exec tsc --noEmit`, `pnpm lint`, `node scripts/design-check.mjs`: clean.
+- `pnpm site:a11y --runs=3`: axe on all 14 pages, 1440 and 390, light and dark: 56 runs,
+  no issues. Lighthouse mobile, lowest of 3: `/` Performance 95, Accessibility 100, LCP
+  2.41 s, CLS 0; `/ar` 98, 100, 2.41 s, 0.
+- Page height (same probe, before → after): `/` 1440 12,154 → 10,958 px; 390 16,614 →
+  15,732; 320 18,111 → 17,116. `/ar` 1440 12,046 → 10,807; 390 15,893 → 15,006.
+- No horizontal scroll at 320 in either language (`scrollWidth` = 320).
+- Section top to content at 1440, before → after (EN): How 408 → 269, By business 309 →
+  231, One order 424 → 324, ALYR Agent 487 → 368. Arabic: 410 → 296, 336 → 245, 461 → 311,
+  502 → 335.
+- Screenshots in `shots-code/` (not committed): How, By business, One order, ALYR Agent, the
+  products' Chat crop and the closing call, EN and AR, light and dark, 1440 and 390, reduced
+  motion (48); full pages of `/` and `/ar` at 1440 and 390; `/chat` and `/agent`'s "How it
+  works" in both languages; `wip/` has the motion runs (the flow playing, the closing call's
+  header outline with motion on).
+
+## Not checked
+
+- A real iPhone or Safari (Chromium Edge only); a screen reader beyond axe.
+- The flow's tick and the start at 60% timed in a run without screenshots (seen in captures
+  only); the moment it goes from the finished frame back to step 1 has not been judged by the
+  founder.
+- The header's outline at the closing call on a phone (the header has no button below
+  62rem; the bar hides there already) and with scripts off (both stay Volt then).
+- The Arabic of the changed lines (callouts, «يحسب», «اعرض الشاشة كاملة») is a draft for ALY-66.
+- 1024 and 1280 widths for the split openings; keyboard pass through "See the whole screen".
