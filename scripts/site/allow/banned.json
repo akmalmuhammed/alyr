@@ -55,6 +55,11 @@
       "term": "يعرف",
       "context": "يعرف العميل",
       "reason": "The customer (a person) knows: their promise was recorded (/accounts), the reason for a cancelled order (/shelf), that the last item sold out (/shelf question). Not the product."
+    },
+    {
+      "term": "قاعدة",
+      "context": "قاعدة البيانات",
+      "reason": "«قاعدة البيانات» is \"the database\" (records kept apart inside the database; an issued document the database refuses to change), not a rule. The founder took \"rule\" off the site (25 Oct 2026); this sentence needs the word."
     }
   ],
   "offerOnly": [
@@ -69,6 +74,55 @@
     {
       "path": "**.factsOffer[*]",
       "reason": "Added to a product page's facts only with the offer on (ProductKit.tsx ProductHero)."
+    }
+  ],
+  "style": [
+    {
+      "path": "*.home.suite.title",
+      "pattern": "stacked",
+      "reason": "The products heading (\"Six products. One workspace. Add them as you grow.\") was outside the content audit (01-audit.md, Out of scope: home.suite). Its wording waits for the founder; reword it then and remove this entry."
+    },
+    {
+      "path": "*.home.price.title",
+      "pattern": "stacked",
+      "reason": "The price section shows only with the offer on (D-034) and was not in the content audit. Its heading waits for the founder with the prices; reword it then and remove this entry."
+    },
+    {
+      "path": "*.home.price.combos[*].label",
+      "pattern": "colon",
+      "reason": "Price examples by trade (offer on only): the colon names the products a trade would use (\"A salon: ALYR Bookings\"), an example, which pattern 6 allows."
+    }
+  ],
+  "kept": [
+    {
+      "path": "en.home.hero.title",
+      "text": "The tech team your business never had.",
+      "reason": "The one slogan the site may have (content audit row 35; 02-decisions.md: keep the hero slogan)"
+    },
+    {
+      "path": "ar.home.hero.title",
+      "text": "فريق التقنية الذي لم يكن لدى مشروعك.",
+      "reason": "The Arabic of the hero slogan (row 35)"
+    },
+    {
+      "path": "en.footer.line",
+      "text": "We do the tech. You run the business.",
+      "reason": "Kept by the founder (row 5, 02-decisions.md, 25 Oct 2026), though it is a two-beat slogan"
+    },
+    {
+      "path": "ar.footer.line",
+      "text": "علينا التقنية، وعليك شغلك.",
+      "reason": "Kept by the founder (row 5), Gulf «شغلك» and all, until the Arabic review (ALY-66)"
+    },
+    {
+      "path": "en.home.spotlight.title",
+      "text": "Every day, see what changed\nand what to do next.",
+      "reason": "Kept by the founder (row 18, 02-decisions.md, 25 Oct 2026)"
+    },
+    {
+      "path": "ar.home.spotlight.title",
+      "text": "كل يوم، اعرف ما تغيّر\nوما الخطوة التالية.",
+      "reason": "The Arabic of row 18, kept with it"
     }
   ]
 }

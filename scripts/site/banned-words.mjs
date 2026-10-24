@@ -14,7 +14,8 @@
 // The words:
 // - the AI words are read from honesty.md section 1 itself, so the prose and the check
 //   cannot drift (if that section's format changes, this fails and says so);
-// - the rest are in scripts/site/banned-words.json.
+// - the rest are in scripts/site/banned-words.json, with the word "rule" (founder, 25 Oct 2026);
+// - the content audit's mechanical style patterns too (its "style" block), in the copy only.
 // A use that is true (a fictional customer asking "when are you coming?") is listed in
 // scripts/site/allow/banned.json with its reason; an entry that matches nothing fails.
 //
@@ -148,6 +149,64 @@ for (const locale of ["en", "ar"]) {
 // A line hidden by the switch that is also used where it always shows is not offer-only.
 for (const text of shownStrings) offerStrings.delete(text);
 
+// ------------------------------------------------------------------ the style
+
+// The content audit's patterns that a regular expression can find (docs/content-audit/01-audit.md
+// section 4; the rules themselves are in alyr-site-page, "Words that read as written by a
+// machine"). Copy only, by path: a label is a string whose last key is one of
+// `style.labelKeys` ("items" only inside a product page's inside.groups); questions, answers,
+// sample data and drawings of screens are skipped (`style.skip`). A line kept on purpose is
+// listed in allow/banned.json under "style" with its path, the pattern's name and its reason.
+const style = config.style;
+const stylePatterns = style.patterns.map((p) => ({ ...p, regex: new RegExp(p.re, `u${p.flags ?? ""}`) }));
+const lastKey = (path) => path.replace(/\[\d+\]/g, "").split(".").at(-1);
+const isLabel = (path) => {
+  const key = lastKey(path);
+  if (!style.labelKeys.includes(key)) return false;
+  return key !== "items" || /\.inside\.groups\[\d+\]\.items\[\d+\]$/.test(path);
+};
+const isBody = (path) => ["body", "lead", "statement"].includes(lastKey(path));
+const styleSkipped = (path) => style.skip.some((pattern) => matchPath(path, pattern));
+const styleUsed = new Set();
+function styleAllowed(path, name) {
+  const hit = (allow.style ?? []).find((entry) => entry.pattern === name && matchPath(path, entry.path));
+  if (hit) styleUsed.add(hit);
+  return Boolean(hit);
+}
+// Lines the founder kept on purpose (the hero's slogan, the footer, ALYR Agent's heading;
+// 02-decisions.md): the style patterns pass over them, and the check fails if one changes, so
+// a change to a kept line is made knowingly and its entry updated with it.
+const kept = allow.kept ?? [];
+const keptValue = (path) => {
+  const [locale, ...rest] = path.split(".");
+  const value = rest.join(".").split(/\.|\[(\d+)\]/).filter(Boolean).reduce((node, key) => node?.[key], copy[locale]);
+  return Array.isArray(value) ? value.join(" ") : value;
+};
+for (const entry of kept) {
+  if (keptValue(entry.path) !== entry.text) problems.push(`allow/banned.json: the kept line ${entry.path} is no longer "${entry.text}" (${entry.reason}). If it changed on purpose, update or remove its entry`);
+}
+const isKept = (path) => kept.some((entry) => path === entry.path || path.startsWith(`${entry.path}[`));
+let styleStrings = 0;
+for (const locale of ["en", "ar"]) {
+  walk(copy[locale], (path, value) => {
+    if (styleSkipped(path) || isKept(`${locale}.${path}`)) return;
+    styleStrings += 1;
+    const text = normalize(value);
+    for (const p of stylePatterns) {
+      if (p.scope === "label" && !isLabel(path)) continue;
+      if (p.scope === "body" && !isBody(path)) continue;
+      if (p.except?.includes(lastKey(path))) continue;
+      const m = text.match(p.regex);
+      if (m && !styleAllowed(`${locale}.${path}`, p.name)) {
+        problems.push(`copy.${locale}.${path}: ${p.name} ("${m[0].trim().slice(0, 60)}"): ${p.why}. In "${value.slice(0, 140)}"`);
+      }
+    }
+  });
+}
+for (const entry of allow.style ?? []) {
+  if (!styleUsed.has(entry)) problems.push(`allow/banned.json: the style entry for ${entry.path} (${entry.pattern}) no longer matches anything; remove it`);
+}
+
 // ------------------------------------------------------------------ the built site
 
 function files(dir, keep) {
@@ -245,6 +304,6 @@ if (problems.length) {
   process.exit(1);
 }
 console.log(
-  `banned-words: clean. ${terms.length} words, ${prices.length} price shapes; ${copyStrings} copy strings` +
+  `banned-words: clean. ${terms.length} words, ${prices.length} price shapes, ${stylePatterns.length} style patterns over ${styleStrings} labels and lines; ${copyStrings} copy strings` +
     (onlyCopy ? "." : `, ${builtFiles} built files (offer ${offer}).`),
 );

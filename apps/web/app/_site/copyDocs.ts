@@ -379,7 +379,7 @@ export const docsEn: DocsPage = {
           "The PDF in the chat within WhatsApp’s 24 hours, and a link that opens it.",
           "A page for each document: Paid or Balance due, and Download PDF.",
           "A credit note when a paid order is cancelled.",
-          "Part of a visit paid? A deposit receipt says what is left.",
+          "When part of a visit is paid, a deposit receipt says what is left.",
         ],
       },
       {
@@ -789,7 +789,7 @@ export const docsAr: DocsPage = {
           "الملف في المحادثة خلال 24 ساعة من آخر رسالة للعميل، ورابط يفتحه.",
           "صفحة لكل مستند: «مدفوع» أو «المتبقي»، وزر تنزيل الملف.",
           "إشعار دائن حين يُلغى طلب مدفوع.",
-          "دُفع جزء من قيمة الزيارة؟ إيصال العربون يقول كم تبقّى.",
+          "إن دُفع جزء من قيمة الزيارة، فإيصال العربون يقول كم تبقّى.",
         ],
       },
       {

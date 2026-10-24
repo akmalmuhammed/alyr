@@ -847,7 +847,7 @@ const en: Copy = {
             {
               move: "in",
               title: "A question for a person",
-              body: "Not everything should be automatic. Sara asks something only your team can answer.",
+              body: "Sara asks something only your team can answer.",
               chat: { from: "customer", text: "Can you write a name on the cake?" },
               work: ["Message received"],
             },
@@ -1684,7 +1684,7 @@ const en: Copy = {
             {
               move: "in",
               title: "A question for a person",
-              body: "Not everything should be automatic. Mariam asks something only your team can answer.",
+              body: "Mariam asks something only your team can answer.",
               chat: { from: "customer", text: "Is the thermostat covered by a warranty?" },
               work: ["Message received"],
             },
@@ -3120,7 +3120,7 @@ const ar: Copy = {
             {
               move: "in",
               title: "سؤال يحتاج إلى موظف",
-              body: "ليس كل شيء يصلح أن يكون آلياً. سارة تسأل عن أمر لا يجيب عنه إلا فريقك.",
+              body: "سارة تسأل عن أمر لا يجيب عنه إلا فريقك.",
               chat: { from: "customer", text: "ممكن تكتبون اسم على الكيكة؟" },
               work: ["تم استلام الرسالة"],
             },
@@ -3957,7 +3957,7 @@ const ar: Copy = {
             {
               move: "in",
               title: "سؤال يحتاج إلى موظف",
-              body: "ليس كل شيء يصلح أن يكون آلياً. مريم تسأل عن أمر لا يجيب عنه إلا فريقك.",
+              body: "مريم تسأل عن أمر لا يجيب عنه إلا فريقك.",
               chat: { from: "customer", text: "هل الثرموستات عليه ضمان؟" },
               work: ["تم استلام الرسالة"],
             },

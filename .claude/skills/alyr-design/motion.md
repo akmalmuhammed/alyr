@@ -22,7 +22,9 @@ curves, which the workspace's `.sh` still calls `--ease` and `--spring`).
    reduced motion (the `/chat` demo and how-it-works flow), and what follows the scroll
    (the two progress rules). A moment may wait for the visitor where there is a fine pointer
    (the homepage's product tiles play on hover or focus, and in view on a phone): it still
-   plays once, and while it waits it shows a true, earlier state of the same screen.
+   plays once, and **while it waits it rests finished**, as every demo opens (founder,
+   25 Oct 2026); its trigger replays it from its start (each animation fills backwards, so
+   its first frame is the earlier state) and it ends finished again.
 2. **Reduced motion shows end states.** Under `prefers-reduced-motion: reduce` nothing
    travels and nothing plays by itself; every figure is composed, every count at its final
    value. Check with the capture script's `--reduced-motion`.

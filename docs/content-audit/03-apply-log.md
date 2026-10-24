@@ -69,3 +69,35 @@ Choices inside the rows:
 
 Checked at this stage: `pnpm exec tsc --noEmit`, `pnpm lint`, banned words on the copy, EN/AR
 parity (6,084 strings).
+
+## Stage 2: the pattern rules, in the skills and the check
+
+- **`alyr-site-page`:** "Words that read as written by a machine", the audit's thirteen rules
+  and a fourteenth (no "rule" / «قاعدة» about ALYR), with what the check enforces and what
+  needs a reader. The homepage's hero lead, the feed, the openings, the products frame, "What's
+  in {product}" and "Questions" are brought up to date.
+- **`alyr-design/honesty.md` §1:** rule lines are the product's, not the public site's; what
+  to say instead; "Agent" never carries a sentence alone, now without "by rules you can check".
+  `alyr-design/SKILL.md` §9 and `alyr-product-screen/agent-dashboard.md` say the same;
+  `components.md` gives the dashboard's `ruleLines={false}`, the feed and the products frame.
+- **`scripts/site/banned-words.json`:** the terms "rule", "rules", «قاعدة», «قاعدته»,
+  «قاعدتها», «قواعد» (copy and built site); a `style` block with fifteen patterns from the
+  audit's table (two Arabic ones added: «تابع … من أوله», «تتنحى»), each with its scope (labels,
+  bodies or all copy), read by `banned-words.mjs` over the copy. Two fixes to the audit's
+  regexes: "stacked" catches two short sentences, not only three ("New company. No
+  shortcuts."), and the Arabic ones match the copy without diacritics, as the check reads it.
+- **`scripts/site/allow/banned.json`:** «قاعدة البيانات» (the database); `kept`: the hero's
+  slogan, the footer (row 5) and ALYR Agent's heading (row 18), in both languages, held to
+  their exact words; `style`: the products heading and the price heading (both outside the
+  audit, for the founder) and the price examples' colons.
+- **The site's data carries no rule lines:** `_site/samples.ts` gives the site each sample
+  screen with its `rule` fields empty and the report's lines without the rule line, so the
+  page's own data (what a crawler reads) has none either. `ReportPhone.tsx` is as before.
+- **Lines the new rules caught outside the audit's rows,** fixed: /docs "Part of a visit
+  paid? …" (a question in a list) is "When part of a visit is paid, …"; "Not everything should
+  be automatic." (a denial opener, rule 7's own example) is gone from the two flows.
+- **Not added:** the audit's two non-regex checks (repeated lines across pages; a lead that
+  restates its H1). The audit suggests them as warnings first; they are left for a later pass.
+- **Not changed:** `alyr-deck-and-social` still asks for the Agent's rule lines on the deck's
+  slide 5 ("by rules you can check"). The founder's decision is for the public site; whether a
+  deck shown to an owner drops them too is his call.

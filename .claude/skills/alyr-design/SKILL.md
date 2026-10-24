@@ -219,8 +219,10 @@ Full list, the claims table and the names register: [honesty.md](honesty.md).
 - **No AI words** until a model is in the product (D-012, D-035): AI, smart, intelligence,
   learns, understands, thinks, predicts, forecast, knows, notices, "I noticed", reads (as in
   understanding), assistant, agentic, health score, top performer, business intelligence;
-  no sparkles, shimmer, typing dots, "thinking…", avatars or first person. Write
-  "By rule: …" and show the rule line. "Agent" never carries a sentence alone.
+  no sparkles, shimmer, typing dots, "thinking…", avatars or first person. Say what was
+  counted or compared, in plain words; the product shows its rule line, the public site never
+  says "rule" (founder, 25 Oct 2026; [honesty.md](honesty.md) §1). "Agent" never carries a
+  sentence alone.
 - **Every sample is marked** as a fictional business, once: the "Sample" mark in its chrome
   for the eye, its first line for screen readers and crawlers.
 - **Fictional names only, checked against real businesses** in the trade and the region
