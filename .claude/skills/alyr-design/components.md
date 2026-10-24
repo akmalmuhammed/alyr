@@ -47,7 +47,7 @@ and the Agent follow these; the product screens have their own older versions (m
 | Product bar | `ProductBar` (`ProductKit.tsx`), `kit.css` | Under the header on product pages; no call to action (the header has it) |
 | Product page template | `ProductHero`, `FlowSection`, `ScreenBlock`, `InsideBlock`, `WhoBlock`, `WorksBlock`, `QuestionsBlock` (`ProductKit.tsx`) | Every product page (`alyr-site-page`) |
 | Tabbed demo | `ProductDemo.tsx` | Product heroes; plays only on screen, can be paused |
-| How it works | `FlowDiagram.tsx` | Product pages; may keep moving while on screen |
+| How it works | `FlowDiagram.tsx` | Product pages and the homepage's One order; may keep moving while on screen. Opens on a finished frame (the first story's last step) and plays from step 1 once 60% of it is in view; the signal on the wire is one 45° tick per step, never a looping glow |
 | The fold | `.band-fold` (`site.css`) | Into a Carbon band and at the top of the closing call |
 | Carbon plate | `.af-plate` (`agentfig.css`), `.product-in` (`site.css`) | Behind the hero figure; product page openings. Top start corner cut at 45°, mirrored |
 | Closing call | `.cta`, `.cta-mark` | Every page, full-bleed Carbon (`--band`), the fold at its top |

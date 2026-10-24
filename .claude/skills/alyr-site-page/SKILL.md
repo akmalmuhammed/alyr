@@ -64,12 +64,24 @@ words under `home` in `copy.ts`):
    handle) or sent across by "Today" and "With ALYR"; it sweeps once when first read. Phones
    rest on "With ALYR" and swipe.
 5. **One order, start to finish** (`#see`): the `/chat` flow figure (`FlowDiagram`) told for
-   Sara at Qirfa Bakery, on a cut-corner Carbon plate, marked "Sample" at the end of its tab
-   row, and the tally of who did what. Every step shown is built; keep the tally's counts true
-   to the steps.
+   Sara at Qirfa Bakery, on a cut-corner Carbon plate whose top holds the section's heading,
+   lead and link (no cross rule), marked "Sample" at the end of its tab row, and the tally of
+   who did what. Every step shown is built; keep the tally's counts true to the steps. The
+   flow opens on a finished frame (its first story's last step) and plays from step 1 once
+   60% of it is on screen; with reduced motion it stays finished.
 6. **ALYR Agent** (eyebrow "ALYR Agent · With every product") with numbered callouts and the
-   sample switch (its "Sample business" label is the mark), opening on the bakery. Not
-   pinned; on phones the screen stops after its five numbered parts.
+   sample switch (its "Sample business" label is the mark), opening on the bakery. The hero
+   already shows the screen's opening sentence, so this section shows it only inside "See the
+   whole screen": it opens on Needs you now and the suggestions with their reasons (marks 1
+   and 2), and the disclosure (a native `<details>`) opens the rest, marks 3 and 4 and their
+   callouts. Show the dashboard's sentence once per page. Not pinned.
+
+**Section openings vary** (framer-review P3, 24 Oct 2026): a split opening (heading at the
+start, lead and link on the end column at its last baseline: How we work, ALYR Agent), a full
+one (one heading line across the grid: By business), and the heading inside the figure's
+plate (One order). Do not give two neighbouring sections the same opening, and land each
+section's content within about 300 px of its top at 1440 (`.open-split`, `.open-full`,
+`.open-plate` in `home.css`).
 7. **The products** on the Carbon band as six plain rows (`room.css` `.suite-row`): name,
    descriptor, the state only on Agent and Shelf, one sentence and its link, and the corner of
    the product's real screen at true size with its "Sample" mark; then the two notes. Nothing
@@ -110,7 +122,7 @@ Every product page uses `_site/ProductKit.tsx` and `kit.css`, in this order:
 | Works with the rest of ALYR | `WorksBlock` | Ruled rows in the suite's order without the page's own product |
 | Questions | `QuestionsBlock` | Native `<details>`, an `id` per question; "Can I use it on its own?", "How long does setup take?" |
 | Closing call | `Shell` | The fold at its top, the contact block in its state |
-| Phone's contact bar | `Shell`, `SiteMotion` | As on the homepage (founder, 24 Oct 2026), below 53rem: up once the opening's `data-hero-cta` button has scrolled away, down while the closing call or the footer is on screen; 44 px button, `env(safe-area-inset-bottom)`, no slide with reduced motion, down without scripts. One Volt button on screen: the header's is the outlined twin while the opening's is in view and hides while the bar is up (`site.css`). A page whose opening has no `data-hero-cta` never shows the bar |
+| Phone's contact bar | `Shell`, `SiteMotion` | As on the homepage (founder, 24 Oct 2026), below 53rem: up once the opening's `data-hero-cta` button has scrolled away, down while the closing call or the footer is on screen; 44 px button, `env(safe-area-inset-bottom)`, no slide with reduced motion, down without scripts. One Volt button on screen: the header's is the outlined twin while the opening's is in view or while the closing call is on screen (`data-at-closing`, set by `SiteMotion`), and hides while the bar is up (`site.css`). A page whose opening has no `data-hero-cta` never shows the bar |
 
 Each page has its own English social card (`(site)/<page>/opengraph-image.tsx` through
 `_site/socialCard.tsx`). Arabic pages share the English homepage card until Arabic cards are

@@ -33,11 +33,6 @@
     },
     {
       "term": "reads",
-      "context": "reads the orders, bookings, chats and credit already in your workspace",
-      "reason": "Reads records, in the sense of taking data from the workspace, not understanding (honesty.md bans 'reads' meaning understands). The next sentences say what it does with them: puts work first, compares the week. Borderline: the site lane may prefer 'counts' or 'takes'."
-    },
-    {
-      "term": "reads",
       "context": "reads your hours, locks the time",
       "reason": "/bookings: it reads the business's opening hours (data), then locks the slot. Not understanding."
     },
