@@ -115,4 +115,4 @@ The same component is every product page's "How it works" (`FlowSection`), so al
 - The header's outline at the closing call on a phone (the header has no button below
   62rem; the bar hides there already) and with scripts off (both stay Volt then).
 - The Arabic of the changed lines (callouts, «يحسب», «اعرض الشاشة كاملة») is a draft for ALY-66.
-- 1024 and 1280 widths for the split openings; keyboard pass through "See the whole screen".
+- 1280 width (1024 looked at: the openings hold); a keyboard pass through "See the whole screen".
