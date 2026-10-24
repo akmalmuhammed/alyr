@@ -43,8 +43,26 @@ type Quote = {
   totals?: { monthly_subtotal_text: string; monthly_total_text: string; period_total_text: string; one_time_total: number; one_time_total_text: string };
   promise?: Text | null; accepted_at?: string | null;
 };
-type WsStep = { key: string; done: boolean; asked: boolean; connection: string };
-type Workspace = { products: { key: string; steps: WsStep[] }[]; connections: { key: string; connected: boolean }[] };
+// The readiness check (ALY-165): what is left before the business goes live, and who owns it.
+type Check = {
+  key: string; label: Record<Lang, string>; todo: Record<Lang, string>;
+  status: "done" | "todo" | "waiting"; owner: "client" | "alyr"; asked: boolean; blocker: string;
+  choice: string; choices: string[]; setup?: WaSetup;
+};
+// How the business gets onto WhatsApp (ALY-217): what its way needs, and where ALYR is.
+type WaNeed = { key: string; label: Record<Lang, string>; field: "" | "phone" | "display_name"; done: boolean };
+type WaSetup = {
+  way: string; status: string; phone: string; display_name: string; needs: WaNeed[]; note: string; open: boolean;
+};
+type Readiness = { stage: "setting_up" | "ready" | "live"; checks: Check[]; left: string[] };
+// "Start on ALYR's number" waits on the founder's decision (ALY-217); the others are offered.
+const WHATSAPP_OFFERED = ["new_number", "move_number", "own_account"];
+// What opens the products (ALY-212, D-051): the setup fee and the first period, paid to ALYR.
+type Payment = {
+  open: boolean; status: "open" | "no_price" | "unpaid"; due_text: string; paid: number; paid_text: string;
+  left: number; left_text: string; setup_text: string; period_text: string; period_months: number;
+  reference: string; bank: string;
+};
 type Booking = { customer: string; service: string; when_text: string; status: string };
 type Step = "loading" | "account" | "code" | "type" | "basics" | "services" | "hours" | "assisted" | "try" | "plan" | "golive" | "finished";
 
@@ -136,9 +154,13 @@ export default function Start() {
   const [chat, setChat] = useState<ChatMessage[]>([]);
   const [draft, setDraft] = useState("");
   const [tested, setTested] = useState<Booking | null>(null);
-  const [ws, setWs] = useState<Workspace | null>(null);
+  const [ready, setReady] = useState<Readiness | null>(null);
+  // The WhatsApp number and name as the owner types them, until saved.
+  const [waDraft, setWaDraft] = useState<{ phone?: string; display_name?: string }>({});
+  const [waError, setWaError] = useState("");
   const [quote, setQuote] = useState<Quote | null>(null);
   const [quoteFlash, setQuoteFlash] = useState(false);
+  const [pay, setPay] = useState<Payment | null>(null);
   const quoteSeen = useRef("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
@@ -147,7 +169,7 @@ export default function Start() {
   const way = state?.way ?? chosen?.way ?? "appointments";
   const rail = way === "assisted"
     ? (["account", "business", "assisted", "plan", "golive"] as const)
-    : (["account", "business", "services", "hours", "try", "plan", "golive"] as const);
+    : (["account", "business", "plan", "services", "hours", "try", "golive"] as const);
   const railKey = step === "code" ? "account" : step === "type" || step === "basics" ? "business" : step;
   const current = step === "finished" ? rail.length : Math.max(0, rail.indexOf(railKey as never));
   const shopName = state?.business.name || form.name;
@@ -190,6 +212,8 @@ export default function Start() {
         if (!loaded) return setStep("account");
         // A finished owner comes back here only to answer a price ALYR published since.
         if (loaded.finished && loaded.quote.status === "published") return setStep("plan");
+        // The workspace sends a finished owner back to the go-live list (ALY-165).
+        if (loaded.finished && new URLSearchParams(window.location.search).has("golive")) return setStep("golive");
         if (loaded.finished) router.replace("/app");
         setStep(loaded.finished ? "finished" : ((loaded.step || loaded.steps[0]) as Step));
       } catch {
@@ -333,7 +357,11 @@ export default function Start() {
     if (step !== "plan") return;
     let alive = true;
     const tick = async () => {
-      const answer = await call<Quote>("/api/onboarding/quote").catch(() => null);
+      const [answer, paid] = await Promise.all([
+        call<Quote>("/api/onboarding/quote").catch(() => null),
+        call<Payment>("/api/onboarding/payment").catch(() => null),
+      ]);
+      if (alive && paid?.ok) setPay(paid.data);
       if (!alive || !answer?.ok) return;
       const seen = JSON.stringify(answer.data);
       if (quoteSeen.current && seen !== quoteSeen.current && answer.data.status !== "preparing") {
@@ -343,8 +371,9 @@ export default function Start() {
       quoteSeen.current = seen;
       setQuote(answer.data);
     };
+    const first = setTimeout(tick, 0);
     const timer = setInterval(tick, 4000);
-    return () => { alive = false; clearInterval(timer); };
+    return () => { alive = false; clearTimeout(first); clearInterval(timer); };
   }, [step]);
   const acceptQuote = (then: () => void) => guard(async () => {
     if (!quote?.id) return;
@@ -362,21 +391,31 @@ export default function Start() {
   });
 
   // ── go live ──────────────────────────────────────────
-  const loadWorkspace = useCallback(async () => {
-    const answer = await call<Workspace>("/api/workspace");
-    if (answer.ok) setWs(answer.data);
+  const loadReadiness = useCallback(async () => {
+    const answer = await call<Readiness>("/api/onboarding/readiness");
+    if (answer.ok) setReady(answer.data);
   }, []);
   useEffect(() => {
     if (step !== "golive") return;
-    const first = setTimeout(() => { loadWorkspace().catch(() => undefined); }, 0);
+    const first = setTimeout(() => {
+      loadReadiness().catch(() => undefined);
+    }, 0);
     return () => clearTimeout(first);
-  }, [step, loadWorkspace]);
-  const wsStep = (key: string) => ws?.products.flatMap((p) => p.steps).find((s) => s.key === key);
-  const ask = (stepKey: string) => guard(async () => {
-    // Filed under the product the step belongs to (a salon's steps are ALYR Bookings').
-    const product = ws?.products.find((p) => p.steps.some((s) => s.key === stepKey))?.key ?? "chat";
-    await call("/api/workspace/setup-requests", "POST", { product, step: stepKey, note: "" });
-    await loadWorkspace();
+  }, [step, loadReadiness]);
+  // Hand a step to ALYR or take it back, or choose how to do it. The answer is the new list.
+  const changeStep = (key: string, change: { owner?: "client" | "alyr"; choice?: string }) => guard(async () => {
+    const answer = await call<Readiness>(`/api/onboarding/steps/${key}`, "PATCH", change);
+    if (answer.ok) setReady(answer.data);
+    else setError(t.offline);
+  });
+  // Give the number, the name, or tick what is ready for the chosen way (ALY-217).
+  const changeWhatsapp = (change: { phone?: string; display_name?: string; ready?: string[] }) => guard(async () => {
+    const answer = await call<Readiness>("/api/onboarding/whatsapp", "PATCH", change);
+    if (answer.status === 422) return setWaError(t.golive.waInvalid);
+    if (!answer.ok) return setError(t.offline);
+    setWaError("");
+    setWaDraft({});
+    setReady(answer.data);
   });
   const finish = () => guard(async () => {
     await call("/api/onboarding/finish", "POST");
@@ -625,8 +664,8 @@ export default function Start() {
     actions = (
       <>
         <button className="ob-btn ghost" type="button" onClick={() => go("hours")}>{t.back}</button>
-        {!tested && <button className="ob-link" type="button" onClick={() => go("plan")}>{t.try.skip}</button>}
-        <button className="ob-btn primary" type="button" disabled={!tested} onClick={() => go("plan")}>{t.continue}<Ico name="arrow" /></button>
+        {!tested && <button className="ob-link" type="button" onClick={() => go("golive")}>{t.try.skip}</button>}
+        <button className="ob-btn primary" type="button" disabled={!tested} onClick={() => go("golive")}>{t.continue}<Ico name="arrow" /></button>
       </>
     );
   } else if (step === "plan") {
@@ -673,10 +712,27 @@ export default function Start() {
             <ul>{t.plan.includes.map((x) => <li key={x}><Ico name="check" size={16} />{x}</li>)}</ul>
           </section>
         )}
+        {accepted && pay && !pay.open && (
+          <section className="ob-pay" aria-label={t.plan.payTitle}>
+            <h2>{t.plan.payTitle}</h2>
+            <p className="ob-pay-total"><span>{t.plan.payTotal}</span><b className="num"><bdi dir="ltr">{pay.left_text}</bdi></b></p>
+            <small>{t.plan.paySetup(pay.setup_text)} · {t.plan.payPeriod(pay.period_months, pay.period_text)}</small>
+            {pay.paid > 0 && <small>{t.plan.paidSoFar(pay.paid_text, pay.left_text)}</small>}
+            <div className="ob-pay-how">
+              <b>{t.plan.payHow}</b>
+              {pay.bank ? <pre dir="ltr">{pay.bank}</pre> : <small>{t.plan.payNoBank}</small>}
+              <small>{t.plan.payRef}</small>
+              <code dir="ltr">{pay.reference}</code>
+            </div>
+            <p className="ob-pay-note"><span className="ob-pulse" />{t.plan.paySameDay}</p>
+          </section>
+        )}
+        {accepted && pay?.open && !state?.finished && <p className="ob-accepted"><Ico name="check" size={15} />{t.plan.payOpen}</p>}
         <section className="ob-note-card"><b>{t.plan.meta}</b><small>{t.plan.metaSub}</small></section>
       </>
     );
     const waiting = q?.status === "published";
+    const open = pay?.open ?? false;
     if (state?.finished) {
       actions = (
         <>
@@ -687,44 +743,155 @@ export default function Start() {
     } else {
       actions = (
         <>
-          <button className="ob-btn ghost" type="button" onClick={() => go(way === "assisted" ? "assisted" : "try")}>{t.back}</button>
-          {waiting && <button className="ob-link" type="button" onClick={() => go("golive")}>{t.plan.later}</button>}
+          {way === "assisted" && <button className="ob-btn ghost" type="button" onClick={() => go("assisted")}>{t.back}</button>}
+          {/* The products open once the client has paid (D-051): no way past the price before. */}
           {waiting
-            ? <button className="ob-btn primary" type="button" disabled={busy} onClick={() => acceptQuote(() => go("golive"))}>{t.plan.accept}<Ico name="arrow" /></button>
-            : <button className="ob-btn primary" type="button" onClick={() => go("golive")}>{t.continue}<Ico name="arrow" /></button>}
+            ? <button className="ob-btn primary" type="button" disabled={busy} onClick={() => acceptQuote(() => undefined)}>{t.plan.accept}<Ico name="arrow" /></button>
+            : open
+              ? <button className="ob-btn primary" type="button" onClick={() => go(way === "assisted" ? "golive" : "services")}>{t.continue}<Ico name="arrow" /></button>
+              : <button className="ob-btn primary" type="button" disabled>{accepted ? t.plan.waitingPay : t.plan.waitingPrice}</button>}
         </>
       );
     }
   } else if (step === "golive") {
-    const whatsapp = wsStep("whatsapp");
-    const provider = wsStep("provider");
-    const item = (done: boolean | undefined, title: string, sub: string, action?: React.ReactNode, next?: boolean) => (
-      <li className={`ob-check ${done ? "done" : next ? "next" : ""}`}>
+    const g = t.golive;
+    const item = (done: boolean, title: string, sub: string, action?: React.ReactNode) => (
+      <li className={`ob-check ${done ? "done" : ""}`}>
         <span className="ob-dot">{done && <Ico name="check" size={14} />}</span>
         <span className="ob-check-text"><b>{title}</b><small>{sub}</small></span>
         {action}
       </li>
     );
+    const stage = g.stage[ready?.stage ?? "setting_up"];
+    // Where the owner does each step: back in this flow, or in the workspace.
+    const fixes: Record<string, (() => void) | string> = {
+      content: way === "appointments" ? () => go("services") : "/app/catalog",
+      hours: () => go("hours"),
+      test: () => go("try"),
+      price: () => go("plan"),
+    };
+    const fixButton = (key: string) => {
+      const fix = fixes[key];
+      if (!fix) return null;
+      return typeof fix === "string"
+        ? <Link className="ob-btn small ghost" href={fix}>{g.fix}</Link>
+        : <button type="button" className="ob-btn small ghost" onClick={fix}>{g.fix}</button>;
+    };
+    const choicesOf = (c: Check, ways: Record<string, { title: string; sub: string }>, offered: string[]) => (
+      <div className="ob-choices" role="radiogroup" aria-label={c.label[lang]}>
+        {offered.filter((w) => c.choices.includes(w)).map((w) => (
+          <button key={w} type="button" role="radio" aria-checked={c.choice === w}
+            className={`ob-choice ${c.choice === w ? "on" : ""}`} disabled={busy}
+            onClick={() => changeStep(c.key, { choice: w })}>
+            <b>{ways[w].title}</b><small>{ways[w].sub}</small>
+          </button>
+        ))}
+      </div>
+    );
+    // What the chosen way needs: the number (and a new number's name) typed in, the rest ticked.
+    const waNeeds = (setup: WaSetup) => {
+      const ticked = setup.needs.filter((n) => !n.field && n.done).map((n) => n.key);
+      const fields = setup.needs.filter((n) => n.field);
+      const value = (f: "phone" | "display_name") => waDraft[f] ?? setup[f];
+      const dirty = fields.some((n) => value(n.field as "phone" | "display_name") !== setup[n.field as "phone" | "display_name"]);
+      const status = g.waStatus[setup.status];
+      return (
+        <div className="ob-wa">
+          {status && <p className={`ob-wa-status ${setup.status}`}>{status}{setup.status === "failed" && setup.note && <> {setup.note}</>}</p>}
+          {setup.needs.length > 0 && setup.status !== "connected" && <>
+            <p className="ob-kicker">{g.getReady}</p>
+            <ul className="ob-wa-needs">
+              {setup.needs.filter((n) => !n.field).map((n) => (
+                <li key={n.key}>
+                  <label>
+                    <input type="checkbox" checked={n.done} disabled={busy}
+                      onChange={(e) => changeWhatsapp({ ready: e.target.checked ? [...ticked, n.key] : ticked.filter((k) => k !== n.key) })} />
+                    <span>{n.label[lang]}</span>
+                  </label>
+                </li>
+              ))}
+            </ul>
+            {fields.length > 0 && (
+              <form className="ob-wa-fields" onSubmit={(e) => {
+                e.preventDefault();
+                changeWhatsapp(Object.fromEntries(fields.map((n) => [n.field, value(n.field as "phone" | "display_name")])));
+              }}>
+                {fields.map((n) => (
+                  <label key={n.key} className="ob-field">
+                    <span>{n.field === "phone" ? g.phone : g.displayName}</span>
+                    <small>{n.label[lang]}</small>
+                    <input
+                      type={n.field === "phone" ? "tel" : "text"} dir={n.field === "phone" ? "ltr" : undefined}
+                      inputMode={n.field === "phone" ? "tel" : undefined} autoComplete={n.field === "phone" ? "tel" : "organization"}
+                      placeholder={n.field === "phone" ? g.phoneHint : ""} maxLength={n.field === "phone" ? 30 : 80}
+                      value={value(n.field as "phone" | "display_name")}
+                      onChange={(e) => setWaDraft((d) => ({ ...d, [n.field]: e.target.value }))} />
+                  </label>
+                ))}
+                {waError && <p className="ob-error" role="alert">{waError}</p>}
+                <button type="submit" className="ob-btn small" disabled={busy || !dirty}>{dirty ? g.save : g.saved}</button>
+              </form>
+            )}
+          </>}
+        </div>
+      );
+    };
+    const row = (c: Check) => {
+      const done = c.status === "done";
+      // A step with choices shows them below, with its own "ask ALYR" link.
+      const choosing = !done && c.owner === "client" && (c.key === "whatsapp" || c.key === "payments");
+      const action = done
+        ? <em>{g.done}</em>
+        : c.owner === "alyr"
+          ? <span className="ob-owner"><em>{g.alyrOwns}</em><button type="button" className="ob-link" onClick={() => changeStep(c.key, { owner: "client" })} disabled={busy}>{g.takeBack}</button></span>
+          : c.status === "waiting"
+            ? <em>{g.waiting}</em>
+            : choosing ? null
+              : fixButton(c.key) ?? <button type="button" className="ob-btn small" onClick={() => changeStep(c.key, { owner: "alyr" })} disabled={busy}>{g.ask}</button>;
+      return (
+        <li key={c.key} className={`ob-check ${done ? "done" : c.status === "waiting" ? "waiting" : ""}`}>
+          <span className="ob-dot">{done && <Ico name="check" size={14} />}</span>
+          <span className="ob-check-text">
+            <b>{c.label[lang]}</b>
+            {!done && <small>{c.todo[lang]}</small>}
+            {c.blocker && <small className="ob-blocker">{g.heldUp(c.blocker)}</small>}
+          </span>
+          {action}
+          {choosing && c.key === "whatsapp" && (
+            <div className="ob-check-more">
+              <p className="ob-kicker">{g.chooseWhatsapp}</p>
+              {choicesOf(c, g.whatsappWays, WHATSAPP_OFFERED)}
+              {c.choice && c.setup && waNeeds(c.setup)}
+              <small className="ob-fine">{g.whatsappNote}</small>
+              <button type="button" className="ob-link" onClick={() => changeStep(c.key, { owner: "alyr" })} disabled={busy}>{g.ask}</button>
+            </div>
+          )}
+          {choosing && c.key === "payments" && (
+            <div className="ob-check-more">
+              <p className="ob-kicker">{g.choosePayments}</p>
+              {choicesOf(c, g.paymentWays, ["cash_transfer", "online"])}
+              <button type="button" className="ob-link" onClick={() => changeStep(c.key, { owner: "alyr" })} disabled={busy}>{g.ask}</button>
+            </div>
+          )}
+        </li>
+      );
+    };
     main = (
       <>
-        {head(t.golive.title, t.golive.sub)}
+        {head(stage.title, stage.sub)}
+        <ul className="ob-checks">{(ready?.checks ?? []).map(row)}</ul>
+        <p className="ob-kicker ob-also">{g.also}</p>
         <ul className="ob-checks">
-          {way === "appointments" && item(true, t.golive.setup, t.golive.setupSub(rows.length))}
-          {way === "appointments" && item(Boolean(tested), tested ? t.golive.tried : t.golive.notTried, tested ? t.golive.triedSub : t.try.waiting)}
-          {item(whatsapp?.done, t.golive.whatsapp, t.golive.whatsappSub,
-            whatsapp?.done ? <em>{t.golive.connected}</em> : whatsapp?.asked ? <em>{t.golive.asked}</em> : <button type="button" className="ob-btn small" onClick={() => ask("whatsapp")} disabled={busy}>{t.golive.ask}</button>, true)}
-          {item(provider?.done, t.golive.payments, t.golive.paymentsSub,
-            provider?.done ? <em>{t.golive.connected}</em> : provider?.asked ? <em>{t.golive.asked}</em> : <button type="button" className="ob-btn small ghost" onClick={() => ask("provider")} disabled={busy}>{t.golive.ask}</button>)}
-          {item(false, t.golive.team, t.golive.teamSub, <Link className="ob-btn small ghost" href="/app/team">{t.golive.invite}</Link>)}
-          {way === "appointments" && state?.catalog && item(false, t.golive.catalog(state.catalog.section[lang === "ar" ? "name_ar" : "name"]), t.golive.catalogSub,
-            <Link className="ob-btn small ghost" href="/app/catalog">{t.golive.open_}</Link>)}
+          {item(false, g.team, g.teamSub, <Link className="ob-btn small ghost" href="/app/team">{g.invite}</Link>)}
+          {way === "appointments" && state?.catalog && item(false, g.catalog(state.catalog.section[lang === "ar" ? "name_ar" : "name"]), g.catalogSub,
+            <Link className="ob-btn small ghost" href="/app/catalog">{g.open_}</Link>)}
         </ul>
       </>
     );
     actions = (
       <>
-        <button className="ob-btn ghost" type="button" onClick={() => go("plan")}>{t.back}</button>
-        <button className="ob-btn primary" type="button" disabled={busy} onClick={finish}>{t.golive.open}<Ico name="arrow" /></button>
+        <button className="ob-btn ghost" type="button" onClick={() => go(way === "assisted" ? "plan" : "try")}>{t.back}</button>
+        <button className="ob-btn primary" type="button" disabled={busy} onClick={finish}>{g.open}<Ico name="arrow" /></button>
       </>
     );
   } else if (step === "finished") {

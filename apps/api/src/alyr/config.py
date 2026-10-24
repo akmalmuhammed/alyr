@@ -114,6 +114,17 @@ class Settings(BaseSettings):
     # off for any one shop.
     catalog_for_new_shops: bool = True
 
+    # The ways ALYR can connect a business's WhatsApp today (ALY-217, D-050), by key from
+    # `core/whatsapp_setup.py`, comma separated: new_number, move_number, own_account. Empty
+    # until Meta approves ALYR as a Tech Provider (ALY-52); until then a business that has
+    # everything ready shows "waiting for Meta", and ALYR says so honestly.
+    whatsapp_ways_open: str = ""
+
+    # How a client pays ALYR by bank transfer (ALY-212, D-051): the account name, bank and
+    # IBAN, shown to the owner beside the amount and their reference. Not a secret. Empty
+    # until ALYR's company account is open; the owner is then told ALYR sends the details.
+    bank_transfer_details: str = ""
+
     # Per shop, to start (D-039; our estimate). A cap stops new items or photos with a
     # clear message and never deletes anything.
     catalog_max_items: int = 1000

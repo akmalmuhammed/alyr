@@ -27,8 +27,10 @@ def signup_token(client, email):
     return answer.json()["signup_token"]
 
 
-def new_business(client, name=None, kind="salon"):
-    """Each test makes its own business; the database is shared by the whole run."""
+def new_business(client, name=None, kind="salon", paid=True):
+    """Each test makes its own business; the database is shared by the whole run. Its
+    products are open, as once the client has paid (ALY-212); `paid=False` keeps them
+    locked, as for a client who has just signed up."""
     email = f"owner-{uuid4().hex[:8]}@shop.example"
     name = name or f"Barbers {uuid4().hex[:6]}"
     body = {"signup_token": signup_token(client, email), "owner_name": "Hamad", "name": name,
@@ -36,6 +38,12 @@ def new_business(client, name=None, kind="salon"):
     answer = client.post(f"{BASE}/business", json=body)
     assert answer.status_code == 200, answer.text
     slug = client.get(f"{BASE}/state").json()["business"]["slug"]
+    if paid:
+        owner_sql(
+            "update clients set access_from = now(), access_note = 'Test: paid' "
+            "where id = (select client_id from tenants where id = $1)",
+            answer.json()["created"],
+        )
     return answer.json()["created"], slug, name
 
 
@@ -80,7 +88,7 @@ def test_a_new_owner_creates_a_salon_with_its_starting_setup(client):
     assert state["business"]["name"] == "Al Sadd Barbers"
     assert slug.startswith("al-sadd-barbers")
     assert state["owner"]["name"] == "Hamad"
-    assert (state["way"], state["step"], state["finished"]) == ("appointments", "services", False)
+    assert (state["way"], state["step"], state["finished"]) == ("appointments", "plan", False)
     assert [s["name"] for s in state["services"]][:2] == ["Haircut", "Beard trim & shape"]
     assert state["services"][0]["price_text"] == "QAR 60"
     assert {"weekday": 5, "opens": "14:00", "closes": "22:00"} in state["hours"]

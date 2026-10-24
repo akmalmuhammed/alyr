@@ -1028,3 +1028,62 @@ There is no separate Pay product: payment links stay a module of Chat and Bookin
 - **The products** are six plain rows, no longer pinned (the audit's L1), so the homepage has no pinned panel on desktop.
 - **"Book a check-up"** is the one action name on every page, product pages included.
 - The new order: hero · how we work · your business · one order, as proof · ALYR Agent · the products · price (offer on) · trust · questions.
+
+## D-049 · Onboarding is one engine with three doors; a readiness check decides ready and live
+**Date** 23 Oct 2026 · **Status** Accepted (the founder, 23 Oct: "start building this", on the client onboarding plan) · Linear ALY-165, ALY-163 · Spec `specs/018-onboarding-engine/spec.md`
+
+**The decision.** Every client goes through one onboarding flow. A client can come in on their own from the site, with ALYR setting them up, or from a link the founder sends after a visit; the steps are the same, and what differs is who owns each step (the client or ALYR). One readiness check, worked out from the business's own data, says what is left and is the same in `/start`, the workspace and the back office. A business is *ready* when everything but its WhatsApp number is done, and *live* when the number is connected too. Live is recorded once and kept.
+
+**Why.**
+- Two separate flows for self-serve and assisted clients would drift. One flow with owners per step lets the founder hand-hold the first clients and learn exactly which steps to automate.
+- Meta's approval is the slowest dependency. "Ready, waiting for WhatsApp" lets a client finish everything else and lets ALYR see who is waiting, instead of a client stuck at an unexplained last step.
+- The money-back promise (D-034) and the first month need a start date nobody can argue with. Live is that date.
+
+**How.**
+- Done is never stored by hand: each check reads the data (`core/readiness.py`). What data cannot say is stored: the step's owner, a blocker ALYR writes, the owner's choice of WhatsApp way and payment way.
+- Every change goes into an append-only record for the funnel, with whether ALYR made it. No customer data.
+- The four WhatsApp ways are recorded now (ALYR's number, a new number, moving the shop's number with Meta's coexistence so the WhatsApp Business app keeps working, the shop's own account). Owners are offered the last three; ALYR's shared number needs routing that does not exist and the founder's decision (ALY-217).
+
+**Chosen over** a status field staff set by hand (it lies as soon as someone deletes a service), and over working out the board from every business on every page load (it would not scale; the board reads the last state the check saw).
+
+**Revisit when** terms acceptance (ALY-167) and per-shop templates (ALY-172) exist: they become checks. When billing starts at Live (ALY-218).
+
+
+## D-050 · Each WhatsApp way has its own list of what to have ready, and its state is honest about Meta
+**Date** 23 Oct 2026 · **Status** Accepted (the founder, 23 Oct: "think every onboarding, whatsapp integration, our whatsapp, clients own whatsapp options") · Linear ALY-217 · Spec `specs/019-whatsapp-setup/spec.md`
+
+**The decision.** A business chooses how its customers reach it on WhatsApp: a new number, moving the number it already uses in the WhatsApp Business app (Meta's coexistence), or a WhatsApp Business Platform account it already has with another provider. Each way lists what the owner must have ready, in plain words in English and Arabic; the owner gives the number and ticks the rest. The step waits only once everything is ready, and then says on whom: Meta (while ALYR cannot connect that way yet) or ALYR. ALYR marks it connecting, or failed with a reason the owner reads. Connected is never typed in: it is the business's Meta number row.
+
+**Why.**
+- The slow part of connecting a number is the business not having what Meta asks for on the day (a number already on WhatsApp, no business portfolio, no card in Meta, an app too old to move). Asking for it up front turns a failed call into a checklist.
+- Each business pays Meta for its own messages: a Tech Provider has no credit line. The card in Meta is a step, said plainly before the owner meets it.
+- Moving a number changes the owner's app (groups stay in the app, broadcast lists become read-only, disappearing and view once messages switch off, linked computers are signed out, the phone must open the app every 14 days). The owner accepts that before ALYR moves it, not after.
+- Until Meta approves ALYR, "waiting for Meta" is the true state. A setting (`ALYR_WHATSAPP_WAYS_OPEN`) opens each way the day it can be connected, with no code change.
+
+**Checked against Meta's own pages on 23 Oct 2026.** Coexistence: app 2.24.17 or newer, six months of one-to-one chats sync within 24 hours, 20 messages a second, the limits above. An account with another provider is shared with ALYR in Meta Business Suite: Meta's new account model does not move numbers between accounts.
+
+**Not offered: ALYR's own shared number.** Customers of many businesses writing to one number needs a step that asks which business they mean, and every message on it is charged to ALYR. It stays in the list of ways, hidden from owners, until the founder decides.
+
+**Chosen over** one generic "connect WhatsApp" button with a call booked by hand (it hides the four very different paths and what each needs), and over storing a "connected" flag (it lies when a number is detached).
+
+**Revisit when** ALYR is a Tech Provider (ALY-52) and Embedded Signup (ALY-39) exists: Embedded Signup will fill in the number and the state itself, and the attach action (ALY-166) writes the Meta number row.
+
+
+## D-051 · A client pays before their products open
+**Date** 23 Oct 2026 · **Status** Accepted (the founder, 23 Oct, answering the onboarding plan's third question: "dashboard will unlock after payment, that means they browse, get to the portal, pay and get access to products") · Linear ALY-212 · Spec `specs/020-pay-before-access/spec.md` · Updates D-049 (the onboarding engine)
+
+**The decision.** The account is still made before any payment (the founder's first answer). The owner signs in, sees the price for their business first, accepts it and pays the setup fee and the first period of that price. Until ALYR has that payment, every product screen and its API answer "your workspace opens once ALYR has your payment" (`402`); the guided setup, the price, the payment page and the go-live list stay open. Recording enough to cover what is due opens every business of that client, once. ALYR's staff can also open it without a payment, saying why (a pilot, a demo); both are on the audit log.
+
+**How a client pays today.** There is no online payment for clients yet (ALY-5, ALY-188). The owner sees what is due, the bank details (the setting `ALYR_BANK_TRANSFER_DETAILS`) and a reference to write on the transfer (`ALYR-` and the first eight characters of the client's ID). ALYR's staff record what arrived in the back office: the amount, how (bank transfer, cash, cheque, a payment link), what the statement shows, and the day. The owner is told it opens the same working day (the founder's fourth answer).
+
+**What stays as it was.**
+- The money-back result (D-034) is still counted over the first 30 days after going live, from `tenants.live_at`. Paying first does not start that clock: an owner who takes two weeks to set up loses none of their 30 days. This is how ALYR read the founder's answer; he can say otherwise.
+- The refund is still the first month's subscription, never the setup fee (D-034).
+- ALYR never holds a shop's money (hard rule 3). This is the client paying ALYR for ALYR's own service, and only references are kept: never a card number.
+- Clients that existed before this decision, and the demo shops, stay open (`access_note` says why).
+
+**What it changes.** The appointments setup now starts with the price (`plan` first), and the test line moves after payment: the owner tries their own chat once it is theirs. "Try before you pay" was never a free trial (D-034 has none), so nothing promised is lost.
+
+**Chosen over** unlocking at go-live and billing then (the founder said no: the products open after payment), and over a soft lock that only hides the menu (a locked workspace must be locked in the API too, or it is not locked).
+
+**Revisit when** online payment for clients exists (ALY-5, ALY-188): the payment page pays and opens in one step, and staff stop recording transfers. When the subscription's later periods are billed (ALY-85, ALY-218), which also decides whether the paid period counts from the day products open or from go-live.
