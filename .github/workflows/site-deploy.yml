@@ -114,6 +114,8 @@ jobs:
             echo "::warning::Cloudflare gave no preview address. Preview URLs are probably still off for alyr-site (docs/runbooks/site-deploy.md, step 3)."
           fi
           marker="<!-- alyr-site-preview -->"
+          # The backticks are Markdown for the comment, not a command.
+          # shellcheck disable=SC2016
           body="$(printf '%s\n**Site preview** for commit `%s`\n\n- This commit: %s\n- This pull request (always the latest commit): %s\n- Cloudflare version: `%s` (takes no traffic on alyr.qa)\n\nCheck `/version.txt` on the preview to see which commit it serves. Publishing to alyr.qa waits for the founder to approve it: docs/runbooks/site-deploy.md.' \
             "$marker" "${ALYR_BUILD_SHA:0:7}" "${url:-none}" "${alias:-none}" "$version")"
           existing="$(gh api "repos/${GITHUB_REPOSITORY}/issues/${PR_NUMBER}/comments" --paginate \

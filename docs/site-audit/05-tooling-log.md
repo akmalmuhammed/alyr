@@ -69,3 +69,80 @@ are public unless Access is put on them, and the approval gates the workflow, no
   - whether a rollback restores the static files.
 - Shell steps inside the workflow were not run, and the jq parsing of the output file was
   not tried on a real upload.
+
+## Stage 2: the CI site job and its checks
+
+**Built:**
+- **CI job `site`** in `.github/workflows/ci.yml`:
+  - installs and runs `pnpm site:check`;
+  - uploads `out-site` as an artifact, even on failure, so a broken build can be looked at;
+  - needs no PostgreSQL.
+- **`scripts/check.sh`** runs `pnpm site:check` after the web build.
+- **`scripts/site/check.mjs`** runs everything below and gives a summary (`--no-build` skips
+  the build). The checks:
+  1. the real `bash scripts/build-site.sh`;
+  2. **`copy-parity.mjs`:** every key in both languages, the same shape and list lengths, no
+     empty string. It reads `copy.ts` through `lib/copy.mjs`, which transpiles it and its
+     imports with the app's own TypeScript into a temporary folder. `copy.ts` is not
+     changed.
+  3. **`banned-words.mjs`:**
+     - **Where:** the copy, by path, in both languages; then every built page (text,
+       word-carrying attributes, and the strings inside the inline page data), the
+       sitemap, robots and the machine files.
+     - **The AI words** are parsed from `alyr-design/honesty.md` section 1 itself, English
+       and Arabic. The Arabic is matched with its article and joined prepositions, and
+       with the diacritics stripped.
+     - **The other words** are in `banned-words.json`: coming, coming soon, soon, beta,
+       under development, early access, Payroll, and their Arabic.
+     - **Prices:** ALYR's price shapes (monthly, "from", setup, money back, in English and
+       Arabic) may sit only in copy lines the offer switch hides:
+       - a question with `offer: true`;
+       - `description` beside a `descriptionNoOffer`;
+       - `facts` beside `factsNoOffer`;
+       - the listed `home.price.**`, `home.trust.closing`, `factsOffer` and `nOffer`.
+
+       In an offer-off build, no price shape and no offer-only line may appear anywhere,
+       the JavaScript chunks included.
+  4. **`link-check.mjs`:**
+     - **What it reads:** every href, src, srcset and og:image; the CSS `url()`s; the
+       sitemap and robots; markdown links.
+     - **How it resolves them:** the way the Worker serves the folder. A `#section` must
+       exist as an id on the target page.
+     - It never goes online.
+- **Reviewed allowlists**, each entry with its reason. An entry that matches nothing fails,
+  so the lists cannot go stale.
+  - `allow/parity.json`, 2 entries:
+    - the Arabic-only chat avatar letter (`pages.*.demo.avatar`);
+    - one deliberate empty cell in `/chat`'s tracking demo.
+  - `allow/banned.json`, 16 words:
+    - **Customers asking "when are you coming?":** a fictional customer's message in the
+      home-services sample, and the owner's day today.
+    - **"Soon" on the pending-contact line and the offer-off price answer.** honesty.md
+      section 7 allows the first.
+    - **"notices" as a noun:** in the STOP reply, `core/consent.py`'s own words.
+    - **"reads" as reading records:** the hours, its own records, the workspace.
+    - **"knows" / «يعرف» of people:** the team, the customer.
+
+**Today's site passes:**
+- 6,534 strings in parity;
+- 6,538 copy strings and 64 built files clean;
+- 974 internal links resolve;
+- about 30 s with the build.
+
+**Proved to fail when it should:**
+- **Prices:** an offer-on build, checked as if the offer were off, gives 157 problems.
+- **Links:** with `shelf.html` removed and the `#how` id renamed, the link check reports
+  48 broken links.
+
+**For the site lane, not changed here:**
+- "ALYR Agent reads the orders, bookings, chats and credit…" (`home.spotlight.body`) is on
+  the allowlist as reading records, but it is the closest to honesty.md's "reads (meaning
+  understands)". "Counts" or "takes" would be safer.
+- "Our prices go on this page soon" is allowed as the offer-off answer. honesty.md section 7
+  allows "soon" only for the WhatsApp line, so the founder may want it reworded.
+
+**Not checked:**
+- the CI job on GitHub (billing);
+- the copy loader on Linux (it ran on Windows, Node 22.22);
+- link targets on other sites;
+- the Arabic matching with words outside the two lists.

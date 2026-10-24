@@ -26,4 +26,6 @@ echo "== web: known vulnerabilities"
 (cd "$root/apps/web" && pnpm audit --prod --audit-level high)
 echo "== web: build"
 (cd "$root/apps/web" && pnpm build)
+echo "== site: the published build, copy parity, banned words, links"
+(cd "$root/apps/web" && pnpm site:check)
 echo "All checks passed."

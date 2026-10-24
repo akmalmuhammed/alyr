@@ -26,8 +26,9 @@ const git = (...args) => {
 
 const sha = process.env.ALYR_BUILD_SHA || git("rev-parse", "HEAD") || "unknown";
 const branch = process.env.ALYR_BUILD_BRANCH || git("rev-parse", "--abbrev-ref", "HEAD") || "unknown";
-// The output folder is ignored by git, so building never makes the tree dirty by itself.
-const dirty = !process.env.ALYR_BUILD_SHA && git("status", "--porcelain", "--untracked-files=no") !== "";
+// Uncommitted or untracked changes in what the build reads mark it dirty. The output folder
+// is ignored by git, so building never makes the tree dirty by itself.
+const dirty = !process.env.ALYR_BUILD_SHA && git("status", "--porcelain", "--", "apps/web", "design", "scripts") !== "";
 const commit = dirty ? `${sha}-dirty` : sha;
 const built = new Date().toISOString();
 const offer = process.env.NEXT_PUBLIC_ALYR_OFFER === "on" ? "on" : "off";

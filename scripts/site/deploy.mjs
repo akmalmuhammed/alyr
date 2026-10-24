@@ -30,8 +30,8 @@ const run = (cmd, args, cwd = web) => {
   if (result.status !== 0) stop(`${cmd} ${args.join(" ")} failed (exit ${result.status}).`);
 };
 
-if (git("status", "--porcelain", "--untracked-files=no") !== "") {
-  stop("the working tree has uncommitted changes. Commit and push them first: a live version must be a commit in git.");
+if (git("status", "--porcelain", "--", "apps/web", "design", "scripts") !== "") {
+  stop("apps/web, design or scripts has uncommitted or untracked changes. Commit and push them first: a live version must be a commit in git.");
 }
 const sha = git("rev-parse", "HEAD");
 const branch = git("rev-parse", "--abbrev-ref", "HEAD");
