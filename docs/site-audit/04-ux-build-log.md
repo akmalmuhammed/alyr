@@ -348,3 +348,10 @@ Android; Safari and Firefox; the WhatsApp and pending contact states (the button
 follow `ContactButton`, which hides in pending); the offer-on state; the keyboard path
 through the opening, not walked; 1024 and 1280 spot
 checks; `pnpm test`; motion timing of the bar's slide in a run without screenshots.
+
+CI on e25a3f2 (run 40096959389): the `web` job stops at `pnpm audit --prod --audit-level high`
+on new Next.js advisories (next 16.0.0 to 16.4.0, patched in 16.4.1; 1 high, 2 critical), so
+CI's lint, test, types and build were skipped; they pass locally. Not caused by this change; the
+Next.js upgrade is its own task. Also seen, not changed: at the closing call the header's
+button is Volt beside the closing call's own (the bar is down there), on the homepage as on
+every page.
