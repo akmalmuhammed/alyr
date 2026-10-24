@@ -218,7 +218,8 @@ def test_a_managers_preview_opened_by_an_agent_shows_no_cost(shop):
     sign_in(client, AGENT_EMAIL)
     opened = client.get(f"/api/items/import/{preview.json()['id']}")
     assert opened.status_code == 200
-    assert "777" not in opened.text and '"costs"' not in opened.text
+    # Not the bare digits "777": a random id or hash in the answer contains them now and then.
+    assert '"costs"' not in opened.text and not re.search(r'"cost"\s*:\s*777', opened.text)
     assert "7.77" not in opened.text
 
 
