@@ -8,9 +8,12 @@
     "start": "next start",
     "lint": "eslint",
     "test": "node --test \"app/**/*.test.mjs\"",
+    "site:dev": "node ../../scripts/site/dev.mjs",
     "site:build": "bash ../../scripts/build-site.sh",
-    "site:deploy": "node ../../scripts/site/deploy.mjs",
-    "site:check": "node ../../scripts/site/check.mjs"
+    "site:serve": "node ../../scripts/site/serve.mjs",
+    "site:check": "node ../../scripts/site/check.mjs",
+    "site:shots": "node ../../scripts/site/shots.mjs",
+    "site:deploy": "node ../../scripts/site/deploy.mjs"
   },
   "dependencies": {
     "@gsap/react": "2.1.2",

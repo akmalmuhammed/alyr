@@ -146,3 +146,47 @@ are public unless Access is put on them, and the approval gates the workflow, no
 - the copy loader on Linux (it ran on Windows, Node 22.22);
 - link targets on other sites;
 - the Arabic matching with words outside the two lists.
+
+## Stage 3: one command set
+
+**Built:** in `apps/web/package.json`. There is no root `package.json`, so run these from
+`apps/web` (or `pnpm -C apps/web site:check` from the root).
+
+| Command | What it does |
+|---|---|
+| `pnpm site:dev` | `scripts/site/dev.mjs`: `next dev` on a free port from 3101 up, never 3100 (`--port=` refuses 3000, 3100 and 8000). Its own output folder `.next-dev-<port>`. Puts `tsconfig.json` back when Next's rewrite is the only change, on stopping and at the next start |
+| `pnpm site:build` | `bash scripts/build-site.sh` |
+| `pnpm site:serve` | `scripts/site/serve.mjs`: serves `out-site` like Cloudflare (clean addresses, the 404 page, `_headers`, brotli or gzip) on a free port |
+| `pnpm site:check` | the build and every check (stage 2) |
+| `pnpm site:shots` | `scripts/site/shots.mjs`: serves `out-site` and shoots every page at 1440 and 390, light and dark, into `apps/web/.shots/<commit>/` (ignored by git). Takes `--pages=`, `--sizes=`, `--schemes=`, `--full`, `--reduced-motion`, `--url=` |
+| `pnpm site:a11y` | axe and Lighthouse (stage 4) |
+| `pnpm site:deploy` | the manual publish (stage 1) |
+
+Wrangler was pinned at exactly 4.150.0 in stage 1.
+
+`shoot.mjs` moved here from stage 4, because `site:shots` needs it:
+- `git mv docs/site-redesign/baseline/shoot.mjs scripts/site/shoot.mjs`;
+- the old path is now a three-line stub that imports the new one, so every doc that cites
+  it keeps working;
+- the browser path also honours `CHROME_PATH`.
+
+**Checked:**
+- `site:serve` answers 200 with brotli on `/` and `/ar/chat`, 200 on `/version.txt`, `image/png`
+  for `/opengraph-image`, 404 for unknown paths and for `/../package.json`, and applies
+  `_headers`.
+- `site:shots` wrote real pictures, `/` and `/ar/docs` at 390 in both themes. The first try
+  failed for two reasons, both fixed:
+  - `spawnSync` blocked the local server running in the same process;
+  - Git Bash turned `--pages=/` into a Windows path, the known `MSYS_NO_PATHCONV=1` trap.
+    The script sets the variable for `shoot.mjs`; from Git Bash, set it yourself for the
+    `--pages=` argument.
+- `site:dev` started on 3101 (3100 was skipped) and served `/shelf` with 200.
+  - `--port=3100` is refused with exit 2.
+  - After a hard kill, the next start put `tsconfig.json` back.
+- The stub at the old path runs the moved script.
+
+**Not checked:**
+- The tidy-up on a normal Ctrl+C. The harness can only kill the process hard; the clean-up
+  at the next start was checked instead.
+- `site:shots` at full page across all 14 pages.
+- `site:dev` on macOS or Linux.
