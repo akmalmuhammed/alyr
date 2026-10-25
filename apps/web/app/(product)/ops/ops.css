@@ -187,3 +187,7 @@
 .ops-access { display: grid; gap: 8px; margin-bottom: 8px; }
 .ops-access p { margin: 0; display: flex; flex-wrap: wrap; gap: 8px; align-items: baseline; }
 .ops-access select, .ops-access input[type="date"] { min-height: 32px; padding: 0 8px; border-radius: 8px; border: 0; box-shadow: 0 0 0 1px var(--hair-2) inset; background: transparent; color: inherit; font: inherit; }
+
+/* The onboarding funnel (ALY-169) */
+.ops-funnel { margin: 0 0 14px; color: var(--ink-2); }
+.ops-funnel p { margin: 0 0 8px; }
