@@ -101,7 +101,7 @@ The creative director's rulings are in `08-rulings.md`.
 
 **Checks (25 Oct 2026, the built out-site on port 3141).**
 - `pnpm exec tsc --noEmit` clean; `pnpm lint` clean; `pnpm test` 83 pass.
-- `pnpm site:check`: build, EN/AR parity (7,0xx strings), banned words and prices (clean),
+- `pnpm site:check`: build, EN/AR parity (7,050 strings), banned words and prices (clean),
   internal links (2,826) all pass. The banned-word check caught "as soon as" ("soon") once more;
   reworded.
 - axe (`pnpm site:a11y`): no serious or critical issue on `/`, `/ar` and all 20 new pages, at
