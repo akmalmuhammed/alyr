@@ -92,7 +92,8 @@ asymmetry over centring.
 9. **Honest by construction.** Nothing a customer sees claims what is not true today, and
    nothing says or implies AI ([honesty.md](honesty.md)).
 10. **Plays once.** Motion arrives, settles and confirms; it never loops, and with reduced
-    motion only the end state shows ([motion.md](motion.md)).
+    motion only the end state shows ([motion.md](motion.md)). One named exception: the live
+    ALYR Agent figure, with its pause button and calm pace (D-058).
 
 ## 2. Tokens
 
@@ -158,8 +159,8 @@ one Volt signal). Plays once. Reduced motion shows every end state; nothing trav
 plays by itself. **Nothing is hidden in the HTML:** start states exist only under the
 `motion` class that the head script adds when motion is wanted, with a failsafe that removes
 it; without scripts the page is complete. Animate transform, opacity, clip-path and font
-variation only. Never re-animate on a poll. Details and the figures allowed to keep
-moving: [motion.md](motion.md).
+variation only. Never re-animate on a poll. Details, the figures allowed to keep moving and
+the one that moves continuously (the live Agent figure, D-058): [motion.md](motion.md).
 
 ## 6. Light and dark; RTL
 
