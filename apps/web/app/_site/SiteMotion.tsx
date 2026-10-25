@@ -6,8 +6,8 @@ import { useEffect } from "react";
  * The page's scroll behaviour, in one place: the header tightening, the header turning
  * Carbon while it sits over a full-bleed Carbon section, sections arriving, and the
  * approach statement lighting up word by word as it is read. Also, on every page: the
- * language link lands on the section being read (`/ar/bookings#how`), and a question
- * linked by its address opens.
+ * language link lands on the section being read (`/ar/bookings#how`), a question linked
+ * by its address opens, and the phone's contact bar comes and goes.
  *
  * Everything here is an enhancement. Without JavaScript, or with reduced motion on, the
  * page is complete and still (see the `.al-js` and `prefers-reduced-motion` rules).
@@ -32,6 +32,64 @@ export function SiteMotion() {
     );
     document.querySelectorAll("[data-reveal], [data-m]").forEach((node) => seen.observe(node));
 
+    // A product page's signature figure (LastOne, PaymentPaper) plays only once it is
+    // substantially in view, so its ending is seen (08-rulings.md): 60% of it on screen, or
+    // its top past the middle of the screen. On a wide screen the whole figure starts at
+    // once; on a phone, where its three parts stack, each part starts as it arrives
+    // (moment.css counts each part's delays from its own first beat).
+    const figures = Array.from(document.querySelectorAll<HTMLElement>("[data-sig]"));
+    const wide = window.matchMedia("(min-width: 62rem)").matches;
+    const started = new Set<Element>();
+    const start = (target: Element) => {
+      if (started.has(target)) return;
+      started.add(target);
+      enough.unobserve(target);
+      past.unobserve(target);
+      const parts = target.hasAttribute("data-sig") ? Array.from(target.querySelectorAll(".sig-part")) : [];
+      for (const node of [target, ...parts]) node.classList.add("is-in");
+    };
+    const enough = new IntersectionObserver(
+      (entries) => { for (const entry of entries) if (entry.intersectionRatio >= 0.6) start(entry.target); },
+      { threshold: 0.6 },
+    );
+    const past = new IntersectionObserver(
+      (entries) => { for (const entry of entries) if (entry.isIntersecting) start(entry.target); },
+      { rootMargin: "0px 0px -50% 0px" },
+    );
+    for (const figure of figures) {
+      const targets = wide ? [figure] : Array.from(figure.querySelectorAll(".sig-part"));
+      for (const target of targets) {
+        enough.observe(target);
+        past.observe(target);
+      }
+    }
+    // It can be read long after the first 4 s. The page has hydrated and these observers
+    // will start it, so the failsafe that drops `motion` is no longer needed here.
+    if (!still && figures.length) window.clearTimeout(window.__alyrMotion);
+
+    // The homepage's six product tiles (SuiteFrame.tsx, suite.css): each plays its moment once.
+    // Where there is a fine pointer, when it is hovered or reached with the keyboard; elsewhere
+    // (a phone, a tablet), when 60% of it has scrolled into view, or when it takes focus. With
+    // reduced motion nothing is watched, and every tile is already finished.
+    const tiles = still ? [] : Array.from(document.querySelectorAll<HTMLElement>("[data-tile]"));
+    const fine = window.matchMedia("(hover: hover) and (pointer: fine)").matches;
+    const tileView = new IntersectionObserver(
+      (entries) => { for (const entry of entries) if (entry.intersectionRatio >= 0.6) playTile(entry.target); },
+      { threshold: 0.6 },
+    );
+    function playTile(tile: Element) {
+      tile.classList.add("is-in");
+      tileView.unobserve(tile);
+    }
+    const onTile = (event: Event) => playTile(event.currentTarget as Element);
+    for (const tile of tiles) {
+      tile.addEventListener("focus", onTile, { once: true });
+      if (fine) tile.addEventListener("pointerenter", onTile, { once: true });
+      else tileView.observe(tile);
+    }
+    // a tile can wait long after the first 4 s for its hover: keep `motion` for it
+    if (tiles.length) window.clearTimeout(window.__alyrMotion);
+
     // The language link keeps the section being read.
     const sections = Array.from(document.querySelectorAll<HTMLElement>("main section[id]"));
     const onLanguage = (event: MouseEvent) => {
@@ -46,10 +104,16 @@ export function SiteMotion() {
     };
     document.addEventListener("click", onLanguage, true);
 
-    // A question's address opens the question.
+    // A question's address opens the question, and the homepage's "More questions" around it.
     const openQuestion = () => {
       const target = window.location.hash ? document.getElementById(window.location.hash.slice(1)) : null;
-      if (target instanceof HTMLDetailsElement) target.open = true;
+      if (!(target instanceof HTMLDetailsElement)) return;
+      const fold = target.parentElement?.closest("details");
+      if (fold instanceof HTMLDetailsElement) fold.open = true;
+      target.open = true;
+      // Once the fold is open (by this or by the browser), land on the question itself; two
+      // frames, so the sections above that are laid out late have their real height.
+      if (fold) requestAnimationFrame(() => requestAnimationFrame(() => target.scrollIntoView({ block: "start", behavior: "instant" })));
     };
     openQuestion();
     window.addEventListener("hashchange", openQuestion);
@@ -69,9 +133,42 @@ export function SiteMotion() {
         },
         { rootMargin: `-30px 0px -${Math.max(0, window.innerHeight - 31)}px 0px` },
       );
-      document.querySelectorAll(".band-in, .cta").forEach((node) => dark?.observe(node));
+      document.querySelectorAll(".cta").forEach((node) => dark?.observe(node));
     };
     watchDark();
+
+    // The phone's contact bar, on the homepage and every product page: up once the opening's
+    // own "Book a check-up" has scrolled away, down while the closing call (and the footer
+    // below it) is on screen. While the bar is up the header's button steps aside, and while
+    // the opening's button is on screen the header's is its outlined twin (site.css), so one
+    // Volt button is on screen. Without scripts the bar stays down.
+    const root = document.documentElement;
+    const bar = document.querySelector<HTMLElement>("[data-bar]");
+    const heroButton = document.querySelector<HTMLElement>("[data-hero-cta]");
+    const closing = document.getElementById("contact");
+    let watchBar: IntersectionObserver | null = null;
+    if (bar && heroButton && closing) {
+      let heroGone = false;
+      let closingSeen = false;
+      watchBar = new IntersectionObserver((entries) => {
+        for (const entry of entries) {
+          if (entry.target === heroButton) heroGone = !entry.isIntersecting && entry.boundingClientRect.top < 0;
+          // Reached or passed: the footer below it stays clear too.
+          if (entry.target === closing) closingSeen = entry.isIntersecting || entry.boundingClientRect.top < 0;
+        }
+        bar.toggleAttribute("data-show", heroGone && !closingSeen);
+        root.toggleAttribute("data-hero-gone", heroGone);
+      });
+      watchBar.observe(heroButton);
+      watchBar.observe(closing);
+    }
+
+    // While the closing call is on screen, its Volt button is the page's one: the header's
+    // becomes the outlined twin (site.css). Without scripts both stay Volt.
+    const atClosing = closing
+      ? new IntersectionObserver(([entry]) => root.toggleAttribute("data-at-closing", entry.isIntersecting))
+      : null;
+    if (closing) atClosing?.observe(closing);
 
     let lit = -1;
     let queued = false;
@@ -103,7 +200,17 @@ export function SiteMotion() {
       document.removeEventListener("click", onLanguage, true);
       window.removeEventListener("hashchange", openQuestion);
       seen.disconnect();
+      enough.disconnect();
+      past.disconnect();
+      tileView.disconnect();
+      for (const tile of tiles) {
+        tile.removeEventListener("focus", onTile);
+        tile.removeEventListener("pointerenter", onTile);
+      }
       dark?.disconnect();
+      watchBar?.disconnect();
+      atClosing?.disconnect();
+      root.removeAttribute("data-at-closing");
       window.removeEventListener("scroll", onScroll);
       window.removeEventListener("resize", onScroll);
       window.removeEventListener("resize", watchDark);

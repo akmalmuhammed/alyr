@@ -82,6 +82,8 @@ UNITS: dict[str, Text] = {
     "g": Text("g", "غ"),
     "l": Text("l", "لتر"),
     "m": Text("m", "متر"),
+    "ml": Text("ml", "مل"),
+    "tola": Text("tola", "تولة"),
     "box": Text("box", "علبة"),
     "pack": Text("pack", "عبوة"),
     "portion": Text("portion", "حصة"),
@@ -111,6 +113,11 @@ NOTES: dict[str, Text] = {
     "preview": Text(
         "Preview. This is not an issued document and has no number.",
         "معاينة. هذا المستند غير صادر وليس له رقم.",
+    ),
+    # A document the shop's own system numbered and ALYR only delivers (ALY-142).
+    "external": Text(
+        "Issued by the seller's own system, which gave it the number above. Delivered by ALYR.",
+        "صدر عن نظام البائع نفسه الذي منحه الرقم أعلاه، وتتولى ALYR إيصاله فقط.",
     ),
 }
 
@@ -304,6 +311,119 @@ ERRORS: dict[str, Text] = {
     "preview_needs_input": Text(
         "Send a draft to preview, or ask for the sample.",
         "أرسل مسودة لمعاينتها، أو اطلب النموذج.",
+    ),
+    # ── Documents from sales, payments recorded by hand, and delivery (ALY-139) ──────────
+    "send_mode_invalid": Text(
+        "Choose to send documents automatically, or only when staff press send.",
+        "اختر إرسال المستندات تلقائيًا، أو عند ضغط الموظف على زر الإرسال فقط.",
+    ),
+    "payment_not_allowed": Text(
+        "Only the owner or an admin can record a payment. Ask them, or ask them to let the "
+        "team record payments in the document settings.",
+        "يقتصر تسجيل الدفعات على المالك أو المشرف. اطلب منهما ذلك، أو اطلب السماح للفريق "
+        "بتسجيل الدفعات من إعدادات المستندات.",
+    ),
+    "source_not_found": Text(
+        "There is no such order, booking, invoice or customer in this shop.",
+        "لا يوجد طلب أو حجز أو فاتورة أو عميل بهذا الرقم في هذا المتجر.",
+    ),
+    "already_paid": Text(
+        "This order is already paid.", "هذا الطلب مدفوع بالفعل."
+    ),
+    "order_cancelled": Text(
+        "This order was cancelled, so it cannot be paid.",
+        "أُلغي هذا الطلب، لذلك لا يمكن دفعه.",
+    ),
+    "order_on_account": Text(
+        "This order is on the customer's credit account. Record the payment against its "
+        "invoice or against the customer's balance instead.",
+        "هذا الطلب مسجّل على حساب العميل الآجل. سجّل الدفعة على فاتورته أو على رصيد العميل.",
+    ),
+    "booking_cancelled": Text(
+        "This booking was cancelled, so it cannot be paid.",
+        "أُلغي هذا الحجز، لذلك لا يمكن دفعه.",
+    ),
+    "invoice_not_payable": Text(
+        "Only an issued invoice that has not been cancelled can be paid.",
+        "لا يمكن الدفع إلا عن فاتورة صادرة لم تُلغَ.",
+    ),
+    "amount_must_match": Text(
+        "A payment for an order must be the whole total of the order.",
+        "يجب أن تكون الدفعة عن الطلب بكامل إجماليه.",
+    ),
+    "amount_needed": Text(
+        "Say how much was paid.", "اذكر المبلغ المدفوع."
+    ),
+    "amount_exceeds": Text(
+        "That is more than is still owed.", "هذا المبلغ أكبر من المتبقي."
+    ),
+    "nothing_owed": Text(
+        "Nothing is owed here, so there is nothing to pay.",
+        "لا يوجد مبلغ مستحق هنا، فلا شيء يُدفع.",
+    ),
+    "receipt_unpaid": Text(
+        "A receipt is for money that has been paid, and this order is not paid yet. Record "
+        "the payment, or issue an invoice.",
+        "يصدر الإيصال عن مبلغ مدفوع، وهذا الطلب غير مدفوع بعد. سجّل الدفعة، أو أصدر فاتورة.",
+    ),
+    "kind_not_for_sale": Text(
+        "From an order or a booking you can issue an invoice, or a receipt once it is paid.",
+        "يمكن إصدار فاتورة من الطلب أو الحجز، أو إيصال بعد دفعه.",
+    ),
+    "no_recipient": Text(
+        "There is no WhatsApp number or email address to send this to. Type one.",
+        "لا يوجد رقم واتساب أو بريد إلكتروني لإرسال المستند إليه. اكتب أحدهما.",
+    ),
+    "email_invalid": Text(
+        "That email address is not valid.", "عنوان البريد الإلكتروني هذا غير صالح."
+    ),
+    "phone_invalid": Text(
+        "That phone number is not valid. Write it with the country code.",
+        "رقم الهاتف هذا غير صالح. اكتبه مع رمز الدولة.",
+    ),
+    "document_voided": Text(
+        "This document has been cancelled by a credit note. Send the credit note instead.",
+        "أُلغي هذا المستند بإشعار دائن. أرسل الإشعار الدائن بدلًا منه.",
+    ),
+    # ── Connected mode: who numbers what (ALY-142) ───────────────────────────────────────
+    "external_authority": Text(
+        "This kind of document is numbered by the shop's other system, so ALYR does not issue "
+        "it. Change who numbers it in the connection settings, or issue it in the other system "
+        "and send it to ALYR.",
+        "يتولى نظام المتجر الآخر ترقيم هذا النوع من المستندات، لذلك لا تُصدره ALYR. غيّر من "
+        "يتولى الترقيم من إعدادات الربط، أو أصدره في النظام الآخر وأرسله إلى ALYR.",
+    ),
+    "authority_number_clash": Text(
+        "ALYR cannot take over numbering yet: a document from your other system already has a "
+        "number that ALYR's own counter would reach. Change the prefix of the ALYR series first.",
+        "لا يمكن لـ ALYR تولّي الترقيم الآن: لدى مستند من نظامك الآخر رقم قد يصل إليه عدّاد "
+        "ALYR. غيّر بادئة سلسلة ALYR أولاً.",
+    ),
+    "document_withdrawn": Text(
+        "This document was withdrawn: it was imported by mistake and never sent.",
+        "سُحب هذا المستند: استُورد عن طريق الخطأ ولم يُرسل.",
+    ),
+    # ── The workspace screens (ALY-146) ──────────────────────────────────────────────────
+    "filter_invalid": Text(
+        "That filter is not one the list knows.", "هذا المرشّح غير معروف في القائمة."
+    ),
+    "date_range_invalid": Text(
+        "The end date is before the start date.", "تاريخ النهاية قبل تاريخ البداية."
+    ),
+    "cursor_invalid": Text(
+        "That page marker is not valid. Reload the list.",
+        "علامة الصفحة هذه غير صالحة. أعد تحميل القائمة.",
+    ),
+    "no_public_link": Text(
+        "This shop has no public address yet, so a link to the document cannot be made.",
+        "ليس لهذا المتجر عنوان عام بعد، لذلك لا يمكن إنشاء رابط للمستند.",
+    ),
+    "page_unknown": Text(
+        "The document does not have that page.", "ليس للمستند هذه الصفحة."
+    ),
+    "settings_override_invalid": Text(
+        "The preview can only try out the look of the document, not the shop's other settings.",
+        "تقتصر المعاينة على تجربة شكل المستند، لا إعدادات المتجر الأخرى.",
     ),
 }
 

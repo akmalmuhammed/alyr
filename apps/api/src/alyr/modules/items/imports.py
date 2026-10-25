@@ -29,7 +29,9 @@ from alyr.core.images import PhotoRefused
 from alyr.core.media import MediaService
 from alyr.core.team import Actor
 from alyr.modules.items import (
+    costs,
     features,
+    fields,
     import_alert,
     import_photos,
     import_plan,
@@ -103,10 +105,16 @@ async def snapshot(
         "select owner_id, asset_id from media_links where owner_kind = 'item'"
     ):
         attached.setdefault(r["owner_id"], set()).add(r["asset_id"])
+    feats = await features.load(conn)
+    may = import_plan.COSTS.get()
+    allowed = frozenset(await features.file_columns(conn, costs=may))
     return Snapshot(
         tenant_id, clock.tz, entries, [c["name"] for c in await service.categories(conn)],
-        limit, max(limit - used, 0), assets, attached,
-        frozenset(await features.file_columns(conn)),
+        limit, max(limit - used, 0), assets, attached, allowed,
+        [f for f in await fields.rows(conn, False)] if feats.on("custom_fields") else [],
+        decimal_ok=feats.on("decimal_quantity"),
+        costs=await costs.kept(conn) if "cost" in allowed else None,
+        cost_note="owner_only" if feats.on("cost_margin") and not may else "",
     )
 
 
@@ -275,9 +283,16 @@ async def discard(conn: asyncpg.Connection, import_id: UUID) -> None:
 _ITEM_FIELDS = (
     "name", "name_ar", "sku", "description", "description_ar", "category", "price", "sale_price",
     "sale_starts_at", "sale_ends_at", "unit", "pack_size", "min_order", "tags", "stock_rule",
-    "available", "status", "low_stock_at",
+    "available", "status", "low_stock_at", "custom",
 )
-_VARIANT_FIELDS = ("name", "name_ar", "sku", "price_delta", "daily_limit", "active")
+_VARIANT_FIELDS = ("name", "name_ar", "sku", "price_delta", "daily_limit", "active", "custom")
+
+
+def _erase(after: dict | None, before: dict | None) -> dict:
+    """What puts the owner's field values back to `before`: the values then, and a null for each
+    key the import added (a save merges, so a key left out would stay)."""
+    before, after = dict(before or {}), dict(after or {})
+    return {**{k: None for k in after if k not in before}, **before}
 
 
 def _ser(value: object) -> object:
@@ -307,6 +322,59 @@ def _variant_state(entry: service.Loaded) -> list[dict]:
     ]
 
 
+async def _set_costs(
+    conn: asyncpg.Connection, actor: Actor, item_id: UUID, ops: list[dict], variants: list[dict]
+) -> list[dict]:
+    """Do what the file's cost column said (ALY-150), and return what it was and became, for
+    the undo: [{variant_id, before, after}]. A size is found by its ID or, for one the import
+    just made, by its name."""
+    if not ops:
+        return []
+    by_name = {
+        import_plan._squash(v["name"] or v["name_ar"]): str(v["id"])
+        for v in variants if v["name"] or v["name_ar"]
+    }
+    before = await costs.kept(conn, [item_id])
+    item_cost, sizes = costs.UNSET, {}
+    record = []
+    for op in ops:
+        variant_id = op["variant_id"] or (by_name.get(import_plan._squash(op["variant"]))
+                                          if op["variant"] else None)
+        if op["variant"] and variant_id is None:
+            continue  # a size the import could not find: nothing to set
+        key = UUID(variant_id) if variant_id else None
+        record.append({"variant_id": variant_id, "before": before.get((item_id, key)),
+                       "after": op["cost"]})
+        if key is None:
+            item_cost = op["cost"]
+        else:
+            sizes[variant_id] = op["cost"]
+    if record:
+        await costs.save(conn, actor, item_id, item_cost, sizes, reason="Import")
+    return record
+
+
+async def _undo_costs(
+    conn: asyncpg.Connection, actor: Actor, item_id: UUID, moves: list[dict]
+) -> bool:
+    """Put the costs the import set back, those still as it left them. True if some were left."""
+    left = False
+    now = await costs.kept(conn, [item_id])
+    item_cost, sizes = costs.UNSET, {}
+    for move in moves:
+        key = UUID(move["variant_id"]) if move["variant_id"] else None
+        if now.get((item_id, key)) != move["after"]:
+            left = True
+            continue
+        if key is None:
+            item_cost = move["before"]
+        else:
+            sizes[move["variant_id"]] = move["before"]
+    if item_cost is not costs.UNSET or sizes:
+        await costs.save(conn, actor, item_id, item_cost, sizes, reason="Undo of an import")
+    return left
+
+
 async def _opening(conn, vid, n: int, actor: Actor) -> None:
     if n > 0:
         # No owner alerts for a move made by an import: one summary follows it (import_alert).
@@ -320,11 +388,13 @@ async def _create(
     data = {k: v for k, v in item.data.items()}
     data["sort"] = order
     named = len(item.variants) > 1 or bool(item.variants and item.variants[0].name)
-    listed = named or any(v.sku for v in item.variants)  # a code on the one unnamed size, too
+    # a code (or a field of its own) on the one unnamed size, too
+    listed = named or any(v.sku or v.custom for v in item.variants)
     if listed:
         data["variants"] = [
             {"name": v.name, "name_ar": v.name_ar, "price_delta": v.price_diff or 0,
-             "daily_limit": v.per_day, "active": True, "sku": v.sku or ""}
+             "daily_limit": v.per_day, "active": True, "sku": v.sku or "",
+             **({"custom": v.custom} if v.custom else {})}
             for v in item.variants
         ]
     elif item.variants and item.variants[0].per_day is not None:
@@ -343,10 +413,11 @@ async def _create(
             await _opening(conn, UUID(variant["id"]), op.stock, actor)
             moved.append({"variant_id": variant["id"], "variant": op.name, "after": op.stock})
     entry = await service.get(conn, clock, item_id)
+    kept = await _set_costs(conn, actor, item_id, item.costs, made["variants"])
     return {
         "op": "create", "id": str(item_id), "name": item.name, "name_ar": item.name_ar,
         "after": _item_state(entry, _ITEM_FIELDS), "variants_after": _variant_state(entry),
-        "stock": moved,
+        "stock": moved, **({"costs": kept} if kept else {}),
     }
 
 
@@ -390,6 +461,8 @@ async def _update(
             change["name_ar"] = op.name_ar
         if op.sku is not None and op.sku != existing["sku"]:
             change["sku"] = op.sku
+        if op.custom:
+            change["custom"] = op.custom
         if change:
             touched[existing["id"]] = {**touched.get(existing["id"], {}), **change}
         if op.stock is not None:
@@ -399,7 +472,8 @@ async def _update(
         default_only = len(entry.variants) == 1 and entry.variants[0]["is_default"]
         new_inputs = [
             {"name": op.name, "name_ar": op.name_ar, "price_delta": op.price_diff or 0,
-             "daily_limit": op.per_day, "active": True, "sku": op.sku or ""}
+             "daily_limit": op.per_day, "active": True, "sku": op.sku or "",
+             **({"custom": op.custom} if op.custom else {})}
             for op in fresh
         ]
         if default_only and fresh and not touched:
@@ -410,7 +484,9 @@ async def _update(
                  "name_ar": touched.get(v["id"], {}).get("name_ar", v["name_ar"]),
                  "price_delta": touched.get(v["id"], {}).get("price_delta", v["price_delta"]),
                  "daily_limit": touched.get(v["id"], {}).get("daily_limit", v["daily_limit"]),
-                 "sku": touched.get(v["id"], {}).get("sku", v["sku"]), "active": v["active"]}
+                 "sku": touched.get(v["id"], {}).get("sku", v["sku"]), "active": v["active"],
+                 **({"custom": touched[v["id"]]["custom"]}
+                    if touched.get(v["id"], {}).get("custom") else {})}
                 for v in entry.variants
             ] + new_inputs
     if changes:
@@ -439,9 +515,11 @@ async def _update(
             await _opening(conn, vid, number, actor)
             moved.append({"variant_id": str(vid), "variant": name, "before": 0,
                           "after": number, "kind": "opening"})
+    kept = await _set_costs(conn, actor, item.target, item.costs, after_entry.variants)
     record = {
         "op": "update", "id": str(item.target), "name": item.name, "name_ar": item.name_ar,
         "before": before, "after": _item_state(after_entry, keys), "stock": moved,
+        **({"costs": kept} if kept else {}),
     }
     if "variants" in changes:
         record["variants_before"] = variants_before
@@ -683,11 +761,17 @@ async def _undo_updated(
     if change["before"]:
         if _item_state(entry, change["after"].keys()) == change["after"]:
             changes = {k: _deser(k, v) for k, v in change["before"].items()}
+            if "custom" in changes:
+                changes["custom"] = _erase(change["after"].get("custom"), changes["custom"])
         else:
             left = True
     if "variants_before" in change:
         if _variant_state(entry) == change["variants_after"]:
-            changes["variants"] = change["variants_before"]
+            after_by_id = {v["id"]: v for v in change["variants_after"]}
+            changes["variants"] = [
+                {**v, "custom": _erase(after_by_id.get(v["id"], {}).get("custom"), v.get("custom"))}
+                for v in change["variants_before"]
+            ]
         else:
             left = True
     if changes:
@@ -695,6 +779,8 @@ async def _undo_updated(
             conn, item_id, changes, actor, clock, require_arabic=False,
             reason="Undo of an import",
         )
+    if change.get("costs") and await _undo_costs(conn, actor, item_id, change["costs"]):
+        left = True
     return "changed_since" if left else None
 
 

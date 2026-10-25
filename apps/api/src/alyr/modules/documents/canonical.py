@@ -76,7 +76,7 @@ def line_content(line: Mapping) -> dict:
         "description": line["description"],
         "description_ar": line["description_ar"],
         "sku": line["sku"],
-        "quantity": line["quantity"],
+        "quantity": Decimal(line["quantity"]),
         "unit": line["unit"],
         "unit_price_minor": line["unit_price_minor"],
         "discount_minor": line["discount_minor"],
@@ -91,7 +91,7 @@ def content_of(doc: Mapping, lines: Sequence[Mapping]) -> dict:
     """What an issued document says, from its row and its lines (as the database holds them
     or as the issuing code has just worked them out: the two must be the same, and
     `verify` in the service checks that they are)."""
-    return {
+    content = {
         "v": HASH_VERSION,
         "id": doc["id"],
         "kind": doc["kind"],
@@ -124,6 +124,12 @@ def content_of(doc: Mapping, lines: Sequence[Mapping]) -> dict:
         "related_document_id": doc["related_document_id"],
         "lines": [line_content(line) for line in sorted(lines, key=lambda x: x["position"])],
     }
+    # Whose number it is, only when it is not ALYR's: every hash made before connected mode (and
+    # every ALYR-numbered one after it) is exactly what it was, and an outside document's hash
+    # commits to the fact that the number is the shop's other system's (ALY-142).
+    if doc.get("number_authority", "alyr") == "external":
+        content["number_authority"] = "external"
+    return content
 
 
 def hash_content(content: object) -> str:

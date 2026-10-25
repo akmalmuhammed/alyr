@@ -81,6 +81,10 @@ three cells in words, top items, owed, team as one line a person.
 - Knowledge cards have "Not now" (until the numbers change or Sunday); tasks and money do not.
 - Volt never sits on a knowledge card.
 - "By rule", never "I noticed".
+- **On the public site the rule lines are hidden** (founder, 25 Oct 2026): the site's showcase
+  passes `ruleLines={false}` (no "RULE · …" under a card, no rule as a need's tooltip) and its
+  own `labels.suggestions` ("Suggestions" / «اقتراحات»). The workspace and `/agent-sample`
+  keep the rule lines and "Suggestions, by rule"; never turn them off there.
 
 ## Charts
 
@@ -121,5 +125,6 @@ Reduced motion shows end states.
 `mode="showcase"` with `headingLevel` from the host: links render as text, no "Not now",
 "Updated", stale line, team, report or setup; the moment ("Thursday · 16:20") instead of a
 date; "Who (3)" still opens; no region landmarks. On the site it sits in the workspace window
-on the Carbon plate, `inert` in the hero crop, with a FIG caption naming the fictional
-business. No "paid through ALYR links" row on a public sample (ALY-17).
+on the Carbon plate, `inert` in the hero crop, with `headings={false}` (its titles are text,
+not headings), the "Sample" mark in the window's bar or the sample switch, and a first line
+for screen readers and crawlers naming the fictional business. No "paid through ALYR links" row on a public sample (ALY-17).

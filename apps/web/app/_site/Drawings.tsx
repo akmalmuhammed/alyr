@@ -1,33 +1,30 @@
-import { Rich } from "../_agent/AgentDashboard";
-import type { AgentView } from "../_agent/types";
 import { copy, type Caption, type Locale, type SampleKey } from "./copy";
 import { CxTop, TickPath } from "./Frames";
 import type { ReportWords } from "./ReportPhone";
-import { OFFER_LIVE } from "./site";
 import { rich } from "./Text";
 import "./drawings.css";
 
 // Drawings of real ALYR screens for the public pages, at true proportions and in the
 // product's own wording, for fictional businesses. Each is a picture, not a working
-// screen: nothing in here is focusable, and each figure says what it shows in its caption.
+// screen: nothing in here is focusable, and each figure is marked as a sample once.
 // Styles are in drawings.css under `.d-*`.
 
 type Track = (typeof copy)["en"]["home"]["sample"];
 
-/** "FIG 01 · what it shows · SAMPLE, FICTIONAL BAKERY", on a hairline ending in a tick.
- * `fictional` names a sample other than the bakery. */
-export function FigCaption({ locale, caption, fictional, className }: {
-  locale: Locale; caption: Caption; fictional?: string; className?: string;
+/** "What it shows · SAMPLE", on a hairline ending in a tick: only for a drawing that means
+ * nothing without its words (the trust pair, the no-CR foot, the agreement). Every other
+ * drawing carries the "Sample" mark in its own chrome instead (SampleMark). Put it first in
+ * the figure, so screen readers and crawlers meet the sample word before the drawing; the
+ * figure's `fig-cap-end` class shows it underneath. */
+export function FigCaption({ locale, caption, className }: {
+  locale: Locale; caption: Caption; className?: string;
 }) {
   const f = copy[locale].fig;
-  const n = OFFER_LIVE && caption.nOffer ? caption.nOffer : caption.n;
   return (
     <figcaption className={`cap${className ? ` ${className}` : ""}`}>
-      <span className="cap-n">{f.label} <bdi>{n}</bdi></span>
-      <span className="cap-sep" aria-hidden="true">·</span>
       <span>{rich(caption.text)}</span>
       <span className="cap-sep" aria-hidden="true">·</span>
-      <span>{fictional ?? f.fictional}</span>
+      <span>{f.sample}</span>
     </figcaption>
   );
 }
@@ -70,72 +67,4 @@ export function reportWords(locale: Locale): Record<SampleKey, ReportWords> {
     meta: r.meta, day: r.day, time: r.time, alt: r.alt[key], monogram: samples[key].monogram,
   });
   return { bakery: words("bakery"), salon: words("salon"), homeservices: words("homeservices") };
-}
-
-// ----------------------------------------------- a corner of each product's screen
-
-type Crops = (typeof copy)["en"]["home"]["suite"]["crops"];
-
-/** ALYR Chat: the bottom of the order page, where the customer pays. */
-export function OrderBarCrop({ crops }: { crops: Crops }) {
-  return (
-    <div className="d-crop d-crop-bar" aria-hidden="true">
-      <div className="d-bar">
-        <div className="d-sum"><span>{crops.items}</span><b>{rich(crops.total)}</b></div>
-        <span className="d-btn"><span>{rich(crops.pay)}</span></span>
-      </div>
-    </div>
-  );
-}
-
-/** ALYR Bookings: the free times on the booking page, one chosen. */
-export function TimesCrop({ crops }: { crops: Crops }) {
-  return (
-    <div className="d-crop d-crop-times" aria-hidden="true">
-      <div className="d-times">
-        {crops.times.map((time) => (
-          <span key={time} className={`d-time-slot${time === crops.time ? " on" : ""}`} dir="auto">{time}</span>
-        ))}
-      </div>
-    </div>
-  );
-}
-
-/** ALYR Agent: the week in one sentence, as the home screen's headline says it. */
-export function SummaryCrop({ view }: { view: AgentView }) {
-  return (
-    <div className="d-crop d-crop-summary" aria-hidden="true" dir={view.dir} lang={view.lang}>
-      <span className="d-crop-k">{view.header.when}</span>
-      <p className="d-crop-sum">
-        {view.header.summary.slice(0, 2).map((s, i) => (
-          <span key={i} className={s.muted ? "is-muted" : undefined}>{i > 0 && " "}<Rich parts={s.text} /></span>
-        ))}
-      </p>
-    </div>
-  );
-}
-
-/** "0–30 days" with its range kept left to right, so Arabic does not read it "30–0". */
-function ranges(text: string) {
-  return text.split(/(\d+–\d+)/).map((piece, i) => (i % 2 === 1 ? <bdi key={i} dir="ltr">{piece}</bdi> : piece));
-}
-
-/** ALYR Accounts: what is owed, by age. */
-export function AgeBarCrop({ view, label }: { view: AgentView; label: string }) {
-  const owed = view.owed;
-  if (!owed) return null;
-  return (
-    <div className="d-crop d-crop-owed" aria-hidden="true" dir={view.dir} lang={view.lang}>
-      <span className="d-crop-k">{label}</span>
-      <b className="d-crop-total"><bdi>{owed.total_text}</bdi></b>
-      <span className="d-agebar">
-        {owed.segments.map((s, i) => s.share > 0 && <span key={s.key} className={`a${i}`} style={{ flexGrow: s.share }} />)}
-      </span>
-      <span className="d-agelegend">
-        {owed.segments.map((s, i) => (
-          <span key={s.key}><i className={`a${i}`} /><span>{ranges(s.label)}</span></span>
-        ))}
-      </span>
-    </div>
-  );
 }

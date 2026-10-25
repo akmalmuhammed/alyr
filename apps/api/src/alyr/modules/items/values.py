@@ -14,7 +14,7 @@ from datetime import date, datetime
 from decimal import ROUND_HALF_UP, Decimal, InvalidOperation
 
 from alyr.core.normalise import western_digits
-from alyr.modules.items import text
+from alyr.modules.items import qty, text
 
 
 class CellError(Exception):
@@ -166,6 +166,33 @@ def parse_money(value: object, *, signed: bool = False, zero_ok: bool = True) ->
     if dirhams == 0 and not zero_ok:
         raise CellError("zero_money", value=shown)
     return dirhams
+
+
+def parse_qty(value: object, low: object, high: object) -> object:
+    """A number of units between `low` and `high`: a whole number, or up to three decimals for
+    something sold by weight or volume, from "12.5", "12,5", "١٢٫٥", "1,000" or a number cell. A
+    whole value is an `int`, a fraction a `Decimal` (ALY-149, `qty.norm`)."""
+    shown = as_text(value)
+    if isinstance(value, bool) or isinstance(value, date):
+        raise CellError("bad_number", value=shown)
+    if isinstance(value, Decimal):
+        amount = value
+    else:
+        negative, body = _signed(_plain_number(shown))
+        try:
+            amount = _decimal_of(body, shown) if body else None
+        except CellError:
+            amount = None
+        if amount is None:
+            raise CellError("bad_number", value=shown)
+        if negative:
+            amount = -amount
+    if amount != amount.quantize(Decimal("0.001")):
+        raise CellError("qty_decimals", value=shown)
+    number = qty.norm(amount)
+    if number < low or number > high:
+        raise CellError("out_of_range", value=shown, low=low, high=high)
+    return number
 
 
 def parse_int(value: object, low: int, high: int) -> int:

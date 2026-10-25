@@ -7,19 +7,25 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import {
-  activityText, api, fromDirhams, nameOf, sayError, stamp, toDirhams, toInt, toSignedDirhams, whoIs,
-  type ActivityRow, type Access, type Category, type GroupPriceRow, type Group, type Item, type Photo, type PriceGroup, type PriceRow, type Rule, type Setup, type Status, type Window,
+  activityText, api, fromDirhams, nameOf, sayError, stamp, toDirhams, toInt, toQty, toSignedDirhams, whoIs,
+  type ActivityRow, type Access, type Category, type CostWarning, type CustomField, type FieldsView, type GroupPriceRow, type Group, type Item, type Photo, type PriceGroup, type PriceRow, type Rule, type Setup, type Status, type Window,
 } from "./catalogApi";
+import { fmtQty, fmtQtyUnit, isMeasure, qtyForApi, sumQty, UNITS as ALL_UNITS, unitOf, unitShort } from "../_customer/qty";
 import { COPY, type Copy, type Lang } from "./catalogCopy";
 import { CatalogPhotos } from "./CatalogPhotos";
 import { CodeBox } from "./CatalogCode";
+import { FEAT } from "./featuresCopy";
 import { Field, Fold, Icon, Sheet, type Toast } from "./CatalogUi";
+import { COST } from "./costCopy";
+import { CostHistory, CostPrice, CostSize, useItemCost } from "./CostFields";
 
 type Push = (text: string, options?: { tone?: Toast["tone"]; undo?: () => void }) => number;
 
 type VariantForm = {
   id?: string; name: string; name_ar: string; sku: string; delta: string; limit: string; active: boolean;
   opening: string; onHand: number | null;
+  // The owner's own fields for this size, as typed (ALY-148): field key to text.
+  custom: Record<string, string>;
 };
 type OptionForm = { id?: string; name: string; name_ar: string; price: string; active: boolean };
 type GroupForm = { id?: string; name: string; name_ar: string; required: boolean; max: string; options: OptionForm[] };
@@ -34,13 +40,21 @@ export type Form = {
   variants: VariantForm[]; groups: GroupForm[]; windows: WindowForm[]; tags: string[];
   // What each price group pays, as typed: "group id|size id" (the size empty for the item's own) to a price.
   groupPrices: Record<string, string>;
+  // The owner's own fields for this item, as typed (ALY-148): field key to text.
+  custom: Record<string, string>;
 };
+
+/** Values as an input holds them: a number as its digits, yes or no as a word. */
+const strings = (custom?: Record<string, string | number | boolean>): Record<string, string> =>
+  Object.fromEntries(Object.entries(custom ?? {}).map(([k, v]) => [k, typeof v === "boolean" ? (v ? "yes" : "no") : String(v)]));
 
 const priceKey = (groupId: string, variantId: string | null) => `${groupId}|${variantId ?? ""}`;
 
 const STATUSES: Status[] = ["draft", "live", "hidden", "archived"];
 const RULES: Rule[] = ["always", "switch", "count", "daily_limit"];
-const UNITS = ["piece", "kg", "box", "pack", "portion", "hour"];
+const UNITS = ALL_UNITS.map((u) => u.key);
+// The units a shop had before "Sold by weight or volume": always offered. The others need the feature.
+const LEGACY_UNITS = ["piece", "kg", "box", "pack", "portion", "hour"];
 // The feature each way of running out belongs to ("always" needs none): a way whose feature is
 // off is not offered for a new choice, but an item that already runs that way keeps it.
 const RULE_FEATURE: Record<string, string> = { switch: "rule_switch", count: "rule_count", daily_limit: "rule_daily_limit" };
@@ -71,7 +85,7 @@ export function blankForm(status: Status = "live", setup?: Setup | null): Form {
     windows: dated
       ? [{ weekdays: [0, 1, 2, 3, 4, 5, 6], kind: "dated", opens: "", closes: "", lead: String(start?.lead_days ?? 1), cutoff: start?.cutoff ?? "", ranged: false, from: "", to: "", closed: false }]
       : [],
-    tags: [], groupPrices: {},
+    tags: [], groupPrices: {}, custom: {},
   };
 }
 
@@ -81,14 +95,14 @@ export function formOf(item: Item): Form {
   return {
     name: item.name, name_ar: item.name_ar, sku: item.sku ?? "", description: item.description, description_ar: item.description_ar,
     category: item.category, price: fromDirhams(item.price || null), sale: fromDirhams(item.sale_price),
-    saleEnds: qatarDay(item.sale_ends_at), unit: item.unit, packSize: item.pack_size ? String(item.pack_size) : "",
-    minOrder: String(item.min_order), status: item.status, rule: item.stock_rule,
-    dailyLimit: only?.daily_limit !== null && only?.daily_limit !== undefined && named.length === 0 ? String(only.daily_limit) : "",
-    lowStock: item.low_stock_at === null || item.low_stock_at === undefined ? "" : String(item.low_stock_at),
+    saleEnds: qatarDay(item.sale_ends_at), unit: item.unit, packSize: item.pack_size ? fmtQty(item.pack_size) : "",
+    minOrder: fmtQty(item.min_order), status: item.status, rule: item.stock_rule,
+    dailyLimit: only?.daily_limit !== null && only?.daily_limit !== undefined && named.length === 0 ? fmtQty(only.daily_limit) : "",
+    lowStock: item.low_stock_at === null || item.low_stock_at === undefined ? "" : fmtQty(item.low_stock_at),
     opening: "", scheduled: item.schedule.length > 0,
     variants: named.map((v) => ({
-      id: v.id, name: v.name, name_ar: v.name_ar, sku: v.sku ?? "", delta: fromDirhams(v.price_delta) || "", limit: v.daily_limit === null ? "" : String(v.daily_limit),
-      active: v.active, opening: "", onHand: v.on_hand,
+      id: v.id, name: v.name, name_ar: v.name_ar, sku: v.sku ?? "", delta: fromDirhams(v.price_delta) || "", limit: v.daily_limit === null ? "" : fmtQty(v.daily_limit),
+      active: v.active, opening: "", onHand: v.on_hand, custom: strings(v.custom),
     })),
     groups: item.option_groups.map((g: Group) => ({
       id: g.id, name: g.name, name_ar: g.name_ar, required: g.required, max: String(g.max_choices),
@@ -96,13 +110,14 @@ export function formOf(item: Item): Form {
     })),
     windows: item.schedule.map(windowForm), tags: item.tags,
     groupPrices: Object.fromEntries((item.group_prices ?? []).map((p) => [priceKey(p.group_id, p.variant_id), fromDirhams(p.price)])),
+    custom: strings(item.custom),
   };
 }
 
-type Problems = Partial<Record<"name" | "name_ar" | "price" | "sale" | "variants" | "limit" | "low" | "schedule" | "groups" | "min" | "opening" | "sku" | "groupPrices", string>>;
+type Problems = Partial<Record<"name" | "name_ar" | "price" | "sale" | "variants" | "limit" | "low" | "schedule" | "groups" | "min" | "step" | "opening" | "sku" | "groupPrices", string>>;
 
 /** What the person typed, as the API wants it, or what is wrong with it. */
-function build(form: Form, t: Copy, existing: Item | null): { body?: Record<string, unknown>; problems: Problems } {
+function build(form: Form, t: Copy, existing: Item | null, defs: CustomField[] = []): { body?: Record<string, unknown>; problems: Problems } {
   const problems: Problems = {};
   const unfinished = form.status === "draft" || form.status === "archived";
   const price = toDirhams(form.price);
@@ -115,8 +130,17 @@ function build(form: Form, t: Copy, existing: Item | null): { body?: Record<stri
   else if (!unfinished && (price === null || price <= 0)) problems.price = t.errors.bad_price;
   const sale = form.sale.trim() ? toDirhams(form.sale) : null;
   if (form.sale.trim() && (sale === null || sale <= 0 || (price !== null && sale >= price))) problems.sale = t.errors.bad_sale;
-  const minOrder = toInt(form.minOrder);
-  if (minOrder === null || minOrder < 1 || minOrder > 999) problems.min = t.errors.bad_minimum;
+  // A quantity is a whole number, or up to three decimals for something sold by weight or volume.
+  const measure = isMeasure(form.unit);
+  const q = (x: number | null) => (x === null ? null : qtyForApi(x));
+  const minOrder = toQty(form.minOrder, form.unit);
+  if (minOrder === null || minOrder > 999 || (measure ? minOrder <= 0 : minOrder < 1)) {
+    problems.min = measure ? t.errors.bad_amount : t.errors.bad_minimum;
+  }
+  const packSize = form.packSize.trim() ? toQty(form.packSize, form.unit) : null;
+  if (form.packSize.trim() && (packSize === null || packSize <= 0 || packSize > 100000)) {
+    problems.step = measure ? t.errors.bad_amount : t.errors.bad_pack;
+  }
 
   const named = form.variants;
   if (named.length > 1 && named.some((v) => !v.name.trim())) problems.variants = t.errors.variant_name_needed;
@@ -127,11 +151,11 @@ function build(form: Form, t: Copy, existing: Item | null): { body?: Record<stri
     seen.add(key);
     if (toSignedDirhams(v.delta) === null) problems.variants = t.errors.bad_price;
   }
-  const lowStock = form.lowStock.trim() ? toInt(form.lowStock) : null;
+  const lowStock = form.lowStock.trim() ? toQty(form.lowStock, form.unit) : null;
   if (form.lowStock.trim() && (lowStock === null || lowStock < 0 || lowStock > 100000)) problems.low = t.errors.bad_low_stock;
   if (form.rule === "daily_limit") {
     const need = named.length ? named.filter((v) => v.active) : [{ limit: form.dailyLimit }];
-    if (need.some((v) => toInt(v.limit) === null || (toInt(v.limit) ?? 0) < 0)) problems.limit = t.errors.limit_needed;
+    if (need.some((v) => toQty(v.limit, form.unit) === null)) problems.limit = t.errors.limit_needed;
   }
   for (const g of form.groups) {
     if (!g.name.trim()) problems.groups = t.errors.group_name_needed;
@@ -147,7 +171,7 @@ function build(form: Form, t: Copy, existing: Item | null): { body?: Record<stri
       }
     }
   }
-  if (!form.opening.trim() || toInt(form.opening) !== null) { /* ok */ } else problems.opening = t.errors.bad_quantity;
+  if (!form.opening.trim() || toQty(form.opening, form.unit) !== null) { /* ok */ } else problems.opening = t.errors.bad_quantity;
   if (form.sku.trim().length > 40 || form.variants.some((v) => v.sku.trim().length > 40)) problems.sku = t.errors.bad_sku;
   // What each group pays: a changed price is sent, an emptied one removes the group's price.
   const groupRows: { group_id: string; variant_id: string | null; price: number | null }[] = [];
@@ -177,10 +201,10 @@ function build(form: Form, t: Copy, existing: Item | null): { body?: Record<stri
     sale_price: sale,
     sale_ends_at: sale !== null && form.saleEnds ? `${form.saleEnds}T23:59:59+03:00` : null,
     unit: form.unit,
-    pack_size: toInt(form.packSize),
-    min_order: minOrder,
+    pack_size: q(packSize),
+    min_order: q(minOrder),
     // Empty clears the item's own number, so the shop's applies again.
-    low_stock_at: lowStock,
+    low_stock_at: q(lowStock),
     tags: form.tags,
     stock_rule: form.rule,
     status: form.status,
@@ -204,16 +228,31 @@ function build(form: Form, t: Copy, existing: Item | null): { body?: Record<stri
   };
   if (!body.name) delete body.name;
   if (groupRows.length) body.group_prices = groupRows;
+  // The owner's own fields: what is typed is sent for the API to read; one emptied that had a
+  // value is sent as null, which removes it.
+  const mine = (values: Record<string, string>, had: Record<string, unknown> | undefined, place: string) => {
+    const out: Record<string, unknown> = {};
+    for (const d of defs) {
+      if (d.applies_to !== place || d.archived) continue;
+      const raw = (values[d.key] ?? "").trim();
+      if (raw !== "") out[d.key] = raw;
+      else if (had && d.key in had) out[d.key] = null;
+    }
+    return out;
+  };
+  const ownItem = mine(form.custom, existing?.custom, "item");
+  if (Object.keys(ownItem).length) body.custom = ownItem;
   if (named.length) {
     body.variants = named.map((v) => ({
       ...(v.id ? { id: v.id } : {}), name: v.name.trim(), name_ar: v.name_ar.trim(), sku: v.sku.trim(),
       price_delta: toSignedDirhams(v.delta) ?? 0,
-      daily_limit: form.rule === "daily_limit" ? toInt(v.limit) : null, active: v.active,
-      ...(!v.id && form.rule === "count" && toInt(v.opening) ? { opening_stock: toInt(v.opening) } : {}),
+      daily_limit: form.rule === "daily_limit" ? q(toQty(v.limit, form.unit)) : null, active: v.active,
+      ...(!v.id && form.rule === "count" && toQty(v.opening, form.unit) ? { opening_stock: q(toQty(v.opening, form.unit)) } : {}),
+      ...((c) => (Object.keys(c).length ? { custom: c } : {}))(mine(v.custom, existing?.variants.find((x) => x.id === v.id)?.custom, "variant")),
     }));
   } else {
-    if (form.rule === "daily_limit") body.daily_limit = toInt(form.dailyLimit);
-    if (!existing && form.rule === "count" && toInt(form.opening)) body.opening_stock = toInt(form.opening);
+    if (form.rule === "daily_limit") body.daily_limit = q(toQty(form.dailyLimit, form.unit));
+    if (!existing && form.rule === "count" && toQty(form.opening, form.unit)) body.opening_stock = q(toQty(form.opening, form.unit));
   }
   return { body, problems };
 }
@@ -237,6 +276,11 @@ export function CatalogEdit({ lang, itemId, initial, categories, access, setup, 
   const [history, setHistory] = useState<{ did: ActivityRow[]; prices: PriceRow[]; groups: GroupPriceRow[] } | null>(null);
   // The shop's price groups, once the API has answered (it does not for a shop without the Catalog).
   const [priceGroups, setPriceGroups] = useState<PriceGroup[] | null>(null);
+  // The shop's own fields (ALY-148), once the API has answered; none while the feature is off.
+  const [defs, setDefs] = useState<CustomField[]>([]);
+  // The cost price (ALY-150): for an owner or admin of a shop that keeps costs, and nobody else.
+  // For anyone else it asks for nothing and the sheet draws nothing of it.
+  const cost = useItemCost({ itemId, enabled: access.can_manage && setup?.features.cost_margin === true });
   const top = useRef<HTMLDivElement>(null);
   const now = useRef({ form, start });
   useEffect(() => { now.current = { form, start }; });
@@ -265,6 +309,13 @@ export function CatalogEdit({ lang, itemId, initial, categories, access, setup, 
     return () => { live = false; };
   }, []);
 
+  useEffect(() => {
+    let live = true;
+    if (setup && setup.features.custom_fields === false) return;
+    api<FieldsView>("/api/custom-fields").then((r) => { if (live) setDefs(r.fields.filter((x) => !x.archived)); }).catch(() => undefined);
+    return () => { live = false; };
+  }, [setup]);
+
   // The parts of the form the shop's type cares about start open on a new item.
   const focused = (part: string) => (!itemId && setup?.focus.includes(part) ? true : undefined);
   const isSample = Boolean(item?.sample);
@@ -273,7 +324,22 @@ export function CatalogEdit({ lang, itemId, initial, categories, access, setup, 
   const feats = setup?.features;
   const allowed = (key: string, used = false) => !feats || feats[key] === true || used;
 
-  const dirty = useMemo(() => JSON.stringify(form) !== start, [form, start]);
+  // Choosing a measure when "Sold by weight or volume" is on starts the item at the unit's usual step
+  // (a quarter kilo) if the owner has not set one; counted units go back to whole numbers.
+  const changeUnit = (unit: string) => {
+    const next: Partial<Form> = { unit };
+    if (isMeasure(unit) && allowed("decimal_quantity") && form.packSize.trim() === "" && form.minOrder === "1") {
+      next.packSize = fmtQty(unitOf(unit)?.step ?? 1);
+      next.minOrder = fmtQty(unitOf(unit)?.step ?? 1);
+    }
+    if (!isMeasure(unit) && isMeasure(form.unit)) {
+      if (form.packSize.trim() !== "" && Number(form.packSize) < 1) next.packSize = "";
+      if (Number(form.minOrder) < 1) next.minOrder = "1";
+    }
+    set(next);
+  };
+
+  const dirty = useMemo(() => JSON.stringify(form) !== start, [form, start]) || cost.dirty;
   const set = (patch: Partial<Form>) => setForm((f) => ({ ...f, ...patch }));
   const photoLabel = nameOf(form, lang) || t.untitled;
 
@@ -288,17 +354,23 @@ export function CatalogEdit({ lang, itemId, initial, categories, access, setup, 
     const filled = typed && !form.tags.some((x) => x.toLowerCase() === typed.toLowerCase()) && form.tags.length < 20
       ? { ...form, tags: [...form.tags, typed] }
       : form;
-    const { body, problems: found } = build(filled, t, item);
+    const { body, problems: found } = build(filled, t, item, defs);
     setProblems(found);
     if (!body) {
       setFailure(Object.values(found)[0] ?? "");
       top.current?.scrollIntoView({ block: "start", behavior: "smooth" });
       return;
     }
+    // A cost box that cannot be read stops the save before anything is sent (ALY-150).
+    if (!cost.check()) {
+      setFailure(COST[lang].badCost);
+      top.current?.scrollIntoView({ block: "start", behavior: "smooth" });
+      return;
+    }
     setFailure("");
     setSaving(true);
     try {
-      let saved: { item: Item; warnings?: { name: string }[] };
+      let saved: { item: Item; warnings?: { name: string }[]; cost_warnings?: CostWarning[] };
       if (itemId) {
         saved = await api(`/api/items/${itemId}`, "PUT", body);
       } else {
@@ -309,12 +381,28 @@ export function CatalogEdit({ lang, itemId, initial, categories, access, setup, 
         }
         // An item counted in stock starts from the number typed.
       }
-      if (itemId && form.rule === "count" && toInt(form.opening) && form.variants.length === 0) {
-        await api(`/api/items/${itemId}/stock`, "POST", { kind: "opening", quantity: toInt(form.opening), reason: "Opening count" }).catch(() => undefined);
+      if (itemId && form.rule === "count" && toQty(form.opening, form.unit) && form.variants.length === 0) {
+        await api(`/api/items/${itemId}/stock`, "POST", { kind: "opening", quantity: qtyForApi(toQty(form.opening, form.unit) as number), reason: "Opening count" }).catch(() => undefined);
+      }
+      // The cost goes to its own route, after the item, and only if a cost box changed. If it is
+      // refused the item is already saved, so say so and close rather than save the item twice.
+      let underCost: CostWarning[] = saved.cost_warnings ?? [];
+      if (cost.enabled) {
+        try {
+          const done = await cost.save(saved.item.id);
+          if (done) underCost = done.warnings;
+        } catch (error) {
+          push(COST[lang].costNotSaved(sayError(error, lang, t)), { tone: "bad" });
+          onChanged();
+          onClose();
+          return;
+        }
       }
       push(itemId ? t.toastSaved : t.toastAdded);
       const dup = saved.warnings?.[0];
       if (dup) push(t.duplicate(dup.name));
+      // A price under the cost is said calmly, in the API's own words; it never blocked the save.
+      for (const w of underCost.slice(0, 2)) push(lang === "ar" ? w.message_ar || w.message : w.message, { tone: "warn" });
       onChanged();
       onClose();
     } catch (error) {
@@ -385,17 +473,21 @@ export function CatalogEdit({ lang, itemId, initial, categories, access, setup, 
         <div className="ct-grid2">
           <Field label={t.variantSku}><input value={v.sku} dir="ltr" maxLength={40} autoComplete="off" onChange={(e) => patch({ sku: e.target.value })} /></Field>
         </div>
+        {sizeFields.length > 0 && (
+          <div className="ct-grid2">{sizeFields.map((d) => ownField(d, v.custom, (next) => patch({ custom: next }), `v${i}`))}</div>
+        )}
         <div className="ct-grid2">
           <Field label={t.variantExtra} hint={t.variantExtraHint}>
             <input value={v.delta} inputMode="decimal" dir="ltr" onChange={(e) => patch({ delta: e.target.value })} />
           </Field>
           {form.rule === "count" && (v.id
-            ? <div className="ct-field"><span className="ct-label">{t.stockNow}</span><p className="ct-static num" dir="ltr">{v.onHand ?? 0}</p></div>
-            : <Field label={t.openingStock}><input value={v.opening} inputMode="numeric" dir="ltr" onChange={(e) => patch({ opening: e.target.value })} /></Field>)}
+            ? <div className="ct-field"><span className="ct-label">{t.stockNow}</span><p className="ct-static num" dir="auto">{fmtQtyUnit(v.onHand ?? 0, form.unit, lang)}</p></div>
+            : <Field label={t.openingStock}><input value={v.opening} inputMode={isMeasure(form.unit) ? "decimal" : "numeric"} dir="ltr" onChange={(e) => patch({ opening: e.target.value })} /></Field>)}
           {form.rule === "daily_limit" && (
-            <Field label={t.dailyLimit}><input value={v.limit} inputMode="numeric" dir="ltr" onChange={(e) => patch({ limit: e.target.value })} /></Field>
+            <Field label={t.dailyLimit}><input value={v.limit} inputMode={isMeasure(form.unit) ? "decimal" : "numeric"} dir="ltr" onChange={(e) => patch({ limit: e.target.value })} /></Field>
           )}
         </div>
+        {cost.enabled && <CostSize lang={lang} form={form} cost={cost} index={i} />}
         <div className="ct-row-between">
           <label className="ct-check"><input type="checkbox" checked={v.active} onChange={(e) => patch({ active: e.target.checked })} />{t.variantActive}</label>
           <button type="button" className="btn small ghost" onClick={() => set({ variants: form.variants.filter((_, k) => k !== i) })}><Icon name="trash" />{t.variantRemove}</button>
@@ -403,6 +495,31 @@ export function CatalogEdit({ lang, itemId, initial, categories, access, setup, 
       </li>
     );
   }
+
+  const fe = FEAT[lang];
+  /** One of the shop's own fields, drawn for its kind: a text, a number, a date, a choice from its list or yes and no. */
+  function ownField(d: CustomField, values: Record<string, string>, change: (next: Record<string, string>) => void, scope: string) {
+    const label = (lang === "ar" && d.label_ar ? d.label_ar : d.label || d.label_ar) + (d.required ? " *" : "");
+    const value = values[d.key] ?? "";
+    const put = (v: string) => change({ ...values, [d.key]: v });
+    return (
+      <Field key={`${scope}-${d.key}`} label={label} hint={d.required ? fe.neededBeforeSale : d.unit || undefined}>
+        {d.kind === "choice" || d.kind === "yes_no" ? (
+          <select value={value} onChange={(ev) => put(ev.target.value)}>
+            <option value="">{fe.notSet}</option>
+            {d.kind === "yes_no"
+              ? [<option key="y" value="yes">{fe.yes}</option>, <option key="n" value="no">{fe.no}</option>]
+              : d.choices.filter((c) => c.active || c.value === value).map((c) => <option key={c.value} value={c.value}>{lang === "ar" && c.label_ar ? c.label_ar : c.label || c.label_ar}</option>)}
+          </select>
+        ) : (
+          <input value={value} type={d.kind === "date" ? "date" : "text"} inputMode={d.kind === "number" ? "decimal" : undefined}
+            dir={d.kind === "text" ? "auto" : "ltr"} maxLength={200} autoComplete="off" onChange={(ev) => put(ev.target.value)} />
+        )}
+      </Field>
+    );
+  }
+  const itemFields = defs.filter((d) => d.applies_to === "item");
+  const sizeFields = defs.filter((d) => d.applies_to === "variant");
 
   const otherGroups = (priceGroups ?? []).filter((g) => !g.is_default);
   const pricedCount = Object.values(form.groupPrices).filter((v) => v.trim() !== "").length;
@@ -596,20 +713,30 @@ export function CatalogEdit({ lang, itemId, initial, categories, access, setup, 
           {form.sale.trim() !== "" && (
             <Field label={t.saleEnds}><input type="date" value={form.saleEnds} dir="ltr" onChange={(e) => set({ saleEnds: e.target.value })} /></Field>
           )}
+          {cost.enabled && <CostPrice lang={lang} form={form} cost={cost} />}
           <div className="ct-grid2">
             <Field label={t.unit}>
-              <select value={form.unit} onChange={(e) => set({ unit: e.target.value })}>
-                {UNITS.map((u) => <option key={u} value={u}>{t.units[u]}</option>)}
+              <select value={form.unit} onChange={(e) => changeUnit(e.target.value)}>
+                {UNITS.filter((u) => LEGACY_UNITS.includes(u) || allowed("decimal_quantity", form.unit === u)).map((u) => (
+                  <option key={u} value={u}>{t.units[u]}</option>
+                ))}
               </select>
             </Field>
-            {allowed("pack_rules", form.minOrder !== "1") && (
-              <Field label={t.minOrder} error={problems.min}>
-                <input value={form.minOrder} inputMode="numeric" dir="ltr" onChange={(e) => set({ minOrder: e.target.value })} />
+            {(isMeasure(form.unit)
+              ? allowed("decimal_quantity", form.minOrder !== "1") || allowed("pack_rules", form.minOrder !== "1")
+              : allowed("pack_rules", form.minOrder !== "1")) && (
+              <Field label={t.minOrder} hint={isMeasure(form.unit) ? t.minOrderMeasureHint : undefined} error={problems.min}>
+                <input value={form.minOrder} inputMode={isMeasure(form.unit) ? "decimal" : "numeric"} dir="ltr" onChange={(e) => set({ minOrder: e.target.value })} />
               </Field>
             )}
           </div>
-          {form.unit === "pack" && allowed("pack_rules", form.packSize !== "") && (
-            <Field label={t.packSize}><input value={form.packSize} inputMode="numeric" dir="ltr" onChange={(e) => set({ packSize: e.target.value })} /></Field>
+          {isMeasure(form.unit) && (allowed("decimal_quantity", form.packSize !== "") || allowed("pack_rules", form.packSize !== "")) && (
+            <Field label={t.stepLabel} hint={t.stepHint(unitShort(form.unit, lang))} error={problems.step}>
+              <input value={form.packSize} inputMode="decimal" dir="ltr" onChange={(e) => set({ packSize: e.target.value })} />
+            </Field>
+          )}
+          {!isMeasure(form.unit) && form.unit === "pack" && allowed("pack_rules", form.packSize !== "") && (
+            <Field label={t.packSize} error={problems.step}><input value={form.packSize} inputMode="numeric" dir="ltr" onChange={(e) => set({ packSize: e.target.value })} /></Field>
           )}
         </section>
 
@@ -658,18 +785,18 @@ export function CatalogEdit({ lang, itemId, initial, categories, access, setup, 
           </fieldset>
           {form.rule === "daily_limit" && form.variants.length === 0 && (
             <Field label={t.dailyLimit} error={problems.limit}>
-              <input value={form.dailyLimit} inputMode="numeric" dir="ltr" onChange={(e) => set({ dailyLimit: e.target.value })} />
+              <input value={form.dailyLimit} inputMode={isMeasure(form.unit) ? "decimal" : "numeric"} dir="ltr" onChange={(e) => set({ dailyLimit: e.target.value })} />
             </Field>
           )}
           {form.rule === "count" && form.variants.length === 0 && (
             !itemId || (item && item.variants.every((v) => v.on_hand === 0))
-              ? <Field label={t.openingStock} error={problems.opening}><input value={form.opening} inputMode="numeric" dir="ltr" onChange={(e) => set({ opening: e.target.value })} /></Field>
-              : <p className="ct-hint">{t.inStock(item?.variants.reduce((n, v) => n + v.on_hand, 0) ?? 0)}. {t.changeInStock}</p>
+              ? <Field label={t.openingStock} error={problems.opening}><input value={form.opening} inputMode={isMeasure(form.unit) ? "decimal" : "numeric"} dir="ltr" onChange={(e) => set({ opening: e.target.value })} /></Field>
+              : <p className="ct-hint">{t.inStock(fmtQtyUnit(sumQty(item?.variants.map((v) => v.on_hand) ?? []), form.unit, lang))}. {t.changeInStock}</p>
           )}
           {form.rule === "count" && itemId && item && item.stock_rule !== "count" && form.variants.length > 0 && <p className="ct-hint">{t.stockLater}</p>}
           {(form.rule === "count" || form.rule === "daily_limit") && (
             <Field label={t.lowStockOwn} hint={t.lowStockOwnHint} error={problems.low}>
-              <input value={form.lowStock} inputMode="numeric" dir="ltr" onChange={(e) => set({ lowStock: e.target.value })} />
+              <input value={form.lowStock} inputMode={isMeasure(form.unit) ? "decimal" : "numeric"} dir="ltr" onChange={(e) => set({ lowStock: e.target.value })} />
             </Field>
           )}
         </section>
@@ -683,7 +810,7 @@ export function CatalogEdit({ lang, itemId, initial, categories, access, setup, 
           <p className="ct-hint">{t.variantsHint}</p>
           {problems.variants && <p className="ct-error">{problems.variants}</p>}
           <ul className="ct-stack">{form.variants.map(variantRow)}</ul>
-          <button type="button" className="btn ct-btn" onClick={() => set({ variants: [...form.variants, { name: "", name_ar: "", sku: "", delta: "", limit: form.dailyLimit, active: true, opening: "", onHand: null }] })}>
+          <button type="button" className="btn ct-btn" onClick={() => set({ variants: [...form.variants, { name: "", name_ar: "", sku: "", delta: "", limit: form.dailyLimit, active: true, opening: "", onHand: null, custom: {} }] })}>
             <Icon name="plus" />{t.addVariant}
           </button>
           {form.variants.length > 0 && itemId && <p className="ct-hint">{t.variantKept}</p>}
@@ -730,6 +857,13 @@ export function CatalogEdit({ lang, itemId, initial, categories, access, setup, 
             </>
           )}
         </Fold>}
+
+        {itemFields.length > 0 && allowed("custom_fields", Object.keys(form.custom).length > 0) && (
+          <Fold title={fe.moreDetails} summary={fe.moreDetailsSummary(Object.values(form.custom).filter((x) => x !== "").length)}
+            open={Object.values(form.custom).some((x) => x !== "") || itemFields.some((d) => d.required) ? true : undefined}>
+            {itemFields.map((d) => ownField(d, form.custom, (next) => set({ custom: next }), "item"))}
+          </Fold>
+        )}
 
         {allowed("tags", form.tags.length > 0) && <Fold title={t.tagsTitle} summary={form.tags.length ? String(form.tags.length) : undefined} open={form.tags.length > 0 ? true : undefined}>
           <p className="ct-hint">{t.tagsHint}</p>
@@ -795,6 +929,8 @@ export function CatalogEdit({ lang, itemId, initial, categories, access, setup, 
             )}
           </Fold>
         )}
+
+        {itemId && cost.enabled && <CostHistory lang={lang} cost={cost} />}
 
         {itemId && !readOnly && item && item.status !== "archived" && (
           <section className="ct-sec danger">

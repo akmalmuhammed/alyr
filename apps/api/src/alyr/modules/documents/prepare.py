@@ -150,14 +150,26 @@ def prepare(body: Mapping, shop: Mapping) -> dict:
     raw_lines = list(body.get("lines") or [])
     if len(raw_lines) > MAX_LINES:
         raise DocumentError("too_many_lines")
+    # A sale another system numbered carries the tax that system worked out (ALY-142).
+    tax_enabled = shop["tax_enabled"] or body.get("number_authority") == "external"
     lines = [
-        clean_line(raw, position, tax_enabled=shop["tax_enabled"])
+        clean_line(raw, position, tax_enabled=tax_enabled)
         for position, raw in enumerate(raw_lines, start=1)
     ]
     totals = totals_of(lines)
     # Cash rounding, if the shop has it and this kind is paid in cash: its own line.
+    # A sale from ALYR's own orders paid by link, card or transfer says `round_cash: False`:
+    # the customer paid the exact amount, and rounding is for notes and coins (ALY-139).
     rounding = (money.round_to_step(totals["total_minor"], shop["cash_rounding_minor"])
-                if kinds.KINDS[kind].rounds else 0)
+                if kinds.KINDS[kind].rounds and body.get("round_cash", True) else 0)
+    if body.get("rounding_minor") is not None:
+        # Another system's own rounding, already worked out and checked by `connect.ingest`:
+        # the paper's total is the total the other system printed. Only code inside ALYR can
+        # send this (the public API's draft body refuses unknown fields).
+        rounding = body["rounding_minor"]
+        if isinstance(rounding, bool) or not isinstance(rounding, int) \
+                or not -1000 <= rounding <= 1000:
+            raise DocumentError("amount_too_big")
     totals["rounding_minor"] = rounding
     totals["total_minor"] += rounding
     if totals["total_minor"] > money.MAX_MINOR:
@@ -189,20 +201,25 @@ def prepare(body: Mapping, shop: Mapping) -> dict:
 
 
 def check_issuable(columns: Mapping, lines: Sequence[Mapping], seller: Mapping,
-                   shop: Mapping) -> None:
+                   shop: Mapping, *, external: bool = False) -> None:
     """Raise a `DocumentError` saying what is missing or not allowed. `columns` is the
-    document row (or the prepared columns), `seller` the copy about to be written."""
+    document row (or the prepared columns), `seller` the copy about to be written.
+
+    `external` is a document the shop's other system numbered (ALY-142): that system is the
+    one that issues it, with its own registration and its own tax rules, so ALYR neither asks
+    for the registration number nor refuses the tax the other system worked out."""
     kind = kinds.KINDS[columns["kind"]]
     if not (seller.get("name") or seller.get("name_ar")):
         raise DocumentError("seller_needed")
-    if kind.needs_registration and not seller.get("registered"):
+    if kind.needs_registration and not seller.get("registered") and not external:
         raise DocumentError("registration_needed")
     settings.check_audience_language(columns["audience"], columns["languages"])
     if not lines:
         raise DocumentError("no_lines")
     # A credit note cancels what was charged, tax included, even if tax has been switched
     # off since.
-    if columns["tax_minor"] and not shop["tax_enabled"] and columns["kind"] != "credit_note":
+    if (columns["tax_minor"] and not shop["tax_enabled"] and columns["kind"] != "credit_note"
+            and not external):
         raise DocumentError("tax_off")
     if columns["total_minor"] <= 0 and not kind.allows_zero_total:
         raise DocumentError("total_zero")

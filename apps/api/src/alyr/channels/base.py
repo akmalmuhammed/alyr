@@ -3,7 +3,7 @@ from datetime import UTC, datetime
 from typing import Literal, Protocol
 from uuid import UUID
 
-MessageKind = Literal["text", "buttons", "list", "template", "image"]
+MessageKind = Literal["text", "buttons", "list", "template", "image", "document"]
 TemplateCategory = Literal["utility", "marketing", "authentication"]
 
 MAX_BUTTONS = 3
@@ -74,6 +74,11 @@ class OutboundMessage:
     image: bytes = b""
     image_type: str = "image/png"
     media_id: str = ""
+    # A file to go with the message (ALY-139): a PDF sent as a document with `body` as its
+    # caption, or the document header of a template that has one. Kept and uploaded like an
+    # image. `filename` is what the customer's phone shows, with its extension.
+    document: bytes = b""
+    filename: str = ""
 
     def __post_init__(self) -> None:
         if self.kind == "buttons" and not 1 <= len(self.choices) <= MAX_BUTTONS:
@@ -88,6 +93,16 @@ class OutboundMessage:
             raise ValueError("an image message needs an image")
         if self.kind == "image" and len(self.body) > MAX_CAPTION:
             raise ValueError(f"an image caption is at most {MAX_CAPTION} characters")
+        if self.kind == "document":
+            if not (self.document or self.media_id):
+                raise ValueError("a document message needs a file")
+            if len(self.body) > MAX_CAPTION:
+                raise ValueError(f"a document caption is at most {MAX_CAPTION} characters")
+        if self.document and not self.filename:
+            raise ValueError("a document needs a file name")
+        if self.filename and ("/" in self.filename or "\\" in self.filename
+                              or not self.filename.lower().endswith(".pdf")):
+            raise ValueError("a document's file name is a plain name ending in .pdf")
 
 
 @dataclass(frozen=True)

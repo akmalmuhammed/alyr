@@ -18,6 +18,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Done, Frame, Glyph, Who } from "../Frame";
 import { formatPrice, type Lang } from "../price";
 import { matches, searchWords } from "../fold";
+import { addQty, fmtQtyUnit, minQty, unitFor } from "../qty";
 import { ApiError, loadItem, loadLive, loadStore, orderAgain } from "./api";
 import { count, keyOf, most, total as totalOf, unitPrice, type Line } from "./cart";
 import { say, T } from "./copy";
@@ -25,7 +26,7 @@ import { ItemCard } from "./ItemCard";
 import type { Chosen } from "./ItemSheet";
 import type { Checked, Item, Live, LiveItem, Placed, Store } from "./types";
 import { Price } from "./ui";
-import { waParts, type WaLine, type WaPart } from "./wa";
+import { waParts, type WaFulfilment, type WaLine, type WaPart } from "./wa";
 import { Wholesale, rowsOf } from "./Wholesale";
 import "./order.css";
 
@@ -91,7 +92,7 @@ function makeLine(item: Item, variantId: string | null, optionIds: string[], qty
     unit: unitPrice(item, variantId, optionIds),
     name: item.name, name_ar: item.name_ar, variant: variant?.name ?? "", variant_ar: variant?.name_ar ?? "",
     extras: extras.map((o) => ({ name: o.name, name_ar: o.name_ar })), src: photo.state === "ready" ? photo.src : "",
-    code: item.code,
+    code: item.code, unitKey: unitFor(item),
   };
 }
 
@@ -100,7 +101,7 @@ function makeLine(item: Item, variantId: string | null, optionIds: string[], qty
 function toWaLines(lines: Line[], lookup: (id: string) => Item | undefined): WaLine[] {
   return lines.map((l) => ({
     code: l.code ?? lookup(l.itemId)?.code ?? null, qty: l.qty, name: l.name, name_ar: l.name_ar,
-    variant: l.variant, variant_ar: l.variant_ar, extras: l.extras, unit: l.unit,
+    variant: l.variant, variant_ar: l.variant_ar, extras: l.extras, unit: l.unit, unitKey: l.unitKey,
   }));
 }
 
@@ -157,11 +158,11 @@ export default function Order({ slug, token, table, initial, lang: first, focusI
 
   /** An order as WhatsApp messages: one, or a few when it is too long for one. */
   const known = useMemo(() => new Map([...base, ...(remote?.items ?? [])].map((i) => [i.id, i] as const)), [base, remote]);
-  const partsOf = useCallback((ls: Line[]): WaPart[] => {
+  const partsOf = useCallback((ls: Line[], fulfilment: WaFulfilment | null = null): WaPart[] => {
     if (!whatsapp || ls.length === 0) return [];
     return waParts(whatsapp, {
       shop: store.shop, lang, mode: store.settings.whatsapp_mode, lines: toWaLines(ls, (id) => known.get(id)),
-      money: (dirhams) => formatPrice(dirhams, lang), customer: store.customer?.name, table: store.table,
+      money: (dirhams) => formatPrice(dirhams, lang), customer: store.customer?.name, table: store.table, fulfilment,
     });
   }, [whatsapp, store, lang, known]);
 
@@ -270,11 +271,11 @@ export default function Order({ slug, token, table, initial, lang: first, focusI
     setCart((old) => {
       const have = old.find((l) => l.key === key);
       const cap = most(item, pick.variantId);
-      if (have) return old.map((l) => (l.key === key ? { ...l, qty: Math.min(cap, l.qty + pick.qty), unit: unitPrice(item, pick.variantId, pick.optionIds) } : l));
+      if (have) return old.map((l) => (l.key === key ? { ...l, qty: minQty(cap, addQty(l.qty, pick.qty)), unit: unitPrice(item, pick.variantId, pick.optionIds) } : l));
       return [...old, makeLine(item, pick.variantId, pick.optionIds, pick.qty)];
     });
     setOpen(null);
-    say_(`${t.inOrder(pick.qty)}: ${say(lang, item.name, item.name_ar)}`);
+    say_(`${t.inOrder(fmtQtyUnit(pick.qty, unitFor(item), lang))}: ${say(lang, item.name, item.name_ar)}`);
   }, [lang, say_, t]);
   const swap = useCallback((key: string, alt: NonNullable<Checked["alternatives"]>[number]) => {
     setCart((old) => {
@@ -290,10 +291,10 @@ export default function Order({ slug, token, table, initial, lang: first, focusI
   }, []);
   const onLimit = useCallback((item: Item) => {
     const cap = most(item);
-    say_(t.atMost(cap));
-  }, [say_, t]);
+    say_(t.atMost(fmtQtyUnit(cap, unitFor(item), lang)));
+  }, [say_, t, lang]);
 
-  const inOrder = useCallback((id: string) => cart.reduce((n, l) => (l.itemId === id ? n + l.qty : n), 0), [cart]);
+  const inOrder = useCallback((id: string) => cart.reduce((n, l) => (l.itemId === id ? addQty(n, l.qty) : n), 0), [cart]);
   const qtyOf = useCallback((id: string, variantId: string | null) => cart.find((l) => l.key === keyOf(id, variantId, []))?.qty ?? 0, [cart]);
 
   // ── the refresh ──
@@ -412,6 +413,8 @@ export default function Order({ slug, token, table, initial, lang: first, focusI
   // keeps the page it always had, which offers all four.
   const offers = store.catalog?.layout ?? { pickup_date: true, quick_quantity: true, same_as_last: true, show_sku: true };
   const section = store.catalog ? say(lang, store.catalog.section.name, store.catalog.section.name_ar) : "";
+  // The shop's automatic discounts in words, only while its discounts are on (ALY-150).
+  const offerList = store.pricing?.discounts?.offers ?? [];
 
   if (placed) {
     const link = placed.payment === "link" && placed.pay_url ? new URL(placed.pay_url).pathname : null;
@@ -420,6 +423,9 @@ export default function Order({ slug, token, table, initial, lang: first, focusI
         <Done title={t.placed(placed.number)}>
           {placed.payment === "account" && <p><b className="num"><Price value={placed.total} lang={lang} /></b> · {t.onAccount}</p>}
           {placed.payment === "link" && <p><b className="num"><Price value={placed.total} lang={lang} /></b></p>}
+          {placed.pricing && placed.pricing.discount_total > 0 && (
+            <p className="ox-discount-line">{t.discountOnOrder(`−${formatPrice(placed.pricing.discount_total, lang)}`)}</p>
+          )}
           <p>{placed.payment === "link" ? t.payToConfirm : t.backToChat}</p>
         </Done>
         {placed.left_out && placed.left_out.length > 0 && (
@@ -484,6 +490,12 @@ export default function Order({ slug, token, table, initial, lang: first, focusI
           {store.table && <span className="ox-table"><Glyph name="table" />{t.table(store.table)}</span>}
         </div>
       </section>
+
+      {offerList.length > 0 && (
+        <ul className="ox-offers" aria-label={t.offers}>
+          {offerList.map((o) => <li key={o.text}>{say(lang, o.text, o.text_ar)}</li>)}
+        </ul>
+      )}
 
       {store.link.state === "invalid" || store.link.state === "expired" ? (
         <p className="cx-warn" role="alert">{say(lang, store.link.message, store.link.message_ar)}</p>
@@ -615,7 +627,8 @@ export default function Order({ slug, token, table, initial, lang: first, focusI
       {review && token && customer && (
         <ReviewSheet slug={slug} token={token} lang={lang} lines={lines} lookup={lookup} customer={customer} table={store.table} askDay={offers.pickup_date}
           forDate={forDate} onForDate={setForDate} setQty={setQty} remove={remove} accept={accept} swap={swap}
-          whatsapp={partsOf(lines)}
+          whatsapp={partsOf(lines)} discounts={!!store.pricing?.discounts}
+          delivery={store.pricing?.delivery} whatsappFor={(choice) => partsOf(lines, choice)}
           choose={(id) => { const it = seenRef.current.get(id); setReview(false); if (it) setOpen(it); }}
           onPlaced={(p) => {
             setReview(false); setCart([]); setFlagged(new Set());

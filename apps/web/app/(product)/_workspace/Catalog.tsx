@@ -10,17 +10,25 @@ import {
   api, nameOf, sayError, type Access, type BulkLast, type Category, type ImportResult, type ImportUndone,
   type Item, type ListResult, type Setup,
 } from "./catalogApi";
+import { fmtQtyUnit, unitFor } from "../_customer/qty";
 import { COPY, type Copy, type Lang } from "./catalogCopy";
 import { FEAT } from "./featuresCopy";
+import { PRICING } from "./pricingCopy";
+import { CatalogDiscounts } from "./CatalogDiscounts";
+import { CatalogDelivery } from "./CatalogDelivery";
+import { DELIVERY } from "./deliveryCopy";
 import { Announce, Icon, Layer, Switch, Tile, ToastLayer, useToasts } from "./CatalogUi";
 import { CatalogEdit } from "./CatalogEdit";
 import { CatalogFeatures } from "./CatalogFeatures";
+import { CatalogFields } from "./CatalogFields";
+import { CatalogTemplate } from "./CatalogTemplate";
 import { CatalogImport } from "./CatalogImport";
 import { AddSheet, WalkThrough } from "./CatalogAdd";
 import { CatalogBulk } from "./CatalogBulk";
 import { CatalogSettings } from "./CatalogSettings";
 import { CatalogShare, type Target } from "./CatalogShare";
 import { CatalogStock } from "./CatalogStock";
+import { MarginPill, useItemMargins } from "./Margin";
 
 type Sheet =
   | null
@@ -31,6 +39,10 @@ type Sheet =
   | { kind: "import" }
   | { kind: "settings" }
   | { kind: "features" }
+  | { kind: "discounts" }
+  | { kind: "delivery" }
+  | { kind: "fields" }
+  | { kind: "template" }
   | { kind: "share"; target: Target };
 
 const PAGE = 60;
@@ -43,7 +55,7 @@ function categoryName(category: Category, lang: Lang) {
 }
 
 /** What to say about an item beside its name: why it cannot be ordered, or how many are left. */
-function statusLine(item: Item, t: Copy, lowAt: number) {
+function statusLine(item: Item, t: Copy, lowAt: number, lang: Lang) {
   const pills: { text: string; tone: "" | "bad" | "wait" | "quiet" | "sample" }[] = [];
   // A sample is an example, never for sale: it says so and nothing else.
   if (item.sample) return [{ text: t.sampleTag, tone: "sample" as const }];
@@ -54,7 +66,8 @@ function statusLine(item: Item, t: Copy, lowAt: number) {
   const left = item.availability.left;
   if (item.status === "live" && left !== null && left > 0 && item.availability.reason === "") {
     const low = item.stock_rule === "count" && item.variants.some((v) => v.active && v.on_hand > 0 && v.on_hand <= lowAt);
-    const text = item.stock_rule === "daily_limit" ? t.leftToday(left) : t.left(left);
+    const shown = fmtQtyUnit(left, unitFor(item), lang);
+    const text = item.stock_rule === "daily_limit" ? t.leftToday(shown) : t.left(shown);
     pills.push({ text, tone: low ? "wait" : "quiet" });
   }
   return pills;
@@ -72,6 +85,7 @@ function priceLine(item: Item, t: Copy) {
 export function Catalog({ lang, title, show = null, onRenamed }: { lang: Lang; title: string; show?: string | null; onRenamed?: () => void }) {
   const t = COPY[lang];
   const feat = FEAT[lang];
+  const pricing = PRICING[lang];
   const { toasts, push, dismiss, clear } = useToasts();
   const [tab, setTab] = useState<"items" | "stock">("items");
   const [typed, setTyped] = useState("");
@@ -194,6 +208,9 @@ export function Catalog({ lang, title, show = null, onRenamed }: { lang: Lang; t
   }, [load, sheetOpen]);
 
   const access: Access = data?.access ?? { role: "agent", can_manage: false, can_edit: false, can_stock: true };
+  // Cost and margin (ALY-150): owners and admins of a shop that keeps costs, and nobody else.
+  const costOn = access.can_manage && setup?.features.cost_margin === true;
+  const margins = useItemMargins(costOn, data);
   const items = useMemo(() => data?.items ?? [], [data]);
   const counts = data?.counts;
   const lowAt = data?.low_stock_at ?? 5;
@@ -288,7 +305,7 @@ export function Catalog({ lang, title, show = null, onRenamed }: { lang: Lang; t
 
   function card(item: Item) {
     const name = nameOf(item, lang);
-    const pills = statusLine(item, t, lowAt);
+    const pills = statusLine(item, t, lowAt, lang);
     const draftIncomplete = item.status === "draft" && (!item.name && !item.name_ar || item.price <= 0);
     const isPicked = picked.has(item.id);
     return (
@@ -312,6 +329,7 @@ export function Catalog({ lang, title, show = null, onRenamed }: { lang: Lang; t
                 {pills.map((p) => <span key={p.text} className={`sh-pill ct-pill ${p.tone}`}>{p.text}</span>)}
               </span>
             )}
+            {costOn && <MarginPill lang={lang} margin={margins?.[item.id]} />}
           </span>
         </button>
         {!selecting && item.status === "live" && <div className="ct-card-foot">{renderSwitch(item)}{renderShare(item)}</div>}
@@ -326,7 +344,7 @@ export function Catalog({ lang, title, show = null, onRenamed }: { lang: Lang; t
 
   function row(item: Item) {
     const name = nameOf(item, lang);
-    const pills = statusLine(item, t, lowAt);
+    const pills = statusLine(item, t, lowAt, lang);
     const draftIncomplete = item.status === "draft" && (!item.name && !item.name_ar || item.price <= 0);
     const isPicked = picked.has(item.id);
     return (
@@ -361,6 +379,7 @@ export function Catalog({ lang, title, show = null, onRenamed }: { lang: Lang; t
                 {pills.map((p) => <span key={p.text} className={`sh-pill ct-pill ${p.tone}`}>{p.text}</span>)}
               </span>
             )}
+            {costOn && <MarginPill lang={lang} margin={margins?.[item.id]} />}
           </span>
         </button>
         {!selecting && <div className="ct-row-end">{renderSwitch(item)}{renderShare(item)}</div>}
@@ -408,6 +427,16 @@ export function Catalog({ lang, title, show = null, onRenamed }: { lang: Lang; t
         <button type="button" className="btn ghost ct-btn" onClick={() => setSheet({ kind: "import" })}>
           <Icon name="sheet" />{t.imp.open}
         </button>
+        {access.can_manage && setup?.features.discounts && (
+          <button type="button" className="btn ghost ct-btn" onClick={() => setSheet({ kind: "discounts" })}>
+            <Icon name="tag" />{pricing.open}
+          </button>
+        )}
+        {access.can_manage && setup?.features.delivery_fees && (
+          <button type="button" className="btn ghost ct-btn" onClick={() => setSheet({ kind: "delivery" })}>
+            <Icon name="stock" />{DELIVERY[lang].open}
+          </button>
+        )}
         {access.can_manage && (
           <button type="button" className="btn ghost ct-btn" onClick={() => setSheet({ kind: "features" })}>
             <Icon name="star" />{feat.open}
@@ -539,7 +568,7 @@ export function Catalog({ lang, title, show = null, onRenamed }: { lang: Lang; t
 
       {tab === "stock" && (
         <div role="tabpanel" id="ct-panel-stock" aria-labelledby="ct-tab-stock" className="ct-panel">
-          <CatalogStock lang={lang} onChanged={() => void load()} push={push} clear={clear} />
+          <CatalogStock lang={lang} onChanged={() => void load()} push={push} clear={clear} costs={costOn} />
         </div>
       )}
 
@@ -578,12 +607,27 @@ export function Catalog({ lang, title, show = null, onRenamed }: { lang: Lang; t
           onClose={() => setSheet(null)} onSettings={() => setSheet({ kind: "settings" })} />
       )}
       {sheet?.kind === "import" && (
-        <CatalogImport lang={lang} canEdit={access.can_edit}
+        <CatalogImport lang={lang} canEdit={access.can_edit} costs={costOn}
           onClose={() => { setSheet(null); void load(); }} onChanged={() => void load()} />
       )}
       {sheet?.kind === "features" && (
         <CatalogFeatures lang={lang} push={push} onClose={() => { setSheet(null); void load(); loadSetup(); }}
-          onChanged={() => { loadSetup(); onRenamed?.(); }} />
+          onChanged={() => { loadSetup(); onRenamed?.(); }} onOpen={(what) => setSheet({ kind: what })} />
+      )}
+      {sheet?.kind === "discounts" && setup?.features.discounts && access.can_manage && (
+        <CatalogDiscounts lang={lang} push={push} groupsOn={setup.features.price_groups ?? false} categories={categories}
+          onClose={() => setSheet(null)} />
+      )}
+      {sheet?.kind === "delivery" && setup?.features.delivery_fees && access.can_manage && (
+        <CatalogDelivery lang={lang} push={push} onClose={() => setSheet(null)} />
+      )}
+      {sheet?.kind === "fields" && (
+        <CatalogFields lang={lang} push={push} onClose={() => { setSheet({ kind: "features" }); void load(); loadSetup(); }}
+          onChanged={() => { loadSetup(); void load(); }} />
+      )}
+      {sheet?.kind === "template" && (
+        <CatalogTemplate lang={lang} push={push} onClose={() => setSheet({ kind: "features" })}
+          onChanged={() => { loadSetup(); void load(); onRenamed?.(); }} />
       )}
       {sheet?.kind === "settings" && (
         <CatalogSettings lang={lang} push={push} onClose={() => { setSheet(null); void load(); loadSetup(); }} />

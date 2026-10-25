@@ -21,13 +21,15 @@ Every function takes a tenant-scoped connection.
 import hashlib
 import io
 import re
+from datetime import UTC, datetime
+from zoneinfo import ZoneInfo
 
 import asyncpg
 from PIL import Image
 
 from alyr.core import images, team
 from alyr.core.team import Actor
-from alyr.modules.documents import colours, kinds, money
+from alyr.modules.documents import colours, kinds, money, numbering
 from alyr.modules.documents.errors import DocumentError
 
 SUBJECT = "document"
@@ -43,9 +45,14 @@ TEXT_LIMITS = {
 FLAGS = (
     "tax_enabled", "show_sku", "show_discounts", "show_customer_tax_id", "show_bank",
     "show_signature", "show_alyr_mark", "agents_may_issue",
+    # What happens on its own (ALY-139): which sales make a document, which channels send it,
+    # and who may record a payment by hand.
+    "auto_receipt_on_payment", "auto_invoice_credit_sales", "auto_deposit_receipt",
+    "auto_send_whatsapp", "auto_send_email", "agents_may_record_payments",
 )
 CHOICES = {
     "languages": kinds.LANGUAGES, "default_audience": kinds.AUDIENCES, "layout": kinds.LAYOUTS,
+    "send_mode": kinds.SEND_MODES,
 }
 # Terms and notes per kind: at most this many characters in each language.
 KIND_TEXT_LIMIT = 600
@@ -98,6 +105,8 @@ async def get(conn: asyncpg.Connection) -> dict:
 
 
 async def series_rows(conn: asyncpg.Connection) -> list[dict]:
+    """Every numbering series with the number the next document will get (`next_number`; the
+    screen says "next", never "reserved": another document may be issued first)."""
     rows = await conn.fetch(
         "select kind, series_key, prefix, pad, yearly_reset, number_year, last_number "
         "from document_series order by kind, series_key"
@@ -105,7 +114,26 @@ async def series_rows(conn: asyncpg.Connection) -> list[dict]:
     if not rows:
         await ensure(conn)
         return await series_rows(conn)
-    return [dict(r) for r in rows]
+    tz = await conn.fetchval(
+        "select timezone from tenants "
+        "where id = nullif(current_setting('app.tenant_id', true), '')::uuid")
+    year = datetime.now(ZoneInfo(tz)).year
+    return [{**dict(r), "next_number": numbering.next_number(r, year)} for r in rows]
+
+
+async def recent_changes(conn: asyncpg.Connection, limit: int = 20) -> list[dict]:
+    """What was changed in the document settings, newest first: who, when, and which settings
+    (never the text of a bank detail or a note; the activity record keeps only the names)."""
+    rows = await conn.fetch(
+        "select action, detail, actor_name, created_at from activity "
+        "where subject = 'document' "
+        "and subject_id = nullif(current_setting('app.tenant_id', true), '')::uuid "
+        "and action in ('settings_changed', 'logo_changed', 'stamp_changed', 'series_changed', "
+        "'branch_added', 'branch_changed') order by created_at desc, id desc limit $1",
+        max(1, min(limit, 50)))
+    return [{"action": r["action"], "detail": r["detail"], "actor": r["actor_name"],
+             "at": r["created_at"].astimezone(UTC).isoformat(timespec="seconds")
+             .replace("+00:00", "Z")} for r in rows]
 
 
 def check_audience_language(audience: str, languages: str) -> None:
@@ -146,8 +174,9 @@ def _clean(changes: dict) -> dict:
             clean[name] = bool(value)
         elif name in CHOICES:
             if value not in CHOICES[name]:
-                raise DocumentError("layout_unknown" if name == "layout" else "kind_unknown",
-                                    field=name)
+                raise DocumentError(
+                    {"layout": "layout_unknown", "send_mode": "send_mode_invalid"}.get(
+                        name, "kind_unknown"), field=name)
             clean[name] = value
         elif name == "currency":
             if value not in money.CURRENCIES:
@@ -174,6 +203,10 @@ def _clean(changes: dict) -> dict:
         elif name in ("terms", "notes"):
             clean[name] = _clean_kind_texts(value)
     return clean
+
+
+# The same checks, for a preview that tries settings out before they are saved.
+clean = _clean
 
 
 async def update(conn: asyncpg.Connection, actor: Actor, changes: dict) -> dict:

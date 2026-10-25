@@ -30,16 +30,27 @@ _BOOKING_WORDS = {
         "انتهت صلاحية رابط الحجز هذا. راسل المتجر على واتساب للحصول على رابط جديد.",
     ),
 }
+_DOCUMENT_WORDS = {
+    "bad_link": (
+        "This document link is not valid. Ask the shop to send the document again.",
+        "رابط المستند هذا غير صالح. اطلب من المتجر إرسال المستند مرة أخرى.",
+    ),
+    "expired_link": (
+        "This document link has expired. Ask the shop to send the document again.",
+        "انتهت صلاحية رابط المستند هذا. اطلب من المتجر إرسال المستند مرة أخرى.",
+    ),
+}
 _UNAVAILABLE = {
     links.ORDER: "orders are not available",
     links.BOOKING: "bookings are not available",
+    links.DOCUMENT: "documents are not available",
 }
 
 
 def say(purpose: str, code: str, lang: str) -> str:
     """The sentence for `bad_link` or `expired_link`, on the page that asked."""
-    if purpose == links.BOOKING:
-        english, arabic = _BOOKING_WORDS[code]
+    if purpose in (links.BOOKING, links.DOCUMENT):
+        english, arabic = (_BOOKING_WORDS if purpose == links.BOOKING else _DOCUMENT_WORDS)[code]
         return arabic if lang == "ar" else english
     return text.say(code, lang, {})
 

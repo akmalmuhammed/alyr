@@ -6,6 +6,8 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Screens, type WorkspaceTab } from "../../_workspace/Screens";
 import { TeamReport } from "../../_workspace/Team";
 import { Catalog } from "../../_workspace/Catalog";
+import { Documents } from "../../_workspace/Documents";
+import { ConnectLink, ConnectSettings } from "../../_workspace/ConnectSettings";
 import { AgentDashboard } from "../../../_agent/AgentDashboard";
 import type { AgentView } from "../../../_agent/types";
 import { color } from "../../../_tokens/tokens";
@@ -30,8 +32,12 @@ type State = {
   products: Product[];
   connections: Connection[];
   plan: { status: "preparing" | "published" | "accepted"; monthly_total_text?: string } | null;
+  // The products open once the client has paid ALYR (ALY-212, D-051).
+  open: boolean;
 };
 type Card = { key: string; module: string; label: Text; value: number; text: string };
+// The go-live readiness check (ALY-165, D-049): the same answer as /start and the back office.
+type Readiness = { stage: "setting_up" | "ready" | "live"; checks: { key: string; label: Text; status: string }[]; left: string[] };
 type Lang = "en" | "ar";
 type Command = { id: string; group: string; label: string; icon: string; run: () => void };
 
@@ -54,6 +60,12 @@ const T = {
     planReady: "Your ALYR price is ready",
     planReadySub: (amount: string) => `${amount} a month. Review it and accept it to go ahead.`,
     planReview: "Review and accept",
+    goLive: { setting_up: "A few steps left to go live", ready: "Ready, waiting for your WhatsApp number" } as Record<string, string>,
+    goLiveSub: (left: string) => `Still to do: ${left}.`,
+    goLiveOpen: "See what is left",
+    lockedTitle: "Your products open once ALYR has your payment",
+    lockedSub: (amount: string) => (amount ? `Due now: ${amount}, the setup fee and your first month. ALYR opens your products the same working day it sees your payment.` : "Accept your price first. ALYR opens your products the same working day it sees your payment."),
+    lockedPay: "See your price and how to pay",
     productsTitle: "Products", productsEyebrow: "Your plan",
     productsSub: "Switch on what your business needs. Switching off hides the screens and keeps every record.",
     active: "Active", available: "Available", on: "On", off: "Off",
@@ -89,6 +101,12 @@ const T = {
     planReady: "سعرك من ALYR جاهز",
     planReadySub: (amount: string) => `${amount} شهرياً. راجعه واقبله للمتابعة.`,
     planReview: "راجع واقبل",
+    goLive: { setting_up: "خطوات قليلة للإطلاق", ready: "جاهز، بانتظار رقم واتساب" },
+    goLiveSub: (left: string) => `المتبقي: ${left}.`,
+    goLiveOpen: "اعرض المتبقي",
+    lockedTitle: "تُفتح منتجاتك عندما يصل دفعك إلى ALYR",
+    lockedSub: (amount: string) => (amount ? `المستحق الآن: ${amount}، رسوم الإعداد وشهرك الأول. تفتح ALYR منتجاتك في يوم العمل نفسه الذي يصلها فيه الدفع.` : "اقبل سعرك أولاً. تفتح ALYR منتجاتك في يوم العمل نفسه الذي يصلها فيه الدفع."),
+    lockedPay: "اعرض سعرك وطريقة الدفع",
     productsTitle: "المنتجات", productsEyebrow: "خطتك",
     productsSub: "فعّل ما يحتاجه عملك. الإيقاف يخفي الشاشات ويحفظ كل السجلات.",
     active: "مفعّل", available: "متاح", on: "مفعّل", off: "متوقف",
@@ -132,6 +150,7 @@ const ICON: Record<string, string> = {
   book: "M5 4h10a3 3 0 0 1 3 3v13H8a3 3 0 0 1-3-3z M5 17a3 3 0 0 1 3-3h10",
   apps: "M4 4h6v6H4z M14 4h6v6h-6z M4 14h6v6H4z M14 14h6v6h-6z",
   catalog: "M4 4h7v8H4z M13 4h7v5h-7z M13 11h7v9h-7z M4 14h7v6H4z",
+  doc: "M7 3h8l4 4v14H7z M15 3v4h4 M10 12h6 M10 16h6",
   plug: "M9 3v5 M15 3v5 M6 8h12v3a6 6 0 0 1-12 0z M12 17v4",
   users: "M9 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8Z M3 21v-2a6 6 0 0 1 12 0v2 M16 4.5a3.5 3.5 0 0 1 0 6.5 M17 15a5 5 0 0 1 4 4.9V21",
   plus: "M12 5v14 M5 12h14",
@@ -190,6 +209,8 @@ export default function WorkspaceShell() {
   const section = params.section?.[0] ?? "home";
   const [state, setState] = useState<State | null>(null);
   const [cards, setCards] = useState<Card[]>([]);
+  const [readiness, setReadiness] = useState<Readiness | null>(null);
+  const [due, setDue] = useState("");
   const [agent, setAgent] = useState<AgentView | null>(null);
   const [agentRise, setAgentRise] = useState(false);
   // ALYR Agent's links open a screen filtered to the rows a rule counted (`?show=`).
@@ -237,6 +258,15 @@ export default function WorkspaceShell() {
       setState(s);
       setCards(h.cards);
       setOffline(false);
+      if (s.open === false) {
+        const p = await fetch("/api/onboarding/payment", { cache: "no-store" });
+        if (p.ok) { const paid = await p.json(); setDue(paid.status === "unpaid" ? paid.left_text : ""); }
+      }
+      // Only those who can act on it see what is left to go live.
+      if (s.can_manage) {
+        const r = await fetch("/api/onboarding/readiness", { cache: "no-store" });
+        if (r.ok) setReadiness(await r.json());
+      }
     } catch {
       setOffline(true);
     }
@@ -377,7 +407,10 @@ export default function WorkspaceShell() {
   const shopName = lang === "ar" && state.business.name_ar ? state.business.name_ar : state.business.name;
   const pending = state.products.filter((p) => p.status === "active" && p.steps.some((s) => !s.done));
   const whatsapp = state.connections.find((c) => c.key === "whatsapp");
-  const current = allNav.find((n) => n.key === section);
+  // The connection screen (ALY-142) lives under Connections in the breadcrumb.
+  const current = allNav.find((n) => n.key === section)
+    ?? (section === "connect" ? allNav.find((n) => n.key === "connections") : undefined);
+  const documentsOn = state.modules.includes("documents");
   const activeProducts = state.products.filter((p) => p.status === "active");
   const roleLabel = state.me.signed_in ? state.me.role.charAt(0).toUpperCase() + state.me.role.slice(1) : t.demo;
 
@@ -442,6 +475,16 @@ export default function WorkspaceShell() {
             <span className="sh-check"><Tick /></span>
             <div><h2>{t.planReady}</h2><p className="sh-note">{t.planReadySub(state.plan.monthly_total_text ?? "")}</p></div>
             <Link className="btn small" href="/start">{t.planReview}<Icon name="arrow" className="sh-ico arrow" /></Link>
+          </section>
+        )}
+        {readiness && readiness.stage !== "live" && state.can_manage && (
+          <section className="sh-tile raised sh-allset sh-plan-ready sh-home-row" style={stagger(0)}>
+            <span className="sh-check" />
+            <div>
+              <h2>{t.goLive[readiness.stage]}</h2>
+              <p className="sh-note">{t.goLiveSub(readiness.checks.filter((c) => c.status !== "done").map((c) => pick(c.label)).join(lang === "ar" ? "، " : ", "))}</p>
+            </div>
+            <Link className="btn small" href="/start?golive">{t.goLiveOpen}<Icon name="arrow" className="sh-ico arrow" /></Link>
           </section>
         )}
         {agent ? (
@@ -564,11 +607,18 @@ export default function WorkspaceShell() {
             );
           })}
         </ul>
+        {documentsOn && state.can_manage && (
+          <ConnectLink lang={lang} href="/app/connect" icon={<Icon name="plug" />} arrow={<Icon name="arrow" className="sh-ico" />} />
+        )}
       </>
     );
+  } else if (section === "connect" && documentsOn) {
+    body = <ConnectSettings lang={lang} canManage={state.can_manage} />;
   } else if (section === "catalog" && enabledScreens.has("catalog")) {
     // Named by the shop's type of business: Menu, Products, Price list (D-039, ALY-107).
     body = <Catalog lang={lang} title={current ? pick(current.label) : t.productsTitle} show={show} onRenamed={() => void load()} />;
+  } else if (section === "documents" && enabledScreens.has("documents")) {
+    body = <Documents lang={lang} title={current ? pick(current.label) : t.productsTitle} show={show} />;
   } else if ((WORK_SCREENS as string[]).includes(section) && enabledScreens.has(section)) {
     body = (
       <Screens embedded section={section as WorkspaceTab} lang={lang} show={show}
@@ -578,6 +628,18 @@ export default function WorkspaceShell() {
           : undefined} />
     );
   } else {
+    body = null;
+  }
+  // Until the client has paid, every screen is this page instead (D-051).
+  if (state.open === false) {
+    body = (
+      <section className="sh-tile raised sh-locked">
+        <h1>{t.lockedTitle}</h1>
+        <p className="sh-note">{t.lockedSub(due)}</p>
+        {state.can_manage && <Link className="btn primary" href="/start">{t.lockedPay}<Icon name="arrow" className="sh-ico arrow" /></Link>}
+      </section>
+    );
+  } else if (body === null) {
     body = (
       <div className="sh-empty-inline">
         <p>{t.notOn}</p>

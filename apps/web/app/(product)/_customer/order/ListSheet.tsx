@@ -9,6 +9,7 @@
 import { Glyph } from "../Frame";
 import type { Lang } from "../price";
 import { lineName, next, total as totalOf, type Line } from "./cart";
+import { addQty, fmtQtyUnit, isMeasure, lineTotal, subQty, unitShort } from "../qty";
 import { T } from "./copy";
 import type { Item } from "./types";
 import { Dialog, DialogHead, Price, Stepper, Tile } from "./ui";
@@ -43,6 +44,7 @@ export function ListSheet({ lang, lines, lookup, parts, setQty, remove, onClose 
                     <b dir="auto">{name}</b>
                     <span className="ox-lprice">
                       <Price value={line.unit} lang={lang} />
+                      {isMeasure(line.unitKey ?? item?.unit ?? "piece") && <small className="ox-per"> {t.perUnit(unitShort(line.unitKey ?? item?.unit ?? "piece", lang))}</small>}
                       {(line.code ?? item?.code) != null && <> · <span className="ox-codeline">{t.code} <bdi className="num">{line.code ?? item?.code}</bdi></span></>}
                     </span>
                     <div className="ox-lact">
@@ -50,9 +52,10 @@ export function ListSheet({ lang, lines, lookup, parts, setQty, remove, onClose 
                     </div>
                   </div>
                   <div className="ox-lqty full">
-                    <Stepper qty={line.qty} atMax={false} labels={labels(name)}
-                      onMinus={() => (item ? setQty(line.key, next(item, line.qty, -1, line.variantId)) : setQty(line.key, line.qty - 1))}
-                      onPlus={() => (item ? setQty(line.key, next(item, line.qty, 1, line.variantId)) : setQty(line.key, line.qty + 1))} />
+                    <Stepper qty={line.qty} text={fmtQtyUnit(line.qty, line.unitKey ?? item?.unit ?? "piece", lang)} atMax={false} labels={labels(name)}
+                      onMinus={() => (item ? setQty(line.key, next(item, line.qty, -1, line.variantId)) : setQty(line.key, subQty(line.qty, 1)))}
+                      onPlus={() => (item ? setQty(line.key, next(item, line.qty, 1, line.variantId)) : setQty(line.key, addQty(line.qty, 1)))} />
+                    {isMeasure(line.unitKey ?? item?.unit ?? "piece") && <Price value={lineTotal(line.unit, line.qty)} lang={lang} className="ox-ltotal" />}
                   </div>
                 </li>
               );

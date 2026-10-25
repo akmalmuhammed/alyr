@@ -19,7 +19,7 @@ Three kinds of entry:
   never deletes or changes anything already made, and an item that already uses it keeps
   working.
 * **Extension points** (`built=False`): a name in the registry for a feature another builder
-  will add later (decimal quantities, cost and margin, discounts, delivery fees, bundles,
+  will add later (cost and margin, discounts, delivery fees, bundles,
   suppliers, barcodes, batches and expiry, serial numbers). They are **hidden everywhere**: no
   screen lists them, no API returns them, nothing can switch them on, and no wording about
   them exists. To build one: write what it does, add its consumers (the form part, the order
@@ -66,6 +66,9 @@ GROUPS: tuple[Group, ...] = (
     Group("selling", Text("Sizes, choices and prices", "المقاسات والخيارات والأسعار"),
           Text("What a customer picks, and what they pay.",
                "ما يختاره العميل وما يدفعه.")),
+    Group("pricing", Text("Discounts, delivery and cost", "الخصومات والتوصيل والتكلفة"),
+          Text("What a customer pays beyond the item's price, and what you earn.",
+               "ما يدفعه العميل فوق سعر الصنف، وما تربحه أنت.")),
     Group("order_page", Text("Your order page", "صفحة الطلب"),
           Text("What your customers see and can do when they order.",
                "ما يراه عملاؤك وما يستطيعون فعله عند الطلب.")),
@@ -212,6 +215,19 @@ BUILT: tuple[Capability, ...] = (
         "pack columns of the files.",
         "يضيف حجم العبوة وأقل كمية للطلب إلى نموذج الصنف، وأزرار الكمية في صفحة الطلب، وأعمدة العبوة في الملفات."),
        "selling", ("form", "order_page", "import_export")),
+    _c("decimal_quantity", ("Sold by weight or volume", "يُباع بالوزن أو الحجم"),
+       ("Let customers order 0.5 kg or 250 ml: dates, coffee, oud, a cake by the kilo, flowers "
+        "or fabric by the metre.",
+        "اسمح لعملائك بطلب نصف كيلو أو 250 مل: تمر وقهوة ودهن عود وكعكة بالكيلو وزهور أو "
+        "أقمشة بالمتر."),
+       ("Adds the units kg, g, litre, ml, metre and tola, and a step and a smallest order such as "
+        "0.25 kg, to the item form; quick quantities and a typed amount to the order page; "
+        "fractions to stock, the files and the WhatsApp commands. Items sold by the piece "
+        "stay whole.",
+        "يضيف الوحدات كغ وغ ولتر ومل ومتر وتولة، وخطوة وأقل كمية مثل 0.25 كغ، إلى نموذج الصنف؛ "
+        "وكميات سريعة وإدخالاً بالكتابة إلى صفحة الطلب؛ وكسوراً إلى المخزون والملفات وأوامر "
+        "واتساب. الأصناف التي تُباع بالقطعة تبقى أعداداً صحيحة."),
+       "selling", ("form", "order_page", "import_export", "reports", "chat"), default=False),
     _c("quick_quantity", ("Quick quantity", "كمية سريعة"),
        ("Plus and minus buttons on every row, so a customer can add without opening the item.",
         "زرّا زائد وناقص على كل صف ليضيف العميل دون فتح الصنف."),
@@ -296,6 +312,41 @@ BUILT: tuple[Capability, ...] = (
         "to the order page.",
         "يضيف حقولك إلى نموذج الصنف والملفات والبحث، وإلى صفحة الطلب إن اخترت ذلك."),
        "details", ("form", "list", "order_page", "import_export", "settings")),
+    # The pricing pack (ALY-150). Off for every shop until the owner or ALYR switches it on.
+    _c("discounts", ("Discounts and coupon codes", "الخصومات ورموز القسائم"),
+       ("Give customers money off: a code they type, or a discount that applies by itself, like "
+        "10% off orders over QAR 200.",
+        "امنح العملاء خصماً: رمزاً يكتبونه أو خصماً تلقائياً مثل 10% على الطلبات فوق 200 ر.ق."),
+       ("Adds Discounts to the Catalog, a coupon box on the order page and in the WhatsApp order, "
+        "the discount line by line on each order, and a line in the weekly report.",
+        "يضيف «الخصومات» إلى الكتالوج، وخانة رمز القسيمة في صفحة الطلب وفي الطلب عبر واتساب، "
+        "والخصم سطراً بسطر في كل طلب، وسطراً في التقرير الأسبوعي."),
+       "pricing", ("settings", "order_page", "chat", "reports"), default=False),
+    _c("delivery_fees", ("Delivery and pickup", "التوصيل والاستلام"),
+       ("Let customers choose pickup or delivery, with a fee for each area you deliver to. "
+        "Customers pick an area from your list and write their address.",
+        "دع العملاء يختارون الاستلام أو التوصيل، برسوم لكل منطقة توصّل إليها. يختار العميل "
+        "منطقة من قائمتك ويكتب عنوانه."),
+       ("Adds Delivery to the Catalog, the choice of pickup or delivery and the delivery fee on "
+        "the order page and in the WhatsApp order, the way each order reaches the customer on "
+        "the order, and a line in the weekly report.",
+        "يضيف «التوصيل» إلى الكتالوج، واختيار الاستلام أو التوصيل ورسوم التوصيل في صفحة الطلب "
+        "وفي الطلب عبر واتساب، وكيف يصل كل طلب إلى العميل في الطلب نفسه، وسطراً في التقرير "
+        "الأسبوعي."),
+       "pricing", ("settings", "order_page", "chat", "reports"), default=False),
+    _c("cost_margin", ("Cost price and margin", "سعر التكلفة والهامش"),
+       ("Write what each item costs you and see what you earn on it. Only you and your admins "
+        "see costs and margins: your team and your customers never do.",
+        "اكتب تكلفة كل صنف عليك وشاهد ما تربحه منه. أنت ومديروك فقط ترون التكاليف والهوامش، "
+        "ولا يراها فريقك ولا عملاؤك أبداً."),
+       ("Adds cost fields to the item form, the margin to the items list and to each order, the "
+        "value of your stock to the Stock tab, cost columns to the Excel and CSV files, and "
+        "lines to the weekly report. It warns you when a price is below the cost, and never "
+        "stops you saving it.",
+        "يضيف حقول التكلفة إلى نموذج الصنف، والهامش إلى قائمة الأصناف وإلى كل طلب، وقيمة "
+        "مخزونك إلى تبويب المخزون، وأعمدة التكلفة إلى ملفات Excel وCSV، وأسطراً إلى التقرير "
+        "الأسبوعي. ينبهك حين يكون السعر أقل من التكلفة، ولا يمنعك من حفظه."),
+       "pricing", ("form", "list", "import_export", "reports"), default=False),
 )
 
 # ── extension points: named, not built, hidden everywhere ─────────────────────────────
@@ -310,7 +361,7 @@ def _later(key: str) -> Capability:
 
 
 EXTENSION_POINTS: tuple[Capability, ...] = tuple(_later(k) for k in (
-    "decimal_quantity", "cost_margin", "discounts", "delivery_fees", "bundles", "suppliers",
+    "bundles", "suppliers",
     "barcode", "batch_expiry", "serial_imei",
 ))
 

@@ -17,7 +17,7 @@ Every function takes a tenant-scoped connection.
 
 import asyncpg
 
-from alyr.modules.items import service, text
+from alyr.modules.items import fields, service, text
 from alyr.modules.items.clock import ShopClock
 
 FILTERS = ("draft", "sold_out", "low_stock", "stocked", "archived", "sample")
@@ -117,7 +117,9 @@ async def low_items(conn: asyncpg.Connection, clock: ShopClock) -> list[dict]:
     """The items the Low stock filter holds, the lowest first, each with `left`."""
     views, low_at = await read(conn, clock)
     low = [
-        {"name": v["name"], "name_ar": v["name_ar"], "left": lowest_left(v, low_at)}
+        {"name": v["name"], "name_ar": v["name_ar"], "left": lowest_left(v, low_at),
+         # (only for something sold in fractions: a stored report keeps its old shape)
+         **({"unit": v["unit"], "show_unit": True} if v["quantity"]["show_unit"] else {})}
         for v in views if is_low(v, low_at)
     ]
     return sorted(low, key=lambda row: (row["left"], row["name"]))
@@ -146,7 +148,14 @@ async def page(
         shown = [v for v in shown if v["category"] == category]
     words = text.search_words(q)
     if words:
-        shown = [v for v in shown if text.matches(words, *_haystack(v))]
+        # What the owner's searchable fields hold is searched too (ALY-148).
+        defs = [f for f in await fields.rows(conn, False) if f["searchable"]]
+        shown = [
+            v for v in shown
+            if text.matches(
+                words, *_haystack(v), *fields.search_text(defs, v["custom"], v["variants"])
+            )
+        ]
     total = len(shown)
     if limit is not None:
         shown = shown[offset: offset + limit]

@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
 # Build the public ALYR site as plain files that any static host can serve.
 #
-# Only the public pages are published: the homepage and the four product pages (/chat,
-# /bookings, /agent, /accounts), each in English and Arabic (/ar, /ar/chat, ...). The
+# Only the public pages are published: the homepage and the six product pages (/chat,
+# /bookings, /agent, /accounts, /shelf, /docs), each in English and Arabic (/ar, /ar/chat, ...). The
 # workspace, sign-in, payment and order pages need the API and are not part of this
 # output, so nothing here can reach customer data.
 #
@@ -22,7 +22,7 @@ NEXT_PUBLIC_ALYR_WORKSPACE_URL="" pnpm build >/dev/null
 
 app=".next/server/app"
 mkdir -p out-site/_next
-pages="chat bookings agent accounts"
+pages="chat bookings agent accounts shelf docs"
 cp "$app/index.html" out-site/index.html
 cp "$app/ar.html" out-site/ar.html
 mkdir -p out-site/ar
@@ -56,6 +56,8 @@ node "$root/scripts/site-defer-scripts.mjs" out-site/index.html out-site/ar.html
 cat > out-site/_headers <<'EOF'
 /opengraph-image
   Content-Type: image/png
+/version.txt
+  Cache-Control: no-cache
 /_next/static/*
   Cache-Control: public, max-age=31536000, immutable
 /*
@@ -64,6 +66,15 @@ cat > out-site/_headers <<'EOF'
   Referrer-Policy: strict-origin-when-cross-origin
   X-Frame-Options: DENY
 EOF
+
+# The site for machines: llms.txt, llms-full.txt and a markdown copy of each page (index.md,
+# chat.md, ar/chat.md, ...), made from copy.ts, with no prices and the samples labelled. It adds their
+# types to _headers, so it runs after _headers is written.
+node "$root/scripts/site/llms.mjs" out-site
+
+# Every build names the commit it came from: out-site/version.txt and a <meta name="alyr-build">
+# in each page, so what is live can be traced to git (docs/runbooks/site-deploy.md).
+node "$root/scripts/site/stamp.mjs" out-site
 
 # Fail loudly if a product page or an API address slipped into the output.
 if grep -rlE "127\.0\.0\.1|/sim/|/api/ledger" out-site/*.html out-site/ar/*.html >/dev/null 2>&1; then

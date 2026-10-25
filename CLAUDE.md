@@ -61,12 +61,28 @@ apps/api/                     FastAPI service (Python 3.13, managed with uv)
                               Settings.catalog_for_new_shops decides whether new shops get it);
                               features.py reads what a shop has switched on (src/alyr/capabilities.py
                               is the registry, src/alyr/shop_templates.py the templates; specs/012):
-                              ask it, never the business type;
+                              ask it, never the business type; fields.py is a shop's own fields on
+                              items and sizes, templates.py the templates made in the back office,
+                              template_change.py a shop's change of type (all specs/012);
+                              orders/totals.py is the ONE pricing function (discounts, delivery fee,
+                              total: the page's review, the chat's draft and the order all call it;
+                              no float) and items/discounts.py, delivery.py and costs.py are the
+                              pricing pack's three features, off for every shop until switched on
+                              (specs/014; cost lives in tables of its own and only owners and admins
+                              ever see it: read costs.py before touching an item's or an order's reader);
                               orders/page.py is what the customer's order page reads (specs/005);
                               documents/ is the documents engine (receipts, invoices, credit notes:
                               gapless numbers, immutable once issued, a PDF drawn in Arabic and
                               English; specs/011, D-042), switched on per shop through the
-                              `documents` module, off for every shop until its screens exist
+                              `documents` module, off for every shop until its screens exist;
+                              sales.py, payments.py and delivery.py make documents from orders,
+                              credit accounts and payments recorded by hand and send them by
+                              WhatsApp, email and a hosted link (specs/013, ALY-139);
+                              listing.py, lookup.py and refs.py are what the workspace's Documents
+                              screens read (specs/014, ALY-146)
+                              connect/ is connected mode: another system sends its sales (open API
+                              with API keys, CSV import), authority says who numbers each kind of
+                              document, webhooks send events out (specs/016, ALY-142, docs/connect-api.md)
                               items/codes.py reads a customer's message for item codes, links and
                               SKUs and items/wa_order.py orders by them in the chat (specs/010)
   src/alyr/routes/            HTTP routes. deps.py: who is calling, which shop, which modules are on
@@ -80,7 +96,8 @@ apps/web/                     Next.js. Three root layouts, one per route group:
   app/(site)/, (site-ar)/     Public site, English and Arabic (/, /ar, /chat, /ar/chat); words in app/_site/copy.ts
   app/(product)/              Workspace (/app), back office (/ops), sign-in (/login), sign-up (/start),
                               sales demo (/whatsapp), owner view sample (/agent-sample), and the customer pages
-                              opened from WhatsApp: order /s, booking /b, payment /pay, tracking /t
+                              opened from WhatsApp: order /s, booking /b, payment /pay, tracking /t,
+                              document /d (a receipt or invoice, by a signed link)
   app/(product)/_customer/    Shared frame, styles, the price format and the Arabic search folding of the
                               customer pages; order/ is the order page (specs/005-order-page-v2)
   app/(product)/_workspace/   Workspace screens and styles
@@ -91,11 +108,15 @@ scripts/                      check.sh (everything CI runs), demo.sh (start and 
                               screens in a real browser at phone width), catalog-reports-browser-check.mjs
                               (its home cards and the back office's Usage view), order-page-browser-check.mjs
                               (the customer's order page, same way), booking-page-browser-check.mjs (the booking page and its links),
+                              document-page-browser-check.mjs (the hosted document page and its links),
+                              documents-screens-browser-check.mjs (the workspace's Documents screens),
+                              connect-browser-check.mjs (the connection screen, phone width, both languages),
                               golive-truth-check.mjs (every onboarding sentence of every business type proved on the
                               finished order page and workspace, English and Arabic),
                               hooks/pre-commit
 specs/                        One folder per spec; write or update the spec before building
-infra/                        Cloud infrastructure as code (proposed in PR #52, not merged)
+infra/cloudflare/api/          The API Worker and container settings for interim hosting (D-052, specs/021);
+                              Azure infrastructure as code was proposed in PR #52, not merged
 packages/compliance/          WPS SIF and e-invoice libraries (not created yet)
 ```
 

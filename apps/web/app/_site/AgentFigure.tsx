@@ -20,7 +20,8 @@
 import { useEffect, useLayoutEffect, useMemo, useRef, useState, type CSSProperties, type ReactNode } from "react";
 import { AgentDashboard, Rich } from "../_agent/AgentDashboard";
 import type { AgentView, Rich as RichParts } from "../_agent/types";
-import type { AgentFigure as FigureCopy, Caption, FeedEvent, SampleKey } from "./copy";
+import type { AgentFigure as FigureCopy, FeedEvent, SampleKey } from "./copy";
+import { SampleMark } from "./Frames";
 import { SAMPLE_EVENT } from "./ReportSwitch";
 import { rich } from "./Text";
 import "./drawings.css";
@@ -34,8 +35,9 @@ type Props = {
   /** The sample shown first (by default the first in `order`). */
   start?: SampleKey;
   text: FigureCopy;
-  figLabel: string;
-  caption: Caption;
+  /** The "Sample" mark in the window's title bar, for a figure without the sample switch
+   * (whose label, "Sample business", already marks the set). */
+  sample?: string;
   label: string;
   switcher?: boolean;
   feed?: boolean;
@@ -45,7 +47,10 @@ type Props = {
   headingLevel?: 2 | 3;
   /** Drawn beside the window: the callouts (the homepage's spotlight). */
   aside?: ReactNode;
-  under?: string;
+  /** Opens the rest of the screen (a native `<details>`): on /agent's phone layout after its
+   * four numbers (site audit P1-c); in the homepage's spotlight at every width, after Needs
+   * you now and the suggestions (framer-review P2). */
+  more?: string;
   id?: string;
   /** Tells other figures on the page which sample was picked (`alyr:sample` with this id):
    * /agent's Sunday report follows the switch (ReportSwitch.tsx). */
@@ -83,14 +88,16 @@ function before(view: AgentView, events: FeedEvent[], shown: number): AgentView 
   };
 }
 
-/** A flag's words, taken from the dashboard itself so the two always agree. */
-function flagged(view: AgentView, flag: NonNullable<FeedEvent["flag"]>): { line: RichParts; rule: string } | null {
+/** A flag's words, taken from the dashboard itself so the two always agree. The site shows
+ * no rule line under it (founder, 25 Oct 2026): the flag says what was counted, in the
+ * dashboard's own words. */
+function flagged(view: AgentView, flag: NonNullable<FeedEvent["flag"]>): { line: RichParts } | null {
   if (flag.from === "suggestion") {
     const card = view.suggestions.find((s) => s.key === flag.key);
-    return card ? { line: card.title, rule: card.rule } : null;
+    return card ? { line: card.title } : null;
   }
   const need = view.needs.items.find((n) => n.key === flag.key);
-  return need ? { line: [{ b: String(need.count) }, " ", ...need.words], rule: need.rule } : null;
+  return need ? { line: [{ b: String(need.count) }, " ", ...need.words] } : null;
 }
 
 function Tick() {
@@ -102,8 +109,8 @@ function Tick() {
 }
 
 export function AgentFigure({
-  variant, views, order, start, text, figLabel, caption, label, switcher = false, feed = false, crop = false, sync,
-  headingLevel = 2, aside, under, id,
+  variant, views, order, start, text, sample: mark, label, switcher = false, feed = false, crop = false, sync,
+  headingLevel = 2, aside, more, id,
 }: Props) {
   const [sample, setSample] = useState<SampleKey>(start ?? order[0]);
   const [phase, setPhase] = useState<"composed" | "waiting" | "playing">("composed");
@@ -231,16 +238,21 @@ export function AgentFigure({
       <div className="aw-bar" aria-hidden="true">
         <span className="aw-mono">{s.monogram}</span>
         <b>{s.shop}</b>
+        {mark && !switcher && <SampleMark label={mark} />}
         <span className="aw-path">{text.path}</span>
       </div>
       <div className="aw-body">
-        <AgentDashboard key={`${sample}-${run}`} view={shownView} mode="showcase" headingLevel={headingLevel} />
+        <AgentDashboard key={`${sample}-${run}`} view={shownView} mode="showcase" headingLevel={headingLevel} headings={false}
+          ruleLines={false} labels={{ suggestions: text.suggestions }} />
       </div>
     </div>
   );
 
   return (
     <figure ref={root} id={id} className={`afig afig-${variant}`} aria-label={label} data-feed={feed || undefined} data-phase={feed ? phase : undefined}>
+      {/* First, before any of the sample's numbers: what this is, for screen readers, search
+          and assistants (site audit 03, A1). The eye reads the mark in the title bar. */}
+      <figcaption className="sr-only">{s.fictional}</figcaption>
       {switcher && (
         <div className="af-switch" role="group" aria-label={text.switchLabel}>
           <span className="af-switch-k" aria-hidden="true">{text.switchLabel}</span>
@@ -254,9 +266,17 @@ export function AgentFigure({
           <span className="sr-only" aria-live="polite">{announce}</span>
         </div>
       )}
-      <div className="af-stage">
+      <div className="af-stage" data-nosnippet>
         {variant === "hero" && <span className="af-plate" aria-hidden="true" />}
         {window_}
+        {more && (
+          <details className="af-more">
+            <summary>
+              <span>{more}</span>
+              <span className="qa-mark" aria-hidden="true" />
+            </summary>
+          </details>
+        )}
         {feed && (
           <div
             className="af-feed"
@@ -288,7 +308,6 @@ export function AgentFigure({
                       ) : (
                         event.line && <span className="af-line">{rich(event.line)}</span>
                       )}
-                      {flag && <span className="af-rule">{flag.rule}</span>}
                     </span>
                   </li>
                 );
@@ -299,14 +318,6 @@ export function AgentFigure({
         )}
         {aside && <div className="af-aside">{aside}</div>}
       </div>
-      <figcaption className="cap">
-        <span className="cap-n">{figLabel} <bdi>{caption.n}</bdi></span>
-        <span className="cap-sep" aria-hidden="true">·</span>
-        <span>{rich(caption.text)}</span>
-        <span className="cap-sep" aria-hidden="true">·</span>
-        <span>{s.fictional}</span>
-      </figcaption>
-      {under && <p className="af-under">{rich(under)}</p>}
     </figure>
   );
 }

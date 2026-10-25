@@ -13,6 +13,9 @@ dependencies = [
     "pillow>=12.3,<13",
     "fpdf2>=2.8.9,<2.9",
     "uharfbuzz>=0.53",
+    # A page of a PDF as a picture, for the workspace screens (ALY-146, render/raster.py). Was a
+    # development dependency (the tests read PDFs with it); the API needs it now.
+    "pypdfium2>=4.30",
 ]
 
 [dependency-groups]
@@ -22,7 +25,6 @@ server = [
     "uvicorn[standard]>=0.32",
 ]
 dev = [
-    "pypdfium2>=4.30",
     "pytest>=8.3",
     "ruff>=0.8",
 ]
@@ -61,11 +63,15 @@ default-groups = ["dev", "server"]
 # The features' and templates' words, in both languages, are kept together for the same review.
 "src/alyr/capabilities.py" = ["E501"]
 "src/alyr/shop_templates.py" = ["E501"]
+"src/alyr/modules/items/templates.py" = ["E501"]
+"src/alyr/routes/admin_templates.py" = ["E501"]
 # A document's every word, in both languages, in one file for the same review (ALY-138).
 "src/alyr/modules/documents/words.py" = ["E501"]
+"src/alyr/modules/documents/delivery_words.py" = ["E501"]
 # The documents tests carry Arabic phrases and SQL that read worse when wrapped (ALY-138).
 "tests/test_documents_*.py" = ["E501"]
 "tests/documents_support.py" = ["E501"]
+"tests/documents_sales_support.py" = ["E501"]
 "tests/pdf_support.py" = ["E501"]
 # Each demo shop's words, in both languages, are kept in one table per shop (ALY-110).
 "src/alyr/demo/shops/*.py" = ["E501"]

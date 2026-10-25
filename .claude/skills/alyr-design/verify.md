@@ -25,31 +25,40 @@ scripts/check.sh
 cd apps/web && pnpm lint && pnpm exec tsc --noEmit && pnpm build
 # the published site: static export, deferred scripts, _headers, a grep for API addresses
 bash scripts/build-site.sh      # writes apps/web/out-site/
+# the site's own commands, from apps/web (scripts/site/; docs/site-audit/05-tooling-log.md)
+pnpm site:check     # build-site.sh, EN/AR copy parity, banned words and prices, internal links
+pnpm site:a11y      # axe on every page (1440 and 390, both themes), Lighthouse mobile on / and /ar
+pnpm site:shots     # screenshots of every page into apps/web/.shots/<commit>/
+pnpm site:serve     # out-site as Cloudflare serves it, compressed, on a free port
+pnpm site:dev       # next dev on a free port from 3101, with its own output folder
 ```
 
 ## Preview servers
 
 - **Never port 3100** and never the checkout `D:\alyr whatsapp`: the laptop's demo and other
   sessions use them. Never the shared `alyr` database or port 8000.
-- A dev server in your own worktree, with its own output folder and a free port of your own
-  (3101 and up are often taken; check first):
-  `ALYR_DIST_DIR=.next-preview pnpm exec next dev -p 31NN` from `apps/web`. Next rewrites
-  `apps/web/tsconfig.json`; `git checkout` it before every commit and delete `.next-preview`
-  at the end.
-- For the final checks, serve `apps/web/out-site` (after `build-site.sh`) with a small Node
-  server **that compresses** (brotli or gzip): without compression Lighthouse read LCP 6.2 s
-  for a page that is 2.3 s behind Cloudflare. Map `/chat` to `chat.html`, `/ar/chat` to
-  `ar/chat.html`.
+- A dev server in your own worktree, with its own output folder and a free port of your own:
+  `pnpm site:dev` from `apps/web` picks a free port from 3101 (never 3100), uses
+  `.next-dev-<port>` and puts back `apps/web/tsconfig.json`, which Next rewrites. Delete
+  `.next-dev-<port>` at the end. By hand:
+  `ALYR_DIST_DIR=.next-preview pnpm exec next dev -p 31NN`, then `git checkout` the
+  tsconfig before every commit.
+- For the final checks, serve `apps/web/out-site` (after `build-site.sh`) with
+  `pnpm site:serve`. It **compresses** (brotli or gzip), applies `_headers` and maps `/chat`
+  to `chat.html`. Without compression Lighthouse read LCP 6.2 s for a page that is 2.3 s
+  behind Cloudflare.
 - **Stop the server before rebuilding** (`build-site.sh` deletes `.next`), and stop every
   server you started when you finish.
 
 ## Screenshots: headless Edge
 
 The in-app browser's screenshots are unreliable here (hidden pane, cropped, animations
-stalled). Use the committed script:
+stalled). Use the committed script. It moved from `docs/site-redesign/baseline/` on 24 Oct
+2026, and the old path still forwards. `pnpm site:shots` runs it over every page, both widths
+and both themes, against the served build.
 
 ```bash
-node docs/site-redesign/baseline/shoot.mjs <url> <width> <height> <out.png> \
+node scripts/site/shoot.mjs <url> <width> <height> <out.png> \
   --scheme=light|dark [--full] [--reduced-motion] [--at=#section --offset=120 --settle=1600] \
   [--wait=ms] [--scale=n] [--as-scrolled] --profile=C:\t\<you>prof
 ```
@@ -72,9 +81,9 @@ node docs/site-redesign/baseline/shoot.mjs <url> <width> <height> <out.png> \
 
 ## Probes the script does not have yet
 
-The committed `shoot.mjs` has no `--eval`. The reviews ran these with their own scripts
-outside the repo; until a probe is committed, write a short DevTools script beside your
-captures (outside the repo) for:
+`shoot.mjs --eval="<expression>"` prints the value of an expression once the page has
+loaded. The probes below are not committed yet. Until one is, write it as an `--eval` or as a
+short DevTools script beside your captures (outside the repo):
 - **320 overflow:** `document.documentElement.scrollWidth === 320` at 320 × 700 in both
   languages, and the sticky bar fully on screen.
 - **Targets:** every interactive element at least 44 × 44 at 390.
@@ -85,11 +94,10 @@ captures (outside the repo) for:
 
 ## Accessibility
 
-- **axe-core 4.14, zero serious or critical** (aim for none at all), injected with
-  puppeteer-core into Edge, on the built site, at the top and after scrolling to the end,
-  with `content-visibility` forced visible (otherwise half-arrived items report contrast).
-  On the founder's laptop the tools are in `C:\t\tools` (another session's folder: require
-  by absolute path, do not edit). Large-text contrast is 3:1.
+- **axe-core 4.14, zero serious or critical** (aim for none at all), on the built site, at
+  the top and after scrolling to the end, with `content-visibility` forced visible (otherwise
+  half-arrived items report contrast). `pnpm site:a11y` does this with the `axe-core` pinned
+  in `apps/web`; `C:\t\tools` is no longer needed. Large-text contrast is 3:1.
 - **Text under a CSS filter** (the drawn chat bubbles) is skipped by axe: scan its contrast
   directly.
 - Keyboard: Tab through every control, open and close every menu with Enter, Space and
@@ -97,21 +105,26 @@ captures (outside the repo) for:
 
 ## Performance (site pages)
 
-Lighthouse 12 mobile, simulated throttling, against the compressed `out-site`, two or three
+Lighthouse mobile, simulated throttling, against the compressed `out-site`, two or three
 runs; report the lowest: Performance ≥ 90, Accessibility 100, CLS < 0.05, LCP < 2.5 s.
-`CHROME_PATH` points at Edge.
+`pnpm site:a11y --no-axe --pages=/,/chat --runs=3` runs the pinned Lighthouse 13 on Edge
+(or `CHROME_PATH`) and fails below that budget.
 
 ## Words and claims
 
 - Read every changed line, `aria-label`, alt text, meta description, social card and
   caption against [honesty.md](honesty.md) and `docs/status.md`.
-- Grep the copy files for the AI word list, the retired names and "QAR" on Arabic pages.
+- `pnpm site:check` checks the copy and the built pages for the AI words (read from
+  [honesty.md](honesty.md) section 1), "coming", "soon", Payroll, "Early access", and prices
+  while the offer is off. A true use goes in `scripts/site/allow/banned.json` with its
+  reason. It does not judge meaning, so still read the lines.
+- Grep the copy files for the retired names and "QAR" on Arabic pages.
 - Grep for retired sample names after any rename (`Sadaf|Nasma|صدف|نسمة`).
 
 ## Cloud sessions
 
 No Edge, axe or Lighthouse there, and no founder's laptop. A cloud session can run
-`scripts/check.sh` (after `scripts/cloud-setup.sh`) and `build-site.sh`, and must say in
+`scripts/check.sh` (after `scripts/cloud-setup.sh`) and `pnpm site:check`, and must say in
 its report that screenshots, axe and Lighthouse were not run.
 
 ## CI and merging

@@ -10,6 +10,7 @@ import { memo } from "react";
 import { Glyph } from "../Frame";
 import type { Lang } from "../price";
 import { most, next } from "./cart";
+import { cmpQty, fmtQty, fmtQtyUnit, unitFor, unitShort } from "../qty";
 import { say, T } from "./copy";
 import type { Item, Variant } from "./types";
 import { Price, Stepper } from "./ui";
@@ -52,12 +53,16 @@ function Line({ row, lang, qty, canOrder, showSku = true, onOpen, onSet, onLimit
   const meta = [
     (variant?.sku || item.sku) ? `${t.sku} ${variant?.sku || item.sku}` : "",
     item.unit && item.unit !== "piece" ? t.units[item.unit] ?? item.unit : "",
-    item.pack_size && item.pack_size > 1 ? t.pack(item.pack_size) : "",
-    item.min_order > 1 ? t.minimum(item.min_order) : "",
+    item.quantity?.show_unit
+      ? t.amountHint(fmtQtyUnit(item.quantity.step, unitFor(item), lang), fmtQtyUnit(item.min_order, unitFor(item), lang))
+      : [
+          item.pack_size && item.pack_size > 1 ? t.pack(fmtQty(item.pack_size)) : "",
+          item.min_order > 1 ? t.minimum(fmtQty(item.min_order)) : "",
+        ].filter(Boolean).join(" · "),
   ].filter(Boolean).join(" · ");
   const left = variant ? variant.left : item.left;
   const label = part ? `${name}, ${part}` : name;
-  const atMax = qty >= most(item, variantId);
+  const atMax = cmpQty(qty, most(item, variantId)) >= 0;
   return (
     <div role="row" className={`ox-wrow ${orderable ? "" : "off"}`}>
       {showSku && <span role="cell" className="ox-wsku" dir="ltr">{code}</span>}
@@ -66,11 +71,12 @@ function Line({ row, lang, qty, canOrder, showSku = true, onOpen, onSet, onLimit
           {name}{part ? <> <span className="ox-wpart">{part}</span></> : null}
         </button>
         {meta && <small dir="auto">{meta}</small>}
-        {sold ? <span className="ox-pill off">{t.soldOut}</span> : left !== null && left > 0 ? <span className="ox-pill few">{item.daily ? t.onlyLeftToday(left) : t.onlyLeft(left)}</span> : null}
+        {sold ? <span className="ox-pill off">{t.soldOut}</span> : left !== null && left > 0 ? <span className="ox-pill few">{item.daily ? t.onlyLeftToday(fmtQtyUnit(left, unitFor(item), lang)) : t.onlyLeft(fmtQtyUnit(left, unitFor(item), lang))}</span> : null}
         {!sold && item.note && <small className="ox-wnote" dir="auto">{say(lang, item.note.en, item.note.ar)}</small>}
       </span>
       <span role="cell" className="ox-wprice">
         <Price value={price} lang={lang} />
+        {item.quantity?.show_unit && <small className="ox-per">{t.perUnit(unitShort(unitFor(item), lang))}</small>}
         {listPrice !== null && <s className="ox-was"><Price value={listPrice} lang={lang} /></s>}
       </span>
       <span role="cell" className="ox-wqty">
@@ -78,7 +84,7 @@ function Line({ row, lang, qty, canOrder, showSku = true, onOpen, onSet, onLimit
           row.choose ? (
             <button type="button" className="ox-choose" onClick={() => onOpen(item)} aria-label={t.chooseNamed(name)}>{t.choose}</button>
           ) : qty > 0 ? (
-            <Stepper qty={qty} atMax={atMax}
+            <Stepper qty={qty} text={fmtQtyUnit(qty, unitFor(item), lang)} atMax={atMax}
               labels={{ minus: `${t.remove}: ${label}`, plus: `${t.moreOne}: ${label}`, quantity: `${t.quantity}: ${label}` }}
               onMinus={() => onSet(item, variantId, next(item, qty, -1, variantId))}
               onPlus={() => { const to = next(item, qty, 1, variantId); if (to === qty) onLimit(item); else onSet(item, variantId, to); }} />

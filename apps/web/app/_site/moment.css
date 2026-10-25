@@ -1,0 +1,249 @@
+/* The two signature figures of the product pages (03-visuals.md §1): ALYR Shelf's "The last
+   one" (LastOne.tsx, .lo-*) and ALYR Docs' "A payment becomes paper" (PaymentPaper.tsx,
+   .pp-*, with the paper itself in paper.css). One grammar for both: three parts on one
+   hairline rule with crosses, each part arriving along 45 degrees, one Volt mark when the
+   thing is done. CSS only, keyed on `.is-in` on each part (SiteMotion): on a wide screen every
+   part at once, when the figure is substantially in view; on a phone each part as it comes
+   into view, its delays counted from its own first beat (`--t0`). The HTML is the end state; start
+   states exist only under `.motion`, so without scripts or with reduced motion every figure
+   is complete. Every delay is a number of `--stagger` steps (60 ms); every duration a
+   `--dur-*` token. It plays once and ends before 3 s. */
+
+.sig-sec .built-head { max-width: 50rem; }
+.sig { min-width: 0; }
+.sig-stage {
+  position: relative; display: grid; grid-template-columns: repeat(12, minmax(0, 1fr));
+  column-gap: var(--col-gap); align-items: start; padding-block: var(--space-5);
+}
+/* the construction line the three parts stand over, with a cross at each end: they hang from
+   one label line above it */
+.sig-rule { position: absolute; inset-inline: 0; bottom: 0; height: 1px; background: var(--line); }
+.sig-rule i { position: absolute; top: -4px; width: 9px; height: 9px; }
+.sig-rule i:first-child { inset-inline-start: -4px; }
+.sig-rule i:last-child { inset-inline-end: -4px; }
+.sig-rule i::before, .sig-rule i::after { content: ""; position: absolute; background: var(--line-strong); }
+.sig-rule i::before { inset: 4px 0 auto; height: 1px; }
+.sig-rule i::after { inset: 0 auto 0 4px; width: 1px; }
+.sig-part { position: relative; z-index: 1; display: grid; grid-template-columns: minmax(0, 1fr); gap: var(--space-2); min-width: 0; }
+.sig-k {
+  font-family: var(--mono); font-size: var(--fs-micro); font-weight: 500; letter-spacing: var(--tracking-label);
+  text-transform: uppercase; color: var(--text-muted);
+}
+[lang="ar"] .sig-k { font-family: var(--arabic); letter-spacing: 0; text-transform: none; font-size: var(--fs-caption); }
+
+/* ------------------------------------------------------------ ALYR Shelf: the last one */
+.lo-a { grid-column: 1 / span 3; }
+.lo-card { grid-column: 5 / span 4; }
+.lo-b { grid-column: 10 / span 3; }
+.lo-phone { height: 17.5rem; }
+.lo-body { display: grid; grid-template-columns: minmax(0, 1fr); gap: 10px; padding: 12px 10px 0; }
+.lo-row { min-height: 64px; border-radius: var(--radius-lg); background: var(--d-card); box-shadow: var(--d-lift); }
+.lo-end { display: grid; justify-items: end; }
+.lo-end > * { grid-area: 1 / 1; }
+.lo-low { display: grid; align-items: start; }
+.lo-low > * { grid-area: 1 / 1; }
+.lo-bar { display: grid; padding: 10px; border-radius: var(--radius-lg); background: var(--d-card); box-shadow: var(--d-float); }
+.lo-press { display: grid; place-items: center; }
+.lo-press > span { grid-area: 1 / 1; }
+.lo-t2 { opacity: 0; }
+.lo-res, .lo-notice { display: grid; gap: 3px; padding: 11px 12px; border-radius: var(--radius-lg); background: var(--d-card); box-shadow: var(--d-lift); font-size: var(--fs-micro); line-height: 1.4; color: var(--d-ink-2); }
+.lo-res b, .lo-notice b { color: var(--d-ink); font-size: var(--fs-label); font-weight: var(--weight-semibold); }
+.lo-res-tick { display: grid; place-items: center; width: 20px; height: 20px; margin-bottom: 3px; border-radius: 50%; box-shadow: inset 0 0 0 1.5px var(--d-ink); color: var(--d-ink); }
+.lo-res-tick svg { width: 11px; height: 11px; stroke-width: 2.8; }
+.lo-notice { box-shadow: var(--d-lift), inset 2px 0 0 var(--d-ink); }
+[dir="rtl"] .lo-notice { box-shadow: var(--d-lift), inset -2px 0 0 var(--d-ink); }
+/* the end state: Aisha's order received (her row no longer offers the last one); Mariam's
+   row greyed and told */
+.lo-a .lo-bar, .lo-b .lo-bar { opacity: 0; }
+.lo-b .lo-dim { opacity: .48; }
+.lo-a .lo-pill, .lo-a .lo-step, .lo-b .lo-pill, .lo-b .lo-step { opacity: 0; }
+
+.lo-win { box-shadow: 0 0 0 1px var(--window-line), var(--window-shadow); }
+.lo-win-body { display: grid; gap: var(--space-3); padding: var(--space-4) var(--space-4) var(--space-5); }
+.lo-item { display: grid; grid-template-columns: auto minmax(0, 1fr); column-gap: var(--space-3); row-gap: 2px; align-items: baseline; }
+.lo-item b { font-size: var(--fs-small); font-weight: 600; line-height: 1.3; }
+.lo-item small { grid-column: 2; font-size: var(--fs-caption); color: var(--text-muted); }
+.lo-code { grid-row: 1 / span 2; align-self: start; padding: 2px 6px; border-radius: var(--radius-sm); box-shadow: inset 0 0 0 1px var(--line-strong); font-family: var(--mono); font-size: var(--fs-micro); color: var(--text-muted); font-variant-numeric: tabular-nums; }
+.lo-count { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: end; column-gap: var(--space-3); padding-block: var(--space-2) var(--space-3); border-bottom: 1px solid var(--window-line); }
+.lo-count-k { grid-column: 1 / -1; font-size: var(--fs-caption); font-weight: 600; color: var(--text-muted); }
+.lo-num { display: inline-flex; align-items: baseline; gap: var(--space-2); }
+.lo-num small { font-size: var(--fs-small); color: var(--text-muted); }
+.lo-digit {
+  position: relative; display: inline-grid; overflow: hidden; height: 1em; line-height: 1;
+  font-size: clamp(3.5rem, 2.6rem + 2.4vw, 4.75rem); font-weight: var(--weight-display); letter-spacing: -.03em; font-variant-numeric: tabular-nums; font-family: var(--sans);
+}
+.lo-digit > span { grid-area: 1 / 1; }
+.lo-d1 { opacity: 0; }
+.lo-out { align-self: center; padding: 3px 9px; border-radius: var(--radius-sm); background: var(--text); color: var(--text-inverse); font-size: var(--fs-caption); font-weight: 600; }
+.lo-log-k { font-size: var(--fs-caption); font-weight: 600; color: var(--text-muted); }
+.lo-log { display: grid; margin-top: calc(-1 * var(--space-2)); }
+.lo-log li {
+  display: grid; grid-template-columns: 1.25rem auto auto minmax(0, 1fr) auto; column-gap: var(--space-2); align-items: center;
+  padding-block: var(--space-2); border-top: 1px solid var(--window-line); font-size: var(--fs-caption); line-height: 1.35;
+}
+.lo-log li:first-child { border-top: 0; }
+.lo-log b { font-weight: 600; }
+.lo-delta { font-variant-numeric: tabular-nums; font-weight: 600; }
+.lo-ord { color: var(--text-muted); min-width: 0; }
+.lo-at { color: var(--text-muted); font-variant-numeric: tabular-nums; }
+.lo-bal { grid-column: 2 / -1; font-family: var(--mono); font-size: var(--fs-micro); color: var(--text-muted); }
+[lang="ar"] .lo-bal { font-family: var(--arabic); font-size: var(--fs-caption); }
+.lo-tick { display: grid; place-items: center; width: 1.125rem; height: 1.125rem; border-radius: 50%; box-shadow: inset 0 0 0 1.5px var(--line-strong); color: var(--on-volt); }
+.lo-tick svg { width: .625rem; height: .625rem; fill: none; stroke: currentColor; stroke-width: 3; stroke-linecap: round; stroke-linejoin: round; }
+/* the one Volt mark: the row the sale wrote, ticked (a ring keeps it 3:1 on light) */
+.lo-new .lo-tick { background: var(--volt); box-shadow: 0 0 0 1px var(--line-strong); }
+
+/* ------------------------------------------------------------------------- motion */
+@keyframes sig-arrive { from { opacity: 0; translate: calc(var(--dir) * var(--travel)) calc(-1 * var(--travel)); } }
+@keyframes sig-leave { to { opacity: 0; translate: calc(var(--dir) * .55em) -.55em; } }
+@keyframes sig-enter { from { opacity: 0; translate: calc(var(--dir) * -.55em) .55em; } to { opacity: 1; } }
+@keyframes sig-in { from { opacity: 0; } to { opacity: 1; } }
+@keyframes sig-out { from { opacity: 1; } to { opacity: 0; } }
+@keyframes sig-rise { from { opacity: 0; translate: 0 .5rem; } to { opacity: 1; } }
+@keyframes sig-press { 50% { scale: .98; } }
+@keyframes sig-wipe { from { clip-path: inset(0 0 100% 0); } to { clip-path: inset(0); } }
+@keyframes sig-tick { from { scale: .6; background: transparent; } to { scale: 1; } }
+@keyframes sig-dim { from { opacity: 1; } to { opacity: .48; } }
+@keyframes sig-hold { from, to { opacity: 1; } }
+
+@media (prefers-reduced-motion: no-preference) {
+  /* before a part is read: everything at its start */
+  .motion .sig .sig-part:not(.is-in) { opacity: 0; }
+  .motion .lo .sig-part:not(.is-in) .lo-bar,
+  .motion .lo .sig-part:not(.is-in) .lo-pill, .motion .lo .sig-part:not(.is-in) .lo-step, .motion .lo .sig-part:not(.is-in) .lo-d1 { opacity: 1; }
+  .motion .lo .sig-part:not(.is-in) .lo-res, .motion .lo .sig-part:not(.is-in) .lo-notice, .motion .lo .sig-part:not(.is-in) .lo-off,
+  .motion .lo .sig-part:not(.is-in) .lo-d0, .motion .lo .sig-part:not(.is-in) .lo-out { opacity: 0; }
+  .motion .lo .sig-part:not(.is-in) .lo-new { clip-path: inset(0 0 100% 0); }
+  .motion .lo .lo-b:not(.is-in) .lo-dim { opacity: 1; }
+
+  /* 0 to 600 ms: Aisha's phone, then Mariam's, then the stock card, along 45 degrees */
+  .motion .sig .sig-part.is-in { animation: sig-arrive var(--dur-3) var(--ease) both; animation-delay: calc(var(--p, 0) * var(--stagger)); }
+  /* 600 ms: both bars pressed at once; 720 ms: "Placing your order…" */
+  .motion .lo .is-in .lo-bar { animation: sig-hold var(--dur-1) linear both, sig-out var(--dur-2) var(--ease) forwards; animation-delay: 0s, calc((28 - var(--t0, 0)) * var(--stagger)); }
+  .motion .lo .lo-b.is-in .lo-bar { animation-delay: 0s, calc((30 - var(--t0, 0)) * var(--stagger)); }
+  .motion .lo .is-in .lo-press { animation: sig-press var(--dur-2) var(--spring) both; animation-delay: calc((10 - var(--t0, 0)) * var(--stagger)); }
+  .motion .lo .is-in .lo-t1 { animation: sig-out var(--dur-1) var(--ease) both; animation-delay: calc((12 - var(--t0, 0)) * var(--stagger)); }
+  .motion .lo .is-in .lo-t2 { animation: sig-in var(--dur-1) var(--ease) both; animation-delay: calc((12 - var(--t0, 0)) * var(--stagger)); }
+  /* 960 ms: the sale's row wipes into the log from the top */
+  .motion .lo .is-in .lo-new { animation: sig-wipe var(--dur-3) var(--ease) both; animation-delay: calc((16 - var(--t0, 0)) * var(--stagger)); }
+  /* 1200 ms: 1 leaves up along 45 degrees; 0 arrives from the other side */
+  .motion .lo .is-in .lo-d1 { animation: sig-hold var(--dur-1) linear both, sig-leave var(--dur-3) var(--ease) forwards; animation-delay: 0s, calc((20 - var(--t0, 0)) * var(--stagger)); }
+  .motion .lo .is-in .lo-d0 { animation: sig-enter var(--dur-3) var(--ease) both; animation-delay: calc((22 - var(--t0, 0)) * var(--stagger)); }
+  .motion .lo .is-in .lo-out { animation: sig-in var(--dur-2) var(--ease) both; animation-delay: calc((26 - var(--t0, 0)) * var(--stagger)); }
+  /* 1560 ms: the one Volt tick */
+  .motion .lo .is-in .lo-new .lo-tick { animation: sig-tick var(--dur-2) var(--spring) both; animation-delay: calc((26 - var(--t0, 0)) * var(--stagger)); }
+  /* 1680 ms: Aisha's order is received, and her row no longer offers the last one */
+  .motion .lo .is-in .lo-res { animation: sig-rise var(--dur-2) var(--ease) both; animation-delay: calc((28 - var(--t0, 0)) * var(--stagger)); }
+  .motion .lo .lo-a.is-in .lo-pill, .motion .lo .lo-a.is-in .lo-step { animation: sig-hold var(--dur-1) linear both, sig-out var(--dur-2) var(--ease) forwards; animation-delay: 0s, calc((28 - var(--t0, 0)) * var(--stagger)); }
+  /* 1800 ms: Mariam's row greys, says Sold out, and she is told */
+  .motion .lo .lo-b.is-in .lo-dim { animation: sig-dim var(--dur-3) var(--ease) both; animation-delay: calc((30 - var(--t0, 0)) * var(--stagger)); }
+  .motion .lo .lo-b.is-in .lo-pill, .motion .lo .lo-b.is-in .lo-step { animation: sig-hold var(--dur-1) linear both, sig-out var(--dur-2) var(--ease) forwards; animation-delay: 0s, calc((30 - var(--t0, 0)) * var(--stagger)); }
+  .motion .lo .is-in .lo-off { animation: sig-in var(--dur-2) var(--ease) both; animation-delay: calc((32 - var(--t0, 0)) * var(--stagger)); }
+  .motion .lo .is-in .lo-notice { animation: sig-rise var(--dur-3) var(--ease) both; animation-delay: calc((30 - var(--t0, 0)) * var(--stagger)); }
+}
+
+/* ------------------------------------------------------------------------- narrower */
+@media (max-width: 75rem) {
+  .lo-a { grid-column: 1 / span 4; }
+  .lo-card { grid-column: 5 / span 4; }
+  .lo-b { grid-column: 9 / span 4; }
+}
+/* stacked on a rule down the inline-start edge: Aisha, the card, Mariam */
+@media (max-width: 61.99rem) {
+  .sig-stage { grid-template-columns: minmax(0, 1fr); row-gap: var(--space-6); padding-inline-start: var(--space-5); }
+  .sig-rule { inset-inline: auto; inset-inline-start: 0; top: 0; bottom: 0; width: 1px; height: auto; }
+  .sig-rule i:first-child { inset-inline-start: -4px; top: -4px; }
+  .sig-rule i:last-child { inset-inline-end: auto; inset-inline-start: -4px; top: auto; bottom: -4px; }
+  .lo-a, .lo-card, .lo-b { grid-column: 1; }
+  .lo-phone { width: min(21rem, 100%); height: 16.25rem; }
+  .lo-win { max-width: 30rem; }
+  /* each part plays as it comes into view, from its own first beat */
+  .lo-a, .lo-card, .pf-a { --t0: 8; }
+  .lo-b { --t0: 20; }
+  .pf-paper { --t0: 12; }
+  .pf-c { --t0: 30; }
+}
+
+/* ---------------------------------------------- ALYR Docs: a payment becomes paper */
+.pf-a { grid-column: 1 / span 4; }
+.pf-paper { grid-column: 5 / span 5; }
+.pf-c { grid-column: 10 / span 3; }
+.pf-body { display: grid; gap: var(--space-2); padding: var(--space-4); font-size: var(--fs-caption); line-height: 1.45; }
+.pf-title { font-size: var(--fs-base); font-weight: 600; }
+.pf-sub { color: var(--text-muted); margin-bottom: var(--space-1); }
+.pf-k { margin-top: var(--space-1); font-weight: 600; color: var(--text-muted); }
+.pf-field { display: flex; align-items: center; height: 2.5rem; padding: 0 .75rem; border-radius: var(--radius-sm); box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--text) 22%, transparent); font-size: var(--fs-small); font-weight: 600; font-variant-numeric: tabular-nums; }
+.pf-methods { display: flex; flex-wrap: wrap; gap: var(--space-1); }
+.pf-methods span { display: inline-flex; align-items: center; height: 1.875rem; padding: 0 .75rem; border-radius: var(--radius-sm); box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--text) 22%, transparent); font-weight: 600; }
+.pf-methods span.on { background: var(--text); color: var(--window); box-shadow: none; }
+.pf-check { display: flex; gap: .625rem; align-items: flex-start; margin-block: var(--space-1); }
+.pf-check > span:last-child { display: grid; gap: 1px; }
+.pf-check small { color: var(--text-muted); font-size: var(--fs-micro); }
+.pf-box { display: grid; place-items: center; width: 1.125rem; height: 1.125rem; flex: none; margin-top: 1px; border-radius: var(--radius-control); background: var(--text); color: var(--window); }
+.pf-box svg, .pf-done-tick svg, .pf-sent-tick svg { width: .6875rem; height: .6875rem; fill: none; stroke: currentColor; stroke-width: 3; stroke-linecap: round; stroke-linejoin: round; }
+.pf-press { justify-self: start; }
+.pf-done { display: flex; gap: .5rem; align-items: center; margin-top: var(--space-1); padding: .625rem .75rem; border-radius: var(--radius-md); box-shadow: inset 0 0 0 1px var(--window-line); font-weight: var(--weight-semibold); }
+.pf-done-tick { display: grid; place-items: center; width: 1.125rem; height: 1.125rem; flex: none; border-radius: 50%; box-shadow: inset 0 0 0 1.5px var(--text); color: var(--text); }
+.pf-sheet { position: relative; }
+.pf-roll { display: none; margin-inline: auto; }
+.pf-wa { max-width: none; height: auto; border-width: .3125rem; }
+.pf-wa .wa-thread { min-height: 19rem; justify-content: flex-end; }
+.pf-wa .wa-msg { max-width: 92%; }
+.pf-sent { display: inline-flex; align-items: center; gap: .5rem; justify-self: start; font-size: var(--fs-caption); font-weight: 600; }
+/* the one Volt mark: sent (a ring keeps it 3:1 on light) */
+.pf-sent-tick { display: grid; place-items: center; width: 1.25rem; height: 1.25rem; border-radius: 50%; background: var(--volt); color: var(--on-volt); box-shadow: 0 0 0 1px var(--line-strong); }
+
+/* the paper draws itself along the fold's diagonal, from the top inline-end corner. The
+   triangle grows past the sheet by 3 rem, so its rules and shadow are never cut. */
+.pf-paper { container-type: inline-size; }
+.pf-sheet { --wipe-to: 260cqi; }
+@property --wipe { syntax: "<length>"; inherits: false; initial-value: 0px; }
+@keyframes pf-wipe { from { --wipe: 0px; } to { --wipe: var(--wipe-to); } }
+@media (prefers-reduced-motion: no-preference) {
+  .motion .pf .pf-paper:not(.is-in) .pf-sheet { clip-path: polygon(100% 0, 100% 0, 100% 0); }
+  .motion .pf .sig-part:not(.is-in) .pp-in, .motion .pf .sig-part:not(.is-in) .pf-done, .motion .pf .sig-part:not(.is-in) .pf-doc,
+  .motion .pf .sig-part:not(.is-in) .pf-sent { opacity: 0; }
+
+  .motion .pf .is-in .pf-press { animation: sig-press var(--dur-2) var(--spring) both; animation-delay: calc((10 - var(--t0, 0)) * var(--stagger)); }
+  .motion .pf .is-in .pf-done { animation: sig-rise var(--dur-2) var(--ease) both; animation-delay: calc((12 - var(--t0, 0)) * var(--stagger)); }
+  .motion .pf .pf-paper.is-in .pf-sheet {
+    clip-path: polygon(calc(100% + 3rem) -3rem, calc(100% + 3rem - var(--wipe)) -3rem, calc(100% + 3rem) calc(var(--wipe) - 3rem));
+    animation: pf-wipe var(--dur-4) var(--ease) both; animation-delay: calc((16 - var(--t0, 0)) * var(--stagger));
+  }
+  .motion[dir="rtl"] .pf .pf-paper:not(.is-in) .pf-sheet { clip-path: polygon(0 0, 0 0, 0 0); }
+  .motion[dir="rtl"] .pf .pf-paper.is-in .pf-sheet { clip-path: polygon(-3rem -3rem, calc(var(--wipe) - 3rem) -3rem, -3rem calc(var(--wipe) - 3rem)); }
+  .motion .pf .is-in .pp-in { animation: sig-rise var(--dur-2) var(--ease) both; animation-delay: calc((18 + var(--k, 0) - var(--t0, 0)) * var(--stagger)); }
+  .motion .pf .is-in .pf-doc { animation: sig-rise var(--dur-3) var(--ease) both; animation-delay: calc((34 - var(--t0, 0)) * var(--stagger)); }
+  .motion .pf .is-in .pf-sent { animation: sig-in var(--dur-2) var(--ease) both; animation-delay: calc((44 - var(--t0, 0)) * var(--stagger)); }
+  .motion .pf .is-in .pf-sent-tick { animation: sig-tick var(--dur-2) var(--spring) both; animation-delay: calc((44 - var(--t0, 0)) * var(--stagger)); }
+}
+
+@media (max-width: 75rem) {
+  .pf-a { grid-column: 1 / span 4; }
+  .pf-paper { grid-column: 5 / span 4; }
+  .pf-c { grid-column: 9 / span 4; }
+}
+/* phones: the sheet and its result, then the 80 mm roll, then the bubble */
+@media (max-width: 61.99rem) {
+  .pf-a, .pf-paper, .pf-c { grid-column: 1; }
+  .pf-win, .pf-wa { max-width: 26rem; }
+  .pf-a4 { display: none; }
+  .pf-roll { display: block; margin-inline: 0; }
+  .pf-sheet { --wipe-to: 420cqi; }
+  .pf-wa .wa-thread { min-height: 0; }
+}
+@media (max-width: 30rem) {
+  .sig-stage { padding-inline-start: var(--space-4); }
+  .lo-win-body, .pf-body { padding: var(--space-3); }
+  .lo-log li { column-gap: var(--space-1); }
+  .lo-phone { height: 18.5rem; }
+  /* the count can take two lines rather than run under the stepper */
+  .lo-row .d-pill.few { white-space: normal; }
+}
+/* the smallest phones: the stepper and Sold out drop under the item, so a long Arabic name
+   keeps its width and the count stays on one line */
+@media (max-width: 23.99rem) {
+  .lo-row { flex-wrap: wrap; }
+  .lo-end { flex: 1 0 100%; justify-items: start; }
+  .lo-row .d-pill.few { white-space: nowrap; }
+}

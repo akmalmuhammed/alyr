@@ -10,7 +10,7 @@ The founder confirms the "2FA" column; until confirmed it says "check".
 |---|---|---|---|---|---|
 | GitHub (`akmalmuhammed/alyr`) | Code, CI | Founder | Founder's GitHub | check | No code changes or CI |
 | Linear (team Alyrtech) | Plan and tasks | Founder | Founder's email | check | Plan history |
-| Cloudflare | DNS for alyr.qa and alyr.online, public site Worker, tunnel, email routing, R2 | Founder (akmalmuhammed93@gmail.com) | Google account | check | Site, email and webhook go down |
+| Cloudflare | DNS for alyr.qa and alyr.online, public site Worker, tunnel, email routing, R2; from D-052 the portal and API Workers and the API container (Workers Paid plan once the founder agrees) | Founder (akmalmuhammed93@gmail.com) | Google account | check | Site, email and webhook go down |
 | Cloudflare API token "DNS edit" | Edit alyr.qa DNS from scripts | Founder | In `apps/api/.env` | n/a | Recreate; rotate per runbook |
 | Cloudflare R2 API token (bucket `alyr-media`, object read and write) | Product photos from the API | Founder | In `apps/api/.env`; production in the key vault | n/a | Photos stop saving and the queue waits; rotate per runbook |
 | QHost | Registrar for alyr.qa | Founder | QHost account | check | Domain cannot be renewed: **renewal date to record** |
@@ -21,9 +21,11 @@ The founder confirms the "2FA" column; until confirmed it says "check".
 | Resend API keys | CLI (full access), app (send-only, alyr.qa) | Founder | CLI config; `apps/api/.env` | n/a | Rotate per runbook |
 | Gmail (akmalmuhammed43@gmail.com) | Receives akmal@, hello@, security@alyr.qa | Founder | Google account | check | Company mail unread |
 | Gmail (akmalmuhammed93@gmail.com) | Ministry of Commerce correspondence, Cloudflare | Founder | Google account | check | Government messages missed |
-| Neon | Hosted demo database (Frankfurt) | Founder | check | check | Demo data only |
+| Neon | Hosted database (Frankfurt): the demo shop; real clients only if the founder agrees (D-052). Connection strings live as Cloudflare Worker secrets (`wrangler secret put`), never in the repo | Founder | check | check | Demo data only until decided |
 | Microsoft for Startups / Azure | Planned production hosting (ALY-55, ALY-10) | Founder | Not yet created | | |
 | Google Cloud | Planned staging and backups | Founder | Not yet created | | |
+| ALYR API keys (a shop's machine access, `alyr_k1_...`; ALY-142) | Let a shop's other system send sales to ALYR and read its documents; never a person, never the workspace | The shop's owner or an admin makes and revokes them in the workspace (Connections, Connect another system); ALYR staff do not hold or see them | The key itself, shown once; ALYR stores only a hash and the public prefix | n/a | The shop revokes it and makes a new one; revoking is immediate. A leaked key is revoked from the same screen (no ALYR secret is involved); the activity record shows its last use |
+| Webhook signing secrets (a shop's outgoing events; ALY-142) | Let the shop's system check a message is from ALYR | The shop; shown once at creation and replaceable | In ALYR's database (it must sign) | n/a | Replace the secret in the workspace; the old one stops at once |
 | Anthropic (Claude) | AI-built development sessions | Founder | Founder's account | check | Development pauses |
 | Ministry of Commerce Single Window | Company registration SR3035824 | Owner (Beevi Jinan) | National authentication | | Registration cannot progress |
 

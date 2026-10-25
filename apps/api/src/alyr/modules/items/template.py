@@ -245,5 +245,9 @@ async def apply(
     await service.save_categories(
         conn, [{"name": name, "name_ar": ar} for name, ar in setup.categories]
     )
+    # (imported here: fields.py builds on this package)
+    from alyr.modules.items import fields
+
+    await fields.seed(conn, samples.SYSTEM, template.fields)
     return await samples.add(conn, setup, clock) if samples_too else 0
 

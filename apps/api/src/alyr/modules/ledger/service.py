@@ -8,6 +8,7 @@ from alyr.core import team, templates
 from alyr.core.normalise import fmt_qar
 from alyr.core.outbound import Outbound
 from alyr.core.team import Actor
+from alyr.modules.documents import sales as documents_sales
 from alyr.modules.items import alerts
 from alyr.modules.items import holds as stock_holds
 from alyr.modules.ledger.ageing import Aged, age
@@ -36,10 +37,18 @@ async def add_entry(
     created_by: str = "",
     at: datetime | None = None,
     order_id: UUID | None = None,
-) -> None:
-    await conn.execute(
+    documents: bool = True,
+    paid_by_link: bool = False,
+) -> UUID:
+    """Write one entry on a customer's credit account and return its ID.
+
+    A payment also asks Documents for a receipt that says what is left (ALY-139), for a shop
+    that has the module on; `documents=False` is for a caller that makes its own receipt
+    (a payment staff recorded by hand names its method and reference). `paid_by_link` says the
+    payment came through the customer's payment link."""
+    entry_id = await conn.fetchval(
         "insert into ledger_entries (contact_id, kind, amount, note, created_by, created_at, "
-        "order_id) values ($1, $2, $3, $4, $5, coalesce($6, now()), $7)",
+        "order_id) values ($1, $2, $3, $4, $5, coalesce($6, now()), $7) returning id",
         contact_id, kind, amount, note, created_by, at, order_id,
     )
     if kind == "payment":
@@ -47,6 +56,13 @@ async def add_entry(
         await conn.execute(
             "update ledger_accounts set promised_until = null where contact_id = $1", contact_id
         )
+        if documents and at is None:
+            await documents_sales.credit_payment(
+                conn, contact_id, entry_id, amount, via_link=paid_by_link,
+                actor=documents_sales.AUTOMATIC if paid_by_link or not created_by
+                else team.Actor(None, created_by),
+            )
+    return entry_id
 
 
 async def reverse_sale(
@@ -88,7 +104,7 @@ async def aged(conn: asyncpg.Connection, contact_id: UUID) -> Aged:
 
 async def recent_entries(conn: asyncpg.Connection, contact_id: UUID, limit: int = 50) -> list:
     return await conn.fetch(
-        "select kind, amount, note, created_by, created_at from ledger_entries "
+        "select id, order_id, kind, amount, note, created_by, created_at from ledger_entries "
         "where contact_id = $1 order by created_at desc limit $2",
         contact_id, limit,
     )
@@ -386,6 +402,8 @@ async def complete_payment(
             conn, "order", row["order_id"], "paid", team.CUSTOMER, row["contact_id"],
             {"number": number, "amount": fmt_qar(row["amount"])},
         )
+        # The receipt, for a shop that has Documents on: made in this transaction, once.
+        await documents_sales.order_paid(conn, row["order_id"])
         body = (
             f"تم استلام {fmt_qar(row['amount'])} للطلب رقم {number}. شكراً لك." if lang == "ar"
             else f"Received {fmt_qar(row['amount'])} for order #{number}. Thank you."
@@ -398,7 +416,7 @@ async def complete_payment(
         return "paid"
     await add_entry(
         conn, row["contact_id"], "payment", row["amount"],
-        note="Paid by payment link", created_by=row["provider"],
+        note="Paid by payment link", created_by=row["provider"], paid_by_link=True,
     )
     await team.record(
         conn, "account", row["contact_id"], "paid", team.CUSTOMER, row["contact_id"],

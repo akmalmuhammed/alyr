@@ -1,0 +1,112 @@
+/* ===================================================== the day, split by the fold
+   (ALY-209, FoldSplit.tsx). One business's afternoon: its WhatsApp chats as they are, on
+   faded paper, and the same customers as ALYR keeps them, on Carbon, row for row. The fold
+   between them is a 45° line whose middle stands at `--p` across the drawing: the Carbon
+   side is clipped to the end side of that line, and its mirror in Arabic. Both sides are
+   laid out whole, so what shows at rest is each side's own lead: who wrote and what, on
+   the paper; who has it and where it stands, on the Carbon. Without scripts
+   the fold rests where the script would leave it, and its handle and buttons are not drawn. */
+.split { --sh: 24rem; --p: .42; margin-top: 1.5rem; }
+.split-view { position: relative; height: var(--sh); overflow: hidden; border: 1px solid var(--line); touch-action: pan-y; user-select: none; -webkit-user-select: none; cursor: col-resize; }
+.split-before, .split-after { position: absolute; inset: 0; }
+/* the faded side: duller, and at night darker too, so the Carbon side reads as the lit one */
+.split-before { background-color: var(--wa-paper); color: var(--wa-ink); font-family: var(--font-chat); filter: saturate(.6) brightness(calc(1 - var(--night) * .3)); }
+[lang="ar"] .split-before { font-family: var(--font-chat-arabic); }
+.split-after {
+  background: var(--band); color: var(--on-band);
+  clip-path: polygon(calc(var(--p) * 100% + var(--sh) / 2) 0, 100% 0, 100% 100%, calc(var(--p) * 100% - var(--sh) / 2) 100%);
+}
+[dir="rtl"] .split-after { clip-path: polygon(calc(100% - var(--p) * 100% - var(--sh) / 2) 0, 0 0, 0 100%, calc(100% - var(--p) * 100% + var(--sh) / 2) 100%); }
+.split-fold { position: absolute; top: 50%; inset-inline-start: calc(var(--p) * 100%); width: 2px; height: calc(var(--sh) * 1.4143); background: var(--volt); pointer-events: none; transform: translate(calc(var(--dir) * -50%), -50%) rotate(calc(var(--dir) * 45deg)); }
+/* the handle rides the fold's middle, and waits at the edge when the fold has passed it */
+.split-handle {
+  position: absolute; top: 50%; inset-inline-start: clamp(1.375rem, calc(var(--p) * 100%), calc(100% - 1.375rem)); z-index: 1;
+  display: grid; place-items: center; width: 2.75rem; height: 2.75rem; translate: calc(var(--dir) * -50%) -50%;
+  background: var(--volt); color: var(--on-volt); cursor: grab; box-shadow: 0 6px 16px -6px rgb(0 0 0 / .45);
+  clip-path: polygon(0 0, calc(100% - .625rem) 0, 100% .625rem, 100% 100%, 0 100%);
+}
+[dir="rtl"] .split-handle { clip-path: polygon(.625rem 0, 100% 0, 100% 100%, 0 100%, 0 .625rem); }
+.split-handle:active { cursor: grabbing; }
+.split-handle svg { width: 1.25rem; height: 1.25rem; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: square; }
+.split-handle:focus-visible { outline: 2px solid var(--text); outline-offset: 3px; clip-path: none; }
+.split-go { position: absolute; bottom: .625rem; z-index: 1; min-height: 2.75rem; padding: 0 1rem; border: 1px solid; border-radius: 2px; font: inherit; font-size: .875rem; font-weight: 600; cursor: pointer; transition: background var(--fast) var(--ease), border-color var(--fast) var(--ease); }
+.split-go-before { inset-inline-start: .625rem; background: var(--wa-chip); color: var(--wa-ink); border-color: var(--wa-rule); }
+.split-go-after { inset-inline-end: .625rem; background: var(--band); color: var(--on-band); border-color: var(--dark-line); }
+.split-go[aria-pressed="true"] { border-color: currentColor; box-shadow: inset 0 -2px 0 var(--volt); }
+:root:not(.al-js) .split-handle, :root:not(.al-js) .split-go { display: none; }
+
+/* the chats, as WhatsApp lists them */
+.dc-top, .do-top { display: flex; align-items: center; gap: .625rem; height: 3rem; padding-inline: 1rem; }
+.dc-top { background: var(--wa-head); border-bottom: 1px solid var(--wa-head-line); }
+.dc-top b, .do-top b { font-size: 1rem; font-weight: 600; }
+.dc-unread { display: inline-flex; align-items: center; gap: .25rem; min-height: 1.5rem; padding: 0 .5rem; border-radius: .75rem; background: var(--wa-green); color: var(--wa-on-green); font-size: .75rem; font-weight: 600; font-variant-numeric: tabular-nums; }
+.dc-row, .do-row { height: 3.5rem; display: grid; align-items: center; column-gap: .75rem; padding-inline: 1rem; }
+.dc-row { grid-template-columns: 2.25rem minmax(0, 1fr) auto; border-bottom: 1px solid var(--wa-rule); }
+.dc-av { display: grid; place-items: center; width: 2.25rem; height: 2.25rem; border-radius: 50%; background: var(--wa-avatar); color: var(--wa-avatar-ink); font-size: .875rem; font-weight: 600; }
+.dc-main, .do-main { display: grid; min-width: 0; line-height: 1.3; }
+.dc-main b, .do-main b { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: .875rem; font-weight: 600; }
+.dc-prev { display: flex; align-items: center; gap: .25rem; min-width: 0; color: var(--wa-soft); font-size: .8125rem; }
+.dc-prev > span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.dc-prev svg { flex: none; width: .9375rem; height: .9375rem; color: var(--wa-green); }
+.dc-side { display: grid; justify-items: end; gap: .25rem; }
+.dc-at { color: var(--wa-green); font-size: .6875rem; white-space: nowrap; }
+.dc-n { display: grid; place-items: center; min-width: 1.25rem; height: 1.25rem; padding-inline: .3125rem; border-radius: .625rem; background: var(--wa-green); color: var(--wa-on-green); font-size: .6875rem; font-weight: 600; font-variant-numeric: tabular-nums; }
+
+/* the same customers, as ALYR keeps them */
+.do-top { border-bottom: 1px solid var(--dark-line); justify-content: flex-end; }
+.do-top .mark-sample { margin-inline-start: 0; border-color: var(--band-rule); color: var(--on-band-quiet); }
+.do-count { display: grid; place-items: center; min-width: 1.5rem; height: 1.5rem; border: 1px solid var(--dark-line); font-family: var(--mono); font-size: .75rem; color: var(--concrete); }
+.do-row { grid-template-columns: 4.75rem minmax(0, 1fr) 6.5rem 9.5rem; border-bottom: 1px solid var(--dark-line); }
+.do-ref { font-family: var(--mono); font-size: .75rem; color: var(--concrete); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+[lang="ar"] .do-ref { font-family: var(--arabic); font-size: .8125rem; }
+.do-main > span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--concrete); font-size: .8125rem; }
+.do-by { display: flex; align-items: center; gap: .375rem; min-width: 0; color: var(--on-band-soft); font-size: .8125rem; }
+.do-by > span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.do-by i { display: grid; place-items: center; flex: none; width: 1.5rem; height: 1.5rem; border-radius: 2px; background: var(--dark-subtle); color: var(--on-band); font-style: normal; font-size: .6875rem; font-weight: 600; }
+.do-st { justify-self: end; display: inline-flex; align-items: center; gap: .375rem; max-width: 100%; min-height: 1.5rem; padding: 0 .5rem; border-radius: 2px; font-size: .75rem; font-weight: 600; line-height: 1.2; text-align: end; }
+.do-st.is-ok { color: var(--on-band-soft); box-shadow: inset 0 0 0 1px var(--dark-line); }
+.do-st.is-now { background: var(--volt); color: var(--on-volt); }
+.do-st.is-wait { color: var(--concrete); }
+.do-st.is-wait::before { content: ""; flex: none; width: .4375rem; height: .4375rem; border-radius: 50%; border: 1.5px solid var(--band-mark); }
+
+/* on a wide screen the Carbon side's rows start past where the fold rests, so at rest each
+   side shows its own lead in full */
+@media (min-width: 48rem) {
+  .do-top, .do-row { padding-inline-start: 46%; }
+}
+@media (max-width: 61.99rem) {
+  .do-row { grid-template-columns: 4rem minmax(0, 1fr) auto; }
+  .do-by { display: none; }
+}
+@media (max-width: 53rem) {
+  .split { --sh: 23rem; }
+}
+/* a phone swipes the drawing itself, and its two buttons send the fold across; a handle
+   resting at the edge would only cover a name */
+@media (max-width: 47.99rem) {
+  .split-handle { display: none; }
+}
+@media (max-width: 30rem) {
+  .dc-row, .do-row { padding-inline: .75rem; column-gap: .5rem; }
+  .do-row { grid-template-columns: minmax(0, 1fr) auto; }
+  .do-ref { display: none; }
+  .do-st { max-width: 8.5rem; }
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  /* the buttons send the fold across; dragging follows the finger with no lag */
+  .split[data-glide] .split-after { transition: clip-path 600ms var(--ease); }
+  .split[data-glide] .split-fold, .split[data-glide] .split-handle { transition: inset-inline-start 600ms var(--ease); }
+  /* a business chosen: its chats arrive in a new order, then the rows they become */
+  .al-js .biz-panel.is-on .dc-row, .al-js .biz-panel.is-on .do-row { animation: hp-rise var(--dur-3) var(--ease) both; }
+  .al-js .biz-panel.is-on .dc-row:nth-child(1) { animation-delay: 120ms; }
+  .al-js .biz-panel.is-on .dc-row:nth-child(2) { animation-delay: 0ms; }
+  .al-js .biz-panel.is-on .dc-row:nth-child(3) { animation-delay: 180ms; }
+  .al-js .biz-panel.is-on .dc-row:nth-child(4) { animation-delay: 60ms; }
+  .al-js .biz-panel.is-on .dc-row:nth-child(5) { animation-delay: 240ms; }
+  .al-js .biz-panel.is-on .do-row { animation-delay: calc(300ms + var(--r, 0) * 60ms); }
+  .do-row:nth-child(2) { --r: 1; }
+  .do-row:nth-child(3) { --r: 2; }
+  .do-row:nth-child(4) { --r: 3; }
+  .do-row:nth-child(5) { --r: 4; }
+}

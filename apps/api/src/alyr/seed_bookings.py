@@ -535,8 +535,8 @@ async def ensure_sample_tenant(owner_dsn: str, sample: Sample, now: datetime, da
             )
         else:
             client_id = await conn.fetchval(
-                "insert into clients (name, contact_name, contact_email) values ($1, $2, $3) "
-                "returning id",
+                "insert into clients (name, contact_name, contact_email, access_from, access_note) "
+                "values ($1, $2, $3, now(), 'Demo shop') returning id",
                 sample.name, sample.team[0][1], sample.team[0][0],
             )
             await conn.execute(
@@ -556,7 +556,7 @@ async def reset_sample(db: Database, sample: Sample, now: datetime | None = None
                       "business_hours", "saved_replies", "memberships", "jobs", "messages",
                       "processed_messages", "payment_requests", "ledger_entries",
                       "ledger_accounts", "contacts", "tenant_modules",
-                      "shop_settings", "shop_features"):
+                      "shop_settings", "shop_features", "custom_fields"):
             await conn.execute(f"delete from {table}")
         web_url = web_url or get_settings().public_web_url
         diary = Diary(conn, now, random.Random(sample.seed), web_url,

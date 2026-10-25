@@ -10,6 +10,7 @@ import re
 from datetime import date, datetime, timedelta
 
 from alyr.core.normalise import fmt_qar, fmt_qar_ar
+from alyr.modules.items import qty
 
 WEEKDAYS = {
     "en": ("Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"),
@@ -38,6 +39,20 @@ MESSAGES: dict[str, tuple[str, str]] = {
     "bad_quantity": (
         "Choose a quantity of {name} between 1 and 999.",
         "اختر كمية من «{name}» بين 1 و999.",
+    ),
+    # A fraction of something counted (a piece, a box), and a quantity of a measure (kg, litre)
+    # that cannot be asked for (ALY-149).
+    "not_whole": (
+        "{name} is sold by the whole piece. Choose a whole number.",
+        "«{name}» يُباع بالقطعة الكاملة. اختر عدداً صحيحاً.",
+    ),
+    "bad_amount": (
+        "Choose a quantity of {name} above zero, up to 999.",
+        "اختر كمية من «{name}» أكبر من صفر وحتى 999.",
+    ),
+    "off_step": (
+        "{name} is sold in steps of {pack}. Choose {suggest}.",
+        "«{name}» يُباع بمضاعفات {pack}. اختر {suggest}.",
     ),
     "below_minimum": (
         "The least you can order of {name} is {minimum}.",
@@ -152,6 +167,8 @@ _NAMED = ("name", "group", "variant")
 # A detail on the left may come as dirhams under the key on the right; it is written the way
 # the sentence's language writes money (an Arabic sentence never says "QAR").
 _MONEY = {"old": "old_price", "new": "new_price", "limit": "limit_amount"}
+# The details that are quantities of the item, which take the item's unit when it is a measure.
+_QUANTITIES = ("left", "minimum", "pack", "suggest", "requested", "max_quantity")
 
 
 def when_text(moment: datetime | date, today: date, lang: str) -> str:
@@ -188,6 +205,12 @@ def say(code: str, lang: str, details: dict, today: date | None = None) -> str:
     for word, key in _MONEY.items():
         if isinstance(details.get(key), int):
             words[word] = fmt_qar_ar(details[key]) if lang == "ar" else fmt_qar(details[key])
+    unit = details.get("unit")
+    if unit:
+        # A measure's numbers carry its unit: "Only 2.5 kg of Dates left".
+        for key in _QUANTITIES:
+            if details.get(key) is not None:
+                words[key] = qty.with_unit(details[key], unit, lang)
     today = today or date.today()
     when = details.get("next_at") or details.get("next_date")
     if when:

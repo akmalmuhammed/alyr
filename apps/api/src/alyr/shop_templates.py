@@ -26,6 +26,12 @@ from alyr.presets_catalog import GENERIC, SETUPS, CatalogSetup
 
 GENERIC_KEY = "generic"
 
+# The built-in types whose trade sells by weight or volume, which start with "Sold by weight or
+# volume" on: dates and spices at the baqala, a cake by the kilo. A perfume or oud shop is "Shop &
+# retail" here and starts with it off (the owner turns it on in Features, one switch); a
+# template made in the back office can start with it on.
+SOLD_BY_MEASURE = ("grocery", "bakery")
+
 # What a starter custom field can be: a short text, a number, one of a list, yes or no, a date.
 FIELD_KINDS = ("text", "number", "choice", "yes_no", "date")
 APPLIES_TO = ("item", "variant")
@@ -64,6 +70,8 @@ class ShopTemplate:
     note: Text = Text("", "")
     # The Catalog suits this kind of business without being its main work (a salon's products).
     optional: bool = False
+    # A shop's owner may switch to it themselves (a template made in the back office says so).
+    offered: bool = False
 
     def on(self, key: str) -> bool:
         return self.features[key][0]
@@ -97,9 +105,69 @@ def _from_setup(key: str, name: Text, based_on: str, setup: CatalogSetup) -> Sho
             "low_stock_alerts": "low_stock" in setup.alerts,
             "sold_out_alerts": "sold_out" in setup.alerts,
             "sold_out_display": (True, {"mode": setup.sold_out}),
+            # Sold by weight or volume (ALY-149): the trades that weigh or pour. Every other type
+            # starts with it off, so a shop of any other type is exactly what it was.
+            "decimal_quantity": key in SOLD_BY_MEASURE,
         }),
+        fields=STARTER_FIELDS.get(key, ()),
         optional=setup.optional,
     )
+
+
+def _t(en: str, ar: str) -> Text:
+    return Text(en, ar)
+
+
+_ALLERGENS = (
+    _t("Nuts", "مكسرات"), _t("Gluten", "غلوتين"), _t("Dairy", "ألبان"), _t("Eggs", "بيض"),
+    _t("Sesame", "سمسم"), _t("Fish", "سمك"),
+)
+_BRAND = FieldSeed("brand", _t("Brand", "العلامة"), shown=True, searchable=True)
+_SIZE_ML = FieldSeed("volume_ml", _t("Volume", "السعة"), "number", unit="ml", shown=True)
+_SHELF = FieldSeed("shelf_life_days", _t("Shelf life", "مدة الصلاحية"), "number", unit="days")
+
+# What each built-in type's shop starts with beside its features: a few fields an owner of that
+# kind of business usually wants (ALY-148). They are the owner's from the first day: edit, switch
+# who sees them, or archive. None is required, so nothing about adding an item changes.
+STARTER_FIELDS: dict[str, tuple[FieldSeed, ...]] = {
+    "restaurant": (
+        FieldSeed("allergens", _t("Allergens", "مسببات الحساسية"), "choice", choices=_ALLERGENS,
+                  shown=True, searchable=True),
+        FieldSeed("spice_level", _t("Spice level", "مستوى البهارات"), "choice", shown=True,
+                  choices=(_t("Mild", "خفيف"), _t("Medium", "متوسط"), _t("Hot", "حار"))),
+        FieldSeed("serves", _t("Serves", "يكفي"), "number", unit="people", shown=True),
+    ),
+    "bakery": (
+        FieldSeed("allergens", _t("Allergens", "مسببات الحساسية"), "choice", choices=_ALLERGENS,
+                  shown=True, searchable=True),
+        FieldSeed("serves", _t("Serves", "يكفي"), "number", unit="people", shown=True),
+    ),
+    "grocery": (
+        FieldSeed("origin", _t("Country of origin", "بلد المنشأ"), shown=True, searchable=True),
+        _SHELF,
+    ),
+    "fashion": (
+        FieldSeed("material", _t("Material", "الخامة"), shown=True, searchable=True),
+        FieldSeed("care", _t("Care", "العناية"), shown=True),
+        FieldSeed("fit", _t("Fit", "القصّة"), "choice", shown=True,
+                  choices=(_t("Slim", "ضيقة"), _t("Regular", "عادية"), _t("Loose", "واسعة"))),
+    ),
+    "shop": (
+        _BRAND,
+        FieldSeed("warranty_months", _t("Warranty", "الضمان"), "number", unit="months",
+                  shown=True),
+    ),
+    "wholesale": (
+        _BRAND,
+        FieldSeed("origin", _t("Country of origin", "بلد المنشأ"), shown=True),
+        _SHELF,
+    ),
+    "salon": (_BRAND, _SIZE_ML),
+    "spa": (FieldSeed("scent", _t("Scent", "العطر"), shown=True), _SIZE_ML),
+    "clinic": (_BRAND,),
+    "home": (_BRAND, FieldSeed("warranty_months", _t("Warranty", "الضمان"), "number",
+                               unit="months", shown=True)),
+}
 
 
 _NAMES = {

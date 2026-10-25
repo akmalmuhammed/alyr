@@ -16,16 +16,17 @@ Every function takes a tenant-scoped connection.
 """
 
 from datetime import datetime
+from decimal import Decimal
 
 import asyncpg
 
-from alyr.core.normalise import fmt_qar
-from alyr.core.words import DAYS, HOURS, ITEMS, counted
+from alyr.core.normalise import fmt_qar, fmt_qar_ar
+from alyr.core.words import DAYS, HOURS, ITEMS, ORDERS, PICKUPS, counted
 from alyr.modules.items import clock as shop_clock
-from alyr.modules.items import features, listing, spells
+from alyr.modules.items import costs, features, listing, qty, spells
 
 TITLE = {"en": "Catalog", "ar": "الكتالوج"}
-LINES = ("sold_out", "asked", "low", "best", "idle")
+LINES = ("sold_out", "asked", "low", "best", "idle", "discounts", "delivery", "margin")
 LIST_MAX = 3  # names in a line, before "and 4 more"
 ASKED_MAX = 2  # items named beside the number of customers who asked
 
@@ -39,6 +40,12 @@ def shown_lines(feats: features.Features) -> list[str]:
         out += ["sold_out", "asked"]
     if feats.counts_stock():
         out.append("low")
+    if feats.on("discounts"):
+        out.append("discounts")  # (ALY-150) a line only for a shop that gives discounts
+    if feats.on("delivery_fees"):
+        out.append("delivery")
+    if feats.on("cost_margin"):
+        out.append("margin")  # (owner and admin only: the report goes to them)
     return [k for k in LINES if k in out]
 
 
@@ -82,13 +89,17 @@ async def numbers(conn: asyncpg.Connection, start: datetime, end: datetime, tz: 
     sold = [dict(r) for r in await conn.fetch(
         "select max(coalesce(i.name, l.name)) as name, "
         "max(coalesce(nullif(i.name_ar, ''), nullif(l.name_ar, ''), i.name, l.name)) as name_ar, "
-        "sum(l.quantity)::int as units, sum(l.price * l.quantity)::bigint as value "
+        "sum(l.quantity) as units, sum(round(l.price * l.quantity))::bigint as value, "
+        "max(l.unit) as unit, bool_or(l.unit_shown) as shown "
         "from order_items l join orders o on o.id = l.order_id "
         "left join items i on i.id = l.item_id "
         "where o.created_at >= $1 and o.created_at < $2 and o.status <> 'cancelled' "
         "group by coalesce(l.item_id::text, l.name)",
         start, end,
     )]
+    for row in sold:  # the unit is kept only where it is written: a stored report keeps its shape
+        if not row.pop("shown"):
+            row.pop("unit")
     by_units = sorted(sold, key=lambda r: (-r["units"], -r["value"], r["name"]))[:LIST_MAX]
     by_value = sorted(sold, key=lambda r: (-r["value"], -r["units"], r["name"]))[:LIST_MAX]
     out["top_units"], out["top_value"] = by_units, by_value
@@ -114,7 +125,98 @@ async def numbers(conn: asyncpg.Connection, start: datetime, end: datetime, tz: 
         "count": len(idle),
         "items": [{"name": r["name"], "name_ar": r["name_ar"]} for r in idle[:LIST_MAX]],
     }
+    if "discounts" in out["show"]:
+        out["discounts"] = await _discounts(conn, start, end)
+    if "delivery" in out["show"]:
+        out["delivery"] = await _delivery(conn, start, end)
+    if "margin" in out["show"]:
+        out["margin"] = await _margin(conn, start, end)
     return out
+
+
+async def _margin(conn: asyncpg.Connection, start: datetime, end: datetime) -> dict:
+    """The estimated gross margin of the week's orders, from the cost each unit had when it was
+    ordered; and the items sold at a loss or for very little. Only lines with a cost kept count
+    (and the revenue counted is theirs), delivery fees are left out, a cancelled order is not a
+    sale. `unknown` is how many orders had a line with no cost kept."""
+    row = await conn.fetchrow(
+        "select count(distinct o.id) filter (where c.unit_cost is not null)::int as orders, "
+        "count(distinct o.id) filter (where c.unit_cost is null)::int as unknown, "
+        "coalesce(sum(round(l.price * l.quantity) - l.discount) "
+        "filter (where c.unit_cost is not null), 0)::bigint as revenue, "
+        "coalesce(sum(round(c.unit_cost * l.quantity)), 0)::bigint as cost "
+        "from orders o join order_items l on l.order_id = o.id "
+        "left join order_item_costs c on c.order_item_id = l.id "
+        "where o.created_at >= $1 and o.created_at < $2 and o.status <> 'cancelled'",
+        start, end,
+    )
+    by_item = await conn.fetch(
+        "select max(coalesce(i.name, l.name)) as name, "
+        "max(coalesce(nullif(i.name_ar, ''), nullif(l.name_ar, ''), i.name, l.name)) as name_ar, "
+        "sum(round(l.price * l.quantity) - l.discount)::bigint as revenue, "
+        "sum(round(c.unit_cost * l.quantity))::bigint as cost "
+        "from order_items l join orders o on o.id = l.order_id "
+        "join order_item_costs c on c.order_item_id = l.id left join items i on i.id = l.item_id "
+        "where o.created_at >= $1 and o.created_at < $2 and o.status <> 'cancelled' "
+        "group by coalesce(l.item_id::text, l.name)",
+        start, end,
+    )
+    loss, low = [], []
+    for r in by_item:
+        amount = r["revenue"] - r["cost"]
+        share = costs.pct(amount, r["revenue"])
+        entry = {"name": r["name"], "name_ar": r["name_ar"], "amount": amount,
+                 "pct": str(share) if share is not None else None}
+        if amount < 0:
+            loss.append(entry)
+        elif share is not None and share < costs.LOW_MARGIN_PCT:
+            low.append(entry)
+    loss.sort(key=lambda x: (x["amount"], x["name"]))
+    low.sort(key=lambda x: (Decimal(x["pct"]), x["name"]))
+    amount = row["revenue"] - row["cost"]
+    share = costs.pct(amount, row["revenue"])
+    return {
+        "orders": row["orders"], "unknown": row["unknown"], "revenue": row["revenue"],
+        "cost": row["cost"], "amount": amount, "pct": str(share) if share is not None else None,
+        "loss": {"count": len(loss), "items": loss[:LIST_MAX]},
+        "low": {"count": len(low), "items": low[:LIST_MAX]},
+    }
+
+
+async def _delivery(conn: asyncpg.Connection, start: datetime, end: datetime) -> dict:
+    """How the week's orders reached their customers: deliveries and the fees on them, and the
+    pickups. A cancelled order is not counted."""
+    row = await conn.fetchrow(
+        "select count(*) filter (where fulfilment = 'delivery')::int as deliveries, "
+        "coalesce(sum(delivery_fee) filter (where fulfilment = 'delivery'), 0)::bigint as fees, "
+        "count(*) filter (where fulfilment = 'pickup')::int as pickups "
+        "from orders where created_at >= $1 and created_at < $2 and status <> 'cancelled'",
+        start, end,
+    )
+    return dict(row)
+
+
+async def _discounts(conn: asyncpg.Connection, start: datetime, end: datetime) -> dict:
+    """What the shop gave away this week: the orders that had a discount, the money, and the
+    discounts that gave most. A cancelled order gave nothing (its use went back)."""
+    row = await conn.fetchrow(
+        "select count(distinct d.order_id)::int as orders, "
+        "coalesce(sum(d.amount_off), 0)::bigint as given "
+        "from order_discounts d join orders o on o.id = d.order_id "
+        "where o.created_at >= $1 and o.created_at < $2 and o.status <> 'cancelled' "
+        "and d.returned_at is null",
+        start, end,
+    )
+    top = await conn.fetch(
+        "select coalesce(nullif(d.code, ''), nullif(d.name, ''), d.rule_text) as label, "
+        "coalesce(nullif(d.code, ''), nullif(d.name_ar, ''), d.rule_text_ar) as label_ar, "
+        "count(*)::int as orders, sum(d.amount_off)::bigint as given "
+        "from order_discounts d join orders o on o.id = d.order_id "
+        "where o.created_at >= $1 and o.created_at < $2 and o.status <> 'cancelled' "
+        "and d.returned_at is null group by 1, 2 order by given desc, label limit $3",
+        start, end, LIST_MAX,
+    )
+    return {"orders": row["orders"], "given": row["given"], "top": [dict(r) for r in top]}
 
 
 def active(n: dict) -> bool:
@@ -160,11 +262,76 @@ def lines(n: dict, before: dict | None, lang: str) -> list[str]:
     low = n["low"]
     if "low" in show and low["count"]:
         left = "المتبقي {}" if ar else "{} left"
-        named = [f"{_name(i, lang)} ({left.format(i['left'])})" for i in low["items"]]
+        def have(i: dict) -> str:
+            shown = i.get("show_unit")
+            return left.format(qty.label(i["left"], i.get("unit", "piece"), shown, lang))
+
+        named = [f"{_name(i, lang)} ({have(i)})" for i in low["items"]]
         head = "مخزون قليل الآن" if ar else "Low on stock now"
         out.append(f"{head}: {_join(named, low['count'], lang)}")
     if "best" in show:
         out += _best(n, lang)
+    given = n.get("discounts")
+    if "discounts" in show and given and given["given"]:
+        comma = "، " if ar else ", "
+        named = comma.join(
+            f"{i['label_ar'] if ar else i['label']} {i['orders']}" for i in given["top"]
+        )
+        if ar:
+            out.append(
+                f"خصومات منحتها هذا الأسبوع: {fmt_qar_ar(given['given'])} "
+                f"على {counted(given['orders'], ORDERS, lang)} ({named})"
+            )
+        else:
+            out.append(
+                f"Discounts given this week: {fmt_qar(given['given'])} on "
+                f"{counted(given['orders'], ORDERS, lang)} ({named})"
+            )
+    earned = n.get("margin")
+    if "margin" in show and earned and earned["orders"]:
+        orders = counted(earned["orders"], ORDERS, lang)
+        money = fmt_qar_ar if ar else fmt_qar
+        if ar:
+            out.append(
+                f"هامش الربح الإجمالي التقديري: {money(earned['amount'])} ({earned['pct']}%) "
+                f"على {orders}"
+            )
+        else:
+            out.append(
+                f"Estimated gross margin: {money(earned['amount'])} ({earned['pct']}%) "
+                f"on {orders}"
+            )
+        if earned["unknown"]:
+            many = counted(earned["unknown"], ORDERS, lang)
+            out.append(
+                f"{many} فيها أصناف بلا تكلفة محفوظة، وهي خارج الهامش" if ar
+                else f"{many} had items with no cost kept, so those items are not in the margin"
+            )
+        if earned["loss"]["count"]:
+            named = [_name(i, lang) for i in earned["loss"]["items"]]
+            out.append(
+                f"بيعت بأقل من تكلفتها: {_join(named, earned['loss']['count'], lang)}" if ar
+                else f"Sold for less than they cost: "
+                     f"{_join(named, earned['loss']['count'], lang)}"
+            )
+        if earned["low"]["count"]:
+            named = [f"{_name(i, lang)} ({i['pct']}%)" for i in earned["low"]["items"]]
+            out.append(
+                f"هامش منخفض (أقل من 10%): {_join(named, earned['low']['count'], lang)}" if ar
+                else f"Low margin (under 10%): {_join(named, earned['low']['count'], lang)}"
+            )
+    sent = n.get("delivery")
+    if "delivery" in show and sent and sent["deliveries"]:
+        pickups = f" ({counted(sent['pickups'], PICKUPS, lang)})" if sent["pickups"] else ""
+        orders = counted(sent["deliveries"], ORDERS, lang)
+        if ar:
+            out.append(
+                f"التوصيل هذا الأسبوع: {orders}، {fmt_qar_ar(sent['fees'])} رسوم توصيل{pickups}"
+            )
+        else:
+            out.append(
+                f"Deliveries this week: {orders}, {fmt_qar(sent['fees'])} in delivery fees{pickups}"
+            )
     idle = n["idle"]
     if "idle" in show and idle["count"]:
         head = "لم تُبَع هذا الأسبوع" if ar else "Did not sell this week"
@@ -182,15 +349,20 @@ def _best(n: dict, lang: str) -> list[str]:
     comma = "، " if ar else ", "
     if [i["name"] for i in units] == [i["name"] for i in value]:
         both = comma.join(
-            f"{_name(i, lang)} ({i['units']}{comma}{fmt_qar(i['value'])})" for i in units
+            f"{_name(i, lang)} ({_units(i, lang)}{comma}{fmt_qar(i['value'])})" for i in units
         )
         return [f"{'الأكثر مبيعاً' if ar else 'Most sold'}: {both}"]
-    by_units = comma.join(f"{_name(i, lang)} ({i['units']})" for i in units)
+    by_units = comma.join(f"{_name(i, lang)} ({_units(i, lang)})" for i in units)
     by_value = comma.join(f"{_name(i, lang)} {fmt_qar(i['value'])}" for i in value)
     return [
         f"{'الأكثر مبيعاً' if ar else 'Most sold'}: {by_units}",
         f"{'الأكثر إيراداً' if ar else 'Biggest earners'}: {by_value}",
     ]
+
+
+def _units(row: dict, lang: str) -> str:
+    """How many were sold: "12", or "12.5 kg" for something sold in fractions."""
+    return qty.label(row["units"], row.get("unit") or "piece", "unit" in row, lang)
 
 
 def _name(row: dict, lang: str) -> str:

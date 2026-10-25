@@ -46,6 +46,14 @@ export type AgentDashboardProps = {
   /** The summary's heading level (default 1 in the workspace, 2 in showcase); section
    * titles sit one below it and suggestion titles two below. */
   headingLevel?: 1 | 2 | 3 | 4;
+  /** False draws the titles as plain text, not headings: the public site's drawings of a
+   * fictional business, so a sample's numbers never read as the page's own outline to a
+   * screen reader or a crawler (site audit 03, A1). The workspace keeps its headings. */
+  headings?: boolean;
+  /** False hides the "RULE · …" lines (under each suggestion, and as a need's tooltip):
+   * the public site's showcase only, where the founder took the word "rule" off the site
+   * (25 Oct 2026). The workspace and `/agent-sample` keep them (default true). */
+  ruleLines?: boolean;
   /** The host's link component. In showcase mode links are plain text unless one is given. */
   link?: AgentLink;
   /** The first load of a session: the numbers rise once along the 45° diagonal. In showcase
@@ -139,7 +147,8 @@ function Figure({ value, unit, unitFirst }: { value: string; unit: string | null
 }
 
 function Heading({ level, className, id, children }: { level: number; className?: string; id?: string; children: ReactNode }) {
-  return createElement(`h${Math.min(Math.max(level, 1), 6)}`, { className, id }, children);
+  // level 0: a title that is not a heading (`headings={false}`)
+  return createElement(level <= 0 ? "p" : `h${Math.min(level, 6)}`, { className, id }, children);
 }
 
 function reducedMotion() {
@@ -207,12 +216,13 @@ function useRiseInView(enabled: boolean, ref: RefObject<HTMLDivElement | null>):
 }
 
 export function AgentDashboard({
-  view, labels, mode = "workspace", headingLevel, link, animate = false, stale, onNotNow, setup, className = "",
+  view, labels, mode = "workspace", headingLevel, headings = true, ruleLines = true, link, animate = false, stale, onNotNow, setup, className = "",
 }: AgentDashboardProps) {
   const t: AgentLabels = { ...AGENT_LABELS[view.lang], ...labels };
   const showcase = mode === "showcase";
   const L: AgentLink = link ?? (showcase ? NoLink : PlainLink);
-  const level = headingLevel ?? (showcase ? 2 : 1);
+  // without headings every title is drawn at "level 0", which Heading renders as plain text
+  const level = headings ? headingLevel ?? (showcase ? 2 : 1) : -9;
   const id = useId();
   const root = useRef<HTMLDivElement>(null);
   const phase = useRiseInView(showcase, root);
@@ -255,7 +265,7 @@ export function AgentDashboard({
                 const Row = item.href ? L : NoLink;
                 return (
                   <li key={item.key}>
-                    <Row href={item.href ?? ""} className="ag-need" title={item.rule}>
+                    <Row href={item.href ?? ""} className="ag-need" title={ruleLines ? item.rule : undefined}>
                       <span className="ag-need-count"><bdi>{item.count}</bdi></span>
                       <span className="ag-need-words">
                         <span><Rich parts={item.words} /></span>
@@ -321,11 +331,13 @@ export function AgentDashboard({
           </div>
         )}
 
-        {!showcase && view.catalog && (
-          <section className="ag-span-12 ag-stock" aria-labelledby={`${id}-stock`}>
-            <Heading level={level + 1} className="ag-label" id={`${id}-stock`}>{view.catalog.title}</Heading>
+        {/* The Catalog's two numbers and, for a shop with Documents, its two (ALY-109, ALY-146):
+            each card is the size of the list its link opens. */}
+        {!showcase && ([["stock", view.catalog], ["docs", view.documents]] as const).map(([part, block]) => block && (
+          <section key={part} className="ag-span-12 ag-stock" aria-labelledby={`${id}-${part}`}>
+            <Heading level={level + 1} className="ag-label" id={`${id}-${part}`}>{block.title}</Heading>
             <ul className="ag-stock-cards">
-              {view.catalog.cards.map((c) => {
+              {block.cards.map((c) => {
                 const Cell = c.href ? L : NoLink;
                 return (
                   <li key={c.key}>
@@ -341,7 +353,7 @@ export function AgentDashboard({
               })}
             </ul>
           </section>
-        )}
+        ))}
 
         {cards.length > 0 && (
           <section className={`${view.week ? "ag-span-8" : "ag-span-12"} ag-cards`} aria-labelledby={`${id}-cards`}>
@@ -364,7 +376,7 @@ export function AgentDashboard({
                   </div>
                   <div className="ag-card-body" id={body}>
                     <p className="ag-card-line"><Rich parts={card.line} /></p>
-                    <p className="ag-rule">{card.rule}</p>
+                    {ruleLines && <p className="ag-rule">{card.rule}</p>}
                     {listOpen === card.key && card.rows.length > 0 && (
                       <ul className="ag-rows">
                         {card.rows.map((row) => <li key={row.id}><bdi>{row.label}</bdi></li>)}
@@ -373,7 +385,7 @@ export function AgentDashboard({
                     )}
                     <div className="ag-card-foot">
                       {card.action ? (
-                        <L href={card.action.href} className={`ag-btn ${card.primary ? "is-volt" : ""}`}>
+                        <L href={card.action.href} className={`ag-btn ${card.primary && !showcase ? "is-volt" : ""}`}>
                           {card.action.label}{!showcase && <Arrow />}
                         </L>
                       ) : (

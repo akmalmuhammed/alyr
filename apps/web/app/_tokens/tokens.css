@@ -97,6 +97,11 @@
   --d-lift: 0 1px 0 rgb(255 255 255 / .7) inset, 0 1px 2px rgb(21 23 26 / .05), 0 0 0 1px var(--hair);
   --d-float: 0 18px 50px -14px rgb(21 23 26 / .32), 0 0 0 1px var(--hair-strong);
   --grid: rgb(167 173 181 / .2);
+  --doc-paper: #ffffff;
+  --doc-ink: #15171a;
+  --doc-ink-2: #5f666d;
+  --doc-rule: #d8dcd7;
+  --doc-band: #eef0ec;
   --agent-bar-mix: 88%;
   --agent-ghost-mix: 10%;
   --sans: var(--font-instrument), "Aptos", "Segoe UI Variable", system-ui, sans-serif;
@@ -281,6 +286,10 @@
     --d-lift: 0 1px 0 rgb(255 255 255 / .04) inset, 0 0 0 1px var(--hair);
     --d-float: 0 24px 60px -18px rgb(0 0 0 / .8), 0 0 0 1px var(--hair-strong);
     --grid: rgb(167 173 181 / .07);
+    --doc-paper: #d8dcd7;
+    --doc-ink-2: #3a3f45;
+    --doc-rule: #c4c9cf;
+    --doc-band: #c9ccc6;
     --agent-bar-mix: 78%;
     --agent-ghost-mix: 14%;
     --menu-shadow: 0 24px 70px rgb(0 0 0 / .5);
@@ -359,6 +368,10 @@
   --d-lift: 0 1px 0 rgb(255 255 255 / .04) inset, 0 0 0 1px var(--hair);
   --d-float: 0 24px 60px -18px rgb(0 0 0 / .8), 0 0 0 1px var(--hair-strong);
   --grid: rgb(167 173 181 / .07);
+  --doc-paper: #d8dcd7;
+  --doc-ink-2: #3a3f45;
+  --doc-rule: #c4c9cf;
+  --doc-band: #c9ccc6;
   --agent-bar-mix: 78%;
   --agent-ghost-mix: 14%;
   --menu-shadow: 0 24px 70px rgb(0 0 0 / .5);

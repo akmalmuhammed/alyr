@@ -21,8 +21,10 @@ from alyr.modules.items import (
     bulk,
     changes,
     clock,
+    costs,
     drafts,
     features,
+    fields,
     groups,
     listing,
     photos,
@@ -31,12 +33,13 @@ from alyr.modules.items import (
     template,
 )
 from alyr.modules.items import service as items
+from alyr.modules.items.qty import quantity_field
 from alyr.routes.deps import current_staff
 
 router = APIRouter(prefix="/api/items", tags=["items"])
 
 Rule = Literal["always", "switch", "count", "daily_limit"]
-Unit = Literal["piece", "kg", "box", "pack", "portion", "hour"]
+Unit = Literal["piece", "kg", "box", "pack", "portion", "hour", "g", "l", "ml", "m", "tola"]
 Status = Literal["draft", "live", "hidden", "archived"]
 Filter = Literal["draft", "sold_out", "low_stock", "stocked", "archived", "sample"]
 Weekday = Annotated[int, Field(ge=0, le=6)]
@@ -46,6 +49,10 @@ NULLABLE = {
     "sale_price", "sale_starts_at", "sale_ends_at", "pack_size", "daily_limit", "sku",
     "low_stock_at",
 }
+
+
+# Values of the owner's own fields, by the field's key (ALY-148).
+FieldValues = dict[str, str | int | float | bool | None]
 
 
 class GroupPriceIn(BaseModel):
@@ -75,9 +82,12 @@ class VariantIn(BaseModel):
                     "an empty one to clear it",
     )
     price_delta: int = Field(default=0, ge=-10_000_000, le=10_000_000)
-    daily_limit: int | None = Field(default=None, ge=0, le=1_000_000)
+    daily_limit: quantity_field(ge=0, le=1_000_000) | None = None
     active: bool = True
-    opening_stock: int | None = Field(default=None, ge=0, le=1_000_000)
+    opening_stock: quantity_field(ge=0, le=1_000_000) | None = None
+    custom: FieldValues | None = Field(
+        default=None, description="The owner's own fields for this size (key to value; null "
+                                  "removes one)")
 
 
 class OptionIn(BaseModel):
@@ -135,30 +145,32 @@ class ItemChanges(BaseModel):
     sale_starts_at: AwareDatetime | None = None
     sale_ends_at: AwareDatetime | None = None
     unit: Unit | None = None
-    pack_size: int | None = Field(default=None, gt=0, le=100_000)
-    min_order: int | None = Field(default=None, ge=1, le=999)
-    low_stock_at: int | None = Field(
-        default=None, ge=0, le=100_000,
-        description="This item's own low-stock number; null uses the shop's",
+    pack_size: quantity_field(gt=0, le=100_000) | None = None
+    min_order: quantity_field(gt=0, le=999) | None = None
+    low_stock_at: quantity_field(ge=0, le=100_000) | None = Field(
+        default=None, description="This item's own low-stock number; null uses the shop's",
     )
     tags: list[Annotated[str, Field(max_length=30)]] | None = Field(default=None, max_length=20)
     stock_rule: Rule | None = None
     available: bool | None = None
     status: Status | None = None
     sort: int | None = Field(default=None, ge=0, le=100_000)
-    daily_limit: int | None = Field(default=None, ge=0, le=1_000_000)
+    daily_limit: quantity_field(ge=0, le=1_000_000) | None = None
     variants: list[VariantIn] | None = Field(default=None, max_length=100)
     option_groups: list[GroupIn] | None = Field(default=None, max_length=20)
     schedule: list[WindowIn] | None = Field(default=None, max_length=30)
+    custom: FieldValues | None = Field(
+        default=None, max_length=fields.MAX_FIELDS,
+        description="The owner's own fields for this item (key to value; null removes one)",
+    )
     reason: str = Field(default="", max_length=200, description="Why the price changed")
 
 
 class NewItem(ItemChanges):
     name: str = Field(min_length=1, max_length=120)
     price: int = Field(ge=0, le=100_000_000, description="In dirhams; zero only for a draft")
-    opening_stock: int | None = Field(
-        default=None, ge=0, le=1_000_000,
-        description="For an item without variants counted in stock",
+    opening_stock: quantity_field(ge=0, le=1_000_000) | None = Field(
+        default=None, description="For an item without variants counted in stock",
     )
 
 
@@ -172,9 +184,9 @@ class Switch(BaseModel):
 
 class StockChange(BaseModel):
     kind: Literal["opening", "received", "wasted", "counted", "adjusted"]
-    quantity: int = Field(
-        ge=-1_000_000, le=1_000_000,
-        description="A number above zero; for adjusted, plus or minus; for counted, the count",
+    quantity: quantity_field(ge=-1_000_000, le=1_000_000) = Field(
+        description="A number above zero, a whole number or up to three decimals (12.5); for "
+                    "adjusted, plus or minus; for counted, the count. A JSON number or a string",
     )
     reason: str = Field(default="", max_length=200)
     variant_id: UUID | None = None
@@ -182,7 +194,7 @@ class StockChange(BaseModel):
 
 
 class Count(BaseModel):
-    counted: int = Field(ge=0, le=1_000_000)
+    counted: quantity_field(ge=0, le=1_000_000)
     reason: str = Field(default="", max_length=200)
     variant_id: UUID | None = None
     day: date | None = None
@@ -194,8 +206,8 @@ class StockSettings(BaseModel):
     agents_edit_items: bool | None = Field(
         default=None, description="Agents may add and edit items and photos"
     )
-    low_stock_at: int | None = Field(
-        default=None, ge=0, le=100_000, description="Counted stock at or below this is low"
+    low_stock_at: quantity_field(ge=0, le=100_000) | None = Field(
+        default=None, description="Counted stock at or below this is low"
     )
     wholesale_layout: bool | None = Field(
         default=None, description="Every customer gets the compact wholesale table"
@@ -279,6 +291,15 @@ class BulkIn(BaseModel):
 
 class BulkApply(BulkIn):
     preview: str = Field(min_length=1, max_length=64, description="The preview's hash")
+
+
+async def _with_warnings(conn, staff: Staff, feats, result: dict) -> dict:
+    """For an owner or admin of a shop that keeps costs: a price under the cost is a warning,
+    never a block (ALY-150). Nobody else is told anything about costs."""
+    if not (feats.on("cost_margin") and access.is_manager(staff)):
+        return result
+    found = await costs.warnings(conn, await clock.load(conn), UUID(str(result["item"]["id"])))
+    return {**result, "cost_warnings": found} if found else result
 
 
 def _media(request: Request):
@@ -369,6 +390,7 @@ async def add_item(
                 conn, data, team.actor_of(staff), await clock.load(conn)
             )
             await photos.add_to_views(conn, _media(request), [result["item"]])
+            result = await _with_warnings(conn, staff, feats, result)
     except (items.ItemError, stock.StockError) as error:
         raise _fail(error) from error
     return {"id": result["item"]["id"], **result}
@@ -619,6 +641,7 @@ async def save_item(
             )
             if result is not None:
                 await photos.add_to_views(conn, _media(request), [result["item"]])
+                result = await _with_warnings(conn, staff, await features.load(conn), result)
     except (items.ItemError, stock.StockError) as error:
         raise _fail(error) from error
     if result is None:

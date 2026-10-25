@@ -62,6 +62,19 @@ MESSAGES: dict[str, tuple[str, str, str]] = {
         "{column}: “{value}” is not a number.",
         "{column}: «{value}» ليس رقماً.",
     ),
+    "qty_decimals": (
+        "error",
+        "{column}: “{value}” has more than three decimals. Use at most three, like 0.25 or 12.5.",
+        "{column}: «{value}» فيه أكثر من ثلاث خانات عشرية. استخدم ثلاثاً على الأكثر، مثل 0.25 أو "
+        "12.5.",
+    ),
+    "decimal_off": (
+        "error",
+        "“Sold by weight or volume” is switched off for your shop, so this unit or fraction "
+        "cannot be added. Switch it on in Features.",
+        "ميزة «يُباع بالوزن أو الحجم» متوقفة في متجرك، لذلك لا يمكن إضافة هذه الوحدة أو هذا "
+        "الكسر. شغّلها من «الميزات».",
+    ),
     "not_whole": (
         "error",
         "{column}: “{value}” must be a whole number.",
@@ -340,12 +353,32 @@ MESSAGES: dict[str, tuple[str, str, str]] = {
         "The column “{value}” is not one ALYR uses, so it was left out.",
         "العمود «{value}» ليس من الأعمدة التي يستخدمها ALYR، لذلك تُرك.",
     ),
+    "custom_bad": (
+        "error",
+        "{detail}",
+        "{detail_ar}",
+    ),
+    "custom_missing": (
+        "warning",
+        "{detail} The item is saved as a draft until it has one.",
+        "{detail_ar} يُحفظ الصنف مسودة إلى أن تكتبه.",
+    ),
+    "custom_required": (
+        "error",
+        "{detail}",
+        "{detail_ar}",
+    ),
     "column_off": (
         "warning",
         "The column “{value}” was left out: “{feature}” is switched off for your shop. Switch it "
         "on in Features to use it.",
         "تُرك العمود «{value}»: ميزة «{feature_ar}» متوقفة في متجرك. شغّلها من «الميزات» "
         "لاستخدامه.",
+    ),
+    "column_owner_only": (
+        "warning",
+        "The column “{value}” was left out: only owners and admins can import costs.",
+        "تُرك العمود «{value}»: يستورد التكاليف المالك والمديرون فقط.",
     ),
     "duplicate_column": (
         "warning",

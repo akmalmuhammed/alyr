@@ -163,7 +163,8 @@ def test_the_home_dashboard_has_one_card_per_number_each_module_offers(client):
     cards = {c["key"]: c for c in client.get("/api/workspace/home").json()["cards"]}
     # The Catalog is off for every shop until go-live, so its cards are not on the demo shop's
     # home (tests/test_catalog_cards.py switches it on).
-    expected = {card.key for m in catalog.MODULES if m.key != "catalog" for card in m.cards}
+    expected = {card.key for m in catalog.MODULES if m.key not in ("catalog", "documents")
+                for card in m.cards}
     assert set(cards) == expected
     assert cards["unanswered"]["value"] == 1
     assert cards["outstanding"]["text"].startswith("QAR ")

@@ -881,8 +881,8 @@ async def ensure_qirfa_tenant(owner_dsn: str) -> None:
         )
         if not await conn.fetchval("select client_id from tenants where id = $1", QIRFA_TENANT_ID):
             client_id = await conn.fetchval(
-                "insert into clients (name, contact_name, contact_email) "
-                "values ('Qirfa Bakery', 'Huda Rahim', $1) returning id",
+                "insert into clients (name, contact_name, contact_email, access_from, access_note) "
+                "values ('Qirfa Bakery', 'Huda Rahim', $1, now(), 'Demo shop') returning id",
                 OWNER_EMAIL,
             )
             await conn.execute(
@@ -905,7 +905,7 @@ async def reset_qirfa(
                       "saved_replies", "memberships", "jobs", "messages", "processed_messages",
                       "order_items", "payment_requests", "orders", "items", "item_categories",
                       "ledger_entries", "ledger_accounts", "contacts", "tenant_modules",
-                      "shop_settings", "shop_features"):
+                      "shop_settings", "shop_features", "custom_fields"):
             await conn.execute(f"delete from {table}")
         web_url = web_url or get_settings().public_web_url
         return await Bakery(conn, now, random.Random(seed), web_url).run()

@@ -20,6 +20,11 @@ for table 7 cannot be turned into table 3 by editing it. A tampered, malformed, 
 wrong-shop or wrong-purpose token is refused; a customer who opens an old link asks for a new
 one in their chat.
 
+A third purpose, "document" (ALY-139), makes the link to one issued receipt or invoice: the ID in
+the token is the document's, not a customer's, the life is `ALYR_DOCUMENT_LINK_DAYS`, and the same
+rule holds: an order or booking token opens nothing on the document page, and a document token
+opens nothing on those pages.
+
 A public link (an item, a category, a QR code on a counter or a table, a shop's booking
 page) never carries a contact ID or a token: it opens the page for anyone, and the page
 sends a customer who wants to order or book to the shop's WhatsApp to get their own link.
@@ -49,7 +54,8 @@ CONTEXT = b"alyr-link-v2\x00"
 # what stops a link made for one page being used on another.
 ORDER = "order"
 BOOKING = "booking"
-_CODES = {ORDER: 1, BOOKING: 2}
+DOCUMENT = "document"
+_CODES = {ORDER: 1, BOOKING: 2, DOCUMENT: 3}
 _PURPOSES = {code: name for name, code in _CODES.items()}
 HEADER = 22  # version, purpose, contact ID, expiry
 MAC_BYTES = 16
@@ -76,10 +82,16 @@ class LinkError(Exception):
 
 @dataclass(frozen=True)
 class Link:
+    # Who or what the link is for: a customer's contact ID for the order and booking pages, a
+    # document's ID for the document page (`subject_id` says it plainly there).
     contact_id: UUID
     table: str
     expires_at: int
     purpose: str
+
+    @property
+    def subject_id(self) -> UUID:
+        return self.contact_id
 
 
 def _b64(data: bytes) -> str:
@@ -140,17 +152,21 @@ def _mac(key: bytes, tenant_id: UUID, payload: bytes) -> bytes:
 
 def mint(
     tenant_id: UUID, contact_id: UUID, *, purpose: str, table: str = "",
-    now: float | None = None, settings: Settings | None = None,
+    now: float | None = None, settings: Settings | None = None, days: int | None = None,
 ) -> str:
     """A token that makes the page named by `purpose` open for this customer at this shop.
-    The purpose is not optional: every link is made for one page."""
+    The purpose is not optional: every link is made for one page. For the document page the
+    ID in the token is the document's, not a customer's, and `days` is its own life."""
     if purpose not in _CODES:
         raise ValueError(f"a link is made for one of {sorted(_CODES)}, not {purpose!r}")
     if clean_table(table) and purpose != ORDER:
         raise ValueError("only an order link can name a table")
     settings = settings or get_settings()
     key = secret(settings)
-    expires = int((now if now is not None else time.time()) + settings.link_days * 86400)
+    life = days if days is not None else (
+        settings.document_link_days if purpose == DOCUMENT else settings.link_days
+    )
+    expires = int((now if now is not None else time.time()) + life * 86400)
     payload = (
         bytes([VERSION, _CODES[purpose]]) + contact_id.bytes + expires.to_bytes(4, "big")
         + clean_table(table).encode("utf-8")
@@ -208,3 +224,15 @@ def booking_url(web_url: str, slug: str, tenant_id: UUID, contact_id: UUID) -> s
     """The booking page link sent to one customer. It opens the booking page and nothing
     else: an order link is refused there, and this one is refused on the order page."""
     return f"{web_url}/b/{slug}?t={mint(tenant_id, contact_id, purpose=BOOKING)}"
+
+
+def document_url(
+    web_url: str, slug: str, tenant_id: UUID, document_id: UUID, *,
+    now: float | None = None, settings: Settings | None = None,
+) -> str:
+    """The link to one issued document (ALY-139): the hosted page that shows it with a button
+    for its PDF. The token names the document and the shop, is made for this page only (an
+    order or booking link opens nothing here, and this one opens nothing there), and runs out
+    after `ALYR_DOCUMENT_LINK_DAYS`. There is no bare ID in the address."""
+    token = mint(tenant_id, document_id, purpose=DOCUMENT, now=now, settings=settings)
+    return f"{web_url}/d/{slug}?t={token}"

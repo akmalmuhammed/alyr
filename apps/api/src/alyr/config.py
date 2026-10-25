@@ -47,6 +47,10 @@ class Settings(BaseSettings):
     # How long an order link works. A customer who opens an older one is told how to get a
     # new one (they ask for one in their chat, as they did for the first).
     link_days: int = 60
+    # How long the link to an issued document works (ALY-139). A receipt is something people
+    # look for months later, so its link lives longer than an order link; an older link is
+    # answered with a page that says so, and the shop sends the document again.
+    document_link_days: int = 90
 
     meta_app_secret: str = ""
     meta_verify_token: str = ""
@@ -63,6 +67,20 @@ class Settings(BaseSettings):
     # has approved `weekly_report_card` in both languages): the card goes as the
     # template's image header. Inside the window the card goes either way.
     report_card_template: bool = False
+
+    # The three document templates (`document_receipt`, `document_invoice`,
+    # `document_credit_note`) are written and not yet submitted to Meta, so a document cannot be
+    # sent outside the customer's 24-hour window. Off: such a send is recorded as "not
+    # delivered: template not approved" at once, and falls back to email or the hosted link,
+    # instead of failing at Meta six times. Switch it on only after Meta approves all three in
+    # both languages (the founder does that; ALY-139, ALY-142). Inside the window a document
+    # always goes as the PDF itself, whatever this says.
+    document_templates_approved: bool = False
+
+    # Webhooks (ALY-142): send to a shop's address on this machine (http, localhost, a private
+    # address). Only read when ALYR_ENV is "local", for tests and for a developer's own
+    # receiver; in any other environment the guard in `connect/ssrf.py` always applies.
+    webhook_allow_local: bool = False
 
     # Email ALYR sends (sign-in codes) goes through Resend (D-029). Empty key: no email
     # is sent, and on a local machine the sign-in page shows the code instead.
@@ -95,6 +113,17 @@ class Settings(BaseSettings):
     # already existed got the module from migration 0032, and the back office can switch it
     # off for any one shop.
     catalog_for_new_shops: bool = True
+
+    # The ways ALYR can connect a business's WhatsApp today (ALY-217, D-050), by key from
+    # `core/whatsapp_setup.py`, comma separated: new_number, move_number, own_account. Empty
+    # until Meta approves ALYR as a Tech Provider (ALY-52); until then a business that has
+    # everything ready shows "waiting for Meta", and ALYR says so honestly.
+    whatsapp_ways_open: str = ""
+
+    # How a client pays ALYR by bank transfer (ALY-212, D-051): the account name, bank and
+    # IBAN, shown to the owner beside the amount and their reference. Not a secret. Empty
+    # until ALYR's company account is open; the owner is then told ALYR sends the details.
+    bank_transfer_details: str = ""
 
     # Per shop, to start (D-039; our estimate). A cap stops new items or photos with a
     # clear message and never deletes anything.

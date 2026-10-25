@@ -29,21 +29,23 @@ from alyr import capabilities, shop_templates
 from alyr.catalog import Text
 from alyr.core import team
 from alyr.core.team import Actor
-from alyr.core.words import ITEMS, counted
-from alyr.modules.items import changes
-from alyr.modules.items.service import ItemError
+from alyr.core.words import DISCOUNTS, ITEMS, ZONES, counted
+from alyr.modules.items import changes, qty
+from alyr.modules.items.service import BilingualError
 
 SET_BY = ("template", "owner")
 
+# The pricing pack (ALY-150) changes what a customer is charged, so it acts only on the Catalog's
+# order page, which shows the customer the same figures that are charged. A shop that has the
+# older order page (orders without the Catalog) is never given a discount, a delivery fee or a
+# cost it could not show: for it these are off, whatever is switched.
+PRICING_PACK = ("discounts", "delivery_fees", "cost_margin")
 
-class FeatureError(ItemError):
+
+class FeatureError(BilingualError):
     """A feature change that cannot be made, or a use of a feature that is off. `code` is
-    stable; the message is safe to show. It is an `ItemError`, so every route that answers one
-    already answers this."""
-
-    def __init__(self, code: str, message: str, message_ar: str = "") -> None:
-        super().__init__(code, message)
-        self.message_ar = message_ar or message
+    stable; the message is safe to show, in both languages. It is an `ItemError`, so every route
+    that answers one already answers this."""
 
 
 _TENANT = "nullif(current_setting('app.tenant_id', true), '')::uuid"
@@ -61,9 +63,12 @@ class Row:
 class Features:
     """A shop's features as they are now. Immutable; load again after a change."""
 
-    def __init__(self, rows: dict[str, Row], template: shop_templates.ShopTemplate) -> None:
+    def __init__(
+        self, rows: dict[str, Row], template: shop_templates.ShopTemplate, catalog: bool = True
+    ) -> None:
         self.rows = rows
         self.template = template
+        self.catalog = catalog  # the Catalog module is on for this shop
 
     # ── asking ──
 
@@ -77,6 +82,8 @@ class Features:
         cap = capabilities.BY_KEY.get(key)
         if cap is None or not cap.built:
             return False  # a feature that is not built is never on
+        if key in PRICING_PACK and not self.catalog:
+            return False
         if cap.core or cap.always_on:
             return True
         return self._own(key) and all(self.on(dep) for dep in cap.depends_on)
@@ -139,9 +146,15 @@ async def template_key(conn: asyncpg.Connection) -> str:
 
 
 async def template_of(conn: asyncpg.Connection) -> shop_templates.ShopTemplate:
-    """The shop's template: the built-in one for its business type (travel and the rest with
-    no catalog of their own get the plain Catalog)."""
-    return shop_templates.builtin_for(await template_key(conn))
+    """The shop's template: a built-in one (the type's, or the plain Catalog for travel and the
+    rest), or one made in the back office, which is read from its table."""
+    key = await template_key(conn)
+    if key in shop_templates.BUILTIN:
+        return shop_templates.BUILTIN[key]
+    # (imported here: the table's code builds on this one)
+    from alyr.modules.items import templates
+
+    return await templates.get(conn, key) or shop_templates.builtin_for(key)
 
 
 async def load(conn: asyncpg.Connection) -> Features:
@@ -152,23 +165,38 @@ async def load(conn: asyncpg.Connection) -> Features:
             "select key, enabled, config, set_by, updated_by, updated_at from shop_features"
         )
     }
-    return Features(rows, await template_of(conn))
+    catalog = bool(await conn.fetchval(
+        "select enabled from tenant_modules where module_key = 'catalog'"
+    ))
+    return Features(rows, await template_of(conn), catalog)
 
 
 async def enabled(conn: asyncpg.Connection, key: str) -> bool:
     return (await load(conn)).on(key)
 
 
-async def file_columns(conn: asyncpg.Connection) -> tuple[str, ...]:
+async def file_columns(conn: asyncpg.Connection, costs: bool = False) -> tuple[str, ...]:
     """The columns of this shop's import and export files: those of its features that are on,
-    and those of a feature that is off but that an item still uses."""
+    and those of a feature that is off but that an item still uses. The cost column (ALY-150)
+    is the owner's and the admins' alone, and only while the shop keeps costs: it is in the
+    answer only when `costs` says the person asking may see costs."""
     from alyr.modules.items import (
         columns,  # (columns is plain data; imported here to keep cycles out)
     )
 
     feats = await load(conn)
     used = await in_use(conn)
-    return columns.allowed(lambda key: feats.on(key) or used.get(key, 0) > 0)
+    wanted = columns.allowed(lambda key: feats.on(key) or used.get(key, 0) > 0)
+    return (*wanted, "cost") if costs and feats.on("cost_margin") else wanted
+
+
+async def own_fields(conn: asyncpg.Connection) -> list[dict]:
+    """The shop's own fields that files carry: its active ones, while the feature is on."""
+    from alyr.modules.items import fields  # (fields builds on this module's neighbours)
+
+    if not (await load(conn)).on("custom_fields"):
+        return []
+    return await fields.rows(conn, archived=False)
 
 
 def hidden_cards(feats: Features) -> list[str]:
@@ -210,14 +238,31 @@ async def in_use(conn: asyncpg.Connection) -> dict[str, int]:
         "  on g.id = p.group_id and g.archived_at is null) as price_groups, "
         "(select count(*) from items where status <> 'archived' "
         "  and (pack_size is not null or min_order > 1)) as pack_rules, "
+        "(select count(*) from items where status <> 'archived' "
+        "  and (unit in ('g', 'l', 'ml', 'm', 'tola') or pack_size <> trunc(pack_size) "
+        "       or min_order <> trunc(min_order))) as decimal_quantity, "
         "(select count(*) from items where status <> 'archived' and cardinality(tags) > 0) "
-        "  as tags"
+        "  as tags, "
+        "(select count(*) from discount_rules where status <> 'ended') as discounts, "
+        "(select count(*) from delivery_zones where archived_at is null) as delivery_fees, "
+        "(select count(distinct item_id) from item_costs) as cost_margin"
     )
     return {k: int(v) for k, v in dict(row).items() if v}
 
 
 def _use_text(key: str, n: int) -> Text:
+    if key == "discounts":
+        things = Text(counted(n, DISCOUNTS, "en"), counted(n, DISCOUNTS, "ar"))
+        return Text(f"{things.en} saved. They are kept if you switch this off.",
+                    f"{things.ar} محفوظة. وتبقى إن أوقفت هذه الميزة.")
+    if key == "delivery_fees":
+        things = Text(counted(n, ZONES, "en"), counted(n, ZONES, "ar"))
+        return Text(f"{things.en} saved. They are kept if you switch this off.",
+                    f"{things.ar} محفوظة. وتبقى إن أوقفت هذه الميزة.")
     things = Text(counted(n, ITEMS, "en"), counted(n, ITEMS, "ar"))
+    if key == "cost_margin":
+        return Text(f"{things.en} have a cost. They keep it, and nobody else sees it.",
+                    f"لدى {things.ar} تكلفة. وتبقى محفوظة، ولا يراها غيرك.")
     if key == "price_groups":
         return Text(f"{things.en} have a group price. They keep it.",
                     f"لدى {things.ar} سعر خاص بمجموعة. وتحتفظ به.")
@@ -402,7 +447,7 @@ async def seed(
 async def item_parts(conn: asyncpg.Connection, item_id) -> dict:
     """What an item holds now of each part a feature governs, for `guard_item_change`."""
     row = await conn.fetchrow(
-        "select i.stock_rule, i.tags, i.pack_size, i.min_order, i.low_stock_at, "
+        "select i.stock_rule, i.tags, i.pack_size, i.min_order, i.low_stock_at, i.unit, "
         "(select count(*) from item_variants v where v.item_id = i.id and v.active "
         "  and not v.is_default) as variants, "
         "(select count(*) from item_option_groups g where g.item_id = i.id) as groups, "
@@ -417,7 +462,7 @@ async def item_parts(conn: asyncpg.Connection, item_id) -> dict:
     )
     return {
         "stock_rule": row["stock_rule"], "tags": list(row["tags"]), "pack_size": row["pack_size"],
-        "min_order": row["min_order"], "low_stock_at": row["low_stock_at"],
+        "min_order": row["min_order"], "low_stock_at": row["low_stock_at"], "unit": row["unit"],
         "variants": row["variants"] > 0, "option_groups": row["groups"] > 0,
         "group_prices": row["prices"] > 0, "schedule": [dict(r) for r in schedule],
     }
@@ -440,11 +485,32 @@ def _refuse(cap_key: str) -> FeatureError:
     )
 
 
+def refuse(key: str) -> FeatureError:
+    """The refusal for new use of a feature that is off."""
+    return _refuse(key)
+
+
 async def require(conn: asyncpg.Connection, key: str) -> None:
     """Refuse (a `FeatureError`) unless the feature is on. For things that are made new, such as
     a price group; what exists keeps working whatever this says."""
     if not (await load(conn)).on(key):
         raise _refuse(key)
+
+
+def _uses_decimal(data: dict) -> bool:
+    """The item uses "Sold by weight or volume": a measure other than the kilo, or a step or a
+    smallest order that is a fraction."""
+    if data.get("unit") and data["unit"] not in qty.LEGACY_UNITS:
+        return True
+    return any(
+        data.get(k) and data[k] != int(data[k]) for k in ("pack_size", "min_order")
+    )
+
+
+def _measure_step(feats: Features, data: dict) -> bool:
+    """A step or smallest order on an item sold by a measure belongs to "Sold by weight or
+    volume", not to "Pack sizes and smallest orders"."""
+    return feats.on("decimal_quantity") and qty.is_measure(data.get("unit") or "")
 
 
 def guard_new_item(feats: Features, data: dict) -> None:
@@ -457,9 +523,11 @@ def guard_new_item(feats: Features, data: dict) -> None:
         raise _refuse(capabilities.RULE_FEATURE[rule])
     if (data.get("tags") and not feats.on("tags")):
         raise _refuse("tags")
+    if not feats.on("decimal_quantity") and _uses_decimal(data):
+        raise _refuse("decimal_quantity")
     if not feats.on("pack_rules") and (
         data.get("pack_size") or (data.get("min_order") or 1) > 1
-    ):
+    ) and not _measure_step(feats, data):
         raise _refuse("pack_rules")
     if not feats.on("pickup_date") and any(
         (w.get("lead_days") or 0) > 0 or w.get("cutoff") for w in data.get("schedule") or []
@@ -481,11 +549,24 @@ def guard_item_change(feats: Features, current: dict, changes_: dict) -> None:
         raise _refuse(capabilities.RULE_FEATURE[rule])
     if changes_.get("tags") and not feats.on("tags") and not current.get("tags"):
         raise _refuse("tags")
+    if not feats.on("decimal_quantity"):
+        # Off stops new use: another measure than kg, or a step or smallest order that is a
+        # fraction, is refused unless the item already had it. What the item holds stays.
+        unit = changes_.get("unit")
+        if unit and unit != current.get("unit") and unit not in qty.LEGACY_UNITS:
+            raise _refuse("decimal_quantity")
+        for key in ("pack_size", "min_order"):
+            value = changes_.get(key)
+            if value and value != int(value) and value != current.get(key):
+                raise _refuse("decimal_quantity")
     if not feats.on("pack_rules"):
         pack = changes_.get("pack_size")
         floor = changes_.get("min_order")
-        if (pack and pack != current.get("pack_size")) or (
-            floor and floor > 1 and floor != current.get("min_order")
+        unit = changes_.get("unit") or current.get("unit")
+        by_step = feats.on("decimal_quantity") and qty.is_measure(unit or "")
+        if not by_step and (
+            (pack and pack != current.get("pack_size"))
+            or (floor and floor > 1 and floor != current.get("min_order"))
         ):
             raise _refuse("pack_rules")
     if not feats.on("pickup_date"):

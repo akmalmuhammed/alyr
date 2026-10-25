@@ -89,8 +89,13 @@ WORDS: dict[str, tuple[str, str]] = {
         "ما السعر الجديد؟ مثلاً: سعر {name} 12",
     ),
     "bad_stock_number": (
-        "Send the stock as a whole number, for example: stock {name} 20",
-        "أرسل المخزون كرقم صحيح، مثلاً: مخزون {name} 20",
+        "Send the stock as a number, for example: stock {name} 20 (or 12.5 for an item sold by "
+        "weight or volume)",
+        "أرسل المخزون كرقم، مثلاً: مخزون {name} 20 (أو 12.5 للأصناف التي تُباع بالوزن أو الحجم)",
+    ),
+    "stock_whole_only": (
+        "{name} is counted in whole numbers. Send a whole number, for example: stock {name} 20",
+        "«{name}» يُعدّ بأعداد صحيحة. أرسل عدداً صحيحاً، مثلاً: مخزون {name} 20",
     ),
     "bad_price_number": (
         "I could not read that price. Send it in riyals, for example: price {name} 12.5",
@@ -344,6 +349,45 @@ WORDS: dict[str, tuple[str, str]] = {
     "total": ("Total: {total}", "الإجمالي: {total}"),
     "draft_head": ("Your order from {shop}:", "طلبك من {shop}:"),
     "draft_added": ("Added to your order.", "تمت الإضافة إلى طلبك."),
+    # Discount codes in the draft (ALY-150).
+    "draft_items": ("Items: {total}", "الأصناف: {total}"),
+    "draft_discount": ("Discount{label}: -{amount}", "خصم{label}: -{amount}"),
+    "coupon_note": ("Code {coupon}: {reason}", "الرمز {coupon}: {reason}"),
+    "coupon_added": (
+        "Code {coupon} added: {text}.", "تمت إضافة الرمز {coupon}: {text}."
+    ),
+    "coupon_saved": (
+        "Code {coupon} saved: {text}. Add items and I will take it off your total.",
+        "تم حفظ الرمز {coupon}: {text}. أضف أصنافاً وسأخصمه من إجمالي طلبك.",
+    ),
+    "coupon_how": (
+        "Send the code like this: coupon RAMADAN10",
+        "أرسل الرمز هكذا: كوبون RAMADAN10",
+    ),
+    # Pickup or delivery in the draft (ALY-150).
+    "fulfil_ask": ("Pickup or delivery?", "استلام أو توصيل؟"),
+    "button_pickup": ("Pickup", "استلام"),
+    "button_delivery": ("Delivery", "توصيل"),
+    "zone_ask": (
+        "Where should we deliver? Choose your area.", "إلى أين نوصّل؟ اختر منطقتك."
+    ),
+    "address_ask": (
+        "Send the delivery address as a message: area, street, house or building.",
+        "أرسل عنوان التوصيل كرسالة: المنطقة والشارع والمنزل أو المبنى.",
+    ),
+    "draft_pickup": ("Pickup from the shop", "استلام من المتجر"),
+    "draft_delivery": ("Delivery to {zone}: {fee}", "التوصيل إلى {zone}: {fee}"),
+    "draft_delivery_flat": ("Delivery: {fee}", "التوصيل: {fee}"),
+    "draft_address": ("Address: {address}", "العنوان: {address}"),
+    "draft_when": ("Delivery day: {when}", "موعد التوصيل: {when}"),
+    "draft_how": (
+        "To change, reply pickup or delivery.", "للتغيير أرسل: استلام أو توصيل."
+    ),
+    "free_word": ("free", "مجاني"),
+    "coupon_total_changed": (
+        "Your total is now {total}. Check it, then tap Place order.",
+        "أصبح إجمالي طلبك {total}. راجعه ثم اضغط إتمام الطلب.",
+    ),
     "draft_more": (
         "Send another code, link or name to add more, or tap Place order and I will send you "
         "the payment link.",

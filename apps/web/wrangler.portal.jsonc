@@ -1,0 +1,23 @@
+// The client portal (workspace, back office, sign-in, sign-up and the customer pages opened
+// from WhatsApp) on Cloudflare Workers, built with OpenNext. Not the public site: that is
+// wrangler.jsonc (alyr-site). Build and deploy by hand from apps/web (D-052):
+//   ALYR_API_URL=https://<the API Worker> pnpm portal:build && pnpm portal:deploy
+// ALYR_API_URL is read while building (next.config.ts), because the rewrites are fixed then.
+{
+  "name": "alyr-portal",
+  "main": ".open-next/worker.js",
+  "compatibility_date": "2026-10-06",
+  "compatibility_flags": ["nodejs_compat", "global_fetch_strictly_public"],
+  // First the workers.dev address; a custom domain (app.alyr.qa) is added only after the
+  // founder approves it.
+  "workers_dev": true,
+  "preview_urls": false,
+  "assets": {
+    "directory": ".open-next/assets",
+    "binding": "ASSETS"
+  },
+  "services": [
+    { "binding": "WORKER_SELF_REFERENCE", "service": "alyr-portal" }
+  ],
+  "observability": { "enabled": true }
+}

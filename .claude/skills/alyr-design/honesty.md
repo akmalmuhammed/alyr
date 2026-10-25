@@ -8,8 +8,10 @@ D-025 to D-039. **It goes stale.** Before you rely on a row, read `docs/status.m
 decision it cites; if a row is no longer true, fix this file in your PR.
 
 "Built" means it works on the simulator or Meta's test number. **No business uses ALYR
-yet.** Describe what the product does as early access that ALYR sets up with each
-business, never as something businesses run now.
+yet.** Describe what the product does as something ALYR sets up with each business
+("Set up for you", founder, 20 Oct 2026), never as something businesses run now. ALYR Docs
+is built and off for every shop: its page never says "today", "now", "live", "turn it on"
+or "coming".
 
 ## 1. No AI words
 
@@ -23,13 +25,23 @@ Until a model is in the product (D-012, D-035), nothing says or implies AI, not 
 - **Arabic:** ذكي، ذكاء، يتعلم، يفهم، يتوقع، يعرف (of the product)، مساعد، وكيل، خوارزمية.
 - **Visuals:** sparkles, shimmer, gradients on text, glowing brains, typing dots,
   "thinking…" loaders, avatars for the product, a first-person product voice.
-- **Say instead:** the product counts, compares, flags, sorts, suggests and shows the rule.
-  "By rule: …", "RULE · owed 30+ days, no reminder in 7 days · 4 customers". The owner is
-  the one who knows.
+- **Say instead:** the product counts, compares, flags, sorts and suggests, and says what it
+  counted or compared, in plain words: "QAR 3,400 owed for over 30 days", "Owed by 3
+  customers. The oldest is Ward Events, 104 days." The owner is the one who knows.
+- **Rule lines: in the product, not on the public site** (founder, 25 Oct 2026: "a new user
+  will not understand what's rule"). The workspace, `/agent-sample`, the report the owner gets
+  and the API keep "RULE · owed 30+ days, no reminder in 7 days · 4 customers" / «القاعدة · …»
+  and "Suggestions, by rule". The public site never says "rule" / «قاعدة» about ALYR (not in
+  copy, meta, `llms.txt`, alt text or a drawing): its Agent showcase passes
+  `ruleLines={false}` and titles the cards "Suggestions" / «اقتراحات»; the feed, the opened
+  card on `/agent` and the report drawn on the site leave the rule line out. Say "reason",
+  "what it counted" or "what it compares" instead. A sentence that truly needs the word about
+  something else may keep it («قاعدة البيانات», the database), and WhatsApp's 24-hour rule is
+  "the 24-hour window".
 - **"Agent" never carries a sentence alone.** Wherever "agent" appears, the same screen,
-  card or post shows a rule line or says "by rules you can check". ALYR (the company) is
-  the agent; ALYR Agent is its screen and report. ALYR Chat and ALYR Bookings send the
-  replies and reminders; ALYR Agent counts them.
+  card or post says what it counted or compared (in the product, its rule line). ALYR (the
+  company) is the agent; ALYR Agent is its screen and report. ALYR Chat and ALYR Bookings send
+  the replies and reminders; ALYR Agent counts them.
 - The API tests enforce part of this (`apps/api/tests/test_agent.py`,
   `test_report_card.py`, `test_agent_samples.py`). Nothing checks `copy.ts` yet; you do.
 
@@ -37,7 +49,7 @@ Until a model is in the product (D-012, D-035), nothing says or implies AI, not 
 
 | Do not say or show | Why | Say instead |
 |---|---|---|
-| Customer logos, "trusted by", testimonials, counts of businesses, messages or money handled, ratings, case studies | No customers | Nothing. "ALYR Chat is in early access. We set it up with each business ourselves." |
+| Customer logos, "trusted by", testimonials, counts of businesses, messages or money handled, ratings, case studies | No customers | Nothing. "We set ALYR Chat up with you at your shop." |
 | "Live on WhatsApp", "used by shops in Doha", "running today" | One test-number round trip from the laptop | "Built on WhatsApp's official Business Platform." |
 | "Keep your number", "the app stays on your phone", "the number you already use", "in the chat you already use", "as she always has" | A shop cannot connect its own number (ALY-39) | "Which number your customers message is agreed with you at setup." |
 | Card payments live; "paid straight to your account"; provider names or logos (SADAD, SkipCash, Dibsy, NAPS, Apple Pay); "licensed payment partner"; "paid through ALYR links" in a sample | No provider integrated (ALY-17); the pay page is a stand-in | "Payment links are built and tested on a test page; card payments start once a payment provider is connected. ALYR is built never to hold your money." |
@@ -58,7 +70,11 @@ Until a model is in the product (D-012, D-035), nothing says or implies AI, not 
 | One message becoming a booking, an order and a payment; free questions answered | Keyword and button matching | "It answers the everyday requests: order, book, balance, pay. Everything else goes to your team." |
 | Delivery tracking, drivers, maps | Tracking ends at ready for collection and complete | "Confirmed, ready for collection, complete." |
 | Staff see no money, beyond the Agent screen | Orders, Credit accounts and the API still show amounts | Only on `/agent`, about that screen |
-| Statements for ALYR Accounts, invoices, stock, product options (until the Catalog ships) | Not built | List under "Not yet", or leave out |
+| Statements of account; ALYR Docs as available to a shop | Statements have no flow; Docs is built and off for every shop | Statements under "Not yet"; Docs as "set up with you" |
+| "Tax invoice" as something ALYR Docs issues, VAT, e-invoicing or the tax authority's system as connected, a retention period, compliance with Qatar's Arabic invoice rule, invoices without a CR, a named POS | Tax is off; ALY-51 open; no POS tried | Quote the no-CR note exactly; "ALYR never deletes an issued document"; "Arabic first, and Arabic always on documents for consumers" |
+| A document sent on WhatsApp at any time | Outside the 24-hour window it needs three templates not yet submitted | "In the chat as a PDF, when the customer has written in the last 24 hours" |
+| ALYR Shelf: Meta catalog sync, barcodes, batches, expiry, a photo per size, maps or drivers, where photos are stored | Not built, or not tested (R2) | Leave out, or "Not yet" |
+| ALYR Shelf "free" or "at no cost" | D-039 allows a usage charge later | "With every product" / «مع كل منتج» |
 | Projected revenue, forecasts | Never | Show what is booked, at today's prices, and say so |
 | "Coming soon", "under development", "beta" to an owner or a customer at go-live | D-039 | Hide what is not ready |
 
@@ -74,17 +90,30 @@ the same product. Check every verb against the code (the router, the module's `c
 WhatsApp, it replies, sends the reminders and tells you what needs you" became two
 sentences, because "what needs you" is on the workspace screen.
 
-## 4. Samples and captions
+## 4. Samples and their marks
 
 - Every drawing, screen capture, image or post that shows product data uses a fictional
-  business and is captioned once: "FIG 03 · The Bookings screen · Fictional salon" /
-  «… · صالون غير حقيقي». Never "sample" twice in a caption.
+  business and is marked as a sample once (founder, 24 Oct 2026). On the site the mark sits
+  in the drawing's own chrome: "Sample" / «مثال» beside the shop's name in the window's
+  title bar or at the end of its tab row, "Sample business" / «نشاط توضيحي» in a drawn
+  phone's header, the switch's "Sample business" on a figure with the sample switch. A
+  caption ("The same tracking page, in English and Arabic · Sample") only where the drawing
+  needs words. Never "sample" twice for one drawing. In a deck or a post, the image carries
+  the same mark, or one caption line where the drawing has no chrome.
+- **Machines read it first.** A sample's numbers must never read as ALYR's results to a
+  person or to a crawler or assistant (site audit 03, A1). Each figure's first child, before
+  any number, is a line for screen readers and crawlers: "Sample screen of a fictional
+  bakery. The names and numbers are made up; they are not ALYR's results." (the sample's
+  `fictional`, or `fig.note`). The drawing itself sits in a `data-nosnippet` box, stays
+  `inert` where it repeats a real screen, and the Agent dashboard on the site draws its
+  titles as text, not headings (`headings={false}`), so no sample number is in the page's
+  outline.
 - One fictional business per figure set (the homepage uses Qirfa Bakery throughout).
 - Prices on sample items are samples; the caption or the figure says so once.
 - Sample numbers come from the engine's captured samples (`apps/web/app/_agent/samples/`),
   never typed by hand, so the dashboard, the feed and the report agree. If two figures show
-  different moments, the captions name them (the report's week 4 to 10 Oct; the dashboard's
-  Thursday 15 Oct, 16:20).
+  different moments, the drawings name them (the report card prints its week, 4 to 10 Oct;
+  the dashboard prints "Thursday · 16:20").
 - Order numbers start at 1001 and booking numbers at 101 per shop; keep a shop's numbers
   plausible across figures.
 - Dates fall on their real weekdays (14 Oct 2026 is a Wednesday). Check with a calendar.

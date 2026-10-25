@@ -20,6 +20,12 @@ GLOBAL_TABLES = {
     "quote_lines",
     # The internal tool's own records: the audit log and Today's set-aside items (D-033).
     "platform_audit", "today_snoozes",
+    # The kinds of business ALYR's staff make in the back office (ALY-148); every shop may read
+    # them, only the back office writes them. Forced row-level security.
+    "business_templates",
+    # What a client paid ALYR, before their products open (ALY-212, D-051): the owner reads
+    # their own client's, only the back office writes. Forced row-level security.
+    "client_payments",
 }
 
 

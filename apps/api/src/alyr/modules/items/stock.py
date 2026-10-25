@@ -6,6 +6,11 @@ statement that moves the number only if it stays at zero or above and writes the
 in the same breath, so two customers cannot buy the last item, and two staff changing the
 same item at once both count: each statement adds to whatever the number is by then.
 
+Numbers are exact decimals with three places (ALY-149, `qty.py`): 12.5 kg is a stock. A
+whole number is still the Python `int` it always was (the database connection reads it so), and
+a stock in a counted unit (a piece, a box) can only be whole: the database refuses a fraction
+there (migration 0043) and `move` says so in plain words before it gets that far.
+
 Two kinds of number:
 
 * **count** variants have a running stock, `item_variants.on_hand`.
@@ -23,7 +28,7 @@ from uuid import UUID
 import asyncpg
 
 from alyr.core.team import Actor
-from alyr.modules.items import events
+from alyr.modules.items import events, qty
 
 KINDS = ("opening", "received", "sold", "cancelled_restocked", "wasted", "counted", "adjusted")
 # What staff may record by hand. Sales and restocks come from orders.
@@ -31,13 +36,13 @@ BY_HAND = ("opening", "received", "wasted", "counted", "adjusted")
 
 _COUNT_STEP = """
 with moved as (
-    update item_variants set on_hand = on_hand + $2::int
-    where id = $1 and on_hand + $2::int >= 0
+    update item_variants set on_hand = on_hand + $2::numeric
+    where id = $1 and on_hand + $2::numeric >= 0
     returning id, on_hand
 )
 insert into stock_movements
     (variant_id, kind, delta, balance_after, reason, order_id, actor_id, actor_name, via)
-select id, $3, $2::int, on_hand, $4, $5::uuid, $6::uuid, $7, $8 from moved
+select id, $3, $2::numeric, on_hand, $4, $5::uuid, $6::uuid, $7, $8 from moved
 returning balance_after
 """
 
@@ -51,14 +56,15 @@ insert into variant_day_stock (variant_id, day) values ($1, $2) on conflict do n
 # lowered below what the day has already sold.
 _DAILY_STEP = """
 with moved as (
-    update variant_day_stock set delta = delta + $3::int
+    update variant_day_stock set delta = delta + $3::numeric
     where variant_id = $1 and day = $2::date
-      and ($3::int >= 0 or $4::int + delta + $3::int >= 0)
+      and ($3::numeric >= 0 or $4::numeric + delta + $3::numeric >= 0)
     returning delta
 )
 insert into stock_movements
     (variant_id, kind, delta, balance_after, day, reason, order_id, actor_id, actor_name, via)
-select $1::uuid, $5, $3::int, $4::int + moved.delta, $2::date, $6, $7::uuid, $8::uuid, $9, $10
+select $1::uuid, $5, $3::numeric, $4::numeric + moved.delta, $2::date, $6, $7::uuid, $8::uuid,
+       $9, $10
 from moved
 returning balance_after
 """
@@ -82,16 +88,16 @@ class Take:
     daily-limit variant: the shop day the units are counted against, and its limit."""
 
     variant_id: UUID
-    quantity: int
+    quantity: "qty.Qty"
     day: date | None = None
-    limit: int | None = None
+    limit: "qty.Qty | None" = None
 
 
 async def move(
-    conn: asyncpg.Connection, variant_id: UUID, kind: str, delta: int, actor: Actor,
+    conn: asyncpg.Connection, variant_id: UUID, kind: str, delta: "qty.Qty", actor: Actor,
     reason: str = "", day: date | None = None, order_id: UUID | None = None,
-    limit: int | None = None, alerts: bool = True,
-) -> int | None:
+    limit: "qty.Qty | None" = None, alerts: bool = True,
+) -> "qty.Qty | None":
     """Change one variant's stock by `delta` and write the log row, in one statement.
     Returns the number after, or None when a take would overdraw it (nothing is written).
     Give `day` for a daily-limit variant, and its `limit` if you have it. `alerts=False`
@@ -99,6 +105,9 @@ async def move(
     does; see `events.stock_changed`)."""
     if kind not in KINDS:
         raise ValueError(f"unknown stock movement {kind!r}")
+    delta = qty.norm(delta)
+    if not isinstance(delta, int):
+        await _require_measure(conn, variant_id)
     if day is None:
         balance = await conn.fetchval(
             _COUNT_STEP, variant_id, delta, kind, reason, order_id, actor.id, actor.name,
@@ -119,6 +128,19 @@ async def move(
         # alerts). They only queue a job; nothing is sent from here.
         await events.stock_changed(conn, variant_id, delta, balance, alerts)
     return balance
+
+
+async def _require_measure(conn: asyncpg.Connection, variant_id: UUID) -> None:
+    """A fraction can only be moved for an item sold by a measure (kg, g, litre, ml, metre,
+    tola). The database refuses it too (migration 0043); this says so in plain words."""
+    unit = await conn.fetchval(
+        "select i.unit from item_variants v join items i on i.id = v.item_id where v.id = $1",
+        variant_id,
+    )
+    if unit is not None and not qty.is_measure(unit):
+        raise StockError(
+            "whole_only", "This item is counted in whole numbers, so it cannot have a fraction."
+        )
 
 
 async def reserve(
@@ -151,7 +173,9 @@ def _day_of(takes: list[Take], variant_id: UUID) -> date | None:
     return next((t.day for t in takes if t.variant_id == variant_id), None)
 
 
-async def left(conn: asyncpg.Connection, variant_id: UUID, day: date | None = None) -> int:
+async def left(
+    conn: asyncpg.Connection, variant_id: UUID, day: date | None = None
+) -> "qty.Qty":
     """What can still be sold of a variant: the running stock, or the day's allowance."""
     if day is None:
         return await conn.fetchval("select on_hand from item_variants where id = $1", variant_id)
@@ -164,7 +188,7 @@ async def left(conn: asyncpg.Connection, variant_id: UUID, day: date | None = No
 
 
 async def count(
-    conn: asyncpg.Connection, variant_id: UUID, counted: int, actor: Actor, reason: str,
+    conn: asyncpg.Connection, variant_id: UUID, counted: "qty.Qty", actor: Actor, reason: str,
     day: date | None = None, alerts: bool = True,
 ) -> dict:
     """The shelf was counted. The log gets the difference between what the system said
@@ -172,13 +196,14 @@ async def count(
     that agrees with the system is recorded too, so the log shows when it was last checked."""
     if counted < 0:
         raise StockError("bad_quantity", "A count cannot be below zero.")
+    counted = qty.norm(counted)
     locked = await conn.fetchrow(
         "select id, daily_limit from item_variants where id = $1 for no key update", variant_id
     )
     if locked is None:
         raise StockError("unknown_variant", "We could not find that item.")
     before = await left(conn, variant_id, day)
-    difference = counted - before
+    difference = qty.norm(counted - before)
     if difference and not reason.strip():
         raise StockError("reason_needed", "Say why the count differs from the system.")
     await move(
@@ -189,10 +214,10 @@ async def count(
     return {"before": before, "counted": counted, "difference": difference}
 
 
-async def total(conn: asyncpg.Connection, variant_id: UUID) -> int:
+async def total(conn: asyncpg.Connection, variant_id: UUID) -> "qty.Qty":
     """The running stock as the log adds it up."""
     return await conn.fetchval(
-        "select coalesce(sum(delta), 0)::int from stock_movements "
+        "select coalesce(sum(delta), 0) from stock_movements "
         "where variant_id = $1 and day is null",
         variant_id,
     )
@@ -201,13 +226,13 @@ async def total(conn: asyncpg.Connection, variant_id: UUID) -> int:
 async def mismatches(conn: asyncpg.Connection) -> list[dict]:
     """Variants whose stored number differs from their log: should always be empty."""
     rows = await conn.fetch(
-        "select v.id, v.on_hand, coalesce(m.total, 0)::int as logged from item_variants v "
+        "select v.id, v.on_hand, coalesce(m.total, 0) as logged from item_variants v "
         "left join (select variant_id, sum(delta) as total from stock_movements "
         "           where day is null group by variant_id) m on m.variant_id = v.id "
         "where v.on_hand <> coalesce(m.total, 0)"
     )
     days = await conn.fetch(
-        "select d.variant_id as id, d.day, d.delta, coalesce(m.total, 0)::int as logged "
+        "select d.variant_id as id, d.day, d.delta, coalesce(m.total, 0) as logged "
         "from variant_day_stock d "
         "left join (select variant_id, day, sum(delta) as total from stock_movements "
         "           where day is not null group by variant_id, day) m "

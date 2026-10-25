@@ -3,6 +3,7 @@
 // (shrinking a photo before it is sent, and sending it with progress).
 
 import { semantic } from "../../_tokens/tokens";
+import { isMeasure, milli, readQty } from "../_customer/qty";
 import type { Copy, Lang } from "./catalogCopy";
 
 export type PhotoState = "ready" | "pending" | "failed" | "missing";
@@ -14,6 +15,8 @@ export type Variant = {
   id: string; name: string; name_ar: string; sku: string; is_default: boolean; active: boolean;
   price_delta: number; daily_limit: number | null; on_hand: number; left: number | null;
   photo_id: string | null; photo?: Photo;
+  /** The owner's own fields for this size (ALY-148): field key to value. */
+  custom?: Record<string, string | number | boolean>;
 };
 export type Option = { id: string; name: string; name_ar: string; price_delta: number; active: boolean };
 export type Group = {
@@ -42,6 +45,8 @@ export type Item = {
   description: string; description_ar: string;
   category: string; status: Status; stock_rule: Rule; available: boolean; unit: string;
   pack_size: number | null; min_order: number; tags: string[]; sort: number; low_stock_at: number | null;
+  /** How it may be ordered (ALY-149): sold by a measure, the step, the smallest order. */
+  quantity?: { measure: boolean; step: number; min: number; fractions: boolean; show_unit: boolean; chips: number[] };
   price: number; price_text: string; sale_price: number | null; sale_price_text: string | null;
   sale_starts_at: string | null; sale_ends_at: string | null; sale_active: boolean;
   current_price: number; current_price_text: string; has_orders: boolean; updated_at: string | null;
@@ -50,7 +55,32 @@ export type Item = {
     orderable: boolean; reason: string; left: number | null; next_at: string | null; next_date: string | null;
   };
   photos: Photo[]; cover: Photo; photo_id: string | null;
+  /** The owner's own fields for this item (ALY-148): field key to value. */
+  custom?: Record<string, string | number | boolean>;
 };
+export type FieldChoice = { value: string; label: string; label_ar: string; active: boolean };
+/** One of the shop's own fields (GET /api/custom-fields; specs/012-feature-engine). */
+export type CustomField = {
+  id: string; key: string; label: string; label_ar: string;
+  kind: "text" | "number" | "choice" | "yes_no" | "date"; applies_to: "item" | "variant";
+  choices: FieldChoice[]; unit: string; shown_to_customers: boolean; searchable: boolean;
+  required: boolean; sort: number; archived: boolean; used_by?: number;
+};
+export type FieldsView = {
+  fields: CustomField[]; active: number; limits: { fields: number; choices: number }; can_manage?: boolean;
+};
+/** What switching to another template would add (GET /api/templates/preview). */
+export type TemplatePlan = {
+  from: { key: string; name: string; name_ar: string }; to: { key: string; name: string; name_ar: string; builtin: boolean };
+  turn_on: { key: string; name: string; name_ar: string }[]; stay_off: { key: string; name: string; name_ar: string }[];
+  stays_on: { key: string; name: string; name_ar: string }[];
+  categories: { name: string; name_ar: string }[];
+  fields: { key: string; label: string; label_ar: string; kind: string }[];
+  fields_skipped: { key: string; label: string; label_ar: string; kind: string }[];
+  wording: { section?: { from: { en: string; ar: string }; to: { en: string; ar: string } }; layout?: { from: string; to: string } };
+  nothing: boolean; hash: string;
+};
+export type TemplateChoice = { key: string; name: string; name_ar: string; builtin: boolean; note: string; note_ar: string };
 export type Access = { role: string; can_manage: boolean; can_edit: boolean; can_stock: boolean };
 export type Category = { name: string; name_ar: string; sort: number };
 export type Counts = {
@@ -72,6 +102,8 @@ export type ShareBase = { url: string; name: string; name_ar: string; whatsapp: 
 export type Movement = {
   id: string; item_id: string; item: string; item_ar: string; variant_id: string; variant: string;
   variant_ar: string; kind: string; delta: number; balance_after: number; day: string | null;
+  /** The item's unit, so a change of 0.5 can say "kg" (ALY-149). */
+  unit?: string;
   reason: string; order_number: number | null; actor: { id: string | null; name: string }; via: string;
   created_at: string;
 };
@@ -119,6 +151,57 @@ export type FeaturesView = {
   can_manage: boolean;
 };
 
+/** Where a discount stands: waiting for its start, working, paused by hand, all used, or over. */
+export type DiscountState = "scheduled" | "active" | "paused" | "used_up" | "ended";
+/**
+ * A coupon code or an automatic discount (`GET /api/discounts`; ALY-150, specs/014-pricing-pack).
+ * Amounts are dirhams. `text` and `text_ar` are the rule in words, from the API. A `percent` is
+ * a string ("12.5") so it stays exact.
+ */
+export type DiscountRule = {
+  id: string; kind: "coupon" | "auto"; code: string; name: string; name_ar: string;
+  text: string; text_ar: string; value_type: "percent" | "amount" | "free_units";
+  percent: string | null; amount: number | null; buy_qty: number | null; get_qty: number | null;
+  scope: "order" | "selected"; items: { id: string; name: string; name_ar: string }[]; categories: string[];
+  min_order: number; usage_limit: number | null; per_customer_limit: number | null;
+  starts_at: string | null; ends_at: string | null; stackable: boolean; group_id: string | null;
+  group: { name: string; name_ar: string } | null; status: string; state: DiscountState;
+  uses: number; given: number; given_text: string; created_by: string; created_at: string;
+};
+export type DiscountsView = {
+  rules: DiscountRule[]; given_total: number; given_total_text: string; limits: { rules: number };
+};
+/** What a discount form sends (`POST /api/discounts`, `PUT /api/discounts/{id}`). */
+export type DiscountBody = {
+  kind: "coupon" | "auto"; code: string; name: string; name_ar: string;
+  value_type: "percent" | "amount" | "free_units"; percent?: number; amount?: number;
+  buy_qty?: number; get_qty?: number; scope: "order" | "selected"; item_ids: string[]; categories: string[];
+  min_order: number; usage_limit: number | null; per_customer_limit: number | null;
+  starts_at: string | null; ends_at: string | null; stackable: boolean; group_id: string | null;
+};
+
+/**
+ * One place the shop delivers to (`GET /api/delivery`; ALY-150 part 2, specs/014-pricing-pack).
+ * Amounts are dirhams, `cutoff` is "HH:MM" on the shop's clock, `days` run 0 (Sunday) to 6.
+ * An empty `days` is every day. `*_text` is the API's English; the screen words it itself.
+ */
+export type DeliveryZone = {
+  id: string; name: string; name_ar: string; fee: number; fee_text: string; free_over: number | null; min_order: number;
+  cutoff: string | null; days: number[]; days_text: string; days_text_ar: string; active: boolean; sort: number;
+};
+export type DeliveryView = {
+  pickup: boolean; delivery: boolean; flat_fee: number | null; flat_free_over: number | null; flat_min_order: number;
+  zones: DeliveryZone[]; archived: DeliveryZone[]; limits: { zones: number }; can_manage: boolean;
+};
+/** What a zone form sends (`POST /api/delivery/zones`, `PUT /api/delivery/zones/{id}`). */
+export type DeliveryZoneBody = {
+  name: string; name_ar: string; fee: number; free_over: number | null; min_order: number; cutoff: string | null; days: number[];
+};
+/** What the switches and the flat fee send (`PUT /api/delivery`): any of them. */
+export type DeliverySettingsBody = Partial<{
+  pickup: boolean; delivery: boolean; flat_fee: number | null; flat_free_over: number | null; flat_min_order: number;
+}>;
+
 /** A WhatsApp number the owner registered as staff: it may change the Catalog by message. */
 export type StaffNumber = {
   id: string; name: string; phone: string; lang: "en" | "ar"; manager: boolean; weekly_report: boolean;
@@ -165,12 +248,12 @@ export class ApiError extends Error {
 type Body = Record<string, unknown> | unknown[];
 
 /** Calls the API. A refusal throws an `ApiError` carrying its `code` and the API's words. */
-export async function api<T>(path: string, method = "GET", body?: Body): Promise<T> {
+export async function api<T>(path: string, method = "GET", body?: Body, extra?: Record<string, string>): Promise<T> {
   let response: Response;
   try {
     response = await fetch(path, {
       method, cache: "no-store",
-      headers: body === undefined ? undefined : { "content-type": "application/json" },
+      headers: body === undefined && !extra ? undefined : { ...(body === undefined ? {} : { "content-type": "application/json" }), ...extra },
       body: body === undefined ? undefined : JSON.stringify(body),
     });
   } catch {
@@ -235,6 +318,15 @@ export function toSignedDirhams(text: string): number | null {
   const negative = clean.startsWith("-");
   const value = toDirhams(negative ? clean.slice(1) : clean);
   return value === null ? null : negative ? -value : value;
+}
+
+/** A quantity typed in a field: a whole number or up to three decimals, in either language's
+ *  digits ("12.5", "٠٫٥"), never below zero. Null when it is not one. A counted unit (a piece,
+ *  a box) takes whole numbers only: pass its `unit`. */
+export function toQty(text: string, unit = "kg"): number | null {
+  const q = readQty(text);
+  if (q === null) return null;
+  return !isMeasure(unit) && milli(q) % 1000 !== 0 ? null : q;
 }
 
 export function toInt(text: string): number | null {
@@ -486,3 +578,31 @@ export function sendFile<T>(method: "POST" | "PUT", path: string, file: Blob, on
 export function issueText(issue: { message: string; message_ar: string }, lang: Lang): string {
   return lang === "ar" ? issue.message_ar || issue.message : issue.message;
 }
+
+// ── cost price and margin (ALY-150 part 3) ─────────────
+// Only an owner or admin of a shop that keeps costs ever asks for these (every route answers 403
+// to an agent and 422 feature_off while the feature is off); no other endpoint carries a cost.
+// Amounts are dirhams; a `pct` is a string with one decimal ("37.5") so it stays exact.
+
+export type CostMargin = { price: number; cost: number; amount: number; pct: string | null };
+export type CostSize = {
+  id: string; name: string; name_ar: string; price: number; cost: number | null; effective: number | null; margin: CostMargin | null;
+};
+export type CostHistoryRow = { variant: string; cost: number | null; by: string; reason: string; at: string };
+/** Where a price is under the cost: the API's own sentence in both languages. A warning, never a block. */
+export type CostWarning = {
+  code: "below_cost" | "sale_below_cost"; variant_id: string | null; price: number; cost: number; message: string; message_ar: string;
+};
+/** `GET /api/items/{id}/cost`. */
+export type CostView = {
+  item_id: string; cost: number | null; price: number; margin: CostMargin | null; variants: CostSize[]; history: CostHistoryRow[];
+};
+/** `PUT /api/items/{id}/cost`: omit a key to leave it, null takes a cost away. */
+export type CostBody = { cost?: number | null; variants?: Record<string, number | null>; reason?: string };
+export type CostSaved = CostView & { warnings: CostWarning[] };
+/** `GET /api/items/margins`: the margin at today's price (the worst size), by item; items with no cost are absent. */
+export type ItemMargin = { price: number; cost: number; amount: number; pct: string | null; below_cost: boolean };
+/** `GET /api/items/valuation`: counted stock x cost; `missing` have stock and no cost (not in the value). */
+export type Valuation = { value: number; value_text: string; items: number; missing: number };
+/** `GET /api/orders/margins`: the estimated gross margin of an order that kept a cost, by order. */
+export type OrderMargin = { revenue: number; cost: number; amount: number; pct: string | null; complete: boolean };

@@ -22,6 +22,8 @@ from uuid import UUID
 
 import asyncpg
 
+from alyr.modules.items import qty
+
 CART_LIFE = timedelta(hours=6)
 PENDING_LIFE = timedelta(minutes=30)
 MISS_WINDOW = timedelta(minutes=10)
@@ -40,10 +42,13 @@ class Cart:
     misses: int = 0
     misses_since: datetime | None = None
     expires_at: datetime | None = None
+    # What else the draft remembers: the discount codes the customer typed (`coupons`) and, with
+    # the delivery feature, how it is to reach them (ALY-150).
+    extras: dict = field(default_factory=dict)
 
     @property
     def total(self) -> int:
-        return sum(line["price"] * line["quantity"] for line in self.lines)
+        return sum(qty.line_total(line["price"], line["quantity"]) for line in self.lines)
 
 
 def new_question_id() -> str:
@@ -51,10 +56,28 @@ def new_question_id() -> str:
     return secrets.token_hex(4)
 
 
+def _lines(stored: list[dict]) -> list[dict]:
+    """The draft's lines as exact quantities: a fraction stored as JSON comes back as the decimal
+    it was written as (0.1 is 0.1), never as a float's approximation."""
+    return [{**line, "quantity": qty.parse(line["quantity"], allow_zero=True)} for line in stored]
+
+
+def _pending(stored: dict | None) -> dict | None:
+    """The pending question with exact quantities in the lines it holds and the sizes it still
+    has to ask about."""
+    if stored is None:
+        return None
+    return {
+        **stored,
+        "lines": _lines(stored.get("lines", [])),
+        "ask": _lines(stored.get("ask", [])),
+    }
+
+
 def _cart(row: asyncpg.Record) -> Cart:
     return Cart(
-        row["id"], row["contact_id"], list(row["lines"]), row["pending"], row["misses"],
-        row["misses_since"], row["expires_at"],
+        row["id"], row["contact_id"], _lines(row["lines"]), _pending(row["pending"]),
+        row["misses"], row["misses_since"], row["expires_at"], dict(row["extras"] or {}),
     )
 
 
@@ -104,10 +127,10 @@ async def save(conn: asyncpg.Connection, cart: Cart, now: datetime | None = None
     cart.expires_at = now + CART_LIFE
     await conn.execute(
         "update chat_carts set lines = $2, pending = $3, pending_expires_at = $4, misses = $5, "
-        "misses_since = $6, expires_at = $7, updated_at = now() where id = $1",
+        "misses_since = $6, expires_at = $7, extras = $8, updated_at = now() where id = $1",
         cart.id, cart.lines, cart.pending,
         now + PENDING_LIFE if cart.pending is not None else None,
-        cart.misses, cart.misses_since, cart.expires_at,
+        cart.misses, cart.misses_since, cart.expires_at, cart.extras,
     )
 
 
@@ -134,8 +157,32 @@ def note_misses(cart: Cart, count: int, now: datetime | None = None) -> None:
     cart.misses += count
 
 
+def coupons(cart: Cart) -> list[str]:
+    """The discount codes the customer has typed into this draft, in order."""
+    return list(cart.extras.get("coupons", []))
+
+
+def add_coupon(cart: Cart, code: str, limit: int) -> bool:
+    """Remember a code (once). False when the draft already carries `limit` codes."""
+    have = coupons(cart)
+    if code in have:
+        return True
+    if len(have) >= limit:
+        return False
+    cart.extras["coupons"] = [*have, code]
+    return True
+
+
+def drop_coupons(cart: Cart, codes: list[str]) -> None:
+    kept = [c for c in coupons(cart) if c not in codes]
+    if kept:
+        cart.extras["coupons"] = kept
+    else:
+        cart.extras.pop("coupons", None)
+
+
 def add_line(
-    cart: Cart, item_id: UUID, variant_id: UUID | None, quantity: int, price: int
+    cart: Cart, item_id: UUID, variant_id: UUID | None, quantity: "qty.Qty", price: int
 ) -> bool:
     """Put a line in the draft, adding to the line for the same item and size. False when
     the draft is full."""
@@ -143,13 +190,13 @@ def add_line(
         if line["item_id"] == str(item_id) and line["variant_id"] == (
             str(variant_id) if variant_id else None
         ):
-            line["quantity"] = min(line["quantity"] + quantity, MAX_QUANTITY)
+            line["quantity"] = qty.norm(min(line["quantity"] + quantity, MAX_QUANTITY))
             line["price"] = price
             return True
     if len(cart.lines) >= MAX_LINES:
         return False
     cart.lines.append({
         "item_id": str(item_id), "variant_id": str(variant_id) if variant_id else None,
-        "quantity": min(quantity, MAX_QUANTITY), "price": price,
+        "quantity": qty.norm(min(quantity, MAX_QUANTITY)), "price": price,
     })
     return True

@@ -76,6 +76,9 @@ def client_factory(monkeypatch, tmp_path):
     monkeypatch.setenv("ALYR_META_APP_SECRET", APP_SECRET)
     monkeypatch.setenv("ALYR_META_VERIFY_TOKEN", VERIFY_TOKEN)
     monkeypatch.setenv("ALYR_META_PHONE_NUMBER_ID", NUMBER_ID)
+    # The suite runs as if Meta had approved the three document templates (the tests of ALY-139
+    # send through them). The tests of "not approved" (ALY-142) switch it off for themselves.
+    monkeypatch.setenv("ALYR_DOCUMENT_TEMPLATES_APPROVED", "true")
     stack = contextlib.ExitStack()
 
     def build() -> TestClient:

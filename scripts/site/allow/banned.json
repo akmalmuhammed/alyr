@@ -1,0 +1,124 @@
+{
+  "$comment": "Reviewed uses of a banned word that are true, for scripts/site/banned-words.mjs. A hit is allowed when its word matches `term` and the copy string (or the 120 characters around it on a built page) contains `context`. `where` is copy, html or both (the default). Every entry needs a reason; an entry that matches nothing fails the check. Reviewed 24 Oct 2026 by the Go-live lane against honesty.md; the site lane may reword any of these lines instead, and then the entry is removed.",
+  "words": [
+    {
+      "term": "coming",
+      "context": "When are you coming?",
+      "reason": "The home-services owner's day today (home.business, Zilal Cooling's sample): a customer asking the technician when he is coming. Not ALYR announcing a product."
+    },
+    {
+      "term": "soon",
+      "context": "Our WhatsApp line opens soon",
+      "reason": "The pending-contact line that honesty.md section 7 allows ('Our WhatsApp line opens soon' at most once a page, in the questions; contact.pending and the WhatsApp question)."
+    },
+    {
+      "term": "قريباً",
+      "context": "سيتوفر رقم واتساب الخاص بنا قريبا",
+      "reason": "The Arabic of the pending-contact line honesty.md section 7 allows."
+    },
+    {
+      "term": "soon",
+      "context": "Pressed too soon?",
+      "reason": "/shelf's stock undo step: 'pressed too soon' is about the person, not a product that is coming."
+    },
+    {
+      "term": "reads",
+      "context": "Reads only its own records",
+      "reason": "/chat's X-ray: each business's data is read only by itself (tenant isolation). Data access, not understanding."
+    },
+    {
+      "term": "notices",
+      "context": "reminders or notices",
+      "reason": "A noun (notifications), in the STOP reply that core/consent.py sends word for word and in /accounts' answer about it. honesty.md bans 'notices' as a verb of the product."
+    },
+    {
+      "term": "notices",
+      "context": "Reminders and notices",
+      "reason": "A noun (notifications), the label of what stops after STOP in /chat's X-ray."
+    },
+    {
+      "term": "knows",
+      "context": "Your team knows it was read",
+      "reason": "/bookings: the team (people) knows the reminder was read. honesty.md: 'The owner is the one who knows'; the ban is on the product knowing."
+    },
+    {
+      "term": "يعرف",
+      "context": "فيعرف الفريق من يتولا",
+      "reason": "The team (people) knows who has the order or chat (home and /chat flows). The ban is يعرف of the product."
+    },
+    {
+      "term": "يعرف",
+      "context": "فريقك يعرف أنها قرأته",
+      "reason": "/bookings: your team knows the reminder was read (people, not the product)."
+    },
+    {
+      "term": "يعرف",
+      "context": "يعرف العميل",
+      "reason": "The customer (a person) knows: their promise was recorded (/accounts), the reason for a cancelled order (/shelf), that the last item sold out (/shelf question). Not the product."
+    },
+    {
+      "term": "قاعدة",
+      "context": "قاعدة البيانات",
+      "reason": "«قاعدة البيانات» is \"the database\" (records kept apart inside the database; an issued document the database refuses to change), not a rule. The founder took \"rule\" off the site (25 Oct 2026); this sentence needs the word."
+    },
+    {
+      "term": "rule",
+      "context": "\"className\":\"rule",
+      "where": "html",
+      "reason": "The section rule's CSS class (the hairline with crosses above a section) in Next's page data, a class name, not a word on the page."
+    }
+  ],
+  "offerOnly": [
+    {
+      "path": "home.price.**",
+      "reason": "The price section renders only with the offer on (HomePage.tsx: {OFFER_LIVE && <Price/>})."
+    },
+    {
+      "path": "home.trust.closing",
+      "reason": "Rendered only with the offer on (HomePage.tsx Trust: {OFFER_LIVE && <p className=\"trust-closing\">})."
+    },
+    {
+      "path": "**.factsOffer[*]",
+      "reason": "Added to a product page's facts only with the offer on (ProductKit.tsx ProductHero)."
+    }
+  ],
+  "style": [
+    {
+      "path": "*.home.price.combos[*].label",
+      "pattern": "colon",
+      "reason": "Price examples by trade (offer on only): the colon names the products a trade would use (\"A salon: ALYR Bookings\"), an example, which pattern 6 allows."
+    }
+  ],
+  "kept": [
+    {
+      "path": "en.home.hero.title",
+      "text": "The tech team your business never had.",
+      "reason": "The one slogan the site may have (content audit row 35; 02-decisions.md: keep the hero slogan)"
+    },
+    {
+      "path": "ar.home.hero.title",
+      "text": "فريق التقنية الذي لم يكن لدى مشروعك.",
+      "reason": "The Arabic of the hero slogan (row 35)"
+    },
+    {
+      "path": "en.footer.line",
+      "text": "We do the tech. You run the business.",
+      "reason": "Kept by the founder (row 5, 02-decisions.md, 25 Oct 2026), though it is a two-beat slogan"
+    },
+    {
+      "path": "ar.footer.line",
+      "text": "علينا التقنية، وعليك شغلك.",
+      "reason": "Kept by the founder (row 5), Gulf «شغلك» and all, until the Arabic review (ALY-66)"
+    },
+    {
+      "path": "en.home.spotlight.title",
+      "text": "Every day, see what changed\nand what to do next.",
+      "reason": "Kept by the founder (row 18, 02-decisions.md, 25 Oct 2026)"
+    },
+    {
+      "path": "ar.home.spotlight.title",
+      "text": "كل يوم، اعرف ما تغيّر\nوما الخطوة التالية.",
+      "reason": "The Arabic of row 18, kept with it"
+    }
+  ]
+}

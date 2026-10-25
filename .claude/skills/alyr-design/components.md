@@ -31,7 +31,8 @@ and the Agent follow these; the product screens have their own older versions (m
 |---|---|---|---|
 | Pending dot and status line | `.dot-pending`, `.status-line` (`site.css`), `ContactPending` | Something not available yet, said plainly | An error box, a disabled button, a "coming soon" badge on a feature an owner or customer would look for (D-039) |
 | Solid rule; dashed rule; section rule with crosses | `.rule`, `.rule-dashed` (`_site/kit.css`) | Above every section; dashed for a slot waiting to become true | Dashed as decoration |
-| FIG caption | `FigCaption` (`_site/Drawings.tsx`), `.cap` (`site.css`) | Every drawn product screen: "FIG 01 · what it shows · Fictional bakery" | "Sample" twice; a caption that wraps to an orphan (it balances) |
+| "Sample" mark | `SampleMark` (`_site/Frames.tsx`), `.mark-sample` (`site.css`) | Every drawn product screen, once, in its own chrome: after the shop's name in a window's `.aw-bar`, at the end of a flow's tab row, in a panel's top when a demo tab has no phone; a drawn phone says `fig.business` ("Sample business") under the name instead. `aria-hidden`: the figure's first line (an `sr-only` `figcaption`, the sample's `fictional` or `fig.note`) says it for machines, and the drawing sits in a `data-nosnippet` box | A second mark on the same drawing; a page-level "everything here is fictional" line instead; a mark on a figure that has the sample switch. A frame of several drawings of one sample business (the homepage's products plate) is one figure set: one mark, in the frame's own chrome, and none on its tiles |
+| Caption | `FigCaption` (`_site/Drawings.tsx`), `.cap` (`site.css`) | Only a drawing that needs words: "what it shows · Sample", no FIG number. First child of its figure, shown below with `fig-cap-end` | A caption beside a chrome mark; a caption that wraps to an orphan (it balances) |
 | Contact states | `Contact.tsx`, `site.ts` (`CONTACT_STATE`) | WhatsApp when `NEXT_PUBLIC_ALYR_WHATSAPP` is set, else email, else pending; decided at build time | A hand-written mailto or wa.me link; "opens soon" more than once on a page |
 | Offer switch | `site.ts` `OFFER_LIVE` | Prices, the hero price, money-back lines, the price question and the Price link | A price anywhere outside it, including meta and social cards (`factsNoOffer`, `descriptionNoOffer`) |
 | Trust records | `site.ts` `TRUST_RECORDS` | CR number, payment provider, Meta status: render only when set | An empty slot for one of them |
@@ -46,9 +47,9 @@ and the Agent follow these; the product screens have their own older versions (m
 | Product bar | `ProductBar` (`ProductKit.tsx`), `kit.css` | Under the header on product pages; no call to action (the header has it) |
 | Product page template | `ProductHero`, `FlowSection`, `ScreenBlock`, `InsideBlock`, `WhoBlock`, `WorksBlock`, `QuestionsBlock` (`ProductKit.tsx`) | Every product page (`alyr-site-page`) |
 | Tabbed demo | `ProductDemo.tsx` | Product heroes; plays only on screen, can be paused |
-| How it works | `FlowDiagram.tsx` | Product pages; may keep moving while on screen |
+| How it works | `FlowDiagram.tsx` | Product pages and the homepage's One order; may keep moving while on screen. Opens on a finished frame (the first story's last step) and plays from step 1 once 60% of it is in view; the signal on the wire is one 45° tick per step, never a looping glow |
 | The fold | `.band-fold` (`site.css`) | Into a Carbon band and at the top of the closing call |
-| Carbon plate | `.af-plate` (`agentfig.css`), `.product-in` (`site.css`) | Behind the hero figure; product page openings. Top start corner cut at 45°, mirrored |
+| Carbon plate | `.af-plate` (`agentfig.css`), `.product-in` (`site.css`), `.sf` (`suite.css`) | Behind the hero figure; product page openings; the homepage's products. Top start corner cut at 45°, mirrored |
 | Closing call | `.cta`, `.cta-mark` | Every page, full-bleed Carbon (`--band`), the fold at its top |
 | Sticky contact bar | `.bar` (`site.css`) | Phones under 53 rem once the hero's button has gone; hides the header's Volt button and hides again at the closing call |
 | Questions | `.qa` (`kit.css`), native `<details>`, an `id` per question | Every page |
@@ -64,13 +65,14 @@ and the Agent follow these; the product screens have their own older versions (m
 | Workspace window | `.aw-*` (`drawings.css`) | Workspace screens on the site, with the shop monogram (Volt corner) | |
 | Drawn workspace screens | `Sheets.tsx`, `Drawings.tsx`, `PageDrawings.tsx` | Product pages, in the product's exact words | Hand copies of `(product)/_workspace/Screens.tsx`: they drift. Prefer a captured sample, as the Agent does |
 | Numbered marks and callouts | `.co-n` (`kit.css`), `drawings.css` | Carbon discs with white mono numbers (a Volt ring in dark) | Volt discs: a number is not an action |
-| Agent feed and sample switch | `AgentFigure.tsx`, `agentfig.css`, `ReportSwitch.tsx` | Homepage hero, spotlight, `/agent` | Only events the product performs and logs |
+| Agent feed and sample switch | `AgentFigure.tsx`, `agentfig.css`, `ReportSwitch.tsx` | Homepage hero, spotlight, `/agent` | Only events the product performs and logs. A flag shows its title and the dashboard's own line, no rule line under it (founder, 25 Oct 2026) |
+| Products frame | `SuiteFrame.tsx`, `suite.css` | The homepage's "One shop, six products": one plate, a tile per product, each one link with a fragment of its real screen. Every tile rests finished; hover, focus or in view replays its moment from the start, once | A second Sample mark; a fade instead of the hard crop; a tile resting on an earlier state; a moment that loops or plays again; a rule line on the Agent tile |
 
 ## Shared with the product
 
 | Component | File | Use | Watch |
 |---|---|---|---|
-| ALYR Agent dashboard | `_agent/AgentDashboard.tsx`, `_agent/agent.css`, `_agent/labels.ts`, `_agent/types.ts`, samples in `_agent/samples/` | The workspace home (`/app`), `/agent-sample`, and the site in `mode="showcase"` with `headingLevel` | Themed by `--ag-*`; resets in `:where()`. On the site it is untouched: no `ag-` class elsewhere, page rules stop at `.ag`. Samples are captured from the engine (`python -m alyr.agent_samples`), never edited by hand |
+| ALYR Agent dashboard | `_agent/AgentDashboard.tsx`, `_agent/agent.css`, `_agent/labels.ts`, `_agent/types.ts`, samples in `_agent/samples/` | The workspace home (`/app`), `/agent-sample`, and the site in `mode="showcase"` with `headingLevel`, `headings={false}`, `ruleLines={false}` and the site's `labels.suggestions` | Themed by `--ag-*`; resets in `:where()`. On the site it is untouched: no `ag-` class elsewhere, page rules stop at `.ag`. **Rule lines:** the product keeps them (`ruleLines` defaults to true); the public site hides them, and every site drawing of a suggestion (the feed, `/agent`'s opened card, the products frame, the report drawn on a phone) leaves the rule line out (founder, 25 Oct 2026). Samples are captured from the engine (`python -m alyr.agent_samples`), never edited by hand |
 | Report card | `apps/api/src/alyr/modules/agent/card.py`; site images in `_site/report/` (`scripts/site-report-images.mjs`) | WhatsApp, the site, Meta's template sample | `alyr-generated-image` |
 | Social card | `_site/socialCard.tsx`, `opengraph-image.tsx` per English page | Link previews | English only until Arabic is drawn with resvg |
 | Words helpers | `_site/Text.tsx` (`lines`, `rich`), `.money`, `.ref`, `.pname`; the Agent's `Rich` | Keep amounts, order numbers and product names whole and in `<bdi>` | |

@@ -41,12 +41,28 @@ LOCK_SERIES = (
 class Allocation:
     series_key: str
     number: str
-    seq: int
+    # None for a document another system numbered (series "EXT"): it has no place in ALYR's
+    # counter (`service.issue_external`, ALY-142).
+    seq: int | None
     number_year: int | None
     # The instant the document is issued, taken after the lock so that numbers and times
     # run in the same order.
     issued_at: datetime
     issue_date: date  # in the shop's time zone
+
+
+def next_number(row, year: int) -> str:
+    """The number the next document of a series will get, as the owner sees it on the settings
+    screen. Only a reading: the number is really taken, under the row lock, by `allocate`
+    (which writes the same shape), and another document may be issued first, so the screen says
+    "next" and not "reserved"."""
+    if row["yearly_reset"]:
+        seq = row["last_number"] + 1 if row["number_year"] == year else 1
+        stem = f"{row['prefix']}-{year}-"
+    else:
+        seq = row["last_number"] + 1
+        stem = f"{row['prefix']}-"
+    return f"{stem}{seq:0{row['pad']}d}"
 
 
 async def allocate(

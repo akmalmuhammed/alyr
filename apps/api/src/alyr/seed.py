@@ -140,8 +140,8 @@ async def ensure_demo_tenant(
         for tenant_id in (DEMO_TENANT_ID, ALYR_TENANT_ID):
             if not await conn.fetchval("select client_id from tenants where id = $1", tenant_id):
                 client_id = await conn.fetchval(
-                    "insert into clients (name) select name from tenants where id = $1 "
-                    "returning id",
+                    "insert into clients (name, access_from, access_note) select name, now(), "
+                    "'Demo shop' from tenants where id = $1 returning id",
                     tenant_id,
                 )
                 await conn.execute(
@@ -165,8 +165,9 @@ async def reset_demo_data(db: Database) -> None:
                       "jobs", "messages", "processed_messages", "order_items",
                       "payment_requests", "orders", "chat_carts", "items",
                       "item_code_counters", "item_categories", "ledger_entries",
-                      "ledger_accounts", "contacts", "price_groups", "tenant_modules",
-                      "shop_settings", "shop_features"):
+                      "ledger_accounts", "contacts", "discount_rules", "delivery_zones",
+                      "delivery_settings", "price_groups", "tenant_modules",
+                      "shop_settings", "shop_features", "custom_fields"):
             await conn.execute(f"delete from {table}")
         await conn.execute(
             "insert into tenant_modules (module_key, enabled_by) "
