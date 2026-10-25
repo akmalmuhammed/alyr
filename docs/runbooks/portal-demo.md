@@ -33,6 +33,10 @@ The recordings are a snapshot. Redo them after the screens or the demo shops cha
    A recording of a shop takes about ten minutes (it opens every tab). `SKIP_CRAWL=1` keeps an earlier recording and only adds the detail answers.
 4. Look at the files before committing: they must hold only the fictional shops.
 
+## Where it is
+
+Live since 25 Oct 2026 at https://alyr-portal-demo.akmalmuhammed93.workers.dev (Worker `alyr-portal-demo`, version 2af3a7bd-c67b-4842-8820-6d036ef8f11e, commit e379bfc). `/version.txt` says which commit it serves. Take it down with `pnpm exec wrangler delete --config wrangler.demo.jsonc` from `apps/web`.
+
 ## Build and look
 
 ```
