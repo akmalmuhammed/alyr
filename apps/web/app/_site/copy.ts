@@ -1208,7 +1208,7 @@ const en: Copy = {
       again: "Then we check again.",
       scenes: {
         check: {
-          label: "Sample check-up sheet of a fictional bakery: four things checked at the counter, each ticked with what was found.",
+          label: "Sample check-up sheet of a fictional bakery. Four things checked at the counter are ticked, each with what was found.",
           replay: "Play the check-up again",
           title: "Check-up at the counter",
           rows: [
@@ -1219,7 +1219,7 @@ const en: Copy = {
           ],
         },
         setup: {
-          label: "Sample setup checklist: the last step is ticked and everything is set up. Then the first order, #1001, arrives on the team’s phone.",
+          label: "Sample setup checklist. The last step is ticked and everything is set up, then the first order, #1001, arrives on the team’s phone.",
           replay: "Play the setup again",
           eyebrow: "Setup",
           title: "Finish setting up",
@@ -1234,12 +1234,12 @@ const en: Copy = {
           tag: "New",
         },
         see: {
-          label: "Sample ALYR Agent screen updating: orders this week go from 49 to 50, an order that needs confirming is confirmed and leaves Needs you now, and the messages ALYR sent for you go from 181 to 183.",
+          label: "Sample ALYR Agent screen as it updates. Orders this week go from 49 to 50, an order that needs confirming is confirmed and leaves Needs you now, and the messages ALYR sent for you go from 181 to 183.",
           replay: "Play the update again",
           confirm: { words: "order needs confirming", detail: "the oldest for 16 min" },
         },
         improve: {
-          label: "Sample ALYR Agent screen: sales this week QAR 8,520 against QAR 7,129 on the same days last week, up 20%.",
+          label: "Sample ALYR Agent screen. Sales this week are QAR 8,520 against QAR 7,129 on the same days last week, up 20%.",
           replay: "Play the week again",
           last: "Last week",
           now: "This week",
@@ -3461,7 +3461,7 @@ const ar: Copy = {
       again: "ثم نفحص من جديد.",
       scenes: {
         check: {
-          label: "ورقة فحص توضيحية لمخبز غير حقيقي: أربعة أمور فُحصت عند الكاونتر، ومع كل منها ما وُجد.",
+          label: "ورقة فحص توضيحية لمخبز غير حقيقي. أربعة أمور فُحصت عند الكاونتر، ومع كل منها ما وُجد.",
           replay: "أعد تشغيل مشهد الفحص",
           title: "الفحص عند الكاونتر",
           rows: [
@@ -3472,7 +3472,7 @@ const ar: Copy = {
           ],
         },
         setup: {
-          label: "قائمة إعداد توضيحية: تُنجز الخطوة الأخيرة ويصبح كل شيء جاهزاً. ثم يصل الطلب الأول، رقم 1001، إلى هاتف الفريق.",
+          label: "قائمة إعداد توضيحية. تُنجز الخطوة الأخيرة ويصبح كل شيء جاهزاً، ثم يصل الطلب الأول، رقم 1001، إلى هاتف الفريق.",
           replay: "أعد تشغيل مشهد التجهيز",
           eyebrow: "الإعداد",
           title: "أكمل الإعداد",
@@ -3487,12 +3487,12 @@ const ar: Copy = {
           tag: "جديد",
         },
         see: {
-          label: "شاشة توضيحية من ALYR Agent تتحدّث: الطلبات هذا الأسبوع من 49 إلى 50، ويُؤكَّد طلب كان بحاجة إلى تأكيد فيخرج من «يحتاجك الآن»، والرسائل التي أرسلتها ALYR نيابة عنك من 181 إلى 183.",
+          label: "شاشة توضيحية من ALYR Agent وهي تتحدّث. الطلبات هذا الأسبوع من 49 إلى 50، ويُؤكَّد طلب كان بحاجة إلى تأكيد فيخرج من «يحتاجك الآن»، والرسائل التي أرسلتها ALYR نيابة عنك من 181 إلى 183.",
           replay: "أعد تشغيل مشهد التحديث",
           confirm: { words: "طلب بحاجة إلى تأكيد", detail: "أقدمها منذ 16 د" },
         },
         improve: {
-          label: "شاشة توضيحية من ALYR Agent: المبيعات هذا الأسبوع 8,520 ر.ق مقابل 7,129 ر.ق في الأيام نفسها من الأسبوع الماضي، بزيادة 20%.",
+          label: "شاشة توضيحية من ALYR Agent. المبيعات هذا الأسبوع 8,520 ر.ق مقابل 7,129 ر.ق في الأيام نفسها من الأسبوع الماضي، بزيادة 20%.",
           replay: "أعد تشغيل مشهد الأسبوع",
           last: "الأسبوع الماضي",
           now: "هذا الأسبوع",
