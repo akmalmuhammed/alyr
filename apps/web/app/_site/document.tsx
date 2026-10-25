@@ -1,7 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import { IBM_Plex_Mono, IBM_Plex_Sans_Arabic, Instrument_Sans } from "next/font/google";
 import { copy, type Locale } from "./copy";
-import { OFFER_LIVE, PATHS, SITE_URL, type PageKey } from "./site";
+import { OFFER_LIVE, PATHS, SITE_URL, SITE_VERIFICATION, type PageKey } from "./site";
 import { dark, semantic } from "../_tokens/tokens";
 import "../_tokens/tokens.css";
 import "./site.css";
@@ -62,6 +62,15 @@ export function siteMetadata(locale: Locale, page: PageKey = "home"): Metadata {
       ...(locale === "en" && page !== "home" ? {} : { images: [{ url: "/opengraph-image", width: 1200, height: 630, alt: "ALYR" }] }),
     },
     twitter: { card: "summary_large_image", title: t.title, description },
+    // Search Console and Bing Webmaster Tools, when verified by tag (D-047).
+    ...(SITE_VERIFICATION.google || SITE_VERIFICATION.bing
+      ? {
+          verification: {
+            ...(SITE_VERIFICATION.google ? { google: SITE_VERIFICATION.google } : {}),
+            ...(SITE_VERIFICATION.bing ? { other: { "msvalidate.01": SITE_VERIFICATION.bing } } : {}),
+          },
+        }
+      : {}),
   };
 }
 

@@ -18,6 +18,23 @@ export const WHATSAPP_NUMBER = (process.env.NEXT_PUBLIC_ALYR_WHATSAPP ?? "").rep
 export type ContactState = "whatsapp" | "email" | "pending";
 export const CONTACT_STATE: ContactState = WHATSAPP_NUMBER ? "whatsapp" : CONTACT_EMAIL ? "email" : "pending";
 
+/** ALYR's own public profiles (LinkedIn, Instagram, X, YouTube, Crunchbase and so on), as a
+ * comma-separated list of https addresses, for the structured data's `sameAs` (D-047). Empty
+ * until each account exists and carries the same name and description as the site: a link
+ * to a profile that does not exist, or says something else, tells search engines the wrong
+ * thing about who ALYR is. */
+export const SAME_AS: readonly string[] = (process.env.NEXT_PUBLIC_ALYR_SAME_AS ?? "")
+  .split(",")
+  .map((value) => value.trim())
+  .filter((value) => /^https:\/\/[^\s]+$/.test(value));
+
+/** Ownership checks for Google Search Console and Bing Webmaster Tools, for when they are
+ * done with an HTML tag rather than a DNS record (D-047). Empty: no tag. */
+export const SITE_VERIFICATION = {
+  google: process.env.NEXT_PUBLIC_GOOGLE_SITE_VERIFICATION ?? "",
+  bing: process.env.NEXT_PUBLIC_BING_SITE_VERIFICATION ?? "",
+} as const;
+
 /** Whether the page shows prices and the first-month offer: the price section, the price in
  * the hero facts, the money-back lines, the price question and the Price link. Off until
  * ALYR holds its commercial registration (ALY-59): research for the customer agreement
