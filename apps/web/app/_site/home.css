@@ -330,22 +330,22 @@ main[data-page="home"] .hs > .wrap > .rule { margin-bottom: var(--space-5); }
   /* rows arrive once, when read */
   .motion .tally li:not(.is-in), .motion .checks li:not(.is-in) { opacity: 0; translate: 0 10px; }
   /* a new tab's lines arrive in order, the sheet's after the day's */
-  .al-js .biz-panel.is-on li { animation: hp-rise var(--dur-3) var(--ease) both; }
-  .al-js .biz-panel.is-on .biz-with li { animation-delay: 120ms; }
+  .al-js .biz-panel.is-on li { animation: hp-rise var(--play-3) var(--ease) both; }
+  .al-js .biz-panel.is-on .biz-with li { animation-delay: calc(2 * var(--play-stagger)); }
 
   /* price: the digits of 449 slot in from below, once; the agreement's blank draws, then the tick */
-  .digit > span { transition: translate var(--dur-4) var(--spring); transition-delay: calc(var(--i, 0) * var(--stagger)); }
+  .digit > span { transition: translate var(--play-4) var(--spring); transition-delay: calc(var(--i, 0) * var(--play-stagger)); }
   .motion .sheet:not(.is-in) .digit > span { translate: 0 105%; }
-  .agr-line { transition: transform var(--dur-3) var(--ease) 200ms; }
-  .agr-tick { transition: scale var(--dur-3) var(--spring) 760ms; }
+  .agr-line { transition: transform var(--play-3) var(--ease) var(--play-2); }
+  .agr-tick { transition: scale var(--play-3) var(--spring) calc(var(--play-4) + var(--play-stagger)); }
   .motion .agreement:not(.is-in) .agr-line { transform: scaleX(0); }
   .motion .agreement:not(.is-in) .agr-tick { scale: 0; }
 
 
   /* the closing call: the Command Fold's three planes assemble along their gaps */
-  .cta-mark polygon { transition: translate var(--dur-4) var(--ease), opacity var(--dur-3) var(--ease); }
-  .cta-mark polygon:nth-child(2) { transition-delay: 60ms; }
-  .cta-mark polygon:nth-child(3) { transition-delay: 180ms; }
+  .cta-mark polygon { transition: translate var(--play-4) var(--ease), opacity var(--play-3) var(--ease); }
+  .cta-mark polygon:nth-child(2) { transition-delay: var(--play-stagger); }
+  .cta-mark polygon:nth-child(3) { transition-delay: calc(3 * var(--play-stagger)); }
   .motion .cta-mark:not(.is-in) polygon { opacity: 0; }
   .motion .cta-mark:not(.is-in) polygon:nth-child(1) { translate: 0 -18px; }
   .motion .cta-mark:not(.is-in) polygon:nth-child(2) { translate: -14px 14px; }

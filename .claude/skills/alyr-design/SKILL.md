@@ -153,8 +153,9 @@ arrows and "×" in text do not flip: use the icon.
 
 ## 5. Motion
 
-Tokens for every duration, ease, stagger and travel; one gesture (arrive along 45°, settle,
-one Volt signal). Plays once. Reduced motion shows every end state; nothing travels or
+Tokens for every duration, ease, stagger and travel; every timed piece (flows, demos, figures,
+reveals) on the pace, `--play-*` times `--pace`, the one setting, with a step staying up for its
+words; one gesture (arrive along 45°, settle, one Volt signal). Plays once. Reduced motion shows every end state; nothing travels or
 plays by itself. **Nothing is hidden in the HTML:** start states exist only under the
 `motion` class that the head script adds when motion is wanted, with a failsafe that removes
 it; without scripts the page is complete. Animate transform, opacity, clip-path and font

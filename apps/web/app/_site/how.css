@@ -17,8 +17,8 @@
   --hw-canvas: 21.25rem;
   /* between two cards' starts in a row, and when the return line starts: Improve's start,
      its 26 beats, and 10 more */
-  --hw-card: calc(4 * var(--stagger));
-  --hw-loop: calc(3 * var(--hw-card) + 36 * var(--stagger));
+  --hw-card: calc(4 * var(--play-stagger));
+  --hw-loop: calc(3 * var(--hw-card) + 36 * var(--play-stagger));
   /* the return line: its stroke, its 45° corners, the middle of the gutter it runs up, the
      centre of the last column it starts under, and the height of the line of words under it */
   --hw-w: 1.5px;
@@ -253,37 +253,37 @@
   /* each step on its beat: the card's place in the row, then `--t` beats */
   .motion .hw-card.is-in :is(.hw-arrive, .hw-in, .hw-was, .hw-box:not(.is-on) .hw-fill, .hw-box:not(.is-on) svg,
     .hw-progress > span, .hw-phone, .hw-wash, .hw-now-bar, .hw-live, .hw-fold) {
-    animation-duration: var(--dur-3); animation-timing-function: var(--ease); animation-fill-mode: both;
-    animation-delay: calc(var(--hw-d) + var(--t, 0) * var(--stagger));
+    animation-duration: var(--play-3); animation-timing-function: var(--ease); animation-fill-mode: both;
+    animation-delay: calc(var(--hw-d) + var(--t, 0) * var(--play-stagger));
   }
   .motion .hw-card.is-in :is(.hw-arrive, .hw-in, .hw-live) { animation-name: hw-arrive; }
-  .motion .hw-card.is-in .hw-was { animation-name: hw-leave; animation-duration: var(--dur-2); }
-  .motion .hw-card.is-in .hw-box:not(.is-on) .hw-fill { animation-name: hw-pop; animation-duration: var(--dur-2); }
-  .motion .hw-card.is-in .hw-box:not(.is-on) svg { animation-name: hw-tickdraw; animation-duration: var(--dur-2); animation-delay: calc(var(--hw-d) + (var(--t, 0) + 2) * var(--stagger)); }
+  .motion .hw-card.is-in .hw-was { animation-name: hw-leave; animation-duration: var(--play-2); }
+  .motion .hw-card.is-in .hw-box:not(.is-on) .hw-fill { animation-name: hw-pop; animation-duration: var(--play-2); }
+  .motion .hw-card.is-in .hw-box:not(.is-on) svg { animation-name: hw-tickdraw; animation-duration: var(--play-2); animation-delay: calc(var(--hw-d) + (var(--t, 0) + 2) * var(--play-stagger)); }
   .motion .hw-card.is-in .hw-progress > span { animation-name: hw-fill-x; }
-  .motion .hw-card.is-in .hw-phone { animation-name: hw-rise; animation-duration: var(--dur-4); }
+  .motion .hw-card.is-in .hw-phone { animation-name: hw-rise; animation-duration: var(--play-4); }
   .motion .hw-card.is-in .hw-wash { animation-name: hw-in; }
-  .motion .hw-card.is-in .hw-now-bar { animation-name: hw-fill-y; animation-duration: var(--dur-4); }
+  .motion .hw-card.is-in .hw-now-bar { animation-name: hw-fill-y; animation-duration: var(--play-4); }
   /* See: the live row makes room as it arrives, is ticked, folds shut along 45° from its
      inline-end top corner (as the product closes a card; a fold the row's own size, so it
      is seen from its first frame) and, once mostly shut, gives its room back */
-  .motion .hw-card.is-in .hw-fold { animation-name: hw-shut; animation-duration: var(--dur-2); }
+  .motion .hw-card.is-in .hw-fold { animation-name: hw-shut; animation-duration: var(--play-2); }
   .motion[dir="rtl"] .hw-card.is-in .hw-fold { animation-name: hw-shut-rtl; }
   .motion .hw-card.is-in .hw-done {
-    animation: hw-room var(--dur-3) var(--ease) both, hw-unroom var(--dur-3) var(--ease) both;
-    animation-delay: calc(var(--hw-d) + 5 * var(--stagger)), calc(var(--hw-d) + 44 * var(--stagger));
+    animation: hw-room var(--play-3) var(--ease) both, hw-unroom var(--play-3) var(--ease) both;
+    animation-delay: calc(var(--hw-d) + 5 * var(--play-stagger)), calc(var(--hw-d) + 44 * var(--play-stagger));
   }
 
   /* the return line, once, when Improve first plays: along the foot, then up the gutter and
      onto Check's cut; its words; then the Volt line along the cut */
-  .motion .hw.is-looped .hw-loop-h { animation: hw-draw-h var(--dur-3) var(--ease) both; animation-delay: var(--hw-loop); }
+  .motion .hw.is-looped .hw-loop-h { animation: hw-draw-h var(--play-3) var(--ease) both; animation-delay: var(--hw-loop); }
   .motion[dir="rtl"] .hw.is-looped .hw-loop-h { animation-name: hw-draw-h-rtl; }
-  .motion .hw.is-looped .hw-loop-v { animation: hw-draw-v var(--dur-3) var(--ease) both; animation-delay: calc(var(--hw-loop) + var(--dur-3)); }
-  .motion .hw.is-looped .hw-again > span { animation: hw-in var(--dur-3) var(--ease) both; animation-delay: calc(var(--hw-loop) + var(--dur-2)); }
-  .motion .hw.is-looped .hw-tick { animation: hw-draw var(--dur-3) var(--ease) both; animation-delay: calc(var(--hw-loop) + 2 * var(--dur-3)); }
+  .motion .hw.is-looped .hw-loop-v { animation: hw-draw-v var(--play-3) var(--ease) both; animation-delay: calc(var(--hw-loop) + var(--play-3)); }
+  .motion .hw.is-looped .hw-again > span { animation: hw-in var(--play-3) var(--ease) both; animation-delay: calc(var(--hw-loop) + var(--play-2)); }
+  .motion .hw.is-looped .hw-tick { animation: hw-draw var(--play-3) var(--ease) both; animation-delay: calc(var(--hw-loop) + 2 * var(--play-3)); }
 }
 /* a fine pointer over a canvas moves its window 2 px along 45° */
 @media (hover: hover) and (pointer: fine) and (prefers-reduced-motion: no-preference) {
-  .hw-scene > * { transition: translate var(--dur-2) var(--ease); }
+  .hw-scene > * { transition: translate var(--play-2) var(--ease); }
   .hw-canvas:hover .hw-scene > * { translate: calc(var(--dir) * 2px) -2px; }
 }
