@@ -239,7 +239,7 @@ export const guidesEn: GuidesCopy = {
       },
       title: "Keep track of who owes you",
       short:
-        "Record every credit sale when it happens, with the date, the amount and who took it, and tell the customer the new balance each time. Once a week, list who owes what and for how long, oldest first. Remind those more than 30 days behind, friendly at first and firmer as the debt ages, never twice in a few days. Agree a limit for each regular, record every promise to pay, and take each payment against the oldest purchase first. A notebook works if one person keeps it; ALYR Accounts does it from one line on the staff phone.",
+        "Record every credit sale when it happens, with the date, the amount and who took it, and tell the customer the new balance each time. Once a week, list who owes what and for how long, oldest first. Remind those more than 30 days behind, friendly at first and firmer as the debt ages, never twice in a few days. Agree a limit for each regular, record every promise to pay, and take each payment against the oldest purchase first. A credit book works if one person keeps it; ALYR Accounts does it from one line on the staff phone.",
       published: "2026-10-25T09:00:00+03:00",
       modified: "2026-10-25T09:00:00+03:00",
       date: "25 Oct 2026",
@@ -471,7 +471,7 @@ export const guidesAr: GuidesCopy = {
       },
       title: "تابِع من عليه مستحقات لك",
       short:
-        "اكتب كل بيع آجل لحظة حدوثه، بالتاريخ والمبلغ ومن أخذه، وأبلغ العميل برصيده الجديد في كل مرة. ومرة كل أسبوع اكتب من عليه كم ومنذ متى، الأقدم أولاً. وذكّر من تأخر أكثر من 30 يوماً، بنبرة ودية أولاً ثم أحزم كلما طال التأخير، ولا تذكّر أحداً مرتين خلال أيام قليلة. واتفق على حدّ لكل زبون دائم، واكتب كل وعد بالسداد مع تاريخه، واخصم كل دفعة من أقدم مشترياته أولاً. الدفتر يكفي إن حفظه شخص واحد، ويفعل ALYR Accounts ذلك بسطر واحد من هاتف الموظف.",
+        "اكتب كل بيع آجل لحظة حدوثه، بالتاريخ والمبلغ ومن أخذه، وأبلغ العميل برصيده الجديد في كل مرة. ومرة كل أسبوع اكتب من عليه كم ومنذ متى، الأقدم أولاً. وذكّر من تأخر أكثر من 30 يوماً، بنبرة ودية أولاً ثم أحزم كلما طال التأخير، ولا تذكّر أحداً مرتين خلال أيام قليلة. واتفق على حدّ لكل زبون دائم، واكتب كل وعد بالسداد مع تاريخه، واخصم كل دفعة من أقدم مشترياته أولاً. دفتر الديون يكفي إن حفظه شخص واحد، ويفعل ALYR Accounts ذلك بسطر واحد من هاتف الموظف.",
       published: "2026-10-25T09:00:00+03:00",
       modified: "2026-10-25T09:00:00+03:00",
       date: "25 أكتوبر 2026",
