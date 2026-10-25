@@ -1107,3 +1107,17 @@ There is no separate Pay product: payment links stay a module of Chat and Bookin
 **Chosen over** Fly or Railway for the API (another vendor, no gain), the laptop and tunnel (down when the laptop is off), and waiting for Azure credits (no portal for the first clients).
 
 **Revisit when** Azure credits arrive (ALY-55, ALY-63), or the first paying client who has not agreed to data outside Qatar.
+
+## D-054 · Staff attach a business's Meta number from the back office, after asking Meta
+**Date** 25 Oct 2026 · **Status** Accepted (the founder, 25 Oct: "analyze what we can build now and do it accordingly") · Linear ALY-166 · Spec `specs/023-attach-whatsapp-number/spec.md`
+
+**The decision.** The Meta row in `channel_numbers` is written by a back-office function for platform staff, after ALYR has asked Meta about the phone number ID and Meta shows it connected. Detaching removes the Meta row only. Who attached what, and when, is the append-only audit log, not a new table.
+
+**Why.**
+- The inbound path, the outbound layer and the go-live check already read that row; attaching it is the only thing missing for a first business to go live on a new number.
+- Asking Meta first turns a typo or a half-registered number into a refusal on the staff screen instead of a business that is "connected" and silent.
+- The app role keeps its rule (hard rule: it cannot write `channel_numbers`); the function checks the caller is staff.
+
+**Chosen over** a token per business now (no business has its own account yet; Embedded Signup, ALY-39, brings that and a place to keep it), and over a history table (the audit log already is one).
+
+**Revisit when** a business has its own WhatsApp account and token (Embedded Signup), or a business needs more than one Meta number.

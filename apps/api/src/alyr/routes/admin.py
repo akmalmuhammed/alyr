@@ -20,7 +20,15 @@ from pydantic import BaseModel, Field
 
 from alyr import catalog, presets
 from alyr.config import get_settings
-from alyr.core import access, auth, backoffice, pricing, readiness, whatsapp_setup
+from alyr.core import (
+    access,
+    auth,
+    backoffice,
+    pricing,
+    readiness,
+    whatsapp_attach,
+    whatsapp_setup,
+)
 from alyr.core.auth import Staff
 from alyr.modules.items import clock as shop_clock
 from alyr.modules.items import template, template_change
@@ -145,6 +153,11 @@ class WhatsappChange(BaseModel):
     # ...and where ALYR is with the connection; a failure says why, for the owner to read.
     state: Literal["", "connecting", "failed"] | None = None
     note: str = Field(default="", max_length=500)
+
+
+class AttachNumber(BaseModel):
+    number_id: str = Field(max_length=30)
+    waba_id: str = Field(default="", max_length=30)
 
 
 class NewStaff(BaseModel):
@@ -714,6 +727,44 @@ async def change_whatsapp(
             return await readiness.run(conn, _by(staff), by_alyr=True)
     except whatsapp_setup.SetupError as error:
         raise HTTPException(status_code=422, detail=str(error)) from error
+
+
+@router.post("/businesses/{business_id}/whatsapp/number")
+async def attach_number(
+    business_id: UUID, body: AttachNumber, request: Request,
+    staff: Staff = Depends(platform_admin),
+) -> dict:
+    """Attach the business's Meta number (ALY-166) once Meta shows it connected. Messages to
+    it reach the business from then on, and the go-live check sees WhatsApp as done."""
+    try:
+        async with _in_business(request, business_id) as conn:
+            attached = await whatsapp_attach.attach(
+                conn, request.app.state.outbound.channels["meta"], business_id,
+                body.number_id, body.waba_id, _by(staff),
+            )
+            await backoffice.audit(
+                conn, staff, "whatsapp.attached", "business", business_id,
+                business_id=business_id, detail=attached,
+            )
+            return await readiness.run(conn, _by(staff), by_alyr=True)
+    except whatsapp_attach.AttachError as error:
+        raise HTTPException(status_code=422, detail=str(error)) from error
+
+
+@router.delete("/businesses/{business_id}/whatsapp/number")
+async def detach_number(
+    business_id: UUID, request: Request, staff: Staff = Depends(platform_admin)
+) -> dict:
+    """Take the business's Meta number off (a wrong number, or a move). The test line stays."""
+    async with _in_business(request, business_id) as conn:
+        removed = await whatsapp_attach.detach(conn, business_id)
+        if removed is None:
+            raise HTTPException(status_code=404, detail="this business has no WhatsApp number")
+        await backoffice.audit(
+            conn, staff, "whatsapp.detached", "business", business_id,
+            business_id=business_id, detail={"number_id": removed},
+        )
+        return await readiness.run(conn, _by(staff), by_alyr=True)
 
 
 # ── pay before access (ALY-212, D-051) ────────────────────
