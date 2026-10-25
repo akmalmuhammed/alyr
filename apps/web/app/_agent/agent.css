@@ -380,3 +380,33 @@ a.ag-btn.is-volt:hover { background: color-mix(in srgb, var(--ag-volt) 88%, var(
 @media (prefers-reduced-motion: reduce) {
   .ag-card.is-closing { display: none; }
 }
+
+/* The public site's live sample (`live`, AgentFigure.tsx; alyr-design motion.md, "The live
+   Agent figure"). A figure that changes rolls: the old one rises out, the new one rises in,
+   each in its own inline box so the line around it never moves; a count that went up gets one
+   Volt rule under it, which fades back. A bar grows from its old height (a scale), never by
+   animating its height. The workspace never sets `live`. */
+.ag-room { display: grid; }
+.ag-room > * { grid-area: 1 / 1; }
+.ag-room-ghost { visibility: hidden; }
+.ag.is-live .ag-word { white-space: nowrap; }
+.ag.is-live .ag-roll { display: inline-block; position: relative; }
+.ag.is-live .ag-roll-out { position: absolute; inset-block-start: 0; inset-inline-start: 0; white-space: nowrap; pointer-events: none; }
+@media (prefers-reduced-motion: no-preference) {
+  .ag.is-live .ag-roll-in { display: inline-block; animation: ag-roll-in var(--dur-3) var(--ease) both; }
+  .ag.is-live .ag-roll-out { animation: ag-roll-out var(--dur-3) var(--ease) both; }
+  .ag.is-live .ag-fade-in { animation: ag-fade-in var(--dur-4) var(--ease) both; }
+  .ag.is-live .ag-roll[data-mark]::after {
+    content: ""; position: absolute; inset-inline: 0; inset-block-end: -0.2em; height: 2px; background: var(--ag-volt);
+    animation: ag-mark-on var(--dur-3) var(--ease) both, ag-mark-off var(--dur-4) var(--ease) calc(var(--dur-4) * 3) forwards;
+  }
+  .ag.is-live :is(.ag-bar, .ag-booked).ag-grow { transform-origin: bottom; animation: ag-grow var(--dur-4) var(--ease) both; }
+}
+/* without motion a live figure never rolls; were one to, only the new figure shows */
+@media (prefers-reduced-motion: reduce) { .ag.is-live .ag-roll-out { display: none; } }
+@keyframes ag-roll-in { from { opacity: 0; translate: 0 0.45em; } }
+@keyframes ag-roll-out { to { opacity: 0; translate: 0 -0.45em; } }
+@keyframes ag-fade-in { from { opacity: 0; } }
+@keyframes ag-mark-on { from { opacity: 0; } }
+@keyframes ag-mark-off { to { opacity: 0; } }
+@keyframes ag-grow { from { scale: 1 var(--from, 1); } }
