@@ -400,7 +400,7 @@ a.ag-btn.is-volt:hover { background: color-mix(in srgb, var(--ag-volt) 88%, var(
     content: ""; position: absolute; inset-inline: 0; inset-block-end: -0.2em; height: 2px; background: var(--ag-volt);
     animation: ag-mark-on var(--dur-3) var(--ease) both, ag-mark-off var(--dur-4) var(--ease) calc(var(--dur-4) * 3) forwards;
   }
-  .ag.is-live :is(.ag-bar, .ag-booked).ag-grow { transform-origin: bottom; animation: ag-grow var(--dur-4) var(--ease) both; }
+  .ag.is-live .ag-grow { transform-origin: bottom; animation: ag-grow var(--dur-4) var(--ease) both; }
 }
 /* without motion a live figure never rolls; were one to, only the new figure shows */
 @media (prefers-reduced-motion: reduce) { .ag.is-live .ag-roll-out { display: none; } }

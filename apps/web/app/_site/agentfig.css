@@ -97,10 +97,16 @@ main .ag { font-weight: 400; }
 
 /* Back to the opening (`data-reset`): what changed fades out, the opening takes its place
    unseen and fades in; the labels and the windows stay. */
-.afig[data-feed] :is(.af-live, .ag-summary, .ag-eyebrow, .ag-roll, .ag-need small, .ag-caption, .ag-day.is-today .ag-bar, .ag-booked) {
+/* (written out, not in one :is(), so each selector keys on its own class and the page's style
+   work stays as small as before) */
+.afig[data-live] .af-live, .afig[data-live] .ag-summary, .afig[data-live] .ag-eyebrow,
+.afig[data-live] .ag-roll, .afig[data-live] .ag-need small, .afig[data-live] .ag-caption,
+.afig[data-live] .ag-day.is-today .ag-bar, .afig[data-live] .ag-booked {
   transition: opacity var(--dur-3) var(--ease);
 }
-.afig[data-reset="out"] :is(.af-live, .ag-summary, .ag-eyebrow, .ag-roll, .ag-need small, .ag-caption, .ag-day.is-today .ag-bar, .ag-booked) {
+.afig[data-reset="out"] .af-live, .afig[data-reset="out"] .ag-summary, .afig[data-reset="out"] .ag-eyebrow,
+.afig[data-reset="out"] .ag-roll, .afig[data-reset="out"] .ag-need small, .afig[data-reset="out"] .ag-caption,
+.afig[data-reset="out"] .ag-day.is-today .ag-bar, .afig[data-reset="out"] .ag-booked {
   opacity: 0;
 }
 
