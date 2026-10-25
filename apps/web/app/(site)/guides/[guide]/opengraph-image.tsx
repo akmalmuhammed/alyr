@@ -5,7 +5,7 @@ import { cardSize, cardWrap, socialCard } from "../../../_site/socialCard";
 // A guide's card: "Guide · ALYR team", its title, and its date (ALY-233).
 const g = copy.en.guides;
 
-export const alt = `ALYR · ${g.crumb}`;
+export const alt = g.card;
 export const size = cardSize;
 export const contentType = "image/png";
 

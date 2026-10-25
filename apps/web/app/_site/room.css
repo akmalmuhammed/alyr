@@ -13,7 +13,7 @@
 .split-before { background-color: var(--wa-paper); color: var(--wa-ink); font-family: var(--font-chat); filter: saturate(.6) brightness(calc(1 - var(--night) * .3)); }
 [lang="ar"] .split-before { font-family: var(--font-chat-arabic); }
 .split-after {
-  background: var(--band); color: var(--on-band);
+  background: var(--dark-surface); color: var(--on-band);
   clip-path: polygon(calc(var(--p) * 100% + var(--sh) / 2) 0, 100% 0, 100% 100%, calc(var(--p) * 100% - var(--sh) / 2) 100%);
 }
 [dir="rtl"] .split-after { clip-path: polygon(calc(100% - var(--p) * 100% - var(--sh) / 2) 0, 0 0, 0 100%, calc(100% - var(--p) * 100% + var(--sh) / 2) 100%); }
@@ -79,7 +79,7 @@
   .do-by { display: none; }
 }
 @media (max-width: 53rem) {
-  .split { --sh: 23rem; }
+  .split { --sh: 24.5rem; }
 }
 /* a phone swipes the drawing itself, and its two buttons send the fold across; a handle
    resting at the edge would only cover a name */

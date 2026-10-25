@@ -12,8 +12,9 @@ import { SECTORS, type GuideKey, type ProductKey, type SectorKey } from "./site"
 
 export type Sector = {
   meta: { title: string; description: string };
-  /** The trade's name: the breadcrumb, the footer, the guides' links. */
+  /** The trade's name: the breadcrumb, the guides' links; and its short name, for the footer. */
   name: string;
+  short: string;
   /** The H1: the owner's main question, said as a statement (no question mark outside the
    * Questions section). */
   title: string;
@@ -53,6 +54,8 @@ export type SectorsCopy = {
   see: string;
   /** The footer's row of trades. */
   footer: string;
+  /** What a sector page's social card shows, for its alt text (the cards are English). */
+  card: string;
   items: Record<SectorKey, Sector>;
 };
 
@@ -71,12 +74,13 @@ export const sectorsEn: SectorsCopy = {
   crumbs: { label: "You are here", home: "ALYR", business: "By business" },
   uses: "What we would set up",
   figure: {
-    title: "The same afternoon, today and with ALYR",
-    body: "On the start side, the chats as they pile up today. On the end side, the same customers as ALYR keeps them. Drag the fold, or use the two buttons.",
+    title: "The same hour, today and with ALYR",
+    body: "Today’s chats as they pile up, and the same customers as ALYR keeps them. Move the fold, or press Today or With ALYR.",
   },
   guide: { title: "Owner guide", read: "Read the guide" },
   see: "See {name}",
   footer: "For your business",
+  card: "ALYR: a page for one kind of owner-run business in Qatar, with its question and the products it uses",
   items: {
     // ------------------------------------------------------------ bakeries
     bakeries: {
@@ -86,9 +90,10 @@ export const sectorsEn: SectorsCopy = {
           "How a bakery or home kitchen in Qatar can take WhatsApp orders without losing them: a menu page in the chat, every order on one screen with one person on it, and office accounts with reminders. Set up for you by ALYR.",
       },
       name: "Bakeries and home kitchens",
+      short: "Bakeries",
       title: "How a bakery in Qatar can take WhatsApp orders without losing them",
       answer:
-        "Give customers your menu as a page that opens from the chat, so each order arrives with its items, quantities and day instead of in a voice note. Every order then lands on one screen, with one person on your team responsible for it. ALYR sets this up with you, at your bakery, and keeps office regulars on an account that pays later.",
+        "Give customers your menu as a page that opens from the chat, so each order arrives with its items and quantities, and its day when it is made to order, instead of in a voice note. Every order then lands on one screen, with one person on your team responsible for it. ALYR sets this up with you, at your bakery. Office regulars can order on an account they pay later.",
       row: "bakery",
       today: {
         title: "Your day today",
@@ -130,19 +135,19 @@ export const sectorsEn: SectorsCopy = {
           },
           {
             id: "offices",
-            q: "How do offices pay at the end of the month?",
-            a: "They order on their account, up to a limit you set. Each entry is sent to them with the new balance, and reminders go when you press Send.",
+            q: "How do offices order now and pay later?",
+            a: "They order on their account, up to a limit you set. Each entry is sent to them with the new balance, and reminders go when you press Send reminders.",
           },
           {
             id: "start",
             q: "Where do we start?",
-            a: "With a check-up at your bakery: about an hour to see how orders reach you today. Then we load your menu, photos and prices in Arabic and English, and train your team.",
+            a: "With a check-up at your bakery, to see how orders reach you today. Then we put your menu, photos and prices on the page in both languages, and show your team how it works.",
           },
         ],
       },
       cta: {
         title: "Tell us how orders reach your bakery today.",
-        body: "Send us a message. A person from ALYR replies, then comes to show you your own menu on your own phone.",
+        body: "Send us a message. A person from ALYR replies, then comes to show you how it would work for your bakery, on your own phone.",
       },
       prefill: "Hello ALYR, I run a bakery and I’d like to see how ALYR takes our orders.",
       subject: "How ALYR works for my bakery",
@@ -156,9 +161,10 @@ export const sectorsEn: SectorsCopy = {
           "How a salon or barber in Qatar can take bookings on WhatsApp and remind every customer: a booking page in the chat, a confirmation at once, a reminder two hours before, and who came marked in one tap. Set up for you by ALYR.",
       },
       name: "Salons and barbers",
+      short: "Salons",
       title: "How a salon in Qatar can take bookings on WhatsApp and remind every customer",
       answer:
-        "Let customers pick a free time from a page that opens in the chat, confirm it at once, and send a reminder two hours before the visit. Then mark who came, so you know how many did not. ALYR Bookings does these four steps, and ALYR Agent counts your no-shows over 30 days.",
+        "Let customers pick an open time from a page that opens in the chat, confirm it at once, and send a reminder two hours before the visit. Then mark who came, so you know how many did not. ALYR Bookings sends the page, the confirmation and the reminder, and gives your team a Came or No-show button. ALYR Agent counts your no-shows over 30 days.",
       row: "salon",
       today: {
         title: "Your day today",
@@ -172,7 +178,7 @@ export const sectorsEn: SectorsCopy = {
       products: {
         title: "What we set up for a salon",
         rows: [
-          { key: "bookings", body: "A booking page from the chat with only the times that are free, the confirmation at once, a reminder two hours before, and Came or No-show in one tap." },
+          { key: "bookings", body: "A booking page from the chat with only the times that are open, the confirmation at once, a reminder two hours before, and Came or No-show in one tap." },
           { key: "agent", body: "Your no-show rate over 30 days, customers who missed twice and booked again, and visits nobody has marked." },
         ],
       },
@@ -185,7 +191,7 @@ export const sectorsEn: SectorsCopy = {
           {
             id: "chairs",
             q: "I have three chairs.",
-            a: "Today ALYR Bookings takes one booking at a time for the whole business, which suits one chair or one room. Tell us how many you run, and we’ll tell you whether it fits.",
+            a: "With three chairs, two customers can want the same hour, and today ALYR Bookings gives that hour to one of them only. Tell us how your chairs fill, and we’ll tell you whether it fits.",
           },
           {
             id: "cancel",
@@ -195,7 +201,7 @@ export const sectorsEn: SectorsCopy = {
           {
             id: "confirm",
             q: "Do I confirm each booking myself?",
-            a: "No. The page offers only times that are free, from your opening hours and the bookings you have, so the confirmation goes at once.",
+            a: "No. The page offers only times that are open, from your opening hours and the bookings you have, so the confirmation goes at once.",
           },
           {
             id: "repeat",
@@ -206,7 +212,7 @@ export const sectorsEn: SectorsCopy = {
       },
       cta: {
         title: "Tell us how bookings reach your salon today.",
-        body: "Send us a message. A person from ALYR replies, then comes to show you a booking from your own chat.",
+        body: "Send us a message. A person from ALYR replies, then comes to show you a booking made from a chat on your own phone.",
       },
       prefill: "Hello ALYR, I run a salon and I’d like to see how ALYR takes our bookings.",
       subject: "How ALYR works for my salon",
@@ -220,6 +226,7 @@ export const sectorsEn: SectorsCopy = {
           "How a grocery or baqala in Qatar can keep track of customers who buy on credit: each sale recorded with one line from the staff phone, the customer told the new balance, and reminders in one press. Orders from your list in the chat. Set up for you by ALYR.",
       },
       name: "Groceries and baqalas",
+      short: "Groceries",
       title: "How a grocery in Qatar can keep track of customers who buy on credit",
       answer:
         "Record each credit sale the moment it happens, with one line typed on the staff phone, and the customer gets a message with the new balance. ALYR Accounts keeps who owes what and for how long, and one press sends reminders to everyone 30 days or more behind, firmer as the debt ages. Customers can also order from your list in the chat.",
@@ -233,7 +240,7 @@ export const sectorsEn: SectorsCopy = {
         ],
         orders: [
           { ref: "#1188", who: "Flat 12", what: "Bread, eggs, 2 kg tomatoes", by: "Rafi", status: "On account", tone: "ok" },
-          { ref: "Credit", who: "Ahmed", what: "Pays Thursday", by: "Rafi", status: "Promise recorded", tone: "ok" },
+          { ref: "Credit", who: "Ahmed", what: "Credit sale, new balance sent", by: "Rafi", status: "Recorded", tone: "ok" },
           { ref: "Credit", who: "Fatma", what: "Asked for her balance", by: "Rafi", status: "Balance sent", tone: "ok" },
           { ref: "#1187", who: "Villa 7", what: "Basmati rice 5 kg × 2", by: "Joseph", status: "Ready, customer told", tone: "now" },
           { ref: "Chat", who: "Saleh", what: "Asked about fresh milk", by: "Joseph", status: "Joseph is answering", tone: "wait" },
@@ -270,7 +277,7 @@ export const sectorsEn: SectorsCopy = {
           {
             id: "upset",
             q: "Will reminders upset my neighbours?",
-            a: "The first is a friendly reminder, and it turns firmer only after 60 days. Nobody gets two within 3 days, a customer can answer “I’ll pay within a week” with one tap, and a customer who says stop gets no more.",
+            a: "The first is a friendly reminder. It turns firmer from 60 days, and from 90 days it is a final notice. Nobody gets two within 3 days, a customer can answer “I’ll pay within a week” with one tap, and a customer who says stop gets no more.",
           },
           {
             id: "paid",
@@ -280,7 +287,7 @@ export const sectorsEn: SectorsCopy = {
           {
             id: "delivery",
             q: "Can customers ask for delivery to the building?",
-            a: "The order page can ask for delivery or pickup, with your delivery areas, a fee and a minimum order, once we switch it on for your shop. ALYR does not track drivers: your team marks the order done.",
+            a: "The order page can ask for delivery or pickup, with your delivery areas, a fee and a minimum order, once we switch it on for your shop. ALYR does not track drivers: your team marks the order complete.",
           },
         ],
       },
@@ -297,12 +304,13 @@ export const sectorsEn: SectorsCopy = {
       meta: {
         title: "Direct WhatsApp orders for restaurants and cafés in Qatar · ALYR",
         description:
-          "How a restaurant or café in Qatar can take orders direct on WhatsApp: the menu as a page in the chat, every order on one screen, the customer told when it is ready to collect, and office lunches on account. Set up for you by ALYR.",
+          "How a restaurant or café in Qatar can take orders direct on WhatsApp: the menu as a page in the chat, every order on one screen, the customer told when it is ready for collection, and office lunches on account. Set up for you by ALYR.",
       },
       name: "Restaurants and cafés",
+      short: "Restaurants",
       title: "How a restaurant in Qatar can take orders direct on WhatsApp",
       answer:
-        "Give your regulars your menu as a page that opens from the chat. They choose the dishes and their options, the order lands on one screen with one person on it, and each customer is told when the order is ready to collect. Office lunches can go on an account that pays at the end of the month.",
+        "Give your regulars your menu as a page that opens from the chat. They choose the dishes and their options, the order lands on one screen with one person on it, and each customer is told when the order is ready for collection. Office lunches can go on an account the office settles later.",
       row: "restaurant",
       today: {
         title: "Your day today",
@@ -319,7 +327,7 @@ export const sectorsEn: SectorsCopy = {
           { key: "chat", body: "Your menu in the chat, with each dish’s options. Every order on one screen with one person responsible, and a message to the customer when it is ready." },
           { key: "accounts", body: "Offices order lunch on account, and you see what each one owes." },
           { key: "agent", body: "Your busiest hours, your best sellers, and this week against the same days last week." },
-          { key: "shelf", body: "Photos and prices in Arabic and English, and Sold out the moment a dish runs out." },
+          { key: "shelf", body: "Photos and prices in Arabic and English, and a dish shown as Sold out the moment your staff mark it." },
         ],
       },
       note: "Table bookings are not in ALYR yet.",
@@ -331,12 +339,12 @@ export const sectorsEn: SectorsCopy = {
           {
             id: "apps",
             q: "Should I leave the delivery apps?",
-            a: "No. Keep them for new customers. ALYR is for the regulars who already message you: their orders come to you direct, and ALYR takes no commission on them.",
+            a: "No. Keep them for customers who find you there. Regulars who already message you can order direct from your menu page, and ALYR takes no cut of those orders.",
           },
           {
             id: "delivery",
             q: "Can customers ask for delivery?",
-            a: "The order page can offer delivery areas with a fee and a minimum order, once we switch it on for you. ALYR does not track drivers or show a map: your team marks the order done.",
+            a: "The order page can offer delivery areas with a fee and a minimum order, once we switch it on for you. ALYR does not track drivers or show a map: your team marks the order complete.",
           },
           {
             id: "sold-out",
@@ -352,7 +360,7 @@ export const sectorsEn: SectorsCopy = {
       },
       cta: {
         title: "Tell us how orders reach your restaurant today.",
-        body: "Send us a message. A person from ALYR replies, then comes to show you your own menu in the chat.",
+        body: "Send us a message. A person from ALYR replies, then comes to show you how it would work for your restaurant, on your own phone.",
       },
       prefill: "Hello ALYR, I run a restaurant and I’d like to see how ALYR takes our orders.",
       subject: "How ALYR works for my restaurant",
@@ -366,9 +374,10 @@ export const sectorsEn: SectorsCopy = {
           "How a home services company in Qatar can answer customers while the team is on a job: visits booked from the chat with a reminder before each, parts ordered from a page, and contract customers on account. Set up for you by ALYR.",
       },
       name: "Home services",
+      short: "Home services",
       title: "How a home services company in Qatar can answer customers while the team is on a job",
       answer:
-        "Let the everyday requests answer themselves in the chat: customers book a visit from a page with your free times, get a confirmation at once and a reminder before you arrive, and order parts from a page. Everything else waits in one shared inbox, with one person responsible, until someone is free. Contract customers can pay later, with reminders.",
+        "Let the everyday requests answer themselves in the chat: customers book a visit from a page with your open times, get a confirmation at once and a reminder before you arrive, and order parts from a page. Everything else waits in one shared inbox, with one person responsible, until someone is free. Contract customers can pay later, with reminders.",
       row: "home-services",
       today: {
         title: "Your day today",
@@ -382,7 +391,7 @@ export const sectorsEn: SectorsCopy = {
       products: {
         title: "What we set up for a home services company",
         rows: [
-          { key: "bookings", body: "Visits booked from the chat, only at free times, with the confirmation at once and a reminder two hours before." },
+          { key: "bookings", body: "Visits booked from the chat, only at open times, with the confirmation at once and a reminder two hours before." },
           { key: "chat", body: "Parts and filters ordered from a page, and every chat in one inbox your whole team shares." },
           { key: "accounts", body: "Contract customers on account, with reminders whose tone follows how late the payment is." },
           { key: "docs", body: "A numbered receipt in Arabic and English for each payment you record." },
@@ -398,7 +407,7 @@ export const sectorsEn: SectorsCopy = {
           {
             id: "teams",
             q: "I have two teams out at once.",
-            a: "Today ALYR Bookings takes one visit at a time for the whole business. Tell us how your teams work, and we’ll tell you whether it fits before you decide anything.",
+            a: "Then two customers can want the same morning, and today ALYR Bookings gives each time to one visit only. Tell us how your teams work, and we’ll tell you whether it fits before you decide anything.",
           },
           {
             id: "on-job",
@@ -413,13 +422,13 @@ export const sectorsEn: SectorsCopy = {
           {
             id: "receipts",
             q: "Can contract customers get a receipt for each payment?",
-            a: "Yes. With ALYR Docs, each payment you record makes a numbered receipt in Arabic and English that says what is left on the account.",
+            a: "We can set that up with ALYR Docs: each payment you record then makes a numbered receipt in Arabic and English that says what is left on the account.",
           },
         ],
       },
       cta: {
         title: "Tell us how jobs reach you today.",
-        body: "Send us a message. A person from ALYR replies, then comes to show you a visit booked from your own chat.",
+        body: "Send us a message. A person from ALYR replies, then comes to show you a visit booked from a chat on your own phone.",
       },
       prefill: "Hello ALYR, we do home services and I’d like to see how ALYR takes our bookings.",
       subject: "How ALYR works for my company",
@@ -430,10 +439,11 @@ export const sectorsEn: SectorsCopy = {
       meta: {
         title: "WhatsApp orders for fashion and gift shops in Qatar · ALYR",
         description:
-          "How a fashion, abaya or gift shop in Qatar can answer every “still available” message: each piece on a page with photos, sizes and price, stock counted on every sale, and orders by a piece’s code in the chat. Set up for you by ALYR.",
+          "How a fashion, abaya or gift shop in Qatar can show customers what is still available: each piece on a page with photos, sizes and price, stock counted on every sale, and orders by a piece’s code in the chat. Set up for you by ALYR.",
       },
       name: "Fashion and gifts",
-      title: "How a fashion or gift shop in Qatar can answer every “still available” message",
+      short: "Fashion and gifts",
+      title: "How a fashion or gift shop in Qatar can show customers what is still available",
       answer:
         "Put each piece on a page with its photos, sizes, colours and price, and send customers there from the chat and your Instagram bio. Stock is counted on every sale, so a piece that is gone shows Sold out instead of waiting for your reply. A customer can also send a piece’s code or link in the chat and order it there.",
       row: "fashion",
@@ -450,7 +460,7 @@ export const sectorsEn: SectorsCopy = {
         title: "What we set up for a fashion or gift shop",
         rows: [
           { key: "chat", body: "A chat link for your Instagram bio, a page of your pieces in the chat, and an order from a piece’s code or link." },
-          { key: "agent", body: "Your best sellers, what did not sell, and this week against the same days last week." },
+          { key: "agent", body: "Your best sellers, what is sold out or low now, and this week against the same days last week." },
           { key: "shelf", body: "Every piece with its photos, sizes and colours, stock counted on every sale, and Sold out when the last one goes." },
         ],
       },
@@ -467,7 +477,7 @@ export const sectorsEn: SectorsCopy = {
           {
             id: "instagram",
             q: "Most of my customers find me on Instagram.",
-            a: "Put your chat link in your bio. One tap opens WhatsApp, ALYR answers with your page, and the order comes to your screen. Instagram stays where people find you.",
+            a: "Put your chat link in your bio. It opens a chat with your shop, and when the customer writes, ALYR answers with your page and the order comes to your screen.",
           },
           {
             id: "code",
@@ -483,7 +493,7 @@ export const sectorsEn: SectorsCopy = {
       },
       cta: {
         title: "Tell us how orders reach your shop today.",
-        body: "Send us a message. A person from ALYR replies, then comes to show you your own pieces on your own phone.",
+        body: "Send us a message. A person from ALYR replies, then comes to show you how it would work for your shop, on your own phone.",
       },
       prefill: "Hello ALYR, I sell fashion and gifts and I’d like to see how ALYR takes our orders.",
       subject: "How ALYR works for my shop",
@@ -494,15 +504,16 @@ export const sectorsEn: SectorsCopy = {
 // ------------------------------------------------------------------ Arabic (draft, ALY-66)
 
 export const sectorsAr: SectorsCopy = {
-  crumbs: { label: "موقعك في الصفحة", home: "ALYR", business: "حسب النشاط" },
+  crumbs: { label: "مسار التنقل", home: "ALYR", business: "حسب نشاطك" },
   uses: "ما سنجهّزه لك",
   figure: {
-    title: "العصر نفسه، اليوم ومع ALYR",
-    body: "في جهة البداية المحادثات كما تتراكم اليوم، وفي الجهة الأخرى العملاء أنفسهم كما ترتبهم ALYR. اسحب الطيّة أو استخدم الزرّين.",
+    title: "الساعة نفسها، اليوم ومع ALYR",
+    body: "محادثات اليوم كما تتراكم، والعملاء أنفسهم كما ترتبهم ALYR. حرّك الطيّة، أو اضغط «اليوم» أو «مع ALYR».",
   },
   guide: { title: "دليل لأصحاب المحلات", read: "اقرأ الدليل" },
   see: "اطّلع على {name}",
   footer: "لنشاطك",
+  card: "ALYR: صفحة لنوع واحد من المنشآت التي يديرها أصحابها في قطر، بسؤالها والمنتجات التي تستخدمها",
   items: {
     bakeries: {
       meta: {
@@ -511,16 +522,17 @@ export const sectorsAr: SectorsCopy = {
           "كيف يستقبل مخبز أو مطبخ منزلي في قطر طلبات واتساب دون أن يضيع منها شيء: صفحة قائمة تفتح من المحادثة، وكل طلب على شاشة واحدة ومعه شخص مسؤول، وحسابات آجلة للمكاتب مع تذكير بالسداد. تجهّزها لك ALYR.",
       },
       name: "المخابز والمطابخ المنزلية",
+      short: "المخابز",
       title: "كيف يستقبل مخبز في قطر طلبات واتساب دون أن يضيع منها شيء",
       answer:
-        "اجعل قائمتك صفحة تفتح من المحادثة، فيصلك كل طلب بأصنافه وكمياته ويومه بدل رسالة صوتية. عندها يصل كل طلب إلى شاشة واحدة، ويتولاه شخص واحد من فريقك. تجهّز ALYR ذلك معك في مخبزك، وتفتح لعملاء المكاتب حساباً آجلاً يسددونه لاحقاً.",
+        "اجعل قائمتك صفحة تفتح من المحادثة، فيصلك كل طلب بأصنافه وكمياته، ويومه إن كان يُحضَّر عند الطلب، بدل رسالة صوتية. عندها يصل كل طلب إلى شاشة واحدة، ويتولاه شخص واحد من فريقك. تجهّز ALYR ذلك معك في مخبزك. ويستطيع زبائن المكاتب أن يطلبوا على حساب آجل يسددونه لاحقاً.",
       row: "bakery",
       today: {
         title: "يومك اليوم",
         items: [
           "في الأسبوع الذي يسبق العيد تصل الطلبات أسرع مما يستطيع أحد أن يكتبها.",
-          "رسالة صوتية تقول «مثل المرة الماضية، لـ 12 شخصاً»، وعلى أحدهم أن يتذكر ما كان ذلك.",
-          "«طلبي جاهز؟» تصل طوال العصر ويداك في العجين.",
+          "رسالة صوتية تقول «مثل المرة الماضية، لـ\u00a012 شخصاً»، وعلى أحدهم أن يتذكر ما كان ذلك.",
+          "تصل رسائل «طلبي جاهز؟» طوال العصر ويداك في العجين.",
           "المكاتب تطلب على الحساب، والمبلغ ينتظر حتى يتذكر أحد أن يطالب به.",
         ],
       },
@@ -528,13 +540,13 @@ export const sectorsAr: SectorsCopy = {
         title: "ما نجهّزه للمخبز",
         rows: [
           { key: "chat", body: "صفحة قائمتك في المحادثة، بالقطعة أو بالوزن. يصل كل طلب كاملاً إلى شاشة واحدة، ويُبلَّغ العميل عند تأكيده وعند جاهزيته." },
-          { key: "accounts", body: "المكاتب والعملاء الدائمون يطلبون على الحساب. ترى من عليه مستحقات لك ومنذ متى، وتُرسل التذكيرات بضغطة واحدة." },
+          { key: "accounts", body: "المكاتب والزبائن الدائمون يطلبون على الحساب. ترى من عليه مستحقات لك ومنذ متى، وتُرسل التذكيرات بضغطة واحدة." },
           { key: "agent", body: "ما يحتاجك الآن، وهذا الأسبوع مقارنةً بالأيام نفسها من الأسبوع الماضي." },
           { key: "shelf", body: "كم كعكة تستطيع أن تصنع في اليوم، ووقت إغلاق الطلبات، وعبارة «نفدت الكمية» حين يكتمل عدد اليوم." },
         ],
       },
       guide: "stop-losing-whatsapp-orders",
-      more: "صفحة المخابز",
+      more: "اطّلع على صفحة المخابز",
       faq: {
         title: "أسئلة",
         items: [
@@ -555,22 +567,22 @@ export const sectorsAr: SectorsCopy = {
           },
           {
             id: "offices",
-            q: "كيف تدفع المكاتب في آخر الشهر؟",
-            a: "تطلب على حسابها حتى الحد الذي تضعه أنت. يُرسَل إليها كل قيد مع الرصيد الجديد، وتذهب التذكيرات حين تضغط «إرسال».",
+            q: "كيف تطلب المكاتب الآن وتدفع لاحقاً؟",
+            a: "تطلب على حسابها حتى الحد الذي تضعه أنت. يُرسَل إليها كل قيد مع الرصيد الجديد، وتذهب التذكيرات حين تضغط «إرسال التذكيرات».",
           },
           {
             id: "start",
             q: "من أين نبدأ؟",
-            a: "بفحص في مخبزك: نحو ساعة نرى فيها كيف تصلك الطلبات اليوم. بعدها نُدخل قائمتك وصورها وأسعارها بالعربية والإنجليزية، وندرّب فريقك.",
+            a: "بفحص في مخبزك نرى فيه كيف تصلك الطلبات اليوم. بعدها نضع قائمتك وصورها وأسعارها في الصفحة باللغتين، ونُري فريقك كيف تعمل.",
           },
         ],
       },
       cta: {
         title: "أخبرنا كيف تصل الطلبات إلى مخبزك اليوم.",
-        body: "أرسل لنا رسالة. يردّ عليك شخص من ALYR، ثم يأتي ليريك قائمتك على هاتفك.",
+        body: "أرسل لنا رسالة. يردّ عليك شخص من ALYR، ثم يأتي ليريك كيف تعمل لمخبزك، على هاتفك.",
       },
       prefill: "مرحبا ALYR، عندي مخبز وأبي أشوف كيف تستقبلون طلباتنا.",
-      subject: "كيف تعمل ALYR لمخبزي",
+      subject: "كيف تعمل ALYR في مخبزي",
     },
 
     salons: {
@@ -580,9 +592,10 @@ export const sectorsAr: SectorsCopy = {
           "كيف يستقبل صالون أو محل حلاقة في قطر الحجوزات عبر واتساب ويذكّر كل عميل: صفحة حجز من المحادثة، وتأكيد فوري، وتذكير قبل الموعد بساعتين، وتسجيل الحضور بلمسة واحدة. تجهّزها لك ALYR.",
       },
       name: "الصالونات ومحلات الحلاقة",
+      short: "الصالونات",
       title: "كيف يستقبل صالون في قطر الحجوزات عبر واتساب ويذكّر كل عميل بموعده",
       answer:
-        "دع العملاء يختارون وقتاً متاحاً من صفحة تفتح في المحادثة، وأكّد الحجز فوراً، وأرسل تذكيراً قبل الموعد بساعتين. ثم سجّل من حضر، لتعرف كم عميلاً لم يحضر. يتولى ALYR Bookings هذه الخطوات الأربع، ويحسب ALYR Agent حالات الغياب خلال 30 يوماً.",
+        "دع العملاء يختارون وقتاً متاحاً من صفحة تفتح في المحادثة، وأكّد الحجز فوراً، وأرسل تذكيراً قبل الموعد بساعتين. ثم سجّل من حضر، لتعرف كم عميلاً لم يحضر. يرسل ALYR Bookings الصفحة والتأكيد والتذكير، ويعطي فريقك زرّي «حضر» و«لم يحضر». ويحسب ALYR Agent حالات الغياب خلال 30 يوماً.",
       row: "salon",
       today: {
         title: "يومك اليوم",
@@ -600,16 +613,16 @@ export const sectorsAr: SectorsCopy = {
           { key: "agent", body: "نسبة الغياب خلال 30 يوماً، والعملاء الذين غابوا مرتين ثم حجزوا من جديد، والمواعيد التي لم يسجّل أحد حضورها." },
         ],
       },
-      note: "يستقبل ALYR Bookings اليوم حجزاً واحداً في كل وقت للنشاط كله: يناسب كرسياً واحداً أو غرفة واحدة.",
+      note: "يستقبل ALYR Bookings اليوم حجزاً واحداً في الوقت نفسه للنشاط كله: يناسب كرسياً واحداً أو غرفة واحدة.",
       guide: "cut-no-shows-with-reminders",
-      more: "صفحة الصالونات ومحلات الحلاقة",
+      more: "اطّلع على صفحة الصالونات ومحلات الحلاقة",
       faq: {
         title: "أسئلة",
         items: [
           {
             id: "chairs",
             q: "عندي ثلاثة كراسٍ.",
-            a: "يستقبل ALYR Bookings اليوم حجزاً واحداً في كل وقت للنشاط كله، وهذا يناسب كرسياً واحداً أو غرفة واحدة. أخبرنا كم كرسياً لديك، ونخبرك إن كان يناسبك.",
+            a: "مع ثلاثة كراسٍ قد يريد عميلان الساعة نفسها، واليوم يعطي ALYR Bookings تلك الساعة لواحد منهما فقط. أخبرنا كيف تمتلئ كراسيك، ونخبرك إن كان يناسبك.",
           },
           {
             id: "cancel",
@@ -630,10 +643,10 @@ export const sectorsAr: SectorsCopy = {
       },
       cta: {
         title: "أخبرنا كيف تصل الحجوزات إلى صالونك اليوم.",
-        body: "أرسل لنا رسالة. يردّ عليك شخص من ALYR، ثم يأتي ليريك حجزاً من محادثتك أنت.",
+        body: "أرسل لنا رسالة. يردّ عليك شخص من ALYR، ثم يأتي ليريك حجزاً يتم من محادثة على هاتفك.",
       },
       prefill: "مرحبا ALYR، عندي صالون وأبي أشوف كيف تستقبلون حجوزاتنا.",
-      subject: "كيف تعمل ALYR لصالوني",
+      subject: "كيف تعمل ALYR في صالوني",
     },
 
     groceries: {
@@ -643,6 +656,7 @@ export const sectorsAr: SectorsCopy = {
           "كيف تتابع بقالة في قطر العملاء الذين يشترون بالآجل: يُسجَّل كل بيع بسطر واحد من هاتف الموظف، ويُبلَّغ العميل برصيده الجديد، وتُرسل التذكيرات بضغطة واحدة. والطلبات من قائمتك في المحادثة. تجهّزها لك ALYR.",
       },
       name: "البقالات والمحلات الغذائية",
+      short: "البقالات",
       title: "كيف تتابع بقالة في قطر العملاء الذين يشترون بالآجل",
       answer:
         "سجّل كل بيع آجل لحظة حدوثه بسطر واحد تكتبه على هاتف الموظف، فتصل إلى العميل رسالة برصيده الجديد. يحفظ ALYR Accounts من عليه مستحقات لك وكم ومنذ متى، وتُرسل بضغطة واحدة تذكيرات إلى كل من تأخر 30 يوماً أو أكثر، بنبرة أحزم كلما طال التأخير. ويستطيع العملاء أيضاً أن يطلبوا من قائمتك في المحادثة.",
@@ -656,7 +670,7 @@ export const sectorsAr: SectorsCopy = {
         ],
         orders: [
           { ref: "#1188", who: "شقة 12", what: "خبز، بيض، 2 كغ طماطم", by: "رفيع", status: "على الحساب", tone: "ok" },
-          { ref: "آجل", who: "أحمد", what: "يسدد الخميس", by: "رفيع", status: "سُجّل وعد بالسداد", tone: "ok" },
+          { ref: "آجل", who: "أحمد", what: "بيع آجل، أُرسل الرصيد الجديد", by: "رفيع", status: "سُجّل", tone: "ok" },
           { ref: "آجل", who: "فاطمة", what: "سألت عن رصيدها", by: "رفيع", status: "أُرسل الرصيد", tone: "ok" },
           { ref: "#1187", who: "فيلا 7", what: "رز بسمتي 5 كغ × 2", by: "جوزيف", status: "جاهز، أُبلغ العميل", tone: "now" },
           { ref: "محادثة", who: "صالح", what: "سأل عن الحليب الطازج", by: "جوزيف", status: "جوزيف يرد", tone: "wait" },
@@ -675,13 +689,13 @@ export const sectorsAr: SectorsCopy = {
         title: "ما نجهّزه للبقالة",
         rows: [
           { key: "accounts", body: "بيع آجل أو دفعة تُسجَّل بسطر واحد من هاتف الموظف. يُبلَّغ العميل بكل قيد وبرصيده الجديد، ويستطيع أن يسأل عنه متى شاء." },
-          { key: "chat", body: "قائمتك صفحةٌ في المحادثة، بالقطعة أو بالوزن. ويستطيع العملاء الدائمون أن يضعوا الطلب على حسابهم حتى الحد الذي تضعه." },
+          { key: "chat", body: "قائمتك صفحةٌ في المحادثة، بالقطعة أو بالوزن. ويستطيع الزبائن الدائمون أن يضعوا الطلب على حسابهم حتى الحد الذي تضعه." },
           { key: "agent", body: "المستحقات حسب عمرها، ووعود السداد التي فات موعدها، والحسابات التي تجاوزت حدها." },
           { key: "shelf", body: "مخزون يُحسب مع كل بيع، وصنف يختفي من الصفحة حين ينفد." },
         ],
       },
       guide: "keep-track-of-who-owes-you",
-      more: "صفحة البقالات",
+      more: "اطّلع على صفحة البقالات",
       faq: {
         title: "أسئلة",
         items: [
@@ -693,7 +707,7 @@ export const sectorsAr: SectorsCopy = {
           {
             id: "upset",
             q: "هل تزعج التذكيرات جيراني؟",
-            a: "التذكير الأول ودّي، ولا تصبح النبرة أحزم إلا بعد 60 يوماً. لا يصل إلى أحد تذكيران خلال 3 أيام، ويستطيع العميل أن يرد بلمسة «سأدفع خلال أسبوع»، ومن يطلب التوقف لا يصله شيء بعد ذلك.",
+            a: "التذكير الأول ودّي، ويصبح أحزم من 60 يوماً، ومن 90 يوماً يصبح إشعاراً أخيراً. لا يصل إلى أحد تذكيران خلال 3 أيام، ويستطيع العميل أن يرد بلمسة «سأدفع خلال أسبوع»، ومن يطلب التوقف لا يصله شيء بعد ذلك.",
           },
           {
             id: "paid",
@@ -712,7 +726,7 @@ export const sectorsAr: SectorsCopy = {
         body: "أرسل لنا رسالة. يردّ عليك شخص من ALYR، ثم يأتي إلى محلك ليراجع دفترك معك.",
       },
       prefill: "مرحبا ALYR، عندي بقالة وأبي أشوف الحسابات الآجلة والطلبات.",
-      subject: "كيف تعمل ALYR لبقالتي",
+      subject: "كيف تعمل ALYR في بقالتي",
     },
 
     restaurants: {
@@ -722,9 +736,10 @@ export const sectorsAr: SectorsCopy = {
           "كيف يستقبل مطعم أو مقهى في قطر الطلبات مباشرة عبر واتساب: القائمة صفحةٌ في المحادثة، وكل طلب على شاشة واحدة، ويُبلَّغ العميل حين يصبح طلبه جاهزاً للاستلام، وغداء المكاتب على الحساب. تجهّزها لك ALYR.",
       },
       name: "المطاعم والمقاهي",
+      short: "المطاعم",
       title: "كيف يستقبل مطعم في قطر الطلبات مباشرة عبر واتساب",
       answer:
-        "اجعل قائمتك صفحة تفتح من المحادثة لعملائك الدائمين. يختارون الأطباق وخياراتها، ويصل الطلب إلى شاشة واحدة ومعه شخص مسؤول، ويُبلَّغ كل عميل حين يصبح طلبه جاهزاً للاستلام. ويمكن أن يكون غداء المكاتب على حساب يُسدَّد في آخر الشهر.",
+        "اجعل قائمتك صفحة تفتح من المحادثة لزبائنك الدائمين. يختارون الأطباق وخياراتها، ويصل الطلب إلى شاشة واحدة ومعه شخص مسؤول، ويُبلَّغ كل عميل حين يصبح طلبه جاهزاً للاستلام. ويمكن أن يكون غداء المكاتب على حساب آجل تسدده المكاتب لاحقاً.",
       row: "restaurant",
       today: {
         title: "يومك اليوم",
@@ -732,7 +747,7 @@ export const sectorsAr: SectorsCopy = {
           "وقت الغداء تصل الطلبات بالاتصال والمحادثة والرسائل الصوتية معاً، وينتهي بها الأمر على الورق.",
           "«أنا برا، الطلب جاهز؟»",
           "مكتب يطلب غداء 14 شخصاً على حسابه، والحساب في دفتر.",
-          "عملاء دائمون كانوا سيطلبون منك مباشرة يمرون عبر تطبيق يأخذ نصيبه.",
+          "زبائن دائمون كانوا سيطلبون منك مباشرة يمرون عبر تطبيق يأخذ نصيبه.",
         ],
       },
       products: {
@@ -741,19 +756,19 @@ export const sectorsAr: SectorsCopy = {
           { key: "chat", body: "قائمتك في المحادثة مع خيارات كل طبق. كل طلب على شاشة واحدة ومعه شخص مسؤول، ورسالة إلى العميل حين يجهز." },
           { key: "accounts", body: "المكاتب تطلب الغداء على الحساب، وترى ما على كل منها." },
           { key: "agent", body: "أكثر ساعاتك ازدحاماً، والأصناف الأكثر مبيعاً، وهذا الأسبوع مقارنةً بالأيام نفسها من الأسبوع الماضي." },
-          { key: "shelf", body: "الصور والأسعار بالعربية والإنجليزية، و«نفدت الكمية» لحظة نفاد الطبق." },
+          { key: "shelf", body: "الصور والأسعار بالعربية والإنجليزية، و«نفدت الكمية» على الطبق فور أن يسجّل موظفك نفاده." },
         ],
       },
-      note: "حجز الطاولات غير موجود في ALYR بعد.",
+      note: "لا يتوفر حجز الطاولات في ALYR بعد.",
       guide: "stop-losing-whatsapp-orders",
-      more: "صفحة المطاعم",
+      more: "اطّلع على صفحة المطاعم",
       faq: {
         title: "أسئلة",
         items: [
           {
             id: "apps",
             q: "هل أترك تطبيقات التوصيل؟",
-            a: "لا. أبقِها للعملاء الجدد. ALYR للعملاء الدائمين الذين يراسلونك أصلاً: تصلك طلباتهم مباشرة، ولا تأخذ ALYR عليها أي عمولة.",
+            a: "لا. أبقِها للعملاء الذين يجدونك عليها. أما الزبائن الدائمون الذين يراسلونك أصلاً فيطلبون مباشرة من صفحة قائمتك، ولا تأخذ ALYR نسبة من هذه الطلبات.",
           },
           {
             id: "delivery",
@@ -768,26 +783,27 @@ export const sectorsAr: SectorsCopy = {
           {
             id: "tables",
             q: "هل يستطيع العملاء حجز طاولة؟",
-            a: "ليس بعد. تستقبل ALYR الطلبات للاستلام، وللتوصيل بعد تفعيله. حجز الطاولات غير موجود في ALYR.",
+            a: "ليس بعد. تستقبل ALYR الطلبات للاستلام، وللتوصيل بعد تفعيله. لا يتوفر حجز الطاولات في ALYR بعد.",
           },
         ],
       },
       cta: {
         title: "أخبرنا كيف تصل الطلبات إلى مطعمك اليوم.",
-        body: "أرسل لنا رسالة. يردّ عليك شخص من ALYR، ثم يأتي ليريك قائمتك في المحادثة.",
+        body: "أرسل لنا رسالة. يردّ عليك شخص من ALYR، ثم يأتي ليريك كيف تعمل لمطعمك، على هاتفك.",
       },
       prefill: "مرحبا ALYR، عندي مطعم وأبي أشوف كيف تستقبلون طلباتنا.",
-      subject: "كيف تعمل ALYR لمطعمي",
+      subject: "كيف تعمل ALYR في مطعمي",
     },
 
     "home-services": {
       meta: {
         title: "حجوزات واتساب للخدمات المنزلية في قطر · ALYR",
         description:
-          "كيف تردّ شركة خدمات منزلية في قطر على عملائها وفريقها في عمل: زيارات تُحجز من المحادثة مع تذكير قبل كل زيارة، وقطع غيار تُطلب من صفحة، وعملاء العقود على الحساب. تجهّزها لك ALYR.",
+          "كيف تردّ شركة خدمات منزلية في قطر على عملائها حين يكون فريقها في موقع العمل: زيارات تُحجز من المحادثة مع تذكير قبل كل زيارة، وقطع غيار تُطلب من صفحة، وعملاء العقود على الحساب. تجهّزها لك ALYR.",
       },
       name: "الخدمات المنزلية",
-      title: "كيف تردّ شركة خدمات منزلية في قطر على عملائها وفريقها في موقع العمل",
+      short: "الخدمات المنزلية",
+      title: "كيف تردّ شركة خدمات منزلية في قطر على عملائها حين يكون فريقها في موقع العمل",
       answer:
         "دع الطلبات اليومية تُنجَز في المحادثة: يحجز العملاء زيارة من صفحة فيها أوقاتك المتاحة، ويصلهم تأكيد فوري وتذكير قبل وصولك، ويطلبون قطع الغيار من صفحة. وكل ما عدا ذلك ينتظر في صندوق واحد مشترك، ومعه شخص مسؤول، حتى يتفرغ أحد. ويستطيع عملاء العقود أن يسددوا لاحقاً، مع تذكير بالسداد.",
       row: "home-services",
@@ -810,16 +826,16 @@ export const sectorsAr: SectorsCopy = {
           { key: "agent", body: "الزيارات التي لم يسجّلها أحد، والمستحقات حسب عمرها، وهذا الأسبوع مقارنةً بالأيام نفسها من الأسبوع الماضي." },
         ],
       },
-      note: "يستقبل ALYR Bookings اليوم زيارة واحدة في كل وقت للنشاط كله.",
+      note: "يستقبل ALYR Bookings اليوم زيارة واحدة في الوقت نفسه للنشاط كله.",
       guide: "cut-no-shows-with-reminders",
-      more: "صفحة الخدمات المنزلية",
+      more: "اطّلع على صفحة الخدمات المنزلية",
       faq: {
         title: "أسئلة",
         items: [
           {
             id: "teams",
             q: "عندي فريقان يعملان في الوقت نفسه.",
-            a: "يستقبل ALYR Bookings اليوم زيارة واحدة في كل وقت للنشاط كله. أخبرنا كيف يعمل فريقاك، ونخبرك إن كان يناسبك قبل أن تقرر أي شيء.",
+            a: "عندها قد يريد عميلان الصباح نفسه، واليوم يعطي ALYR Bookings كل وقت لزيارة واحدة فقط. أخبرنا كيف يعمل فريقاك، ونخبرك إن كان يناسبك قبل أن تقرر أي شيء.",
           },
           {
             id: "on-job",
@@ -834,35 +850,36 @@ export const sectorsAr: SectorsCopy = {
           {
             id: "receipts",
             q: "هل يحصل عملاء العقود على إيصال لكل دفعة؟",
-            a: "نعم. مع ALYR Docs تُنشئ كل دفعة تسجّلها إيصالاً مرقّماً بالعربية والإنجليزية يذكر ما بقي على الحساب.",
+            a: "نستطيع أن نجهّز ذلك مع ALYR Docs: عندها تُنشئ كل دفعة تسجّلها إيصالاً مرقّماً بالعربية والإنجليزية يذكر ما بقي على الحساب.",
           },
         ],
       },
       cta: {
         title: "أخبرنا كيف تصلك طلبات العمل اليوم.",
-        body: "أرسل لنا رسالة. يردّ عليك شخص من ALYR، ثم يأتي ليريك زيارة محجوزة من محادثتك أنت.",
+        body: "أرسل لنا رسالة. يردّ عليك شخص من ALYR، ثم يأتي ليريك زيارة تُحجز من محادثة على هاتفك.",
       },
-      prefill: "مرحبا ALYR، نقدّم خدمات منزلية ونبي نشوف كيف تستقبلون حجوزاتنا.",
-      subject: "كيف تعمل ALYR لشركتي",
+      prefill: "مرحبا ALYR، عندنا شركة خدمات منزلية ونبي نشوف كيف تستقبلون حجوزاتنا.",
+      subject: "كيف تعمل ALYR مع شركتي",
     },
 
     fashion: {
       meta: {
         title: "طلبات واتساب لمحلات الأزياء والهدايا في قطر · ALYR",
         description:
-          "كيف يردّ محل أزياء أو عبايات أو هدايا في قطر على كل رسالة «متوفر؟»: كل قطعة في صفحة بصورها ومقاساتها وسعرها، ومخزون يُحسب مع كل بيع، وطلب برمز القطعة في المحادثة. تجهّزها لك ALYR.",
+          "كيف يُري محل أزياء أو عبايات أو هدايا في قطر عملاءه ما بقي متوفراً: كل قطعة في صفحة بصورها ومقاساتها وسعرها، ومخزون يُحسب مع كل بيع، وطلب برمز القطعة في المحادثة. تجهّزها لك ALYR.",
       },
       name: "الأزياء والهدايا",
-      title: "كيف يردّ محل أزياء أو هدايا في قطر على كل رسالة «متوفر»",
+      short: "الأزياء والهدايا",
+      title: "كيف يُري محل أزياء أو هدايا في قطر عملاءه ما بقي متوفراً",
       answer:
-        "ضع كل قطعة في صفحة بصورها ومقاساتها وألوانها وسعرها، وأرسل العملاء إليها من المحادثة ومن نبذة حسابك على إنستغرام. يُحسب المخزون مع كل بيع، فتظهر القطعة التي نفدت «نفدت الكمية» بدل أن تنتظر ردّك. ويستطيع العميل أيضاً أن يرسل رمز القطعة أو رابطها في المحادثة ويطلبها هناك.",
+        "ضع كل قطعة في صفحة بصورها ومقاساتها وألوانها وسعرها، وأرسل العملاء إليها من المحادثة ومن نبذة حسابك على إنستغرام. يُحسب المخزون مع كل بيع، فتظهر على القطعة التي نفدت عبارة «نفدت الكمية» بدل أن تنتظر ردّك. ويستطيع العميل أيضاً أن يرسل رمز القطعة أو رابطها في المحادثة ويطلبها هناك.",
       row: "fashion",
       today: {
         title: "يومك اليوم",
         items: [
           "«السعر؟ مقاس 54؟» تحت كل صورة تنشرها.",
-          "ترسل الصور واحدة واحدة، ثم لا تعرف أي القطع بقي.",
-          "يصل الطلب لقطة شاشة، وعلى أحدهم أن يكتشف أي قطعة هي.",
+          "ترسل الصور واحدة واحدة، ثم لا تعرف أيّ القطع بقيت.",
+          "يصل الطلب على شكل لقطة شاشة، وعلى أحدهم أن يكتشف أي قطعة هي.",
           "طلبات الهدايا تصل في آخر الليل، والأسئلة تنتظر حتى الصباح.",
         ],
       },
@@ -870,12 +887,12 @@ export const sectorsAr: SectorsCopy = {
         title: "ما نجهّزه لمحل الأزياء والهدايا",
         rows: [
           { key: "chat", body: "رابط محادثة لنبذة حسابك على إنستغرام، وصفحة قطعك في المحادثة، وطلب برمز القطعة أو رابطها." },
-          { key: "agent", body: "الأكثر مبيعاً، وما لم يُبع، وهذا الأسبوع مقارنةً بالأيام نفسها من الأسبوع الماضي." },
+          { key: "agent", body: "الأكثر مبيعاً، وما نفد أو قارب على النفاد الآن، وهذا الأسبوع مقارنةً بالأيام نفسها من الأسبوع الماضي." },
           { key: "shelf", body: "كل قطعة بصورها ومقاساتها وألوانها، ومخزون يُحسب مع كل بيع، و«نفدت الكمية» حين تُباع آخر قطعة." },
         ],
       },
       guide: "stop-losing-whatsapp-orders",
-      more: "صفحة الأزياء والهدايا",
+      more: "اطّلع على صفحة الأزياء والهدايا",
       faq: {
         title: "أسئلة",
         items: [
@@ -887,7 +904,7 @@ export const sectorsAr: SectorsCopy = {
           {
             id: "instagram",
             q: "أغلب عملائي يجدونني على إنستغرام.",
-            a: "ضع رابط المحادثة في نبذة حسابك. لمسة واحدة تفتح واتساب، فتردّ ALYR بصفحتك، ويصل الطلب إلى شاشتك. ويبقى إنستغرام حيث يجدك الناس.",
+            a: "ضع رابط المحادثة في نبذة حسابك. يفتح الرابط محادثة مع محلك، وحين يكتب العميل تردّ ALYR بصفحتك ويصل الطلب إلى شاشتك.",
           },
           {
             id: "code",
@@ -903,10 +920,10 @@ export const sectorsAr: SectorsCopy = {
       },
       cta: {
         title: "أخبرنا كيف تصل الطلبات إلى محلك اليوم.",
-        body: "أرسل لنا رسالة. يردّ عليك شخص من ALYR، ثم يأتي ليريك قطعك على هاتفك.",
+        body: "أرسل لنا رسالة. يردّ عليك شخص من ALYR، ثم يأتي ليريك كيف تعمل لمحلك، على هاتفك.",
       },
       prefill: "مرحبا ALYR، أبيع أزياء وهدايا وأبي أشوف كيف تستقبلون طلباتنا.",
-      subject: "كيف تعمل ALYR لمحلي",
+      subject: "كيف تعمل ALYR في محلي",
     },
   },
 };

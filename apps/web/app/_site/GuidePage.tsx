@@ -39,14 +39,14 @@ export function GuidePage({ locale, guide }: { locale: Locale; guide: GuideKey }
     <Shell locale={locale} page={guidePage(guide)} cta={d.cta}>
       <article className="gd" aria-labelledby="guide-title">
         <header className="gd-head">
-          <div className="wrap gd-measure">
+          <div className="wrap">
             <Crumbs label={t.sectors.crumbs.label} items={[[t.sectors.crumbs.home, home], [g.crumb, PATHS.guides[locale]], [d.title]]} />
             <h1 className="gd-title" id="guide-title">{rich(d.title)}</h1>
             <Byline locale={locale} published={d.published} date={d.date} />
           </div>
         </header>
 
-        <div className="wrap gd-measure gd-body">
+        <div className="wrap gd-body">
           <section className="gd-short" aria-labelledby="short-title">
             <h2 className="mono-k" id="short-title">{g.short}</h2>
             <p>{rich(d.short)}</p>
@@ -137,11 +137,11 @@ export function GuidesIndex({ locale }: { locale: Locale }) {
               const d = g.items[key];
               return (
                 <li key={key}>
-                  <p className="gd-row-date mono-k"><time dateTime={d.published}><bdi>{d.date}</bdi></time></p>
                   <div className="gd-row-main">
                     <h2 className="gd-row-title">
                       <a href={PATHS[guidePage(key)][locale]}>{rich(d.title)}</a>
                     </h2>
+                    <p className="gd-row-date mono-k"><time dateTime={d.published}><bdi>{d.date}</bdi></time></p>
                     <p>{rich(d.meta.description)}</p>
                   </div>
                 </li>

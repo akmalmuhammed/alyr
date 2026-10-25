@@ -45,7 +45,7 @@ export function ProductTags({ locale, products }: { locale: Locale; products: Pr
         const plus = INCLUDED.includes(key);
         return (
           <a key={key} className={`tag tag-link${plus ? " tag-plus" : ""}`} href={productPath(key, locale)} aria-label={name}>
-            {plus && <span aria-hidden="true">{"+ "}</span>}<bdi>{name.replace(/^ALYR\s+/, "")}</bdi>
+            <bdi dir="ltr">{plus ? "+ " : ""}{name.replace(/^ALYR\s+/, "")}</bdi>
           </a>
         );
       })}
@@ -81,20 +81,6 @@ export function SectorPage({ locale, sector }: { locale: Locale; sector: SectorK
         </div>
       </section>
 
-      <section className="sec sp-today" id="today" aria-labelledby="today-title">
-        <div className="wrap sp-split">
-          <h2 className="h2" id="today-title">{rich(s.today.title)}</h2>
-          <ul className="sp-day">
-            {s.today.items.map((line) => (
-              <li key={line}>
-                <span className="sp-mark" aria-hidden="true" />
-                <span>{rich(line)}</span>
-              </li>
-            ))}
-          </ul>
-        </div>
-      </section>
-
       {day && (
         <section className="sec sp-fig" id="afternoon" aria-labelledby="afternoon-title">
           <div className="wrap">
@@ -111,6 +97,20 @@ export function SectorPage({ locale, sector }: { locale: Locale; sector: SectorK
           </div>
         </section>
       )}
+
+      <section className="sec sp-today" id="today" aria-labelledby="today-title">
+        <div className="wrap sp-split">
+          <h2 className="h2" id="today-title">{rich(s.today.title)}</h2>
+          <ul className="sp-day">
+            {s.today.items.map((line) => (
+              <li key={line}>
+                <span className="sp-mark" aria-hidden="true" />
+                <span>{rich(line)}</span>
+              </li>
+            ))}
+          </ul>
+        </div>
+      </section>
 
       <section className="sec sp-products" id="products" aria-labelledby="products-title">
         <div className="wrap">
@@ -145,22 +145,19 @@ export function SectorPage({ locale, sector }: { locale: Locale; sector: SectorK
         </div>
       </section>
 
-      <section className="sec sp-guide" id="guide" aria-labelledby="guide-title">
-        <div className="wrap sp-split">
-          <p className="mono-k">{w.guide.title}</p>
-          <div className="sp-guide-body">
-            <h2 className="sp-guide-title" id="guide-title">
-              <a href={PATHS[guidePage(s.guide)][locale]}>{rich(guide.title)}</a>
-            </h2>
+      <QuestionsBlock
+        faq={s.faq}
+        aside={
+          <div className="sp-guide">
+            <p className="mono-k">{w.guide.title}</p>
+            <p className="sp-guide-title" id="guide-title">{rich(guide.title)}</p>
             <a className="link" href={PATHS[guidePage(s.guide)][locale]} aria-describedby="guide-title">
               <span>{w.guide.read}</span>
               <Icon name="arrow-right" className="ico ico-flip" />
             </a>
           </div>
-        </div>
-      </section>
-
-      <QuestionsBlock faq={s.faq} />
+        }
+      />
     </Shell>
   );
 }

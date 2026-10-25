@@ -545,7 +545,9 @@ a.pm-link[aria-current="page"] .pm-name::after { content: ""; display: inline-bl
 .foot-products a { color: var(--text); font-weight: 600; }
 .foot-products a[aria-current="page"] { text-decoration: underline; text-decoration-thickness: 1px; text-underline-offset: .25em; }
 .foot-sectors, .foot-site { padding-top: 0; border-top: 0; margin-top: -1rem; }
-.foot-sectors a[aria-current="page"] { color: var(--text); }
+.foot-k { display: inline-flex; align-items: center; min-height: 2.75rem; }
+.foot-sectors a, .foot-site a { min-width: 2.75rem; justify-content: center; }
+.foot-sectors a[aria-current="page"], .foot-site a[aria-current="page"] { color: var(--text); text-decoration: underline; text-decoration-thickness: var(--rule-hairline); text-underline-offset: .25em; }
 
 /* The phone's contact bar, on every page with an opening button: in once that button has
    gone, out at the closing call. */

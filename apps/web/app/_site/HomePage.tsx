@@ -260,14 +260,16 @@ function Business({ locale }: { locale: Locale }) {
                   <span className="biz-k">{b.uses}</span>
                   <span className="biz-tags">{tags(row.products)}</span>
                 </p>
-                <ContactButton locale={locale} variant="line" className="biz-ask" message={row} label={row.ask} />
+                <span className="biz-acts">
+                  {pageOf(row.id) && (
+                    <a className="link biz-more" href={PATHS[sectorPage(pageOf(row.id)!)][locale]}>
+                      <span>{t.sectors.items[pageOf(row.id)!].more}</span>
+                      <Icon name="arrow-right" className="ico ico-flip" />
+                    </a>
+                  )}
+                  <ContactButton locale={locale} variant="line" className="biz-ask" message={row} label={row.ask} />
+                </span>
               </div>
-              {pageOf(row.id) && (
-                <a className="link biz-more" href={PATHS[sectorPage(pageOf(row.id)!)][locale]}>
-                  <span>{t.sectors.items[pageOf(row.id)!].more}</span>
-                  <Icon name="arrow-right" className="ico ico-flip" />
-                </a>
-              )}
             </div>
           ))}
           <div id={b.other.id} className="biz-panel biz-else" role="tabpanel" aria-labelledby={`biz-tab-${b.other.id}`}>

@@ -1,6 +1,6 @@
 ---
 name: alyr-site-page
-description: Build or change a public ALYR web page or anything on it. Use for the homepage (/ and /ar), the product pages (/chat, /bookings, /agent, /accounts, /shelf, /docs and their /ar pages), adding a new product page, the header, Products menu, theme switch, product bar, footer, closing call, contact states, the offer switch, the "Sample" marks on drawings of product screens, the "works with" rows, the sitemap, metadata and social cards, and anything under apps/web/app/_site, apps/web/app/(site) or apps/web/app/(site-ar), or scripts/build-site.sh. Load alyr-design first.
+description: Build or change a public ALYR web page or anything on it. Use for the homepage (/ and /ar), the product pages (/chat, /bookings, /agent, /accounts, /shelf, /docs and their /ar pages), adding a new product page, the sector pages (/for/...) and owner guides (/guides), the header, Products menu, theme switch, product bar, footer, closing call, contact states, the offer switch, the "Sample" marks on drawings of product screens, the "works with" rows, the sitemap, metadata and social cards, and anything under apps/web/app/_site, apps/web/app/(site) or apps/web/app/(site-ar), or scripts/build-site.sh. Load alyr-design first.
 ---
 
 # A public ALYR page
@@ -177,9 +177,9 @@ silently not published, or published and not linked:
 4. **Routes in both groups:** `app/(site)/<key>/page.tsx` and
    `app/(site-ar)/ar/<key>/page.tsx`, each with `siteMetadata(locale, "<key>")`.
 5. **Social card:** `app/(site)/<key>/opengraph-image.tsx`.
-6. **`scripts/build-site.sh`:** add the key to `pages=`; that one list copies the HTML in
-   both languages, the social card and the deferred-scripts step. It fails if the card is
-   missing.
+6. **`scripts/build-site.sh`:** nothing to add. It reads its list of pages from `PATHS`
+   (`scripts/site/pages.mjs`, since ALY-232): the HTML in both languages, the social card and
+   the deferred-scripts step. It fails if an English page's card is missing.
 7. **Homepage:** its tile in `SuiteFrame.tsx` (`FRAGMENT`), drawn from the product's real
    screen, with its moment in `suite.css` and its place in the plate's grid at each width.
 8. **Menu, footer and "works with" rows** read `PRODUCTS` and `productPath`, so they turn into
@@ -191,6 +191,36 @@ silently not published, or published and not linked:
 10. **Docs in the same PR:** `docs/brand.md` (the suite on the site), `docs/status.md`, the
     lane brief's "Now", and a decision entry if it changes a recorded decision (check the
     next free D-number on `origin/main` right before committing).
+
+## Sector pages and owner guides
+
+Added 25 Oct 2026 (ALY-232, ALY-233, D-057; reviewed by two critics, `docs/work/ALY-232-sector-pages/`).
+Words in `copySectors.ts` and `copyGuides.ts`; pages `SectorPage.tsx` and `GuidePage.tsx`;
+styles `pages.css`; routes `/for/[sector]` and `/guides/[guide]` with `generateStaticParams`.
+
+- **A sector page answers first.** Breadcrumb, then the owner's main question said as a
+  statement (no question mark) on the start seven columns and its answer (under 80 words) on
+  the end five, then the one Volt "Book a check-up" with that trade's own message and the
+  products as tags. It opens on the canvas, not Carbon: an audience page is read, not demoed.
+- **Then the drawing, at once:** the trade's hour split by the fold (`DaySplit.tsx`, the
+  homepage's rows, or the trade's own `day`), marked "Sample" once, its machine line first.
+  Its lead names the buttons as they read; never "start side" or "end side".
+- **Then** "Your day today" (the opener in the owner's words, as statements), "What we set
+  up" (one row per product, only what is built, a limit as a pending status line), and the
+  Questions with the trade's guide in their start column (`QuestionsBlock`'s `aside`).
+- **A guide** is an article on the grid's start: title, a byline with `<time>` ("Guide · ALYR
+  team · date"), "In short" (100 words or fewer, the whole answer, checked by
+  `pages.test.mjs`), steps that work without ALYR, then "With ALYR" once, last, describing
+  only what is built and never claiming a step of the guide that the product does not do.
+- **Structured data:** WebPage + BreadcrumbList + FAQPage for a sector; Article (author the
+  organisation "ALYR team", dates in Doha time) + BreadcrumbList for a guide; CollectionPage
+  for the index. Never a person, a price or a rating.
+- **A new trade or guide:** add its key to `SECTORS` or `GUIDES` in `site.ts` and its words in
+  both languages; the routes, sitemap, footer row, machine copies, build and checks follow.
+  A clinic never gets a page (health data, D-043).
+- Found by the critics, keep out: a sample that shows a feature the product lacks (a promise
+  to pay on a named day); "every" where ALYR answers only some messages; "free" for an open
+  time; a line repeated from the homepage word for word.
 
 ## Do
 

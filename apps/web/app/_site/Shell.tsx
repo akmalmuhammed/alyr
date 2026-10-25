@@ -189,14 +189,15 @@ export function Shell({
             ))}
           </nav>
           {/* the kinds of business with a page of their own, and the owner guides (ALY-232, ALY-233) */}
-          <nav className="foot-nav foot-sectors" aria-label={t.sectors.footer}>
+          <nav className="foot-nav foot-sectors" aria-labelledby="foot-sectors-k">
+            <span className="foot-k mono-k" id="foot-sectors-k">{t.sectors.footer}</span>
             {SECTORS.map((key) => (
-              <a key={key} href={PATHS[sectorPage(key)][locale]} aria-current={page === sectorPage(key) ? "page" : undefined}>{t.sectors.items[key].name}</a>
+              <a key={key} href={PATHS[sectorPage(key)][locale]} aria-current={page === sectorPage(key) ? "page" : undefined}>{t.sectors.items[key].short}</a>
             ))}
-            <a href={PATHS.guides[locale]} aria-current={page === "guides" ? "page" : undefined}>{t.guides.footer}</a>
           </nav>
           <nav className="foot-nav foot-site" aria-label={t.footer.links}>
             <a href={at("#questions")}>{t.nav.questions}</a>
+            <a href={PATHS.guides[locale]} aria-current={page === "guides" ? "page" : undefined}>{t.guides.footer}</a>
             <a href={other} lang={otherLocale} hrefLang={otherLocale} data-lang>{t.nav.other}</a>
             {WORKSPACE_URL && <a href={WORKSPACE_URL}>{t.footer.workspace}</a>}
           </nav>

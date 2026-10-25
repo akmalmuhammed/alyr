@@ -6,7 +6,7 @@ import { cardSize, cardWrap, socialCard } from "../../../_site/socialCard";
 // products the page names (ALY-232). English only, as every card (socialCard.tsx).
 const t = copy.en;
 
-export const alt = `ALYR · ${t.sectors.footer}`;
+export const alt = t.sectors.card;
 export const size = cardSize;
 export const contentType = "image/png";
 
@@ -18,7 +18,7 @@ export default async function OpenGraphImage({ params }: { params: Promise<{ sec
   const { sector } = await params;
   const s = t.sectors.items[sector as SectorKey];
   return socialCard({
-    eyebrow: `ALYR · ${s.name}`,
+    eyebrow: s.name,
     title: cardWrap(s.title),
     facts: s.products.rows.slice(0, 3).map((row) => t.products.items[row.key].name),
   });

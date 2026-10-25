@@ -47,6 +47,7 @@ Status: **Accepted** (in force), **Proposed** (waiting for the founder), **Super
 | D-042 | Documents (receipts, invoices and the rest) are one engine: gapless numbers, issued paper nobody can change, Arabic first, a PDF drawn by fpdf2 and kept in the database; free now, metered later | Accepted |
 | D-046 | The public site adds ALYR Shelf (the Catalog) and ALYR Docs (Documents), each with its own page; Payroll leaves the site until it is built; every product's state is "Set up for you" | Accepted |
 | D-056 | Search and AI visibility: be found, described correctly and contacted in Qatar, in search and AI assistants; profiles and verification switch on from settings | Accepted |
+| D-057 | Sector pages live under `/for/`, owner guides under `/guides/`, in both languages with the same Latin slugs | Proposed |
 
 ---
 
@@ -1127,3 +1128,22 @@ Nothing claims more than the page, as before.
 **Kept.**
 - `llms.txt` and the markdown copies stay, although Google ignores `llms.txt`: they cost nothing and agents read them.
 - No fake reviews, no undisclosed posts, no AI claims about the product, no prices before the CR.
+
+## D-057 · Sector pages under `/for/`, owner guides under `/guides/`
+**Date** 25 Oct 2026 · **Status** Proposed (Site and brand lane; the founder can change the addresses before the first publish) · Linear ALY-232, ALY-233 · Plan: `docs/growth/visibility.md` (D-056) · Work: `docs/work/ALY-232-sector-pages/`
+
+**Decision.**
+- A page for one kind of business lives at `/for/<trade>`: `/for/bakeries`, `/for/salons`, `/for/groceries`, `/for/restaurants`, `/for/home-services`, `/for/fashion`.
+- The owner guides live at `/guides` (the index) and `/guides/<what it does>`: `/guides/stop-losing-whatsapp-orders`, `/guides/cut-no-shows-with-reminders`, `/guides/keep-track-of-who-owes-you`.
+- The Arabic pages add `/ar` in front and keep the same Latin slugs, as `/ar/chat` does.
+- There is no `/for` index: the homepage's "By business" is that index, and each sector page's breadcrumb points there.
+
+**Why.**
+- One prefix per kind of page keeps an audience (`/for/restaurants`) apart from a product (`/chat`) and from any product name to come.
+- "for bakeries" reads as what an owner searches; a guide's slug says what it helps with.
+- Latin slugs in both languages keep one address per page across languages and avoid percent-encoded Arabic in links shared on WhatsApp.
+
+**What it changed.** `PATHS` in `apps/web/app/_site/site.ts` lists the new pages (the sitemap, hreflang, the machine copies, the checks and `scripts/build-site.sh` all read it). The guides are signed "ALYR team" (D-043) and carry Article structured data; sector pages carry WebPage, BreadcrumbList and FAQPage.
+
+**Revisit when** the site goes to a second country (ALY-241), or Gulf keyword research (ALY-234) shows owners search for a trade by another word.
+

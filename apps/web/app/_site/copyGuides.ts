@@ -52,6 +52,8 @@ export type GuidesCopy = {
   see: string;
   read: string;
   footer: string;
+  /** What a guide's social card shows, for its alt text (the cards are English). */
+  card: string;
   cta: Titled;
   items: Record<GuideKey, Guide>;
 };
@@ -87,6 +89,7 @@ export const guidesEn: GuidesCopy = {
   see: "See {name}",
   read: "Read the guide",
   footer: "Guides",
+  card: "ALYR: an owner guide by the ALYR team, with its title and date",
   cta: {
     title: "Tell us which of these costs you the most.",
     body: "Send us a message. A person from ALYR replies, then comes to look at it with you at your shop.",
@@ -125,7 +128,7 @@ export const guidesEn: GuidesCopy = {
           title: "During the rush",
           steps: [
             { title: "Confirm every order in writing", body: "Send the order back to the customer with the items, the quantity, the day and time, and a number, for example “Order 14 · 2 kg kunafa, 18 maamoul · Thursday, 5 pm”. If it is wrong, the customer says so now, not at the counter." },
-            { title: "Keep one list", body: "Every confirmed order goes on one list your whole team works from, on paper by the oven or on a screen, never only in the chat. Mark each order new, confirmed, ready or collected." },
+            { title: "Keep one list", body: "Every confirmed order goes on one list your whole team works from, on paper by the oven or on a screen, never only in the chat. Mark each order new, confirmed, ready for collection or complete." },
             { title: "Give each order one person", body: "Write a name beside each order. When the customer asks, one person has the answer, and two people never reply to the same chat." },
             { title: "Label the chats", body: "In the WhatsApp Business app, give each chat a label such as New order, Confirmed or Ready, so the chat list shows where each one stands." },
           ],
@@ -163,11 +166,11 @@ export const guidesEn: GuidesCopy = {
       meta: {
         title: "How to cut no-shows with reminders · ALYR guide",
         description:
-          "For salons, barbers and home services in Qatar: confirm every booking in writing, remind a few hours before with an easy way to cancel, mark who came, and act on repeat no-shows. By hand or with ALYR Bookings.",
+          "For salons, barbers and home services in Qatar: confirm every booking in writing, remind a few hours before with an easy way to cancel, mark who came, and act on repeat no-shows. By hand, or with ALYR Bookings for the confirmation and the reminder.",
       },
       title: "Cut no-shows with reminders",
       short:
-        "A customer who forgot cannot come, and a reminder fixes that. Confirm every booking in writing the moment it is made, with the day, the time and the service. Send a reminder a few hours before, with an easy way to cancel or move, so a free slot can go to someone else. Mark who came and who did not, so you know your real no-show rate and who misses more than once. You can do this by hand with saved replies and one list; ALYR Bookings sends the confirmation and the reminder itself.",
+        "A customer who forgot cannot come, and a reminder fixes that. Confirm every booking in writing the moment it is made, with the day, the time and the service. Send a reminder a few hours before, with an easy way to cancel or move, so the slot can go to someone else. Mark who came and who did not, so you know your real no-show rate and who misses more than once. You can do this by hand with saved replies and one list; ALYR Bookings sends the confirmation and the reminder itself.",
       published: "2026-10-25T09:00:00+03:00",
       modified: "2026-10-25T09:00:00+03:00",
       date: "25 Oct 2026",
@@ -175,7 +178,7 @@ export const guidesEn: GuidesCopy = {
         {
           id: "why",
           title: "Why customers do not come",
-          body: "Often it is not rudeness. The booking was made days ago, in a chat, between other messages, and nothing brought it back to mind. Some customers would have cancelled if cancelling were easy. Both can be fixed.",
+          body: "Often it is not rudeness. The booking was made days ago, in a chat, between other messages, and nothing brought it back to mind. Some customers would have cancelled if cancelling were easy.",
         },
         {
           id: "confirm",
@@ -191,14 +194,14 @@ export const guidesEn: GuidesCopy = {
           steps: [
             { title: "Choose the time", body: "A few hours before suits an afternoon visit; for a morning visit, the evening before works better. Send it at the same time for every booking, so customers learn to expect it." },
             { title: "Make it easy to answer", body: "End the reminder with what to do if plans changed, for example “Reply 1 to confirm or 2 to cancel”. A cancellation two hours before is a slot you can still fill." },
-            { title: "Keep it short", body: "The name, the day, the time and the place. Nothing else." },
+            { title: "Keep it short", body: "The name, the day, the time and the place, and nothing else." },
           ],
         },
         {
           id: "mark",
           title: "Mark who came",
           steps: [
-            { title: "Mark every visit the same day", body: "Came or no-show, every evening. Without it, you are guessing." },
+            { title: "Mark every visit the same day", body: "Came or no-show, every evening, so the monthly count is right." },
             { title: "Count once a month", body: "Divide the no-shows by the bookings. Watch the number when you change the reminder, and keep what works." },
           ],
         },
@@ -210,11 +213,11 @@ export const guidesEn: GuidesCopy = {
       ],
       alyr: {
         title: "With ALYR",
-        body: "ALYR Bookings does these steps for one booking at a time across the whole business, which suits one chair, one room or one team.",
+        body: "ALYR Bookings covers the confirmation, the reminder and the count. It takes one booking at a time across the whole business, which suits one chair, one room or one team.",
         items: [
-          "Customers book from a page in the chat that offers only free times, from your opening hours and the bookings you have.",
-          "The confirmation goes at once, and a reminder two hours before.",
-          "A customer who writes “my booking” sees the next one and can cancel it, which frees the time.",
+          "Customers book from a page in the chat that shows only open times.",
+          "The confirmation goes at once and says how to cancel. The reminder goes two hours before every booking.",
+          "“my booking” lets a customer cancel, which frees the time.",
           "Your team marks Came or No-show in one tap.",
           "ALYR Agent shows your no-show rate over 30 days and a customer who missed twice and booked again.",
         ],
@@ -258,7 +261,7 @@ export const guidesEn: GuidesCopy = {
         {
           id: "age",
           title: "Know how old each debt is",
-          body: "Sort what is owed by age: under 30 days, 30 to 60, 60 to 90, and over 90. The oldest amounts matter more than the total, because the longer a debt waits, the harder it is to collect.",
+          body: "Sort what is owed by age: up to 30 days, 31 to 60, 61 to 90, and over 90. The oldest amounts matter more than the total, because the longer a debt waits, the harder it is to collect.",
         },
         {
           id: "remind",
@@ -287,7 +290,7 @@ export const guidesEn: GuidesCopy = {
           "Your staff record a credit sale or a payment with one line from their phone, and the customer is told the entry and the new balance.",
           "A customer can ask for their balance in the chat at any time.",
           "What is owed, by age, with who promised to pay and when.",
-          "One press sends reminders to everyone 30 days or more behind. The tone follows the age, nobody gets two within 3 days, and a customer who says stop gets no more.",
+          "One press sends reminders to everyone 30 days or more behind, with the safeguards on the ALYR Accounts page.",
           "A payment settles the oldest purchase first.",
           "ALYR Agent shows promises that have passed and accounts over their limit.",
         ],
@@ -321,6 +324,7 @@ export const guidesAr: GuidesCopy = {
   see: "اطّلع على {name}",
   read: "اقرأ الدليل",
   footer: "الأدلة",
+  card: "ALYR: دليل لأصحاب المحلات من فريق ALYR، بعنوانه وتاريخه",
   cta: {
     title: "أخبرنا أيّ هذه الأمور يكلّفك أكثر.",
     body: "أرسل لنا رسالة. يردّ عليك شخص من ALYR، ثم يأتي ليراه معك في محلك.",
@@ -349,7 +353,7 @@ export const guidesAr: GuidesCopy = {
           title: "قبل الزحمة",
           steps: [
             { title: "أعطِ العملاء ما يختارون منه", body: "ضع قائمتك أو قائمة أسعارك حيث يستطيع العميل أن يختار منها: الكتالوج في تطبيق واتساب للأعمال، أو قائمة بجانب كل صنف فيها رقم، أو صفحة طلب. العميل الذي يختار من قائمة يرسل طلباً تستطيع قراءته." },
-            { title: "حدّد متى تُغلق الطلبات", body: "حدّد الوقت الذي تُغلق فيه طلبات اليوم التالي، وكم تستطيع أن تصنع من كل صنف. اذكر الأمرين في رسالة الترحيب، وتوقف عن استقبال الطلبات حين يتحقق أيّهما." },
+            { title: "حدّد متى تُغلق الطلبات", body: "حدّد الوقت الذي تُغلق فيه طلبات اليوم التالي، وكم تستطيع أن تصنع من كل صنف. اذكر الأمرين في رسالة الترحيب، وتوقف عن استقبال الطلبات حين يتحقق أحدهما." },
             { title: "اكتب ردودك المحفوظة", body: "اكتب مرة واحدة الإجابات التي تكررها كل يوم: رابط القائمة، ساعات العمل، مكان الاستلام، طريقة الدفع، موعد جاهزية الطلب. في تطبيق واتساب للأعمال تسمّى هذه الردود السريعة." },
           ],
         },
@@ -358,7 +362,7 @@ export const guidesAr: GuidesCopy = {
           title: "أثناء الزحمة",
           steps: [
             { title: "أكّد كل طلب كتابةً", body: "أعِد الطلب إلى العميل بأصنافه وكمياته ويومه ووقته ورقمه، مثل «الطلب رقم 14 · 2 كغ كنافة، 18 معمول · الخميس، 5 م». إن كان فيه خطأ قاله العميل الآن، لا عند الكاونتر." },
-            { title: "احتفظ بقائمة واحدة", body: "كل طلب مؤكد يدخل قائمة واحدة يعمل منها فريقك كله، على ورقة بجانب الفرن أو على شاشة، لا في المحادثة وحدها. وضع لكل طلب حالته: جديد، مؤكد، جاهز، استُلم." },
+            { title: "احتفظ بقائمة واحدة", body: "كل طلب مؤكد يدخل قائمة واحدة يعمل منها فريقك كله، على ورقة بجانب الفرن أو على شاشة، لا في المحادثة وحدها. وضع لكل طلب حالته: جديد، مؤكد، جاهز للاستلام، مكتمل." },
             { title: "اجعل لكل طلب شخصاً واحداً", body: "اكتب اسماً بجانب كل طلب. حين يسأل العميل يكون الجواب عند شخص واحد، ولا يردّ شخصان على المحادثة نفسها." },
             { title: "صنّف المحادثات", body: "في تطبيق واتساب للأعمال أعطِ كل محادثة تصنيفاً مثل «طلب جديد» أو «مؤكد» أو «جاهز»، فتُظهر قائمة المحادثات أين وصل كل طلب." },
           ],
@@ -379,7 +383,7 @@ export const guidesAr: GuidesCopy = {
           "يطلب العملاء من صفحة تفتح من المحادثة، بالقطعة أو بالوزن، فيصل كل طلب بالشكل نفسه.",
           "يصل كل طلب إلى شاشة واحدة يتشاركها فريقك، مع حالته وشخص واحد مسؤول عنه.",
           "تصل العميل رسالة حين يُؤكَّد الطلب وحين يجهز.",
-          "يمكن أن يكون لكل صنف عدد في اليوم ووقت تُغلق فيه الطلبات.",
+          "يمكن أن يكون لكل صنف حدّ يومي ووقت تُغلق فيه الطلبات.",
           "ردود محفوظة وملاحظات في صندوق واحد يتشاركه فريقك.",
         ],
         products: ["chat", "shelf"],
@@ -395,7 +399,7 @@ export const guidesAr: GuidesCopy = {
       meta: {
         title: "كيف تقلل الغياب عن المواعيد بالتذكير · دليل من ALYR",
         description:
-          "للصالونات ومحلات الحلاقة والخدمات المنزلية في قطر: أكّد كل حجز كتابةً، وذكّر قبل الموعد بساعات مع طريقة سهلة للإلغاء، وسجّل من حضر، وتعامل مع الغياب المتكرر. يدوياً أو مع ALYR Bookings.",
+          "للصالونات ومحلات الحلاقة والخدمات المنزلية في قطر: أكّد كل حجز كتابةً، وذكّر قبل الموعد بساعات مع طريقة سهلة للإلغاء، وسجّل من حضر، وتعامل مع الغياب المتكرر. يدوياً، أو مع ALYR Bookings للتأكيد والتذكير.",
       },
       title: "قلّل الغياب عن المواعيد بالتذكير",
       short:
@@ -407,7 +411,7 @@ export const guidesAr: GuidesCopy = {
         {
           id: "why",
           title: "لماذا لا يحضر العملاء",
-          body: "كثيراً ما لا يكون الأمر قلة احترام. فالحجز تمّ قبل أيام، في محادثة، بين رسائل أخرى، ولم يذكّر العميلَ به شيء. وبعض العملاء كانوا سيلغون لو كان الإلغاء سهلاً. والأمران يمكن علاجهما.",
+          body: "كثيراً ما لا يكون الأمر قلة احترام. فالحجز تمّ قبل أيام، في محادثة، بين رسائل أخرى، ولم يذكّر العميلَ به شيء. وبعض العملاء كانوا سيلغون لو كان الإلغاء سهلاً.",
         },
         {
           id: "confirm",
@@ -423,14 +427,14 @@ export const guidesAr: GuidesCopy = {
           steps: [
             { title: "اختر الوقت", body: "قبل الموعد بساعات يناسب موعد العصر، أما موعد الصباح فيناسبه تذكير في المساء السابق. أرسله في الوقت نفسه لكل حجز، ليعتاد العملاء انتظاره." },
             { title: "اجعل الرد سهلاً", body: "اختم التذكير بما يفعله العميل إن تغيّرت خططه، مثل «أرسل 1 للتأكيد أو 2 للإلغاء». الإلغاء قبل الموعد بساعتين وقتٌ ما زال بإمكانك ملؤه." },
-            { title: "اجعله قصيراً", body: "الاسم واليوم والوقت والمكان. ولا شيء غير ذلك." },
+            { title: "اجعله قصيراً", body: "الاسم واليوم والوقت والمكان، لا أكثر." },
           ],
         },
         {
           id: "mark",
           title: "سجّل من حضر",
           steps: [
-            { title: "سجّل كل موعد في يومه", body: "حضر أو لم يحضر، كل مساء. من دون ذلك أنت تخمّن." },
+            { title: "سجّل كل موعد في يومه", body: "حضر أو لم يحضر، كل مساء، ليكون العدّ الشهري صحيحاً." },
             { title: "احسب مرة كل شهر", body: "اقسم عدد مرات الغياب على عدد الحجوزات. راقب الرقم حين تغيّر التذكير، واحتفظ بما ينجح." },
           ],
         },
@@ -442,11 +446,11 @@ export const guidesAr: GuidesCopy = {
       ],
       alyr: {
         title: "مع ALYR",
-        body: "يتولى ALYR Bookings هذه الخطوات بحجز واحد في كل وقت للنشاط كله، وهذا يناسب كرسياً واحداً أو غرفة واحدة أو فريقاً واحداً.",
+        body: "يتولى ALYR Bookings التأكيد والتذكير والعدّ. ويستقبل حجزاً واحداً في الوقت نفسه للنشاط كله، وهذا يناسب كرسياً واحداً أو غرفة واحدة أو فريقاً واحداً.",
         items: [
-          "يحجز العملاء من صفحة في المحادثة لا تعرض إلا الأوقات المتاحة، حسب ساعات عملك والحجوزات القائمة.",
-          "يصل التأكيد فوراً، ويصل تذكير قبل الموعد بساعتين.",
-          "العميل الذي يكتب «حجزي» يرى حجزه القادم ويستطيع إلغاءه، فيعود الوقت متاحاً.",
+          "يحجز العملاء من صفحة في المحادثة لا تعرض إلا الأوقات المتاحة.",
+          "يصل التأكيد فوراً ومعه طريقة الإلغاء، ويصل التذكير قبل كل موعد بساعتين.",
+          "تتيح «حجزي» للعميل أن يلغي، فيعود الوقت متاحاً.",
           "يسجّل فريقك «حضر» أو «لم يحضر» بلمسة واحدة.",
           "يعرض ALYR Agent نسبة الغياب خلال 30 يوماً، والعميل الذي غاب مرتين ثم حجز من جديد.",
         ],
@@ -467,7 +471,7 @@ export const guidesAr: GuidesCopy = {
       },
       title: "تابِع من عليه مستحقات لك",
       short:
-        "اكتب كل بيع آجل لحظة حدوثه، بالتاريخ والمبلغ ومن أخذه، وأبلغ العميل برصيده الجديد في كل مرة. ومرة كل أسبوع اكتب من عليه كم ومنذ متى، الأقدم أولاً. وذكّر من تأخر أكثر من 30 يوماً، بنبرة ودية أولاً ثم أحزم كلما طال التأخير، ولا تذكّر أحداً مرتين خلال أيام قليلة. واتفق على حدّ لكل عميل دائم، واكتب كل وعد بالسداد مع تاريخه، واخصم كل دفعة من أقدم مشترياته أولاً. الدفتر يكفي إن حفظه شخص واحد، ويفعل ALYR Accounts ذلك بسطر واحد من هاتف الموظف.",
+        "اكتب كل بيع آجل لحظة حدوثه، بالتاريخ والمبلغ ومن أخذه، وأبلغ العميل برصيده الجديد في كل مرة. ومرة كل أسبوع اكتب من عليه كم ومنذ متى، الأقدم أولاً. وذكّر من تأخر أكثر من 30 يوماً، بنبرة ودية أولاً ثم أحزم كلما طال التأخير، ولا تذكّر أحداً مرتين خلال أيام قليلة. واتفق على حدّ لكل زبون دائم، واكتب كل وعد بالسداد مع تاريخه، واخصم كل دفعة من أقدم مشترياته أولاً. الدفتر يكفي إن حفظه شخص واحد، ويفعل ALYR Accounts ذلك بسطر واحد من هاتف الموظف.",
       published: "2026-10-25T09:00:00+03:00",
       modified: "2026-10-25T09:00:00+03:00",
       date: "25 أكتوبر 2026",
@@ -475,21 +479,21 @@ export const guidesAr: GuidesCopy = {
         {
           id: "why",
           title: "لماذا يضيع الآجل",
-          body: "البيع بالآجل معروفٌ تقدّمه لعميل دائم، لذلك يُكتب بسرعة، بيد من يكون عند الكاونتر، وبطريقته. وبعد شهر لا أحد متأكد من المجموع، وتبدو المطالبة كأنها اتهام. والعلاج سجلّ يثق به الطرفان.",
+          body: "البيع بالآجل معروفٌ تقدّمه لزبون دائم، لذلك يُكتب بسرعة، بيد من يكون عند الكاونتر، وبطريقته. وبعد شهر لا أحد متأكد من المجموع، وتبدو المطالبة كأنها اتهام. والعلاج سجلّ يثق به الطرفان.",
         },
         {
           id: "record",
           title: "سجّله بالطريقة نفسها كل مرة",
           steps: [
             { title: "لحظة البيع", body: "التاريخ والعميل وما أخذه والمبلغ ومن خدمه. الأخطاء تدخل حين يُكتب لاحقاً." },
-            { title: "أبلغ العميل بكل قيد", body: "أرسل ما أُضيف والرصيد الجديد في اليوم نفسه. العميل الذي يرى كل قيد لا يجد ما يعترض عليه في آخر الشهر." },
+            { title: "أبلغ العميل بكل قيد", body: "أرسل ما أُضيف والرصيد الجديد في اليوم نفسه. العميل الذي يرى كل قيد قلّما يجد ما يعترض عليه في آخر الشهر." },
             { title: "سجلّ واحد وحافظ واحد", body: "دفتر واحد يحفظه شخص واحد، أو شاشة واحدة. دفتران لا يتفقان أبداً." },
           ],
         },
         {
           id: "age",
           title: "اعرف عمر كل دين",
-          body: "رتّب المستحقات حسب عمرها: أقل من 30 يوماً، ومن 30 إلى 60، ومن 60 إلى 90، وأكثر من 90. المبالغ الأقدم أهم من المجموع، لأن الدين كلما طال انتظاره صعب تحصيله.",
+          body: "رتّب المستحقات حسب عمرها: حتى 30 يوماً، ومن 31 إلى 60، ومن 61 إلى 90، وأكثر من 90. المبالغ الأقدم أهم من المجموع، لأن الدين كلما طال انتظاره صعب تحصيله.",
         },
         {
           id: "remind",
@@ -505,7 +509,7 @@ export const guidesAr: GuidesCopy = {
           id: "limits",
           title: "الحدود والدفعات",
           items: [
-            "اتفق على حدّ لكل عميل دائم، وأوقف الآجل الجديد حين يبلغه.",
+            "اتفق على حدّ لكل زبون دائم، وأوقف الآجل الجديد حين يبلغه.",
             "اخصم كل دفعة من أقدم المشتريات أولاً، وأبلغ العميل بما بقي عليه.",
             "أعطِ إيصالاً لكل دفعة، حتى لو كانت جزءاً من المبلغ.",
           ],
@@ -518,7 +522,7 @@ export const guidesAr: GuidesCopy = {
           "يسجّل موظفوك البيع الآجل أو الدفعة بسطر واحد من هواتفهم، ويُبلَّغ العميل بالقيد وبرصيده الجديد.",
           "يستطيع العميل أن يسأل عن رصيده في المحادثة متى شاء.",
           "المستحقات حسب عمرها، مع من وعد بالسداد ومتى.",
-          "ضغطة واحدة ترسل التذكيرات إلى كل من تأخر 30 يوماً أو أكثر. النبرة تتبع عمر الدين، ولا يصل إلى أحد تذكيران خلال 3 أيام، ومن يطلب التوقف لا يصله شيء بعد ذلك.",
+          "ضغطة واحدة ترسل التذكيرات إلى كل من تأخر 30 يوماً أو أكثر، مع الضوابط المذكورة في صفحة ALYR Accounts.",
           "تُسدِّد الدفعة أقدم المشتريات أولاً.",
           "يعرض ALYR Agent وعود السداد التي فات موعدها والحسابات التي تجاوزت حدها.",
         ],
