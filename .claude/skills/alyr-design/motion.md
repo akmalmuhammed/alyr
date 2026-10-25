@@ -6,12 +6,46 @@ signal confirms them, once. Each move says something; none is there for its own 
 ## Tokens
 
 Durations, eases, stagger and travel come from the motion tokens (`design/tokens.json`,
-[tokens.md](tokens.md)): `--dur-1` to `--dur-4`; `--ease` for things arriving (GSAP's
-`expo.out` is the same curve); `--spring` (a `linear()` spring) for things the visitor presses;
-`--stagger`; `--travel` along 45° with `--dir` (−1 in Arabic). Never a literal duration or
-curve. Old names to retire as you touch them, never to use in new code: `--fast`, `--medium`,
+[tokens.md](tokens.md)). Two scales:
+- **The interaction scale**, for what the visitor does (hovers, presses, menus, the theme
+  switch, the accordion, the product screens): `--dur-1` to `--dur-4` and `--stagger`.
+- **The pace**, for every timed piece (the flows, the demos, the signature figures, the products
+  frame's tiles, the business day's fold, the X-ray, the reveals, the heading splits, the
+  closing call's fold): `--play-1` to `--play-4` and `--play-stagger` (0.6 of the interaction
+  scale), and a step's dwell from `--read-word`, `--dwell-beat` and `--dwell-min`. Each is
+  multiplied by **`--pace`** (`motion.pace.pace`, 1 since 25 Oct 2026), the one value the
+  founder tunes: 0.8 is 20% quicker, 1.25 is 25% slower.
+
+Then `--ease` for things arriving (GSAP's `expo.out` is the same curve); `--spring` (a
+`linear()` spring) for things the visitor presses; `--travel` along 45° with `--dir` (−1 in
+Arabic). Never a literal duration or curve. Old names to retire as you touch them, never to use in new code: `--fast`, `--medium`,
 `--slow` (the site's older scale) and `--ease-product`, `--spring-product` (the product's
 curves, which the workspace's `.sh` still calls `--ease` and `--spring`).
+
+## The pace (founder, 25 Oct 2026: the timed pieces were too slow)
+
+- **A timed piece never writes a duration.** In CSS: `--play-*` for each move, every delay a
+  number of `--play-stagger` beats (`calc(6 * var(--play-stagger))`), a long move a multiple of a
+  token (`calc(2 * var(--play-4))`). In a script: `PLAY` from `_site/pace.ts` (already
+  multiplied by the pace when the tokens are generated). `scripts/site/pace-check.mjs` (in
+  `pnpm site:check`) fails on a literal; a reviewed exception goes in
+  `scripts/site/allow/pace.json` with its reason.
+- **A step dwells for its words.** A flow's step or a demo's tab stays up while its words are
+  read at 230 words a minute (`--read-word`), then `--dwell-beat`, never less than
+  `--dwell-min` (1.2 s, which the pace does not shorten). The component sets `--words` on its
+  progress bar (`words()` in `pace.ts`); the CSS does the sum, so `--pace` reaches it. A flow
+  counts its step's title and the work lines it ticks; the paragraph under the title is for a
+  visitor who pauses or picks a step. A demo counts its caption, and waits for its last
+  message or row (`--last`) if that comes later. Count the words of the language shown.
+- **New timed pieces take the pace too:** the homepage's How we work, rebuilt after 25 Oct
+  2026, uses `--play-*` and `--play-stagger`, not `--dur-*`. Hovers and presses stay on the
+  interaction scale.
+- The hero's entrance and its figure (AgentFigure and the feed) were left on the interaction
+  scale on 25 Oct 2026 while the figure is rebuilt; bring them onto the pace with it.
+- Measure before and after with the capture script's `--eval` (no screenshots): every
+  animation a piece starts, from `document.getAnimations()`, and each step's dwell from its
+  progress bar: `node scripts/site/pace-probe.mjs <url> flow demo sig tiles …` against the built
+  site (`docs/framer-review/07-pace-log.md` has the before and after of 25 Oct 2026).
 
 ## Rules
 

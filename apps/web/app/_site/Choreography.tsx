@@ -4,6 +4,7 @@ import { useGSAP } from "@gsap/react";
 import { gsap } from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
 import { SplitText } from "gsap/SplitText";
+import { PLAY } from "./pace";
 
 gsap.registerPlugin(useGSAP, ScrollTrigger, SplitText);
 
@@ -12,8 +13,10 @@ gsap.registerPlugin(useGSAP, ScrollTrigger, SplitText);
 // mostly CSS in home.css, keyed on `.is-in`; this file says when, scrubs the progress
 // rule (ScrollTrigger), splits each section heading into lines as it arrives (SplitText)
 // and leans the main buttons toward the pointer.
-// Tokens: durations 120 / 240 / 480 / 720 ms, `expo.out` for arrivals (the CSS `--ease`),
-// 60 ms stagger, one travel vector at 45°.
+// Tokens: the heading splits are timed pieces, so they take the site's pace (pace.ts:
+// `play-4` for a line, `play-stagger` between lines); `expo.out` for arrivals (the CSS
+// `--ease`), one travel vector at 45°. The buttons' lean is an interaction, on the
+// interaction scale.
 // Start-up is kept light on purpose: one IntersectionObserver for everything that arrives
 // once, instead of a ScrollTrigger each, and no heading is split before it is reached.
 
@@ -56,7 +59,7 @@ export default function Choreography() {
         gsap.fromTo(
           heading,
           { clipPath: "inset(0 0 100% 0)", y: 24 },
-          { clipPath: "inset(0 0 -10% 0)", y: 0, duration: 0.72, ease: ARRIVE },
+          { clipPath: "inset(0 0 -10% 0)", y: 0, duration: PLAY[4] / 1000, ease: ARRIVE },
         );
         return;
       }
@@ -66,7 +69,7 @@ export default function Choreography() {
         aria: "auto",
         autoSplit: true,
         linesClass: "split-line",
-        onSplit: (self) => gsap.from(self.lines, { yPercent: 110, duration: 0.72, ease: ARRIVE, stagger: 0.06 }),
+        onSplit: (self) => gsap.from(self.lines, { yPercent: 110, duration: PLAY[4] / 1000, ease: ARRIVE, stagger: PLAY.stagger / 1000 }),
       });
     });
     const headings = new IntersectionObserver(

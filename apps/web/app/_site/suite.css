@@ -235,34 +235,35 @@
      the HTML is the end state and nothing waits on it. Hover or focus with a fine pointer, or
      60% in view elsewhere, adds `is-in` once (SiteMotion), and the moment plays from its start:
      each animation fills backwards, so its first frame shows the earlier state at once, through
-     its delay, and it ends on the finished one. */
+     its delay, and it ends on the finished one. Durations are `--play-*` and delays a number of
+     `--play-stagger` beats, so `--pace` tunes them; each moment ends by 1 s. */
   /* ALYR Chat: the order lands in Sara's chat, then its confirmation, then her row in the inbox */
-  .motion .sf-chat > .is-in .sf-event { animation: sf-arrive var(--dur-3) var(--ease) both; }
-  .motion .sf-chat > .is-in .sf-confirm { animation: sf-arrive var(--dur-3) var(--ease) both; animation-delay: calc(6 * var(--stagger)); }
-  .motion .sf-chat > .is-in .sf-wash { animation: sf-in var(--dur-3) var(--ease) both; animation-delay: calc(10 * var(--stagger)); }
-  .motion .sf-chat > .is-in .sf-old { animation: sf-out var(--dur-2) var(--ease) both; animation-delay: calc(10 * var(--stagger)); }
-  .motion .sf-chat > .is-in .sf-new { animation: sf-up var(--dur-3) var(--ease) both; animation-delay: calc(11 * var(--stagger)); }
+  .motion .sf-chat > .is-in .sf-event { animation: sf-arrive var(--play-3) var(--ease) both; }
+  .motion .sf-chat > .is-in .sf-confirm { animation: sf-arrive var(--play-3) var(--ease) both; animation-delay: calc(6 * var(--play-stagger)); }
+  .motion .sf-chat > .is-in .sf-wash { animation: sf-in var(--play-3) var(--ease) both; animation-delay: calc(10 * var(--play-stagger)); }
+  .motion .sf-chat > .is-in .sf-old { animation: sf-out var(--play-2) var(--ease) both; animation-delay: calc(10 * var(--play-stagger)); }
+  .motion .sf-chat > .is-in .sf-new { animation: sf-up var(--play-3) var(--ease) both; animation-delay: calc(11 * var(--play-stagger)); }
   /* ALYR Bookings: 6:00 pm is taken, its booking arrives, then the reminder that went at 4:00 */
-  .motion .sf-bookings > .is-in .sf-slot-fill { animation: sf-wipe var(--dur-2) var(--ease) both; }
+  .motion .sf-bookings > .is-in .sf-slot-fill { animation: sf-wipe var(--play-2) var(--ease) both; }
   .motion[dir="rtl"] .sf-bookings > .is-in .sf-slot-fill { animation-name: sf-wipe-rtl; }
-  .motion .sf-bookings > .is-in .sf-b1 { animation: sf-arrive var(--dur-3) var(--ease) both; animation-delay: calc(5 * var(--stagger)); }
-  .motion .sf-bookings > .is-in .sf-b2 { animation: sf-arrive var(--dur-3) var(--ease) both; animation-delay: calc(14 * var(--stagger)); }
+  .motion .sf-bookings > .is-in .sf-b1 { animation: sf-arrive var(--play-3) var(--ease) both; animation-delay: calc(5 * var(--play-stagger)); }
+  .motion .sf-bookings > .is-in .sf-b2 { animation: sf-arrive var(--play-3) var(--ease) both; animation-delay: calc(14 * var(--play-stagger)); }
   /* ALYR Agent: the suggestion arrives, then its outlined button */
-  .motion .sf-agent > .is-in .sf-card { animation: sf-arrive var(--dur-4) var(--ease) both; }
-  .motion .sf-agent > .is-in .sf-act { animation: sf-arrive var(--dur-2) var(--ease) both; animation-delay: calc(8 * var(--stagger)); }
+  .motion .sf-agent > .is-in .sf-card { animation: sf-arrive var(--play-4) var(--ease) both; }
+  .motion .sf-agent > .is-in .sf-act { animation: sf-arrive var(--play-2) var(--ease) both; animation-delay: calc(8 * var(--play-stagger)); }
   /* ALYR Accounts: the age bar fills, oldest last, then the promise */
-  .motion .sf-accounts > .is-in .sf-age i { animation: sf-grow var(--dur-3) var(--ease) both; animation-delay: calc(var(--i, 0) * 2 * var(--stagger)); }
-  .motion .sf-accounts > .is-in .sf-promise { animation: sf-arrive var(--dur-3) var(--ease) both; animation-delay: calc(16 * var(--stagger)); }
+  .motion .sf-accounts > .is-in .sf-age i { animation: sf-grow var(--play-3) var(--ease) both; animation-delay: calc(var(--i, 0) * 2 * var(--play-stagger)); }
+  .motion .sf-accounts > .is-in .sf-promise { animation: sf-arrive var(--play-3) var(--ease) both; animation-delay: calc(16 * var(--play-stagger)); }
   /* ALYR Shelf: the count steps from 1 to 0, then the cake is Sold out */
-  .motion .sf-shelf > .is-in .sf-d1 { animation: sf-leave var(--dur-3) var(--ease) both; }
-  .motion .sf-shelf > .is-in .sf-d0 { animation: sf-enter var(--dur-3) var(--ease) both; }
-  .motion .sf-shelf > .is-in .sf-old { animation: sf-fade var(--dur-2) var(--ease) both; animation-delay: calc(8 * var(--stagger)); }
-  .motion .sf-shelf > .is-in .sf-new { animation: sf-arrive var(--dur-3) var(--ease) both; animation-delay: calc(8 * var(--stagger)); }
+  .motion .sf-shelf > .is-in .sf-d1 { animation: sf-leave var(--play-3) var(--ease) both; }
+  .motion .sf-shelf > .is-in .sf-d0 { animation: sf-enter var(--play-3) var(--ease) both; }
+  .motion .sf-shelf > .is-in .sf-old { animation: sf-fade var(--play-2) var(--ease) both; animation-delay: calc(8 * var(--play-stagger)); }
+  .motion .sf-shelf > .is-in .sf-new { animation: sf-arrive var(--play-3) var(--ease) both; animation-delay: calc(8 * var(--play-stagger)); }
   /* ALYR Docs: the paper settles along 45°, then draws Arabic first, its English, then its number and date */
-  .motion .sf-docs > .is-in .sf-paper { animation: sf-settle var(--dur-4) var(--ease) both; }
-  .motion .sf-docs > .is-in :is(.pp-shop > b, .pp-kind > b) { animation: sf-wipe-rtl var(--dur-3) var(--ease) both; animation-delay: calc(8 * var(--stagger)); }
-  .motion .sf-docs > .is-in :is(.pp-shop > .pp-en, .pp-kind > .pp-en) { animation: sf-wipe var(--dur-3) var(--ease) both; animation-delay: calc(13 * var(--stagger)); }
-  .motion .sf-docs > .is-in .pp-addr { animation: sf-wipe-rtl var(--dur-3) var(--ease) both; animation-delay: calc(13 * var(--stagger)); }
-  .motion .sf-docs > .is-in .pp-f { animation: sf-wipe-rtl var(--dur-3) var(--ease) both; animation-delay: calc(17 * var(--stagger)); }
-  .motion .sf-docs > .is-in .pp-f + .pp-f { animation-delay: calc(19 * var(--stagger)); }
+  .motion .sf-docs > .is-in .sf-paper { animation: sf-settle var(--play-4) var(--ease) both; }
+  .motion .sf-docs > .is-in :is(.pp-shop > b, .pp-kind > b) { animation: sf-wipe-rtl var(--play-3) var(--ease) both; animation-delay: calc(8 * var(--play-stagger)); }
+  .motion .sf-docs > .is-in :is(.pp-shop > .pp-en, .pp-kind > .pp-en) { animation: sf-wipe var(--play-3) var(--ease) both; animation-delay: calc(13 * var(--play-stagger)); }
+  .motion .sf-docs > .is-in .pp-addr { animation: sf-wipe-rtl var(--play-3) var(--ease) both; animation-delay: calc(13 * var(--play-stagger)); }
+  .motion .sf-docs > .is-in .pp-f { animation: sf-wipe-rtl var(--play-3) var(--ease) both; animation-delay: calc(17 * var(--play-stagger)); }
+  .motion .sf-docs > .is-in .pp-f + .pp-f { animation-delay: calc(19 * var(--play-stagger)); }
 }
