@@ -25,6 +25,7 @@ import asyncpg
 from alyr import catalog
 from alyr.catalog import Text
 from alyr.core import access, whatsapp_setup
+from alyr.modules.orders import pay_ways
 
 OWNERS = ("client", "alyr")
 
@@ -351,6 +352,9 @@ async def set_choice(
         key, choice, actor,
     )
     await _event(conn, key, "choice", actor, by_alyr, {"from": row["choice"], "to": choice})
+    if key == "payments":
+        # What the owner chose is how the order page asks for money (ALY-170, spec 024).
+        await pay_ways.apply_choice(conn, choice)
     return True
 
 

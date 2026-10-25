@@ -4,19 +4,22 @@
 own API is `/api/items` (routes/items.py); these routes now run on the same items.
 """
 
-from uuid import UUID
+from typing import Literal
+from uuid import UUID, uuid4
 
-from fastapi import APIRouter, Depends, HTTPException, Request
+from fastapi import APIRouter, Depends, Header, HTTPException, Request
 from pydantic import BaseModel, Field
 
+from alyr.catalog import MANAGERS
 from alyr.config import get_settings
 from alyr.core import team
 from alyr.core.auth import Staff
 from alyr.core.normalise import fmt_qar
+from alyr.modules.documents import payments as manual_payments
 from alyr.modules.documents import refs as doc_refs
 from alyr.modules.items import clock
 from alyr.modules.items import service as items
-from alyr.modules.orders import service
+from alyr.modules.orders import pay_ways, service
 from alyr.routes.deps import current_staff, current_tenant
 
 router = APIRouter(prefix="/api", tags=["orders"])
@@ -28,6 +31,19 @@ class StatusChange(BaseModel):
         default=None,
         description="For cancelled: put the stock back (default: yes if the order was not "
                     "made yet)",
+    )
+
+
+class MarkPaid(BaseModel):
+    method: Literal["cash", "bank_transfer", "cheque", "card_terminal"]
+    reference: str = Field(default="", max_length=80, description="A transfer or cheque number")
+
+
+class PayWays(BaseModel):
+    online: bool | None = Field(default=None, description="Offer a payment link")
+    ways: list[str] | None = Field(
+        default=None, max_length=3,
+        description="cash, bank_transfer, card_terminal: what the shop takes on collection",
     )
 
 
@@ -96,6 +112,45 @@ async def change_status(
         # The order was on the customer's credit account; its sale is off the ledger again.
         answer["credit_reversed_text"] = result["credit_reversed_text"]
     return answer
+
+
+@router.post("/orders/{order_id}/paid")
+async def mark_paid(
+    order_id: UUID, body: MarkPaid, request: Request, staff: Staff = Depends(current_staff),
+    idempotency_key: str | None = Header(default=None, alias="Idempotency-Key"),
+) -> dict:
+    """The customer paid the shop in cash, by transfer, by cheque or on the card machine
+    (ALY-170). The order becomes paid, its stock is sold, and it is on the activity record.
+    A shop with Documents on also gets the receipt. Owners and admins; an agent only where
+    the shop allows it. ALYR never touches the money (hard rule 3)."""
+    async with request.app.state.db.tenant(staff.tenant_id) as conn:
+        done = await manual_payments.record(
+            conn, staff, subject="order", subject_id=order_id, amount_minor=None,
+            method=body.method, reference=body.reference,
+            key=idempotency_key or f"order-paid-{uuid4()}",
+        )
+    return {"payment": done["payment"], "replayed": done["replayed"],
+            "receipt": done["document"]}
+
+
+@router.get("/orders-payment-ways")
+async def get_pay_ways(request: Request, staff: Staff = Depends(current_staff)) -> dict:
+    async with request.app.state.db.tenant(staff.tenant_id) as conn:
+        return await pay_ways.get(conn)
+
+
+@router.put("/orders-payment-ways")
+async def put_pay_ways(
+    body: PayWays, request: Request, staff: Staff = Depends(current_staff)
+) -> dict:
+    """How customers pay: a payment link, or cash, transfer or card machine on collection."""
+    if staff.role not in MANAGERS:
+        raise HTTPException(status_code=403, detail="only owners and admins change this")
+    try:
+        async with request.app.state.db.tenant(staff.tenant_id) as conn:
+            return await pay_ways.save(conn, body.online, body.ways)
+    except pay_ways.PayWaysError as error:
+        raise HTTPException(status_code=422, detail=str(error)) from error
 
 
 @router.post("/orders/{order_id}/assign")

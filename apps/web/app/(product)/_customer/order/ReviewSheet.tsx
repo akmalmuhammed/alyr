@@ -14,7 +14,7 @@ import { formatPrice } from "../price";
 import { addQty, fmtQtyUnit, isMeasure, lineTotal, qtyForApi, subQty, unitShort } from "../qty";
 import { ApiError, checkCart, placeOrder, type CartBody } from "./api";
 import { lineName, next, total as totalOf, type Line } from "./cart";
-import { say, T } from "./copy";
+import { say, T, waysText } from "./copy";
 import type { Check, Checked, Customer, Day, DeliveryOptions, Item, Placed } from "./types";
 import type { WaFulfilment, WaPart } from "./wa";
 import { Dialog, DialogHead, Price, Stepper, Tile } from "./ui";
@@ -34,6 +34,8 @@ type Props = {
   /** The latest of each item in the cart, for its rules and the days it is made for. */
   lookup: (id: string) => Item | undefined;
   customer: Customer;
+  /** The ways the shop takes money on collection, when it has no online payment (ALY-170). */
+  payLater?: string[];
   table: string;
   forDate: string | null;
   onForDate: (date: string | null) => void;
@@ -443,9 +445,10 @@ export function ReviewSheet(props: Props) {
           })}>{t.accept}</button>
         ) : (
           <button type="button" className="cx-btn" disabled={!clear || placing} onClick={() => void place("link")}>
-            <Glyph name="card" />{placing ? t.placing : t.pay(formatPrice(shown, lang))}
+            <Glyph name={props.payLater ? "check" : "card"} />{placing ? t.placing : props.payLater ? t.placeOrder : t.pay(formatPrice(shown, lang))}
           </button>
         )}
+        {props.payLater && changed.length === 0 && <p className="ox-quiet center">{t.payOnCollect(waysText(lang, props.payLater))}</p>}
         {customer.can_use_account && changed.length === 0 && (
           <button type="button" className="cx-btn ghost" disabled={!clear || placing} onClick={() => void place("account")}>{t.account}</button>
         )}
