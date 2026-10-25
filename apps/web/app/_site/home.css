@@ -1,3 +1,7 @@
+/* "How we work with you" (HowCards.tsx) is part of this stylesheet, so the homepage asks for
+   no extra render-blocking file (ALY-226). */
+@import "./how.css";
+
 /* ALYR homepage: the suite, led by ALYR Agent (docs/agent-dashboard/07-site-brief.md).
    Still a working drawing of an owner's business: Paper, a visible construction grid,
    hairline rules, a mono caption on every drawing, real ALYR screens in the product's own
@@ -16,7 +20,7 @@ main[data-page="home"] { font-size: 1.0625rem; line-height: 1.55; }
 /* The sections after how it works are laid out only as they come near the screen, so the
    first screen is drawn sooner. None of them is measured by a scroll trigger, and the
    size each one last had is kept (auto), so the scrollbar barely moves as they arrive. */
-#price, #trust, #questions { content-visibility: auto; contain-intrinsic-size: auto 1100px; }
+#price, #questions { content-visibility: auto; contain-intrinsic-size: auto 1100px; }
 
 /* ------------------------------------------------------------------- hero */
 .hero { position: relative; padding-block: clamp(1.5rem, 4vw, 3rem) clamp(3.5rem, 7vw, 6rem); }
@@ -152,25 +156,6 @@ main[data-page="home"] .hs > .wrap > .rule { margin-bottom: var(--space-5); }
 
 /* ----------------------------------------------------------- how we work */
 .how .head { max-width: 44rem; }
-.how-rail { position: relative; margin-top: var(--space-4); container-type: inline-size; }
-.how-line { position: absolute; top: 1.25rem; inset-inline-start: 1.25rem; width: calc((100% + var(--col-gap)) * .75); height: 1px; background: var(--line); }
-.how-line > span { position: absolute; inset: 0; background: var(--volt); transform-origin: left center; }
-[dir="rtl"] .how-line > span { transform-origin: right center; }
-.how-steps { position: relative; display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); column-gap: var(--col-gap); }
-.how-step { display: grid; gap: .75rem; align-content: start; padding-inline-end: 1rem; }
-.how-node { position: relative; z-index: 1; width: 2.5rem; height: 2.5rem; display: grid; place-items: center; border-radius: 50%; margin-bottom: .5rem; background: var(--carbon); color: var(--on-band); box-shadow: inset 0 0 0 1.5px var(--mark-ring); font-family: var(--mono); font-size: .8125rem; font-weight: 500; transition: background var(--dur-3) var(--ease), color var(--dur-3) var(--ease), box-shadow var(--dur-3) var(--ease); }
-.how-step h3 { font-size: var(--h3); font-weight: 600; line-height: 1.25; letter-spacing: -.012em; }
-[lang="ar"] .how-step h3 { letter-spacing: 0; line-height: 1.5; }
-.how-step p { color: var(--text-muted); }
-/* back to the start: a dashed arc over the steps, from the last node to the first, with
-   its words on the arc; drawn once the rail is full (Choreography sets .is-looped) */
-.how-rail { padding-top: 3.25rem; }
-.how-line { top: 4.5rem; }
-.how-loop { position: absolute; top: .875rem; inset-inline-start: calc(1.25rem - .75px); width: calc((100% + var(--col-gap)) * .75 + 1.5px); height: 2rem; display: grid; justify-items: center; border: 1.5px dashed var(--line-strong); border-bottom: 0; border-start-start-radius: .75rem; border-start-end-radius: .75rem; }
-.how-loop-k { margin-top: -.6875rem; padding-inline: .75rem; background: var(--canvas); font-family: var(--mono); font-size: .75rem; font-weight: 500; letter-spacing: .09em; line-height: 1.25rem; text-transform: uppercase; color: var(--text); }
-[lang="ar"] .how-loop-k { font-family: var(--arabic); font-size: .875rem; letter-spacing: 0; text-transform: none; }
-.how-loop-head { position: absolute; bottom: -.375rem; inset-inline-start: calc(-.375rem - .75px); width: .75rem; height: .5rem; background: var(--text); clip-path: polygon(0 0, 100% 0, 50% 100%); }
-.how-again { display: none; }
 /* under the steps: the early-access note and a second way in, then what we need and what
    every month brings */
 .how-foot { display: grid; grid-template-columns: repeat(12, minmax(0, 1fr)); column-gap: var(--col-gap); row-gap: 2.5rem; margin-top: clamp(3rem, 6vw, 4.5rem); align-items: start; }
@@ -238,29 +223,6 @@ main[data-page="home"] .hs > .wrap > .rule { margin-bottom: var(--space-5); }
 .price-cta { margin-top: clamp(2.5rem, 5vw, 3.5rem); display: flex; flex-wrap: wrap; align-items: center; gap: 1rem 1.75rem; }
 .price-cta .contact-note, .price-cta .status-line { max-width: 30rem; }
 
-/* ------------------------------------------------------------------ trust */
-.trust-grid { display: grid; grid-template-columns: repeat(12, minmax(0, 1fr)); column-gap: var(--col-gap); row-gap: 3rem; align-items: start; }
-.trust-copy { grid-column: 1 / span 7; }
-.trust .head { max-width: 38rem; }
-.facts6 { margin-top: 2.75rem; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); border-top: 1px solid var(--line); }
-.facts6 li { display: grid; gap: .5rem; align-content: start; padding: 1.25rem 1.25rem 1.5rem 0; border-bottom: 1px solid var(--line); }
-.facts6 li:not(:nth-child(3n + 1)) { border-inline-start: 1px solid var(--line); padding-inline-start: 1.25rem; }
-[dir="rtl"] .facts6 li { padding: 1.25rem 0 1.5rem 1.25rem; }
-[dir="rtl"] .facts6 li:not(:nth-child(3n + 1)) { padding-inline-start: 1.25rem; }
-.facts6 h3 { font-size: 1.0625rem; font-weight: 600; line-height: 1.3; }
-[lang="ar"] .facts6 h3 { line-height: 1.55; }
-.facts6 p { color: var(--text-muted); font-size: .9375rem; }
-.records { margin-top: 1.5rem; display: grid; gap: 0; border-bottom: 1px solid var(--line); }
-.records > div { display: flex; justify-content: space-between; gap: 1rem; padding-block: .75rem; border-top: 1px solid var(--line); font-size: .9375rem; }
-.records dt { font-family: var(--mono); font-size: .75rem; letter-spacing: .08em; text-transform: uppercase; color: var(--text-muted); }
-.records dd { margin: 0; font-weight: 500; }
-.trust-closing { margin-top: 2rem; font-size: 1.1875rem; font-weight: 560; max-width: 36rem; }
-.trust-fig { grid-column: 9 / -1; }
-.pair { position: relative; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 1rem; }
-.pair::before { content: ""; position: absolute; inset-block: -.75rem; inset-inline-start: 50%; width: 1px; border-inline-start: 1px dashed var(--line-strong); opacity: 0; }
-.pair:focus-visible { outline: 2px solid var(--focus); outline-offset: 6px; }
-.pair-phone { height: 30rem; }
-.pair-phone .d-main { padding-top: 14px; }
 
 
 /* the two lists beside the note: what we need from you, and every month */
@@ -297,38 +259,12 @@ main[data-page="home"] .hs > .wrap > .rule { margin-bottom: var(--space-5); }
   .hero-side > .hero-note { margin-top: .875rem; }
   .tally .mono-k, .tally ul { grid-column: 1 / -1; }
   .tally .mono-k { padding-top: 0; }
-  .how-line { display: none; }
-  .how-steps { grid-template-columns: minmax(0, 1fr); row-gap: 0; }
-  .how-step { position: relative; padding-inline-start: 3.5rem; padding-bottom: 2rem; gap: .5rem; }
-  .how-node { position: absolute; inset-inline-start: 0; top: 0; margin: 0; }
-  .how-step h3 { padding-top: .375rem; }
-  .how-step:not(:last-child)::after { content: ""; position: absolute; inset-inline-start: calc(1.25rem - .5px); top: 2.75rem; bottom: .25rem; width: 1px; background: var(--line); transition: background var(--dur-3) var(--ease); }
-  .how-step:has(+ .how-step.is-on)::after { background: var(--volt); }
-  .how-rail { padding-top: 0; }
-  .how-loop { display: none; }
-  /* the loop, down the start edge: a dashed line from step 4 to a node that points back up */
-  .how-step:last-child::after { content: ""; position: absolute; inset-inline-start: calc(1.25rem - .5px); top: 2.75rem; bottom: .25rem; border-inline-start: 1px dashed var(--line-strong); }
-  .how-again { display: flex; align-items: center; gap: 1rem; font-family: var(--mono); font-size: .75rem; font-weight: 500; letter-spacing: .09em; text-transform: uppercase; }
-  [lang="ar"] .how-again { font-family: var(--arabic); font-size: .875rem; letter-spacing: 0; text-transform: none; }
-  .how-again .ico { box-sizing: content-box; width: 1rem; height: 1rem; padding: calc(.75rem - 1.5px); border: 1.5px dashed var(--line-strong); border-radius: 50%; rotate: -90deg; }
   .how-foot { grid-template-columns: minmax(0, 1fr); }
   .how-next, .how-lists { grid-column: 1; }
   .sheet, .agreement-fig { grid-column: 1 / -1; padding-inline-end: 0; }
   .agreement-fig { max-width: 36rem; }
-  .trust-copy, .trust-fig { grid-column: 1 / -1; position: static; }
-  .trust-fig { max-width: 34rem; }
 }
 @media (max-width: 53rem) {
-  .facts6 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-  .facts6 li:not(:nth-child(3n + 1)) { border-inline-start: 0; padding-inline-start: 0; }
-  .facts6 li, [dir="rtl"] .facts6 li { padding: 1.25rem 1.25rem 1.5rem 0; }
-  [dir="rtl"] .facts6 li { padding: 1.25rem 0 1.5rem 1.25rem; }
-  .facts6 li:nth-child(even) { border-inline-start: 1px solid var(--line); padding-inline-start: 1.25rem; }
-  /* the two pages scroll sideways and snap, one at a time */
-  .pair { display: flex; gap: .75rem; overflow-x: auto; scroll-snap-type: x mandatory; scrollbar-width: none; margin-inline: calc(var(--gutter) * -1); padding-inline: var(--gutter); scroll-padding-inline: var(--gutter); }
-  .pair::-webkit-scrollbar { display: none; }
-  .pair::before { display: none; }
-  .pair-item { flex: 0 0 min(76%, 17.5rem); scroll-snap-align: start; }
   .how-lists { grid-template-columns: minmax(0, 1fr); }
   .biz-cols { grid-template-columns: minmax(0, 1fr); }
 }
@@ -344,8 +280,6 @@ main[data-page="home"] .hs > .wrap > .rule { margin-bottom: var(--space-5); }
   .hero-facts { grid-template-columns: minmax(0, 1fr); margin-top: 1.5rem; }
   .hero-facts li, [dir="rtl"] .hero-facts li { padding: .6875rem 0; }
   .hero-facts li + li, [dir="rtl"] .hero-facts li + li { border-inline-start: 0; padding-inline-start: 0; border-top: 1px solid var(--line); }
-  .facts6 { grid-template-columns: minmax(0, 1fr); }
-  .facts6 li:nth-child(n), [dir="rtl"] .facts6 li:nth-child(n) { border-inline-start: 0; padding: 1.25rem 0; }
   .agr-fields > div { grid-template-columns: minmax(0, 1fr); gap: .25rem; }
   .ledger > div { grid-template-columns: minmax(0, 1fr); gap: .25rem; }
   .price-cta .btn { width: 100%; }
@@ -394,22 +328,10 @@ main[data-page="home"] .hs > .wrap > .rule { margin-bottom: var(--space-5); }
   .motion [data-split]:not(.is-split) { clip-path: inset(0 0 100% 0); }
 
   /* rows arrive once, when read */
-  .motion .tally li:not(.is-in), .motion .checks li:not(.is-in), .motion .facts6 li:not(.is-in) { opacity: 0; translate: 0 10px; }
+  .motion .tally li:not(.is-in), .motion .checks li:not(.is-in) { opacity: 0; translate: 0 10px; }
   /* a new tab's lines arrive in order, the sheet's after the day's */
   .al-js .biz-panel.is-on li { animation: hp-rise var(--dur-3) var(--ease) both; }
   .al-js .biz-panel.is-on .biz-with li { animation-delay: 120ms; }
-
-  /* how we work: the rail is empty until the scroll fills it */
-  .motion [data-rail-fill] { transform: scaleX(0); }
-  .how-node { transition: background var(--dur-3) var(--ease), color var(--dur-3) var(--ease), box-shadow var(--dur-3) var(--ease); }
-  .motion .how-step:not(.is-on) .how-node { background: var(--canvas); color: var(--text); box-shadow: inset 0 0 0 1.5px var(--line-strong); }
-  /* once the rail is full, the arc draws back from step 4 to step 1, then its words and its head */
-  .how-loop { transition: clip-path var(--dur-4) var(--ease); }
-  .how-loop-k, .how-loop-head { transition: opacity var(--dur-3) var(--ease) 360ms; }
-  .motion .how-rail:not(.is-looped) .how-loop { clip-path: inset(-1rem 0 -1rem 100%); }
-  [dir="rtl"] .motion .how-rail:not(.is-looped) .how-loop { clip-path: inset(-1rem 100% -1rem 0); }
-  .motion .how-rail:not(.is-looped) :is(.how-loop-k, .how-loop-head) { opacity: 0; }
-  .motion .how-loop { clip-path: inset(-1rem -1rem -1rem -1rem); }
 
   /* price: the digits of 449 slot in from below, once; the agreement's blank draws, then the tick */
   .digit > span { transition: translate var(--dur-4) var(--spring); transition-delay: calc(var(--i, 0) * var(--stagger)); }
@@ -419,14 +341,6 @@ main[data-page="home"] .hs > .wrap > .rule { margin-bottom: var(--space-5); }
   .motion .agreement:not(.is-in) .agr-line { transform: scaleX(0); }
   .motion .agreement:not(.is-in) .agr-tick { scale: 0; }
 
-  /* trust: the English and Arabic pages part from one centre line, mirrored */
-  .pair-item { transition: translate var(--dur-4) var(--ease), opacity var(--dur-3) var(--ease); }
-  .pair::before { transition: opacity var(--dur-3) var(--ease); }
-  .motion .trust-fig:not(.is-in) .pair::before { opacity: 1; }
-  .motion .trust-fig:not(.is-in) .pair-item:first-child { translate: calc(50% + .5rem) 0; opacity: 0; }
-  .motion .trust-fig:not(.is-in) .pair-item:last-child { translate: calc(-50% - .5rem) 0; opacity: 0; }
-  .motion[dir="rtl"] .trust-fig:not(.is-in) .pair-item:first-child { translate: calc(-50% - .5rem) 0; }
-  .motion[dir="rtl"] .trust-fig:not(.is-in) .pair-item:last-child { translate: calc(50% + .5rem) 0; }
 
   /* the closing call: the Command Fold's three planes assemble along their gaps */
   .cta-mark polygon { transition: translate var(--dur-4) var(--ease), opacity var(--dur-3) var(--ease); }
@@ -441,11 +355,6 @@ main[data-page="home"] .hs > .wrap > .rule { margin-bottom: var(--space-5); }
 @media (prefers-reduced-motion: no-preference) and (min-width: 62rem) {
   :root:not([lang="ar"]).motion .hl > span { animation: hp-line var(--dur-4) var(--ease) both, hp-settle var(--dur-4) var(--ease) both; }
   :root:not([lang="ar"]).motion .hl + .hl > span { animation-delay: 90ms, 90ms; }
-}
-/* on phones the two pages sit in a snapping scroller, so they only fade in: sliding would fight the snap */
-@media (prefers-reduced-motion: no-preference) and (max-width: 53rem) {
-  .motion .trust-fig:not(.is-in) .pair-item:first-child, .motion .trust-fig:not(.is-in) .pair-item:last-child,
-  .motion[dir="rtl"] .trust-fig:not(.is-in) .pair-item:first-child, .motion[dir="rtl"] .trust-fig:not(.is-in) .pair-item:last-child { translate: none; }
 }
 @media (min-width: 62rem) {
   /* the headline's second line ends before the body beside it, at every width */
