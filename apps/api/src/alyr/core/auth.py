@@ -81,26 +81,32 @@ async def request_code(db: Database, email: str, allow_new: bool = False) -> str
 
 
 async def check_code(db: Database, email: str, code: str) -> None:
-    """Spend a correct code, or count a wrong guess. Raises AuthError when refused."""
+    """Spend a correct code, or count a wrong guess. Raises AuthError when refused.
+
+    The code's row stays locked until a wrong guess has been counted and saved: a guess that
+    queued on the lock must see the count of the one before it, or parallel guesses could try
+    far more than MAX_GUESSES codes (ALY-244)."""
     email = clean_email(email)
     refused = AuthError("that code is wrong or has expired")
-    async with db.unscoped() as conn, conn.transaction():
-        row = await conn.fetchrow(
-            "select id, code_hash, attempts from login_codes "
-            "where email = $1 and not used and expires_at > now() "
-            "order by created_at desc limit 1 for update",
-            email,
-        )
-        if row is None or row["attempts"] >= MAX_GUESSES:
-            raise refused
-        if hmac.compare_digest(row["code_hash"], _hash(f"{email}:{code.strip()}")):
-            await conn.execute("update login_codes set used = true where id = $1", row["id"])
-            return
-        # Counted outside this transaction's fate: the raise below must not undo it.
-        wrong = row["id"]
     async with db.unscoped() as conn:
-        await conn.execute("update login_codes set attempts = attempts + 1 where id = $1", wrong)
-    raise refused
+        async with conn.transaction():
+            row = await conn.fetchrow(
+                "select id, code_hash, attempts from login_codes "
+                "where email = $1 and not used and expires_at > now() "
+                "order by created_at desc limit 1 for update",
+                email,
+            )
+            if row is not None and row["attempts"] < MAX_GUESSES:
+                if hmac.compare_digest(row["code_hash"], _hash(f"{email}:{code.strip()}")):
+                    await conn.execute(
+                        "update login_codes set used = true where id = $1", row["id"]
+                    )
+                    return
+                await conn.execute(
+                    "update login_codes set attempts = attempts + 1 where id = $1", row["id"]
+                )
+        # Raised after the transaction block, so the count above is committed, not undone.
+        raise refused
 
 
 async def create_session(conn: asyncpg.Connection, user_id: UUID, tenant_id: UUID) -> str:
