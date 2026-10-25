@@ -127,7 +127,7 @@ export function AgentPage({ locale }: { locale: Locale }) {
         </div>
       </section>
 
-      <InsideBlock inside={p.inside} locale={locale} />
+      <InsideBlock inside={p.inside} />
       <WhoBlock who={p.who} />
       <WorksBlock locale={locale} works={p.works} self="agent" />
       <QuestionsBlock faq={p.faq} />

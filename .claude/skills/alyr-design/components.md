@@ -35,7 +35,6 @@ and the Agent follow these; the product screens have their own older versions (m
 | Caption | `FigCaption` (`_site/Drawings.tsx`), `.cap` (`site.css`) | Only a drawing that needs words: "what it shows · Sample", no FIG number. First child of its figure, shown below with `fig-cap-end` | A caption beside a chrome mark; a caption that wraps to an orphan (it balances) |
 | Contact states | `Contact.tsx`, `site.ts` (`CONTACT_STATE`) | WhatsApp when `NEXT_PUBLIC_ALYR_WHATSAPP` is set, else email, else pending; decided at build time | A hand-written mailto or wa.me link; "opens soon" more than once on a page |
 | Offer switch | `site.ts` `OFFER_LIVE` | Prices, the hero price, money-back lines, the price question and the Price link | A price anywhere outside it, including meta and social cards (`factsNoOffer`, `descriptionNoOffer`) |
-| Trust records | `site.ts` `TRUST_RECORDS` | CR number, payment provider, Meta status: render only when set | An empty slot for one of them |
 
 ## Page structure (site)
 
@@ -66,6 +65,7 @@ and the Agent follow these; the product screens have their own older versions (m
 | Drawn workspace screens | `Sheets.tsx`, `Drawings.tsx`, `PageDrawings.tsx` | Product pages, in the product's exact words | Hand copies of `(product)/_workspace/Screens.tsx`: they drift. Prefer a captured sample, as the Agent does |
 | Numbered marks and callouts | `.co-n` (`kit.css`), `drawings.css` | Carbon discs with white mono numbers (a Volt ring in dark) | Volt discs: a number is not an action |
 | Agent feed and sample switch | `AgentFigure.tsx`, `agentfig.css`, `ReportSwitch.tsx` | Homepage hero, spotlight, `/agent` | Only events the product performs and logs. A flag shows its title and the dashboard's own line, no rule line under it (founder, 25 Oct 2026) |
+| How we work cards | `HowCards.tsx`, `how.css` | The homepage's four stages: a Carbon canvas cut at 45° per card with one drawn window of the product and one moment, a `button` over it to play it again, and the return line from the last card to the first. The HTML is the finished state | A scene that loops; a second Sample mark; the return line drawing more than once; Volt on anything that has not just become true |
 | Products frame | `SuiteFrame.tsx`, `suite.css` | The homepage's "One shop, six products": one plate, a tile per product, each one link with a fragment of its real screen. Every tile rests finished; hover, focus or in view replays its moment from the start, once | A second Sample mark; a fade instead of the hard crop; a tile resting on an earlier state; a moment that loops or plays again; a rule line on the Agent tile |
 
 ## Shared with the product

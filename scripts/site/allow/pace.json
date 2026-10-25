@@ -16,7 +16,6 @@
     { "file": "apps/web/app/_site/home.css", "match": ".motion .afig-hero .af-status { animation: hp-fade var(--dur-3) var(--ease) both 500ms; }", "reason": "The hero figure, as above." },
     { "file": "apps/web/app/_site/home.css", "match": ".motion .afig-hero .cap { animation: hp-fade var(--dur-3) var(--ease) both 1000ms; }", "reason": "The hero figure, as above." },
     { "file": "apps/web/app/_site/home.css", "match": ":root:not([lang=\"ar\"]).motion .hl + .hl > span { animation-delay: 90ms, 90ms; }", "reason": "The hero's entrance (the width settle), as above." },
-    { "file": "apps/web/app/_site/home.css", "match": ".how-loop-k, .how-loop-head { transition: opacity var(--dur-3) var(--ease) 360ms; }", "reason": "The homepage's How we work is being rebuilt by another agent (25 Oct 2026); the rebuild takes --play-* and --play-stagger (alyr-design/motion.md)." },
     { "file": "apps/web/app/_site/site.css", "match": ".al-js .company-in.is-in .company-path path { animation: draw 1600ms", "reason": "Dead CSS: no component renders .company since the homepage was rebuilt. Remove the .company block rather than pace it." },
     { "file": "apps/web/app/_site/site.css", "match": ".al-js .company-in.is-in .company-path .company-path-volt { animation: draw 700ms", "reason": "Dead CSS, as above." }
   ]

@@ -54,11 +54,15 @@ curves, which the workspace's `.sh` still calls `--ease` and `--spring`).
    rings, no marquee. A status dot lights once, with one ring. Allowed to keep moving:
    explanatory figures that play only while on screen, can be paused and stay still with
    reduced motion (the `/chat` demo and how-it-works flow), and what follows the scroll
-   (the two progress rules). A moment may wait for the visitor where there is a fine pointer
+   (the progress rule). A moment may wait for the visitor where there is a fine pointer
    (the homepage's product tiles play on hover or focus, and in view on a phone): it still
    plays once, and **while it waits it rests finished**, as every demo opens (founder,
    25 Oct 2026); its trigger replays it from its start (each animation fills backwards, so
    its first frame is the earlier state) and it ends finished again.
+   **One exception, the founder's (ALY-226, 25 Oct 2026):** the homepage's "How we work"
+   cards play once in view and then once more each time the visitor hovers, focuses or
+   presses a card, when it is not already playing. It is the visitor's own action, it ends
+   finished, and the return line under the cards draws only once per page.
 2. **Reduced motion shows end states.** Under `prefers-reduced-motion: reduce` nothing
    travels and nothing plays by itself; every figure is composed, every count at its final
    value. Check with the capture script's `--reduced-motion`.
@@ -81,9 +85,10 @@ curves, which the workspace's `.sh` still calls `--ease` and `--spring`).
 ## The stack (site)
 
 CSS for the first screen's entrance (it runs before hydration), hovers, presses, springs
-and one-shot arrivals keyed on `.is-in` from one IntersectionObserver. GSAP (ScrollTrigger,
-SplitText; exact versions in `apps/web/package.json`) loads after the window's load event,
-only when motion is wanted, for line splits and the scrubbed rules. Cross-document View
+and one-shot arrivals keyed on `.is-in` from one IntersectionObserver. GSAP (SplitText;
+exact versions in `apps/web/package.json`) loads after the window's load event, only when
+motion is wanted, for line splits; the homepage's How we work rail and its ScrollTrigger are
+gone (ALY-226). Cross-document View
 Transitions keep the header still between pages; the theme switch sweeps along 45° from its
 own corner. Clean up every ScrollTrigger on unmount (`useGSAP`).
 

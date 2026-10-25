@@ -525,7 +525,7 @@ a.pm-link[aria-current="page"] .pm-name::after { content: ""; display: inline-bl
 .product .mark-sample, .see-panel .mark-sample, .demo-bar .mark-sample { border-color: var(--band-rule); color: var(--on-band-quiet); }
 
 /* Captions: a mono line on a hairline that ends in a tick. Only where a drawing needs words
-   (the trust pair, the no-CR foot, the agreement); every other drawing carries its mark. */
+   (the no-CR foot, the agreement); every other drawing carries its mark. */
 .cap {
   position: relative; display: block;
   margin-top: 1rem; padding-top: .625rem; border-top: 1px solid var(--line);

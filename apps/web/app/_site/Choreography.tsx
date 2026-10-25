@@ -2,17 +2,15 @@
 
 import { useGSAP } from "@gsap/react";
 import { gsap } from "gsap";
-import { ScrollTrigger } from "gsap/ScrollTrigger";
 import { SplitText } from "gsap/SplitText";
 import { PLAY } from "./pace";
 
-gsap.registerPlugin(useGSAP, ScrollTrigger, SplitText);
+gsap.registerPlugin(useGSAP, SplitText);
 
 // The homepage's scroll choreography. Loaded on its own, after the page has loaded, only
 // when the visitor has not asked for reduced motion (HomeMotion). The moves themselves are
-// mostly CSS in home.css, keyed on `.is-in`; this file says when, scrubs the progress
-// rule (ScrollTrigger), splits each section heading into lines as it arrives (SplitText)
-// and leans the main buttons toward the pointer.
+// mostly CSS in home.css, keyed on `.is-in`; this file says when, splits each section
+// heading into lines as it arrives (SplitText) and leans the main buttons toward the pointer.
 // Tokens: the heading splits are timed pieces, so they take the site's pace (pace.ts:
 // `play-4` for a line, `play-stagger` between lines); `expo.out` for arrivals (the CSS
 // `--ease`), one travel vector at 45°. The buttons' lean is an interaction, on the
@@ -84,39 +82,6 @@ export default function Choreography() {
     );
     document.querySelectorAll("[data-split]").forEach((node) => headings.observe(node));
     undo.push(() => headings.disconnect());
-
-    // How we work: the rail fills Volt with the scroll, and each step's node turns as the
-    // fill reaches it; once it is full the loop back to the first step draws (home.css).
-    // Across on wide screens, down the start edge on phones.
-    const rail = document.querySelector<HTMLElement>("[data-rail]");
-    const railFill = rail?.querySelector<HTMLElement>("[data-rail-fill]");
-    const railSteps = rail ? gsap.utils.toArray<HTMLElement>(rail.querySelectorAll("[data-rail-step]")) : [];
-    if (rail && railFill && railSteps.length) {
-      const media = gsap.matchMedia();
-      media.add({ wide: "(min-width: 62rem)", narrow: "(max-width: 61.99rem)" }, (context) => {
-        const wide = Boolean(context.conditions?.wide);
-        const axis = wide ? "scaleX" : "scaleY";
-        const last = railSteps.length - 1;
-        gsap.fromTo(
-          railFill,
-          { [axis]: 0 },
-          {
-            [axis]: 1,
-            ease: "none",
-            scrollTrigger: {
-              trigger: rail,
-              start: wide ? "top 78%" : "top 72%",
-              end: wide ? "top 34%" : "bottom 58%",
-              scrub: 0.4,
-              onUpdate: (self) => {
-                railSteps.forEach((step, index) => step.classList.toggle("is-on", self.progress >= index / last - 0.001));
-                rail.classList.toggle("is-looped", self.progress > 0.98);
-              },
-            },
-          },
-        );
-      });
-    }
 
     // The main buttons lean 2 to 3 px toward the pointer, on devices with a fine pointer.
     const leaners = gsap.utils.toArray<HTMLElement>("[data-lean]");

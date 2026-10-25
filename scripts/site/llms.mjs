@@ -163,7 +163,6 @@ function homeTwin(locale) {
       return `[${productName(t, key)}](${SITE}${site.PATHS[key][locale]}): ${flat(body)}`;
     });
   }
-  if (h.trust) doc.h(2, h.trust.title).p(h.trust.body).list(h.trust.facts, titled);
   questions(doc, h.faq);
   if (h.final) doc.h(2, h.final.title).p(h.final.body).p(contactLine(locale));
   footer(doc, locale, site.PATHS.home[locale]);

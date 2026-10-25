@@ -76,7 +76,7 @@ asymmetry over centring.
    under the name in a drawn phone's header, or at the end of a figure's tab row
    (`SampleMark`, «مثال»). It travels with a screenshot. A figure with the sample switch is
    marked by the switch's label. A caption ("what it shows · Sample", no FIG number) stays
-   only where the drawing means nothing without its words (the trust pair, the no-CR foot).
+   only where the drawing means nothing without its words (the no-CR foot).
    For machines, the figure's first line says it is a fictional business whose numbers are
    not ALYR's results ([honesty.md](honesty.md) §4). Never "sample" twice for one drawing.
    Arabic writes its own words, no capitals, no tracking.
