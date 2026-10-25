@@ -5,8 +5,10 @@
 // Honest by construction (alyr-design/honesty.md):
 // - no `offers`, `price`, `aggregateRating` or `review`: prices are off (D-034) and there are
 //   no customers to rate anything;
-// - no `legalName`, `taxID`, `address`, `foundingDate` or `sameAs` before the CR and accounts
-//   exist;
+// - no `legalName`, `taxID`, `address` or `foundingDate` before the CR exists, and `sameAs`
+//   only lists profiles named in NEXT_PUBLIC_ALYR_SAME_AS, once each exists (D-056);
+// - the contact point is the contact the page itself offers: WhatsApp once the number is set,
+//   and the email address;
 // - nothing says a product is available: a product is described by its page's own meta
 //   description (ALYR Docs' never says "available");
 // - the questions are the ones the page shows, in its contact state and offer state.
@@ -17,7 +19,7 @@
 // and a rating, which ALYR will not invent.
 
 import { copy, type Locale, type Question } from "./copy";
-import { CONTACT_EMAIL, CONTACT_STATE, OFFER_LIVE, PATHS, SITE_URL, type PageKey, type ProductKey } from "./site";
+import { CONTACT_EMAIL, CONTACT_STATE, OFFER_LIVE, PATHS, SAME_AS, SITE_URL, WHATSAPP_NUMBER, type PageKey, type ProductKey } from "./site";
 
 type Json = Record<string, unknown>;
 
@@ -44,6 +46,19 @@ function organization(locale: Locale): Json {
     ...(CONTACT_EMAIL ? { email: CONTACT_EMAIL } : {}),
     areaServed: { "@type": "Country", name: "Qatar" },
     knowsLanguage: ["ar", "en"],
+    ...(CONTACT_EMAIL || WHATSAPP_NUMBER
+      ? {
+          contactPoint: {
+            "@type": "ContactPoint",
+            contactType: "customer service",
+            areaServed: "QA",
+            availableLanguage: ["Arabic", "English"],
+            ...(CONTACT_EMAIL ? { email: CONTACT_EMAIL } : {}),
+            ...(WHATSAPP_NUMBER ? { telephone: `+${WHATSAPP_NUMBER}`, url: `https://wa.me/${WHATSAPP_NUMBER}` } : {}),
+          },
+        }
+      : {}),
+    ...(SAME_AS.length ? { sameAs: SAME_AS } : {}),
   };
 }
 
