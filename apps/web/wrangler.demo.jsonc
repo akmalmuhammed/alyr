@@ -1,0 +1,17 @@
+// The client portal demo on Cloudflare (ALY-246): plain files, sample data, no backend, no
+// secrets. Build with scripts/build-portal-demo.sh, then `pnpm exec wrangler deploy --config
+// wrangler.demo.jsonc` from apps/web. Not the public site (wrangler.jsonc, alyr.qa) and not the
+// real portal (wrangler.portal.jsonc). Runbook: docs/runbooks/portal-demo.md.
+{
+  "name": "alyr-portal-demo",
+  "compatibility_date": "2026-10-06",
+  // The first address is workers.dev; a custom domain (for example demo.alyr.qa) is added only
+  // after the founder approves it.
+  "workers_dev": true,
+  "preview_urls": false,
+  "assets": {
+    "directory": "./out-demo",
+    "html_handling": "auto-trailing-slash",
+    "not_found_handling": "404-page"
+  }
+}

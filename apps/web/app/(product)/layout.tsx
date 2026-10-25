@@ -3,6 +3,7 @@ import { IBM_Plex_Mono, IBM_Plex_Sans_Arabic, Instrument_Sans } from "next/font/
 import { dark, semantic } from "../_tokens/tokens";
 import "../_tokens/tokens.css";
 import "../globals.css";
+import DemoMode from "./_demo/DemoMode";
 
 // The ALYR type: Instrument Sans, IBM Plex Sans Arabic, IBM Plex Mono (docs/brand.md). The
 // variables carry the same names as on the public site, so one set of tokens
@@ -43,7 +44,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       <head>
         <script dangerouslySetInnerHTML={{ __html: THEME }} />
       </head>
-      <body>{children}</body>
+      <body>{children}<DemoMode /></body>
     </html>
   );
 }

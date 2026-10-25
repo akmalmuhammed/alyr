@@ -1127,3 +1127,20 @@ There is no separate Pay product: payment links stay a module of Chat and Bookin
 **Chosen over** unlocking only the guided setup before payment (a half-open product tells an owner nothing), and a free trial (D-034 has none; the money-back promise covers the risk).
 
 **Revisit when** online payment for clients exists (ALY-5, ALY-188), and when the subscription is billed (ALY-85, ALY-218).
+
+## D-057 · The client portal is shown to the public as a static build on recorded demo data, with no backend
+**Date** 25 Oct 2026 · **Status** Accepted (the founder, 25 Oct, in conversation: "ignore hosting, just publish the front end with demo data"; "we have made an amazing portal locally, I want to publish it") · Linear ALY-246 · Runbook `docs/runbooks/portal-demo.md`
+
+**The decision.**
+- The real portal screens (workspace and sign-up) are built unchanged as a static export and published with sample data and **no backend**. A switch at build time (`NEXT_PUBLIC_ALYR_DEMO=1`) replaces the browser's `fetch` for `/api/*`: reads are answered from recorded files of the fictional demo shops (`apps/web/demo/*.json`), changes are refused in plain words, and sign-up is played by a small state machine kept in the visitor's tab. A "Demo" strip is on every page.
+- It is served by its own Cloudflare Worker with assets only, `alyr-portal-demo` (free plan, no secrets, no database, no container), first on a workers.dev address; a custom domain only after the founder approves one.
+- Only the workspace, the sign-up and a landing page are in it. The customer pages (order, booking, tracking, document, payment), the back office, the WhatsApp simulator and the public site are not.
+- Everything in the recordings is invented (the seeded demo shops). Nothing real is recorded, sent or stored; the visitor's browser keeps only the chosen shop and the sign-up progress.
+
+**Why.** The founder wants the finished portal to be seen now; the real portal needs the API, a database and a hosting decision (D-052, the data-residency question) that are not made. This shows the product without taking any of those decisions.
+
+**Not the product.** It cannot take a sign-up, send a message or take a payment. The sign-up is scripted for a barber shop; its test chat is scripted too. The data is a snapshot (recorded 25 Oct 2026) and does not move with the calendar. It must never be presented as the live service.
+
+**Chosen over** the Framer prototype alone (a mock that can drift from the real screens), the OpenNext Worker with a fake API (needs the paid Workers plan, D-052), and waiting for Azure.
+
+**Revisit when** the real portal is hosted: this is replaced by a demo shop on the real stack, or kept as the public demo.

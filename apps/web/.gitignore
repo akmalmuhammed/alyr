@@ -50,3 +50,7 @@ next-env.d.ts
 # screenshots from pnpm site:shots (never commit screenshots)
 /.shots/
 /.open-next/
+
+# the portal demo build (scripts/build-portal-demo.sh)
+/.demo-stage/
+/out-demo/

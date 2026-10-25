@@ -13,6 +13,9 @@ const eslintConfig = defineConfig([
     "out/**",
     // The published public site, built by scripts/build-site.sh.
     "out-site/**",
+    // The portal demo (scripts/build-portal-demo.sh): its build and its stage copy.
+    "out-demo/**",
+    ".demo-stage/**",
     ".wrangler/**",
     // The portal built for Cloudflare Workers (pnpm portal:build).
     ".open-next/**",

@@ -113,6 +113,8 @@ scripts/                      check.sh (everything CI runs), demo.sh (start and 
                               connect-browser-check.mjs (the connection screen, phone width, both languages),
                               golive-truth-check.mjs (every onboarding sentence of every business type proved on the
                               finished order page and workspace, English and Arabic),
+                              build-portal-demo.sh (the portal as a static demo on recorded sample data, D-057) and
+                              demo-portal/ (the scripts that record it from the fictional demo shops),
                               hooks/pre-commit
 specs/                        One folder per spec; write or update the spec before building
 infra/cloudflare/api/          The API Worker and container settings for interim hosting (D-052, specs/021);
