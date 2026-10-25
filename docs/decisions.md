@@ -993,7 +993,7 @@ There is no separate Pay product: payment links stay a module of Chat and Bookin
 
 **Open for the founder.** Publishing (the go-ahead each time), the Arabic review (ALY-66), the manual name check of Qirfa Bakery, and the [F] lines in `docs/site-products-2/02-messaging.md` (routes, the Docs "Not yet" line on tax and e-invoicing, whether ALYR Docs can be a shop's first product when prices are on).
 
-## D-047 · The homepage leads with the owner's problem, and shows the agent honestly
+## D-056 · The homepage leads with the owner's problem, and shows the agent honestly
 **Date** 22 Oct 2026 · **Status** Accepted (founder, 22 Oct, in chat: "Agentic, shown honestly", then "implement this") · Linear ALY-154 · Updates D-037 and D-046. Source: the homepage improvement table (Claude Doc, 22 Oct).
 
 **The decision.**
@@ -1008,13 +1008,13 @@ There is no separate Pay product: payment links stay a module of Chat and Bookin
 **Open for the founder.** Publishing (the go-ahead each time), the Arabic review (ALY-66, the new sections roughly double the homepage's Arabic), and the table's open questions (the WhatsApp number and reply promise, a named person, the setup fee). The product-page template from the table is ALY-208.
 
 ## D-048 · ALYR is the small business's tech team; the homepage says so
-**Date** 23 Oct 2026 · **Status** Accepted (founder, 23 Oct, in chat: ALYR "is not just WhatsApp" but "a company that helps small businesses in their 0 to 100 about tech", "like a complete business suite, with continuous audit and insights and optimization suggestions and products"; then, on the reimagined homepage and its audit, "implement it") · Linear ALY-210 · Updates D-047 (the hero and the order of the page). Source: the reimagined homepage and its word-by-word and visual audit (Claude Doc, 23 Oct).
+**Date** 23 Oct 2026 · **Status** Accepted (founder, 23 Oct, in chat: ALYR "is not just WhatsApp" but "a company that helps small businesses in their 0 to 100 about tech", "like a complete business suite, with continuous audit and insights and optimization suggestions and products"; then, on the reimagined homepage and its audit, "implement it") · Linear ALY-210 · Updates D-056 (the hero and the order of the page). Source: the reimagined homepage and its word-by-word and visual audit (Claude Doc, 23 Oct).
 
 **The decision.**
 - **Positioning.** ALYR is the technology team an owner-run business never had: what consultants and an IT team do for a big company, done for a small one. WhatsApp is one product and the way in, not the whole company. The homepage's H1 is "The tech team your business never had." / «فريق التقنية الذي لم يكن لدى مشروعك.», and its one action is "Book a check-up" / «احجز فحصاً لمشروعك» (the header says "Check-up" / «احجز فحصاً» below a laptop's width).
 - **The work is a loop:** check, set up, see, improve, then check again. The check-up is the visit we already make; nothing new is promised beyond it. "Every month we go over your numbers with you" is promised; it is easy to drop if the founder does not want it.
 - **The order of the page:** hero · Why ALYR (a big company, you today, with ALYR, four rows) · how we work (the loop) · what a check-up finds (six shown, the rest folded) · your business · one order, as proof · insights (ALYR Agent) · the products · price (offer on) · trust · questions.
-- **Plain words.** "Rule" becomes "reason" or "why" on the homepage: the feed's "Flagged by rule" is "Needs a look", and its rule line starts "Why ·". The product itself keeps its own words. No AI words, as in D-047.
+- **Plain words.** "Rule" becomes "reason" or "why" on the homepage: the feed's "Flagged by rule" is "Needs a look", and its rule line starts "Why ·". The product itself keeps its own words. No AI words, as in D-056.
 - **Not stated:** the check-up's price (the setup fee is quoted at the visit, as before).
 - **Visual audit applied:** the pinned panels on desktop go from seven to two (the products' room only); the agent's whole screen on phones stops after its five numbered parts; links to a section land under the header.
 
