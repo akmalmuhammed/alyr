@@ -87,6 +87,11 @@ def client_factory(monkeypatch, tmp_path):
     # The suite runs as if Meta had approved the three document templates (the tests of ALY-139
     # send through them). The tests of "not approved" (ALY-142) switch it off for themselves.
     monkeypatch.setenv("ALYR_DOCUMENT_TEMPLATES_APPROVED", "true")
+    # Tests that place hundreds of orders from one address (the stress and property tests) must
+    # not meet the limit a real address would; tests/test_rate_limits.py puts it back (ALY-116).
+    from alyr.core import ratelimit
+
+    monkeypatch.setattr(ratelimit, "PLACED_PER_ADDRESS", ratelimit.Limit(1_000_000, 600))
     stack = contextlib.ExitStack()
 
     def build() -> TestClient:

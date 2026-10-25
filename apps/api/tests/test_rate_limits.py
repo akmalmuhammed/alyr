@@ -84,7 +84,9 @@ def test_the_table_keeps_hashes_not_emails_or_addresses(client):
     assert keys and all(len(k) == 64 and "@" not in k and "." not in k for k in keys)
 
 
-def test_orders_and_bookings_from_one_address_are_limited(client):
+def test_orders_and_bookings_from_one_address_are_limited(client, monkeypatch):
+    # The harness lifts this limit for every other test; here it is the real one.
+    monkeypatch.setattr(ratelimit, "PLACED_PER_ADDRESS", ratelimit.Limit(30, 600))
     limit = ratelimit.PLACED_PER_ADDRESS.count
     for path in ("/api/store/al-noor/orders", "/api/book/al-noor"):
         for _ in range(limit):
