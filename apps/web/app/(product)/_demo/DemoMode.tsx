@@ -16,7 +16,7 @@ const ON = process.env.NEXT_PUBLIC_ALYR_DEMO === "1";
 
 const WORDS = {
   en: { tag: "Demo", note: "Sample data for a make-believe shop. Nothing you do here is saved.", shop: "Shop", start: "All demos", blocked: "This is a demo, so that change was not saved." },
-  ar: { tag: "تجربة", note: "بيانات تجريبية لمتجر افتراضي. لا يُحفظ شيء مما تفعله هنا.", shop: "المتجر", start: "كل التجارب", blocked: "هذه نسخة تجريبية، لذلك لم يُحفظ هذا التغيير." },
+  ar: { tag: "تجربة", note: "بيانات تجريبية لمتجر افتراضي. لا يُحفظ شيء مما تفعله هنا.", shop: "المتجر", start: "كل التجارب", blocked: "هذا عرض للتجربة فقط، لذلك لم يُحفظ هذا التغيير." },
 };
 
 const readLang = (): "en" | "ar" => {
