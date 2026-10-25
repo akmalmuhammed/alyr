@@ -465,6 +465,17 @@ export const motion = {
     "medium": "280ms",
     "slow": "480ms"
   },
+  "pace": {
+    "pace": 1,
+    "play-1": "72ms",
+    "play-2": "144ms",
+    "play-3": "288ms",
+    "play-4": "432ms",
+    "play-stagger": "36ms",
+    "read-word": "261ms",
+    "dwell-beat": "400ms",
+    "dwell-min": "1200ms"
+  },
   "ease": {
     "ease": "cubic-bezier(0.16, 1, 0.3, 1)",
     "spring": "linear(0, .1 2.4%, .38 6.2%, .7 11%, .9 15.6%, 1.03 20.6%, 1.07 25%, 1.06 30%, 1.02 37.5%, .995 47%, .99 55%, 1 70%, 1)",

@@ -102,7 +102,10 @@ on the scale yet: do not add more.
 
 | Tokens | Use |
 |---|---|
-| `--dur-1` … `--dur-4`, `--stagger` | Every duration and stagger |
+| `--dur-1` … `--dur-4`, `--stagger` | The interaction scale: hovers, presses, menus, the theme switch, product screens |
+| `--pace` | The one setting for every timed piece (1; lower is quicker). Multiplies everything in the row below |
+| `--play-1` … `--play-4`, `--play-stagger` | Every duration and delay inside a timed piece (flows, demos, signature figures, the products frame, reveals, heading splits); `PLAY` in `_site/pace.ts` for scripts |
+| `--read-word`, `--dwell-beat`, `--dwell-min` | How long a flow's step or a demo's tab stays up: its `--words` times `--read-word` (230 a minute), plus the beat, never under the minimum (which the pace does not change) |
 | `--ease` | Things arriving (GSAP `expo.out`) |
 | `--spring` | Things the visitor presses |
 | `--travel`, `--dir` | How far along 45°, and the inline direction (−1 in Arabic) |

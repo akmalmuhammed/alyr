@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState, type CSSProperties, type KeyboardEvent, type PointerEvent, type ReactNode } from "react";
+import { PLAY } from "./pace";
 
 type Props = {
   /** The group's name, the two sides' names, the slider's name, and its value ("{n}% with ALYR"). */
@@ -19,6 +20,11 @@ type Props = {
 // it rests with the whole day with ALYR, and "Today" wipes back.
 const REST = 0.42;
 const STEP = 0.05;
+// The sweep across the day, the counter's beats and the buttons' glide follow the site's pace
+// (pace.ts; the glide's transition is room.css's, on the same tokens).
+const SWEEP = 2 * PLAY[4];
+const COUNT_BEAT = PLAY[3];
+const GLIDE = PLAY[4];
 
 /**
  * One business's day, split by the fold (ALY-209). The owner's chats today on one side, the
@@ -79,7 +85,7 @@ export function FoldSplit({ label, today, with: withAlyr, slider, value, before,
       const to = rest();
       const start = performance.now();
       const run = (now: number) => {
-        const t = Math.min(1, (now - start) / 1600);
+        const t = Math.min(1, (now - start) / SWEEP);
         const eased = t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2;
         if (!touched.current) setP(from + (to - from) * eased);
         if (t < 1 && !touched.current) frame = requestAnimationFrame(run);
@@ -89,7 +95,7 @@ export function FoldSplit({ label, today, with: withAlyr, slider, value, before,
       const total = Number(counter?.dataset.unread ?? 0);
       if (counter && total) {
         [0.28, 0.63, 1].forEach((share, index) => {
-          timers.push(window.setTimeout(() => { counter.textContent = String(Math.round(total * share)); }, index * 380));
+          timers.push(window.setTimeout(() => { counter.textContent = String(Math.round(total * share)); }, index * COUNT_BEAT));
         });
       }
     }
@@ -163,7 +169,7 @@ export function FoldSplit({ label, today, with: withAlyr, slider, value, before,
     hold();
     if (root.current) root.current.dataset.glide = "";
     setP(to);
-    window.setTimeout(() => { if (root.current) delete root.current.dataset.glide; }, 700);
+    window.setTimeout(() => { if (root.current) delete root.current.dataset.glide; }, GLIDE);
   }
 
   // How far across its travel the fold stands, and so how much of the day is with ALYR.

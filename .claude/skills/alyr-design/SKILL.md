@@ -76,7 +76,7 @@ asymmetry over centring.
    under the name in a drawn phone's header, or at the end of a figure's tab row
    (`SampleMark`, «مثال»). It travels with a screenshot. A figure with the sample switch is
    marked by the switch's label. A caption ("what it shows · Sample", no FIG number) stays
-   only where the drawing means nothing without its words (the trust pair, the no-CR foot).
+   only where the drawing means nothing without its words (the no-CR foot).
    For machines, the figure's first line says it is a fictional business whose numbers are
    not ALYR's results ([honesty.md](honesty.md) §4). Never "sample" twice for one drawing.
    Arabic writes its own words, no capitals, no tracking.
@@ -154,8 +154,9 @@ arrows and "×" in text do not flip: use the icon.
 
 ## 5. Motion
 
-Tokens for every duration, ease, stagger and travel; one gesture (arrive along 45°, settle,
-one Volt signal). Plays once. Reduced motion shows every end state; nothing travels or
+Tokens for every duration, ease, stagger and travel; every timed piece (flows, demos, figures,
+reveals) on the pace, `--play-*` times `--pace`, the one setting, with a step staying up for its
+words; one gesture (arrive along 45°, settle, one Volt signal). Plays once. Reduced motion shows every end state; nothing travels or
 plays by itself. **Nothing is hidden in the HTML:** start states exist only under the
 `motion` class that the head script adds when motion is wanted, with a failsafe that removes
 it; without scripts the page is complete. Animate transform, opacity, clip-path and font

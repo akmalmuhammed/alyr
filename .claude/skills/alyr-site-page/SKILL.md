@@ -48,11 +48,21 @@ words under `home` in `copy.ts`):
    `ruleLines={false}` and its cards titled "Suggestions"; the feed's flags say "Needs a look"
    with the dashboard's own line and no rule line (founder, 25 Oct 2026). The product's own
    screens keep their rule lines.
-3. **How we work** (`#how`): check, set up, see, improve, on the rail that fills with the
-   scroll; once full, a dashed arc draws from step 4 back to step 1 with "Then we check
-   again" (`.how-loop`, Choreography sets `is-looped`; drawn statically without motion). On
-   phones a dashed line from step 4 to an up-arrow row. Then a line button and "What we need
-   from you".
+3. **How we work** (`#how`, ALY-226, the founder's yes on the Framer prototype, 25 Oct 2026;
+   `HowCards.tsx`, `how.css`): four cards, check, set up, see and improve, each a still Carbon
+   canvas cut at 45° (mirrored) holding one drawn window of the product for Qirfa Bakery, then
+   its title and two lines (`home.how.steps`; the scenes' words in `home.how.scenes`, the
+   numbers on See and Improve from the engine's sample, the earlier values derived from them).
+   One "Sample" mark, in Check's window. Four in a row from 75rem, two by two from 48rem,
+   stacked below. Each scene plays once as its canvas is half in view (a row staggered
+   4 × `--stagger` apart) and once more on hover, keyboard focus or a press of its canvas (a
+   `button` over the drawing), when it is not already playing; done by about 3 s. Under the
+   row a solid line draws once, after Improve first plays: down from under Improve, along the
+   row's foot, up the page's gutter and along 45° onto Check's cut, which takes one Volt line;
+   "Then we check again." under it (the founder's words; no "every month"). On phones the
+   line runs up the gutter from under the last card. The HTML is every finished state and the
+   line is drawn; without scripts or with reduced motion nothing plays. Then a line button
+   and "What we need from you".
 4. **Your business** (`#business`, `BusinessTabs.tsx`): one tab per business type plus
    "Something else"; each panel has an anchor (`#bakery`, `#wholesale`, `#fashion`,
    `#restaurant`, `#salon`, `#home-services`, `#other`), the "Today" list (what a check-up
@@ -102,13 +112,16 @@ ALYR Agent's split), and land each section's content within about 300 px of its 
    every demo on the site opens (founder, 25 Oct 2026); its moment replays from the start once
    (CSS keyed on `is-in`, which SiteMotion adds on hover or focus with a fine pointer, and at
    60% in view elsewhere; each animation fills backwards, so its first frame is the earlier
-   state), done by 1.7 s. The HTML is the end state, so without scripts or with reduced motion
+   state), done by 1 s (`--play-*` and `--play-stagger`, so `--pace` tunes it). The HTML is the end state, so without scripts or with reduced motion
    nothing plays and every tile is finished. The one Volt fill is the chosen slot. Then the two
    notes. Nothing is pinned. The six plain rows of 24 Oct and their crops are gone. Then **Price** (offer on: the price, examples by trade, setup,
-   the first month, what every month includes, the agreement), **Trust**, **Questions** (the
+   the first month, what every month includes, the agreement), **Questions** (the
    first `faq.shown` open to read, the rest under "More questions"; a `#q-...` link opens the
    fold), the **closing call**, the **footer** (no clock).
 
+Gone on 25 Oct (the founder, ALY-226): the trust section, "What you can check before you
+start", with its six facts, the on-record slots and the tracking pages in two languages;
+and the rail of four numbered steps under How we work.
 Gone on 24 Oct and not to come back without the founder: the Why ALYR table, "What a check-up
 finds" as its own section, the pinned products room, eyebrows that repeat a heading or a
 header link, numbers on tabs and indexes, FIG captions. Gone on 25 Oct (the content audit,
@@ -136,8 +149,8 @@ Every product page uses `_site/ProductKit.tsx` and `kit.css`, in this order:
 |---|---|---|
 | Product bar | `ProductBar` | Name with the signal and its sections; sticky; no call to action |
 | Opening on Carbon | `ProductHero` | Eyebrow with the state, a two-line H1 that names the result (second line Concrete), the lead, the page's one Volt button "Book a check-up" (`HeroAction`: `home.hero.action`, the homepage's contact link, `data-hero-cta`; the column's width on a phone), a tabbed demo (`ProductDemo`), three facts on one rule. Cut corner, not rounded |
-| Signature figure (optional, after the opening) | `LastOne.tsx`, `PaymentPaper.tsx`, `moment.css` | One real object changing state (03-visuals of `docs/site-products-2`): three parts hanging from one label line over a rule, CSS keyframes keyed on `.is-in` on each part, every delay a number of `--stagger` steps, one Volt mark, done before 3 s; the HTML is the end state. `data-sig` (not `data-m`) gives it SiteMotion's own trigger: on a wide screen the whole figure starts once 60% of it is on screen or its top is past the middle; on a phone each part starts as it arrives, its delays counted from its own first beat (`--t0`). It keeps `motion` past the 4 s failsafe. Measure that it starts and ends in view (`--eval`, no screenshots). It must fit one screen at 1440 × 900 |
-| How it works, from both sides | `FlowSection` (`FlowDiagram`) | The customer's steps and the business's, in the product's real words |
+| Signature figure (optional, after the opening) | `LastOne.tsx`, `PaymentPaper.tsx`, `moment.css` | One real object changing state (03-visuals of `docs/site-products-2`): three parts hanging from one label line over a rule, CSS keyframes keyed on `.is-in` on each part, every duration a `--play-*` token and every delay a number of `--play-stagger` beats (`alyr-design/motion.md`, the pace), one Volt mark, done by 1.8 s; the HTML is the end state. `data-sig` (not `data-m`) gives it SiteMotion's own trigger: on a wide screen the whole figure starts once 60% of it is on screen or its top is past the middle; on a phone each part starts as it arrives, its delays counted from its own first beat (`--t0`). It keeps `motion` past the 4 s failsafe. Measure that it starts and ends in view (`--eval`, no screenshots). It must fit one screen at 1440 × 900 |
+| How it works, from both sides | `FlowSection` (`FlowDiagram`) | The customer's steps and the business's, in the product's real words. Each step dwells for its title and work lines at 230 words a minute (the pace, `alyr-design/motion.md`): a long work line makes a long step |
 | The screen used every day | `ScreenBlock` | The real workspace screen at true scale in the workspace window, numbered Carbon callouts beside it; on phones the workspace's phone layout (cards), never a sideways table with no cue |
 | What's in it | `InsideBlock` | Everything it does today by audience, titled "What's in {product}" ("What's in ALYR Chat" / «ما يتضمنه ALYR Chat»); a figure beside it if the page needs one (`children`); then **Not yet** below a dashed rule with the pending dot, only for an item whose absence would make another line untrue (D-039: nothing coming is shown). Leave `notYet` out otherwise |
 | (each part tells one thing) | | The demo, the signature, the flow and "What's in it" each tell a different part; a story drawn three times is cut, not squeezed. A product page stays near the family's height (about 8,800 px at 1440, plus a signature figure) |

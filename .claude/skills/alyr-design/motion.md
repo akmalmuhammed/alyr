@@ -6,12 +6,46 @@ signal confirms them, once. Each move says something; none is there for its own 
 ## Tokens
 
 Durations, eases, stagger and travel come from the motion tokens (`design/tokens.json`,
-[tokens.md](tokens.md)): `--dur-1` to `--dur-4`; `--ease` for things arriving (GSAP's
-`expo.out` is the same curve); `--spring` (a `linear()` spring) for things the visitor presses;
-`--stagger`; `--travel` along 45° with `--dir` (−1 in Arabic). Never a literal duration or
-curve. Old names to retire as you touch them, never to use in new code: `--fast`, `--medium`,
+[tokens.md](tokens.md)). Two scales:
+- **The interaction scale**, for what the visitor does (hovers, presses, menus, the theme
+  switch, the accordion, the product screens): `--dur-1` to `--dur-4` and `--stagger`.
+- **The pace**, for every timed piece (the flows, the demos, the signature figures, the products
+  frame's tiles, the business day's fold, the X-ray, the reveals, the heading splits, the
+  closing call's fold): `--play-1` to `--play-4` and `--play-stagger` (0.6 of the interaction
+  scale), and a step's dwell from `--read-word`, `--dwell-beat` and `--dwell-min`. Each is
+  multiplied by **`--pace`** (`motion.pace.pace`, 1 since 25 Oct 2026), the one value the
+  founder tunes: 0.8 is 20% quicker, 1.25 is 25% slower.
+
+Then `--ease` for things arriving (GSAP's `expo.out` is the same curve); `--spring` (a
+`linear()` spring) for things the visitor presses; `--travel` along 45° with `--dir` (−1 in
+Arabic). Never a literal duration or curve. Old names to retire as you touch them, never to use in new code: `--fast`, `--medium`,
 `--slow` (the site's older scale) and `--ease-product`, `--spring-product` (the product's
 curves, which the workspace's `.sh` still calls `--ease` and `--spring`).
+
+## The pace (founder, 25 Oct 2026: the timed pieces were too slow)
+
+- **A timed piece never writes a duration.** In CSS: `--play-*` for each move, every delay a
+  number of `--play-stagger` beats (`calc(6 * var(--play-stagger))`), a long move a multiple of a
+  token (`calc(2 * var(--play-4))`). In a script: `PLAY` from `_site/pace.ts` (already
+  multiplied by the pace when the tokens are generated). `scripts/site/pace-check.mjs` (in
+  `pnpm site:check`) fails on a literal; a reviewed exception goes in
+  `scripts/site/allow/pace.json` with its reason.
+- **A step dwells for its words.** A flow's step or a demo's tab stays up while its words are
+  read at 230 words a minute (`--read-word`), then `--dwell-beat`, never less than
+  `--dwell-min` (1.2 s, which the pace does not shorten). The component sets `--words` on its
+  progress bar (`words()` in `pace.ts`); the CSS does the sum, so `--pace` reaches it. A flow
+  counts its step's title and the work lines it ticks; the paragraph under the title is for a
+  visitor who pauses or picks a step. A demo counts its caption, and waits for its last
+  message or row (`--last`) if that comes later. Count the words of the language shown.
+- **New timed pieces take the pace too:** the homepage's How we work, rebuilt after 25 Oct
+  2026, uses `--play-*` and `--play-stagger`, not `--dur-*`. Hovers and presses stay on the
+  interaction scale.
+- The hero's entrance and its figure (AgentFigure and the feed) were left on the interaction
+  scale on 25 Oct 2026 while the figure is rebuilt; bring them onto the pace with it.
+- Measure before and after with the capture script's `--eval` (no screenshots): every
+  animation a piece starts, from `document.getAnimations()`, and each step's dwell from its
+  progress bar: `node scripts/site/pace-probe.mjs <url> flow demo sig tiles …` against the built
+  site (`docs/framer-review/07-pace-log.md` has the before and after of 25 Oct 2026).
 
 ## Rules
 
@@ -21,11 +55,15 @@ curves, which the workspace's `.sh` still calls `--ease` and `--spring`).
    live Agent figure (below). Allowed to keep moving:
    explanatory figures that play only while on screen, can be paused and stay still with
    reduced motion (the `/chat` demo and how-it-works flow), and what follows the scroll
-   (the two progress rules). A moment may wait for the visitor where there is a fine pointer
+   (the progress rule). A moment may wait for the visitor where there is a fine pointer
    (the homepage's product tiles play on hover or focus, and in view on a phone): it still
    plays once, and **while it waits it rests finished**, as every demo opens (founder,
    25 Oct 2026); its trigger replays it from its start (each animation fills backwards, so
    its first frame is the earlier state) and it ends finished again.
+   **One exception, the founder's (ALY-226, 25 Oct 2026):** the homepage's "How we work"
+   cards play once in view and then once more each time the visitor hovers, focuses or
+   presses a card, when it is not already playing. It is the visitor's own action, it ends
+   finished, and the return line under the cards draws only once per page.
 2. **Reduced motion shows end states.** Under `prefers-reduced-motion: reduce` nothing
    travels and nothing plays by itself; every figure is composed, every count at its final
    value. Check with the capture script's `--reduced-motion`.
@@ -82,9 +120,10 @@ on these conditions. Anything else that wants to keep moving needs the founder's
 ## The stack (site)
 
 CSS for the first screen's entrance (it runs before hydration), hovers, presses, springs
-and one-shot arrivals keyed on `.is-in` from one IntersectionObserver. GSAP (ScrollTrigger,
-SplitText; exact versions in `apps/web/package.json`) loads after the window's load event,
-only when motion is wanted, for line splits and the scrubbed rules. Cross-document View
+and one-shot arrivals keyed on `.is-in` from one IntersectionObserver. GSAP (SplitText;
+exact versions in `apps/web/package.json`) loads after the window's load event, only when
+motion is wanted, for line splits; the homepage's How we work rail and its ScrollTrigger are
+gone (ALY-226). Cross-document View
 Transitions keep the header still between pages; the theme switch sweeps along 45° from its
 own corner. Clean up every ScrollTrigger on unmount (`useGSAP`).
 
