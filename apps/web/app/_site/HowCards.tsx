@@ -173,7 +173,7 @@ function See({ locale }: { locale: Locale }) {
           {/* the row that comes, is ticked as the order is confirmed, and goes: out of the
               flow, folded shut at rest, so the finished screen is the sample's own */}
           <li className="hw-live" style={at(5)}>
-            <span className="hw-fold" style={at(43)}>
+            <span className="hw-fold" style={at(40)}>
               <b><bdi>1</bdi></b>
               <span className="hw-words"><span>{s.confirm.words}</span><small>{rich(s.confirm.detail)}</small></span>
               <Box t={35} />

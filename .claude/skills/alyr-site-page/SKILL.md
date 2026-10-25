@@ -45,11 +45,21 @@ words under `home` in `copy.ts`):
    `ruleLines={false}` and its cards titled "Suggestions"; the feed's flags say "Needs a look"
    with the dashboard's own line and no rule line (founder, 25 Oct 2026). The product's own
    screens keep their rule lines.
-3. **How we work** (`#how`): check, set up, see, improve, on the rail that fills with the
-   scroll; once full, a dashed arc draws from step 4 back to step 1 with "Then we check
-   again" (`.how-loop`, Choreography sets `is-looped`; drawn statically without motion). On
-   phones a dashed line from step 4 to an up-arrow row. Then a line button and "What we need
-   from you".
+3. **How we work** (`#how`, ALY-226, the founder's yes on the Framer prototype, 25 Oct 2026;
+   `HowCards.tsx`, `how.css`): four cards, check, set up, see and improve, each a still Carbon
+   canvas cut at 45° (mirrored) holding one drawn window of the product for Qirfa Bakery, then
+   its title and two lines (`home.how.steps`; the scenes' words in `home.how.scenes`, the
+   numbers on See and Improve from the engine's sample, the earlier values derived from them).
+   One "Sample" mark, in Check's window. Four in a row from 75rem, two by two from 48rem,
+   stacked below. Each scene plays once as its canvas is half in view (a row staggered
+   4 × `--stagger` apart) and once more on hover, keyboard focus or a press of its canvas (a
+   `button` over the drawing), when it is not already playing; done by about 3 s. Under the
+   row a solid line draws once, after Improve first plays: down from under Improve, along the
+   row's foot, up the page's gutter and along 45° onto Check's cut, which takes one Volt line;
+   "Then we check again." under it (the founder's words; no "every month"). On phones the
+   line runs up the gutter from under the last card. The HTML is every finished state and the
+   line is drawn; without scripts or with reduced motion nothing plays. Then a line button
+   and "What we need from you".
 4. **Your business** (`#business`, `BusinessTabs.tsx`): one tab per business type plus
    "Something else"; each panel has an anchor (`#bakery`, `#wholesale`, `#fashion`,
    `#restaurant`, `#salon`, `#home-services`, `#other`), the "Today" list (what a check-up
@@ -102,10 +112,13 @@ ALYR Agent's split), and land each section's content within about 300 px of its 
    state), done by 1.7 s. The HTML is the end state, so without scripts or with reduced motion
    nothing plays and every tile is finished. The one Volt fill is the chosen slot. Then the two
    notes. Nothing is pinned. The six plain rows of 24 Oct and their crops are gone. Then **Price** (offer on: the price, examples by trade, setup,
-   the first month, what every month includes, the agreement), **Trust**, **Questions** (the
+   the first month, what every month includes, the agreement), **Questions** (the
    first `faq.shown` open to read, the rest under "More questions"; a `#q-...` link opens the
    fold), the **closing call**, the **footer** (no clock).
 
+Gone on 25 Oct (the founder, ALY-226): the trust section, "What you can check before you
+start", with its six facts, the on-record slots and the tracking pages in two languages;
+and the rail of four numbered steps under How we work.
 Gone on 24 Oct and not to come back without the founder: the Why ALYR table, "What a check-up
 finds" as its own section, the pinned products room, eyebrows that repeat a heading or a
 header link, numbers on tabs and indexes, FIG captions. Gone on 25 Oct (the content audit,

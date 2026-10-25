@@ -63,7 +63,7 @@ Until a model is in the product (D-012, D-035), nothing says or implies AI, not 
 | "Hosted in Qatar", "your data stays in Qatar", Azure Qatar Central | Production is not provisioned | "Each business's records are kept apart inside the database itself." |
 | "A local team", "our experts", a founder name or photo | One founder working with agents; no founder on the page (D-034) | "A person from ALYR replies." |
 | A response time ("within the hour"), 24/7, support hours, "whenever you message", written Arabic replies | Not agreed | "A person from ALYR reads every message." |
-| "Registered", "licensed", a legal name, a CR number | Not registered (ALY-59) | "ALYR. Built in Qatar." CR shows only from `TRUST_RECORDS` |
+| "Registered", "licensed", a legal name, a CR number | Not registered (ALY-59) | "ALYR. Built in Qatar." No CR anywhere until it is issued; the on-record slots (`TRUST_RECORDS`) left with the trust section on 25 Oct 2026, so showing a CR is a new decision |
 | "Official WhatsApp partner", "Meta Business Partner", "Tech Provider", the WhatsApp logo, WhatsApp green on ALYR's own surfaces | Not a partner | Footer: "ALYR uses the WhatsApp Business Platform. ALYR is not affiliated with, or endorsed by, WhatsApp or Meta." |
 | Clinics, patients, health data, "appointments, not medical records" | Health data needs the lawyer (ALY-51) | Leave clinics out |
 | Parallel bookings, chairs, tables, party sizes, per-stylist calendars | One booking at a time per business (until ALY-27) | "Two customers can never take the same slot." |
