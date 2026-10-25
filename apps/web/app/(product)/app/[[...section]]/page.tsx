@@ -694,6 +694,7 @@ export default function WorkspaceShell() {
           <Mark />
           <span className="sh-brand-text"><b>{shopName}</b><small>{current ? pick(current.label) : "ALYR"}</small></span>
           <span className={`sh-live ${whatsapp?.connected ? "on" : ""}`}><span className="sh-dot" />{whatsapp?.connected ? t.live : t.sim}</span>
+          <button className="sh-lang sh-mlang" onClick={() => chooseLang(lang === "en" ? "ar" : "en")} aria-label={t.langName}>{t.lang}</button>
           <button className="sh-iconbtn" onClick={() => { setPalette(true); setQuery(""); setCursor(0); }} aria-label={t.search}><Icon name="search" /></button>
         </header>
         <div className="sh-scroll">
