@@ -1,10 +1,10 @@
 # ALYR's public profiles: texts to paste and the founder's checklist
 
-Growth lane, ALY-230 (part of ALY-227, search and AI visibility, D-047 in PR #123). Written 25 Oct 2026. **Nothing here is published and no account was created.** The founder creates each account, pastes these texts and approves what goes public (`docs/lanes/growth.md`, "Never").
+Growth lane, ALY-230 (part of ALY-227, search and AI visibility, D-056 in PR #123). Written 25 Oct 2026. **Nothing here is published and no account was created.** The founder creates each account, pastes these texts and approves what goes public (`docs/lanes/growth.md`, "Never").
 
 Search engines and AI assistants decide who "ALYR" is by matching the same name, the same line and the same link across the web. So every profile below carries **the same name, the same line and the same description as the site**, word for word. Change a word here only if the site changes it too.
 
-Sources: the site's own words (`apps/web/app/_site/copy.ts`: the homepage's meta description and the line), `docs/company/introduction.md` (D-043, PR #87), `docs/growth/visibility.md` (D-047, PR #123), `docs/brand.md`.
+Sources: the site's own words (`apps/web/app/_site/copy.ts`: the homepage's meta description and the line), `docs/company/introduction.md` (D-043, PR #87), `docs/growth/visibility.md` (D-056, PR #123), `docs/brand.md`.
 
 ## Rules every profile follows
 
@@ -232,7 +232,7 @@ Do the accounts in this order: LinkedIn and Google first (`introduction.md`, "Tr
 - [ ] **Bing Places:** import from the verified Google profile.
 
 **Last step, once each profile exists and reads like the site**
-- [ ] Add its address to **`NEXT_PUBLIC_ALYR_SAME_AS`** (PR #123, D-047), comma-separated, `https://` only, in the environment the public site is built from: the site's `.env` file on the laptop that runs `scripts/build-site.sh` (see `apps/web/.env.example`), and as a GitHub Actions variable once publishing from GitHub is merged. For example:
+- [ ] Add its address to **`NEXT_PUBLIC_ALYR_SAME_AS`** (PR #123, D-056), comma-separated, `https://` only, in the environment the public site is built from: the site's `.env` file on the laptop that runs `scripts/build-site.sh` (see `apps/web/.env.example`), and as a GitHub Actions variable once publishing from GitHub is merged. For example:
 
   ```
   NEXT_PUBLIC_ALYR_SAME_AS=https://www.linkedin.com/company/alyr-qa,https://www.instagram.com/alyr_qa,https://x.com/alyr_qa,https://www.youtube.com/@alyr_qa,https://www.crunchbase.com/organization/<the address Crunchbase gives>
