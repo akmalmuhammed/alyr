@@ -171,7 +171,7 @@ export default function Start() {
   const way = state?.way ?? chosen?.way ?? "appointments";
   const rail = way === "assisted"
     ? (["account", "business", "assisted", "plan", "golive"] as const)
-    : (["account", "business", "plan", "services", "hours", "try", "golive"] as const);
+    : (["account", "business", "services", "hours", "try", "plan", "golive"] as const);
   const railKey = step === "code" ? "account" : step === "type" || step === "basics" ? "business" : step;
   const current = step === "finished" ? rail.length : Math.max(0, rail.indexOf(railKey as never));
   const shopName = state?.business.name || form.name;
