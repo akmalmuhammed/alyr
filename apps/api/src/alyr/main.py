@@ -5,6 +5,7 @@ from fastapi import Depends, FastAPI
 from alyr.channels.meta import MetaChannel
 from alyr.channels.simulator import SimulatorChannel
 from alyr.config import get_settings
+from alyr.core import origin
 from alyr.core.images import PhotoRefused
 from alyr.core.inbound import INBOUND, InboundHandler
 from alyr.core.jobs import JobRunner
@@ -85,6 +86,7 @@ def create_app() -> FastAPI:
         docs_url="/docs" if local else None, redoc_url=None,
         openapi_url="/openapi.json" if local else None,
     )
+    app.add_middleware(origin.OwnPagesOnly, settings=settings)
     app.state.db = Database(settings.database_url)
     app.state.outbound = Outbound(
         {
@@ -148,7 +150,8 @@ def create_app() -> FastAPI:
 
     @app.get("/health")
     async def health() -> dict:
-        return {"status": "ok", "env": settings.env}
+        # Alive, nothing more: which environment this is stays with us (ALY-118).
+        return {"status": "ok"}
 
     app.include_router(whatsapp_webhook.router)
     # Each module's routes answer only for shops that have switched that module on.

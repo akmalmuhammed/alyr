@@ -65,6 +65,8 @@ cat > out-site/_headers <<'EOF'
   X-Content-Type-Options: nosniff
   Referrer-Policy: strict-origin-when-cross-origin
   X-Frame-Options: DENY
+  Permissions-Policy: camera=(), microphone=(), geolocation=(), payment=()
+  Content-Security-Policy: frame-ancestors 'none'; base-uri 'self'; object-src 'none'
 EOF
 
 # The site for machines: llms.txt, llms-full.txt and a markdown copy of each page (index.md,
