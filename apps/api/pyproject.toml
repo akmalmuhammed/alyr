@@ -10,7 +10,7 @@ dependencies = [
     "asyncpg>=0.30",
     "resvg-py==0.5.0",
     "fonttools>=4.55",
-    "pillow>=12.3,<13",
+    "pillow>=12.3,<14",
     "fpdf2>=2.8.9,<2.9",
     "uharfbuzz>=0.53",
     # A page of a PDF as a picture, for the workspace screens (ALY-146, render/raster.py). Was a
