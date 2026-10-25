@@ -134,6 +134,27 @@ export type FlowSet = {
 type Meta = { title: string; description: string; descriptionNoOffer?: string };
 export type Titled = { title: string; body: string };
 
+/** The words of the four scenes in "How we work with you" (ALY-226, HowCards.tsx). Each
+ * scene's `label` is its sentence for screen readers and `replay` its button's name. The
+ * numbers on See and Improve come from the engine's bakery sample, not from here; these
+ * are the words the product prints, and the one row that comes and goes on See. */
+export type HowScenes = {
+  check: { label: string; replay: string; title: string; rows: { what: string; found: string }[] };
+  setup: {
+    label: string; replay: string; eyebrow: string; title: string; done: string;
+    /** "{n} of 3 steps done.", the workspace's own line, before and after the last step. */
+    sub: string; steps: string[];
+    phone: string; today: string; order: string; who: string; what: string; tag: string;
+  };
+  see: {
+    label: string; replay: string;
+    /** The row in Needs you now that comes, is ticked and goes: one order older than the
+     * 15 minutes the product waits, in the engine's words for one order. */
+    confirm: { words: string; detail: string };
+  };
+  improve: { label: string; replay: string; last: string; now: string };
+};
+
 /** A caption, only for a drawing that needs words (the trust pair, the no-CR foot, the
  * agreement): what it shows. The component adds "Sample" from `fig`. Every other drawing
  * carries the "Sample" mark in its own chrome instead (site audit, 24 Oct 2026). */
@@ -294,14 +315,17 @@ type Home = {
     rows: BusinessRow[];
     other: { id: string; tab: string; title: string; body: string; link: string };
   };
-  /** How we work (ALY-210): the loop of check, set up, see and improve, which starts again
-   * after the fourth step (`again`), and what the owner brings and gets every month. */
+  /** How we work (ALY-210, as four cards with a moving scene since ALY-226): check, set up,
+   * see and improve, each a card with its title and two lines (`steps`), which starts again
+   * after the fourth (`again`, the line under the return line), and what the owner brings. */
   how: {
     eyebrow?: string;
     title: string;
     lead: string;
     steps: Titled[];
     again: string;
+    /** The four scenes drawn in the cards (HowCards.tsx), for the sample bakery. */
+    scenes: HowScenes;
     /** The set-up line, under the price (offer on). */
     note: string;
     /** How little the owner has to bring. */
@@ -1193,22 +1217,61 @@ const en: Copy = {
       steps: [
         {
           title: "We check how your business runs.",
-          body: "We come to your shop and look at how customers reach you, how orders, bookings and credit are kept, and where time and money slip away. You get the list, in plain words.",
+          body: "We come to your shop and look at how orders, bookings and credit are kept. You get the list in plain words.",
         },
         {
           title: "We set up what fixes it.",
-          body: "Only the products the check-up calls for. We load your items, photos and prices in Arabic and English (an Excel sheet is fine), set your hours, give each person a sign-in, and train your team at the counter.",
+          body: "We set up only what the check-up calls for. We load your items, set your hours and train your team at the counter.",
         },
         {
           title: "You see your business on one screen.",
-          body: "ALYR Agent shows what needs you each day, and your week against the same days last week. A short report on WhatsApp every Sunday starts once WhatsApp approves its wording.",
+          body: "ALYR Agent shows what needs you now and what ALYR has done for you. The numbers update as orders come in.",
         },
         {
           title: "We keep improving it with you.",
-          body: "Every suggestion says why. Want something changed? Message us and we change it. Every month we go over your numbers with you, and add what your business has grown into.",
+          body: "ALYR Agent compares your week with the same days last week. We go over it with you and add what your business needs next.",
         },
       ],
-      again: "Then we check again",
+      again: "Then we check again.",
+      scenes: {
+        check: {
+          label: "Sample check-up sheet of a fictional bakery: four things checked at the counter, each ticked with what was found.",
+          replay: "Play the check-up again",
+          title: "Check-up at the counter",
+          rows: [
+            { what: "How customers reach you", found: "43 unread chats on WhatsApp" },
+            { what: "How orders are kept", found: "In long chats, with voice notes and photos" },
+            { what: "Who owes you", found: "Office regulars, never reminded" },
+            { what: "What customers ask most", found: "“Is my order ready?”" },
+          ],
+        },
+        setup: {
+          label: "Sample setup checklist: the last step is ticked and everything is set up. Then the first order, #1001, arrives on the team’s phone.",
+          replay: "Play the setup again",
+          eyebrow: "Setup",
+          title: "Finish setting up",
+          done: "Everything is set up",
+          sub: "{n} of 3 steps done.",
+          steps: ["Add your menu or price list", "Add the services customers can book", "Set your opening hours"],
+          phone: "Orders",
+          today: "Today",
+          order: "#1001",
+          who: "Mariam S.",
+          what: "6 butter croissants",
+          tag: "New",
+        },
+        see: {
+          label: "Sample ALYR Agent screen updating: orders this week go from 49 to 50, an order that needs confirming is confirmed and leaves Needs you now, and the messages ALYR sent for you go from 181 to 183.",
+          replay: "Play the update again",
+          confirm: { words: "order needs confirming", detail: "the oldest for 16 min" },
+        },
+        improve: {
+          label: "Sample ALYR Agent screen: sales this week QAR 8,520 against QAR 7,129 on the same days last week, up 20%.",
+          replay: "Play the week again",
+          last: "Last week",
+          now: "This week",
+        },
+      },
       note: "We set ALYR up with each business ourselves, and agree your go-live date at the visit.",
       need: {
         title: "What we need from you",
@@ -3466,22 +3529,61 @@ const ar: Copy = {
       steps: [
         {
           title: "نفحص كيف يسير عملك.",
-          body: "نأتي إلى محلك وننظر كيف يصلك العملاء، وكيف تُحفظ الطلبات والحجوزات والآجل، وأين يضيع الوقت والمال. وتحصل على القائمة بكلمات واضحة.",
+          body: "نأتي إلى محلك وننظر كيف تُحفظ الطلبات والحجوزات والآجل. وتحصل على القائمة بكلمات واضحة.",
         },
         {
           title: "نجهّز ما يحلّها.",
-          body: "المنتجات التي يحتاجها الفحص فقط. نُدخل أصنافك وصورها وأسعارها بالعربية والإنجليزية (ملف Excel يكفي)، ونضبط ساعات العمل، ونعطي كل شخص حساب دخوله، وندرّب فريقك عند الكاونتر.",
+          body: "نجهّز فقط ما يحتاجه الفحص. نُدخل أصنافك، ونضبط ساعات العمل، وندرّب فريقك عند الكاونتر.",
         },
         {
           title: "ترى عملك في شاشة واحدة.",
-          body: "يعرض ALYR Agent ما يحتاجك كل يوم، وأسبوعك مقارنة بالأيام نفسها من الأسبوع الماضي. ويبدأ تقرير قصير على واتساب كل أحد بعد موافقة واتساب على صياغته.",
+          body: "يعرض ALYR Agent ما يحتاجك الآن وما أنجزته ALYR لك. وتتحدّث الأرقام مع وصول الطلبات.",
         },
         {
           title: "نواصل تحسينه معك.",
-          body: "كل اقتراح يذكر سببه. تريد تعديلاً؟ راسلنا ونعدّله. وكل شهر نراجع أرقامك معك، ونضيف ما كبر إليه عملك.",
+          body: "يقارن ALYR Agent أسبوعك بالأيام نفسها من الأسبوع الماضي. ونراجعه معك ونضيف ما يحتاجه عملك بعد ذلك.",
         },
       ],
-      again: "ثم نفحص من جديد",
+      again: "ثم نفحص من جديد.",
+      scenes: {
+        check: {
+          label: "ورقة فحص توضيحية لمخبز غير حقيقي: أربعة أمور فُحصت عند الكاونتر، ومع كل منها ما وُجد.",
+          replay: "أعد تشغيل مشهد الفحص",
+          title: "الفحص عند الكاونتر",
+          rows: [
+            { what: "كيف يصلك العملاء", found: "43 محادثة غير مقروءة على واتساب" },
+            { what: "كيف تُحفظ الطلبات", found: "في محادثات طويلة، برسائل صوتية وصور" },
+            { what: "من عليه مستحقات لك", found: "عملاء المكاتب، دون أي تذكير" },
+            { what: "أكثر ما يسأل عنه العملاء", found: "«طلبي جاهز؟»" },
+          ],
+        },
+        setup: {
+          label: "قائمة إعداد توضيحية: تُنجز الخطوة الأخيرة ويصبح كل شيء جاهزاً. ثم يصل الطلب الأول، رقم 1001، إلى هاتف الفريق.",
+          replay: "أعد تشغيل مشهد التجهيز",
+          eyebrow: "الإعداد",
+          title: "أكمل الإعداد",
+          done: "كل شيء جاهز",
+          sub: "أنجزت {n} من 3.",
+          steps: ["أضف قائمتك أو أسعارك", "أضف الخدمات المتاحة للحجز", "حدّد ساعات العمل"],
+          phone: "الطلبات",
+          today: "اليوم",
+          order: "#1001",
+          who: "مريم س.",
+          what: "6 كرواسون بالزبدة",
+          tag: "جديد",
+        },
+        see: {
+          label: "شاشة توضيحية من ALYR Agent تتحدّث: الطلبات هذا الأسبوع من 49 إلى 50، ويُؤكَّد طلب كان بحاجة إلى تأكيد فيخرج من «يحتاجك الآن»، والرسائل التي أرسلتها ALYR نيابة عنك من 181 إلى 183.",
+          replay: "أعد تشغيل مشهد التحديث",
+          confirm: { words: "طلب بحاجة إلى تأكيد", detail: "أقدمها منذ 16 د" },
+        },
+        improve: {
+          label: "شاشة توضيحية من ALYR Agent: المبيعات هذا الأسبوع 8,520 ر.ق مقابل 7,129 ر.ق في الأيام نفسها من الأسبوع الماضي، بزيادة 20%.",
+          replay: "أعد تشغيل مشهد الأسبوع",
+          last: "الأسبوع الماضي",
+          now: "هذا الأسبوع",
+        },
+      },
       note: "نجهّز ALYR مع كل منشأة بأنفسنا، ونتفق معك على موعد بدء التشغيل خلال الزيارة.",
       need: {
         title: "ما نحتاجه منك",

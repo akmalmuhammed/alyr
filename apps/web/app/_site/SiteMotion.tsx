@@ -90,6 +90,54 @@ export function SiteMotion() {
     // a tile can wait long after the first 4 s for its hover: keep `motion` for it
     if (tiles.length) window.clearTimeout(window.__alyrMotion);
 
+    // The homepage's "How we work with you" (HowCards.tsx, how.css): each card plays its scene
+    // once when half of its canvas is in view (how.css staggers a row), and once more each
+    // time it is hovered with a fine pointer, reached with the keyboard or pressed, when it is
+    // not already playing; a replay starts at once. When Improve first plays, the row draws
+    // its return line once (`is-looped`). With reduced motion nothing is watched.
+    const how = still ? null : document.querySelector<HTMLElement>("[data-hw]");
+    const howCards = how ? Array.from(how.querySelectorAll<HTMLElement>("[data-hw-card]")) : [];
+    const howView = new IntersectionObserver(
+      (entries) => {
+        for (const entry of entries) {
+          const card = entry.target.closest<HTMLElement>("[data-hw-card]");
+          if (card && entry.intersectionRatio >= 0.5) playCard(card, false);
+        }
+      },
+      { threshold: 0.5 },
+    );
+    function playCard(card: HTMLElement, again: boolean) {
+      // a scene still playing (or waiting on its beat) is left to finish; hover transitions do not count
+      if (card.getAnimations({ subtree: true }).some((a) => "animationName" in a && a.playState === "running")) return;
+      const canvas = card.querySelector(".hw-canvas");
+      if (canvas) howView.unobserve(canvas);
+      card.classList.remove("is-in", "is-again");
+      void card.offsetWidth; // restart its animations from their first frame
+      card.classList.add("is-in");
+      if (again) card.classList.add("is-again");
+      if (card.dataset.hwCard === "improve") how?.classList.add("is-looped");
+    }
+    const howOff: (() => void)[] = [];
+    for (const card of howCards) {
+      const canvas = card.querySelector<HTMLElement>(".hw-canvas");
+      const button = card.querySelector<HTMLButtonElement>("[data-hw-play]");
+      if (!canvas || !button) continue;
+      howView.observe(canvas);
+      const onEnter = (event: PointerEvent) => { if (event.pointerType === "mouse") playCard(card, true); };
+      const onFocus = () => { if (button.matches(":focus-visible")) playCard(card, true); };
+      const onPress = () => playCard(card, true);
+      canvas.addEventListener("pointerenter", onEnter);
+      button.addEventListener("focus", onFocus);
+      button.addEventListener("click", onPress);
+      howOff.push(() => {
+        canvas.removeEventListener("pointerenter", onEnter);
+        button.removeEventListener("focus", onFocus);
+        button.removeEventListener("click", onPress);
+      });
+    }
+    // a card can wait long after the first 4 s to be reached: keep `motion` for it
+    if (howCards.length) window.clearTimeout(window.__alyrMotion);
+
     // The language link keeps the section being read.
     const sections = Array.from(document.querySelectorAll<HTMLElement>("main section[id]"));
     const onLanguage = (event: MouseEvent) => {
@@ -203,6 +251,8 @@ export function SiteMotion() {
       enough.disconnect();
       past.disconnect();
       tileView.disconnect();
+      howView.disconnect();
+      howOff.forEach((off) => off());
       for (const tile of tiles) {
         tile.removeEventListener("focus", onTile);
         tile.removeEventListener("pointerenter", onTile);

@@ -1,0 +1,288 @@
+/* "How we work with you" as four cards (HowCards.tsx, ALY-226; the founder approved the Framer
+   prototype, docs/framer-review/04-triptych-prototype-log.md). Each card is a still Carbon
+   canvas cut at 45° at its top inline-start corner (mirrored), holding one drawn window of the
+   product for the fictional Qirfa Bakery, then its title and two lines. Under the row, a line
+   runs back from Improve to Check: down from under Improve, along the foot of the row, up the
+   page's gutter and, along 45°, onto Check's cut, which takes one Volt tick. "Then we check
+   again." sits under it.
+   Four in a row from 75rem, two by two from 48rem, stacked below. The HTML is every scene's
+   finished state and the line is drawn: start states exist only as each animation's first
+   frame (it fills backwards), under `.motion`, once SiteMotion adds `is-in` to a card (in
+   view, staggered across the row, and again on hover, focus or a tap) or `is-looped` to the
+   row (when Improve first plays). Nothing loops; with reduced motion nothing plays. */
+
+.hw {
+  --hw-cut: var(--cut-plate-sm);
+  --hw-cols: 4;
+  --hw-canvas: 21.25rem;
+  /* between two cards' starts in a row, and when the return line starts: Improve's start,
+     its 26 beats, and 10 more */
+  --hw-card: calc(4 * var(--stagger));
+  --hw-loop: calc(3 * var(--hw-card) + 36 * var(--stagger));
+  /* the return line: its stroke, its 45° corners, the middle of the gutter it runs up, the
+     centre of the last column it starts under, and the height of the line of words under it */
+  --hw-w: 1.5px;
+  --hw-c: .75rem;
+  --hw-x0: calc(var(--gutter) / -2);
+  --hw-colw: calc((100% - (var(--hw-cols) - 1) * var(--col-gap)) / var(--hw-cols));
+  --hw-xi: calc((var(--hw-cols) - 1) * (var(--hw-colw) + var(--col-gap)) + var(--hw-colw) / 2);
+  --hw-note: 2.5rem;
+  position: relative; margin-top: var(--space-5);
+}
+
+.hw-cards { display: grid; grid-template-columns: repeat(var(--hw-cols), minmax(0, 1fr)); gap: var(--space-5) var(--col-gap); }
+.hw-card { --hw-d: calc(var(--k, 0) * var(--hw-card)); display: flex; flex-direction: column; min-width: 0; }
+/* played again by the visitor: at once, without the row's stagger */
+.hw-card.is-again { --hw-d: 0ms; }
+/* the canvas is drawn first; the title comes first for a screen reader */
+.hw-canvas { order: -1; }
+.hw-title { margin-top: var(--space-4); font-size: var(--h3); font-weight: var(--weight-heading); line-height: var(--leading-heading); letter-spacing: var(--tracking-heading); text-wrap: balance; }
+[lang="ar"] .hw-title { letter-spacing: 0; line-height: var(--leading-arabic-heading); }
+.hw-body { margin-top: var(--space-2); color: var(--text-muted); text-wrap: pretty; }
+
+/* ------------------------------------------------------------------ a canvas */
+.hw-canvas {
+  position: relative; block-size: var(--hw-canvas); overflow: clip; container-type: inline-size;
+  background: var(--band); color: var(--on-band);
+  clip-path: polygon(var(--hw-cut) 0, 100% 0, 100% 100%, 0 100%, 0 var(--hw-cut));
+}
+[dir="rtl"] .hw-canvas { clip-path: polygon(0 0, calc(100% - var(--hw-cut)) 0, 100% var(--hw-cut), 100% 100%, 0 100%); }
+/* where the canvas meets the page in dark, a hairline (the band's edge), and along the cut */
+.hw-canvas::after { content: ""; position: absolute; inset: 0; box-shadow: inset 0 0 0 1px var(--band-edge); pointer-events: none; }
+.hw-canvas::before {
+  content: ""; position: absolute; top: var(--hw-cut); inset-inline-start: 0; z-index: var(--z-raised);
+  inline-size: calc(var(--hw-cut) * 1.4142); block-size: 1px; background: var(--band-edge);
+  transform-origin: 0 0; rotate: -45deg; pointer-events: none;
+}
+[dir="rtl"] .hw-canvas::before { transform-origin: 100% 0; rotate: 45deg; }
+.hw-scene { position: absolute; inset: 0; display: grid; justify-items: center; align-items: safe center; padding: var(--space-4); }
+@container (max-width: 17.5rem) { .hw-scene { padding: var(--space-3); } }
+/* the whole canvas is one button that plays the scene again */
+.hw-play {
+  position: absolute; inset: 0; z-index: var(--z-raised); inline-size: 100%; block-size: 100%;
+  padding: 0; border: 0; background: transparent; cursor: pointer; -webkit-tap-highlight-color: transparent;
+}
+.hw-play:focus-visible { outline: var(--focus-width) solid var(--focus-on-band); outline-offset: calc(-1 * (var(--space-1) + var(--focus-width))); }
+/* Check's corner: the Volt line along its cut, where the return line arrives */
+.hw-tick {
+  position: absolute; top: var(--hw-cut); inset-inline-start: 0; z-index: var(--z-raised);
+  inline-size: calc(var(--hw-cut) * 1.4142); block-size: var(--rule-strong); background: var(--volt);
+  transform-origin: 0 0; rotate: -45deg; pointer-events: none;
+}
+[dir="rtl"] .hw-tick { transform-origin: 100% 0; rotate: 45deg; }
+
+/* ------------------------------------------------- a drawn window of the product */
+.hw-win {
+  --n: var(--cut-notch);
+  position: relative; inline-size: min(100%, 18.75rem); min-width: 0;
+  background: var(--window); color: var(--text); box-shadow: inset 0 0 0 1px var(--window-line);
+  clip-path: polygon(0 0, calc(100% - var(--n)) 0, 100% var(--n), 100% 100%, 0 100%);
+  font-size: var(--ui-small); line-height: 1.35; text-align: start;
+}
+[dir="rtl"] .hw-win { clip-path: polygon(var(--n) 0, 100% 0, 100% 100%, 0 100%, 0 var(--n)); line-height: 1.55; }
+/* the hairline along the notch: an inset edge does not follow a clip-path */
+.hw-win::before {
+  content: ""; position: absolute; top: 0; inset-inline-start: calc(100% - var(--n)); z-index: var(--z-raised);
+  inline-size: calc(var(--n) * 1.4142); block-size: 1px; background: var(--window-line);
+  transform-origin: 0 0; rotate: 45deg;
+}
+[dir="rtl"] .hw-win::before { transform-origin: 100% 0; rotate: -45deg; }
+.hw-win .aw-bar { min-height: 2.25rem; padding-inline: var(--space-3) var(--space-5); gap: var(--space-2); font-size: var(--ui-caption); }
+.hw-bar, .hw-k {
+  font-family: var(--mono); font-size: var(--ui-micro); font-weight: var(--weight-medium); line-height: 1.4;
+  letter-spacing: var(--tracking-label); text-transform: uppercase; color: var(--text-muted);
+}
+[dir="rtl"] :is(.hw-bar, .hw-k) { font-family: var(--arabic); font-size: var(--ui-caption); letter-spacing: 0; text-transform: none; }
+.hw-bar { display: flex; justify-content: space-between; gap: var(--space-2); padding: var(--space-3) var(--space-5) 0 var(--space-3); }
+[dir="rtl"] .hw-bar { padding: var(--space-3) var(--space-3) 0 var(--space-5); }
+.hw-bar > bdi { font-family: var(--mono); font-size: var(--ui-micro); white-space: nowrap; }
+.hw-bar > span { font-variant-numeric: tabular-nums; white-space: nowrap; }
+.hw-pad { display: grid; align-content: start; gap: var(--space-2); padding: var(--space-3); }
+.hw-h { font-size: var(--ui-body); font-weight: var(--weight-semibold); line-height: 1.25; }
+.hw-words { display: grid; gap: 2px; min-width: 0; }
+.hw-words small { color: var(--text-muted); font-size: var(--ui-caption); }
+.hw-rows { border-top: 1px solid var(--hair-strong); }
+.hw-rows > li { display: grid; grid-template-columns: 1rem minmax(0, 1fr); gap: .625rem; align-items: start; padding-block: .4375rem; }
+.hw-rows > li + li { border-top: 1px solid var(--hair); }
+
+/* a box the product ticks: Volt with its tick once its step is true */
+.hw-box { position: relative; display: grid; inline-size: 1rem; block-size: 1rem; margin-top: 1px; box-shadow: inset 0 0 0 1.5px var(--line-strong); }
+.hw-fill { position: absolute; inset: 0; display: grid; place-items: center; background: var(--volt); color: var(--on-volt); }
+.hw-fill svg { inline-size: .75rem; block-size: .75rem; fill: none; stroke: currentColor; stroke-width: 2.4; stroke-linecap: square; stroke-linejoin: miter; }
+
+/* a value that changes: the values stack in one cell; the earlier ones rest hidden */
+.hw-swap { display: inline-grid; justify-items: start; min-width: 0; }
+.hw-swap > * { grid-area: 1 / 1; }
+.hw-was { opacity: 0; }
+
+/* 2. set up: the checklist at the top, the team's phone rising at the foot, cut by the canvas */
+.hw-setup .hw-scene { align-items: start; padding-bottom: 0; }
+.hw-set { position: relative; inline-size: min(100%, 18.75rem); block-size: 100%; }
+.hw-list { inline-size: 88%; }
+.hw-list .hw-swap.hw-h { white-space: nowrap; }
+.hw-list > .hw-pad > .hw-swap:not(.hw-h) { color: var(--text-muted); font-size: var(--ui-caption); }
+.hw-progress { display: block; block-size: 3px; margin-block: var(--space-1); overflow: hidden; background: var(--hair-strong); }
+.hw-progress > span { display: block; block-size: 100%; background: var(--volt); transform-origin: 0 50%; }
+[dir="rtl"] .hw-progress > span { transform-origin: 100% 50%; }
+.hw-steps > li { padding-block: .375rem; font-size: var(--ui-caption); }
+.hw-phone {
+  --cut: 1.25rem; --bezel: 5px; --t: 12;
+  position: absolute; inset-inline-end: 0; top: calc(100% - 6.5rem);
+  inline-size: 11.5rem; block-size: 11rem; border-radius: var(--radius-phone);
+}
+.hw-orders { display: grid; align-content: start; gap: var(--space-2); padding: var(--space-3) .75rem; color: var(--d-ink); font-size: var(--ui-caption); line-height: 1.35; text-align: start; }
+.hw-orders-top { display: flex; align-items: baseline; justify-content: space-between; gap: var(--space-2); padding-inline-end: var(--space-2); }
+.hw-orders-top b { font-size: var(--ui-body-sm); font-weight: var(--weight-semibold); }
+.hw-order { position: relative; display: grid; gap: 2px; margin-inline: -.75rem; padding: .5rem .75rem; border-block: 1px solid var(--d-hair); }
+.hw-order > :not(.hw-wash) { position: relative; }
+.hw-wash { position: absolute; inset: 0; background: var(--volt-wash); }
+.hw-order-top { display: flex; align-items: flex-start; justify-content: space-between; gap: var(--space-1); }
+.hw-order-top b { font-weight: var(--weight-semibold); font-variant-numeric: tabular-nums; }
+.hw-order small { color: var(--d-ink-2); font-size: var(--ui-micro); }
+.hw-tag { color: var(--volt-ink); font-family: var(--mono); font-size: var(--ui-micro); font-weight: var(--weight-semibold); letter-spacing: var(--tracking-label); text-transform: uppercase; white-space: nowrap; }
+[dir="rtl"] .hw-tag { font-family: var(--arabic); letter-spacing: 0; text-transform: none; }
+
+/* 3. see: ALYR Agent's one screen; its live row sits out of the flow, folded shut at rest */
+.hw-agent { --hw-row: 3rem; }
+[dir="rtl"] .hw-agent { --hw-row: 3.375rem; }
+.hw-kpi { display: flex; align-items: baseline; justify-content: space-between; gap: var(--space-3); color: var(--text-muted); font-size: var(--ui-caption); }
+.hw-kpi > b { color: var(--text); font-size: var(--ui-heading); font-weight: var(--weight-semibold); line-height: 1; font-variant-numeric: tabular-nums; }
+.hw-agent .hw-k { margin-top: var(--space-1); }
+.hw-needs { position: relative; border-top: 1px solid var(--text); }
+.hw-needs > li > b, .hw-fold > b { font-size: var(--ui-title); font-weight: var(--weight-semibold); line-height: 1; font-variant-numeric: tabular-nums; }
+.hw-needs > li:not(.hw-live), .hw-fold { display: grid; grid-template-columns: 1.75rem minmax(0, 1fr) auto; gap: .625rem; align-items: center; min-block-size: var(--hw-row); padding-block: var(--space-1); }
+/* the row that comes and goes is exactly the room the rows under it make for it */
+.hw-fold { block-size: var(--hw-row); }
+.hw-live { position: absolute; top: 100%; inset-inline: 0; }
+.hw-fold { border-top: 1px solid var(--hair); background: var(--window); clip-path: polygon(100% 0, 100% 0, 100% 0); }
+[dir="rtl"] .hw-fold { clip-path: polygon(0 0, 0 0, 0 0); }
+.hw-done { display: grid; gap: var(--space-1); margin-top: var(--space-1); }
+.hw-ledger { border-top: 1px solid var(--hair-strong); }
+.hw-ledger > li { display: grid; grid-template-columns: 2.25rem minmax(0, 1fr) auto; gap: .625rem; align-items: center; min-block-size: 2.25rem; }
+.hw-ledger > li + li { border-top: 1px solid var(--hair); }
+.hw-ledger > li > b { font-size: var(--ui-title-sm); font-weight: var(--weight-semibold); font-variant-numeric: tabular-nums; }
+.hw-ledger > li > span { color: var(--text-muted); font-size: var(--ui-caption); }
+
+/* 4. improve: this week's bar against last week's to the same moment (time runs right to left
+   in Arabic, which the row's direction does by itself) */
+.hw-sentence { font-size: var(--ui-small); font-weight: var(--weight-medium); line-height: 1.35; }
+.hw-up { color: var(--volt-ink); font-size: var(--ui-small); font-weight: var(--weight-semibold); }
+.hw-bars { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--space-4); align-items: end; block-size: 6.5rem; border-bottom: 1px solid var(--line-strong); }
+.hw-col { display: grid; align-content: end; gap: .375rem; block-size: 100%; min-width: 0; }
+.hw-col > small { font-size: var(--ui-caption); font-variant-numeric: tabular-nums; white-space: nowrap; }
+.hw-col:last-child > small { font-weight: var(--weight-semibold); }
+.hw-col > i { display: block; }
+.hw-was-bar { block-size: calc(4.5rem * var(--last, 1)); background: var(--surface-subtle); box-shadow: inset 0 1px 0 var(--line-strong); }
+.hw-now-bar { block-size: 4.5rem; background: var(--volt); transform-origin: 50% 100%; }
+.hw-legend { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--space-4); color: var(--text-muted); font-size: var(--ui-caption); }
+.hw-legend > span:last-child { color: var(--text); font-weight: var(--weight-medium); }
+.hw-cap { color: var(--text-muted); font-size: var(--ui-micro); }
+
+/* ----------------------------------------------------------- the return line */
+.hw-loop { position: absolute; pointer-events: none; }
+.hw-loop > i { position: absolute; display: block; background: var(--line-strong); }
+/* down from under Improve, a 45° corner, along the foot of the row, a 45° corner */
+.hw-loop-h {
+  inset-inline-start: calc(var(--hw-x0) - var(--hw-w) / 2);
+  inline-size: calc(var(--hw-xi) - var(--hw-x0) + var(--hw-w));
+  bottom: calc(var(--hw-note) - var(--hw-w) / 2); block-size: var(--space-4);
+}
+.hw-l1 { top: 0; inset-inline-end: 0; inline-size: var(--hw-w); block-size: calc(100% - var(--hw-w) / 2 - var(--hw-c)); }
+.hw-loop-h::after {
+  content: ""; position: absolute; bottom: 0; inset-inline: calc(var(--hw-w) / 2 + var(--hw-c));
+  block-size: var(--hw-w); background: var(--line-strong);
+}
+.hw-c1, .hw-c2 { top: calc(100% - var(--hw-c) - var(--hw-w)); inline-size: calc(var(--hw-c) * 1.4142 + var(--hw-w) / 2); block-size: var(--hw-w); }
+.hw-c1 { inset-inline-end: calc(var(--hw-w) / 2); transform-origin: 100% 50%; rotate: -45deg; }
+.hw-c2 { inset-inline-start: calc(var(--hw-w) / 2); transform-origin: 0 50%; rotate: 45deg; }
+[dir="rtl"] .hw-c1 { transform-origin: 0 50%; rotate: 45deg; }
+[dir="rtl"] .hw-c2 { transform-origin: 100% 50%; rotate: -45deg; }
+/* up the gutter, then along 45° onto Check's cut */
+.hw-loop-v {
+  inset-inline-start: calc(var(--hw-x0) - var(--hw-w) / 2);
+  inline-size: calc(var(--hw-w) / 2 - var(--hw-x0));
+  top: var(--hw-cut); bottom: calc(var(--hw-note) + var(--hw-c));
+}
+.hw-l3 { top: calc(var(--gutter) / 2); bottom: 0; inset-inline-start: 0; inline-size: var(--hw-w); }
+.hw-c3 {
+  top: calc(var(--gutter) / 2 - var(--hw-w) / 2); inset-inline-start: calc(var(--hw-w) / 2);
+  inline-size: calc(var(--gutter) / 2 * 1.4142); block-size: var(--hw-w); transform-origin: 0 50%; rotate: -45deg;
+}
+[dir="rtl"] .hw-c3 { transform-origin: 100% 50%; rotate: 45deg; }
+/* the words under it, between the gutter and Improve */
+.hw-again {
+  position: relative; display: flex; justify-content: center; align-items: end;
+  block-size: var(--hw-note); margin-top: var(--space-5);
+  margin-inline-start: var(--hw-x0); inline-size: calc(var(--hw-xi) - var(--hw-x0));
+  font-family: var(--mono); font-size: var(--fs-label); font-weight: var(--weight-medium); line-height: 1.25;
+  letter-spacing: var(--tracking-label); text-transform: uppercase; color: var(--text); white-space: nowrap;
+}
+[lang="ar"] .hw-again { font-family: var(--arabic); font-size: var(--fs-note); letter-spacing: 0; text-transform: none; line-height: 1.5; }
+
+/* ------------------------------------------------------------------ narrower */
+@media (max-width: 74.99rem) {
+  .hw { --hw-cols: 2; --hw-canvas: 22.5rem; }
+}
+/* a phone: stacked, Check first; the return line runs up the gutter from under Improve, and
+   the cards no longer wait for each other */
+@media (max-width: 47.99rem) {
+  .hw { --hw-cols: 1; --hw-canvas: 23.75rem; --hw-card: 0ms; --hw-xi: var(--space-4); }
+  .hw-cards { row-gap: var(--space-6); }
+  .hw-again { justify-content: start; inline-size: auto; margin-inline-start: 0; }
+}
+
+/* ------------------------------------------------------------------ the moments */
+@keyframes hw-arrive { from { opacity: 0; translate: calc(var(--dir) * var(--travel) * .7071) calc(var(--travel) * -.7071); } }
+@keyframes hw-leave { from { opacity: 1; translate: 0 0; } to { opacity: 0; translate: calc(var(--dir) * var(--travel) * -.7071) calc(var(--travel) * .7071); } }
+@keyframes hw-rise { from { opacity: 0; translate: calc(var(--dir) * var(--travel) * -1.4142) calc(var(--travel) * 1.4142); } }
+@keyframes hw-in { from { opacity: 0; } }
+@keyframes hw-pop { from { opacity: 0; scale: .5; } }
+@keyframes hw-tickdraw { from { clip-path: inset(0 100% 0 0); } to { clip-path: inset(0); } }
+@keyframes hw-fill-x { from { scale: .6667 1; } }
+@keyframes hw-fill-y { from { scale: 1 0; } }
+@keyframes hw-room { to { translate: 0 var(--hw-row); } }
+@keyframes hw-unroom { to { transform: translateY(calc(-1 * var(--hw-row))); } }
+@keyframes hw-shut { from { clip-path: polygon(100% 0, calc(100% - 1600px) 0, 100% 1600px); } to { clip-path: polygon(100% 0, 100% 0, 100% 0); } }
+@keyframes hw-shut-rtl { from { clip-path: polygon(0 0, 1600px 0, 0 1600px); } to { clip-path: polygon(0 0, 0 0, 0 0); } }
+@keyframes hw-draw-h { from { clip-path: inset(-.5rem -.5rem -.5rem 100%); } to { clip-path: inset(-.5rem); } }
+@keyframes hw-draw-h-rtl { from { clip-path: inset(-.5rem 100% -.5rem -.5rem); } to { clip-path: inset(-.5rem); } }
+@keyframes hw-draw-v { from { clip-path: inset(100% -.5rem -.5rem -.5rem); } to { clip-path: inset(-.5rem); } }
+@keyframes hw-draw { from { scale: 0 1; } }
+
+@media (prefers-reduced-motion: no-preference) {
+  /* each step on its beat: the card's place in the row, then `--t` beats */
+  .motion .hw-card.is-in :is(.hw-arrive, .hw-in, .hw-was, .hw-box:not(.is-on) .hw-fill, .hw-box:not(.is-on) svg,
+    .hw-progress > span, .hw-phone, .hw-wash, .hw-now-bar, .hw-live, .hw-fold) {
+    animation-duration: var(--dur-3); animation-timing-function: var(--ease); animation-fill-mode: both;
+    animation-delay: calc(var(--hw-d) + var(--t, 0) * var(--stagger));
+  }
+  .motion .hw-card.is-in :is(.hw-arrive, .hw-in, .hw-live) { animation-name: hw-arrive; }
+  .motion .hw-card.is-in .hw-was { animation-name: hw-leave; animation-duration: var(--dur-2); }
+  .motion .hw-card.is-in .hw-box:not(.is-on) .hw-fill { animation-name: hw-pop; animation-duration: var(--dur-2); }
+  .motion .hw-card.is-in .hw-box:not(.is-on) svg { animation-name: hw-tickdraw; animation-duration: var(--dur-2); animation-delay: calc(var(--hw-d) + (var(--t, 0) + 2) * var(--stagger)); }
+  .motion .hw-card.is-in .hw-progress > span { animation-name: hw-fill-x; }
+  .motion .hw-card.is-in .hw-phone { animation-name: hw-rise; animation-duration: var(--dur-4); }
+  .motion .hw-card.is-in .hw-wash { animation-name: hw-in; }
+  .motion .hw-card.is-in .hw-now-bar { animation-name: hw-fill-y; animation-duration: var(--dur-4); }
+  /* See: the live row makes room as it arrives, is ticked, folds shut along 45° from its
+     inline-end top corner (as the product closes a card) and gives its room back */
+  .motion .hw-card.is-in .hw-fold { animation-name: hw-shut; animation-duration: var(--dur-2); }
+  .motion[dir="rtl"] .hw-card.is-in .hw-fold { animation-name: hw-shut-rtl; }
+  .motion .hw-card.is-in .hw-done {
+    animation: hw-room var(--dur-3) var(--ease) both, hw-unroom var(--dur-3) var(--ease) both;
+    animation-delay: calc(var(--hw-d) + 5 * var(--stagger)), calc(var(--hw-d) + 43 * var(--stagger));
+  }
+
+  /* the return line, once, when Improve first plays: along the foot, then up the gutter and
+     onto Check's cut; its words; then the Volt line along the cut */
+  .motion .hw.is-looped .hw-loop-h { animation: hw-draw-h var(--dur-3) var(--ease) both; animation-delay: var(--hw-loop); }
+  .motion[dir="rtl"] .hw.is-looped .hw-loop-h { animation-name: hw-draw-h-rtl; }
+  .motion .hw.is-looped .hw-loop-v { animation: hw-draw-v var(--dur-3) var(--ease) both; animation-delay: calc(var(--hw-loop) + var(--dur-3)); }
+  .motion .hw.is-looped .hw-again > span { animation: hw-in var(--dur-3) var(--ease) both; animation-delay: calc(var(--hw-loop) + var(--dur-2)); }
+  .motion .hw.is-looped .hw-tick { animation: hw-draw var(--dur-3) var(--ease) both; animation-delay: calc(var(--hw-loop) + 2 * var(--dur-3)); }
+}
+/* a fine pointer over a canvas moves its window 2 px along 45° */
+@media (hover: hover) and (pointer: fine) and (prefers-reduced-motion: no-preference) {
+  .hw-scene > * { transition: translate var(--dur-2) var(--ease); }
+  .hw-canvas:hover .hw-scene > * { translate: calc(var(--dir) * 2px) -2px; }
+}

@@ -9,6 +9,7 @@ import { Phone, SampleMark, TickPath } from "./Frames";
 import { FlowDiagram } from "./FlowDiagram";
 import { FoldSplit } from "./FoldSplit";
 import { HomeMotion } from "./HomeMotion";
+import { HowCards } from "./HowCards";
 import { SAMPLE_ORDER, SAMPLES } from "./samples";
 import { SuiteFrame } from "./SuiteFrame";
 import { contactHref, Shell } from "./Shell";
@@ -387,9 +388,9 @@ function See({ locale }: { locale: Locale }) {
 
 // ---------------------------------------------------------------- how we work
 /**
- * Check, set up, see, improve: four steps on a rail that fills as the visitor scrolls, and
- * a dashed arc from the last step back to the first once it is full, because the work
- * starts again. Without motion the arc is simply drawn.
+ * Check, set up, see, improve: four cards, each a still canvas with one moving scene from
+ * the product, and a line back from the last to the first, because the work starts again
+ * (HowCards.tsx, ALY-226). Without motion every scene is finished and the line is drawn.
  */
 function How({ locale }: { locale: Locale }) {
   const w = copy[locale].home.how;
@@ -403,27 +404,7 @@ function How({ locale }: { locale: Locale }) {
             <p className="lead">{rich(w.lead)}</p>
           </div>
         </div>
-        <div className="how-rail" data-rail>
-          <span className="how-line" aria-hidden="true"><span data-rail-fill /></span>
-          <ol className="how-steps">
-            {w.steps.map((step, index) => (
-              <li key={step.title} className="how-step" data-rail-step>
-                <span className="how-node" aria-hidden="true"><bdi>{index + 1}</bdi></span>
-                <h3>{rich(step.title)}</h3>
-                <p>{rich(step.body)}</p>
-              </li>
-            ))}
-          </ol>
-          {/* the way back to step 1: an arc over the steps on wide screens, a row under them on phones */}
-          <p className="how-loop">
-            <span className="how-loop-k"><bdi>{w.again}</bdi></span>
-            <span className="how-loop-head" aria-hidden="true" />
-          </p>
-          <p className="how-again">
-            <Icon name="arrow-right" className="ico" />
-            <span>{w.again}</span>
-          </p>
-        </div>
+        <HowCards locale={locale} />
         <div className="how-foot">
           <div className="how-next">
             <ContactButton locale={locale} variant="line" label={copy[locale].home.final.action} />
