@@ -7,7 +7,7 @@ import { Phone, SampleMark, TickPath } from "./Frames";
 import { SAMPLES } from "./samples";
 import { rich } from "./Text";
 import "./drawings.css";
-import "./how.css";
+// how.css comes with home.css (one stylesheet for the homepage)
 
 // "How we work with you" as four cards (ALY-226; the founder approved the Framer prototype,
 // docs/framer-review/04-triptych-prototype-log.md): check, set up, see and improve, each a

@@ -1,3 +1,7 @@
+/* "How we work with you" (HowCards.tsx) is part of this stylesheet, so the homepage asks for
+   no extra render-blocking file (ALY-226). */
+@import "./how.css";
+
 /* ALYR homepage: the suite, led by ALYR Agent (docs/agent-dashboard/07-site-brief.md).
    Still a working drawing of an owner's business: Paper, a visible construction grid,
    hairline rules, a mono caption on every drawing, real ALYR screens in the product's own
