@@ -65,55 +65,8 @@ main .ag { font-weight: 400; }
 [lang="ar"] .af-line { line-height: 1.7; }
 .af-line bdi { white-space: nowrap; }
 
-/* The chip and the pause button share a row; the button's 44 px target reaches above and
-   below the chip's height, so the row is as tall as the chip with or without it. */
-.af-head { display: flex; align-items: center; justify-content: space-between; gap: .75rem; min-width: 0; }
-.af-pause {
-  display: inline-grid; place-items: center; flex: none; width: 2.75rem; height: 2.75rem; margin-block: -.375rem;
-  margin-inline-end: -.75rem; padding: 0; border: 0; border-radius: 0; background: transparent; color: var(--concrete); cursor: pointer;
-}
-.af-pause:hover { color: var(--on-band); }
-.af-pause:focus-visible { outline: var(--focus-width) solid var(--focus-on-band); outline-offset: calc(var(--focus-offset) * -1); }
-/* drawn from the start so it never moves the row, shown only while the sample moves */
-.afig:not([data-live]) .af-pause { visibility: hidden; }
-
-/* ---------------------------------------------- the live sample (motion.md exception) */
-/* The settled list keeps its place, unseen (still read by screen readers); the live rows
-   are drawn over it, each placed with a transform by AgentFigure, so nothing moves the page. */
-.af-view { position: relative; }
-.afig[data-live] .af-list:not(.af-live) { opacity: 0; }
-.af-live { position: absolute; inset: 0; display: block; border: 0; }
-.af-live > .af-item { position: absolute; top: 0; left: 0; right: auto; }
-/* in a column, each row also draws the rule under it, so the last one shown ends on a rule */
-.af-live[data-column] > .af-item { box-shadow: 0 1px 0 var(--dark-line); }
-.af-live > .af-item[data-out] { opacity: 0; }
-@media (prefers-reduced-motion: no-preference) {
-  .af-live > .af-item { transition: translate var(--dur-3) var(--ease), opacity var(--dur-3) var(--ease); }
-  .af-live > .af-item.is-new { animation: af-enter var(--dur-3) var(--ease) both; }
-  .af-live > .af-item.is-new .af-tick { animation: af-pop var(--dur-3) var(--spring) both 80ms; }
-}
-@keyframes af-enter { from { opacity: 0; transform: translateY(calc(var(--travel) * -.5)); } }
-@keyframes af-pop { from { scale: 0; } }
-
-/* Back to the opening (`data-reset`): what changed fades out, the opening takes its place
-   unseen and fades in; the labels and the windows stay. */
-/* (written out, not in one :is(), so each selector keys on its own class and the page's style
-   work stays as small as before) */
-.afig[data-live] .af-live, .afig[data-live] .ag-summary, .afig[data-live] .ag-eyebrow,
-.afig[data-live] .ag-roll, .afig[data-live] .ag-need small, .afig[data-live] .ag-caption,
-.afig[data-live] .ag-day.is-today .ag-bar, .afig[data-live] .ag-booked {
-  transition: opacity var(--dur-3) var(--ease);
-}
-.afig[data-reset="out"] .af-live, .afig[data-reset="out"] .ag-summary, .afig[data-reset="out"] .ag-eyebrow,
-.afig[data-reset="out"] .ag-roll, .afig[data-reset="out"] .ag-need small, .afig[data-reset="out"] .ag-caption,
-.afig[data-reset="out"] .ag-day.is-today .ag-bar, .afig[data-reset="out"] .ag-booked {
-  opacity: 0;
-}
-
-/* The hero's entrance (home.css): the feed arrives with its chip, after the window. */
-@media (prefers-reduced-motion: no-preference) {
-  .motion .afig-hero .af-view { animation: hp-fade var(--dur-3) var(--ease) both 620ms; }
-}
+/* The status chip, the pause button and the live rows: liveStyle.ts, inline in the page's
+   head, so this render-blocking file stays as small as before (D-058). */
 
 /* -------------------------------------------------- hero: the Carbon plate */
 /* clipped sideways, so the plate's 45-degree entrance never widens the page on a phone */

@@ -63,7 +63,8 @@ export type AgentDashboardProps = {
    * (a short rise, transforms and opacity only, and one Volt mark under a count that went up,
    * fading back); "hush", the numbers change without rolling (the figure going back to its
    * opening while it fades). Drawn the same way on the server, so nothing moves at hydration.
-   * The workspace leaves it off. */
+   * Its styles come with the site's figure (`_site/liveStyle.ts`), not agent.css; the
+   * workspace leaves it off. */
   live?: "roll" | "hush";
   /** With `live`: the other sentences the summary will show, drawn unseen in its place, so the
    * header always keeps the height of the longest and nothing under it moves when the words

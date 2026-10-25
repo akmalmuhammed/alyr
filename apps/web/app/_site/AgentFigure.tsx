@@ -26,6 +26,7 @@ import type { AgentView, Rich as RichParts } from "../_agent/types";
 import type { AgentFigure as FigureCopy, FeedEvent, SampleKey } from "./copy";
 import { SampleMark } from "./Frames";
 import { flagLine, liveView } from "./live";
+import { LIVE_CSS } from "./liveStyle";
 import { SAMPLE_EVENT } from "./ReportSwitch";
 import { rich } from "./Text";
 import "./drawings.css";
@@ -316,6 +317,8 @@ export function AgentFigure({
   return (
     <figure ref={root} id={id} className={`afig afig-${variant}`} aria-label={label} data-feed={feed || undefined}
       data-live={live || undefined} data-reset={reset ?? undefined}>
+      {/* The live sample's styles, inline in <head> (liveStyle.ts says why). */}
+      {feed && <style href="alyr-agent-live" precedence="default">{LIVE_CSS}</style>}
       {/* First, before any of the sample's numbers: what this is, for screen readers, search
           and assistants (site audit 03, A1). The eye reads the mark in the title bar. */}
       <figcaption className="sr-only">{s.fictional}</figcaption>
