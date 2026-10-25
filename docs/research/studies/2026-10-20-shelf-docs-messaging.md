@@ -28,7 +28,7 @@ What words (English final, Arabic draft) should `/shelf` and `/docs` use, and wh
 - D-046 (21 Oct, founder 20 Oct): the two pages, the six-product order, Payroll off the site, "Set up for you", Shelf and Agent "With every product", the offer-on pricing change. D-046 lists this file's [F] lines (routes, the tax line under "Not yet", whether Docs can be a first product) as open for the founder.
 
 ## What changed since, and conflicts
-- Homepage lines here (suite body and rows, "By business" rows, how-it-works step 2, the `which-product` FAQ) were written for the D-037 homepage. D-047 and D-048 rebuilt and folded the homepage (now "The tech team your business never had."), so check `copy.ts` before reusing any of them.
+- Homepage lines here (suite body and rows, "By business" rows, how-it-works step 2, the `which-product` FAQ) were written for the D-037 homepage. D-056 and D-048 rebuilt and folded the homepage (now "The tech team your business never had."), so check `copy.ts` before reusing any of them.
 - "FIG 0N" captions on figures: replaced by a single "Sample" mark (founder, 24 Oct, brand.md).
 - `03-visuals.md` (same folder, same day) draws different sample details: an item 214 "Saffron cake", receipt RC-0042 for QAR 169 paid in cash, a Monday date for the Shelf figure. This file uses items 104 to 131, RC-0042 for QAR 64, and Saturday 17 Oct. The build has to pick one set.
 - It updates `agent-dashboard/06-messaging.md` (17 Oct) on the stale `/agent` and `/accounts` lines and on Payroll and "Early access".

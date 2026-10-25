@@ -19,7 +19,7 @@ export type ContactState = "whatsapp" | "email" | "pending";
 export const CONTACT_STATE: ContactState = WHATSAPP_NUMBER ? "whatsapp" : CONTACT_EMAIL ? "email" : "pending";
 
 /** ALYR's own public profiles (LinkedIn, Instagram, X, YouTube, Crunchbase and so on), as a
- * comma-separated list of https addresses, for the structured data's `sameAs` (D-047). Empty
+ * comma-separated list of https addresses, for the structured data's `sameAs` (D-056). Empty
  * until each account exists and carries the same name and description as the site: a link
  * to a profile that does not exist, or says something else, tells search engines the wrong
  * thing about who ALYR is. */
@@ -29,7 +29,7 @@ export const SAME_AS: readonly string[] = (process.env.NEXT_PUBLIC_ALYR_SAME_AS 
   .filter((value) => /^https:\/\/[^\s]+$/.test(value));
 
 /** Ownership checks for Google Search Console and Bing Webmaster Tools, for when they are
- * done with an HTML tag rather than a DNS record (D-047). Empty: no tag. */
+ * done with an HTML tag rather than a DNS record (D-056). Empty: no tag. */
 export const SITE_VERIFICATION = {
   google: process.env.NEXT_PUBLIC_GOOGLE_SITE_VERIFICATION ?? "",
   bing: process.env.NEXT_PUBLIC_BING_SITE_VERIFICATION ?? "",

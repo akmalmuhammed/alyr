@@ -29,7 +29,7 @@ Which companies grew a product for small businesses through content, word of mou
 ## What changed since, and conflicts
 - The cases and numbers still stand. The search budget left some cases out (Ryanair, Gong, Rippling, Toast and Square referral terms, Booksy, Zoko, Gallabox, Tamara).
 - Its lesson 2 suggests "we set it up for you in 24 hours". That conflicts with the held-back "live in 48 hours" style of promise (D-025) and with product truth: there is no time promise on the public site. D-046's "Set up for you" is the wording in use.
-- Its lesson 17 says to be open about "what ALYR's AI does". That conflicts with D-035, D-047 and D-048: there is no AI in the product and nothing says or implies AI.
+- Its lesson 17 says to be open about "what ALYR's AI does". That conflicts with D-035, D-056 and D-048: there is no AI in the product and nothing says or implies AI.
 - It names clinics among target buyers. D-037 says no clinics. D-043 widens the target to every owner-run business.
 - Its lesson 14 (founder LinkedIn, the 100-day rule) conflicts with D-043 (on branch `origin/company-introduction`, not merged): the brand speaks alone.
 

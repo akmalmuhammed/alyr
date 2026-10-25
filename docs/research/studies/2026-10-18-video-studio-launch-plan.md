@@ -27,7 +27,7 @@ How can ALYR make launch films in code with Claude, what makes them good rather 
 - No D-number. The CR gate matches D-034.
 
 ## What changed since, and conflicts
-- The hero line "Your business just got an agent." (D-037) was replaced by D-047, then by D-048 ("The tech team your business never had."). The 24 Oct film direction (`films/DIRECTION.md`) replaces the launch kit with a 90 s hero "The other job" and six product films.
+- The hero line "Your business just got an agent." (D-037) was replaced by D-056, then by D-048 ("The tech team your business never had."). The 24 Oct film direction (`films/DIRECTION.md`) replaces the launch kit with a 90 s hero "The other job" and six product films.
 - "Which look" is settled: Carbon and Volt (D-040).
 - The founder note conflicts with D-043 (brand speaks, no founder name or face).
 - Showing Payroll on a dashed line and things as "coming" conflicts with D-039 and D-046: Payroll is not shown until built, and nothing "coming" is shown.

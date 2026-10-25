@@ -28,7 +28,7 @@ How should ALYR grow at launch through social media, content and other growth pl
 
 ## What changed since, and conflicts
 - **Founder-led content conflicts with D-043** (19 Oct, accepted by the founder, on branch `origin/company-introduction`, not merged): the brand speaks alone, with no founder name or photo on the site, deck or profiles, and people on visits are "the ALYR team". The plan's founder LinkedIn and X as channel 2, the "On the road" series, founder-to-camera videos and its recommendation that the founder's face and voice lead (section 14, item 6) all go against this.
-- **Positioning moved on.** The plan uses "We do the tech. You run the business." and the suite with "Payroll coming". D-047 (22 Oct) led the homepage with the owner's problem ("Stop losing orders in the chat."). D-048 (23 Oct, updated 24 Oct) now says ALYR is the small business's tech team ("The tech team your business never had."), with one action, "Book a check-up". D-046 (21 Oct) added ALYR Shelf and ALYR Docs and took Payroll off the site.
+- **Positioning moved on.** The plan uses "We do the tech. You run the business." and the suite with "Payroll coming". D-056 (22 Oct) led the homepage with the owner's problem ("Stop losing orders in the chat."). D-048 (23 Oct, updated 24 Oct) now says ALYR is the small business's tech team ("The tech team your business never had."), with one action, "Book a check-up". D-046 (21 Oct) added ALYR Shelf and ALYR Docs and took Payroll off the site.
 - **Words and marks.** D-048 changes "rule" to "reason/why" on the homepage, so the "RULE ·" lines in the message table and hooks need the new wording where they copy the homepage. The founder replaced FIG captions with a single "Sample" mark (brand.md, 24 Oct), so the "FIG. N" series and FIG caption design need renaming.
 - **Look still holds.** The Carbon and Volt look matches D-040, which retired the playbook's cobalt look. The section 13 table agrees.
 - **Prices still off.** D-034 keeps prices off public channels until the CR, and D-051 (23 Oct) says clients pay before products open. The plan's "no price, no offer, no sign up" before the CR still matches. Its "price set per client" line is now "from QAR 449 a month, setup from QAR 1,500" (D-034), still not public.
@@ -36,4 +36,4 @@ How should ALYR grow at launch through social media, content and other growth pl
 
 ## Use it for
 - Read the full source before planning ALYR's social channels, posting rhythm, content pillars or growth plays beyond social. The channel table, the pre-publish checklist and the lawyer questions are still useful.
-- Before reusing it, take out the founder-led parts (D-043) and update the positioning and marks to D-046, D-047, D-048 and brand.md.
+- Before reusing it, take out the founder-led parts (D-043) and update the positioning and marks to D-046, D-056, D-048 and brand.md.

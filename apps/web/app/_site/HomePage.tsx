@@ -20,7 +20,7 @@ import "./room.css";
 
 /**
  * The ALYR homepage: ALYR as the technology team an owner-run business never had (ALY-210,
- * D-048, after D-047, folded on 24 Oct 2026). The hero says so, with why in one line (a big
+ * D-048, after D-056, folded on 24 Oct 2026). The hero says so, with why in one line (a big
  * company has consultants and an IT team; you have us), beside the real dashboard and the
  * feed of what ALYR did; how we work, a loop of check, set up, see and improve; the
  * visitor's own business, as tabs, whose "Today" list is what a check-up finds; one order

@@ -27,7 +27,7 @@ How does the homepage change if ALYR presents itself as the small business's tec
 ## What changed since, and conflicts
 - D-048's 24 Oct update folded the page further: "What a check-up finds" became each business tab's "Today" list; the "Why ALYR" table became one line in the hero lead; the products are six plain rows, no longer pinned; "Book a check-up" is the action on every page. The new order is hero, how we work, your business, one order, ALYR Agent, products, price, trust, questions.
 - Still open from D-048: the check-up's price, keeping the monthly look at the numbers, the Arabic review (ALY-66). The films doc records founder answers (check-up free, keep the monthly review) that are not yet in docs/decisions.md.
-- Replaces D-047's hero ("Stop losing orders in the chat.").
+- Replaces D-056's hero ("Stop losing orders in the chat.").
 
 ## Use it for
 - The reasoning and the word-by-word English and Arabic behind the live homepage, and the visual-audit numbers as a baseline. Read D-048's update alongside it, since the page order changed after this source.

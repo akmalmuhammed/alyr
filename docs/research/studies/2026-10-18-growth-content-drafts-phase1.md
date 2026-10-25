@@ -25,9 +25,9 @@ What would ALYR post first, where and when, if the growth plan were approved? Th
 
 ## What changed since, and conflicts
 - **Founder-led posts conflict with D-043** (19 Oct, accepted by the founder, on branch `origin/company-introduction`, not merged): the brand speaks alone, no founder name or photo on the site, deck or profiles, and people on visits are "the ALYR team". The founder LinkedIn and X batch, the founder-to-camera videos (V3, V7), "On the road" (V5) and the founder's headline "Building ALYR in Doha" go against this. To reuse them, they would need to be rewritten in the brand's voice or kept to the founder's private network.
-- **Positioning and words.** The drafts predate D-047 ("Stop losing orders in the chat.") and D-048 ("The tech team your business never had.", "Book a check-up", "rule" becomes "reason/why" on the homepage). The "RULE ·" lines and "FIG" series need checking against D-048 and the founder's 24 Oct "Sample" mark that replaced FIG captions (brand.md).
-- **AI wording.** L3 and X3 say "our agent has no AI" and "We'll add smarter things when they're reliable". D-047 and D-048 say the agent is shown, never claimed, with no AI words. A post about AI, even denying it, needs checking against that rule.
+- **Positioning and words.** The drafts predate D-056 ("Stop losing orders in the chat.") and D-048 ("The tech team your business never had.", "Book a check-up", "rule" becomes "reason/why" on the homepage). The "RULE ·" lines and "FIG" series need checking against D-048 and the founder's 24 Oct "Sample" mark that replaced FIG captions (brand.md).
+- **AI wording.** L3 and X3 say "our agent has no AI" and "We'll add smarter things when they're reliable". D-056 and D-048 say the agent is shown, never claimed, with no AI words. A post about AI, even denying it, needs checking against that rule.
 - **Still true:** no prices before the CR (D-034), the Carbon and Volt look (D-040), sample businesses labelled, and no "live in 48 hours" or "keep your number" (D-025).
 
 ## Use it for
-- Read the full drafts when the Growth lane writes the first real posts or video scripts. The calendar structure, series and script timings can be reused. The voice and positioning must be brought up to D-043, D-047 and D-048 first.
+- Read the full drafts when the Growth lane writes the first real posts or video scripts. The calendar structure, series and script timings can be reused. The voice and positioning must be brought up to D-043, D-056 and D-048 first.
