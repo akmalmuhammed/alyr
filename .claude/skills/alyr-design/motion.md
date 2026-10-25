@@ -51,7 +51,8 @@ curves, which the workspace's `.sh` still calls `--ease` and `--spring`).
 
 1. **Plays once.** An arrival plays the first time it is seen, never again on scroll back,
    never on a poll or a data refresh. No infinite animation: no pulsing dots, no breathing
-   rings, no marquee. A status dot lights once, with one ring. Allowed to keep moving:
+   rings, no marquee. A status dot lights once, with one ring. The one named exception is the
+   live Agent figure (below). Allowed to keep moving:
    explanatory figures that play only while on screen, can be paused and stay still with
    reduced motion (the `/chat` demo and how-it-works flow), and what follows the scroll
    (the progress rule). A moment may wait for the visitor where there is a fine pointer
@@ -81,6 +82,40 @@ curves, which the workspace's `.sh` still calls `--ease` and `--spring`).
    get whole sentences (`aria: "auto"`).
 8. **Every diagonal mirrors in Arabic** (`--dir`, and the `[dir="rtl"]` clip-path).
 9. Total motion over 5 s that starts by itself needs a pause control; otherwise end sooner.
+
+## The one exception: the live Agent figure
+
+The ALYR Agent figure with its "ALYR · Running" feed (the homepage hero and `/agent`'s
+opening; `_site/AgentFigure.tsx`, `_site/live.ts`) **moves continuously**, as the workspace
+does (the founder, 25 Oct 2026, D-058). It is the only thing on the site allowed to, and only
+on these conditions. Anything else that wants to keep moving needs the founder's word.
+
+1. **A pause control** (WCAG 2.2.2): a small, quiet button beside the status chip, its
+   accessible name in `copy.ts` in both languages (`agent.pause`, `agent.play`). Drawn from
+   the first paint so it never moves the row; shown only while the sample moves.
+2. **It stops when it should not run:** when the figure leaves the screen (an
+   IntersectionObserver), when the tab is hidden (`visibilitychange`), and with reduced
+   motion, chosen or changed while on the page. Reduced motion shows the settled picture.
+   Without scripts the HTML is the full settled state; motion starts only after the load
+   event, so the first paint is that state too.
+3. **Calm pacing:** one event every 3 to 5 s (4 s; 5 s on a phone, where the motion stays
+   lighter). Volt only on what just became true (one rule under a count that went up), fading
+   back after. No flashing, no pulse, no loop of a single element.
+4. **Transforms and opacity only, CLS 0:** the feed's settled list keeps its place (unseen,
+   still read by screen readers) and the live rows are placed over it with `translate`; a
+   changed figure rolls inside its own inline box (tabular digits keep the width; a word
+   holding a figure stays unbroken); a bar grows by `scale`; the summary keeps the height of
+   its longest sentence (`summaryRoom`). Measure layout shifts over a whole cycle, both
+   languages, 1440 and 390. Its styles are inline in the head (`_site/liveStyle.ts`), not in
+   `agent.css` or `agentfig.css`: those block rendering, and a couple of hundred bytes more in
+   them cost the homepage about 150 ms of simulated LCP.
+5. **Every event is one the product performs**, in its own words, and **the numbers stay
+   true to each other**: `live.ts` works the dashboard out from the engine's sample (counts,
+   sales and today's bar, the percentages as `view.py` rounds them, waits, the clock, booked
+   days), and the summary sentence always matches the numbers. Payment reminders are not
+   automatic, so the script never sends one: an overdue balance is "Needs a look".
+6. **The cycle ends without a jump:** what changed fades out, the opening (16:20) takes its
+   place unseen, fades in, and the script starts again. The "Sample" mark stays throughout.
 
 ## The stack (site)
 

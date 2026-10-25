@@ -41,7 +41,10 @@ words under `home` in `copy.ts`):
    keep improving it with you. It is the work a large company has an IT team for."), "Book a
    check-up" and "See how we work" (to `#how`) with the note on the end side; the facts row
    ("We come to your shop, in Qatar"); the real ALYR Agent dashboard, marked "Sample" in its
-   window bar, and the live feed on the Carbon plate. The dashboard is drawn with
+   window bar, and the live feed on the Carbon plate, which keeps moving: one event every
+   few seconds with the dashboard's numbers moving with it, a pause button, and stops off
+   screen, in a hidden tab and with reduced motion (D-058, `alyr-design/motion.md`, "The one
+   exception"). The dashboard is drawn with
    `ruleLines={false}` and its cards titled "Suggestions"; the feed's flags say "Needs a look"
    with the dashboard's own line and no rule line (founder, 25 Oct 2026). The product's own
    screens keep their rule lines.

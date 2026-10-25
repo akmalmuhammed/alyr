@@ -205,12 +205,36 @@ export type FeedEvent = {
   adds: ("sent" | "booking_reminders")[];
 };
 
+/**
+ * One thing ALYR does after the dashboard's moment (16:20), in the figure's continuous
+ * sample (the founder, 25 Oct 2026; `alyr-design/motion.md`, "The live Agent figure"). Its
+ * time moves the dashboard's clock, and what it changes moves the dashboard's own numbers,
+ * so the two always agree (`live.ts` works them out from the engine's sample). Only events
+ * the product really performs: the product's own replies, confirmations and reminders, and
+ * a dashboard row that needs a look.
+ */
+export type LiveEvent = FeedEvent & {
+  /** An order placed through the order page, for this many riyals: "Orders this week" and
+   * the week's sales go up, and today's bar with them. */
+  order?: number;
+  /** A booking made for this day of the week ("Thu" is today): booked for the next 7 days
+   * and new bookings go up, and that day's booked part with them. */
+  booking?: "Thu" | "Fri" | "Sat";
+  /** A "Needs you now" row's count goes up (an order new for over 15 minutes) or down (that
+   * order confirmed). `summary`: the dashboard sentence that says so while it is changed,
+   * in the engine's words for that count. */
+  needs?: { key: string; by: 1 | -1; summary?: string };
+};
+
 export type AgentFigure = {
   /** The window's path after the shop's name: the workspace home. */
   path: string;
   switchLabel: string;
   status: string;
   feedLabel: string;
+  /** The figure's pause control, which stops the continuous sample (WCAG 2.2.2). */
+  pause: string;
+  play: string;
   flagged: string;
   /** The dashboard's "Suggestions" title on the site, in place of the workspace's
    * "Suggestions, by rule": the public site shows no rule lines (founder, 25 Oct 2026). */
@@ -224,6 +248,8 @@ export type AgentFigure = {
      * any of its numbers (site audit 03, A1): a fictional business, numbers not ALYR's. */
     fictional: string;
     feed: FeedEvent[];
+    /** What happens next, played in turn after the feed, then from the start again. */
+    live: LiveEvent[];
   }>;
 };
 
@@ -676,6 +702,8 @@ const en: Copy = {
     switchLabel: "Sample business",
     status: "ALYR · Running",
     feedLabel: "What ALYR did this afternoon",
+    pause: "Pause the sample",
+    play: "Play the sample",
     flagged: "Needs a look",
     suggestions: "Suggestions",
     samples: {
@@ -692,6 +720,15 @@ const en: Copy = {
           { at: "16:13", title: "Order page sent", line: "Sara M. wrote “order”. The link went back at once.", adds: ["sent"] },
           { at: "16:18", title: "Needs a look", flag: { from: "suggestion", key: "overdue" }, adds: [] },
         ],
+        live: [
+          { at: "16:22", title: "Welcome menu sent", line: "To a new customer: “Welcome to Qirfa Bakery. How can we help?”", adds: ["sent"] },
+          { at: "16:23", title: "Order page sent", line: "Reem K. wrote “order”. The link went back at once.", adds: ["sent"] },
+          { at: "16:27", title: "Order received", line: "Order #1442 from Reem K., QAR\u00a0145, with its tracking page", adds: ["sent"], order: 145 },
+          { at: "16:30", title: "Booking reminder sent", line: "Cake tasting, today at 18:30\u00a0·\u00a0Maha J.", adds: ["sent", "booking_reminders"] },
+          { at: "16:43", title: "Needs a look", flag: { from: "needs", key: "unconfirmed" }, adds: [], needs: { key: "unconfirmed", by: 1, summary: "3 orders need confirming." } },
+          { at: "16:45", title: "Ready message sent", line: "Order #1439 for Khalid A., ready for collection", adds: ["sent"] },
+          { at: "16:48", title: "Order confirmation sent", line: "Order #1442 from Reem K., with its tracking page", adds: ["sent"], needs: { key: "unconfirmed", by: -1 } },
+        ],
       },
       salon: {
         tab: "Salon",
@@ -706,6 +743,14 @@ const en: Copy = {
           { at: "16:07", title: "Booking page sent", line: "Rania H. tapped “Book a visit”. The link went back at once.", adds: ["sent"] },
           { at: "16:16", title: "Needs a look", flag: { from: "suggestion", key: "repeat_no_show" }, adds: [] },
         ],
+        live: [
+          { at: "16:22", title: "Booking page sent", line: "Noura S. wrote “book”. The link went back at once.", adds: ["sent"] },
+          { at: "16:25", title: "Booking confirmation sent", line: "Blow-dry, today at 18:45\u00a0·\u00a0Noura S.", adds: ["sent"], booking: "Thu" },
+          { at: "16:31", title: "Welcome menu sent", line: "To a new customer: “Welcome to Dafira Salon. How can we help?”", adds: ["sent"] },
+          { at: "16:36", title: "Booking details sent", line: "Layla A. wrote “my booking”: her visit, with a Cancel button.", adds: ["sent"] },
+          { at: "16:40", title: "Needs a look", flag: { from: "suggestion", key: "quiet_regulars" }, adds: [] },
+          { at: "16:45", title: "Booking reminder sent", line: "Blow-dry, today at 18:45\u00a0·\u00a0Noura S.", adds: ["sent", "booking_reminders"] },
+        ],
       },
       homeservices: {
         tab: "Home services",
@@ -719,6 +764,13 @@ const en: Copy = {
           { at: "16:06", title: "Booking page sent", line: "Omar K. wrote “book”. The link went back at once.", adds: ["sent"] },
           { at: "16:12", title: "Booking details sent", line: "Ali T. wrote “my booking”: his visit, with a Cancel button.", adds: ["sent"] },
           { at: "16:17", title: "Needs a look", flag: { from: "suggestion", key: "overdue" }, adds: [] },
+        ],
+        live: [
+          { at: "16:23", title: "Welcome menu sent", line: "To a new customer: “Welcome to Zilal Cooling. How can we help?”", adds: ["sent"] },
+          { at: "16:24", title: "Booking page sent", line: "Fahad M. wrote “book”. The link went back at once.", adds: ["sent"] },
+          { at: "16:29", title: "Booking confirmation sent", line: "AC service, split unit, Saturday at 10:00\u00a0·\u00a0Fahad M.", adds: ["sent"], booking: "Sat" },
+          { at: "16:35", title: "Booking details sent", line: "Saad R. wrote “my booking”: his visit, with a Cancel button.", adds: ["sent"] },
+          { at: "16:41", title: "Needs a look", flag: { from: "suggestion", key: "late_cancellations" }, adds: [] },
         ],
       },
     },
@@ -2929,6 +2981,8 @@ const ar: Copy = {
     switchLabel: "نشاط توضيحي",
     status: "ALYR · تعمل",
     feedLabel: "ما أنجزته ALYR عصر اليوم",
+    pause: "إيقاف حركة المثال",
+    play: "تشغيل حركة المثال",
     flagged: "يحتاج نظرة",
     suggestions: "اقتراحات",
     samples: {
@@ -2945,6 +2999,15 @@ const ar: Copy = {
           { at: "16:13", title: "أُرسلت صفحة الطلب", line: "كتبت سارة م. «طلب»، فوصلها الرابط فوراً.", adds: ["sent"] },
           { at: "16:18", title: "يحتاج نظرة", flag: { from: "suggestion", key: "overdue" }, adds: [] },
         ],
+        live: [
+          { at: "16:22", title: "أُرسلت قائمة الترحيب", line: "لعميلة جديدة: «أهلاً بك في مخبز قرفة. كيف نقدر نساعدك؟»", adds: ["sent"] },
+          { at: "16:23", title: "أُرسلت صفحة الطلب", line: "كتبت ريم ك. «طلب»، فوصلها الرابط فوراً.", adds: ["sent"] },
+          { at: "16:27", title: "وصل طلب جديد", line: "الطلب رقم 1442 من ريم ك.، 145\u00a0ر.ق، مع صفحة تتبّعه", adds: ["sent"], order: 145 },
+          { at: "16:30", title: "أُرسل تذكير بموعد", line: "تذوّق الكيك، اليوم الساعة 18:30\u00a0·\u00a0مها ج.", adds: ["sent", "booking_reminders"] },
+          { at: "16:43", title: "يحتاج نظرة", flag: { from: "needs", key: "unconfirmed" }, adds: [], needs: { key: "unconfirmed", by: 1, summary: "3 طلبات بحاجة إلى تأكيد." } },
+          { at: "16:45", title: "أُرسل إشعار الجاهزية", line: "الطلب رقم 1439 لخالد ع. جاهز للاستلام", adds: ["sent"] },
+          { at: "16:48", title: "أُرسل تأكيد الطلب", line: "الطلب رقم 1442 من ريم ك.، مع صفحة تتبّعه", adds: ["sent"], needs: { key: "unconfirmed", by: -1 } },
+        ],
       },
       salon: {
         tab: "صالون",
@@ -2959,6 +3022,14 @@ const ar: Copy = {
           { at: "16:07", title: "أُرسلت صفحة الحجز", line: "ضغطت رانيا ح. «احجز موعداً»، فوصلها الرابط فوراً.", adds: ["sent"] },
           { at: "16:16", title: "يحتاج نظرة", flag: { from: "suggestion", key: "repeat_no_show" }, adds: [] },
         ],
+        live: [
+          { at: "16:22", title: "أُرسلت صفحة الحجز", line: "كتبت نورة س. «حجز»، فوصلها الرابط فوراً.", adds: ["sent"] },
+          { at: "16:25", title: "أُرسل تأكيد الحجز", line: "تسشوار، اليوم الساعة 18:45\u00a0·\u00a0نورة س.", adds: ["sent"], booking: "Thu" },
+          { at: "16:31", title: "أُرسلت قائمة الترحيب", line: "لعميلة جديدة: «أهلاً بك في صالون ضفيرة. كيف نقدر نخدمك؟»", adds: ["sent"] },
+          { at: "16:36", title: "أُرسلت تفاصيل الحجز", line: "كتبت ليلى ع. «حجزي»، فوصلها موعدها مع زر للإلغاء.", adds: ["sent"] },
+          { at: "16:40", title: "يحتاج نظرة", flag: { from: "suggestion", key: "quiet_regulars" }, adds: [] },
+          { at: "16:45", title: "أُرسل تذكير بموعد", line: "تسشوار، اليوم الساعة 18:45\u00a0·\u00a0نورة س.", adds: ["sent", "booking_reminders"] },
+        ],
       },
       homeservices: {
         tab: "خدمات منزلية",
@@ -2972,6 +3043,13 @@ const ar: Copy = {
           { at: "16:06", title: "أُرسلت صفحة الحجز", line: "كتب عمر ك. «حجز»، فوصله الرابط فوراً.", adds: ["sent"] },
           { at: "16:12", title: "أُرسلت تفاصيل الحجز", line: "كتب علي ت. «حجزي»، فوصله موعده مع زر للإلغاء.", adds: ["sent"] },
           { at: "16:17", title: "يحتاج نظرة", flag: { from: "suggestion", key: "overdue" }, adds: [] },
+        ],
+        live: [
+          { at: "16:23", title: "أُرسلت قائمة الترحيب", line: "لعميل جديد: «أهلاً بك في ظلال للتكييف. كيف نقدر نساعدك؟»", adds: ["sent"] },
+          { at: "16:24", title: "أُرسلت صفحة الحجز", line: "كتب فهد م. «حجز»، فوصله الرابط فوراً.", adds: ["sent"] },
+          { at: "16:29", title: "أُرسل تأكيد الحجز", line: "صيانة مكيف سبليت، السبت الساعة 10:00\u00a0·\u00a0فهد م.", adds: ["sent"], booking: "Sat" },
+          { at: "16:35", title: "أُرسلت تفاصيل الحجز", line: "كتب سعد ر. «حجزي»، فوصله موعده مع زر للإلغاء.", adds: ["sent"] },
+          { at: "16:41", title: "يحتاج نظرة", flag: { from: "suggestion", key: "late_cancellations" }, adds: [] },
         ],
       },
     },
