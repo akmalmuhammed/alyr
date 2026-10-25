@@ -46,6 +46,7 @@ Status: **Accepted** (in force), **Proposed** (waiting for the founder), **Super
 | D-039 | The Catalog (items, stock, photos) is built complete before go-live; photos on Cloudflare R2; free now, charged by usage later | Accepted |
 | D-042 | Documents (receipts, invoices and the rest) are one engine: gapless numbers, issued paper nobody can change, Arabic first, a PDF drawn by fpdf2 and kept in the database; free now, metered later | Accepted |
 | D-046 | The public site adds ALYR Shelf (the Catalog) and ALYR Docs (Documents), each with its own page; Payroll leaves the site until it is built; every product's state is "Set up for you" | Accepted |
+| D-056 | Search and AI visibility: be found, described correctly and contacted in Qatar, in search and AI assistants; profiles and verification switch on from settings | Accepted |
 
 ---
 
@@ -1107,3 +1108,22 @@ There is no separate Pay product: payment links stay a module of Chat and Bookin
 **Chosen over** Fly or Railway for the API (another vendor, no gain), the laptop and tunnel (down when the laptop is off), and waiting for Azure credits (no portal for the first clients).
 
 **Revisit when** Azure credits arrive (ALY-55, ALY-63), or the first paying client who has not agreed to data outside Qatar.
+
+## D-056 · Search and AI visibility
+**Date** 25 Oct 2026 · **Status** Accepted (founder: "improve and implement", 25 Oct) · Linear ALY-227 · Plan and audit: `docs/growth/visibility.md`
+
+**Decision.**
+- The goal is to be found, described correctly and contacted when an owner in Qatar, or someone asking for them, searches or asks an AI assistant, in Arabic and English.
+- Global keywords are not a target; Qatar comes first, then the GCC.
+- Authority (other people mentioning ALYR) is the biggest gap, so most of the work is off the site: profiles, Google Business Profile, forums, partners, press and original data, in that order.
+
+**What changed in code.**
+- The Organization's structured data gains a contact point: the email, and WhatsApp once its number is set.
+- It also gains `sameAs` links to ALYR's profiles, listed in `NEXT_PUBLIC_ALYR_SAME_AS` and added only once each profile exists.
+- Google Search Console and Bing verification tags can be set from `NEXT_PUBLIC_GOOGLE_SITE_VERIFICATION` and `NEXT_PUBLIC_BING_SITE_VERIFICATION`.
+
+Nothing claims more than the page, as before.
+
+**Kept.**
+- `llms.txt` and the markdown copies stay, although Google ignores `llms.txt`: they cost nothing and agents read them.
+- No fake reviews, no undisclosed posts, no AI claims about the product, no prices before the CR.
