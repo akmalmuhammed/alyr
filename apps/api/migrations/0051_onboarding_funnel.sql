@@ -6,13 +6,10 @@
 -- Only businesses the readiness check has looked at are counted (they have onboarding steps),
 -- so the demo shops and shops made before the engine do not skew it.
 
--- The function reads every business's record, so staff may read it: when the owner of the
--- tables does not bypass row-level security (as in production), the forced tenant policy would
--- otherwise show it nothing. Reading only; nothing here lets the app write across businesses.
-create policy onboarding_events_back_office on onboarding_events
-    for select using (is_back_office());
-create policy onboarding_steps_back_office on onboarding_steps
-    for select using (is_back_office());
+-- Like `admin_onboarding()` (migration 0046), the function reads every business's record as the
+-- table owner. It adds no policy to the onboarding tables: a policy that let staff see all
+-- businesses would also show every business's rows to the queries that rely on the tenant policy
+-- to pick their own, in a back-office connection scoped to one business.
 
 create function admin_onboarding_funnel() returns jsonb
 language plpgsql security definer set search_path = public as $$

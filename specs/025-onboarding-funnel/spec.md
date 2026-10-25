@@ -29,10 +29,10 @@ says "3 of 8" beside the percentage for that reason.
 `admin_onboarding_funnel()` (migration 0051, staff only) counts from `onboarding_events`,
 `onboarding_steps` and `tenants`; `GET /api/admin/onboarding/funnel` shapes it
 (`core/readiness.funnel`). Steps are taken from the record as written, so a step added or removed by a
-later change to the flow shows up without touching this. Migration 0051 also lets staff read
-the two onboarding tables across businesses (select only, `is_back_office()`), as other back-office
-tables already do: without it, a database owner that does not bypass row-level security would show
-the function nothing.
+later change to the flow shows up without touching this. Like `admin_onboarding()`, the function
+reads every business's record as the table owner, and migration 0051 adds no policy to the onboarding
+tables: a policy that let staff see all businesses would also show every business's rows to queries
+that rely on the tenant policy, in a back-office connection scoped to one business.
 
 No customer data is read or shown: step names, times, counts.
 
@@ -40,8 +40,7 @@ No customer data is read or shown: step names, times, counts.
 
 `tests/test_onboarding_funnel.py`: a new business is counted as started with its steps reached; a
 business ALYR helped is counted apart; a business gone quiet and the hours to a step are right; only
-staff may read it. Not checked: the view in a browser; the function as a database owner that bypasses
-nothing (the policy is there for it; the migration suite runs as a superuser owner).
+staff may read it. Not checked: the view in a browser.
 
 ## Not here
 
