@@ -46,7 +46,7 @@ Status: **Accepted** (in force), **Proposed** (waiting for the founder), **Super
 | D-039 | The Catalog (items, stock, photos) is built complete before go-live; photos on Cloudflare R2; free now, charged by usage later | Accepted |
 | D-042 | Documents (receipts, invoices and the rest) are one engine: gapless numbers, issued paper nobody can change, Arabic first, a PDF drawn by fpdf2 and kept in the database; free now, metered later | Accepted |
 | D-046 | The public site adds ALYR Shelf (the Catalog) and ALYR Docs (Documents), each with its own page; Payroll leaves the site until it is built; every product's state is "Set up for you" | Accepted |
-| D-047 | Search and AI visibility: be found, described correctly and contacted in Qatar, in search and AI assistants; profiles and verification switch on from settings | Accepted |
+| D-056 | Search and AI visibility: be found, described correctly and contacted in Qatar, in search and AI assistants; profiles and verification switch on from settings | Accepted |
 
 ---
 
@@ -1109,7 +1109,7 @@ There is no separate Pay product: payment links stay a module of Chat and Bookin
 
 **Revisit when** Azure credits arrive (ALY-55, ALY-63), or the first paying client who has not agreed to data outside Qatar.
 
-## D-047 · Search and AI visibility
+## D-056 · Search and AI visibility
 **Date** 25 Oct 2026 · **Status** Accepted (founder: "improve and implement", 25 Oct) · Linear ALY-227 · Plan and audit: `docs/growth/visibility.md`
 
 **Decision.**

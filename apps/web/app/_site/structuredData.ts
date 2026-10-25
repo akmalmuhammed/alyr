@@ -6,7 +6,7 @@
 // - no `offers`, `price`, `aggregateRating` or `review`: prices are off (D-034) and there are
 //   no customers to rate anything;
 // - no `legalName`, `taxID`, `address` or `foundingDate` before the CR exists, and `sameAs`
-//   only lists profiles named in NEXT_PUBLIC_ALYR_SAME_AS, once each exists (D-047);
+//   only lists profiles named in NEXT_PUBLIC_ALYR_SAME_AS, once each exists (D-056);
 // - the contact point is the contact the page itself offers: WhatsApp once the number is set,
 //   and the email address;
 // - nothing says a product is available: a product is described by its page's own meta
