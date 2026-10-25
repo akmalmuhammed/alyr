@@ -1,0 +1,103 @@
+/* The sector pages (/for/...) and the owner guides (/guides), ALY-232 and ALY-233.
+   Light first: an audience page opens on the canvas, where a product page opens on Carbon,
+   so the two read as different kinds of page. Tokens only; logical properties; no rule of
+   its own for dark (the tokens turn down). The shared pieces come from kit.css: the tag,
+   the works rows, the questions. */
+
+/* ------------------------------------------------------------ breadcrumbs */
+.crumbs ol { display: flex; flex-wrap: wrap; align-items: center; gap: 0 var(--space-2); font-size: var(--fs-note); color: var(--text-muted); }
+.crumbs li { display: inline-flex; align-items: center; gap: var(--space-2); min-width: 0; }
+.crumbs li + li::before { content: "/"; color: var(--line-strong); }
+.crumbs a { display: inline-flex; align-items: center; min-height: 2.75rem; color: var(--text-muted); }
+.crumbs a:hover { color: var(--text); text-decoration: underline; text-underline-offset: .2em; }
+.crumbs [aria-current] { color: var(--text); }
+
+/* ------------------------------------------------------------ the opening: question, answer */
+.sp-open { padding-block: calc(var(--sec) * .6) var(--sec); border-bottom: 1px solid var(--line); }
+.sp-open-in { display: grid; gap: var(--space-5); }
+.sp-title { max-width: 22ch; font-size: var(--h2); font-weight: var(--weight-display); line-height: var(--leading-heading); letter-spacing: var(--tracking-heading); text-wrap: balance; }
+[lang="ar"] .sp-title { max-width: 26ch; font-weight: var(--weight-semibold); line-height: var(--leading-arabic-heading); letter-spacing: 0; }
+.sp-answer { max-width: 44rem; font-size: clamp(1.125rem, 1.02rem + .45vw, 1.375rem); line-height: var(--leading-body); color: var(--text); text-wrap: pretty; }
+[lang="ar"] .sp-answer { line-height: var(--leading-arabic-body); }
+.sp-act { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: var(--space-4) var(--space-6); padding-top: var(--space-4); border-top: 1px dashed var(--line-strong); }
+.sp-uses { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-2) var(--space-3); }
+.sp-tags { display: flex; flex-wrap: wrap; gap: var(--space-2); }
+
+/* ------------------------------------------------------------ a heading beside its content */
+.sp-split { display: grid; grid-template-columns: repeat(12, minmax(0, 1fr)); column-gap: var(--col-gap); row-gap: var(--space-4); align-items: start; }
+.sp-split > :first-child { grid-column: 1 / span 4; }
+.sp-split > :last-child { grid-column: 6 / -1; }
+
+/* ------------------------------------------------------------ your day today */
+.sp-day { border-bottom: 1px solid var(--line); }
+.sp-day li { display: grid; grid-template-columns: 1.125rem minmax(0, 1fr); gap: var(--space-3); align-items: start; padding-block: var(--space-4); border-top: 1px solid var(--line); font-size: var(--fs-body); line-height: var(--leading-body); }
+[lang="ar"] .sp-day li { line-height: var(--leading-arabic-body); }
+.sp-mark { width: .5625rem; height: .5625rem; margin-block-start: .55em; margin-inline-start: var(--space-1); border-radius: var(--radius-round); border: 1.5px solid var(--line-strong); }
+
+/* ------------------------------------------------------------ the same afternoon */
+.sp-fig-head { display: grid; grid-template-columns: repeat(12, minmax(0, 1fr)); column-gap: var(--col-gap); row-gap: var(--space-3); align-items: end; }
+.sp-fig-head .h2 { grid-column: 1 / span 6; }
+.sp-fig-head .lead { grid-column: 8 / -1; }
+.sp-figure { margin-top: var(--space-5); }
+
+/* ------------------------------------------------------------ what we set up */
+.sp-products-title { margin-bottom: var(--space-5); }
+.sp-say { display: grid; grid-template-columns: 1.125rem minmax(0, 1fr); gap: var(--space-3); align-items: start; color: var(--text); }
+.sp-tick svg, .gd-ticks .sp-tick svg { display: block; width: 1.125rem; height: 1.125rem; margin-top: .2em; color: var(--text); fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: square; stroke-linejoin: miter; }
+.sp-note { margin-top: var(--space-4); }
+
+/* ------------------------------------------------------------ the guide for this trade */
+.sp-guide-body { display: grid; gap: var(--space-3); justify-items: start; }
+.sp-guide-title { font-size: var(--h3); font-weight: var(--weight-semibold); line-height: 1.25; text-wrap: balance; }
+.sp-guide-title a:hover { text-decoration: underline; text-underline-offset: .2em; text-decoration-thickness: 1px; }
+
+/* ------------------------------------------------------------ a guide */
+.gd-measure { max-width: calc(44rem + var(--gutter) * 2); }
+.gd-head { padding-block: calc(var(--sec) * .6) var(--space-6); }
+.gd-head .wrap { display: grid; gap: var(--space-4); }
+.gd-title { font-size: var(--h2); font-weight: var(--weight-display); line-height: var(--leading-heading); letter-spacing: var(--tracking-heading); text-wrap: balance; }
+[lang="ar"] .gd-title { font-weight: var(--weight-semibold); line-height: var(--leading-arabic-heading); letter-spacing: 0; }
+.gd-by { display: flex; flex-wrap: wrap; gap: var(--space-1) var(--space-2); font-family: var(--mono); font-size: var(--fs-label); letter-spacing: var(--tracking-label); text-transform: uppercase; color: var(--text-muted); }
+[lang="ar"] .gd-by { font-family: var(--arabic); font-size: var(--fs-note); letter-spacing: 0; text-transform: none; }
+.gd-sep { color: var(--line-strong); }
+.gd-body { display: grid; gap: var(--space-6); padding-bottom: var(--sec); font-size: var(--fs-body); line-height: var(--leading-body); }
+[lang="ar"] .gd-body { line-height: var(--leading-arabic-body); }
+.gd-body p { text-wrap: pretty; }
+.gd-short { display: grid; gap: var(--space-3); padding: var(--space-5); background: var(--surface); box-shadow: inset 0 0 0 1px var(--line); border-inline-start: 3px solid var(--text); }
+.gd-short p { font-size: clamp(1.0625rem, 1rem + .3vw, 1.1875rem); }
+.gd-sec, .gd-alyr { display: grid; gap: var(--space-3); }
+.gd-h2 { font-size: clamp(1.5rem, 1.25rem + .9vw, 2rem); font-weight: var(--weight-heading); line-height: 1.15; letter-spacing: -.02em; text-wrap: balance; }
+[lang="ar"] .gd-h2 { font-weight: var(--weight-semibold); line-height: var(--leading-arabic-heading); letter-spacing: 0; }
+.gd-steps { counter-reset: step; border-bottom: 1px solid var(--line); }
+.gd-steps li { counter-increment: step; display: grid; grid-template-columns: 2rem minmax(0, 1fr); column-gap: var(--space-3); row-gap: var(--space-1); padding-block: var(--space-4); border-top: 1px solid var(--line); }
+.gd-steps li::before { content: counter(step); grid-row: span 2; font-family: var(--mono); font-size: var(--fs-label); line-height: 2; color: var(--text-muted); font-variant-numeric: tabular-nums; }
+.gd-steps h3 { font-size: 1.125rem; font-weight: var(--weight-semibold); line-height: 1.35; }
+.gd-steps p { color: var(--text-muted); }
+.gd-list { display: grid; gap: var(--space-2); padding-inline-start: 1.25rem; list-style: disc; }
+.gd-list li::marker { color: var(--line-strong); }
+.gd-alyr { padding-top: var(--space-5); border-top: 2px solid var(--text); }
+.gd-ticks li { display: grid; grid-template-columns: 1.125rem minmax(0, 1fr); gap: var(--space-3); padding-block: var(--space-2); }
+.gd-products, .gd-related ul { display: flex; flex-wrap: wrap; gap: 0 var(--space-5); }
+.gd-related { display: grid; gap: var(--space-2); padding-top: var(--space-4); border-top: 1px solid var(--line); }
+
+/* ------------------------------------------------------------ the guides' index */
+.gd-rows { border-bottom: 1px solid var(--line); }
+.gd-rows > li { display: grid; grid-template-columns: repeat(12, minmax(0, 1fr)); column-gap: var(--col-gap); row-gap: var(--space-2); padding-block: var(--space-5); border-top: 1px solid var(--line); }
+.gd-rows > li:first-child { border-top: 2px solid var(--text); }
+.gd-row-date { grid-column: 1 / span 3; padding-top: .35em; }
+.gd-row-main { grid-column: 4 / -1; display: grid; gap: var(--space-2); }
+.gd-row-main p { max-width: 42rem; color: var(--text-muted); }
+.gd-row-title { font-size: clamp(1.375rem, 1.2rem + .7vw, 1.75rem); font-weight: var(--weight-semibold); line-height: 1.2; text-wrap: balance; }
+.gd-row-title a:hover { text-decoration: underline; text-underline-offset: .2em; text-decoration-thickness: 1px; }
+
+/* ------------------------------------------------------------ narrower screens */
+@media (max-width: 61.99rem) {
+  .sp-split > :first-child, .sp-split > :last-child { grid-column: 1 / -1; }
+  .sp-fig-head .h2, .sp-fig-head .lead { grid-column: 1 / -1; }
+  .gd-row-date, .gd-row-main { grid-column: 1 / -1; }
+}
+@media (max-width: 53rem) {
+  .sp-act { display: grid; justify-content: stretch; }
+  .sp-act .pk-actions { display: grid; }
+  .sp-act .pk-actions .btn { width: 100%; }
+}

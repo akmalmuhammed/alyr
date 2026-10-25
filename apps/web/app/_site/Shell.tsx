@@ -2,7 +2,7 @@ import { Icon, Logo, Symbol } from "./brand";
 import { ContactAddress, ContactButton, contactLink, ContactPending } from "./Contact";
 import { copy, fill, type Locale } from "./copy";
 import {
-  CONTACT_EMAIL, CONTACT_STATE, INCLUDED, OFFER_LIVE, PATHS, PRODUCTS, productPath, WHATSAPP_NUMBER, WORKSPACE_URL,
+  CONTACT_EMAIL, CONTACT_STATE, INCLUDED, OFFER_LIVE, PATHS, PRODUCTS, productPath, SECTORS, sectorPage, WHATSAPP_NUMBER, WORKSPACE_URL,
   type PageKey, type ProductKey,
 } from "./site";
 import { SiteMotion } from "./SiteMotion";
@@ -187,6 +187,13 @@ export function Shell({
             {PRODUCTS.map((key) => (
               <a key={key} href={productPath(key, locale)} aria-current={page === key ? "page" : undefined}><bdi>{name(key)}</bdi></a>
             ))}
+          </nav>
+          {/* the kinds of business with a page of their own, and the owner guides (ALY-232, ALY-233) */}
+          <nav className="foot-nav foot-sectors" aria-label={t.sectors.footer}>
+            {SECTORS.map((key) => (
+              <a key={key} href={PATHS[sectorPage(key)][locale]} aria-current={page === sectorPage(key) ? "page" : undefined}>{t.sectors.items[key].name}</a>
+            ))}
+            <a href={PATHS.guides[locale]} aria-current={page === "guides" ? "page" : undefined}>{t.guides.footer}</a>
           </nav>
           <nav className="foot-nav foot-site" aria-label={t.footer.links}>
             <a href={at("#questions")}>{t.nav.questions}</a>

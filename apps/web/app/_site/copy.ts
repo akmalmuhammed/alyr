@@ -15,6 +15,8 @@
 import type { ContactState, PageKey, ProductKey, TrustRecord } from "./site";
 import { docsAr, docsEn, type DocLinkPage, type DocsPage } from "./copyDocs";
 import { shelfAr, shelfEn, type ShelfPage } from "./copyShelf";
+import { guideMeta, guidesAr, guidesEn, type GuidesCopy } from "./copyGuides";
+import { sectorMeta, sectorsAr, sectorsEn, type SectorsCopy } from "./copySectors";
 
 export type Locale = "en" | "ar";
 
@@ -538,6 +540,9 @@ export type Copy = {
     cta: { title: string; body: string };
   };
   pages: { bookings: BookingsPage; agent: AgentPage; accounts: AccountsPage; shelf: ShelfPage; docs: DocsPage };
+  /** The sector pages (/for/...) and the owner guides (/guides), ALY-232 and ALY-233. */
+  sectors: SectorsCopy;
+  guides: GuidesCopy;
 };
 
 const en: Copy = {
@@ -579,6 +584,8 @@ const en: Copy = {
       description:
         "ALYR Docs makes numbered receipts from your sales and the payments you record, in Arabic and English. A shop without a commercial registration gets receipts; invoices need a CR number. Set up for you, in Qatar.",
     },
+    ...sectorMeta(sectorsEn),
+    ...guideMeta(guidesEn),
   },
   skip: "Skip to content",
   nav: {
@@ -2811,6 +2818,8 @@ const en: Copy = {
     // ------------------------------------------------------------------- /docs
     docs: docsEn,
   },
+  sectors: sectorsEn,
+  guides: guidesEn,
 };
 
 const ar: Copy = {
@@ -2852,6 +2861,8 @@ const ar: Copy = {
       description:
         "يُصدر ALYR Docs إيصالات مرقّمة من مبيعاتك ومن الدفعات التي تسجّلها، بالعربية والإنجليزية. المحل الذي ليس له سجل تجاري تصدر له إيصالات، والفواتير تحتاج إلى رقم السجل التجاري. نجهّزه لك في قطر.",
     },
+    ...sectorMeta(sectorsAr),
+    ...guideMeta(guidesAr),
   },
   skip: "انتقل إلى المحتوى",
   nav: {
@@ -5082,6 +5093,8 @@ const ar: Copy = {
     shelf: shelfAr,
     docs: docsAr,
   },
+  sectors: sectorsAr,
+  guides: guidesAr,
 };
 
 export const copy: Record<Locale, Copy> = { en, ar };
