@@ -33,7 +33,7 @@ How should the workspace home (the ALYR Agent dashboard) and the new product pag
 - Payroll as a dashed "coming" row in menus and "works with" rows: removed by D-039 and D-046. The order is now Chat, Bookings, Agent, Accounts, Shelf, Docs (D-046).
 - "FIG · SAMPLE, FICTIONAL BAKERY" captions: replaced by a single "Sample" mark (founder, 24 Oct, recorded in brand.md).
 - "Rule" wording: the product keeps "RULE ·", but D-048 makes the homepage say "reason" or "why" ("Why ·", "Needs a look").
-- The homepage direction (the dashboard as the headline) was reframed by D-056 (lead with the owner's problem) and D-048 ("The tech team your business never had."). The dashboard stays on the homepage as proof, not as the headline.
+- The homepage direction (the dashboard as the headline) was reframed by D-047 (lead with the owner's problem) and D-048 ("The tech team your business never had."). The dashboard stays on the homepage as proof, not as the headline.
 - `02-data.md` (same folder) checks the catalogue's data in detail and adds gaps this file does not name: cash at the counter is not recorded, and payments run on a test page only.
 
 ## Use it for

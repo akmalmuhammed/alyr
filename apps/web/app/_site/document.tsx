@@ -62,7 +62,7 @@ export function siteMetadata(locale: Locale, page: PageKey = "home"): Metadata {
       ...(locale === "en" && page !== "home" ? {} : { images: [{ url: "/opengraph-image", width: 1200, height: 630, alt: "ALYR" }] }),
     },
     twitter: { card: "summary_large_image", title: t.title, description },
-    // Search Console and Bing Webmaster Tools, when verified by tag (D-056).
+    // Search Console and Bing Webmaster Tools, when verified by tag (D-047).
     ...(SITE_VERIFICATION.google || SITE_VERIFICATION.bing
       ? {
           verification: {

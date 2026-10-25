@@ -28,11 +28,11 @@ What exact words (English final, Arabic draft) should the suite homepage and the
 - D-035 (17 Oct): "ALYR Agent" stays in Latin with «نشاطك بالأرقام», included with every product.
 
 ## What changed since, and conflicts
-- Hero: none of the three options was used. D-037 set "Your business just got an agent."; D-056 changed it to "Stop losing orders in the chat."; D-048 (current) to "The tech team your business never had." with one action, "Book a check-up". D-056 also bans «وكيل» and the "Is it AI?" question, in line with this file.
+- Hero: none of the three options was used. D-037 set "Your business just got an agent."; D-047 changed it to "Stop losing orders in the chat."; D-048 (current) to "The tech team your business never had." with one action, "Book a check-up". D-047 also bans «وكيل» and the "Is it AI?" question, in line with this file.
 - Clinics: D-037 took clinics off the site (ALY-51), so the clinic sample, the clinic "By business" row and the clinic question are out. The sample salon was renamed from Sadaf Salon to Dafira Salon (too close to a real business).
 - Payroll as "Coming": removed from the site by D-039 and D-046. "Early access" became "Set up for you" (D-046). The order is now Chat, Bookings, Agent, Accounts, Shelf, Docs.
 - "FIG 0N" captions: replaced by one "Sample" mark (founder, 24 Oct).
-- Homepage structure: D-056 and D-048 rebuilt the page order and folded sections. D-048 says "reason/why" instead of "rule" on the homepage only; the product pages keep "RULE ·".
+- Homepage structure: D-047 and D-048 rebuilt the page order and folded sections. D-048 says "reason/why" instead of "rule" on the homepage only; the product pages keep "RULE ·".
 - `site-products-2/02-messaging.md` (20 Oct) rewords stale lines from this file: `/agent`'s "cash at the counter is not recorded" becomes "sales count orders, not cash"; `/accounts` "Statements and invoices" under "Not yet" now points to ALYR Docs.
 
 ## Use it for

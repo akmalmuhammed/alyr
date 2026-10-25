@@ -31,7 +31,7 @@ What films should ALYR make, built on what idea, and how do they stay true to wh
 - The Other Job storyboard (same day) is an earlier version: hands only and no faces, a different closing line ("We take on the other one."), 22 frames. This doc replaces it with actors and Huda.
 - "The check-up is free" and "keep the monthly review" answer questions D-048 left open, but are not recorded as decisions.
 - End cards say "Book a free check-up" only after the CR; all release waits on the CR and the founder's go-ahead.
-- Consistent with D-056 and D-048 (honesty rules, the headline, "Book a check-up") and D-046 (Docs never shown as live).
+- Consistent with D-047 and D-048 (honesty rules, the headline, "Book a check-up") and D-046 (Docs never shown as live).
 
 ## Use it for
 - Any film, animatic, video cut-down or sonic work. Read the full source for the beat sheet, storyboard, voice-over in both languages, the honesty table and the production order.

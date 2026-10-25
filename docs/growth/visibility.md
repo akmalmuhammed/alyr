@@ -1,6 +1,6 @@
 # Search and AI visibility
 
-How ALYR gets found, described correctly and contacted, in Google, in the AI assistants (ChatGPT, Gemini and Google's AI Mode, Perplexity, Copilot, Claude) and by AI agents acting for people, in Arabic and English. Decision D-056. Linear epic ALY-227 (ALY-228 to ALY-241; the monthly check is ALY-240). First audit 25 Oct 2026.
+How ALYR gets found, described correctly and contacted, in Google, in the AI assistants (ChatGPT, Gemini and Google's AI Mode, Perplexity, Copilot, Claude) and by AI agents acting for people, in Arabic and English. Decision D-047. Linear epic ALY-227 (ALY-228 to ALY-241; the monthly check is ALY-240). First audit 25 Oct 2026.
 
 ## The goal, sharpened
 

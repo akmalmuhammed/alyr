@@ -25,11 +25,11 @@ How should the homepage be rebuilt so every visitor finds their own problem and 
 - Read in full. The Arabic drafts cover only the headline lines; the doc says the rest (tab bodies, flow steps, product template) would be drafted in the copy pull request.
 
 ## What we decided because of it
-- D-056 names this table as its source: problem-led hero, the page order, "Agent is shown, never claimed", trust changes. D-056 left out what is not true yet: a reply-time promise, a named person, "hosted in Qatar", the CR, card payments as live, the Sunday report as running, a founding offer or 14-day refund, a "Coming next" row.
+- D-047 names this table as its source: problem-led hero, the page order, "Agent is shown, never claimed", trust changes. D-047 left out what is not true yet: a reply-time promise, a named person, "hosted in Qatar", the CR, card payments as live, the Sunday report as running, a founding offer or 14-day refund, a "Coming next" row.
 
 ## What changed since, and conflicts
 - D-048 replaced the hero and page order (tech-team positioning, "Book a check-up"), and its 24 Oct update folded the sections again.
-- D-056 removed the Arabic «وكيل»; this table used «وكيلك» throughout and flagged it for review.
+- D-047 removed the Arabic «وكيل»; this table used «وكيلك» throughout and flagged it for review.
 - It says the CR is done since 21 Oct; later growth documents still plan around the CR. Check docs/status.md.
 - A named person would reverse D-034; not decided.
 

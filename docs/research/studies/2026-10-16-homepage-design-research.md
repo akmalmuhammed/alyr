@@ -32,7 +32,7 @@ How should the new homepage look and move, so that it shows the real product, ea
 - **Founder photo (P11) rejected.** D-034 has no name and no photo, and the trust section speaks as ALYR.
 - **One fictional business.** The research said "a cafe"; the brief made it a bakery, and today it is Qirfa Bakery on every homepage figure (`brand.md`).
 - **The price sheet and agreement (P9, P10) are hidden.** Prices stay off the public site until the commercial registration (D-034 update, 17 Oct). They show only when the offer switch is on.
-- **The hero changed three times.** The order-page phone was replaced by ALYR Agent at work (D-037), then the owner's problem (D-056), then "The tech team your business never had." (D-048).
+- **The hero changed three times.** The order-page phone was replaced by ALYR Agent at work (D-037), then the owner's problem (D-047), then "The tech team your business never had." (D-048).
 - **The live clock was removed.** The Doha clock (P8, P14) came out in the 24 Oct site audit as decoration.
 - **Dashed "coming" slots were dropped.** Dashed slots for products that are coming conflict with D-039 (nothing "coming" is shown). Payroll left the site (D-046). The dashed rule survives only for things that are not true yet.
 - **Fewer pinned panels.** D-048 and the site audit cut the pinned panels to none on the homepage.

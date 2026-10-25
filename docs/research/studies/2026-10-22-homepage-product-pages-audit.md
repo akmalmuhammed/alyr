@@ -25,7 +25,7 @@ Line by line, what should change on the homepage and the four product pages (Cha
 - Ranked fix list of 27 items (11 quick wins, 9 next, 7 waiting), plus five founder decisions: hero A or B, a named person on the page, the setup fee, a founding-shop offer, the date to switch the offer on.
 
 ## What we decided because of it
-- D-056 took the option A hero ("Stop losing orders in the chat.") and the "agent shown, never claimed" rule; its "not true yet" list (no reply promise, no named person, no "hosted in Qatar", no card payments as live) matches this audit's claims table.
+- D-047 took the option A hero ("Stop losing orders in the chat.") and the "agent shown, never claimed" rule; its "not true yet" list (no reply promise, no named person, no "hosted in Qatar", no card payments as live) matches this audit's claims table.
 
 ## What changed since, and conflicts
 - The hero was replaced by D-048 ("The tech team your business never had.", "Book a check-up").
