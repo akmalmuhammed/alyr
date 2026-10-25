@@ -52,3 +52,67 @@ served on port 3141 (`pnpm site:serve --port=3141`). Edge profile `C:\t\sectorpr
 all four pass (build, parity, banned words, 2,838 links).
 
 **Next.** The two critics (06, 07), rulings (08), fix pass.
+
+## Stage 2: critics and rulings (06, 07, 08)
+
+Two critics ran in parallel on the built out-site (port 3141), neither reading the other.
+Design (06): no P0, six P1, ten P2. Copy, claims and Arabic (07): one P0, six P1, 29 P2.
+The creative director's rulings are in `08-rulings.md`.
+
+## Stage 3: fix pass (commit 8c5785a)
+
+**Applied.**
+- Copy P0-1: the grocery sample's "Promise recorded · Pays Thursday" (a promise to a named day,
+  which is not built) is now a credit sale recorded with the new balance sent.
+- Copy P1: fashion says "show customers what is still available" (not "answer every message");
+  its Agent row names what the Agent screen shows (best sellers, sold out or low now), not the
+  Sunday report's "what did not sell"; the no-shows guide's "With ALYR" claims the
+  confirmation, the reminder and the count only; the salon and home services closing calls say
+  "a chat on your own phone"; the Arabic home services H1; «في الوقت نفسه» for one booking at a
+  time.
+- Copy P2: all but those ruled otherwise (P2-1 changed to "The same hour", P2-19 to "how it
+  would work for your bakery, on your own phone", P2-20 to a static alt from the copy).
+- Design: the answer beside the question on the grid and the drawing right under the opening
+  (at 1440 × 900 the question, the answer, the Volt button and the top of the drawing are in
+  the first screen; at 1280 × 720 the button is at about 560 px); the figure opens as a plate
+  with its lead naming the buttons; the guide in the Questions section's start column
+  (`QuestionsBlock` `aside`); end columns from column 5; the H1 on the display-sm step; the
+  problem marks a hairline dash, not the pending dot; "+ Agent" kept whole in one `<bdi>`;
+  guides on the grid's start, "In short" as a rule, steps in `--text`; the index's date under
+  each title; 44 px crumbs and footer links; tokens for type, leading, tracking and rules.
+- Shared, on purpose: the day split's phone height 23 → 24.5 rem (its buttons no longer cover
+  the fifth row; the homepage too) and its ALYR side on `--dark-surface` (in dark it now stands
+  apart from the faded side; in light the change is one step and hard to see).
+- Footer: "For your business" shown as the row's label, short trade names, the current page
+  underlined, Guides beside Questions. Homepage: the link to the trade's page sits in the
+  panel's foot row, before the outlined button; Arabic with a verb.
+- Docs: D-057 (addresses, proposed), `docs/brand.md`, `docs/status.md`, the lane brief,
+  `alyr-site-page` ("Sector pages and owner guides", and step 6 of "Adding a product page" now
+  says the build reads `PATHS`), `components.md` (the footer).
+
+**Not applied, and why.**
+- Design P1-5 (a Groceries tab on the homepage): a homepage change, for the founder.
+- Design P2-6 (the fold's rest point): the homepage's tuned value; a sample's reference is
+  cut by the fold at rest on a laptop, as on the homepage.
+- Copy P2-20 per-page alt: `generateImageMetadata` would move the cards' addresses; the alt
+  is a static line from the copy instead. Arabic pages keep the homepage's English card.
+- The Meta template condition on reminders and entry notices (07, "conditions said
+  elsewhere"): a site-wide question, for the founder.
+
+**Checks (25 Oct 2026, the built out-site on port 3141).**
+- `pnpm exec tsc --noEmit` clean; `pnpm lint` clean; `pnpm test` 83 pass.
+- `pnpm site:check`: build, EN/AR parity (7,0xx strings), banned words and prices (clean),
+  internal links (2,826) all pass. The banned-word check caught "as soon as" ("soon") once more;
+  reworded.
+- axe (`pnpm site:a11y`): no serious or critical issue on `/`, `/ar` and all 20 new pages, at
+  1440 and 390, light and dark.
+- Lighthouse mobile, lowest of 2: `/` 94 (LCP 2.42 s), `/for/bakeries` 98 (2.41 s),
+  `/ar/for/bakeries` 98 (2.41 s), `/guides/stop-losing-whatsapp-orders` 99 (2.26 s);
+  Accessibility 100 and CLS 0 on all four.
+- 320 px: `scrollWidth` 320 on all 20 new pages and on `/` and `/ar`.
+- Looked at: the openings at 1440 (EN, AR), 1280 and 390 dark; the figure at 390 dark; the
+  homepage's business panel at 1440 (EN) and 390 (AR).
+
+**Not checked.** Without scripts (the capture script cannot turn them off: the figure then
+rests at 42 % on a phone too, as on the homepage); a real keyboard walk; a screen reader; Safari
+and a real iPhone; the Products menu open on the new pages; the Arabic by a native speaker.
