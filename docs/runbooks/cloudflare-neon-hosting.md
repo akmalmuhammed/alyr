@@ -76,7 +76,12 @@ touched.
   Cloudflare refuses a Worker-to-Worker call on workers.dev, give the API a custom domain
   (`api.alyr.qa`) and rebuild the portal with `ALYR_API_URL` set to it.
 - **Check 5:** sign in twice with a wrong code from two networks; the rate limit should count
-  them separately.
+  them separately. The API Worker sets `ALYR_CLIENT_IP_HEADER` to `x-alyr-client-ip`, which it
+  writes from `CF-Connecting-IP` after deleting any `X-Forwarded-For`, `X-Real-IP` and
+  `x-alyr-client-ip` the caller sent. If the portal Worker's own calls arrive with the portal's
+  address instead of the visitor's, every visitor shares one count: then have the portal pass
+  the visitor's address in `CF-Connecting-IP` or give the API a custom domain, before opening
+  sign-up.
 - A job runs: place a demo order and see its confirmation in the simulator inbox (the job
   runner is in the same container).
 
