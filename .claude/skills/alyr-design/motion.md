@@ -68,7 +68,9 @@ on these conditions. Anything else that wants to keep moving needs the founder's
    changed figure rolls inside its own inline box (tabular digits keep the width; a word
    holding a figure stays unbroken); a bar grows by `scale`; the summary keeps the height of
    its longest sentence (`summaryRoom`). Measure layout shifts over a whole cycle, both
-   languages, 1440 and 390.
+   languages, 1440 and 390. Its styles are inline in the head (`_site/liveStyle.ts`), not in
+   `agent.css` or `agentfig.css`: those block rendering, and a couple of hundred bytes more in
+   them cost the homepage about 150 ms of simulated LCP.
 5. **Every event is one the product performs**, in its own words, and **the numbers stay
    true to each other**: `live.ts` works the dashboard out from the engine's sample (counts,
    sales and today's bar, the percentages as `view.py` rounds them, waits, the clock, booked
