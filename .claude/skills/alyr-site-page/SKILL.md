@@ -37,12 +37,14 @@ words under `home` in `copy.ts`):
    (`Shell` takes them from `home.final`). Price only with the offer.
 2. **Hero:** no eyebrow on the page (`hero.eyebrow` is the social card's only), H1 "The tech
    team your business never had.", then one row under it: the lead on the start side, which
-   carries the one line of why ("Big businesses have consultants and an IT team for this.
-   You have us: …"), "Book a check-up" and "See how we work" (to `#how`) with the note on the
-   end side; the facts row ("We come to your shop, in Qatar"); the real ALYR Agent dashboard,
-   marked "Sample" in its window bar, and the live feed on the Carbon plate. The feed's flags
-   say "Needs a look" and their rule line starts "Why ·" (`AgentFigure.tsx` `reason`); the
-   product's own screens keep "Rule".
+   carries the one line of why ("We check how your business runs, set up what it needs and
+   keep improving it with you. It is the work a large company has an IT team for."), "Book a
+   check-up" and "See how we work" (to `#how`) with the note on the end side; the facts row
+   ("We come to your shop, in Qatar"); the real ALYR Agent dashboard, marked "Sample" in its
+   window bar, and the live feed on the Carbon plate. The dashboard is drawn with
+   `ruleLines={false}` and its cards titled "Suggestions"; the feed's flags say "Needs a look"
+   with the dashboard's own line and no rule line (founder, 25 Oct 2026). The product's own
+   screens keep their rule lines.
 3. **How we work** (`#how`): check, set up, see, improve, on the rail that fills with the
    scroll; once full, a dashed arc draws from step 4 back to step 1 with "Then we check
    again" (`.how-loop`, Choreography sets `is-looped`; drawn statically without motion). On
@@ -64,29 +66,59 @@ words under `home` in `copy.ts`):
    handle) or sent across by "Today" and "With ALYR"; it sweeps once when first read. Phones
    rest on "With ALYR" and swipe.
 5. **One order, start to finish** (`#see`): the `/chat` flow figure (`FlowDiagram`) told for
-   Sara at Qirfa Bakery, on a cut-corner Carbon plate, marked "Sample" at the end of its tab
-   row, and the tally of who did what. Every step shown is built; keep the tally's counts true
-   to the steps.
+   Sara at Qirfa Bakery, on a cut-corner Carbon plate whose top holds the section's heading,
+   lead and link (no cross rule), marked "Sample" at the end of its tab row, and the tally of
+   who did what. Every step shown is built; keep the tally's counts true to the steps. The
+   flow opens on a finished frame (its first story's last step) and plays from step 1 once
+   60% of it is on screen; with reduced motion it stays finished.
 6. **ALYR Agent** (eyebrow "ALYR Agent · With every product") with numbered callouts and the
-   sample switch (its "Sample business" label is the mark), opening on the bakery. Not
-   pinned; on phones the screen stops after its five numbered parts.
-7. **The products** on the Carbon band as six plain rows (`room.css` `.suite-row`): name,
-   descriptor, the state only on Agent and Shelf, one sentence and its link, and the corner of
-   the product's real screen at true size with its "Sample" mark; then the two notes. Nothing
-   is pinned and nothing plays. Then **Price** (offer on: the price, examples by trade, setup,
+   sample switch (its "Sample business" label is the mark), opening on the bakery. The hero
+   already shows the screen's opening sentence, so this section shows it only inside "See the
+   whole screen": it opens on Needs you now and the suggestions with their reasons (marks 1
+   and 2), and the disclosure (a native `<details>`) opens the rest, marks 3 and 4 and their
+   callouts. Show the dashboard's sentence once per page. Not pinned.
+
+**Section openings vary** (framer-review P3, 24 Oct 2026): a split opening (heading at the
+start, lead and link on the end column at its last baseline: How we work, ALYR Agent), a full
+one (one heading line across the grid, its lead under it if it has one: By business, the
+products), and the heading inside the figure's plate (One order). Never give two neighbouring
+sections the same opening, with no exception (the founder, 25 Oct 2026, took the products off
+ALYR Agent's split), and land each section's content within about 300 px of its top at 1440
+(`.open-split`, `.open-full`, `.open-plate` in `home.css`).
+7. **The products: "One shop, six products"** (framer-review P1, the founder's yes on the
+   Framer prototype; `SuiteFrame.tsx`, `suite.css`, words in `home.suite.frame`). A full
+   opening (the heading across the grid, the lead under it), then one Carbon plate cut at 45°
+   (mirrored): a bar with Qirfa Bakery, the frame's
+   one "Sample" mark and "Thursday · 16:20", then six tiles in the suite's order: Chat (8
+   columns) and Bookings; Agent, Accounts, and Shelf over Docs. Two columns on a tablet, one on
+   a phone. Each tile is one link named "{name}, {descriptor}" (and its state), holding a
+   fragment of the product's real screen (`inert`, cropped hard at the tile's edge, no fade)
+   and its name, descriptor and arrow. Numbers come from the engine's sample (`_agent/samples`),
+   Shelf's page copy and `paperData.ts`, never retyped; the Agent tile titles its card
+   "Suggestions" and draws no rule line. **Every tile rests finished** at every width, as
+   every demo on the site opens (founder, 25 Oct 2026); its moment replays from the start once
+   (CSS keyed on `is-in`, which SiteMotion adds on hover or focus with a fine pointer, and at
+   60% in view elsewhere; each animation fills backwards, so its first frame is the earlier
+   state), done by 1.7 s. The HTML is the end state, so without scripts or with reduced motion
+   nothing plays and every tile is finished. The one Volt fill is the chosen slot. Then the two
+   notes. Nothing is pinned. The six plain rows of 24 Oct and their crops are gone. Then **Price** (offer on: the price, examples by trade, setup,
    the first month, what every month includes, the agreement), **Trust**, **Questions** (the
    first `faq.shown` open to read, the rest under "More questions"; a `#q-...` link opens the
    fold), the **closing call**, the **footer** (no clock).
 
 Gone on 24 Oct and not to come back without the founder: the Why ALYR table, "What a check-up
 finds" as its own section, the pinned products room, eyebrows that repeat a heading or a
-header link, numbers on tabs and indexes, FIG captions.
+header link, numbers on tabs and indexes, FIG captions. Gone on 25 Oct (the content audit,
+`docs/content-audit/`): `/agent`'s "The rules" section and its product-bar link, and every
+rule line drawn on the site.
 
 "Agent" on the homepage always sits beside what it counted; no AI words, no «وكيل» (the Arabic
-says ALYR «تتولى عنك العمل المعتاد»), no "Is it AI?" question. Say "reason" or "why", not
-"rule", in the homepage's own words. Nothing on the homepage is pinned.
+says ALYR «تتولى عنك العمل المعتاد»), no "Is it AI?" question. Say "reason", "what it
+counted" or "what it compares", never "rule" / «قاعدة», on any public page, in its meta or in
+`llms.txt` (founder, 25 Oct 2026; `alyr-design/honesty.md` §1). Nothing on the homepage is
+pinned.
 
-`/chat`'s "Everything it does today" is the phone with X-ray (`ChatXray.tsx`, `xray.css`,
+`/chat`'s "What's in ALYR Chat" is the phone with X-ray (`ChatXray.tsx`, `xray.css`,
 ALY-209): the list beside a pinned phone that shows the feature being read; "For your team"
 brings the team's workspace in behind it, "Behind the scenes" turns the phone to X-ray with
 the message's path through ALYR. Each item's `scene` in `copy.ts` must show only what is
@@ -104,13 +136,13 @@ Every product page uses `_site/ProductKit.tsx` and `kit.css`, in this order:
 | Signature figure (optional, after the opening) | `LastOne.tsx`, `PaymentPaper.tsx`, `moment.css` | One real object changing state (03-visuals of `docs/site-products-2`): three parts hanging from one label line over a rule, CSS keyframes keyed on `.is-in` on each part, every delay a number of `--stagger` steps, one Volt mark, done before 3 s; the HTML is the end state. `data-sig` (not `data-m`) gives it SiteMotion's own trigger: on a wide screen the whole figure starts once 60% of it is on screen or its top is past the middle; on a phone each part starts as it arrives, its delays counted from its own first beat (`--t0`). It keeps `motion` past the 4 s failsafe. Measure that it starts and ends in view (`--eval`, no screenshots). It must fit one screen at 1440 × 900 |
 | How it works, from both sides | `FlowSection` (`FlowDiagram`) | The customer's steps and the business's, in the product's real words |
 | The screen used every day | `ScreenBlock` | The real workspace screen at true scale in the workspace window, numbered Carbon callouts beside it; on phones the workspace's phone layout (cards), never a sideways table with no cue |
-| What's in it | `InsideBlock` | Everything it does today by audience; a figure beside it if the page needs one (`children`); then **Not yet** below a dashed rule with the pending dot, only for an item whose absence would make another line untrue (D-039: nothing coming is shown). Leave `notYet` out otherwise |
+| What's in it | `InsideBlock` | Everything it does today by audience, titled "What's in {product}" ("What's in ALYR Chat" / «ما يتضمنه ALYR Chat»); a figure beside it if the page needs one (`children`); then **Not yet** below a dashed rule with the pending dot, only for an item whose absence would make another line untrue (D-039: nothing coming is shown). Leave `notYet` out otherwise |
 | (each part tells one thing) | | The demo, the signature, the flow and "What's in it" each tell a different part; a story drawn three times is cut, not squeezed. A product page stays near the family's height (about 8,800 px at 1440, plus a signature figure) |
 | Who it's for | `WhoBlock` | Rows by business type with what each uses; tags in suite order |
 | Works with the rest of ALYR | `WorksBlock` | Ruled rows in the suite's order without the page's own product |
-| Questions | `QuestionsBlock` | Native `<details>`, an `id` per question; "Can I use it on its own?", "How long does setup take?" |
+| Questions | `QuestionsBlock` | Titled "Questions" / «أسئلة», as the header link; native `<details>`, an `id` per question; "Can I use it on its own?", "How long does setup take?" |
 | Closing call | `Shell` | The fold at its top, the contact block in its state |
-| Phone's contact bar | `Shell`, `SiteMotion` | As on the homepage (founder, 24 Oct 2026), below 53rem: up once the opening's `data-hero-cta` button has scrolled away, down while the closing call or the footer is on screen; 44 px button, `env(safe-area-inset-bottom)`, no slide with reduced motion, down without scripts. One Volt button on screen: the header's is the outlined twin while the opening's is in view and hides while the bar is up (`site.css`). A page whose opening has no `data-hero-cta` never shows the bar |
+| Phone's contact bar | `Shell`, `SiteMotion` | As on the homepage (founder, 24 Oct 2026), below 53rem: up once the opening's `data-hero-cta` button has scrolled away, down while the closing call or the footer is on screen; 44 px button, `env(safe-area-inset-bottom)`, no slide with reduced motion, down without scripts. One Volt button on screen: the header's is the outlined twin while the opening's is in view or while the closing call is on screen (`data-at-closing`, set by `SiteMotion`), and hides while the bar is up (`site.css`). A page whose opening has no `data-hero-cta` never shows the bar |
 
 Each page has its own English social card (`(site)/<page>/opengraph-image.tsx` through
 `_site/socialCard.tsx`). Arabic pages share the English homepage card until Arabic cards are
@@ -148,8 +180,8 @@ silently not published, or published and not linked:
 6. **`scripts/build-site.sh`:** add the key to `pages=`; that one list copies the HTML in
    both languages, the social card and the deferred-scripts step. It fails if the card is
    missing.
-7. **Homepage:** the suite crop in `HomePage.tsx` (`crop` record) drawn from the product's
-   real screen, and the suite row's link.
+7. **Homepage:** its tile in `SuiteFrame.tsx` (`FRAGMENT`), drawn from the product's real
+   screen, with its moment in `suite.css` and its place in the plate's grid at each width.
 8. **Menu, footer and "works with" rows** read `PRODUCTS` and `productPath`, so they turn into
    links once step 1 is done; check each, in both languages, with the menu open.
 9. **Check:** `pnpm site:check` passes (from `apps/web`: `build-site.sh`, EN/AR parity,
@@ -194,6 +226,56 @@ silently not published, or published and not linked:
 - Deploy. Publishing is the founder's yes each time: his approval of the `production`
   environment in GitHub (`site deploy` workflow), or `pnpm site:deploy` on his laptop
   (`docs/runbooks/site-deploy.md`). A pull request gets a preview address on its own.
+
+### Words that read as written by a machine
+
+From the content audit (`docs/content-audit/01-audit.md` §4, applied 25 Oct 2026 at the
+founder's word). Before and after: "Numbers that never skip" → "Gapless numbering"; "No CR
+yet? Receipts that say so" → "Receipts for shops without a CR"; "Check. Set up. See.
+Improve. / Then again." → "How we work with you".
+
+1. **Feature titles, facts, tags, menu lines and step titles are plain nouns or one plain
+   sentence.** "Gapless numbering", "Receipts for shops without a CR". No slogan fragments
+   ("Every paper final"), no puns on a product's name (shelf, docs, paper).
+2. **One slogan per site:** the homepage H1. Every other heading names what the section holds,
+   in the owner's words, and matches the link that leads to it ("How we work", "Questions",
+   "What's in ALYR Docs").
+3. **A two-line heading is one sentence broken in two**, never two slogans stacked.
+4. **No questions outside the Questions section**: not in a heading, fact, tag, step title,
+   list item or the "Who it's for" line. In Questions, ask as an owner asks ("Will my staff
+   use it?"); at most one objection written as a statement per page.
+5. **No stacked fragments or tricolons in headings:** no "X. Y. Z.", no "One X, one Y, one
+   Z", no comma lists used as titles.
+6. **No colon reveals** in headings, facts, tags, menu lines, step titles or the opening of a
+   caption. In body text a colon introduces a list or an example only.
+7. **No denial or contrast openers:** "No guesses and no scores.", "Not everything should be
+   automatic.", "Not X, but Y".
+8. **No filler words:** polite(ly), honest(ly), simply, easily, truly, really (unless it is a
+   fact), powerful, beautiful; «لبقة», «بصراحة», «بكل سهولة».
+9. **No grandiosity or punchlines:** "the businesses that win", "You decide." or "Nothing
+   lost." standing alone at the end of a paragraph.
+10. **No personification beyond what the product does:** it sends, counts, checks, records
+    and pauses. It does not step back, go quiet, seal or read.
+11. **The lead adds a fact the heading did not give.** It never restates it. No stage
+    directions ("Follow one order through").
+12. **Say it once.** A line used on two pages, or twice on one page, is reworded, unless it
+    is a template label (product names, "Works with the rest of ALYR", the contact block).
+13. **Eyebrows only for a product's state or a name the heading lacks.** Never an eyebrow that
+    restates the heading or a header link.
+14. **No "rule" / «قاعدة» about ALYR** on the public site (founder, 25 Oct 2026): say what was
+    counted or compared. WhatsApp's 24-hour rule is "the 24-hour window" / «نافذة 24 ساعة».
+
+**The check.** `scripts/site/banned-words.mjs` (in `pnpm site:check`) enforces what a regular
+expression can: the word "rule" in the copy and the built site, and the `style` block of
+`scripts/site/banned-words.json` in the copy (questions in labels, stacked short sentences,
+"one X, one Y, one Z", colon reveals in labels, "X means X", filler, grandiosity, denial
+openers, personification, stage directions, punchline closers, in both languages). Labels are
+strings under the keys in `style.labelKeys`; questions, answers and sample data are skipped.
+A line kept on purpose goes in `scripts/site/allow/banned.json` with its reason: under `kept`
+the founder's kept lines (the hero's slogan, the footer, ALYR Agent's heading), which the
+check holds to their exact words, and under `style` a reviewed hit (the products and price
+headings, outside the audit, wait for the founder). Rules 2, 11 (the lead), 12 and 13 need a
+reader: check them by eye.
 
 ## Done when
 

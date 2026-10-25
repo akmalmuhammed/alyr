@@ -64,8 +64,6 @@ main .ag { font-weight: 400; }
 .af-line { font-size: .8125rem; line-height: 1.45; color: var(--on-band-quiet); text-wrap: pretty; }
 [lang="ar"] .af-line { line-height: 1.7; }
 .af-line bdi { white-space: nowrap; }
-.af-rule { margin-top: .25rem; padding-inline-start: .625rem; border-inline-start: 1px solid var(--volt); font-family: var(--mono); font-size: .6875rem; line-height: 1.5; letter-spacing: .02em; color: var(--concrete); }
-[lang="ar"] .af-rule { font-family: var(--arabic); letter-spacing: 0; font-size: .75rem; line-height: 1.7; }
 
 /* motion: before the page's scripts run, the feed is hidden only when motion is wanted
    (`.motion`, set before paint); after, the figure's own state says what shows. */
@@ -136,27 +134,43 @@ main .ag { font-weight: 400; }
 }
 
 /* ---------------------------------------------- spot: the whole screen, explained */
-.afig-spot { margin-top: clamp(2rem, 4vw, 3rem); }
+.afig-spot { margin-top: var(--space-4); }
 .afig-spot .af-stage { display: grid; grid-template-columns: minmax(0, 9fr) minmax(0, 3fr); column-gap: var(--col-gap); row-gap: 2rem; align-items: start; }
 .afig-spot .aw { grid-column: 1; }
-.afig-spot .af-aside { align-self: start; }
+.afig-spot .af-aside { grid-column: 2; grid-row: 1 / span 2; align-self: start; }
 /* numbered marks on the dashboard's parts, matching the callouts (alt text "": the
    number is for the eye; the list beside says what each part is) */
-.afig-spot .ag :is(.ag-head, .ag-needs, .ag-kpis-block, .ag-cards, .ag-done) { position: relative; }
-.afig-spot .ag :is(.ag-head, .ag-needs, .ag-kpis-block, .ag-cards, .ag-done)::after {
+.afig-spot .ag :is(.ag-needs, .ag-kpis-block, .ag-cards, .ag-done) { position: relative; }
+.afig-spot .ag :is(.ag-needs, .ag-kpis-block, .ag-cards, .ag-done)::after {
   position: absolute; top: 0; inset-inline-end: 0; translate: 0 -50%; z-index: 1;
   display: grid; place-items: center; width: 1.5rem; height: 1.5rem; border-radius: 50%;
   background: var(--carbon); color: var(--on-band); box-shadow: 0 0 0 3px var(--window), inset 0 0 0 1.5px var(--mark-ring);
   font-family: var(--mono); font-size: .75rem; font-weight: 500; line-height: 1;
 }
-.afig-spot .ag .ag-head::after { content: "1" / ""; top: .25rem; translate: none; }
-.afig-spot .ag .ag-needs::after { content: "2" / ""; }
+.afig-spot .ag .ag-needs::after { content: "1" / ""; }
+.afig-spot .ag .ag-cards::after { content: "2" / ""; }
 .afig-spot .ag .ag-kpis-block::after { content: "3" / ""; }
-.afig-spot .ag .ag-cards::after { content: "4" / ""; }
-.afig-spot .ag .ag-done::after { content: "5" / ""; }
+.afig-spot .ag .ag-done::after { content: "4" / ""; }
+/* The hero already shows the screen's opening sentence and its first numbers, so the whole
+   screen opens on what the hero cannot reach: Needs you now and the suggestions with their
+   reasons, across the window (framer-review P2). "See the whole screen", a native <details>,
+   opens the rest, with or without scripts; the callouts for the parts it opens wait with it. */
+.afig-spot .af-more { display: block; grid-column: 1; }
+.afig-spot .af-more > summary {
+  display: flex; align-items: center; justify-content: space-between; gap: var(--space-3);
+  min-height: 2.75rem; padding: 0 var(--space-3); border: 1px solid var(--line-strong);
+  color: var(--text); font-weight: var(--weight-strong); cursor: pointer; list-style: none;
+}
+.afig-spot .af-more > summary::-webkit-details-marker { display: none; }
+.afig-spot .af-more > summary:hover { background: var(--surface-subtle); }
+.afig-spot .af-more > summary:focus-visible { outline: var(--focus-width) solid var(--focus); outline-offset: var(--focus-offset); }
+.afig-spot .af-more[open] .qa-mark::after { rotate: 0deg; }
+.afig-spot:has(.af-more:not([open])) .ag :is(.ag-head, .ag-done, .ag-kpis-block, .ag-week, .ag-hours, .ag-top, .ag-owed, .ag-team, .ag-stock) { display: none; }
+.afig-spot:has(.af-more:not([open])) .ag .ag-grid > :is(.ag-needs, .ag-cards) { grid-column: 1 / -1; }
+.afig-spot:has(.af-more:not([open])) .callouts li:nth-child(n + 3) { display: none; }
 @media (max-width: 81.99rem) {
   .afig-spot .af-stage { grid-template-columns: minmax(0, 1fr); }
-  .afig-spot .af-aside { position: static; }
+  .afig-spot .af-aside { position: static; grid-column: 1; grid-row: auto; }
   .afig-spot .callouts { grid-template-columns: repeat(2, minmax(0, 1fr)); column-gap: var(--col-gap); }
   .afig-spot .callouts li:nth-child(2) { border-top: 1px solid var(--line); }
 }
@@ -196,11 +210,6 @@ main .ag { font-weight: 400; }
   .afig .ag .ag-kpi:nth-child(n + 3) { border-top: 1px solid var(--ag-rule); }
 }
 
-/* on phones the whole screen stops after its five numbered parts: the week, the hours, the
-   best sellers, money owed and the team are the same dashboard, already shown above */
-@media (max-width: 47.99rem) {
-  .afig-spot .ag-grid > :is(.ag-stock, .ag-hours, .ag-top, .ag-owed, .ag-team, .ag-week) { display: none; }
-}
 
 /* /agent on a phone: the screen stops after Needs you now, Done for you and the four numbers;
    "See the whole screen" (a native <details>) opens the rest (site audit P1-c). Wider, the

@@ -198,11 +198,6 @@ function productTwin(locale, key) {
   if (key === "agent") {
     if (p.how) doc.h(2, p.how.title).numbered(p.how.steps, titled);
     if (p.report) doc.h(2, p.report.title).p(p.report.body).p(words[locale].sample);
-    if (p.rules) {
-      doc.h(2, p.rules.title).p(p.rules.body);
-      doc.list(p.rules.rows, (r) => `**${flat(r.name)}**: ${flat(r.rule)}${has(r.note) ? ` (${flat(r.note)})` : ""}`);
-      doc.list(p.rules.notes);
-    }
   }
   if (p.inside) {
     doc.h(2, p.inside.title);

@@ -50,6 +50,10 @@ export type AgentDashboardProps = {
    * fictional business, so a sample's numbers never read as the page's own outline to a
    * screen reader or a crawler (site audit 03, A1). The workspace keeps its headings. */
   headings?: boolean;
+  /** False hides the "RULE · …" lines (under each suggestion, and as a need's tooltip):
+   * the public site's showcase only, where the founder took the word "rule" off the site
+   * (25 Oct 2026). The workspace and `/agent-sample` keep them (default true). */
+  ruleLines?: boolean;
   /** The host's link component. In showcase mode links are plain text unless one is given. */
   link?: AgentLink;
   /** The first load of a session: the numbers rise once along the 45° diagonal. In showcase
@@ -212,7 +216,7 @@ function useRiseInView(enabled: boolean, ref: RefObject<HTMLDivElement | null>):
 }
 
 export function AgentDashboard({
-  view, labels, mode = "workspace", headingLevel, headings = true, link, animate = false, stale, onNotNow, setup, className = "",
+  view, labels, mode = "workspace", headingLevel, headings = true, ruleLines = true, link, animate = false, stale, onNotNow, setup, className = "",
 }: AgentDashboardProps) {
   const t: AgentLabels = { ...AGENT_LABELS[view.lang], ...labels };
   const showcase = mode === "showcase";
@@ -261,7 +265,7 @@ export function AgentDashboard({
                 const Row = item.href ? L : NoLink;
                 return (
                   <li key={item.key}>
-                    <Row href={item.href ?? ""} className="ag-need" title={item.rule}>
+                    <Row href={item.href ?? ""} className="ag-need" title={ruleLines ? item.rule : undefined}>
                       <span className="ag-need-count"><bdi>{item.count}</bdi></span>
                       <span className="ag-need-words">
                         <span><Rich parts={item.words} /></span>
@@ -372,7 +376,7 @@ export function AgentDashboard({
                   </div>
                   <div className="ag-card-body" id={body}>
                     <p className="ag-card-line"><Rich parts={card.line} /></p>
-                    <p className="ag-rule">{card.rule}</p>
+                    {ruleLines && <p className="ag-rule">{card.rule}</p>}
                     {listOpen === card.key && card.rows.length > 0 && (
                       <ul className="ag-rows">
                         {card.rows.map((row) => <li key={row.id}><bdi>{row.label}</bdi></li>)}
@@ -381,7 +385,7 @@ export function AgentDashboard({
                     )}
                     <div className="ag-card-foot">
                       {card.action ? (
-                        <L href={card.action.href} className={`ag-btn ${card.primary ? "is-volt" : ""}`}>
+                        <L href={card.action.href} className={`ag-btn ${card.primary && !showcase ? "is-volt" : ""}`}>
                           {card.action.label}{!showcase && <Arrow />}
                         </L>
                       ) : (

@@ -18,28 +18,8 @@
     },
     {
       "term": "soon",
-      "context": "Our prices go on this page soon",
-      "reason": "The offer-off answer to 'What does it cost?' (home.faq id cost, offer: false): it says prices are not on the site yet, as D-034 requires, and is replaced by the priced answer when the offer switch is on."
-    },
-    {
-      "term": "قريباً",
-      "context": "سننشر أسعارنا على هذه الصفحة قريبا",
-      "reason": "The Arabic of the offer-off answer to 'What does it cost?'."
-    },
-    {
-      "term": "soon",
       "context": "Pressed too soon?",
       "reason": "/shelf's stock undo step: 'pressed too soon' is about the person, not a product that is coming."
-    },
-    {
-      "term": "reads",
-      "context": "reads the orders, bookings, chats and credit already in your workspace",
-      "reason": "Reads records, in the sense of taking data from the workspace, not understanding (honesty.md bans 'reads' meaning understands). The next sentences say what it does with them: puts work first, compares the week. Borderline: the site lane may prefer 'counts' or 'takes'."
-    },
-    {
-      "term": "reads",
-      "context": "reads your hours, locks the time",
-      "reason": "/bookings: it reads the business's opening hours (data), then locks the slot. Not understanding."
     },
     {
       "term": "reads",
@@ -75,6 +55,17 @@
       "term": "يعرف",
       "context": "يعرف العميل",
       "reason": "The customer (a person) knows: their promise was recorded (/accounts), the reason for a cancelled order (/shelf), that the last item sold out (/shelf question). Not the product."
+    },
+    {
+      "term": "قاعدة",
+      "context": "قاعدة البيانات",
+      "reason": "«قاعدة البيانات» is \"the database\" (records kept apart inside the database; an issued document the database refuses to change), not a rule. The founder took \"rule\" off the site (25 Oct 2026); this sentence needs the word."
+    },
+    {
+      "term": "rule",
+      "context": "\"className\":\"rule",
+      "where": "html",
+      "reason": "The section rule's CSS class (the hairline with crosses above a section) in Next's page data, a class name, not a word on the page."
     }
   ],
   "offerOnly": [
@@ -89,6 +80,45 @@
     {
       "path": "**.factsOffer[*]",
       "reason": "Added to a product page's facts only with the offer on (ProductKit.tsx ProductHero)."
+    }
+  ],
+  "style": [
+    {
+      "path": "*.home.price.combos[*].label",
+      "pattern": "colon",
+      "reason": "Price examples by trade (offer on only): the colon names the products a trade would use (\"A salon: ALYR Bookings\"), an example, which pattern 6 allows."
+    }
+  ],
+  "kept": [
+    {
+      "path": "en.home.hero.title",
+      "text": "The tech team your business never had.",
+      "reason": "The one slogan the site may have (content audit row 35; 02-decisions.md: keep the hero slogan)"
+    },
+    {
+      "path": "ar.home.hero.title",
+      "text": "فريق التقنية الذي لم يكن لدى مشروعك.",
+      "reason": "The Arabic of the hero slogan (row 35)"
+    },
+    {
+      "path": "en.footer.line",
+      "text": "We do the tech. You run the business.",
+      "reason": "Kept by the founder (row 5, 02-decisions.md, 25 Oct 2026), though it is a two-beat slogan"
+    },
+    {
+      "path": "ar.footer.line",
+      "text": "علينا التقنية، وعليك شغلك.",
+      "reason": "Kept by the founder (row 5), Gulf «شغلك» and all, until the Arabic review (ALY-66)"
+    },
+    {
+      "path": "en.home.spotlight.title",
+      "text": "Every day, see what changed\nand what to do next.",
+      "reason": "Kept by the founder (row 18, 02-decisions.md, 25 Oct 2026)"
+    },
+    {
+      "path": "ar.home.spotlight.title",
+      "text": "كل يوم، اعرف ما تغيّر\nوما الخطوة التالية.",
+      "reason": "The Arabic of row 18, kept with it"
     }
   ]
 }

@@ -86,10 +86,10 @@ export const docsEn: DocsPage = {
   },
   hero: {
     eyebrow: "Set up for you",
-    title: ["Payment in, receipt out.", "Every number in order. Every paper final."],
+    title: ["A numbered receipt", "for every payment you record."],
     lead:
-      "When a payment is recorded, ALYR Docs issues the next numbered receipt, Arabic first, final once issued.",
-    facts: ["Numbers that never skip", "No CR yet? Receipts that say so", "Arabic first, English beside it"],
+      "Receipts, invoices and credit notes in Arabic and English, numbered without gaps. An issued document cannot be edited; a correction is a credit note.",
+    facts: ["Gapless numbering", "Arabic and English documents"],
   },
   demo: {
     business: "Qirfa Bakery",
@@ -145,7 +145,7 @@ export const docsEn: DocsPage = {
             { lead: "CN-0003", main: "Credit note · QAR 254.00", sub: "Cancels INV-0017", trail: "Sent", tone: "signal" },
           ],
         },
-        caption: "Issued means final. A correction is a credit note, and both keep their numbers.",
+        caption: "An issued document is final. A correction is a credit note, and both keep their numbers.",
       },
       {
         id: "link",
@@ -176,12 +176,12 @@ export const docsEn: DocsPage = {
     ],
   },
   moment: {
-    title: "One payment, one receipt, one number.",
+    title: "A cash payment becomes receipt RC-0042",
     body:
-      "Yusuf records Aisha’s cash at the counter. ALYR Docs takes the next receipt number and draws the paper in Arabic and English. Aisha wrote to the shop a few minutes before, so the PDF goes to her chat.",
+      "Yusuf records Aisha’s cash at the counter. ALYR Docs takes the next receipt number and draws the receipt in Arabic and English. Aisha wrote to the shop a few minutes before, so the PDF goes to her chat.",
     label:
-      "A cash payment of QAR 64.00 is recorded in the bakery’s workspace. Receipt RC-0042 is made, its paper is drawn Arabic first with English beside it, and the PDF arrives in the customer’s WhatsApp chat, below the message she sent minutes earlier, with its caption. The delivery shows Sent.",
-    parts: { sheet: "The workspace", paper: "The paper", chat: "Aisha’s phone" },
+      "A cash payment of QAR 64.00 is recorded in the bakery’s workspace. Receipt RC-0042 is made, drawn Arabic first with English beside it, and the PDF arrives in the customer’s WhatsApp chat, below the message she sent minutes earlier, with its caption. The delivery shows Sent.",
+    parts: { sheet: "The workspace", paper: "The receipt", chat: "Aisha’s phone" },
     form: {
       shop: "Qirfa Bakery",
       monogram: "QB",
@@ -213,7 +213,7 @@ export const docsEn: DocsPage = {
   flow: {
     title: "What happens when a payment comes in.",
     body:
-      "When your customer has written in the last 24 hours, the receipt arrives in the chat. Behind it, ALYR Docs takes the next number, writes the paper in both languages and seals it. Follow one receipt through.",
+      "When your customer has written in the last 24 hours, the receipt arrives in the chat. ALYR Docs takes the next number and issues the document in Arabic and English.",
     tabsLabel: "Examples",
     stepsLabel: "Steps",
     pause: "Pause",
@@ -234,17 +234,17 @@ export const docsEn: DocsPage = {
             work: ["Record a payment · QAR 64.00 · Cash"],
           },
           {
-            title: "The next number, never skipped",
+            title: "The next receipt number",
             body: "ALYR Docs takes the shop’s next receipt number under a lock. If anything fails, the number goes back, so there is never a gap.",
             work: ["Series RC · next 0042 · taken under lock", "Number: RC-0042"],
           },
           {
-            title: "Written, then sealed",
-            body: "The paper is drawn in Arabic and English, with the shop and the customer copied onto it. After that, nothing on it can change.",
+            title: "The PDF is drawn and issued",
+            body: "The document is drawn in Arabic and English, with the shop and the customer copied onto it. After that, nothing on it can change.",
             work: ["Arabic first", "PDF drawn · 1 page", "Receipt RC-0042 issued"],
           },
           {
-            title: "It checks WhatsApp’s rules",
+            title: "It checks the 24-hour window",
             body: "Aisha wrote in the last 24 hours, so the PDF itself can go in the chat. After 24 hours, WhatsApp allows only wording it has approved, and the receipt’s wording is not approved.",
             work: ["Last message: 9 minutes ago", "Consent: on record", "Within 24 hours: sent"],
           },
@@ -287,7 +287,7 @@ export const docsEn: DocsPage = {
             record: { id: "doc", main: "INV-0017 · Omar Ali", sub: "QAR 254.00 · Unpaid", trail: "Sent", tone: "signal" },
           },
           {
-            title: "No CR on file?",
+            title: "If no CR number is on file",
             body: "The sale still goes ahead, as a credit sale, and no invoice is made. The record says why.",
             work: ["Invoice not made: no CR number on file"],
           },
@@ -334,7 +334,7 @@ export const docsEn: DocsPage = {
     ],
   },
   screen: {
-    title: "Every paper you issued, and whether it arrived.",
+    title: "Every document you issued, and whether it arrived.",
     label: "The Documents screen of a fictional bakery’s workspace",
     callouts: [
       "Every document, newest first, by its number.",
@@ -362,14 +362,14 @@ export const docsEn: DocsPage = {
     },
   },
   cr: {
-    title: "No CR yet? Receipts, and they say so.",
+    title: "Shops without a commercial registration",
     body:
       "Until your CR number is in your document settings, ALYR Docs issues receipts, never invoices, and each receipt says so in plain words. Add your CR number, and you can issue invoices too.",
     caption: { text: "The foot of a receipt with no CR on file" },
     label: "The foot of a receipt from a shop with no CR number on file, with its note in Arabic and English: the seller has no commercial registration number on file; this document is a receipt and is not a tax invoice; ALYR does not give tax advice.",
   },
   inside: {
-    title: "Everything it is built to do.",
+    title: "What’s in ALYR Docs",
     groups: [
       {
         name: "For your customers",
@@ -379,7 +379,7 @@ export const docsEn: DocsPage = {
           "The PDF in the chat within WhatsApp’s 24 hours, and a link that opens it.",
           "A page for each document: Paid or Balance due, and Download PDF.",
           "A credit note when a paid order is cancelled.",
-          "Part of a visit paid? A deposit receipt says what is left.",
+          "When part of a visit is paid, a deposit receipt says what is left.",
         ],
       },
       {
@@ -393,17 +393,17 @@ export const docsEn: DocsPage = {
           "A4, A5 or an 80 mm roll.",
           "Your shop’s name, logo and colours, and “Issued with ALYR” at the foot unless you remove it.",
           "Staff may record payments only if the owner allows it.",
-          "Your own system can send its sales by file or by API, and you choose, for each kind of paper, whose numbers it carries.",
+          "Your own system can send its sales by file or by API, and you choose, for each kind of document, whose numbers it carries.",
         ],
       },
       {
         name: "Behind the scenes",
         items: [
-          "Numbers never skip: a failed issue gives its number back.",
-          "Issued paper cannot change: the database refuses any edit.",
+          "Numbering has no gaps. If issuing fails, the number goes back.",
+          "An issued document cannot be edited. The database refuses the change.",
           "A correction is a credit note. ALYR never deletes an issued document.",
-          "Each paper is issued once, even if a payment is reported twice.",
-          "A paper that cannot be made never stops the sale.",
+          "Each document is issued once, even if a payment is reported twice.",
+          "A document that cannot be made never stops the sale.",
           "A customer who asked you to stop gets no document message.",
         ],
       },
@@ -411,15 +411,15 @@ export const docsEn: DocsPage = {
     note: "Everything listed here is built.",
   },
   who: {
-    title: "For businesses that hand over paper.",
+    title: "For businesses that give customers receipts or invoices.",
     rows: [
       { name: "Bakeries, cafes and shops paid at the counter", tags: ["Receipt", "Credit note"] },
       { name: "Trading and wholesale with customers on account", tags: ["Invoice, with your CR", "Receipt for each payment"] },
       { name: "Home services that take part up front", tags: ["Deposit receipt", "Receipt"] },
       { name: "Shops with more than one branch", tags: ["Numbers for each branch"] },
-      { name: "Shops that already have a till or accounting system", tags: ["Its sales, ALYR’s paper"] },
+      { name: "Shops that already have a till or accounting system", tags: ["Sales from your system"] },
     ],
-    other: "Run something else? Write to us about how you work.",
+    other: "If you run another kind of business, write to us about how you work.",
   },
   works: {
     title: "Works with the rest of ALYR.",
@@ -433,7 +433,7 @@ export const docsEn: DocsPage = {
     },
   },
   faq: {
-    title: "Before you ask.",
+    title: "Questions",
     items: [
       {
         id: "own",
@@ -443,7 +443,7 @@ export const docsEn: DocsPage = {
       {
         id: "setup",
         q: "How long does setup take?",
-        a: "We agree the date you start at the visit, and set your numbers, branches and paper with you.",
+        a: "We agree the date you start at the visit, and set your numbers, branches and documents with you.",
       },
       {
         id: "no-cr",
@@ -474,7 +474,7 @@ export const docsEn: DocsPage = {
   },
   cta: {
     title: "Tell us how you give customers their receipts.",
-    body: "Send us a message. A person from ALYR replies, then comes to your shop to set your numbers and paper with you.",
+    body: "Send us a message. A person from ALYR replies, then comes to your shop to set your numbers and documents with you.",
   },
 };
 
@@ -495,10 +495,10 @@ export const docsAr: DocsPage = {
   },
   hero: {
     eyebrow: "نجهّزه لك",
-    title: ["تُسجَّل الدفعة، فيصدر الإيصال.", "أرقام متتالية، ومستند لا يتغيّر."],
+    title: ["إيصال مرقّم", "لكل دفعة تسجّلها."],
     lead:
-      "حين تُسجَّل دفعة، يُصدر ALYR Docs الإيصال التالي برقمه، بالعربية أولاً، ولا يتغيّر بعد إصداره.",
-    facts: ["أرقام متسلسلة لا تنقطع", "بلا سجل تجاري؟ إيصالات تقول ذلك", "العربية أولاً والإنجليزية بجانبها"],
+      "إيصالات وفواتير وإشعارات دائنة بالعربية والإنجليزية، بترقيم بلا فجوات. لا يُعدَّل المستند بعد صدوره، والتصحيح يكون بإشعار دائن.",
+    facts: ["ترقيم متسلسل بلا فجوات", "مستندات بالعربية والإنجليزية"],
   },
   demo: {
     business: "مخبز قرفة",
@@ -555,7 +555,7 @@ export const docsAr: DocsPage = {
             { lead: "CN-0003", main: "إشعار دائن · 254.00 ر.ق", sub: "يلغي INV-0017", trail: "أُرسل", tone: "signal" },
           ],
         },
-        caption: "ما صدر نهائي. والتصحيح إشعار دائن، ويحتفظ كلٌّ منهما برقمه.",
+        caption: "المستند الصادر نهائي. والتصحيح إشعار دائن، ويحتفظ كلٌّ منهما برقمه.",
       },
       {
         id: "link",
@@ -586,7 +586,7 @@ export const docsAr: DocsPage = {
     ],
   },
   moment: {
-    title: "دفعة واحدة، وإيصال واحد، ورقم واحد.",
+    title: "دفعة نقدية تصبح الإيصال RC-0042",
     body:
       "يسجّل يوسف المبلغ الذي دفعته عائشة نقداً في المحل. فيأخذ ALYR Docs رقم الإيصال التالي، ويكتب المستند بالعربية والإنجليزية. وقد راسلت عائشة المحل قبل دقائق، فيصل الملف إلى محادثتها.",
     label:
@@ -623,7 +623,7 @@ export const docsAr: DocsPage = {
   flow: {
     title: "ماذا يحدث حين تصل دفعة.",
     body:
-      "إذا راسلك العميل خلال آخر 24 ساعة، يصله الإيصال في المحادثة. وفي الخلفية يأخذ ALYR Docs الرقم التالي، ويكتب المستند باللغتين، ويثبّته. تابع إيصالاً واحداً من البداية.",
+      "حين يكون عميلك قد راسلك خلال آخر 24 ساعة، يصله الإيصال في المحادثة. ويأخذ ALYR Docs الرقم التالي ويُصدر المستند بالعربية والإنجليزية.",
     tabsLabel: "الأمثلة",
     stepsLabel: "الخطوات",
     pause: "إيقاف",
@@ -644,17 +644,17 @@ export const docsAr: DocsPage = {
             work: ["تسجيل دفعة · 64.00 ر.ق · نقداً"],
           },
           {
-            title: "الرقم التالي، دون تخطٍّ",
+            title: "رقم الإيصال التالي",
             body: "يأخذ ALYR Docs رقم الإيصال التالي للمحل محجوزاً له وحده. وإن تعثّر شيء يعود الرقم، فلا تبقى فجوة أبداً.",
             work: ["السلسلة RC · التالي 0042 · محجوز", "الرقم: RC-0042"],
           },
           {
-            title: "يُكتب ثم يُثبَّت",
+            title: "يُرسم ملف PDF ويصدر",
             body: "يُكتب المستند بالعربية والإنجليزية، ويُنسخ عليه المحل والعميل. وبعدها لا يتغيّر فيه شيء.",
             work: ["العربية أولاً", "رُسم ملف PDF · صفحة واحدة", "صدر الإيصال RC-0042"],
           },
           {
-            title: "يراعي قواعد واتساب",
+            title: "يتحقق من نافذة 24 ساعة",
             body: "راسلت عائشة خلال آخر 24 ساعة، فيمكن إرسال الملف نفسه في المحادثة. وبعد 24 ساعة لا يسمح واتساب إلا بصياغة وافق عليها، وصياغة الإيصال لم تُعتمد.",
             work: ["آخر رسالة: قبل 9 دقائق", "الموافقة: مسجّلة", "خلال 24 ساعة: أُرسل"],
           },
@@ -697,7 +697,7 @@ export const docsAr: DocsPage = {
             record: { id: "doc", main: "INV-0017 · عمر علي", sub: "254.00 ر.ق · غير مدفوع", trail: "أُرسل", tone: "signal" },
           },
           {
-            title: "لا رقم سجل تجاري؟",
+            title: "إن لم يكن رقم السجل التجاري محفوظاً",
             body: "يمضي البيع بالآجل كما هو، ولا تصدر فاتورة، ويقول السجل لماذا.",
             work: ["لم تصدر فاتورة: لا رقم سجل تجاري محفوظاً"],
           },
@@ -772,14 +772,14 @@ export const docsAr: DocsPage = {
     },
   },
   cr: {
-    title: "ليس لديك سجل تجاري بعد؟ تُصدر إيصالات، وكل إيصال يقول ذلك.",
+    title: "المحلات التي ليس لها سجل تجاري",
     body:
       "إلى أن تضيف رقم سجلك التجاري في إعدادات المستندات، يُصدر ALYR Docs إيصالات لا فواتير، ويقول كل إيصال ذلك بكلمات واضحة. أضف رقم سجلك، فتستطيع إصدار الفواتير أيضاً.",
     caption: { text: "أسفل إيصال حين لا يكون للمحل رقم سجل تجاري" },
     label: "أسفل إيصال من محل ليس له رقم سجل تجاري، وعليه ملاحظته بالعربية والإنجليزية: لا يوجد رقم سجل تجاري مسجّل للبائع، وهذا المستند إيصال وليس فاتورة ضريبية، ولا تقدّم ALYR استشارات ضريبية.",
   },
   inside: {
-    title: "كل ما بُني ليفعله.",
+    title: "ما يتضمنه ALYR Docs",
     groups: [
       {
         name: "لعملائك",
@@ -789,7 +789,7 @@ export const docsAr: DocsPage = {
           "الملف في المحادثة خلال 24 ساعة من آخر رسالة للعميل، ورابط يفتحه.",
           "صفحة لكل مستند: «مدفوع» أو «المتبقي»، وزر تنزيل الملف.",
           "إشعار دائن حين يُلغى طلب مدفوع.",
-          "دُفع جزء من قيمة الزيارة؟ إيصال العربون يقول كم تبقّى.",
+          "إن دُفع جزء من قيمة الزيارة، فإيصال العربون يقول كم تبقّى.",
         ],
       },
       {
@@ -809,8 +809,8 @@ export const docsAr: DocsPage = {
       {
         name: "في الخلفية",
         items: [
-          "لا تتخطّى الأرقام رقماً: الإصدار المتعثّر يعيد رقمه.",
-          "المستند الصادر لا يتغيّر: قاعدة البيانات ترفض أي تعديل.",
+          "لا فجوات في الترقيم. وإن تعذّر الإصدار يعود الرقم.",
+          "لا يُعدَّل المستند بعد صدوره، وقاعدة البيانات ترفض أي تعديل.",
           "التصحيح إشعار دائن، ولا تحذف ALYR أي مستند صادر.",
           "يصدر كل مستند مرة واحدة، حتى لو وصل خبر الدفعة مرتين.",
           "المستند الذي يتعذّر إصداره لا يوقف البيع.",
@@ -821,15 +821,15 @@ export const docsAr: DocsPage = {
     note: "كل ما في هذه القائمة مبنيّ في المنتج.",
   },
   who: {
-    title: "للأنشطة التي تسلّم عملاءها مستندات.",
+    title: "للأنشطة التي تعطي عملاءها إيصالات أو فواتير.",
     rows: [
       { name: "المخابز والمقاهي والمحلات التي يُدفع لها في المحل", tags: ["إيصال", "إشعار دائن"] },
       { name: "التجارة والجملة مع عملاء بالآجل", tags: ["فاتورة مع سجلك التجاري", "إيصال لكل دفعة"] },
       { name: "الخدمات المنزلية التي تأخذ جزءاً مقدماً", tags: ["إيصال عربون", "إيصال"] },
       { name: "المحلات التي لها أكثر من فرع", tags: ["أرقام لكل فرع"] },
-      { name: "المحلات التي لديها نظام كاشير أو محاسبة", tags: ["مبيعاته، ومستندات ALYR"] },
+      { name: "المحلات التي لديها نظام كاشير أو محاسبة", tags: ["المبيعات من نظامك"] },
     ],
-    other: "نشاطك مختلف؟ راسلنا وأخبرنا كيف تعمل.",
+    other: "إن كان نشاطك من نوع آخر، فاكتب لنا كيف تعمل.",
   },
   works: {
     title: "يعمل مع بقية منتجات ALYR.",
@@ -843,7 +843,7 @@ export const docsAr: DocsPage = {
     },
   },
   faq: {
-    title: "قبل أن تسأل.",
+    title: "أسئلة",
     items: [
       {
         id: "own",

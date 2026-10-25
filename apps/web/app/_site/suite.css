@@ -1,0 +1,268 @@
+/* "One shop, six products" (SuiteFrame.tsx; framer-review P1, approved on the Framer prototype).
+   One Carbon plate, cut at 45° at its top inline-start corner, holding the workspace of one
+   fictional bakery: a bar with its name, the one "Sample" mark and the time, then six tiles in
+   the suite's order, split by hairline seams. Each tile is one link: a fragment of the
+   product's real screen, cropped hard at the tile's edge (no fade), and its name, descriptor
+   and arrow. Each fragment plays one moment once (the end of this file): the HTML is the end
+   state, every tile rests finished, and the moment replays from its start when SiteMotion adds
+   `is-in` (the start states are each animation's first frame, under `.motion`).
+   Grid at 62rem and up: Chat (8 columns) and Bookings (4); Agent, Accounts, and Shelf over
+   Docs (4 each). Two columns on a tablet; one, in the suite's order, on a phone. */
+
+/* ------------------------------------------------------------------ the plate */
+.sf {
+  --cut: var(--cut-plate);
+  position: relative; margin-top: var(--space-5); background: var(--band); color: var(--on-band);
+  clip-path: polygon(var(--cut) 0, 100% 0, 100% 100%, 0 100%, 0 var(--cut));
+}
+[dir="rtl"] .sf { clip-path: polygon(0 0, calc(100% - var(--cut)) 0, 100% var(--cut), 100% 100%, 0 100%); }
+/* where the plate meets the page in dark, a hairline (the band's edge) */
+.sf::after { content: ""; position: absolute; inset: 0; z-index: var(--z-raised); box-shadow: inset 0 0 0 1px var(--band-edge); pointer-events: none; }
+
+.sf-bar {
+  display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-1) var(--space-3);
+  min-height: 3.5rem; padding-block: var(--space-2); padding-inline: calc(var(--cut) + var(--space-3)) var(--space-4);
+  border-bottom: 1px solid var(--dark-line); font-size: var(--fs-note); line-height: 1.3;
+}
+.sf-bar b { font-weight: var(--weight-semibold); white-space: nowrap; }
+.sf-mono {
+  position: relative; display: grid; place-items: center; width: 1.75rem; height: 1.75rem; flex: none; overflow: hidden;
+  border-radius: var(--radius-sm); background: var(--monogram-bg); color: var(--monogram-ink); box-shadow: inset 0 0 0 1px var(--band-rule);
+  font-size: var(--fs-micro); font-weight: var(--weight-semibold);
+}
+.sf-mono::after { content: ""; position: absolute; top: 0; inset-inline-end: 0; width: .5rem; height: .5rem; background: var(--volt); clip-path: polygon(0 0, 100% 0, 100% 100%); }
+[dir="rtl"] .sf-mono::after { clip-path: polygon(0 0, 100% 0, 0 100%); }
+.sf-bar .mark-sample { margin-inline-start: 0; border-color: var(--band-rule); color: var(--on-band-quiet); }
+.sf-when { margin-inline-start: auto; color: var(--on-band-quiet); font-variant-numeric: tabular-nums; white-space: nowrap; }
+
+.sf-grid {
+  display: grid; gap: 1px; background: var(--dark-line);
+  grid-template-columns: repeat(3, minmax(0, 1fr)); grid-template-rows: 27.5rem 16.25rem 16.25rem;
+  grid-template-areas: "chat chat bookings" "agent accounts shelf" "agent accounts docs";
+}
+.sf-cell { display: grid; min-width: 0; background: var(--band); }
+.sf-chat { grid-area: chat; }
+.sf-bookings { grid-area: bookings; }
+.sf-agent { grid-area: agent; }
+.sf-accounts { grid-area: accounts; }
+.sf-shelf { grid-area: shelf; }
+.sf-docs { grid-area: docs; }
+
+/* ------------------------------------------------------------------- a tile */
+.sf-tile {
+  --pad: var(--space-4); --bleed: 2.5rem;
+  position: relative; display: grid; grid-template-rows: minmax(0, 1fr) auto; row-gap: var(--space-3);
+  min-width: 0; min-height: 2.75rem; padding: var(--pad) var(--pad) 1.375rem; overflow: clip;
+  color: var(--on-band); text-decoration: none; -webkit-tap-highlight-color: transparent;
+}
+.sf-chat .sf-tile { --bleed: 3.5rem; }
+.sf-shelf .sf-tile { --bleed: 1.5rem; }
+.sf-docs .sf-tile { --bleed: calc(-1 * var(--pad)); }
+/* the edge a fine pointer lights */
+.sf-tile::after { content: ""; position: absolute; inset: 0; box-shadow: inset 0 0 0 1px var(--line-strong); opacity: 0; pointer-events: none; transition: opacity var(--dur-2) var(--ease); }
+.sf-tile:focus-visible { outline: var(--focus-width) solid var(--focus-on-band); outline-offset: calc(-1 * (var(--space-1) + var(--focus-width))); }
+/* the fragment runs past the tile's inline-end edge and is cut there, and at its foot */
+.sf-frag { display: grid; grid-template-rows: minmax(0, 1fr); min-height: 0; overflow: clip; margin-inline-end: calc(-1 * (var(--pad) + var(--bleed))); }
+/* a screen fills its tile down to the label; a card and a sheet of paper keep their own height */
+.sf-shelf .sf-frag, .sf-docs .sf-frag { grid-template-rows: auto; align-content: start; }
+.sf-label { display: grid; gap: var(--space-1); }
+.sf-name { display: inline-flex; align-items: center; gap: var(--space-2); font-family: var(--sans); font-size: var(--fs-body); font-weight: var(--weight-semibold); line-height: 1.2; }
+.sf-name .ico { width: 1.125rem; height: 1.125rem; flex: none; }
+.sf-desc { color: var(--on-band-quiet); font-size: var(--fs-caption); line-height: 1.4; }
+[lang="ar"] .sf-desc { line-height: 1.7; }
+.sf-state { color: var(--on-band-faint); }
+
+@media (hover: hover) and (pointer: fine) {
+  .sf-tile:hover::after { opacity: 1; }
+}
+@media (hover: hover) and (pointer: fine) and (prefers-reduced-motion: no-preference) {
+  .sf-frag, .sf-name .ico { transition: translate var(--dur-2) var(--ease); }
+  .sf-tile:hover .sf-frag { translate: calc(var(--dir) * 2px) -2px; }
+  .sf-tile:hover .sf-name .ico { translate: calc(var(--dir) * 1px) 0; }
+}
+
+/* ------------------------------------------- a window of the workspace, drawn */
+.sf-win {
+  --c: var(--cut-notch);
+  display: flex; flex-direction: column; min-width: 0; min-height: 0; overflow: hidden;
+  background: var(--window); color: var(--text); box-shadow: inset 0 0 0 1px var(--window-line);
+  clip-path: polygon(var(--c) 0, 100% 0, 100% 100%, 0 100%, 0 var(--c));
+  font-size: var(--ui-body-sm); line-height: 1.35;
+}
+[dir="rtl"] .sf-win { clip-path: polygon(0 0, calc(100% - var(--c)) 0, 100% var(--c), 100% 100%, 0 100%); line-height: 1.55; }
+.sf-win-head { display: flex; flex: none; align-items: center; justify-content: space-between; gap: var(--space-3); min-height: 2.75rem; padding-inline: var(--space-3); border-bottom: 1px solid var(--hair-strong); }
+.sf-win-head b { font-weight: var(--weight-semibold); white-space: nowrap; }
+.sf-win-head span { color: var(--text-muted); font-size: var(--ui-caption); font-variant-numeric: tabular-nums; white-space: nowrap; }
+.sf-pad { display: grid; align-content: start; gap: var(--space-3); padding: var(--space-3); }
+.sf-k { color: var(--text-muted); font-size: var(--ui-caption); font-weight: var(--weight-medium); }
+.sf-swap { display: grid; justify-items: start; min-width: 0; }
+.sf-swap > * { grid-area: 1 / 1; }
+.sf-old { opacity: 0; }
+
+/* ALYR Chat: the team's inbox, and Sara's chat beside it */
+.sf-inbox { display: grid; flex: 1; grid-template-columns: 18.75rem minmax(0, 1fr); min-height: 0; }
+.sf-list { display: grid; align-content: start; min-width: 0; }
+.sf-row { position: relative; display: grid; gap: 3px; min-width: 0; padding: .6875rem var(--space-3); border-bottom: 1px solid var(--hair); }
+.sf-row > :not(.sf-wash) { position: relative; }
+.sf-wash { position: absolute; inset: 0; background: var(--volt-wash); }
+.sf-row-top { display: flex; justify-content: space-between; gap: var(--space-2); }
+.sf-row-top b { font-weight: var(--weight-semibold); white-space: nowrap; }
+.sf-row-top > span { color: var(--text-muted); font-size: var(--ui-caption); font-variant-numeric: tabular-nums; }
+.sf-row-line { overflow: hidden; color: var(--text-muted); font-size: var(--ui-small); white-space: nowrap; }
+.sf-new { display: flex; align-items: center; gap: var(--space-2); white-space: nowrap; }
+.sf-tag { flex: none; padding-inline: .375rem; border: 1px solid currentColor; color: var(--volt-ink); font-size: var(--ui-caption); font-weight: var(--weight-semibold); font-variant-numeric: tabular-nums; }
+.sf-convo { display: flex; flex-direction: column; min-width: 0; min-height: 0; background: var(--d-chat); border-inline-start: 1px solid var(--hair-strong); }
+.sf-convo-head { display: flex; flex: none; align-items: center; min-height: 2.75rem; padding-inline: var(--space-3); border-bottom: 1px solid var(--hair-strong); background: var(--window); font-weight: var(--weight-semibold); }
+/* the newest message sits at the foot, as a chat scrolled to its end; older ones leave at the top */
+.sf-thread { display: flex; flex: 1; flex-direction: column; justify-content: flex-end; gap: var(--space-2); min-height: 0; overflow: hidden; padding: .875rem; }
+.sf-msg { flex: none; max-width: 82%; padding: .4375rem .6875rem; border-radius: var(--radius-sm); background: var(--d-card); color: var(--d-ink); box-shadow: 0 0 0 1px var(--d-hair); }
+.sf-msg.is-in { align-self: flex-start; }
+.sf-msg.is-out { align-self: flex-end; background: var(--d-out); }
+.sf-msg-act { display: block; margin: .4375rem -.6875rem -.4375rem; padding: .4375rem .6875rem; border-top: 1px solid var(--d-hair-2); color: var(--d-link); font-size: var(--ui-small); font-weight: var(--weight-semibold); text-align: center; }
+.sf-event { flex: none; align-self: center; padding: .1875rem .625rem; background: var(--d-raise); box-shadow: 0 0 0 1px var(--d-hair-2); color: var(--d-ink-2); font-size: var(--ui-caption); font-variant-numeric: tabular-nums; }
+
+/* ALYR Bookings: the day's free times, one taken, its booking and its reminder */
+.sf-slots { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: var(--space-2); }
+.sf-slot { position: relative; display: grid; place-items: center; height: 2.25rem; overflow: hidden; border-radius: var(--radius-md); background: var(--d-card); color: var(--d-ink); box-shadow: 0 0 0 1px var(--d-hair-2); font-size: var(--ui-small); font-weight: var(--weight-medium); font-variant-numeric: tabular-nums; }
+/* the one Volt: the time taken, the screen's current state */
+.sf-slot-fill { position: absolute; inset: 0; display: grid; place-items: center; background: var(--volt); color: var(--on-volt); font-weight: var(--weight-semibold); }
+.sf-lines { display: grid; }
+.sf-line { display: grid; grid-template-columns: 3.75rem minmax(0, 1fr) auto; align-items: center; gap: var(--space-3); padding-block: .625rem; border-top: 1px solid var(--hair); }
+.sf-line > b { font-size: var(--ui-small); font-weight: var(--weight-semibold); font-variant-numeric: tabular-nums; justify-self: start; }
+.sf-line > span { display: grid; gap: 2px; min-width: 0; }
+.sf-line b { font-weight: var(--weight-semibold); }
+.sf-line small { color: var(--text-muted); font-size: var(--ui-caption); font-variant-numeric: tabular-nums; }
+.sf-tick { display: grid; width: 1.125rem; height: 1.125rem; color: var(--volt-ink); }
+.sf-tick svg { width: 100%; height: 100%; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: square; }
+
+/* ALYR Agent: what needs the owner now, then one suggestion (no rule line on the site) */
+.sf-needs li { display: flex; align-items: baseline; gap: var(--space-3); padding: .625rem var(--space-3); border-bottom: 1px solid var(--hair); }
+.sf-needs li > b { font-size: var(--ui-heading); font-weight: var(--weight-semibold); line-height: 1; font-variant-numeric: tabular-nums; }
+.sf-needs li > span { display: grid; gap: 2px; font-weight: var(--weight-medium); }
+.sf-needs small, .sf-card > span:nth-child(2) { color: var(--text-muted); font-size: var(--ui-caption); font-weight: var(--weight-regular); }
+.sf-sugg { display: grid; gap: var(--space-2); padding: .75rem var(--space-3) 0; }
+.sf-card { display: grid; justify-items: start; gap: .375rem; padding: .875rem; background: var(--d-card); box-shadow: 0 0 0 1px var(--d-hair-2); }
+.sf-card > b { font-size: var(--ui-body); font-weight: var(--weight-semibold); }
+.sf-card > span:nth-child(2) { font-size: var(--ui-small); }
+/* a drawn button that cannot be pressed: the outline with its notch */
+.sf-act { --n: var(--cut-notch-sm); margin-top: var(--space-1); padding: 1px; background: var(--text); clip-path: polygon(0 0, calc(100% - var(--n)) 0, 100% var(--n), 100% 100%, 0 100%); }
+.sf-act > span { display: block; padding: .3125rem .75rem; background: var(--d-card); font-size: var(--ui-small); font-weight: var(--weight-semibold); clip-path: polygon(0 0, calc(100% - var(--n) + .5px) 0, 100% calc(var(--n) - .5px), 100% 100%, 0 100%); }
+[dir="rtl"] .sf-act { clip-path: polygon(var(--n) 0, 100% 0, 100% 100%, 0 100%, 0 var(--n)); }
+[dir="rtl"] .sf-act > span { clip-path: polygon(calc(var(--n) - .5px) 0, 100% 0, 100% 100%, 0 100%, 0 calc(var(--n) - .5px)); }
+
+/* ALYR Accounts: what is owed, by age, and one customer's promise */
+.sf-owed { gap: var(--space-1); }
+.sf-big { font-size: var(--ui-heading-lg); font-weight: var(--weight-semibold); line-height: 1.15; font-variant-numeric: tabular-nums; }
+.sf-age { display: flex; gap: 2px; height: .625rem; margin-top: .625rem; }
+.sf-age > span { display: grid; flex-basis: 0; min-width: 4px; overflow: hidden; background: var(--d-raise); box-shadow: inset 0 0 0 1px var(--hair); }
+.sf-age i { display: block; transform-origin: 0 50%; }
+[dir="rtl"] .sf-age i { transform-origin: 100% 50%; }
+.sf-legend { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: .375rem var(--space-3); margin-top: .625rem; }
+.sf-legend > span { display: flex; align-items: center; gap: .375rem; min-width: 0; color: var(--text-muted); font-size: var(--ui-caption); white-space: nowrap; }
+.sf-legend i { width: .5rem; height: .5rem; flex: none; }
+.sf-legend b { color: var(--text); font-weight: var(--weight-regular); font-variant-numeric: tabular-nums; }
+.sf-acct { display: grid; gap: .375rem; margin-top: var(--space-2); padding-top: .75rem; border-top: 1px solid var(--hair-strong); }
+.sf-acct-top { display: flex; align-items: baseline; justify-content: space-between; gap: var(--space-3); }
+.sf-acct-top b { font-weight: var(--weight-semibold); }
+.sf-acct-top b:last-child { white-space: nowrap; font-variant-numeric: tabular-nums; }
+.sf-acct small { color: var(--text-muted); font-size: var(--ui-caption); }
+.sf-promise { justify-self: start; padding: .1875rem .5rem; background: var(--volt-wash); color: var(--volt-ink); font-size: var(--ui-caption); font-weight: var(--weight-semibold); }
+
+/* ALYR Shelf: the Stock screen's card for the last cake, at its last sale */
+.sf-stock { display: grid; grid-template-columns: 5.5rem minmax(0, 1fr); }
+.sf-count { display: grid; align-content: center; justify-items: center; gap: 2px; padding: .75rem .375rem; border-inline-end: 1px solid var(--hair-strong); text-align: center; }
+.sf-count small { color: var(--text-muted); font-size: var(--ui-caption); }
+.sf-digit { display: grid; overflow: hidden; font-size: var(--ui-display-sm); font-weight: var(--weight-semibold); line-height: 1; font-variant-numeric: tabular-nums; }
+.sf-digit > span { grid-area: 1 / 1; }
+.sf-d1 { opacity: 0; }
+.sf-item { display: grid; align-content: start; justify-items: start; gap: 3px; min-width: 0; padding: .75rem var(--space-3); }
+.sf-item > b { font-weight: var(--weight-semibold); line-height: 1.3; }
+.sf-code { padding-inline: .375rem; box-shadow: inset 0 0 0 1px var(--line-strong); color: var(--text-muted); font-family: var(--mono); font-size: var(--ui-micro); }
+.sf-price { color: var(--text-muted); font-size: var(--ui-small); font-variant-numeric: tabular-nums; }
+.sf-left { margin-top: 2px; }
+.sf-few { color: var(--text-muted); font-size: var(--ui-caption); }
+.sf-out { padding: 1px .5rem; background: var(--text); color: var(--text-inverse); font-size: var(--ui-caption); font-weight: var(--weight-semibold); }
+
+/* ALYR Docs: the top of receipt RC-0042, Arabic first (Paper.tsx) */
+.sf-paper { --c: var(--cut-notch); clip-path: polygon(var(--c) 0, 100% 0, 100% 100%, 0 100%, 0 var(--c)); }
+[dir="rtl"] .sf-paper { clip-path: polygon(0 0, calc(100% - var(--c)) 0, 100% var(--c), 100% 100%, 0 100%); }
+.sf-paper .pp-sheet { box-shadow: inset 0 0 0 1px var(--doc-rule); }
+
+/* -------------------------------------------------------------- the notes */
+.suite-notes { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); column-gap: var(--col-gap); row-gap: var(--space-3); margin-top: var(--space-4); }
+.suite-notes p { max-width: 34rem; color: var(--text-muted); font-size: var(--fs-base); }
+.suite-notes b { color: var(--text); font-weight: var(--weight-semibold); }
+
+/* ------------------------------------------------------------ narrower */
+@media (max-width: 61.99rem) {
+  .sf-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); grid-template-rows: 26rem 26rem 16.25rem 16.25rem; grid-template-areas: "chat chat" "bookings agent" "accounts shelf" "accounts docs"; }
+}
+/* a phone: one column in the suite's order, each tile its own height */
+@media (max-width: 47.99rem) {
+  .sf { --cut: var(--cut-plate-sm); margin-top: var(--space-4); }
+  .sf-bar { min-height: 3.25rem; padding-inline: calc(var(--cut) + var(--space-2)) var(--space-3); column-gap: var(--space-2); }
+  .sf-grid { grid-template-columns: minmax(0, 1fr); grid-template-rows: none; grid-template-areas: none; }
+  .sf-grid > .sf-cell { grid-area: auto; }
+  .sf-tile { --pad: var(--space-3); --bleed: var(--space-4); height: var(--h); padding-bottom: var(--space-3); }
+  .sf-chat .sf-tile { --bleed: var(--space-5); }
+  .sf-docs .sf-tile { --bleed: calc(-1 * var(--pad)); }
+  .sf-chat { --h: 19rem; }
+  .sf-bookings { --h: 23.5rem; }
+  .sf-agent { --h: 24.5rem; }
+  .sf-accounts { --h: 26rem; }
+  .sf-shelf, .sf-docs { --h: 15rem; }
+  .sf-inbox { grid-template-columns: minmax(0, 1fr); }
+  .sf-convo { display: none; }
+  .sf-needs li + li { display: none; }
+  .suite-notes { grid-template-columns: minmax(0, 1fr); }
+}
+
+/* --------------------------------------------------------------- the moments */
+@keyframes sf-arrive { from { opacity: 0; translate: calc(var(--dir) * var(--travel) * .7071) calc(var(--travel) * -.7071); } }
+@keyframes sf-settle { from { translate: calc(var(--dir) * var(--travel) * .7071) calc(var(--travel) * -.7071); } }
+@keyframes sf-in { from { opacity: 0; } to { opacity: 1; } }
+@keyframes sf-out { from { opacity: 1; translate: 0 0; } to { opacity: 0; translate: 0 -.5rem; } }
+@keyframes sf-fade { from { opacity: 1; } to { opacity: 0; } }
+@keyframes sf-up { from { opacity: 0; translate: 0 .5rem; } to { opacity: 1; translate: 0 0; } }
+@keyframes sf-wipe { from { clip-path: inset(0 100% 0 0); } to { clip-path: inset(0); } }
+@keyframes sf-wipe-rtl { from { clip-path: inset(0 0 0 100%); } to { clip-path: inset(0); } }
+@keyframes sf-grow { from { scale: 0 1; } }
+@keyframes sf-leave { from { opacity: 1; translate: 0 0; } to { opacity: 0; translate: calc(var(--dir) * .55em) -.55em; } }
+@keyframes sf-enter { from { opacity: 0; translate: calc(var(--dir) * -.55em) .55em; } to { opacity: 1; translate: 0 0; } }
+
+@media (prefers-reduced-motion: no-preference) {
+  /* At rest every tile is finished, as every demo on the site opens (founder, 25 Oct 2026):
+     the HTML is the end state and nothing waits on it. Hover or focus with a fine pointer, or
+     60% in view elsewhere, adds `is-in` once (SiteMotion), and the moment plays from its start:
+     each animation fills backwards, so its first frame shows the earlier state at once, through
+     its delay, and it ends on the finished one. */
+  /* ALYR Chat: the order lands in Sara's chat, then its confirmation, then her row in the inbox */
+  .motion .sf-chat > .is-in .sf-event { animation: sf-arrive var(--dur-3) var(--ease) both; }
+  .motion .sf-chat > .is-in .sf-confirm { animation: sf-arrive var(--dur-3) var(--ease) both; animation-delay: calc(6 * var(--stagger)); }
+  .motion .sf-chat > .is-in .sf-wash { animation: sf-in var(--dur-3) var(--ease) both; animation-delay: calc(10 * var(--stagger)); }
+  .motion .sf-chat > .is-in .sf-old { animation: sf-out var(--dur-2) var(--ease) both; animation-delay: calc(10 * var(--stagger)); }
+  .motion .sf-chat > .is-in .sf-new { animation: sf-up var(--dur-3) var(--ease) both; animation-delay: calc(11 * var(--stagger)); }
+  /* ALYR Bookings: 6:00 pm is taken, its booking arrives, then the reminder that went at 4:00 */
+  .motion .sf-bookings > .is-in .sf-slot-fill { animation: sf-wipe var(--dur-2) var(--ease) both; }
+  .motion[dir="rtl"] .sf-bookings > .is-in .sf-slot-fill { animation-name: sf-wipe-rtl; }
+  .motion .sf-bookings > .is-in .sf-b1 { animation: sf-arrive var(--dur-3) var(--ease) both; animation-delay: calc(5 * var(--stagger)); }
+  .motion .sf-bookings > .is-in .sf-b2 { animation: sf-arrive var(--dur-3) var(--ease) both; animation-delay: calc(14 * var(--stagger)); }
+  /* ALYR Agent: the suggestion arrives, then its outlined button */
+  .motion .sf-agent > .is-in .sf-card { animation: sf-arrive var(--dur-4) var(--ease) both; }
+  .motion .sf-agent > .is-in .sf-act { animation: sf-arrive var(--dur-2) var(--ease) both; animation-delay: calc(8 * var(--stagger)); }
+  /* ALYR Accounts: the age bar fills, oldest last, then the promise */
+  .motion .sf-accounts > .is-in .sf-age i { animation: sf-grow var(--dur-3) var(--ease) both; animation-delay: calc(var(--i, 0) * 2 * var(--stagger)); }
+  .motion .sf-accounts > .is-in .sf-promise { animation: sf-arrive var(--dur-3) var(--ease) both; animation-delay: calc(16 * var(--stagger)); }
+  /* ALYR Shelf: the count steps from 1 to 0, then the cake is Sold out */
+  .motion .sf-shelf > .is-in .sf-d1 { animation: sf-leave var(--dur-3) var(--ease) both; }
+  .motion .sf-shelf > .is-in .sf-d0 { animation: sf-enter var(--dur-3) var(--ease) both; }
+  .motion .sf-shelf > .is-in .sf-old { animation: sf-fade var(--dur-2) var(--ease) both; animation-delay: calc(8 * var(--stagger)); }
+  .motion .sf-shelf > .is-in .sf-new { animation: sf-arrive var(--dur-3) var(--ease) both; animation-delay: calc(8 * var(--stagger)); }
+  /* ALYR Docs: the paper settles along 45°, then draws Arabic first, its English, then its number and date */
+  .motion .sf-docs > .is-in .sf-paper { animation: sf-settle var(--dur-4) var(--ease) both; }
+  .motion .sf-docs > .is-in :is(.pp-shop > b, .pp-kind > b) { animation: sf-wipe-rtl var(--dur-3) var(--ease) both; animation-delay: calc(8 * var(--stagger)); }
+  .motion .sf-docs > .is-in :is(.pp-shop > .pp-en, .pp-kind > .pp-en) { animation: sf-wipe var(--dur-3) var(--ease) both; animation-delay: calc(13 * var(--stagger)); }
+  .motion .sf-docs > .is-in .pp-addr { animation: sf-wipe-rtl var(--dur-3) var(--ease) both; animation-delay: calc(13 * var(--stagger)); }
+  .motion .sf-docs > .is-in .pp-f { animation: sf-wipe-rtl var(--dur-3) var(--ease) both; animation-delay: calc(17 * var(--stagger)); }
+  .motion .sf-docs > .is-in .pp-f + .pp-f { animation-delay: calc(19 * var(--stagger)); }
+}
