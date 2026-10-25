@@ -26,7 +26,7 @@ How should ALYR's films look and what should they say? CREATIVE.md (18 Oct) set 
 
 ## What we decided because of it
 - Nothing yet. All 10 questions are open, including actors on screen, the line, the monthly review, a free check-up, the Arabic voice, budget and retiring the October films.
-- It applies D-046, D-056 and D-048, and the honesty rules in `alyr-design/honesty.md`.
+- It applies D-046, D-047 and D-048, and the honesty rules in `alyr-design/honesty.md`.
 
 ## What changed since, and conflicts
 - CREATIVE.md is superseded by DIRECTION.md, which retires the three October films as masters. They predate Shelf and Docs, and use the old line, FIG captions and an "EARLY ACCESS" mark.

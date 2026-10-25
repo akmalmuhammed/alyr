@@ -27,13 +27,13 @@ How good is alyr.qa (10 pages, English and Arabic), and what should be fixed, in
 - Conflicts it found in our own docs: the growth plan's founder-led posts go against D-043; DMARC reports went to a founder-named address; introduction.md claims payments; Payroll showed "Coming".
 
 ## What we decided because of it
-- D-056 (22 Oct) answered the "agent reads as AI" finding: the homepage opens on the owner's problem, and "agent" appears only beside its rules, with no AI words and no "Is it AI?" question.
+- D-047 (22 Oct) answered the "agent reads as AI" finding: the homepage opens on the owner's problem, and "agent" appears only beside its rules, with no AI words and no "Is it AI?" question.
 - D-046 removed Payroll from the site.
 - Other items (WhatsApp number, Search Console, structured data, Arabic cards) are not recorded as decisions on main.
 
 ## What changed since, and conflicts
-- Its proposed headline was not taken; D-056 chose "Stop losing orders in the chat." and D-048 replaced that with "The tech team your business never had."
-- "ALYR Agent" kept its name (D-035, D-056); the rename to "ALYR Today" and "Accounts" to "Credit" were not adopted.
+- Its proposed headline was not taken; D-047 chose "Stop losing orders in the chat." and D-048 replaced that with "The tech team your business never had."
+- "ALYR Agent" kept its name (D-035, D-047); the rename to "ALYR Today" and "Accounts" to "Credit" were not adopted.
 - It assumes prices wait for the CR (D-034); the 22 Oct audit says the CR is done. That gap is between sources, not settled here.
 - D-043 is on the unmerged `company-introduction` branch, not on main.
 

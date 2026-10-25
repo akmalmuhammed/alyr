@@ -42,7 +42,7 @@ What should the homepage say, section by section in English and Arabic, to get a
 - The build brief (`04-brief.md`) used its copy for the 16 Oct redesign. The founder's table (`00-founder-decisions.md`) settled the setup fee, the month-to-month term, and no founder name.
 
 ## What changed since, and conflicts
-- **Hero line replaced** three times: "Your business just got an agent." (D-037), "Stop losing orders in the chat." (D-056), then "The tech team your business never had." (D-048).
+- **Hero line replaced** three times: "Your business just got an agent." (D-037), "Stop losing orders in the chat." (D-047), then "The tech team your business never had." (D-048).
 - **CTA:** "Message us on WhatsApp" was never live. The site ships in the email state (hello@alyr.qa). Since 24 Oct, "Book a check-up" is the one action on every page (D-048 update).
 - **Prices are off the public site** until the commercial registration (D-034, 17 Oct). The price section, hero price and money-back lines show only when the offer switch is on. The term now has 7 days' notice.
 - **Positioning:** "ALYR Chat is the first product" became a suite led by ALYR Agent (D-035). Credit accounts is now ALYR Accounts; Shelf and Docs were added (D-046).

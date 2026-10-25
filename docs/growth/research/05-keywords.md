@@ -1,6 +1,6 @@
 # Keyword map: the words owners in Qatar use, in Gulf Arabic and English
 
-Growth lane, ALY-234 (part of ALY-227, search and AI visibility, D-056 in PR #123). Collected 25 Oct 2026. Feeds the sector pages (ALY-232), the owner guides (ALY-233) and the monthly AI question set (ALY-240). Numbered after research 01 to 04 of the growth plan (`docs/research/sources/growth-launch-plan/`).
+Growth lane, ALY-234 (part of ALY-227, search and AI visibility, D-047 in PR #123). Collected 25 Oct 2026. Feeds the sector pages (ALY-232), the owner guides (ALY-233) and the monthly AI question set (ALY-240). Numbered after research 01 to 04 of the growth plan (`docs/research/sources/growth-launch-plan/`).
 
 **What this is and is not.** It lists what people in Qatar type, per sector and problem, and which page should answer each query. It does **not** give search volumes: Google's Keyword Planner needs a Google Ads account (the founder's), and Search Console has no data until the site is verified (ALY-228). Autocomplete shows what is typed often enough to be suggested, not how often. Treat order of appearance as a weak signal only.
 

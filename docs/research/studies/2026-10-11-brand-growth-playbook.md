@@ -33,7 +33,7 @@ How should alyr be branded, how should it talk, what content and sales materials
 ## What changed since, and conflicts
 - Retired: cobalt look, lowercase "alyr", the four product names and colours, QAR 199/449/899, the free 14-day pilot, "live in 48 hours" (D-025, D-034, D-040).
 - The product line-up is now Chat, Bookings, Agent, Accounts, Shelf, Docs (D-035, D-046); there is no Pay, Books or Sites.
-- Positioning moved on: D-056 led with the owner's problem, then D-048 made ALYR "the tech team your business never had." "We do the tech. You run the business." survives as a footer line.
+- Positioning moved on: D-047 led with the owner's problem, then D-048 made ALYR "the tech team your business never had." "We do the tech. You run the business." survives as a footer line.
 - The playbook's founder-led posts and founder on camera conflict with D-034 (no founder name or photo on the site) and with D-043 on the unmerged `company-introduction` branch (the brand speaks alone).
 - Its first audience (restaurants and cafes) differs from later priority lists (bakeries and wholesale first, per the 22 Oct audit).
 
