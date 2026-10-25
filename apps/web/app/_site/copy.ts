@@ -12,7 +12,7 @@
 // The Arabic is written natively, not translated line by line, and still needs a
 // native speaker's review before launch (ALY-66).
 
-import type { ContactState, PageKey, ProductKey, TrustRecord } from "./site";
+import type { ContactState, PageKey, ProductKey } from "./site";
 import { docsAr, docsEn, type DocLinkPage, type DocsPage } from "./copyDocs";
 import { shelfAr, shelfEn, type ShelfPage } from "./copyShelf";
 
@@ -155,7 +155,7 @@ export type HowScenes = {
   improve: { label: string; replay: string; last: string; now: string };
 };
 
-/** A caption, only for a drawing that needs words (the trust pair, the no-CR foot, the
+/** A caption, only for a drawing that needs words (the no-CR foot, the
  * agreement): what it shows. The component adds "Sample" from `fig`. Every other drawing
  * carries the "Sample" mark in its own chrome instead (site audit, 24 Oct 2026). */
 export type Caption = { text: string };
@@ -363,35 +363,11 @@ type Home = {
       print: string;
     };
   };
-  trust: {
-    /** None today: the heading says what the section holds (content audit row 19). */
-    eyebrow?: string;
-    title: string;
-    body: string;
-    facts: { title: string; body: string }[];
-    closing: string;
-    records: { label: string; items: Record<TrustRecord, string> };
-    figure: { caption: Caption; label: string };
-  };
   /** The first `shown` questions are open to read; the rest sit under `more`. */
   faq: Questions & { shown: number; more: string };
   /** The closing call; `action` is the button's words there, in the header and on the phone's bar. */
   /** `short` is the header button's words on a phone, where the full action does not fit. */
   final: Titled & { action: string; short: string };
-  /** The sample business on the trust figure: the order tracking page. */
-  sample: {
-    shop: string;
-    monogram: string;
-    track: {
-      context: string;
-      eyebrow: string;
-      title: string;
-      status: string;
-      steps: { label: string; at: string; reached: boolean; now?: boolean }[];
-      person: { name: string; rest: string };
-      updates: string;
-    };
-  };
 };
 
 // ----------------------------------------------------------- the product pages
@@ -413,9 +389,6 @@ export type InsideSection = {
   /** What is not built, below a dashed rule. Leave it out where nothing needs saying (D-039). */
   notYet?: { title: string; items: string[] };
   note?: string;
-  /** A link to the homepage's trust section, closing the last group, in place of the
-   * consent and WhatsApp-rules lines every page used to repeat (site audit R3). */
-  rules?: string;
 };
 
 export type WhoSection = { eyebrow?: string; title: string; rows: { name: string; tags?: string[] }[]; other: string };
@@ -1334,46 +1307,6 @@ const en: Copy = {
         print: "The terms are written into your agreement.",
       },
     },
-    trust: {
-      title: "What you can check before you start",
-      body:
-        "We are choosing our first businesses in Doha now, so there are no logos or results on this page. These are the things you can check.",
-      facts: [
-        {
-          title: "The same person from the visit on",
-          body: "The person who visits you sets you up and answers when you message.",
-        },
-        {
-          title: "Records kept apart",
-          body: "Each business’s records are separated inside the database itself, not by a setting someone can forget.",
-        },
-        {
-          title: "Consent recorded",
-          body: "ALYR checks a customer’s consent before any message it starts, and keeps every consent on record.",
-        },
-        {
-          title: "Built on WhatsApp’s official platform",
-          body: "ALYR is built on WhatsApp’s official Business Platform, not on unofficial tools that put a number at risk. We are not WhatsApp or Meta.",
-        },
-        {
-          title: "Built never to hold your money",
-          body: "Card payments, once your payment provider is connected, go to your own account. ALYR keeps a payment’s reference and status, never card numbers.",
-        },
-        {
-          title: "Your team can take over any chat",
-          body: "Automatic replies handle the routine, ALYR Agent only suggests and shows why, and anyone on your team can step into any chat.",
-        },
-      ],
-      closing: "And if the first month misses the result we agreed, you get that month’s subscription back.",
-      records: {
-        label: "On record",
-        items: { cr: "Commercial registration", provider: "Payment provider", meta: "Meta Tech Provider" },
-      },
-      figure: {
-        caption: { text: "The same tracking page, in English and Arabic" },
-        label: "The same customer page in English and in Arabic, side by side",
-      },
-    },
     faq: {
       title: "Questions",
       shown: 6,
@@ -1505,24 +1438,6 @@ const en: Copy = {
       body: "Send us a message. A person from ALYR replies, visits your shop, and shows you what we would change first.",
       action: "Book a check-up",
       short: "Check-up",
-    },
-    sample: {
-      shop: "Qirfa Bakery",
-      monogram: "QB",
-      track: {
-        context: "Order tracking",
-        eyebrow: "Your order",
-        title: "Order #1439",
-        status: "Ready for collection",
-        steps: [
-          { label: "Order received", at: "Wed 4:05 pm", reached: true },
-          { label: "Confirmed by the shop", at: "Wed 4:09 pm", reached: true },
-          { label: "Ready for collection", at: "Wed 4:31 pm", reached: true, now: true },
-          { label: "Complete", at: "Waiting", reached: false },
-        ],
-        person: { name: "Yusuf", rest: " at Qirfa Bakery is looking after your order." },
-        updates: "This page updates by itself. We also message you on WhatsApp at every step.",
-      },
     },
   },
   product: {
@@ -2308,7 +2223,6 @@ const en: Copy = {
             ],
           },
         ],
-        rules: "How ALYR handles consent, WhatsApp and your records",
         note: "Everything listed here is built.",
       },
       who: {
@@ -3646,46 +3560,6 @@ const ar: Copy = {
         print: "الشروط مكتوبة في اتفاقك معنا.",
       },
     },
-    trust: {
-      title: "ما يمكنك التحقق منه قبل أن تبدأ",
-      body:
-        "نختار الآن أول الأنشطة التي نعمل معها في الدوحة، لذلك لا توجد على هذه الصفحة شعارات ولا نتائج. وهذه أمور يمكنك التحقق منها.",
-      facts: [
-        {
-          title: "الشخص نفسه من الزيارة فصاعداً",
-          body: "الشخص الذي يزورك هو من يجهّز لك، وهو من يردّ حين تراسلنا.",
-        },
-        {
-          title: "سجلات منفصلة",
-          body: "بيانات كل منشأة مفصولة داخل قاعدة البيانات نفسها، لا بإعداد قد يُنسى.",
-        },
-        {
-          title: "الموافقة مسجّلة",
-          body: "تتحقق ALYR من موافقة العميل قبل أي رسالة تبدأها، وتحفظ كل موافقة في السجل.",
-        },
-        {
-          title: "مبنية على منصة واتساب الرسمية",
-          body: "ALYR مبنية على منصة واتساب للأعمال الرسمية، لا على أدوات غير رسمية تعرّض الرقم للحظر. ولسنا واتساب ولا Meta.",
-        },
-        {
-          title: "صُمّمت كي لا تحتفظ بأموالك أبداً",
-          body: "مدفوعات البطاقات، بعد ربط مزوّد الدفع الخاص بك، تذهب إلى حسابك أنت. وتحفظ ALYR مرجع الدفعة وحالتها، لا أرقام البطاقات أبداً.",
-        },
-        {
-          title: "يستطيع فريقك تولّي أي محادثة",
-          body: "الردود الآلية تتولى المتكرر، وALYR Agent يقترح فقط ويبيّن السبب، وأي موظف يستطيع الدخول إلى أي محادثة.",
-        },
-      ],
-      closing: "وإن لم يحقق الشهر الأول النتيجة التي اتفقنا عليها، نعيد لك اشتراك ذلك الشهر.",
-      records: {
-        label: "موثّق",
-        items: { cr: "السجل التجاري", provider: "مزوّد الدفع", meta: "مزوّد تقنية معتمد لدى Meta" },
-      },
-      figure: {
-        caption: { text: "صفحة تتبّع الطلب نفسها، بالعربية والإنجليزية" },
-        label: "صفحة العميل نفسها بالعربية والإنجليزية، جنباً إلى جنب",
-      },
-    },
     faq: {
       title: "أسئلة",
       shown: 6,
@@ -3817,24 +3691,6 @@ const ar: Copy = {
       body: "أرسل لنا رسالة. يردّ عليك شخص من ALYR، ويزور محلك، ويريك ما سنغيّره أولاً.",
       action: "احجز فحصاً لمشروعك",
       short: "احجز فحصاً",
-    },
-    sample: {
-      shop: "مخبز قرفة",
-      monogram: "ق",
-      track: {
-        context: "تتبّع الطلب",
-        eyebrow: "طلبك",
-        title: "الطلب رقم 1439",
-        status: "جاهز للاستلام",
-        steps: [
-          { label: "تم استلام الطلب", at: "الأربعاء 4:05 م", reached: true },
-          { label: "أكّده المتجر", at: "الأربعاء 4:09 م", reached: true },
-          { label: "جاهز للاستلام", at: "الأربعاء 4:31 م", reached: true, now: true },
-          { label: "مكتمل", at: "قيد الانتظار", reached: false },
-        ],
-        person: { name: "يوسف", rest: " من مخبز قرفة يتابع طلبك." },
-        updates: "تتحدّث هذه الصفحة تلقائياً، ونراسلك على واتساب عند كل خطوة.",
-      },
     },
   },
   product: {
@@ -4621,7 +4477,6 @@ const ar: Copy = {
             ],
           },
         ],
-        rules: "كيف تتعامل ALYR مع الموافقة وواتساب وسجلاتك",
         note: "كل ما في هذه القائمة مبنيّ في المنتج.",
       },
       who: {

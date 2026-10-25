@@ -16,7 +16,7 @@ main[data-page="home"] { font-size: 1.0625rem; line-height: 1.55; }
 /* The sections after how it works are laid out only as they come near the screen, so the
    first screen is drawn sooner. None of them is measured by a scroll trigger, and the
    size each one last had is kept (auto), so the scrollbar barely moves as they arrive. */
-#price, #trust, #questions { content-visibility: auto; contain-intrinsic-size: auto 1100px; }
+#price, #questions { content-visibility: auto; contain-intrinsic-size: auto 1100px; }
 
 /* ------------------------------------------------------------------- hero */
 .hero { position: relative; padding-block: clamp(1.5rem, 4vw, 3rem) clamp(3.5rem, 7vw, 6rem); }
@@ -219,29 +219,6 @@ main[data-page="home"] .hs > .wrap > .rule { margin-bottom: var(--space-5); }
 .price-cta { margin-top: clamp(2.5rem, 5vw, 3.5rem); display: flex; flex-wrap: wrap; align-items: center; gap: 1rem 1.75rem; }
 .price-cta .contact-note, .price-cta .status-line { max-width: 30rem; }
 
-/* ------------------------------------------------------------------ trust */
-.trust-grid { display: grid; grid-template-columns: repeat(12, minmax(0, 1fr)); column-gap: var(--col-gap); row-gap: 3rem; align-items: start; }
-.trust-copy { grid-column: 1 / span 7; }
-.trust .head { max-width: 38rem; }
-.facts6 { margin-top: 2.75rem; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); border-top: 1px solid var(--line); }
-.facts6 li { display: grid; gap: .5rem; align-content: start; padding: 1.25rem 1.25rem 1.5rem 0; border-bottom: 1px solid var(--line); }
-.facts6 li:not(:nth-child(3n + 1)) { border-inline-start: 1px solid var(--line); padding-inline-start: 1.25rem; }
-[dir="rtl"] .facts6 li { padding: 1.25rem 0 1.5rem 1.25rem; }
-[dir="rtl"] .facts6 li:not(:nth-child(3n + 1)) { padding-inline-start: 1.25rem; }
-.facts6 h3 { font-size: 1.0625rem; font-weight: 600; line-height: 1.3; }
-[lang="ar"] .facts6 h3 { line-height: 1.55; }
-.facts6 p { color: var(--text-muted); font-size: .9375rem; }
-.records { margin-top: 1.5rem; display: grid; gap: 0; border-bottom: 1px solid var(--line); }
-.records > div { display: flex; justify-content: space-between; gap: 1rem; padding-block: .75rem; border-top: 1px solid var(--line); font-size: .9375rem; }
-.records dt { font-family: var(--mono); font-size: .75rem; letter-spacing: .08em; text-transform: uppercase; color: var(--text-muted); }
-.records dd { margin: 0; font-weight: 500; }
-.trust-closing { margin-top: 2rem; font-size: 1.1875rem; font-weight: 560; max-width: 36rem; }
-.trust-fig { grid-column: 9 / -1; }
-.pair { position: relative; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 1rem; }
-.pair::before { content: ""; position: absolute; inset-block: -.75rem; inset-inline-start: 50%; width: 1px; border-inline-start: 1px dashed var(--line-strong); opacity: 0; }
-.pair:focus-visible { outline: 2px solid var(--focus); outline-offset: 6px; }
-.pair-phone { height: 30rem; }
-.pair-phone .d-main { padding-top: 14px; }
 
 
 /* the two lists beside the note: what we need from you, and every month */
@@ -282,20 +259,8 @@ main[data-page="home"] .hs > .wrap > .rule { margin-bottom: var(--space-5); }
   .how-next, .how-lists { grid-column: 1; }
   .sheet, .agreement-fig { grid-column: 1 / -1; padding-inline-end: 0; }
   .agreement-fig { max-width: 36rem; }
-  .trust-copy, .trust-fig { grid-column: 1 / -1; position: static; }
-  .trust-fig { max-width: 34rem; }
 }
 @media (max-width: 53rem) {
-  .facts6 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-  .facts6 li:not(:nth-child(3n + 1)) { border-inline-start: 0; padding-inline-start: 0; }
-  .facts6 li, [dir="rtl"] .facts6 li { padding: 1.25rem 1.25rem 1.5rem 0; }
-  [dir="rtl"] .facts6 li { padding: 1.25rem 0 1.5rem 1.25rem; }
-  .facts6 li:nth-child(even) { border-inline-start: 1px solid var(--line); padding-inline-start: 1.25rem; }
-  /* the two pages scroll sideways and snap, one at a time */
-  .pair { display: flex; gap: .75rem; overflow-x: auto; scroll-snap-type: x mandatory; scrollbar-width: none; margin-inline: calc(var(--gutter) * -1); padding-inline: var(--gutter); scroll-padding-inline: var(--gutter); }
-  .pair::-webkit-scrollbar { display: none; }
-  .pair::before { display: none; }
-  .pair-item { flex: 0 0 min(76%, 17.5rem); scroll-snap-align: start; }
   .how-lists { grid-template-columns: minmax(0, 1fr); }
   .biz-cols { grid-template-columns: minmax(0, 1fr); }
 }
@@ -311,8 +276,6 @@ main[data-page="home"] .hs > .wrap > .rule { margin-bottom: var(--space-5); }
   .hero-facts { grid-template-columns: minmax(0, 1fr); margin-top: 1.5rem; }
   .hero-facts li, [dir="rtl"] .hero-facts li { padding: .6875rem 0; }
   .hero-facts li + li, [dir="rtl"] .hero-facts li + li { border-inline-start: 0; padding-inline-start: 0; border-top: 1px solid var(--line); }
-  .facts6 { grid-template-columns: minmax(0, 1fr); }
-  .facts6 li:nth-child(n), [dir="rtl"] .facts6 li:nth-child(n) { border-inline-start: 0; padding: 1.25rem 0; }
   .agr-fields > div { grid-template-columns: minmax(0, 1fr); gap: .25rem; }
   .ledger > div { grid-template-columns: minmax(0, 1fr); gap: .25rem; }
   .price-cta .btn { width: 100%; }
@@ -361,7 +324,7 @@ main[data-page="home"] .hs > .wrap > .rule { margin-bottom: var(--space-5); }
   .motion [data-split]:not(.is-split) { clip-path: inset(0 0 100% 0); }
 
   /* rows arrive once, when read */
-  .motion .tally li:not(.is-in), .motion .checks li:not(.is-in), .motion .facts6 li:not(.is-in) { opacity: 0; translate: 0 10px; }
+  .motion .tally li:not(.is-in), .motion .checks li:not(.is-in) { opacity: 0; translate: 0 10px; }
   /* a new tab's lines arrive in order, the sheet's after the day's */
   .al-js .biz-panel.is-on li { animation: hp-rise var(--dur-3) var(--ease) both; }
   .al-js .biz-panel.is-on .biz-with li { animation-delay: 120ms; }
@@ -374,14 +337,6 @@ main[data-page="home"] .hs > .wrap > .rule { margin-bottom: var(--space-5); }
   .motion .agreement:not(.is-in) .agr-line { transform: scaleX(0); }
   .motion .agreement:not(.is-in) .agr-tick { scale: 0; }
 
-  /* trust: the English and Arabic pages part from one centre line, mirrored */
-  .pair-item { transition: translate var(--dur-4) var(--ease), opacity var(--dur-3) var(--ease); }
-  .pair::before { transition: opacity var(--dur-3) var(--ease); }
-  .motion .trust-fig:not(.is-in) .pair::before { opacity: 1; }
-  .motion .trust-fig:not(.is-in) .pair-item:first-child { translate: calc(50% + .5rem) 0; opacity: 0; }
-  .motion .trust-fig:not(.is-in) .pair-item:last-child { translate: calc(-50% - .5rem) 0; opacity: 0; }
-  .motion[dir="rtl"] .trust-fig:not(.is-in) .pair-item:first-child { translate: calc(-50% - .5rem) 0; }
-  .motion[dir="rtl"] .trust-fig:not(.is-in) .pair-item:last-child { translate: calc(50% + .5rem) 0; }
 
   /* the closing call: the Command Fold's three planes assemble along their gaps */
   .cta-mark polygon { transition: translate var(--dur-4) var(--ease), opacity var(--dur-3) var(--ease); }
@@ -396,11 +351,6 @@ main[data-page="home"] .hs > .wrap > .rule { margin-bottom: var(--space-5); }
 @media (prefers-reduced-motion: no-preference) and (min-width: 62rem) {
   :root:not([lang="ar"]).motion .hl > span { animation: hp-line var(--dur-4) var(--ease) both, hp-settle var(--dur-4) var(--ease) both; }
   :root:not([lang="ar"]).motion .hl + .hl > span { animation-delay: 90ms, 90ms; }
-}
-/* on phones the two pages sit in a snapping scroller, so they only fade in: sliding would fight the snap */
-@media (prefers-reduced-motion: no-preference) and (max-width: 53rem) {
-  .motion .trust-fig:not(.is-in) .pair-item:first-child, .motion .trust-fig:not(.is-in) .pair-item:last-child,
-  .motion[dir="rtl"] .trust-fig:not(.is-in) .pair-item:first-child, .motion[dir="rtl"] .trust-fig:not(.is-in) .pair-item:last-child { translate: none; }
 }
 @media (min-width: 62rem) {
   /* the headline's second line ends before the body beside it, at every width */
