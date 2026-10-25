@@ -73,8 +73,12 @@ jobs:
           test "$(curl -s -o /dev/null -w '%{http_code}' http://127.0.0.1:8080/docs)" = "404"
           docker rm -f api
       - run: uv run pytest
-      # Known vulnerabilities in Python dependencies.
-      - run: uvx pip-audit --progress-spinner off
+      # Known vulnerabilities in the locked Python dependencies. `uvx pip-audit` alone would
+      # audit pip-audit's own environment, not ours (ALY-243), so the lock file is exported
+      # and audited by name.
+      - run: |
+          uv export --frozen --no-emit-project --no-hashes > /tmp/locked.txt
+          uvx pip-audit -r /tmp/locked.txt --no-deps --disable-pip --progress-spinner off
 
   web:
     runs-on: ubuntu-latest
