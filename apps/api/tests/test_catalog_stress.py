@@ -17,6 +17,7 @@ from concurrent.futures import ThreadPoolExecutor
 
 import pytest
 
+from alyr.core import ratelimit
 from alyr.modules.orders import holds as order_holds
 from alyr.seed import DEMO_TENANT_ID
 from concurrency import LockWatch, warm
@@ -136,7 +137,11 @@ def one_round(client, rng, buyers, n: int) -> int:
 
 
 @pytest.mark.stress
-def test_stock_never_goes_negative_never_oversells_and_always_matches_its_log(client):
+def test_stock_never_goes_negative_never_oversells_and_always_matches_its_log(
+    client, monkeypatch
+):
+    # Ten buyers on one address place far more than a real address would (ALY-116).
+    monkeypatch.setattr(ratelimit, "PLACED_PER_ADDRESS", ratelimit.Limit(1_000_000, 600))
     rng = random.Random(110)
     buyers = people(client, 10)
     sweeps = 0
