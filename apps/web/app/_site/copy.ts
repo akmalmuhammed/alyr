@@ -535,7 +535,7 @@ export type Copy = {
     draft: string;
     bar: string;
   };
-  footer: { line: string; rights: string; workspace: string; disclaimer: string; links: string; products: string };
+  footer: { line: string; rights: string; legal: string; workspace: string; disclaimer: string; links: string; products: string };
   /** The "Sample" mark in a drawing's chrome; the phone header's "Sample business"; and the
    * line said first in a figure of a fictional business that is not one of the three. */
   fig: { sample: string; business: string; note: string };
@@ -682,6 +682,7 @@ const en: Copy = {
   footer: {
     line: "We do the tech. You run the business.",
     rights: "ALYR. Built in Qatar.",
+    legal: "alyr software W.L.L. · Commercial Registration 255539 · Qatar",
     workspace: "Staff sign-in",
     disclaimer: "ALYR uses the WhatsApp Business Platform. ALYR is not affiliated with, or endorsed by, WhatsApp or Meta.",
     links: "Site",
@@ -2970,6 +2971,7 @@ const ar: Copy = {
   footer: {
     line: "علينا التقنية، وعليك شغلك.",
     rights: "ALYR. صُنع في قطر.",
+    legal: "alyr software ذ.م.م. (الير للبرمجيات) · سجل تجاري 255539 · قطر",
     workspace: "دخول الموظفين",
     disclaimer: "تستخدم ALYR منصة واتساب للأعمال، وليست تابعة لواتساب أو Meta، ولا معتمدة منهما.",
     links: "الموقع",

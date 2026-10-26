@@ -197,6 +197,7 @@ export function Shell({
             <p>
               <span><span dir="ltr">© 2026</span> {rich(t.footer.rights)}</span>
             </p>
+            <p>{t.footer.legal}</p>
             <p>{rich(t.footer.disclaimer)}</p>
           </div>
         </div>
