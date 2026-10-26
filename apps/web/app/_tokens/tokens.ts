@@ -466,14 +466,14 @@ export const motion = {
     "slow": "480ms"
   },
   "pace": {
-    "pace": 1,
-    "play-1": "72ms",
-    "play-2": "144ms",
-    "play-3": "288ms",
-    "play-4": "432ms",
-    "play-stagger": "36ms",
-    "read-word": "261ms",
-    "dwell-beat": "400ms",
+    "pace": 1.3,
+    "play-1": "93.6ms",
+    "play-2": "187.2ms",
+    "play-3": "374.4ms",
+    "play-4": "561.6ms",
+    "play-stagger": "46.8ms",
+    "read-word": "339.3ms",
+    "dwell-beat": "520ms",
     "dwell-min": "1200ms"
   },
   "ease": {
