@@ -21,10 +21,25 @@ The database has no public address. Only the apps, inside the private network, r
 
 ## Steps
 
-**0. Before anything.** Open the account through Microsoft for Startups, on the personal
-Microsoft account you will keep. Do not open a plain Azure free account first:
-Microsoft for Startups requires an account with no earlier Azure use. Credits stay with
-the subscription they are redeemed on.
+**0. Before anything.** The account holder opens the account through Microsoft for
+Startups (microsoft.com/startups > Get started now). Microsoft's rules as of October 2026
+(learn.microsoft.com/startups/microsoft-for-startups/application):
+
+- Sign in with a personal consumer Microsoft account that has never used Azure, for
+  example an Outlook.com address made only for ALYR. Company-domain addresses such as
+  name@alyr.qa are refused at this step, and work or school accounts fail at activation.
+  Do not open a plain Azure free account first: the credits are for accounts new to Azure.
+- Without an investor referral code, the applicant verifies with their own LinkedIn
+  profile before the Azure account is created.
+- Country/region Qatar. It cannot be changed later and must match the billing address.
+- Startup name and address exactly as on the commercial registration, or business
+  verification fails.
+- A card is required (identity check, and pay-as-you-go once credits end).
+- The alyr.qa address can go in "Email address for important notifications".
+
+Credits stay with the subscription they are redeemed on. If someone else runs the steps
+below, the account holder adds them as Owner of the subscription first (Microsoft for
+Startups: add a team member), and they sign in with their own account in step 1.
 
 **1. Install and sign in** (once, on the laptop):
 
