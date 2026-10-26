@@ -539,6 +539,14 @@ export type Copy = {
   /** The "Sample" mark in a drawing's chrome; the phone header's "Sample business"; and the
    * line said first in a figure of a fictional business that is not one of the three. */
   fig: { sample: string; business: string; note: string };
+  /** The pause control of a figure that keeps playing by itself (WCAG 2.2.2; founder, 26 Oct
+   * 2026: motion always on): the word shown on it, and its full name for each figure, which
+   * starts with that word. */
+  loop: {
+    pause: string;
+    play: string;
+    names: Record<"how" | "frame" | "figure", { pause: string; play: string }>;
+  };
   report: ReportCopy;
   agent: AgentFigure;
   home: Home;
@@ -683,6 +691,15 @@ const en: Copy = {
     sample: "Sample",
     business: "Sample business",
     note: "Sample screen of a fictional business. The names and numbers are made up; they are not ALYR’s results.",
+  },
+  loop: {
+    pause: "Pause",
+    play: "Play",
+    names: {
+      how: { pause: "Pause the four scenes", play: "Play the four scenes" },
+      frame: { pause: "Pause the six products", play: "Play the six products" },
+      figure: { pause: "Pause the drawing", play: "Play the drawing" },
+    },
   },
   report: {
     meta: "Sample business",
@@ -2962,6 +2979,15 @@ const ar: Copy = {
     sample: "مثال",
     business: "نشاط توضيحي",
     note: "مثال لشاشة نشاط غير حقيقي. الأسماء والأرقام للتوضيح، وليست نتائج حققتها ALYR.",
+  },
+  loop: {
+    pause: "إيقاف",
+    play: "تشغيل",
+    names: {
+      how: { pause: "إيقاف حركة المشاهد الأربعة", play: "تشغيل حركة المشاهد الأربعة" },
+      frame: { pause: "إيقاف حركة المنتجات الستة", play: "تشغيل حركة المنتجات الستة" },
+      figure: { pause: "إيقاف حركة الرسم", play: "تشغيل حركة الرسم" },
+    },
   },
   report: {
     meta: "نشاط توضيحي",

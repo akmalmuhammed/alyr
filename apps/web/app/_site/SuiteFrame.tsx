@@ -4,6 +4,8 @@ import { AGENT_LABELS } from "../_agent/labels";
 import { Icon } from "./brand";
 import { copy, type Locale } from "./copy";
 import { SampleMark, TickPath } from "./Frames";
+import { LoopToggle } from "./LoopToggle";
+import { words } from "./pace";
 import { PaperTop } from "./Paper";
 import { RC0042 } from "./paperData";
 import { SAMPLES } from "./samples";
@@ -14,11 +16,13 @@ import "./suite.css";
 // "One shop, six products" (framer-review P1, approved by the founder on the Framer prototype,
 // 25 Oct 2026): the suite as one Carbon plate, the workspace of one fictional bakery at 16:20
 // on a Thursday, with one fragment of each product's real screen in its own words. Each tile is
-// one link to its product's page, and rests finished, as every demo on the site opens; its
-// moment replays from the start once (suite.css): on hover or focus with a fine pointer, as it
-// scrolls into view on a phone (SiteMotion adds `is-in`). The HTML is every moment's end
-// state, so without scripts or with reduced motion every tile is finished too.
-// The frame is one figure set, so it carries one "Sample" mark, in the plate's bar.
+// one link to its product's page. Its moment plays as the tile comes into view and then keeps
+// playing (founder, 26 Oct 2026: motion always on): the finished moment holds while its new
+// words are read (`--words`), fades, and plays again, each tile on its own cycle, staggered
+// (suite.css and loopStyle.ts; loops.ts adds `is-in`); hover or focus replays it at once. One Pause control in
+// the plate's bar stops all six (WCAG 2.2.2); they stop off screen and in a hidden tab too.
+// The HTML is every moment's end state, so without scripts or with reduced motion every tile
+// is finished. The frame is one figure set, so it carries one "Sample" mark, in the plate's bar.
 
 const at = (index: number) => ({ "--i": index }) as CSSProperties;
 
@@ -210,6 +214,22 @@ const FRAGMENT: Record<ProductKey, (props: { locale: Locale }) => ReactNode> = {
   docs: Docs,
 };
 
+/** The words a tile's moment brings, read while it holds before playing again. */
+function tileWords(key: ProductKey, locale: Locale): number {
+  const f = copy[locale].home.suite.frame;
+  const plain = (parts: (string | { b: string })[]) => parts.map((p) => (typeof p === "string" ? p : p.b)).join(" ");
+  if (key === "chat") return words(f.chat.event, f.chat.confirm, f.chat.tag, f.chat.newText);
+  if (key === "bookings") return words(f.bookings.service, f.bookings.who, f.bookings.booked, f.bookings.reminder, f.bookings.before);
+  if (key === "agent") {
+    const view = SAMPLES[locale].bakery;
+    const card = view.suggestions.find((s) => s.key === "ready") ?? view.suggestions[0];
+    return card ? words(plain(card.title), plain(card.line), card.action?.label) : 0;
+  }
+  if (key === "accounts") return words(f.accounts.promise);
+  if (key === "shelf") return words(copy[locale].pages.shelf.moment.stock.soldOut);
+  return 0;
+}
+
 const fill = (template: string, values: Record<string, string>) =>
   template.replace(/\{(\w+)\}/g, (_, key: string) => values[key] ?? "");
 
@@ -219,7 +239,7 @@ export function SuiteFrame({ locale }: { locale: Locale }) {
   const sample = t.agent.samples.bakery;
   const view = SAMPLES[locale].bakery;
   return (
-    <figure className="sf">
+    <figure className="sf" data-loop>
       <p className="sr-only">{sample.fictional}</p>
       <div className="sf-bar" aria-hidden="true">
         <span className="sf-mono">{sample.monogram}</span>
@@ -227,8 +247,10 @@ export function SuiteFrame({ locale }: { locale: Locale }) {
         <SampleMark label={t.fig.sample} />
         <span className="sf-when">{view.header.when}</span>
       </div>
+      {/* at the bar's end, in the room the bar keeps for it (suite.css) */}
+      <LoopToggle words={t.loop} name={t.loop.names.frame} className="sf-toggle" />
       <ul className="sf-grid">
-        {PRODUCTS.map((key) => {
+        {PRODUCTS.map((key, index) => {
           const p = t.products.items[key];
           const state = INCLUDED.includes(key) ? p.state : "";
           const Fragment = FRAGMENT[key];
@@ -238,7 +260,9 @@ export function SuiteFrame({ locale }: { locale: Locale }) {
                 className="sf-tile"
                 href={productPath(key, locale)}
                 aria-label={fill(state ? f.tileState : f.tile, { name: p.name, descriptor: p.descriptor, state })}
+                style={{ "--k": index, "--words": tileWords(key, locale) } as CSSProperties}
                 data-tile
+                data-loop-play
               >
                 <div className="sf-frag" inert aria-hidden="true" data-nosnippet>
                   <Fragment locale={locale} />

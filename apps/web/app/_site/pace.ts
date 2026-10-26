@@ -20,6 +20,9 @@ export const PLAY = {
   3: ms(pace["play-3"]),
   4: ms(pace["play-4"]),
   stagger: ms(pace["play-stagger"]),
+  /** The live ALYR Agent figure's beat: one product event every this long (AgentFigure). */
+  beat: ms(pace["live-beat"]),
+  beatPhone: ms(pace["live-beat-phone"]),
 } as const;
 
 /** How many words a visitor reads in a piece of text (whitespace-separated, any language).
