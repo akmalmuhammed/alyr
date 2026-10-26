@@ -190,7 +190,7 @@
   --fast: 160ms;
   --medium: 280ms;
   --slow: 480ms;
-  --pace: 1;
+  --pace: 1.3;
   --play-1: calc(72ms * var(--pace));
   --play-2: calc(144ms * var(--pace));
   --play-3: calc(288ms * var(--pace));
