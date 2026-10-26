@@ -7,9 +7,11 @@
    again." sits under it.
    Four in a row from 75rem, two by two from 48rem, stacked below. The HTML is every scene's
    finished state and the line is drawn: start states exist only as each animation's first
-   frame (it fills backwards), under `.motion`, once SiteMotion adds `is-in` to a card (in
+   frame (it fills backwards), under `.motion`, once loops.ts adds `is-in` to a card (in
    view, staggered across the row, and again on hover, focus or a tap) or `is-looped` to the
-   row (when Improve first plays). Nothing loops; with reduced motion nothing plays. */
+   row (each time Improve plays). Each scene then holds, fades and plays again on its own
+   cycle until the Pause control under Improve stops all four (founder, 26 Oct 2026: motion
+   always on); those rules are inline, in loopStyle.ts. With reduced motion nothing plays. */
 
 .hw {
   --hw-cut: var(--cut-plate-sm);

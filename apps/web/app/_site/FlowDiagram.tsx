@@ -52,6 +52,8 @@ export function FlowDiagram({ flow, sample, note }: Props) {
   const [pinned, setPinned] = useState(false);
   const [onScreen, setOnScreen] = useState(false);
   const [still, setStill] = useState(false);
+  // A hidden tab stops it too, as it stops off screen (nothing plays that nobody sees).
+  const [shown, setShown] = useState(true);
   const root = useRef<HTMLDivElement>(null);
   const tabs = useRef<(HTMLButtonElement | null)[]>([]);
 
@@ -60,6 +62,8 @@ export function FlowDiagram({ flow, sample, note }: Props) {
     const sync = () => setStill(media.matches);
     const first = setTimeout(sync, 0);
     media.addEventListener("change", sync);
+    const seen = () => setShown(document.visibilityState === "visible");
+    document.addEventListener("visibilitychange", seen);
     const node = root.current;
     const watch = new IntersectionObserver(
       ([entry]) => {
@@ -79,6 +83,7 @@ export function FlowDiagram({ flow, sample, note }: Props) {
     return () => {
       clearTimeout(first);
       media.removeEventListener("change", sync);
+      document.removeEventListener("visibilitychange", seen);
       watch.disconnect();
     };
   }, []);
@@ -86,7 +91,7 @@ export function FlowDiagram({ flow, sample, note }: Props) {
   const story = stories[at.story];
   const steps = story.steps;
   const now = steps[at.step];
-  const playing = auto && onScreen && !still && started;
+  const playing = auto && onScreen && shown && !still && started;
 
   // Everything that has happened so far in this story.
   const past = steps.slice(0, at.step + 1);

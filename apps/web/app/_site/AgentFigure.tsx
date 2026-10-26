@@ -25,6 +25,7 @@ import { AgentDashboard, Rich } from "../_agent/AgentDashboard";
 import type { AgentView, Rich as RichParts } from "../_agent/types";
 import type { AgentFigure as FigureCopy, FeedEvent, SampleKey } from "./copy";
 import { SampleMark } from "./Frames";
+import { PLAY } from "./pace";
 import { flagLine, liveView } from "./live";
 import { LIVE_CSS } from "./liveStyle";
 import { SAMPLE_EVENT } from "./ReportSwitch";
@@ -63,10 +64,12 @@ type Props = {
   sync?: string;
 };
 
-/** The pace: one event every 4 s, every 5 s on a phone, where the motion stays lighter. The
- * first comes half a beat after the figure goes live, which is this long after load. */
-const BEAT = 4000;
-const BEAT_PHONE = 5000;
+/** The pace: one event every `live-beat` (4 s times the site's pace: 5.2 s at 1.3), every
+ * `live-beat-phone` on a phone (6.5 s), where the motion stays lighter (pace.ts; founder,
+ * 26 Oct 2026: "a bit slower" reaches the hero too). The first comes half a beat after the
+ * figure goes live, which is this long after load. */
+const BEAT = PLAY.beat;
+const BEAT_PHONE = PLAY.beatPhone;
 const AFTER_LOAD = 1500;
 const PHONE = "(max-width: 47.99rem)";
 const STILL = "(prefers-reduced-motion: reduce)";

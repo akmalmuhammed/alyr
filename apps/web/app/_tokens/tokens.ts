@@ -474,7 +474,9 @@ export const motion = {
     "play-stagger": "46.8ms",
     "read-word": "339.3ms",
     "dwell-beat": "520ms",
-    "dwell-min": "1200ms"
+    "dwell-min": "1200ms",
+    "live-beat": "5200ms",
+    "live-beat-phone": "6500ms"
   },
   "ease": {
     "ease": "cubic-bezier(0.16, 1, 0.3, 1)",

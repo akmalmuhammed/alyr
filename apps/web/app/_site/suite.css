@@ -3,9 +3,11 @@
    fictional bakery: a bar with its name, the one "Sample" mark and the time, then six tiles in
    the suite's order, split by hairline seams. Each tile is one link: a fragment of the
    product's real screen, cropped hard at the tile's edge (no fade), and its name, descriptor
-   and arrow. Each fragment plays one moment once (the end of this file): the HTML is the end
-   state, every tile rests finished, and the moment replays from its start when SiteMotion adds
-   `is-in` (the start states are each animation's first frame, under `.motion`).
+   and arrow. Each fragment plays one moment (the end of this file): the HTML is the end state,
+   and the moment plays from its start each time loops.ts adds `is-in` (the start states are
+   each animation's first frame, under `.motion`): once 60% of the tile is in view, then again
+   after each hold, until the bar's Pause stops it (founder, 26 Oct 2026: motion always on;
+   the cycle's rules are inline, in loopStyle.ts).
    Grid at 62rem and up: Chat (8 columns) and Bookings (4); Agent, Accounts, and Shelf over
    Docs (4 each). Two columns on a tablet; one, in the suite's order, on a phone. */
 
@@ -21,7 +23,7 @@
 
 .sf-bar {
   display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-1) var(--space-3);
-  min-height: 3.5rem; padding-block: var(--space-2); padding-inline: calc(var(--cut) + var(--space-3)) var(--space-4);
+  min-height: 3.5rem; padding-block: var(--space-2); padding-inline: calc(var(--cut) + var(--space-3)) calc(var(--space-4) + 5rem);
   border-bottom: 1px solid var(--dark-line); font-size: var(--fs-note); line-height: 1.3;
 }
 .sf-bar b { font-weight: var(--weight-semibold); white-space: nowrap; }
@@ -200,7 +202,7 @@
 /* a phone: one column in the suite's order, each tile its own height */
 @media (max-width: 47.99rem) {
   .sf { --cut: var(--cut-plate-sm); margin-top: var(--space-4); }
-  .sf-bar { min-height: 3.25rem; padding-inline: calc(var(--cut) + var(--space-2)) var(--space-3); column-gap: var(--space-2); }
+  .sf-bar { min-height: 3.25rem; padding-inline: calc(var(--cut) + var(--space-2)) calc(var(--space-3) + 5rem); column-gap: var(--space-2); }
   .sf-grid { grid-template-columns: minmax(0, 1fr); grid-template-rows: none; grid-template-areas: none; }
   .sf-grid > .sf-cell { grid-area: auto; }
   .sf-tile { --pad: var(--space-3); --bleed: var(--space-4); height: var(--h); padding-bottom: var(--space-3); }
@@ -231,9 +233,9 @@
 @keyframes sf-enter { from { opacity: 0; translate: calc(var(--dir) * -.55em) .55em; } to { opacity: 1; translate: 0 0; } }
 
 @media (prefers-reduced-motion: no-preference) {
-  /* At rest every tile is finished, as every demo on the site opens (founder, 25 Oct 2026):
-     the HTML is the end state and nothing waits on it. Hover or focus with a fine pointer, or
-     60% in view elsewhere, adds `is-in` once (SiteMotion), and the moment plays from its start:
+  /* Before it is seen every tile is finished: the HTML is the end state and nothing waits on
+     it. In view, and again after each hold (loops.ts, loopStyle.ts), `is-in` plays the moment
+     from its start (a hover or focus replays a resting tile):
      each animation fills backwards, so its first frame shows the earlier state at once, through
      its delay, and it ends on the finished one. Durations are `--play-*` and delays a number of
      `--play-stagger` beats, so `--pace` tunes them; each moment ends by 1 s. */
