@@ -4,6 +4,7 @@
 #
 #   infra/gcp/setup.sh infra         network, database, registry, accounts, export bucket, budget
 #   infra/gcp/setup.sh secrets       generate database passwords and the link secret; ask for the rest
+#   infra/gcp/setup.sh env-secrets <.env>  or: copy the R2, Meta and Resend values from a .env file
 #   infra/gcp/setup.sh apps <tag>    migration job, API, worker, web app and the nightly export
 #   infra/gcp/setup.sh github        let GitHub Actions deploy without a stored key; print its variables
 #   infra/gcp/setup.sh monitoring    uptime checks on the health addresses, email alerts (ALYR_ALERT_EMAIL)
@@ -185,6 +186,31 @@ case "${1:-}" in
     echo "Done. Next: infra/gcp/push-images.sh <tag>, then infra/gcp/setup.sh apps <tag>"
     ;;
 
+  env-secrets)
+    # The founder's shortcut for `secrets`: copy the R2, Meta and Resend values already in
+    # a local .env file straight into Secret Manager. Values are never shown; only the
+    # names of what was stored. Database passwords and the link secret are not taken from
+    # the file: `secrets` generates those.
+    file="${2:?usage: setup.sh env-secrets <path to apps/api/.env>}"
+    [ -r "$file" ] || { echo "setup: cannot read $file" >&2; exit 1; }
+    stored=0
+    for pair in "${SECRETS[@]}"; do
+      key="${pair%%=*}"; name="${pair#*=}"
+      case "$name" in database-url|migration-url|link-secret) continue ;; esac
+      val="$(grep -E "^[[:space:]]*$key=" "$file" | tail -1 | cut -d= -f2- | tr -d '\r' |
+             sed -E 's/^[[:space:]]+|[[:space:]]+$//g; s/^"(.*)"$/\1/; s/^'"'"'(.*)'"'"'$/\1/')"
+      if [ -n "$val" ]; then put_secret "$name" "$val"; echo "  stored $name"; stored=$((stored + 1)); fi
+      unset val
+    done
+    for s in meta-app-secret meta-verify-token meta-access-token meta-phone-number-id meta-waba-id email-api-key; do
+      secret_exists "$s" || put_secret "$s" "unset"
+    done
+    echo "Stored $stored values from the file."
+    for s in r2-account-id r2-access-key-id r2-secret-access-key; do
+      secret_exists "$s" || echo "  missing $s: run 'setup.sh secrets' and type it" >&2
+    done
+    ;;
+
   apps)
     tag="${2:?usage: setup.sh apps <image tag>}"
     images="$REGION-docker.pkg.dev/$PROJECT/$REPO"
@@ -328,7 +354,7 @@ for c in json.load(sys.stdin).get('notificationChannels', []):
     ;;
 
   *)
-    sed -n '2,14p' "$0"
+    sed -n '2,15p' "$0"
     exit 1
     ;;
 esac

@@ -31,6 +31,13 @@ one at a time and hidden, for the three R2 values (required; the same as in
 infra/gcp/setup.sh secrets
 ```
 
+Or, if those values are already in `apps/api/.env` on this machine, copy them without typing
+(after `secrets` has generated the database values; press Ctrl+C at its first question):
+
+```bash
+infra/gcp/setup.sh env-secrets apps/api/.env
+```
+
 **4. Images**, built on the laptop and pushed to Doha (needs Docker running):
 
 ```bash
