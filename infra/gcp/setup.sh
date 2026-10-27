@@ -6,6 +6,7 @@
 #   infra/gcp/setup.sh secrets       generate database passwords and the link secret; ask for the rest
 #   infra/gcp/setup.sh apps <tag>    migration job, API, worker, web app and the nightly export
 #   infra/gcp/setup.sh github        let GitHub Actions deploy without a stored key; print its variables
+#   infra/gcp/setup.sh monitoring    uptime checks on the health addresses, email alerts (ALYR_ALERT_EMAIL)
 #   infra/gcp/setup.sh lock-backups  lock the export bucket's 35-day retention (cannot be undone)
 #
 # No secret is printed, written to a file, or passed to an agent. Passwords are generated
@@ -267,6 +268,57 @@ case "${1:-}" in
     echo "GCP_DEPLOY_SERVICE_ACCOUNT=$(sa alyr-deploy)"
     ;;
 
+  monitoring)
+    # Uptime checks every 5 minutes on the three health addresses, and one email alert
+    # policy per check (ALY-121). The checkers call only /health addresses, which carry no
+    # personal data, from Google's probe locations.
+    email="${ALYR_ALERT_EMAIL:?set ALYR_ALERT_EMAIL to the address that gets alerts}"
+    token="$(value auth print-access-token)"
+    api="https://monitoring.googleapis.com/v3/projects/$PROJECT"
+    call() { curl -fsS -H "Authorization: Bearer $token" -H "Content-Type: application/json" "$@"; }
+    channel="$(call "$api/notificationChannels" | python -c "
+import json, sys
+for c in json.load(sys.stdin).get('notificationChannels', []):
+    if c.get('labels', {}).get('email_address') == sys.argv[1]:
+        print(c['name']); break" "$email")"
+    if [ -z "$channel" ]; then
+      channel="$(call -X POST "$api/notificationChannels" \
+        -d "{\"type\":\"email\",\"displayName\":\"ALYR alerts\",\"labels\":{\"email_address\":\"$email\"}}" |
+        python -c "import json,sys; print(json.load(sys.stdin)['name'])")"
+    fi
+    for check in "alyr-api|/health/ready|API cannot reach the database" \
+                 "alyr-api|/health/worker|Worker stopped checking in (reminders are not going out)" \
+                 "alyr-web|/login|Web app down (customer pages and workspace)"; do
+      IFS='|' read -r service path title <<<"$check"
+      host="${service}-$(number).$REGION.run.app"
+      if ! value monitoring uptime list-configs --format='value(displayName)' | grep -qx "$title"; then
+        g monitoring uptime create "$title" --resource-type=uptime-url \
+          --resource-labels="host=$host,project_id=$PROJECT" --path="$path" --protocol=https \
+          --period=5 --timeout=10 >/dev/null
+      fi
+      check_id="$(value monitoring uptime list-configs --filter="displayName=\"$title\"" --format='value(name)' | sed 's#.*/##')"
+      if ! call "$api/alertPolicies" | grep -q "\"displayName\": \"$title\""; then
+        call -X POST "$api/alertPolicies" -d "{
+          \"displayName\": \"$title\",
+          \"combiner\": \"OR\",
+          \"notificationChannels\": [\"$channel\"],
+          \"conditions\": [{
+            \"displayName\": \"$path failing from more than one place\",
+            \"conditionThreshold\": {
+              \"filter\": \"metric.type=\\\"monitoring.googleapis.com/uptime_check/check_passed\\\" AND resource.type=\\\"uptime_url\\\" AND metric.label.check_id=\\\"$check_id\\\"\",
+              \"aggregations\": [{\"alignmentPeriod\": \"300s\", \"perSeriesAligner\": \"ALIGN_NEXT_OLDER\",
+                                  \"crossSeriesReducer\": \"REDUCE_COUNT_FALSE\", \"groupByFields\": [\"resource.label.host\"]}],
+              \"comparison\": \"COMPARISON_GT\", \"thresholdValue\": 1, \"duration\": \"300s\",
+              \"trigger\": {\"count\": 1}
+            }
+          }]
+        }" >/dev/null
+      fi
+      echo "  watching https://$host$path"
+    done
+    echo "Alerts go to $email (Google sends a confirmation email the first time)."
+    ;;
+
   lock-backups)
     echo "This locks the 35-day retention on gs://$EXPORTS for good: nobody, including you,"
     echo "can delete an export early or shorten the period. Only after a restore has been tested."
@@ -276,7 +328,7 @@ case "${1:-}" in
     ;;
 
   *)
-    sed -n '2,13p' "$0"
+    sed -n '2,14p' "$0"
     exit 1
     ;;
 esac

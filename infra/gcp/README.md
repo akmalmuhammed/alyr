@@ -54,7 +54,14 @@ set them in the repository, then use Actions > `deploy-gcp`.
 infra/gcp/setup.sh github
 ```
 
-**8. After a tested restore from an export** (`docs/hosting.md`, "Backups on Google"):
+**8. Monitoring** (after step 6): uptime checks every 5 minutes on `/health/ready`,
+`/health/worker` and `/login`, each with an email alert. Google emails a confirmation first.
+
+```bash
+ALYR_ALERT_EMAIL=akmal@alyr.qa infra/gcp/setup.sh monitoring
+```
+
+**9. After a tested restore from an export** (`docs/hosting.md`, "Backups on Google"):
 `infra/gcp/setup.sh lock-backups`. It cannot be undone.
 
 ## Meta's webhook
