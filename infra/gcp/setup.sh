@@ -22,12 +22,10 @@ EXPORTS="${ALYR_EXPORT_BUCKET:-$PROJECT-db-exports}"
 BILLING="${ALYR_BILLING_ACCOUNT:-}"
 GITHUB_REPO="${ALYR_GITHUB_REPO:-akmalmuhammed/alyr}"
 
-# On Windows (Git Bash) the Cloud SDK's bash entry point needs its own Python; gcloud.cmd
-# does not, but it ends lines with CR, which `value` strips. Arguments are passed as written.
-if command -v gcloud.cmd >/dev/null 2>&1; then GCLOUD=gcloud.cmd; else GCLOUD=gcloud; fi
-export MSYS_NO_PATHCONV=1
-g() { "$GCLOUD" --project "$PROJECT" --quiet "$@"; }
-value() { g "$@" | tr -d ''; }
+# shellcheck source=infra/gcp/gcloud.sh
+. "$(dirname "$0")/gcloud.sh"
+g() { gcloud_run --project "$PROJECT" --quiet "$@"; }
+value() { g "$@" | tr -d '\r'; }
 need() { command -v "$1" >/dev/null || { echo "setup: $1 is not installed" >&2; exit 1; }; }
 need openssl
 
@@ -73,7 +71,18 @@ case "${1:-}" in
     g services enable run.googleapis.com sqladmin.googleapis.com secretmanager.googleapis.com \
       artifactregistry.googleapis.com cloudscheduler.googleapis.com compute.googleapis.com \
       servicenetworking.googleapis.com iamcredentials.googleapis.com iam.googleapis.com \
-      sts.googleapis.com storage.googleapis.com billingbudgets.googleapis.com
+      sts.googleapis.com storage.googleapis.com billingbudgets.googleapis.com \
+      logging.googleapis.com monitoring.googleapis.com
+
+    # Google keeps logs in a "global" bucket unless told otherwise. The apps' logs carry
+    # request paths and errors that can name a shop's customers, so they stay in Doha.
+    # (The _Required bucket, Google's own audit trail of who changed what, cannot move.)
+    echo "Logs kept in Doha for 30 days..."
+    exists g logging buckets describe alyr-doha --location="$REGION" ||
+      g logging buckets create alyr-doha --location="$REGION" --retention-days=30 \
+        --description="ALYR logs, kept in Doha"
+    g logging sinks update _Default \
+      "logging.googleapis.com/projects/$PROJECT/locations/$REGION/buckets/alyr-doha" >/dev/null
 
     echo "Private network: one subnet for Cloud Run, one range for the database..."
     exists g compute networks describe "$NETWORK" || g compute networks create "$NETWORK" --subnet-mode=custom
@@ -129,10 +138,15 @@ case "${1:-}" in
       g storage buckets update "gs://$EXPORTS" --lifecycle-file="$rules_arg"
       rm -f "$rules"
     fi
-    # Cloud SQL writes the export as its own account.
+    # Cloud SQL writes the export as its own account. A new instance's account is refused
+    # as "invalid" for a few minutes after creation, so this waits for it.
     sql_sa="$(value sql instances describe "$SQL" --format='value(serviceAccountEmailAddress)')"
-    g storage buckets add-iam-policy-binding "gs://$EXPORTS" --member="serviceAccount:$sql_sa" \
-      --role=roles/storage.objectCreator >/dev/null
+    for attempt in 1 2 3 4 5 6 7 8 9 10; do
+      if g storage buckets add-iam-policy-binding "gs://$EXPORTS" --member="serviceAccount:$sql_sa" \
+           --role=roles/storage.objectCreator >/dev/null 2>&1; then break; fi
+      [ "$attempt" = 10 ] && { echo "setup: Cloud SQL's account still refused; run 'infra' again in a few minutes" >&2; exit 1; }
+      sleep 30
+    done
 
     if ! value billing budgets list --billing-account="$BILLING" --format='value(displayName)' | grep -qx "ALYR monthly"; then
       g billing budgets create --billing-account="$BILLING" --display-name="ALYR monthly" \

@@ -14,8 +14,9 @@ REGION="me-central1"
 here="$(cd "$(dirname "$0")/../.." && pwd)"
 tag="${1:-$(git -C "$here" rev-parse --short=12 HEAD)}"
 
-if command -v gcloud.cmd >/dev/null 2>&1; then GCLOUD=gcloud.cmd; else GCLOUD=gcloud; fi
-value() { "$GCLOUD" --project "$PROJECT" "$@" | tr -d '\r'; }
+# shellcheck source=infra/gcp/gcloud.sh
+. "$(dirname "$0")/gcloud.sh"
+value() { gcloud_run --project "$PROJECT" "$@" | tr -d '\r'; }
 
 if [ -n "$(git -C "$here" status --porcelain)" ]; then
   echo "push-images: the working tree has uncommitted changes; commit first so the tag means something" >&2
