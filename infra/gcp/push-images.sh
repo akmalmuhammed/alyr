@@ -11,7 +11,8 @@ set -euo pipefail
 
 PROJECT="${ALYR_GCP_PROJECT:-alyr-prod}"
 REGION="me-central1"
-here="$(cd "$(dirname "$0")/../.." && pwd)"
+# A Windows-style path on Git Bash (pwd -W), because paths are passed untranslated below.
+here="$(cd "$(dirname "$0")/../.." && { pwd -W 2>/dev/null || pwd; })"
 tag="${1:-$(git -C "$here" rev-parse --short=12 HEAD)}"
 
 # shellcheck source=infra/gcp/gcloud.sh
