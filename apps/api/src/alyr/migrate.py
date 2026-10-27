@@ -50,6 +50,30 @@ async def ensure_backup_role(conn: asyncpg.Connection, backup_dsn: str) -> None:
         print(f"warning: backup role {role} not fully set up ({error}); backups will fail")
 
 
+async def ensure_owner_bypasses_rls(conn: asyncpg.Connection) -> None:
+    """Let the owner role, which runs the migrations and owns the SECURITY DEFINER
+    functions (sign-up, the back office, quotes), act past row-level security.
+
+    On a developer machine and in tests the owner is a superuser and does so already. A
+    managed database's admin is not: on Cloud SQL `postgres` is subject to the forced
+    policies, so sign-up and the back office would fail with "new row violates row-level
+    security policy" (found on the first Google deploy, 28 Oct 2026). Cloud SQL lets its
+    admin give itself BYPASSRLS. The application role never has it (hard rule 1).
+    """
+    row = await conn.fetchrow(
+        "select rolname, rolsuper, rolbypassrls from pg_roles where rolname = current_user"
+    )
+    if row["rolsuper"] or row["rolbypassrls"]:
+        return
+    try:
+        await conn.execute(f'alter role "{row["rolname"]}" bypassrls')
+    except asyncpg.InsufficientPrivilegeError as error:
+        print(
+            f"warning: the owner role {row['rolname']} cannot bypass row-level security "
+            f"({error}); sign-up and back-office functions will fail on this host"
+        )
+
+
 # Any two processes that start a migration at once (two API replicas, or a deploy and a
 # person) take turns on this lock instead of applying the same file twice.
 _MIGRATION_LOCK = 7_301_202_610
@@ -59,6 +83,7 @@ async def migrate(owner_dsn: str, app_dsn: str, backup_dsn: str = "") -> list[st
     conn = await asyncpg.connect(owner_dsn)
     try:
         await conn.execute("select pg_advisory_lock($1)", _MIGRATION_LOCK)
+        await ensure_owner_bypasses_rls(conn)
         await ensure_app_role(conn, app_dsn)
         if backup_dsn:
             await ensure_backup_role(conn, backup_dsn)

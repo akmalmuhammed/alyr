@@ -1210,11 +1210,11 @@ Nothing claims more than the page, as before.
 - Doha has everything ALYR needs, checked against Google Cloud itself on 28 Oct: Cloud Run services, jobs and worker pools, Cloud SQL for PostgreSQL 16, Artifact Registry, Cloud Scheduler.
 - It keeps hard rule 2 for real clients' data, which the interim Cloudflare and Neon host (D-052) could not.
 
-**Costs, said plainly.** About USD 85 to 90 a month at Doha list prices (database about 34, API about 14, web app about 14, worker about 20, the rest a few dollars), against about USD 62 for the Azure plan. Doha's prices are higher than Google's US regions. A budget alerts at 50% and 90% of USD 150 and at a forecast of 100%.
+**Costs, said plainly.** About USD 100 to 105 a month at Doha list prices (database about 34, API about 14, web app about 14, worker about 37 because an always-on worker needs 1 vCPU, the rest a few dollars), against about USD 62 for the Azure plan. Doha's prices are higher than Google's US regions. A budget alerts at 50% and 90% of USD 150 and at a forecast of 100%.
 
 **What stays the same.** The images, the worker heartbeat and the health checks from ALY-63 run unchanged; the API image now takes `api` or `worker` as its first argument, and with none runs both (the Cloudflare layout of D-052). Product photos stay on Cloudflare R2 (D-039).
 
-**Not proven until the first deploy** (the list in `infra/gcp/README.md`): migrations as Cloud SQL's `postgres` user; whether the nightly export holds every shop's rows despite forced row-level security; the worker's size.
+**First deploy, 28 Oct.** Healthy from outside. Migrations run as Cloud SQL's `postgres`, which is not a superuser, so the owner now gives itself BYPASSRLS (the owner-run sign-up and back-office functions needed it; the application role never has it). An export restored into a fresh database matched all 20 tables of the demo shop row for row. Details in `infra/gcp/README.md`.
 
 **Chosen over** Azure on full price (no credits; D-036), the interim Cloudflare and Neon host (outside Qatar; D-052), and a copy of backups on Cloudflare R2 in the EU (the founder chose Doha only).
 

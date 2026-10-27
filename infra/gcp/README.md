@@ -12,6 +12,9 @@ so PowerShell's script policy does not matter.
 
 ## Steps
 
+**State: running since 28 Oct 2026** (image tag `204091be0d79`). Nothing points at it yet:
+Meta's webhook and the customer links still use the laptop.
+
 **1. Sign in** (once): `gcloud.cmd auth login akmal@alyr.qa`.
 
 **2. Infrastructure** (about 15 minutes; the database takes most of it):
@@ -77,12 +80,20 @@ Point the Meta app's webhook at `https://alyr-api-841433519399.me-central1.run.a
 with the same verify phrase as in Secret Manager. Retire the laptop tunnel only after Meta
 verifies it and a test message arrives.
 
-## Not proven until the first deploy
+## What the first deploy showed (28 Oct 2026)
 
-- That Cloud SQL lets the `postgres` user create the app role and run every migration
-  (expected: it has CREATEROLE; the only extension used is `btree_gist`, which Cloud SQL has).
-- That the nightly export holds every shop's rows despite forced row-level security: restore
-  one export and compare counts before relying on it.
-- That a 0.5 vCPU worker pool keeps up (raise `ALYR_WORKER_CPU` and `ALYR_WORKER_MEMORY` and
-  run `apps` again if not).
-- That `roles/run.developer` is enough for GitHub's deploy account to update the worker pool.
+- All 48 migrations apply as Cloud SQL's `postgres` user.
+- **Cloud SQL's `postgres` is not a superuser**, so the forced row-level security applied to
+  it too, and the owner-run functions (sign-up, the back office, quotes; 23 of them) would
+  have failed. Migrations now give the owner BYPASSRLS (`ensure_owner_bypasses_rls`), which
+  Cloud SQL allows; the application role still cannot bypass it.
+- **The nightly export holds every shop's rows:** the demo shop was seeded into a throwaway
+  database, exported, imported into a second one, and all 20 tables with rows matched,
+  including contacts, ledger entries, memberships and consents. Both databases were deleted.
+- An always-on worker pool needs at least 1 vCPU (Google refuses less).
+- `/health`, `/health/ready` and `/health/worker` answer 200 from outside; the web app answers
+  `/login` and forwards `/api/*`; the simulator and API docs answer 404; an unsigned webhook is
+  refused with 401.
+
+Not yet proven: that `roles/run.developer` is enough for GitHub's deploy account to update
+the worker pool (the first `deploy-gcp` run will tell).

@@ -24,7 +24,7 @@ The public site at alyr.qa is not part of this: it is static files on Cloudflare
 | Stage | Where | State |
 |---|---|---|
 | Rehearsal | The laptop, `docker-compose.prod.yml` | Works (17 and 20 Oct 2026) |
-| Production | Google Cloud, Doha (`me-central1`), project `alyr-prod`: Cloud Run, Cloud SQL, Secret Manager | Being set up (ALY-10): `infra/gcp/`, steps in its README |
+| Production | Google Cloud, Doha (`me-central1`), project `alyr-prod`: Cloud Run, Cloud SQL, Secret Manager | Running since 28 Oct 2026, healthy; not yet receiving WhatsApp traffic (ALY-10): `infra/gcp/` |
 | Database backups | Cloud SQL's own daily backups (14 kept) and point-in-time recovery (7 days), plus a nightly export to a bucket in Doha kept 35 days | Set up with production |
 | Interim host on Cloudflare and Neon (D-052) | Not used for real clients | Superseded by D-060 |
 
@@ -35,7 +35,7 @@ Everything stays in Doha: the founder chose on 28 Oct 2026 to keep no copy outsi
 | Part | Google service | Size |
 |---|---|---|
 | API | Cloud Run service `alyr-api` | 1 vCPU, 1 GiB, one always running, up to 3; billed per request beyond the idle instance |
-| Worker | Cloud Run worker pool `alyr-worker` | One instance, 0.5 vCPU, 512 MiB |
+| Worker | Cloud Run worker pool `alyr-worker` | One instance, 1 vCPU (the least Google allows for an always-on worker), 512 MiB |
 | Web app | Cloud Run service `alyr-web` | 1 vCPU, 512 MiB, one always running, up to 3 |
 | Migrations | Cloud Run job `alyr-migrate` | Run by each deploy, before the rollout |
 | Database | Cloud SQL for PostgreSQL 16 `alyr-db`, `db-g1-small` | Shared vCPU, 1.7 GB, 10 GB SSD growing on its own; private address only; encrypted connections only |
@@ -51,8 +51,13 @@ egress); the database has no public address. Each app runs as its own service ac
 deploys; may update the apps and push images).
 
 **Roughly a month at Doha list prices (28 Oct 2026):** database about USD 34, API about
-USD 14, web app about USD 14, worker about USD 20, the rest a few dollars: about USD 85 to 90,
+USD 14, web app about USD 14, worker about USD 37, the rest a few dollars: about USD 100 to 105,
 paid from the startup credits.
+
+**The database owner bypasses row-level security** (`ensure_owner_bypasses_rls` in
+`alyr/migrate.py`), as a superuser does on a developer machine: the SECURITY DEFINER
+functions behind sign-up and the back office are owned by it. Cloud SQL's `postgres` is not a
+superuser, so without this those functions fail. The application role never bypasses it.
 
 **Addresses.** Cloud Run gives fixed addresses: `https://alyr-api-841433519399.me-central1.run.app`
 and `https://alyr-web-841433519399.me-central1.run.app`. Custom names (`api.alyr.qa`,

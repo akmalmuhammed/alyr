@@ -236,7 +236,7 @@ case "${1:-}" in
       --service-account="$(sa alyr-run)" "${private_net[@]}" --allow-unauthenticated \
       --set-env-vars="$(env_flag)" --set-secrets="$(secrets_flag)"
     g run worker-pools deploy alyr-worker --region="$REGION" --image="$images/alyr-api:$tag" \
-      --args=worker --instances=1 --cpu="${ALYR_WORKER_CPU:-0.5}" --memory="${ALYR_WORKER_MEMORY:-512Mi}" \
+      --args=worker --instances=1 --cpu="${ALYR_WORKER_CPU:-1}" --memory="${ALYR_WORKER_MEMORY:-512Mi}" \
       --service-account="$(sa alyr-run)" "${private_net[@]}" \
       --set-env-vars="$(env_flag)" --set-secrets="$(secrets_flag)"
     g run deploy alyr-web --region="$REGION" --image="$images/alyr-web:$tag" --port=3000 \
@@ -246,11 +246,12 @@ case "${1:-}" in
 
     echo "The nightly export, 02:00 Doha time..."
     # Google's own gcloud image; it names each export by the time it ran. The script is
-    # expanded inside the job, not here.
+    # expanded inside the job, not here. `^@^` makes @ the list separator, because the
+    # script itself is full of semicolons.
     # shellcheck disable=SC2016
     g run jobs deploy alyr-db-export --region="$REGION" \
       --image=gcr.io/google.com/cloudsdktool/google-cloud-cli:slim --command=bash \
-      --args='^;^-c;set -e; f="gs://$BUCKET/alyr-$(date -u +%Y%m%dT%H%M%SZ).sql.gz"; gcloud sql export sql "$INSTANCE" "$f" --database=alyr --project="$PROJECT" --quiet; echo "exported $f"' \
+      --args='^@^-c@set -e; f="gs://$BUCKET/alyr-$(date -u +%Y%m%dT%H%M%SZ).sql.gz"; gcloud sql export sql "$INSTANCE" "$f" --database=alyr --project="$PROJECT" --quiet; echo "exported $f"' \
       --set-env-vars="BUCKET=$EXPORTS,INSTANCE=$SQL,PROJECT=$PROJECT" \
       --service-account="$(sa alyr-export)" --max-retries=1 --task-timeout=30m
     g run jobs add-iam-policy-binding alyr-db-export --region="$REGION" \

@@ -5,7 +5,7 @@ from urllib.parse import urlparse
 
 import asyncpg
 
-from alyr.migrate import migrate
+from alyr.migrate import ensure_owner_bypasses_rls, migrate
 from alyr.worker import heartbeat
 from conftest import APP_DSN, OWNER_DSN
 
@@ -116,3 +116,45 @@ def test_the_application_role_still_cannot_bypass_row_level_security():
     role = urlparse(APP_DSN).username
     row = owner_sql("select rolbypassrls from pg_roles where rolname = $1", role)[0]
     assert row["rolbypassrls"] is False
+
+
+def test_an_owner_that_is_already_a_superuser_is_left_alone():
+    async def go():
+        conn = await asyncpg.connect(OWNER_DSN)
+        try:
+            before = await conn.fetchrow(
+                "select rolsuper, rolbypassrls from pg_roles where rolname = current_user"
+            )
+            await ensure_owner_bypasses_rls(conn)
+            return before
+        finally:
+            await conn.close()
+
+    assert asyncio.run(go())["rolsuper"] is True
+
+
+def test_an_owner_that_cannot_bypass_row_level_security_is_warned_not_blocked(capsys):
+    # A managed database's admin that may not give itself BYPASSRLS: the deploy goes on and
+    # the warning says sign-up will fail. (Cloud SQL's postgres may, and does, 28 Oct.)
+    owner = urlparse(OWNER_DSN)
+    limited = OWNER_DSN.replace(
+        f"{owner.username}:{owner.password}", "alyr_owner_test:owner_test_pw"
+    )
+    owner_sql("drop role if exists alyr_owner_test")
+    owner_sql("create role alyr_owner_test login createrole password 'owner_test_pw'")
+    try:
+        async def go():
+            conn = await asyncpg.connect(limited)
+            try:
+                await ensure_owner_bypasses_rls(conn)
+            finally:
+                await conn.close()
+
+        asyncio.run(go())
+        row = owner_sql(
+            "select rolbypassrls from pg_roles where rolname = 'alyr_owner_test'"
+        )[0]
+        assert row["rolbypassrls"] is False
+        assert "cannot bypass row-level security" in capsys.readouterr().out
+    finally:
+        owner_sql("drop role if exists alyr_owner_test")
