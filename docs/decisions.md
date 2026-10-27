@@ -50,6 +50,7 @@ Status: **Accepted** (in force), **Proposed** (waiting for the founder), **Super
 | D-056 | Search and AI visibility: be found, described correctly and contacted in Qatar, in search and AI assistants; profiles and verification switch on from settings | Accepted |
 | D-058 | The homepage hero's ALYR Agent figure (and /agent's) moves continuously, the one exception to "plays once", with a pause button and calm pacing | Accepted |
 | D-059 | Motion is always on: the site's figures (How we work, the products frame, the signature figures, with the flows, demos and the live Agent) keep playing, each with a Pause control; text arrives once | Accepted |
+| D-060 | ALYR runs on Google Cloud in Doha (Cloud Run, Cloud SQL, Secret Manager); replaces Azure (D-036) and the interim Cloudflare and Neon host (D-052); backups stay in Doha | Accepted |
 
 ---
 
@@ -1197,3 +1198,24 @@ Nothing claims more than the page, as before.
 - The numbers in a scene stay true to each other on every cycle; no layout shift; the homepage's Lighthouse no worse than before.
 
 **Revisit when** a visitor or the founder finds it distracting, or a figure's cycle reads as too busy (its hold is one token away).
+
+## D-060 · ALYR runs on Google Cloud in Doha; backups stay in Doha
+**Date** 28 Oct 2026 · **Status** Accepted (the founder, 28 Oct: "instead of azure lets use google cloud as our hosting and cloud provider for alyr"; on the plan and its cost, "yeah go ahead"; on a backup copy outside Qatar, "ok keep in doha") · Linear ALY-10 · Replaces D-036 · Supersedes D-052 for real clients · Builds on D-013
+
+**The decision.** Production runs in Google Cloud's Doha region (`me-central1`), project `alyr-prod`: the API, the web app and the worker on Cloud Run (two services and a worker pool), PostgreSQL 16 on Cloud SQL with a private address only, secrets in Secret Manager kept in Doha, images in Artifact Registry in Doha. Backups are Cloud SQL's own (14 nightly, 7 days of point-in-time recovery) and a nightly export to a bucket in Doha kept 35 days. No copy leaves Qatar. Steps in `infra/gcp/README.md`; what runs where in `docs/hosting.md`.
+
+**Why.**
+- Microsoft refused startup credits on the founder's identity on 26 Oct (LinkedIn check and then "not eligible for an Azure free account"); Azure would have been paid in full from day one.
+- Google gives USD 300 of trial credit now, and USD 2,000 for a year under the Start tier, applied for on 28 Oct with the alyr.qa address. That covers the first year of hosting.
+- Doha has everything ALYR needs, checked against Google Cloud itself on 28 Oct: Cloud Run services, jobs and worker pools, Cloud SQL for PostgreSQL 16, Artifact Registry, Cloud Scheduler.
+- It keeps hard rule 2 for real clients' data, which the interim Cloudflare and Neon host (D-052) could not.
+
+**Costs, said plainly.** About USD 85 to 90 a month at Doha list prices (database about 34, API about 14, web app about 14, worker about 20, the rest a few dollars), against about USD 62 for the Azure plan. Doha's prices are higher than Google's US regions. A budget alerts at 50% and 90% of USD 150 and at a forecast of 100%.
+
+**What stays the same.** The images, the worker heartbeat and the health checks from ALY-63 run unchanged; the API image now takes `api` or `worker` as its first argument, and with none runs both (the Cloudflare layout of D-052). Product photos stay on Cloudflare R2 (D-039).
+
+**Not proven until the first deploy** (the list in `infra/gcp/README.md`): migrations as Cloud SQL's `postgres` user; whether the nightly export holds every shop's rows despite forced row-level security; the worker's size.
+
+**Chosen over** Azure on full price (no credits; D-036), the interim Cloudflare and Neon host (outside Qatar; D-052), and a copy of backups on Cloudflare R2 in the EU (the founder chose Doha only).
+
+**Revisit when** the startup credits are refused or run out, a paying client needs Cloud SQL's high availability (a standby in a second zone, about double the database's cost), or the database's CPU stays above 60%.
