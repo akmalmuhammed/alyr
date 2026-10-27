@@ -1,0 +1,1442 @@
+> Copied 2026-10-24 from D:/playbook.txt (text export of the Brand & Growth Playbook, 11 Oct 2026) for the research library. Original kept. Status: Partly superseded.
+
+
+
+# alyr Brand & Growth Playbook
+ · 
+
+## Executive summary
+Brand alyr as the local tech partner that sets everything up for you, not as another app: "We do the tech. You run the business." The evidence from Toast, Foodics, Linear and Mercury, and from B2B buyer research, says small-business owners trust people, proof and plain prices more than polish or hype. alyr's edge over global WhatsApp tools and delivery apps is being local, bilingual and hands-on.
+The visual sheet with logo directions, palette, Arabic and Latin type, social templates, deck slides and the field kit is here: alyr Brand Sheet.
+Ten decisions this playbook makes
+
+Architecture: one master brand, alyr, with plain product names (alyr Chat, Pay, Books, Sites), each with one colour. This is the Stripe and Shopify model, and Careem's single mark across services.
+
+Lines: keep the site's "Go digital without the IT team" as the master line; the brand idea is "We do the tech. You run the business." / علينا التقنية، وعليك شغلك.
+
+Promise: live in 48 hours, your customers stay yours, a person answers on WhatsApp.
+
+Voice: helpful, plain-spoken, local, crafted. Numbers over adjectives. Gulf Arabic on social and WhatsApp, MSA on contracts and invoices.
+
+Visuals: keep the existing site system (cobalt #2747F5, Bricolage Grotesque + Geist) and add Alexandria + IBM Plex Sans Arabic, a sand neutral, and real RTL. Fix white text on the green Chat buttons, which fails contrast.
+
+Site fixes: prices in QAR, an Arabic version, "Message us on WhatsApp" instead of "Work email", and remove sample stats until real numbers exist. Qatar penalises misleading claims.
+
+Content: four pillars led by real shop-floor stories, owner tips that help, building in public, and Doha's calendar. Posts go out 5 days a week from one weekly shoot. TikTok, Facebook and YouTube have the widest reach in Qatar; WhatsApp is the most used.
+
+Sales: the demo is the owner's own menu on their own phone. A 10-slide deck, an A5 bilingual leave-behind and five WhatsApp scripts cover the journey from referral to paid customer.
+
+Growth: start with a Founding 25 programme, sell district by district, and run merchant-gets-merchant referrals. Add a WhatsApp owners' club, Doha micro-creators, and partnerships with payment providers. Apply to SMEs Go Digital in month 1.
+
+Governance: one owner signs off everything public against a 12-point checklist. Each month, measure recall, saves and shares, visit-to-paid rates, time to first order, support response time and NPS.
+One decision only you can make: how alyr is pronounced and spelled in Arabic. I used ألير as a placeholder. It sets the Arabic wordmark and every Arabic line.
+Next 14 days: fix the site items in decision 6, print 200 leave-behinds, film the first two merchant videos, and launch the Founding 25. Have a native Gulf Arabic speaker review all Arabic copy before anything is printed.
+
+## 1. Brand strategy
+alyr should be positioned as the local tech partner that sets up and runs the software for you, not as another app. Restaurant owners in Doha already have too many apps and tablets; what they lack is someone who does the tech for them, in their language, and answers on WhatsApp. That is the gap global tools (Wati, respond.io) and delivery apps leave open. Assumption, to be tested in the first 40 restaurant interviews from the Qatar plan.
+
+### Positioning statement
+For owner-run restaurants, cafes and service businesses in Qatar who lose orders and time in WhatsApp chats and pay heavy delivery-app commissions, alyr is the digital partner that turns their chats into orders, bookings and payments. Unlike global chatbot tools or delivery apps, alyr sets it up for you in 48 hours, in Arabic and English, keeps your customers yours, and is one call or message away when something breaks.
+
+### Brand idea and promise
+
+Brand idea: We do the tech. You run the business. (Arabic: علينا التقنية، وعليك شغلك)
+
+Promise to the owner: Live in 48 hours, your customers stay yours, and a real person answers on WhatsApp.
+
+Proof we must be able to show: a named local merchant, a before/after number (orders, no-shows, commission saved), and a setup time.
+
+### Personality
+The neighbour who is brilliant with tech. Four traits, each with its limit:
+Trait
+ | What it means
+ | Not this
+ | 
+Helpful
+ | We show, set up and fix. We never make the owner feel slow.
+ | Patronising, jargon
+ | 
+Plain-spoken
+ | Short sentences, real numbers, prices in QAR.
+ | Hype, "revolutionise"
+ | 
+Local
+ | Doha places, Gulf Arabic, Ramadan hours, Friday rhythms.
+ | Generic stock-photo global
+ | 
+Crafted
+ | Every screen, receipt and post is tidy and fast.
+ | Cheap, cluttered, template-y
+ | 
+
+### Brand architecture: one master brand, descriptive products
+Use a branded house, the model Stripe, Shopify and Square use: one name everyone learns, plus plain product names that say what they do. A small team cannot afford to build several brands, and a merchant who trusts alyr Chat should trust alyr Pay on day one.
+Layer
+ | Name
+ | Arabic in copy
+ | Role
+ | Product colour
+ | 
+Master
+ | alyr
+ | ألير (spelling to confirm)
+ | Company, trust, support, billing
+ | Cobalt #2747F5
+ | 
+Product 1 (live)
+ | alyr Chat
+ | ألير شات
+ | Orders, bookings, payments in WhatsApp
+ | Green #12A150
+ | 
+Product 2
+ | alyr Pay
+ | ألير باي
+ | Payment links, invoices, tap to pay
+ | Coral #E2552B
+ | 
+Product 3
+ | alyr Books
+ | ألير بوكس
+ | Stock, sales, simple books
+ | Violet #7A5AF0
+ | 
+Product 4
+ | alyr Sites
+ | ألير سايتس
+ | Website and online store
+ | Amber #D99A0B
+ | 
+Rules: the product name is always "alyr" + one plain English word; the master logo always appears, the product colour only tints it; Arabic copy describes the product ("ألير شات للطلبات والحجوزات عبر واتساب") rather than inventing new Arabic names. Never put "WhatsApp" inside a product name or logo; say "for WhatsApp Business" in descriptors and keep the "not affiliated with Meta" line, per WhatsApp brand guidelines.
+
+### Narrative (the story we tell everywhere)
+
+The world changed: In Qatar your customers already message you on WhatsApp and Instagram before they visit or order.
+
+The problem: Those chats get lost, orders are written on paper, payment means cash or a bank transfer screenshot, and delivery apps take a big cut of every order.
+
+The shift: The businesses that win treat the chat as their shop counter, with a menu, a checkout and a booking book inside it.
+
+alyr: We set that up for you in 48 hours, in Arabic and English, using the number you already have.
+
+Proof: Named local merchants and their numbers.
+
+Next: As you grow, alyr adds payments, books and a website, all on the same customer list.
+
+### Taglines
+Use
+ | English
+ | Arabic (Gulf, for social and outreach)
+ | 
+Master line (recommended)
+ | Go digital without the IT team.
+ | خلّ شغلك رقمي… بدون فريق تقنية
+ | 
+Brand idea / manifesto
+ | We do the tech. You run the business.
+ | علينا التقنية، وعليك شغلك
+ | 
+alyr Chat
+ | Sell, book and get paid in the chat.
+ | اطلب، احجز، وادفع… كله من الواتساب
+ | 
+alyr Chat, restaurants
+ | Your menu, your customers, no commission.
+ | منيوك، زباينك، وبدون عمولة
+ | 
+Field / trust line
+ | Set up in 48 hours. Support on WhatsApp.
+ | نجهزه لك في 48 ساعة، والدعم على الواتساب
+ | 
+The master line is already on the site, so keep it. Arabic lines are drafts written for Gulf readers; have a Qatari native speaker review every line before print. Assumption.
+
+### What we always say, and what we never say
+Always say
+ | Never say
+ | 
+Prices in QAR, with what is included
+ | "Contact us for pricing" on small plans
+ | 
+"Set up for you" and the setup time
+ | "Seamless", "revolutionary", "disrupt", "synergy"
+ | 
+Real merchant names and numbers, with permission
+ | Made-up stats or "sample" numbers in public
+ | 
+"Your customers stay yours"
+ | Attacks on talabat, Snoonu or Keeta by name
+ | 
+"A person answers on WhatsApp"
+ | "AI-powered" as the headline benefit
+ | 
+"Works with the number you have" (once confirmed)
+ | Anything implying we are WhatsApp or Meta
+ | 
+Arabic and English, side by side
+ | Arabic as a footnote or machine translation
+ | 
+
+## 2. Verbal identity
+alyr talks like a capable friend explaining something over karak: short, concrete, warm, and always with a number or an example. Five rules cover 90% of cases.
+
+### Five tone rules
+Rule
+ | Do
+ | Don't
+ | 
+Lead with the owner's outcome
+ | "Take orders on WhatsApp without missing one."
+ | "An omnichannel conversational commerce platform."
+ | 
+Use numbers and names
+ | "Live in 48 hours. QAR 199 a month."
+ | "Fast setup at an affordable price."
+ | 
+One idea per sentence, under 20 words
+ | "Customers pay by link. You get a receipt."
+ | Long sentences joined by "and" and "which"
+ | 
+Talk to one person, as "you"
+ | "Your menu, in your customers' chat."
+ | "Businesses can leverage…"
+ | 
+Calm confidence, no hype
+ | "Most cafes are live the same week."
+ | "Skyrocket your sales!!! 🚀"
+ | 
+
+### Vocabulary
+Say
+ | Instead of
+ | 
+customers
+ | users, end-users
+ | 
+orders, bookings, payments
+ | transactions, conversions
+ | 
+set up, connect, go live
+ | onboard, implement, deploy
+ | 
+your team
+ | agents, seats
+ | 
+message, chat
+ | conversation session, touchpoint
+ | 
+payment link
+ | checkout URL, PG
+ | 
+a person from alyr
+ | customer success manager
+ | 
+free 14-day pilot
+ | free trial (in field sales)
+ | 
+
+### Arabic voice by channel
+Use Gulf (Khaleeji) Arabic where the owner chats, and clear Modern Standard Arabic where the content must look official. Never machine-translate; write Arabic first for Arabic-first channels. Assumption based on common GCC practice; the research list in section 9 adds sources.
+Channel
+ | Arabic register
+ | Example
+ | 
+WhatsApp outreach, status, support
+ | Light Gulf, friendly
+ | هلا أبو فهد، جهزنا لك المنيو على الواتساب، تبي نجربه اليوم؟
+ | 
+Instagram, TikTok, Snapchat
+ | Gulf, spoken, short
+ | الطلب يوصلك على الواتساب، والدفع برابط… بس كذا
+ | 
+Website, product UI
+ | Simple MSA, Gulf-friendly words
+ | استقبل الطلبات والحجوزات والدفع في المحادثة
+ | 
+Contracts, invoices, proposals, PR
+ | Formal MSA
+ | تقدم ألير حلولاً رقمية للمنشآت الصغيرة والمتوسطة
+ | 
+LinkedIn
+ | English first, MSA second
+ | Bilingual carousel, English cover
+ | 
+Arabic writing rules: use Arabic-Indic or Western digits consistently per piece (Western digits are safer for prices and phone numbers); write "ر.ق" or "QAR" for currency, never "$"; respect greetings (start with هلا or السلام عليكم, never a cold pitch); avoid religious phrases in sales copy unless the context is Ramadan or Eid greetings.
+
+### Message house
+Roof (one line): alyr turns your customers' chats into orders, bookings and payments, set up for you.
+Pillar
+ | Message
+ | Proof to show
+ | 
+Sell more
+ | Never miss an order, even after hours or in the Friday rush.
+ | Orders answered after hours; repeat orders from broadcasts
+ | 
+Keep more
+ | Direct orders mean no delivery-app commission on those orders; your customer list stays yours.
+ | QAR saved per month on direct orders
+ | 
+Easy
+ | Set up for you in 48 hours, on the number you already use. No app for customers.
+ | Setup time; screenshots of the flow
+ | 
+Trusted
+ | Local team, Arabic and English, licensed Qatari payment partner, data kept safe.
+ | Partner logos, support response time, named merchants
+ | 
+Foundation: a Doha team, real merchants, and prices in QAR on the page.
+
+### Objection handling
+They say
+ | We say
+ | 
+"I already use WhatsApp Business, it's free."
+ | Keep it. alyr adds a menu, a checkout and an order board on top, so your staff stop copying orders onto paper. Let me show you on your own menu.
+ | 
+"talabat / Snoonu brings me customers."
+ | Keep them for new customers. alyr is for the regulars who already message you, so those orders come without commission.
+ | 
+"Too expensive."
+ | At QAR 199 a month, two or three direct orders a week that would have gone through an app cover it. The pilot is free, so you see the numbers first.
+ | 
+"My staff won't use it."
+ | We train them in your shop, in Arabic, English or Hindi/Urdu if needed, and the board works like a paper ticket rail.
+ | 
+"What if it breaks on a Friday night?"
+ | You message us on WhatsApp and a person answers. We'll write the response time into your agreement.
+ | 
+"Customers won't pay online."
+ | They can still pay cash on delivery. Payment links are there for those who want them, and they cut no-shows for bookings.
+ | 
+"I'm not technical."
+ | You don't need to be. We set everything up and send you a two-minute video in your language.
+ | 
+"Is my data safe? Is this approved?"
+ | Payments go through a licensed Qatari provider, and we use WhatsApp's official Business Platform. Your customer list belongs to you.
+ | 
+
+## 3. Visual identity and design system
+Keep the system the site already uses (cobalt master colour, one hue per product, Bricolage Grotesque headlines, Geist body) and add what it is missing: an Arabic type pairing, accessible text colours, a sand neutral for print and social, and RTL rules. The tokens below are the single source for the website, product UI, decks and social posts. The visual sheet (palette, logo directions, sample posts and slides) is linked from the executive summary.
+
+### Logo direction
+Direction
+ | Description
+ | Verdict
+ | 
+A. Keep the current "a" mark
+ | Cobalt rounded square, a ring plus a stem that reads as a lowercase "a" and hints at a chat bubble. Lowercase "alyr" wordmark in Bricolage 800.
+ | Recommended. Simple, works at 16px as a favicon and as a WhatsApp profile picture.
+ | 
+B. Wordmark only
+ | "alyr" in Latin and "ألير" in Arabic, stacked, no symbol.
+ | Good for print and shop-window stickers; weak as an app icon.
+ | 
+C. Bubble monogram
+ | The "a" ring sits inside a speech-bubble outline.
+ | Too tied to chat; ages badly once Books and Sites launch.
+ | 
+Lockup rules: Latin wordmark left of the mark in LTR, Arabic wordmark right of the mark in RTL; clear space equals the mark's height on all sides; minimum size 16px for the mark, 64px wide for the lockup. Product lockups add the product word in the product colour: "alyr Chat". A Qatari or Arabic lettering designer should draw the Arabic wordmark so it matches the Latin weight. Assumption: no Arabic wordmark exists yet.
+
+### Colour
+Token
+ | Light
+ | Dark
+ | Use
+ | Contrast note
+ | 
+--accent (alyr cobalt)
+ | #2747F5
+ | #6F86FF
+ | Master brand, links, primary buttons
+ | 6.35:1 on white, passes AA
+ | 
+--ink
+ | #0D1017
+ | #EEF0F5
+ | Text, dark bands
+ | 17.4:1 on --bg
+ | 
+--ink-2
+ | #555C6B
+ | #9AA1B2
+ | Secondary text
+ | 6.15:1 on --bg
+ | 
+--bg
+ | #F4F5F7
+ | #0A0C11
+ | Page background
+ |  | 
+--surface
+ | #FFFFFF
+ | #12151D
+ | Cards, phone screens
+ |  | 
+--sand (new)
+ | #F3EDE4
+ | #1A1712
+ | Print, social backgrounds, warm sections
+ | cobalt on sand 5.46:1
+ | 
+--chat
+ | #12A150
+ | #3DD27F
+ | alyr Chat fills
+ | White text on it is 3.37:1, fails AA. Use ink text (5.65:1)
+ | 
+--chat-text (new)
+ | #0B7A3B
+ | #3DD27F
+ | Green text and links on light backgrounds
+ | 5.44:1 on white
+ | 
+--pay
+ | #E2552B
+ | #FF8358
+ | alyr Pay
+ | Use #C24419 for text (5.08:1)
+ | 
+--books
+ | #7A5AF0
+ | #A68CFF
+ | alyr Books
+ | 4.62:1, AA for text
+ | 
+--sites
+ | #D99A0B
+ | #F4BE3E
+ | alyr Sites
+ | Never as text on white (2.45:1); ink on it is 7.77:1
+ | 
+--ok / --warn
+ | #12A150 / #C27C0E
+ | #3DD27F / #F0B84B
+ | Status
+ | Pair with an icon, never colour alone
+ | 
+Ratios computed with the WCAG 2.x formula. Ratio rule: about 70% neutral (bg, surface, sand), 20% ink, 10% colour; one product hue per page.
+
+### Type
+Role
+ | Latin
+ | Arabic
+ | Weight and size
+ | 
+Display (headlines)
+ | Bricolage Grotesque
+ | Alexandria (geometric, matches Bricolage's width)
+ | 700–800; H1 48–112px, H2 36–68px, tracking -0.035em Latin only
+ | 
+Body and UI
+ | Geist
+ | IBM Plex Sans Arabic
+ | 400/500/600; 16px body, 14px UI, line-height 1.55 Latin, 1.7 Arabic
+ | 
+Numbers, labels
+ | Geist Mono
+ | Geist Mono for digits
+ | 12–13px, uppercase labels with 0.12em tracking in Latin only
+ | 
+Arabic rules: never letter-space or uppercase-style Arabic; set Arabic about 10% larger than the Latin at the same level so they look equal; no italics in Arabic; use Western digits in UI tables for alignment. All five families are free on Google Fonts.
+
+### Spacing, radius and layout
+
+Spacing scale (4px base): 4, 8, 12, 16, 20, 24, 32, 48, 72, 96, 128.
+
+Radius: buttons and chips 999px; cards 22px; inputs and small tiles 12–14px; phone mock 44px; menus 18px.
+
+Layout: 1200px max column, side padding clamp(16px, 4vw, 40px); section padding clamp(72px, 10vw, 128px).
+
+Social: 1080×1350 (feed), 1080×1920 (stories, reels, TikTok), 1200×1500 (LinkedIn); 64px safe margin.
+
+Decks: 1920×1080, 96px margins, one idea per slide, max 25 words.
+
+### Iconography, illustration and photography
+
+Icons: 24px grid, 2px stroke, round caps and joins, outline style (as on the site). Filled only for active states.
+
+Illustration: none in year one. The product is the illustration: real chat bubbles, order cards and boards rendered in brand colours.
+
+Photography: real Doha merchants in their real shops, natural light, the owner's hands holding a phone with alyr on screen. Shot on a phone is fine. No stock photos of people in suits, no glowing "AI" brains, no skyline-only shots.
+
+Motion: UI 150–250ms; headline reveals 600–900ms with cubic-bezier(.2,.8,.2,1); chat bubbles pop in at 350ms. Respect prefers-reduced-motion (the site already does).
+
+### Accessibility baseline
+AA contrast for all text (4.5:1, 3:1 for 24px+ bold); 44×44px tap targets; focus ring 2px in the product colour; never colour alone for status; every video captioned in Arabic and English (most short video is watched muted).
+
+### Design tokens (paste into base.css)
+
+### Existing site: keep and change
+Keep
+ | Change
+ | 
+Master/product structure with a product hue per page (build.py PRODUCTS list)
+ | Prices in QAR (199 / 449 / 899 from the Qatar plan), not USD $19/$49/$99
+ | 
+"Go digital without the IT team" headline
+ | Add a full Arabic version at /ar with real RTL, and a language switch in the nav
+ | 
+Phone mock that replays real flows
+ | Replace "Work email" signup with "Message us on WhatsApp" (click-to-chat) plus a phone field; owners don't use work email
+ | 
+Not-affiliated-with-Meta footer line
+ | Swap placeholder merchants (Karak House, Bloom Salon) for real pilot merchants as soon as they agree
+ | 
+Reduced-motion support, focus rings
+ | Fix white text on green buttons on the Chat page (3.37:1)
+ | 
+Four-step setup sequence
+ | "14-day free trial" becomes "Free 14-day pilot, set up for you" to match field sales
+ | 
+Stats band
+ | Remove sample stats from the public site until real pilot numbers exist
+ | 
+ | Add trust row: licensed payment partner, Meta Business Partner status when earned, Doha address, support hours
+ | 
+
+## 4. Product UI/UX rules
+The product has two faces with different users: the customer inside WhatsApp (anyone, any phone, often in a hurry) and the owner and staff on the dashboard (busy, interrupted, often on a phone at the counter). Design every screen for the second user holding a phone in one hand during the Friday lunch rush.
+
+### Seven principles
+
+Fewest taps to an order. Customer path: greeting → menu → cart → pay or cash → confirmation. Five steps maximum, no account creation.
+
+Use WhatsApp's native parts first (lists, reply buttons, catalogue, Flows) before sending people to a web page. Every link out is a drop-off point. Assumption; measure it.
+
+The board is a ticket rail. Columns New → Preparing → Ready → Delivered, big cards, one tap to move, a sound and a badge for new orders. It should feel like the paper rail staff already know.
+
+Bilingual by default. Every message template exists in Arabic and English; the customer's language is detected from their first message and remembered.
+
+A person is always one tap away. Every bot flow has "Talk to the shop" (customer side) and "Message alyr support" (owner side).
+
+Show money clearly. QAR, two decimals in UI, totals bold, fees itemised, receipts instant.
+
+Never lose an order. Offline banner, retries, and a daily summary at closing time.
+
+### Onboarding (owner)
+Step
+ | What alyr does
+ | What the owner sees
+ | Target time
+ | 
+1. Visit
+ | Rep photographs the menu, collects logo and hours
+ | "We'll have it ready tomorrow"
+ | 20 min in shop
+ | 
+2. Build
+ | alyr team loads menu (AR+EN), photos, prices, delivery zones
+ | Nothing, work happens for them
+ | Under 24 h
+ | 
+3. Connect
+ | Number connected to the WhatsApp Business Platform, payment account opened with the licensed provider
+ | A test order sent to their own phone
+ | Under 48 h
+ | 
+4. Train
+ | 15-minute training at the counter, 2-minute video in their language
+ | First real order on the board
+ | Day 2–3
+ | 
+5. Launch kit
+ | Table tents, window sticker, Instagram bio link, Google Maps link
+ | QR codes on tables and the door
+ | Day 3
+ | 
+6. Check-ins
+ | WhatsApp check-in on day 3, 7 and 13 with their numbers
+ | Weekly summary message
+ | Pilot length
+ | 
+The first success moment is the first paid order from a real customer. Count time-to-first-order as the onboarding metric.
+
+### Empty states and microcopy
+Moment
+ | English
+ | Arabic
+ | 
+Board with no orders
+ | No orders yet. Share your chat link to get the first one. [Copy link]
+ | ما فيه طلبات للحين. شارك رابط المحادثة عشان يوصلك أول طلب. [انسخ الرابط]
+ | 
+New order sound + toast
+ | New order from Fatima, QAR 46.00
+ | طلب جديد من فاطمة، 46.00 ر.ق
+ | 
+Customer greeting
+ | Hi! I'm the Karak House assistant. Order, book a table, or talk to the team?
+ | هلا! معك مساعد كرك هاوس. تبي تطلب، تحجز طاولة، ولا تكلم الفريق؟
+ | 
+Order confirmed
+ | Got it! Order #1043 is with the kitchen. Ready in about 20 minutes.
+ | وصل طلبك رقم 1043 للمطبخ. جاهز تقريباً بعد 20 دقيقة.
+ | 
+Payment failed
+ | The payment didn't go through. Nothing was charged. Try again or choose cash.
+ | ما تم الدفع ولا انخصم شي. جرب مرة ثانية أو اختر الدفع كاش.
+ | 
+Out of stock
+ | Sorry, chicken paratha is sold out today. Want the cheese one instead?
+ | معذرة، البراتا بالدجاج خلصت اليوم. تبي بالجبن بدالها؟
+ | 
+Error (owner)
+ | We couldn't reach WhatsApp. Orders are safe and will appear when it's back. We're on it.
+ | الاتصال بواتساب متوقف. طلباتك محفوظة وبتظهر أول ما يرجع. نشتغل عليها.
+ | 
+Microcopy rules: the button says what happens ("Pay QAR 46", not "Submit"); errors say what happened, whether money moved, and what to do next; no blame, no exclamation marks in errors; emojis only in customer-facing chat, at most one per message.
+
+### Trust and payment moments
+
+Payment link message shows: shop name, order number, itemised total in QAR, the licensed provider's name, and "Secure payment".
+
+The link opens a page with the shop's logo, not alyr's; alyr appears only as "Powered by alyr" in small type. The merchant's brand is what the customer trusts.
+
+Receipt arrives in the chat within seconds, with order number and a "Need help? Reply here" line.
+
+Refunds: owner taps Refund → confirms amount → customer gets a message with the expected days.
+
+Opt-in for broadcasts is explicit, with "Reply STOP to unsubscribe" (أرسل إيقاف لإلغاء الاشتراك) on every marketing message; this follows WhatsApp Business Platform policy and protects the number's quality rating.
+
+### RTL rules
+
+Set dir="rtl" and lang="ar" on the root; use CSS logical properties (margin-inline-start, padding-inline-end, inset-inline) everywhere so one stylesheet serves both.
+
+Mirror layout, navigation, progress and "back/next" arrows. Do not mirror: media play buttons, clocks, phone numbers, prices, order numbers, brand logos, and checkmarks.
+
+Keep Latin product names (alyr Chat) as embedded LTR runs; wrap them in <bdi> so punctuation lands correctly.
+
+The phone mock in RTL flips bubble sides: incoming on the right, outgoing on the left, as WhatsApp itself does in Arabic.
+
+Test every screen with long Arabic strings (Arabic text is often 20–30% wider in UI at equal legibility; assumption) and with mixed Arabic + numbers.
+
+References: Material Design bidirectionality and Apple HIG right to left.
+
+## 5. Content engine
+Post where Doha owners already scroll, show real shops, and teach one useful thing per post. A team of two can sustain the cadence below with one three-hour shoot day a week: every reel is cut once and posted to Instagram, TikTok and Snapchat; every carousel is reused on LinkedIn.
+
+### Four content pillars
+Pillar
+ | Share
+ | What it is
+ | Example hook
+ | 
+Shop floor stories
+ | 35%
+ | Real merchants, their numbers, filmed in their shop
+ | "This Al Sadd cafe took 212 WhatsApp orders last month without a tablet."
+ | 
+Owner playbook
+ | 30%
+ | One practical tip that works even without alyr
+ | "3 things to put in your Instagram bio to get more direct orders"
+ | 
+Build with us
+ | 20%
+ | Founders, product updates, what we shipped this week, lessons
+ | "We visited 40 restaurants. Here's what every owner asked for."
+ | 
+Doha rhythm
+ | 15%
+ | Ramadan hours, Eid, National Day (18 Dec), summer heat, weekend rush
+ | "Your Ramadan iftar pre-order message, ready to copy"
+ | 
+
+### Channel roles and cadence
+Channel
+ | Role
+ | Weekly cadence
+ | Language
+ | 
+Instagram
+ | Main shop window; owners check it daily
+ | 2 reels, 1 carousel, stories 5 days
+ | Arabic and English versions, or bilingual captions
+ | 
+TikTok
+ | Reach and personality
+ | 3 short videos (repurposed reels + 1 native)
+ | Gulf Arabic first, English subtitles
+ | 
+Snapchat
+ | Local reach in Qatar, younger owners
+ | Stories 3 days, repurposed
+ | Gulf Arabic
+ | 
+LinkedIn
+ | Partners, investors, larger B2B buyers, hiring
+ | 2 founder posts, 1 carousel
+ | English, Arabic summary
+ | 
+WhatsApp Channel + Status
+ | Merchants and leads who opted in
+ | 1 broadcast or channel post, status 3 days
+ | Arabic + English
+ | 
+Google Business Profile
+ | Local search trust
+ | 1 update, answer every review
+ | Both
+ | 
+Platform reach figures for Qatar are in section 9: TikTok, Facebook and YouTube reach the most people, so cross-post every reel to Facebook and YouTube Shorts at no extra cost, and put any paid boost budget there first. Plan and shoot on Sunday (Qatar's week runs Sunday to Thursday), post at 12:00–14:00 and 20:00–23:00 when owners are on their phones between rushes. Posting times are an assumption; read your own Instagram insights after 4 weeks.
+
+### Formats that win for owner-operators
+
+Before/after shop reel (20–30s): the paper order pad, then the alyr board. Ends on the owner's number.
+
+Owner-to-camera testimonial (30–45s): one question, "what changed?", subtitled.
+
+Screen-recorded order (15s): a real customer ordering in WhatsApp, from greeting to receipt. The product sells itself.
+
+Carousel tip (6–8 slides): cover hook, one tip per slide, last slide = save and share.
+
+Founder talking head (45–60s): one lesson from the field this week.
+
+Street question (30s): ask Doha shop owners one question ("How many orders do you miss on Friday?").
+
+Case study post + PDF: Problem, what we set up, numbers after 30 days, quote, photo.
+
+### 30-day calendar
+Week 1 builds credibility, week 2 teaches, week 3 shows proof, week 4 converts. IG = Instagram, TT = TikTok, LI = LinkedIn, WA = WhatsApp Channel or broadcast.
+Day
+ | Channel
+ | Pillar
+ | Post
+ | 
+1 Sun
+ | IG, TT, LI
+ | Build
+ | Founder intro: "Why we started alyr in Doha" (45s)
+ | 
+2 Mon
+ | IG carousel, LI
+ | Playbook
+ | "5 signs your WhatsApp is costing you orders"
+ | 
+3 Tue
+ | IG story, WA
+ | Build
+ | Poll: "Do you take orders on WhatsApp today?"
+ | 
+4 Wed
+ | IG, TT
+ | Shop floor
+ | Screen-recorded order from a pilot cafe (15s)
+ | 
+5 Thu
+ | LI
+ | Build
+ | "What 10 restaurant owners told us this week"
+ | 
+6 Fri
+ | IG story
+ | Doha rhythm
+ | Friday rush: "How many messages did you get today?"
+ | 
+7 Sat
+ | —
+ | —
+ | Rest, reply to comments and DMs
+ | 
+8 Sun
+ | IG, TT
+ | Playbook
+ | "Write your WhatsApp greeting in 3 lines" (copy-ready)
+ | 
+9 Mon
+ | IG carousel, LI
+ | Playbook
+ | "Delivery app commission vs direct orders: the maths"
+ | 
+10 Tue
+ | WA
+ | Playbook
+ | Template drop: free AR/EN order-confirmation messages
+ | 
+11 Wed
+ | IG, TT
+ | Shop floor
+ | Before/after reel: paper pad → order board
+ | 
+12 Thu
+ | LI
+ | Build
+ | Product update: "Shipped: bilingual menus"
+ | 
+13 Fri
+ | IG story
+ | Doha rhythm
+ | Weekend specials message, ready to copy
+ | 
+14 Sat
+ | —
+ | —
+ | Rest, community replies
+ | 
+15 Sun
+ | IG, TT, LI
+ | Shop floor
+ | Owner testimonial #1 (30s, subtitled)
+ | 
+16 Mon
+ | IG carousel
+ | Playbook
+ | "How to get 5-star Google reviews from WhatsApp"
+ | 
+17 Tue
+ | TT
+ | Shop floor
+ | Street question: "How many orders do you miss?"
+ | 
+18 Wed
+ | IG, LI
+ | Shop floor
+ | Case study #1: numbers after 30 days
+ | 
+19 Thu
+ | WA
+ | Shop floor
+ | Case study PDF sent to opted-in leads
+ | 
+20 Fri
+ | IG story
+ | Doha rhythm
+ | Behind the scenes: a Friday at a pilot restaurant
+ | 
+21 Sat
+ | —
+ | —
+ | Rest
+ | 
+22 Sun
+ | IG, TT
+ | Build
+ | "Day in the life of an alyr field rep"
+ | 
+23 Mon
+ | IG carousel, LI
+ | Playbook
+ | "Set up table QR codes that customers actually scan"
+ | 
+24 Tue
+ | IG, TT
+ | Shop floor
+ | Owner testimonial #2 (salon or second cafe)
+ | 
+25 Wed
+ | LI
+ | Build
+ | Founder post: lessons from the first 30 days, with numbers
+ | 
+26 Thu
+ | IG, WA
+ | Offer
+ | "Free 14-day pilot for 10 Doha restaurants this month"
+ | 
+27 Fri
+ | IG story
+ | Doha rhythm
+ | Countdown: pilot spots left
+ | 
+28 Sun
+ | IG, TT
+ | Shop floor
+ | Screen-recorded booking with deposit
+ | 
+29 Mon
+ | IG carousel, LI
+ | Playbook
+ | "Your first month of direct orders: checklist"
+ | 
+30 Tue
+ | IG, TT, LI, WA
+ | Offer
+ | Recap reel + "Message us to book your setup visit"
+ | 
+Shift the calendar for Ramadan: move offers to the two weeks before, post after iftar (21:00–01:00), and swap Doha rhythm posts for iftar pre-order and suhoor delivery tips. Assumption based on regional Ramadan behaviour; see section 9.
+
+### Post templates with captions
+Template A: Before/after reel
+
+On-screen text 0–3s: "Friday, 1pm. 38 unread WhatsApp messages." / "الجمعة، 1 الظهر. 38 رسالة ما انقرت."
+
+3–15s: the paper pad, a missed message, a frustrated look. Cut to the alyr board filling up.
+
+15–25s: owner: "Now every order lands here. Paid or cash, nothing gets lost."
+
+End card: "alyr Chat. Set up for you in 48 hours."
+
+Caption EN: "Fridays at [Shop] used to mean a full phone and a paper pad. Now every WhatsApp order lands on one board. Want the same for your shop? Message us, link in bio."
+
+Caption AR: "يوم الجمعة في [اسم المحل] كان يعني جوال مليان رسايل ودفتر ورق. الحين كل طلبات الواتساب توصل على لوحة وحدة. تبي نفس الشي لمحلك؟ راسلنا، الرابط بالبايو."
+Template B: Playbook carousel
+
+Slide 1 (hook): "Delivery apps vs direct orders: the real maths" / "تطبيقات التوصيل ولا الطلب المباشر؟ الحسبة الحقيقية"
+
+Slides 2–6: one number or step per slide, big type, sand background, cobalt highlight.
+
+Slide 7: "Save this for your next menu update. Send it to a friend who runs a cafe."
+
+Caption EN: "A QAR 50 order through an app at 25% commission leaves you QAR 37.50. The same order from your own WhatsApp leaves you QAR 50. Here's how to move your regulars to direct ordering, without leaving the apps." (Commission rate illustrative; Qatar rates vary.)
+
+Caption AR: "طلب بـ 50 ر.ق عن طريق تطبيق بعمولة 25% يخلي لك 37.5 ر.ق. نفس الطلب من واتسابك يخلي لك 50 ر.ق. هذي الطريقة عشان تحول زباينك الدائمين للطلب المباشر."
+Template C: Founder LinkedIn post
+We visited 40 restaurants in Doha in 3 weeks. 31 take orders on WhatsApp today. 0 have a menu inside the chat. 24 write orders on paper.
+The surprise: owners don't want more software. They want someone to set it up and answer the phone.
+So that's what we're building at alyr. [one line on what shipped]. If you run a restaurant in Qatar, my WhatsApp is open: [number].
+(Numbers are placeholders; replace with your real interview tally.)
+Template D: WhatsApp Channel post
+📌 Tip of the week / نصيحة الأسبوع Add your WhatsApp link to your Google Maps listing. Customers who find you on Maps can order in one tap. أضف رابط الواتساب في صفحتك على خرائط جوجل، والزبون يطلب بضغطة وحدة. Need help? Reply here. / تبي مساعدة؟ رد علينا.
+
+### Short-video scripts
+Script 1: "The missed order" (25s, Arabic voice, English subtitles)
+Time
+ | Visual
+ | Voice (Gulf Arabic)
+ | Subtitle
+ | 
+0–3s
+ | Phone buzzing on a busy counter
+ | كم طلب ضاع عليك اليوم بالواتساب؟
+ | How many WhatsApp orders did you miss today?
+ | 
+3–10s
+ | Unread chats scroll by
+ | الزبون راسلك، ما أحد رد، راح للتطبيق
+ | The customer messaged, nobody replied, they ordered on an app.
+ | 
+10–20s
+ | Customer taps menu → cart → pays; board lights up
+ | مع ألير شات، المنيو داخل المحادثة، والطلب يوصلك جاهز
+ | With alyr Chat, the menu is in the chat and the order arrives ready.
+ | 
+20–25s
+ | Logo end card
+ | نجهزه لك في 48 ساعة. راسلنا.
+ | Set up in 48 hours. Message us.
+ | 
+Script 2: "Owner says" (30s, testimonial)
+Questions to ask on camera, one per take: "What did Friday look like before?", "What changed in the first two weeks?", "What would you tell another owner?" Keep the best 3 sentences, add the name, shop, area and one number on screen. Get written consent to use name, face and figures.
+Script 3: "60-second setup" (45s, founder)
+Founder at a cafe table: "Here's what we do in the 48 hours after you say yes." Show photo of menu → our team building it → test order arriving on the owner's phone → table QR code. Close: "You don't touch a laptop. We do the tech, you run the business."
+
+### Case study and testimonial formats
+
+One-page case study: headline with the number ("Karak House cut missed orders to zero on Fridays"), 3-line problem, what we set up (with screenshot), 3 numbers after 30 days, one quote with photo, "set up in X hours". AR and EN on two sides of one page.
+
+Testimonial card (1080×1350): owner photo in shop, quote under 20 words, name, shop, area, one stat chip.
+
+Rule: no case study without the owner's written permission and numbers we can show from the dashboard.
+
+## 6. Sales and presenting materials
+In the first year, the sale happens in the shop, on the owner's own phone, with their own menu. Every material below exists to get to that moment and then to remove doubt after it. The leave-behind, one-pager and deck slides are drawn in the visual sheet.
+
+### How to present: restaurant owner vs larger buyer
+ | Owner-operator (cafe, restaurant, salon)
+ | Larger buyer (group with 5+ branches, mall, franchise, corporate)
+ | 
+Where
+ | In the shop, 15 minutes, between rushes (10–11:30 or 15–17:00)
+ | Office meeting, 45 minutes, booked a week ahead
+ | 
+Opener
+ | "Can I show you your menu inside WhatsApp?"
+ | "How do your branches take orders and bookings today, and what does it cost?"
+ | 
+Material
+ | Their own phone, one-page leave-behind, a test order to their number
+ | 10-slide deck, proposal PDF, security and data page
+ | 
+Proof
+ | A nearby merchant's name and number
+ | Case study, pilot plan with success metrics, references
+ | 
+Ask
+ | "Shall we set up your free 14-day pilot this week?"
+ | "Can we pilot two branches for 30 days, with these three metrics?"
+ | 
+Decision
+ | Same day, by the owner
+ | 2–8 weeks, owner + ops + finance; assumption
+ | 
+Language
+ | Their language: Arabic, English, or bring a Hindi/Urdu speaker
+ | English deck, Arabic summary page
+ | 
+
+### Client pitch deck (10 slides)
+
+Title: alyr logo, "We do the tech. You run the business.", presenter name and WhatsApp number.
+
+Your customers already message you: one big stat on WhatsApp use in Qatar (section 9) and a phone screenshot.
+
+What it costs you today: missed messages, paper orders, app commission. Use their numbers if you have them.
+
+The chat becomes your counter: 4-step flow, order → book → pay → manage.
+
+Live demo (switch to phone).
+
+What changes: before/after table from a pilot merchant.
+
+How we set it up: 48-hour timeline, who does what.
+
+Pricing in QAR: three plans, what's included, payment share stated plainly.
+
+Why alyr: local team, Arabic + English, licensed payment partner, WhatsApp support, your data stays yours.
+
+Next step: pilot dates, success metrics, contact.
+Deck style: sand or white background, one idea per slide, headlines under 8 words, product screenshots instead of icons, the product colour only on the product slide.
+
+### One-pager (A4 / leave-behind, both sides)
+Front (English): headline "Take WhatsApp orders, bookings and payments without missing one." → 3 benefits with icons (Never miss an order, Keep the commission, Set up in 48 hours) → phone screenshot of the order flow → three plan prices in QAR → QR code that opens a WhatsApp chat with the rep → rep name, photo and number.
+Back (Arabic): the same layout, mirrored, written in Arabic first rather than translated.
+Print at A5 on thick matte card with rounded corners. Add a small table-tent version for the pilot launch kit.
+
+### Demo script (8 minutes, on the owner's phone)
+Minute
+ | Do
+ | Say
+ | 
+0–1
+ | Ask permission, open WhatsApp on their phone
+ | "Pretend you're a customer. Message this number."
+ | 
+1–3
+ | They tap the menu (built from their Instagram menu beforehand), add 2 items, check out
+ | "That's your menu, your prices. Your customers don't download anything."
+ | 
+3–4
+ | Show the order arriving on the board on your phone
+ | "This is what your counter sees. One tap moves it to Preparing."
+ | 
+4–5
+ | Send a payment link, pay QAR 1 with a test card
+ | "Money goes to your bank through a licensed Qatari provider."
+ | 
+5–6
+ | Show a booking with reminder (if relevant)
+ | "Reminders go out on their own the day before."
+ | 
+6–7
+ | Show the Arabic version
+ | "Your Arabic customers see everything in Arabic."
+ | 
+7–8
+ | Close
+ | "We'll set it up this week, free for 14 days. If it doesn't bring you orders, you've lost nothing."
+ | 
+The single best preparation: build a 6-item version of their menu the night before from their Instagram or Google listing. Assumption: this personalised demo is the strongest conversion lever for field sales; track demo-to-pilot rate with and without it.
+
+### WhatsApp outreach scripts
+Send only to people who gave their number or a warm introduction, never bulk cold messages; unsolicited messages risk the number being blocked under WhatsApp Business policy.
+1. After a referral (EN)
+Hi [Name], this is [Rep] from alyr. [Referrer] at [Shop] said you might like what we set up for them: WhatsApp orders with a menu and payment links. Could I drop by for 10 minutes this week to show you on your own menu? Tuesday or Wednesday morning?
+1. After a referral (AR)
+هلا [الاسم]، معك [المندوب] من ألير. [المُحيل] من [المحل] قال إنك ممكن تستفيد من اللي سويناه لهم: طلبات واتساب مع منيو وروابط دفع. يناسبك أمرك عشر دقايق هالأسبوع أوريك على منيوك؟ الثلاثاء ولا الأربعاء الصبح؟
+2. Same day after a visit
+Thanks for your time today, [Name]. As promised, here's the 30-second video of your menu in WhatsApp: [link]. If you say yes, we'll have your pilot live by [day]. 👍
+شكراً على وقتك اليوم [الاسم]. هذا فيديو قصير لمنيوك داخل الواتساب: [الرابط]. إذا تمام، نشغل التجربة عندك يوم [اليوم].
+3. Pilot day 7 check-in
+Week one at [Shop]: [X] orders through WhatsApp, [Y] paid by link, QAR [Z] in direct sales. Anything you want changed on the menu? / أول أسبوع: [X] طلب، [Y] مدفوع برابط، [Z] ر.ق مبيعات مباشرة. تبي نغير شي في المنيو؟
+4. Pilot day 12 conversion
+Your pilot ends on [date]. So far: [numbers]. To keep it running, the Growth plan is QAR 449 a month, nothing to set up again. Shall I switch you over? / تجربتك تخلص يوم [التاريخ]. للحين: [الأرقام]. عشان تكمل، باقة النمو بـ 449 ر.ق بالشهر وما تحتاج تجهيز جديد. أحولك؟
+5. Referral ask (after first paid month)
+Glad it's working, [Name]. Know another owner who'd want this? If they join, your next month is free. Just share this contact. / ناس تعرفهم يبون نفس الشي؟ إذا اشتركوا، شهرك الجاي علينا.
+
+### Proposal (for larger buyers)
+Six sections, four pages maximum: (1) your situation in your words, (2) goals and three success metrics, (3) the pilot plan with dates and owners, (4) what alyr sets up and what you need to provide, (5) pricing and terms, (6) team, support hours and data handling. Arabic summary on page one.
+
+### Pricing page layout
+
+Headline: "Simple plans in QAR. Set up for you." with a free 14-day pilot banner.
+
+Three columns: Starter QAR 199, Growth QAR 449 (marked "Most popular"), Business QAR 899, each with the first 5 features and "set up included". Plan prices are from the Qatar plan and are drafts.
+
+Directly below: the payment share (0.5% of online payments), WhatsApp conversation fees stated as "passed through at cost", and "no contract, cancel monthly".
+
+Comparison table, then FAQ (number migration, payouts, languages, support hours), then "Message us on WhatsApp".
+
+Show monthly prices only; an annual plan with 2 months free can come once churn is known.
+
+## 7. Launch and growth plays
+The evidence points one way for a company alyr's size: win trust in person, make proof visible fast, and let merchants sell to merchants. Toast gets 1 in 5 deals from referrals and sees in-person meetings convert about 3x better (SaaStr); 73% of SaaS marketing leaders rank word of mouth first (Wynter). Paid ads and big stunts come after the funnel is proven.
+
+### Look established from day one
+Small details make a two-person company read as a real partner. Each one is cheap.
+Signal
+ | Why it matters
+ | Source
+ | 
+Prices in QAR on the website
+ | Pricing transparency is the top change buyers want (45%)
+ | TrustRadius via EMARKETER
+ | 
+"Set up for you, no hidden fees"
+ | About 60% of SMBs regretted a software purchase, mostly from hidden setup and support costs
+ | Capterra 2025
+ | 
+Site says exactly what reps say
+ | 69% of buyers see inconsistencies between vendor sites and sellers
+ | Gartner 2025
+ | 
+Verified WhatsApp Business profile, Doha address, CR number in footer
+ | 74.6% trust a business more when they can message it; 79.3% need proof of legitimacy first
+ | Meta/Kantar 2025
+ | 
+"Licensed Qatari payment partner", local support, data in Qatar (where true)
+ | Local payment brands lead with exactly these claims
+ | SADAD, Dibsy
+ | 
+First 5–10 real testimonials and Google reviews
+ | Five reviews lift conversion 270% vs none (B2C data)
+ | Spiegel via MarketingProfs
+ | 
+Payback inside one quarter, stated plainly
+ | 57% of buyers expect ROI within 3 months
+ | G2 2024
+ | 
+Branded uniform or tote, printed leave-behind, business cards
+ | Field credibility at the counter
+ | Assumption
+ | 
+Approved provider badge from SMEs Go Digital
+ | Government stamp of trust for SMB owners
+ | QNA
+ | 
+
+### Plays, in order
+
+Founding 25 programme (months 0–3). Like Linear's hand-picked beta (First Round): 25 Doha restaurants get free setup, a locked launch price for 12 months, a "Founding merchant" window sticker and a direct line to the founders. In return: a filmed testimonial and permission to share their numbers. Scarcity makes it easy to say yes.
+
+District sweeps. Sell street by street (Al Sadd, Old Airport, Bin Mahmoud, Al Wakrah, The Pearl), like Toast's dense-territory field model. Every live merchant is a reference two doors away. The window sticker and table QR codes are the local billboard.
+
+Merchant-gets-merchant referral. One free month for the referrer and the new merchant per paid signup. Ask on day 30 when results are fresh (script 5 in section 6). Track "how did you hear?" on every signup. Target 30% of new customers from referrals by month 9 (assumption).
+
+alyr Growth Club. A WhatsApp Community for owners, with one tip a week, a monthly breakfast at a member's cafe, and early access to new features. It mirrors Zid's named merchant growth programme (Arab News) and Snoonu's "Tamkeen" merchant fund (Gulf Times), at a size alyr can afford.
+
+Micro-creators, not celebrities. Doha's top food creators are mid-sized (most under 35k followers) with high engagement (Modash). Pay or barter with 5–10 of them to order from alyr merchants on camera, with tracked links. Notion found creator signups 50–100x cheaper than search or social ads (Passionfroot). Follow disclosure rules; Qatar's influencer licensing is being drafted (Marhaba).
+
+Partner channels. Payment providers (SkipCash, SADAD, Dibsy) refer merchants who need ordering; food distributors and POS resellers co-sell, as Toast does with US Foods. Offer partners a share of the first year.
+
+Fortnightly "What's new at alyr" in Arabic and English (WhatsApp Channel, LinkedIn, site). Linear's changelog showed momentum to customers, hires and investors (Linear).
+
+Two named seasons a year. Bundle features into a pre-Ramadan release and a September release, the way Shopify does with Editions (source). Ramadan pre-orders on WhatsApp is a ready-made campaign: Doha venues already sell iftar and suhoor boxes that need 24–48 hours' notice (Marhaba).
+
+Own a data story (month 9+). Publish "How Doha orders on WhatsApp" from anonymised alyr data, as Stripe does with Atlas (Stripe) and Toast with its sales comparison tool. Data-backed content is what buyers rate highest (Edelman–LinkedIn 2024).
+
+### PR and partnership angles in Qatar
+Angle
+ | Where
+ | Hook
+ | 
+SMEs Go Digital approved provider
+ | MCIT, QNA, forums with 195+ SMEs
+ | "Qatari startup helps restaurants take orders on WhatsApp under the national SME digital programme" (QNA)
+ | 
+QDB incubation or Qatar Fintech Hub
+ | QDB, The Peninsula, Gulf Times
+ | Local credibility and funding route; QFTH pre-seed up to QAR 730k (QDB)
+ | 
+Web Summit Qatar, January 2027
+ | Startup programme, launch moment
+ | 30k attendees and 1,000 investors in 2026 (GCO)
+ | 
+Qatar National Day, 18 December
+ | Social, local media
+ | Feature Qatari merchant owners, as talabat did for its 12 years in Qatar (Qatar Tribune)
+ | 
+SME story
+ | Gulf Times, Qatar Tribune, Marhaba, Qatar Living, Doha News
+ | Qatar has about 71,000 SMEs, 97% of private firms (Gulf Times); tie alyr to the National Development Strategy 3 SME goals
+ | 
+Payment partner co-announcement
+ | SkipCash or SADAD channels
+ | "Order and pay in WhatsApp, settled in Qatar"
+ | 
+Compliance note: Qatar's Ministry of Commerce suspended talabat for a week in September 2025 over "false or misleading information" under the consumer protection law (Khaleej Times). Every price, claim and number alyr publishes must be exact; this is one more reason the site's sample stats must go.
+
+## 8. Rules and governance
+One person (a founder, for now) owns the brand and signs off anything public. These three tools keep a small team consistent without slowing it down.
+
+### One-page brand cheat sheet
+ |  | 
+Who we are
+ | The local tech partner for Qatar's small businesses
+ | 
+Brand idea
+ | We do the tech. You run the business. / علينا التقنية، وعليك شغلك
+ | 
+Master line
+ | Go digital without the IT team.
+ | 
+Name
+ | Always lowercase "alyr", even at the start of a sentence. Products: alyr Chat, alyr Pay, alyr Books, alyr Sites
+ | 
+Voice
+ | Helpful, plain-spoken, local, crafted. Numbers over adjectives.
+ | 
+Colour
+ | Cobalt #2747F5, ink #0D1017, bg #F4F5F7, sand #F3EDE4; one product hue per piece
+ | 
+Type
+ | Bricolage Grotesque + Geist (Latin); Alexandria + IBM Plex Sans Arabic (Arabic)
+ | 
+Shape
+ | Pill buttons, 22px cards, 2px outline icons
+ | 
+Photos
+ | Real Doha merchants in real shops, no stock
+ | 
+Languages
+ | Arabic and English as equals; Gulf Arabic on social, MSA on formal
+ | 
+Never
+ | Fake numbers, hype words, attacking delivery apps, implying we are WhatsApp/Meta
+ | 
+
+### Pre-publish checklist
+
+One clear message, and it serves one of the four pillars
+
+Every number is real, current, and we can show where it came from
+
+Merchant name, face and figures have written consent
+
+Arabic written or checked by a native Gulf speaker, not machine-translated
+
+Prices in QAR, fees stated, nothing hidden
+
+Logo, colours and type from the system; one product hue only
+
+Text contrast passes AA; video has burned-in subtitles in both languages
+
+RTL version mirrors correctly; numbers and Latin names display right
+
+No WhatsApp logo misuse or implied Meta endorsement
+
+Call to action is one tap: message us on WhatsApp
+
+Ramadan, prayer times, and national occasions considered for timing
+
+Someone other than the maker read it on a phone
+
+### What to measure
+Area
+ | Metric
+ | How to measure
+ | Healthy early target (assumption)
+ | 
+Awareness
+ | Unprompted recall among visited owners
+ | Ask "which WhatsApp ordering tools do you know?" on every visit
+ | alyr named by 20% of owners in target areas by month 6
+ | 
+Awareness
+ | Branded search and direct WhatsApp chats started
+ | Google Search Console, click-to-chat tracking
+ | Growing month over month
+ | 
+Content
+ | Saves + shares per post (not likes)
+ | Instagram and TikTok insights
+ | Saves + shares above 3% of reach
+ | 
+Content
+ | DMs and WhatsApp chats from content
+ | UTM/ref codes in click-to-chat links
+ | 10+ qualified conversations a month by month 3
+ | 
+Sales
+ | Visit → demo → pilot → paid rates
+ | CRM or a shared sheet
+ | Pilot-to-paid 50%+
+ | 
+Product trust
+ | Time to first order
+ | Dashboard
+ | Under 72 hours from yes
+ | 
+Product trust
+ | Support first-response time
+ | WhatsApp support inbox
+ | Under 5 minutes in business hours
+ | 
+Loyalty
+ | Net Promoter Score at day 30 and 90
+ | One-question WhatsApp survey
+ | 50+
+ | 
+Loyalty
+ | Referral share of new customers
+ | "How did you hear about us?"
+ | 30% by month 9
+ | 
+Brand consistency
+ | Pieces that pass the checklist first time
+ | Founder review log
+ | 80%+
+ | 
+Review monthly: one page with these numbers, the three best and worst posts, and one change for next month.
+
+## 9. Evidence library
+The pattern across winners is the same: one plain promise backed by a number, visible proof from real customers, trust built in person or in a crisis, and payments revenue that pays for the sales motion. Every source below was opened; claims we could not verify are listed at the end and are not used above.
+
+### Where Qatar's audience is
+WhatsApp is the most used platform in Qatar and Qataris consume media mostly in Arabic (NU-Q Media Use 2022). Business messaging interactions in Qatar grew 67% in 2025 (Infobip via Campaign ME). LinkedIn's Qatar audience grew 21.4% in a year (DataReportal 2025). 71% of young Arabs prefer Arabic media but 67% find it outdated next to English, so modern Arabic design stands out (The National).
+
+### Global brands: what they did and what it produced
+Company
+ | What they did
+ | Measured result
+ | Lesson for alyr
+ | 
+Linear
+ | Invite-only beta, ~10 users let in a week, weekly builds per cohort
+ | ~10,000 waitlist; $100M+ ARR, 177% net retention by Aug 2026 (Pulse 2.0)
+ | Hand-pick the first merchants, ship weekly
+ | 
+Linear changelog
+ | Changelog every sprint, written by the builder
+ | 50+ posts in year one; candidates and investors followed it
+ | Fortnightly "What's new" in AR/EN
+ | 
+Stripe docs
+ | Docs in every engineer's career ladder; samples personalised with the user's keys
+ | No public metric
+ | Personalise onboarding with the merchant's own menu
+ | 
+Stripe Atlas
+ | Annual data report from its own platform
+ | 23,000 incorporations in 2025
+ | Publish a Doha WhatsApp-ordering report
+ | 
+Notion
+ | Ambassadors, consultants, YouTubers found via support tickets
+ | Creator signups 50–100x cheaper than ads
+ | Micro-creators and power merchants first
+ | 
+Shopify Masters
+ | Merchant-story podcast, twice weekly
+ | 10M+ downloads
+ | Owner-story videos are the core content
+ | 
+Toast
+ | Dense-territory field reps, co-selling with a food distributor
+ | 1 in 5 deals from referrals; in-person converts ~3x
+ | District sweeps and distributor partners
+ | 
+Toast Q2 2026
+ | Software plus embedded payments
+ | $2.41B ARR, about half from payments
+ | Build payments in from day one
+ | 
+Square
+ | QR self-serve ordering
+ | Vendor-reported +35% sales in first 30 days
+ | Lead with an uplift number, then replace it with yours
+ | 
+Ramp
+ | One footnoted promise: "save an average of 5%"
+ | $1B annualised revenue by Aug 2025 (Crowdfund Insider)
+ | One quantified promise, honestly footnoted
+ | 
+Mercury
+ | During SVB's collapse: weekend support and a new insured product within days
+ | ~$2B new deposits in a week
+ | Make trust a feature, not a slogan
+ | 
+Duolingo
+ | TikTok persona riding trends; first hit was the 39th video
+ | 100K → 1.7M followers in months
+ | Expect dozens of posts before a hit; keep one tone
+ | 
+
+### GCC and Qatar brands
+Company
+ | What worked
+ | Result
+ | Lesson for alyr
+ | 
+Foodics
+ | Arabic-first POS, "simpler than legacy"; then payments and lending
+ | 33,500+ branches, payments volume +38% (H1 2025)
+ | One job first, then payments
+ | 
+Salla
+ | Everyday Arabic name ("basket"), "we know Saudis", partner network
+ | 68,000+ active merchants (Salla)
+ | Made here, for here; partners as a channel
+ | 
+Zid
+ | Named "10x" merchant growth programme and own event
+ | Merchants +30% in 2024
+ | Named programme with published stories
+ | 
+SADAD
+ | "Built in Qatar. Trusted by Business." Licence, local data, local support
+ | Vendor claims
+ | Local licensing and support are the trust words
+ | 
+SkipCash
+ | Payment links, tap to phone; QDB-backed
+ | 6,000+ clients, QR1B+ processed in 2025
+ | Natural payment partner
+ | 
+Snoonu
+ | QAR 5M interest-free merchant fund
+ | Launched Oct 2026
+ | Visible "we invest in you" programme
+ | 
+talabat Qatar
+ | National Day campaign starring local owners and Qatari creators
+ | Brand moment
+ | Merchant faces at the centre
+ | 
+Careem
+ | Kept one mark and colour; services grouped as Go, Eat, Get, Pay
+ | Rebrand done in-house
+ | Simple service architecture under one mark
+ | 
+Wati
+ | Generic self-serve WhatsApp API tool
+ | 6,000+ customers, 75 countries
+ | The competitor to beat on local depth
+ | 
+
+### Buyer research
+Finding
+ | Source
+ | 
+73% of buyers trust thought leadership more than marketing materials; data and case studies make the best content
+ | Edelman–LinkedIn 2024
+ | 
+61% prefer a rep-free buying experience; 73% avoid suppliers with irrelevant outreach
+ | Gartner 2025
+ | 
+57% expect ROI within 3 months; review sites are the top source (31%)
+ | G2 2024
+ | 
+~60% of SMBs regretted a software purchase; 35% blame over-promising
+ | Capterra 2025
+ | 
+Video (58%) and customer stories (53%) rated most effective B2B content
+ | CMI 2025
+ | 
+73.3% prefer messaging to contact businesses; 72.4% more likely to buy from those that offer it
+ | Meta/Kantar 2025
+ | 
+No-card trials: 8.5% visitor-to-trial, 18.2% trial-to-paid; card-required: 48.8% trial-to-paid
+ | First Page Sage 2025
+ | 
+Gulf dialect for consumer and social copy, MSA for financial and legal text
+ | Translated
+ | 
+Design Arabic and Latin as one system, not one as a companion
+ | Design Week, Nadine Chahine
+ | 
+Set dir in markup; use <bdi> and dir="auto" for mixed customer text
+ | W3C
+ | 
+
+### Not verified, not used
+Linear's "$35K total marketing spend"; any Ramp Super Bowl revenue lift; Stripe Press sales impact; Vercel launch-week metrics; launch-week signup uplift in general; paid-pilot conversion benchmarks (alyr must measure its own). The Material Design and Apple HIG RTL pages cited in section 4 could not be opened by the research tools; check their mirroring lists by hand.

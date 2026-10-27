@@ -50,7 +50,7 @@ function Card({ image, alt, theme }: { image: CardImage; alt: string; theme: "ca
 
 export function ReportPhone({ sample, words }: { sample: ReportSample; words: ReportWords }) {
   return (
-    <div className="wa rp">
+    <div className="wa rp" data-nosnippet>
       <div className="wa-top" aria-hidden="true">
         <svg className="wa-back ico-flip" viewBox="0 0 24 24"><path d="M20 11H7.8l5.6-5.6L12 4l-8 8 8 8 1.4-1.4L7.8 13H20z" /></svg>
         <span className="wa-avatar">{words.monogram}</span>

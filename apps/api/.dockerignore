@@ -7,4 +7,5 @@
 tests
 .env
 .env.*
+.media
 python_modules

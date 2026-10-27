@@ -1,0 +1,17 @@
+{
+  "$comment": "Reviewed differences between the English and Arabic copy that are true on purpose. Each entry needs a reason. scripts/site/copy-parity.mjs fails on any other difference, and on an entry here that no longer matches anything. Paths: `*` is one key, `[*]` any list index, `**` anything.",
+  "onlyOneLanguage": [
+    {
+      "path": "pages.*.demo.avatar",
+      "reason": "Arabic only by design (copy.ts DemoSet.avatar): the chat avatar's letter when the Arabic business name starts with a generic word (مخبز, صالون), so the avatar shows ق or ض instead of م or ص. English uses the name's first letter. Reviewed 24 Oct 2026."
+    }
+  ],
+  "differentShape": [],
+  "differentLength": [],
+  "empty": [
+    {
+      "path": "product.demos[2].panel.rows[3].lead",
+      "reason": "An empty lead cell on purpose in the /chat demo's tracking panel (the 'Collected' / 'تم التسليم' row has no time), in both languages; ProductDemo.tsx renders the cell so the row keeps its column. Reviewed 24 Oct 2026."
+    }
+  ]
+}

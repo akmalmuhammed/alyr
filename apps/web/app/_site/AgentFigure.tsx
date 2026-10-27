@@ -2,25 +2,32 @@
 
 // ALYR Agent on the public site: the real dashboard (`app/_agent/AgentDashboard`) in its
 // showcase mode, fed with the samples captured from the engine, set in a workspace window.
-// Beside it, the agent's feed: what ALYR did this afternoon, one thing at a time, each with
-// its time and a Volt tick, while the dashboard's "Done for you" count steps up with each
-// (07-site-brief.md §1). Every word arrives as props from `copy.ts`, so no copy is bundled.
+// Beside it, the agent's feed: what ALYR did this afternoon, newest on top, each with its time
+// and a Volt tick. Every word arrives as props from `copy.ts`, so no copy is bundled.
 //
-// - The static HTML has the "Done for you" count as it stood before the feed's events, so
-//   the count only ever goes up: the feed then plays and each event adds to it.
-// - Without JavaScript: the dashboard of the first sample, and the whole feed, composed.
-// - With reduced motion, or once the 4 s failsafe has removed `motion`: the same, composed,
-//   and the count at its final value.
-// - Otherwise the feed waits until the figure is on screen, then plays once (under 5 s, so
-//   it needs no pause control), and again whenever the visitor picks another sample.
-// - The newest event is on top. Events are drawn newest first and the list slides down by
-//   one event as each arrives (a transform, so nothing around it moves).
+// The live sample (the founder, 25 Oct 2026; `alyr-design/motion.md`, "The live Agent
+// figure"). The one figure on the site that keeps moving, as the workspace does:
+// - The HTML is the settled moment, 16:20: the engine's dashboard and the whole feed. Without
+//   scripts, with reduced motion, or before the page has loaded, that is what shows.
+// - After load, while the figure is on screen and the tab is in view, the sample's script
+//   (`samples.*.live`) plays one event every few seconds: the event arrives at the top of the
+//   feed and the dashboard's clock and numbers move with it (`live.ts`, in the engine's own
+//   words), a changed figure rolling to its new value. At the end it fades back to 16:20 and
+//   starts again.
+// - It stops when the figure leaves the screen, when the tab is hidden and with reduced
+//   motion, and a pause button stops it for good until pressed again (WCAG 2.2.2).
+// - Nothing moves the page: the feed's settled list keeps its place (unseen, still read by
+//   screen readers), and the live rows above it are placed with transforms.
 // The switch (Bakery, Salon, Home services) shows only when scripts run (`.al-js`).
 
-import { useEffect, useLayoutEffect, useMemo, useRef, useState, type CSSProperties, type ReactNode } from "react";
+import { useEffect, useLayoutEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { AgentDashboard, Rich } from "../_agent/AgentDashboard";
 import type { AgentView, Rich as RichParts } from "../_agent/types";
-import type { AgentFigure as FigureCopy, Caption, FeedEvent, SampleKey } from "./copy";
+import type { AgentFigure as FigureCopy, FeedEvent, SampleKey } from "./copy";
+import { SampleMark } from "./Frames";
+import { PLAY } from "./pace";
+import { flagLine, liveView } from "./live";
+import { LIVE_CSS } from "./liveStyle";
 import { SAMPLE_EVENT } from "./ReportSwitch";
 import { rich } from "./Text";
 import "./drawings.css";
@@ -34,10 +41,12 @@ type Props = {
   /** The sample shown first (by default the first in `order`). */
   start?: SampleKey;
   text: FigureCopy;
-  figLabel: string;
-  caption: Caption;
+  /** The "Sample" mark in the window's title bar, for a figure without the sample switch
+   * (whose label, "Sample business", already marks the set). */
+  sample?: string;
   label: string;
   switcher?: boolean;
+  /** The feed beside the window, and with it the live sample. */
   feed?: boolean;
   /** Cropped to its first screen and taken out of the tab order (the homepage hero, whose
    * whole screen is the next section's figure). */
@@ -45,53 +54,37 @@ type Props = {
   headingLevel?: 2 | 3;
   /** Drawn beside the window: the callouts (the homepage's spotlight). */
   aside?: ReactNode;
-  under?: string;
+  /** Opens the rest of the screen (a native `<details>`): on /agent's phone layout after its
+   * four numbers (site audit P1-c); in the homepage's spotlight at every width, after Needs
+   * you now and the suggestions (framer-review P2). */
+  more?: string;
   id?: string;
   /** Tells other figures on the page which sample was picked (`alyr:sample` with this id):
    * /agent's Sunday report follows the switch (ReportSwitch.tsx). */
   sync?: string;
 };
 
-/** The first event arrives no earlier than this after navigation: after the plate, the
- * window and the status chip (home.css), so the hero builds in one order. */
-const FIRST_AT = 1200;
-const STEP = 700;
-/** The status dot lights this long before the first event. */
-const LIGHT_LEAD = 400;
+/** The pace: one event every `live-beat` (4 s times the site's pace: 5.2 s at 1.3), every
+ * `live-beat-phone` on a phone (6.5 s), where the motion stays lighter (pace.ts; founder,
+ * 26 Oct 2026: "a bit slower" reaches the hero too). The first comes half a beat after the
+ * figure goes live, which is this long after load. */
+const BEAT = PLAY.beat;
+const BEAT_PHONE = PLAY.beatPhone;
+const AFTER_LOAD = 1500;
+const PHONE = "(max-width: 47.99rem)";
+const STILL = "(prefers-reduced-motion: reduce)";
 
 // useLayoutEffect warns on the server; the placement only matters in the browser.
 const useIsoLayoutEffect = typeof window === "undefined" ? useEffect : useLayoutEffect;
 
-function count(value: string): number {
-  return Number(value.replace(/[^\d]/g, "")) || 0;
+/** A motion token in milliseconds (`--dur-3` and the like), read from the page. */
+function token(name: string, fallback: number): number {
+  const value = getComputedStyle(document.documentElement).getPropertyValue(name).trim();
+  const ms = value.endsWith("ms") ? parseFloat(value) : value.endsWith("s") ? parseFloat(value) * 1000 : NaN;
+  return Number.isFinite(ms) ? ms : fallback;
 }
 
-/** The view as it stood before the feed's events still to come: each "Done for you" row
- * that an unshown event counts towards is that many lower. */
-function before(view: AgentView, events: FeedEvent[], shown: number): AgentView {
-  if (shown >= events.length) return view;
-  const minus: Record<string, number> = {};
-  for (const event of events.slice(shown)) for (const key of event.adds) minus[key] = (minus[key] ?? 0) + 1;
-  return {
-    ...view,
-    done: {
-      ...view.done,
-      rows: view.done.rows.map((row) =>
-        minus[row.key] ? { ...row, value: (count(row.value) - minus[row.key]).toLocaleString("en-US") } : row,
-      ),
-    },
-  };
-}
-
-/** A flag's words, taken from the dashboard itself so the two always agree. */
-function flagged(view: AgentView, flag: NonNullable<FeedEvent["flag"]>): { line: RichParts; rule: string } | null {
-  if (flag.from === "suggestion") {
-    const card = view.suggestions.find((s) => s.key === flag.key);
-    return card ? { line: card.title, rule: card.rule } : null;
-  }
-  const need = view.needs.items.find((n) => n.key === flag.key);
-  return need ? { line: [{ b: String(need.count) }, " ", ...need.words], rule: need.rule } : null;
-}
+type Row = { id: string; event: FeedEvent; flag: RichParts | null; fresh: boolean };
 
 function Tick() {
   return (
@@ -101,146 +94,237 @@ function Tick() {
   );
 }
 
+function Item({ row }: { row: Row }) {
+  const { event, flag } = row;
+  return (
+    <li className={`af-item${flag ? " is-flag" : ""}${row.fresh ? " is-new" : ""}`}>
+      <span className="af-at"><bdi>{event.at}</bdi></span>
+      <span className="af-tick"><Tick /></span>
+      <span className="af-what">
+        <b>{event.title}</b>
+        {flag ? (
+          <span className="af-line"><Rich parts={flag} /></span>
+        ) : (
+          event.line && <span className="af-line">{rich(event.line)}</span>
+        )}
+      </span>
+    </li>
+  );
+}
+
 export function AgentFigure({
-  variant, views, order, start, text, figLabel, caption, label, switcher = false, feed = false, crop = false, sync,
-  headingLevel = 2, aside, under, id,
+  variant, views, order, start, text, sample: mark, label, switcher = false, feed = false, crop = false, sync,
+  headingLevel = 2, aside, more, id,
 }: Props) {
   const [sample, setSample] = useState<SampleKey>(start ?? order[0]);
-  const [phase, setPhase] = useState<"composed" | "waiting" | "playing">("composed");
-  // With a feed, the page is drawn with the count before the feed (see above).
-  const [shown, setShown] = useState(feed ? 0 : Number.POSITIVE_INFINITY);
-  const [run, setRun] = useState(0);
-  const [wait, setWait] = useState(0);
+  // "still": the settled moment (the HTML); "live": the sample plays.
+  const [phase, setPhase] = useState<"still" | "live">("still");
+  const [step, setStep] = useState(0);
+  // Counts each return to the opening, so its rows are new ones, placed without travelling.
+  const [cycle, setCycle] = useState(0);
+  // Going back to the opening: "out" while the changed parts fade, "in" while they return.
+  const [reset, setReset] = useState<"out" | "in" | null>(null);
+  const [paused, setPaused] = useState(false);
+  const [onScreen, setOnScreen] = useState(false);
+  // Read once on the client; the page's markup never depends on it.
+  const [shown, setShown] = useState(() => typeof document === "undefined" || document.visibilityState === "visible");
   const [announce, setAnnounce] = useState("");
   const root = useRef<HTMLElement>(null);
-  const feedBox = useRef<HTMLDivElement>(null);
+  const viewBox = useRef<HTMLDivElement>(null);
   const list = useRef<HTMLOListElement>(null);
-  const timers = useRef<number[]>([]);
+  const liveList = useRef<HTMLOListElement>(null);
 
   const s = text.samples[sample];
-  const events = useMemo(() => (feed ? s.feed : []), [feed, s.feed]);
-  const view = views[sample]!;
-  const shownView = useMemo(() => before(view, events, shown), [view, events, shown]);
-
-  const clear = () => {
-    timers.current.forEach((t) => window.clearTimeout(t));
-    timers.current = [];
-  };
-
-  // Plays the feed from its first event: the count goes back to where it stood, and each
-  // event then arrives in turn. The dashboard is drawn afresh first (its key), so going back
-  // is not mistaken for a change worth a tick.
-  const play = (length: number, delay: number) => {
-    clear();
-    setShown(0);
-    setRun((r) => r + 1);
-    setWait(delay);
-    setPhase("playing");
-    for (let i = 1; i <= length; i++) {
-      timers.current.push(window.setTimeout(() => setShown(i), delay + (i - 1) * STEP));
+  const base = views[sample]!;
+  const script = s.live;
+  const live = feed && phase === "live";
+  const view = useMemo(() => (live ? liveView(base, script, step) : base), [live, base, script, step]);
+  // Every other sentence the summary will show, so the header is as tall as the longest from
+  // the first paint (drawn on the server too).
+  const room = useMemo(() => {
+    if (!feed) return undefined;
+    const said = (v: AgentView) => JSON.stringify(v.header.summary);
+    const seen = new Set([said(base)]);
+    const out: AgentView["header"]["summary"][] = [];
+    for (let i = 1; i <= script.length; i++) {
+      const v = liveView(base, script, i);
+      if (seen.has(said(v))) continue;
+      seen.add(said(v));
+      out.push(v.header.summary);
     }
-  };
+    return out;
+  }, [feed, base, script]);
 
-  const still = () => window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-  // On hydration the feed plays only while the page still wants motion: once the failsafe
-  // has removed it (a slow phone), the composed feed is already on screen and stays.
-  const moving = () => document.documentElement.classList.contains("motion") && !still();
+  // The settled feed, newest first, as the HTML draws it.
+  const opening = useMemo<Row[]>(
+    () => s.feed.map((event, index) => ({
+      id: `${sample}-o${index}`, event, fresh: false,
+      flag: event.flag ? flagLine(base, event.flag) : null,
+    })).reverse(),
+    [s.feed, sample, base],
+  );
+  // The live feed: the opening, then each event played so far, newest first; one row more than
+  // the feed holds, the one leaving.
+  const rows = useMemo<Row[]>(() => {
+    if (!live) return opening;
+    const played = script.slice(0, step).map((event, index) => ({
+      id: `${sample}-${cycle}-${index}`, event, fresh: true,
+      flag: event.flag ? flagLine(liveView(base, script, index + 1), event.flag) : null,
+    })).reverse();
+    const settled = opening.map((row) => ({ ...row, id: `${row.id}-${cycle}` }));
+    return [...played, ...settled].slice(0, opening.length + 1);
+  }, [live, opening, script, step, sample, cycle, base]);
 
+  // ------------------------------------------------------------ when it may move
   useEffect(() => {
     if (!feed) return;
-    if (!moving()) {
-      // still: the count goes straight to its final value, beside the composed feed
-      const done = window.setTimeout(() => setShown(Number.POSITIVE_INFINITY), 0);
-      timers.current.push(done);
-      return clear;
-    }
-    // The feed starts when the feed itself is in view (on a phone it sits under the window,
-    // just below "Done for you", which is then in view too).
-    const node = feedBox.current ?? root.current;
-    const length = events.length;
-    // Not on screen yet: the feed waits, hidden, with the count where it stood before it.
-    const box = node?.getBoundingClientRect();
-    const visible = !!box && box.top < window.innerHeight * 0.85 && box.bottom > 0;
-    if (visible) {
-      const begin = window.setTimeout(() => play(length, Math.max(300, FIRST_AT - performance.now())), 0);
-      timers.current.push(begin);
-      return clear;
-    }
-    const wait = window.setTimeout(() => {
-      setShown(0);
-      setRun((r) => r + 1);
-      setPhase("waiting");
-    }, 0);
-    timers.current.push(wait);
-    const watch = new IntersectionObserver(
-      (entries) => {
-        if (!entries.some((e) => e.isIntersecting)) return;
-        watch.disconnect();
-        play(length, 300);
-      },
-      { threshold: 0.3 },
-    );
-    if (node) watch.observe(node);
-    return () => {
-      watch.disconnect();
-      clear();
+    const still = window.matchMedia(STILL);
+    let timer = 0;
+    const go = () => {
+      window.clearTimeout(timer);
+      if (still.matches) return;
+      timer = window.setTimeout(() => setPhase("live"), AFTER_LOAD);
     };
-    // Runs once, on hydration; picking a sample plays the feed again from `choose`.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+    // Reduced motion, chosen or changed: the settled moment, at once.
+    const sync = () => {
+      if (still.matches) {
+        window.clearTimeout(timer);
+        setPhase("still");
+        setStep(0);
+        setReset(null);
+      } else go();
+    };
+    if (document.readyState === "complete") go();
+    else window.addEventListener("load", go, { once: true });
+    still.addEventListener("change", sync);
+
+    const seen = () => setShown(document.visibilityState === "visible");
+    document.addEventListener("visibilitychange", seen);
+
+    const watch = new IntersectionObserver(
+      (entries) => setOnScreen(entries.some((e) => e.isIntersecting && e.intersectionRatio >= 0.05)),
+      { threshold: [0, 0.05, 0.25] },
+    );
+    if (root.current) watch.observe(root.current);
+    return () => {
+      window.clearTimeout(timer);
+      window.removeEventListener("load", go);
+      still.removeEventListener("change", sync);
+      document.removeEventListener("visibilitychange", seen);
+      watch.disconnect();
+    };
+  }, [feed]);
+
+  const running = live && !paused && onScreen && shown && reset === null;
+
+  // ------------------------------------------------------------------ the beat
+  useEffect(() => {
+    if (!running) return;
+    const beat = window.matchMedia(PHONE).matches ? BEAT_PHONE : BEAT;
+    const wait = step === 0 ? beat / 2 : beat;
+    const next = window.setTimeout(() => {
+      if (step < script.length) setStep(step + 1);
+      else setReset("out");
+    }, wait);
+    return () => window.clearTimeout(next);
+  }, [running, step, script.length, sample, cycle]);
+
+  // Back to the opening without a jump: what changed fades out, the opening goes in its place
+  // unseen, and fades in; the next event comes a beat later.
+  useEffect(() => {
+    if (!reset) return;
+    const fade = token("--dur-3", 480);
+    const next = window.setTimeout(() => {
+      if (reset === "out") {
+        setStep(0);
+        setCycle((c) => c + 1);
+        setReset("in");
+      } else setReset(null);
+    }, reset === "out" ? fade : fade + 50);
+    return () => window.clearTimeout(next);
+  }, [reset]);
 
   const choose = (key: SampleKey) => {
     if (key === sample) return;
     setSample(key);
+    setStep(0);
+    setCycle((c) => c + 1);
+    setReset(null);
     setAnnounce(text.samples[key].announce);
     if (sync) window.dispatchEvent(new CustomEvent(SAMPLE_EVENT, { detail: { id: sync, key } }));
-    // A choice replays the feed whenever motion is allowed, failsafe or not.
-    if (feed && !still()) play(text.samples[key].feed.length, 300);
-    else {
-      clear();
-      setShown(Number.POSITIVE_INFINITY);
-      setPhase("composed");
-    }
   };
 
-  // Newest first: the list is drawn newest at the top and moved up past the events still to
-  // come, so the newest one shown sits at the top. In a row of events (the hero between
-  // phone and wide screens) every event has its own place and nothing moves.
+  // ------------------------------------------------------- placing the live rows
+  // Each live row takes the place of a row of the settled list (the slots): stacked in a
+  // column, each under the one above it; in a row of events (the hero between phone and wide
+  // screens), in the settled list's own cells. A row that no longer fits fades out.
   useIsoLayoutEffect(() => {
-    const node = list.current;
-    if (!node) return;
+    const sizer = list.current;
+    const layer = liveList.current;
+    const box = viewBox.current;
+    if (!sizer || !layer || !box) return;
     const place = () => {
-      const items = Array.from(node.children) as HTMLElement[];
-      const n = items.length;
-      const column = n > 1 && items[0].offsetTop !== items[n - 1].offsetTop;
-      let offset = 0;
-      if (phase !== "composed" && column && shown < n) {
-        const last = items[n - 1];
-        offset = shown <= 0 ? last.offsetTop + last.offsetHeight : items[n - shown].offsetTop;
+      const slots = Array.from(sizer.children) as HTMLElement[];
+      const items = Array.from(layer.children) as HTMLElement[];
+      if (!slots.length) return;
+      const column = slots.length < 2 || slots[0].offsetLeft === slots[1].offsetLeft;
+      const mask = getComputedStyle(box).maskImage;
+      const masked = !!mask && mask !== "none";
+      const height = box.clientHeight;
+      layer.toggleAttribute("data-column", column);
+      const first: HTMLElement[] = [];
+      let y = 0;
+      for (const [k, item] of items.entries()) {
+        // a row just drawn takes its place at once; after that it travels between places
+        if (!item.hasAttribute("data-at")) {
+          item.style.transition = "none";
+          first.push(item);
+        }
+        const slot = slots[Math.min(k, slots.length - 1)];
+        item.style.width = `${column ? sizer.clientWidth : slot.offsetWidth}px`;
+        const x = column ? 0 : slot.offsetLeft;
+        const top = column ? y : slot.offsetTop;
+        if (column) y += item.offsetHeight;
+        item.style.translate = `${x}px ${top}px`;
+        item.setAttribute("data-at", String(k));
+        const out = k >= slots.length || (column && (masked ? top >= height : top + item.offsetHeight > height + 1));
+        item.toggleAttribute("data-out", out);
       }
-      node.style.translate = offset ? `0 ${-offset}px` : "";
+      if (first.length) {
+        void layer.offsetHeight;
+        for (const item of first) item.style.transition = "";
+      }
     };
     place();
     const watch = new ResizeObserver(place);
-    watch.observe(node);
+    watch.observe(sizer);
     return () => watch.disconnect();
-  }, [phase, shown, sample, run]);
+  }, [rows, live]);
 
   const window_ = (
     <div className={`aw${crop ? " is-crop" : ""}`} inert={crop || undefined}>
       <div className="aw-bar" aria-hidden="true">
         <span className="aw-mono">{s.monogram}</span>
         <b>{s.shop}</b>
+        {mark && !switcher && <SampleMark label={mark} />}
         <span className="aw-path">{text.path}</span>
       </div>
       <div className="aw-body">
-        <AgentDashboard key={`${sample}-${run}`} view={shownView} mode="showcase" headingLevel={headingLevel} />
+        <AgentDashboard key={sample} view={view} mode="showcase" headingLevel={headingLevel} headings={false}
+          ruleLines={false} labels={{ suggestions: text.suggestions }}
+          live={feed ? (reset ? "hush" : "roll") : undefined} summaryRoom={room} />
       </div>
     </div>
   );
 
   return (
-    <figure ref={root} id={id} className={`afig afig-${variant}`} aria-label={label} data-feed={feed || undefined} data-phase={feed ? phase : undefined}>
+    <figure ref={root} id={id} className={`afig afig-${variant}`} aria-label={label} data-feed={feed || undefined}
+      data-live={live || undefined} data-reset={reset ?? undefined}>
+      {/* The live sample's styles, inline in <head> (liveStyle.ts says why). */}
+      {feed && <style href="alyr-agent-live" precedence="default">{LIVE_CSS}</style>}
+      {/* First, before any of the sample's numbers: what this is, for screen readers, search
+          and assistants (site audit 03, A1). The eye reads the mark in the title bar. */}
+      <figcaption className="sr-only">{s.fictional}</figcaption>
       {switcher && (
         <div className="af-switch" role="group" aria-label={text.switchLabel}>
           <span className="af-switch-k" aria-hidden="true">{text.switchLabel}</span>
@@ -254,59 +338,47 @@ export function AgentFigure({
           <span className="sr-only" aria-live="polite">{announce}</span>
         </div>
       )}
-      <div className="af-stage">
+      <div className="af-stage" data-nosnippet>
         {variant === "hero" && <span className="af-plate" aria-hidden="true" />}
         {window_}
+        {more && (
+          <details className="af-more">
+            <summary>
+              <span>{more}</span>
+              <span className="qa-mark" aria-hidden="true" />
+            </summary>
+          </details>
+        )}
         {feed && (
-          <div
-            className="af-feed"
-            data-phase={phase}
-            data-start={shown <= 0 || undefined}
-            ref={feedBox}
-            style={{ "--af-light": `${wait - LIGHT_LEAD}ms` } as CSSProperties}
-          >
-            <p className="af-status">
-              <span className="af-dot" aria-hidden="true" />
-              <bdi>{text.status}</bdi>
-            </p>
-            <div className="af-view">
-            <ol className="af-list" aria-label={text.feedLabel} ref={list}>
-              {events.map((event, index) => ({ event, index })).reverse().map(({ event, index }) => {
-                const flag = event.flag ? flagged(view, event.flag) : null;
-                return (
-                  <li
-                    key={`${sample}-${index}`}
-                    className={`af-item${index < shown ? " is-on" : ""}${flag ? " is-flag" : ""}`}
-                    style={{ "--i": index } as CSSProperties}
-                  >
-                    <span className="af-at"><bdi>{event.at}</bdi></span>
-                    <span className="af-tick"><Tick /></span>
-                    <span className="af-what">
-                      <b>{event.title}</b>
-                      {flag ? (
-                        <span className="af-line"><Rich parts={flag.line} /></span>
-                      ) : (
-                        event.line && <span className="af-line">{rich(event.line)}</span>
-                      )}
-                      {flag && <span className="af-rule">{flag.rule}</span>}
-                    </span>
-                  </li>
-                );
-              })}
-            </ol>
+          <div className="af-feed">
+            <div className="af-head">
+              <p className="af-status">
+                <span className="af-dot" aria-hidden="true" />
+                <bdi>{text.status}</bdi>
+              </p>
+              {/* Drawn from the start so nothing moves when it shows; shown only once the
+                  sample moves (never without scripts or with reduced motion). */}
+              <button type="button" className="af-pause" aria-label={paused ? text.play : text.pause}
+                onClick={() => setPaused(!paused)}>
+                <span className={paused ? "demo-play" : "demo-pause"} aria-hidden="true" />
+              </button>
+            </div>
+            <div className="af-view" ref={viewBox}>
+              {/* The settled feed: the HTML's, and what a screen reader reads. While the sample
+                  moves it keeps its place unseen, and the live rows are drawn over it. */}
+              <ol className="af-list" aria-label={text.feedLabel} ref={list}>
+                {opening.map((row) => <Item key={row.id} row={{ ...row, fresh: false }} />)}
+              </ol>
+              {live && (
+                <ol className="af-list af-live" aria-hidden="true" ref={liveList}>
+                  {rows.map((row) => <Item key={row.id} row={row} />)}
+                </ol>
+              )}
             </div>
           </div>
         )}
         {aside && <div className="af-aside">{aside}</div>}
       </div>
-      <figcaption className="cap">
-        <span className="cap-n">{figLabel} <bdi>{caption.n}</bdi></span>
-        <span className="cap-sep" aria-hidden="true">·</span>
-        <span>{rich(caption.text)}</span>
-        <span className="cap-sep" aria-hidden="true">·</span>
-        <span>{s.fictional}</span>
-      </figcaption>
-      {under && <p className="af-under">{rich(under)}</p>}
     </figure>
   );
 }

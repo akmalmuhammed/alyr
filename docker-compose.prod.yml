@@ -77,9 +77,10 @@ services:
 
   api:
     image: alyr-api
+    command: ["api"]
     environment: *api-settings
     ports:
-      - "${ALYR_API_PORT:-18000}:8000"
+      - "${ALYR_API_PORT:-18000}:8080"
     volumes:
       - media:/data/media
     depends_on:
@@ -88,7 +89,7 @@ services:
 
   worker:
     image: alyr-api
-    command: ["python", "-m", "alyr.worker"]
+    command: ["worker"]
     environment: *api-settings
     # The worker serves no HTTP; its health is the heartbeat, read at the API's
     # /health/worker.
@@ -104,11 +105,11 @@ services:
     build:
       context: apps/web
       args:
-        ALYR_API_URL: http://api:8000
+        ALYR_API_URL: http://api:8080
         NEXT_PUBLIC_ALYR_WORKSPACE_URL: ${ALYR_PUBLIC_WEB_URL:-http://localhost:13000}
     image: alyr-web
     environment:
-      ALYR_API_URL: http://api:8000
+      ALYR_API_URL: http://api:8080
     ports:
       - "${ALYR_WEB_PORT:-13000}:3000"
     depends_on:

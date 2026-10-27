@@ -1,7 +1,7 @@
 # syntax=docker/dockerfile:1
 # The web app (workspace, sign-in, onboarding and the customer pages) as one small Node
 # server (ALY-63). Built from apps/web:
-#   docker build -t alyr-web --build-arg ALYR_API_URL=http://api:8000 apps/web
+#   docker build -t alyr-web --build-arg ALYR_API_URL=http://api:8080 apps/web
 #
 # Next.js reads next.config.ts and every NEXT_PUBLIC_ value while building, so these are
 # build arguments, not runtime settings: build one image per environment.
@@ -15,7 +15,7 @@ COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
 RUN --mount=type=cache,id=pnpm,target=/pnpm/store pnpm install --frozen-lockfile
 COPY . .
 # Where this app forwards /api/* (the API's address inside the hosting network).
-ARG ALYR_API_URL=http://api:8000
+ARG ALYR_API_URL=http://api:8080
 ARG NEXT_PUBLIC_ALYR_SITE_URL=https://alyr.qa
 ARG NEXT_PUBLIC_ALYR_CONTACT_EMAIL=hello@alyr.qa
 ARG NEXT_PUBLIC_ALYR_WORKSPACE_URL=
@@ -40,7 +40,7 @@ FROM node:22-bookworm-slim
 # The order page (`/s/<shop>`) asks the API from the server while it runs, for its first
 # page of items and its link preview, so the running server needs the address too. The
 # cloud may override it as a normal setting.
-ARG ALYR_API_URL=http://api:8000
+ARG ALYR_API_URL=http://api:8080
 ENV NODE_ENV=production NEXT_TELEMETRY_DISABLED=1 PORT=3000 HOSTNAME=0.0.0.0 \
     ALYR_API_URL=$ALYR_API_URL
 WORKDIR /web

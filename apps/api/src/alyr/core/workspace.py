@@ -11,7 +11,7 @@ from uuid import UUID
 import asyncpg
 
 from alyr import catalog
-from alyr.core import pricing
+from alyr.core import pricing, readiness
 from alyr.core.auth import Staff
 from alyr.core.normalise import fmt_qar
 from alyr.db import Database
@@ -340,6 +340,8 @@ async def ask_alyr(
         note.strip()[:500],
         staff.name,
     )
+    # ALYR now owns the step on the readiness check and the onboarding board (ALY-165).
+    await readiness.handed_over(conn, step_key, staff.name)
     return str(request_id)
 
 
