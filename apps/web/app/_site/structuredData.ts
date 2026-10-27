@@ -5,7 +5,8 @@
 // Honest by construction (alyr-design/honesty.md):
 // - no `offers`, `price`, `aggregateRating` or `review`: prices are off (D-034) and there are
 //   no customers to rate anything;
-// - no `legalName`, `taxID`, `address` or `foundingDate` before the CR exists, and `sameAs`
+// - `legalName`, `taxID`, `identifier`, `foundingDate` and the city come from the commercial
+//   registration and the tax card (26 Oct 2026), nothing else, and `sameAs`
 //   only lists profiles named in NEXT_PUBLIC_ALYR_SAME_AS, once each exists (D-056);
 // - the contact point is the contact the page itself offers: WhatsApp once the number is set,
 //   and the email address;
@@ -44,6 +45,13 @@ function organization(locale: Locale): Json {
     logo: `${SITE_URL}/icon.svg`,
     description: OFFER_LIVE ? meta.description : meta.descriptionNoOffer ?? meta.description,
     ...(CONTACT_EMAIL ? { email: CONTACT_EMAIL } : {}),
+    // The company behind the name, as printed on its commercial registration and tax card.
+    legalName: "alyr software W.L.L.",
+    alternateName: "الير للبرمجيات",
+    taxID: "5009341769",
+    identifier: { "@type": "PropertyValue", name: "Commercial registration number, Qatar", value: "255539" },
+    foundingDate: "2026-10-26",
+    address: { "@type": "PostalAddress", addressLocality: "Doha", addressCountry: "QA" },
     areaServed: { "@type": "Country", name: "Qatar" },
     knowsLanguage: ["ar", "en"],
     ...(CONTACT_EMAIL || WHATSAPP_NUMBER
@@ -80,7 +88,7 @@ function faq(locale: Locale, page: PageKey, items: Question[]): Json | null {
 function questionsOf(locale: Locale, page: PageKey): Question[] {
   const t = copy[locale];
   if (page === "home") return t.home.faq.items;
-  if (page === "chat") return [];
+  if (page === "chat" || page === "company") return [];
   return t.pages[page].faq.items;
 }
 
@@ -97,6 +105,24 @@ export function structuredData(locale: Locale, page: PageKey): Json {
       inLanguage: locale,
       publisher: { "@id": ORG_ID },
     });
+  } else if (page === "company") {
+    graph.push(
+      {
+        "@type": "WebPage",
+        "@id": `${url(PATHS.company[locale])}#page`,
+        name: t.meta.company.title,
+        url: url(PATHS.company[locale]),
+        inLanguage: locale,
+        about: { "@id": ORG_ID },
+      },
+      {
+        "@type": "BreadcrumbList",
+        itemListElement: [
+          { "@type": "ListItem", position: 1, name: "ALYR", item: url(PATHS.home[locale]) },
+          { "@type": "ListItem", position: 2, name: t.nav.company, item: url(PATHS.company[locale]) },
+        ],
+      },
+    );
   } else {
     const key = page as ProductKey;
     const product = t.products.items[key];
