@@ -57,6 +57,8 @@ export const PATHS = {
   accounts: { en: "/accounts", ar: "/ar/accounts" },
   shelf: { en: "/shelf", ar: "/ar/shelf" },
   docs: { en: "/docs", ar: "/ar/docs" },
+  // Not a product: the company's registration details (the footer links to it).
+  company: { en: "/company", ar: "/ar/company" },
 } as const;
 
 export type PageKey = keyof typeof PATHS;

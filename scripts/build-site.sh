@@ -23,10 +23,16 @@ NEXT_PUBLIC_ALYR_WORKSPACE_URL="" pnpm build >/dev/null
 app=".next/server/app"
 mkdir -p out-site/_next
 pages="chat bookings agent accounts shelf docs"
+# a plain page: no social card of its own (it uses the homepage's), so it is not in `pages`
+plain="company"
 cp "$app/index.html" out-site/index.html
 cp "$app/ar.html" out-site/ar.html
 mkdir -p out-site/ar
 for page in $pages; do
+  cp "$app/$page.html" "out-site/$page.html"
+  cp "$app/ar/$page.html" "out-site/ar/$page.html"
+done
+for page in $plain; do
   cp "$app/$page.html" "out-site/$page.html"
   cp "$app/ar/$page.html" "out-site/ar/$page.html"
 done
@@ -49,7 +55,7 @@ cp -r .next/static out-site/_next/static
 # The pages are drawn first and the framework's scripts start after the first paint
 # (scripts/site-defer-scripts.mjs says why). It fails the build if Next's markup changes.
 node "$root/scripts/site-defer-scripts.mjs" out-site/index.html out-site/ar.html out-site/404.html \
-  $(for page in $pages; do echo "out-site/$page.html out-site/ar/$page.html"; done)
+  $(for page in $pages $plain; do echo "out-site/$page.html out-site/ar/$page.html"; done)
 
 # Cloudflare Pages reads these two files. The link-preview image has no file extension,
 # so its type is stated; hashed assets never change, so browsers may keep them.

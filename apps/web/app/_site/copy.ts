@@ -505,12 +505,25 @@ type AgentPage = PageCommon & {
   report: { eyebrow?: string; title: string; body: string };
 };
 
+/** The company page: who is behind ALYR, in the words of the commercial registration and the
+ * tax card. Every row is a fact printed on one of those documents (nothing else). */
+export type CompanyPage = {
+  eyebrow: string;
+  title: string;
+  lead: string;
+  rows: { name: string; value: string; note?: string }[];
+  /** Said once, under the rows: where the facts come from. */
+  source: string;
+  contact: { title: string; body: string };
+};
+
 export type Copy = {
   meta: Record<PageKey, Meta>;
+  company: CompanyPage;
   skip: string;
   nav: {
     products: string; business: string; how: string; questions: string; price: string;
-    other: string; home: string; menu: string; sections: string; productsMenu: string;
+    other: string; home: string; menu: string; sections: string; productsMenu: string; company: string;
   };
   /** The suite, in its fixed order: the Products menu, the footer, the rows on each page. */
   products: {
@@ -573,6 +586,10 @@ export type Copy = {
 
 const en: Copy = {
   meta: {
+    company: {
+      title: "Company details · ALYR",
+      description: "ALYR is a product name of alyr software W.L.L., a limited liability company registered in Qatar. Commercial registration 255539, tax registration 5009341769.",
+    },
     home: {
       title: "ALYR · The tech team for small businesses in Qatar",
       description:
@@ -612,8 +629,26 @@ const en: Copy = {
     },
   },
   skip: "Skip to content",
+  company: {
+    eyebrow: "Company details",
+    title: "Who is behind ALYR",
+    lead: "ALYR is the name we use for our products. The company is alyr software W.L.L., a limited liability company registered in Qatar.",
+    rows: [
+      { name: "Legal name", value: "alyr software W.L.L.", note: "In Arabic: الير للبرمجيات ذ.م.م." },
+      { name: "Trading name", value: "ALYR" },
+      { name: "Legal form", value: "Limited liability company owned by one person" },
+      { name: "Commercial registration number", value: "255539", note: "Ministry of Commerce and Industry, State of Qatar. Registered on 26 October 2026." },
+      { name: "Tax registration number", value: "5009341769", note: "General Tax Authority, State of Qatar." },
+      { name: "Registered activities", value: "Designing and programming special software (620102). Retail sale via the internet (479120)." },
+      { name: "Head office", value: "Doha, Qatar" },
+      { name: "Website", value: "alyr.qa" },
+    ],
+    source: "These details are as printed on the company's commercial registration certificate and tax card.",
+    contact: { title: "Write to us", body: "For anything about the company, write to hello@alyr.qa." },
+  },
   nav: {
     products: "Products",
+    company: "Company details",
     business: "By business",
     how: "How we work",
     questions: "Questions",
@@ -2862,6 +2897,10 @@ const en: Copy = {
 
 const ar: Copy = {
   meta: {
+    company: {
+      title: "بيانات الشركة · ALYR",
+      description: "ALYR اسم لمنتجات شركة alyr software ذ.م.م.، شركة ذات مسؤولية محدودة مسجّلة في قطر. السجل التجاري 255539 والتسجيل الضريبي 5009341769.",
+    },
     home: {
       title: "ALYR · فريق التقنية للمشاريع الصغيرة في قطر",
       description:
@@ -2901,8 +2940,26 @@ const ar: Copy = {
     },
   },
   skip: "انتقل إلى المحتوى",
+  company: {
+    eyebrow: "بيانات الشركة",
+    title: "من وراء ALYR",
+    lead: "ALYR هو الاسم الذي نستخدمه لمنتجاتنا. أما الشركة فهي alyr software ذ.م.م.، شركة ذات مسؤولية محدودة مسجّلة في دولة قطر.",
+    rows: [
+      { name: "الاسم القانوني", value: "alyr software ذ.م.م.", note: "بالعربية: الير للبرمجيات ذ.م.م." },
+      { name: "الاسم التجاري", value: "ALYR" },
+      { name: "الشكل القانوني", value: "شركة ذات مسؤولية محدودة مملوكة لشخص واحد" },
+      { name: "رقم السجل التجاري", value: "255539", note: "وزارة التجارة والصناعة، دولة قطر. تاريخ التسجيل: 26 أكتوبر 2026." },
+      { name: "رقم التسجيل الضريبي", value: "5009341769", note: "الهيئة العامة للضرائب، دولة قطر." },
+      { name: "الأنشطة المسجّلة", value: "تصميم وبرمجة البرمجيات الخاصة (620102). البيع بالتجزئة عن طريق الإنترنت (479120)." },
+      { name: "المركز الرئيسي", value: "الدوحة، قطر" },
+      { name: "الموقع الإلكتروني", value: "alyr.qa" },
+    ],
+    source: "هذه البيانات كما وردت في شهادة السجل التجاري والبطاقة الضريبية للشركة.",
+    contact: { title: "راسلنا", body: "لأي استفسار عن الشركة، اكتب إلى hello@alyr.qa." },
+  },
   nav: {
     products: "المنتجات",
+    company: "بيانات الشركة",
     business: "حسب نشاطك",
     how: "كيف نعمل",
     questions: "أسئلة",
