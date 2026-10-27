@@ -39,10 +39,15 @@ async def ensure_backup_role(conn: asyncpg.Connection, backup_dsn: str) -> None:
     if not role or not role.replace("_", "").isalnum():
         raise ValueError("backup_url must name a simple role")
     exists = await conn.fetchval("select 1 from pg_roles where rolname = $1", role)
-    if not exists:
-        quoted = (password or "").replace("'", "''")
-        await conn.execute(f"create role {role} login bypassrls password '{quoted}'")
-    await conn.execute(f"grant pg_read_all_data to {role}")
+    try:
+        if not exists:
+            quoted = (password or "").replace("'", "''")
+            await conn.execute(f"create role {role} login bypassrls password '{quoted}'")
+        await conn.execute(f"grant pg_read_all_data to {role}")
+    except asyncpg.InsufficientPrivilegeError as error:
+        # A host that does not allow this must not block a deploy: the backup job then
+        # fails loudly on its own, which is where the problem belongs.
+        print(f"warning: backup role {role} not fully set up ({error}); backups will fail")
 
 
 # Any two processes that start a migration at once (two API replicas, or a deploy and a
