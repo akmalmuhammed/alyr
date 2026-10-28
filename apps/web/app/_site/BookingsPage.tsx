@@ -31,7 +31,7 @@ export function BookingsPage({ locale }: { locale: Locale }) {
       >
         <BookingsScreen sheet={sheet} shop={salon.shop} monogram={salon.monogram} path={sheet.path} label={p.screen.label} sample={t.fig.sample} />
       </ScreenBlock>
-      <InsideBlock inside={p.inside} locale={locale} />
+      <InsideBlock inside={p.inside} />
       <WhoBlock who={p.who} />
       <WorksBlock locale={locale} works={p.works} self="bookings" />
       <QuestionsBlock faq={p.faq} />

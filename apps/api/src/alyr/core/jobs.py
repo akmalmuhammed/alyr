@@ -13,6 +13,7 @@ us no way to make a send idempotent, so that small window is accepted.
 
 import asyncio
 import logging
+import time
 from collections.abc import Awaitable, Callable
 from datetime import datetime
 from uuid import UUID
@@ -82,10 +83,21 @@ class JobRunner:
         finally:
             self._draining = False
 
-    async def run_forever(self, idle_seconds: float = 1.0) -> None:
-        """The worker process's loop."""
+    async def run_forever(
+        self,
+        idle_seconds: float = 1.0,
+        heartbeat: Callable[[], Awaitable[None]] | None = None,
+        heartbeat_seconds: float = 30.0,
+    ) -> None:
+        """The worker process's loop. `heartbeat` is called from inside the loop at most
+        every `heartbeat_seconds`, so it stops being called if the loop itself stops."""
+        last_beat = 0.0
         while True:
             try:
+                now = time.monotonic()
+                if heartbeat is not None and now - last_beat >= heartbeat_seconds:
+                    await heartbeat()
+                    last_beat = now
                 if not await self.drain():
                     await asyncio.sleep(idle_seconds)
             except Exception:  # noqa: BLE001 - the worker must outlive any one failure
