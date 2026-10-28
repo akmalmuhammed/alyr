@@ -86,7 +86,7 @@ Tests: 1,136 API tests pass and 2 are skipped (the opt-in live R2 check) on the 
 6. **Products screen and remaining order-link items (ALY-24); remaining ledger items (ALY-22).**
 7. **Broadcasts with marketing opt-in (ALY-44), Embedded Signup (ALY-39).**
 8. **Always-on hosting (D-036): Azure Qatar Central, with backups and an emergency host on Google Cloud in Doha.** Images, production compose file, worker heartbeat and encrypted backup and restore are built and rehearsed on the laptop (ALY-63, `docs/hosting.md`). Next: Azure infrastructure code and the deploy workflow (ALY-10). Then a real payment gateway (ALY-17).
-9. **A real payment gateway (ALY-17).** Payments are planned as ALY-155 (D-044): the onboarding step "Get paid online" opens the shop's own account at the partner provider (ALY-156) or connects one it already has (ALY-157).
+9. **A real payment gateway (ALY-17).** Payments come through three doors, each ending in the shop's own account (D-072, updating D-044): connect your own account (ALY-157), ALYR-assisted sign-up with a partner (ALY-156; Noqoody, then SADAD), and opening by API once a provider proves it. The groundwork is in a pull request (branch `aly-17-payment-adapter`, spec 033): the adapter interface, sealed keys, signed webhooks, a simulator provider, and the pay page sending the customer to the provider's page. No real provider yet: production lists none, so every shop keeps the stand-in until SADAD or Noqoody issue sandbox keys (applications drafted 28 Oct, ALY-5).
 
 ## Waiting on the founder
 

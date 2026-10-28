@@ -46,6 +46,9 @@ These are not style preferences. Do not write code that breaks them, and stop an
 apps/api/                     FastAPI service (Python 3.13, managed with uv)
   migrations/                 Plain SQL, applied in order by `python -m alyr.migrate`. Never edit an applied one
   src/alyr/channels/          Message channels: Meta Cloud API and the local simulator, same interface
+  src/alyr/gateways/          Payment providers: one adapter each, same interface, and the local simulator
+                              (specs/033); core/payments.py makes links on the shop's own account, and
+                              core/payment_keys.py seals its keys
   src/alyr/core/              Inbound path, contact identity, outbound layer (consent, 24-hour window), jobs,
                               sign-in (auth), email (mail), sign-up (onboarding), pricing, back office,
                               team accountability (team, D-028), workspace shell (workspace), templates,

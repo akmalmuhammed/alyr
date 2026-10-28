@@ -14,8 +14,10 @@ from alyr.core.jobs import JobRunner
 from alyr.core.links import check_secret as check_link_secret
 from alyr.core.media import MediaService
 from alyr.core.outbound import SEND, Outbound
+from alyr.core.payments import Payments
 from alyr.core.storage import check_store, make_store
 from alyr.db import Database
+from alyr.gateways import registry as payment_gateways
 from alyr.modules import report
 from alyr.modules.bookings.service import REMINDER, Reminders
 from alyr.modules.connect import webhooks as connect_webhooks
@@ -59,6 +61,7 @@ from alyr.routes import items_import as items_import_routes
 from alyr.routes import jobs as jobs_routes
 from alyr.routes import media as media_routes
 from alyr.routes import onboarding as onboarding_routes
+from alyr.routes import payments as payment_routes
 from alyr.routes import price_groups as price_group_routes
 from alyr.routes import reports as reports_routes
 from alyr.routes import staff_numbers as staff_numbers_routes
@@ -115,6 +118,12 @@ def create_app() -> FastAPI:
 
     app.state.jobs = JobRunner(app.state.db, settings.jobs_backoff_seconds)
     app.state.jobs.register(SEND, app.state.outbound.deliver, app.state.outbound.gave_up)
+    # The shop's own payment account (ALY-17): keys checked, payment pages made and providers
+    # asked what happened, each by a job.
+    app.state.payments = Payments(
+        app.state.db, app.state.outbound, payment_gateways(settings), settings.public_web_url
+    )
+    app.state.payments.register(app.state.jobs)
     app.state.jobs.register(INBOUND, app.state.inbound.process)
     app.state.jobs.register(REMINDER, Reminders(app.state.db, app.state.outbound).send)
     app.state.jobs.register(report.JOB, report.WeeklyReports(app.state.db, app.state.outbound).send)
@@ -202,6 +211,7 @@ def create_app() -> FastAPI:
     # Each module's routes answer only for shops that have switched that module on.
     app.include_router(ledger.router, dependencies=[Depends(require_module("ledger"))])
     app.include_router(pay.router)
+    app.include_router(payment_routes.router)
     app.include_router(track_routes.router)
     app.include_router(orders.router, dependencies=[Depends(require_module("orders"))])
     # The Catalog's own API (D-039). It adds nothing to the Products screen. It answers
