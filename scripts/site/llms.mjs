@@ -169,6 +169,39 @@ function homeTwin(locale) {
   return doc.text();
 }
 
+// ------------------------------------------------------------------ the company page
+
+function companyTwin(locale) {
+  const t = copy[locale];
+  const c = t.company;
+  const doc = new Doc();
+  header(doc, locale, "company", c.title, null);
+  doc.p(c.eyebrow).p(c.lead);
+  doc.list(c.rows, (r) => `**${flat(r.name)}**: ${flat(r.value)}${r.note ? `. ${flat(r.note)}` : ""}`);
+  doc.p(c.source);
+  doc.h(2, c.contact.title).p(c.contact.body);
+  footer(doc, locale, site.PATHS.company[locale]);
+  return doc.text();
+}
+
+// ------------------------------------------------------------------ the privacy policy
+
+function privacyTwin(locale) {
+  const t = copy[locale];
+  const v = t.privacy;
+  const doc = new Doc();
+  header(doc, locale, "privacy", v.title, null);
+  doc.p(v.updated).p(v.lead);
+  for (const s of v.sections) {
+    doc.h(2, s.title);
+    for (const para of s.paras) doc.p(para);
+    if (s.list) doc.list(s.list);
+    for (const para of s.after ?? []) doc.p(para);
+  }
+  footer(doc, locale, site.PATHS.privacy[locale]);
+  return doc.text();
+}
+
 // ------------------------------------------------------------------ the product pages
 
 function productTwin(locale, key) {
@@ -254,8 +287,8 @@ function llmsTxt() {
     const caveat = w.caveats[key] ? ` ${w.caveats[key]}` : "";
     lines.push(`- [${productName(t, key)}](${SITE}${twinPath(site.PATHS[key].en)}): ${flat(meta.descriptionNoOffer ?? meta.description)}${caveat}`);
   }
-  lines.push("", `## ${w.pages}`, "", `- [${w.home}](${SITE}${twinPath("/")}): ${w.homeLine}`, "", `## ${w.optional}`, "");
-  const arabic = Object.entries(site.PATHS).map(([key, p]) => `[${key === "home" ? copy.ar.nav?.home ?? "ALYR" : productName(copy.ar, key)}](${SITE}${twinPath(p.ar)})`);
+  lines.push("", `## ${w.pages}`, "", `- [${w.home}](${SITE}${twinPath("/")}): ${w.homeLine}`, `- [${t.nav.company}](${SITE}${twinPath(site.PATHS.company.en)}): ${flat(t.meta.company.description)}`, `- [${t.nav.privacy}](${SITE}${twinPath(site.PATHS.privacy.en)}): ${flat(t.meta.privacy.description)}`, "", `## ${w.optional}`, "");
+  const arabic = Object.entries(site.PATHS).map(([key, p]) => `[${key === "home" ? copy.ar.nav?.home ?? "ALYR" : key === "company" || key === "privacy" ? copy.ar.nav[key] : productName(copy.ar, key)}](${SITE}${twinPath(p.ar)})`);
   lines.push(`- ${w.arabic}: ${arabic.join(", ")}`, "");
   return lines.join("\n");
 }
@@ -266,7 +299,7 @@ const written = [];
 const twins = [];
 for (const [key, paths] of Object.entries(site.PATHS)) {
   for (const locale of ["en", "ar"]) {
-    const text = key === "home" ? homeTwin(locale) : productTwin(locale, key);
+    const text = key === "home" ? homeTwin(locale) : key === "company" ? companyTwin(locale) : key === "privacy" ? privacyTwin(locale) : productTwin(locale, key);
     const file = twinPath(paths[locale]);
     if (!text.startsWith("# ") || text.length < 600) problems.push(`${file}: the copy came out too short (${text.length} characters); has copy.ts changed shape?`);
     mkdirSync(dirname(join(out, file)), { recursive: true });

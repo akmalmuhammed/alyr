@@ -19,7 +19,9 @@ else:
   features, and all of them are on, so the report reads as it did;
 * the answers gained keys (`template`, `features`, `layout_custom`, `section.custom`...);
 * a new shop of a type has the type's starter custom fields (ALY-148, second part): a column for
-  each in the files, no value on any item, nothing required.
+  each in the files, no value on any item, nothing required;
+* the order page's settings gained `pay` (ALY-170): a payment link, as before, until the shop turns
+  it off.
 """
 
 import json
@@ -124,7 +126,9 @@ def test_a_shop_of_this_type_behaves_as_it_did_before(on, kind):
     assert page.status_code == old["store_status"]
     if page.status_code == 200:  # an appointment business has no order page
         assert public_now(page.json()["catalog"]) == public_before(old["store_catalog"])
-        assert page.json()["settings"] == old["store_settings"]
+        settings = dict(page.json()["settings"])
+        assert settings.pop("pay") == {"online": True, "ways": []}
+        assert settings == old["store_settings"]
 
     # The item form reaches everything it did: a full item for every way of running out.
     for n, rule in enumerate(("always", "switch", "count", "daily_limit")):

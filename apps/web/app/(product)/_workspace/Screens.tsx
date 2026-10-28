@@ -6,6 +6,7 @@ import { fmtQtyUnit, lineUnit } from "../_customer/qty";
 import { formatPrice } from "../_customer/price";
 import { OrderMargin, useOrderMargins } from "./Margin";
 import { OrderSum } from "./OrderSum";
+import { MarkPaid, PayWays } from "./OrderPay";
 import { FulfilDetails, FulfilFilters, FulfilPill, matchesFilter, type FulfilFilter } from "./OrderFulfil";
 import type { Fulfilment } from "../_customer/fulfil";
 import { DELIVERY } from "./deliveryCopy";
@@ -941,7 +942,7 @@ export function Screens({ embedded = false, section, lang: langProp, intro, show
                       {composeMode === "reply" && savedReplies.map((r) => (
                         <span key={r.id} className="quickchip">
                           <button dir="auto" title={r.body} onClick={() => setReplyDraft(r.body)}>{r.title}</button>
-                          <button aria-label={`${t.remove}: ${r.title}`} onClick={() => deleteQuickReply(r.id)}>×</button>
+                          {canManage && <button aria-label={`${t.remove}: ${r.title}`} onClick={() => deleteQuickReply(r.id)}>×</button>}
                         </span>
                       ))}
                     </div>
@@ -1066,6 +1067,7 @@ export function Screens({ embedded = false, section, lang: langProp, intro, show
             )
           )}
 
+          {tab === "orders" && canManage && <PayWays lang={lang} />}
           {tab === "orders" && filterLine}
           {tab === "orders" && <FulfilFilters value={fulfilFilter} onChange={setFulfilFilter} lang={lang} show={orders.some((o) => o.fulfilment)} />}
           {tab === "orders" && (
@@ -1106,7 +1108,12 @@ export function Screens({ embedded = false, section, lang: langProp, intro, show
                           {o.discount_total || o.fulfilment?.mode === "delivery" ? <OrderSum order={o} lang={lang} /> : null}
                           {orderMargins && <OrderMargin lang={lang} margin={orderMargins[o.id]} />}</td>
                         <td className="r num" dir="ltr">{o.total_text}</td>
-                        <td><span className={`pill ${o.payment === "unpaid" ? "p1" : "p0"}`}>{t.pay[o.payment]}</span></td>
+                        <td>
+                          <span className={`pill ${o.payment === "unpaid" ? "p1" : "p0"}`}>{t.pay[o.payment]}</span>
+                          {o.payment === "unpaid" && o.status !== "cancelled" && canManage && (
+                            <MarkPaid orderId={o.id} lang={lang} onDone={refresh} />
+                          )}
+                        </td>
                         <td>
                           <AssignSelect value={o.assigned} members={members} label={t.assignedTo} nobody={t.nobody}
                             onChange={(id) => giveTo(`/api/orders/${o.id}/assign`, id)} />
@@ -1155,8 +1162,12 @@ export function Screens({ embedded = false, section, lang: langProp, intro, show
               </div>
 
               <div className="actions">
-                <button className="btn primary" onClick={remind} disabled={busy}>{t.remind}</button>
-                <span style={{ color: "var(--muted)", fontSize: 13.5 }}>{t.remindHint}</span>
+                {canManage && (
+                  <>
+                    <button className="btn primary" onClick={remind} disabled={busy}>{t.remind}</button>
+                    <span style={{ color: "var(--muted)", fontSize: 13.5 }}>{t.remindHint}</span>
+                  </>
+                )}
                 {note && <span className="note">{note}</span>}
               </div>
 

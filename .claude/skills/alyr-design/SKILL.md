@@ -91,9 +91,11 @@ asymmetry over centring.
    the API. Arabic is written, not translated ([arabic.md](arabic.md)).
 9. **Honest by construction.** Nothing a customer sees claims what is not true today, and
    nothing says or implies AI ([honesty.md](honesty.md)).
-10. **Plays once.** Motion arrives, settles and confirms; it never loops, and with reduced
-    motion only the end state shows ([motion.md](motion.md)). One named exception: the live
-    ALYR Agent figure, with its pause button and calm pace (D-058).
+10. **Always on, text once.** Figures that show the product at work keep playing while on
+    screen (founder, 26 Oct 2026): the live ALYR Agent figure (D-058), the flows and demos,
+    How we work, the products frame and the signature figures, each with a Pause control, on
+    the pace, stopped off screen and in a hidden tab. Text and sections arrive once and stay.
+    With reduced motion only the end state shows ([motion.md](motion.md)).
 
 ## 2. Tokens
 
@@ -156,7 +158,8 @@ arrows and "×" in text do not flip: use the icon.
 
 Tokens for every duration, ease, stagger and travel; every timed piece (flows, demos, figures,
 reveals) on the pace, `--play-*` times `--pace`, the one setting, with a step staying up for its
-words; one gesture (arrive along 45°, settle, one Volt signal). Plays once. Reduced motion shows every end state; nothing travels or
+words; one gesture (arrive along 45°, settle, one Volt signal). Figures keep playing it, text
+arrives once (founder, 26 Oct 2026; `_site/loops.ts`). Reduced motion shows every end state; nothing travels or
 plays by itself. **Nothing is hidden in the HTML:** start states exist only under the
 `motion` class that the head script adds when motion is wanted, with a failsafe that removes
 it; without scripts the page is complete. Animate transform, opacity, clip-path and font

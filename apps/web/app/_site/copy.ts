@@ -15,6 +15,7 @@
 import type { ContactState, PageKey, ProductKey } from "./site";
 import { docsAr, docsEn, type DocLinkPage, type DocsPage } from "./copyDocs";
 import { shelfAr, shelfEn, type ShelfPage } from "./copyShelf";
+import { privacyAr, privacyEn, type PrivacyPage } from "./copyPrivacy";
 
 export type Locale = "en" | "ar";
 
@@ -505,12 +506,26 @@ type AgentPage = PageCommon & {
   report: { eyebrow?: string; title: string; body: string };
 };
 
+/** The company page: who is behind ALYR, in the words of the commercial registration and the
+ * tax card. Every row is a fact printed on one of those documents (nothing else). */
+export type CompanyPage = {
+  eyebrow: string;
+  title: string;
+  lead: string;
+  rows: { name: string; value: string; note?: string }[];
+  /** Said once, under the rows: where the facts come from. */
+  source: string;
+  contact: { title: string; body: string };
+};
+
 export type Copy = {
   meta: Record<PageKey, Meta>;
+  company: CompanyPage;
+  privacy: PrivacyPage;
   skip: string;
   nav: {
     products: string; business: string; how: string; questions: string; price: string;
-    other: string; home: string; menu: string; sections: string; productsMenu: string;
+    other: string; home: string; menu: string; sections: string; productsMenu: string; company: string; privacy: string;
   };
   /** The suite, in its fixed order: the Products menu, the footer, the rows on each page. */
   products: {
@@ -535,10 +550,18 @@ export type Copy = {
     draft: string;
     bar: string;
   };
-  footer: { line: string; rights: string; workspace: string; disclaimer: string; links: string; products: string };
+  footer: { line: string; rights: string; legal: string; workspace: string; disclaimer: string; links: string; products: string };
   /** The "Sample" mark in a drawing's chrome; the phone header's "Sample business"; and the
    * line said first in a figure of a fictional business that is not one of the three. */
   fig: { sample: string; business: string; note: string };
+  /** The pause control of a figure that keeps playing by itself (WCAG 2.2.2; founder, 26 Oct
+   * 2026: motion always on): the word shown on it, and its full name for each figure, which
+   * starts with that word. */
+  loop: {
+    pause: string;
+    play: string;
+    names: Record<"how" | "frame" | "figure", { pause: string; play: string }>;
+  };
   report: ReportCopy;
   agent: AgentFigure;
   home: Home;
@@ -565,6 +588,14 @@ export type Copy = {
 
 const en: Copy = {
   meta: {
+    privacy: {
+      title: "Privacy policy · ALYR",
+      description: "What data ALYR holds, why, who else sees it, how long it is kept and how to ask for it to be deleted. ALYR is run by alyr software W.L.L., Qatar.",
+    },
+    company: {
+      title: "Company details · ALYR",
+      description: "ALYR is a product name of alyr software W.L.L., a limited liability company registered in Qatar. Commercial registration 255539, tax registration 5009341769.",
+    },
     home: {
       title: "ALYR · The tech team for small businesses in Qatar",
       description:
@@ -604,8 +635,28 @@ const en: Copy = {
     },
   },
   skip: "Skip to content",
+  privacy: privacyEn,
+  company: {
+    eyebrow: "Company details",
+    title: "Who is behind ALYR",
+    lead: "ALYR is the name we use for our products. The company is alyr software W.L.L., a limited liability company registered in Qatar.",
+    rows: [
+      { name: "Legal name", value: "alyr software W.L.L.", note: "In Arabic: الير للبرمجيات ذ.م.م." },
+      { name: "Trading name", value: "ALYR" },
+      { name: "Legal form", value: "Limited liability company owned by one person" },
+      { name: "Commercial registration number", value: "255539", note: "Ministry of Commerce and Industry, State of Qatar. Registered on 26 October 2026." },
+      { name: "Tax registration number", value: "5009341769", note: "General Tax Authority, State of Qatar." },
+      { name: "Registered activities", value: "Designing and programming special software (620102). Retail sale via the internet (479120)." },
+      { name: "Head office", value: "Doha, Qatar" },
+      { name: "Website", value: "alyr.qa" },
+    ],
+    source: "These details are as printed on the company's commercial registration certificate and tax card.",
+    contact: { title: "Write to us", body: "For anything about the company, write to hello@alyr.qa." },
+  },
   nav: {
     products: "Products",
+    company: "Company details",
+    privacy: "Privacy",
     business: "By business",
     how: "How we work",
     questions: "Questions",
@@ -674,6 +725,7 @@ const en: Copy = {
   footer: {
     line: "We do the tech. You run the business.",
     rights: "ALYR. Built in Qatar.",
+    legal: "alyr software W.L.L. · Commercial Registration 255539 · Qatar",
     workspace: "Staff sign-in",
     disclaimer: "ALYR uses the WhatsApp Business Platform. ALYR is not affiliated with, or endorsed by, WhatsApp or Meta.",
     links: "Site",
@@ -683,6 +735,15 @@ const en: Copy = {
     sample: "Sample",
     business: "Sample business",
     note: "Sample screen of a fictional business. The names and numbers are made up; they are not ALYR’s results.",
+  },
+  loop: {
+    pause: "Pause",
+    play: "Play",
+    names: {
+      how: { pause: "Pause the four scenes", play: "Play the four scenes" },
+      frame: { pause: "Pause the six products", play: "Play the six products" },
+      figure: { pause: "Pause the drawing", play: "Play the drawing" },
+    },
   },
   report: {
     meta: "Sample business",
@@ -1315,7 +1376,7 @@ const en: Copy = {
       currency: "QAR",
       currencyFirst: true,
       period: "a month",
-      first: "for your first product. Add ALYR Chat, ALYR Bookings or ALYR Accounts for QAR 150 a month each. ALYR Agent and ALYR Shelf come with every one.",
+      first: "for your first product. Add ALYR Chat, ALYR Bookings or ALYR Accounts for QAR 50 a month each. ALYR Agent and ALYR Shelf come with every one.",
       setup: "Setup from QAR 1,500, quoted at your visit.",
       firstMonth: "Your first month is the subscription and the setup fee. After that, only the subscription.",
       includesLabel: "Every month includes",
@@ -1331,8 +1392,8 @@ const en: Copy = {
       combosLabel: "For example",
       combos: [
         { label: "A salon: ALYR Bookings", value: "from QAR 449" },
-        { label: "A bakery: ALYR Chat and ALYR Accounts", value: "from QAR 599" },
-        { label: "Home services: Bookings, Chat and Accounts", value: "from QAR 749" },
+        { label: "A bakery: ALYR Chat and ALYR Accounts", value: "from QAR 499" },
+        { label: "Home services: Bookings, Chat and Accounts", value: "from QAR 549" },
         { label: "ALYR Agent and ALYR Shelf", value: "included" },
       ],
       ledgerLabel: "Fees, said plainly",
@@ -1435,7 +1496,7 @@ const en: Copy = {
           id: "more-products",
           offer: true,
           q: "What if I need more than one product?",
-          a: "The first is from QAR 449 a month. ALYR Chat, ALYR Bookings and ALYR Accounts are QAR 150 a month each after that. ALYR Agent and ALYR Shelf come with all of them.",
+          a: "The first is from QAR 449 a month. ALYR Chat, ALYR Bookings and ALYR Accounts are QAR 50 a month each after that. ALYR Agent and ALYR Shelf come with all of them.",
         },
         {
           id: "busy-night",
@@ -1963,7 +2024,7 @@ const en: Copy = {
         lead:
           "Free times come from your opening hours, and the confirmation goes at once. Your team marks who came.",
         facts: ["Free times from your opening hours", "A reminder 2 hours before", "One booking at a time, for one chair or one\u00a0room"],
-        factsOffer: ["From QAR 449 a month, or QAR 150 beside ALYR Chat or ALYR Accounts"],
+        factsOffer: ["From QAR 449 a month, or QAR 50 beside ALYR Chat or ALYR Accounts"],
       },
       demo: {
         business: "Dafira Salon",
@@ -2463,7 +2524,7 @@ const en: Copy = {
         lead:
           "Record credit in one line. One press sends reminders whose tone follows how late the payment is.",
         facts: ["The oldest debt is settled first", "Never reminded twice within 3 days", "No reminders after “stop”"],
-        factsOffer: ["From QAR 449 a month, or QAR 150 beside ALYR Chat or ALYR Bookings"],
+        factsOffer: ["From QAR 449 a month, or QAR 50 beside ALYR Chat or ALYR Bookings"],
       },
       demo: {
         business: "Qirfa Bakery",
@@ -2844,6 +2905,14 @@ const en: Copy = {
 
 const ar: Copy = {
   meta: {
+    privacy: {
+      title: "سياسة الخصوصية · ALYR",
+      description: "البيانات التي تحتفظ بها ALYR، ولماذا، ومن يطّلع عليها، وكم تُحفظ، وكيف تطلب حذفها. تديرها شركة alyr software ذ.م.م. في قطر.",
+    },
+    company: {
+      title: "بيانات الشركة · ALYR",
+      description: "ALYR اسم لمنتجات شركة alyr software ذ.م.م.، شركة ذات مسؤولية محدودة مسجّلة في قطر. السجل التجاري 255539 والتسجيل الضريبي 5009341769.",
+    },
     home: {
       title: "ALYR · فريق التقنية للمشاريع الصغيرة في قطر",
       description:
@@ -2883,8 +2952,28 @@ const ar: Copy = {
     },
   },
   skip: "انتقل إلى المحتوى",
+  privacy: privacyAr,
+  company: {
+    eyebrow: "بيانات الشركة",
+    title: "من وراء ALYR",
+    lead: "ALYR هو الاسم الذي نستخدمه لمنتجاتنا. أما الشركة فهي alyr software ذ.م.م.، شركة ذات مسؤولية محدودة مسجّلة في دولة قطر.",
+    rows: [
+      { name: "الاسم القانوني", value: "alyr software ذ.م.م.", note: "بالعربية: الير للبرمجيات ذ.م.م." },
+      { name: "الاسم التجاري", value: "ALYR" },
+      { name: "الشكل القانوني", value: "شركة ذات مسؤولية محدودة مملوكة لشخص واحد" },
+      { name: "رقم السجل التجاري", value: "255539", note: "وزارة التجارة والصناعة، دولة قطر. تاريخ التسجيل: 26 أكتوبر 2026." },
+      { name: "رقم التسجيل الضريبي", value: "5009341769", note: "الهيئة العامة للضرائب، دولة قطر." },
+      { name: "الأنشطة المسجّلة", value: "تصميم وبرمجة البرمجيات الخاصة (620102). البيع بالتجزئة عن طريق الإنترنت (479120)." },
+      { name: "المركز الرئيسي", value: "الدوحة، قطر" },
+      { name: "الموقع الإلكتروني", value: "alyr.qa" },
+    ],
+    source: "هذه البيانات كما وردت في شهادة السجل التجاري والبطاقة الضريبية للشركة.",
+    contact: { title: "راسلنا", body: "لأي استفسار عن الشركة، اكتب إلى hello@alyr.qa." },
+  },
   nav: {
     products: "المنتجات",
+    company: "بيانات الشركة",
+    privacy: "الخصوصية",
     business: "حسب نشاطك",
     how: "كيف نعمل",
     questions: "أسئلة",
@@ -2953,6 +3042,7 @@ const ar: Copy = {
   footer: {
     line: "علينا التقنية، وعليك شغلك.",
     rights: "ALYR. صُنع في قطر.",
+    legal: "alyr software ذ.م.م. (الير للبرمجيات) · سجل تجاري 255539 · قطر",
     workspace: "دخول الموظفين",
     disclaimer: "تستخدم ALYR منصة واتساب للأعمال، وليست تابعة لواتساب أو Meta، ولا معتمدة منهما.",
     links: "الموقع",
@@ -2962,6 +3052,15 @@ const ar: Copy = {
     sample: "مثال",
     business: "نشاط توضيحي",
     note: "مثال لشاشة نشاط غير حقيقي. الأسماء والأرقام للتوضيح، وليست نتائج حققتها ALYR.",
+  },
+  loop: {
+    pause: "إيقاف",
+    play: "تشغيل",
+    names: {
+      how: { pause: "إيقاف حركة المشاهد الأربعة", play: "تشغيل حركة المشاهد الأربعة" },
+      frame: { pause: "إيقاف حركة المنتجات الستة", play: "تشغيل حركة المنتجات الستة" },
+      figure: { pause: "إيقاف حركة الرسم", play: "تشغيل حركة الرسم" },
+    },
   },
   report: {
     meta: "نشاط توضيحي",
@@ -3594,7 +3693,7 @@ const ar: Copy = {
       currency: "ر.ق",
       currencyFirst: false,
       period: "شهرياً",
-      first: "لأول منتج. وأضف ALYR Chat أو ALYR Bookings أو ALYR Accounts بـ\u00a0150 ر.ق شهرياً لكل منها. ويأتي ALYR Agent وALYR Shelf مع كل منتج.",
+      first: "لأول منتج. وأضف ALYR Chat أو ALYR Bookings أو ALYR Accounts بـ\u00a050 ر.ق شهرياً لكل منها. ويأتي ALYR Agent وALYR Shelf مع كل منتج.",
       setup: "ورسوم تجهيز تبدأ من 1,500 ر.ق، ونحدد مبلغها خلال زيارتنا لك.",
       firstMonth: "يشمل شهرك الأول الاشتراك ورسوم التجهيز، وبعده الاشتراك وحده.",
       includesLabel: "يشمل كل شهر",
@@ -3610,8 +3709,8 @@ const ar: Copy = {
       combosLabel: "مثلاً",
       combos: [
         { label: "صالون: ALYR Bookings", value: "من 449 ر.ق" },
-        { label: "مخبز: ALYR Chat وALYR Accounts", value: "من 599 ر.ق" },
-        { label: "خدمات منزلية: Bookings وChat وAccounts", value: "من 749 ر.ق" },
+        { label: "مخبز: ALYR Chat وALYR Accounts", value: "من 499 ر.ق" },
+        { label: "خدمات منزلية: Bookings وChat وAccounts", value: "من 549 ر.ق" },
         { label: "ALYR Agent وALYR Shelf", value: "مشمولان" },
       ],
       ledgerLabel: "الرسوم بوضوح",
@@ -3714,7 +3813,7 @@ const ar: Copy = {
           id: "more-products",
           offer: true,
           q: "وإن احتجت أكثر من منتج؟",
-          a: "الأول من 449 ر.ق شهرياً، ثم ALYR Chat وALYR Bookings وALYR Accounts بـ 150 ر.ق شهرياً لكل منها. ويأتي ALYR Agent وALYR Shelf معها كلها.",
+          a: "الأول من 449 ر.ق شهرياً، ثم ALYR Chat وALYR Bookings وALYR Accounts بـ 50 ر.ق شهرياً لكل منها. ويأتي ALYR Agent وALYR Shelf معها كلها.",
         },
         {
           id: "busy-night",
@@ -4242,7 +4341,7 @@ const ar: Copy = {
         lead:
           "تأتي الأوقات المتاحة من ساعات عملك، ويصل التأكيد فوراً. ويسجّل فريقك من حضر.",
         facts: ["الأوقات المتاحة من ساعات عملك", "تذكير قبل الموعد بساعتين", "حجز واحد في الوقت نفسه، لكرسي واحد أو غرفة واحدة"],
-        factsOffer: ["من 449 ر.ق شهرياً، أو 150 ر.ق مع ALYR Chat أو ALYR Accounts"],
+        factsOffer: ["من 449 ر.ق شهرياً، أو 50 ر.ق مع ALYR Chat أو ALYR Accounts"],
       },
       demo: {
         business: "صالون ضفيرة",
@@ -4743,7 +4842,7 @@ const ar: Copy = {
         lead:
           "سجّل البيع بالآجل بسطر واحد. وبضغطة واحدة تُرسل التذكيرات بنبرة تتدرّج مع تأخر السداد.",
         facts: ["يُسدَّد الأقدم أولاً", "لا تذكير مرتين خلال 3 أيام", "لا تذكير بعد طلب الإيقاف"],
-        factsOffer: ["من 449 ر.ق شهرياً، أو 150 ر.ق مع ALYR Chat أو ALYR Bookings"],
+        factsOffer: ["من 449 ر.ق شهرياً، أو 50 ر.ق مع ALYR Chat أو ALYR Bookings"],
       },
       demo: {
         business: "مخبز قرفة",

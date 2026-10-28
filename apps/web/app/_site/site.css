@@ -882,3 +882,29 @@ h4 { margin: 0; }
 :root[data-at-closing] .top[data-on-dark] .btn-volt::after { background: var(--band); }
 /* "+ Agent": it comes with every product, so its tag is lighter */
 .tag.tag-plus { background: transparent; box-shadow: inset 0 0 0 1px var(--line); color: var(--text-muted); }
+
+/* The company page: the registration details as one list of facts. */
+.co { padding-block: clamp(3rem, 7vw, 6rem); }
+.co-eyebrow { font-family: var(--mono); font-size: .75rem; letter-spacing: .08em; text-transform: uppercase; color: var(--text-muted); margin: 0 0 .75rem; }
+[lang="ar"] .co-eyebrow { font-family: var(--arabic); letter-spacing: 0; text-transform: none; font-size: .8125rem; }
+.co-title { font-size: clamp(2rem, 1.45rem + 2.3vw, 3rem); font-weight: 620; line-height: 1.05; letter-spacing: -.03em; text-wrap: balance; margin: 0 0 1rem; }
+[lang="ar"] .co-title { line-height: 1.3; letter-spacing: 0; font-weight: 600; }
+.co-lead { font-size: clamp(1.0625rem, 1rem + .35vw, 1.1875rem); line-height: 1.55; color: var(--text-muted); max-width: 40rem; margin: 0 0 2.5rem; text-wrap: pretty; }
+.co-rows { margin: 0; border-top: 1px solid var(--rule, currentColor); max-width: 52rem; }
+.co-row { display: grid; grid-template-columns: minmax(11rem, 16rem) 1fr; gap: .25rem 2rem; padding: 1rem 0; border-bottom: 1px solid var(--rule, color-mix(in srgb, currentColor 18%, transparent)); }
+.co-row dt { font-size: .875rem; color: var(--text-muted); }
+.co-row dd { margin: 0; display: grid; gap: .25rem; font-size: 1.0625rem; font-weight: 520; overflow-wrap: anywhere; }
+.co-row dd small { font-size: .875rem; font-weight: 400; color: var(--text-muted); }
+.co-source { font-size: .875rem; color: var(--text-muted); max-width: 40rem; margin: 1.25rem 0 0; }
+.co-contact { margin-top: 2.5rem; max-width: 40rem; }
+.co-h2 { font-size: 1.25rem; font-weight: 600; margin: 0 0 .5rem; }
+.co-contact p { margin: 0; color: var(--text-muted); }
+@media (max-width: 40rem) { .co-row { grid-template-columns: 1fr; } }
+
+/* The privacy policy: the company page's type, as readable sections. */
+.pv-updated { font-size: .875rem; color: var(--text-muted); margin: -.25rem 0 1.25rem; }
+.pv-section { max-width: 44rem; margin-top: 2.25rem; scroll-margin-top: 6rem; }
+.pv-section p, .pv-section li { line-height: 1.65; color: var(--text); }
+.pv-section p { margin: 0 0 .875rem; }
+.pv-section ul { margin: 0 0 .875rem; padding-inline-start: 1.25rem; display: grid; gap: .5rem; list-style: disc; }
+.pv-section li::marker { color: var(--text-muted); }

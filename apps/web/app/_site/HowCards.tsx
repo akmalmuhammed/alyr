@@ -4,6 +4,8 @@ import { AGENT_LABELS } from "../_agent/labels";
 import type { AgentView } from "../_agent/types";
 import { copy, type Locale } from "./copy";
 import { Phone, SampleMark, TickPath } from "./Frames";
+import { LoopToggle } from "./LoopToggle";
+import { words } from "./pace";
 import { SAMPLES } from "./samples";
 import { rich } from "./Text";
 import "./drawings.css";
@@ -16,12 +18,15 @@ import "./drawings.css";
 // to Check, "Then we check again."
 //
 // The HTML is every scene's finished state, and the return line is drawn. With motion
-// wanted (`.motion`), SiteMotion adds `is-in` to a card as it comes into view (staggered
-// across a row) and once more on hover, focus or a tap, and how.css plays its scene from
-// the start: every animation fills backwards, so its first frame is the earlier state, and
-// it ends on the finished one. When Improve first plays, `is-looped` on the row draws the
-// return line once, and Check's cut takes one Volt tick. Without scripts or with reduced
-// motion nothing moves and everything is finished.
+// wanted (`.motion`), loops.ts adds `is-in` to a card as it comes into view (staggered
+// across a row) and how.css plays its scene from the start: every animation fills
+// backwards, so its first frame is the earlier state, and it ends on the finished one. The
+// finished scene holds while its new words are read (`--words`), fades, and plays again
+// (founder, 26 Oct 2026: motion always on), each card on its own cycle; a hover, focus or
+// tap replays a card at once. Each time Improve plays, `is-looped` on the row draws the
+// return line, and Check's cut takes one Volt tick. One Pause control stops all four
+// (WCAG 2.2.2); they stop off screen and in a hidden tab too. Without scripts or with
+// reduced motion nothing moves and everything is finished.
 //
 // The numbers on See and Improve come from the engine's bakery sample (`SAMPLES`), in ALYR
 // Agent's own labels; the earlier values a scene starts from are derived from them, never
@@ -241,6 +246,20 @@ function Improve({ locale }: { locale: Locale }) {
 }
 
 const SCENE = { check: Check, setup: Setup, see: See, improve: Improve } as const;
+
+/** The words a scene adds as it plays, read while its finished state holds before it plays
+ * again (`--words`; loopStyle.ts sums the hold with `--read-word`, `--dwell-beat`, `--dwell-min`). */
+function sceneWords(key: keyof typeof SCENE, locale: Locale): number {
+  const s = copy[locale].home.how.scenes;
+  const plain = (parts: { b: string }[] | (string | { b: string })[]) => parts.map((p) => (typeof p === "string" ? p : p.b)).join(" ");
+  if (key === "check") return words(...s.check.rows.map((row) => row.found));
+  if (key === "setup") return words(s.setup.done, s.setup.sub, s.setup.order, s.setup.who, s.setup.tag, s.setup.what);
+  if (key === "see") return words(s.see.confirm.words, s.see.confirm.detail);
+  const view = SAMPLES[locale].bakery;
+  const sentence = view.header.summary.find((part) => part.muted);
+  const sales = view.kpis.find((kpi) => kpi.key === "sales");
+  return words(sentence ? plain(sentence.text) : "", sales?.change ? plain(sales.change.text) : "", s.improve.now);
+}
 const KEYS = ["check", "setup", "see", "improve"] as const;
 
 /** The four cards, the return line from Improve back to Check, and its words. */
@@ -248,7 +267,7 @@ export function HowCards({ locale }: { locale: Locale }) {
   const t = copy[locale];
   const w = t.home.how;
   return (
-    <div className="hw" data-hw>
+    <div className="hw" data-hw data-loop>
       {/* for screen readers and crawlers, before any number: the business is fictional */}
       <p className="sr-only">{t.agent.samples.bakery.fictional}</p>
       <ol className="hw-cards">
@@ -257,7 +276,8 @@ export function HowCards({ locale }: { locale: Locale }) {
           const step = w.steps[index];
           const scene = w.scenes[key];
           return (
-            <li key={key} className={`hw-card hw-${key}`} style={{ "--k": index } as CSSProperties} data-hw-card={key}>
+            <li key={key} className={`hw-card hw-${key}`} style={{ "--k": index, "--words": sceneWords(key, locale) } as CSSProperties}
+              data-hw-card={key} data-loop-play>
               {/* the title first for a screen reader; the canvas is drawn above it (how.css) */}
               <h3 className="hw-title">{rich(step.title)}</h3>
               <p className="hw-body">{rich(step.body)}</p>
@@ -279,6 +299,7 @@ export function HowCards({ locale }: { locale: Locale }) {
       <span className="hw-loop hw-loop-h" aria-hidden="true"><i className="hw-l1" /><i className="hw-c1" /><i className="hw-c2" /></span>
       <span className="hw-loop hw-loop-v" aria-hidden="true"><i className="hw-l3" /><i className="hw-c3" /></span>
       <p className="hw-again"><span>{rich(w.again)}</span></p>
+      <LoopToggle words={t.loop} name={t.loop.names.how} className="hw-toggle" />
     </div>
   );
 }
