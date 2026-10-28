@@ -18,6 +18,23 @@ export const WHATSAPP_NUMBER = (process.env.NEXT_PUBLIC_ALYR_WHATSAPP ?? "").rep
 export type ContactState = "whatsapp" | "email" | "pending";
 export const CONTACT_STATE: ContactState = WHATSAPP_NUMBER ? "whatsapp" : CONTACT_EMAIL ? "email" : "pending";
 
+/** ALYR's own public profiles (LinkedIn, Instagram, X, YouTube, Crunchbase and so on), as a
+ * comma-separated list of https addresses, for the structured data's `sameAs` (D-056). Empty
+ * until each account exists and carries the same name and description as the site: a link
+ * to a profile that does not exist, or says something else, tells search engines the wrong
+ * thing about who ALYR is. */
+export const SAME_AS: readonly string[] = (process.env.NEXT_PUBLIC_ALYR_SAME_AS ?? "")
+  .split(",")
+  .map((value) => value.trim())
+  .filter((value) => /^https:\/\/[^\s]+$/.test(value));
+
+/** Ownership checks for Google Search Console and Bing Webmaster Tools, for when they are
+ * done with an HTML tag rather than a DNS record (D-056). Empty: no tag. */
+export const SITE_VERIFICATION = {
+  google: process.env.NEXT_PUBLIC_GOOGLE_SITE_VERIFICATION ?? "",
+  bing: process.env.NEXT_PUBLIC_BING_SITE_VERIFICATION ?? "",
+} as const;
+
 /** Whether the page shows prices and the first-month offer: the price section, the price in
  * the hero facts, the money-back lines, the price question and the Price link. Off until
  * ALYR holds its commercial registration (ALY-59): research for the customer agreement
@@ -28,19 +45,6 @@ export const OFFER_LIVE = process.env.NEXT_PUBLIC_ALYR_OFFER === "on";
 /** Where staff sign in. Empty on the published site, which is the public pages only:
  * the workspace is not hosted there, so the footer shows no link to it. */
 export const WORKSPACE_URL = process.env.NEXT_PUBLIC_ALYR_WORKSPACE_URL ?? "";
-
-/** Facts that make ALYR checkable, shown in the trust section only once each is true.
- * Until then nothing is rendered: no empty slot, no "coming soon". The labels are in
- * `copy.ts` (`home.trust.records`). */
-export const TRUST_RECORDS = {
-  /** Commercial registration number, once the company is registered (ALY-59). */
-  cr: process.env.NEXT_PUBLIC_ALYR_CR ?? "",
-  /** The licensed payment provider's name, once one is signed and connected (ALY-17). */
-  provider: process.env.NEXT_PUBLIC_ALYR_PAYMENT_PROVIDER ?? "",
-  /** Meta's approval of ALYR as a Tech Provider, once granted (ALY-39). */
-  meta: process.env.NEXT_PUBLIC_ALYR_META_STATUS ?? "",
-} as const;
-export type TrustRecord = keyof typeof TRUST_RECORDS;
 
 /** Every public page, and its address in each language. The product pages are in the
  * suite's fixed order: Chat, Bookings, Agent, Accounts, Shelf, Docs. A product that is not
@@ -53,6 +57,10 @@ export const PATHS = {
   accounts: { en: "/accounts", ar: "/ar/accounts" },
   shelf: { en: "/shelf", ar: "/ar/shelf" },
   docs: { en: "/docs", ar: "/ar/docs" },
+  // Not a product: the company's registration details (the footer links to it).
+  company: { en: "/company", ar: "/ar/company" },
+  // Not a product: the privacy policy (ALY-72); Meta's app settings point here.
+  privacy: { en: "/privacy", ar: "/ar/privacy" },
 } as const;
 
 export type PageKey = keyof typeof PATHS;

@@ -12,6 +12,8 @@ GLOBAL_TABLES = {
     "tenants", "channel_numbers", "schema_migrations", "users", "login_codes", "sessions",
     # Counts of requests to open doors, keyed by a hash of the address (ALY-116).
     "rate_hits",
+    # The background worker's check-ins; ALYR's own, not a shop's (ALY-63).
+    "worker_heartbeats",
     # ALYR's own staff list; belongs to ALYR, not to a shop (D-027).
     "platform_admins",
     # A verified email before its business exists (D-031).

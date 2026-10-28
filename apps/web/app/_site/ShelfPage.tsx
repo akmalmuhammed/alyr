@@ -33,7 +33,7 @@ export function ShelfPage({ locale }: { locale: Locale }) {
       >
         <CatalogScreen sheet={sheet} shop={bakery.shop} monogram={bakery.monogram} label={p.screen.label} sample={t.fig.sample} />
       </ScreenBlock>
-      <InsideBlock inside={p.inside} locale={locale} />
+      <InsideBlock inside={p.inside} />
       <WhoBlock who={p.who} />
       <WorksBlock locale={locale} works={p.works} self="shelf" />
       <QuestionsBlock faq={p.faq} />

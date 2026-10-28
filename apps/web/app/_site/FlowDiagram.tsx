@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { Icon, Symbol } from "./brand";
 import type { FlowSet, PanelRow } from "./copy";
 import { SampleMark } from "./Frames";
+import { words } from "./pace";
 
 type Props = {
   flow: FlowSet;
@@ -28,6 +29,11 @@ const two = (value: number) => String(value).padStart(2, "0");
  * Picking a story keeps it playing but stays on that story; picking a step pauses. With
  * reduced motion nothing plays and nothing travels: it stays on the finished frame, a story
  * picked opens finished too, and the steps are read one tap at a time.
+ *
+ * Each step dwells as long as it takes to read what it adds to the drawing: its title and
+ * the work lines it ticks, at `--read-word` a word, plus `--dwell-beat`, never under
+ * `--dwell-min` (site.css, `.fx-progress`; all of it follows `--pace`). The paragraph under
+ * the title is for a visitor who pauses or picks a step.
  */
 export function FlowDiagram({ flow, sample, note }: Props) {
   const stories = flow.stories;
@@ -46,6 +52,8 @@ export function FlowDiagram({ flow, sample, note }: Props) {
   const [pinned, setPinned] = useState(false);
   const [onScreen, setOnScreen] = useState(false);
   const [still, setStill] = useState(false);
+  // A hidden tab stops it too, as it stops off screen (nothing plays that nobody sees).
+  const [shown, setShown] = useState(true);
   const root = useRef<HTMLDivElement>(null);
   const tabs = useRef<(HTMLButtonElement | null)[]>([]);
 
@@ -54,6 +62,8 @@ export function FlowDiagram({ flow, sample, note }: Props) {
     const sync = () => setStill(media.matches);
     const first = setTimeout(sync, 0);
     media.addEventListener("change", sync);
+    const seen = () => setShown(document.visibilityState === "visible");
+    document.addEventListener("visibilitychange", seen);
     const node = root.current;
     const watch = new IntersectionObserver(
       ([entry]) => {
@@ -73,6 +83,7 @@ export function FlowDiagram({ flow, sample, note }: Props) {
     return () => {
       clearTimeout(first);
       media.removeEventListener("change", sync);
+      document.removeEventListener("visibilitychange", seen);
       watch.disconnect();
     };
   }, []);
@@ -80,7 +91,7 @@ export function FlowDiagram({ flow, sample, note }: Props) {
   const story = stories[at.story];
   const steps = story.steps;
   const now = steps[at.step];
-  const playing = auto && onScreen && !still && started;
+  const playing = auto && onScreen && shown && !still && started;
 
   // Everything that has happened so far in this story.
   const past = steps.slice(0, at.step + 1);
@@ -283,7 +294,12 @@ export function FlowDiagram({ flow, sample, note }: Props) {
               <span className="fx-step-n" aria-hidden="true">{two(index + 1)}</span>
               <span className="fx-step-t">{step.title}</span>
               {index === at.step && playing && (
-                <span className="fx-progress" aria-hidden="true" onAnimationEnd={next} />
+                <span
+                  className="fx-progress"
+                  aria-hidden="true"
+                  style={{ "--words": words(step.title, ...(step.work ?? [])) } as React.CSSProperties}
+                  onAnimationEnd={next}
+                />
               )}
             </button>
           </li>
