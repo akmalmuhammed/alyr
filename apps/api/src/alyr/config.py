@@ -36,6 +36,15 @@ class Settings(BaseSettings):
     # Self-serve sign-up at /start (D-031). Unset: open on a local machine, closed
     # everywhere else until the founder decides to open it.
     signup_open: bool | None = None
+
+    # Where the visitor's address is read from, for the rate limits (ALY-116). Empty: the address
+    # the connection came from. Behind Cloudflare set "cf-connecting-ip"; behind the web app's
+    # proxy set "x-forwarded-for". A header the visitor can write must never be trusted by
+    # accident, so nothing is read from one until this names it.
+    client_ip_header: str = ""
+    # How many proxies of ours add to a list header such as x-forwarded-for: the address is read
+    # that many places from the right, where a visitor cannot have written it.
+    client_ip_proxies: int = 1
     # Prices and the promise are set in the back office, not here (D-032).
 
     # Local only: read the ALYR Agent as if it were this moment (ISO 8601, with an offset),

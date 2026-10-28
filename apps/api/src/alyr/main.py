@@ -1,3 +1,4 @@
+import logging
 from contextlib import asynccontextmanager
 
 from fastapi import Depends, FastAPI
@@ -6,7 +7,7 @@ from fastapi.responses import JSONResponse
 from alyr.channels.meta import MetaChannel
 from alyr.channels.simulator import SimulatorChannel
 from alyr.config import get_settings
-from alyr.core import origin
+from alyr.core import origin, ratelimit
 from alyr.core.images import PhotoRefused
 from alyr.core.inbound import INBOUND, InboundHandler
 from alyr.core.jobs import JobRunner
@@ -67,6 +68,8 @@ from alyr.routes import track as track_routes
 from alyr.routes import workspace as workspace_routes
 from alyr.routes.deps import require_any_module, require_module, require_module_for_slug
 
+log = logging.getLogger("alyr.main")
+
 
 def create_app() -> FastAPI:
     settings = get_settings()
@@ -89,6 +92,11 @@ def create_app() -> FastAPI:
         docs_url="/docs" if local else None, redoc_url=None,
         openapi_url="/openapi.json" if local else None,
     )
+    if not ratelimit.address_limits_on(settings):
+        log.warning(
+            "per-address rate limits are off: set ALYR_CLIENT_IP_HEADER to say where the "
+            "visitor's address is read from (ALY-116)"
+        )
     app.add_middleware(origin.OwnPagesOnly, settings=settings)
     app.state.db = Database(settings.database_url)
     app.state.outbound = Outbound(
