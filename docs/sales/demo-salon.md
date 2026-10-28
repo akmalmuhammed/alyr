@@ -97,9 +97,13 @@ The same as the bakery demo:
 - a QR code to a test line;
 - "Book your check-up".
 
-## Open question for the founder
+## Decided (29 Oct): build several chairs and deposits first
 
-Several chairs at once (ALY-27) and deposits decide how strong this demo is for real salons. The options:
-1. **Build ALY-27 and deposits first,** then run this demo for every salon.
-2. **Run it now for single-chair and solo businesses** (barbers, nail and lash artists, home salons, massage, technicians), and build ALY-27 next.
-3. **Show several chairs labelled "Coming"** and sell to salons now.
+The founder chose to build ALY-27 before this demo runs:
+- several staff or chairs booked at the same time;
+- walk-ins and moving bookings from the screen;
+- deposits on booking.
+
+The demo is built once that and the bakery demo's engine are merged. Then:
+- the **[needs ALY-27]** beats become real, with each chair's or stylist's column filling in scene 3;
+- scene 4 gains the deposit beat: a deposit link at booking and a deposit receipt (Docs), and a no-show keeps the deposit by the shop's own rule.
