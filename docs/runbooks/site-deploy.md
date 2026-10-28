@@ -133,7 +133,7 @@ Cloudflare Access.** Add the founder's email.
    deploy**.
 4. The job fails if `https://alyr.qa/version.txt` does not name the commit within a minute.
 5. Write the commit and Cloudflare version ID in `docs/status.md`. The job's log prints the
-   version ID; `pnpm exec wrangler deployments status` shows it too.
+   version ID; `pnpm exec wrangler deployments status --config wrangler.jsonc` shows it too.
 
 **Manual fallback, on the laptop:**
 
@@ -143,7 +143,7 @@ pnpm exec wrangler login        # once; opens Cloudflare in the browser
 pnpm site:deploy                # refuses unpushed or uncommitted work, builds, checks, asks "yes"
 ```
 
-`pnpm exec wrangler deploy` on its own still works exactly as before. It does not check the
+`pnpm exec wrangler deploy --config wrangler.jsonc` on its own still works. **Always name the config:** `apps/web` also holds `open-next.config.ts` for the portal (ALY-224), and without `--config wrangler.jsonc` wrangler treats the folder as an OpenNext app and fails ("Could not find compiled Open Next config"). It does not check the
 commit, so prefer `site:deploy`.
 
 ## What is live?
@@ -151,8 +151,8 @@ commit, so prefer `site:deploy`.
 ```bash
 curl -s https://alyr.qa/version.txt          # commit, branch, built, offer
 cd apps/web
-pnpm exec wrangler deployments status        # the version serving alyr.qa now
-pnpm exec wrangler deployments list          # every production deployment
+pnpm exec wrangler deployments status --config wrangler.jsonc        # the version serving alyr.qa now
+pnpm exec wrangler deployments list --config wrangler.jsonc          # every production deployment
 pnpm exec wrangler versions list             # every version, previews included
 ```
 
@@ -164,7 +164,7 @@ pull request's preview.
 alyr.qa is wrong after a publish:
 
 1. **Find the last good production version:**
-   - run `pnpm exec wrangler deployments list` from `apps/web`;
+   - run `pnpm exec wrangler deployments list --config wrangler.jsonc` from `apps/web`;
    - use the deployment before the bad one;
    - its message reads "Production from <branch>, commit <sha>" or "Manual deploy from …";
    - take the **version ID** shown for it.

@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import type { DemoSet, Locale } from "./copy";
 import { SampleMark, WaDoc } from "./Frames";
 import { BookingPhone, DocLinkPhone } from "./PageDrawings";
+import { words } from "./pace";
 
 type Props = {
   product: DemoSet;
@@ -36,6 +37,10 @@ function clock(locale: Locale, minutes: number): string {
  * (`start`), so the times on the messages agree with the panel beside them. A tab with no
  * conversation shows the team's screen alone; a panel with a `page` shows the page the
  * customer opened (the booking page) instead of the team's rows.
+ *
+ * A tab dwells until its last message or row has arrived and its caption can be read (the
+ * caption's words at `--read-word` a word), plus `--dwell-beat`, never under `--dwell-min`
+ * (site.css, `.demo-tab-bar`; all of it follows `--pace`).
  */
 export function ProductDemo({ product, locale, sample, note }: Props) {
   const demos = product.demos;
@@ -46,6 +51,8 @@ export function ProductDemo({ product, locale, sample, note }: Props) {
   const [auto, setAuto] = useState(true);
   const [onScreen, setOnScreen] = useState(false);
   const [still, setStill] = useState(false);
+  // A hidden tab stops it too, as it stops off screen (nothing plays that nobody sees).
+  const [shown, setShown] = useState(true);
   const root = useRef<HTMLDivElement>(null);
   const tabs = useRef<(HTMLButtonElement | null)[]>([]);
 
@@ -54,6 +61,8 @@ export function ProductDemo({ product, locale, sample, note }: Props) {
     const sync = () => setStill(media.matches);
     const first = setTimeout(sync, 0);
     media.addEventListener("change", sync);
+    const seen = () => setShown(document.visibilityState === "visible");
+    document.addEventListener("visibilitychange", seen);
     const node = root.current;
     const watch = new IntersectionObserver(
       ([entry]) => setOnScreen(entry.isIntersecting),
@@ -63,6 +72,7 @@ export function ProductDemo({ product, locale, sample, note }: Props) {
     return () => {
       clearTimeout(first);
       media.removeEventListener("change", sync);
+      document.removeEventListener("visibilitychange", seen);
       watch.disconnect();
     };
   }, []);
@@ -76,8 +86,14 @@ export function ProductDemo({ product, locale, sample, note }: Props) {
     row.scrollTo({ left: tab.offsetLeft - row.offsetLeft - 8, behavior: "smooth" });
   }, [active]);
 
-  const playing = auto && onScreen && !still;
+  const playing = auto && onScreen && shown && !still;
   const demo = demos[active];
+  // The `--i` of the last thing to arrive (messages count 1 each, rows 0.35, then the total).
+  const last = demo.panel.total
+    ? demo.chat.length + demo.panel.rows.length * 0.35
+    : demo.panel.rows.length > 0
+      ? demo.chat.length + (demo.panel.rows.length - 1) * 0.35
+      : Math.max(0, demo.chat.length - 1);
 
   function choose(index: number, focus = false) {
     setAuto(false);
@@ -121,6 +137,7 @@ export function ProductDemo({ product, locale, sample, note }: Props) {
                 <span
                   className="demo-tab-bar"
                   aria-hidden="true"
+                  style={{ "--words": words(demo.caption), "--last": moved ? last : 0 } as React.CSSProperties}
                   onAnimationEnd={() => {
                     setMoved(true);
                     setActive((active + 1) % demos.length);

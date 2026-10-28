@@ -87,12 +87,11 @@ CHECKS: tuple[Check, ...] = (
     ),
     Check(
         "paid",
-        Text("Your products are paid for", "منتجاتك مدفوعة"),
+        Text("You paid to go live", "دفعت لتبدأ العمل"),
         Text(
-            "Pay the setup fee and your first month. ALYR opens your products the same working "
-            "day it sees the payment.",
-            "ادفع رسوم الإعداد وشهرك الأول. تفتح ALYR منتجاتك في يوم العمل نفسه "
-            "الذي يصلها فيه الدفع.",
+            "Pay the setup fee and your first month to go live. ALYR sees the payment the same "
+            "working day.",
+            "ادفع رسوم الإعداد وشهرك الأول لتبدأ العمل. تصل الدفعة إلى ALYR في يوم العمل نفسه.",
         ),
     ),
     Check(
@@ -173,7 +172,7 @@ _PASSES: dict[str, Evaluate] = {
     "hours": lambda conn, modules: _exists(conn, "select 1 from business_hours"),
     "test": _test,
     "price": _price,
-    "paid": lambda conn, modules: access.is_open(conn),
+    "paid": lambda conn, modules: access.settled(conn),
 }
 
 

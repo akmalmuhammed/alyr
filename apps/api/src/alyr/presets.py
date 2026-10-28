@@ -172,11 +172,11 @@ PRESETS: tuple[Preset, ...] = (
 
 PRESET_BY_KEY = {p.key: p for p in PRESETS}
 
-# The onboarding steps after the business exists, per way of working. The price comes
-# first: the products open once the client has paid (ALY-212, D-051), and services, hours
-# and the test line are the products.
+# The onboarding steps after the business exists, per way of working. Nothing is paid
+# first (ALY-242, D-053): the owner sets up and tries their business, then sees the plan,
+# and pays when going live.
 STEPS = {
-    "appointments": ("plan", "services", "hours", "try", "golive"),
+    "appointments": ("services", "hours", "try", "plan", "golive"),
     "assisted": ("assisted", "plan", "golive"),
 }
 

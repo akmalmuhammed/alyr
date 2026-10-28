@@ -767,18 +767,18 @@ async def detach_number(
         return await readiness.run(conn, _by(staff), by_alyr=True)
 
 
-# ── pay before access (ALY-212, D-051) ────────────────────
+# ── what a client pays ALYR (ALY-212, D-051; payment at go-live: ALY-242, D-053) ──
 
 
 @router.post("/clients/{client_id}/payments")
 async def record_payment(
     client_id: UUID, body: Payment, request: Request, staff: Staff = Depends(platform_admin)
 ) -> dict:
-    """Record a payment the client made to ALYR. Once what is due is covered, the client's
-    products open."""
+    """Record a payment the client made to ALYR. Once what is due is covered, the client can
+    go live."""
     try:
         async with _back_office(request) as conn:
-            opened = await access.record(
+            covered = await access.record(
                 conn, client_id, amount=body.amount, method=body.method,
                 reference=body.reference, received_on=body.received_on, note=body.note,
                 by=_by(staff),
@@ -786,7 +786,7 @@ async def record_payment(
             await backoffice.audit(
                 conn, staff, "client.payment", "client", client_id, client_id=client_id,
                 detail={"amount": body.amount, "method": body.method,
-                        "received_on": body.received_on.isoformat(), "opened": opened},
+                        "received_on": body.received_on.isoformat(), "covered": covered},
             )
             return await access.summary(conn, client_id)
     except LookupError as error:
@@ -795,16 +795,16 @@ async def record_payment(
         raise HTTPException(status_code=422, detail=str(error)) from error
 
 
-@router.post("/clients/{client_id}/open")
-async def open_without_payment(
+@router.post("/clients/{client_id}/waive")
+async def waive_payment(
     client_id: UUID, body: OpenWithout, request: Request, staff: Staff = Depends(platform_admin)
 ) -> dict:
-    """Open a client's products without a payment (a pilot, a demo), saying why."""
+    """Waive a client's payment (a pilot, a demo), saying why."""
     try:
         async with _back_office(request) as conn:
-            if await access.open_without_payment(conn, client_id, body.reason):
+            if await access.waive(conn, client_id, body.reason):
                 await backoffice.audit(
-                    conn, staff, "client.opened", "client", client_id, client_id=client_id,
+                    conn, staff, "client.payment_waived", "client", client_id, client_id=client_id,
                     detail={"reason": body.reason.strip()},
                 )
             return await access.summary(conn, client_id)
