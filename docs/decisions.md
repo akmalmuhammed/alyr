@@ -34,17 +34,25 @@ Status: **Accepted** (in force), **Proposed** (waiting for the founder), **Super
 | D-026 | The homepage is about ALYR the company; ALYR Chat has its own page | Accepted |
 | D-027 | One workspace for every product, driven by a catalogue; ALYR has a back office | Accepted |
 | D-028 | Every item has one person responsible, and the team's work is on the record | Accepted |
-| D-029 | Email at @alyr.qa: Cloudflare Email Routing in, Resend out | Accepted |
+| D-029 | Email at @alyr.qa: Cloudflare Email Routing in, Resend out | Mail in replaced by D-061 (28 Oct 2026); Resend out stands |
 | D-030 | A weekly result report to the owner, one section per product | Accepted |
 | D-031 | Self-serve onboarding: sign up, create the business, start from a preset, try it on a private test line | Accepted |
 | D-032 | Prices are set per client from the back office: a price list, a quote per client, published live to the owner | Accepted |
 | D-033 | The internal tool: one console for every client, built in three levels; staff never see customer conversations | Accepted |
 | D-034 | Product first and paid from the first customer; the homepage leads with what ALYR sells today | Accepted |
 | D-035 | ALYR is a suite of products led by ALYR Agent: Chat, Bookings, Agent, Accounts, Payroll coming; the workspace home becomes the Agent dashboard | Accepted |
+| D-036 | ALYR runs on Azure Qatar Central; backups and the emergency host are on Google Cloud in Doha | Accepted in direction |
 | D-037 | The public site presents the suite: the homepage leads with ALYR Agent at work, and every live product has its own page | Accepted |
 | D-038 | The Sunday report is a report card: a branded image from ALYR Agent's engine with about eight lines under it | Accepted |
 | D-039 | The Catalog (items, stock, photos) is built complete before go-live; photos on Cloudflare R2; free now, charged by usage later | Accepted |
 | D-042 | Documents (receipts, invoices and the rest) are one engine: gapless numbers, issued paper nobody can change, Arabic first, a PDF drawn by fpdf2 and kept in the database; free now, metered later | Accepted |
+| D-045 | When two records turn out to be one customer, a withdrawal of consent always wins, append-only records are copied forward and nothing is deleted that cannot be found again | Accepted |
+| D-046 | The public site adds ALYR Shelf (the Catalog) and ALYR Docs (Documents), each with its own page; Payroll leaves the site until it is built; every product's state is "Set up for you" | Accepted |
+| D-056 | Search and AI visibility: be found, described correctly and contacted in Qatar, in search and AI assistants; profiles and verification switch on from settings | Accepted |
+| D-058 | The homepage hero's ALYR Agent figure (and /agent's) moves continuously, the one exception to "plays once", with a pause button and calm pacing | Accepted |
+| D-059 | Motion is always on: the site's figures (How we work, the products frame, the signature figures, with the flows, demos and the live Agent) keep playing, each with a Pause control; text arrives once | Accepted |
+| D-060 | ALYR runs on Google Cloud in Doha (Cloud Run, Cloud SQL, Secret Manager); replaces Azure (D-036) and the interim Cloudflare and Neon host (D-052); backups stay in Doha | Accepted |
+| D-061 | Company mail moves to Zoho Mail (free plan): hello@ with akmal@ and security@ as aliases, and a mailbox for Beevi Jinan, the registered owner; Resend still sends the product's email | Accepted |
 
 ---
 
@@ -653,6 +661,42 @@ There is no separate Pay product: payment links stay a module of Chat and Bookin
 
 **Not built yet.** The suggestions beyond the 20 rules (for example answered after hours), tapping a number to open its week on a phone, the product pages `/bookings`, `/agent` and `/accounts`, and the homepage figure itself (the site builder takes the component in showcase mode and the samples).
 
+## D-036 · ALYR runs on Azure Qatar Central; backups and the emergency host are on Google Cloud in Doha
+**Date** 17 Oct 2026 · **Status** Accepted in direction (founder, 17 Oct: skip Oracle and focus on Azure, with backups on other clouds; "start building phase 1"). Still the founder's to answer: when to open the Azure account, the Google Cloud account, the encrypted copy in Cloudflare R2, and the move of the product to alyr.qa addresses · Linear ALY-63, ALY-10 · Updates D-013 and D-019
+
+**Why now.** Everything ran on the founder's laptop. A real booking reminder was missed on 13 Oct because the laptop was asleep, and demos stop when it does.
+
+**The decision.**
+
+| Role | Where | Why |
+|---|---|---|
+| Main home | Azure Qatar Central: Container Apps (web, API, worker, each always on, each able to add copies), PostgreSQL Flexible Server 16, Key Vault, Container Registry | In Qatar (hard rule 2). About USD 62 a month at Qatar list prices: Container Apps about 36, the database 21.31, the registry 5.07. Own domain and HTTPS included. Startup credits do not need venture funding |
+| Database protection | Azure's own backups (7 to 35 days, point-in-time, across the region's three zones), plus a nightly encrypted dump to Google Cloud Storage in Doha and a second copy in Cloudflare R2 | Qatar Central has no paired region, so Azure offers no copy elsewhere. Doha keeps a copy in Qatar with a second company; R2 survives a Qatar-wide event. Under USD 1 a month |
+| Emergency host | Google Cloud Run and Cloud SQL in Doha, started from the latest backup | USD 0 while unused; about 110 to 150 a month if ever run. Restore and switch in about one to two hours |
+| Web app standby | Vercel Pro, only if needed | It has no Gulf region and cannot run the worker, so it can hold the web app only |
+
+**Considered and rejected.**
+- **Oracle's free server:** the founder chose to skip it.
+- **Neon's free database:** an always-on worker uses about 182 compute-hours a month against 100 free, so it would stop mid-month.
+- **Cloudflare alone:** cannot run the Python API (D-019); Containers would still need an always-awake database.
+- **Vercel for the API or worker:** no long-running worker, no Gulf region, data processed anywhere.
+- **Google Cloud as the main home:** about USD 85 to 107 a month; its Doha region needs an extra USD 18 load balancer for a custom domain, and that terminates outside Qatar.
+- **AWS:** its Bahrain and UAE regions are reported damaged since March 2026; Frankfurt is a last resort only.
+- **Alibaba Cloud:** no managed containers in Dubai.
+- **Qatar's local providers (Meeza, Ooredoo, Vodafone):** sales-led only; revisit for government-linked customers.
+
+**How it stays movable (D-011).** Three images (API and worker, web, backup) and standard PostgreSQL. `docker-compose.prod.yml` runs the same images on any single server and is the rehearsal on the laptop. Moving clouds is a restore and a DNS change. Details and commands are in `docs/hosting.md`.
+
+**Rules that come with it.**
+- Production images start in production mode: no simulator, no open demo, jobs only in the worker.
+- Migrations take a lock, so two deploys cannot apply the same file twice.
+- The backup role is the only role that reads past row-level security; it is read-only and used only by the backup job. The application role still cannot bypass it (hard rule 1).
+- Dumps are encrypted to a key only the founder holds.
+- The worker checks in every 30 seconds, and `/health/worker` turns red after two minutes of silence. Uptime monitoring watches it.
+- The backup tools match the database's major version (the rehearsal found why).
+
+**Before the commercial registration.** Opening the Azure account (Microsoft for Startups, about USD 200 of credit) is the founder's personal account and card, not ALYR trading; he decides when. The USD 5,000 tier needs the company. Do not open a plain Azure free account first: Microsoft for Startups requires an account with no prior Azure use.
+
 ## D-037 · The public site presents the suite: the homepage leads with ALYR Agent at work, and every live product has its own page
 **Date** 17 Oct 2026 · **Status** Accepted (founder, 17 Oct, in conversation; recorded in `docs/agent-dashboard/07-site-brief.md` §1) · Linear ALY-99 · Updates D-026 and D-034. Numbered D-037 because the open PRs #51 and #52 both take D-036; renumber at merge if needed.
 
@@ -964,6 +1008,304 @@ There is no separate Pay product: payment links stay a module of Chat and Bookin
 - **A copy of an issued document on another paper** is drawn from the stored content (the seller copy in the row, the lines) and never stored; the issued PDF, number and hash do not change. A logo that is not the one the paper was issued with is left off a copy.
 - **The address carries the screen** (`?d=`, `?edit=`, `?view=settings`, `?show=`), so Back works and a refusal can send the person to the registration field.
 - **Left open:** matching credit-account payments to invoices; a screen for a booking's deposit; the Arabic by a native reader (ALY-66); a real phone, printer and roll; the product lead switching the module on.
+
+**As built (ALY-142, 20 Oct 2026; package 5: connected mode; `specs/016-documents-connected/spec.md`, `docs/connect-api.md`).** Where the code settled what the issue left open. None of it changes the decision.
+- **Who owns the numbers is a per-shop, per-kind setting, and ALYR never numbers what the other system owns.** `document_authority` (`alyr` by default, `external`). For `external`, a document carries the other system's number (series `EXT`, no counter, not gap-checked) and its PDF says it was issued by the seller's own system and delivered by ALYR; ALYR's own hooks for that kind **skip and say so** on the activity record (`external_authority`) instead of issuing a non-fiscal "order confirmation" (the simplest correct behaviour: nothing is on paper twice, and the other system issues the receipt when it rings the sale up). The rule is kept in the service, in the numbering path and **in the database** (`documents_guard` refuses an ALYR number for a kind the shop gave away, and an outside number for a kind that is ALYR's), so the engine's guarantees for ALYR-numbered paper (gapless, immutable, hashed) are as they were; the hash of an outside document commits to who numbered it and no earlier hash changes. *Chosen over* a second table of outside documents (it would have duplicated lists, hash, PDF, delivery and the hosted page) and over letting the other system's number live in `source_ref` with an ALYR number beside it (two numbers on one sale is the double paper this exists to prevent).
+- **A sale from another system is one door, `ingest.accept`, used by the API and the CSV import.** Idempotent by key and by (kind, external sale ID); the paper's total is the total the till printed (a difference of up to a minor unit a line is shown as the document's Rounding line, more is refused with both numbers). The customer is found or made by phone; the Catalog link is recorded and no stock moves.
+- **Consent for a customer who never wrote to the shop is the shop's assertion, recorded.** The owner confirms four sentences once (versioned); a sale that asks for delivery records, on a customer whose consent is unknown, a `service` consent with source `connected_sale`, the assertion, the terms' version and the key's public prefix. Marketing is never granted this way, and a customer who said stop is never messaged whatever the shop asserts. *Open for the lawyer (ALY-51):* whether a settings-screen confirmation is enough as the opt-in. *Chosen over* asking each customer by a first message (WhatsApp forbids starting the conversation without the opt-in, so that is circular) and over treating the sale as consent (it is not).
+- **The three document templates are not approved by Meta, so outside the 24-hour window delivery says so at once.** `ALYR_DOCUMENT_TEMPLATES_APPROVED` (default off) makes the job record `blocked: template_not_approved`, tell the shop's webhooks (with the hosted link) and fall back to email. Nothing is submitted to Meta by this package; the founder switches the setting on after approval. The ALY-139 tests assume the approved world (conftest sets it).
+- **API keys authenticate a machine and nothing else.** Hash of a 256-bit secret, constant-time compare, prefix to find the row (a policy on `api_keys` lets one row be read by its prefix before the shop is known, as `memberships` does for sign-in), scopes, revoke, a per-key rate limit in the key's own row (one atomic update, fixed one-minute window, 429 and `Retry-After`; no Redis), every management action audited. *Not chosen:* a Redis limiter (a new moving part for a till's traffic) or a per-IP limit (a POS shares one address).
+- **Webhooks are written in the transaction of the event, signed, retried through the job queue, logged and guarded against SSRF.** HMAC-SHA256 over `<timestamp>.<body>`, eight attempts over about ten hours, a switch-off after ten failures and a day without success with an email to the owners, no customer data in the payload, and a guard that refuses anything but a public https name, re-resolves at send time, connects to the IP it checked, follows no redirect and reads 2 KB. *Rejected:* delivering webhooks synchronously inside the request (a slow receiver would hold a sale open).
+- **Undoing a CSV import withdraws; it never deletes.** Issued paper is never deleted (D-042). A document another system numbered, never sent, with no credit note against it, can be marked withdrawn (the one change the immutability guard allows besides voiding): it stays on record with its number and PDF, leaves the lists and the hosted page, and gives its number and sale back so a corrected file can be imported. A document ALYR numbered is never taken back (a gapless counter), and an import that sent anything or voided something cannot be undone.
+- **Left open:** the templates are to be submitted by the founder; a real WhatsApp send, a real email and a real POS have not been tried; the lawyer's answers (opt-in by settings screen; an invoice rendered for a shop with no CR number from another system's data); the Arabic is a draft (ALY-66); the hosted page does not yet say a document is the other system's.
+
+---
+
+## D-045 · Merging two records of one customer never loses a consent, and leaves a trail
+**Date** 20 Oct 2026 · **Status** Accepted (the audit's ALY-115, built on the founder's instruction of 20 Oct) · Linear ALY-115 · Tests `apps/api/tests/test_contact_merge.py`
+
+**Where we were.** A customer can exist twice: once by the phone number a shop imported, once by the WhatsApp user ID that arrives when they write. When a message carries both, `core/identity.py` folded one record into the other. It moved messages, ledger entries, payment requests and orders, then deleted the duplicate, and the database deleted everything else that hung on it. That included the consent history, so **a customer's STOP could vanish and the shop could message someone who had asked it to stop** (a breach of WhatsApp's policy and of the customer's rights). A booking on the duplicate made the delete fail, so the customer's message failed and was retried. The activity record, notes, sold-out asks and waiting lists were lost the same way. Moving them was not even possible: the app role may only add to the activity record, consents, notes and sold-out asks (that is what makes them records).
+
+**The decision.**
+- **A withdrawal always wins.** Per purpose (service, marketing, back in stock): revoked on either record means revoked; otherwise a grant on either record counts; otherwise unknown. If that differs from where the survivor stood, it is written as a new, visible consent record (source `merge`), so the history ends where the state is. A customer who stopped can start again by saying so; a customer who was silenced by mistake cannot be.
+- **Append-only records are copied forward, column for column**, with their original times, read from the table's own columns so a column added later comes too. Moving is not allowed, and the duplicate's own rows go when it is deleted.
+- **Everything the app may change is moved**: messages, ledger entries, payment requests, orders, bookings, staff changes. Chasing records are combined (later promise, reminders added up). A waiting list entry that repeats one the survivor has is closed, not deleted.
+- **Locked records are not touched.** An issued document and a recorded payment cannot be rewritten (that is the point of them), and they keep the contact ID they were made with. A new append-only table, `contact_merges`, says where that ID went (counts of what moved, no names or text), and the same fact is one line on the customer's activity record.
+- **Two messages at once are safe.** Both rows are locked in a fixed order; if the other message already merged them, the second does nothing.
+- **A new table cannot be forgotten.** A test reads the database's own foreign keys to `contacts`, and every column named `contact_id` without one, and fails until `core/identity.py` says what a merge does with it.
+
+**Rejected.**
+- *Keep the stricter state by newest event.* A STOP on one record and a START on another in the order the founder cannot see would let the later one win; for a legal consent the safe error is to ask again.
+- *Move the append-only tables by loosening their grants.* They are records because the app cannot edit them.
+- *Rewrite issued documents to the surviving contact.* An invoice is never rewritten.
+
+**Revisit when.** A screen lists a customer's documents or payments by contact (it must follow `contact_merges`), or the shop's staff can merge two customers by hand (then they choose which survives and the trail names the person).
+
+---
+
+## D-046 · The public site adds ALYR Shelf and ALYR Docs; Payroll leaves it; "Set up for you"
+**Date** 21 Oct 2026 · **Status** Accepted (founder, 20 Oct, in chat; recorded in `docs/site-products-2/00-founder-decisions.md`) · Linear ALY-205 · Updates D-037. Numbered D-046 because open pull requests take D-043, D-044 and D-045 (and D-041 is left for a renumber).
+
+**The decision.**
+- **Two new product pages, in both languages:** `/shelf` for the Catalog under its public name **ALYR Shelf** ("Everything you sell, on one shelf."), and `/docs` for Documents under its public name **ALYR Docs** (receipts, invoices, credit notes and the rest). Code, decisions and the workspace keep "Catalog" (Menu, Products, Price list) and "Documents" / «المستندات».
+- **Both go live together, once approved,** although the Documents module is still off for every shop. So the Docs page never says or implies it is available: no "today", "now", "live", "turn it on", and never "coming". It is set up with the shop, like every ALYR product.
+- **The suite's order is Chat, Bookings, Agent, Accounts, Shelf, Docs** (the fixed order, then `catalog.py`'s module order), in the Products menu, the footer, the suite section and every "works with" row.
+- **Payroll leaves the site** (menu, footer, suite, works-with rows) until it is built (D-039).
+- **States:** "Early access" becomes **"Set up for you" / «نجهّزه لك»** on every product; ALYR Agent and ALYR Shelf say **"With every product" / «مع كل منتج»**. ALYR Shelf is included with ALYR, not priced on its own (D-039); with the offer switch on, the "QAR 150 for each product you add" lines name ALYR Chat, ALYR Bookings and ALYR Accounts only.
+- **The "agentic" feel comes from what the products do on their own:** stock counted on every sale, the last item sold once, a sold-out item leaving the order page, a receipt issued when a payment is recorded, gapless numbers, paper that cannot change. No AI words.
+
+**Why.** Shelf and Docs are built (D-039, D-042) and are what an owner asks about at the visit: what I sell and what I hand over. A product that is not built is not shown at all (D-039), so Payroll goes rather than staying as "coming".
+
+**Open for the founder.** Publishing (the go-ahead each time), the Arabic review (ALY-66), the manual name check of Qirfa Bakery, and the [F] lines in `docs/site-products-2/02-messaging.md` (routes, the Docs "Not yet" line on tax and e-invoicing, whether ALYR Docs can be a shop's first product when prices are on).
+
+## D-047 · The homepage leads with the owner's problem, and shows the agent honestly
+**Date** 22 Oct 2026 · **Status** Accepted (founder, 22 Oct, in chat: "Agentic, shown honestly", then "implement this") · Linear ALY-154 · Updates D-037 and D-046. Source: the homepage improvement table (Claude Doc, 22 Oct).
+
+**The decision.**
+- **The homepage opens on the problem, not on ALYR.** H1 "Stop losing orders in the chat." / «لا تدع الطلبات تضيع في المحادثة.», with one plain line under it: "ALYR works as your agent in WhatsApp, by rules you can check. You run the business." The real ALYR Agent dashboard and the feed of what ALYR did stay beside it.
+- **The order of the page:** hero (with a row of business chips) · everyday problems, each with its fix and its product · your business, as tabs (your day today, the same day with ALYR, what you would use, a contact button with a message for that business) · one order start to finish (the `/chat` flow figure, told for Sara at Qirfa Bakery, and who did what: 5 messages by ALYR, 3 presses by Yusuf, 0 orders copied by hand) · ALYR Agent explained · how we set it up and stay (what we need from you, when you start, every month) · the products · price (offer on) · trust · questions (six shown, the rest under "More questions").
+- **"Agent" is shown, never claimed.** The word appears only beside its rules ("by rules you can check", a rule line, a count). No AI words on the page, no «وكيل» in Arabic (the Arabic says ALYR «تتولى عنك العمل المعتاد»), no "agentic", and no "Is it AI?" question. The flow shows only steps that are built, so it needs no "next" markers.
+- **What the table proposed and the page leaves out, because it is not true yet:** a reply-time promise, a named person, "hosted in Qatar", the commercial registration, card payments as live, the Sunday report as running, a founding offer or a 14-day refund, a "Coming next" row. The existing honest notes (one booking at a time, no table bookings) stay.
+- **Trust:** "Consent, on record." (ALYR checks consent before any message it starts) and "Built never to hold your money" replace "Stop means stop" and the languages fact; the platform line says "is built on" WhatsApp's official Business Platform.
+
+**Why.** An owner recognises their own problem faster than a product name, and the founder's brief was that every business should find its problem and see its day with ALYR. Showing the agent through what it does, with its rules and counts beside it, is the only version that stays true (D-039, the honesty rules in `.claude/skills/alyr-design/honesty.md`).
+
+**Open for the founder.** Publishing (the go-ahead each time), the Arabic review (ALY-66, the new sections roughly double the homepage's Arabic), and the table's open questions (the WhatsApp number and reply promise, a named person, the setup fee). The product-page template from the table is ALY-208.
+
+## D-048 · ALYR is the small business's tech team; the homepage says so
+**Date** 23 Oct 2026 · **Status** Accepted (founder, 23 Oct, in chat: ALYR "is not just WhatsApp" but "a company that helps small businesses in their 0 to 100 about tech", "like a complete business suite, with continuous audit and insights and optimization suggestions and products"; then, on the reimagined homepage and its audit, "implement it") · Linear ALY-210 · Updates D-047 (the hero and the order of the page). Source: the reimagined homepage and its word-by-word and visual audit (Claude Doc, 23 Oct).
+
+**The decision.**
+- **Positioning.** ALYR is the technology team an owner-run business never had: what consultants and an IT team do for a big company, done for a small one. WhatsApp is one product and the way in, not the whole company. The homepage's H1 is "The tech team your business never had." / «فريق التقنية الذي لم يكن لدى مشروعك.», and its one action is "Book a check-up" / «احجز فحصاً لمشروعك» (the header says "Check-up" / «احجز فحصاً» below a laptop's width).
+- **The work is a loop:** check, set up, see, improve, then check again. The check-up is the visit we already make; nothing new is promised beyond it. "Every month we go over your numbers with you" is promised; it is easy to drop if the founder does not want it.
+- **The order of the page:** hero · Why ALYR (a big company, you today, with ALYR, four rows) · how we work (the loop) · what a check-up finds (six shown, the rest folded) · your business · one order, as proof · insights (ALYR Agent) · the products · price (offer on) · trust · questions.
+- **Plain words.** "Rule" becomes "reason" or "why" on the homepage: the feed's "Flagged by rule" is "Needs a look", and its rule line starts "Why ·". The product itself keeps its own words. No AI words, as in D-047.
+- **Not stated:** the check-up's price (the setup fee is quoted at the visit, as before).
+- **Visual audit applied:** the pinned panels on desktop go from seven to two (the products' room only); the agent's whole screen on phones stops after its five numbered parts; links to a section land under the header.
+
+**Why.** The founder's brief: small businesses need what big ones buy from consultants and IT teams, and ALYR is that, with products to back it. Leading with WhatsApp made ALYR look like one tool. The loop is how the work already runs (set up for you, changes whenever asked, the weekly view), so it can be said without a new promise.
+
+**Open for the founder.** Publishing (the founder's go-ahead each time); the headline pick; whether the check-up is free; whether to keep the monthly look at the numbers; the Arabic review (ALY-66).
+
+**Update, 24 Oct 2026 (founder, in chat, on the site audit; `docs/site-audit/00-decisions.md`, ALY-223).** The homepage is folded, against the order above:
+- **What a check-up finds** leaves as a section: its six problems become each business tab's "Today" list in By business (each tab's list in the problems' own words, row for row with its "With ALYR" list), so the visitor meets the problems in their own trade.
+- **Why ALYR** leaves as a table: its strongest line goes into the hero lead, "Big businesses have consultants and an IT team for this. You have us: we check how your business runs, set up what it needs, and keep improving it with you." / «للشركات الكبيرة مستشارون وفريق تقنية لهذا العمل، ولمشروعك ALYR: نفحص كيف يسير عملك، ونجهّز ما يحتاجه، ونواصل تحسينه معك.»
+- **The products** are six plain rows, no longer pinned (the audit's L1), so the homepage has no pinned panel on desktop.
+- **"Book a check-up"** is the one action name on every page, product pages included.
+- The new order: hero · how we work · your business · one order, as proof · ALYR Agent · the products · price (offer on) · trust · questions.
+
+## D-049 · Onboarding is one engine with three doors; a readiness check decides ready and live
+**Date** 23 Oct 2026 · **Status** Accepted (the founder, 23 Oct: "start building this", on the client onboarding plan) · Linear ALY-165, ALY-163 · Spec `specs/018-onboarding-engine/spec.md`
+
+**The decision.** Every client goes through one onboarding flow. A client can come in on their own from the site, with ALYR setting them up, or from a link the founder sends after a visit; the steps are the same, and what differs is who owns each step (the client or ALYR). One readiness check, worked out from the business's own data, says what is left and is the same in `/start`, the workspace and the back office. A business is *ready* when everything but its WhatsApp number is done, and *live* when the number is connected too. Live is recorded once and kept.
+
+**Why.**
+- Two separate flows for self-serve and assisted clients would drift. One flow with owners per step lets the founder hand-hold the first clients and learn exactly which steps to automate.
+- Meta's approval is the slowest dependency. "Ready, waiting for WhatsApp" lets a client finish everything else and lets ALYR see who is waiting, instead of a client stuck at an unexplained last step.
+- The money-back promise (D-034) and the first month need a start date nobody can argue with. Live is that date.
+
+**How.**
+- Done is never stored by hand: each check reads the data (`core/readiness.py`). What data cannot say is stored: the step's owner, a blocker ALYR writes, the owner's choice of WhatsApp way and payment way.
+- Every change goes into an append-only record for the funnel, with whether ALYR made it. No customer data.
+- The four WhatsApp ways are recorded now (ALYR's number, a new number, moving the shop's number with Meta's coexistence so the WhatsApp Business app keeps working, the shop's own account). Owners are offered the last three; ALYR's shared number needs routing that does not exist and the founder's decision (ALY-217).
+
+**Chosen over** a status field staff set by hand (it lies as soon as someone deletes a service), and over working out the board from every business on every page load (it would not scale; the board reads the last state the check saw).
+
+**Revisit when** terms acceptance (ALY-167) and per-shop templates (ALY-172) exist: they become checks. When billing starts at Live (ALY-218).
+
+
+## D-050 · Each WhatsApp way has its own list of what to have ready, and its state is honest about Meta
+**Date** 23 Oct 2026 · **Status** Accepted (the founder, 23 Oct: "think every onboarding, whatsapp integration, our whatsapp, clients own whatsapp options") · Linear ALY-217 · Spec `specs/019-whatsapp-setup/spec.md`
+
+**The decision.** A business chooses how its customers reach it on WhatsApp: a new number, moving the number it already uses in the WhatsApp Business app (Meta's coexistence), or a WhatsApp Business Platform account it already has with another provider. Each way lists what the owner must have ready, in plain words in English and Arabic; the owner gives the number and ticks the rest. The step waits only once everything is ready, and then says on whom: Meta (while ALYR cannot connect that way yet) or ALYR. ALYR marks it connecting, or failed with a reason the owner reads. Connected is never typed in: it is the business's Meta number row.
+
+**Why.**
+- The slow part of connecting a number is the business not having what Meta asks for on the day (a number already on WhatsApp, no business portfolio, no card in Meta, an app too old to move). Asking for it up front turns a failed call into a checklist.
+- Each business pays Meta for its own messages: a Tech Provider has no credit line. The card in Meta is a step, said plainly before the owner meets it.
+- Moving a number changes the owner's app (groups stay in the app, broadcast lists become read-only, disappearing and view once messages switch off, linked computers are signed out, the phone must open the app every 14 days). The owner accepts that before ALYR moves it, not after.
+- Until Meta approves ALYR, "waiting for Meta" is the true state. A setting (`ALYR_WHATSAPP_WAYS_OPEN`) opens each way the day it can be connected, with no code change.
+
+**Checked against Meta's own pages on 23 Oct 2026.** Coexistence: app 2.24.17 or newer, six months of one-to-one chats sync within 24 hours, 20 messages a second, the limits above. An account with another provider is shared with ALYR in Meta Business Suite: Meta's new account model does not move numbers between accounts.
+
+**Not offered: ALYR's own shared number.** Customers of many businesses writing to one number needs a step that asks which business they mean, and every message on it is charged to ALYR. It stays in the list of ways, hidden from owners, until the founder decides.
+
+**Chosen over** one generic "connect WhatsApp" button with a call booked by hand (it hides the four very different paths and what each needs), and over storing a "connected" flag (it lies when a number is detached).
+
+**Revisit when** ALYR is a Tech Provider (ALY-52) and Embedded Signup (ALY-39) exists: Embedded Signup will fill in the number and the state itself, and the attach action (ALY-166) writes the Meta number row.
+
+
+## D-051 · A client pays before their products open
+**Date** 23 Oct 2026 · **Status** Superseded by D-053 on 25 Oct 2026 (the founder dropped pay-first) · was Accepted (the founder, 23 Oct, answering the onboarding plan's third question: "dashboard will unlock after payment, that means they browse, get to the portal, pay and get access to products") · Linear ALY-212 · Spec `specs/020-pay-before-access/spec.md` · Updates D-049 (the onboarding engine)
+
+**The decision.** The account is still made before any payment (the founder's first answer). The owner signs in, sees the price for their business first, accepts it and pays the setup fee and the first period of that price. Until ALYR has that payment, every product screen and its API answer "your workspace opens once ALYR has your payment" (`402`); the guided setup, the price, the payment page and the go-live list stay open. Recording enough to cover what is due opens every business of that client, once. ALYR's staff can also open it without a payment, saying why (a pilot, a demo); both are on the audit log.
+
+**How a client pays today.** There is no online payment for clients yet (ALY-5, ALY-188). The owner sees what is due, the bank details (the setting `ALYR_BANK_TRANSFER_DETAILS`) and a reference to write on the transfer (`ALYR-` and the first eight characters of the client's ID). ALYR's staff record what arrived in the back office: the amount, how (bank transfer, cash, cheque, a payment link), what the statement shows, and the day. The owner is told it opens the same working day (the founder's fourth answer).
+
+**What stays as it was.**
+- The money-back result (D-034) is still counted over the first 30 days after going live, from `tenants.live_at`. Paying first does not start that clock: an owner who takes two weeks to set up loses none of their 30 days. This is how ALYR read the founder's answer; he can say otherwise.
+- The refund is still the first month's subscription, never the setup fee (D-034).
+- ALYR never holds a shop's money (hard rule 3). This is the client paying ALYR for ALYR's own service, and only references are kept: never a card number.
+- Clients that existed before this decision, and the demo shops, stay open (`access_note` says why).
+
+**What it changes.** The appointments setup now starts with the price (`plan` first), and the test line moves after payment: the owner tries their own chat once it is theirs. "Try before you pay" was never a free trial (D-034 has none), so nothing promised is lost.
+
+**Chosen over** unlocking at go-live and billing then (the founder said no: the products open after payment), and over a soft lock that only hides the menu (a locked workspace must be locked in the API too, or it is not locked).
+
+**Revisit when** online payment for clients exists (ALY-5, ALY-188): the payment page pays and opens in one step, and staff stop recording transfers. When the subscription's later periods are billed (ALY-85, ALY-218), which also decides whether the paid period counts from the day products open or from go-live.
+
+
+## D-052 · Until Azure, the portal and API run on Cloudflare and the database on Neon
+**Date** 24 Oct 2026 · **Status** Accepted for the fictional demo shop (the founder, 24 Oct: "use neon and cloudflare", then "if not [Fly or Railway] let's go with that"). **Real clients' data on it: proposed, waiting for the founder's answer** · Linear ALY-224, ALY-10 · Spec `specs/021-cloudflare-neon-hosting/spec.md` · Builds on D-013
+
+**The decision.** The client portal runs as a Cloudflare Worker (OpenNext), the API and the job runner as one container behind a Worker, and PostgreSQL on Neon. No Fly.io, Railway or Vercel. Azure Qatar Central (ALY-63) is still where production ends up; nothing built here is Cloudflare-only except the two small Worker files, so moving is a change of host, not of code.
+
+**Why.**
+- The founder already has Cloudflare (DNS, the site, R2, email) and an account is the only thing missing; one fewer vendor to hold.
+- Vercel's free plan forbids commercial use; Fly and Railway add a vendor and a bill for what Cloudflare Containers now do.
+- The API keeps a plain Dockerfile, so the same image runs on Azure Container Apps later.
+
+**Costs and risks, said plainly.**
+- Cloudflare Containers need the Workers Paid plan (USD 5 a month) and are billed by use; our estimate for one always-on small instance is about USD 12 a month in all. Nothing is paid until the founder agrees.
+- Neon has no Middle East region (Frankfurt is nearest); Cloudflare places containers where it chooses. This conflicts with hard rule 2 for real merchant and customer data. D-013 already allows Neon in Frankfurt only for the demo shop and consenting alpha merchants, leaving at the first paying customer. The founder is asked whether the first clients may be on it with written consent; **until he answers, only the fictional demo shop is hosted there**, and the register says so.
+- Five things are untested until the first deploy (spec 021, "Not proven"), including outbound access from the container to Neon.
+
+**Chosen over** Fly or Railway for the API (another vendor, no gain), the laptop and tunnel (down when the laptop is off), and waiting for Azure credits (no portal for the first clients).
+
+**Revisit when** Azure credits arrive (ALY-55, ALY-63), or the first paying client who has not agreed to data outside Qatar.
+
+## D-055 · Until a shop has an online account, the order page does not ask for money
+**Date** 25 Oct 2026 · **Status** Accepted (the founder, 25 Oct: "analyze what we can build now and do it accordingly"; D-044 already says the payment step never blocks go-live) · Linear ALY-170 · Spec `specs/024-pay-on-collection/spec.md`
+
+**The decision.** A shop chooses whether its order page offers a payment link. With the link off, an order is placed unpaid, keeps its stock, tells the customer how the shop takes payment (cash, bank transfer, card machine), and staff mark it paid by writing down the payment, which reuses the Documents payment code. The default is the link on, so nothing changes until a shop or its go-live choice turns it off.
+
+**Why.**
+- A link that cannot be paid for real, and a hold that gives the stock back after 30 minutes, make the order page useless for a shop that takes cash on pickup.
+- The payment is the shop's record of money it took (hard rule 3): ALYR never holds it.
+- One code path for a hand-written payment keeps receipts, numbers and the audit trail the same with or without Documents.
+
+**Chosen over** a third button next to "Pay" and "Put it on my account" (the shop would show a pay button that leads to a stand-in page), and over a separate "mark paid" table for shops without Documents (two records of one payment).
+
+**Revisit when** a shop has its own online account and wants both; that needs both buttons.
+
+## D-054 · Staff attach a business's Meta number from the back office, after asking Meta
+**Date** 25 Oct 2026 · **Status** Accepted (the founder, 25 Oct: "analyze what we can build now and do it accordingly") · Linear ALY-166 · Spec `specs/023-attach-whatsapp-number/spec.md`
+
+**The decision.** The Meta row in `channel_numbers` is written by a back-office function for platform staff, after ALYR has asked Meta about the phone number ID and Meta shows it connected. Detaching removes the Meta row only. Who attached what, and when, is the append-only audit log, not a new table.
+
+**Why.**
+- The inbound path, the outbound layer and the go-live check already read that row; attaching it is the only thing missing for a first business to go live on a new number.
+- Asking Meta first turns a typo or a half-registered number into a refusal on the staff screen instead of a business that is "connected" and silent.
+- The app role keeps its rule (hard rule: it cannot write `channel_numbers`); the function checks the caller is staff.
+
+**Chosen over** a token per business now (no business has its own account yet; Embedded Signup, ALY-39, brings that and a place to keep it), and over a history table (the audit log already is one).
+
+**Revisit when** a business has its own WhatsApp account and token (Embedded Signup), or a business needs more than one Meta number.
+
+## D-053 · Nothing is paid first: the workspace opens at sign-up, the price depends on the products, payment is asked at go-live
+**Date** 25 Oct 2026 · **Status** Accepted (the founder, 25 Oct, in conversation: "payment depends on the product they choose, audit is free, … no first pay, that's the rule now"; "anyone can auto start using ALYR without any support") · Linear ALY-242 · Spec `specs/022-no-payment-first/spec.md` · Supersedes D-051 · Changes the added-product price of D-035
+
+**The decision.**
+- A client's workspace opens the moment they sign up. The guided setup, the test chat and every product they chose work with nothing paid. The `402` gate of D-051 is gone.
+- The price depends on the products the client chooses. ALYR Agent (the check-up, the home dashboard and the Sunday report) is free for every business. The first product is QAR 449 a month (D-032); **each product added is QAR 50 a month** (D-035 had 150). Chat and Bookings are QAR 499, with Accounts QAR 549.
+- The plan screen shows what combining saves, as a real price: three products are QAR 549 against QAR 1,347 bought one by one, 59% off. The figure is always the products' own list prices against what is charged, never an invented "was" price, and nothing is shown when nothing is discounted.
+- Payment is asked at go-live: the owner sets up, tries it as a customer, sees the plan and then pays the setup fee and the first period to go live. The readiness check `paid` is now "you paid to go live" and is part of "ready". Staff record payments, or waive one with a reason (a pilot, a demo).
+- Every client who was waiting on a payment under D-051 is opened by the migration.
+
+**Why.** The founder wants any owner to start alone and see ALYR work before being asked for money. It also matches the Figma onboarding plan of 16 Oct, which puts the plan after "it works".
+
+**Kept.** The money-back promise is counted over the first 30 days after going live (D-034). ALYR never holds a shop's money (hard rule 3): this is the client paying ALYR. Only references are stored.
+
+**Not decided yet** (asked of the founder): the setup fee for a self-serve client with no support visit; whether the first charge is taken the day the owner goes live or when WhatsApp is connected; the public site's "from QAR 449" text, changed in the repository but not published.
+
+**Chosen over** unlocking only the guided setup before payment (a half-open product tells an owner nothing), and a free trial (D-034 has none; the money-back promise covers the risk).
+
+**Revisit when** online payment for clients exists (ALY-5, ALY-188), and when the subscription is billed (ALY-85, ALY-218).
+
+## D-056 · Search and AI visibility
+**Date** 25 Oct 2026 · **Status** Accepted (founder: "improve and implement", 25 Oct) · Linear ALY-227 · Plan and audit: `docs/growth/visibility.md`
+
+**Decision.**
+- The goal is to be found, described correctly and contacted when an owner in Qatar, or someone asking for them, searches or asks an AI assistant, in Arabic and English.
+- Global keywords are not a target; Qatar comes first, then the GCC.
+- Authority (other people mentioning ALYR) is the biggest gap, so most of the work is off the site: profiles, Google Business Profile, forums, partners, press and original data, in that order.
+
+**What changed in code.**
+- The Organization's structured data gains a contact point: the email, and WhatsApp once its number is set.
+- It also gains `sameAs` links to ALYR's profiles, listed in `NEXT_PUBLIC_ALYR_SAME_AS` and added only once each profile exists.
+- Google Search Console and Bing verification tags can be set from `NEXT_PUBLIC_GOOGLE_SITE_VERIFICATION` and `NEXT_PUBLIC_BING_SITE_VERIFICATION`.
+
+Nothing claims more than the page, as before.
+
+**Kept.**
+- `llms.txt` and the markdown copies stay, although Google ignores `llms.txt`: they cost nothing and agents read them.
+- No fake reviews, no undisclosed posts, no AI claims about the product, no prices before the CR.
+
+## D-058 · The live Agent figure moves continuously
+**Date** 25 Oct 2026 · **Status** Accepted (the founder, 25 Oct 2026, relayed in the work's brief) · Branch `aly-hero-live-motion` · Rules: `.claude/skills/alyr-design/motion.md`, "The one exception" · Log: `docs/framer-review/06-live-motion-log.md`
+
+**Decision.**
+- The ALYR Agent dashboard with the "ALYR · Running" feed beside it (the homepage hero, Qirfa Bakery, and `/agent`'s opening with its three samples) keeps moving, the way the workspace does, instead of playing once and stopping. It is the one named exception to "plays once" (alyr-design principle 10).
+- Each sample plays a script of events the product really performs (order page, order received, order confirmation, ready message, welcome menu, booking page, booking confirmation and details, booking reminder, "Needs a look"), and the dashboard's numbers move with them and stay true to each other. Payment reminders are not automatic, so none is shown being sent.
+
+**Conditions.**
+- A pause button with its name in English and Arabic (WCAG 2.2.2).
+- It stops off screen, in a hidden tab and with reduced motion; reduced motion and no scripts show the settled picture, and the first paint is that picture.
+- About one event every 3 to 5 s; Volt only on what just became true, fading back; no flashing; transforms and opacity only; CLS stays 0.
+
+**Revisit when** a visitor or the founder finds it distracting, or another figure asks to keep moving (that needs his word, not this decision).
+
+---
+## D-059 · Motion is always on: the site's figures keep playing
+**Date** 26 Oct 2026 · **Status** Accepted (the founder, 26 Oct 2026, in his words, relayed in the work's brief: "animation is super fast now make it a bit slower, always it should be always on animations and motions") · Branch `aly-always-on`, stacked on `aly-pace-slower` (PR #142) · Rules: `.claude/skills/alyr-design/motion.md` rule 1 and "Figures that keep playing" · Log: `docs/framer-review/08-always-on-log.md`
+
+**Decision.**
+- "A bit slower" is the pace at 1.3 (PR #142); the live Agent figure's beat now follows it too (`--live-beat`: 5.2 s, 6.5 s on a phone).
+- "Always on": the figures that show the product at work keep playing while they are on screen, instead of playing once and resting: the homepage's How we work cards (the return line drawn again with Improve), the products frame's six tiles, and the signature figures on `/shelf` and `/docs`. The flows, the demos and the live Agent figure already did. This replaces "plays once" (alyr-design principle 10) for figures, and widens D-058 beyond its one figure.
+- Text and sections still arrive once, and the visitor's own controls (the business day's fold, `/chat`'s X-ray, tabs, hovers, presses) are unchanged: looping text would make the page unreadable, and a timer must not move a control under the visitor's hand.
+
+**Conditions** (D-058's, for every looping figure).
+- A Pause control per figure or section, its words in English and Arabic (WCAG 2.2.2), absent without scripts and with reduced motion.
+- It stops off screen and in a hidden tab; reduced motion and no scripts show the finished picture.
+- Its timing comes from the pace tokens, and each finished state holds while its words are read (at least `--dwell-min`).
+- The numbers in a scene stay true to each other on every cycle; no layout shift; the homepage's Lighthouse no worse than before.
+
+**Revisit when** a visitor or the founder finds it distracting, or a figure's cycle reads as too busy (its hold is one token away).
+
+## D-060 · ALYR runs on Google Cloud in Doha; backups stay in Doha
+**Date** 28 Oct 2026 · **Status** Accepted (the founder, 28 Oct: "instead of azure lets use google cloud as our hosting and cloud provider for alyr"; on the plan and its cost, "yeah go ahead"; on a backup copy outside Qatar, "ok keep in doha") · Linear ALY-10 · Replaces D-036 · Supersedes D-052 for real clients · Builds on D-013
+
+**The decision.** Production runs in Google Cloud's Doha region (`me-central1`), project `alyr-prod`: the API, the web app and the worker on Cloud Run (two services and a worker pool), PostgreSQL 16 on Cloud SQL with a private address only, secrets in Secret Manager kept in Doha, images in Artifact Registry in Doha. Backups are Cloud SQL's own (14 nightly, 7 days of point-in-time recovery) and a nightly export to a bucket in Doha kept 35 days. No copy leaves Qatar. Steps in `infra/gcp/README.md`; what runs where in `docs/hosting.md`.
+
+**Why.**
+- Microsoft refused startup credits on the founder's identity on 26 Oct (LinkedIn check and then "not eligible for an Azure free account"); Azure would have been paid in full from day one.
+- Google gives USD 300 of trial credit now, and USD 2,000 for a year under the Start tier, applied for on 28 Oct with the alyr.qa address. That covers the first year of hosting.
+- Doha has everything ALYR needs, checked against Google Cloud itself on 28 Oct: Cloud Run services, jobs and worker pools, Cloud SQL for PostgreSQL 16, Artifact Registry, Cloud Scheduler.
+- It keeps hard rule 2 for real clients' data, which the interim Cloudflare and Neon host (D-052) could not.
+
+**Costs, said plainly.** About USD 100 to 105 a month at Doha list prices (database about 34, API about 14, web app about 14, worker about 37 because an always-on worker needs 1 vCPU, the rest a few dollars), against about USD 62 for the Azure plan. Doha's prices are higher than Google's US regions. A budget alerts at 50% and 90% of USD 150 and at a forecast of 100%.
+
+**What stays the same.** The images, the worker heartbeat and the health checks from ALY-63 run unchanged; the API image now takes `api` or `worker` as its first argument, and with none runs both (the Cloudflare layout of D-052). Product photos stay on Cloudflare R2 (D-039).
+
+**First deploy, 28 Oct.** Healthy from outside. Migrations run as Cloud SQL's `postgres`, which is not a superuser, so the owner now gives itself BYPASSRLS (the owner-run sign-up and back-office functions needed it; the application role never has it). An export restored into a fresh database matched all 20 tables of the demo shop row for row. Details in `infra/gcp/README.md`.
+
+**Chosen over** Azure on full price (no credits; D-036), the interim Cloudflare and Neon host (outside Qatar; D-052), and a copy of backups on Cloudflare R2 in the EU (the founder chose Doha only).
+
+**Revisit when** the startup credits are refused or run out, a paying client needs Cloud SQL's high availability (a standby in a second zone, about double the database's cost), or the database's CPU stays above 60%.
+
+## D-061 · Company mail moves to Zoho Mail
+**Date** 28 Oct 2026 (the move was made on 25 Oct 2026) · **Status** Accepted (the founder, 25 Oct 2026: "i want zoho email", then "i want akmal@alyr.qa running and working receiving and sending") · Replaces the mail-in half of D-029
+
+**Decision.**
+- alyr.qa's mail goes to **Zoho Mail** (free plan, 5 licences, Zoho's `.com` data centre). MX `mx.zoho.com` (10), `mx2` (20), `mx3` (50); SPF `include:zohomail.com` added beside Cloudflare's; DKIM selector `zmail` (2048-bit), verified in Zoho on 26 Oct.
+- One mailbox, `hello@alyr.qa` (the Zoho super administrator), with **akmal@** and **security@** as aliases that receive and send. A second mailbox, **beevi.jinan@alyr.qa**, for the company's registered owner, who holds the Meta business portfolio's admin role and receives Meta's business notices.
+- **Resend still sends the product's email** (sign-in codes, reports, documents) from `send.alyr.qa`, as D-029 says. Its records are untouched.
+- Cloudflare Email Routing is no longer used. Its rules still exist and do nothing (Cloudflare marks it "misconfigured" because the MX records are Zoho's).
+
+**Why.** Forwarding to a personal Gmail could not send as @alyr.qa, and Meta's business verification needed company addresses that work both ways.
+
+**Data.** Zoho is outside Qatar and may hold a customer's or a merchant's message when they write to us: a row in `docs/data-residency.md`. No merchant data is routed through it.
+
+**Revisit when** ALYR needs shared inboxes or more than five mailboxes (Zoho's paid plan, or the startup programme's mail, ALY-55), or a lawyer says company mail must stay in Qatar (ALY-51).
 
 ---
 

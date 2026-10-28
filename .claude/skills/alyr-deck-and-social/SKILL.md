@@ -34,7 +34,7 @@ founder approves and publishes (`docs/lanes/growth.md`).
 - **Paper or Carbon** grounds, never cobalt, sand or a gradient. Light first; Carbon for the
   one command slide (the product, the call to action).
 - **The 12-column grid** scaled to the canvas, hairline rules, the section rule with its
-  cross, FIG captions on every product image.
+  cross, a "Sample" mark on every product image (`alyr-design` §1.5).
 - **Type:** Instrument Sans for headlines and figures (tabular), Plex Mono for labels, Plex
   Sans Arabic for Arabic, set about 10% larger than the Latin beside it. On a 1080 canvas
   shown at phone size, nothing under 32 px; headlines 72 to 120 px.
@@ -44,7 +44,8 @@ founder approves and publishes (`docs/lanes/growth.md`).
   fold's planes on the cover and the closing slide. The logo from the master files, never
   retyped, at least 140 px wide (the symbol below that).
 - **The product is the picture:** real screens from the product or the site's drawings, at a
-  readable scale, captioned "FIG · … · Fictional bakery". No icons as illustration, no stock
+  readable scale, each marked "Sample" once in its own chrome (or one caption line, "… ·
+  Sample", where the image has no chrome). No icons as illustration, no stock
   photos, no skylines, dhows, coffee pots or arabesque, no 3D phones, no AI imagery, no emoji.
 - **Motion** in reels: the brand's one gesture (arrive along 45°, settle, one Volt tick),
   plays once; captions burnt in for sound-off viewing, in the video's language.
@@ -77,7 +78,7 @@ Everything in `alyr-design/honesty.md`, plus:
 - Deck slides from the playbook that are retired: "Set up in 48 hours", three plans, "local
   team", "licensed payment partner", "your data stays in Qatar", a pilot merchant's
   before/after table, founder photo. Replace with what is true: set up by ALYR in your shop,
-  the product on the owner's own phone, early access, the go-live date agreed at the visit.
+  the product on the owner's own phone, "Set up for you", the go-live date agreed at the visit.
 - Never imply WhatsApp or Meta affiliation; no WhatsApp logo as ALYR's; a deck that shows
   WhatsApp screens draws them as the site does.
 
@@ -91,7 +92,7 @@ Everything in `alyr-design/honesty.md`, plus:
 6. Live demo: switch to the owner's own phone.
 7. How we set it up: the visit, the setup, the training, go-live agreed together.
 8. Price (only once the CR is issued and the founder agrees).
-9. What is true today: early access, built on WhatsApp's official Business Platform,
+9. What is true today: set up for you, built on WhatsApp's official Business Platform,
    records kept apart, non-custodial.
 10. Next step: one action.
 

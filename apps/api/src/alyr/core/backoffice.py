@@ -164,6 +164,23 @@ async def today(conn: asyncpg.Connection) -> dict:
                 f"“{b['onboarding_step'] or 'the start'}”.",
                 b["created_at"], client_id=b["client_id"], business_id=b["id"],
             ))
+    # Steps ALYR took on for a client (assisted onboarding, ALY-165) and has not finished,
+    # as the readiness check last saw them.
+    for o in await conn.fetch(
+        "select id, name, client_id, live_at, steps from admin_onboarding() "
+        "where live_at is null"
+    ):
+        for step in o["steps"] or []:
+            if step["owner"] != "alyr" or step["done_at"]:
+                continue
+            since = datetime.fromisoformat(step["updated_at"])
+            items.append(_item(
+                "owe", f"{o['id']}:{step['key']}", f"Do “{step['key']}” for {o['name']}",
+                "ALYR took this step on for the client"
+                + (f". Held up: {step['blocker']}" if step["blocker"] else "."),
+                since, client_id=o["client_id"], business_id=o["id"],
+                urgent=_days(since, now) >= 2,
+            ))
     for d in await conn.fetch(
         "select * from admin_delivery_problems() where failed_messages + failed_jobs > 0"
     ):

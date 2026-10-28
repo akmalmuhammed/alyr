@@ -34,11 +34,11 @@ Plan and tasks live in Linear, team `Alyrtech`, project `Alyr Launch`. Work one 
 These are not style preferences. Do not write code that breaks them, and stop and say so if a task seems to require it.
 
 1. **Tenant isolation.** Every tenant-owned table has a `tenant_id` column and a PostgreSQL Row-Level Security policy. The application database role cannot bypass RLS. No query relies on application code alone to separate tenants.
-2. **Data stays in Qatar.** Production runs in Azure Qatar Central. No service outside Qatar receives merchant or end-customer personal data unless it is listed in `docs/data-residency.md` with its legal basis. This includes error trackers, analytics, OCR and LLM APIs. When in doubt, strip the data or do not send it.
+2. **Data stays in Qatar.** Production runs in Google Cloud's Doha region (`me-central1`, D-060). No service outside Qatar receives merchant or end-customer personal data unless it is listed in `docs/data-residency.md` with its legal basis. This includes error trackers, analytics, OCR and LLM APIs. When in doubt, strip the data or do not send it.
 3. **Non-custodial payments.** Alyr never holds, pools or moves merchant funds. Each merchant uses their own gateway account, in their own name: opened through ALYR at the partner provider (model B), or one they already have, such as SADAD, SkipCash or Dibsy (model A; D-044). Store payment references and statuses only; never card numbers.
 4. **Official WhatsApp only.** All WhatsApp traffic goes through Meta's Cloud API. No WhatsApp Web automation, no unofficial libraries.
 5. **Consent before sending.** Any message Alyr starts (a template) goes through the outbound layer, which checks consent, the 24-hour window and the tenant's messaging limit. Modules never call a channel directly.
-6. **Secrets.** Never commit tokens or keys. Local values go in `.env` (ignored); production values in Azure Key Vault.
+6. **Secrets.** Never commit tokens or keys. Local values go in `.env` (ignored); production values in Google Secret Manager, kept in Doha.
 
 ## Layout
 
@@ -80,6 +80,9 @@ apps/api/                     FastAPI service (Python 3.13, managed with uv)
                               WhatsApp, email and a hosted link (specs/013, ALY-139);
                               listing.py, lookup.py and refs.py are what the workspace's Documents
                               screens read (specs/014, ALY-146)
+                              connect/ is connected mode: another system sends its sales (open API
+                              with API keys, CSV import), authority says who numbers each kind of
+                              document, webhooks send events out (specs/016, ALY-142, docs/connect-api.md)
                               items/codes.py reads a customer's message for item codes, links and
                               SKUs and items/wa_order.py orders by them in the chat (specs/010)
   src/alyr/routes/            HTTP routes. deps.py: who is calling, which shop, which modules are on
@@ -107,11 +110,14 @@ scripts/                      check.sh (everything CI runs), demo.sh (start and 
                               (the customer's order page, same way), booking-page-browser-check.mjs (the booking page and its links),
                               document-page-browser-check.mjs (the hosted document page and its links),
                               documents-screens-browser-check.mjs (the workspace's Documents screens),
+                              connect-browser-check.mjs (the connection screen, phone width, both languages),
                               golive-truth-check.mjs (every onboarding sentence of every business type proved on the
                               finished order page and workspace, English and Arabic),
                               hooks/pre-commit
 specs/                        One folder per spec; write or update the spec before building
-infra/                        Cloud infrastructure as code (proposed in PR #52, not merged)
+infra/gcp/                    Production on Google Cloud in Doha (D-060): setup.sh, push-images.sh, README
+infra/cloudflare/api/          The API Worker and container settings for interim hosting (D-052, specs/021);
+                              superseded for real clients by D-060
 packages/compliance/          WPS SIF and e-invoice libraries (not created yet)
 ```
 

@@ -27,6 +27,8 @@ def _refuse(error: Exception) -> HTTPException:
 @router.get("")
 async def shell(request: Request, staff: Staff = Depends(current_staff)) -> dict:
     async with request.app.state.db.tenant(staff.tenant_id) as conn:
+        # Whether the products are open yet (ALY-212): the workspace shows a locked page
+        # with what to pay until they are.
         return await workspace.state(conn, staff)
 
 

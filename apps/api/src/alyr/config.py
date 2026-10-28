@@ -16,12 +16,18 @@ class Settings(BaseSettings):
     # Migrations and demo-tenant setup connect as the owner.
     migration_url: str = "postgresql://alyr:alyr_local@localhost:5432/alyr"
     redis_url: str = "redis://localhost:6379/0"
+    # The read-only role the nightly backup signs in as (scripts/backup). Only migrations
+    # use this setting, to create the role; the app never connects with it. Empty: no
+    # backup role is created.
+    backup_url: str = ""
 
     # Run queued jobs inside the API process after each request. Convenient locally
     # and in tests. In production set this to false and run `python -m alyr.worker`.
     jobs_inline: bool = True
     # First retry delay; it doubles on each further attempt.
     jobs_backoff_seconds: float = 5.0
+    # /health/worker answers 503 when the worker has not checked in for this long.
+    worker_stale_seconds: int = 120
 
     # Local only: let the workspace be used without signing in, as the demo shop.
     # Ignored everywhere except env "local".
@@ -30,6 +36,15 @@ class Settings(BaseSettings):
     # Self-serve sign-up at /start (D-031). Unset: open on a local machine, closed
     # everywhere else until the founder decides to open it.
     signup_open: bool | None = None
+
+    # Where the visitor's address is read from, for the rate limits (ALY-116). Empty: the address
+    # the connection came from. Behind Cloudflare set "cf-connecting-ip"; behind the web app's
+    # proxy set "x-forwarded-for". A header the visitor can write must never be trusted by
+    # accident, so nothing is read from one until this names it.
+    client_ip_header: str = ""
+    # How many proxies of ours add to a list header such as x-forwarded-for: the address is read
+    # that many places from the right, where a visitor cannot have written it.
+    client_ip_proxies: int = 1
     # Prices and the promise are set in the back office, not here (D-032).
 
     # Local only: read the ALYR Agent as if it were this moment (ISO 8601, with an offset),
@@ -38,6 +53,10 @@ class Settings(BaseSettings):
 
     # Where payment links point. The web app serves /pay/...
     public_web_url: str = "http://localhost:3100"
+    # Other web addresses a signed-in browser may post from, comma separated (ALY-118). The
+    # address in `public_web_url` is always allowed; add the console's (ops.alyr.qa) or a
+    # workers.dev address of the portal while that is where people sign in.
+    allowed_origins: str = ""
 
     # Signs the order links sent to one customer (HMAC-SHA256, core/links.py, ALY-112). Only
     # a local machine may leave it empty (a built-in development value is used); anywhere
@@ -68,6 +87,20 @@ class Settings(BaseSettings):
     # template's image header. Inside the window the card goes either way.
     report_card_template: bool = False
 
+    # The three document templates (`document_receipt`, `document_invoice`,
+    # `document_credit_note`) are written and not yet submitted to Meta, so a document cannot be
+    # sent outside the customer's 24-hour window. Off: such a send is recorded as "not
+    # delivered: template not approved" at once, and falls back to email or the hosted link,
+    # instead of failing at Meta six times. Switch it on only after Meta approves all three in
+    # both languages (the founder does that; ALY-139, ALY-142). Inside the window a document
+    # always goes as the PDF itself, whatever this says.
+    document_templates_approved: bool = False
+
+    # Webhooks (ALY-142): send to a shop's address on this machine (http, localhost, a private
+    # address). Only read when ALYR_ENV is "local", for tests and for a developer's own
+    # receiver; in any other environment the guard in `connect/ssrf.py` always applies.
+    webhook_allow_local: bool = False
+
     # Email ALYR sends (sign-in codes) goes through Resend (D-029). Empty key: no email
     # is sent, and on a local machine the sign-in page shows the code instead.
     email_api_key: str = ""
@@ -84,6 +117,11 @@ class Settings(BaseSettings):
     r2_bucket: str = "alyr-media"
     media_base_url: str = "https://media.alyr.qa"
     media_local_dir: str = ".media"
+    # Outside a developer machine, photos on local disk are refused at start-up
+    # (`storage.check_store`): a cloud container's disk is wiped on every restart and is not
+    # shared between copies. Only a single server whose `media_local_dir` is a kept volume
+    # may switch this on (the rehearsal in docker-compose.prod.yml does).
+    media_allow_local: bool = False
 
     # What one upload may be. The web page shrinks a photo before sending it, so these
     # only stop a damaged or hostile file. A 12-megapixel phone photo is about 4 MB.
@@ -99,6 +137,17 @@ class Settings(BaseSettings):
     # already existed got the module from migration 0032, and the back office can switch it
     # off for any one shop.
     catalog_for_new_shops: bool = True
+
+    # The ways ALYR can connect a business's WhatsApp today (ALY-217, D-050), by key from
+    # `core/whatsapp_setup.py`, comma separated: new_number, move_number, own_account. Empty
+    # until Meta approves ALYR as a Tech Provider (ALY-52); until then a business that has
+    # everything ready shows "waiting for Meta", and ALYR says so honestly.
+    whatsapp_ways_open: str = ""
+
+    # How a client pays ALYR by bank transfer (ALY-212, D-051): the account name, bank and
+    # IBAN, shown to the owner beside the amount and their reference. Not a secret. Empty
+    # until ALYR's company account is open; the owner is then told ALYR sends the details.
+    bank_transfer_details: str = ""
 
     # Per shop, to start (D-039; our estimate). A cap stops new items or photos with a
     # clear message and never deletes anything.

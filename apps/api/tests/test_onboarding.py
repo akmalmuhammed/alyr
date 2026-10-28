@@ -27,8 +27,10 @@ def signup_token(client, email):
     return answer.json()["signup_token"]
 
 
-def new_business(client, name=None, kind="salon"):
-    """Each test makes its own business; the database is shared by the whole run."""
+def new_business(client, name=None, kind="salon", paid=True):
+    """Each test makes its own business; the database is shared by the whole run. Its
+    payment is settled, as once the client has paid (D-053); `paid=False` leaves it owing,
+    as for a client who has just signed up. The workspace is open either way."""
     email = f"owner-{uuid4().hex[:8]}@shop.example"
     name = name or f"Barbers {uuid4().hex[:6]}"
     body = {"signup_token": signup_token(client, email), "owner_name": "Hamad", "name": name,
@@ -36,6 +38,12 @@ def new_business(client, name=None, kind="salon"):
     answer = client.post(f"{BASE}/business", json=body)
     assert answer.status_code == 200, answer.text
     slug = client.get(f"{BASE}/state").json()["business"]["slug"]
+    if paid:
+        owner_sql(
+            "update clients set payment_waived_at = now(), access_note = 'Test: paid' "
+            "where id = (select client_id from tenants where id = $1)",
+            answer.json()["created"],
+        )
     return answer.json()["created"], slug, name
 
 

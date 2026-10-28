@@ -21,9 +21,8 @@ const STILL = "(prefers-reduced-motion: reduce)";
  * JavaScript, or with reduced motion, every section is complete and still. (The language
  * link and questions opened by their address are SiteMotion's, on every page.)
  *
- * - On phones, the contact bar shows once the hero's button has scrolled away and hides
- *   while the closing call to action is on screen.
- * - The scroll choreography (GSAP) loads after first paint and keeps the `motion` class.
+ * The scroll choreography (GSAP) loads after first paint and keeps the `motion` class.
+ * (The phone's contact bar, on every page, is SiteMotion's.)
  */
 export function HomeMotion() {
   const [choreograph, setChoreograph] = useState(false);
@@ -31,28 +30,6 @@ export function HomeMotion() {
   useEffect(() => {
     const root = document.documentElement;
     const undo: (() => void)[] = [];
-
-    // ------------------------------------------------------------- the phone contact bar
-    const bar = document.querySelector<HTMLElement>("[data-bar]");
-    const heroButton = document.querySelector<HTMLElement>("[data-hero-cta]");
-    const closing = document.getElementById("contact");
-    if (bar && heroButton && closing) {
-      let heroGone = false;
-      let closingSeen = false;
-      const watch = new IntersectionObserver((entries) => {
-        for (const entry of entries) {
-          if (entry.target === heroButton) heroGone = !entry.isIntersecting && entry.boundingClientRect.top < 0;
-          // Reached or passed: the footer below it stays clear too.
-          if (entry.target === closing) closingSeen = entry.isIntersecting || entry.boundingClientRect.top < 0;
-        }
-        bar.toggleAttribute("data-show", heroGone && !closingSeen);
-        // the header's button turns Volt once the hero's own has scrolled away (site.css)
-        root.toggleAttribute("data-hero-gone", heroGone);
-      });
-      watch.observe(heroButton);
-      watch.observe(closing);
-      undo.push(() => watch.disconnect());
-    }
 
     // ------------------------------------------------------- motion, only when wanted
     const still = window.matchMedia(STILL).matches;

@@ -77,8 +77,8 @@ async def ensure_tenant(conn: asyncpg.Connection, shop: Shop, now: datetime) -> 
     )
     if not await conn.fetchval("select client_id from tenants where id = $1", shop.tenant_id):
         client_id = await conn.fetchval(
-            "insert into clients (name, contact_name, contact_email) values ($1, $2, $3) "
-            "returning id", shop.name, shop.owner[1], shop.owner[0],
+            "insert into clients (name, contact_name, contact_email, access_from, payment_waived_at, access_note) "
+            "values ($1, $2, $3, now(), now(), 'Demo shop') returning id", shop.name, shop.owner[1], shop.owner[0],
         )
         await conn.execute(
             "update tenants set client_id = $2 where id = $1", shop.tenant_id, client_id

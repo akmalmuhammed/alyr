@@ -140,8 +140,9 @@ async def ensure_demo_tenant(
         for tenant_id in (DEMO_TENANT_ID, ALYR_TENANT_ID):
             if not await conn.fetchval("select client_id from tenants where id = $1", tenant_id):
                 client_id = await conn.fetchval(
-                    "insert into clients (name) select name from tenants where id = $1 "
-                    "returning id",
+                    "insert into clients (name, access_from, payment_waived_at, access_note) "
+                    "select name, now(), now(), "
+                    "'Demo shop' from tenants where id = $1 returning id",
                     tenant_id,
                 )
                 await conn.execute(
