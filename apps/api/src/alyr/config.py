@@ -44,6 +44,10 @@ class Settings(BaseSettings):
 
     # Where payment links point. The web app serves /pay/...
     public_web_url: str = "http://localhost:3100"
+    # Other web addresses a signed-in browser may post from, comma separated (ALY-118). The
+    # address in `public_web_url` is always allowed; add the console's (ops.alyr.qa) or a
+    # workers.dev address of the portal while that is where people sign in.
+    allowed_origins: str = ""
 
     # Signs the order links sent to one customer (HMAC-SHA256, core/links.py, ALY-112). Only
     # a local machine may leave it empty (a built-in development value is used); anywhere

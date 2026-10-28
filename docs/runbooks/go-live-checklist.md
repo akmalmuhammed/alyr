@@ -22,7 +22,7 @@ customers use ALYR. From the 17 Oct 2026 audit (`docs/audit/2026-10-17.md`).
 - [ ] Rate limits on sign-in codes, sign-up and public pages (issue from the audit)
 - [ ] Staff roles: agents cannot change prices, services, hours or send bulk reminders (audit issue)
 - [ ] Contact merge keeps consent records (audit issue)
-- [ ] Security headers on the web app (CSP, HSTS, frame-ancestors, nosniff)
+- [x] Security headers on the web app (CSP, HSTS, frame-ancestors, nosniff) and an Origin check on signed-in changes (ALY-118); on the public site: `_headers` has HSTS, nosniff, frame-ancestors, base-uri, object-src; add Cloudflare's own rules in front
 - [ ] Real payment provider connected, or stand-in payments switched off (ALY-17)
 - [ ] Data retention and "forget this customer" procedure (audit issue)
 

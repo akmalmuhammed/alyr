@@ -264,7 +264,10 @@ def test_the_server_does_not_start_without_a_secret_outside_local(client_factory
     monkeypatch.setenv("ALYR_MEDIA_ALLOW_LOCAL", "true")
     get_settings.cache_clear()
     with TestClient(create_app()) as started:
-        assert started.get("/health").json()["env"] == "production"
+        # In production the interactive docs are off and sign-in is required (ALY-114).
+        assert started.get("/health").json() == {"status": "ok"}
+        assert started.get("/docs").status_code == 404
+        assert started.get("/api/auth/me").status_code == 401
     get_settings.cache_clear()
 
 
