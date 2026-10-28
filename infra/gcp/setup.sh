@@ -411,6 +411,38 @@ for c in json.load(sys.stdin).get('notificationChannels', []):
       fi
       echo "  watching https://$host$path"
     done
+    # Errors: a server error answered by the API or web app, a crash (traceback) or a job that
+    # failed (a WhatsApp send, a reminder) in any of them. Google's Error Reporting cannot read
+    # logs kept in Doha, so this is a log-based count with its own alert. Python's log lines
+    # carry no severity on Cloud Run, hence the text match.
+    errors="alyr-app-errors"
+    if ! exists g logging metrics describe "$errors"; then
+      g logging metrics create "$errors" \
+        --description="ALYR: server errors, crashes and failed jobs" \
+        --log-filter='(resource.type="cloud_run_revision" AND resource.labels.service_name=("alyr-api" OR "alyr-web") AND httpRequest.status>=500) OR ((resource.type="cloud_run_revision" OR resource.type="cloud_run_worker_pool" OR resource.type="cloud_run_job") AND (textPayload:"Traceback" OR textPayload:"ERROR:" OR textPayload:" failed: "))' \
+        >/dev/null
+    fi
+    title="ALYR errors (server errors, crashes, failed jobs)"
+    if ! call "$api/alertPolicies" | grep -q "\"displayName\": \"$title\""; then
+      call -X POST "$api/alertPolicies" -d "{
+        \"displayName\": \"$title\",
+        \"combiner\": \"OR\",
+        \"notificationChannels\": [\"$channel\"],
+        \"alertStrategy\": {\"autoClose\": \"1800s\"},
+        \"documentation\": {\"content\": \"Read the lines in Logs Explorer (project alyr-prod) with the filter of the log-based metric $errors.\", \"mimeType\": \"text/markdown\"},
+        \"conditions\": [{
+          \"displayName\": \"Any error in 5 minutes\",
+          \"conditionThreshold\": {
+            \"filter\": \"metric.type=\\\"logging.googleapis.com/user/$errors\\\" AND resource.type=one_of(\\\"cloud_run_revision\\\", \\\"cloud_run_job\\\", \\\"cloud_run_worker_pool\\\")\",
+            \"aggregations\": [{\"alignmentPeriod\": \"300s\", \"perSeriesAligner\": \"ALIGN_SUM\",
+                                \"crossSeriesReducer\": \"REDUCE_SUM\"}],
+            \"comparison\": \"COMPARISON_GT\", \"thresholdValue\": 0, \"duration\": \"0s\",
+            \"trigger\": {\"count\": 1}
+          }
+        }]
+      }" >/dev/null
+    fi
+    echo "  watching errors (log-based metric $errors)"
     echo "Alerts go to $email (Google sends a confirmation email the first time)."
     ;;
 
