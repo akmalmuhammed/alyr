@@ -408,3 +408,28 @@
 .ob-pay-how pre { margin: 0; white-space: pre-wrap; font: inherit; font-size: var(--ui-body-sm); }
 .ob-pay-how code { justify-self: start; padding: 4px 8px; border-radius: 8px; background: var(--raise); font-size: var(--ui-body-sm); letter-spacing: 0.04em; }
 .ob-pay-note { display: flex; gap: 8px; align-items: baseline; margin: 0; color: var(--ink-2); font-size: var(--ui-small); line-height: 1.5; }
+
+/* ── the order path (ALY-164): what you sell, then pickup and payment ───────── */
+.ob-items .ob-tr, .ob-items .ob-th { grid-template-columns: 2.75rem minmax(0, 1fr) 5.5rem 2.75rem; }
+.ob-items .ob-item { min-height: 3rem; }
+.ob-keep { display: grid; place-items: center; min-width: 44px; min-height: 44px; cursor: pointer; }
+.ob-tr .ob-keep input { width: 22px; height: 22px; min-width: 22px; padding: 0; accent-color: var(--ink); cursor: pointer; }
+.ob-onsale { display: grid; place-items: center; min-height: 44px; color: var(--ink-2); }
+.ob-item-name { display: grid; min-width: 0; font-size: var(--ui-body); overflow-wrap: anywhere; }
+.ob-item-name small { color: var(--ink-2); font-size: var(--ui-small); }
+.ob-items .ob-th, .ob-handover .ob-muted { color: var(--ink-2); }
+.ob-items .ob-tr input[inputmode="decimal"] { height: 44px; font-size: var(--ui-input); text-align: end; }
+.ob-items .ob-tr input:disabled { color: var(--ink-3); }
+.ob-items .ob-x { width: 44px; height: 44px; }
+.ob-own, .ob-handover { display: grid; gap: 12px; margin-top: 14px; }
+.ob-own h2, .ob-handover h2 { margin: 0; font-size: var(--ui-title); }
+.ob-handover p { margin: 0; }
+.ob-own-form { display: grid; gap: 12px; align-items: end; }
+.ob-own-form .ob-field, .ob-handover .ob-field { grid-template-columns: minmax(0, 1fr); }
+.ob-own-form .ob-field input, .ob-handover .ob-field input { min-width: 0; min-height: 44px; font-size: var(--ui-input); }
+.ob-own-form .ob-btn.small { min-height: 44px; justify-self: start; }
+.ob-handover .ob-chip { min-height: 44px; padding-inline: 18px; }
+.ob-more { margin-top: 14px; flex-wrap: wrap; }
+@media (min-width: 640px) {
+  .ob-own-form { grid-template-columns: minmax(0, 1.4fr) minmax(0, 1.4fr) minmax(0, 0.8fr) auto; }
+}

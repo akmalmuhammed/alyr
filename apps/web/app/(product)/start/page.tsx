@@ -9,14 +9,16 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Logo } from "../../_site/brand";
+import { call } from "./api";
 import { identifyFromSession } from "../../_analytics/ProductAnalytics";
 import { track } from "../../_analytics/posthog";
 import { Chat, initialsOf, type ChatMessage, type Choice } from "./Chat";
 import { COPY, type Lang } from "./copy";
+import { HandoverView, ProductsView, useHandover, useProducts } from "./OrderSteps";
 import "./start.css";
 
 type Text = { en: string; ar: string };
-type BusinessType = { key: string; name: Text; hint: Text; icon: string; way: "appointments" | "assisted" };
+type BusinessType = { key: string; name: Text; hint: Text; icon: string; way: "appointments" | "orders" | "assisted" };
 type Service = { id: string; name: string; name_ar: string; duration_minutes: number; price: number; price_text: string; active?: boolean };
 type Period = { weekday: number; opens: string; closes: string };
 // What the shop's type of business gives its Catalog, in plain words (null where it has none).
@@ -27,7 +29,7 @@ type CatalogReview = {
 type State = {
   business: { name: string; name_ar: string; slug: string; type: string; area: string; reminders: boolean };
   owner: { name: string; email: string };
-  way: "appointments" | "assisted";
+  way: "appointments" | "orders" | "assisted";
   steps: string[];
   step: string;
   finished: boolean;
@@ -68,7 +70,7 @@ type Payment = {
   reference: string; bank: string;
 };
 type Booking = { customer: string; service: string; when_text: string; status: string };
-type Step = "loading" | "account" | "code" | "type" | "basics" | "services" | "hours" | "assisted" | "try" | "plan" | "golive" | "finished";
+type Step = "loading" | "account" | "code" | "type" | "basics" | "services" | "hours" | "products" | "handover" | "assisted" | "try" | "plan" | "golive" | "finished";
 
 const ORDER = [6, 0, 1, 2, 3, 4, 5]; // Saturday first, as the week runs in Qatar
 const MINUTES = [15, 20, 30, 45, 60, 75, 90, 120, 150, 180];
@@ -99,15 +101,6 @@ function Ico({ name, size = 20 }: { name: string; size?: number }) {
       {(ICON[name] ?? []).map((d) => <path key={d} d={d} />)}
     </svg>
   );
-}
-
-async function call<T>(url: string, method = "GET", body?: unknown): Promise<{ ok: boolean; status: number; data: T }> {
-  const response = await fetch(url, {
-    method, cache: "no-store",
-    headers: body === undefined ? undefined : { "content-type": "application/json" },
-    body: body === undefined ? undefined : JSON.stringify(body),
-  });
-  return { ok: response.ok, status: response.status, data: (await response.json().catch(() => ({}))) as T };
 }
 
 const qar = (dirhams: number) => (dirhams / 100).toString();
@@ -168,12 +161,17 @@ export default function Start() {
   const quoteSeen = useRef("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
+  // The order path's two steps (ALY-164): what you sell, and pickup, delivery and payment.
+  const products = useProducts(step === "products", t);
+  const handover = useHandover(step === "handover", t);
 
   const chosen = types.find((x) => x.key === (state?.business.type || kind));
   const way = state?.way ?? chosen?.way ?? "appointments";
   const rail = way === "assisted"
     ? (["account", "business", "assisted", "plan", "golive"] as const)
-    : (["account", "business", "services", "hours", "try", "plan", "golive"] as const);
+    : way === "orders"
+      ? (["account", "business", "products", "handover", "try", "plan", "golive"] as const)
+      : (["account", "business", "services", "hours", "try", "plan", "golive"] as const);
   const railKey = step === "code" ? "account" : step === "type" || step === "basics" ? "business" : step;
   const current = step === "finished" ? rail.length : Math.max(0, rail.indexOf(railKey as never));
   const shopName = state?.business.name || form.name;
@@ -240,7 +238,7 @@ export default function Start() {
 
   async function go(next: Step) {
     setError("");
-    if (state && ["services", "hours", "assisted", "try", "plan", "golive"].includes(next)) {
+    if (state && ["services", "hours", "products", "handover", "assisted", "try", "plan", "golive"].includes(next)) {
       await call("/api/onboarding/state", "PATCH", { step: next });
     }
     setStep(next);
@@ -469,6 +467,26 @@ export default function Start() {
         payload: { choices: [{ id: "m", title: ar ? "حجزي" : "My booking" }] },
       }];
     }
+    if (step === "products") {
+      const lines = products.rows
+        .filter((r) => (r.sample ? r.keep : r.status === "live"))
+        .slice(0, 4)
+        .map((r) => `${ar && r.name_ar ? r.name_ar : r.name}${r.priceText ? `: QAR ${r.priceText}` : ""}`);
+      return [
+        { direction: "in", body: ar ? "شو عندكم اليوم؟" : "What do you have today?" },
+        { direction: "out", body: [ar ? "قائمتنا:" : "Our menu:", ...lines].join("\n"), payload: { choices: [{ id: "o", title: ar ? "اطلب الآن" : "Order now" }] } },
+      ];
+    }
+    if (step === "handover") {
+      const choices = [
+        ...(handover.pickup ? [{ id: "p", title: ar ? "استلام من المحل" : "Pickup" }] : []),
+        ...(handover.delivery ? [{ id: "d", title: ar ? "توصيل" : "Delivery" }] : []),
+      ];
+      return [{
+        direction: "out", body: ar ? "كيف تحب تستلم طلبك؟" : "How would you like to get your order?",
+        payload: { choices },
+      }];
+    }
     if (step === "account" || step === "code") {
       return [
         { direction: "in", body: ar ? "مرحبا، أبي أحجز حلاقة بكرة المسا" : "Hi, can I book a haircut tomorrow evening?" },
@@ -478,7 +496,7 @@ export default function Start() {
       ];
     }
     return [greeting];
-  }, [step, rows, shopShown, lang, t]);
+  }, [step, rows, shopShown, lang, t, products.rows, handover.pickup, handover.delivery]);
 
   // ── screens ──────────────────────────────────────────
   const total = rail.length;
@@ -654,6 +672,30 @@ export default function Start() {
         <button className="ob-btn primary" type="button" disabled={busy} onClick={saveHours}>{t.continue}<Ico name="arrow" /></button>
       </>
     );
+  } else if (step === "products") {
+    main = (
+      <>
+        {head(t.products.title, t.products.sub)}
+        <ProductsView p={products} lang={lang} t={t} section={state?.catalog?.section[lang === "ar" ? "name_ar" : "name"] ?? t.steps.products} />
+      </>
+    );
+    actions = (
+      <button className="ob-btn primary" type="button" disabled={busy || products.busy || !products.canContinue}
+        onClick={async () => { if (await products.save()) await go("handover"); }}>
+        {t.continue}<Ico name="arrow" />
+      </button>
+    );
+  } else if (step === "handover") {
+    main = <>{head(t.handover.title, t.handover.sub)}<HandoverView h={handover} t={t} /></>;
+    actions = (
+      <>
+        <button className="ob-btn ghost" type="button" onClick={() => go("products")}>{t.back}</button>
+        <button className="ob-btn primary" type="button" disabled={busy || handover.busy || !handover.canContinue}
+          onClick={async () => { if (await handover.save()) await go("try"); }}>
+          {t.handover.save}<Ico name="arrow" />
+        </button>
+      </>
+    );
   } else if (step === "assisted") {
     const what = lang === "ar" ? (chosen?.name.ar ?? "") : (chosen?.name.en.toLowerCase() ?? "");
     const review = state?.catalog ?? null;
@@ -771,7 +813,7 @@ export default function Start() {
     const stage = g.stage[ready?.stage ?? "setting_up"];
     // Where the owner does each step: back in this flow, or in the workspace.
     const fixes: Record<string, (() => void) | string> = {
-      content: way === "appointments" ? () => go("services") : "/app/catalog",
+      content: way === "appointments" ? () => go("services") : way === "orders" ? () => go("products") : "/app/catalog",
       hours: () => go("hours"),
       test: () => go("try"),
       price: () => go("plan"),
