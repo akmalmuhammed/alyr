@@ -1,14 +1,18 @@
 "use client";
 
-// Analytics on alyr.qa (D-070): page views, and a count of every press of a button that
-// contacts ALYR (any link marked `data-cta`). Cookieless and anonymous; see posthog.ts.
+// Analytics on alyr.qa (D-070): page views, clicks, errors and page speed, counted without
+// cookies until the visitor allows more in the consent prompt; plus a named event for every
+// press of a button that contacts ALYR (any link marked `data-cta`). See posthog.ts.
 
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
+import { Consent } from "./Consent";
 import { startAnalytics, track } from "./posthog";
 
 export function SiteAnalytics() {
+  const [on, setOn] = useState(false);
   useEffect(() => {
     if (!startAnalytics("site")) return;
+    const first = setTimeout(() => setOn(true), 0);
     const onClick = (event: MouseEvent) => {
       const link = (event.target as Element | null)?.closest?.("a[data-cta]");
       if (!link) return;
@@ -20,7 +24,7 @@ export function SiteAnalytics() {
       });
     };
     document.addEventListener("click", onClick);
-    return () => document.removeEventListener("click", onClick);
+    return () => { clearTimeout(first); document.removeEventListener("click", onClick); };
   }, []);
-  return null;
+  return on ? <Consent surface="site" /> : null;
 }

@@ -1,3 +1,4 @@
+import { ChangeChoice } from "../_analytics/Consent";
 import { Shell } from "./Shell";
 import { copy, type Locale } from "./copy";
 
@@ -21,6 +22,7 @@ export function PrivacyPage({ locale }: { locale: Locale }) {
               {s.paras.map((para) => <p key={para}>{para}</p>)}
               {s.list && <ul>{s.list.map((item) => <li key={item}>{item}</li>)}</ul>}
               {(s.after ?? []).map((para) => <p key={para}>{para}</p>)}
+              {s.choice && <ChangeChoice label={s.choice} />}
             </section>
           ))}
         </div>

@@ -54,7 +54,7 @@ Status: **Accepted** (in force), **Proposed** (waiting for the founder), **Super
 | D-060 | ALYR runs on Google Cloud in Doha (Cloud Run, Cloud SQL, Secret Manager); replaces Azure (D-036) and the interim Cloudflare and Neon host (D-052); backups stay in Doha | Accepted |
 | D-061 | Company mail moves to Zoho Mail (free plan): hello@ with akmal@ and security@ as aliases, and a mailbox for Beevi Jinan, the registered owner; Resend still sends the product's email | Accepted |
 | D-062 | The homepage hero is the explainer film (one afternoon at Qirfa Bakery in the product's own screens, three lanes at once, ending on the ALYR Agent home): "the product is the illustration" in motion; the hero's live ALYR Agent figure leaves the hero | Accepted |
-| D-070 | Product analytics with PostHog (EU region): cookieless page views and contact-button presses on alyr.qa, the onboarding funnel and workspace sections per business; never customer data, recordings or names | Accepted |
+| D-070 | Product analytics with PostHog (EU), at two levels the visitor chooses: cookieless counting by default, cookies and masked recordings with consent; never customer pages, the inbox or names | Accepted |
 
 ---
 
@@ -1325,35 +1325,59 @@ Nothing claims more than the page, as before.
 **Revisit when** the founder or a visitor finds it busy or slow (`--pace` tunes all of it), or the product's screens change (the film draws them from the products frame's drawings and the real dashboard, so they follow).
 
 
-## D-070 · Product analytics with PostHog
-**Date** 28 Oct 2026 · **Status** Accepted (the founder set up PostHog, with startup credits, and asked for it on 28 Oct)
+## D-070 · Product analytics with PostHog, at two levels the visitor chooses
+**Date** 28–29 Oct 2026 · **Status** Accepted. The founder set up PostHog (startup credits) and asked for "the best out of this solution" on 29 Oct, after checking that no Qatar rule forbids it.
 
-**Decision.** ALYR counts how its site and product are used with PostHog Cloud in the EU region (`eu.posthog.com`). It covers three places:
-- **alyr.qa:** page views, and every press of a button that contacts ALYR (`cta_click`, with which button, which channel and which page), with the source code a link or QR code carried (`?s=`).
-- **Onboarding (`/start`):** each step reached, the code sent, the email verified, the business created, the first test booking, the price accepted, and finishing.
-- **The workspace (`/app`):** the sections opened.
+**Decision.** ALYR measures alyr.qa, onboarding (`/start`) and the workspace (`/app`) with PostHog Cloud, EU region. A small consent prompt (English and Arabic) offers two levels.
 
-An owner is known by their user ID and their business by its ID (PostHog's group analytics). Nothing else is sent about them.
+*Until a choice is made, or after "No thanks": counted without cookies* (PostHog's cookieless server hash, project setting on). This level covers:
+- page views;
+- clicks (autocapture);
+- errors and Core Web Vitals;
+- named events:
+  - `cta_click` (button, channel, page);
+  - the onboarding steps (`onboarding_*`).
 
-**What is never sent, by design** (`apps/web/app/_analytics/posthog.ts`):
-- **Cookies.** The site uses PostHog's cookieless server hash; the product keeps nothing in the browser between visits. The only thing stored is the source code, in the tab's session storage.
-- **Recordings and automatic capture.** No screen recordings, no automatic capture of clicks or text, no heatmaps, no surveys.
-- **Customer data.** No customer page (`/s`, `/b`, `/pay`, `/t`) and not the back office loads PostHog. In the workspace, only a section's name is counted, never what is in it.
-- **Identifiers in addresses.** Every address is cut to its path, with IDs replaced by `:id`, before it leaves.
-- **Personal details.** No name, email or phone number.
+The browser keeps only the choice and, for the visit, the link's source code.
 
-**How it travels.** Browsers send to our own address, `/ingest`, which forwards to PostHog's EU region: Next.js rewrites in the app, `site-worker.js` on alyr.qa. So the security policy stays "self only", ad blockers do not break the counts, and the destination is fixed to the EU. The worker strips cookies and passes the visitor's address only for PostHog's cookieless hash. The PostHog project is set to discard IP addresses.
+*After "Allow":*
+- cookies, so a returning visitor is recognised;
+- session recordings and heatmaps;
+- surveys;
+- a signed-in owner known by their user ID and their business's ID (group analytics).
 
-**Why PostHog.** Funnels, retention, group analytics per business, experiments and feature flags in one place, in the EU, with startup credits. Cloudflare Web Analytics, the site's only measure until now, counts page views only.
+**Never, at either level** (enforced in `apps/web/app/_analytics/posthog.ts` and in the PostHog project's settings):
+- **Pages that never load PostHog:** the customer pages (`/s`, `/b`, `/pay`, `/t`) and the back office (`/ops`). They are also on the project's recording blocklist.
+- **No recording of the inbox, ever.** This is the founder's rule that ALYR never sees customers' conversations.
+- **In onboarding and the workspace, all text is masked in recordings and in captured clicks.** That covers labels too, so a click is known by its place on the screen, not by what it says.
+- **Every input is masked everywhere.**
+- **No names, emails or phone numbers as properties.**
+- **No IDs or query strings in addresses** beyond the source codes. Addresses are cut to their path, with IDs replaced.
+- **No network bodies or headers, and no console logs.**
+- **IP addresses are discarded.**
 
-**Key.** `NEXT_PUBLIC_POSTHOG_KEY` (the project key, public by design) at build time. It is the repository variable `POSTHOG_PROJECT_KEY` for the Google Cloud deploy, and `.env.local` for the site build. Without it, analytics is off everywhere.
+Recordings are kept 30 days, and the shortest kept is 2 seconds.
+
+**Is this allowed in Qatar?** No Qatar rule we found forbids analytics or recordings. The PDPPL (Law 13 of 2016) asks for transparency, a lawful purpose, security and respect for people's choices, and secondary sources read it as asking for consent to cookies and tracking. This setup meets the stricter reading: cookies and recordings only with consent, a notice that says what happens, and the choice can be changed on `/privacy`. The data sits in the EU, which the register lists. To confirm with the lawyer (ALY-51).
+
+**How it travels.** Browsers send events to our own address, `/ingest`, which forwards them to PostHog's EU region: Next.js rewrites in the app, `site-worker.js` on alyr.qa. So the security policy stays "self only" and ad blockers do not break the counts. The worker strips cookies and passes the visitor's address only for the cookieless hash.
+
+**Key.** `NEXT_PUBLIC_POSTHOG_KEY` (the project key, public by design) at build time:
+- the repository variable `POSTHOG_PROJECT_KEY` for the Google Cloud deploy;
+- `.env.local` for the site build.
+
+Without it, analytics is off everywhere.
+
+**Dashboard.** "ALYR growth" in PostHog, with 10 charts:
+- site visits and page views;
+- contact presses by channel, page and source;
+- visit to contact press;
+- the onboarding funnel from code sent to finish;
+- steps reached;
+- businesses created by type;
+- workspace sections.
 
 **Not yet:**
 - server-side events from the API (booking made, order paid, the money-back promise);
 - experiments (the homepage headline first);
-- surveys;
-- session recordings on `/start` only, masked.
-
-Each is a separate decision.
-
-**The privacy notice** (`/privacy`, both languages) now says what is counted, where, and what is never collected. It is still a draft for the lawyer (ALY-51) and the native Arabic review (ALY-66).
+- the first surveys.
