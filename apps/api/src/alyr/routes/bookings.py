@@ -29,7 +29,10 @@ from alyr.routes.deps import current_staff, current_tenant
 public = APIRouter(prefix="/api/book", tags=["booking page"])
 router = APIRouter(prefix="/api", tags=["bookings"])
 
-_STATUS_FOR = {"unknown_customer": 404, "unknown_service": 404, "not_free": 409}
+_STATUS_FOR = {
+    "unknown_customer": 404, "unknown_service": 404, "not_free": 409,
+    "unknown_resource": 404, "last_resource": 409,
+}
 
 
 class NewBooking(BaseModel):
@@ -56,6 +59,22 @@ class NewService(BaseModel):
     name_ar: str = Field(default="", max_length=120)
     duration_minutes: int = Field(ge=5, le=600)
     price: int = Field(default=0, ge=0, description="In dirhams: 100 is QAR 1")
+
+
+class NewResource(BaseModel):
+    name: str = Field(min_length=1, max_length=120, description="A chair, a person or a room")
+    name_ar: str = Field(default="", max_length=120)
+
+
+class ResourceChange(BaseModel):
+    name: str | None = Field(default=None, max_length=120)
+    name_ar: str | None = Field(default=None, max_length=120)
+
+
+class ServiceResources(BaseModel):
+    resource_ids: list[UUID] = Field(
+        max_length=50, description="The resources that do this service; empty means all"
+    )
 
 
 class Active(BaseModel):
@@ -285,6 +304,71 @@ async def set_active(
         if not await service.set_service_active(conn, service_id, body.active):
             raise HTTPException(status_code=404, detail="service not found")
     return {"active": body.active}
+
+
+def _managers_only(staff: Staff) -> None:
+    """Chairs and who does what are the owner's or an admin's to change (D-062)."""
+    if staff.role == "agent":
+        raise HTTPException(status_code=403, detail="only an owner or admin can change this")
+
+
+@router.get("/resources")
+async def resources(request: Request, tenant_id: UUID = Depends(current_tenant)) -> dict:
+    """The shop's chairs, people or rooms. Empty means the shop takes one customer at a time."""
+    async with request.app.state.db.tenant(tenant_id) as conn:
+        return {"resources": await service.list_resources(conn)}
+
+
+@router.post("/resources")
+async def add_resource(
+    body: NewResource, request: Request, staff: Staff = Depends(current_staff)
+) -> dict:
+    _managers_only(staff)
+    async with request.app.state.db.tenant(staff.tenant_id) as conn:
+        resource_id = await service.add_resource(conn, body.name, body.name_ar)
+        return {"id": resource_id, "resources": await service.list_resources(conn)}
+
+
+@router.patch("/resources/{resource_id}")
+async def change_resource(
+    resource_id: UUID, body: ResourceChange, request: Request,
+    staff: Staff = Depends(current_staff),
+) -> dict:
+    _managers_only(staff)
+    async with request.app.state.db.tenant(staff.tenant_id) as conn:
+        if not await service.update_resource(conn, resource_id, body.name, body.name_ar):
+            raise HTTPException(status_code=404, detail="resource not found")
+        return {"resources": await service.list_resources(conn)}
+
+
+@router.post("/resources/{resource_id}/active")
+async def set_resource_active(
+    resource_id: UUID, body: Active, request: Request, staff: Staff = Depends(current_staff)
+) -> dict:
+    _managers_only(staff)
+    try:
+        async with request.app.state.db.tenant(staff.tenant_id) as conn:
+            if not await service.set_resource_active(conn, resource_id, body.active):
+                raise HTTPException(status_code=404, detail="resource not found")
+    except service.BookingError as error:
+        raise _refuse(error) from error
+    return {"active": body.active}
+
+
+@router.put("/services/{service_id}/resources")
+async def set_service_resources(
+    service_id: UUID, body: ServiceResources, request: Request,
+    staff: Staff = Depends(current_staff),
+) -> dict:
+    """Say which resources do this service. An empty list means all of them."""
+    _managers_only(staff)
+    try:
+        async with request.app.state.db.tenant(staff.tenant_id) as conn:
+            if not await service.set_service_resources(conn, service_id, body.resource_ids):
+                raise HTTPException(status_code=404, detail="service not found")
+            return {"resources": await service.list_resources(conn)}
+    except service.BookingError as error:
+        raise _refuse(error) from error
 
 
 @router.get("/hours")

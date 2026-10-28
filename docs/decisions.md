@@ -50,6 +50,7 @@ Status: **Accepted** (in force), **Proposed** (waiting for the founder), **Super
 | D-058 | The homepage hero's ALYR Agent figure (and /agent's) moves continuously, the one exception to "plays once", with a pause button and calm pacing | Accepted |
 | D-059 | Motion is always on: the site's figures (How we work, the products frame, the signature figures, with the flows, demos and the live Agent) keep playing, each with a Pause control; text arrives once | Accepted |
 | D-061 | Company mail moves to Zoho Mail (free plan): hello@ with akmal@ and security@ as aliases, and a mailbox for Beevi Jinan, the registered owner; Resend still sends the product's email | Accepted |
+| D-062 | A shop's bookings are held to one customer at a time per resource (chair, person, room), not per shop; a shop with no resources is unchanged | Accepted |
 
 ---
 
@@ -1176,3 +1177,26 @@ Nothing claims more than the page, as before.
 **Data.** Zoho is outside Qatar and may hold a customer's or a merchant's message when they write to us: a row in `docs/data-residency.md`. No merchant data is routed through it.
 
 **Revisit when** ALYR needs shared inboxes or more than five mailboxes (Zoho's paid plan, or the startup programme's mail, ALY-55), or a lawyer says company mail must stay in Qatar (ALY-51).
+
+---
+
+## D-062 · One customer at a time per resource, not per shop
+**Date** 28 Oct 2026 · **Status** Accepted (the founder's 28 Oct instruction to build the open items of ALY-27) · Linear ALY-258, step 2 of ALY-27 · Spec `specs/026-bookable-resources/spec.md`
+
+**Where we were.** Since migration 0010 the database refused any two overlapping bookings of one shop. A salon with two chairs, a clinic with two doctors or a workshop with two technicians could take one customer at a time, and onboarding already offers these businesses a self-serve path (D-031).
+
+**The decision.**
+- A shop may list **resources** (a chair, a person, a room). The rule becomes one customer at a time **per resource**.
+- A shop with **no resources behaves exactly as before**. Nothing was migrated; a shop opts in by adding its first resource, which takes over the bookings still to come so they keep blocking it.
+- A time is free when at least one resource that does the service is free; a booking takes the first free one in the shop's order (or the one asked for), under the shop's lock; a move keeps its resource when it can.
+- A service can be narrowed to some resources; none narrowed means all.
+- A resource is switched off, not deleted (a booking points at it), and the last active one cannot be switched off.
+- The database stays the last guard: `bookings_no_overlap` now holds per `coalesce(resource_id, tenant_id)`.
+- Owners and admins change resources; agents can read them.
+
+**Rejected.**
+- *A capacity number per shop* ("2 at a time"). It cannot say which chair, whose calendar or which service needs which, and it would have to be thrown away for the first shop that needs a person's own diary.
+- *Migrating every existing shop into one default resource.* Nothing to gain, and it would change what every existing shop's database rule means for a feature they did not ask for.
+- *Letting customers choose the resource from day one.* The engine accepts a choice; the booking page offers none until a shop asks for it.
+
+**Revisit when.** A shop needs a resource's own hours, days off or a login (a stylist's own calendar), or assignment by least busy instead of first free, which concentrates the day on the first chair.

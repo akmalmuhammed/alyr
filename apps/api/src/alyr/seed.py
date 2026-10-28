@@ -160,7 +160,8 @@ async def reset_demo_data(db: Database) -> None:
         await conn.execute(
             "delete from login_codes where email = any($1)", [email for email, _, _ in TEAM]
         )
-        for table in ("weekly_reports", "bookings", "services", "business_hours",
+        for table in ("weekly_reports", "bookings", "services", "booking_resources",
+                      "business_hours",
                       "saved_replies", "memberships",
                       "jobs", "messages", "processed_messages", "order_items",
                       "payment_requests", "orders", "chat_carts", "items",
