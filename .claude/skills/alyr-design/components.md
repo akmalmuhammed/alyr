@@ -52,7 +52,7 @@ and the Agent follow these; the product screens have their own older versions (m
 | Closing call | `.cta`, `.cta-mark` | Every page, full-bleed Carbon (`--band`), the fold at its top |
 | Sticky contact bar | `.bar` (`site.css`) | Phones under 53 rem once the hero's button has gone; hides the header's Volt button and hides again at the closing call |
 | Questions | `.qa` (`kit.css`), native `<details>`, an `id` per question | Every page |
-| Footer | `Shell.tsx` | Sign-off, products in order, the disclaimer, "Built in Qatar." with the Doha time |
+| Footer | `Shell.tsx` | Sign-off, products in order, the trades with a page of their own under their label ("For your business"), Questions and Guides, the disclaimer, "Built in Qatar." |
 
 ## Drawings of the product (site)
 
