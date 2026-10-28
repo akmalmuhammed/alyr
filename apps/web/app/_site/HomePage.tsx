@@ -4,14 +4,16 @@ import { Icon, type IconName } from "./brand";
 import { BusinessTabs } from "./BusinessTabs";
 import { ContactButton, ContactNote } from "./Contact";
 import { copy, type BusinessRow, type Locale, type Questions as QuestionSet } from "./copy";
-import { AgeBarCrop, FigCaption, OrderBarCrop, ReceiptCrop, ShelfCrop, SummaryCrop, TimesCrop, TrackScreen } from "./Drawings";
-import { Phone, SampleMark, TickPath } from "./Frames";
+import { FigCaption } from "./Drawings";
+import { SampleMark, TickPath } from "./Frames";
 import { FlowDiagram } from "./FlowDiagram";
 import { FoldSplit } from "./FoldSplit";
 import { HomeMotion } from "./HomeMotion";
+import { HowCards } from "./HowCards";
 import { SAMPLE_ORDER, SAMPLES } from "./samples";
+import { SuiteFrame } from "./SuiteFrame";
 import { contactHref, Shell } from "./Shell";
-import { CONTACT_STATE, INCLUDED, OFFER_LIVE, PATHS, PRODUCTS, productPath, TRUST_RECORDS, type TrustRecord } from "./site";
+import { CONTACT_STATE, INCLUDED, OFFER_LIVE, PATHS, PRODUCTS, productPath } from "./site";
 import { lines, rich } from "./Text";
 import "./kit.css";
 import "./home.css";
@@ -24,13 +26,12 @@ import "./room.css";
  * feed of what ALYR did; how we work, a loop of check, set up, see and improve; the
  * visitor's own business, as tabs, whose "Today" list is what a check-up finds; one order
  * followed from the first message to collection, as proof; ALYR Agent; the products; the
- * price (offer on); trust; questions; the closing call. Every word from `copy.ts`; every
+ * price (offer on); questions; the closing call. Every word from `copy.ts`; every
  * screen is the product's own, with fictional businesses, each marked as a sample once.
  */
 export function HomePage({ locale }: { locale: Locale }) {
   const t = copy[locale];
   const h = t.home;
-  const other: Locale = locale === "en" ? "ar" : "en";
 
   return (
     <Shell locale={locale} page="home" cta={h.final}>
@@ -41,7 +42,6 @@ export function HomePage({ locale }: { locale: Locale }) {
       <Spotlight locale={locale} />
       <Suite locale={locale} />
       {OFFER_LIVE && <Price locale={locale} />}
-      <Trust locale={locale} other={other} />
       <Questions locale={locale} />
       <HomeMotion />
     </Shell>
@@ -61,7 +61,7 @@ function Rule({ dashed = false }: { dashed?: boolean }) {
 }
 
 /** A section's heading. The eyebrow is kept only where it says something the heading does
- * not (the trust question, the Agent spotlight's product, the price); site audit R1. */
+ * not (the Agent spotlight's product, the price); site audit R1. */
 function Head({ eyebrow, title, id, dark = false, children }: {
   eyebrow?: string; title: string; id: string; dark?: boolean; children?: ReactNode;
 }) {
@@ -135,14 +135,15 @@ function Spotlight({ locale }: { locale: Locale }) {
     <section className="hs spot" id="agent" aria-labelledby="spot-title">
       <div className="wrap">
         <Rule />
-        <div className="spot-head">
-          <Head eyebrow={s.eyebrow} title={s.title} id="spot-title">
+        <div className="open-split">
+          <Head eyebrow={s.eyebrow} title={s.title} id="spot-title" />
+          <div className="open-end">
             <p className="lead">{rich(s.body)}</p>
-          </Head>
-          <a className="link spot-link" href={PATHS.agent[locale]}>
-            <span>{rich(s.link)}</span>
-            <Icon name="arrow-right" className="ico ico-flip" />
-          </a>
+            <a className="link" href={PATHS.agent[locale]}>
+              <span>{rich(s.link)}</span>
+              <Icon name="arrow-right" className="ico ico-flip" />
+            </a>
+          </div>
         </div>
         <AgentFigure
           variant="spot"
@@ -154,6 +155,7 @@ function Spotlight({ locale }: { locale: Locale }) {
           switcher
           headingLevel={3}
           aside={callouts}
+          more={s.more}
         />
       </div>
     </section>
@@ -161,65 +163,26 @@ function Spotlight({ locale }: { locale: Locale }) {
 }
 
 // --------------------------------------------------------------- the products
+/* One shop, six products (framer-review P1): the suite as one fictional bakery's workspace on
+   a Carbon plate, a tile per product, each one link to its page (SuiteFrame.tsx); then what
+   holds for every product. It opens full (the heading across the grid, the lead under it), so
+   it never repeats the split opening of ALYR Agent just before it. */
 function Suite({ locale }: { locale: Locale }) {
-  const t = copy[locale];
-  const s = t.home.suite;
-  const bakery = SAMPLES[locale].bakery;
-  const crop: Record<(typeof PRODUCTS)[number], ReactNode> = {
-    chat: <OrderBarCrop crops={s.crops} />,
-    bookings: <TimesCrop crops={s.crops} />,
-    agent: <SummaryCrop view={bakery} />,
-    accounts: <AgeBarCrop view={bakery} label={s.crops.owed} />,
-    shelf: <ShelfCrop crops={s.crops} soldOut={s.crops.shelf.find((i) => i.out)?.note ?? ""} />,
-    docs: <ReceiptCrop crops={s.crops} />,
-  };
+  const s = copy[locale].home.suite;
   return (
-    <section className="band suite" id="products" aria-labelledby="products-title">
-      <div className="band-fold" aria-hidden="true" data-m>
-        <i />
-        <i />
-        <i />
-      </div>
-      <div className="band-in">
-        <div className="wrap">
-          <Head eyebrow={s.eyebrow} title={s.title} id="products-title" dark>
-            <p className="band-body">{rich(s.body)}</p>
+    <section className="hs suite" id="products" aria-labelledby="products-title">
+      <div className="wrap">
+        <Rule />
+        <div className="open-full">
+          <Head eyebrow={s.eyebrow} title={s.title} id="products-title">
+            <p className="lead">{rich(s.body)}</p>
           </Head>
-          {/* Six plain rows (site audit L1): the name, what it is, one sentence and its link,
-              and a corner of its real screen at true size, marked as a sample. The corners'
-              numbers are the bakery's samples, so a machine reads that first. */}
-          <p className="sr-only">{t.agent.samples.bakery.fictional}</p>
-          <ul className="suite-rows">
-            {PRODUCTS.map((key) => {
-              const p = t.products.items[key];
-              const row = s.rows[key];
-              return (
-                <li key={key} id={`p-${key}`} className="suite-row">
-                  <div className="suite-name">
-                    <h3><bdi>{p.name}</bdi></h3>
-                    <span className="suite-desc">{p.descriptor}</span>
-                    {INCLUDED.includes(key) && <span className="suite-state">{p.state}</span>}
-                  </div>
-                  <div className="suite-say">
-                    <p>{rich(row.body)}</p>
-                    <a className="link link-dark" href={productPath(key, locale)}>
-                      <span>{rich(row.link)}</span>
-                      <Icon name="arrow-right" className="ico ico-flip" />
-                    </a>
-                  </div>
-                  <div className="suite-crop" data-nosnippet>
-                    <SampleMark label={t.fig.sample} />
-                    {crop[key]}
-                  </div>
-                </li>
-              );
-            })}
-          </ul>
-          <div className="suite-notes">
-            {s.notes.map((note) => (
-              <p key={note.title}><b>{rich(note.title)}</b> {rich(note.body)}</p>
-            ))}
-          </div>
+        </div>
+        <SuiteFrame locale={locale} />
+        <div className="suite-notes">
+          {s.notes.map((note) => (
+            <p key={note.title}><b>{rich(note.title)}</b> {rich(note.body)}</p>
+          ))}
         </div>
       </div>
     </section>
@@ -249,7 +212,9 @@ function Business({ locale }: { locale: Locale }) {
     <section className="hs bizs" id="business" aria-labelledby="business-title">
       <div className="wrap">
         <Rule />
-        <Head eyebrow={b.eyebrow} title={b.title} id="business-title" />
+        <div className="open-full">
+          <Head eyebrow={b.eyebrow} title={b.title} id="business-title" />
+        </div>
         <BusinessTabs
           label={b.tabsLabel}
           tabs={[...b.rows, b.other].map((row) => ({ id: row.id, name: row.tab, icon: <Icon name={BUSINESS_ICON[row.id] ?? "plus"} /> }))}
@@ -390,17 +355,17 @@ function See({ locale }: { locale: Locale }) {
   return (
     <section className="hs see" id="see" aria-labelledby="see-title">
       <div className="wrap">
-        <Rule />
-        <div className="see-head">
-          <Head eyebrow={see.eyebrow} title={see.title} id="see-title">
-            <p className="lead">{rich(see.body)}</p>
-          </Head>
-          <a className="link see-link" href={PATHS.chat[locale]}>
-            <span>{rich(see.link)}</span>
-            <Icon name="arrow-right" className="ico ico-flip" />
-          </a>
-        </div>
         <div className="how-panel see-panel">
+          <div className="open-split open-plate">
+            <Head eyebrow={see.eyebrow} title={see.title} id="see-title" dark />
+            <div className="open-end">
+              <p className="lead">{rich(see.body)}</p>
+              <a className="link link-dark" href={PATHS.chat[locale]}>
+                <span>{rich(see.link)}</span>
+                <Icon name="arrow-right" className="ico ico-flip" />
+              </a>
+            </div>
+          </div>
           <FlowDiagram flow={see} sample={copy[locale].fig.sample} note={copy[locale].agent.samples.bakery.fictional} />
         </div>
         <div className="tally">
@@ -421,9 +386,9 @@ function See({ locale }: { locale: Locale }) {
 
 // ---------------------------------------------------------------- how we work
 /**
- * Check, set up, see, improve: four steps on a rail that fills as the visitor scrolls, and
- * a dashed arc from the last step back to the first once it is full, because the work
- * starts again. Without motion the arc is simply drawn.
+ * Check, set up, see, improve: four cards, each a still canvas with one moving scene from
+ * the product, and a line back from the last to the first, because the work starts again
+ * (HowCards.tsx, ALY-226). Without motion every scene is finished and the line is drawn.
  */
 function How({ locale }: { locale: Locale }) {
   const w = copy[locale].home.how;
@@ -431,30 +396,13 @@ function How({ locale }: { locale: Locale }) {
     <section className="hs how" id="how" aria-labelledby="how-title">
       <div className="wrap">
         <Rule />
-        <Head eyebrow={w.eyebrow} title={w.title} id="how-title">
-          <p className="lead">{rich(w.lead)}</p>
-        </Head>
-        <div className="how-rail" data-rail>
-          <span className="how-line" aria-hidden="true"><span data-rail-fill /></span>
-          <ol className="how-steps">
-            {w.steps.map((step, index) => (
-              <li key={step.title} className="how-step" data-rail-step>
-                <span className="how-node" aria-hidden="true"><bdi>{index + 1}</bdi></span>
-                <h3>{rich(step.title)}</h3>
-                <p>{rich(step.body)}</p>
-              </li>
-            ))}
-          </ol>
-          {/* the way back to step 1: an arc over the steps on wide screens, a row under them on phones */}
-          <p className="how-loop">
-            <span className="how-loop-k"><bdi>{w.again}</bdi></span>
-            <span className="how-loop-head" aria-hidden="true" />
-          </p>
-          <p className="how-again">
-            <Icon name="arrow-right" className="ico" />
-            <span>{w.again}</span>
-          </p>
+        <div className="open-split">
+          <Head eyebrow={w.eyebrow} title={w.title} id="how-title" />
+          <div className="open-end">
+            <p className="lead">{rich(w.lead)}</p>
+          </div>
         </div>
+        <HowCards locale={locale} />
         <div className="how-foot">
           <div className="how-next">
             <ContactButton locale={locale} variant="line" label={copy[locale].home.final.action} />
@@ -580,56 +528,6 @@ function Price({ locale }: { locale: Locale }) {
         <div className="price-cta">
           <ContactButton locale={locale} lean label={copy[locale].home.final.action} />
           <ContactNote locale={locale} />
-        </div>
-      </div>
-    </section>
-  );
-}
-
-// ------------------------------------------------------------------------ trust
-function Trust({ locale, other }: { locale: Locale; other: Locale }) {
-  const tr = copy[locale].home.trust;
-  const records = (Object.keys(TRUST_RECORDS) as TrustRecord[]).filter((key) => TRUST_RECORDS[key]);
-  return (
-    <section className="hs trust" id="trust" aria-labelledby="trust-title">
-      <div className="wrap">
-        <Rule />
-        <div className="trust-grid">
-          <div className="trust-copy">
-            <Head eyebrow={tr.eyebrow} title={tr.title} id="trust-title">
-              <p className="lead">{rich(tr.body)}</p>
-            </Head>
-            <ul className="facts6">
-              {tr.facts.map((fact, index) => (
-                <li key={fact.title} data-m style={n(index % 3)}>
-                  <h3>{rich(fact.title)}</h3>
-                  <p>{rich(fact.body)}</p>
-                </li>
-              ))}
-            </ul>
-            {records.length > 0 && (
-              <dl className="records" aria-label={tr.records.label}>
-                {records.map((key) => (
-                  <div key={key}>
-                    <dt>{tr.records.items[key]}</dt>
-                    <dd dir="auto">{TRUST_RECORDS[key]}</dd>
-                  </div>
-                ))}
-              </dl>
-            )}
-            {OFFER_LIVE && <p className="trust-closing">{rich(tr.closing)}</p>}
-          </div>
-          <figure className="trust-fig fig-cap-end" data-m>
-            <FigCaption locale={locale} caption={tr.figure.caption} />
-            {/* On phones the pair scrolls sideways, so it takes keyboard focus. */}
-            <div className="pair" tabIndex={0} role="group" aria-label={tr.figure.label} data-nosnippet>
-              {[locale, other].map((lang) => (
-                <div key={lang} className={`pair-item pair-${lang}`} dir={lang === "ar" ? "rtl" : "ltr"} lang={lang}>
-                  <Phone className="pair-phone"><TrackScreen sample={copy[lang].home.sample} lang={lang} /></Phone>
-                </div>
-              ))}
-            </div>
-          </figure>
         </div>
       </div>
     </section>

@@ -81,6 +81,10 @@ three cells in words, top items, owed, team as one line a person.
 - Knowledge cards have "Not now" (until the numbers change or Sunday); tasks and money do not.
 - Volt never sits on a knowledge card.
 - "By rule", never "I noticed".
+- **On the public site the rule lines are hidden** (founder, 25 Oct 2026): the site's showcase
+  passes `ruleLines={false}` (no "RULE · …" under a card, no rule as a need's tooltip) and its
+  own `labels.suggestions` ("Suggestions" / «اقتراحات»). The workspace and `/agent-sample`
+  keep the rule lines and "Suggestions, by rule"; never turn them off there.
 
 ## Charts
 

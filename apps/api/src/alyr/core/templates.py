@@ -94,6 +94,13 @@ CATALOGUE: dict[str, Template] = {
         "تم استلام الطلب رقم {{1}}: {{2}}. الإجمالي {{3}}. يمكنك الدفع من هنا: {{4}} . شكراً لك.",
         ("1001", "1 x Breaker 16 A, 1 x Cable 1.5 mm", "QAR 179", "https://app.alyr.online/pay/a/b"),
     ),
+    "order_received_later": Template(
+        "utility",
+        "Order {{1}} received: {{2}}. The total is {{3}}. {{4}} Thank you.",
+        "تم استلام الطلب رقم {{1}}: {{2}}. الإجمالي {{3}}. {{4}} شكراً لك.",
+        ("1001", "1 x Honey cake, 2 x Date maamoul", "QAR 179", "Pay by cash or bank transfer "
+         "when you collect."),
+    ),
     "order_received_account": Template(
         "utility",
         "Order {{1}} received: {{2}}. The total of {{3}} is on your account, "

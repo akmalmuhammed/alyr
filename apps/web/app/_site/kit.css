@@ -153,7 +153,6 @@ main:has(.pbar) section[id] { scroll-margin-top: calc(var(--header) + 4rem); }
 .inside-grid.is-four { grid-template-columns: repeat(4, minmax(0, 1fr)); }
 @media (max-width: 75rem) { .inside-grid.is-four { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
 @media (max-width: 61.99rem) { .inside-grid.is-four { grid-template-columns: minmax(0, 1fr); } }
-.inside-rules { margin-top: var(--space-4); }
 .pk-list li p { margin-top: 0; color: var(--text); font-size: 1rem; line-height: 1.5; }
 [lang="ar"] .pk-list li p { line-height: 1.7; }
 .notyet { position: relative; margin-top: clamp(2.5rem, 5vw, 3.5rem); padding-top: 1.5rem; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); column-gap: clamp(1.5rem, 3.5vw, 3.5rem); }
@@ -187,7 +186,8 @@ main:has(.pbar) section[id] { scroll-margin-top: calc(var(--header) + 4rem); }
 .pk-steps h3 { font-size: var(--h3); font-weight: 600; line-height: 1.25; }
 .pk-steps p { color: var(--text-muted); }
 .pk-step-n { display: inline-grid; place-items: center; width: 2rem; height: 2rem; border-radius: 50%; margin-bottom: .5rem; box-shadow: inset 0 0 0 1.5px var(--line-strong); font-family: var(--mono); font-size: .8125rem; }
-.pk-steps li:nth-child(3) .pk-step-n { background: var(--volt); color: var(--on-volt); box-shadow: none; }
+/* the step being described is a Carbon disc: a number is never Volt (framer-review P4) */
+.pk-steps li:nth-child(3) .pk-step-n { background: var(--carbon); color: var(--on-band); box-shadow: inset 0 0 0 1.5px var(--mark-ring); }
 .pk-card-fig { margin-top: clamp(2rem, 4vw, 3rem); max-width: 44rem; margin-inline-start: calc((100% + var(--col-gap)) * .5); }
 .pk-card .ag { padding: 0 1.5rem; }
 .pk-card .ag-card { border-bottom: 0; }
@@ -198,19 +198,6 @@ main:has(.pbar) section[id] { scroll-margin-top: calc(var(--header) + 4rem); }
 /* ALYR Agent: the Sunday report */
 .pk-report-grid { display: grid; grid-template-columns: minmax(0, 6fr) minmax(0, 6fr); column-gap: clamp(2rem, 5vw, 5rem); row-gap: 2.5rem; align-items: start; }
 .pk-report-fig { min-width: 0; }
-
-/* ALYR Agent: the rules, as the screen shows them */
-.rules-table { width: 100%; border-collapse: collapse; border-bottom: 1px solid var(--line); }
-.rules-table th, .rules-table td { text-align: start; vertical-align: top; padding: 1.125rem 1.5rem 1.125rem 0; border-top: 1px solid var(--line); }
-[dir="rtl"] .rules-table th, [dir="rtl"] .rules-table td { padding: 1.125rem 0 1.125rem 1.5rem; }
-.rules-table thead th { padding-block: .75rem; border-top: 2px solid var(--text); font-family: var(--mono); font-size: .75rem; font-weight: 500; letter-spacing: .09em; text-transform: uppercase; color: var(--text-muted); }
-[lang="ar"] .rules-table thead th { font-family: var(--arabic); letter-spacing: 0; text-transform: none; font-size: .875rem; }
-.rules-table tbody th { width: 34%; font-size: 1.0625rem; font-weight: 600; }
-.rules-line { display: block; font-family: var(--mono); font-size: .875rem; line-height: 1.55; color: var(--text); }
-[lang="ar"] .rules-line { font-family: var(--arabic); font-size: .9375rem; line-height: 1.7; }
-.rules-note { margin-top: .5rem; font-size: .875rem; }
-.rules-notes { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); column-gap: var(--col-gap); margin-top: 1.5rem; }
-.rules-notes li { color: var(--text-muted); max-width: 32rem; }
 
 /* ------------------------------------------------------------- narrower */
 @media (max-width: 61.99rem) {
@@ -235,7 +222,6 @@ main:has(.pbar) section[id] { scroll-margin-top: calc(var(--header) + 4rem); }
   .pk-who > li { grid-template-columns: minmax(0, 1fr); }
   .pk-who .tags { justify-content: flex-start; }
   .pk-facts.is-four { grid-template-columns: minmax(0, 1fr); }
-  .rules-notes { grid-template-columns: minmax(0, 1fr); row-gap: .75rem; }
 }
 @media (max-width: 30rem) {
   :root:has(.top[data-scrolled]) .pbar { top: 3.5rem; }
@@ -251,9 +237,5 @@ main:has(.pbar) section[id] { scroll-margin-top: calc(var(--header) + 4rem); }
   .pk-steps { grid-template-columns: minmax(0, 1fr); }
   .pk-steps li, [dir="rtl"] .pk-steps li { border-inline-start: 0; padding-inline: 0; }
   .pk-steps li + li { border-top: 1px solid var(--line); }
-  .rules-table, .rules-table thead, .rules-table tbody, .rules-table tr, .rules-table th, .rules-table td { display: block; }
-  .rules-table thead { display: none; }
-  .rules-table tbody th { width: auto; padding-bottom: .25rem; }
-  .rules-table td { border-top: 0; padding-top: 0; }
   .pk-card .ag { padding: 0 1rem; }
 }

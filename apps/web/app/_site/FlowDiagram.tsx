@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { Icon, Symbol } from "./brand";
 import type { FlowSet, PanelRow } from "./copy";
 import { SampleMark } from "./Frames";
+import { words } from "./pace";
 
 type Props = {
   flow: FlowSet;
@@ -21,20 +22,38 @@ const two = (value: number) => String(value).padStart(2, "0");
  * the reply travels back. Each story is a list of steps from `copy.ts`; the figure shows
  * everything that has happened up to the current one.
  *
- * It plays by itself while on screen and moves on to the next story when one ends.
+ * It opens on a finished frame: the first story's last step, with the customer's chat, ALYR's
+ * work and the team's screen all filled (framer-review P5; a figure is judged on its first
+ * frame). Once 60% of it is on screen, or its top is past the middle of a short screen, it
+ * plays that story forward from its first step, moving on to the next story when one ends.
  * Picking a story keeps it playing but stays on that story; picking a step pauses. With
- * reduced motion nothing plays and nothing travels: the steps are read one tap at a time.
+ * reduced motion nothing plays and nothing travels: it stays on the finished frame, a story
+ * picked opens finished too, and the steps are read one tap at a time.
+ *
+ * Each step dwells as long as it takes to read what it adds to the drawing: its title and
+ * the work lines it ticks, at `--read-word` a word, plus `--dwell-beat`, never under
+ * `--dwell-min` (site.css, `.fx-progress`; all of it follows `--pace`). The paragraph under
+ * the title is for a visitor who pauses or picks a step.
  */
 export function FlowDiagram({ flow, sample, note }: Props) {
   const stories = flow.stories;
-  const [at, setAt] = useState({ story: 0, step: 0 });
-  // The first step opens finished, as the HTML draws it; what each later step adds arrives
+  const last = (index: number) => stories[index].steps.length - 1;
+  // The HTML draws the first story finished; what each step adds arrives once it plays
   // (site audit F2: nothing hidden in the first view).
+  const [at, setAt] = useState({ story: 0, step: stories[0].steps.length - 1 });
   const [moved, setMoved] = useState(false);
+  const [started, setStarted] = useState(false);
+  const begun = useRef(false);
+  const begin = () => {
+    begun.current = true;
+    setStarted(true);
+  };
   const [auto, setAuto] = useState(true);
   const [pinned, setPinned] = useState(false);
   const [onScreen, setOnScreen] = useState(false);
   const [still, setStill] = useState(false);
+  // A hidden tab stops it too, as it stops off screen (nothing plays that nobody sees).
+  const [shown, setShown] = useState(true);
   const root = useRef<HTMLDivElement>(null);
   const tabs = useRef<(HTMLButtonElement | null)[]>([]);
 
@@ -43,15 +62,28 @@ export function FlowDiagram({ flow, sample, note }: Props) {
     const sync = () => setStill(media.matches);
     const first = setTimeout(sync, 0);
     media.addEventListener("change", sync);
+    const seen = () => setShown(document.visibilityState === "visible");
+    document.addEventListener("visibilitychange", seen);
     const node = root.current;
     const watch = new IntersectionObserver(
-      ([entry]) => setOnScreen(entry.isIntersecting),
-      { threshold: 0.25 },
+      ([entry]) => {
+        setOnScreen(entry.intersectionRatio >= 0.25);
+        const enough = entry.intersectionRatio >= 0.6
+          || (entry.isIntersecting && entry.boundingClientRect.top < window.innerHeight * 0.5);
+        if (!enough || media.matches) return;
+        // From the finished frame back to the first step, then forward, once it is read.
+        if (begun.current) return;
+        begin();
+        setMoved(true);
+        setAt({ story: 0, step: 0 });
+      },
+      { threshold: [0, 0.25, 0.6, 1] },
     );
     if (node) watch.observe(node);
     return () => {
       clearTimeout(first);
       media.removeEventListener("change", sync);
+      document.removeEventListener("visibilitychange", seen);
       watch.disconnect();
     };
   }, []);
@@ -59,7 +91,7 @@ export function FlowDiagram({ flow, sample, note }: Props) {
   const story = stories[at.story];
   const steps = story.steps;
   const now = steps[at.step];
-  const playing = auto && onScreen && !still;
+  const playing = auto && onScreen && shown && !still && started;
 
   // Everything that has happened so far in this story.
   const past = steps.slice(0, at.step + 1);
@@ -95,13 +127,15 @@ export function FlowDiagram({ flow, sample, note }: Props) {
   function chooseStory(index: number, focus = false) {
     setPinned(true);
     setMoved(true);
-    setAt({ story: index, step: 0 });
+    begin();
+    setAt({ story: index, step: still ? last(index) : 0 });
     if (focus) tabs.current[index]?.focus();
   }
 
   function chooseStep(index: number) {
     setAuto(false);
     setMoved(true);
+    begin();
     setAt({ story: at.story, step: index });
   }
 
@@ -183,9 +217,7 @@ export function FlowDiagram({ flow, sample, note }: Props) {
         {/* The wire to the customer runs through WhatsApp; the signal travels along it. */}
         <div className="fx-link" data-dir={phoneWire} aria-hidden="true">
           <span className="fx-wire" />
-          <span className="fx-pulse" />
-          <span className="fx-pulse" />
-          <span className="fx-pulse" />
+          {phoneWire && <span className="fx-signal" key={`${story.id}-${at.step}`} />}
           <span className="fx-station" />
           <span className="fx-via">
             <b>{flow.whatsapp.name}</b>
@@ -214,9 +246,7 @@ export function FlowDiagram({ flow, sample, note }: Props) {
 
         <div className="fx-link fx-link-short" data-dir={teamWire} aria-hidden="true">
           <span className="fx-wire" />
-          <span className="fx-pulse" />
-          <span className="fx-pulse" />
-          <span className="fx-pulse" />
+          {teamWire && <span className="fx-signal" key={`${story.id}-${at.step}`} />}
         </div>
 
         <section className="fx-node fx-team" data-lit={lit === "team" || undefined} aria-label={flow.team.name}>
@@ -264,7 +294,12 @@ export function FlowDiagram({ flow, sample, note }: Props) {
               <span className="fx-step-n" aria-hidden="true">{two(index + 1)}</span>
               <span className="fx-step-t">{step.title}</span>
               {index === at.step && playing && (
-                <span className="fx-progress" aria-hidden="true" onAnimationEnd={next} />
+                <span
+                  className="fx-progress"
+                  aria-hidden="true"
+                  style={{ "--words": words(step.title, ...(step.work ?? [])) } as React.CSSProperties}
+                  onAnimationEnd={next}
+                />
               )}
             </button>
           </li>

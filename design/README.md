@@ -17,7 +17,7 @@
 | Semantic | `semantic.*` | Every page and screen. **These names are the API**: canvas, surface, surface-subtle, text, text-muted, text-faint, text-inverse, line, line-strong, hair, hair-strong, focus, on-volt, volt-ink, volt-wash, pending, ok, warn, bad (and their `-soft`). |
 | Component | `component.*` | One component each: `band` (Carbon blocks and what sits on them), `window`, `theme-switch`, `chat` (the drawn WhatsApp chat), `drawing` (product screens drawn on the site), `agent`, `card` (the report card), `email`, `social`. |
 
-Then the non-colour groups: `font` (family, file, weight, size, leading, tracking), `space`, `layout`, `radius`, `border`, `cut` (the 45° cut), `shadow`, `motion` (duration, ease, travel), `breakpoint`, `z`, `focus`.
+Then the non-colour groups: `font` (family, file, weight, size, leading, tracking), `space`, `layout`, `radius`, `border`, `cut` (the 45° cut), `shadow`, `motion` (duration, pace, ease, travel), `breakpoint`, `z`, `focus`. In `motion.pace`, every token marked `paced` is multiplied by `pace` (CSS `calc(… * var(--pace))`; TypeScript and Python get the product), so one number sets the speed of every timed piece on the site.
 
 The brand primitives `--carbon`, `--volt`, `--volt-hover`, `--volt-pressed`, `--concrete` and `--graphite` are also exposed in CSS, because the site names them directly (Volt as the action, Carbon as the band). The grey ramp is not: use a semantic name, or add one.
 

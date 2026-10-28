@@ -80,25 +80,6 @@
 
 
 /* tracking page */
-.d-status { justify-self: start; display: inline-flex; align-items: center; gap: 6px; height: 24px; padding: 0 10px; border-radius: 12px; background: var(--d-wash); color: var(--d-volt-ink); font-size: 11px; font-weight: 600; }
-.d-status::before { content: ""; width: 6px; height: 6px; border-radius: 50%; background: var(--volt); }
-.d-track { padding: 6px 14px; }
-.d-track li { position: relative; display: flex; gap: 10px; padding: 9px 0; }
-.d-track li + li::before { content: ""; position: absolute; inset-inline-start: 9px; top: -9px; height: 18px; width: 2px; background: var(--d-hair-2); }
-.d-track li.reached + li.reached::before { background: var(--volt); }
-.d-node { position: relative; z-index: 1; width: 20px; height: 20px; flex: none; display: grid; place-items: center; border-radius: 50%; background: var(--d-card); box-shadow: inset 0 0 0 2px var(--d-hair-2); color: var(--on-volt); }
-.d-node svg { width: 11px; height: 11px; stroke-width: 2.8; }
-.d-track li.reached .d-node { background: var(--volt); box-shadow: none; }
-.d-track li.now .d-node { box-shadow: 0 0 0 5px var(--d-wash); }
-.d-track-text { display: grid; gap: 1px; }
-.d-track-text b { font-size: 12px; font-weight: 600; }
-.d-track li:not(.reached) .d-track-text b { color: var(--d-ink-3); font-weight: 500; }
-.d-track-text span { font-size: 10.5px; color: var(--d-ink-2); font-variant-numeric: tabular-nums; }
-.d-person { display: flex; align-items: center; gap: 10px; padding: 11px 12px; }
-.d-avatar-lg { width: 32px; height: 32px; flex: none; display: grid; place-items: center; border-radius: 50%; background: var(--d-ink); color: var(--d-card); font-weight: 600; font-size: 12px; }
-.d-person p { font-size: 11.5px; line-height: 1.4; color: var(--d-ink-2); }
-.d-person b { color: var(--d-ink); font-weight: 600; }
-.d-note { font-size: 10.5px; line-height: 1.45; color: var(--d-ink-2); text-align: center; }
 
 /* booking page */
 .d-cx { counter-reset: d-step; }
@@ -242,26 +223,6 @@
   box-shadow: 0 0 0 3px var(--window), inset 0 0 0 1.5px var(--mark-ring);
 }
 
-/* ------------------------------------------- a corner of each product's screen */
-.d-crop { position: relative; display: grid; gap: .5rem; align-content: start; padding: .875rem 1rem; border-radius: 12px; background: var(--window); color: var(--text); box-shadow: 0 0 0 1px var(--window-line); font-family: var(--sans); }
-.d-crop:lang(ar) { font-family: var(--arabic); }
-.d-crop .d-bar { position: static; inset: auto; box-shadow: none; background: transparent; padding: 0; backdrop-filter: none; -webkit-backdrop-filter: none; color: var(--d-ink); }
-.d-crop-times .d-times { grid-template-columns: repeat(3, minmax(0, 1fr)); }
-.d-crop-times .d-time-slot { color: var(--d-ink); }
-.d-crop-times .d-time-slot.on { color: var(--on-volt); }
-.d-crop-k { font-family: var(--mono); font-size: .625rem; letter-spacing: .08em; text-transform: uppercase; color: var(--text-muted); }
-.d-crop:lang(ar) .d-crop-k { font-family: var(--arabic); letter-spacing: 0; text-transform: none; font-size: .75rem; }
-.d-crop-sum { font-size: 1.0625rem; font-weight: 500; line-height: 1.3; letter-spacing: -.01em; text-wrap: pretty; }
-.d-crop:lang(ar) .d-crop-sum { letter-spacing: 0; line-height: 1.6; }
-.d-crop-sum .is-muted { color: var(--text-muted); }
-.d-crop-sum bdi { white-space: nowrap; }
-.d-crop-total { font-size: 1.5rem; font-weight: 650; letter-spacing: -.02em; line-height: 1; font-variant-numeric: tabular-nums; }
-.d-agebar { display: flex; gap: 2px; height: .5rem; }
-.d-agebar > span { flex-basis: 0; min-width: 4px; border-radius: 2px; }
-.d-agelegend { display: flex; flex-wrap: wrap; gap: .25rem .875rem; font-size: .6875rem; color: var(--text-muted); }
-.d-agelegend > span { display: inline-flex; align-items: center; gap: .375rem; }
-.d-agelegend i { width: .5rem; height: .5rem; border-radius: 2px; }
-
 /* The booking page on the customer's phone, in the product pages' demo. */
 .panel-page { flex: 1; display: grid; place-items: center; padding: 1.25rem; background: var(--dark-canvas); }
 .d-book-phone { width: min(17.5rem, 100%); height: 31rem; }
@@ -390,9 +351,3 @@
   .ws-search { min-width: 0; flex: 1 1 100%; }
   .ws-sorted { margin-inline-start: 0; }
 }
-
-/* the homepage's corners of ALYR Shelf and ALYR Docs */
-.d-crop-shelf { padding: .5rem; background: var(--d-bg); }
-.d-crop-shelf .d-row { padding-inline: 10px; }
-.d-crop-receipt { padding: 0; background: none; box-shadow: none; overflow: hidden; }
-.d-crop-receipt .pp-sheet { box-shadow: 0 0 0 1px var(--window-line); }

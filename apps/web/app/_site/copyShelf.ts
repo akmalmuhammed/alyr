@@ -74,10 +74,10 @@ export const shelfEn: ShelfPage = {
   },
   hero: {
     eyebrow: "With every product",
-    title: ["Everything you sell, on one shelf.", "Every sale counts the stock down."],
+    title: ["Your items and stock in one place,", "counted down with every sale."],
     lead:
-      "Photos, prices and sizes in Arabic and English. Every sale counts the stock, so the last one sells once.",
-    facts: ["With every ALYR product", "The last one sells only once", "Counted, by the day or by weight"],
+      "Photos, prices, sizes and choices in Arabic and English. When the last one sells, the order page shows Sold out.",
+    facts: ["With every ALYR product", "Sold out shown on the order page", "Count by item, by day or by weight"],
   },
   demo: {
     business: "Qirfa Bakery",
@@ -169,7 +169,7 @@ export const shelfEn: ShelfPage = {
     ],
   },
   moment: {
-    title: "One left, two customers, one sale.",
+    title: "Two customers order the last cheesecake",
     body:
       "Aisha and Mariam put the last kunafa cheesecake on their accounts in the same second. ALYR Shelf takes stock in one step, and only if the count stays at zero or above, so one order gets it. Mariam’s page says Sold out, and nothing sells twice.",
     label:
@@ -197,7 +197,7 @@ export const shelfEn: ShelfPage = {
   flow: {
     title: "What happens when something sells.",
     body:
-      "Your customer sees an ordinary order page. Behind it, ALYR Shelf takes the stock, writes the log and changes what the page shows. Follow one item through.",
+      "ALYR Shelf takes the stock, adds a row to the stock log and updates the order page.",
     tabsLabel: "Examples",
     stepsLabel: "Steps",
     pause: "Pause",
@@ -231,7 +231,7 @@ export const shelfEn: ShelfPage = {
           },
           {
             move: "team",
-            title: "A row in the log, by itself",
+            title: "The stock log adds a row",
             body: "The stock log gains a “Sold” row with the order number. Nobody typed it, and nobody can edit it.",
             record: { id: "log", main: "Sold · Order #1452", sub: "Pistachio kunafa cheesecake", trail: "16:05" },
             work: ["Stock log: Sold −1"],
@@ -283,7 +283,7 @@ export const shelfEn: ShelfPage = {
           },
           {
             move: "team",
-            title: "The change has a name on it",
+            title: "The record shows who changed it",
             body: "The record says who changed it, when, and from which phone.",
             work: ["Changed by Yusuf · 17:42"],
           },
@@ -325,7 +325,7 @@ export const shelfEn: ShelfPage = {
           },
           {
             move: "out",
-            title: "He is told",
+            title: "Omar is told why",
             body: "The customer hears why, in his language.",
             chat: { from: "business", text: "Order #1453 was cancelled because it was not paid within 30 minutes. The items were put back." },
             work: ["Customer told"],
@@ -335,7 +335,7 @@ export const shelfEn: ShelfPage = {
     ],
   },
   screen: {
-    title: "What is on the shelf, and every change to it.",
+    title: "Stock now, and every change to it",
     label: "The Stock screen of a fictional bakery’s workspace",
     callouts: [
       "What is left now, for every item you count.",
@@ -371,7 +371,7 @@ export const shelfEn: ShelfPage = {
     logCaption: "The same screen with one item open: its recent changes, newest first.",
   },
   inside: {
-    title: "Everything it does today.",
+    title: "What’s in ALYR Shelf",
     groups: [
       {
         name: "For your customers",
@@ -424,7 +424,7 @@ export const shelfEn: ShelfPage = {
     note: "With every ALYR product. Everything listed here is built.",
   },
   who: {
-    title: "Every business that sells things.\nEach starts the way it already works.",
+    title: "How each kind of business starts",
     rows: [
       { name: "Bakeries and home kitchens", tags: ["A number each day", "Order before 6 pm", "Photos"] },
       { name: "Groceries and baqalas", tags: ["Counted stock", "By weight", "Left out when sold out"] },
@@ -432,7 +432,7 @@ export const shelfEn: ShelfPage = {
       { name: "Restaurants and cafes", tags: ["Menu", "Choices and extras", "On or off"] },
       { name: "Wholesale and trading", tags: ["Price list", "Wholesale prices", "Import from a sheet"] },
     ],
-    other: "Run something else? Write to us about how you work today.",
+    other: "If you run another kind of business, write to us about how you work today.",
   },
   works: {
     title: "Works with the rest of ALYR.",
@@ -446,7 +446,7 @@ export const shelfEn: ShelfPage = {
     },
   },
   faq: {
-    title: "Before you ask.",
+    title: "Questions",
     items: [
       { id: "pay", q: "Do I pay for ALYR Shelf?", a: "It comes with ALYR, with every product.", offer: false },
       { id: "pay-offer", q: "Do I pay for ALYR Shelf?", a: "It is included with ALYR. It is not priced on its own.", offer: true },
@@ -494,10 +494,10 @@ export const shelfAr: ShelfPage = {
   },
   hero: {
     eyebrow: "مع كل منتج",
-    title: ["كل ما تبيعه، في مكان واحد.", "ومع كل\u00a0بيع، ينقص المخزون تلقائياً."],
+    title: ["أصنافك ومخزونك في مكان واحد،", "وينقص المخزون مع كل\u00a0بيع."],
     lead:
-      "الصور والأسعار والمقاسات بالعربية والإنجليزية. كل بيع يُنقص المخزون، فلا تُباع القطعة الأخيرة إلا مرة.",
-    facts: ["مع كل منتج من ALYR", "القطعة الأخيرة تُباع مرة واحدة", "بالعدد أو باليوم أو بالوزن"],
+      "الصور والأسعار والمقاسات والخيارات بالعربية والإنجليزية. وحين تُباع القطعة الأخيرة، تُظهر صفحة الطلب «نفد».",
+    facts: ["مع كل منتج من ALYR", "«نفد» يظهر في صفحة الطلب", "العدّ بالقطعة أو باليوم أو بالوزن"],
   },
   demo: {
     business: "مخبز قرفة",
@@ -590,7 +590,7 @@ export const shelfAr: ShelfPage = {
     ],
   },
   moment: {
-    title: "بقيت واحدة، وطلبتها عميلتان، فبيعت مرة واحدة.",
+    title: "عميلتان تطلبان آخر قطعة تشيز كيك",
     body:
       "وضعت عائشة ومريم آخر تشيز كيك كنافة على حسابيهما في الثانية نفسها. يأخذ ALYR Shelf الكمية في خطوة واحدة، ولا يأخذها إلا إذا بقي الرقم صفراً أو أكثر، فيحصل عليها طلب واحد. وتُظهر صفحة مريم «نفد»، ولا يُباع شيء مرتين.",
     label:
@@ -618,7 +618,7 @@ export const shelfAr: ShelfPage = {
   flow: {
     title: "ماذا يحدث حين يُباع صنف.",
     body:
-      "يرى عميلك صفحة طلب عادية. وفي الخلفية يأخذ ALYR Shelf الكمية من المخزون، ويكتب السجل، ويغيّر ما تعرضه الصفحة. تابع صنفاً واحداً من البداية.",
+      "يُنقص ALYR Shelf المخزون، ويضيف سطراً إلى سجل المخزون، ويحدّث صفحة الطلب.",
     tabsLabel: "الأمثلة",
     stepsLabel: "الخطوات",
     pause: "إيقاف",
@@ -652,7 +652,7 @@ export const shelfAr: ShelfPage = {
           },
           {
             move: "team",
-            title: "سطر في السجل تلقائياً",
+            title: "يُضاف سطر إلى سجل المخزون",
             body: "يُضاف إلى سجل المخزون سطر «مبيع» برقم الطلب. لم يكتبه أحد، ولا يستطيع أحد تعديله.",
             record: { id: "log", main: "مبيع · الطلب رقم 1452", sub: "تشيز كيك الكنافة بالفستق", trail: "16:05" },
             work: ["سجل المخزون: مبيع −1"],
@@ -704,7 +704,7 @@ export const shelfAr: ShelfPage = {
           },
           {
             move: "team",
-            title: "وعلى التغيير اسم صاحبه",
+            title: "يُظهر السجل من غيّر الصنف",
             body: "يقول السجل من غيّره، ومتى، ومن أي هاتف.",
             work: ["غيّره يوسف · 17:42"],
           },
@@ -746,7 +746,7 @@ export const shelfAr: ShelfPage = {
           },
           {
             move: "out",
-            title: "ويُبلَّغ العميل",
+            title: "يُبلَّغ عمر بالسبب",
             body: "يعرف العميل السبب بلغته.",
             chat: { from: "business", text: "تم إلغاء الطلب رقم 1453 لأنه لم يُدفع خلال 30 دقيقة، وأُعيدت الأصناف." },
             work: ["أُبلغ العميل"],
@@ -756,7 +756,7 @@ export const shelfAr: ShelfPage = {
     ],
   },
   screen: {
-    title: "ما على الرف، وكل تغيير عليه.",
+    title: "المخزون الآن، وكل تغيير عليه",
     label: "شاشة المخزون في مساحة عمل مخبز غير حقيقي",
     callouts: [
       "ما تبقّى الآن من كل صنف تعدّه.",
@@ -792,7 +792,7 @@ export const shelfAr: ShelfPage = {
     logCaption: "الشاشة نفسها وقد فُتح فيها صنف واحد: آخر تغييراته، الأحدث أولاً.",
   },
   inside: {
-    title: "كل ما يفعله اليوم.",
+    title: "ما يتضمنه ALYR Shelf",
     groups: [
       {
         name: "لعملائك",
@@ -845,7 +845,7 @@ export const shelfAr: ShelfPage = {
     note: "مع كل منتج من ALYR. كل ما في هذه القائمة مبنيّ في المنتج.",
   },
   who: {
-    title: "لكل نشاط يبيع شيئاً.\nوكلٌّ يبدأ كما يعمل اليوم.",
+    title: "كيف يبدأ كل نوع من الأنشطة",
     rows: [
       { name: "المخابز والمطابخ المنزلية", tags: ["عدد في اليوم", "اطلب قبل 6 م", "الصور"] },
       { name: "البقالات", tags: ["مخزون محسوب", "بالوزن", "يُخفى ما نفد"] },
@@ -853,7 +853,7 @@ export const shelfAr: ShelfPage = {
       { name: "المطاعم والمقاهي", tags: ["القائمة", "خيارات وإضافات", "تشغيل وإيقاف"] },
       { name: "تجارة الجملة", tags: ["قائمة الأسعار", "أسعار الجملة", "استيراد من ملف"] },
     ],
-    other: "نشاطك مختلف؟ راسلنا وأخبرنا كيف تعمل اليوم.",
+    other: "إن كان نشاطك من نوع آخر، فاكتب لنا كيف تعمل اليوم.",
   },
   works: {
     title: "يعمل مع بقية منتجات ALYR.",
@@ -867,7 +867,7 @@ export const shelfAr: ShelfPage = {
     },
   },
   faq: {
-    title: "قبل أن تسأل.",
+    title: "أسئلة",
     items: [
       { id: "pay", q: "هل أدفع مقابل ALYR Shelf؟", a: "يأتي مع ALYR، مع كل منتج.", offer: false },
       { id: "pay-offer", q: "هل أدفع مقابل ALYR Shelf؟", a: "هو مشمول مع ALYR، ولا يُسعَّر وحده.", offer: true },
