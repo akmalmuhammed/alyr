@@ -104,6 +104,13 @@
   --doc-band: #eef0ec;
   --agent-bar-mix: 88%;
   --agent-ghost-mix: 10%;
+  --shop-cocoa: #6f4329;
+  --shop-terracotta: #a5432a;
+  --shop-rose: #a53860;
+  --shop-saffron: #8a5a00;
+  --shop-teal: #1d6a6a;
+  --shop-plum: #613a7d;
+  --shop-ink: #ffffff;
   --sans: var(--font-instrument), "Aptos", "Segoe UI Variable", system-ui, sans-serif;
   --arabic: var(--font-plex-arabic), "Segoe UI", "Geeza Pro", sans-serif;
   --mono: var(--font-plex-mono), "Cascadia Mono", ui-monospace, monospace;
@@ -141,6 +148,10 @@
   --ui-heading-lg: 28px;
   --ui-display-sm: 36px;
   --ui-display: 56px;
+  --stage-hero: clamp(3.25rem, 0.5rem + 6.6vw, 8rem);
+  --stage-title: clamp(2.25rem, 0.6rem + 3.6vw, 4.5rem);
+  --stage-figure: clamp(2.75rem, 0.5rem + 5vw, 6.5rem);
+  --stage-lead: clamp(1.125rem, 0.75rem + 0.9vw, 1.75rem);
   --leading-display: 1;
   --leading-heading: 1.04;
   --leading-body: 1.55;
