@@ -1,0 +1,21 @@
+{
+  "$comment": "Literal durations the pace check (scripts/site/pace-check.mjs) lets through, each with its reason. Remove an entry once its line takes a pace token; the check fails on an entry that no longer matches.",
+  "allow": [
+    { "file": "apps/web/app/_site/Choreography.tsx", "match": "x: gsap.quickTo(button, \"x\", { duration: 0.48", "reason": "The main button leaning toward the pointer is an interaction, not a timed piece: the interaction scale (dur-3), not the pace." },
+    { "file": "apps/web/app/_site/Choreography.tsx", "match": "y: gsap.quickTo(button, \"y\", { duration: 0.48", "reason": "The same lean, on the other axis." },
+    { "file": "apps/web/app/_site/HomeMotion.tsx", "match": "root.classList.remove(\"motion\"), 10_000)", "reason": "The failsafe that drops motion if the choreography never arrives (motion.md rule 3), not a duration anyone sees." },
+    { "file": "apps/web/app/_site/HomeMotion.tsx", "match": "window.setTimeout(run, 200)", "reason": "Waiting for an idle moment before loading GSAP where requestIdleCallback is missing; not motion." },
+    { "file": "apps/web/app/_site/document.tsx", "match": "d.classList.remove('motion')},4000)", "reason": "The 4 s failsafe before hydration (motion.md rule 3), inlined in <head> before any token can load." },
+    { "file": "apps/web/app/_site/home.css", "match": ".motion .hl + .hl > span { animation-delay: 90ms; }", "reason": "The hero's entrance runs before hydration with the hero figure (AgentFigure), left out of the pace work on 25 Oct 2026 while the figure is rebuilt; it ends within about 1 s." },
+    { "file": "apps/web/app/_site/home.css", "match": ".motion .hero-lead { animation: hp-rise-solid var(--dur-3) var(--ease) both 260ms; }", "reason": "The hero's entrance, as above." },
+    { "file": "apps/web/app/_site/home.css", "match": ".motion .hero-actions { animation: hp-rise-solid var(--dur-3) var(--ease) both 360ms; }", "reason": "The hero's entrance, as above." },
+    { "file": "apps/web/app/_site/home.css", "match": ".motion .hero-note { animation: hp-rise-solid var(--dur-3) var(--ease) both 420ms; }", "reason": "The hero's entrance, as above." },
+    { "file": "apps/web/app/_site/home.css", "match": ".motion .hero-facts li { animation: hp-rise-solid var(--dur-3) var(--ease) both; animation-delay: calc(480ms", "reason": "The hero's entrance, as above." },
+    { "file": "apps/web/app/_site/home.css", "match": ".motion .afig-hero .aw { animation: hp-window var(--dur-4) var(--ease) both 240ms; }", "reason": "The hero figure (AgentFigure), left out of the pace work: another agent is rebuilding it." },
+    { "file": "apps/web/app/_site/home.css", "match": ".motion .afig-hero .af-status { animation: hp-fade var(--dur-3) var(--ease) both 500ms; }", "reason": "The hero figure, as above." },
+    { "file": "apps/web/app/_site/home.css", "match": ".motion .afig-hero .cap { animation: hp-fade var(--dur-3) var(--ease) both 1000ms; }", "reason": "The hero figure, as above." },
+    { "file": "apps/web/app/_site/home.css", "match": ":root:not([lang=\"ar\"]).motion .hl + .hl > span { animation-delay: 90ms, 90ms; }", "reason": "The hero's entrance (the width settle), as above." },
+    { "file": "apps/web/app/_site/site.css", "match": ".al-js .company-in.is-in .company-path path { animation: draw 1600ms", "reason": "Dead CSS: no component renders .company since the homepage was rebuilt. Remove the .company block rather than pace it." },
+    { "file": "apps/web/app/_site/site.css", "match": ".al-js .company-in.is-in .company-path .company-path-volt { animation: draw 700ms", "reason": "Dead CSS, as above." }
+  ]
+}

@@ -20,7 +20,7 @@ from uuid import UUID
 from fastapi import APIRouter, Depends, Header, HTTPException, Query, Request, Response
 from pydantic import BaseModel, Field
 
-from alyr.core import links, team
+from alyr.core import links, ratelimit, team
 from alyr.core.auth import Staff
 from alyr.modules.bookings import service
 from alyr.routes import customer_link
@@ -151,7 +151,8 @@ async def times(slug: str, service_id: UUID, day: date, request: Request) -> dic
     return {"day": day.isoformat(), "times": [t.isoformat() for t in free]}
 
 
-@public.post("/{slug}")
+@public.post("/{slug}",
+    dependencies=[Depends(ratelimit.per_address("booking-placed", "PLACED_PER_ADDRESS"))])
 async def book(slug: str, body: NewBooking, request: Request) -> dict:
     shop = await _shop(request, slug)
     # Who is booking comes from the signed link and from nothing else in the request.

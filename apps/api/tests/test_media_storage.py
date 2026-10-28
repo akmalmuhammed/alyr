@@ -17,6 +17,7 @@ from alyr.core.storage import (
     S3Store,
     StoreError,
     StoreUnavailable,
+    check_store,
     make_store,
     sign_v4,
     valid_key,
@@ -252,3 +253,28 @@ def test_a_server_without_r2_warns_that_local_disk_is_not_for_production(tmp_pat
     with caplog.at_level(logging.WARNING, logger="alyr.storage"):
         make_store(Settings(_env_file=None, env="production", media_local_dir=str(tmp_path)))
     assert "local disk in a non-local environment" in caplog.text
+
+
+# ── the start-up check (ALY-63) ───────────────────────────
+
+
+def test_a_server_refuses_to_start_with_photos_on_a_disk_the_cloud_wipes(tmp_path):
+    production = Settings(_env_file=None, env="production", media_local_dir=str(tmp_path))
+    with pytest.raises(RuntimeError, match="ALYR_R2_ACCOUNT_ID"):
+        check_store(production, make_store(production))
+
+
+def test_a_single_server_may_keep_photos_on_its_kept_volume_on_purpose(tmp_path):
+    allowed = Settings(
+        _env_file=None, env="production", media_local_dir=str(tmp_path), media_allow_local=True
+    )
+    check_store(allowed, make_store(allowed))
+
+
+def test_r2_and_a_developer_machine_always_start(tmp_path):
+    check_store(settings(media_local_dir=str(tmp_path)), make_store(settings()))
+    production_r2 = Settings(
+        _env_file=None, env="production", r2_account_id=ACCOUNT, r2_access_key_id="id",
+        r2_secret_access_key="secret",
+    )
+    check_store(production_r2, make_store(production_r2))

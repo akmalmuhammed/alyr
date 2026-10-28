@@ -3,6 +3,8 @@ import { Icon } from "./brand";
 import { copy, type Locale } from "./copy";
 import type { LastOne as Moment } from "./copyShelf";
 import { CxTop, Phone, SampleMark, TickPath } from "./Frames";
+import { LoopToggle } from "./LoopToggle";
+import { words } from "./pace";
 import { PhotoTile } from "./PageDrawings";
 import { lines, rich } from "./Text";
 import "./drawings.css";
@@ -12,8 +14,10 @@ import "./moment.css";
 // two customers who put it on their accounts in the same second, one stock card between
 // them. Aisha's order takes it, the count steps from 1 to 0 and the stock log gains a Sold
 // row with one Volt tick; Mariam's page marks it Sold out. CSS only (moment.css), keyed on
-// the `.is-in` that SiteMotion adds once: the HTML is the finished state, so without
-// scripts or with reduced motion the figure is complete. It plays once, in under 2.5 s.
+// the `.is-in` that loops.ts adds: the HTML is the finished state, so without scripts or
+// with reduced motion the figure is complete. It plays in under 2.5 s, holds while its new
+// words are read, fades and plays again (founder, 26 Oct 2026: motion always on), until its
+// Pause control stops it; off screen and in a hidden tab it stops too.
 
 const at = (index: number) => ({ "--p": index }) as CSSProperties;
 
@@ -50,8 +54,12 @@ function Row({ m, out }: { m: Moment; out?: boolean }) {
 }
 
 export function LastOneFigure({ locale }: { locale: Locale }) {
-  const m = copy[locale].pages.shelf.moment;
+  const t = copy[locale];
+  const m = t.pages.shelf.moment;
   const s = m.stock;
+  // what the moment comes to, read while it holds: Aisha's order, Sold out, Mariam's notice
+  // (the lines under them are there for a visitor who stops; each cycle shows them again)
+  const said = words(m.a.placed, s.soldOut, m.b.notice);
   return (
     <section className="sec sig-sec" id="moment" aria-labelledby="moment-title">
       <div className="wrap">
@@ -60,12 +68,13 @@ export function LastOneFigure({ locale }: { locale: Locale }) {
           <h2 className="h1" id="moment-title">{lines(m.title)}</h2>
           <p className="lead">{rich(m.body)}</p>
         </div>
-        <figure className="sig lo" data-sig>
-          <p className="sr-only">{copy[locale].agent.samples.bakery.fictional} {m.label}</p>
+        <figure className="sig lo" data-sig data-loop data-loop-play style={{ "--words": said } as CSSProperties}>
+          <p className="sr-only">{t.agent.samples.bakery.fictional} {m.label}</p>
+          <LoopToggle words={t.loop} name={t.loop.names.figure} className="sig-toggle" />
           <div className="sig-stage" inert aria-hidden="true" data-nosnippet>
             <span className="sig-rule"><i /><i /></span>
 
-            <div className="sig-part lo-a" style={at(0)}>
+            <div data-loop-part className="sig-part lo-a" style={at(0)}>
               <span className="sig-k">{m.parts.a}</span>
               <Phone className="lo-phone">
                 <div className="d-cx">
@@ -85,7 +94,7 @@ export function LastOneFigure({ locale }: { locale: Locale }) {
               </Phone>
             </div>
 
-            <div className="sig-part lo-card" style={at(2)}>
+            <div data-loop-part className="sig-part lo-card" style={at(2)}>
               <span className="sig-k">{m.parts.card}</span>
               <div className="aw lo-win">
                 <div className="aw-bar">
@@ -128,7 +137,7 @@ export function LastOneFigure({ locale }: { locale: Locale }) {
               </div>
             </div>
 
-            <div className="sig-part lo-b" style={at(1)}>
+            <div data-loop-part className="sig-part lo-b" style={at(1)}>
               <span className="sig-k">{m.parts.b}</span>
               <Phone className="lo-phone">
                 <div className="d-cx">
