@@ -55,7 +55,7 @@ if (!yes) {
 
 // On Windows pnpm runs through the shell, so the message needs its own quotes there.
 const message = `Manual deploy from ${branch}, commit ${sha}`;
-run("pnpm", ["exec", "wrangler", "deploy", "--tag", sha.slice(0, 7), "--message", shell ? `"${message}"` : message]);
+run("pnpm", ["exec", "wrangler", "deploy", "--config", "wrangler.jsonc", "--tag", sha.slice(0, 7), "--message", shell ? `"${message}"` : message]);
 
 for (let attempt = 1; attempt <= 6; attempt += 1) {
   const live = await fetch(`https://alyr.qa/version.txt?check=${Date.now()}`)

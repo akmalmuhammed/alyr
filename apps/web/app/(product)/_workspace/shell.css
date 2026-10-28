@@ -39,13 +39,13 @@
 .sh[dir="rtl"] .sh-brand-text small { letter-spacing: 0; }
 .sh-mark { width: 28px; height: 24px; flex: none; color: var(--ink); }
 
-.sh-search { display: flex; align-items: center; gap: 8px; margin: 6px 0 10px; padding: 0 8px 0 10px; height: 34px; border: 0; border-radius: 9px; background: var(--sheet); box-shadow: var(--lift); color: var(--ink-3); font-size: var(--ui-small); text-align: start; transition: color 0.2s var(--ease-product); }
-.sh-search:hover { color: var(--ink-2); }
+.sh-search { display: flex; align-items: center; gap: 8px; margin: 6px 0 10px; padding: 0 8px 0 10px; height: 34px; border: 0; border-radius: 9px; background: var(--sheet); box-shadow: var(--lift); color: var(--ink-2); font-size: var(--ui-small); text-align: start; transition: color 0.2s var(--ease-product); }
+.sh-search:hover { color: var(--ink); }
 .sh-search span { flex: 1; }
-.sh-kbd { font-family: var(--font-ui-mono); font-size: var(--ui-micro); padding: 1px 5px; border-radius: 5px; background: var(--raise); box-shadow: 0 0 0 1px var(--hair); color: var(--ink-3); }
+.sh-kbd { font-family: var(--font-ui-mono); font-size: var(--ui-micro); padding: 1px 5px; border-radius: 5px; background: var(--raise); box-shadow: 0 0 0 1px var(--hair); color: var(--ink-2); }
 
 .sh-side nav { display: flex; flex-direction: column; gap: 1px; flex: 1; }
-.sh-group { font-family: var(--font-ui-mono); font-size: var(--ui-micro); font-weight: 500; letter-spacing: 0.08em; text-transform: uppercase; color: var(--ink-3); padding: 16px 10px 6px; }
+.sh-group { font-family: var(--font-ui-mono); font-size: var(--ui-micro); font-weight: 500; letter-spacing: 0.08em; text-transform: uppercase; color: var(--ink-2); padding: 16px 10px 6px; }
 .sh[dir="rtl"] .sh-group { font-family: var(--face); letter-spacing: 0; font-size: var(--ui-caption); }
 .sh-link { position: relative; display: flex; align-items: center; gap: 10px; min-height: 34px; padding: 0 10px; border-radius: 8px; color: var(--ink-2); text-decoration: none; font-size: var(--ui-body-sm); font-weight: 500; transition: background 0.18s var(--ease-product), color 0.18s var(--ease-product); }
 .sh-link:hover { color: var(--ink); background: var(--hair); }
@@ -54,7 +54,7 @@
 .sh-link.on::before { content: ""; position: absolute; inset-inline-start: -12px; top: 9px; bottom: 9px; width: 5px; background: var(--volt); clip-path: polygon(0 0, 100% 22%, 100% 78%, 0 100%); }
 .sh[dir="rtl"] .sh-link.on::before { clip-path: polygon(0 22%, 100% 0, 100% 100%, 0 78%); }
 .sh-link .sh-count { margin-inline-start: auto; font-family: var(--font-ui-mono); font-size: var(--ui-micro); min-width: 20px; height: 18px; padding: 0 6px; display: grid; place-items: center; border-radius: 9px; background: var(--ink); color: var(--sheet); }
-.sh-add { color: var(--ink-3); }
+.sh-add { color: var(--ink-2); }
 .sh-add .sh-ico { padding: 1px; border-radius: 5px; box-shadow: 0 0 0 1px var(--hair-2); }
 .sh-ico { width: 18px; height: 18px; flex: none; }
 
@@ -62,18 +62,20 @@
 .sh-avatar { width: 30px; height: 30px; flex: none; display: grid; place-items: center; border-radius: 50%; background: var(--ink); color: var(--sheet); font-size: var(--ui-caption); font-weight: 600; letter-spacing: 0.02em; }
 .sh-me { display: grid; min-width: 0; flex: 1; line-height: 1.2; }
 .sh-me b { font-size: var(--ui-small); font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.sh-me small { font-size: var(--ui-caption); color: var(--ink-3); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.sh-me small { font-size: var(--ui-caption); color: var(--ink-2); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .sh-iconbtn { width: 30px; height: 30px; flex: none; display: grid; place-items: center; border: 0; border-radius: 8px; background: transparent; color: var(--ink-2); text-decoration: none; transition: background 0.18s var(--ease-product), color 0.18s var(--ease-product); }
 .sh-iconbtn:hover { background: var(--hair); color: var(--ink); }
 /* A thumb needs 44 px: the icon buttons grow on a phone and on any touch screen (ALY-110). */
 @media (max-width: 56rem), (pointer: coarse) { .sh-iconbtn { width: 44px; height: 44px; } }
 .sh-lang { height: 30px; padding: 0 9px; border: 0; border-radius: 8px; background: var(--hair); color: var(--ink); font-size: var(--ui-small); font-weight: 600; }
 .sh-lang:hover { background: var(--hair-2); }
+/* On a phone the sidebar is gone, so the same button sits in the top bar, 44 px tall (ALY-129). */
+.sh-mlang { min-width: 44px; height: 44px; flex: none; }
 
 /* ── the sheet ───────────────────────────────────────── */
 .sh-sheet { margin: 8px; margin-inline-start: 0; min-width: 0; min-height: 0; display: flex; flex-direction: column; background: var(--sheet); border-radius: 14px; box-shadow: var(--lift); overflow: hidden; }
 .sh-top { display: flex; align-items: center; gap: 12px; min-height: 52px; padding: 0 clamp(16px, 3vw, 32px); border-bottom: 1px solid var(--hair); flex: none; }
-.sh-crumbs { display: flex; align-items: center; gap: 8px; min-width: 0; font-size: var(--ui-body-sm); color: var(--ink-3); }
+.sh-crumbs { display: flex; align-items: center; gap: 8px; min-width: 0; font-size: var(--ui-body-sm); color: var(--ink-2); }
 .sh-crumbs b { color: var(--ink); font-weight: 600; white-space: nowrap; }
 .sh-crumbs span { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .sh-crumbs i { font-style: normal; color: var(--hair-2); }
@@ -83,7 +85,7 @@
 .sh-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--ink-3); flex: none; }
 .sh-live.on .sh-dot { background: var(--volt); box-shadow: 0 0 0 0 rgba(183, 243, 74, 0.6); animation: sh-pulse 2.4s var(--ease-product) 1; }
 @keyframes sh-pulse { 0% { box-shadow: 0 0 0 0 rgba(183, 243, 74, 0.55); } 70%, 100% { box-shadow: 0 0 0 7px rgba(183, 243, 74, 0); } }
-.sh-clock { font-family: var(--font-ui-mono); font-size: var(--ui-caption); color: var(--ink-3); letter-spacing: 0.02em; white-space: nowrap; }
+.sh-clock { font-family: var(--font-ui-mono); font-size: var(--ui-caption); color: var(--ink-2); letter-spacing: 0.02em; white-space: nowrap; }
 .sh-scroll { flex: 1; min-height: 0; overflow-y: auto; scrollbar-gutter: stable; }
 .sh-main { max-width: 76rem; margin: 0 auto; padding: clamp(20px, 3.5vw, 40px) clamp(16px, 3vw, 32px) 64px; display: flex; flex-direction: column; gap: 22px; }
 .sh-enter > * { animation: sh-rise 0.55s var(--ease-product) both; animation-delay: calc(var(--i, 0) * 55ms); }

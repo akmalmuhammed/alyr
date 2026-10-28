@@ -29,6 +29,8 @@ type Doc = {
   };
   payments: { method: Pair; amount_minor: number }[];
   voided_by: string | null; against: string | null;
+  // Numbered by the seller's own system and only delivered by ALYR (ALY-142): the sentence says so.
+  external: boolean; external_note: Pair | null;
 };
 type LinkState = { state: "none" | "ok" | "invalid" | "expired"; message: string; message_ar: string };
 type Page = { shop: { name: string; name_ar: string }; document: Doc | null; link: LinkState };
@@ -241,6 +243,8 @@ function DocumentPage() {
           </div>
         </section>
       )}
+
+      {doc.external && doc.external_note && <p className="cx-note">{doc.external_note[lang]}</p>}
 
       {failed && <p className="cx-error" role="alert">{t.downloadFailed}</p>}
       <button className="cx-btn" style={{ "--i": 3 } as React.CSSProperties} onClick={download} disabled={busy || !token}>

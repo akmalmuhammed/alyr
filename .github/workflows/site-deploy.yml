@@ -95,7 +95,7 @@ jobs:
           short="${ALYR_BUILD_SHA:0:7}"
           # REDIRECT off: the preview address must not send visitors on to alyr.qa.
           # PREVIEW on: the Worker adds X-Robots-Tag noindex.
-          pnpm exec wrangler versions upload \
+          pnpm exec wrangler versions upload --config wrangler.jsonc \
             --preview-alias "pr-${PR_NUMBER}" \
             --var REDIRECT:off --var PREVIEW:on \
             --tag "$short" \
@@ -167,7 +167,7 @@ jobs:
       - name: Deploy to alyr.qa
         run: |
           test -n "$CLOUDFLARE_API_TOKEN" || { echo "::error::CLOUDFLARE_API_TOKEN is not set (docs/runbooks/site-deploy.md, step 1)"; exit 1; }
-          pnpm exec wrangler deploy \
+          pnpm exec wrangler deploy --config wrangler.jsonc \
             --tag "${ALYR_BUILD_SHA:0:7}" \
             --message "Production from ${ALYR_BUILD_BRANCH}, commit ${ALYR_BUILD_SHA}"
       - name: alyr.qa serves this commit
