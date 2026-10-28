@@ -1,0 +1,85 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Signal field harness</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Instrument+Sans:wdth,wght@75..100,400..700&family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans+Arabic:wght@400;500;600&display=swap" rel="stylesheet">
+<script type="importmap">{"imports":{"react":"https://esm.sh/react@18.3.1","react-dom/client":"https://esm.sh/react-dom@18.3.1/client","framer":"./framer-stub.js"}}</script>
+<style>
+:root{--token-S2oE56wbE:#f6f7f3;--token-XYAPSNcOu:#15171a;--token-tpGxkcLLH:#5f666d;--token-MIJi7pupd:#8a918b;--token-SVZjCcT_M:#8a918b;--token-cE5AGFc5n:rgba(21,23,26,.14);--token-wnKZyblTz:#b7f34a;--token-BJ9wYGxIM:#151a0f;--token-kaftmF1nD:#6a9320;--token-rOTmNSxBK:#d8dcd7;color-scheme:light}
+@media (prefers-color-scheme:dark){:root{--token-S2oE56wbE:#0e1012;--token-XYAPSNcOu:#f3f5f0;--token-tpGxkcLLH:#a7adb5;--token-MIJi7pupd:#6f767e;--token-SVZjCcT_M:#5f666d;--token-cE5AGFc5n:rgba(255,255,255,.13);--token-kaftmF1nD:#b7f34a;--token-rOTmNSxBK:#2a2e33;color-scheme:dark}}
+*{box-sizing:border-box;margin:0}
+body{background:var(--token-S2oE56wbE);color:var(--token-XYAPSNcOu);font-family:"Instrument Sans",system-ui,sans-serif;-webkit-font-smoothing:antialiased}
+[dir=rtl] body,[dir=rtl] .first{font-family:"IBM Plex Sans Arabic",system-ui,sans-serif}
+.first{position:relative;height:820px;overflow:hidden}
+.art{position:absolute;inset:0;z-index:0}
+.hd{position:relative;z-index:1;height:72px;display:flex;align-items:center;gap:32px;padding:0 48px}
+.logo{width:140px;height:auto;display:block;color:var(--token-XYAPSNcOu)}
+.nav{display:flex;gap:28px;font-size:15px;font-weight:500;margin-inline-start:16px}
+.end{margin-inline-start:auto;display:flex;align-items:center;gap:24px;font-size:15px;font-weight:500}
+.outline{border:1px solid var(--token-SVZjCcT_M);padding:0 16px;height:40px;display:inline-flex;align-items:center;font-size:14px;font-weight:560}
+.copy{position:relative;z-index:1;padding:88px 48px 0;max-width:1000px}
+h1{font-size:88px;line-height:1;font-weight:640;letter-spacing:-.03em;font-stretch:96%}
+[dir=rtl] h1{letter-spacing:0;line-height:1.25;font-weight:600;font-size:76px}
+h1 span{display:block}
+.lead{margin-top:32px;max-width:520px;font-size:17px;line-height:1.55;font-weight:430}
+[dir=rtl] .lead{line-height:1.8;font-weight:400}
+.actions{margin-top:32px;display:flex;align-items:center;gap:28px}
+.volt{background:var(--token-wnKZyblTz);color:var(--token-BJ9wYGxIM);height:48px;padding:0 24px;display:inline-flex;align-items:center;font-size:15px;font-weight:560;clip-path:polygon(0 0,calc(100% - 12px) 0,100% 12px,100% 100%,0 100%);text-decoration:none}
+[dir=rtl] .volt{clip-path:polygon(12px 0,100% 0,100% 100%,0 100%,0 12px)}
+.more{font-size:15px;font-weight:560;text-decoration:underline;text-underline-offset:4px;text-decoration-thickness:1px}
+.menu{display:none}
+@media (max-width:1439px){.first{height:760px}.hd{padding:0 41px}.copy{padding:72px 41px 0}h1{font-size:73.6px}[dir=rtl] h1{font-size:64px}.lead{max-width:480px;margin-top:28px}.actions{margin-top:28px}}
+@media (max-width:1023px){.first{height:auto;overflow:visible}.art{position:relative;inset:auto;height:360px;margin-top:24px}.hd{height:64px;padding:0 20px;gap:12px}.nav,.lang{display:none}.menu{display:block;width:44px;height:44px}.copy{padding:40px 20px 0}h1{font-size:44px;line-height:1.02}[dir=rtl] h1{font-size:40px}.lead{font-size:17px}.actions{flex-wrap:wrap;gap:16px 24px}.big{display:none}}
+@media (min-width:1024px){.small{display:none}}
+</style>
+</head>
+<body>
+<div id="root"></div>
+<script type="module">
+import React from "react"
+import { createRoot } from "react-dom/client"
+import BgSignal from "./BgSignal.js"
+const q = new URLSearchParams(location.search)
+const lang = q.get("lang") || "en"
+const at = Number(q.get("at") ?? -1)
+document.documentElement.lang = lang
+document.documentElement.dir = lang === "ar" ? "rtl" : "ltr"
+const W = window.innerWidth
+const T = lang === "ar"
+  ? { h: ["فريق التقنية الذي", "لم يكن لدى مشروعك."], lead: "نفحص كيف يسير عملك، ونجهّز ما يحتاجه، ونواصل تحسينه معك. وهذا ما تكلّف به الشركات الكبيرة فريق التقنية لديها.", act: "احجز فحصاً لمشروعك", more: "شاهد طريقة عملنا", nav: ["المنتجات", "حسب نشاطك", "كيف نعمل", "أسئلة"], lang: "English", head: "احجز فحصاً لمشروعك", short: "احجز فحصاً" }
+  : { h: ["The tech team your", "business never had."], lead: "We check how your business runs, set up what it needs and keep improving it with you. It is the work a large company has an IT team for.", act: "Book a check-up", more: "See how we work", nav: ["Products", "By business", "How we work", "Questions"], lang: "العربية", head: "Book a check-up", short: "Check-up" }
+const e = React.createElement
+const logo = e("svg", { className: "logo", viewBox: "20 30 986 160", role: "img", "aria-label": "ALYR" },
+  e("g", { transform: "translate(20 30)" },
+    e("polygon", { fill: "currentColor", points: "50,0 180,0 130,62 0,62" }),
+    e("polygon", { fill: "currentColor", points: "0,72 126,72 39,160" }),
+    e("polygon", { fill: "#b7f34a", points: "134,72 190,72 142,160 46,160" })),
+  e("g", { transform: "translate(300 35)", fill: "currentColor" },
+    e("polygon", { points: "0,150 69,10 92,10 28,150" }), e("polygon", { points: "76,37 92,10 164,150 134,150" }),
+    e("polygon", { points: "190,10 216,10 216,124 326,124 326,150 190,150" }), e("polygon", { points: "348,10 379,10 433,80 414,107" }),
+    e("polygon", { points: "478,10 511,10 421,150 389,150" }),
+    e("path", { fillRule: "evenodd", d: "M540 10H672L702 40V84L672 114H569V150H540ZM569 36V88H661L674 75V49L661 36Z" }),
+    e("polygon", { points: "620,88 655,88 706,150 671,150" })))
+const phone = W < 1024
+const mode = q.get("mode") || (phone ? "phone" : W >= 1440 ? "wide" : "mid")
+const doodle = e("div", { className: "art" }, e(BgSignal, { dir: lang === "ar" ? "rtl" : "ltr", at, mode, inset: W >= 1440 ? 48 : phone ? 20 : 41 }))
+const App = () => e("div", { className: "first" },
+  phone ? null : doodle,
+  e("header", { className: "hd" }, logo,
+    e("nav", { className: "nav" }, ...T.nav.map((n) => e("span", { key: n }, n))),
+    e("div", { className: "end" }, e("span", { className: "lang" }, T.lang),
+      e("span", { className: "outline" }, e("span", { className: "big" }, T.head), e("span", { className: "small" }, T.short)),
+      e("svg", { className: "menu", viewBox: "0 0 24 24", fill: "none", stroke: "currentColor", strokeWidth: 1.7 }, e("path", { d: "M4 7h16M4 12h16M4 17h16" })))),
+  e("main", { className: "copy" },
+    e("h1", null, e("span", null, T.h[0]), e("span", null, T.h[1])),
+    e("p", { className: "lead" }, T.lead),
+    e("div", { className: "actions" }, e("a", { className: "volt", href: "#" }, T.act), e("a", { className: "more" }, T.more))),
+  phone ? doodle : null)
+if (q.get("bare")) document.head.insertAdjacentHTML("beforeend", "<style>.copy,.hd{visibility:hidden}</style>")
+createRoot(document.getElementById("root")).render(e(React.Fragment, null, e(App), q.get("tall") ? e("div", { style: { height: 4000 } }) : null))
+</script>
+</body>
+</html>
