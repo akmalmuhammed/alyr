@@ -9,7 +9,7 @@ The one source for who ALYR is, what it does and how it wins clients. The site, 
 | Which businesses | **Every owner-run business, no single target sector.** Every lead records its sector, so the sales tool shows which sectors buy fastest |
 | Who speaks | **The brand only.** ALYR speaks as a company; no founder name or photo on the site, deck or profiles. People who visit shops introduce themselves as the ALYR team |
 | Ambition | **Qatar first, then the GCC** |
-| Commercial registration | Submitted to MOCI, waiting. Until it is issued: no signing, no money, no prices in public (D-034, `docs/company/customer-agreement/notes.md`) |
+| Commercial registration | **Issued:** alyr software W.L.L., CR 255539 (licence 26 Oct 2026; footer and `/company`). Prices and the offer stay off the site until the founder turns them on (`NEXT_PUBLIC_ALYR_OFFER`, D-034); selling through the website also needs MOCI's e-commerce licence (`docs/company/customer-agreement/notes.md`) |
 
 ## The lines
 
@@ -33,7 +33,7 @@ Each answer says only what is true today. "Built" means built and tested, not ye
    - **ALYR Agent:** the owner's dashboard and the Sunday report card, with rules you can read (it counts and flags; it does not guess).
    - **ALYR Accounts:** credit accounts for customers who pay later.
 
-   Also part of ALYR: the Catalog (items, photos and stock), and receipts and invoices. All of it is built and tested; none of it runs for a real shop until the registration and the WhatsApp connection are in place.
+   Also part of ALYR: the Catalog (items, photos and stock), and receipts and invoices. All of it is built and tested; none of it runs for a real shop until the WhatsApp connection (Meta Tech Provider, now possible with the registration) is in place.
 5. **What can we do for you?** Inside the subscription:
    - we set it up in your shop;
    - load your items, services and prices;
@@ -54,7 +54,7 @@ Each answer says only what is true today. "Built" means built and tested, not ye
    - WhatsApp first, because that is where your customers are.
    - Rules you can read, not a black box.
 8. **Why now?** Customers in Qatar already expect to order and book on WhatsApp, and Meta's official platform now lets a shop keep its number and its WhatsApp Business app.
-9. **What does it cost?** Not in public until the registration (D-034). At the counter, only after the registration, from the back-office price list: the first product from QAR 449 a month, each added product QAR 150, ALYR Agent included, a setup quoted at the visit. The first month is paid, with the money back if the agreed result is missed.
+9. **What does it cost?** Not in public until the founder turns the offer on (D-034). At the counter, from the back-office price list: the first product from QAR 449 a month, each added product QAR 150, ALYR Agent included, a setup quoted at the visit. The first month is paid, with the money back if the agreed result is missed.
 10. **What happens after I say yes?** The plan for each shop (a target, not a promise in public):
     - Day 1: we set up your items, prices and hours with you, and you try it as a customer.
     - Days 2–3: WhatsApp and payments are connected and your staff are trained.
@@ -63,7 +63,7 @@ Each answer says only what is true today. "Built" means built and tested, not ye
 11. **What do I have to do?** About an hour with us at setup. Share your chat link and QR cards in the first week. Answer the chats ALYR hands to you.
 12. **Is my data safe?** Each business's data is walled off from every other business in the database. ALYR staff see a shop's setup, never its customers' conversations. Data is processed under Qatar's privacy law (PDPPL).
 13. **What if I want to leave?** Stop at the end of any month with 7 days' notice. You can export your items and prices and take them with you.
-14. **Who is behind ALYR?** ALYR, a company being registered in Qatar. Once the registration is issued, its number and address appear in the footer, on quotes and on invoices. No founder name or face (the founder's decision).
+14. **Who is behind ALYR?** alyr software W.L.L., registered in Qatar, CR 255539. The registration details are in the site footer and on `/company`, and go on quotes and invoices. No founder name or face (the founder's decision).
 15. **What is the goal?** To be the tech partner for owner-run businesses in Qatar, then across the GCC.
 16. **What's coming?** We announce something when it is built. Payroll is the next product.
 17. **Who uses it?** No business yet: the honest answer, until there is one. Instead we offer a demo of your own business on your own phone, and the money-back first month.
@@ -72,7 +72,7 @@ Each answer says only what is true today. "Built" means built and tested, not ye
 
 - "AI", "smart" or "learns" about the product: it runs on rules.
 - "Live", "customers", or any number about real use, until it is true.
-- A price, an offer or "live in 48 hours" in public before the registration.
+- A price or an offer in public before the founder turns the offer on; "live in 48 hours" at all.
 - "Keep your number" before ALYR is a Meta Tech Provider.
 - That Meta or WhatsApp endorses us; never show their logo.
 - A competitor's name, in an attack.
@@ -85,10 +85,10 @@ The brand speaks alone, so trust has to come from what an owner can check:
 | Signal | When |
 |---|---|
 | ALYR's own WhatsApp number on the site and every card: a WhatsApp company that answers on WhatsApp | As soon as the number is set up (`docs/brand.md`, open items) |
-| Registration number and address in the site footer, on quotes and invoices | When the registration is issued |
+| Registration number and address in the site footer, on quotes and invoices | Done on the site (footer and `/company`, 28 Oct); quotes and invoices next |
 | The visit kit: an ALYR staff card, the leave-behind, a sample QR card, the demo on the owner's phone | Before the first visits |
 | Google Business Profile and a company LinkedIn page | Before the first visits |
-| The money-back first month | With the offer, after the registration |
+| The money-back first month | With the offer, when the founder turns it on |
 | A first case study, with written consent | After the first shop's first 30 days |
 
 ## Getting clients
@@ -104,14 +104,14 @@ The brand speaks alone, so trust has to come from what an owner can check:
 | Home services, AC repair | "Who answers when a customer messages while you're on a job?" | Bookings, Chat, Agent |
 | Fashion and gifts | "How many people ask 'is this available?' and never hear back?" | Catalog, Chat |
 
-**Phase A: until the registration is issued (now).**
+**Phase A: before the registration (done; the registration was issued on 26 Oct).** What still applies until the offer is on:
 1. Visits as the ALYR team, logged in the sales tool: sector, area, the two numbers, objections in the owner's words, next step.
 2. Each good visit ends with a non-binding letter of interest. No signature as ALYR, no money (`docs/company/customer-agreement/notes.md`).
 3. **Founding shops** (proposal, for the founder to confirm): the first ten who say yes get their price fixed for 12 months, setup first, and a direct line to ALYR. In return they give written consent to a case study and one referral. Still paid from the first month.
 4. Partners who reach many shops at once: payment providers (SkipCash, Sadad, Dibsy), QDB's incubation hub, suppliers who visit shops every week.
 5. Content from the growth plan (`docs/growth/plan.md`), so the visit is expected, not cold.
 
-**Phase B: registration issued, up to 10 paying shops.**
+**Phase B: now, up to 10 paying shops.**
 - Turn the letters of interest into quotes, in the order they came.
 - Set up in person and hit the agreed result in 30 days.
 - Publish the first case study.
@@ -126,14 +126,13 @@ The brand speaks alone, so trust has to come from what an owner can check:
 **Measured weekly:**
 - qualified owner conversations;
 - visits, demos and letters of interest by sector;
-- after the registration: shops paying, shops live, and shops still paying in month 3.
+- shops paying, shops live, and shops still paying in month 3.
 
 ## Open, for the founder
 
 | Item | Why it matters |
 |---|---|
 | ALYR's WhatsApp number | The first thing an owner checks |
-| The legal name and its Arabic form | Footer, quotes, invoices, profiles |
 | Setup fee: the site says "from QAR 1,500", the back office drafts QAR 2,500 | One number at the counter |
 | "ALYR Agent" with no AI: explain it as rules in every introduction, or rename before launch | "Agent" reads as AI in 2026 |
 | Founding shops: yes or no, and the terms | Gives early shops a reason to commit |
