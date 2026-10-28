@@ -279,7 +279,13 @@ case "${1:-}" in
     tag="${2:?usage: setup.sh first-admin <image tag> <email> <name>}"
     email="${3:?usage: setup.sh first-admin <image tag> <email> <name>}"
     name="${4:?usage: setup.sh first-admin <image tag> <email> <name>}"
-    g run jobs deploy alyr-first-admin --region="$REGION"       --image="$REGION-docker.pkg.dev/$PROJECT/$REPO/alyr-api:$tag"       --args="^@^python@-m@alyr.first_admin@--email@$email@--name@$name@--own-number"       --service-account="$(sa alyr-run)" "${private_net[@]}" --set-env-vars=ALYR_ENV=production       --set-secrets="ALYR_MIGRATION_URL=migration-url:latest,ALYR_DATABASE_URL=database-url:latest,ALYR_META_PHONE_NUMBER_ID=meta-phone-number-id:latest,ALYR_META_WABA_ID=meta-waba-id:latest"       --cpu=1 --memory=512Mi --max-retries=0 --task-timeout=5m
+    # `^|^` makes | the list separator: an email address has an @ in it.
+    g run jobs deploy alyr-first-admin --region="$REGION" \
+      --image="$REGION-docker.pkg.dev/$PROJECT/$REPO/alyr-api:$tag" \
+      --args="^|^python|-m|alyr.first_admin|--email|$email|--name|$name|--own-number" \
+      --service-account="$(sa alyr-run)" "${private_net[@]}" --set-env-vars=ALYR_ENV=production \
+      --set-secrets="ALYR_MIGRATION_URL=migration-url:latest,ALYR_DATABASE_URL=database-url:latest,ALYR_META_PHONE_NUMBER_ID=meta-phone-number-id:latest,ALYR_META_WABA_ID=meta-waba-id:latest" \
+      --cpu=1 --memory=512Mi --max-retries=0 --task-timeout=5m
     g run jobs execute alyr-first-admin --region="$REGION" --wait
     echo "Sign in at $(url alyr-web)/login with $email (a code is emailed)."
     ;;

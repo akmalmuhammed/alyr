@@ -61,8 +61,10 @@ superuser, so without this those functions fail. The application role never bypa
 
 **Addresses.** Cloud Run gives fixed addresses: `https://alyr-api-841433519399.me-central1.run.app`
 and `https://alyr-web-841433519399.me-central1.run.app`. Custom names (`api.alyr.qa`,
-`app.alyr.qa`) are a later step: Cloud Run in Doha needs Google's load balancer for them (about
-USD 18 a month) or a Cloudflare Worker in front.
+`app.alyr.qa`) need Google's load balancer (about USD 18 a month) or a Cloudflare Worker in
+front: Cloud Run's own domain mappings are refused in Doha ("Creating domain mappings is not
+allowed in me-central1", 28 Oct 2026). alyr.qa is verified in Google Search Console for
+akmal@alyr.qa (TXT record on alyr.qa).
 
 ## Production settings
 
