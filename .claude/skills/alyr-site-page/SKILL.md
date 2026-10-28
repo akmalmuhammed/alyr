@@ -39,15 +39,16 @@ words under `home` in `copy.ts`):
    team your business never had.", then one row under it: the lead on the start side, which
    carries the one line of why ("We check how your business runs, set up what it needs and
    keep improving it with you. It is the work a large company has an IT team for."), "Book a
-   check-up" and "See how we work" (to `#how`) with the note on the end side; the facts row
-   ("We come to your shop, in Qatar"); the real ALYR Agent dashboard, marked "Sample" in its
-   window bar, and the live feed on the Carbon plate, which keeps moving: one event every
-   few seconds with the dashboard's numbers moving with it, a pause button, and stops off
-   screen, in a hidden tab and with reduced motion (D-058, `alyr-design/motion.md`, "The one
-   exception"). The dashboard is drawn with
-   `ruleLines={false}` and its cards titled "Suggestions"; the feed's flags say "Needs a look"
-   with the dashboard's own line and no rule line (founder, 25 Oct 2026). The product's own
-   screens keep their rule lines.
+   check-up" and "See how we work" (to `#how`), who replies, and the facts as one quiet line
+   (one under the other beside the film), all on the start side; on the far side **the film**
+   (D-062, the founder, 28 Oct 2026; `HeroFilm.tsx`, `alyr-design/motion.md`, "The hero
+   film"): a Carbon plate cut by the fold, clear of the headline, from under the header to the
+   hero's foot, with one afternoon at Qirfa Bakery in the product's own screens, three lanes
+   at once, ending on the real ALYR Agent home at 16:20 (`ruleLines={false}`), which is also
+   the still. One "Sample" mark in the plate's bar, Pause at its end; it stops off screen, in
+   a hidden tab and with reduced motion. Its stage steps down with the screen (`--fz`); on a
+   tablet it sits under the text, and on a phone under the text, full width, with the plate's
+   cut corner. The hero's live Agent figure (D-058) is now `/agent`'s only.
 3. **How we work** (`#how`, ALY-226, the founder's yes on the Framer prototype, 25 Oct 2026;
    `HowCards.tsx`, `how.css`): four cards, check, set up, see and improve, each a still Carbon
    canvas cut at 45° (mirrored) holding one drawn window of the product for Qirfa Bakery, then
