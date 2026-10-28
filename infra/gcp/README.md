@@ -77,6 +77,16 @@ ALYR_ALERT_EMAIL=akmal@alyr.qa infra/gcp/setup.sh monitoring
 **9. After a tested restore from an export** (`docs/hosting.md`, "Backups on Google"):
 `infra/gcp/setup.sh lock-backups`. It cannot be undone.
 
+## The visitor's address (ALY-265)
+
+So the per-address rate limits count the visitor and not the proxy, the edge Worker signs the
+address it sees and the API believes only a signed one. Four steps, in this order, each safe to
+stop after: `setup.sh client-ip-key` (make the key), `setup.sh edge-key` (give it to the Worker,
+logged in to the business Cloudflare account), deploy the Worker, `setup.sh client-ip-on` (the
+API starts counting); `setup.sh client-ip-off` undoes the last. Check with
+`scripts/check-client-address.sh`. The full procedure, the check and the rollback are in
+`docs/runbooks/client-address.md`. `setup.sh apps` keeps these settings when they are on.
+
 ## Meta's webhook
 
 Done on 28 Oct 2026: Meta sends WhatsApp events to `https://api.alyr.qa/webhooks/whatsapp`, and

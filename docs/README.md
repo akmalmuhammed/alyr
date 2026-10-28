@@ -16,7 +16,7 @@ Where each kind of document lives is set by [hygiene.md](hygiene.md). Read in th
 | [working-with-claude.md](working-with-claude.md) | How AI-built projects fail and our guard against each |
 | [brand.md](brand.md) | Brand rules and the design system |
 | [research/](research/) | Every marketing, sales, growth, customer, design and social study; start with `research/current-truth.md` |
-| [runbooks/](runbooks/) | Incident response, secret rotation, go-live checklist, product photo storage, site deploy and rollback |
+| [runbooks/](runbooks/) | Incident response, secret rotation, go-live checklist, product photo storage, site deploy and rollback, the visitor's address for the rate limits |
 | [audit/](audit/) | Audits, each finding with an issue number |
 | [lanes/](lanes/) | Each lane's brief and "Now" |
 | [growth/](growth/), [company/](company/) | Drafts and applications for the founder |

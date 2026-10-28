@@ -14,6 +14,7 @@
 import type { Metadata } from "next";
 import { headers } from "next/headers";
 import OrderPage from "../../_customer/order/OrderPage";
+import { askApi, visitorHeaders } from "../../_customer/order/serverApi";
 import type { Store } from "../../_customer/order/types";
 
 const API = process.env.ALYR_API_URL ?? "http://127.0.0.1:8000";
@@ -34,13 +35,9 @@ type Share = {
 };
 
 async function get<T>(path: string, token?: string | null): Promise<{ status: number; body: T | null }> {
-  try {
-    // The customer's link goes to the API in a header, so the API's request log holds none.
-    const response = await fetch(`${API}${path}`, { cache: "no-store", headers: token ? { "x-order-link": token } : undefined });
-    return { status: response.status, body: response.ok ? ((await response.json()) as T) : null };
-  } catch {
-    return { status: 0, body: null };
-  }
+  // The customer's link goes to the API in a header, so the API's request log holds none; who
+  // the visitor is goes along too, so the API does not count every visitor as this server (ALY-265).
+  return askApi<T>(API, path, { token, visitor: visitorHeaders(await headers()) });
 }
 
 export async function generateMetadata({ params, searchParams }: Props): Promise<Metadata> {

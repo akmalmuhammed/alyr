@@ -11,7 +11,10 @@ because it knows an email and a business and Cloudflare does not.
 """
 
 import hashlib
+import hmac
+import ipaddress
 import logging
+import time
 from dataclasses import dataclass
 
 from fastapi import HTTPException, Request
@@ -57,16 +60,106 @@ def _digest(value: str) -> str:
     return hashlib.sha256(value.encode()).hexdigest()
 
 
-def client_address(request: Request, settings: Settings | None = None) -> str:
-    """The visitor's address. Only a header the settings name is read, and from the right of a
-    list header, so a visitor cannot choose the answer by writing one themselves."""
+#: Where every request whose address nobody vouched for is counted. One shared bucket, on purpose:
+#: a caller who skips our edge cannot pick an address of their own (no fresh allowance per
+#: request, ALY-265) and cannot use anybody else's (nobody with a vouched address is held up by it).
+UNVOUCHED = "unvouched"
+
+# Where `resolve` found the address (the fourth, UNVOUCHED, is also the bucket's name).
+SIGNED = "signed"  # the edge wrote it and signed it with one of the keys
+HEADER = "header"  # the named header, believed as it stands (no keys set)
+CONNECTION = "connection"  # no header named, or none sent: the connection's own address
+
+_WARN_EVERY = 60.0
+_warned_at = float("-inf")
+
+
+def signing_keys(settings: Settings) -> list[str]:
+    """The keys that may vouch for an address. A trailing newline from a pasted or piped secret
+    is dropped, so the same key in two places always matches."""
+    return [k.strip() for k in settings.client_ip_keys.split(",") if k.strip()]
+
+
+def sign(key: str, address: str) -> str:
+    """What the edge writes beside the address: HMAC-SHA256 of the address, lower-case hex. The
+    key never travels; a signature is good for that one address and no other."""
+    return hmac.new(key.strip().encode(), address.encode(), hashlib.sha256).hexdigest()
+
+
+def _is_address(value: str) -> bool:
+    try:
+        ipaddress.ip_address(value)
+    except ValueError:
+        return False
+    return True
+
+
+def _refused_note(header: str) -> None:
+    """Say, at most once a minute, that a request named an address with no good signature. A
+    stranger poking at the API does this, and so does an edge whose key does not match the API's,
+    which is the case worth seeing in the logs."""
+    global _warned_at
+    now = time.monotonic()
+    if now - _warned_at >= _WARN_EVERY:
+        _warned_at = now
+        log.warning(
+            "client address refused: %s is missing or its signature does not match "
+            "ALYR_CLIENT_IP_KEYS; counted in the shared '%s' bucket (ALY-265)", header, UNVOUCHED,
+        )
+
+
+def resolve(request: Request, settings: Settings | None = None) -> tuple[str, str]:
+    """The visitor's address for the limits and the record of an acceptance, and where it came
+    from (SIGNED, HEADER, CONNECTION or UNVOUCHED).
+
+    Only a header the settings name is read. With keys set, the address counts only with a
+    signature the edge made, so a visitor, or a caller who reached the API without passing the
+    edge, cannot choose it. Without keys the header is believed and read from the right of a list
+    header, which is only safe where nothing but our own proxy can reach the API.
+
+    The connection's own address is never the answer once a header is named: uvicorn runs with
+    `--forwarded-allow-ips '*'`, which makes `request.client` the FIRST `X-Forwarded-For` entry,
+    and that is whatever the caller wrote."""
     settings = settings or get_settings()
     header = settings.client_ip_header.strip().lower()
-    if header:
+    connection = request.client.host if request.client else "unknown"
+    if not header:
+        return connection, CONNECTION
+    keys = signing_keys(settings)
+    if not keys:
         parts = [p.strip() for p in request.headers.get(header, "").split(",") if p.strip()]
         if parts:
-            return parts[max(len(parts) - max(settings.client_ip_proxies, 1), 0)]
-    return request.client.host if request.client else "unknown"
+            return parts[max(len(parts) - max(settings.client_ip_proxies, 1), 0)], HEADER
+        return connection, CONNECTION
+    address = request.headers.get(header, "").strip()
+    sent = request.headers.get(f"{header}-sig", "").strip().lower().encode()
+    if address and _is_address(address) and any(
+        hmac.compare_digest(sent, sign(key, address).encode()) for key in keys
+    ):
+        return address, SIGNED
+    if address or sent:
+        _refused_note(header)
+    return UNVOUCHED, UNVOUCHED
+
+
+def client_address(request: Request, settings: Settings | None = None) -> str:
+    """The visitor's address; see `resolve`."""
+    return resolve(request, settings)[0]
+
+
+def startup_notes(settings: Settings) -> list[str]:
+    """What to say in the log when the API starts about how addresses are counted."""
+    if not address_limits_on(settings):
+        return [
+            "per-address rate limits are off: set ALYR_CLIENT_IP_HEADER to say where the "
+            "visitor's address is read from (ALY-116)"
+        ]
+    if settings.env != "local" and not signing_keys(settings):
+        return [
+            "ALYR_CLIENT_IP_HEADER is believed without ALYR_CLIENT_IP_KEYS: anyone who can reach "
+            "the API directly can choose the address they are counted under (ALY-265)"
+        ]
+    return []
 
 
 def address_limits_on(settings: Settings | None = None) -> bool:
