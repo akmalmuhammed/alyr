@@ -2,7 +2,7 @@
 // line says what ALYR really does, checked against docs/data-residency.md, the customer
 // agreement draft (docs/company/customer-agreement/agreement.md, section 9), the hosting
 // decision (D-060: Google Cloud, Doha) and the code (consent.py's STOP words, the site's
-// one localStorage key). It is a draft until the founder and a lawyer have read it (ALY-51),
+// one localStorage key and the analytics of D-070). It is a draft until the founder and a lawyer have read it (ALY-51),
 // and the Arabic is a draft until the native review (ALY-66). Meta's app settings point to
 // this page for the privacy policy, and to `#delete` for the data deletion instructions.
 
@@ -52,7 +52,8 @@ export const privacyEn: PrivacyPage = {
       ],
       after: [
         "About a business's customers: their WhatsApp number or WhatsApp user ID, the name they show on WhatsApp, their messages with the business, their orders, bookings and credit balances, the status of their payments, and whether they agreed to be messaged or asked to stop. We never hold card numbers: payments are taken by the business's own payment provider, and we keep only its reference and status.",
-        "About visitors to alyr.qa: nothing. The site has no analytics, no advertising and no cookies. If you choose light or dark mode, that choice is kept in your own browser and never sent to us.",
+        "About visitors to alyr.qa: which pages are opened and which contact buttons are pressed, counted with PostHog without cookies. Your IP address is used for a moment to tell one visit from another and is not stored, and a code saying which link brought you (for example a leaflet's QR code) is kept in your browser until you close the tab. Nothing records your screen or what you type, and the site has no advertising. If you choose light or dark mode, that choice is kept in your own browser and never sent to us.",
+        "About business owners using ALYR: which steps of setting up and which sections of the workspace are opened, counted with PostHog under the user's and the business's ID only, never a name, an email, a phone number or anything a customer wrote.",
       ],
     },
     {
@@ -78,6 +79,7 @@ export const privacyEn: PrivacyPage = {
         "Google Cloud, Doha region, Qatar: ALYR's servers and database, where the data above is kept.",
         "Meta (WhatsApp Business Platform): the WhatsApp messages and the numbers and names that come with them, outside Qatar.",
         "Cloudflare: the website and the pages customers open from WhatsApp, passing through its network, outside Qatar.",
+        "PostHog: the counts of pages opened and buttons pressed described above, in the European Union.",
         "Resend: the emails ALYR sends, such as sign-in codes, weekly reports to a business owner, and receipts or invoices a business emails to its customer, in the European Union.",
         "Zoho: ALYR's own mailboxes, which hold the emails people send us, outside Qatar.",
         "The business's own payment provider and, if the business connects it, its own sales or accounting system.",
@@ -161,7 +163,8 @@ export const privacyAr: PrivacyPage = {
       ],
       after: [
         "عن عملاء المشروع: رقم واتساب أو معرّف المستخدم على واتساب، والاسم الظاهر على واتساب، ورسائلهم مع المشروع، وطلباتهم وحجوزاتهم وأرصدة حساباتهم، وحالة مدفوعاتهم، وهل وافقوا على تلقي الرسائل أو طلبوا التوقف. لا نحتفظ أبداً بأرقام البطاقات: يتسلّم المدفوعات مزوّدُ الدفع الخاص بالمشروع، ونحتفظ بمرجع الدفع وحالته فقط.",
-        "عن زوار alyr.qa: لا شيء. لا يستخدم الموقع أدوات تحليل ولا إعلانات ولا ملفات تعريف الارتباط. إذا اخترت الوضع الفاتح أو الداكن، يُحفظ اختيارك في متصفحك أنت ولا يُرسل إلينا.",
+        "عن زوار alyr.qa: الصفحات التي تُفتح وأزرار التواصل التي يُضغط عليها، نعدّها باستخدام PostHog دون ملفات تعريف الارتباط. يُستخدم عنوان IP لحظةً للتمييز بين زيارة وأخرى ولا يُحفظ، ويُحفظ في متصفحك رمز يبيّن الرابط الذي أوصلك إلينا (مثل رمز QR في منشور ورقي) حتى تغلق الصفحة. لا شيء يسجّل شاشتك أو ما تكتبه، ولا إعلانات في الموقع. إذا اخترت الوضع الفاتح أو الداكن، يُحفظ اختيارك في متصفحك أنت ولا يُرسل إلينا.",
+        "عن أصحاب المشاريع الذين يستخدمون ALYR: خطوات الإعداد وأقسام مساحة العمل التي تُفتح، نعدّها باستخدام PostHog برقم المستخدم ورقم المشروع فقط، دون اسم أو بريد أو رقم هاتف أو أي شيء كتبه عميل.",
       ],
     },
     {
@@ -187,6 +190,7 @@ export const privacyAr: PrivacyPage = {
         "Google Cloud، منطقة الدوحة، قطر: خوادم ALYR، وفيها قاعدة البيانات حيث تُحفظ البيانات المذكورة أعلاه.",
         "Meta (منصة واتساب للأعمال): رسائل واتساب والأرقام والأسماء المرافقة لها، خارج قطر.",
         "Cloudflare: الموقع والصفحات التي يفتحها العملاء من واتساب، وتمر عبر شبكتها، خارج قطر.",
+        "PostHog: أعداد الصفحات المفتوحة والأزرار المضغوطة المذكورة أعلاه، في الاتحاد الأوروبي.",
         "Resend: الرسائل البريدية التي ترسلها ALYR، مثل رموز الدخول والتقارير الأسبوعية لصاحب المشروع والإيصالات أو الفواتير التي يرسلها المشروع لعميله، في الاتحاد الأوروبي.",
         "Zoho: صناديق البريد الخاصة بـ ALYR، وفيها الرسائل التي يرسلها الناس إلينا، خارج قطر.",
         "مزوّد الدفع الخاص بالمشروع، ونظام المبيعات أو المحاسبة الخاص به إذا ربطه المشروع.",

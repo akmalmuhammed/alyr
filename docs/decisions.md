@@ -54,6 +54,7 @@ Status: **Accepted** (in force), **Proposed** (waiting for the founder), **Super
 | D-060 | ALYR runs on Google Cloud in Doha (Cloud Run, Cloud SQL, Secret Manager); replaces Azure (D-036) and the interim Cloudflare and Neon host (D-052); backups stay in Doha | Accepted |
 | D-061 | Company mail moves to Zoho Mail (free plan): hello@ with akmal@ and security@ as aliases, and a mailbox for Beevi Jinan, the registered owner; Resend still sends the product's email | Accepted |
 | D-062 | The homepage hero is the explainer film (one afternoon at Qirfa Bakery in the product's own screens, three lanes at once, ending on the ALYR Agent home): "the product is the illustration" in motion; the hero's live ALYR Agent figure leaves the hero | Accepted |
+| D-070 | Product analytics with PostHog (EU region): cookieless page views and contact-button presses on alyr.qa, the onboarding funnel and workspace sections per business; never customer data, recordings or names | Accepted |
 
 ---
 
@@ -1323,3 +1324,36 @@ Nothing claims more than the page, as before.
 
 **Revisit when** the founder or a visitor finds it busy or slow (`--pace` tunes all of it), or the product's screens change (the film draws them from the products frame's drawings and the real dashboard, so they follow).
 
+
+## D-070 · Product analytics with PostHog
+**Date** 28 Oct 2026 · **Status** Accepted (the founder set up PostHog, with startup credits, and asked for it on 28 Oct)
+
+**Decision.** ALYR counts how its site and product are used with PostHog Cloud in the EU region (`eu.posthog.com`). It covers three places:
+- **alyr.qa:** page views, and every press of a button that contacts ALYR (`cta_click`, with which button, which channel and which page), with the source code a link or QR code carried (`?s=`).
+- **Onboarding (`/start`):** each step reached, the code sent, the email verified, the business created, the first test booking, the price accepted, and finishing.
+- **The workspace (`/app`):** the sections opened.
+
+An owner is known by their user ID and their business by its ID (PostHog's group analytics). Nothing else is sent about them.
+
+**What is never sent, by design** (`apps/web/app/_analytics/posthog.ts`):
+- **Cookies.** The site uses PostHog's cookieless server hash; the product keeps nothing in the browser between visits. The only thing stored is the source code, in the tab's session storage.
+- **Recordings and automatic capture.** No screen recordings, no automatic capture of clicks or text, no heatmaps, no surveys.
+- **Customer data.** No customer page (`/s`, `/b`, `/pay`, `/t`) and not the back office loads PostHog. In the workspace, only a section's name is counted, never what is in it.
+- **Identifiers in addresses.** Every address is cut to its path, with IDs replaced by `:id`, before it leaves.
+- **Personal details.** No name, email or phone number.
+
+**How it travels.** Browsers send to our own address, `/ingest`, which forwards to PostHog's EU region: Next.js rewrites in the app, `site-worker.js` on alyr.qa. So the security policy stays "self only", ad blockers do not break the counts, and the destination is fixed to the EU. The worker strips cookies and passes the visitor's address only for PostHog's cookieless hash. The PostHog project is set to discard IP addresses.
+
+**Why PostHog.** Funnels, retention, group analytics per business, experiments and feature flags in one place, in the EU, with startup credits. Cloudflare Web Analytics, the site's only measure until now, counts page views only.
+
+**Key.** `NEXT_PUBLIC_POSTHOG_KEY` (the project key, public by design) at build time. It is the repository variable `POSTHOG_PROJECT_KEY` for the Google Cloud deploy, and `.env.local` for the site build. Without it, analytics is off everywhere.
+
+**Not yet:**
+- server-side events from the API (booking made, order paid, the money-back promise);
+- experiments (the homepage headline first);
+- surveys;
+- session recordings on `/start` only, masked.
+
+Each is a separate decision.
+
+**The privacy notice** (`/privacy`, both languages) now says what is counted, where, and what is never collected. It is still a draft for the lawyer (ALY-51) and the native Arabic review (ALY-66).
