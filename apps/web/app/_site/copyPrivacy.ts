@@ -1,4 +1,4 @@
-// The words of the privacy policy (/privacy, /ar/privacy), English and Arabic (ALY-72). Every
+// The words of the privacy policy (/privacy, /ar/privacy), English and Arabic (ALY-68; the record of processing is ALY-120). Every
 // line says what ALYR really does, checked against docs/data-residency.md, the customer
 // agreement draft (docs/company/customer-agreement/agreement.md, section 9), the hosting
 // decision (D-060: Google Cloud, Doha) and the code (consent.py's STOP words, the site's
