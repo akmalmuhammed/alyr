@@ -20,7 +20,15 @@ from pydantic import BaseModel, Field
 
 from alyr import catalog, presets
 from alyr.config import get_settings
-from alyr.core import access, auth, backoffice, pricing, readiness, whatsapp_setup
+from alyr.core import (
+    access,
+    auth,
+    backoffice,
+    pricing,
+    readiness,
+    whatsapp_attach,
+    whatsapp_setup,
+)
 from alyr.core.auth import Staff
 from alyr.modules.items import clock as shop_clock
 from alyr.modules.items import template, template_change
@@ -145,6 +153,11 @@ class WhatsappChange(BaseModel):
     # ...and where ALYR is with the connection; a failure says why, for the owner to read.
     state: Literal["", "connecting", "failed"] | None = None
     note: str = Field(default="", max_length=500)
+
+
+class AttachNumber(BaseModel):
+    number_id: str = Field(max_length=30)
+    waba_id: str = Field(default="", max_length=30)
 
 
 class NewStaff(BaseModel):
@@ -642,6 +655,14 @@ async def onboarding_board(request: Request, _: Staff = Depends(platform_admin))
     return {"businesses": board, "counts": counts}
 
 
+@router.get("/onboarding/funnel")
+async def onboarding_funnel(request: Request, _: Staff = Depends(platform_admin)) -> dict:
+    """Where businesses stop on the way to live, how long each step takes, and how many needed
+    ALYR's hand (ALY-169). Read from the record the onboarding engine keeps."""
+    return readiness.funnel(await _admin_call(
+        request, "select admin_onboarding_funnel()", fetch="fetchval"))
+
+
 @router.get("/businesses/{business_id}/readiness")
 async def business_readiness(
     business_id: UUID, request: Request, staff: Staff = Depends(platform_admin)
@@ -716,18 +737,56 @@ async def change_whatsapp(
         raise HTTPException(status_code=422, detail=str(error)) from error
 
 
-# ── pay before access (ALY-212, D-051) ────────────────────
+@router.post("/businesses/{business_id}/whatsapp/number")
+async def attach_number(
+    business_id: UUID, body: AttachNumber, request: Request,
+    staff: Staff = Depends(platform_admin),
+) -> dict:
+    """Attach the business's Meta number (ALY-166) once Meta shows it connected. Messages to
+    it reach the business from then on, and the go-live check sees WhatsApp as done."""
+    try:
+        async with _in_business(request, business_id) as conn:
+            attached = await whatsapp_attach.attach(
+                conn, request.app.state.outbound.channels["meta"], business_id,
+                body.number_id, body.waba_id, _by(staff),
+            )
+            await backoffice.audit(
+                conn, staff, "whatsapp.attached", "business", business_id,
+                business_id=business_id, detail=attached,
+            )
+            return await readiness.run(conn, _by(staff), by_alyr=True)
+    except whatsapp_attach.AttachError as error:
+        raise HTTPException(status_code=422, detail=str(error)) from error
+
+
+@router.delete("/businesses/{business_id}/whatsapp/number")
+async def detach_number(
+    business_id: UUID, request: Request, staff: Staff = Depends(platform_admin)
+) -> dict:
+    """Take the business's Meta number off (a wrong number, or a move). The test line stays."""
+    async with _in_business(request, business_id) as conn:
+        removed = await whatsapp_attach.detach(conn, business_id)
+        if removed is None:
+            raise HTTPException(status_code=404, detail="this business has no WhatsApp number")
+        await backoffice.audit(
+            conn, staff, "whatsapp.detached", "business", business_id,
+            business_id=business_id, detail={"number_id": removed},
+        )
+        return await readiness.run(conn, _by(staff), by_alyr=True)
+
+
+# ── what a client pays ALYR (ALY-212, D-051; payment at go-live: ALY-242, D-053) ──
 
 
 @router.post("/clients/{client_id}/payments")
 async def record_payment(
     client_id: UUID, body: Payment, request: Request, staff: Staff = Depends(platform_admin)
 ) -> dict:
-    """Record a payment the client made to ALYR. Once what is due is covered, the client's
-    products open."""
+    """Record a payment the client made to ALYR. Once what is due is covered, the client can
+    go live."""
     try:
         async with _back_office(request) as conn:
-            opened = await access.record(
+            covered = await access.record(
                 conn, client_id, amount=body.amount, method=body.method,
                 reference=body.reference, received_on=body.received_on, note=body.note,
                 by=_by(staff),
@@ -735,7 +794,7 @@ async def record_payment(
             await backoffice.audit(
                 conn, staff, "client.payment", "client", client_id, client_id=client_id,
                 detail={"amount": body.amount, "method": body.method,
-                        "received_on": body.received_on.isoformat(), "opened": opened},
+                        "received_on": body.received_on.isoformat(), "covered": covered},
             )
             return await access.summary(conn, client_id)
     except LookupError as error:
@@ -744,16 +803,16 @@ async def record_payment(
         raise HTTPException(status_code=422, detail=str(error)) from error
 
 
-@router.post("/clients/{client_id}/open")
-async def open_without_payment(
+@router.post("/clients/{client_id}/waive")
+async def waive_payment(
     client_id: UUID, body: OpenWithout, request: Request, staff: Staff = Depends(platform_admin)
 ) -> dict:
-    """Open a client's products without a payment (a pilot, a demo), saying why."""
+    """Waive a client's payment (a pilot, a demo), saying why."""
     try:
         async with _back_office(request) as conn:
-            if await access.open_without_payment(conn, client_id, body.reason):
+            if await access.waive(conn, client_id, body.reason):
                 await backoffice.audit(
-                    conn, staff, "client.opened", "client", client_id, client_id=client_id,
+                    conn, staff, "client.payment_waived", "client", client_id, client_id=client_id,
                     detail={"reason": body.reason.strip()},
                 )
             return await access.summary(conn, client_id)

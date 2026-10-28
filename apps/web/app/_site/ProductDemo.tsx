@@ -51,6 +51,8 @@ export function ProductDemo({ product, locale, sample, note }: Props) {
   const [auto, setAuto] = useState(true);
   const [onScreen, setOnScreen] = useState(false);
   const [still, setStill] = useState(false);
+  // A hidden tab stops it too, as it stops off screen (nothing plays that nobody sees).
+  const [shown, setShown] = useState(true);
   const root = useRef<HTMLDivElement>(null);
   const tabs = useRef<(HTMLButtonElement | null)[]>([]);
 
@@ -59,6 +61,8 @@ export function ProductDemo({ product, locale, sample, note }: Props) {
     const sync = () => setStill(media.matches);
     const first = setTimeout(sync, 0);
     media.addEventListener("change", sync);
+    const seen = () => setShown(document.visibilityState === "visible");
+    document.addEventListener("visibilitychange", seen);
     const node = root.current;
     const watch = new IntersectionObserver(
       ([entry]) => setOnScreen(entry.isIntersecting),
@@ -68,6 +72,7 @@ export function ProductDemo({ product, locale, sample, note }: Props) {
     return () => {
       clearTimeout(first);
       media.removeEventListener("change", sync);
+      document.removeEventListener("visibilitychange", seen);
       watch.disconnect();
     };
   }, []);
@@ -81,7 +86,7 @@ export function ProductDemo({ product, locale, sample, note }: Props) {
     row.scrollTo({ left: tab.offsetLeft - row.offsetLeft - 8, behavior: "smooth" });
   }, [active]);
 
-  const playing = auto && onScreen && !still;
+  const playing = auto && onScreen && shown && !still;
   const demo = demos[active];
   // The `--i` of the last thing to arrive (messages count 1 each, rows 0.35, then the total).
   const last = demo.panel.total

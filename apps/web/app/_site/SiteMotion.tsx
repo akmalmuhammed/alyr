@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect } from "react";
+import { startLoops } from "./loops";
 
 /**
  * The page's scroll behaviour, in one place: the header tightening, the header turning
@@ -32,111 +33,9 @@ export function SiteMotion() {
     );
     document.querySelectorAll("[data-reveal], [data-m]").forEach((node) => seen.observe(node));
 
-    // A product page's signature figure (LastOne, PaymentPaper) plays only once it is
-    // substantially in view, so its ending is seen (08-rulings.md): 60% of it on screen, or
-    // its top past the middle of the screen. On a wide screen the whole figure starts at
-    // once; on a phone, where its three parts stack, each part starts as it arrives
-    // (moment.css counts each part's delays from its own first beat).
-    const figures = Array.from(document.querySelectorAll<HTMLElement>("[data-sig]"));
-    const wide = window.matchMedia("(min-width: 62rem)").matches;
-    const started = new Set<Element>();
-    const start = (target: Element) => {
-      if (started.has(target)) return;
-      started.add(target);
-      enough.unobserve(target);
-      past.unobserve(target);
-      const parts = target.hasAttribute("data-sig") ? Array.from(target.querySelectorAll(".sig-part")) : [];
-      for (const node of [target, ...parts]) node.classList.add("is-in");
-    };
-    const enough = new IntersectionObserver(
-      (entries) => { for (const entry of entries) if (entry.intersectionRatio >= 0.6) start(entry.target); },
-      { threshold: 0.6 },
-    );
-    const past = new IntersectionObserver(
-      (entries) => { for (const entry of entries) if (entry.isIntersecting) start(entry.target); },
-      { rootMargin: "0px 0px -50% 0px" },
-    );
-    for (const figure of figures) {
-      const targets = wide ? [figure] : Array.from(figure.querySelectorAll(".sig-part"));
-      for (const target of targets) {
-        enough.observe(target);
-        past.observe(target);
-      }
-    }
-    // It can be read long after the first 4 s. The page has hydrated and these observers
-    // will start it, so the failsafe that drops `motion` is no longer needed here.
-    if (!still && figures.length) window.clearTimeout(window.__alyrMotion);
-
-    // The homepage's six product tiles (SuiteFrame.tsx, suite.css): each plays its moment once.
-    // Where there is a fine pointer, when it is hovered or reached with the keyboard; elsewhere
-    // (a phone, a tablet), when 60% of it has scrolled into view, or when it takes focus. With
-    // reduced motion nothing is watched, and every tile is already finished.
-    const tiles = still ? [] : Array.from(document.querySelectorAll<HTMLElement>("[data-tile]"));
-    const fine = window.matchMedia("(hover: hover) and (pointer: fine)").matches;
-    const tileView = new IntersectionObserver(
-      (entries) => { for (const entry of entries) if (entry.intersectionRatio >= 0.6) playTile(entry.target); },
-      { threshold: 0.6 },
-    );
-    function playTile(tile: Element) {
-      tile.classList.add("is-in");
-      tileView.unobserve(tile);
-    }
-    const onTile = (event: Event) => playTile(event.currentTarget as Element);
-    for (const tile of tiles) {
-      tile.addEventListener("focus", onTile, { once: true });
-      if (fine) tile.addEventListener("pointerenter", onTile, { once: true });
-      else tileView.observe(tile);
-    }
-    // a tile can wait long after the first 4 s for its hover: keep `motion` for it
-    if (tiles.length) window.clearTimeout(window.__alyrMotion);
-
-    // The homepage's "How we work with you" (HowCards.tsx, how.css): each card plays its scene
-    // once when half of its canvas is in view (how.css staggers a row), and once more each
-    // time it is hovered with a fine pointer, reached with the keyboard or pressed, when it is
-    // not already playing; a replay starts at once. When Improve first plays, the row draws
-    // its return line once (`is-looped`). With reduced motion nothing is watched.
-    const how = still ? null : document.querySelector<HTMLElement>("[data-hw]");
-    const howCards = how ? Array.from(how.querySelectorAll<HTMLElement>("[data-hw-card]")) : [];
-    const howView = new IntersectionObserver(
-      (entries) => {
-        for (const entry of entries) {
-          const card = entry.target.closest<HTMLElement>("[data-hw-card]");
-          if (card && entry.intersectionRatio >= 0.5) playCard(card, false);
-        }
-      },
-      { threshold: 0.5 },
-    );
-    function playCard(card: HTMLElement, again: boolean) {
-      // a scene still playing (or waiting on its beat) is left to finish; hover transitions do not count
-      if (card.getAnimations({ subtree: true }).some((a) => "animationName" in a && a.playState === "running")) return;
-      const canvas = card.querySelector(".hw-canvas");
-      if (canvas) howView.unobserve(canvas);
-      card.classList.remove("is-in", "is-again");
-      void card.offsetWidth; // restart its animations from their first frame
-      card.classList.add("is-in");
-      if (again) card.classList.add("is-again");
-      if (card.dataset.hwCard === "improve") how?.classList.add("is-looped");
-    }
-    const howOff: (() => void)[] = [];
-    for (const card of howCards) {
-      const canvas = card.querySelector<HTMLElement>(".hw-canvas");
-      const button = card.querySelector<HTMLButtonElement>("[data-hw-play]");
-      if (!canvas || !button) continue;
-      howView.observe(canvas);
-      const onEnter = (event: PointerEvent) => { if (event.pointerType === "mouse") playCard(card, true); };
-      const onFocus = () => { if (button.matches(":focus-visible")) playCard(card, true); };
-      const onPress = () => playCard(card, true);
-      canvas.addEventListener("pointerenter", onEnter);
-      button.addEventListener("focus", onFocus);
-      button.addEventListener("click", onPress);
-      howOff.push(() => {
-        canvas.removeEventListener("pointerenter", onEnter);
-        button.removeEventListener("focus", onFocus);
-        button.removeEventListener("click", onPress);
-      });
-    }
-    // a card can wait long after the first 4 s to be reached: keep `motion` for it
-    if (howCards.length) window.clearTimeout(window.__alyrMotion);
+    // The figures that keep playing: How we work's cards, the products frame's tiles and the
+    // product pages' signature figures (loops.ts; founder, 26 Oct 2026: motion always on).
+    const stopLoops = startLoops();
 
     // The language link keeps the section being read.
     const sections = Array.from(document.querySelectorAll<HTMLElement>("main section[id]"));
@@ -248,15 +147,7 @@ export function SiteMotion() {
       document.removeEventListener("click", onLanguage, true);
       window.removeEventListener("hashchange", openQuestion);
       seen.disconnect();
-      enough.disconnect();
-      past.disconnect();
-      tileView.disconnect();
-      howView.disconnect();
-      howOff.forEach((off) => off());
-      for (const tile of tiles) {
-        tile.removeEventListener("focus", onTile);
-        tile.removeEventListener("pointerenter", onTile);
-      }
+      stopLoops();
       dark?.disconnect();
       watchBar?.disconnect();
       atClosing?.disconnect();

@@ -120,6 +120,11 @@ const en = {
   accept: "Accept new prices",
   total: "Total",
   pay: (amount: string) => `Pay ${amount}`,
+  // A shop with no online account yet: nothing is paid on the page (ALY-170).
+  placeOrder: "Place order",
+  payWay: { cash: "cash", bank_transfer: "bank transfer", card_terminal: "card machine" } as Record<string, string>,
+  payOrJoin: " or ",
+  payOnCollect: (ways: string) => `Pay by ${ways} when you collect or receive your order.`,
   account: "Put it on my account",
   accountHint: "Added to your account with the shop.",
   fixFirst: "Fix the items marked above to continue.",
@@ -302,6 +307,10 @@ const ar: Copy = {
   accept: "قبول الأسعار الجديدة",
   total: "الإجمالي",
   pay: (amount) => `ادفع ${amount}`,
+  placeOrder: "أرسل الطلب",
+  payWay: { cash: "نقداً", bank_transfer: "تحويل بنكي", card_terminal: "بطاقة عبر الجهاز" },
+  payOrJoin: " أو ",
+  payOnCollect: (ways) => `الدفع ${ways} عند استلام طلبك.`,
   account: "سجّله على حسابي",
   accountHint: "يُضاف إلى حسابك لدى المتجر.",
   fixFirst: "صحّح الأصناف المعلّمة أعلاه للمتابعة.",
@@ -387,4 +396,10 @@ export const T: Record<Lang, Copy> = { en, ar };
 /** A name or text in the page's language, falling back to the other one. */
 export function say(lang: Lang, english: string, arabic: string): string {
   return lang === "ar" ? arabic || english : english || arabic;
+}
+
+/** The ways a shop takes money on collection, in a phrase: "cash or bank transfer". */
+export function waysText(lang: Lang, ways: string[]): string {
+  const names = ways.map((w) => T[lang].payWay[w]).filter(Boolean);
+  return names.join(T[lang].payOrJoin);
 }

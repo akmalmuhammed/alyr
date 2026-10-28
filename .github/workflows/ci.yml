@@ -16,10 +16,10 @@ jobs:
       contents: read
       pull-requests: read
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with:
           fetch-depth: 0
-      - uses: gitleaks/gitleaks-action@v2
+      - uses: gitleaks/gitleaks-action@v3
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
@@ -45,14 +45,15 @@ jobs:
       run:
         working-directory: apps/api
     steps:
-      - uses: actions/checkout@v4
-      - uses: astral-sh/setup-uv@v5
+      - uses: actions/checkout@v7
+      - uses: astral-sh/setup-uv@v7
       # --locked: fail if uv.lock does not match pyproject.toml, so CI tests what we ship.
       - run: uv sync --locked
       - run: uv run ruff check .
-      # The API image as Cloudflare runs it (D-052): build apps/api/Dockerfile, migrate the
-      # database above, start the entrypoint (API + job runner) and ask /health. Fails if the
+      # The API image with no argument (API + job runner, as D-052 runs it): build
+      # apps/api/Dockerfile, migrate the database above, start it and ask /health. Fails if the
       # image cannot start with production settings, which pytest alone would not notice.
+      # A throwaway container has no R2, so only here may photos stay on its own disk.
       - run: docker build -t alyr-api .
       - name: Start the image
         run: |
@@ -60,6 +61,7 @@ jobs:
           docker run -d --name api --network host \
             -e ALYR_ENV=production -e ALYR_JOBS_INLINE=false \
             -e ALYR_LINK_SECRET=ci-only-secret-not-used-anywhere-else-0123456789 \
+            -e ALYR_MEDIA_ALLOW_LOCAL=true \
             -e PORT=8080 alyr-api
       - name: Image answers /health and runs the job runner
         run: |
@@ -73,8 +75,12 @@ jobs:
           test "$(curl -s -o /dev/null -w '%{http_code}' http://127.0.0.1:8080/docs)" = "404"
           docker rm -f api
       - run: uv run pytest
-      # Known vulnerabilities in Python dependencies.
-      - run: uvx pip-audit --progress-spinner off
+      # Known vulnerabilities in the locked Python dependencies. `uvx pip-audit` alone would
+      # audit pip-audit's own environment, not ours (ALY-243), so the lock file is exported
+      # and audited by name.
+      - run: |
+          uv export --frozen --no-emit-project --no-hashes > /tmp/locked.txt
+          uvx pip-audit -r /tmp/locked.txt --no-deps --disable-pip --progress-spinner off
 
   web:
     runs-on: ubuntu-latest
@@ -82,11 +88,11 @@ jobs:
       run:
         working-directory: apps/web
     steps:
-      - uses: actions/checkout@v4
-      - uses: pnpm/action-setup@v4
+      - uses: actions/checkout@v7
+      - uses: pnpm/action-setup@v6
         with:
           package_json_file: apps/web/package.json
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v7
         with:
           node-version: 22
           cache: pnpm
@@ -112,11 +118,11 @@ jobs:
       run:
         working-directory: infra/cloudflare/api
     steps:
-      - uses: actions/checkout@v4
-      - uses: pnpm/action-setup@v4
+      - uses: actions/checkout@v7
+      - uses: pnpm/action-setup@v6
         with:
           package_json_file: infra/cloudflare/api/package.json
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v7
         with:
           node-version: 22
           cache: pnpm
@@ -138,18 +144,18 @@ jobs:
       run:
         working-directory: apps/web
     steps:
-      - uses: actions/checkout@v4
-      - uses: pnpm/action-setup@v4
+      - uses: actions/checkout@v7
+      - uses: pnpm/action-setup@v6
         with:
           package_json_file: apps/web/package.json
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v7
         with:
           node-version: 22
           cache: pnpm
           cache-dependency-path: apps/web/pnpm-lock.yaml
       - run: pnpm install --frozen-lockfile
       - run: pnpm site:check
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         if: always()
         with:
           name: out-site
