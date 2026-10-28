@@ -46,19 +46,6 @@ export const OFFER_LIVE = process.env.NEXT_PUBLIC_ALYR_OFFER === "on";
  * the workspace is not hosted there, so the footer shows no link to it. */
 export const WORKSPACE_URL = process.env.NEXT_PUBLIC_ALYR_WORKSPACE_URL ?? "";
 
-/** Facts that make ALYR checkable, shown in the trust section only once each is true.
- * Until then nothing is rendered: no empty slot, no "coming soon". The labels are in
- * `copy.ts` (`home.trust.records`). */
-export const TRUST_RECORDS = {
-  /** Commercial registration number, once the company is registered (ALY-59). */
-  cr: process.env.NEXT_PUBLIC_ALYR_CR ?? "",
-  /** The licensed payment provider's name, once one is signed and connected (ALY-17). */
-  provider: process.env.NEXT_PUBLIC_ALYR_PAYMENT_PROVIDER ?? "",
-  /** Meta's approval of ALYR as a Tech Provider, once granted (ALY-39). */
-  meta: process.env.NEXT_PUBLIC_ALYR_META_STATUS ?? "",
-} as const;
-export type TrustRecord = keyof typeof TRUST_RECORDS;
-
 /** Every public page, and its address in each language. The product pages are in the
  * suite's fixed order: Chat, Bookings, Agent, Accounts, Shelf, Docs. A product that is not
  * built has no page and is not listed (D-039; Payroll left the site on 20 Oct 2026). */
@@ -70,6 +57,10 @@ export const PATHS = {
   accounts: { en: "/accounts", ar: "/ar/accounts" },
   shelf: { en: "/shelf", ar: "/ar/shelf" },
   docs: { en: "/docs", ar: "/ar/docs" },
+  // Not a product: the company's registration details (the footer links to it).
+  company: { en: "/company", ar: "/ar/company" },
+  // Not a product: the privacy policy (ALY-72); Meta's app settings point here.
+  privacy: { en: "/privacy", ar: "/ar/privacy" },
 } as const;
 
 export type PageKey = keyof typeof PATHS;

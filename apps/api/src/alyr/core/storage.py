@@ -296,3 +296,17 @@ def make_store(settings) -> Store:
         log.warning("photo storage: local disk in a non-local environment; photos are lost "
                     "if this machine's disk is")
     return LocalStore(Path(settings.media_local_dir))
+
+
+def check_store(settings, store: Store) -> None:
+    """Called when the API and the worker start (ALY-63): outside a developer machine,
+    photos on local disk stop the start, unless the server says on purpose that its disk is
+    kept (`media_allow_local`). In a cloud container the disk is wiped on every restart and
+    each copy of the API has its own, so photos would vanish or appear only sometimes."""
+    if store.name == "local" and settings.env != "local" and not settings.media_allow_local:
+        raise RuntimeError(
+            "photo storage: R2 is not configured, and local disk is not allowed outside a "
+            "developer machine. Set ALYR_R2_ACCOUNT_ID, ALYR_R2_ACCESS_KEY_ID and "
+            "ALYR_R2_SECRET_ACCESS_KEY, or ALYR_MEDIA_ALLOW_LOCAL=true on a single server "
+            "whose ALYR_MEDIA_LOCAL_DIR is a kept volume."
+        )

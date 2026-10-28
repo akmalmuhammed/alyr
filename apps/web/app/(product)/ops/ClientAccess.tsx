@@ -1,16 +1,16 @@
 "use client";
 
-// Pay before access (ALY-212, D-051). A client's products open once ALYR has their payment
-// for the setup fee and the first period of the price they accepted. Until online payment
-// exists, staff record each payment here (a bank transfer, cash, a cheque or a link) with
-// what the statement shows. Recording enough opens the products; staff can also open them
-// without a payment, saying why. Both are on the audit log.
+// What a client pays ALYR (ALY-212, D-051; asked at go-live since ALY-242, D-053). The
+// workspace is open from sign-up; the setup fee and the first period of the accepted price
+// settle the client's go-live check. Until online payment exists, staff record each payment
+// here (a bank transfer, cash, a cheque or a link) with what the statement shows. Staff can
+// also waive the payment, saying why. Both are on the audit log.
 
 import { useState } from "react";
 import { api, toDirhams } from "./api";
 
 export type Access = {
-  open: boolean; status: "open" | "no_price" | "unpaid"; opened_at?: string | null;
+  status: "paid" | "no_price" | "unpaid"; waived: boolean; waived_note: string;
   due: number; due_text: string; paid: number; paid_text: string; left: number; left_text: string;
   reference: string;
   payments: { id: string; amount_text: string; method: string; reference: string; received_on: string; note: string }[];
@@ -42,11 +42,11 @@ export function ClientAccess({ clientId, access, onDone }: { clientId: string; a
   return (
     <div className="ops-access">
       <p>
-        <span className={`sh-pill ${access.open ? "active" : "wait"}`}>
-          {access.open ? "Products open" : access.status === "no_price" ? "Locked: no accepted price" : "Locked: waiting for payment"}
+        <span className={`sh-pill ${access.status === "paid" ? "active" : "wait"}`}>
+          {access.status === "paid" ? (access.waived ? "Payment waived" : "Paid") : access.status === "no_price" ? "No accepted price yet" : "Owes the go-live payment"}
         </span>{" "}
         {access.status === "unpaid" && <>Due <b className="num">{access.due_text}</b> · paid {access.paid_text} · left <b className="num">{access.left_text}</b> · reference <code>{access.reference}</code></>}
-        {access.open && access.opened_at && <small>since {new Date(access.opened_at).toLocaleDateString("en-GB")}</small>}
+        {access.waived && access.waived_note && <small>{access.waived_note}</small>}
       </p>
       {access.payments.length > 0 && (
         <div className="tablewrap"><table>
@@ -75,10 +75,10 @@ export function ClientAccess({ clientId, access, onDone }: { clientId: string; a
           <button className="btn small" type="submit" disabled={busy || !(amount > 0)}>Record payment</button>
         </form>
       )}
-      {!access.open && (
+      {!access.waived && access.status !== "paid" && (
         <div className="ops-step">
-          <input aria-label="Why it opens without a payment" placeholder="Open without a payment: why (a pilot, a demo)" maxLength={500} value={reason} onChange={(e) => setReason(e.target.value)} />
-          <button className="btn small ghost" type="button" disabled={busy || !reason.trim()} onClick={() => send(`/api/admin/clients/${clientId}/open`, { reason })}>Open without payment</button>
+          <input aria-label="Why the payment is waived" placeholder="Waive the payment: why (a pilot, a demo)" maxLength={500} value={reason} onChange={(e) => setReason(e.target.value)} />
+          <button className="btn small ghost" type="button" disabled={busy || !reason.trim()} onClick={() => send(`/api/admin/clients/${clientId}/waive`, { reason })}>Waive payment</button>
         </div>
       )}
       {error && <p className="ops-error" role="alert">{error}</p>}
