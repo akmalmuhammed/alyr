@@ -112,6 +112,8 @@ export type Settings = {
   sold_out_display: "grey" | "hide"; wholesale_layout: boolean; whatsapp_number: string;
   /** chat: the number runs on ALYR and the chat reads codes. link: the shop answers itself. */
   whatsapp_mode: "chat" | "link";
+  /** How customers pay: a payment link, or on collection by these ways (ALY-170). */
+  pay: { online: boolean; ways: string[] };
 };
 
 /** What the shop's type of business says about its page (`GET /api/store/{slug}` → `catalog`,
@@ -254,8 +256,10 @@ export type Placed = {
   order_id: string;
   number: number;
   total: number;
-  payment: "link" | "account";
+  payment: "link" | "account" | "later";
   pay_url: string | null;
+  /** For payment "later": how the shop takes the money (cash, bank_transfer, card_terminal). */
+  pay_ways?: string[];
   track_url?: string;
   left_out?: { name: string; name_ar: string; code: string; message: string; message_ar: string }[];
   price_changes?: { name: string; was: number; now: number }[];

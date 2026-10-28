@@ -32,7 +32,7 @@ export function DocsPage({ locale }: { locale: Locale }) {
       <ScreenBlock locale={locale} screen={p.screen}>
         <DocumentsScreen sheet={p.screen.sheet} shop={bakery.shop} monogram={bakery.monogram} label={p.screen.label} sample={t.fig.sample} />
       </ScreenBlock>
-      <InsideBlock inside={p.inside} locale={locale}>
+      <InsideBlock inside={p.inside}>
         <div className="pk-cr" id="cr">
           <div className="pk-cr-head" data-reveal>
             <h3 className="pk-cr-title">{rich(p.cr.title)}</h3>

@@ -76,6 +76,9 @@ async def page(conn: asyncpg.Connection, doc_id: UUID) -> dict | None:
         "voided_by": voided_by, "against": related,
         # Numbered by the shop's other system and only delivered by ALYR (ALY-142).
         "external": row["number_authority"] == "external",
+        # The same sentence the PDF carries, in both languages, so the page can say it too.
+        "external_note": _pair(words.NOTES["external"])
+        if row["number_authority"] == "external" else None,
     }
 
 
