@@ -1,11 +1,10 @@
-/* The consent prompt (D-070). Self-contained: it borrows each surface's own tokens where
-   they exist (the site's --canvas and --text, the product's --sheet and --ink) and falls
-   back to ALYR's carbon and paper otherwise. */
+/* The consent prompt (D-070). Colours from design/tokens.json (_tokens/tokens.css), which
+   the site and the product both load, so it follows each one's light and dark theme. */
 .ph-consent {
-  --ph-bg: var(--canvas, var(--sheet, #ffffff));
-  --ph-fg: var(--text, var(--ink, #15171a));
-  --ph-muted: var(--text-2, var(--ink-2, #5f666d));
-  --ph-line: var(--hair-2, rgba(21, 23, 26, 0.14));
+  --ph-bg: var(--surface);
+  --ph-fg: var(--text);
+  --ph-muted: var(--text-muted);
+  --ph-line: var(--line);
   position: fixed;
   z-index: 60;
   inset-inline: max(12px, env(safe-area-inset-left, 0px));
@@ -18,7 +17,7 @@
   border-radius: 12px;
   background: var(--ph-bg);
   color: var(--ph-fg);
-  box-shadow: 0 18px 50px -18px rgba(0, 0, 0, 0.35), 0 0 0 1px var(--ph-line);
+  box-shadow: var(--shadow-float), 0 0 0 1px var(--ph-line);
   font-size: 14px;
   line-height: 1.5;
 }
@@ -37,7 +36,7 @@
   cursor: pointer;
 }
 .ph-consent-deny { background: transparent; color: var(--ph-fg); box-shadow: 0 0 0 1px var(--ph-line) inset; }
-.ph-consent-allow { background: var(--volt, #b7f34a); color: #15171a; }
+.ph-consent-allow { background: var(--volt); color: var(--on-volt); }
 .ph-consent button:focus-visible, .ph-consent-change:focus-visible { outline: 2px solid var(--ph-fg); outline-offset: 2px; }
 .ph-consent-change { background: transparent; color: inherit; box-shadow: 0 0 0 1px currentColor inset; }
 @media (prefers-reduced-motion: no-preference) {
