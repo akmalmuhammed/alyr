@@ -260,6 +260,98 @@ function productTwin(locale, key) {
   return doc.text();
 }
 
+// ------------------------------------------------------------------ the sector pages
+
+/** A sector page (ALY-232): the question and its answer first, the day in the owner's words,
+ * the sample afternoon as one labelled line, what each product does, the guide, questions. */
+function sectorTwin(locale, key) {
+  const t = copy[locale];
+  const s = t.sectors?.items?.[key];
+  if (!s) {
+    problems.push(`${locale} for-${key}: no copy found for this page`);
+    return "";
+  }
+  const doc = new Doc();
+  header(doc, locale, `for-${key}`, s.title, s.answer);
+  doc.h(2, s.today?.title).list(s.today?.items);
+  doc.h(2, t.sectors.figure?.title).p(words[locale].sample);
+  doc.h(2, s.products?.title);
+  doc.list(s.products?.rows, (row) => `[${productName(t, row.key)}](${SITE}${twinPath(site.PATHS[row.key][locale])}): ${flat(row.body)}`);
+  doc.p(s.note);
+  const guide = t.guides?.items?.[s.guide];
+  if (guide) doc.h(2, t.sectors.guide?.title).p(`[${flat(guide.title)}](${SITE}${twinPath(site.PATHS[`guide-${s.guide}`][locale])})`);
+  questions(doc, s.faq);
+  doc.h(2, s.cta?.title).p(s.cta?.body).p(contactLine(locale));
+  footer(doc, locale, site.PATHS[`for-${key}`][locale]);
+  return doc.text();
+}
+
+// ------------------------------------------------------------------ the guides
+
+/** A guide (ALY-233): its author and date, "In short", every section, then what ALYR does. */
+function guideTwin(locale, key) {
+  const t = copy[locale];
+  const g = t.guides;
+  const d = g?.items?.[key];
+  if (!d) {
+    problems.push(`${locale} guide-${key}: no copy found for this page`);
+    return "";
+  }
+  const doc = new Doc();
+  header(doc, locale, `guide-${key}`, d.title, null);
+  doc.p(`${g.kind} · ${g.by} · ${g.published} ${d.date}`);
+  doc.h(2, g.short).p(d.short);
+  for (const section of d.sections ?? []) {
+    doc.h(2, section.title).p(section.body);
+    doc.numbered(section.steps, titled);
+    doc.list(section.items);
+  }
+  doc.h(2, d.alyr?.title).p(d.alyr?.body).list(d.alyr?.items);
+  doc.list(d.alyr?.products, (k) => `[${productName(t, k)}](${SITE}${twinPath(site.PATHS[k][locale])})`);
+  doc.h(2, g.related).list(d.sectors, (k) => `[${flat(t.sectors.items[k].name)}](${SITE}${twinPath(site.PATHS[`for-${k}`][locale])})`);
+  doc.h(2, d.cta?.title).p(d.cta?.body).p(contactLine(locale));
+  footer(doc, locale, site.PATHS[`guide-${key}`][locale]);
+  return doc.text();
+}
+
+/** The guides' index. */
+function guidesTwin(locale) {
+  const t = copy[locale];
+  const g = t.guides;
+  const doc = new Doc();
+  header(doc, locale, "guides", g.title, g.lead);
+  for (const key of site.GUIDES) {
+    const d = g.items[key];
+    doc.h(2, d.title).p(`${g.by} · ${d.date}`).p(d.meta?.description);
+    doc.p(`[${flat(g.read)}](${SITE}${twinPath(site.PATHS[`guide-${key}`][locale])})`);
+  }
+  doc.h(2, g.cta?.title).p(g.cta?.body).p(contactLine(locale));
+  footer(doc, locale, site.PATHS.guides[locale]);
+  return doc.text();
+}
+
+/** The page's name in a list of links. */
+function pageName(locale, key) {
+  const t = copy[locale];
+  if (key === "home") return t.nav?.home ?? "ALYR";
+  if (key === "company" || key === "privacy") return t.nav?.[key] ?? key;
+  if (key === "guides") return t.guides?.crumb ?? key;
+  if (key.startsWith("for-")) return t.sectors?.items?.[key.slice(4)]?.name ?? key;
+  if (key.startsWith("guide-")) return t.guides?.items?.[key.slice(6)]?.title ?? key;
+  return productName(t, key);
+}
+
+/** The text of one page's markdown copy. */
+function twinOf(locale, key) {
+  if (key === "home") return homeTwin(locale);
+  if (key === "company") return companyTwin(locale);
+  if (key === "privacy") return privacyTwin(locale);
+  if (key === "guides") return guidesTwin(locale);
+  if (key.startsWith("for-")) return sectorTwin(locale, key.slice(4));
+  if (key.startsWith("guide-")) return guideTwin(locale, key.slice(6));
+  return productTwin(locale, key);
+}
+
 // ------------------------------------------------------------------ llms.txt
 
 function llmsTxt() {
@@ -287,8 +379,24 @@ function llmsTxt() {
     const caveat = w.caveats[key] ? ` ${w.caveats[key]}` : "";
     lines.push(`- [${productName(t, key)}](${SITE}${twinPath(site.PATHS[key].en)}): ${flat(meta.descriptionNoOffer ?? meta.description)}${caveat}`);
   }
-  lines.push("", `## ${w.pages}`, "", `- [${w.home}](${SITE}${twinPath("/")}): ${w.homeLine}`, `- [${t.nav.company}](${SITE}${twinPath(site.PATHS.company.en)}): ${flat(t.meta.company.description)}`, `- [${t.nav.privacy}](${SITE}${twinPath(site.PATHS.privacy.en)}): ${flat(t.meta.privacy.description)}`, "", `## ${w.optional}`, "");
-  const arabic = Object.entries(site.PATHS).map(([key, p]) => `[${key === "home" ? copy.ar.nav?.home ?? "ALYR" : key === "company" || key === "privacy" ? copy.ar.nav[key] : productName(copy.ar, key)}](${SITE}${twinPath(p.ar)})`);
+  lines.push("", `## ${w.sectors}`, "");
+  for (const key of site.SECTORS) {
+    const s = t.sectors.items[key];
+    lines.push(`- [${flat(s.name)}](${SITE}${twinPath(site.PATHS[`for-${key}`].en)}): ${flat(s.meta.description)}`);
+  }
+  lines.push("", `## ${w.guides}`, "");
+  for (const key of site.GUIDES) {
+    const d = t.guides.items[key];
+    lines.push(`- [${flat(d.title)}](${SITE}${twinPath(site.PATHS[`guide-${key}`].en)}): ${flat(d.meta.description)}`);
+  }
+  lines.push(
+    "", `## ${w.pages}`, "", `- [${w.home}](${SITE}${twinPath("/")}): ${w.homeLine}`,
+    `- [${flat(t.guides.crumb)}](${SITE}${twinPath(site.PATHS.guides.en)}): ${flat(t.guides.meta.description)}`,
+    `- [${t.nav.company}](${SITE}${twinPath(site.PATHS.company.en)}): ${flat(t.meta.company.description)}`,
+    `- [${t.nav.privacy}](${SITE}${twinPath(site.PATHS.privacy.en)}): ${flat(t.meta.privacy.description)}`,
+    "", `## ${w.optional}`, "",
+  );
+  const arabic = Object.entries(site.PATHS).map(([key, p]) => `[${flat(pageName("ar", key))}](${SITE}${twinPath(p.ar)})`);
   lines.push(`- ${w.arabic}: ${arabic.join(", ")}`, "");
   return lines.join("\n");
 }
@@ -299,7 +407,7 @@ const written = [];
 const twins = [];
 for (const [key, paths] of Object.entries(site.PATHS)) {
   for (const locale of ["en", "ar"]) {
-    const text = key === "home" ? homeTwin(locale) : key === "company" ? companyTwin(locale) : key === "privacy" ? privacyTwin(locale) : productTwin(locale, key);
+    const text = twinOf(locale, key);
     const file = twinPath(paths[locale]);
     if (!text.startsWith("# ") || text.length < 600) problems.push(`${file}: the copy came out too short (${text.length} characters); has copy.ts changed shape?`);
     mkdirSync(dirname(join(out, file)), { recursive: true });

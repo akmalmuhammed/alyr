@@ -93,7 +93,7 @@ headline is MSA: «تحوّل رقمياً.»
 |---|---|---|
 | Orders | الطلبات | |
 | Booking; the time | حجز؛ موعد | |
-| Credit accounts; a credit sale | الحسابات الآجلة؛ البيع بالآجل | حسابات الآجل، دفتر الديون |
+| Credit accounts; a credit sale | الحسابات الآجلة؛ البيع بالآجل | حسابات الآجل; «دفتر الديون» for the product (allowed for the owner's own notebook, the word owners search: `docs/growth/research/05-keywords.md`, 25 Oct 2026) |
 | Owed to you | المستحق لك؛ من عليه مستحقات لك | ديون |
 | Promise to pay | وعد بالسداد | وعد بالدفع |
 | Workspace | مساحة العمل | |

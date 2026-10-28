@@ -96,6 +96,7 @@ const ICONS = {
   // the businesses on the homepage's tabs, and what a chat's preview carries
   bakery: ["M4 20v-8a8 6 0 0 1 16 0v8z", "m9 9 1.5 2.5", "m13 8.5 1.5 2.5"],
   crate: ["M3 9h18v11H3z", "M5 9l2-5h10l2 5", "M10 13h4"],
+  basket: ["M3 10h18l-2 10H5z", "M8 10l2.5-6h3l2.5 6", "M9 14v2", "M15 14v2"],
   hanger: ["M10 6.5a2 2 0 1 1 2 2V10", "M12 10 3 17v2h18v-2z"],
   cup: ["M5 8h11v6a5 5 0 0 1-5 5h-1a5 5 0 0 1-5-5z", "M16 10h1.5a2.5 2.5 0 0 1 0 5H16", "M9 3v2", "M12 3v2"],
   scissors: ["M8.5 6.5a2.5 2.5 0 1 1-5 0 2.5 2.5 0 0 1 5 0z", "M8.5 17.5a2.5 2.5 0 1 1-5 0 2.5 2.5 0 0 1 5 0z", "M8 8l12 10", "M8 16 20 6"],
