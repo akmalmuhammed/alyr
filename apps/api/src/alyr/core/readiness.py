@@ -419,6 +419,8 @@ def board_row(row: asyncpg.Record, now: datetime) -> dict:
         "stuck": stage != "live" and hours_still >= STUCK_HOURS,
         "helped": row["helped"],
         "whatsapp": _board_whatsapp(row["whatsapp"], steps),
+        # The Meta number attached to the business (ALY-166), if any.
+        "number": row["number"],
     }
 
 
