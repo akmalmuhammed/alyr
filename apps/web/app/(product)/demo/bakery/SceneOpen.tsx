@@ -9,9 +9,12 @@ import {
   DAYS, LIMITS, PAINS, SHARE, SHOP_COLOURS, clamp, estimate, painOrder, qar, testLine,
   type Numbers, type Pain,
 } from "./logic";
-import { Icon, Label, Labels, Line, M, Monogram, Qr } from "./parts";
+import { Icon, Label, Labels, Line, M, Monogram, Phone, Qr } from "./parts";
 
 const i = (n: number) => ({ "--i": n }) as CSSProperties;
+
+/** Unread counts on the drawn chat list: a sample, as WhatsApp shows them. */
+const UNREAD = [2, 1, 3, 1, 1, 2, 1, 1, 4, 1, 2, 1, 1, 1];
 
 // ── Setup ─────────────────────────────────────────────────────────────────────
 
@@ -83,25 +86,40 @@ export function Bakery({ w, beat, shop }: SceneProps) {
         <p className="dm-open-clock dm-rise" style={i(6)}><bdi>{b.clock}</bdi></p>
         {beat >= 1 ? <Line size="title" className="dm-open-unread dm-in">{b.unread}</Line> : null}
       </div>
-      {beat >= 1 ? (
-        <div className="dm-chats" role="img" aria-label={`${b.list} · ${w.labels.sample}`}>
-          <div className="dm-chats-head">
-            <span>{b.list}</span>
-            <Label kind="sample">{w.labels.sample}</Label>
-          </div>
-          <ol className="dm-chats-list">
-            {b.previews.map(([who, said, at], n) => (
-              <li key={who} className="dm-chat-row dm-in" style={i(n)}>
-                <span className="dm-chat-av" aria-hidden="true">{who.charAt(0)}</span>
-                <span className="dm-chat-who" dir="auto">{who}</span>
-                <span className="dm-chat-time"><bdi>{at}</bdi></span>
-                <span className="dm-chat-said" dir="auto">{said}</span>
-                <span className="dm-chat-dot" aria-hidden="true" />
-              </li>
-            ))}
-          </ol>
-        </div>
-      ) : null}
+      <div className="dm-open-phone dm-in" style={i(4)}>
+        <Phone label={`${b.list} · ${w.labels.sample}`} >
+          {beat === 0 ? (
+            <div className="dm-lock">
+              <span className="dm-lock-day">{b.lockDay}</span>
+              <span className="dm-lock-time"><bdi>{b.lockTime}</bdi></span>
+              <ol className="dm-lock-notes">
+                {b.previews.slice(0, 3).map(([who, said, at], n) => (
+                  <li key={who} className="dm-in" style={i(8 + n * 2)}>
+                    <b dir="auto">{who}</b><span className="dm-lock-at"><bdi>{at}</bdi></span>
+                    <span dir="auto">{said}</span>
+                  </li>
+                ))}
+              </ol>
+            </div>
+          ) : (
+            <div className="dm-wa-list">
+              <div className="dm-wa-list-head">{b.chats}</div>
+              <ol>
+                {b.previews.map(([who, said, at], n) => (
+                  <li key={who} className="dm-chat-row dm-in" style={i(n)}>
+                    <span className="dm-chat-av" aria-hidden="true">{who.charAt(0)}</span>
+                    <span className="dm-chat-who" dir="auto">{who}</span>
+                    <span className="dm-chat-time"><bdi>{at}</bdi></span>
+                    <span className="dm-chat-said" dir="auto">{said}</span>
+                    <span className="dm-chat-count" aria-hidden="true">{UNREAD[n % UNREAD.length]}</span>
+                  </li>
+                ))}
+              </ol>
+            </div>
+          )}
+        </Phone>
+        <Labels><Label kind="sample">{w.labels.sample}</Label></Labels>
+      </div>
     </div>
   );
 }
@@ -168,9 +186,10 @@ export function Money({ w, lang, beat, visit, change }: SceneProps) {
   }
 
   const L = LIMITS;
+  const open = beat >= 1 && visit.formula;
   return (
-    <div className="dm-cash">
-      <Line>{m.title}</Line>
+    <div className={`dm-cash ${open ? "is-open" : ""}`}>
+      {open ? null : <Line>{m.title}</Line>}
       <div className="dm-steps">
         <Stepper label={m.inputs.daily} value={n.daily} limits={L.daily} lang={lang}
           fewer={m.fewer(m.inputs.daily)} more={m.more(m.inputs.daily)} onChange={(v) => set({ daily: v })} />
@@ -180,7 +199,7 @@ export function Money({ w, lang, beat, visit, change }: SceneProps) {
           fewer={m.fewer(m.inputs.average)} more={m.more(m.inputs.average)} onChange={(v) => set({ average: v })} />
       </div>
       {beat >= 1 ? (
-        <div className="dm-leak dm-in">
+        <div className="dm-leak dm-in" key="leak">
           <p className="dm-leak-line">
             {m.month[0]}<M>{qar(total, lang)}</M>{m.month[1]}
           </p>
@@ -215,7 +234,12 @@ export function Money({ w, lang, beat, visit, change }: SceneProps) {
             </div>
           ) : null}
         </div>
-      ) : null}
+      ) : (
+        <div className="dm-leak is-held" aria-hidden="true" inert>
+          <p className="dm-leak-line">{m.month[0]}<M>{qar(total, lang)}</M>{m.month[1]}</p>
+          <Labels><Label kind="estimate">{w.labels.estimate}</Label></Labels>
+        </div>
+      )}
     </div>
   );
 }
@@ -227,15 +251,17 @@ export function How({ w, beat, visit, change }: SceneProps) {
   return (
     <div className="dm-how">
       <p className="dm-eyebrow">{h.title}</p>
-      <ol className={`dm-how-steps ${beat ? "is-small" : ""}`}>
-        {h.steps.map((s, k) => (
-          <li key={s} className="dm-how-step dm-in" style={i(k * 2)}>
-            <span className="dm-disc" aria-hidden="true">{k + 1}</span>
-            <span>{s}</span>
-          </li>
-        ))}
-      </ol>
-      {beat >= 1 ? (
+      {beat === 0 ? (
+        <ol className="dm-how-steps">
+          {h.steps.map((s, k) => (
+            <li key={s} className="dm-how-step dm-in" style={i(k * 3)}>
+              <span className="dm-how-tick" aria-hidden="true" />
+              <span className="dm-how-n" aria-hidden="true">{String(k + 1).padStart(2, "0")}</span>
+              <span>{s}</span>
+            </li>
+          ))}
+        </ol>
+      ) : (
         <div className="dm-objs dm-in">
           <p className="dm-eyebrow">{h.objTitle}</p>
           <div className="dm-obj-grid">
@@ -251,7 +277,7 @@ export function How({ w, beat, visit, change }: SceneProps) {
             })}
           </div>
         </div>
-      ) : null}
+      )}
     </div>
   );
 }

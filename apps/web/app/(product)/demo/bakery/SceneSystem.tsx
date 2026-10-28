@@ -41,17 +41,24 @@ export function System({ w, beat, shop }: SceneProps) {
         ) : beat === 8 ? (
           <>
             <Line>{s.after}</Line>
-            <Window title={shop} name={shop} className="dm-one dm-cut" labels={<Label kind="built">{w.labels.built}</Label>}>
-              <ul className="dm-one-rows">
-                {s.afterRows.map(([what, eg], k) => (
-                  <li key={what} className="dm-in" style={i(2 + k * 2)}><b>{what}</b><span dir="auto">{eg}</span></li>
-                ))}
-              </ul>
-              <div className="dm-one-tags">
-                {s.nodes.map((n) => <span key={n.name} className="dm-pname"><bdi>{n.name}</bdi></span>)}
+            <Window title={shop} name={shop} className="dm-one dm-cut"
+              labels={<><Label kind="sample">{w.labels.sample}</Label><Label kind="built">{w.labels.built}</Label></>}>
+              <div className="dm-one-in">
+                <nav className="dm-one-side" aria-label={s.sidebar}>
+                  <span className="dm-eyebrow">{s.sidebar}</span>
+                  {s.nodes.map((n, k) => (
+                    <span key={n.name} className="dm-one-prod dm-in" style={i(k)}>
+                      <b className="dm-pname"><bdi>{n.name}</bdi></b><small>{n.what}</small>
+                    </span>
+                  ))}
+                </nav>
+                <ul className="dm-one-rows">
+                  {s.afterRows.map(([what, eg], k) => (
+                    <li key={what} className="dm-in" style={i(4 + k * 2)}><b>{what}</b><span dir="auto">{eg}</span></li>
+                  ))}
+                </ul>
               </div>
             </Window>
-            <Labels><Label kind="sample">{w.labels.sample}</Label></Labels>
           </>
         ) : (
           <>
@@ -74,7 +81,8 @@ export function System({ w, beat, shop }: SceneProps) {
   return (
     <div className="dm-sys" style={{ "--at": at, "--lit": beat } as CSSProperties}>
       <div className="dm-sys-head">
-        <Line>{beat === 6 ? s.end : s.title}</Line>
+        <Line>{s.title}</Line>
+        <p className={`dm-lead ${beat === 6 ? "dm-in" : "is-held"}`} aria-hidden={beat === 6 ? undefined : true}>{s.end}</p>
         <Labels><Label kind="built">{w.labels.built}</Label><Label kind="sample">{w.labels.sample}</Label></Labels>
       </div>
       <div className="dm-wire">
@@ -88,6 +96,7 @@ export function System({ w, beat, shop }: SceneProps) {
                 <span className="dm-station-node" aria-hidden="true" />
                 <b className="dm-pname"><bdi>{n.name}</bdi></b>
                 <small>{n.what}</small>
+                <span className={`dm-frag ${beat > k ? "is-lit" : ""}`} dir="auto">{n.frag}</span>
                 {beat > k ? <p className="dm-station-did dm-in" dir="auto">{n.did}</p> : null}
               </li>
             );
@@ -110,62 +119,59 @@ export function Found({ w, beat, shop, setup }: SceneProps) {
     <div className="dm-found">
       <div className="dm-found-head">
         <Line key={beat} className="dm-in">{f.head[beat]}</Line>
-        <Labels>
-          <Label kind="setup">{w.labels.setup}</Label>
-          {beat === 3 ? <Label kind="built">{w.labels.built}</Label> : null}
-          <Label kind="sample">{w.labels.sample}</Label>
-        </Labels>
+        <Labels note={beat <= 2 ? f.condition : undefined}><Label kind="sample">{w.labels.sample}</Label></Labels>
       </div>
       <div className="dm-found-row">
-        <Phone label={f.search}>
-          <div className="dm-map">
-            <div className="dm-map-search"><Icon name="pin" className="dm-ico" /><span>{f.search}</span></div>
-            <div className="dm-map-area" aria-hidden="true">
-              {f.others.map((o, k) => <span key={o} className={`dm-pin is-${k}`}><Icon name="pin" className="dm-ico" /></span>)}
-              <span className="dm-pin is-ours"><Monogram name={shop} /></span>
-            </div>
-            <div className="dm-listing">
-              <b dir="auto">{shop}</b>
-              <small>{f.kind}</small>
-              {beat >= 2 ? (
-                <div className="dm-review dm-in">
-                  <span className="dm-stars" role="img" aria-label={f.stars}>{Array.from({ length: 5 }, (_, k) => <Icon key={k} name="star" className="dm-ico" />)}</span>
-                  <b>{f.reviewer}</b> <small>{f.reviewWhen}</small>
-                  <p dir="auto">{f.reviewText}</p>
+        <div className="dm-found-fig">
+          <Phone label={f.search}>
+            <div className="dm-map">
+              <div className="dm-map-search"><Icon name="pin" className="dm-ico" /><span>{f.search}</span></div>
+              <div className="dm-map-area" aria-hidden="true">
+                {f.others.map((o, k) => <span key={o} className={`dm-pin is-${k}`}><Icon name="pin" className="dm-ico" /></span>)}
+                <span className="dm-pin is-ours"><Monogram name={shop} /></span>
+              </div>
+              <div className="dm-listing">
+                <b dir="auto">{shop}</b>
+                <small>{f.kind}</small>
+                {beat >= 2 ? (
+                  <div className="dm-review dm-in">
+                    <span className="dm-stars" role="img" aria-label={f.stars}>{Array.from({ length: 5 }, (_, k) => <Icon key={k} name="star" className="dm-ico" />)}</span>
+                    <b>{f.reviewer}</b> <small>{f.reviewWhen}</small>
+                    <p dir="auto">{f.reviewText}</p>
+                  </div>
+                ) : null}
+                <div className="dm-listing-btns">
+                  <span className="dm-listing-btn is-order">{f.order}</span>
+                  <span className="dm-listing-btn"><Icon name="directions" className="dm-ico" />{f.directions}</span>
+                  <span className="dm-listing-btn"><Icon name="phone" className="dm-ico" />{f.call}</span>
                 </div>
-              ) : null}
-              <div className="dm-listing-btns">
-                <span className="dm-listing-btn is-order">{f.order}</span>
-                <span className="dm-listing-btn"><Icon name="directions" className="dm-ico" />{f.directions}</span>
-                <span className="dm-listing-btn"><Icon name="phone" className="dm-ico" />{f.call}</span>
               </div>
             </div>
-          </div>
-        </Phone>
-        <div className="dm-found-side">
-          {beat >= 1 ? (
-            <div className="dm-card is-wide dm-in">
-              <WaHead name={shop} sub={w.order.account} />
-              <div className="dm-wa-body is-flat">
-                <Bubble time={w.pains.ready.time}>{f.thanks(shop)} <span className="dm-wa-link is-static">{f.review}</span></Bubble>
-              </div>
-            </div>
-          ) : null}
-          {beat >= 3 ? (
-            <div className="dm-found-pair">
-              <div className="dm-counter dm-in">
-                <span className="dm-counter-top"><Monogram name={shop} /><b dir="auto">{shop}</b></span>
-                <Qr link={`https://${link}`} label={f.qrNote} />
-                <b>{f.qr}</b>
-              </div>
-              <div className="dm-bio dm-in" style={i(3)}>
-                <span className="dm-bio-top"><Monogram name={shop} big /><b dir="auto">{shop}</b></span>
-                <small>{f.bio}</small>
-                <span className="dm-bio-link" dir="ltr">{link}</span>
-              </div>
-            </div>
-          ) : null}
+          </Phone>
+          <Labels><Label kind="setup">{w.labels.setup}</Label></Labels>
         </div>
+        {beat >= 1 && beat <= 2 ? (
+          <div className="dm-found-fig dm-in">
+            <Phone label={w.order.customer}>
+              <WaHead name={shop} sub={w.order.account} />
+              <div className="dm-wa-body">
+                <Bubble time={f.when}>{f.thanks(shop)} <span className="dm-wa-link is-static">{f.review}</span></Bubble>
+              </div>
+            </Phone>
+            <Labels><Label kind="setup">{w.labels.setup}</Label></Labels>
+          </div>
+        ) : null}
+        {beat >= 3 ? (
+          <div className="dm-found-fig dm-in">
+            <div className="dm-counter">
+              <span className="dm-counter-top"><Monogram name={shop} /><b dir="auto">{shop}</b></span>
+              <Qr link={`https://${link}`} label={f.qrNote} />
+              <b>{f.qr}</b>
+              <span className="dm-bio-line"><small>{f.bio}</small> <span dir="ltr">{link}</span></span>
+            </div>
+            <Labels><Label kind="built">{w.labels.built}</Label></Labels>
+          </div>
+        ) : null}
       </div>
     </div>
   );
@@ -183,7 +189,7 @@ function waText(line: string, shop: string, sample: string): ReactNode {
   );
 }
 
-function ReportCard({ card, shop, week, sample }: { card: Card; shop: string; week: string; sample: string }) {
+function ReportCard({ card, shop, week, sample, mini }: { card: Card; shop: string; week: string; sample: string; mini?: boolean }) {
   const max = Math.max(...card.days.map((d) => Math.max(d.value, d.last)));
   return (
     <div className="dm-report" dir={card.dir}>
@@ -211,7 +217,7 @@ function ReportCard({ card, shop, week, sample }: { card: Card; shop: string; we
           ))}
         </div>
       </div>
-      <div className="dm-report-facts">
+      <div className="dm-report-facts" hidden={mini}>
         {card.facts.map((f) => (
           <span key={f.key}><small>{f.label}</small><b><bdi>{f.value}</bdi></b><small>{f.note}</small></span>
         ))}
@@ -242,7 +248,7 @@ export function Sunday({ w, lang, beat, shop }: SceneProps) {
             <div className="dm-wa-body">
               <div className="dm-in" style={i(2)}>
                 <div className="dm-bub is-card">
-                  <ReportCard card={report.card as Card} shop={shop} week={report.week} sample={w.labels.week} />
+                  <ReportCard card={report.card as Card} shop={shop} week={report.week} sample={w.labels.week} mini />
                   <span className="dm-bub-text" dir="auto">
                     {lines.map((l, k) => (l ? <span key={k} className="dm-wa-line">{waText(l, shop, sampleName)}</span> : <br key={k} />))}
                   </span>

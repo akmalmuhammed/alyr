@@ -5,7 +5,6 @@
 import type { CSSProperties, ReactNode } from "react";
 import { Icon, Symbol, type IconName } from "../../../_site/brand";
 import { encode, QUIET } from "../../_workspace/qr";
-import { initials } from "../../_customer/Frame";
 import type { ShopColour } from "./logic";
 
 export { Icon, type IconName };
@@ -33,6 +32,19 @@ export function Labels({ children, note }: { children: ReactNode; note?: ReactNo
 }
 
 export const shopVar = (colour: ShopColour) => ({ "--shop": `var(--shop-${colour})` }) as CSSProperties;
+
+/** The trade words a shop's name often starts with: the monogram takes the name after them,
+ * so «مخبز قرفة» gives «ق», not the «م» every bakery would share. */
+const TRADE = /^(مخبز|مخابز|حلويات|مقهى|كافيه|محل|مطبخ|فرن|bakery|cafe|café)$/i;
+
+export function initials(name: string) {
+  const words = name.trim().split(/\s+/).filter(Boolean);
+  if (/[؀-ۿ]/.test(name)) {
+    const word = words.find((w) => !TRADE.test(w)) ?? words[0] ?? "";
+    return word.replace(/^ال/, "").charAt(0) || "·";
+  }
+  return words.slice(0, 2).map((w) => w[0]).join("").toUpperCase() || "·";
+}
 
 /** The shop's monogram, in its own colour, cut at 45° like ALYR's marks. */
 export function Monogram({ name, big }: { name: string; big?: boolean }) {

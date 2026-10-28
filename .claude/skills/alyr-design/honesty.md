@@ -136,6 +136,8 @@ father's name (Aisha Hamad, «عائشة حمد»), never a prominent family nam
 | Al Noor Electricals | Templates' sample values | not recorded | Open |
 | Aisha Hamad, Mariam Saleh, Khalid Nasser, Omar Ali; staff Yusuf | Sample customers and staff | first and father's name rule | n/a |
 | Palm Court Offices, Bluefin Events, Ward Events, Tamr Café, Garden Gate Nursery, Marina Desk Co-working, Bayview School, Crescent Tower Offices, Dana Home Services | Sample customers in the AC and other samples | **Not checked** | Open |
+| Mahbash Café / مقهى المهباش; Ghaf House Offices / مكاتب بيت الغاف | The sales demo's café on account and its office client (`/demo/bakery`, ALY-263) | 29 Oct 2026, none found in the Gulf | Open |
+| Tamr Café; Crescent Tower Offices | Close to Tammra Café (a Gulf chain) and Tamra Cafe, Al Ain; Crescent Tower is an office tower in Abu Dhabi (copy critic, 29 Oct 2026) | **Collide: do not use in new work** | n/a |
 
 **Retired after collisions, never reuse:** Sadaf Salon (a Gulf salon chain), Nasma Cooling
 (Nisma AC brand, «نسمة» AC firms), Ruwaa Dental, Zaitoon Grill, Al-Kuwari, Al-Emadi,

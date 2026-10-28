@@ -23,33 +23,61 @@ export function Pains(props: SceneProps) {
   const pain: Pain | "invoice" = k < order.length ? order[k] : "invoice";
   const p = w.pains;
   const quote = pain === "invoice" ? p.cards.invoice.quote ?? "" : w.money.pains[pain];
-  const total = order.length + 1;
+
+  // The before: their words beside their own chats that day. On the after beat it stays under
+  // the new picture and closes along 45°, so the fold cuts the pain away.
+  const before = (closing: boolean) => (
+    <div className={`dm-before ${closing ? "is-closing" : ""}`} key={`b-${k}-${closing ? "c" : "o"}`}
+      aria-hidden={closing || undefined} inert={closing || undefined}>
+      <div className="dm-before-copy">
+        <p className="dm-eyebrow">{p.before}</p>
+        <blockquote className={`dm-quote ${closing ? "" : "dm-rise"}`}>{quote}</blockquote>
+      </div>
+      <div className="dm-before-fig">
+        <Phone label={`${p.beforeWho} · ${w.labels.sample}`}>
+          <div className="dm-wa-list">
+            <div className="dm-wa-list-head">{p.beforeWho}</div>
+            <ol>
+              {p.beforeChat[pain].map(([text, at], n) => {
+                const who = pain === "cafe" ? p.cafe.name : w.bakery.previews[(n * 3 + k) % w.bakery.previews.length][0];
+                return (
+                  <li key={n} className={`dm-chat-row ${closing ? "" : "dm-in"}`} style={i(2 + n * 2)}>
+                    <span className="dm-chat-av" aria-hidden="true">{who.charAt(0)}</span>
+                    <span className="dm-chat-who" dir="auto">{who}</span>
+                    <span className="dm-chat-time"><bdi>{at}</bdi></span>
+                    <span className="dm-chat-said is-wrap" dir="auto">{text}</span>
+                    <span className="dm-chat-count" aria-hidden="true">1</span>
+                  </li>
+                );
+              })}
+            </ol>
+          </div>
+        </Phone>
+        <Labels><Label kind="sample">{w.labels.sample}</Label></Labels>
+      </div>
+    </div>
+  );
 
   return (
     <div className={`dm-pains ${after ? "is-after" : "is-before"}`}>
-      <div className="dm-pains-rail" aria-hidden="true">
-        {Array.from({ length: total }, (_, n) => <i key={n} className={n < k ? "is-done" : n === k ? "is-on" : ""} />)}
-      </div>
-      {!after ? (
-        <div className="dm-before" key={`b-${k}`}>
-          <p className="dm-eyebrow dm-in">{p.before}</p>
-          <blockquote className="dm-quote dm-rise">{quote}</blockquote>
-        </div>
-      ) : (
-        <div className="dm-after dm-cut" key={`a-${k}`}>
-          <div className="dm-after-copy">
-            <p className="dm-eyebrow">{p.after}</p>
-            <p className="dm-after-was">{quote}</p>
-            <Line className="dm-in">{p.cards[pain].head}</Line>
-            {pain !== "invoice" && POINTS_TO[pain] ? (
-              <button type="button" className="dm-btn is-line dm-in" style={i(3)}
-                onClick={() => go({ scene: POINTS_TO[pain as Pain] as number, beat: LANDS[pain as Pain] ?? 0 }, { scene: 4, beat })}>
-                <span>{p.jump(POINTS_TO[pain] as number)}</span><Icon name="arrow-right" className="dm-ico dm-ico-fwd" />
-              </button>
-            ) : null}
+      {!after ? before(false) : (
+        <>
+          {before(true)}
+          <div className="dm-after" key={`a-${k}`}>
+            <div className="dm-after-copy">
+              <p className="dm-eyebrow dm-in">{p.after}</p>
+              <p className="dm-after-was dm-in">{quote}</p>
+              <Line className="dm-in">{p.cards[pain].head}</Line>
+              {pain !== "invoice" && POINTS_TO[pain] ? (
+                <button type="button" className="dm-btn is-line dm-in" style={i(3)}
+                  onClick={() => go({ scene: POINTS_TO[pain as Pain] as number, beat: LANDS[pain as Pain] ?? 0 }, { scene: 4, beat })}>
+                  <span>{p.jump(POINTS_TO[pain] as number)}</span><Icon name="arrow-right" className="dm-ico dm-ico-fwd" />
+                </button>
+              ) : null}
+            </div>
+            <div className="dm-after-fig">{figure(pain, props)}</div>
           </div>
-          <div className="dm-after-fig">{figure(pain, props)}</div>
-        </div>
+        </>
       )}
     </div>
   );
@@ -99,7 +127,7 @@ function figure(pain: Pain | "invoice", { w, lang, shop }: SceneProps): ReactNod
               <p className="dm-msg" dir="auto">{p.pistachio.back(shop)} <span className="dm-wa-link is-static" dir="ltr">{p.orderUrl}</span></p>
             </div>
           </div>
-          <Labels note={p.condition}>{built}{sample}</Labels>
+          <Labels note={p.pistachio.condition}>{built}{sample}</Labels>
         </div>
       );
     case "cafe":
@@ -113,7 +141,7 @@ function figure(pain: Pain | "invoice", { w, lang, shop }: SceneProps): ReactNod
               </div>
               <div className="dm-age" aria-hidden="true"><i style={{ flexGrow: 620 }} /><i style={{ flexGrow: 760 }} /><i className="is-old" style={{ flexGrow: 460 }} /></div>
               <small>{p.cafe.oldest}</small>
-              <span className="dm-fake-btn is-pressed">{p.cafe.sent}</span>
+              <span className="dm-sent"><Icon name="check" className="dm-ico" />{p.cafe.sent} · {p.reminded}</span>
             </div>
             <div className="dm-card is-wide dm-in" style={i(4)}>
               <p className="dm-msg" dir="auto">{p.cafe.reminder(shop)} <span className="dm-wa-link is-static" dir="ltr">{p.payUrl}</span></p>
@@ -128,7 +156,7 @@ function figure(pain: Pain | "invoice", { w, lang, shop }: SceneProps): ReactNod
             </div>
             <small className="dm-eyebrow">{p.cafe.group}</small>
           </div>
-          <Labels>{built}{sample}</Labels>
+          <Labels note={p.cafe.condition}>{built}{sample}</Labels>
         </div>
       );
     case "delivery":
@@ -162,10 +190,10 @@ function figure(pain: Pain | "invoice", { w, lang, shop }: SceneProps): ReactNod
               <div key={a} className="dm-paper-line">
                 <span><span dir="auto">{a}</span><small dir="auto">{b}</small></span>
                 <span>× {n}</span>
-                <M>{qar(n * 45, "en")}</M>
+                <M>{qar(n * 45, lang)}</M>
               </div>
             ))}
-            <div className="dm-paper-total"><span>{p.invoice.total}</span><M>{qar(40 * 45, "en")}</M></div>
+            <div className="dm-paper-total"><span>{p.invoice.total}</span><M>{qar(40 * 45, lang)}</M></div>
           </div>
           <Labels>{built}{sample}</Labels>
         </div>
@@ -196,7 +224,7 @@ function figure(pain: Pain | "invoice", { w, lang, shop }: SceneProps): ReactNod
       };
       const labels: Record<string, ReactNode> = {
         transfer: <Labels note={o.cardsLive}>{built}</Labels>,
-        best: <Labels><Label kind="week">{w.labels.week}</Label></Labels>,
+        best: <Labels note={w.sunday.condition}><Label kind="week">{w.labels.week}</Label></Labels>,
         google: <Labels><Label kind="setup">{w.labels.setup}</Label></Labels>,
       };
       return (

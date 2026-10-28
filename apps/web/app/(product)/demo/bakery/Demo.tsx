@@ -73,6 +73,7 @@ export default function Demo() {
   });
   const [pos, setPos] = useState<Pos>({ scene: 0, beat: 0 });
   const [leaving, setLeaving] = useState<Pos | null>(null);
+  const [way, setWay] = useState<"fwd" | "back">("fwd");
   const [visit, setVisit] = useState<Visit>(FRESH);
   const [notes, setNotes] = useState(false);
   const [back, setBack] = useState<Pos | null>(null);
@@ -103,6 +104,7 @@ export default function Demo() {
     setPos((current) => {
       if (to.scene === current.scene && to.beat === current.beat) return current;
       if (to.scene !== current.scene && !reduced) setLeaving(current);
+      setWay(to.scene > current.scene || (to.scene === current.scene && to.beat >= current.beat) ? "fwd" : "back");
       if (current.scene === 0 && to.scene > 0) setStarted((s) => s ?? Date.now());
       return to;
     });
@@ -250,7 +252,7 @@ export default function Demo() {
         </div>
       </header>
 
-      <main className="dm-stage">
+      <main className={`dm-stage is-${way}`}>
         <h1 className="dm-sr">{`ALYR · ${w.title}`}</h1>
         {leaving && Before ? (
           <section className={`dm-scene is-leaving ${CARBON.has(leaving.scene) ? "is-carbon" : ""}`} aria-hidden="true" inert key={`out-${leaving.scene}`}>

@@ -13,19 +13,28 @@ import { Bubble, Icon, Label, Labels, Line, M, Monogram, Phone, WaHead, Window }
 
 const i = (n: number) => ({ "--i": n }) as CSSProperties;
 
-function Choices({ title, options, chosen, onPick, disabled, extra }: {
+/** After a tap, the next choice comes into view inside the drawn phone, so the owner always
+ * sees what is left to pick (the page scrolls, like the real one). */
+function reveal(from: HTMLElement) {
+  const reduced = matchMedia("(prefers-reduced-motion: reduce)").matches;
+  const group = from.closest(".dm-op-group");
+  const target = (group?.nextElementSibling as HTMLElement | null) ?? from.closest(".dm-op")?.querySelector<HTMLElement>(".dm-op-foot");
+  target?.scrollIntoView({ block: "nearest", behavior: reduced ? "auto" : "smooth" });
+}
+
+function Choices({ title, options, chosen, onPick, disabled, extra, wide }: {
   title: string; options: string[]; chosen: number | null; onPick: (k: number) => void;
-  disabled?: (k: number) => boolean; extra?: (k: number) => string | null;
+  disabled?: (k: number) => boolean; extra?: (k: number) => string | null; wide?: boolean;
 }) {
   return (
-    <fieldset className="dm-op-group">
+    <fieldset className={`dm-op-group ${wide ? "is-two" : ""}`}>
       <legend>{title}</legend>
       <div className="dm-op-chips">
         {options.map((o, k) => {
           const off = disabled?.(k) ?? false;
           return (
             <button key={o} type="button" className={`dm-op-chip ${chosen === k ? "is-on" : ""} ${off ? "is-off" : ""}`}
-              aria-pressed={chosen === k} disabled={off} onClick={() => onPick(k)}>
+              aria-pressed={chosen === k} disabled={off} onClick={(e) => { onPick(k); reveal(e.currentTarget); }}>
               <span dir="auto">{o}</span>
               {extra?.(k) ? <small>{extra(k)}</small> : null}
             </button>
@@ -85,19 +94,18 @@ export function Order({ w, lang, beat, shop, visit, change, next }: SceneProps) 
             <div className="dm-op-photo" aria-hidden="true"><Icon name="bakery" className="dm-ico" /></div>
             <div>
               <b>{o.item}</b>
-              <small>{o.itemNote}</small>
               {khalid ? <small className="dm-op-note dm-in">{o.nextFree}</small> : null}
             </div>
           </div>
           {khalid ? (
-            <Choices title={o.day} options={o.days} chosen={2} onPick={() => undefined}
-              disabled={(k) => k < 2} extra={(k) => (k < 2 ? o.full : null)} />
+            <Choices title={o.day} options={o.daysMorning} chosen={2} onPick={() => undefined}
+              disabled={(k) => k < 2} extra={(k) => (k === 0 ? o.full : k === 1 ? o.closed : null)} />
           ) : (
             <>
               <Choices title={o.size} options={o.sizes.map(([s]) => s)} chosen={cake.size} onPick={(k) => set({ size: k })}
                 extra={(k) => qar(o.sizes[k][1], lang)} />
-              <Choices title={o.flavour} options={o.flavours} chosen={cake.flavour} onPick={(k) => set({ flavour: k })} />
-              <Choices title={o.message} options={o.messages} chosen={cake.message} onPick={(k) => set({ message: k })} />
+              <Choices title={o.flavour} options={o.flavours} chosen={cake.flavour} onPick={(k) => set({ flavour: k })} wide />
+              <Choices title={o.message} options={o.messages} chosen={cake.message} onPick={(k) => set({ message: k })} wide />
               <Choices title={o.day} options={o.days} chosen={cake.day} onPick={(k) => set({ day: k })} />
             </>
           )}
@@ -153,17 +161,15 @@ export function Order({ w, lang, beat, shop, visit, change, next }: SceneProps) 
   return (
     <div className="dm-split">
       <div className="dm-split-head">
-        <span className="dm-clock"><bdi>{o.times[beat]}</bdi></span>
+        <span className={`dm-clock ${beat === 0 || beat === 5 ? "is-quiet" : ""}`}><bdi>{o.times[beat]}</bdi></span>
         <Line key={beat} className="dm-in">{o.lines[beat]}</Line>
+        <Labels><Label kind="sample">{w.labels.sample}</Label></Labels>
         {beat === 2 ? <p className="dm-lead dm-in" style={i(2)}>{o.yourTurn}</p> : null}
       </div>
 
       <div className="dm-split-phone">
         <Phone label={who}>{phone}</Phone>
-        <Labels note={beat === 3 ? o.cardsLive : undefined}>
-          <Label kind="built">{w.labels.built}</Label>
-          <Label kind="sample">{w.labels.sample}</Label>
-        </Labels>
+        <Labels><Label kind="built">{w.labels.built}</Label></Labels>
       </div>
 
       <div className="dm-split-work">
@@ -205,8 +211,9 @@ export function Order({ w, lang, beat, shop, visit, change, next }: SceneProps) 
               </div>
             ))}
           </div>
+        </Window>
 
-          <div className={`dm-limit ${full ? "is-full" : ""}`}>
+        <div className={`dm-limit ${full ? "is-full" : ""}`}>
             <div className="dm-limit-head">
               <span><b>{o.limitTitle}</b><small>{o.limitDay}</small></span>
               <span className="dm-limit-count" aria-live="polite"><M>{o.ofLimit(count, CAKE.limit)}</M></span>
@@ -217,13 +224,13 @@ export function Order({ w, lang, beat, shop, visit, change, next }: SceneProps) 
               ))}
             </div>
             {full ? <p className="dm-limit-full dm-in">{o.fullLine}</p> : null}
+            <Labels><Label kind="built">{w.labels.built}</Label></Labels>
           </div>
-        </Window>
 
         <div className="dm-list">
           <div className="dm-list-head">
             <span><b>{o.list}</b><small>{o.listNote}</small></span>
-            <Label kind="sample">{w.labels.sample}</Label>
+            <Label kind="notBuilt">{w.labels.notBuilt}</Label>
           </div>
           <ul>
             <li className={beat >= 4 && beat <= 5 ? "is-new" : ""}>
@@ -236,7 +243,7 @@ export function Order({ w, lang, beat, shop, visit, change, next }: SceneProps) 
           </ul>
         </div>
       </div>
-      <p className="dm-built">{o.builtLine}</p>
+      <p className="dm-built">{o.builtLine} {o.cardsLive}</p>
     </div>
   );
 }
