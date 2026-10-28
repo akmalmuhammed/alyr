@@ -63,7 +63,7 @@ SECRETS=(
 )
 secrets_flag() { local IFS=,; local s=("${SECRETS[@]/%/:latest}"); echo "${s[*]}"; }
 env_flag() {
-  echo "ALYR_ENV=production,ALYR_JOBS_INLINE=false,ALYR_PUBLIC_WEB_URL=${ALYR_PUBLIC_WEB_URL:-$(url alyr-web)},ALYR_R2_BUCKET=${ALYR_R2_BUCKET:-alyr-media},ALYR_MEDIA_BASE_URL=${ALYR_MEDIA_BASE_URL:-https://media.alyr.qa}"
+  echo "ALYR_ENV=production,ALYR_JOBS_INLINE=false,ALYR_PUBLIC_WEB_URL=${ALYR_PUBLIC_WEB_URL:-https://app.alyr.qa},ALYR_R2_BUCKET=${ALYR_R2_BUCKET:-alyr-media},ALYR_MEDIA_BASE_URL=${ALYR_MEDIA_BASE_URL:-https://media.alyr.qa}"
 }
 private_net=(--network="$NETWORK" --subnet="$SUBNET" --vpc-egress=private-ranges-only)
 
@@ -287,7 +287,7 @@ case "${1:-}" in
       --set-secrets="ALYR_MIGRATION_URL=migration-url:latest,ALYR_DATABASE_URL=database-url:latest,ALYR_META_PHONE_NUMBER_ID=meta-phone-number-id:latest,ALYR_META_WABA_ID=meta-waba-id:latest" \
       --cpu=1 --memory=512Mi --max-retries=0 --task-timeout=5m
     g run jobs execute alyr-first-admin --region="$REGION" --wait
-    echo "Sign in at $(url alyr-web)/login with $email (a code is emailed)."
+    echo "Sign in at https://app.alyr.qa/login with $email (a code is emailed)."
     ;;
 
   github)
