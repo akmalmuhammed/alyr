@@ -1,0 +1,37 @@
+// The ALYR API on Cloudflare: a small Worker in front of one container that runs the FastAPI
+// service and the job runner (apps/api/Dockerfile). Postgres is Neon, outside Cloudflare.
+// Deploy by hand from this folder: `pnpm install && pnpm exec wrangler deploy` (Docker must be
+// running, because wrangler builds the image). Secrets are set with `wrangler secret put`,
+// never written here. Steps and rollback: docs/runbooks/cloudflare-neon-hosting.md (D-052).
+{
+  "name": "alyr-api",
+  "main": "src/index.ts",
+  "compatibility_date": "2026-10-06",
+  // First the workers.dev address, so nothing public changes until the founder approves a
+  // custom route (app.alyr.qa/api/*).
+  "workers_dev": true,
+  "preview_urls": false,
+  "containers": [
+    {
+      "class_name": "ApiContainer",
+      "image": "../../../apps/api/Dockerfile",
+      "image_build_context": "../../../apps/api",
+      // One always-on instance: the job runner lives in the same container and must not sleep.
+      "max_instances": 1,
+      "instance_type": "basic"
+    }
+  ],
+  "durable_objects": {
+    "bindings": [{ "name": "API", "class_name": "ApiContainer" }]
+  },
+  "migrations": [{ "tag": "v1", "new_sqlite_classes": ["ApiContainer"] }],
+  // Pings the container every few minutes so it never sleeps and the job runner keeps running.
+  "triggers": { "crons": ["*/3 * * * *"] },
+  "observability": { "enabled": true },
+  // Non-secret settings. Secrets (ALYR_DATABASE_URL, ALYR_MIGRATION_URL, ALYR_LINK_SECRET,
+  // ALYR_EMAIL_API_KEY, ...) are set with `wrangler secret put`; every ALYR_* value of this
+  // Worker is passed to the container as an environment variable (src/index.ts).
+  "vars": {
+    "ALYR_PUBLIC_WEB_URL": "https://app.alyr.qa"
+  }
+}

@@ -101,3 +101,89 @@
   .ops-list td { display: block; padding: 0 !important; border: 0 !important; }
   .ops-kinds { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 }
+
+/* ── Usage (ALY-109): storage against the free 10 GB, per business and month by month ── */
+.ops-main .sh-eyebrow { color: var(--ink-2); }
+.ops-sr { position: absolute; width: 1px; height: 1px; margin: -1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+.sh-pill.bad { color: var(--bad); background: var(--bad-soft); box-shadow: none; }
+/* the shell's amber on its pale amber is 4:1; this state is the one the founder must read */
+.ops-meter .sh-pill.wait { color: color-mix(in srgb, var(--warn) 70%, var(--ink)); }
+.ops-meter { display: grid; gap: 12px; }
+.ops-meter-top { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+.ops-meter-top > div { display: grid; gap: 6px; }
+.ops-meter-top span:not(.sh-pill) { font-size: var(--ui-small); color: var(--ink-2); }
+.ops-meter-top b { font-size: var(--ui-display-sm); font-weight: 600; letter-spacing: -0.04em; line-height: 1; }
+.ops-meter-top b small { font-size: var(--ui-body-sm); font-weight: 500; letter-spacing: 0; color: var(--ink-2); }
+.ops-meter small { color: var(--ink-2); font-size: var(--ui-small); }
+.ops-gauge { position: relative; height: 10px; border-radius: 5px; background: var(--raise); box-shadow: 0 0 0 1px var(--hair-2) inset; overflow: hidden; }
+.ops-gauge-fill { position: absolute; inset-block: 0; inset-inline-start: 0; min-width: 2px; background: var(--ink); border-radius: 5px; }
+.ops-gauge-fill.warn { background: var(--warn); }
+.ops-gauge-fill.over { background: var(--bad); }
+.ops-gauge-line { position: absolute; inset-block: 0; width: 2px; background: var(--ink-3); }
+.ops-toolbar { display: flex; align-items: flex-end; gap: 12px; flex-wrap: wrap; }
+.ops-toolbar .ops-field { min-width: 9rem; }
+.ops-toolbar .ops-field > span { font-size: var(--ui-small); color: var(--ink-2); }
+.ops-usage table { min-width: 560px; }
+.ops-usage thead th { color: var(--ink-2); }
+.ops-usage td small, .ops-usage th small { color: var(--ink-3); font-family: var(--face); }
+.ops-usage tfoot th, .ops-usage tfoot td { border-top: 1px solid var(--hair-2); border-bottom: 0; font-weight: 600; background: transparent; text-transform: none; letter-spacing: 0; font-family: var(--face); font-size: var(--ui-body-sm); color: var(--ink); }
+.ops-trend { white-space: nowrap; }
+.ops-trend-in { display: inline-flex; align-items: center; justify-content: flex-end; gap: 10px; }
+.ops-trend-in > span:first-child { min-width: 5.5rem; }
+.ops-bar { display: inline-block; flex: none; width: 5rem; height: 6px; border-radius: 3px; background: var(--raise); overflow: hidden; }
+.ops-bar > span { display: block; height: 100%; background: var(--ink); border-radius: 3px; }
+@media (max-width: 56rem) {
+  .ops-usage table { min-width: 0; }
+  .ops-usage thead { position: absolute; width: 1px; height: 1px; margin: -1px; overflow: hidden; clip-path: inset(50%); }
+  .ops-usage tr { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 6px 18px; padding: 12px 14px; border-top: 1px solid var(--hair); }
+  .ops-usage tbody tr:first-child { border-top: 0; }
+  .ops-usage td, .ops-usage th { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; padding: 0 !important; border: 0 !important; text-align: start; }
+  .ops-usage td::before { content: attr(data-label); font-family: var(--face); font-size: var(--ui-caption); color: var(--ink-3); }
+  .ops-usage td:first-child, .ops-usage th[scope="row"], .ops-usage td[data-label="Since last month"] { grid-column: 1 / -1; }
+  .ops-usage td:first-child::before { display: none; }
+  .ops-usage td.r { text-align: end; }
+  .ops-trend-in > span:first-child { min-width: 0; }
+  /* two figures to a row leave no room for the bar; the numbers carry the trend */
+  .ops-bar { display: none; }
+  .ops-usage tfoot tr { border-top: 1px solid var(--hair-2); }
+  .ops-usage tfoot th, .ops-usage tfoot td { border-top: 0; }
+  .ops-toolbar .ops-field { flex: 1 1 8rem; min-width: 0; }
+  .ops-meter-top b { font-size: var(--ui-heading); }
+}
+
+/* templates: the quick start, the editor, a business's change of template (ALY-148) */
+.ops-quick { display: grid; gap: 8px; padding: 18px; border-radius: 16px; background: var(--volt-wash); color: var(--volt-ink); }
+.ops-quick h2, .ops-quick p, .ops-quick ol { margin: 0; }
+.ops-quick ol { padding-inline-start: 1.3em; display: grid; gap: 4px; font-size: var(--ui-body-sm); }
+.ops-quick a { color: inherit; text-decoration: underline; }
+.ops-row-actions { white-space: nowrap; }
+.ops-row-actions .btn + .btn { margin-inline-start: 6px; }
+.ops-editor { display: grid; gap: 12px; scroll-margin-top: 16px; }
+.ops-editor h3 { margin: 6px 0 0; font-size: var(--ui-small); font-weight: 600; color: var(--ink-2); font-family: var(--font-ui-mono); text-transform: uppercase; letter-spacing: 0.06em; }
+.ops-editor h3 small { text-transform: none; letter-spacing: 0; font-family: var(--face); }
+.ops-editor textarea { padding: 10px 12px; border: 0; border-radius: 10px; background: var(--sheet); color: var(--ink); box-shadow: var(--lift); font: inherit; font-size: var(--ui-body-sm); resize: vertical; min-height: 5rem; }
+.ops-features { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 22rem), 1fr)); gap: 12px; }
+.ops-featgroup { margin: 0; padding: 12px 14px; border: 0; border-radius: 12px; background: var(--sheet); box-shadow: 0 0 0 1px var(--hair) inset; display: grid; gap: 4px; min-width: 0; }
+.ops-featgroup legend { padding: 0 6px; font-size: var(--ui-small); font-weight: 600; }
+.ops-featgroup .ops-check { align-items: flex-start; }
+.ops-featgroup .ops-check small { display: block; color: var(--ink-2); font-size: var(--ui-caption); }
+.ops .ops-tpl-table th, .ops .ops-tpl-table td small, .ops .ops-tpl small { color: var(--ink-2); }
+.ops-seeds { display: grid; gap: 10px; }
+.ops-seed { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 11rem), 1fr)); gap: 10px 12px; align-items: end; padding: 12px; border-radius: 12px; background: var(--sheet); box-shadow: 0 0 0 1px var(--hair) inset; }
+.ops-tpl { display: grid; gap: 8px; max-width: 40rem; padding: 10px; border-radius: 12px; background: var(--sheet); box-shadow: 0 0 0 1px var(--hair) inset; }
+.ops-tpl-plan ul { margin: 0; padding-inline-start: 1.2em; display: grid; gap: 3px; font-size: var(--ui-small); }
+.ops-tpl-plan p { margin: 4px 0 0; font-size: var(--ui-small); }
+
+/* The onboarding board (ALY-165): one line per step left, with its controls. */
+.ops-step { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; padding: 6px 0; }
+.ops-step b { min-width: 160px; }
+.ops-step input { flex: 1 1 220px; min-height: 32px; padding: 0 10px; border-radius: 8px; border: 0; box-shadow: 0 0 0 1px var(--hair-2) inset; background: transparent; color: inherit; font: inherit; }
+/* A business's WhatsApp setup on the onboarding board (ALY-217). */
+.ops-wa { padding: 8px 0 12px; margin-bottom: 8px; border-bottom: 1px solid var(--hair-2); }
+.ops-wa p { margin: 0 0 6px; }
+.ops-wa ul { list-style: none; margin: 0 0 6px; padding: 0; display: grid; gap: 2px; color: var(--ink-3); font-size: var(--ui-small); }
+.ops-wa li.done { color: var(--ink-2); }
+/* A client's payment and access (ALY-212). */
+.ops-access { display: grid; gap: 8px; margin-bottom: 8px; }
+.ops-access p { margin: 0; display: flex; flex-wrap: wrap; gap: 8px; align-items: baseline; }
+.ops-access select, .ops-access input[type="date"] { min-height: 32px; padding: 0 8px; border-radius: 8px; border: 0; box-shadow: 0 0 0 1px var(--hair-2) inset; background: transparent; color: inherit; font: inherit; }

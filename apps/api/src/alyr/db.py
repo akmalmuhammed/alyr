@@ -1,14 +1,24 @@
-import json
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
 from uuid import UUID
 
 import asyncpg
 
+from alyr.modules.items import qty
+
 
 async def _init(conn: asyncpg.Connection) -> None:
+    import json
+
+    # A quantity may be a Decimal; it is a JSON number in a jsonb value (qty.dumps).
     await conn.set_type_codec(
-        "jsonb", encoder=json.dumps, decoder=json.loads, schema="pg_catalog"
+        "jsonb", encoder=qty.dumps, decoder=json.loads, schema="pg_catalog"
+    )
+    # Every numeric is read as an int when it is whole and a Decimal otherwise, so a stock of 3
+    # is the Python 3 it was when stock was an integer (ALY-149, qty.py).
+    await conn.set_type_codec(
+        "numeric", encoder=qty.encode_numeric, decoder=qty.decode_numeric,
+        schema="pg_catalog", format="text",
     )
 
 

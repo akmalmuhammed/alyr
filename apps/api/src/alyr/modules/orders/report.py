@@ -37,7 +37,7 @@ async def numbers(conn: asyncpg.Connection, start: datetime, end: datetime, tz: 
     )
     top = await conn.fetchrow(
         "select i.name, coalesce(nullif(p.name_ar, ''), i.name) as name_ar, "
-        "sum(i.quantity)::int as quantity "
+        "sum(i.quantity) as quantity "
         "from order_items i join orders o on o.id = i.order_id "
         "left join items p on p.id = i.item_id "
         "where o.created_at >= $1 and o.created_at < $2 and o.status <> 'cancelled' "
@@ -77,8 +77,8 @@ def lines(n: dict, before: dict | None, lang: str) -> list[str]:
     if n["paid_online"]:
         paid = counted(n["paid_orders"], ORDERS, lang)
         out.append(
-            f"مدفوع إلكترونياً: {fmt_qar(n['paid_online'])} عن {paid}" if ar
-            else f"Paid online: {fmt_qar(n['paid_online'])} for {paid}"
+            f"المدفوع: {fmt_qar(n['paid_online'])} عن {paid}" if ar
+            else f"Paid: {fmt_qar(n['paid_online'])} for {paid}"
         )
     if n["on_account"]:
         out.append(

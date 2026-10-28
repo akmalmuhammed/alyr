@@ -147,6 +147,10 @@ class Facts:
     hours_total: int = 0
     # Setup still to do, for owners and admins: [(product name, [step])].
     setup: list = field(default_factory=list)
+    # The Catalog's stock states, as the numbers on its list's filter chips ("sold_out",
+    # "low_stock", ...). None when the shop does not have the Catalog module; read by
+    # `view.build` and not by `gather`, which the weekly report also uses for a past moment.
+    stock: dict | None = None
 
     @property
     def zone(self) -> ZoneInfo:
@@ -428,9 +432,9 @@ async def _orders(conn, f: Facts, span, last, chart) -> None:
     f.top_items = [
         (r["name"], r["cur"], r["prev"])
         for r in await conn.fetch(
-            "select i.name, coalesce(sum(i.quantity) filter (where o.created_at >= $2), 0)::int "
+            "select i.name, coalesce(sum(i.quantity) filter (where o.created_at >= $2), 0) "
             "as cur, "
-            "coalesce(sum(i.quantity) filter (where o.created_at < $2), 0)::int as prev "
+            "coalesce(sum(i.quantity) filter (where o.created_at < $2), 0) as prev "
             "from order_items i join orders o on o.id = i.order_id "
             "where o.status <> 'cancelled' and o.created_at >= $1 and o.created_at < $3 "
             "group by i.name order by cur desc, i.name",
@@ -441,8 +445,8 @@ async def _orders(conn, f: Facts, span, last, chart) -> None:
         (r["name"], r["cur"], r["prev"])
         for r in await conn.fetch(
             "select i.name, "
-            "coalesce(sum(i.quantity) filter (where o.created_at >= $3), 0)::int as cur, "
-            "coalesce(sum(i.quantity) filter (where o.created_at < $2), 0)::int as prev "
+            "coalesce(sum(i.quantity) filter (where o.created_at >= $3), 0) as cur, "
+            "coalesce(sum(i.quantity) filter (where o.created_at < $2), 0) as prev "
             "from order_items i join orders o on o.id = i.order_id "
             "where o.status <> 'cancelled' and o.created_at >= $1 and o.created_at < $4 "
             "and (o.created_at < $2 or o.created_at >= $3) group by i.name",
@@ -635,7 +639,8 @@ async def _ledger(conn, f: Facts, span, last, chart) -> None:
         start = f.at(f.week_start - timedelta(days=7 * k))
         end = f.at(f.week_start - timedelta(days=7 * (k - 1)))
         row = await conn.fetchrow(
-            "select coalesce(sum(amount) filter (where kind = 'sale'), 0)::bigint as sales, "
+            f"select coalesce(sum(amount) filter (where {ledger.STANDING_SALE}), 0)::bigint "
+            "as sales, "
             "coalesce(sum(amount) filter (where kind = 'payment'), 0)::bigint as payments "
             "from ledger_entries where created_at >= $1 and created_at < $2",
             start, end,

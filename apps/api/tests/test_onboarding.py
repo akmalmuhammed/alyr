@@ -27,8 +27,10 @@ def signup_token(client, email):
     return answer.json()["signup_token"]
 
 
-def new_business(client, name=None, kind="salon"):
-    """Each test makes its own business; the database is shared by the whole run."""
+def new_business(client, name=None, kind="salon", paid=True):
+    """Each test makes its own business; the database is shared by the whole run. Its
+    payment is settled, as once the client has paid (D-053); `paid=False` leaves it owing,
+    as for a client who has just signed up. The workspace is open either way."""
     email = f"owner-{uuid4().hex[:8]}@shop.example"
     name = name or f"Barbers {uuid4().hex[:6]}"
     body = {"signup_token": signup_token(client, email), "owner_name": "Hamad", "name": name,
@@ -36,6 +38,12 @@ def new_business(client, name=None, kind="salon"):
     answer = client.post(f"{BASE}/business", json=body)
     assert answer.status_code == 200, answer.text
     slug = client.get(f"{BASE}/state").json()["business"]["slug"]
+    if paid:
+        owner_sql(
+            "update clients set payment_waived_at = now(), access_note = 'Test: paid' "
+            "where id = (select client_id from tenants where id = $1)",
+            answer.json()["created"],
+        )
     return answer.json()["created"], slug, name
 
 
@@ -43,8 +51,9 @@ def book_from_test_line(client, slug, days_ahead=2):
     """Ask for the booking link on the test line, then book through the public page."""
     answer = client.post(f"{BASE}/test-chat", json={"reply_id": "book"}).json()
     link = answer["messages"][-1]["body"]
-    contact_id = link.split("?c=")[1].strip()
-    page = client.get(f"/api/book/{slug}", params={"c": contact_id}).json()
+    token = link.split("?t=")[1].strip()
+    page = client.get(f"/api/book/{slug}", headers={"x-order-link": token}).json()
+    assert page["customer"] is not None and page["link"]["state"] == "ok"
     service_id = page["services"][0]["id"]
     day = date.today() + timedelta(days=days_ahead)
     if day.weekday() == 4:
@@ -54,7 +63,7 @@ def book_from_test_line(client, slug, days_ahead=2):
     ).json()["times"]
     return client.post(
         f"/api/book/{slug}",
-        json={"contact_id": contact_id, "service_id": service_id, "starts_at": times[0]},
+        json={"token": token, "service_id": service_id, "starts_at": times[0]},
     )
 
 
@@ -85,7 +94,11 @@ def test_a_new_owner_creates_a_salon_with_its_starting_setup(client):
     assert {"weekday": 5, "opens": "14:00", "closes": "22:00"} in state["hours"]
     me = client.get("/api/auth/me").json()
     assert (me["signed_in"], me["role"]) == (True, "owner")
-    assert set(client.get("/api/workspace").json()["modules"]) == {"inbox", "bookings", "payments"}
+    # The Catalog is on for new shops (ALY-113): an appointment business gets it as an optional
+    # extra beside its bookings.
+    assert set(client.get("/api/workspace").json()["modules"]) == {
+        "inbox", "bookings", "payments", "catalog",
+    }
 
 
 def test_the_same_name_twice_gets_its_own_address(client):
@@ -201,7 +214,7 @@ def test_the_test_line_answers_like_a_customer_would_see_it(client):
     prices = client.post(f"{BASE}/test-chat", json={"reply_id": "prices"}).json()["messages"][-1]
     assert "Haircut: QAR 60 (45 min)" in prices["body"]
     link = client.post(f"{BASE}/test-chat", json={"reply_id": "book"}).json()["messages"][-1]
-    assert f"/b/{slug}?c=" in link["body"]
+    assert f"/b/{slug}?t=" in link["body"] and "?c=" not in link["body"]
 
 
 def test_a_test_booking_goes_through_the_real_booking_page(client):
@@ -249,7 +262,9 @@ def test_a_business_whose_screens_are_not_built_gets_a_person_to_help(client):
     tenant, _, _ = new_business(client, kind="restaurant")
     state = client.get(f"{BASE}/state").json()
     assert (state["way"], state["steps"][0], state["services"]) == ("assisted", "assisted", [])
-    assert set(client.get("/api/workspace").json()["modules"]) == {"inbox", "orders", "payments"}
+    assert set(client.get("/api/workspace").json()["modules"]) == {
+        "inbox", "orders", "payments", "catalog",
+    }
     asked = owner_sql(
         "select product_key, step_key from setup_requests where tenant_id = $1", tenant
     )
@@ -279,3 +294,18 @@ def test_the_app_role_still_cannot_create_or_rename_businesses_directly():
             await conn.close()
 
     asyncio.run(attempt())
+
+
+def test_with_the_catalog_switched_off_for_new_shops_a_business_is_made_as_it_was_before(
+    client_factory, monkeypatch
+):
+    """`ALYR_CATALOG_FOR_NEW_SHOPS=false` is still honoured (ALY-113): the setting stays so the
+    Catalog can be turned off for new businesses without a change of code."""
+    monkeypatch.setenv("ALYR_CATALOG_FOR_NEW_SHOPS", "false")
+    off = client_factory()
+    new_business(off, kind="salon")
+    assert set(off.get("/api/workspace").json()["modules"]) == {"inbox", "bookings", "payments"}
+    assert off.get(f"{BASE}/state").json()["catalog"] is None
+    new_business(off, kind="restaurant")
+    assert set(off.get("/api/workspace").json()["modules"]) == {"inbox", "orders", "payments"}
+    assert off.get(f"{BASE}/state").json()["catalog"] is None

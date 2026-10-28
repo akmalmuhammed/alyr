@@ -1,4 +1,4 @@
-"""Linking a staff WhatsApp number to the person who holds it (ALY-130, decision D-040).
+"""Linking a staff WhatsApp number to the person who holds it (ALY-130, decision D-065).
 
 Until now `contacts.role = 'staff'` was only a flag: nothing proved who held the number or
 which person, and so which role, was behind it. A signed-in person asks the workspace for a

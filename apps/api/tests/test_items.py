@@ -17,6 +17,7 @@ from alyr.modules.items import stock
 from alyr.modules.items.cart import CartLine
 from alyr.modules.orders import service as orders
 from alyr.seed import AGENT_EMAIL, DEMO_SLUG, DEMO_TENANT_ID
+from order_links import token
 from test_consent import owner_sql
 from test_orders import customer
 from test_sign_in import sign_in
@@ -71,7 +72,7 @@ def people(client, count: int = 2) -> list[dict]:
 def order(client, contact: dict, lines: list[dict], payment: str = "link", **more):
     return client.post(
         f"{STORE}/orders",
-        json={"contact_id": contact["id"], "items": lines, "payment": payment, **more},
+        json={"token": token(contact["id"]), "items": lines, "payment": payment, **more},
     )
 
 

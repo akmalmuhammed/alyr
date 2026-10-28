@@ -7,7 +7,16 @@ from fastapi import APIRouter, Depends, HTTPException, Request, Response
 from pydantic import BaseModel, Field
 
 from alyr.config import get_settings
-from alyr.core import auth, mail, onboarding, pricing
+from alyr.core import (
+    access,
+    auth,
+    mail,
+    onboarding,
+    pricing,
+    ratelimit,
+    readiness,
+    whatsapp_setup,
+)
 from alyr.core.auth import Staff
 from alyr.routes.deps import current_staff
 
@@ -44,6 +53,21 @@ class Acceptance(BaseModel):
     quote_id: UUID
 
 
+class StepChange(BaseModel):
+    # Hand the step to ALYR, or take it back.
+    owner: str | None = Field(default=None, max_length=10)
+    # How the business wants to do a step that has choices (WhatsApp, payments).
+    choice: str | None = Field(default=None, max_length=40)
+
+
+class WhatsappSetup(BaseModel):
+    # The way, as on the go-live list; then the number and what is ready (ALY-217).
+    way: str | None = Field(default=None, max_length=40)
+    phone: str | None = Field(default=None, max_length=30)
+    display_name: str | None = Field(default=None, max_length=80)
+    ready: list[str] | None = Field(default=None, max_length=10)
+
+
 class TestMessage(BaseModel):
     text: str = Field(default="", max_length=1000)
     reply_id: str = Field(default="", max_length=120)
@@ -72,10 +96,13 @@ async def send_code(body: Email, request: Request) -> dict:
     """Like sign-in, but a new address gets a code too when sign-up is open. The answer
     is the same either way."""
     settings = get_settings()
+    await ratelimit.check(request, "code-address", ratelimit.CODES_PER_ADDRESS)
     try:
         code = await auth.request_code(request.app.state.db, body.email, allow_new=signup_open())
     except auth.TooManyCodes as error:
-        raise HTTPException(status_code=429, detail=str(error)) from error
+        raise HTTPException(
+            status_code=429, detail=str(error), headers={"Retry-After": str(error.retry_after)}
+        ) from error
     answer: dict = {"sent": True, "signup_open": signup_open()}
     if code is not None and mail.configured():
         subject, text, html = mail.sign_in_message(code, auth.CODE_MINUTES)
@@ -97,6 +124,7 @@ async def send_code(body: Email, request: Request) -> dict:
 async def verify(body: EmailCode, request: Request, response: Response) -> dict:
     """A known owner is signed in. A new address gets a token to create a business."""
     db = request.app.state.db
+    await ratelimit.check(request, "guess-address", ratelimit.GUESSES_PER_ADDRESS)
     try:
         await auth.check_code(db, body.email, body.code)
     except auth.AuthError as error:
@@ -114,6 +142,7 @@ async def verify(body: EmailCode, request: Request, response: Response) -> dict:
 async def create_business(body: NewBusiness, request: Request, response: Response) -> dict:
     if not signup_open():
         raise HTTPException(status_code=403, detail="sign-up is not open yet")
+    await ratelimit.check(request, "signup-address", ratelimit.SIGNUPS_PER_ADDRESS)
     try:
         tenant_id, session = await onboarding.create_business(
             request.app.state.db, body.signup_token, body.owner_name, body.name,
@@ -178,9 +207,67 @@ async def accept_quote(
 async def finish(request: Request, staff: Staff = Depends(current_staff)) -> dict:
     _owner(staff)
     async with request.app.state.db.tenant(staff.tenant_id) as conn:
+        # Checked first: the test booking it cancels still proves the owner tried it.
+        await readiness.run(conn, staff.name)
         cleared = await onboarding.end_test(conn, staff)
         await onboarding.update(conn, step="", finished=True)
     return {"finished": True, "test_bookings_cancelled": cleared}
+
+
+@router.get("/readiness")
+async def get_readiness(request: Request, staff: Staff = Depends(current_staff)) -> dict:
+    """Is the business ready to go live, and what is left (ALY-165). The same answer the
+    go-live step, the workspace and the back office show."""
+    async with request.app.state.db.tenant(staff.tenant_id) as conn:
+        return await readiness.run(conn, staff.name)
+
+
+@router.patch("/steps/{key}")
+async def change_step(
+    key: str, body: StepChange, request: Request, staff: Staff = Depends(current_staff)
+) -> dict:
+    """The owner hands a step to ALYR (or takes it back), or chooses how to do it."""
+    _owner(staff)
+    try:
+        async with request.app.state.db.tenant(staff.tenant_id) as conn:
+            if body.owner is not None:
+                await readiness.set_owner(conn, key, body.owner, staff.name, False)
+            if body.choice is not None:
+                await readiness.set_choice(conn, key, body.choice, staff.name, False)
+            return await readiness.run(conn, staff.name)
+    except LookupError as error:
+        raise HTTPException(status_code=404, detail=str(error)) from error
+    except readiness.ReadinessError as error:
+        raise HTTPException(status_code=422, detail=str(error)) from error
+
+
+@router.get("/payment")
+async def payment(request: Request, staff: Staff = Depends(current_staff)) -> dict:
+    """What opens the workspace (ALY-212, D-051): the amount due, what was paid, how to pay,
+    and whether the products are open."""
+    async with request.app.state.db.tenant(staff.tenant_id) as conn:
+        return await access.summary(conn)
+
+
+@router.patch("/whatsapp")
+async def change_whatsapp(
+    body: WhatsappSetup, request: Request, staff: Staff = Depends(current_staff)
+) -> dict:
+    """The owner chooses how customers reach them on WhatsApp, gives the number and ticks
+    what they have ready. Answers the whole go-live list."""
+    _owner(staff)
+    try:
+        async with request.app.state.db.tenant(staff.tenant_id) as conn:
+            if body.way is not None:
+                await readiness.set_choice(conn, "whatsapp", body.way, staff.name, False)
+            if (body.phone, body.display_name, body.ready) != (None, None, None):
+                await whatsapp_setup.prepare(
+                    conn, staff.name, False, phone=body.phone, display_name=body.display_name,
+                    ready=body.ready,
+                )
+            return await readiness.run(conn, staff.name)
+    except (readiness.ReadinessError, whatsapp_setup.SetupError) as error:
+        raise HTTPException(status_code=422, detail=str(error)) from error
 
 
 @router.get("/test-chat")

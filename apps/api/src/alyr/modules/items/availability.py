@@ -48,6 +48,31 @@ def variant_price(item, variant, now: datetime) -> int:
     return item_price(item, now) + variant["price_delta"]
 
 
+def group_item_price(item, now: datetime, prices: dict, group_id) -> tuple[int, bool]:
+    """What the item costs a customer of a price group, and whether that is the group's own
+    price (False: the group has none, so it is the normal price). `prices` maps
+    (group id, variant id or None) to a price. A group's price replaces the normal price,
+    a sale price included: it is the price agreed with that kind of customer."""
+    own = prices.get((group_id, None)) if group_id is not None else None
+    if own is not None:
+        return own, True
+    return item_price(item, now), False
+
+
+def group_variant_price(item, variant, now: datetime, prices: dict, group_id) -> tuple[int, bool]:
+    """What one size or colour costs a customer of a price group, and whether the group set
+    it. The group's price for that size wins; else its price for the item plus the size's
+    difference; else the normal price."""
+    if group_id is not None:
+        exact = prices.get((group_id, variant["id"]))
+        if exact is not None:
+            return exact, True
+        base = prices.get((group_id, None))
+        if base is not None:
+            return base + variant["price_delta"], True
+    return variant_price(item, variant, now), False
+
+
 def variant_left(item, variant, deltas: dict, day: date) -> int | None:
     """How many of one variant can still be sold; None when the rule does not count."""
     rule = item["stock_rule"]

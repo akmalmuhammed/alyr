@@ -76,11 +76,15 @@ how it looks (`docs/lanes/`). Say in the PR which lane's files you touch.
   to exactly the rows it counted (`?show=unconfirmed`, `?show=unmarked`, `?show=overdue`).
 - **Polling never re-animates** and never moves the scroll position.
 - **Customer pages:** the shop's brand first (name, monogram), ALYR quietly in the foot; a
-  language switch in the frame (today every page opens in English, whatever language the
-  customer wrote in: a known gap); no WhatsApp green; the
-  stand-in pay page says "Test payment page. No money moves."; no data beyond the one order
-  or booking. Times and dates as the product prints them, Western digits in Arabic too
-  (`/t/` and `/b/` print Eastern digits through `ar-QA` today: fix it when you touch them).
+  language switch in the frame (the order, payment and tracking pages open in the customer's
+  own language, from their link; the booking page still opens in English: a known gap); no
+  WhatsApp green; the stand-in pay page says "Test payment page. No money moves."; no data
+  beyond the one order or booking. Times and dates as the product prints them, Western digits
+  in Arabic too (`/b/` prints Eastern digits through `ar-QA` today: fix it when you touch it).
+  **Money on a customer page comes from `_customer/price.ts`** (`QAR 24`, «24 ر.ق»), never
+  from the API's English `*_text` fields (ALY-112). The order page is `_customer/order/`
+  (`specs/005-order-page-v2`): a customer's link carries a signed token and a public link never
+  carries a person, so never put a contact ID in a link.
 
 ## Do
 

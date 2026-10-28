@@ -1,23 +1,37 @@
 from uuid import UUID
 
-from fastapi import APIRouter, HTTPException, Request
+from fastapi import APIRouter, HTTPException, Request, Response
 
 from alyr.config import get_settings
 from alyr.core.normalise import fmt_qar
 from alyr.modules.ledger import service
+from alyr.routes import customer_link
 
 router = APIRouter(prefix="/api/pay", tags=["payments"])
 
 # The link carries the tenant id because the customer opening it is not signed in,
 # and without a tenant Row-Level Security returns nothing.
+#
+# Who may open it (ALY-133): whoever holds the link, and that is the whole of it. The payment's
+# ID is a random version-4 UUID (122 bits from the database's secure source,
+# `gen_random_uuid()`), not derived from the customer's ID or from anything else, and it opens
+# exactly one payment. The page says the amount, the shop, the order number and the payer's
+# first name, and nothing else: no contact ID, no phone number, no balance, no other payment. A
+# customer's contact ID, or their order or booking link, opens nothing here. The route that
+# marks a payment paid exists only on a developer machine.
 
 
 @router.get("/{tenant_id}/{payment_id}")
-async def details(tenant_id: UUID, payment_id: UUID, request: Request) -> dict:
+async def details(
+    tenant_id: UUID, payment_id: UUID, request: Request, response: Response
+) -> dict:
+    # It names the payer: no shared cache keeps it for someone else.
+    customer_link.keep_private(response, by_link=False)
     async with request.app.state.db.tenant(tenant_id) as conn:
         row = await conn.fetchrow(
-            "select p.amount, p.status, p.provider, c.name as customer, t.name as shop, "
-            "t.name_ar as shop_ar, "
+            "select p.amount, p.status, p.provider, split_part(c.name, ' ', 1) as customer, "
+            "c.lang, t.name as shop, "
+            "t.name_ar as shop_ar, t.slug, "
             "o.number as order_number, p.order_id "
             "from payment_requests p join contacts c on c.id = p.contact_id "
             "join tenants t on t.id = p.tenant_id left join orders o on o.id = p.order_id "

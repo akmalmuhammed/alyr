@@ -48,7 +48,7 @@ this skill, then the content skill, then your own taste.
 
 **Precision industrial minimalism.** A working drawing of an owner's business, made by an
 engineer who respects the owner's time: a light canvas, a visible 12-column grid, hairline
-rules, mono captions on figures, and the product's real screens at true scale in its real
+rules, a small "Sample" mark in each drawing's own chrome, and the product's real screens at true scale in its real
 words. Nothing is decoration; even the honesty labels are design. Light first; Carbon for
 command moments (the band, the plate, the closing call). Rules and whitespace before cards;
 asymmetry over centring.
@@ -70,9 +70,16 @@ asymmetry over centring.
    fold's three planes with the symbol's gaps at the entry to a Carbon band and the closing
    call; motion that arrives along the diagonal. Every cut is mirrored in Arabic, because
    `clip-path` does not flip. Rounded panels and pills are not ALYR.
-5. **FIG captions.** Every drawing of a product screen carries a mono caption on a hairline
-   ending in a tick: "FIG 01 · what it shows · Fictional bakery". It says "sample" or
-   "fictional" once, never twice. Arabic writes its own words, no capitals, no tracking.
+5. **The "Sample" mark** (founder, 24 Oct 2026, `docs/site-audit/00-decisions.md`). Every
+   drawing of a product screen is marked as a sample once, in its own chrome: beside the
+   shop's name in the window's title bar ("Qirfa Bakery · SAMPLE / Home"), "Sample business"
+   under the name in a drawn phone's header, or at the end of a figure's tab row
+   (`SampleMark`, «مثال»). It travels with a screenshot. A figure with the sample switch is
+   marked by the switch's label. A caption ("what it shows · Sample", no FIG number) stays
+   only where the drawing means nothing without its words (the no-CR foot).
+   For machines, the figure's first line says it is a fictional business whose numbers are
+   not ALYR's results ([honesty.md](honesty.md) §4). Never "sample" twice for one drawing.
+   Arabic writes its own words, no capitals, no tracking.
 6. **The product is the illustration.** Real screens, real wording, one fictional business
    per figure set. No people, stock photos, skylines, dhows, coffee pots, arabesque, 3D
    phones, glass, glow, gradients, bento icon grids, logo walls, ratings or emoji.
@@ -84,8 +91,11 @@ asymmetry over centring.
    the API. Arabic is written, not translated ([arabic.md](arabic.md)).
 9. **Honest by construction.** Nothing a customer sees claims what is not true today, and
    nothing says or implies AI ([honesty.md](honesty.md)).
-10. **Plays once.** Motion arrives, settles and confirms; it never loops, and with reduced
-    motion only the end state shows ([motion.md](motion.md)).
+10. **Always on, text once.** Figures that show the product at work keep playing while on
+    screen (founder, 26 Oct 2026): the live ALYR Agent figure (D-058), the flows and demos,
+    How we work, the products frame and the signature figures, each with a Pause control, on
+    the pace, stopped off screen and in a hidden tab. Text and sections arrive once and stay.
+    With reduced motion only the end state shows ([motion.md](motion.md)).
 
 ## 2. Tokens
 
@@ -136,7 +146,7 @@ Use what exists before drawing anything new; the catalogue with paths, when to u
 and what not to do is [components.md](components.md). The ones every page uses: the
 Logo and Symbol (`_site/brand.tsx`, never retyped, never under 140 px wide, the symbol
 below that), the Volt button and its outlined twin, the link with arrow, the signal mark,
-the pending dot and status line, FIG captions, section rules with crosses, the fold, the
+the pending dot and status line, the "Sample" mark, section rules with crosses, the fold, the
 Carbon plate, the drawn phone and workspace window, the ALYR Agent dashboard
 (`_agent/AgentDashboard.tsx`, the one component shared by site and product).
 
@@ -146,13 +156,15 @@ arrows and "×" in text do not flip: use the icon.
 
 ## 5. Motion
 
-Tokens for every duration, ease, stagger and travel; one gesture (arrive along 45°, settle,
-one Volt signal). Plays once. Reduced motion shows every end state; nothing travels or
+Tokens for every duration, ease, stagger and travel; every timed piece (flows, demos, figures,
+reveals) on the pace, `--play-*` times `--pace`, the one setting, with a step staying up for its
+words; one gesture (arrive along 45°, settle, one Volt signal). Figures keep playing it, text
+arrives once (founder, 26 Oct 2026; `_site/loops.ts`). Reduced motion shows every end state; nothing travels or
 plays by itself. **Nothing is hidden in the HTML:** start states exist only under the
 `motion` class that the head script adds when motion is wanted, with a failsafe that removes
 it; without scripts the page is complete. Animate transform, opacity, clip-path and font
-variation only. Never re-animate on a poll. Details and the figures allowed to keep
-moving: [motion.md](motion.md).
+variation only. Never re-animate on a poll. Details, the figures allowed to keep moving and
+the one that moves continuously (the live Agent figure, D-058): [motion.md](motion.md).
 
 ## 6. Light and dark; RTL
 
@@ -212,9 +224,12 @@ Full list, the claims table and the names register: [honesty.md](honesty.md).
 - **No AI words** until a model is in the product (D-012, D-035): AI, smart, intelligence,
   learns, understands, thinks, predicts, forecast, knows, notices, "I noticed", reads (as in
   understanding), assistant, agentic, health score, top performer, business intelligence;
-  no sparkles, shimmer, typing dots, "thinking…", avatars or first person. Write
-  "By rule: …" and show the rule line. "Agent" never carries a sentence alone.
-- **Every sample is captioned** as a fictional business, once.
+  no sparkles, shimmer, typing dots, "thinking…", avatars or first person. Say what was
+  counted or compared, in plain words; the product shows its rule line, the public site never
+  says "rule" (founder, 25 Oct 2026; [honesty.md](honesty.md) §1). "Agent" never carries a
+  sentence alone.
+- **Every sample is marked** as a fictional business, once: the "Sample" mark in its chrome
+  for the eye, its first line for screen readers and crawlers.
 - **Fictional names only, checked against real businesses** in the trade and the region
   before use, with the date of the check in the register.
 - **Prices only behind the offer switch** (`NEXT_PUBLIC_ALYR_OFFER=on`, D-034) until the CR.

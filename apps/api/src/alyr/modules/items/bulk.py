@@ -54,6 +54,10 @@ SKIPS: dict[str, tuple[str, str]] = {
         "It was changed after the action, so it was left as it is now.",
         "تغيّر بعد الإجراء، لذلك تُرك كما هو الآن.",
     ),
+    "sample": (
+        "It is a sample. Open it to make it yours, or remove all the samples.",
+        "هذا نموذج. افتحه لتجعله لك، أو احذف كل النماذج.",
+    ),
     "gone": ("It no longer exists.", "لم يعد موجوداً."),
     "failed": ("It could not be changed.", "تعذّر تغييره."),
 }
@@ -155,7 +159,9 @@ async def plan(
     for entry in entries:
         item = service.view(entry, clock)
         i = entry.item
-        if action in AVAILABILITY:
+        if i["is_sample"]:  # samples are changed one at a time, by the owner opening them
+            result.skipped.append(_skip(item, "sample"))
+        elif action in AVAILABILITY:
             wanted = action == "back"
             if i["status"] != "live":
                 result.skipped.append(_skip(item, "not_on_sale"))

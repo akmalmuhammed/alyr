@@ -29,13 +29,12 @@ def test_the_shell_shows_what_the_demo_shop_has(client):
     assert state["business"]["slug"] == DEMO_SLUG
     # The line-up of 17 Oct 2026, in its order (D-035).
     assert [p["key"] for p in state["products"]] == [
-        "chat", "bookings", "agent", "accounts", "payroll",
+        "chat", "bookings", "agent", "accounts",
     ]
     assert product(state, "chat")["status"] == "active"
     assert product(state, "bookings")["status"] == "active"
     assert product(state, "agent")["status"] == "included"
     assert product(state, "accounts")["status"] == "active"
-    assert product(state, "payroll")["status"] == "coming"
     accounts = product(state, "accounts")
     assert accounts["name"] == {"en": "ALYR Accounts", "ar": "ALYR Accounts"}
     assert accounts["descriptor"]["ar"] == "الحسابات الآجلة"
@@ -140,8 +139,8 @@ def test_which_products_a_set_of_modules_means():
     assert catalog.SHARED_MODULES == {"inbox", "payments"}
 
 
-def test_a_coming_product_cannot_be_switched_on(client):
-    assert client.post("/api/workspace/products/payroll/enable").status_code == 422
+def test_a_product_that_is_not_built_is_not_listed_and_cannot_be_switched_on(client):
+    assert client.post("/api/workspace/products/payroll/enable").status_code == 404
     assert client.post("/api/workspace/products/nothing/enable").status_code == 404
 
 
@@ -162,7 +161,10 @@ def test_the_setup_checklist_reflects_what_the_shop_has_done(client):
 def test_the_home_dashboard_has_one_card_per_number_each_module_offers(client):
     say(client, AHMED_PHONE, "hello")
     cards = {c["key"]: c for c in client.get("/api/workspace/home").json()["cards"]}
-    expected = {card.key for m in catalog.MODULES for card in m.cards}
+    # The Catalog is off for every shop until go-live, so its cards are not on the demo shop's
+    # home (tests/test_catalog_cards.py switches it on).
+    expected = {card.key for m in catalog.MODULES if m.key not in ("catalog", "documents")
+                for card in m.cards}
     assert set(cards) == expected
     assert cards["unanswered"]["value"] == 1
     assert cards["outstanding"]["text"].startswith("QAR ")
@@ -207,7 +209,8 @@ def test_the_back_office_creates_a_shop_whose_owner_can_sign_in(client_factory, 
         },
     )
     assert created.status_code == 200, created.text
-    assert created.json()["modules"] == ["inbox", "orders", "payments"]
+    # The Catalog is on for every business (ALY-113): the back office adds it to the products.
+    assert created.json()["modules"] == ["inbox", "orders", "payments", "catalog"]
     assert (
         client.post(
             "/api/admin/businesses",

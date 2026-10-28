@@ -28,7 +28,7 @@ import asyncpg
 
 from alyr import presets
 from alyr.config import get_settings
-from alyr.core import consent
+from alyr.core import consent, links
 from alyr.db import Database
 from alyr.seed_qirfa import NAMES_AR, PEOPLE, THANKS, TZ, Bakery, Person, _when
 
@@ -477,8 +477,9 @@ class Diary(Bakery):
         lang = person.lang
         asked = made - timedelta(minutes=rng.randint(2, 9))
         self.say(person, asked, rng.choice(BOOK[lang]))
-        self.auto(person, asked + timedelta(seconds=4),
-                  BOOK_LINK[lang].format(url=f"{self.web_url}/b/{self.slug}?c={person.id}"))
+        # The customer's own booking link carries a signed token, like the one the chat sends.
+        url = links.booking_url(self.web_url, self.slug, self.sample.tenant_id, person.id)
+        self.auto(person, asked + timedelta(seconds=4), BOOK_LINK[lang].format(url=url))
         self.auto(person, made + timedelta(seconds=3), f"Booking #{self.booking_number} confirmed.",
                   {"template": "booking_confirmed", "category": "utility", "sent_as": "text"})
         self.log("booking", booking_id, person, "booked", made)
@@ -534,8 +535,9 @@ async def ensure_sample_tenant(owner_dsn: str, sample: Sample, now: datetime, da
             )
         else:
             client_id = await conn.fetchval(
-                "insert into clients (name, contact_name, contact_email) values ($1, $2, $3) "
-                "returning id",
+                "insert into clients (name, contact_name, contact_email, access_from, "
+                "payment_waived_at, access_note) "
+                "values ($1, $2, $3, now(), now(), 'Demo shop') returning id",
                 sample.name, sample.team[0][1], sample.team[0][0],
             )
             await conn.execute(
@@ -555,7 +557,7 @@ async def reset_sample(db: Database, sample: Sample, now: datetime | None = None
                       "business_hours", "saved_replies", "memberships", "jobs", "messages",
                       "processed_messages", "payment_requests", "ledger_entries",
                       "ledger_accounts", "contacts", "tenant_modules",
-                      "shop_settings"):
+                      "shop_settings", "shop_features", "custom_fields"):
             await conn.execute(f"delete from {table}")
         web_url = web_url or get_settings().public_web_url
         diary = Diary(conn, now, random.Random(sample.seed), web_url,

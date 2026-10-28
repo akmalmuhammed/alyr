@@ -7,15 +7,28 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
-  api, nameOf, sayError, type Access, type BulkLast, type Category, type Item, type ListResult,
+  api, nameOf, sayError, type Access, type BulkLast, type Category, type ImportResult, type ImportUndone,
+  type Item, type ListResult, type Setup,
 } from "./catalogApi";
+import { fmtQtyUnit, unitFor } from "../_customer/qty";
 import { COPY, type Copy, type Lang } from "./catalogCopy";
+import { FEAT } from "./featuresCopy";
+import { PRICING } from "./pricingCopy";
+import { CatalogDiscounts } from "./CatalogDiscounts";
+import { CatalogDelivery } from "./CatalogDelivery";
+import { DELIVERY } from "./deliveryCopy";
 import { Announce, Icon, Layer, Switch, Tile, ToastLayer, useToasts } from "./CatalogUi";
 import { CatalogEdit } from "./CatalogEdit";
+import { CatalogFeatures } from "./CatalogFeatures";
+import { CatalogFields } from "./CatalogFields";
+import { CatalogTemplate } from "./CatalogTemplate";
+import { CatalogImport } from "./CatalogImport";
 import { AddSheet, WalkThrough } from "./CatalogAdd";
 import { CatalogBulk } from "./CatalogBulk";
 import { CatalogSettings } from "./CatalogSettings";
+import { CatalogShare, type Target } from "./CatalogShare";
 import { CatalogStock } from "./CatalogStock";
+import { MarginPill, useItemMargins } from "./Margin";
 
 type Sheet =
   | null
@@ -23,10 +36,17 @@ type Sheet =
   | { kind: "add" }
   | { kind: "walk"; ids: string[] }
   | { kind: "bulk" }
-  | { kind: "settings" };
+  | { kind: "import" }
+  | { kind: "settings" }
+  | { kind: "features" }
+  | { kind: "discounts" }
+  | { kind: "delivery" }
+  | { kind: "fields" }
+  | { kind: "template" }
+  | { kind: "share"; target: Target };
 
 const PAGE = 60;
-const FILTERS = ["all", "draft", "sold_out", "low_stock", "archived"] as const;
+const FILTERS = ["all", "draft", "sold_out", "low_stock", "archived", "sample"] as const;
 const SCHEDULE_REASONS = ["not_now", "closed", "after_cutoff", "not_that_day", "past"];
 const VIEW_KEY = "alyr-catalog-view";
 
@@ -35,8 +55,10 @@ function categoryName(category: Category, lang: Lang) {
 }
 
 /** What to say about an item beside its name: why it cannot be ordered, or how many are left. */
-function statusLine(item: Item, t: Copy, lowAt: number) {
-  const pills: { text: string; tone: "" | "bad" | "wait" | "quiet" }[] = [];
+function statusLine(item: Item, t: Copy, lowAt: number, lang: Lang) {
+  const pills: { text: string; tone: "" | "bad" | "wait" | "quiet" | "sample" }[] = [];
+  // A sample is an example, never for sale: it says so and nothing else.
+  if (item.sample) return [{ text: t.sampleTag, tone: "sample" as const }];
   if (item.status !== "live") pills.push({ text: t.status[item.status], tone: "quiet" });
   else if (item.availability.reason === "off") pills.push({ text: t.soldOut, tone: "bad" });
   else if (item.availability.reason === "sold_out") pills.push({ text: t.noneLeft, tone: "bad" });
@@ -44,21 +66,26 @@ function statusLine(item: Item, t: Copy, lowAt: number) {
   const left = item.availability.left;
   if (item.status === "live" && left !== null && left > 0 && item.availability.reason === "") {
     const low = item.stock_rule === "count" && item.variants.some((v) => v.active && v.on_hand > 0 && v.on_hand <= lowAt);
-    const text = item.stock_rule === "daily_limit" ? t.leftToday(left) : t.left(left);
+    const shown = fmtQtyUnit(left, unitFor(item), lang);
+    const text = item.stock_rule === "daily_limit" ? t.leftToday(shown) : t.left(shown);
     pills.push({ text, tone: low ? "wait" : "quiet" });
   }
   return pills;
 }
 
-function priceLine(item: Item) {
+function priceLine(item: Item, t: Copy) {
   if (item.price <= 0) return null;
+  // The price of a sample is an example, and the screen says so.
+  if (item.sample) return <span className="ct-quiet" dir="auto">{t.sampleExamplePrice(item.price_text)}</span>;
   return item.sale_active
     ? <><b className="num" dir="ltr">{item.current_price_text}</b> <s className="num" dir="ltr">{item.price_text}</s></>
     : <b className="num" dir="ltr">{item.price_text}</b>;
 }
 
-export function Catalog({ lang }: { lang: Lang }) {
+export function Catalog({ lang, title, show = null, onRenamed }: { lang: Lang; title: string; show?: string | null; onRenamed?: () => void }) {
   const t = COPY[lang];
+  const feat = FEAT[lang];
+  const pricing = PRICING[lang];
   const { toasts, push, dismiss, clear } = useToasts();
   const [tab, setTab] = useState<"items" | "stock">("items");
   const [typed, setTyped] = useState("");
@@ -73,7 +100,12 @@ export function Catalog({ lang }: { lang: Lang }) {
   const [selecting, setSelecting] = useState(false);
   const [picked, setPicked] = useState<Set<string>>(new Set());
   const [last, setLast] = useState<BulkLast | null>(null);
+  const [lastImport, setLastImport] = useState<ImportResult | null>(null);
   const [busy, setBusy] = useState<Set<string>>(new Set());
+  // What the shop's type of business gave it: what this section says under its title, and the
+  // starting values of a new item. Asked once, and again after the settings are changed.
+  const [setup, setSetup] = useState<Setup | null>(null);
+  const [removingSamples, setRemovingSamples] = useState(false);
   const asked = useRef(0);
   const sheetOpen = sheet !== null;
   // A message about the list should not sit over a form that has just opened.
@@ -96,6 +128,14 @@ export function Catalog({ lang }: { lang: Lang }) {
     try { localStorage.setItem(VIEW_KEY, next); } catch { /* not remembered */ }
   }
 
+  // A card on the home screen (Sold out now, Low stock) opens the list with its filter on:
+  // `/app/catalog?show=sold_out`. The chips keep working as ever.
+  useEffect(() => {
+    if (!show || !(FILTERS as readonly string[]).includes(show)) return;
+    const apply = setTimeout(() => { setFilter(show as (typeof FILTERS)[number]); setLimit(PAGE); }, 0);
+    return () => clearTimeout(apply);
+  }, [show]);
+
   // The search waits for a pause in typing.
   useEffect(() => {
     const wait = setTimeout(() => { setQuery(typed.trim()); setLimit(PAGE); }, 250);
@@ -114,13 +154,15 @@ export function Catalog({ lang }: { lang: Lang }) {
   const load = useCallback(async () => {
     const mine = ++asked.current;
     try {
-      const [list, again] = await Promise.all([
+      const [list, again, imported] = await Promise.all([
         api<ListResult>(`/api/items?${params}`),
         api<{ last: BulkLast | null }>("/api/items/bulk/last"),
+        api<{ last: ImportResult | null }>("/api/items/import/last").catch(() => ({ last: null })),
       ]);
       if (mine !== asked.current) return; // a newer question is on its way
       setData(list);
       setLast(again.last);
+      setLastImport(imported.last);
       setOffline(false);
     } catch {
       if (mine === asked.current) setOffline(true);
@@ -131,6 +173,29 @@ export function Catalog({ lang }: { lang: Lang }) {
     const first = setTimeout(load, 0);
     return () => clearTimeout(first);
   }, [load]);
+
+  const loadSetup = useCallback(() => {
+    api<Setup>("/api/items/setup").then(setSetup).catch(() => undefined);
+  }, []);
+  useEffect(() => {
+    const first = setTimeout(loadSetup, 0);
+    return () => clearTimeout(first);
+  }, [loadSetup]);
+
+  async function removeSamples() {
+    setRemovingSamples(true);
+    try {
+      const done = await api<{ removed: number }>("/api/items/samples/remove", "POST");
+      push(t.samplesRemoved(done.removed));
+      setFilter("all");
+      loadSetup();
+    } catch (error) {
+      push(sayError(error, lang, t), { tone: "bad" });
+    } finally {
+      setRemovingSamples(false);
+    }
+    await load();
+  }
 
   // A colleague's change shows up without anyone reloading: look again now and then, while
   // the person is not in the middle of a form.
@@ -143,6 +208,9 @@ export function Catalog({ lang }: { lang: Lang }) {
   }, [load, sheetOpen]);
 
   const access: Access = data?.access ?? { role: "agent", can_manage: false, can_edit: false, can_stock: true };
+  // Cost and margin (ALY-150): owners and admins of a shop that keeps costs, and nobody else.
+  const costOn = access.can_manage && setup?.features.cost_margin === true;
+  const margins = useItemMargins(costOn, data);
   const items = useMemo(() => data?.items ?? [], [data]);
   const counts = data?.counts;
   const lowAt = data?.low_stock_at ?? 5;
@@ -182,6 +250,16 @@ export function Catalog({ lang }: { lang: Lang }) {
     await load();
   }
 
+  async function undoImport() {
+    try {
+      const done = await api<ImportUndone>("/api/items/import/undo", "POST");
+      push(done.left.length ? `${t.imp.undoneToast(done.removed + done.archived, done.restored)}. ${t.imp.undoLeft(done.left.length)}` : t.imp.undoneToast(done.removed + done.archived, done.restored));
+    } catch (error) {
+      push(sayError(error, lang, t), { tone: "bad" });
+    }
+    await load();
+  }
+
   function togglePick(id: string) {
     setPicked((p) => { const n = new Set(p); if (n.has(id)) n.delete(id); else n.add(id); return n; });
   }
@@ -189,7 +267,7 @@ export function Catalog({ lang }: { lang: Lang }) {
 
   const filtered = filter !== "all" || query !== "" || category !== null;
   const empty = data !== null && counts !== undefined && counts.all === 0 && counts.archived === 0 && !filtered;
-  const labels = { pending: t.photoSaving, failed: t.photoFailed, missing: t.addPhoto };
+  const labels = { pending: t.photoSaving, failed: t.photoFailed, missing: t.addPhoto, sample: t.sampleTileLabel };
   const sizes = "(max-width: 56rem) 46vw, 240px";
   const draftsWaiting = counts?.draft ?? 0;
 
@@ -205,6 +283,21 @@ export function Catalog({ lang }: { lang: Lang }) {
     );
   }
 
+  // Sharing is two features (ALY-148): links, and QR codes for the counter and the tables.
+  const canShare = (setup?.features.share_links ?? true) || (setup?.features.table_qr ?? true);
+
+  /** Share this item: its link and QR code. Only an item that is on sale has a page to open. */
+  function renderShare(item: Item) {
+    if (item.status !== "live" || !canShare) return null;
+    const name = nameOf(item, lang) || t.untitled;
+    return (
+      <button type="button" className="sh-iconbtn ct-share-btn" aria-label={t.shareOpen(name)} title={t.share}
+        onClick={() => setSheet({ kind: "share", target: { kind: "item", id: item.id, name } })}>
+        <Icon name="share" />
+      </button>
+    );
+  }
+
   function openOrPick(item: Item) {
     if (selecting) togglePick(item.id);
     else setSheet({ kind: "edit", id: item.id });
@@ -212,27 +305,34 @@ export function Catalog({ lang }: { lang: Lang }) {
 
   function card(item: Item) {
     const name = nameOf(item, lang);
-    const pills = statusLine(item, t, lowAt);
+    const pills = statusLine(item, t, lowAt, lang);
     const draftIncomplete = item.status === "draft" && (!item.name && !item.name_ar || item.price <= 0);
     const isPicked = picked.has(item.id);
     return (
       <li key={item.id} className={`ct-card ${isPicked ? "picked" : ""} ${item.status === "archived" ? "faded" : ""}`}>
         <button type="button" className="ct-open" onClick={() => openOrPick(item)} aria-pressed={selecting ? isPicked : undefined}>
           <span className="ct-photo">
-            <Tile photo={item.cover} sizes={sizes} labels={labels} />
+            <Tile photo={item.cover} sizes={sizes} labels={labels} sample={item.sample ? item.sample_key : undefined} />
             {selecting && <span className={`ct-pick ${isPicked ? "on" : ""}`} aria-hidden="true">{isPicked && <Icon name="check" />}</span>}
           </span>
           <span className="ct-card-body">
             <span className="ct-name" dir="auto">{name || t.untitled}</span>
-            <span className="ct-price">{priceLine(item) ?? (draftIncomplete ? <span className="ct-quiet">{t.needsDetails}</span> : null)}</span>
+            <span className="ct-price">{priceLine(item, t) ?? (draftIncomplete ? <span className="ct-quiet">{t.needsDetails}</span> : null)}</span>
+            {(item.code !== null || item.sku) && (
+              <span className="ct-quiet ct-sku" dir="ltr">
+                {item.code !== null && <span className="ct-code" aria-label={t.codeShort(item.code)}>#{item.code}</span>}
+                {item.code !== null && item.sku ? " · " : ""}{item.sku}
+              </span>
+            )}
             {pills.length > 0 && (
               <span className="ct-pills">
                 {pills.map((p) => <span key={p.text} className={`sh-pill ct-pill ${p.tone}`}>{p.text}</span>)}
               </span>
             )}
+            {costOn && <MarginPill lang={lang} margin={margins?.[item.id]} />}
           </span>
         </button>
-        {!selecting && <div className="ct-card-foot">{renderSwitch(item)}</div>}
+        {!selecting && item.status === "live" && <div className="ct-card-foot">{renderSwitch(item)}{renderShare(item)}</div>}
       </li>
     );
   }
@@ -244,24 +344,33 @@ export function Catalog({ lang }: { lang: Lang }) {
 
   function row(item: Item) {
     const name = nameOf(item, lang);
-    const pills = statusLine(item, t, lowAt);
+    const pills = statusLine(item, t, lowAt, lang);
     const draftIncomplete = item.status === "draft" && (!item.name && !item.name_ar || item.price <= 0);
     const isPicked = picked.has(item.id);
     return (
       <li key={item.id} className={`ct-row ${isPicked ? "picked" : ""} ${item.status === "archived" ? "faded" : ""}`}>
         <button type="button" className="ct-open" onClick={() => openOrPick(item)} aria-pressed={selecting ? isPicked : undefined}>
           <span className="ct-photo">
-            <Tile photo={item.cover} sizes="64px" labels={labels} />
+            <Tile photo={item.cover} sizes="64px" labels={labels} sample={item.sample ? item.sample_key : undefined} />
             {selecting && <span className={`ct-pick ${isPicked ? "on" : ""}`} aria-hidden="true">{isPicked && <Icon name="check" />}</span>}
           </span>
           <span className="ct-card-body">
             <span className="ct-name" dir="auto">{name || t.untitled}</span>
             <span className="ct-price">
-              {priceLine(item) ?? (draftIncomplete ? <span className="ct-quiet">{t.needsDetails}</span> : null)}
+              {priceLine(item, t) ?? (draftIncomplete ? <span className="ct-quiet">{t.needsDetails}</span> : null)}
               {item.category && (
                 <>
                   {item.price > 0 && <span className="ct-sep" aria-hidden="true">·</span>}
                   <span className="ct-quiet" dir="auto">{categoryLabel(item.category)}</span>
+                </>
+              )}
+              {(item.code !== null || item.sku) && (
+                <>
+                  {(item.price > 0 || item.category) && <span className="ct-sep" aria-hidden="true">·</span>}
+                  <span className="ct-quiet ct-sku" dir="ltr">
+                    {item.code !== null && <span className="ct-code" aria-label={t.codeShort(item.code)}>#{item.code}</span>}
+                    {item.code !== null && item.sku ? " · " : ""}{item.sku}
+                  </span>
                 </>
               )}
             </span>
@@ -270,9 +379,10 @@ export function Catalog({ lang }: { lang: Lang }) {
                 {pills.map((p) => <span key={p.text} className={`sh-pill ct-pill ${p.tone}`}>{p.text}</span>)}
               </span>
             )}
+            {costOn && <MarginPill lang={lang} margin={margins?.[item.id]} />}
           </span>
         </button>
-        {!selecting && <div className="ct-row-end">{renderSwitch(item)}</div>}
+        {!selecting && <div className="ct-row-end">{renderSwitch(item)}{renderShare(item)}</div>}
       </li>
     );
   }
@@ -281,8 +391,8 @@ export function Catalog({ lang }: { lang: Lang }) {
     <div className={`ct ${selecting ? "selecting" : ""}`} lang={lang}>
       <header className="sh-head">
         <span className="sh-eyebrow">{data ? t.count(counts?.all ?? 0) : " "}</span>
-        <h1>{t.title}</h1>
-        <p>{t.sub}</p>
+        <h1>{title}</h1>
+        <p>{setup ? (lang === "ar" ? setup.section.sub_ar : setup.section.sub) : " "}</p>
       </header>
 
       {offline && (
@@ -292,7 +402,7 @@ export function Catalog({ lang }: { lang: Lang }) {
         </div>
       )}
 
-      {((access.can_edit && !empty) || (last && (access.can_edit || last.action === "sold_out" || last.action === "back")) || access.can_manage) && <div className="ct-actions">
+      <div className="ct-actions">
         {access.can_edit && !empty && (
           <button type="button" className="btn volt ct-btn" onClick={() => setSheet({ kind: "add" })}>
             <Icon name="plus" />{t.add}
@@ -303,15 +413,43 @@ export function Catalog({ lang }: { lang: Lang }) {
             <Icon name="undo" />{t.undoNamed(last.action, last.changed)}
           </button>
         )}
+        {lastImport && access.can_edit && (
+          <button type="button" className="btn ct-btn" onClick={() => void undoImport()}>
+            <Icon name="undo" />{t.imp.undoButton((lastImport.summary.counts.create ?? 0) + (lastImport.summary.counts.update ?? 0))}
+          </button>
+        )}
         <span className="ct-grow" />
+        {!empty && canShare && (
+          <button type="button" className="btn ghost ct-btn" onClick={() => setSheet({ kind: "share", target: { kind: "shop" } })}>
+            <Icon name="share" />{t.share}
+          </button>
+        )}
+        <button type="button" className="btn ghost ct-btn" onClick={() => setSheet({ kind: "import" })}>
+          <Icon name="sheet" />{t.imp.open}
+        </button>
+        {access.can_manage && setup?.features.discounts && (
+          <button type="button" className="btn ghost ct-btn" onClick={() => setSheet({ kind: "discounts" })}>
+            <Icon name="tag" />{pricing.open}
+          </button>
+        )}
+        {access.can_manage && setup?.features.delivery_fees && (
+          <button type="button" className="btn ghost ct-btn" onClick={() => setSheet({ kind: "delivery" })}>
+            <Icon name="stock" />{DELIVERY[lang].open}
+          </button>
+        )}
+        {access.can_manage && (
+          <button type="button" className="btn ghost ct-btn" onClick={() => setSheet({ kind: "features" })}>
+            <Icon name="star" />{feat.open}
+          </button>
+        )}
         {access.can_manage && (
           <button type="button" className="btn ghost ct-btn" onClick={() => setSheet({ kind: "settings" })}>
             <Icon name="sliders" />{t.settings}
           </button>
         )}
-      </div>}
+      </div>
 
-      <div className="ct-tabs" role="tablist" aria-label={t.title}>
+      <div className="ct-tabs" role="tablist" aria-label={title}>
         {(["items", "stock"] as const).map((key) => (
           <button key={key} type="button" role="tab" id={`ct-tab-${key}`} aria-selected={tab === key} aria-controls={tab === key ? `ct-panel-${key}` : undefined}
             tabIndex={tab === key ? 0 : -1}
@@ -332,6 +470,17 @@ export function Catalog({ lang }: { lang: Lang }) {
 
       {tab === "items" && (
         <div role="tabpanel" id="ct-panel-items" aria-labelledby="ct-tab-items" className="ct-panel">
+          {(counts?.sample ?? 0) > 0 && (
+            <div className="ct-banner sample">
+              <span><b>{t.samplesBanner(counts?.sample ?? 0)}</b> {t.samplesBannerHint}</span>
+              {access.can_edit && (
+                <button type="button" className="btn small" disabled={removingSamples} onClick={() => void removeSamples()}>
+                  <Icon name="trash" />{t.samplesRemove}
+                </button>
+              )}
+            </div>
+          )}
+
           {draftsWaiting > 0 && access.can_edit && filter !== "draft" && (
             <div className="ct-banner">
               <span>{t.draftsWaiting(draftsWaiting)}</span>
@@ -368,6 +517,12 @@ export function Catalog({ lang }: { lang: Lang }) {
                 {categories.map((c) => <option key={c.name} value={c.name}>{categoryName(c, lang)}</option>)}
                 <option value="">{t.noCategory}</option>
               </select>
+              {category !== null && category !== "" && canShare && (
+                <button type="button" className="sh-iconbtn ct-share-btn" aria-label={t.shareOpen(categoryLabel(category))} title={t.share}
+                  onClick={() => setSheet({ kind: "share", target: { kind: "category", name: category } })}>
+                  <Icon name="share" />
+                </button>
+              )}
               <span className="ct-grow" />
               <div className="ct-seg" role="group" aria-label={t.view}>
                 <button type="button" aria-pressed={view === "grid"} onClick={() => chooseView("grid")} aria-label={t.asPhotos} title={t.asPhotos}><Icon name="grid" /></button>
@@ -413,7 +568,7 @@ export function Catalog({ lang }: { lang: Lang }) {
 
       {tab === "stock" && (
         <div role="tabpanel" id="ct-panel-stock" aria-labelledby="ct-tab-stock" className="ct-panel">
-          <CatalogStock lang={lang} onChanged={() => void load()} push={push} clear={clear} />
+          <CatalogStock lang={lang} onChanged={() => void load()} push={push} clear={clear} costs={costOn} />
         </div>
       )}
 
@@ -429,8 +584,8 @@ export function Catalog({ lang }: { lang: Lang }) {
 
       {sheet?.kind === "edit" && (
         <CatalogEdit lang={lang} itemId={sheet.id} initial={items.find((i) => i.id === sheet.id) ?? null}
-          categories={categories} access={access} push={push}
-          onClose={() => setSheet(null)} onChanged={() => void load()} />
+          categories={categories} access={access} setup={setup} push={push}
+          onClose={() => setSheet(null)} onChanged={() => { void load(); loadSetup(); }} />
       )}
       {sheet?.kind === "add" && (
         <AddSheet lang={lang} onClose={() => { setSheet(null); void load(); }}
@@ -446,8 +601,36 @@ export function Catalog({ lang }: { lang: Lang }) {
           onClose={() => setSheet(null)}
           onDone={() => { setSheet(null); stopSelecting(); void load(); }} />
       )}
+      {sheet?.kind === "share" && (
+        <CatalogShare lang={lang} target={sheet.target} categories={categories} push={push}
+          links={setup?.features.share_links ?? true} codes={setup?.features.table_qr ?? true}
+          onClose={() => setSheet(null)} onSettings={() => setSheet({ kind: "settings" })} />
+      )}
+      {sheet?.kind === "import" && (
+        <CatalogImport lang={lang} canEdit={access.can_edit} costs={costOn}
+          onClose={() => { setSheet(null); void load(); }} onChanged={() => void load()} />
+      )}
+      {sheet?.kind === "features" && (
+        <CatalogFeatures lang={lang} push={push} onClose={() => { setSheet(null); void load(); loadSetup(); }}
+          onChanged={() => { loadSetup(); onRenamed?.(); }} onOpen={(what) => setSheet({ kind: what })} />
+      )}
+      {sheet?.kind === "discounts" && setup?.features.discounts && access.can_manage && (
+        <CatalogDiscounts lang={lang} push={push} groupsOn={setup.features.price_groups ?? false} categories={categories}
+          onClose={() => setSheet(null)} />
+      )}
+      {sheet?.kind === "delivery" && setup?.features.delivery_fees && access.can_manage && (
+        <CatalogDelivery lang={lang} push={push} onClose={() => setSheet(null)} />
+      )}
+      {sheet?.kind === "fields" && (
+        <CatalogFields lang={lang} push={push} onClose={() => { setSheet({ kind: "features" }); void load(); loadSetup(); }}
+          onChanged={() => { loadSetup(); void load(); }} />
+      )}
+      {sheet?.kind === "template" && (
+        <CatalogTemplate lang={lang} push={push} onClose={() => setSheet({ kind: "features" })}
+          onChanged={() => { loadSetup(); void load(); onRenamed?.(); }} />
+      )}
       {sheet?.kind === "settings" && (
-        <CatalogSettings lang={lang} push={push} onClose={() => { setSheet(null); void load(); }} />
+        <CatalogSettings lang={lang} push={push} onClose={() => { setSheet(null); void load(); loadSetup(); }} />
       )}
 
       <ToastLayer toasts={toasts} dismiss={dismiss} lang={lang} undoWord={t.undo} dismissWord={t.dismiss} />

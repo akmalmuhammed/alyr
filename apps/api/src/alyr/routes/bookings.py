@@ -2,18 +2,29 @@
 
 The public routes need no sign-in: the customer arrives by a link from the chat, and the
 tenant comes from the shop's slug in the address, so every query is still scoped.
+
+Two kinds of link open the booking page, as on the order page (`routes/store.py`):
+
+* **Public** (`/b/<slug>`): anyone can open it and look at the services and the free times.
+  It carries no customer and cannot book; a customer who wants to book is sent to the shop's
+  WhatsApp to get a link of their own.
+* **One customer's**: `?t=<token>` made for booking (`core/links.py`), signed over the shop,
+  the customer and the purpose, and sent by the page in the header `X-Order-Link`. It lets
+  that customer book. A token made for the order page is refused here, and a bare contact
+  ID in the address or in a request identifies nobody (ALY-133).
 """
 
 from datetime import date, datetime, timedelta
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, HTTPException, Request
+from fastapi import APIRouter, Depends, Header, HTTPException, Query, Request, Response
 from pydantic import BaseModel, Field
 
-from alyr.core import team
+from alyr.core import links, ratelimit, team
 from alyr.core.auth import Staff
 from alyr.modules.bookings import service
-from alyr.routes.deps import current_staff, current_tenant
+from alyr.routes import customer_link
+from alyr.routes.deps import current_staff, current_tenant, require_manager
 
 public = APIRouter(prefix="/api/book", tags=["booking page"])
 router = APIRouter(prefix="/api", tags=["bookings"])
@@ -22,7 +33,12 @@ _STATUS_FOR = {"unknown_customer": 404, "unknown_service": 404, "not_free": 409}
 
 
 class NewBooking(BaseModel):
-    contact_id: UUID
+    # The customer's own booking link token, never a contact ID. A missing one is refused
+    # with the same words as a bad one.
+    token: str | None = Field(
+        default=None, max_length=200,
+        description="The customer's own booking link token (`?t=` in their booking link)",
+    )
     service_id: UUID
     starts_at: datetime
     note: str = Field(default="", max_length=500)
@@ -92,21 +108,35 @@ async def _shop(request: Request, slug: str):
 
 
 @public.get("/{slug}")
-async def booking_page(slug: str, request: Request, c: UUID | None = None) -> dict:
+async def booking_page(
+    slug: str, request: Request, response: Response,
+    t: str | None = Query(default=None, max_length=200),
+    x_order_link: str | None = Header(default=None, max_length=200),
+) -> dict:
+    """The booking page: the shop, its services, and the customer if the link is theirs.
+    `link` says whether the link was good, expired or not valid, with the words for it."""
+    customer_link.keep_private(response)
     shop = await _shop(request, slug)
+    link, state = customer_link.state(x_order_link or t, shop["id"], links.BOOKING)
     async with request.app.state.db.tenant(shop["id"]) as conn:
         services = await service.list_services(conn, only_active=True)
         customer = None
-        if c is not None:
-            name = await conn.fetchval(
-                "select name from contacts where id = $1 and role = 'customer'", c
+        if link is not None:
+            who = await conn.fetchrow(
+                "select name, lang from contacts where id = $1 and role = 'customer'",
+                link.contact_id,
             )
-            if name is not None:
-                customer = {"name": name}
+            if who is not None:
+                customer = {"name": who["name"], "lang": who["lang"]}
+            else:
+                state = "invalid"  # a link whose customer is gone
+        # So a customer who cannot book here can be sent to the shop's chat.
+        whatsapp = await conn.fetchval("select whatsapp_number from shop_settings") or ""
     return {
         "shop": {"name": shop["name"], "name_ar": shop["name_ar"],
-                 "timezone": shop["timezone"]},
+                 "timezone": shop["timezone"], "whatsapp": whatsapp},
         "services": services, "customer": customer,
+        "link": customer_link.view(state, links.BOOKING),
     }
 
 
@@ -121,13 +151,16 @@ async def times(slug: str, service_id: UUID, day: date, request: Request) -> dic
     return {"day": day.isoformat(), "times": [t.isoformat() for t in free]}
 
 
-@public.post("/{slug}")
+@public.post("/{slug}",
+    dependencies=[Depends(ratelimit.per_address("booking-placed", "PLACED_PER_ADDRESS"))])
 async def book(slug: str, body: NewBooking, request: Request) -> dict:
     shop = await _shop(request, slug)
+    # Who is booking comes from the signed link and from nothing else in the request.
+    link = customer_link.require(body.token, shop["id"], links.BOOKING, required=True)
     try:
         async with request.app.state.db.tenant(shop["id"]) as conn:
             return await service.create_booking(
-                conn, shop["id"], request.app.state.outbound, body.contact_id,
+                conn, shop["id"], request.app.state.outbound, link.contact_id,
                 body.service_id, _aware(body.starts_at), body.note,
             )
     except service.BookingError as error:
@@ -221,7 +254,7 @@ async def services(request: Request, tenant_id: UUID = Depends(current_tenant)) 
         return {"services": await service.list_services(conn)}
 
 
-@router.post("/services")
+@router.post("/services", dependencies=[Depends(require_manager)])
 async def add_service(
     body: NewService, request: Request, tenant_id: UUID = Depends(current_tenant)
 ) -> dict:
@@ -231,7 +264,7 @@ async def add_service(
         )}
 
 
-@router.patch("/services/{service_id}")
+@router.patch("/services/{service_id}", dependencies=[Depends(require_manager)])
 async def change_service(
     service_id: UUID, body: ServiceChange, request: Request,
     tenant_id: UUID = Depends(current_tenant),
@@ -244,7 +277,7 @@ async def change_service(
         return {"services": await service.list_services(conn)}
 
 
-@router.post("/services/{service_id}/active")
+@router.post("/services/{service_id}/active", dependencies=[Depends(require_manager)])
 async def set_active(
     service_id: UUID, body: Active, request: Request,
     tenant_id: UUID = Depends(current_tenant),
@@ -261,7 +294,7 @@ async def hours(request: Request, tenant_id: UUID = Depends(current_tenant)) -> 
         return {"periods": await service.hours(conn)}
 
 
-@router.put("/hours")
+@router.put("/hours", dependencies=[Depends(require_manager)])
 async def set_hours(
     body: Week, request: Request, tenant_id: UUID = Depends(current_tenant)
 ) -> dict:

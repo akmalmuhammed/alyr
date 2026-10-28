@@ -1,4 +1,4 @@
-"""Owner actions over WhatsApp, phases 0 and 1 (ALY-130, decision D-040): linking a staff
+"""Owner actions over WhatsApp, phases 0 and 1 (ALY-130, decision D-065): linking a staff
 number to the person who holds it, and the read-only commands that number can then send."""
 
 import pytest

@@ -20,6 +20,7 @@ A rule here is not a preference. If a task seems to need breaking one, stop and 
 | How to handle an emergency or chore | `docs/runbooks/` | One file per procedure, written so a tired person can follow it. |
 | Lane briefs | `docs/lanes/` | Each lane's "Now" section is updated in the PR that changes it. |
 | Content and applications | `docs/growth/`, `docs/company/` | Drafts the founder approves. |
+| Studies and research (marketing, sales, growth, customers, design, social) | `docs/research/` | A card per study in `studies/` the same day, wherever the study itself lives (Claude Doc, artifact, file); copy to `sources/` anything that could be lost; `current-truth.md` says which answer stands. Run `python docs/research/build_index.py`. |
 | Audits | `docs/audit/<date>.md` | Findings with an issue number each. |
 | Working notes of one piece of work (briefs, critiques, logs) | `docs/work/<ALY-NN>-<name>/` | Allowed while the work runs. When it merges, keep only what someone will read again; decisions move to `decisions.md`. |
 | Release history | `CHANGELOG.md` | A line per merged PR that changes behaviour. |
@@ -41,6 +42,7 @@ the rule still applies where they do not reach.
 6. **The PR template is filled in honestly**, including "Not checked".
 7. **Merge only on green CI.** Then update the Linear issue with what is still missing.
 8. **Delete the branch and remove the worktree** after merge.
+9. **Look at `apps/api/migrations/` on `main` again just before you name a migration** and take the next free number. `tests/test_migration_numbers.py` fails when two files share one.
 
 ## 3. Docs stay true
 

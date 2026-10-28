@@ -6,9 +6,11 @@
 // reason when they differ. Below, the log of every change, with who made it and why.
 
 import { useCallback, useEffect, useState } from "react";
-import { api, nameOf, sayError, stamp, toInt, type Item, type ListResult, type Movement, type Variant } from "./catalogApi";
+import { fmtQtyUnit, isMeasure, qtyForApi, subQty, unitFor, unitShort } from "../_customer/qty";
+import { api, nameOf, sayError, stamp, toQty, whoIs, type Item, type ListResult, type Movement, type Variant } from "./catalogApi";
 import { COPY, type Lang } from "./catalogCopy";
 import { Field, Icon, Sheet, Tile, type Toast } from "./CatalogUi";
+import { StockValue } from "./Margin";
 
 type Push = (text: string, options?: { tone?: Toast["tone"]; undo?: () => void }) => number;
 type Mode = "received" | "wasted" | "count";
@@ -16,8 +18,9 @@ type Mode = "received" | "wasted" | "count";
 const GENERIC = ["Opening count", "Stock received", "Counted, no difference", "Order placed"];
 type Target = { item: Item; variant: Variant; mode: Mode };
 
-function signed(n: number) {
-  return n > 0 ? `+${n}` : n < 0 ? `−${Math.abs(n)}` : "0";
+/** "+2.5 kg", "−0.5 kg", "0": a change in stock with its sign (a minus sign, not a hyphen). */
+function signed(n: number, unit = "piece", lang: Lang = "en") {
+  return n > 0 ? `+${fmtQtyUnit(n, unit, lang)}` : n < 0 ? `−${fmtQtyUnit(Math.abs(n), unit, lang)}` : "0";
 }
 
 /** What the system says is left of one variant: the number in stock, or today's allowance. */
@@ -25,7 +28,7 @@ function systemOf(item: Item, v: Variant) {
   return item.stock_rule === "daily_limit" ? v.left ?? 0 : v.on_hand;
 }
 
-export function CatalogStock({ lang, onChanged, push, clear }: { lang: Lang; onChanged: () => void; push: Push; clear: () => void }) {
+export function CatalogStock({ lang, onChanged, push, clear, costs = false }: { lang: Lang; onChanged: () => void; push: Push; clear: () => void; costs?: boolean }) {
   const t = COPY[lang];
   const [items, setItems] = useState<Item[] | null>(null);
   const [log, setLog] = useState<Movement[]>([]);
@@ -64,6 +67,8 @@ export function CatalogStock({ lang, onChanged, push, clear }: { lang: Lang; onC
         <p>{t.stockSub}</p>
       </header>
 
+      {costs && <StockValue lang={lang} on={costs} version={items} />}
+
       {failed && (
         <div className="ct-banner bad" role="status">
           <span>{t.offline}</span>
@@ -97,8 +102,8 @@ export function CatalogStock({ lang, onChanged, push, clear }: { lang: Lang; onC
                   {item.status !== "live" && <small>{t.status[item.status]}</small>}
                 </span>
                 <span className={`ct-stock-n ${system === 0 ? "none" : low ? "low" : ""}`}>
-                  <b className="num" dir="ltr">{system}</b>
-                  <small>{system === 0 ? t.noneLeft : daily ? `${t.today} ${t.of(variant.daily_limit ?? 0)}` : low ? t.stockNow + " · " + t.left(system) : t.stockNow}</small>
+                  <b className="num" dir="auto">{fmtQtyUnit(system, unitFor(item), lang)}</b>
+                  <small>{system === 0 ? t.noneLeft : daily ? `${t.today} ${t.of(fmtQtyUnit(variant.daily_limit ?? 0, unitFor(item), lang))}` : low ? t.stockNow + " · " + t.left(fmtQtyUnit(system, unitFor(item), lang)) : t.stockNow}</small>
                 </span>
                 <span className="ct-stock-acts">
                   {([["received", t.received], ["wasted", t.wasted], ["count", t.countShelf]] as const).map(([mode, word]) => (
@@ -123,16 +128,16 @@ export function CatalogStock({ lang, onChanged, push, clear }: { lang: Lang; onC
             const size = lang === "ar" && m.variant_ar ? m.variant_ar : m.variant;
             return (
               <li key={m.id}>
-                <b className={`ct-delta num ${m.delta > 0 ? "up" : m.delta < 0 ? "down" : ""}`} dir="ltr">{signed(m.delta)}</b>
+                <b className={`ct-delta num ${m.delta > 0 ? "up" : m.delta < 0 ? "down" : ""}`} dir="auto">{signed(m.delta, m.unit ?? "piece", lang)}</b>
                 <span className="ct-move-text">
                   <span><b dir="auto">{name || t.untitled}</b>{size ? <span dir="auto"> · {size}</span> : null}</span>
                   <small>
                     {t.kinds[m.kind] ?? m.kind}
                     {m.order_number ? ` · ${t.orderNo(m.order_number)}` : ""}
                     {m.reason && m.kind !== "sold" && !GENERIC.includes(m.reason) ? ` · ${m.reason}` : ""}
-                    {` · ${t.balance(m.balance_after)}`}
+                    {` · ${t.balance(fmtQtyUnit(m.balance_after, m.unit ?? "piece", lang))}`}
                   </small>
-                  <small>{t.by(m.actor.name)} · <time className="num" dateTime={m.created_at} dir="ltr">{stamp(m.created_at)}</time></small>
+                  <small>{t.by(whoIs(m.actor.name, t))}{m.via === "whatsapp" ? ` · ${t.viaWhatsapp}` : ""} · <time className="num" dateTime={m.created_at} dir="ltr">{stamp(m.created_at, lang)}</time></small>
                 </span>
               </li>
             );
@@ -159,9 +164,11 @@ function StockSheet({ lang, target, onClose, onDone }: {
   const [failure, setFailure] = useState("");
   const [saving, setSaving] = useState(false);
 
-  const n = toInt(amount);
+  // A quantity: a whole number, or up to three decimals for something sold by weight or volume.
+  const measure = isMeasure(item.unit);
+  const n = toQty(amount, item.unit);
   const valid = n !== null && (mode === "count" ? n >= 0 : n > 0);
-  const difference = mode === "count" && n !== null ? n - system : 0;
+  const difference = mode === "count" && n !== null ? subQty(n, system) : 0;
   const needReason = mode === "wasted" || (mode === "count" && valid && difference !== 0);
   const ideas = mode === "received" ? t.reasonsReceived : mode === "wasted" ? t.reasonsWasted : t.reasonsCount;
   const name = nameOf(item, lang) || t.untitled;
@@ -174,10 +181,10 @@ function StockSheet({ lang, target, onClose, onDone }: {
     setFailure("");
     try {
       if (mode === "count") {
-        const done = await api<{ difference: number }>(`/api/items/${item.id}/count`, "POST", { counted: n, reason: reason.trim(), variant_id: variant.id });
-        onDone(done.difference === 0 ? t.countSame : t.countDifferent(done.difference));
+        const done = await api<{ difference: number }>(`/api/items/${item.id}/count`, "POST", { counted: qtyForApi(n), reason: reason.trim(), variant_id: variant.id });
+        onDone(done.difference === 0 ? t.countSame : t.countDifferent(done.difference > 0, fmtQtyUnit(Math.abs(done.difference), item.unit, lang)));
       } else {
-        await api(`/api/items/${item.id}/stock`, "POST", { kind: mode, quantity: n, reason: reason.trim(), variant_id: variant.id });
+        await api(`/api/items/${item.id}/stock`, "POST", { kind: mode, quantity: qtyForApi(n), reason: reason.trim(), variant_id: variant.id });
         onDone(t.stockSaved);
       }
     } catch (error) {
@@ -199,16 +206,17 @@ function StockSheet({ lang, target, onClose, onDone }: {
         {failure && <p className="ct-alert" role="alert"><Icon name="warn" />{failure}</p>}
         <div className="ct-system">
           <span>{t.stockNow}</span>
-          <b className="num" dir="ltr">{system}</b>
+          <b className="num" dir="auto">{fmtQtyUnit(system, unitFor(item), lang)}</b>
         </div>
-        <Field label={mode === "received" ? t.receivedFor : mode === "wasted" ? t.wastedFor : t.counted}>
-          <input className="ct-bignum" value={amount} inputMode="numeric" dir="ltr" autoComplete="off" data-autofocus
+        <Field label={mode === "received" ? t.receivedFor : mode === "wasted" ? t.wastedFor : t.counted}
+          hint={measure ? t.inUnit(unitShort(item.unit, lang)) : undefined}>
+          <input className="ct-bignum" value={amount} inputMode={measure ? "decimal" : "numeric"} dir="ltr" autoComplete="off" data-autofocus
             onChange={(e) => setAmount(e.target.value)} />
         </Field>
         {mode === "count" && valid && (
           <p className={`ct-diff ${difference === 0 ? "same" : difference > 0 ? "up" : "down"}`} role="status">
             <Icon name={difference === 0 ? "check" : difference > 0 ? "up" : "low"} />
-            <span><b>{t.difference}: <bdi className="num" dir="ltr">{signed(difference)}</bdi></b>{" "}
+            <span><b>{t.difference}: <bdi className="num">{signed(difference, item.unit, lang)}</bdi></b>{" "}
               {difference === 0 ? t.same : difference > 0 ? t.more : t.fewer}</span>
           </p>
         )}

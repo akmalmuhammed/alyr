@@ -1,0 +1,46 @@
+/* Delivery and pickup in the workspace (ALY-150 part 2): the Delivery sheet, its zone form, and the
+   pickup or delivery lines on an order in the Orders list. It builds on the Catalog's patterns
+   (catalog.css) and the Discounts sheet's (pricing.css) and takes every colour, size and radius
+   from the workspace tokens, so light, dark and right-to-left come for free. */
+
+/* ── the sheet ── */
+.dl-body { gap: 18px; }
+.dl-set { margin: 0; padding: 0; border: 0; display: grid; gap: 10px; min-width: 0; }
+.dl-set legend { padding: 0 0 6px; font-size: var(--ui-body); font-weight: 600; }
+.dl-guard { margin: 0; }
+.dl-h { margin: 0; font-size: var(--ui-body); font-weight: 600; }
+.dl-flat { display: grid; gap: 14px; min-width: 0; }
+.dl-flat > .ct-hint { margin: -6px 0 0; }
+.dl-save { display: flex; flex-direction: column; align-items: stretch; gap: 8px; }
+.dl-save .btn { align-self: start; }
+.dl-zones { display: grid; gap: 12px; min-width: 0; }
+.dl-zones-head .ct-hint { margin: 2px 0 0; }
+.dl-zone { min-width: 0; }
+.dl-zone.over { background: transparent; box-shadow: 0 0 0 1px var(--hair-2) inset; }
+.dl-fee { flex: none; font-size: var(--ui-body-sm); font-weight: 600; white-space: nowrap; }
+
+/* ── the days of the week: chips with a real checkbox under them ── */
+.dl-days { margin: 0; padding: 0; border: 0; display: grid; gap: 8px; min-width: 0; }
+.dl-days legend { padding: 0 0 4px; font-size: var(--ui-small); font-weight: 500; color: var(--ink-2); }
+.dl-days .ct-hint { margin: 0; }
+.dl-daylist { display: flex; flex-wrap: wrap; gap: 8px; }
+.dl-day { position: relative; display: inline-flex; align-items: center; min-height: 44px; padding: 0 14px; border-radius: 22px; background: var(--sheet); color: var(--ink-2); box-shadow: 0 0 0 1px var(--hair-2) inset; font-size: var(--ui-body-sm); font-weight: 500; cursor: pointer; }
+.dl-day input { position: absolute; inset: 0; width: 100%; height: 100%; margin: 0; opacity: 0; cursor: pointer; }
+.dl-day:has(input:checked) { background: var(--ink); color: var(--sheet); box-shadow: none; }
+.dl-day:has(input:focus-visible) { outline: 2px solid var(--ink); outline-offset: 2px; }
+
+/* ── a time input keeps the form's size and left-to-right digits in Arabic too ── */
+.ct-form input[type="time"] { min-width: 0; }
+
+/* ── pickup or delivery on an order in the Orders list ── */
+.dl-how { display: grid; gap: 2px; margin-top: 6px; font-size: var(--ui-caption); line-height: 1.5; color: var(--ink-2); min-width: 0; }
+.dl-how > span { overflow-wrap: anywhere; }
+.dl-how .dl-where { color: var(--ink); }
+
+/* ── the filter above the list ── */
+.dl-filter { display: flex; flex-wrap: wrap; gap: 8px; margin: 0 0 12px; padding: 0; border: 0; }
+.dl-filter legend { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+.dl-chip { position: relative; display: inline-flex; align-items: center; min-height: 44px; padding: 0 16px; border-radius: 22px; background: var(--sheet); color: var(--ink-2); box-shadow: 0 0 0 1px var(--hair-2) inset; font-size: var(--ui-body-sm); font-weight: 500; cursor: pointer; }
+.dl-chip input { position: absolute; inset: 0; width: 100%; height: 100%; margin: 0; opacity: 0; cursor: pointer; }
+.dl-chip:has(input:checked) { background: var(--ink); color: var(--sheet); box-shadow: none; }
+.dl-chip:has(input:focus-visible) { outline: 2px solid var(--ink); outline-offset: 2px; }

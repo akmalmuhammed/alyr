@@ -282,7 +282,7 @@ Overdue more than 60 days: QAR 6,100 from 3 customers
 
 Orders
 Orders received: 38, worth QAR 5,640 (last week 31)
-Paid online: QAR 2,180 for 12 orders
+Paid: QAR 2,180 for 12 orders
 Put on account: QAR 3,460
 Customers who ordered again: 9
 Most ordered: Breaker 16 A single pole (64)

@@ -7,13 +7,19 @@ import { rich } from "./Text";
 // is set, email until then, and a plain status line if neither exists. Every word is in
 // `copy.ts` under `contact`.
 
+/** A message filled in for one kind of business (the homepage's business tabs): the
+ * WhatsApp text in the owner's words, and the email's subject. */
+export type ContactMessage = { prefill: string; subject: string };
+
 /** Where the main button goes: a chat with the message filled in, or an email with a
  * subject and the few lines a first visit needs, or the contact section. */
-export function contactLink(locale: Locale): string {
+export function contactLink(locale: Locale, message?: ContactMessage): string {
   const c = copy[locale].contact;
-  if (CONTACT_STATE === "whatsapp") return `https://wa.me/${WHATSAPP_NUMBER}?text=${encodeURIComponent(c.prefill)}`;
+  if (CONTACT_STATE === "whatsapp") {
+    return `https://wa.me/${WHATSAPP_NUMBER}?text=${encodeURIComponent(message?.prefill ?? c.prefill)}`;
+  }
   if (CONTACT_STATE === "email") {
-    return `mailto:${CONTACT_EMAIL}?subject=${encodeURIComponent(c.subject)}&body=${encodeURIComponent(c.body)}`;
+    return `mailto:${CONTACT_EMAIL}?subject=${encodeURIComponent(message?.subject ?? c.subject)}&body=${encodeURIComponent(c.body)}`;
   }
   return "#contact";
 }
@@ -22,19 +28,23 @@ export function contactLink(locale: Locale): string {
  * down the page (`variant="line"`). Absent in the pending state: there is nothing to
  * press yet, so the page says so in words instead (`ContactPending`). */
 export function ContactButton({
-  locale, className, lean = false, id, variant = "volt",
-}: { locale: Locale; className?: string; lean?: boolean; id?: string; variant?: "volt" | "line" }) {
+  locale, className, lean = false, id, variant = "volt", message, label,
+}: {
+  locale: Locale; className?: string; lean?: boolean; id?: string; variant?: "volt" | "line";
+  /** A message for one kind of business, and the words that say so ("Show me for my bakery"). */
+  message?: ContactMessage; label?: string;
+}) {
   if (CONTACT_STATE === "pending") return null;
   const c = copy[locale].contact;
   return (
     <a
       id={id}
       className={`btn btn-${variant} btn-notch${className ? ` ${className}` : ""}`}
-      href={contactLink(locale)}
+      href={contactLink(locale, message)}
       data-lean={lean || undefined}
     >
       <Icon name={CONTACT_STATE === "whatsapp" ? "chat" : "mail"} className="ico btn-glyph" />
-      <span>{CONTACT_STATE === "whatsapp" ? c.whatsapp : c.email}</span>
+      <span>{label ?? (CONTACT_STATE === "whatsapp" ? c.whatsapp : c.email)}</span>
       <Icon name="arrow-up-right" className="ico ico-flip btn-arrow" />
     </a>
   );

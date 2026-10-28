@@ -8,7 +8,7 @@ from pydantic import BaseModel, Field
 from alyr.core.auth import Staff
 from alyr.core.team import actor_of
 from alyr.modules.inbox import service
-from alyr.routes.deps import current_staff, current_tenant
+from alyr.routes.deps import current_staff, current_tenant, require_manager
 
 router = APIRouter(prefix="/api/inbox", tags=["inbox"])
 
@@ -165,7 +165,7 @@ async def save_reply(
         raise HTTPException(status_code=422, detail=str(error)) from error
 
 
-@router.delete("/saved-replies/{reply_id}")
+@router.delete("/saved-replies/{reply_id}", dependencies=[Depends(require_manager)])
 async def delete_saved_reply(
     reply_id: UUID, request: Request, tenant_id: UUID = Depends(current_tenant)
 ) -> dict:

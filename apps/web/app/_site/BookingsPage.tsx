@@ -15,22 +15,21 @@ export function BookingsPage({ locale }: { locale: Locale }) {
   return (
     <Shell locale={locale} page="bookings" cta={p.cta}>
       <ProductBar bar={p.bar} />
-      <ProductHero hero={p.hero}>
-        <ProductDemo product={p.demo} locale={locale} />
+      <ProductHero locale={locale} hero={p.hero}>
+        <ProductDemo product={p.demo} locale={locale} sample={t.fig.sample} note={salon.fictional} />
       </ProductHero>
-      <FlowSection flow={p.flow} />
+      <FlowSection flow={p.flow} locale={locale} />
       <ScreenBlock
         locale={locale}
         screen={p.screen}
         fictional={salon.fictional}
         extra={
           <div className="pk-also">
-            <BookingsFiltered sheet={sheet} shop={salon.shop} monogram={salon.monogram} path={sheet.path} label={sheet.filtered.caption} />
-            <p className="pk-also-cap">{sheet.filtered.caption}</p>
+            <BookingsFiltered sheet={sheet} shop={salon.shop} monogram={salon.monogram} path={sheet.path} label={sheet.filtered.caption} sample={t.fig.sample} />
           </div>
         }
       >
-        <BookingsScreen sheet={sheet} shop={salon.shop} monogram={salon.monogram} path={sheet.path} label={p.screen.label} />
+        <BookingsScreen sheet={sheet} shop={salon.shop} monogram={salon.monogram} path={sheet.path} label={p.screen.label} sample={t.fig.sample} />
       </ScreenBlock>
       <InsideBlock inside={p.inside} />
       <WhoBlock who={p.who} />
