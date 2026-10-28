@@ -1,13 +1,14 @@
 "use client";
 
 import { useEffect } from "react";
+import { startLoops } from "./loops";
 
 /**
  * The page's scroll behaviour, in one place: the header tightening, the header turning
  * Carbon while it sits over a full-bleed Carbon section, sections arriving, and the
  * approach statement lighting up word by word as it is read. Also, on every page: the
- * language link lands on the section being read (`/ar/bookings#how`), and a question
- * linked by its address opens.
+ * language link lands on the section being read (`/ar/bookings#how`), a question linked
+ * by its address opens, and the phone's contact bar comes and goes.
  *
  * Everything here is an enhancement. Without JavaScript, or with reduced motion on, the
  * page is complete and still (see the `.al-js` and `prefers-reduced-motion` rules).
@@ -32,6 +33,10 @@ export function SiteMotion() {
     );
     document.querySelectorAll("[data-reveal], [data-m]").forEach((node) => seen.observe(node));
 
+    // The figures that keep playing: How we work's cards, the products frame's tiles and the
+    // product pages' signature figures (loops.ts; founder, 26 Oct 2026: motion always on).
+    const stopLoops = startLoops();
+
     // The language link keeps the section being read.
     const sections = Array.from(document.querySelectorAll<HTMLElement>("main section[id]"));
     const onLanguage = (event: MouseEvent) => {
@@ -46,10 +51,16 @@ export function SiteMotion() {
     };
     document.addEventListener("click", onLanguage, true);
 
-    // A question's address opens the question.
+    // A question's address opens the question, and the homepage's "More questions" around it.
     const openQuestion = () => {
       const target = window.location.hash ? document.getElementById(window.location.hash.slice(1)) : null;
-      if (target instanceof HTMLDetailsElement) target.open = true;
+      if (!(target instanceof HTMLDetailsElement)) return;
+      const fold = target.parentElement?.closest("details");
+      if (fold instanceof HTMLDetailsElement) fold.open = true;
+      target.open = true;
+      // Once the fold is open (by this or by the browser), land on the question itself; two
+      // frames, so the sections above that are laid out late have their real height.
+      if (fold) requestAnimationFrame(() => requestAnimationFrame(() => target.scrollIntoView({ block: "start", behavior: "instant" })));
     };
     openQuestion();
     window.addEventListener("hashchange", openQuestion);
@@ -69,9 +80,42 @@ export function SiteMotion() {
         },
         { rootMargin: `-30px 0px -${Math.max(0, window.innerHeight - 31)}px 0px` },
       );
-      document.querySelectorAll(".band-in, .cta").forEach((node) => dark?.observe(node));
+      document.querySelectorAll(".cta").forEach((node) => dark?.observe(node));
     };
     watchDark();
+
+    // The phone's contact bar, on the homepage and every product page: up once the opening's
+    // own "Book a check-up" has scrolled away, down while the closing call (and the footer
+    // below it) is on screen. While the bar is up the header's button steps aside, and while
+    // the opening's button is on screen the header's is its outlined twin (site.css), so one
+    // Volt button is on screen. Without scripts the bar stays down.
+    const root = document.documentElement;
+    const bar = document.querySelector<HTMLElement>("[data-bar]");
+    const heroButton = document.querySelector<HTMLElement>("[data-hero-cta]");
+    const closing = document.getElementById("contact");
+    let watchBar: IntersectionObserver | null = null;
+    if (bar && heroButton && closing) {
+      let heroGone = false;
+      let closingSeen = false;
+      watchBar = new IntersectionObserver((entries) => {
+        for (const entry of entries) {
+          if (entry.target === heroButton) heroGone = !entry.isIntersecting && entry.boundingClientRect.top < 0;
+          // Reached or passed: the footer below it stays clear too.
+          if (entry.target === closing) closingSeen = entry.isIntersecting || entry.boundingClientRect.top < 0;
+        }
+        bar.toggleAttribute("data-show", heroGone && !closingSeen);
+        root.toggleAttribute("data-hero-gone", heroGone);
+      });
+      watchBar.observe(heroButton);
+      watchBar.observe(closing);
+    }
+
+    // While the closing call is on screen, its Volt button is the page's one: the header's
+    // becomes the outlined twin (site.css). Without scripts both stay Volt.
+    const atClosing = closing
+      ? new IntersectionObserver(([entry]) => root.toggleAttribute("data-at-closing", entry.isIntersecting))
+      : null;
+    if (closing) atClosing?.observe(closing);
 
     let lit = -1;
     let queued = false;
@@ -103,7 +147,11 @@ export function SiteMotion() {
       document.removeEventListener("click", onLanguage, true);
       window.removeEventListener("hashchange", openQuestion);
       seen.disconnect();
+      stopLoops();
       dark?.disconnect();
+      watchBar?.disconnect();
+      atClosing?.disconnect();
+      root.removeAttribute("data-at-closing");
       window.removeEventListener("scroll", onScroll);
       window.removeEventListener("resize", onScroll);
       window.removeEventListener("resize", watchDark);

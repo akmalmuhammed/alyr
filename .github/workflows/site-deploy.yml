@@ -1,0 +1,189 @@
+# The public site (alyr.qa) from GitHub to the Cloudflare Worker `alyr-site`.
+#
+# - Every pull request gets a preview: the site is built with scripts/build-site.sh and
+#   uploaded as a new *version* of `alyr-site` that takes no traffic (`wrangler versions
+#   upload`). Cloudflare gives each version its own address on workers.dev, plus a fixed
+#   alias per pull request (pr-<number>-alyr-site.<subdomain>.workers.dev). The address is
+#   posted on the pull request.
+# - Production changes only after the founder approves: the `production` job waits on the
+#   GitHub environment `production`, which has him as its required reviewer.
+# - Every build carries its commit (out-site/version.txt and <meta name="alyr-build">), and
+#   every version on Cloudflare is tagged with it.
+#
+# Runbook, secrets and rollback: docs/runbooks/site-deploy.md. The manual fallback stays:
+# `pnpm site:deploy` (or `pnpm exec wrangler deploy`) from apps/web on the founder's laptop.
+
+name: site deploy
+
+on:
+  pull_request:
+    paths:
+      - "apps/web/**"
+      - "design/**"
+      - "scripts/build-site.sh"
+      - "scripts/site-defer-scripts.mjs"
+      - "scripts/tokens-build.mjs"
+      - "scripts/site/**"
+      - ".github/workflows/site-deploy.yml"
+  push:
+    branches: [main]
+    paths:
+      - "apps/web/**"
+      - "design/**"
+      - "scripts/build-site.sh"
+      - "scripts/site-defer-scripts.mjs"
+      - "scripts/tokens-build.mjs"
+      - "scripts/site/**"
+      - ".github/workflows/site-deploy.yml"
+  # Publish any pushed branch or commit (for example the live stack before it merges).
+  # It still waits for the founder's approval on the `production` environment.
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  preview:
+    # Pull requests from forks get no secrets and never run here.
+    if: github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    permissions:
+      contents: read
+      pull-requests: write
+    concurrency:
+      group: site-preview-${{ github.event.pull_request.number }}
+      cancel-in-progress: true
+    env:
+      # Stamp the pull request's own commit, not GitHub's temporary merge commit.
+      ALYR_BUILD_SHA: ${{ github.event.pull_request.head.sha }}
+      ALYR_BUILD_BRANCH: ${{ github.head_ref }}
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+      PR_NUMBER: ${{ github.event.pull_request.number }}
+    defaults:
+      run:
+        working-directory: apps/web
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+      - uses: pnpm/action-setup@v4
+        with:
+          package_json_file: apps/web/package.json
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+          cache-dependency-path: apps/web/pnpm-lock.yaml
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm site:build
+      - name: Cloudflare credentials present?
+        id: creds
+        run: |
+          if [ -n "$CLOUDFLARE_API_TOKEN" ] && [ -n "$CLOUDFLARE_ACCOUNT_ID" ]; then
+            echo "ok=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "ok=false" >> "$GITHUB_OUTPUT"
+            echo "::notice::No Cloudflare secrets yet (docs/runbooks/site-deploy.md, step 1), so no preview was uploaded. The site was built."
+          fi
+      - name: Upload a preview version (takes no traffic)
+        if: steps.creds.outputs.ok == 'true'
+        env:
+          WRANGLER_OUTPUT_FILE_PATH: ${{ runner.temp }}/wrangler-output.json
+        run: |
+          short="${ALYR_BUILD_SHA:0:7}"
+          # REDIRECT off: the preview address must not send visitors on to alyr.qa.
+          # PREVIEW on: the Worker adds X-Robots-Tag noindex.
+          pnpm exec wrangler versions upload --config wrangler.jsonc \
+            --preview-alias "pr-${PR_NUMBER}" \
+            --var REDIRECT:off --var PREVIEW:on \
+            --tag "$short" \
+            --message "Preview of PR #${PR_NUMBER}, commit ${ALYR_BUILD_SHA}"
+      - name: Post the preview address on the pull request
+        if: steps.creds.outputs.ok == 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          WRANGLER_OUTPUT_FILE_PATH: ${{ runner.temp }}/wrangler-output.json
+        run: |
+          entry="$(grep '"type":"version-upload"' "$WRANGLER_OUTPUT_FILE_PATH" | tail -n 1)"
+          version="$(echo "$entry" | jq -r '.version_id')"
+          url="$(echo "$entry" | jq -r '.preview_url // empty')"
+          alias="$(echo "$entry" | jq -r '.preview_alias_url // empty')"
+          if [ -z "$url" ]; then
+            echo "::warning::Cloudflare gave no preview address. Preview URLs are probably still off for alyr-site (docs/runbooks/site-deploy.md, step 3)."
+          fi
+          marker="<!-- alyr-site-preview -->"
+          # The backticks are Markdown for the comment, not a command.
+          # shellcheck disable=SC2016
+          body="$(printf '%s\n**Site preview** for commit `%s`\n\n- This commit: %s\n- This pull request (always the latest commit): %s\n- Cloudflare version: `%s` (takes no traffic on alyr.qa)\n\nCheck `/version.txt` on the preview to see which commit it serves. Publishing to alyr.qa waits for the founder to approve it: docs/runbooks/site-deploy.md.' \
+            "$marker" "${ALYR_BUILD_SHA:0:7}" "${url:-none}" "${alias:-none}" "$version")"
+          existing="$(gh api "repos/${GITHUB_REPOSITORY}/issues/${PR_NUMBER}/comments" --paginate \
+            --jq ".[] | select(.body | startswith(\"$marker\")) | .id" | head -n 1)"
+          if [ -n "$existing" ]; then
+            gh api -X PATCH "repos/${GITHUB_REPOSITORY}/issues/comments/${existing}" -f body="$body" >/dev/null
+          else
+            gh api -X POST "repos/${GITHUB_REPOSITORY}/issues/${PR_NUMBER}/comments" -f body="$body" >/dev/null
+          fi
+          echo "Preview: ${url:-none} (alias ${alias:-none})" >> "$GITHUB_STEP_SUMMARY"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: out-site-pr-${{ github.event.pull_request.number }}
+          path: apps/web/out-site
+          retention-days: 14
+
+  production:
+    if: github.event_name == 'push' || github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    # The founder is this environment's required reviewer: the job waits for his approval.
+    environment:
+      name: production
+      url: https://alyr.qa
+    concurrency:
+      group: site-production
+      cancel-in-progress: false
+    env:
+      ALYR_BUILD_SHA: ${{ github.sha }}
+      ALYR_BUILD_BRANCH: ${{ github.ref_name }}
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+    defaults:
+      run:
+        working-directory: apps/web
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          package_json_file: apps/web/package.json
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+          cache-dependency-path: apps/web/pnpm-lock.yaml
+      - run: pnpm install --frozen-lockfile
+      # The same build and checks as the CI site job; nothing is published if one fails.
+      - run: pnpm site:check
+      - name: Deploy to alyr.qa
+        run: |
+          test -n "$CLOUDFLARE_API_TOKEN" || { echo "::error::CLOUDFLARE_API_TOKEN is not set (docs/runbooks/site-deploy.md, step 1)"; exit 1; }
+          pnpm exec wrangler deploy --config wrangler.jsonc \
+            --tag "${ALYR_BUILD_SHA:0:7}" \
+            --message "Production from ${ALYR_BUILD_BRANCH}, commit ${ALYR_BUILD_SHA}"
+      - name: alyr.qa serves this commit
+        run: |
+          for attempt in 1 2 3 4 5 6; do
+            live="$(curl -fsS "https://alyr.qa/version.txt?check=${attempt}" | head -n 1 || true)"
+            if [ "$live" = "commit ${ALYR_BUILD_SHA}" ]; then
+              echo "alyr.qa serves ${ALYR_BUILD_SHA}" >> "$GITHUB_STEP_SUMMARY"
+              exit 0
+            fi
+            sleep 10
+          done
+          echo "::error::alyr.qa answers '${live}', not commit ${ALYR_BUILD_SHA}. See docs/runbooks/site-deploy.md (Roll back)."
+          exit 1
+      - uses: actions/upload-artifact@v4
+        with:
+          name: out-site-production-${{ github.sha }}
+          path: apps/web/out-site
+          retention-days: 90

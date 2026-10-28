@@ -173,3 +173,17 @@
 .ops-tpl { display: grid; gap: 8px; max-width: 40rem; padding: 10px; border-radius: 12px; background: var(--sheet); box-shadow: 0 0 0 1px var(--hair) inset; }
 .ops-tpl-plan ul { margin: 0; padding-inline-start: 1.2em; display: grid; gap: 3px; font-size: var(--ui-small); }
 .ops-tpl-plan p { margin: 4px 0 0; font-size: var(--ui-small); }
+
+/* The onboarding board (ALY-165): one line per step left, with its controls. */
+.ops-step { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; padding: 6px 0; }
+.ops-step b { min-width: 160px; }
+.ops-step input { flex: 1 1 220px; min-height: 32px; padding: 0 10px; border-radius: 8px; border: 0; box-shadow: 0 0 0 1px var(--hair-2) inset; background: transparent; color: inherit; font: inherit; }
+/* A business's WhatsApp setup on the onboarding board (ALY-217). */
+.ops-wa { padding: 8px 0 12px; margin-bottom: 8px; border-bottom: 1px solid var(--hair-2); }
+.ops-wa p { margin: 0 0 6px; }
+.ops-wa ul { list-style: none; margin: 0 0 6px; padding: 0; display: grid; gap: 2px; color: var(--ink-3); font-size: var(--ui-small); }
+.ops-wa li.done { color: var(--ink-2); }
+/* A client's payment and access (ALY-212). */
+.ops-access { display: grid; gap: 8px; margin-bottom: 8px; }
+.ops-access p { margin: 0; display: flex; flex-wrap: wrap; gap: 8px; align-items: baseline; }
+.ops-access select, .ops-access input[type="date"] { min-height: 32px; padding: 0 8px; border-radius: 8px; border: 0; box-shadow: 0 0 0 1px var(--hair-2) inset; background: transparent; color: inherit; font: inherit; }

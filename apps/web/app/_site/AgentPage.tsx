@@ -3,7 +3,8 @@ import { Rich } from "../_agent/AgentDashboard";
 import type { AgentView } from "../_agent/types";
 import { AgentFigure } from "./AgentFigure";
 import { copy, type Locale } from "./copy";
-import { FigCaption, reportWords } from "./Drawings";
+import { reportWords } from "./Drawings";
+import { SampleMark } from "./Frames";
 import { InsideBlock, ProductBar, ProductHero, QuestionsBlock, WhoBlock, WorksBlock } from "./ProductKit";
 import { ReportSwitch } from "./ReportSwitch";
 import { REPORTS, SAMPLE_ORDER, SAMPLES } from "./samples";
@@ -13,11 +14,21 @@ import { rich } from "./Text";
 const n = (index: number) => ({ "--n": index }) as CSSProperties;
 
 /** One suggestion as the screen shows it, opened: the bakery's money card, word for word
- * from the sample (the engine's own text), drawn with the dashboard's own styles. */
-function OpenedCard({ view, label }: { view: AgentView; label: string }) {
+ * from the sample (the engine's own text), drawn with the dashboard's own styles, in the
+ * workspace window with its "Sample" mark. Without its rule line: the public site shows
+ * suggestions without rule lines (founder, 25 Oct 2026); the workspace keeps them. */
+function OpenedCard({ view, label, shop, monogram, path, sample }: {
+  view: AgentView; label: string; shop: string; monogram: string; path: string; sample: string;
+}) {
   const card = view.suggestions.find((s) => s.key === "overdue") ?? view.suggestions[0];
   return (
     <div className="aw pk-card" role="img" aria-label={label}>
+      <div className="aw-bar" aria-hidden="true">
+        <span className="aw-mono">{monogram}</span>
+        <b>{shop}</b>
+        <SampleMark label={sample} />
+        <span className="aw-path">{path}</span>
+      </div>
       <div className="ag" dir={view.dir} lang={view.lang} aria-hidden="true">
         <article className="ag-card">
           <div className="ag-card-head">
@@ -25,7 +36,6 @@ function OpenedCard({ view, label }: { view: AgentView; label: string }) {
           </div>
           <div className="ag-card-body">
             <p className="ag-card-line"><Rich parts={card.line} /></p>
-            <p className="ag-rule">{card.rule}</p>
             {card.action && (
               <div className="ag-card-foot">
                 <span className={`ag-btn${card.primary ? " is-volt" : ""}`}>{card.action.label}</span>
@@ -47,15 +57,14 @@ export function AgentPage({ locale }: { locale: Locale }) {
   return (
     <Shell locale={locale} page="agent" cta={p.cta}>
       <ProductBar bar={p.bar} />
-      <ProductHero hero={p.hero}>
+      <ProductHero locale={locale} hero={p.hero}>
         <AgentFigure
           variant="agent"
           views={SAMPLES[locale]}
           order={SAMPLE_ORDER}
           text={t.agent}
-          figLabel={t.fig.label}
-          caption={p.figure.caption}
           label={p.figure.label}
+          more={p.figure.more}
           switcher
           feed
           headingLevel={2}
@@ -66,7 +75,7 @@ export function AgentPage({ locale }: { locale: Locale }) {
       <section className="sec pk-how" id="how" aria-labelledby="how-title">
         <div className="wrap">
           <div className="built-head" data-reveal>
-            <p className="eyebrow">{p.how.eyebrow}</p>
+            {p.how.eyebrow && <p className="eyebrow">{p.how.eyebrow}</p>}
             <h2 className="h1" id="how-title">{rich(p.how.title)}</h2>
           </div>
           <ol className="pk-steps">
@@ -79,9 +88,18 @@ export function AgentPage({ locale }: { locale: Locale }) {
             ))}
           </ol>
           <figure className="pk-card-fig" data-reveal>
-            <OpenedCard view={bakery} label={p.how.card} />
+            <figcaption className="sr-only">{t.agent.samples.bakery.fictional}</figcaption>
+            <div data-nosnippet>
+              <OpenedCard
+                view={bakery}
+                label={p.how.card}
+                shop={t.agent.samples.bakery.shop}
+                monogram={t.agent.samples.bakery.monogram}
+                path={t.agent.path}
+                sample={t.fig.sample}
+              />
+            </div>
             <p className="pk-card-under">{rich(p.how.under)}</p>
-            <FigCaption locale={locale} caption={p.how.caption} fictional={t.agent.samples.bakery.fictional} />
           </figure>
         </div>
       </section>
@@ -89,7 +107,7 @@ export function AgentPage({ locale }: { locale: Locale }) {
       <section className="sec pk-report" id="report" aria-labelledby="report-title">
         <div className="wrap pk-report-grid">
           <div className="built-head" data-reveal>
-            <p className="eyebrow">{p.report.eyebrow}</p>
+            {p.report.eyebrow && <p className="eyebrow">{p.report.eyebrow}</p>}
             <h2 className="h1" id="report-title">{rich(p.report.title)}</h2>
             <p className="lead">{rich(p.report.body)}</p>
           </div>
@@ -99,8 +117,6 @@ export function AgentPage({ locale }: { locale: Locale }) {
               start={SAMPLE_ORDER[0]}
               samples={REPORTS[locale]}
               words={reportWords(locale)}
-              figLabel={t.fig.label}
-              caption={p.report.report.caption}
               fictional={{
                 bakery: t.agent.samples.bakery.fictional,
                 salon: t.agent.samples.salon.fictional,
@@ -108,43 +124,6 @@ export function AgentPage({ locale }: { locale: Locale }) {
               }}
             />
           </figure>
-        </div>
-      </section>
-
-      <section className="sec pk-rules" id="rules" aria-labelledby="rules-title">
-        <div className="wrap">
-          <div className="built-head" data-reveal>
-            <p className="eyebrow">{p.rules.eyebrow}</p>
-            <h2 className="h1" id="rules-title">{rich(p.rules.title)}</h2>
-            <p className="lead">{rich(p.rules.body)}</p>
-          </div>
-          <table className="rules-table" data-reveal>
-            <thead>
-              <tr>
-                <th scope="col">{p.rules.heads[0]}</th>
-                <th scope="col">{p.rules.heads[1]}</th>
-              </tr>
-            </thead>
-            <tbody>
-              {p.rules.rows.map((row) => (
-                <tr key={row.name}>
-                  <th scope="row">{rich(row.name)}</th>
-                  <td>
-                    <span className="rules-line">{row.rule}</span>
-                    {row.note && (
-                      <span className="status-line rules-note">
-                        <span className="dot-pending" aria-hidden="true" />
-                        <span>{rich(row.note)}</span>
-                      </span>
-                    )}
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-          <ul className="rules-notes" data-reveal>
-            {p.rules.notes.map((note) => <li key={note}>{rich(note)}</li>)}
-          </ul>
         </div>
       </section>
 

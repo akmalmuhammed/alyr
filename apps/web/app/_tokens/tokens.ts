@@ -230,6 +230,13 @@ export const component = {
     "float": "0 18px 50px -14px rgb(21 23 26 / .32), 0 0 0 1px var(--hair-strong)",
     "grid": "rgb(167 173 181 / .2)"
   },
+  "document": {
+    "paper": "#ffffff",
+    "ink": "#15171a",
+    "ink-2": "#5f666d",
+    "rule": "#d8dcd7",
+    "band": "#eef0ec"
+  },
   "agent": {
     "bar-mix": "88%",
     "ghost-mix": "10%"
@@ -458,6 +465,19 @@ export const motion = {
     "medium": "280ms",
     "slow": "480ms"
   },
+  "pace": {
+    "pace": 1.3,
+    "play-1": "93.6ms",
+    "play-2": "187.2ms",
+    "play-3": "374.4ms",
+    "play-4": "561.6ms",
+    "play-stagger": "46.8ms",
+    "read-word": "339.3ms",
+    "dwell-beat": "520ms",
+    "dwell-min": "1200ms",
+    "live-beat": "5200ms",
+    "live-beat-phone": "6500ms"
+  },
   "ease": {
     "ease": "cubic-bezier(0.16, 1, 0.3, 1)",
     "spring": "linear(0, .1 2.4%, .38 6.2%, .7 11%, .9 15.6%, 1.03 20.6%, 1.07 25%, 1.06 30%, 1.02 37.5%, .995 47%, .99 55%, 1 70%, 1)",
@@ -581,6 +601,13 @@ export const dark = {
       "lift": "0 1px 0 rgb(255 255 255 / .04) inset, 0 0 0 1px var(--hair)",
       "float": "0 24px 60px -18px rgb(0 0 0 / .8), 0 0 0 1px var(--hair-strong)",
       "grid": "rgb(167 173 181 / .07)"
+    },
+    "document": {
+      "paper": "#d8dcd7",
+      "ink": "#15171a",
+      "ink-2": "#3a3f45",
+      "rule": "#c4c9cf",
+      "band": "#c9ccc6"
     },
     "agent": {
       "bar-mix": "78%",

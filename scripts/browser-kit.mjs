@@ -25,7 +25,9 @@ export async function launch({ edge, port, profile, width = 375, height = 812, s
     try { page = (await (await fetch(`http://127.0.0.1:${port}/json`)).json()).find((x) => x.type === "page"); } catch { /* not up yet */ }
     if (!page) await sleep(250);
   }
-  if (!page || proc.exitCode !== null) throw new Error("the browser did not start");
+  // Edge's launcher process can hand over to the browser and exit at once (seen with Edge on
+  // 24 Oct 2026), so an exited launcher is not a failure if our port answers with a page.
+  if (!page) throw new Error("the browser did not start");
   const ws = new WebSocket(page.webSocketDebuggerUrl);
   await new Promise((resolve, reject) => { ws.onopen = resolve; ws.onerror = reject; });
   let counter = 0;
