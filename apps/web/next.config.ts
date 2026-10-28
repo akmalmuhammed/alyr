@@ -59,8 +59,14 @@ const nextConfig: NextConfig = {
     return [
       { source: "/api/:path*", destination: `${api}/api/:path*` },
       { source: "/sim/:path*", destination: `${api}/sim/:path*` },
+      // Product analytics (D-070): the browser sends events to us and we forward them to
+      // PostHog's EU region, so the security policy above stays "self only".
+      { source: "/ingest/static/:path*", destination: "https://eu-assets.i.posthog.com/static/:path*" },
+      { source: "/ingest/:path*", destination: "https://eu.i.posthog.com/:path*" },
     ];
   },
+  // PostHog's addresses end in a slash (/ingest/e/); redirecting them would drop the event.
+  skipTrailingSlashRedirect: true,
 };
 
 export default nextConfig;

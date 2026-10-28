@@ -57,6 +57,8 @@ Status: **Accepted** (in force), **Proposed** (waiting for the founder), **Super
 | D-063 | Order businesses get a self-serve onboarding path (a third way, `orders`) made of thin screens over the Catalog's own APIs; one flow for both doors, automatic first, money later | Accepted |
 | D-064 | The owner's test order is marked in the database (a trigger sets `orders.is_test`), counted nowhere (a guard test reads every query), and cancelled with its stock returned when the test ends | Accepted |
 | D-062 | The homepage hero is the explainer film (one afternoon at Qirfa Bakery in the product's own screens, three lanes at once, ending on the ALYR Agent home): "the product is the illustration" in motion; the hero's live ALYR Agent figure leaves the hero | Accepted |
+| D-070 | Product analytics with PostHog (EU), at two levels the visitor chooses: cookieless counting by default, cookies and masked recordings with consent; never customer pages, the inbox or names | Accepted |
+| D-071 | The homepage plays like a video: the film starts at load and moves at once; its Pause controls are not on show (only on hover, keyboard focus or while paused); a click on the film pauses it | Accepted |
 
 ---
 
@@ -1401,4 +1403,74 @@ Nothing claims more than the page, as before.
 - The headline stays clear of the fold and is the page's slogan; the homepage's Lighthouse no worse than before.
 
 **Revisit when** the founder or a visitor finds it busy or slow (`--pace` tunes all of it), or the product's screens change (the film draws them from the products frame's drawings and the real dashboard, so they follow).
+
+
+## D-070 · Product analytics with PostHog, at two levels the visitor chooses
+**Date** 28–29 Oct 2026 · **Status** Accepted. The founder set up PostHog (startup credits) and asked for "the best out of this solution" on 29 Oct, after checking that no Qatar rule forbids it.
+
+**Decision.** ALYR measures alyr.qa, onboarding (`/start`) and the workspace (`/app`) with PostHog Cloud, EU region. A small consent prompt (English and Arabic) offers two levels.
+
+*Until a choice is made, or after "No thanks": counted without cookies* (PostHog's cookieless server hash, project setting on). This level covers:
+- page views;
+- clicks (autocapture);
+- errors and Core Web Vitals;
+- named events:
+  - `cta_click` (button, channel, page);
+  - the onboarding steps (`onboarding_*`).
+
+The browser keeps only the choice and, for the visit, the link's source code.
+
+*After "Allow":*
+- cookies, so a returning visitor is recognised;
+- session recordings and heatmaps;
+- surveys;
+- a signed-in owner known by their user ID and their business's ID (group analytics).
+
+**Never, at either level** (enforced in `apps/web/app/_analytics/posthog.ts` and in the PostHog project's settings):
+- **Pages that never load PostHog:** the customer pages (`/s`, `/b`, `/pay`, `/t`) and the back office (`/ops`). They are also on the project's recording blocklist.
+- **No recording of the inbox, ever.** This is the founder's rule that ALYR never sees customers' conversations.
+- **In onboarding and the workspace, all text is masked in recordings and in captured clicks.** That covers labels too, so a click is known by its place on the screen, not by what it says.
+- **Every input is masked everywhere.**
+- **No names, emails or phone numbers as properties.**
+- **No IDs or query strings in addresses** beyond the source codes. Addresses are cut to their path, with IDs replaced.
+- **No network bodies or headers, and no console logs.**
+- **IP addresses are discarded.**
+
+Recordings are kept 30 days, and the shortest kept is 2 seconds.
+
+**Is this allowed in Qatar?** No Qatar rule we found forbids analytics or recordings. The PDPPL (Law 13 of 2016) asks for transparency, a lawful purpose, security and respect for people's choices, and secondary sources read it as asking for consent to cookies and tracking. This setup meets the stricter reading: cookies and recordings only with consent, a notice that says what happens, and the choice can be changed on `/privacy`. The data sits in the EU, which the register lists. To confirm with the lawyer (ALY-51).
+
+**How it travels.** Browsers send events to our own address, `/ingest`, which forwards them to PostHog's EU region: Next.js rewrites in the app, `site-worker.js` on alyr.qa. So the security policy stays "self only" and ad blockers do not break the counts. The worker strips cookies and passes the visitor's address only for the cookieless hash.
+
+**Key.** `NEXT_PUBLIC_POSTHOG_KEY` (the project key, public by design) at build time:
+- the repository variable `POSTHOG_PROJECT_KEY` for the Google Cloud deploy;
+- `.env.local` for the site build.
+
+Without it, analytics is off everywhere.
+
+**Dashboard.** "ALYR growth" in PostHog, with 10 charts:
+- site visits and page views;
+- contact presses by channel, page and source;
+- visit to contact press;
+- the onboarding funnel from code sent to finish;
+- steps reached;
+- businesses created by type;
+- workspace sections.
+
+**Not yet:**
+- server-side events from the API (booking made, order paid, the money-back promise);
+- experiments (the homepage headline first);
+- the first surveys.
+
+## D-071 · The homepage plays like a video
+**Date** 29 Oct 2026 · **Status** Accepted (the founder, 29 Oct 2026: "all animations should start right away. In the homepage also remove the pause button, it should feel like a video. Now it's taking a few seconds to start the motion"; asked how far, the founder chose "hide until hover or Tab") · Branch `aly-motion-now`
+
+**Decision.**
+- **The film starts at load,** not when the page is idle, and each of its steps waits a frame, not an idle moment. Its first frame (`STILL`, the HTML and the reduced-motion still) is the last moment of the ALYR Agent home before the fold closes, so it moves at once. Measured on this machine against main: the film started at about 0.7 s instead of 3.3 s on a desktop, and its first big move came about 0.35 s later instead of 2.8 s; with the CPU slowed 4x, about 3.4 s instead of 6.5 s.
+- **The homepage's Pause controls are not on show** (the film's, How we work's, the products frame's and the flow's): each fades in while the pointer is over its figure, with keyboard focus, or while paused, as a video player's controls do. A click on the film pauses it and plays it again. This keeps a way to stop the motion (WCAG 2.2.2, D-059) without a control on screen.
+- The product pages' Pause controls are unchanged.
+
+**Cost.** The film's canvas is drawn inside the window Lighthouse measures: on the mobile run LCP is unchanged (2.41 s), Total Blocking Time rises (about 300 to 700 ms against 100 to 200 ms) and Speed Index too (the film moves), so the lowest Performance score of three runs falls from about 95 to between 80 and 95 (/ 80, /ar 95 on the last check; axe clean on both at 1440 and 390, light and dark). It changes D-062's condition "the homepage's Lighthouse no worse than before": the founder put the motion first. The re-styling cost of the homepage's `:root:has(...)` rules (task "Remove :root:has() style recalc cost on the site") is most of that blocking time.
+
+**Revisit when** the `:root:has()` work lands (measure again), or the founder finds the hidden control hard to find.
 
