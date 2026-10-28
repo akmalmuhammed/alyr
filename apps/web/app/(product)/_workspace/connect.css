@@ -1,0 +1,75 @@
+/* The connection screen (ALY-142). It builds on the Catalog's patterns (catalog.css) and takes
+   every colour, size and radius from the workspace tokens, so light, dark and right-to-left come
+   for free. Phone first: cards stack, rows keep their meaning at 375 px, nothing scrolls sideways,
+   targets are 44 px or more. Logical properties only. */
+
+.cn { display: flex; flex-direction: column; gap: 18px; min-width: 0; }
+.cn .sh-eyebrow { color: var(--ink-2); }
+.cn-card { display: flex; flex-direction: column; gap: 12px; min-width: 0; padding: 16px; border-radius: 14px; background: var(--sheet); box-shadow: 0 0 0 1px var(--hair) inset; }
+.cn-card h2 { margin: 0; font-size: var(--ui-body); font-weight: 600; }
+.cn-h3 { margin: 6px 0 0; font-size: var(--ui-small); font-weight: 600; color: var(--ink-2); }
+.cn-intro, .cn-note, .cn-sheet-text { margin: 0; max-width: 62ch; font-size: var(--ui-body-sm); line-height: 1.55; color: var(--ink-2); }
+.cn-sheet-text { color: var(--ink); }
+.cn-hint { margin: 0; font-size: var(--ui-caption); line-height: 1.45; color: var(--ink-2); }
+.cn-error { margin: 0; font-size: var(--ui-caption); font-weight: 500; color: var(--bad); }
+.cn-ok { margin: 0; font-size: var(--ui-body-sm); }
+.cn-bad { color: var(--bad); }
+
+/* what the shop confirms */
+.cn-points { margin: 0; padding-inline-start: 22px; display: grid; gap: 8px; font-size: var(--ui-body-sm); line-height: 1.55; }
+.cn-points li::marker { font-family: var(--font-ui-mono); color: var(--ink-2); }
+
+/* rows: a key, a kind of document, an address, an import */
+.cn-rows { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; border-radius: 12px; box-shadow: 0 0 0 1px var(--hair) inset; overflow: hidden; }
+.cn-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; min-height: 64px; padding: 10px 14px; min-width: 0; }
+.cn-row + .cn-row { border-top: 1px solid var(--hair); }
+.cn-row-text { display: flex; flex-direction: column; gap: 4px; min-width: 0; flex: 1; }
+.cn-row-text b { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; font-size: var(--ui-body-sm); font-weight: 600; overflow-wrap: anywhere; }
+.cn-row-text small { font-size: var(--ui-caption); line-height: 1.45; color: var(--ink-2); overflow-wrap: anywhere; }
+.cn-code { display: block; font-family: var(--font-ui-mono); font-size: var(--ui-caption); color: var(--ink); overflow-wrap: anywhere; word-break: break-all; unicode-bidi: isolate; }
+.cn-wide { padding: 10px 12px; border-radius: 10px; background: var(--raise); box-shadow: 0 0 0 1px var(--hair) inset; }
+.cn-pills { display: flex; flex-wrap: wrap; gap: 4px; }
+.cn-tag { display: inline-flex; align-items: center; min-height: 22px; max-width: 100%; padding: 2px 9px; border-radius: 11px; font-size: var(--ui-caption); font-weight: 500; color: var(--ink-2); box-shadow: 0 0 0 1px var(--hair-2) inset; overflow-wrap: anywhere; }
+.cn-sep { color: var(--ink-2); }
+@media (max-width: 40rem) {
+  .cn-row { flex-wrap: wrap; align-items: flex-start; }
+  .cn-row > .btn { margin-inline-start: auto; }
+}
+
+/* an empty list is the shape of what will appear */
+.cn-empty { margin: 0; padding: 18px 14px; border-radius: 12px; border: 1px dashed var(--hair-2); font-size: var(--ui-body-sm); color: var(--ink-2); }
+
+/* the entry from the Connections screen */
+.cn-link { display: flex; align-items: center; gap: 14px; min-height: 64px; margin-top: 12px; padding: 14px 16px; border-radius: 14px; background: var(--sheet); color: var(--ink); text-decoration: none; box-shadow: 0 0 0 1px var(--hair) inset; }
+.cn-link:hover { box-shadow: 0 0 0 1px var(--hair-2) inset; }
+/* the glyph marks a place, not a state: the connection rows' quiet one, not the Volt one */
+.cn-link .sh-glyph { width: 44px; height: 44px; border-radius: 12px; background: var(--raise); color: var(--ink); box-shadow: 0 0 0 1px var(--hair) inset; }
+.cn-link-text { display: flex; flex-direction: column; gap: 2px; min-width: 0; flex: 1; }
+.cn-link-text b { font-size: var(--ui-body-sm); font-weight: 600; }
+.cn-link-text small { font-size: var(--ui-caption); line-height: 1.45; color: var(--ink-2); }
+.cn-link-arrow { display: inline-flex; flex: none; color: var(--ink-2); }
+.sh[dir="rtl"] .cn-link-arrow { transform: scaleX(-1); }
+
+/* forms inside sheets */
+.cn-form { display: flex; flex-direction: column; gap: 14px; min-width: 0; }
+.cn-fieldset { margin: 0; padding: 0; border: 0; display: flex; flex-direction: column; gap: 4px; min-width: 0; }
+.cn-fieldset legend { padding: 0; margin-bottom: 4px; font-size: var(--ui-small); font-weight: 500; color: var(--ink-2); }
+.cn-check-text { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.cn-check-text b { font-size: var(--ui-body-sm); font-weight: 600; }
+.cn-check-text small { font-size: var(--ui-caption); line-height: 1.4; color: var(--ink-2); overflow-wrap: anywhere; }
+.cn-map { display: grid; gap: 12px; grid-template-columns: repeat(auto-fill, minmax(min(100%, 15rem), 1fr)); }
+.cn-summary { margin: 0; display: flex; flex-wrap: wrap; align-items: center; gap: 8px; font-size: var(--ui-body-sm); }
+.cn-problems .cn-row { min-height: 0; }
+.cn-remember { display: flex; flex-direction: column; align-items: flex-start; gap: 10px; padding-top: 6px; }
+.cn-remember .ct-field { align-self: stretch; }
+
+/* a secret, shown once */
+.cn-secret { display: flex; flex-direction: column; align-items: flex-start; gap: 10px; min-width: 0; }
+.cn-secret h3 { margin: 0; font-size: var(--ui-body); font-weight: 600; }
+.cn-secret-box { align-self: stretch; min-height: 48px; padding: 10px 12px; resize: none; word-break: break-all; line-height: 1.5; border: 0; border-radius: 12px; background: var(--raise); color: var(--ink); font-family: var(--font-ui-mono); font-size: var(--ui-caption); box-shadow: 0 0 0 1px var(--hair-2) inset; unicode-bidi: isolate; text-align: start; }
+.cn-secret-box:focus-visible { outline: none; box-shadow: 0 0 0 1px var(--ink), 0 0 0 4px var(--volt-wash); }
+
+/* the log of a webhook */
+.cn-log .cn-row { min-height: 0; align-items: flex-start; }
+.cn-snippet { font-family: var(--font-ui-mono); color: var(--ink-2); }
+.cn-dev .cn-hint { max-width: 62ch; }

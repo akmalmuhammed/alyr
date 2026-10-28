@@ -1,0 +1,2572 @@
+{
+ "bakery": {
+  "categories": {
+   "categories": [
+    {
+     "name": "Cakes",
+     "name_ar": "الكيك",
+     "sort": 0
+    },
+    {
+     "name": "Pastries",
+     "name_ar": "المعجنات",
+     "sort": 1
+    },
+    {
+     "name": "Savouries",
+     "name_ar": "المالحات",
+     "sort": 2
+    },
+    {
+     "name": "Sweets",
+     "name_ar": "الحلويات",
+     "sort": 3
+    },
+    {
+     "name": "Bread",
+     "name_ar": "الخبز",
+     "sort": 4
+    }
+   ]
+  },
+  "export_header": "Item ID,Item code (ALYR),Name (English),Name (Arabic),SKU,Category,Price (QAR),Sale price (QAR),Sale starts,Sale ends,Sold by,Units in a pack,Smallest order,Tags,Status,How it runs out,Available,Size or colour,Size or colour (Arabic),Size or colour SKU,Price difference (QAR),In stock,Low-stock number,Per day,Description,Description (Arabic),Photos",
+  "full_item_status": {
+   "always": 200,
+   "count": 200,
+   "daily_limit": 200,
+   "switch": 200
+  },
+  "home_cards": [
+   "unanswered",
+   "orders_today",
+   "sold_out",
+   "low_stock",
+   "paid_today"
+  ],
+  "modules": [
+   "catalog",
+   "inbox",
+   "orders",
+   "payments"
+  ],
+  "nav_account": [
+   [
+    "products",
+    {
+     "ar": "المنتجات",
+     "en": "Products"
+    }
+   ],
+   [
+    "connections",
+    {
+     "ar": "الاتصالات",
+     "en": "Connections"
+    }
+   ],
+   [
+    "team",
+    {
+     "ar": "الفريق",
+     "en": "Team"
+    }
+   ]
+  ],
+  "nav_products": [
+   [
+    "inbox",
+    {
+     "ar": "المحادثات",
+     "en": "Inbox"
+    }
+   ],
+   [
+    "orders",
+    {
+     "ar": "الطلبات",
+     "en": "Orders"
+    }
+   ],
+   [
+    "catalog",
+    {
+     "ar": "القائمة",
+     "en": "Menu"
+    }
+   ]
+  ],
+  "onboarding_catalog": {
+   "alerts": {
+    "low_stock": true,
+    "sold_out": true
+   },
+   "focus": [
+    "schedule"
+   ],
+   "gets": [
+    {
+     "ar": "قائمة بما تخبزه مع الصور، بالعربية والإنجليزية.",
+     "en": "A menu of what you bake, with photos, in English and Arabic."
+    },
+    {
+     "ar": "عدد تستطيع تحضيره كل يوم. ينفد الصنف لذلك اليوم عند اكتمال العدد، ويبدأ من جديد صباح اليوم التالي.",
+     "en": "A number you can make each day. An item is sold out for the day when it is used, and starts again the next morning."
+    },
+    {
+     "ar": "طلبات لليوم التالي: الصنف الجديد يحتاج إلى يوم مهلة وطلباً قبل السادسة مساءً، ويختار العميل يوم الاستلام.",
+     "en": "Orders for tomorrow: a new item asks for one day's notice and an order before 6 pm, and the customer picks the pickup day."
+    },
+    {
+     "ar": "أصناف حسب الطلب، مثل كيكة المناسبات، لا تنفد.",
+     "en": "Made-to-order items, like a celebration cake, that never run out."
+    },
+    {
+     "ar": "أضف أرقام مديريك في «الموظفون على واتساب» ضمن الإعدادات، وتراسلهم ALYR حين يوشك صنف على النفاد أو ينفد.",
+     "en": "Add your managers' numbers under Staff on WhatsApp in the settings, and ALYR messages them when something is nearly gone or sold out."
+    }
+   ],
+   "layout": {
+    "pickup_date": true,
+    "quick_quantity": false,
+    "same_as_last": false,
+    "show_sku": false,
+    "style": "menu"
+   },
+   "low_stock_at": 3,
+   "new_item": {
+    "cutoff": "18:00",
+    "lead_days": 1,
+    "rule": "daily_limit",
+    "unit": "piece"
+   },
+   "optional": false,
+   "report_lines": [
+    "make_tomorrow",
+    "sold_out_now",
+    "top_items"
+   ],
+   "samples": 6,
+   "section": {
+    "name": "Menu",
+    "name_ar": "القائمة",
+    "sub": "What you bake: photos, prices, how many each day and when to order by.",
+    "sub_ar": "ما تخبزه: الصور والأسعار والعدد اليومي وآخر موعد للطلب."
+   },
+   "sold_out": "grey",
+   "starting_categories": [
+    {
+     "name": "Cakes",
+     "name_ar": "الكيك"
+    },
+    {
+     "name": "Pastries",
+     "name_ar": "المعجنات"
+    },
+    {
+     "name": "Savouries",
+     "name_ar": "المالحات"
+    },
+    {
+     "name": "Sweets",
+     "name_ar": "الحلويات"
+    },
+    {
+     "name": "Bread",
+     "name_ar": "الخبز"
+    }
+   ],
+   "type": "bakery"
+  },
+  "samples": {
+   "all": 10,
+   "archived": 0,
+   "draft": 0,
+   "low_stock": 0,
+   "sample": 6,
+   "sold_out": 0,
+   "stocked": 2
+  },
+  "settings": {
+   "agents_edit_items": false,
+   "day_starts": "00:00",
+   "hold_minutes": 30,
+   "low_stock_at": 3,
+   "sold_out_display": "grey",
+   "whatsapp_mode": "link",
+   "whatsapp_number": "",
+   "wholesale_layout": false
+  },
+  "setup": {
+   "alerts": {
+    "low_stock": true,
+    "sold_out": true
+   },
+   "focus": [
+    "schedule"
+   ],
+   "layout": {
+    "pickup_date": true,
+    "quick_quantity": false,
+    "same_as_last": false,
+    "show_sku": false,
+    "style": "menu"
+   },
+   "low_stock_at": 3,
+   "new_item": {
+    "cutoff": "18:00",
+    "lead_days": 1,
+    "rule": "daily_limit",
+    "unit": "piece"
+   },
+   "optional": false,
+   "report_lines": [
+    "make_tomorrow",
+    "sold_out_now",
+    "top_items"
+   ],
+   "samples": 6,
+   "section": {
+    "name": "Menu",
+    "name_ar": "القائمة",
+    "sub": "What you bake: photos, prices, how many each day and when to order by.",
+    "sub_ar": "ما تخبزه: الصور والأسعار والعدد اليومي وآخر موعد للطلب."
+   },
+   "sold_out": "grey",
+   "type": "bakery"
+  },
+  "setup_status": 200,
+  "steps": [
+   [
+    "chat",
+    [
+     {
+      "ar": "اربط رقم واتساب",
+      "en": "Connect your WhatsApp number"
+     },
+     {
+      "ar": "أضف القائمة",
+      "en": "Add your menu"
+     },
+     {
+      "ar": "اربط بوابة الدفع",
+      "en": "Connect your payment provider"
+     }
+    ]
+   ]
+  ],
+  "store_catalog": {
+   "layout": {
+    "pickup_date": true,
+    "quick_quantity": false,
+    "same_as_last": false,
+    "show_sku": false,
+    "style": "menu"
+   },
+   "section": {
+    "name": "Menu",
+    "name_ar": "القائمة"
+   },
+   "sold_out": "grey",
+   "type": "bakery"
+  },
+  "store_settings": {
+   "sold_out_display": "grey",
+   "whatsapp_mode": "link",
+   "whatsapp_number": "",
+   "wholesale_layout": false
+  },
+  "store_status": 200,
+  "template_header": "Name (English),Name (Arabic),SKU,Category,Price (QAR),Size or colour,Size or colour (Arabic),Size or colour SKU,Price difference (QAR),In stock,Description,Description (Arabic),Photos"
+ },
+ "clinic": {
+  "categories": {
+   "categories": [
+    {
+     "name": "Dental care",
+     "name_ar": "العناية بالأسنان",
+     "sort": 0
+    }
+   ]
+  },
+  "export_header": "Item ID,Item code (ALYR),Name (English),Name (Arabic),SKU,Category,Price (QAR),Sale price (QAR),Sale starts,Sale ends,Sold by,Units in a pack,Smallest order,Tags,Status,How it runs out,Available,Size or colour,Size or colour (Arabic),Size or colour SKU,Price difference (QAR),In stock,Low-stock number,Per day,Description,Description (Arabic),Photos",
+  "full_item_status": {
+   "always": 200,
+   "count": 200,
+   "daily_limit": 200,
+   "switch": 200
+  },
+  "home_cards": [
+   "unanswered",
+   "bookings_today",
+   "sold_out",
+   "low_stock",
+   "paid_today"
+  ],
+  "modules": [
+   "bookings",
+   "catalog",
+   "inbox",
+   "payments"
+  ],
+  "nav_account": [
+   [
+    "products",
+    {
+     "ar": "منتجات ALYR",
+     "en": "ALYR products"
+    }
+   ],
+   [
+    "connections",
+    {
+     "ar": "الاتصالات",
+     "en": "Connections"
+    }
+   ],
+   [
+    "team",
+    {
+     "ar": "الفريق",
+     "en": "Team"
+    }
+   ]
+  ],
+  "nav_products": [
+   [
+    "inbox",
+    {
+     "ar": "المحادثات",
+     "en": "Inbox"
+    }
+   ],
+   [
+    "bookings",
+    {
+     "ar": "الحجوزات",
+     "en": "Bookings"
+    }
+   ],
+   [
+    "catalog",
+    {
+     "ar": "المنتجات",
+     "en": "Products"
+    }
+   ]
+  ],
+  "onboarding_catalog": {
+   "alerts": {
+    "low_stock": false,
+    "sold_out": false
+   },
+   "focus": [],
+   "gets": [
+    {
+     "ar": "مكان لمنتجات العناية التي تعرضها على المرضى، بالصور والأسعار.",
+     "en": "A place for care products you offer to patients, with photos and prices."
+    },
+    {
+     "ar": "حجوزاتك تعمل كما كانت تماماً. هذا إضافي ويمكنك تركه فارغاً.",
+     "en": "Your bookings work exactly as before. This is extra, and you can leave it empty."
+    }
+   ],
+   "layout": {
+    "pickup_date": false,
+    "quick_quantity": false,
+    "same_as_last": false,
+    "show_sku": false,
+    "style": "grid"
+   },
+   "low_stock_at": 3,
+   "new_item": {
+    "cutoff": null,
+    "lead_days": null,
+    "rule": "switch",
+    "unit": "piece"
+   },
+   "optional": true,
+   "report_lines": [
+    "bookings_only"
+   ],
+   "samples": 2,
+   "section": {
+    "name": "Products",
+    "name_ar": "المنتجات",
+    "sub": "Products you sell beside your services: photos and prices. Optional.",
+    "sub_ar": "منتجات تبيعها إلى جانب خدماتك: الصور والأسعار. اختياري."
+   },
+   "sold_out": "grey",
+   "starting_categories": [
+    {
+     "name": "Dental care",
+     "name_ar": "العناية بالأسنان"
+    }
+   ],
+   "type": "clinic"
+  },
+  "samples": {
+   "all": 6,
+   "archived": 0,
+   "draft": 0,
+   "low_stock": 0,
+   "sample": 2,
+   "sold_out": 0,
+   "stocked": 2
+  },
+  "settings": {
+   "agents_edit_items": false,
+   "day_starts": "00:00",
+   "hold_minutes": 30,
+   "low_stock_at": 3,
+   "sold_out_display": "grey",
+   "whatsapp_mode": "link",
+   "whatsapp_number": "",
+   "wholesale_layout": false
+  },
+  "setup": {
+   "alerts": {
+    "low_stock": false,
+    "sold_out": false
+   },
+   "focus": [],
+   "layout": {
+    "pickup_date": false,
+    "quick_quantity": false,
+    "same_as_last": false,
+    "show_sku": false,
+    "style": "grid"
+   },
+   "low_stock_at": 3,
+   "new_item": {
+    "cutoff": null,
+    "lead_days": null,
+    "rule": "switch",
+    "unit": "piece"
+   },
+   "optional": true,
+   "report_lines": [
+    "bookings_only"
+   ],
+   "samples": 2,
+   "section": {
+    "name": "Products",
+    "name_ar": "المنتجات",
+    "sub": "Products you sell beside your services: photos and prices. Optional.",
+    "sub_ar": "منتجات تبيعها إلى جانب خدماتك: الصور والأسعار. اختياري."
+   },
+   "sold_out": "grey",
+   "type": "clinic"
+  },
+  "setup_status": 200,
+  "steps": [
+   [
+    "bookings",
+    [
+     {
+      "ar": "اربط رقم واتساب",
+      "en": "Connect your WhatsApp number"
+     },
+     {
+      "ar": "أضف الخدمات المتاحة للحجز",
+      "en": "Add the services customers can book"
+     },
+     {
+      "ar": "حدّد ساعات العمل",
+      "en": "Set your opening hours"
+     },
+     {
+      "ar": "اربط بوابة الدفع",
+      "en": "Connect your payment provider"
+     }
+    ]
+   ]
+  ],
+  "store_status": 404,
+  "template_header": "Name (English),Name (Arabic),SKU,Category,Price (QAR),Size or colour,Size or colour (Arabic),Size or colour SKU,Price difference (QAR),In stock,Description,Description (Arabic),Photos"
+ },
+ "fashion": {
+  "categories": {
+   "categories": [
+    {
+     "name": "Abayas",
+     "name_ar": "العبايات",
+     "sort": 0
+    },
+    {
+     "name": "Clothing",
+     "name_ar": "الملابس",
+     "sort": 1
+    },
+    {
+     "name": "Bags",
+     "name_ar": "الحقائب",
+     "sort": 2
+    },
+    {
+     "name": "Accessories",
+     "name_ar": "الإكسسوارات",
+     "sort": 3
+    },
+    {
+     "name": "Gifts",
+     "name_ar": "الهدايا",
+     "sort": 4
+    }
+   ]
+  },
+  "export_header": "Item ID,Item code (ALYR),Name (English),Name (Arabic),SKU,Category,Price (QAR),Sale price (QAR),Sale starts,Sale ends,Sold by,Units in a pack,Smallest order,Tags,Status,How it runs out,Available,Size or colour,Size or colour (Arabic),Size or colour SKU,Price difference (QAR),In stock,Low-stock number,Per day,Description,Description (Arabic),Photos",
+  "full_item_status": {
+   "always": 200,
+   "count": 200,
+   "daily_limit": 200,
+   "switch": 200
+  },
+  "home_cards": [
+   "unanswered",
+   "orders_today",
+   "sold_out",
+   "low_stock",
+   "paid_today"
+  ],
+  "modules": [
+   "catalog",
+   "inbox",
+   "orders",
+   "payments"
+  ],
+  "nav_account": [
+   [
+    "products",
+    {
+     "ar": "منتجات ALYR",
+     "en": "ALYR products"
+    }
+   ],
+   [
+    "connections",
+    {
+     "ar": "الاتصالات",
+     "en": "Connections"
+    }
+   ],
+   [
+    "team",
+    {
+     "ar": "الفريق",
+     "en": "Team"
+    }
+   ]
+  ],
+  "nav_products": [
+   [
+    "inbox",
+    {
+     "ar": "المحادثات",
+     "en": "Inbox"
+    }
+   ],
+   [
+    "orders",
+    {
+     "ar": "الطلبات",
+     "en": "Orders"
+    }
+   ],
+   [
+    "catalog",
+    {
+     "ar": "المنتجات",
+     "en": "Products"
+    }
+   ]
+  ],
+  "onboarding_catalog": {
+   "alerts": {
+    "low_stock": true,
+    "sold_out": true
+   },
+   "focus": [
+    "variants"
+   ],
+   "gets": [
+    {
+     "ar": "الصور أولاً: التقط صوراً أو اخترها وتصنع ALYR مسودة لكل صورة. وتضيف أنت الاسم والسعر.",
+     "en": "Photos first: take or choose pictures and ALYR makes a draft item for each one. You add the name and price."
+    },
+    {
+     "ar": "مقاسات وألوان، ولكل منها مخزونه.",
+     "en": "Sizes and colours, each with its own stock."
+    },
+    {
+     "ar": "سعر مخفّض بتاريخ انتهاء.",
+     "en": "A sale price with an end date."
+    },
+    {
+     "ar": "رابط لكل صنف، لترسله في محادثة أو تشاركه على إنستغرام. أضف رقم واتساب في الإعدادات ليُحوَّل إليه العميل الذي يفتح الرابط ليطلب.",
+     "en": "A link for every item, to send in a chat or share on Instagram. Add your WhatsApp number in the settings, and a customer who opens it is sent there to order."
+    },
+    {
+     "ar": "صفحة الطلب شبكة صور مع اختيار المقاس واللون. القطعة المنتهية تبقى ظاهرة باهتة.",
+     "en": "Your order page is a photo grid with a size and colour picker. A sold-out piece stays visible, greyed out."
+    },
+    {
+     "ar": "أضف أرقام مديريك في «الموظفون على واتساب» ضمن الإعدادات، وتراسلهم ALYR حين يبقى من أحد المقاسات 2 أو أقل.",
+     "en": "Add your managers' numbers under Staff on WhatsApp in the settings, and ALYR messages them when a size is down to 2 or fewer."
+    },
+    {
+     "ar": "يُخبَر العميل الذي طلب على واتساب أن يعرف حين تعود القطعة المنتهية.",
+     "en": "A customer who asks on WhatsApp is told when a sold-out piece is back."
+    }
+   ],
+   "layout": {
+    "pickup_date": false,
+    "quick_quantity": false,
+    "same_as_last": false,
+    "show_sku": false,
+    "style": "grid"
+   },
+   "low_stock_at": 2,
+   "new_item": {
+    "cutoff": null,
+    "lead_days": null,
+    "rule": "count",
+    "unit": "piece"
+   },
+   "optional": false,
+   "report_lines": [
+    "low_stock",
+    "back_in_stock",
+    "top_items"
+   ],
+   "samples": 6,
+   "section": {
+    "name": "Products",
+    "name_ar": "المنتجات",
+    "sub": "Your pieces: photos, sizes, colours and what is left of each.",
+    "sub_ar": "قطعك: الصور والمقاسات والألوان والمتبقي من كل منها."
+   },
+   "sold_out": "grey",
+   "starting_categories": [
+    {
+     "name": "Abayas",
+     "name_ar": "العبايات"
+    },
+    {
+     "name": "Clothing",
+     "name_ar": "الملابس"
+    },
+    {
+     "name": "Bags",
+     "name_ar": "الحقائب"
+    },
+    {
+     "name": "Accessories",
+     "name_ar": "الإكسسوارات"
+    },
+    {
+     "name": "Gifts",
+     "name_ar": "الهدايا"
+    }
+   ],
+   "type": "fashion"
+  },
+  "samples": {
+   "all": 10,
+   "archived": 0,
+   "draft": 0,
+   "low_stock": 0,
+   "sample": 6,
+   "sold_out": 0,
+   "stocked": 2
+  },
+  "settings": {
+   "agents_edit_items": false,
+   "day_starts": "00:00",
+   "hold_minutes": 30,
+   "low_stock_at": 2,
+   "sold_out_display": "grey",
+   "whatsapp_mode": "link",
+   "whatsapp_number": "",
+   "wholesale_layout": false
+  },
+  "setup": {
+   "alerts": {
+    "low_stock": true,
+    "sold_out": true
+   },
+   "focus": [
+    "variants"
+   ],
+   "layout": {
+    "pickup_date": false,
+    "quick_quantity": false,
+    "same_as_last": false,
+    "show_sku": false,
+    "style": "grid"
+   },
+   "low_stock_at": 2,
+   "new_item": {
+    "cutoff": null,
+    "lead_days": null,
+    "rule": "count",
+    "unit": "piece"
+   },
+   "optional": false,
+   "report_lines": [
+    "low_stock",
+    "back_in_stock",
+    "top_items"
+   ],
+   "samples": 6,
+   "section": {
+    "name": "Products",
+    "name_ar": "المنتجات",
+    "sub": "Your pieces: photos, sizes, colours and what is left of each.",
+    "sub_ar": "قطعك: الصور والمقاسات والألوان والمتبقي من كل منها."
+   },
+   "sold_out": "grey",
+   "type": "fashion"
+  },
+  "setup_status": 200,
+  "steps": [
+   [
+    "chat",
+    [
+     {
+      "ar": "اربط رقم واتساب",
+      "en": "Connect your WhatsApp number"
+     },
+     {
+      "ar": "أضف المنتجات",
+      "en": "Add your products"
+     },
+     {
+      "ar": "اربط بوابة الدفع",
+      "en": "Connect your payment provider"
+     }
+    ]
+   ]
+  ],
+  "store_catalog": {
+   "layout": {
+    "pickup_date": false,
+    "quick_quantity": false,
+    "same_as_last": false,
+    "show_sku": false,
+    "style": "grid"
+   },
+   "section": {
+    "name": "Products",
+    "name_ar": "المنتجات"
+   },
+   "sold_out": "grey",
+   "type": "fashion"
+  },
+  "store_settings": {
+   "sold_out_display": "grey",
+   "whatsapp_mode": "link",
+   "whatsapp_number": "",
+   "wholesale_layout": false
+  },
+  "store_status": 200,
+  "template_header": "Name (English),Name (Arabic),SKU,Category,Price (QAR),Size or colour,Size or colour (Arabic),Size or colour SKU,Price difference (QAR),In stock,Description,Description (Arabic),Photos"
+ },
+ "grocery": {
+  "categories": {
+   "categories": [
+    {
+     "name": "Fruit & vegetables",
+     "name_ar": "الفواكه والخضار",
+     "sort": 0
+    },
+    {
+     "name": "Dairy & eggs",
+     "name_ar": "الألبان والبيض",
+     "sort": 1
+    },
+    {
+     "name": "Pantry",
+     "name_ar": "المواد الغذائية",
+     "sort": 2
+    },
+    {
+     "name": "Drinks",
+     "name_ar": "المشروبات",
+     "sort": 3
+    },
+    {
+     "name": "Household",
+     "name_ar": "المنزلية",
+     "sort": 4
+    }
+   ]
+  },
+  "export_header": "Item ID,Item code (ALYR),Name (English),Name (Arabic),SKU,Category,Price (QAR),Sale price (QAR),Sale starts,Sale ends,Sold by,Units in a pack,Smallest order,Tags,Status,How it runs out,Available,Size or colour,Size or colour (Arabic),Size or colour SKU,Price difference (QAR),In stock,Low-stock number,Per day,Description,Description (Arabic),Photos",
+  "full_item_status": {
+   "always": 200,
+   "count": 200,
+   "daily_limit": 200,
+   "switch": 200
+  },
+  "home_cards": [
+   "unanswered",
+   "orders_today",
+   "sold_out",
+   "low_stock",
+   "paid_today"
+  ],
+  "modules": [
+   "catalog",
+   "inbox",
+   "orders",
+   "payments"
+  ],
+  "nav_account": [
+   [
+    "products",
+    {
+     "ar": "منتجات ALYR",
+     "en": "ALYR products"
+    }
+   ],
+   [
+    "connections",
+    {
+     "ar": "الاتصالات",
+     "en": "Connections"
+    }
+   ],
+   [
+    "team",
+    {
+     "ar": "الفريق",
+     "en": "Team"
+    }
+   ]
+  ],
+  "nav_products": [
+   [
+    "inbox",
+    {
+     "ar": "المحادثات",
+     "en": "Inbox"
+    }
+   ],
+   [
+    "orders",
+    {
+     "ar": "الطلبات",
+     "en": "Orders"
+    }
+   ],
+   [
+    "catalog",
+    {
+     "ar": "المنتجات",
+     "en": "Products"
+    }
+   ]
+  ],
+  "onboarding_catalog": {
+   "alerts": {
+    "low_stock": true,
+    "sold_out": true
+   },
+   "focus": [],
+   "gets": [
+    {
+     "ar": "قائمة بما تبيعه بالكيلو أو بالحبة أو بالعبوة، بالعربية والإنجليزية.",
+     "en": "A list of what you sell, by kilo, piece or pack, in English and Arabic."
+    },
+    {
+     "ar": "تعدّ ALYR ما على رفوفك. كل بيع ينقص العدد، وينفد الصنف عند الصفر.",
+     "en": "ALYR counts what is on your shelf. Each sale takes one off, and an item is sold out at zero."
+    },
+    {
+     "ar": "يُعدّ الصنف منخفضاً عند 10 أو أقل. يمكنك تغيير الرقم.",
+     "en": "An item counts as low at 10 or fewer. You can change the number."
+    },
+    {
+     "ar": "الأصناف المنتهية لا تظهر في صفحة الطلب، وهي قائمة مختصرة. يضغط العميل «+» لإضافة صنف و«−» لإنقاصه.",
+     "en": "Items that are sold out are left off your order page, which is a compact list. A customer taps plus to add an item and minus to take one off."
+    },
+    {
+     "ar": "أضف أرقام مديريك في «الموظفون على واتساب» ضمن الإعدادات، وتراسلهم ALYR حين يقل صنف أو ينفد.",
+     "en": "Add your managers' numbers under Staff on WhatsApp in the settings, and ALYR messages them when an item is low or sold out."
+    }
+   ],
+   "layout": {
+    "pickup_date": false,
+    "quick_quantity": true,
+    "same_as_last": false,
+    "show_sku": false,
+    "style": "list"
+   },
+   "low_stock_at": 10,
+   "new_item": {
+    "cutoff": null,
+    "lead_days": null,
+    "rule": "count",
+    "unit": "piece"
+   },
+   "optional": false,
+   "report_lines": [
+    "reorder",
+    "low_stock",
+    "top_items"
+   ],
+   "samples": 6,
+   "section": {
+    "name": "Products",
+    "name_ar": "المنتجات",
+    "sub": "What you sell: prices, units and what is left on the shelf.",
+    "sub_ar": "ما تبيعه: الأسعار والوحدات والمتبقي على الرف."
+   },
+   "sold_out": "hide",
+   "starting_categories": [
+    {
+     "name": "Fruit & vegetables",
+     "name_ar": "الفواكه والخضار"
+    },
+    {
+     "name": "Dairy & eggs",
+     "name_ar": "الألبان والبيض"
+    },
+    {
+     "name": "Pantry",
+     "name_ar": "المواد الغذائية"
+    },
+    {
+     "name": "Drinks",
+     "name_ar": "المشروبات"
+    },
+    {
+     "name": "Household",
+     "name_ar": "المنزلية"
+    }
+   ],
+   "type": "grocery"
+  },
+  "samples": {
+   "all": 10,
+   "archived": 0,
+   "draft": 0,
+   "low_stock": 0,
+   "sample": 6,
+   "sold_out": 0,
+   "stocked": 2
+  },
+  "settings": {
+   "agents_edit_items": false,
+   "day_starts": "00:00",
+   "hold_minutes": 30,
+   "low_stock_at": 10,
+   "sold_out_display": "hide",
+   "whatsapp_mode": "link",
+   "whatsapp_number": "",
+   "wholesale_layout": false
+  },
+  "setup": {
+   "alerts": {
+    "low_stock": true,
+    "sold_out": true
+   },
+   "focus": [],
+   "layout": {
+    "pickup_date": false,
+    "quick_quantity": true,
+    "same_as_last": false,
+    "show_sku": false,
+    "style": "list"
+   },
+   "low_stock_at": 10,
+   "new_item": {
+    "cutoff": null,
+    "lead_days": null,
+    "rule": "count",
+    "unit": "piece"
+   },
+   "optional": false,
+   "report_lines": [
+    "reorder",
+    "low_stock",
+    "top_items"
+   ],
+   "samples": 6,
+   "section": {
+    "name": "Products",
+    "name_ar": "المنتجات",
+    "sub": "What you sell: prices, units and what is left on the shelf.",
+    "sub_ar": "ما تبيعه: الأسعار والوحدات والمتبقي على الرف."
+   },
+   "sold_out": "hide",
+   "type": "grocery"
+  },
+  "setup_status": 200,
+  "steps": [
+   [
+    "chat",
+    [
+     {
+      "ar": "اربط رقم واتساب",
+      "en": "Connect your WhatsApp number"
+     },
+     {
+      "ar": "أضف المنتجات",
+      "en": "Add your products"
+     },
+     {
+      "ar": "اربط بوابة الدفع",
+      "en": "Connect your payment provider"
+     }
+    ]
+   ]
+  ],
+  "store_catalog": {
+   "layout": {
+    "pickup_date": false,
+    "quick_quantity": true,
+    "same_as_last": false,
+    "show_sku": false,
+    "style": "list"
+   },
+   "section": {
+    "name": "Products",
+    "name_ar": "المنتجات"
+   },
+   "sold_out": "hide",
+   "type": "grocery"
+  },
+  "store_settings": {
+   "sold_out_display": "hide",
+   "whatsapp_mode": "link",
+   "whatsapp_number": "",
+   "wholesale_layout": false
+  },
+  "store_status": 200,
+  "template_header": "Name (English),Name (Arabic),SKU,Category,Price (QAR),Size or colour,Size or colour (Arabic),Size or colour SKU,Price difference (QAR),In stock,Description,Description (Arabic),Photos"
+ },
+ "home": {
+  "categories": {
+   "categories": [
+    {
+     "name": "Filters",
+     "name_ar": "الفلاتر",
+     "sort": 0
+    }
+   ]
+  },
+  "export_header": "Item ID,Item code (ALYR),Name (English),Name (Arabic),SKU,Category,Price (QAR),Sale price (QAR),Sale starts,Sale ends,Sold by,Units in a pack,Smallest order,Tags,Status,How it runs out,Available,Size or colour,Size or colour (Arabic),Size or colour SKU,Price difference (QAR),In stock,Low-stock number,Per day,Description,Description (Arabic),Photos",
+  "full_item_status": {
+   "always": 200,
+   "count": 200,
+   "daily_limit": 200,
+   "switch": 200
+  },
+  "home_cards": [
+   "unanswered",
+   "bookings_today",
+   "sold_out",
+   "low_stock",
+   "paid_today"
+  ],
+  "modules": [
+   "bookings",
+   "catalog",
+   "inbox",
+   "payments"
+  ],
+  "nav_account": [
+   [
+    "products",
+    {
+     "ar": "منتجات ALYR",
+     "en": "ALYR products"
+    }
+   ],
+   [
+    "connections",
+    {
+     "ar": "الاتصالات",
+     "en": "Connections"
+    }
+   ],
+   [
+    "team",
+    {
+     "ar": "الفريق",
+     "en": "Team"
+    }
+   ]
+  ],
+  "nav_products": [
+   [
+    "inbox",
+    {
+     "ar": "المحادثات",
+     "en": "Inbox"
+    }
+   ],
+   [
+    "bookings",
+    {
+     "ar": "الحجوزات",
+     "en": "Bookings"
+    }
+   ],
+   [
+    "catalog",
+    {
+     "ar": "المنتجات",
+     "en": "Products"
+    }
+   ]
+  ],
+  "onboarding_catalog": {
+   "alerts": {
+    "low_stock": false,
+    "sold_out": false
+   },
+   "focus": [],
+   "gets": [
+    {
+     "ar": "مكان للقطع والمنتجات التي تبيعها، بالصور والأسعار.",
+     "en": "A place for the parts and products you sell, with photos and prices."
+    },
+    {
+     "ar": "حجوزاتك تعمل كما كانت تماماً. هذا إضافي ويمكنك تركه فارغاً.",
+     "en": "Your bookings work exactly as before. This is extra, and you can leave it empty."
+    }
+   ],
+   "layout": {
+    "pickup_date": false,
+    "quick_quantity": false,
+    "same_as_last": false,
+    "show_sku": false,
+    "style": "grid"
+   },
+   "low_stock_at": 3,
+   "new_item": {
+    "cutoff": null,
+    "lead_days": null,
+    "rule": "switch",
+    "unit": "piece"
+   },
+   "optional": true,
+   "report_lines": [
+    "bookings_only"
+   ],
+   "samples": 2,
+   "section": {
+    "name": "Products",
+    "name_ar": "المنتجات",
+    "sub": "Products you sell beside your services: photos and prices. Optional.",
+    "sub_ar": "منتجات تبيعها إلى جانب خدماتك: الصور والأسعار. اختياري."
+   },
+   "sold_out": "grey",
+   "starting_categories": [
+    {
+     "name": "Filters",
+     "name_ar": "الفلاتر"
+    }
+   ],
+   "type": "home"
+  },
+  "samples": {
+   "all": 6,
+   "archived": 0,
+   "draft": 0,
+   "low_stock": 0,
+   "sample": 2,
+   "sold_out": 0,
+   "stocked": 2
+  },
+  "settings": {
+   "agents_edit_items": false,
+   "day_starts": "00:00",
+   "hold_minutes": 30,
+   "low_stock_at": 3,
+   "sold_out_display": "grey",
+   "whatsapp_mode": "link",
+   "whatsapp_number": "",
+   "wholesale_layout": false
+  },
+  "setup": {
+   "alerts": {
+    "low_stock": false,
+    "sold_out": false
+   },
+   "focus": [],
+   "layout": {
+    "pickup_date": false,
+    "quick_quantity": false,
+    "same_as_last": false,
+    "show_sku": false,
+    "style": "grid"
+   },
+   "low_stock_at": 3,
+   "new_item": {
+    "cutoff": null,
+    "lead_days": null,
+    "rule": "switch",
+    "unit": "piece"
+   },
+   "optional": true,
+   "report_lines": [
+    "bookings_only"
+   ],
+   "samples": 2,
+   "section": {
+    "name": "Products",
+    "name_ar": "المنتجات",
+    "sub": "Products you sell beside your services: photos and prices. Optional.",
+    "sub_ar": "منتجات تبيعها إلى جانب خدماتك: الصور والأسعار. اختياري."
+   },
+   "sold_out": "grey",
+   "type": "home"
+  },
+  "setup_status": 200,
+  "steps": [
+   [
+    "bookings",
+    [
+     {
+      "ar": "اربط رقم واتساب",
+      "en": "Connect your WhatsApp number"
+     },
+     {
+      "ar": "أضف الخدمات المتاحة للحجز",
+      "en": "Add the services customers can book"
+     },
+     {
+      "ar": "حدّد ساعات العمل",
+      "en": "Set your opening hours"
+     },
+     {
+      "ar": "اربط بوابة الدفع",
+      "en": "Connect your payment provider"
+     }
+    ]
+   ]
+  ],
+  "store_status": 404,
+  "template_header": "Name (English),Name (Arabic),SKU,Category,Price (QAR),Size or colour,Size or colour (Arabic),Size or colour SKU,Price difference (QAR),In stock,Description,Description (Arabic),Photos"
+ },
+ "restaurant": {
+  "categories": {
+   "categories": [
+    {
+     "name": "Starters",
+     "name_ar": "المقبلات",
+     "sort": 0
+    },
+    {
+     "name": "Mains",
+     "name_ar": "الأطباق الرئيسية",
+     "sort": 1
+    },
+    {
+     "name": "Drinks",
+     "name_ar": "المشروبات",
+     "sort": 2
+    },
+    {
+     "name": "Desserts",
+     "name_ar": "الحلويات",
+     "sort": 3
+    }
+   ]
+  },
+  "export_header": "Item ID,Item code (ALYR),Name (English),Name (Arabic),SKU,Category,Price (QAR),Sale price (QAR),Sale starts,Sale ends,Sold by,Units in a pack,Smallest order,Tags,Status,How it runs out,Available,Size or colour,Size or colour (Arabic),Size or colour SKU,Price difference (QAR),In stock,Low-stock number,Per day,Description,Description (Arabic),Photos",
+  "full_item_status": {
+   "always": 200,
+   "count": 200,
+   "daily_limit": 200,
+   "switch": 200
+  },
+  "home_cards": [
+   "unanswered",
+   "orders_today",
+   "sold_out",
+   "low_stock",
+   "paid_today"
+  ],
+  "modules": [
+   "catalog",
+   "inbox",
+   "orders",
+   "payments"
+  ],
+  "nav_account": [
+   [
+    "products",
+    {
+     "ar": "المنتجات",
+     "en": "Products"
+    }
+   ],
+   [
+    "connections",
+    {
+     "ar": "الاتصالات",
+     "en": "Connections"
+    }
+   ],
+   [
+    "team",
+    {
+     "ar": "الفريق",
+     "en": "Team"
+    }
+   ]
+  ],
+  "nav_products": [
+   [
+    "inbox",
+    {
+     "ar": "المحادثات",
+     "en": "Inbox"
+    }
+   ],
+   [
+    "orders",
+    {
+     "ar": "الطلبات",
+     "en": "Orders"
+    }
+   ],
+   [
+    "catalog",
+    {
+     "ar": "القائمة",
+     "en": "Menu"
+    }
+   ]
+  ],
+  "onboarding_catalog": {
+   "alerts": {
+    "low_stock": false,
+    "sold_out": true
+   },
+   "focus": [
+    "options",
+    "schedule"
+   ],
+   "gets": [
+    {
+     "ar": "قائمة بأطباقك مع الصور، بالعربية والإنجليزية.",
+     "en": "A menu of your dishes, with photos, in English and Arabic."
+    },
+    {
+     "ar": "أحجام وإضافات للطبق، ولكل منها سعره.",
+     "en": "Sizes and extras on a dish, each with its own price."
+    },
+    {
+     "ar": "أوقف الطبق حين ينفد، أو حدّد عدد حصصه كل يوم.",
+     "en": "Switch a dish off when it runs out, or give it a number of portions each day."
+    },
+    {
+     "ar": "يمكن ألا يُطلب الطبق إلا في ساعات معيّنة، مثل قائمة الإفطار.",
+     "en": "A dish can be ordered only at certain hours, like a breakfast menu."
+    },
+    {
+     "ar": "الطبق الموقوف يظهر باهتاً في صفحة الطلب.",
+     "en": "A dish that is off shows greyed out on your order page."
+    },
+    {
+     "ar": "أضف أرقام مديريك في «الموظفون على واتساب» ضمن الإعدادات، وتراسلهم ALYR حين ينفد طبق له عدد يومي.",
+     "en": "Add your managers' numbers under Staff on WhatsApp in the settings, and ALYR messages them when a dish with a daily number sells out."
+    }
+   ],
+   "layout": {
+    "pickup_date": false,
+    "quick_quantity": false,
+    "same_as_last": false,
+    "show_sku": false,
+    "style": "menu"
+   },
+   "low_stock_at": 3,
+   "new_item": {
+    "cutoff": null,
+    "lead_days": null,
+    "rule": "switch",
+    "unit": "portion"
+   },
+   "optional": false,
+   "report_lines": [
+    "sold_out_now",
+    "top_items",
+    "never_ordered"
+   ],
+   "samples": 6,
+   "section": {
+    "name": "Menu",
+    "name_ar": "القائمة",
+    "sub": "Your dishes: photos, prices and what is available today.",
+    "sub_ar": "أطباقك: الصور والأسعار وما هو متوفر اليوم."
+   },
+   "sold_out": "grey",
+   "starting_categories": [
+    {
+     "name": "Starters",
+     "name_ar": "المقبلات"
+    },
+    {
+     "name": "Mains",
+     "name_ar": "الأطباق الرئيسية"
+    },
+    {
+     "name": "Drinks",
+     "name_ar": "المشروبات"
+    },
+    {
+     "name": "Desserts",
+     "name_ar": "الحلويات"
+    }
+   ],
+   "type": "restaurant"
+  },
+  "samples": {
+   "all": 10,
+   "archived": 0,
+   "draft": 0,
+   "low_stock": 0,
+   "sample": 6,
+   "sold_out": 0,
+   "stocked": 2
+  },
+  "settings": {
+   "agents_edit_items": false,
+   "day_starts": "00:00",
+   "hold_minutes": 30,
+   "low_stock_at": 3,
+   "sold_out_display": "grey",
+   "whatsapp_mode": "link",
+   "whatsapp_number": "",
+   "wholesale_layout": false
+  },
+  "setup": {
+   "alerts": {
+    "low_stock": false,
+    "sold_out": true
+   },
+   "focus": [
+    "options",
+    "schedule"
+   ],
+   "layout": {
+    "pickup_date": false,
+    "quick_quantity": false,
+    "same_as_last": false,
+    "show_sku": false,
+    "style": "menu"
+   },
+   "low_stock_at": 3,
+   "new_item": {
+    "cutoff": null,
+    "lead_days": null,
+    "rule": "switch",
+    "unit": "portion"
+   },
+   "optional": false,
+   "report_lines": [
+    "sold_out_now",
+    "top_items",
+    "never_ordered"
+   ],
+   "samples": 6,
+   "section": {
+    "name": "Menu",
+    "name_ar": "القائمة",
+    "sub": "Your dishes: photos, prices and what is available today.",
+    "sub_ar": "أطباقك: الصور والأسعار وما هو متوفر اليوم."
+   },
+   "sold_out": "grey",
+   "type": "restaurant"
+  },
+  "setup_status": 200,
+  "steps": [
+   [
+    "chat",
+    [
+     {
+      "ar": "اربط رقم واتساب",
+      "en": "Connect your WhatsApp number"
+     },
+     {
+      "ar": "أضف القائمة",
+      "en": "Add your menu"
+     },
+     {
+      "ar": "اربط بوابة الدفع",
+      "en": "Connect your payment provider"
+     }
+    ]
+   ]
+  ],
+  "store_catalog": {
+   "layout": {
+    "pickup_date": false,
+    "quick_quantity": false,
+    "same_as_last": false,
+    "show_sku": false,
+    "style": "menu"
+   },
+   "section": {
+    "name": "Menu",
+    "name_ar": "القائمة"
+   },
+   "sold_out": "grey",
+   "type": "restaurant"
+  },
+  "store_settings": {
+   "sold_out_display": "grey",
+   "whatsapp_mode": "link",
+   "whatsapp_number": "",
+   "wholesale_layout": false
+  },
+  "store_status": 200,
+  "template_header": "Name (English),Name (Arabic),SKU,Category,Price (QAR),Size or colour,Size or colour (Arabic),Size or colour SKU,Price difference (QAR),In stock,Description,Description (Arabic),Photos"
+ },
+ "salon": {
+  "categories": {
+   "categories": [
+    {
+     "name": "Hair care",
+     "name_ar": "العناية بالشعر",
+     "sort": 0
+    },
+    {
+     "name": "Beard care",
+     "name_ar": "العناية باللحية",
+     "sort": 1
+    }
+   ]
+  },
+  "export_header": "Item ID,Item code (ALYR),Name (English),Name (Arabic),SKU,Category,Price (QAR),Sale price (QAR),Sale starts,Sale ends,Sold by,Units in a pack,Smallest order,Tags,Status,How it runs out,Available,Size or colour,Size or colour (Arabic),Size or colour SKU,Price difference (QAR),In stock,Low-stock number,Per day,Description,Description (Arabic),Photos",
+  "full_item_status": {
+   "always": 200,
+   "count": 200,
+   "daily_limit": 200,
+   "switch": 200
+  },
+  "home_cards": [
+   "unanswered",
+   "bookings_today",
+   "sold_out",
+   "low_stock",
+   "paid_today"
+  ],
+  "modules": [
+   "bookings",
+   "catalog",
+   "inbox",
+   "payments"
+  ],
+  "nav_account": [
+   [
+    "products",
+    {
+     "ar": "منتجات ALYR",
+     "en": "ALYR products"
+    }
+   ],
+   [
+    "connections",
+    {
+     "ar": "الاتصالات",
+     "en": "Connections"
+    }
+   ],
+   [
+    "team",
+    {
+     "ar": "الفريق",
+     "en": "Team"
+    }
+   ]
+  ],
+  "nav_products": [
+   [
+    "inbox",
+    {
+     "ar": "المحادثات",
+     "en": "Inbox"
+    }
+   ],
+   [
+    "bookings",
+    {
+     "ar": "الحجوزات",
+     "en": "Bookings"
+    }
+   ],
+   [
+    "catalog",
+    {
+     "ar": "المنتجات",
+     "en": "Products"
+    }
+   ]
+  ],
+  "onboarding_catalog": {
+   "alerts": {
+    "low_stock": false,
+    "sold_out": false
+   },
+   "focus": [],
+   "gets": [
+    {
+     "ar": "مكان للمنتجات التي تبيعها عند الاستقبال، بالصور والأسعار.",
+     "en": "A place for the products you sell at the counter, with photos and prices."
+    },
+    {
+     "ar": "حجوزاتك تعمل كما كانت تماماً. هذا إضافي ويمكنك تركه فارغاً.",
+     "en": "Your bookings work exactly as before. This is extra, and you can leave it empty."
+    }
+   ],
+   "layout": {
+    "pickup_date": false,
+    "quick_quantity": false,
+    "same_as_last": false,
+    "show_sku": false,
+    "style": "grid"
+   },
+   "low_stock_at": 3,
+   "new_item": {
+    "cutoff": null,
+    "lead_days": null,
+    "rule": "switch",
+    "unit": "piece"
+   },
+   "optional": true,
+   "report_lines": [
+    "bookings_only"
+   ],
+   "samples": 3,
+   "section": {
+    "name": "Products",
+    "name_ar": "المنتجات",
+    "sub": "Products you sell beside your services: photos and prices. Optional.",
+    "sub_ar": "منتجات تبيعها إلى جانب خدماتك: الصور والأسعار. اختياري."
+   },
+   "sold_out": "grey",
+   "starting_categories": [
+    {
+     "name": "Hair care",
+     "name_ar": "العناية بالشعر"
+    },
+    {
+     "name": "Beard care",
+     "name_ar": "العناية باللحية"
+    }
+   ],
+   "type": "salon"
+  },
+  "samples": {
+   "all": 7,
+   "archived": 0,
+   "draft": 0,
+   "low_stock": 0,
+   "sample": 3,
+   "sold_out": 0,
+   "stocked": 2
+  },
+  "settings": {
+   "agents_edit_items": false,
+   "day_starts": "00:00",
+   "hold_minutes": 30,
+   "low_stock_at": 3,
+   "sold_out_display": "grey",
+   "whatsapp_mode": "link",
+   "whatsapp_number": "",
+   "wholesale_layout": false
+  },
+  "setup": {
+   "alerts": {
+    "low_stock": false,
+    "sold_out": false
+   },
+   "focus": [],
+   "layout": {
+    "pickup_date": false,
+    "quick_quantity": false,
+    "same_as_last": false,
+    "show_sku": false,
+    "style": "grid"
+   },
+   "low_stock_at": 3,
+   "new_item": {
+    "cutoff": null,
+    "lead_days": null,
+    "rule": "switch",
+    "unit": "piece"
+   },
+   "optional": true,
+   "report_lines": [
+    "bookings_only"
+   ],
+   "samples": 3,
+   "section": {
+    "name": "Products",
+    "name_ar": "المنتجات",
+    "sub": "Products you sell beside your services: photos and prices. Optional.",
+    "sub_ar": "منتجات تبيعها إلى جانب خدماتك: الصور والأسعار. اختياري."
+   },
+   "sold_out": "grey",
+   "type": "salon"
+  },
+  "setup_status": 200,
+  "steps": [
+   [
+    "bookings",
+    [
+     {
+      "ar": "اربط رقم واتساب",
+      "en": "Connect your WhatsApp number"
+     },
+     {
+      "ar": "أضف الخدمات المتاحة للحجز",
+      "en": "Add the services customers can book"
+     },
+     {
+      "ar": "حدّد ساعات العمل",
+      "en": "Set your opening hours"
+     },
+     {
+      "ar": "اربط بوابة الدفع",
+      "en": "Connect your payment provider"
+     }
+    ]
+   ]
+  ],
+  "store_status": 404,
+  "template_header": "Name (English),Name (Arabic),SKU,Category,Price (QAR),Size or colour,Size or colour (Arabic),Size or colour SKU,Price difference (QAR),In stock,Description,Description (Arabic),Photos"
+ },
+ "shop": {
+  "categories": {
+   "categories": [
+    {
+     "name": "Electronics",
+     "name_ar": "الإلكترونيات",
+     "sort": 0
+    },
+    {
+     "name": "Home",
+     "name_ar": "المنزل",
+     "sort": 1
+    },
+    {
+     "name": "Clothing",
+     "name_ar": "الملابس",
+     "sort": 2
+    },
+    {
+     "name": "Stationery",
+     "name_ar": "القرطاسية",
+     "sort": 3
+    }
+   ]
+  },
+  "export_header": "Item ID,Item code (ALYR),Name (English),Name (Arabic),SKU,Category,Price (QAR),Sale price (QAR),Sale starts,Sale ends,Sold by,Units in a pack,Smallest order,Tags,Status,How it runs out,Available,Size or colour,Size or colour (Arabic),Size or colour SKU,Price difference (QAR),In stock,Low-stock number,Per day,Description,Description (Arabic),Photos",
+  "full_item_status": {
+   "always": 200,
+   "count": 200,
+   "daily_limit": 200,
+   "switch": 200
+  },
+  "home_cards": [
+   "unanswered",
+   "orders_today",
+   "sold_out",
+   "low_stock",
+   "paid_today"
+  ],
+  "modules": [
+   "catalog",
+   "inbox",
+   "orders",
+   "payments"
+  ],
+  "nav_account": [
+   [
+    "products",
+    {
+     "ar": "منتجات ALYR",
+     "en": "ALYR products"
+    }
+   ],
+   [
+    "connections",
+    {
+     "ar": "الاتصالات",
+     "en": "Connections"
+    }
+   ],
+   [
+    "team",
+    {
+     "ar": "الفريق",
+     "en": "Team"
+    }
+   ]
+  ],
+  "nav_products": [
+   [
+    "inbox",
+    {
+     "ar": "المحادثات",
+     "en": "Inbox"
+    }
+   ],
+   [
+    "orders",
+    {
+     "ar": "الطلبات",
+     "en": "Orders"
+    }
+   ],
+   [
+    "catalog",
+    {
+     "ar": "المنتجات",
+     "en": "Products"
+    }
+   ]
+  ],
+  "onboarding_catalog": {
+   "alerts": {
+    "low_stock": true,
+    "sold_out": true
+   },
+   "focus": [
+    "variants"
+   ],
+   "gets": [
+    {
+     "ar": "قائمة منتجات بالصور والأسعار، بالعربية والإنجليزية. ويمكن أن يكون لكل منتج رمز (SKU).",
+     "en": "A product list with photos and prices, in English and Arabic. Each product can have a code (SKU)."
+    },
+    {
+     "ar": "مقاسات وألوان، ولكل منها مخزونه.",
+     "en": "Sizes and colours, each with its own stock."
+    },
+    {
+     "ar": "تعدّ ALYR ما لديك. كل بيع ينقص العدد، وينفد المنتج عند الصفر.",
+     "en": "ALYR counts what you have. Each sale takes one off, and a product is sold out at zero."
+    },
+    {
+     "ar": "صفحة الطلب شبكة صور. المنتج المنتهي يبقى ظاهراً باهتاً.",
+     "en": "Your order page is a photo grid. A sold-out product stays visible, greyed out."
+    },
+    {
+     "ar": "أضف أرقام مديريك في «الموظفون على واتساب» ضمن الإعدادات، وتراسلهم ALYR حين يقل منتج (5 أو أقل) أو ينفد.",
+     "en": "Add your managers' numbers under Staff on WhatsApp in the settings, and ALYR messages them when a product is low (5 or fewer) or sold out."
+    }
+   ],
+   "layout": {
+    "pickup_date": false,
+    "quick_quantity": false,
+    "same_as_last": false,
+    "show_sku": false,
+    "style": "grid"
+   },
+   "low_stock_at": 5,
+   "new_item": {
+    "cutoff": null,
+    "lead_days": null,
+    "rule": "count",
+    "unit": "piece"
+   },
+   "optional": false,
+   "report_lines": [
+    "low_stock",
+    "top_items",
+    "never_ordered"
+   ],
+   "samples": 6,
+   "section": {
+    "name": "Products",
+    "name_ar": "المنتجات",
+    "sub": "What you sell: photos, prices and what is left.",
+    "sub_ar": "ما تبيعه: الصور والأسعار والمتبقي."
+   },
+   "sold_out": "grey",
+   "starting_categories": [
+    {
+     "name": "Electronics",
+     "name_ar": "الإلكترونيات"
+    },
+    {
+     "name": "Home",
+     "name_ar": "المنزل"
+    },
+    {
+     "name": "Clothing",
+     "name_ar": "الملابس"
+    },
+    {
+     "name": "Stationery",
+     "name_ar": "القرطاسية"
+    }
+   ],
+   "type": "shop"
+  },
+  "samples": {
+   "all": 10,
+   "archived": 0,
+   "draft": 0,
+   "low_stock": 0,
+   "sample": 6,
+   "sold_out": 0,
+   "stocked": 2
+  },
+  "settings": {
+   "agents_edit_items": false,
+   "day_starts": "00:00",
+   "hold_minutes": 30,
+   "low_stock_at": 5,
+   "sold_out_display": "grey",
+   "whatsapp_mode": "link",
+   "whatsapp_number": "",
+   "wholesale_layout": false
+  },
+  "setup": {
+   "alerts": {
+    "low_stock": true,
+    "sold_out": true
+   },
+   "focus": [
+    "variants"
+   ],
+   "layout": {
+    "pickup_date": false,
+    "quick_quantity": false,
+    "same_as_last": false,
+    "show_sku": false,
+    "style": "grid"
+   },
+   "low_stock_at": 5,
+   "new_item": {
+    "cutoff": null,
+    "lead_days": null,
+    "rule": "count",
+    "unit": "piece"
+   },
+   "optional": false,
+   "report_lines": [
+    "low_stock",
+    "top_items",
+    "never_ordered"
+   ],
+   "samples": 6,
+   "section": {
+    "name": "Products",
+    "name_ar": "المنتجات",
+    "sub": "What you sell: photos, prices and what is left.",
+    "sub_ar": "ما تبيعه: الصور والأسعار والمتبقي."
+   },
+   "sold_out": "grey",
+   "type": "shop"
+  },
+  "setup_status": 200,
+  "steps": [
+   [
+    "chat",
+    [
+     {
+      "ar": "اربط رقم واتساب",
+      "en": "Connect your WhatsApp number"
+     },
+     {
+      "ar": "أضف المنتجات",
+      "en": "Add your products"
+     },
+     {
+      "ar": "اربط بوابة الدفع",
+      "en": "Connect your payment provider"
+     }
+    ]
+   ]
+  ],
+  "store_catalog": {
+   "layout": {
+    "pickup_date": false,
+    "quick_quantity": false,
+    "same_as_last": false,
+    "show_sku": false,
+    "style": "grid"
+   },
+   "section": {
+    "name": "Products",
+    "name_ar": "المنتجات"
+   },
+   "sold_out": "grey",
+   "type": "shop"
+  },
+  "store_settings": {
+   "sold_out_display": "grey",
+   "whatsapp_mode": "link",
+   "whatsapp_number": "",
+   "wholesale_layout": false
+  },
+  "store_status": 200,
+  "template_header": "Name (English),Name (Arabic),SKU,Category,Price (QAR),Size or colour,Size or colour (Arabic),Size or colour SKU,Price difference (QAR),In stock,Description,Description (Arabic),Photos"
+ },
+ "spa": {
+  "categories": {
+   "categories": [
+    {
+     "name": "Body care",
+     "name_ar": "العناية بالجسم",
+     "sort": 0
+    },
+    {
+     "name": "Aromatherapy",
+     "name_ar": "العلاج بالروائح",
+     "sort": 1
+    }
+   ]
+  },
+  "export_header": "Item ID,Item code (ALYR),Name (English),Name (Arabic),SKU,Category,Price (QAR),Sale price (QAR),Sale starts,Sale ends,Sold by,Units in a pack,Smallest order,Tags,Status,How it runs out,Available,Size or colour,Size or colour (Arabic),Size or colour SKU,Price difference (QAR),In stock,Low-stock number,Per day,Description,Description (Arabic),Photos",
+  "full_item_status": {
+   "always": 200,
+   "count": 200,
+   "daily_limit": 200,
+   "switch": 200
+  },
+  "home_cards": [
+   "unanswered",
+   "bookings_today",
+   "sold_out",
+   "low_stock",
+   "paid_today"
+  ],
+  "modules": [
+   "bookings",
+   "catalog",
+   "inbox",
+   "payments"
+  ],
+  "nav_account": [
+   [
+    "products",
+    {
+     "ar": "منتجات ALYR",
+     "en": "ALYR products"
+    }
+   ],
+   [
+    "connections",
+    {
+     "ar": "الاتصالات",
+     "en": "Connections"
+    }
+   ],
+   [
+    "team",
+    {
+     "ar": "الفريق",
+     "en": "Team"
+    }
+   ]
+  ],
+  "nav_products": [
+   [
+    "inbox",
+    {
+     "ar": "المحادثات",
+     "en": "Inbox"
+    }
+   ],
+   [
+    "bookings",
+    {
+     "ar": "الحجوزات",
+     "en": "Bookings"
+    }
+   ],
+   [
+    "catalog",
+    {
+     "ar": "المنتجات",
+     "en": "Products"
+    }
+   ]
+  ],
+  "onboarding_catalog": {
+   "alerts": {
+    "low_stock": false,
+    "sold_out": false
+   },
+   "focus": [],
+   "gets": [
+    {
+     "ar": "مكان للمنتجات التي تبيعها عند الاستقبال، بالصور والأسعار.",
+     "en": "A place for the products you sell at reception, with photos and prices."
+    },
+    {
+     "ar": "حجوزاتك تعمل كما كانت تماماً. هذا إضافي ويمكنك تركه فارغاً.",
+     "en": "Your bookings work exactly as before. This is extra, and you can leave it empty."
+    }
+   ],
+   "layout": {
+    "pickup_date": false,
+    "quick_quantity": false,
+    "same_as_last": false,
+    "show_sku": false,
+    "style": "grid"
+   },
+   "low_stock_at": 3,
+   "new_item": {
+    "cutoff": null,
+    "lead_days": null,
+    "rule": "switch",
+    "unit": "piece"
+   },
+   "optional": true,
+   "report_lines": [
+    "bookings_only"
+   ],
+   "samples": 3,
+   "section": {
+    "name": "Products",
+    "name_ar": "المنتجات",
+    "sub": "Products you sell beside your services: photos and prices. Optional.",
+    "sub_ar": "منتجات تبيعها إلى جانب خدماتك: الصور والأسعار. اختياري."
+   },
+   "sold_out": "grey",
+   "starting_categories": [
+    {
+     "name": "Body care",
+     "name_ar": "العناية بالجسم"
+    },
+    {
+     "name": "Aromatherapy",
+     "name_ar": "العلاج بالروائح"
+    }
+   ],
+   "type": "spa"
+  },
+  "samples": {
+   "all": 7,
+   "archived": 0,
+   "draft": 0,
+   "low_stock": 0,
+   "sample": 3,
+   "sold_out": 0,
+   "stocked": 2
+  },
+  "settings": {
+   "agents_edit_items": false,
+   "day_starts": "00:00",
+   "hold_minutes": 30,
+   "low_stock_at": 3,
+   "sold_out_display": "grey",
+   "whatsapp_mode": "link",
+   "whatsapp_number": "",
+   "wholesale_layout": false
+  },
+  "setup": {
+   "alerts": {
+    "low_stock": false,
+    "sold_out": false
+   },
+   "focus": [],
+   "layout": {
+    "pickup_date": false,
+    "quick_quantity": false,
+    "same_as_last": false,
+    "show_sku": false,
+    "style": "grid"
+   },
+   "low_stock_at": 3,
+   "new_item": {
+    "cutoff": null,
+    "lead_days": null,
+    "rule": "switch",
+    "unit": "piece"
+   },
+   "optional": true,
+   "report_lines": [
+    "bookings_only"
+   ],
+   "samples": 3,
+   "section": {
+    "name": "Products",
+    "name_ar": "المنتجات",
+    "sub": "Products you sell beside your services: photos and prices. Optional.",
+    "sub_ar": "منتجات تبيعها إلى جانب خدماتك: الصور والأسعار. اختياري."
+   },
+   "sold_out": "grey",
+   "type": "spa"
+  },
+  "setup_status": 200,
+  "steps": [
+   [
+    "bookings",
+    [
+     {
+      "ar": "اربط رقم واتساب",
+      "en": "Connect your WhatsApp number"
+     },
+     {
+      "ar": "أضف الخدمات المتاحة للحجز",
+      "en": "Add the services customers can book"
+     },
+     {
+      "ar": "حدّد ساعات العمل",
+      "en": "Set your opening hours"
+     },
+     {
+      "ar": "اربط بوابة الدفع",
+      "en": "Connect your payment provider"
+     }
+    ]
+   ]
+  ],
+  "store_status": 404,
+  "template_header": "Name (English),Name (Arabic),SKU,Category,Price (QAR),Size or colour,Size or colour (Arabic),Size or colour SKU,Price difference (QAR),In stock,Description,Description (Arabic),Photos"
+ },
+ "travel": {
+  "home_cards": [
+   "unanswered",
+   "paid_today"
+  ],
+  "modules": [
+   "inbox",
+   "payments"
+  ],
+  "nav_account": [
+   [
+    "products",
+    {
+     "ar": "المنتجات",
+     "en": "Products"
+    }
+   ],
+   [
+    "connections",
+    {
+     "ar": "الاتصالات",
+     "en": "Connections"
+    }
+   ],
+   [
+    "team",
+    {
+     "ar": "الفريق",
+     "en": "Team"
+    }
+   ]
+  ],
+  "nav_products": [
+   [
+    "inbox",
+    {
+     "ar": "المحادثات",
+     "en": "Inbox"
+    }
+   ]
+  ],
+  "setup_status": 403,
+  "steps": [
+   [
+    "chat",
+    [
+     {
+      "ar": "اربط رقم واتساب",
+      "en": "Connect your WhatsApp number"
+     },
+     {
+      "ar": "اربط بوابة الدفع",
+      "en": "Connect your payment provider"
+     }
+    ]
+   ]
+  ]
+ },
+ "wholesale": {
+  "categories": {
+   "categories": [
+    {
+     "name": "Rice & sugar",
+     "name_ar": "الأرز والسكر",
+     "sort": 0
+    },
+    {
+     "name": "Oils",
+     "name_ar": "الزيوت",
+     "sort": 1
+    },
+    {
+     "name": "Drinks",
+     "name_ar": "المشروبات",
+     "sort": 2
+    },
+    {
+     "name": "Household",
+     "name_ar": "المنزلية",
+     "sort": 3
+    }
+   ]
+  },
+  "export_header": "Item ID,Item code (ALYR),Name (English),Name (Arabic),SKU,Category,Price (QAR),Sale price (QAR),Sale starts,Sale ends,Sold by,Units in a pack,Smallest order,Tags,Status,How it runs out,Available,Size or colour,Size or colour (Arabic),Size or colour SKU,Price difference (QAR),In stock,Low-stock number,Per day,Description,Description (Arabic),Photos",
+  "full_item_status": {
+   "always": 200,
+   "count": 200,
+   "daily_limit": 200,
+   "switch": 200
+  },
+  "home_cards": [
+   "unanswered",
+   "orders_today",
+   "sold_out",
+   "low_stock",
+   "paid_today",
+   "outstanding"
+  ],
+  "modules": [
+   "catalog",
+   "inbox",
+   "ledger",
+   "orders",
+   "payments"
+  ],
+  "nav_account": [
+   [
+    "products",
+    {
+     "ar": "المنتجات",
+     "en": "Products"
+    }
+   ],
+   [
+    "connections",
+    {
+     "ar": "الاتصالات",
+     "en": "Connections"
+    }
+   ],
+   [
+    "team",
+    {
+     "ar": "الفريق",
+     "en": "Team"
+    }
+   ]
+  ],
+  "nav_products": [
+   [
+    "inbox",
+    {
+     "ar": "المحادثات",
+     "en": "Inbox"
+    }
+   ],
+   [
+    "orders",
+    {
+     "ar": "الطلبات",
+     "en": "Orders"
+    }
+   ],
+   [
+    "catalog",
+    {
+     "ar": "قائمة الأسعار",
+     "en": "Price list"
+    }
+   ],
+   [
+    "ledger",
+    {
+     "ar": "الحسابات الآجلة",
+     "en": "Credit accounts"
+    }
+   ]
+  ],
+  "onboarding_catalog": {
+   "alerts": {
+    "low_stock": true,
+    "sold_out": true
+   },
+   "focus": [
+    "groups"
+   ],
+   "gets": [
+    {
+     "ar": "قائمة أسعار يمكن أن يكون لكل صنف فيها رمز (SKU) وحجم عبوة وأقل كمية للطلب.",
+     "en": "A price list in which each item can have a code (SKU), a pack size and a smallest order."
+    },
+    {
+     "ar": "أضف مجموعات أسعار، مثل التجزئة والجملة، وضع كل عميل في مجموعة. ويرى كل عميل أسعاره.",
+     "en": "Add price groups, such as retail and wholesale, and put each customer in one. Each customer sees their own prices."
+    },
+    {
+     "ar": "تعدّ ALYR ما في مخزنك. الصنف عند الصفر يظهر باهتاً على أنه غير متوفر.",
+     "en": "ALYR counts what is in your store. An item at zero shows greyed out as out of stock."
+    },
+    {
+     "ar": "صفحة الطلب جدول بكميات سريعة وزر واحد لـ«مثل الطلب الأخير».",
+     "en": "Your order page is a table with quick quantities and a one-tap \"same as last order\"."
+    },
+    {
+     "ar": "العميل الذي منحته حداً ائتمانياً يستطيع تسجيل طلبه على حسابه.",
+     "en": "A customer you have given a credit limit can put an order on their account."
+    },
+    {
+     "ar": "أضف أرقام مديريك في «الموظفون على واتساب» ضمن الإعدادات، وتراسلهم ALYR حين يقل صنف (20 أو أقل) أو ينفد.",
+     "en": "Add your managers' numbers under Staff on WhatsApp in the settings, and ALYR messages them when an item is low (20 or fewer) or sold out."
+    }
+   ],
+   "layout": {
+    "pickup_date": false,
+    "quick_quantity": true,
+    "same_as_last": true,
+    "show_sku": true,
+    "style": "table"
+   },
+   "low_stock_at": 20,
+   "new_item": {
+    "cutoff": null,
+    "lead_days": null,
+    "rule": "count",
+    "unit": "pack"
+   },
+   "optional": false,
+   "report_lines": [
+    "fast_movers",
+    "dead_stock",
+    "low_stock"
+   ],
+   "samples": 6,
+   "section": {
+    "name": "Price list",
+    "name_ar": "قائمة الأسعار",
+    "sub": "Your price list: codes, pack sizes, minimum orders and a price for each kind of customer.",
+    "sub_ar": "قائمة أسعارك: الرموز وأحجام العبوات والحد الأدنى للطلب وسعر لكل فئة من العملاء."
+   },
+   "sold_out": "grey",
+   "starting_categories": [
+    {
+     "name": "Rice & sugar",
+     "name_ar": "الأرز والسكر"
+    },
+    {
+     "name": "Oils",
+     "name_ar": "الزيوت"
+    },
+    {
+     "name": "Drinks",
+     "name_ar": "المشروبات"
+    },
+    {
+     "name": "Household",
+     "name_ar": "المنزلية"
+    }
+   ],
+   "type": "wholesale"
+  },
+  "samples": {
+   "all": 10,
+   "archived": 0,
+   "draft": 0,
+   "low_stock": 0,
+   "sample": 6,
+   "sold_out": 0,
+   "stocked": 2
+  },
+  "settings": {
+   "agents_edit_items": false,
+   "day_starts": "00:00",
+   "hold_minutes": 30,
+   "low_stock_at": 20,
+   "sold_out_display": "grey",
+   "whatsapp_mode": "link",
+   "whatsapp_number": "",
+   "wholesale_layout": false
+  },
+  "setup": {
+   "alerts": {
+    "low_stock": true,
+    "sold_out": true
+   },
+   "focus": [
+    "groups"
+   ],
+   "layout": {
+    "pickup_date": false,
+    "quick_quantity": true,
+    "same_as_last": true,
+    "show_sku": true,
+    "style": "table"
+   },
+   "low_stock_at": 20,
+   "new_item": {
+    "cutoff": null,
+    "lead_days": null,
+    "rule": "count",
+    "unit": "pack"
+   },
+   "optional": false,
+   "report_lines": [
+    "fast_movers",
+    "dead_stock",
+    "low_stock"
+   ],
+   "samples": 6,
+   "section": {
+    "name": "Price list",
+    "name_ar": "قائمة الأسعار",
+    "sub": "Your price list: codes, pack sizes, minimum orders and a price for each kind of customer.",
+    "sub_ar": "قائمة أسعارك: الرموز وأحجام العبوات والحد الأدنى للطلب وسعر لكل فئة من العملاء."
+   },
+   "sold_out": "grey",
+   "type": "wholesale"
+  },
+  "setup_status": 200,
+  "steps": [
+   [
+    "chat",
+    [
+     {
+      "ar": "اربط رقم واتساب",
+      "en": "Connect your WhatsApp number"
+     },
+     {
+      "ar": "أضف قائمة الأسعار",
+      "en": "Add your price list"
+     },
+     {
+      "ar": "اربط بوابة الدفع",
+      "en": "Connect your payment provider"
+     }
+    ]
+   ]
+  ],
+  "store_catalog": {
+   "layout": {
+    "pickup_date": false,
+    "quick_quantity": true,
+    "same_as_last": true,
+    "show_sku": true,
+    "style": "table"
+   },
+   "section": {
+    "name": "Price list",
+    "name_ar": "قائمة الأسعار"
+   },
+   "sold_out": "grey",
+   "type": "wholesale"
+  },
+  "store_settings": {
+   "sold_out_display": "grey",
+   "whatsapp_mode": "link",
+   "whatsapp_number": "",
+   "wholesale_layout": false
+  },
+  "store_status": 200,
+  "template_header": "Name (English),Name (Arabic),SKU,Category,Price (QAR),Size or colour,Size or colour (Arabic),Size or colour SKU,Price difference (QAR),In stock,Description,Description (Arabic),Photos"
+ }
+}

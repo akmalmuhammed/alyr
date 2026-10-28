@@ -6,7 +6,7 @@
 // category. Nothing is half-saved: a photo is a draft or it is a failed tile to try again.
 
 import { useEffect, useRef, useState } from "react";
-import { ApiError, api, sayError, toDirhams, fromDirhams, type Category, type Item } from "./catalogApi";
+import { ApiError, api, sayError, toDirhams, toInt, fromDirhams, type Category, type Item } from "./catalogApi";
 import { COPY, type Lang } from "./catalogCopy";
 import { Field, Icon, Sheet, Tile } from "./CatalogUi";
 import { usePhotoQueue } from "./usePhotoQueue";
@@ -131,14 +131,14 @@ export function AddSheet({ lang, onClose, onTyped, onFill }: {
 }
 
 type Walk = {
-  name: string; name_ar: string; price: string; category: string; live: boolean;
+  name: string; name_ar: string; price: string; category: string; live: boolean; opening: string;
 };
-type Problems = Partial<Record<"name" | "name_ar" | "price", string>>;
+type Problems = Partial<Record<"name" | "name_ar" | "price" | "opening", string>>;
 
 function walkForm(item: Item): Walk {
   return {
     name: item.name, name_ar: item.name_ar, price: fromDirhams(item.price || null), category: item.category,
-    live: true,
+    live: true, opening: "",
   };
 }
 
@@ -191,6 +191,10 @@ export function WalkThrough({ lang, ids, categories, onClose }: {
       if (price === null || price <= 0) found.price = t.errors.bad_price;
     }
     if (form.price.trim() && price === null) found.price = t.errors.bad_price;
+    // A shop whose items are counted (a grocery, a fashion seller) says how many it has.
+    const counted = item.stock_rule === "count" && item.variants.length === 1;
+    const opening = toInt(form.opening);
+    if (counted && form.opening.trim() && (opening === null || opening < 0)) found.opening = t.errors.bad_quantity;
     setProblems(found);
     if (Object.keys(found).length) return;
     const empty = !name && !form.name_ar.trim() && !form.price.trim() && !form.category.trim();
@@ -202,6 +206,9 @@ export function WalkThrough({ lang, ids, categories, onClose }: {
         ...(name ? { name } : {}), name_ar: form.name_ar.trim(), price: price ?? 0, category: form.category.trim(),
         status: form.live ? "live" : "draft",
       });
+      if (counted && opening) {
+        await api(`/api/items/${item.id}/stock`, "POST", { kind: "opening", quantity: opening, reason: "Opening count" });
+      }
       next(form.live ? "live" : "drafts");
     } catch (error) {
       setFailure(sayError(error, lang, t));
@@ -263,6 +270,11 @@ export function WalkThrough({ lang, ids, categories, onClose }: {
                 </button>
               ))}
             </div>
+          )}
+          {item.stock_rule === "count" && item.variants.length === 1 && (
+            <Field label={t.openingStock} error={problems.opening}>
+              <input value={form.opening} inputMode="numeric" dir="ltr" autoComplete="off" onChange={(e) => setForm({ ...form, opening: e.target.value })} />
+            </Field>
           )}
           <label className="ct-toggle">
             <span className="ct-toggle-text"><b>{t.walkOnSale}</b><small>{t.walkOnSaleHint}</small></span>

@@ -7,6 +7,8 @@ import { Screens, type WorkspaceTab } from "../../_workspace/Screens";
 import { TeamReport } from "../../_workspace/Team";
 import { WhatsappLink } from "../../_workspace/WhatsappLink";
 import { Catalog } from "../../_workspace/Catalog";
+import { Documents } from "../../_workspace/Documents";
+import { ConnectLink, ConnectSettings } from "../../_workspace/ConnectSettings";
 import { AgentDashboard } from "../../../_agent/AgentDashboard";
 import type { AgentView } from "../../../_agent/types";
 import { color } from "../../../_tokens/tokens";
@@ -18,7 +20,7 @@ type Step = { key: string; label: Text; done: boolean; screen: string; connectio
 type Product = {
   key: string; name: Text; descriptor: Text; summary: Text;
   // included: every business has it (ALYR Agent); it has no switch.
-  status: "active" | "available" | "coming" | "included";
+  status: "active" | "available" | "included";
   modules: string[]; includes: { key: string; label: Text }[]; steps: Step[];
 };
 type Connection = { key: string; name: Text; detail: Text; connected: boolean; available: boolean };
@@ -33,10 +35,13 @@ type State = {
   plan: { status: "preparing" | "published" | "accepted"; monthly_total_text?: string } | null;
 };
 type Card = { key: string; module: string; label: Text; value: number; text: string };
+// The go-live readiness check (ALY-165, D-049): the same answer as /start and the back office.
+type Readiness = { stage: "setting_up" | "ready" | "live"; checks: { key: string; label: Text; status: string }[]; left: string[] };
 type Lang = "en" | "ar";
 type Command = { id: string; group: string; label: string; icon: string; run: () => void };
 
 const WORK_SCREENS: WorkspaceTab[] = ["inbox", "ledger", "orders", "bookings", "team"];
+const LANG_KEY = "alyr-workspace-lang";
 
 const T = {
   en: {
@@ -54,15 +59,18 @@ const T = {
     planReady: "Your ALYR price is ready",
     planReadySub: (amount: string) => `${amount} a month. Review it and accept it to go ahead.`,
     planReview: "Review and accept",
+    goLive: { setting_up: "A few steps left to go live", ready: "Ready, waiting for your WhatsApp number" } as Record<string, string>,
+    goLiveSub: (left: string) => `Still to do: ${left}.`,
+    goLiveOpen: "See what is left",
     productsTitle: "Products", productsEyebrow: "Your plan",
     productsSub: "Switch on what your business needs. Switching off hides the screens and keeps every record.",
-    active: "Active", available: "Available", coming: "Coming", on: "On", off: "Off",
+    active: "Active", available: "Available", on: "On", off: "Off",
     included: "Included", includedNote: "Included for every business.",
     confirmOff: "Hide its screens from your team? Nothing is deleted.", keep: "Keep on", turnOff: "Switch off",
     managersOnly: "Only an owner or admin can change products.", includes: "Includes",
     connectionsTitle: "Connections", connectionsEyebrow: "Accounts",
     connectionsSub: "The accounts ALYR works through on your behalf.",
-    connected: "Connected", notConnected: "Not connected", notYet: "Not available yet",
+    connected: "Connected", notConnected: "Not connected", setUpWithAlyr: "Set up with ALYR",
     askSetup: "Ask ALYR to set it up",
     notOn: "This isn't switched on for your shop.", seeProducts: "See products",
     helpTitle: "ALYR team", helpOnline: "A person from ALYR reads every message.",
@@ -70,7 +78,7 @@ const T = {
     helpPlaceholder: "Write to ALYR…", send: "Send to ALYR",
     sentReply: "Sent to the ALYR team. We answer on WhatsApp or by email.",
     suggestions: ["Connect our WhatsApp number", "Add our services and prices", "Add a team member"],
-    live: "WhatsApp live", sim: "Simulator", seeAll: "See all", soon: "Coming soon",
+    live: "WhatsApp live", sim: "Simulator", seeAll: "See all",
     go: "Go to", actions: "Actions", noMatch: "Nothing matches that.", navigate: "Move", choose: "Open", close: "Close",
     more: "More", doha: "Doha",
   },
@@ -89,15 +97,18 @@ const T = {
     planReady: "سعرك من ALYR جاهز",
     planReadySub: (amount: string) => `${amount} شهرياً. راجعه واقبله للمتابعة.`,
     planReview: "راجع واقبل",
+    goLive: { setting_up: "خطوات قليلة للإطلاق", ready: "جاهز، بانتظار رقم واتساب" },
+    goLiveSub: (left: string) => `المتبقي: ${left}.`,
+    goLiveOpen: "اعرض المتبقي",
     productsTitle: "المنتجات", productsEyebrow: "خطتك",
     productsSub: "فعّل ما يحتاجه عملك. الإيقاف يخفي الشاشات ويحفظ كل السجلات.",
-    active: "مفعّل", available: "متاح", coming: "قريباً", on: "مفعّل", off: "متوقف",
+    active: "مفعّل", available: "متاح", on: "مفعّل", off: "متوقف",
     included: "مشمول", includedNote: "مشمول لكل منشأة.",
     confirmOff: "إخفاء شاشاته عن فريقك؟ لن يُحذف شيء.", keep: "أبقِه", turnOff: "إيقاف",
     managersOnly: "تغيير المنتجات متاح للمالك أو المدير فقط.", includes: "يشمل",
     connectionsTitle: "الاتصالات", connectionsEyebrow: "الحسابات",
     connectionsSub: "الحسابات التي تعمل ALYR من خلالها نيابة عنك.",
-    connected: "متصل", notConnected: "غير متصل", notYet: "غير متاح بعد",
+    connected: "متصل", notConnected: "غير متصل", setUpWithAlyr: "تُعدّ مع ALYR",
     askSetup: "اطلب من ALYR إعداده",
     notOn: "هذا غير مفعّل لمتجرك.", seeProducts: "عرض المنتجات",
     helpTitle: "فريق ALYR", helpOnline: "يقرأ كل رسالة شخص من فريق ALYR.",
@@ -105,7 +116,7 @@ const T = {
     helpPlaceholder: "اكتب إلى ALYR…", send: "أرسل إلى ALYR",
     sentReply: "أُرسلت إلى فريق ALYR. نرد عبر واتساب أو البريد.",
     suggestions: ["اربطوا رقم واتساب", "أضيفوا خدماتنا وأسعارنا", "أضيفوا عضواً للفريق"],
-    live: "واتساب يعمل", sim: "المحاكي", seeAll: "عرض الكل", soon: "قريباً",
+    live: "واتساب يعمل", sim: "المحاكي", seeAll: "عرض الكل",
     go: "انتقل إلى", actions: "إجراءات", noMatch: "لا نتائج.", navigate: "تنقّل", choose: "افتح", close: "إغلاق",
     more: "المزيد", doha: "الدوحة",
   },
@@ -113,10 +124,10 @@ const T = {
 
 // Module and product names come from the catalogue (`catalog.py`) through the API.
 const MODULE_ICON: Record<string, string> = {
-  inbox: "inbox", bookings: "calendar", orders: "receipt", payments: "card", ledger: "book", payroll: "wallet",
+  inbox: "inbox", bookings: "calendar", orders: "receipt", payments: "card", ledger: "book",
 };
 const PRODUCT_ICON: Record<string, string> = {
-  chat: "chat", bookings: "calendar", agent: "chart", accounts: "book", payroll: "wallet",
+  chat: "chat", bookings: "calendar", agent: "chart", accounts: "book",
 };
 const CONNECTION_ICON: Record<string, string> = { whatsapp: "chat", payments: "card" };
 
@@ -132,6 +143,7 @@ const ICON: Record<string, string> = {
   book: "M5 4h10a3 3 0 0 1 3 3v13H8a3 3 0 0 1-3-3z M5 17a3 3 0 0 1 3-3h10",
   apps: "M4 4h6v6H4z M14 4h6v6h-6z M4 14h6v6H4z M14 14h6v6h-6z",
   catalog: "M4 4h7v8H4z M13 4h7v5h-7z M13 11h7v9h-7z M4 14h7v6H4z",
+  doc: "M7 3h8l4 4v14H7z M15 3v4h4 M10 12h6 M10 16h6",
   plug: "M9 3v5 M15 3v5 M6 8h12v3a6 6 0 0 1-12 0z M12 17v4",
   users: "M9 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8Z M3 21v-2a6 6 0 0 1 12 0v2 M16 4.5a3.5 3.5 0 0 1 0 6.5 M17 15a5 5 0 0 1 4 4.9V21",
   plus: "M12 5v14 M5 12h14",
@@ -190,6 +202,7 @@ export default function WorkspaceShell() {
   const section = params.section?.[0] ?? "home";
   const [state, setState] = useState<State | null>(null);
   const [cards, setCards] = useState<Card[]>([]);
+  const [readiness, setReadiness] = useState<Readiness | null>(null);
   const [agent, setAgent] = useState<AgentView | null>(null);
   const [agentRise, setAgentRise] = useState(false);
   // ALYR Agent's links open a screen filtered to the rows a rule counted (`?show=`).
@@ -197,6 +210,26 @@ export default function WorkspaceShell() {
   const agentLoaded = useRef(false);
   const [offline, setOffline] = useState(false);
   const [lang, setLang] = useState<Lang>("en");
+  const [langReady, setLangReady] = useState(false);
+  // The language a person chose is kept on this device. Each screen of the workspace is a new
+  // page component, so without it a card on the home screen (or any link inside ALYR Agent)
+  // would send an Arabic reader back to English.
+  useEffect(() => {
+    const read = setTimeout(() => {
+      try {
+        const saved = localStorage.getItem(LANG_KEY);
+        if (saved === "ar" || saved === "en") setLang(saved);
+      } catch {
+        // A browser that refuses storage starts in English every time.
+      }
+      setLangReady(true);
+    }, 0);
+    return () => clearTimeout(read);
+  }, []);
+  const chooseLang = useCallback((next: Lang) => {
+    setLang(next);
+    try { localStorage.setItem(LANG_KEY, next); } catch { /* not remembered */ }
+  }, []);
   const [help, setHelp] = useState("");
   const [helpSent, setHelpSent] = useState("");
   const [confirming, setConfirming] = useState("");
@@ -209,18 +242,33 @@ export default function WorkspaceShell() {
   const pick = useCallback((text: Text) => text[lang], [lang]);
 
   const load = useCallback(async () => {
+    // Signed out (or the session ended): the sign-in page, not "cannot reach ALYR".
+    let signedOut = false;
+    const json = (r: Response) => {
+      if (r.status === 401) signedOut = true;
+      return r.ok ? r.json() : Promise.reject();
+    };
     try {
       const [s, h] = await Promise.all([
-        fetch("/api/workspace", { cache: "no-store" }).then((r) => (r.ok ? r.json() : Promise.reject())),
-        fetch("/api/workspace/home", { cache: "no-store" }).then((r) => (r.ok ? r.json() : Promise.reject())),
+        fetch("/api/workspace", { cache: "no-store" }).then(json),
+        fetch("/api/workspace/home", { cache: "no-store" }).then(json),
       ]);
       setState(s);
       setCards(h.cards);
       setOffline(false);
+      // Only those who can act on it see what is left to go live.
+      if (s.can_manage) {
+        const r = await fetch("/api/onboarding/readiness", { cache: "no-store" });
+        if (r.ok) setReadiness(await r.json());
+      }
     } catch {
+      if (signedOut) {
+        router.replace("/login");
+        return;
+      }
       setOffline(true);
     }
-  }, []);
+  }, [router]);
 
   useEffect(() => {
     const first = setTimeout(load, 0);
@@ -255,11 +303,12 @@ export default function WorkspaceShell() {
   }, [lang]);
 
   useEffect(() => {
-    if (section !== "home") return;
+    // Not before the saved language is known, or an Arabic reader would first be sent English.
+    if (section !== "home" || !langReady) return;
     const first = setTimeout(loadAgent, 0);
     const timer = setInterval(loadAgent, 15_000);
     return () => { clearTimeout(first); clearInterval(timer); };
-  }, [loadAgent, section]);
+  }, [loadAgent, section, langReady]);
 
   useEffect(() => {
     const read = setTimeout(() => setShow(new URLSearchParams(window.location.search).get("show")), 0);
@@ -332,7 +381,7 @@ export default function WorkspaceShell() {
     }));
     list.push(
       { id: "ask", group: t.actions, label: t.ask, icon: "chat", run: () => router.push("/app#ask") },
-      { id: "lang", group: t.actions, label: t.langName, icon: "globe", run: () => setLang(lang === "en" ? "ar" : "en") },
+      { id: "lang", group: t.actions, label: t.langName, icon: "globe", run: () => chooseLang(lang === "en" ? "ar" : "en") },
     );
     if (state?.me.signed_in) list.push({ id: "out", group: t.actions, label: t.signOut, icon: "out", run: signOut });
     return list;
@@ -356,7 +405,10 @@ export default function WorkspaceShell() {
   const shopName = lang === "ar" && state.business.name_ar ? state.business.name_ar : state.business.name;
   const pending = state.products.filter((p) => p.status === "active" && p.steps.some((s) => !s.done));
   const whatsapp = state.connections.find((c) => c.key === "whatsapp");
-  const current = allNav.find((n) => n.key === section);
+  // The connection screen (ALY-142) lives under Connections in the breadcrumb.
+  const current = allNav.find((n) => n.key === section)
+    ?? (section === "connect" ? allNav.find((n) => n.key === "connections") : undefined);
+  const documentsOn = state.modules.includes("documents");
   const activeProducts = state.products.filter((p) => p.status === "active");
   const roleLabel = state.me.signed_in ? state.me.role.charAt(0).toUpperCase() + state.me.role.slice(1) : t.demo;
 
@@ -423,6 +475,16 @@ export default function WorkspaceShell() {
             <Link className="btn small" href="/start">{t.planReview}<Icon name="arrow" className="sh-ico arrow" /></Link>
           </section>
         )}
+        {readiness && readiness.stage !== "live" && state.can_manage && (
+          <section className="sh-tile raised sh-allset sh-plan-ready sh-home-row" style={stagger(0)}>
+            <span className="sh-check" />
+            <div>
+              <h2>{t.goLive[readiness.stage]}</h2>
+              <p className="sh-note">{t.goLiveSub(readiness.checks.filter((c) => c.status !== "done").map((c) => pick(c.label)).join(lang === "ar" ? "، " : ", "))}</p>
+            </div>
+            <Link className="btn small" href="/start?golive">{t.goLiveOpen}<Icon name="arrow" className="sh-ico arrow" /></Link>
+          </section>
+        )}
         {agent ? (
           <AgentDashboard view={agent} link={Link} animate={agentRise} onNotNow={state.can_manage ? notNow : undefined}
             stale={offline ? `${t.offline} ${agent.header.updated}` : null} setup={setupTiles} />
@@ -468,7 +530,7 @@ export default function WorkspaceShell() {
       <>
         <header className="sh-head" style={stagger(0)}>
           <span className="sh-eyebrow">{t.productsEyebrow} · {activeProducts.length} {t.active.toLowerCase()}</span>
-          <h1>{t.productsTitle}</h1>
+          <h1>{current ? pick(current.label) : t.productsTitle}</h1>
           <p>{t.productsSub}</p>
         </header>
         {!state.can_manage && <p className="sh-note">{t.managersOnly}</p>}
@@ -478,7 +540,7 @@ export default function WorkspaceShell() {
             return (
               <li key={product.key} className={`sh-product ${pillClass(product)}`}>
                 <div className="sh-product-top">
-                  <span className={`sh-glyph ${inUse(product) ? "" : "coming"}`}><Icon name={PRODUCT_ICON[product.key] ?? "apps"} /></span>
+                  <span className={`sh-glyph ${inUse(product) ? "" : "idle"}`}><Icon name={PRODUCT_ICON[product.key] ?? "apps"} /></span>
                   <span className={`sh-pill ${pillClass(product)}`}>{t[product.status]}</span>
                 </div>
                 <div>
@@ -495,7 +557,6 @@ export default function WorkspaceShell() {
                 </div>
                 <div className="sh-product-foot">
                   {product.status === "included" ? <span className="sh-note">{t.includedNote}</span>
-                    : product.status === "coming" ? <span className="sh-note">{t.soon}</span>
                     : confirming === product.key ? (
                       <div className="sh-confirm" role="alertdialog" aria-label={t.confirmOff}>
                         <span>{t.confirmOff}</span>
@@ -533,8 +594,8 @@ export default function WorkspaceShell() {
               <li key={c.key} className={`sh-conn ${c.connected ? "on" : ""}`}>
                 <span className="sh-glyph"><Icon name={CONNECTION_ICON[c.key] ?? "plug"} /></span>
                 <div className="sh-conn-text">
-                  <h2>{pick(c.name)} <span className={`sh-pill ${c.connected ? "active" : "coming"}`}>
-                    {c.connected ? t.connected : c.available ? t.notConnected : t.notYet}</span></h2>
+                  <h2>{pick(c.name)} <span className={`sh-pill ${c.connected ? "active" : "idle"}`}>
+                    {c.connected ? t.connected : c.available ? t.notConnected : t.setUpWithAlyr}</span></h2>
                   <p>{pick(c.detail)}</p>
                 </div>
                 {!c.connected && needer && step && (step.asked
@@ -544,10 +605,18 @@ export default function WorkspaceShell() {
             );
           })}
         </ul>
+        {documentsOn && state.can_manage && (
+          <ConnectLink lang={lang} href="/app/connect" icon={<Icon name="plug" />} arrow={<Icon name="arrow" className="sh-ico" />} />
+        )}
       </>
     );
+  } else if (section === "connect" && documentsOn) {
+    body = <ConnectSettings lang={lang} canManage={state.can_manage} />;
   } else if (section === "catalog" && enabledScreens.has("catalog")) {
-    body = <Catalog lang={lang} />;
+    // Named by the shop's type of business: Menu, Products, Price list (D-039, ALY-107).
+    body = <Catalog lang={lang} title={current ? pick(current.label) : t.productsTitle} show={show} onRenamed={() => void load()} />;
+  } else if (section === "documents" && enabledScreens.has("documents")) {
+    body = <Documents lang={lang} title={current ? pick(current.label) : t.productsTitle} show={show} />;
   } else if ((WORK_SCREENS as string[]).includes(section) && enabledScreens.has(section)) {
     body = (
       <Screens embedded section={section as WorkspaceTab} lang={lang} show={show}
@@ -562,6 +631,9 @@ export default function WorkspaceShell() {
           : undefined} />
     );
   } else {
+    body = null;
+  }
+  if (body === null) {
     body = (
       <div className="sh-empty-inline">
         <p>{t.notOn}</p>
@@ -596,7 +668,7 @@ export default function WorkspaceShell() {
         <div className="sh-foot">
           <span className="sh-avatar">{initials(state.me.signed_in ? state.me.name : shopName)}</span>
           <span className="sh-me"><b>{state.me.signed_in ? state.me.name : shopName}</b><small>{roleLabel}</small></span>
-          <button className="sh-lang" onClick={() => setLang(lang === "en" ? "ar" : "en")} aria-label={t.langName}>{t.lang}</button>
+          <button className="sh-lang" onClick={() => chooseLang(lang === "en" ? "ar" : "en")} aria-label={t.langName}>{t.lang}</button>
           {state.me.signed_in
             ? <button className="sh-iconbtn" onClick={signOut} aria-label={t.signOut} title={t.signOut}><Icon name="out" /></button>
             : <a className="sh-iconbtn" href="/login" aria-label={t.signIn} title={t.signIn}><Icon name="out" /></a>}
@@ -616,6 +688,7 @@ export default function WorkspaceShell() {
           <Mark />
           <span className="sh-brand-text"><b>{shopName}</b><small>{current ? pick(current.label) : "ALYR"}</small></span>
           <span className={`sh-live ${whatsapp?.connected ? "on" : ""}`}><span className="sh-dot" />{whatsapp?.connected ? t.live : t.sim}</span>
+          <button className="sh-lang sh-mlang" onClick={() => chooseLang(lang === "en" ? "ar" : "en")} aria-label={t.langName}>{t.lang}</button>
           <button className="sh-iconbtn" onClick={() => { setPalette(true); setQuery(""); setCursor(0); }} aria-label={t.search}><Icon name="search" /></button>
         </header>
         <div className="sh-scroll">

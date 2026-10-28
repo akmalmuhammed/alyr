@@ -377,7 +377,7 @@
    {
     "date": "2026-10-16",
     "label": "جمعة",
-    "state": "coming",
+    "state": "ahead",
     "value": null,
     "value_text": null,
     "last": 43400,
@@ -390,7 +390,7 @@
    {
     "date": "2026-10-17",
     "label": "سبت",
-    "state": "coming",
+    "state": "ahead",
     "value": null,
     "value_text": null,
     "last": 135800,

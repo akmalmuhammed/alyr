@@ -5,6 +5,7 @@ from uuid import UUID
 import asyncpg
 
 from alyr.channels.base import Choice, InboundMessage, OutboundMessage
+from alyr.core import links
 from alyr.core.normalise import has_arabic
 from alyr.core.outbound import Outbound
 from alyr.modules.bookings import service
@@ -18,9 +19,11 @@ BOOK_WORDS = ("book", "appointment", "reserve", "reservation", "schedule",
 CANCEL_PREFIX = "booking_cancel:"
 
 
-def booking_link(web_url: str, slug: str, contact_id: UUID) -> str:
-    # Like the order link: the random contact ID says who is booking.
-    return f"{web_url}/b/{slug}?c={contact_id}"
+def booking_link(web_url: str, slug: str, contact_id: UUID, tenant_id: UUID) -> str:
+    """The booking page link for ONE customer: a signed token made for booking
+    (`core/links.py`), not the bare contact ID. Whoever holds it is that customer on the
+    booking page until it runs out, and nowhere else; an order link does not open it."""
+    return links.booking_url(web_url, slug, tenant_id, contact_id)
 
 
 async def _arabic(
@@ -102,7 +105,7 @@ async def maybe_handle(
         slug = await conn.fetchval("select slug from tenants where id = $1", tenant_id)
         if not slug or not await service.list_services(conn, only_active=True):
             return None
-        link = booking_link(web_url, slug, contact["id"])
+        link = booking_link(web_url, slug, contact["id"], tenant_id)
         body = (
             f"اختر الخدمة والوقت المناسب من هنا: {link}" if arabic
             else f"Pick a service and a time that suits you: {link}"

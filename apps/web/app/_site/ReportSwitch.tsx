@@ -2,14 +2,13 @@
 
 // /agent's Sunday report follows the sample chosen on the page's ALYR Agent figure: the
 // figure's switch sends `alyr:sample` with its `sync` id (AgentFigure.tsx), and this shows
-// that sample's message and caption. Without scripts it stays on the first sample, which
+// that sample's message. Without scripts it stays on the first sample, which
 // is what the figure shows then too.
 
 import { useEffect, useState } from "react";
-import type { Caption, SampleKey } from "./copy";
+import type { SampleKey } from "./copy";
 import { ReportPhone, type ReportWords } from "./ReportPhone";
 import type { ReportSample } from "./samples";
-import { rich } from "./Text";
 
 export const SAMPLE_EVENT = "alyr:sample";
 export type SampleEvent = CustomEvent<{ id: string; key: SampleKey }>;
@@ -20,13 +19,12 @@ type Props = {
   start: SampleKey;
   samples: Record<SampleKey, ReportSample>;
   words: Record<SampleKey, ReportWords>;
-  figLabel: string;
-  caption: Caption;
-  /** The end of the caption, for each sample: "Sample data, fictional bakery". */
+  /** What each sample is, said first to screen readers and crawlers (site audit 03, A1);
+   * the phone's header says "Sample business" for the eye. */
   fictional: Record<SampleKey, string>;
 };
 
-export function ReportSwitch({ sync, start, samples, words, figLabel, caption, fictional }: Props) {
+export function ReportSwitch({ sync, start, samples, words, fictional }: Props) {
   const [key, setKey] = useState<SampleKey>(start);
   useEffect(() => {
     const pick = (event: Event) => {
@@ -39,14 +37,8 @@ export function ReportSwitch({ sync, start, samples, words, figLabel, caption, f
 
   return (
     <>
+      <figcaption className="sr-only">{fictional[key]}</figcaption>
       <ReportPhone sample={samples[key]} words={words[key]} />
-      <figcaption className="cap">
-        <span className="cap-n">{figLabel} <bdi>{caption.n}</bdi></span>
-        <span className="cap-sep" aria-hidden="true">·</span>
-        <span>{rich(caption.text)}</span>
-        <span className="cap-sep" aria-hidden="true">·</span>
-        <span>{fictional[key]}</span>
-      </figcaption>
     </>
   );
 }

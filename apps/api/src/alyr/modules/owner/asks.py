@@ -1,4 +1,4 @@
-"""The read-only actions: what an owner can ask about the shop (D-040, phase 1).
+"""The read-only actions: what an owner can ask about the shop (D-065, phase 1).
 
 Each returns plain data, so the workspace and the chat cannot disagree. Nothing here
 changes anything. An agent sees no money (D-035): the amounts are left out of what they

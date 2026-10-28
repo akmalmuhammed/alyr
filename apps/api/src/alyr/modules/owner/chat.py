@@ -1,4 +1,4 @@
-"""A staff number's messages as owner actions, and the answers in words (D-040).
+"""A staff number's messages as owner actions, and the answers in words (D-065).
 
 Only two things are read from anyone: `LINK <code>`, which proves a phone belongs to a
 signed-in person, and, from a linked staff number, the commands below. A customer who
@@ -18,6 +18,7 @@ from alyr.config import get_settings
 from alyr.core import actions, staff_link
 from alyr.core.normalise import fmt_qar, has_arabic
 from alyr.core.words import CUSTOMERS, counted
+from alyr.modules.items import wa_text
 
 RLM = "‏"  # keeps a line of Arabic running right to left next to digits and Latin
 
@@ -97,6 +98,9 @@ async def maybe_handle(
         return None
 
     caller = await staff_link.caller_for(conn, contact["id"])
+    if caller is None and command == "help":
+        # A registered staff number that is not linked keeps the Catalog's HELP (wa_staff).
+        return None
     if caller is None:
         return _reply(contact, lang, [
             "هذا الرقم غير مربوط بحساب. اطلب من صاحب المحل ربطه من مساحة العمل." if lang == "ar"
@@ -104,7 +108,11 @@ async def maybe_handle(
                  "workspace."
         ])
     if command == "help":
-        return _reply(contact, lang, await _help(conn, caller, lang))
+        lines = await _help(conn, caller, lang)
+        if await actions.module_on(conn, "catalog"):
+            # The Catalog answers HELP too (wa_staff); a linked number sees both lists.
+            lines += ["", wa_text.say("help", lang)]
+        return _reply(contact, lang, lines)
     try:
         data = await actions.run(conn, caller, command, lang=lang)
     except actions.NotAllowed:

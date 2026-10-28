@@ -1,4 +1,4 @@
-"""Owner actions from the workspace (ALY-130, decision D-040).
+"""Owner actions from the workspace (ALY-130, decision D-065).
 
 The same actions the owner's WhatsApp commands run, so the two doors cannot disagree, and
 the link between a person and their WhatsApp number.

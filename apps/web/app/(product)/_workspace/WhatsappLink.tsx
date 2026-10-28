@@ -4,7 +4,7 @@ import { useCallback, useEffect, useState } from "react";
 import { COPY, commandsFor, type Lang } from "./whatsappCopy";
 import "./whatsapp.css";
 
-// "Your WhatsApp" on the Team screen (ALY-131, D-040): link the signed-in person's phone to
+// "Your WhatsApp" on the Team screen (ALY-131, D-065): link the signed-in person's phone to
 // their login with a one-time code, say where they work, and show what the phone can ask.
 // The API is routes/owner.py. Every word is in whatsappCopy.ts.
 

@@ -1,18 +1,29 @@
 """The customer's tracking page for one order. No sign-in: the customer arrives by the
-link in their chat, which carries the shop's ID and the order's unguessable ID."""
+link in their chat, which carries the shop's ID and the order's unguessable ID.
+
+Who may open it (ALY-133): whoever holds the link. The order's ID is a random version-4 UUID
+(122 bits, `uuid4()`), not derived from the customer's ID, and it opens exactly one order.
+The page says what was bought, where the order has got to, the first name of the staff member
+looking after it and the table; it does not say the customer's name, phone number or contact
+ID, and it shows nothing of any other order. A customer's contact ID, or their order or
+booking link, opens nothing here."""
 
 from uuid import UUID
 
-from fastapi import APIRouter, HTTPException, Request
+from fastapi import APIRouter, HTTPException, Request, Response
 
 from alyr.core.workspace import module_enabled
 from alyr.modules.orders import service
+from alyr.routes import customer_link
 
 router = APIRouter(prefix="/api/track", tags=["order tracking"])
 
 
 @router.get("/{tenant_id}/{order_id}")
-async def track(tenant_id: UUID, order_id: UUID, request: Request) -> dict:
+async def track(
+    tenant_id: UUID, order_id: UUID, request: Request, response: Response
+) -> dict:
+    customer_link.keep_private(response, by_link=False)
     db = request.app.state.db
     async with db.unscoped() as conn:
         shop = await conn.fetchrow(

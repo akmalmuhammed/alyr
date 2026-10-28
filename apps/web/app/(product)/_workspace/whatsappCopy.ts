@@ -3,7 +3,7 @@
 // through it). The component holds no text. Both languages are written against the same
 // shape, so a missing Arabic line is a type error, not a hole on a phone.
 //
-// The commands are the ones the shop's WhatsApp number answers (ALY-130, D-040): the English
+// The commands are the ones the shop's WhatsApp number answers (ALY-130, D-065): the English
 // word and the Arabic word both work, in either interface language.
 
 export type Lang = "en" | "ar";

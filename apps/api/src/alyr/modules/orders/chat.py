@@ -1,20 +1,38 @@
 """What the order link says in a chat: a customer asks to order and gets their link."""
 
+import re
 from uuid import UUID
 
 import asyncpg
 
 from alyr.channels.base import InboundMessage, OutboundMessage
-from alyr.core.normalise import has_arabic
+from alyr.core import links
+from alyr.core.normalise import has_arabic, western_digits
 
 ORDER_WORDS = ("order", "menu", "catalog", "catalogue", "buy", "shop",
                "اطلب", "أطلب", "طلب", "منتجات", "قائمة")
 
+# "Order table 7", «طلب طاولة 7»: what the shop's public order page offers as the message to
+# start with when it was opened from a table's QR code. The table goes into the customer's
+# own link, signed.
+TABLE = re.compile(r"(?:table|طاول[ةه])\s*#?\s*([a-z0-9]{1,6})", re.IGNORECASE)
 
-def order_link(web_url: str, slug: str, contact_id: UUID) -> str:
-    # The link carries the contact, so the order page knows who is ordering without
-    # asking them to type anything. The ID is random and not guessable.
-    return f"{web_url}/s/{slug}?c={contact_id}"
+
+def table_in(text: str) -> str:
+    """The table label a message names, or an empty string."""
+    found = TABLE.search(western_digits(text))
+    return links.clean_table(found.group(1).upper()) if found else ""
+
+
+def order_link(
+    web_url: str, slug: str, contact_id: UUID, tenant_id: UUID, table: str = "",
+    item: UUID | str = "",
+) -> str:
+    """The order page link for ONE customer. It carries a signed token, not the bare contact ID
+    (`core/links.py`; the ID is inside the token, readable by whoever holds the link, and
+    alone it grants nothing here): whoever holds the link is that customer until the token
+    runs out, and a link that is edited, or made for another shop, is refused."""
+    return links.order_url(web_url, slug, tenant_id, contact_id, table, item)
 
 
 async def maybe_handle(
@@ -37,10 +55,17 @@ async def maybe_handle(
     slug = await conn.fetchval("select slug from tenants where id = $1", tenant_id)
     if not slug:
         return None
-    link = order_link(web_url, slug, contact["id"])
+    table = table_in(message.text)
+    link = order_link(web_url, slug, contact["id"], tenant_id, table)
     arabic = contact["lang"] == "ar" or has_arabic(message.text)
-    body = (
-        f"تفضل، اختر طلبك من هنا: {link}" if arabic
-        else f"Here is our order page. Pick what you need: {link}"
-    )
+    if table:
+        body = (
+            f"تفضل، اختر طلبك لطاولة {table} من هنا: {link}" if arabic
+            else f"Here is our order page for table {table}. Pick what you need: {link}"
+        )
+    else:
+        body = (
+            f"تفضل، اختر طلبك من هنا: {link}" if arabic
+            else f"Here is our order page. Pick what you need: {link}"
+        )
     return [OutboundMessage(to=contact["id"], body=body)]

@@ -18,6 +18,7 @@ creates an item.
 
 import asyncio
 import hashlib
+import io
 import logging
 import re
 from collections.abc import Awaitable, Callable
@@ -26,11 +27,12 @@ from datetime import date
 from uuid import UUID
 
 import asyncpg
+from PIL import Image
 
 from alyr.config import Settings
 from alyr.core import images, jobs
 from alyr.core.images import PhotoRefused
-from alyr.core.storage import PHOTO_KEY, Store
+from alyr.core.storage import PHOTO_KEY, Store, StoreError
 from alyr.db import Database
 
 log = logging.getLogger("alyr.media")
@@ -131,6 +133,21 @@ def _order_changed() -> PhotoRefused:
         "تغيّرت صور هذا الصنف أثناء عرضك لها. أعد تحميل الصفحة وحاول مرة أخرى.",
         status=409,
     )
+
+
+def _as_jpeg(data: bytes) -> bytes:
+    """Decode a stored WebP and write it as a JPEG, on white where it was see-through."""
+    with Image.open(io.BytesIO(data)) as image:
+        image.load()
+        if image.mode in ("RGBA", "LA", "P"):
+            flat = Image.new("RGB", image.size, (255, 255, 255))
+            flat.paste(image.convert("RGBA"), mask=image.convert("RGBA").split()[-1])
+            image = flat
+        else:
+            image = image.convert("RGB")
+        out = io.BytesIO()
+        image.save(out, "JPEG", quality=85)
+        return out.getvalue()
 
 
 def parse_photo_ref(text: str) -> tuple[UUID, str] | None:
@@ -436,6 +453,24 @@ class MediaService:
             for owner, shown in every.items()
         }
 
+    async def jpeg_for(
+        self, conn: asyncpg.Connection, asset_id: UUID, target: int = 800
+    ) -> bytes | None:
+        """A stored photo as a JPEG of about `target` pixels on its long side, for a
+        message. WhatsApp takes JPEG and PNG and our files are WebP, so this reads the
+        size from the store and draws it again. None while the photo is not stored yet
+        (`pending`), is gone, or the store cannot be read: the message goes without it."""
+        row = await self._asset(conn, asset_id)
+        if row is None or row["state"] != "ready":
+            return None
+        try:
+            data = await self.store.get(pick(row["variants"], target)["key"])
+        except StoreError:
+            return None
+        if data is None:
+            return None
+        return await asyncio.to_thread(_as_jpeg, data)
+
     async def assert_can_add_item(self, conn: asyncpg.Connection) -> None:
         """Called by the catalog before it creates an item. Raises `PhotoRefused` with the
         plain message when the shop is at its cap; never deletes anything."""
@@ -617,6 +652,38 @@ class MediaService:
             },
             "shops": shops,
         }
+
+    async def admin_usage_history(self, conn: asyncpg.Connection, months: int) -> dict:
+        """Back office: the meters of this month and the months before it, newest first, each
+        with every business's figures and the totals, so a trend can be read. The free-tier
+        alert is today's: it compares what all shops store now with R2's free 10 GB. Read
+        only; nothing here prices anything (D-032, D-039)."""
+        current = await conn.fetchval(
+            "select date_trunc('month', now() at time zone 'Asia/Qatar')::date"
+        )
+        history = []
+        newest = None
+        for back in range(months):
+            one = await self.admin_usage(conn, months_back(current, back))
+            newest = newest or one
+            shops = one["shops"]
+            history.append({
+                "month": one["month"], "current": back == 0, "shops": shops,
+                "totals": {
+                    "shops": len(shops),
+                    "photos": sum(s["photos"] for s in shops),
+                    "gb": gigabytes(sum(s["bytes"] for s in shops)),
+                    "uploads": sum(s["uploads"] for s in shops),
+                    "active_items": sum(s["active_items"] for s in shops),
+                },
+            })
+        return {"storage": newest["storage"], "alert": newest["alert"], "months": history}
+
+
+def months_back(month: date, count: int) -> date:
+    """The first day of the month `count` months before `month` (itself the first of one)."""
+    index = month.year * 12 + month.month - 1 - count
+    return date(index // 12, index % 12 + 1, 1)
 
 
 def gigabytes(size: int) -> float:

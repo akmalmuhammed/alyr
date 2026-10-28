@@ -57,6 +57,14 @@ async def _fresh_database() -> None:
     await migrate(OWNER_DSN, APP_DSN)
 
 
+async def _clear_rate_hits() -> None:
+    conn = await asyncpg.connect(OWNER_DSN)
+    try:
+        await conn.execute("delete from rate_hits")
+    finally:
+        await conn.close()
+
+
 @pytest.fixture(scope="session", autouse=True)
 def database():
     asyncio.run(_fresh_database())
@@ -76,6 +84,14 @@ def client_factory(monkeypatch, tmp_path):
     monkeypatch.setenv("ALYR_META_APP_SECRET", APP_SECRET)
     monkeypatch.setenv("ALYR_META_VERIFY_TOKEN", VERIFY_TOKEN)
     monkeypatch.setenv("ALYR_META_PHONE_NUMBER_ID", NUMBER_ID)
+    # The suite runs as if Meta had approved the three document templates (the tests of ALY-139
+    # send through them). The tests of "not approved" (ALY-142) switch it off for themselves.
+    monkeypatch.setenv("ALYR_DOCUMENT_TEMPLATES_APPROVED", "true")
+    # Tests that place hundreds of orders from one address (the stress and property tests) must
+    # not meet the limit a real address would; tests/test_rate_limits.py puts it back (ALY-116).
+    from alyr.core import ratelimit
+
+    monkeypatch.setattr(ratelimit, "PLACED_PER_ADDRESS", ratelimit.Limit(1_000_000, 600))
     stack = contextlib.ExitStack()
 
     def build() -> TestClient:
@@ -84,6 +100,8 @@ def client_factory(monkeypatch, tmp_path):
 
         test_client = stack.enter_context(TestClient(create_app()))
         assert test_client.post("/sim/reset").status_code == 200
+        # Each test starts with nobody counted against a rate limit (ALY-116).
+        asyncio.run(_clear_rate_hits())
         return test_client
 
     yield build

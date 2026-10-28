@@ -64,7 +64,7 @@
 .ob h1 { margin: 0; font-size: clamp(26px, 6vw, 34px); line-height: 1.12; letter-spacing: -0.02em; font-weight: 600; text-wrap: balance; }
 .ob[dir="rtl"] h1 { letter-spacing: 0; line-height: 1.3; }
 .ob h2 { margin: 0 0 6px; font-size: var(--ui-body); font-weight: 600; }
-.ob-kicker { margin: 0; font-family: var(--font-ui-mono); font-size: var(--ui-micro); letter-spacing: 0.08em; text-transform: uppercase; color: var(--ink-3); }
+.ob-kicker { margin: 0; font-family: var(--font-ui-mono); font-size: var(--ui-micro); letter-spacing: 0.08em; text-transform: uppercase; color: var(--ink-2); }
 .ob[dir="rtl"] .ob-kicker { font-family: var(--face); letter-spacing: 0; font-size: var(--ui-small); }
 .ob-kicker.volt { color: var(--volt-ink); }
 .ob-content > .ob-kicker + h1 { margin-top: -10px; }
@@ -186,8 +186,6 @@
 .ob-rule b { font-size: var(--ui-body); font-weight: 500; }
 .ob-rule small { font-size: var(--ui-small); color: var(--ink-3); }
 .ob-rule em { font-style: normal; font-size: var(--ui-small); color: var(--volt-ink); white-space: nowrap; }
-.ob-rule.locked { color: var(--ink-3); }
-.ob-rule.locked b { color: var(--ink-2); }
 .ob-switch {
   appearance: none; flex: none; position: relative; width: 44px; height: 26px; margin: 0; border-radius: 999px;
   background: var(--hair-2); cursor: pointer; transition: background 0.2s var(--ease-product);
@@ -239,6 +237,12 @@
 .ob-promise { display: grid; gap: 6px; padding: 18px; border-radius: 22px; background: var(--volt-wash); color: var(--ink); }
 .ob-promise svg { color: var(--volt-ink); }
 .ob-promise p { margin: 0; color: var(--ink-2); font-size: var(--ui-body); line-height: 1.5; }
+.ob-review { display: grid; gap: 12px; padding: 16px; border-radius: 16px; background: var(--raise); box-shadow: var(--lift); }
+.ob-review h2 { margin: 0; font-size: var(--ui-lead, 1.125rem); font-weight: 600; }
+.ob-gets { list-style: none; margin: 0; padding: 0; display: grid; gap: 10px; }
+.ob-gets li { display: flex; align-items: flex-start; gap: 10px; font-size: var(--ui-body); line-height: 1.5; color: var(--ink); }
+.ob-gets svg { flex: none; margin-top: 3px; color: var(--volt-ink); }
+.ob-review .ob-note-card { background: var(--volt-wash); box-shadow: none; }
 .ob-note-card { display: grid; gap: 4px; padding: 14px 16px; border-radius: 16px; background: var(--raise); box-shadow: var(--lift); }
 .ob-note-card b { font-size: var(--ui-body-sm); font-weight: 600; }
 .ob-note-card small { color: var(--ink-2); font-size: var(--ui-small); line-height: 1.5; }
@@ -359,3 +363,48 @@
 @media (prefers-reduced-motion: reduce) {
   .ob *, .ob *::after { animation: none !important; transition: none !important; }
 }
+
+/* The readiness check (ALY-165): who owns a step, what holds it up, and the choices. */
+.ob-check { grid-template-areas: "dot text action" "more more more"; }
+.ob-check > .ob-dot { grid-area: dot; }
+.ob-check > .ob-check-text { grid-area: text; }
+.ob-check-more { grid-area: more; display: grid; gap: 10px; padding-top: 4px; }
+.ob-check.waiting .ob-dot { box-shadow: 0 0 0 2px var(--volt-ink) inset; }
+.ob-check-text .ob-blocker { color: var(--ink-2); }
+.ob-owner { display: grid; justify-items: end; gap: 2px; }
+.ob-choices { display: grid; gap: 8px; }
+.ob-choice { display: grid; gap: 2px; text-align: start; padding: 12px 14px; border-radius: 14px; border: 0; background: var(--raise); box-shadow: 0 0 0 1px var(--hair-2) inset; color: var(--ink); font: inherit; cursor: pointer; }
+.ob-choice b { font-size: var(--ui-body-sm); font-weight: 600; }
+.ob-choice small { color: var(--ink-3); font-size: var(--ui-small); line-height: 1.45; }
+.ob-choice.on { box-shadow: 0 0 0 2px var(--ink) inset; background: var(--volt-wash); }
+.ob-choice:focus-visible { outline: 2px solid var(--ink); outline-offset: 2px; }
+.ob-fine { color: var(--ink-3); font-size: var(--ui-small); line-height: 1.5; }
+.ob-also { margin-top: 18px; }
+@media (min-width: 720px) { .ob-choices { grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); } }
+
+/* What the chosen WhatsApp way needs, and where ALYR is with it (ALY-217). */
+.ob-wa { display: grid; gap: 10px; padding: 12px 14px; border-radius: 14px; background: var(--raise); box-shadow: 0 0 0 1px var(--hair-2) inset; }
+.ob-wa-status { margin: 0; font-size: var(--ui-body-sm); line-height: 1.5; color: var(--ink-2); }
+.ob-wa-status.failed { color: var(--bad); }
+.ob-wa-status.waiting_on_meta, .ob-wa-status.queued, .ob-wa-status.connecting { color: var(--ink); }
+.ob-wa-needs { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; }
+.ob-wa-needs label { display: grid; grid-template-columns: auto 1fr; gap: 10px; align-items: start; font-size: var(--ui-small); line-height: 1.5; color: var(--ink-2); cursor: pointer; }
+.ob-wa-needs input { width: 18px; height: 18px; margin: 1px 0 0; accent-color: var(--ink); }
+.ob-wa-fields { display: grid; gap: 12px; justify-items: start; }
+.ob-wa-fields .ob-field { width: 100%; }
+.ob-wa-fields .ob-field small { color: var(--ink-3); font-size: var(--ui-small); line-height: 1.45; }
+.ob-wa-fields .ob-error { margin: 0; }
+
+/* Pay to open the products (ALY-212, D-051). */
+.ob-saving { color: var(--volt-ink); font-weight: 600; }
+.ob-pay { display: grid; gap: 8px; margin-top: 16px; padding: 18px; border-radius: 18px; background: var(--raise); box-shadow: 0 0 0 2px var(--ink) inset; }
+.ob-pay h2 { margin: 0; font-size: var(--ui-body); font-weight: 600; }
+.ob-pay small { color: var(--ink-3); font-size: var(--ui-small); line-height: 1.5; }
+.ob-pay-total { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; margin: 0; }
+.ob-pay-total span { color: var(--ink-2); font-size: var(--ui-body-sm); }
+.ob-pay-total b { font-size: var(--ui-display-sm); letter-spacing: -0.02em; font-weight: 600; }
+.ob-pay-how { display: grid; gap: 4px; padding: 12px 14px; border-radius: 12px; background: var(--volt-wash); }
+.ob-pay-how b { font-size: var(--ui-body-sm); font-weight: 600; }
+.ob-pay-how pre { margin: 0; white-space: pre-wrap; font: inherit; font-size: var(--ui-body-sm); }
+.ob-pay-how code { justify-self: start; padding: 4px 8px; border-radius: 8px; background: var(--raise); font-size: var(--ui-body-sm); letter-spacing: 0.04em; }
+.ob-pay-note { display: flex; gap: 8px; align-items: baseline; margin: 0; color: var(--ink-2); font-size: var(--ui-small); line-height: 1.5; }

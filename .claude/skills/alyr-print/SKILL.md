@@ -100,7 +100,11 @@ photo or testimonials, no "licensed payment partner".
 
 ## Invoices, receipts, quotes
 
-Not built (D-032, D-033; e-invoicing parked, D-008). Before designing one:
+ALYR Docs (the Documents module, D-042) draws a shop's receipts, invoices, credit notes and
+the rest as PDFs on A4, A5 and an 80 mm roll (`modules/documents/render`); it is built and
+off for every shop. Its layout is the engine's, and the site draws the same paper in HTML
+(`_site/Paper.tsx`). ALYR's own invoices to its clients are not built (D-032, D-033;
+e-invoicing parked, D-008). Before designing one:
 - The required fields are a legal question (Company lane, a lawyer): issuer's legal name and
   CR number, the customer, date, number sequence, items, amounts, totals, and whatever
   Qatar's rules and e-invoicing require at the time. Research, then ask; do not guess.

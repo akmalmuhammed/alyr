@@ -30,10 +30,13 @@ class TeamError(Exception):
 
 @dataclass(frozen=True)
 class Actor:
-    """Who did something. `id` is None for the customer, the assistant and the open demo."""
+    """Who did something. `id` is None for the customer, the assistant and the open demo.
+    `via` says how, when it was not the workspace: "whatsapp" for a staff member's message
+    (the staff number has no sign-in, so `id` is None and `name` is the person's name)."""
 
     id: UUID | None
     name: str
+    via: str = ""
 
 
 CUSTOMER = Actor(None, "Customer")
@@ -64,7 +67,7 @@ async def record(
     channel: str = "portal",
 ) -> None:
     """Put one thing on the record. `channel` says which door it came through: the
-    workspace ("portal"), a message ("whatsapp"), or ALYR itself ("system") (D-040)."""
+    workspace ("portal"), a message ("whatsapp"), or ALYR itself ("system") (D-065)."""
     await conn.execute(
         "insert into activity (subject, subject_id, contact_id, action, detail, actor_id, "
         "actor_name, channel) values ($1, $2, $3, $4, $5, $6, $7, $8)",
@@ -72,7 +75,8 @@ async def record(
         subject_id,
         contact_id,
         action,
-        {k: v for k, v in (detail or {}).items() if v is not None},
+        {k: v for k, v in ((detail or {}) | ({"via": actor.via} if actor.via else {})).items()
+         if v is not None},
         actor.id,
         actor.name,
         channel,

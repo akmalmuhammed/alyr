@@ -17,6 +17,11 @@ type Text = { en: string; ar: string };
 type BusinessType = { key: string; name: Text; hint: Text; icon: string; way: "appointments" | "assisted" };
 type Service = { id: string; name: string; name_ar: string; duration_minutes: number; price: number; price_text: string; active?: boolean };
 type Period = { weekday: number; opens: string; closes: string };
+// What the shop's type of business gives its Catalog, in plain words (null where it has none).
+type CatalogReview = {
+  section: { name: string; name_ar: string }; optional: boolean; samples: number;
+  gets: Text[]; starting_categories: { name: string; name_ar: string }[];
+};
 type State = {
   business: { name: string; name_ar: string; slug: string; type: string; area: string; reminders: boolean };
   owner: { name: string; email: string };
@@ -28,6 +33,7 @@ type State = {
   hours: Period[];
   quote: Quote;
   areas: string[];
+  catalog: CatalogReview | null;
 };
 type QuoteLine = { id: string; business: string; business_ar: string; name: string; name_ar: string; kind: "monthly" | "one_time"; quantity: number; amount_text: string };
 type Quote = {
@@ -36,15 +42,35 @@ type Quote = {
   lines?: QuoteLine[];
   totals?: { monthly_subtotal_text: string; monthly_total_text: string; period_total_text: string; one_time_total: number; one_time_total_text: string };
   promise?: Text | null; accepted_at?: string | null;
+  // What using the products together saves, against buying each alone (D-053).
+  together?: { alone_text: string; saving_text: string; saving_pct: number } | null;
 };
-type WsStep = { key: string; done: boolean; asked: boolean; connection: string };
-type Workspace = { products: { key: string; steps: WsStep[] }[]; connections: { key: string; connected: boolean }[] };
+// The readiness check (ALY-165): what is left before the business goes live, and who owns it.
+type Check = {
+  key: string; label: Record<Lang, string>; todo: Record<Lang, string>;
+  status: "done" | "todo" | "waiting"; owner: "client" | "alyr"; asked: boolean; blocker: string;
+  choice: string; choices: string[]; setup?: WaSetup;
+};
+// How the business gets onto WhatsApp (ALY-217): what its way needs, and where ALYR is.
+type WaNeed = { key: string; label: Record<Lang, string>; field: "" | "phone" | "display_name"; done: boolean };
+type WaSetup = {
+  way: string; status: string; phone: string; display_name: string; needs: WaNeed[]; note: string; open: boolean;
+};
+type Readiness = { stage: "setting_up" | "ready" | "live"; checks: Check[]; left: string[] };
+// "Start on ALYR's number" waits on the founder's decision (ALY-217); the others are offered.
+const WHATSAPP_OFFERED = ["new_number", "move_number", "own_account"];
+// What the client pays ALYR to go live (ALY-242, D-053): the setup fee and the first period.
+type Payment = {
+  status: "paid" | "no_price" | "unpaid"; due_text: string; paid: number; paid_text: string;
+  left: number; left_text: string; setup_text: string; period_text: string; period_months: number;
+  reference: string; bank: string;
+};
 type Booking = { customer: string; service: string; when_text: string; status: string };
 type Step = "loading" | "account" | "code" | "type" | "basics" | "services" | "hours" | "assisted" | "try" | "plan" | "golive" | "finished";
 
 const ORDER = [6, 0, 1, 2, 3, 4, 5]; // Saturday first, as the week runs in Qatar
 const MINUTES = [15, 20, 30, 45, 60, 75, 90, 120, 150, 180];
-const NOUN: Record<string, string> = { salon: "salon", spa: "spa", clinic: "clinic", home: "business", restaurant: "restaurant", shop: "shop", wholesale: "business", travel: "office" };
+const NOUN: Record<string, string> = { salon: "salon", spa: "spa", clinic: "clinic", home: "business", restaurant: "restaurant", bakery: "bakery", grocery: "shop", shop: "shop", fashion: "shop", wholesale: "business", travel: "office" };
 const ICON: Record<string, string[]> = {
   scissors: ["M6 3a3 3 0 1 0 0 6 3 3 0 0 0 0-6Z", "M6 15a3 3 0 1 0 0 6 3 3 0 0 0 0-6Z", "M20 4 8.1 15.9", "M14.5 14.5 20 20", "M8.1 8.1 12 12"],
   leaf: ["M11 20A7 7 0 0 1 9.8 6.1C15.5 5 17 4.5 19 2c1 2 2 4.2 2 8 0 5.5-4.8 10-10 10Z", "M2 21c0-3 1.9-5.4 5.2-6"],
@@ -53,6 +79,9 @@ const ICON: Record<string, string[]> = {
   cup: ["M17 8h1a4 4 0 1 1 0 8h-1", "M3 8h14v9a4 4 0 0 1-4 4H7a4 4 0 0 1-4-4Z", "M6 2v2", "M10 2v2", "M14 2v2"],
   bag: ["M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4Z", "M3 6h18", "M16 10a4 4 0 0 1-8 0"],
   boxes: ["M21 8 12 3 3 8v8l9 5 9-5Z", "M3 8l9 5 9-5", "M12 13v8"],
+  cake: ["M4 20h16", "M5 20v-8h14v8", "M5 15.5c1.5 1.5 2.5 1.5 3.5 0s2-1.5 3.5 0 2.5 1.5 3.5 0 2-1.5 3.5 0", "M12 11V8", "M12 6.5c.8-.9.8-1.6 0-2.5-.8.9-.8 1.6 0 2.5Z"],
+  basket: ["M4 10h16l-1.5 9a2 2 0 0 1-2 1.7H7.5a2 2 0 0 1-2-1.7L4 10Z", "M8 10l3-6", "M16 10l-3-6", "M9 14v3", "M12 14v3", "M15 14v3"],
+  shirt: ["M9 4 4 6.5l2 4 2-1V20h8V9.5l2 1 2-4L15 4a3 3 0 0 1-6 0Z"],
   plane: ["M17.8 19.2 16 11l3.5-3.5C21 6 21.5 4 21 3c-1-.5-3 0-4.5 1.5L13 8 4.8 6.2c-.5-.1-.9.1-1.1.5l-.3.5c-.2.5-.1 1 .3 1.3L9 12l-2 3H4l-1 1 3 2 2 3 1-1v-3l3-2 3.5 5.3c.3.4.8.5 1.3.3l.5-.2c.4-.3.6-.7.5-1.2z"],
   check: ["m5 12 4 4L19 6"],
   lock: ["M6 11h12v10H6z", "M8 11V7a4 4 0 0 1 8 0v4"],
@@ -92,6 +121,21 @@ function writeDraft(draft: Draft | null) {
   try { if (draft) sessionStorage.setItem(DRAFT, JSON.stringify(draft)); else sessionStorage.removeItem(DRAFT); } catch { /* storage may be blocked */ }
 }
 
+/** What the owner is getting for the type of business they chose, in plain words (ALY-107). */
+function ReviewCard({ review, lang, t }: { review: CatalogReview; lang: Lang; t: (typeof COPY)[Lang] }) {
+  const name = lang === "ar" ? review.section.name_ar : review.section.name;
+  return (
+    <section className="ob-review" aria-labelledby="ob-review-title">
+      <p className="ob-kicker">{name}</p>
+      <h2 id="ob-review-title">{t.review.title}</h2>
+      <ul className="ob-gets">
+        {review.gets.map((line) => <li key={line.en}><Ico name="check" size={16} />{line[lang]}</li>)}
+      </ul>
+      {review.samples > 0 && <p className="ob-note-card"><b>{t.review.samplesTitle(review.samples)}</b><small>{t.review.samples}</small></p>}
+    </section>
+  );
+}
+
 export default function Start() {
   const router = useRouter();
   const [lang, setLang] = useState<Lang>("en");
@@ -112,9 +156,13 @@ export default function Start() {
   const [chat, setChat] = useState<ChatMessage[]>([]);
   const [draft, setDraft] = useState("");
   const [tested, setTested] = useState<Booking | null>(null);
-  const [ws, setWs] = useState<Workspace | null>(null);
+  const [ready, setReady] = useState<Readiness | null>(null);
+  // The WhatsApp number and name as the owner types them, until saved.
+  const [waDraft, setWaDraft] = useState<{ phone?: string; display_name?: string }>({});
+  const [waError, setWaError] = useState("");
   const [quote, setQuote] = useState<Quote | null>(null);
   const [quoteFlash, setQuoteFlash] = useState(false);
+  const [pay, setPay] = useState<Payment | null>(null);
   const quoteSeen = useRef("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
@@ -166,6 +214,8 @@ export default function Start() {
         if (!loaded) return setStep("account");
         // A finished owner comes back here only to answer a price ALYR published since.
         if (loaded.finished && loaded.quote.status === "published") return setStep("plan");
+        // The workspace sends a finished owner back to the go-live list (ALY-165).
+        if (loaded.finished && new URLSearchParams(window.location.search).has("golive")) return setStep("golive");
         if (loaded.finished) router.replace("/app");
         setStep(loaded.finished ? "finished" : ((loaded.step || loaded.steps[0]) as Step));
       } catch {
@@ -306,10 +356,14 @@ export default function Start() {
   // While the owner looks at the plan, ask again every few seconds: ALYR may publish or
   // change the price from the back office at that very moment.
   useEffect(() => {
-    if (step !== "plan") return;
+    if (step !== "plan" && step !== "golive") return;
     let alive = true;
     const tick = async () => {
-      const answer = await call<Quote>("/api/onboarding/quote").catch(() => null);
+      const [answer, paid] = await Promise.all([
+        call<Quote>("/api/onboarding/quote").catch(() => null),
+        call<Payment>("/api/onboarding/payment").catch(() => null),
+      ]);
+      if (alive && paid?.ok) setPay(paid.data);
       if (!alive || !answer?.ok) return;
       const seen = JSON.stringify(answer.data);
       if (quoteSeen.current && seen !== quoteSeen.current && answer.data.status !== "preparing") {
@@ -319,8 +373,9 @@ export default function Start() {
       quoteSeen.current = seen;
       setQuote(answer.data);
     };
+    const first = setTimeout(tick, 0);
     const timer = setInterval(tick, 4000);
-    return () => { alive = false; clearInterval(timer); };
+    return () => { alive = false; clearTimeout(first); clearInterval(timer); };
   }, [step]);
   const acceptQuote = (then: () => void) => guard(async () => {
     if (!quote?.id) return;
@@ -338,21 +393,31 @@ export default function Start() {
   });
 
   // ── go live ──────────────────────────────────────────
-  const loadWorkspace = useCallback(async () => {
-    const answer = await call<Workspace>("/api/workspace");
-    if (answer.ok) setWs(answer.data);
+  const loadReadiness = useCallback(async () => {
+    const answer = await call<Readiness>("/api/onboarding/readiness");
+    if (answer.ok) setReady(answer.data);
   }, []);
   useEffect(() => {
     if (step !== "golive") return;
-    const first = setTimeout(() => { loadWorkspace().catch(() => undefined); }, 0);
+    const first = setTimeout(() => {
+      loadReadiness().catch(() => undefined);
+    }, 0);
     return () => clearTimeout(first);
-  }, [step, loadWorkspace]);
-  const wsStep = (key: string) => ws?.products.flatMap((p) => p.steps).find((s) => s.key === key);
-  const ask = (stepKey: string) => guard(async () => {
-    // Filed under the product the step belongs to (a salon's steps are ALYR Bookings').
-    const product = ws?.products.find((p) => p.steps.some((s) => s.key === stepKey))?.key ?? "chat";
-    await call("/api/workspace/setup-requests", "POST", { product, step: stepKey, note: "" });
-    await loadWorkspace();
+  }, [step, loadReadiness]);
+  // Hand a step to ALYR or take it back, or choose how to do it. The answer is the new list.
+  const changeStep = (key: string, change: { owner?: "client" | "alyr"; choice?: string }) => guard(async () => {
+    const answer = await call<Readiness>(`/api/onboarding/steps/${key}`, "PATCH", change);
+    if (answer.ok) setReady(answer.data);
+    else setError(t.offline);
+  });
+  // Give the number, the name, or tick what is ready for the chosen way (ALY-217).
+  const changeWhatsapp = (change: { phone?: string; display_name?: string; ready?: string[] }) => guard(async () => {
+    const answer = await call<Readiness>("/api/onboarding/whatsapp", "PATCH", change);
+    if (answer.status === 422) return setWaError(t.golive.waInvalid);
+    if (!answer.ok) return setError(t.offline);
+    setWaError("");
+    setWaDraft({});
+    setReady(answer.data);
   });
   const finish = () => guard(async () => {
     await call("/api/onboarding/finish", "POST");
@@ -556,8 +621,7 @@ export default function Start() {
               <input type="checkbox" role="switch" className="ob-switch" checked={state?.business.reminders ?? true} onChange={(e) => setReminders(e.target.checked)} />
             </label>
             <div className="ob-rule"><span><b>{t.hours.cancel}</b><small>{t.hours.cancelSub}</small></span><em>{t.hours.always}</em></div>
-            <div className="ob-rule locked"><span><b>{t.hours.deposit}</b><small>{t.hours.depositSub}</small></span><Ico name="lock" size={18} /></div>
-            <div className="ob-rule locked"><span><b>{t.hours.capacity}</b><small>{t.hours.capacitySub}</small></span><Ico name="lock" size={18} /></div>
+            <div className="ob-rule"><span><b>{t.hours.capacity}</b><small>{t.hours.capacitySub}</small></span><em>{t.hours.always}</em></div>
           </section>
         </div>
       </>
@@ -570,7 +634,14 @@ export default function Start() {
     );
   } else if (step === "assisted") {
     const what = lang === "ar" ? (chosen?.name.ar ?? "") : (chosen?.name.en.toLowerCase() ?? "");
-    main = (
+    const review = state?.catalog ?? null;
+    main = review ? (
+      <>
+        {head(t.assisted.catalogTitle, t.assisted.catalogSub)}
+        <ReviewCard review={review} lang={lang} t={t} />
+        <p className="ob-note"><Ico name="chat" size={18} />{t.assisted.note}</p>
+      </>
+    ) : (
       <>
         {head(t.assisted.title, t.assisted.sub(what))}
         <p className="ob-note"><Ico name="chat" size={18} />{t.assisted.note}</p>
@@ -620,6 +691,7 @@ export default function Start() {
               {(q.discount_pct ?? 0) > 0 && <small>{t.plan.discount(q.discount_pct ?? 0, q.totals.monthly_subtotal_text)}</small>}
               {(q.period_months ?? 1) > 1 && <small>{t.plan.paidEvery(q.period_months ?? 1, q.totals.period_total_text)}</small>}
               {q.totals.one_time_total > 0 && <small>{t.plan.oneTime(q.totals.one_time_total_text)}</small>}
+              {q.together && <small className="ob-saving">{t.plan.together(q.together.saving_text, q.together.alone_text, q.together.saving_pct)}</small>}
               <ul className="ob-lines">
                 {(q.lines ?? []).map((l) => (
                   <li key={l.id}>
@@ -658,7 +730,7 @@ export default function Start() {
       actions = (
         <>
           <button className="ob-btn ghost" type="button" onClick={() => go(way === "assisted" ? "assisted" : "try")}>{t.back}</button>
-          {waiting && <button className="ob-link" type="button" onClick={() => go("golive")}>{t.plan.later}</button>}
+          {/* Nothing is paid first (D-053): the price is accepted, and paying waits for go-live. */}
           {waiting
             ? <button className="ob-btn primary" type="button" disabled={busy} onClick={() => acceptQuote(() => go("golive"))}>{t.plan.accept}<Ico name="arrow" /></button>
             : <button className="ob-btn primary" type="button" onClick={() => go("golive")}>{t.continue}<Ico name="arrow" /></button>}
@@ -666,33 +738,159 @@ export default function Start() {
       );
     }
   } else if (step === "golive") {
-    const whatsapp = wsStep("whatsapp");
-    const provider = wsStep("provider");
-    const item = (done: boolean | undefined, title: string, sub: string, action?: React.ReactNode, next?: boolean) => (
-      <li className={`ob-check ${done ? "done" : next ? "next" : ""}`}>
+    const g = t.golive;
+    const item = (done: boolean, title: string, sub: string, action?: React.ReactNode) => (
+      <li className={`ob-check ${done ? "done" : ""}`}>
         <span className="ob-dot">{done && <Ico name="check" size={14} />}</span>
         <span className="ob-check-text"><b>{title}</b><small>{sub}</small></span>
         {action}
       </li>
     );
+    const stage = g.stage[ready?.stage ?? "setting_up"];
+    // Where the owner does each step: back in this flow, or in the workspace.
+    const fixes: Record<string, (() => void) | string> = {
+      content: way === "appointments" ? () => go("services") : "/app/catalog",
+      hours: () => go("hours"),
+      test: () => go("try"),
+      price: () => go("plan"),
+    };
+    const fixButton = (key: string) => {
+      const fix = fixes[key];
+      if (!fix) return null;
+      return typeof fix === "string"
+        ? <Link className="ob-btn small ghost" href={fix}>{g.fix}</Link>
+        : <button type="button" className="ob-btn small ghost" onClick={fix}>{g.fix}</button>;
+    };
+    const choicesOf = (c: Check, ways: Record<string, { title: string; sub: string }>, offered: string[]) => (
+      <div className="ob-choices" role="radiogroup" aria-label={c.label[lang]}>
+        {offered.filter((w) => c.choices.includes(w)).map((w) => (
+          <button key={w} type="button" role="radio" aria-checked={c.choice === w}
+            className={`ob-choice ${c.choice === w ? "on" : ""}`} disabled={busy}
+            onClick={() => changeStep(c.key, { choice: w })}>
+            <b>{ways[w].title}</b><small>{ways[w].sub}</small>
+          </button>
+        ))}
+      </div>
+    );
+    // What the chosen way needs: the number (and a new number's name) typed in, the rest ticked.
+    const waNeeds = (setup: WaSetup) => {
+      const ticked = setup.needs.filter((n) => !n.field && n.done).map((n) => n.key);
+      const fields = setup.needs.filter((n) => n.field);
+      const value = (f: "phone" | "display_name") => waDraft[f] ?? setup[f];
+      const dirty = fields.some((n) => value(n.field as "phone" | "display_name") !== setup[n.field as "phone" | "display_name"]);
+      const status = g.waStatus[setup.status];
+      return (
+        <div className="ob-wa">
+          {status && <p className={`ob-wa-status ${setup.status}`}>{status}{setup.status === "failed" && setup.note && <> {setup.note}</>}</p>}
+          {setup.needs.length > 0 && setup.status !== "connected" && <>
+            <p className="ob-kicker">{g.getReady}</p>
+            <ul className="ob-wa-needs">
+              {setup.needs.filter((n) => !n.field).map((n) => (
+                <li key={n.key}>
+                  <label>
+                    <input type="checkbox" checked={n.done} disabled={busy}
+                      onChange={(e) => changeWhatsapp({ ready: e.target.checked ? [...ticked, n.key] : ticked.filter((k) => k !== n.key) })} />
+                    <span>{n.label[lang]}</span>
+                  </label>
+                </li>
+              ))}
+            </ul>
+            {fields.length > 0 && (
+              <form className="ob-wa-fields" onSubmit={(e) => {
+                e.preventDefault();
+                changeWhatsapp(Object.fromEntries(fields.map((n) => [n.field, value(n.field as "phone" | "display_name")])));
+              }}>
+                {fields.map((n) => (
+                  <label key={n.key} className="ob-field">
+                    <span>{n.field === "phone" ? g.phone : g.displayName}</span>
+                    <small>{n.label[lang]}</small>
+                    <input
+                      type={n.field === "phone" ? "tel" : "text"} dir={n.field === "phone" ? "ltr" : undefined}
+                      inputMode={n.field === "phone" ? "tel" : undefined} autoComplete={n.field === "phone" ? "tel" : "organization"}
+                      placeholder={n.field === "phone" ? g.phoneHint : ""} maxLength={n.field === "phone" ? 30 : 80}
+                      value={value(n.field as "phone" | "display_name")}
+                      onChange={(e) => setWaDraft((d) => ({ ...d, [n.field]: e.target.value }))} />
+                  </label>
+                ))}
+                {waError && <p className="ob-error" role="alert">{waError}</p>}
+                <button type="submit" className="ob-btn small" disabled={busy || !dirty}>{dirty ? g.save : g.saved}</button>
+              </form>
+            )}
+          </>}
+        </div>
+      );
+    };
+    const row = (c: Check) => {
+      const done = c.status === "done";
+      // A step with choices shows them below, with its own "ask ALYR" link.
+      const choosing = !done && c.owner === "client" && (c.key === "whatsapp" || c.key === "payments");
+      const action = done
+        ? <em>{g.done}</em>
+        : c.owner === "alyr"
+          ? <span className="ob-owner"><em>{g.alyrOwns}</em><button type="button" className="ob-link" onClick={() => changeStep(c.key, { owner: "client" })} disabled={busy}>{g.takeBack}</button></span>
+          : c.status === "waiting"
+            ? <em>{g.waiting}</em>
+            : choosing ? null
+              : fixButton(c.key) ?? <button type="button" className="ob-btn small" onClick={() => changeStep(c.key, { owner: "alyr" })} disabled={busy}>{g.ask}</button>;
+      return (
+        <li key={c.key} className={`ob-check ${done ? "done" : c.status === "waiting" ? "waiting" : ""}`}>
+          <span className="ob-dot">{done && <Ico name="check" size={14} />}</span>
+          <span className="ob-check-text">
+            <b>{c.label[lang]}</b>
+            {!done && <small>{c.todo[lang]}</small>}
+            {c.blocker && <small className="ob-blocker">{g.heldUp(c.blocker)}</small>}
+          </span>
+          {action}
+          {choosing && c.key === "whatsapp" && (
+            <div className="ob-check-more">
+              <p className="ob-kicker">{g.chooseWhatsapp}</p>
+              {choicesOf(c, g.whatsappWays, WHATSAPP_OFFERED)}
+              {c.choice && c.setup && waNeeds(c.setup)}
+              <small className="ob-fine">{g.whatsappNote}</small>
+              <button type="button" className="ob-link" onClick={() => changeStep(c.key, { owner: "alyr" })} disabled={busy}>{g.ask}</button>
+            </div>
+          )}
+          {c.key === "paid" && !done && pay?.status === "unpaid" && (
+            <section className="ob-check-more ob-pay" aria-label={t.plan.payTitle}>
+              <h2>{t.plan.payTitle}</h2>
+              <p className="ob-pay-total"><span>{t.plan.payTotal}</span><b className="num"><bdi dir="ltr">{pay.left_text}</bdi></b></p>
+              <small>{t.plan.paySetup(pay.setup_text)} · {t.plan.payPeriod(pay.period_months, pay.period_text)}</small>
+              {pay.paid > 0 && <small>{t.plan.paidSoFar(pay.paid_text, pay.left_text)}</small>}
+              <div className="ob-pay-how">
+                <b>{t.plan.payHow}</b>
+                {pay.bank ? <pre dir="ltr">{pay.bank}</pre> : <small>{t.plan.payNoBank}</small>}
+                <small>{t.plan.payRef}</small>
+                <code dir="ltr">{pay.reference}</code>
+              </div>
+              <p className="ob-pay-note"><span className="ob-pulse" />{t.plan.paySameDay}</p>
+            </section>
+          )}
+          {choosing && c.key === "payments" && (
+            <div className="ob-check-more">
+              <p className="ob-kicker">{g.choosePayments}</p>
+              {choicesOf(c, g.paymentWays, ["cash_transfer", "online"])}
+              <button type="button" className="ob-link" onClick={() => changeStep(c.key, { owner: "alyr" })} disabled={busy}>{g.ask}</button>
+            </div>
+          )}
+        </li>
+      );
+    };
     main = (
       <>
-        {head(t.golive.title, t.golive.sub)}
+        {head(stage.title, stage.sub)}
+        <ul className="ob-checks">{(ready?.checks ?? []).map(row)}</ul>
+        <p className="ob-kicker ob-also">{g.also}</p>
         <ul className="ob-checks">
-          {way === "appointments" && item(true, t.golive.setup, t.golive.setupSub(rows.length))}
-          {way === "appointments" && item(Boolean(tested), tested ? t.golive.tried : t.golive.notTried, tested ? t.golive.triedSub : t.try.waiting)}
-          {item(whatsapp?.done, t.golive.whatsapp, t.golive.whatsappSub,
-            whatsapp?.done ? <em>{t.golive.connected}</em> : whatsapp?.asked ? <em>{t.golive.asked}</em> : <button type="button" className="ob-btn small" onClick={() => ask("whatsapp")} disabled={busy}>{t.golive.ask}</button>, true)}
-          {item(provider?.done, t.golive.payments, t.golive.paymentsSub,
-            provider?.done ? <em>{t.golive.connected}</em> : provider?.asked ? <em>{t.golive.asked}</em> : <button type="button" className="ob-btn small ghost" onClick={() => ask("provider")} disabled={busy}>{t.golive.ask}</button>)}
-          {item(false, t.golive.team, t.golive.teamSub, <Link className="ob-btn small ghost" href="/app/team">{t.golive.invite}</Link>)}
+          {item(false, g.team, g.teamSub, <Link className="ob-btn small ghost" href="/app/team">{g.invite}</Link>)}
+          {way === "appointments" && state?.catalog && item(false, g.catalog(state.catalog.section[lang === "ar" ? "name_ar" : "name"]), g.catalogSub,
+            <Link className="ob-btn small ghost" href="/app/catalog">{g.open_}</Link>)}
         </ul>
       </>
     );
     actions = (
       <>
         <button className="ob-btn ghost" type="button" onClick={() => go("plan")}>{t.back}</button>
-        <button className="ob-btn primary" type="button" disabled={busy} onClick={finish}>{t.golive.open}<Ico name="arrow" /></button>
+        <button className="ob-btn primary" type="button" disabled={busy} onClick={finish}>{g.open}<Ico name="arrow" /></button>
       </>
     );
   } else if (step === "finished") {

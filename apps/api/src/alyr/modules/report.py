@@ -35,6 +35,7 @@ from alyr.core.outbound import Outbound
 from alyr.db import Database
 from alyr.modules.bookings import report as bookings_report
 from alyr.modules.inbox import report as inbox_report
+from alyr.modules.items import report as catalog_report
 from alyr.modules.ledger import report as ledger_report
 from alyr.modules.orders import report as orders_report
 
@@ -46,10 +47,11 @@ SEND_WEEKDAY = 6
 SEND_HOUR = 9
 REPORT_WORDS = {"report", "weekly report", "تقرير", "التقرير"}
 
-# In the order they appear: money first, then orders, visits and chats.
+# In the order they appear: money first, then orders and the items sold, visits and chats.
 SECTIONS = (
     ("ledger", ledger_report),
     ("orders", orders_report),
+    ("catalog", catalog_report),
     ("bookings", bookings_report),
     ("inbox", inbox_report),
 )
@@ -134,14 +136,18 @@ def render(report: dict, shop: dict, lang: str) -> dict:
     lang = "ar" if lang == "ar" else "en"
     week = date.fromisoformat(report["week_start"])
     when = label(week, lang)
-    sections = []
+    sections, shown = [], []
     for section in report["sections"]:
         part = PARTS[section["key"]]
+        lines = part.lines(section["numbers"], section["before"], lang)
+        if not lines:
+            continue  # nothing to report: the section is left out, not shown empty
+        shown.append(section)
         sections.append({
             "key": section["key"],
             "title": part.TITLE[lang],
             "headline": part.headline(section["numbers"], lang),
-            "lines": part.lines(section["numbers"], section["before"], lang),
+            "lines": lines,
         })
     heading = (
         f"تقرير ALYR الأسبوعي: {shop[lang]}" if lang == "ar"
@@ -150,7 +156,7 @@ def render(report: dict, shop: dict, lang: str) -> dict:
     blocks = [f"{heading}\n{when}"]
     blocks += ["\n".join([s["title"], *s["lines"]]) for s in sections]
     busy = [
-        view for view, section in zip(sections, report["sections"], strict=True)
+        view for view, section in zip(sections, shown, strict=True)
         if PARTS[section["key"]].active(section["numbers"])
     ]
     summary = ("؛ " if lang == "ar" else "; ").join(s["headline"] for s in busy or sections)
@@ -242,17 +248,10 @@ async def update_settings(
     return await settings(conn)
 
 
-# Domains reserved for examples and tests (RFC 2606). The demo shops' people use them,
-# and nothing should ever be emailed there.
-RESERVED_DOMAINS = (".example", ".test", ".invalid", ".localhost")
-
-
-def _deliverable(address: str) -> bool:
-    local, at, domain = address.rpartition("@")
-    domain = domain.lower()
-    if not (local and at and "." in domain):
-        return False
-    return not domain.endswith(RESERVED_DOMAINS)
+# The guard against emailing an example domain lives in `core/mail.py` (documents use it
+# too); these names stay for the code and tests that already read them.
+RESERVED_DOMAINS = mail.RESERVED_DOMAINS
+_deliverable = mail.deliverable
 
 
 async def _owner_emails(conn: asyncpg.Connection) -> list[str]:

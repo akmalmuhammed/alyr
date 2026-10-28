@@ -4,11 +4,19 @@ import { useParams, useSearchParams } from "next/navigation";
 import { Suspense, useEffect, useMemo, useState } from "react";
 import { Done, Empty, Frame, Glyph, Who, type Lang } from "../../_customer/Frame";
 
+// The booking page (`/b/<shop>`). A customer's own link carries a signed token made for
+// booking (`?t=`, ALY-133); the page sends it to the API in the header `X-Order-Link`, never
+// in the address of a request, and the API says who it is. A public link (no token) shows the
+// services and the free times and cannot book. The old `?c=<contact id>` identifies nobody:
+// it is treated as a link that is not valid.
+
 type Service = { id: string; name: string; name_ar: string; duration_minutes: number; price_text: string };
+type LinkState = { state: "none" | "ok" | "invalid" | "expired"; message: string; message_ar: string };
 type BookingPage = {
-  shop: { name: string; name_ar: string; timezone: string };
+  shop: { name: string; name_ar: string; timezone: string; whatsapp: string };
   services: Service[];
-  customer: { name: string } | null;
+  customer: { name: string; lang: Lang } | null;
+  link: LinkState;
 };
 type Booked = { number: number; when_text: string; service: string };
 
@@ -19,6 +27,8 @@ const T = {
     context: "Booking", eyebrow: "Book from your chat", title: "Book a visit",
     hello: (n: string) => <>Booking as <b>{n}</b></>,
     noCustomer: "Open this page from the link in your chat so we know who is booking.",
+    startOnWhatsApp: (shop: string) => `To book, start on WhatsApp with ${shop}. They will send you your own booking link.`,
+    askShop: "Message the shop on WhatsApp", prefill: "Book",
     service: "Choose a service", day: "Choose a day", time: "Choose a time", minutes: (n: number) => `${n} min`,
     noTimes: "No free times on this day. Try another day.",
     note: "Anything we should know? (optional)", confirm: "Confirm booking",
@@ -31,6 +41,8 @@ const T = {
     context: "حجز", eyebrow: "حجز من المحادثة", title: "احجز موعداً",
     hello: (n: string) => <>الحجز باسم <b>{n}</b></>,
     noCustomer: "افتح هذه الصفحة من الرابط في المحادثة لنعرف صاحب الحجز.",
+    startOnWhatsApp: (shop: string) => `للحجز، ابدأ من واتساب مع ${shop} وسيرسلون لك رابط الحجز الخاص بك.`,
+    askShop: "راسل المتجر على واتساب", prefill: "حجز",
     service: "اختر الخدمة", day: "اختر اليوم", time: "اختر الوقت", minutes: (n: number) => `${n} دقيقة`,
     noTimes: "لا توجد أوقات متاحة في هذا اليوم. جرّب يوماً آخر.",
     note: "هل من ملاحظة؟ (اختياري)", confirm: "تأكيد الحجز",
@@ -47,12 +59,26 @@ function upcomingDays(timezone: string): string[] {
   return Array.from({ length: DAYS_AHEAD }, (_, index) => format.format(new Date(Date.now() + index * 86_400_000)));
 }
 
+/** The language a visitor with no link of their own reads: the one asked for in the address,
+ *  else the phone's. */
+function preferred(asked: string | null): Lang {
+  if (asked === "ar" || asked === "en") return asked;
+  return typeof navigator !== "undefined" && /^ar/i.test(navigator.language) ? "ar" : "en";
+}
+
 function BookingForm() {
   const { slug } = useParams<{ slug: string }>();
-  const contact = useSearchParams().get("c");
+  const query = useSearchParams();
+  const asked = query.get("t");
+  // The customer's link goes in a header, not in the address, so no request log of ours holds
+  // it. A token is plain ASCII; anything else cannot be a header (fetch would throw) and
+  // cannot be ours, so it is sent as one the API will call invalid. The old `?c=` link (a
+  // bare contact ID) gets the same answer: it identifies nobody.
+  const token = asked ? (/^[\w.-]{1,200}$/.test(asked) ? asked : "invalid") : query.get("c") ? "invalid" : null;
+  const askedLang = query.get("lang");
   const [page, setPage] = useState<BookingPage | null>(null);
   const [missing, setMissing] = useState(false);
-  const [lang, setLang] = useState<Lang>("en");
+  const [chosen, setChosen] = useState<Lang | null>(null);
   const [serviceId, setServiceId] = useState("");
   const [day, setDay] = useState("");
   const [times, setTimes] = useState<string[] | null>(null);
@@ -60,20 +86,25 @@ function BookingForm() {
   const [note, setNote] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
+  // The link stopped working while the page was open (it expired, say): the page says so.
+  const [stopped, setStopped] = useState<LinkState | null>(null);
   const [booked, setBooked] = useState<Booked | null>(null);
+  const lang: Lang = chosen ?? "en";
   const t = T[lang];
   const locale = lang === "ar" ? "ar-QA" : "en-GB";
 
   useEffect(() => {
-    fetch(`/api/book/${slug}${contact ? `?c=${contact}` : ""}`, { cache: "no-store" })
+    fetch(`/api/book/${slug}`, { cache: "no-store", headers: token ? { "x-order-link": token } : undefined })
       .then((r) => (r.ok ? r.json() : Promise.reject()))
       .then((data: BookingPage) => {
         setPage(data);
+        // The page speaks the customer's own language when their link says who they are.
+        setChosen((current) => current ?? data.customer?.lang ?? preferred(askedLang));
         setDay(upcomingDays(data.shop.timezone)[0]);
         if (data.services.length === 1) setServiceId(data.services[0].id);
       })
-      .catch(() => setMissing(true));
-  }, [slug, contact]);
+      .catch(() => { setChosen((current) => current ?? preferred(askedLang)); setMissing(true); });
+  }, [slug, token, askedLang]);
 
   useEffect(() => {
     if (!serviceId || !day) return;
@@ -106,12 +137,18 @@ function BookingForm() {
     const response = await fetch(`/api/book/${slug}`, {
       method: "POST",
       headers: { "content-type": "application/json" },
-      body: JSON.stringify({ contact_id: contact, service_id: serviceId, starts_at: start, note }),
+      body: JSON.stringify({ token, service_id: serviceId, starts_at: start, note }),
     });
     const data = await response.json().catch(() => ({}));
     setBusy(false);
     if (!response.ok) {
-      setError(data?.detail?.message ?? t.failed);
+      const refusal = data?.detail;
+      // The link ran out, or was never good: say so, with the API's own words.
+      if (response.status === 403 && (refusal?.code === "expired_link" || refusal?.code === "bad_link")) {
+        setStopped({ state: refusal.code === "expired_link" ? "expired" : "invalid", message: refusal.message, message_ar: refusal.message_ar });
+        return;
+      }
+      setError(refusal?.message ?? t.failed);
       // Someone else may have just taken the time: show what is still free.
       if (response.status === 409) pick(setDay, day);
       return;
@@ -120,10 +157,34 @@ function BookingForm() {
   }
 
   if (missing) return <Empty text={t.notFound} />;
-  if (!page) return null;
+  if (!page || !chosen) return null;
   const shop = lang === "ar" && page.shop.name_ar ? page.shop.name_ar : page.shop.name;
-  const toggle = () => setLang(lang === "en" ? "ar" : "en");
-  const chosen = page.services.find((s) => s.id === serviceId);
+  const toggle = () => setChosen(lang === "en" ? "ar" : "en");
+  const chosenService = page.services.find((s) => s.id === serviceId);
+  const whatsapp = page.shop.whatsapp ? `https://wa.me/${page.shop.whatsapp}?text=${encodeURIComponent(t.prefill)}` : "";
+
+  // A link that has expired or is not valid (an edited one, one from another shop, an order
+  // link, or the old bare contact ID): the customer is told, kindly, to ask the shop for a new
+  // one. Nothing here can book.
+  const problem = stopped ?? (page.link.state === "invalid" || page.link.state === "expired" ? page.link : null);
+  if (problem) {
+    return (
+      <Frame lang={lang} onLang={toggle} shop={shop} context={t.context} short>
+        <section className="cx-hero" style={{ "--i": 0 } as React.CSSProperties}>
+          <span className="cx-eyebrow">{t.eyebrow}</span>
+          <h1>{t.title}</h1>
+        </section>
+        <p className="cx-warn" role="alert" style={{ "--i": 1 } as React.CSSProperties}>
+          {lang === "ar" && problem.message_ar ? problem.message_ar : problem.message}
+        </p>
+        {whatsapp && (
+          <a className="cx-btn" style={{ "--i": 2 } as React.CSSProperties} href={whatsapp}>
+            <Glyph name="wa" />{t.askShop}
+          </a>
+        )}
+      </Frame>
+    );
+  }
 
   if (booked) {
     return (
@@ -141,7 +202,12 @@ function BookingForm() {
       <section className="cx-hero" style={{ "--i": 0 } as React.CSSProperties}>
         <span className="cx-eyebrow">{t.eyebrow}</span>
         <h1>{t.title}</h1>
-        {page.customer ? <Who label={t.hello(page.customer.name)} /> : <p className="cx-warn">{t.noCustomer}</p>}
+        {page.customer ? <Who label={t.hello(page.customer.name)} /> : (
+          <p className="cx-warn">{whatsapp ? t.startOnWhatsApp(shop) : t.noCustomer}</p>
+        )}
+        {!page.customer && whatsapp && (
+          <a className="cx-btn ghost" href={whatsapp}><Glyph name="wa" />{t.askShop}</a>
+        )}
       </section>
 
       {page.services.length === 0 && <p className="cx-warn">{t.noServices}</p>}
@@ -199,12 +265,12 @@ function BookingForm() {
 
       {!start && error && <div className="cx-error" role="alert">{error}</div>}
 
-      {start && chosen && (
+      {start && chosenService && (
         <div className="cx-bar">
           <div className="cx-bar-in">
             {error && <div className="cx-error" role="alert">{error}</div>}
             <div className="cx-sum">
-              <span>{lang === "ar" && chosen.name_ar ? chosen.name_ar : chosen.name}</span>
+              <span>{lang === "ar" && chosenService.name_ar ? chosenService.name_ar : chosenService.name}</span>
               <b className="num" dir="ltr">{part(day, { weekday: "short", day: "numeric", month: "short" })} · {timeLabel(start)}</b>
             </div>
             <input className="cx-input" value={note} maxLength={500} placeholder={t.note} aria-label={t.note}

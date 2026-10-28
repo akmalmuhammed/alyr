@@ -1,4 +1,4 @@
-"""One set of actions behind every door (ALY-130, decision D-040).
+"""One set of actions behind every door (ALY-130, decision D-065).
 
 An owner can ask ALYR about the shop, and later change it, from the workspace or from
 WhatsApp. Both call the same action here, so who may do what, which modules must be on,

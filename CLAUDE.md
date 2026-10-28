@@ -34,11 +34,11 @@ Plan and tasks live in Linear, team `Alyrtech`, project `Alyr Launch`. Work one 
 These are not style preferences. Do not write code that breaks them, and stop and say so if a task seems to require it.
 
 1. **Tenant isolation.** Every tenant-owned table has a `tenant_id` column and a PostgreSQL Row-Level Security policy. The application database role cannot bypass RLS. No query relies on application code alone to separate tenants.
-2. **Data stays in Qatar.** Production runs in Azure Qatar Central. No service outside Qatar receives merchant or end-customer personal data unless it is listed in `docs/data-residency.md` with its legal basis. This includes error trackers, analytics, OCR and LLM APIs. When in doubt, strip the data or do not send it.
+2. **Data stays in Qatar.** Production runs in Google Cloud's Doha region (`me-central1`, D-060). No service outside Qatar receives merchant or end-customer personal data unless it is listed in `docs/data-residency.md` with its legal basis. This includes error trackers, analytics, OCR and LLM APIs. When in doubt, strip the data or do not send it.
 3. **Non-custodial payments.** Alyr never holds, pools or moves merchant funds. Each merchant uses their own gateway account (SADAD, SkipCash, Dibsy). Store payment references and statuses only; never card numbers.
 4. **Official WhatsApp only.** All WhatsApp traffic goes through Meta's Cloud API. No WhatsApp Web automation, no unofficial libraries.
 5. **Consent before sending.** Any message Alyr starts (a template) goes through the outbound layer, which checks consent, the 24-hour window and the tenant's messaging limit. Modules never call a channel directly.
-6. **Secrets.** Never commit tokens or keys. Local values go in `.env` (ignored); production values in Azure Key Vault.
+6. **Secrets.** Never commit tokens or keys. Local values go in `.env` (ignored); production values in Google Secret Manager, kept in Doha.
 
 ## Layout
 
@@ -48,14 +48,47 @@ apps/api/                     FastAPI service (Python 3.13, managed with uv)
   src/alyr/channels/          Message channels: Meta Cloud API and the local simulator, same interface
   src/alyr/core/              Inbound path, contact identity, outbound layer (consent, 24-hour window), jobs,
                               sign-in (auth), email (mail), sign-up (onboarding), pricing, back office,
-                              team accountability (team, D-028), workspace shell (workspace), templates
-                              actions (one set of actions behind the workspace and WhatsApp, D-040) and
+                              team accountability (team, D-028), workspace shell (workspace), templates,
+                              signed customer links (links: a customer's order or booking link carries a token made for that page, never a contact ID),
+                              actions (one set of actions behind the workspace and WhatsApp, D-065) and
                               staff_link (links a staff number to a person by a one-time code)
   src/alyr/modules/           What answers customers: ledger, orders, bookings, inbox, agent (the owner's
                               weekly view), report.py (weekly report card); router.py picks the module.
                               items/ is the Catalog's engine (what a shop sells: variants, availability,
-                              stock log, holds; specs/001-catalog-engine), used by orders at checkout
-                              owner/ is what an owner can ask from WhatsApp (specs/003-owner-actions)
+                              stock log, holds; specs/001-catalog-engine), used by orders at checkout;
+                              groups.py holds customer price groups and group prices (specs/003); the
+                              Excel and CSV import and export are in specs/006-catalog-import-export;
+                              template.py and samples.py give each business type its catalog
+                              (specs/008; the words are in src/alyr/presets_catalog.py, and
+                              Settings.catalog_for_new_shops decides whether new shops get it);
+                              features.py reads what a shop has switched on (src/alyr/capabilities.py
+                              is the registry, src/alyr/shop_templates.py the templates; specs/012):
+                              ask it, never the business type; fields.py is a shop's own fields on
+                              items and sizes, templates.py the templates made in the back office,
+                              template_change.py a shop's change of type (all specs/012);
+                              orders/totals.py is the ONE pricing function (discounts, delivery fee,
+                              total: the page's review, the chat's draft and the order all call it;
+                              no float) and items/discounts.py, delivery.py and costs.py are the
+                              pricing pack's three features, off for every shop until switched on
+                              (specs/014; cost lives in tables of its own and only owners and admins
+                              ever see it: read costs.py before touching an item's or an order's reader);
+                              orders/page.py is what the customer's order page reads (specs/005);
+                              documents/ is the documents engine (receipts, invoices, credit notes:
+                              gapless numbers, immutable once issued, a PDF drawn in Arabic and
+                              English; specs/011, D-042), switched on per shop through the
+                              `documents` module, off for every shop until its screens exist;
+                              sales.py, payments.py and delivery.py make documents from orders,
+                              credit accounts and payments recorded by hand and send them by
+                              WhatsApp, email and a hosted link (specs/013, ALY-139);
+                              listing.py, lookup.py and refs.py are what the workspace's Documents
+                              screens read (specs/014, ALY-146)
+                              connect/ is connected mode: another system sends its sales (open API
+                              with API keys, CSV import), authority says who numbers each kind of
+                              document, webhooks send events out (specs/016, ALY-142, docs/connect-api.md)
+                              items/codes.py reads a customer's message for item codes, links and
+                              SKUs and items/wa_order.py orders by them in the chat (specs/010);
+                              owner/ is what an owner or staff member can ask from WhatsApp, and
+                              LINK proves a staff phone (specs/029-owner-actions, D-065)
   src/alyr/routes/            HTTP routes. deps.py: who is calling, which shop, which modules are on
   src/alyr/catalog.py         What ALYR sells: modules and products (D-027)
   src/alyr/db.py              `Database.tenant(id)`: one transaction scoped to one tenant
@@ -67,16 +100,28 @@ apps/web/                     Next.js. Three root layouts, one per route group:
   app/(site)/, (site-ar)/     Public site, English and Arabic (/, /ar, /chat, /ar/chat); words in app/_site/copy.ts
   app/(product)/              Workspace (/app), back office (/ops), sign-in (/login), sign-up (/start),
                               sales demo (/whatsapp), owner view sample (/agent-sample), and the customer pages
-                              opened from WhatsApp: order /s, booking /b, payment /pay, tracking /t
-  app/(product)/_customer/    Shared frame and styles of the customer pages
+                              opened from WhatsApp: order /s, booking /b, payment /pay, tracking /t,
+                              document /d (a receipt or invoice, by a signed link)
+  app/(product)/_customer/    Shared frame, styles, the price format and the Arabic search folding of the
+                              customer pages; order/ is the order page (specs/005-order-page-v2)
   app/(product)/_workspace/   Workspace screens and styles
   app/_agent/                 The owner's weekly view (ALYR Agent)
 docs/                         See docs/README.md for what lives where (docs/hygiene.md section 1)
 scripts/                      check.sh (everything CI runs), demo.sh (start and check the live demo),
                               api-in-docker.sh, build-site.sh, catalog-browser-check.mjs (the Catalog's
-                              screens in a real browser at phone width), hooks/pre-commit
+                              screens in a real browser at phone width), catalog-reports-browser-check.mjs
+                              (its home cards and the back office's Usage view), order-page-browser-check.mjs
+                              (the customer's order page, same way), booking-page-browser-check.mjs (the booking page and its links),
+                              document-page-browser-check.mjs (the hosted document page and its links),
+                              documents-screens-browser-check.mjs (the workspace's Documents screens),
+                              connect-browser-check.mjs (the connection screen, phone width, both languages),
+                              golive-truth-check.mjs (every onboarding sentence of every business type proved on the
+                              finished order page and workspace, English and Arabic),
+                              hooks/pre-commit
 specs/                        One folder per spec; write or update the spec before building
-infra/                        Cloud infrastructure as code (proposed in PR #52, not merged)
+infra/gcp/                    Production on Google Cloud in Doha (D-060): setup.sh, push-images.sh, README
+infra/cloudflare/api/          The API Worker and container settings for interim hosting (D-052, specs/021);
+                              superseded for real clients by D-060
 packages/compliance/          WPS SIF and e-invoice libraries (not created yet)
 ```
 

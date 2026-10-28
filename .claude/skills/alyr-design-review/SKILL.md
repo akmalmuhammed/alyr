@@ -44,6 +44,9 @@ A review reads the work as it runs, not the code alone:
   list in `alyr-design/arabic.md`;
 - the names in the samples against real businesses (web searches in English and Arabic,
   dated; the manual check goes on the founder's list);
+- every drawing marked "Sample" once in its own chrome (no FIG captions, no page-level line),
+  and, in the served HTML, the figure's first line saying it is fictional before any of its
+  numbers, with no heading inside a sample figure (`alyr-design/honesty.md` §4);
 - the recurring failures in `alyr-design` §11, one by one;
 - accessibility with axe and by keyboard; performance with Lighthouse on the built site.
 

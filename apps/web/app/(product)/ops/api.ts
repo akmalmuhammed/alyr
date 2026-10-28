@@ -1,5 +1,6 @@
 // Types and helpers shared by the back-office screens (D-027, D-032). Amounts are in
 // dirhams, as the API sends them: 100 is QAR 1.
+import type { Access } from "./ClientAccess";
 
 export type Text = { en: string; ar: string };
 
@@ -33,6 +34,8 @@ export type ClientSummary = {
 };
 export type ClientDetail = Omit<ClientSummary, "quote"> & {
   quotes: Quote[]; draft_preview: Line[]; effective_price_mode: "automatic" | "prepared";
+  // Whether the client's products are open, and what they paid (ALY-212, D-051).
+  access?: Access;
 };
 
 export type Item = {
@@ -57,7 +60,8 @@ export async function api<T>(url: string, method = "GET", body?: unknown): Promi
   });
   const data = await response.json().catch(() => ({}));
   const detail = (data as { detail?: unknown }).detail;
-  const error = response.ok ? "" : typeof detail === "string" ? detail : "That did not work. Check the fields.";
+  const said = detail && typeof detail === "object" ? (detail as { message?: unknown }).message : undefined;
+  const error = response.ok ? "" : typeof detail === "string" ? detail : typeof said === "string" ? said : "That did not work. Check the fields.";
   return { ok: response.ok, status: response.status, data: data as T, error };
 }
 

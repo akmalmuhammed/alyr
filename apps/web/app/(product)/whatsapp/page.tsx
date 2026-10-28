@@ -1,8 +1,14 @@
 "use client";
 
-import { Screens } from "../_workspace/Screens";
+import { useRouter } from "next/navigation";
+import { useEffect } from "react";
 
-/** The sales demo: the chat simulator beside the workspace screens, all on sample data. */
-export default function DemoPage() {
-  return <Screens />;
+/** The old sales demo (chat simulator beside sample screens) is gone: the founder asked for
+ *  the real product only (28 Oct 2026). An old link lands in the workspace instead. */
+export default function OldDemo() {
+  const router = useRouter();
+  useEffect(() => {
+    router.replace("/app");
+  }, [router]);
+  return null;
 }

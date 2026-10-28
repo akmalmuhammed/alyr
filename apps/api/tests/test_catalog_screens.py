@@ -340,7 +340,7 @@ def test_the_list_has_filters_with_counts_and_pages(client):
     shown = listed(client)
     assert shown["counts"] == {
         "all": base + 6, "draft": 1, "sold_out": 2, "low_stock": 1, "stocked": 3,
-        "archived": 1,
+        "archived": 1, "sample": 0,
     }
     assert shown["low_stock_at"] == 5 and shown["total"] == base + 6
     assert "Old" not in names(client)
@@ -745,7 +745,9 @@ def test_shop_settings_round_trip(client):
     saved = client.put("/api/items/settings", json={
         "agents_edit_items": True, "low_stock_at": 12, "hold_minutes": 45, "day_starts": "04:30"})
     assert saved.json() == {
-        "hold_minutes": 45, "day_starts": "04:30", "agents_edit_items": True, "low_stock_at": 12}
+        "hold_minutes": 45, "day_starts": "04:30", "agents_edit_items": True, "low_stock_at": 12,
+        "sold_out_display": "grey", "wholesale_layout": False, "whatsapp_number": "",
+        "whatsapp_mode": "chat"}
     assert client.get("/api/items/settings").json() == saved.json()
     assert client.put("/api/items/settings", json={"low_stock_at": -1}).status_code == 422
     assert on_shop(client, listing.low_stock_at) == 12

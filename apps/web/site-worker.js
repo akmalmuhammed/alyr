@@ -18,7 +18,15 @@ const worker = {
       url.protocol = "https:";
       return Response.redirect(url.toString(), 301);
     }
-    return env.ASSETS.fetch(request);
+    const response = await env.ASSETS.fetch(request);
+    // A pull request's preview (a version URL on workers.dev) is never indexed: search
+    // engines only ever see alyr.qa.
+    if (env.PREVIEW === "on") {
+      const preview = new Response(response.body, response);
+      preview.headers.set("X-Robots-Tag", "noindex, nofollow");
+      return preview;
+    }
+    return response;
   },
 };
 

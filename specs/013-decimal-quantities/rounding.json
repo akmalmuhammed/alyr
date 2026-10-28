@@ -1,0 +1,27 @@
+{
+  "rule": "A line is the price of one times its quantity, rounded half up to a whole dirham, once per line. An order is the sum of its rounded lines. The API (qty.line_total) and the web (lineTotal in _customer/qty.ts) both read this table in their tests.",
+  "cases": [
+    {"price": 1250, "quantity": "0.333", "line": 416, "note": "416.25"},
+    {"price": 1250, "quantity": "0.5", "line": 625},
+    {"price": 1250, "quantity": "1.5", "line": 1875},
+    {"price": 333, "quantity": "0.5", "line": 167, "note": "166.5 rounds up"},
+    {"price": 199, "quantity": "1.5", "line": 299, "note": "298.5 rounds up"},
+    {"price": 1, "quantity": "0.499", "line": 0, "note": "0.499"},
+    {"price": 1, "quantity": "0.5", "line": 1, "note": "0.5 rounds up"},
+    {"price": 4999, "quantity": "2.25", "line": 11248, "note": "11247.75"},
+    {"price": 1250, "quantity": "0.001", "line": 1, "note": "1.25"},
+    {"price": 800, "quantity": "0.125", "line": 100},
+    {"price": 2500, "quantity": "12.5", "line": 31250},
+    {"price": 7, "quantity": "0.5", "line": 4, "note": "3.5 rounds up"},
+    {"price": 1250, "quantity": "3", "line": 3750},
+    {"price": 1005, "quantity": "0.5", "line": 503, "note": "502.5; 1.005 is not exact as a float"},
+    {"price": 10, "quantity": "0.15", "line": 2, "note": "1.5; a float gives 1.5000000000000002"},
+    {"price": 3999, "quantity": "0.007", "line": 28, "note": "27.993"},
+    {"price": 100000000, "quantity": "999.999", "line": 99999900000, "note": "the largest line"}
+  ],
+  "orders": [
+    {"lines": [{"price": 1250, "quantity": "0.333"}, {"price": 333, "quantity": "0.5"}], "total": 583},
+    {"lines": [{"price": 199, "quantity": "1.5"}, {"price": 199, "quantity": "1.5"}], "total": 598},
+    {"lines": [{"price": 1, "quantity": "0.5"}, {"price": 1, "quantity": "0.5"}, {"price": 1, "quantity": "0.5"}], "total": 3, "note": "three halves of a dirham are three dirhams, not two: each is rounded alone"}
+  ]
+}

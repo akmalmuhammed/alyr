@@ -10,7 +10,7 @@ caller. Every change is written to the audit log in the same transaction (D-033)
 
 import re
 from contextlib import asynccontextmanager
-from datetime import UTC, datetime, timedelta
+from datetime import UTC, date, datetime, timedelta
 from typing import Literal
 from uuid import UUID
 
@@ -20,8 +20,18 @@ from pydantic import BaseModel, Field
 
 from alyr import catalog, presets
 from alyr.config import get_settings
-from alyr.core import auth, backoffice, pricing
+from alyr.core import (
+    access,
+    auth,
+    backoffice,
+    pricing,
+    readiness,
+    whatsapp_attach,
+    whatsapp_setup,
+)
 from alyr.core.auth import Staff
+from alyr.modules.items import clock as shop_clock
+from alyr.modules.items import template, template_change
 from alyr.routes.deps import current_staff
 
 router = APIRouter(prefix="/api/admin", tags=["back office"])
@@ -38,6 +48,9 @@ class NewBusiness(BaseModel):
     products: list[str] = Field(default_factory=list, max_length=10)
     # Add the business to an existing client; empty makes a new client for it.
     client_id: UUID | None = None
+    # A template (ALYR's own type, or one made in the back office) for the business: its type,
+    # features, wording, layout, starter categories and fields (ALY-148). Empty is the plain one.
+    template: str = Field(default="", max_length=40)
 
 
 class ItemChange(BaseModel):
@@ -95,9 +108,56 @@ class MoveBusiness(BaseModel):
     client_id: UUID
 
 
+class SwitchModule(BaseModel):
+    enabled: bool
+
+
+# The modules the back office switches for one business. The Catalog is on for every business
+# (ALY-113) and this is how one business has it turned off, or back on; the other modules are
+# a business's products and are switched in its own workspace. Documents (ALY-138) is off for
+# every business and has no screen yet: this is how ALYR switches it on for one business to
+# try it, until the workspace screens (package 3) make it part of a product.
+SWITCHABLE_MODULES = ("catalog", "documents")
+
+
 class Snooze(BaseModel):
     key: str = Field(min_length=3, max_length=120)
     days: int = Field(default=1, ge=1, le=30)
+
+
+class StepChange(BaseModel):
+    owner: Literal["client", "alyr"] | None = None
+    # What is holding the step up, in ALYR's words; empty clears it.
+    blocker: str | None = Field(default=None, max_length=500)
+    choice: str | None = Field(default=None, max_length=40)
+
+
+class Payment(BaseModel):
+    # In dirhams (100 is QAR 1), what the bank statement or link shows.
+    amount: int = Field(gt=0, le=100_000_000)
+    method: Literal["bank_transfer", "cash", "cheque", "link"]
+    reference: str = Field(default="", max_length=120)
+    received_on: date
+    note: str = Field(default="", max_length=500)
+
+
+class OpenWithout(BaseModel):
+    reason: str = Field(min_length=1, max_length=500)
+
+
+class WhatsappChange(BaseModel):
+    # What ALYR fills in for the client (assisted onboarding)...
+    phone: str | None = Field(default=None, max_length=30)
+    display_name: str | None = Field(default=None, max_length=80)
+    ready: list[str] | None = Field(default=None, max_length=10)
+    # ...and where ALYR is with the connection; a failure says why, for the owner to read.
+    state: Literal["", "connecting", "failed"] | None = None
+    note: str = Field(default="", max_length=500)
+
+
+class AttachNumber(BaseModel):
+    number_id: str = Field(max_length=30)
+    waba_id: str = Field(default="", max_length=30)
 
 
 class NewStaff(BaseModel):
@@ -188,6 +248,17 @@ async def create_business(
         if product is None or product.status != "available":
             raise HTTPException(status_code=422, detail=f"{key} cannot be switched on")
         modules += [m for m in product.modules if m not in modules]
+    target = None
+    if body.template:
+        async with _back_office(request) as conn:
+            target = await template_change.find(conn, body.template, usable=True)
+        if target is None:
+            raise HTTPException(status_code=404, detail="no such template")
+    if get_settings().catalog_for_new_shops and "catalog" not in modules:
+        # Every business has the Catalog, as the shops made by onboarding do (ALY-113). It has
+        # no type of its own here, so it gets the plain Catalog; the back office can switch it
+        # off for this business afterwards.
+        modules.append("catalog")
     try:
         async with _back_office(request) as conn:
             tenant_id = await conn.fetchval(
@@ -208,7 +279,24 @@ async def create_business(
         raise HTTPException(status_code=409, detail="that short name is taken") from error
     except asyncpg.ForeignKeyViolationError as error:
         raise HTTPException(status_code=404, detail="no such client") from error
-    return {"id": str(tenant_id), "slug": slug, "modules": modules}
+    if target is not None and "catalog" in modules:
+        # Its type first (an owner cannot change it), then what the template brings. No samples:
+        # a business made here has its own items.
+        async with _back_office(request) as conn:
+            await conn.fetchval(
+                "select admin_set_business_type($1, $2)", tenant_id,
+                template_change.business_type_of(target),
+            )
+            await backoffice.audit(
+                conn, staff, "business.template", "business", tenant_id, business_id=tenant_id,
+                detail={"to": target.key, "created": True},
+            )
+        async with request.app.state.db.tenant(tenant_id) as conn:
+            await template.apply(
+                conn, target, await shop_clock.load(conn), samples_too=False, by=_by(staff)
+            )
+    return {"id": str(tenant_id), "slug": slug, "modules": modules,
+            "template": target.key if target else None}
 
 
 @router.get("/setup-requests")
@@ -260,6 +348,28 @@ async def move_business(
             detail={"from_client": str(before) if before else None},
         )
     return {"moved": True}
+
+
+@router.post("/businesses/{business_id}/modules/{module}")
+async def switch_module(
+    business_id: UUID, module: str, body: SwitchModule, request: Request,
+    staff: Staff = Depends(platform_admin),
+) -> dict:
+    """Switch the Catalog (or Documents) on or off for one business. Nothing is deleted: its
+    items, photos and stock (or its documents, which cannot be deleted at all) stay, and the
+    screens and pages come back when it is switched on again."""
+    if module not in SWITCHABLE_MODULES:
+        raise HTTPException(status_code=404, detail=f"{module} cannot be switched here")
+    async with _back_office(request) as conn:
+        if not await conn.fetchval(
+            "select admin_set_module($1, $2, $3)", business_id, module, body.enabled
+        ):
+            raise HTTPException(status_code=404, detail="no such business")
+        await backoffice.audit(
+            conn, staff, "module.on" if body.enabled else "module.off", "business",
+            business_id, business_id=business_id, detail={"module": module},
+        )
+    return {"module": module, "enabled": body.enabled}
 
 
 # ── pricing and onboarding switches (D-032) ───────────────
@@ -349,7 +459,9 @@ async def clients(request: Request, _: Staff = Depends(platform_admin)) -> dict:
 async def client(client_id: UUID, request: Request, _: Staff = Depends(platform_admin)) -> dict:
     try:
         async with _back_office(request) as conn:
-            return await pricing.client(conn, client_id)
+            return await pricing.client(conn, client_id) | {
+                "access": await access.summary(conn, client_id)
+            }
     except pricing.PricingError as error:
         raise HTTPException(status_code=404, detail=str(error)) from error
 
@@ -514,3 +626,189 @@ async def audit_log(
 ) -> dict:
     async with _back_office(request) as conn:
         return {"entries": await backoffice.audit_log(conn, client_id, limit)}
+
+
+# ── onboarding board and readiness (ALY-165, D-049) ──────
+
+
+@asynccontextmanager
+async def _in_business(request: Request, business_id: UUID):
+    """The back-office connection, also scoped to one business: the business's own rows
+    and the audit log are written in the same transaction, so they stand or fall together."""
+    async with _back_office(request) as conn:
+        if not await conn.fetchval("select true from tenants where id = $1", business_id):
+            raise HTTPException(status_code=404, detail="no such business")
+        await conn.execute("select set_config('app.tenant_id', $1, true)", str(business_id))
+        yield conn
+
+
+@router.get("/onboarding")
+async def onboarding_board(request: Request, _: Staff = Depends(platform_admin)) -> dict:
+    """Every business by stage, as the readiness check last saw it: what is left, what
+    ALYR owes, what is blocked, and who has not moved in two days."""
+    now = datetime.now(UTC)
+    rows = await _admin_call(request, "select * from admin_onboarding()")
+    board = [readiness.board_row(r, now) for r in rows]
+    counts = {stage: 0 for stage in ("setting_up", "ready", "live")}
+    for b in board:
+        counts[b["stage"]] += 1
+    return {"businesses": board, "counts": counts}
+
+
+@router.get("/businesses/{business_id}/readiness")
+async def business_readiness(
+    business_id: UUID, request: Request, staff: Staff = Depends(platform_admin)
+) -> dict:
+    """Check one business now, as its owner would see it."""
+    async with _in_business(request, business_id) as conn:
+        return await readiness.run(conn, _by(staff), by_alyr=True)
+
+
+@router.patch("/businesses/{business_id}/steps/{key}")
+async def change_step(
+    business_id: UUID, key: str, body: StepChange, request: Request,
+    staff: Staff = Depends(platform_admin),
+) -> dict:
+    """Take a step on for the client (assisted onboarding), hand it back, or write what is
+    holding it up. The client sees the owner and the blocker on their own go-live list."""
+    try:
+        async with _in_business(request, business_id) as conn:
+            changed = {}
+            if body.owner is not None and await readiness.set_owner(
+                conn, key, body.owner, _by(staff), True
+            ):
+                changed["owner"] = body.owner
+            if body.blocker is not None and await readiness.set_blocker(
+                conn, key, body.blocker, _by(staff)
+            ):
+                changed["blocker"] = body.blocker.strip()
+            if body.choice is not None and await readiness.set_choice(
+                conn, key, body.choice, _by(staff), True
+            ):
+                changed["choice"] = body.choice
+            if changed:
+                await backoffice.audit(
+                    conn, staff, "onboarding.step", "business", business_id,
+                    business_id=business_id, detail={"step": key, **changed},
+                )
+            return await readiness.run(conn, _by(staff), by_alyr=True)
+    except LookupError as error:
+        raise HTTPException(status_code=404, detail=str(error)) from error
+    except readiness.ReadinessError as error:
+        raise HTTPException(status_code=422, detail=str(error)) from error
+
+
+@router.patch("/businesses/{business_id}/whatsapp")
+async def change_whatsapp(
+    business_id: UUID, body: WhatsappChange, request: Request,
+    staff: Staff = Depends(platform_admin),
+) -> dict:
+    """Fill in a business's WhatsApp setup for them, or say where ALYR is with connecting
+    it (ALY-217). The owner sees the state, and a failure's reason, on their go-live list."""
+    try:
+        async with _in_business(request, business_id) as conn:
+            # The audit names what was filled in, and keeps ALYR's state and note.
+            detail: dict = {}
+            if (body.phone, body.display_name, body.ready) != (None, None, None):
+                given = await whatsapp_setup.prepare(
+                    conn, _by(staff), True, phone=body.phone, display_name=body.display_name,
+                    ready=body.ready,
+                )
+                detail |= {key: True for key in given}
+            if body.state is not None and await whatsapp_setup.set_state(
+                conn, body.state, body.note, _by(staff)
+            ):
+                detail |= {"state": body.state, "note": body.note.strip()}
+            if detail:
+                await backoffice.audit(
+                    conn, staff, "onboarding.whatsapp", "business", business_id,
+                    business_id=business_id, detail=detail,
+                )
+            return await readiness.run(conn, _by(staff), by_alyr=True)
+    except whatsapp_setup.SetupError as error:
+        raise HTTPException(status_code=422, detail=str(error)) from error
+
+
+@router.post("/businesses/{business_id}/whatsapp/number")
+async def attach_number(
+    business_id: UUID, body: AttachNumber, request: Request,
+    staff: Staff = Depends(platform_admin),
+) -> dict:
+    """Attach the business's Meta number (ALY-166) once Meta shows it connected. Messages to
+    it reach the business from then on, and the go-live check sees WhatsApp as done."""
+    try:
+        async with _in_business(request, business_id) as conn:
+            attached = await whatsapp_attach.attach(
+                conn, request.app.state.outbound.channels["meta"], business_id,
+                body.number_id, body.waba_id, _by(staff),
+            )
+            await backoffice.audit(
+                conn, staff, "whatsapp.attached", "business", business_id,
+                business_id=business_id, detail=attached,
+            )
+            return await readiness.run(conn, _by(staff), by_alyr=True)
+    except whatsapp_attach.AttachError as error:
+        raise HTTPException(status_code=422, detail=str(error)) from error
+
+
+@router.delete("/businesses/{business_id}/whatsapp/number")
+async def detach_number(
+    business_id: UUID, request: Request, staff: Staff = Depends(platform_admin)
+) -> dict:
+    """Take the business's Meta number off (a wrong number, or a move). The test line stays."""
+    async with _in_business(request, business_id) as conn:
+        removed = await whatsapp_attach.detach(conn, business_id)
+        if removed is None:
+            raise HTTPException(status_code=404, detail="this business has no WhatsApp number")
+        await backoffice.audit(
+            conn, staff, "whatsapp.detached", "business", business_id,
+            business_id=business_id, detail={"number_id": removed},
+        )
+        return await readiness.run(conn, _by(staff), by_alyr=True)
+
+
+# ── what a client pays ALYR (ALY-212, D-051; payment at go-live: ALY-242, D-053) ──
+
+
+@router.post("/clients/{client_id}/payments")
+async def record_payment(
+    client_id: UUID, body: Payment, request: Request, staff: Staff = Depends(platform_admin)
+) -> dict:
+    """Record a payment the client made to ALYR. Once what is due is covered, the client can
+    go live."""
+    try:
+        async with _back_office(request) as conn:
+            covered = await access.record(
+                conn, client_id, amount=body.amount, method=body.method,
+                reference=body.reference, received_on=body.received_on, note=body.note,
+                by=_by(staff),
+            )
+            await backoffice.audit(
+                conn, staff, "client.payment", "client", client_id, client_id=client_id,
+                detail={"amount": body.amount, "method": body.method,
+                        "received_on": body.received_on.isoformat(), "covered": covered},
+            )
+            return await access.summary(conn, client_id)
+    except LookupError as error:
+        raise HTTPException(status_code=404, detail=str(error)) from error
+    except access.AccessError as error:
+        raise HTTPException(status_code=422, detail=str(error)) from error
+
+
+@router.post("/clients/{client_id}/waive")
+async def waive_payment(
+    client_id: UUID, body: OpenWithout, request: Request, staff: Staff = Depends(platform_admin)
+) -> dict:
+    """Waive a client's payment (a pilot, a demo), saying why."""
+    try:
+        async with _back_office(request) as conn:
+            if await access.waive(conn, client_id, body.reason):
+                await backoffice.audit(
+                    conn, staff, "client.payment_waived", "client", client_id, client_id=client_id,
+                    detail={"reason": body.reason.strip()},
+                )
+            return await access.summary(conn, client_id)
+    except LookupError as error:
+        raise HTTPException(status_code=404, detail=str(error)) from error
+    except access.AccessError as error:
+        raise HTTPException(status_code=422, detail=str(error)) from error

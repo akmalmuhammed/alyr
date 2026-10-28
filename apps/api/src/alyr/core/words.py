@@ -14,7 +14,14 @@ MESSAGES: Noun = (("message", "messages"), ("رسالة واحدة", "رسالت
 REMINDERS: Noun = (("reminder", "reminders"), ("تذكير واحد", "تذكيران", "تذكيرات", "تذكيراً"))
 NUMBERS: Noun = (("number", "numbers"), ("رقم واحد", "رقمان", "أرقام", "رقماً"))
 DAYS: Noun = (("day", "days"), ("يوم واحد", "يومان", "أيام", "يوماً"))
+HOURS: Noun = (("hour", "hours"), ("ساعة واحدة", "ساعتان", "ساعات", "ساعة"))
 ITEMS: Noun = (("item", "items"), ("صنف واحد", "صنفان", "أصناف", "صنفاً"))
+DISCOUNTS: Noun = (("discount", "discounts"), ("خصم واحد", "خصمان", "خصومات", "خصماً"))
+ZONES: Noun = (
+    ("delivery area", "delivery areas"),
+    ("منطقة توصيل واحدة", "منطقتا توصيل", "مناطق توصيل", "منطقة توصيل"),
+)
+PICKUPS: Noun = (("pickup", "pickups"), ("استلام واحد", "استلامان", "استلامات", "استلاماً"))
 CHATS: Noun = (("chat", "chats"), ("محادثة واحدة", "محادثتان", "محادثات", "محادثة"))
 PATIENTS: Noun = (("patient", "patients"), ("مراجع واحد", "مراجعان", "مراجعين", "مراجعاً"))
 TIMES: Noun = (("time", "times"), ("مرة واحدة", "مرتان", "مرات", "مرة"))

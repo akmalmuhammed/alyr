@@ -28,13 +28,14 @@ from zoneinfo import ZoneInfo
 import asyncpg
 
 from alyr.config import get_settings
-from alyr.core import consent
+from alyr.core import consent, links
 from alyr.core.normalise import fmt_qar
 from alyr.db import Database
 from alyr.modules import report
 from alyr.modules.ledger import service as ledger
 
 QIRFA_TENANT_ID = UUID("0a1f0000-0000-4000-8000-00000000c1fa")
+CANCEL_ACCOUNT_EVERY = 0  # see where it is used; tests set it
 QIRFA_SLUG = "qirfa"
 NUMBER_ID = "sim-qirfa"
 TZ = ZoneInfo("Asia/Qatar")
@@ -354,8 +355,9 @@ class Bakery:
             self.products.append((product_id, name, price))
         # Huda's own WhatsApp receives the Sunday report; Yusuf's counter phone does not.
         owner = await conn.fetchval(
-            "insert into contacts (phone, name, role, number_id, weekly_report, lang) "
-            "values ($1, 'Huda (owner)', 'staff', $2, true, 'ar') returning id",
+            "insert into contacts (phone, name, role, number_id, weekly_report, lang, "
+            "catalog_manager) values ($1, 'Huda (owner)', 'staff', $2, true, 'ar', true) "
+            "returning id",
             OWNER_PHONE, NUMBER_ID,
         )
         await consent.record(conn, owner, "service", "granted", "weekly_report_setting")
@@ -415,6 +417,10 @@ class Bakery:
         # Collected within a few hours; only this morning's orders are still in the shop.
         if age > timedelta(hours=5):
             status = "cancelled" if rng.random() < 0.03 else "done"
+            # Off by default so the captured report and Agent samples stay as they are; a test
+            # turns it on to cancel a credit order every Nth order and check the reversal.
+            if kind == "account" and CANCEL_ACCOUNT_EVERY and number % CANCEL_ACCOUNT_EVERY == 0:
+                status = "cancelled"
         else:
             status = "new" if age < timedelta(minutes=40) else (
                 "confirmed" if age < timedelta(hours=2) else "ready")
@@ -441,7 +447,8 @@ class Bakery:
             [(order_id, pid, name, price, quantity) for pid, name, price, quantity in lines],
         )
         lang = person.lang
-        url = f"{self.web_url}/s/{self.slug}?c={person.id}"
+        # The customer's own link carries a signed token, like the one the chat sends.
+        url = links.order_url(self.web_url, self.slug, QIRFA_TENANT_ID, person.id)
         if kind != "account":
             asked = at - timedelta(minutes=rng.randint(3, 14))
             self.say(person, asked, rng.choice(WANT[lang]))
@@ -469,12 +476,26 @@ class Bakery:
         if status == "done":
             done = last + timedelta(minutes=rng.randint(10, 90))
             self.log("order", order_id, person, "done", min(done, self.now), staff)
-        if status == "cancelled":
-            self.log("order", order_id, person, "cancelled", at + timedelta(hours=1), staff)
+        cancelled_at = at + timedelta(hours=1)
+        reversed_amount = None
         if payment == "on_account":
+            # The sale is tied to its order, so the ledger can tell which sale a cancellation
+            # takes back (ALY-128).
             await ledger.add_entry(conn, person.id, "sale", total, f"Order #{number}",
-                                   "Order link", at)
-        else:
+                                   "Order link", at, order_id=order_id)
+            if status == "cancelled":
+                # A cancelled order on account has its sale and the reversal beside it, written
+                # by the one function `orders.service.cancel_order` uses, so the demo does not
+                # show a debt that was cancelled (ALY-110).
+                reversed_amount = await ledger.reverse_sale(
+                    conn, order_id, person.id, total, number, self.names[staff], at=cancelled_at
+                )
+        if status == "cancelled":
+            self.log("order", order_id, person, "cancelled", cancelled_at, staff, {
+                "number": number,
+                "credit_reversed": fmt_qar(reversed_amount) if reversed_amount else None,
+            })
+        if payment != "on_account":
             paid = payment == "paid"
             await conn.execute(
                 "insert into payment_requests (contact_id, amount, status, created_at, "
@@ -554,7 +575,8 @@ class Bakery:
             status, reminded, made, self.users[ADMIN_EMAIL],
         )
         lang = person.lang
-        url = f"{self.web_url}/b/{self.slug}?c={person.id}"
+        # The customer's own booking link carries a signed token, like the one the chat sends.
+        url = links.booking_url(self.web_url, self.slug, QIRFA_TENANT_ID, person.id)
         asked = made - timedelta(minutes=rng.randint(2, 9))
         self.say(person, asked, BOOK[lang])
         self.auto(person, asked + timedelta(seconds=4), BOOK_LINK[lang].format(url=url))
@@ -859,8 +881,9 @@ async def ensure_qirfa_tenant(owner_dsn: str) -> None:
         )
         if not await conn.fetchval("select client_id from tenants where id = $1", QIRFA_TENANT_ID):
             client_id = await conn.fetchval(
-                "insert into clients (name, contact_name, contact_email) "
-                "values ('Qirfa Bakery', 'Huda Rahim', $1) returning id",
+                "insert into clients (name, contact_name, contact_email, access_from, "
+                "payment_waived_at, access_note) "
+                "values ('Qirfa Bakery', 'Huda Rahim', $1, now(), now(), 'Demo shop') returning id",
                 OWNER_EMAIL,
             )
             await conn.execute(
@@ -883,7 +906,7 @@ async def reset_qirfa(
                       "saved_replies", "memberships", "jobs", "messages", "processed_messages",
                       "order_items", "payment_requests", "orders", "items", "item_categories",
                       "ledger_entries", "ledger_accounts", "contacts", "tenant_modules",
-                      "shop_settings"):
+                      "shop_settings", "shop_features", "custom_fields"):
             await conn.execute(f"delete from {table}")
         web_url = web_url or get_settings().public_web_url
         return await Bakery(conn, now, random.Random(seed), web_url).run()
