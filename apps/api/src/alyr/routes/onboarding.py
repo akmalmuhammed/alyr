@@ -7,7 +7,16 @@ from fastapi import APIRouter, Depends, HTTPException, Request, Response
 from pydantic import BaseModel, Field
 
 from alyr.config import get_settings
-from alyr.core import access, auth, mail, onboarding, pricing, readiness, whatsapp_setup
+from alyr.core import (
+    access,
+    auth,
+    mail,
+    onboarding,
+    pricing,
+    ratelimit,
+    readiness,
+    whatsapp_setup,
+)
 from alyr.core.auth import Staff
 from alyr.routes.deps import current_staff
 
@@ -87,10 +96,13 @@ async def send_code(body: Email, request: Request) -> dict:
     """Like sign-in, but a new address gets a code too when sign-up is open. The answer
     is the same either way."""
     settings = get_settings()
+    await ratelimit.check(request, "code-address", ratelimit.CODES_PER_ADDRESS)
     try:
         code = await auth.request_code(request.app.state.db, body.email, allow_new=signup_open())
     except auth.TooManyCodes as error:
-        raise HTTPException(status_code=429, detail=str(error)) from error
+        raise HTTPException(
+            status_code=429, detail=str(error), headers={"Retry-After": str(error.retry_after)}
+        ) from error
     answer: dict = {"sent": True, "signup_open": signup_open()}
     if code is not None and mail.configured():
         subject, text, html = mail.sign_in_message(code, auth.CODE_MINUTES)
@@ -112,6 +124,7 @@ async def send_code(body: Email, request: Request) -> dict:
 async def verify(body: EmailCode, request: Request, response: Response) -> dict:
     """A known owner is signed in. A new address gets a token to create a business."""
     db = request.app.state.db
+    await ratelimit.check(request, "guess-address", ratelimit.GUESSES_PER_ADDRESS)
     try:
         await auth.check_code(db, body.email, body.code)
     except auth.AuthError as error:
@@ -129,6 +142,7 @@ async def verify(body: EmailCode, request: Request, response: Response) -> dict:
 async def create_business(body: NewBusiness, request: Request, response: Response) -> dict:
     if not signup_open():
         raise HTTPException(status_code=403, detail="sign-up is not open yet")
+    await ratelimit.check(request, "signup-address", ratelimit.SIGNUPS_PER_ADDRESS)
     try:
         tenant_id, session = await onboarding.create_business(
             request.app.state.db, body.signup_token, body.owner_name, body.name,

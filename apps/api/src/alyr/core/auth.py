@@ -14,6 +14,7 @@ from uuid import UUID
 
 import asyncpg
 
+from alyr.core import ratelimit
 from alyr.db import Database
 
 log = logging.getLogger("alyr.auth")
@@ -22,7 +23,7 @@ COOKIE = "alyr_session"
 SESSION_DAYS = 30
 CODE_MINUTES = 10
 MAX_GUESSES = 5
-MAX_CODES_PER_HOUR = 5
+MAX_CODES_PER_HOUR = ratelimit.CODES_PER_EMAIL.count
 ROLES = ("owner", "admin", "agent")
 
 
@@ -31,7 +32,9 @@ class AuthError(Exception):
 
 
 class TooManyCodes(AuthError):
-    pass
+    def __init__(self, message: str, retry_after: int = 3600) -> None:
+        super().__init__(message)
+        self.retry_after = retry_after
 
 
 @dataclass(frozen=True)
@@ -59,6 +62,14 @@ async def request_code(db: Database, email: str, allow_new: bool = False) -> str
     form to learn who has an account. With `allow_new` (sign-up, D-031) a code is made
     for any address, so the person can prove they own it."""
     email = clean_email(email)
+    # Counted before anything is looked up, so an unknown email is refused after five asks
+    # just as a known one is, and the 429 tells nobody who has an account (ALY-116).
+    try:
+        await ratelimit.hit(db, "code-email", email, ratelimit.CODES_PER_EMAIL)
+    except ratelimit.TooManyRequests as error:
+        raise TooManyCodes(
+            "too many codes requested; try again in an hour", error.retry_after
+        ) from error
     async with db.unscoped() as conn:
         known = await conn.fetchval("select true from users where email = $1", email)
         if not known and not allow_new:

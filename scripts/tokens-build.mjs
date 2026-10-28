@@ -49,7 +49,7 @@ function walk(node, path, inherited) {
     else if (here.prefix !== undefined && here.prefix !== null) css = `${here.prefix}${key}`;
     const token = {
       path: path.join("."), key, type: here.type, value: node.$value,
-      dark: ext.dark, rtl: ext.rtl, nextFont: ext.nextFont, css, description: node.$description,
+      dark: ext.dark, rtl: ext.rtl, nextFont: ext.nextFont, paced: ext.paced === true, css, description: node.$description,
     };
     tokens.push(token);
     byPath.set(token.path, token);
@@ -122,6 +122,23 @@ for (const token of tokens) {
   cssNames.set(token.css, token.path);
 }
 
+// ── the pace ──────────────────────────────────────────────
+// A token marked `paced` is multiplied by motion.pace.pace: in CSS as calc(… * var(--pace)), so
+// the one custom property tunes them all at run time; in TypeScript and Python already
+// multiplied, for timers and GSAP.
+const PACE = byPath.get("motion.pace.pace");
+for (const token of tokens) {
+  if (!token.paced) continue;
+  if (!PACE) errors.push(`${token.path} is paced, but motion.pace.pace does not exist`);
+  if (token.type !== "duration") errors.push(`${token.path}: only a duration can be paced`);
+}
+/** "432ms" or "1.2s" times the pace, as milliseconds. */
+function pacedData(token) {
+  const value = String(raw(token, "light"));
+  const number = parseFloat(value) * (value.endsWith("ms") ? 1 : 1000) * Number(raw(PACE, "light"));
+  return `${Math.round(number * 100) / 100}ms`;
+}
+
 // ── formatting ────────────────────────────────────────────
 const NEXT_FONT = new Map();
 for (const token of tokens) {
@@ -129,6 +146,10 @@ for (const token of tokens) {
 }
 const quote = (name) => (GENERIC.has(name) ? name : `"${name}"`);
 function cssValue(token, mode) {
+  if (token.paced && PACE) {
+    const base = isRef(token.value) ? `var(--${byPath.get(token.value.slice(1, -1))?.css})` : String(token.value);
+    return `calc(${base} * var(--${PACE.css}))`;
+  }
   const value = raw(token, mode);
   switch (token.type) {
     case "fontFamily":
@@ -141,6 +162,7 @@ function cssValue(token, mode) {
 }
 /** JSON-ish value for TypeScript and Python: arrays stay arrays, numbers stay numbers. */
 function dataValue(token, mode) {
+  if (token.paced && PACE) return pacedData(token);
   const value = raw(token, mode);
   if (token.type === "cubicBezier") return `cubic-bezier(${value.join(", ")})`;
   return value;

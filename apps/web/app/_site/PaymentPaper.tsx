@@ -2,6 +2,8 @@ import type { CSSProperties } from "react";
 import { copy, type Locale } from "./copy";
 import { RC0042 } from "./paperData";
 import { SampleMark, TickPath, WaDoc } from "./Frames";
+import { LoopToggle } from "./LoopToggle";
+import { words } from "./pace";
 import { PaperA4, PaperRoll } from "./Paper";
 import { lines, rich } from "./Text";
 import "./drawings.css";
@@ -11,15 +13,21 @@ import "./moment.css";
 // becomes receipt RC-0042. The paper draws itself along the fold's diagonal, its contents
 // arrive in reading order (each Arabic line before its English twin), and the PDF lands in
 // the chat Aisha wrote in a few minutes before, so WhatsApp's 24-hour window is visibly
-// open. One Volt tick when it is sent. CSS only (moment.css), keyed on SiteMotion's
-// `.is-in`; the HTML is the finished state. It plays once and ends before 3 s.
+// open. One Volt tick when it is sent. CSS only (moment.css), keyed on loops.ts's `.is-in`;
+// the HTML is the finished state. It ends before 3 s, holds while its new words are read,
+// fades and plays again (founder, 26 Oct 2026: motion always on), until its Pause control
+// stops it; off screen and in a hidden tab it stops too.
 
 const at = (index: number) => ({ "--p": index }) as CSSProperties;
 
 export function PaymentPaperFigure({ locale }: { locale: Locale }) {
-  const m = copy[locale].pages.docs.moment;
+  const t = copy[locale];
+  const m = t.pages.docs.moment;
   const f = m.form;
   const c = m.chat;
+  // what the moment comes to, read while it holds: recorded, the PDF, sent (the bubble's
+  // caption is there for a visitor who stops; each cycle shows it again)
+  const said = words(f.done, c.file, c.sent);
   return (
     <section className="sec sig-sec" id="moment" aria-labelledby="moment-title">
       <div className="wrap">
@@ -28,12 +36,13 @@ export function PaymentPaperFigure({ locale }: { locale: Locale }) {
           <h2 className="h1" id="moment-title">{lines(m.title)}</h2>
           <p className="lead">{rich(m.body)}</p>
         </div>
-        <figure className="sig pf" data-sig>
-          <p className="sr-only">{copy[locale].agent.samples.bakery.fictional} {m.label}</p>
+        <figure className="sig pf" data-sig data-loop data-loop-play style={{ "--words": said } as CSSProperties}>
+          <p className="sr-only">{t.agent.samples.bakery.fictional} {m.label}</p>
+          <LoopToggle words={t.loop} name={t.loop.names.figure} className="sig-toggle" />
           <div className="sig-stage" inert aria-hidden="true" data-nosnippet>
             <span className="sig-rule"><i /><i /></span>
 
-            <div className="sig-part pf-a" style={at(0)}>
+            <div data-loop-part className="sig-part pf-a" style={at(0)}>
               <span className="sig-k">{m.parts.sheet}</span>
               <div className="aw pf-win">
                 <div className="aw-bar">
@@ -63,7 +72,7 @@ export function PaymentPaperFigure({ locale }: { locale: Locale }) {
               </div>
             </div>
 
-            <div className="sig-part pf-paper" style={at(2)}>
+            <div data-loop-part className="sig-part pf-paper" style={at(2)}>
               <span className="sig-k">{m.parts.paper}</span>
               <div className="pf-sheet">
                 <PaperA4 doc={RC0042} crop className="pf-a4" />
@@ -71,7 +80,7 @@ export function PaymentPaperFigure({ locale }: { locale: Locale }) {
               </div>
             </div>
 
-            <div className="sig-part pf-c" style={at(1)}>
+            <div data-loop-part className="sig-part pf-c" style={at(1)}>
               <span className="sig-k">{m.parts.chat}</span>
               <div className="wa pf-wa">
                 <header className="wa-top">
