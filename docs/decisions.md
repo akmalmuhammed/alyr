@@ -34,7 +34,7 @@ Status: **Accepted** (in force), **Proposed** (waiting for the founder), **Super
 | D-026 | The homepage is about ALYR the company; ALYR Chat has its own page | Accepted |
 | D-027 | One workspace for every product, driven by a catalogue; ALYR has a back office | Accepted |
 | D-028 | Every item has one person responsible, and the team's work is on the record | Accepted |
-| D-029 | Email at @alyr.qa: Cloudflare Email Routing in, Resend out | Accepted |
+| D-029 | Email at @alyr.qa: Cloudflare Email Routing in, Resend out | Mail in replaced by D-061 (28 Oct 2026); Resend out stands |
 | D-030 | A weekly result report to the owner, one section per product | Accepted |
 | D-031 | Self-serve onboarding: sign up, create the business, start from a preset, try it on a private test line | Accepted |
 | D-032 | Prices are set per client from the back office: a price list, a quote per client, published live to the owner | Accepted |
@@ -51,6 +51,7 @@ Status: **Accepted** (in force), **Proposed** (waiting for the founder), **Super
 | D-058 | The homepage hero's ALYR Agent figure (and /agent's) moves continuously, the one exception to "plays once", with a pause button and calm pacing | Accepted |
 | D-059 | Motion is always on: the site's figures (How we work, the products frame, the signature figures, with the flows, demos and the live Agent) keep playing, each with a Pause control; text arrives once | Accepted |
 | D-060 | ALYR runs on Google Cloud in Doha (Cloud Run, Cloud SQL, Secret Manager); replaces Azure (D-036) and the interim Cloudflare and Neon host (D-052); backups stay in Doha | Accepted |
+| D-061 | Company mail moves to Zoho Mail (free plan): hello@ with akmal@ and security@ as aliases, and a mailbox for Beevi Jinan, the registered owner; Resend still sends the product's email | Accepted |
 
 ---
 
@@ -1219,3 +1220,18 @@ Nothing claims more than the page, as before.
 **Chosen over** Azure on full price (no credits; D-036), the interim Cloudflare and Neon host (outside Qatar; D-052), and a copy of backups on Cloudflare R2 in the EU (the founder chose Doha only).
 
 **Revisit when** the startup credits are refused or run out, a paying client needs Cloud SQL's high availability (a standby in a second zone, about double the database's cost), or the database's CPU stays above 60%.
+
+## D-061 · Company mail moves to Zoho Mail
+**Date** 28 Oct 2026 (the move was made on 25 Oct 2026) · **Status** Accepted (the founder, 25 Oct 2026: "i want zoho email", then "i want akmal@alyr.qa running and working receiving and sending") · Replaces the mail-in half of D-029
+
+**Decision.**
+- alyr.qa's mail goes to **Zoho Mail** (free plan, 5 licences, Zoho's `.com` data centre). MX `mx.zoho.com` (10), `mx2` (20), `mx3` (50); SPF `include:zohomail.com` added beside Cloudflare's; DKIM selector `zmail` (2048-bit), verified in Zoho on 26 Oct.
+- One mailbox, `hello@alyr.qa` (the Zoho super administrator), with **akmal@** and **security@** as aliases that receive and send. A second mailbox, **beevi.jinan@alyr.qa**, for the company's registered owner, who holds the Meta business portfolio's admin role and receives Meta's business notices.
+- **Resend still sends the product's email** (sign-in codes, reports, documents) from `send.alyr.qa`, as D-029 says. Its records are untouched.
+- Cloudflare Email Routing is no longer used. Its rules still exist and do nothing (Cloudflare marks it "misconfigured" because the MX records are Zoho's).
+
+**Why.** Forwarding to a personal Gmail could not send as @alyr.qa, and Meta's business verification needed company addresses that work both ways.
+
+**Data.** Zoho is outside Qatar and may hold a customer's or a merchant's message when they write to us: a row in `docs/data-residency.md`. No merchant data is routed through it.
+
+**Revisit when** ALYR needs shared inboxes or more than five mailboxes (Zoho's paid plan, or the startup programme's mail, ALY-55), or a lawyer says company mail must stay in Qatar (ALY-51).

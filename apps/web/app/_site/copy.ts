@@ -15,6 +15,7 @@
 import type { ContactState, PageKey, ProductKey } from "./site";
 import { docsAr, docsEn, type DocLinkPage, type DocsPage } from "./copyDocs";
 import { shelfAr, shelfEn, type ShelfPage } from "./copyShelf";
+import { privacyAr, privacyEn, type PrivacyPage } from "./copyPrivacy";
 
 export type Locale = "en" | "ar";
 
@@ -520,10 +521,11 @@ export type CompanyPage = {
 export type Copy = {
   meta: Record<PageKey, Meta>;
   company: CompanyPage;
+  privacy: PrivacyPage;
   skip: string;
   nav: {
     products: string; business: string; how: string; questions: string; price: string;
-    other: string; home: string; menu: string; sections: string; productsMenu: string; company: string;
+    other: string; home: string; menu: string; sections: string; productsMenu: string; company: string; privacy: string;
   };
   /** The suite, in its fixed order: the Products menu, the footer, the rows on each page. */
   products: {
@@ -586,6 +588,10 @@ export type Copy = {
 
 const en: Copy = {
   meta: {
+    privacy: {
+      title: "Privacy policy · ALYR",
+      description: "What data ALYR holds, why, who else sees it, how long it is kept and how to ask for it to be deleted. ALYR is run by alyr software W.L.L., Qatar.",
+    },
     company: {
       title: "Company details · ALYR",
       description: "ALYR is a product name of alyr software W.L.L., a limited liability company registered in Qatar. Commercial registration 255539, tax registration 5009341769.",
@@ -629,6 +635,7 @@ const en: Copy = {
     },
   },
   skip: "Skip to content",
+  privacy: privacyEn,
   company: {
     eyebrow: "Company details",
     title: "Who is behind ALYR",
@@ -649,6 +656,7 @@ const en: Copy = {
   nav: {
     products: "Products",
     company: "Company details",
+    privacy: "Privacy",
     business: "By business",
     how: "How we work",
     questions: "Questions",
@@ -2897,6 +2905,10 @@ const en: Copy = {
 
 const ar: Copy = {
   meta: {
+    privacy: {
+      title: "سياسة الخصوصية · ALYR",
+      description: "البيانات التي تحتفظ بها ALYR، ولماذا، ومن يطّلع عليها، وكم تُحفظ، وكيف تطلب حذفها. تديرها شركة alyr software ذ.م.م. في قطر.",
+    },
     company: {
       title: "بيانات الشركة · ALYR",
       description: "ALYR اسم لمنتجات شركة alyr software ذ.م.م.، شركة ذات مسؤولية محدودة مسجّلة في قطر. السجل التجاري 255539 والتسجيل الضريبي 5009341769.",
@@ -2940,6 +2952,7 @@ const ar: Copy = {
     },
   },
   skip: "انتقل إلى المحتوى",
+  privacy: privacyAr,
   company: {
     eyebrow: "بيانات الشركة",
     title: "من وراء ALYR",
@@ -2960,6 +2973,7 @@ const ar: Copy = {
   nav: {
     products: "المنتجات",
     company: "بيانات الشركة",
+    privacy: "الخصوصية",
     business: "حسب نشاطك",
     how: "كيف نعمل",
     questions: "أسئلة",
