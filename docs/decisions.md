@@ -41,6 +41,7 @@ Status: **Accepted** (in force), **Proposed** (waiting for the founder), **Super
 | D-033 | The internal tool: one console for every client, built in three levels; staff never see customer conversations | Accepted |
 | D-034 | Product first and paid from the first customer; the homepage leads with what ALYR sells today | Accepted |
 | D-035 | ALYR is a suite of products led by ALYR Agent: Chat, Bookings, Agent, Accounts, Payroll coming; the workspace home becomes the Agent dashboard | Accepted |
+| D-036 | ALYR runs on Azure Qatar Central; backups and the emergency host are on Google Cloud in Doha | Accepted in direction |
 | D-037 | The public site presents the suite: the homepage leads with ALYR Agent at work, and every live product has its own page | Accepted |
 | D-038 | The Sunday report is a report card: a branded image from ALYR Agent's engine with about eight lines under it | Accepted |
 | D-039 | The Catalog (items, stock, photos) is built complete before go-live; photos on Cloudflare R2; free now, charged by usage later | Accepted |
@@ -49,6 +50,7 @@ Status: **Accepted** (in force), **Proposed** (waiting for the founder), **Super
 | D-056 | Search and AI visibility: be found, described correctly and contacted in Qatar, in search and AI assistants; profiles and verification switch on from settings | Accepted |
 | D-058 | The homepage hero's ALYR Agent figure (and /agent's) moves continuously, the one exception to "plays once", with a pause button and calm pacing | Accepted |
 | D-059 | Motion is always on: the site's figures (How we work, the products frame, the signature figures, with the flows, demos and the live Agent) keep playing, each with a Pause control; text arrives once | Accepted |
+| D-060 | ALYR runs on Google Cloud in Doha (Cloud Run, Cloud SQL, Secret Manager); replaces Azure (D-036) and the interim Cloudflare and Neon host (D-052); backups stay in Doha | Accepted |
 | D-061 | Company mail moves to Zoho Mail (free plan): hello@ with akmal@ and security@ as aliases, and a mailbox for Beevi Jinan, the registered owner; Resend still sends the product's email | Accepted |
 
 ---
@@ -658,6 +660,42 @@ There is no separate Pay product: payment links stay a module of Chat and Bookin
 
 **Not built yet.** The suggestions beyond the 20 rules (for example answered after hours), tapping a number to open its week on a phone, the product pages `/bookings`, `/agent` and `/accounts`, and the homepage figure itself (the site builder takes the component in showcase mode and the samples).
 
+## D-036 · ALYR runs on Azure Qatar Central; backups and the emergency host are on Google Cloud in Doha
+**Date** 17 Oct 2026 · **Status** Accepted in direction (founder, 17 Oct: skip Oracle and focus on Azure, with backups on other clouds; "start building phase 1"). Still the founder's to answer: when to open the Azure account, the Google Cloud account, the encrypted copy in Cloudflare R2, and the move of the product to alyr.qa addresses · Linear ALY-63, ALY-10 · Updates D-013 and D-019
+
+**Why now.** Everything ran on the founder's laptop. A real booking reminder was missed on 13 Oct because the laptop was asleep, and demos stop when it does.
+
+**The decision.**
+
+| Role | Where | Why |
+|---|---|---|
+| Main home | Azure Qatar Central: Container Apps (web, API, worker, each always on, each able to add copies), PostgreSQL Flexible Server 16, Key Vault, Container Registry | In Qatar (hard rule 2). About USD 62 a month at Qatar list prices: Container Apps about 36, the database 21.31, the registry 5.07. Own domain and HTTPS included. Startup credits do not need venture funding |
+| Database protection | Azure's own backups (7 to 35 days, point-in-time, across the region's three zones), plus a nightly encrypted dump to Google Cloud Storage in Doha and a second copy in Cloudflare R2 | Qatar Central has no paired region, so Azure offers no copy elsewhere. Doha keeps a copy in Qatar with a second company; R2 survives a Qatar-wide event. Under USD 1 a month |
+| Emergency host | Google Cloud Run and Cloud SQL in Doha, started from the latest backup | USD 0 while unused; about 110 to 150 a month if ever run. Restore and switch in about one to two hours |
+| Web app standby | Vercel Pro, only if needed | It has no Gulf region and cannot run the worker, so it can hold the web app only |
+
+**Considered and rejected.**
+- **Oracle's free server:** the founder chose to skip it.
+- **Neon's free database:** an always-on worker uses about 182 compute-hours a month against 100 free, so it would stop mid-month.
+- **Cloudflare alone:** cannot run the Python API (D-019); Containers would still need an always-awake database.
+- **Vercel for the API or worker:** no long-running worker, no Gulf region, data processed anywhere.
+- **Google Cloud as the main home:** about USD 85 to 107 a month; its Doha region needs an extra USD 18 load balancer for a custom domain, and that terminates outside Qatar.
+- **AWS:** its Bahrain and UAE regions are reported damaged since March 2026; Frankfurt is a last resort only.
+- **Alibaba Cloud:** no managed containers in Dubai.
+- **Qatar's local providers (Meeza, Ooredoo, Vodafone):** sales-led only; revisit for government-linked customers.
+
+**How it stays movable (D-011).** Three images (API and worker, web, backup) and standard PostgreSQL. `docker-compose.prod.yml` runs the same images on any single server and is the rehearsal on the laptop. Moving clouds is a restore and a DNS change. Details and commands are in `docs/hosting.md`.
+
+**Rules that come with it.**
+- Production images start in production mode: no simulator, no open demo, jobs only in the worker.
+- Migrations take a lock, so two deploys cannot apply the same file twice.
+- The backup role is the only role that reads past row-level security; it is read-only and used only by the backup job. The application role still cannot bypass it (hard rule 1).
+- Dumps are encrypted to a key only the founder holds.
+- The worker checks in every 30 seconds, and `/health/worker` turns red after two minutes of silence. Uptime monitoring watches it.
+- The backup tools match the database's major version (the rehearsal found why).
+
+**Before the commercial registration.** Opening the Azure account (Microsoft for Startups, about USD 200 of credit) is the founder's personal account and card, not ALYR trading; he decides when. The USD 5,000 tier needs the company. Do not open a plain Azure free account first: Microsoft for Startups requires an account with no prior Azure use.
+
 ## D-037 · The public site presents the suite: the homepage leads with ALYR Agent at work, and every live product has its own page
 **Date** 17 Oct 2026 · **Status** Accepted (founder, 17 Oct, in conversation; recorded in `docs/agent-dashboard/07-site-brief.md` §1) · Linear ALY-99 · Updates D-026 and D-034. Numbered D-037 because the open PRs #51 and #52 both take D-036; renumber at merge if needed.
 
@@ -1161,6 +1199,27 @@ Nothing claims more than the page, as before.
 - The numbers in a scene stay true to each other on every cycle; no layout shift; the homepage's Lighthouse no worse than before.
 
 **Revisit when** a visitor or the founder finds it distracting, or a figure's cycle reads as too busy (its hold is one token away).
+
+## D-060 · ALYR runs on Google Cloud in Doha; backups stay in Doha
+**Date** 28 Oct 2026 · **Status** Accepted (the founder, 28 Oct: "instead of azure lets use google cloud as our hosting and cloud provider for alyr"; on the plan and its cost, "yeah go ahead"; on a backup copy outside Qatar, "ok keep in doha") · Linear ALY-10 · Replaces D-036 · Supersedes D-052 for real clients · Builds on D-013
+
+**The decision.** Production runs in Google Cloud's Doha region (`me-central1`), project `alyr-prod`: the API, the web app and the worker on Cloud Run (two services and a worker pool), PostgreSQL 16 on Cloud SQL with a private address only, secrets in Secret Manager kept in Doha, images in Artifact Registry in Doha. Backups are Cloud SQL's own (14 nightly, 7 days of point-in-time recovery) and a nightly export to a bucket in Doha kept 35 days. No copy leaves Qatar. Steps in `infra/gcp/README.md`; what runs where in `docs/hosting.md`.
+
+**Why.**
+- Microsoft refused startup credits on the founder's identity on 26 Oct (LinkedIn check and then "not eligible for an Azure free account"); Azure would have been paid in full from day one.
+- Google gives USD 300 of trial credit now, and USD 2,000 for a year under the Start tier, applied for on 28 Oct with the alyr.qa address. That covers the first year of hosting.
+- Doha has everything ALYR needs, checked against Google Cloud itself on 28 Oct: Cloud Run services, jobs and worker pools, Cloud SQL for PostgreSQL 16, Artifact Registry, Cloud Scheduler.
+- It keeps hard rule 2 for real clients' data, which the interim Cloudflare and Neon host (D-052) could not.
+
+**Costs, said plainly.** About USD 100 to 105 a month at Doha list prices (database about 34, API about 14, web app about 14, worker about 37 because an always-on worker needs 1 vCPU, the rest a few dollars), against about USD 62 for the Azure plan. Doha's prices are higher than Google's US regions. A budget alerts at 50% and 90% of USD 150 and at a forecast of 100%.
+
+**What stays the same.** The images, the worker heartbeat and the health checks from ALY-63 run unchanged; the API image now takes `api` or `worker` as its first argument, and with none runs both (the Cloudflare layout of D-052). Product photos stay on Cloudflare R2 (D-039).
+
+**First deploy, 28 Oct.** Healthy from outside. Migrations run as Cloud SQL's `postgres`, which is not a superuser, so the owner now gives itself BYPASSRLS (the owner-run sign-up and back-office functions needed it; the application role never has it). An export restored into a fresh database matched all 20 tables of the demo shop row for row. Details in `infra/gcp/README.md`.
+
+**Chosen over** Azure on full price (no credits; D-036), the interim Cloudflare and Neon host (outside Qatar; D-052), and a copy of backups on Cloudflare R2 in the EU (the founder chose Doha only).
+
+**Revisit when** the startup credits are refused or run out, a paying client needs Cloud SQL's high availability (a standby in a second zone, about double the database's cost), or the database's CPU stays above 60%.
 
 ## D-061 · Company mail moves to Zoho Mail
 **Date** 28 Oct 2026 (the move was made on 25 Oct 2026) · **Status** Accepted (the founder, 25 Oct 2026: "i want zoho email", then "i want akmal@alyr.qa running and working receiving and sending") · Replaces the mail-in half of D-029
