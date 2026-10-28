@@ -74,10 +74,6 @@
       "reason": "The price section renders only with the offer on (HomePage.tsx: {OFFER_LIVE && <Price/>})."
     },
     {
-      "path": "home.trust.closing",
-      "reason": "Rendered only with the offer on (HomePage.tsx Trust: {OFFER_LIVE && <p className=\"trust-closing\">})."
-    },
-    {
       "path": "**.factsOffer[*]",
       "reason": "Added to a product page's facts only with the offer on (ProductKit.tsx ProductHero)."
     }
