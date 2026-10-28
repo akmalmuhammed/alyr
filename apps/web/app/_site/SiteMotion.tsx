@@ -86,9 +86,10 @@ export function SiteMotion() {
 
     // The phone's contact bar, on the homepage and every product page: up once the opening's
     // own "Book a check-up" has scrolled away, down while the closing call (and the footer
-    // below it) is on screen. While the bar is up the header's button steps aside, and while
-    // the opening's button is on screen the header's is its outlined twin (site.css), so one
-    // Volt button is on screen. Without scripts the bar stays down.
+    // below it) is on screen. While the bar is up the header's button steps aside (`data-bar-up`
+    // on <html>), and while the opening's button is on screen the header's is its outlined twin
+    // (site.css), so one Volt button is on screen. Without scripts the bar stays down. The
+    // states go on <html> rather than being read with `:root:has(...)`.
     const root = document.documentElement;
     const bar = document.querySelector<HTMLElement>("[data-bar]");
     const heroButton = document.querySelector<HTMLElement>("[data-hero-cta]");
@@ -103,7 +104,9 @@ export function SiteMotion() {
           // Reached or passed: the footer below it stays clear too.
           if (entry.target === closing) closingSeen = entry.isIntersecting || entry.boundingClientRect.top < 0;
         }
-        bar.toggleAttribute("data-show", heroGone && !closingSeen);
+        const up = heroGone && !closingSeen;
+        bar.toggleAttribute("data-show", up);
+        root.toggleAttribute("data-bar-up", up);
         root.toggleAttribute("data-hero-gone", heroGone);
       });
       watchBar.observe(heroButton);
@@ -121,7 +124,10 @@ export function SiteMotion() {
     let queued = false;
     const update = () => {
       queued = false;
-      header?.toggleAttribute("data-scrolled", window.scrollY > 12);
+      // on the header for its own look, and on <html> for the product bar and the X-ray below it
+      const scrolled = window.scrollY > 12;
+      header?.toggleAttribute("data-scrolled", scrolled);
+      root.toggleAttribute("data-scrolled", scrolled);
       if (!statement || still) return;
       const box = statement.getBoundingClientRect();
       const height = window.innerHeight;
@@ -152,6 +158,8 @@ export function SiteMotion() {
       watchBar?.disconnect();
       atClosing?.disconnect();
       root.removeAttribute("data-at-closing");
+      root.removeAttribute("data-bar-up");
+      root.removeAttribute("data-scrolled");
       window.removeEventListener("scroll", onScroll);
       window.removeEventListener("resize", onScroll);
       window.removeEventListener("resize", watchDark);

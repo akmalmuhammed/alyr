@@ -81,6 +81,14 @@ export function Shell({
   const name = (key: ProductKey) => t.products.items[key].name;
   const action = cta.action ?? t.home.final.action;
   const short = cta.short ?? t.home.final.short;
+  // A product page has the product bar under the header (`data-product` on <main>: its
+  // sections land below both bars, kit.css). The homepage's hero and a product page's opening
+  // have their own "Book a check-up" (`data-hero-cta`; ProductKit's HeroAction while ALYR can
+  // be reached): the header says so from the server (`data-hero`), so its button is the
+  // outlined twin from the first paint and without scripts (site.css). site:check holds the
+  // header's mark and the opening's button together (scripts/site/has-check.mjs).
+  const product = (PRODUCTS as readonly PageKey[]).includes(page);
+  const hero = page === "home" || (product && CONTACT_STATE !== "pending");
 
   return (
     <>
@@ -88,7 +96,7 @@ export function Shell({
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: structuredDataJson(locale, page) }} />
       <a className="skip" href="#main">{t.skip}</a>
 
-      <header className="top" data-header>
+      <header className="top" data-header data-hero={hero || undefined}>
         <div className="wrap top-in">
           <a className="top-logo" href={home} aria-label={t.nav.home}>
             <Logo label="ALYR" className="logo" />
@@ -138,7 +146,7 @@ export function Shell({
         </div>
       </header>
 
-      <main id="main" data-page={page}>
+      <main id="main" data-page={page} data-product={product || undefined}>
         {children}
 
         {/* The closing call opens with the fold, the page's signature: three Carbon planes
