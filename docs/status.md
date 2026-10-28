@@ -137,6 +137,14 @@ Tests: 1,136 API tests pass and 2 are skipped (the opt-in live R2 check) on the 
 
 ## Publishing the public site
 
+**Where it stands on 29 Oct 2026** (this bullet is current; the older bullets below describe how publishing grew):
+- **Accounts.** `alyr.qa` and `alyr.online` run in the business Cloudflare account (akmal@alyr.qa). The repository secrets `CLOUDFLARE_API_TOKEN` and `CLOUDFLARE_ACCOUNT_ID` point there, so `site-deploy.yml` publishes on a push to `main`. The laptop fallback is `pnpm site:deploy` with the business login only.
+- **What the production build carries:** the PostHog key (D-070, repo variable `POSTHOG_PROJECT_KEY`) and Bing's ownership tag `msvalidate.01` (repo variable `BING_SITE_VERIFICATION`). If the tag is dropped, Bing un-verifies the site.
+- **Search tools (ALY-228):** Google Search Console has the domain property `sc-domain:alyr.qa`, verified through DNS; its sitemap was read with 18 pages. Bing Webmaster Tools is verified by the tag, with the sitemap submitted.
+- **Crawlers (ALY-229):** Cloudflare allows search, agent and training crawlers, and Crawler Hints is on.
+- **The app:** `deploy-gcp.yml` deploys it from GitHub through Workload Identity: `gh workflow run deploy-gcp.yml --ref main -f deploy=true`.
+- **Watching:** Google Cloud uptime checks run every 5 minutes, on the Cloud Run addresses and on the public ones (`alyr.qa`, `app.alyr.qa/login`, `api.alyr.qa/health/ready`, where WhatsApp messages arrive). There is also an error alert. All of them email akmal@alyr.qa (`infra/gcp/setup.sh monitoring`).
+
 - The public pages are published as plain files on Cloudflare (Worker `alyr-site`, static assets, free plan): `/` and `/chat` with their Arabic pages today; the suite site (ALY-99) adds `/bookings`, `/agent` and `/accounts` and their Arabic pages, which `scripts/build-site.sh` copies. The workspace, sign-in and the API are not there: `/whatsapp`, `/login` and `/api/...` answer 404 on `alyr.online`.
 - To publish a change: `scripts/build-site.sh`, then `npx wrangler deploy` from `apps/web`. It needs the Cloudflare sign-in on the founder's laptop and the founder's go-ahead each time. Nothing deploys automatically. **In a pull request (site tooling, branch `aly-site-tooling`, not merged):**
   - **Publishing from GitHub:** a preview per pull request; production only after the founder approves in GitHub; `pnpm site:deploy` on the laptop as the fallback.

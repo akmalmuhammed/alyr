@@ -383,9 +383,14 @@ for c in json.load(sys.stdin).get('notificationChannels', []):
     fi
     for check in "alyr-api|/health/ready|API cannot reach the database" \
                  "alyr-api|/health/worker|Worker stopped checking in (reminders are not going out)" \
-                 "alyr-web|/login|Web app down (customer pages and workspace)"; do
+                 "alyr-web|/login|Web app down (customer pages and workspace)"                  "alyr.qa|/|Public site down (alyr.qa)"                  "app.alyr.qa|/login|Workspace address down (app.alyr.qa, through Cloudflare)"                  "api.alyr.qa|/health/ready|API address down (api.alyr.qa, where WhatsApp messages arrive)"; do
       IFS='|' read -r service path title <<<"$check"
-      host="${service}-$(number).$REGION.run.app"
+      # A Cloud Run service by name, or a public address. The public ones go through
+      # Cloudflare (the alyr-edge and alyr-site Workers), which the run.app checks cannot see.
+      case "$service" in
+        *.*) host="$service" ;;
+        *) host="${service}-$(number).$REGION.run.app" ;;
+      esac
       if ! value monitoring uptime list-configs --format='value(displayName)' | grep -qx "$title"; then
         g monitoring uptime create "$title" --resource-type=uptime-url \
           --resource-labels="host=$host,project_id=$PROJECT" --path="$path" --protocol=https \
