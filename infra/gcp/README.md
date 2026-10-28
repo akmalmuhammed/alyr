@@ -65,7 +65,10 @@ infra/gcp/setup.sh github
 ```
 
 **8. Monitoring** (after step 6): uptime checks every 5 minutes on `/health/ready`,
-`/health/worker` and `/login`, each with an email alert. Google emails a confirmation first.
+`/health/worker` and `/login`, each with an email alert, and an alert on errors: any server
+error from the API or web app, a crash (traceback) or a failed job (a WhatsApp send, a
+reminder), counted by the log-based metric `alyr-app-errors`. Google's Error Reporting cannot
+read logs kept in Doha, so this replaces it. Google emails a confirmation first.
 
 ```bash
 ALYR_ALERT_EMAIL=akmal@alyr.qa infra/gcp/setup.sh monitoring
