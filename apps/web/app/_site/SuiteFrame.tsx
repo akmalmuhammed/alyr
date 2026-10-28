@@ -93,7 +93,7 @@ function Bookings({ locale }: { locale: Locale }) {
       <div className="sf-pad">
         <div className="sf-slots">
           {b.times.map((time) => (
-            <span key={time} className={`sf-slot${time === b.time ? " is-on" : ""}`}>
+            <span key={time} className={`sf-slot${time === b.time ? " is-on" : b.taken.includes(time) ? " is-taken" : ""}`}>
               <span dir="auto">{time}</span>
               {time === b.time && <span className="sf-slot-fill" dir="auto">{time}</span>}
             </span>
