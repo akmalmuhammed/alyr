@@ -2,7 +2,6 @@
 
 import dynamic from "next/dynamic";
 import { useEffect, useState } from "react";
-import { PLAY } from "./pace";
 
 // GSAP and its plugins arrive in their own chunk, only when motion is wanted and only
 // after the first paint, so they never hold up the first screen.
@@ -48,28 +47,22 @@ export function HomeMotion() {
     const idle = window.requestIdleCallback
       ? (run: () => void) => window.requestIdleCallback(run, { timeout: 1200 })
       : (run: () => void) => window.setTimeout(run, 200);
-    // The hero's film (film.ts) and its tracks arrive in their own chunk, after load, like the
-    // choreography: the first paint is its still.
+    // The hero's film (film.ts) and its tracks arrive in their own chunk at load: the first paint
+    // is its still. It starts then, not when the page is idle (founder, 29 Oct 2026: "all
+    // animations should start right away"; D-071); the choreography still waits for an idle
+    // moment. (Fetching its chunks earlier, at hydration, made no difference to when it starts.)
     let stopFilm: (() => void) | null = null;
     let gone = false;
     undo.push(() => {
       gone = true;
       stopFilm?.();
     });
-    // The film's still (the ALYR Agent home at 16:20) holds while the page settles: the film is
-    // drawn and starts half a beat after the choreography, as the hero's live figure's first
-    // event did, so its work never competes with the first screen.
-    let filmTimer = 0;
-    undo.push(() => window.clearTimeout(filmTimer));
-    const start = () =>
-      idle(() => {
-        setChoreograph(true);
-        filmTimer = window.setTimeout(() => {
-          void import("./film").then(({ startFilm }) => {
-            if (!gone) stopFilm = startFilm();
-          });
-        }, PLAY.beat / 2);
+    const start = () => {
+      void import("./film").then(({ startFilm }) => {
+        if (!gone) stopFilm = startFilm();
       });
+      idle(() => setChoreograph(true));
+    };
     if (document.readyState === "complete") start();
     else window.addEventListener("load", start, { once: true });
     undo.push(() => window.removeEventListener("load", start));

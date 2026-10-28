@@ -55,6 +55,7 @@ Status: **Accepted** (in force), **Proposed** (waiting for the founder), **Super
 | D-061 | Company mail moves to Zoho Mail (free plan): hello@ with akmal@ and security@ as aliases, and a mailbox for Beevi Jinan, the registered owner; Resend still sends the product's email | Accepted |
 | D-062 | The homepage hero is the explainer film (one afternoon at Qirfa Bakery in the product's own screens, three lanes at once, ending on the ALYR Agent home): "the product is the illustration" in motion; the hero's live ALYR Agent figure leaves the hero | Accepted |
 | D-070 | Product analytics with PostHog (EU), at two levels the visitor chooses: cookieless counting by default, cookies and masked recordings with consent; never customer pages, the inbox or names | Accepted |
+| D-071 | The homepage plays like a video: the film starts at load and moves at once; its Pause controls are not on show (only on hover, keyboard focus or while paused); a click on the film pauses it | Accepted |
 
 ---
 
@@ -1381,3 +1382,16 @@ Without it, analytics is off everywhere.
 - server-side events from the API (booking made, order paid, the money-back promise);
 - experiments (the homepage headline first);
 - the first surveys.
+
+## D-071 · The homepage plays like a video
+**Date** 29 Oct 2026 · **Status** Accepted (the founder, 29 Oct 2026: "all animations should start right away. In the homepage also remove the pause button, it should feel like a video. Now it's taking a few seconds to start the motion"; asked how far, the founder chose "hide until hover or Tab") · Branch `aly-motion-now`
+
+**Decision.**
+- **The film starts at load,** not when the page is idle, and each of its steps waits a frame, not an idle moment. Its first frame (`STILL`, the HTML and the reduced-motion still) is the last moment of the ALYR Agent home before the fold closes, so it moves at once. Measured on this machine against main: the film started at about 0.7 s instead of 3.3 s on a desktop, and its first big move came about 0.35 s later instead of 2.8 s; with the CPU slowed 4x, about 3.4 s instead of 6.5 s.
+- **The homepage's Pause controls are not on show** (the film's, How we work's, the products frame's and the flow's): each fades in while the pointer is over its figure, with keyboard focus, or while paused, as a video player's controls do. A click on the film pauses it and plays it again. This keeps a way to stop the motion (WCAG 2.2.2, D-059) without a control on screen.
+- The product pages' Pause controls are unchanged.
+
+**Cost.** The film's canvas is drawn inside the window Lighthouse measures: on the mobile run LCP is unchanged (2.41 s), Total Blocking Time rises (about 300 to 700 ms against 100 to 200 ms) and Speed Index too (the film moves), so the lowest Performance score of three runs falls from about 95 to between 80 and 95 (/ 80, /ar 95 on the last check; axe clean on both at 1440 and 390, light and dark). It changes D-062's condition "the homepage's Lighthouse no worse than before": the founder put the motion first. The re-styling cost of the homepage's `:root:has(...)` rules (task "Remove :root:has() style recalc cost on the site") is most of that blocking time.
+
+**Revisit when** the `:root:has()` work lands (measure again), or the founder finds the hidden control hard to find.
+
