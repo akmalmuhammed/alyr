@@ -282,8 +282,27 @@ async def _lines(conn: asyncpg.Connection, quote_id: UUID) -> list[dict]:
     ]
 
 
+def together(lines: list[dict], list_prices: dict[str, int]) -> dict | None:
+    """What a client saves by using their products together (D-053): the monthly price of
+    their lines against the same products bought one by one at their own list price. Only a
+    line charged below its own list price counts, so the figure is a real price ALYR charges
+    and never an invented one. None when nothing is discounted."""
+    monthly = [x for x in lines if x["kind"] == "monthly" and x["quantity"] == 1]
+    alone = sum(max(list_prices.get(x["item_key"], 0), x["unit_price"]) for x in monthly)
+    price = sum(x["unit_price"] for x in monthly)
+    if alone <= price:
+        return None
+    out = {"alone": alone, "price": price, "saving": alone - price,
+           "saving_pct": round((alone - price) * 100 / alone)}
+    return out | {f"{k}_text": fmt_qar(out[k]) for k in ("alone", "price", "saving")}
+
+
 async def quote_view(conn: asyncpg.Connection, row, the_promise: dict | None = None) -> dict:
     lines = await _lines(conn, row["id"])
+    list_prices = {
+        r["key"]: r["price"]
+        for r in await conn.fetch("select key, price from price_items where kind = 'monthly'")
+    }
     return {
         "id": str(row["id"]), "number": row["number"], "status": row["status"],
         "period_months": row["period_months"], "discount_pct": row["discount_pct"],
@@ -294,6 +313,7 @@ async def quote_view(conn: asyncpg.Connection, row, the_promise: dict | None = N
         "accepted_by": row["accepted_by_name"],
         "lines": lines,
         "totals": totals(lines, row["period_months"], row["discount_pct"]),
+        "together": together(lines, list_prices),
         "promise": the_promise if row["show_promise"] and the_promise else None,
     }
 

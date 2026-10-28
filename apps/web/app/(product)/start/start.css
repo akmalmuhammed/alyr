@@ -396,6 +396,7 @@
 .ob-wa-fields .ob-error { margin: 0; }
 
 /* Pay to open the products (ALY-212, D-051). */
+.ob-saving { color: var(--volt-ink); font-weight: 600; }
 .ob-pay { display: grid; gap: 8px; margin-top: 16px; padding: 18px; border-radius: 18px; background: var(--raise); box-shadow: 0 0 0 2px var(--ink) inset; }
 .ob-pay h2 { margin: 0; font-size: var(--ui-body); font-weight: 600; }
 .ob-pay small { color: var(--ink-3); font-size: var(--ui-small); line-height: 1.5; }

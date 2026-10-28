@@ -236,6 +236,20 @@ class MetaChannel:
             sent = response.json().get("messages") or [{}]
             return sent[0].get("id")
 
+    async def number_info(self, number_id: str) -> dict:
+        """What Meta says about one of our WhatsApp numbers, for attaching it to a business
+        (ALY-166). Checked against Meta's phone number page, 25 Oct 2026:
+        GET /{phone-number-id}?fields=... answers with the number as customers see it, the
+        name Meta verified, and `status` (CONNECTED once the number is registered)."""
+        async with httpx.AsyncClient(timeout=10) as client:
+            response = await client.get(
+                f"{self._base}/{number_id}",
+                headers={"Authorization": f"Bearer {self._token}"},
+                params={"fields": "display_phone_number,verified_name,status,quality_rating"},
+            )
+            response.raise_for_status()
+            return response.json()
+
     async def download_media(self, media_id: str, max_bytes: int) -> tuple[bytes, str]:
         """Fetch a file that was sent to us. Two requests, checked against Meta's media
         page on 18 Oct 2026: GET /{media-id} answers with a `url` (good for five minutes)

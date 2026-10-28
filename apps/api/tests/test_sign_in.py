@@ -199,3 +199,46 @@ def test_one_shop_cannot_list_or_remove_another_shops_team(client):
         m["email"] for m in client.get("/api/team").json()["members"]
     ]
     assert client.delete(f"/api/team/{omar}").status_code == 404
+
+
+def test_parallel_guesses_cannot_try_more_than_five_codes(client, monkeypatch):
+    """The lock on a code stays until a wrong guess is counted, so guesses sent at the same
+    moment are still limited to five (ALY-244)."""
+    import asyncio
+
+    from alyr.core import auth
+    from alyr.db import Database
+    from conftest import APP_DSN
+
+    code = code_for(client, OWNER_EMAIL)
+    wrong = "000000" if code != "000000" else "111111"
+    compared = []
+    real = auth.hmac.compare_digest
+
+    def counting(a, b):
+        compared.append(1)
+        return real(a, b)
+
+    monkeypatch.setattr(auth.hmac, "compare_digest", counting)
+
+    async def storm():
+        db = Database(APP_DSN)
+        await db.connect()
+        try:
+            async def guess():
+                try:
+                    await auth.check_code(db, OWNER_EMAIL, wrong)
+                except auth.AuthError:
+                    return "refused"
+                return "accepted"
+
+            return await asyncio.gather(*(guess() for _ in range(40)))
+        finally:
+            await db.close()
+
+    outcomes = asyncio.run(storm())
+    assert set(outcomes) == {"refused"}
+    assert len(compared) <= auth.MAX_GUESSES
+    # And the real code no longer works: the five guesses burnt it.
+    burnt = client.post("/api/auth/verify", json={"email": OWNER_EMAIL, "code": code})
+    assert burnt.status_code == 401

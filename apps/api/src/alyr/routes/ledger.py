@@ -9,7 +9,7 @@ from alyr.core.auth import Staff
 from alyr.core.normalise import fmt_qar
 from alyr.modules.documents import refs as doc_refs
 from alyr.modules.ledger import service
-from alyr.routes.deps import current_staff, current_tenant
+from alyr.routes.deps import current_staff, current_tenant, require_manager
 
 router = APIRouter(prefix="/api/ledger", tags=["ledger"])
 
@@ -69,7 +69,7 @@ async def entries(
         }
 
 
-@router.post("/reminders")
+@router.post("/reminders", dependencies=[Depends(require_manager)])
 async def reminders(
     body: ReminderRun, request: Request, staff: Staff = Depends(current_staff)
 ) -> dict:

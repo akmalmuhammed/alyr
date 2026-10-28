@@ -535,8 +535,9 @@ async def ensure_sample_tenant(owner_dsn: str, sample: Sample, now: datetime, da
             )
         else:
             client_id = await conn.fetchval(
-                "insert into clients (name, contact_name, contact_email, access_from, access_note) "
-                "values ($1, $2, $3, now(), 'Demo shop') returning id",
+                "insert into clients (name, contact_name, contact_email, access_from, "
+                "payment_waived_at, access_note) "
+                "values ($1, $2, $3, now(), now(), 'Demo shop') returning id",
                 sample.name, sample.team[0][1], sample.team[0][0],
             )
             await conn.execute(
