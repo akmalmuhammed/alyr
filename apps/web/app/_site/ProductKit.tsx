@@ -266,8 +266,9 @@ export function WorksBlock({ locale, works, self }: { locale: Locale; works: Wor
   );
 }
 
-/** Questions, in native `<details>`: each with an address, the first one open. */
-export function QuestionsBlock({ faq, id = "questions" }: { faq: Questions; id?: string }) {
+/** Questions, in native `<details>`: each with an address, the first one open. `aside` sits
+ * under the heading in the start column (a sector page's owner guide). */
+export function QuestionsBlock({ faq, id = "questions", aside }: { faq: Questions; id?: string; aside?: ReactNode }) {
   const items = faq.items.filter(
     (item) => (!item.state || item.state === CONTACT_STATE) && (item.offer === undefined || item.offer === OFFER_LIVE),
   );
@@ -279,6 +280,7 @@ export function QuestionsBlock({ faq, id = "questions" }: { faq: Questions; id?:
             {faq.eyebrow && <p className="eyebrow">{faq.eyebrow}</p>}
             <h2 className="h1" id={`${id}-title`}>{rich(faq.title)}</h2>
           </div>
+          {aside}
         </div>
         <div className="faq-list">
           {items.map((item, index) => (
