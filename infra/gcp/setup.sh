@@ -75,7 +75,7 @@ case "${1:-}" in
       artifactregistry.googleapis.com cloudscheduler.googleapis.com compute.googleapis.com \
       servicenetworking.googleapis.com iamcredentials.googleapis.com iam.googleapis.com \
       sts.googleapis.com storage.googleapis.com billingbudgets.googleapis.com \
-      logging.googleapis.com monitoring.googleapis.com
+      logging.googleapis.com monitoring.googleapis.com cloudresourcemanager.googleapis.com
 
     # Google keeps logs in a "global" bucket unless told otherwise. The apps' logs carry
     # request paths and errors that can name a shop's customers, so they stay in Doha.
