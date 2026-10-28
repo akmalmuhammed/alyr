@@ -37,6 +37,7 @@ docker build -t "$images/alyr-api:$tag" "$here/apps/api"
 docker build -t "$images/alyr-web:$tag" \
   --build-arg ALYR_API_URL="$api_url" \
   --build-arg NEXT_PUBLIC_ALYR_WORKSPACE_URL="$web_url" \
+  --build-arg NEXT_PUBLIC_POSTHOG_KEY="${NEXT_PUBLIC_POSTHOG_KEY:-}" \
   "$here/apps/web"
 docker push "$images/alyr-api:$tag"
 docker push "$images/alyr-web:$tag"

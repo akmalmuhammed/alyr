@@ -42,6 +42,7 @@ export function ContactButton({
       className={`btn btn-${variant} btn-notch${className ? ` ${className}` : ""}`}
       href={contactLink(locale, message)}
       data-lean={lean || undefined}
+      data-cta={id ?? (variant === "line" ? "button-line" : "button")}
     >
       <Icon name={CONTACT_STATE === "whatsapp" ? "chat" : "mail"} className="ico btn-glyph" />
       <span>{label ?? (CONTACT_STATE === "whatsapp" ? c.whatsapp : c.email)}</span>
@@ -55,7 +56,7 @@ export function ContactButton({
 export function ContactAddress({ locale, className }: { locale: Locale; className?: string }) {
   if (!CONTACT_EMAIL) return null;
   return (
-    <a className={`address${className ? ` ${className}` : ""}`} href={contactLink(locale)} dir="ltr">
+    <a className={`address${className ? ` ${className}` : ""}`} href={contactLink(locale)} dir="ltr" data-cta="address">
       {CONTACT_EMAIL}
     </a>
   );
