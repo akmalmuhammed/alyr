@@ -125,6 +125,13 @@ class Sample:
     accounts: tuple = ()
     # How visits that are over turned out: came, no-show, cancelled (weights).
     outcomes: tuple = (86, 9, 5)
+    # Who does the work (D-072): (name, Arabic name, day off in PostgreSQL's numbering, 0 is
+    # Sunday). Each works the shop's hours except her day off. None: one customer at a time.
+    resources: tuple = ()
+    # Deposits: (service name, "fixed" or "percent", dirhams or percent).
+    deposits: tuple = ()
+    # Other modules the sample has on, beyond its preset's.
+    modules: tuple = ()
 
 
 SALON = Sample(
@@ -143,6 +150,13 @@ SALON = Sample(
         ("Hair treatment", "علاج الشعر", 60, 22_000),
     ),
     min_gap_days=7,
+    # Three stylists, first names only, so the day view has a column each and two or three
+    # customers can be in the salon at the same time (ALY-27, for the salon demo, ALY-264).
+    resources=(("Reem", "ريم", 0), ("Huda", "هدى", 1), ("Noor", "نور", 2)),
+    # A deposit on the two long services: a fixed QAR 50 and a quarter of the price.
+    deposits=(("Hair colour", "fixed", 5_000), ("Hair treatment", "percent", 25)),
+    # So a deposit paid by link makes a deposit receipt.
+    modules=("documents",),
 )
 HOME = Sample(
     "homeservices", UUID("0a1f0000-0000-4000-8000-0000000ac0a1"), "zilal",
@@ -185,9 +199,15 @@ SAMPLES = {s.key: s for s in (SALON, HOME)}
 class Diary(Bakery):
     """A business that runs on bookings: the bakery's helpers, its own week."""
 
-    def __init__(self, conn, now, rng, web_url, sample: Sample, days: int) -> None:
+    def __init__(self, conn, now, rng, web_url, sample: Sample, days: int,
+                 live: bool = False) -> None:
         super().__init__(conn, now, rng, web_url)
         self.sample = sample
+        # The live demo (`python -m alyr.seed_bookings`) also gets the visits side by side in
+        # the days ahead, paid deposits and its extra modules. The captured samples for the
+        # public site (agent_samples, report_samples) do not, so their figures stay as
+        # published.
+        self.live = live
         self.days = days
         self.first_day = self.today - timedelta(days=max(days, 1) - 1)
         self.number_id = f"sim-{sample.slug}"
@@ -199,13 +219,18 @@ class Diary(Bakery):
         self.account_holders = 0
         self.preset = presets.PRESET_BY_KEY[sample.business_type]
         self.opening: dict[int, list[tuple[time, time]]] = {}
+        # (resource ID, day off) in the shop's order, and each one's booked visits.
+        self.resources: list[tuple[UUID, int]] = []
+        self.taken_by: dict[UUID, list[tuple[datetime, datetime]]] = {}
+        self.deposit_of: dict[int, int] = {}  # service index -> dirhams
 
     async def setup(self) -> None:
         conn, sample = self.conn, self.sample
         await conn.execute(
             "insert into tenant_modules (module_key, enabled_at, enabled_by) "
             "select unnest($1::text[]), $2::timestamptz, 'ALYR setup'",
-            [*self.preset.modules, *(["ledger"] if sample.accounts else [])],
+            [*self.preset.modules, *(["ledger"] if sample.accounts else []),
+             *(sample.modules if self.live else ())],
             _when(self.first_day - timedelta(days=2), 10, 0),
         )
         await conn.execute("insert into shop_settings (weekly_report) values (true)")
@@ -228,6 +253,30 @@ class Diary(Bakery):
             self.opening.setdefault(weekday, []).append(
                 (time.fromisoformat(opens), time.fromisoformat(closes))
             )
+        for sort, (name, name_ar, off) in enumerate(sample.resources):
+            resource_id = await conn.fetchval(
+                "insert into booking_resources (name, name_ar, kind, sort) "
+                "values ($1, $2, 'person', $3) returning id",
+                name, name_ar, sort,
+            )
+            for weekday, opens, closes in self.preset.hours:
+                if weekday != off:
+                    await conn.execute(
+                        "insert into resource_hours (resource_id, weekday, opens, closes) "
+                        "values ($1, $2, $3::text::time, $4::text::time)",
+                        resource_id, weekday, opens, closes,
+                    )
+            self.resources.append((resource_id, off))
+            self.taken_by[resource_id] = []
+        prices = {name: price for name, _, _, price in menu}
+        for name, kind, value in sample.deposits:
+            await conn.execute(
+                "update services set deposit_kind = $2, deposit_value = $3 where name = $1",
+                name, kind, value,
+            )
+            index = next(i for i, svc in enumerate(self.services) if svc[1] == name)
+            self.deposit_of[index] = value if kind == "fixed" else (
+                prices[name] * value + 50) // 100
         for email, name, role in sample.team:
             user_id = await conn.fetchval(
                 "insert into users (email, name, name_ar) values ($1, $2, $3) "
@@ -394,7 +443,68 @@ class Diary(Bakery):
             self.say(person, self.now - timedelta(minutes=minutes_ago), asked)
         for index, account in enumerate(self.sample.accounts):
             await self.contract(index, account)
+        if self.resources and self.live:
+            await self.side_by_side(people)
         return await self.finish(people, waiting)
+
+    def working(self, resource_id: UUID, starts: datetime) -> bool:
+        off = dict(self.resources)[resource_id]
+        return (starts.astimezone(TZ).date().weekday() + 1) % 7 != off
+
+    def resource_for(self, starts: datetime) -> UUID | None:
+        """Which stylist a visit of the diary goes to: one who works that day, in turn by the
+        booking's number (no random draw, so the rest of the diary is unchanged)."""
+        if not self.resources:
+            return None
+        on = [rid for rid, _ in self.resources if self.working(rid, starts)]
+        return on[self.booking_number % len(on)] if on else self.resources[0][0]
+
+    async def side_by_side(self, people: list) -> None:
+        """Visits in the days ahead on the other stylists, at the same times as the diary's,
+        so the day view fills in by column and the same time is taken on two or three chairs.
+        A separate draw, so nothing above changes. Upcoming visits of a service with a deposit
+        have it paid by link; the one booked last is still within its hold."""
+        rng = random.Random(self.sample.seed + 7)
+        regular = [p for p in people if p.kind in ("regular", "occasional", "new")]
+        last_with_deposit = None
+        for offset in range(0, 4):
+            day = self.today + timedelta(days=offset)
+            for opens, closes in self.periods(day):
+                cursor = opens
+                while cursor + timedelta(minutes=60) <= closes:
+                    starts = cursor.astimezone(UTC)
+                    cursor += timedelta(minutes=rng.choice([60, 60, 90]))
+                    if starts < self.now + timedelta(minutes=45):
+                        continue
+                    for resource_id, _ in self.resources:
+                        if not self.working(resource_id, starts) or rng.random() > 0.42:
+                            continue
+                        service = rng.choices(range(len(self.services)), [5, 3, 3, 2, 2])[0]
+                        ends = starts + timedelta(minutes=self.services[service][2])
+                        if ends > closes or any(
+                            s < ends and starts < e for s, e in self.taken_by[resource_id]
+                        ):
+                            continue
+                        person = rng.choice(regular)
+                        made = self.now - timedelta(hours=rng.choice([3, 8, 20, 30, 50]))
+                        booking_id = await self.visit(
+                            person, service, made, starts, ends, "booked", resource_id
+                        )
+                        if service in self.deposit_of:
+                            last_with_deposit = (booking_id, person, service)
+        if last_with_deposit is not None:
+            # The deposit of the latest one is still waiting, inside its 30-minute hold.
+            booking_id, person, service = last_with_deposit
+            await self.conn.execute(
+                "update bookings set deposit_state = 'due', created_at = $2, "
+                "hold_until = $2::timestamptz + interval '30 minutes' where id = $1",
+                booking_id, self.now - timedelta(minutes=8),
+            )
+            await self.conn.execute(
+                "update payment_requests set status = 'pending', paid_at = null, created_at = $2 "
+                "where booking_id = $1",
+                booking_id, self.now - timedelta(minutes=8),
+            )
 
     async def contract(self, index: int, spec: tuple) -> None:
         """A customer on account: a monthly maintenance contract invoiced on the first,
@@ -449,10 +559,16 @@ class Diary(Bakery):
         return getattr(self, "_taken", [])
 
     async def visit(self, person: Person, service: int, made: datetime, starts: datetime,
-                    ends: datetime, status: str) -> None:
+                    ends: datetime, status: str, resource_id: UUID | None = None) -> UUID:
         rng, conn = self.rng, self.conn
+        resource_id = resource_id or self.resource_for(starts)
         if status == "booked":
             self._taken = [*self.taken_ranges, (starts, ends)]
+            if resource_id is not None:
+                self.taken_by[resource_id].append((starts, ends))
+        # A deposit only on visits still to come: the salon started asking for one recently.
+        deposit = self.deposit_of.get(service, 0) if self.live and status == "booked" \
+            and starts > self.now and resource_id is not None else 0
         service_id, service_name, _ = self.services[service]
         reminded = starts - timedelta(hours=2)
         reminded = reminded if status != "cancelled" and reminded < self.now else None
@@ -469,11 +585,22 @@ class Diary(Bakery):
             note = rng.choice(self.sample.notes)[1 if person.lang == "ar" else 0]
         await conn.execute(
             "insert into bookings (id, number, contact_id, service_id, service_name, starts_at, "
-            "ends_at, status, reminded_at, created_at, assigned_to, note) "
-            "values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)",
+            "ends_at, status, reminded_at, created_at, assigned_to, note, resource_id, deposit, "
+            "deposit_state, deposit_terms) "
+            "values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16)",
             booking_id, self.booking_number, person.id, service_id, service_name, starts, ends,
-            status, reminded, made, self.users[staff], note,
+            status, reminded, made, self.users[staff], note, resource_id, deposit,
+            "paid" if deposit else "none",
+            {"no_show": "keep", "late_cancel": "keep", "cancel_hours": 24, "hold_minutes": 30}
+            if deposit else {},
         )
+        if deposit:
+            # Paid on ALYR's stand-in payment page a few minutes after booking.
+            await conn.execute(
+                "insert into payment_requests (contact_id, amount, booking_id, status, "
+                "created_at, paid_at) values ($1, $2, $3, 'paid', $4, $5)",
+                person.id, deposit, booking_id, made, made + timedelta(minutes=6),
+            )
         lang = person.lang
         asked = made - timedelta(minutes=rng.randint(2, 9))
         self.say(person, asked, rng.choice(BOOK[lang]))
@@ -499,6 +626,7 @@ class Diary(Bakery):
             self.log("booking", booking_id, person, status,
                      ends + timedelta(minutes=rng.randint(5, 40)), staff)
         person.events.append(made)
+        return booking_id
 
 
 async def ensure_sample_tenant(owner_dsn: str, sample: Sample, now: datetime, days: int) -> None:
@@ -548,20 +676,21 @@ async def ensure_sample_tenant(owner_dsn: str, sample: Sample, now: datetime, da
 
 
 async def reset_sample(db: Database, sample: Sample, now: datetime | None = None, days: int = 56,
-                       web_url: str = "") -> dict:
+                       web_url: str = "", live: bool = False) -> dict:
     """Wipe the sample business and write `days` days of activity ending `now`."""
     now = now or datetime.now(UTC)
     async with db.tenant(sample.tenant_id) as conn:
         await conn.execute("delete from sessions where tenant_id = $1", sample.tenant_id)
         for table in ("weekly_reports", "agent_snoozes", "bookings", "services",
-                      "business_hours", "saved_replies", "memberships", "jobs", "messages",
+                      "booking_resources", "business_hours", "saved_replies", "memberships",
+                      "jobs", "messages",
                       "processed_messages", "payment_requests", "ledger_entries",
                       "ledger_accounts", "contacts", "tenant_modules",
                       "shop_settings", "shop_features", "custom_fields"):
             await conn.execute(f"delete from {table}")
         web_url = web_url or get_settings().public_web_url
         diary = Diary(conn, now, random.Random(sample.seed), web_url,
-                      sample, days)
+                      sample, days, live)
         return await diary.run()
 
 
@@ -574,7 +703,7 @@ async def main(keys: list[str]) -> None:
         for key in keys:
             sample = SAMPLES[key]
             await ensure_sample_tenant(settings.migration_url, sample, now, 56)
-            counts = await reset_sample(db, sample, now)
+            counts = await reset_sample(db, sample, now, live=True)
             print(f"sample business ready: {sample.name}, "
                   + ", ".join(f"{v} {k}" for k, v in counts.items())
                   + f". Sign in as {sample.team[0][0]} (owner) or {sample.team[2][0]} (agent).")

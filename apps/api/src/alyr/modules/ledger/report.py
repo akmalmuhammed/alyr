@@ -30,7 +30,8 @@ async def numbers(conn: asyncpg.Connection, start: datetime, end: datetime, tz: 
         return out
     out["by_link"] = await conn.fetchval(
         "select coalesce(sum(amount), 0)::bigint from payment_requests "
-        "where status = 'paid' and order_id is null and paid_at >= $1 and paid_at < $2",
+        "where status = 'paid' and order_id is null and booking_id is null "
+        "and paid_at >= $1 and paid_at < $2",
         start, end,
     )
     out["reminders"] = await conn.fetchval(

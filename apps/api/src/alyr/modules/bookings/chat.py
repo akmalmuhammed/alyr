@@ -8,7 +8,7 @@ from alyr.channels.base import Choice, InboundMessage, OutboundMessage
 from alyr.core import links
 from alyr.core.normalise import has_arabic
 from alyr.core.outbound import Outbound
-from alyr.modules.bookings import service
+from alyr.modules.bookings import service, words
 
 # Checked before "book": a customer asking about a booking they have must not be sent
 # the link to make a new one.
@@ -65,6 +65,13 @@ async def maybe_handle(
         # separate cancellation notice is not needed.
         if mine and await service.cancel(conn, outbound, booking_id, notify=False):
             body = "تم إلغاء حجزك." if arabic else "Your booking has been cancelled."
+            # What became of a paid deposit, by the rule the customer was shown (D-072).
+            deposit = await conn.fetchrow(
+                "select deposit, deposit_state from bookings where id = $1", booking_id
+            )
+            outcome = words.deposit_outcome(deposit["deposit_state"], deposit["deposit"], arabic)
+            if outcome:
+                body += " " + outcome
         else:
             body = (
                 "لم نجد حجزاً قائماً لإلغائه." if arabic
@@ -88,10 +95,12 @@ async def maybe_handle(
                 else "You have no upcoming booking. Send \"book\" to make one."
             )
             return [OutboundMessage(to=contact["id"], body=body)]
-        when = await service._when_text(conn, upcoming["starts_at"], arabic)
+        when = await service.when_text(conn, upcoming["starts_at"], arabic)
+        # "Blow-dry with Reem": the service and who it is with (D-072).
+        what = await service.service_words(conn, upcoming["id"], arabic)
         body = (
-            f"حجزك رقم {upcoming['number']}: {upcoming['service_name']}، {when}." if arabic
-            else f"Booking {upcoming['number']}: {upcoming['service_name']}, {when}."
+            f"حجزك رقم {upcoming['number']}: {what}، {when}." if arabic
+            else f"Booking {upcoming['number']}: {what}, {when}."
         )
         return [OutboundMessage(
             to=contact["id"], kind="buttons", body=body,

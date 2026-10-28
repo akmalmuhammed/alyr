@@ -40,6 +40,8 @@ COPY = (
     ("consents", {}),
     ("inbox_notes", {}),
     ("sold_out_asks", {}),
+    # Review requests sent (D-072): the 30-day rule follows the person to the record that stays.
+    ("review_requests", {}),
     # An entry about a conversation or a credit account names the contact as its subject too.
     ("activity", {
         "subject_id": "case when subject in ('conversation', 'account') and subject_id = $2 "

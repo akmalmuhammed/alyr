@@ -17,6 +17,7 @@ from alyr.core.outbound import SEND, Outbound
 from alyr.core.storage import check_store, make_store
 from alyr.db import Database
 from alyr.modules import report
+from alyr.modules.bookings import deposits as booking_deposits
 from alyr.modules.bookings.service import REMINDER, Reminders
 from alyr.modules.connect import webhooks as connect_webhooks
 from alyr.modules.documents.delivery import JOB as DELIVERY_JOB
@@ -120,6 +121,11 @@ def create_app() -> FastAPI:
     app.state.jobs.register(report.JOB, report.WeeklyReports(app.state.db, app.state.outbound).send)
     app.state.jobs.register(
         EXPIRE_JOB, order_holds.HoldExpiry(app.state.db, app.state.outbound).run
+    )
+    # A booking whose deposit was not paid in time gives its time back (D-072).
+    app.state.jobs.register(
+        booking_deposits.EXPIRE_JOB,
+        booking_deposits.DepositExpiry(app.state.db, app.state.outbound).run,
     )
     # Documents sent to the customer (ALY-139): WhatsApp through the outbound layer, email with
     # the PDF attached. A delivery that fails every try shows the owner "not delivered".

@@ -401,10 +401,16 @@ async def from_order(conn: asyncpg.Connection, staff: Staff, order_id: UUID, kin
 
 async def booking_payments(conn: asyncpg.Connection, booking_id: UUID,
                            upto: datetime | None = None) -> list[dict]:
+    """What a booking has been paid so far: payments staff recorded by hand, and a deposit
+    paid by link (D-072), which counts against the final bill."""
     rows = await conn.fetch(
-        "select method, reference, amount_minor from manual_payments "
-        "where subject = 'booking' and subject_id = $1 and ($2::timestamptz is null "
-        "or recorded_at <= $2) order by recorded_at, id", booking_id, upto,
+        "select method, reference, amount_minor from ("
+        "  select method, reference, amount_minor, recorded_at as at, id from manual_payments "
+        "  where subject = 'booking' and subject_id = $1 "
+        "  union all "
+        "  select 'link', '', amount, paid_at, id from payment_requests "
+        "  where booking_id = $1 and status = 'paid'"
+        ") p where ($2::timestamptz is null or at <= $2) order by at, id", booking_id, upto,
     )
     return [{"method": PAPER_METHOD.get(r["method"], r["method"]),
              "amount_minor": r["amount_minor"], "reference": r["reference"]} for r in rows]
@@ -433,6 +439,29 @@ def booking_body(cfg: dict, booking: asyncpg.Record, kind: str, payments: list[d
         "notes": _note(cfg, kind, f"Booking {booking['number']}.",
                        f"الحجز رقم {booking['number']}."),
     }
+
+
+async def booking_deposit_paid(conn: asyncpg.Connection, booking_id: UUID) -> Issued | None:
+    """A booking's deposit was paid by link (D-072): a deposit receipt saying how much was
+    received and what is left of the price (or a receipt, when the deposit is the whole price
+    or the service has none). Once, in the payment's transaction, for a shop with Documents on
+    and its deposit receipts on."""
+    if not await enabled(conn):
+        return None
+    booking = await booking_parts(conn, booking_id)
+    if booking is None:
+        return None
+    payments = await booking_payments(conn, booking_id)
+    paid = sum(p["amount_minor"] for p in payments)
+    kind = kind_for_payment(booking["price"], paid)
+    cfg = await doc_settings.get(conn)
+    if not cfg["auto_deposit_receipt" if kind == "deposit_receipt" else "auto_receipt_on_payment"]:
+        return None
+    total = booking["price"] or paid
+    body = booking_body(cfg, booking, kind, payments, total, str(booking_id))
+    return await issue(conn, AUTOMATIC, body, f"receipt:booking-deposit:{booking_id}",
+                       subject="booking", subject_id=booking_id,
+                       contact_id=booking["contact_id"])
 
 
 async def from_booking(conn: asyncpg.Connection, staff: Staff, booking_id: UUID, kind: str,

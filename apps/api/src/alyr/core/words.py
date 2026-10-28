@@ -12,6 +12,7 @@ APPOINTMENTS: Noun = (
 JOBS: Noun = (("job", "jobs"), ("مهمة واحدة", "مهمتان", "مهام", "مهمة"))
 MESSAGES: Noun = (("message", "messages"), ("رسالة واحدة", "رسالتان", "رسائل", "رسالة"))
 REMINDERS: Noun = (("reminder", "reminders"), ("تذكير واحد", "تذكيران", "تذكيرات", "تذكيراً"))
+REQUESTS: Noun = (("request", "requests"), ("طلب واحد", "طلبان", "طلبات", "طلباً"))
 NUMBERS: Noun = (("number", "numbers"), ("رقم واحد", "رقمان", "أرقام", "رقماً"))
 DAYS: Noun = (("day", "days"), ("يوم واحد", "يومان", "أيام", "يوماً"))
 HOURS: Noun = (("hour", "hours"), ("ساعة واحدة", "ساعتان", "ساعات", "ساعة"))

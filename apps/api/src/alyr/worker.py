@@ -18,6 +18,7 @@ from alyr.core.links import check_secret as check_link_secret
 from alyr.core.storage import check_store
 from alyr.main import create_app
 from alyr.modules import report
+from alyr.modules.bookings import deposits as booking_deposits
 from alyr.modules.orders import holds as order_holds
 
 log = logging.getLogger("alyr.worker")
@@ -67,6 +68,10 @@ async def keep_holds_swept(db, outbound) -> None:
             cancelled = await order_holds.sweep_all(db, outbound)
             if cancelled:
                 log.info("released the holds of %s unpaid orders", cancelled)
+            # Bookings whose deposit was not paid in time (D-072), the same way.
+            released = await booking_deposits.sweep_all(db, outbound)
+            if released:
+                log.info("released %s bookings whose deposit was not paid", released)
         except Exception:  # never let a sweep stop the worker
             log.exception("could not sweep expired holds")
         await asyncio.sleep(300)

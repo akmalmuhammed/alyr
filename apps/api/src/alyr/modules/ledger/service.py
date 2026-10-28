@@ -134,7 +134,7 @@ async def summary(conn: asyncpg.Connection, now: datetime | None = None) -> dict
         )
     collected = await conn.fetchrow(
         "select coalesce(sum(amount), 0)::bigint as total, count(*) as payments "
-        "from payment_requests where status = 'paid' and order_id is null"
+        "from payment_requests where status = 'paid' and order_id is null and booking_id is null"
     )
     out, totals = [], Aged()
     for c in customers:
@@ -375,21 +375,33 @@ async def complete_payment(
     row = await conn.fetchrow(
         "update payment_requests set status = 'paid', paid_at = now() "
         "where id = $1 and status = 'pending' "
-        "returning contact_id, amount, provider, order_id",
+        "returning contact_id, amount, provider, order_id, booking_id",
         payment_id,
     )
     if row is None:
         late = await conn.fetchrow(
-            "select status, order_id, contact_id, amount, provider from payment_requests "
-            "where id = $1", payment_id,
+            "select status, order_id, booking_id, contact_id, amount, provider "
+            "from payment_requests where id = $1", payment_id,
         )
         if late is None:
             return "not_found"
+        if late["status"] == "expired" and late["booking_id"] and late["provider"] != "standin":
+            # A real gateway took a deposit after its booking was released (D-072).
+            from alyr.modules.bookings import deposits
+
+            await deposits.late_payment(conn, late)
         if late["status"] == "expired" and late["order_id"] and late["provider"] != "standin":
             # A real gateway took the money after the link had expired and the order was
             # cancelled. The stand-in gateway moves no money, so it never lands here.
             await _late_payment(conn, outbound, payment_id, late)
         return late["status"]
+    if row["booking_id"] is not None:
+        # A booking's deposit (D-072): the booking is confirmed and the receipt made. It was
+        # never a debt, so the ledger is not touched.
+        from alyr.modules.bookings import deposits
+
+        await deposits.paid(conn, outbound, row)
+        return "paid"
     lang = await conn.fetchval("select lang from contacts where id = $1", row["contact_id"])
     if row["order_id"] is not None:
         # Paying for an order settles the order. It was never a debt, so the ledger

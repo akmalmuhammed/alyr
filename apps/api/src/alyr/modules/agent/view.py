@@ -16,7 +16,7 @@ import asyncpg
 from alyr import catalog as shop_catalog
 from alyr.core import workspace
 from alyr.core.auth import Staff
-from alyr.core.words import DAYS, MESSAGES, NUMBERS, ORDERS, REMINDERS, STEPS
+from alyr.core.words import DAYS, MESSAGES, NUMBERS, ORDERS, REMINDERS, REQUESTS, STEPS
 from alyr.modules.agent import facts as facts_
 from alyr.modules.agent.facts import Facts
 from alyr.modules.agent.insights import (
@@ -658,6 +658,11 @@ def _done(f: Facts, lang: str) -> dict:
         add("booking_reminders", f"{n:,}",
             T(lang, f"booking {noun_after(n, REMINDERS, lang)}",
               f"{noun_after(n, REMINDERS, lang)} بالمواعيد"), "/app/bookings")
+    if f.review_requests_sent:
+        n = f.review_requests_sent
+        add("review_requests", f"{n:,}",
+            T(lang, f"review {noun_after(n, REQUESTS, lang)}",
+              f"{noun_after(n, REQUESTS, lang)} للتقييم"), "/app/bookings")
     if f.payment_reminders_sent:
         n = f.payment_reminders_sent
         add("payment_reminders", f"{n:,}",

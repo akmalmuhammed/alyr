@@ -901,6 +901,13 @@ async def set_status(
     await outbound.send(conn, templates.notice(
         row["contact_id"], f"order_{status}", lang, body, row["number"],
     ))
+    if status == "done" and not await conn.fetchval(
+        "select is_test from orders where id = $1", order_id
+    ):
+        # Collected or delivered: the review request, if the shop asks for reviews (D-072).
+        from alyr.modules import reviews
+
+        await reviews.after_visit(conn, outbound, "order", order_id, row["contact_id"])
     return True
 
 

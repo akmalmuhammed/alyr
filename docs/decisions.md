@@ -62,6 +62,7 @@ Status: **Accepted** (in force), **Proposed** (waiting for the founder), **Super
 | D-070 | Product analytics with PostHog (EU), at two levels the visitor chooses: cookieless counting by default, cookies and masked recordings with consent; never customer pages, the inbox or names | Accepted |
 | D-071 | The homepage plays like a video: the film starts at load and moves at once; its Pause controls are not on show (only on hover, keyboard focus or while paused); a click on the film pauses it | Accepted |
 | D-069 | A shop's bookings are held to one customer at a time per resource (chair, person, room), not per shop; a shop with no resources is unchanged | Accepted |
+| D-072 | Bookings: each chair or person has its own hours and the customer may pick one; staff run the day from the screen; a service may ask a deposit by pay link, held like the Catalog's and kept or refunded by the shop's own rule shown before paying; a review request goes to every customer the same way, never only to happy ones | Accepted |
 
 ---
 
@@ -1536,3 +1537,26 @@ Without it, analytics is off everywhere.
 - *Letting customers choose the resource from day one.* The engine accepts a choice; the booking page offers none until a shop asks for it.
 
 **Revisit when.** A shop needs a resource's own hours, days off or a login (a stylist's own calendar), or assignment by least busy instead of first free, which concentrates the day on the first chair.
+
+## D-072 · Chairs and people with their own hours, the day from the screen, deposits by the shop's rule, and a review request with no gating
+**Date** 29 Oct 2026 · **Status** Accepted (the founder's decision of 29 Oct to build ALY-27 before the salon sales demo, ALY-264; the review request added the same day by the product lead, with the instruction that there is no gating) · Linear ALY-27 · Spec `specs/033-bookings-chairs-deposits/spec.md` · Builds on D-069
+
+**Where we were.** D-069 let a shop list resources and held one customer at a time per resource, in the engine only. A resource had no hours of its own, the customer could not choose one, staff could not add a walk-in or move a booking from the screen, nothing asked a deposit, and nothing asked for a review.
+
+**The decision.**
+- **A resource is a person or a place, with its own working hours** (none set: the shop's). Free times are computed per resource. The customer picks **"Anyone"** or one of the people or places that do the service. This reverses D-069's "no customer choice yet": the salon demo and every salon we spoke about book a stylist by name.
+- **Staff run the day from the Bookings screen:** a day view by resource; add a walk-in or a booking taken by phone, at any minute; move to another time or resource; cancel; came or didn't come. Every action is on the activity record. Staff never double-book either: the same shop lock and the same database guard.
+- **Deposits per service, optional,** a fixed amount or a percentage of the price, asked by **pay link**. The booking holds the time for the shop's pay-link hold (`hold_minutes`, 30 by default, the Catalog's); unpaid at the end, the time is released and the customer told. A paid deposit confirms the booking, makes a **deposit receipt** (Documents, where it is on) and **counts against the final bill**.
+- **The shop's own rule** decides a paid deposit on a no-show and on a late cancel (keep or refund), with the hours that make a cancel late. **The customer is shown the rule before paying,** and the booking keeps the rule it was made under. ALYR never moves money (hard rule 3): "refund due" is a note to the shop, which refunds from its own account and marks it done.
+- **The payment link is ALYR's stand-in until the shop's payment provider is connected,** and every place that shows it says so.
+- **The review request:** per shop, off until the owner turns it on and gives the Google review link. One WhatsApp message when a booking is marked "came" or an order is done, in the customer's language, at most one per customer every 30 days, through the outbound layer (consent, stop, the 24-hour window or a utility template that names the visit). **Everyone is asked the same way: no gating.** ALYR does not first ask whether the customer was happy and send only the happy ones to Google, although ALY-27's first description said so: Google's review policy forbids selectively asking for positive reviews, and a shop caught doing it can lose its reviews. Anyone can reply in the chat, and the owner reads the reply in the inbox.
+- **New templates are written, not submitted** to Meta (`booking_deposit_due`, `booking_deposit_paid`, `booking_released`, `booking_cancelled_deposit`, `review_request`): submitting is the founder's go. The resource rides inside the existing templates' blanks, so their approved wording does not change.
+
+**Rejected.**
+- *A booking that waits for the deposit before it holds the time.* Two customers could pay for the same slot; the hold is the Catalog's tested pattern.
+- *Confirming the booking only when the deposit is paid, with no hold.* The same race, and a customer who has paid would find the time gone.
+- *Asking "were you happy?" first, and sending only the happy ones to Google.* Review gating, against Google's policy (above).
+- *Letting staff place bookings only on the 30-minute grid.* A walk-in arrives at 4:10.
+- *Deposits for bookings staff make.* Staff can record a payment by hand (Documents); a link for a customer standing at the counter is not needed for the demo, and can follow.
+
+**Revisit when.** A shop connects its own payment provider (the stand-in goes); a shop needs days off by date or buffers between visits; a stylist needs a login of her own; Meta refuses a template's category; or a shop asks for assignment by least busy rather than first free.
